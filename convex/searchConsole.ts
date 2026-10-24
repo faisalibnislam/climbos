@@ -3,6 +3,7 @@ import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, query, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireOrgAccess } from "./lib/tenancy";
+import { queryPageOverlaps } from "../shared/seo/queryOverlap";
 
 const rowValidator = v.object({
   query: v.string(),
@@ -98,6 +99,7 @@ export const observations = query({
       dataState: result.snapshot.dataState,
       rowCount: result.snapshot.rowCount,
       truncated: result.snapshot.truncated,
+      queryOverlaps: queryPageOverlaps(result.rows),
       rows: result.rows.map(({ _id: _rowId, _creationTime: _createdAt, orgId: _orgId, snapshotId: _snapshotId, ...row }) => row),
       note: "These are Search Console observations for this property and date window. They are not universal search volume, complete query coverage, or proof of causation.",
     };
@@ -143,6 +145,7 @@ export const snapshot = query({
       dataState: snapshot.dataState,
       rowCount: snapshot.rowCount,
       truncated: snapshot.truncated,
+      queryOverlaps: queryPageOverlaps(rows),
       rows: rows.map(({ _id: _rowId, _creationTime: _createdAt, orgId: _orgId, snapshotId: _snapshotId, ...row }) => row),
     };
   },

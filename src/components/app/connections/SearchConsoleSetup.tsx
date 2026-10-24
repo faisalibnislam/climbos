@@ -94,6 +94,7 @@ export function SearchConsoleSetup({ slug, connected, canManage, isDemo, selecte
   }
 
   const rows = observations?.rows.slice().sort((a, b) => b.clicks - a.clicks).slice(0, 8) ?? [];
+  const queryOverlaps = observations?.queryOverlaps ?? [];
 
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-line bg-surface-2 p-4" aria-labelledby="search-console-data-heading">
@@ -191,6 +192,30 @@ export function SearchConsoleSetup({ slug, connected, canManage, isDemo, selecte
             {" · "}synced {relativeTime(observations.fetchedAt)}
           </p>
           {observations.truncated ? <Callout tone="warning">Google returned a capped result set. These top rows do not represent every query or page.</Callout> : null}
+          {queryOverlaps.length ? (
+            <div className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-3">
+              <div>
+                <h5 className="text-sm font-semibold text-ink">Queries shown for multiple pages</h5>
+                <p className="mt-1 text-xs text-ink-3">These exact query observations include impressions for more than one page URL in this property and date window. That can be normal and does not prove the pages compete or hurt rankings; compare each page&apos;s intent and purpose before consolidating anything.</p>
+              </div>
+              <ul className="flex flex-col gap-3">
+                {queryOverlaps.map((overlap) => (
+                  <li key={overlap.query} className="rounded-md bg-surface-2 p-3">
+                    <p className="text-sm font-medium text-ink">{overlap.query}</p>
+                    <p className="text-xs text-ink-3">{overlap.pageCount} observed page URLs</p>
+                    <ul className="mt-2 flex flex-col gap-1">
+                      {overlap.pages.map((page) => (
+                        <li key={page.page} className="break-all text-xs text-ink-2">
+                          {page.page} · {page.impressions.toLocaleString()} impressions · {page.clicks.toLocaleString()} clicks · avg. position {page.position.toFixed(1)}
+                        </li>
+                      ))}
+                    </ul>
+                    {overlap.pageCount > overlap.pages.length ? <p className="mt-1 text-xs text-ink-3">{overlap.pageCount - overlap.pages.length} more page URLs not shown.</p> : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {rows.length ? (
             <div className="overflow-x-auto rounded-lg border border-line">
               <table className="w-full min-w-[38rem] text-left text-sm">

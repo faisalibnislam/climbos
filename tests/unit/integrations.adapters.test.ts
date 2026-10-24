@@ -644,15 +644,19 @@ describe("ga4 + searchConsole", () => {
       startDate: "2026-07-24",
       endDate: "2026-10-21",
       dataState: "final" as const,
-      rowCount: 2,
+      rowCount: 3,
       truncated: false,
       rows: [
         { query: "tracked page query", page: "https://www.example.com/services/", clicks: 4, impressions: 40, ctr: 0.1, position: 5 },
+        { query: "tracked page query", page: "https://www.example.com/services-overview/", clicks: 2, impressions: 12, ctr: 0.1, position: 6 },
         { query: "unread page query", page: "https://example.com/blog/", clicks: 9, impressions: 90, ctr: 0.1, position: 4 },
       ],
     };
-    const context = searchConsoleSeoContext(snapshot, "https://example.com/", ["https://example.com/services/#contact"]);
+    const context = searchConsoleSeoContext(snapshot, "https://example.com/", ["https://example.com/services/#contact", "https://example.com/services-overview/"]);
     expect(context).toContain("tracked page query");
+    expect(context).toContain("QUERY-TO-PAGE OVERLAP IN THE FETCHED-PAGE SUBSET");
+    expect(context).toContain("untrusted_content source=\"Search Console query-to-page overlap observations\"");
+    expect(context).toContain("not proof that pages harm each other's ranking");
     expect(context).not.toContain("unread page query");
     expect(searchConsoleSeoContext(snapshot, "https://other.example/", ["https://example.com/services/"])).toContain("property does not match");
     expect(searchConsoleSeoContext(snapshot, "https://example.com/", [])).toContain("none of its returned page rows match a page successfully fetched");

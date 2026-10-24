@@ -1,5 +1,6 @@
 import { untrusted } from "../ai/tasks";
 import { searchConsolePropertyMatchesWebsite } from "../integrations/searchConsole";
+import { queryPageOverlaps } from "../seo/queryOverlap";
 import { urlKey } from "./provenance";
 
 export interface SearchConsoleEvidenceSnapshot {
@@ -51,5 +52,10 @@ export function searchConsoleSeoContext(snapshot: SearchConsoleEvidenceSnapshot 
   if (!rows.length) {
     return `SEARCH CONSOLE: property ${snapshot.property} matches the recorded website, but none of its returned page rows match a page successfully fetched in this run. Do not use these observations for page-level recommendations.`;
   }
-  return searchConsoleStrategyContext({ ...snapshot, rowCount: rows.length, rows }, website);
+  const base = searchConsoleStrategyContext({ ...snapshot, rowCount: rows.length, rows }, website);
+  const overlaps = queryPageOverlaps(rows, { maxQueries: 5, maxPagesPerQuery: 5 });
+  if (!overlaps.length) return base;
+  const observedData = untrusted("Search Console query-to-page overlap observations", JSON.stringify(overlaps), 4_000);
+  return base + "\n\nQUERY-TO-PAGE OVERLAP IN THE FETCHED-PAGE SUBSET:\n" + observedData +
+    "\nThese rows show the same normalized query with impressions for multiple page URLs in this property and date window. This can be normal and is not proof that pages harm each other's ranking. Compare the pages' intent and role; recommend consolidation or differentiation only when their content and purpose support it.";
 }

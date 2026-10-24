@@ -251,7 +251,10 @@ describe("connections", () => {
       scopes: ["https://www.googleapis.com/auth/webmasters.readonly"],
       externalAccountId: property,
     });
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ rows: [{ keys: ["best climbing shoes", "https://example.com/shoes"], clicks: 12, impressions: 150, ctr: 0.08, position: 4.2 }] }), { status: 200 }));
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ rows: [
+      { keys: ["best climbing shoes", "https://example.com/shoes"], clicks: 12, impressions: 150, ctr: 0.08, position: 4.2 },
+      { keys: ["best climbing shoes", "https://example.com/best-shoes"], clicks: 3, impressions: 25, ctr: 0.12, position: 6.1 },
+    ] }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
     await t.action(internal.connectionActions.syncSearchConsole, { orgId: o.orgId });
@@ -261,8 +264,14 @@ describe("connections", () => {
       property,
       dataState: "final",
       truncated: false,
-      rows: [{ query: "best climbing shoes", page: "https://example.com/shoes", clicks: 12, impressions: 150, ctr: 0.08, position: 4.2 }],
+      rows: [
+        { query: "best climbing shoes", page: "https://example.com/shoes", clicks: 12, impressions: 150, ctr: 0.08, position: 4.2 },
+        { query: "best climbing shoes", page: "https://example.com/best-shoes", clicks: 3, impressions: 25, ctr: 0.12, position: 6.1 },
+      ],
     });
+    expect(observations!.queryOverlaps).toMatchObject([
+      { query: "best climbing shoes", pageCount: 2, pages: [{ page: "https://example.com/shoes" }, { page: "https://example.com/best-shoes" }] },
+    ]);
     expect(observations!.startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(observations!.endDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(observations!.note).toContain("not universal search volume");
