@@ -1032,6 +1032,17 @@ export const buildStrategy = internalAction({
         priceUsdMonth: job.business?.unitEconomics?.revenuePerCustomerMonthUsd ?? entryPriceUsdMonth(job.facts),
         currency: workspaceCurrency(job),
       });
+      const diagnoseFor = (types: string[]) => {
+        const cycle = CYCLE_DAYS[profile.dims.salesCycle?.value ?? ""];
+        return diagnose({
+          funnel: job.business?.funnel,
+          monthlyChurn: job.business?.unitEconomics?.monthlyChurn,
+          newCustomersPerMonth: job.business?.unitEconomics?.newCustomersPerMonth,
+          types,
+          ...(cycle !== undefined ? { salesCycleDays: cycle } : {}),
+        });
+      };
+      let diagnosis = diagnoseFor(profile.types);
       // Speed: something useful in seconds, from code alone (no model): the channels that fit and the budget approach.
       if (v2) await previewChannels(ctx, job, profile);
       let adjustments: Adjustment[] = [];
@@ -1073,6 +1084,7 @@ export const buildStrategy = internalAction({
               `3. channels: review every candidate below. Each has rule-based factor priors (audience, intent, budget, time, feasibility, competition, scalability, measurement). Give deltas (−30…+30, 0 = keep) only where evidence for THIS business says the prior is wrong: e.g. competitors already dominate it (competition down) or are absent (up); the audience provably gathers there (audience up); the owner can't execute it (feasibility down). Name the platform, the tactic and the audience for each.`,
               `4. summary: two short bullets on what wins and why.`,
               `Monthly budget: $${profile.budgetUsd}. Horizon: ${profile.horizonDays} days.`,
+              `CURRENT BUSINESS DIAGNOSIS (computed from owner data; an observed weak link is not proof of cause):\n${diagnosisBrief(diagnosis)}\nUse this to avoid rewarding channels that only create more demand when the supported bottleneck is later in the customer journey. If the diagnosis is uncertain, do not force a channel change.`,
               `OWNER-CONFIRMED: ${Object.entries(profile.dims).filter(([, d]) => d?.source === "owner").map(([k, d]) => `${k}=${d!.value}`).join(", ") || "none"}.`,
               `CANDIDATES (id · name · priors):\n${candidates.map((c) => `${c.id} · ${c.name} · ${FACTORS.map((f) => c.factors[f]).join("/")}`).join("\n")}`,
               `BUSINESS INTELLIGENCE (researched earlier):\n${insightsBrief}`,
@@ -1086,6 +1098,7 @@ export const buildStrategy = internalAction({
         if (fitR.status === "rejected") throw fitR.reason;
         const fit = fitR.value;
         profile = mergeFit(profile, fit, new Set(typeKeys));
+        diagnosis = diagnoseFor(profile.types);
         adjustments = adjustmentsFrom(fit);
         channelSummary = fit.summary.slice(0, 3);
       }
@@ -1095,10 +1108,10 @@ export const buildStrategy = internalAction({
         newCustomersPerMonth: job.business?.unitEconomics?.newCustomersPerMonth,
         connected: job.capabilities.connected,
       } : undefined;
-      const scored = scoreChannels(profile, adjustments, undefined, limits);
+      // A supported diagnosis can change which channels lead the shortlist; an uncertain one never forces a ranking change.
+      const scored = scoreChannels(profile, adjustments, undefined, limits, diagnosis.status === "supported" && diagnosis.constraint !== "unknown" ? diagnosis.constraint : undefined);
       const scorecard = `\n\nCHANNEL SCORECARD (Acquisition Intelligence, budget band ${budgetBand(profile.budgetUsd).label}${profile.currency ? " in USD terms" : ""}: ${budgetBand(profile.budgetUsd).approach}). Build on the Primary and In-the-plan channels first; anything lower-ranked must say why:\n${scorecardText(scored, 14, profile.currency)}${priceFitText(profile) ? `\n${priceFitText(profile)}` : ""}`;
-      const cycleDays = CYCLE_DAYS[profile.dims.salesCycle?.value ?? ""];
-      const diagnosis = diagnose({ funnel: job.business?.funnel, monthlyChurn: job.business?.unitEconomics?.monthlyChurn, newCustomersPerMonth: job.business?.unitEconomics?.newCustomersPerMonth, types: profile.types, ...(cycleDays !== undefined ? { salesCycleDays: cycleDays } : {}) });
+      diagnosis = diagnoseFor(profile.types);
       const playbookChoice = choosePlaybooks(playbookContext(job, profile, diagnosis));
       decided.diagnosis = diagnosis;
       decided.ineligible = playbookChoice.ineligible.map(({ pb, reasons }) => ({ id: pb.id, reasons }));

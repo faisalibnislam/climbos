@@ -1,5 +1,6 @@
 import { formatMoney, fromUsd, minorToMajor, thresholdIn, toUsd } from "../economics/currency";
 import { budgetBand, CHANNELS, TYPE_BY_KEY, type Channel, type Execution, type Requirement, type Stage } from "./library";
+import type { BindingConstraint } from "../agents/decision";
 
 /**
  * Acquisition Intelligence: hard eligibility checks, rule-based priors for the
@@ -373,11 +374,25 @@ export interface ScoredChannel {
   priceFit?: string;
   /** Hard-limit findings, when limits were applied (decision_contract plans). */
   limits?: LimitCheck[];
+  /** True when this channel directly serves the supported, owner-data diagnosis. */
+  diagnosisFit?: boolean;
 }
 
 const PAID_FAMILIES = new Set(["paid_search", "paid_social", "traditional"]);
 
-export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] = [], weights = DEFAULT_WEIGHTS, limits?: ChannelLimits): ScoredChannel[] {
+/** Buyer-journey stages a channel can directly help when the measured constraint is supported. */
+const DIAGNOSIS_STAGES: Partial<Record<BindingConstraint, readonly Stage[]>> = {
+  demand: ["unaware", "problem", "solution"],
+  activation: ["product", "existing"],
+  conversion: ["product", "high_intent"],
+  offer: ["product", "high_intent"],
+  positioning: ["problem", "solution", "product"],
+  retention: ["existing", "returning"],
+  delivery: ["existing", "returning"],
+  economics: ["product", "high_intent"],
+};
+
+export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] = [], weights = DEFAULT_WEIGHTS, limits?: ChannelLimits, focus?: BindingConstraint): ScoredChannel[] {
   const adj = new Map(adjustments.map((a) => [a.channelId, a]));
   const regulated = p.types.map((k) => TYPE_BY_KEY[k]?.regulated).find(Boolean) ?? (dim(p, "regulation") === "high" ? "Regulated industry: check advertising rules before running this." : undefined);
   const rows = CHANNELS.map((c): ScoredChannel => {
@@ -406,15 +421,18 @@ export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] =
       caution: el.ok && c.regulatedCaution && regulated ? regulated : undefined,
       priceFit,
       ...(limits && el.ok ? { limits: limitChecks(c, p, limits) } : {}),
+      ...(focus && DIAGNOSIS_STAGES[focus] ? { diagnosisFit: c.stages.some((stage) => DIAGNOSIS_STAGES[focus]!.includes(stage)) } : {}),
     };
   });
-  return select(rows, p);
+  return select(rows, p, focus && DIAGNOSIS_STAGES[focus] ? focus : undefined);
 }
 
 /** Budget discipline (Part 7): a few focused channels, paid ones only when the budget can feed a real test. */
-function select(rows: ScoredChannel[], p: AcquisitionProfile): ScoredChannel[] {
+function select(rows: ScoredChannel[], p: AcquisitionProfile, focus?: BindingConstraint): ScoredChannel[] {
   const band = budgetBand(p.budgetUsd);
-  const ranked = rows.filter((r) => r.status !== "ineligible").sort((a, b) => b.score - a.score);
+  const ranked = rows.filter((r) => r.status !== "ineligible").sort((a, b) =>
+    (focus ? Number(Boolean(b.diagnosisFit)) - Number(Boolean(a.diagnosisFit)) : 0) || b.score - a.score,
+  );
   // Hard limits come before rank: a blocked channel is never picked; a late one only fills a slot no on-time channel can.
   const blocked = (r: ScoredChannel) => r.limits?.find((x) => x.verdict === "blocked");
   const late = (r: ScoredChannel) => r.limits?.find((x) => x.verdict === "late");
@@ -437,7 +455,9 @@ function select(rows: ScoredChannel[], p: AcquisitionProfile): ScoredChannel[] {
         paid++;
         spend += r.minMonthly;
       }
-      if (!r.why) r.why = picked === 1 ? "Highest score for your business, goal and budget." : "Strong fit that the budget can support alongside the primary channel.";
+      if (!r.why) r.why = r.diagnosisFit
+        ? `Fits the measured ${focus} bottleneck and the budget.`
+        : picked === 1 ? "Highest score for your business, goal and budget." : "Strong fit that the budget can support alongside the primary channel.";
     } else if (r.score >= 60) {
       r.status = "later";
       if (!r.why) r.why = !affordable ? `Needs about ${shownThreshold(p, r.minMonthly)}/month on top of the plan.` : "Good fit; add once the first channels show results.";
@@ -525,7 +545,7 @@ export function scorecardText(rows: ScoredChannel[], n = 14, currency?: string):
   return rows
     .filter((r) => r.status !== "ineligible")
     .slice(0, n)
-    .map((r) => `- ${r.id} ${r.name}: ${r.score}/100 · ${STATUS_LABEL[r.status]}${r.paid ? ` · min ${formatMoney(thresholdIn(r.minMonthly, currency), currency)}/mo` : ""}${r.tactic ? ` · tactic: ${r.tactic}` : ""}${r.why ? ` · ${r.why}` : ""}${r.priceFit && r.priceFit !== r.why ? ` · price: ${r.priceFit}` : ""}${(r.limits ?? []).filter((x) => x.reason !== r.why).map((x) => ` · ${x.verdict === "setup" ? "setup" : x.kind.replace("_", " ")}: ${x.reason}`).join("")}`)
+    .map((r) => `- ${r.id} ${r.name}: ${r.score}/100 · ${STATUS_LABEL[r.status]}${r.diagnosisFit ? " · fits measured bottleneck" : ""}${r.paid ? ` · min ${formatMoney(thresholdIn(r.minMonthly, currency), currency)}/mo` : ""}${r.tactic ? ` · tactic: ${r.tactic}` : ""}${r.why ? ` · ${r.why}` : ""}${r.priceFit && r.priceFit !== r.why ? ` · price: ${r.priceFit}` : ""}${(r.limits ?? []).filter((x) => x.reason !== r.why).map((x) => ` · ${x.verdict === "setup" ? "setup" : x.kind.replace("_", " ")}: ${x.reason}`).join("")}`)
     .join("\n")
     .concat(pair ? `\nThe picked channels are pages that wait for visitors: pair them with a route that sends qualified people, e.g. ${pair.id} ${pair.name} (${pair.score}/100), and give each page play its route.` : "");
 }

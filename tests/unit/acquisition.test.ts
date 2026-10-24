@@ -36,6 +36,16 @@ describe("channel scoring", () => {
     const rows = scoreChannels(plumber).filter((r) => r.status !== "ineligible");
     expect(rows.slice(0, 5).map((r) => r.id)).toContain("S04");
   });
+  it("only a supported diagnosis changes channel shortlist priority toward the affected journey stage", () => {
+    const ordinary = scoreChannels(formkit);
+    const focused = scoreChannels(formkit, [], undefined, undefined, "retention");
+    const first = focused[0];
+    expect(first.diagnosisFit).toBe(true);
+    expect(CHANNEL_BY_ID[first.id]!.stages.some((stage) => stage === "existing" || stage === "returning")).toBe(true);
+    expect(focused.find((r) => r.id === first.id)?.why).toMatch(/measured retention bottleneck/);
+    // Without a supported diagnosis, the established score ordering is unchanged.
+    expect(scoreChannels(formkit).map((r) => r.id)).toEqual(ordinary.map((r) => r.id));
+  });
   it("evidence-backed adjustments move a channel, within bounds", () => {
     const before = scoreChannels(formkit).find((r) => r.id === "M10")!.score;
     const after = scoreChannels(formkit, [{ channelId: "M10", deltas: { competition: 90, audience: 20 }, reason: "No rival launched there in 2 years", evidence: "producthunt.com search" }]).find((r) => r.id === "M10")!;

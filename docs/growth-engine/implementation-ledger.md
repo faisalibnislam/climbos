@@ -24,6 +24,8 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 
 ## Resumption note (2026-10-24, engine and learning work)
 
+The first 2026-10-24 strategy improvement now passes the computed business diagnosis into channel-fit research and final channel ranking. Only a `supported` diagnosis changes the shortlist: the existing channel journey-stage taxonomy brings channels relevant to demand, activation, conversion, retention, delivery or economics ahead of channels that only score well on generic priors. The score itself remains the base channel score; the scorecard labels diagnosis fit, and uncertain diagnoses preserve the old ordering. Deterministic unit coverage verifies the retention case and unchanged behavior without focus. This is still a stage-taxonomy proxy, not live-model or business-outcome validation.
+
 Since the original S4 note, owner economics now recalculate forecasts, portfolio selection and goal gap on plan reads; approval and play launch are blocked if the inputs differ from the plan snapshot. Outreach learning now separates any replies from owner-reported reply disposition, and sparse first-party rates remain visible with a conservative planning bound. Generic all-business rate pools have been removed. These changes are pushed on `growth-engine-v2`; they are not deployed or live-model validated.
 
 The attached improvement brief's Issue 21 now has canonical display grouping for same-category, same-review-state facts with equivalent normalized meaning; source records remain attached to the display row and reviewing the canonical fact updates the whole exact group. Matching is deliberately high precision (normalized terms, currency/value, entity words and negation), not embedding-based semantic deduplication. Issue 22's price/trial/capability conflict detector compares pending researched facts with confirmed/edited facts and returns each fact's review state and source evidence. It preserves explicit billing units, recognizes direct and passive feature-availability wording, and places plans with detected material conflicts in `needs_input`; approval is blocked until the owner resolves the facts and refreshes the plan. Detection remains lexical and limited to clearly structured pricing, trial and capability statements.
@@ -138,7 +140,7 @@ The shared agent and critic contracts now preserve the distinction between publi
 | REQ-STRAT-05 | done-fixture (flagged) | S5 | as REQ-OUT-03 | The flag replaces the mandatory shape. The default path keeps it until evaluated (§6 proposal) |
 | REQ-STRAT-06 | partial | S3 | `economics.ts` lint, `planTasks.ts` | The money-loser remedy no longer says "raise volume or conversion". The task says never raise reach or rates. Measured effect: not measured |
 | REQ-STRAT-07 | missing | S5 | — | Qualification, fulfilment and refunds aren't modelled |
-| REQ-STRAT-08 | partial | S5 | `specs.ts:743` | Channel-fit deltas need evidence. No owner override with a rationale |
+| REQ-STRAT-08 | partial | S5 | `specs.ts:743`, `shared/acquisition/scoring.ts`, `convex/jobs.ts` | Channel-fit deltas still need business-specific evidence, and no owner override with rationale exists. As an additional deterministic relevance signal, only a supported owner-data diagnosis now prioritizes channels whose declared customer-journey stages address that bottleneck; the score remains unchanged and uncertain diagnoses leave ranking untouched. Fixture-tested; stage tags are a taxonomy proxy and remain unvalidated against live outcomes. |
 
 ### Evidence and provenance
 
