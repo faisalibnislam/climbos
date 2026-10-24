@@ -35,6 +35,11 @@ describe("claim ledger", () => {
     expect(lintCopy({ body: "Support 24/7 by chat" }, { evidence: input.brief, claimEvidence: "", publishable: true })).toMatchObject([{ rule: "unsupported_claim" }]);
     expect(lintCopy({ body: "Support 24/7 by chat" }, { evidence: input.brief, claimEvidence: verified, publishable: true })).toEqual([]);
   });
+  it("requires confirmed evidence for named product integrations", () => {
+    const check = (evidence: string) => lintClaims([{ path: "body", text: "Connects directly to Slack" }], evidence);
+    expect(check("The homepage mentions Slack and our team uses it internally.")).toMatchObject([{ rule: "unsupported_capability" }]);
+    expect(check("Owner confirmed: Slack integration connects ClimbOS to the workspace.")).toEqual([]);
+  });
 });
 
 describe("borrowed uplift", () => {

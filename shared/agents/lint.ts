@@ -51,10 +51,24 @@ const CLAIMS: { kind: string; re: RegExp; key: (m: RegExpMatchArray) => RegExp }
   { kind: "full automation", re: /\bfully[- ]automat\w+\b|\bhands[- ]free\b|\bno human\b/i, key: () => /fully[- ]automat|hands[- ]free|no human|automat/i },
 ];
 
+/** Named integrations create concrete buyer expectations and are easy to overstate. */
+const NAMED_INTEGRATION = /\b(?:[Ii]ntegrat\w*\s+with|[Cc]onnects?\s+(?:directly\s+)?to|[Cc]onnects?\s+with|[Ss]yncs?\s+with)\s+([A-Z][\w.+-]*(?:\s+[A-Z][\w.+-]*){0,2}|CRM|API)\b/g;
+const INTEGRATION_EVIDENCE = /\b(?:integrat\w*|connect\w*|sync\w*)\b/i;
+
+function hasIntegrationEvidence(service: string, evidence: string): boolean {
+  return evidence.split(/[\n.!?]+/).some((line) => line.toLocaleLowerCase("en-US").includes(service.toLocaleLowerCase("en-US")) && INTEGRATION_EVIDENCE.test(line));
+}
+
 /** Unsupported capability, scale or leadership claims in customer-facing text. */
 export function lintClaims(fields: { path: string; text: string }[], evidence: string): LintIssue[] {
   const issues: LintIssue[] = [];
   for (const { path, text } of fields) {
+    for (const m of text.matchAll(NAMED_INTEGRATION)) {
+      if (!hasIntegrationEvidence(m[1], evidence)) {
+        issues.push({ severity: "error", rule: "unsupported_capability", message: `The integration with "${m[1]}" has no matching verified capability fact. Remove the promise or confirm the integration first.`, path });
+        break;
+      }
+    }
     for (const c of CLAIMS) {
       const m = text.match(c.re);
       if (m && !c.key(m).test(evidence)) {
