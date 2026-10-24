@@ -64,7 +64,7 @@ const CalcOutputSchema = z.union([
 const DraftListOutputSchema = z.array(z.object({ id: z.string(), title: z.string(), channel: z.string(), kind: z.string(), status: z.string(), scheduledFor: z.string().nullable() }));
 const DraftReadOutputSchema = z.object({ id: z.string(), title: z.string(), channel: z.string(), status: z.string(), scheduledFor: z.string().nullable(), version: z.number().optional(), headline: z.string().nullable().optional(), body: z.string().optional(), callToAction: z.string().nullable().optional(), hashtags: z.array(z.string()).optional(), image: z.string().nullable().optional(), unsupportedClaims: z.array(z.string()).optional() });
 const HttpUrlSchema = z.string().url().refine((value) => {
-  try { return ["https:", "http:"].includes(new URL(value).protocol); } catch { return false; }
+  return isHttpUrl(value);
 }, "Expected an HTTP(S) URL");
 const ImageListOutputSchema = z.object({ website: z.string().nullable(), images: z.array(z.object({ id: z.string(), kind: z.string(), view: z.string().nullable(), label: z.string(), product: z.json().nullable() })) });
 const InboxOutputSchema = z.object({ open: z.number().int().nonnegative(), items: z.array(z.object({ id: z.string(), kind: z.string(), from: z.string(), email: z.string().nullable(), text: z.string(), status: z.string(), hasDraftReply: z.boolean() })) });
@@ -82,6 +82,35 @@ const CampaignStartOutputSchema = z.object({ campaignId: z.string(), pausedSendi
 const SavedDraftOutputSchema = z.object({ saved: z.literal(true), note: z.string() });
 const OkOutputSchema = z.object({ ok: z.boolean() });
 
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return ["https:", "http:"].includes(url.protocol) && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
+/** URL-bearing fields from tools must not smuggle script, data, or credential URLs into either agent surface. */
+function validateToolUrls(value: unknown, path = "tool result"): void {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => validateToolUrls(item, `${path}[${index}]`));
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  for (const [key, child] of Object.entries(value)) {
+    const urlField = key.toLowerCase() === "website" || /urls?$/i.test(key);
+    if (urlField && child !== null) {
+      const values = Array.isArray(child) ? child : [child];
+      if (values.some((item) => typeof item !== "string" || !isHttpUrl(item))) {
+        throw new Error(`The tool returned an unsafe URL in ${path}.${key}.`);
+      }
+    } else {
+      validateToolUrls(child, `${path}.${key}`);
+    }
+  }
+}
+
 /** Validate and bound tool results before they re-enter the model context as untrusted data. */
 export function encodeToolOutput(output: unknown, maxChars = 7_800, outputSchema?: z.ZodType): string {
   let normalized: unknown;
@@ -98,6 +127,7 @@ export function encodeToolOutput(output: unknown, maxChars = 7_800, outputSchema
   }
   const checked = z.json().safeParse(normalized);
   if (!checked.success) throw new Error("The tool returned data that cannot be safely passed to the agent.");
+  validateToolUrls(checked.data);
   const semantic = outputSchema?.safeParse(checked.data);
   if (semantic && !semantic.success) throw new Error("The tool returned data that did not match its output contract.");
   // Escape '<' so untrusted tool text cannot close the surrounding trust boundary.

@@ -35,6 +35,8 @@ describe("Climb tool output boundary", () => {
 
   it("rejects unsafe URL schemes in agent tool results", () => {
     const links = toolByName("get_links");
-    expect(() => encodeToolOutput({ weekTotal: 0, links: [{ label: "bad", url: "javascript:alert(1)", clicks: 0, week: 0 }] }, 7_800, links?.output)).toThrow(/output contract/);
+    expect(() => encodeToolOutput({ weekTotal: 0, links: [{ label: "bad", url: "javascript:alert(1)", clicks: 0, week: 0 }] }, 7_800, links?.output)).toThrow(/unsafe URL/);
+    expect(() => encodeToolOutput({ report: { sourceUrls: ["data:text/html,unsafe"] } })).toThrow(/unsafe URL/);
+    expect(() => encodeToolOutput({ website: "https://user:password@example.com" })).toThrow(/unsafe URL/);
   });
 });
