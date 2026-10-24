@@ -31,6 +31,34 @@ describe("growth intelligence retrieval", () => {
     expect(library.records.every((record) => /^[a-f0-9]{64}$/u.test(record.sha256))).toBe(true);
   });
 
+  it("indexes the 1,000 owner-supplied scenarios as hypotheses and retrieves only matching business types", () => {
+    const scenarios = library.records.filter((record) => record.kind === "scenario");
+    expect(scenarios).toHaveLength(1_000);
+    expect(library.scenarioSourceSha256).toMatch(/^[a-f0-9]{64}$/u);
+    expect(new Set(scenarios.map((record) => record.id)).size).toBe(1_000);
+    expect(new Set(scenarios.map((record) => record.businessType)).size).toBe(20);
+    expect(scenarios.every((record) => record.evidenceClass === "proposed_scenario")).toBe(true);
+    const principles = library.records.filter((record) => record.kind === "principle");
+    expect(principles).toHaveLength(15);
+    expect(library.persuasionSourceSha256).toMatch(/^[a-f0-9]{64}$/u);
+    expect(principles.every((record) => record.evidenceClass === "proposed_practice")).toBe(true);
+
+    const saas = retrieveGrowthKnowledge("B2B SaaS low activation and trial conversion", { limit: 3, maxChars: 2_500 });
+    const scenario = saas.find((record) => record.kind === "scenario");
+    expect(scenario?.businessType).toBe("B2B SaaS");
+    expect(saas.some((record) => record.kind === "chapter" || record.kind === "playbook")).toBe(true);
+    expect(formatGrowthKnowledge([scenario!])).toContain("proposed hypothesis, not validated production guidance");
+    expect(knowledgeReferenceSet([scenario!]).records[0]).toMatchObject({ businessType: "B2B SaaS", evidenceClass: "proposed_scenario" });
+
+    const unrelated = retrieveGrowthKnowledge("restaurant cafe menu discovery and reservations", { limit: 3, maxChars: 2_500 });
+    expect(unrelated.some((record) => record.kind === "scenario")).toBe(true);
+    expect(unrelated.filter((record) => record.kind === "scenario").every((record) => record.businessType === "Restaurants and cafes")).toBe(true);
+
+    const persuasion = retrieveGrowthKnowledge("genuine scarcity false urgency countdown inventory evidence", { limit: 3, maxChars: 2_500 });
+    expect(persuasion.some((record) => record.kind === "principle" && /FOMO|urgency|Scarcity/iu.test(record.heading))).toBe(true);
+    expect(formatGrowthKnowledge(persuasion)).toContain("proposed hypotheses");
+  });
+
   it("retrieves relevant chapters for the actual task rather than attaching the full corpus", () => {
     const records = retrieveGrowthKnowledge("B2B SaaS activation onboarding retention cohort", { limit: 3, maxChars: 1800 });
     expect(records.length).toBeGreaterThan(0);

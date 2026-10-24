@@ -35,6 +35,8 @@ Read [RECONCILIATION.md](RECONCILIATION.md) before combining the frameworks. It 
 - [Video knowledge and source access](videos/VIDEO_KNOWLEDGE.md), [video sources](videos/sources.json), and [video playbooks](videos/playbooks.json).
 - [Articles and training](articles/ARTICLE_KNOWLEDGE.md), [article sources](articles/sources.json), and [article playbooks](articles/playbooks.json).
 - [Business-type playbooks](collections/BUSINESS_TYPE_PLAYBOOKS.md) and [machine-readable versions](collections/business_type_playbooks.json).
+- [Owner-supplied 1,000-scenario catalog](collections/scenarios/ClimbOS_1000_Problem_Solution_Library.md): 20 archetypes × 50 scenarios, indexed into the agent knowledge corpus with business-type filtering. Every entry is labeled a proposed hypothesis and must be checked against the business's evidence; the catalog has not been validated as a production rule set or as a set of effective interventions.
+- [Behavioral marketing guidance](collections/MARKETING_PSYCHOLOGY.md): 15 persuasion principles with evidence limits, safe applications, measurement guardrails, and research references. The agent knowledge build indexes each tactic separately; the engine treats tactics as testable hypotheses, not universal lifts.
 - [Public case collection](collections/PUBLIC_CASES.md) and [case records](collections/public_cases.json).
 - [Customer language capture](collections/CUSTOMER_LANGUAGE_CAPTURE.md).
 - [Platform rules](collections/PLATFORM_RULES.md) and [rule records](collections/platform_rules.json).

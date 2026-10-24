@@ -10,6 +10,7 @@ import {
   setCampaignStatus as setMetaStatus,
 } from "../shared/integrations/metaAds";
 import { approvalHash, canonicalJson, checkApprovalForExecution, sha256Hex } from "../shared/policy";
+import { maxRolling31DaySpend, validCampaignDateRange } from "../shared/policy/campaignBudget";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
@@ -102,14 +103,27 @@ export const prepareCampaign = mutation({
       .first();
     const dailyMinor = Math.round(args.dailyBudget * 100);
     if (!(dailyMinor > 0)) throw appError("INVALID", "Enter a daily budget greater than 0.");
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(args.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(args.endDate) || args.endDate < args.startDate) {
+    if (!validCampaignDateRange(args.startDate, args.endDate)) {
       throw appError("INVALID", "Pick a start date and an end date after it.");
     }
     const days = Math.round((Date.parse(args.endDate) - Date.parse(args.startDate)) / 86_400_000) + 1;
     const envelope = policy?.maxMonthlyAdSpendMinor ?? 0;
-    // Planned spend over any 31-day window must stay within the owner's monthly envelope.
-    if (dailyMinor * Math.min(days, 31) > envelope) {
-      throw appError("LIMIT_REACHED", `That would plan more than your approved monthly ad budget (${(envelope / 100).toFixed(0)} ${policy?.currency ?? org.currency}). Lower the daily budget or raise your budget in Settings → Policies.`);
+    // Reserve every pending or live campaign across both ad providers in the
+    // same transaction. This prevents parallel preparations from each using
+    // the full owner-approved monthly envelope.
+    const existing = await ctx.db.query("campaigns").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(1001);
+    if (existing.length > 1000) throw appError("LIMIT_REACHED", "There are too many campaigns to safely calculate the shared ad budget. Review or end older campaigns first.");
+    const planned = maxRolling31DaySpend(
+      [
+        ...existing,
+        { status: "needs_approval", currency: policy?.currency ?? org.currency, dailyBudgetMinor: dailyMinor, startDate: args.startDate, endDate: args.endDate },
+      ],
+      policy?.currency ?? org.currency,
+      new Date().toISOString().slice(0, 10),
+    );
+    if (!planned.ok) throw appError("LIMIT_REACHED", "We can't safely calculate your shared ad budget from the existing campaign schedules. Resolve the currency or schedule details before preparing another campaign.");
+    if (planned.maxSpendMinor > envelope) {
+      throw appError("LIMIT_REACHED", `That would plan ${(planned.maxSpendMinor / 100).toFixed(2)} ${policy?.currency ?? org.currency} across Google and Meta in the 31-day window starting ${planned.windowStart}, above your approved monthly ad budget of ${(envelope / 100).toFixed(0)}. Lower or reschedule a campaign, or raise your budget in Settings → Policies.`);
     }
     const provider = a.channel === "google_search_ad" ? "google_ads" : "meta_ads";
     const conn = await ctx.db

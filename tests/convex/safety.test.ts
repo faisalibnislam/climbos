@@ -207,12 +207,27 @@ describe("approvals and execution safety", () => {
   it("ad campaigns respect the owner's monthly envelope", async () => {
     const t = setup();
     const d = await demo(t);
+    // The synthetic demo seeds an existing campaign. Remove it here so this
+    // case isolates the owner's envelope and cross-provider reservation rule.
+    await t.run(async (ctx) => {
+      const campaigns = await ctx.db.query("campaigns").withIndex("by_org", (q) => q.eq("orgId", d.orgId)).collect();
+      await Promise.all(campaigns.map((campaign) => ctx.db.delete(campaign._id)));
+    });
     const ad = (await artifactsByStatus(t, d.orgId, "approved")).find((a) => a.kind === "ad")!;
     await expect(
       d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 50, startDate: "2026-11-01", endDate: "2026-11-30" }),
     ).rejects.toThrow(/approved monthly ad budget/);
     const ok = await d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 15, startDate: "2026-11-01", endDate: "2026-11-30" });
     expect(ok).toBeTruthy();
+
+    // A second provider cannot each consume the same full monthly envelope.
+    await t.run(async (ctx) => ctx.db.patch(ad._id, { channel: "meta_ad" }));
+    await expect(
+      d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 6, startDate: "2026-11-01", endDate: "2026-11-30" }),
+    ).rejects.toThrow(/across Google and Meta/);
+    // The shared limit is over overlapping 31-day windows, so a later flight can still fit.
+    const later = await d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 15, startDate: "2026-12-01", endDate: "2026-12-30" });
+    expect(later).toBeTruthy();
   });
 });
 

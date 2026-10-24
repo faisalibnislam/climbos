@@ -27,3 +27,9 @@ All playbooks, schemas, evaluation expectations, and engine integration rules ar
 ## Validation errors
 
 None.
+
+## Owner-supplied scenario catalog (2026-10-24)
+
+The separately supplied `ClimbOS_1000_Problem_Solution_Library.md` was added to `collections/scenarios/`. Structural validation found 20 archetypes, 50 rows in each, and 1,000 unique IDs. The build script hashes the source and emits each row as a separately retrievable `proposed_scenario` record. Agent retrieval includes at most one scenario matched to explicit business-type wording while preserving room for source-grounded chapters and playbooks. The catalog contains no outcome validation; it is a diagnostic idea library, not training data, business evidence, a success-rate claim, or authorization to execute. Structural checks do not assess every recommendation's legal, industry, or causal correctness.
+
+The owner-requested marketing psychology review is documented in `collections/MARKETING_PSYCHOLOGY.md`. It covers 15 tactics and indexes them as separate records. It distinguishes evidence-backed mechanisms from universal claims, includes studies with mixed or context-specific results, and defines customer-benefit guardrails. Agent operating rules prohibit deceptive decoys, fabricated proof or scarcity, hidden terms, and non-consensual personalization. The document is a research synthesis, not jurisdiction-specific legal advice; no tactic has been evaluated in live customer traffic.
