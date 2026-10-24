@@ -34,6 +34,36 @@ export interface MetricDef {
 export const LEARN_WINDOW_DAYS = 120;
 export const MAX_POOLED_TRIALS_PER_WORKSPACE = 100;
 
+export interface OwnerReportedLearningProfile {
+  businessType: string;
+  lifecycleStage?: string;
+  acquisitionDims?: Record<string, { value?: unknown; source?: unknown } | undefined>;
+}
+
+/**
+ * A strict exact-match segment for pooled learning. Only owner-confirmed
+ * dimensions participate; inferred classifications and free-text claims do
+ * not. Missing any required dimension means this narrower pool is unavailable.
+ */
+export function comparableLearningSegment(profile: OwnerReportedLearningProfile): { scope: string; label: string } | null {
+  const ownerValue = (key: string): string | null => {
+    const dimension = profile.acquisitionDims?.[key];
+    if (!dimension || dimension.source !== "owner" || typeof dimension.value !== "string") return null;
+    return /^[a-z][a-z0-9_]{0,31}$/.test(dimension.value) ? dimension.value : null;
+  };
+  const customerType = ownerValue("customerType");
+  const revenueModel = ownerValue("revenueModel");
+  const aov = ownerValue("aov");
+  const geography = ownerValue("geography");
+  if (!profile.lifecycleStage || !/^[a-z][a-z0-9_]{0,31}$/.test(profile.lifecycleStage) || !customerType || !revenueModel || !aov || !geography) return null;
+  const businessType = /^[a-z][a-z0-9_]{0,31}$/.test(profile.businessType) ? profile.businessType : "other";
+  const scope = `segment:${businessType}:${profile.lifecycleStage}:${revenueModel}:${aov}:${customerType}:${geography}`;
+  return {
+    scope,
+    label: `businesses with owner-confirmed ${revenueModel}/${aov} offer model, ${customerType} buyers and ${geography} market at the owner-reported ${profile.lifecycleStage} stage`,
+  };
+}
+
 /** Bound one workspace's influence before pooling; keep an approximately proportional success count. */
 export function boundedPoolContribution(trials: number, successes: number, maxTrials = MAX_POOLED_TRIALS_PER_WORKSPACE): { trials: number; successes: number } {
   if (!(trials > maxTrials)) return { trials: Math.max(0, trials), successes: Math.min(Math.max(0, trials), Math.max(0, successes)) };
@@ -115,8 +145,7 @@ export function rateLine(metric: string, scope: "own" | { workspaces: number; la
     return `- ${def.label}: THIS BUSINESS ${pct(rate)} (${r.successes}/${r.trials}, ${window}${range}${cautious}) [first-party counts of ${def.counts}; observed, not proof of cause]`;
   }
   const roundedPct = (x: number) => `${Math.round(x / 0.05) * 5}%`;
-  const roundedCount = (x: number) => Math.round(x / 10) * 10;
-  const workspaceBand = scope.workspaces >= 20 ? `${Math.floor(scope.workspaces / 10) * 10}+` : "10+";
+  const workspaceBand = scope.workspaces >= 50 ? "50+" : "10+";
   const pooledRange = ci ? `, rounded 90% range ${roundedPct(ci.low)}–${roundedPct(ci.high)}` : "";
-  return `- ${def.label}: ClimbOS ${scope.label} ${roundedPct(rate)} (~${roundedCount(r.successes)}/~${roundedCount(r.trials)}, ${workspaceBand} workspaces, ${window}${pooledRange}) [privacy-rounded pooled counts; each workspace contributes at most ${MAX_POOLED_TRIALS_PER_WORKSPACE} trials; compare offer, channel, audience, market and stage before transferring]`;
+  return `- ${def.label}: ClimbOS ${scope.label} ${roundedPct(rate)} (${workspaceBand} workspaces, ${window}${pooledRange}) [pooled event counts are not shared; rate is rounded for privacy; each workspace contributes at most ${MAX_POOLED_TRIALS_PER_WORKSPACE} trials]`;
 }

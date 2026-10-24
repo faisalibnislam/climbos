@@ -1083,7 +1083,7 @@ export default defineSchema({
 
   /** Learning from results: first-party rates, per workspace and k-anonymous business-type or owner-reported-stage cohorts. */
   learnedRates: defineTable({
-    /** "org:<id>" (that workspace only), "type:<businessType>", or "stage:<businessType>:<stage>" (pooled, k ≥ 10). */
+    /** Workspace-only, business-type, lifecycle-stage, or exact owner-confirmed offer/audience/geography scope; pooled rows require k ≥ 10. */
     scope: v.string(),
     metric: v.string(),
     workspaces: v.number(),

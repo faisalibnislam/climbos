@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boundedPoolContribution, learningCounts, METRIC_DEFS, outreachCohortMature, OUTREACH_REPLY_WINDOW_DAYS, rateLine, wilson90 } from "../../shared/growth/learnedMetrics";
+import { boundedPoolContribution, comparableLearningSegment, learningCounts, METRIC_DEFS, outreachCohortMature, OUTREACH_REPLY_WINDOW_DAYS, rateLine, wilson90 } from "../../shared/growth/learnedMetrics";
 
 /** S4 (REQ-LEARN-01..03): windows match, reply ≠ interest, booked ≠ attended, counts with ranges. */
 const empty = { outreach: [], bookingOutcomes: [], landing: [], chats: { total: 0, withEmail: 0 }, reviews: { sent: 0, clicked: 0 }, bio: null };
@@ -55,12 +55,29 @@ describe("learned metrics", () => {
     expect(line).toMatch(/observed, not proof of cause/);
   });
 
-  it("bounds a workspace's pooled influence and rounds pooled counts for release", () => {
+  it("bounds one workspace's influence and withholds pooled event counts", () => {
     expect(boundedPoolContribution(1_000, 100)).toEqual({ trials: 100, successes: 10 });
     const line = rateLine("landing_lead", { label: "agency businesses", workspaces: 17 }, { trials: 1_000, successes: 95 });
-    expect(line).toContain("10% (~100/~1000, 10+ workspaces");
+    expect(line).toContain("10% (10+ workspaces");
     expect(line).not.toContain("95/1000");
+    expect(line).not.toMatch(/~\d+\/~/);
+    expect(line).toContain("pooled event counts are not shared");
     expect(line).toContain("at most 100 trials");
+  });
+
+  it("creates exact-match pools only from complete owner-confirmed offer, audience and geography dimensions", () => {
+    const ownerDims = {
+      customerType: { value: "b2b", source: "owner" },
+      revenueModel: { value: "subscription", source: "owner" },
+      aov: { value: "low", source: "owner" },
+      geography: { value: "local", source: "owner" },
+    };
+    expect(comparableLearningSegment({ businessType: "other", lifecycleStage: "growth", acquisitionDims: ownerDims })).toEqual({
+      scope: "segment:other:growth:subscription:low:b2b:local",
+      label: "businesses with owner-confirmed subscription/low offer model, b2b buyers and local market at the owner-reported growth stage",
+    });
+    expect(comparableLearningSegment({ businessType: "other", lifecycleStage: "growth", acquisitionDims: { ...ownerDims, geography: { value: "local", source: "inferred" } } })).toBeNull();
+    expect(comparableLearningSegment({ businessType: "other", lifecycleStage: "growth", acquisitionDims: { ...ownerDims, geography: undefined } })).toBeNull();
   });
 });
 

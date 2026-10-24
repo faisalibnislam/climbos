@@ -132,7 +132,8 @@ describe("learning from results", () => {
     const ctx0 = await t.query(internal.learning.contextFor, { orgId: orgs[0] });
     expect(ctx0).toContain("THIS BUSINESS 5%");
     expect(ctx0).toContain("other businesses (stage not matched)");
-    expect(ctx0).toMatch(/~100\/~1000, 10\+ workspaces/);
+    expect(ctx0).toMatch(/10\+ workspaces/);
+    expect(ctx0).not.toMatch(/~\d+\/~\d+/);
     expect(ctx0).toMatch(/each workspace contributes at most 100 trials/);
     expect(await t.run(async (ctx) => (await ctx.db.query("learnedRates").collect()).some((row) => row.scope === "stage:other:growth"))).toBe(false);
     // Once ten records share an owner-reported stage, prefer that narrower cohort.
@@ -150,6 +151,57 @@ describe("learning from results", () => {
     });
     await t.action(internal.learning.recompute, {});
     expect(await t.query(internal.learning.contextFor, { orgId: orgs[0] })).not.toMatch(/workspaces, n=/);
+  });
+
+  it("uses owner-matched offer, buyer and geography pools when they meet k-anonymity", async () => {
+    const t = setup();
+    const orgs: Id<"organizations">[] = [];
+    for (let i = 0; i < 20; i++) {
+      const u = await asNewUser(t, `learn-segment${i}@example.com`);
+      const { orgId } = await u.client.mutation(api.orgs.createWorkspace, { businessName: `Segment Learn ${i}` });
+      orgs.push(orgId as Id<"organizations">);
+      await t.run(async (ctx) => {
+        const now = Date.now();
+        const businesses = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId as Id<"organizations">)).first();
+        await ctx.db.patch(businesses!._id, {
+          lifecycleStage: { stage: "growth", provenance: "owner_reported", updatedAt: now },
+          acquisition: {
+            types: [],
+            typesSource: "owner",
+            dims: {
+              customerType: { value: "b2b", confidence: "high", source: "owner" },
+              revenueModel: { value: "subscription", confidence: "high", source: "owner" },
+              aov: { value: "low", confidence: "high", source: "owner" },
+              geography: { value: i < 10 ? "local" : "national", confidence: "high", source: "owner" },
+            },
+            updatedAt: now,
+          },
+        });
+        await ctx.db.insert("landingPages", {
+          orgId: orgId as Id<"organizations">,
+          slug: `segment-${i}`,
+          title: "Offer",
+          brief: "Offer",
+          status: "live",
+          color: "#000000",
+          views: 100,
+          leads: i < 10 ? 2 : 30,
+          createdAt: now,
+          updatedAt: now,
+        });
+      });
+    }
+
+    await t.action(internal.learning.recompute, {});
+    const localContext = await t.query(internal.learning.contextFor, { orgId: orgs[0] });
+    const nationalContext = await t.query(internal.learning.contextFor, { orgId: orgs[10] });
+    const localPool = localContext.split("\n").find((line) => line.includes("ClimbOS businesses with owner-confirmed subscription/low offer model, b2b buyers and local market"));
+    const nationalPool = nationalContext.split("\n").find((line) => line.includes("ClimbOS businesses with owner-confirmed subscription/low offer model, b2b buyers and national market"));
+    expect(localPool).toContain("0% (10+ workspaces");
+    expect(nationalPool).toContain("30% (10+ workspaces");
+    expect(localPool).not.toMatch(/\d+\/\d+/);
+    expect(nationalPool).not.toMatch(/\d+\/\d+/);
+    expect(await t.run(async (ctx) => (await ctx.db.query("learnedRates").collect()).some((row) => row.scope === "segment:other:growth:subscription:low:b2b:local"))).toBe(true);
   });
 
   it("keeps a sparse own rate visible and does not fall back to an all-business rate", async () => {

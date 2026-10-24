@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
-import { boundedPoolContribution, LEARN_WINDOW_DAYS, learningCounts, METRIC_DEFS, outreachCohortMature, rateLine, type Counts, type RawLearningInputs } from "../shared/growth/learnedMetrics";
+import { boundedPoolContribution, comparableLearningSegment, LEARN_WINDOW_DAYS, learningCounts, METRIC_DEFS, outreachCohortMature, rateLine, type Counts, type RawLearningInputs } from "../shared/growth/learnedMetrics";
 
 /**
  * Loop 2 — learn from results. Weekly, every workspace's real outcomes
@@ -90,7 +90,10 @@ export const countsForOrg = internalQuery({
   args: { orgId: v.id("organizations") },
   handler: async (ctx, { orgId }) => {
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first();
-    return { type: business?.businessType ?? "other", stage: business?.lifecycleStage?.stage ?? null, counts: await orgCounts(ctx, orgId, Date.now() - WINDOW) };
+    const type = business?.businessType ?? "other";
+    const stage = business?.lifecycleStage?.stage ?? null;
+    const segment = business ? comparableLearningSegment({ businessType: type, lifecycleStage: stage ?? undefined, acquisitionDims: business.acquisition?.dims as Record<string, { value?: unknown; source?: unknown } | undefined> | undefined }) : null;
+    return { type, stage, segment, counts: await orgCounts(ctx, orgId, Date.now() - WINDOW) };
   },
 });
 
@@ -120,7 +123,7 @@ export const recompute = internalAction({
     const pooled = new Map<string, { workspaces: number; trials: number; successes: number }>();
     const rows: { scope: string; metric: string; workspaces: number; trials: number; successes: number }[] = [];
     for (const orgId of await ctx.runQuery(internal.learning.orgIds, {})) {
-      const { type, stage, counts } = await ctx.runQuery(internal.learning.countsForOrg, { orgId });
+      const { type, stage, segment, counts } = await ctx.runQuery(internal.learning.countsForOrg, { orgId });
       for (const [metric, x] of Object.entries(counts)) {
         // Keep sparse first-party evidence visible with its wide uncertainty range;
         // only mature samples are eligible to contribute to cross-workspace pools.
@@ -129,7 +132,7 @@ export const recompute = internalAction({
         const contribution = boundedPoolContribution(x.trials, x.successes);
         // Stage-specific cohorts are kept alongside the broader type pool;
         // each is independently k-anonymous and bounded per workspace.
-        const scopes = [`type:${type}`, ...(stage ? [`stage:${type}:${stage}`] : [])];
+        const scopes = [`type:${type}`, ...(stage ? [`stage:${type}:${stage}`] : []), ...(segment ? [segment.scope] : [])];
         for (const scope of scopes) {
           const k = `${scope}|${metric}`;
           const p = pooled.get(k) ?? { workspaces: 0, trials: 0, successes: 0 };
@@ -151,13 +154,19 @@ export const contextFor = internalQuery({
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first();
     const type = business?.businessType ?? "other";
     const stage = business?.lifecycleStage?.stage;
+    const segment = business ? comparableLearningSegment({ businessType: type, lifecycleStage: stage, acquisitionDims: business.acquisition?.dims as Record<string, { value?: unknown; source?: unknown } | undefined> | undefined }) : null;
     const lines: string[] = [];
     for (const metric of Object.keys(METRIC_DEFS)) {
       const own = await ctx.db.query("learnedRates").withIndex("by_scope_metric", (q) => q.eq("scope", `org:${orgId}`).eq("metric", metric)).first();
+      const segmentPool = segment ? await ctx.db.query("learnedRates").withIndex("by_scope_metric", (q) => q.eq("scope", segment.scope).eq("metric", metric)).first() : null;
       const stagePool = stage ? await ctx.db.query("learnedRates").withIndex("by_scope_metric", (q) => q.eq("scope", `stage:${type}:${stage}`).eq("metric", metric)).first() : null;
       const pool = stagePool ?? await ctx.db.query("learnedRates").withIndex("by_scope_metric", (q) => q.eq("scope", `type:${type}`).eq("metric", metric)).first();
       if (own) lines.push(rateLine(metric, "own", own));
-      if (pool) lines.push(rateLine(metric, { workspaces: pool.workspaces, label: stagePool ? `${type} businesses at the owner-reported ${stage} stage` : `${type} businesses (stage not matched)` }, pool));
+      const selectedPool = segmentPool ?? pool;
+      if (selectedPool) lines.push(rateLine(metric, {
+        workspaces: selectedPool.workspaces,
+        label: segmentPool ? segment!.label : stagePool ? `${type} businesses at the owner-reported ${stage} stage` : `${type} businesses (stage not matched)`,
+      }, selectedPool));
     }
     return lines.length ? `RESULTS CLIMBOS HAS MEASURED (counts, not causes; prefer them to vendor benchmarks when the offer and channel match; a small sample's range is wide):\n${lines.join("\n")}` : "";
   },
