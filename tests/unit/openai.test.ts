@@ -38,6 +38,12 @@ describe("OpenAI adapter", () => {
     ]);
   });
 
+  it("maps low-detail visual references to Responses image inputs", () => {
+    expect(toInput([{ role: "user", content: [{ type: "text", text: "Review this post creative." }, { type: "image", image_url: "https://scontent.cdninstagram.com/a.jpg?sig=x", detail: "low" }] }])).toEqual([
+      { role: "user", content: [{ type: "input_text", text: "Review this post creative." }, { type: "input_image", image_url: "https://scontent.cdninstagram.com/a.jpg?sig=x", detail: "low" }] },
+    ]);
+  });
+
   it("round-trips encrypted reasoning through caller-managed stateless tool turns", async () => {
     process.env.OPENAI_API_KEY = "test-key";
     const reasoning = { type: "reasoning", id: "rs_tool_1", encrypted_content: "opaque-encrypted-payload" };

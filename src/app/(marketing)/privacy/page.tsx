@@ -83,7 +83,9 @@ export default function PrivacyPage() {
         the Chrome UX Report API for aggregated mobile performance measurements. When you run a social content audit, we send a bounded sample of recent post text/captions, platform, post
         identifiers, timestamps, content type, available post links and platform-returned engagement counts from ClimbOS and
         connected Facebook Pages or Instagram professional accounts to our AI provider for review. Engagement values are limited
-        to the sampled posts and are not account-wide analytics. We do not download or analyze the post images or videos in this audit.
+        to the sampled posts and are not account-wide analytics. For connected Instagram accounts, we may also send up to three
+        temporary image URLs returned by Meta for still-image posts to the AI provider for low-detail visual review; URLs are
+        used only for that audit and are not saved. We do not analyze video or full carousel content.
         LinkedIn post history is not read because this app does not have the required restricted permission. We read from the
         platforms you connect (such as Meta or Google) when you ask us to audit, publish, send or launch something there. If you
         confirm creating a WordPress draft, we send the exact approved article title and body to the WordPress site you connected,

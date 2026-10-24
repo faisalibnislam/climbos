@@ -101,6 +101,8 @@ export interface AgentInput {
   businessWebsite?: string;
   /** Owner-selected niche from the versioned industry corpus; unset means no niche-specific playbook. */
   industryBusinessTypeId?: string;
+  /** Short-lived visual references for this run; never saved to jobs, checkpoints or knowledge records. */
+  visualInputs?: { sourceArtifactId: string; platform: string; imageUrl: string; note: string }[];
   /** Exact URLs copied from the owner's request; external destinations need this provenance. */
   ownerSuppliedUrls?: string[];
   /** Facts the critic must check claims against (statements). */

@@ -320,7 +320,15 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
   const knowledge = formatGrowthKnowledge(knowledgeRecords);
   const reviewerKnowledge = formatGrowthKnowledge(retrieveGrowthKnowledge(`${input.task}\n${input.brief}`, { limit: 2, maxChars: 1_800, ...(input.industryBusinessTypeId ? { businessTypeId: input.industryBusinessTypeId } : {}) }));
   const baseUser = `${inputBlock(input, research?.notes ?? null, knowledge)}\n\nYOUR TASK:\n${input.task}\n\nBefore answering, check your work against the playbook's checklist. Respond only with JSON matching the schema.`;
-  const baseMessages: MessageParam[] = [{ role: "user", content: baseUser }];
+  const baseMessages: MessageParam[] = [{
+    role: "user",
+    content: input.visualInputs?.length
+      ? [
+          { type: "text", text: `${baseUser}\n\nVISUAL REFERENCES (analyze only as one-frame creative samples; identify findings by sourceArtifactId and platform):\n${input.visualInputs.map((image) => `- ${image.sourceArtifactId} (${image.platform}): ${image.note}`).join("\n")}` },
+          ...input.visualInputs.map((image) => ({ type: "image" as const, image_url: image.imageUrl, detail: "low" as const })),
+        ]
+      : baseUser,
+  }];
 
   const draftOnce = async (round: number, feedback: { previous: T; fixes: string[]; strengths: string[]; lint: LintIssue[] } | null, modelOverride?: ModelKey): Promise<T> => {
     checkDeadline(deps);

@@ -21,6 +21,12 @@ export interface TextBlock {
   type: "text";
   text: string;
 }
+/** Ephemeral low-detail image input. The URL is sent to the configured model and must not be persisted. */
+export interface ImageBlock {
+  type: "image";
+  image_url: string;
+  detail: "low";
+}
 export interface ToolUseBlock {
   type: "tool_use";
   id: string;
@@ -39,7 +45,7 @@ export interface ProviderItemBlock {
   provider: "openai";
   item: Record<string, unknown>;
 }
-export type ContentBlock = TextBlock | ToolUseBlock | ToolResultBlock | ProviderItemBlock;
+export type ContentBlock = TextBlock | ImageBlock | ToolUseBlock | ToolResultBlock | ProviderItemBlock;
 
 export interface MessageParam {
   role: "user" | "assistant";

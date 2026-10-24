@@ -89,6 +89,31 @@ export function toInput(messages: MessageParam[]): Json[] {
       items.push({ role: m.role, content: m.content });
       continue;
     }
+    if (m.content.some((block) => block.type === "image")) {
+      const content: Json[] = [];
+      const flushContent = () => {
+        if (content.length) items.push({ role: m.role, content: content.splice(0) });
+      };
+      for (const block of m.content) {
+        if (block.type === "text") content.push({ type: "input_text", text: block.text });
+        if (block.type === "image") content.push({ type: "input_image", image_url: block.image_url, detail: block.detail });
+        if (block.type === "tool_use") {
+          flushContent();
+          items.push({ type: "function_call", call_id: block.id, name: block.name, arguments: JSON.stringify(block.input ?? {}) });
+        }
+        if (block.type === "tool_result") {
+          flushContent();
+          const output = typeof block.content === "string" ? block.content : (block.content ?? []).map((part) => (part.type === "text" ? part.text : "")).join("\n");
+          items.push({ type: "function_call_output", call_id: block.tool_use_id, output });
+        }
+        if (block.type === "provider_item" && block.provider === "openai") {
+          flushContent();
+          items.push(block.item as Json);
+        }
+      }
+      flushContent();
+      continue;
+    }
     for (const b of m.content) {
       if (b.type === "text") items.push({ role: m.role, content: b.text });
       if (b.type === "tool_use") items.push({ type: "function_call", call_id: b.id, name: b.name, arguments: JSON.stringify(b.input ?? {}) });

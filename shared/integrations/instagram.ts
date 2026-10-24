@@ -191,6 +191,21 @@ export interface InstagramMedia {
   mediaType?: string;
   mediaProductType?: string;
   caption?: string;
+  /** Temporary Meta CDN URL; callers must not persist or log it. */
+  mediaUrl?: string;
+}
+
+/** Temporary Instagram media URLs may be sent to the model only from Meta CDN hosts. */
+export function isMetaMediaImageUrl(value?: string): value is string {
+  if (!value || value.length > 4_096) return false;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    return url.protocol === "https:" && !url.username && !url.password && !url.port &&
+      ["cdninstagram.com", "fbcdn.net"].some((domain) => host === domain || host.endsWith(`.${domain}`));
+  } catch {
+    return false;
+  }
 }
 
 function parseMedia(d: Record<string, unknown>): InstagramMedia {
@@ -205,12 +220,24 @@ function parseMedia(d: Record<string, unknown>): InstagramMedia {
   if (productType) m.mediaProductType = productType;
   const c = asString(d.caption);
   if (c !== undefined) m.caption = c;
+  const mediaUrl = asString(d.media_url);
+  if (mediaUrl) m.mediaUrl = mediaUrl;
   return m;
 }
 
 export async function getMedia(call: GraphCall & { mediaId: string }): Promise<ReadResult<InstagramMedia>> {
   const url = new URL(`${INSTAGRAM_GRAPH_BASE}/${call.mediaId}`);
   url.searchParams.set("fields", "id,permalink,timestamp,media_type,caption");
+  const out = await graphGet(call, url);
+  if (out.kind !== "ok") return metaReadFailure(out);
+  return { ok: true, data: parseMedia(isRecord(out.data) ? out.data : {}) };
+}
+
+/** Optional media-asset read used by visual audits; failures must not block caption review. */
+export async function getMediaAsset(call: GraphCall & { mediaId: string }): Promise<ReadResult<InstagramMedia>> {
+  if (!/^\d+$/.test(call.mediaId)) return { ok: false, providerMessage: "Invalid media id", retryable: false };
+  const url = new URL(`${INSTAGRAM_GRAPH_BASE}/${call.mediaId}`);
+  url.searchParams.set("fields", "id,media_type,media_url");
   const out = await graphGet(call, url);
   if (out.kind !== "ok") return metaReadFailure(out);
   return { ok: true, data: parseMedia(isRecord(out.data) ? out.data : {}) };

@@ -326,13 +326,26 @@ describe("facebookPages", () => {
 describe("instagram", () => {
   const post: instagram.ImagePostInput = { igUserId: "1789", imageUrl: "https://cdn.example.com/shoe.jpg", caption: "New shoe #climbing", altText: "A red climbing shoe" };
 
-  it("reads a bounded recent media sample without requesting media assets", async () => {
+  it("reads the bounded recent caption sample without requesting media assets", async () => {
     const { fetchImpl, calls } = scripted([{ match: "/1789/media?", respond: json(200, { data: [{ id: "m1", caption: "A product update", media_type: "IMAGE", permalink: "https://www.instagram.com/p/abc/", timestamp: "2026-10-24T10:00:00+0000" }], paging: { next: "https://graph.instagram.com/next" } }) }]);
     const result = await instagram.getRecentMedia({ accessToken: "t", igUserId: "1789", limit: 100, fetchImpl });
     expect(result).toMatchObject({ ok: true, data: { truncated: true, items: [{ id: "m1", caption: "A product update", permalink: "https://www.instagram.com/p/abc/" }] } });
     const url = new URL(calls[0]!.url);
     expect(url.searchParams.get("limit")).toBe("10");
     expect(url.searchParams.get("fields")).toBe("id,permalink,timestamp,media_type,caption");
+  });
+
+  it("reads an image URL as an optional per-post asset", async () => {
+    const { fetchImpl, calls } = scripted([{ match: "/1789001?", respond: json(200, { id: "1789001", media_type: "IMAGE", media_url: "https://scontent.cdninstagram.com/photo.jpg?sig=x" }) }]);
+    expect(await instagram.getMediaAsset({ accessToken: "t", mediaId: "1789001", fetchImpl })).toMatchObject({ ok: true, data: { id: "1789001", mediaType: "IMAGE", mediaUrl: "https://scontent.cdninstagram.com/photo.jpg?sig=x" } });
+    expect(new URL(calls[0]!.url).searchParams.get("fields")).toBe("id,media_type,media_url");
+  });
+
+  it("accepts only HTTPS Meta CDN media URLs", () => {
+    expect(instagram.isMetaMediaImageUrl("https://scontent.cdninstagram.com/a.jpg?sig=x")).toBe(true);
+    expect(instagram.isMetaMediaImageUrl("https://lookalike-cdninstagram.com/a.jpg")).toBe(false);
+    expect(instagram.isMetaMediaImageUrl("http://scontent.cdninstagram.com/a.jpg")).toBe(false);
+    expect(instagram.isMetaMediaImageUrl("https://user:pass@scontent.cdninstagram.com/a.jpg")).toBe(false);
   });
 
   it("reads and normalizes lifetime post insight metrics", async () => {
