@@ -904,7 +904,7 @@ function hasNewerOwnerEconomics(
 
 function planStaleInputs(
   strategy: Pick<Doc<"strategies">, "createdAt" | "expert" | "goalId">,
-  business: Pick<Doc<"businesses">, "unitEconomics" | "lifecycleStage" | "funnel" | "name" | "website" | "socialUrls" | "businessType" | "summary" | "acquisition" | "currency" | "insights"> | null,
+  business: Pick<Doc<"businesses">, "unitEconomics" | "lifecycleStage" | "funnel" | "name" | "website" | "socialUrls" | "businessType" | "industryBusinessTypeId" | "summary" | "acquisition" | "currency" | "insights"> | null,
   goal: Pick<Doc<"goals">, "_id" | "kind" | "statement" | "horizonDays" | "monthlyAdBudgetMinor" | "currency" | "target"> | null,
   businessFactVersions: { id: string; updatedAt: number }[] = [],
   brand: Pick<Doc<"brandProfiles">, "voice" | "toneWords" | "colors" | "doNots" | "learnedRules" | "socialHumor" | "socialTrendPolicy"> | null,
@@ -963,13 +963,14 @@ async function currentConnectedCapabilities(ctx: QueryCtx | MutationCtx, orgId: 
     .sort();
 }
 
-function businessProfileValues(business: Pick<Doc<"businesses">, "name" | "website" | "socialUrls" | "businessType" | "summary" | "acquisition" | "currency"> | null): unknown {
+function businessProfileValues(business: Pick<Doc<"businesses">, "name" | "website" | "socialUrls" | "businessType" | "industryBusinessTypeId" | "summary" | "acquisition" | "currency"> | null): unknown {
   if (!business) return null;
   return {
     name: business.name,
     website: business.website ?? null,
     socialUrls: [...business.socialUrls].sort(),
     businessType: business.businessType,
+    industryBusinessTypeId: business.industryBusinessTypeId ?? null,
     summary: business.summary ?? null,
     currency: business.currency ?? null,
   };

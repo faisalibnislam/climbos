@@ -527,7 +527,7 @@ function marketChangeContext(job: JobCtx): string {
 }
 
 function agentInput(job: JobCtx, task: string, extra: Partial<AgentInput> = {}): AgentInput {
-  return { task, brief: businessBrief(job), facts: job.facts.map((f) => f.statement), ownerApprovedExamples: job.brand?.approvedExamples ?? [], constraints: constraintsOf(job), ...(job.business?.website ? { businessWebsite: job.business.website } : {}), ...extra };
+  return { task, brief: businessBrief(job), facts: job.facts.map((f) => f.statement), ownerApprovedExamples: job.brand?.approvedExamples ?? [], constraints: constraintsOf(job), ...(job.business?.website ? { businessWebsite: job.business.website } : {}), ...(job.business?.industryBusinessTypeId ? { industryBusinessTypeId: job.business.industryBusinessTypeId } : {}), ...extra };
 }
 
 /** Preserve destination provenance separately from sources in the generated plan/research context. */
@@ -779,6 +779,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
       website: job.business.website ?? null,
       socialUrls: [...job.business.socialUrls].sort(),
       businessType: job.business.businessType,
+      industryBusinessTypeId: job.business.industryBusinessTypeId ?? null,
       summary: job.business.summary ?? null,
       currency: job.business.currency ?? null,
     } : null,

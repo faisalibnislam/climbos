@@ -89,6 +89,10 @@ describe("growth intelligence retrieval", () => {
     expect(ambiguous.some((record) => record.kind === "industry_playbook")).toBe(false);
     const explicit = retrieveGrowthKnowledge("conversion and customer retention", { limit: 3, maxChars: 2_500, businessTypeId: "BT-001" });
     expect(explicit.some((record) => record.kind === "industry_playbook" && record.businessTypeId === "BT-001")).toBe(true);
+    const ownerSelected = retrieveGrowthKnowledge("conversion and customer retention for restaurants", { limit: 3, maxChars: 2_500, businessTypeId: "BT-001" });
+    expect(ownerSelected.find((record) => record.kind === "industry_playbook")?.businessTypeId).toBe("BT-001");
+    const invalidSelection = retrieveGrowthKnowledge("conversion and customer retention", { limit: 3, maxChars: 2_500, businessTypeId: "BT-999" });
+    expect(invalidSelection.some((record) => record.kind === "industry_playbook")).toBe(false);
   });
 
   it("retrieves relevant chapters for the actual task rather than attaching the full corpus", () => {

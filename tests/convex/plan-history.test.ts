@@ -220,6 +220,19 @@ describe("Plan version history", () => {
     await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/business profile changed/);
   });
 
+  it("requires refresh when the selected industry playbook type changes", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-industry-type@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+
+    await w.client.mutation(api.orgs.saveBusinessDetails, { slug: w.slug, industryBusinessTypeId: "BT-001" });
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toMatchObject({ businessProfile: true, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/business profile changed/);
+  });
+
   it("requires refresh when confirmed business facts change", async () => {
     const t = setup();
     const w = await workspace(t, "history-stale-facts@example.com");

@@ -1,6 +1,7 @@
 import { majorToMinor, minorToMajor } from "../shared/economics/currency";
 import { isUnlimited } from "../shared/economics/credits";
 import { v } from "convex/values";
+import { isIndustryBusinessTypeId } from "../shared/knowledge/industryCatalog";
 import type { GoalTarget } from "../shared/agents/goal";
 import { accountWorkspaces, ensureAccountForOwner } from "./lib/accounts";
 import { recordReferral } from "./referrals";
@@ -300,6 +301,7 @@ export const onboardingState = query({
             website: business.website ?? null,
             summary: business.summary ?? null,
             businessType: business.businessType,
+            industryBusinessTypeId: business.industryBusinessTypeId ?? null,
             lifecycleStage: business.lifecycleStage ?? null,
             researchStatus: business.researchStatus,
             successEvents: business.successEvents,
@@ -467,6 +469,8 @@ export const saveBusinessDetails = mutation({
     businessType: v.optional(
       v.union(v.literal("saas"), v.literal("ecommerce"), v.literal("services"), v.literal("physical_products"), v.literal("other")),
     ),
+    /** Exact owner selection from the curated 500-type catalog; null clears it. */
+    industryBusinessTypeId: v.optional(v.union(v.string(), v.null())),
     currency: v.optional(v.string()),
     timezone: v.optional(v.string()),
     /** Owner-reported business stage; null clears it. Website copy never sets this field. */
@@ -487,12 +491,15 @@ export const saveBusinessDetails = mutation({
     const businessChanged = Boolean((args.name && args.name.trim() !== business.name) || (website !== undefined && website !== (business.website ?? "")) || (args.businessType && args.businessType !== business.businessType));
     const stageChanged = args.lifecycleStage !== undefined && args.lifecycleStage !== (business.lifecycleStage?.stage ?? null);
     if (args.lifecycleStage !== undefined && role !== "owner" && role !== "admin") throw appError("FORBIDDEN", "Only a workspace owner or admin can set the business stage.");
+    if (args.industryBusinessTypeId !== undefined && args.industryBusinessTypeId !== null && !isIndustryBusinessTypeId(args.industryBusinessTypeId)) throw appError("INVALID", "Choose a business type from the ClimbOS industry catalog.");
     if (args.lifecycleStage !== undefined && args.lifecycleStage !== null && !(BUSINESS_LIFECYCLE_STAGES as readonly string[]).includes(args.lifecycleStage)) throw appError("INVALID", "Choose a valid business stage.");
     const now = Date.now();
+    const industryTypeChanged = args.industryBusinessTypeId !== undefined && args.industryBusinessTypeId !== (business.industryBusinessTypeId ?? null);
     await ctx.db.patch(business._id, {
       ...(args.name ? { name: args.name.trim().slice(0, 80) } : {}),
       ...(website !== undefined ? { website: website || undefined } : {}),
       ...(args.businessType ? { businessType: args.businessType } : {}),
+      ...(industryTypeChanged ? { industryBusinessTypeId: args.industryBusinessTypeId || undefined } : {}),
       ...(currency ? { currency } : {}),
       ...(args.timezone ? { timezone: args.timezone.slice(0, 64) } : {}),
       ...(stageChanged ? { lifecycleStage: args.lifecycleStage === null ? undefined : { stage: args.lifecycleStage!, provenance: "owner_reported" as const, updatedAt: now } } : {}),
@@ -506,6 +513,7 @@ export const saveBusinessDetails = mutation({
       ...(args.timezone ? { timezone: args.timezone.slice(0, 64) } : {}),
     });
     if (stageChanged) await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "business.lifecycle_stage_changed", summary: args.lifecycleStage === null ? "Cleared the owner-reported business stage." : `Set the owner-reported business stage to ${args.lifecycleStage!.replace(/_/g, " ")}.` });
+    if (industryTypeChanged) await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "business.industry_type_changed", summary: args.industryBusinessTypeId ? `Selected industry playbook type ${args.industryBusinessTypeId}.` : "Cleared the selected industry playbook type." });
   },
 });
 

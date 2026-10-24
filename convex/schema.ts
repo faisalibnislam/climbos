@@ -505,6 +505,8 @@ export default defineSchema({
       v.literal("physical_products"),
       v.literal("other"),
     ),
+    /** Exact niche chosen by the workspace owner; gates proposed industry-playbook retrieval. */
+    industryBusinessTypeId: v.optional(v.string()),
     /** Owner-selected lifecycle stage; this is not inferred from website copy or treated as performance evidence. */
     lifecycleStage: v.optional(v.object({
       stage: v.union(

@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "docs/growth-expansion/collections/ClimbOS_25000_Playbooks_Industry_Chapters.zip"
 OUTPUT = ROOT / "shared/knowledge/industryPlaybooks.generated.json"
+CATALOG_OUTPUT = ROOT / "shared/knowledge/industryBusinessCatalog.generated.json"
 FIELD_ORDER = [
     "Problem",
     "Evidence to collect",
@@ -137,6 +138,8 @@ def main() -> None:
     }
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+    catalog = [{"id": business["id"], "name": business["name"], "industry": business["industry"]} for business in businesses]
+    CATALOG_OUTPUT.write_text(json.dumps(catalog, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     print(
         json.dumps(
             {
@@ -146,6 +149,8 @@ def main() -> None:
                 "sourceSha256": payload["sourceSha256"],
                 "output": str(OUTPUT.relative_to(ROOT)),
                 "outputBytes": OUTPUT.stat().st_size,
+                "catalog": str(CATALOG_OUTPUT.relative_to(ROOT)),
+                "catalogBytes": CATALOG_OUTPUT.stat().st_size,
             }
         )
     )
