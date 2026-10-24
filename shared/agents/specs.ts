@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
-import { lintEconomics, playMaths, portfolioP50, selectPortfolio, withForecasts, type Economics, type PlaySensitivity } from "./economics";
+import { customerValue, lintEconomics, playMaths, portfolioP50, selectPortfolio, withForecasts, type Economics, type PlayLike, type PlaySensitivity } from "./economics";
 import { PROVENANCE } from "./provenance";
 import { DECISION_CAPS, DecisionSchema, lintDecision, type Decision } from "./decision";
 import type { PlanQuality } from "./quality";
@@ -165,7 +165,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; portfolio?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
 export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.6-simulated-cac-range";
+export const ENGINE_VERSION = "v3.7-decision-choice-check";
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
@@ -1284,6 +1284,60 @@ export function insightsSpec(o: SpecOptions = {}): AgentSpec<InsightsV2> {
 }
 
 /** Growth plays: the creative, predictable portfolio the plan is built around. */
+/** Check a structured strategic choice against the candidate plays' locked math when both options are measurable. */
+export function lintDecisionOptionChoice(
+  decision: Decision | undefined,
+  plays: PlayLike[],
+  economics: Economics,
+  constraints?: PlanConstraints,
+): LintIssue[] {
+  if (!decision || decision.options.length < 2) return [];
+  const chosenIndex = decision.options.findIndex((option) => option.chosen);
+  if (chosenIndex < 0) return [];
+  const names = new Map(plays.map((play) => [play.name.trim().toLowerCase(), play]));
+  const horizonDays = constraints?.horizonDays ?? Math.max(1, ...plays.map((play) => play.horizonDays || 90));
+  const valuePerCustomer = customerValue(economics);
+  const candidates = decision.options.map((option, index) => {
+    if (!option.plays.length) return null;
+    const selected = option.plays.map((name) => names.get(name.trim().toLowerCase()));
+    if (selected.some((play) => !play) || new Set(selected).size !== selected.length) return null;
+    const optionPlays = selected as PlayLike[];
+    if (optionPlays.some((play) => !play.model?.steps?.length)) return null;
+    const spend = optionPlays.reduce((sum, play) => sum + Math.max(0, play.model.monthlySpendUsd), 0);
+    const ownerHours = optionPlays.reduce((sum, play) => sum + Math.max(0, play.model.ownerHoursPerWeek), 0);
+    const customers = portfolioP50({ economics, plays: optionPlays }, horizonDays);
+    const cost = optionPlays.reduce((sum, play) => sum + playMaths({ ...play, horizonDays }, economics).costUsd, 0);
+    const feasible =
+      (constraints?.monthlyAdBudgetUsd === undefined || spend <= constraints.monthlyAdBudgetUsd) &&
+      (constraints?.ownerHoursPerWeek === undefined || ownerHours <= constraints.ownerHoursPerWeek) &&
+      (constraints?.newCustomersPerMonth === undefined || customers <= constraints.newCustomersPerMonth * (horizonDays / 30));
+    return { index, feasible, customers, netContribution: valuePerCustomer === null ? null : customers * valuePerCustomer - cost };
+  });
+  const chosen = candidates[chosenIndex];
+  if (!chosen) return [];
+  const alternatives = candidates.filter((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate) && candidate!.index !== chosenIndex);
+  const chosenScore = chosen.netContribution;
+  const comparable = alternatives.filter((candidate) => (candidate.netContribution !== null) === (chosenScore !== null));
+  const better = comparable.find((candidate) => {
+    if (!chosen.feasible && candidate.feasible) return true;
+    if (chosen.feasible && !candidate.feasible) return false;
+    const alternativeScore = candidate.netContribution ?? candidate.customers;
+    const selectedScore = chosen.netContribution ?? chosen.customers;
+    return alternativeScore > selectedScore + Math.max(0.01, Math.abs(selectedScore) * 0.01);
+  });
+  if (!better) return [];
+  const selectedName = decision.options[chosenIndex].name;
+  const alternativeName = decision.options[better.index].name;
+  const reason = !chosen.feasible && better.feasible
+    ? `The chosen option "${selectedName}" exceeds a confirmed budget, time or delivery limit, while "${alternativeName}" fits.`
+    : valuePerCustomer === null
+      ? `The chosen option "${selectedName}" supports fewer modeled customers than "${alternativeName}" under the same confirmed limits.`
+      : `The chosen option "${selectedName}" has lower modeled net contribution than "${alternativeName}" under the same confirmed limits.`;
+  // This is a reviewer signal rather than a hard gate: a documented nonfinancial
+  // reason can legitimately outweigh a simplified modeled comparison.
+  return [{ severity: "warn", rule: "decision_choice", message: `${reason} Recheck this trade-off and state an evidence-based reason if another factor outweighs the modeled result.`, path: `decision.options[${chosenIndex}]` }];
+}
+
 export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCatalogsFor(null)): AgentSpec<PlaysOutput> {
   return base(
     {
@@ -1295,7 +1349,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, { ...out.economics, currency: input.constraints?.currency }, evidenceOf(input)), ...lintSelfServeFunnel(out.plays, out.economics), ...lintComparisonPositioning(out.plays), ...lintOfferClaims(out.plays, evidenceOf(input)), ...lintReferralDrivers(out.plays), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints, out.economics), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintNoAudience(out.plays, input.constraints, input.facts.join("\n")), ...lintBorrowedUplift(out.plays), ...lintDiagnosisFit(out.plays, input.constraints?.diagnosis), ...lintEligibilityIds(out.plays, input.constraints?.ineligiblePlaybooks), ...lintPlatformEligibility(out.plays.map((p, i) => ({ path: `plays[${i}]`, text: JSON.stringify(p) })), input.constraints?.businessTypes ?? []), ...(input.constraints?.factKinds ? lintEvidenceStrength(out.plays.flatMap((p, i) => [{ path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }, { path: `plays[${i}].mechanic`, text: (p as { mechanic?: string }).mechanic ?? "" }]), input.constraints.factKinds) : []), ...lintClaims(out.plays.flatMap((p, i) => [{ path: `plays[${i}].hook`, text: (p as { hook?: string }).hook ?? "" }, { path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }]), verifiedCapabilityEvidence(input)), ...lintDeliveryCapacity(portfolioP50(out, input.constraints?.horizonDays), input.constraints), ...lintServiceArea(out.plays.map((p, i) => ({ path: `plays[${i}]`, spend: p.model?.monthlySpendUsd ?? 0, text: JSON.stringify(p) })), input.constraints), ...lintEconomics({ ...out, economics: { ...out.economics, currency: input.constraints?.currency } })],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, { ...out.economics, currency: input.constraints?.currency }, evidenceOf(input)), ...lintSelfServeFunnel(out.plays, out.economics), ...lintComparisonPositioning(out.plays), ...lintOfferClaims(out.plays, evidenceOf(input)), ...lintReferralDrivers(out.plays), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints, out.economics), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintDecisionOptionChoice(out.decision, out.plays, out.economics, input.constraints), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintNoAudience(out.plays, input.constraints, input.facts.join("\n")), ...lintBorrowedUplift(out.plays), ...lintDiagnosisFit(out.plays, input.constraints?.diagnosis), ...lintEligibilityIds(out.plays, input.constraints?.ineligiblePlaybooks), ...lintPlatformEligibility(out.plays.map((p, i) => ({ path: `plays[${i}]`, text: JSON.stringify(p) })), input.constraints?.businessTypes ?? []), ...(input.constraints?.factKinds ? lintEvidenceStrength(out.plays.flatMap((p, i) => [{ path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }, { path: `plays[${i}].mechanic`, text: (p as { mechanic?: string }).mechanic ?? "" }]), input.constraints.factKinds) : []), ...lintClaims(out.plays.flatMap((p, i) => [{ path: `plays[${i}].hook`, text: (p as { hook?: string }).hook ?? "" }, { path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }]), verifiedCapabilityEvidence(input)), ...lintDeliveryCapacity(portfolioP50(out, input.constraints?.horizonDays), input.constraints), ...lintServiceArea(out.plays.map((p, i) => ({ path: `plays[${i}]`, spend: p.model?.monthlySpendUsd ?? 0, text: JSON.stringify(p) })), input.constraints), ...lintEconomics({ ...out, economics: { ...out.economics, currency: input.constraints?.currency } })],
     },
     o,
     "expert",

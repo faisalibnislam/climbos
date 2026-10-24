@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { DECISION_FIELDS, lintDecision, type Decision } from "../../shared/agents/decision";
 import { playsTask } from "../../shared/agents/planTasks";
 import { planQuality } from "../../shared/agents/quality";
-import { growthPlaysSpec } from "../../shared/agents/specs";
+import { growthPlaysSpec, lintDecisionOptionChoice } from "../../shared/agents/specs";
+import type { PlayLike } from "../../shared/agents/economics";
 
 /** S5 (REQ-STRAT-01/02/04) behind decision_contract: the decision is structured and checked in code. */
 const decision = (o: Partial<Decision> = {}): Decision => ({
@@ -26,6 +27,14 @@ const decision = (o: Partial<Decision> = {}): Decision => ({
 });
 const plays = [{ name: "Win back lapsed customers" }];
 const errors = (d: Decision | undefined, p = plays) => lintDecision(d, p).filter((i) => i.severity === "error");
+
+const measurablePlay = (name: string, weeklyReach: number, rate: number, monthlySpendUsd: number): PlayLike => ({
+  name,
+  kind: "bankable",
+  unit: "customers",
+  horizonDays: 30,
+  model: { weeklyReach, steps: [{ name: "paid customers", rate }], monthlySpendUsd, ownerHoursPerWeek: 0 },
+});
 
 describe("structured decision (flagged)", () => {
   it("a retention decision that outranks acquisition, with a dated falsifier, passes", () => {
@@ -70,6 +79,33 @@ describe("structured decision (flagged)", () => {
   it("decision findings are soft: the plan is provisional, not failed", () => {
     const q = planQuality([{ agentId: "growth_plays", shipped: false, gatesPassed: true, average: 8, rounds: 2, errors: { decision: 2 }, researchSources: 4 }]);
     expect(q.state).toBe("provisional");
+  });
+});
+
+describe("deterministic comparison of decision options", () => {
+  const economics = { revenuePerCustomerMonthUsd: 100, grossMargin: 1, monthlyChurn: 0, basis: "test" };
+  const optionPlays = [measurablePlay("Volume", 1, 1, 10_000), measurablePlay("Efficient", 5, 1, 100)];
+  const options = [
+    { name: "Buy volume", kind: "acquisition" as const, plays: ["Volume"], chosen: true, whyNot: "" },
+    { name: "Use the efficient channel", kind: "acquisition" as const, plays: ["Efficient"], chosen: false, whyNot: "Smaller reach." },
+  ];
+
+  it("flags a chosen option with lower modeled contribution than another feasible option", () => {
+    const issues = lintDecisionOptionChoice(decision({ options }), optionPlays, economics);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].rule).toBe("decision_choice");
+    expect(issues[0].message).toContain("lower modeled net contribution");
+  });
+
+  it("flags a chosen option that breaches a confirmed monthly budget when another fits", () => {
+    const issues = lintDecisionOptionChoice(decision({ options }), optionPlays, economics, { monthlyAdBudgetUsd: 1_000 });
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toContain("exceeds a confirmed budget");
+  });
+
+  it("does not score options whose alternatives have no measurable play mapping", () => {
+    const nonComparable = options.map((option) => ({ ...option, plays: [] }));
+    expect(lintDecisionOptionChoice(decision({ options: nonComparable }), optionPlays, economics)).toEqual([]);
   });
 });
 
