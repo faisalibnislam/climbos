@@ -116,4 +116,34 @@ describe("Plan version history", () => {
       playId: playId!,
     })).rejects.toThrow(/numbers changed after this plan was created/);
   });
+
+  it("requires refresh when the owner-reported business stage changes after planning", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-stage@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const playId = (saved?.expert?.plays as { id?: string }[] | undefined)?.find((play) => play.id)?.id;
+    expect(playId).toBeTruthy();
+
+    await w.client.mutation(api.orgs.saveBusinessDetails, { slug: w.slug, lifecycleStage: "growth" });
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: true, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/business stage changed/);
+    await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/business stage changed/);
+  });
+
+  it("does not mark a plan stale when the owner re-saves the same business stage", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-same-stage@example.com");
+    await makePaid(t, w.orgId);
+    await w.client.mutation(api.orgs.saveBusinessDetails, { slug: w.slug, lifecycleStage: "growth" });
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+
+    await w.client.mutation(api.orgs.saveBusinessDetails, { slug: w.slug, lifecycleStage: "growth" });
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: false, requiresRefresh: false });
+  });
 });

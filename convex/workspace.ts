@@ -268,7 +268,9 @@ export const startPlay = mutation({
     const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
     const s = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan");
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
-    if (hasNewerOwnerEconomics(s, business?.unitEconomics)) throw appError("INVALID", "Your confirmed business numbers changed after this plan was created. Refresh the plan before starting this play.");
+    const staleInputs = planStaleInputs(s, business);
+    if (staleInputs.ownerEconomics) throw appError("INVALID", "Your confirmed business numbers changed after this plan was created. Refresh the plan before starting this play.");
+    if (staleInputs.lifecycleStage) throw appError("INVALID", "Your owner-reported business stage changed after this plan was created. Refresh the plan before starting this play.");
     const play = ((s.expert?.plays ?? []) as { id?: string; name: string; oneLiner: string; audience: string; hook: string; climbosCanDo: string }[]).find((p) => p.id === playId);
     if (!play) throw appError("NOT_FOUND", "That play isn't in this plan.");
     return postChat(ctx, org, user._id, `Start the "${play.name}" play (plan v${s.version}, play ${playId}): ${play.oneLiner} Audience: ${play.audience}. Hook: ${play.hook}. Prepare everything your team can do for it now: ${play.climbosCanDo}`);
@@ -507,6 +509,7 @@ export const plan = query({
     const currentPlays = Array.isArray(expert?.plays) && expert.plays.length && currentEconomics
       ? withForecasts({ economics: currentEconomics as Economics, plays: expert.plays as PlayLike[] })
       : null;
+    const staleInputs = strategy ? planStaleInputs(strategy, business) : { ownerEconomics: false, lifecycleStage: false };
     // Owner edits immediately refresh every deterministic derived number in the returned plan view.
     const currentPortfolio = currentPlays
       ? selectPortfolio(currentPlays, {
@@ -549,7 +552,9 @@ export const plan = query({
       unitEconomics: business?.unitEconomics ?? null,
       funnel: business?.funnel ?? null,
       /** The owner answered after this plan was written: numbers are current, the text may not be. */
-      answersNewerThanPlan: Boolean(strategy && business?.unitEconomics && business.unitEconomics.updatedAt > strategy.createdAt),
+      answersNewerThanPlan: staleInputs.ownerEconomics,
+      /** Material owner inputs that differ from the plan snapshot; signal refresh before execution. */
+      staleInputs: { ...staleInputs, requiresRefresh: staleInputs.ownerEconomics || staleInputs.lifecycleStage },
       strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null, createdAt: strategyRun.createdAt } : null,
       /** When the newest version was written (a failed refresh after it is shown). */
       latestVersionAt: latest?.createdAt ?? null,
@@ -656,7 +661,9 @@ export const decidePlan = mutation({
     if (s.status !== "needs_approval") throw appError("INVALID", "This plan isn't waiting for approval.");
     if (decision === "approve") {
       const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
-      if (hasNewerOwnerEconomics(s, business?.unitEconomics)) throw appError("INVALID", "Your confirmed business numbers changed after this plan was created. Refresh the plan before approving it.");
+      const staleInputs = planStaleInputs(s, business);
+      if (staleInputs.ownerEconomics) throw appError("INVALID", "Your confirmed business numbers changed after this plan was created. Refresh the plan before approving it.");
+      if (staleInputs.lifecycleStage) throw appError("INVALID", "Your owner-reported business stage changed after this plan was created. Refresh the plan before approving it.");
     }
     // Hard failures and unresolved material fact conflicts must not reach execution.
     const planQuality = (s.expert as { quality?: { state: QualityState; conflicts?: string[] } } | undefined)?.quality;
@@ -729,6 +736,20 @@ function hasNewerOwnerEconomics(
     return keys.some((key) => JSON.stringify(snapshot.ownerEconomics?.[key]) !== JSON.stringify(owner[key]));
   }
   return owner.updatedAt > strategy.createdAt;
+}
+
+function planStaleInputs(
+  strategy: Pick<Doc<"strategies">, "createdAt" | "expert">,
+  business: Pick<Doc<"businesses">, "unitEconomics" | "lifecycleStage"> | null,
+): { ownerEconomics: boolean; lifecycleStage: boolean } {
+  const snapshot = strategy.expert?.snapshot as { businessLifecycleStage?: { stage?: string } | null } | undefined;
+  const savedStage = snapshot?.businessLifecycleStage?.stage ?? null;
+  const currentStage = business?.lifecycleStage?.stage ?? null;
+  return {
+    ownerEconomics: hasNewerOwnerEconomics(strategy, business?.unitEconomics),
+    // Re-saving the same stage is not a material decision-input change.
+    lifecycleStage: snapshot ? savedStage !== currentStage : Boolean(currentStage && (business?.lifecycleStage?.updatedAt ?? 0) > strategy.createdAt),
+  };
 }
 
 /** Re-bind a plan's approval to the current policy version and a fresh expiry (the owner is deciding now, on this version). */
