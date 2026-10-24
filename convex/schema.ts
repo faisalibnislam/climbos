@@ -2380,6 +2380,16 @@ export default defineSchema({
     customAgentParentRunId: v.optional(v.id("workflowRuns")),
     /** Built-in specialist selected by the coordinator for this action. */
     agentArchetypeId: v.optional(v.string()),
+    /** Immutable role contract used by this run so retries keep their original evaluation criteria. */
+    agentArchetypeSnapshot: v.optional(v.object({
+      version: v.literal(1),
+      id: v.string(),
+      name: v.string(),
+      objective: v.string(),
+      role: agentRoleValidator,
+      defaultActions: v.array(v.string()),
+      successMeasures: v.object({ outputQuality: v.string(), businessOutcome: v.string(), guardrail: v.string() }),
+    })),
     /** Immutable profile context used by this run and any action runs it starts. */
     customAgentSnapshot: v.optional(v.object({
       archetypeId: v.string(),

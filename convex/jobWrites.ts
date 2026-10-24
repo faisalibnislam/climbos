@@ -176,7 +176,7 @@ export const jobContext = internalQuery({
       run,
       specialist: run.customAgentSnapshot ?? null,
       specialistFeedbackText,
-      agentArchetype: run.agentArchetypeId ? AGENT_ARCHETYPE_BY_ID.get(run.agentArchetypeId) ?? null : null,
+      agentArchetype: run.agentArchetypeSnapshot ?? (run.agentArchetypeId ? AGENT_ARCHETYPE_BY_ID.get(run.agentArchetypeId) ?? null : null),
       org,
       business,
       /** Recent, source-backed competitor page changes are market signals, not customer evidence. */

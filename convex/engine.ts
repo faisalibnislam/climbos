@@ -150,6 +150,16 @@ export async function createRunWithReservation(
   if (params.agentArchetypeId && !AGENT_ARCHETYPE_BY_ID.has(params.agentArchetypeId)) {
     throw appError("INVALID", "This specialist role is no longer available.");
   }
+  const archetype = params.agentArchetypeId ? AGENT_ARCHETYPE_BY_ID.get(params.agentArchetypeId) : undefined;
+  const agentArchetypeSnapshot = archetype ? {
+    version: 1 as const,
+    id: archetype.id,
+    name: archetype.name,
+    objective: archetype.objective,
+    role: archetype.role,
+    defaultActions: [...archetype.defaultActions],
+    successMeasures: { ...archetype.successMeasures },
+  } : undefined;
   let customAgentSnapshot: NonNullable<Doc<"workflowRuns">["customAgentSnapshot"]> | undefined;
   let customAgentFeedbackSnapshot: NonNullable<Doc<"workflowRuns">["customAgentFeedbackSnapshot"]> | undefined;
   if (params.customAgentId) {
@@ -235,6 +245,7 @@ export async function createRunWithReservation(
     ...(params.customAgentId ? { customAgentId: params.customAgentId } : {}),
     ...(params.customAgentParentRunId ? { customAgentParentRunId: params.customAgentParentRunId } : {}),
     ...(params.agentArchetypeId ? { agentArchetypeId: params.agentArchetypeId } : {}),
+    ...(agentArchetypeSnapshot ? { agentArchetypeSnapshot } : {}),
     ...(customAgentSnapshot ? { customAgentSnapshot } : {}),
     ...(customAgentFeedbackSnapshot ? { customAgentFeedbackSnapshot } : {}),
     kind: params.kind,

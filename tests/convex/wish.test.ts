@@ -68,8 +68,16 @@ describe("wishes", () => {
     expect(JSON.parse(social.payload).brief).toContain("Dec 20");
     const run = runs.find((r) => r._id === social.runId)!;
     expect(run.agentArchetypeId).toBe("social_media_marketing");
+    expect(run.agentArchetypeSnapshot).toMatchObject({
+      version: 1,
+      id: "social_media_marketing",
+      successMeasures: {
+        businessOutcome: expect.stringMatching(/qualified visits, leads, or purchases/i),
+        guardrail: expect.stringMatching(/not customer or revenue growth/i),
+      },
+    });
     const context = await t.query(internal.jobWrites.jobContext, { runId: run._id });
-    expect(context?.agentArchetype).toMatchObject({ id: "social_media_marketing", role: "social_media_manager" });
+    expect(context?.agentArchetype).toMatchObject({ id: "social_media_marketing", role: "social_media_manager", successMeasures: run.agentArchetypeSnapshot?.successMeasures });
     expect(JSON.parse(run.input).brief).toContain("Dec 20");
     expect(run.status).toBe("verified");
     // Every card that started is internal-only.
