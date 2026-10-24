@@ -26,7 +26,7 @@ describe("site performance normalization", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(String(fetch.mock.calls[0]?.[0])).toContain("pagespeedonline.googleapis.com");
     const requestedCategories = new URL(String(fetch.mock.calls[0]?.[0])).searchParams.getAll("category");
-    expect(requestedCategories).toEqual(["performance", "accessibility"]);
+    expect(requestedCategories).toEqual(["performance", "accessibility", "seo"]);
     expect(result.labData).toMatchObject({ status: "measured", score: 0.9 });
     expect(result.fieldData.status).toBe("not_configured");
   });
@@ -80,6 +80,7 @@ describe("site performance normalization", () => {
         categories: {
           performance: { score: 0.78 },
           accessibility: { score: 0.83, auditRefs: [{ id: "color-contrast" }, { id: "label" }, { id: "manual-check" }] },
+          seo: { score: 0.91, auditRefs: [{ id: "crawlable-anchors" }, { id: "meta-description" }] },
         },
         audits: {
           "largest-contentful-paint": { displayValue: "3.4 s" },
@@ -87,12 +88,14 @@ describe("site performance normalization", () => {
           "color-contrast": { scoreDisplayMode: "numeric", score: 0, title: "Background and foreground colors do not have a sufficient contrast ratio.", description: "Low-contrast text can be difficult to read." },
           label: { scoreDisplayMode: "numeric", score: 1, title: "Form elements have labels." },
           "manual-check": { scoreDisplayMode: "manual", score: null, title: "Manual review needed." },
+          "crawlable-anchors": { scoreDisplayMode: "numeric", score: 0, title: "Links are not crawlable", description: "Use anchor elements with href attributes." },
+          "meta-description": { scoreDisplayMode: "numeric", score: 1, title: "Document has a meta description." },
           "passed-audit": { scoreDisplayMode: "numeric", score: 1, title: "Passed", details: { overallSavingsMs: 0 } },
         },
       },
     }, "https://example.com/", 42);
 
-    expect(result).toMatchObject({ status: "measured", strategy: "mobile", requestedUrl: "https://example.com/", finalUrl: "https://example.com/", fetchedAt: 42, score: 0.78, accessibility: { status: "measured", score: 0.83, failedChecks: [{ id: "color-contrast", title: "Background and foreground colors do not have a sufficient contrast ratio.", displayValue: null, description: "Low-contrast text can be difficult to read." }] } });
+    expect(result).toMatchObject({ status: "measured", strategy: "mobile", requestedUrl: "https://example.com/", finalUrl: "https://example.com/", fetchedAt: 42, score: 0.78, accessibility: { status: "measured", score: 0.83, failedChecks: [{ id: "color-contrast", title: "Background and foreground colors do not have a sufficient contrast ratio.", displayValue: null, description: "Low-contrast text can be difficult to read." }] }, seo: { status: "measured", score: 0.91, failedChecks: [{ id: "crawlable-anchors", title: "Links are not crawlable", displayValue: null, description: "Use anchor elements with href attributes." }] } });
     expect(result.metrics).toEqual([{ id: "largest-contentful-paint", label: "Largest Contentful Paint", displayValue: "3.4 s" }]);
     expect(result.opportunities).toEqual([{ id: "unused-javascript", title: "Reduce unused JavaScript", displayValue: "Potential savings: 400 ms", description: "Remove code that this page does not need." }]);
   });

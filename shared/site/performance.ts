@@ -70,6 +70,11 @@ export interface LighthousePerformance {
     score: number | null;
     failedChecks: { id: string; title: string; displayValue: string | null; description: string }[];
   };
+  seo: {
+    status: "measured" | "unavailable" | "no_result";
+    score: number | null;
+    failedChecks: { id: string; title: string; displayValue: string | null; description: string }[];
+  };
   metrics: { id: string; label: string; displayValue: string }[];
   opportunities: { id: string; title: string; displayValue: string | null; description: string }[];
 }
@@ -82,29 +87,34 @@ const LAB_METRICS: Record<string, string> = {
   "cumulative-layout-shift": "Cumulative Layout Shift",
 };
 
+function parseLighthouseCategory(category: JsonObject | null, audits: JsonObject | null) {
+  const rawScore = number(category?.score);
+  const score = rawScore !== null && rawScore <= 1 ? rawScore : null;
+  const ids = new Set(Array.isArray(category?.auditRefs)
+    ? category.auditRefs.flatMap((ref) => {
+        const id = object(ref)?.id;
+        return typeof id === "string" ? [id] : [];
+      })
+    : []);
+  const failedChecks = [...ids].flatMap((id) => {
+    const audit = object(audits?.[id]);
+    const auditScore = number(audit?.score);
+    if (!audit || audit.scoreDisplayMode !== "numeric" || auditScore === null || auditScore >= 1 || typeof audit.title !== "string") return [];
+    return [{ id, title: audit.title.slice(0, 120), displayValue: typeof audit.displayValue === "string" ? audit.displayValue.slice(0, 100) : null, description: typeof audit.description === "string" ? audit.description.slice(0, 280) : "" }];
+  }).slice(0, 12);
+  return { status: score !== null ? "measured" as const : category ? "no_result" as const : "unavailable" as const, score, failedChecks };
+}
+
 /** Parse bounded mobile Lighthouse results; these are lab results, not field data. */
 export function parseLighthousePerformance(value: unknown, requestedUrl: string, fetchedAt = Date.now()): LighthousePerformance {
   const root = object(value);
   const result = object(root?.lighthouseResult);
   const categories = object(result?.categories);
   const performance = object(categories?.performance);
-  const accessibility = object(categories?.accessibility);
   const audits = object(result?.audits);
   const score = number(performance?.score);
-  const accessibilityScoreRaw = number(accessibility?.score);
-  const accessibilityScore = accessibilityScoreRaw !== null && accessibilityScoreRaw <= 1 ? accessibilityScoreRaw : null;
-  const accessibilityIds = new Set(Array.isArray(accessibility?.auditRefs)
-    ? accessibility.auditRefs.flatMap((ref) => {
-        const id = object(ref)?.id;
-        return typeof id === "string" ? [id] : [];
-      })
-    : []);
-  const accessibilityChecks = [...accessibilityIds].flatMap((id) => {
-    const audit = object(audits?.[id]);
-    const auditScore = number(audit?.score);
-    if (!audit || audit.scoreDisplayMode !== "numeric" || auditScore === null || auditScore >= 1 || typeof audit.title !== "string") return [];
-    return [{ id, title: audit.title.slice(0, 120), displayValue: typeof audit.displayValue === "string" ? audit.displayValue.slice(0, 100) : null, description: typeof audit.description === "string" ? audit.description.slice(0, 280) : "" }];
-  }).slice(0, 12);
+  const accessibility = parseLighthouseCategory(object(categories?.accessibility), audits);
+  const seo = parseLighthouseCategory(object(categories?.seo), audits);
   const metrics = Object.entries(LAB_METRICS).flatMap(([id, label]) => {
     const audit = object(audits?.[id]);
     return typeof audit?.displayValue === "string" ? [{ id, label, displayValue: audit.displayValue.slice(0, 80) }] : [];
@@ -126,11 +136,8 @@ export function parseLighthousePerformance(value: unknown, requestedUrl: string,
     finalUrl: typeof result?.finalUrl === "string" ? result.finalUrl : null,
     fetchedAt,
     score,
-    accessibility: {
-      status: accessibilityScore !== null ? "measured" : accessibility ? "no_result" : "unavailable",
-      score: accessibilityScore,
-      failedChecks: accessibilityChecks,
-    },
+    accessibility,
+    seo,
     metrics,
     opportunities,
   };
