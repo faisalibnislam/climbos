@@ -23,8 +23,9 @@ export interface CustomerConcentration {
 /**
  * Descriptive customer concentration from billing events. Shares are based on
  * positive net revenue by identified customer, not forecast or causal impact.
- * Refunds inherit customer identity from a matching currency + orderRef when
- * the refund row itself has no customerRef.
+ * Customer and order references are scoped to their billing source because
+ * provider IDs are not globally unique. Refunds inherit identity from a
+ * matching source + currency + orderRef when the refund row has no customerRef.
  */
 export function customerConcentration(
   events: readonly RevenueEvent[],
@@ -42,7 +43,7 @@ export function customerConcentration(
   const customerByOrder = new Map<string, string>();
   for (const event of unique) {
     if (event.kind !== "refund" && event.orderRef && event.customerRef) {
-      const key = `${event.currency}\u0000${event.orderRef}`;
+      const key = `${event.source}\u0000${event.currency}\u0000${event.orderRef}`;
       if (!customerByOrder.has(key)) customerByOrder.set(key, event.customerRef);
     }
   }
@@ -52,9 +53,10 @@ export function customerConcentration(
   for (const event of unique) {
     const net = netMinor(event);
     if (net > 0) totalPositiveMinor += net;
-    const customer = event.customerRef ?? (event.kind === "refund" && event.orderRef
-      ? customerByOrder.get(`${event.currency}\u0000${event.orderRef}`)
+    const customerRef = event.customerRef ?? (event.kind === "refund" && event.orderRef
+      ? customerByOrder.get(`${event.source}\u0000${event.currency}\u0000${event.orderRef}`)
       : undefined);
+    const customer = customerRef ? `${event.source}\u0000${customerRef}` : undefined;
     if (customer) netByCustomer.set(customer, (netByCustomer.get(customer) ?? 0) + net);
   }
 

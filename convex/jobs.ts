@@ -587,7 +587,7 @@ function customerConcentrationLine(signal: JobCtx["customerConcentration"]): str
     `OBSERVED CUSTOMER CONCENTRATION (billing records, trailing 365 days, ${signal.currency}; descriptive association only, not a forecast or causal claim):`,
     `${signal.customerCount} identified customer(s), ${signal.eventCount} unique event(s); top customer share ${pct(signal.topCustomerShare)}, top three share ${pct(signal.topThreeCustomerShare)} of identified positive net revenue.`,
     `Identified positive net revenue coverage ${pct(signal.identifiedCoverage)} (${formatMoney(minorToMajor(signal.identifiedPositiveMinor, signal.currency), signal.currency)} identified of ${formatMoney(minorToMajor(signal.totalPositiveMinor, signal.currency), signal.currency)} positive billing-event revenue).`,
-    `${signal.partial ? "The 10,000-event read limit was reached; figures may be incomplete. " : ""}${signal.duplicatesRemoved ? `${signal.duplicatesRemoved} duplicate event(s) removed. ` : ""}Customer IDs are not included in this context.`,
+    `${signal.partial ? "The 10,000-event read limit was reached; figures may be incomplete. " : ""}${signal.duplicatesRemoved ? `${signal.duplicatesRemoved} duplicate event(s) removed. ` : ""}Customer IDs are source-scoped and may count one real person more than once across billing systems; IDs themselves are not included in this context. Assess repeated/contracted exposure before calling this a material dependency.`,
   ].join(" ");
 }
 

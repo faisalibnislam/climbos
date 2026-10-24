@@ -53,4 +53,16 @@ describe("customer concentration", () => {
     ], { ...window, partial: true })?.partial).toBe(true);
     expect(() => customerConcentration([], { currency: "USD", fromMs: 2, toMs: 1 })).toThrow(RangeError);
   });
+
+  it("does not combine customer or order identifiers across billing sources", () => {
+    const result = customerConcentration([
+      event({ source: "provider-a", sourceEventId: "a", amountMinor: 10_000, kind: "order", customerRef: "same-id", orderRef: "same-order" }),
+      event({ source: "provider-b", sourceEventId: "b", amountMinor: 10_000, kind: "order", customerRef: "same-id", orderRef: "same-order" }),
+      event({ source: "provider-b", sourceEventId: "refund-b", amountMinor: 2_000, kind: "refund", orderRef: "same-order" }),
+    ], window)!;
+
+    expect(result.customerCount).toBe(2);
+    expect(result.identifiedPositiveMinor).toBe(18_000);
+    expect(result.topCustomerShare).toBeCloseTo(10 / 18);
+  });
 });
