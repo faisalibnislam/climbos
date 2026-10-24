@@ -81,9 +81,19 @@ describe("structured action contracts", () => {
     expect(issues.filter((issue) => issue.severity === "error").map((issue) => issue.rule)).toEqual(["action_evidence", "action_evidence", "action_measurement"]);
   });
 
+  it("requires the primary success metric to match the outcome forecast by the play", () => {
+    const clicks = play({ actionContract: { ...play().actionContract, measurement: { ...play().actionContract.measurement, metric: "Website clicks" } } });
+    const qualifiedLeads = play({ actionContract: { ...play().actionContract, measurement: { ...play().actionContract.measurement, metric: "Qualified leads" } } });
+    const valid = play({ actionContract: { ...play().actionContract, measurement: { ...play().actionContract.measurement, metric: "Recovered orders" } } });
+    expect(lintActionContracts([clicks], 0, "").map((issue) => issue.path)).toContain("plays[0].actionContract.measurement.metric");
+    expect(lintActionContracts([qualifiedLeads], 0, "").some((issue) => /does not match this play's forecast outcome/.test(issue.message))).toBe(true);
+    expect(lintActionContracts([valid], 0, "")).toEqual([]);
+  });
+
   it("makes the plays agent populate the trace and leaves readiness to code", () => {
     const prompt = playsTask({ scorecard: "", insights: "" });
     expect(prompt).toContain("fill actionContract");
+    expect(prompt).toContain("primary measurement that matches the same business outcome as the play's forecast unit");
     expect(prompt).toContain("ClimbOS derives readiness");
   });
 });

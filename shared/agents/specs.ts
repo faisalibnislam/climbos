@@ -1014,6 +1014,18 @@ export function lintCites(out: { channels: { name: string; priority: number; cit
 }
 
 /** REQ-OUT-01/05: keep each play traceable and expose prerequisites as data. */
+const ACTION_OUTCOME_FAMILIES: [RegExp, string][] = [
+  [/\b(?:revenue|sales|gross profit|contribution)\b/i, "revenue"],
+  [/\b(?:qualified )?leads?\b/i, "leads"],
+  [/\b(?:booked|attended|completed)?\s*(?:jobs?|appointments?|bookings?|calls?)\b/i, "bookings"],
+  [/\b(?:paying|paid|new|returning|retained|repeat)?\s*(?:customers?|clients?|accounts?|members?|subscribers?|orders?|purchases?|deals?|contracts?)\b/i, "paying_customers"],
+  [/\b(?:activated|activation|first value|retained|retention|repeat purchase)\b/i, "activation_or_retention"],
+];
+
+function actionOutcomeFamilies(value: string): Set<string> {
+  return new Set(ACTION_OUTCOME_FAMILIES.filter(([pattern]) => pattern.test(value)).map(([, family]) => family));
+}
+
 export function lintActionContracts(plays: PlayDraft[], factCount: number, evidence: string, horizonDays?: number, availableSourceUrls: string[] = []): LintIssue[] {
   const issues: LintIssue[] = [];
   const readUrls = new Set(availableSourceUrls.map(citeKey));
@@ -1036,6 +1048,13 @@ export function lintActionContracts(plays: PlayDraft[], factCount: number, evide
     }
     if (horizonDays && action.measurement.windowDays > horizonDays) {
       issues.push({ severity: "error", rule: "action_measurement", message: `The ${action.measurement.windowDays}-day measurement window exceeds the ${horizonDays}-day plan horizon.`, path: `${path}.measurement.windowDays` });
+    }
+    const unitOutcomes = actionOutcomeFamilies(play.unit);
+    const metricOutcomes = actionOutcomeFamilies(action.measurement.metric);
+    if (unitOutcomes.size && ![...unitOutcomes].some((outcome) => metricOutcomes.has(outcome))) {
+      issues.push({ severity: "error", rule: "action_measurement", message: `The primary measurement "${action.measurement.metric}" does not match this play's forecast outcome ("${play.unit}"). Measure the same business outcome; keep visits, clicks and impressions as leading indicators.`, path: `${path}.measurement.metric` });
+    } else if (!metricOutcomes.size) {
+      issues.push({ severity: "error", rule: "action_measurement", message: `"${action.measurement.metric}" does not name a recognized business outcome. Use a measurable customer, booking, lead, revenue, activation or retention outcome; keep traffic and engagement as leading indicators.`, path: `${path}.measurement.metric` });
     }
     if (/\b(?:unknown|not known|not measured|no baseline)\b/i.test(action.measurement.baseline) && !/\b(?:measure|establish|collect|instrument)\b/i.test(action.measurement.source)) {
       issues.push({ severity: "warn", rule: "action_measurement", message: "The baseline is unknown; specify how the first action will measure it.", path: `${path}.measurement.source` });
