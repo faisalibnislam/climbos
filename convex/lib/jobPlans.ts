@@ -85,12 +85,14 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
     case "content_social": {
       const qty = Math.max(1, Math.min(params.quantity ?? 3, 6));
       const images = Math.max(0, Math.min(params.images ?? 0, qty, 2));
+      const r = { maxSearches: searches("social_posts") };
+      const spec = any(socialSpec([params.channel ?? "instagram"]));
       return plan(
         `Draft ${qty} social post${qty === 1 ? "" : "s"}`,
         images ? ["social_media_manager", "creative_director"] : ["social_media_manager"],
         ["social_posts"],
-        [...agentSteps(any(socialSpec([params.channel ?? "instagram"]))), ...Array.from({ length: images }, (): PlannedStep => ({ kind: "image", role: "creative_director", imageAttempts: 2 }))],
-        { socialPosts: qty, imageAttempts: images * 2, deliveredImages: images },
+        [...agentSteps(spec, r), ...Array.from({ length: images }, (): PlannedStep => ({ kind: "image", role: "creative_director", imageAttempts: 2 }))],
+        { socialPosts: qty, searchCalls: r.maxSearches, imageAttempts: images * 2, deliveredImages: images },
       );
     }
     case "content_ads": {
@@ -114,8 +116,10 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
       return plan("Plan retention and loyalty", ["customer_success_manager"], ["retention_plan"], agentSteps(any(retentionSpec())), {});
     case "sales_sequence":
       return plan("Plan sales follow-ups", ["cso"], ["sales_sequence"], agentSteps(any(salesSpec())), {});
-    case "social_calendar":
-      return plan("Plan next week's posts", ["social_media_manager"], ["social_posts"], agentSteps(any(socialCalendarSpec({ instagram: 3 }))), {});
+    case "social_calendar": {
+      const r = { maxSearches: searches("social_posts") };
+      return plan("Plan next week's posts", ["social_media_manager"], ["social_posts"], agentSteps(any(socialCalendarSpec({ instagram: 3 })), r), { searchCalls: r.maxSearches });
+    }
     case "outbound": {
       const r = { maxSearches: searches("prospecting") };
       // Our own website and email checks (up to 3 pages per prospect) use our fetcher: counted, not charged.

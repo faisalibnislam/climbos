@@ -1375,7 +1375,7 @@ export const createContent = internalAction({
     if (!job) return;
     const factIds = job.facts.map((f) => f.id);
     const assets = args.assetIds?.length ? await ctx.runQuery(internal.assets.forJob, { orgId: job.org._id, assetIds: args.assetIds }) : [];
-    const copyBriefInstruction = `Return one shared copyBrief for the campaign with reader, situation, awarenessStage, relationshipStage, objective, offerFactIndexes, problemJob, trigger, centralIdea, objection, proofFactIndexes, prohibitedClaims, channel, format, deliveryContext, brandVoice, approvedExamples, cta, afterAction, trackingMetric, trackingMethod, supportingFactIndexes, supportingSourceUrls, and unknowns. approvedExamples must contain only exact examples from OWNER-APPROVED COPY EXAMPLES in the business context; return [] when none are supplied. Use only confirmed fact indexes and exact source URLs supplied in this run; use empty arrays when unsupported. Put missing commercial or audience inputs in unknowns and use "unknown" for unknown stage values. Never invent proof, offer terms, customer details, tracking setup, or permission. This is a planning brief, not evidence that an offer or tracking system exists.`;
+    const copyBriefInstruction = `Return one shared copyBrief for the campaign with reader, situation, awarenessStage, relationshipStage, objective, offerFactIndexes, problemJob, trigger, centralIdea, objection, proofFactIndexes, prohibitedClaims, channel, format, deliveryContext, brandVoice, approvedExamples, cta, afterAction, trackingMetric, trackingMethod, supportingFactIndexes, supportingSourceUrls, and unknowns. approvedExamples must contain only exact examples from OWNER-APPROVED COPY EXAMPLES in the business context; return [] when none are supplied. Use only confirmed fact indexes and exact source URLs supplied in this run; use empty arrays when unsupported. If a post uses a current trend, include its exact source URL and note any missing source date in unknowns. Put missing commercial or audience inputs in unknowns and use "unknown" for unknown stage values. Never invent proof, offer terms, customer details, tracking setup, trend freshness, or permission. This is a planning brief, not evidence that an offer or tracking system exists.`;
     const imagesBrief = assets.length
       ? `\n\nREAL IMAGES (use them; post N is built around image N, in order; write each post's imageIdea and alt text to describe how that real image is used, never inventing what it shows):\n${assets.map((a, i) => `${i + 1}. ${a.describe}`).join("\n")}`
       : "";
@@ -1400,7 +1400,10 @@ export const createContent = internalAction({
             agentInput(
               job,
               `Write ${qty} social post${qty === 1 ? "" : "s"} for ${channels.join(", ")} that support the growth plan and goal. Before drafting, choose a specific positioning or customer-language angle for each piece; return that reader-facing idea in its angle field, in 12 words or fewer, and vary the angles across the set. Each post makes one point, written natively for its platform, with a visual brief and accessible alt text. Never imply a real customer or show a fake screenshot. ${copyBriefInstruction}${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${imagesBrief}${planContext(job)}`,
-              { ownerSuppliedUrls: ownerSuppliedUrls(args.brief) },
+              {
+                ownerSuppliedUrls: ownerSuppliedUrls(args.brief),
+                research: researchFor("social_posts", { website: job.business?.website, businessName: job.business?.name ?? job.org.name, platforms: channels }),
+              },
             ),
             startedAt,
             {
@@ -1599,6 +1602,7 @@ export const planSocialWeek = internalAction({
               ]
                 .filter(Boolean)
                 .join("\n\n"),
+              { research: researchFor("social_posts", { website: job.business?.website, businessName: job.business?.name ?? job.org.name, platforms: Object.keys(pc.cadence) }) },
             ),
             startedAt,
             { task: "social_posts", text: "", context: "", ctx: fixtureCtx(job) },

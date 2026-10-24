@@ -266,7 +266,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { id: string; kind: "more_sales" | "more_customers" | "more_reach" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid"; rationale: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.54-built-in-agent-feedback";
+export const ENGINE_VERSION = "v3.55-social-intelligence";
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
@@ -2001,10 +2001,10 @@ export function socialSpec(channels: string[], o: SpecOptions = {}): AgentSpec<S
       id: "social_posts",
       role: "social_media_manager",
       label: "Social posts",
-      skills: ["copy-fundamentals", ...channelSkills, "social-visual-briefs", ...(needsVideo || channelSkills.includes("instagram-posts") ? ["short-video-scripts"] : [])].filter((v, i, a) => a.indexOf(v) === i),
+      skills: ["copy-fundamentals", "social-intelligence", ...channelSkills, "social-visual-briefs", ...(needsVideo || channelSkills.includes("instagram-posts") ? ["short-video-scripts"] : [])].filter((v, i, a) => a.indexOf(v) === i),
       schema: SocialPostsV2Schema,
       rubric: rubricOf(primary),
-      criticSkills: ["copy-fundamentals", ...channelSkills.slice(1)],
+      criticSkills: ["copy-fundamentals", "social-intelligence", ...channelSkills.slice(1)],
       lint: lintSocial,
     },
     o,
@@ -2116,12 +2116,13 @@ export function socialCalendarSpec(cadence: Record<string, number>, o: SpecOptio
       id: "social_calendar",
       role: "social_media_manager",
       label: "Weekly content plan",
-      skills: ["owner-brevity", "social-calendar", "positioning", ...channelSkills.slice(0, 2)],
+      skills: ["owner-brevity", "social-calendar", "social-intelligence", "positioning", ...channelSkills.slice(0, 2)],
       schema: SocialCalendarSchema,
       rubric: rubricOf("social-calendar"),
-      criticSkills: ["copy-fundamentals"],
+      criticSkills: ["copy-fundamentals", "social-intelligence"],
       lint: (out, input) => {
         const issues = lintCopy({ theme: out.weekTheme, slots: out.slots.map((s) => ({ idea: s.idea, hook: s.hookDraft })) }, { evidence: evidenceOf(input) });
+        const trendReferences: { url: string; path: string }[] = [];
         for (const [channel, n] of Object.entries(cadence)) {
           const got = out.slots.filter((s) => s.channel === channel).length;
           if (got !== n) issues.push({ severity: "error", rule: "count", message: `${channel} needs exactly ${n} slot${n === 1 ? "" : "s"}; the plan has ${got}.`, path: "slots" });
@@ -2129,7 +2130,14 @@ export function socialCalendarSpec(cadence: Record<string, number>, o: SpecOptio
         out.slots.forEach((s, i) => {
           if (!(s.channel in cadence)) issues.push({ severity: "error", rule: "channel", message: `"${s.channel}" isn't one of this week's channels.`, path: `slots[${i}].channel` });
           if (!Number.isInteger(s.day) || s.day < 1 || s.day > 7) issues.push({ severity: "error", rule: "day", message: "day must be 1 (Monday) to 7 (Sunday).", path: `slots[${i}].day` });
+          if (/\b(?:trend|trending|meme|viral)\b/i.test(`${s.idea} ${s.angle} ${s.hookDraft}`)) {
+            const urls = (s.ownerNote.match(/https?:\/\/[^\s)]+/g) ?? []).map((url) => url.replace(/[.,;!?]+$/, ""));
+            if (!urls.length) issues.push({ severity: "error", rule: "trend_source", message: "A current trend or meme-based calendar idea needs an exact source URL and freshness note in ownerNote; otherwise choose an evergreen angle.", path: `slots[${i}].ownerNote` });
+            for (const url of urls) trendReferences.push({ url, path: `slots[${i}].ownerNote` });
+            if (!/\b(?:date|dated|freshness|undated|unknown)\b/i.test(s.ownerNote)) issues.push({ severity: "warn", rule: "trend_freshness", message: "State the trend source's date or say freshness is unknown in ownerNote.", path: `slots[${i}].ownerNote` });
+          }
         });
+        issues.push(...lintAvailableSourceUrls(trendReferences, input));
         const ideas = out.slots.map((s) => s.idea.trim().toLowerCase());
         if (new Set(ideas).size !== ideas.length) issues.push({ severity: "error", rule: "duplicate", message: "Two slots share the same idea; every slot needs its own.", path: "slots" });
         if (out.pillars.length > 4) issues.push({ severity: "warn", rule: "focus", message: "More than 4 pillars dilutes the week.", path: "pillars" });
@@ -2474,11 +2482,17 @@ export function creatorOutreachSpec(o: SpecOptions = {}): AgentSpec<OutreachOutp
 }
 
 /** Research briefs per job (what the research phase should find). */
-export function researchFor(task: TaskType | "business_insights" | "prospecting" | "creator_scout", ctx: { website?: string; businessName: string; country?: string; marketScope?: string }): ResearchSpec | undefined {
+export function researchFor(task: TaskType | "business_insights" | "prospecting" | "creator_scout", ctx: { website?: string; businessName: string; country?: string; marketScope?: string; platforms?: string[] }): ResearchSpec | undefined {
   const site = ctx.website ? ` (${ctx.website})` : "";
   const market = ctx.country ? ` Owner-stated market: ${ctx.country}.` : "";
   const scope = ctx.marketScope ? ` Business reach is classified as ${ctx.marketScope}; this is scope only, not a named city or country.` : "";
   switch (task) {
+    case "social_posts":
+      return {
+        maxSearches: 3,
+        maxFetches: 3,
+        brief: `Find at most three recent social trends or meme-inspired formats that could fit ${ctx.businessName}${site} on these requested platforms: ${(ctx.platforms ?? []).join(", ") || "the platforms in the task"}.${market}${scope} Prefer sources with visible recent activity and a date. Use official platform trend resources where available, but label ad-library or paid-creative examples as paid evidence, not proof of organic popularity. For each useful signal, report the exact URL, what was observed, date/freshness if shown, platform/market, and a cautious fit idea. Do not call an undated signal current. Skip unrelated viral items, tragedy, sensitive news, political bait, copied creator assets, and trends incompatible with the business or platform. If no source supports a relevant current signal, say so and recommend evergreen ideas instead. Do not recommend a specific song, meme image, creator clip, or branded character for reuse; original and licensed assets only.`,
+      };
     case "growth_strategy":
       return {
         maxSearches: 7,
