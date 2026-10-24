@@ -9,7 +9,7 @@ import { RefreshCw, Search } from "@/components/icons";
 import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
-import { Button, Callout, Card, CardContent, EmptyState, Field, Input, Select, Textarea, toast } from "@/components/ui";
+import { Button, Callout, Card, CardContent, DatePicker, EmptyState, Field, Input, Select, Textarea, toast } from "@/components/ui";
 import { useWorkspaceMember } from "@/components/app/content/shared";
 import { can } from "@shared/policy";
 
@@ -97,6 +97,7 @@ function AiAnswerObservations({ slug, canEdit }: { slug: string; canEdit: boolea
   const [panelId, setPanelId] = useState<Id<"aiSearchPanels"> | "all">("all");
   const report = useQuery(api.aiSearchVisibility.report, { slug, days: 90, compareToPreviousWindow: true, ...(panelId !== "all" ? { panelId } : {}) });
   const record = useMutation(api.aiSearchVisibility.recordObservation);
+  const recordIntervention = useMutation(api.aiSearchVisibility.recordIntervention);
   const createPanel = useMutation(api.aiSearchVisibility.createPanel);
   const [provider, setProvider] = useState("chatgpt");
   const [query, setQuery] = useState("");
@@ -112,6 +113,12 @@ function AiAnswerObservations({ slug, canEdit }: { slug: string; canEdit: boolea
   const [competitors, setCompetitors] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savingIntervention, setSavingIntervention] = useState(false);
+  const [changeDate, setChangeDate] = useState(new Date().toISOString().slice(0, 10));
+  const [changeKind, setChangeKind] = useState("content");
+  const [changeSummary, setChangeSummary] = useState("");
+  const [expectedSignal, setExpectedSignal] = useState("");
+  const [affectedPages, setAffectedPages] = useState("");
   const selectedPanelQuery = report?.panel?.queries?.find((item) => item.key === panelQueryKey);
   const makePanel = async () => {
     setCreatingPanel(true);
@@ -154,6 +161,25 @@ function AiAnswerObservations({ slug, canEdit }: { slug: string; canEdit: boolea
     } catch (error) {
       toast({ tone: "danger", title: errorMessage(error) });
     } finally { setSaving(false); }
+  };
+  const submitIntervention = async () => {
+    const changedAt = new Date(`${changeDate}T12:00:00`).getTime();
+    setSavingIntervention(true);
+    try {
+      await recordIntervention({
+        slug,
+        ...(panelId !== "all" ? { panelId } : {}),
+        changedAt,
+        kind: changeKind as "content" | "technical_seo" | "brand_or_entity" | "off_site" | "other",
+        summary: changeSummary,
+        expectedSignal,
+        pageUrls: affectedPages.split(/[\n,]+/u).map((value) => value.trim()).filter(Boolean),
+      });
+      setChangeSummary(""); setExpectedSignal(""); setAffectedPages("");
+      toast({ tone: "success", title: "Optimization change recorded", description: "Its timing can be compared with later samples; this does not prove causation." });
+    } catch (error) {
+      toast({ tone: "danger", title: errorMessage(error) });
+    } finally { setSavingIntervention(false); }
   };
   const percent = (rate: { rate: number | null } | null) => rate?.rate === null || !rate ? "Not enough labeled answers" : `${Math.round(rate.rate * 100)}% of recorded samples`;
   const percentValue = (value: number | null | undefined) => value === null || value === undefined ? "Not enough labeled answers" : `${Math.round(value * 100)}%`;
@@ -200,6 +226,18 @@ function AiAnswerObservations({ slug, canEdit }: { slug: string; canEdit: boolea
         </div>
         <div><Button size="sm" disabled={!canEdit || (panelId !== "all" ? !selectedPanelQuery : !query.trim()) || (status === "answered" && !excerpt.trim())} loading={saving} onClick={() => void submit(Date.now())}>Save observation</Button></div>
       </CardContent></Card>
+      {canEdit ? <Card><CardContent className="flex flex-col gap-4">
+        <div><h3 className="text-sm font-semibold text-ink">Log an optimization change</h3><p className="mt-1 text-sm text-ink-3">Record what changed and when, then compare with later checks. This is an owner report, not proof the change caused a visibility difference.</p></div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Change date"><DatePicker value={changeDate} max={new Date().toISOString().slice(0, 10)} onChange={(value) => setChangeDate(value ?? "")} /></Field>
+          <Field label="Change type"><Select value={changeKind} onValueChange={setChangeKind} options={[{ value: "content", label: "Content update" }, { value: "technical_seo", label: "Technical SEO" }, { value: "brand_or_entity", label: "Brand or entity information" }, { value: "off_site", label: "Off-site mention or profile" }, { value: "other", label: "Other" }]} /></Field>
+          <div className="sm:col-span-2"><Field label="What changed"><Textarea value={changeSummary} onChange={(event) => setChangeSummary(event.target.value)} rows={2} maxLength={1000} placeholder="e.g. Added a sourced comparison section to the service page" /></Field></div>
+          <div className="sm:col-span-2"><Field label="What signal will you watch?"><Input value={expectedSignal} onChange={(event) => setExpectedSignal(event.target.value)} maxLength={500} placeholder="e.g. Whether this page is cited in the saved buyer-question panel" /></Field></div>
+          <div className="sm:col-span-2"><Field label="Affected pages (one per line, optional for brand/off-site changes)"><Textarea value={affectedPages} onChange={(event) => setAffectedPages(event.target.value)} rows={2} maxLength={5000} placeholder="https://example.com/page" /></Field></div>
+        </div>
+        <div><Button size="sm" loading={savingIntervention} disabled={!canEdit || !changeDate || !changeSummary.trim() || !expectedSignal.trim() || (changeKind === "content" || changeKind === "technical_seo") && !affectedPages.trim()} onClick={() => void submitIntervention()}>Save change log</Button></div>
+        {report?.interventions?.length ? <ul className="flex flex-col gap-2">{report.interventions.map((item) => <li key={item.id} className="rounded-lg bg-surface-2 p-3"><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-medium text-ink">{new Date(item.changedAt).toLocaleDateString()} · {item.kind.replaceAll("_", " ")}</p><span className="text-xs text-ink-3">Owner-reported{item.comparisonWindow ? ` · ${item.comparisonWindow} window` : ""}</span></div><p className="mt-1 text-sm text-ink-2">{item.summary}</p><p className="mt-1 text-xs text-ink-3">Signal to watch: {item.expectedSignal}</p>{item.pageUrls.length ? <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">{item.pageUrls.map((url) => <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="break-all text-xs text-ink-3 underline underline-offset-2">{url}</a>)}</div> : null}</li>)}</ul> : <p className="text-xs text-ink-3">No owner-reported changes in this comparison window.</p>}
+      </CardContent></Card> : null}
       {report === undefined ? <p className="text-sm text-ink-3">Loading recorded observations…</p> : report.observationCount === 0 ? <EmptyState icon={<Search />} title={panelId !== "all" ? "No checks in this panel yet" : "No AI-search observations yet"} body={panelId !== "all" ? "Choose a saved question above, check it in the named tool, and record what the answer shows." : "Save a few results for a consistent set of questions to establish an owner-observed baseline."} /> : <>
         <Card><CardContent className="flex flex-col gap-3"><div><h3 className="text-sm font-semibold text-ink">Recorded sample summary · last {report.windowDays} days</h3><p className="mt-1 text-sm text-ink-3">{report.observationCount} observation{report.observationCount === 1 ? "" : "s"}{report.truncated ? " shown (older samples are not included in this view)" : ""}. The sample is owner-recorded and is not a platform-wide rate.</p></div><dl className="grid gap-3 text-sm sm:grid-cols-3"><div><dt className="text-xs text-ink-3">Answered checks</dt><dd className="text-ink-2">{report.panelSummary.answered} of {report.observationCount}</dd></div><div><dt className="text-xs text-ink-3">Business mentioned</dt><dd className="text-ink-2">{knownMentionAnswers.length ? `${businessMentions} of ${knownMentionAnswers.length} answers with a known mention result` : "No labeled answers yet"}</dd></div><div><dt className="text-xs text-ink-3">Cited own-site answers</dt><dd className="text-ink-2">{report.panelSummary.observedFirstPartyCitationRate ? percent(report.panelSummary.observedFirstPartyCitationRate) : "No website recorded"}</dd></div></dl></CardContent></Card>
         {report.comparison ? <Card><CardContent className="flex flex-col gap-3"><div><h3 className="text-sm font-semibold text-ink">Observed period comparison</h3><p className="mt-1 text-sm text-ink-3">Prior {report.windowDays}-day sample: {report.comparison.baselineObservationCount}; current sample: {report.comparison.currentObservationCount}. Descriptive only; it does not show that a website or content change caused a visibility change.</p></div>{report.comparison.queryChanges.length ? <ul className="flex flex-col gap-2">{report.comparison.queryChanges.slice(0, 10).map((change) => <li key={`${change.provider}:${change.query}:${change.location ?? ""}`} className="rounded-lg bg-surface-2 p-3"><p className="text-sm font-medium text-ink">{change.query}</p><p className="mt-1 text-xs text-ink-3">{change.provider.replaceAll("_", " ")}{change.location ? ` · ${change.location}` : ""}</p><dl className="mt-2 grid gap-2 text-xs sm:grid-cols-3"><div><dt className="text-ink-3">Prior mention rate</dt><dd className="text-ink-2">{percentValue(change.baseline?.brandMentions.rate)}</dd></div><div><dt className="text-ink-3">Current mention rate</dt><dd className="text-ink-2">{percentValue(change.current?.brandMentions.rate)}</dd></div><div><dt className="text-ink-3">Observed change</dt><dd className="text-ink-2">{pointChange(change.brandMentionRateChange)}</dd></div></dl></li>)}</ul> : <p className="text-sm text-ink-3">No question has labeled answers in both periods yet.</p>}{report.comparison.truncated ? <p className="text-xs text-ink-3">The comparison is truncated to the latest recorded samples.</p> : null}</CardContent></Card> : null}

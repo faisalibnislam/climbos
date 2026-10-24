@@ -12,6 +12,9 @@ const MAX_CITATIONS = 30;
 const MAX_COMPETITORS = 30;
 const MAX_PANEL_QUERIES = 100;
 const MAX_PANEL_NAME = 120;
+const MAX_INTERVENTION_SUMMARY = 1_000;
+const MAX_EXPECTED_SIGNAL = 500;
+const MAX_INTERVENTION_PAGES = 20;
 
 function safeHttpUrl(raw: string): string | null {
   try {
@@ -164,6 +167,59 @@ export const recordObservation = mutation({
   },
 });
 
+/** Keep an owner-reported optimization timeline alongside sampled answers. */
+export const recordIntervention = mutation({
+  args: {
+    slug: v.string(),
+    panelId: v.optional(v.id("aiSearchPanels")),
+    changedAt: v.number(),
+    kind: v.union(v.literal("content"), v.literal("technical_seo"), v.literal("brand_or_entity"), v.literal("off_site"), v.literal("other")),
+    summary: v.string(),
+    expectedSignal: v.string(),
+    pageUrls: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
+    if (!Number.isSafeInteger(args.changedAt) || args.changedAt > Date.now()) throw appError("INVALID", "The change date must be valid and cannot be in the future.");
+    const summary = args.summary.trim().replace(/\s+/g, " ");
+    const expectedSignal = args.expectedSignal.trim().replace(/\s+/g, " ");
+    if (!summary || summary.length > MAX_INTERVENTION_SUMMARY) throw appError("INVALID", `Describe the change in 1–${MAX_INTERVENTION_SUMMARY} characters.`);
+    if (!expectedSignal || expectedSignal.length > MAX_EXPECTED_SIGNAL) throw appError("INVALID", `Describe the signal to watch in 1–${MAX_EXPECTED_SIGNAL} characters.`);
+    if (args.pageUrls.length > MAX_INTERVENTION_PAGES) throw appError("INVALID", `Record no more than ${MAX_INTERVENTION_PAGES} affected pages.`);
+    const panel = args.panelId ? await ctx.db.get(args.panelId) : null;
+    if (args.panelId && (!panel || panel.orgId !== org._id)) throw appError("NOT_FOUND", "The selected AI-search panel was not found.");
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    let siteHost: string | null = null;
+    if (business?.website) {
+      try { siteHost = new URL(business.website).hostname.toLocaleLowerCase().replace(/^www\./, ""); } catch { /* Invalid legacy values cannot authorize page attribution. */ }
+    }
+    const pageUrls = [...new Set(args.pageUrls.filter((raw) => raw.trim()).map((raw) => {
+      const value = safeHttpUrl(raw);
+      if (!value) throw appError("INVALID", "Affected pages must be valid HTTP or HTTPS addresses.");
+      const url = new URL(value);
+      if (!siteHost || url.hostname.toLocaleLowerCase().replace(/^www\./, "") !== siteHost) {
+        throw appError("INVALID", "Affected page addresses must use this workspace's recorded website host.");
+      }
+      return value;
+    }))];
+    if (["content", "technical_seo"].includes(args.kind) && pageUrls.length === 0) throw appError("INVALID", "Content and technical SEO changes need at least one affected page URL.");
+    const id = await ctx.db.insert("aiSearchInterventions", {
+      orgId: org._id,
+      ...(args.panelId ? { panelId: args.panelId } : {}),
+      changedAt: args.changedAt,
+      kind: args.kind,
+      summary,
+      expectedSignal,
+      pageUrls,
+      evidenceBasis: "owner_reported",
+      enteredBy: user._id,
+      enteredAt: Date.now(),
+    });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "ai_search.intervention_recorded", subjectType: "business", subjectId: String(id), summary: `Recorded an owner-reported AI-search change: ${summary.slice(0, 80)}.` });
+    return id;
+  },
+});
+
 /** Bounded, descriptive report. Rates describe only recorded samples, never all platform answers. */
 export const report = query({
   args: { slug: v.string(), days: v.optional(v.number()), panelId: v.optional(v.id("aiSearchPanels")), compareToPreviousWindow: v.optional(v.boolean()) },
@@ -176,6 +232,15 @@ export const report = query({
     const comparisonSince = currentSince - (compareToPreviousWindow ? windowDays * 86_400_000 : 0);
     const panel = panelId ? await ctx.db.get(panelId) : null;
     if (panelId && (!panel || panel.orgId !== org._id)) throw appError("NOT_FOUND", "The selected AI-search panel was not found.");
+    const interventionQuery = panelId
+      ? await ctx.db.query("aiSearchInterventions")
+        .withIndex("by_org_panel_changed", (q) => q.eq("orgId", org._id).eq("panelId", panelId).gte("changedAt", comparisonSince).lt("changedAt", now + 1))
+        .order("desc")
+        .take(100)
+      : await ctx.db.query("aiSearchInterventions")
+        .withIndex("by_org_changed", (q) => q.eq("orgId", org._id).gte("changedAt", comparisonSince).lt("changedAt", now + 1))
+        .order("desc")
+        .take(100);
     const fetched = panelId
       ? await ctx.db.query("aiSearchObservations")
         .withIndex("by_org_panel_checked", (q) => q.eq("orgId", org._id).eq("panelId", panelId).gte("checkedAt", comparisonSince).lt("checkedAt", now + 1))
@@ -228,6 +293,16 @@ export const report = query({
       summary,
       panelSummary,
       comparison,
+      interventions: interventionQuery.map(({ _id, changedAt, kind, summary, expectedSignal, pageUrls, evidenceBasis }) => ({
+        id: _id,
+        changedAt,
+        kind,
+        summary,
+        expectedSignal,
+        pageUrls,
+        evidenceBasis,
+        ...(compareToPreviousWindow ? { comparisonWindow: changedAt < currentSince ? "baseline" as const : "current" as const } : {}),
+      })),
       observations: observations.map(({ _id, panelId: observationPanelId, panelQueryKey, provider, query, location, checkedAt, answerStatus, brandMention, sentiment, citedUrls, competitorMentions, answerExcerpt, enteredAt }) => ({
         id: _id,
         panelId: observationPanelId ?? null,

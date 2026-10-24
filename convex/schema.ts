@@ -1933,6 +1933,22 @@ export default defineSchema({
     .index("by_org_panel_checked", ["orgId", "panelId", "checkedAt"])
     .index("by_org_query_checked", ["orgId", "query", "checkedAt"]),
 
+  /** Owner-reported changes logged beside AI-search samples; timing is not causal evidence. */
+  aiSearchInterventions: defineTable({
+    orgId: v.id("organizations"),
+    panelId: v.optional(v.id("aiSearchPanels")),
+    changedAt: v.number(),
+    kind: v.union(v.literal("content"), v.literal("technical_seo"), v.literal("brand_or_entity"), v.literal("off_site"), v.literal("other")),
+    summary: v.string(),
+    expectedSignal: v.string(),
+    pageUrls: v.array(v.string()),
+    evidenceBasis: v.literal("owner_reported"),
+    enteredBy: v.id("users"),
+    enteredAt: v.number(),
+  })
+    .index("by_org_changed", ["orgId", "changedAt"])
+    .index("by_org_panel_changed", ["orgId", "panelId", "changedAt"]),
+
   campaigns: defineTable({
     orgId: v.id("organizations"),
     strategyId: v.optional(v.id("strategies")),

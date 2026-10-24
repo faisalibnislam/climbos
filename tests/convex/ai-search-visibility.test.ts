@@ -210,4 +210,66 @@ describe("AI search visibility observations", () => {
       ],
     })).rejects.toThrow(/same provider, question and location twice/);
   });
+
+  it("records owner-reported optimization changes in the matching comparison window", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "ai-search-intervention@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Example Co" });
+    const business = await t.run((ctx) => ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first());
+    if (!business) throw new Error("Business was not created");
+    await t.run((ctx) => ctx.db.patch(business._id, { website: "https://example.com" }));
+    const panelId = await owner.client.mutation(api.aiSearchVisibility.createPanel, {
+      slug,
+      name: "Buyer questions",
+      queries: [{ provider: "chatgpt", query: "best invoicing tool", location: "United States" }],
+    });
+    const changedAt = Date.now() - 15 * 86_400_000;
+    await owner.client.mutation(api.aiSearchVisibility.recordIntervention, {
+      slug,
+      panelId,
+      changedAt,
+      kind: "content",
+      summary: "Added a sourced pricing comparison to the product page.",
+      expectedSignal: "Whether the page appears among citations for the saved buyer questions.",
+      pageUrls: ["https://www.example.com/pricing"],
+    });
+    const report = await owner.client.query(api.aiSearchVisibility.report, { slug, panelId, days: 30, compareToPreviousWindow: true });
+    expect(report.interventions).toMatchObject([{
+      changedAt,
+      kind: "content",
+      summary: "Added a sourced pricing comparison to the product page.",
+      expectedSignal: "Whether the page appears among citations for the saved buyer questions.",
+      pageUrls: ["https://www.example.com/pricing"],
+      evidenceBasis: "owner_reported",
+      comparisonWindow: "current",
+    }]);
+    await expect(owner.client.mutation(api.aiSearchVisibility.recordIntervention, {
+      slug,
+      panelId,
+      changedAt,
+      kind: "technical_seo",
+      summary: "Changed crawl settings.",
+      expectedSignal: "Citation count",
+      pageUrls: ["https://outside.example/pricing"],
+    })).rejects.toThrow(/recorded website host/);
+    await expect(owner.client.mutation(api.aiSearchVisibility.recordIntervention, {
+      slug,
+      changedAt,
+      kind: "content",
+      summary: "Updated a page.",
+      expectedSignal: "Citations",
+      pageUrls: [],
+    })).rejects.toThrow(/at least one affected page URL/);
+    const other = await asNewUser(t, "ai-search-intervention-stranger@example.com");
+    await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other Co" });
+    await expect(other.client.mutation(api.aiSearchVisibility.recordIntervention, {
+      slug,
+      panelId,
+      changedAt,
+      kind: "content",
+      summary: "Changed a page.",
+      expectedSignal: "Citations",
+      pageUrls: ["https://example.com/page"],
+    })).rejects.toThrow();
+  });
 });
