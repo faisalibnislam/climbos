@@ -11,7 +11,7 @@ export const refreshDue = internalAction({
     for (const sourceId of due) {
       const claimed = await ctx.runMutation(internal.knowledge.queueDueRefresh, { sourceId, now });
       if (!claimed) continue;
-      await ctx.scheduler.runAfter(0, internal.knowledgeActions.refreshSource, { sourceId });
+      await ctx.scheduler.runAfter(0, internal.knowledgeActions.refreshSource, { sourceId, scheduled: true });
       queued++;
     }
     return { eligible: due.length, queued };

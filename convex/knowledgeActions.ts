@@ -10,7 +10,6 @@ import { extractPageContent, isPathAllowed, safeFetchPage } from "../shared/inte
 import { sourceFreshness } from "../shared/knowledge/freshness";
 
 const MAX_SOURCE_CHARS = 24_000;
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 function diffLines(before: string, after: string) {
   const oldLines = [...new Set(before.split(/\n+/).map((s) => s.trim()).filter(Boolean))];
@@ -23,9 +22,9 @@ function diffLines(before: string, after: string) {
 
 /** Fetches one manually requested source, records a bounded hash diff, and never promotes content. */
 export const refreshSource = internalAction({
-  args: { sourceId: v.id("growthKnowledgeSources") },
-  handler: async (ctx, { sourceId }) => {
-    const source = await ctx.runMutation(internal.knowledge.markChecking, { sourceId });
+  args: { sourceId: v.id("growthKnowledgeSources"), scheduled: v.optional(v.boolean()) },
+  handler: async (ctx, { sourceId, scheduled }) => {
+    const source = await ctx.runMutation(internal.knowledge.markChecking, { sourceId, scheduled });
     if (!source) return { skipped: true };
     const registrySource = registry.sources.find((candidate) => candidate.registry_id === source.registryId);
     const checkedAt = Date.now();
@@ -55,7 +54,8 @@ export const refreshSource = internalAction({
         ...(source.lastModified ? { ifModifiedSince: source.lastModified } : {}),
       });
       const freshness = sourceFreshness(registrySource, checkedAt);
-      const nextCheckAt = freshness.cadenceDays ? checkedAt + WEEK_MS : undefined;
+      const cadenceDays = source.reviewCadenceDays ?? freshness.cadenceDays ?? 0;
+      const nextCheckAt = cadenceDays > 0 ? checkedAt + cadenceDays * 24 * 60 * 60 * 1000 : undefined;
       if (response.notModified) {
         await ctx.runMutation(internal.knowledge.finishRefresh, { sourceId, status: "unchanged", checkedAt, nextCheckAt, etag: response.etag, lastModified: response.lastModified, source: { url: registrySource.url, title: registrySource.title } });
         return { status: "unchanged" };
