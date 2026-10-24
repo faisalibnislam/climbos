@@ -12,6 +12,8 @@ import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary
 import { Button, Callout, Card, CardContent, DatePicker, EmptyState, Field, Input, Select, Textarea, toast } from "@/components/ui";
 import { useWorkspaceMember } from "@/components/app/content/shared";
 import { can } from "@shared/policy";
+import { searchConsolePropertyMatchesWebsite } from "@shared/integrations/searchConsole";
+import { planAiSearchQueries } from "@shared/aiSearch/queryPlanner";
 
 export default function SearchReadinessPage() {
   const { organization: slug } = useParams<{ organization: string }>();
@@ -87,13 +89,16 @@ export default function SearchReadinessPage() {
           </CardContent></Card>
         )) : <EmptyState icon={<Search />} title="No multi-page website review saved" body="Run a website review from your workspace to build a dated sample of page metadata and search-readiness findings here." />}
       </section>
-      <AiAnswerObservations slug={slug} canEdit={canEdit} />
+      <AiAnswerObservations slug={slug} canEdit={canEdit} website={data.website} />
     </div>
   );
 }
 
-function AiAnswerObservations({ slug, canEdit }: { slug: string; canEdit: boolean }) {
+function AiAnswerObservations({ slug, canEdit, website }: { slug: string; canEdit: boolean; website: string | null }) {
   const panels = useQuery(api.aiSearchVisibility.listPanels, { slug });
+  const searchConsole = useQuery(api.searchConsole.observations, { slug });
+  const matchedProperty = Boolean(searchConsole && website && searchConsolePropertyMatchesWebsite(searchConsole.property, website));
+  const querySuggestions = matchedProperty && searchConsole ? planAiSearchQueries(searchConsole.rows) : [];
   const [panelId, setPanelId] = useState<Id<"aiSearchPanels"> | "all">("all");
   const report = useQuery(api.aiSearchVisibility.report, { slug, days: 90, compareToPreviousWindow: true, ...(panelId !== "all" ? { panelId } : {}) });
   const record = useMutation(api.aiSearchVisibility.recordObservation);
@@ -105,6 +110,7 @@ function AiAnswerObservations({ slug, canEdit }: { slug: string; canEdit: boolea
   const [panelQueryKey, setPanelQueryKey] = useState("choose");
   const [panelName, setPanelName] = useState("");
   const [panelQuestions, setPanelQuestions] = useState("");
+  const [selectedObservedQueries, setSelectedObservedQueries] = useState<string[]>([]);
   const [creatingPanel, setCreatingPanel] = useState(false);
   const [status, setStatus] = useState("answered");
   const [mentioned, setMentioned] = useState("unknown");
@@ -120,6 +126,13 @@ function AiAnswerObservations({ slug, canEdit }: { slug: string; canEdit: boolea
   const [expectedSignal, setExpectedSignal] = useState("");
   const [affectedPages, setAffectedPages] = useState("");
   const selectedPanelQuery = report?.panel?.queries?.find((item) => item.key === panelQueryKey);
+  const addObservedQueries = () => {
+    const selected = querySuggestions.filter((item) => selectedObservedQueries.includes(item.query)).map((item) => item.query);
+    const existing = new Set(panelQuestions.split(/\n+/u).map((item) => item.trim().toLocaleLowerCase("en-US")).filter(Boolean));
+    const additions = selected.filter((item) => !existing.has(item.toLocaleLowerCase("en-US")));
+    setPanelQuestions([...panelQuestions.split(/\n+/u).map((item) => item.trim()).filter(Boolean), ...additions].join("\n"));
+    setSelectedObservedQueries([]);
+  };
   const makePanel = async () => {
     setCreatingPanel(true);
     try {
@@ -133,6 +146,7 @@ function AiAnswerObservations({ slug, canEdit }: { slug: string; canEdit: boolea
       setPanelQueryKey("choose");
       setPanelName("");
       setPanelQuestions("");
+      setSelectedObservedQueries([]);
       toast({ tone: "success", title: "Comparable question panel created" });
     } catch (error) {
       toast({ tone: "danger", title: errorMessage(error) });
@@ -202,6 +216,22 @@ function AiAnswerObservations({ slug, canEdit }: { slug: string; canEdit: boolea
             <Field label="Panel name"><Input value={panelName} onChange={(event) => setPanelName(event.target.value)} maxLength={120} placeholder="Core buyer questions" /></Field>
             <Field label="Provider for these questions"><Select value={provider} onValueChange={setProvider} options={[{ value: "chatgpt", label: "ChatGPT search" }, { value: "google_ai_overview", label: "Google AI Overview" }, { value: "gemini", label: "Gemini" }, { value: "perplexity", label: "Perplexity" }, { value: "other", label: "Other" }]} /></Field>
             <div className="sm:col-span-2"><Field label="Questions (one per line)"><Textarea value={panelQuestions} onChange={(event) => setPanelQuestions(event.target.value)} rows={4} maxLength={20_000} placeholder={"Best [category] for [buyer]?\nHow does [business] compare with alternatives?"} /></Field></div>
+            <div className="sm:col-span-2 rounded-lg border border-line p-3">
+              <h4 className="text-sm font-medium text-ink">Start with observed Google searches</h4>
+              <p className="mt-1 text-xs text-ink-3">Use exact phrases from this business’s matching Search Console property as starting points. They show Google activity in that property and period, not demand in AI answer tools. Intent labels are keyword-based hints; review and rewrite each phrase as a realistic buyer question before saving.</p>
+              {searchConsole === undefined ? <p className="mt-2 text-xs text-ink-3">Loading Search Console observations…</p> : !searchConsole ? <p className="mt-2 text-xs text-ink-3">Connect Search Console and sync a query report to get observed query suggestions.</p> : !matchedProperty ? <p className="mt-2 text-xs text-ink-3">The latest Search Console property does not match the recorded business website, so its queries are not suggested here.</p> : querySuggestions.length ? <>
+                <p className="mt-2 text-xs text-ink-3">Property: {searchConsole.property} · {searchConsole.startDate} to {searchConsole.endDate}{searchConsole.truncated ? " · report is truncated" : ""}</p>
+                <ul className="mt-2 flex flex-col gap-2">
+                  {querySuggestions.map((item) => <li key={item.query}>
+                    <label className="flex cursor-pointer items-start gap-2 rounded-md bg-surface-2 p-2 text-sm">
+                      <input type="checkbox" className="mt-1" checked={selectedObservedQueries.includes(item.query)} onChange={(event) => setSelectedObservedQueries((current) => event.target.checked ? [...new Set([...current, item.query])] : current.filter((queryItem) => queryItem !== item.query))} />
+                      <span className="min-w-0 flex-1"><span className="block break-words text-ink">{item.query}</span><span className="mt-0.5 block text-xs text-ink-3">{item.intent} intent hint · {item.highestPageImpressions} impressions on the strongest single page · {item.observedPageCount} page{item.observedPageCount === 1 ? "" : "s"}</span></span>
+                    </label>
+                  </li>)}
+                </ul>
+                <div className="mt-2"><Button size="sm" variant="secondary" disabled={!selectedObservedQueries.length} onClick={addObservedQueries}>Add selected phrases</Button></div>
+              </> : <p className="mt-2 text-xs text-ink-3">No usable query phrases were returned for this property and period.</p>}
+            </div>
             <Field label="Market for all questions (optional)"><Input value={location} onChange={(event) => setLocation(event.target.value)} maxLength={160} placeholder="e.g. Dhaka, Bangladesh" /></Field>
             <div className="flex items-end"><Button size="sm" loading={creatingPanel} disabled={!panelName.trim() || !panelQuestions.split(/\n+/u).some((item) => item.trim())} onClick={() => void makePanel()}>Save question panel</Button></div>
           </div>
