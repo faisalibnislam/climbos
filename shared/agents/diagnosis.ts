@@ -84,6 +84,13 @@ export interface Hypothesis {
   discriminate: string;
 }
 
+export interface NextMeasurement {
+  /** One next question or measurement action, selected from the missing inputs. */
+  action: string;
+  reason: string;
+  priority: "decision_critical" | "useful";
+}
+
 export interface Diagnosis {
   /** The binding constraint, or unknown when the owner's numbers can't tell. */
   constraint: BindingConstraint | "unknown";
@@ -94,6 +101,8 @@ export interface Diagnosis {
   competing: string;
   /** What to measure next when the diagnosis is weak or unknown. */
   missing: string[];
+  /** One highest-priority next measurement, to avoid overwhelming the owner with every gap at once. */
+  nextMeasurement?: NextMeasurement;
   /**
    * supported: one link is the weaker with ≥80% probability (still an observation, not a cause);
    * ambiguous: two links compete; insufficient_evidence: too few numbers;
@@ -213,6 +222,26 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
   if (setupCount) missing.push("a first-value event (the count given is setup or unclear, not value received)");
   const basis: Diagnosis["basis"] = measuredLinks >= 2 && !setupCount && !conflicts.length ? "measured" : measuredLinks >= 1 || capR || retR ? "partial" : "none";
 
+  const nextMeasurement: NextMeasurement | undefined = conflicts.length
+    ? undefined
+    : f.newCustomers === undefined
+      ? { action: `Count new paying customers in the same ${days}-day period (include zero if there were none).`, reason: "This is the outcome the growth plan needs to explain; without it, the system cannot tell whether the business is gaining customers.", priority: "decision_critical" }
+      : saas && !saasRef && overall !== null
+        ? { action: "Confirm whether a signup is a free plan, a trial without a card, or a trial with a card.", reason: "That choice changes which comparison range, if any, is appropriate.", priority: "decision_critical" }
+        : setupCount
+          ? { action: "Count how many leads reached first customer value, not just how many finished setup.", reason: "Setup completion can hide whether customers actually received the product's promised value.", priority: "decision_critical" }
+          : f.activated === undefined && f.leads !== undefined
+            ? { action: "Count how many leads reached first customer value in the same period.", reason: "This separates an onboarding or product-value problem from a purchase problem.", priority: "useful" }
+            : f.leads === undefined && f.visitors !== undefined
+              ? { action: `Count how many of those ${f.visitors} visitors became leads or signups.`, reason: "This shows whether the offer turns existing attention into a real buying conversation.", priority: "useful" }
+              : f.visitors === undefined && f.leads !== undefined
+                ? { action: "Count how many people saw the offer in the same period (for example, relevant site visitors or profile views).", reason: "A lead count without the number of people who saw the offer cannot show whether the business needs more reach.", priority: "useful" }
+                : immature
+                  ? { action: `Wait until the measurement period covers at least ${ctx.salesCycleDays} days, then compare the same funnel counts again.`, reason: "Some recent leads may still be deciding, so a shorter period can undercount purchases.", priority: "useful" }
+                  : missing.length
+                    ? { action: `Confirm ${missing[0]}.`, reason: "This is the next unresolved input in the current diagnosis.", priority: "useful" }
+                    : undefined;
+
   // Customers a month per +1 point at each link (other rates held): shows the lowest rate isn't automatically the biggest lever.
   const leverage: NonNullable<Diagnosis["leverage"]> = [];
   const down = (stage: "lead" | "activation" | "purchase") => (stage === "lead" ? (act && buyFromActive ? act.rate! * buyFromActive.rate! : overall) : stage === "activation" ? (buyFromActive?.rate ?? null) : 1);
@@ -230,6 +259,7 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
     readings,
     competing: COMPETING[constraint],
     missing,
+    ...(status !== "supported" && nextMeasurement ? { nextMeasurement } : {}),
     status,
     hypotheses,
     ...(conflicts.length ? { conflicts } : {}),
@@ -285,7 +315,8 @@ export function diagnosisBrief(d: Diagnosis): string {
     return [`DIAGNOSIS (computed from the owner's numbers): the counts contradict each other, so no constraint is named. Resolve first:`, ...(d.conflicts ?? []).map((c) => `- ${c}`), "The first step must be checking these counts. Keep plays cheap and reversible until they're consistent."].join("\n");
   if (d.constraint === "unknown") {
     const hyps = d.hypotheses?.length ? [`Competing hypotheses (none established): ${d.hypotheses.map((h) => `${h.constraint}${h.probability !== null ? ` (P weaker ${h.probability})` : ""}`).join(" vs ")}. To tell them apart: ${d.hypotheses[0].discriminate}`] : [];
-    return [`DIAGNOSIS (computed from the owner's numbers): not enough evidence to name the binding constraint${d.missing.length ? ` (missing: ${d.missing.join(", ")})` : ""}.`, ...d.readings.map(reading), ...hyps, ...lever, "Include a first step that measures these, and keep plays cheap and reversible until they're known."].join("\n");
+    const next = d.nextMeasurement ? [`NEXT MEASUREMENT (${d.nextMeasurement.priority === "decision_critical" ? "needed before a firm decision" : "most useful next"}): ${d.nextMeasurement.action} Why: ${d.nextMeasurement.reason}`] : [];
+    return [`DIAGNOSIS (computed from the owner's numbers): not enough evidence to name the binding constraint.`, ...d.readings.map(reading), ...hyps, ...lever, ...next, "Use this as the first measurement step; keep plays cheap and reversible until the diagnosis is supported."].join("\n");
   }
   const alt = d.hypotheses?.slice(1).filter((h) => h.probability !== null);
   return [

@@ -41,7 +41,15 @@ describe("diagnosis", () => {
   it("no numbers → unknown, with what to measure (never a guess)", () => {
     const d = diagnose({});
     expect(d).toMatchObject({ constraint: "unknown", basis: "none" });
-    expect(diagnosisBrief(d)).toMatch(/missing: visitors in the period, signups or leads/);
+    expect(d.nextMeasurement).toMatchObject({ priority: "decision_critical" });
+    expect(d.nextMeasurement?.action).toMatch(/Count new paying customers/);
+    expect(diagnosisBrief(d)).toMatch(/NEXT MEASUREMENT \(needed before a firm decision\)/);
+    expect(diagnosisBrief(d)).not.toMatch(/visitors in the period, signups or leads/);
+  });
+  it("asks for the one missing count that separates the remaining funnel explanations", () => {
+    const d = diagnose({ funnel: { periodDays: 30, visitors: 300, newCustomers: 10 } });
+    expect(d.nextMeasurement).toMatchObject({ action: expect.stringMatching(/Count how many of those 300 visitors became leads/), priority: "useful" });
+    expect(d.missing.length).toBeGreaterThan(1);
   });
   it("plays must work on a measured activation constraint", () => {
     const d = diagnose({ funnel: { leads: 100, activated: 12, newCustomers: 3 }, types: ["b2b_saas"] });
