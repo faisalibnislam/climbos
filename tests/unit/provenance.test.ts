@@ -188,7 +188,7 @@ describe("adversarial source checks", () => {
   it("the cost line always has a basis, and unverified sources are named", async () => {
     const { COST_BASIS_LABEL, forecastBasis, urlKey } = await import("../../shared/agents/provenance");
     const verifyTags = (await import("../../shared/agents/provenance")).verifyTags as unknown as Loose;
-    expect(COST_BASIS_LABEL.sourced_estimate).toMatch(/not yet your results/);
+    expect(COST_BASIS_LABEL.sourced_estimate).toMatch(/fit to your business is not verified/);
     const out = verifyTags(onePlay({ quote: "15% off annual plans." }, { reachSource: { source: "benchmark", ref: "Survey" } }), { pages: { [urlKey("https://formkit.app/pricing")]: PAGE } });
     expect(forecastBasis(out.plays[0] as never, out.economics).customers.unchecked).toEqual(["Weekly reach", "trial to paid"]);
   });

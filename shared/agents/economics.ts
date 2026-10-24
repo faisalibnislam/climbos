@@ -789,13 +789,13 @@ function basisNote(p: PlayLike, e: Economics): string {
   const f = financialEvidence(p, e);
   const finance = ` Financial comparison: ${f.status.replaceAll("_", " ")}; ${f.assumed.length ? `assumed ${f.assumed.join(", ")}` : "no assumed inputs"}${f.unchecked.length ? `; unchecked ${f.unchecked.join(", ")}` : ""}${f.planned.length ? `; planned ${f.planned.join(", ")}` : ""}.`;
   if (b.kind === "assumption_scenario") return `Forecast basis: assumption-based scenario (assumed: ${b.assumed.join(", ")}).${unchecked}${finance}`;
-  if (b.kind === "sourced_estimate") return `Forecast basis: estimate from cited sources, not yet from this business's results.${unchecked}${finance}`;
+  if (b.kind === "sourced_estimate") return `Forecast basis: estimate from cited sources, not yet from this business's results; source fit to this business is not verified.${unchecked}${finance}`;
   return `Forecast basis: scenario from the play's own inputs (sources not labelled).${finance}`;
 }
 
 function portfolioEvidenceNote(plays: PlayLike[], e: Economics): string {
   const statuses = plays.map((p) => financialEvidence(p, e).status);
-  if (statuses.every((s) => s === "checked_inputs")) return "The selected comparison uses inputs checked by owner confirmation or source review; results still are not calibrated to observed outcomes.";
+  if (statuses.every((s) => s === "checked_inputs")) return "The selected comparison uses owner-confirmed inputs; results still are not calibrated to observed outcomes.";
   if (statuses.includes("unlabelled_scenario")) return "At least one input is unlabeled, so this is a scenario comparison and not a firm money decision.";
   return "At least one input is assumed, planned, or unchecked, so this is a conditional scenario comparison and not a firm money decision.";
 }

@@ -166,6 +166,20 @@ describe("edge cases", () => {
     expect(issue?.severity).toBe("error");
   });
 
+  it("keeps a page-matched research rate conditional until its fit to this business is established", () => {
+    const owner = { source: "owner" as const, ref: "Owner-confirmed", check: "owner_input" as const, checkedBy: CHECK_STAMP };
+    const research = { source: "research" as const, ref: "https://example.test/report", quote: "The conversion rate was 8% for qualified visitors in Q2.", population: "qualified visitors", period: "Q2", check: "source_verified" as const, checkedBy: CHECK_STAMP, access: "read" as const };
+    const economics = { ...ref, sources: { revenue: owner, margin: owner, churn: owner } };
+    const losing = {
+      ...refPlay({ monthlySpendUsd: 6000 }),
+      model: { ...refPlay({ monthlySpendUsd: 6000 }).model, reachSource: owner, spendSource: owner, hoursSource: owner, steps: [{ name: "paid", rate: 0.08, source: "research" as const, ref: research.ref, quote: research.quote, population: research.population, period: research.period, check: research.check, checkedBy: CHECK_STAMP, access: "read" as const }] },
+    };
+    const result = playMaths(losing, economics);
+    const issue = lintEconomics({ economics, plays: [losing] }).find((item) => item.rule === "economics" && /Does not pay back/.test(item.message));
+    expect(result.financialEvidence).toMatchObject({ status: "conditional_scenario", unchecked: expect.arrayContaining(["paid (source fit to this business unverified)"]) });
+    expect(issue?.severity).toBe("warn");
+  });
+
   it("publishes structured conditional evidence for assumed and unchecked inputs", () => {
     const tagged = {
       ...refPlay(),

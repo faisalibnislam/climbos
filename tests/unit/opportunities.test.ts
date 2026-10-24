@@ -76,7 +76,7 @@ describe("Growth Home opportunity projection", () => {
     expect(result[0].nextStep).toBe("Invite three recent customers to a short call.");
     expect(result[0].ownerHoursPerWeek).toBe(1.5);
     expect(result[1].ownerHoursPerWeek).toBeNull();
-    expect(result[1].sources.map((source) => source.label)).toEqual(["Verified on source", "Owner-confirmed input"]);
+    expect(result[1].sources.map((source) => source.label)).toEqual(["Page quote and number match; business fit unverified", "Owner-confirmed input"]);
   });
 
   it("does not turn unchecked research claims into verified citations", () => {
@@ -88,7 +88,7 @@ describe("Growth Home opportunity projection", () => {
       },
     ]);
 
-    expect(result.sources[0]).toMatchObject({ label: "Page read; claim not verified", url: "https://example.com/research" });
+    expect(result.sources[0]).toMatchObject({ label: "Page read; quote or metric not matched", url: "https://example.com/research" });
   });
 
   it("projects only complete, ordered, nonnegative forecast ranges", () => {

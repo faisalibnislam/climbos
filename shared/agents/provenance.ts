@@ -329,12 +329,12 @@ export interface ForecastBasis {
   kind: BasisKind;
   /** Labels of the assumed inputs, for "assumed: …". */
   assumed: string[];
-  /** Labels of sourced inputs not verified (model-reported research, unmatched pages, benchmarks, unconfirmed owner values). */
+  /** Inputs whose source, applicability, or owner confirmation is not established. */
   unchecked: string[];
 }
 
 export interface FinancialEvidence {
-  /** Evidence quality for a scenario's money comparison; this is not a probability or outcome forecast. */
+  /** Evidence quality for a scenario's money comparison; a page quote match alone does not verify source applicability. */
   status: "checked_inputs" | "conditional_scenario" | "unlabelled_scenario";
   assumed: string[];
   unchecked: string[];
@@ -343,7 +343,9 @@ export interface FinancialEvidence {
 
 function basisOf(rows: InputRow[]): ForecastBasis {
   const assumed = rows.filter((r) => r.tag.source === "assumption").map((r) => r.label);
-  const unchecked = rows.filter((r) => r.tag.check === "reported" || r.tag.check === "retrieved").map((r) => r.label);
+  const unchecked = rows.flatMap((r) => r.tag.source === "research" && r.tag.check === "source_verified"
+    ? [`${r.label} (source fit to this business unverified)`]
+    : r.tag.check === "reported" || r.tag.check === "retrieved" ? [r.label] : []);
   if (assumed.length) return { kind: "assumption_scenario", assumed, unchecked };
   if (rows.some((r) => r.tag.source === "unlabelled")) return { kind: "unlabelled_scenario", assumed: [], unchecked };
   return { kind: "sourced_estimate", assumed: [], unchecked };
@@ -359,7 +361,9 @@ export function forecastBasis(p: PlayLike, e: Economics): { customers: ForecastB
 export function financialEvidence(p: PlayLike, e: Economics): FinancialEvidence {
   const rows = playInputs(p, e);
   const assumed = rows.filter((r) => r.tag.source === "assumption").map((r) => r.label);
-  const unchecked = rows.filter((r) => r.tag.check === "reported" || r.tag.check === "retrieved").map((r) => r.label);
+  const unchecked = rows.flatMap((r) => r.tag.source === "research" && r.tag.check === "source_verified"
+    ? [`${r.label} (source fit to this business unverified)`]
+    : r.tag.check === "reported" || r.tag.check === "retrieved" ? [r.label] : []);
   const planned = rows.filter((r) => r.tag.source === "planned").map((r) => r.label);
   const unlabelled = rows.filter((r) => r.tag.source === "unlabelled").map((r) => r.label);
   return {
@@ -372,14 +376,14 @@ export function financialEvidence(p: PlayLike, e: Economics): FinancialEvidence 
 
 export const BASIS_LABEL: Record<BasisKind, string> = {
   assumption_scenario: "Assumption-based scenario",
-  sourced_estimate: "Estimate from sources, not yet your results",
+  sourced_estimate: "Estimate from sources; fit to this business is not verified",
   unlabelled_scenario: "Scenario (older plan: sources not labelled)",
 };
 
 /** Short form for the cost line. */
 export const COST_BASIS_LABEL: Record<BasisKind, string> = {
   assumption_scenario: "rests on assumptions",
-  sourced_estimate: "from sources, not yet your results",
+  sourced_estimate: "uses source values whose fit to your business is not verified",
   unlabelled_scenario: "sources not labelled",
 };
 
@@ -394,7 +398,7 @@ export const ACCESS_LABEL: Record<NonNullable<SourceTag["access"]>, string> = {
 
 export const CHECK_LABEL: Record<TagCheck, string> = {
   owner_input: "confirmed by you",
-  source_verified: "verified on page",
+  source_verified: "page quote and metric matched; applicability not checked",
   retrieved: "page retrieved, claim not matched",
   reported: "not checked",
 };

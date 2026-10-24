@@ -41,4 +41,10 @@ describe("play confidence", () => {
     expect(["some", "strong"]).toContain(own.forecast);
     expect(playConfidence(play([owner, owner]) as never, econKnown, activation, { comparativeEvidence: true }).fix).toBe("strong");
   });
+  it("does not present a page-matched source quote as a business-calibrated forecast", () => {
+    const matched = { ...research, check: "source_verified", checkedBy: "climbos-provenance-1", access: "read" };
+    const confidence = playConfidence(play([matched, matched]) as never, econKnown, activation);
+    expect(confidence.forecast).toBe("some");
+    expect(confidence.why.forecast).toMatch(/fit to this business is not established/i);
+  });
 });

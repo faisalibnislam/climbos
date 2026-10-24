@@ -95,9 +95,9 @@ function sourceProjection(tag: OpportunitySourceInput): OpportunitySource | null
     };
   }
   if (source === "research") {
-    const verified = tag.checkedBy === CHECK_STAMP && tag.check === "source_verified" && tag.access === "read";
+    const matched = tag.checkedBy === CHECK_STAMP && tag.check === "source_verified" && tag.access === "read";
     return {
-      label: verified ? "Verified on source" : tag.access === "read" ? "Page read; claim not verified" : "Search result; page not verified",
+      label: matched ? "Page quote and number match; business fit unverified" : tag.access === "read" ? "Page read; quote or metric not matched" : "Search result; page not verified",
       ...(url ? { url } : {}),
       ...(quote ? { quote } : {}),
     };
