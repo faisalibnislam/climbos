@@ -1,74 +1,60 @@
-# Capabilities and honest boundaries
+# ClimbOS capabilities and boundaries
 
-ClimbOS is an all-in-one AI growth team: ten specialist roles coordinated through one shared business record. **Every claim on the website must match this file.** Status legend:
-- **Built**: implemented and tested locally.
-- **Fixture**: works against deterministic demo adapters only.
-- **Needs setup**: built, but requires credentials or provider approval before real use.
-- **Not offered**: deliberately unavailable.
+Last checked against the repository: 25 October 2026. This is an implementation guide, not a claim that every customer account is connected or every provider has approved ClimbOS.
 
-## The ten roles
+## Availability labels
 
-All text work runs on OpenAI (`shared/agents/routes.ts`, route `openai-2026-10-18`). There's no fallback model: if OpenAI is down, a job pauses and resumes from its checkpoints.
+- **Built:** implemented in the application and covered by local checks.
+- **Needs setup:** the code exists, but an owner connection, operator credential, provider review, or workspace permission is required for real use.
+- **Limited:** available only for a bounded sample or specific workflow, as described.
+- **Unavailable:** no supported integration or behavior is implemented; use the stated manual or export path.
 
-| Role | What it does in ClimbOS |
-|---|---|
-| 🧠 AI CEO | Goal decomposition, priorities, the growth plan |
-| ⚙️ AI COO | Turns chat requests into costed action cards (never executes directly) |
-| 📈 AI CMO | Business insights, positioning, channels, experiments |
-| 💰 AI CSO | Conversion audits, follow-ups, find customers and outreach |
-| 🎨 AI Creative Director | Image briefs and branded images (metered attempts) |
-| 📱 AI Social Media Manager | Posts, variants, alt text, calendar, weekly autopilot |
-| 🎯 AI Ads Manager | Search and Meta ad drafts within the approved budget |
-| 🔍 AI SEO Specialist | Search-intent pages, outlines and drafts |
-| 📊 AI Data Analyst | Explains numbers that statistical code computed; extracts business facts |
-| 🤝 AI Customer Success Manager | Welcome, retention and lifecycle sequences (opt-in only) |
+The Connections screen reports the current state for each workspace. Credentials and provider approvals can change availability without a code change. Demo workspaces use labeled fixtures; a fixture result is not evidence of a live provider operation.
 
-**Models**
+## What businesses can do
 
-| Mode | Research | Draft / revise | Review |
-|---|---|---|---|
-| Climb AI Basic (default) | gpt-6-luna | gpt-6-luna; insights, plays and plan write two drafts and keep the stronger | gpt-6-luna |
-| Climb AI Expert (paid, chosen by the owner) | gpt-6-luna | gpt-6.1-sol for insights, channel fit, plays, plan, ads and the weekly plan; Luna for everything else | gpt-6-luna |
-
-- **Images:** Gemini image routes. **Video:** Veo 3.1 Lite (`shared/ai/models.ts`).
-- **Routing:** deterministic (`shared/agents/routes.ts`). It isn't a round-robin conversation between agents.
-
-## Capability areas
-
-| Area | What works | Status |
+| Area | Current capability | Availability and limits |
 |---|---|---|
-| A. Business intelligence | Reads the homepage plus up to 4 product, pricing or about pages (respects robots.txt; SSRF-safe). Extracts sourced facts for owner review. Covers audiences, competitors (sourced or flagged "confirm"), positioning, pricing notes, SWOT, customer journey and opportunities. Falls back to a pasted description (labeled "supplied by you"). | Built |
-| B. Growth strategy | Prioritized channels with why, deliverables, dependencies, measurement, AI cost and ad spend (capped to the owner's budget). Experiments with hypothesis, population, method, metric, guardrails and stopping rule. Plan approval, refresh and versions. | Built |
-| C. Social media | Drafts for Instagram, Facebook, LinkedIn, X, TikTok, Pinterest and YouTube with platform limits. AI images (2 attempts max, labeled). Calendar, scheduling, approvals. **Direct publishing:** Instagram professional accounts, Facebook Pages, LinkedIn and X after OAuth (and provider review where required), following the workspace's approval mode. TikTok, Pinterest and YouTube use export packs (copy/CSV). | Built; direct publishing **needs setup** (provider apps and keys) |
-| D. Advertising | Google search and Meta ad drafts. Campaigns created **paused**; activation needs an approval bound to the exact budget, dates and destination. Monthly envelope enforced. Pause-all requests provider pauses and reports confirmed or unknown. ROAS shown separately from ROI. | Built; live **needs setup** (Google Ads developer token at Basic/Standard access; Meta Marketing API access tier) |
-| E. Sales engine | Qualification questions and follow-up sequences. **Find customers:** researches fitting companies and keeps only published business emails, with evidence. **Find creators:** public profiles with contact routes. Outreach sends from the owner's own mailbox with warm-up, follow-ups, stop-on-reply and suppressions. Each send is bound to the approved content. No bought contact database. | Built; sending **needs setup** (owner mailbox) |
-| F. Content & SEO | Search-intent page briefs and drafts with keywords and internal links. The Search Console adapter exists, but nothing syncs or uses its data yet. No site inventory, content calendar or CMS publishing yet (growth-engine slices S9–S10). | Briefs and drafts built; Search Console **not wired**; publishing **not offered** |
-| G. Email marketing | Sequence drafts. Sending runs only through the customer's **own** Resend account, only to consented, unsuppressed contacts, and requires the unsubscribe placeholder. A connected list alone doesn't authorize sending. | Drafts built. The BYO adapter is built and tested with mocks; the in-app send flow (segment preview, scheduled send) is **not wired yet** |
-| H. Conversion & revenue | Landing-page conversion audit with page citations. Funnel, attribution (first/last touch, unattributed bucket, reconciliation), revenue import (Stripe read-only key or CSV), deterministic forecasts with backtests, scenario calculator. | Built |
+| Business research | Read the public homepage and a bounded set of same-site pages; extract page-cited facts for owner review; organize audiences, offers, positioning, competitors, objections, SWOT, and business unknowns. | Built. Website access respects robots rules and blocks private-network destinations. Website statements are not independent proof of demand or performance. |
+| Growth planning | Turn an owner goal and known constraints into prioritized channels, plays, action cards, and experiments with prerequisites, costs, measures, and stop rules. Recalculate deterministic scenario economics and compare portfolio choices when inputs permit. | Built. Forecasts and scenario ranges depend on supplied inputs; they are not promised results or causal lift. Unknown inputs remain unknown. |
+| Specialist work | Configure specialized profiles for growth strategy, research, competitive intelligence, SEO and AI-search readiness, conversion, social, ads, sales, lifecycle, revenue, brand, PR, and related tasks. These profiles use ten shared, metered execution roles. | Built. The profiles are coordinated workflows, not independent human experts. Work quality and business outcomes still require evaluation. |
+| AI model modes | Basic mode uses the configured Luna route. Expert mode can escalate selected strategy and planning tasks to Sol after a measured review condition. | Built. OpenAI availability and workspace eligibility are required. There is no silent provider fallback. Image generation uses configured Google Gemini routes. |
+| Social content | Draft channel-specific posts, variants, alt text, content angles, trend-aware ideas, and calendars. Brand settings can include tone, humor/trend preferences, and approved writing examples. | Built. Trends need current source evidence; category and platform checks still apply. A draft or calendar entry is not proof of expected engagement or sales. |
+| Social planning and publishing | Plan weekly content and schedule approved posts under each workspace's publishing policy. | Built; real publishing needs connected accounts, operator credentials, and any required provider review. Facebook Pages, professional Instagram, LinkedIn, and X have supported publish paths when their capability state is ready. TikTok, Pinterest, and YouTube use manual export paths. Instagram publishing requires an eligible professional account and supported media. |
+| Creative assets | Create image concepts and generated images, manage reusable assets, edit supported designs, and prepare short-form video/Reel assets. | Built with configured image/video providers and usage limits. A generated visual is not a real customer, product, or performance result. Some editing and rendering options depend on worker/provider configuration. |
+| Paid advertising | Draft Google Search and Meta campaigns, inspect available metrics, and request campaign activation or pause actions. | Needs setup. Campaigns are created paused; activation is checked against approval for the exact account, destination, dates, and spend. Provider access level and app review affect live use. A reported ROAS is not causal ROI or full profit. |
+| Customer discovery and sales | Research public companies, creators, and potential partners; retain source evidence; prepare qualification, booking, and tailored outreach workflows; manage prospect stages and collaboration outcomes. | Built with bounded public-source research. Contact routes must be supported by evidence. Sending requires an authorized, configured mailbox and the applicable approval and suppression checks; no shared bought-contact database is assumed. |
+| Email and lifecycle | Draft onboarding, nurture, retention, and sales follow-up messages; manage eligible contacts and suppression state. | Drafting is built. Marketing sends require the customer's configured Resend account, consented and unsuppressed recipients, and the send workflow's approval checks. An imported contact is not automatically eligible to receive marketing. |
+| Landing pages and lead capture | Draft, edit, and host ClimbOS landing pages; collect page views and form leads into the workspace pipeline/inbox. | Built. A ClimbOS-hosted page is not an edit to the customer's existing website. Live page limits depend on workspace plan. |
+| Website conversion audit | Review the homepage plus up to four prioritized same-site pages, sampled social posts, page evidence, conversion paths, technical observations, and available performance data. When the authenticated render worker is available, send temporary desktop/mobile screenshots of one already-read page for visual review. | Limited sample. Screenshots are synthetic and temporary. They do not test full journeys, form behavior, accessibility conformance, or actual conversion impact. Social review is also bounded; sampled posts do not represent a complete account history. |
+| Search and AI-search visibility | Check sampled static HTML for search-readiness signals; use Google Search Console snapshots when the matching property is connected; import a bounded CSV export of Google's Generative AI report; record fixed AI-answer questions and owner-observed mentions/citations over time. | Built with setup and sampling limits. AI-answer observations are manual samples, not continuous monitoring or market share. Search checks do not establish indexing, rankings, or citations by answer engines. |
+| Reviews and inbox | Manage manually imported reviews, draft suitable responses, route sensitive items for owner review, collect private feedback, and review supported connected-channel messages. | Limited. Reviews can be recorded and drafted, but Google Business Profile review retrieval and native public reply publishing are not implemented. |
+| Analytics and results | Read supported GA4 and Search Console data, import revenue from Stripe read-only access or CSV, review funnel and attribution views, analyze cohorts, and run deterministic forecasts/backtests/scenarios. | Needs setup for live providers. Import coverage, attribution rules, and data freshness are shown where available. Platform conversion claims are not combined into total revenue, and association is not presented as causation. |
+| Climb AI workspace assistant | Ask about workspace information, request research or drafts, and turn requests into bounded action cards and jobs. A website chat widget can answer from configured business information and collect inquiries. | Built. Access follows workspace roles, tool limits, usage budgets, and action approvals. The assistant cannot grant itself permission to publish, send, or spend. |
+| Operations and controls | Manage connections, team roles, brand settings, policies, approvals, usage, billing, activity, and pause controls. Operators have a separate knowledge and service console. | Built. External writes are tenant-scoped and checked against approved content, destination, budget, time window, current policy, and provider capability. |
 
-## Platform matrix
+## Connection and write summary
 
-| Platform | Read | Publish / write | Notes |
+| Service or data source | Read / import | Write / publish | Requirements or limit |
 |---|---|---|---|
-| Website | Bounded public pages | — | robots.txt, redirects re-validated, private IPs blocked, DNS checked |
-| Google Analytics 4 | Visits, sign-ups (key events), daily | — | OAuth (read-only scope) |
-| Search Console | Adapter only (not synced yet) | — | OAuth (read-only scope) |
-| Google Ads | Campaign metrics | Paused campaign → approved activation → pause | Developer token; Test access can't touch production accounts |
-| Meta Ads | Insights | Paused campaign (with spend cap) → approved activation → pause | Marketing API tier Limited/Full; advanced permissions to manage others' accounts |
-| Facebook Pages | Page posts | Publish approved posts, then verify by reading back | `pages_manage_posts` review |
-| Instagram | Account type, publishing limit | Image posts through the container flow, verified | Business/Creator accounts only; personal accounts show "Unsupported account type" |
-| Stripe | Charges, refunds (read-only restricted key) | — | Import only; ClimbOS billing stays on Polar |
-| Revenue CSV | Validated rows, duplicates reported | — | Up to 50,000 rows / 10 MB |
-| Customer's Resend | Segments, contacts | Broadcasts (consent + unsubscribe enforced) | BYO API key |
-| LinkedIn | — | Publish approved posts, verified | OAuth app needed |
-| X | — | Publish approved posts, verified | API keys needed |
-| TikTok, Pinterest, YouTube | — | Export packs only | No browser automation or password scraping, ever |
+| Public website | Bounded same-site page reads; screenshot and performance checks where configured | ClimbOS landing pages can be hosted; edits to the customer's own CMS are not general website writes | Public HTTP(S), robots and network safety checks; screenshot worker and Google PageSpeed key are optional |
+| Google Analytics 4 | Visits, events, and supported reports | None | Google OAuth setup and access to the selected property |
+| Google Search Console | Dated query/page snapshots, URL inspection, and matched-property context | None | Google OAuth setup and selected property must match the business website; dedicated generative-AI report is CSV import |
+| Google Ads / Meta Ads | Supported campaign metrics | Create paused campaigns; approved, bounded activation/pause actions | Operator credentials, account access level, provider permissions/review, and exact approval |
+| Facebook Pages / Instagram | Supported sampled posts and returned metrics; Instagram still-image samples | Approved supported posts | Meta/Instagram app setup and permissions; Instagram requires a Business or Creator account |
+| LinkedIn / X | Limited account data as returned by the integration | Approved posts when the configured OAuth capability is ready | Provider app credentials and permissions; otherwise use drafts/export |
+| TikTok / Pinterest / YouTube | No connected account history in the current integration | No automatic publishing | Prepare and export platform-ready drafts |
+| WordPress | Connection validation and draft read-back | Create a private draft from an approved article after separate confirmation | Connected site and Application Password; ClimbOS does not publish the article live |
+| Customer's Resend account | Supported contact/segment access | Consent-checked marketing send workflow | Customer-owned API key, eligible recipients, suppression/unsubscribe handling, and approval |
+| Stripe / revenue CSV | Stripe revenue import is read-only; CSV revenue and contact imports are validated and bounded | None | Stripe restricted read key or owner-prepared CSV; ClimbOS billing uses Polar |
 
-## What ClimbOS will never do
+This table describes implemented paths, not current production status for any particular customer. Check the workspace Connections screen and `docs/ProviderSetup.md` for current setup instructions.
 
-- Invent testimonials, customers, statistics, results or a contact list.
-- Send, post, publish or spend without the policy and approval checks above.
-- Raise an ad budget on its own, or promise an instant zero-spend stop.
-- Present an AI-generated image as a real customer or product screenshot.
-- Call a forecast "calibrated" without a held-out coverage check, or attach intervals to pure assumptions.
-- Add Google and Meta claimed conversions together as total revenue.
+## Boundaries
+
+- ClimbOS does not invent customers, testimonials, statistics, results, contacts, or business facts.
+- Drafting a recommendation does not authorize sending, publishing, changing a live campaign, or spending money.
+- No tactic guarantees growth, conversion lift, search ranking, or answer-engine citation.
+- A scenario library entry is a proposed hypothesis; it must be checked against the business's evidence, budget, capacity, geography, and permissions.
+- Sensitive or legally uncertain tactics require current, jurisdiction-specific review. The product's checks are not legal advice or a legal determination.
+- Read [Architecture](Architecture.md), [Security and data](SecurityAndData.md), [Provider setup](ProviderSetup.md), and [Verification](Verification.md) for system design, controls, setup, and test evidence.

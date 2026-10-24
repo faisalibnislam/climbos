@@ -15,7 +15,8 @@ const groups: { name: string; where: "web" | "convex"; keys: string[]; required:
   { name: "Encryption", where: "convex", keys: ["CLIMBOS_ENCRYPTION_KEY", "CLIMBOS_ENCRYPTION_KEY_ID"], required: true, impact: "Connections can't store tokens" },
   { name: "Operators", where: "convex", keys: ["OPS_EMAILS"], required: true, impact: "Nobody can open /ops" },
   { name: "Email sign-in (Resend)", where: "convex", keys: ["AUTH_RESEND_KEY"], required: true, impact: "Email codes can't be sent" },
-  { name: "AI providers", where: "convex", keys: ["ANTHROPIC_API_KEY", "GEMINI_API_KEY"], required: true, impact: "Real AI work is unavailable (demo still works)" },
+  { name: "OpenAI text models", where: "convex", keys: ["OPENAI_API_KEY"], required: true, impact: "Real text-AI work is unavailable (demo still works)" },
+  { name: "Gemini image/video models", where: "convex", keys: ["GEMINI_API_KEY"], required: false, impact: "AI image and video generation is unavailable" },
   { name: "Billing (Polar)", where: "convex", keys: ["POLAR_ACCESS_TOKEN", "POLAR_WEBHOOK_SECRET", "POLAR_PRODUCT_BASIC", "POLAR_PRODUCT_STARTER", "POLAR_PRODUCT_GROWTH", "POLAR_PRODUCT_PRO", "POLAR_PRODUCT_BUSINESS", "POLAR_PRODUCT_BOOST_29"], required: true, impact: "Plans can't be purchased" },
   { name: "Resend webhooks", where: "convex", keys: ["RESEND_WEBHOOK_SECRET"], required: false, impact: "Bounces/complaints aren't auto-suppressed" },
   { name: "Google sign-in", where: "convex", keys: ["AUTH_GOOGLE_ID", "AUTH_GOOGLE_SECRET"], required: false, impact: "Email codes only" },
@@ -24,6 +25,8 @@ const groups: { name: string; where: "web" | "convex"; keys: string[]; required:
   { name: "Google Ads API", where: "convex", keys: ["GOOGLE_ADS_DEVELOPER_TOKEN", "GOOGLE_ADS_ACCESS_LEVEL"], required: false, impact: "Google Ads campaigns can't be created" },
   { name: "Meta integrations", where: "convex", keys: ["META_APP_ID", "META_APP_SECRET", "META_ADS_ACCESS_TIER"], required: false, impact: "Facebook Pages / Meta Ads show Setup needed" },
   { name: "Instagram Login", where: "convex", keys: ["INSTAGRAM_APP_ID", "INSTAGRAM_APP_SECRET"], required: false, impact: "Instagram publishing shows Setup needed" },
+  { name: "LinkedIn publishing app", where: "convex", keys: ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"], required: false, impact: "LinkedIn publishing shows Setup needed" },
+  { name: "X publishing app", where: "convex", keys: ["X_CLIENT_ID", "X_CLIENT_SECRET"], required: false, impact: "X publishing shows Setup needed" },
   { name: "R2 storage", where: "convex", keys: ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"], required: false, impact: "Convex file storage is used" },
   { name: "Product analytics", where: "web", keys: ["NEXT_PUBLIC_POSTHOG_KEY"], required: false, impact: "No ClimbOS usage analytics" },
 ];

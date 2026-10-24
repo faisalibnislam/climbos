@@ -4,13 +4,13 @@
 
 - Web: Next.js 16 (App Router) on Vercel · `climbos.app`
 - Backend: Convex (state, auth, durable jobs, crons, webhooks)
-- AI: Anthropic Claude + Google Gemini (direct, no gateway)
+- AI: OpenAI for text models and Google Gemini for image/video generation (direct, no gateway)
 - Billing: Polar (merchant of record) · Platform email: Resend · Research: built-in fetcher or Firecrawl
 
 ```
 User → "Help Formkit get more paying customers in 90 days, $600/mo ads"
      → research (sourced facts you confirm) → growth plan (you approve)
-     → drafts (posts, ads, emails, SEO pages) → approval → publish / export → results & forecasts
+     → drafts (social, ads, email, SEO, landing pages) → approval → publish / export → results & forecasts
 ```
 
 ## Quick start (local)
@@ -57,7 +57,7 @@ pnpm dev                       # http://localhost:3000
 ## Documentation
 
 - [Architecture](docs/Architecture.md): the system map, job engine and approval-bound execution
-- [Capabilities](docs/Capabilities.md): the 10 roles, capability areas A–H, the platform matrix and honest limits
+- [Capabilities](docs/Capabilities.md): current product workflows, connection states, and honest limits
 - [Pricing & economics](docs/PricingAndEconomics.md): plans, margins, formulas and enforcement
 - [Security & data](docs/SecurityAndData.md): tenancy, secrets, webhooks, SSRF, retention, deletion
 - [Forecasting](docs/Forecasting.md): attribution, backtests, intervals, scenarios

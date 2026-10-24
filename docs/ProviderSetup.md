@@ -12,10 +12,10 @@ Run `pnpm setup:check` (or `pnpm setup:check --prod`) at any time. It lists what
 
 | Variable | Notes |
 |---|---|
-| `ANTHROPIC_API_KEY` | Models `claude-sonnet-5-5` and `claude-haiku-5-5` (verified 17 Oct 2026). The web search tool is `web_search_20250305` at $10 per 1k searches. |
-| `GEMINI_API_KEY` | Models `gemini-3.8-flash` and `gemini-3.1-flash-lite`. Images use `gemini-3.1-flash-lite-image`. `gemini-2.5-flash-image` was shut down on 2 Oct 2026. |
+| `OPENAI_API_KEY` | Required for real text-agent work. Basic mode uses `gpt-6-luna`; selected Expert-mode strategy tasks may escalate to `gpt-6.1-sol` after a measured review condition. There is no silent provider fallback. |
+| `GEMINI_API_KEY` | Used for image generation and video workflows. Image model routes and per-attempt budgets are defined in `shared/ai/models.ts`; video generation is separately metered. |
 
-Without keys, real workspaces show "AI providers aren't available". The demo still works on fixtures.
+Without `OPENAI_API_KEY`, real text-agent work is unavailable; the demo still works on fixtures. Without `GEMINI_API_KEY`, the configured image/video generation routes are unavailable while text work can continue.
 
 ## 3. Resend (platform email: sign-in codes, invitations, alerts, digests)
 
@@ -94,6 +94,8 @@ OAuth runs on our own domain. `CUSTOM_AUTH_SITE_URL` on the Convex deployment po
 | Google Ads (API v26) | Same client plus `GOOGLE_ADS_DEVELOPER_TOKEN`, `GOOGLE_ADS_ACCESS_LEVEL` (test, explorer, basic or standard) | Developer token **Basic or Standard** access. Test access can't touch production accounts. Permissible-use review. |
 | Facebook Pages + Meta Ads (Graph v26.0) | `META_APP_ID`, `META_APP_SECRET`, `META_ADS_ACCESS_TIER` (limited or full) | App Review for `pages_manage_posts`, `pages_read_engagement`, `ads_management` and `ads_read`; Business Verification; Marketing API access tier |
 | Instagram (Instagram Login) | `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET` | App Review for `instagram_business_basic` and `instagram_business_content_publish`. Business or Creator accounts only. |
+| LinkedIn | `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` | LinkedIn app setup and the permissions required by the selected organization/profile publishing capability. |
+| X | `X_CLIENT_ID`, `X_CLIENT_SECRET` | X developer app and API access needed for the approved publishing capability. |
 | Firecrawl | `FIRECRAWL_API_KEY` | None. Without it, the built-in bounded fetcher is used. |
 | Cloudflare R2 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` (a **private** bucket; an API token with Object Read & Write on that bucket only) | None. When set, new AI images and privacy exports go to R2 behind presigned URLs. |
 | PostHog | `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` | None. Session replay is off and text is masked. |

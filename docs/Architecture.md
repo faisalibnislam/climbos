@@ -6,7 +6,7 @@ ClimbOS turns a business goal into a researched plan, reviewable work, approved 
 Browser (Next.js 16 on Vercel)
   ├─ Marketing: /, /pricing, /how-it-works, /security, /privacy, /terms
   ├─ Live preview (/api/preview → Convex, IP-hashed, rate-limited)
-  ├─ App: /onboarding, /app/[org]/{today,plan,content,results,connections,settings/*}
+  ├─ App: /onboarding, /app/[org]/{today,plan,content,autopilot,outbound,visibility,pipeline,reviews,pages,images,reels,results,connections,chat,settings/*}
   ├─ Operators: /ops (separate allowlist)
   └─ Server routes: /api/oauth/callback, /api/health, proxy.ts (optimistic auth redirect)
         │  reactive queries / mutations / actions (Convex client, JWT from Convex Auth)
@@ -16,9 +16,8 @@ Convex (authoritative state + durable jobs)
   ├─ lib/tenancy.ts       requireOrgAccess(): identity + membership + permission on EVERY call
   ├─ engine.ts            runs, checkpointed steps, atomic reservations, reconcile-once, recovery
   ├─ jobs.ts ("use node") ten-role tasks: research, insights, strategy, content, chat, analysis
-  ├─ ai/providers.ts      Claude + Gemini adapters (server-only keys), schema validation
+  ├─ ai/providers.ts      OpenAI text + Gemini image/video adapters (server-only keys), schema validation
   ├─ ai/fixtures.ts       deterministic demo adapter (never used for real workspaces)
-  ├─ ai/research.ts       SSRF-safe website research (+ Firecrawl when configured)
   ├─ publish.ts / ads.ts  approval-checked external writes, receipts, reconciliation
   ├─ billing.ts           Polar checkout/portal (REST), webhook processing, grants
   ├─ connections*.ts      OAuth, encrypted secrets, capability states, syncs
@@ -29,7 +28,7 @@ Convex (authoritative state + durable jobs)
   └─ crons.ts             recovery, retries, reconciliation, retention, syncs, digests
         │
         ▼
-External: Anthropic, Google Gemini, Polar, Resend, Firecrawl, Google (GA4/SC/Ads), Meta (Pages/IG/Ads), Stripe (read-only)
+External: OpenAI, Google Gemini, Polar, Resend, Firecrawl, Google (GA4/Search Console/Ads/PageSpeed), Meta (Pages/Instagram/Ads), LinkedIn, X, WordPress, Stripe (read-only)
 
 shared/ (pure TypeScript, runs in browser, Node and Convex)
   economics/  rates, routing, entitlements, calculator, ledger, top-ups, CSV
@@ -38,7 +37,7 @@ shared/ (pure TypeScript, runs in browser, Node and Convex)
   integrations/ provider adapters, OAuth/PKCE, capability evaluation, CSV, SSRF
   policy/     roles/permissions, job state machine, canonical hashes, approval checks
   billing/    subscription access, grant rules, Standard Webhooks verification
-  ai/         model registry (verified ids), task contracts and schemas, prompt isolation
+  ai/         OpenAI Responses adapter, model registry, task contracts/schemas, prompt isolation, bounded page-fetch tool
 ```
 
 ## Key decisions
@@ -47,8 +46,7 @@ shared/ (pure TypeScript, runs in browser, Node and Convex)
 |---|---|
 | **Convex for state and jobs** with a custom persisted state machine (not a workflow component) | Every step is written down before and after its external call, so a resumed run skips completed steps (`workflowSteps.output` checkpoint). Stuck runs are recovered by cron: model steps fail, provider writes become *uncertain*. Fully covered by `convex-test`. |
 | **Reservations in mutations** | Convex mutations are serializable transactions, so check-and-reserve is atomic. Provider calls happen only in actions. |
-| **Direct provider SDKs and REST**, no paid gateway | No markup. `@anthropic-ai/sdk` (structured output via `output_config`), `@google/genai`, and Polar/Resend/Firecrawl over REST. |
-| **Claude + Gemini only** (owner decision) | The blueprint's GPT-6 Luna routes go to Claude Haiku 5.5 at identical rates; quality fallbacks are cross-provider. The economics are unchanged (tested). |
+| **OpenAI-first text engine; Gemini media routes** | Text jobs use the OpenAI Responses API through `shared/ai/openai.ts`; Gemini is used for configured image/video work. There is no paid model gateway or silent cross-provider fallback. |
 | **Convex Auth** (email code via Resend, Google, anonymous for demo) | No second paid auth vendor. Product user seats aren't developer seats. |
 | **Cache Components off** in Next.js | Almost every route depends on the session cookie, and data is reactive on the client. Prerendering static shells bought little and broke auth. |
 | **Polar via REST** for checkout, portal and subscriptions | The 1.0 SDK is a fresh rewrite. Signature verification mirrors the SDK exactly, and a test checks it against the official `validateEvent`. |
@@ -59,7 +57,7 @@ shared/ (pure TypeScript, runs in browser, Node and Convex)
 
 1. The user triggers work (onboarding, an action card, Create content, Refresh plan). The mutation checks membership and permission, the emergency/fleet stop and subscription access, then calls `createRunWithReservation` (concurrency limit, per-run step budget, worst-case reservation, entitlement version).
 2. The mutation schedules a node action (`jobs.*`). Each step calls `engine.beginStep`, which returns a checkpoint if the step already ran, refuses when paused or over budget, and marks interrupted provider writes uncertain. The action then calls the provider, records usage (`engine.recordUsage`) and completes or fails the step.
-3. Model output is parsed and validated against the task's schema, with at most one repair. Provider failures may fall back to the other provider after `reserveAdditional`. Circuit breakers open after 5 consecutive failures.
+3. Model output is parsed and validated against the task's schema, with at most one repair. A provider failure does not silently switch providers; the job follows its retry/checkpoint path and usage reservation rules. Circuit breakers open after 5 consecutive failures.
 4. Results are saved through `jobWrites.*`. Artifacts get versions with a canonical content hash. Researched facts start as *needs review*.
 5. `engine.finishRun` reconciles exactly once, using metered quantities derived from usage events, then triggers usage alerts.
 
