@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Eye, Plus, RefreshCw, Trash2 } from "@/components/icons"
+import { ExternalLink, Eye, Plus, RefreshCw, Trash2 } from "@/components/icons"
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { errorMessage } from "@/components/app/errors";
@@ -113,6 +113,35 @@ export default function CompetitorsPage() {
                     <Scannable text={c.summary} max={3} tone="muted" />
                   ) : null}
                   {c.soWhat ? <Callout tone="info">{c.soWhat}</Callout> : null}
+                  <div className="rounded-lg border border-line bg-surface-2 p-3">
+                    <p className="text-xs font-semibold text-ink">AI interpretation of observed page changes</p>
+                    {c.sourceUrls.length ? (
+                      <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                        {c.sourceUrls.filter((url) => /^https?:\/\//i.test(url)).map((url) => (
+                          <li key={url}>
+                            <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-1 break-all text-xs font-medium text-brand underline underline-offset-2">
+                              View source <ExternalLink aria-hidden className="size-3 shrink-0" />
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : <p className="mt-1 text-xs text-ink-3">No source page was saved for this change.</p>}
+                    {c.evidence ? (
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        {c.evidence.removed.length ? <div><p className="text-xs font-medium text-ink-2">Text no longer observed</p><ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-ink-3">{c.evidence.removed.slice(0, 3).map((line, i) => <li key={`${i}-${line}`}>{line}</li>)}</ul></div> : null}
+                        {c.evidence.added.length ? <div><p className="text-xs font-medium text-ink-2">New text observed</p><ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-ink-3">{c.evidence.added.slice(0, 3).map((line, i) => <li key={`${i}-${line}`}>{line}</li>)}</ul></div> : null}
+                      </div>
+                    ) : null}
+                  </div>
+                  {c.suggestedAction ? (
+                    <Callout tone="warning" title="Possible test idea · review before acting">
+                      <p className="font-medium">{c.suggestedAction.action}</p>
+                      <p className="mt-1">First step: {c.suggestedAction.firstStep}</p>
+                      <p className="mt-1">Success signal: {c.suggestedAction.successMetric} · review after {c.suggestedAction.reviewAfterDays} days</p>
+                      <p className="mt-1 text-xs">Caveat: {c.suggestedAction.caveat}</p>
+                    </Callout>
+                  ) : null}
+                  <p className="text-xs text-ink-3">A changed competitor page is a market signal. It does not show why customers choose that competitor or prove a test will work for your business.</p>
                 </CardContent>
               </Card>
             </li>
