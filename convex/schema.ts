@@ -1980,6 +1980,7 @@ export default defineSchema({
   })
     .index("by_org_updated", ["orgId", "updatedAt"])
     .index("by_org_status", ["orgId", "status"])
+    .index("by_org_status_channel", ["orgId", "status", "channel"])
     .index("by_org_scheduled", ["orgId", "scheduledFor"])
     .index("by_run", ["runId"]),
 

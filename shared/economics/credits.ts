@@ -91,7 +91,7 @@ export const CREDIT_EXAMPLES: readonly { kind: string; label: string; basic: num
   { kind: "content_ads", label: "Ad set", basic: 9, expert: 47 },
   { kind: "content_email", label: "Email sequence", basic: 4 },
   { kind: "content_seo", label: "SEO page", basic: 11 },
-  { kind: "conversion_audit", label: "Website audit", basic: 9 },
+  { kind: "conversion_audit", label: "Website & social review", basic: 10 },
   { kind: "social_calendar", label: "Weekly autopilot plan", basic: 8, expert: 38 },
   { kind: "outbound", label: "Find customers + emails", basic: 20 },
   { kind: "image", label: "One image", basic: 5 },

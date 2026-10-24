@@ -107,8 +107,8 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
     }
     case "conversion_audit": {
       const r = { maxSearches: searches("conversion_audit") };
-      return plan("Audit your website for conversions", ["cso", "cmo"], ["conversion_audit"], [{ kind: "research", scrapeCredits: 2 }, ...agentSteps(any(conversionAuditSpec()), r)], {
-        scrapeCredits: 2,
+      return plan("Review your website and social content", ["cso", "cmo"], ["conversion_audit"], [{ kind: "research", scrapeCredits: 5 }, ...agentSteps(any(conversionAuditSpec()), r)], {
+        scrapeCredits: 5,
         searchCalls: r.maxSearches,
       });
     }
@@ -236,11 +236,11 @@ function v1Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
     case "conversion_audit":
       return {
         kind,
-        title: "Audit your website for conversions",
+        title: "Review your website and social content",
         roles: ["cso", "cmo"],
         tasks: ["conversion_audit"],
-        steps: [{ kind: "research", scrapeCredits: 2 }, modelStep("conversion_audit")],
-        meters: { scrapeCredits: 2 },
+        steps: [{ kind: "research", scrapeCredits: 5 }, modelStep("conversion_audit")],
+        meters: { scrapeCredits: 5 },
       };
     case "retention_plan":
       return { kind, title: "Plan retention and loyalty", roles: ["customer_success_manager"], tasks: ["retention_plan"], steps: [modelStep("retention_plan")], meters: {} };

@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { BackLink, Badge, Button, Card, CardContent, CardHeader, CardTitle, NetworkLabel, StatusPill } from "@/components/ui";
 import { OutputView } from "@/components/app/OutputView";
+import { ConversionAuditView } from "@/components/app/ConversionAuditView";
 import { relativeTime } from "@/components/app/money";
 import { RunProgress } from "@/components/app/content/RunProgress";
 import { ClampText } from "@/components/app/results/ClampText";
@@ -79,7 +80,7 @@ export default function WorkPage() {
           {run.output && typeof run.output === "object" && !isPlan && run.artifacts.length === 0 ? (
             <Card>
               <CardContent>
-                <OutputView value={run.output} />
+                {run.kind === "conversion_audit" ? <ConversionAuditView value={run.output} slug={slug} /> : <OutputView value={run.output} />}
               </CardContent>
             </Card>
           ) : null}

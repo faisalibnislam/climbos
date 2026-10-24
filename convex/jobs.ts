@@ -102,6 +102,7 @@ import { readExpertPlan } from "../shared/agents/planCompatibility";
 import { customerNeedPerMonth } from "../shared/agents/goal";
 import { strategyQuickTakeTask } from "../shared/agents/quickTake";
 import { searchConsoleStrategyContext } from "../shared/agents/searchConsoleEvidence";
+import { searchConsolePropertyMatchesWebsite } from "../shared/integrations/searchConsole";
 
 /** Computed results for the explainer: valid JSON within budget, drops logged. */
 function fitMetrics(json: string): string {
@@ -1840,31 +1841,76 @@ export const conversionAudit = internalAction({
     await guarded(ctx, runId, async () => {
       const step = await begin(ctx, runId, 0, "research", "Read key pages");
       let text = "";
-      if (step.checkpoint !== undefined) text = step.checkpoint as string;
+      let pages: { url: string; status: "read" | "blocked_by_robots" | "failed" }[] = [];
+      let pagesFetched = 0;
+      if (step.checkpoint !== undefined) {
+        try {
+          const checkpoint = JSON.parse(String(step.checkpoint)) as unknown;
+          if (checkpoint && typeof checkpoint === "object" && "text" in checkpoint) {
+            const saved = checkpoint as { text?: unknown; pages?: typeof pages; pagesFetched?: unknown };
+            text = typeof saved.text === "string" ? saved.text : "";
+            pages = Array.isArray(saved.pages) ? saved.pages : [];
+            pagesFetched = typeof saved.pagesFetched === "number" ? saved.pagesFetched : 0;
+          } else text = typeof checkpoint === "string" ? checkpoint : String(step.checkpoint);
+        } catch { text = String(step.checkpoint); }
+      }
       else {
         if (!job.run.isFixture && website) {
-          const res = await researchWebsite(website, 1);
-          text = res.pages.filter((p) => p.status === "ok").map((p) => untrusted(p.url, p.text, 10_000)).join("\n\n");
+          const res = await researchWebsite(website, 4);
+          pages = res.pages.map((p) => ({ url: p.url, status: p.status === "ok" ? "read" : p.status }));
+          pagesFetched = res.pagesFetched;
+          text = res.pages.filter((p) => p.status === "ok").map((p) => untrusted(p.url, `TITLE: ${p.title ?? ""}\nDESCRIPTION: ${p.description ?? ""}\nHEADINGS: ${(p.headings ?? []).join(" | ")}\nPAGE TEXT:\n${p.text}`, 4_200)).join("\n\n");
           await ctx.runMutation(internal.engine.recordUsage, {
             stepId: step.stepId!,
             records: [{ type: "scrape_credit", provider: process.env.FIRECRAWL_API_KEY ? "firecrawl" : "builtin", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: res.pagesFetched, costMicros: res.pagesFetched * 5_000, estimated: !process.env.FIRECRAWL_API_KEY }],
           });
         }
-        await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify(text) });
+        await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify({ text, pages, pagesFetched }) });
       }
+      const socialPosts = job.run.isFixture ? [] : await ctx.runQuery(internal.content.auditPublishedSocial, { orgId: job.org._id, limit: 20 });
+      const socialText = socialPosts.length
+        ? untrusted("ClimbOS-published social posts (not complete external account history; no platform performance metrics were supplied)", JSON.stringify(socialPosts), 7_000)
+        : "No confirmed published social posts are available in this ClimbOS workspace. Do not claim to have reviewed external social accounts or infer platform performance. Offer channel/content-mix recommendations only as hypotheses, and label them as such.";
+      const searchConsole = job.run.isFixture ? null : await ctx.runQuery(internal.searchConsole.latestForOrg, { orgId: job.org._id });
+      const propertyMatches = Boolean(searchConsole && website && searchConsolePropertyMatchesWebsite(searchConsole.property, website));
+      const inspectedPageKeys = new Set(pages.filter((page) => page.status === "read").map((page) => urlKey(page.url)));
+      const inspectedSearchRows = propertyMatches && searchConsole
+        ? searchConsole.rows.filter((row) => inspectedPageKeys.has(urlKey(row.page)))
+        : [];
+      const searchContext = propertyMatches && searchConsole
+        ? searchConsoleStrategyContext({ ...searchConsole, rowCount: inspectedSearchRows.length, rows: inspectedSearchRows }, website)
+        : searchConsoleStrategyContext(searchConsole, website);
       const out = await runAgentTask<unknown>(
         ctx,
         job,
         1,
         conversionAuditSpec(),
-        agentInput(job, "Audit the money page(s) for conversion: clarity, message match, offer, proof, objections, calls to action, friction, pricing presentation and trust. Cite the page URL for each finding and prioritise the fixes.", {
-          untrustedContext: text,
+        agentInput(job, "Audit the supplied website pages for conversion and acquisition: clarity, message match, offer, proof, objections, calls to action, friction, pricing presentation and trust. Cite only exact supplied page URLs. Search Console observations, when present, are historical query/page impressions, clicks, CTR and position for this property's date window; use them only when tied to one of the pages actually read, and never call them conversions, total search demand, or causal evidence. Explain this is a text/content review; do not claim visual, speed, mobile, conversion analytics, conversion-rate or causal measurement. Review supplied ClimbOS-published social posts for audience fit, variety of purpose/format, platform adaptation, clarity, proof, CTA and reuse. For each social finding, copy the exact sourceArtifactId and platform from a supplied post. Recommend platform- and business-appropriate content formats as testable ideas, not guaranteed growth. Do not claim to have inspected complete external social accounts or performance metrics. If no published posts were supplied, say so in socialReview.summary and leave its findings empty. Prioritize concrete fixes and never invent numerical lift.", {
+          untrustedContext: [text, socialText, searchContext].filter(Boolean).join("\n\n"),
           research: researchFor("conversion_audit", { website, businessName: job.business?.name ?? job.org.name }),
         }),
         startedAt,
-        { task: "conversion_audit", context: text, ctx: fixtureCtx(job), text: `TASK: Audit these pages for conversion: clarity of offer, proof, friction, calls to action, pricing presentation. Cite the page URL for each finding. Recommend quick wins.\n\n${businessBrief(job)}` },
+        { task: "conversion_audit", context: [text, socialText, searchContext].filter(Boolean).join("\n\n"), ctx: fixtureCtx(job), text: `TASK: Audit supplied website pages for conversion and supplied published social posts for business fit, platform adaptation, content variety, clarity, proof, CTA and reuse. Use matching Search Console observations only for page(s) actually read, and treat them as historical acquisition context, not conversions or causal proof. Cite exact website URLs and exact social artifact IDs. Do not claim visual, analytics, conversion-rate, platform-performance or causal measurement. Recommend channel-native formats as hypotheses, never guaranteed outcomes.\n\n${businessBrief(job)}` },
       );
-      await finish(ctx, runId, "verified", { output: out, meters: { scrapeCredits: text ? 2 : 0 } });
+      const postSources = new Map(socialPosts.map((post) => [String(post.artifactId), post.platform]));
+      const safeOutput = out && typeof out === "object" ? { ...(out as Record<string, unknown>) } : {};
+      const socialReview = safeOutput.socialReview && typeof safeOutput.socialReview === "object" ? safeOutput.socialReview as Record<string, unknown> : {};
+      socialReview.findings = Array.isArray(socialReview.findings)
+        ? socialReview.findings.filter((finding) => {
+            if (!finding || typeof finding !== "object") return false;
+            const candidate = finding as { sourceArtifactId?: unknown; platform?: unknown };
+            return postSources.get(String(candidate.sourceArtifactId ?? "")) === candidate.platform;
+          })
+        : [];
+      if (socialPosts.length === 0) socialReview.summary = "No confirmed ClimbOS-published social posts were available, so no current-post review was possible. Any content-mix ideas are hypotheses to test.";
+      safeOutput.socialReview = socialReview;
+      safeOutput.auditCoverage = {
+        website: { requested: Boolean(website), requestedUrl: website ?? null, pagesAttempted: pages.length, pagesRead: pages.filter((page) => page.status === "read").length, pages },
+        searchConsole: propertyMatches && searchConsole ? { state: inspectedSearchRows.length ? "matched_to_read_pages" : "property_matched_no_rows_for_read_pages", property: searchConsole.property, startDate: searchConsole.startDate, endDate: searchConsole.endDate, observedRows: inspectedSearchRows.length, truncated: searchConsole.truncated } : { state: searchConsole ? "not_used_property_mismatch" : "no_snapshot" },
+        social: { publishedPostsReviewed: socialPosts.length, platformsReviewed: [...new Set(socialPosts.map((post) => post.platform))], accountAnalytics: "not_available_in_this_audit" },
+        limitations: ["Website assessment uses text and metadata from the listed pages; visual rendering, mobile behavior and page speed were not measured.", "This review does not include conversion analytics or prove that any suggested change will increase conversions.", "Social review covers only posts confirmed as published through this ClimbOS workspace; other posts and platform performance metrics were not inspected."],
+      };
+      await finish(ctx, runId, "verified", { output: safeOutput, meters: { scrapeCredits: pagesFetched } });
       if (cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId, status: "done" });
     }, undefined, resumeAs(ctx, "conversionAudit", { runId, cardId }));
   },

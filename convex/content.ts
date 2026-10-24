@@ -19,7 +19,7 @@ import { contentHash } from "../shared/policy";
 import { findRiskyClaims } from "../shared/ai/tasks";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import { artifactStatusValidator, channelValidator } from "./schema";
 import { createRunWithReservation, MAX_RETRIES } from "./engine";
 import { audit } from "./lib/audit";
@@ -28,6 +28,33 @@ import { onOwnerDecision, onPublishOutcome } from "./lib/autopilot";
 import { estimateJobMicros, planJob } from "./lib/jobPlans";
 import { imageUrlFor } from "./lib/media";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+
+/** Read-only source set for the conversion/social audit; restricted to one tenant and confirmed published posts. */
+export const auditPublishedSocial = internalQuery({
+  args: { orgId: v.id("organizations"), limit: v.optional(v.number()) },
+  handler: async (ctx, { orgId, limit }) => {
+    const take = Math.max(1, Math.min(Math.floor(limit ?? 20), 30));
+    const channels = ["linkedin", "instagram", "facebook", "x", "tiktok", "youtube", "pinterest"] as const;
+    const posts = (await Promise.all(channels.map((channel) => ctx.db.query("artifacts")
+      .withIndex("by_org_status_channel", (q) => q.eq("orgId", orgId).eq("status", "published").eq("channel", channel))
+      .order("desc")
+      .take(take)))).flat().sort((a, b) => b.updatedAt - a.updatedAt).slice(0, take);
+    const social = posts;
+    return await Promise.all(social.map(async (post) => {
+      const version = post.currentVersionId ? await ctx.db.get(post.currentVersionId) : null;
+      return {
+        artifactId: post._id,
+        platform: post.channel,
+        title: post.title.slice(0, 160),
+        publishedAt: post.updatedAt,
+        headline: version?.headline?.slice(0, 300) ?? "",
+        body: (version?.body ?? "").slice(0, 1600),
+        angle: version?.contentAngle?.slice(0, 240) ?? "",
+        callToAction: version?.callToAction?.slice(0, 240) ?? "",
+      };
+    }));
+  },
+});
 
 /** The honest label shown with a library image on a post. */
 function assetPostLabel(a: Doc<"assets">): string {

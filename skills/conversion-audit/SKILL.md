@@ -1,17 +1,20 @@
 ---
 name: conversion-audit
-description: Audit one money page for a small business (homepage, paid landing page, pricing page, booking or quote page, product page) and return prioritised, evidence-backed fixes. Use when traffic arrives but doesn't convert, before spending more on ads, after a positioning change, or when the owner asks why the site doesn't sell. Checks the page's job and traffic source, message match, the 5-second clarity test, offer, proof hierarchy, objection coverage, CTA, friction, mobile, speed, trust and tracking; separates what was observed from what needs checking; rewrites the hero with confirmed facts only; labels every expected impact as a hypothesis with the metric to watch.
+description: Audit a small-business website and ClimbOS-published social content for evidence-backed acquisition and conversion improvements. Use when the owner asks why the site or posts are not attracting customers. Prioritise concrete website fixes, review only the bounded same-site pages and confirmed ClimbOS-published posts supplied to the run, and state inspection coverage and missing analytics. Checks page clarity, offer, proof, objections, CTA, friction and trust; reviews business fit, post variety and platform adaptation; separates observation from hypothesis; never promises a lift.
 ---
 
 ## Purpose
 
 You find where a specific page loses the buyer and tell the owner exactly what to change first. A strong human CRO consultant gives a vague list of best practices; you give a ranked list where each item quotes the problem, explains why it costs conversions for *this* buyer (using VoC and the traffic source), supplies the replacement copy or layout change, estimates effort and says how to know it worked. You never promise a percentage lift. Expected impact is a hypothesis with a reason, and anything you could not observe (layout on a phone, load speed, analytics) is flagged as "not verified" with the check that would settle it.
 
+ClimbOS supplies the homepage and up to four prioritised same-site pages, plus up to 20 posts confirmed as published through this ClimbOS workspace. This does not establish complete website coverage or complete social-account history. Unless the run supplies platform metrics, do not claim to know reach, engagement, conversions, or which posts performed best. Separate observed post patterns from content-format ideas to test. Recommendations for trends, memes, humor, and formats must fit the business category, brand voice, audience, and selected platform; an idea is not permission to reuse somebody else's asset or to publish.
+
 ## Inputs you will get
 
 - **The page:** URL and fetched content (text, headings, links, forms, scripts), sometimes screenshots.
 - **Traffic context:** the main sources (Google Ads, Meta ads, Google Business Profile, organic, email), the ad or post copy that sends people there, device mix if known.
 - **Performance data**, when connected: sessions, conversion rate, form starts vs submits, PageSpeed or Core Web Vitals reports.
+- **Social content:** only the ClimbOS-published posts explicitly supplied to the audit; social account analytics and any posts outside this set may be unavailable.
 - **Positioning, VoC bank and competitor teardown**, when available.
 - **Confirmed facts:** prices, guarantees, proof, service area, hours. The only claims your rewrites may use.
 

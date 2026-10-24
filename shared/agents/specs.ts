@@ -463,6 +463,17 @@ export const ConversionAuditV2Schema = ConversionAuditSchema.extend({
   clarityVerdict: z.string(),
   messageMatch: z.string(),
   prioritizedFixes: z.array(z.object({ fix: z.string(), why: z.string(), effort: z.enum(["small", "medium", "large"]), expectedEffect: z.string() })),
+  socialReview: z.object({
+    summary: z.string(),
+    findings: z.array(z.object({
+      sourceArtifactId: z.string(),
+      platform: z.string(),
+      observation: z.string(),
+      recommendation: z.string(),
+      priority: z.enum(["high", "medium", "low"]),
+    })).max(12),
+    contentMixSuggestions: z.array(z.string()).max(8),
+  }),
 });
 
 /* ---------------- Lint ---------------- */

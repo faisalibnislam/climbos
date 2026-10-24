@@ -27,7 +27,7 @@ const PLAN_CARD: Partial<Record<JobKind, { what: string; channel?: string; quant
   content_email: { what: "first email sequence", channel: "email" },
   sales_sequence: { what: "outreach sequence" },
   retention_plan: { what: "retention plan" },
-  conversion_audit: { what: "conversion check" },
+  conversion_audit: { what: "website & social review" },
 };
 
 export type PlanWorkResult = { started: string[]; waiting: { title: string; reason: string }[]; covered: string[]; busy: boolean };

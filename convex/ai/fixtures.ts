@@ -266,11 +266,17 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
       };
     case "conversion_audit":
       return {
+        clarityVerdict: "The supplied pages provide a useful starting point; confirm each change with customer and analytics evidence.",
+        messageMatch: "No acquisition-message or conversion analytics were supplied, so message match cannot be measured.",
         findings: [
           { area: "Homepage", observation: "The main benefit is clear, but there's no example of a finished form above the fold.", recommendation: "Show a real example form next to the headline.", impact: "high", sourceUrl: ctx.website ?? "" },
           { area: "Pricing", observation: "Plan differences need a quick comparison.", recommendation: "Add a 3-row comparison of what each plan unlocks.", impact: "medium", sourceUrl: ctx.website ?? "" },
         ],
         quickWins: ["Add one example form to the homepage", "Make the sign-up button text specific: 'Build my first form'"],
+        prioritizedFixes: [
+          { fix: "Show a real example form near the primary call to action.", why: "It may help visitors understand the first-use experience.", effort: "small", expectedEffect: "A testable clarity improvement; conversion lift is unknown." },
+        ],
+        socialReview: { summary: "Demo data does not represent a live review of this workspace's social accounts.", findings: [], contentMixSuggestions: ["Test a platform-native educational post and compare qualified responses with the current baseline."] },
       };
     case "retention_plan":
       return {
