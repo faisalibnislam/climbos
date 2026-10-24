@@ -48,7 +48,14 @@ export const runArm = internalAction({
         : "Choose this business's growth-plays portfolio for the goal. Be ambitious but truthful.";
       const input = { task: `${task}\n\n${CLIMBOS_ENGINES}\n\nBUSINESS INTELLIGENCE:\n${LAB_CASE.insights}`, brief: LAB_CASE.brief, facts: LAB_CASE.facts };
       const result = p.agentId === "growth_strategy" ? await runAgent(strategy, input, deps) : await runAgent(plays, input, deps);
-      await ctx.runMutation(internal.engineLab.recordArm, { id, arm, score: result.assessment?.average ?? 0, costMicros: cost });
+      // A higher self-review score is not evidence of improvement when the
+      // candidate still violates its own hard gates or output lints.
+      const assessment = result.assessment;
+      if (!assessment?.ship || !assessment.gatesPassed || assessment.lint.some((issue) => issue.severity === "error")) {
+        const reasons = assessment?.lint.filter((issue) => issue.severity === "error").map((issue) => `${issue.rule}${issue.path ? ` at ${issue.path}` : ""}`).join(", ") || "the reviewer ship rule";
+        throw new Error(`The ${arm} arm failed its quality gates (${reasons}); its score cannot be used to promote a rule.`);
+      }
+      await ctx.runMutation(internal.engineLab.recordArm, { id, arm, score: assessment.average, costMicros: cost });
     } catch (e) {
       await ctx.runMutation(internal.engineLab.recordArm, { id, arm, costMicros: cost, error: (e as Error).message });
     }

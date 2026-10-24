@@ -12,7 +12,7 @@ describe("engine lab", () => {
     delete process.env.CLIMBOS_FAKE_LLM;
   });
 
-  it("tests a proposal on the fixed case, then approved rules join the agent's playbook", async () => {
+  it("does not score or promote a rule when the tested agent fails its quality gates", async () => {
     const t = setup();
     const ops = await asNewUser(t, "ops@example.com");
     const customer = await asNewUser(t, "c@example.com");
@@ -23,15 +23,11 @@ describe("engine lab", () => {
     const o = await ops.client.query(api.engineLab.overview, {});
     const p = o.proposals.find((x) => x.id === id)!;
     expect(p.status).toBe("proposed");
-    expect(p.test?.baseline).toBeTypeOf("number");
-    expect(p.test?.variant).toBeTypeOf("number");
+    expect(p.test?.error).toMatch(/failed its quality gates/);
+    expect(p.test?.baseline).toBeUndefined();
+    expect(p.test?.variant).toBeUndefined();
     expect(await t.query(internal.engineLab.addendumFor, { agentId: "growth_plays" })).toBe("");
-    await t.mutation(internal.engineLab.recordArm, { id, arm: "baseline", score: 3, costMicros: 0 });
-    await t.mutation(internal.engineLab.recordArm, { id, arm: "variant", score: 4, costMicros: 0 });
-    await ops.client.mutation(api.engineLab.decide, { id, decision: "approved" });
-    expect(await t.query(internal.engineLab.addendumFor, { agentId: "growth_plays" })).toContain("activation milestone");
-    await ops.client.mutation(api.engineLab.decide, { id, decision: "retired" });
-    expect(await t.query(internal.engineLab.addendumFor, { agentId: "growth_plays" })).toBe("");
+    await expect(ops.client.mutation(api.engineLab.decide, { id, decision: "approved" })).rejects.toThrow(/completed, error-free comparison/);
   });
 
   it("never promotes an untested proposal or a rule that fails its screening comparison", async () => {
