@@ -905,7 +905,11 @@ export default defineSchema({
     rules: v.string(),
     rationale: v.string(),
     status: v.union(v.literal("proposed"), v.literal("testing"), v.literal("approved"), v.literal("rejected"), v.literal("retired")),
-    test: v.optional(v.object({ baseline: v.optional(v.number()), variant: v.optional(v.number()), costMicros: v.number(), at: v.number(), error: v.optional(v.string()) })),
+    test: v.optional(v.object({
+      baseline: v.optional(v.number()), variant: v.optional(v.number()), costMicros: v.number(), at: v.number(), error: v.optional(v.string()),
+      /** Snapshots of the engine and frozen case set actually compared. Legacy records may not have them. */
+      engineVersion: v.optional(v.string()), caseSetVersion: v.optional(v.string()),
+    })),
     decidedBy: v.optional(v.id("users")),
     decidedAt: v.optional(v.number()),
     createdAt: v.number(),

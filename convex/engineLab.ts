@@ -5,6 +5,8 @@ import { internalMutation, internalQuery, mutation, query, type QueryCtx } from 
 import { requireStaff } from "./lib/staff";
 import { appError } from "./lib/tenancy";
 import { redactFeedback } from "../shared/lab/redact";
+import { LAB_CASE_VERSION } from "../shared/lab/formkitCase";
+import { ENGINE_VERSION } from "../shared/agents/specs";
 
 /**
  * Self-improvement loop 3 — the engine lab. Weekly, Luna reads what reviewers
@@ -164,7 +166,7 @@ export const test = mutation({
     if (!p || p.status !== "proposed") throw appError("INVALID", "Only new proposals can be tested.");
     if (!LAB_AGENTS.includes(p.agentId as (typeof LAB_AGENTS)[number])) throw appError("INVALID", "This proposal is not attached to a testable growth agent.");
     if ((await spentThisMonth(ctx)) + 400_000 > MONTHLY_CAP_MICROS) throw appError("LIMIT_REACHED", "This month's $5 lab budget is used up.");
-    await ctx.db.patch(id, { status: "testing", test: { costMicros: 0, at: Date.now() } });
+    await ctx.db.patch(id, { status: "testing", test: { costMicros: 0, at: Date.now(), engineVersion: ENGINE_VERSION, caseSetVersion: LAB_CASE_VERSION } });
     await ctx.scheduler.runAfter(0, internal.engineLabActions.runArm, { id, arm: "baseline" });
     await ctx.scheduler.runAfter(0, internal.engineLabActions.runArm, { id, arm: "variant" });
   },
@@ -180,6 +182,9 @@ export const decide = mutation({
       const result = p.test;
       if (p.status !== "proposed" || !result || result.error || result.baseline === undefined || result.variant === undefined) {
         throw appError("INVALID", "A proposal needs a completed, error-free comparison before it can be approved.");
+      }
+      if (result.engineVersion !== ENGINE_VERSION || result.caseSetVersion !== LAB_CASE_VERSION) {
+        throw appError("INVALID", "This comparison used an older engine or evaluation case set. Run it again before approving the rule.");
       }
       if (result.variant <= result.baseline) {
         throw appError("INVALID", "The proposed rule did not improve the current screening score. Keep it out of the live playbook.");
