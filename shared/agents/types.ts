@@ -93,6 +93,8 @@ export interface AgentInput {
   ownerSuppliedUrls?: string[];
   /** Facts the critic must check claims against (statements). */
   facts: string[];
+  /** Explicit examples the owner approved for brand guidance; model output must not invent these. */
+  ownerApprovedExamples?: string[];
   /** Hard limits the output is checked against in code (spec §13). */
   constraints?: PlanConstraints;
 }

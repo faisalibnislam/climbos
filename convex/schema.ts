@@ -642,6 +642,8 @@ export default defineSchema({
     toneWords: v.array(v.string()),
     colors: v.array(v.string()),
     doNots: v.array(v.string()),
+    /** Short style examples the owner controls and is authorized to share; these do not prove customer outcomes. */
+    approvedExamples: v.optional(v.array(v.string())),
     logoStorageId: v.optional(v.id("_storage")),
     /** Voice learning: short rules learned from how the owner edits drafts. */
     learnedRules: v.optional(v.array(v.object({ text: v.string(), at: v.number() }))),
@@ -1439,7 +1441,7 @@ export default defineSchema({
         /** What this plan was built from (spec §04), for tracing results back to inputs. */
         snapshot: v.optional(
           v.object({
-            snapshotVersion: v.union(v.literal(1), v.literal(2), v.literal(3), v.literal(4), v.literal(5), v.literal(6), v.literal(7), v.literal(8), v.literal(9), v.literal(10), v.literal(11), v.literal(12), v.literal(13), v.literal(14), v.literal(15), v.literal(16)),
+            snapshotVersion: v.union(v.literal(1), v.literal(2), v.literal(3), v.literal(4), v.literal(5), v.literal(6), v.literal(7), v.literal(8), v.literal(9), v.literal(10), v.literal(11), v.literal(12), v.literal(13), v.literal(14), v.literal(15), v.literal(16), v.literal(17)),
             snapshotId: v.string(),
             capturedAt: v.number(),
             engine: v.string(),

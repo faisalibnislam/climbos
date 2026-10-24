@@ -521,7 +521,7 @@ function marketChangeContext(job: JobCtx): string {
 }
 
 function agentInput(job: JobCtx, task: string, extra: Partial<AgentInput> = {}): AgentInput {
-  return { task, brief: businessBrief(job), facts: job.facts.map((f) => f.statement), constraints: constraintsOf(job), ...(job.business?.website ? { businessWebsite: job.business.website } : {}), ...extra };
+  return { task, brief: businessBrief(job), facts: job.facts.map((f) => f.statement), ownerApprovedExamples: job.brand?.approvedExamples ?? [], constraints: constraintsOf(job), ...(job.business?.website ? { businessWebsite: job.business.website } : {}), ...extra };
 }
 
 /** Preserve destination provenance separately from sources in the generated plan/research context. */
@@ -623,6 +623,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     businessLifecycleContext(b?.lifecycleStage?.stage, b?.lifecycleStage?.updatedAt),
     job.goal ? `GOAL: ${job.goal.statement} (horizon ${job.goal.horizonDays} days, ad budget ${minorToMajor(job.goal.monthlyAdBudgetMinor, job.goal.currency).toFixed(0)} ${job.goal.currency}/month, paid directly to ad platforms)` : "",
     job.brand ? `BRAND VOICE: ${job.brand.voice}${job.brand.toneWords.length ? ` (${job.brand.toneWords.join(", ")})` : ""}. Avoid: ${job.brand.doNots.join("; ")}` : "",
+    job.brand?.approvedExamples?.length ? `OWNER-APPROVED COPY EXAMPLES (style reference only; not proof about customer outcomes):\n${untrusted("owner-approved copy examples", JSON.stringify(job.brand.approvedExamples), 3_500)}` : "",
     job.brand?.learnedRules?.length ? `HOW THE OWNER EDITS DRAFTS (follow these): ${job.brand.learnedRules.map((r) => r.text).join("; ")}` : "",
     job.org.contentLanguage && job.org.contentLanguage !== "English" ? `LANGUAGE: write every customer-facing word (posts, emails, ads, pages) in ${job.org.contentLanguage}. Notes to the owner stay in English.` : "",
     ownerEconomicsLine(b?.unitEconomics, workspaceCurrency(job)),
@@ -710,11 +711,11 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   const readUrls = [...new Set(sourceUrls)].sort();
   const insightsHash = await sha256Hex(insights);
   const material = {
-    snapshotVersion: 16,
+    snapshotVersion: 17,
     orgId: String(job.org._id),
     businessId: job.business ? String(job.business._id) : null,
     business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, socialUrls: job.business.socialUrls, businessType: job.business.businessType, lifecycleStage: job.business.lifecycleStage ?? null, funnel: job.business.funnel ?? null, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
-    brand: job.brand ? { voice: job.brand.voice, toneWords: job.brand.toneWords, colors: job.brand.colors, doNots: job.brand.doNots, learnedRules: job.brand.learnedRules ?? [], updatedAt: job.brand.updatedAt } : null,
+    brand: job.brand ? { voice: job.brand.voice, toneWords: job.brand.toneWords, colors: job.brand.colors, doNots: job.brand.doNots, ...(job.brand.approvedExamples?.length ? { approvedExamples: job.brand.approvedExamples } : {}), learnedRules: job.brand.learnedRules ?? [], updatedAt: job.brand.updatedAt } : null,
     goal,
     goalKind: job.goal?.kind ?? null,
     facts: [...facts, ...staleFacts].map(({ id, updatedAt, statement }) => ({ id, updatedAt, statement })).sort((a, b) => a.id.localeCompare(b.id)),
@@ -731,7 +732,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   };
   const snapshotId = await sha256Hex(JSON.stringify(material));
   return {
-    snapshotVersion: 16,
+    snapshotVersion: 17,
     snapshotId,
     capturedAt: Date.now(),
     engine: ENGINE_VERSION,
@@ -768,6 +769,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
       toneWords: [...job.brand.toneWords],
       colors: [...job.brand.colors],
       doNots: [...job.brand.doNots],
+      ...(job.brand.approvedExamples?.length ? { approvedExamples: [...job.brand.approvedExamples] } : {}),
       learnedRules: (job.brand.learnedRules ?? []).map(({ text }) => text),
     } : null,
     staleFactIds: staleFacts.map(({ id }) => id),
@@ -1342,7 +1344,7 @@ export const createContent = internalAction({
     if (!job) return;
     const factIds = job.facts.map((f) => f.id);
     const assets = args.assetIds?.length ? await ctx.runQuery(internal.assets.forJob, { orgId: job.org._id, assetIds: args.assetIds }) : [];
-    const copyBriefInstruction = `Return one shared copyBrief for the campaign with reader, situation, awarenessStage, relationshipStage, objective, offerFactIndexes, problemJob, trigger, centralIdea, objection, proofFactIndexes, prohibitedClaims, channel, format, deliveryContext, brandVoice, up to 3 approvedExamples, cta, afterAction, trackingMetric, trackingMethod, supportingFactIndexes, supportingSourceUrls, and unknowns. Use only confirmed fact indexes and exact source URLs supplied in this run; use empty arrays when unsupported. Put missing commercial or audience inputs in unknowns and use "unknown" for unknown stage values. Never invent proof, offer terms, customer details, tracking setup, or permission. This is a planning brief, not evidence that an offer or tracking system exists.`;
+    const copyBriefInstruction = `Return one shared copyBrief for the campaign with reader, situation, awarenessStage, relationshipStage, objective, offerFactIndexes, problemJob, trigger, centralIdea, objection, proofFactIndexes, prohibitedClaims, channel, format, deliveryContext, brandVoice, approvedExamples, cta, afterAction, trackingMetric, trackingMethod, supportingFactIndexes, supportingSourceUrls, and unknowns. approvedExamples must contain only exact examples from OWNER-APPROVED COPY EXAMPLES in the business context; return [] when none are supplied. Use only confirmed fact indexes and exact source URLs supplied in this run; use empty arrays when unsupported. Put missing commercial or audience inputs in unknowns and use "unknown" for unknown stage values. Never invent proof, offer terms, customer details, tracking setup, or permission. This is a planning brief, not evidence that an offer or tracking system exists.`;
     const imagesBrief = assets.length
       ? `\n\nREAL IMAGES (use them; post N is built around image N, in order; write each post's imageIdea and alt text to describe how that real image is used, never inventing what it shows):\n${assets.map((a, i) => `${i + 1}. ${a.describe}`).join("\n")}`
       : "";

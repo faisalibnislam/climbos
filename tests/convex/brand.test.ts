@@ -21,9 +21,13 @@ describe("brand kit + voice learning", () => {
       const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId as Id<"organizations">)).first();
       await ctx.db.insert("brandProfiles", { orgId: orgId as Id<"organizations">, businessId: business!._id, voice: "Plain", toneWords: [], colors: [], doNots: [], updatedAt: Date.now() });
     });
-    await owner.client.mutation(api.brand.update, { slug, voice: "Friendly expert", toneWords: ["warm", " direct "], colors: ["#123456", "nope"], doNots: ["No emojis", ""] });
+    await owner.client.mutation(api.brand.update, { slug, voice: "Friendly expert", toneWords: ["warm", " direct "], colors: ["#123456", "nope"], doNots: ["No emojis", ""], approvedExamples: ["  Example with spacing  ", "Example with spacing", "", "Second example", "Third example", "Fourth example"] });
     let b = await owner.client.query(api.brand.get, { slug });
-    expect(b).toMatchObject({ voice: "Friendly expert", toneWords: ["warm", "direct"], colors: ["#123456"], doNots: ["No emojis"] });
+    expect(b).toMatchObject({ voice: "Friendly expert", toneWords: ["warm", "direct"], colors: ["#123456"], doNots: ["No emojis"], approvedExamples: ["Example with spacing", "Second example", "Third example"] });
+    await owner.client.mutation(api.brand.update, { slug, voice: "Friendly expert", toneWords: ["warm"], colors: ["#123456"], doNots: ["No emojis"] });
+    expect((await owner.client.query(api.brand.get, { slug })).approvedExamples).toEqual(["Example with spacing", "Second example", "Third example"]);
+    await owner.client.mutation(api.brand.update, { slug, voice: "Friendly expert", toneWords: ["warm", " direct "], colors: ["#123456"], doNots: ["No emojis"], approvedExamples: [] });
+    expect((await owner.client.query(api.brand.get, { slug })).approvedExamples).toEqual([]);
 
     await t.run(async (ctx) => {
       const { recordVoiceSample } = await import("../../convex/brand");

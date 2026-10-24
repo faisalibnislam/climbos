@@ -101,6 +101,14 @@ describe("structured copy brief provenance", () => {
     ]);
   });
 
+  it("accepts only exact owner-approved copy examples", () => {
+    const input = { task: "Draft email", brief: "", facts: ["Consultation is available"], ownerApprovedExamples: ["We make the next step clear."], availableSourceUrls: ["https://example.com/services"] };
+    expect(lintCopyBrief({ ...copyBrief, approvedExamples: ["We make the next step clear."] }, input)).toEqual([]);
+    expect(lintCopyBrief({ ...copyBrief, approvedExamples: ["We always deliver 10x more sales."] }, input)).toMatchObject([
+      { severity: "error", rule: "approved_example", path: "copyBrief.approvedExamples[0]" },
+    ]);
+  });
+
   it("binds campaign context to the artifact approval hash", async () => {
     const draft = { body: "The same approved copy.", hashtags: [], channel: "email" };
     const first = await contentHash({ ...draft, copyBrief: { ...copyBrief, centralIdea: "Make the next step clear" } });

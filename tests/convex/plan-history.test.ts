@@ -334,7 +334,7 @@ describe("Plan version history", () => {
     const playId = (saved?.expert?.plays as { id?: string }[] | undefined)?.find((play) => play.id)?.id;
     expect(playId).toBeTruthy();
 
-    await w.client.mutation(api.brand.update, { slug: w.slug, voice: "Direct and warm", toneWords: ["clear"], colors: ["#123456"], doNots: ["No unsupported claims"] });
+    await w.client.mutation(api.brand.update, { slug: w.slug, voice: "Friendly and practical", toneWords: ["helpful"], colors: [], doNots: ["No unsupported claims"], approvedExamples: ["We make the next step clear."] });
     const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
     expect(view.staleInputs).toMatchObject({ businessProfile: false, businessFacts: false, brandGuidance: true, requiresRefresh: true });
     await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/brand guidance changed/);

@@ -842,13 +842,14 @@ function businessProfileValues(business: Pick<Doc<"businesses">, "name" | "websi
   };
 }
 
-function brandProfileValues(brand: Pick<Doc<"brandProfiles">, "voice" | "toneWords" | "colors" | "doNots" | "learnedRules"> | null): unknown {
+function brandProfileValues(brand: Pick<Doc<"brandProfiles">, "voice" | "toneWords" | "colors" | "doNots" | "approvedExamples" | "learnedRules"> | null): unknown {
   if (!brand) return null;
   return {
     voice: brand.voice,
     toneWords: [...brand.toneWords],
     colors: [...brand.colors],
     doNots: [...brand.doNots],
+    ...(brand.approvedExamples?.length ? { approvedExamples: [...brand.approvedExamples] } : {}),
     learnedRules: (brand.learnedRules ?? []).map(({ text }) => text),
   };
 }

@@ -39,6 +39,7 @@ export const get = query({
       toneWords: b?.toneWords ?? [],
       colors: b?.colors ?? [],
       doNots: b?.doNots ?? [],
+      approvedExamples: b?.approvedExamples ?? [],
       learnedRules: (b?.learnedRules ?? []).map((r) => r.text),
       pending,
       learnAfter: LEARN_AFTER,
@@ -47,9 +48,10 @@ export const get = query({
 });
 
 export const update = mutation({
-  args: { slug: v.string(), voice: v.string(), toneWords: v.array(v.string()), colors: v.array(v.string()), doNots: v.array(v.string()) },
+  args: { slug: v.string(), voice: v.string(), toneWords: v.array(v.string()), colors: v.array(v.string()), doNots: v.array(v.string()), approvedExamples: v.optional(v.array(v.string())) },
   handler: async (ctx, a) => {
-    const { org } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
+    const { org, role } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
+    if (a.approvedExamples !== undefined && role !== "owner" && role !== "admin") throw appError("FORBIDDEN", "Only an owner or admin can approve brand examples.");
     const b = await brandFor(ctx, org._id);
     if (!b) throw appError("NOT_FOUND", "Finish setting up your business first.");
     await ctx.db.patch(b._id, {
@@ -57,6 +59,9 @@ export const update = mutation({
       toneWords: a.toneWords.map((w) => w.trim().slice(0, 30)).filter(Boolean).slice(0, 8),
       colors: a.colors.filter((c) => /^#[0-9a-f]{6}$/i.test(c)).slice(0, 6),
       doNots: a.doNots.map((d) => d.trim().slice(0, 160)).filter(Boolean).slice(0, 12),
+      ...(a.approvedExamples !== undefined ? {
+        approvedExamples: [...new Set(a.approvedExamples.map((example) => example.trim().slice(0, 1000)).filter(Boolean))].slice(0, 3),
+      } : {}),
       updatedAt: Date.now(),
     });
   },
