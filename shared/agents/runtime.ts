@@ -4,7 +4,7 @@ import type { MessageParam, SystemBlock, TurnRequest, TurnResult } from "../ai/t
 import { ROLE_CHARTERS, stripFactMarkers, untrusted } from "../ai/tasks";
 import type { ModelKey } from "../economics/rates";
 import { skillPlaybook, skillRubricText } from "../skills";
-import { growthKnowledgeContext } from "../knowledge/retrieve";
+import { formatGrowthKnowledge, knowledgeReferenceSet, retrieveGrowthKnowledge } from "../knowledge/retrieve";
 import type { AgentInput, AgentRunResult, AgentSpec, Assessment, CritiqueResult, LintIssue, Rubric, RunQuality } from "./types";
 
 /**
@@ -244,8 +244,9 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
   const research: AgentRunResult<T>["research"] = input.precomputedResearch ?? (await runResearch(spec, input, deps));
 
   const system = draftSystem(spec);
-  const knowledge = growthKnowledgeContext(`${input.task}\n${input.brief}`, { limit: 3, maxChars: 3_500 });
-  const reviewerKnowledge = growthKnowledgeContext(`${input.task}\n${input.brief}`, { limit: 2, maxChars: 1_800 });
+  const knowledgeRecords = retrieveGrowthKnowledge(`${input.task}\n${input.brief}`, { limit: 3, maxChars: 3_500 });
+  const knowledge = formatGrowthKnowledge(knowledgeRecords);
+  const reviewerKnowledge = formatGrowthKnowledge(retrieveGrowthKnowledge(`${input.task}\n${input.brief}`, { limit: 2, maxChars: 1_800 }));
   const baseUser = `${inputBlock(input, research?.notes ?? null, knowledge)}\n\nYOUR TASK:\n${input.task}\n\nBefore answering, check your work against the playbook's checklist. Respond only with JSON matching the schema.`;
   const baseMessages: MessageParam[] = [{ role: "user", content: baseUser }];
 
@@ -395,7 +396,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     shipped: best.assessment?.ship ?? null,
     rounds: history.length,
   };
-  return { output: best.output, assessment: best.assessment, rounds: history.length, research, history, quality };
+  return { output: best.output, assessment: best.assessment, rounds: history.length, research, history, quality, knowledgeReferences: knowledgeReferenceSet(knowledgeRecords) };
 }
 
 function errorsByRule(lint: LintIssue[]): Record<string, number> {

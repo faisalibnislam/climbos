@@ -46,7 +46,7 @@ import { buildPlanEvidence } from "../shared/agents/evidence";
 import { trustPostureContext } from "../shared/agents/evidenceKind";
 import { conflictLines, findConflicts } from "../shared/agents/conflicts";
 import { platformNotes } from "../shared/acquisition/platformRules";
-import { growthKnowledgeContext } from "../shared/knowledge/retrieve";
+import { growthKnowledgeContext, type KnowledgeReferenceSet } from "../shared/knowledge/retrieve";
 import { diagnose, diagnosisBrief, funnelRatesOf, type Diagnosis } from "../shared/agents/diagnosis";
 import { businessLifecycleContext } from "../shared/agents/lifecycle";
 import { choosePlaybooks, playbookBrief, type PlaybookContext } from "../shared/playbooks/contracts";
@@ -475,6 +475,7 @@ async function runAgentTask<T>(
       meta.skills = [...spec.skills, ...(spec.criticSkills ?? [])];
       meta.models = spec.models;
       meta.quality = agentQuality(spec.id, result.assessment, result.rounds, result.research ? result.research.sources.length : null);
+      meta.knowledgeReferences = result.knowledgeReferences;
     }
     if (result.quality) {
       // Once per run and agent (a resumed action replays checkpoints and must not log twice).
@@ -564,7 +565,7 @@ function playbookContext(job: JobCtx, profile: AcquisitionProfile, d: Diagnosis)
 }
 
 /** What an agent run reports back for quality and the plan's evidence record. */
-type AgentMeta = { shipped?: boolean | null; sources?: { url: string; title?: string }[]; notes?: string; skills?: string[]; models?: unknown; quality?: AgentQuality };
+type AgentMeta = { shipped?: boolean | null; sources?: { url: string; title?: string }[]; notes?: string; skills?: string[]; models?: unknown; quality?: AgentQuality; knowledgeReferences?: KnowledgeReferenceSet };
 
 /** Constraints once the plays' numbers are locked: the plan's prose must use these customer counts (Book 14 §7). */
 function lockedConstraints(job: JobCtx, plays: PlaysOutput, serviceArea?: string, businessTypes?: string[], diagnosis?: Diagnosis): PlanConstraints {
@@ -680,7 +681,7 @@ function refundExposureLine(signal: JobCtx["refundExposure"]): string {
   return `${base} ${ratio} This is an amount ratio, not the share of customers who refund and not proof of cause. ${signal.partial ? "The 10,000-event read limit was reached; figures may be incomplete. " : ""}${signal.duplicatesRemoved ? `${signal.duplicatesRemoved} duplicate event(s) removed. ` : ""}Use it as a reason to inspect refund reasons and delivery costs before scaling; do not invent a refund threshold or infer why refunds happened.`;
 }
 
-async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[]): Promise<PlanSnapshot> {
+async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[], knowledgeReferences: KnowledgeReferenceSet): Promise<PlanSnapshot> {
   const facts = job.facts.map((f) => ({ id: String(f.id), updatedAt: f.updatedAt, statement: f.statement, category: f.category })).sort((a, b) => a.id.localeCompare(b.id));
   const staleFacts = job.staleFacts.map((f) => ({ id: String(f.id), updatedAt: f.updatedAt, statement: f.statement, category: f.category })).sort((a, b) => a.id.localeCompare(b.id));
   const goal = job.goal ? { id: String(job.goal._id), statement: job.goal.statement, horizonDays: job.goal.horizonDays, monthlyAdBudgetMinor: job.goal.monthlyAdBudgetMinor, currency: job.goal.currency, target: job.goal.target } : null;
@@ -691,7 +692,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[])
   const readUrls = [...new Set(sourceUrls)].sort();
   const insightsHash = await sha256Hex(insights);
   const material = {
-    snapshotVersion: 5,
+    snapshotVersion: 6,
     orgId: String(job.org._id),
     businessId: job.business ? String(job.business._id) : null,
     business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, businessType: job.business.businessType, lifecycleStage: job.business.lifecycleStage ?? null, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
@@ -705,10 +706,11 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[])
     flags,
     insightsHash,
     sourceUrls: readUrls,
+    knowledgeReferences,
   };
   const snapshotId = await sha256Hex(JSON.stringify(material));
   return {
-    snapshotVersion: 5,
+    snapshotVersion: 6,
     snapshotId,
     capturedAt: Date.now(),
     engine: ENGINE_VERSION,
@@ -726,11 +728,23 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[])
     sourceUrls: readUrls,
     capabilities,
     ...(job.business?.lifecycleStage ? { businessLifecycleStage: job.business.lifecycleStage } : { businessLifecycleStage: null }),
+    knowledgeReferences,
     ...(ownerEconomics ? { ownerEconomics } : {}),
     ...(job.refundExposure ? { refundExposure: job.refundExposure } : {}),
     ...(job.platformSourceConcentration ? { channelOutcomes: job.platformSourceConcentration } : {}),
     ...(job.goal?.target ? { goalTarget: job.goal.target } : {}),
     ...(job.org.engineFlags?.length ? { flags: job.org.engineFlags } : {}),
+  };
+}
+
+function mergeKnowledgeReferences(...sets: (KnowledgeReferenceSet | undefined)[]): KnowledgeReferenceSet {
+  const available = sets.filter((set): set is KnowledgeReferenceSet => Boolean(set));
+  const first = available[0];
+  const unique = new Map(available.flatMap((set) => set.records).map((record) => [record.id, record]));
+  return {
+    edition: first?.edition ?? "unknown",
+    researchCutoff: first?.researchCutoff ?? "unknown",
+    records: [...unique.values()].sort((a, b) => a.id.localeCompare(b.id)),
   };
 }
 
@@ -1221,7 +1235,7 @@ export const buildStrategy = internalAction({
       await firstTake;
       await ctx.runMutation(internal.jobWrites.saveStrategy, {
         runId,
-        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, ...(plays.decision ? { decision: plays.decision } : {}), webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: await planSnapshot(job, insightsBrief, uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]).map((source) => source.url)), quality, goalGap: playsGoalGap(plays, job.goal), constraintDiagnosis: diagnosis, ...(portfolio ? { portfolio } : {}), playbooks: { eligible: playbookChoice.eligible.map(({ pb, unknown, soft, status }) => ({ id: pb.id, name: pb.name, unknown, ...(soft?.length ? { soft } : {}), ...(status ? { status } : {}) })), ineligible: playbookChoice.ineligible.map(({ pb, reasons }) => ({ id: pb.id, name: pb.name, reasons })) } } : strategy),
+        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, ...(plays.decision ? { decision: plays.decision } : {}), webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: await planSnapshot(job, insightsBrief, uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]).map((source) => source.url), mergeKnowledgeReferences(playsMeta.knowledgeReferences, planMeta.knowledgeReferences)), quality, goalGap: playsGoalGap(plays, job.goal), constraintDiagnosis: diagnosis, ...(portfolio ? { portfolio } : {}), playbooks: { eligible: playbookChoice.eligible.map(({ pb, unknown, soft, status }) => ({ id: pb.id, name: pb.name, unknown, ...(soft?.length ? { soft } : {}), ...(status ? { status } : {}) })), ineligible: playbookChoice.ineligible.map(({ pb, reasons }) => ({ id: pb.id, name: pb.name, reasons })) } } : strategy),
         factIds: job.facts.map((f) => f.id),
         acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary, ...(limits ? { limits: { ownerHoursPerWeek: limits.ownerHoursPerWeek ?? null, newCustomersPerMonth: limits.newCustomersPerMonth ?? null } } : {}) }),
         evidence: JSON.stringify(

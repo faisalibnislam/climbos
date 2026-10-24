@@ -2,6 +2,11 @@ import library from "./growthLibrary.generated.json";
 
 type KnowledgeRecord = (typeof library.records)[number];
 export type RetrievedKnowledge = Pick<KnowledgeRecord, "id" | "kind" | "bookId" | "heading" | "path" | "sha256"> & { content: string; score: number };
+export interface KnowledgeReferenceSet {
+  edition: string;
+  researchCutoff: string;
+  records: Pick<RetrievedKnowledge, "id" | "kind" | "bookId" | "heading" | "path" | "sha256">[];
+}
 
 const STOP = new Set("about after again against all also any are because been before being between both but can could did does doing down during each few for from further had has have having her here hers him his how into itself just more most other our out over own same should some such than that the their them then there these they this those through too under until upon very was were what when where which while who why will with would your yourself business climbos growth guide recommendation reference references section example examples current actual".split(/\s+/u));
 const tokens = (text: string) => text.toLocaleLowerCase("en-US").normalize("NFKC").match(/[\p{L}\p{N}]{2,}/gu)?.filter((term) => !STOP.has(term)) ?? [];
@@ -53,11 +58,22 @@ export function retrieveGrowthKnowledge(query: string, options: { limit?: number
   return out;
 }
 
-export function growthKnowledgeContext(query: string, options: { limit?: number; maxChars?: number } = {}): string {
-  const records = retrieveGrowthKnowledge(query, options);
+export function knowledgeReferenceSet(records: readonly RetrievedKnowledge[]): KnowledgeReferenceSet {
+  return {
+    edition: library.edition,
+    researchCutoff: library.researchCutoff,
+    records: records.map(({ id, kind, bookId, heading, path, sha256 }) => ({ id, kind, bookId, heading, path, sha256 })),
+  };
+}
+
+export function formatGrowthKnowledge(records: readonly RetrievedKnowledge[]): string {
   if (!records.length) return "";
   return [
     `Edition: ${library.edition}. Research cutoff: ${library.researchCutoff}. The corpus is reference guidance, not business evidence or permission to execute.`,
     ...records.map((record) => `[${record.kind} · Book ${record.bookId} · ${record.heading} · docs/growth-intelligence/${record.path} · sha256:${record.sha256}]\n${record.content}`),
   ].join("\n\n---\n\n");
+}
+
+export function growthKnowledgeContext(query: string, options: { limit?: number; maxChars?: number } = {}): string {
+  return formatGrowthKnowledge(retrieveGrowthKnowledge(query, options));
 }

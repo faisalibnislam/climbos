@@ -4,6 +4,7 @@ import type { z } from "zod";
 import type { Effort } from "../ai/types";
 import type { ModelKey } from "../economics/rates";
 import type { RoleKey } from "../economics/roles";
+import type { KnowledgeReferenceSet } from "../knowledge/retrieve";
 
 /** A scoring rubric an expert would use, with hard gates that override the score. */
 export interface Rubric {
@@ -147,6 +148,8 @@ export interface AgentRunResult<T> {
   rounds: number;
   research: { notes: string; sources: { url: string; title?: string }[] } | null;
   history: { round: number; average: number; gatesPassed: boolean; lintErrors: number }[];
+  /** Versioned guidance passages the drafting agent actually received; separate from business evidence. */
+  knowledgeReferences?: KnowledgeReferenceSet;
   /** Run quality signals for the engine dashboard (spec §27). */
   quality?: RunQuality;
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import library from "@shared/knowledge/growthLibrary.generated.json";
-import { growthKnowledgeContext, retrieveGrowthKnowledge } from "@shared/knowledge/retrieve";
+import { formatGrowthKnowledge, growthKnowledgeContext, knowledgeReferenceSet, retrieveGrowthKnowledge } from "@shared/knowledge/retrieve";
 
 describe("growth intelligence retrieval", () => {
   it("indexes the committed books and reference playbooks with their source hashes", () => {
@@ -28,5 +28,17 @@ describe("growth intelligence retrieval", () => {
     expect(context).toContain("docs/growth-intelligence/");
     expect(context.length).toBeLessThan(1800);
     expect(growthKnowledgeContext("", { maxChars: 500 })).toBe("");
+  });
+
+  it("exports hash-addressed references without copying knowledge text or relevance scores", () => {
+    const records = retrieveGrowthKnowledge("SaaS onboarding activation", { limit: 2, maxChars: 900 });
+    const references = knowledgeReferenceSet(records);
+    expect(references.edition).toBe(library.edition);
+    expect(references.researchCutoff).toBe(library.researchCutoff);
+    expect(references.records).toHaveLength(records.length);
+    expect(references.records[0]).toMatchObject({ id: records[0].id, sha256: records[0].sha256, path: records[0].path });
+    expect(references.records[0]).not.toHaveProperty("content");
+    expect(references.records[0]).not.toHaveProperty("score");
+    expect(formatGrowthKnowledge(records)).toContain("reference guidance, not business evidence");
   });
 });
