@@ -1197,6 +1197,7 @@ export default defineSchema({
   /** Learning from results: first-party rates, per workspace and k-anonymous business-type or owner-reported-stage cohorts. */
   learnedRates: defineTable({
     /** Workspace-only, business-type, lifecycle-stage, or exact owner-confirmed offer/audience/geography scope; pooled rows require k ≥ 10. */
+    snapshotId: v.optional(v.string()),
     scope: v.string(),
     metric: v.string(),
     workspaces: v.number(),
@@ -1204,7 +1205,17 @@ export default defineSchema({
     successes: v.number(),
     rate: v.number(),
     updatedAt: v.number(),
-  }).index("by_scope_metric", ["scope", "metric"]),
+  })
+    .index("by_scope_metric", ["scope", "metric"])
+    .index("by_snapshot_scope_metric", ["snapshotId", "scope", "metric"])
+    .index("by_snapshot", ["snapshotId"]),
+
+  /** Atomic pointer to the most recently completed first-party learning snapshot. */
+  learningRateState: defineTable({
+    key: v.literal("global"),
+    activeSnapshotId: v.optional(v.string()),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
 
   /** Public status: a health sample every 5 minutes per component. */
   statusSamples: defineTable({

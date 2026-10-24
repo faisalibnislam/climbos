@@ -20,6 +20,24 @@ describe("learning from results", () => {
     expect(page2.page[0]).not.toBe(page1.page[0]);
   });
 
+  it("keeps the last complete learning snapshot active until its replacement is complete", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "learn-snapshot@example.com");
+    const { orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Snapshot Co" });
+    const scope = `org:${orgId}`;
+    await t.mutation(internal.learning.writeRates, { snapshotId: "complete-old", rows: [{ scope, metric: "landing_lead", workspaces: 1, trials: 100, successes: 10 }] });
+    await t.mutation(internal.learning.activateSnapshot, { snapshotId: "complete-old" });
+
+    // A partially written replacement must not affect agent context.
+    await t.mutation(internal.learning.writeRates, { snapshotId: "incomplete-new", rows: [{ scope, metric: "landing_lead", workspaces: 1, trials: 100, successes: 50 }] });
+    expect(await t.query(internal.learning.contextFor, { orgId: orgId as Id<"organizations"> })).toContain("THIS BUSINESS 10%");
+
+    await t.mutation(internal.learning.activateSnapshot, { snapshotId: "incomplete-new" });
+    expect(await t.query(internal.learning.contextFor, { orgId: orgId as Id<"organizations"> })).toContain("THIS BUSINESS 50%");
+    await t.mutation(internal.learning.cleanupSnapshot, { snapshotId: "complete-old" });
+    expect(await t.run(async (ctx) => (await ctx.db.query("learnedRates").collect()).some((row) => row.snapshotId === "complete-old"))).toBe(false);
+  });
+
   it("uses actual first-send time and excludes CRM stages recorded before contact", async () => {
     const t = setup();
     const u = await asNewUser(t, "learn-cohort@example.com");

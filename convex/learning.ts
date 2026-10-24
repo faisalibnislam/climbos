@@ -106,19 +106,50 @@ export const countsForOrg = internalQuery({
 const rowV = v.object({ scope: v.string(), metric: v.string(), workspaces: v.number(), trials: v.number(), successes: v.number() });
 
 export const writeRates = internalMutation({
-  args: { rows: v.array(rowV), replace: v.boolean() },
-  handler: async (ctx, { rows, replace }) => {
+  args: { snapshotId: v.string(), rows: v.array(rowV) },
+  handler: async (ctx, { snapshotId, rows }) => {
     const now = Date.now();
-    if (replace) {
-      const keep = new Set(rows.map((r) => `${r.scope}|${r.metric}`));
-      for (const old of await ctx.db.query("learnedRates").take(8000)) if (!keep.has(`${old.scope}|${old.metric}`)) await ctx.db.delete(old._id);
-    }
     for (const r of rows) {
-      const existing = await ctx.db.query("learnedRates").withIndex("by_scope_metric", (q) => q.eq("scope", r.scope).eq("metric", r.metric)).first();
-      const doc = { ...r, rate: r.trials ? r.successes / r.trials : 0, updatedAt: now };
+      const existing = await ctx.db.query("learnedRates").withIndex("by_snapshot_scope_metric", (q) => q.eq("snapshotId", snapshotId).eq("scope", r.scope).eq("metric", r.metric)).first();
+      const doc = { ...r, snapshotId, rate: r.trials ? r.successes / r.trials : 0, updatedAt: now };
       if (existing) await ctx.db.patch(existing._id, doc);
       else await ctx.db.insert("learnedRates", doc);
     }
+  },
+});
+
+export const activateSnapshot = internalMutation({
+  args: { snapshotId: v.string() },
+  handler: async (ctx, { snapshotId }) => {
+    const state = await ctx.db.query("learningRateState").withIndex("by_key", (q) => q.eq("key", "global")).unique();
+    const previous = state?.activeSnapshotId;
+    if (state) await ctx.db.patch(state._id, { activeSnapshotId: snapshotId, updatedAt: Date.now() });
+    else await ctx.db.insert("learningRateState", { key: "global", activeSnapshotId: snapshotId, updatedAt: Date.now() });
+    if (previous && previous !== snapshotId) await ctx.scheduler.runAfter(0, internal.learning.cleanupSnapshot, { snapshotId: previous });
+    await ctx.scheduler.runAfter(0, internal.learning.cleanupLegacyRates, {});
+    return true;
+  },
+});
+
+export const cleanupSnapshot = internalMutation({
+  args: { snapshotId: v.string() },
+  handler: async (ctx, { snapshotId }) => {
+    const active = await ctx.db.query("learningRateState").withIndex("by_key", (q) => q.eq("key", "global")).unique();
+    if (active?.activeSnapshotId === snapshotId) return;
+    const rows = await ctx.db.query("learnedRates").withIndex("by_snapshot", (q) => q.eq("snapshotId", snapshotId)).take(250);
+    for (const row of rows) await ctx.db.delete(row._id);
+    if (rows.length === 250) await ctx.scheduler.runAfter(0, internal.learning.cleanupSnapshot, { snapshotId });
+  },
+});
+
+export const cleanupLegacyRates = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const active = await ctx.db.query("learningRateState").withIndex("by_key", (q) => q.eq("key", "global")).unique();
+    if (!active?.activeSnapshotId) return;
+    const rows = await ctx.db.query("learnedRates").withIndex("by_snapshot", (q) => q.eq("snapshotId", undefined)).take(250);
+    for (const row of rows) await ctx.db.delete(row._id);
+    if (rows.length === 250) await ctx.scheduler.runAfter(0, internal.learning.cleanupLegacyRates, {});
   },
 });
 
@@ -128,6 +159,7 @@ export const recompute = internalAction({
   handler: async (ctx): Promise<number> => {
     const pooled = new Map<string, { workspaces: number; trials: number; successes: number }>();
     const rows: { scope: string; metric: string; workspaces: number; trials: number; successes: number }[] = [];
+    const snapshotId = crypto.randomUUID();
     let cursor: string | null = null;
     let done = false;
     while (!done) {
@@ -160,8 +192,16 @@ export const recompute = internalAction({
       cursor = done ? null : page.continueCursor;
     }
     for (const [k, p] of pooled) if (p.workspaces >= K_ANON) rows.push({ scope: k.split("|")[0], metric: k.split("|")[1], ...p });
-    // Write in chunks; the first chunk also clears rates that no longer qualify.
-    for (let i = 0; i < Math.max(rows.length, 1); i += 200) await ctx.runMutation(internal.learning.writeRates, { rows: rows.slice(i, i + 200), replace: i === 0 });
+    // Stage every row under a new id. Readers keep using the last complete
+    // snapshot until all chunks are saved and this pointer switches atomically.
+    try {
+      for (let i = 0; i < rows.length; i += 200) await ctx.runMutation(internal.learning.writeRates, { snapshotId, rows: rows.slice(i, i + 200) });
+      await ctx.runMutation(internal.learning.activateSnapshot, { snapshotId });
+    } catch (error) {
+      // A failed writer never becomes visible; clean any chunks it already wrote.
+      await ctx.runMutation(internal.learning.cleanupSnapshot, { snapshotId });
+      throw error;
+    }
     return rows.length;
   },
 });
@@ -174,12 +214,16 @@ export const contextFor = internalQuery({
     const type = business?.businessType ?? "other";
     const stage = business?.lifecycleStage?.stage;
     const segment = business ? comparableLearningSegment({ businessType: type, lifecycleStage: stage, acquisitionDims: business.acquisition?.dims as Record<string, { value?: unknown; source?: unknown } | undefined> | undefined }) : null;
+    const state = await ctx.db.query("learningRateState").withIndex("by_key", (q) => q.eq("key", "global")).unique();
+    const rate = async (scope: string, metric: string) => state?.activeSnapshotId
+      ? ctx.db.query("learnedRates").withIndex("by_snapshot_scope_metric", (q) => q.eq("snapshotId", state.activeSnapshotId!).eq("scope", scope).eq("metric", metric)).first()
+      : ctx.db.query("learnedRates").withIndex("by_scope_metric", (q) => q.eq("scope", scope).eq("metric", metric)).first();
     const lines: string[] = [];
     for (const metric of Object.keys(METRIC_DEFS)) {
-      const own = await ctx.db.query("learnedRates").withIndex("by_scope_metric", (q) => q.eq("scope", `org:${orgId}`).eq("metric", metric)).first();
-      const segmentPool = segment ? await ctx.db.query("learnedRates").withIndex("by_scope_metric", (q) => q.eq("scope", segment.scope).eq("metric", metric)).first() : null;
-      const stagePool = stage ? await ctx.db.query("learnedRates").withIndex("by_scope_metric", (q) => q.eq("scope", `stage:${type}:${stage}`).eq("metric", metric)).first() : null;
-      const pool = stagePool ?? await ctx.db.query("learnedRates").withIndex("by_scope_metric", (q) => q.eq("scope", `type:${type}`).eq("metric", metric)).first();
+      const own = await rate(`org:${orgId}`, metric);
+      const segmentPool = segment ? await rate(segment.scope, metric) : null;
+      const stagePool = stage ? await rate(`stage:${type}:${stage}`, metric) : null;
+      const pool = stagePool ?? await rate(`type:${type}`, metric);
       if (own) lines.push(rateLine(metric, "own", own));
       const selectedPool = segmentPool ?? pool;
       if (selectedPool) lines.push(rateLine(metric, {
