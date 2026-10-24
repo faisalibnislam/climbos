@@ -636,6 +636,18 @@ export default defineSchema({
           firstTest: v.string(),
           measure: v.string(),
         }))),
+        commercialAssessment: v.optional(v.object({
+          status: v.union(v.literal("evidence_supports_testing"), v.literal("mixed_evidence"), v.literal("insufficient_business_specific_evidence")),
+          evidence: v.array(v.object({
+            dimension: v.union(v.literal("problem"), v.literal("demand"), v.literal("alternatives"), v.literal("differentiation"), v.literal("willingness_to_pay")),
+            finding: v.string(),
+            basis: v.union(v.literal("owner_report"), v.literal("measured"), v.literal("research"), v.literal("site_claim"), v.literal("inference")),
+            evidenceRefs: v.array(v.string()),
+            limitation: v.string(),
+          })),
+          unknowns: v.array(v.string()),
+          nextTest: v.object({ question: v.string(), smallestTest: v.string(), successSignal: v.string(), decisionRule: v.string() }),
+        })),
         journey: v.array(v.object({ stage: v.string(), observation: v.string(), opportunity: v.string() })),
         opportunities: v.array(v.object({ title: v.string(), why: v.string(), effort: v.string() })),
         /** Engine v2 expert research: alternatives, customer language, objections, gaps. */

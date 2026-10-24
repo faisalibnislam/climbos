@@ -322,6 +322,7 @@ export const saveInsights = internalMutation({
     const i = JSON.parse(insights) as BusinessInsights;
     const v2 = i as unknown as Partial<InsightsV2>;
     const v2Competitors = v2.competitors;
+    const commercialAssessment = v2.commercialAssessment;
     const insightsAt = Date.now();
     const org = await ctx.db.get(run.orgId);
     const refreshDays = org?.competitorResearchRefreshDays ?? 90;
@@ -368,6 +369,24 @@ export const saveInsights = internalMutation({
           firstTest: move.firstTest.slice(0, 300),
           measure: move.measure.slice(0, 200),
         })),
+        ...(commercialAssessment ? {
+          commercialAssessment: {
+            ...commercialAssessment,
+            evidence: commercialAssessment.evidence.slice(0, 12).map((item) => ({
+              ...item,
+              finding: item.finding.slice(0, 360),
+              evidenceRefs: item.evidenceRefs.slice(0, 4),
+              limitation: item.limitation.slice(0, 240),
+            })),
+            unknowns: commercialAssessment.unknowns.slice(0, 8).map((item) => item.slice(0, 240)),
+            nextTest: {
+              question: commercialAssessment.nextTest.question.slice(0, 240),
+              smallestTest: commercialAssessment.nextTest.smallestTest.slice(0, 400),
+              successSignal: commercialAssessment.nextTest.successSignal.slice(0, 240),
+              decisionRule: commercialAssessment.nextTest.decisionRule.slice(0, 300),
+            },
+          },
+        } : {}),
         journey: i.journey.slice(0, 6),
         opportunities: i.opportunities.slice(0, 6),
         ...("vocPhrases" in i

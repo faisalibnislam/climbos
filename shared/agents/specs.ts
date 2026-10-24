@@ -75,6 +75,23 @@ export const InsightsV2Schema = BusinessInsightsSchema.extend({
     sourceUrl: z.string(),
     implication: z.string().max(360),
   })).max(8),
+  commercialAssessment: z.object({
+    status: z.enum(["evidence_supports_testing", "mixed_evidence", "insufficient_business_specific_evidence"]),
+    evidence: z.array(z.object({
+      dimension: z.enum(["problem", "demand", "alternatives", "differentiation", "willingness_to_pay"]),
+      finding: z.string().max(360),
+      basis: z.enum(["owner_report", "measured", "research", "site_claim", "inference"]),
+      evidenceRefs: z.array(z.string()).max(4),
+      limitation: z.string().max(240),
+    })).max(12),
+    unknowns: z.array(z.string().max(240)).max(8),
+    nextTest: z.object({
+      question: z.string().max(240),
+      smallestTest: z.string().max(400),
+      successSignal: z.string().max(240),
+      decisionRule: z.string().max(300),
+    }),
+  }),
   competitors: z.array(
     BusinessInsightsSchema.shape.competitors.element.extend({
       kind: z.enum(["direct", "adjacent"]),
@@ -1610,7 +1627,7 @@ export function lintCopyBrief(brief: CopyBrief | undefined, input: AgentInput): 
   ];
 }
 
-export function lintInsightSources(out: Pick<InsightsV2, "audiences" | "competitors" | "alternatives" | "vocPhrases" | "objections" | "gaps" | "swot" | "swotEvidence" | "swotMoves" | "siteAssessment">, input: AgentInput): LintIssue[] {
+export function lintInsightSources(out: Pick<InsightsV2, "audiences" | "competitors" | "alternatives" | "vocPhrases" | "objections" | "gaps" | "swot" | "swotEvidence" | "swotMoves" | "siteAssessment" | "commercialAssessment">, input: AgentInput): LintIssue[] {
   const refs: { url: string; path: string }[] = [];
   out.competitors.forEach((competitor, i) => {
     refs.push({ url: competitor.sourceUrl, path: `competitors[${i}].sourceUrl` });
@@ -1624,6 +1641,33 @@ export function lintInsightSources(out: Pick<InsightsV2, "audiences" | "competit
   ];
   refs.push(...groups.flatMap(([group, rows]) => rows.map((row, i) => ({ url: row.sourceUrl, path: `${group}[${i}].sourceUrl` }))));
   const siteQuoteIssues: LintIssue[] = [];
+  const commercialEvidenceIssues: LintIssue[] = [];
+  out.commercialAssessment.evidence.forEach((item, index) => {
+    const path = `commercialAssessment.evidence[${index}]`;
+    if (item.basis !== "inference" && item.evidenceRefs.length === 0) {
+      commercialEvidenceIssues.push({ severity: "error", rule: "commercial_evidence", message: "Label this as an inference or cite a supplied fact or a page read in this run.", path: `${path}.evidenceRefs` });
+    }
+    if ((item.dimension === "demand" || item.dimension === "problem" || item.dimension === "willingness_to_pay") && item.basis === "site_claim") {
+      commercialEvidenceIssues.push({ severity: "error", rule: "commercial_evidence", message: "A business website's own claim cannot establish independent customer demand, problem severity, or willingness to pay.", path: `${path}.basis` });
+    }
+    if ((item.basis === "owner_report" || item.basis === "measured") && !item.evidenceRefs.some((ref) => /^fact:\d+$/i.test(ref.trim()))) {
+      commercialEvidenceIssues.push({ severity: "error", rule: "commercial_evidence", message: "Owner-reported and measured findings must point to a supplied fact record.", path: `${path}.evidenceRefs` });
+    }
+    if (item.basis === "research" && !item.evidenceRefs.some((ref) => /^https?:\/\//i.test(ref.trim()))) {
+      commercialEvidenceIssues.push({ severity: "error", rule: "commercial_evidence", message: "A research finding must cite a page read in this run.", path: `${path}.evidenceRefs` });
+    }
+    for (const ref of item.evidenceRefs) {
+      const fact = /^fact:(\d+)$/i.exec(ref.trim());
+      if (fact) {
+        if (Number(fact[1]) >= input.facts.length) commercialEvidenceIssues.push({ severity: "error", rule: "citation", message: `Evidence reference "${ref}" is outside this run's confirmed fact list.`, path: `${path}.evidenceRefs` });
+      } else if (/^https?:\/\//i.test(ref.trim())) {
+        refs.push({ url: ref, path: `${path}.evidenceRefs` });
+      } else {
+        commercialEvidenceIssues.push({ severity: "error", rule: "citation", message: "Use fact:N or a page URL read in this run.", path: `${path}.evidenceRefs` });
+      }
+    }
+    if (!item.limitation.trim()) commercialEvidenceIssues.push({ severity: "error", rule: "commercial_evidence", message: "State what this evidence does not establish for this business.", path: `${path}.limitation` });
+  });
   const normalizeQuote = (text: string) => text.replace(/\s+/g, " ").trim().toLocaleLowerCase();
   const pageBlocks = [...(input.untrustedContext ?? "").matchAll(/<untrusted_content source="([^"]+)">\s*([\s\S]*?)\s*<\/untrusted_content>/gi)];
   out.siteAssessment.forEach((finding, index) => {
@@ -1738,7 +1782,7 @@ export function lintInsightSources(out: Pick<InsightsV2, "audiences" | "competit
       swotIssues.push({ severity: "error", rule: "swot_move", message: "Each strategy needs a concrete move, a first test, and a measure.", path });
     }
   });
-  return [...lintAvailableSourceUrls(refs, input), ...siteQuoteIssues, ...swotIssues];
+  return [...lintAvailableSourceUrls(refs, input), ...siteQuoteIssues, ...commercialEvidenceIssues, ...swotIssues];
 }
 
 /** Lint for things that get published or sent as written (emails, pages): no placeholders. */

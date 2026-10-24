@@ -56,11 +56,37 @@ describe("research source assessment", () => {
 
   it("accepts insight citations only when their URLs were supplied to the run", () => {
     const input = { task: "Assess alternatives", brief: "Business facts", facts: [], precomputedResearch: { notes: "Review page", sources: [{ url: "https://example.com/reviews/" }] } };
-    const base = { audiences: [], competitors: [], alternatives: [], objections: [], gaps: [], siteAssessment: [], swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, swotEvidence: [], swotMoves: [] };
+    const base = { audiences: [], competitors: [], alternatives: [], objections: [], gaps: [], siteAssessment: [], commercialAssessment: { status: "insufficient_business_specific_evidence" as const, evidence: [], unknowns: [], nextTest: { question: "What remains unknown?", smallestTest: "Ask a small set of prospective buyers.", successSignal: "A measured buyer commitment.", decisionRule: "Continue only if the predeclared signal appears." } }, swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, swotEvidence: [], swotMoves: [] };
     expect(lintInsightSources({ ...base, vocPhrases: [{ phrase: "Useful", theme: "value", sourceUrl: "https://example.com/reviews" }] }, input)).toEqual([]);
     const issues = lintInsightSources({ ...base, vocPhrases: [{ phrase: "Made up", theme: "value", sourceUrl: "https://invented.example/reviews" }] }, input);
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({ severity: "error", rule: "citation", path: "vocPhrases[0].sourceUrl" });
+  });
+
+  it("keeps commercial evidence bounded and rejects website claims as proof of demand or payment", () => {
+    const input = { task: "Assess commercial evidence", brief: "Example Co", facts: ["Owner-reported: 3 customers paid for a pilot"], availableSourceUrls: ["https://example.com/"], untrustedContext: '<untrusted_content source="https://example.com/">Our product is in high demand.</untrusted_content>' };
+    const base: Parameters<typeof lintInsightSources>[0] = {
+      audiences: [], competitors: [], alternatives: [], vocPhrases: [], objections: [], gaps: [],
+      swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, swotEvidence: [], swotMoves: [], siteAssessment: [],
+      commercialAssessment: {
+        status: "mixed_evidence",
+        evidence: [
+          { dimension: "demand", finding: "Three customers paid for a pilot.", basis: "owner_report", evidenceRefs: ["fact:0"], limitation: "Small, owner-reported sample; representativeness is unknown." },
+          { dimension: "alternatives", finding: "The business website claims high demand.", basis: "site_claim", evidenceRefs: ["https://example.com/"], limitation: "This is the company's own claim, not independent evidence." },
+        ],
+        unknowns: ["Repeatable demand outside the initial pilot is unknown."],
+        nextTest: { question: "Will similar buyers pay at the intended price?", smallestTest: "Offer the pilot to a clearly defined set of qualified prospects.", successSignal: "Paid commitments at the intended price.", decisionRule: "Compare commitments with a threshold set by the owner before outreach." },
+      },
+    };
+    expect(lintInsightSources(base, input)).toEqual([]);
+    const unsupported = lintInsightSources({ ...base, commercialAssessment: { ...base.commercialAssessment, evidence: [
+      { ...base.commercialAssessment.evidence[1]!, dimension: "willingness_to_pay" as const },
+      { ...base.commercialAssessment.evidence[0]!, evidenceRefs: ["fact:4"] },
+    ] } }, input);
+    expect(unsupported).toEqual(expect.arrayContaining([
+      expect.objectContaining({ rule: "commercial_evidence", path: "commercialAssessment.evidence[0].basis" }),
+      expect.objectContaining({ rule: "citation", path: "commercialAssessment.evidence[1].evidenceRefs" }),
+    ]));
   });
 
   it("binds website assessments to verbatim text from the exact page read", () => {
@@ -69,6 +95,7 @@ describe("research source assessment", () => {
     const base: Parameters<typeof lintInsightSources>[0] = {
       audiences: [], competitors: [], alternatives: [], vocPhrases: [], objections: [], gaps: [],
       swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, swotEvidence: [], swotMoves: [],
+      commercialAssessment: { status: "insufficient_business_specific_evidence" as const, evidence: [], unknowns: [], nextTest: { question: "What remains unknown?", smallestTest: "Ask a small set of prospective buyers.", successSignal: "A measured buyer commitment.", decisionRule: "Continue only if the predeclared signal appears." } },
       siteAssessment: [{ dimension: "offer_clarity", observation: "The page gives a monthly starting price.", evidenceQuote: "Plans start at $29 per month.", sourceUrl: "https://example.com/pricing", implication: "The owner can review whether this entry price matches the intended buyer." }],
     };
     expect(lintInsightSources(base, input)).toEqual([]);
@@ -162,6 +189,7 @@ describe("research source assessment", () => {
       swotEvidence: [],
       swotMoves: [],
       siteAssessment: [],
+      commercialAssessment: { status: "insufficient_business_specific_evidence" as const, evidence: [], unknowns: [], nextTest: { question: "What remains unknown?", smallestTest: "Ask a small set of prospective buyers.", successSignal: "A measured buyer commitment.", decisionRule: "Continue only if the predeclared signal appears." } },
     };
     expect(lintInsightSources(base, input)).toEqual([]);
     const issues = lintInsightSources({ ...base, competitors: [{ ...base.competitors[0], comparison: [{ ...base.competitors[0].comparison[0], sourceUrl: "https://unread.example/pricing" }] }] }, input);
@@ -184,6 +212,7 @@ describe("research source assessment", () => {
       ],
       swotMoves: [{ kind: "strength_opportunity" as const, firstIndex: 0, secondIndex: 0, move: "Offer opt-in referrals to existing customers in the researched local service area.", firstTest: "Invite the last five consenting customers to refer one neighbor.", measure: "Qualified referred inquiries in 14 days" }],
       siteAssessment: [],
+      commercialAssessment: { status: "insufficient_business_specific_evidence" as const, evidence: [], unknowns: [], nextTest: { question: "What remains unknown?", smallestTest: "Ask a small set of prospective buyers.", successSignal: "A measured buyer commitment.", decisionRule: "Continue only if the predeclared signal appears." } },
     };
     expect(lintInsightSources(base, input)).toEqual([]);
     const issues = lintInsightSources({ ...base, swotEvidence: [{ ...base.swotEvidence[0], evidenceRefs: ["fact:8"] }, { ...base.swotEvidence[1], dimension: "strength" as const }], swotMoves: [{ ...base.swotMoves[0], kind: "weakness_opportunity" as const }] }, input);
@@ -208,6 +237,7 @@ describe("research source assessment", () => {
       competitors: [], alternatives: [], vocPhrases: [], objections: [], gaps: [],
       swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, swotEvidence: [], swotMoves: [],
       siteAssessment: [],
+      commercialAssessment: { status: "insufficient_business_specific_evidence" as const, evidence: [], unknowns: [], nextTest: { question: "What remains unknown?", smallestTest: "Ask a small set of prospective buyers.", successSignal: "A measured buyer commitment.", decisionRule: "Continue only if the predeclared signal appears." } },
     };
     expect(lintInsightSources(base, input)).toEqual([]);
     const invalid: Parameters<typeof lintInsightSources>[0] = { ...base, audiences: [{ ...base.audiences[0], needs: [{ statement: "A made-up need.", basis: "research", evidenceRefs: ["https://unread.example/claims"] }], objections: [{ statement: "A likely objection.", basis: "owner_report", evidenceRefs: [] }] }] };
@@ -221,7 +251,8 @@ describe("research source assessment", () => {
     const context = businessResearchContext({ siteAssessment: [{ dimension: "offer_clarity", observation: "The page lists a starting price.", evidenceQuote: "Plans start at $29 per month.", sourceUrl: "https://example.com/pricing", implication: "Review whether this entry price fits the intended buyer." }], competitors: [{ name: "Rival", comparison: [{ dimension: "pricing", finding: "Published annual pricing.", sourceUrl: "https://rival.example/pricing", implication: "Test whether annual terms fit the buyer." }] }] });
     expect(context).toContain("dimension");
     expect(context).toContain("siteAssessment");
-    expect(context).toContain("not proof of demand, product quality, conversion performance");
+    expect(context).toContain("not proof of this business's own demand");
+    expect(context).toContain("never a binary judgment that the business is viable or nonviable");
     expect(context).toContain("<untrusted_content source=\"business research\">");
     expect(context).toContain("do not copy their wording");
     expect(context).toContain("not independent proof of effectiveness");

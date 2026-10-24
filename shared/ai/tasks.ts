@@ -76,6 +76,24 @@ export const BusinessInsightsSchema = z.object({
   swotEvidence: z.array(SwotEvidenceSchema).max(16).optional(),
   /** TOWS-style combinations; indices point to exact entries in the relevant SWOT sections. */
   swotMoves: z.array(SwotMoveSchema).max(8).optional(),
+  /** Evidence map for a bounded commercial validation decision; this is not a viability verdict. */
+  commercialAssessment: z.object({
+    status: z.enum(["evidence_supports_testing", "mixed_evidence", "insufficient_business_specific_evidence"]),
+    evidence: z.array(z.object({
+      dimension: z.enum(["problem", "demand", "alternatives", "differentiation", "willingness_to_pay"]),
+      finding: z.string().max(360),
+      basis: z.enum(["owner_report", "measured", "research", "site_claim", "inference"]),
+      evidenceRefs: z.array(z.string()).max(4),
+      limitation: z.string().max(240),
+    })).max(12),
+    unknowns: z.array(z.string().max(240)).max(8),
+    nextTest: z.object({
+      question: z.string().max(240),
+      smallestTest: z.string().max(400),
+      successSignal: z.string().max(240),
+      decisionRule: z.string().max(300),
+    }),
+  }).optional(),
   journey: z.array(z.object({ stage: z.string(), observation: z.string(), opportunity: z.string() })),
   opportunities: z.array(z.object({ title: z.string(), why: z.string(), effort: z.enum(["small", "medium", "large"]) })),
 });
@@ -356,10 +374,10 @@ export function untrusted(source: string, text: string, maxChars = 24_000): stri
 /** Research inputs for downstream content agents. Competitor findings are context, not proof or publishing claims. */
 export function businessResearchContext(insights?: Record<string, unknown>): string {
   if (!insights) return "";
-  const fields = ["positioningStatement", "positioning", "siteAssessment", "vocPhrases", "objections", "audiences", "competitors"];
+  const fields = ["positioningStatement", "positioning", "commercialAssessment", "siteAssessment", "vocPhrases", "objections", "audiences", "competitors"];
   const context = Object.fromEntries(fields.filter((key) => insights[key] !== undefined && insights[key] !== null).map((key) => [key, insights[key]]));
   if (!Object.keys(context).length) return "";
-  return `\n\nPOSITIONING, WEBSITE, CUSTOMER LANGUAGE AND COMPETITOR RESEARCH:\nUse the website assessment as observations about the copy and pages ClimbOS read, not proof of demand, product quality, conversion performance, willingness to pay, or viability. Treat competitor-site findings as published claims, not independent proof of effectiveness or customer preference. Use them to understand category expectations and possible differentiation; do not copy their wording, name a competitor, claim superiority, or present their pricing/features as current unless the owner explicitly asks and the current source is included.\n${untrusted("business research", JSON.stringify(context), 8_000)}`;
+  return `\n\nPOSITIONING, COMMERCIAL VALIDATION, WEBSITE, CUSTOMER LANGUAGE AND COMPETITOR RESEARCH:\nThe commercialAssessment is an evidence map and proposal for a bounded validation test, never a binary judgment that the business is viable or nonviable. Preserve evidence basis and limitations. Owner reports are not independent verification; a research source about a market is not proof of this business's own demand; website claims are not proof of customer demand, product quality, conversion performance, or willingness to pay. Treat competitor-site findings as published claims, not independent proof of effectiveness or customer preference. Use them to understand category expectations and possible differentiation; do not copy their wording, name a competitor, claim superiority, or present their pricing/features as current unless the owner explicitly asks and the current source is included.\n${untrusted("business research", JSON.stringify(context), 8_000)}`;
 }
 
 /** `kind` (when given) is the fact's strength as evidence (shared/agents/evidenceKind.ts), e.g. "stated opinion" vs "measured". */

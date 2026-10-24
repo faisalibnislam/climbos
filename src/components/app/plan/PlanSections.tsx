@@ -839,6 +839,45 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
           </ul>
         </div>
 
+        {insights.commercialAssessment ? (
+          <div>
+            <SubHead icon={ShieldAlert} meta={<Badge tone={insights.commercialAssessment.status === "evidence_supports_testing" ? "green" : insights.commercialAssessment.status === "mixed_evidence" ? "amber" : "neutral"}>{insights.commercialAssessment.status.replaceAll("_", " ")}</Badge>}>
+              Commercial evidence and next test
+            </SubHead>
+            <Callout tone="info" title="A validation guide, not a viability verdict">
+              These findings separate business-specific evidence from owner reports, public research, website claims, and hypotheses. A small or selected sample does not establish a whole market.
+            </Callout>
+            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+              <Card>
+                <CardContent className="flex flex-col gap-3 p-4">
+                  <h4 className="text-ui font-semibold text-ink">What the evidence says</h4>
+                  {insights.commercialAssessment.evidence.length ? (
+                    <ul className="flex flex-col gap-3">
+                      {insights.commercialAssessment.evidence.map((item, index) => (
+                        <li key={`${item.dimension}-${index}`} className="flex flex-col gap-1.5 border-b border-line pb-3 last:border-0 last:pb-0">
+                          <span className="flex flex-wrap items-center gap-2"><Badge>{item.dimension.replaceAll("_", " ")}</Badge><Badge tone={item.basis === "measured" ? "green" : item.basis === "inference" ? "amber" : "neutral"}>{item.basis.replaceAll("_", " ")}</Badge></span>
+                          <p className="text-ui text-ink">{item.finding}</p>
+                          <p className="text-sm text-ink-3">Limit: {item.limitation}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : <p className="text-ui text-ink-3">No business-specific commercial evidence was supplied. The gaps below are hypotheses to validate.</p>}
+                  {insights.commercialAssessment.unknowns.length ? <div><p className="text-sm font-semibold text-ink-2">Still unknown</p><ul className="mt-1 list-inside list-disc text-sm text-ink-2">{insights.commercialAssessment.unknowns.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul></div> : null}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="flex flex-col gap-3 p-4">
+                  <h4 className="text-ui font-semibold text-ink">Smallest useful validation test</h4>
+                  <p className="text-ui text-ink-2"><span className="font-semibold text-ink">Question: </span>{insights.commercialAssessment.nextTest.question}</p>
+                  <p className="text-ui text-ink-2"><span className="font-semibold text-ink">Try: </span>{insights.commercialAssessment.nextTest.smallestTest}</p>
+                  <p className="text-ui text-ink-2"><span className="font-semibold text-ink">Look for: </span>{insights.commercialAssessment.nextTest.successSignal}</p>
+                  <p className="text-ui text-ink-2"><span className="font-semibold text-ink">Decide in advance: </span>{insights.commercialAssessment.nextTest.decisionRule}</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        ) : null}
+
         <div>
           <SubHead icon={Target} meta={<Badge>{String(insights.competitors.length)}</Badge>}>
             Competitors
