@@ -13,7 +13,7 @@ import type { PlanConstraints } from "./types";
 import { LOW_TICKET_USD_MONTH } from "../acquisition/scoring";
 import { formatMoney, toUsd } from "../economics/currency";
 import { sampleSize } from "../analysis/decisions";
-import { citedCreatorFact } from "../growth/targets";
+import { citedCreatorCompetitorCollaborations, citedCreatorFact } from "../growth/targets";
 import type { Effort } from "../ai/types";
 import {
   AdDraftsSchema,
@@ -2251,6 +2251,14 @@ export const ProspectsOutputSchema = z.object({
         likes: z.string().max(40).optional(),
         comments: z.string().max(40).optional(),
       })).max(5).optional(),
+      /** Prior competitor work is a source-bound fit/conflict signal, never proof of an active exclusive contract. */
+      competitorCollaborations: z.array(z.object({
+        name: z.string().min(1).max(100),
+        type: z.enum(["paid_or_sponsored", "affiliate", "gifted_or_product", "co_created_or_partnered", "mentioned_only", "unclear"]),
+        evidenceUrl: z.string().url(),
+        evidenceQuote: z.string().min(1).max(240),
+        publishedAt: z.string().max(80).optional(),
+      })).max(5).optional(),
       /** A proposed collaboration, not a claim that the creator has agreed or performed. */
       collaborationConcept: z.string().max(240).optional(),
     }),
@@ -2366,6 +2374,10 @@ function lintCreators(out: ProspectsOutput, input: AgentInput): LintIssue[] {
         }
       }
     }
+    const competitorSignals = citedCreatorCompetitorCollaborations(p.competitorCollaborations, p.evidence, 0);
+    if (competitorSignals.length !== (p.competitorCollaborations ?? []).length) {
+      issues.push({ severity: "error", rule: "creator_competitor_source", message: `${p.company}: each competitor-collaboration signal needs an exact cited source quote naming the company; a published date must appear in that quote.`, path: `${path}.competitorCollaborations` });
+    }
     if (p.publicEmail && !p.evidence.some((e) => e.observation.toLowerCase().includes(p.publicEmail.toLowerCase()))) {
       issues.push({ severity: "error", rule: "invented_email", message: `${p.company}: only use an email copied verbatim from a cited page (quote it in evidence).`, path: `${path}.publicEmail` });
     }
@@ -2470,7 +2482,8 @@ Only report what you actually found, with URLs.`,
 2. Open each candidate's profile or own site to confirm: handle, platform, audience size as shown publicly, creator location, separately stated audience location if available, recent activity, and one recent post that shows fit (URL + what it's about). Do not infer audience location from creator location.
 3. Find the contact route: a business email published in bio/link-in-bio/site/media kit (copy verbatim), else the DM or form route. Never guess an email.
 4. For up to 5 recent content examples per creator, record the exact content URL, format, and visible views/likes/comments exactly as shown; omit metrics that aren't visible. Do not calculate engagement rates or infer audience quality, authenticity, reach, response, or sales from those counts.
-5. Skip inactive accounts, off-niche creators and anyone promoting a direct competitor. Do not label an audience as fake or bought without reliable evidence. Gather ~1.5x what's needed; record a URL for every observation.`,
+5. If public evidence shows a prior competitor collaboration, record the company, type, exact source quote, URL and publication date when visible. Treat it as a fit/conflict signal, not proof of a current exclusive deal; do not automatically exclude a creator for a past mention or partnership. Exclude only when evidence supports a current material conflict with this proposed campaign.
+6. Skip inactive accounts and off-niche creators. Do not label an audience as fake or bought without reliable evidence. Gather ~1.5x what's needed; record a URL for every observation.`,
       };
     case "conversion_audit":
       return { maxSearches: 2, maxFetches: 4, brief: `Fetch the business's money page(s) and 1-2 competitor equivalents. Note headline, offer, proof, CTA, objections handled and friction.` };

@@ -182,10 +182,11 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         const evidenceUrl = `https://${n}.example.com/about`;
         const contentUrl = `https://${n}.example.com/posts/recent`;
         const creatorOutput = "audienceSize" in tmpl;
-        const prospect: Record<string, unknown> = { ...tmpl, company: `${marker} ${n}`, website: `https://${n}.example.com`, evidence: [{ url: evidenceUrl, observation: `${marker} observation; 12k followers; English-language tutorials${creatorOutput ? "; UK audience" : ""}.` }, ...(creatorOutput ? [{ url: contentUrl, observation: "Recent tutorial; 3.2k views, 210 likes, 14 comments." }] : [])], publicEmail: "", fit: 80 - i * 10, timing: 60 };
+        const prospect: Record<string, unknown> = { ...tmpl, company: `${marker} ${n}`, website: `https://${n}.example.com`, evidence: [{ url: evidenceUrl, observation: `${marker} observation; 12k followers; English-language tutorials${creatorOutput ? "; UK audience; partnered with Example competitor in September 2025" : ""}.` }, ...(creatorOutput ? [{ url: contentUrl, observation: "Recent tutorial; 3.2k views, 210 likes, 14 comments." }] : [])], publicEmail: "", fit: 80 - i * 10, timing: 60 };
         if ("audienceSize" in tmpl) prospect.audienceSize = { value: "12k followers", sourceUrl: evidenceUrl };
         if ("contentLanguage" in tmpl) prospect.contentLanguage = { value: "English", sourceUrl: evidenceUrl };
         if ("audienceLocation" in tmpl) prospect.audienceLocation = { value: "UK audience", sourceUrl: evidenceUrl };
+        if ("competitorCollaborations" in tmpl) prospect.competitorCollaborations = [{ name: "Example competitor", type: "co_created_or_partnered", evidenceUrl, evidenceQuote: "partnered with Example competitor in September 2025", publishedAt: "September 2025" }];
         if ("contentSamples" in tmpl) prospect.contentSamples = [{ url: contentUrl, format: "short_video", views: "3.2k views", likes: "210 likes", comments: "14 comments" }];
         if ("collaborationConcept" in tmpl) prospect.collaborationConcept = "Proposed short tutorial; no agreement implied.";
         return prospect;

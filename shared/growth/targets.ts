@@ -16,6 +16,14 @@ export interface CreatorContentSample {
   likes?: string;
   comments?: string;
 }
+export interface CreatorCompetitorCollaboration {
+  name: string;
+  type: "paid_or_sponsored" | "affiliate" | "gifted_or_product" | "co_created_or_partnered" | "mentioned_only" | "unclear";
+  evidenceUrl: string;
+  evidenceQuote: string;
+  publishedAt?: string;
+  observedAt: number;
+}
 
 function containsExactPhrase(source: string, phrase: string): boolean {
   const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -39,6 +47,28 @@ export function citedCreatorContentSamples(value: unknown, evidence: readonly Cr
       if (typeof count === "string" && count.trim() && count.length <= 40 && containsExactPhrase(source, count.trim())) result[metric] = count.trim();
     }
     accepted.push(result);
+  }
+  return accepted;
+}
+
+/** Preserve prior competitor collaborations as dated, source-bound signals without asserting current exclusivity. */
+export function citedCreatorCompetitorCollaborations(value: unknown, evidence: readonly CreatorEvidence[], observedAt: number): CreatorCompetitorCollaboration[] {
+  if (!Array.isArray(value)) return [];
+  const accepted: CreatorCompetitorCollaboration[] = [];
+  for (const raw of value.slice(0, 5)) {
+    if (!raw || typeof raw !== "object") continue;
+    const item = raw as Record<string, unknown>;
+    const name = typeof item.name === "string" ? item.name.trim() : "";
+    const evidenceUrl = typeof item.evidenceUrl === "string" ? item.evidenceUrl.trim() : "";
+    const evidenceQuote = typeof item.evidenceQuote === "string" ? item.evidenceQuote.trim() : "";
+    const type = item.type;
+    if (!name || name.length > 100 || !/^https?:\/\//i.test(evidenceUrl) || !evidenceQuote || evidenceQuote.length > 240) continue;
+    if (!["paid_or_sponsored", "affiliate", "gifted_or_product", "co_created_or_partnered", "mentioned_only", "unclear"].includes(String(type))) continue;
+    const source = evidence.find((row) => row.url === evidenceUrl)?.observation;
+    if (!source || !containsExactPhrase(source, evidenceQuote) || !containsExactPhrase(evidenceQuote, name)) continue;
+    const publishedAt = typeof item.publishedAt === "string" ? item.publishedAt.trim() : "";
+    if (publishedAt && (publishedAt.length > 80 || !containsExactPhrase(evidenceQuote, publishedAt))) continue;
+    accepted.push({ name: name.slice(0, 100), type: type as CreatorCompetitorCollaboration["type"], evidenceUrl: evidenceUrl.slice(0, 500), evidenceQuote: evidenceQuote.slice(0, 240), ...(publishedAt ? { publishedAt: publishedAt.slice(0, 80) } : {}), observedAt });
   }
   return accepted;
 }

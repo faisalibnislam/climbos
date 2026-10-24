@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { citedCreatorContentSamples, citedCreatorFact, creatorIdentity, targetBrief, targetKindOf, targetReadiness, type TargetRow } from "../../shared/growth/targets";
+import { citedCreatorCompetitorCollaborations, citedCreatorContentSamples, citedCreatorFact, creatorIdentity, targetBrief, targetKindOf, targetReadiness, type TargetRow } from "../../shared/growth/targets";
 import { creatorScoutSpec } from "../../shared/agents/specs";
 
 /** S6 (REQ-TARGET-01..06, REQ-CREATOR-01): which plays need targets, creator identity, honest readiness. */
@@ -72,6 +72,13 @@ describe("source-bound creator facts (REQ-CREATOR-01)", () => {
     expect(citedCreatorContentSamples([{ url: postUrl, format: "short_video", views: "32k views" }], source)).toEqual([{ url: postUrl, format: "short_video" }]);
     expect(citedCreatorContentSamples([{ url: postUrl, format: "short_video", views: "2k views" }], [{ url: postUrl, observation: "12k views" }])).toEqual([{ url: postUrl, format: "short_video" }]);
     expect(citedCreatorContentSamples([{ url: "https://instagram.com/p/other", format: "short_video", likes: "210 likes" }], source)).toEqual([]);
+  });
+  it("records prior competitor mentions with a source quote and observation date without implying current exclusivity", () => {
+    const source = [{ url: "https://instagram.com/ana", observation: "Partnered with Rival in September 2025." }];
+    const prior = [{ name: "Rival", type: "co_created_or_partnered", evidenceUrl: source[0].url, evidenceQuote: "Partnered with Rival in September 2025", publishedAt: "September 2025" }];
+    expect(citedCreatorCompetitorCollaborations(prior, source, 123)).toEqual([{ ...prior[0], observedAt: 123 }]);
+    expect(citedCreatorCompetitorCollaborations([{ ...prior[0], evidenceQuote: "Partnered with Rival in October 2025" }], source, 123)).toEqual([]);
+    expect(citedCreatorCompetitorCollaborations([{ ...prior[0], publishedAt: "2026" }], source, 123)).toEqual([]);
   });
   it("hard-fails creator facts that don't match their cited page evidence", () => {
     const profile = "https://instagram.com/ana";

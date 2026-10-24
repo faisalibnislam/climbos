@@ -1022,6 +1022,15 @@ export default defineSchema({
       likes: v.optional(v.string()),
       comments: v.optional(v.string()),
     }))),
+    /** Source-bound past competitor references; observedAt is when ClimbOS inspected the source, not proof of current status. */
+    competitorCollaborations: v.optional(v.array(v.object({
+      name: v.string(),
+      type: v.union(v.literal("paid_or_sponsored"), v.literal("affiliate"), v.literal("gifted_or_product"), v.literal("co_created_or_partnered"), v.literal("mentioned_only"), v.literal("unclear")),
+      evidenceUrl: v.string(),
+      evidenceQuote: v.string(),
+      publishedAt: v.optional(v.string()),
+      observedAt: v.number(),
+    }))),
     /** Suggested collaboration concept; this does not imply creator agreement. */
     collaborationConcept: v.optional(v.string()),
     createdAt: v.number(),

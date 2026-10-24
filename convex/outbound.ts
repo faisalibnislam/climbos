@@ -8,7 +8,7 @@ import { cancelQueued } from "./outboundSending";
 import type { OutreachOutput, ProspectsOutput } from "../shared/agents/specs";
 import { can, sha256Hex } from "../shared/policy";
 import { DEFAULT_BOOKING, bookingSlug, domainOf, fixtureOutbound, openSlots, prospectScore, type BookingRules } from "../shared/outbound";
-import { citedCreatorContentSamples, citedCreatorFact, creatorIdentity } from "../shared/growth/targets";
+import { citedCreatorCompetitorCollaborations, citedCreatorContentSamples, citedCreatorFact, creatorIdentity } from "../shared/growth/targets";
 import { expertPlaysOf } from "../shared/agents/planCompatibility";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -148,6 +148,7 @@ export const get = query({
           contentLanguage: p.contentLanguage ?? null,
           audienceLocation: p.audienceLocation ?? null,
           contentSamples: p.contentSamples ?? [],
+          competitorCollaborations: p.competitorCollaborations ?? [],
           collaborationConcept: p.collaborationConcept ?? null,
           check: p.check ?? null,
           firstLine: p.firstLine,
@@ -651,12 +652,14 @@ export const saveResult = internalMutation({
         const contentLanguage = c.kind === "creators" ? citedCreatorFact(p.contentLanguage, p.evidence) : null;
         const audienceLocation = c.kind === "creators" ? citedCreatorFact(p.audienceLocation, p.evidence) : null;
         const contentSamples = c.kind === "creators" ? citedCreatorContentSamples(p.contentSamples, p.evidence) : [];
+        const competitorCollaborations = c.kind === "creators" ? citedCreatorCompetitorCollaborations(p.competitorCollaborations, p.evidence, now) : [];
         const playIds = c.playId && !(existing.playIds ?? []).includes(c.playId) ? [...(existing.playIds ?? []), c.playId] : undefined;
         const creatorUpdates = c.kind === "creators" ? {
           ...(audienceSize ? { audienceSize } : {}),
           ...(contentLanguage ? { contentLanguage } : {}),
           ...(audienceLocation ? { audienceLocation } : {}),
           ...(contentSamples.length ? { contentSamples } : {}),
+          ...(competitorCollaborations.length ? { competitorCollaborations } : {}),
           ...(typeof p.collaborationConcept === "string" && p.collaborationConcept.trim() ? { collaborationConcept: p.collaborationConcept.trim().slice(0, 240) } : {}),
         } : {};
         if (playIds || Object.keys(creatorUpdates).length) {
@@ -669,6 +672,7 @@ export const saveResult = internalMutation({
       const contentLanguage = c.kind === "creators" ? citedCreatorFact(p.contentLanguage, p.evidence) : null;
       const audienceLocation = c.kind === "creators" ? citedCreatorFact(p.audienceLocation, p.evidence) : null;
       const contentSamples = c.kind === "creators" ? citedCreatorContentSamples(p.contentSamples, p.evidence) : [];
+      const competitorCollaborations = c.kind === "creators" ? citedCreatorCompetitorCollaborations(p.competitorCollaborations, p.evidence, now) : [];
       await ctx.db.insert("prospects", {
         orgId: c.orgId,
         campaignId: c._id,
@@ -694,6 +698,7 @@ export const saveResult = internalMutation({
         ...(contentLanguage ? { contentLanguage } : {}),
         ...(audienceLocation ? { audienceLocation } : {}),
         ...(contentSamples.length ? { contentSamples } : {}),
+        ...(competitorCollaborations.length ? { competitorCollaborations } : {}),
         ...(c.kind === "creators" && typeof p.collaborationConcept === "string" && p.collaborationConcept.trim() ? { collaborationConcept: p.collaborationConcept.trim().slice(0, 240) } : {}),
         createdAt: now,
         updatedAt: now,
