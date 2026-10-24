@@ -53,6 +53,41 @@ export function customerNeedPerMonth(target: GoalTarget | null | undefined, hori
 }
 
 /**
+ * Translate a monthly revenue target into the steady monthly customer additions
+ * needed to reach its active-customer equivalent by the horizon. This uses only
+ * the owner's average monthly revenue per customer and churn; missing baseline,
+ * price, churn, or horizon keeps the pace unknown. New and existing customers
+ * are assumed to have the same average revenue and churn, so the result is a
+ * scenario, not a forecast or a profitability measure.
+ */
+export function revenueGoalNewCustomersPerMonth(
+  target: GoalTarget | null | undefined,
+  horizonDays: number,
+  revenuePerCustomerMonth: number | null,
+  churn: number | null,
+): number | null {
+  if (!target || target.metric !== "revenue_month" || !finite(target.desired) || target.desired < 0 || !finite(horizonDays) || horizonDays <= 0) return null;
+  if (!finite(revenuePerCustomerMonth) || revenuePerCustomerMonth <= 0 || !finite(churn) || churn < 0 || churn > 1) return null;
+  const baselineRevenue = finite(target.baseline) && target.baseline >= 0 ? target.baseline : null;
+  if (target.mode === "total" && baselineRevenue === null) return null;
+  if (target.mode === "incremental" && baselineRevenue === null && churn > 0) return null;
+
+  const months = horizonDays / DAYS_PER_MONTH;
+  const startingRevenue = baselineRevenue ?? 0;
+  const desiredRunRate = target.mode === "incremental" ? startingRevenue + target.desired : target.desired;
+  const startingCustomers = startingRevenue / revenuePerCustomerMonth;
+  const desiredCustomers = desiredRunRate / revenuePerCustomerMonth;
+  const retainedStartingCustomers = startingCustomers * (1 - churn) ** months;
+  const additionsFactor = churn === 0
+    ? months
+    : churn === 1
+      ? 1
+      : -Math.expm1(months * Math.log1p(-churn)) / churn;
+  if (!(additionsFactor > 0) || !Number.isFinite(additionsFactor)) return null;
+  return Math.max(0, (desiredCustomers - retainedStartingCustomers) / additionsFactor);
+}
+
+/**
  * Compare the owner's target with the plays' scenario.
  * `customers` is the plays' new-customer range over the goal horizon; `revenuePerCustomerMonth`
  * converts it to monthly revenue for revenue goals. Unknown inputs give an unknown gap, never a default.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { lockedNumbers, playsGoalGap, portfolioRange } from "../../shared/agents/economics";
-import { customerNeedPerMonth, goalGap } from "../../shared/agents/goal";
+import { customerNeedPerMonth, goalGap, revenueGoalNewCustomersPerMonth } from "../../shared/agents/goal";
 import { lintPlanFit } from "../../shared/agents/specs";
 
 /** S3 (spec §8.1): goal, scenario and gap stay separate. */
@@ -17,6 +17,27 @@ describe("goal gap", () => {
     expect(customerNeedPerMonth({ metric: "customers", baseline: 20, desired: 50, mode: "total" }, 90, null)).toBeNull();
     expect(customerNeedPerMonth({ metric: "customers", baseline: 0, desired: 30, mode: "total" }, 90, null)).not.toBeNull();
     expect(customerNeedPerMonth({ metric: "revenue_month", baseline: 100, desired: 200, mode: "incremental" }, 90, 0)).toBeNull();
+  });
+  it("translates revenue goals into horizon-adjusted customer additions only from supplied economics", () => {
+    const horizonDays = 90;
+    const months = horizonDays / DAYS_PER_MONTH;
+    const total = revenueGoalNewCustomersPerMonth({ metric: "revenue_month", baseline: 1_000, desired: 1_600, mode: "total" }, horizonDays, 100, 0);
+    expect(total).toBeCloseTo(6 / months, 10);
+
+    const withChurn = revenueGoalNewCustomersPerMonth({ metric: "revenue_month", baseline: 1_000, desired: 1_600, mode: "total" }, horizonDays, 100, 0.1);
+    const retainedBase = 10 * 0.9 ** months;
+    const additionsFactor = (1 - 0.9 ** months) / 0.1;
+    expect(withChurn).toBeCloseTo((16 - retainedBase) / additionsFactor, 10);
+
+    const incremental = revenueGoalNewCustomersPerMonth({ metric: "revenue_month", baseline: 1_000, desired: 500, mode: "incremental" }, horizonDays, 100, 0);
+    expect(incremental).toBeCloseTo(5 / months, 10);
+  });
+  it("leaves a revenue-derived customer pace unknown when material owner inputs are missing", () => {
+    const target = { metric: "revenue_month" as const, baseline: 1_000, desired: 1_600, mode: "total" as const };
+    expect(revenueGoalNewCustomersPerMonth(target, 90, null, 0.05)).toBeNull();
+    expect(revenueGoalNewCustomersPerMonth(target, 90, 100, null)).toBeNull();
+    expect(revenueGoalNewCustomersPerMonth({ ...target, baseline: null }, 90, 100, 0.05)).toBeNull();
+    expect(revenueGoalNewCustomersPerMonth({ ...target, mode: "incremental", baseline: null }, 90, 100, 0.05)).toBeNull();
   });
   it("'50 customers by day 90' from 20 means 30 more plus expected losses, not 50 new", () => {
     const g = goalGap({ metric: "customers", baseline: 20, desired: 50, mode: "total" }, 90, range(25), { churn: 0.05, revenuePerCustomerMonth: 30 });

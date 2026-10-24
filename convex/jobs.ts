@@ -103,7 +103,7 @@ import { sha256Hex } from "../shared/policy";
 import { mediaBreakEvenRoas } from "../shared/attribution/roi";
 import { approvedPlanContext } from "../shared/agents/approvedPlanContext";
 import { readExpertPlan } from "../shared/agents/planCompatibility";
-import { customerNeedPerMonth } from "../shared/agents/goal";
+import { customerNeedPerMonth, revenueGoalNewCustomersPerMonth } from "../shared/agents/goal";
 import { strategyQuickTakeTask } from "../shared/agents/quickTake";
 import { searchConsoleSeoContext, searchConsoleStrategyContext } from "../shared/agents/searchConsoleEvidence";
 import { searchConsolePropertyMatchesWebsite } from "../shared/integrations/searchConsole";
@@ -1184,11 +1184,20 @@ export const buildStrategy = internalAction({
       });
       const diagnoseFor = (types: string[]) => {
         const cycle = CYCLE_DAYS[profile.dims.salesCycle?.value ?? ""];
+        const target = job.goal?.target;
+        const monthlyChurn = job.business?.unitEconomics?.monthlyChurn ?? null;
+        const revenuePerCustomerMonth = job.business?.unitEconomics?.revenuePerCustomerMonthUsd ?? null;
+        const customerTargetPerMonth = target?.metric === "revenue_month"
+          ? revenueGoalNewCustomersPerMonth(target, job.goal?.horizonDays ?? 90, revenuePerCustomerMonth, monthlyChurn)
+          : target?.metric === "customers"
+            ? customerNeedPerMonth(target, job.goal?.horizonDays ?? 90, monthlyChurn)
+            : null;
         return diagnose({
           funnel: job.business?.funnel,
-          monthlyChurn: job.business?.unitEconomics?.monthlyChurn,
+          monthlyChurn,
           newCustomersPerMonth: job.business?.unitEconomics?.newCustomersPerMonth,
-          ...(job.goal?.target ? { customerTargetPerMonth: customerNeedPerMonth(job.goal.target, job.goal.horizonDays, job.business?.unitEconomics?.monthlyChurn ?? null) ?? undefined } : {}),
+          ...(customerTargetPerMonth !== null ? { customerTargetPerMonth } : {}),
+          ...(target?.metric === "customers" || target?.metric === "revenue_month" ? { goalMetric: target.metric } : {}),
           types,
           ...(cycle !== undefined ? { salesCycleDays: cycle } : {}),
         });

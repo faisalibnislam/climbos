@@ -134,6 +134,31 @@ describe("diagnosis", () => {
     expect(diagnosisBrief(d)).toMatch(/If today's conversion rate held, about 4500 visitors per month would match the goal pace/);
     expect(diagnosisBrief(d)).toMatch(/does not show why the gap exists or which channel will close it/);
   });
+  it("uses a revenue goal's owner-supplied revenue per customer and churn for a customer-equivalent pace", () => {
+    const d = diagnose({
+      funnel: { periodDays: 30, visitors: 1_000, leads: 100, newCustomers: 0 },
+      goalMetric: "revenue_month",
+      customerTargetPerMonth: 20,
+    });
+    expect(d.customerGoalPace).toMatchObject({
+      goalMetric: "revenue_month",
+      currentCustomersPerMonth: 0,
+      targetCustomersPerMonth: 20,
+      gapPerMonth: 20,
+      probabilityCurrentReachBelowGoal: expect.any(Number),
+    });
+    expect(diagnosisBrief(d)).toContain("against 20/month needed");
+    expect(diagnosisBrief(d)).toContain("REVENUE GOAL CUSTOMER-EQUIVALENT PACE");
+    expect(diagnosisBrief(d)).toContain("same averages assumed for new customers");
+  });
+  it("asks for owner economics before translating a revenue goal into customers", () => {
+    const d = diagnose({ funnel: { periodDays: 30, newCustomers: 2 }, goalMetric: "revenue_month" });
+    expect(d.customerGoalPace).toBeUndefined();
+    expect(d.goalNote).toMatch(/do not convert the revenue goal into a customer target/);
+    expect(diagnosisBrief(d)).toContain("REVENUE GOAL PACE UNKNOWN");
+    expect(d.nextMeasurement).toMatchObject({ priority: "decision_critical" });
+    expect(d.nextMeasurement?.action).toMatch(/average monthly revenue per customer, and monthly customer churn/);
+  });
   it("identifies a relative non-SaaS funnel bottleneck only when owner counts separate the rates", () => {
     const conversion = diagnose({ funnel: { periodDays: 30, visitors: 500, leads: 100, newCustomers: 5 }, types: ["local_services"] });
     expect(conversion).toMatchObject({ constraint: "conversion", status: "supported", basis: "measured" });
