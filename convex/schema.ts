@@ -499,7 +499,7 @@ export default defineSchema({
       }),
     ),
     /** Business classification for channel scoring; owner-confirmed values are kept across plan refreshes. */
-    acquisition: v.optional(v.object({ types: v.array(v.string()), dims: v.any(), updatedAt: v.number() })),
+    acquisition: v.optional(v.object({ types: v.array(v.string()), typesSource: v.optional(v.union(v.literal("owner"), v.literal("inferred"))), dims: v.any(), updatedAt: v.number() })),
     /** Next bounded research refresh; owner profile/fact changes move this to now. */
     competitorResearchNextAt: v.optional(v.number()),
     competitorResearchStaleAt: v.optional(v.number()),

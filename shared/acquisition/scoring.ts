@@ -86,6 +86,8 @@ export interface DimensionValue {
 export interface AcquisitionProfile {
   /** Business type keys from the library (multi-label). */
   types: string[];
+  /** Type labels can steer soft scores when inferred, but only owner-confirmed labels establish hard eligibility. */
+  typesSource?: "owner" | "inferred";
   dims: Partial<Record<DimensionKey, DimensionValue>>;
   /** Monthly marketing budget in USD terms (the owner's budget scaled by a reference rate), to compare with the library's USD thresholds. */
   budgetUsd: number;
@@ -169,7 +171,7 @@ export function dimensionsToConfirm(p: AcquisitionProfile, max = 3): DimensionKe
 
 export function traitsOf(p: AcquisitionProfile): Set<Requirement> {
   const t = new Set<Requirement>();
-  for (const k of p.types) for (const r of TYPE_BY_KEY[k]?.traits ?? []) t.add(r);
+  if (p.typesSource !== "inferred") for (const k of p.types) for (const r of TYPE_BY_KEY[k]?.traits ?? []) t.add(r);
   // Only an owner-confirmed dimension can unlock or exclude hard channel eligibility.
   // Inferred classifications may inform soft scores, but must not silently rule out a route.
   const c = p.dims.customerType?.source === "owner" ? p.dims.customerType.value : undefined;
@@ -488,6 +490,7 @@ export function candidatesFor(p: AcquisitionProfile, n = 30): ScoredChannel[] {
 
 export interface SavedAcquisition {
   types: string[];
+  typesSource?: "owner" | "inferred";
   dims: Partial<Record<DimensionKey, DimensionValue>>;
 }
 
@@ -497,6 +500,7 @@ export function profileFrom(p: { saved?: SavedAcquisition | null; legacyType?: s
   const cur = p.currency;
   return {
     types: p.saved?.types.length ? p.saved.types : p.legacyTypes(p.legacyType),
+    typesSource: p.saved?.types.length ? p.saved.typesSource ?? "inferred" : "inferred",
     dims: { ...(p.saved?.dims ?? {}) },
     budgetUsd: Math.max(0, Math.round(toUsd(minorToMajor(p.budgetMinor, cur), cur))),
     horizonDays: p.horizonDays,
@@ -515,7 +519,7 @@ export function mergeFit(profile: AcquisitionProfile, fit: { types: string[]; di
     dims[key] = { value: d.value, confidence: d.confidence, source: "inferred", evidence: d.evidence.slice(0, 240) };
   }
   const types = fit.types.filter((t) => validTypes.has(t)).slice(0, 3);
-  return { ...profile, types: types.length ? types : profile.types, dims };
+  return { ...profile, types: profile.typesSource === "owner" ? profile.types : types.length ? types : profile.types, typesSource: profile.typesSource === "owner" ? "owner" : "inferred", dims };
 }
 
 /** The agent's channel rows as scoring adjustments. */

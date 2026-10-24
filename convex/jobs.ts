@@ -1159,7 +1159,7 @@ export const buildStrategy = internalAction({
             [
               "Classify this business and score its candidate acquisition channels for the goal and budget, so the plan uses the channels most likely to bring profitable customers.",
               `1. types: 1-3 of these library keys, most specific first: ${BUSINESS_TYPES.map((t) => `${t.key} (${t.label})`).join("; ")}.`,
-              `2. dimensions: infer each you can from the website and research, with confidence and evidence. Allowed values: ${Object.entries(DIMENSIONS).map(([k, d]) => `${k}=${d.values.join("|")}`).join("; ")}. Owner-confirmed values (below) are fixed.`,
+              `2. dimensions: infer each you can from the website and research, with confidence and evidence. Allowed values: ${Object.entries(DIMENSIONS).map(([k, d]) => `${k}=${d.values.join("|")}`).join("; ")}. Owner-confirmed business types and dimensions (below) are fixed.`,
               `3. channels: review every candidate below. Each has rule-based factor priors (audience, intent, budget, time, feasibility, competition, scalability, measurement). Give deltas (−30…+30, 0 = keep) only where evidence for THIS business says the prior is wrong: e.g. competitors already dominate it (competition down) or are absent (up); the audience provably gathers there (audience up); the owner can't execute it (feasibility down). Name the platform, the tactic and the audience for each.`,
               `4. summary: two short bullets on what wins and why.`,
               `Monthly budget: $${profile.budgetUsd}. Horizon: ${profile.horizonDays} days.`,
@@ -1167,6 +1167,7 @@ export const buildStrategy = internalAction({
               channelOutcomesLine(job.platformSourceConcentration, job.business?.unitEconomics?.grossMargin),
               "Channel history is descriptive last-touch association. It may omit untagged influence. Use source-tagged first-recorded-payer counts to distinguish acquisition from renewal payment events, and matched media spend per first recorded payer as a proxy only; neither is CAC or proof of channel causation. When matched same-currency spend and an owner-reported margin are available, compare tracked media ROAS with the media-only break-even ROAS only as a cautious screen for a bounded follow-up test; it is not incremental lift, full ROI, or proof of profitability. Treat no observed history as unknown, not evidence against a channel.",
               `OWNER-CONFIRMED: ${Object.entries(profile.dims).filter(([, d]) => d?.source === "owner").map(([k, d]) => `${k}=${d!.value}`).join(", ") || "none"}.`,
+              `OWNER-CONFIRMED BUSINESS TYPES: ${profile.typesSource === "owner" ? profile.types.join(", ") : "none; inferred types are soft scoring clues only and cannot establish hard eligibility"}.`,
               `CANDIDATES (id · name · priors):\n${candidates.map((c) => `${c.id} · ${c.name} · ${FACTORS.map((f) => c.factors[f]).join("/")}`).join("\n")}`,
               `BUSINESS INTELLIGENCE (researched earlier):\n${insightsBrief}`,
             ].join("\n\n"),

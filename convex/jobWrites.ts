@@ -393,7 +393,10 @@ export const saveStrategy = internalMutation({
     const now = Date.now();
     const contentPlans = CHANNEL_JOBS;
     const acq = acquisition ? (JSON.parse(acquisition) as { libraryVersion: string; profile: { types: string[]; dims: unknown }; adjustments: unknown; summary: string[]; limits?: { ownerHoursPerWeek: number | null } }) : null;
-    if (acq) await ctx.db.patch(business._id, { acquisition: { types: acq.profile.types, dims: acq.profile.dims, updatedAt: now } });
+    if (acq) {
+      const priorTypesSource = business.acquisition?.typesSource;
+      await ctx.db.patch(business._id, { acquisition: { types: priorTypesSource === "owner" ? business.acquisition!.types : acq.profile.types, typesSource: priorTypesSource === "owner" ? "owner" : "inferred", dims: { ...((acq.profile.dims as Record<string, unknown> | undefined) ?? {}), ...((business.acquisition?.dims as Record<string, unknown> | undefined) ?? {}) }, updatedAt: now } });
+    }
     // Pages the run read, so cited URLs keep their titles.
     const webSources = ((s as { webSources?: { url: string; title?: string }[] }).webSources ?? []).slice(0, 40);
     const strategyId = await ctx.db.insert("strategies", {

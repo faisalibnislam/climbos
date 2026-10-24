@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { budgetBand, EXECUTION_LABEL, FAMILIES, typesFromLegacy, TYPE_BY_KEY } from "../shared/acquisition/library";
+import { budgetBand, BUSINESS_TYPES, EXECUTION_LABEL, FAMILIES, typesFromLegacy, TYPE_BY_KEY } from "../shared/acquisition/library";
 import {
   DIMENSIONS,
   dimensionsToConfirm,
@@ -45,7 +45,7 @@ export const view = query({
     const strategy = strategies.find((s) => s.status === "approved") ?? strategies[0] ?? null;
     const planned = strategy?.acquisition ?? null;
     // The business's saved classification (owner confirmations) wins over the plan's snapshot.
-    const saved: SavedAcquisition | null = business.acquisition ? { types: business.acquisition.types, dims: business.acquisition.dims } : planned ? { types: planned.profile.types, dims: planned.profile.dims } : null;
+    const saved: SavedAcquisition | null = business.acquisition ? { types: business.acquisition.types, typesSource: business.acquisition.typesSource ?? "inferred", dims: business.acquisition.dims } : planned ? { types: planned.profile.types, typesSource: planned.profile.typesSource ?? "inferred", dims: planned.profile.dims } : null;
     const profile = profileFrom({ saved, legacyType: business.businessType, currency: goal.currency ?? business.currency, budgetMinor: goal.monthlyAdBudgetMinor, horizonDays: goal.horizonDays, legacyTypes: typesFromLegacy, priceUsdMonth: business.unitEconomics?.revenuePerCustomerMonthUsd ?? (planned?.profile as { priceUsdMonth?: number } | undefined)?.priceUsdMonth });
     // decision_contract plans: the same hard limits as the plan, with today's connections.
     const connected = planned?.limits ? (await ctx.db.query("connections").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(50)).filter((c) => c.status === "connected").map((c) => c.provider) : null;
@@ -62,6 +62,7 @@ export const view = query({
       summary: planned?.summary ?? [],
       budget: { usd: profile.budgetUsd, band: band.label, approach: band.approach },
       types: profile.types.map((k) => ({ key: k, label: TYPE_BY_KEY[k]?.label ?? k, regulated: TYPE_BY_KEY[k]?.regulated ?? null })),
+      typesSource: profile.typesSource ?? "inferred",
       dimensions: (Object.keys(DIMENSIONS) as DimensionKey[]).map((k) => ({
         key: k,
         label: DIMENSIONS[k].label,
@@ -98,6 +99,22 @@ export const view = query({
   },
 });
 
+/** The owner confirms the business identities that may enable hard channel eligibility. */
+export const setTypes = mutation({
+  args: { slug: v.string(), types: v.array(v.string()) },
+  handler: async (ctx, { slug, types }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    if (types.length < 1 || types.length > 3 || new Set(types).size !== types.length || types.some((type) => !TYPE_BY_KEY[type])) {
+      throw appError("INVALID", `Choose 1–3 distinct business types from the ${BUSINESS_TYPES.length} available categories.`);
+    }
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    if (!business) throw appError("NOT_FOUND", "Set up your business first.");
+    const prior = business.acquisition;
+    await ctx.db.patch(business._id, { acquisition: { types, typesSource: "owner", dims: prior?.dims ?? {}, updatedAt: Date.now() } });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "acquisition.types_confirmed", subjectType: "business", subjectId: business._id, summary: `Confirmed ${types.length} business type${types.length === 1 ? "" : "s"} for channel eligibility.` });
+  },
+});
+
 /** The owner confirms or corrects one business detail; channels re-rank on the next read. */
 export const setDimension = mutation({
   args: { slug: v.string(), key: v.string(), value: v.string() },
@@ -112,7 +129,7 @@ export const setDimension = mutation({
     if (!business) throw appError("NOT_FOUND", "Set up your business first.");
     const prior = business.acquisition ?? { types: typesFromLegacy(business.businessType), dims: {}, updatedAt: 0 };
     const dims = { ...(prior.dims as Record<string, unknown>), [k]: { value, confidence: "high", source: "owner" } };
-    await ctx.db.patch(business._id, { acquisition: { types: prior.types, dims, updatedAt: Date.now() } });
+    await ctx.db.patch(business._id, { acquisition: { types: prior.types, typesSource: prior.typesSource ?? "inferred", dims, updatedAt: Date.now() } });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "acquisition.dimension", subjectType: "business", subjectId: business._id, summary: `${DIMENSIONS[k].label}: ${VALUE_LABEL[value] ?? value}` });
   },
 });

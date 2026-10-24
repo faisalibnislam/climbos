@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BUSINESS_TYPES, CHANNELS, CHANNEL_BY_ID, budgetBand } from "../../shared/acquisition/library";
-import { candidatesFor, dimensionsToConfirm, scoreChannels, type AcquisitionProfile } from "../../shared/acquisition/scoring";
+import { candidatesFor, dimensionsToConfirm, mergeFit, scoreChannels, type AcquisitionProfile } from "../../shared/acquisition/scoring";
 
 const v = (value: string) => ({ value, confidence: "high" as const, source: "owner" as const });
 const formkit: AcquisitionProfile = { types: ["b2b_saas"], budgetUsd: 600, horizonDays: 90, dims: { customerType: v("b2b"), geography: v("global"), aov: v("low"), salesMotion: v("self_service"), team: v("solo") } };
@@ -67,6 +67,14 @@ describe("channel scoring", () => {
     expect(scoreChannels(inferredConsumer).find((r) => r.id === "P14")?.status).toBe("ineligible");
     const lowConfidence = { ...formkit, dims: { ...formkit.dims, aov: { value: "low", confidence: "low" as const, source: "inferred" as const } } };
     expect(scoreChannels(lowConfidence).find((r) => r.id === "D01")?.priceFit).toBeUndefined();
+  });
+  it("keeps inferred business-type traits soft until the owner confirms the types", () => {
+    const inferred: AcquisitionProfile = { types: ["mobile_app"], typesSource: "inferred", budgetUsd: 600, horizonDays: 90, dims: {} };
+    const ownerConfirmed = { ...inferred, typesSource: "owner" as const };
+    expect(scoreChannels(inferred).find((r) => r.id === "S18")?.status).toBe("ineligible");
+    expect(scoreChannels(ownerConfirmed).find((r) => r.id === "S18")?.status).not.toBe("ineligible");
+    const updated = mergeFit(ownerConfirmed, { types: ["b2b_saas"], dimensions: [] }, new Set(["mobile_app", "b2b_saas"]));
+    expect(updated).toMatchObject({ types: ["mobile_app"], typesSource: "owner" });
   });
   it("asks only about unknown or low-confidence dimensions", () => {
     expect(dimensionsToConfirm({ ...formkit, dims: {} })).toEqual(["customerType", "geography", "salesMotion"]);
