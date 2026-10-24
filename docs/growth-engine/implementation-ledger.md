@@ -282,6 +282,13 @@ The shared agent and critic contracts now preserve the distinction between publi
 | REQ-EVAL-01 | partial | S0/S14 | `evaluation-and-cost.md` | Four kinds of evidence defined. Bench output doesn't report them separately |
 | REQ-EVAL-02 | partial | S14 | `shared/abtest` | Engine Lab uses its own A/B |
 
+### Built-in and custom agents (issues 381–410)
+
+| Issue group | Status | Paths | Evidence / gap |
+|---|---|---|---|
+| 381–389, nine marketing identities | partial | `shared/agents/registry.ts`, `convex/jobs.ts`, `convex/jobWrites.ts` | All nine identities already route through ClimbOS roles and supported action types. The COO workflow chooses 1–4 proposed actions; code filters actions against any custom specialist's permissions and per-run cap before creating action cards. Routing is deterministic but keyword-based. Cart recovery, renewal and customer-retention email select lifecycle marketing; ordinary newsletters select email marketing; onboarding/activation strategy selects Product Growth. The retention specialist can now receive a plan-refresh task (`agent-registry.test.ts`). **Gap:** built-in identities lack complete typed input/output contracts, role-level success measures, and quality/outcome evaluation. |
+| 390–410, 21 business/growth identities | partial | `shared/agents/registry.ts`, `convex/customAgents.ts`, `convex/workspace.ts`, `convex/jobs.ts` | All 21 identities exist in the same 30-role registry. Owner-configured profiles support objective, instructions, permitted action kinds, selected knowledge, permission level, per-run/monthly credit ceilings, action cap, success metric, manual/daily/weekly trigger, model routing and feedback. Runs use the existing metered workflow, immutable profile snapshot and reviewable action cards. **Gap:** this is not yet dependency-aware multi-agent orchestration; no consensus/conflict workflow, per-archetype evaluation set, or quality-calibrated dynamic routing by expected value and cost exists. |
+
 ### UX
 
 | ID | Status | Slice | Paths | Evidence / gap |

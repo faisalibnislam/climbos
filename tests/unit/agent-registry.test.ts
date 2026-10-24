@@ -19,6 +19,14 @@ describe("specialist registry", () => {
     expect(agentForAction("connect_account")).toBeNull();
   });
 
+  it("routes lifecycle journeys to retention expertise and ordinary newsletters to email marketing", () => {
+    expect(agentForAction("generate_content", "email", "Recover abandoned carts with an opted-in email")?.id).toBe("lifecycle_marketing");
+    expect(agentForAction("generate_content", "email", "Write a quarterly customer newsletter")?.id).toBe("email_marketing");
+    expect(agentForAction("generate_content", "lifecycle_email", "Prepare a renewal and win-back journey")?.id).toBe("lifecycle_marketing");
+    expect(agentForAction("research", "", "Investigate repeat purchase and churn")?.id).toBe("customer_retention");
+    expect(agentForAction("refresh_plan", "", "Improve activation and onboarding")?.id).toBe("product_growth");
+  });
+
   it("makes every built-in role reachable through a supported action", () => {
     const routed = [
       agentForAction("generate_content", "instagram"),

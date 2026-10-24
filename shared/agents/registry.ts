@@ -17,6 +17,10 @@ export type AgentAction = (typeof AGENT_ACTIONS)[number];
 
 const allDraftActions: readonly AgentAction[] = ["generate_content", "refresh_plan", "research", "analyze_results", "schedule_content", "ad_change", "email_send", "find_customers", "note"];
 const researchActions: readonly AgentAction[] = ["research", "analyze_results", "note"];
+const LIFECYCLE_INTENT = [
+  "onboard", "activation", "retention", "reactivat", "nurture", "churn", "renewal", "win-back", "winback",
+  "lifecycle", "post-purchase", "post purchase", "abandoned cart", "cart recovery", "repeat purchase", "customer engagement", "upsell", "cross-sell",
+];
 
 /** The 30 specialized identities requested in Issues 381–410 map to reusable priced ClimbOS roles. */
 export const AGENT_ARCHETYPES: readonly AgentArchetype[] = Object.freeze([
@@ -44,7 +48,7 @@ export const AGENT_ARCHETYPES: readonly AgentArchetype[] = Object.freeze([
   { id: "revenue_intelligence", name: "Revenue Intelligence Agent", objective: "Explain revenue and profitability patterns from available measurements.", role: "data_analyst", defaultActions: ["analyze_results", "refresh_plan", "note"] },
   { id: "pricing_strategy", name: "Pricing Strategy Agent", objective: "Evaluate pricing options without inventing willingness-to-pay evidence.", role: "cmo", defaultActions: ["research", "analyze_results", "refresh_plan", "note"] },
   { id: "customer_research", name: "Customer Research Agent", objective: "Organize customer needs and feedback into testable insights.", role: "data_analyst", defaultActions: ["research", "analyze_results", "note"] },
-  { id: "customer_retention", name: "Customer Retention Agent", objective: "Identify measurable ways to help customers stay and return.", role: "customer_success_manager", defaultActions: ["research", "analyze_results", "email_send", "note"] },
+  { id: "customer_retention", name: "Customer Retention Agent", objective: "Identify measurable ways to help customers stay and return.", role: "customer_success_manager", defaultActions: ["refresh_plan", "research", "analyze_results", "email_send", "note"] },
   { id: "product_growth", name: "Product Growth Agent", objective: "Improve activation and product adoption from available evidence.", role: "cmo", defaultActions: ["research", "analyze_results", "refresh_plan", "note"] },
   { id: "analytics_attribution", name: "Analytics & Attribution Agent", objective: "Check metric definitions, data quality, and channel attribution.", role: "data_analyst", defaultActions: ["analyze_results", "research", "note"] },
   { id: "forecasting", name: "Forecasting Agent", objective: "Explain bounded scenarios and uncertainty from measured inputs.", role: "data_analyst", defaultActions: ["analyze_results", "refresh_plan", "note"] },
@@ -61,16 +65,19 @@ export function agentForAction(kind: string, channel = "", brief = ""): AgentArc
   const normalizedChannel = channel.trim().toLowerCase();
   const normalizedBrief = brief.toLowerCase();
   const mentions = (...terms: string[]) => terms.some((term) => normalizedBrief.includes(term));
+  const lifecycleIntent = mentions(...LIFECYCLE_INTENT);
+  const productActivationIntent = mentions("product adoption", "activation", "onboarding", "product led", "user activation");
   let id: string | undefined;
   if (kind === "refresh_plan") {
     if (mentions("go to market", "go-to-market", "launch", "market entry")) id = "gtm_strategy";
     else if (mentions("diagnos", "root cause", "biggest problem", "business weakness")) id = "business_diagnosis";
     else if (mentions("price", "packaging", "monetiz")) id = "pricing_strategy";
-    else if (mentions("retention", "churn", "renewal", "reactivat")) id = "customer_retention";
+    else if (productActivationIntent) id = "product_growth";
+    else if (lifecycleIntent) id = "customer_retention";
     else id = "chief_growth_strategist";
   }
   else if (kind === "generate_content") {
-    if (normalizedChannel === "email") id = mentions("onboard", "activation", "retention", "reactivat", "nurture") ? "lifecycle_marketing" : "email_marketing";
+    if (["email", "lifecycle_email"].includes(normalizedChannel)) id = lifecycleIntent ? "lifecycle_marketing" : "email_marketing";
     else if (["google_search_ad", "meta_ad", "ads"].includes(normalizedChannel)) id = "performance_marketing";
     else if (["blog", "website", "seo"].includes(normalizedChannel)) id = mentions("aeo", "geo", "answer engine", "ai search") ? "aeo_geo_intelligence" : mentions("technical seo", "search console", "ranking") ? "seo_intelligence" : "content_marketing";
     else if (mentions("press release", "media pitch", "public announcement", "crisis response")) id = "pr_communications";
@@ -84,10 +91,10 @@ export function agentForAction(kind: string, channel = "", brief = ""): AgentArc
     else if (mentions("technical seo", "search console", "keyword", "search ranking")) id = "seo_intelligence";
     else if (mentions("pricing", "price", "packaging", "willingness to pay")) id = "pricing_strategy";
     else if (mentions("sales", "deal", "pipeline", "buyer signal", "objection")) id = "sales_intelligence";
-    else if (mentions("customer retention", "churn", "renewal", "reactivation")) id = "customer_retention";
+    else if (productActivationIntent) id = "product_growth";
+    else if (lifecycleIntent) id = "customer_retention";
     else if (mentions("conversion", "landing page", "funnel", "checkout")) id = "conversion_optimization";
     else if (mentions("customer", "interview", "review", "feedback", "satisfaction")) id = "customer_research";
-    else if (mentions("product adoption", "activation", "onboarding", "product led")) id = "product_growth";
     else if (mentions("product", "positioning", "differentiation")) id = "product_marketing";
     else if (mentions("partnership", "affiliate", "co-marketing", "distribution partner")) id = "partnership_marketing";
     else if (mentions("event", "conference", "webinar", "local campaign")) id = "field_marketing";
