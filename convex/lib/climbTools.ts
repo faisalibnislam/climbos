@@ -128,6 +128,8 @@ const RunIdOutputSchema = z.object({ runId: z.string() });
 const CampaignStartOutputSchema = z.object({ campaignId: z.string(), pausedSending: z.boolean() });
 const SavedDraftOutputSchema = z.object({ saved: z.literal(true), note: z.string() });
 const OkOutputSchema = z.object({ ok: z.boolean() });
+const DraftDecisionOutputSchema = z.object({ approvalId: z.string(), slot: z.enum(["scheduled", "ready_to_post", "needs_time", "needs_approval", "not_autopilot"]) });
+const PauseOutputSchema = z.object({ canceledRuns: z.number().int().nonnegative(), unscheduled: z.number().int().nonnegative(), campaignsPausing: z.number().int().nonnegative() });
 
 function isHttpUrl(value: string): boolean {
   try {
@@ -585,6 +587,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "confirm",
     doing: "Asking the strategist for a new plan",
     input: z.object({}),
+    output: RunIdOutputSchema,
     summarize: () => `Draft a new version of your growth plan. Uses up to ${microsToCredits(estimateJobMicros(planJob("strategy"))).toLocaleString("en-US")} credits; unused credits are returned.`,
     run: async (c, slug) => c.mutation(api.orgs.generatePlan, { slug }),
   }),
@@ -595,6 +598,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "confirm",
     doing: "Approving",
     input: z.object({ artifactId, note: z.string().optional() }),
+    output: DraftDecisionOutputSchema,
     summarize: () => "Approve this draft as it is now. Autopilot posts then go out at their planned time.",
     run: async (c, slug, i) => c.mutation(api.content.decide, { slug, artifactId: i.artifactId as Id<"artifacts">, decision: "approve", note: i.note }),
   }),
@@ -605,6 +609,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "confirm",
     doing: "Sending it back",
     input: z.object({ artifactId, note: z.string() }),
+    output: DraftDecisionOutputSchema,
     summarize: (i) => `Send this draft back with the note: "${i.note}"`,
     run: async (c, slug, i) => c.mutation(api.content.decide, { slug, artifactId: i.artifactId as Id<"artifacts">, decision: "reject", note: i.note }),
   }),
@@ -615,6 +620,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "confirm",
     doing: "Scheduling",
     input: z.object({ artifactId, when: z.string().refine(isIsoDateTimeWithOffset, "Use a real ISO 8601 date and time with a valid timezone offset, like 2026-10-20T09:00:00+01:00.") }),
+    output: OkOutputSchema,
     summarize: (i, c) => `Schedule it for ${localTime(Date.parse(i.when), c?.timeZone)}.`,
     run: async (c, slug, i) => c.mutation(api.content.schedule, { slug, artifactId: i.artifactId as Id<"artifacts">, when: Date.parse(i.when) }),
   }),
@@ -625,6 +631,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "confirm",
     doing: "Publishing",
     input: z.object({ artifactId }),
+    output: OkOutputSchema,
     summarize: () => "Publish this approved post right now.",
     run: async (c, slug, i) => c.mutation(api.content.publishNow, { slug, artifactId: i.artifactId as Id<"artifacts"> }),
   }),
@@ -635,6 +642,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "confirm",
     doing: "Skipping the post",
     input: z.object({ slotId: z.string() }),
+    output: OkOutputSchema,
     summarize: () => "Skip this planned post. Nothing will go out in that slot.",
     run: async (c, slug, i) => c.mutation(api.autopilot.skipSlot, { slug, slotId: i.slotId as Id<"calendarSlots"> }),
   }),
@@ -650,6 +658,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
       if (value.channels.reduce((sum, item) => sum + item.postsPerWeek, 0) > 21) ctx.addIssue({ code: "custom", message: "Keep it to 21 posts a week or fewer.", path: ["channels"] });
       if (value.enabled && value.channels.every((item) => item.postsPerWeek === 0)) ctx.addIssue({ code: "custom", message: "Pick at least one post per week when autopilot is on.", path: ["channels"] });
     }),
+    output: z.string(),
     summarize: (i) => (i.enabled ? `Autopilot on (${i.mode.replace("_", " ")}): ${i.channels.map((c) => `${c.channel} ${c.postsPerWeek}/week`).join(", ")}.` : "Turn autopilot off. Scheduled posts stay scheduled."),
     run: async (c, slug, i) => {
       const cur = await c.query(api.autopilot.get, { slug });
@@ -663,6 +672,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "confirm",
     doing: "Pausing everything",
     input: z.object({ reason: z.string().optional() }),
+    output: PauseOutputSchema,
     summarize: () => "Pause all activity in this workspace until you resume it.",
     run: async (c, slug, i) => c.mutation(api.workspace.pauseAll, { slug, reason: i.reason }),
   }),

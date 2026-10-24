@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { encodeToolOutput, toolByName } from "../../convex/lib/climbTools";
+import { CLIMB_TOOLS, encodeToolOutput, toolByName } from "../../convex/lib/climbTools";
 
 describe("Climb tool output boundary", () => {
   it("validates JSON and escapes data that could close the untrusted wrapper", () => {
@@ -31,6 +31,20 @@ describe("Climb tool output boundary", () => {
       { id: "a", title: "Post", channel: "instagram", kind: "post", status: "draft", scheduledFor: null },
     ]);
     expect(() => encodeToolOutput([{ id: "a", status: "draft" }], 7_800, listDrafts?.output)).toThrow(/output contract/);
+  });
+
+  it("declares an output contract for every data tool, including confirmations", () => {
+    for (const tool of CLIMB_TOOLS.filter((entry) => entry.risk !== "ui")) {
+      expect(tool.output, tool.name).toBeDefined();
+    }
+    for (const name of ["schedule_draft", "publish_now", "skip_post"]) {
+      const output = toolByName(name)?.output;
+      expect(JSON.parse(encodeToolOutput({ ok: true }, 7_800, output))).toEqual({ ok: true });
+      expect(() => encodeToolOutput({ ok: "yes" }, 7_800, output)).toThrow(/output contract/);
+    }
+    const approve = toolByName("approve_draft")?.output;
+    expect(JSON.parse(encodeToolOutput({ approvalId: "approval_1", slot: "not_autopilot" }, 7_800, approve))).toEqual({ approvalId: "approval_1", slot: "not_autopilot" });
+    expect(() => encodeToolOutput({ approvalId: "approval_1", slot: "posted" }, 7_800, approve)).toThrow(/output contract/);
   });
 
   it("rejects unsafe URL schemes in agent tool results", () => {
