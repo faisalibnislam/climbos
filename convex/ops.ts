@@ -8,6 +8,7 @@ import {
   marginGuard,
   microsToUsd,
   RATE_VERSIONS,
+  detectModelCostAnomalies,
   summarizeModelUsage,
 } from "../shared/economics";
 import { internal } from "./_generated/api";
@@ -90,10 +91,13 @@ export const dashboard = query({
       .take(50);
     const usageRows = await ctx.db
       .query("usageEvents")
-      .withIndex("by_created", (q) => q.gt("createdAt", now - DAY))
-      .take(5001);
-    const usageCoverageCapped = usageRows.length > 5000;
-    const recentUsage = usageRows.slice(0, 5000);
+      .withIndex("by_created", (q) => q.gt("createdAt", now - 8 * DAY))
+      .order("desc")
+      .take(25_001);
+    const historyCapped = usageRows.length > 25_000;
+    const lastDayRows = usageRows.filter((event) => event.createdAt > now - DAY);
+    const usageCoverageCapped = lastDayRows.length > 5_000;
+    const recentUsage = lastDayRows.slice(0, 5_000);
     const spend24h = recentUsage.reduce((s, e) => s + e.costMicros, 0);
     const byProvider = new Map<string, { calls: number; costMicros: number }>();
     for (const e of recentUsage) {
@@ -175,6 +179,18 @@ export const dashboard = query({
           costMicros: event.costMicros,
           estimated: event.estimated,
         }))),
+        modelCostAnomalies8d: detectModelCostAnomalies(usageRows.slice(0, 25_000).map((event) => ({
+          provider: event.provider,
+          model: event.model,
+          inputTokens: event.inputTokens,
+          outputTokens: event.outputTokens,
+          reasoningTokens: event.reasoningTokens,
+          cacheReadTokens: event.cacheReadTokens,
+          cacheWriteTokens: event.cacheWriteTokens,
+          costMicros: event.costMicros,
+          estimated: event.estimated,
+          createdAt: event.createdAt,
+        })), now, historyCapped),
         estimate7dMicros: estimate,
         actual7dMicros: actual,
         overEstimateRuns: drift.length,

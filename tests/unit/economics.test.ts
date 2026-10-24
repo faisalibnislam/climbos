@@ -28,6 +28,7 @@ import {
   rateVersionForDate,
   RESEARCH_2026_10_17,
   roleTextCosts,
+  detectModelCostAnomalies,
   summarizeModelUsage,
   ROUTING_CLIMBOS_2026_10_17,
   topupEconomics,
@@ -77,6 +78,20 @@ describe("model usage analysis", () => {
       { provider: "other", model: "unknown", inputTokens: 100, outputTokens: 10, reasoningTokens: 0, cacheReadTokens: 20, cacheWriteTokens: 0, costMicros: 5, estimated: false },
     ]);
     expect(summary.map((row) => row.cacheReadRate)).toEqual([0.2, null]);
+  });
+
+  it("flags only a large rise over a sufficiently populated rolling-day baseline", () => {
+    const now = 8 * 86_400_000;
+    const event = (ageDays: number, costMicros: number) => ({ provider: "openai", model: "gpt-6-luna", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, costMicros, estimated: false, createdAt: now - ageDays * 86_400_000 });
+    const rows = [event(0, 31), ...[1, 2, 3, 4, 5].map((day) => event(day, 10))];
+
+    expect(detectModelCostAnomalies(rows, now, false)).toMatchObject({
+      available: true,
+      thresholdMultiple: 3,
+      alerts: [{ provider: "openai", model: "gpt-6-luna", currentMicros: 31, priorDailyMedianMicros: 10, multipleOfMedian: 3.1, baselineDaysWithUsage: 5, heuristic: true }],
+    });
+    expect(detectModelCostAnomalies(rows, now, true)).toMatchObject({ available: false, reason: "history_capped", alerts: [] });
+    expect(detectModelCostAnomalies(rows.slice(0, 4), now, false)).toMatchObject({ available: false, reason: "insufficient_baseline", alerts: [] });
   });
 });
 
