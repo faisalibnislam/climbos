@@ -12,6 +12,7 @@ import { sha256Hex } from "../shared/policy";
 import { v } from "convex/values";
 import { resultsBrief } from "./playResults";
 import { customerConcentration } from "../shared/attribution/concentration";
+import { refundExposure } from "../shared/attribution/refundExposure";
 import { platformConcentration } from "../shared/attribution/platformConcentration";
 import { shortenable, utmFor, withUtm } from "../shared/links";
 import { createLink } from "./links";
@@ -135,9 +136,13 @@ export const jobContext = internalQuery({
     const platformSourceConcentration = concentrationCurrency
       ? platformConcentration(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
       : null;
+    const refundExposureSignal = concentrationCurrency
+      ? refundExposure(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
+      : null;
     return {
       customerConcentration: concentration,
       platformSourceConcentration,
+      refundExposure: refundExposureSignal,
       audience: { contacts, consented },
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },
       run,

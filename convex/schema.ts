@@ -1296,7 +1296,7 @@ export default defineSchema({
         /** What this plan was built from (spec §04), for tracing results back to inputs. */
         snapshot: v.optional(
           v.object({
-            snapshotVersion: v.literal(1),
+            snapshotVersion: v.union(v.literal(1), v.literal(2)),
             snapshotId: v.string(),
             capturedAt: v.number(),
             engine: v.string(),
@@ -1314,6 +1314,20 @@ export default defineSchema({
             sourceUrls: v.array(v.string()),
             capabilities: v.array(v.string()),
             ownerEconomics: v.optional(v.any()),
+            refundExposure: v.optional(v.object({
+              currency: v.string(),
+              fromMs: v.number(),
+              toMs: v.number(),
+              paymentCount: v.number(),
+              explicitRefundEventCount: v.number(),
+              grossPaidMinor: v.number(),
+              refundsRecordedMinor: v.number(),
+              netPaidMinor: v.number(),
+              refundToGrossShare: v.union(v.number(), v.null()),
+              ratioUnavailableReason: v.optional(v.union(v.literal("no_gross_payments"), v.literal("refunds_exceed_window_gross"))),
+              duplicatesRemoved: v.number(),
+              partial: v.boolean(),
+            })),
             goalTarget: v.optional(v.any()),
             flags: v.optional(v.array(v.string())),
           }),

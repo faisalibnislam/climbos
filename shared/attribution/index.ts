@@ -33,4 +33,5 @@ export {
 export { computeReturnMetrics, contribution, roas, roi, type ReturnMetrics } from "./roi";
 export { computeCohorts, type CohortPayment, type CohortRow } from "./cohorts";
 export { customerConcentration, type CustomerConcentration } from "./concentration";
+export { refundExposure, type RefundExposure } from "./refundExposure";
 export { platformConcentration, type PlatformConcentration } from "./platformConcentration";

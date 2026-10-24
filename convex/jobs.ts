@@ -606,6 +606,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     ownerEconomicsLine(b?.unitEconomics, workspaceCurrency(job)),
     customerConcentrationLine(job.customerConcentration),
     platformConcentrationLine(job.platformSourceConcentration),
+    refundExposureLine(job.refundExposure),
     job.run.kind === "strategy" && b?.unitEconomics?.ownerHoursPerWeek === undefined ? "OWNER TIME: unknown (the owner hasn't said). Keep owner work small, prefer work ClimbOS can do, and state the hours each play needs so the owner can check." : "",
     audienceLine(job.audience),
     trustPostureContext(job.facts.map((f) => f.evidenceKind)),
@@ -638,6 +639,19 @@ function platformConcentrationLine(signal: JobCtx["platformSourceConcentration"]
   return `TRACKED PLATFORM CONCENTRATION (billing events, trailing 365 days, ${signal.currency}; last-touch association, not cause or a complete dependency inventory): top recognized tagged source ${signal.topSource} accounts for ${pct(signal.topSourceShare)} of ${formatMoney(minorToMajor(signal.attributedPositiveNetMinor, signal.currency), signal.currency)} positive net revenue with recognized tags; top three ${pct(signal.topThreeShare)}. Tagged-source billing conversions ${signal.attributedConversions} of ${signal.totalConversions}. ${signal.partial ? "The 10,000-event read limit was reached; figures may be incomplete. " : ""}Before recommending diversification, validate whether the exposure is recurring, material, and replaceable; do not infer untracked channels or customer access.`;
 }
 
+/** Refund amount exposure is descriptive billing data, not the chance a future customer will refund. */
+function refundExposureLine(signal: JobCtx["refundExposure"]): string {
+  if (!signal) return "OBSERVED REFUNDS: no matching, non-demo billing events are available for the last 365 days; do not assume a refund level.";
+  const amount = (minor: number) => formatMoney(minorToMajor(minor, signal.currency), signal.currency);
+  const base = `OBSERVED REFUND EXPOSURE (billing event-time window, trailing 365 days, ${signal.currency}): ${signal.paymentCount} payment event(s), gross ${amount(signal.grossPaidMinor)}, refunds recorded ${amount(signal.refundsRecordedMinor)}, net ${amount(signal.netPaidMinor)}.`;
+  const ratio = signal.refundToGrossShare === null
+    ? signal.ratioUnavailableReason === "no_gross_payments"
+      ? "No same-window gross payments exist, so no refund share is calculated."
+      : "Refunds exceed same-window gross payments; some may relate to earlier sales, so no refund share is calculated."
+    : `Recorded refund amount is ${Math.round(signal.refundToGrossShare * 1000) / 10}% of same-window gross payments.`;
+  return `${base} ${ratio} This is an amount ratio, not the share of customers who refund and not proof of cause. ${signal.partial ? "The 10,000-event read limit was reached; figures may be incomplete. " : ""}${signal.duplicatesRemoved ? `${signal.duplicatesRemoved} duplicate event(s) removed. ` : ""}Use it as a reason to inspect refund reasons and delivery costs before scaling; do not invent a refund threshold or infer why refunds happened.`;
+}
+
 async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[]): Promise<PlanSnapshot> {
   const facts = job.facts.map((f) => ({ id: String(f.id), updatedAt: f.updatedAt, statement: f.statement, category: f.category })).sort((a, b) => a.id.localeCompare(b.id));
   const staleFacts = job.staleFacts.map((f) => ({ id: String(f.id), updatedAt: f.updatedAt, statement: f.statement, category: f.category })).sort((a, b) => a.id.localeCompare(b.id));
@@ -649,7 +663,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[])
   const readUrls = [...new Set(sourceUrls)].sort();
   const insightsHash = await sha256Hex(insights);
   const material = {
-    snapshotVersion: 1,
+    snapshotVersion: 2,
     orgId: String(job.org._id),
     businessId: job.business ? String(job.business._id) : null,
     business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, businessType: job.business.businessType, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
@@ -657,6 +671,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[])
     goal,
     facts: [...facts, ...staleFacts].map(({ id, updatedAt, statement }) => ({ id, updatedAt, statement })).sort((a, b) => a.id.localeCompare(b.id)),
     ownerEconomics,
+    refundExposure: job.refundExposure ?? null,
     capabilities,
     flags,
     insightsHash,
@@ -664,7 +679,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[])
   };
   const snapshotId = await sha256Hex(JSON.stringify(material));
   return {
-    snapshotVersion: 1,
+    snapshotVersion: 2,
     snapshotId,
     capturedAt: Date.now(),
     engine: ENGINE_VERSION,
@@ -682,6 +697,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[])
     sourceUrls: readUrls,
     capabilities,
     ...(ownerEconomics ? { ownerEconomics } : {}),
+    ...(job.refundExposure ? { refundExposure: job.refundExposure } : {}),
     ...(job.goal?.target ? { goalTarget: job.goal.target } : {}),
     ...(job.org.engineFlags?.length ? { flags: job.org.engineFlags } : {}),
   };

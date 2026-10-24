@@ -49,6 +49,50 @@ describe("Engine v2 wiring", () => {
   it("runs a growth plan as draft + review steps, meters every call and reconciles once", async () => {
     const t = setup();
     const w = await workspace(t, "v2-plan@example.com");
+    const now = Date.now();
+    await t.run(async (ctx) => {
+      await ctx.db.insert("revenueEvents", {
+        orgId: w.orgId,
+        source: "stripe",
+        sourceEventId: "refund-exposure-payment",
+        occurredAt: now - 30 * 86_400_000,
+        customerRef: "private-customer",
+        orderRef: "refund-exposure-order",
+        currency: "USD",
+        amountMinor: 10_000,
+        refundedMinor: 1_500,
+        kind: "order",
+        isFixture: false,
+        ingestedAt: now,
+      });
+      await ctx.db.insert("revenueEvents", {
+        orgId: w.orgId,
+        source: "stripe",
+        sourceEventId: "refund-exposure-payment-2",
+        occurredAt: now - 20 * 86_400_000,
+        customerRef: "private-customer-2",
+        orderRef: "refund-exposure-order-2",
+        currency: "USD",
+        amountMinor: 5_000,
+        refundedMinor: 0,
+        kind: "order",
+        isFixture: false,
+        ingestedAt: now,
+      });
+      await ctx.db.insert("revenueEvents", {
+        orgId: w.orgId,
+        source: "stripe",
+        sourceEventId: "refund-exposure-standalone-refund",
+        occurredAt: now - 10 * 86_400_000,
+        orderRef: "refund-exposure-order-2",
+        currency: "USD",
+        amountMinor: 500,
+        refundedMinor: 0,
+        kind: "refund",
+        isFixture: false,
+        ingestedAt: now,
+      });
+    });
     await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
     await t.finishAllScheduledFunctions(() => undefined);
     const run = await latestRun(t, w.orgId, "strategy");
@@ -80,8 +124,17 @@ describe("Engine v2 wiring", () => {
     // Pages the research read are saved, and so is what the plan was built from.
     expect(strategy?.expert?.webSources?.[0]?.url).toBe("https://example.com");
     expect(strategy?.expert?.snapshot?.engine).toMatch(/^v\d/);
-    expect(strategy?.expert?.snapshot?.snapshotVersion).toBe(1);
+    expect(strategy?.expert?.snapshot?.snapshotVersion).toBe(2);
     expect(strategy?.expert?.snapshot?.snapshotId).toMatch(/^[a-f0-9]{64}$/);
+    expect(strategy?.expert?.snapshot?.refundExposure).toMatchObject({
+      paymentCount: 2,
+      grossPaidMinor: 15_000,
+      refundsRecordedMinor: 2_000,
+      netPaidMinor: 13_000,
+      refundToGrossShare: 2_000 / 15_000,
+      partial: false,
+    });
+    expect(JSON.stringify(strategy?.expert?.snapshot?.refundExposure)).not.toContain("private-customer");
     expect(strategy?.expert?.snapshot?.factVersions).toEqual([]);
     expect(strategy?.expert?.snapshot?.staleFactIds).toEqual([]);
     expect(strategy?.expert?.snapshot?.contradictions).toEqual([]);
