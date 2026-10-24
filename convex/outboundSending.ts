@@ -106,6 +106,7 @@ export const status = query({
     const c = assertSameOrg(await ctx.db.get(campaignId), org._id, "campaign");
     const mailbox = await mailboxOf(ctx, org._id);
     const sends = await ctx.db.query("outboundSends").withIndex("by_campaign", (q) => q.eq("campaignId", campaignId)).order("desc").take(300);
+    const attemptEvents = await ctx.db.query("outboundSendEvents").withIndex("by_campaign", (q) => q.eq("campaignId", campaignId)).order("desc").take(40);
     const count = (st: Doc<"outboundSends">["status"]) => sends.filter((s) => s.status === st).length;
     const now = Date.now();
     const day = await mailboxDay(ctx, org, now);
@@ -118,6 +119,10 @@ export const status = query({
       counts: { queued: count("queued") + count("sending"), sent: count("sent"), failed: count("failed"), bounced: count("bounced"), canceled: count("canceled"), uncertain: count("uncertain") },
       // May have gone out: the owner checks their Sent folder and says.
       review: sends.filter((s) => s.status === "uncertain").slice(0, 10).map((s) => ({ id: s._id, to: s.to, step: s.step, reason: s.reviewReason ?? "unverifiable" })),
+      attemptEvents: attemptEvents.map((item) => {
+        const send = sends.find((row) => row._id === item.sendId);
+        return { id: item._id, step: send?.step ?? null, to: send?.to ?? null, attempt: item.attempt, event: item.event, actor: item.actor, summary: item.summary, happenedAt: item.happenedAt, providerMessageId: item.providerMessageId ?? null };
+      }),
       next: sends.filter((s) => s.status === "queued").sort((a, b) => a.scheduledFor - b.scheduledFor)[0]?.scheduledFor ?? null,
       recent: sends.filter((s) => s.status !== "queued").slice(0, 20).map((s) => ({ id: s._id, to: s.to, step: s.step, status: s.status, at: s.sentAt ?? s.scheduledFor, error: s.error ?? null })),
       newlyApproved: c.sending ? (await unqueuedApproved(ctx, c)).length : 0,
@@ -197,12 +202,36 @@ async function keyTaken(ctx: MutationCtx, opKey: string, self: Id<"outboundSends
   return rows.some((r) => r._id !== self && (r.status === "sent" || r.status === "sending" || r.status === "uncertain" || r.status === "bounced"));
 }
 
+/** Retain send-attempt and reconciliation outcomes without copying addresses or message bodies. */
+async function recordSendEvent(
+  ctx: MutationCtx,
+  send: Doc<"outboundSends">,
+  event: Doc<"outboundSendEvents">["event"],
+  summary: string,
+  actor: Doc<"outboundSendEvents">["actor"] = "system",
+  providerMessageId?: string,
+) {
+  await ctx.db.insert("outboundSendEvents", {
+    orgId: send.orgId,
+    campaignId: send.campaignId,
+    sendId: send._id,
+    attempt: send.attempts,
+    ...(send.opKey ? { opKey: send.opKey } : {}),
+    event,
+    actor,
+    summary: summary.slice(0, 300),
+    ...(providerMessageId ? { providerMessageId: providerMessageId.slice(0, 300) } : {}),
+    happenedAt: Date.now(),
+  });
+}
+
 /**
  * It may have gone out. Never back to the queue from here: the Sent folder is
  * checked first (by the Message-ID derived from the key), or the owner decides.
  */
 async function markUncertain(ctx: MutationCtx, s: Doc<"outboundSends">, reason: NonNullable<Doc<"outboundSends">["reviewReason"]>, error?: string) {
   await ctx.db.patch(s._id, { status: "uncertain", reviewReason: reason, leaseExpiresAt: undefined, ...(error ? { error: error.slice(0, 300) } : {}) });
+  await recordSendEvent(ctx, s, "outcome_uncertain", error ?? "The mailbox outcome could not be confirmed. ClimbOS will check the Sent folder or ask the owner.");
   if (reason === "payload_changed") await askOwner(ctx, s);
   // A lost answer: give the Sent copy a moment to land before looking.
   else await ctx.scheduler.runAfter(reason === "no_response" ? 120_000 : 0, internal.mailbox.reconcileOne, { sendId: s._id, lease: s.lease });
@@ -267,6 +296,7 @@ export const dispatch = internalMutation({
         const opKey = await sendOpKey({ orgId, prospectId: s.prospectId, step: s.step, contentHash: approved.get(s.campaignId)! });
         if (await keyTaken(ctx, opKey, s._id)) {
           await ctx.db.patch(s._id, { status: "canceled", opKey, error: "Duplicate of an email already sent or on its way." });
+          await recordSendEvent(ctx, { ...s, opKey }, "duplicate_blocked", "A duplicate send was blocked because the same approved email is already sent or in progress.");
           continue;
         }
         const lease = `${s.attempts + 1}.${now.toString(36)}`;
@@ -334,6 +364,7 @@ export const claimSend = internalMutation({
     if (s.leaseExpiresAt !== undefined && s.leaseExpiresAt <= now) return false;
     if (s.opKey && (await keyTaken(ctx, s.opKey, s._id))) {
       await ctx.db.patch(s._id, { status: "canceled", error: "Duplicate of an email already sent or on its way.", ...RELEASE });
+      await recordSendEvent(ctx, s, "duplicate_blocked", "A duplicate send was blocked because the same approved email is already sent or in progress.");
       return false;
     }
     if (s.payloadHash && s.payloadHash !== payloadHash) {
@@ -353,13 +384,21 @@ export const claimSend = internalMutation({
       activeTestId = test._id;
     }
     await ctx.db.patch(s._id, { claimedAt: now, leaseExpiresAt: now + SEND_LEASE_MS, payloadHash, abTestId: activeTestId });
+    await recordSendEvent(ctx, s, "claimed", "The mailbox worker claimed this email immediately before contacting the provider.");
     return true;
   },
 });
 
 /** Sent: record it, then queue the next step once (or stop). */
-async function markSent(ctx: MutationCtx, s: Doc<"outboundSends">, messageId: string | undefined, now: number) {
+async function markSent(
+  ctx: MutationCtx,
+  s: Doc<"outboundSends">,
+  messageId: string | undefined,
+  now: number,
+  event: "provider_accepted" | "sent_folder_confirmed" | "owner_confirmed_sent" = "provider_accepted",
+) {
   await ctx.db.patch(s._id, { status: "sent", sentAt: now, messageId, leaseExpiresAt: undefined, reviewReason: undefined, error: undefined });
+  await recordSendEvent(ctx, s, event, event === "provider_accepted" ? "The mailbox provider accepted the email." : event === "sent_folder_confirmed" ? "The email was found in the mailbox Sent folder." : "The owner confirmed the email was sent.", event === "owner_confirmed_sent" ? "owner" : "system", messageId);
   if (s.step === 0 && s.abTestId) {
     const test = await ctx.db.get(s.abTestId);
     if (test) {
@@ -408,8 +447,13 @@ export const recordSend = internalMutation({
       // Only before the mailbox was reached.
       if (s.claimedAt) return;
       // Back in the queue for when sending resumes (this attempt doesn't count).
-      if (hold) await ctx.db.patch(s._id, { status: "queued", attempts: Math.max(0, s.attempts - 1), ...RELEASE });
-      else await ctx.db.patch(s._id, { status: "canceled", ...RELEASE });
+      if (hold) {
+        await ctx.db.patch(s._id, { status: "queued", attempts: Math.max(0, s.attempts - 1), ...RELEASE });
+        await recordSendEvent(ctx, s, "not_sent", "The mailbox was unavailable or sending was paused before this email reached the provider.");
+      } else {
+        await ctx.db.patch(s._id, { status: "canceled", ...RELEASE });
+        await recordSendEvent(ctx, s, "not_sent", "The email was stopped before it reached the mailbox provider.");
+      }
       return;
     }
     if (outcome === "unclear") {
@@ -418,11 +462,13 @@ export const recordSend = internalMutation({
     }
     if (outcome === "auth") {
       // The mailbox refused the sign-in (its connection is now marked expired): wait in the queue, no retry.
+      await recordSendEvent(ctx, s, "provider_rejected", "The mailbox provider rejected the sign-in; reconnect before sending resumes.");
       await ctx.db.patch(s._id, { status: "queued", attempts: Math.max(0, s.attempts - 1), error: "Mailbox sign-in failed", ...RELEASE });
       await notifyOwners(ctx, s.orgId, "Your mailbox sign-in stopped working. Reconnect it in Connections to keep sending.", "connections");
       return;
     }
     // The server said no: one retry after 30 minutes, then give up on this email.
+    await recordSendEvent(ctx, s, "provider_rejected", error ?? "The mailbox provider rejected this attempt.");
     if (s.attempts < 2) await ctx.db.patch(s._id, { status: "queued", scheduledFor: now + 30 * 60_000, error: error?.slice(0, 300), ...RELEASE });
     else await ctx.db.patch(s._id, { status: "failed", error: error?.slice(0, 300), ...RELEASE });
   },
@@ -446,7 +492,9 @@ export const recordReconcile = internalMutation({
     const s = await ctx.db.get(sendId);
     if (!s || s.status !== "uncertain" || s.lease !== lease) return;
     const now = Date.now();
-    if (found) await markSent(ctx, s, messageId, now);
+    if (found === false) await recordSendEvent(ctx, s, "sent_folder_not_found", "The Sent-folder check did not find the email; ClimbOS will use the safe retry limit.");
+    if (found === null) await recordSendEvent(ctx, s, "sent_folder_unavailable", "The Sent-folder check could not determine whether the email went out.");
+    if (found) await markSent(ctx, s, messageId, now, "sent_folder_confirmed");
     else if (found === false && s.attempts >= MAX_ATTEMPTS) await ctx.db.patch(s._id, { status: "failed", reviewReason: undefined, error: `Not sent after ${MAX_ATTEMPTS} tries.`, ...RELEASE });
     else if (found === false) await ctx.db.patch(s._id, { status: "queued", scheduledFor: now, reviewReason: undefined, error: "Not in your Sent folder; sending again.", ...RELEASE });
     else {
@@ -466,12 +514,16 @@ export const resolveUncertain = mutation({
     const now = Date.now();
     if (outcome === "sent") {
       const mailbox = await mailboxOf(ctx, org._id);
-      await markSent(ctx, s, s.opKey && mailbox?.accountLabel ? sendMessageId(s.opKey, mailbox.accountLabel) : undefined, now);
+      await markSent(ctx, s, s.opKey && mailbox?.accountLabel ? sendMessageId(s.opKey, mailbox.accountLabel) : undefined, now, "owner_confirmed_sent");
     } else if (outcome === "resend") {
       await refuseInCopilot(ctx, org._id, "send email");
       // The owner confirmed it didn't go out: the current approved email is bound afresh.
+      await recordSendEvent(ctx, s, "owner_requested_retry", "The owner confirmed the email was not sent and requested one approved retry.", "owner");
       await ctx.db.patch(s._id, { status: "queued", scheduledFor: now, payloadHash: undefined, reviewReason: undefined, error: undefined, ...RELEASE });
-    } else await ctx.db.patch(s._id, { status: "canceled", reviewReason: undefined, ...RELEASE });
+    } else {
+      await recordSendEvent(ctx, s, "owner_skipped", "The owner marked this email as not sent and skipped it.", "owner");
+      await ctx.db.patch(s._id, { status: "canceled", reviewReason: undefined, ...RELEASE });
+    }
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "outbound.send_resolved", subjectType: "campaign", subjectId: s.campaignId, summary: `Unclear email to ${s.to}: ${outcome === "sent" ? "marked sent" : outcome === "resend" ? "sending again" : "skipped"}.` });
   },
 });

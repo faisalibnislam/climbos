@@ -83,6 +83,9 @@ describe("cold email: one send per key", () => {
     const after = await rows(t, w.campaignId);
     expect(after.map((r) => `${r.step}:${r.status}`).sort()).toEqual(["0:canceled", "0:sent", "1:queued"]);
     expect(after.find((r) => r.status === "canceled")?.error).toMatch(/Duplicate/);
+    const events = await t.run(async (ctx) => ctx.db.query("outboundSendEvents").withIndex("by_campaign", (q) => q.eq("campaignId", w.campaignId)).collect());
+    expect(events.map((event) => event.event)).toEqual(expect.arrayContaining(["claimed", "provider_accepted", "duplicate_blocked"]));
+    expect(events.every((event) => !("to" in event) && !("body" in event))).toBe(true);
   });
 
   it("a worker crash after the mailbox took the email: the Sent folder is checked, no second send", async () => {
@@ -108,6 +111,8 @@ describe("cold email: one send per key", () => {
     [s] = await rows(t, w.campaignId);
     expect(s).toMatchObject({ status: "sent", messageId: sendMessageId(s.opKey!, "sam@seller.example") });
     expect(fakeMailbox().sent).toHaveLength(1);
+    const events = await t.run(async (ctx) => ctx.db.query("outboundSendEvents").withIndex("by_send", (q) => q.eq("sendId", s._id)).collect());
+    expect(events.map((event) => event.event)).toEqual(expect.arrayContaining(["claimed", "outcome_uncertain", "sent_folder_confirmed"]));
   });
 
   it("a lost answer (timeout after the mailbox took it) is checked, not resent", async () => {

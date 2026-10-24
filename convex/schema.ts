@@ -1559,6 +1559,36 @@ export default defineSchema({
     .index("by_prospect", ["prospectId", "step"])
     .index("by_org_sent", ["orgId", "sentAt"]),
 
+  /** Append-only mailbox execution history; contains no recipient address or email body. */
+  outboundSendEvents: defineTable({
+    orgId: v.id("organizations"),
+    campaignId: v.id("outboundCampaigns"),
+    sendId: v.id("outboundSends"),
+    attempt: v.number(),
+    opKey: v.optional(v.string()),
+    event: v.union(
+      v.literal("claimed"),
+      v.literal("provider_accepted"),
+      v.literal("provider_rejected"),
+      v.literal("outcome_uncertain"),
+      v.literal("sent_folder_confirmed"),
+      v.literal("sent_folder_not_found"),
+      v.literal("sent_folder_unavailable"),
+      v.literal("owner_confirmed_sent"),
+      v.literal("owner_requested_retry"),
+      v.literal("owner_skipped"),
+      v.literal("duplicate_blocked"),
+      v.literal("not_sent"),
+    ),
+    actor: v.union(v.literal("system"), v.literal("owner")),
+    summary: v.string(),
+    providerMessageId: v.optional(v.string()),
+    happenedAt: v.number(),
+  })
+    .index("by_campaign", ["campaignId", "happenedAt"])
+    .index("by_send", ["sendId", "happenedAt"])
+    .index("by_org", ["orgId", "happenedAt"]),
+
   prospects: defineTable({
     orgId: v.id("organizations"),
     campaignId: v.id("outboundCampaigns"),

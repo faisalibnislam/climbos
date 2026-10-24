@@ -84,6 +84,20 @@ export function ConnectMailbox({ slug, label = "Connect your mailbox" }: { slug:
 }
 
 const STATUS_TEXT: Record<string, string> = { sent: "Sent", failed: "Didn't send", bounced: "Bounced", canceled: "Stopped", uncertain: "Check" };
+const SEND_EVENT_TEXT: Record<string, string> = {
+  claimed: "Mailbox worker started",
+  provider_accepted: "Mailbox accepted",
+  provider_rejected: "Mailbox rejected",
+  outcome_uncertain: "Outcome unclear; checking",
+  sent_folder_confirmed: "Found in Sent folder",
+  sent_folder_not_found: "Not found in Sent folder",
+  sent_folder_unavailable: "Sent folder could not confirm",
+  owner_confirmed_sent: "Owner confirmed sent",
+  owner_requested_retry: "Owner requested retry",
+  owner_skipped: "Owner skipped",
+  duplicate_blocked: "Duplicate blocked",
+  not_sent: "Stopped before provider send",
+};
 
 type PanelProps = { slug: string; campaignId: Id<"outboundCampaigns">; approvedWithEmail: number; defaultCompany: string; bookingUrl?: string };
 
@@ -213,6 +227,21 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
                   </li>
                 ))}
               </ul>
+            </div>
+          ) : null}
+          {s.attemptEvents.length ? (
+            <div>
+              <h3 className="text-overline">Send attempt history</h3>
+              <ul className="mt-1.5 flex flex-col divide-y divide-line text-xs">
+                {s.attemptEvents.slice(0, 8).map((event) => (
+                  <li key={event.id} className="flex items-start gap-2 py-1.5">
+                    <span className="w-32 shrink-0 font-medium text-ink-2">{SEND_EVENT_TEXT[event.event] ?? event.event}</span>
+                    <span className="min-w-0 flex-1 text-ink-3">{"Email " + (event.step === null ? "" : event.step + 1) + (event.to ? " to " + event.to : "") + " · attempt " + event.attempt + " · " + event.summary + (event.providerMessageId ? " · Message ID " + event.providerMessageId : "")}</span>
+                    <span className="shrink-0 text-ink-3">{relativeTime(event.happenedAt)}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 text-xs text-ink-3">Attempt history records mailbox outcomes. It does not include email contents.</p>
             </div>
           ) : null}
         </>
