@@ -29,6 +29,7 @@ export async function measureSitePerformance(pageUrl: string) {
   pagespeedUrl.searchParams.set("url", canonicalUrl);
   pagespeedUrl.searchParams.set("strategy", "mobile");
   pagespeedUrl.searchParams.set("category", "performance");
+  pagespeedUrl.searchParams.append("category", "accessibility");
   pagespeedUrl.searchParams.set("locale", "en");
   if (process.env.GOOGLE_PAGESPEED_API_KEY) pagespeedUrl.searchParams.set("key", process.env.GOOGLE_PAGESPEED_API_KEY);
 
@@ -55,6 +56,6 @@ export async function measureSitePerformance(pageUrl: string) {
     fieldData: parsedField ?? (cruxKey && field.status === 404
       ? { status: "no_data" as const, formFactor: "PHONE" as const, recordUrl: canonicalUrl, collectionPeriod: null, fetchedAt: now, metrics: [] }
       : { status: cruxKey ? "unavailable" as const : "not_configured" as const, formFactor: "PHONE" as const, recordUrl: null, collectionPeriod: null, fetchedAt: now, metrics: [] }),
-    labData: parsedLab ?? { status: "unavailable" as const, strategy: "mobile" as const, requestedUrl: canonicalUrl, finalUrl: null, fetchedAt: now, score: null, metrics: [], opportunities: [] },
+    labData: parsedLab ?? { status: "unavailable" as const, strategy: "mobile" as const, requestedUrl: canonicalUrl, finalUrl: null, fetchedAt: now, score: null, accessibility: { status: "unavailable" as const, score: null, failedChecks: [] }, metrics: [], opportunities: [] },
   };
 }
