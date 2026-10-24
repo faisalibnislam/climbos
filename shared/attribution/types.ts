@@ -15,6 +15,10 @@ export interface RevenueEvent {
   occurredAt: number;
   customerRef?: string;
   orderRef?: string;
+  /** Acquisition tags carried on the billing event, when available. */
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
   /** ISO 4217 code. */
   currency: string;
   /**

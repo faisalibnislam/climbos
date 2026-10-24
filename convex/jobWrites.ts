@@ -12,6 +12,7 @@ import { sha256Hex } from "../shared/policy";
 import { v } from "convex/values";
 import { resultsBrief } from "./playResults";
 import { customerConcentration } from "../shared/attribution/concentration";
+import { platformConcentration } from "../shared/attribution/platformConcentration";
 import { shortenable, utmFor, withUtm } from "../shared/links";
 import { createLink } from "./links";
 import type {
@@ -111,15 +112,21 @@ export const jobContext = internalQuery({
     const usableRevenueRows = revenueRows.filter((event) => !event.isFixture);
     const concentrationIsPartial = revenueRows.length > 10_000;
     const concentrationCurrency = business?.currency ?? org.currency;
-    const concentration = concentrationCurrency
-      ? customerConcentration(usableRevenueRows.map((event) => ({
+    const concentrationEvents = usableRevenueRows.map((event) => ({
           id: String(event._id), sourceEventId: event.sourceEventId, source: event.source, occurredAt: event.occurredAt,
           customerRef: event.customerRef, orderRef: event.orderRef, currency: event.currency,
           amountMinor: event.amountMinor, refundedMinor: event.refundedMinor, kind: event.kind,
-        })), { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
+          utmSource: event.utmSource, utmMedium: event.utmMedium,
+        }));
+    const concentration = concentrationCurrency
+      ? customerConcentration(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
+      : null;
+    const platformSourceConcentration = concentrationCurrency
+      ? platformConcentration(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
       : null;
     return {
       customerConcentration: concentration,
+      platformSourceConcentration,
       audience: { contacts, consented },
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },
       run,

@@ -5,6 +5,7 @@ import {
   computeReturnMetrics,
   dedupeConversionEvents,
   dedupeRevenueEvents,
+  platformConcentration,
   roas,
   roi,
   summarizePlatformClaims,
@@ -144,6 +145,33 @@ describe("attribute", () => {
 
   it("rejects non-integer minor amounts", () => {
     expect(() => attribute([ev({ id: "x", amountMinor: 10.5 })], [], { model: "last_touch", lookbackDays: 7 })).toThrow(/integer/);
+  });
+});
+
+describe("platform concentration", () => {
+  it("uses recognized tagged billing paths, attaches refunds, and leaves unknown sources out", () => {
+    const result = platformConcentration([
+      ev({ id: "google-order", customerRef: "c1", orderRef: "g1", amountMinor: 10_000, utmSource: "google", utmMedium: "cpc" }),
+      ev({ id: "google-refund", orderRef: "g1", amountMinor: 2_000, kind: "refund", occurredAt: T0 + DAY }),
+      ev({ id: "meta-order", source: "polar", customerRef: "c2", orderRef: "m1", amountMinor: 6_000, utmSource: "instagram", utmMedium: "paid_social" }),
+      ev({ id: "unknown-order", source: "shopify", customerRef: "c3", orderRef: "u1", amountMinor: 5_000, utmSource: "made-up-channel", utmMedium: "cpc" }),
+    ], { currency: "USD", fromMs: T0, toMs: T0 + 2 * DAY })!;
+
+    expect(result.topSource).toBe("Google ads");
+    expect(result.attributedPositiveNetMinor).toBe(14_000);
+    expect(result.topSourceShare).toBeCloseTo(8 / 14);
+    expect(result.attributedConversions).toBe(2);
+    expect(result.totalConversions).toBe(3);
+    expect(result.topThreeShare).toBe(1);
+  });
+
+  it("returns a truthful empty attribution state when no recognized UTMs exist", () => {
+    const result = platformConcentration([
+      ev({ id: "no-utm", customerRef: "c1", amountMinor: 4_000 }),
+    ], { currency: "USD", fromMs: T0, toMs: T0 + DAY })!;
+    expect(result.topSource).toBeNull();
+    expect(result.topSourceShare).toBeNull();
+    expect(result.attributedPositiveNetMinor).toBe(0);
   });
 });
 

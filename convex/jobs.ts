@@ -567,6 +567,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     job.org.contentLanguage && job.org.contentLanguage !== "English" ? `LANGUAGE: write every customer-facing word (posts, emails, ads, pages) in ${job.org.contentLanguage}. Notes to the owner stay in English.` : "",
     ownerEconomicsLine(b?.unitEconomics, workspaceCurrency(job)),
     customerConcentrationLine(job.customerConcentration),
+    platformConcentrationLine(job.platformSourceConcentration),
     job.run.kind === "strategy" && b?.unitEconomics?.ownerHoursPerWeek === undefined ? "OWNER TIME: unknown (the owner hasn't said). Keep owner work small, prefer work ClimbOS can do, and state the hours each play needs so the owner can check." : "",
     audienceLine(job.audience),
     trustPostureContext(job.facts.map((f) => f.evidenceKind)),
@@ -589,6 +590,14 @@ function customerConcentrationLine(signal: JobCtx["customerConcentration"]): str
     `Identified positive net revenue coverage ${pct(signal.identifiedCoverage)} (${formatMoney(minorToMajor(signal.identifiedPositiveMinor, signal.currency), signal.currency)} identified of ${formatMoney(minorToMajor(signal.totalPositiveMinor, signal.currency), signal.currency)} positive billing-event revenue).`,
     `${signal.partial ? "The 10,000-event read limit was reached; figures may be incomplete. " : ""}${signal.duplicatesRemoved ? `${signal.duplicatesRemoved} duplicate event(s) removed. ` : ""}Customer IDs are source-scoped and may count one real person more than once across billing systems; IDs themselves are not included in this context. Assess repeated/contracted exposure before calling this a material dependency.`,
   ].join(" ");
+}
+
+/** Tracked platform revenue is a partial last-touch path signal, never proof of causation or dependence. */
+function platformConcentrationLine(signal: JobCtx["platformSourceConcentration"]): string {
+  if (!signal) return "TRACKED PLATFORM REVENUE: no matching, non-demo billing events are available for the last 365 days; do not infer platform dependence.";
+  if (!signal.topSource) return `TRACKED PLATFORM REVENUE (${signal.currency}, last 365 days): none of the recorded positive net billing revenue is attributed to a recognized UTM source. This does not mean the business has no platform dependence.`;
+  const pct = (value: number | null) => value === null ? "unavailable" : `${Math.round(value * 100)}%`;
+  return `TRACKED PLATFORM CONCENTRATION (billing events, trailing 365 days, ${signal.currency}; last-touch association, not cause or a complete dependency inventory): top recognized tagged source ${signal.topSource} accounts for ${pct(signal.topSourceShare)} of ${formatMoney(minorToMajor(signal.attributedPositiveNetMinor, signal.currency), signal.currency)} positive net revenue with recognized tags; top three ${pct(signal.topThreeShare)}. Tagged-source billing conversions ${signal.attributedConversions} of ${signal.totalConversions}. ${signal.partial ? "The 10,000-event read limit was reached; figures may be incomplete. " : ""}Before recommending diversification, validate whether the exposure is recurring, material, and replaceable; do not infer untracked channels or customer access.`;
 }
 
 function planSnapshot(job: JobCtx, insightsChars: number): PlanSnapshot {
