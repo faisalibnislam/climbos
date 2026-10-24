@@ -10,6 +10,8 @@ describe("diagnosis", () => {
     expect(task).toContain("Not enough evidence; count new paying customers.");
     expect(task).toContain("do not present a root cause as fact");
     expect(task).toContain("does not prove that reach, advertising, or a particular channel caused the gap");
+    expect(task).toContain("Diagnosis counts are owner-reported inputs, not independently confirmed facts");
+    expect(task).toContain("do not cite them with factIndexes");
     expect(task).toContain("Owner-reported positioning hypothesis.");
   });
   it("EV01: 100 trials → 12 first value → 3 paid points to activation as an observation, not a proven cause", () => {
