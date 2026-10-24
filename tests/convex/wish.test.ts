@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { api } from "../../convex/_generated/api";
+import { api, internal } from "../../convex/_generated/api";
 import { asNewUser, setup } from "./helpers";
 
 /**
@@ -33,6 +33,8 @@ describe("wishes", () => {
     expect(JSON.parse(social.payload).brief).toContain("Dec 20");
     const run = runs.find((r) => r._id === social.runId)!;
     expect(run.agentArchetypeId).toBe("social_media_marketing");
+    const context = await t.query(internal.jobWrites.jobContext, { runId: run._id });
+    expect(context?.agentArchetype).toMatchObject({ id: "social_media_marketing", role: "social_media_manager" });
     expect(JSON.parse(run.input).brief).toContain("Dec 20");
     expect(run.status).toBe("verified");
     // Every card that started is internal-only.
