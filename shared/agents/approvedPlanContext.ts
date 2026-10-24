@@ -24,8 +24,8 @@ type PlanDetail = {
 const clean = (value: unknown, max = 500): string => typeof value === "string" ? value.trim().slice(0, max) : "";
 
 /** A bounded, provenance-labeled summary of the exact owner-approved plan. */
-export function approvedPlanContext(plan: ApprovedPlanContextInput): string {
-  if (plan.status !== "approved") return "";
+export function approvedPlanContext(plan: ApprovedPlanContextInput, opts: { pinnedAtLaunch?: boolean } = {}): string {
+  if (plan.status !== "approved" && !(plan.status === "superseded" && opts.pinnedAtLaunch)) return "";
   const expert = plan.expert && typeof plan.expert === "object" ? plan.expert as PlanDetail : {};
   const snapshotId = clean(expert.snapshot?.snapshotId, 100) || "unavailable for this legacy plan";
   const lines = [

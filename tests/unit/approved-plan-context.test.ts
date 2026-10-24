@@ -24,6 +24,12 @@ describe("approved plan agent context", () => {
     expect(approvedPlanContext({ status: "needs_approval", version: 2, summary: "draft" })).toBe("");
   });
 
+  it("keeps the exact approved plan for a job already pinned to it after supersession", () => {
+    const oldPlan = { status: "superseded", version: 3, summary: "Original approved plan" };
+    expect(approvedPlanContext(oldPlan)).toBe("");
+    expect(approvedPlanContext(oldPlan, { pinnedAtLaunch: true })).toContain("Original approved plan");
+  });
+
   it("bounds untrusted plan text", () => {
     const context = approvedPlanContext({ status: "approved", version: 1, summary: "x".repeat(20_000) });
     expect(context.length).toBeLessThanOrEqual(5_000);

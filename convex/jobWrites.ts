@@ -154,6 +154,8 @@ export const jobContext = internalQuery({
       goal,
       brand,
       strategy,
+      /** True when this run was created from a specific plan card while that plan was approved. */
+      strategyPinned: Boolean(requestedStrategy && requestedStrategy.orgId === org._id),
     };
   },
 });
