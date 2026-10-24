@@ -512,7 +512,7 @@ function ConfidenceChips({ c }: { c: PlayConfidence }) {
   );
 }
 
-/** The forecast as a KPI: likely number, unit, low/likely/high range bar and the evidence behind it. */
+/** The forecast as a KPI: point estimate at stated inputs, scenario range, and evidence. */
 function Forecast({ f, economics, open = false, diagnosis }: { f: PlayView; economics?: Economics; open?: boolean; diagnosis?: Diagnosis | null }) {
   const k = kindOf(f.kind);
   const max = Math.max(f.p90, 1) * 1.1;
@@ -531,10 +531,10 @@ function Forecast({ f, economics, open = false, diagnosis }: { f: PlayView; econ
       <div className="flex min-w-0 items-baseline gap-2">
         <span className="text-kpi font-semibold tabular-nums text-ink">{fmtN(f.p50)}</span>
         <span className="min-w-0 flex-1 text-ui text-ink-2" title={f.unit}>
-          {lead(f.unit).head} <span className="text-ink-3">· {scenario ? "middle case" : "most likely"}</span>
+          {lead(f.unit).head} <span className="text-ink-3">· point at stated inputs</span>
         </span>
       </div>
-      <div className="relative h-5" role="img" aria-label={`${scenario ? "Scenario" : "Forecast"}: low ${fmtN(f.p10)}, likely ${fmtN(f.p50)}, high ${fmtN(f.p90)} ${lead(f.unit).head}`}>
+      <div className="relative h-5" role="img" aria-label={`${scenario ? "Scenario" : "Forecast"}: lower scenario ${fmtN(f.p10)}, point at stated inputs ${fmtN(f.p50)}, upper scenario ${fmtN(f.p90)} ${lead(f.unit).head}`}>
         <span aria-hidden className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-surface-3" />
         <span aria-hidden className={cn("absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full", k.soft)} style={{ left: `${pos(f.p10)}%`, width: `${Math.max(1, pos(f.p90) - pos(f.p10))}%` }} />
         <span aria-hidden className={cn("absolute top-1/2 h-3 w-0.5 -translate-x-1/2 -translate-y-1/2", k.rail)} style={{ left: `${pos(f.p10)}%` }} />
@@ -543,15 +543,15 @@ function Forecast({ f, economics, open = false, diagnosis }: { f: PlayView; econ
       </div>
       <dl className="grid grid-cols-3 text-xs">
         <div>
-          <dt className="text-ink-3">Low</dt>
+          <dt className="text-ink-3">Lower scenario</dt>
           <dd className="font-medium tabular-nums text-ink">{fmtN(f.p10)}</dd>
         </div>
         <div className="text-center">
-          <dt className="text-ink-3">Likely</dt>
+          <dt className="text-ink-3">At stated inputs</dt>
           <dd className="font-semibold tabular-nums text-ink">{fmtN(f.p50)}</dd>
         </div>
         <div className="text-right">
-          <dt className="text-ink-3">High</dt>
+          <dt className="text-ink-3">Upper scenario</dt>
           <dd className="font-medium tabular-nums text-ink">{fmtN(f.p90)}</dd>
         </div>
       </dl>
@@ -569,12 +569,24 @@ function Forecast({ f, economics, open = false, diagnosis }: { f: PlayView; econ
         </div>
       ) : null}
       {f.forecastUncertainty ? (
-        <p className="text-xs text-ink-3">
-          {f.forecastUncertainty.rangeMethod === "input_scenario"
-            ? `Low-to-high range varies ${f.forecastUncertainty.variedDrivers.join(", ") || "the stated inputs"}.`
-            : "No input range was supplied, so low, likely, and high use one scenario."}
-          {" "}This is not a statistical confidence interval or a calibrated probability. It does not include {f.forecastUncertainty.omittedFactors.join(", ")}.
-        </p>
+        <dl className="grid gap-2 rounded-md bg-surface-2 px-3 py-2 text-xs text-ink-3 sm:grid-cols-2">
+          <div>
+            <dt className="font-semibold text-ink-2">Scenario range</dt>
+            <dd>{f.forecastUncertainty.rangeMethod === "input_scenario" ? `Lower and upper values vary ${f.forecastUncertainty.variedDrivers.join(", ") || "the stated inputs"}.` : "No input ranges were supplied; all three values use the same stated inputs."}</dd>
+          </div>
+          <div>
+            <dt className="font-semibold text-ink-2">Statistical confidence</dt>
+            <dd>Not estimated. This range is not a statistical confidence interval or calibrated probability.</dd>
+          </div>
+          <div>
+            <dt className="font-semibold text-ink-2">Real-world factors not modeled</dt>
+            <dd>{f.forecastUncertainty.omittedFactors.join(", ").replaceAll("_", " ")}.</dd>
+          </div>
+          <div>
+            <dt className="font-semibold text-ink-2">Timing assumptions</dt>
+            <dd>Reach ramp: {f.forecastUncertainty.timing.reachRamp === "modeled" ? "modeled" : "assumed immediate"}; paid conversion lag: {f.forecastUncertainty.timing.paidConversionLag === "modeled" ? "modeled" : "none assumed"}.</dd>
+          </div>
+        </dl>
       ) : <p className="text-xs text-ink-3">This saved plan does not record how its range was built.</p>}
     </div>
   );
@@ -622,7 +634,7 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
       </dl>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <Badge tone={cost.kind === "assumption_scenario" ? "amber" : "neutral"}>{`Cost basis: ${COST_BASIS_LABEL[cost.kind]}`}</Badge>
-        <span className="text-xs text-ink-3">At most-likely rates, not the simulated range</span>
+        <span className="text-xs text-ink-3">Calculated at the stated point rates, outside the input-scenario range</span>
       </div>
       {top && top.switchValue !== null ? (
         <p className="text-xs text-ink-2">
@@ -1088,12 +1100,12 @@ function PlayCard({ play, slug, economics, results, planId, targets, canEdit = f
 
 /* ---------------- Plays comparison chart ---------------- */
 
-/** Low–likely–high range per play on one axis; hover or arrow keys for the numbers. */
+/** Lower/upper input scenarios and the stated-input point per play on one axis. */
 function PlayRangeChart({ plays, economics }: { plays: PlayView[]; economics?: Economics }) {
   const nav = useKeyNav(plays.length, 1);
   const scale = niceScale(Math.max(...plays.map((p) => p.p90), 1));
   const at = (v: number) => Math.min(100, Math.max(0, (v / scale.max) * 100));
-  const label = "Forecast range per play: low, likely and high";
+  const label = "Forecast per play: lower scenario, point at stated inputs, and upper scenario";
   return (
     <div className="flex flex-col gap-2">
       <div
@@ -1134,9 +1146,9 @@ function PlayRangeChart({ plays, economics }: { plays: PlayView[]; economics?: E
                       y: i === 0 ? 100 : 0,
                       title: p.name,
                       rows: [
-                        { label: "Low", value: String(p.p10), color: k.chart, shape: "dot" },
-                        { label: "Likely", value: String(p.p50), color: k.chart, shape: "dot", strong: true },
-                        { label: "High", value: String(p.p90), color: k.chart, shape: "dot" },
+                        { label: "Lower scenario", value: String(p.p10), color: k.chart, shape: "dot" },
+                        { label: "At stated inputs", value: String(p.p50), color: k.chart, shape: "dot", strong: true },
+                        { label: "Upper scenario", value: String(p.p90), color: k.chart, shape: "dot" },
                         ...(cac !== null ? [{ label: "Cost / customer", value: usd(cac, economics?.currency) }] : []),
                       ],
                       note: `${kindOf(p.kind).label} · ${CONFIDENCE[p.confidence]?.label ?? p.confidence} · ${p.horizonDays} days`,
@@ -1153,14 +1165,14 @@ function PlayRangeChart({ plays, economics }: { plays: PlayView[]; economics?: E
       </div>
       <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-3">
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="h-2 w-5 rounded-full bg-surface-3" /> Low to high
+          <span aria-hidden className="h-2 w-5 rounded-full bg-surface-3" /> Lower-to-upper scenario range
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="size-2.5 rounded-full bg-ink-2" /> Likely
+          <span aria-hidden className="size-2.5 rounded-full bg-ink-2" /> Point at stated inputs
         </span>
         <span>New customers in {plays[0]?.horizonDays ?? 90} days</span>
       </p>
-      <SrTable caption={label} columns={["Play", "Low", "Likely", "High", "Unit"]} rows={plays.map((p) => [p.name, p.p10, p.p50, p.p90, p.unit])} />
+      <SrTable caption={label} columns={["Play", "Lower scenario", "At stated inputs", "Upper scenario", "Unit"]} rows={plays.map((p) => [p.name, p.p10, p.p50, p.p90, p.unit])} />
     </div>
   );
 }
@@ -1262,12 +1274,12 @@ function PortfolioObjectiveCard({ label, explanation, choice, noChoice, economic
             <ul className="mt-1 list-disc pl-5 text-ui font-medium text-ink">{choice.selected.map((name) => <li key={name}>{name}</li>)}</ul>
           </div>
           <dl className="grid grid-cols-2 gap-2 text-sm">
-            <div><dt className="text-xs text-ink-3">Modeled customers</dt><dd className="font-semibold tabular-nums text-ink">{fmtN(choice.customers)} most likely · {fmtN(choice.expectedCustomers)} average</dd></div>
+            <div><dt className="text-xs text-ink-3">Modeled customers</dt><dd className="font-semibold tabular-nums text-ink">{fmtN(choice.customers)} at stated rates · {fmtN(choice.expectedCustomers)} average across modeled scenarios</dd></div>
             <div><dt className="text-xs text-ink-3">Spend and time</dt><dd className="font-semibold tabular-nums text-ink">{usd(choice.spendUsdMonth, economics?.currency)}/mo · {fmtN(choice.ownerHoursWeek)} h/wk</dd></div>
             {choice.netUsd !== null ? <div><dt className="text-xs text-ink-3">Modeled net contribution over this period</dt><dd className="font-semibold tabular-nums text-ink">{usd(choice.netUsd, economics?.currency)}</dd></div> : null}
             <div><dt className="text-xs text-ink-3">Limits</dt><dd className="font-medium text-ink">{choice.allFit ? "Fits supplied budget and capacity" : "Some drafted plays do not fit"}</dd></div>
           </dl>
-          {choice.runnerUp ? <p className="text-xs text-ink-3">Closest alternative: {choice.runnerUp.selected.join(" + ") || "No play"} · {fmtN(choice.runnerUp.customers)} most-likely customers.</p> : null}
+          {choice.runnerUp ? <p className="text-xs text-ink-3">Closest alternative: {choice.runnerUp.selected.join(" + ") || "No play"} · {fmtN(choice.runnerUp.customers)} customers at stated rates.</p> : null}
           {choice.left.length ? <details className="text-xs text-ink-3"><summary className="cursor-pointer font-medium text-ink-2">Why other plays were left out ({choice.left.length})</summary><ul className="mt-1 list-disc pl-5">{choice.left.map((item, i) => <li key={`${item.name}-${i}`}>{item.name}: {item.why}</li>)}</ul></details> : null}
         </>
       )}
