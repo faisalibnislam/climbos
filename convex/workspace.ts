@@ -265,6 +265,8 @@ export const startPlay = mutation({
   handler: async (ctx, { slug, strategyId, playId }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
     const s = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan");
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    if (hasNewerOwnerEconomics(s, business?.unitEconomics)) throw appError("INVALID", "Your confirmed business numbers changed after this plan was created. Refresh the plan before starting this play.");
     const play = ((s.expert?.plays ?? []) as { id?: string; name: string; oneLiner: string; audience: string; hook: string; climbosCanDo: string }[]).find((p) => p.id === playId);
     if (!play) throw appError("NOT_FOUND", "That play isn't in this plan.");
     return postChat(ctx, org, user._id, `Start the "${play.name}" play (plan v${s.version}, play ${playId}): ${play.oneLiner} Audience: ${play.audience}. Hook: ${play.hook}. Prepare everything your team can do for it now: ${play.climbosCanDo}`);
@@ -623,6 +625,10 @@ export const decidePlan = mutation({
     const { org, user, role } = await requireOrgAccess(ctx, { slug }, "approve");
     const s = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan");
     if (s.status !== "needs_approval") throw appError("INVALID", "This plan isn't waiting for approval.");
+    if (decision === "approve") {
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+      if (hasNewerOwnerEconomics(s, business?.unitEconomics)) throw appError("INVALID", "Your confirmed business numbers changed after this plan was created. Refresh the plan before approving it.");
+    }
     // A plan that failed ClimbOS's hard checks can be read and sent back, never approved into work.
     if (decision === "approve" && !canDriveWork((s.expert as { quality?: { state: QualityState } } | undefined)?.quality)) throw appError("INVALID", "This plan didn't pass ClimbOS checks, so it can't start work. Refresh the plan or send it back.");
     const now = Date.now();
@@ -679,6 +685,17 @@ export const decidePlan = mutation({
     return work;
   },
 });
+
+/** Approval and play launch must use the economics the plan actually analyzed. */
+function hasNewerOwnerEconomics(
+  strategy: Pick<Doc<"strategies">, "createdAt" | "expert">,
+  owner: Doc<"businesses">["unitEconomics"],
+): boolean {
+  if (!owner) return false;
+  const snapshot = strategy.expert?.snapshot as { ownerEconomics?: { updatedAt?: number } } | undefined;
+  const analyzedAt = snapshot?.ownerEconomics?.updatedAt ?? strategy.createdAt;
+  return owner.updatedAt > analyzedAt;
+}
 
 /** Re-bind a plan's approval to the current policy version and a fresh expiry (the owner is deciding now, on this version). */
 async function refreshPlanApproval(ctx: MutationCtx, s: Doc<"strategies">, userId: Id<"users">) {

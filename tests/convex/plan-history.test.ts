@@ -83,4 +83,34 @@ describe("Plan version history", () => {
     await t.run(async (ctx) => ctx.db.insert("memberships", { orgId: w.orgId, userId: viewer.userId, role: "viewer", status: "active", createdAt: Date.now() }));
     await expect(viewer.client.mutation(api.planHistory.restore, { slug: w.slug, fromId: latest.id, parts: ["summary"] })).rejects.toThrow();
   });
+
+  it("requires a fresh plan after owner economics change before approval or play launch", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-economics@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+
+    await w.client.mutation(api.workspace.setUnitEconomics, {
+      slug: w.slug,
+      revenuePerCustomerMonthUsd: 250,
+      grossMargin: 0.7,
+      monthlyChurn: 0.04,
+    });
+
+    await expect(w.client.mutation(api.workspace.decidePlan, {
+      slug: w.slug,
+      strategyId: plan.id,
+      decision: "approve",
+    })).rejects.toThrow(/numbers changed after this plan was created/);
+
+    const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const playId = (saved?.expert?.plays as { id?: string }[] | undefined)?.find((play) => play.id)?.id;
+    expect(playId).toBeTruthy();
+    await expect(w.client.mutation(api.workspace.startPlay, {
+      slug: w.slug,
+      strategyId: plan.id,
+      playId: playId!,
+    })).rejects.toThrow(/numbers changed after this plan was created/);
+  });
 });

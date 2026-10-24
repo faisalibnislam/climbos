@@ -189,7 +189,7 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 | REQ-LEARN-04 | done-fixture | S4 | `convex/jobWrites.ts` `withPlayIds`, `convex/playResults.ts`, `playResults.playId` | Plays get stable IDs, carried to the next plan version by name. Results match by ID, so a rename keeps them (`play-results.test.ts`). Older rows match by name |
 | REQ-LEARN-05 | missing | S4 | `learning.ts:17` | minTrials only |
 | REQ-LEARN-06 | partial | S4 | `learning.ts:13` (K_ANON=5) | Not audited |
-| REQ-LEARN-07 | missing | S4 | `workspace.ts:425` | No recalculation |
+| REQ-LEARN-07 | partial | S4 | `workspace.ts` owner-economics snapshot and approval/start gates | Confirmed economics already replace planner assumptions on reads; plans are now blocked from approval or play launch when inputs changed after generation. Saved forecasts/portfolio still require a refreshed plan to recalculate. |
 | REQ-COST-01 | partial | all | this ledger | Decision records are written per slice in commit messages. No formal record per workflow yet |
 | REQ-COST-02 | missing | S14 | run `actualMicros` | No $ per accepted output |
 | REQ-COST-03 | partial | S12/S14 | reservation, `jobs.ts:95`, `engine.ts:192` | No per-automation ceiling |
