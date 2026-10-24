@@ -52,11 +52,33 @@ describe("research source assessment", () => {
 
   it("accepts insight citations only when their URLs were supplied to the run", () => {
     const input = { task: "Assess alternatives", brief: "Business facts", facts: [], precomputedResearch: { notes: "Review page", sources: [{ url: "https://example.com/reviews/" }] } };
-    const base = { audiences: [], competitors: [], alternatives: [], objections: [], gaps: [], swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, swotEvidence: [], swotMoves: [] };
+    const base = { audiences: [], competitors: [], alternatives: [], objections: [], gaps: [], siteAssessment: [], swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, swotEvidence: [], swotMoves: [] };
     expect(lintInsightSources({ ...base, vocPhrases: [{ phrase: "Useful", theme: "value", sourceUrl: "https://example.com/reviews" }] }, input)).toEqual([]);
     const issues = lintInsightSources({ ...base, vocPhrases: [{ phrase: "Made up", theme: "value", sourceUrl: "https://invented.example/reviews" }] }, input);
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({ severity: "error", rule: "citation", path: "vocPhrases[0].sourceUrl" });
+  });
+
+  it("binds website assessments to verbatim text from the exact page read", () => {
+    const pageText = '<untrusted_content source="https://example.com/pricing/">Plans start at $29 per month.\nCancel at any time.</untrusted_content>';
+    const input = { task: "Assess the website", brief: "Example Co", facts: [], availableSourceUrls: ["https://example.com/pricing/"], untrustedContext: pageText };
+    const base: Parameters<typeof lintInsightSources>[0] = {
+      audiences: [], competitors: [], alternatives: [], vocPhrases: [], objections: [], gaps: [],
+      swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, swotEvidence: [], swotMoves: [],
+      siteAssessment: [{ dimension: "offer_clarity", observation: "The page gives a monthly starting price.", evidenceQuote: "Plans start at $29 per month.", sourceUrl: "https://example.com/pricing", implication: "The owner can review whether this entry price matches the intended buyer." }],
+    };
+    expect(lintInsightSources(base, input)).toEqual([]);
+
+    const wrongPage = lintInsightSources({ ...base, siteAssessment: [{ ...base.siteAssessment[0], sourceUrl: "https://example.com/", evidenceQuote: "Plans start at $29 per month." }] }, input);
+    expect(wrongPage).toEqual(expect.arrayContaining([
+      expect.objectContaining({ rule: "citation", path: "siteAssessment[0].sourceUrl" }),
+      expect.objectContaining({ rule: "site_assessment_quote", path: "siteAssessment[0].evidenceQuote" }),
+    ]));
+
+    const inventedQuote = lintInsightSources({ ...base, siteAssessment: [{ ...base.siteAssessment[0], evidenceQuote: "Customers love this product." }] }, input);
+    expect(inventedQuote).toEqual(expect.arrayContaining([
+      expect.objectContaining({ rule: "site_assessment_quote", path: "siteAssessment[0].evidenceQuote" }),
+    ]));
   });
 
   it("accepts website audit findings only when their cited page was actually read", () => {
@@ -95,6 +117,7 @@ describe("research source assessment", () => {
       swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] },
       swotEvidence: [],
       swotMoves: [],
+      siteAssessment: [],
     };
     expect(lintInsightSources(base, input)).toEqual([]);
     const issues = lintInsightSources({ ...base, competitors: [{ ...base.competitors[0], comparison: [{ ...base.competitors[0].comparison[0], sourceUrl: "https://unread.example/pricing" }] }] }, input);
@@ -116,6 +139,7 @@ describe("research source assessment", () => {
         { dimension: "opportunity" as const, finding: "Local searches have grown", basis: "research" as const, evidenceRefs: ["https://market.example/report"], strategicImplication: "Check local-intent visits before investing in new service areas.", confidence: "low" as const },
       ],
       swotMoves: [{ kind: "strength_opportunity" as const, firstIndex: 0, secondIndex: 0, move: "Offer opt-in referrals to existing customers in the researched local service area.", firstTest: "Invite the last five consenting customers to refer one neighbor.", measure: "Qualified referred inquiries in 14 days" }],
+      siteAssessment: [],
     };
     expect(lintInsightSources(base, input)).toEqual([]);
     const issues = lintInsightSources({ ...base, swotEvidence: [{ ...base.swotEvidence[0], evidenceRefs: ["fact:8"] }, { ...base.swotEvidence[1], dimension: "strength" as const }], swotMoves: [{ ...base.swotMoves[0], kind: "weakness_opportunity" as const }] }, input);
@@ -139,6 +163,7 @@ describe("research source assessment", () => {
       }],
       competitors: [], alternatives: [], vocPhrases: [], objections: [], gaps: [],
       swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, swotEvidence: [], swotMoves: [],
+      siteAssessment: [],
     };
     expect(lintInsightSources(base, input)).toEqual([]);
     const invalid: Parameters<typeof lintInsightSources>[0] = { ...base, audiences: [{ ...base.audiences[0], needs: [{ statement: "A made-up need.", basis: "research", evidenceRefs: ["https://unread.example/claims"] }], objections: [{ statement: "A likely objection.", basis: "owner_report", evidenceRefs: [] }] }] };
@@ -149,8 +174,10 @@ describe("research source assessment", () => {
   });
 
   it("carries competitor comparisons into downstream content as untrusted context with publishing limits", () => {
-    const context = businessResearchContext({ competitors: [{ name: "Rival", comparison: [{ dimension: "pricing", finding: "Published annual pricing.", sourceUrl: "https://rival.example/pricing", implication: "Test whether annual terms fit the buyer." }] }] });
+    const context = businessResearchContext({ siteAssessment: [{ dimension: "offer_clarity", observation: "The page lists a starting price.", evidenceQuote: "Plans start at $29 per month.", sourceUrl: "https://example.com/pricing", implication: "Review whether this entry price fits the intended buyer." }], competitors: [{ name: "Rival", comparison: [{ dimension: "pricing", finding: "Published annual pricing.", sourceUrl: "https://rival.example/pricing", implication: "Test whether annual terms fit the buyer." }] }] });
     expect(context).toContain("dimension");
+    expect(context).toContain("siteAssessment");
+    expect(context).toContain("not proof of demand, product quality, conversion performance");
     expect(context).toContain("<untrusted_content source=\"business research\">");
     expect(context).toContain("do not copy their wording");
     expect(context).toContain("not independent proof of effectiveness");

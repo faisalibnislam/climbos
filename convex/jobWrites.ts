@@ -365,6 +365,13 @@ export const saveInsights = internalMutation({
                   gaps: x.gaps.slice(0, 10).map((a) => ({ ...a, sourceUrl: url(a.sourceUrl) })),
                   positioningStatement: x.positioningStatement,
                   confidenceNotes: x.confidenceNotes,
+                  siteAssessment: x.siteAssessment.slice(0, 8).map((finding) => ({
+                    ...finding,
+                    observation: finding.observation.slice(0, 360),
+                    evidenceQuote: finding.evidenceQuote.slice(0, 240),
+                    implication: finding.implication.slice(0, 360),
+                    sourceUrl: url(finding.sourceUrl),
+                  })),
                 };
               })(),
             }

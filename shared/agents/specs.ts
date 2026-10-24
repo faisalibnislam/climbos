@@ -67,6 +67,13 @@ export const InsightsV2Schema = BusinessInsightsSchema.extend({
   }),
   swotEvidence: z.array(SwotEvidenceSchema).max(16),
   swotMoves: z.array(SwotMoveSchema).max(8),
+  siteAssessment: z.array(z.object({
+    dimension: z.enum(["offer_clarity", "buyer_specificity", "proof_presentation", "conversion_path", "trust_signals", "messaging_consistency"]),
+    observation: z.string().max(360),
+    evidenceQuote: z.string().min(1).max(240),
+    sourceUrl: z.string(),
+    implication: z.string().max(360),
+  })).max(8),
   competitors: z.array(
     BusinessInsightsSchema.shape.competitors.element.extend({
       kind: z.enum(["direct", "adjacent"]),
@@ -1530,7 +1537,7 @@ export function lintCopyBrief(brief: CopyBrief | undefined, input: AgentInput): 
   ];
 }
 
-export function lintInsightSources(out: Pick<InsightsV2, "audiences" | "competitors" | "alternatives" | "vocPhrases" | "objections" | "gaps" | "swot" | "swotEvidence" | "swotMoves">, input: AgentInput): LintIssue[] {
+export function lintInsightSources(out: Pick<InsightsV2, "audiences" | "competitors" | "alternatives" | "vocPhrases" | "objections" | "gaps" | "swot" | "swotEvidence" | "swotMoves" | "siteAssessment">, input: AgentInput): LintIssue[] {
   const refs: { url: string; path: string }[] = [];
   out.competitors.forEach((competitor, i) => {
     refs.push({ url: competitor.sourceUrl, path: `competitors[${i}].sourceUrl` });
@@ -1543,6 +1550,19 @@ export function lintInsightSources(out: Pick<InsightsV2, "audiences" | "competit
     ["gaps", out.gaps],
   ];
   refs.push(...groups.flatMap(([group, rows]) => rows.map((row, i) => ({ url: row.sourceUrl, path: `${group}[${i}].sourceUrl` }))));
+  const siteQuoteIssues: LintIssue[] = [];
+  const normalizeQuote = (text: string) => text.replace(/\s+/g, " ").trim().toLocaleLowerCase();
+  const pageBlocks = [...(input.untrustedContext ?? "").matchAll(/<untrusted_content source="([^"]+)">\s*([\s\S]*?)\s*<\/untrusted_content>/gi)];
+  out.siteAssessment.forEach((finding, index) => {
+    const path = `siteAssessment[${index}]`;
+    refs.push({ url: finding.sourceUrl, path: `${path}.sourceUrl` });
+    const source = normalizeSourceUrl(finding.sourceUrl);
+    const quote = normalizeQuote(finding.evidenceQuote);
+    const supported = source && quote && pageBlocks.some(([, pageUrl, pageText]) =>
+      normalizeSourceUrl(pageUrl) === source && normalizeQuote(pageText).includes(quote),
+    );
+    if (!supported) siteQuoteIssues.push({ severity: "error", rule: "site_assessment_quote", message: "Use a verbatim excerpt from the cited website page that ClimbOS read in this run; do not cite owner text or another page.", path: `${path}.evidenceQuote` });
+  });
   const factCount = input.facts.length;
   const swotIssues: LintIssue[] = [];
   const audienceEvidence = (items: { statement: string; basis: string; evidenceRefs: string[] }[], path: string) => items.forEach((item, index) => {
@@ -1645,7 +1665,7 @@ export function lintInsightSources(out: Pick<InsightsV2, "audiences" | "competit
       swotIssues.push({ severity: "error", rule: "swot_move", message: "Each strategy needs a concrete move, a first test, and a measure.", path });
     }
   });
-  return [...lintAvailableSourceUrls(refs, input), ...swotIssues];
+  return [...lintAvailableSourceUrls(refs, input), ...siteQuoteIssues, ...swotIssues];
 }
 
 /** Lint for things that get published or sent as written (emails, pages): no placeholders. */

@@ -350,10 +350,10 @@ export function untrusted(source: string, text: string, maxChars = 24_000): stri
 /** Research inputs for downstream content agents. Competitor findings are context, not proof or publishing claims. */
 export function businessResearchContext(insights?: Record<string, unknown>): string {
   if (!insights) return "";
-  const fields = ["positioningStatement", "positioning", "vocPhrases", "objections", "audiences", "competitors"];
+  const fields = ["positioningStatement", "positioning", "siteAssessment", "vocPhrases", "objections", "audiences", "competitors"];
   const context = Object.fromEntries(fields.filter((key) => insights[key] !== undefined && insights[key] !== null).map((key) => [key, insights[key]]));
   if (!Object.keys(context).length) return "";
-  return `\n\nPOSITIONING, CUSTOMER LANGUAGE AND COMPETITOR RESEARCH:\nUse customer language to make the message relevant. Treat competitor-site findings as published claims, not independent proof of effectiveness or customer preference. Use them to understand category expectations and possible differentiation; do not copy their wording, name a competitor, claim superiority, or present their pricing/features as current unless the owner explicitly asks and the current source is included.\n${untrusted("business research", JSON.stringify(context), 8_000)}`;
+  return `\n\nPOSITIONING, WEBSITE, CUSTOMER LANGUAGE AND COMPETITOR RESEARCH:\nUse the website assessment as observations about the copy and pages ClimbOS read, not proof of demand, product quality, conversion performance, willingness to pay, or viability. Treat competitor-site findings as published claims, not independent proof of effectiveness or customer preference. Use them to understand category expectations and possible differentiation; do not copy their wording, name a competitor, claim superiority, or present their pricing/features as current unless the owner explicitly asks and the current source is included.\n${untrusted("business research", JSON.stringify(context), 8_000)}`;
 }
 
 /** `kind` (when given) is the fact's strength as evidence (shared/agents/evidenceKind.ts), e.g. "stated opinion" vs "measured". */
