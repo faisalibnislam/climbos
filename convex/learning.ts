@@ -122,9 +122,11 @@ export const recompute = internalAction({
     for (const orgId of await ctx.runQuery(internal.learning.orgIds, {})) {
       const { type, counts } = await ctx.runQuery(internal.learning.countsForOrg, { orgId });
       for (const [metric, x] of Object.entries(counts)) {
-        if (x.trials < METRICS[metric].minTrials) continue;
+        // Keep sparse first-party evidence visible with its wide uncertainty range;
+        // only mature samples are eligible to contribute to cross-workspace pools.
         rows.push({ scope: `org:${orgId}`, metric, workspaces: 1, ...x });
-        for (const scope of [`type:${type}`, "all"]) {
+        if (x.trials < METRICS[metric].minTrials) continue;
+        for (const scope of [`type:${type}`]) {
           const k = `${scope}|${metric}`;
           const p = pooled.get(k) ?? { workspaces: 0, trials: 0, successes: 0 };
           pooled.set(k, { workspaces: p.workspaces + 1, trials: p.trials + x.trials, successes: p.successes + x.successes });
@@ -146,9 +148,9 @@ export const contextFor = internalQuery({
     const lines: string[] = [];
     for (const metric of Object.keys(METRIC_DEFS)) {
       const own = await ctx.db.query("learnedRates").withIndex("by_scope_metric", (q) => q.eq("scope", `org:${orgId}`).eq("metric", metric)).first();
-      const pool = (await ctx.db.query("learnedRates").withIndex("by_scope_metric", (q) => q.eq("scope", `type:${type}`).eq("metric", metric)).first()) ?? (await ctx.db.query("learnedRates").withIndex("by_scope_metric", (q) => q.eq("scope", "all").eq("metric", metric)).first());
+      const pool = await ctx.db.query("learnedRates").withIndex("by_scope_metric", (q) => q.eq("scope", `type:${type}`).eq("metric", metric)).first();
       if (own) lines.push(rateLine(metric, "own", own));
-      if (pool) lines.push(rateLine(metric, { workspaces: pool.workspaces, label: pool.scope === "all" ? "all businesses" : `${type} businesses` }, pool));
+      if (pool) lines.push(rateLine(metric, { workspaces: pool.workspaces, label: `${type} businesses` }, pool));
     }
     return lines.length ? `RESULTS CLIMBOS HAS MEASURED (counts, not causes; prefer them to vendor benchmarks when the offer and channel match; a small sample's range is wide):\n${lines.join("\n")}` : "";
   },

@@ -853,7 +853,7 @@ export default defineSchema({
 
   /** Learning from results: first-party rates, per workspace and pooled by business type (anonymized, k ≥ 5). */
   learnedRates: defineTable({
-    /** "org:<id>" (that workspace only) or "type:<businessType>" (pooled) or "all". */
+    /** "org:<id>" (that workspace only) or "type:<businessType>" (pooled). */
     scope: v.string(),
     metric: v.string(),
     workspaces: v.number(),

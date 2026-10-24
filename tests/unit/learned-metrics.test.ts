@@ -47,6 +47,13 @@ describe("learned metrics", () => {
     const large = wilson90(100, 500)!;
     expect(small.high - small.low).toBeGreaterThan(large.high - large.low);
   });
+
+  it("gives sparse first-party rates a conservative planning bound", () => {
+    const line = rateLine("chat_lead", "own", { trials: 4, successes: 1 });
+    expect(line).toMatch(/4\/10 minimum trials/);
+    expect(line).toMatch(/cautious planning rate .* Wilson lower bound/);
+    expect(line).toMatch(/observed, not proof of cause/);
+  });
 });
 
 describe("play IDs across plan versions", () => {

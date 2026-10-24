@@ -119,6 +119,7 @@ describe("learning from results", () => {
       });
     }
     await t.action(internal.learning.recompute, {});
+    expect(await t.run(async (ctx) => (await ctx.db.query("learnedRates").collect()).some((row) => row.scope === "all"))).toBe(false);
     const ctx0 = await t.query(internal.learning.contextFor, { orgId: orgs[0] });
     expect(ctx0).toContain("THIS BUSINESS 5%");
     expect(ctx0).toMatch(/5 workspaces, n=500/);
@@ -129,5 +130,31 @@ describe("learning from results", () => {
     });
     await t.action(internal.learning.recompute, {});
     expect(await t.query(internal.learning.contextFor, { orgId: orgs[0] })).not.toMatch(/workspaces, n=/);
+  });
+
+  it("keeps a sparse own rate visible and does not fall back to an all-business rate", async () => {
+    const t = setup();
+    const u = await asNewUser(t, "learn-sparse@example.com");
+    const { orgId } = await u.client.mutation(api.orgs.createWorkspace, { businessName: "Sparse Learn" });
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      await ctx.db.insert("landingPages", {
+        orgId: orgId as Id<"organizations">,
+        slug: "sparse",
+        title: "Sparse",
+        brief: "Sparse evidence",
+        status: "live",
+        color: "#000000",
+        views: 20,
+        leads: 1,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+    await t.action(internal.learning.recompute, {});
+    const context = await t.query(internal.learning.contextFor, { orgId: orgId as Id<"organizations"> });
+    expect(context).toMatch(/THIS BUSINESS 5% \(1\/20/);
+    expect(context).toMatch(/cautious planning rate .* Wilson lower bound/);
+    expect(context).not.toMatch(/ClimbOS all businesses/);
   });
 });

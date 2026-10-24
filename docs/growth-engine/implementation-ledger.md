@@ -22,14 +22,18 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 - 727 tests pass. `tsc` is clean (app and convex). ESLint shows 0 errors (15 older warnings).
 - Everything here is fixture-tested only. No real model run, no live search, no browser check against a live backend.
 
+## Resumption note (2026-10-24, engine and learning work)
+
+Since the original S4 note, owner economics now recalculate forecasts, portfolio selection and goal gap on plan reads; approval and play launch are blocked if the inputs differ from the plan snapshot. Outreach learning now separates any replies from owner-reported reply disposition, and sparse first-party rates remain visible with a conservative planning bound. Generic all-business rate pools have been removed. These changes are pushed on `growth-engine-v2`; they are not deployed or live-model validated.
+
 **Next:**
 1. **S2 remainder.** Add an old-plan read adapter with schema versioning (REQ-ENG-03), stored from `expert.version`. Add the population, period and denominator binding for research tags (REQ-EVID-02). Files: `shared/agents/provenance.ts`, `convex/workspace.ts` (read path).
 2. **S3 remainder.** Make the CAC and the headline use the same basis (REQ-MATH-06). Add a sensitivity line per play (REQ-MATH-07). Add a currency field to economics, no mixing (REQ-MATH-08). Model ramp and sales lag (REQ-MATH-04). Files: `shared/agents/economics.ts`, `ExpertPlan.tsx`.
 3. **S4 remainder.**
-   - Shrink a workspace's own rates toward the pooled rate when its sample is small (REQ-LEARN-05).
+   - Sparse first-party rates use a Wilson lower-bound planning value; check finer offer/audience/geography/stage match and calibrate when to use pooled rates (REQ-LEARN-05).
    - Audit the k-anonymity of pooled rates (REQ-LEARN-06).
-   - Recalculate scenarios, or show they're stale, after an owner edit (REQ-LEARN-07, REQ-UX-07).
-   - Classify replies as positive or negative (REQ-LEARN-02).
+   - Regenerate the saved plan narrative after owner edits and finish the stale-plan UX (REQ-LEARN-07, REQ-UX-07); deterministic projections already recalculate on read and work is gated.
+   - Link retained-customer revenue/contribution to play outcomes (REQ-LEARN-02); explicit qualified/not-qualified/unclear reply dispositions now supplement any-reply.
 4. **S5 gaps.** Fulfilment capacity, minimum evidence and financial viability aren't in the pre-ranking filter yet (REQ-STRAT-03). Strategy-level best-of-two still compares drafts, not options (REQ-STRAT-02). Contrasting-business evidence from real runs needs the paid check.
 5. **S6 gaps.**
    - Only one target search runs at a time (the one-campaign pipeline). Approval auto-starts the first target-heavy play; the others start from the play card.
@@ -187,7 +191,7 @@ Nothing on this branch is deployed. Production is `main` at `c5dfc09`.
 | REQ-LEARN-02 | partial | S4 | `learnedMetrics.ts`, `outbound.setReplyDisposition`, `learning.ts` | Any reply remains distinct from an owner-reported qualified/not-qualified/unclear disposition; added emails→qualified reply. Booked→attended uses `bookings.outcome`. **Gap:** retained-customer revenue/contribution is not linked to play outcomes |
 | REQ-LEARN-03 | done-fixture | S4 | `learnedMetrics.ts` `rateLine`, `playResults.ts` | Counts, window, 90% Wilson range and "observed, not proof of cause". No "grade A". **Gap:** attribution method and lag aren't shown |
 | REQ-LEARN-04 | done-fixture | S4 | `convex/jobWrites.ts` `withPlayIds`, `convex/playResults.ts`, `playResults.playId` | Plays get stable IDs, carried to the next plan version by name. Results match by ID, so a rename keeps them (`play-results.test.ts`). Older rows match by name |
-| REQ-LEARN-05 | missing | S4 | `learning.ts:17` | minTrials only |
+| REQ-LEARN-05 | partial | S4 | `learning.ts`, `learnedMetrics.ts` | Sparse owner rates are retained and exposed with a conservative 90% Wilson lower-bound planning rate; only same-business-type pools are shown, with an explicit context-transfer warning. **Gap:** offer, audience, geography and stage similarity are not yet stored or compared; no empirical calibration of the bound. |
 | REQ-LEARN-06 | partial | S4 | `learning.ts:13` (K_ANON=5) | Not audited |
 | REQ-LEARN-07 | partial | S4 | `workspace.ts` owner-economics snapshot, live forecast/portfolio recalculation, approval/start gates | Confirmed economics now recalculate forecasts, portfolio choice and goal gap on plan reads. Approval/play launch is blocked when owner economics differ from the plan snapshot. The plan narrative still needs regeneration to reflect the changed numbers. |
 | REQ-COST-01 | partial | all | this ledger | Decision records are written per slice in commit messages. No formal record per workflow yet |

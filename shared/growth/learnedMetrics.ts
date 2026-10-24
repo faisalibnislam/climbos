@@ -101,6 +101,11 @@ export function rateLine(metric: string, scope: "own" | { workspaces: number; la
   const ci = wilson90(r.successes, r.trials);
   const window = `${def.window === "120d" ? `last ${LEARN_WINDOW_DAYS} days` : "all time"}${def.maturity ? `; ${def.maturity}` : ""}`;
   const range = ci ? `, 90% range ${pct(ci.low)}–${pct(ci.high)}` : "";
-  if (scope === "own") return `- ${def.label}: THIS BUSINESS ${pct(rate)} (${r.successes}/${r.trials}, ${window}${range}) [first-party counts of ${def.counts}; observed, not proof of cause]`;
-  return `- ${def.label}: ClimbOS ${scope.label} ${pct(rate)} (${scope.workspaces} workspaces, n=${r.trials}, ${window}) [pooled counts; other businesses' offers and audiences differ]`;
+  if (scope === "own") {
+    const cautious = r.trials < def.minTrials && ci
+      ? `; cautious planning rate ${pct(ci.low)} (90% Wilson lower bound; ${r.trials}/${def.minTrials} minimum trials)`
+      : "";
+    return `- ${def.label}: THIS BUSINESS ${pct(rate)} (${r.successes}/${r.trials}, ${window}${range}${cautious}) [first-party counts of ${def.counts}; observed, not proof of cause]`;
+  }
+  return `- ${def.label}: ClimbOS ${scope.label} ${pct(rate)} (${scope.workspaces} workspaces, n=${r.trials}, ${window}) [pooled counts; compare offer, channel, audience, market and stage before transferring]`;
 }
