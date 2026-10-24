@@ -214,6 +214,40 @@ export interface SafeFetchResult {
   error?: string;
 }
 
+async function readBoundedBody(response: Response, maxBytes: number): Promise<{ text: string; truncated: boolean }> {
+  if (!response.body) return { text: "", truncated: false };
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  let truncated = false;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (!value?.byteLength) continue;
+      const remaining = Math.max(0, maxBytes - total);
+      if (value.byteLength > remaining) {
+        if (remaining > 0) chunks.push(value.subarray(0, remaining));
+        total += remaining;
+        truncated = true;
+        await reader.cancel();
+        break;
+      }
+      chunks.push(value);
+      total += value.byteLength;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { text: new TextDecoder().decode(bytes), truncated };
+}
+
 /**
  * Fetch a public page with manual, re-validated redirects and a byte cap.
  * `resolveHost` (optional) lets server callers enforce DNS-rebinding checks.
@@ -227,6 +261,8 @@ export async function safeFetchPage(input: {
   /** Conditional validators from a prior safe read. Sent only to the original origin across redirects. */
   ifNoneMatch?: string;
   ifModifiedSince?: string;
+  /** Optional caller policy applied to every redirect target before it is fetched. */
+  allowRedirect?: (fromUrl: string, toUrl: string) => boolean;
 }): Promise<SafeFetchResult> {
   const doFetch: FetchLike = input.fetchImpl ?? ((u, i) => fetch(u, i));
   const maxBytes = input.maxBytes ?? 2_000_000;
@@ -267,6 +303,7 @@ export async function safeFetchPage(input: {
       if (!loc) return { ok: false, finalUrl: current.url, status: res.status, contentType: "", body: "", truncated: false, error: "Redirect without location" };
       const next = isAllowedRedirect(current.url, loc, hop + 1);
       if (!next.ok) return { ok: false, finalUrl: current.url, status: res.status, contentType: "", body: "", truncated: false, error: next.reason };
+      if (input.allowRedirect && !input.allowRedirect(current.url, next.url)) return { ok: false, finalUrl: current.url, status: res.status, contentType: "", body: "", truncated: false, error: "Redirect was rejected by caller policy" };
       current = next;
       continue;
     }
@@ -276,13 +313,11 @@ export async function safeFetchPage(input: {
     let text = "";
     let truncated = false;
     try {
-      text = await res.text();
+      const bounded = await readBoundedBody(res, maxBytes);
+      text = bounded.text;
+      truncated = bounded.truncated;
     } finally {
       clearTimeout(timer);
-    }
-    if (text.length > maxBytes) {
-      text = text.slice(0, maxBytes);
-      truncated = true;
     }
     return { ok: res.ok, finalUrl: current.url, status: res.status, contentType, body: text, truncated, ...(etag ? { etag } : {}), ...(lastModified ? { lastModified } : {}) };
   }

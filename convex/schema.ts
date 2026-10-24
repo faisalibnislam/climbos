@@ -233,6 +233,51 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_staff_org", ["staffUserId", "orgId"]),
 
+  /** Staff-triggered checks of approved library sources; fetches never publish guidance. */
+  growthKnowledgeSources: defineTable({
+    registryId: v.string(),
+    url: v.string(),
+    title: v.string(),
+    status: v.union(v.literal("queued"), v.literal("checking"), v.literal("baseline_set"), v.literal("unchanged"), v.literal("update_pending"), v.literal("blocked_by_robots"), v.literal("failed")),
+    accessReview: v.literal("not_reviewed"),
+    requestedBy: v.id("users"),
+    requestedAt: v.number(),
+    checkedAt: v.optional(v.number()),
+    nextCheckAt: v.optional(v.number()),
+    etag: v.optional(v.string()),
+    lastModified: v.optional(v.string()),
+    contentHash: v.optional(v.string()),
+    contentText: v.optional(v.string()),
+    lastError: v.optional(v.string()),
+    version: v.number(),
+  })
+    .index("by_registry_id", ["registryId"])
+    .index("by_status_requested", ["status", "requestedAt"]),
+
+  /** Candidate source changes staged for human review; never consumed by production retrieval. */
+  growthKnowledgeProposals: defineTable({
+    sourceId: v.id("growthKnowledgeSources"),
+    registryId: v.string(),
+    url: v.string(),
+    title: v.string(),
+    version: v.number(),
+    previousHash: v.string(),
+    currentHash: v.string(),
+    removedPassages: v.array(v.string()),
+    addedPassages: v.array(v.string()),
+    claimScopes: v.array(v.string()),
+    applicability: v.literal("unreviewed"),
+    affectedRules: v.literal("unassessed"),
+    rationale: v.literal("Source content changed; human review required."),
+    evaluationImpact: v.literal("not_run; production guidance unchanged"),
+    status: v.union(v.literal("pending_review"), v.literal("dismissed")),
+    createdAt: v.number(),
+    reviewedBy: v.optional(v.id("users")),
+    reviewedAt: v.optional(v.number()),
+  })
+    .index("by_status_created", ["status", "createdAt"])
+    .index("by_source_version", ["sourceId", "version"]),
+
   /** Live settings staff change without a deploy (plans, credits, feature locks). */
   appConfig: defineTable({
     key: v.string(),

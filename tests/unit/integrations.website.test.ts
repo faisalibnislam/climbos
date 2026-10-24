@@ -135,6 +135,27 @@ describe("validateResearchUrl (SSRF)", () => {
     expect(seen[0]?.headers).toMatchObject({ "If-None-Match": '"private-validator"' });
     expect(seen[1]?.headers).not.toHaveProperty("If-None-Match");
   });
+
+  it("applies the caller's redirect policy before requesting a redirected page", async () => {
+    const seen: string[] = [];
+    const fetchImpl: FetchLike = async (url) => {
+      seen.push(url);
+      return new Response(null, { status: 302, headers: { location: "/private/next" } });
+    };
+    const result = await safeFetchPage({
+      url: "https://example.com/public", fetchImpl,
+      allowRedirect: (_from, to) => new URL(to).pathname.startsWith("/public/"),
+    });
+    expect(result).toMatchObject({ ok: false, error: "Redirect was rejected by caller policy" });
+    expect(seen).toEqual(["https://example.com/public"]);
+  });
+
+  it("stops reading a response at the byte budget", async () => {
+    const fetchImpl: FetchLike = async () => new Response("x".repeat(10_000));
+    const result = await safeFetchPage({ url: "https://example.com/large", fetchImpl, maxBytes: 32 });
+    expect(result.truncated).toBe(true);
+    expect(new TextEncoder().encode(result.body).byteLength).toBe(32);
+  });
 });
 
 describe("robots.txt", () => {
