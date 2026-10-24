@@ -16,6 +16,7 @@ import {
   Checkbox,
   ChoiceChips,
   ConfirmDialog,
+  DatePicker,
   Dialog,
   DialogContent,
   DialogFooter,
@@ -645,8 +646,8 @@ function CreatorCollaborationPanel({ slug, prospectId, campaignId, currency, can
               <Field label={metricKind === "rate" ? "Rate (%)" : "Observed value"} hint={metricKind === "rate" ? "Enter 0–100; include its denominator." : undefined}><Input inputMode="decimal" value={metricValue} onChange={(e) => setMetricValue(e.target.value.replace(/[^\d.]/g, ""))} /></Field>
               <Field label="Unit"><Input value={metricUnit} onChange={(e) => setMetricUnit(e.target.value)} placeholder={metricKind === "amount" ? currency ?? "Set currency first" : metricKind === "rate" ? "%" : "e.g. clicks"} maxLength={40} /></Field>
               <Field label="Denominator (required for rates)"><Input inputMode="numeric" value={denominator} onChange={(e) => setDenominator(e.target.value.replace(/\D/g, ""))} placeholder="e.g. impressions" /></Field>
-              <Field label="Period from"><Input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} /></Field>
-              <Field label="Period through"><Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} /></Field>
+              <Field label="Period from"><DatePicker value={periodStart} onChange={(v) => setPeriodStart(v ?? "")} max={periodEnd || new Date().toISOString().slice(0, 10)} /></Field>
+              <Field label="Period through"><DatePicker value={periodEnd} onChange={(v) => setPeriodEnd(v ?? "")} min={periodStart || undefined} max={new Date().toISOString().slice(0, 10)} /></Field>
               <Field label="Metric source URL"><Input inputMode="url" value={metricSourceUrl} onChange={(e) => setMetricSourceUrl(e.target.value)} placeholder="Optional" /></Field>
             </div>
           ) : null}

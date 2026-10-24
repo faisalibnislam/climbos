@@ -555,7 +555,7 @@ function SlotCard({ slug, slot, tz, canAct }: { slug: string; slot: Slot; tz: st
         <details className="mt-1 rounded-md bg-surface-2 px-2 py-1.5">
           <summary className="cursor-pointer text-xs font-medium text-ink-2">Idea notes and sources</summary>
           <p className="mt-1 whitespace-pre-wrap break-words text-xs text-ink-3">{noteWithLinks(slot.ownerNote)}</p>
-          <p className="mt-1 text-[11px] text-ink-3">Check the cited page and its date before treating a trend as current.</p>
+          <p className="mt-1 text-xs text-ink-3">Check the cited page and its date before treating a trend as current.</p>
         </details>
       ) : null}
     </article>
