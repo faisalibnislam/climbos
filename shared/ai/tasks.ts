@@ -305,8 +305,8 @@ export function untrusted(source: string, text: string, maxChars = 24_000): stri
 
 /** `kind` (when given) is the fact's strength as evidence (shared/agents/evidenceKind.ts), e.g. "stated opinion" vs "measured". */
 export function factsBlock(facts: { statement: string; category: string; kind?: string; freshness?: { reviewSuggested: boolean; daysOld: number } }[]): string {
-  if (facts.length === 0) return "CONFIRMED FACTS: (none yet — keep claims general)";
-  return `CONFIRMED FACTS (cite them only through the fact index fields; never write "[n]" markers in text the owner reads; a "stated opinion" is a signal, not proof of demand. Facts marked "review suggested" may be outdated; treat their current accuracy as unknown until rechecked):\n${facts.map((f, i) => `[${i}] (${f.category}${f.kind ? `; ${f.kind}` : ""}${f.freshness?.reviewSuggested ? `; review suggested, ${f.freshness.daysOld} days since last update` : ""}) ${f.statement}`).join("\n")}`;
+  if (facts.length === 0) return "BUSINESS EVIDENCE: (none yet — keep claims general)";
+  return `BUSINESS EVIDENCE (cite through fact index fields only; never write "[n]" markers in text the owner reads. Preserve the source kind: "site says" is a published claim, "owner report" is not independent verification, and a stated opinion is a signal, not proof of demand. No source kind alone proves viability or willingness to pay. Facts marked "review suggested" may be outdated; treat their current accuracy as unknown until rechecked):\n${facts.map((f, i) => `[${i}] (${f.category}${f.kind ? `; ${f.kind}` : ""}${f.freshness?.reviewSuggested ? `; review suggested, ${f.freshness.daysOld} days since last update` : ""}) ${f.statement}`).join("\n")}`;
 }
 
 /** Stale facts inform what to recheck, but are excluded from the evidence list used to ground claims. */

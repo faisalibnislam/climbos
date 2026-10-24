@@ -1,9 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { RESEARCH_EVIDENCE_RULES } from "../../shared/agents/runtime";
+import { CRITIC_RULES, OPERATING_RULES, RESEARCH_EVIDENCE_RULES } from "../../shared/agents/runtime";
 import { playsTask } from "../../shared/agents/planTasks";
 import { lintInsightSources } from "../../shared/agents/specs";
+import { factsBlock } from "../../shared/ai/tasks";
 
 describe("research source assessment", () => {
+  it("keeps published claims and owner reports from becoming proof of viability or demand", () => {
+    const records = factsBlock([
+      { statement: "The service is the most reliable in town", category: "proof", kind: "site says" },
+      { statement: "Customers are ready to buy", category: "audience", kind: "owner report" },
+    ]);
+    expect(records).toContain('"site says" is a published claim');
+    expect(records).toContain('"owner report" is not independent verification');
+    expect(OPERATING_RULES).toContain("not that its offer works");
+    expect(OPERATING_RULES).toContain("use numbers only when supplied");
+    expect(CRITIC_RULES).toContain("a weak page alone is not proof that the underlying business is unviable");
+    expect(CRITIC_RULES).not.toContain("Details stated in the brief (name, website, offers) are known facts");
+  });
+
   it("asks research agents to assess provenance, freshness, fit, independence, and method without invented scores", () => {
     expect(RESEARCH_EVIDENCE_RULES).toContain("Source role");
     expect(RESEARCH_EVIDENCE_RULES).toContain("Freshness");
