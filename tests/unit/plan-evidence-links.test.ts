@@ -94,10 +94,20 @@ describe("conflicting facts", () => {
       { id: "a", category: "pricing", statement: "Our service costs $120/month." },
       { id: "b", category: "offer", statement: "Our monthly plan is $150 per month." },
     ])).toEqual([expect.objectContaining({
-      subject: "price per month",
+      subject: "Unspecified offer price per month",
       values: ["$120", "$150"],
       factIds: ["a", "b"],
     })]);
+  });
+  it("keeps untiered prices separate when the currency or billing period differs", () => {
+    expect(findConflicts([
+      { id: "a", category: "pricing", statement: "Our service costs $120/month." },
+      { id: "b", category: "offer", statement: "Our service costs €1,200 per year." },
+    ])).toEqual([]);
+    expect(findConflicts([
+      { id: "a", category: "pricing", statement: "Our service costs $120." },
+      { id: "b", category: "offer", statement: "Our service costs $150." },
+    ])).toEqual([]);
   });
   it("material conflicts need owner input and cannot drive work until resolved", () => {
     const q = planQuality([agentQuality("growth_plays", { critique: { gates: [], scores: [], strengths: [], fixes: [] }, lint: [], average: 4.5, minimum: 4, gatesPassed: true, ship: true }, 1, 3)], [], { conflicts: ["Pro price per month: $19 vs $24"] });

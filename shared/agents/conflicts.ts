@@ -45,7 +45,7 @@ export function findConflicts(facts: { id: string; statement: string; category?:
       const unit = (m[5] ?? m[3])?.toLowerCase().replace(/s$/, "");
       const n = Number(m[2].replace(/,/g, ""));
       if (n > 0) {
-        const subject = `${tier ? `${tier[0].toUpperCase()}${tier.slice(1)} ` : ""}price${unit ? ` per ${unit}` : ""} per ${yearly ? "year" : "month"} (${sym(m[1])})`;
+        const subject = `${tier ? `${tier[0].toUpperCase()}${tier.slice(1)} ` : "Unspecified offer "}price${unit ? ` per ${unit}` : ""} per ${yearly ? "year" : "month"} (${sym(m[1])})`;
         add(subject, n, `${sym(m[1])}${m[2]}${unit ? `/${unit}` : ""}`, f.id);
       }
     }
