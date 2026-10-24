@@ -160,6 +160,7 @@ export const jobContext = internalQuery({
           toMs: concentrationToMs,
           partial: concentrationIsPartial,
           spendPartial,
+          ...(typeof business?.unitEconomics?.grossMargin === "number" && business.unitEconomics.grossMargin >= 0 && business.unitEconomics.grossMargin <= 1 ? { grossMargin: business.unitEconomics.grossMargin } : {}),
           reportedSpend: spendRows.filter((row) => !row.isFixture).map((row) => ({ platform: row.platform, date: row.date, currency: row.currency, spendMinor: row.spendMinor, ...(row.spendOrigin ? { origin: row.spendOrigin } : {}) })),
         })
       : null;

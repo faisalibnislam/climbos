@@ -695,7 +695,10 @@ function channelOutcomesLine(signal: JobCtx["platformSourceConcentration"], owne
     const mediaCostPerFirstRecorded = row.mediaSpendStatus === "matched" && row.firstRecordedCustomers > 0
       ? `; media spend per source-tagged first recorded payer ${amount((row.adSpendMinor ?? 0) / row.firstRecordedCustomers)}`
       : "";
-    return `${row.source}: ${row.paymentEvents} billing payment event(s), ${row.identifiedCustomers} identified customer(s), ${row.firstRecordedCustomers} identified customers whose first positive payment in loaded ClimbOS history fell in this window, net ${amount(row.netRevenueMinor)}, recorded refunds ${amount(row.refundMinor)}${spend}${mediaCostPerFirstRecorded}${breakEven}`;
+    const modeledContribution = row.modeledContributionAfterMediaSpendMinor !== undefined
+      ? `; modeled contribution after reported media spend ${amount(row.modeledContributionAfterMediaSpendMinor)} (net last-touch billing × owner-reported gross margin, then less reported media spend; not incremental profit and excludes costs absent from that margin)`
+      : "";
+    return `${row.source}: ${row.paymentEvents} billing payment event(s), ${row.identifiedCustomers} identified customer(s), ${row.firstRecordedCustomers} identified customers whose first positive payment in loaded ClimbOS history fell in this window, net ${amount(row.netRevenueMinor)}, recorded refunds ${amount(row.refundMinor)}${spend}${mediaCostPerFirstRecorded}${breakEven}${modeledContribution}`;
   });
   const concentration = signal.topSource
     ? `Largest recognized source is ${signal.topSource} (${Math.round((signal.topSourceShare ?? 0) * 100)}% of positive tagged net revenue); the top three account for ${Math.round((signal.topThreeShare ?? 0) * 100)}%.`
@@ -733,7 +736,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   const readUrls = [...new Set(sourceUrls)].sort();
   const insightsHash = await sha256Hex(insights);
   const material = {
-    snapshotVersion: 17,
+    snapshotVersion: 18,
     orgId: String(job.org._id),
     businessId: job.business ? String(job.business._id) : null,
     business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, socialUrls: job.business.socialUrls, businessType: job.business.businessType, lifecycleStage: job.business.lifecycleStage ?? null, funnel: job.business.funnel ?? null, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
@@ -754,7 +757,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   };
   const snapshotId = await sha256Hex(JSON.stringify(material));
   return {
-    snapshotVersion: 17,
+    snapshotVersion: 18,
     snapshotId,
     capturedAt: Date.now(),
     engine: ENGINE_VERSION,

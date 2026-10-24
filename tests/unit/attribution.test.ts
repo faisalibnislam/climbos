@@ -207,6 +207,35 @@ describe("platform concentration", () => {
     expect(partial.sources[0]).not.toHaveProperty("mediaRoas");
   });
 
+  it("estimates source-level contribution after media spend from net billing and an owner margin", () => {
+    const result = platformConcentration([
+      ev({ id: "google-order", customerRef: "c1", orderRef: "g1", amountMinor: 10_000, utmSource: "google", utmMedium: "cpc" }),
+      ev({ id: "google-refund", orderRef: "g1", amountMinor: 2_000, kind: "refund", occurredAt: T0 + DAY }),
+    ], {
+      currency: "USD",
+      fromMs: T0,
+      toMs: T0 + 2 * DAY,
+      grossMargin: 0.6,
+      reportedSpend: [{ platform: "google_ads", date: "2025-01-10", currency: "USD", spendMinor: 4_000, origin: "owner_reported" }],
+    })!;
+    expect(result.sources[0]).toMatchObject({
+      netRevenueMinor: 8_000,
+      adSpendMinor: 4_000,
+      modeledContributionAfterMediaSpendMinor: 800,
+    });
+    expect(result.sources[0]).not.toHaveProperty("customerAcquisitionCost");
+  });
+
+  it("keeps a losing media contribution negative and rejects invalid margins", () => {
+    const event = ev({ id: "google-order", customerRef: "c1", utmSource: "google", utmMedium: "cpc", amountMinor: 10_000 });
+    const result = platformConcentration([event], {
+      currency: "USD", fromMs: T0, toMs: T0 + DAY, grossMargin: 0.5,
+      reportedSpend: [{ platform: "google_ads", date: "2025-01-10", currency: "USD", spendMinor: 6_000 }],
+    })!;
+    expect(result.sources[0].modeledContributionAfterMediaSpendMinor).toBe(-1_000);
+    expect(() => platformConcentration([event], { currency: "USD", fromMs: T0, toMs: T0 + DAY, grossMargin: 1.1 })).toThrow(/Gross margin/);
+  });
+
   it("does not count a repeat payment as a first recorded payer for its tagged source", () => {
     const previous = ev({ id: "first", occurredAt: T0 - 10 * DAY, customerRef: "repeat-customer", utmSource: "google", utmMedium: "cpc" });
     const renewal = ev({ id: "renewal", occurredAt: T0, customerRef: "repeat-customer", kind: "subscription_payment", utmSource: undefined, utmMedium: undefined });

@@ -1546,7 +1546,7 @@ export default defineSchema({
         /** What this plan was built from (spec §04), for tracing results back to inputs. */
         snapshot: v.optional(
           v.object({
-            snapshotVersion: v.union(v.literal(1), v.literal(2), v.literal(3), v.literal(4), v.literal(5), v.literal(6), v.literal(7), v.literal(8), v.literal(9), v.literal(10), v.literal(11), v.literal(12), v.literal(13), v.literal(14), v.literal(15), v.literal(16), v.literal(17)),
+            snapshotVersion: v.union(v.literal(1), v.literal(2), v.literal(3), v.literal(4), v.literal(5), v.literal(6), v.literal(7), v.literal(8), v.literal(9), v.literal(10), v.literal(11), v.literal(12), v.literal(13), v.literal(14), v.literal(15), v.literal(16), v.literal(17), v.literal(18)),
             snapshotId: v.string(),
             capturedAt: v.number(),
             engine: v.string(),
@@ -1613,6 +1613,7 @@ export default defineSchema({
                 mediaSpendOrigin: v.optional(v.union(v.literal("owner_reported"), v.literal("platform_reported"), v.literal("mixed"), v.literal("unknown"))),
                 adSpendMinor: v.optional(v.number()),
                 mediaRoas: v.optional(v.union(v.number(), v.null())),
+                modeledContributionAfterMediaSpendMinor: v.optional(v.number()),
               })),
               topSource: v.union(v.string(), v.null()),
               topSourceShare: v.union(v.number(), v.null()),

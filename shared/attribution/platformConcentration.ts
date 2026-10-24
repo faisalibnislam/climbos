@@ -56,6 +56,8 @@ export interface PlatformConcentration {
     mediaSpendOrigin?: "owner_reported" | "platform_reported" | "mixed" | "unknown";
     adSpendMinor?: number;
     mediaRoas?: number | null;
+    /** Net billing × supplied gross margin minus reported media spend; a modeled proxy, not causal profit. */
+    modeledContributionAfterMediaSpendMinor?: number;
   }[];
   topSource: string | null;
   topSourceShare: number | null;
@@ -80,8 +82,11 @@ export interface ReportedAdSpend {
  */
 export function platformConcentration(
   input: readonly RevenueEvent[],
-  options: { currency: string; fromMs: number; toMs: number; partial?: boolean; reportedSpend?: readonly ReportedAdSpend[]; spendPartial?: boolean },
+  options: { currency: string; fromMs: number; toMs: number; partial?: boolean; reportedSpend?: readonly ReportedAdSpend[]; spendPartial?: boolean; grossMargin?: number },
 ): PlatformConcentration | null {
+  if (options.grossMargin !== undefined && (!Number.isFinite(options.grossMargin) || options.grossMargin < 0 || options.grossMargin > 1)) {
+    throw new RangeError("Gross margin must be a share between 0 and 1");
+  }
   const { events, duplicates } = dedupeRevenueEvents(input.filter(
     (event) => event.currency === options.currency && event.occurredAt >= options.fromMs && event.occurredAt <= options.toMs,
   ));
@@ -212,6 +217,7 @@ export function platformConcentration(
           mediaSpendOrigin: spend.origins.size === 1 ? [...spend.origins][0] as "owner_reported" | "platform_reported" | "unknown" : "mixed" as const,
           adSpendMinor: mediaSpend,
           mediaRoas: mediaSpend > 0 ? outcome.netRevenueMinor / mediaSpend : null,
+          ...(options.grossMargin !== undefined ? { modeledContributionAfterMediaSpendMinor: Math.round(outcome.netRevenueMinor * options.grossMargin) - mediaSpend } : {}),
         };
       })
       .sort((a, b) => b.netRevenueMinor - a.netRevenueMinor || a.source.localeCompare(b.source)),
