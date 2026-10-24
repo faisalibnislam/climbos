@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DECISION_FIELDS, lintDecision, type Decision } from "../../shared/agents/decision";
+import { DECISION_FIELDS, DecisionSchema, lintDecision, type Decision } from "../../shared/agents/decision";
 import { playsTask } from "../../shared/agents/planTasks";
 import { planQuality } from "../../shared/agents/quality";
 import { growthPlaysSpec, lintDecisionConstraintFit, lintDecisionOptionChoice } from "../../shared/agents/specs";
@@ -81,6 +81,27 @@ describe("structured decision (flagged)", () => {
   it("observations that are all inference are flagged", () => {
     const obs = decision().observations.map((o) => ({ ...o, source: "inference" as const }));
     expect(lintDecision(decision({ observations: obs }), plays).some((i) => i.severity === "warn" && i.path === "decision.observations")).toBe(true);
+  });
+
+  it("links strategic observations to only the supplied fact indexes and research URLs", () => {
+    const linked = decision({ observations: [
+      { observation: "Orders stayed flat", source: "owner", evidenceRefs: ["fact:0"] },
+      { observation: "The pricing page lists a monthly plan", source: "site", evidenceRefs: ["https://example.com/pricing"] },
+    ] });
+    const issues = lintDecision(linked, plays, { factCount: 1, availableSourceUrls: ["https://www.example.com/pricing/"] });
+    expect(issues.filter((issue) => issue.severity === "error")).toEqual([]);
+    expect(DecisionSchema.safeParse(linked).success).toBe(true);
+  });
+
+  it("rejects fabricated or out-of-run decision references and flags missing provenance", () => {
+    const linked = decision({ observations: [
+      { observation: "Orders stayed flat", source: "owner", evidenceRefs: ["fact:4"] },
+      { observation: "Competitor has a new offer", source: "research", evidenceRefs: ["https://not-read.example/offer"] },
+      { observation: "Maybe the price is high", source: "owner" },
+    ] });
+    const issues = lintDecision(linked, plays, { factCount: 1, availableSourceUrls: ["https://example.com/pricing"] });
+    expect(issues.filter((issue) => issue.severity === "error")).toHaveLength(2);
+    expect(issues.some((issue) => issue.severity === "warn" && issue.path === "decision.observations[2].evidenceRefs")).toBe(true);
   });
 
   it("decision findings are soft: the plan is provisional, not failed", () => {
