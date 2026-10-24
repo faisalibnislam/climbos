@@ -504,6 +504,28 @@ export function portfolioRange(out: { economics: Economics; plays: PlayLike[] },
   return { p10: Math.min(p50, quantile(totals, 0.1)), p50, p90: Math.max(p50, quantile(totals, 0.9)) };
 }
 
+/** Mean combined customers over the same seeded joint draws used for portfolio ranking. */
+export function portfolioExpectedCustomers(out: { economics: Economics; plays: PlayLike[] }, horizonDays?: number): number {
+  const ps = out.plays.filter((p) => p.model?.steps?.length).map((p) => (horizonDays ? { ...p, horizonDays } : p));
+  if (!ps.length) return 0;
+  const stages = ps.map(stageOfPlay);
+  const cols = pairedDraws(ps);
+  if (!cols) return combinePlays(ps.map((p) => playMaths(p, out.economics).headline.p50), stages);
+  return expectedCombinedDraws(cols, ps.map((_, i) => i), stages);
+}
+
+const MEAN_STRIDE = 4;
+
+function expectedCombinedDraws(cols: number[][], indexes: number[], stages: string[]): number {
+  let total = 0;
+  let samples = 0;
+  for (let draw = 0; draw < RUNS; draw += MEAN_STRIDE) {
+    total += combinePlays(indexes.map((i) => cols[i][draw]), indexes.map((i) => stages[i]));
+    samples++;
+  }
+  return samples ? total / samples : 0;
+}
+
 export interface PortfolioChoice {
   /** Play names in the best feasible set. */
   selected: string[];
@@ -541,13 +563,9 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
   // Sets are ranked on expected (mean) customers over the joint draws, not the most-likely point: skewed ranges matter (Kochenderfer Ex 4.1, 6.5–6.7).
   const hp = ps.map((p) => ({ ...p, horizonDays: h }));
   const cols = pairedDraws(hp);
-  const STRIDE = 4;
   const expected = (idx: number[]) => {
     if (!cols) return combinePlays(idx.map((i) => ms[i].headline.p50), idx.map((i) => stages[i]));
-    let s = 0;
-    let n = 0;
-    for (let d = 0; d < RUNS; d += STRIDE, n++) s += combinePlays(idx.map((i) => cols[i][d]), idx.map((i) => stages[i]));
-    return s / n;
+    return expectedCombinedDraws(cols, idx, stages);
   };
   type Opt = { idx: number[]; customers: number; expectedCustomers: number; spend: number; hours: number; net: number | null; cost: number };
   const opts: Opt[] = [];

@@ -3,7 +3,7 @@ import { DECISION_FIELDS, lintDecision, type Decision } from "../../shared/agent
 import { playsTask } from "../../shared/agents/planTasks";
 import { planQuality } from "../../shared/agents/quality";
 import { growthPlaysSpec, lintDecisionOptionChoice } from "../../shared/agents/specs";
-import type { PlayLike } from "../../shared/agents/economics";
+import { portfolioRange, type PlayLike } from "../../shared/agents/economics";
 
 /** S5 (REQ-STRAT-01/02/04) behind decision_contract: the decision is structured and checked in code. */
 const decision = (o: Partial<Decision> = {}): Decision => ({
@@ -112,6 +112,30 @@ describe("deterministic comparison of decision options", () => {
   it("does not score options whose alternatives have no measurable play mapping", () => {
     const nonComparable = options.map((option) => ({ ...option, plays: [] }));
     expect(lintDecisionOptionChoice(decision({ options: nonComparable }), optionPlays, economics)).toEqual([]);
+  });
+
+  it("uses mean joint scenario outcomes instead of the middle scenario to compare ranged options", () => {
+    const skewed = { ...measurablePlay("Skewed", 10, 1, 0), model: { ...measurablePlay("Skewed", 10, 1, 0).model!, weeklyReachLow: 1, weeklyReachHigh: 100 } };
+    const steady = measurablePlay("Steady", 20, 1, 0);
+    const rangedOptions = [
+      { name: "Test the upside", kind: "acquisition" as const, plays: ["Skewed"], chosen: true, whyNot: "" },
+      { name: "Take the steady path", kind: "acquisition" as const, plays: ["Steady"], chosen: false, whyNot: "Lower potential." },
+    ];
+    expect(lintDecisionOptionChoice(decision({ options: rangedOptions }), [skewed, steady], economics)).toEqual([]);
+  });
+
+  it("uses the P90 customer scenario when checking a confirmed delivery-capacity limit", () => {
+    const ranged = measurablePlay("Ranged", 10, 1, 0);
+    ranged.model = { ...ranged.model!, weeklyReachLow: 1, weeklyReachHigh: 1_000 };
+    const steady = measurablePlay("Steady", 5, 1, 0);
+    const rangedOptions = [
+      { name: "Ranged option", kind: "acquisition" as const, plays: ["Ranged"], chosen: true, whyNot: "" },
+      { name: "Steady option", kind: "acquisition" as const, plays: ["Steady"], chosen: false, whyNot: "Lower volume." },
+    ];
+    expect(portfolioRange({ economics, plays: [ranged] }, 30).p90).toBeGreaterThan(30);
+    const issues = lintDecisionOptionChoice(decision({ options: rangedOptions }), [ranged, steady], economics, { newCustomersPerMonth: 30 });
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toContain("exceeds a confirmed budget, time or delivery limit");
   });
 });
 

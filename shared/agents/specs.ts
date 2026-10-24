@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
-import { customerValue, lintEconomics, playMaths, portfolioP50, selectPortfolio, withForecasts, type Economics, type ForecastUncertainty, type PlayLike, type PlaySensitivity } from "./economics";
+import { customerValue, lintEconomics, playMaths, portfolioExpectedCustomers, portfolioP50, portfolioRange, selectPortfolio, withForecasts, type Economics, type ForecastUncertainty, type PlayLike, type PlaySensitivity } from "./economics";
 import type { FinancialEvidence } from "./provenance";
 import { PROVENANCE } from "./provenance";
 import { DECISION_CAPS, DecisionSchema, lintDecision, type Decision } from "./decision";
@@ -191,7 +191,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; portfolio?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
 export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.20-financial-evidence-status";
+export const ENGINE_VERSION = "v3.21-joint-scenario-option-comparison";
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
@@ -1331,13 +1331,15 @@ export function lintDecisionOptionChoice(
     if (optionPlays.some((play) => !play.model?.steps?.length)) return null;
     const spend = optionPlays.reduce((sum, play) => sum + Math.max(0, play.model.monthlySpendUsd), 0);
     const ownerHours = optionPlays.reduce((sum, play) => sum + Math.max(0, play.model.ownerHoursPerWeek), 0);
-    const customers = portfolioP50({ economics, plays: optionPlays }, horizonDays);
+    const range = portfolioRange({ economics, plays: optionPlays }, horizonDays);
+    const customers = range.p50;
+    const expectedCustomers = portfolioExpectedCustomers({ economics, plays: optionPlays }, horizonDays);
     const cost = optionPlays.reduce((sum, play) => sum + playMaths({ ...play, horizonDays }, economics).costUsd, 0);
     const feasible =
       (constraints?.monthlyAdBudgetUsd === undefined || spend <= constraints.monthlyAdBudgetUsd) &&
       (constraints?.ownerHoursPerWeek === undefined || ownerHours <= constraints.ownerHoursPerWeek) &&
-      (constraints?.newCustomersPerMonth === undefined || customers <= constraints.newCustomersPerMonth * (horizonDays / 30));
-    return { index, feasible, customers, netContribution: valuePerCustomer === null ? null : customers * valuePerCustomer - cost };
+      (constraints?.newCustomersPerMonth === undefined || range.p90 <= constraints.newCustomersPerMonth * (horizonDays / 30));
+    return { index, feasible, customers, expectedCustomers, netContribution: valuePerCustomer === null ? null : expectedCustomers * valuePerCustomer - cost };
   });
   const chosen = candidates[chosenIndex];
   if (!chosen) return [];
