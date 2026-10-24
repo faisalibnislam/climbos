@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { lintEconomics, lockedNumbers, playMaths, simulateCustomers, withForecasts } from "../../shared/agents/economics";
 
 const econ = { revenuePerCustomerMonthUsd: 19, grossMargin: 0.8, monthlyChurn: 0.1, basis: "Business plan price; margin and churn assumed", assumed: ["margin", "churn"] };
-type Model = { weeklyReach: number; weeklyReachLow?: number; weeklyReachHigh?: number; steps: { name: string; rate: number; low?: number; high?: number }[]; monthlySpendUsd: number; ownerHoursPerWeek: number };
+type Model = { weeklyReach: number; weeklyReachLow?: number; weeklyReachHigh?: number; rampWeeks?: number; salesLagDays?: number; steps: { name: string; rate: number; low?: number; high?: number }[]; monthlySpendUsd: number; ownerHoursPerWeek: number };
 const play = (over: Partial<{ kind: string; model: Model }> = {}) => ({ name: "Agency outreach", kind: "bankable", unit: "paying customers", horizonDays: 91, model: { weeklyReach: 250, steps: [{ name: "reply", rate: 0.02 }, { name: "trial", rate: 0.5 }, { name: "paid", rate: 0.3 }], monthlySpendUsd: 0, ownerHoursPerWeek: 1 } as Model, ...over });
 
 describe("growth maths in code", () => {
@@ -33,6 +33,27 @@ describe("growth maths in code", () => {
   it("writes the forecast onto plays (the model never does)", () => {
     const out = withForecasts({ economics: econ, plays: [play()] });
     expect(out.plays[0].p50).toBeCloseTo(9.8, 1);
+    expect(out.plays[0].forecastUncertainty).toEqual({
+      rangeMethod: "single_scenario",
+      variedDrivers: [],
+      statisticalInterval: "not_estimated",
+      calibratedToBusiness: false,
+      timing: { reachRamp: "immediate_assumed", paidConversionLag: "none_assumed" },
+      omittedFactors: ["seasonality", "execution_variation", "model_error"],
+    });
+  });
+
+  it("separates named input scenarios from statistical uncertainty and reports modeled timing", () => {
+    const ranged = play({ model: { ...play().model, weeklyReachLow: 150, weeklyReachHigh: 350, rampWeeks: 3, salesLagDays: 14, steps: [{ name: "reply", rate: 0.02, low: 0.01, high: 0.04 }, { name: "paid", rate: 0.3 }] } });
+    const forecast = withForecasts({ economics: econ, plays: [ranged] }).plays[0].forecastUncertainty;
+    expect(forecast).toMatchObject({
+      rangeMethod: "input_scenario",
+      variedDrivers: ["weekly reach", "reply rate"],
+      statisticalInterval: "not_estimated",
+      calibratedToBusiness: false,
+      timing: { reachRamp: "modeled", paidConversionLag: "modeled" },
+    });
+    expect(forecast?.omittedFactors).toContain("model_error");
   });
 
   it("returns one-input-at-a-time sensitivity for explicit funnel, reach, and owner ranges", () => {

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
-import { customerValue, lintEconomics, playMaths, portfolioP50, selectPortfolio, withForecasts, type Economics, type PlayLike, type PlaySensitivity } from "./economics";
+import { customerValue, lintEconomics, playMaths, portfolioP50, selectPortfolio, withForecasts, type Economics, type ForecastUncertainty, type PlayLike, type PlaySensitivity } from "./economics";
 import { PROVENANCE } from "./provenance";
 import { DECISION_CAPS, DecisionSchema, lintDecision, type Decision } from "./decision";
 import type { PlanQuality } from "./quality";
@@ -102,6 +102,15 @@ export const PlaySchema = z.object({
   p10: z.number(),
   p50: z.number(),
   p90: z.number(),
+  /** Code-generated explanation of the forecast range; absent on older saved plans. */
+  forecastUncertainty: z.object({
+    rangeMethod: z.enum(["input_scenario", "single_scenario"]),
+    variedDrivers: z.array(z.string()),
+    statisticalInterval: z.literal("not_estimated"),
+    calibratedToBusiness: z.literal(false),
+    timing: z.object({ reachRamp: z.enum(["modeled", "immediate_assumed"]), paidConversionLag: z.enum(["modeled", "none_assumed"]) }),
+    omittedFactors: z.tuple([z.literal("seasonality"), z.literal("execution_variation"), z.literal("model_error")]),
+  }).optional(),
   horizonDays: z.number(),
   confidence: z.enum(["high", "medium", "low"]),
   biggestUnknown: z.string(),
@@ -138,7 +147,7 @@ export const PlaySchema = z.object({
 });
 export type Play = z.infer<typeof PlaySchema>;
 /** What the plays agent writes: no forecast numbers (ClimbOS code computes P10/P50/P90 from the model). */
-export const PlayDraftSchema = PlaySchema.omit({ p10: true, p50: true, p90: true });
+export const PlayDraftSchema = PlaySchema.omit({ p10: true, p50: true, p90: true, forecastUncertainty: true });
 export type PlayDraft = z.infer<typeof PlayDraftSchema>;
 
 export const SCORE_KEYS = ["fit", "predictability", "leverage", "timeToSignal", "compounding", "cost", "risk", "distinctiveness"] as const;
@@ -173,7 +182,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; portfolio?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
 export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.17-ramp-and-sales-lag";
+export const ENGINE_VERSION = "v3.18-forecast-uncertainty-contract";
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
@@ -197,7 +206,7 @@ export const PlaysDecisionOutputSchema = PlaysOutputSchema.extend({ decision: De
 /** `economics.currency` is set by code after the agent (the workspace currency every amount is in). */
 export type PlaysOutput = Omit<z.infer<typeof PlaysOutputSchema>, "economics"> & { economics: z.infer<typeof PlaysOutputSchema>["economics"] & { currency?: string }; decision?: Decision };
 /** Saved portfolio: the agent's plays plus the forecast ClimbOS computed. */
-export type PlaysWithForecast = Omit<PlaysOutput, "plays"> & { plays: (Play & { sensitivity: PlaySensitivity[] })[] };
+export type PlaysWithForecast = Omit<PlaysOutput, "plays"> & { plays: (Play & { sensitivity: PlaySensitivity[]; forecastUncertainty: ForecastUncertainty | null })[] };
 
 const VANITY = /\b(awareness|impressions|engagement|followers|reach|likes|views)\b/i;
 const GENERIC = /\b(post consistently|build a community|leverage social media|increase brand awareness|engage with your audience|create valuable content|optimi[sz]e your seo|run targeted ads|start a blog|partner with influencers|go viral|thought leadership|omnichannel|drive engagement)\b/i;

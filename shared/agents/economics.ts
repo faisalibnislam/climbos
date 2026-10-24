@@ -166,9 +166,38 @@ export interface PlaySensitivity {
   atHigh: number;
 }
 
+export interface ForecastUncertainty {
+  rangeMethod: "input_scenario" | "single_scenario";
+  variedDrivers: string[];
+  /** No statistical interval is estimated by the seeded range simulation. */
+  statisticalInterval: "not_estimated";
+  calibratedToBusiness: false;
+  timing: { reachRamp: "modeled" | "immediate_assumed"; paidConversionLag: "modeled" | "none_assumed" };
+  omittedFactors: ["seasonality", "execution_variation", "model_error"];
+}
+
 /** A share in 0–1, or NaN. Ratios above 1 are rejected, never silently read as percents (REQ-MATH-03). */
 const rateOf = (r: number | undefined | null): number => (typeof r === "number" && Number.isFinite(r) && r >= 0 && r <= 1 ? r : NaN);
 const DAYS_PER_MONTH = 365.25 / 12;
+
+/** Explain what the seeded P10–P90 does and does not represent. */
+export function forecastUncertainty(m: PlayModel): ForecastUncertainty {
+  const variedDrivers: string[] = [];
+  const reachLow = m.weeklyReachLow ?? m.weeklyReach;
+  const reachHigh = m.weeklyReachHigh ?? m.weeklyReach;
+  if (reachLow !== m.weeklyReach || reachHigh !== m.weeklyReach) variedDrivers.push("weekly reach");
+  for (const step of m.steps) {
+    if ((step.low ?? step.rate) !== step.rate || (step.high ?? step.rate) !== step.rate) variedDrivers.push(`${step.name} rate`);
+  }
+  return {
+    rangeMethod: variedDrivers.length ? "input_scenario" : "single_scenario",
+    variedDrivers,
+    statisticalInterval: "not_estimated",
+    calibratedToBusiness: false,
+    timing: { reachRamp: m.rampWeeks ? "modeled" : "immediate_assumed", paidConversionLag: m.salesLagDays ? "modeled" : "none_assumed" },
+    omittedFactors: ["seasonality", "execution_variation", "model_error"],
+  };
+}
 
 /** Equivalent full-volume weeks that can produce paid customers before the horizon closes. */
 export function effectiveCustomerWeeks(m: Pick<PlayModel, "rampWeeks" | "salesLagDays">, horizonWeeks: number): number {
@@ -374,14 +403,14 @@ export function roundCount(n: number): number {
 }
 
 /** Adds the computed forecast (P10/P50/P90 customers) to each play; the model never writes it. */
-export function withForecasts<O extends { economics: Economics; plays: PlayLike[] }>(out: O): Omit<O, "plays"> & { plays: (O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[]; cacRange: PlayMaths["cacRange"] | null })[] } {
+export function withForecasts<O extends { economics: Economics; plays: PlayLike[] }>(out: O): Omit<O, "plays"> & { plays: (O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[]; cacRange: PlayMaths["cacRange"] | null; forecastUncertainty: ForecastUncertainty | null })[] } {
   return {
     ...out,
     plays: out.plays.map((p) => {
       // Older plays without a model keep the forecast they were saved with.
-      if (!p.model?.steps?.length) return { ...p, sensitivity: [], cacRange: null } as unknown as O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[]; cacRange: PlayMaths["cacRange"] | null };
+      if (!p.model?.steps?.length) return { ...p, sensitivity: [], cacRange: null, forecastUncertainty: null } as unknown as O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[]; cacRange: PlayMaths["cacRange"] | null; forecastUncertainty: ForecastUncertainty | null };
       const m = playMaths(p, out.economics);
-      return { ...p, p10: roundCount(m.headline.p10), p50: roundCount(m.headline.p50), p90: roundCount(m.headline.p90), sensitivity: m.sensitivity, cacRange: m.cacRange };
+      return { ...p, p10: roundCount(m.headline.p10), p50: roundCount(m.headline.p50), p90: roundCount(m.headline.p90), sensitivity: m.sensitivity, cacRange: m.cacRange, forecastUncertainty: forecastUncertainty(p.model) };
     }),
   };
 }
