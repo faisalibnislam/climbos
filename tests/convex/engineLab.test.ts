@@ -56,4 +56,16 @@ describe("engine lab", () => {
     await expect(ops.client.mutation(api.engineLab.decide, { id, decision: "approved" })).rejects.toThrow(/completed, error-free comparison/);
     expect(await t.query(internal.engineLab.addendumFor, { agentId: "growth_plays" })).toBe("");
   });
+
+  it("tests growth-plan rules with the growth-plan agent", async () => {
+    const t = setup();
+    const ops = await asNewUser(t, "ops@example.com");
+    const id = await t.mutation(internal.engineLab.saveProposal, { agentId: "growth_strategy", rules: "- Keep the plan focused on the measured constraint.", rationale: "Growth-plan reviewer feedback." });
+    await ops.client.mutation(api.engineLab.test, { id });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    const result = (await ops.client.query(api.engineLab.overview, {})).proposals.find((p) => p.id === id)!;
+    expect(result.status).toBe("proposed");
+    expect(result.test?.baseline).toBeTypeOf("number");
+    expect(result.test?.variant).toBeTypeOf("number");
+  });
 });

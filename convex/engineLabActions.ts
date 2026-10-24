@@ -3,7 +3,8 @@ import { z } from "zod";
 import { fakeTurn } from "../shared/agents/fake";
 import { CALL_ROUTES } from "../shared/agents/routes";
 import { runAgent, type AgentDeps } from "../shared/agents/runtime";
-import { growthPlaysSpec, playCatalogsFor } from "../shared/agents/specs";
+import type { AgentSpec } from "../shared/agents/types";
+import { growthPlaysSpec, playCatalogsFor, strategySpec } from "../shared/agents/specs";
 import { modelTurn } from "../shared/ai/turn";
 import { currentRateVersion } from "../shared/economics";
 import { LAB_CASE } from "../shared/lab/formkitCase";
@@ -18,18 +19,21 @@ import { verifyRecurringRules } from "../shared/lab/proposalEvidence";
 const rates = () => currentRateVersion();
 const call = () => (process.env.CLIMBOS_FAKE_LLM ? fakeTurn : modelTurn);
 
-/** One arm of a lab test: the growth-plays agent on the Formkit case, scored by its reviewer (1–5 average). */
+/** One arm of a lab test: the matching growth agent on the Formkit case, scored by its reviewer (1–5 average). */
 export const runArm = internalAction({
   args: { id: v.id("engineProposals"), arm: v.union(v.literal("baseline"), v.literal("variant")) },
   handler: async (ctx, { id, arm }): Promise<void> => {
     const p = await ctx.runQuery(internal.engineLab.proposalById, { id });
     if (!p) return;
-    const approved: string = await ctx.runQuery(internal.engineLab.addendumFor, { agentId: "growth_plays" });
+    if (p.agentId !== "growth_plays" && p.agentId !== "growth_strategy") return;
+    const approved: string = await ctx.runQuery(internal.engineLab.addendumFor, { agentId: p.agentId });
     const addendum = [approved, arm === "variant" ? p.rules : ""].filter(Boolean).join("\n");
     let cost = 0;
-    // Medium effort and one review keep each arm inside one action and ≈$0.15.
-    const base = growthPlaysSpec({ maxRevisions: 0, effort: { draft: "medium", critic: "low" } }, playCatalogsFor("saas"));
-    const spec = { ...base, addendum: addendum || undefined, maxTokens: { research: 16_000, draft: 20_000, critic: 12_000 } };
+    // Compare the proposal against the agent it will change on the same fixed case.
+    const options = { maxRevisions: 0, effort: { draft: "medium" as const, critic: "low" as const } };
+    const configure = <T,>(base: AgentSpec<T>): AgentSpec<T> => ({ ...base, addendum: addendum || undefined, maxTokens: { research: 16_000, draft: 20_000, critic: 12_000 } });
+    const plays = configure(growthPlaysSpec(options, playCatalogsFor("saas")));
+    const strategy = configure(strategySpec(options));
     const deps: AgentDeps = {
       turn: async (req) => {
         const r = await call()({ ...req, timeoutMs: 420_000 }, rates());
@@ -39,7 +43,11 @@ export const runArm = internalAction({
       phase: async (_key, _label, fn) => (await fn()).value,
     };
     try {
-      const result = await runAgent(spec, { task: `Choose this business's growth-plays portfolio for the goal. Be ambitious but truthful.\n\n${CLIMBOS_ENGINES}\n\nBUSINESS INTELLIGENCE:\n${LAB_CASE.insights}`, brief: LAB_CASE.brief, facts: LAB_CASE.facts }, deps);
+      const task = p.agentId === "growth_strategy"
+        ? "Choose a focused growth strategy for this business and goal. Be ambitious, feasible, and truthful."
+        : "Choose this business's growth-plays portfolio for the goal. Be ambitious but truthful.";
+      const input = { task: `${task}\n\n${CLIMBOS_ENGINES}\n\nBUSINESS INTELLIGENCE:\n${LAB_CASE.insights}`, brief: LAB_CASE.brief, facts: LAB_CASE.facts };
+      const result = p.agentId === "growth_strategy" ? await runAgent(strategy, input, deps) : await runAgent(plays, input, deps);
       await ctx.runMutation(internal.engineLab.recordArm, { id, arm, score: result.assessment?.average ?? 0, costMicros: cost });
     } catch (e) {
       await ctx.runMutation(internal.engineLab.recordArm, { id, arm, costMicros: cost, error: (e as Error).message });

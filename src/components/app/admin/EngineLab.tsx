@@ -11,7 +11,7 @@ import { Scannable, StatBlocks, StepFlow } from "@/components/ds/content";
 const AGENT = { growth_plays: "Growth plays", growth_strategy: "Growth plan", business_insights: "Insights", channel_fit: "Channel fit" } as Record<string, string>;
 const usd = (micros: number) => `$${(micros / 1_000_000).toFixed(2)}`;
 
-/** Engine lab: rules learned from reviews; test on the Formkit case, approve to ship. */
+/** Engine lab: rules learned from reviews; screen each rule on the matching agent and Formkit case. */
 export function EngineLab() {
   const d = useQuery(api.engineLab.overview, {});
   const test = useMutation(api.engineLab.test);
@@ -150,9 +150,9 @@ export function EngineLab() {
                   </div>
                 ) : null}
                 <div className="flex flex-wrap gap-2">
-                  {p.agentId === "growth_plays" && p.status === "proposed" ? (
-                    <Button size="sm" variant="secondary" onClick={() => run(() => test({ id: p.id }), "Testing on the Formkit case (≈$0.30)")}>
-                      Test (≈$0.30)
+                  {p.status === "proposed" ? (
+                    <Button size="sm" variant="secondary" onClick={() => run(() => test({ id: p.id }), "Testing this agent on the Formkit case")}>
+                      Test on Formkit
                     </Button>
                   ) : null}
                   <Button size="sm" disabled={p.status === "testing"} onClick={() => run(() => decide({ id: p.id, decision: "approved" }), "Approved: live in the next plan")}>

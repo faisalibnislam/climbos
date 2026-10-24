@@ -162,6 +162,7 @@ export const test = mutation({
     await requireStaff(ctx, "features");
     const p = await ctx.db.get(id);
     if (!p || p.status !== "proposed") throw appError("INVALID", "Only new proposals can be tested.");
+    if (!LAB_AGENTS.includes(p.agentId as (typeof LAB_AGENTS)[number])) throw appError("INVALID", "This proposal is not attached to a testable growth agent.");
     if ((await spentThisMonth(ctx)) + 400_000 > MONTHLY_CAP_MICROS) throw appError("LIMIT_REACHED", "This month's $5 lab budget is used up.");
     await ctx.db.patch(id, { status: "testing", test: { costMicros: 0, at: Date.now() } });
     await ctx.scheduler.runAfter(0, internal.engineLabActions.runArm, { id, arm: "baseline" });
