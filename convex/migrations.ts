@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { ensureAccountForOwner } from "./lib/accounts";
+import { EXPERT_PLAN_JSON_ENVELOPE_VERSION, EXPERT_PLAN_SCHEMA_VERSION } from "../shared/agents/planCompatibility";
+import { buildCurrentExpertGrowthPayload, parseCurrentExpertGrowthPayload } from "../shared/agents/growthPlanPersistence";
 
 /**
  * 18 Oct 2026: shared accounts. Give every customer workspace its owner's
@@ -32,5 +34,67 @@ export const accountsBackfill = internalMutation({
     }
     const left = (await ctx.db.query("organizations").take(2000)).filter((o) => o.kind === "customer" && !o.accountId && !o.deletedAt).length;
     return { migrated, left };
+  },
+});
+
+/**
+ * Converts historical expert-plan growth payloads only when the original plays
+ * and economics already satisfy the current evidence-bearing schema. This is
+ * intentionally lossless: it does not fill missing sources or rewrite facts.
+ * Pass the returned cursor to the next invocation until `done` is true.
+ */
+export const expertGrowthPlansToV9 = internalMutation({
+  args: { cursor: v.optional(v.string()), limit: v.optional(v.number()) },
+  handler: async (ctx, { cursor, limit }) => {
+    const pageSize = Number.isSafeInteger(limit) ? Math.max(1, Math.min(500, limit!)) : 100;
+    const page = await ctx.db.query("strategies").paginate({ numItems: pageSize, cursor: cursor ?? null });
+    let migrated = 0;
+    let skippedUnsupported = 0;
+    let skippedInvalid = 0;
+
+    for (const strategy of page.page) {
+      const expert = strategy.expert as Record<string, unknown> | undefined;
+      if (!expert) continue;
+      const rawVersion = expert.version;
+      const version = typeof rawVersion === "number" && Number.isSafeInteger(rawVersion) && rawVersion >= 0 ? rawVersion : 0;
+      if (version === EXPERT_PLAN_SCHEMA_VERSION) continue;
+      if (version > EXPERT_PLAN_JSON_ENVELOPE_VERSION) {
+        skippedUnsupported++;
+        continue;
+      }
+
+      const legacyPayload = version === EXPERT_PLAN_JSON_ENVELOPE_VERSION
+        ? parseCurrentExpertGrowthPayload(expert.growthPlanV8)
+        : parseCurrentExpertGrowthPayload({ plays: expert.plays, economics: expert.economics });
+      if (!legacyPayload) {
+        skippedInvalid++;
+        continue;
+      }
+      const current = buildCurrentExpertGrowthPayload(legacyPayload.plays, legacyPayload.economics);
+      if (!current) {
+        skippedInvalid++;
+        continue;
+      }
+
+      const migratedExpert = {
+        ...expert,
+        version: EXPERT_PLAN_SCHEMA_VERSION,
+        plays: undefined,
+        economics: undefined,
+        growthPlanV8: undefined,
+        growthPlanV9: current,
+      };
+      await ctx.db.patch(strategy._id, { expert: migratedExpert as never });
+      migrated++;
+    }
+
+    return {
+      scanned: page.page.length,
+      migrated,
+      skippedUnsupported,
+      skippedInvalid,
+      done: page.isDone,
+      cursor: page.isDone ? null : page.continueCursor,
+    };
   },
 });

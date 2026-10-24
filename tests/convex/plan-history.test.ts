@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { api } from "../../convex/_generated/api";
+import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { expertPlaysOf, readExpertPlan } from "../../shared/agents/planCompatibility";
 import { asNewUser, makePaid, setup, type T } from "./helpers";
@@ -429,5 +429,30 @@ describe("Plan version history", () => {
     const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
     expect(view.staleInputs).toMatchObject({ businessProfile: true, requiresRefresh: true });
     await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/business profile changed/);
+  });
+
+  it("migrates a valid legacy growth payload losslessly into the current nested schema", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-plan-migration@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const before = await t.run((ctx) => ctx.db.get(plan.id));
+    const decoded = readExpertPlan(before!.expert!);
+    const legacyExpert = { ...decoded, version: 7 } as Record<string, unknown>;
+    delete legacyExpert.growthPlanV8;
+    delete legacyExpert.growthPlanV9;
+    await t.run((ctx) => ctx.db.patch(plan.id, { expert: legacyExpert as never }));
+
+    const result = await t.mutation(internal.migrations.expertGrowthPlansToV9, { limit: 100 });
+    expect(result).toMatchObject({ migrated: 1, skippedInvalid: 0, skippedUnsupported: 0, done: true });
+    const migrated = (await t.run((ctx) => ctx.db.get(plan.id)))!.expert!;
+    expect(migrated.version).toBe(9);
+    expect(migrated.growthPlanV9).toEqual({ plays: decoded.plays, economics: decoded.economics });
+    expect(migrated.plays).toBeUndefined();
+    expect(migrated.economics).toBeUndefined();
+    expect(migrated.diagnosis).toBe(decoded.diagnosis);
+
+    expect(await t.mutation(internal.migrations.expertGrowthPlansToV9, { limit: 100 })).toMatchObject({ migrated: 0, done: true });
   });
 });
