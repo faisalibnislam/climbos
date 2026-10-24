@@ -334,6 +334,24 @@ describe("instagram", () => {
     expect(url.searchParams.get("fields")).toBe("id,permalink,timestamp,media_type,caption");
   });
 
+  it("reads and normalizes lifetime post insight metrics", async () => {
+    const { fetchImpl, calls } = scripted([{ match: "/1789001/insights?", respond: json(200, { data: [
+      { name: "views", values: [{ value: 120 }] },
+      { name: "saved", values: [{ value: "7" }] },
+      { name: "likes", value: 19 },
+      { name: "future_metric", values: [{ value: "not-a-number" }] },
+    ] }) }]);
+    const result = await instagram.getMediaInsights({ accessToken: "t", mediaId: "1789001", fetchImpl });
+    expect(result).toEqual({ ok: true, data: [{ metric: "views", value: 120 }, { metric: "saved", value: 7 }, { metric: "likes", value: 19 }] });
+    expect(new URL(calls[0]!.url).searchParams.get("metric")).toBe("views,reach,likes,comments,saved,shares");
+  });
+
+  it("rejects invalid media ids before requesting insights", async () => {
+    const { fetchImpl, calls } = scripted([]);
+    expect(await instagram.getMediaInsights({ accessToken: "t", mediaId: "1/2", fetchImpl })).toMatchObject({ ok: false, retryable: false });
+    expect(calls).toHaveLength(0);
+  });
+
   it("rejects malformed Instagram ids before making a request", async () => {
     const { fetchImpl, calls } = scripted([]);
     expect(await instagram.getRecentMedia({ accessToken: "t", igUserId: "1789/x", fetchImpl })).toMatchObject({ ok: false, retryable: false });

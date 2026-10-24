@@ -409,3 +409,9 @@ The paid benchmark's business-insights task and judge criteria now include page-
 | REQ-ENG-10 | exists | — | `scripts/skills-build.mjs` | No skill edits in S1–S3 |
 | REQ-ENG-11 | done-fixture | S5 | `capacity.ts` `capabilityContext`, `jobWrites.ts` job context | Built per run from connected providers and the approval mode; nothing unconnected is promised (`capability-context.test.ts`). Bench and Engine Lab use the static text |
 | REQ-ENG-12 | partial | S0 | docs listed under REQ-COST-12 | Pricing and provider setup docs not yet checked |
+
+## Resumption note (2026-10-25, social post performance context)
+
+- Added optional Instagram media insights to conversion audits. The OAuth capability requests `instagram_business_manage_insights`; existing caption review continues without it. At most ten sampled posts are queried with three concurrent insight requests, and provider errors, missing permission, and no-post states remain visible rather than becoming zero-valued measurements.
+- Source-returned lifetime metrics are passed with their exact post IDs to the audit, shown beside source-linked posts, and labeled as lifetime snapshots. The agent is instructed to compare like metrics only within the supplied sample and avoid causal or account-wide claims. No Facebook post metrics were added because current supported organic Page metric availability needs separate verification.
+- Verified provider parsing, malformed-ID rejection, and OAuth scope mapping. Full tests: 1,389 passed; typecheck, affected-file ESLint, and production webpack build passed. This remains fixture-verified; live Meta app permission review, real account data, and recommendation quality are not verified.

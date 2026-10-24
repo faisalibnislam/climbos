@@ -1,6 +1,7 @@
 /**
  * Instagram API with Instagram Login (graph.instagram.com, v26.0).
- * Scopes: instagram_business_basic, instagram_business_content_publish.
+ * Scopes: instagram_business_basic, instagram_business_content_publish,
+ * instagram_business_manage_insights for optional organic post analytics.
  *
  * Flow: account type check → content_publishing_limit → create container →
  * bounded status polling → media_publish → read the media back.
@@ -188,6 +189,7 @@ export interface InstagramMedia {
   permalink?: string;
   timestamp?: string;
   mediaType?: string;
+  mediaProductType?: string;
   caption?: string;
 }
 
@@ -199,6 +201,8 @@ function parseMedia(d: Record<string, unknown>): InstagramMedia {
   if (t) m.timestamp = t;
   const mt = asString(d.media_type);
   if (mt) m.mediaType = mt;
+  const productType = asString(d.media_product_type);
+  if (productType) m.mediaProductType = productType;
   const c = asString(d.caption);
   if (c !== undefined) m.caption = c;
   return m;
@@ -225,6 +229,34 @@ export async function getRecentMedia(call: GraphCall & { igUserId: string; limit
   const items = asArray(data.data).filter(isRecord).map(parseMedia).filter((media) => Boolean(media.id)).slice(0, limit);
   const paging = isRecord(data.paging) ? data.paging : {};
   return { ok: true, data: { items, truncated: typeof paging.next === "string" } };
+}
+
+export interface InstagramMediaInsight {
+  metric: string;
+  value: number;
+}
+
+/** Reads lifetime metrics for one owned professional-account media item. */
+export async function getMediaInsights(
+  call: GraphCall & { mediaId: string; metrics?: readonly string[] },
+): Promise<ReadResult<InstagramMediaInsight[]>> {
+  if (!/^\d+$/.test(call.mediaId)) return { ok: false, providerMessage: "Invalid Instagram media id", retryable: false };
+  const metrics = call.metrics ?? ["views", "reach", "likes", "comments", "saved", "shares"];
+  const url = new URL(`${INSTAGRAM_GRAPH_BASE}/${call.mediaId}/insights`);
+  url.searchParams.set("metric", metrics.join(","));
+  const out = await graphGet(call, url);
+  if (out.kind !== "ok") return metaReadFailure(out);
+  const data = isRecord(out.data) ? asArray(out.data.data) : [];
+  const values: InstagramMediaInsight[] = [];
+  for (const item of data) {
+    if (!isRecord(item)) continue;
+    const metric = asString(item.name);
+    const valueRows = asArray(item.values).filter(isRecord);
+    const rawValue = valueRows[0]?.value ?? item.value;
+    const value = typeof rawValue === "number" ? rawValue : typeof rawValue === "string" && rawValue.trim() ? Number(rawValue) : NaN;
+    if (metric && Number.isFinite(value) && value >= 0) values.push({ metric, value });
+  }
+  return { ok: true, data: values };
 }
 
 /** media_publish + verification read of the returned media id. */

@@ -204,6 +204,7 @@ export const PROVIDERS: Record<ProviderId, ProviderMetadata> = {
     capabilities: [
       { id: "instagram.read_profile", kind: "read", label: "Check your Instagram account", description: "Confirms the account is a Business or Creator account." },
       { id: "instagram.read_posts", kind: "read", label: "Review recent Instagram posts", description: "Reads a small sample of recent post captions for a content audit." },
+      { id: "instagram.read_insights", kind: "read", label: "Read Instagram post results", description: "Reads lifetime views, reach, likes, comments, saves and shares for sampled posts when Meta provides them." },
       { id: "instagram.publish_media", kind: "write", label: "Publish Instagram posts", description: "Publishes approved photo posts and verifies they are live." },
     ],
     requiredEnv: ["INSTAGRAM_APP_ID", "INSTAGRAM_APP_SECRET"],

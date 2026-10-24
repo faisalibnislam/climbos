@@ -54,7 +54,7 @@ const OAUTH_CAPABILITIES: Partial<Record<OurProvider, ScopedCapability[]>> = {
   google_ads: ["google_ads.read_metrics", "google_ads.create_paused_campaign", "google_ads.set_campaign_status"],
   meta_ads: ["meta_ads.read_insights", "meta_ads.create_paused_campaign", "meta_ads.set_campaign_status"],
   facebook_pages: ["facebook_pages.publish_post", "facebook_pages.read_posts", "facebook_pages.read_insights"],
-  instagram: ["instagram.publish_media", "instagram.read_posts"],
+  instagram: ["instagram.publish_media", "instagram.read_posts", "instagram.read_insights"],
   linkedin: ["linkedin.read_profile", "linkedin.publish_post"],
   x: ["x.read_profile", "x.publish_post"],
 };

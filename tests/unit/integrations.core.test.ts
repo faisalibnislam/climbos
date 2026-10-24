@@ -11,6 +11,7 @@ import {
   createPkcePair,
   generateState,
   OAUTH_PROVIDERS,
+  CAPABILITY_SCOPES,
   parseTokenResponse,
   scopesFor,
   timingSafeEqual,
@@ -28,6 +29,9 @@ function ctx(partial: Partial<CapabilityContext>): CapabilityContext {
 }
 
 describe("evaluateCapabilities", () => {
+  it("requests the least scopes needed for optional Instagram post insights", () => {
+    expect(CAPABILITY_SCOPES["instagram.read_insights"]).toEqual(["instagram_business_basic", "instagram_business_manage_insights"]);
+  });
   it("returns only the exact state strings with reason and fix", () => {
     for (const id of Object.keys(PROVIDERS) as ProviderId[]) {
       for (const e of evaluateCapabilities(id, ctx({}))) {

@@ -89,6 +89,7 @@ export const CAPABILITY_SCOPES = {
   "facebook_pages.read_insights": ["pages_show_list", "read_insights", "pages_read_engagement"],
   "instagram.read_profile": ["instagram_business_basic"],
   "instagram.read_posts": ["instagram_business_basic"],
+  "instagram.read_insights": ["instagram_business_basic", "instagram_business_manage_insights"],
   "instagram.publish_media": ["instagram_business_basic", "instagram_business_content_publish"],
   "linkedin.read_profile": ["openid", "profile"],
   "linkedin.publish_post": ["w_member_social"],
