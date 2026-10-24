@@ -42,6 +42,7 @@ import { CALL_ROUTES, draftsFor, routeModels } from "../shared/agents/routes";
 import { reconcile } from "../shared/agents/consistency";
 import { formatMoney, minorToMajor } from "../shared/economics/currency";
 import { buildPlanEvidence } from "../shared/agents/evidence";
+import { trustPostureContext } from "../shared/agents/evidenceKind";
 import { conflictLines, findConflicts } from "../shared/agents/conflicts";
 import { platformNotes } from "../shared/acquisition/platformRules";
 import { growthKnowledgeContext } from "../shared/knowledge/retrieve";
@@ -567,6 +568,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     ownerEconomicsLine(b?.unitEconomics, workspaceCurrency(job)),
     job.run.kind === "strategy" && b?.unitEconomics?.ownerHoursPerWeek === undefined ? "OWNER TIME: unknown (the owner hasn't said). Keep owner work small, prefer work ClimbOS can do, and state the hours each play needs so the owner can check." : "",
     audienceLine(job.audience),
+    trustPostureContext(job.facts.map((f) => f.evidenceKind)),
     conflictsLine(job),
     job.resultsText ?? "",
     factsBlock(job.facts),
