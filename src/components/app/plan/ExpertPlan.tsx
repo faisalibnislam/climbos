@@ -88,8 +88,37 @@ export interface PlayView {
   scores: number[];
   firstActionToday: string;
   climbosCanDo: string;
+  actionContract?: {
+    diagnosis: string;
+    intendedEffect: string;
+    evidenceBasis: "assumption" | "inference" | "measured" | "owner_report" | "source_claim";
+    evidenceNote: string;
+    evidenceRefs: string[];
+    targetOrAsset: string;
+    resourcePlan: string;
+    executionCapability: "owner" | "climbos" | "existing_integration" | "external_setup" | "unknown";
+    dependencies: string[];
+    measurement: { metric: string; baseline: string; target: string; windowDays: number; source: string };
+  };
+  actionReadiness?: { status: "safe_to_start" | "depends_on_input"; reasons: string[] };
   model?: PlayModel;
 }
+
+const EVIDENCE_BASIS_LABEL: Record<NonNullable<PlayView["actionContract"]>["evidenceBasis"], string> = {
+  assumption: "Assumption to test",
+  inference: "Reasoned inference",
+  measured: "Measured in this business",
+  owner_report: "Reported by your team",
+  source_claim: "Claim from a source",
+};
+
+const CAPABILITY_LABEL: Record<NonNullable<PlayView["actionContract"]>["executionCapability"], string> = {
+  owner: "Your team carries this out",
+  climbos: "ClimbOS can prepare this",
+  existing_integration: "Needs a connected tool",
+  external_setup: "Needs setup outside ClimbOS",
+  unknown: "Who will carry this out is not yet confirmed",
+};
 
 export interface ExpertView {
   diagnosis: string;
@@ -666,8 +695,40 @@ function PlayInputs({ play, economics }: { play: PlayView; economics: Economics 
 }
 
 function PlayDetails({ play, economics, id }: { play: PlayView; economics?: Economics; id: string }) {
+  const action = play.actionContract;
   return (
     <div id={id} className="flex flex-col gap-4">
+      {action ? (
+        <section aria-label="Action and measurement plan" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-surface-2 p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <FieldLabel icon={Target}>Action and measurement</FieldLabel>
+            {play.actionReadiness ? (
+              <Badge tone={play.actionReadiness.status === "safe_to_start" ? "green" : "amber"}>
+                {play.actionReadiness.status === "safe_to_start" ? "Ready to prepare" : "Needs input first"}
+              </Badge>
+            ) : <Badge>Readiness not recorded</Badge>}
+          </div>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <div><dt className="text-xs text-ink-3">Diagnosis</dt><dd className="text-ui text-ink">{action.diagnosis}</dd></div>
+            <div><dt className="text-xs text-ink-3">Intended effect</dt><dd className="text-ui text-ink">{action.intendedEffect}</dd></div>
+            <div><dt className="text-xs text-ink-3">Evidence basis</dt><dd className="text-ui text-ink">{EVIDENCE_BASIS_LABEL[action.evidenceBasis]} · {action.evidenceNote}</dd></div>
+            {action.evidenceRefs.length ? <div><dt className="text-xs text-ink-3">Evidence references</dt><dd className="break-words text-ui text-ink">{action.evidenceRefs.join(" · ")}</dd></div> : null}
+            <div><dt className="text-xs text-ink-3">Target or asset</dt><dd className="text-ui text-ink">{action.targetOrAsset}</dd></div>
+            <div><dt className="text-xs text-ink-3">Resources</dt><dd className="text-ui text-ink">{action.resourcePlan}</dd></div>
+            <div><dt className="text-xs text-ink-3">Execution</dt><dd className="text-ui text-ink">{CAPABILITY_LABEL[action.executionCapability]}</dd></div>
+            <div><dt className="text-xs text-ink-3">Success measure</dt><dd className="text-ui text-ink">{action.measurement.metric} · baseline: {action.measurement.baseline} · target: {action.measurement.target} · {action.measurement.windowDays} days · source: {action.measurement.source}</dd></div>
+          </dl>
+          {action.dependencies.length || play.actionReadiness?.reasons.length ? (
+            <div>
+              <p className="text-xs font-medium text-ink-2">What needs to happen first</p>
+              <ul className="mt-1 list-disc pl-5 text-ui text-ink">
+                {(play.actionReadiness?.reasons.length ? play.actionReadiness.reasons : action.dependencies).map((item, i) => <li key={`${item}-${i}`}>{item}</li>)}
+              </ul>
+            </div>
+          ) : null}
+          <p className="text-xs text-ink-3">This is the plan’s stated logic and measurement setup. It does not prove the action will cause the intended result.</p>
+        </section>
+      ) : <Callout tone="info" title="Action details not recorded">This plan predates the structured action checklist. Refreshing the plan can add its evidence basis, dependencies, and success measure.</Callout>}
       {play.model?.steps?.length ? <PlayInputs play={play} economics={economics ?? NO_ECONOMICS} /> : null}
       <div className="flex flex-col gap-1.5">
         <FieldLabel icon={Crosshair}>How we estimate it</FieldLabel>
