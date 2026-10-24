@@ -48,6 +48,32 @@ describe("§8.3 reference fixture", () => {
     expect(m.profitable).toBe(true);
     expect(m.invalidInputs).toEqual([]);
   });
+
+  it("reports CAC bounds from the inverse of the same simulated customer range", () => {
+    const base = refPlay();
+    const ranged = {
+      ...base,
+      model: {
+        ...base.model,
+        weeklyReachLow: 30,
+        weeklyReachHigh: 120,
+        steps: [{ name: "paid", rate: 0.1, low: 0.05, high: 0.2 }],
+      },
+    };
+    const m = playMaths(ranged, ref);
+
+    expect(m.cacRange.p10).toBeCloseTo(m.costUsd / m.range.p90, 8);
+    expect(m.cacRange.p50).toBeCloseTo(m.costUsd / m.range.p50, 8);
+    expect(m.cacRange.p90).toBeCloseTo(m.costUsd / m.range.p10, 8);
+    expect(m.cacRange.p10!).toBeLessThanOrEqual(m.cacRange.p50!);
+    expect(m.cacRange.p50!).toBeLessThanOrEqual(m.cacRange.p90!);
+  });
+
+  it("marks the high CAC bound unbounded when the low customer draw is zero", () => {
+    const m = playMaths(refPlay({ steps: [{ name: "paid", rate: 0 }] }), ref);
+
+    expect(m.cacRange).toEqual({ p10: null, p50: null, p90: null });
+  });
 });
 
 describe("edge cases", () => {
@@ -136,5 +162,6 @@ describe("headline basis (REQ-MATH-06, regression check 2026-10-19)", () => {
     expect(m.headline.p90).toBeGreaterThanOrEqual(m.customers);
     const out = withForecasts({ economics: ref, plays: [skewed] });
     expect(out.plays[0].p50).toBeCloseTo(m.customers, 1);
+    expect(out.plays[0].cacRange).toEqual(m.cacRange);
   });
 });

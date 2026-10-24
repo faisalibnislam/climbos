@@ -126,6 +126,8 @@ export interface PlayMaths {
   headline: { p10: number; p50: number; p90: number };
   costUsd: number;
   cacUsd: number | null;
+  /** P10–P90 cost per customer from the same input-range draws as `range`; null when that draw has no customers. */
+  cacRange: { p10: number | null; p50: number | null; p90: number | null };
   /** Contribution one customer earns within the payback horizon (the allowable cost per customer); null when price, margin or churn is unknown. */
   valueUsd: number | null;
   /** Months to earn back the cost per customer, with churn; null if it never pays back. */
@@ -309,6 +311,13 @@ export function playMaths(p: PlayLike, e: Economics, opts: { pointOnly?: boolean
   const other = Math.max(0, p.model.otherMonthlyUsd ?? 0) * (days / DAYS_PER_MONTH);
   const costUsd = spend + hours * hourUsd + other;
   const cacUsd = cacFull(spend, hours, hourUsd, other, customers);
+  const cacAt = (count: number) => (count > 0 ? costUsd / count : null);
+  const cacRange = {
+    // CAC moves inversely to customer count: the low CAC bound uses the high-customer draw.
+    p10: cacAt(range.p90),
+    p50: cacAt(range.p50),
+    p90: cacAt(range.p10),
+  };
   const cm = monthlyContribution(e);
   const churn = churnOf(e);
   // Unknown churn stays unknown: no value, payback or verdict is invented from it.
@@ -325,6 +334,7 @@ export function playMaths(p: PlayLike, e: Economics, opts: { pointOnly?: boolean
     headline,
     costUsd,
     cacUsd,
+    cacRange,
     valueUsd,
     paybackMonths: cacUsd === null ? null : paybackWithChurn(cacUsd, cm, churn),
     breakevenPerReachUsd: breakevenPerReach(valueUsd, rates),
@@ -344,14 +354,14 @@ export function roundCount(n: number): number {
 }
 
 /** Adds the computed forecast (P10/P50/P90 customers) to each play; the model never writes it. */
-export function withForecasts<O extends { economics: Economics; plays: PlayLike[] }>(out: O): Omit<O, "plays"> & { plays: (O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[] })[] } {
+export function withForecasts<O extends { economics: Economics; plays: PlayLike[] }>(out: O): Omit<O, "plays"> & { plays: (O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[]; cacRange: PlayMaths["cacRange"] | null })[] } {
   return {
     ...out,
     plays: out.plays.map((p) => {
       // Older plays without a model keep the forecast they were saved with.
-      if (!p.model?.steps?.length) return { ...p, sensitivity: [] } as unknown as O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[] };
+      if (!p.model?.steps?.length) return { ...p, sensitivity: [], cacRange: null } as unknown as O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[]; cacRange: PlayMaths["cacRange"] | null };
       const m = playMaths(p, out.economics);
-      return { ...p, p10: roundCount(m.headline.p10), p50: roundCount(m.headline.p50), p90: roundCount(m.headline.p90), sensitivity: m.sensitivity };
+      return { ...p, p10: roundCount(m.headline.p10), p50: roundCount(m.headline.p50), p90: roundCount(m.headline.p90), sensitivity: m.sensitivity, cacRange: m.cacRange };
     }),
   };
 }
@@ -574,7 +584,7 @@ export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }, 
   return [
     "LOCKED NUMBERS (computed by ClimbOS from the plays; use exactly these, never restate them differently):",
     `- One customer: ${usd(monthlyContribution(e))}/month contribution, ${churn === null ? "churn unknown" : `${r1(churn * 100)}% monthly churn`}; earns ${usd(customerValue(e))} in ${PAYBACK_HORIZON_MONTHS} months = the most a customer may cost (${e.basis}; sources: ${sourcesLine(e)}).`,
-    ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.headline.p50)} customers in ${p.horizonDays || 90} days at the most-likely rates (simulated range ${roundCount(m.headline.p10)}–${roundCount(m.headline.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)} (same basis), payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months with churn`}${m.cacUsd !== null && cmOf > 0 ? ` (${r1(m.cacUsd / cmOf)} months per surviving customer)` : ""}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}${m.breakevenCustomers !== null && m.costUsd > 0 ? `; needs ${roundCount(m.breakevenCustomers)} customers to break even (${ROBUST_WORD[m.robustness]})` : ""}${m.incremental ? "; extra customers over today's rate only" : ""}${m.lossChance !== null && m.costUsd > 0 ? `; ${Math.round(m.lossChance * 100)}% chance it doesn't pay back if its ranges are right` : ""}. ${basisNote(p, e)}${decidesLine(p, e, usd) ? `\n${decidesLine(p, e, usd)}` : ""}`),
+    ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.headline.p50)} customers in ${p.horizonDays || 90} days at the most-likely rates (simulated range ${roundCount(m.headline.p10)}–${roundCount(m.headline.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)} (same basis; simulated CAC P10–P90 ${usd(m.cacRange.p10)}–${usd(m.cacRange.p90)}${m.cacRange.p90 === null ? ", unbounded when a draw has no customers" : ""}), payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months with churn`}${m.cacUsd !== null && cmOf > 0 ? ` (${r1(m.cacUsd / cmOf)} months per surviving customer)` : ""}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}${m.breakevenCustomers !== null && m.costUsd > 0 ? `; needs ${roundCount(m.breakevenCustomers)} customers to break even (${ROBUST_WORD[m.robustness]})` : ""}${m.incremental ? "; extra customers over today's rate only" : ""}${m.lossChance !== null && m.costUsd > 0 ? `; ${Math.round(m.lossChance * 100)}% chance it doesn't pay back if its ranges are right` : ""}. ${basisNote(p, e)}${decidesLine(p, e, usd) ? `\n${decidesLine(p, e, usd)}` : ""}`),
     ...rows.flatMap(({ m }) => m.sensitivity.slice(0, 3).map((s) => `- SENSITIVITY · ${m.name} · ${s.driver} (one input at a time, not a joint forecast): ${s.metric === "net_contribution_12m" ? "12-month net contribution" : "customers"} is ${s.metric === "net_contribution_12m" ? usd(s.atLow) : roundCount(s.atLow)} at low, ${s.metric === "net_contribution_12m" ? usd(s.atMode) : roundCount(s.atMode)} at most-likely, ${s.metric === "net_contribution_12m" ? usd(s.atHigh) : roundCount(s.atHigh)} at high.`)),
     "- None of these forecasts is calibrated to this business's own results yet. Call assumption-based ones scenarios, never predictions.",
     `- TOTAL: ≈${roundCount(total)} new customers in ${h} days (range ${roundCount(low)}–${roundCount(high)}, plays assumed to vary independently; ${PLAY_OVERLAP * 100}% overlap between plays; plays on the same step count once) for ${usd(cost)} (cash spend ${usd(spend)}/month); blended cost per customer ${usd(total > 0 ? cost / total : null)}.`,
