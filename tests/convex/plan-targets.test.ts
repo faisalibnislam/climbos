@@ -143,4 +143,16 @@ describe("plan targets (flagged)", () => {
     expect(msg?.text).toContain("Creator finder drafts pitches");
     await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: w.strategyId, playId: "pl_nope" })).rejects.toThrow(/isn't in this plan/);
   });
+
+  it("starts an opportunity conversation from tenant-checked, saved plan data", async () => {
+    const t = setup();
+    const w = await workspace(t, "ask-opportunity@example.com", []);
+    const { messageId } = await w.client.mutation(api.workspace.askAboutOpportunity, { slug: w.slug, strategyId: w.strategyId, opportunityId: "pl_creators1", question: "What should I verify first?" });
+    const msg = await t.run((ctx) => ctx.db.get(messageId));
+    expect(msg?.text).toContain("growth opportunity from plan v1");
+    expect(msg?.text).toContain("Studio creator demos");
+    expect(msg?.text).toContain("Audience: Yoga creators in the UK with studio followings");
+    expect(msg?.text).toContain("My question: What should I verify first?");
+    await expect(w.client.mutation(api.workspace.askAboutOpportunity, { slug: w.slug, strategyId: w.strategyId, opportunityId: "other-tenant-play" })).rejects.toThrow(/isn't in this plan/);
+  });
 });

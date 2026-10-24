@@ -217,6 +217,33 @@ export const startPlay = mutation({
   },
 });
 
+/** Starts a contextual conversation from a saved opportunity, using stored plan data rather than browser-authored context. */
+export const askAboutOpportunity = mutation({
+  args: { slug: v.string(), strategyId: v.id("strategies"), opportunityId: v.string(), question: v.optional(v.string()) },
+  handler: async (ctx, { slug, strategyId, opportunityId, question }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
+    const strategy = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan");
+    const play = ((strategy.expert?.plays ?? []) as { id?: string; name: string; oneLiner: string; audience?: string; hook?: string; firstActionToday?: string; biggestUnknown?: string; model?: { reachSource?: { source?: string; ref?: string; quote?: string }; steps?: { source?: string; ref?: string; quote?: string }[] } }[]).find((item) => item.id === opportunityId);
+    if (!play) throw appError("NOT_FOUND", "That opportunity isn't in this plan.");
+    const ownerQuestion = question?.trim().slice(0, 500) || "Why is this a good opportunity for my business?";
+    const evidence = [play.model?.reachSource, ...(play.model?.steps ?? [])]
+      .filter((item): item is { source?: string; ref?: string; quote?: string } => Boolean(item))
+      .slice(0, 6)
+      .map((item) => `${item.source ?? "unlabeled"}${item.ref ? ` · ${item.ref.slice(0, 240)}` : ""}${item.quote ? ` · “${item.quote.slice(0, 180)}”` : ""}`);
+    const text = [
+      `Help me understand this growth opportunity from plan v${strategy.version}. Plan text is prior analysis, not new proof. Preserve whether each input is owner-reported, research, benchmark, planned, or assumed. Do not start work or change the plan unless I explicitly ask.`,
+      `Opportunity: ${play.name}. ${play.oneLiner}`,
+      play.audience ? `Audience: ${play.audience}` : "",
+      play.hook ? `Approach: ${play.hook}` : "",
+      play.firstActionToday ? `Suggested first step: ${play.firstActionToday}` : "",
+      play.biggestUnknown ? `Biggest unknown: ${play.biggestUnknown}` : "",
+      evidence.length ? `Saved evidence basis (provenance · reference · quote):\n${evidence.join("\n")}` : "No evidence references were saved with this opportunity.",
+      `My question: ${ownerQuestion}`,
+    ].filter(Boolean).join("\n");
+    return postChat(ctx, org, user._id, text);
+  },
+});
+
 async function postChat(ctx: MutationCtx, org: Doc<"organizations">, userId: Id<"users">, text: string): Promise<{ messageId: Id<"chatMessages"> }> {
   const clean = text.trim().slice(0, 2000);
   if (!clean) throw appError("INVALID", "Type a message first.");

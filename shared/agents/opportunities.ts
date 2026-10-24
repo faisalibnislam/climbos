@@ -15,6 +15,11 @@ export interface OpportunityPlayInput {
   oneLiner?: string;
   firstActionToday?: string;
   kind?: string;
+  p10?: number;
+  p50?: number;
+  p90?: number;
+  unit?: string;
+  horizonDays?: number;
   model?: {
     ownerHoursPerWeek?: number;
     reachSource?: OpportunitySourceInput;
@@ -36,6 +41,7 @@ export interface GrowthOpportunity {
   nextStep: string;
   ownerHoursPerWeek: number | null;
   sources: OpportunitySource[];
+  forecast: { low: number; likely: number; high: number; unit: string; days: number } | null;
 }
 
 export interface QuickTakeDraft {
@@ -121,6 +127,9 @@ export function projectGrowthOpportunities(plays: readonly OpportunityPlayInput[
       })
       .slice(0, 3);
     const hours = play.model?.ownerHoursPerWeek;
+    const forecast = [play.p10, play.p50, play.p90].every((value) => typeof value === "number" && Number.isFinite(value) && value >= 0) && play.p10! <= play.p50! && play.p50! <= play.p90!
+      ? { low: play.p10!, likely: play.p50!, high: play.p90!, unit: play.unit?.trim() || "customers", days: typeof play.horizonDays === "number" && play.horizonDays > 0 ? Math.round(play.horizonDays) : 90 }
+      : null;
 
     return {
       id: play.id ?? null,
@@ -129,6 +138,7 @@ export function projectGrowthOpportunities(plays: readonly OpportunityPlayInput[
       nextStep: play.firstActionToday?.trim().slice(0, 300) ?? "",
       ownerHoursPerWeek: typeof hours === "number" && Number.isFinite(hours) && hours >= 0 ? hours : null,
       sources,
+      forecast,
     };
   });
 }

@@ -91,6 +91,18 @@ describe("Growth Home opportunity projection", () => {
     expect(result.sources[0]).toMatchObject({ label: "Page read; claim not verified", url: "https://example.com/research" });
   });
 
+  it("projects only complete, ordered, nonnegative forecast ranges", () => {
+    const [valid, reversed, missing] = projectGrowthOpportunities([
+      { name: "Valid", p10: 2, p50: 5, p90: 9, unit: "bookings", horizonDays: 30 },
+      { name: "Reversed", p10: 5, p50: 2, p90: 9, unit: "bookings", horizonDays: 30 },
+      { name: "Missing", p10: 1, p50: 2, unit: "bookings", horizonDays: 30 },
+    ]);
+
+    expect(valid.forecast).toEqual({ low: 2, likely: 5, high: 9, unit: "bookings", days: 30 });
+    expect(reversed.forecast).toBeNull();
+    expect(missing.forecast).toBeNull();
+  });
+
   it("bounds the number of projected opportunities and ignores nameless plays", () => {
     const plays = Array.from({ length: 5 }, (_, index) => ({ name: `Opportunity ${index + 1}`, kind: "bankable" })) as OpportunityPlayInput[];
     plays.unshift({ kind: "bankable", name: "   " });

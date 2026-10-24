@@ -12,6 +12,7 @@ import {
   FileCheck2,
   Hourglass,
   Lightbulb,
+  MessageCircle,
   Sparkles,
   Target,
   Zap,
@@ -21,7 +22,7 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Badge, Button, Callout, Card, CardContent, CardHeader, CardTitle, EmptyState, IconTile, Skeleton, SocialIcon, Tooltip, buttonClasses, toast, type Tone } from "@/components/ui";
+import { Badge, Button, Callout, Card, CardContent, CardHeader, CardTitle, EmptyState, IconTile, Segmented, Skeleton, SocialIcon, Tooltip, buttonClasses, toast, type Tone } from "@/components/ui";
 import { PauseAllButton } from "@/components/app/AppShell";
 import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
@@ -193,7 +194,7 @@ export default function TodayPage() {
               </ol>
             )}
           </section>
-          {data.strategy?.opportunities.length ? <GrowthOpportunities slug={slug} status={data.strategy.status} opportunities={data.strategy.opportunities} /> : null}
+          {data.strategy?.opportunities.length ? <GrowthOpportunities slug={slug} strategyId={data.strategy.id} status={data.strategy.status} opportunities={data.strategy.opportunities} /> : null}
           {suggested.length > 0 && (
             <section aria-labelledby="suggested-heading" className="flex flex-col gap-3">
               <div className="flex items-baseline justify-between gap-2">
@@ -268,15 +269,30 @@ export default function TodayPage() {
   );
 }
 
-function GrowthOpportunities({ slug, status, opportunities }: { slug: string; status: NonNullable<Today["strategy"]>["status"]; opportunities: GrowthOpportunity[] }) {
+function GrowthOpportunities({ slug, strategyId, status, opportunities }: { slug: string; strategyId: Id<"strategies">; status: NonNullable<Today["strategy"]>["status"]; opportunities: GrowthOpportunity[] }) {
+  const askAbout = useMutation(api.workspace.askAboutOpportunity);
+  const [asking, setAsking] = useState<string | null>(null);
+  const [detail, setDetail] = useState<"simple" | "detailed" | "expert">("simple");
   const planStatus = status === "needs_approval" ? "Plan needs your OK" : status === "approved" ? "From your approved plan" : status === "draft" ? "Draft plan" : "Plan update";
   const tone = status === "needs_approval" ? "amber" : status === "approved" ? "green" : "neutral";
+  async function ask(opportunity: GrowthOpportunity) {
+    if (!opportunity.id) return;
+    setAsking(opportunity.id);
+    try {
+      await askAbout({ slug, strategyId, opportunityId: opportunity.id, question: "Explain why this may fit my business, what evidence supports it, and what I should verify before acting." });
+      toast({ tone: "success", title: "Question sent to ClimbOS", description: "The reply will appear in your Today conversation." });
+    } catch (error) {
+      toast({ tone: "danger", title: errorMessage(error) });
+    } finally {
+      setAsking(null);
+    }
+  }
 
   return (
     <section aria-labelledby="opportunities-heading" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="opportunities-heading" className="heading-section">Top growth opportunities</h2>
-        <Badge tone={tone}>{planStatus}</Badge>
+        <span className="flex flex-wrap items-center gap-2"><Badge tone={tone}>{planStatus}</Badge><Segmented label="Opportunity explanation level" value={detail} onChange={setDetail} options={[{ value: "simple", label: "Simple" }, { value: "detailed", label: "Detailed" }, { value: "expert", label: "Expert" }]} /></span>
       </div>
       <ol className="grid gap-3">
         {opportunities.map((opportunity, index) => (
@@ -293,17 +309,25 @@ function GrowthOpportunities({ slug, status, opportunities }: { slug: string; st
                   <p className="mt-0.5 text-sm text-ink">{opportunity.nextStep}</p>
                 </div>
               ) : null}
+              {detail !== "simple" && opportunity.ownerHoursPerWeek !== null ? <p className="text-xs text-ink-3">Planned owner time: {opportunity.ownerHoursPerWeek} {opportunity.ownerHoursPerWeek === 1 ? "hour" : "hours"}/week</p> : null}
+              {detail === "expert" && opportunity.forecast ? (
+                <div className="rounded-lg border border-line px-3 py-2">
+                  <p className="text-xs font-medium text-ink-3">Modelled scenario · {opportunity.forecast.days} days</p>
+                  <p className="mt-0.5 text-sm text-ink-2">{opportunity.forecast.low}–{opportunity.forecast.high} {opportunity.forecast.unit} · midpoint {opportunity.forecast.likely}</p>
+                  <p className="mt-1 text-xs text-ink-3">A simulated estimate from the plan’s stated inputs, not a measured result or guarantee.</p>
+                </div>
+              ) : null}
               <div className="flex flex-wrap items-center justify-between gap-2">
-                {opportunity.ownerHoursPerWeek !== null ? (
-                  <span className="text-xs text-ink-3">Planned owner time: {opportunity.ownerHoursPerWeek} {opportunity.ownerHoursPerWeek === 1 ? "hour" : "hours"}/week</span>
-                ) : <span className="text-xs text-ink-3">Owner time not estimated</span>}
-                <Link href={`/app/${slug}/plan#plays`} className={buttonClasses({ variant: "link" })}>
-                  Open plan <ArrowRight aria-hidden />
-                </Link>
+                <span className="flex flex-wrap items-center gap-2">
+                  <Link href={`/app/${slug}/plan#plays`} className={buttonClasses({ variant: "link" })}>
+                    Open plan <ArrowRight aria-hidden />
+                  </Link>
+                  {opportunity.id ? <Button size="sm" variant="secondary" loading={asking === opportunity.id} disabled={asking !== null} onClick={() => void ask(opportunity)}><MessageCircle aria-hidden /> Ask about this</Button> : null}
+                </span>
               </div>
-              {opportunity.sources.length ? (
-                <details className="border-t border-line pt-2">
-                  <summary className="cursor-pointer text-xs font-medium text-ink-2">Evidence basis</summary>
+              {detail !== "simple" && opportunity.sources.length ? (
+                <div className="border-t border-line pt-2">
+                  <p className="text-xs font-medium text-ink-2">Evidence basis</p>
                   <ul className="mt-2 flex flex-col gap-2">
                     {opportunity.sources.map((source, sourceIndex) => (
                       <li key={`${source.label}-${source.url ?? source.detail ?? sourceIndex}`} className="text-xs text-ink-2">
@@ -316,8 +340,8 @@ function GrowthOpportunities({ slug, status, opportunities }: { slug: string; st
                       </li>
                     ))}
                   </ul>
-                </details>
-              ) : <p className="border-t border-line pt-2 text-xs text-ink-3">No linked source was saved for this play.</p>}
+                </div>
+              ) : detail !== "simple" ? <p className="border-t border-line pt-2 text-xs text-ink-3">No linked source was saved for this play.</p> : null}
             </article>
           </li>
         ))}
