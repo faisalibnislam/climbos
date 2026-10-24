@@ -96,6 +96,7 @@ import { sha256Hex } from "../shared/policy";
 import { mediaBreakEvenRoas } from "../shared/attribution/roi";
 import { approvedPlanContext } from "../shared/agents/approvedPlanContext";
 import { customerNeedPerMonth } from "../shared/agents/goal";
+import { strategyQuickTakeTask } from "../shared/agents/quickTake";
 
 /** Computed results for the explainer: valid JSON within budget, drops logged. */
 function fitMetrics(json: string): string {
@@ -1130,8 +1131,6 @@ export const buildStrategy = internalAction({
       const learned = await ctx.runQuery(internal.learning.contextFor, { orgId: job.org._id });
       const insightsBrief = `${insights ? reportDropped("strategy insights", fitJson(insights, 20_000, "insights")) : "(none yet)"}${learned ? `\n\n${learned}` : ""}${marketChangeContext(job)}`;
       const v2 = !job.run.isFixture && job.run.engine === "v2";
-      // Speed: a first take in about a minute, running alongside the real work (never blocking it).
-      const firstTake = quickTake(ctx, job, 300, "First take", `Give the owner a first take on the growth plan for this goal: the single biggest opportunity, the 2-3 moves you'd start with this week and what to measure. A deeper, researched plan follows in a few minutes.\n\nBUSINESS INTELLIGENCE:\n${insights ? reportDropped("first take insights", fitJson(insights, 6000, "insights")) : "(none yet)"}`);
       // 0. Acquisition Intelligence: classify the business and score the library's channels with evidence.
       let profile = profileFrom({
         saved: (job.business as { acquisition?: SavedAcquisition } | null)?.acquisition ?? null,
@@ -1154,6 +1153,18 @@ export const buildStrategy = internalAction({
         });
       };
       let diagnosis = diagnoseFor(profile.types);
+      // Give the quick first take the same deterministic diagnosis as the full strategy.
+      // It remains asynchronous and non-blocking, but can no longer recommend from profile alone.
+      const firstTake = quickTake(
+        ctx,
+        job,
+        300,
+        "First take",
+        strategyQuickTakeTask({
+          diagnosis: diagnosisBrief(diagnosis),
+          businessIntelligence: insights ? reportDropped("first take insights", fitJson(insights, 6000, "insights")) : "(none yet)",
+        }),
+      );
       // Speed: something useful in seconds, from code alone (no model): the channels that fit and the budget approach.
       if (v2) await previewChannels(ctx, job, profile);
       let adjustments: Adjustment[] = [];

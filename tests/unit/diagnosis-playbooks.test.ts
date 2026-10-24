@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { diagnose, diagnosisBrief, funnelRatesOf, lintDiagnosisFit, playStage } from "../../shared/agents/diagnosis";
 import { choosePlaybooks, eligibility, lintEligibility, lintEligibilityIds, playbookBrief, PLAYBOOKS, type PlaybookContext } from "../../shared/playbooks/contracts";
+import { strategyQuickTakeTask } from "../../shared/agents/quickTake";
 
 /** Cycle 2: diagnosis decided in code from the owner's numbers; playbooks gated by typed contracts. */
 describe("diagnosis", () => {
+  it("grounds the fast first take in diagnosis and preserves uncertainty rules", () => {
+    const task = strategyQuickTakeTask({ diagnosis: "Not enough evidence; count new paying customers.", businessIntelligence: "Owner-reported positioning hypothesis." });
+    expect(task).toContain("Not enough evidence; count new paying customers.");
+    expect(task).toContain("do not present a root cause as fact");
+    expect(task).toContain("does not prove that reach, advertising, or a particular channel caused the gap");
+    expect(task).toContain("Owner-reported positioning hypothesis.");
+  });
   it("EV01: 100 trials → 12 first value → 3 paid points to activation as an observation, not a proven cause", () => {
     const d = diagnose({ funnel: { periodDays: 30, leads: 100, activated: 12, newCustomers: 3 }, types: ["b2b_saas"] });
     expect(d).toMatchObject({ constraint: "activation", basis: "measured", status: "supported" });
