@@ -22,6 +22,7 @@ const decision = (o: Partial<Decision> = {}): Decision => ({
     { name: "Buy more traffic", kind: "acquisition", plays: [], chosen: false, whyNot: "More visitors leak out the same way; traffic is already up." },
   ],
   guidingPolicy: "Keep the customers we already win before paying for new ones.",
+  focus: { primaryPlay: "Win back lapsed customers", supportingMove: "Ask recent buyers what blocked reorder", maintenanceWork: "Review reorder rate weekly" },
   falsifier: "Fewer than 10 of 300 lapsed customers reorder by day 21.",
   ...o,
 });
@@ -64,6 +65,11 @@ describe("structured decision (flagged)", () => {
     expect(errors(decision({ options: [{ ...decision().options[0], plays: ["Referral loop"] }] })).some((i) => /Referral loop/.test(i.message))).toBe(true);
     const warns = lintDecision(decision(), [...plays, { name: "TikTok tests" }]).filter((i) => i.severity === "warn");
     expect(warns.some((i) => /TikTok tests/.test(i.message))).toBe(true);
+  });
+
+  it("requires the strategic focus to name an exact primary play and concrete support and upkeep", () => {
+    const issues = errors(decision({ focus: { primaryPlay: "Referral loop", supportingMove: " ", maintenanceWork: " " } }));
+    expect(issues.map((i) => i.path)).toEqual(expect.arrayContaining(["decision.focus.primaryPlay", "decision.focus.supportingMove", "decision.focus.maintenanceWork"]));
   });
 
   it("the falsifier needs a number and a date", () => {

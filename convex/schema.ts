@@ -1321,6 +1321,8 @@ export default defineSchema({
             limits: v.string(),
             options: v.array(v.object({ name: v.string(), kind: v.string(), plays: v.array(v.string()), chosen: v.boolean(), whyNot: v.string() })),
             guidingPolicy: v.string(),
+            /** New structured strategic focus; optional so existing saved decisions remain readable. */
+            focus: v.optional(v.object({ primaryPlay: v.string(), supportingMove: v.string(), maintenanceWork: v.string() })),
             falsifier: v.string(),
           }),
         ),

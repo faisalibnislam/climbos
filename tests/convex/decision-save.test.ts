@@ -17,6 +17,7 @@ const decision = {
     { name: "Buy traffic", kind: "acquisition", plays: [], chosen: false, whyNot: "Leaks the same way." },
   ],
   guidingPolicy: "Keep customers before buying new ones.",
+  focus: { primaryPlay: "Win back", supportingMove: "Ask recent buyers what blocked reorder", maintenanceWork: "Review reorder rate weekly" },
   falsifier: "Fewer than 10 of 300 reorder by day 21.",
 };
 
