@@ -207,6 +207,10 @@ export interface SafeFetchResult {
   contentType: string;
   body: string;
   truncated: boolean;
+  /** Present for conditional requests that returned 304 Not Modified. */
+  notModified?: boolean;
+  etag?: string;
+  lastModified?: string;
   error?: string;
 }
 
@@ -220,11 +224,15 @@ export async function safeFetchPage(input: {
   resolveHost?: (hostname: string) => Promise<string[]>;
   maxBytes?: number;
   timeoutMs?: number;
+  /** Conditional validators from a prior safe read. Sent only to the original origin across redirects. */
+  ifNoneMatch?: string;
+  ifModifiedSince?: string;
 }): Promise<SafeFetchResult> {
   const doFetch: FetchLike = input.fetchImpl ?? ((u, i) => fetch(u, i));
   const maxBytes = input.maxBytes ?? 2_000_000;
   const first = validateResearchUrl(input.url);
   if (!first.ok) return { ok: false, finalUrl: input.url, status: 0, contentType: "", body: "", truncated: false, error: first.reason };
+  const originalOrigin = new URL(first.url).origin;
   let current = first;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     if (input.resolveHost && classifyIpLiteral(current.hostname).kind === "not_ip") {
@@ -235,10 +243,23 @@ export async function safeFetchPage(input: {
     const timer = setTimeout(() => controller.abort(), input.timeoutMs ?? 15_000);
     let res: Response;
     try {
-      res = await doFetch(current.url, { redirect: "manual", signal: controller.signal, headers: { "User-Agent": `${RESEARCH_USER_AGENT}/1.0`, Accept: "text/html,text/plain;q=0.9,*/*;q=0.1" } });
+      const headers: Record<string, string> = { "User-Agent": `${RESEARCH_USER_AGENT}/1.0`, Accept: "text/html,text/plain;q=0.9,*/*;q=0.1" };
+      if (new URL(current.url).origin === originalOrigin) {
+        const etag = input.ifNoneMatch?.trim();
+        const modifiedSince = input.ifModifiedSince?.trim();
+        if (etag && etag.length <= 512 && !/[\r\n]/u.test(etag)) headers["If-None-Match"] = etag;
+        if (modifiedSince && modifiedSince.length <= 128 && !/[\r\n]/u.test(modifiedSince)) headers["If-Modified-Since"] = modifiedSince;
+      }
+      res = await doFetch(current.url, { redirect: "manual", signal: controller.signal, headers });
     } catch (err) {
       clearTimeout(timer);
       return { ok: false, finalUrl: current.url, status: 0, contentType: "", body: "", truncated: false, error: err instanceof Error ? err.message : String(err) };
+    }
+    if (res.status === 304) {
+      clearTimeout(timer);
+      const etag = res.headers.get("etag") ?? undefined;
+      const lastModified = res.headers.get("last-modified") ?? undefined;
+      return { ok: true, finalUrl: current.url, status: res.status, contentType: res.headers.get("content-type") ?? "", body: "", truncated: false, notModified: true, ...(etag ? { etag } : {}), ...(lastModified ? { lastModified } : {}) };
     }
     if (res.status >= 300 && res.status < 400) {
       clearTimeout(timer);
@@ -250,6 +271,8 @@ export async function safeFetchPage(input: {
       continue;
     }
     const contentType = res.headers.get("content-type") ?? "";
+    const etag = res.headers.get("etag") ?? undefined;
+    const lastModified = res.headers.get("last-modified") ?? undefined;
     let text = "";
     let truncated = false;
     try {
@@ -261,7 +284,7 @@ export async function safeFetchPage(input: {
       text = text.slice(0, maxBytes);
       truncated = true;
     }
-    return { ok: res.ok, finalUrl: current.url, status: res.status, contentType, body: text, truncated };
+    return { ok: res.ok, finalUrl: current.url, status: res.status, contentType, body: text, truncated, ...(etag ? { etag } : {}), ...(lastModified ? { lastModified } : {}) };
   }
   return { ok: false, finalUrl: current.url, status: 0, contentType: "", body: "", truncated: false, error: "Too many redirects" };
 }

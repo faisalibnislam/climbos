@@ -103,6 +103,38 @@ describe("validateResearchUrl (SSRF)", () => {
     expect(ok.ok).toBe(true);
     expect(ok.body).toContain("hi");
   });
+
+  it("returns validators and sends conditional headers on the original origin", async () => {
+    let requestHeaders: HeadersInit | undefined;
+    const fetchImpl: FetchLike = async (_url, init) => {
+      requestHeaders = init?.headers;
+      return new Response("<p>unchanged</p>", { status: 200, headers: { "content-type": "text/html", etag: '"v2"', "last-modified": "Mon, 19 Oct 2026 00:00:00 GMT" } });
+    };
+    const first = await safeFetchPage({ url: "https://example.com/page", fetchImpl });
+    expect(first).toMatchObject({ ok: true, etag: '"v2"', lastModified: "Mon, 19 Oct 2026 00:00:00 GMT" });
+
+    const notModified: FetchLike = async (_url, init) => {
+      requestHeaders = init?.headers;
+      return new Response(null, { status: 304, headers: { etag: '"v2"' } });
+    };
+    const next = await safeFetchPage({ url: "https://example.com/page", fetchImpl: notModified, ifNoneMatch: first.etag, ifModifiedSince: first.lastModified });
+    expect(requestHeaders).toMatchObject({ "If-None-Match": '"v2"', "If-Modified-Since": "Mon, 19 Oct 2026 00:00:00 GMT" });
+    expect(next).toMatchObject({ ok: true, status: 304, body: "", notModified: true, etag: '"v2"' });
+  });
+
+  it("does not forward conditional validators to a different redirect origin", async () => {
+    const seen: { url: string; headers: HeadersInit | undefined }[] = [];
+    const fetchImpl: FetchLike = async (url, init) => {
+      seen.push({ url, headers: init?.headers });
+      return url === "https://example.com/page"
+        ? new Response(null, { status: 302, headers: { location: "https://other.example.net/page" } })
+        : new Response("<p>ok</p>", { status: 200, headers: { "content-type": "text/html" } });
+    };
+    const result = await safeFetchPage({ url: "https://example.com/page", fetchImpl, ifNoneMatch: '"private-validator"' });
+    expect(result.ok).toBe(true);
+    expect(seen[0]?.headers).toMatchObject({ "If-None-Match": '"private-validator"' });
+    expect(seen[1]?.headers).not.toHaveProperty("If-None-Match");
+  });
 });
 
 describe("robots.txt", () => {
