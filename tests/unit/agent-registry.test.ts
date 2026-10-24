@@ -16,6 +16,7 @@ describe("specialist registry", () => {
     expect(agentForAction("analyze_results")?.id).toBe("analytics_attribution");
     expect(agentForAction("note")?.id).toBe("quality_assurance");
     expect(agentForAction("unsupported_action")).toBeNull();
+    expect(agentForAction("connect_account")).toBeNull();
   });
 
   it("makes every built-in role reachable through a supported action", () => {

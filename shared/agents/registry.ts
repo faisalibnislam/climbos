@@ -23,9 +23,9 @@ export const AGENT_ARCHETYPES: readonly AgentArchetype[] = Object.freeze([
   { id: "social_media_marketing", name: "Social Media Marketing Agent", objective: "Plan, draft, and learn from social content.", role: "social_media_manager", defaultActions: ["generate_content", "research", "analyze_results", "note"] },
   { id: "pr_communications", name: "PR & Communications Agent", objective: "Prepare accurate public announcements and communications.", role: "creative_director", defaultActions: ["generate_content", "research", "note"] },
   { id: "product_marketing", name: "Product Marketing Agent", objective: "Clarify product positioning, differentiation, and adoption.", role: "cmo", defaultActions: ["refresh_plan", "research", "generate_content", "note"] },
-  { id: "performance_marketing", name: "Performance Marketing Agent", objective: "Improve paid campaign plans using budget and conversion evidence.", role: "ads_manager", defaultActions: ["ad_change", "research", "analyze_results", "note"] },
+  { id: "performance_marketing", name: "Performance Marketing Agent", objective: "Improve paid campaign plans using budget and conversion evidence.", role: "ads_manager", defaultActions: ["generate_content", "ad_change", "research", "analyze_results", "note"] },
   { id: "partnership_marketing", name: "Partnership Marketing Agent", objective: "Find and prepare relevant partnership opportunities.", role: "cso", defaultActions: ["find_customers", "research", "note"] },
-  { id: "lifecycle_marketing", name: "Lifecycle Marketing Agent", objective: "Improve opt-in onboarding, engagement, and retention journeys.", role: "customer_success_manager", defaultActions: ["email_send", "research", "analyze_results", "note"] },
+  { id: "lifecycle_marketing", name: "Lifecycle Marketing Agent", objective: "Improve opt-in onboarding, engagement, and retention journeys.", role: "customer_success_manager", defaultActions: ["generate_content", "email_send", "research", "analyze_results", "note"] },
   { id: "field_marketing", name: "Field Marketing Agent", objective: "Plan useful local campaigns, events, and community activity.", role: "cmo", defaultActions: ["research", "generate_content", "note"] },
   { id: "content_marketing", name: "Content Marketing Agent", objective: "Plan useful, evidence-led educational content.", role: "seo_specialist", defaultActions: ["generate_content", "research", "analyze_results", "note"] },
   { id: "brand_marketing", name: "Brand Marketing Agent", objective: "Keep positioning and customer-facing messaging consistent.", role: "creative_director", defaultActions: ["generate_content", "refresh_plan", "note"] },
@@ -40,7 +40,7 @@ export const AGENT_ARCHETYPES: readonly AgentArchetype[] = Object.freeze([
   { id: "conversion_optimization", name: "Conversion Optimization Agent", objective: "Find and prioritize measurable improvements to conversion paths.", role: "cmo", defaultActions: ["research", "analyze_results", "generate_content", "note"] },
   { id: "sales_intelligence", name: "Sales Intelligence Agent", objective: "Summarize buyer signals, objections, and pipeline risks.", role: "cso", defaultActions: ["research", "analyze_results", "find_customers", "note"] },
   { id: "lead_intelligence", name: "Lead Intelligence Agent", objective: "Prepare evidenced prospect research and qualification.", role: "cso", defaultActions: ["find_customers", "research", "note"] },
-  { id: "email_marketing", name: "Email Marketing Agent", objective: "Prepare useful email for people the business may contact.", role: "customer_success_manager", defaultActions: ["email_send", "research", "analyze_results", "note"] },
+  { id: "email_marketing", name: "Email Marketing Agent", objective: "Prepare useful email for people the business may contact.", role: "customer_success_manager", defaultActions: ["generate_content", "email_send", "research", "analyze_results", "note"] },
   { id: "revenue_intelligence", name: "Revenue Intelligence Agent", objective: "Explain revenue and profitability patterns from available measurements.", role: "data_analyst", defaultActions: ["analyze_results", "refresh_plan", "note"] },
   { id: "pricing_strategy", name: "Pricing Strategy Agent", objective: "Evaluate pricing options without inventing willingness-to-pay evidence.", role: "cmo", defaultActions: ["research", "analyze_results", "refresh_plan", "note"] },
   { id: "customer_research", name: "Customer Research Agent", objective: "Organize customer needs and feedback into testable insights.", role: "data_analyst", defaultActions: ["research", "analyze_results", "note"] },
@@ -106,7 +106,7 @@ export function agentForAction(kind: string, channel = "", brief = ""): AgentArc
   else if (kind === "schedule_content") id = "social_media_marketing";
   else if (kind === "ad_change") id = "performance_marketing";
   else if (kind === "email_send") id = "email_marketing";
-  else if (kind === "set_up_autopilot") id = "chief_growth_strategist";
-  else if (kind === "connect_account" || kind === "note") id = "quality_assurance";
-  return id ? AGENT_ARCHETYPE_BY_ID.get(id) ?? null : null;
+  else if (kind === "note") id = "quality_assurance";
+  const candidate = id ? AGENT_ARCHETYPE_BY_ID.get(id) ?? null : null;
+  return candidate?.defaultActions.includes(kind as AgentAction) ? candidate : null;
 }
