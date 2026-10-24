@@ -1534,7 +1534,15 @@ function lintOneOutboundUrl(rawUrl: string, path: string, input: AgentInput, rul
   const businessHost = input.businessWebsite ? domainOf(input.businessWebsite) : null;
   const isBusinessHost = businessHost !== null && (host === businessHost || host.endsWith(`.${businessHost}`));
   const url = normalizeSourceUrl(raw);
-  if (isBusinessHost || (url !== null && ownerSuppliedTaskUrls(input).has(url))) return [];
+  const ownerSupplied = url !== null && ownerSuppliedTaskUrls(input).has(url);
+  if (isBusinessHost || ownerSupplied) {
+    const readSources = new Set([
+      ...(input.availableSourceUrls ?? []),
+      ...(input.precomputedResearch?.sources.map((source) => source.url) ?? []),
+    ].map(normalizeSourceUrl).filter((candidate): candidate is string => Boolean(candidate)));
+    if (url && readSources.has(url)) return [];
+    return [{ severity: "warn", rule: "unverified_copy_link", message: "This destination is on the business site or was supplied by the owner, but the exact URL was not opened in this run. Check that it loads and still leads to the intended offer before publishing.", path }];
+  }
   return [{ severity: "error", rule, message: "This link is outside the business website and was not explicitly supplied by the owner. Use the business site or provide the approved URL.", path }];
 }
 

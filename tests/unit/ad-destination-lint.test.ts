@@ -42,10 +42,12 @@ describe("ad destination validation", () => {
     expect(destinationIssues("", base)).toEqual([]); // the artifact builder falls back to the business website
   });
 
-  it("checks embedded campaign links and uses only owner-supplied external URLs as approval", () => {
-    expect(lintEmbeddedUrls([{ path: "emails[0].body", text: "Book at https://example.com/book" }], base)).toEqual([]);
+  it("checks embedded campaign links and flags allowed URLs that were not read", () => {
+    expect(lintEmbeddedUrls([{ path: "emails[0].body", text: "Book at https://example.com/book" }], base)).toMatchObject([{ rule: "unverified_copy_link", severity: "warn" }]);
     expect(lintEmbeddedUrls([{ path: "emails[0].body", text: "Book at https://booking.example.net/consultation" }], base)).toMatchObject([{ rule: "copy_link" }]);
-    expect(lintEmbeddedUrls([{ path: "emails[0].body", text: "Book at https://booking.example.net/consultation" }], { ...base, ownerSuppliedUrls: ["https://booking.example.net/consultation"] })).toEqual([]);
+    const ownerSupplied = { ...base, ownerSuppliedUrls: ["https://booking.example.net/consultation"] };
+    expect(lintEmbeddedUrls([{ path: "emails[0].body", text: "Book at https://booking.example.net/consultation" }], ownerSupplied)).toMatchObject([{ rule: "unverified_copy_link", severity: "warn" }]);
+    expect(lintEmbeddedUrls([{ path: "emails[0].body", text: "Book at https://booking.example.net/consultation" }], { ...ownerSupplied, availableSourceUrls: ["https://booking.example.net/consultation"] })).toEqual([]);
     expect(lintEmbeddedUrls([{ path: "emails[0].body", text: "Visit http://example.com/book" }], base)).toMatchObject([{ rule: "copy_link" }]);
   });
 });

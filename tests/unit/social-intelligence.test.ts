@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { researchFor, socialCalendarSpec, socialSpec } from "../../shared/agents/specs";
+import { lintEmbeddedUrls, researchFor, socialCalendarSpec, socialSpec } from "../../shared/agents/specs";
 import type { AgentInput } from "../../shared/agents/types";
 import { planJob } from "../../convex/lib/jobPlans";
 import { socialToArtifacts } from "../../convex/jobWrites";
@@ -16,6 +16,28 @@ describe("social intelligence routing", () => {
     expect(research).toMatchObject({ maxSearches: 3, maxFetches: 3 });
     expect(research?.brief).toContain("linkedin");
     expect(research?.brief).toContain("Do not call an undated signal current");
+  });
+
+  it("warns when an allowed copy link was not actually opened in the run", () => {
+    const input: AgentInput = {
+      task: "Write a LinkedIn post",
+      brief: "A business",
+      facts: [],
+      businessWebsite: "https://example.com",
+      availableSourceUrls: ["https://example.com/"],
+      ownerSuppliedUrls: ["https://partner.example/join"],
+    };
+    const issues = lintEmbeddedUrls([
+      { path: "posts[0].body", text: "See https://example.com/pricing for details." },
+      { path: "posts[1].body", text: "Apply at https://partner.example/join." },
+      { path: "posts[2].body", text: "Read https://unapproved.example/offer." },
+    ], input);
+    expect(issues.filter((issue) => issue.rule === "unverified_copy_link")).toHaveLength(2);
+    expect(issues.find((issue) => issue.rule === "unverified_copy_link")?.severity).toBe("warn");
+    expect(issues.find((issue) => issue.rule === "copy_link")?.severity).toBe("error");
+
+    const checked = lintEmbeddedUrls([{ path: "posts[0].body", text: "See https://example.com/ for details." }], input);
+    expect(checked).toEqual([]);
   });
 
   it("includes social trend research in the upfront v2 cost reservation", () => {
