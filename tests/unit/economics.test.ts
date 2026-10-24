@@ -83,7 +83,7 @@ describe("model usage analysis", () => {
   it("flags only a large rise over a sufficiently populated rolling-day baseline", () => {
     const now = 8 * 86_400_000;
     const event = (ageDays: number, costMicros: number) => ({ provider: "openai", model: "gpt-6-luna", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, costMicros, estimated: false, createdAt: now - ageDays * 86_400_000 });
-    const rows = [event(0, 31), ...[1, 2, 3, 4, 5].map((day) => event(day, 10))];
+    const rows = [event(0, 31), ...[1, 2, 3, 4, 5].map((day) => event(day, 10)), { ...event(0, 10_000), estimated: true }];
 
     expect(detectModelCostAnomalies(rows, now, false)).toMatchObject({
       available: true,

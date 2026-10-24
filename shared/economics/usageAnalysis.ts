@@ -79,6 +79,7 @@ export function detectModelCostAnomalies(rows: DatedUsageCostRow[], now: number,
   if (historyCapped) return { available: false as const, reason: "history_capped" as const, thresholdMultiple: 3, alerts: [] };
   const groups = new Map<string, { provider: string; model: string | null; currentMicros: number; priorMicros: number[]; priorDaysWithUsage: number }>();
   for (const row of rows) {
+    if (row.estimated) continue;
     const ageDays = Math.floor((now - row.createdAt) / DAY_MS);
     if (ageDays < 0 || ageDays > 7) continue;
     const model = row.model?.trim() || null;
