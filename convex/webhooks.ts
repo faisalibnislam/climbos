@@ -14,6 +14,7 @@ import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
  */
 
 const AAD = (orgId: string) => `climbos:${orgId}:webhook`;
+const MAX_WEBHOOK_PAYLOAD_CHARS = 60_000;
 
 /** Queue an event for every active endpoint of the workspace that wants it. */
 export async function emitEvent(ctx: MutationCtx, orgId: Id<"organizations">, event: WebhookEvent, data: Record<string, unknown>) {
@@ -21,7 +22,8 @@ export async function emitEvent(ctx: MutationCtx, orgId: Id<"organizations">, ev
   if (!endpoints.length) return;
   const now = Date.now();
   const payload = JSON.stringify({ event, createdAt: new Date(now).toISOString(), data });
-  for (const e of endpoints) await ctx.db.insert("webhookDeliveries", { orgId, endpointId: e._id, event, payload: payload.slice(0, 20_000), status: "pending", attempts: 0, nextAt: now, createdAt: now });
+  if (payload.length > MAX_WEBHOOK_PAYLOAD_CHARS) throw new Error(`Webhook event ${event} exceeded the ${MAX_WEBHOOK_PAYLOAD_CHARS}-character payload limit.`);
+  for (const e of endpoints) await ctx.db.insert("webhookDeliveries", { orgId, endpointId: e._id, event, payload, status: "pending", attempts: 0, nextAt: now, createdAt: now });
   await ctx.scheduler.runAfter(0, internal.webhooks.deliverDue, {});
 }
 

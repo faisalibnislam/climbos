@@ -3,6 +3,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { appError } from "./tenancy";
 import { activePolicyVersion } from "../jobWrites";
+import { emitEvent } from "../webhooks";
 
 /** Channels ClimbOS publishes to directly, and the connection provider each needs. */
 export const DIRECT_PUBLISH: Partial<Record<Doc<"artifacts">["channel"], Doc<"connections">["provider"]>> = {
@@ -84,6 +85,22 @@ export async function recordArtifactDecision(
     createdAt: now,
   });
   await ctx.db.patch(a._id, { status: p.decision === "approve" ? "approved" : "draft", approvalId, lastPublishError: undefined, updatedAt: now });
+  if (p.decision === "approve" && org.kind !== "demo" && a.kind === "blog_post") {
+    const maxContent = 50_000;
+    await emitEvent(ctx, org._id, "content.approved", {
+      approvalId,
+      artifactId: a._id,
+      artifactVersion: ver.version,
+      contentHash: ver.contentHash,
+      actionScope: "approved_export",
+      publishAuthorized: false,
+      destination: { channel: a.channel, existingPageUrl: ver.destinationUrl ?? null },
+      title: a.title,
+      contentFormat: "markdown",
+      content: ver.body.slice(0, maxContent),
+      contentComplete: ver.body.length <= maxContent,
+    });
+  }
   return approvalId;
 }
 
