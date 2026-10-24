@@ -81,7 +81,7 @@ export const list = query({
         return {
           id: _id, archetypeId, name, objective, instructions, allowedActions, knowledge, permission,
           maxRunCredits, monthlyBudgetCredits: monthlyCap, monthlyCreditsUsed: usedMicros === null ? null : microsToCredits(usedMicros), maxActionsPerRun, successMetric, trigger, modelRouting, status, updatedAt, recentRuns,
-          ownerReportedFeedback: { windowDays: 90, sampleSize: feedbackSample.length, helpful: feedbackSample.filter((entry) => entry.rating === "helpful").length, needsWork: feedbackSample.filter((entry) => entry.rating === "needs_work").length, capped: feedbackRows.length > 100 },
+          workspaceReportedFeedback: { source: "workspace_member_report", windowDays: 90, sampleSize: feedbackSample.length, helpful: feedbackSample.filter((entry) => entry.rating === "helpful").length, needsWork: feedbackSample.filter((entry) => entry.rating === "needs_work").length, capped: feedbackRows.length > 100 },
         };
       })),
     };

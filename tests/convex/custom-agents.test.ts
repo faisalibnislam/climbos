@@ -76,10 +76,10 @@ describe("custom specialist profiles", () => {
     await alice.client.mutation(api.workspace.rateCustomAgentRun, { slug: aliceWorkspace.slug, runId: message.runId!, rating: "needs_work", note: "That request was outside the profile's research scope." });
     const profileView = await alice.client.query(api.customAgents.list, { slug: aliceWorkspace.slug });
     expect(profileView.agents[0]?.recentRuns[0]).toMatchObject({ id: message.runId, rating: "needs_work", feedbackNote: "That request was outside the profile's research scope." });
-    expect(profileView.agents[0]?.ownerReportedFeedback).toMatchObject({ windowDays: 90, sampleSize: 1, helpful: 0, needsWork: 1, capped: false });
+    expect(profileView.agents[0]?.workspaceReportedFeedback).toMatchObject({ source: "workspace_member_report", windowDays: 90, sampleSize: 1, helpful: 0, needsWork: 1, capped: false });
     await alice.client.mutation(api.workspace.rateCustomAgentRun, { slug: aliceWorkspace.slug, runId: message.runId, rating: "helpful", note: "The research checklist was useful." });
     const revisedView = await alice.client.query(api.customAgents.list, { slug: aliceWorkspace.slug });
-    expect(revisedView.agents[0]?.ownerReportedFeedback).toMatchObject({ sampleSize: 1, helpful: 1, needsWork: 0 });
+    expect(revisedView.agents[0]?.workspaceReportedFeedback).toMatchObject({ sampleSize: 1, helpful: 1, needsWork: 0 });
   });
 
   it("blocks actions that exceed a specialist's projected per-run budget", async () => {

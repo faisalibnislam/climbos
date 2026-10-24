@@ -1644,7 +1644,7 @@ export default defineSchema({
     userId: v.id("users"),
     rating: v.union(v.literal("helpful"), v.literal("needs_work")),
     note: v.optional(v.string()),
-    evidenceKind: v.literal("owner_reported"),
+    evidenceKind: v.literal("member_reported"),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
