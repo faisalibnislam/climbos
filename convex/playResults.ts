@@ -66,8 +66,10 @@ export const log = mutation({
     const play = playsOf(s).find((p) => p.name === a.playName);
     if (!play) throw appError("NOT_FOUND", "That play isn't in this plan.");
     if (a.steps.length !== play.model!.steps.length) throw appError("INVALID", "Give a number for every step.");
-    const nums = [a.reach, ...a.steps, a.spendUsd, a.ownerHours];
-    if (nums.some((n) => !Number.isFinite(n) || n < 0 || n > 10_000_000)) throw appError("INVALID", "Numbers must be zero or more.");
+    const counts = [a.reach, ...a.steps];
+    if (counts.some((n) => !Number.isSafeInteger(n) || n < 0 || n > 10_000_000)) throw appError("INVALID", "Reach and funnel counts must be whole numbers from zero to ten million.");
+    const nums = [a.spendUsd, a.ownerHours];
+    if (nums.some((n) => !Number.isFinite(n) || n < 0 || n > 10_000_000)) throw appError("INVALID", "Spend and owner hours must be finite numbers from zero to ten million.");
     if (a.repeatCustomers !== undefined && (!Number.isSafeInteger(a.repeatCustomers) || a.repeatCustomers < 0 || a.repeatCustomers > 10_000_000)) throw appError("INVALID", "Repeat-customer count must be a whole number from zero to ten million.");
     if (a.retainedRevenueMinor !== undefined && (!Number.isSafeInteger(a.retainedRevenueMinor) || a.retainedRevenueMinor > 1_000_000_000_000)) throw appError("INVALID", "Retained revenue must be a valid amount in minor currency units.");
     if (a.retainedContributionMinor !== undefined && (!Number.isSafeInteger(a.retainedContributionMinor) || Math.abs(a.retainedContributionMinor) > 1_000_000_000_000)) throw appError("INVALID", "Retained contribution must be a valid amount in minor currency units.");
@@ -79,7 +81,7 @@ export const log = mutation({
     if (weekStart > Date.now()) throw appError("INVALID", "That week hasn't started yet.");
     if (weekStart < weekOf(s._creationTime)) throw appError("INVALID", "That week is before this plan was made, so it isn't this play's result.");
     const existing = (await ctx.db.query("playResults").withIndex("by_strategy", (q) => q.eq("strategyId", s._id)).take(400)).find((e) => e.weekStart === weekStart && (play.id && e.playId ? e.playId === play.id : e.playName === a.playName));
-    const row = { reach: Math.round(a.reach), steps: a.steps.map(Math.round), spendUsd: a.spendUsd, ownerHours: a.ownerHours, repeatCustomers: a.repeatCustomers, retainedRevenueMinor: a.retainedRevenueMinor, retainedContributionMinor: a.retainedContributionMinor, retentionCurrency: a.retainedRevenueMinor !== undefined || a.retainedContributionMinor !== undefined ? business!.currency : undefined, enteredBy: user._id, updatedAt: Date.now() };
+    const row = { reach: a.reach, steps: a.steps, spendUsd: a.spendUsd, ownerHours: a.ownerHours, repeatCustomers: a.repeatCustomers, retainedRevenueMinor: a.retainedRevenueMinor, retainedContributionMinor: a.retainedContributionMinor, retentionCurrency: a.retainedRevenueMinor !== undefined || a.retainedContributionMinor !== undefined ? business!.currency : undefined, enteredBy: user._id, updatedAt: Date.now() };
     if (existing) await ctx.db.patch(existing._id, row);
     else await ctx.db.insert("playResults", { orgId: org._id, strategyId: s._id, playName: a.playName, ...(play.id ? { playId: play.id } : {}), weekStart, ...row });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "play.results_logged", subjectType: "strategy", subjectId: s._id, summary: `Logged results for “${a.playName}”.` });

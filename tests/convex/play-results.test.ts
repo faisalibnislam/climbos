@@ -71,6 +71,8 @@ describe("play results", () => {
       });
     });
     await expect(owner.client.mutation(api.playResults.log, { slug, strategyId, playName: "Agency outreach", reach: 100, steps: [10, 20], spendUsd: 0, ownerHours: 1 })).rejects.toThrow(/bigger than the one before/);
+    await expect(owner.client.mutation(api.playResults.log, { slug, strategyId, playName: "Agency outreach", reach: 250.5, steps: [6, 1], spendUsd: 0, ownerHours: 1 })).rejects.toThrow(/counts must be whole numbers/);
+    await expect(owner.client.mutation(api.playResults.log, { slug, strategyId, playName: "Agency outreach", reach: 250, steps: [6, 1.5], spendUsd: 0, ownerHours: 1 })).rejects.toThrow(/counts must be whole numbers/);
     await owner.client.mutation(api.playResults.log, { slug, strategyId, playName: "Agency outreach", reach: 250, steps: [6, 1], spendUsd: 0, ownerHours: 1, repeatCustomers: 3, retainedRevenueMinor: 50_000, retainedContributionMinor: 32_000 });
     const view = await owner.client.query(api.playResults.forStrategy, { slug, strategyId });
     expect(view["Agency outreach"]).toMatchObject({ weeks: 1, reach: 250, customers: 1, status: "too_early" });
