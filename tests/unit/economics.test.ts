@@ -66,9 +66,17 @@ describe("model usage analysis", () => {
     ]);
 
     expect(summary).toEqual([
-      { provider: "openai", model: "gpt-6.1-sol", calls: 2, estimatedCalls: 1, recordedCalls: 1, inputTokens: 150, outputTokens: 30, reasoningTokens: 7, cacheReadTokens: 40, cacheWriteTokens: 10, costMicros: 150 },
-      { provider: "openai", model: null, calls: 1, estimatedCalls: 0, recordedCalls: 1, inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, costMicros: 100 },
+      { provider: "openai", model: "gpt-6.1-sol", calls: 2, estimatedCalls: 1, recordedCalls: 1, inputTokens: 150, outputTokens: 30, reasoningTokens: 7, cacheReadTokens: 40, cacheWriteTokens: 10, costMicros: 150, cacheReadRate: 0.2 },
+      { provider: "openai", model: null, calls: 1, estimatedCalls: 0, recordedCalls: 1, inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, costMicros: 100, cacheReadRate: null },
     ]);
+  });
+
+  it("keeps cache-hit rates unavailable for providers with unknown token semantics", () => {
+    const summary = summarizeModelUsage([
+      { provider: "google", model: "gemini", inputTokens: 100, outputTokens: 10, reasoningTokens: 0, cacheReadTokens: 20, cacheWriteTokens: 0, costMicros: 10, estimated: false },
+      { provider: "other", model: "unknown", inputTokens: 100, outputTokens: 10, reasoningTokens: 0, cacheReadTokens: 20, cacheWriteTokens: 0, costMicros: 5, estimated: false },
+    ]);
+    expect(summary.map((row) => row.cacheReadRate)).toEqual([0.2, null]);
   });
 });
 

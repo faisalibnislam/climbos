@@ -69,8 +69,8 @@ describe("operator accepted-plan costs", () => {
       spend24hMicros: 170_000,
       usage24h: { eventsRead: 3, coverageCapped: false },
       byModel24h: [
-        { provider: "openai", model: "gpt-6.1-sol", calls: 2, estimatedCalls: 1, recordedCalls: 1, costMicros: 150_000 },
-        { provider: "openai", model: "gpt-6-luna", calls: 1, estimatedCalls: 0, recordedCalls: 1, costMicros: 20_000 },
+        { provider: "openai", model: "gpt-6.1-sol", calls: 2, estimatedCalls: 1, recordedCalls: 1, costMicros: 150_000, cacheReadRate: 2 / 7 },
+        { provider: "openai", model: "gpt-6-luna", calls: 1, estimatedCalls: 0, recordedCalls: 1, costMicros: 20_000, cacheReadRate: 2 / 7 },
       ],
     });
   });

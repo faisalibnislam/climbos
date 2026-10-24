@@ -252,7 +252,7 @@ The shared agent and critic contracts now preserve the distinction between publi
 | REQ-COST-04 | partial | S14 | bench arms, `bench/run.ts --import-arm` | Two paid Basic runs on 2026-10-19 ($4.62 of a $5 cap): B1 lost 2–3, then 1–1–3, to B0. Causes: timid inputs from the softened wording, and a headline/CAC basis mismatch. Both fixed (ambition restored, headline on the most-likely basis). Another run needs new funding (cap $2.50) |
 | REQ-COST-05 | missing | S14 | `routes.ts` | Mode-based only. Explicit Expert choice preserved |
 | REQ-COST-06 | missing | S14 | — | |
-| REQ-COST-07 | partial | S14 | cache blocks, `prompt_cache_key` | Hits not measured |
+| REQ-COST-07 | partial | S14 | `ops.ts` `byModel24h`, `shared/economics/usageAnalysis.ts`, provider usage adapters | The dashboard now reports a 24-hour cache-read rate for OpenAI (read tokens ÷ uncached + read + write input tokens) and Google (read tokens ÷ provider-reported prompt input tokens). Providers without a known denominator expose no rate; no hit is inferred from a cache key alone. **Gap:** cache-key reuse and longer-term savings are not measured, and provider-reported token semantics still need live validation. |
 | REQ-COST-08 | missing | S14 | — | |
 | REQ-COST-09 | partial | S14 | `wordCaps.ts` | Not tuned from measurements |
 | REQ-COST-10 | exists | — | `jobs.ts:349-381` | |
