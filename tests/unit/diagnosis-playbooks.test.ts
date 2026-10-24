@@ -27,6 +27,25 @@ describe("diagnosis", () => {
     expect(diagnose({ newCustomersPerMonth: Number.NaN })).toMatchObject({ constraint: "unknown", status: "conflicting_inputs" });
     expect(diagnose({ funnel: { visitors: 10, leads: 12 }, newCustomersPerMonth: 0 })).toMatchObject({ constraint: "unknown", status: "conflicting_inputs" });
   });
+  it("rejects fractional funnel counts instead of rounding them into posterior evidence", () => {
+    const diagnosis = diagnose({ funnel: { visitors: 10.5, leads: 2, periodDays: 30 }, types: ["b2b_saas"] });
+    expect(diagnosis).toMatchObject({ constraint: "unknown", status: "conflicting_inputs" });
+    expect(diagnosis.conflicts).toContain("visitors must be a whole count between 0 and 100,000,000.");
+    expect(diagnosis.readings).toEqual([]);
+  });
+  it("rejects invalid churn and sales-cycle inputs before reading retention or maturity", () => {
+    for (const monthlyChurn of [-0.01, 1.01, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const diagnosis = diagnose({ monthlyChurn, types: ["b2b_saas"] });
+      expect(diagnosis).toMatchObject({ constraint: "unknown", status: "conflicting_inputs" });
+      expect(diagnosis.conflicts).toContain("Monthly churn must be a share between 0 and 100%.");
+      expect(diagnosis.readings.some((reading) => reading.stage === "retention")).toBe(false);
+    }
+    for (const salesCycleDays of [0, -30, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const diagnosis = diagnose({ funnel: { periodDays: 30, leads: 10, activated: 5, newCustomers: 1 }, salesCycleDays });
+      expect(diagnosis).toMatchObject({ constraint: "unknown", status: "conflicting_inputs" });
+      expect(diagnosis.conflicts).toContain("Sales cycle length must be a number of days greater than zero.");
+    }
+  });
   it("rejects an explicitly invalid measurement period instead of silently assuming 30 days", () => {
     for (const periodDays of [0, -14, Number.NaN, Number.POSITIVE_INFINITY]) {
       const diagnosis = diagnose({ funnel: { periodDays, visitors: 300, leads: 30, activated: 15, newCustomers: 3 }, newCustomersPerMonth: 10 });
@@ -36,6 +55,7 @@ describe("diagnosis", () => {
   });
   it("SaaS churn above the reference is a retention problem", () => {
     expect(diagnose({ monthlyChurn: 0.12, types: ["b2b_saas"] }).constraint).toBe("retention");
+    expect(diagnose({ monthlyChurn: 0, types: ["b2b_saas"] })).toMatchObject({ constraint: "unknown", status: "insufficient_evidence" });
     expect(diagnose({ monthlyChurn: 0.12, types: ["local_services"] }).constraint).toBe("unknown");
   });
   it("activated users who don't pay point to conversion", () => {

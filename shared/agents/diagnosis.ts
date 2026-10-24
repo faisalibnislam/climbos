@@ -163,9 +163,26 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
   if (gt(f.activated, f.leads)) conflicts.push(`${f.activated} reached first value but only ${f.leads} leads: one of the two counts is off.`);
   if (gt(f.newCustomers, f.leads) && f.leads !== undefined) conflicts.push(`${f.newCustomers} new customers but only ${f.leads} leads: some buyers may skip the lead step, or a count is off.`);
   if (gt(f.newCustomers, f.activated) && !gt(f.newCustomers, f.leads)) conflicts.push(`${f.newCustomers} paid but only ${f.activated} reached first value: either people pay before first value (then first value isn't on the path to paying) or a count is off.`);
-  for (const [k, n] of Object.entries({ visitors: f.visitors, leads: f.leads, activated: f.activated, newCustomers: f.newCustomers })) if (n !== undefined && !(Number.isFinite(n) && n >= 0)) conflicts.push(`${k} must be a count of zero or more.`);
+  for (const [k, n] of Object.entries({ visitors: f.visitors, leads: f.leads, activated: f.activated, newCustomers: f.newCustomers })) if (n !== undefined && !(Number.isSafeInteger(n) && n >= 0 && n <= 100_000_000)) conflicts.push(`${k} must be a whole count between 0 and 100,000,000.`);
   if (f.periodDays !== undefined && !(Number.isFinite(f.periodDays) && f.periodDays > 0)) conflicts.push("The measurement period must be a number of days greater than zero.");
+  if (ctx.monthlyChurn !== undefined && ctx.monthlyChurn !== null && !(Number.isFinite(ctx.monthlyChurn) && ctx.monthlyChurn >= 0 && ctx.monthlyChurn <= 1)) conflicts.push("Monthly churn must be a share between 0 and 100%.");
+  if (ctx.salesCycleDays !== undefined && !(Number.isFinite(ctx.salesCycleDays) && ctx.salesCycleDays > 0)) conflicts.push("Sales cycle length must be a number of days greater than zero.");
   if (ctx.newCustomersPerMonth !== undefined && ctx.newCustomersPerMonth !== null && !(Number.isFinite(ctx.newCustomersPerMonth) && ctx.newCustomersPerMonth >= 0)) conflicts.push("Capacity must be a number of zero or more new customers a month.");
+
+  // Do not round malformed measurements into posterior evidence or show them as readings.
+  if (conflicts.length) {
+    return {
+      constraint: "unknown",
+      basis: "none",
+      readings: [],
+      competing: COMPETING.unknown,
+      missing: conflicts.map((c) => `Resolve: ${c}`),
+      status: "conflicting_inputs",
+      hypotheses: [],
+      conflicts,
+      rules,
+    };
+  }
 
   // This input is remaining capacity, not total historical intake. Current funnel volume
   // cannot be compared with it; only an explicit zero means no additional demand can be served.
@@ -178,7 +195,7 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
     }
   }
   // Retention: only against a reference that exists (SaaS).
-  if (ctx.monthlyChurn !== undefined && ctx.monthlyChurn !== null) {
+  if (ctx.monthlyChurn !== undefined && ctx.monthlyChurn !== null && Number.isFinite(ctx.monthlyChurn) && ctx.monthlyChurn >= 0 && ctx.monthlyChurn <= 1) {
     const ref = REFERENCES.saasChurn;
     if (saas) rules.push(`${ref.id}@${ref.version}`);
     readings.push({ stage: "retention", observed: `${pct(ctx.monthlyChurn)} of customers leave each month`, rate: ctx.monthlyChurn, reference: saas ? ref.text : null, verdict: saas ? (ctx.monthlyChurn > (ref.high ?? ref.low) ? "weak" : "ok") : "unknown", ...(saas ? { referenceId: ref.id } : {}) });
@@ -267,10 +284,6 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
     rules: [...new Set(rules)],
   });
 
-  if (conflicts.length) {
-    missing.unshift(...conflicts.map((c) => `Resolve: ${c}`));
-    return out("unknown", "conflicting_inputs", []);
-  }
   if (capR?.verdict === "weak") return out("delivery", "supported", [hyp("delivery", capR.observed, null, ["The owner reported no remaining capacity for additional customers."], [COMPETING.delivery])]);
   if (retR?.verdict === "weak") return out("retention", "supported", [hyp("retention", retR.observed, null, [`Above the ${REFERENCES.saasChurn.text}.`], [COMPETING.retention])]);
 
