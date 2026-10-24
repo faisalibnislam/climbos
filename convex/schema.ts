@@ -962,7 +962,7 @@ export default defineSchema({
     /** A is the current version; B the challenger (JSON for landing pages, text for subjects). */
     variants: v.array(v.object({ key: v.string(), value: v.string() })),
     stats: v.array(v.object({ key: v.string(), trials: v.number(), wins: v.number() })),
-    status: v.union(v.literal("running"), v.literal("done"), v.literal("stopped")),
+    status: v.union(v.literal("running"), v.literal("done"), v.literal("invalid"), v.literal("stopped")),
     winner: v.optional(v.string()),
     note: v.optional(v.string()),
     startedAt: v.number(),

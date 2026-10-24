@@ -17,6 +17,8 @@ export interface VariantStats {
 
 export interface Decision {
   done: boolean;
+  /** A completed experiment with a broken assignment split is invalid, not evidence for either variant. */
+  validity: "collecting" | "valid" | "invalid";
   winner: string | null;
   /** Relative lift of B over A (e.g. 0.25 = +25%), null until both have data. */
   lift: number | null;
@@ -28,21 +30,21 @@ export interface Decision {
 export function decide(stats: VariantStats[], minTrials: number, maxTrials: number): Decision {
   const a = stats.find((s) => s.key === "A");
   const b = stats.find((s) => s.key === "B");
-  if (!a || !b) return { done: false, winner: null, lift: null, confidence: 0, note: "Waiting for data." };
+  if (!a || !b) return { done: false, validity: "collecting", winner: null, lift: null, confidence: 0, note: "Waiting for data." };
   const pa = a.trials ? a.wins / a.trials : 0;
   const pb = b.trials ? b.wins / b.trials : 0;
   const lift = a.trials && b.trials && pa > 0 ? (pb - pa) / pa : null;
   const total = a.trials + b.trials;
   if (total < maxTrials || a.trials < minTrials || b.trials < minTrials)
-    return { done: false, winner: null, lift, confidence: 0, note: `Collecting: ${total} of ${maxTrials}. The result is read once at the end; an early lead is usually noise.` };
+    return { done: false, validity: "collecting", winner: null, lift, confidence: 0, note: `Collecting: ${total} of ${maxTrials}. The result is read once at the end; an early lead is usually noise.` };
   // The split must match 50/50 before any result is read.
   const srm = sampleRatio({ planned: [50, 50], observed: [a.trials, b.trials] });
-  if (srm.mismatch) return { done: true, winner: "A", lift, confidence: 0, note: "The two versions weren't shown equally often, so the result can't be trusted. Kept the original; check the page or sending before testing again." };
+  if (srm.mismatch) return { done: true, validity: "invalid", winner: null, lift: null, confidence: 0, note: "Invalid test: the two versions weren't shown as planned, so neither version can be called a winner. The original remains active; check assignment, exposure and tracking before testing again." };
   const r = compareRates({ control: { visitors: a.trials, conversions: Math.min(a.wins, a.trials) }, treatment: { visitors: b.trials, conversions: Math.min(b.wins, b.trials) } });
   const confidence = Math.round((1 - r.pValue) * 1000) / 10;
-  if (r.verdict === "difference_detected" && pb > pa) return { done: true, winner: "B", lift, confidence, note: `The new version did better (p = ${Math.round(r.pValue * 1000) / 1000}).` };
-  if (r.verdict === "difference_detected") return { done: true, winner: "A", lift, confidence, note: `The original did better (p = ${Math.round(r.pValue * 1000) / 1000}).` };
-  return { done: true, winner: "A", lift, confidence, note: "No clear difference, so we kept the original." };
+  if (r.verdict === "difference_detected" && pb > pa) return { done: true, validity: "valid", winner: "B", lift, confidence, note: `The new version did better (p = ${Math.round(r.pValue * 1000) / 1000}).` };
+  if (r.verdict === "difference_detected") return { done: true, validity: "valid", winner: "A", lift, confidence, note: `The original did better (p = ${Math.round(r.pValue * 1000) / 1000}).` };
+  return { done: true, validity: "valid", winner: "A", lift, confidence, note: "No clear difference, so we kept the original." };
 }
 
 /** Stable A/B split for a recipient id. */

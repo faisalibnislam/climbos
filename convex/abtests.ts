@@ -24,7 +24,13 @@ export async function recordAb(ctx: MutationCtx, test: Doc<"abTests">, key: stri
     await ctx.db.patch(test._id, { stats });
     return;
   }
-  await ctx.db.patch(test._id, { stats, status: "done", winner: d.winner ?? "A", note: d.note, endedAt: Date.now() });
+  await ctx.db.patch(test._id, {
+    stats,
+    status: d.validity === "invalid" ? "invalid" : "done",
+    ...(d.winner ? { winner: d.winner } : { winner: undefined }),
+    note: d.note,
+    endedAt: Date.now(),
+  });
   if (d.winner === "B") await applyB(ctx, test);
 }
 

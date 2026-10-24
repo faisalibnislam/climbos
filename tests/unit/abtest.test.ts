@@ -13,8 +13,8 @@ describe("A/B decisions", () => {
   });
   it("a split that doesn't match 50/50 keeps the original whatever the rates say", () => {
     const d = decide([{ key: "A", trials: 1700, wins: 20 }, { key: "B", trials: 1300, wins: 60 }], 100, 3000);
-    expect(d).toMatchObject({ done: true, winner: "A" });
-    expect(d.note).toMatch(/weren't shown equally/);
+    expect(d).toMatchObject({ done: true, validity: "invalid", winner: null, confidence: 0, lift: null });
+    expect(d.note).toMatch(/Invalid test.*neither version can be called a winner.*original remains active/);
   });
   it("identical variants rarely produce a B winner (seeded simulation)", () => {
     let seed = 7;

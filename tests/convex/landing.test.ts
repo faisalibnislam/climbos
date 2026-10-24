@@ -82,6 +82,30 @@ describe("landing A/B test", () => {
     expect((await t.query(api.landing.publicPage, { slug: page.slug }))?.test).toBeNull();
   });
 
+  it("persists a sample-ratio mismatch as invalid with no winner or challenger rollout", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "ab-invalid@example.com");
+    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Invalid Split Co" });
+    const pageId = await owner.client.mutation(api.landing.create, { slug, brief: "Free audit" });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await owner.client.mutation(api.landing.setLive, { slug, id: pageId, live: true });
+    const page = (await owner.client.query(api.landing.list, { slug })).pages[0];
+    const originalHeadline = page.content!.headline;
+    await owner.client.mutation(api.abtests.startLanding, { slug, pageId, headline: "A challenger headline" });
+    const [started] = await owner.client.query(api.abtests.forTarget, { slug, targetId: pageId });
+
+    // Put the run one view short of its fixed horizon with an already broken 90/10 split.
+    await t.run(async (ctx) => ctx.db.patch(started.id, {
+      stats: [{ key: "A", trials: 899, wins: 1 }, { key: "B", trials: 100, wins: 50 }],
+    }));
+    await t.mutation(api.landing.viewed, { slug: page.slug, variant: "A" });
+
+    const [finished] = await owner.client.query(api.abtests.forTarget, { slug, targetId: pageId });
+    expect(finished).toMatchObject({ status: "invalid", winner: null, confidence: 0 });
+    expect(finished.note).toMatch(/Invalid test/);
+    expect((await owner.client.query(api.landing.list, { slug })).pages[0].content?.headline).toBe(originalHeadline);
+  });
+
   it("a page that didn't finish can be written again; deleting a page ends its running test", async () => {
     const t = setup();
     const owner = await asNewUser(t, "ab-retry@example.com");
