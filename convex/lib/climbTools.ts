@@ -76,9 +76,44 @@ const CompetitorsOutputSchema = z.object({
   coverage: z.object({ watched: z.number().int().nonnegative(), failed: z.number().int().nonnegative(), pending: z.number().int().nonnegative(), changesReturned: z.number().int().nonnegative(), changesTruncated: z.boolean(), note: z.string() }),
 });
 const LinksOutputSchema = z.object({ weekTotal: z.number(), returned: z.number().int().nonnegative(), truncated: z.boolean(), coverage: z.string(), links: z.array(z.object({ label: z.string(), url: HttpUrlSchema, clicks: z.number(), week: z.number() })) });
-const OverviewOutputSchema = z.object({ business: z.json(), goal: z.json(), plan: z.json(), waitingForApproval: z.array(z.object({ id: z.string(), title: z.string(), channel: z.string() })), approvalsCount: z.number(), next: z.array(z.json()), recentJobs: z.array(z.object({ id: z.string(), title: z.string(), status: z.string() })), paused: z.boolean() });
-const PlanOutputSchema = z.object({ goal: z.json(), plan: z.json().optional(), status: z.string().optional(), summary: z.string().optional(), diagnosis: z.string().optional(), northStar: z.json().optional(), plays: z.array(z.json()).optional(), weekOne: z.array(z.string()).optional(), channels: z.array(z.object({ name: z.string(), priority: z.number(), status: z.string() })).optional(), experiments: z.array(z.object({ name: z.string(), status: z.string() })).optional() });
-const AutopilotOutputSchema = z.object({ settings: z.json(), trust: z.array(z.json()), connected: z.array(z.string()), weeks: z.array(z.object({ weekOf: z.string(), theme: z.string().optional(), slots: z.array(z.object({ id: z.string(), channel: z.string(), when: z.string(), idea: z.string(), status: z.string(), draftId: z.string().nullable() })) })) });
+const OverviewOutputSchema = z.object({
+  business: z.object({ name: z.string(), website: z.string().nullable(), summary: z.string().nullable(), type: z.string().nullable() }).nullable(),
+  goal: z.object({ statement: z.string(), horizonDays: z.number(), monthlyAdBudget: z.number(), currency: z.string(), createdAt: z.number() }).nullable(),
+  plan: z.object({ status: z.string(), version: z.number(), summary: z.string().nullable() }).nullable(),
+  waitingForApproval: z.array(z.object({ id: z.string(), title: z.string(), channel: z.string() })),
+  approvalsCount: z.number().int().nonnegative(),
+  next: z.array(z.object({ title: z.string(), why: z.string(), href: z.string(), kind: z.string() })),
+  recentJobs: z.array(z.object({ id: z.string(), title: z.string(), status: z.string() })),
+  paused: z.boolean(),
+});
+const PlanOutputSchema = z.object({
+  goal: z.object({ statement: z.string(), horizonDays: z.number(), monthlyAdBudget: z.number(), currency: z.string() }).nullable(),
+  plan: z.null().optional(),
+  status: z.string().optional(),
+  summary: z.string().optional(),
+  diagnosis: z.string().optional(),
+  northStar: z.object({ metric: z.string(), baseline: z.string(), target: z.string() }).optional(),
+  plays: z.array(z.object({ name: z.string(), kind: z.string(), oneLiner: z.string(), forecast: z.string().nullable() })).optional(),
+  weekOne: z.array(z.string()).optional(),
+  channels: z.array(z.object({ name: z.string(), priority: z.number(), status: z.string() })).optional(),
+  experiments: z.array(z.object({ name: z.string(), status: z.string() })).optional(),
+});
+const AutopilotOutputSchema = z.object({
+  settings: z.object({
+    enabled: z.boolean(),
+    mode: z.enum(["always_ask", "trust_ladder", "auto"]),
+    channels: z.array(z.object({ channel: z.string(), postsPerWeek: z.number() })),
+    postingHours: z.array(z.number()),
+    alwaysAskTopics: z.array(z.string()),
+    imagesPerWeek: z.number(),
+    aiMode: z.enum(["basic", "expert"]).nullable(),
+    pausedReason: z.string().nullable(),
+    lastPlannedWeek: z.string().nullable(),
+  }).nullable(),
+  trust: z.array(z.object({ channel: z.string(), streak: z.number(), unlocked: z.boolean(), threshold: z.number() })),
+  connected: z.array(z.string()),
+  weeks: z.array(z.object({ weekOf: z.string(), theme: z.string().optional(), slots: z.array(z.object({ id: z.string(), channel: z.string(), when: z.string(), idea: z.string(), status: z.string(), draftId: z.string().nullable() })) })),
+});
 const ResultsOutputSchema = z.object({
   span: z.number().int().min(7).max(365),
   historyLimited: z.boolean(),
