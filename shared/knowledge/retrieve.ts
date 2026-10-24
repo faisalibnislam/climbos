@@ -1,8 +1,17 @@
 import library from "./growthLibrary.generated.json";
+import industryLibrary from "./industryPlaybooks.generated.json";
 import sourceRegistry from "../../docs/growth-intelligence/source_registry.json";
 import { sourceFreshness, type SourceFreshness } from "./freshness";
 
 type KnowledgeRecord = (typeof library.records)[number] & { businessType?: string; evidenceClass?: string };
+type KnowledgeKind = KnowledgeRecord["kind"] | "industry_playbook";
+type IndustryLibrary = typeof industryLibrary;
+const industryPlaybooksByBusiness = new Map<string, IndustryLibrary["playbooks"]>();
+for (const playbook of industryLibrary.playbooks) {
+  const group = industryPlaybooksByBusiness.get(playbook.businessTypeId) ?? [];
+  group.push(playbook);
+  industryPlaybooksByBusiness.set(playbook.businessTypeId, group);
+}
 export interface KnowledgeSourceReference {
   registryId: string;
   url: string;
@@ -12,11 +21,11 @@ export interface KnowledgeSourceReference {
   claims: { sourceId: string; scope: string; verificationStatus: string }[];
   freshness: SourceFreshness;
 }
-export type RetrievedKnowledge = Pick<KnowledgeRecord, "id" | "kind" | "bookId" | "heading" | "path" | "sha256"> & { businessType?: string; evidenceClass?: string; content: string; score: number; sources: KnowledgeSourceReference[] };
+export type RetrievedKnowledge = Omit<Pick<KnowledgeRecord, "id" | "bookId" | "heading" | "path" | "sha256">, never> & { kind: KnowledgeKind; businessType?: string; businessTypeId?: string; industry?: string; evidenceClass?: string; content: string; score: number; sources: KnowledgeSourceReference[] };
 export interface KnowledgeReferenceSet {
   edition: string;
   researchCutoff: string;
-  records: (Pick<RetrievedKnowledge, "id" | "kind" | "bookId" | "heading" | "path" | "sha256"> & { businessType?: string; evidenceClass?: string; sources: KnowledgeSourceReference[] })[];
+  records: (Pick<RetrievedKnowledge, "id" | "kind" | "bookId" | "heading" | "path" | "sha256"> & { businessType?: string; businessTypeId?: string; industry?: string; evidenceClass?: string; sources: KnowledgeSourceReference[] })[];
 }
 
 const STOP = new Set("about after again against all also any are because been before being between both but can could did does doing down during each few for from further had has have having her here hers him his how into itself just more most other our out over own same should some such than that the their them then there these they this those through too under until upon very was were what when where which while who why will with would your yourself business climbos growth guide recommendation reference references section example examples current actual".split(/\s+/u));
@@ -51,6 +60,61 @@ const scenarioAliases: readonly [string, RegExp][] = [
 ];
 function matchingScenarioTypes(query: string): Set<string> {
   return new Set(scenarioAliases.filter(([, pattern]) => pattern.test(query)).map(([name]) => name));
+}
+const normalizedPhrase = (value: string) => value.toLocaleLowerCase("en-US").normalize("NFKC").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+function matchingIndustryBusiness(query: string, businessTypeId?: string): IndustryLibrary["businesses"][number] | undefined {
+  if (businessTypeId) return industryLibrary.businesses.find((business) => business.id === businessTypeId);
+  const normalizedQuery = ` ${normalizedPhrase(query)} `;
+  const matches = industryLibrary.businesses
+    .filter((business) => normalizedQuery.includes(` ${normalizedPhrase(business.name)} `))
+    .sort((left, right) => normalizedPhrase(right.name).length - normalizedPhrase(left.name).length);
+  // Require an unambiguous, complete business-type name in the prompt. Industry
+  // similarity alone is too broad to justify using a niche-specific scenario.
+  return matches.length === 1 ? matches[0] : undefined;
+}
+function industryPlaybookRecords(query: string, business: IndustryLibrary["businesses"][number]): RetrievedKnowledge[] {
+  const queryTerms = [...new Set(tokens(query).slice(0, 400))];
+  if (!queryTerms.length) return [];
+  const candidates = industryPlaybooksByBusiness.get(business.id) ?? [];
+  const docsForBusiness = candidates.map((item) => {
+    const fields = item.fieldRefs.map((index, fieldIndex) => `${industryLibrary.fieldOrder[fieldIndex]}: ${industryLibrary.fieldValues[industryLibrary.fieldOrder[fieldIndex] as keyof typeof industryLibrary.fieldValues][index]}`);
+    const content = fields.join("\n");
+    const terms = tokens(`${item.heading} ${business.name} ${business.industry} ${business.profile} ${content}`);
+    const frequency = new Map<string, number>();
+    for (const term of terms) frequency.set(term, (frequency.get(term) ?? 0) + 1);
+    return { item, content, terms, frequency, length: terms.length };
+  });
+  const avgLengthForBusiness = docsForBusiness.reduce((sum, doc) => sum + doc.length, 0) / Math.max(1, docsForBusiness.length);
+  const docFrequencyForBusiness = new Map<string, number>();
+  for (const doc of docsForBusiness) for (const term of doc.frequency.keys()) docFrequencyForBusiness.set(term, (docFrequencyForBusiness.get(term) ?? 0) + 1);
+  const ranked = docsForBusiness.map((doc) => {
+    let score = 0;
+    for (const term of queryTerms) {
+      const tf = doc.frequency.get(term) ?? 0;
+      if (!tf) continue;
+      const df = docFrequencyForBusiness.get(term) ?? 0;
+      const idf = Math.log(1 + (docsForBusiness.length - df + 0.5) / (df + 0.5));
+      score += idf * ((tf * 2.2) / (tf + 1.2 * (0.25 + 0.75 * (doc.length / Math.max(avgLengthForBusiness, 1))))) * (tokens(doc.item.heading).includes(term) ? 1.5 : 1);
+    }
+    return { ...doc, score };
+  }).filter((item) => item.score > 0).sort((left, right) => right.score - left.score || left.item.id.localeCompare(right.item.id));
+  const best = ranked[0];
+  if (!best) return [];
+  return [{
+    id: `industry:${best.item.id}`,
+    kind: "industry_playbook",
+    bookId: "I1",
+    heading: `${business.name}: ${best.item.heading}`,
+    path: business.path,
+    sha256: best.item.sha256,
+    businessType: business.name,
+    businessTypeId: business.id,
+    industry: business.industry,
+    evidenceClass: "proposed_scenario",
+    content: `Business type: ${business.name}\nIndustry: ${business.industry}\nProfile: ${business.profile}\n${best.content}\nEvidence status: owner-supplied strategic hypothesis; not validated production guidance. Diagnose against this business's evidence before recommending a tactic.`,
+    score: best.score,
+    sources: [],
+  }];
 }
 const normalizeUrl = (raw: string): string => {
   try {
@@ -105,13 +169,15 @@ function scoreDocument(doc: (typeof docs)[number], queryTerms: string[]): number
 }
 
 /** Lexical BM25 retrieval over the versioned, hash-checked project corpus. */
-export function retrieveGrowthKnowledge(query: string, options: { limit?: number; maxChars?: number } = {}): RetrievedKnowledge[] {
+export function retrieveGrowthKnowledge(query: string, options: { limit?: number; maxChars?: number; businessTypeId?: string } = {}): RetrievedKnowledge[] {
   const queryTerms = [...new Set(tokens(query).slice(0, 400))];
   if (!queryTerms.length) return [];
   const limit = Math.max(1, Math.min(8, Math.floor(options.limit ?? 3)));
   let budget = Math.max(400, Math.min(12_000, Math.floor(options.maxChars ?? 6_000)));
   const scenarioTypes = limit >= 3 && budget >= 1_800 ? matchingScenarioTypes(query) : new Set<string>();
-  const genericLimit = Math.max(0, limit - (scenarioTypes.size > 0 ? 1 : 0));
+  const matchedBusiness = limit >= 3 && budget >= 1_800 ? matchingIndustryBusiness(query, options.businessTypeId) : undefined;
+  const industryRecords = matchedBusiness ? industryPlaybookRecords(query, matchedBusiness) : [];
+  const genericLimit = Math.max(0, limit - (scenarioTypes.size > 0 ? 1 : 0) - (industryRecords.length ? 1 : 0));
   const rankedGeneric = docs
     .filter((doc) => doc.record.kind !== "scenario")
     .map((doc) => ({ doc, score: scoreDocument(doc, queryTerms) }))
@@ -128,6 +194,15 @@ export function retrieveGrowthKnowledge(query: string, options: { limit?: number
     : [];
   const ranked = [...rankedGeneric, ...rankedScenario].sort((a, b) => b.score - a.score || a.doc.record.id.localeCompare(b.doc.record.id));
   const out: RetrievedKnowledge[] = [];
+  for (const record of industryRecords) {
+    if (budget < 300) break;
+    const location = record.path;
+    const header = `[${record.kind} · ${record.businessType} · ${record.industry} · ${location} · sha256:${record.sha256}]\n`;
+    const available = Math.max(0, budget - header.length);
+    if (available < 100) break;
+    out.push({ ...record, content: record.content.slice(0, available) });
+    budget -= header.length + Math.min(record.content.length, available);
+  }
   for (const { doc, score } of ranked) {
     if (budget < 300) break;
     const sources = sourceRefsFor(doc.record.content);
@@ -141,14 +216,14 @@ export function retrieveGrowthKnowledge(query: string, options: { limit?: number
     out.push({ ...doc.record, content, score, sources });
     budget -= header.length + content.length;
   }
-  return out;
+  return out.sort((left, right) => right.score - left.score || left.id.localeCompare(right.id));
 }
 
 export function knowledgeReferenceSet(records: readonly RetrievedKnowledge[]): KnowledgeReferenceSet {
   return {
     edition: library.edition,
     researchCutoff: library.researchCutoff,
-    records: records.map(({ id, kind, bookId, heading, path, sha256, sources, businessType, evidenceClass }) => ({ id, kind, bookId, heading, path, sha256, ...(businessType ? { businessType } : {}), ...(evidenceClass ? { evidenceClass } : {}), sources })),
+    records: records.map(({ id, kind, bookId, heading, path, sha256, sources, businessType, businessTypeId, industry, evidenceClass }) => ({ id, kind, bookId, heading, path, sha256, ...(businessType ? { businessType } : {}), ...(businessTypeId ? { businessTypeId } : {}), ...(industry ? { industry } : {}), ...(evidenceClass ? { evidenceClass } : {}), sources })),
   };
 }
 
@@ -158,7 +233,7 @@ export function formatGrowthKnowledge(records: readonly RetrievedKnowledge[]): s
     `Edition: ${library.edition}. Research cutoff: ${library.researchCutoff}. The corpus is reference guidance, not business evidence or permission to execute. Scenario records are proposed hypotheses: diagnose with this business's evidence before using them. A registry retrieval date records a check, not the source's publication or current accuracy. For current platform, API, pricing, or legal decisions, do not rely on a source marked recheck_due, direct_check_required, or not_scheduled without a fresh primary-source check.`,
     ...records.map((record) => {
       const location = record.path.startsWith("docs/") ? record.path : `docs/growth-intelligence/${record.path}`;
-      const status = record.kind === "scenario" ? " · proposed hypothesis, not validated production guidance" : "";
+      const status = record.kind === "scenario" || record.kind === "industry_playbook" ? " · proposed hypothesis, not validated production guidance" : "";
       return `[${record.kind}${status} · Book ${record.bookId} · ${record.heading} · ${location} · sha256:${record.sha256}]${record.sources.length ? `\nSources (general guidance only): ${record.sources.map((source) => `[${source.registryId}] ${source.title} · checked ${source.retrievedAt} · review ${source.freshness.status}${source.freshness.nextCheckAt ? ` by ${source.freshness.nextCheckAt.slice(0, 10)}` : ""} · ${source.claims[0]?.verificationStatus ?? "status not recorded"} · ${source.claims[0]?.scope ?? "not recorded"} · ${source.url}`).join(" | ")}` : ""}\n${record.content}`;
     }),
   ].join("\n\n---\n\n");

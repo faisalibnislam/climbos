@@ -17,7 +17,7 @@
     "env:sync": "node scripts/env-sync.mjs",
     "polar:setup": "node scripts/polar-setup.mjs",
     "skills:build": "node scripts/skills-build.mjs",
-    "growth-intelligence:build": "node scripts/growth-intelligence-build.mjs",
+    "growth-intelligence:build": "python3 scripts/growth-industry-build.py && node scripts/growth-intelligence-build.mjs",
     "bench": "TMPDIR=/private/tmp/claude-501 tsx bench/run.ts",
     "auth:keys": "node scripts/generate-auth-keys.mjs"
   },

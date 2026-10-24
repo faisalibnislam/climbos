@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import library from "@shared/knowledge/growthLibrary.generated.json";
+import industryLibrary from "@shared/knowledge/industryPlaybooks.generated.json";
 import { formatGrowthKnowledge, growthKnowledgeContext, knowledgeReferenceSet, retrieveGrowthKnowledge } from "@shared/knowledge/retrieve";
 import { sourceFreshness } from "@shared/knowledge/freshness";
 import { formatBusinessKnowledgeLayers, KNOWLEDGE_LAYER_POLICY } from "@shared/knowledge/layers";
@@ -57,6 +58,37 @@ describe("growth intelligence retrieval", () => {
     const persuasion = retrieveGrowthKnowledge("genuine scarcity false urgency countdown inventory evidence", { limit: 3, maxChars: 2_500 });
     expect(persuasion.some((record) => record.kind === "principle" && /FOMO|urgency|Scarcity/iu.test(record.heading))).toBe(true);
     expect(formatGrowthKnowledge(persuasion)).toContain("proposed hypotheses");
+  });
+
+  it("indexes the 25,000 industry playbooks compactly and retrieves one exact business-type match", () => {
+    expect(industryLibrary.businesses).toHaveLength(500);
+    expect(new Set(industryLibrary.businesses.map((business) => business.id)).size).toBe(500);
+    expect(industryLibrary.playbooks).toHaveLength(25_000);
+    expect(new Set(industryLibrary.playbooks.map((playbook) => playbook.id)).size).toBe(25_000);
+    expect(industryLibrary.sourceSha256).toMatch(/^[a-f0-9]{64}$/u);
+    expect(industryLibrary.evidenceClass).toBe("proposed_scenario");
+    expect(industryLibrary.fieldValues["ClimbOS automation"]).toHaveLength(86);
+
+    const records = retrieveGrowthKnowledge("Independent bookstore buying trigger new release or gift", { limit: 3, maxChars: 2_500 });
+    const industryRecord = records.find((record) => record.kind === "industry_playbook");
+    expect(industryRecord).toMatchObject({
+      businessType: "Independent bookstore",
+      businessTypeId: "BT-001",
+      industry: "Specialty retail and ecommerce",
+      evidenceClass: "proposed_scenario",
+    });
+    expect(industryRecord?.content).toContain("Evidence status: owner-supplied strategic hypothesis");
+    expect(industryRecord?.content).toContain("Evidence to collect:");
+    expect(knowledgeReferenceSet([industryRecord!]).records[0]).toMatchObject({
+      kind: "industry_playbook",
+      businessTypeId: "BT-001",
+      sha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+    });
+
+    const ambiguous = retrieveGrowthKnowledge("specialty retail conversion for independent and online businesses", { limit: 3, maxChars: 2_500 });
+    expect(ambiguous.some((record) => record.kind === "industry_playbook")).toBe(false);
+    const explicit = retrieveGrowthKnowledge("conversion and customer retention", { limit: 3, maxChars: 2_500, businessTypeId: "BT-001" });
+    expect(explicit.some((record) => record.kind === "industry_playbook" && record.businessTypeId === "BT-001")).toBe(true);
   });
 
   it("retrieves relevant chapters for the actual task rather than attaching the full corpus", () => {
