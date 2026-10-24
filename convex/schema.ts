@@ -1621,6 +1621,8 @@ export default defineSchema({
     permission: v.union(v.literal("read_only"), v.literal("draft"), v.literal("request_approval")),
     /** Maximum projected spend across this run's action cards, expressed in ClimbOS credits. */
     maxRunCredits: v.number(),
+    /** Optional for profiles created before monthly budgets were introduced. */
+    monthlyBudgetCredits: v.optional(v.number()),
     maxActionsPerRun: v.number(),
     successMetric: v.string(),
     trigger: v.literal("manual"),
@@ -1633,6 +1635,21 @@ export default defineSchema({
   })
     .index("by_org_updated", ["orgId", "updatedAt"])
     .index("by_org_archetype", ["orgId", "archetypeId"]),
+
+  /** Human outcome notes on a specialist run; separates owner-reported results from platform measurements. */
+  customAgentFeedback: defineTable({
+    orgId: v.id("organizations"),
+    customAgentId: v.id("customAgents"),
+    workflowRunId: v.id("workflowRuns"),
+    userId: v.id("users"),
+    rating: v.union(v.literal("helpful"), v.literal("needs_work")),
+    note: v.optional(v.string()),
+    evidenceKind: v.literal("owner_reported"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_run_user", ["workflowRunId", "userId"])
+    .index("by_agent_created", ["orgId", "customAgentId", "createdAt"]),
 
   /* ---------------- Real visuals: the asset library ---------------- */
   /** Real images for posts: site screenshots, store product photos, uploads, AI images and edits. */
@@ -1927,6 +1944,9 @@ export default defineSchema({
   /* ---------------- Workflow engine ---------------- */
   workflowRuns: defineTable({
     orgId: v.id("organizations"),
+    /** Profile and originating request let budgets and outcome reporting follow child work. */
+    customAgentId: v.optional(v.id("customAgents")),
+    customAgentParentRunId: v.optional(v.id("workflowRuns")),
     kind: v.string(),
     /** "v2" = agent loop with skills (Engine v2); absent = single-call v1. Fixed at creation. */
     engine: v.optional(v.literal("v2")),
@@ -1967,6 +1987,8 @@ export default defineSchema({
   })
     .index("by_org_created", ["orgId", "createdAt"])
     .index("by_org_kind_created", ["orgId", "kind", "createdAt"])
+    .index("by_org_custom_agent", ["orgId", "customAgentId", "createdAt"])
+    .index("by_org_custom_agent_parent", ["orgId", "customAgentId", "customAgentParentRunId"])
     .index("by_org_status", ["orgId", "status"])
     .index("by_status_updated", ["status", "updatedAt"]),
 

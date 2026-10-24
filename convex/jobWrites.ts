@@ -705,7 +705,7 @@ export const saveChatResult = internalMutation({
               : "A note for your team. No cost.",
         kind: a.kind,
         roles: plan?.roles ?? ["coo"],
-        payload: JSON.stringify({ job, channel: a.channel, quantity: a.quantity, brief: a.brief?.slice(0, 1500) ?? "" }),
+        payload: JSON.stringify({ job, channel: a.channel, quantity: a.quantity, brief: a.brief?.slice(0, 1500) ?? "", ...(customAgentId ? { customAgentId, customAgentParentRunId: run._id } : {}) }),
         costEstimateMicros: cost,
         externalEffect: external,
         status: overSpecialistBudget ? "blocked" : job || a.kind === "note" || isLink ? "proposed" : "blocked",

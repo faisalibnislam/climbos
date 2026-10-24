@@ -6,7 +6,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import { ACTIVE_RUN_STATUSES, createRunWithReservation, finishRunImpl, latestRunOfKind, reopenFailedRun } from "./engine";
-import { activePolicyVersion, jobForAction } from "./jobWrites";
+import { activePolicyVersion } from "./jobWrites";
 import { audit } from "./lib/audit";
 import { approvalHash, can } from "../shared/policy";
 import { holdPlanChannel, startCardRun, startPlanWork, type PlanWorkResult } from "./lib/cards";
@@ -217,6 +217,22 @@ export const runCustomAgent = mutation({
   },
 });
 
+/** Record owner-reported usefulness after a custom specialist run finishes. */
+export const rateCustomAgentRun = mutation({
+  args: { slug: v.string(), runId: v.id("workflowRuns"), rating: v.union(v.literal("helpful"), v.literal("needs_work")), note: v.optional(v.string()) },
+  handler: async (ctx, { slug, runId, rating, note }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
+    const run = assertSameOrg(await ctx.db.get(runId), org._id, "specialist run");
+    if (!run.customAgentId || !["verified", "failed", "uncertain", "canceled"].includes(run.status)) throw appError("INVALID", "Rate a finished specialist run.");
+    assertSameOrg(await ctx.db.get(run.customAgentId), org._id, "specialist");
+    const prior = await ctx.db.query("customAgentFeedback").withIndex("by_run_user", (q) => q.eq("workflowRunId", run._id).eq("userId", user._id)).unique();
+    const cleanNote = note?.trim().slice(0, 800) || undefined;
+    if (prior) await ctx.db.patch(prior._id, { rating, note: cleanNote, updatedAt: Date.now() });
+    else await ctx.db.insert("customAgentFeedback", { orgId: org._id, customAgentId: run.customAgentId, workflowRunId: run._id, userId: user._id, rating, note: cleanNote, evidenceKind: "owner_reported", createdAt: Date.now(), updatedAt: Date.now() });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "custom_agent.outcome_rated", subjectType: "workflowRun", subjectId: run._id, summary: `Recorded ${rating === "helpful" ? "helpful" : "needs work"} feedback for a specialist run${cleanNote ? `: ${cleanNote.slice(0, 120)}` : "."}` });
+  },
+});
+
 /**
  * "Make it happen" on a play (REQ-UX-03): the request is built here from the
  * stored play, found by plan and play ID, never from text the page assembled.
@@ -274,7 +290,7 @@ async function postChat(ctx: MutationCtx, org: Doc<"organizations">, userId: Id<
   const plan = planJob("chat_intent");
   let runId;
   try {
-    runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: plan.title, roles: plan.roles, input: { messageId }, steps: plan.steps, meters: plan.meters, createdBy: userId, isFixture: org.kind === "demo" });
+    runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: plan.title, roles: plan.roles, input: { messageId, customAgentId }, steps: plan.steps, meters: plan.meters, createdBy: userId, isFixture: org.kind === "demo", customAgentId });
   } catch (e) {
     await ctx.db.patch(messageId, { status: "failed" });
     throw e;

@@ -1,6 +1,6 @@
 import type { FunctionReference } from "convex/server";
 import { v } from "convex/values";
-import { CURRENT_ENTITLEMENTS, CURRENT_ROUTING, currentRateVersion, microsToCredits } from "../shared/economics";
+import { CURRENT_ENTITLEMENTS, CURRENT_ROUTING, creditsToMicros, currentRateVersion, microsToCredits } from "../shared/economics";
 import type { PartialMeters } from "../shared/economics/ledger";
 import { assertTransition, type RunStatus } from "../shared/policy";
 import { estimateRun, type PlannedStep } from "./lib/estimate";
@@ -12,7 +12,7 @@ import { chargeableAccess, fleetStopped } from "./lib/access";
 import { audit } from "./lib/audit";
 import { notifyOwners } from "./lib/notify";
 import { reserveCredits, settleCredits, tryReserveCredits } from "./lib/credits";
-import { appError } from "./lib/tenancy";
+import { appError, assertSameOrg } from "./lib/tenancy";
 
 /**
  * Durable job engine. A run is created with an atomic worst-case cost
@@ -99,6 +99,8 @@ export async function createRunWithReservation(
     isFixture: boolean;
     /** Climb AI mode (resolve with resolveAiMode). Absent = basic. */
     aiMode?: "basic" | "expert";
+    customAgentId?: Id<"customAgents">;
+    customAgentParentRunId?: Id<"workflowRuns">;
   },
 ): Promise<Id<"workflowRuns">> {
   const { org } = params;
@@ -133,6 +135,33 @@ export async function createRunWithReservation(
   // Agent-only jobs (no single-call version) always run on Engine v2 outside demos.
   const v2 = (process.env.CLIMBOS_ENGINE === "v2" && !params.isFixture) || (!params.isFixture && AGENT_ONLY_KINDS.has(params.kind));
   const estimate = estimateRun(params.steps, rateVersion.id, { repair: !v2 });
+  if (params.customAgentParentRunId && !params.customAgentId) {
+    throw appError("INVALID", "Specialist action runs must identify their specialist profile.");
+  }
+  if (params.customAgentId) {
+    const profile = assertSameOrg(await ctx.db.get(params.customAgentId), org._id, "specialist");
+    if (profile.status !== "active") throw appError("INVALID", "This specialist is archived and cannot start work.");
+    const runCapMicros = creditsToMicros(profile.maxRunCredits);
+    if (params.customAgentParentRunId) {
+      const parent = assertSameOrg(await ctx.db.get(params.customAgentParentRunId), org._id, "specialist request");
+      if (parent.customAgentId !== profile._id || parent.customAgentParentRunId) throw appError("INVALID", "This action is not linked to the active specialist request.");
+      const siblings = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent_parent", (q) => q.eq("orgId", org._id).eq("customAgentId", profile._id).eq("customAgentParentRunId", parent._id)).take(100);
+      const committedForRequest = parent.estimateMicros + siblings.reduce((sum, run) => sum + run.estimateMicros, 0);
+      if (committedForRequest + estimate.costMicros > runCapMicros) throw appError("LIMIT_REACHED", `This exceeds ${profile.name}'s configured ${profile.maxRunCredits}-credit per-run budget.`);
+    } else if (estimate.costMicros > runCapMicros) {
+      throw appError("LIMIT_REACHED", `This request exceeds ${profile.name}'s configured ${profile.maxRunCredits}-credit per-run budget.`);
+    }
+    const monthStart = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1);
+    const monthlyRuns = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", org._id).eq("customAgentId", profile._id).gte("createdAt", monthStart)).take(501);
+    if (monthlyRuns.length > 500) throw appError("LIMIT_REACHED", "This specialist reached the monthly run limit for safe budget accounting.");
+    const usedMicros = monthlyRuns.reduce((sum, run) => {
+      const activeRun = ["cost_reserved", "preparing", "needs_approval", "approved", "scheduled", "executing"].includes(run.status);
+      return sum + (activeRun ? Math.max(run.actualMicros, run.estimateMicros) : run.actualMicros);
+    }, 0);
+    if (profile.monthlyBudgetCredits !== undefined && usedMicros + estimate.costMicros > creditsToMicros(profile.monthlyBudgetCredits)) {
+      throw appError("LIMIT_REACHED", `This would exceed ${profile.name}'s ${profile.monthlyBudgetCredits}-credit monthly budget.`, { reason: "custom_agent_budget" });
+    }
+  }
   const period = access.period;
   // Team rule: jobs above the workspace's approval limit need an owner or admin to start them.
   if (org.creditApprovalLimit !== undefined && params.createdBy && microsToCredits(estimate.costMicros) > org.creditApprovalLimit) {
@@ -146,6 +175,8 @@ export async function createRunWithReservation(
   const now = Date.now();
   const runId = await ctx.db.insert("workflowRuns", {
     orgId: org._id,
+    ...(params.customAgentId ? { customAgentId: params.customAgentId } : {}),
+    ...(params.customAgentParentRunId ? { customAgentParentRunId: params.customAgentParentRunId } : {}),
     kind: params.kind,
     ...(v2 ? { engine: "v2" as const } : {}),
     ...(params.aiMode === "expert" ? { aiMode: "expert" as const } : {}),
