@@ -1,6 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
-import { runDailyReport, listAccessibleProperties } from "../shared/integrations/ga4";
+import { aiReferralAttribution, runDailyReport, listAccessibleProperties } from "../shared/integrations/ga4";
 import { getAccount as getInstagramAccount } from "../shared/integrations/instagram";
 import { listManagedPages } from "../shared/integrations/facebookPages";
 import { getMember as getLinkedInMember } from "../shared/integrations/linkedin";
@@ -310,17 +310,30 @@ export const syncGa4 = internalAction({
       return;
     }
     const byDay = new Map<string, { sessions: number; users: number; keyEvents: number }>();
+    const aiByDayProvider = new Map<string, { date: string; provider: string; sessions: number; keyEvents: number }>();
     for (const r of report.data.items) {
       const d = byDay.get(r.date) ?? { sessions: 0, users: 0, keyEvents: 0 };
       d.sessions += r.sessions;
       d.users += r.totalUsers;
       d.keyEvents += r.keyEvents;
       byDay.set(r.date, d);
+      const provider = aiReferralAttribution(r.sessionSource, r.sessionMedium);
+      if (provider) {
+        const key = `${r.date}\u0000${provider}`;
+        const traffic = aiByDayProvider.get(key) ?? { date: r.date, provider, sessions: 0, keyEvents: 0 };
+        traffic.sessions += r.sessions;
+        traffic.keyEvents += r.keyEvents;
+        aiByDayProvider.set(key, traffic);
+      }
     }
     const rows = [...byDay.entries()].flatMap(([date, d]) => [
       { metricKey: "visits", date, value: d.sessions },
       { metricKey: "signups", date, value: d.keyEvents },
     ]);
+    rows.push(...[...aiByDayProvider.values()].flatMap(({ date, provider, sessions, keyEvents }) => [
+      { metricKey: "ai_referral_sessions", date, value: sessions, channel: `AI referral / ${provider}` },
+      { metricKey: "ai_referral_key_events", date, value: keyEvents, channel: `AI referral / ${provider}` },
+    ]));
     await ctx.runMutation(internal.analytics.upsertDaily, { orgId, source: "ga4", kind: "observed", rows });
     await ctx.runMutation(internal.connections.markSync, { connectionId: conn._id, ok: true });
   },

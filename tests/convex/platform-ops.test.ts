@@ -238,6 +238,39 @@ describe("connections", () => {
     expect((await t.run(async (ctx) => ctx.db.get(connectionId)))?.status).toBe("expired");
   });
 
+  it("GA4 sync stores explicit AI assistant referrals but excludes Google organic and tagged email", async () => {
+    const t = setup();
+    const o = await owned(t);
+    const date = new Date(Date.now() - 3 * DAY).toISOString().slice(0, 10);
+    await t.mutation(internal.connections.storeConnection, {
+      orgId: o.orgId,
+      userId: o.userId,
+      provider: "ga4",
+      secret: JSON.stringify({ accessToken: "google-token" }),
+      secretKind: "oauth",
+      scopes: [],
+      externalAccountId: "properties/1",
+    });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      dimensionHeaders: [{ name: "date" }, { name: "sessionSource" }, { name: "sessionMedium" }],
+      metricHeaders: [{ name: "sessions" }, { name: "totalUsers" }, { name: "keyEvents" }, { name: "purchaseRevenue" }],
+      rowCount: 3,
+      rows: [
+        { dimensionValues: [{ value: date.replaceAll("-", "") }, { value: "chatgpt.com" }, { value: "referral" }], metricValues: [{ value: "8" }, { value: "7" }, { value: "2" }, { value: "0" }] },
+        { dimensionValues: [{ value: date.replaceAll("-", "") }, { value: "google" }, { value: "organic" }], metricValues: [{ value: "40" }, { value: "35" }, { value: "4" }, { value: "0" }] },
+        { dimensionValues: [{ value: date.replaceAll("-", "") }, { value: "chatgpt.com" }, { value: "email" }], metricValues: [{ value: "3" }, { value: "3" }, { value: "1" }, { value: "0" }] },
+      ],
+    }), { status: 200 })));
+
+    await t.action(internal.connectionActions.syncGa4, { orgId: o.orgId });
+    const rows = await t.run(async (ctx) => ctx.db.query("metricDaily").withIndex("by_org_metric_date", (q) => q.eq("orgId", o.orgId).eq("metricKey", "ai_referral_sessions").eq("date", date)).collect());
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ value: 8, channel: "AI referral / ChatGPT", source: "ga4", kind: "observed" });
+    const keyEvents = await t.run(async (ctx) => ctx.db.query("metricDaily").withIndex("by_org_metric_date", (q) => q.eq("orgId", o.orgId).eq("metricKey", "ai_referral_key_events").eq("date", date)).collect());
+    expect(keyEvents).toHaveLength(1);
+    expect(keyEvents[0]?.value).toBe(2);
+  });
+
   it("Search Console sync stores dated query and page observations for the selected property", async () => {
     const t = setup();
     const o = await owned(t);

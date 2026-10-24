@@ -30,6 +30,35 @@ export interface Ga4DailyRow {
   purchaseRevenue: number;
 }
 
+export const AI_REFERRAL_PROVIDERS = ["ChatGPT", "Perplexity", "Claude", "Gemini", "Microsoft Copilot"] as const;
+export type AiReferralProvider = typeof AI_REFERRAL_PROVIDERS[number];
+
+const AI_REFERRER_HOSTS: Record<AiReferralProvider, readonly string[]> = {
+  ChatGPT: ["chatgpt.com", "chat.openai.com"],
+  Perplexity: ["perplexity.ai"],
+  Claude: ["claude.ai"],
+  Gemini: ["gemini.google.com", "bard.google.com"],
+  "Microsoft Copilot": ["copilot.microsoft.com", "copilot.com"],
+};
+
+/** Identify only explicit assistant referrer hosts; ordinary google/organic stays unclassified. */
+export function aiReferralProvider(source: string): AiReferralProvider | undefined {
+  const normalized = source.trim().toLocaleLowerCase("en-US").replace(/^www\./u, "");
+  const hostname = (() => {
+    try { return new URL(normalized.includes("://") ? normalized : `https://${normalized}`).hostname.toLocaleLowerCase("en-US"); }
+    catch { return normalized.split("/")[0]?.split(":")[0] ?? ""; }
+  })();
+  for (const [provider, hosts] of Object.entries(AI_REFERRER_HOSTS) as [AiReferralProvider, readonly string[]][]) {
+    if (hosts.some((host) => hostname === host || hostname.endsWith(`.${host}`))) return provider;
+  }
+  return undefined;
+}
+
+/** Only a GA4 referral session is counted; UTM-tagged paid/email traffic is not. */
+export function aiReferralAttribution(source: string, medium: string): AiReferralProvider | undefined {
+  return medium.trim().toLocaleLowerCase("en-US") === "referral" ? aiReferralProvider(source) : undefined;
+}
+
 export interface Ga4ReportInput extends AdapterOptions {
   accessToken: string;
   /** numeric id or "properties/123" */

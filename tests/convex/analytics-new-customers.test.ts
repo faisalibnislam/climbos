@@ -6,6 +6,41 @@ import { asNewUser, setup } from "./helpers";
 const DAY = 86_400_000;
 
 describe("first recorded paying customers", () => {
+  it("shows only identified GA4 AI-assistant referral sources in the workspace results", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "ai-referrals@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "AI Referral Co" });
+    const other = await asNewUser(t, "other-ai-referrals@example.com");
+    const otherWorkspace = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other AI Referral Co" });
+    const date = new Date(Date.now() - 2 * DAY).toISOString().slice(0, 10);
+    await t.mutation(internal.analytics.upsertDaily, {
+      orgId: orgId as Id<"organizations">,
+      source: "ga4",
+      kind: "observed",
+      rows: [
+        { metricKey: "ai_referral_sessions", date, value: 12, channel: "AI referral / ChatGPT" },
+        { metricKey: "ai_referral_key_events", date, value: 2, channel: "AI referral / ChatGPT" },
+        { metricKey: "ai_referral_sessions", date, value: 5, channel: "AI referral / Perplexity" },
+        { metricKey: "ai_referral_key_events", date, value: 1, channel: "AI referral / Perplexity" },
+        { metricKey: "ai_referral_sessions", date, value: 900, channel: "AI referral / Google" },
+      ],
+    });
+    await t.mutation(internal.analytics.upsertDaily, {
+      orgId: otherWorkspace.orgId as Id<"organizations">,
+      source: "ga4",
+      kind: "observed",
+      rows: [{ metricKey: "ai_referral_sessions", date, value: 300, channel: "AI referral / ChatGPT" }],
+    });
+
+    const overview = await owner.client.query(api.analytics.overview, { slug, days: 30 });
+    expect(overview?.aiReferrals).toMatchObject({ sessions: 17, keyEvents: 3 });
+    expect(overview?.aiReferrals.providers).toEqual([
+      expect.objectContaining({ provider: "ChatGPT", sessions: 12, keyEvents: 2 }),
+      expect.objectContaining({ provider: "Perplexity", sessions: 5, keyEvents: 1 }),
+    ]);
+    expect(overview?.aiReferrals.note).toContain("Google Search AI feature visibility is not classified here");
+  });
+
   it("imports owner-reported ad spend with currency precision and safely replaces the same day", async () => {
     const t = setup();
     const owner = await asNewUser(t, "ad-spend-import@example.com");

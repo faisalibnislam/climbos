@@ -5,6 +5,7 @@ import { attribute, computeCohorts, OVERLAP_WARNING, summarizePlatformClaims } f
 import type { RevenueEvent, Touch } from "../shared/attribution/types";
 import { addDays, fillMissingDays, runForecast, type DailyPoint } from "../shared/forecasting";
 import { majorToMinor } from "../shared/economics/currency";
+import { AI_REFERRAL_PROVIDERS } from "../shared/integrations/ga4";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { audit } from "./lib/audit";
@@ -269,6 +270,37 @@ async function series(ctx: { db: QueryCtx["db"] }, orgId: Id<"organizations">, m
   return { points, freshness, source, isFixture };
 }
 
+async function aiReferralSummary(ctx: { db: QueryCtx["db"] }, orgId: Id<"organizations">, from: string, to: string) {
+  const byProvider = new Map<string, { provider: string; sessions: number; keyEvents: number; freshness: number }>();
+  const recognizedProviders = new Set<string>(AI_REFERRAL_PROVIDERS);
+  for (const metricKey of ["ai_referral_sessions", "ai_referral_key_events"] as const) {
+    const rows = await ctx.db
+      .query("metricDaily")
+      .withIndex("by_org_metric_date", (q) => q.eq("orgId", orgId).eq("metricKey", metricKey).gte("date", from).lte("date", to))
+      .take(1000);
+    for (const row of rows) {
+      if (row.source !== "ga4" || row.kind !== "observed" || row.isFixture || !row.channel?.startsWith("AI referral / ")) continue;
+      const provider = row.channel.slice("AI referral / ".length);
+      if (!recognizedProviders.has(provider)) continue;
+      const value = byProvider.get(provider) ?? { provider, sessions: 0, keyEvents: 0, freshness: 0 };
+      if (metricKey === "ai_referral_sessions") value.sessions += row.value;
+      else value.keyEvents += row.value;
+      value.freshness = Math.max(value.freshness, row.ingestedAt);
+      byProvider.set(provider, value);
+    }
+  }
+  const providers = [...byProvider.values()].sort((a, b) => b.sessions - a.sessions || a.provider.localeCompare(b.provider));
+  return {
+    sessions: providers.reduce((sum, row) => sum + row.sessions, 0),
+    keyEvents: providers.reduce((sum, row) => sum + row.keyEvents, 0),
+    providers,
+    freshness: providers.reduce((latest, row) => Math.max(latest, row.freshness), 0) || null,
+    period: { from, to },
+    source: "Google Analytics 4",
+    note: "Includes only sessions attributed to recognized AI-assistant source hosts in GA4. GA4 source labels may vary. Google Search AI feature visibility is not classified here; use the Search Console Generative AI report for that view. Key events follow the events this property owner configured in GA4. These are observed associations, not proof of cause.",
+  };
+}
+
 export const overview = query({
   args: { slug: v.string(), days: v.optional(v.number()) },
   handler: async (ctx, { slug, days }) => {
@@ -302,6 +334,7 @@ export const overview = query({
         partialReason: null as string | null,
       });
     }
+    const aiReferrals = await aiReferralSummary(ctx, org._id, from, addDays(today, -1));
 
     const yesterday = addDays(today, -1);
     const payerHistory = await firstRecordedPayerDays(ctx, org._id, prevFrom, yesterday, org.timezone);
@@ -401,6 +434,7 @@ export const overview = query({
       timezone: org.timezone,
       isDemo: org.kind === "demo",
       metrics,
+      aiReferrals,
       attribution: {
         lastTouch: lastTouch ? summarizeAttribution(lastTouch) : null,
         firstTouch: firstTouch ? summarizeAttribution(firstTouch) : null,

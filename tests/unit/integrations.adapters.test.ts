@@ -577,6 +577,19 @@ describe("stripeRevenue", () => {
 });
 
 describe("ga4 + searchConsole", () => {
+  it("recognizes explicit AI assistant referral hosts without classifying Google organic traffic", () => {
+    expect(ga4.aiReferralProvider("chatgpt.com")).toBe("ChatGPT");
+    expect(ga4.aiReferralProvider("www.perplexity.ai")).toBe("Perplexity");
+    expect(ga4.aiReferralProvider("ref.claude.ai")).toBe("Claude");
+    expect(ga4.aiReferralProvider("gemini.google.com")).toBe("Gemini");
+    expect(ga4.aiReferralProvider("copilot.microsoft.com")).toBe("Microsoft Copilot");
+    expect(ga4.aiReferralProvider("google")).toBeUndefined();
+    expect(ga4.aiReferralProvider("notchatgpt.com")).toBeUndefined();
+    expect(ga4.aiReferralAttribution("chatgpt.com", "referral")).toBe("ChatGPT");
+    expect(ga4.aiReferralAttribution("chatgpt.com", "email")).toBeUndefined();
+    expect(ga4.aiReferralAttribution("google", "organic")).toBeUndefined();
+  });
+
   it("parses runReport rows and pages by offset", async () => {
     const page = (rows: number, rowCount: number) =>
       json(200, {
