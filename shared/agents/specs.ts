@@ -129,6 +129,27 @@ export const PlaySchema = z.object({
   /** 1-5 each: fit, predictability, leverage, timeToSignal, compounding, cost, risk, distinctiveness. */
   scores: z.array(z.number()),
   firstActionToday: z.string(),
+  /** Typed chain from the diagnosed constraint to a measurable owner action. */
+  actionContract: z.object({
+    diagnosis: z.string().min(1),
+    intendedEffect: z.string().min(1),
+    evidenceBasis: z.enum(["assumption", "inference", "measured", "owner_report", "source_claim"]),
+    evidenceNote: z.string().min(1),
+    evidenceRefs: z.array(z.string()).max(8),
+    targetOrAsset: z.string().min(1),
+    resourcePlan: z.string().min(1),
+    executionCapability: z.enum(["owner", "climbos", "existing_integration", "external_setup", "unknown"]),
+    dependencies: z.array(z.string()).max(8),
+    measurement: z.object({
+      metric: z.string().min(1),
+      baseline: z.string().min(1),
+      target: z.string().min(1),
+      windowDays: z.number().int().min(1).max(365),
+      source: z.string().min(1),
+    }),
+  }),
+  /** Derived by ClimbOS from the action's declared dependencies and capability. */
+  actionReadiness: z.object({ status: z.enum(["safe_to_start", "depends_on_input"]), reasons: z.array(z.string()) }).optional(),
   climbosCanDo: z.string(),
   /** The play's numbers; ClimbOS code (not the model) turns them into customers, cost per customer and payback. */
   model: z.object({
@@ -156,8 +177,17 @@ export const PlaySchema = z.object({
 });
 export type Play = z.infer<typeof PlaySchema>;
 /** What the plays agent writes: no forecast numbers (ClimbOS code computes P10/P50/P90 from the model). */
-export const PlayDraftSchema = PlaySchema.omit({ p10: true, p50: true, p90: true, forecastUncertainty: true, financialEvidence: true });
+export const PlayDraftSchema = PlaySchema.omit({ p10: true, p50: true, p90: true, forecastUncertainty: true, financialEvidence: true, actionReadiness: true });
 export type PlayDraft = z.infer<typeof PlayDraftSchema>;
+
+export function actionReadinessOf(action: PlayDraft["actionContract"]): NonNullable<Play["actionReadiness"]> {
+  const reasons = [...action.dependencies];
+  if (action.executionCapability === "external_setup") reasons.push("External setup is required.");
+  if (action.executionCapability === "unknown") reasons.push("Execution capability is not established.");
+  if (action.executionCapability === "climbos") reasons.push("Confirm the required ClimbOS capability is available for this action.");
+  if (action.executionCapability === "existing_integration") reasons.push("Confirm the required integration is connected and authorized.");
+  return { status: reasons.length ? "depends_on_input" : "safe_to_start", reasons: [...new Set(reasons)] };
+}
 
 export const SCORE_KEYS = ["fit", "predictability", "leverage", "timeToSignal", "compounding", "cost", "risk", "distinctiveness"] as const;
 export type PlayScores = Record<(typeof SCORE_KEYS)[number], number>;
@@ -191,7 +221,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; portfolio?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
 export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.22-diagnosis-action-fit";
+export const ENGINE_VERSION = "v3.23-action-contracts";
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
@@ -905,6 +935,37 @@ export function lintCites(out: { channels: { name: string; priority: number; cit
   return issues;
 }
 
+/** REQ-OUT-01/05: keep each play traceable and expose prerequisites as data. */
+export function lintActionContracts(plays: PlayDraft[], factCount: number, evidence: string, horizonDays?: number, availableSourceUrls: string[] = []): LintIssue[] {
+  const issues: LintIssue[] = [];
+  const readUrls = new Set(availableSourceUrls.map(citeKey));
+  plays.forEach((play, i) => {
+    const path = `plays[${i}].actionContract`;
+    const action = play.actionContract;
+    // Legacy fixtures and plans predate this contract. New model drafts cannot
+    // omit it because PlayDraftSchema requires the full object.
+    if (!action) return;
+    if (["measured", "owner_report", "source_claim"].includes(action.evidenceBasis) && !action.evidenceRefs.length) {
+      issues.push({ severity: "error", rule: "action_evidence", message: "This evidence basis requires at least one confirmed fact or source reference.", path: `${path}.evidenceRefs` });
+    }
+    for (const ref of action.evidenceRefs) {
+      const fact = /^fact:(\d+)$/i.exec(ref.trim());
+      const valid = fact ? Number(fact[1]) < factCount : /^https?:\/\//i.test(ref.trim()) && readUrls.has(citeKey(ref));
+      if (!valid) issues.push({ severity: "error", rule: "action_evidence", message: `Evidence reference "${ref.slice(0, 80)}" is not a supplied fact or a page read for this run.`, path: `${path}.evidenceRefs` });
+    }
+    if (action.executionCapability === "unknown" && action.dependencies.length === 0) {
+      issues.push({ severity: "error", rule: "action_readiness", message: "Name what must be confirmed before this play can start, or identify the available execution capability.", path: `${path}.executionCapability` });
+    }
+    if (horizonDays && action.measurement.windowDays > horizonDays) {
+      issues.push({ severity: "error", rule: "action_measurement", message: `The ${action.measurement.windowDays}-day measurement window exceeds the ${horizonDays}-day plan horizon.`, path: `${path}.measurement.windowDays` });
+    }
+    if (/\b(?:unknown|not known|not measured|no baseline)\b/i.test(action.measurement.baseline) && !/\b(?:measure|establish|collect|instrument)\b/i.test(action.measurement.source)) {
+      issues.push({ severity: "warn", rule: "action_measurement", message: "The baseline is unknown; specify how the first action will measure it.", path: `${path}.measurement.source` });
+    }
+  });
+  return issues;
+}
+
 /** "about 400 visitors a week", "1,200 trial users": the first count in a population, and whether it is per week or per month. */
 function eligibleCount(population: string): { n: number; per: "week" | "month" | "total" } | null {
   const m = population.replace(/(\d),(\d{3})/g, "$1$2").match(/(\d+(?:\.\d+)?)\s*(k)?\b/i);
@@ -1398,7 +1459,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, { ...out.economics, currency: input.constraints?.currency }, evidenceOf(input)), ...lintSelfServeFunnel(out.plays, out.economics), ...lintComparisonPositioning(out.plays), ...lintOfferClaims(out.plays, evidenceOf(input)), ...lintReferralDrivers(out.plays), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints, out.economics), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintDecisionConstraintFit(out.decision, out.plays, input.constraints?.diagnosis), ...lintDecisionOptionChoice(out.decision, out.plays, out.economics, input.constraints), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintNoAudience(out.plays, input.constraints, input.facts.join("\n")), ...lintBorrowedUplift(out.plays), ...lintDiagnosisFit(out.plays, o.decisionContract && out.decision ? undefined : input.constraints?.diagnosis), ...lintEligibilityIds(out.plays, input.constraints?.ineligiblePlaybooks), ...lintPlatformEligibility(out.plays.map((p, i) => ({ path: `plays[${i}]`, text: JSON.stringify(p) })), input.constraints?.businessTypes ?? []), ...(input.constraints?.factKinds ? lintEvidenceStrength(out.plays.flatMap((p, i) => [{ path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }, { path: `plays[${i}].mechanic`, text: (p as { mechanic?: string }).mechanic ?? "" }]), input.constraints.factKinds) : []), ...lintClaims(out.plays.flatMap((p, i) => [{ path: `plays[${i}].hook`, text: (p as { hook?: string }).hook ?? "" }, { path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }]), verifiedCapabilityEvidence(input)), ...lintDeliveryCapacity(portfolioP50(out, input.constraints?.horizonDays), input.constraints), ...lintServiceArea(out.plays.map((p, i) => ({ path: `plays[${i}]`, spend: p.model?.monthlySpendUsd ?? 0, text: JSON.stringify(p) })), input.constraints), ...lintEconomics({ ...out, economics: { ...out.economics, currency: input.constraints?.currency } })],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintActionContracts(out.plays, input.facts.length, evidenceOf(input), input.constraints?.horizonDays, input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url)), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, { ...out.economics, currency: input.constraints?.currency }, evidenceOf(input)), ...lintSelfServeFunnel(out.plays, out.economics), ...lintComparisonPositioning(out.plays), ...lintOfferClaims(out.plays, evidenceOf(input)), ...lintReferralDrivers(out.plays), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints, out.economics), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays), ...lintDecisionConstraintFit(out.decision, out.plays, input.constraints?.diagnosis), ...lintDecisionOptionChoice(out.decision, out.plays, out.economics, input.constraints), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintNoAudience(out.plays, input.constraints, input.facts.join("\n")), ...lintBorrowedUplift(out.plays), ...lintDiagnosisFit(out.plays, o.decisionContract && out.decision ? undefined : input.constraints?.diagnosis), ...lintEligibilityIds(out.plays, input.constraints?.ineligiblePlaybooks), ...lintPlatformEligibility(out.plays.map((p, i) => ({ path: `plays[${i}]`, text: JSON.stringify(p) })), input.constraints?.businessTypes ?? []), ...(input.constraints?.factKinds ? lintEvidenceStrength(out.plays.flatMap((p, i) => [{ path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }, { path: `plays[${i}].mechanic`, text: (p as { mechanic?: string }).mechanic ?? "" }]), input.constraints.factKinds) : []), ...lintClaims(out.plays.flatMap((p, i) => [{ path: `plays[${i}].hook`, text: (p as { hook?: string }).hook ?? "" }, { path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }]), verifiedCapabilityEvidence(input)), ...lintDeliveryCapacity(portfolioP50(out, input.constraints?.horizonDays), input.constraints), ...lintServiceArea(out.plays.map((p, i) => ({ path: `plays[${i}]`, spend: p.model?.monthlySpendUsd ?? 0, text: JSON.stringify(p) })), input.constraints), ...lintEconomics({ ...out, economics: { ...out.economics, currency: input.constraints?.currency } })],
     },
     o,
     "expert",

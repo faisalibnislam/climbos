@@ -26,7 +26,7 @@ import type {
   StrategyOutput,
 } from "../shared/ai/tasks";
 import { findRiskyClaims, validateFactIndexes } from "../shared/ai/tasks";
-import type { InsightsV2, StrategyV2 } from "../shared/agents/specs";
+import { actionReadinessOf, type InsightsV2, type StrategyV2 } from "../shared/agents/specs";
 import { approvalHash, contentHash } from "../shared/policy";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
@@ -391,7 +391,7 @@ export const saveStrategy = internalMutation({
                 phases: x.phases.slice(0, 4),
                 weekOneChecklist: x.weekOneChecklist.slice(0, 7),
                 risks: x.risks.slice(0, 6),
-                plays: withPlayIds((x.plays ?? []).slice(0, 4), prior),
+                plays: withPlayIds((x.plays ?? []).slice(0, 4).map((play) => ({ ...play, actionReadiness: actionReadinessOf(play.actionContract) })), prior),
                 economics: x.economics,
                 ...(x.decision ? { decision: x.decision } : {}),
                 ...(x.snapshot ? { snapshot: x.snapshot } : {}),

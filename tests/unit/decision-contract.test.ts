@@ -1,7 +1,7 @@
 import { playMaths } from "../../shared/agents/economics";
 import { describe, expect, it } from "vitest";
 import { DECISION_CONTRACT, playsTask } from "../../shared/agents/planTasks";
-import { growthPlaysSpec, lintPlays, type PlayDraft } from "../../shared/agents/specs";
+import { actionReadinessOf, growthPlaysSpec, lintActionContracts, lintPlays, type PlayDraft } from "../../shared/agents/specs";
 
 /** S5 flag (REQ-STRAT-05, REQ-OUT-03): a focused plan isn't forced into bankable + creative. */
 const tag = { source: "assumption" as const, ref: "", quote: "" };
@@ -25,6 +25,7 @@ const play = (o: Partial<PlayDraft> = {}): PlayDraft => ({
   scaleIf: "8+ orders in 14 days",
   scores: [5, 3, 3, 4, 3, 5, 5, 3],
   firstActionToday: "Export last year's customers",
+  actionContract: { diagnosis: "Repeat purchase is weak", intendedEffect: "Recover paid orders", evidenceBasis: "assumption", evidenceNote: "The customer list size and response are unverified; validate while testing.", evidenceRefs: [], targetOrAsset: "Prior customer list", resourcePlan: "1 owner hour per week; no media spend", executionCapability: "owner", dependencies: [], measurement: { metric: "Recovered orders", baseline: "Establish from the prior 30 days", target: "8 orders", windowDays: 14, source: "Count paid orders during the test" } },
   climbosCanDo: "Drafts and sends the emails",
   model: { weeklyReach: 75, weeklyReachLow: 60, weeklyReachHigh: 75, reachSource: tag, steps: [{ name: "open", rate: 0.4, low: 0.3, high: 0.5, ...tag, source: "assumption" }, { name: "order", rate: 0.07, low: 0.05, high: 0.1, ...tag, source: "assumption" }], monthlySpendUsd: 0, spendSource: { source: "planned", ref: "", quote: "" }, ownerHoursPerWeek: 1, hoursSource: { source: "planned", ref: "", quote: "" } },
   ...o,
@@ -59,6 +60,28 @@ describe("decision contract flag", () => {
     expect(playsTask({ scorecard: "", insights: "", decisionContract: true })).toContain(DECISION_CONTRACT);
     expect(playsTask({ scorecard: "", insights: "" })).toMatch(/one bankable play, one or two creative-but-proven plays/);
     expect(playsTask({ scorecard: "", insights: "" })).not.toContain("DECISION CONTRACT");
+  });
+});
+
+describe("structured action contracts", () => {
+  it("derives safe-to-start versus dependency-gated readiness", () => {
+    expect(actionReadinessOf(play().actionContract)).toEqual({ status: "safe_to_start", reasons: [] });
+    expect(actionReadinessOf({ ...play().actionContract, dependencies: ["Confirm the customer list is consented"] })).toEqual({ status: "depends_on_input", reasons: ["Confirm the customer list is consented"] });
+    expect(actionReadinessOf({ ...play().actionContract, executionCapability: "external_setup" })).toEqual({ status: "depends_on_input", reasons: ["External setup is required."] });
+    expect(actionReadinessOf({ ...play().actionContract, executionCapability: "existing_integration" }).status).toBe("depends_on_input");
+    expect(actionReadinessOf({ ...play().actionContract, executionCapability: "climbos" }).status).toBe("depends_on_input");
+  });
+
+  it("rejects invented evidence references and measurement windows past the horizon", () => {
+    const draft = play({ actionContract: { ...play().actionContract, evidenceRefs: ["fact:4", "https://invented.example/pricing"], measurement: { ...play().actionContract.measurement, windowDays: 45 } } });
+    const issues = lintActionContracts([draft], 1, "https://real.example/pricing", 30, ["https://real.example/pricing"]);
+    expect(issues.filter((issue) => issue.severity === "error").map((issue) => issue.rule)).toEqual(["action_evidence", "action_evidence", "action_measurement"]);
+  });
+
+  it("makes the plays agent populate the trace and leaves readiness to code", () => {
+    const prompt = playsTask({ scorecard: "", insights: "" });
+    expect(prompt).toContain("fill actionContract");
+    expect(prompt).toContain("ClimbOS derives readiness");
   });
 });
 

@@ -66,7 +66,7 @@ describe("decision contract persistence", () => {
       acquisition: JSON.stringify({ libraryVersion: "acq-2026-10-18", profile, adjustments: [], summary: [], limits: { ownerHoursPerWeek: 0 } }),
     });
     const saved = await t.run(async (ctx) => (await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", id)).first())!);
-    expect(saved.expert?.version).toBe(4);
+    expect(saved.expert?.version).toBe(5);
     expect(saved.expert?.decision).toEqual(decision);
     expect(saved.acquisition?.limits).toEqual({ ownerHoursPerWeek: 0 });
     const view = await owner.client.query(api.acquisition.view, { slug });
