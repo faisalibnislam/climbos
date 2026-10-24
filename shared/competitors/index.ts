@@ -6,13 +6,19 @@ export function normaliseForDiff(text: string): string[] {
     .split(/\n+/)
     .map((l) =>
       l
+        // Query-only analytics parameters create artificial diffs without changing the page.
+        .replace(/[?&](?:utm_[a-z_]+|gclid|fbclid|mc_[ce]id)=[^&\s)\]]*/gi, "")
         .replace(/\s+/g, " ")
         .replace(/\b(19|20)\d{2}\b/g, "YEAR")
         .replace(/\b\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\b/g, "DATE")
         .replace(/\b\d{1,3}(,\d{3})+\+?\b/g, "N")
         .trim(),
     )
-    .filter((l) => l.length >= 3 && !/cookie|consent|privacy preferences|accept all/i.test(l))
+    .filter((l) =>
+      l.length >= 3 &&
+      !/cookie|consent|privacy preferences|accept all/i.test(l) &&
+      !/^(?:home|menu|main menu|navigation|skip to content|skip navigation|search|log in|login|sign in|sign up|register|account|cart|basket|back to top|all rights reserved)$/i.test(l),
+    )
     .slice(0, 800);
 }
 

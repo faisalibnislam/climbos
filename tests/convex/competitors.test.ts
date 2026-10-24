@@ -22,6 +22,13 @@ describe("competitor watch", () => {
     expect(meaningful(diffLines(a, c))).toBe(false);
   });
 
+  it("ignores standalone navigation and analytics query parameters", () => {
+    const before = normaliseForDiff("Home\nPricing\nSign in\nhttps://rival.example/pricing?utm_source=weekly&utm_campaign=october\nPlans from $10/mo");
+    const after = normaliseForDiff("Menu\nPricing\nLogin\nhttps://rival.example/pricing?utm_source=search&utm_campaign=november\nPlans from $10/mo");
+    expect(diffLines(before, after)).toEqual({ added: [], removed: [] });
+    expect(meaningful(diffLines(before, after))).toBe(false);
+  });
+
   it("first read is a free baseline; a later change is summarised and lands in the report", async () => {
     const t = setup();
     const owner = await asNewUser(t, "watch@example.com");
