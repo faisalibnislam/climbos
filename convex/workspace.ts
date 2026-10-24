@@ -4,11 +4,11 @@ import { minorToMajor } from "../shared/economics/currency";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { ACTIVE_RUN_STATUSES, createRunWithReservation, finishRunImpl, latestRunOfKind, reopenFailedRun } from "./engine";
 import { activePolicyVersion } from "./jobWrites";
 import { audit } from "./lib/audit";
-import { approvalHash, can } from "../shared/policy";
+import { approvalHash, can, canonicalJson } from "../shared/policy";
 import { assertCardDependenciesComplete, holdPlanChannel, startCardRun, startPlanWork, type PlanWorkResult } from "./lib/cards";
 import { autoStartPlanTargets } from "./targets";
 import { notifyOwners } from "./lib/notify";
@@ -24,6 +24,7 @@ import { applyOwnerEconomics, decisionQuestions, playsGoalGap, selectPortfolio, 
 import { projectGrowthOpportunities, type OpportunityPlayInput } from "../shared/agents/opportunities";
 import { AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
 import { readExpertPlan } from "../shared/agents/planCompatibility";
+import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 
 /** Everything the Today screen needs, in one bounded query. */
 export const today = query({
@@ -269,11 +270,14 @@ export const startPlay = mutation({
     const s = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan");
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     const goal = await ctx.db.query("goals").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active")).first();
-    const staleInputs = planStaleInputs(s, business, goal);
+    const businessFactVersions = business ? await currentBusinessFactVersions(ctx, business._id) : [];
+    const staleInputs = planStaleInputs(s, business, goal, businessFactVersions);
     if (staleInputs.ownerEconomics) throw appError("INVALID", "Your confirmed business numbers changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.lifecycleStage) throw appError("INVALID", "Your owner-reported business stage changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.funnel) throw appError("INVALID", "Your owner-reported funnel measurements changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.goal) throw appError("INVALID", "Your active growth goal or budget changed after this plan was created. Refresh the plan before starting this play.");
+    if (staleInputs.businessProfile) throw appError("INVALID", "Your business profile changed after this plan was created. Refresh the plan before starting this play.");
+    if (staleInputs.businessFacts) throw appError("INVALID", "Your confirmed business facts changed after this plan was created. Refresh the plan before starting this play.");
     const play = ((s.expert?.plays ?? []) as { id?: string; name: string; oneLiner: string; audience: string; hook: string; climbosCanDo: string }[]).find((p) => p.id === playId);
     if (!play) throw appError("NOT_FOUND", "That play isn't in this plan.");
     return postChat(ctx, org, user._id, `Start the "${play.name}" play (plan v${s.version}, play ${playId}): ${play.oneLiner} Audience: ${play.audience}. Hook: ${play.hook}. Prepare everything your team can do for it now: ${play.climbosCanDo}`);
@@ -490,6 +494,7 @@ export const plan = query({
       .query("goals")
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
       .first();
+    const businessFactVersions = business ? await currentBusinessFactVersions(ctx, business._id) : [];
     const experiments = strategy
       ? (
           await ctx.db
@@ -512,7 +517,7 @@ export const plan = query({
     const currentPlays = Array.isArray(expert?.plays) && expert.plays.length && currentEconomics
       ? withForecasts({ economics: currentEconomics as Economics, plays: expert.plays as PlayLike[] })
       : null;
-    const staleInputs = strategy ? planStaleInputs(strategy, business, goal) : { ownerEconomics: false, lifecycleStage: false, funnel: false, goal: false };
+    const staleInputs = strategy ? planStaleInputs(strategy, business, goal, businessFactVersions) : { ownerEconomics: false, lifecycleStage: false, funnel: false, goal: false, businessProfile: false, businessFacts: false };
     // Owner edits immediately refresh every deterministic derived number in the returned plan view.
     const currentPortfolio = currentPlays
       ? selectPortfolio(currentPlays, {
@@ -557,7 +562,7 @@ export const plan = query({
       /** The owner answered after this plan was written: numbers are current, the text may not be. */
       answersNewerThanPlan: staleInputs.ownerEconomics,
       /** Material owner inputs that differ from the plan snapshot; signal refresh before execution. */
-      staleInputs: { ...staleInputs, requiresRefresh: staleInputs.ownerEconomics || staleInputs.lifecycleStage || staleInputs.funnel || staleInputs.goal },
+      staleInputs: { ...staleInputs, requiresRefresh: staleInputs.ownerEconomics || staleInputs.lifecycleStage || staleInputs.funnel || staleInputs.goal || staleInputs.businessProfile || staleInputs.businessFacts },
       strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null, createdAt: strategyRun.createdAt } : null,
       /** When the newest version was written (a failed refresh after it is shown). */
       latestVersionAt: latest?.createdAt ?? null,
@@ -665,11 +670,14 @@ export const decidePlan = mutation({
     if (decision === "approve") {
       const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
       const goal = await ctx.db.query("goals").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active")).first();
-      const staleInputs = planStaleInputs(s, business, goal);
+      const businessFactVersions = business ? await currentBusinessFactVersions(ctx, business._id) : [];
+      const staleInputs = planStaleInputs(s, business, goal, businessFactVersions);
       if (staleInputs.ownerEconomics) throw appError("INVALID", "Your confirmed business numbers changed after this plan was created. Refresh the plan before approving it.");
       if (staleInputs.lifecycleStage) throw appError("INVALID", "Your owner-reported business stage changed after this plan was created. Refresh the plan before approving it.");
       if (staleInputs.funnel) throw appError("INVALID", "Your owner-reported funnel measurements changed after this plan was created. Refresh the plan before approving it.");
       if (staleInputs.goal) throw appError("INVALID", "Your active growth goal or budget changed after this plan was created. Refresh the plan before approving it.");
+      if (staleInputs.businessProfile) throw appError("INVALID", "Your business profile changed after this plan was created. Refresh the plan before approving it.");
+      if (staleInputs.businessFacts) throw appError("INVALID", "Your confirmed business facts changed after this plan was created. Refresh the plan before approving it.");
     }
     // Hard failures and unresolved material fact conflicts must not reach execution.
     const planQuality = (s.expert as { quality?: { state: QualityState; conflicts?: string[] } } | undefined)?.quality;
@@ -746,16 +754,18 @@ function hasNewerOwnerEconomics(
 
 function planStaleInputs(
   strategy: Pick<Doc<"strategies">, "createdAt" | "expert" | "goalId">,
-  business: Pick<Doc<"businesses">, "unitEconomics" | "lifecycleStage" | "funnel"> | null,
+  business: Pick<Doc<"businesses">, "unitEconomics" | "lifecycleStage" | "funnel" | "name" | "website" | "socialUrls" | "businessType" | "summary" | "acquisition" | "currency"> | null,
   goal: Pick<Doc<"goals">, "_id" | "kind" | "statement" | "horizonDays" | "monthlyAdBudgetMinor" | "currency" | "target"> | null,
-): { ownerEconomics: boolean; lifecycleStage: boolean; funnel: boolean; goal: boolean } {
-  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null } | undefined;
+  businessFactVersions: { id: string; updatedAt: number }[] = [],
+): { ownerEconomics: boolean; lifecycleStage: boolean; funnel: boolean; goal: boolean; businessProfile: boolean; businessFacts: boolean } {
+  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number }[] } | undefined;
   const savedStage = snapshot?.businessLifecycleStage?.stage ?? null;
   const currentStage = business?.lifecycleStage?.stage ?? null;
   const savedFunnel = funnelDecisionValues(snapshot?.businessFunnel);
   const currentFunnel = funnelDecisionValues(business?.funnel);
   const hasFunnelSnapshot = (snapshot?.snapshotVersion ?? 0) >= 7;
   const hasGoalSnapshot = (snapshot?.snapshotVersion ?? 0) >= 8;
+  const hasProfileAndFactSnapshot = (snapshot?.snapshotVersion ?? 0) >= 9;
   return {
     ownerEconomics: hasNewerOwnerEconomics(strategy, business?.unitEconomics),
     // Re-saving the same stage is not a material decision-input change.
@@ -764,7 +774,33 @@ function planStaleInputs(
     funnel: hasFunnelSnapshot ? JSON.stringify(savedFunnel) !== JSON.stringify(currentFunnel) : Boolean(business?.funnel && business.funnel.updatedAt > strategy.createdAt),
     // Goals are replaced when edited; legacy plans fall back to their bound goal ID.
     goal: hasGoalSnapshot ? JSON.stringify(goalDecisionValues(snapshot?.goalInput)) !== JSON.stringify(goalDecisionValues(goal)) : !goal || String(strategy.goalId) !== String(goal._id),
+    businessProfile: hasProfileAndFactSnapshot && canonicalJson(snapshot?.businessProfile as never) !== canonicalJson(businessProfileValues(business) as never),
+    businessFacts: hasProfileAndFactSnapshot && canonicalJson(snapshot?.businessFactVersions as never) !== canonicalJson(businessFactVersions as never),
   };
+}
+
+function businessProfileValues(business: Pick<Doc<"businesses">, "name" | "website" | "socialUrls" | "businessType" | "summary" | "acquisition" | "currency"> | null): unknown {
+  if (!business) return null;
+  return {
+    name: business.name,
+    website: business.website ?? null,
+    socialUrls: [...business.socialUrls].sort(),
+    businessType: business.businessType,
+    summary: business.summary ?? null,
+    currency: business.currency ?? null,
+  };
+}
+
+/** Same bounded, confirmed-fact basis supplied to plan generation, including fresh and review-suggested facts. */
+async function currentBusinessFactVersions(ctx: QueryCtx | MutationCtx, businessId: Id<"businesses">): Promise<{ id: string; updatedAt: number }[]> {
+  const records = await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", businessId)).take(200);
+  const canonical = groupExactDuplicateFacts(
+    records
+      .filter((fact) => fact.reviewState === "confirmed" || fact.reviewState === "edited")
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .map((fact) => ({ ...fact, id: String(fact._id) })),
+  ).map(({ primary }) => primary);
+  return canonical.map((fact) => ({ id: fact.id, updatedAt: fact.updatedAt })).sort((a, b) => a.id.localeCompare(b.id));
 }
 
 function goalDecisionValues(goal: { _id?: unknown; id?: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target?: unknown } | null | undefined): unknown {
