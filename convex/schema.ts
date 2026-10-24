@@ -559,6 +559,8 @@ export default defineSchema({
     siteHash: v.optional(v.string()),
     siteText: v.optional(v.string()),
     siteCheckedAt: v.optional(v.number()),
+    /** Pauses only the scheduled weekly site-change monitor; manual checks remain available. Legacy businesses default to enabled. */
+    siteWatchEnabled: v.optional(v.boolean()),
     siteReadiness: v.optional(v.object({
       status: v.union(v.literal("queued"), v.literal("complete"), v.literal("failed")),
       startedAt: v.number(),

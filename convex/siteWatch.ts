@@ -193,6 +193,8 @@ export const targets = internalQuery({
     const since = Date.now() - 45 * DAY;
     for (const o of await ctx.db.query("organizations").withIndex("by_kind_created", (q) => q.eq("kind", "customer")).take(3000)) {
       if (o.deletedAt || o.suspendedAt) continue;
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", o._id)).first();
+      if (!business?.website || business.siteWatchEnabled === false) continue;
       // Only workspaces in use: someone ran a job in the last 45 days.
       const recent = await ctx.db.query("workflowRuns").withIndex("by_org_created", (q) => q.eq("orgId", o._id).gte("createdAt", since)).first();
       if (recent) out.push(o._id);
@@ -207,7 +209,7 @@ export const siteState = internalQuery({
     const b = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first();
     if (!b?.website) return null;
     const facts = (await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", b._id)).take(200)).filter((f) => f.reviewState === "confirmed" || f.reviewState === "edited");
-    return { businessId: b._id, website: b.website, siteHash: b.siteHash ?? null, siteText: b.siteText ?? null, name: b.name, facts: facts.map((f) => ({ id: f._id as string, category: f.category, statement: f.statement })) };
+    return { businessId: b._id, website: b.website, enabled: b.siteWatchEnabled !== false, siteHash: b.siteHash ?? null, siteText: b.siteText ?? null, name: b.name, facts: facts.map((f) => ({ id: f._id as string, category: f.category, statement: f.statement })) };
   },
 });
 

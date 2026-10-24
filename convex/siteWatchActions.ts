@@ -62,10 +62,10 @@ export const scanReadiness = internalAction({
 });
 
 export const check = internalAction({
-  args: { orgId: v.id("organizations") },
-  handler: async (ctx, { orgId }): Promise<void> => {
+  args: { orgId: v.id("organizations"), scheduled: v.optional(v.boolean()) },
+  handler: async (ctx, { orgId, scheduled }): Promise<void> => {
     const s = await ctx.runQuery(internal.siteWatch.siteState, { orgId });
-    if (!s) return;
+    if (!s || (scheduled && !s.enabled)) return;
     const site = process.env.CLIMBOS_FAKE_LLM ? { text: `${s.name}\n${process.env.CLIMBOS_FAKE_SITE_TEXT ?? "Plans from $10/mo"}` } : await readSite(s.website);
     if ("error" in site) return;
     const lines = normaliseForDiff(site.text);
@@ -98,7 +98,7 @@ export const weekly = internalAction({
   args: {},
   handler: async (ctx): Promise<number> => {
     const ids: Id<"organizations">[] = await ctx.runQuery(internal.siteWatch.targets, {});
-    ids.forEach((orgId, i) => void ctx.scheduler.runAfter((i % 120) * 30_000, internal.siteWatchActions.check, { orgId }));
+    ids.forEach((orgId, i) => void ctx.scheduler.runAfter((i % 120) * 30_000, internal.siteWatchActions.check, { orgId, scheduled: true }));
     return ids.length;
   },
 });

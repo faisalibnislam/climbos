@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, BookOpenCheck, Bot, CreditCard, Gauge, LayoutGrid, Palette, ShieldCheck, SlidersHorizontal, Sparkles, Target, UserRound, Users, Webhook } from "@/components/icons"
+import { Activity, BookOpenCheck, Bot, CreditCard, Gauge, LayoutGrid, Palette, ShieldCheck, SlidersHorizontal, Sparkles, Target, UserRound, Users, Webhook, Workflow } from "@/components/icons"
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { can, type MemberRole } from "@shared/policy";
@@ -23,6 +23,7 @@ export const SETTINGS_SECTIONS = [
   { key: "activity", label: "Activity", icon: Activity, tone: "teal", permission: "view" },
   { key: "usage", label: "Usage", icon: Gauge, tone: "pink", permission: "view" },
   { key: "agents", label: "Agents & MCP", icon: Bot, tone: "violet", permission: "edit" },
+  { key: "automations", label: "Automations", icon: Workflow, tone: "teal", permission: "view" },
   { key: "specialists", label: "Specialists", icon: Sparkles, tone: "teal", permission: "edit" },
   { key: "webhooks", label: "Webhooks", icon: Webhook, tone: "teal", permission: "manage_connections" },
   { key: "privacy", label: "Privacy", icon: ShieldCheck, tone: "green", permission: "export" },

@@ -38,6 +38,7 @@ import type * as climb from "../climb.js";
 import type * as competitorActions from "../competitorActions.js";
 import type * as competitorDiscovery from "../competitorDiscovery.js";
 import type * as competitors from "../competitors.js";
+import type * as automationRegistry from "../automationRegistry.js";
 import type * as connectionActions from "../connectionActions.js";
 import type * as connections from "../connections.js";
 import type * as content from "../content.js";
@@ -147,6 +148,7 @@ declare const fullApi: ApiFromModules<{
   assets: typeof assets;
   auth: typeof auth;
   autopilot: typeof autopilot;
+  automationRegistry: typeof automationRegistry;
   billing: typeof billing;
   bio: typeof bio;
   bookings: typeof bookings;
