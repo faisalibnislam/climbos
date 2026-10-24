@@ -69,6 +69,10 @@ describe("decision contract flag", () => {
     expect(playsTask({ scorecard: "", insights: "", decisionContract: true })).toContain(DECISION_CONTRACT);
     const defaultTask = playsTask({ scorecard: "", insights: "" });
     expect(defaultTask).toContain(DECISION_CONTRACT);
+    expect(defaultTask).toContain("COMMERCIAL EVIDENCE GATE");
+    expect(defaultTask).toContain("When business-specific evidence of customer demand or willingness to pay is insufficient or mixed");
+    expect(defaultTask).toContain("keep any acquisition spend bounded to the test");
+    expect(defaultTask).toContain("Never infer viability from a polished website");
     expect(defaultTask).toMatch(/best-supported binding constraint/);
     expect(defaultTask).not.toMatch(/one bankable play, one or two creative-but-proven plays/);
     expect(defaultTask).not.toContain("Fill decision");
