@@ -48,6 +48,7 @@ import { callModel } from "../convex/ai/providers";
 import { fetchCitedPages, researchWebsite, resolveHost } from "../convex/ai/research";
 import { selectCases, TASKS_ALL, type BenchCase, type BenchTask } from "./cases";
 import { hardCheck, hardSection, withHardOverride, type HardCheck, type HardEvidence, type LintCase, type PairResult } from "./hard";
+import { evaluationEvidence } from "./evidence";
 
 // ---------- env & args ----------
 for (const line of readFileSync(".env.local", "utf8").split(/\r?\n/)) {
@@ -743,6 +744,7 @@ function summarize(rows: Record<string, unknown>[]): string {
   type Row = { case: string; task: BenchTask; outs: Record<string, ArmResult>; comparisons: Record<string, Record<string, { result: string; reasons: string[]; hardOverride?: string }>>; scores: Record<string, Score | null>; hard?: Record<string, HardCheck | null> };
   const R = rows as unknown as Row[];
   const lines: string[] = [`# Benchmark: ${label} (${new Date().toISOString().slice(0, 10)})`, "", `Cases: ${[...new Set(R.map((r) => r.case))].join(", ")} · Tasks: ${tasks.join(", ")} · Arms: ${arms.join(", ")}`, ""];
+  lines.push(...evaluationEvidence(R, arms, judges, pointwise, process.argv.includes("--blind")));
   lines.push("## Pairwise (both orders; a win needs both orders to agree; a hard failure decides first)", "", "| Comparison | Judge | Wins | Ties | Losses | Win rate (excl. ties) | Decided by hard checks |", "|---|---|---|---|---|---|---|");
   for (const [x, y] of compare) {
     for (const j of judges) {
