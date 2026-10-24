@@ -53,6 +53,12 @@ export const InsightsV2Schema = BusinessInsightsSchema.extend({
   competitors: z.array(
     BusinessInsightsSchema.shape.competitors.element.extend({
       kind: z.enum(["direct", "adjacent"]),
+      comparison: z.array(z.object({
+        dimension: z.enum(["target_customer", "positioning", "offer", "pricing", "proof", "distribution", "experience", "other"]),
+        finding: z.string().max(500),
+        sourceUrl: z.string(),
+        implication: z.string().max(500),
+      })).max(8).optional(),
     }),
   ),
   alternatives: z.array(z.object({ name: z.string(), kind: z.enum(["competitor", "adjacent", "diy", "hire", "marketplace", "do_nothing", "other"]), evidence: z.string(), sourceUrl: z.string() })),
@@ -222,7 +228,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; portfolio?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; ownerEconomics?: unknown; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.28-first-recorded-channel-outcomes";
+export const ENGINE_VERSION = "v3.29-competitor-comparison-evidence";
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
@@ -1242,14 +1248,19 @@ export function lintAvailableSourceUrls(refs: { url: string; path: string }[], i
 }
 
 export function lintInsightSources(out: Pick<InsightsV2, "competitors" | "alternatives" | "vocPhrases" | "objections" | "gaps">, input: AgentInput): LintIssue[] {
+  const refs: { url: string; path: string }[] = [];
+  out.competitors.forEach((competitor, i) => {
+    refs.push({ url: competitor.sourceUrl, path: `competitors[${i}].sourceUrl` });
+    competitor.comparison?.forEach((finding, j) => refs.push({ url: finding.sourceUrl, path: `competitors[${i}].comparison[${j}].sourceUrl` }));
+  });
   const groups: [string, { sourceUrl: string }[]][] = [
-    ["competitors", out.competitors],
     ["alternatives", out.alternatives],
     ["vocPhrases", out.vocPhrases],
     ["objections", out.objections],
     ["gaps", out.gaps],
   ];
-  return lintAvailableSourceUrls(groups.flatMap(([group, rows]) => rows.map((row, i) => ({ url: row.sourceUrl, path: `${group}[${i}].sourceUrl` }))), input);
+  refs.push(...groups.flatMap(([group, rows]) => rows.map((row, i) => ({ url: row.sourceUrl, path: `${group}[${i}].sourceUrl` }))));
+  return lintAvailableSourceUrls(refs, input);
 }
 
 /** Lint for things that get published or sent as written (emails, pages): no placeholders. */
@@ -1951,7 +1962,7 @@ Only report what you actually found, with URLs.`,
         maxSearches: 8,
         maxFetches: 8,
         brief: `For ${ctx.businessName}${site}:
-1. Competitive set: identify 3-5 direct competitors that solve the same customer job for a similar buyer, and classify each sourced company as direct or adjacent (nearby job/segment, not a direct substitute). Use the competitor's own canonical homepage as url and the exact page read as sourceUrl. Put DIY, hiring, marketplaces and doing nothing in alternatives with their matching kind; do not list directories or review sites as vendors.
+1. Competitive set: identify 3-5 direct competitors that solve the same customer job for a similar buyer, and classify each sourced company as direct or adjacent (nearby job/segment, not a direct substitute). Use the competitor's own canonical homepage as url and the exact page read as sourceUrl. Put DIY, hiring, marketplaces and doing nothing in alternatives with their matching kind; do not list directories or review sites as vendors. For each competitor, add up to 8 comparison observations across target customer, positioning, offer, pricing, proof, distribution, and customer experience when the supplied pages support them. Each observation must include the exact sourceUrl read, what that page shows, and a separate cautious implication for this business. Omit dimensions with no evidence; unknown is not a weakness, and do not claim superiority or that an observed difference causes customer choice.
 2. Voice of customer: find reviews and forum threads (G2/Capterra/Trustpilot/Google reviews/Reddit/app stores, whichever fit this business type) about this business and its top competitors. Collect 15-30 short verbatim phrases with URLs: why people switch, what almost stopped them, outcomes they describe, words they use for the problem.
 3. Gaps: values customers mention that no competitor leads with; offers nobody makes (guarantee, fixed price, fast start); channels competitors are absent from. Note evidence for each.`,
       };

@@ -289,7 +289,14 @@ export const saveInsights = internalMutation({
     await ctx.db.patch(businessId, {
       insights: {
         audiences: i.audiences.slice(0, 5),
-        competitors: i.competitors.slice(0, 6).map((c, index) => ({ name: c.name, url: c.url || undefined, note: c.note, sourceUrl: c.sourceUrl || undefined, kind: v2Competitors?.[index]?.kind })),
+        competitors: i.competitors.slice(0, 6).map((c, index) => ({
+          name: c.name,
+          url: c.url || undefined,
+          note: c.note,
+          sourceUrl: c.sourceUrl || undefined,
+          kind: v2Competitors?.[index]?.kind,
+          comparison: v2Competitors?.[index]?.comparison?.slice(0, 8).map((finding) => ({ ...finding, finding: finding.finding.slice(0, 500), implication: finding.implication.slice(0, 500) })),
+        })),
         positioning: i.positioning,
         pricingNotes: i.pricingNotes,
         swot: {

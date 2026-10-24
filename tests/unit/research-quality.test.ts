@@ -42,4 +42,25 @@ describe("research source assessment", () => {
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({ severity: "error", rule: "citation", path: "vocPhrases[0].sourceUrl" });
   });
+
+  it("requires each structured competitor comparison to cite a page read in this run", () => {
+    const input = { task: "Compare competitors", brief: "Business facts", facts: [], precomputedResearch: { notes: "Pricing and offer pages", sources: [{ url: "https://rival.example/pricing" }] } };
+    const base = {
+      competitors: [{
+        name: "Rival",
+        url: "https://rival.example",
+        note: "Direct alternative",
+        sourceUrl: "https://rival.example/pricing",
+        kind: "direct" as const,
+        comparison: [{ dimension: "pricing" as const, finding: "Publishes a monthly plan price.", sourceUrl: "https://rival.example/pricing", implication: "A comparable price test may be useful if the offers serve the same buyer." }],
+      }],
+      alternatives: [],
+      vocPhrases: [],
+      objections: [],
+      gaps: [],
+    };
+    expect(lintInsightSources(base, input)).toEqual([]);
+    const issues = lintInsightSources({ ...base, competitors: [{ ...base.competitors[0], comparison: [{ ...base.competitors[0].comparison[0], sourceUrl: "https://unread.example/pricing" }] }] }, input);
+    expect(issues).toMatchObject([{ severity: "error", rule: "citation", path: "competitors[0].comparison[0].sourceUrl" }]);
+  });
 });

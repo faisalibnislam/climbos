@@ -425,7 +425,19 @@ export default defineSchema({
       v.object({
         audiences: v.array(v.object({ name: v.string(), description: v.string(), confidence: v.string() })),
         competitors: v.array(
-          v.object({ name: v.string(), url: v.optional(v.string()), note: v.string(), sourceUrl: v.optional(v.string()), kind: v.optional(v.union(v.literal("direct"), v.literal("adjacent"))) }),
+          v.object({
+            name: v.string(),
+            url: v.optional(v.string()),
+            note: v.string(),
+            sourceUrl: v.optional(v.string()),
+            kind: v.optional(v.union(v.literal("direct"), v.literal("adjacent"))),
+            comparison: v.optional(v.array(v.object({
+              dimension: v.union(v.literal("target_customer"), v.literal("positioning"), v.literal("offer"), v.literal("pricing"), v.literal("proof"), v.literal("distribution"), v.literal("experience"), v.literal("other")),
+              finding: v.string(),
+              sourceUrl: v.string(),
+              implication: v.string(),
+            }))),
+          }),
         ),
         positioning: v.string(),
         pricingNotes: v.string(),
