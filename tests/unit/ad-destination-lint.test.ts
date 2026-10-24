@@ -11,8 +11,8 @@ const base: AgentInput = {
 
 function destinationIssues(finalUrl: string, input: AgentInput = base) {
   const output = {
-    searchAds: [{ headlines: [], descriptions: [], keywords: [], finalUrl, paths: [], negativeKeywords: [], landingPageMatch: "" }],
-    metaAds: [{ primaryText: "", headline: "", description: "", imageIdea: "", audience: "", concept: "", angle: "", format: "image", creativeBrief: "" }],
+    searchAds: [{ headlines: [], descriptions: [], keywords: [], finalUrl, angle: "Clear service booking", paths: [], negativeKeywords: [], landingPageMatch: "" }],
+    metaAds: [{ primaryText: "", headline: "", description: "", imageIdea: "", audience: "", concept: "", angle: "Simple weekly service planning", format: "image", creativeBrief: "" }],
     budgetNote: "",
     factIndexes: [],
   };

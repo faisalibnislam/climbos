@@ -224,7 +224,7 @@ The shared agent and critic contracts now preserve the distinction between publi
 | REQ-SEO-04 | blocked + missing | S10 | — | No CMS adapter. Needs a WordPress sandbox |
 | REQ-SEO-05 | partial | S9 | `shared/integrations/searchConsole.ts` | Adapter not called from `convex/` |
 | REQ-COPY-01 | partial | S8 | `specs.ts:195-229` | Per-channel schemas. No unified brief |
-| REQ-COPY-02 | partial | S8 | `jobs.ts` `planContext` | No angle-selection step |
+| REQ-COPY-02 | partial | S8 | `skills/copy-fundamentals/SKILL.md`, `specs.ts` `lintDistinctAngles`, `jobs.ts`, `artifactVersions.contentAngle` | Social, search/meta ads, and email now return a distinct owner-facing angle cue, persist it outside publishable copy, and run a shortness/lexical-near-duplicate check before save. The cue is selected from positioning, customer language, use cases, objections, triggers or proof. **Gap:** the angle is still self-reported by the model; lexical overlap does not establish semantic distinction or evidence relevance, and no live-model or owner evaluation has measured improvement. |
 | REQ-COPY-03 | partial | S8 | skills, `runtime.ts` | Prompt only |
 | REQ-COPY-04 | partial | S8 | `specs.ts:840-851` | |
 | REQ-COPY-05 / AEO 354 | partial | S8 | `factIndexes.ts` `lintFactIndexes`, `artifactVersions.claimFactIds` | SEO, social, ads and email outputs now fail lint when they cite fact indexes outside the exact input list; valid indexes are already resolved to tenant fact IDs when artifacts are saved. **Gap:** this verifies reference integrity, not that the cited fact semantically proves each sentence. |

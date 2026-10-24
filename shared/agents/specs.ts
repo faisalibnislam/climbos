@@ -357,9 +357,12 @@ export function lintPlays(drafts: PlayDraft[], economics?: Economics, opts: { de
 }
 
 const postFormat = z.enum(["text", "single_image", "carousel", "document", "reel", "thread", "story"]);
+const copyAngleSchema = z.string().min(4).max(180);
 export const SocialPostsV2Schema = z.object({
   posts: z.array(
     SocialPostsSchema.shape.posts.element.extend({
+      /** Internal strategy cue shown to the owner; keep it to one specific idea. */
+      angle: copyAngleSchema,
       format: postFormat,
       hook: z.string(),
       slides: z.array(z.object({ heading: z.string(), body: z.string() })),
@@ -373,19 +376,23 @@ export type SocialPostsV2 = z.infer<typeof SocialPostsV2Schema>;
 
 export const AdDraftsV2Schema = AdDraftsSchema.extend({
   searchAds: z.array(
-    AdDraftsSchema.shape.searchAds.element.extend({ paths: z.array(z.string()), negativeKeywords: z.array(z.string()), landingPageMatch: z.string() }),
+    AdDraftsSchema.shape.searchAds.element.extend({ angle: copyAngleSchema, paths: z.array(z.string()), negativeKeywords: z.array(z.string()), landingPageMatch: z.string() }),
   ),
   metaAds: z.array(
-    AdDraftsSchema.shape.metaAds.element.extend({ concept: z.string(), angle: z.string(), format: z.enum(["image", "video", "carousel"]), creativeBrief: z.string() }),
+    AdDraftsSchema.shape.metaAds.element.extend({ concept: z.string(), angle: copyAngleSchema, format: z.enum(["image", "video", "carousel"]), creativeBrief: z.string() }),
   ),
 });
 export type AdDraftsV2 = z.infer<typeof AdDraftsV2Schema>;
 
 export const EmailSequenceV2Schema = EmailSequenceSchema.extend({
+  /** Campaign's organizing idea, distinct from each email's own angle. */
+  angle: copyAngleSchema,
+  emails: z.array(EmailSequenceSchema.shape.emails.element.extend({ angle: copyAngleSchema })),
   sender: z.string(),
   goal: z.string(),
   successMetric: z.string(),
 });
+export type EmailSequenceV2 = z.infer<typeof EmailSequenceV2Schema>;
 
 export const SeoBriefV2Schema = SeoBriefSchema.extend({
   pageType: z.enum(["comparison", "alternatives", "service_location", "pricing", "how_to", "product", "category", "other"]),
@@ -1201,13 +1208,49 @@ function lintPlanning(out: unknown, input: AgentInput): LintIssue[] {
   return lintCopy(out, { evidence: `${evidenceOf(input)}\n${ownNumbers(out).join(" ")}`, labelled: true, skip: (p) => /url|sourceUrl|keywords|key$|killIf|scaleIf|falsifier|days$|weeklyTarget|target$/i.test(p) });
 }
 
+const ANGLE_STOP_WORDS = new Set(["a", "an", "and", "at", "for", "from", "in", "of", "on", "or", "the", "to", "with", "your", "their", "when", "how", "why"]);
+
+function normalizeAngleWord(word: string): string {
+  if (word.length > 5 && word.endsWith("ing")) return word.slice(0, -3);
+  if (word.length > 4 && word.endsWith("ed")) return word.slice(0, -2);
+  if (word.length > 4 && word.endsWith("s") && !word.endsWith("ss")) return word.slice(0, -1);
+  return word;
+}
+
+/** Flags thin and lexically near-identical angle choices without claiming semantic understanding. */
+export function lintDistinctAngles(items: { path: string; angle: string }[]): LintIssue[] {
+  const issues: LintIssue[] = [];
+  const normalized = items.map((item) => {
+    const angle = typeof item.angle === "string" ? item.angle : "";
+    const words = angle.toLocaleLowerCase("en-US").match(/[\p{L}\p{N}]+/gu) ?? [];
+    const meaningful = new Set(words.filter((word) => !ANGLE_STOP_WORDS.has(word)).map(normalizeAngleWord));
+    if (!angle.trim()) issues.push({ severity: "error", rule: "copy_angle", message: "Choose one concrete reader angle for this piece before drafting it.", path: item.path });
+    if (words.length > 12) issues.push({ severity: "error", rule: "copy_angle", message: `This angle is ${words.length} words; make it one idea in 12 words or fewer.`, path: item.path });
+    return { ...item, meaningful };
+  });
+  for (let i = 0; i < normalized.length; i += 1) {
+    const left = normalized[i]!;
+    if (left.meaningful.size < 4) continue;
+    for (let j = i + 1; j < normalized.length; j += 1) {
+      const right = normalized[j]!;
+      const union = new Set([...left.meaningful, ...right.meaningful]);
+      const overlap = [...left.meaningful].filter((word) => right.meaningful.has(word)).length / union.size;
+      if (overlap >= 0.8) {
+        issues.push({ severity: "warn", rule: "repeated_angle", message: `This angle closely repeats ${left.path}. Choose a different customer moment, objection, use case, customer phrase, myth, or proof mechanism.`, path: right.path });
+      }
+    }
+  }
+  return issues;
+}
+
 function lintSocial(out: SocialPostsV2, input: AgentInput): LintIssue[] {
   const issues: LintIssue[] = [];
+  issues.push(...lintDistinctAngles(out.posts.map((p, i) => ({ path: `posts[${i}].angle`, angle: p.angle }))));
   out.posts.forEach((p, i) => {
     const lim = CHANNEL_LIMITS[p.channel] ?? CHANNEL_LIMITS.instagram;
     const path = `posts[${i}]`;
     issues.push(
-      ...lintCopy({ body: p.body, slides: p.slides, script: p.videoScript, firstComment: p.firstComment }, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), emojiPer150: lim.emojiPer150, publishable: true }).map((l) => ({ ...l, path: `${path}.${l.path ?? ""}` })),
+      ...lintCopy({ angle: p.angle, body: p.body, slides: p.slides, script: p.videoScript, firstComment: p.firstComment }, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), emojiPer150: lim.emojiPer150, publishable: true }).map((l) => ({ ...l, path: `${path}.${l.path ?? ""}` })),
       ...lintFactIndexes(p.factIndexes, input.facts.length, `${path}.factIndexes`),
       // Briefs and alt text are complete too: no owner questions hidden in them.
       ...lintCopy({ title: p.title, hook: p.hook, visualBrief: p.visualBrief, altText: p.altText, imageIdea: p.imageIdea }, { publishable: true }).filter((l) => l.rule === "placeholder").map((l) => ({ ...l, path: `${path}.${l.path ?? ""}` })),
@@ -1248,7 +1291,7 @@ export function promisedCount(text: string): number | null {
 }
 
 function lintAds(out: AdDraftsV2, input: AgentInput): LintIssue[] {
-  const issues: LintIssue[] = [...lintCopy(out, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), publishable: true, skip: (p) => /keywords|finalUrl|negative|creativeBrief|landingPageMatch/i.test(p) }), ...lintAdDestinations(out, input), ...lintFactIndexes(out.factIndexes, input.facts.length)];
+  const issues: LintIssue[] = [...lintCopy(out, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), publishable: true, skip: (p) => /keywords|finalUrl|negative|creativeBrief|landingPageMatch/i.test(p) }), ...lintDistinctAngles([...out.searchAds.map((ad, i) => ({ path: `searchAds[${i}].angle`, angle: ad.angle })), ...out.metaAds.map((ad, i) => ({ path: `metaAds[${i}].angle`, angle: ad.angle }))]), ...lintAdDestinations(out, input), ...lintFactIndexes(out.factIndexes, input.facts.length)];
   out.searchAds.forEach((a, i) => {
     const path = `searchAds[${i}]`;
     issues.push(...minItems(a.headlines, 3, `${path}.headlines`, "headlines"), ...maxItems(a.headlines, 15, `${path}.headlines`, "headlines"));
@@ -1796,7 +1839,7 @@ export function emailSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof EmailSe
       skills: ["copy-fundamentals", "lifecycle-email"],
       schema: EmailSequenceV2Schema,
       rubric: rubricOf("lifecycle-email"),
-      lint: (out, input) => [...lintPublishable(out, input), ...out.emails.flatMap((e, i) => maxLength(e.subject, 70, `emails[${i}].subject`, "Subject line"))],
+      lint: (out, input) => [...lintPublishable(out, input), ...lintDistinctAngles(out.emails.map((e, i) => ({ path: `emails[${i}].angle`, angle: e.angle }))), ...out.emails.flatMap((e, i) => maxLength(e.subject, 70, `emails[${i}].subject`, "Subject line"))],
     },
     o,
     "lean",

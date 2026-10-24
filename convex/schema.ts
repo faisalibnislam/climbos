@@ -1776,6 +1776,8 @@ export default defineSchema({
     version: v.number(),
     headline: v.optional(v.string()),
     body: v.string(),
+    /** Owner-facing copy strategy cue, separate from publishable content. */
+    contentAngle: v.optional(v.string()),
     callToAction: v.optional(v.string()),
     destinationUrl: v.optional(v.string()),
     hashtags: v.array(v.string()),

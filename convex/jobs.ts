@@ -10,17 +10,14 @@ import { CURRENT_ROUTING, getRateVersion } from "../shared/economics";
 import type { ModelKey } from "../shared/economics/rates";
 import { estimateTokens, MODEL_SPECS, runtimeModel, VIDEO_ROUTE, worstCaseStepMicros } from "../shared/ai/models";
 import {
-  type AdDraftsOutput,
   type BusinessInsights,
   type BusinessProfile,
   type ChatIntentOutput,
-  type EmailSequenceOutput,
   factsBlock,
   businessResearchContext,
   staleFactsBlock,
   stripFactMarkers,
   type SeoBriefOutput,
-  type SocialPostsOutput,
   type StrategyOutput,
   systemPrompt,
   TASKS,
@@ -75,6 +72,9 @@ import {
   socialSpec,
   strategySpec,
   type ChannelFit,
+  type SocialPostsV2,
+  type AdDraftsV2,
+  type EmailSequenceV2,
   type OutreachOutput,
   type PlaysOutput,
   type PlanSnapshot,
@@ -1340,14 +1340,14 @@ export const createContent = internalAction({
         if (args.job === "content_social") {
           const qty = Math.max(1, Math.min(args.quantity ?? 3, 6));
           const channels = args.channel ? [args.channel] : ["instagram", "facebook", "linkedin"];
-          const out = await runAgentTask<SocialPostsOutput>(
+          const out = await runAgentTask<SocialPostsV2>(
             ctx,
             job,
             0,
             socialSpec(channels),
             agentInput(
               job,
-              `Write ${qty} social post${qty === 1 ? "" : "s"} for ${channels.join(", ")} that support the growth plan and goal. Each post makes one point, written natively for its platform, with a visual brief and accessible alt text. Never imply a real customer or show a fake screenshot.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${imagesBrief}${planContext(job)}`,
+              `Write ${qty} social post${qty === 1 ? "" : "s"} for ${channels.join(", ")} that support the growth plan and goal. Before drafting, choose a specific positioning or customer-language angle for each piece; return that reader-facing idea in its angle field, in 12 words or fewer, and vary the angles across the set. Each post makes one point, written natively for its platform, with a visual brief and accessible alt text. Never imply a real customer or show a fake screenshot.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${imagesBrief}${planContext(job)}`,
             ),
             startedAt,
             {
@@ -1364,12 +1364,12 @@ export const createContent = internalAction({
           posts = out.posts.length;
           items = socialToArtifacts(out, Date.now());
         } else if (args.job === "content_ads") {
-          const out = await runAgentTask<AdDraftsOutput>(
+          const out = await runAgentTask<AdDraftsV2>(
             ctx,
             job,
             0,
             adsSpec(),
-            agentInput(job, `Draft one Google responsive search ad and Meta ads built on distinct creative concepts for the goal, within the owner's budget. Ads are created paused and only go live after the owner approves them.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`, {
+            agentInput(job, `Draft one Google responsive search ad and Meta ads built on distinct creative concepts for the goal, within the owner's budget. Choose and return one specific positioning/customer-language angle for each ad in its angle field (12 words or fewer). Ads are created paused and only go live after the owner approves them.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`, {
               research: researchFor("ad_drafts", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }),
             }),
             startedAt,
@@ -1377,12 +1377,12 @@ export const createContent = internalAction({
           );
           items = adsToArtifacts(out, job.business?.website);
         } else if (args.job === "content_email") {
-          const out = await runAgentTask<EmailSequenceOutput>(
+          const out = await runAgentTask<EmailSequenceV2>(
             ctx,
             job,
             0,
             emailSpec(),
-            agentInput(job, `Write a short email sequence (3 emails) for people who agreed to hear from the business. Use {{first_name}} with a safe fallback. One idea and one call to action per email.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`),
+            agentInput(job, `Write a short email sequence (3 emails) for people who agreed to hear from the business. Return one campaign angle and a distinct specific angle for each email (12 words or fewer per angle), selected from positioning, customer language, use case, objection, trigger or proof. Use {{first_name}} with a safe fallback. One idea and one call to action per email.${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`),
             startedAt,
             { task: "email_sequence", context: "", ctx: fx, text: `TASK: Write a short email sequence (3 emails) for people who agreed to hear from the business. Use {{first_name}} for personalization. Include a clear call to action per email.\n\n${businessBrief(job)}${brief}` },
           );

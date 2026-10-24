@@ -132,6 +132,7 @@ export async function sha256Hex(input: string): Promise<string> {
 export interface MaterialContent {
   headline?: string;
   body: string;
+  contentAngle?: string;
   callToAction?: string;
   destinationUrl?: string;
   hashtags: string[];
@@ -145,6 +146,7 @@ export function contentHash(content: MaterialContent): Promise<string> {
     canonicalJson({
       headline: content.headline?.trim(),
       body: content.body.trim(),
+      contentAngle: content.contentAngle?.trim(),
       callToAction: content.callToAction?.trim(),
       destinationUrl: content.destinationUrl?.trim(),
       hashtags: [...content.hashtags].map((h) => h.trim().toLowerCase()).sort(),

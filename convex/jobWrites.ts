@@ -601,6 +601,8 @@ export type ArtifactInput = {
   title: string;
   headline?: string;
   body: string;
+  /** Owner-facing strategy cue; not included in the publishable copy body. */
+  contentAngle?: string;
   callToAction?: string;
   destinationUrl?: string;
   hashtags: string[];
@@ -665,6 +667,7 @@ export async function insertArtifact(
   const ch = await contentHash({
     headline: item.headline,
     body: item.body,
+    contentAngle: item.contentAngle,
     callToAction: item.callToAction,
     destinationUrl: item.destinationUrl,
     hashtags: item.hashtags,
@@ -678,6 +681,7 @@ export async function insertArtifact(
     version: 1,
     headline: item.headline,
     body: item.body,
+    contentAngle: item.contentAngle,
     callToAction: item.callToAction,
     destinationUrl: item.destinationUrl,
     hashtags: item.hashtags.slice(0, 12),
@@ -703,6 +707,7 @@ const artifactInputValidator = v.object({
   title: v.string(),
   headline: v.optional(v.string()),
   body: v.string(),
+  contentAngle: v.optional(v.string()),
   callToAction: v.optional(v.string()),
   destinationUrl: v.optional(v.string()),
   hashtags: v.array(v.string()),
@@ -746,12 +751,13 @@ export const saveArtifacts = internalMutation({
 });
 
 /** Convert task outputs into artifact inputs (pure helpers used by jobs). */
-export function socialToArtifacts(out: SocialPostsOutput, now: number): Omit<ArtifactInput, "imageStorageId">[] {
+export function socialToArtifacts(out: Omit<SocialPostsOutput, "posts"> & { posts: (SocialPostsOutput["posts"][number] & { angle?: string })[] }, now: number): Omit<ArtifactInput, "imageStorageId">[] {
   return out.posts.map((p, i) => ({
     kind: "social_post" as const,
     channel: p.channel,
     title: p.title,
     body: p.body,
+    contentAngle: p.angle,
     hashtags: p.hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)),
     altText: p.altText,
     imagePrompt: p.imageIdea,
@@ -761,7 +767,10 @@ export function socialToArtifacts(out: SocialPostsOutput, now: number): Omit<Art
   }));
 }
 
-export function adsToArtifacts(out: AdDraftsOutput, website?: string): Omit<ArtifactInput, "imageStorageId">[] {
+export function adsToArtifacts(out: Omit<AdDraftsOutput, "searchAds" | "metaAds"> & {
+  searchAds: (AdDraftsOutput["searchAds"][number] & { angle?: string })[];
+  metaAds: (AdDraftsOutput["metaAds"][number] & { angle?: string })[];
+}, website?: string): Omit<ArtifactInput, "imageStorageId">[] {
   const items: Omit<ArtifactInput, "imageStorageId">[] = [];
   for (const a of out.searchAds.slice(0, 2)) {
     items.push({
@@ -770,6 +779,7 @@ export function adsToArtifacts(out: AdDraftsOutput, website?: string): Omit<Arti
       title: `Search ad: ${a.headlines[0] ?? "Draft"}`,
       headline: a.headlines.map((h) => h.slice(0, 30)).join(" | "),
       body: a.descriptions.map((d) => d.slice(0, 90)).join("\n"),
+      contentAngle: a.angle,
       destinationUrl: a.finalUrl || website,
       hashtags: a.keywords.slice(0, 10),
       factIndexes: out.factIndexes,
@@ -783,6 +793,7 @@ export function adsToArtifacts(out: AdDraftsOutput, website?: string): Omit<Arti
       title: `Social ad: ${m.headline}`,
       headline: m.headline,
       body: `${m.primaryText}\n\n${m.description}`,
+      contentAngle: m.angle,
       destinationUrl: website,
       hashtags: [],
       imagePrompt: m.imageIdea,
@@ -793,7 +804,7 @@ export function adsToArtifacts(out: AdDraftsOutput, website?: string): Omit<Arti
   return items;
 }
 
-export function emailToArtifacts(out: EmailSequenceOutput): Omit<ArtifactInput, "imageStorageId">[] {
+export function emailToArtifacts(out: Omit<EmailSequenceOutput, "emails"> & { angle?: string; emails: (EmailSequenceOutput["emails"][number] & { angle?: string })[] }): Omit<ArtifactInput, "imageStorageId">[] {
   return [
     {
       kind: "email_sequence",
@@ -803,6 +814,7 @@ export function emailToArtifacts(out: EmailSequenceOutput): Omit<ArtifactInput, 
       body: out.emails
         .map((e, i) => `Email ${i + 1} — day ${e.sendAfterDays}\nSubject: ${e.subject}\nPreview: ${e.previewText}\n\n${e.body}\n\n[${e.callToAction}]`)
         .join("\n\n———\n\n"),
+      contentAngle: [out.angle, ...out.emails.map((email, i) => (email.angle ? `Email ${i + 1}: ${email.angle}` : ""))].filter(Boolean).join("\n").slice(0, 500) || undefined,
       hashtags: [],
       factIndexes: out.factIndexes,
       role: "customer_success_manager",
