@@ -2,6 +2,7 @@ import { feedbackBrief } from "./feedback";
 import { EVIDENCE_KIND_LABEL, evidenceKind } from "../shared/agents/evidenceKind";
 import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 import { factFreshness } from "../shared/agents/factFreshness";
+import { EXPERT_PLAN_SCHEMA_VERSION } from "../shared/agents/planCompatibility";
 import { planContentHash } from "./lib/planHash";
 import { resolveCites } from "../shared/agents/evidence";
 import { majorToMinor } from "../shared/economics/currency";
@@ -110,7 +111,7 @@ export const jobContext = internalQuery({
       business,
       /** Plans start from what earlier plays actually did. */
       resultsText: run.kind === "strategy" ? [await resultsBrief(ctx, org._id), await feedbackBrief(ctx, org._id)].filter(Boolean).join("\n\n") : "",
-      facts: currentFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, kind: EVIDENCE_KIND_LABEL[evidenceKind(f.statement, f.provenance)], evidenceKind: evidenceKind(f.statement, f.provenance), freshness: factFreshness(f.category, f.updatedAt) })),
+      facts: currentFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, createdAt: f.createdAt, kind: EVIDENCE_KIND_LABEL[evidenceKind(f.statement, f.provenance)], evidenceKind: evidenceKind(f.statement, f.provenance), freshness: factFreshness(f.category, f.updatedAt) })),
       staleFacts: staleFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, freshness: factFreshness(f.category, f.updatedAt) })),
       unconfirmedCount: facts.filter((f) => f.reviewState === "needs_review").length,
       goal,
@@ -352,6 +353,7 @@ export const saveStrategy = internalMutation({
             expert: (() => {
               const x = s as unknown as StrategyV2;
               return {
+                version: EXPERT_PLAN_SCHEMA_VERSION,
                 diagnosis: x.diagnosis,
                 affordableCac: x.affordableCac,
                 notDoing: x.notDoing.slice(0, 10),

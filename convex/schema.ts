@@ -1258,6 +1258,8 @@ export default defineSchema({
     /** Engine v2 expert plan detail. */
     expert: v.optional(
       v.object({
+        /** Persisted expert-plan shape; 0 is reserved for rows created before versioning. */
+        version: v.optional(v.number()),
         diagnosis: v.string(),
         affordableCac: v.string(),
         notDoing: v.array(v.object({ channel: v.string(), why: v.string() })),

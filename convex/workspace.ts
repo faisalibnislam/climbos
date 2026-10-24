@@ -23,6 +23,7 @@ import { canDriveWork, type QualityState } from "../shared/agents/quality";
 import { applyOwnerEconomics, decisionQuestions, playsGoalGap, selectPortfolio, withForecasts, type Economics, type OwnerEconomics, type PlayLike } from "../shared/agents/economics";
 import { projectGrowthOpportunities, type OpportunityPlayInput } from "../shared/agents/opportunities";
 import { AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
+import { readExpertPlan } from "../shared/agents/planCompatibility";
 
 /** Everything the Today screen needs, in one bounded query. */
 export const today = query({
@@ -497,11 +498,12 @@ export const plan = query({
       if (f && f.orgId === org._id) facts.push({ id: f._id, statement: f.statement, category: f.category });
     }
     const strategyRun = await latestRunOfKind(ctx, org._id, "strategy");
-    const currentEconomics = strategy?.expert?.economics
-      ? { ...applyOwnerEconomics(strategy.expert.economics as Economics, business?.unitEconomics), currency: goal?.currency ?? business?.currency }
+    const expert = strategy?.expert ? readExpertPlan(strategy.expert) : null;
+    const currentEconomics = expert?.economics
+      ? { ...applyOwnerEconomics(expert.economics as Economics, business?.unitEconomics), currency: goal?.currency ?? business?.currency }
       : null;
-    const currentPlays = strategy?.expert?.plays?.length && currentEconomics
-      ? withForecasts({ economics: currentEconomics as Economics, plays: strategy.expert.plays as PlayLike[] })
+    const currentPlays = Array.isArray(expert?.plays) && expert.plays.length && currentEconomics
+      ? withForecasts({ economics: currentEconomics as Economics, plays: expert.plays as PlayLike[] })
       : null;
     // Owner edits immediately refresh every deterministic derived number in the returned plan view.
     const currentPortfolio = currentPlays
@@ -531,8 +533,8 @@ export const plan = query({
             reviewDate: strategy.reviewDate,
             createdAt: strategy.createdAt,
             // Owner-confirmed unit economics apply on read: cost per customer and payback update at once.
-            expert: strategy.expert ? {
-              ...strategy.expert,
+            expert: expert ? {
+              ...expert,
               ...(currentEconomics ? { economics: currentEconomics } : {}),
               ...(currentPlays ? { plays: currentPlays.plays } : {}),
               ...(currentPortfolio ? { portfolio: currentPortfolio } : {}),
@@ -541,7 +543,7 @@ export const plan = query({
           }
         : null,
       /** Up to 3 questions whose answers would change this plan's verdicts (computed, not written by the model). */
-      questions: strategy?.expert?.plays?.length && strategy.expert.economics ? decisionQuestions({ economics: strategy.expert.economics as Economics, plays: strategy.expert.plays as PlayLike[] }, business?.unitEconomics, 3, { serviceBusiness: isServiceBusiness(business?.acquisition?.types, business?.businessType), horizonDays: goal?.horizonDays }) : [],
+      questions: Array.isArray(expert?.plays) && expert.plays.length && expert.economics ? decisionQuestions({ economics: expert.economics as Economics, plays: expert.plays as PlayLike[] }, business?.unitEconomics, 3, { serviceBusiness: isServiceBusiness(business?.acquisition?.types, business?.businessType), horizonDays: goal?.horizonDays }) : [],
       unitEconomics: business?.unitEconomics ?? null,
       funnel: business?.funnel ?? null,
       /** The owner answered after this plan was written: numbers are current, the text may not be. */

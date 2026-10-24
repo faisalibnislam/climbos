@@ -614,8 +614,17 @@ function uniqueSources(xs: { url: string; title?: string }[]): { url: string; ti
 
 /** Owner-confirmed unit economics, stated as facts in the brief. */
 /** Confirmed facts that disagree (Book 14 §5): both stay, and the writer must not pick one silently. */
+function conflictsForJob(job: JobCtx) {
+  // The general plan context is newest-first for deduplication. Present disagreements
+  // in original creation order so same-time updates cannot flip owner-facing text.
+  const facts = [...job.facts]
+    .sort((a, b) => a.createdAt - b.createdAt || String(a.id).localeCompare(String(b.id)))
+    .map((f) => ({ id: String(f.id), statement: f.statement, category: f.category }));
+  return findConflicts(facts);
+}
+
 function conflictsLine(job: JobCtx): string {
-  const lines = conflictLines(findConflicts(job.facts.map((f) => ({ id: String(f.id), statement: f.statement, category: f.category }))));
+  const lines = conflictLines(conflictsForJob(job));
   return lines.length ? `CONFLICTING FACTS (both confirmed; don't state either as settled, say which one a number uses or that the owner must confirm): ${lines.join("; ")}.` : "";
 }
 
@@ -1052,7 +1061,7 @@ export const buildStrategy = internalAction({
             // The plan agent's hard checks are re-run on the final plan below (after the consistency pass may have fixed them).
             [playsMeta.quality, planMeta.quality && withoutHard(planMeta.quality)].filter((q): q is AgentQuality => Boolean(q)),
             (strategySpec().lint?.(strategy as never, planLintInput!) ?? []).filter((l) => HARD_RULES.has(l.rule)),
-            { economicsMissing: !(plays.economics.revenuePerCustomerMonthUsd > 0) || churnOf(plays.economics) === null, unknowns: planUnknowns(job), conflicts: conflictLines(findConflicts(job.facts.map((f) => ({ id: String(f.id), statement: f.statement, category: f.category })))) },
+            { economicsMissing: !(plays.economics.revenuePerCustomerMonthUsd > 0) || churnOf(plays.economics) === null, unknowns: planUnknowns(job), conflicts: conflictLines(conflictsForJob(job)) },
           )
         : null;
       await firstTake;
@@ -1070,7 +1079,7 @@ export const buildStrategy = internalAction({
             facts: job.facts.map((f) => ({ id: String(f.id), statement: f.statement, ...(f.category ? { category: f.category } : {}) })),
             ownerEconomics: job.business?.unitEconomics,
             insights: insightsBrief,
-            conflicts: findConflicts(job.facts.map((f) => ({ id: String(f.id), statement: f.statement, category: f.category }))),
+            conflicts: conflictsForJob(job),
             research: [
               { agentId: "growth_plays", notes: playsMeta.notes ?? research?.notes, sources: playsMeta.sources },
               { agentId: "growth_strategy", notes: planMeta.notes, sources: planMeta.sources },
