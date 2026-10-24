@@ -125,7 +125,7 @@ export const sendOne = internalAction({
       return;
     }
     const secret = JSON.parse(raw.value) as MailboxSecret;
-    if (!(await ctx.runMutation(internal.outboundSending.claimSend, { sendId, lease, payloadHash: job.payloadHash }))) return;
+    if (!(await ctx.runMutation(internal.outboundSending.claimSend, { sendId, lease, payloadHash: job.payloadHash, ...(job.abTestId ? { abTestId: job.abTestId } : {}) }))) return;
     const messageId = job.opKey ? sendMessageId(job.opKey, secret.email) : undefined;
     try {
       const info = process.env.CLIMBOS_FAKE_MAILBOX

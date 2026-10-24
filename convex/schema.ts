@@ -758,6 +758,8 @@ export default defineSchema({
     orgId: v.id("organizations"),
     campaignId: v.id("outboundCampaigns"),
     prospectId: v.id("prospects"),
+    /** Subject experiment whose assigned variant was used to compose this first-step email. */
+    abTestId: v.optional(v.id("abTests")),
     step: v.number(),
     to: v.string(),
     scheduledFor: v.number(),
@@ -961,7 +963,7 @@ export default defineSchema({
     targetId: v.string(),
     /** A is the current version; B the challenger (JSON for landing pages, text for subjects). */
     variants: v.array(v.object({ key: v.string(), value: v.string() })),
-    stats: v.array(v.object({ key: v.string(), trials: v.number(), wins: v.number() })),
+    stats: v.array(v.object({ key: v.string(), assigned: v.optional(v.number()), exposed: v.optional(v.number()), trials: v.number(), wins: v.number() })),
     status: v.union(v.literal("running"), v.literal("done"), v.literal("invalid"), v.literal("stopped")),
     winner: v.optional(v.string()),
     note: v.optional(v.string()),
@@ -970,6 +972,19 @@ export default defineSchema({
   })
     .index("by_target", ["targetId", "status"])
     .index("by_org", ["orgId", "startedAt"]),
+
+  /** Anonymous, per-test assignment/exposure/outcome events; subject identifiers are stored only as hashes. */
+  abTestAssignments: defineTable({
+    orgId: v.id("organizations"),
+    testId: v.id("abTests"),
+    subjectHash: v.string(),
+    variant: v.union(v.literal("A"), v.literal("B")),
+    assignedAt: v.number(),
+    exposedAt: v.optional(v.number()),
+    outcomeAt: v.optional(v.number()),
+  })
+    .index("by_test_subject", ["testId", "subjectHash"])
+    .index("by_test", ["testId", "assignedAt"]),
 
   /** Airly apps (Formkit, Meetrao, Taskeni, Folevi): the owner's token for each, encrypted, plus sync state. */
   airlyLinks: defineTable({

@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { Check } from "@/components/icons"
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -9,17 +10,30 @@ import { errorMessage } from "@/components/app/errors";
 import { Skeleton } from "@/components/ui";
 import { firstViewToday } from "@/lib/seen";
 
-/** A/B test: each visitor keeps one version (remembered in this browser). */
-function pickVariant(testId: string): "A" | "B" {
-  const key = `climbos:ab:${testId}`;
+/** Anonymous, stable per-page subject key. The server chooses and persists the arm. */
+const visitorKeys = new Map<string, string>();
+function visitorKeyFor(slug: string): string {
+  const key = `climbos:visitor:p:${slug}`;
   try {
     const saved = localStorage.getItem(key);
-    if (saved === "A" || saved === "B") return saved;
-    const v = Math.random() < 0.5 ? "A" : "B";
-    localStorage.setItem(key, v);
-    return v;
+    if (saved && saved.length >= 16) return saved;
+    const id = crypto.randomUUID();
+    localStorage.setItem(key, id);
+    return id;
   } catch {
-    return "A";
+    const saved = visitorKeys.get(slug);
+    if (saved) return saved;
+    const id = crypto.randomUUID();
+    visitorKeys.set(slug, id);
+    return id;
+  }
+}
+
+function lastTestIdFor(slug: string): string | undefined {
+  try {
+    return localStorage.getItem(`climbos:ab-test:p:${slug}`) ?? undefined;
+  } catch {
+    return undefined;
   }
 }
 
@@ -27,23 +41,49 @@ function pickVariant(testId: string): "A" | "B" {
 export default function LandingPage() {
   const { slug } = useParams<{ slug: string }>();
   const page = useQuery(api.landing.publicPage, { slug });
+  const assignLanding = useMutation(api.landing.assignLanding);
   const viewed = useMutation(api.landing.viewed);
   const submit = useMutation(api.landing.submit);
   const counted = useRef(false);
+  const [assignment, setAssignment] = useState<{ testId: string; variant: "A" | "B" } | null>(null);
+  const [resolvedTestId, setResolvedTestId] = useState<string | null>(null);
   const [f, setF] = useState({ name: "", email: "", message: "" });
   const [state, setState] = useState<"idle" | "busy" | "done">("idle");
   const [error, setError] = useState<string | null>(null);
-  const variant = page?.test ? pickVariant(page.test.id) : undefined;
+  const pageHeadline = page?.content.headline;
+  const pageName = page?.name;
+  const testId = page?.test?.id;
+  const variant = page?.test && assignment?.testId === page.test.id ? assignment.variant : undefined;
   useEffect(() => {
-    if (page) document.title = `${page.content.headline} · ${page.name}`;
-    if (page && !counted.current) {
-      counted.current = true;
-      // One view per visitor per day, so reloads don't inflate views or A/B trials.
-      if (firstViewToday(`p:${slug}`)) void viewed({ slug, variant });
+    if (pageHeadline === undefined || pageName === undefined) return;
+    document.title = `${pageHeadline} · ${pageName}`;
+    const countView = !counted.current && firstViewToday(`p:${slug}`);
+    counted.current = true;
+    if (!testId) {
+      if (countView) void viewed({ slug, countView: true });
+      return;
     }
-  }, [page, slug, viewed, variant]);
+    let active = true;
+    const visitorKey = visitorKeyFor(slug);
+    void (async () => {
+      const assigned = await assignLanding({ slug, visitorKey });
+      const result = assigned.testId
+        ? await viewed({ slug, visitorKey, testId: assigned.testId, countView })
+        : (await viewed({ slug, countView }), assigned);
+      if (!active) return;
+      if (result.testId && result.variant) {
+        setAssignment({ testId: result.testId, variant: result.variant });
+        try { localStorage.setItem(`climbos:ab-test:p:${slug}`, result.testId); } catch { /* Session can still use its in-memory assignment. */ }
+      }
+      setResolvedTestId(testId);
+    })().catch(() => {
+      if (active) setResolvedTestId(testId); // Keep the original version available; this visit is not counted in the test.
+    });
+    return () => { active = false; };
+  }, [pageHeadline, pageName, testId, slug, assignLanding, viewed]);
   if (page === undefined) return <Skeleton className="mx-auto mt-24 h-64 w-full max-w-3xl" />;
   if (page === null) return <main className="grid min-h-dvh place-items-center p-6 text-sm text-ink-3">This page isn&apos;t available.</main>;
+  if (page.test && resolvedTestId !== page.test.id) return <Skeleton className="mx-auto mt-24 h-64 w-full max-w-3xl" />;
   const c = variant === "B" && page.test ? { ...page.content, ...page.test.b } : page.content;
   const color = page.color;
   const input = "w-full rounded-xl border border-line bg-white px-4 py-3 text-base outline-none focus:border-ink-3";
@@ -122,7 +162,8 @@ export default function LandingPage() {
                 setState("busy");
                 setError(null);
                 try {
-                  await submit({ slug, ...f, variant });
+                  const testId = assignment?.testId ?? lastTestIdFor(slug);
+                  await submit({ slug, ...f, visitorKey: visitorKeyFor(slug), ...(testId ? { testId: testId as Id<"abTests"> } : {}) });
                   setState("done");
                 } catch (err) {
                   setError(errorMessage(err));

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import { asNewUser, setup } from "./helpers";
 
 describe("landing pages", () => {
@@ -44,6 +45,23 @@ describe("landing pages", () => {
 });
 
 describe("landing A/B test", () => {
+  async function assignVisitors(t: ReturnType<typeof setup>, slug: string, targets: { A: number; B: number }) {
+    const visitors: Record<"A" | "B", { key: string; testId: Id<"abTests"> }[]> = { A: [], B: [] };
+    for (let i = 0; (visitors.A.length < targets.A || visitors.B.length < targets.B) && i < 5000; i++) {
+      const key = `ab-test-visitor-${String(i).padStart(8, "0")}`;
+      const result = await t.mutation(api.landing.assignLanding, { slug, visitorKey: key });
+      if (result.variant && result.testId && visitors[result.variant].length < targets[result.variant]) {
+        visitors[result.variant].push({ key, testId: result.testId });
+      }
+    }
+    if (visitors.A.length !== targets.A || visitors.B.length !== targets.B) throw new Error("Could not create the requested balanced assignment sample.");
+    return visitors;
+  }
+
+  async function exposeVisitors(t: ReturnType<typeof setup>, slug: string, visitors: { key: string; testId: Id<"abTests"> }[]) {
+    for (const visitor of visitors) await t.mutation(api.landing.viewed, { slug, visitorKey: visitor.key, testId: visitor.testId, countView: false });
+  }
+
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
     process.env.CLIMBOS_FAKE_LLM = "ship";
@@ -64,20 +82,26 @@ describe("landing A/B test", () => {
     await expect(owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: page.content!.headline })).rejects.toThrow(/different/);
     await owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: "Double your leads in 30 days" });
     expect((await t.query(api.landing.publicPage, { slug: page.slug }))?.test?.b.headline).toBe("Double your leads in 30 days");
-    await t.mutation(api.landing.submit, { slug: page.slug, name: "A1", email: "a1@x.example", variant: "A" });
-    for (let i = 0; i < 18; i++) await t.mutation(api.landing.submit, { slug: page.slug, name: `B${i}`, email: `b${i}@x.example`, variant: "B" });
-    for (let i = 0; i < 110; i++) {
-      await t.mutation(api.landing.viewed, { slug: page.slug, variant: "A" });
-      await t.mutation(api.landing.viewed, { slug: page.slug, variant: "B" });
-    }
-    // Decision books: a clear early lead is not read; the test runs to its planned end (1,000 views).
-    expect((await owner.client.query(api.abtests.forTarget, { slug, targetId: id }))[0]).toMatchObject({ status: "running" });
-    for (let i = 110; i < 500; i++) {
-      await t.mutation(api.landing.viewed, { slug: page.slug, variant: "A" });
-      await t.mutation(api.landing.viewed, { slug: page.slug, variant: "B" });
-    }
+    const visitors = await assignVisitors(t, page.slug, { A: 500, B: 500 });
+    // Assignment does not count as a trial. Only a rendered version is an exposure.
+    expect((await owner.client.query(api.abtests.forTarget, { slug, targetId: id }))[0].stats).toMatchObject([
+      { key: "A", assigned: expect.any(Number), exposed: 0, trials: 0 },
+      { key: "B", assigned: expect.any(Number), exposed: 0, trials: 0 },
+    ]);
+    await exposeVisitors(t, page.slug, visitors.A.slice(0, 1));
+    await exposeVisitors(t, page.slug, visitors.A.slice(0, 1)); // Repeated renders from the same assignment are one exposure.
+    await t.mutation(api.landing.submit, { slug: page.slug, name: "A1", email: "a1@x.example", visitorKey: visitors.A[0].key, testId: visitors.A[0].testId });
+    await t.mutation(api.landing.submit, { slug: page.slug, name: "A1", email: "a1@x.example", visitorKey: visitors.A[0].key, testId: visitors.A[0].testId });
+    await exposeVisitors(t, page.slug, visitors.B.slice(0, 18));
+    for (let i = 0; i < 18; i++) await t.mutation(api.landing.submit, { slug: page.slug, name: `B${i}`, email: `b${i}@x.example`, visitorKey: visitors.B[i].key, testId: visitors.B[i].testId });
+    await exposeVisitors(t, page.slug, visitors.A.slice(1));
+    await exposeVisitors(t, page.slug, visitors.B.slice(18));
     const [test] = await owner.client.query(api.abtests.forTarget, { slug, targetId: id });
     expect(test).toMatchObject({ status: "done", winner: "B" });
+    expect(test.stats).toMatchObject([
+      { key: "A", assigned: expect.any(Number), exposed: 500, trials: 500, wins: 1 },
+      { key: "B", assigned: expect.any(Number), exposed: 500, trials: 500, wins: 18 },
+    ]);
     expect((await owner.client.query(api.landing.list, { slug })).pages[0].content?.headline).toBe("Double your leads in 30 days");
     expect((await t.query(api.landing.publicPage, { slug: page.slug }))?.test).toBeNull();
   });
@@ -95,10 +119,18 @@ describe("landing A/B test", () => {
     const [started] = await owner.client.query(api.abtests.forTarget, { slug, targetId: pageId });
 
     // Put the run one view short of its fixed horizon with an already broken 90/10 split.
+    let visitorKey = "";
+    let testId: Id<"abTests"> | null = null;
+    for (let i = 0; i < 10 && !visitorKey; i++) {
+      const key = `srm-test-visitor-${i.toString().padStart(8, "0")}`;
+      const assigned = await t.mutation(api.landing.assignLanding, { slug: page.slug, visitorKey: key });
+      if (assigned.variant === "A" && assigned.testId) { visitorKey = key; testId = assigned.testId; }
+    }
+    expect(visitorKey).toBeTruthy();
     await t.run(async (ctx) => ctx.db.patch(started.id, {
-      stats: [{ key: "A", trials: 899, wins: 1 }, { key: "B", trials: 100, wins: 50 }],
+      stats: [{ key: "A", assigned: 900, exposed: 899, trials: 899, wins: 1 }, { key: "B", assigned: 100, exposed: 100, trials: 100, wins: 50 }],
     }));
-    await t.mutation(api.landing.viewed, { slug: page.slug, variant: "A" });
+    await t.mutation(api.landing.viewed, { slug: page.slug, visitorKey, testId: testId! });
 
     const [finished] = await owner.client.query(api.abtests.forTarget, { slug, targetId: pageId });
     expect(finished).toMatchObject({ status: "invalid", winner: null, confidence: 0 });

@@ -76,6 +76,29 @@ describe("outbound sending safety", () => {
     expect((await t.run(async (ctx) => ctx.db.get(w.prospectId)))?.stage).toBe("replied");
   });
 
+  it("email subject experiments bind assignment to the actual send and count a reply once", async () => {
+    const t = setup();
+    const w = await ready(t);
+    await w.owner.client.mutation(api.outboundSending.start, { slug: w.slug, campaignId: w.campaignId, ...SENDER });
+    await w.owner.client.mutation(api.abtests.startSubject, { slug: w.slug, campaignId: w.campaignId, subject: "A clearer subject line" });
+    vi.setSystemTime(new Date("2026-10-20T09:05:00Z"));
+    expect(await t.mutation(internal.outboundSending.dispatch, {})).toBe(1);
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const [test] = await w.owner.client.query(api.abtests.forTarget, { slug: w.slug, targetId: w.campaignId });
+    const [assignment] = await t.run(async (ctx) => ctx.db.query("abTestAssignments").withIndex("by_test", (q) => q.eq("testId", test.id)).collect());
+    expect(assignment).toMatchObject({ testId: test.id, variant: expect.any(String), exposedAt: expect.any(Number) });
+    const exposedArm = test.stats.find((s) => s.key === assignment.variant);
+    expect(exposedArm).toMatchObject({ assigned: 1, exposed: 1, trials: 1, wins: 0 });
+
+    const reply = { from: "jane@agency.example", optOut: false, messageId: "<ab-reply@agency>", text: "Please send details", at: Date.now() };
+    await t.mutation(internal.outboundSending.applyInbox, { campaignId: w.campaignId, replies: [reply], bounced: [], checkedAt: Date.now() });
+    await t.mutation(internal.outboundSending.applyInbox, { campaignId: w.campaignId, replies: [reply], bounced: [], checkedAt: Date.now() });
+    const [updatedAssignment] = await t.run(async (ctx) => ctx.db.query("abTestAssignments").withIndex("by_test", (q) => q.eq("testId", test.id)).collect());
+    expect(updatedAssignment.outcomeAt).toBeTypeOf("number");
+    expect((await w.owner.client.query(api.abtests.forTarget, { slug: w.slug, targetId: w.campaignId }))[0].stats.find((s) => s.key === assignment.variant)).toMatchObject({ wins: 1 });
+  });
+
   it("an opt-out after an earlier reply still suppresses; replies are processed once", async () => {
     const t = setup();
     const w = await ready(t);

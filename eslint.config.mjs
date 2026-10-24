@@ -13,7 +13,7 @@ const eslintConfig = defineConfig([
       ],
     },
   },
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "convex/_generated/**", "playwright-report/**", "test-results/**"]),
+  globalIgnores([".next/**", "**/.claude/worktrees/**", "out/**", "build/**", "next-env.d.ts", "convex/_generated/**", "playwright-report/**", "test-results/**"]),
 ]);
 
 export default eslintConfig;

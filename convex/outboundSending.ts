@@ -1,8 +1,7 @@
 import { v } from "convex/values";
 import { syncDealFromProspect } from "./crm";
 import { emitEvent } from "./webhooks";
-import { recordAb, runningTest } from "./abtests";
-import { variantFor } from "../shared/abtest";
+import { assignSubject, recordExposure, recordOutcome, subjectAssignment, variantForSubject } from "./abtests";
 import { can, sha256Hex } from "../shared/policy";
 import { bookingLinkFor, composeEmail, dailyCap, followUpAt, inSendWindow, localDayKey, nextSendWindow, sendMessageId, sendOpKey, sendPayloadHash, SPACING_MINUTES, unsubscribeToken, verifyUnsubscribeToken } from "../shared/outbound/sending";
 import { internal } from "./_generated/api";
@@ -312,12 +311,12 @@ export const prepareSend = internalQuery({
     const oneClick = process.env.CONVEX_SITE_URL ? `${process.env.CONVEX_SITE_URL}/unsubscribe?token=${encodeURIComponent(token)}` : unsub;
     // A/B subject test: half the prospects get subject B on the first email.
     const test = s.step === 0 ? await ctx.db.query("abTests").withIndex("by_target", (q) => q.eq("targetId", c._id).eq("status", "running")).first() : null;
-    const b = test && variantFor(p._id) === "B" ? test.variants.find((x) => x.key === "B")?.value : undefined;
+    const b = test && await variantForSubject(test._id, p._id) === "B" ? test.variants.find((x) => x.key === "B")?.value : undefined;
     // The booking link carries the prospect, so a booking stops their sequence and joins their deal.
     const bookingUrl = c.sending.bookingUrl ? bookingLinkFor(c.sending.bookingUrl, p._id) : undefined;
     const email = composeEmail({ step: b ? { ...step, subject: b } : step, stepIndex: s.step, firstLine: p.firstLine, contactName: p.contact, sender: { name: c.sending.senderName, company: c.sending.company, address: c.sending.address, bookingUrl }, unsubscribeUrl: unsub });
     const inReplyTo = previous?.messageId ?? null;
-    return { hold: false as const, to: s.to, subject: email.subject, text: email.text, unsubscribeUrl: oneClick, connectionId: mailbox._id, inReplyTo, opKey: s.opKey ?? null, payloadHash: await sendPayloadHash({ to: s.to, subject: email.subject, text: email.text, inReplyTo }) };
+    return { hold: false as const, to: s.to, subject: email.subject, text: email.text, unsubscribeUrl: oneClick, connectionId: mailbox._id, inReplyTo, opKey: s.opKey ?? null, abTestId: test?._id ?? null, payloadHash: await sendPayloadHash({ to: s.to, subject: email.subject, text: email.text, inReplyTo }) };
   },
 });
 
@@ -327,8 +326,8 @@ export const prepareSend = internalQuery({
  * one first tried under its key. True = send now.
  */
 export const claimSend = internalMutation({
-  args: { sendId: v.id("outboundSends"), lease: v.optional(v.string()), payloadHash: v.string() },
-  handler: async (ctx, { sendId, lease, payloadHash }) => {
+  args: { sendId: v.id("outboundSends"), lease: v.optional(v.string()), payloadHash: v.string(), abTestId: v.optional(v.id("abTests")) },
+  handler: async (ctx, { sendId, lease, payloadHash, abTestId }) => {
     const s = await ctx.db.get(sendId);
     const now = Date.now();
     if (!s || s.status !== "sending" || s.lease !== lease || s.claimedAt) return false;
@@ -342,7 +341,18 @@ export const claimSend = internalMutation({
       await markUncertain(ctx, s, "payload_changed", "The email changed since the first try.");
       return false;
     }
-    await ctx.db.patch(s._id, { claimedAt: now, leaseExpiresAt: now + SEND_LEASE_MS, payloadHash });
+    let activeTestId: Id<"abTests"> | undefined;
+    if (s.step === 0 && abTestId) {
+      const test = await ctx.db.get(abTestId);
+      if (!test || test.targetId !== s.campaignId || test.status !== "running") {
+        await ctx.db.patch(s._id, { status: "queued", ...RELEASE });
+        await ctx.scheduler.runAfter(0, internal.outboundSending.dispatch, {});
+        return false;
+      }
+      await assignSubject(ctx, test, s.prospectId);
+      activeTestId = test._id;
+    }
+    await ctx.db.patch(s._id, { claimedAt: now, leaseExpiresAt: now + SEND_LEASE_MS, payloadHash, abTestId: activeTestId });
     return true;
   },
 });
@@ -350,9 +360,12 @@ export const claimSend = internalMutation({
 /** Sent: record it, then queue the next step once (or stop). */
 async function markSent(ctx: MutationCtx, s: Doc<"outboundSends">, messageId: string | undefined, now: number) {
   await ctx.db.patch(s._id, { status: "sent", sentAt: now, messageId, leaseExpiresAt: undefined, reviewReason: undefined, error: undefined });
-  if (s.step === 0) {
-    const test = await runningTest(ctx, s.campaignId);
-    if (test) await recordAb(ctx, test, variantFor(s.prospectId), "trials");
+  if (s.step === 0 && s.abTestId) {
+    const test = await ctx.db.get(s.abTestId);
+    if (test) {
+      const assignment = await subjectAssignment(ctx, test, s.prospectId);
+      if (assignment) await recordExposure(ctx, assignment, test);
+    }
   }
   const c = await ctx.db.get(s.campaignId);
   const p = await ctx.db.get(s.prospectId);
@@ -491,8 +504,12 @@ export const applyInbox = internalMutation({
       await syncDealFromProspect(ctx, p, "talking", "outbound", r.text ? `Replied: “${r.text.slice(0, 160)}”` : "Replied to your email.");
       if (!already && r.text) await emitEvent(ctx, c.orgId, "reply.received", { company: p.company, email: r.from, subject: r.subject ?? null, text: r.text.slice(0, 1000) });
       if (!already) {
-        const test = await runningTest(ctx, campaignId);
-        if (test) await recordAb(ctx, test, variantFor(p._id), "wins");
+        const firstSend = await ctx.db.query("outboundSends").withIndex("by_prospect", (q) => q.eq("prospectId", p._id).eq("step", 0)).first();
+        const test = firstSend?.abTestId ? await ctx.db.get(firstSend.abTestId) : null;
+        if (test) {
+          const assignment = await subjectAssignment(ctx, test, p._id);
+          if (assignment?.exposedAt && !assignment.outcomeAt) await recordOutcome(ctx, assignment, test);
+        }
       }
       if (already || p.stage === "lost") continue;
       await ctx.db.patch(p._id, { stage: "replied", stageUpdatedAt: now, updatedAt: now });

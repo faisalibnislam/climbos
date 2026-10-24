@@ -7,7 +7,7 @@ import { cleanLanding, LandingContent, landingSlug } from "../shared/landing";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
-import { recordAb, runningTest } from "./abtests";
+import { assignSubject, recordExposure, recordOutcome, runningTest } from "./abtests";
 import { createRunWithReservation } from "./engine";
 import { featureAllowed, isPaid } from "./lib/access";
 import { audit } from "./lib/audit";
@@ -220,18 +220,37 @@ export const publicPage = query({
 });
 
 export const viewed = mutation({
-  args: { slug: v.string(), variant: v.optional(v.string()) },
-  handler: async (ctx, { slug, variant }) => {
+  args: { slug: v.string(), visitorKey: v.optional(v.string()), testId: v.optional(v.id("abTests")), countView: v.optional(v.boolean()) },
+  handler: async (ctx, { slug, visitorKey, testId, countView }) => {
     const p = await ctx.db.query("landingPages").withIndex("by_slug", (q) => q.eq("slug", slug)).first();
-    if (p?.status !== "live") return;
-    await ctx.db.patch(p._id, { views: p.views + 1 });
-    const test = variant ? await runningTest(ctx, p._id) : null;
-    if (test && variant) await recordAb(ctx, test, variant, "trials");
+    if (p?.status !== "live") return { variant: null, testId: null };
+    if (countView !== false) await ctx.db.patch(p._id, { views: p.views + 1 });
+    if (!visitorKey) return { variant: null, testId: null };
+    if (visitorKey.length < 16 || visitorKey.length > 160) throw appError("INVALID", "The visitor assignment key is invalid.");
+    const test = testId ? await ctx.db.get(testId) : await runningTest(ctx, p._id);
+    if (!test || test.targetId !== p._id || test.orgId !== p.orgId) return { variant: null, testId: null };
+    const assignment = await assignSubject(ctx, test, visitorKey);
+    if (!assignment) return { variant: null, testId: null };
+    return { variant: await recordExposure(ctx, assignment, test), testId: test._id };
+  },
+});
+
+/** Persist an anonymous visitor's arm before the page renders either variant. */
+export const assignLanding = mutation({
+  args: { slug: v.string(), visitorKey: v.string() },
+  handler: async (ctx, { slug, visitorKey }) => {
+    const p = await ctx.db.query("landingPages").withIndex("by_slug", (q) => q.eq("slug", slug)).first();
+    if (!p || p.status !== "live") return { variant: null, testId: null };
+    if (visitorKey.length < 16 || visitorKey.length > 160) throw appError("INVALID", "The visitor assignment key is invalid.");
+    const test = await runningTest(ctx, p._id);
+    if (!test) return { variant: null, testId: null };
+    const assignment = await assignSubject(ctx, test, visitorKey);
+    return assignment ? { variant: assignment.variant, testId: test._id } : { variant: null, testId: null };
   },
 });
 
 export const submit = mutation({
-  args: { slug: v.string(), name: v.string(), email: v.string(), message: v.optional(v.string()), variant: v.optional(v.string()) },
+  args: { slug: v.string(), name: v.string(), email: v.string(), message: v.optional(v.string()), visitorKey: v.optional(v.string()), testId: v.optional(v.id("abTests")) },
   handler: async (ctx, a) => {
     const p = await ctx.db.query("landingPages").withIndex("by_slug", (q) => q.eq("slug", a.slug)).first();
     if (!p || p.status !== "live") throw appError("NOT_FOUND", "This page isn't available.");
@@ -250,7 +269,12 @@ export const submit = mutation({
     await ctx.db.patch(p._id, { leads: p.leads + 1 });
     await notifyOwners(ctx, p.orgId, `New lead from “${p.title}”: ${name}`, "inbox");
     await emitEvent(ctx, p.orgId, "lead.created", { name, email, message: message || null, source: "landing_page", page: p.title });
-    const test = a.variant ? await runningTest(ctx, p._id) : null;
-    if (test && a.variant) await recordAb(ctx, test, a.variant, "wins");
+    if (a.visitorKey && a.testId && a.visitorKey.length >= 16 && a.visitorKey.length <= 160) {
+      const test = await ctx.db.get(a.testId);
+      if (test?.targetId === p._id && test.orgId === p.orgId) {
+        const assignment = await assignSubject(ctx, test, a.visitorKey);
+        if (assignment) await recordOutcome(ctx, assignment, test);
+      }
+    }
   },
 });

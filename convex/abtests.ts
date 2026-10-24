@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { decide } from "../shared/abtest";
+import { decide, variantFor } from "../shared/abtest";
 import { cleanLanding, type LandingContent } from "../shared/landing";
+import { sha256Hex } from "../shared/policy";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
@@ -15,12 +16,19 @@ export async function runningTest(ctx: { db: MutationCtx["db"] }, targetId: stri
 }
 
 /** Count a trial (view / send) or a win (lead / reply), then decide; apply a B win. */
-export async function recordAb(ctx: MutationCtx, test: Doc<"abTests">, key: string, field: "trials" | "wins") {
-  if (test.status !== "running" || !["A", "B"].includes(key)) return;
-  const stats = test.stats.map((s) => (s.key === key ? { ...s, [field]: s[field] + 1 } : s));
+export async function recordAb(ctx: MutationCtx, test: Doc<"abTests">, key: string, field: "assigned" | "trials" | "wins") {
+  if ((field !== "wins" && test.status !== "running") || !["A", "B"].includes(key)) return;
+  const stats = test.stats.map((s) => {
+    if (s.key !== key) return s;
+    if (field === "assigned") return { ...s, assigned: (s.assigned ?? 0) + 1 };
+    if (field === "trials") return { ...s, exposed: (s.exposed ?? s.trials) + 1, trials: s.trials + 1 };
+    return { ...s, wins: s.wins + 1 };
+  });
+  // Late outcomes remain on their assignment record, not in the decision snapshot.
+  if (field === "wins" && test.status !== "running") return;
   const rule = RULES[test.kind];
   const d = decide(stats, rule.min, rule.max);
-  if (!d.done) {
+  if (field === "assigned" || !d.done) {
     await ctx.db.patch(test._id, { stats });
     return;
   }
@@ -32,6 +40,44 @@ export async function recordAb(ctx: MutationCtx, test: Doc<"abTests">, key: stri
     endedAt: Date.now(),
   });
   if (d.winner === "B") await applyB(ctx, test);
+}
+
+async function assignmentHash(testId: Id<"abTests">, subjectKey: string): Promise<string> {
+  return sha256Hex(`abTestAssignment:v1|${testId}|${subjectKey.trim()}`);
+}
+
+export async function variantForSubject(testId: Id<"abTests">, subjectKey: string): Promise<"A" | "B"> {
+  return variantFor(`${testId}:${await assignmentHash(testId, subjectKey)}`);
+}
+
+export async function subjectAssignment(ctx: { db: MutationCtx["db"] }, test: Doc<"abTests">, subjectKey: string) {
+  const subjectHash = await assignmentHash(test._id, subjectKey);
+  return ctx.db.query("abTestAssignments").withIndex("by_test_subject", (q) => q.eq("testId", test._id).eq("subjectHash", subjectHash)).first();
+}
+
+export async function assignSubject(ctx: MutationCtx, test: Doc<"abTests">, subjectKey: string) {
+  const subjectHash = await assignmentHash(test._id, subjectKey);
+  const existing = await subjectAssignment(ctx, test, subjectKey);
+  if (existing) return existing;
+  if (test.status !== "running") return null;
+  const variant = variantFor(`${test._id}:${subjectHash}`);
+  const id = await ctx.db.insert("abTestAssignments", { orgId: test.orgId, testId: test._id, subjectHash, variant, assignedAt: Date.now() });
+  await recordAb(ctx, test, variant, "assigned");
+  return await ctx.db.get(id);
+}
+
+export async function recordExposure(ctx: MutationCtx, assignment: NonNullable<Awaited<ReturnType<typeof assignSubject>>>, test: Doc<"abTests">) {
+  if (assignment.exposedAt) return assignment.variant;
+  await ctx.db.patch(assignment._id, { exposedAt: Date.now() });
+  if (test.status === "running") await recordAb(ctx, test, assignment.variant, "trials");
+  return assignment.variant;
+}
+
+export async function recordOutcome(ctx: MutationCtx, assignment: NonNullable<Awaited<ReturnType<typeof assignSubject>>>, test: Doc<"abTests">) {
+  if (!assignment.exposedAt || assignment.outcomeAt) return false;
+  await ctx.db.patch(assignment._id, { outcomeAt: Date.now() });
+  await recordAb(ctx, test, assignment.variant, "wins");
+  return true;
 }
 
 async function applyB(ctx: MutationCtx, test: Doc<"abTests">) {
@@ -51,7 +97,7 @@ async function applyB(ctx: MutationCtx, test: Doc<"abTests">) {
 function view(t: Doc<"abTests">) {
   const rule = RULES[t.kind];
   const d = decide(t.stats, rule.min, rule.max);
-  return { id: t._id, kind: t.kind, status: t.status, winner: t.winner ?? null, note: t.note ?? d.note, variants: t.variants, stats: t.stats.map((s) => ({ ...s, rate: s.trials ? Math.round((s.wins / s.trials) * 1000) / 10 : 0 })), lift: d.lift, confidence: d.confidence, startedAt: t.startedAt };
+  return { id: t._id, kind: t.kind, status: t.status, winner: t.winner ?? null, note: t.note ?? d.note, variants: t.variants, stats: t.stats.map((s) => ({ ...s, assigned: s.assigned ?? 0, exposed: s.exposed ?? s.trials, rate: s.trials ? Math.round((s.wins / s.trials) * 1000) / 10 : 0 })), lift: d.lift, confidence: d.confidence, startedAt: t.startedAt };
 }
 
 export const forTarget = query({
@@ -92,7 +138,7 @@ export const startSubject = mutation({
 });
 
 async function start(ctx: MutationCtx, orgId: Id<"organizations">, kind: Doc<"abTests">["kind"], targetId: string, a: string, b: string) {
-  return ctx.db.insert("abTests", { orgId, kind, targetId, variants: [{ key: "A", value: a }, { key: "B", value: b }], stats: [{ key: "A", trials: 0, wins: 0 }, { key: "B", trials: 0, wins: 0 }], status: "running", startedAt: Date.now() });
+  return ctx.db.insert("abTests", { orgId, kind, targetId, variants: [{ key: "A", value: a }, { key: "B", value: b }], stats: [{ key: "A", assigned: 0, exposed: 0, trials: 0, wins: 0 }, { key: "B", assigned: 0, exposed: 0, trials: 0, wins: 0 }], status: "running", startedAt: Date.now() });
 }
 
 export const stop = mutation({
