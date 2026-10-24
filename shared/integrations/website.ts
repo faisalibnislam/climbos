@@ -205,6 +205,8 @@ export interface SafeFetchResult {
   finalUrl: string;
   status: number;
   contentType: string;
+  /** HTTP indexing directives, kept separately from HTML meta robots tags. */
+  xRobotsTag?: string;
   body: string;
   truncated: boolean;
   /** Present for conditional requests that returned 304 Not Modified. */
@@ -295,7 +297,8 @@ export async function safeFetchPage(input: {
       clearTimeout(timer);
       const etag = res.headers.get("etag") ?? undefined;
       const lastModified = res.headers.get("last-modified") ?? undefined;
-      return { ok: true, finalUrl: current.url, status: res.status, contentType: res.headers.get("content-type") ?? "", body: "", truncated: false, notModified: true, ...(etag ? { etag } : {}), ...(lastModified ? { lastModified } : {}) };
+      const xRobotsTag = res.headers.get("x-robots-tag")?.slice(0, 1_000) ?? undefined;
+      return { ok: true, finalUrl: current.url, status: res.status, contentType: res.headers.get("content-type") ?? "", body: "", truncated: false, notModified: true, ...(xRobotsTag ? { xRobotsTag } : {}), ...(etag ? { etag } : {}), ...(lastModified ? { lastModified } : {}) };
     }
     if (res.status >= 300 && res.status < 400) {
       clearTimeout(timer);
@@ -308,6 +311,7 @@ export async function safeFetchPage(input: {
       continue;
     }
     const contentType = res.headers.get("content-type") ?? "";
+    const xRobotsTag = res.headers.get("x-robots-tag")?.slice(0, 1_000) ?? undefined;
     const etag = res.headers.get("etag") ?? undefined;
     const lastModified = res.headers.get("last-modified") ?? undefined;
     let text = "";
@@ -319,7 +323,7 @@ export async function safeFetchPage(input: {
     } finally {
       clearTimeout(timer);
     }
-    return { ok: res.ok, finalUrl: current.url, status: res.status, contentType, body: text, truncated, ...(etag ? { etag } : {}), ...(lastModified ? { lastModified } : {}) };
+    return { ok: res.ok, finalUrl: current.url, status: res.status, contentType, ...(xRobotsTag ? { xRobotsTag } : {}), body: text, truncated, ...(etag ? { etag } : {}), ...(lastModified ? { lastModified } : {}) };
   }
   return { ok: false, finalUrl: current.url, status: 0, contentType: "", body: "", truncated: false, error: "Too many redirects" };
 }

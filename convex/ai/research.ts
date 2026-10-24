@@ -69,7 +69,7 @@ async function robotsFor(origin: string): Promise<RobotsRead> {
   return { status: "unavailable", body: null };
 }
 
-function searchReadinessFor(page: ReturnType<typeof extractPageContent>, url: string, httpStatus: number, robots: string | null | undefined, robotsFileStatus: RobotsRead["status"]): ReadinessFinding[] {
+function searchReadinessFor(page: ReturnType<typeof extractPageContent>, url: string, httpStatus: number, xRobotsTag: string | undefined, robots: string | null | undefined, robotsFileStatus: RobotsRead["status"]): ReadinessFinding[] {
   const crawlerChecks: CrawlerCheck[] = (["Googlebot", "Bingbot", "OAI-SearchBot"] as const).map((crawler) => ({
     crawler,
     allowed: robots == null || isPathAllowed(robots, crawler, new URL(url).pathname || "/"),
@@ -79,6 +79,7 @@ function searchReadinessFor(page: ReturnType<typeof extractPageContent>, url: st
     canonicalUrl: page.canonicalUrl,
     pageUrl: url,
     robotsDirectives: page.robotsDirectives,
+    xRobotsTag,
     robotsFileStatus,
     crawlerChecks,
   });
@@ -126,7 +127,7 @@ async function fetchOne(url: string, robots?: RobotsRead): Promise<ResearchedPag
             imagesWithAltAttribute: meta.imagesWithAltAttribute,
             structuredDataTypes: meta.jsonLdTypes,
             htmlMetadataRead: true,
-            searchReadiness: searchReadinessFor(meta, htmlFinalUrl, htmlStatus, robots?.body, robots?.status ?? "unavailable"),
+            searchReadiness: searchReadinessFor(meta, htmlFinalUrl, htmlStatus, html?.xRobotsTag, robots?.body, robots?.status ?? "unavailable"),
           } : { htmlMetadataRead: false }),
           text: parsed.markdown,
           status: "ok",
@@ -154,7 +155,7 @@ async function fetchOne(url: string, robots?: RobotsRead): Promise<ResearchedPag
     headings: page.headings.slice(0, 12).map((heading) => heading.text),
     internalLinks: page.links.slice(0, 30).map((link) => link.url),
     ...(page.htmlLang ? { htmlLang: page.htmlLang } : {}),
-    ...(htmlMetadataRead ? { viewportPresent: page.viewportPresent, imageCount: page.imageCount, imagesWithAltAttribute: page.imagesWithAltAttribute, structuredDataTypes: page.jsonLdTypes, htmlMetadataRead: true, searchReadiness: searchReadinessFor(page, res.finalUrl, res.status, robots?.body, robots?.status ?? "unavailable") } : { htmlMetadataRead: false }),
+    ...(htmlMetadataRead ? { viewportPresent: page.viewportPresent, imageCount: page.imageCount, imagesWithAltAttribute: page.imagesWithAltAttribute, structuredDataTypes: page.jsonLdTypes, htmlMetadataRead: true, searchReadiness: searchReadinessFor(page, res.finalUrl, res.status, res.xRobotsTag, robots?.body, robots?.status ?? "unavailable") } : { htmlMetadataRead: false }),
     text: [page.title, page.metaDescription, ...page.headings.map((h) => h.text), page.text].filter(Boolean).join("\n"),
     status: "ok",
     prices: page.jsonLdPrices.map((p) => `${p.name ?? "Offer"}: ${p.price} ${p.currency ?? ""}`.trim()),

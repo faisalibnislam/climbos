@@ -108,10 +108,10 @@ describe("validateResearchUrl (SSRF)", () => {
     let requestHeaders: HeadersInit | undefined;
     const fetchImpl: FetchLike = async (_url, init) => {
       requestHeaders = init?.headers;
-      return new Response("<p>unchanged</p>", { status: 200, headers: { "content-type": "text/html", etag: '"v2"', "last-modified": "Mon, 19 Oct 2026 00:00:00 GMT" } });
+      return new Response("<p>unchanged</p>", { status: 200, headers: { "content-type": "text/html", etag: '"v2"', "last-modified": "Mon, 19 Oct 2026 00:00:00 GMT", "x-robots-tag": "noindex, follow" } });
     };
     const first = await safeFetchPage({ url: "https://example.com/page", fetchImpl });
-    expect(first).toMatchObject({ ok: true, etag: '"v2"', lastModified: "Mon, 19 Oct 2026 00:00:00 GMT" });
+    expect(first).toMatchObject({ ok: true, etag: '"v2"', lastModified: "Mon, 19 Oct 2026 00:00:00 GMT", xRobotsTag: "noindex, follow" });
 
     const notModified: FetchLike = async (_url, init) => {
       requestHeaders = init?.headers;

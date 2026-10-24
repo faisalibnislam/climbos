@@ -53,6 +53,18 @@ describe("homepage search readiness", () => {
     expect(findings.map((finding) => finding.id)).not.toEqual(expect.arrayContaining(["robots-googlebot", "robots-bingbot", "robots-oai-searchbot"]));
   });
 
+  it("detects noindex sent in the HTTP X-Robots-Tag response header", () => {
+    const findings = assessSearchReadiness(page(), {
+      httpStatus: 200,
+      pageUrl: "https://site.example/guide",
+      xRobotsTag: "noindex, follow",
+      robotsFileStatus: "not_found",
+      crawlerChecks: [{ crawler: "Googlebot", allowed: true }, { crawler: "Bingbot", allowed: true }, { crawler: "OAI-SearchBot", allowed: true }],
+    });
+    expect(findings).toContainEqual(expect.objectContaining({ id: "page-noindex", level: "attention" }));
+    expect(findings.find((finding) => finding.id === "page-noindex")?.evidence).toContain("X-Robots-Tag: noindex, follow");
+  });
+
   it("flags missing viewport and image alt attributes as checks, not ranking claims", () => {
     const findings = assessSearchReadiness(page({ imageCount: 2, imagesWithAltAttribute: 1, viewportPresent: false }));
     expect(findings.map((finding) => finding.id)).toEqual(expect.arrayContaining(["missing-viewport", "missing-image-alt"]));

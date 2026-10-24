@@ -14,6 +14,7 @@ export type TechnicalEvidence = {
   canonicalUrl?: string;
   pageUrl: string;
   robotsDirectives?: string;
+  xRobotsTag?: string;
   robotsFileStatus: "available" | "not_found" | "unavailable";
   crawlerChecks: CrawlerCheck[];
 };
@@ -23,8 +24,8 @@ export function assessSearchReadiness(page: ExtractedPage, technical?: Technical
   const findings: ReadinessFinding[] = [];
   if (technical) {
     if (technical.httpStatus < 200 || technical.httpStatus >= 300) findings.push({ id: "http-status", level: "attention", title: "Page did not return a successful response", evidence: `The checked page returned HTTP ${technical.httpStatus}.`, nextStep: "Check the public page response and redirect destination, then confirm the page is available to visitors and crawlers." });
-    const directives = (technical.robotsDirectives ?? "").split(/[\s,]+/).map((item) => item.trim().toLowerCase());
-    if (directives.includes("noindex") || directives.includes("none")) findings.push({ id: "page-noindex", level: "attention", title: "A page directive asks crawlers not to index this page", evidence: `The checked page includes the directive “${directives.includes("none") ? "none" : "noindex"}” (${technical.robotsDirectives}).`, nextStep: "If you want this page in search results, review and remove the noindex directive." });
+    const directives = `${technical.robotsDirectives ?? ""},${technical.xRobotsTag ?? ""}`.split(/[\s,]+/).map((item) => item.trim().toLowerCase());
+    if (directives.includes("noindex") || directives.includes("none")) findings.push({ id: "page-noindex", level: "attention", title: "A noindex directive was found for this page", evidence: `The checked page includes the directive “${directives.includes("none") ? "none" : "noindex"}” (${[technical.robotsDirectives, technical.xRobotsTag ? `X-Robots-Tag: ${technical.xRobotsTag}` : undefined].filter(Boolean).join("; ")}).`, nextStep: "Review which crawlers the directive applies to, and remove it only if you want those crawlers to index the page." });
     if (technical.canonicalUrl) {
       try {
         if (new URL(technical.canonicalUrl).origin !== new URL(technical.pageUrl).origin) findings.push({ id: "cross-site-canonical", level: "check", title: "The page canonical points to another site", evidence: `The declared canonical is ${technical.canonicalUrl}.`, nextStep: "Confirm this cross-site canonical is intentional; otherwise set it to the preferred URL for this page." });

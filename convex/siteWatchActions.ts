@@ -46,7 +46,7 @@ export const scanReadiness = internalAction({
       else if (robots.ok && robots.status >= 200 && robots.status < 300) { robotsFileStatus = "available"; robotsText = robots.body; }
     } catch { /* retain unavailable; network failures are not treated as allow */ }
     const crawlerChecks: CrawlerCheck[] = (["Googlebot", "Bingbot", "OAI-SearchBot"] as const).map((crawler) => ({ crawler, allowed: robotsFileStatus === "not_found" || (robotsFileStatus === "available" && isPathAllowed(robotsText, crawler, new URL(site.finalUrl).pathname || "/")) }));
-    const technical = { httpStatus: site.status, canonicalUrl: p.canonicalUrl, pageUrl: site.finalUrl, robotsDirectives: p.robotsDirectives, robotsFileStatus, crawlerChecks };
+    const technical = { httpStatus: site.status, canonicalUrl: p.canonicalUrl, pageUrl: site.finalUrl, robotsDirectives: p.robotsDirectives, xRobotsTag: site.xRobotsTag, robotsFileStatus, crawlerChecks };
     await ctx.runMutation(internal.siteWatch.saveSearchReadiness, {
       businessId,
       startedAt,

@@ -18,11 +18,11 @@ import { claudeUsageRecords } from "./lib/usage";
 const MODEL = CALL_ROUTES.chat_intent;
 const resolveHost = async (h: string) => (await lookup(h, { all: true, verbatim: true })).map((r) => r.address);
 
-export async function readSitePage(url: string): Promise<{ page: ExtractedPage; finalUrl: string; status: number } | { error: string }> {
+export async function readSitePage(url: string): Promise<{ page: ExtractedPage; finalUrl: string; status: number; xRobotsTag?: string } | { error: string }> {
   const response = await safeFetchPage({ url, resolveHost, maxBytes: 2_000_000, timeoutMs: 15_000 }).catch(() => null);
   if (!response?.ok) return { error: response?.error ?? "Couldn't reach the site" };
   if (!response.contentType.toLowerCase().includes("text/html")) return { error: "The homepage did not return an HTML page." };
-  return { page: extractPageContent(response.body, response.finalUrl, { maxTextChars: 40_000, maxLinks: 80 }), finalUrl: response.finalUrl, status: response.status };
+  return { page: extractPageContent(response.body, response.finalUrl, { maxTextChars: 40_000, maxLinks: 80 }), finalUrl: response.finalUrl, status: response.status, ...(response.xRobotsTag ? { xRobotsTag: response.xRobotsTag } : {}) };
 }
 
 /** Internal, SSRF-safe homepage identity check used before an insight auto-seeds a watch. */
