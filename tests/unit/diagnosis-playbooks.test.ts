@@ -127,7 +127,7 @@ describe("diagnosis", () => {
 });
 
 describe("playbook contracts", () => {
-  const ctx = (o: Partial<PlaybookContext> = {}): PlaybookContext => ({ types: ["b2b_saas"], budgetUsd: 600, connected: [], constraint: "unknown", ...o });
+  const ctx = (o: Partial<PlaybookContext> = {}): PlaybookContext => ({ types: ["b2b_saas"], budgetUsd: 600, connected: [], constraint: "unknown", tracking: "full", ...o });
   it("every contract is complete", () => {
     for (const pb of PLAYBOOKS) {
       for (const k of ["decision", "appliesWhen", "avoidWhen", "outcome", "guardrail", "stop", "revise", "expand", "source"] as const) expect(pb[k], `${pb.id}.${k}`).toBeTruthy();
@@ -143,6 +143,8 @@ describe("playbook contracts", () => {
     expect(eligibility(search, ctx({ budgetUsd: 60, priceUsdMonth: 50, cpcUsd: 2 }))).toMatchObject({ eligible: true, status: "low_priority" });
     expect(eligibility(search, ctx({ budgetUsd: 600, priceUsdMonth: 6, cpcUsd: 2 })).soft.join(" ")).toMatch(/\$25/);
     expect(eligibility(search, ctx({ budgetUsd: 600, priceUsdMonth: 50, cpcUsd: 2 })).status).toBe("eligible");
+    expect(eligibility(search, ctx({ budgetUsd: 600, priceUsdMonth: 50, cpcUsd: 2, tracking: undefined }))).toMatchObject({ eligible: true, status: "needs_evidence", unknown: ["whether conversion tracking is set up"] });
+    expect(eligibility(search, ctx({ budgetUsd: 600, priceUsdMonth: 50, cpcUsd: 2, tracking: "none" }))).toMatchObject({ eligible: false, status: "blocked", reasons: [expect.stringMatching(/conversion tracking is needed/i)] });
     const split = PLAYBOOKS.find((p) => p.id === "PB-landing-split")!;
     expect(eligibility(split, ctx({ weeklyVisitors: 12 })).eligible).toBe(false);
     // Readability is sized on the owner's own rate: 400 a week at a 20% lead rate fits in 6 weeks; at 2% it doesn't.

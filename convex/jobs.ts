@@ -558,6 +558,7 @@ function playbookContext(job: JobCtx, profile: AcquisitionProfile, d: Diagnosis)
     ...(job.goal?.target?.metric === "customers" && job.goal.target.mode === "total" && typeof job.goal.target.baseline === "number" ? { customers: job.goal.target.baseline } : {}),
     ...(profile.dims.geography?.value ? { geography: profile.dims.geography.value } : {}),
     ...(job.business?.unitEconomics?.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: job.business.unitEconomics.ownerHoursPerWeek } : {}),
+    ...(profile.dims.tracking?.source === "owner" ? { tracking: profile.dims.tracking.value as "none" | "basic" | "full" } : {}),
   };
 }
 

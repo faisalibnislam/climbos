@@ -21,7 +21,7 @@ const play = (name: string, o: Partial<PlayLike["model"]> = {}, kind = "bankable
   horizonDays,
   model: { weeklyReach: 100, steps: [{ name: "lead", rate: 0.05 }, { name: "paid", rate: 0.2 }], monthlySpendUsd: 100, ownerHoursPerWeek: 1, ...o },
 });
-const ctx = (o: Partial<PlaybookContext> = {}): PlaybookContext => ({ types: ["b2b_saas"], budgetUsd: 600, connected: [], constraint: "unknown", ...o });
+const ctx = (o: Partial<PlaybookContext> = {}): PlaybookContext => ({ types: ["b2b_saas"], budgetUsd: 600, connected: [], constraint: "unknown", tracking: "full", ...o });
 const pb = (id: string) => PLAYBOOKS.find((p) => p.id === id)!;
 
 describe("rate uncertainty helpers", () => {
