@@ -10,6 +10,8 @@ type Finding = { area?: string; observation?: string; recommendation?: string; i
 type Fix = { fix?: string; pageUrl?: string; why?: string; effort?: string; expectedEffect?: string; contentStructure?: string[]; sampleCopy?: string; uxChanges?: string[]; measurementPlan?: string };
 type SocialFinding = { sourceArtifactId?: string; platform?: string; sourceType?: string; sourceUrl?: string; observation?: string; recommendation?: string; priority?: string };
 type SocialSourceCoverage = { source?: string; state?: string; postsReviewed?: number };
+type SeoReadinessFinding = { pageUrl?: string; level?: string; title?: string; evidence?: string; nextStep?: string };
+type SeoReadinessPage = { url?: string; metadataState?: string; titleLength?: number | null; descriptionLength?: number | null; headingCounts?: { h1?: number; h2?: number; h3?: number } | null; canonicalUrl?: string | null; robotsDirectives?: string | null; structuredDataTypes?: string[] | null };
 type Coverage = { requestedUrl?: string | null; pagesAttempted?: number; pagesRead?: number; pages?: { url?: string; status?: string }[] };
 
 const obj = (value: unknown): Record<string, unknown> => value && typeof value === "object" ? value as Record<string, unknown> : {};
@@ -21,6 +23,9 @@ export function ConversionAuditView({ value, slug }: { value: unknown; slug: str
   const coverage = obj(data.auditCoverage);
   const website = obj(coverage.website) as Coverage;
   const performance = obj(coverage.performance);
+  const seoReadiness = obj(coverage.seoReadiness);
+  const seoFindings = list<SeoReadinessFinding>(seoReadiness.findings);
+  const seoPages = list<SeoReadinessPage>(seoReadiness.pages);
   const fieldData = obj(performance.fieldData);
   const labData = obj(performance.labData);
   const fieldMetrics = list<{ id?: string; label?: string; value?: number; unit?: string; verdict?: string }>(fieldData.metrics);
@@ -45,6 +50,13 @@ export function ConversionAuditView({ value, slug }: { value: unknown; slug: str
         {website.requestedUrl ? <a href={String(website.requestedUrl)} target="_blank" rel="noreferrer noopener" className="mt-2 inline-flex items-center gap-1 break-all text-xs text-link">{String(website.requestedUrl)} <ExternalLink aria-hidden className="size-3" /></a> : <p className="mt-2 text-xs text-ink-3">No website address was saved for this business.</p>}
         {pages.length > 0 ? <ul className="mt-3 flex flex-col gap-1 text-xs text-ink-2">{pages.map((raw, i) => { const page = obj(raw); return <li key={`${String(page.url)}-${i}`} className="flex flex-wrap items-center gap-2"><Badge tone={page.status === "read" ? "green" : "amber"}>{label(page.status, "not read").replaceAll("_", " ")}</Badge><span className="break-all">{label(page.url)}</span></li>; })}</ul> : null}
       </section>
+
+      {seoReadiness.state ? <section className="rounded-xl border border-line p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="heading-section">Search readiness checks</h3><p className="mt-1 text-xs text-ink-3">ClimbOS&apos;s existing checks applied to sampled static HTML. They do not prove indexing or ranking.</p></div><Badge tone={seoReadiness.state === "measured" ? "green" : "amber"}>{Number(seoReadiness.pagesWithStaticHtml ?? 0)} of {Number(seoReadiness.pagesSampled ?? 0)} pages inspected</Badge></div>
+        {seoFindings.length ? <ul className="mt-3 grid gap-2">{seoFindings.map((finding, i) => <li key={`${finding.pageUrl}-${finding.title}-${i}`} className="rounded-lg bg-surface-2/70 p-3"><div className="flex flex-wrap items-center gap-2"><Badge tone={finding.level === "attention" ? "amber" : "neutral"}>{label(finding.level, "check").replaceAll("_", " ")}</Badge><span className="text-sm font-medium text-ink">{label(finding.title, "Search readiness check")}</span></div>{finding.evidence ? <p className="mt-2 text-sm text-ink-2">{finding.evidence}</p> : null}{finding.nextStep ? <p className="mt-1 text-sm text-ink">{finding.nextStep}</p> : null}{finding.pageUrl ? <a href={finding.pageUrl} target="_blank" rel="noreferrer noopener" className="mt-2 inline-flex break-all text-xs text-link">Open checked page <ExternalLink aria-hidden className="ml-1 size-3" /></a> : null}</li>)}</ul> : seoReadiness.state === "unavailable" ? <p className="mt-3 text-sm text-ink-2">Static HTML metadata was unavailable for the pages read in this audit.</p> : <p className="mt-3 text-sm text-ink-2">No issues were found in the search readiness checks run on these sampled pages.</p>}
+        {seoPages.some((page) => page.metadataState === "unavailable") ? <p className="mt-2 text-xs text-ink-3">Some page metadata could not be read, so no finding was inferred for those pages.</p> : null}
+        {seoPages.filter((page) => page.metadataState === "observed").length ? <details className="mt-3"><summary className="cursor-pointer text-xs font-medium text-link">Show observed page signals</summary><ul className="mt-2 grid gap-2">{seoPages.filter((page) => page.metadataState === "observed").map((page, i) => <li key={`${page.url}-${i}`} className="rounded-md border border-line p-3 text-xs text-ink-2"><a href={page.url} target="_blank" rel="noreferrer noopener" className="break-all text-link">{label(page.url)}</a><p className="mt-1">Title: {page.titleLength ?? 0} characters · Description: {page.descriptionLength ?? 0} characters · H1/H2/H3: {Number(page.headingCounts?.h1 ?? 0)}/{Number(page.headingCounts?.h2 ?? 0)}/{Number(page.headingCounts?.h3 ?? 0)}</p><p className="mt-1">Canonical: {page.canonicalUrl ? <a href={page.canonicalUrl} target="_blank" rel="noreferrer noopener" className="text-link">declared</a> : "not observed"} · Robots: {label(page.robotsDirectives, "not observed")}</p>{page.structuredDataTypes?.length ? <p className="mt-1">Structured data types observed: {page.structuredDataTypes.join(", ")}</p> : null}</li>)}</ul></details> : null}
+      </section> : null}
 
       {label(data.clarityVerdict) ? <div><p className="text-overline">Website clarity</p><Prose text={label(data.clarityVerdict)} tone="default" /></div> : null}
       {label(data.messageMatch) ? <div><p className="text-overline">Message match</p><Prose text={label(data.messageMatch)} tone="muted" /></div> : null}

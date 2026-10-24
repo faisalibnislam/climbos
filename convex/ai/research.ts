@@ -11,6 +11,7 @@ import {
   validateResearchUrl,
 } from "../../shared/integrations/website";
 import { parseSitemapLocations } from "../../shared/seo/sitemap";
+import { assessSearchReadiness, type CrawlerCheck, type ReadinessFinding } from "../../shared/seo/readiness";
 
 /**
  * Bounded public-website research. Untrusted content: the caller wraps every
@@ -29,7 +30,16 @@ export interface ResearchedPage {
   canonicalUrl?: string;
   robotsDirectives?: string;
   headings?: string[];
+  headingCounts?: { h1: number; h2: number; h3: number };
   internalLinks?: string[];
+  htmlLang?: string;
+  viewportPresent?: boolean;
+  imageCount?: number;
+  imagesWithAltAttribute?: number;
+  structuredDataTypes?: string[];
+  /** True only when bounded static HTML was fetched and parsed, independent of Firecrawl markdown. */
+  htmlMetadataRead?: boolean;
+  searchReadiness?: ReadinessFinding[];
   text: string;
   status: "ok" | "blocked_by_robots" | "failed";
   error?: string;
@@ -50,19 +60,79 @@ export function normalizeWebsite(input: string): string | null {
   return v.ok ? v.url : null;
 }
 
-async function robotsFor(origin: string): Promise<string | null> {
+type RobotsRead = { status: "available" | "not_found" | "unavailable"; body: string | null };
+
+async function robotsFor(origin: string): Promise<RobotsRead> {
   const res = await safeFetchPage({ url: `${origin}/robots.txt`, resolveHost, maxBytes: 200_000, timeoutMs: 8000 });
-  return res.ok ? res.body : null;
+  if (res.ok) return { status: "available", body: res.body };
+  if (res.status === 404) return { status: "not_found", body: null };
+  return { status: "unavailable", body: null };
 }
 
-async function fetchOne(url: string): Promise<ResearchedPage> {
+function searchReadinessFor(page: ReturnType<typeof extractPageContent>, url: string, httpStatus: number, robots: string | null | undefined, robotsFileStatus: RobotsRead["status"]): ReadinessFinding[] {
+  const crawlerChecks: CrawlerCheck[] = (["Googlebot", "Bingbot", "OAI-SearchBot"] as const).map((crawler) => ({
+    crawler,
+    allowed: robots == null || isPathAllowed(robots, crawler, new URL(url).pathname || "/"),
+  }));
+  return assessSearchReadiness(page, {
+    httpStatus,
+    canonicalUrl: page.canonicalUrl,
+    pageUrl: url,
+    robotsDirectives: page.robotsDirectives,
+    robotsFileStatus,
+    crawlerChecks,
+  });
+}
+
+async function fetchOne(url: string, robots?: RobotsRead): Promise<ResearchedPage> {
   const key = process.env.FIRECRAWL_API_KEY;
   if (key) {
     try {
       const req = firecrawlScrapeRequest({ apiKey: key, url, timeoutMs: 30_000 });
       const res = await fetch(req.url, { method: req.method, headers: req.headers, body: req.body });
       const parsed = parseFirecrawlScrapeResponse(await res.json().catch(() => null), 24_000);
-      if (parsed.ok) return { url, title: parsed.title, text: parsed.markdown, status: "ok", prices: [] };
+      if (parsed.ok) {
+        const requestedHost = new URL(url).hostname;
+        const html = await safeFetchPage({
+          url,
+          resolveHost,
+          maxBytes: 2_000_000,
+          timeoutMs: 15_000,
+          allowRedirect: (_from, to) => {
+            try {
+              const target = new URL(to);
+              return sameSite(target.hostname, requestedHost) && (!robots?.body || isPathAllowed(robots.body, RESEARCH_USER_AGENT, target.pathname || "/"));
+            } catch {
+              return false;
+            }
+          },
+        }).catch(() => null);
+        const meta = html?.ok && /html/i.test(html.contentType) ? extractPageContent(html.body, html.finalUrl, { maxTextChars: 1_000, maxLinks: 50 }) : null;
+        const htmlFinalUrl = html?.finalUrl ?? url;
+        const htmlStatus = html?.status ?? 200;
+        return {
+          url: meta && html ? html.finalUrl : url,
+          title: meta?.title ?? parsed.title,
+          ...(meta?.metaDescription ? { description: meta.metaDescription } : {}),
+          ...(meta?.canonicalUrl ? { canonicalUrl: meta.canonicalUrl } : {}),
+          ...(meta?.robotsDirectives ? { robotsDirectives: meta.robotsDirectives } : {}),
+          ...(meta ? {
+            headings: meta.headings.slice(0, 12).map((heading) => heading.text),
+            headingCounts: { h1: meta.headings.filter((heading) => heading.level === 1).length, h2: meta.headings.filter((heading) => heading.level === 2).length, h3: meta.headings.filter((heading) => heading.level === 3).length },
+            internalLinks: meta.links.slice(0, 30).map((link) => link.url),
+            htmlLang: meta.htmlLang,
+            viewportPresent: meta.viewportPresent,
+            imageCount: meta.imageCount,
+            imagesWithAltAttribute: meta.imagesWithAltAttribute,
+            structuredDataTypes: meta.jsonLdTypes,
+            htmlMetadataRead: true,
+            searchReadiness: searchReadinessFor(meta, htmlFinalUrl, htmlStatus, robots?.body, robots?.status ?? "unavailable"),
+          } : { htmlMetadataRead: false }),
+          text: parsed.markdown,
+          status: "ok",
+          prices: meta?.jsonLdPrices.map((price) => `${price.name ?? "Offer"}: ${price.price} ${price.currency ?? ""}`.trim()) ?? [],
+        };
+      }
     } catch {
       // Fall through to the built-in fetcher.
     }
@@ -73,14 +143,18 @@ async function fetchOne(url: string): Promise<ResearchedPage> {
     return { url, text: "", status: "failed", error: "Not a web page", prices: [] };
   }
   const page = extractPageContent(res.body, res.finalUrl, { maxTextChars: 16_000, maxLinks: 50 });
+  const htmlMetadataRead = /html/i.test(res.contentType);
   return {
     url: res.finalUrl,
     title: page.title,
     description: page.metaDescription,
     ...(page.canonicalUrl ? { canonicalUrl: page.canonicalUrl } : {}),
     ...(page.robotsDirectives ? { robotsDirectives: page.robotsDirectives } : {}),
+    ...(htmlMetadataRead ? { headingCounts: { h1: page.headings.filter((heading) => heading.level === 1).length, h2: page.headings.filter((heading) => heading.level === 2).length, h3: page.headings.filter((heading) => heading.level === 3).length } } : {}),
     headings: page.headings.slice(0, 12).map((heading) => heading.text),
     internalLinks: page.links.slice(0, 30).map((link) => link.url),
+    ...(page.htmlLang ? { htmlLang: page.htmlLang } : {}),
+    ...(htmlMetadataRead ? { viewportPresent: page.viewportPresent, imageCount: page.imageCount, imagesWithAltAttribute: page.imagesWithAltAttribute, structuredDataTypes: page.jsonLdTypes, htmlMetadataRead: true, searchReadiness: searchReadinessFor(page, res.finalUrl, res.status, robots?.body, robots?.status ?? "unavailable") } : { htmlMetadataRead: false }),
     text: [page.title, page.metaDescription, ...page.headings.map((h) => h.text), page.text].filter(Boolean).join("\n"),
     status: "ok",
     prices: page.jsonLdPrices.map((p) => `${p.name ?? "Offer"}: ${p.price} ${p.currency ?? ""}`.trim()),
@@ -157,7 +231,8 @@ export async function researchWebsite(website: string, extraPages: number): Prom
   const url = normalizeWebsite(website);
   if (!url) return { pages: [{ url: website, text: "", status: "failed", error: "That doesn't look like a public website address.", prices: [] }], pagesFetched: 0 };
   const origin = new URL(url).origin;
-  const robots = await robotsFor(origin).catch(() => null);
+  const robotsRead = await robotsFor(origin).catch((): RobotsRead => ({ status: "unavailable", body: null }));
+  const robots = robotsRead.body;
   const allowed = (u: string) => !robots || isPathAllowed(robots, RESEARCH_USER_AGENT, new URL(u).pathname || "/");
 
   const pages: ResearchedPage[] = [];
@@ -165,7 +240,7 @@ export async function researchWebsite(website: string, extraPages: number): Prom
   if (!allowed(url)) {
     return { pages: [{ url, text: "", status: "blocked_by_robots", prices: [] }], pagesFetched: 0 };
   }
-  const home = await fetchOne(url);
+  const home = await fetchOne(url, robotsRead);
   fetched++;
   pages.push(home);
   if (home.status !== "ok" || extraPages <= 0) return { pages, pagesFetched: fetched };
@@ -202,7 +277,7 @@ export async function researchWebsite(website: string, extraPages: number): Prom
       pages.push({ url: c, text: "", status: "blocked_by_robots", prices: [] });
       continue;
     }
-    pages.push(await fetchOne(c));
+    pages.push(await fetchOne(c, robotsRead));
     fetched++;
   }
   return { pages, pagesFetched: fetched };
@@ -217,19 +292,19 @@ export async function fetchCitedPages(cited: string[], searched: string[], key: 
   const allowed = new Set(searched.map(key));
   const out: Record<string, string | null> = {};
   const targets = [...new Set(cited.map((u) => u.trim()))].filter((u) => allowed.has(key(u))).slice(0, 8);
-  const robots = new Map<string, string | null>();
+  const robots = new Map<string, RobotsRead>();
   await Promise.all(
     targets.map(async (u) => {
       const url = normalizeWebsite(u);
       if (!url) return;
       const origin = new URL(url).origin;
-      if (!robots.has(origin)) robots.set(origin, await robotsFor(origin).catch(() => null));
+      if (!robots.has(origin)) robots.set(origin, await robotsFor(origin).catch((): RobotsRead => ({ status: "unavailable", body: null })));
       const r = robots.get(origin);
-      if (r && !isPathAllowed(r, RESEARCH_USER_AGENT, new URL(url).pathname || "/")) {
+      if (r?.body && !isPathAllowed(r.body, RESEARCH_USER_AGENT, new URL(url).pathname || "/")) {
         out[key(u)] = null;
         return;
       }
-      const page = await fetchOne(url).catch(() => null);
+      const page = await fetchOne(url, r).catch(() => null);
       out[key(u)] = page?.status === "ok" ? `${page.text}\n${page.prices.join("\n")}` : null;
     }),
   );

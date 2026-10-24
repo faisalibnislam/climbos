@@ -201,9 +201,10 @@ describe("robots.txt", () => {
 });
 
 describe("extractPageContent", () => {
-  const html = `<!doctype html><html><head>
+  const html = `<!doctype html><html lang="en"><head>
     <title>Acme &amp; Co — Climbing Shoes</title>
     <meta name="description" content="Best shoes &quot;ever&quot;">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="index,follow">
     <meta name="googlebot" content="max-snippet:-1">
     <link rel="canonical" href="/climbing-shoes">
@@ -214,6 +215,7 @@ describe("extractPageContent", () => {
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Rock Shoe","offers":{"@type":"Offer","price":"129.99","priceCurrency":"usd","availability":"https://schema.org/InStock"}}</script>
     </head><body>
     <h1>Shoes</h1><h2>Best <em>sellers</em></h2>
+    <img src="/shoe.jpg" alt="Red climbing shoe"><img src="/decorative.png">
     <p>Hello&nbsp;world &#x2014; caf&eacute; &#169;</p>
     <!-- hidden comment -->
     <noscript>enable js</noscript>
@@ -228,6 +230,10 @@ describe("extractPageContent", () => {
     expect(page.robotsDirectives).toBe("index,follow, max-snippet:-1");
     expect(page.canonicalUrl).toBe("https://example.com/climbing-shoes");
     expect(page.og["og:title"]).toBe("Acme OG");
+    expect(page.htmlLang).toBe("en");
+    expect(page.viewportPresent).toBe(true);
+    expect(page.imageCount).toBe(2);
+    expect(page.imagesWithAltAttribute).toBe(1);
     expect(page.headings).toEqual([
       { level: 1, text: "Shoes" },
       { level: 2, text: "Best sellers" },

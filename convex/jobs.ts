@@ -6,6 +6,7 @@ import { downloadVeo, pollVeo, startVeo } from "./ai/veo";
 import { measureSitePerformance } from "./ai/sitePerformance";
 import { getRecentPosts as getRecentFacebookPosts } from "../shared/integrations/facebookPages";
 import { getRecentMedia as getRecentInstagramMedia } from "../shared/integrations/instagram";
+import type { ReadinessFinding } from "../shared/seo/readiness";
 import type { FunctionArgs, FunctionReference } from "convex/server";
 import { v } from "convex/values";
 import { z } from "zod";
@@ -1847,6 +1848,35 @@ function isSafeSocialPermalink(value: string, source: "climbos" | "facebook" | "
   }
 }
 
+type SiteSeoReadiness = {
+  state: "measured" | "partial" | "unavailable";
+  pagesSampled: number;
+  pagesWithStaticHtml: number;
+  pages: { url: string; metadataState: "observed" | "unavailable"; titleLength: number | null; descriptionLength: number | null; headingCounts: { h1: number; h2: number; h3: number } | null; canonicalUrl: string | null; robotsDirectives: string | null; structuredDataTypes: string[] | null }[];
+  findings: (ReadinessFinding & { pageUrl: string })[];
+};
+
+function siteSeoReadiness(pages: Awaited<ReturnType<typeof researchWebsite>>["pages"]): SiteSeoReadiness {
+  const sampled = pages.filter((page) => page.status === "ok");
+  const observed = sampled.filter((page) => page.htmlMetadataRead === true);
+  return {
+    state: sampled.length === 0 || observed.length === 0 ? "unavailable" : observed.length === sampled.length ? "measured" : "partial",
+    pagesSampled: sampled.length,
+    pagesWithStaticHtml: observed.length,
+    pages: sampled.map((page) => ({
+      url: page.url,
+      metadataState: page.htmlMetadataRead ? "observed" : "unavailable",
+      titleLength: page.htmlMetadataRead ? page.title?.trim().length ?? 0 : null,
+      descriptionLength: page.htmlMetadataRead ? page.description?.trim().length ?? 0 : null,
+      headingCounts: page.htmlMetadataRead ? page.headingCounts ?? { h1: 0, h2: 0, h3: 0 } : null,
+      canonicalUrl: page.htmlMetadataRead ? page.canonicalUrl ?? null : null,
+      robotsDirectives: page.htmlMetadataRead ? page.robotsDirectives ?? null : null,
+      structuredDataTypes: page.htmlMetadataRead ? (page.structuredDataTypes ?? []).slice(0, 20) : null,
+    })),
+    findings: observed.flatMap((page) => (page.searchReadiness ?? []).map((finding) => ({ ...finding, pageUrl: page.url }))).slice(0, 40),
+  };
+}
+
 export const conversionAudit = internalAction({
   args: { runId: v.id("workflowRuns"), cardId: v.optional(v.id("actionCards")) },
   handler: async (ctx, { runId, cardId }) => {
@@ -1859,14 +1889,16 @@ export const conversionAudit = internalAction({
       let text = "";
       let pages: { url: string; status: "read" | "blocked_by_robots" | "failed" }[] = [];
       let pagesFetched = 0;
+      let seoReadiness: SiteSeoReadiness = { state: "unavailable", pagesSampled: 0, pagesWithStaticHtml: 0, pages: [], findings: [] };
       if (step.checkpoint !== undefined) {
         try {
           const checkpoint = JSON.parse(String(step.checkpoint)) as unknown;
           if (checkpoint && typeof checkpoint === "object" && "text" in checkpoint) {
-            const saved = checkpoint as { text?: unknown; pages?: typeof pages; pagesFetched?: unknown };
+            const saved = checkpoint as { text?: unknown; pages?: typeof pages; pagesFetched?: unknown; seoReadiness?: unknown };
             text = typeof saved.text === "string" ? saved.text : "";
             pages = Array.isArray(saved.pages) ? saved.pages : [];
             pagesFetched = typeof saved.pagesFetched === "number" ? saved.pagesFetched : 0;
+            if (saved.seoReadiness && typeof saved.seoReadiness === "object") seoReadiness = saved.seoReadiness as SiteSeoReadiness;
           } else text = typeof checkpoint === "string" ? checkpoint : String(step.checkpoint);
         } catch { text = String(step.checkpoint); }
       }
@@ -1874,6 +1906,7 @@ export const conversionAudit = internalAction({
         if (!job.run.isFixture && website) {
           const res = await researchWebsite(website, 4);
           pages = res.pages.map((p) => ({ url: p.url, status: p.status === "ok" ? "read" : p.status }));
+          seoReadiness = siteSeoReadiness(res.pages);
           pagesFetched = res.pagesFetched;
           text = res.pages.filter((p) => p.status === "ok").map((p) => untrusted(p.url, `TITLE: ${p.title ?? ""}\nDESCRIPTION: ${p.description ?? ""}\nHEADINGS: ${(p.headings ?? []).join(" | ")}\nPAGE TEXT:\n${p.text}`, 4_200)).join("\n\n");
           await ctx.runMutation(internal.engine.recordUsage, {
@@ -1881,7 +1914,7 @@ export const conversionAudit = internalAction({
             records: [{ type: "scrape_credit", provider: process.env.FIRECRAWL_API_KEY ? "firecrawl" : "builtin", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: res.pagesFetched, costMicros: res.pagesFetched * 5_000, estimated: !process.env.FIRECRAWL_API_KEY }],
           });
         }
-        await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify({ text, pages, pagesFetched }) });
+        await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify({ text, pages, pagesFetched, seoReadiness }) });
       }
       const workspaceSocialPosts = job.run.isFixture ? [] : await ctx.runQuery(internal.content.auditPublishedSocial, { orgId: job.org._id, limit: 10 });
       const socialCoverage: { source: "climbos" | "facebook" | "instagram" | "linkedin"; state: "reviewed" | "not_connected" | "not_authorized" | "unavailable" | "no_posts"; postsReviewed: number }[] = [
@@ -1964,17 +1997,18 @@ export const conversionAudit = internalAction({
         await ctx.runMutation(internal.engine.completeStep, { stepId: performanceStep.stepId!, output: JSON.stringify(performance) });
       }
       const performanceContext = untrusted("Google PageSpeed / Chrome UX performance observations (machine-measured; use only for the exact URL shown)", JSON.stringify(performance), 2_500);
+      const technicalSeoContext = untrusted("Existing ClimbOS Search Readiness checks applied to the exact sampled pages (static HTML observations; not proof of indexing, ranking, or causation)", JSON.stringify(seoReadiness), 3_500);
       const out = await runAgentTask<unknown>(
         ctx,
         job,
         2,
         conversionAuditSpec(),
-        agentInput(job, "Audit the supplied website pages for conversion and acquisition: clarity, message match, offer, proof, objections, calls to action, friction, pricing presentation and trust. Cite only exact supplied page URLs. Give at most four prioritized fixes. Every fix must target an exact page URL read in this run and include: why the evidence supports it; effort; a proposed content-section order; brief sample copy; text/flow-level UX changes that follow from observed content; and a measurement plan that starts by recording the current baseline and names a relevant metric without inventing a target or expected numerical lift. Sample copy is a draft, not publish-ready; do not add capabilities, proof, offers, prices or guarantees absent from owner-confirmed facts. Do not infer visual layout, mobile behavior, forms, accessibility, speed, conversion rate or causal effects from text extraction. Leave fixes empty when no page supports a concrete recommendation. When supplied, report CrUX metrics as real-user field data with the provided 28-day collection window and phone form factor; report Lighthouse values as a separate synthetic mobile lab test. Never substitute one for the other, infer conversions from them, or claim either proves a change caused a conversion result. If no performance data was supplied, say it was unavailable rather than guessing. Search Console observations, when present, are historical query/page impressions, clicks, CTR and position for this property's date window; use them only when tied to one of the pages actually read, and never call them conversions, total search demand, or causal evidence. Review the supplied ClimbOS and connected-account post sample for audience fit, purpose/format variety, platform adaptation, clarity, proof, CTA and reuse. For each social finding, cite the exact supplied sourceArtifactId and platform. Recommend platform- and business-appropriate content formats as testable ideas, not guaranteed growth. Never imply this is a complete account history or that performance metrics were reviewed. If no posts were supplied, explain that and leave social findings empty. Prioritize concrete fixes and never invent numerical lift.", {
-          untrustedContext: [text, socialText, searchContext, performanceContext].filter(Boolean).join("\n\n"),
+        agentInput(job, "Audit the supplied website pages for conversion and acquisition: clarity, message match, offer, proof, objections, calls to action, friction, pricing presentation and trust. Use deterministic technical SEO observations to distinguish crawl/indexing signals from content and user-experience findings; describe only the measured sample and never equate these observations with actual indexing, ranking effects, or a complete crawl. Cite only exact supplied page URLs. Give at most four prioritized fixes. Every fix must target an exact page URL read in this run and include: why the evidence supports it; effort; a proposed content-section order; brief sample copy; text/flow-level UX changes that follow from observed content; and a measurement plan that starts by recording the current baseline and names a relevant metric without inventing a target or expected numerical lift. Sample copy is a draft, not publish-ready; do not add capabilities, proof, offers, prices or guarantees absent from owner-confirmed facts. Do not infer visual layout, mobile behavior, forms, accessibility, speed, conversion rate or causal effects from text extraction. Leave fixes empty when no page supports a concrete recommendation. When supplied, report CrUX metrics as real-user field data with the provided 28-day collection window and phone form factor; report Lighthouse values as a separate synthetic mobile lab test. Never substitute one for the other, infer conversions from them, or claim either proves a change caused a conversion result. If no performance data was supplied, say it was unavailable rather than guessing. Search Console observations, when present, are historical query/page impressions, clicks, CTR and position for this property's date window; use them only when tied to one of the pages actually read, and never call them conversions, total search demand, or causal evidence. Review the supplied ClimbOS and connected-account post sample for audience fit, purpose/format variety, platform adaptation, clarity, proof, CTA and reuse. For each social finding, cite the exact supplied sourceArtifactId and platform. Recommend platform- and business-appropriate content formats as testable ideas, not guaranteed growth. Never imply this is a complete account history or that performance metrics were reviewed. If no posts were supplied, explain that and leave social findings empty. Prioritize concrete fixes and never invent numerical lift.", {
+          untrustedContext: [text, technicalSeoContext, socialText, searchContext, performanceContext].filter(Boolean).join("\n\n"),
           research: researchFor("conversion_audit", { website, businessName: job.business?.name ?? job.org.name }),
         }),
         startedAt,
-        { task: "conversion_audit", context: [text, socialText, searchContext, performanceContext].filter(Boolean).join("\n\n"), ctx: fixtureCtx(job), text: `TASK: Audit supplied website pages for conversion and supplied ClimbOS or connected-account social posts for business fit, platform adaptation, content variety, clarity, proof, CTA and reuse. Give at most four implementation-ready page fixes, each tied to an exact page read in this run, with content order, fact-grounded sample copy, evidence-based text/flow UX changes, effort and a baseline-first measurement plan. Report CrUX only as real-user field data with its 28-day window, and Lighthouse only as a synthetic mobile lab test. Do not invent claims, numerical lift or a measurement target. Use matching Search Console observations only for page(s) actually read, and treat them as historical acquisition context, not conversions or causal proof. Cite exact website URLs and exact social source IDs/platforms supplied in context. Do not infer speed if no measurement was returned or claim causal effects. Recommendations for channels and formats must stay testable ideas and never guarantee growth. LinkedIn post history and post performance analytics are not available in this audit.\n\n${businessBrief(job)}` },
+        { task: "conversion_audit", context: [text, technicalSeoContext, socialText, searchContext, performanceContext].filter(Boolean).join("\n\n"), ctx: fixtureCtx(job), text: `TASK: Audit the sampled website pages for conversion and acquisition. Use the deterministic technical SEO observations to distinguish crawl/indexing signals from page content and customer experience, but never claim they prove indexing, ranking change, or whole-site coverage. Provide at most four page-specific, implementation-ready fixes tied to exact URLs read in this run, with evidence, content order, fact-grounded copy, UX changes, effort, and baseline-first measurement. Report CrUX as real-user field data and Lighthouse as synthetic mobile lab data. Treat Search Console as dated property observations, not conversions, total search demand, or causal proof. Review supplied ClimbOS and connected-account post samples only; cite exact supplied IDs and platforms. Do not invent numerical lift or guarantee outcomes. LinkedIn post history and post performance analytics are not available.\n\n${businessBrief(job)}` },
       );
       const postSources = new Map<string, { platform: string; sourceUrl?: string; sourceType: "climbos" | "facebook" | "instagram" }>(socialPosts.map((post) => [String(post.artifactId), { platform: post.platform, sourceUrl: post.sourceUrl, sourceType: post.platform === "facebook" || post.platform === "instagram" ? post.platform : "climbos" }]));
       const safeOutput = out && typeof out === "object" ? { ...(out as Record<string, unknown>) } : {};
@@ -1997,9 +2031,10 @@ export const conversionAudit = internalAction({
       safeOutput.auditCoverage = {
         website: { requested: Boolean(website), requestedUrl: website ?? null, pagesAttempted: pages.length, pagesRead: pages.filter((page) => page.status === "read").length, pages },
         performance,
+        seoReadiness,
         searchConsole: propertyMatches && searchConsole ? { state: inspectedSearchRows.length ? "matched_to_read_pages" : "property_matched_no_rows_for_read_pages", property: searchConsole.property, startDate: searchConsole.startDate, endDate: searchConsole.endDate, observedRows: inspectedSearchRows.length, truncated: searchConsole.truncated } : { state: searchConsole ? "not_used_property_mismatch" : "no_snapshot" },
         social: { postsReviewed: socialPosts.length, platformsReviewed: [...new Set(socialPosts.map((post) => post.platform))], sourceCoverage: socialCoverage, accountAnalytics: "not_available_in_this_audit" },
-        limitations: ["Website assessment uses text and metadata from the listed pages; it does not directly inspect rendered layout, forms, accessibility or mobile behavior. Any performance measurements are shown separately.", "This review does not include conversion analytics or prove that any suggested change will increase conversions.", "Social review uses at most ten recent caption-bearing posts per available source; it does not include complete account history, visual media analysis or account performance metrics."],
+        limitations: ["Technical SEO checks cover only sampled, fetched static HTML and observed metadata; they do not establish Google indexing, JavaScript-rendered content, rankings, or whole-site coverage. Search Console URL inspection is a separate Google index snapshot.", "Website assessment does not directly inspect rendered layout, forms, accessibility or mobile behavior. Any performance measurements are shown separately.", "This review does not include conversion analytics or prove that any suggested change will increase conversions.", "Social review uses at most ten recent caption-bearing posts per available source; it does not include complete account history, visual media analysis or account performance metrics."],
       };
       await finish(ctx, runId, "verified", { output: safeOutput, meters: { scrapeCredits: pagesFetched } });
       if (cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId, status: "done" });

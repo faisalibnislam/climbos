@@ -474,6 +474,10 @@ export interface ExtractedPage {
   metaDescription?: string;
   canonicalUrl?: string;
   robotsDirectives?: string;
+  htmlLang?: string;
+  viewportPresent: boolean;
+  imageCount: number;
+  imagesWithAltAttribute: number;
   og: Record<string, string>;
   headings: Array<{ level: 1 | 2 | 3; text: string }>;
   links: Array<{ url: string; text: string }>;
@@ -546,6 +550,15 @@ export function extractPageContent(
 
   const titleMatch = /<title\b[^>]*>([\s\S]*?)<\/title\s*>/i.exec(src);
   const title = titleMatch ? stripTags(titleMatch[1] ?? "").slice(0, 500) : undefined;
+  const htmlTag = /<html\b[^>]*>/i.exec(src)?.[0];
+  const htmlLang = htmlTag ? parseAttributes(htmlTag).lang?.trim().slice(0, 32) : undefined;
+  const viewportPresent = (src.match(/<meta\b[^>]*>/gi) ?? []).some((tag) => {
+    const attrs = parseAttributes(tag);
+    return attrs.name?.toLowerCase() === "viewport" && Boolean(attrs.content?.trim());
+  });
+  const imageTags = src.match(/<img\b[^>]*>/gi) ?? [];
+  let imagesWithAltAttribute = 0;
+  for (const tag of imageTags) if (Object.prototype.hasOwnProperty.call(parseAttributes(tag), "alt")) imagesWithAltAttribute++;
 
   let metaDescription: string | undefined;
   const robotsDirectives: string[] = [];
@@ -624,11 +637,12 @@ export function extractPageContent(
     truncated = true;
   }
 
-  const page: ExtractedPage = { og, headings, links, jsonLdPrices, jsonLdTypes: [...jsonLdTypes].slice(0, 50), text, truncated };
+  const page: ExtractedPage = { og, headings, links, jsonLdPrices, jsonLdTypes: [...jsonLdTypes].slice(0, 50), text, truncated, viewportPresent, imageCount: imageTags.length, imagesWithAltAttribute };
   if (title) page.title = title;
   if (metaDescription) page.metaDescription = metaDescription;
   if (canonicalUrl) page.canonicalUrl = canonicalUrl;
   if (robotsDirectives.length) page.robotsDirectives = [...new Set(robotsDirectives)].join(", ");
+  if (htmlLang) page.htmlLang = htmlLang;
   return page;
 }
 
