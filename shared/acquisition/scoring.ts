@@ -102,7 +102,11 @@ const shown = (p: AcquisitionProfile, usd: number) => formatMoney(fromUsd(usd, p
 /** A library threshold (written in USD), shown as a round amount in the owner's currency. */
 const shownThreshold = (p: AcquisitionProfile, usd: number) => formatMoney(thresholdIn(usd, p.currency), p.currency);
 
-const dim = (p: AcquisitionProfile, k: DimensionKey) => p.dims[k]?.value;
+/** Low-confidence model guesses are questions to resolve, not decision inputs. */
+const dim = (p: AcquisitionProfile, k: DimensionKey) => {
+  const value = p.dims[k];
+  return value?.source === "inferred" && value.confidence === "low" ? undefined : value?.value;
+};
 
 /* ---------------- price fit ---------------- */
 
@@ -166,7 +170,9 @@ export function dimensionsToConfirm(p: AcquisitionProfile, max = 3): DimensionKe
 export function traitsOf(p: AcquisitionProfile): Set<Requirement> {
   const t = new Set<Requirement>();
   for (const k of p.types) for (const r of TYPE_BY_KEY[k]?.traits ?? []) t.add(r);
-  const c = dim(p, "customerType");
+  // Only an owner-confirmed dimension can unlock or exclude hard channel eligibility.
+  // Inferred classifications may inform soft scores, but must not silently rule out a route.
+  const c = p.dims.customerType?.source === "owner" ? p.dims.customerType.value : undefined;
   if (c === "b2b" || c === "b2b2c") t.add("b2b");
   if (c === "b2c" || c === "b2b2c") t.add("b2c");
   if (c === "b2g") {
@@ -177,7 +183,7 @@ export function traitsOf(p: AcquisitionProfile): Set<Requirement> {
     t.add("b2b");
     t.add("b2c");
   }
-  if (dim(p, "geography") === "local") t.add("location");
+  if (p.dims.geography?.source === "owner" && p.dims.geography.value === "local") t.add("location");
   return t;
 }
 

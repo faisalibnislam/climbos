@@ -60,6 +60,14 @@ describe("channel scoring", () => {
     const app = scoreChannels({ ...plumber, types: ["mobile_app"], dims: { customerType: v("b2c"), geography: v("global") } });
     expect(app.find((r) => r.id === "S18")?.status).not.toBe("ineligible");
   });
+  it("does not let inferred customer type or geography unlock hard channel eligibility", () => {
+    const inferredLocal = { ...formkit, dims: { ...formkit.dims, geography: { value: "local", confidence: "high" as const, source: "inferred" as const } } };
+    expect(scoreChannels(inferredLocal).find((r) => r.id === "S04")?.status).toBe("ineligible");
+    const inferredConsumer = { ...formkit, dims: { ...formkit.dims, customerType: { value: "b2c", confidence: "medium" as const, source: "inferred" as const } } };
+    expect(scoreChannels(inferredConsumer).find((r) => r.id === "P14")?.status).toBe("ineligible");
+    const lowConfidence = { ...formkit, dims: { ...formkit.dims, aov: { value: "low", confidence: "low" as const, source: "inferred" as const } } };
+    expect(scoreChannels(lowConfidence).find((r) => r.id === "D01")?.priceFit).toBeUndefined();
+  });
   it("asks only about unknown or low-confidence dimensions", () => {
     expect(dimensionsToConfirm({ ...formkit, dims: {} })).toEqual(["customerType", "geography", "salesMotion"]);
     expect(dimensionsToConfirm(formkit)).toEqual(["salesCycle", "scale"]);
