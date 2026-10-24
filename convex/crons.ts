@@ -48,5 +48,6 @@ crons.daily("approvals waiting", { hourUTC: 14, minuteUTC: 0 }, internal.emailAc
 crons.daily("digests", { hourUTC: 13, minuteUTC: 0 }, internal.maintenance.sendDigests, {});
 // Competitor watch: Monday mornings, before the weekly report.
 crons.weekly("competitor watch", { dayOfWeek: "monday", hourUTC: 7, minuteUTC: 0 }, internal.competitors.weekly, {});
+crons.daily("refresh due competitor research", { hourUTC: 8, minuteUTC: 15 }, internal.competitorDiscovery.refreshDue, {});
 
 export default crons;

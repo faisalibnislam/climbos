@@ -313,6 +313,11 @@ export default defineSchema({
     firstWinRunIds: v.optional(v.array(v.id("workflowRuns"))),
     /** Team rules: jobs above this many credits need an owner or admin to start them. */
     creditApprovalLimit: v.optional(v.number()),
+    /** Periodic competitor research cadence in days; 0 disables scheduled refreshes. Default is 90. */
+    competitorResearchRefreshDays: v.optional(v.union(v.literal(0), v.literal(30), v.literal(60), v.literal(90), v.literal(180))),
+    /** Bounded cursor for one-time initialization of refresh times on legacy businesses. */
+    competitorResearchBackfillCursor: v.optional(v.string()),
+    competitorResearchBackfillDone: v.optional(v.boolean()),
     createdAt: v.number(),
   })
     .index("by_slug", ["slug"])
@@ -466,9 +471,16 @@ export default defineSchema({
     ),
     /** Business classification for channel scoring; owner-confirmed values are kept across plan refreshes. */
     acquisition: v.optional(v.object({ types: v.array(v.string()), dims: v.any(), updatedAt: v.number() })),
+    /** Next bounded research refresh; owner profile/fact changes move this to now. */
+    competitorResearchNextAt: v.optional(v.number()),
+    competitorResearchStaleAt: v.optional(v.number()),
+    competitorResearchCompletedAt: v.optional(v.number()),
+    competitorResearchLastStatus: v.optional(v.union(v.literal("scheduled"), v.literal("waiting_for_credits"), v.literal("waiting_for_owner"), v.literal("no_website"))),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_org", ["orgId"]),
+  })
+    .index("by_org", ["orgId"])
+    .index("by_competitor_research_due", ["competitorResearchNextAt"]),
 
   businessFacts: defineTable({
     orgId: v.id("organizations"),

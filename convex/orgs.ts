@@ -379,6 +379,10 @@ export const reviewFact = mutation({
     } else {
       for (const target of reviewTargets) await ctx.db.patch(target._id, { reviewState: args.action === "confirm" ? "confirmed" : "rejected", updatedBy: user._id, updatedAt: Date.now() });
     }
+    if (["product", "audience", "pricing", "offer", "competitor"].includes(fact.category)) {
+      const business = await ctx.db.get(fact.businessId);
+      if (business?.orgId === org._id) await ctx.db.patch(business._id, { competitorResearchNextAt: Date.now(), competitorResearchStaleAt: Date.now(), updatedAt: Date.now() });
+    }
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: `fact.${args.action}`, subjectType: "fact", subjectId: fact._id, summary: `Fact ${args.action}ed${reviewTargets.length > 1 ? ` with ${reviewTargets.length - 1} duplicate${reviewTargets.length === 2 ? "" : "s"}` : ""}.` });
   },
 });
@@ -392,6 +396,13 @@ export const confirmAllFacts = mutation({
       .withIndex("by_org_state", (q) => q.eq("orgId", org._id).eq("reviewState", "needs_review"))
       .take(100);
     for (const f of facts) await ctx.db.patch(f._id, { reviewState: "confirmed", updatedBy: user._id, updatedAt: Date.now() });
+    if (facts.some((fact) => ["product", "audience", "pricing", "offer", "competitor"].includes(fact.category))) {
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+      if (business) {
+        const now = Date.now();
+        await ctx.db.patch(business._id, { competitorResearchNextAt: now, competitorResearchStaleAt: now, updatedAt: now });
+      }
+    }
     if (org.onboardingStep !== "done") await ctx.db.patch(org._id, { onboardingStep: "goal" });
     return facts.length;
   },
@@ -422,7 +433,7 @@ export const addFact = mutation({
     const statement = args.statement.trim().slice(0, 400);
     if (!statement) throw appError("INVALID", "Please write the fact.");
     const now = Date.now();
-    return ctx.db.insert("businessFacts", {
+    const factId = await ctx.db.insert("businessFacts", {
       orgId: org._id,
       businessId: business._id,
       category: args.category,
@@ -435,6 +446,10 @@ export const addFact = mutation({
       createdAt: now,
       updatedAt: now,
     });
+    if (["product", "audience", "pricing", "offer", "competitor"].includes(args.category)) {
+      await ctx.db.patch(business._id, { competitorResearchNextAt: now, competitorResearchStaleAt: now, updatedAt: now });
+    }
+    return factId;
   },
 });
 
@@ -462,6 +477,7 @@ export const saveBusinessDetails = mutation({
     if (currency && !/^[A-Z]{3}$/.test(currency)) throw appError("INVALID", "Currency must be a 3-letter code like USD.");
     const website = args.website === undefined ? undefined : args.website.trim() ? normalizeWebsite(args.website) : "";
     if (website === undefined && args.website?.trim()) throw appError("INVALID", "That doesn't look like a website address. Try something like example.com.");
+    const businessChanged = Boolean((args.name && args.name.trim() !== business.name) || (website !== undefined && website !== (business.website ?? "")) || (args.businessType && args.businessType !== business.businessType));
     await ctx.db.patch(business._id, {
       ...(args.name ? { name: args.name.trim().slice(0, 80) } : {}),
       ...(website !== undefined ? { website: website || undefined } : {}),
@@ -469,6 +485,7 @@ export const saveBusinessDetails = mutation({
       ...(currency ? { currency } : {}),
       ...(args.timezone ? { timezone: args.timezone.slice(0, 64) } : {}),
       ...(args.successEvents ? { successEvents: args.successEvents.slice(0, 6) } : {}),
+      ...(businessChanged ? { competitorResearchNextAt: Date.now(), competitorResearchStaleAt: Date.now() } : {}),
       updatedAt: Date.now(),
     });
     await ctx.db.patch(org._id, {
@@ -476,6 +493,22 @@ export const saveBusinessDetails = mutation({
       ...(currency ? { currency } : {}),
       ...(args.timezone ? { timezone: args.timezone.slice(0, 64) } : {}),
     });
+  },
+});
+
+/** Set low-cadence competitor research; 0 stops scheduled refreshes. */
+export const setCompetitorResearchRefreshDays = mutation({
+  args: { slug: v.string(), days: v.union(v.literal(0), v.literal(30), v.literal(60), v.literal(90), v.literal(180)) },
+  handler: async (ctx, { slug, days }) => {
+    const { org, role, user } = await requireOrgAccess(ctx, { slug }, "manage_team");
+    if (role !== "owner" && role !== "admin") throw appError("FORBIDDEN", "Only an owner or admin can change scheduled research spending.");
+    const businesses = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(50);
+    await ctx.db.patch(org._id, { competitorResearchRefreshDays: days });
+    for (const business of businesses) if (business.insights) {
+      const nextAt = days === 0 ? undefined : business.competitorResearchStaleAt ?? (business.competitorResearchCompletedAt ?? business.insights.generatedAt) + days * 86_400_000;
+      await ctx.db.patch(business._id, { competitorResearchNextAt: nextAt, competitorResearchLastStatus: undefined });
+    }
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "competitor_research.cadence_changed", summary: days === 0 ? "Disabled scheduled competitor research." : `Set competitor research to refresh every ${days} days.` });
   },
 });
 

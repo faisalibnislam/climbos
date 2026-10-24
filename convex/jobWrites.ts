@@ -286,6 +286,8 @@ export const saveInsights = internalMutation({
     const i = JSON.parse(insights) as BusinessInsights;
     const v2Competitors = (i as unknown as Partial<InsightsV2>).competitors;
     const insightsAt = Date.now();
+    const org = await ctx.db.get(run.orgId);
+    const refreshDays = org?.competitorResearchRefreshDays ?? 90;
     await ctx.db.patch(businessId, {
       insights: {
         audiences: i.audiences.slice(0, 5),
@@ -326,9 +328,12 @@ export const saveInsights = internalMutation({
         generatedAt: insightsAt,
         runId,
       },
+      competitorResearchCompletedAt: insightsAt,
+      competitorResearchNextAt: refreshDays > 0 ? insightsAt + refreshDays * 86_400_000 : undefined,
+      competitorResearchStaleAt: undefined,
+      competitorResearchLastStatus: undefined,
       updatedAt: Date.now(),
     });
-    const org = await ctx.db.get(run.orgId);
     await ctx.scheduler.runAfter(0, internal.competitorDiscovery.seedFromInsights, { orgId: run.orgId, businessId, insightsAt });
     if (org) await notifyOwners(ctx, org._id, `Research on ${business.name} is done. Check what we learned.`, org.onboardingStep !== "done" ? `/onboarding?workspace=${org.slug}` : "settings/business");
   },

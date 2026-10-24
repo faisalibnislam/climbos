@@ -100,6 +100,8 @@ export async function createRunWithReservation(
     meters: PartialMeters;
     createdBy?: Id<"users">;
     isFixture: boolean;
+    /** Enforce workspace approval thresholds even for system-scheduled work with no user creator. */
+    enforceCreditApprovalLimit?: boolean;
     /** Climb AI mode (resolve with resolveAiMode). Absent = basic. */
     aiMode?: "basic" | "expert";
     customAgentId?: Id<"customAgents">;
@@ -216,7 +218,10 @@ export async function createRunWithReservation(
   }
   const period = access.period;
   // Team rule: jobs above the workspace's approval limit need an owner or admin to start them.
-  if (org.creditApprovalLimit !== undefined && params.createdBy && microsToCredits(estimate.costMicros) > org.creditApprovalLimit) {
+  if (org.creditApprovalLimit !== undefined && (params.createdBy !== undefined || params.enforceCreditApprovalLimit) && microsToCredits(estimate.costMicros) > org.creditApprovalLimit) {
+    if (!params.createdBy && params.enforceCreditApprovalLimit) {
+      throw appError("LIMIT_REACHED", `This scheduled job exceeds the workspace's ${org.creditApprovalLimit}-credit approval limit. An owner or admin can start the refresh manually.`, { reason: "approval_limit", title: params.title.slice(0, 120), credits: microsToCredits(estimate.costMicros) });
+    }
     const m = await ctx.db.query("memberships").withIndex("by_org_user", (q) => q.eq("orgId", org._id).eq("userId", params.createdBy!)).unique();
     if (m && m.role !== "owner" && m.role !== "admin") {
       throw appError("FORBIDDEN", `Jobs over ${org.creditApprovalLimit} credits need an owner or admin to start them.`, { reason: "approval_limit", title: params.title.slice(0, 120), credits: microsToCredits(estimate.costMicros) });

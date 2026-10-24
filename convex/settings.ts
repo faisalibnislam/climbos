@@ -46,6 +46,7 @@ export const team = query({
       yourRole: role,
       seatLimit,
       creditApprovalLimit: org.creditApprovalLimit ?? null,
+      competitorResearchRefreshDays: org.competitorResearchRefreshDays ?? 90,
       /** Seats are per account: people across all of the account's workspaces. */
       seatsUsed: seats.used,
       roles: Object.entries(ROLE_DESCRIPTIONS).map(([key, description]) => ({ key, description })),

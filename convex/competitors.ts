@@ -33,11 +33,26 @@ export const overview = query({
     );
     return {
       limit: (await isPaid(ctx, org)) ? LIMIT.paid : LIMIT.free,
+      researchRefresh: business?.insights ? {
+        cadenceDays: org.competitorResearchRefreshDays ?? 90,
+        nextAt: business.competitorResearchNextAt ?? null,
+        completedAt: business.competitorResearchCompletedAt ?? business.insights.generatedAt,
+        status: business.competitorResearchLastStatus ?? null,
+      } : null,
       watches: watches.map((w) => ({ id: w._id, name: w.name, url: w.url, active: w.active, autoSeeded: w.autoSeededAt !== undefined, discoverySourceUrl: w.discoverySourceUrl ?? null, lastCheckedAt: w.lastCheckedAt ?? null, lastError: w.lastError ?? null })),
       changes: changes.map((c) => ({ id: c._id, name: c.name, summary: c.summary, bullets: c.bullets, soWhat: c.soWhat ?? null, sourceUrls: c.sourceUrls ?? watches.find((w) => w._id === c.watchId)?.lastSourceUrls ?? [], evidence: c.evidence ?? null, at: c.at })),
       suggested: suggested.slice(0, 6),
     };
   },
+});
+
+/** Due queue is indexed and bounded; the daily cron never walks unchanged workspaces. */
+export const dueForResearch = internalQuery({
+  args: { now: v.number(), limit: v.number() },
+  handler: async (ctx, { now, limit }) => (await ctx.db.query("businesses")
+    .withIndex("by_competitor_research_due", (q) => q.lte("competitorResearchNextAt", now))
+    .take(Math.max(1, Math.min(50, Math.floor(limit)))))
+    .map((business) => business._id),
 });
 
 function normaliseUrl(input: string): string | null {

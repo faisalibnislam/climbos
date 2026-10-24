@@ -144,6 +144,84 @@ describe("competitor watch", () => {
     expect(overview.watches[0]).toMatchObject({ autoSeeded: false, discoverySourceUrl: null });
   });
 
+  it("refreshes competitor research on its owner-configured cadence and keeps scheduled work under the approval cap", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "competitor-refresh@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Refresh Co" });
+    await makePaid(t, orgId);
+    const business = await t.run((ctx) => ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first());
+    if (!business) throw new Error("Business was not created");
+    const now = Date.now();
+    await t.run(async (ctx) => {
+      await ctx.db.patch(orgId, { aiMode: "basic" });
+      await ctx.db.patch(business._id, {
+        website: "https://refresh.example",
+        insights: { audiences: [], competitors: [], positioning: "", pricingNotes: "", swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, journey: [], opportunities: [], generatedAt: now - 100 * 86_400_000 },
+        competitorResearchCompletedAt: now - 100 * 86_400_000,
+        competitorResearchNextAt: now - 1,
+      });
+    });
+    await owner.client.mutation(api.orgs.setCompetitorResearchRefreshDays, { slug, days: 30 });
+    const started = await t.mutation(internal.competitorDiscovery.startScheduledRefresh, { businessId: business._id });
+    expect(started).toBe(true);
+    const stored = await t.run(async (ctx) => ({
+      org: await ctx.db.get(orgId),
+      business: await ctx.db.get(business._id),
+      run: await ctx.db.query("workflowRuns").withIndex("by_org_kind_created", (q) => q.eq("orgId", orgId).eq("kind", "onboarding_research")).order("desc").first(),
+    }));
+    expect(stored.org?.competitorResearchRefreshDays).toBe(30);
+    expect(stored.business?.competitorResearchLastStatus).toBe("scheduled");
+    expect(stored.business?.competitorResearchNextAt).toBeGreaterThan(now);
+    expect(String(stored.run?.input)).toContain("scheduled_competitor_research");
+
+    await owner.client.mutation(api.orgs.setCompetitorResearchRefreshDays, { slug, days: 180 });
+    const rescheduled = await t.run((ctx) => ctx.db.get(business._id));
+    expect(rescheduled?.competitorResearchNextAt).toBe(now - 100 * 86_400_000 + 180 * 86_400_000);
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(orgId, { creditApprovalLimit: 1 });
+      if (stored.run) await ctx.db.patch(stored.run._id, { status: "verified", finishedAt: Date.now() });
+    });
+    await owner.client.mutation(api.orgs.addFact, { slug, category: "offer", statement: "We now offer a fixed-price onboarding package." });
+    const invalidated = await t.run((ctx) => ctx.db.get(business._id));
+    expect(invalidated?.competitorResearchNextAt).toBeLessThanOrEqual(Date.now());
+    expect(invalidated?.competitorResearchStaleAt).toBeDefined();
+    const deferred = await t.mutation(internal.competitorDiscovery.startScheduledRefresh, { businessId: business._id });
+    expect(deferred).toBe(false);
+    const deferredBusiness = await t.run((ctx) => ctx.db.get(business._id));
+    expect(deferredBusiness?.competitorResearchLastStatus).toBe("waiting_for_owner");
+  });
+
+  it("initializes bounded refresh schedules for legacy businesses with saved research", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "competitor-refresh-backfill@example.com");
+    const { orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Legacy Research Co" });
+    const business = await t.run((ctx) => ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first());
+    if (!business) throw new Error("Business was not created");
+    const generatedAt = Date.now() - 100 * 86_400_000;
+    await t.run((ctx) => ctx.db.patch(business._id, {
+      insights: { audiences: [], competitors: [], positioning: "", pricingNotes: "", swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, journey: [], opportunities: [], generatedAt },
+    }));
+    const result = await t.mutation(internal.competitorDiscovery.backfillLegacySchedules, {});
+    expect(result.businesses).toBe(1);
+    const stored = await t.run(async (ctx) => ({ business: await ctx.db.get(business._id), org: await ctx.db.get(orgId) }));
+    expect(stored.business?.competitorResearchCompletedAt).toBe(generatedAt);
+    expect(stored.business?.competitorResearchNextAt).toBe(generatedAt + 90 * 86_400_000);
+    expect(stored.org?.competitorResearchBackfillDone).toBe(true);
+  });
+
+  it("clears a due marker when the business has not completed its first research yet", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "competitor-refresh-no-insights@example.com");
+    const { orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Not Researched Co" });
+    const business = await t.run((ctx) => ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first());
+    if (!business) throw new Error("Business was not created");
+    await t.run((ctx) => ctx.db.patch(business._id, { competitorResearchNextAt: Date.now() - 1 }));
+    expect(await t.mutation(internal.competitorDiscovery.startScheduledRefresh, { businessId: business._id })).toBe(false);
+    const stored = await t.run((ctx) => ctx.db.get(business._id));
+    expect(stored?.competitorResearchNextAt).toBeUndefined();
+  });
+
   it("does not load or write a competitor watch under another workspace", async () => {
     const t = setup();
     const owner = await asNewUser(t, "watch-tenancy@example.com");
