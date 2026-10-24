@@ -16,7 +16,7 @@ export default function BrandSettingsPage() {
   const { organization: slug } = useParams<{ organization: string }>();
   const data = useQuery(api.brand.get, { slug });
   if (data === undefined) return <LoadingBlock label="Loading brand kit" lines={4} />;
-  return <BrandForm key={JSON.stringify([data.voice, data.toneWords, data.colors, data.doNots, data.approvedExamples, data.voiceLearningEnabled])} slug={slug} data={data} />;
+  return <BrandForm key={JSON.stringify([data.voice, data.toneWords, data.colors, data.doNots, data.approvedExamples, data.socialHumor, data.socialTrendPolicy, data.voiceLearningEnabled])} slug={slug} data={data} />;
 }
 
 type Brand = NonNullable<ReturnType<typeof useQuery<typeof api.brand.get>>>;
@@ -46,6 +46,8 @@ function BrandForm({ slug, data }: { slug: string; data: Brand }) {
   const [colors, setColors] = useState<string[]>(data.colors.length ? data.colors : ["#0b5d46"]);
   const [doNots, setDoNots] = useState(data.doNots.join("\n"));
   const [approvedExamples, setApprovedExamples] = useState([...data.approvedExamples, "", ""].slice(0, 3));
+  const [socialHumor, setSocialHumor] = useState(data.socialHumor);
+  const [socialTrendPolicy, setSocialTrendPolicy] = useState(data.socialTrendPolicy);
   const [voiceLearningEnabled, setVoiceLearningEnabled] = useState(data.voiceLearningEnabled);
   const [busy, setBusy] = useState<string | null>(null);
   async function run(key: string, fn: () => Promise<unknown>, ok?: string) {
@@ -74,6 +76,27 @@ function BrandForm({ slug, data }: { slug: string; data: Brand }) {
           <Field label="Never say or do" hint="One per line">
             <Textarea value={doNots} onChange={(e) => setDoNots(e.target.value)} rows={3} autosize />
           </Field>
+          <section aria-labelledby="social-style-heading" className="flex flex-col gap-3 rounded-xl border border-line p-4">
+            <div>
+              <h3 id="social-style-heading" className="text-sm font-semibold text-ink">Social post style</h3>
+              <p className="mt-1 text-sm text-ink-3">These preferences guide drafts by business type and platform. Safety, audience fit, and current platform rules still apply.</p>
+            </div>
+            <Field label="Humor" hint="Cheeky humor may be unsuitable for some topics or platforms; ClimbOS will adapt or avoid it when needed.">
+              <Select value={socialHumor} onValueChange={(value) => setSocialHumor(value as typeof socialHumor)} options={[
+                { value: "restrained", label: "Restrained" },
+                { value: "light", label: "Light wit" },
+                { value: "playful", label: "Playful" },
+                { value: "cheeky", label: "Cheeky, when suitable" },
+              ]} />
+            </Field>
+            <Field label="Trends and meme-inspired ideas" hint="Trend-aware drafts still need a current source and an original, useful take.">
+              <Select value={socialTrendPolicy} onValueChange={(value) => setSocialTrendPolicy(value as typeof socialTrendPolicy)} options={[
+                { value: "evergreen_first", label: "Prefer evergreen ideas" },
+                { value: "selective", label: "Use trends selectively" },
+                { value: "trend_aware", label: "Look actively for fitting trends" },
+              ]} />
+            </Field>
+          </section>
           <section aria-labelledby="approved-examples-heading" className="flex flex-col gap-3 rounded-xl border border-line p-4">
             <div>
               <h3 id="approved-examples-heading" className="text-sm font-semibold text-ink">Examples ClimbOS may learn style from</h3>
@@ -110,7 +133,7 @@ function BrandForm({ slug, data }: { slug: string; data: Brand }) {
             className="self-start"
             loading={busy === "save"}
             disabled={!data.exists || !data.canEdit}
-            onClick={() => run("save", () => save({ slug, voice, toneWords: tone.split(","), colors, doNots: doNots.split("\n"), ...(data.canManageVoiceLearning ? { approvedExamples, voiceLearningEnabled } : {}) }), "Brand kit saved")}
+            onClick={() => run("save", () => save({ slug, voice, toneWords: tone.split(","), colors, doNots: doNots.split("\n"), socialHumor, socialTrendPolicy, ...(data.canManageVoiceLearning ? { approvedExamples, voiceLearningEnabled } : {}) }), "Brand kit saved")}
           >
             Save
           </Button>

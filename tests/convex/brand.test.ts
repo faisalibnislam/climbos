@@ -21,11 +21,12 @@ describe("brand kit + voice learning", () => {
       const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId as Id<"organizations">)).first();
       await ctx.db.insert("brandProfiles", { orgId: orgId as Id<"organizations">, businessId: business!._id, voice: "Plain", toneWords: [], colors: [], doNots: [], updatedAt: Date.now() });
     });
-    await owner.client.mutation(api.brand.update, { slug, voice: "Friendly expert", toneWords: ["warm", " direct "], colors: ["#123456", "nope"], doNots: ["No emojis", ""], approvedExamples: ["  Example with spacing  ", "Example with spacing", "", "Second example", "Third example", "Fourth example"], voiceLearningEnabled: true });
+    await owner.client.mutation(api.brand.update, { slug, voice: "Friendly expert", toneWords: ["warm", " direct "], colors: ["#123456", "nope"], doNots: ["No emojis", ""], approvedExamples: ["  Example with spacing  ", "Example with spacing", "", "Second example", "Third example", "Fourth example"], socialHumor: "cheeky", socialTrendPolicy: "trend_aware", voiceLearningEnabled: true });
     let b = await owner.client.query(api.brand.get, { slug });
-    expect(b).toMatchObject({ voice: "Friendly expert", toneWords: ["warm", "direct"], colors: ["#123456"], doNots: ["No emojis"], approvedExamples: ["Example with spacing", "Second example", "Third example"], voiceLearningEnabled: true, canEdit: true, canManageVoiceLearning: true });
+    expect(b).toMatchObject({ voice: "Friendly expert", toneWords: ["warm", "direct"], colors: ["#123456"], doNots: ["No emojis"], approvedExamples: ["Example with spacing", "Second example", "Third example"], socialHumor: "cheeky", socialTrendPolicy: "trend_aware", voiceLearningEnabled: true, canEdit: true, canManageVoiceLearning: true });
     await owner.client.mutation(api.brand.update, { slug, voice: "Friendly expert", toneWords: ["warm"], colors: ["#123456"], doNots: ["No emojis"] });
     expect((await owner.client.query(api.brand.get, { slug })).approvedExamples).toEqual(["Example with spacing", "Second example", "Third example"]);
+    expect((await owner.client.query(api.brand.get, { slug })).socialHumor).toBe("cheeky");
     await owner.client.mutation(api.brand.update, { slug, voice: "Friendly expert", toneWords: ["warm", " direct "], colors: ["#123456"], doNots: ["No emojis"], approvedExamples: [] });
     expect((await owner.client.query(api.brand.get, { slug })).approvedExamples).toEqual([]);
 

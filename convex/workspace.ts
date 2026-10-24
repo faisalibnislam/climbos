@@ -907,7 +907,7 @@ function planStaleInputs(
   business: Pick<Doc<"businesses">, "unitEconomics" | "lifecycleStage" | "funnel" | "name" | "website" | "socialUrls" | "businessType" | "summary" | "acquisition" | "currency" | "insights"> | null,
   goal: Pick<Doc<"goals">, "_id" | "kind" | "statement" | "horizonDays" | "monthlyAdBudgetMinor" | "currency" | "target"> | null,
   businessFactVersions: { id: string; updatedAt: number }[] = [],
-  brand: Pick<Doc<"brandProfiles">, "voice" | "toneWords" | "colors" | "doNots" | "learnedRules"> | null,
+  brand: Pick<Doc<"brandProfiles">, "voice" | "toneWords" | "colors" | "doNots" | "learnedRules" | "socialHumor" | "socialTrendPolicy"> | null,
   connectedCapabilities: string[] = [],
   marketChangeVersions: { id: string; at: number }[] = [],
 ): { ownerEconomics: boolean; lifecycleStage: boolean; funnel: boolean; goal: boolean; businessProfile: boolean; businessFacts: boolean; brandGuidance: boolean; capabilities: boolean; businessResearch: boolean; marketChanges: boolean } {
@@ -975,7 +975,7 @@ function businessProfileValues(business: Pick<Doc<"businesses">, "name" | "websi
   };
 }
 
-function brandProfileValues(brand: Pick<Doc<"brandProfiles">, "voice" | "toneWords" | "colors" | "doNots" | "approvedExamples" | "learnedRules"> | null): unknown {
+function brandProfileValues(brand: Pick<Doc<"brandProfiles">, "voice" | "toneWords" | "colors" | "doNots" | "approvedExamples" | "learnedRules" | "socialHumor" | "socialTrendPolicy"> | null): unknown {
   if (!brand) return null;
   return {
     voice: brand.voice,
@@ -983,6 +983,8 @@ function brandProfileValues(brand: Pick<Doc<"brandProfiles">, "voice" | "toneWor
     colors: [...brand.colors],
     doNots: [...brand.doNots],
     ...(brand.approvedExamples?.length ? { approvedExamples: [...brand.approvedExamples] } : {}),
+    ...(brand.socialHumor ? { socialHumor: brand.socialHumor } : {}),
+    ...(brand.socialTrendPolicy ? { socialTrendPolicy: brand.socialTrendPolicy } : {}),
     learnedRules: (brand.learnedRules ?? []).map(({ text }) => text),
   };
 }

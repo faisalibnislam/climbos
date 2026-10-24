@@ -42,6 +42,8 @@ export const get = query({
       colors: b?.colors ?? [],
       doNots: b?.doNots ?? [],
       approvedExamples: b?.approvedExamples ?? [],
+      socialHumor: b?.socialHumor ?? "restrained",
+      socialTrendPolicy: b?.socialTrendPolicy ?? "selective",
       voiceLearningEnabled: b?.voiceLearningEnabled === true,
       learnedRules: (b?.learnedRules ?? []).map((r) => r.text),
       pending,
@@ -51,7 +53,7 @@ export const get = query({
 });
 
 export const update = mutation({
-  args: { slug: v.string(), voice: v.string(), toneWords: v.array(v.string()), colors: v.array(v.string()), doNots: v.array(v.string()), approvedExamples: v.optional(v.array(v.string())), voiceLearningEnabled: v.optional(v.boolean()) },
+  args: { slug: v.string(), voice: v.string(), toneWords: v.array(v.string()), colors: v.array(v.string()), doNots: v.array(v.string()), approvedExamples: v.optional(v.array(v.string())), socialHumor: v.optional(v.union(v.literal("restrained"), v.literal("light"), v.literal("playful"), v.literal("cheeky"))), socialTrendPolicy: v.optional(v.union(v.literal("evergreen_first"), v.literal("selective"), v.literal("trend_aware"))), voiceLearningEnabled: v.optional(v.boolean()) },
   handler: async (ctx, a) => {
     const { org, role } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
     if (a.approvedExamples !== undefined && role !== "owner" && role !== "admin") throw appError("FORBIDDEN", "Only an owner or admin can approve brand examples.");
@@ -66,6 +68,8 @@ export const update = mutation({
       ...(a.approvedExamples !== undefined ? {
         approvedExamples: [...new Set(a.approvedExamples.map((example) => example.trim().slice(0, 1000)).filter(Boolean))].slice(0, 3),
       } : {}),
+      ...(a.socialHumor !== undefined ? { socialHumor: a.socialHumor } : {}),
+      ...(a.socialTrendPolicy !== undefined ? { socialTrendPolicy: a.socialTrendPolicy } : {}),
       ...(a.voiceLearningEnabled !== undefined ? { voiceLearningEnabled: a.voiceLearningEnabled } : {}),
       updatedAt: Date.now(),
     });
