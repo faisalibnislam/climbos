@@ -27,6 +27,7 @@ async function orgInputs(ctx: QueryCtx, orgId: Id<"organizations">, since: numbe
   const sends = await ctx.db
     .query("outboundSends")
     .withIndex("by_org_sent", (q) => q.eq("orgId", orgId).gte("sentAt", since).lte("sentAt", Date.now()))
+    .order("desc")
     .take(3000);
   const firstSends = new Map<string, { campaignId: Id<"outboundCampaigns">; prospectId: Id<"prospects">; sentAt: number }>();
   for (const send of sends) {
@@ -41,9 +42,10 @@ async function orgInputs(ctx: QueryCtx, orgId: Id<"organizations">, since: numbe
     if (!prospect || prospect.orgId !== orgId || prospect.campaignId !== send.campaignId) continue;
     const cohort = cohorts.get(String(send.campaignId)) ?? { contacted: 0, replied: 0, booked: 0 };
     cohort.contacted += 1;
-    // Stage is a current-state field. Its timestamp must follow contact or it
-    // may describe an earlier CRM event unrelated to this outreach cohort.
-    if (prospect.updatedAt >= send.sentAt) {
+    // Stage is a current-state field. Only its own transition timestamp can
+    // show whether the current outcome followed this contact; unrelated edits
+    // to the prospect record are not outcome evidence.
+    if (prospect.stageUpdatedAt !== undefined && prospect.stageUpdatedAt >= send.sentAt) {
       if (["replied", "booked", "won"].includes(prospect.stage)) cohort.replied += 1;
       if (prospect.stage === "booked" || prospect.stage === "won") cohort.booked += 1;
     }

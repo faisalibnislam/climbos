@@ -358,7 +358,7 @@ async function markSent(ctx: MutationCtx, s: Doc<"outboundSends">, messageId: st
   const p = await ctx.db.get(s.prospectId);
   const org = await ctx.db.get(s.orgId);
   if (c?.sending) await ctx.db.patch(c._id, { sending: { ...c.sending, firstSentAt: c.sending.firstSentAt ?? now, lastSentAt: now } });
-  if (p && p.stage === "approved") await ctx.db.patch(p._id, { stage: "contacted", updatedAt: now });
+  if (p && p.stage === "approved") await ctx.db.patch(p._id, { stage: "contacted", stageUpdatedAt: now, updatedAt: now });
   const next = c?.sequence[s.step + 1];
   if (!c || !next || !org) return;
   if (await ctx.db.query("outboundSends").withIndex("by_prospect", (q) => q.eq("prospectId", s.prospectId).eq("step", s.step + 1)).first()) return;
@@ -484,7 +484,7 @@ export const applyInbox = internalMutation({
         // An opt-out always stops everything, even after an earlier reply.
         await cancelQueued(ctx, p._id);
         await suppress(ctx, c.orgId, r.from, "unsubscribe", "reply");
-        if (p.stage !== "booked" && p.stage !== "won" && p.stage !== "lost") await ctx.db.patch(p._id, { stage: "lost", updatedAt: now });
+        if (p.stage !== "booked" && p.stage !== "won" && p.stage !== "lost") await ctx.db.patch(p._id, { stage: "lost", stageUpdatedAt: now, updatedAt: now });
         continue;
       }
       const already = p.stage === "replied" || p.stage === "booked" || p.stage === "won";
@@ -495,7 +495,7 @@ export const applyInbox = internalMutation({
         if (test) await recordAb(ctx, test, variantFor(p._id), "wins");
       }
       if (already || p.stage === "lost") continue;
-      await ctx.db.patch(p._id, { stage: "replied", updatedAt: now });
+      await ctx.db.patch(p._id, { stage: "replied", stageUpdatedAt: now, updatedAt: now });
       await cancelQueued(ctx, p._id);
       await ctx.db.insert("notices", { userId: c.sending.startedBy, orgId: c.orgId, kind: "system", text: `${p.company} replied to your email. Their sequence is stopped so you can answer personally.`, href: `/app/${(await ctx.db.get(c.orgId))?.slug ?? ""}/outbound`, createdAt: now });
     }
@@ -549,7 +549,10 @@ export const unsubscribe = mutation({
     if (p) {
       await cancelQueued(ctx, p._id);
       if (p.publicEmail) await suppress(ctx, p.orgId, p.publicEmail, "unsubscribe", "link");
-      if (p.stage !== "won" && p.stage !== "booked") await ctx.db.patch(p._id, { stage: "lost", updatedAt: Date.now() });
+      if (p.stage !== "won" && p.stage !== "booked") {
+        const now = Date.now();
+        await ctx.db.patch(p._id, { stage: "lost", stageUpdatedAt: now, updatedAt: now });
+      }
       return { company: (await ctx.db.get(p.orgId))?.name ?? "the sender" };
     }
     // Review requests carry the same signed link.

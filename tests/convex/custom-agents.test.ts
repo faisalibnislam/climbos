@@ -153,6 +153,12 @@ describe("custom specialist profiles", () => {
     await alice.client.mutation(api.workspace.rateCustomAgentRun, { slug: aliceWorkspace.slug, runId: message.runId, rating: "helpful", note: "The research checklist was useful." });
     const revisedView = await alice.client.query(api.customAgents.list, { slug: aliceWorkspace.slug });
     expect(revisedView.agents[0]?.workspaceReportedFeedback).toMatchObject({ sampleSize: 1, helpful: 1, needsWork: 0 });
+    const { messageId: nextMessageId } = await alice.client.mutation(api.workspace.runCustomAgent, { slug: aliceWorkspace.slug, agentId: id, request: "Review this week's customer research." });
+    const nextMessage = await t.run((ctx) => ctx.db.get(nextMessageId));
+    expect(nextMessage?.runId).toBeTruthy();
+    const nextRunContext = await t.query(internal.jobWrites.jobContext, { runId: nextMessage!.runId! });
+    expect(nextRunContext?.specialistFeedbackText).toContain("1 helpful, 0 needs work");
+    expect(nextRunContext?.specialistFeedbackText).toContain("The research checklist was useful.");
   });
 
   it("blocks actions that exceed a specialist's projected per-run budget", async () => {

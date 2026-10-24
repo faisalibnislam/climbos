@@ -23,10 +23,10 @@ describe("learning from results", () => {
         updatedAt: now,
       });
       const cases = [
-        { company: "Old stage", stage: "booked" as const, sentAt: now - 1_000, updatedAt: now - 2_000, createdAt: now - 100_000 },
-        { company: "New stage", stage: "booked" as const, sentAt: now - 1_000, updatedAt: now, createdAt: now - 100_000 },
+        { company: "Old stage", stage: "booked" as const, sentAt: now - 1_000, stageUpdatedAt: now - 2_000, updatedAt: now, createdAt: now - 100_000 },
+        { company: "New stage", stage: "booked" as const, sentAt: now - 1_000, stageUpdatedAt: now, updatedAt: now, createdAt: now - 100_000 },
         // Queued long ago but delivered inside the window: the delivery belongs in the cohort.
-        { company: "Late delivery", stage: "contacted" as const, sentAt: now - 1_000, updatedAt: now - 1_000, createdAt: now - 200 * 86_400_000 },
+        { company: "Late delivery", stage: "contacted" as const, sentAt: now - 1_000, stageUpdatedAt: now - 1_000, updatedAt: now - 1_000, createdAt: now - 200 * 86_400_000 },
       ];
       for (const [index, item] of cases.entries()) {
         const prospectId = await ctx.db.insert("prospects", {
@@ -45,6 +45,7 @@ describe("learning from results", () => {
           contact: "Owner",
           firstLine: "Hello",
           stage: item.stage,
+          stageUpdatedAt: item.stageUpdatedAt,
           createdAt: item.createdAt,
           updatedAt: item.updatedAt,
         });

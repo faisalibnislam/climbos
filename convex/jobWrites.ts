@@ -82,6 +82,24 @@ export const jobContext = internalQuery({
     // What this workspace can actually run (REQ-ENG-11): live connections and the approval mode.
     const connections = await ctx.db.query("connections").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(50);
     const policy = await ctx.db.query("autonomyPolicies").withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true)).first();
+    // Member ratings are useful feedback, not business outcomes or permission.
+    // Keep them scoped to this specialist and workspace, and bounded to the last 90 days.
+    const specialistFeedbackRows = run.customAgentId
+      ? await ctx.db
+          .query("customAgentFeedback")
+          .withIndex("by_agent_created", (q) => q.eq("orgId", org._id).eq("customAgentId", run.customAgentId!).gte("createdAt", Date.now() - 90 * DAY))
+          .order("desc")
+          .take(100)
+      : [];
+    const specialistFeedbackText = specialistFeedbackRows.length
+      ? [
+          `WORKSPACE MEMBER-REPORTED SPECIALIST FEEDBACK (last 90 days; sample of ${specialistFeedbackRows.length} ratings: ${specialistFeedbackRows.filter((r) => r.rating === "helpful").length} helpful, ${specialistFeedbackRows.filter((r) => r.rating === "needs_work").length} needs work; these are usefulness reports, not measured business outcomes):`,
+          ...specialistFeedbackRows
+            .filter((r) => r.note)
+            .slice(0, 5)
+            .map((r) => `- ${r.rating}: ${r.note!.slice(0, 400)}`),
+        ].join("\n")
+      : "";
     // Who the business can email (Book 14 §4: no audience is assumed). Bounded counts; 1,000 means "1,000 or more".
     const contacts = (await ctx.db.query("contacts").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(1000)).filter((c) => !c.deletedAt).length;
     const consented = new Set(
@@ -94,6 +112,7 @@ export const jobContext = internalQuery({
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },
       run,
       specialist: run.customAgentSnapshot ?? null,
+      specialistFeedbackText,
       agentArchetype: run.agentArchetypeId ? AGENT_ARCHETYPE_BY_ID.get(run.agentArchetypeId) ?? null : null,
       org,
       business,

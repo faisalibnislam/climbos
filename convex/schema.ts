@@ -773,6 +773,8 @@ export default defineSchema({
       v.literal("won"),
       v.literal("lost"),
     ),
+    /** When the pipeline stage last changed; separate from unrelated edits to the prospect record. */
+    stageUpdatedAt: v.optional(v.number()),
     /** plan_targets (S6): plays (stable IDs) this target was found for; one record per entity across plans (REQ-TARGET-06). */
     playIds: v.optional(v.array(v.string())),
     /** Creators: canonical identity from the profile path (REQ-TARGET-03), e.g. instagram + "studio.ana". */

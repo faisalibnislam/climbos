@@ -221,7 +221,7 @@ export const setStage = mutation({
     const now = Date.now();
     for (const id of prospectIds.slice(0, 200)) {
       const p = assertSameOrg(await ctx.db.get(id), org._id, "prospect");
-      await ctx.db.patch(p._id, { stage, updatedAt: now });
+      await ctx.db.patch(p._id, { ...(p.stage !== stage ? { stage, stageUpdatedAt: now } : {}), updatedAt: now });
       // Leaving the sequence: nothing more goes out.
       if (stage !== "approved" && stage !== "contacted") await cancelQueued(ctx, p._id);
       // Conversations move into the pipeline (CRM) automatically.
@@ -370,7 +370,7 @@ export const book = mutation({
     });
     await ctx.db.patch(id, { manageTokenHash: await sha256Hex(await manageToken(id)) });
     if (prospect) {
-      if (prospect.stage !== "won") await ctx.db.patch(prospect._id, { stage: "booked", updatedAt: now });
+      if (prospect.stage !== "won" && prospect.stage !== "booked") await ctx.db.patch(prospect._id, { stage: "booked", stageUpdatedAt: now, updatedAt: now });
       // They booked: no more follow-ups.
       await cancelQueued(ctx, prospect._id);
       await syncDealFromProspect(ctx, prospect, "booked", "outbound", "Booked a call.");
@@ -498,6 +498,7 @@ export const saveResult = internalMutation({
         ...((p as { check?: Doc<"prospects">["check"] }).check ? { check: (p as { check?: Doc<"prospects">["check"] }).check } : {}),
         firstLine: (lines.get(p.company.trim().toLowerCase()) ?? "").slice(0, 400),
         stage: "suggested",
+        stageUpdatedAt: now,
         ...(c.playId ? { playIds: [c.playId] } : {}),
         ...("platform" in ident && ident.platform ? { platform: ident.platform, handle: ident.handle } : {}),
         createdAt: now,

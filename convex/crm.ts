@@ -46,7 +46,7 @@ export async function bookingCancelled(ctx: MutationCtx, b: Doc<"bookings">, not
     : (await ctx.db.query("deals").withIndex("by_org_stage", (q) => q.eq("orgId", b.orgId).eq("stage", "booked")).take(200)).find((d) => d.source === "booking" && d.name === b.name && d.nextStepAt === b.startAt);
   if (deal?.stage === "booked") await ctx.db.patch(deal._id, { stage: "talking", nextStep: undefined, nextStepAt: undefined, notes: [...deal.notes, { text: note, at: now }], updatedAt: now });
   const p = b.prospectId ? await ctx.db.get(b.prospectId) : null;
-  if (p?.stage === "booked") await ctx.db.patch(p._id, { stage: "replied", updatedAt: now });
+  if (p?.stage === "booked") await ctx.db.patch(p._id, { stage: "replied", stageUpdatedAt: now, updatedAt: now });
 }
 
 function view(d: Doc<"deals">) {
@@ -122,7 +122,7 @@ export const update = mutation({
         patch.wonAt = now;
         await emitEvent(ctx, org._id, "deal.won", { name: d!.name, company: d!.company ?? null, email: d!.email ?? null, value: (patch.valueMinor ?? d!.valueMinor ?? 0) / 100, currency: d!.currency });
       }
-      if (d!.prospectId && (a.stage === "won" || a.stage === "lost")) await ctx.db.patch(d!.prospectId, { stage: a.stage, updatedAt: now });
+      if (d!.prospectId && (a.stage === "won" || a.stage === "lost")) await ctx.db.patch(d!.prospectId, { stage: a.stage, stageUpdatedAt: now, updatedAt: now });
     }
     await ctx.db.patch(a.id, patch);
     const after = (await ctx.db.get(a.id))!;
