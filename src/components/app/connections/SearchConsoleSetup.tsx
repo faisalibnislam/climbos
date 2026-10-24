@@ -128,6 +128,17 @@ export function SearchConsoleSetup({ slug, connected, canManage, isDemo, selecte
       {!canManage && !isDemo ? <p className="text-sm text-ink-3">Only workspace owners and admins can select a property.</p> : null}
       {problem ? <Callout tone="warning" title="Search Console setup">{problem}</Callout> : null}
 
+      {selectedProperty ? (
+        <div className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-3" aria-labelledby="google-ai-search-report-heading">
+          <div>
+            <h5 id="google-ai-search-report-heading" className="text-sm font-semibold text-ink">Google AI search visibility</h5>
+            <p className="mt-1 text-xs text-ink-3">Google Search Console has a dedicated report for impressions in AI Overviews and AI Mode, with page, country, device, and date views.</p>
+          </div>
+          <a className="w-fit text-sm font-medium text-brand-800 underline-offset-2 hover:underline" href="https://search.google.com/search-console/performance/search-analytics/ai" target="_blank" rel="noopener noreferrer">Open Google’s AI performance report ↗</a>
+          <p className="text-xs text-ink-3">ClimbOS does not import this dedicated report yet. Its Search Console snapshots show standard query/page data and do not separate AI feature impressions. If Google does not show a report, that may reflect its reporting threshold; it does not prove your site has zero AI visibility.</p>
+        </div>
+      ) : null}
+
       {currentHistory.length > 1 ? (
         <Field label="Saved snapshots" hint="Up to three completed rolling 90-day snapshots are kept. Windows overlap, so changes are descriptive rather than causal.">
           <Select
