@@ -105,6 +105,7 @@ const CRITIC_RULES = `You are a demanding senior reviewer (the kind agencies hir
 
 How to review:
 - Check every claim against CONFIRMED FACTS, the brief and the cited research. An unsupported number, quote, customer or result fails the truth gate. Details stated in the brief (name, website, offers) are known facts.
+- For research-based claims, check source role, date, method, population, relevance and independence when available. A quote matching a page verifies that the page says it; it does not prove the publisher is reliable or the evidence applies. Treat first-party claims, secondary reports and anecdotes according to what each can establish, and flag missing material quality details.
 - Judge substance as hard as safety. Thin, generic, two-line or placeholder-filled work is weak even when every word is true. Publishable copy (posts, ads, emails, pages) with any [NEEDS FACT] or placeholder is NOT ready: fail readiness and say which supported angle to use instead. In plans and audits, one flagged gap is acceptable.
 - Score each criterion strictly against its anchors. A 5 is rare and means a top specialist would publish it unchanged.
 - Owner-facing analysis that is wordy, repetitive or buries the answer is a weakness: ask for it shorter. (Never cut substance or proof to get there.)
@@ -115,6 +116,15 @@ How to review:
 - "fixes" = the 3-6 changes that would most improve the work, most important first, written as instructions.
 - "strengths" = what must be kept in a revision.
 - Use the gate and criterion ids exactly as given. Respond only with JSON matching the schema.`;
+
+/** Shared source assessment rules for every specialist research pass (Issue 24). */
+export const RESEARCH_EVIDENCE_RULES = `For evidence that could materially affect a recommendation, assess and label:
+- Source role: the business's own published claim, an official/primary record, an independent study or dataset, a secondary publisher/expert, or an anecdote. A company page proves what the company publishes, not that the claim is independently true.
+- Freshness: publication/measurement date and the date you accessed it when available. If the date is absent, say freshness is unknown; do not infer it from the page's current appearance.
+- Relevance: population, denominator, geography, business model, offer, channel, and measurement period. State material mismatches instead of transferring the finding to this business.
+- Independence: count distinct evidence origins, not URLs. Pages repeating the same study, press release, or dataset are one evidence origin; say when independence cannot be established.
+- Method and limitations: sample, method, and definitions when reported. Treat unsupported publisher claims, listicles, and anecdotes as lower-confidence evidence for prevalence or performance.
+Prefer primary evidence for what a company or platform currently does, and independent evidence for market behavior. Separate the source's claim from your assessment. Compare material conflicts and explain what differs. Never invent a numeric source score, sample, date, method, population, or evidence origin. If evidence quality is insufficient, say what is missing and use a clearly labeled assumption or benchmark rather than presenting a research-backed rate.`;
 
 /** Every rubric also carries the holistic verdict a top specialist would give. */
 const EXPERT_VERDICT = {
@@ -202,7 +212,7 @@ export async function runResearch<T>(spec: AgentSpec<T>, input: AgentInput, deps
       system: [
         { text: OPERATING_RULES },
         {
-          text: `${ROLE_CHARTERS[spec.role]}\n\nYou are doing the research phase only. Use web search and web fetch to gather evidence, then write compact research notes for the colleague who will do the work. Prefer primary sources (the business's and competitors' own pages, review sites, forums, ad libraries) over SEO listicles. Quote customer language verbatim (short quotes) with the URL. Separate evidence from inference. Never pad: if something can't be found, say so.`,
+          text: `${ROLE_CHARTERS[spec.role]}\n\nYou are doing the research phase only. Use web search and web fetch to gather evidence, then write compact research notes for the colleague who will do the work. Prefer primary sources (the business's and competitors' own pages, review sites, forums, ad libraries) over SEO listicles. Quote customer language verbatim (short quotes) with the URL. Separate evidence from inference. Never pad: if something can't be found, say so.\n\n${RESEARCH_EVIDENCE_RULES}`,
           cache: true,
         },
       ],

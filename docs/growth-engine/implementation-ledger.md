@@ -30,6 +30,8 @@ The attached improvement brief's Issue 21 now has canonical display grouping for
 
 Issue 23 now separates facts past their category review interval from the current verified fact index used by agents. The previous statements remain available in a bounded, untrusted recheck block; they cannot be cited as confirmed through structured fact references. Age alone remains a review signal, not proof a statement is false.
 
+Issue 24 now has shared research and critic instructions to assess source role, publication/measurement date, method, population, fit, and independent origins; planning prompts carry those limits into recommendations. The engine does not assign a numeric reputation score or independently validate a publisher's credibility, and this assessment remains model-reviewed rather than a deterministic source registry.
+
 **Next:**
 1. **S2 remainder.** Add an old-plan read adapter with schema versioning (REQ-ENG-03), stored from `expert.version`. REQ-EVID-02 now requires the quote to contain the supplied population and period, plus denominator for percentage rates; the model must supply those fields. This is lexical binding, not semantic proof that a source's cohort applies to the business. Files: `shared/agents/provenance.ts`, `convex/workspace.ts` (read path).
 2. **S3 remainder.** Make the CAC and the headline use the same basis (REQ-MATH-06). Add a sensitivity line per play (REQ-MATH-07). Add a currency field to economics, no mixing (REQ-MATH-08). Model ramp and sales lag (REQ-MATH-04). Files: `shared/agents/economics.ts`, `ExpertPlan.tsx`.
