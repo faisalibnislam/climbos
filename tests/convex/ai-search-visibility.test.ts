@@ -136,8 +136,23 @@ describe("AI search visibility observations", () => {
       competitorMentions: ["Other Co"],
       answerExcerpt: "Example Co and Other Co are possible options.",
     });
+    await owner.client.mutation(api.aiSearchVisibility.recordObservation, {
+      slug,
+      panelId,
+      panelQueryKey: "q1",
+      provider: "chatgpt",
+      query: "best invoice tool for contractors",
+      location: "United States",
+      checkedAt: Date.now() - 45 * 86_400_000,
+      answerStatus: "answered",
+      brandMention: "no",
+      sentiment: "unknown",
+      citedUrls: [],
+      competitorMentions: ["Other Co"],
+      answerExcerpt: "Other Co is one option.",
+    });
 
-    const report = await owner.client.query(api.aiSearchVisibility.report, { slug, panelId });
+    const report = await owner.client.query(api.aiSearchVisibility.report, { slug, panelId, days: 30, compareToPreviousWindow: true });
     expect(report.panel).toMatchObject({
       id: panelId,
       name: "Core buyer questions",
@@ -149,6 +164,17 @@ describe("AI search visibility observations", () => {
       ],
     });
     expect(report.observations[0]).toMatchObject({ panelId, panelQueryKey: "q1" });
+    expect(report.comparison).toMatchObject({
+      kind: "observed_before_after_change_not_causal",
+      baselineObservationCount: 1,
+      currentObservationCount: 1,
+      queryChanges: [{
+        query: "best invoice tool for contractors",
+        baseline: { brandMentions: { rate: 0 } },
+        current: { brandMentions: { rate: 1 } },
+        brandMentionRateChange: 1,
+      }],
+    });
 
     await expect(owner.client.mutation(api.aiSearchVisibility.recordObservation, {
       slug,

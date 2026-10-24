@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { summarizeAiSearchPanel, summarizeAiSearchVisibility, type AiSearchObservation } from "../shared/aiSearch/visibility";
+import { compareAiSearchObservationPeriods, summarizeAiSearchPanel, summarizeAiSearchVisibility, type AiSearchObservation } from "../shared/aiSearch/visibility";
 import { mutation, query } from "./_generated/server";
 import { audit } from "./lib/audit";
 import { appError, requireOrgAccess } from "./lib/tenancy";
@@ -166,28 +166,48 @@ export const recordObservation = mutation({
 
 /** Bounded, descriptive report. Rates describe only recorded samples, never all platform answers. */
 export const report = query({
-  args: { slug: v.string(), days: v.optional(v.number()), panelId: v.optional(v.id("aiSearchPanels")) },
-  handler: async (ctx, { slug, days, panelId }) => {
+  args: { slug: v.string(), days: v.optional(v.number()), panelId: v.optional(v.id("aiSearchPanels")), compareToPreviousWindow: v.optional(v.boolean()) },
+  handler: async (ctx, { slug, days, panelId, compareToPreviousWindow }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "view");
     const requestedDays = days !== undefined && Number.isFinite(days) ? days : 90;
     const windowDays = Math.max(1, Math.min(365, Math.floor(requestedDays)));
-    const since = Date.now() - windowDays * 86_400_000;
+    const now = Date.now();
+    const currentSince = now - windowDays * 86_400_000;
+    const comparisonSince = currentSince - (compareToPreviousWindow ? windowDays * 86_400_000 : 0);
     const panel = panelId ? await ctx.db.get(panelId) : null;
     if (panelId && (!panel || panel.orgId !== org._id)) throw appError("NOT_FOUND", "The selected AI-search panel was not found.");
     const fetched = panelId
       ? await ctx.db.query("aiSearchObservations")
-        .withIndex("by_org_panel_checked", (q) => q.eq("orgId", org._id).eq("panelId", panelId).gte("checkedAt", since))
+        .withIndex("by_org_panel_checked", (q) => q.eq("orgId", org._id).eq("panelId", panelId).gte("checkedAt", comparisonSince).lt("checkedAt", now + 1))
         .order("desc")
-        .take(MAX_OBSERVATIONS + 1)
+        .take(MAX_OBSERVATIONS * (compareToPreviousWindow ? 2 : 1) + 1)
       : await ctx.db.query("aiSearchObservations")
-        .withIndex("by_org_checked", (q) => q.eq("orgId", org._id).gte("checkedAt", since))
+        .withIndex("by_org_checked", (q) => q.eq("orgId", org._id).gte("checkedAt", comparisonSince).lt("checkedAt", now + 1))
         .order("desc")
-        .take(MAX_OBSERVATIONS + 1);
-    const truncated = fetched.length > MAX_OBSERVATIONS;
-    const observations = fetched.slice(0, MAX_OBSERVATIONS);
+        .take(MAX_OBSERVATIONS * (compareToPreviousWindow ? 2 : 1) + 1);
+    const currentFetched = fetched.filter((observation) => observation.checkedAt >= currentSince);
+    const baselineFetched = fetched.filter((observation) => observation.checkedAt < currentSince);
+    const currentTruncated = currentFetched.length > MAX_OBSERVATIONS;
+    const baselineTruncated = baselineFetched.length > MAX_OBSERVATIONS;
+    const truncated = currentTruncated || baselineTruncated || fetched.length > MAX_OBSERVATIONS * (compareToPreviousWindow ? 2 : 1);
+    const observations = currentFetched.slice(0, MAX_OBSERVATIONS);
+    const baselineObservations = compareToPreviousWindow ? baselineFetched.slice(0, MAX_OBSERVATIONS) : [];
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     const summary = summarizeAiSearchVisibility(observations as AiSearchObservation[], business?.website);
     const panelSummary = summarizeAiSearchPanel(observations as AiSearchObservation[], business?.website);
+    const comparison = compareToPreviousWindow ? {
+      kind: "observed_before_after_change_not_causal" as const,
+      baselineWindow: { from: comparisonSince, toExclusive: currentSince },
+      currentWindow: { from: currentSince, toExclusive: now + 1 },
+      baselineObservationCount: baselineObservations.length,
+      currentObservationCount: observations.length,
+      truncated: baselineTruncated || currentTruncated,
+      queryChanges: compareAiSearchObservationPeriods(
+        baselineObservations as AiSearchObservation[],
+        observations as AiSearchObservation[],
+        business?.website,
+      ),
+    } : null;
     const panelQueries = panel?.queries.map((item) => {
       const matching = observations.filter((observation) => observation.panelQueryKey === item.key);
       return {
@@ -207,6 +227,7 @@ export const report = query({
       panel: panel ? { id: panel._id, name: panel.name, status: panel.status, queryCount: panel.queries.length, queries: panelQueries } : null,
       summary,
       panelSummary,
+      comparison,
       observations: observations.map(({ _id, panelId: observationPanelId, panelQueryKey, provider, query, location, checkedAt, answerStatus, brandMention, sentiment, citedUrls, competitorMentions, answerExcerpt, enteredAt }) => ({
         id: _id,
         panelId: observationPanelId ?? null,
@@ -227,6 +248,7 @@ export const report = query({
       interpretation: [
         "These figures describe owner-recorded samples only; prompts, platform versions, geography and answer variation can change results.",
         "A mention or citation is not evidence that content changes caused visibility or business growth.",
+        ...(compareToPreviousWindow ? ["The prior/current comparison is descriptive; it does not isolate the effect of a content change or control for provider, prompt, market, or seasonal changes."] : []),
         "Content readiness and qualified visits, leads or customers are separate measures and are not included in these rates.",
       ],
     };

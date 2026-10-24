@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { observedRate, summarizeAiSearchPanel, summarizeAiSearchVisibility, wilsonInterval, type AiSearchObservation } from "../../shared/aiSearch/visibility";
+import { compareAiSearchObservationPeriods, observedRate, summarizeAiSearchPanel, summarizeAiSearchVisibility, wilsonInterval, type AiSearchObservation } from "../../shared/aiSearch/visibility";
 
 const row = (overrides: Partial<AiSearchObservation> = {}): AiSearchObservation => ({
   provider: "chatgpt",
@@ -96,5 +96,31 @@ describe("AI search visibility observations", () => {
     expect(panel.competitorMentionEvents).toBe(1);
     expect(panel.answersWithKnownBrandOrCompetitorMention).toBe(0);
     expect(panel.businessShareAmongAnswersWithKnownBrandOrCompetitorMention.rate).toBeNull();
+  });
+
+  it("compares only matching observation periods and leaves missing denominators unscored", () => {
+    const baseline = [
+      row({ checkedAt: Date.UTC(2026, 8, 1), brandMention: "no", sentiment: "unknown", citedUrls: [] }),
+      row({ query: "best accounting software", brandMention: "yes" }),
+    ];
+    const current = [
+      row({ checkedAt: Date.UTC(2026, 9, 1), citedUrls: ["https://example.com/pricing"] }),
+    ];
+    const changes = compareAiSearchObservationPeriods(baseline, current, "https://example.com");
+    const invoice = changes.find((item) => item.query === "best invoicing tool for freelancers");
+    const accounting = changes.find((item) => item.query === "best accounting software");
+
+    expect(changes).toHaveLength(2);
+    expect(invoice).toMatchObject({
+      baseline: { brandMentions: { rate: 0 }, firstPartyCitations: { rate: 0 } },
+      current: { brandMentions: { rate: 1 }, firstPartyCitations: { rate: 1 } },
+      brandMentionRateChange: 1,
+      firstPartyCitationRateChange: 1,
+    });
+    expect(accounting).toMatchObject({
+      current: null,
+      brandMentionRateChange: null,
+      firstPartyCitationRateChange: null,
+    });
   });
 });

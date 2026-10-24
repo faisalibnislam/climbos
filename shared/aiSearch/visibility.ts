@@ -64,6 +64,16 @@ export interface AiSearchPanelSummary {
   limitations: string[];
 }
 
+export interface AiSearchObservedChange {
+  provider: AiSearchProvider;
+  query: string;
+  location: string | null;
+  baseline: AiSearchVisibilityRow | null;
+  current: AiSearchVisibilityRow | null;
+  brandMentionRateChange: number | null;
+  firstPartyCitationRateChange: number | null;
+}
+
 const Z95 = 1.959963984540054;
 
 /** Wilson score interval: finite for small samples and deterministic. */
@@ -219,4 +229,36 @@ export function summarizeAiSearchPanel(
       "A citation or mention is not evidence of visits, leads, customers, or revenue impact.",
     ],
   };
+}
+
+/** Compare two owner-observed periods on the same provider/query/location dimensions. Deltas are descriptive, not causal. */
+export function compareAiSearchObservationPeriods(
+  baseline: readonly AiSearchObservation[],
+  current: readonly AiSearchObservation[],
+  businessWebsite?: string,
+): AiSearchObservedChange[] {
+  const keyOf = (row: { provider: AiSearchProvider; query: string; location: string | null | undefined }) =>
+    `${row.provider}\u0000${cleanKey(row.query)}\u0000${cleanKey(row.location ?? "")}`;
+  const before = new Map(summarizeAiSearchVisibility(baseline, businessWebsite).map((row) => [keyOf(row), row]));
+  const after = new Map(summarizeAiSearchVisibility(current, businessWebsite).map((row) => [keyOf(row), row]));
+  const keys = new Set([...before.keys(), ...after.keys()]);
+
+  return [...keys].map((key) => {
+    const baselineRow = before.get(key) ?? null;
+    const currentRow = after.get(key) ?? null;
+    const reference = currentRow ?? baselineRow!;
+    const beforeMention = baselineRow?.brandMentions.rate ?? null;
+    const afterMention = currentRow?.brandMentions.rate ?? null;
+    const beforeCitation = baselineRow?.firstPartyCitations?.rate ?? null;
+    const afterCitation = currentRow?.firstPartyCitations?.rate ?? null;
+    return {
+      provider: reference.provider,
+      query: reference.query,
+      location: reference.location,
+      baseline: baselineRow,
+      current: currentRow,
+      brandMentionRateChange: beforeMention !== null && afterMention !== null ? afterMention - beforeMention : null,
+      firstPartyCitationRateChange: beforeCitation !== null && afterCitation !== null ? afterCitation - beforeCitation : null,
+    };
+  }).sort((a, b) => a.provider.localeCompare(b.provider) || cleanKey(a.query).localeCompare(cleanKey(b.query)) || cleanKey(a.location ?? "").localeCompare(cleanKey(b.location ?? "")));
 }
