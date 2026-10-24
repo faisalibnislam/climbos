@@ -81,8 +81,9 @@ export default function PrivacyPage() {
         process your information only to provide their service to us. When you run a website audit, we send the public page URL being
         checked to Google PageSpeed Insights and, when configured, the Chrome UX Report API to retrieve mobile performance
         measurements. When you run a social content audit, we send a bounded sample of recent post text/captions, platform, post
-        identifiers, timestamps, content type and available post links from ClimbOS and connected Facebook Pages or Instagram
-        professional accounts to our AI provider for review. We do not download or analyze the post images or videos in this audit.
+        identifiers, timestamps, content type, available post links and platform-returned engagement counts from ClimbOS and
+        connected Facebook Pages or Instagram professional accounts to our AI provider for review. Engagement values are limited
+        to the sampled posts and are not account-wide analytics. We do not download or analyze the post images or videos in this audit.
         LinkedIn post history is not read because this app does not have the required restricted permission. We read from the
         platforms you connect (such as Meta or Google) when you ask us to audit, publish, send or launch something there. We may
         disclose information if the law requires it.

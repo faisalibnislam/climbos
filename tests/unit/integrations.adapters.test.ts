@@ -279,11 +279,12 @@ describe("facebookPages", () => {
   });
 
   it("reads a bounded recent Page post sample", async () => {
-    const { fetchImpl, calls } = scripted([{ match: "/123/feed?", respond: json(200, { data: [{ id: "123_9", message: "A recent update", created_time: "2026-10-24T10:00:00+0000", permalink_url: "https://www.facebook.com/page/posts/9" }] }) }]);
+    const { fetchImpl, calls } = scripted([{ match: "/123/feed?", respond: json(200, { data: [{ id: "123_9", message: "A recent update", created_time: "2026-10-24T10:00:00+0000", permalink_url: "https://www.facebook.com/page/posts/9", reactions: { summary: { total_count: 14 } }, comments: { summary: { total_count: 3 } }, shares: { count: 2 } }, { id: "123_8", message: "No counts", reactions: { summary: { total_count: -1 } }, comments: { summary: { total_count: "4" } }, shares: { count: null } }] }) }]);
     const result = await facebookPages.getRecentPosts({ accessToken: "pat", pageId: "123", limit: 100, fetchImpl });
-    expect(result).toMatchObject({ ok: true, data: { items: [{ id: "123_9", message: "A recent update" }] } });
+    expect(result).toMatchObject({ ok: true, data: { items: [{ id: "123_9", message: "A recent update", reactions: 14, comments: 3, shares: 2 }, { id: "123_8", message: "No counts" }] } });
     expect(new URL(calls[0]!.url).searchParams.get("limit")).toBe("10");
-    expect(new URL(calls[0]!.url).searchParams.get("fields")).toContain("permalink_url");
+    expect(new URL(calls[0]!.url).searchParams.get("fields")).toContain("reactions.limit(0).summary(true)");
+    expect(new URL(calls[0]!.url).searchParams.get("fields")).toContain("comments.limit(0).summary(true)");
   });
 
   it("rejects malformed Page ids before making a request", async () => {
