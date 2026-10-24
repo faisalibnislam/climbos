@@ -63,6 +63,13 @@ export const facts = query({
         return {
           id: primary._id,
           duplicateIds: duplicates.map((fact) => fact._id),
+          duplicateRecords: duplicates.map((fact) => ({
+            id: fact._id,
+            statement: fact.statement,
+            provenance: fact.provenance,
+            updatedAt: fact.updatedAt,
+            sources: [...new Set(fact.sourceIds.map(String))].map((id) => sourceMap.get(id)).filter((source): source is NonNullable<typeof source> => source !== undefined),
+          })),
           category: primary.category,
           statement: primary.statement,
           state: primary.reviewState,

@@ -96,6 +96,7 @@ describe("site watch (keeps researching the business)", () => {
     expect(before?.facts[0]).toMatchObject({
       id: ids.second,
       duplicateIds: [ids.first],
+      duplicateRecords: [{ id: ids.first, statement: "Pro plan costs $20 per month.", sources: [expect.objectContaining({ url: "https://site.example/pricing" })] }],
       state: "needs_review",
       sources: expect.arrayContaining([expect.objectContaining({ url: "https://site.example/pricing" }), expect.objectContaining({ url: "https://site.example/plans" })]),
     });

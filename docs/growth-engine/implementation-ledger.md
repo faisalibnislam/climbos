@@ -427,3 +427,7 @@ The paid benchmark's business-insights task and judge criteria now include page-
 ## Resumption note (2026-10-25, creator outcome learning)
 
 Strategy runs now receive at most 12 of the newest creator-collaboration reports from their own workspace. The query verifies report, creator, and campaign tenant ownership and restricts records to creator campaigns; fixture runs do not receive customer reports. Context preserves owner-reported status, format, cost, source, metric unit/period/denominator, and note, all wrapped as untrusted input with explicit non-causal instructions. A deterministic formatter caps rows and preserves denominators rather than deriving response rates. Full testing and build verification are pending for this increment.
+
+## Resumption note (2026-10-25, business-fact deduplication review)
+
+The Business Facts query already returns one canonical row for duplicate groups and retains all source references, but the UI was not showing those references or the original wording of repeated rows. It now exposes an expandable evidence/history section with source links, excerpts, dates, and each repeated statement, while keeping every stored fact unchanged. The visible summary reports canonical facts and repeated-record counts separately. A Convex test verifies that duplicate statements and per-record source references are returned; full UI/type/build checks are pending for this increment.

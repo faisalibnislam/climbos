@@ -13,7 +13,6 @@ import { SettingsHeader } from "@/components/app/settings/SettingsNav";
 import { Button, Card, CardContent, Input, Select, toast } from "@/components/ui";
 import { PERMISSION_WHO, useWorkspaceMember } from "@/components/app/content/shared";
 import { can } from "@shared/policy";
-import { groupExactDuplicateFacts } from "@shared/agents/factDuplicates";
 import { factFreshness } from "@shared/agents/factFreshness";
 
 const CATEGORIES = ["product", "pricing", "offer", "audience", "proof", "brand", "competitor", "other"] as const;
@@ -45,7 +44,7 @@ export default function FactsPage() {
   if (data === null) return <p className="text-sm text-ink-3">Finish onboarding first.</p>;
   const pending = data.facts.filter((f) => f.state === "needs_review");
   const known = data.facts.filter((f) => f.state !== "needs_review");
-  const knownGroups = groupExactDuplicateFacts(known);
+  const repeatedCount = known.reduce((total, fact) => total + fact.duplicateRecords.length, 0);
   const statementOf = (id: string | null) => (id ? data.facts.find((f) => f.id === id)?.statement : undefined);
   const renderKnownFact = (f: (typeof known)[number]) => editing?.id === f.id ? (
     <div key={f.id} className="flex gap-2">
@@ -56,12 +55,39 @@ export default function FactsPage() {
     </div>
   ) : (
     <div key={f.id} id={`business-fact-${f.id}`} className="flex items-start justify-between gap-2 text-sm scroll-mt-6">
-      <span className="flex min-w-0 flex-col gap-0.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="text-ink-2">{f.statement}</span>
         <span className="text-xs text-ink-3">
           {f.provenance === "owner_supplied" ? "Owner-provided" : f.provenance === "researched" ? "Website research" : "Demo example"} · Last confirmed {relativeTime(f.updatedAt)}{factFreshness(f.category, f.updatedAt).reviewSuggested ? " · Worth reviewing" : ""}
         </span>
-      </span>
+        {f.sources.length || f.duplicateRecords.length ? (
+          <details className="mt-1 text-xs text-ink-3">
+            <summary className="cursor-pointer">Evidence and history{f.duplicateRecords.length ? ` · ${f.duplicateRecords.length} repeated ${f.duplicateRecords.length === 1 ? "record" : "records"}` : ""}{f.sources.length ? ` · ${f.sources.length} source${f.sources.length === 1 ? "" : "s"}` : ""}</summary>
+            <ul className="mt-2 flex flex-col gap-2 border-l border-line pl-3">
+              {f.sources.map((source, index) => (
+                <li key={`${source.url ?? source.title ?? source.kind}-${index}`}>
+                  <span>{source.url ? <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-link underline underline-offset-2">{source.title || source.url}</a> : source.title || source.kind}</span>
+                  <span> · {relativeTime(source.fetchedAt)}{source.status !== "ok" ? ` · ${source.status}` : ""}</span>
+                  {source.excerpt ? <p className="mt-0.5 line-clamp-3 text-ink-2">{source.excerpt}</p> : null}
+                </li>
+              ))}
+              {f.duplicateRecords.map((record) => (
+                <li key={record.id} className="border-t border-line pt-2">
+                  <p className="text-ink-2">Repeated statement: “{record.statement}”</p>
+                  <p className="mt-0.5">{record.provenance === "owner_supplied" ? "Owner-provided" : record.provenance === "researched" ? "Website research" : "Demo example"} · Recorded {relativeTime(record.updatedAt)}</p>
+                  {record.sources.map((source, index) => (
+                    <p key={`${source.url ?? source.title ?? source.kind}-${index}`} className="mt-0.5">
+                      {source.url ? <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-link underline underline-offset-2">{source.title || source.url}</a> : source.title || source.kind}
+                      <span> · {relativeTime(source.fetchedAt)}{source.status !== "ok" ? ` · ${source.status}` : ""}</span>
+                      {source.excerpt ? <span className="block mt-0.5 line-clamp-3 text-ink-2">{source.excerpt}</span> : null}
+                    </p>
+                  ))}
+                </li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
+      </div>
       {canEdit ? <span className="flex shrink-0 gap-1">
         <Button size="sm" variant="ghost" aria-label="Edit" onClick={() => setEditing({ id: f.id, text: f.statement })}>
           <Pencil aria-hidden />
@@ -151,26 +177,16 @@ export default function FactsPage() {
       ) : null}
       <Card>
         <CardContent className="flex flex-col gap-2">
-          <h2 className="heading-card">Known facts ({knownGroups.length}{known.length > knownGroups.length ? ` · ${known.length - knownGroups.length} repeated` : ""})</h2>
+          <h2 className="heading-card">Known facts ({known.length}{repeatedCount ? ` · ${repeatedCount} repeated records` : ""})</h2>
           <p className="text-xs text-ink-3">Older pricing, offers, and other details are marked for review. Age alone does not mean a fact is incorrect.</p>
-          {CATEGORIES.map((cat) => [cat, knownGroups.filter(({ primary }) => ((CATEGORIES as readonly string[]).includes(primary.category) ? primary.category : "other") === cat)] as const)
+          {CATEGORIES.map((cat) => [cat, known.filter((fact) => ((CATEGORIES as readonly string[]).includes(fact.category) ? fact.category : "other") === cat)] as const)
             .filter(([, list]) => list.length)
             .map(([cat, list]) => (
               <section key={cat} aria-label={`${CATEGORY_LABEL[cat]} facts`} className="flex flex-col gap-1.5 border-t border-line pt-2 first-of-type:border-0 first-of-type:pt-0">
                 <h3 className="text-xs font-medium text-ink-3">
                   {CATEGORY_LABEL[cat]} <span className="tabular-nums">{list.length}</span>
                 </h3>
-                {list.map(({ primary, duplicates }) => (
-                  <div key={primary.id} className="flex flex-col gap-1.5">
-                    {renderKnownFact(primary)}
-                    {duplicates.length ? (
-                      <details className="ml-3 border-l border-line pl-3">
-                        <summary className="cursor-pointer text-xs text-ink-3">Show {duplicates.length} repeated {duplicates.length === 1 ? "record" : "records"}</summary>
-                        <div className="mt-2 flex flex-col gap-2">{duplicates.map(renderKnownFact)}</div>
-                      </details>
-                    ) : null}
-                  </div>
-                ))}
+                {list.map(renderKnownFact)}
               </section>
             ))}
           {canEdit ? <div className="mt-2 grid gap-2 border-t border-line pt-3 sm:grid-cols-[10rem_minmax(0,1fr)_auto]">
