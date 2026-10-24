@@ -45,6 +45,11 @@ describe("operator accepted-plan costs", () => {
       for (const [model, costMicros, estimated] of [["gpt-6.1-sol", 90_000, false], ["gpt-6.1-sol", 60_000, true], ["gpt-6-luna", 20_000, false]] as const) {
         await ctx.db.insert("usageEvents", {
           orgId: orgId as Id<"organizations">,
+          taskKind: "strategy",
+          stepKind: "model",
+          stepIndex: 0,
+          routingVersionId: "openai-v1",
+          aiMode: "basic",
           type: "model_call",
           provider: "openai",
           model,
@@ -69,6 +74,15 @@ describe("operator accepted-plan costs", () => {
       spend24hMicros: 170_000,
       usage24h: { eventsRead: 3, coverageCapped: false },
       modelCostAnomalies8d: { available: false, reason: "insufficient_baseline", thresholdMultiple: 3, alerts: [] },
+      byTaskPhase24h: {
+        events: 3,
+        taggedEvents: 3,
+        coverage: 1,
+        groups: [
+          { taskKind: "strategy", stepKind: "model", role: null, routingVersionId: "openai-v1", aiMode: "basic", provider: "openai", model: "gpt-6.1-sol", calls: 2, estimatedCalls: 1, recordedCalls: 1, costMicros: 150_000 },
+          { taskKind: "strategy", stepKind: "model", role: null, routingVersionId: "openai-v1", aiMode: "basic", provider: "openai", model: "gpt-6-luna", calls: 1, estimatedCalls: 0, recordedCalls: 1, costMicros: 20_000 },
+        ],
+      },
       byModel24h: [
         { provider: "openai", model: "gpt-6.1-sol", calls: 2, estimatedCalls: 1, recordedCalls: 1, costMicros: 150_000, cacheReadRate: 2 / 7 },
         { provider: "openai", model: "gpt-6-luna", calls: 1, estimatedCalls: 0, recordedCalls: 1, costMicros: 20_000, cacheReadRate: 2 / 7 },

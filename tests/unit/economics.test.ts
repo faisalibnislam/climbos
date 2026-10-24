@@ -30,6 +30,7 @@ import {
   roleTextCosts,
   detectModelCostAnomalies,
   summarizeModelUsage,
+  summarizeTaskPhaseUsage,
   ROUTING_CLIMBOS_2026_10_17,
   topupEconomics,
   USAGE_PROFILES,
@@ -78,6 +79,27 @@ describe("model usage analysis", () => {
       { provider: "other", model: "unknown", inputTokens: 100, outputTokens: 10, reasoningTokens: 0, cacheReadTokens: 20, cacheWriteTokens: 0, costMicros: 5, estimated: false },
     ]);
     expect(summary.map((row) => row.cacheReadRate)).toEqual([0.2, null]);
+  });
+
+  it("groups usage by immutable task, step, mode and route while disclosing legacy coverage", () => {
+    const usage = (costMicros: number, tagged = true) => ({
+      provider: "openai",
+      model: "gpt-6-luna",
+      inputTokens: 100,
+      outputTokens: 20,
+      reasoningTokens: 0,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+      costMicros,
+      estimated: false,
+      ...(tagged ? { taskKind: "strategy", stepKind: "model", role: "strategist", routingVersionId: "openai-v1", aiMode: "basic" } : {}),
+    });
+    const summary = summarizeTaskPhaseUsage([usage(40), usage(60), usage(25, false)]);
+    expect(summary).toMatchObject({ events: 3, taggedEvents: 2, coverage: 2 / 3 });
+    expect(summary.groups).toEqual([
+      { taskKind: "legacy / untagged", stepKind: "unknown", role: null, routingVersionId: "unknown", aiMode: "unknown", provider: "openai", model: "gpt-6-luna", calls: 1, estimatedCalls: 0, recordedCalls: 1, costMicros: 25 },
+      { taskKind: "strategy", stepKind: "model", role: "strategist", routingVersionId: "openai-v1", aiMode: "basic", provider: "openai", model: "gpt-6-luna", calls: 2, estimatedCalls: 0, recordedCalls: 2, costMicros: 100 },
+    ].sort((a, b) => b.costMicros - a.costMicros || a.taskKind.localeCompare(b.taskKind) || a.stepKind.localeCompare(b.stepKind)));
   });
 
   it("flags only a large rise over a sufficiently populated rolling-day baseline", () => {

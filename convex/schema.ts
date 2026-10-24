@@ -2805,6 +2805,12 @@ export default defineSchema({
     periodId: v.optional(v.id("usagePeriods")),
     runId: v.optional(v.id("workflowRuns")),
     stepId: v.optional(v.id("workflowSteps")),
+    /** Immutable execution dimensions copied from the owning run and step for cost analysis. */
+    taskKind: v.optional(v.string()),
+    stepKind: v.optional(v.union(v.literal("model"), v.literal("research"), v.literal("image"), v.literal("provider_write"), v.literal("compute"))),
+    stepIndex: v.optional(v.number()),
+    routingVersionId: v.optional(v.string()),
+    aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
     type: v.union(
       v.literal("model_call"),
       v.literal("image_attempt"),

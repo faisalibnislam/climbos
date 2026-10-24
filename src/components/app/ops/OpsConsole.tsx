@@ -337,6 +337,27 @@ export function OpsConsole() {
             { key: "cost", header: "Cost", align: "right", cell: (p) => microsToUsd(p.costMicros) },
           ]}
         />
+        <h3 className="heading-card mt-2">Cost by task and step, last 24 hours</h3>
+        <p className="text-xs text-ink-3">
+          Execution tags cover {d.costs.byTaskPhase24h.taggedEvents} of {d.costs.byTaskPhase24h.events} recent usage events
+          {d.costs.byTaskPhase24h.coverage === null ? "." : ` (${Math.round(d.costs.byTaskPhase24h.coverage * 100)}%).`}
+          {" "}Older events are shown as untagged; task and step labels describe where cost was recorded, not output quality.
+        </p>
+        <DataTable
+          caption="AI and service spend by task, step, role, route and model in the last 24 hours"
+          rows={d.costs.byTaskPhase24h.groups.slice(0, 50)}
+          rowKey={(row) => [row.taskKind, row.stepKind, row.role ?? "", row.routingVersionId, row.aiMode, row.provider, row.model ?? ""].join(":")}
+          emptyText="No usage in the last 24 hours."
+          columns={[
+            { key: "task", header: "Task", rowHeader: true, cell: (row) => row.taskKind.replace(/_/g, " ") },
+            { key: "step", header: "Step", cell: (row) => row.stepKind.replace(/_/g, " ") },
+            { key: "role", header: "Role", cell: (row) => row.role ?? "—" },
+            { key: "model", header: "Provider / model", cell: (row) => `${row.provider} · ${row.model ?? "unknown"}` },
+            { key: "route", header: "Route", cell: (row) => `${row.routingVersionId} · ${row.aiMode}` },
+            { key: "events", header: "Events", align: "right", cell: (row) => formatNumber(row.calls) },
+            { key: "cost", header: "Cost", align: "right", cell: (row) => microsToUsd(row.costMicros) },
+          ]}
+        />
         {!d.margin.ok ? (
           <Callout tone="danger" live="none" title="Margin gate failing">
             <ul className="list-disc pl-5">

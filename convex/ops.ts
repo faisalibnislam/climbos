@@ -10,6 +10,7 @@ import {
   RATE_VERSIONS,
   detectModelCostAnomalies,
   summarizeModelUsage,
+  summarizeTaskPhaseUsage,
 } from "../shared/economics";
 import { internal } from "./_generated/api";
 import { action, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
@@ -169,6 +170,23 @@ export const dashboard = query({
         usage24h: { eventsRead: recentUsage.length, coverageCapped: usageCoverageCapped },
         byProvider: [...byProvider.entries()].map(([provider, x]) => ({ provider, ...x })),
         byModel24h: summarizeModelUsage(recentUsage.map((event) => ({
+          provider: event.provider,
+          model: event.model,
+          inputTokens: event.inputTokens,
+          outputTokens: event.outputTokens,
+          reasoningTokens: event.reasoningTokens,
+          cacheReadTokens: event.cacheReadTokens,
+          cacheWriteTokens: event.cacheWriteTokens,
+          costMicros: event.costMicros,
+          estimated: event.estimated,
+        }))),
+        byTaskPhase24h: summarizeTaskPhaseUsage(recentUsage.map((event) => ({
+          taskKind: event.taskKind,
+          stepKind: event.stepKind,
+          stepIndex: event.stepIndex,
+          role: event.role,
+          routingVersionId: event.routingVersionId,
+          aiMode: event.aiMode,
           provider: event.provider,
           model: event.model,
           inputTokens: event.inputTokens,

@@ -14,6 +14,15 @@ export interface DatedUsageCostRow extends UsageCostRow {
   createdAt: number;
 }
 
+export interface TaskPhaseUsageRow extends UsageCostRow {
+  taskKind?: string;
+  stepKind?: string;
+  stepIndex?: number;
+  role?: string;
+  routingVersionId?: string;
+  aiMode?: string;
+}
+
 const DAY_MS = 86_400_000;
 
 /** Stable, source-preserving aggregation for operator cost analysis. */
@@ -72,6 +81,59 @@ export function summarizeModelUsage(rows: UsageCostRow[]) {
   return [...groups.entries()]
     .map(([key, group]) => ({ ...group, cacheReadRate: (cacheInputTotals.get(key) ?? 0) > 0 ? group.cacheReadTokens / cacheInputTotals.get(key)! : null }))
     .sort((a, b) => b.costMicros - a.costMicros || a.provider.localeCompare(b.provider) || (a.model ?? "").localeCompare(b.model ?? ""));
+}
+
+/** Summarize cost by the immutable task/step/routing context stamped at record time. */
+export function summarizeTaskPhaseUsage(rows: TaskPhaseUsageRow[]) {
+  const groups = new Map<string, {
+    taskKind: string;
+    stepKind: string;
+    role: string | null;
+    routingVersionId: string;
+    aiMode: string;
+    provider: string;
+    model: string | null;
+    calls: number;
+    estimatedCalls: number;
+    recordedCalls: number;
+    costMicros: number;
+  }>();
+  let taggedEvents = 0;
+  for (const row of rows) {
+    const tagged = Boolean(row.taskKind && row.stepKind && row.routingVersionId && row.aiMode);
+    if (tagged) taggedEvents += 1;
+    const taskKind = tagged ? row.taskKind! : "legacy / untagged";
+    const stepKind = tagged ? row.stepKind! : "unknown";
+    const routingVersionId = tagged ? row.routingVersionId! : "unknown";
+    const role = row.role?.trim() || null;
+    const aiMode = row.aiMode || "unknown";
+    const model = row.model?.trim() || null;
+    const key = [taskKind, stepKind, role ?? "", routingVersionId, aiMode, row.provider, model ?? ""].join("\0");
+    const group = groups.get(key) ?? {
+      taskKind,
+      stepKind,
+      role,
+      routingVersionId,
+      aiMode,
+      provider: row.provider,
+      model,
+      calls: 0,
+      estimatedCalls: 0,
+      recordedCalls: 0,
+      costMicros: 0,
+    };
+    group.calls += 1;
+    group.estimatedCalls += row.estimated ? 1 : 0;
+    group.recordedCalls += row.estimated ? 0 : 1;
+    group.costMicros += row.costMicros;
+    groups.set(key, group);
+  }
+  return {
+    events: rows.length,
+    taggedEvents,
+    coverage: rows.length ? taggedEvents / rows.length : null,
+    groups: [...groups.values()].sort((a, b) => b.costMicros - a.costMicros || a.taskKind.localeCompare(b.taskKind) || a.stepKind.localeCompare(b.stepKind)),
+  };
 }
 
 /** Conservative rolling-day cost signal; unavailable when the history read is capped or sparse. */

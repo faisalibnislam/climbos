@@ -468,6 +468,11 @@ export const recordUsage = internalMutation({
         periodId: reservation?.periodId,
         runId: run._id,
         stepId,
+        taskKind: run.kind,
+        stepKind: step.kind,
+        stepIndex: step.index,
+        routingVersionId: run.routingVersionId,
+        aiMode: run.aiMode ?? "basic",
         role: step.role,
         createdAt: Date.now(),
       });

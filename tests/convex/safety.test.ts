@@ -47,6 +47,9 @@ describe("cost reservations under concurrency", () => {
     const run = await t.run(async (ctx) => ctx.db.get(runId));
     expect(run?.actualMicros).toBe(100);
     expect(run?.inFlightMicros).toBe(0);
+    const usage = await t.run(async (ctx) => ctx.db.query("usageEvents").withIndex("by_run", (q) => q.eq("runId", runId)).collect());
+    expect(usage).toHaveLength(2);
+    expect(usage[0]).toMatchObject({ taskKind: "content_email", stepKind: "model", stepIndex: expect.any(Number), routingVersionId: expect.any(String) });
   });
 
   it("parallel jobs can never overspend the account's credits", async () => {
