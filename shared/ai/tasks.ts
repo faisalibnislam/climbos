@@ -212,8 +212,10 @@ export const ChatIntentSchema = z.object({
       quantity: z.number(),
       /** Detailed instructions for the specialist: the owner's words, facts to use, angle, deadline. */
       brief: z.string(),
+      /** Zero-based indexes of earlier actions whose output is required before this action can start. */
+      dependsOnActionIndexes: z.array(z.number().int().nonnegative()).max(4),
     }),
-  ),
+  ).max(4),
   /** At most one question, only if the answer would change the work; otherwise "". */
   followUp: z.string(),
 });

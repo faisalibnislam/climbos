@@ -9,7 +9,7 @@ import { ACTIVE_RUN_STATUSES, createRunWithReservation, finishRunImpl, latestRun
 import { activePolicyVersion } from "./jobWrites";
 import { audit } from "./lib/audit";
 import { approvalHash, can } from "../shared/policy";
-import { holdPlanChannel, startCardRun, startPlanWork, type PlanWorkResult } from "./lib/cards";
+import { assertCardDependenciesComplete, holdPlanChannel, startCardRun, startPlanWork, type PlanWorkResult } from "./lib/cards";
 import { autoStartPlanTargets } from "./targets";
 import { notifyOwners } from "./lib/notify";
 import { chargeableAccess, isPaid } from "./lib/access";
@@ -193,6 +193,7 @@ function cardView(c: Doc<"actionCards">) {
     externalEffect: c.externalEffect,
     status: c.status,
     blockedReason: c.blockedReason ?? null,
+    dependsOnActionCardIds: c.dependsOnActionCardIds ?? [],
     runId: c.runId ?? null,
   };
 }
@@ -333,6 +334,7 @@ export const runCard = mutation({
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const card = assertSameOrg(await ctx.db.get(cardId), org._id, "action");
     if (card.status !== "proposed") throw appError("INVALID", "This action has already been handled.");
+    await assertCardDependenciesComplete(ctx, card, org._id);
     if (card.kind === "note") {
       await ctx.db.patch(card._id, { status: "done", updatedAt: Date.now() });
       return { runId: null };

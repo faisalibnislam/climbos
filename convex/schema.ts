@@ -2088,6 +2088,8 @@ export default defineSchema({
 
   actionCards: defineTable({
     orgId: v.id("organizations"),
+    /** Earlier action cards that must finish before this action can start. */
+    dependsOnActionCardIds: v.optional(v.array(v.id("actionCards"))),
     title: v.string(),
     description: v.string(),
     proposedEffect: v.string(),

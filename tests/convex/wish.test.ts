@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import { asNewUser, setup } from "./helpers";
 
 /**
@@ -8,6 +9,40 @@ import { asNewUser, setup } from "./helpers";
  * and nothing external runs without approval.
  */
 describe("wishes", () => {
+  it("does not let a dependent action start until its prerequisite is complete", async () => {
+    const t = setup();
+    const u = await asNewUser(t, "wish-dependency@example.com", { anonymous: true });
+    const { slug } = await u.client.mutation(api.demo.createDemoWorkspace, {});
+    const { parentId, childId } = await t.run(async (ctx) => {
+      const org = (await ctx.db.query("organizations").withIndex("by_slug", (q) => q.eq("slug", slug)).unique())!;
+      const now = Date.now();
+      const makeNote = (title: string, dependsOnActionCardIds?: Id<"actionCards">[]) => ctx.db.insert("actionCards", {
+        orgId: org._id,
+        ...(dependsOnActionCardIds ? { dependsOnActionCardIds } : {}),
+        title,
+        description: title,
+        proposedEffect: "A note for your team.",
+        kind: "note",
+        roles: ["coo"],
+        payload: "{}",
+        costEstimateMicros: 0,
+        externalEffect: false,
+        status: "proposed",
+        priority: 1,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const parentId = await makeNote("Research the market");
+      const childId = await makeNote("Write the recommendation", [parentId]);
+      return { parentId, childId };
+    });
+
+    await expect(u.client.mutation(api.workspace.runCard, { slug, cardId: childId })).rejects.toThrow(/complete.*first/i);
+    await u.client.mutation(api.workspace.runCard, { slug, cardId: parentId });
+    await u.client.mutation(api.workspace.runCard, { slug, cardId: childId });
+    expect(await t.run(async (ctx) => (await ctx.db.get(childId))?.status)).toBe("done");
+  });
+
   it("a wish starts drafting immediately and carries the owner's words", async () => {
     const t = setup();
     const u = await asNewUser(t, "wish@example.com", { anonymous: true });

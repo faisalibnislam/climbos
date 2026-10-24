@@ -8,6 +8,7 @@ import { resolveCites } from "../shared/agents/evidence";
 import { majorToMinor, minorToMajor } from "../shared/economics/currency";
 import { creditsToMicros } from "../shared/economics/credits";
 import { AGENT_ARCHETYPE_BY_ID, agentForAction } from "../shared/agents/registry";
+import { validateActionDependencies } from "../shared/agents/actionDependencies";
 import { sha256Hex } from "../shared/policy";
 import { v } from "convex/values";
 import { resultsBrief } from "./playResults";
@@ -802,6 +803,9 @@ export const saveChatResult = internalMutation({
     const run = await ensureRunOrg(ctx, runId);
     const org = await ctx.db.get(run.orgId);
     const out = JSON.parse(result) as ChatIntentOutput;
+    if (validateActionDependencies(out.actions).length) {
+      throw appError("INVALID", "The action plan has an invalid prerequisite order. Please try again.");
+    }
     const profile = customAgentId ? await ctx.db.get(customAgentId) : null;
     if (customAgentId && (!profile || profile.orgId !== run.orgId || profile.status !== "active")) throw appError("NOT_FOUND", "We couldn't find that specialist.");
     const specialist = run.customAgentSnapshot ?? profile;
@@ -814,13 +818,18 @@ export const saveChatResult = internalMutation({
     const started: string[] = [];
     const waiting: string[] = [];
     const budgetBlocked: string[] = [];
-    const permittedActions = out.actions.filter((action) => !allowedActions || allowedActions.has(action.kind));
+    const permittedActions = out.actions.map((action, sourceIndex) => ({ action, sourceIndex })).filter(({ action }) => !allowedActions || allowedActions.has(action.kind));
     const selectedActions = permittedActions.slice(0, specialist?.maxActionsPerRun ?? 4);
     const restrictedCount = out.actions.length - permittedActions.length;
     const cappedCount = permittedActions.length - selectedActions.length;
+    const selectedSourceIndexes = new Set(selectedActions.map(({ sourceIndex }) => sourceIndex));
+    const cardsBySourceIndex = new Map<number, Id<"actionCards">>();
+    const blockedSourceIndexes = new Set<number>();
     let specialistBudgetMicros = specialist ? creditsToMicros(specialist.maxRunCredits) : Number.POSITIVE_INFINITY;
     if (specialist) specialistBudgetMicros = Math.max(0, specialistBudgetMicros - run.estimateMicros);
-    for (const a of selectedActions) {
+    for (const { action: a, sourceIndex } of selectedActions) {
+      const unavailablePrerequisite = a.dependsOnActionIndexes.find((index) => !selectedSourceIndexes.has(index) || blockedSourceIndexes.has(index));
+      const dependencyIds = a.dependsOnActionIndexes.map((index) => cardsBySourceIndex.get(index)).filter((id): id is Id<"actionCards"> => Boolean(id));
       const job = jobForAction(a.kind, a.channel);
       const builtinAgent = specialist ? null : agentForAction(a.kind, a.channel, a.brief ?? "");
       const plan = job ? planJob(job, { quantity: a.quantity, images: job === "content_social" ? 1 : 0, channel: a.channel }, { fixture: org?.kind === "demo" }) : null;
@@ -829,8 +838,16 @@ export const saveChatResult = internalMutation({
       const cost = plan ? estimateJobMicros(plan) : 0;
       const overSpecialistBudget = Boolean(specialist && cost > specialistBudgetMicros);
       if (specialist && !overSpecialistBudget) specialistBudgetMicros -= cost;
+      const prerequisiteReason = unavailablePrerequisite === undefined
+        ? undefined
+        : `This depends on “${out.actions[unavailablePrerequisite]?.title ?? "an earlier action"}”, which is unavailable under this specialist's action permissions or run limit.`;
+      const blockedReason = prerequisiteReason ?? (overSpecialistBudget
+        ? `This exceeds ${specialist?.name}'s configured ${specialist?.maxRunCredits}-credit per-run budget.`
+        : job || a.kind === "note" || isLink ? undefined : "This needs a connected account and an approval rule before ClimbOS can prepare it.");
+      const cardStatus = prerequisiteReason || overSpecialistBudget || (!job && a.kind !== "note" && !isLink) ? "blocked" : "proposed";
       const cardId = await ctx.db.insert("actionCards", {
         orgId: run.orgId,
+        ...(dependencyIds.length ? { dependsOnActionCardIds: dependencyIds } : {}),
         title: a.title.slice(0, 120),
         description: a.description.slice(0, 400),
         proposedEffect: external
@@ -849,17 +866,17 @@ export const saveChatResult = internalMutation({
         payload: JSON.stringify({ job, channel: a.channel, quantity: a.quantity, brief: a.brief?.slice(0, 1500) ?? "", ...(customAgentId ? { customAgentId, customAgentParentRunId: run._id } : {}), ...(builtinAgent ? { agentArchetypeId: builtinAgent.id } : {}) }),
         costEstimateMicros: cost,
         externalEffect: external,
-        status: overSpecialistBudget ? "blocked" : job || a.kind === "note" || isLink ? "proposed" : "blocked",
-        blockedReason: overSpecialistBudget
-          ? `This exceeds ${specialist?.name}'s configured ${specialist?.maxRunCredits}-credit per-run budget.`
-          : job || a.kind === "note" || isLink ? undefined : "This needs a connected account and an approval rule before ClimbOS can prepare it.",
+        status: cardStatus,
+        blockedReason,
         priority: priority++,
         createdAt: now,
         updatedAt: now,
       });
       cardIds.push(cardId);
+      cardsBySourceIndex.set(sourceIndex, cardId);
+      if (cardStatus === "blocked") blockedSourceIndexes.add(sourceIndex);
       const card = await ctx.db.get(cardId);
-      if (!specialist && org && card && job && !external && AUTO_RUN_KINDS.has(a.kind) && cost <= autoBudget && run.createdBy) {
+      if (!prerequisiteReason && dependencyIds.length === 0 && !specialist && org && card && job && !external && AUTO_RUN_KINDS.has(a.kind) && cost <= autoBudget && run.createdBy) {
         try {
           await startCardRun(ctx, { org, card, userId: run.createdBy, auto: true });
           autoBudget -= cost;

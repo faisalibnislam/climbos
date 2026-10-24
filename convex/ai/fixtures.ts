@@ -225,28 +225,28 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
       const actions: ChatIntentOutput["actions"] = [];
       const outbound = /find (?:me )?(?:more )?(?:customers|clients|leads|people)|prospect|outreach|cold email|book(?:s|ed)? (?:the )?calls/.test(text);
       if (outbound) {
-        actions.push({ kind: "find_customers", title: "Find customers and write the emails", description: "Finds companies that need you, with evidence, and drafts the emails. Nothing is sent.", channel: "", quantity: 15, brief: ctx.request ?? "" });
+        actions.push({ kind: "find_customers", title: "Find customers and write the emails", description: "Finds companies that need you, with evidence, and drafts the emails. Nothing is sent.", channel: "", quantity: 15, brief: ctx.request ?? "", dependsOnActionIndexes: [] });
       }
       if (/post|instagram|social|linkedin|facebook/.test(text)) {
-        actions.push({ kind: "generate_content", title: "Draft social posts", description: "Create posts for your connected channels using confirmed facts.", channel: /linkedin/.test(text) ? "linkedin" : "instagram", quantity: 3, brief: ctx.request ?? "" });
+        actions.push({ kind: "generate_content", title: "Draft social posts", description: "Create posts for your connected channels using confirmed facts.", channel: /linkedin/.test(text) ? "linkedin" : "instagram", quantity: 3, brief: ctx.request ?? "", dependsOnActionIndexes: [] });
       }
       if (!outbound && /email|newsletter|welcome/.test(text)) {
-        actions.push({ kind: "generate_content", title: "Draft an email sequence", description: "A short sequence for people who agreed to hear from you.", channel: "email", quantity: 1, brief: ctx.request ?? "" });
+        actions.push({ kind: "generate_content", title: "Draft an email sequence", description: "A short sequence for people who agreed to hear from you.", channel: "email", quantity: 1, brief: ctx.request ?? "", dependsOnActionIndexes: [] });
       }
       if (/ad|google|meta|budget/.test(text)) {
-        actions.push({ kind: "generate_content", title: "Draft ads (paused until you approve)", description: "Search and social ad drafts within your approved budget.", channel: "google_search_ad", quantity: 1, brief: ctx.request ?? "" });
+        actions.push({ kind: "generate_content", title: "Draft ads (paused until you approve)", description: "Search and social ad drafts within your approved budget.", channel: "google_search_ad", quantity: 1, brief: ctx.request ?? "", dependsOnActionIndexes: [] });
       }
       if (/seo|blog|search|page/.test(text)) {
-        actions.push({ kind: "generate_content", title: "Write an SEO page", description: "A use-case page aimed at real searches.", channel: "blog", quantity: 1, brief: ctx.request ?? "" });
+        actions.push({ kind: "generate_content", title: "Write an SEO page", description: "A use-case page aimed at real searches.", channel: "blog", quantity: 1, brief: ctx.request ?? "", dependsOnActionIndexes: [] });
       }
       if (/plan|strategy|priorit/.test(text)) {
-        actions.push({ kind: "refresh_plan", title: "Refresh the growth plan", description: "Update priorities using the latest facts and results.", channel: "", quantity: 1, brief: ctx.request ?? "" });
+        actions.push({ kind: "refresh_plan", title: "Refresh the growth plan", description: "Update priorities using the latest facts and results.", channel: "", quantity: 1, brief: ctx.request ?? "", dependsOnActionIndexes: [] });
       }
       if (/result|working|perform|number|forecast/.test(text)) {
-        actions.push({ kind: "analyze_results", title: "Explain recent results", description: "Plain-English summary of what changed and why it might have.", channel: "", quantity: 1, brief: ctx.request ?? "" });
+        actions.push({ kind: "analyze_results", title: "Explain recent results", description: "Plain-English summary of what changed and why it might have.", channel: "", quantity: 1, brief: ctx.request ?? "", dependsOnActionIndexes: [] });
       }
       if (actions.length === 0) {
-        actions.push({ kind: "generate_content", title: "Draft 3 social posts", description: "A quick start based on your plan.", channel: "instagram", quantity: 3, brief: ctx.request ?? "" });
+        actions.push({ kind: "generate_content", title: "Draft 3 social posts", description: "A quick start based on your plan.", channel: "instagram", quantity: 3, brief: ctx.request ?? "", dependsOnActionIndexes: [] });
       }
       return {
         understood: ctx.request ? `You want: ${ctx.request.slice(0, 140)}` : "You want a quick start.",

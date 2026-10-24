@@ -133,6 +133,15 @@ export const WISH_AUTO_BUDGET_MICROS = 5_000_000;
 
 export type CardPayload = { job?: string; channel?: string; quantity?: number; brief?: string; strategyId?: string; planChannel?: string; customAgentId?: string; customAgentParentRunId?: string; agentArchetypeId?: string };
 
+/** Keep dependent work gated even when a card is started outside the chat UI. */
+export async function assertCardDependenciesComplete(ctx: MutationCtx, card: Doc<"actionCards">, orgId: Id<"organizations">) {
+  for (const dependencyId of card.dependsOnActionCardIds ?? []) {
+    const dependency = await ctx.db.get(dependencyId);
+    if (!dependency || dependency.orgId !== orgId) throw appError("INVALID", "A prerequisite for this action is unavailable.");
+    if (dependency.status !== "done") throw appError("INVALID", `Complete “${dependency.title}” first.`);
+  }
+}
+
 /**
  * Start exactly the job an action card describes, with the owner's brief.
  * Throws the same app errors as createRunWithReservation (limits, pause).
@@ -142,6 +151,7 @@ export async function startCardRun(
   p: { org: Doc<"organizations">; card: Doc<"actionCards">; userId: Id<"users">; auto: boolean },
 ): Promise<Id<"workflowRuns"> | null> {
   const { org, card } = p;
+  await assertCardDependenciesComplete(ctx, card, org._id);
   const payload = JSON.parse(card.payload) as CardPayload;
   // Plan cards name their job; wish cards derive it from the kind and channel.
   const job = ((payload.planChannel && payload.job) || jobForAction(card.kind, payload.channel ?? "") || payload.job) as JobKind | undefined;
