@@ -692,12 +692,13 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   const readUrls = [...new Set(sourceUrls)].sort();
   const insightsHash = await sha256Hex(insights);
   const material = {
-    snapshotVersion: 7,
+    snapshotVersion: 8,
     orgId: String(job.org._id),
     businessId: job.business ? String(job.business._id) : null,
     business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, businessType: job.business.businessType, lifecycleStage: job.business.lifecycleStage ?? null, funnel: job.business.funnel ?? null, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
     brand: job.brand ? { voice: job.brand.voice, toneWords: job.brand.toneWords, doNots: job.brand.doNots, updatedAt: job.brand.updatedAt } : null,
     goal,
+    goalKind: job.goal?.kind ?? null,
     facts: [...facts, ...staleFacts].map(({ id, updatedAt, statement }) => ({ id, updatedAt, statement })).sort((a, b) => a.id.localeCompare(b.id)),
     ownerEconomics,
     refundExposure: job.refundExposure ?? null,
@@ -710,7 +711,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   };
   const snapshotId = await sha256Hex(JSON.stringify(material));
   return {
-    snapshotVersion: 7,
+    snapshotVersion: 8,
     snapshotId,
     capturedAt: Date.now(),
     engine: ENGINE_VERSION,
@@ -729,6 +730,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
     capabilities,
     ...(job.business?.lifecycleStage ? { businessLifecycleStage: job.business.lifecycleStage } : { businessLifecycleStage: null }),
     ...(job.business?.funnel ? { businessFunnel: job.business.funnel } : { businessFunnel: null }),
+    goalInput: job.goal ? { id: String(job.goal._id), kind: job.goal.kind, statement: job.goal.statement, horizonDays: job.goal.horizonDays, monthlyAdBudgetMinor: job.goal.monthlyAdBudgetMinor, currency: job.goal.currency, target: job.goal.target ?? null } : null,
     knowledgeReferences,
     ...(ownerEconomics ? { ownerEconomics } : {}),
     ...(job.refundExposure ? { refundExposure: job.refundExposure } : {}),

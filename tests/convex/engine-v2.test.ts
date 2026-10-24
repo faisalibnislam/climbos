@@ -146,11 +146,12 @@ describe("Engine v2 wiring", () => {
     // Pages the research read are saved, and so is what the plan was built from.
     expect(strategy?.expert?.webSources?.[0]?.url).toBe("https://example.com");
     expect(strategy?.expert?.snapshot?.engine).toMatch(/^v\d/);
-    expect(strategy?.expert?.snapshot?.snapshotVersion).toBe(7);
+    expect(strategy?.expert?.snapshot?.snapshotVersion).toBe(8);
     expect(strategy?.expert?.snapshot?.knowledgeReferences?.records.length).toBeGreaterThan(0);
     expect(strategy?.expert?.snapshot?.knowledgeReferences?.records.every((record) => /^[a-f0-9]{64}$/u.test(record.sha256))).toBe(true);
     expect(strategy?.expert?.snapshot?.businessLifecycleStage).toMatchObject({ stage: "early_traction", provenance: "owner_reported" });
     expect(strategy?.expert?.snapshot?.businessFunnel).toMatchObject({ periodDays: 30, visitors: 100, leads: 20, activated: 10, newCustomers: 5 });
+    expect(strategy?.expert?.snapshot?.goalInput).toMatchObject({ kind: "more_customers", statement: "More paying customers", horizonDays: 90, currency: "USD" });
     expect(strategy?.expert?.snapshot?.snapshotId).toMatch(/^[a-f0-9]{64}$/);
     expect(strategy?.expert?.snapshot?.refundExposure).toMatchObject({
       paymentCount: 2,
