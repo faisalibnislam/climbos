@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { betaPosterior, probBelow, probLess, poissonCdf } from "../../shared/analysis/bayes";
 import { compareRates } from "../../shared/analysis/decisions";
 import { diagnose, diagnosisBrief } from "../../shared/agents/diagnosis";
-import { combinePlays, lintEconomics, playMaths, portfolioRange, selectPortfolio, type Economics, type PlayLike } from "../../shared/agents/economics";
+import { combinePlays, lintEconomics, lockedNumbers, playMaths, portfolioRange, selectPortfolio, type Economics, type PlayLike } from "../../shared/agents/economics";
 import { lintFeasibility } from "../../shared/agents/specs";
 import { playActuals } from "../../shared/growth/actuals";
 import { diagnoseShortfall } from "../../shared/growth/diagnostics";
@@ -236,6 +236,25 @@ describe("follow-up reading (ADM exercise sets)", () => {
     const selected = selectPortfolio({ economics: econ, plays: [attributed, baselineDelta] }, {})!;
     expect(selected.outcomeBasis).toBe("mixed");
     expect(selected.basis).toContain("not a causal lift estimate");
+  });
+
+  it("ranks attributed outcomes and modeled baseline deltas in separate portfolio objectives", () => {
+    const nearBaseline = play("Near-baseline optimization", { steps: [{ name: "paid", rate: 0.2, baselineRate: 0.199 }], monthlySpendUsd: 1 });
+    const largerDelta = play("Higher-lift optimization", { steps: [{ name: "paid", rate: 0.1, baselineRate: 0.05 }], monthlySpendUsd: 1 });
+    const plays = [nearBaseline, largerDelta];
+
+    const attributed = selectPortfolio({ economics: econ, plays }, { objective: "play_attributed", monthlyBudgetUsd: 1 })!;
+    const incremental = selectPortfolio({ economics: econ, plays }, { objective: "modeled_incremental", monthlyBudgetUsd: 1 })!;
+    expect(attributed.objective).toBe("play_attributed");
+    expect(attributed.outcomeBasis).toBe("attributed_only");
+    expect(attributed.selected).toEqual(["Near-baseline optimization"]);
+    expect(incremental.objective).toBe("modeled_incremental");
+    expect(incremental.outcomeBasis).toBe("modeled_baseline_delta");
+    expect(incremental.selected).toEqual(["Higher-lift optimization"]);
+
+    const locked = lockedNumbers({ economics: econ, plays });
+    expect(locked).toContain("PORTFOLIO CHECK · PLAY-ATTRIBUTED OUTCOMES");
+    expect(locked).toContain("PORTFOLIO CHECK · MODELED BASELINE DELTA");
   });
 
   it("huge counts don't rank two links that convert within 10% of each other", () => {

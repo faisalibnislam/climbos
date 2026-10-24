@@ -595,6 +595,8 @@ function expectedCombinedDraws(cols: number[][], indexes: number[], stages: stri
 }
 
 export interface PortfolioChoice {
+  /** Which customer outcome definition this feasible set optimizes. */
+  objective: PortfolioObjective;
   /** Play names in the best feasible set. */
   selected: string[];
   /** Whether its modeled customers are attributed conversions, baseline deltas, or a mix. */
@@ -615,19 +617,28 @@ export interface PortfolioChoice {
   basis: string;
 }
 
+export type PortfolioObjective = "combined_current" | "play_attributed" | "modeled_incremental";
+
 /**
  * The best feasible set of drafted plays under the owner's joint limits (Kochenderfer App. C/E:
  * small sets are enumerated exactly; no solver needed up to 10 plays). Plays that lose money at
  * their most-likely rates never enter, at any budget. A bigger budget only adds feasible sets,
  * so a set that fit before still fits.
  */
-export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }, limits: { monthlyBudgetUsd?: number; ownerHoursPerWeek?: number; newCustomersPerMonth?: number; horizonDays?: number }): PortfolioChoice | null {
+export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }, limits: { monthlyBudgetUsd?: number; ownerHoursPerWeek?: number; newCustomersPerMonth?: number; horizonDays?: number; objective?: PortfolioObjective }): PortfolioChoice | null {
   const h = limits.horizonDays || 90;
-  const ps = out.plays.filter((p) => p.model?.steps?.length).slice(0, 10);
+  const objective = limits.objective ?? "combined_current";
+  let ps = out.plays.filter((p) => p.model?.steps?.length);
+  if (objective === "modeled_incremental") ps = ps.filter((p) => p.model.steps.some((step) => step.baselineRate !== undefined));
+  if (objective === "play_attributed") ps = ps.map((p) => ({
+    ...p,
+    model: { ...p.model, steps: p.model.steps.map(({ baselineRate: _baselineRate, ...step }) => step) },
+  }));
+  ps = ps.slice(0, 10);
   if (!ps.length) return null;
   const ms = ps.map((p) => playMaths({ ...p, horizonDays: h }, out.economics));
   const stages = ps.map(stageOfPlay);
-  const outcomeBasis = portfolioOutcomeBasis(ps);
+  const outcomeBasis = objective === "play_attributed" ? "attributed_only" : objective === "modeled_incremental" ? "modeled_baseline_delta" : portfolioOutcomeBasis(ps);
   const value = customerValue(out.economics);
   const capLimit = limits.newCustomersPerMonth !== undefined ? limits.newCustomersPerMonth * (h / 30) : undefined;
   const losers = new Set(ms.flatMap((m, i) => (m.profitable === false && ps[i].kind !== "moonshot" ? [i] : [])));
@@ -661,6 +672,7 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
   const all = ps.map((_, i) => i);
   if (!best)
     return {
+      objective,
       selected: [],
       outcomeBasis,
       customers: 0,
@@ -677,6 +689,7 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
   // The strongest alternative must beat the choice on something (more customers, less cash or fewer hours); a set worse on every count isn't a trade-off (Kochenderfer Ex 14.5).
   const runner = opts.find((o) => key(o) !== key(best) && (o.expectedCustomers > best.expectedCustomers + 1e-9 || o.spend < best.spend - 1e-9 || o.hours < best.hours - 1e-9)) ?? null;
   return {
+    objective,
     selected: best.idx.map((i) => ps[i].name),
     outcomeBasis: portfolioOutcomeBasis(best.idx.map((i) => ps[i])),
     customers: best.customers,
@@ -750,10 +763,17 @@ const ROBUST_WORD: Record<PlayMaths["robustness"], string> = { robust: "pays bac
 
 /** The feasible-set check as one locked line: what fits together, and the strongest alternative. */
 function portfolioLine(out: { economics: Economics; plays: PlayLike[] }, limits: Parameters<typeof selectPortfolio>[1], usd: (n: number | null) => string): string[] {
-  const c = selectPortfolio(out, limits);
-  if (!c || (c.allFit && !c.left.length)) return [];
-  const alt = c.runnerUp ? ` Strongest alternative: ${c.runnerUp.selected.join(" + ")} (≈${roundCount(c.runnerUp.customers)} customers${c.runnerUp.netUsd !== null ? `, net ${usd(c.runnerUp.netUsd)}` : ""}).` : "";
-  return [`- PORTFOLIO CHECK (computed): the best set that fits the limits is ${c.selected.join(" + ") || "none"} (≈${roundCount(c.customers)} customers, ${usd(c.spendUsdMonth)}/month, ${Math.round(c.ownerHoursWeek * 10) / 10} h/week${c.netUsd !== null ? `, net ${usd(c.netUsd)}` : ""}). Left out: ${c.left.map((l) => `${l.name} (${l.why})`).join("; ")}.${alt} ${c.basis}`];
+  const choices = [
+    { objective: "play_attributed" as const, label: "PLAY-ATTRIBUTED OUTCOMES" },
+    { objective: "modeled_incremental" as const, label: "MODELED BASELINE DELTA" },
+  ];
+  return choices.map(({ objective, label }) => {
+    const c = selectPortfolio(out, { ...limits, objective });
+    if (!c) return objective === "modeled_incremental" ? "- PORTFOLIO CHECK · MODELED BASELINE DELTA: not estimated; none of the plays includes a baseline rate." : "";
+    if (c.allFit && !c.left.length) return `- PORTFOLIO CHECK · ${label}: all eligible plays fit the stated limits (≈${roundCount(c.customers)} outcomes, ${usd(c.spendUsdMonth)}/month, ${Math.round(c.ownerHoursWeek * 10) / 10} h/week${c.netUsd !== null ? `, net ${usd(c.netUsd)}` : ""}). ${c.basis}`;
+    const alt = c.runnerUp ? ` Strongest alternative: ${c.runnerUp.selected.join(" + ")} (≈${roundCount(c.runnerUp.customers)} outcomes${c.runnerUp.netUsd !== null ? `, net ${usd(c.runnerUp.netUsd)}` : ""}).` : "";
+    return `- PORTFOLIO CHECK · ${label}: best feasible set is ${c.selected.join(" + ") || "none"} (≈${roundCount(c.customers)} outcomes, ${usd(c.spendUsdMonth)}/month, ${Math.round(c.ownerHoursWeek * 10) / 10} h/week${c.netUsd !== null ? `, net ${usd(c.netUsd)}` : ""}). Left out: ${c.left.map((l) => `${l.name} (${l.why})`).join("; ")}.${alt} ${c.basis}`;
+  }).filter(Boolean);
 }
 
 /** "revenue: research (formkit.app/pricing), margin: assumption, …" for the locked numbers. */
