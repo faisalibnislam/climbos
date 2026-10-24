@@ -111,6 +111,7 @@ import type * as repurposeActions from "../repurposeActions.js";
 import type * as reviews from "../reviews.js";
 import type * as settings from "../settings.js";
 import type * as searchConsole from "../searchConsole.js";
+import type * as seoOpportunities from "../seoOpportunities.js";
 import type * as siteWatch from "../siteWatch.js";
 import type * as siteWatchActions from "../siteWatchActions.js";
 import type * as status from "../status.js";
@@ -230,6 +231,7 @@ declare const fullApi: ApiFromModules<{
   reviews: typeof reviews;
   settings: typeof settings;
   searchConsole: typeof searchConsole;
+  seoOpportunities: typeof seoOpportunities;
   siteWatch: typeof siteWatch;
   siteWatchActions: typeof siteWatchActions;
   status: typeof status;

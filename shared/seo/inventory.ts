@@ -1,4 +1,4 @@
-export type SiteInventoryFinding = { id: string; level: "check" | "attention"; title: string; evidence: string; nextStep: string };
+export type SiteInventoryFinding = { id: string; level: "check" | "attention"; title: string; evidence: string; nextStep: string; state: "open" | "addressed" | "not_relevant" };
 export type SiteInventoryPage = {
   url: string;
   status: "read" | "blocked_by_robots" | "failed";
@@ -53,7 +53,7 @@ function finding(value: unknown): SiteInventoryFinding | null {
   const title = text(item.title, 300);
   const evidence = text(item.evidence, 1_000);
   const nextStep = text(item.nextStep, 1_000);
-  return id && title && evidence && nextStep ? { id, level: item.level, title, evidence, nextStep } : null;
+  return id && title && evidence && nextStep ? { id, level: item.level, title, evidence, nextStep, state: "open" } : null;
 }
 
 /** Read only bounded, same-site page observations from a saved verified audit output. */

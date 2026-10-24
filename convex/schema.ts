@@ -2993,6 +2993,19 @@ export default defineSchema({
     .index("by_org_page", ["orgId", "page"])
     .index("by_org_query", ["orgId", "query"]),
 
+  /** Owner-reported dispositions for exact findings in a verified website-audit run. */
+  seoOpportunityStates: defineTable({
+    orgId: v.id("organizations"),
+    runId: v.id("workflowRuns"),
+    pageUrl: v.string(),
+    findingId: v.string(),
+    state: v.union(v.literal("addressed"), v.literal("not_relevant")),
+    updatedBy: v.id("users"),
+    updatedAt: v.number(),
+  })
+    .index("by_org_run", ["orgId", "runId"])
+    .index("by_org_run_page_finding", ["orgId", "runId", "pageUrl", "findingId"]),
+
   revenueEvents: defineTable({
     orgId: v.id("organizations"),
     source: v.string(),

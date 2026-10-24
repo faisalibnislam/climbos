@@ -141,6 +141,18 @@ export const searchReadiness = query({
         return snapshot ? [snapshot] : [];
       })
       .slice(0, 5);
+    for (const snapshot of inventory) {
+      const states = await ctx.db.query("seoOpportunityStates")
+        .withIndex("by_org_run", (q) => q.eq("orgId", org._id).eq("runId", snapshot.runId as Id<"workflowRuns">))
+        .take(250);
+      const stateByFinding = new Map(states.map((item) => [`${item.pageUrl}\u0000${item.findingId}`, item.state]));
+      for (const page of snapshot.pages) {
+        page.findings = page.findings.map((finding) => ({
+          ...finding,
+          state: stateByFinding.get(`${page.url}\u0000${finding.id}`) ?? "open",
+        }));
+      }
+    }
     return { website: business.website ?? null, scan: business.siteReadiness ?? null, inventory };
   },
 });

@@ -17,12 +17,24 @@ export default function SearchReadinessPage() {
   const { organization: slug } = useParams<{ organization: string }>();
   const data = useQuery(api.siteWatch.searchReadiness, { slug });
   const scan = useMutation(api.siteWatch.scanSearchReadiness);
+  const updateFinding = useMutation(api.seoOpportunities.updateFindingState);
   const member = useWorkspaceMember(slug);
   const canEdit = Boolean(member?.role && can(member.role, "edit"));
+  const [savingFinding, setSavingFinding] = useState("");
   if (data === undefined) return <LoadingBlock label="Loading search readiness" lines={4} />;
   if (data === null) return <p className="text-sm text-ink-3">Finish onboarding first.</p>;
   const current = data.scan;
   const run = () => scan({ slug }).then(() => toast({ tone: "success", title: "Homepage check started" }), (error) => toast({ tone: "danger", title: errorMessage(error) }));
+  const changeFindingState = async (runId: string, pageUrl: string, findingId: string, state: "open" | "addressed" | "not_relevant") => {
+    const key = `${runId}:${pageUrl}:${findingId}`;
+    setSavingFinding(key);
+    try {
+      await updateFinding({ slug, runId: runId as Id<"workflowRuns">, pageUrl, findingId, state });
+      toast({ tone: "success", title: state === "open" ? "Finding reopened" : state === "addressed" ? "Marked addressed" : "Marked not relevant", description: "This is your report. A later website review can check the page again." });
+    } catch (error) {
+      toast({ tone: "danger", title: errorMessage(error) });
+    } finally { setSavingFinding(""); }
+  };
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <PageHeader
@@ -53,7 +65,7 @@ export default function SearchReadinessPage() {
         </>
       )}
       <section className="flex flex-col gap-3">
-        <div><h2 className="heading-card">Reviewed page inventory</h2><p className="mt-1 text-sm text-ink-3">Page-level details from recent website reviews are saved here. This is a sampled inventory, not a complete crawl.</p></div>
+        <div><h2 className="heading-card">SEO review queue and page inventory</h2><p className="mt-1 text-sm text-ink-3">Page-level details from recent website reviews are saved here. “Needs attention” findings appear before “Review” checks; this reflects the observed check severity, not predicted ranking or traffic impact.</p></div>
         {data.inventory?.length ? data.inventory.map((audit) => (
           <Card key={audit.runId}><CardContent className="flex flex-col gap-3">
             <div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="text-sm font-semibold text-ink">{audit.pagesRead} pages read · {audit.discoveredCandidates} same-site candidates discovered</h3><p className="mt-1 break-all text-xs text-ink-3">{audit.website}</p></div><span className="shrink-0 text-xs text-ink-3">Reviewed {relativeTime(audit.checkedAt)}</span></div>
@@ -62,7 +74,14 @@ export default function SearchReadinessPage() {
               <li key={`${audit.runId}:${page.url}`} className="rounded-lg bg-surface-2 p-3">
                 <div className="flex flex-wrap items-start justify-between gap-2"><div className="min-w-0"><a href={page.url} target="_blank" rel="noopener noreferrer" className="break-all text-sm font-medium text-link">{page.url}</a><p className="mt-1 text-xs text-ink-3">{page.status === "read" ? page.metadataState === "observed" ? "Page read · static HTML observed" : "Page read · static HTML unavailable" : page.status === "blocked_by_robots" ? "Not read · blocked by robots.txt" : "Page read failed"}</p></div><span className="shrink-0 text-xs text-ink-3">{page.findings.length} check{page.findings.length === 1 ? "" : "s"}</span></div>
                 {page.metadataState === "observed" ? <p className="mt-2 text-xs text-ink-2">Title: {page.titleLength ?? "not observed"} chars · Description: {page.descriptionLength ?? "not observed"} chars · H1/H2/H3: {page.headingCounts ? `${page.headingCounts.h1}/${page.headingCounts.h2}/${page.headingCounts.h3}` : "not observed"}{page.structuredDataTypes?.length ? ` · Structured data: ${page.structuredDataTypes.join(", ")}` : ""}</p> : null}
-                {page.findings.length ? <ul className="mt-2 flex flex-col gap-2">{page.findings.map((finding, index) => <li key={`${finding.id}:${index}`} className="border-l-2 border-line pl-3"><p className="text-xs font-medium text-ink">{finding.title}</p><p className="mt-0.5 text-xs text-ink-3">{finding.evidence} Next step: {finding.nextStep}</p></li>)}</ul> : null}
+                {page.findings.length ? <ul className="mt-2 flex flex-col gap-2">{[...page.findings].sort((a, b) => Number(b.level === "attention") - Number(a.level === "attention")).map((finding, index) => {
+                  const key = `${audit.runId}:${page.url}:${finding.id}`;
+                  return <li key={`${finding.id}:${index}`} className="border-l-2 border-line pl-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-medium text-ink">{finding.title} · {finding.level === "attention" ? "Needs attention" : "Review"}</p>{finding.state !== "open" ? <span className="text-xs text-ink-3">Owner-reported: {finding.state === "addressed" ? "addressed" : "not relevant"}</span> : null}</div>
+                    <p className="mt-0.5 text-xs text-ink-3">{finding.evidence} Next step: {finding.nextStep}</p>
+                    {canEdit ? <div className="mt-2 flex flex-wrap gap-2">{finding.state === "open" ? <><Button size="sm" variant="secondary" loading={savingFinding === key} disabled={Boolean(savingFinding)} onClick={() => void changeFindingState(audit.runId, page.url, finding.id, "addressed")}>Mark addressed</Button><Button size="sm" variant="ghost" loading={savingFinding === key} disabled={Boolean(savingFinding)} onClick={() => void changeFindingState(audit.runId, page.url, finding.id, "not_relevant")}>Not relevant</Button></> : <Button size="sm" variant="ghost" loading={savingFinding === key} disabled={Boolean(savingFinding)} onClick={() => void changeFindingState(audit.runId, page.url, finding.id, "open")}>Reopen</Button>}</div> : null}
+                  </li>;
+                })}</ul> : null}
               </li>
             ))}</ul> : <p className="text-sm text-ink-3">The saved review did not return page-level inventory details.</p>}
           </CardContent></Card>
