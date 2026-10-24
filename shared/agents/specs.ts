@@ -164,7 +164,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; portfolio?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
 export interface PlanSnapshot { engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; insightsChars: number; ownerEconomics?: unknown; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.1-trust-checks";
+export const ENGINE_VERSION = "v3.2-trust-claims-intent";
 
 /** The growth-plays agent's output: 1 bankable, 1-2 creative-proven, at most 1 capped moonshot (≤ 4). */
 export const PlaysOutputSchema = z.object({
@@ -1164,7 +1164,7 @@ function lintPublishable(out: unknown, input: AgentInput): LintIssue[] {
   return lintCopy(out, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), publishable: true, skip: (p) => /url|sourceUrl|keywords|key$|intentEvidence|eeatSignals|outline|goal|successMetric/i.test(p) });
 }
 
-function lintSearchIntent(out: z.infer<typeof SeoBriefV2Schema>): LintIssue[] {
+export function lintSearchIntent(out: z.infer<typeof SeoBriefV2Schema>): LintIssue[] {
   const inferred = inferSearchIntentStage(`${out.primaryKeyword} ${out.searchIntent} ${out.intentEvidence}`, out.pageType);
   if (inferred === "unclear" || out.intentStage === inferred) return [];
   return [{ severity: "error", rule: "search_intent", message: `The page is labeled ${out.intentStage}, but its keyword and intent evidence indicate ${inferred} intent. Match the content and next step to the searcher's stage.`, path: "intentStage" }];

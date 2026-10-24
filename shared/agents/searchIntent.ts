@@ -1,7 +1,7 @@
 export type SearchIntentStage = "awareness" | "evaluation" | "purchase" | "unclear";
 
-const PURCHASE = /\b(?:buy|purchase|pricing?|price|cost|quote|book|hire|order|sign\s?up|start\s+(?:a\s+)?trial|free trial|demo|near me|discount)\b/i;
-const EVALUATION = /\b(?:best|compare|comparison|versus|vs\.?|alternative|review|reviews|features?|software|tool|platform|options?)\b/i;
+const PURCHASE = /\b(?:buy|purchase|pricing|how much does|cost(?:s)?\s+of|quote|book|hire|order|sign\s?up|start\s+(?:a\s+)?trial|free trial|demo|near me|discount)\b/i;
+const EVALUATION = /\b(?:best|compare|comparison|versus|vs\.?|alternative|review|reviews|features?|options?)\b/i;
 const AWARENESS = /\b(?:what is|how to|how do|why does|guide|tutorial|examples?|definition|learn about|ideas?)\b/i;
 
 /** Classify only explicit intent evidence; page type is a conservative fallback. */

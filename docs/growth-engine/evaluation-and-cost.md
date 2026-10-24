@@ -468,3 +468,9 @@ Search or existing traffic counts only with a measured number. `lintPlanDistribu
 - **Payback:** labelled "with churn", and the per-surviving-customer figure is shown alongside.
 - **Activation kind:** a setup-only count makes the diagnosis partial.
 - **Price increases:** classed under economics, with a new PB-price-increase contract.
+
+**Built (not yet evaluated): trust, claims, and intent checks, `ENGINE_VERSION` v3.2-trust-claims-intent.**
+- Publishable claims use owner-confirmed, observed, or measured capability facts; website claims and stated opinions do not substantiate them. Selected high-risk claims and named integrations are checked deterministically.
+- Every agent receives a trust-evidence posture. The prompt distinguishes proof-building from evidence-backed credibility, while leaving brand age/reputation unknown when not recorded.
+- SEO briefs classify search intent as awareness, evaluation, purchase, or unclear; a deterministic cross-check compares the label with query evidence and page type.
+- **Limit:** regex and phrase checks catch high-risk cases but do not semantically match every product feature or query. No paid real-model comparison has been run for this version.
