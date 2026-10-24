@@ -52,7 +52,7 @@ export default function PrivacyPage() {
       <h2>How we use it</h2>
       <ul>
         <li>To provide ClimbOS: researching your business, building your plan, creating work and measuring results.</li>
-        <li>To publish or send things you&apos;ve approved, on the accounts you&apos;ve connected.</li>
+        <li>To create a private WordPress draft or publish or send content you&apos;ve separately confirmed or approved, on the accounts you&apos;ve connected.</li>
         <li>To send you sign-in codes, approval requests, alerts and service messages.</li>
         <li>To keep the service secure, prevent abuse and meet legal obligations.</li>
         <li>
@@ -85,8 +85,12 @@ export default function PrivacyPage() {
         connected Facebook Pages or Instagram professional accounts to our AI provider for review. Engagement values are limited
         to the sampled posts and are not account-wide analytics. We do not download or analyze the post images or videos in this audit.
         LinkedIn post history is not read because this app does not have the required restricted permission. We read from the
-        platforms you connect (such as Meta or Google) when you ask us to audit, publish, send or launch something there. We may
-        disclose information if the law requires it.
+        platforms you connect (such as Meta or Google) when you ask us to audit, publish, send or launch something there. If you
+        confirm creating a WordPress draft, we send the exact approved article title and body to the WordPress site you connected,
+        using your encrypted Application Password. ClimbOS reads back the new post&apos;s ID, title and draft status to confirm it was
+        saved; it does not publish the post. We retain the site, approved version hash, request status and WordPress draft link with
+        your workspace until you delete the workspace. The post itself remains on your WordPress site unless you remove it there.
+        We may disclose information if the law requires it.
       </p>
 
       <h2>How long we keep it</h2>

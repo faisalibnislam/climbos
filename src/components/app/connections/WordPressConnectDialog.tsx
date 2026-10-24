@@ -55,7 +55,7 @@ export function WordPressConnectDialog({ slug, trigger }: { slug: string; trigge
           <Field label="Application Password" hint="Do not enter your regular WordPress password.">
             <Input type="password" autoComplete="new-password" autoCapitalize="off" spellCheck={false} value={applicationPassword} onChange={(e) => setApplicationPassword(e.target.value)} required />
           </Field>
-          <Callout tone="info">ClimbOS checks access over HTTPS and confirms this user can edit posts. The credential is encrypted, never shown again, and can be revoked in WordPress. This connection currently verifies access; it does not publish or create posts yet.</Callout>
+          <Callout tone="info">ClimbOS checks access over HTTPS and confirms this user can edit posts. The credential is encrypted, never shown again, and can be revoked in WordPress. ClimbOS can create a private draft from an approved blog article after you confirm. It never publishes that article to your site.</Callout>
           <p aria-live="assertive" className="sr-only">{error ?? ""}</p>
           <DialogFooter className="mt-2">
             <DialogClose asChild><Button variant="secondary" disabled={busy}>Cancel</Button></DialogClose>

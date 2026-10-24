@@ -201,6 +201,14 @@ export const get = query({
       : null;
     const currentApproval = a.approvalId ? await ctx.db.get(a.approvalId) : null;
     const curVer = a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null;
+    const wordpressConnection = a.kind === "blog_post" && a.channel === "blog"
+      ? await ctx.db.query("connections").withIndex("by_org_provider", (q) => q.eq("orgId", org._id).eq("provider", "wordpress")).first()
+      : null;
+    const wordpressDrafts = a.kind === "blog_post" && a.channel === "blog"
+      ? (await ctx.db.query("wordpressDraftOperations").withIndex("by_artifact", (q) => q.eq("artifactId", a._id)).order("desc").take(5))
+        .filter((row) => row.orgId === org._id)
+        .map((row) => ({ id: row._id, status: row.status, summary: row.summary, externalPostId: row.externalPostId ?? null, editUrl: row.editUrl ?? null, createdAt: row.createdAt }))
+      : [];
     const slot = await ctx.db
       .query("calendarSlots")
       .withIndex("by_artifact", (q) => q.eq("artifactId", a._id))
@@ -244,6 +252,10 @@ export const get = query({
       })),
       receipts: receipts.map((r) => ({ id: r._id, provider: r.provider, action: r.action, status: r.status, externalId: r.externalId ?? null, summary: r.summary, createdAt: r.createdAt })),
       facts,
+      wordpressConnection: wordpressConnection?.status === "connected"
+        ? { accountLabel: wordpressConnection.accountLabel ?? null, siteUrl: wordpressConnection.externalAccountId ?? null }
+        : null,
+      wordpressDrafts,
       /** Copilot mode: the owner posts it themselves from the export pack. */
       copilot: (await autonomyMode(ctx, org._id)) === "copilot",
       publishTarget: target
@@ -283,6 +295,8 @@ export const edit = mutation({
     const a = assertSameOrg(await ctx.db.get(args.artifactId), org._id, "draft");
     if (["publishing", "published"].includes(a.status)) throw appError("INVALID", "Published content can't be edited. Duplicate it instead.");
     if (a.status === "uncertain") throw appError("INVALID", "Check whether it was posted first, then edit it.");
+    const pendingWordPressDraft = await ctx.db.query("wordpressDraftOperations").withIndex("by_artifact", (q) => q.eq("artifactId", a._id)).order("desc").take(5);
+    if (pendingWordPressDraft.some((operation) => operation.orgId === org._id && operation.status === "pending")) throw appError("INVALID", "A WordPress draft request is still running. Wait for its result before editing this article.");
     const prev = a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null;
     const body = args.body.trim().slice(0, 20_000);
     if (!body) throw appError("INVALID", "The text can't be empty.");

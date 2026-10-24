@@ -21,6 +21,62 @@ export function normalizeWordPressSiteUrl(raw: string): string | null {
   return `${url.origin}${path}`;
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(/&/gu, "&amp;").replace(/</gu, "&lt;").replace(/>/gu, "&gt;").replace(/"/gu, "&quot;").replace(/'/gu, "&#39;");
+}
+
+/** Render the small Markdown subset used by article drafts, escaping raw HTML and allowing HTTPS links only. */
+export function wordpressArticleHtml(markdown: string): string {
+  const inline = (value: string) => {
+    let safe = escapeHtml(value);
+    safe = safe.replace(/\[([^\]]{1,200})\]\((https:\/\/[^\s)]+)\)/gu, (match, label: string, rawUrl: string) => {
+      const url = safePublicUrl(rawUrl);
+      return url?.protocol === "https:" ? `<a href="${escapeHtml(url.toString())}">${label}</a>` : match;
+    });
+    safe = safe.replace(/\*\*([^*\n]+)\*\*/gu, "<strong>$1</strong>").replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/gu, "<em>$1</em>");
+    return safe;
+  };
+  const lines = markdown.replace(/\r\n?/gu, "\n").split("\n");
+  const output: string[] = [];
+  let paragraph: string[] = [];
+  let list: "ul" | "ol" | null = null;
+  let code: string[] | null = null;
+  const closeParagraph = () => {
+    if (paragraph.length) output.push(`<p>${inline(paragraph.join(" "))}</p>`);
+    paragraph = [];
+  };
+  const closeList = () => {
+    if (list) output.push(`</${list}>`);
+    list = null;
+  };
+  for (const line of lines) {
+    if (line.trim().startsWith("```")) {
+      closeParagraph(); closeList();
+      if (code) { output.push(`<pre><code>${escapeHtml(code.join("\n"))}</code></pre>`); code = null; }
+      else code = [];
+      continue;
+    }
+    if (code) { code.push(line); continue; }
+    const heading = /^(#{1,6})\s+(.+?)\s*#*$/u.exec(line);
+    const unordered = /^\s*[-*+]\s+(.+)$/u.exec(line);
+    const ordered = /^\s*\d+[.)]\s+(.+)$/u.exec(line);
+    if (!line.trim()) { closeParagraph(); closeList(); continue; }
+    if (heading) { closeParagraph(); closeList(); output.push(`<h${heading[1]!.length}>${inline(heading[2]!)}</h${heading[1]!.length}>`); continue; }
+    if (unordered || ordered) {
+      closeParagraph();
+      const nextList = unordered ? "ul" : "ol";
+      if (list !== nextList) { closeList(); output.push(`<${nextList}>`); list = nextList; }
+      output.push(`<li>${inline((unordered ?? ordered)![1]!)}</li>`);
+      continue;
+    }
+    closeList();
+    paragraph.push(line.trim());
+  }
+  closeParagraph(); closeList();
+  if (code) output.push(`<pre><code>${escapeHtml(code.join("\n"))}</code></pre>`);
+  return output.join("\n").slice(0, 100_000);
+}
+
 function basicAuthorization(username: string, password: string): string {
   const bytes = new TextEncoder().encode(`${username}:${password.replace(/\s+/gu, "")}`);
   let binary = "";

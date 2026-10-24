@@ -3278,6 +3278,28 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_artifact", ["artifactId", "version"]),
 
+  /** Approval-bound, non-publishing WordPress draft writes with read-back status. */
+  wordpressDraftOperations: defineTable({
+    orgId: v.id("organizations"),
+    artifactId: v.id("artifacts"),
+    artifactVersionId: v.id("artifactVersions"),
+    approvalId: v.id("approvals"),
+    connectionId: v.id("connections"),
+    requestedBy: v.id("users"),
+    siteUrl: v.string(),
+    contentHash: v.string(),
+    idempotencyKey: v.string(),
+    status: v.union(v.literal("pending"), v.literal("verified"), v.literal("failed"), v.literal("uncertain")),
+    summary: v.string(),
+    externalPostId: v.optional(v.string()),
+    editUrl: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_org_created", ["orgId", "createdAt"])
+    .index("by_artifact", ["artifactId", "createdAt"])
+    .index("by_idempotency", ["idempotencyKey"]),
+
   /* ---------------- Approvals and policy ---------------- */
   approvals: defineTable({
     orgId: v.id("organizations"),

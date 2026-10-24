@@ -10,6 +10,7 @@ import { ErrorCallout, FactList, MessageText, NoteList, PERMISSION_WHO, browserT
 import { ExportPackPanel } from "./ExportPack";
 import { hasValidApproval } from "./ApprovalPanel";
 import type { ArtifactView } from "./model";
+import { WordPressDraftPanel } from "./WordPressDraftPanel";
 
 /** Read the clock in event handlers. */
 const currentTime = () => Date.now();
@@ -164,7 +165,15 @@ export function PublishPanel({ slug, artifact, now }: { slug: string; artifact: 
 
   let statusLine: ReactNode;
   if (s === "draft" || s === "in_review") statusLine = "Approve first.";
-  else if (s === "approved") statusLine = valid ? (direct ? "Ready. Schedule or publish." : "Ready to post yourself.") : (artifact.approvalProblem ?? "Approval expired. Re-approve.");
+  else if (s === "approved") statusLine = valid
+    ? direct
+      ? "Ready. Schedule or publish."
+      : artifact.kind === "blog_post" && artifact.channel === "blog"
+        ? artifact.wordpressConnection
+          ? "Approved. Create a private WordPress draft or export the article."
+          : "Approved. Export the article or connect WordPress to create a private draft."
+        : "Ready to post yourself."
+    : (artifact.approvalProblem ?? "Approval expired. Re-approve.");
   else if (s === "scheduled") statusLine = `Scheduled for ${artifact.scheduledFor && now ? formatDateTime(artifact.scheduledFor) : "…"}. Not on ${ch} until it accepts.`;
   else if (s === "publishing")
     statusLine = (
@@ -206,7 +215,7 @@ export function PublishPanel({ slug, artifact, now }: { slug: string; artifact: 
           </p>
         </Callout>
       ) : null}
-      {!target && ["approved", "exported"].includes(s) ? (
+      {!target && !(artifact.kind === "blog_post" && artifact.channel === "blog") && ["approved", "exported"].includes(s) ? (
         <Callout tone="info" title={`Can't post to ${ch} directly`}>
           Use the export pack below.
         </Callout>
@@ -227,6 +236,13 @@ export function PublishPanel({ slug, artifact, now }: { slug: string; artifact: 
       ) : null}
 
       {showExport ? <ExportPackPanel slug={slug} artifact={artifact} /> : null}
+      {artifact.kind === "blog_post" && artifact.channel === "blog" ? (
+        <WordPressDraftPanel
+          slug={slug}
+          artifact={artifact}
+          canCreate={Boolean(artifact.wordpressConnection) && artifact.status === "approved" && valid && artifact.canApprove && !artifact.copilot && now !== null}
+        />
+      ) : null}
     </div>
   );
 }

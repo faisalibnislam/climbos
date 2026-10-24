@@ -560,6 +560,7 @@ export async function endBillingIfLastWorkspace(ctx: MutationCtx, org: Doc<"orga
 /** Tables purged by an index whose first field is orgId (children are removed with their parents). */
 const PURGE_BY_ORG: { table: string; index: string }[] = [
   { table: "artifacts", index: "by_org_updated" },
+  { table: "wordpressDraftOperations", index: "by_org_created" },
   { table: "approvals", index: "by_org_status" },
   { table: "actionCards", index: "by_org_status" },
   { table: "chatMessages", index: "by_org_created" },

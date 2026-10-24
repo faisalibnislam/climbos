@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { normalizeWordPressSiteUrl, probeWordPressCredentials } from "@shared/integrations/wordpress";
+import { normalizeWordPressSiteUrl, probeWordPressCredentials, wordpressArticleHtml } from "@shared/integrations/wordpress";
 
 const credentials = { siteUrl: "https://example.com/", username: "editor", applicationPassword: "abcd efgh ijkl mnop" };
 const userResponse = (capabilities: Record<string, unknown> = { edit_posts: true }) => new Response(JSON.stringify({ id: 7, name: "Site Editor", slug: "editor", capabilities }), { status: 200, headers: { "content-type": "application/json" } });
@@ -47,5 +47,11 @@ describe("WordPress connection probe", () => {
       fetchImpl: async () => userResponse({ read: true, edit_posts: false }),
     });
     expect(readonly).toEqual({ ok: false, reason: "permission" });
+  });
+
+  it("renders article Markdown as safe HTML without passing raw HTML or non-HTTPS links through", () => {
+    expect(wordpressArticleHtml('# Guide\n\nUse **strong copy** and [the guide](https://example.com/start).\n\n<script>alert(1)</script>\n\n- First\n- Second\n\n[unsafe](javascript:alert(1))')).toBe(
+      '<h1>Guide</h1>\n<p>Use <strong>strong copy</strong> and <a href="https://example.com/start">the guide</a>.</p>\n<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>\n<ul>\n<li>First</li>\n<li>Second</li>\n</ul>\n<p>[unsafe](javascript:alert(1))</p>',
+    );
   });
 });

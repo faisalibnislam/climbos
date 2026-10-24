@@ -55,7 +55,7 @@ describe("WordPress connection", () => {
 
     const item = (await owner.client.query(api.connections.list, { slug })).items.find((connection) => connection.provider === "wordpress");
     expect(item?.connection).toMatchObject({ status: "connected", externalAccountId: "https://example.com" });
-    expect(item?.capabilities.find((capability) => capability.capability === "wordpress.create_draft")?.state).toBe("unavailable");
+    expect(item?.capabilities.find((capability) => capability.capability === "wordpress.create_draft")?.state).toBe("ready");
 
     const stored = await t.run(async (ctx) => {
       const connection = await ctx.db.query("connections").withIndex("by_org_provider", (q) => q.eq("orgId", orgId).eq("provider", "wordpress")).first();

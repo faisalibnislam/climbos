@@ -216,7 +216,7 @@ export const list = query({
             provider,
             group,
             name: "WordPress",
-            description: "Connect a WordPress user with a revocable Application Password. ClimbOS verifies HTTPS access and the ability to edit posts.",
+            description: "Connect a WordPress user with a revocable Application Password. ClimbOS can send separately confirmed articles as private drafts and verify the saved status.",
             connection: conn
               ? { status: conn.status, accountLabel: conn.accountLabel ?? null, externalAccountId: conn.externalAccountId ?? null, lastSyncAt: conn.lastSyncAt ?? null, expiresAt: null, isFixture: conn.isFixture, lastSyncError: conn.lastSyncError ?? null }
               : null,
@@ -224,7 +224,7 @@ export const list = query({
             capabilities: [
               { capability: "wordpress.manual_export", label: "Article draft and export", state: "ready" as const, reason: "You can always review and export an approved ClimbOS article.", fix: "" },
               { capability: "wordpress.authenticate", label: "Secure WordPress connection", state: conn?.status === "connected" ? "ready" as const : "setup_needed" as const, reason: conn?.status === "connected" ? "The stored Application Password was accepted and the account can edit posts." : "No WordPress account is connected.", fix: conn?.status === "connected" ? "" : "Connect using a revocable Application Password over HTTPS." },
-              { capability: "wordpress.create_draft", label: "Create a WordPress draft", state: "unavailable" as const, reason: "WordPress draft creation is not enabled yet; this connection currently verifies access only.", fix: "Use the signed content approval webhook or export pack for now." },
+              { capability: "wordpress.create_draft", label: "Create a WordPress draft", state: conn?.status === "connected" ? "ready" as const : "setup_needed" as const, reason: conn?.status === "connected" ? "Approved blog articles can be sent as private WordPress drafts after a separate confirmation." : "Connect WordPress to create a private draft from an approved article.", fix: conn?.status === "connected" ? "" : "Connect using a revocable Application Password over HTTPS." },
             ],
           };
         }

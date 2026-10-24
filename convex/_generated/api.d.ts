@@ -120,6 +120,8 @@ import type * as targets from "../targets.js";
 import type * as team from "../team.js";
 import type * as translate from "../translate.js";
 import type * as webhooks from "../webhooks.js";
+import type * as wordpressDraftActions from "../wordpressDraftActions.js";
+import type * as wordpressDrafts from "../wordpressDrafts.js";
 import type * as workspace from "../workspace.js";
 
 import type {
@@ -241,6 +243,8 @@ declare const fullApi: ApiFromModules<{
   team: typeof team;
   translate: typeof translate;
   webhooks: typeof webhooks;
+  wordpressDraftActions: typeof wordpressDraftActions;
+  wordpressDrafts: typeof wordpressDrafts;
   workspace: typeof workspace;
 }>;
 
