@@ -13,6 +13,7 @@ import { ChannelScorecard } from "@/components/app/plan/ChannelScorecard";
 import { GeneratePlanButton, PlanReviewCard, StrategyRunWatcher } from "@/components/app/plan/PlanActions";
 import { PlanToAirly } from "@/components/app/connections/AirlyApps";
 import type { Economics } from "../../../../../shared/agents/economics";
+import type { KnowledgeReferenceSet } from "../../../../../shared/knowledge/retrieve";
 import { FunnelNumbers, SharpenPlan } from "@/components/app/plan/SharpenPlan";
 import type { QualityFix, QualityState } from "../../../../../shared/agents/quality";
 import type { Diagnosis } from "../../../../../shared/agents/diagnosis";
@@ -298,7 +299,7 @@ function PlanScreen({ slug }: { slug: string }) {
       )}
 
       <BusinessInsights insights={plan.insights} />
-      {s ? <Sources sources={plan.sources} web={(s.expert as { webSources?: { url: string; title?: string }[] } | null)?.webSources ?? []} /> : null}
+      {s ? <Sources sources={plan.sources} web={(s.expert as { webSources?: { url: string; title?: string }[] } | null)?.webSources ?? []} knowledge={(s.expert as { snapshot?: { knowledgeReferences?: KnowledgeReferenceSet } } | null)?.snapshot?.knowledgeReferences} /> : null}
       {s ? <Discussion slug={slug} subjectType="strategy" subjectId={s.id} title={`Growth plan v${s.version}`} href={`/app/${slug}/plan`} /> : null}
         </TabsContent>
       </Tabs>

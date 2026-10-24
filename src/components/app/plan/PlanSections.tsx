@@ -43,6 +43,7 @@ import { HorizontalBarChart } from "@/components/ds/charts";
 import { cn } from "@/lib/utils";
 import { microsToCreditsLabel, minorToDisplay, relativeTime } from "../money";
 import { microsToCredits } from "../../../../shared/economics/credits";
+import type { KnowledgeReferenceSet } from "../../../../shared/knowledge/retrieve";
 import { RUN_STATUS_LABEL, RUN_STATUS_TONE } from "../content/RunProgress";
 import { ErrorCallout, PERMISSION_WHO, RoleName, useNow } from "../content/shared";
 import { ROLE_META } from "../roles";
@@ -977,7 +978,7 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
 
 /* ---------------- Sources ---------------- */
 
-export function Sources({ sources, web = [] }: { sources: PlanView["sources"]; web?: { url: string; title?: string }[] }) {
+export function Sources({ sources, web = [], knowledge }: { sources: PlanView["sources"]; web?: { url: string; title?: string }[]; knowledge?: KnowledgeReferenceSet }) {
   return (
     <PlanSection
       id="sources-heading"
@@ -1011,6 +1012,45 @@ export function Sources({ sources, web = [] }: { sources: PlanView["sources"]; w
             {web.map((w) => (
               <li key={w.url} className="min-w-0 max-w-full">
                 <LinkChip url={w.url} label={w.title ? `${w.title} · ${hostOf(w.url)}` : undefined} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {knowledge?.records.length ? (
+        <div className="flex flex-col gap-3 border-t border-line pt-3">
+          <div>
+            <FieldLabel icon={BookOpenCheck}>Reference guidance used</FieldLabel>
+            <p className="mt-1 text-xs text-ink-3">
+              These curated references helped shape the plan. They are not evidence about your business, and proposed scenarios are unvalidated hypotheses.
+            </p>
+            <p className="mt-1 text-xs text-ink-3">{knowledge.edition} · research cutoff {knowledge.researchCutoff}</p>
+          </div>
+          <ul className="flex flex-col divide-y divide-line">
+            {knowledge.records.map((record) => (
+              <li key={record.id} className="flex flex-col gap-1.5 py-2 first:pt-0 last:pb-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={record.kind === "industry_playbook" || record.kind === "scenario" ? "amber" : "neutral"}>
+                    {record.kind === "industry_playbook" || record.kind === "scenario" ? "Proposed hypothesis" : "Reference guidance"}
+                  </Badge>
+                  {record.businessType ? <Badge>{record.businessType}</Badge> : null}
+                  {record.industry ? <Badge>{record.industry}</Badge> : null}
+                </div>
+                <p className="text-sm font-medium text-ink">{record.heading}</p>
+                <p className="text-xs text-ink-3">{record.path} · reference checksum {record.sha256.slice(0, 12)}</p>
+                {record.sources.length ? (
+                  <ul className="flex flex-col gap-1 text-xs">
+                    {record.sources.map((source) => (
+                      <li key={source.registryId} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <a href={source.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                          {source.title}
+                        </a>
+                        <span className="text-ink-3">Checked {source.retrievedAt} · {source.freshness.status}</span>
+                        {source.claims[0]?.scope ? <span className="text-ink-3">Scope: {source.claims[0].scope}</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                ) : <p className="text-xs text-ink-3">Curated library reference; no external source was attached.</p>}
               </li>
             ))}
           </ul>
