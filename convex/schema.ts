@@ -1374,7 +1374,7 @@ export default defineSchema({
         /** What this plan was built from (spec §04), for tracing results back to inputs. */
         snapshot: v.optional(
           v.object({
-            snapshotVersion: v.union(v.literal(1), v.literal(2), v.literal(3), v.literal(4), v.literal(5), v.literal(6), v.literal(7), v.literal(8), v.literal(9), v.literal(10), v.literal(11)),
+            snapshotVersion: v.union(v.literal(1), v.literal(2), v.literal(3), v.literal(4), v.literal(5), v.literal(6), v.literal(7), v.literal(8), v.literal(9), v.literal(10), v.literal(11), v.literal(12)),
             snapshotId: v.string(),
             capturedAt: v.number(),
             engine: v.string(),
@@ -1389,6 +1389,7 @@ export default defineSchema({
             businessFactVersions: v.optional(v.array(v.object({ id: v.string(), updatedAt: v.number() }))),
             brandProfile: v.optional(v.any()),
             ownerAcquisitionTypes: v.optional(v.union(v.array(v.string()), v.null())),
+            ownerAcquisitionDimensions: v.optional(v.any()),
             staleFactIds: v.array(v.string()),
             contradictions: v.array(v.object({ subject: v.string(), values: v.array(v.string()), factIds: v.array(v.string()) })),
             insightsChars: v.number(),
