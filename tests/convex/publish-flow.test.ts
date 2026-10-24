@@ -103,6 +103,34 @@ describe("publishing lifecycle", () => {
     expect(stub.posts()).toBe(2);
   });
 
+  it("rechecks risky claims after an owner edits a draft instead of clearing the flags", async () => {
+    const t = setup();
+    const w = await workspace(t, "claim-review@flow.example");
+    const artifactId = await draft(t, w.orgId, "facebook");
+
+    await w.owner.client.mutation(api.content.edit, {
+      slug: w.slug,
+      artifactId,
+      body: "We guarantee a 2x faster result for every customer.",
+      hashtags: [],
+    });
+
+    const updated = await w.owner.client.query(api.content.get, { slug: w.slug, artifactId });
+    expect(updated.current?.unsupportedClaims).toEqual(expect.arrayContaining([
+      expect.stringMatching(/guarantee/i),
+    ]));
+    expect(updated.status).toBe("in_review");
+
+    await w.owner.client.mutation(api.content.edit, {
+      slug: w.slug,
+      artifactId,
+      body: "A result designed for your team.",
+      hashtags: [],
+    });
+    const corrected = await w.owner.client.query(api.content.get, { slug: w.slug, artifactId });
+    expect(corrected.current?.unsupportedClaims).toEqual([]);
+  });
+
   it("a repeat call on an already-attempted approval settles the post instead of leaving it sending", async () => {
     const t = setup();
     const w = await workspace(t);

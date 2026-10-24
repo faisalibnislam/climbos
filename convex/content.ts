@@ -16,6 +16,7 @@ import { recordVoiceSample } from "./brand";
 import { findingsFor, plannedSteps } from "../shared/progress";
 import { buildManualExportPack, manualExportToCsv, type DraftPlatform } from "../shared/integrations/drafts";
 import { contentHash } from "../shared/policy";
+import { findRiskyClaims } from "../shared/ai/tasks";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
@@ -246,6 +247,11 @@ export const edit = mutation({
     const imageStorageId = asset ? asset.storageId : args.removeImage ? undefined : prev?.imageStorageId;
     const imageR2Key = asset ? asset.r2Key : args.removeImage ? undefined : prev?.imageR2Key;
     const imageLabel = asset ? assetPostLabel(asset) : imageStorageId || imageR2Key ? prev?.imageLabel : undefined;
+    // Re-run the same deterministic claim screen after every owner edit. An
+    // edit is not evidence that a performance, guarantee, scale or medical
+    // claim has become supportable; stale warnings must not disappear silently.
+    const unsupportedClaims = findRiskyClaims(`${args.headline ?? ""} ${body} ${args.callToAction ?? ""} ${args.altText ?? ""}`)
+      .map((claim) => `Check claim: "${claim}"`);
     const ch = await contentHash({
       headline: args.headline,
       body,
@@ -274,7 +280,7 @@ export const edit = mutation({
       imagePrompt: asset ? undefined : prev?.imagePrompt,
       imageLabel,
       claimFactIds: prev?.claimFactIds ?? [],
-      unsupportedClaims: [],
+      unsupportedClaims,
       contentHash: ch,
       editedByUser: user._id,
       createdAt: now,
