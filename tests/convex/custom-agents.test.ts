@@ -191,6 +191,93 @@ describe("custom specialist profiles", () => {
     expect(card?.blockedReason).toContain("per-run budget");
   });
 
+  it("keeps additional reservations inside the specialist request ceiling", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "additional-budget-specialist@example.com", { anonymous: true });
+    const { slug } = await owner.client.mutation(api.demo.createDemoWorkspace, {});
+    const { id } = await owner.client.mutation(api.customAgents.create, { slug, ...profile });
+    const { messageId } = await owner.client.mutation(api.workspace.runCustomAgent, { slug, agentId: id, request: "Review our acquisition results." });
+    const runId = await t.run(async (ctx) => (await ctx.db.get(messageId))?.runId);
+    if (!runId) throw new Error("Expected specialist request run");
+    const before = await t.run(async (ctx) => ctx.db.get(runId));
+    const result = await t.mutation(internal.engine.reserveAdditional, { runId, costMicros: 20_000_000 });
+    const after = await t.run(async (ctx) => ctx.db.get(runId));
+
+    expect(result).toMatchObject({ ok: false, message: expect.stringContaining("specialist request limit") });
+    expect(after?.estimateMicros).toBe(before?.estimateMicros);
+  });
+
+  it("keeps additional reservations inside the specialist monthly ceiling", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "additional-monthly-budget-specialist@example.com", { anonymous: true });
+    const { slug } = await owner.client.mutation(api.demo.createDemoWorkspace, {});
+    const { id } = await owner.client.mutation(api.customAgents.create, { slug, ...profile, maxRunCredits: 100, monthlyBudgetCredits: 1_000 });
+    const runId = await t.run(async (ctx) => {
+      const org = (await ctx.db.query("organizations").withIndex("by_slug", (q) => q.eq("slug", slug)).unique())!;
+      const period = (await ctx.db.query("usagePeriods").withIndex("by_org_period", (q) => q.eq("orgId", org._id)).first())!;
+      const now = Date.now();
+      await ctx.db.insert("workflowRuns", {
+        orgId: org._id,
+        customAgentId: id,
+        kind: "climb_chat",
+        title: "Prior specialist usage",
+        status: "verified",
+        input: "{}",
+        roles: [],
+        estimateMicros: 9_990_000,
+        actualMicros: 9_990_000,
+        rateVersionId: "verified-2026-10-17",
+        entitlementVersionId: "ent-credits-2026-10-18",
+        routingVersionId: "r1",
+        budget: { modelSteps: 1, researchTools: 0, repairs: 0 },
+        used: { modelSteps: 1, researchTools: 0, repairs: 0 },
+        isFixture: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const run = await ctx.db.insert("workflowRuns", {
+        orgId: org._id,
+        customAgentId: id,
+        customAgentSnapshot: {
+          archetypeId: profile.archetypeId,
+          name: profile.name,
+          objective: profile.objective,
+          instructions: profile.instructions,
+          allowedActions: profile.allowedActions,
+          knowledge: profile.knowledge,
+          permission: profile.permission,
+          maxRunCredits: 100,
+          monthlyBudgetCredits: 1_000,
+          maxActionsPerRun: profile.maxActionsPerRun,
+          successMetric: profile.successMetric,
+          role: "ceo",
+          profileUpdatedAt: now,
+        },
+        kind: "climb_chat",
+        title: "Current specialist request",
+        status: "preparing",
+        input: "{}",
+        roles: [],
+        estimateMicros: 10_000,
+        actualMicros: 0,
+        rateVersionId: "verified-2026-10-17",
+        entitlementVersionId: "ent-credits-2026-10-18",
+        routingVersionId: "r1",
+        budget: { modelSteps: 1, researchTools: 0, repairs: 0 },
+        used: { modelSteps: 1, researchTools: 0, repairs: 0 },
+        isFixture: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const reservationId = await ctx.db.insert("usageReservations", { orgId: org._id, periodId: period._id, runId: run, purpose: "climb_chat", walletMicros: 10_000, topupMicros: 0, meters: {}, status: "held", createdAt: now });
+      await ctx.db.patch(run, { reservationId });
+      return run;
+    });
+
+    const result = await t.mutation(internal.engine.reserveAdditional, { runId, costMicros: 20_000 });
+    expect(result).toMatchObject({ ok: false, message: expect.stringContaining("specialist monthly budget") });
+  });
+
   it("enforces monthly caps against completed usage before reserving another run", async () => {
     const t = setup();
     const owner = await asNewUser(t, "monthly-budget-specialist@example.com", { anonymous: true });

@@ -2020,6 +2020,7 @@ export default defineSchema({
       knowledge: v.array(v.string()),
       permission: v.union(v.literal("read_only"), v.literal("draft"), v.literal("request_approval")),
       maxRunCredits: v.number(),
+      monthlyBudgetCredits: v.optional(v.number()),
       maxActionsPerRun: v.number(),
       successMetric: v.string(),
       role: agentRoleValidator,

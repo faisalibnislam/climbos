@@ -162,6 +162,7 @@ export async function createRunWithReservation(
       knowledge: profile.knowledge,
       permission: profile.permission,
       maxRunCredits: profile.maxRunCredits,
+      monthlyBudgetCredits: profile.monthlyBudgetCredits,
       maxActionsPerRun: profile.maxActionsPerRun,
       successMetric: profile.successMetric,
       role: archetype.role,
@@ -422,17 +423,65 @@ export const failStep = internalMutation({
   },
 });
 
+/** Recheck immutable specialist ceilings when an active or retried run reserves more credits. */
+async function customAgentBudgetError(
+  ctx: MutationCtx,
+  run: Doc<"workflowRuns">,
+  additionalMicros: number,
+  replaceFailedEstimate = false,
+): Promise<string | null> {
+  if (!run.customAgentId || !run.customAgentSnapshot) return null;
+  const parent = run.customAgentParentRunId ? await ctx.db.get(run.customAgentParentRunId) : run;
+  if (!parent || parent.orgId !== run.orgId || parent.customAgentId !== run.customAgentId || parent.customAgentParentRunId) {
+    return "Specialist request budget could not be verified.";
+  }
+  const siblings = await ctx.db.query("workflowRuns")
+    .withIndex("by_org_custom_agent_parent", (q) => q.eq("orgId", run.orgId).eq("customAgentId", run.customAgentId!).eq("customAgentParentRunId", parent._id))
+    .take(101);
+  if (siblings.length > 100) return "This specialist request reached the safe action-count limit.";
+  const requestRuns = [parent, ...siblings];
+  const requestCommitted = requestRuns.reduce((sum, item) => {
+    const committed = item._id === run._id && replaceFailedEstimate ? item.actualMicros : Math.max(item.actualMicros, item.estimateMicros);
+    return sum + committed;
+  }, 0);
+  const runCapMicros = creditsToMicros(run.customAgentSnapshot.maxRunCredits);
+  if (!Number.isSafeInteger(runCapMicros) || requestCommitted + additionalMicros > runCapMicros) {
+    return `This would exceed ${run.customAgentSnapshot.maxRunCredits}-credit specialist request limit.`;
+  }
+
+  const monthlyCapCredits = run.customAgentSnapshot.monthlyBudgetCredits;
+  if (monthlyCapCredits !== undefined) {
+    const monthStart = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1);
+    const monthlyRuns = await ctx.db.query("workflowRuns")
+      .withIndex("by_org_custom_agent", (q) => q.eq("orgId", run.orgId).eq("customAgentId", run.customAgentId!).gte("createdAt", monthStart))
+      .take(501);
+    if (monthlyRuns.length > 500) return "This specialist reached the monthly run limit for safe budget accounting.";
+    const usedMicros = monthlyRuns.reduce((sum, item) => {
+      if (item._id === run._id && replaceFailedEstimate) return sum + item.actualMicros;
+      const active = ["cost_reserved", "preparing", "needs_approval", "approved", "scheduled", "executing", "paused"].includes(item.status);
+      return sum + (active ? Math.max(item.actualMicros, item.estimateMicros) : item.actualMicros);
+    }, 0);
+    if (usedMicros + additionalMicros > creditsToMicros(monthlyCapCredits)) {
+      return `This would exceed the ${monthlyCapCredits}-credit specialist monthly budget.`;
+    }
+  }
+  return null;
+}
+
 /** Reserve more before a fallback route. Fails closed when capacity is gone. */
 export const reserveAdditional = internalMutation({
   args: { runId: v.id("workflowRuns"), costMicros: v.number() },
   handler: async (ctx, { runId, costMicros }) => {
     const run = await ctx.db.get(runId);
     if (!run?.reservationId) return { ok: false as const, message: "No reservation for this run." };
+    if (!Number.isSafeInteger(costMicros) || costMicros <= 0) return { ok: false as const, message: "Additional cost must be a positive whole number of microcredits." };
     const reservation = await ctx.db.get(run.reservationId);
     const period = reservation ? await ctx.db.get(reservation.periodId) : null;
     if (!reservation || !period || reservation.status !== "held") return { ok: false as const, message: "Reservation is not active." };
     const org = await ctx.db.get(run.orgId);
     if (!org) return { ok: false as const, message: "Workspace not found." };
+    const budgetError = await customAgentBudgetError(ctx, run, costMicros);
+    if (budgetError) return { ok: false as const, message: budgetError };
     const decision = await tryReserveCredits(ctx, { org, period, costMicros, meters: {} });
     if (!decision.ok) return { ok: false as const, message: decision.message };
     await ctx.db.patch(reservation._id, {
@@ -581,6 +630,8 @@ export async function reopenFailedRun(ctx: MutationCtx, run: Doc<"workflowRuns">
 
   // Reserve the rest of the estimate (at least a third of it: the unfinished step runs again).
   const remaining = Math.max(run.estimateMicros - run.actualMicros, Math.ceil(run.estimateMicros / 3));
+  const budgetError = await customAgentBudgetError(ctx, run, remaining, true);
+  if (budgetError) throw appError("LIMIT_REACHED", budgetError, { reason: "custom_agent_budget" });
   const old = run.reservationId ? await ctx.db.get(run.reservationId) : null;
   const settled = run.settled ?? { micros: 0, searchCalls: 0, imageAttempts: 0, scrapeCredits: 0 };
   const meters: PartialMeters = {};
