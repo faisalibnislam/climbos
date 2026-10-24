@@ -57,3 +57,21 @@ export function assertCurrentExpertGrowthPayload(plays: unknown, economics: unkn
     throw new Error(`Invalid current growth-plan play at ${issue?.path.join(".") || "plays"}: ${issue?.message ?? "invalid value"}`);
   }
 }
+
+export function serializeCurrentExpertGrowthPayload(plays: unknown, economics: unknown): string | undefined {
+  if (!economics || typeof economics !== "object" || !("sources" in economics)) return undefined;
+  assertCurrentExpertGrowthPayload(plays, economics);
+  return JSON.stringify({ plays, economics });
+}
+
+export function parseCurrentExpertGrowthPayload(value: unknown): { plays: unknown[]; economics: Record<string, unknown> } | null {
+  if (typeof value !== "string") return null;
+  try {
+    const parsed = JSON.parse(value) as { plays?: unknown; economics?: unknown };
+    if (!Array.isArray(parsed.plays) || !parsed.economics || typeof parsed.economics !== "object") return null;
+    assertCurrentExpertGrowthPayload(parsed.plays, parsed.economics);
+    return { plays: parsed.plays, economics: parsed.economics as Record<string, unknown> };
+  } catch {
+    return null;
+  }
+}

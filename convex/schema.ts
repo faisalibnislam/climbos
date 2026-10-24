@@ -1426,6 +1426,8 @@ export default defineSchema({
         plays: v.optional(v.array(v.any())),
         /** What one customer is worth (from the plays agent); the UI computes each play's cost per customer from it. */
         economics: v.optional(v.any()),
+        /** Strictly validated v8 growth-plan payload; legacy fields above remain for historical compatibility. */
+        growthPlanV8: v.optional(v.string()),
         /** Plan quality, separate from the run finishing (passed / provisional / needs_input / failed). */
         quality: v.optional(
           v.object({

@@ -74,6 +74,7 @@ describe("decision contract persistence", () => {
     });
     const saved = await t.run(async (ctx) => (await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", id)).first())!);
     expect(saved.expert?.version).toBe(7);
+    expect(saved.expert?.growthPlanV8).toBeUndefined();
     expect(saved.expert?.decision).toEqual(decision);
     expect(saved.expert?.decisionAnalysis).toMatchObject({
       snapshotId: null,

@@ -9,9 +9,23 @@ describe("saved expert plan compatibility", () => {
   });
 
   it("preserves a supported saved version", () => {
-    const current = { version: EXPERT_PLAN_SCHEMA_VERSION, diagnosis: "Current plan" };
+    const current = {
+      version: EXPERT_PLAN_SCHEMA_VERSION,
+      diagnosis: "Current plan",
+      growthPlanV8: JSON.stringify({ plays: [], economics: { revenuePerCustomerMonthUsd: 40, grossMargin: 0.7, monthlyChurn: 0.05, basis: "owner", sources: { revenue: { source: "owner", ref: "fact:revenue", quote: "" }, margin: { source: "owner", ref: "fact:margin", quote: "" }, churn: { source: "owner", ref: "fact:churn", quote: "" } } } }),
+      plays: [{ name: "Untrusted compatibility mirror" }],
+      economics: { revenuePerCustomerMonthUsd: -1 },
+    };
 
-    expect(readExpertPlan(current)).toEqual(current);
+    expect(readExpertPlan(current)).toMatchObject({ version: EXPERT_PLAN_SCHEMA_VERSION, diagnosis: "Current plan", plays: [], economics: { revenuePerCustomerMonthUsd: 40 } });
+  });
+
+  it("fails closed when a current-version growth payload cannot be parsed", () => {
+    const current = { version: EXPERT_PLAN_SCHEMA_VERSION, growthPlanV8: "not json", plays: [{ name: "Malformed mirror" }], economics: { revenuePerCustomerMonthUsd: 40 } };
+
+    expect(readExpertPlan(current)).toMatchObject({ version: EXPERT_PLAN_SCHEMA_VERSION, growthPlanInvalid: true });
+    expect(readExpertPlan(current)).not.toHaveProperty("plays");
+    expect(readExpertPlan(current)).not.toHaveProperty("economics");
   });
 
   it("preserves a future version without guessing how to migrate it", () => {

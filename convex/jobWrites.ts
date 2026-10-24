@@ -2,8 +2,8 @@ import { feedbackBrief } from "./feedback";
 import { EVIDENCE_KIND_LABEL, evidenceKind } from "../shared/agents/evidenceKind";
 import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 import { factFreshness } from "../shared/agents/factFreshness";
-import { EXPERT_PLAN_SCHEMA_VERSION } from "../shared/agents/planCompatibility";
-import { assertCurrentExpertGrowthPayload } from "../shared/agents/growthPlanPersistence";
+import { EXPERT_PLAN_SCHEMA_VERSION, LEGACY_EXPERT_PLAN_SCHEMA_VERSION } from "../shared/agents/planCompatibility";
+import { serializeCurrentExpertGrowthPayload } from "../shared/agents/growthPlanPersistence";
 import { planContentHash } from "./lib/planHash";
 import { resolveCites } from "../shared/agents/evidence";
 import { majorToMinor, minorToMajor } from "../shared/economics/currency";
@@ -469,7 +469,8 @@ export const saveStrategy = internalMutation({
             expert: (() => {
               const x = s as unknown as StrategyV2;
               const savedPlays = (x.plays ?? []).slice(0, 4);
-              assertCurrentExpertGrowthPayload(savedPlays, x.economics);
+              const expertPlays = withPlayIds(savedPlays.map((play) => ({ ...play, actionReadiness: actionReadinessOf(play.actionContract) })), prior);
+              const growthPlanV8 = serializeCurrentExpertGrowthPayload(expertPlays, x.economics);
               const ownerEconomics = x.snapshot?.ownerEconomics as { newCustomersPerMonth?: unknown } | undefined;
               const monthlyBudget = typeof x.snapshot?.monthlyAdBudget === "number" ? x.snapshot.monthlyAdBudget : minorToMajor(goal.monthlyAdBudgetMinor, goal.currency);
               const decisionAnalysis = x.decision && x.economics && savedPlays.length
@@ -481,7 +482,7 @@ export const saveStrategy = internalMutation({
                   })
                 : undefined;
               return {
-                version: EXPERT_PLAN_SCHEMA_VERSION,
+                version: growthPlanV8 ? EXPERT_PLAN_SCHEMA_VERSION : LEGACY_EXPERT_PLAN_SCHEMA_VERSION,
                 diagnosis: x.diagnosis,
                 affordableCac: x.affordableCac,
                 notDoing: x.notDoing.slice(0, 10),
@@ -490,8 +491,9 @@ export const saveStrategy = internalMutation({
                 phases: x.phases.slice(0, 4),
                 weekOneChecklist: x.weekOneChecklist.slice(0, 7),
                 risks: x.risks.slice(0, 6),
-                plays: withPlayIds(savedPlays.map((play) => ({ ...play, actionReadiness: actionReadinessOf(play.actionContract) })), prior),
+                plays: expertPlays,
                 economics: x.economics,
+                ...(growthPlanV8 ? { growthPlanV8 } : {}),
                 ...(x.decision ? { decision: x.decision } : {}),
                 ...(decisionAnalysis ? { decisionAnalysis: { snapshotId: x.snapshot?.snapshotId ?? null, ...decisionAnalysis } } : {}),
                 ...(x.snapshot ? { snapshot: x.snapshot } : {}),
