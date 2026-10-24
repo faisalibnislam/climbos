@@ -16,6 +16,7 @@ import { resultsBrief } from "./playResults";
 import { customerConcentration } from "../shared/attribution/concentration";
 import { refundExposure } from "../shared/attribution/refundExposure";
 import { platformConcentration } from "../shared/attribution/platformConcentration";
+import { summarizeAiReferralRows, type AiReferralMetricRow } from "../shared/integrations/ga4";
 import { shortenable, utmFor, withUtm } from "../shared/links";
 import { createLink } from "./links";
 import type {
@@ -187,12 +188,22 @@ export const jobContext = internalQuery({
           reportedSpend: spendRows.filter((row) => !row.isFixture).map((row) => ({ platform: row.platform, date: row.date, currency: row.currency, spendMinor: row.spendMinor, ...(row.spendOrigin ? { origin: row.spendOrigin } : {}) })),
         })
       : null;
+    const aiReferralTo = new Date(Date.now()).toISOString().slice(0, 10);
+    const aiReferralFrom = new Date(Date.now() - 90 * DAY).toISOString().slice(0, 10);
+    const aiReferralRows: AiReferralMetricRow[] = [];
+    for (const metricKey of ["ai_referral_sessions", "ai_referral_key_events"] as const) {
+      aiReferralRows.push(...(await ctx.db.query("metricDaily")
+        .withIndex("by_org_metric_date", (q) => q.eq("orgId", org._id).eq("metricKey", metricKey).gte("date", aiReferralFrom).lte("date", aiReferralTo))
+        .take(1_000)));
+    }
+    const aiReferralSignals = { from: aiReferralFrom, to: aiReferralTo, providers: summarizeAiReferralRows(aiReferralRows) };
     const refundExposureSignal = concentrationCurrency
       ? refundExposure(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
       : null;
     return {
       customerConcentration: concentration,
       platformSourceConcentration,
+      aiReferralSignals,
       refundExposure: refundExposureSignal,
       audience: { contacts, consented },
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },

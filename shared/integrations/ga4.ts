@@ -30,6 +30,40 @@ export interface Ga4DailyRow {
   purchaseRevenue: number;
 }
 
+export interface AiReferralMetricRow {
+  metricKey: string;
+  value: number;
+  source: string;
+  kind: string;
+  isFixture: boolean;
+  channel?: string;
+  ingestedAt: number;
+}
+
+export interface AiReferralProviderSummary {
+  provider: AiReferralProvider;
+  sessions: number;
+  keyEvents: number;
+  freshness: number;
+}
+
+export function summarizeAiReferralRows(rows: readonly AiReferralMetricRow[]): AiReferralProviderSummary[] {
+  const providers = new Map<AiReferralProvider, AiReferralProviderSummary>();
+  for (const row of rows) {
+    if (row.source !== "ga4" || row.kind !== "observed" || row.isFixture || !row.channel?.startsWith("AI referral / ")) continue;
+    const providerName = row.channel.slice("AI referral / ".length);
+    if (!(AI_REFERRAL_PROVIDERS as readonly string[]).includes(providerName) || !Number.isFinite(row.value) || row.value < 0) continue;
+    const provider = providerName as AiReferralProvider;
+    const summary = providers.get(provider) ?? { provider, sessions: 0, keyEvents: 0, freshness: 0 };
+    if (row.metricKey === "ai_referral_sessions") summary.sessions += row.value;
+    else if (row.metricKey === "ai_referral_key_events") summary.keyEvents += row.value;
+    else continue;
+    summary.freshness = Math.max(summary.freshness, row.ingestedAt);
+    providers.set(provider, summary);
+  }
+  return [...providers.values()].sort((a, b) => b.sessions - a.sessions || a.provider.localeCompare(b.provider));
+}
+
 export const AI_REFERRAL_PROVIDERS = ["ChatGPT", "Perplexity", "Claude", "Gemini", "Microsoft Copilot"] as const;
 export type AiReferralProvider = typeof AI_REFERRAL_PROVIDERS[number];
 

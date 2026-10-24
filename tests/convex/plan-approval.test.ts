@@ -212,8 +212,19 @@ describe("Plan approval starts the work", () => {
     expect(pending.strategy?.status).toBe("needs_approval");
     expect(pending.otherVersion?.id).toBe(s._id);
     // Content jobs read the approved plan, not the newer draft.
+    const referralDate = new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10);
+    await t.mutation(internal.analytics.upsertDaily, {
+      orgId: w.orgId,
+      source: "ga4",
+      kind: "observed",
+      rows: [
+        { metricKey: "ai_referral_sessions", date: referralDate, value: 14, channel: "AI referral / Claude" },
+        { metricKey: "ai_referral_key_events", date: referralDate, value: 2, channel: "AI referral / Claude" },
+      ],
+    });
     const ctxOut = await t.query(internal.jobWrites.jobContext, { runId: planRun._id });
     expect(ctxOut?.strategy?._id).toBe(s._id);
+    expect(ctxOut?.aiReferralSignals.providers).toEqual([expect.objectContaining({ provider: "Claude", sessions: 14, keyEvents: 2 })]);
   });
 
   it("tells owners once when a job fails, even if a retry fails again", async () => {

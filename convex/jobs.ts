@@ -629,6 +629,15 @@ function fixtureCtx(job: JobCtx, extra: Partial<FixtureContext> = {}): FixtureCo
   };
 }
 
+function aiReferralSignalsLine(signal: JobCtx["aiReferralSignals"]): string {
+  const observed = signal.providers.filter((row) => row.sessions > 0 || row.keyEvents > 0);
+  if (!observed.length) {
+    return `GA4 AI-ASSISTANT REFERRALS (${signal.from} through ${signal.to}): no recognized referral rows were found. This covers five recognized assistant source families and medium=referral only; unknown labels and Google organic are not classified, and this does not prove AI traffic is absent.`;
+  }
+  const rows = observed.map((row) => `${row.provider}: ${row.sessions} sessions, ${row.keyEvents} owner-configured GA4 key events (data last ingested ${new Date(row.freshness).toISOString().slice(0, 10)})`);
+  return `GA4 AI-ASSISTANT REFERRALS (${signal.from} through ${signal.to}; source-reported observations): ${rows.join("; ")}. This covers five recognized assistant source families and medium=referral only. Key events depend on owner GA4 settings. Sessions and events are not proof of qualified customers, revenue, or causation. Google Search AI visibility is measured separately in Search Console when that report is available.`;
+}
+
 function businessBrief(job: JobCtx, includeSpecialist = true): string {
   const b = job.business;
   const truth = [
@@ -657,6 +666,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
   ];
   const performance = [
     ownerFunnelLine(b?.funnel),
+    aiReferralSignalsLine(job.aiReferralSignals),
     customerConcentrationLine(job.customerConcentration),
     channelOutcomesLine(job.platformSourceConcentration, b?.unitEconomics?.grossMargin),
     refundExposureLine(job.refundExposure),
