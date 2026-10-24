@@ -107,6 +107,12 @@ export interface CustomerGoalPace {
   targetCustomersPerMonth: number;
   gapPerMonth: number;
   visitorToCustomerRate: { observed: number; likely: { low: number; high: number } } | null;
+  /** Visitors per month needed if the observed conversion rate held; posterior-rate scenarios are not forecasts. */
+  visitorVolumeScenario?: {
+    currentPerMonth: number;
+    atObservedConversionPerMonth: number | null;
+    atLikelyConversionRangePerMonth: { low: number; high: number | null };
+  };
   /** Posterior probability that the current visitor volume cannot meet the goal at the observed funnel rate. */
   probabilityCurrentReachBelowGoal: number | null;
   /** These figures describe the current funnel and are not a forecast or proof of cause. */
@@ -275,11 +281,22 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
       : null;
     const visitorsPerMonth = f.visitors !== undefined ? perMonth(f.visitors) : 0;
     const requiredRate = visitorsPerMonth > 0 ? Math.min(1, ctx.customerTargetPerMonth / visitorsPerMonth) : null;
+    const observedRate = visitorToCustomerRate ? visitorToCustomerRate.successes / visitorToCustomerRate.trials : null;
     customerGoalPace = {
       currentCustomersPerMonth,
       targetCustomersPerMonth: r2(ctx.customerTargetPerMonth),
       gapPerMonth: r2(ctx.customerTargetPerMonth - currentCustomersPerMonth),
-      visitorToCustomerRate: visitorToCustomerRate ? { observed: r2(visitorToCustomerRate.successes / visitorToCustomerRate.trials), likely: { low: r2(visitorToCustomerRate.low), high: r2(visitorToCustomerRate.high) } } : null,
+      visitorToCustomerRate: visitorToCustomerRate ? { observed: r2(observedRate!), likely: { low: r2(visitorToCustomerRate.low), high: r2(visitorToCustomerRate.high) } } : null,
+      ...(visitorToCustomerRate && ctx.customerTargetPerMonth > 0 ? {
+        visitorVolumeScenario: {
+          currentPerMonth: r2(visitorsPerMonth),
+          atObservedConversionPerMonth: observedRate! > 0 ? r2(ctx.customerTargetPerMonth / observedRate!) : null,
+          atLikelyConversionRangePerMonth: {
+            low: r2(ctx.customerTargetPerMonth / visitorToCustomerRate.high),
+            high: visitorToCustomerRate.low > 0 ? r2(ctx.customerTargetPerMonth / visitorToCustomerRate.low) : null,
+          },
+        },
+      } : {}),
       probabilityCurrentReachBelowGoal: visitorToCustomerRate && requiredRate !== null ? r2(probBelow(visitorToCustomerRate, requiredRate)) : null,
       basis: "owner_goal_and_counts_current_scenario",
     };
@@ -410,7 +427,7 @@ export function diagnosisBrief(d: Diagnosis): string {
     `- ${r.stage}: ${r.observed}${r.rate !== null && r.stage !== "capacity" && r.stage !== "retention" ? ` (${pct(r.rate)}${r.likely ? `, likely ${pct(r.likely.low)}–${pct(r.likely.high)}` : ""})` : ""}${r.reference ? `; reference ${r.reference}` : "; no reliable benchmark"}${r.definition ? `; owner-defined as ${JSON.stringify(r.definition)}` : ""}${r.immature ? "; period shorter than the sales cycle, purchases still arriving" : ""}${r.verdict === "weak" ? " → weak" : ""}`;
   const lever = d.leverage?.length ? [`Customers a month per +1 point at each link (arithmetic only; which change is attainable is unknown): ${d.leverage.map((l) => `${l.stage} +${l.perPoint}`).join(", ")}. The lowest rate isn't automatically the best fix: compare evidence, cost and delay.`] : [];
   const pace = d.customerGoalPace ? [
-    `CUSTOMER GOAL PACE (owner goal + current counts; scenario, not a forecast): about ${d.customerGoalPace.currentCustomersPerMonth}/month now against ${d.customerGoalPace.targetCustomersPerMonth}/month needed (${d.customerGoalPace.gapPerMonth > 0 ? `short by ${d.customerGoalPace.gapPerMonth}` : d.customerGoalPace.gapPerMonth < 0 ? `above by ${Math.abs(d.customerGoalPace.gapPerMonth)}` : "at the goal pace"}${d.customerGoalPace.gapPerMonth === 0 ? "" : "/month"}).${d.customerGoalPace.visitorToCustomerRate ? ` Visitor → paying-customer rate: ${pct(d.customerGoalPace.visitorToCustomerRate.observed)} observed, likely ${pct(d.customerGoalPace.visitorToCustomerRate.likely.low)}–${pct(d.customerGoalPace.visitorToCustomerRate.likely.high)} under a uniform-prior model; P(current visitor volume falls short of the goal) = ${d.customerGoalPace.probabilityCurrentReachBelowGoal === null ? "unknown" : pct(d.customerGoalPace.probabilityCurrentReachBelowGoal)}.` : " A comparable visitor → paying-customer count is unavailable, so no conversion scenario is calculated."} This compares the owner goal with current data; it does not show why the gap exists or which channel will close it.`,
+    `CUSTOMER GOAL PACE (owner goal + current counts; scenario, not a forecast): about ${d.customerGoalPace.currentCustomersPerMonth}/month now against ${d.customerGoalPace.targetCustomersPerMonth}/month needed (${d.customerGoalPace.gapPerMonth > 0 ? `short by ${d.customerGoalPace.gapPerMonth}` : d.customerGoalPace.gapPerMonth < 0 ? `above by ${Math.abs(d.customerGoalPace.gapPerMonth)}` : "at the goal pace"}${d.customerGoalPace.gapPerMonth === 0 ? "" : "/month"}).${d.customerGoalPace.visitorToCustomerRate ? ` Visitor → paying-customer rate: ${pct(d.customerGoalPace.visitorToCustomerRate.observed)} observed, likely ${pct(d.customerGoalPace.visitorToCustomerRate.likely.low)}–${pct(d.customerGoalPace.visitorToCustomerRate.likely.high)} under a uniform-prior model; P(current visitor volume falls short of the goal) = ${d.customerGoalPace.probabilityCurrentReachBelowGoal === null ? "unknown" : pct(d.customerGoalPace.probabilityCurrentReachBelowGoal)}.` : " A comparable visitor → paying-customer count is unavailable, so no conversion scenario is calculated."}${d.customerGoalPace.visitorVolumeScenario ? ` If today's conversion rate held, about ${d.customerGoalPace.visitorVolumeScenario.atObservedConversionPerMonth === null ? "no point estimate is available at the observed zero-customer rate" : `${d.customerGoalPace.visitorVolumeScenario.atObservedConversionPerMonth} visitors per month`} would match the goal pace, compared with ${d.customerGoalPace.visitorVolumeScenario.currentPerMonth} now. Using the likely conversion-rate range gives a scenario of ${d.customerGoalPace.visitorVolumeScenario.atLikelyConversionRangePerMonth.low} to ${d.customerGoalPace.visitorVolumeScenario.atLikelyConversionRangePerMonth.high ?? "no finite upper estimate"} visitors per month; this is a conversion-held-constant calculation, not a forecast.` : " A visitors-needed scenario is unavailable without a comparable visitor and customer count."} This compares the owner goal with current data; it does not show why the gap exists or which channel will close it.`,
   ] : [];
   if (d.status === "conflicting_inputs")
     return [`DIAGNOSIS (computed from the owner's numbers): the counts contradict each other, so no constraint is named. Resolve first:`, ...(d.conflicts ?? []).map((c) => `- ${c}`), "The first step must be checking these counts. Keep plays cheap and reversible until they're consistent."].join("\n");

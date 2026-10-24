@@ -126,7 +126,17 @@ describe("diagnosis", () => {
     const d = diagnose({ funnel: { periodDays: 30, visitors: 3_000, leads: 400, newCustomers: 100 }, types: ["local_services"], customerTargetPerMonth: 150 });
     expect(d).toMatchObject({ constraint: "unknown", status: "insufficient_evidence", customerGoalPace: { currentCustomersPerMonth: 100, targetCustomersPerMonth: 150, gapPerMonth: 50, visitorToCustomerRate: { observed: 0.03 } } });
     expect(d.customerGoalPace?.probabilityCurrentReachBelowGoal).toBeGreaterThan(0.9);
+    expect(d.customerGoalPace?.visitorVolumeScenario).toMatchObject({ currentPerMonth: 3_000, atObservedConversionPerMonth: 4_500 });
+    expect(d.customerGoalPace?.visitorVolumeScenario?.atLikelyConversionRangePerMonth.low).toBeLessThan(4_500);
+    expect(d.customerGoalPace?.visitorVolumeScenario?.atLikelyConversionRangePerMonth.high).toBeGreaterThan(4_500);
+    expect(diagnosisBrief(d)).toMatch(/If today's conversion rate held, about 4500 visitors per month would match the goal pace/);
     expect(diagnosisBrief(d)).toMatch(/does not show why the gap exists or which channel will close it/);
+  });
+  it("does not invent a point traffic target when the observed conversion rate is zero", () => {
+    const d = diagnose({ funnel: { periodDays: 30, visitors: 300, leads: 8, newCustomers: 0 }, types: ["local_services"], customerTargetPerMonth: 12 });
+    expect(d.customerGoalPace?.visitorVolumeScenario).toMatchObject({ currentPerMonth: 300, atObservedConversionPerMonth: null });
+    expect(d.customerGoalPace?.visitorVolumeScenario?.atLikelyConversionRangePerMonth.high).toBeGreaterThan(0);
+    expect(diagnosisBrief(d)).toMatch(/no point estimate is available at the observed zero-customer rate/);
   });
   it("no numbers → unknown, with what to measure (never a guess)", () => {
     const d = diagnose({});
