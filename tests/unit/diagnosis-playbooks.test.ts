@@ -35,6 +35,13 @@ describe("diagnosis", () => {
     expect(diagnose({ newCustomersPerMonth: Number.NaN })).toMatchObject({ constraint: "unknown", status: "conflicting_inputs" });
     expect(diagnose({ funnel: { visitors: 10, leads: 12 }, newCustomersPerMonth: 0 })).toMatchObject({ constraint: "unknown", status: "conflicting_inputs" });
   });
+  it("rejects an explicitly invalid measurement period instead of silently assuming 30 days", () => {
+    for (const periodDays of [0, -14, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const diagnosis = diagnose({ funnel: { periodDays, visitors: 300, leads: 30, activated: 15, newCustomers: 3 }, newCustomersPerMonth: 10 });
+      expect(diagnosis).toMatchObject({ constraint: "unknown", status: "conflicting_inputs" });
+      expect(diagnosis.conflicts).toContain("The measurement period must be a number of days greater than zero.");
+    }
+  });
   it("SaaS churn above the reference is a retention problem", () => {
     expect(diagnose({ monthlyChurn: 0.12, types: ["b2b_saas"] }).constraint).toBe("retention");
     expect(diagnose({ monthlyChurn: 0.12, types: ["local_services"] }).constraint).toBe("unknown");

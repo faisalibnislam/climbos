@@ -166,6 +166,7 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
   if (gt(f.newCustomers, f.leads) && f.leads !== undefined) conflicts.push(`${f.newCustomers} new customers but only ${f.leads} leads: some buyers may skip the lead step, or a count is off.`);
   if (gt(f.newCustomers, f.activated) && !gt(f.newCustomers, f.leads)) conflicts.push(`${f.newCustomers} paid but only ${f.activated} reached first value: either people pay before first value (then first value isn't on the path to paying) or a count is off.`);
   for (const [k, n] of Object.entries({ visitors: f.visitors, leads: f.leads, activated: f.activated, newCustomers: f.newCustomers })) if (n !== undefined && !(Number.isFinite(n) && n >= 0)) conflicts.push(`${k} must be a count of zero or more.`);
+  if (f.periodDays !== undefined && !(Number.isFinite(f.periodDays) && f.periodDays > 0)) conflicts.push("The measurement period must be a number of days greater than zero.");
   if (ctx.newCustomersPerMonth !== undefined && ctx.newCustomersPerMonth !== null && !(Number.isFinite(ctx.newCustomersPerMonth) && ctx.newCustomersPerMonth >= 0)) conflicts.push("Capacity must be a number of zero or more new customers a month.");
 
   // Capacity binds before anything else: more demand can't be served.
