@@ -3,6 +3,8 @@ import { EVIDENCE_KIND_LABEL, evidenceKind } from "../shared/agents/evidenceKind
 import { planContentHash } from "./lib/planHash";
 import { resolveCites } from "../shared/agents/evidence";
 import { majorToMinor } from "../shared/economics/currency";
+import { creditsToMicros } from "../shared/economics/credits";
+import { AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
 import { sha256Hex } from "../shared/policy";
 import { v } from "convex/values";
 import { resultsBrief } from "./playResults";
@@ -28,6 +30,7 @@ import { audit } from "./lib/audit";
 import { AUTO_RUN_KINDS, CHANNEL_JOBS, jobForAction, startCardRun, WISH_AUTO_BUDGET_MICROS } from "./lib/cards";
 import { estimateJobMicros, planJob } from "./lib/jobPlans";
 import { notifyOwners } from "./lib/notify";
+import { appError } from "./lib/tenancy";
 
 const DAY = 86_400_000;
 
@@ -655,11 +658,14 @@ export function seoToArtifacts(out: SeoBriefOutput): Omit<ArtifactInput, "imageS
 }
 
 export const saveChatResult = internalMutation({
-  args: { runId: v.id("workflowRuns"), messageId: v.id("chatMessages"), result: v.string(), isFixture: v.boolean() },
-  handler: async (ctx, { runId, messageId, result }) => {
+  args: { runId: v.id("workflowRuns"), messageId: v.id("chatMessages"), result: v.string(), isFixture: v.boolean(), customAgentId: v.optional(v.id("customAgents")) },
+  handler: async (ctx, { runId, messageId, result, customAgentId }) => {
     const run = await ensureRunOrg(ctx, runId);
     const org = await ctx.db.get(run.orgId);
     const out = JSON.parse(result) as ChatIntentOutput;
+    const specialist = customAgentId ? await ctx.db.get(customAgentId) : null;
+    if (customAgentId && (!specialist || specialist.orgId !== run.orgId || specialist.status !== "active")) throw appError("NOT_FOUND", "We couldn't find that specialist.");
+    const allowedActions = specialist ? new Set(specialist.allowedActions) : null;
     const now = Date.now();
     const cardIds: Id<"actionCards">[] = [];
     let priority = 1;
@@ -667,12 +673,21 @@ export const saveChatResult = internalMutation({
     let autoBudget = WISH_AUTO_BUDGET_MICROS;
     const started: string[] = [];
     const waiting: string[] = [];
-    for (const a of out.actions.slice(0, 4)) {
+    const budgetBlocked: string[] = [];
+    const permittedActions = out.actions.filter((action) => !allowedActions || allowedActions.has(action.kind));
+    const selectedActions = permittedActions.slice(0, specialist?.maxActionsPerRun ?? 4);
+    const restrictedCount = out.actions.length - permittedActions.length;
+    const cappedCount = permittedActions.length - selectedActions.length;
+    let specialistBudgetMicros = specialist ? creditsToMicros(specialist.maxRunCredits) : Number.POSITIVE_INFINITY;
+    if (specialist) specialistBudgetMicros = Math.max(0, specialistBudgetMicros - run.estimateMicros);
+    for (const a of selectedActions) {
       const job = jobForAction(a.kind, a.channel);
       const plan = job ? planJob(job, { quantity: a.quantity, images: job === "content_social" ? 1 : 0, channel: a.channel }, { fixture: org?.kind === "demo" }) : null;
       const external = a.kind === "ad_change" || a.kind === "email_send" || a.kind === "schedule_content";
       const isLink = a.kind === "connect_account" || a.kind === "set_up_autopilot";
       const cost = plan ? estimateJobMicros(plan) : 0;
+      const overSpecialistBudget = Boolean(specialist && cost > specialistBudgetMicros);
+      if (specialist && !overSpecialistBudget) specialistBudgetMicros -= cost;
       const cardId = await ctx.db.insert("actionCards", {
         orgId: run.orgId,
         title: a.title.slice(0, 120),
@@ -693,15 +708,17 @@ export const saveChatResult = internalMutation({
         payload: JSON.stringify({ job, channel: a.channel, quantity: a.quantity, brief: a.brief?.slice(0, 1500) ?? "" }),
         costEstimateMicros: cost,
         externalEffect: external,
-        status: job || a.kind === "note" || isLink ? "proposed" : "blocked",
-        blockedReason: job || a.kind === "note" || isLink ? undefined : "This needs a connected account and an approval rule before ClimbOS can prepare it.",
+        status: overSpecialistBudget ? "blocked" : job || a.kind === "note" || isLink ? "proposed" : "blocked",
+        blockedReason: overSpecialistBudget
+          ? `This exceeds ${specialist?.name}'s configured ${specialist?.maxRunCredits}-credit per-run budget.`
+          : job || a.kind === "note" || isLink ? undefined : "This needs a connected account and an approval rule before ClimbOS can prepare it.",
         priority: priority++,
         createdAt: now,
         updatedAt: now,
       });
       cardIds.push(cardId);
       const card = await ctx.db.get(cardId);
-      if (org && card && job && !external && AUTO_RUN_KINDS.has(a.kind) && cost <= autoBudget && run.createdBy) {
+      if (!specialist && org && card && job && !external && AUTO_RUN_KINDS.has(a.kind) && cost <= autoBudget && run.createdBy) {
         try {
           await startCardRun(ctx, { org, card, userId: run.createdBy, auto: true });
           autoBudget -= cost;
@@ -712,7 +729,10 @@ export const saveChatResult = internalMutation({
           if (message) await ctx.db.patch(cardId, { blockedReason: message });
         }
       }
-      if (job || isLink) waiting.push(a.title);
+      if (job || isLink) {
+        if (overSpecialistBudget) budgetBlocked.push(a.title);
+        else waiting.push(a.title);
+      }
     }
     await ctx.db.patch(messageId, { status: "done" });
     const status =
@@ -726,9 +746,10 @@ export const saveChatResult = internalMutation({
     await ctx.db.insert("chatMessages", {
       orgId: run.orgId,
       author: "climbos",
-      text: `${out.reply}${status}${out.followUp ? `\n\n${out.followUp}` : ""}`.slice(0, 1600),
+      customAgentId,
+      text: `${specialist ? selectedActions.length ? `${specialist.name} prepared suggestions for your review.` : `${specialist.name} could not prepare an action within its configured capabilities; no work was started.` : out.reply}${specialist && restrictedCount ? ` ${restrictedCount} suggestion${restrictedCount === 1 ? " was" : "s were"} outside the configured capabilities and was not added.` : ""}${specialist && cappedCount ? ` ${cappedCount} additional suggestion${cappedCount === 1 ? " was" : "s were"} left out to stay within the action limit.` : ""}${specialist && budgetBlocked.length ? ` ${budgetBlocked.length} action${budgetBlocked.length === 1 ? " was" : "s were"} blocked by the per-run budget.` : ""}${status}${out.followUp ? `\n\n${out.followUp}` : ""}`.slice(0, 1600),
       understood: out.understood?.slice(0, 300) || undefined,
-      roles: ["coo"],
+      roles: [specialist ? AGENT_ARCHETYPE_BY_ID.get(specialist.archetypeId)?.role ?? "coo" : "coo"],
       actionCardIds: cardIds,
       status: "done",
       replyTo: messageId,

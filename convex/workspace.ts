@@ -22,6 +22,7 @@ import { redactFeedback } from "../shared/lab/redact";
 import { canDriveWork, type QualityState } from "../shared/agents/quality";
 import { applyOwnerEconomics, decisionQuestions, type Economics, type PlayLike } from "../shared/agents/economics";
 import { projectGrowthOpportunities, type OpportunityPlayInput } from "../shared/agents/opportunities";
+import { AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
 
 /** Everything the Today screen needs, in one bounded query. */
 export const today = query({
@@ -202,6 +203,20 @@ export const sendChat = mutation({
   },
 });
 
+/** Run a saved specialist profile manually through the existing metered COO workflow. */
+export const runCustomAgent = mutation({
+  args: { slug: v.string(), agentId: v.id("customAgents"), request: v.string() },
+  handler: async (ctx, { slug, agentId, request }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
+    const agent = assertSameOrg(await ctx.db.get(agentId), org._id, "specialist");
+    if (agent.status !== "active") throw appError("INVALID", "This specialist is archived.");
+    if (!AGENT_ARCHETYPE_BY_ID.has(agent.archetypeId)) throw appError("INVALID", "This specialist role is no longer available.");
+    const clean = request.trim().slice(0, 1500);
+    if (!clean) throw appError("INVALID", "Describe what you want this specialist to do.");
+    return postChat(ctx, org, user._id, clean, agentId);
+  },
+});
+
 /**
  * "Make it happen" on a play (REQ-UX-03): the request is built here from the
  * stored play, found by plan and play ID, never from text the page assembled.
@@ -244,7 +259,7 @@ export const askAboutOpportunity = mutation({
   },
 });
 
-async function postChat(ctx: MutationCtx, org: Doc<"organizations">, userId: Id<"users">, text: string): Promise<{ messageId: Id<"chatMessages"> }> {
+async function postChat(ctx: MutationCtx, org: Doc<"organizations">, userId: Id<"users">, text: string, customAgentId?: Id<"customAgents">): Promise<{ messageId: Id<"chatMessages"> }> {
   const clean = text.trim().slice(0, 2000);
   if (!clean) throw appError("INVALID", "Type a message first.");
   const now = Date.now();
@@ -255,7 +270,7 @@ async function postChat(ctx: MutationCtx, org: Doc<"organizations">, userId: Id<
   if (recent.filter((m) => m.author === "user").length >= 6) {
     throw appError("RATE_LIMITED", "That's a lot of messages in a minute. Give the team a moment to catch up.");
   }
-  const messageId = await ctx.db.insert("chatMessages", { orgId: org._id, author: "user", userId, text: clean, roles: [], actionCardIds: [], status: "thinking", createdAt: now });
+  const messageId = await ctx.db.insert("chatMessages", { orgId: org._id, author: "user", userId, text: clean, customAgentId, roles: [], actionCardIds: [], status: "thinking", createdAt: now });
   const plan = planJob("chat_intent");
   let runId;
   try {
@@ -265,7 +280,7 @@ async function postChat(ctx: MutationCtx, org: Doc<"organizations">, userId: Id<
     throw e;
   }
   await ctx.db.patch(messageId, { runId });
-  await ctx.scheduler.runAfter(0, internal.jobs.chatIntent, { runId, messageId, text: clean });
+  await ctx.scheduler.runAfter(0, internal.jobs.chatIntent, { runId, messageId, text: clean, customAgentId });
   return { messageId };
 }
 
@@ -726,6 +741,31 @@ export const wishContext = internalQuery({
         .reverse()
         .map((m) => `${m.author === "user" ? "Owner" : "ClimbOS"}: ${m.text.slice(0, 300)}`)
         .join("\n"),
+    };
+  },
+});
+
+/** Internal jobs receive the saved profile only after the caller has tenant-checked it. */
+export const customAgentForRun = internalQuery({
+  args: { orgId: v.id("organizations"), agentId: v.id("customAgents") },
+  handler: async (ctx, { orgId, agentId }) => {
+    const agent = assertSameOrg(await ctx.db.get(agentId), orgId, "specialist");
+    if (agent.status !== "active") return null;
+    const archetype = AGENT_ARCHETYPE_BY_ID.get(agent.archetypeId);
+    if (!archetype) return null;
+    return {
+      id: agent._id,
+      archetypeId: agent.archetypeId,
+      name: agent.name,
+      objective: agent.objective,
+      instructions: agent.instructions,
+      allowedActions: agent.allowedActions,
+      knowledge: agent.knowledge,
+      permission: agent.permission,
+      maxRunCredits: agent.maxRunCredits,
+      maxActionsPerRun: agent.maxActionsPerRun,
+      successMetric: agent.successMetric,
+      role: archetype.role,
     };
   },
 });

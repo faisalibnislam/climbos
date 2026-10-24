@@ -1609,6 +1609,31 @@ export default defineSchema({
     .index("by_hash", ["tokenHash"])
     .index("by_org", ["orgId"]),
 
+  /** Owner-configured specialists routed through existing metered, approval-aware workflows. */
+  customAgents: defineTable({
+    orgId: v.id("organizations"),
+    archetypeId: v.string(),
+    name: v.string(),
+    objective: v.string(),
+    instructions: v.string(),
+    allowedActions: v.array(v.string()),
+    knowledge: v.array(v.string()),
+    permission: v.union(v.literal("read_only"), v.literal("draft"), v.literal("request_approval")),
+    /** Maximum projected spend across this run's action cards, expressed in ClimbOS credits. */
+    maxRunCredits: v.number(),
+    maxActionsPerRun: v.number(),
+    successMetric: v.string(),
+    trigger: v.literal("manual"),
+    modelRouting: v.literal("automatic"),
+    status: v.union(v.literal("active"), v.literal("archived")),
+    createdBy: v.id("users"),
+    updatedBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_org_updated", ["orgId", "updatedAt"])
+    .index("by_org_archetype", ["orgId", "archetypeId"]),
+
   /* ---------------- Real visuals: the asset library ---------------- */
   /** Real images for posts: site screenshots, store product photos, uploads, AI images and edits. */
   assets: defineTable({
@@ -1847,6 +1872,8 @@ export default defineSchema({
     author: v.union(v.literal("user"), v.literal("climbos")),
     userId: v.optional(v.id("users")),
     text: v.string(),
+    /** Specialist profile that initiated this conversation, if any. */
+    customAgentId: v.optional(v.id("customAgents")),
     /** For replies to a wish: one sentence restating what the owner asked for. */
     understood: v.optional(v.string()),
     roles: v.array(agentRoleValidator),

@@ -39,6 +39,7 @@ import type * as competitors from "../competitors.js";
 import type * as connectionActions from "../connectionActions.js";
 import type * as connections from "../connections.js";
 import type * as content from "../content.js";
+import type * as customAgents from "../customAgents.js";
 import type * as crm from "../crm.js";
 import type * as crons from "../crons.js";
 import type * as demo from "../demo.js";
@@ -151,6 +152,7 @@ declare const fullApi: ApiFromModules<{
   connectionActions: typeof connectionActions;
   connections: typeof connections;
   content: typeof content;
+  customAgents: typeof customAgents;
   crm: typeof crm;
   crons: typeof crons;
   demo: typeof demo;

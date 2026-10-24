@@ -23,6 +23,7 @@ export const SETTINGS_SECTIONS = [
   { key: "activity", label: "Activity", icon: Activity, tone: "teal", permission: "view" },
   { key: "usage", label: "Usage", icon: Gauge, tone: "pink", permission: "view" },
   { key: "agents", label: "Agents & MCP", icon: Bot, tone: "violet", permission: "edit" },
+  { key: "specialists", label: "Specialists", icon: Sparkles, tone: "teal", permission: "edit" },
   { key: "webhooks", label: "Webhooks", icon: Webhook, tone: "teal", permission: "manage_connections" },
   { key: "privacy", label: "Privacy", icon: ShieldCheck, tone: "green", permission: "export" },
   { key: "profile", label: "Profile", icon: UserRound, tone: "blue", permission: null },
