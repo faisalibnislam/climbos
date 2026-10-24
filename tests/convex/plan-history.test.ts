@@ -124,6 +124,9 @@ describe("Plan version history", () => {
     const refreshed = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
     expect(refreshed.strategy?.expert?.economics).toMatchObject({ revenuePerCustomerMonthUsd: 250, grossMargin: 0.7, monthlyChurn: 0.04 });
     expect(refreshed.strategy?.expert?.portfolio).toBeTruthy();
+    expect(refreshed.strategy?.expert?.portfolioComparisons).toMatchObject({ horizonDays: 90 });
+    expect(refreshed.strategy?.expert?.portfolioComparisons?.modeledPlayCount).toBeGreaterThan(0);
+    expect(refreshed.strategy?.expert?.portfolioComparisons?.playAttributed?.objective).toBe("play_attributed");
     const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
     expect(playId).toBeTruthy();
     await expect(w.client.mutation(api.workspace.startPlay, {

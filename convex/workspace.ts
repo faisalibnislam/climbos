@@ -655,14 +655,20 @@ export const plan = query({
     const marketChangeVersions = await currentMarketChangeVersions(ctx, org._id);
     const staleInputs = strategy ? planStaleInputs(strategy, business, goal, businessFactVersions, brand, connectedCapabilities, marketChangeVersions) : { ownerEconomics: false, lifecycleStage: false, funnel: false, goal: false, businessProfile: false, businessFacts: false, brandGuidance: false, capabilities: false, businessResearch: false, marketChanges: false };
     // Owner edits immediately refresh every deterministic derived number in the returned plan view.
-    const currentPortfolio = currentPlays
-      ? selectPortfolio(currentPlays, {
-          ...(goal ? { monthlyBudgetUsd: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency) } : {}),
-          ...(business?.unitEconomics?.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: business.unitEconomics.ownerHoursPerWeek } : {}),
-          ...(business?.unitEconomics?.newCustomersPerMonth !== undefined ? { newCustomersPerMonth: business.unitEconomics.newCustomersPerMonth } : {}),
-          horizonDays: goal?.horizonDays,
-        })
-      : null;
+    const portfolioLimits = {
+      ...(goal ? { monthlyBudgetUsd: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency) } : {}),
+      ...(business?.unitEconomics?.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: business.unitEconomics.ownerHoursPerWeek } : {}),
+      ...(business?.unitEconomics?.newCustomersPerMonth !== undefined ? { newCustomersPerMonth: business.unitEconomics.newCustomersPerMonth } : {}),
+      horizonDays: goal?.horizonDays,
+    };
+    const currentPortfolio = currentPlays ? selectPortfolio(currentPlays, portfolioLimits) : null;
+    const portfolioComparisons = currentPlays ? {
+      horizonDays: goal?.horizonDays ?? 90,
+      modeledPlayCount: currentPlays.plays.filter((play) => play.model?.steps?.length).length,
+      baselinePlayCount: currentPlays.plays.filter((play) => play.model?.steps?.some((step) => step.baselineRate !== undefined)).length,
+      playAttributed: selectPortfolio(currentPlays, { ...portfolioLimits, objective: "play_attributed" }),
+      modeledIncremental: selectPortfolio(currentPlays, { ...portfolioLimits, objective: "modeled_incremental" }),
+    } : null;
     return {
       role,
       canApprove: ["owner", "admin", "reviewer"].includes(role),
@@ -687,6 +693,7 @@ export const plan = query({
               ...(currentEconomics ? { economics: currentEconomics } : {}),
               ...(currentPlays ? { plays: currentPlays.plays } : {}),
               ...(currentPortfolio ? { portfolio: currentPortfolio } : {}),
+              ...(portfolioComparisons ? { portfolioComparisons } : {}),
               ...(currentPlays ? { goalGap: playsGoalGap(currentPlays, goal ? { target: goal.target, horizonDays: goal.horizonDays } : null) } : {}),
             } : null,
           }

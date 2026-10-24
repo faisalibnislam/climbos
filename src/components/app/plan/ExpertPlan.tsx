@@ -48,7 +48,7 @@ import { cn } from "@/lib/utils";
 import { formatMoney } from "../../../../shared/economics/currency";
 import { playConfidence, type EvidenceLevel, type PlayConfidence } from "../../../../shared/agents/confidence";
 import type { Diagnosis } from "../../../../shared/agents/diagnosis";
-import { churnOf, ownerHourOf, playMaths, type Economics, type ForecastUncertainty, type PlayModel, type PlaySensitivity } from "../../../../shared/agents/economics";
+import { churnOf, ownerHourOf, playMaths, type Economics, type ForecastUncertainty, type PlayModel, type PlaySensitivity, type PortfolioChoice } from "../../../../shared/agents/economics";
 import { fmtInput as fmtSwitch, switchPoints } from "../../../../shared/agents/voi";
 import { ACCESS_LABEL, BASIS_LABEL, CHECK_LABEL, COST_BASIS_LABEL, economicsSources, forecastBasis, playInputs, SOURCE_LABEL, type InputRow } from "../../../../shared/agents/provenance";
 import { Clamp, DetailsToggle, ExpandAll, FieldLabel, PlanSection, splitLinks, LinkChip } from "./PlanSections";
@@ -135,6 +135,13 @@ export interface ExpertView {
   snapshot?: { goal?: string };
   /** decision_contract plans: the structured decision (shared/agents/decision.ts). */
   decision?: Decision | null;
+  portfolioComparisons?: {
+    horizonDays: number;
+    modeledPlayCount: number;
+    baselinePlayCount: number;
+    playAttributed: PortfolioChoice | null;
+    modeledIncremental: PortfolioChoice | null;
+  };
 }
 
 /** Each play type has its own colour identity (flat token tints, never colour alone: label + icon too). */
@@ -1230,7 +1237,64 @@ function EconomicsLine({ economics: e }: { economics: Economics }) {
   );
 }
 
-export function GrowthPlays({ plays, slug, economics, strategyId, planId, canEdit = false, focused = false, diagnosis }: { plays: PlayView[]; slug: string; economics?: Economics; strategyId?: Id<"strategies">; planId?: Id<"strategies">; canEdit?: boolean; focused?: boolean; diagnosis?: Diagnosis | null }) {
+function PortfolioObjectiveCard({ label, explanation, choice, noChoice, economics, days }: { label: string; explanation: string; choice: PortfolioChoice | null; noChoice: string; economics?: Economics; days: number }) {
+  return (
+    <article className="flex min-w-0 flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-3">
+      <div>
+        <h3 className="text-sm font-semibold text-ink">{label}</h3>
+        <p className="mt-1 text-xs text-ink-3">{explanation}</p>
+      </div>
+      {!choice ? <p className="text-ui text-ink-2">{noChoice}</p> : (
+        <>
+          <div>
+            <p className="text-xs text-ink-3">Selected set · {days} days</p>
+            <ul className="mt-1 list-disc pl-5 text-ui font-medium text-ink">{choice.selected.map((name) => <li key={name}>{name}</li>)}</ul>
+          </div>
+          <dl className="grid grid-cols-2 gap-2 text-sm">
+            <div><dt className="text-xs text-ink-3">Modeled customers</dt><dd className="font-semibold tabular-nums text-ink">{fmtN(choice.customers)} most likely · {fmtN(choice.expectedCustomers)} average</dd></div>
+            <div><dt className="text-xs text-ink-3">Spend and time</dt><dd className="font-semibold tabular-nums text-ink">{usd(choice.spendUsdMonth, economics?.currency)}/mo · {fmtN(choice.ownerHoursWeek)} h/wk</dd></div>
+            {choice.netUsd !== null ? <div><dt className="text-xs text-ink-3">Modeled net contribution over this period</dt><dd className="font-semibold tabular-nums text-ink">{usd(choice.netUsd, economics?.currency)}</dd></div> : null}
+            <div><dt className="text-xs text-ink-3">Limits</dt><dd className="font-medium text-ink">{choice.allFit ? "Fits supplied budget and capacity" : "Some drafted plays do not fit"}</dd></div>
+          </dl>
+          {choice.runnerUp ? <p className="text-xs text-ink-3">Closest alternative: {choice.runnerUp.selected.join(" + ") || "No play"} · {fmtN(choice.runnerUp.customers)} most-likely customers.</p> : null}
+          {choice.left.length ? <details className="text-xs text-ink-3"><summary className="cursor-pointer font-medium text-ink-2">Why other plays were left out ({choice.left.length})</summary><ul className="mt-1 list-disc pl-5">{choice.left.map((item, i) => <li key={`${item.name}-${i}`}>{item.name}: {item.why}</li>)}</ul></details> : null}
+        </>
+      )}
+    </article>
+  );
+}
+
+function PortfolioComparisons({ data, economics }: { data: NonNullable<ExpertView["portfolioComparisons"]>; economics?: Economics }) {
+  return (
+    <section aria-label="Compare growth plans under two outcome definitions" className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface-2 p-3">
+      <div>
+        <h3 className="text-sm font-semibold text-ink">Which set fits the goal?</h3>
+        <p className="mt-1 text-xs text-ink-3">Both comparisons use the supplied budget, team time, delivery capacity, and {data.horizonDays}-day goal period. These are modeled scenarios, not guaranteed outcomes.</p>
+      </div>
+      <div className="grid gap-2 lg:grid-cols-2">
+        <PortfolioObjectiveCard
+          label="Play-attributed customers"
+          explanation="Counts customers modeled through each play’s funnel. It does not subtract what might happen without the play."
+          choice={data.playAttributed}
+          noChoice="No feasible play set fits the current modeled limits."
+          economics={economics}
+          days={data.horizonDays}
+        />
+        <PortfolioObjectiveCard
+          label="Modeled improvement over baseline"
+          explanation="Subtracts the supplied baseline rates to estimate change. This is not experimentally proven lift."
+          choice={data.modeledIncremental}
+          noChoice={data.baselinePlayCount ? "No feasible set uses the available baseline-based play inputs." : "Not estimated: none of the modeled plays includes a baseline rate."}
+          economics={economics}
+          days={data.horizonDays}
+        />
+      </div>
+      {data.baselinePlayCount > 0 && data.baselinePlayCount < data.modeledPlayCount ? <p className="text-xs text-ink-3">Baseline comparison covers {data.baselinePlayCount} of {data.modeledPlayCount} modeled plays; the rest cannot be included in that objective.</p> : null}
+    </section>
+  );
+}
+
+export function GrowthPlays({ plays, slug, economics, portfolioComparisons, strategyId, planId, canEdit = false, focused = false, diagnosis }: { plays: PlayView[]; slug: string; economics?: Economics; portfolioComparisons?: ExpertView["portfolioComparisons"]; strategyId?: Id<"strategies">; planId?: Id<"strategies">; canEdit?: boolean; focused?: boolean; diagnosis?: Diagnosis | null }) {
   const byPlay = useQuery(api.playResults.forStrategy, strategyId ? { slug, strategyId } : "skip");
   // plan_targets workspaces only (null otherwise): named targets per play.
   const targets = useQuery(api.targets.forStrategy, planId ? { slug, strategyId: planId } : "skip");
@@ -1257,6 +1321,7 @@ export function GrowthPlays({ plays, slug, economics, strategyId, planId, canEdi
       })}
     >
       {economics ? <EconomicsLine economics={economics} /> : null}
+      {portfolioComparisons ? <PortfolioComparisons data={portfolioComparisons} economics={economics} /> : null}
       {sorted.length > 1 ? <PlaysChart plays={sorted} economics={economics} /> : null}
       <div className={cn("grid gap-3", sorted.length > 2 ? "lg:grid-cols-2 xl:grid-cols-3" : "lg:grid-cols-2")}>
         {sorted.map((p) => (
