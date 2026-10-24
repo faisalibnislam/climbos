@@ -285,6 +285,9 @@ export async function openaiTurn(req: TurnRequest, rates: RateVersion): Promise<
     instructions: req.system.map((b) => b.text).join("\n\n"),
     max_output_tokens: req.maxTokens,
     store: false,
+    // Responses API enforces this total built-in-tool limit; search context
+    // size alone is only a retrieval-depth hint, not a call budget.
+    ...(req.webSearch ? { max_tool_calls: req.webSearch.maxUses } : {}),
     ...(effort ? { reasoning: { effort } } : {}),
     ...(tools.length ? { tools, tool_choice: "auto", include: include.length ? include : undefined } : {}),
     ...(req.schema || req.verbosity ? { text: { ...(req.schema ? { format: { type: "json_schema", name: "answer", schema: strictSchema(jsonSchemaFor(req.schema)), strict: true } } : {}), ...(req.verbosity ? { verbosity: req.verbosity } : {}) } } : {}),

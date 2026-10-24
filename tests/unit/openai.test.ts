@@ -81,6 +81,7 @@ describe("OpenAI adapter", () => {
       expect(body.model).toBe("gpt-6.1-sol");
       expect(body.text.format.strict).toBe(true);
       expect(body.tools[0].type).toBe("web_search");
+      expect(body.max_tool_calls).toBe(5);
       expect(body.reasoning.effort).toBe("high");
       return new Response(
         JSON.stringify({
