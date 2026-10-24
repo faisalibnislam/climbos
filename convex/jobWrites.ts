@@ -528,7 +528,14 @@ export async function insertArtifact(
     }
   }
   const { valid, invalid } = validateFactIndexes(item.factIndexes, params.factIds.length);
-  const risky = findRiskyClaims(`${item.headline ?? ""} ${item.body}`);
+  const risky = findRiskyClaims([
+    item.title,
+    item.headline,
+    item.body,
+    item.callToAction,
+    item.altText,
+    ...item.hashtags,
+  ].filter(Boolean).join(" "));
   const unsupported = [...risky.map((r) => `Check claim: "${r}"`), ...(invalid.length ? ["References a fact that doesn't exist"] : [])];
   const artifactId = await ctx.db.insert("artifacts", {
     orgId: params.orgId,

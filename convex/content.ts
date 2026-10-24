@@ -250,7 +250,14 @@ export const edit = mutation({
     // Re-run the same deterministic claim screen after every owner edit. An
     // edit is not evidence that a performance, guarantee, scale or medical
     // claim has become supportable; stale warnings must not disappear silently.
-    const unsupportedClaims = findRiskyClaims(`${args.headline ?? ""} ${body} ${args.callToAction ?? ""} ${args.altText ?? ""}`)
+    const unsupportedClaims = findRiskyClaims([
+      args.title,
+      args.headline,
+      body,
+      args.callToAction,
+      args.altText,
+      ...args.hashtags,
+    ].filter(Boolean).join(" "))
       .map((claim) => `Check claim: "${claim}"`);
     const ch = await contentHash({
       headline: args.headline,

@@ -346,10 +346,12 @@ export function validateFactIndexes(indexes: number[], factCount: number): { val
 const RISKY_CLAIM_PATTERNS = [
   /\bguarantee(d|s)?\b/i,
   /\b#1\b|\bnumber one\b|\bbest in the world\b/i,
-  /\b\d{2,3}% (more|increase|growth|off)\b/i,
+  /\b\d+(?:\.\d+)?\s?(?:%|x|×)\s?(?:faster|quicker|cheaper|more|fewer|better|easier|less|lower|higher|increase|growth|reduction|reduced|off)\b/i,
+  /\b(?:save|saves|saved|cut|cuts|reduce|reduces|reduced|boost|boosts|increase|increases|grow|grows|grew)\b[^.!?]{0,40}\b(?:\d{1,3}(?:\.\d+)?\s?%|\$\s?\d[\d,.]*)/i,
   /\b(thousands|millions) of (customers|users|happy)\b/i,
   /\btrusted by\b/i,
   /\bclinically\b|\bcure[sd]?\b/i,
+  /\b(?:100%|fully|completely)\s+(?:secure|safe|accurate|compliant|risk[- ]free)\b/i,
 ];
 
 export function findRiskyClaims(text: string): string[] {
