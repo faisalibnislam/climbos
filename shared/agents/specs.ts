@@ -127,6 +127,17 @@ export const PlaySchema = z.object({
   p10: z.number(),
   p50: z.number(),
   p90: z.number(),
+  /** Code-generated separation of modeled play-attributed outcomes from counterfactual lift. */
+  outcomeAccounting: z.object({
+    attributionBasis: z.literal("modeled_play_funnel"),
+    attributedCustomers: z.object({ p10: z.number(), p50: z.number(), p90: z.number() }),
+    attributedRevenue12m: z.object({ p10: z.number(), p50: z.number(), p90: z.number() }).nullable(),
+    incrementalityBasis: z.enum(["modeled_baseline_delta", "not_estimated"]),
+    modeledIncrementalCustomers: z.object({ p10: z.number(), p50: z.number(), p90: z.number() }).nullable(),
+    modeledIncrementalRevenue12m: z.object({ p10: z.number(), p50: z.number(), p90: z.number() }).nullable(),
+    currency: z.string(),
+    revenueHorizonMonths: z.literal(12),
+  }).nullable().optional(),
   /** Code-generated explanation of the forecast range; absent on older saved plans. */
   forecastUncertainty: z.object({
     rangeMethod: z.enum(["input_scenario", "single_scenario"]),
@@ -201,7 +212,7 @@ export const PlaySchema = z.object({
 });
 export type Play = z.infer<typeof PlaySchema>;
 /** What the plays agent writes: no forecast numbers (ClimbOS code computes P10/P50/P90 from the model). */
-export const PlayDraftSchema = PlaySchema.omit({ p10: true, p50: true, p90: true, forecastUncertainty: true, financialEvidence: true, actionReadiness: true });
+export const PlayDraftSchema = PlaySchema.omit({ p10: true, p50: true, p90: true, outcomeAccounting: true, forecastUncertainty: true, financialEvidence: true, actionReadiness: true });
 export type PlayDraft = z.infer<typeof PlayDraftSchema>;
 
 export function actionReadinessOf(action: PlayDraft["actionContract"]): NonNullable<Play["actionReadiness"]> {

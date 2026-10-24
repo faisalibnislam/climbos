@@ -51,6 +51,16 @@ const growthPlayValidator = v.object({
   p10: v.number(),
   p50: v.number(),
   p90: v.number(),
+  outcomeAccounting: v.optional(v.union(v.null(), v.object({
+    attributionBasis: v.literal("modeled_play_funnel"),
+    attributedCustomers: v.object({ p10: v.number(), p50: v.number(), p90: v.number() }),
+    attributedRevenue12m: v.union(v.object({ p10: v.number(), p50: v.number(), p90: v.number() }), v.null()),
+    incrementalityBasis: v.union(v.literal("modeled_baseline_delta"), v.literal("not_estimated")),
+    modeledIncrementalCustomers: v.union(v.object({ p10: v.number(), p50: v.number(), p90: v.number() }), v.null()),
+    modeledIncrementalRevenue12m: v.union(v.object({ p10: v.number(), p50: v.number(), p90: v.number() }), v.null()),
+    currency: v.string(),
+    revenueHorizonMonths: v.literal(12),
+  }))),
   forecastUncertainty: v.optional(v.union(v.null(), v.object({
     rangeMethod: v.union(v.literal("input_scenario"), v.literal("single_scenario")),
     variedDrivers: v.array(v.string()),

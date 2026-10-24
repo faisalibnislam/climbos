@@ -138,6 +138,12 @@ describe("Engine v2 wiring", () => {
     expect(strategy?.expert?.version).toBe(9);
     const expert = readExpertPlan(strategy!.expert as Record<string, unknown>);
     expect(expert.growthPlanV9).toMatchObject({ plays: expect.any(Array), economics: expect.any(Object) });
+    expect((expert.plays as { outcomeAccounting?: { incrementalityBasis?: string; modeledIncrementalRevenue12m?: unknown } }[])[0].outcomeAccounting).toMatchObject({
+      attributionBasis: "modeled_play_funnel",
+      incrementalityBasis: "not_estimated",
+      modeledIncrementalRevenue12m: null,
+      revenueHorizonMonths: 12,
+    });
     expect(strategy?.expert?.plays).toBeUndefined();
     expect(strategy?.expert?.economics).toBeUndefined();
     expect((expert.weekOneChecklist as unknown[]).length).toBeGreaterThan(0);

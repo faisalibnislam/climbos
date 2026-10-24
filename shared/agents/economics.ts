@@ -146,6 +146,17 @@ export interface PlayMaths {
   invalidInputs: string[];
   /** Counted only the extra customers over each step's baseline rate. */
   incremental: boolean;
+  /** Explicitly separates play-attributed outcomes from the modeled counterfactual delta. */
+  outcomeAccounting: {
+    attributionBasis: "modeled_play_funnel";
+    attributedCustomers: { p10: number; p50: number; p90: number };
+    attributedRevenue12m: { p10: number; p50: number; p90: number } | null;
+    incrementalityBasis: "modeled_baseline_delta" | "not_estimated";
+    modeledIncrementalCustomers: { p10: number; p50: number; p90: number } | null;
+    modeledIncrementalRevenue12m: { p10: number; p50: number; p90: number } | null;
+    currency: string;
+    revenueHorizonMonths: 12;
+  };
   /**
    * Does the verdict survive the low end of its own range? robust: pays back even at P10;
    * fragile: pays back at the most-likely rates only; loses: doesn't at the most-likely rates;
@@ -183,6 +194,14 @@ export interface ForecastUncertainty {
 /** A share in 0–1, or NaN. Ratios above 1 are rejected, never silently read as percents (REQ-MATH-03). */
 const rateOf = (r: number | undefined | null): number => (typeof r === "number" && Number.isFinite(r) && r >= 0 && r <= 1 ? r : NaN);
 const DAYS_PER_MONTH = 365.25 / 12;
+
+/** Revenue from a newly acquired customer over the same 12-month survival horizon as contribution payback. */
+function customerRevenue12m(e: Economics): number | null {
+  const churn = churnOf(e);
+  const monthlyRevenue = e.revenuePerCustomerMonthUsd;
+  if (churn === null || !Number.isFinite(monthlyRevenue) || monthlyRevenue < 0) return null;
+  return churn === 0 ? monthlyRevenue * PAYBACK_HORIZON_MONTHS : monthlyRevenue * (1 - (1 - churn) ** PAYBACK_HORIZON_MONTHS) / churn;
+}
 
 /** Explain what the seeded P10–P90 does and does not represent. */
 export function forecastUncertainty(m: PlayModel): ForecastUncertainty {
@@ -357,6 +376,21 @@ export function playMaths(p: PlayLike, e: Economics, opts: { pointOnly?: boolean
   const customers = invalidInputs.some((n) => n !== "margin") ? 0 : Math.max(0, (funnelCustomers(Math.max(0, p.model.weeklyReach), rates) ?? 0) * customerWeeks - baselineCustomers(p.model, weeks));
   const draws = opts.pointOnly ? customersPoint(p.model, weeks) : simulateSamples(p.model, weeks, `${p.name}|${p.kind}`);
   const range = typeof draws === "number" ? { p10: draws, p50: draws, p90: draws } : { p10: quantile(draws, 0.1), p50: quantile(draws, 0.5), p90: quantile(draws, 0.9) };
+  const attributedModel: PlayModel = { ...p.model, steps: p.model.steps.map(({ baselineRate: _baselineRate, ...step }) => step) };
+  const attributedPoint = invalidInputs.some((n) => n !== "margin") ? 0 : Math.max(0, (funnelCustomers(Math.max(0, p.model.weeklyReach), rates) ?? 0) * customerWeeks);
+  const attributedDraws = opts.pointOnly ? customersPoint({ ...attributedModel }, weeks) : simulateSamples(attributedModel, weeks, `${p.name}|${p.kind}`);
+  const attributedRange = typeof attributedDraws === "number" ? { p10: attributedDraws, p50: attributedDraws, p90: attributedDraws } : { p10: quantile(attributedDraws, 0.1), p50: quantile(attributedDraws, 0.5), p90: quantile(attributedDraws, 0.9) };
+  const twelveMonthRevenue = customerRevenue12m(e);
+  const toRevenueRange = (customerRange: { p10: number; p50: number; p90: number } | null) =>
+    customerRange && twelveMonthRevenue !== null
+      ? { p10: customerRange.p10 * twelveMonthRevenue, p50: customerRange.p50 * twelveMonthRevenue, p90: customerRange.p90 * twelveMonthRevenue }
+      : null;
+  const attributedHeadline = {
+    p10: Math.min(attributedRange.p10, attributedPoint),
+    p50: attributedPoint,
+    p90: Math.max(attributedRange.p90, attributedPoint),
+  };
+  const incrementalityRange = incremental ? { p10: Math.min(range.p10, customers), p50: customers, p90: Math.max(range.p90, customers) } : null;
   const spend = Math.max(0, p.model.monthlySpendUsd) * (days / DAYS_PER_MONTH);
   const hours = Math.max(0, p.model.ownerHoursPerWeek) * weeks;
   const hourUsd = ownerHourOf(e);
@@ -394,6 +428,16 @@ export function playMaths(p: PlayLike, e: Economics, opts: { pointOnly?: boolean
     profitable,
     invalidInputs,
     incremental,
+    outcomeAccounting: {
+      attributionBasis: "modeled_play_funnel",
+      attributedCustomers: attributedHeadline,
+      attributedRevenue12m: toRevenueRange(attributedHeadline),
+      incrementalityBasis: incremental ? "modeled_baseline_delta" : "not_estimated",
+      modeledIncrementalCustomers: incrementalityRange,
+      modeledIncrementalRevenue12m: toRevenueRange(incrementalityRange),
+      currency: e.currency ?? "USD",
+      revenueHorizonMonths: PAYBACK_HORIZON_MONTHS,
+    },
     robustness,
     breakevenCustomers: valueUsd !== null && valueUsd > 0 ? costUsd / valueUsd : null,
     lossChance: valueUsd === null || typeof draws === "number" ? null : Math.round((draws.filter((c) => c * valueUsd < costUsd).length / draws.length) * 1000) / 1000,
@@ -408,16 +452,16 @@ export function roundCount(n: number): number {
 }
 
 /** Adds the computed forecast (P10/P50/P90 customers) to each play; the model never writes it. */
-export function withForecasts<O extends { economics: Economics; plays: PlayLike[] }>(out: O): Omit<O, "plays"> & { plays: (O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[]; cacRange: PlayMaths["cacRange"] | null; forecastUncertainty: ForecastUncertainty | null; financialEvidence: FinancialEvidence | null })[] } {
+export function withForecasts<O extends { economics: Economics; plays: PlayLike[] }>(out: O): Omit<O, "plays"> & { plays: (O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[]; cacRange: PlayMaths["cacRange"] | null; forecastUncertainty: ForecastUncertainty | null; financialEvidence: FinancialEvidence | null; outcomeAccounting: PlayMaths["outcomeAccounting"] | null })[] } {
   return {
     ...out,
     plays: out.plays.map((p) => {
       // Older plays without a model keep the forecast they were saved with.
-      if (!p.model?.steps?.length) return { ...p, sensitivity: [], cacRange: null, forecastUncertainty: null, financialEvidence: null } as unknown as O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[]; cacRange: PlayMaths["cacRange"] | null; forecastUncertainty: ForecastUncertainty | null; financialEvidence: FinancialEvidence | null };
+      if (!p.model?.steps?.length) return { ...p, sensitivity: [], cacRange: null, forecastUncertainty: null, financialEvidence: null, outcomeAccounting: null } as unknown as O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[]; cacRange: PlayMaths["cacRange"] | null; forecastUncertainty: ForecastUncertainty | null; financialEvidence: FinancialEvidence | null; outcomeAccounting: PlayMaths["outcomeAccounting"] | null };
       const m = playMaths(p, out.economics);
-      return { ...p, p10: roundCount(m.headline.p10), p50: roundCount(m.headline.p50), p90: roundCount(m.headline.p90), sensitivity: m.sensitivity, cacRange: m.cacRange, forecastUncertainty: forecastUncertainty(p.model), financialEvidence: m.financialEvidence };
+      return { ...p, p10: roundCount(m.headline.p10), p50: roundCount(m.headline.p50), p90: roundCount(m.headline.p90), sensitivity: m.sensitivity, cacRange: m.cacRange, forecastUncertainty: forecastUncertainty(p.model), financialEvidence: m.financialEvidence, outcomeAccounting: m.outcomeAccounting };
     }),
-  };
+  } as Omit<O, "plays"> & { plays: (O["plays"][number] & { p10: number; p50: number; p90: number; sensitivity: PlaySensitivity[]; cacRange: PlayMaths["cacRange"] | null; forecastUncertainty: ForecastUncertainty | null; financialEvidence: FinancialEvidence | null; outcomeAccounting: PlayMaths["outcomeAccounting"] | null })[] };
 }
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -656,10 +700,12 @@ export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }, 
   const churn = churnOf(e);
   // Two payback definitions give different months for the same play: name both (Skok's per-surviving-customer vs ClimbOS's churn-weighted; blog research BRP-17).
   const cmOf = monthlyContribution(e) ?? 0;
+  const rangeLine = (r: { p10: number; p50: number; p90: number } | null, money = false) =>
+    r ? `${money ? usd(r.p10) : roundCount(r.p10)}–${money ? usd(r.p90) : roundCount(r.p90)} (central ${money ? usd(r.p50) : roundCount(r.p50)})` : "not estimated";
   return [
     "LOCKED NUMBERS (computed by ClimbOS from the plays; use exactly these, never restate them differently):",
     `- One customer: ${usd(monthlyContribution(e))}/month contribution, ${churn === null ? "churn unknown" : `${r1(churn * 100)}% monthly churn`}; earns ${usd(customerValue(e))} in ${PAYBACK_HORIZON_MONTHS} months = the most a customer may cost (${e.basis}; sources: ${sourcesLine(e)}).`,
-      ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.headline.p50)} customers in ${p.horizonDays || 90} days at the most-likely rates (simulated range ${roundCount(m.headline.p10)}–${roundCount(m.headline.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)} (same basis; simulated CAC P10–P90 ${usd(m.cacRange.p10)}–${usd(m.cacRange.p90)}${m.cacRange.p90 === null ? ", unbounded when a draw has no customers" : ""}), payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months with churn`}${m.cacUsd !== null && cmOf > 0 ? ` (${r1(m.cacUsd / cmOf)} months per surviving customer)` : ""}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}${m.breakevenCustomers !== null && m.costUsd > 0 ? `; needs ${roundCount(m.breakevenCustomers)} customers to break even (${ROBUST_WORD[m.robustness]})` : ""}${m.incremental ? "; extra customers over today's rate only" : ""}${p.model.rampWeeks ? `; reach ramps to full volume over ${p.model.rampWeeks} weeks` : ""}${p.model.salesLagDays ? `; allows ${p.model.salesLagDays} days for paid conversion` : ""}${m.lossChance !== null && m.costUsd > 0 ? `; ${Math.round(m.lossChance * 100)}% chance it doesn't pay back if its ranges are right` : ""}. ${basisNote(p, e)}${decidesLine(p, e, usd) ? `\n${decidesLine(p, e, usd)}` : ""}`),
+      ...rows.map(({ p, m }) => `- ${m.name} (${m.kind}): ≈${roundCount(m.headline.p50)} customers in ${p.horizonDays || 90} days at the most-likely rates (simulated range ${roundCount(m.headline.p10)}–${roundCount(m.headline.p90)}), cost ${usd(m.costUsd)}, cost per customer ${usd(m.cacUsd)} (same basis; simulated CAC P10–P90 ${usd(m.cacRange.p10)}–${usd(m.cacRange.p90)}${m.cacRange.p90 === null ? ", unbounded when a draw has no customers" : ""}), payback ${m.paybackMonths === null ? "never within lifetime" : `${r1(m.paybackMonths)} months with churn`}${m.cacUsd !== null && cmOf > 0 ? ` (${r1(m.cacUsd / cmOf)} months per surviving customer)` : ""}${p.model.monthlySpendUsd > 0 && m.breakevenPerReachUsd !== null ? `, break-even ${usd(m.breakevenPerReachUsd)} per person reached` : ""}${m.breakevenCustomers !== null && m.costUsd > 0 ? `; needs ${roundCount(m.breakevenCustomers)} customers to break even (${ROBUST_WORD[m.robustness]})` : ""}${m.incremental ? "; extra customers over today's rate only" : ""}${p.model.rampWeeks ? `; reach ramps to full volume over ${p.model.rampWeeks} weeks` : ""}${p.model.salesLagDays ? `; allows ${p.model.salesLagDays} days for paid conversion` : ""}${m.lossChance !== null && m.costUsd > 0 ? `; ${Math.round(m.lossChance * 100)}% chance it doesn't pay back if its ranges are right` : ""}. ${basisNote(p, e)}\n  OUTCOME ACCOUNTING · attributed customers: ${rangeLine(m.outcomeAccounting.attributedCustomers)}; modeled 12-month attributed revenue: ${rangeLine(m.outcomeAccounting.attributedRevenue12m, true)}; modeled incremental customers: ${rangeLine(m.outcomeAccounting.modeledIncrementalCustomers)}; modeled incremental 12-month revenue: ${rangeLine(m.outcomeAccounting.modeledIncrementalRevenue12m, true)} (${m.outcomeAccounting.incrementalityBasis === "modeled_baseline_delta" ? "modeled against supplied baseline rates, not experimentally measured" : "not estimated because no baseline was supplied"}).${decidesLine(p, e, usd) ? `\n${decidesLine(p, e, usd)}` : ""}`),
     ...rows.flatMap(({ m }) => m.sensitivity.slice(0, 3).map((s) => `- SENSITIVITY · ${m.name} · ${s.driver} (one input at a time, not a joint forecast): ${s.metric === "net_contribution_12m" ? "12-month net contribution" : "customers"} is ${s.metric === "net_contribution_12m" ? usd(s.atLow) : roundCount(s.atLow)} at low, ${s.metric === "net_contribution_12m" ? usd(s.atMode) : roundCount(s.atMode)} at most-likely, ${s.metric === "net_contribution_12m" ? usd(s.atHigh) : roundCount(s.atHigh)} at high.`)),
     "- None of these forecasts is calibrated to this business's own results yet. Call assumption-based ones scenarios, never predictions.",
     "- Timing assumptions: specified ramp and sales lag are applied to customer forecasts; costs still cover the full planned period. Missing ramp or lag means immediate full volume or immediate paid conversion.",
