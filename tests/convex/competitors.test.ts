@@ -63,6 +63,34 @@ describe("competitor watch", () => {
     expect(report.competitors[0].observedAt).toBeTruthy();
   });
 
+  it("shows sourced watch candidates while filtering self, directory, and duplicate domains", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "competitor-candidates@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Owner Co" });
+    const business = await t.run((ctx) => ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first());
+    if (!business) throw new Error("Business was not created");
+    await t.run((ctx) => ctx.db.patch(business._id, {
+      website: "https://owner.example",
+      insights: {
+        audiences: [],
+        competitors: [
+          { name: "Our own comparison page", url: "https://owner.example/compare/rival", sourceUrl: "https://owner.example/compare/rival", note: "Comparison page" },
+          { name: "Directory listing", url: "https://g2.com/products/rival", sourceUrl: "https://g2.com/products/rival", note: "Directory" },
+          { name: "Rival", url: "https://www.rival.example/pricing", sourceUrl: "https://rival.example/pricing", note: "Sourced rival" },
+          { name: "Duplicate", url: "http://rival.example/", sourceUrl: "https://rival.example/", note: "Duplicate host" },
+        ],
+        positioning: "",
+        pricingNotes: "",
+        swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] },
+        journey: [],
+        opportunities: [],
+        generatedAt: Date.now(),
+      },
+    }));
+    const overview = await owner.client.query(api.competitors.overview, { slug });
+    expect(overview.suggested).toEqual([{ name: "Rival", url: "https://rival.example", sourceUrl: "https://rival.example/pricing" }]);
+  });
+
   it("does not load or write a competitor watch under another workspace", async () => {
     const t = setup();
     const owner = await asNewUser(t, "watch-tenancy@example.com");

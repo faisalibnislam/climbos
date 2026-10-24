@@ -6,6 +6,7 @@ import { internalMutation, internalQuery, mutation, query, type MutationCtx } fr
 import { createRunWithReservation } from "./engine";
 import { isPaid } from "./lib/access";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+import { selectWatchCandidates } from "../shared/competitors/candidates";
 
 /**
  * Competitor watch: each week we read competitors' homepage and pricing page
@@ -23,8 +24,12 @@ export const overview = query({
     const watches = await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(20);
     const changes = await ctx.db.query("competitorChanges").withIndex("by_org_at", (q) => q.eq("orgId", org._id)).order("desc").take(30);
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
-    const watched = new Set(watches.map((w) => normaliseUrl(w.url) ?? w.url));
-    const suggested = (business?.insights?.competitors ?? []).filter((c) => c.url && !watched.has(normaliseUrl(c.url) ?? "")).map((c) => ({ name: c.name, url: c.url! }));
+    const suggested = selectWatchCandidates(
+      (business?.insights?.competitors ?? []).flatMap((c) => c.url ? [{ name: c.name, url: c.url, sourceUrl: c.sourceUrl }] : []),
+      business?.website,
+      watches.map((w) => w.url),
+      6,
+    );
     return {
       limit: (await isPaid(ctx, org)) ? LIMIT.paid : LIMIT.free,
       watches: watches.map((w) => ({ id: w._id, name: w.name, url: w.url, active: w.active, lastCheckedAt: w.lastCheckedAt ?? null, lastError: w.lastError ?? null })),
