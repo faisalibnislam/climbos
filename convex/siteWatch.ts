@@ -9,6 +9,7 @@ import { notifyOwners } from "./lib/notify";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { findConflicts } from "../shared/agents/conflicts";
 import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
+import { extractSiteInventory } from "../shared/seo/inventory";
 
 /**
  * Self-improvement loop 1 — keep researching each business. Weekly, ClimbOS
@@ -126,7 +127,21 @@ export const searchReadiness = query({
   handler: async (ctx, { slug }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "view");
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
-    return business ? { website: business.website ?? null, scan: business.siteReadiness ?? null } : null;
+    if (!business) return null;
+    const audits = business.website
+      ? await ctx.db.query("workflowRuns")
+          .withIndex("by_org_kind_created", (q) => q.eq("orgId", org._id).eq("kind", "conversion_audit"))
+          .order("desc")
+          .take(30)
+      : [];
+    const inventory = (business.website ? audits : [])
+      .filter((run) => run.status === "verified" && !run.isFixture && typeof run.output === "string")
+      .flatMap((run) => {
+        const snapshot = extractSiteInventory({ output: run.output!, runId: String(run._id), checkedAt: run.finishedAt ?? run.updatedAt, website: business.website! });
+        return snapshot ? [snapshot] : [];
+      })
+      .slice(0, 5);
+    return { website: business.website ?? null, scan: business.siteReadiness ?? null, inventory };
   },
 });
 

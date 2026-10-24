@@ -110,7 +110,7 @@ describe("site watch (keeps researching the business)", () => {
     const t = setup();
     const owner = await asNewUser(t, "readiness@example.com");
     const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Site Co", website: "https://site.example" });
-    expect(await owner.client.query(api.siteWatch.searchReadiness, { slug })).toEqual({ website: "https://site.example", scan: null });
+    expect(await owner.client.query(api.siteWatch.searchReadiness, { slug })).toEqual({ website: "https://site.example", scan: null, inventory: [] });
     await owner.client.mutation(api.siteWatch.scanSearchReadiness, { slug });
     const result = await owner.client.query(api.siteWatch.searchReadiness, { slug });
     expect(result?.scan).toEqual(expect.objectContaining({ status: "queued", startedAt: expect.any(Number) }));
@@ -118,5 +118,30 @@ describe("site watch (keeps researching the business)", () => {
     await t.run(async (ctx) => ctx.db.insert("memberships", { orgId: orgId as Id<"organizations">, userId: viewer.userId, role: "viewer", status: "active", createdAt: Date.now() }));
     await expect(viewer.client.query(api.siteWatch.searchReadiness, { slug })).resolves.toMatchObject({ website: "https://site.example" });
     await expect(viewer.client.mutation(api.siteWatch.scanSearchReadiness, { slug })).rejects.toThrow(/role \(viewer\) can't/);
+  });
+
+  it("shows a tenant-scoped inventory from saved same-site conversion audits", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "inventory@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Site Co", website: "https://site.example" });
+    const now = Date.now();
+    const output = JSON.stringify({ auditCoverage: {
+      website: { requestedUrl: "https://site.example/", discoveredCandidates: 8, pagesSampled: 1, pagesRead: 1, pages: [{ url: "https://site.example/pricing/", status: "read" }] },
+      seoReadiness: { state: "measured", pagesWithStaticHtml: 1, pages: [{ url: "https://site.example/pricing/", metadataState: "observed", titleLength: 50, descriptionLength: 120, headingCounts: { h1: 1, h2: 2, h3: 0 }, canonicalUrl: null, robotsDirectives: null, structuredDataTypes: [] }], findings: [{ id: "missing-description", level: "attention", title: "Search description is missing", evidence: "No description was found.", nextStep: "Add a clear summary.", pageUrl: "https://site.example/pricing/" }] },
+    } });
+    const addRun = (workspaceId: Id<"organizations">, requestedUrl: string, createdAt: number) => t.run(async (ctx) => ctx.db.insert("workflowRuns", {
+      orgId: workspaceId, kind: "conversion_audit", title: "Website review", status: "verified", input: "{}", output: JSON.stringify({ auditCoverage: { website: { requestedUrl } } }), roles: [], estimateMicros: 0, actualMicros: 0, rateVersionId: "test", entitlementVersionId: "test", routingVersionId: "test", budget: { modelSteps: 0, researchTools: 0, repairs: 0 }, used: { modelSteps: 0, researchTools: 0, repairs: 0 }, isFixture: false, createdAt, updatedAt: createdAt, finishedAt: createdAt,
+    }));
+    await t.run(async (ctx) => ctx.db.insert("workflowRuns", {
+      orgId: orgId as Id<"organizations">, kind: "conversion_audit", title: "Website review", status: "verified", input: "{}", output, roles: [], estimateMicros: 0, actualMicros: 0, rateVersionId: "test", entitlementVersionId: "test", routingVersionId: "test", budget: { modelSteps: 0, researchTools: 0, repairs: 0 }, used: { modelSteps: 0, researchTools: 0, repairs: 0 }, isFixture: false, createdAt: now, updatedAt: now, finishedAt: now,
+    }));
+    await addRun(orgId as Id<"organizations">, "https://old.example/", now + 1);
+    const other = await asNewUser(t, "other-inventory@example.com");
+    const otherWorkspace = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other Co", website: "https://other.example" });
+    await addRun(otherWorkspace.orgId as Id<"organizations">, "https://site.example/", now + 2);
+
+    const result = await owner.client.query(api.siteWatch.searchReadiness, { slug });
+    expect(result?.inventory).toHaveLength(1);
+    expect(result?.inventory[0]).toMatchObject({ website: "https://site.example/", discoveredCandidates: 8, pagesRead: 1, pages: [{ url: "https://site.example/pricing/", findings: [{ id: "missing-description" }] }] });
   });
 });

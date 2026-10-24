@@ -52,6 +52,22 @@ export default function SearchReadinessPage() {
           </section>
         </>
       )}
+      <section className="flex flex-col gap-3">
+        <div><h2 className="heading-card">Reviewed page inventory</h2><p className="mt-1 text-sm text-ink-3">Page-level details from recent website reviews are saved here. This is a sampled inventory, not a complete crawl.</p></div>
+        {data.inventory?.length ? data.inventory.map((audit) => (
+          <Card key={audit.runId}><CardContent className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="text-sm font-semibold text-ink">{audit.pagesRead} pages read · {audit.discoveredCandidates} same-site candidates discovered</h3><p className="mt-1 break-all text-xs text-ink-3">{audit.website}</p></div><span className="shrink-0 text-xs text-ink-3">Reviewed {relativeTime(audit.checkedAt)}</span></div>
+            <p className="text-xs text-ink-3">Static HTML metadata observed on {audit.pagesWithStaticHtml} of {audit.pagesSampled} sampled pages. Discovery and sampling do not prove indexing, rankings, or coverage of every site page.</p>
+            {audit.pages.length ? <ul className="flex flex-col gap-2">{audit.pages.map((page) => (
+              <li key={`${audit.runId}:${page.url}`} className="rounded-lg bg-surface-2 p-3">
+                <div className="flex flex-wrap items-start justify-between gap-2"><div className="min-w-0"><a href={page.url} target="_blank" rel="noopener noreferrer" className="break-all text-sm font-medium text-link">{page.url}</a><p className="mt-1 text-xs text-ink-3">{page.status === "read" ? page.metadataState === "observed" ? "Page read · static HTML observed" : "Page read · static HTML unavailable" : page.status === "blocked_by_robots" ? "Not read · blocked by robots.txt" : "Page read failed"}</p></div><span className="shrink-0 text-xs text-ink-3">{page.findings.length} check{page.findings.length === 1 ? "" : "s"}</span></div>
+                {page.metadataState === "observed" ? <p className="mt-2 text-xs text-ink-2">Title: {page.titleLength ?? "not observed"} chars · Description: {page.descriptionLength ?? "not observed"} chars · H1/H2/H3: {page.headingCounts ? `${page.headingCounts.h1}/${page.headingCounts.h2}/${page.headingCounts.h3}` : "not observed"}{page.structuredDataTypes?.length ? ` · Structured data: ${page.structuredDataTypes.join(", ")}` : ""}</p> : null}
+                {page.findings.length ? <ul className="mt-2 flex flex-col gap-2">{page.findings.map((finding, index) => <li key={`${finding.id}:${index}`} className="border-l-2 border-line pl-3"><p className="text-xs font-medium text-ink">{finding.title}</p><p className="mt-0.5 text-xs text-ink-3">{finding.evidence} Next step: {finding.nextStep}</p></li>)}</ul> : null}
+              </li>
+            ))}</ul> : <p className="text-sm text-ink-3">The saved review did not return page-level inventory details.</p>}
+          </CardContent></Card>
+        )) : <EmptyState icon={<Search />} title="No multi-page website review saved" body="Run a website review from your workspace to build a dated sample of page metadata and search-readiness findings here." />}
+      </section>
       <AiAnswerObservations slug={slug} canEdit={canEdit} />
     </div>
   );
