@@ -51,10 +51,16 @@ const CLAIMS: { kind: string; re: RegExp; key: (m: RegExpMatchArray) => RegExp }
   { kind: "full automation", re: /\bfully[- ]automat\w+\b|\bhands[- ]free\b|\bno human\b/i, key: () => /fully[- ]automat|hands[- ]free|no human|automat/i },
 ];
 
+/** Availability and deadline claims must be grounded in a confirmed current offer. */
+const SCARCITY_CLAIM = /\b(?:only\s+\d[\d,.]*\s+(?:spots?|seats?|places?|tickets?|items?|rooms?|appointments?|openings?)\s+(?:left|remain(?:ing)?|available)|last\s+(?:few|\d+[\d,.]*|remaining)\s+(?:spots?|seats?|places?|tickets?|items?|rooms?|appointments?|openings?)|limited[- ](?:time|availability|quantity|stock|seats?|spots?|places?|tickets?)|while\s+(?:supplies|stocks?)\s+last|almost\s+sold\s+out|last\s+chance)\b/i;
+const DEADLINE_CLAIM = /\b(?:offer|sale|discount|price|registration|enrollment|booking|application)\s+(?:ends?|expires?|closes?)\s+(?:today|tonight|tomorrow|on\s+[\p{L}\d, -]{3,30}|in\s+\d+\s+(?:hours?|days?|weeks?)|at\s+midnight|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|\b(?:ends?|expires?|closes?)\s+(?:today|tonight|tomorrow|on\s+[\p{L}\d, -]{3,30}|in\s+\d+\s+(?:hours?|days?|weeks?)|at\s+midnight|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/iu;
+const SCARCITY_EVIDENCE = /\b(?:limited|only\s+\d|\d[\d,.]*\s+(?:spots?|seats?|places?|tickets?|items?|rooms?|appointments?|openings?)\s+(?:left|remain(?:ing)?|available)|last\s+(?:few|\d+|remaining)|while\s+(?:supplies|stocks?)\s+last|almost\s+sold\s+out|last\s+chance)\b/i;
+const DEADLINE_EVIDENCE = /\b(?:ends?|expires?|closes?|deadline|through|until|by\s+(?:today|tonight|tomorrow|\w+\s+\d{1,2}|\d{1,2}\s+\w+)|today|tonight|tomorrow|midnight)\b/i;
+
 /** Named integrations create concrete buyer expectations and are easy to overstate. */
 const NAMED_INTEGRATION = /\b(?:[Ii]ntegrat\w*\s+with|[Cc]onnects?\s+(?:directly\s+)?to|[Cc]onnects?\s+with|[Ss]yncs?\s+with)\s+([A-Z][\w.+-]*(?:\s+[A-Z][\w.+-]*){0,2}|CRM|API)\b/g;
 const INTEGRATION_EVIDENCE = /\b(?:integrat\w*|connect\w*|sync\w*)\b/i;
-const NON_AFFIRMATIVE_EVIDENCE = /\b(?:not|isn't|aren't|doesn't|does not|never|no longer|without|lack(?:s|ing)?|unavailable|not yet|request(?:ed|ing)?|ask(?:ed|ing)? for|want(?:s|ed)?|would|could|might|may|plan(?:s|ned)? to|hope to)\b/i;
+const NON_AFFIRMATIVE_EVIDENCE = /\b(?:no|not|isn't|aren't|doesn't|does not|never|no longer|without|lack(?:s|ing)?|unavailable|not yet|request(?:ed|ing)?|ask(?:ed|ing)? for|want(?:s|ed)?|would|could|might|may|plan(?:s|ned)? to|hope to)\b/i;
 
 function supportedByAffirmativeEvidence(pattern: RegExp, evidence: string): boolean {
   return evidence.split(/[\n.!?;]+/).some((sentence) => pattern.test(sentence) && !NON_AFFIRMATIVE_EVIDENCE.test(sentence));
@@ -62,6 +68,15 @@ function supportedByAffirmativeEvidence(pattern: RegExp, evidence: string): bool
 
 function hasIntegrationEvidence(service: string, evidence: string): boolean {
   return evidence.split(/[\n.!?;]+/).some((sentence) => sentence.toLocaleLowerCase("en-US").includes(service.toLocaleLowerCase("en-US")) && INTEGRATION_EVIDENCE.test(sentence) && !NON_AFFIRMATIVE_EVIDENCE.test(sentence));
+}
+
+function supportsUrgencyClaim(claim: string, evidence: string, kind: "scarcity" | "deadline"): boolean {
+  const numbers = (value: string) => (value.match(/\b\d[\d,.]*\b/g) ?? []).map((item) => item.replace(/[,.]/g, ""));
+  const number = numbers(claim)[0];
+  const claimEvidence = kind === "scarcity" ? SCARCITY_EVIDENCE : DEADLINE_EVIDENCE;
+  return evidence.split(/[\n.!?;]+/).some((sentence) => {
+    return claimEvidence.test(sentence) && !NON_AFFIRMATIVE_EVIDENCE.test(sentence) && (!number || numbers(sentence).includes(number));
+  });
 }
 
 /** Unsupported capability, scale or leadership claims in customer-facing text. */
@@ -80,6 +95,14 @@ export function lintClaims(fields: { path: string; text: string }[], evidence: s
         issues.push({ severity: "error", rule: "unsupported_claim", message: `"${m[0]}" is ${c.kind} no verified capability evidence supports. Say what the product verifiably does, or drop it.`, path });
         break;
       }
+    }
+    const scarcity = text.match(SCARCITY_CLAIM);
+    if (scarcity && !supportsUrgencyClaim(scarcity[0], evidence, "scarcity")) {
+      issues.push({ severity: "error", rule: "unsupported_scarcity", message: "Scarcity or inventory claims need current confirmed availability evidence, including the same quantity when one is stated. Remove the urgency or confirm the real limit first.", path });
+    }
+    const deadline = text.match(DEADLINE_CLAIM);
+    if (deadline && !supportsUrgencyClaim(deadline[0], evidence, "deadline")) {
+      issues.push({ severity: "error", rule: "unsupported_deadline", message: "A deadline or expiring offer needs a current confirmed end date or time. Remove the deadline or confirm the real terms first.", path });
     }
   }
   return issues;

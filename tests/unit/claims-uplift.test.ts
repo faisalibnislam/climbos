@@ -19,6 +19,19 @@ describe("claim ledger", () => {
     expect(lintClaims([{ path: "hook", text: "3x faster checkout" }], "Case study on our site: checkout 3x faster after redesign")).toEqual([]);
     expect(lintClaims([{ path: "hook", text: "Build a payment form in minutes" }], "")).toEqual([]);
   });
+  it("requires confirmed current evidence for scarcity and expiring-offer claims", () => {
+    const check = (text: string, evidence: string) => lintClaims([{ path: "social.body", text }], evidence);
+    expect(check("Only 4 seats left. Book today!", "Owner confirmed: enrollment ends Friday.")).toMatchObject([
+      { rule: "unsupported_scarcity", path: "social.body" },
+    ]);
+    expect(check("Offer ends Friday.", "Owner confirmed: four seats remain.")).toMatchObject([
+      { rule: "unsupported_deadline", path: "social.body" },
+    ]);
+    expect(check("Only 4 seats left; offer ends Friday.", "Owner confirmed that 4 seats remain and enrollment ends Friday.")).toEqual([]);
+    expect(check("Limited stock available.", "There is no limited stock; inventory is replenished daily.")).toMatchObject([
+      { rule: "unsupported_scarcity", path: "social.body" },
+    ]);
+  });
   it("applies to all publishable copy", () => {
     expect(lintCopy({ body: "The #1 platform for florists" }, { evidence: "", publishable: true }).some((i) => i.rule === "unsupported_claim")).toBe(true);
     expect(lintCopy({ body: "The #1 platform for florists" }, { evidence: "" }).some((i) => i.rule === "unsupported_claim")).toBe(false);
