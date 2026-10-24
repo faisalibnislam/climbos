@@ -467,7 +467,17 @@ export const SeoBriefV2Schema = SeoBriefSchema.extend({
 export const ConversionAuditV2Schema = ConversionAuditSchema.extend({
   clarityVerdict: z.string(),
   messageMatch: z.string(),
-  prioritizedFixes: z.array(z.object({ fix: z.string(), why: z.string(), effort: z.enum(["small", "medium", "large"]), expectedEffect: z.string() })),
+  prioritizedFixes: z.array(z.object({
+    fix: z.string(),
+    pageUrl: z.string(),
+    why: z.string(),
+    effort: z.enum(["small", "medium", "large"]),
+    expectedEffect: z.string(),
+    contentStructure: z.array(z.string()).max(8),
+    sampleCopy: z.string(),
+    uxChanges: z.array(z.string()).max(6),
+    measurementPlan: z.string(),
+  })).max(4),
   socialReview: z.object({
     summary: z.string(),
     findings: z.array(z.object({
@@ -1778,10 +1788,12 @@ export function lintSeoRecommendation(out: z.infer<typeof SeoBriefV2Schema>, inp
 
 /** Conversion findings must point to a page supplied to this run, not a plausible-looking URL. */
 export function lintConversionAuditSources(out: z.infer<typeof ConversionAuditV2Schema>, input: AgentInput): LintIssue[] {
-  return lintAvailableSourceUrls(
-    out.findings.map((finding, i) => ({ url: finding.sourceUrl, path: `findings[${i}].sourceUrl` })),
-    input,
-  );
+  const refs = [
+    ...out.findings.map((finding, i) => ({ url: finding.sourceUrl, path: `findings[${i}].sourceUrl` })),
+    ...out.prioritizedFixes.map((fix, i) => ({ url: fix.pageUrl, path: `prioritizedFixes[${i}].pageUrl` })),
+  ];
+  const copyClaims = out.prioritizedFixes.map((fix, i) => ({ path: `prioritizedFixes[${i}].sampleCopy`, text: fix.sampleCopy }));
+  return [...lintAvailableSourceUrls(refs, input), ...lintClaims(copyClaims, verifiedCapabilityEvidence(input))];
 }
 
 /* ---------------- Rubrics ---------------- */

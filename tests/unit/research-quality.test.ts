@@ -102,6 +102,30 @@ describe("research source assessment", () => {
     ]);
   });
 
+  it("requires implementation-ready page fixes to cite a read page and avoid unsupported sample-copy claims", () => {
+    const input = { task: "Audit the business website", brief: "Example Co", facts: [], availableSourceUrls: ["https://example.com/pricing/"] };
+    const audit = {
+      findings: [], quickWins: [], clarityVerdict: "Clear offer", messageMatch: "Not measured.",
+      prioritizedFixes: [{
+        fix: "Clarify the plan choice", pageUrl: "https://example.com/pricing/", why: "The page lists plans without explaining who each fits.",
+        effort: "small" as const, expectedEffect: "Visitors may compare plans more easily.",
+        contentStructure: ["Who this plan suits", "Included features", "Compare plans"], sampleCopy: "Choose the plan that fits your team.",
+        uxChanges: ["Place the plan comparison next to the plan choices."], measurementPlan: "Record qualified plan inquiries before the change, then compare the same count after it.",
+      }],
+      socialReview: { summary: "No published posts supplied", findings: [], contentMixSuggestions: [] },
+    };
+    const parsed = ConversionAuditV2Schema.parse(audit);
+    expect(lintConversionAuditSources(parsed, input)).toEqual([]);
+    const bad = ConversionAuditV2Schema.parse({
+      ...audit,
+      prioritizedFixes: [{ ...audit.prioritizedFixes[0]!, pageUrl: "https://invented.example/pricing", sampleCopy: "Get 2x faster results." }],
+    });
+    expect(lintConversionAuditSources(bad, input)).toMatchObject([
+      { severity: "error", rule: "citation", path: "prioritizedFixes[0].pageUrl" },
+      { severity: "error", rule: "unsupported_claim", path: "prioritizedFixes[0].sampleCopy" },
+    ]);
+  });
+
   it("requires social recommendations to carry an artifact source and keeps format ideas separate", () => {
     const parsed = ConversionAuditV2Schema.parse({
       findings: [], quickWins: [], clarityVerdict: "The offer is specific.", messageMatch: "Not measured.", prioritizedFixes: [],

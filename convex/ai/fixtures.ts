@@ -277,7 +277,7 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
         ],
         quickWins: ["Add one example form to the homepage", "Make the sign-up button text specific: 'Build my first form'"],
         prioritizedFixes: [
-          { fix: "Show a real example form near the primary call to action.", why: "It may help visitors understand the first-use experience.", effort: "small", expectedEffect: "A testable clarity improvement; conversion lift is unknown." },
+          { fix: "Make the next step clear on the homepage.", pageUrl: ctx.website ?? "", why: "A visitor should be able to tell what to do after understanding the offer.", effort: "small", expectedEffect: "Visitors may find the next step more easily; any conversion effect is unknown.", contentStructure: ["Main benefit", "What the visitor can do", "One next step"], sampleCopy: "Start with the form your business needs.", uxChanges: ["Keep the primary next step consistent between the headline and button."], measurementPlan: "Record the current qualified signup rate and its denominator before the change; compare the same metric and traffic source afterward." },
         ],
         socialReview: { summary: "Demo data does not represent a live review of this workspace's social accounts.", findings: [], contentMixSuggestions: ["Test a platform-native educational post and compare qualified responses with the current baseline."] },
       };
