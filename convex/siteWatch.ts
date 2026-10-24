@@ -29,10 +29,10 @@ export const facts = query({
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     if (!business) return null;
     const rows = (await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", business._id)).take(300)).filter((f) => f.reviewState !== "rejected");
-    const confirmed = rows.filter((f) => f.reviewState === "confirmed" || f.reviewState === "edited");
-    const conflicts = findConflicts(confirmed.map((f) => ({ id: String(f._id), statement: f.statement, category: f.category })));
+    const conflictCandidates = rows.filter((f) => f.reviewState !== "rejected");
+    const conflicts = findConflicts(conflictCandidates.map((f) => ({ id: String(f._id), statement: f.statement, category: f.category })));
     const conflictFactIds = [...new Set(conflicts.flatMap((conflict) => conflict.factIds))];
-    const conflictFacts = new Map(confirmed.filter((fact) => conflictFactIds.includes(String(fact._id))).map((fact) => [String(fact._id), fact]));
+    const conflictFacts = new Map(conflictCandidates.filter((fact) => conflictFactIds.includes(String(fact._id))).map((fact) => [String(fact._id), fact]));
     const conflictSourceIds = [...new Set([...conflictFacts.values()].flatMap((fact) => fact.sourceIds.map(String)))];
     const conflictSources = new Map<string, { kind: string; url?: string; title?: string; excerpt?: string; fetchedAt: number }>();
     for (const id of conflictSourceIds) {
@@ -79,6 +79,7 @@ export const facts = query({
             id: fact._id,
             statement: fact.statement,
             provenance: fact.provenance,
+            state: fact.reviewState,
             sources: fact.sourceIds.map(String).map((sourceId) => conflictSources.get(sourceId)).filter((source): source is NonNullable<typeof source> => source !== undefined),
           } : null;
         }).filter((fact): fact is NonNullable<typeof fact> => fact !== null),

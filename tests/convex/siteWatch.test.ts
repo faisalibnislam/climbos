@@ -51,6 +51,30 @@ describe("site watch (keeps researching the business)", () => {
     })]);
   });
 
+  it("surfaces a researched price that conflicts with the owner's confirmed price and marks it pending", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "pending-conflict@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Site Co", website: "https://site.example" });
+    const confirmedId = await owner.client.mutation(api.orgs.addFact, { slug, category: "pricing", statement: "The Pro plan costs $19 per month." });
+    await t.run(async (ctx) => {
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId as Id<"organizations">)).first();
+      expect(business).toBeTruthy();
+      const now = Date.now();
+      const sourceId = await ctx.db.insert("factSources", { orgId: orgId as Id<"organizations">, businessId: business!._id, kind: "website", url: "https://site.example/pricing", excerpt: "Pro plan $24 per month", fetchedAt: now, status: "ok", expiresAt: now + 1000 });
+      await ctx.db.insert("businessFacts", { orgId: orgId as Id<"organizations">, businessId: business!._id, category: "pricing", statement: "The Pro plan costs $24 per month.", confidence: "medium", reviewState: "needs_review", provenance: "researched", sourceIds: [sourceId], replacesFactId: confirmedId, createdAt: now, updatedAt: now });
+    });
+
+    const facts = await owner.client.query(api.siteWatch.facts, { slug });
+    expect(facts?.conflicts).toEqual([expect.objectContaining({
+      subject: "Pro price per month",
+      values: ["$19", "$24"],
+      facts: expect.arrayContaining([
+        expect.objectContaining({ id: confirmedId, state: "confirmed", provenance: "owner_supplied" }),
+        expect.objectContaining({ statement: "The Pro plan costs $24 per month.", state: "needs_review", provenance: "researched", sources: [expect.objectContaining({ url: "https://site.example/pricing" })] }),
+      ]),
+    })]);
+  });
+
   it("shows exact duplicates as one fact with all source history and reviews the group together", async () => {
     const t = setup();
     const owner = await asNewUser(t, "duplicate-facts@example.com");
