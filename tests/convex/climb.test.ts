@@ -59,9 +59,12 @@ describe("Climb AI tools", () => {
     const w = await demo(t, "climb-draft@example.com");
     const made = (await CLIMB_TOOLS.find((x) => x.name === "create_posts")!.run!(w.caller, w.slug, { channel: "linkedin", quantity: 1, brief: "Our Dec 20 holiday deadline" } as never)) as { runId: string };
     expect(made.runId).toBeTruthy();
+    expect(() => encodeToolOutput(made, 50_000, CLIMB_TOOLS.find((x) => x.name === "create_posts")!.output)).not.toThrow();
     const drafts = (await CLIMB_TOOLS.find((x) => x.name === "list_drafts")!.run!(w.caller, w.slug, { status: "in_review" } as never)) as { id: string }[];
     const before = (await CLIMB_TOOLS.find((x) => x.name === "get_draft")!.run!(w.caller, w.slug, { artifactId: drafts[0].id } as never)) as { hashtags: string[]; version: number };
-    await CLIMB_TOOLS.find((x) => x.name === "edit_draft")!.run!(w.caller, w.slug, { artifactId: drafts[0].id, body: "A shorter, sharper version." } as never);
+    const editTool = CLIMB_TOOLS.find((x) => x.name === "edit_draft")!;
+    const editResult = await editTool.run!(w.caller, w.slug, { artifactId: drafts[0].id, body: "A shorter, sharper version." } as never);
+    expect(() => encodeToolOutput(editResult, 50_000, editTool.output)).not.toThrow();
     const after = (await CLIMB_TOOLS.find((x) => x.name === "get_draft")!.run!(w.caller, w.slug, { artifactId: drafts[0].id } as never)) as { body: string; hashtags: string[]; version: number };
     expect(after.body).toBe("A shorter, sharper version.");
     expect(after.hashtags).toEqual(before.hashtags);
