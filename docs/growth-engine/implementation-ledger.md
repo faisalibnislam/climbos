@@ -682,3 +682,7 @@ The anonymous homepage preview now includes a preliminary website observation in
 ## Resumption note (2026-10-25, correct Home labels for creator target previews)
 
 Home's plan-target preview now distinguishes suggested creator partners from possible customer businesses in its heading and public-research caveat. During verification, the existing Vitest unit project was found to exclude all `.test.tsx` files, so the two component regressions were silently skipped. The unit project now includes both `.test.ts` and `.test.tsx`; the run covers the creator-partner wording plus the earlier evidence-bound preview component. This is a labeling/context correction only; discovery evidence and contact permissions are unchanged.
+
+## Resumption note (2026-10-25, locally operated asset-recombination precedent CP-067)
+
+Added Rainforest Connection to the production creative-strategy precedent library. Its founder's retrospective and the organization's Tembé project page support the repurposed-phone listening system and local ranger partnership; the partner-reported conservation outcome is not isolated to the device or transferable as a commercial result. Production mechanism retrieval and injection are regression-tested. Updated the capability and precedent summaries to the current 67 source-checked cases; 33 of the 100-case research target remain unverified. This capability remains focused on plain-language, inspectable recommendations and does not broaden execution permissions.

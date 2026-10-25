@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(66);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(67);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -97,6 +97,22 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://ieeexplore.ieee.org/document/4531148", sourceRole: "independent_secondary" }),
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Explore external challenge strategy", query)).toContain("CP-066");
+  });
+
+  it("retrieves constraint recombination while preserving local response and maintenance limits", () => {
+    const query = "Repurpose donated old phones and existing cellular coverage as solar-powered acoustic sensors, then connect alerts to local stewards who can act";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-067");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("underused object");
+    expect(match?.precedent.outcome).toContain("founder and partner reports");
+    expect(match?.precedent.causalLimit).toContain("not a controlled evaluation");
+    expect(match?.precedent.transferRisk).toContain("consent");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://rfcx.org/projects/tembe", sourceRole: "organization_primary" }),
+      expect.objectContaining({ url: "https://www.nationalgeographic.com/podcasts/overheard/article/turning-old-cell-phones-into-forest-guardians", publicationDate: "2022-04-05", sourceRole: "creator_primary" }),
+      expect.objectContaining({ url: "https://news.mongabay.com/2014/06/discarded-cell-phones-to-help-fight-rainforest-poachers-loggers-in-real-time/", sourceRole: "independent_secondary" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Explore an unusual use for an existing business asset", query)).toContain("CP-067");
   });
 
   it("retrieves practitioner-community learning without treating invitations as causal growth evidence", () => {
