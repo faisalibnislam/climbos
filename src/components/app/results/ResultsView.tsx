@@ -78,6 +78,7 @@ export function ResultsView({ slug }: { slug: string }) {
             </Callout>
           ) : null}
 
+          {data.healthAlerts.length > 0 ? <HealthAlertsSection alerts={data.healthAlerts} /> : null}
           {data.gaps.length > 0 ? <GapsSection slug={slug} gaps={data.gaps} /> : null}
 
           <OutcomeSection slug={slug} data={data} />
@@ -118,6 +119,19 @@ function AiReferralsSection({ data }: { data: Overview }) {
         </>
       ) : <p className="rounded-lg bg-surface-2 p-3 text-sm text-ink-2">No sessions from recognized AI assistant source websites were recorded in this period. That does not rule out visits that GA4 labels under another source.</p>}
       <p className="text-xs text-ink-3">{referrals.note}</p>
+    </section>
+  );
+}
+
+/** Possible tracking breaks or unusual days in connected metrics: prompts to check the source, not explanations. */
+export function HealthAlertsSection({ alerts }: { alerts: { metric: string; kind: string; date: string; message: string }[] }) {
+  return (
+    <section aria-labelledby="health-heading" className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-amber-300 bg-amber-50 p-4">
+      <h2 id="health-heading" className="heading-section text-amber-950">Worth checking before you read these numbers</h2>
+      <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-amber-950">
+        {alerts.map((a) => <li key={`${a.metric}-${a.kind}-${a.date}`}>{a.message}</li>)}
+      </ul>
+      <p className="text-xs text-amber-900">Found by comparing each metric with its own recent history. These flags don&apos;t say what caused a change.</p>
     </section>
   );
 }
