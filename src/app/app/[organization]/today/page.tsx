@@ -282,7 +282,7 @@ export default function TodayPage() {
 
       {/* At a glance */}
       <section aria-label="At a glance" className="grid gap-3 sm:grid-cols-3">
-        <StatCard icon={Hourglass} tone="amber" label="Needs your OK" value={data.approvalsCount + (data.strategy?.status === "needs_approval" ? 1 : 0)} />
+        <StatCard icon={Hourglass} tone="amber" label="Needs your OK" value={data.approvalsCountIsLowerBound ? "20+" : data.approvalsCount + (data.strategy?.status === "needs_approval" ? 1 : 0)} />
         <StatCard icon={Zap} tone="blue" label="Working now" value={running} />
         <StatCard icon={CheckCircle2} tone="green" label="Done this week" value={doneThisWeek} />
       </section>
@@ -473,7 +473,7 @@ function ApprovalsPanel({ slug, data }: { slug: string; data: Today }) {
     <section id="review" tabIndex={-1} aria-labelledby="approvals-heading" className="scroll-mt-20">
       <div className="flex items-center justify-between">
         <h2 id="approvals-heading" className="heading-section">Review before it goes ahead</h2>
-        {data.approvalsCount > 0 && <Badge tone="amber">{data.approvalsCount}</Badge>}
+        {data.approvalsCount > 0 && <Badge tone="amber">{data.approvalsCountIsLowerBound ? "20+" : data.approvalsCount}</Badge>}
       </div>
       <Card className="mt-4">
         <CardContent className="p-0">

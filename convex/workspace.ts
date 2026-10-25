@@ -43,7 +43,8 @@ export const today = query({
       .query("artifacts")
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "in_review"))
       .order("desc")
-      .take(20);
+      // Read one past the display cap so owners are told when this is a lower bound.
+      .take(21);
     const strategy = await ctx.db
       .query("strategies")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
@@ -111,8 +112,9 @@ export const today = query({
       next.push({ title: "Build your growth plan", why: "Your team turns your goal into a short, costed plan you approve.", href: `/app/${slug}/plan`, kind: "plan" });
     }
     if (pendingApprovals.length > 0) {
+      const approvalCountLabel = pendingApprovals.length > 20 ? "20+" : String(pendingApprovals.length);
       next.push({
-        title: `Review ${pendingApprovals.length} draft${pendingApprovals.length === 1 ? "" : "s"}`,
+        title: `Review ${approvalCountLabel} draft${pendingApprovals.length === 1 ? "" : "s"}`,
         why: "Nothing goes live until you approve it.",
         href: `/app/${slug}/content?status=in_review`,
         kind: "approvals",
@@ -138,7 +140,8 @@ export const today = query({
       business: business ? { name: business.name, website: business.website ?? null, summary: business.summary ?? null, type: business.businessType ?? null } : null,
       next: next.slice(0, 3),
       approvals: pendingApprovals.slice(0, 6).map((a) => ({ id: a._id, title: a.title, channel: a.channel, kind: a.kind, createdByRole: a.createdByRole ?? null, updatedAt: a.updatedAt })),
-      approvalsCount: pendingApprovals.length,
+      approvalsCount: Math.min(pendingApprovals.length, 20),
+      approvalsCountIsLowerBound: pendingApprovals.length > 20,
       strategy: strategy
         ? {
             id: strategy._id,

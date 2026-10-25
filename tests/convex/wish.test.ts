@@ -9,6 +9,44 @@ import { asNewUser, setup } from "./helpers";
  * and nothing external runs without approval.
  */
 describe("wishes", () => {
+  it("marks the Home approval count as a lower bound when more drafts exist than the bounded query returns", async () => {
+    const t = setup();
+    const u = await asNewUser(t, "wish-approval-count@example.com", { anonymous: true });
+    const { slug } = await u.client.mutation(api.demo.createDemoWorkspace, {});
+    await t.run(async (ctx) => {
+      const org = (await ctx.db.query("organizations").withIndex("by_slug", (q) => q.eq("slug", slug)).unique())!;
+      const business = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first())!;
+      for (let index = 0; index < 21; index += 1) {
+        await ctx.db.insert("artifacts", {
+          orgId: org._id,
+          businessId: business._id,
+          kind: "social_post",
+          channel: "instagram",
+          title: `Draft ${index + 1}`,
+          status: "in_review",
+          currentVersion: 1,
+          createdAt: Date.now() + index,
+          updatedAt: Date.now() + index,
+        });
+      }
+    });
+
+    const today = await u.client.query(api.workspace.today, { slug });
+    expect(today.approvalsCount).toBe(20);
+    expect(today.approvalsCountIsLowerBound).toBe(true);
+    expect(today.approvals).toHaveLength(6);
+    expect(today.next.find((item) => item.kind === "approvals")?.title).toBe("Review 20+ drafts");
+  });
+
+  it("returns an exact approval count when the bounded list is complete", async () => {
+    const t = setup();
+    const u = await asNewUser(t, "wish-approval-count-exact@example.com", { anonymous: true });
+    const { slug } = await u.client.mutation(api.demo.createDemoWorkspace, {});
+    const today = await u.client.query(api.workspace.today, { slug });
+    expect(today.approvalsCount).toBe(3);
+    expect(today.approvalsCountIsLowerBound).toBe(false);
+  });
+
   it("seeds a clearly fictional opportunity for the editable Growth Home question flow", async () => {
     const t = setup();
     const u = await asNewUser(t, "demo-opportunity@example.com", { anonymous: true });
