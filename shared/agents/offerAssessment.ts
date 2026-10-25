@@ -204,8 +204,18 @@ export interface OfferAssessmentContext {
 const REQUIRED_ALTERNATIVES = ["positioning", "conversion_path", "retention", "capacity", "no_change"] as const;
 const PROMOTION_WORDS = /\b(?:discount|%\s*off|save\s+\$|sale price|coupon|promo code|limited[- ]time|bonus|bundle|free trial|payment terms|pay later|guarantee|referral reward|incentive|special offer|offer change|change the offer|non[- ]price offer|free (?:setup|shipping|delivery|consultation|onboarding))\b/i;
 const URGENCY_WORDS = /\b(?:limited[- ]time|ends? (?:today|tomorrow|this week|on|in)|last chance|only \d+|limited (?:spots?|seats?|stock|inventory)|while supplies last|deadline|scarcity|expires? (?:today|tomorrow|on|in))\b/i;
-const RESTRICTED_AUDIENCE = /\b(?:first[- ]time|new (?:customers?|clients?|buyers?|users?)|existing (?:customers?|clients?|buyers?|users?)|qualified|invited|waitlist|members? only|for (?:returning|current) (?:customers?|clients?|buyers?|users?))\b/i;
+const RESTRICTED_AUDIENCE = /\b(?:first[- ]time|new (?:customers?|clients?|buyers?|users?)|existing (?:customers?|clients?|buyers?|users?|subscribers?|members?)|qualified|invited|waitlist|members? only|(?:for )?(?:returning|current) (?:customers?|clients?|buyers?|users?|subscribers?|members?))\b/i;
 const UNIVERSAL_AUDIENCE = /\b(?:available to everyone|open to everyone|for everyone|all customers|all users|any customer|any user|anyone can|no restrictions)\b/i;
+const AUDIENCE_QUALIFIERS = [
+  /\bfirst[- ]time\b/i,
+  /\bnew (?:customers?|clients?|buyers?|users?)\b/i,
+  /\bexisting (?:customers?|clients?|buyers?|users?|subscribers?|members?)\b/i,
+  /\bqualified\b/i,
+  /\binvited\b/i,
+  /\bwaitlist\b/i,
+  /\bmembers? only\b/i,
+  /\b(?:returning|current) (?:customers?|clients?|buyers?|users?|subscribers?|members?)\b/i,
+];
 const OFFER_MECHANISM_PATTERNS: Record<string, RegExp> = {
   discount: /\b(?:discount|\d+(?:\.\d+)?%\s*off|save\s+(?:[$£€]\s*)?\d|promo(?:tion)? code|coupon|sale price|introductory price)\b/i,
   bundle: /\bbundles?\b/i,
@@ -237,8 +247,21 @@ export function lintApprovedOfferCopy(text: string, offers: ApprovedOfferCopyTer
       issues.push({ severity: "error", rule: "approved_offer_urgency", message: "This copy adds a deadline, scarcity, or limited-availability claim that is not present in the approved offer evidence. Remove it or use the exact supported claim from the plan.", path });
     }
   }
-  if (PROMOTION_WORDS.test(text) && offers.some((offer) => offer.eligibleAudience && RESTRICTED_AUDIENCE.test(offer.eligibleAudience)) && UNIVERSAL_AUDIENCE.test(text)) {
-    issues.push({ severity: "error", rule: "approved_offer_eligibility", message: "This copy presents a restricted offer as open to everyone. Preserve the audience qualifiers from the approved plan or remove the broader claim.", path });
+  const promotionOffers = offers.filter((offer) => offer.recommendation === "recommend_promotion" || offer.recommendation === "validate_first");
+  const restrictedAudiences = promotionOffers
+    .map((offer) => offer.eligibleAudience?.split(/;\s*(?:exclude|except|not eligible)\b/i)[0]?.trim())
+    .filter((audience): audience is string => Boolean(audience && RESTRICTED_AUDIENCE.test(audience)));
+  const distinctRestrictedAudiences = [...new Set(restrictedAudiences.map((audience) => audience.normalize("NFKC").replace(/\s+/gu, " ").toLocaleLowerCase("en-US")))];
+  const requiredQualifiers = restrictedAudiences.length === 1 || distinctRestrictedAudiences.length === 1
+    ? [...new Set(restrictedAudiences.flatMap((audience) => AUDIENCE_QUALIFIERS.filter((qualifier) => qualifier.test(audience)).map((qualifier) => qualifier.source)))]
+    : [];
+  const hasUnrestrictedPromotion = promotionOffers.some((offer) => !offer.eligibleAudience || !RESTRICTED_AUDIENCE.test(offer.eligibleAudience));
+  if (PROMOTION_WORDS.test(text) && restrictedAudiences.length && !hasUnrestrictedPromotion) {
+    if (UNIVERSAL_AUDIENCE.test(text)) {
+      issues.push({ severity: "error", rule: "approved_offer_eligibility", message: "This copy presents a restricted offer as open to everyone. Preserve the audience qualifiers from the approved plan or remove the broader claim.", path });
+    } else if (requiredQualifiers.length && !requiredQualifiers.every((source) => new RegExp(source, "i").test(text))) {
+      issues.push({ severity: "error", rule: "approved_offer_eligibility", message: "This copy mentions a restricted promotion but omits its eligible-audience condition. Include the relevant approved qualifier or remove the promotion wording.", path });
+    }
   }
   return issues;
 }

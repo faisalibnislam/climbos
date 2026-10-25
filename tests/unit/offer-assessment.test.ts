@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { approvedPlanContext, approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
 import { evaluateOfferUnitEconomics, lintApprovedOfferCopy, lintOfferAssessment, type OfferAssessment } from "../../shared/agents/offerAssessment";
 import { OFFER_DECISION_POLICY, playsTask } from "../../shared/agents/planTasks";
-import { adsSpec, emailSpec, socialSpec } from "../../shared/agents/specs";
+import { adsSpec, emailSpec, socialCalendarSpec, socialSpec } from "../../shared/agents/specs";
 
 const fact = "Owner reports that qualified quote requests do not book because of stated price objections. Current offer is $100 per service. Proposed offer is $95 per service. Variable labor is $40 per service, payment fee is $3 per sale, fulfillment costs $7 per service, and the proposed bonus costs $5 per service. Owner minimum contribution is $35 per sale and minimum contribution margin is 30%. The team has capacity for 20 additional jobs per month.";
 const context = { facts: [fact], researchNotes: "", sourceUrls: [], evidenceText: fact };
@@ -171,6 +171,12 @@ describe("offer and promotion recommendations", () => {
     expect(lintApprovedOfferCopy("Limited-time offer ends November 30, 2026.", supportedUrgency, "email.body").some((issue) => issue.rule === "approved_offer_urgency")).toBe(false);
     expect(lintApprovedOfferCopy("Special offer available to everyone.", terms, "email.body").some((issue) => issue.rule === "approved_offer_eligibility")).toBe(true);
     expect(lintApprovedOfferCopy("Special offer for first-time quote requesters only.", terms, "email.body").some((issue) => issue.rule === "approved_offer_eligibility")).toBe(false);
+    expect(lintApprovedOfferCopy("Get a 5% discount today.", terms, "email.body")).toMatchObject([{ rule: "approved_offer_eligibility", severity: "error" }]);
+    const separateAudiences = [
+      ...terms,
+      { ...terms[0], playName: "Member offer", eligibleAudience: "Current subscribers" },
+    ];
+    expect(lintApprovedOfferCopy("Get a 5% discount today.", separateAudiences, "email.body").some((issue) => issue.rule === "approved_offer_eligibility")).toBe(false);
     expect(lintApprovedOfferCopy("Get a free trial for first-time quote requesters.", terms, "email.body").some((issue) => issue.rule === "approved_offer_mechanism")).toBe(true);
     expect(lintApprovedOfferCopy("Get a 5% discount for first-time quote requesters.", terms, "email.body").some((issue) => issue.rule === "approved_offer_mechanism")).toBe(false);
     expect(lintApprovedOfferCopy("Get a 10% discount for first-time quote requesters.", terms, "email.body")).toMatchObject([{ rule: "approved_offer_discount", severity: "error" }]);
@@ -184,5 +190,7 @@ describe("offer and promotion recommendations", () => {
     expect(emailSpec().lint?.(emailOutput, copyInput).some((issue) => issue.rule === "approved_offer_price")).toBe(true);
     expect(socialSpec(["instagram"]).lint?.(socialOutput, copyInput).some((issue) => issue.rule === "approved_offer_price")).toBe(true);
     expect(adsSpec().lint?.(adsOutput, copyInput).some((issue) => issue.rule === "approved_offer_price")).toBe(true);
+    const calendarOutput = { weekTheme: "Service offers", pillars: [], slots: [{ channel: "instagram", day: 1, pillar: "offers", purpose: "teach" as const, format: "text" as const, idea: "Share a 5% discount.", angle: "price", hookDraft: "Get a 5% discount today.", proof: "", callToAction: "Learn more", needsOwner: false, ownerNote: "" }], learningsApplied: [] };
+    expect(socialCalendarSpec({ instagram: 1 }).lint?.(calendarOutput, copyInput).some((issue) => issue.rule === "approved_offer_eligibility")).toBe(true);
   });
 });
