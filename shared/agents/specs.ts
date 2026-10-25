@@ -265,6 +265,9 @@ export const PlaySchema = z.object({
     /** Monthly non-media costs for this play (tools, freelancers, creative); 0 when none. Counted in cost per customer. */
     otherMonthlyUsd: z.number().optional(),
     otherSource: SourceTagSchema.optional(),
+    /** One-time cash cost to start this play (setup, tooling, creative); omit or 0 when none. Counted once in cost per customer and in cash timing. */
+    setupCashUsd: z.number().min(0).optional().describe("One-time cash cost to start this play (setup, tooling, creative), in the workspace currency. Include only when the owner, a cited page or an explicitly labelled assumption supports it, with setupSource; omit when there is none."),
+    setupSource: SourceTagSchema.optional(),
     hoursSource: SourceTagSchema,
   }),
 });
@@ -316,7 +319,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { id: string; kind: "more_sales" | "more_customers" | "more_reach" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.68-action-evidence-excerpts";
+export const ENGINE_VERSION = "v3.69-play-setup-costs";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -1236,7 +1239,7 @@ export function lintFeasibility(plays: { name: string; kind: string; model?: { m
  * never estimated by the model). Most-likely shortfall is an error; a shortfall only at P10 customers is a warning.
  * Unknown reserve, payment delay, price, margin or churn: no check rather than an assumed value.
  */
-export function lintGrowthCashReserve(plays: { name: string; kind: string; model?: { monthlySpendUsd: number; otherMonthlyUsd?: number; ownerHoursPerWeek: number } }[], c: PlanConstraints | undefined, economics?: Economics): LintIssue[] {
+export function lintGrowthCashReserve(plays: { name: string; kind: string; model?: { monthlySpendUsd: number; otherMonthlyUsd?: number; setupCashUsd?: number; ownerHoursPerWeek: number } }[], c: PlanConstraints | undefined, economics?: Economics): LintIssue[] {
   const g = c?.growthCashTiming;
   if (!c || !g || !economics) return [];
   const m = (n: number) => formatMoney(Math.round(n * 100) / 100, c.currency);
@@ -1250,7 +1253,7 @@ export function lintGrowthCashReserve(plays: { name: string; kind: string; model
   const lows = (s: NonNullable<typeof t.mostLikely>) => `a modeled low point of ${m(s.lowestBalanceUsd)} in week ${s.lowestWeek}`;
   if (t.mostLikely.reserveCovers === false) {
     // The computed fix: would deferring the most cash-heavy selected play bring the low point within the reserve?
-    const cashOf = (name: string) => { const p = plays.find((x) => x.name === name); return Math.max(0, p?.model?.monthlySpendUsd ?? 0) + Math.max(0, p?.model?.otherMonthlyUsd ?? 0); };
+    const cashOf = (name: string) => { const p = plays.find((x) => x.name === name); return Math.max(0, p?.model?.monthlySpendUsd ?? 0) + Math.max(0, p?.model?.otherMonthlyUsd ?? 0) + Math.max(0, p?.model?.setupCashUsd ?? 0); };
     const heaviest = [...pick.selected].sort((a, b) => cashOf(b) - cashOf(a))[0];
     const without = pick.selected.length > 1 && cashOf(heaviest) > 0 ? timing(pick.selected.filter((n) => n !== heaviest)) : null;
     const hint = without?.mostLikely ? without.mostLikely.reserveCovers ? ` Deferring "${heaviest}" (computed) keeps the low point at ${m(without.mostLikely.lowestBalanceUsd)}, within the reserve.` : ` Even without "${heaviest}" the low point is ${m(without.mostLikely.lowestBalanceUsd)}; cut cash costs or start cash-heavy plays later.` : " Cut cash costs or start cash-heavy plays later.";

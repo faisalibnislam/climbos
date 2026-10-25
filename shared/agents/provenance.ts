@@ -320,6 +320,7 @@ export function verifyTags<O extends PlaysLike>(out: O, ctx: VerifyContext): O {
           return { ...st, source: t.source, ref: t.ref, quote: t.quote, population: t.population, denominator: t.denominator, period: t.period, check: t.check, checkedBy: t.checkedBy, access: t.access, receipt: t.receipt };
         }),
         spendSource: verifyTag(m.spendSource, { values: [m.monthlySpendUsd, undefined, undefined], unit: "usd_month", metricWords: [], kind: "allocation" }, ctx),
+        ...(m.setupSource ? { setupSource: verifyTag(m.setupSource, { values: [m.setupCashUsd ?? 0, undefined, undefined], unit: "usd_month", metricWords: [], kind: "allocation" }, ctx) } : {}),
         hoursSource: verifyTag(m.hoursSource, { values: [m.ownerHoursPerWeek, undefined, undefined], unit: "count", metricWords: [], kind: "allocation" }, ctx),
       },
     };
@@ -329,7 +330,7 @@ export function verifyTags<O extends PlaysLike>(out: O, ctx: VerifyContext): O {
 
 /* ---------------- Rows and forecast basis ---------------- */
 
-export type InputUnit = "people_week" | "share" | "usd_month" | "hours_week" | "share_month" | "usd_hour";
+export type InputUnit = "people_week" | "share" | "usd_month" | "usd_once" | "hours_week" | "share_month" | "usd_hour";
 export interface InputRow {
   key: string;
   label: string;
@@ -357,6 +358,7 @@ export function playInputs(p: PlayLike, e: Economics): InputRow[] {
   ];
   if (typeof e.monthlyChurn === "number") rows.push({ key: "churn", label: "Monthly churn", value: e.monthlyChurn, unit: "share_month", tag: econ.churn, drives: "cost" });
   if ((m.otherMonthlyUsd ?? 0) > 0) rows.push({ key: "other", label: "Tools and freelancers", value: m.otherMonthlyUsd!, unit: "usd_month", tag: read(m.otherSource), drives: "cost" });
+  if ((m.setupCashUsd ?? 0) > 0) rows.push({ key: "setup", label: "One-time setup", value: m.setupCashUsd!, unit: "usd_once", tag: read(m.setupSource), drives: "cost" });
   if (m.ownerHoursPerWeek > 0) rows.push({ key: "ownerHour", label: "Value of your hour", value: ownerHourOf(e), unit: "usd_hour", tag: econ.ownerHour, drives: "cost" });
   return rows;
 }

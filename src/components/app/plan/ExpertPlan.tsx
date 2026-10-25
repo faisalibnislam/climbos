@@ -664,7 +664,7 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
         </ul>
       </details>
       <dl className="grid gap-2 rounded-[var(--radius-control)] bg-surface-2 p-3 text-sm sm:grid-cols-3">
-        <div><dt className="text-xs text-ink-3">Cash over {play.horizonDays} days</dt><dd className="font-medium tabular-nums text-ink">{money(m.costBreakdown.cashMediaUsd + m.costBreakdown.cashOtherUsd)}</dd><dd className="text-xs text-ink-3">Media {money(m.costBreakdown.cashMediaUsd)} + other cash costs {money(m.costBreakdown.cashOtherUsd)}</dd></div>
+        <div><dt className="text-xs text-ink-3">Cash over {play.horizonDays} days</dt><dd className="font-medium tabular-nums text-ink">{money(m.costBreakdown.cashMediaUsd + m.costBreakdown.cashOtherUsd + m.costBreakdown.cashSetupUsd)}</dd><dd className="text-xs text-ink-3">Media {money(m.costBreakdown.cashMediaUsd)} + other cash costs {money(m.costBreakdown.cashOtherUsd)}{m.costBreakdown.cashSetupUsd > 0 ? ` + one-time setup ${money(m.costBreakdown.cashSetupUsd)}` : ""}</dd></div>
         <div><dt className="text-xs text-ink-3">Owner time value</dt><dd className="font-medium tabular-nums text-ink">{money(m.costBreakdown.ownerTimeUsd)}</dd><dd className="text-xs text-ink-3">Hours × your hourly value</dd></div>
         <div><dt className="text-xs text-ink-3">Fully loaded total</dt><dd className="font-semibold tabular-nums text-ink">{money(m.costBreakdown.fullyLoadedUsd)}</dd><dd className="text-xs text-ink-3">Cash + owner time; used for cost per customer</dd></div>
       </dl>
@@ -709,13 +709,14 @@ const fmtInput = (r: InputRow, currency?: string): string => {
       case "share_month":
         return `${Math.round(v * 1000) / 10}%`;
       case "usd_month":
+      case "usd_once":
       case "usd_hour":
         return usd(v, currency);
       default:
         return Math.round(v).toLocaleString("en-US");
     }
   };
-  const suffix = { people_week: "/week", share: "", share_month: "/month", usd_month: "/month", hours_week: " h/week", usd_hour: "/hour" }[r.unit];
+  const suffix = { people_week: "/week", share: "", share_month: "/month", usd_month: "/month", usd_once: " once", hours_week: " h/week", usd_hour: "/hour" }[r.unit];
   const range = r.low !== undefined && r.high !== undefined && (r.low !== r.value || r.high !== r.value) ? ` (${n(r.low)}–${n(r.high)})` : "";
   return `${n(r.value)}${suffix}${range}`;
 };

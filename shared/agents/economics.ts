@@ -55,6 +55,10 @@ export interface PlayModel {
   otherMonthlyUsd?: number;
   /** Where the monthly non-media cost came from. */
   otherSource?: SourceTag;
+  /** One-time cash cost to start the play (setup, tooling, creative), paid in the first week; 0 or absent when none. */
+  setupCashUsd?: number;
+  /** Where the one-time setup cost came from. */
+  setupSource?: SourceTag;
   /** Where reach, spend and owner hours came from (newer plans). */
   reachSource?: SourceTag;
   spendSource?: SourceTag;
@@ -146,7 +150,7 @@ export interface PlayMaths {
   headline: { p10: number; p50: number; p90: number };
   costUsd: number;
   /** Horizon-aligned view of cash spend and owner time that compose the fully loaded total. */
-  costBreakdown: { cashMediaUsd: number; cashOtherUsd: number; ownerTimeUsd: number; fullyLoadedUsd: number };
+  costBreakdown: { cashMediaUsd: number; cashOtherUsd: number; cashSetupUsd: number; ownerTimeUsd: number; fullyLoadedUsd: number };
   cacUsd: number | null;
   /** P10–P90 cost per customer from the same input-range draws as `range`; null when that draw has no customers. */
   cacRange: { p10: number | null; p50: number | null; p90: number | null };
@@ -413,8 +417,10 @@ export function playMaths(p: PlayLike, e: Economics, opts: { pointOnly?: boolean
   // Fully loaded: media, owner time and other costs over the same period (Skok; blog research BRP-17).
   const other = Math.max(0, p.model.otherMonthlyUsd ?? 0) * (days / DAYS_PER_MONTH);
   const ownerTimeUsd = hours * hourUsd;
-  const costUsd = spend + ownerTimeUsd + other;
-  const cacUsd = cacFull(spend, hours, hourUsd, other, customers);
+  // A one-time setup cost is paid once within the horizon, whatever its length.
+  const setup = Math.max(0, p.model.setupCashUsd ?? 0);
+  const costUsd = spend + ownerTimeUsd + other + setup;
+  const cacUsd = cacFull(spend, hours, hourUsd, other + setup, customers);
   const cacAt = (count: number) => (count > 0 ? costUsd / count : null);
   const cacRange = {
     // CAC moves inversely to customer count: the low CAC bound uses the high-customer draw.
@@ -437,7 +443,7 @@ export function playMaths(p: PlayLike, e: Economics, opts: { pointOnly?: boolean
     range,
     headline,
     costUsd,
-    costBreakdown: { cashMediaUsd: spend, cashOtherUsd: other, ownerTimeUsd, fullyLoadedUsd: costUsd },
+    costBreakdown: { cashMediaUsd: spend, cashOtherUsd: other, cashSetupUsd: setup, ownerTimeUsd, fullyLoadedUsd: costUsd },
     cacUsd,
     cacRange,
     valueUsd,
@@ -763,6 +769,8 @@ export interface GrowthCashTiming {
   horizonWeeks: number;
   /** Recurring media and other cash costs of the selected plays, per week (excludes owner time). */
   weeklyCashOutUsd: number;
+  /** One-time setup cash of the selected plays, paid in week 1. */
+  setupCashUsd: number;
   cashOutOverPeriodUsd: number;
   reserveUsd: number | null;
   paymentLagDays: number | null;
@@ -795,6 +803,7 @@ export function growthCashTiming(out: { economics: Economics; plays: PlayLike[] 
   const weight = (w: number) => Math.min(1, hw - (w - 1));
   const monthlyCash = ps.reduce((s, p) => s + Math.max(0, p.model.monthlySpendUsd) + Math.max(0, p.model.otherMonthlyUsd ?? 0), 0);
   const weeklyCashOut = monthlyCash / WEEKS_PER_MONTH;
+  const setupCash = ps.reduce((s, p) => s + Math.max(0, p.model.setupCashUsd ?? 0), 0);
   const reserve = opts.reserveUsd !== undefined && Number.isFinite(opts.reserveUsd) && opts.reserveUsd >= 0 ? opts.reserveUsd : null;
   const lag = opts.paymentLagDays !== undefined && Number.isFinite(opts.paymentLagDays) && opts.paymentLagDays >= 0 ? opts.paymentLagDays : null;
   const contribution = monthlyContribution(out.economics);
@@ -810,7 +819,8 @@ export function growthCashTiming(out: { economics: Economics; plays: PlayLike[] 
   const base = {
     horizonWeeks: W,
     weeklyCashOutUsd: weeklyCashOut,
-    cashOutOverPeriodUsd: weeklyCashOut * hw,
+    setupCashUsd: setupCash,
+    cashOutOverPeriodUsd: weeklyCashOut * hw + setupCash,
     reserveUsd: reserve,
     paymentLagDays: lag,
     missing,
@@ -840,7 +850,7 @@ export function growthCashTiming(out: { economics: Economics; plays: PlayLike[] 
     for (let w = 1; w <= W; w++) {
       let paying = 0;
       for (let a = 1; a + firstPayWeek <= w; a++) paying += won[a] * Math.pow(survival, w - a);
-      balance += (paying * weeklyContribution - weeklyCashOut) * weight(w);
+      balance += (paying * weeklyContribution - weeklyCashOut) * weight(w) - (w === 1 ? setupCash : 0);
       if (balance < lowest - 1e-9) {
         lowest = balance;
         lowestWeek = w;
@@ -911,7 +921,7 @@ export function growthCashTimingLine(t: GrowthCashTiming | null, currency?: stri
   const body = t.mostLikely && t.lowCase
     ? `${scen("most-likely", t.mostLikely)}; ${scen("low-end P10 customers", t.lowCase)}`
     : `customer payments not timed (missing ${t.missing.filter((x) => x !== "reserve").join(", ")}); growth costs total ${m(t.cashOutOverPeriodUsd)} before any customer pays`;
-  return `- GROWTH CASH TIMING · selected set (${inputs}; ${m(t.weeklyCashOutUsd)}/week growth cash out): ${body}. Computed by ClimbOS from play costs, ramps and economics; quote it, don't recompute it. Not a bank-balance or cash-flow forecast. If the reserve is short, sequence or cap cash-heavy plays and say so; if inputs are unknown, don't assume them.`;
+  return `- GROWTH CASH TIMING · selected set (${inputs}; ${m(t.weeklyCashOutUsd)}/week growth cash out${t.setupCashUsd > 0 ? ` plus ${m(t.setupCashUsd)} one-time setup in week 1` : ""}): ${body}. Computed by ClimbOS from play costs, ramps and economics; quote it, don't recompute it. Not a bank-balance or cash-flow forecast. If the reserve is short, sequence or cap cash-heavy plays and say so; if inputs are unknown, don't assume them.`;
 }
 
 /** Every customer count the calculations produce: portfolio and each play's P10/P50/P90, at the goal's horizon and each play's own. */

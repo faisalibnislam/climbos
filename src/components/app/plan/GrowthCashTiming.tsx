@@ -79,11 +79,11 @@ export function GrowthCashTimingPanel({ data, slug, canEdit }: { data: GrowthCas
       <div>
         <h3 className="text-sm font-semibold text-ink">When growth cash goes out and comes back</h3>
         <p className="mt-1 text-xs text-ink-3">
-          For {data.selected.join(" + ")} over {data.horizonWeeks} weeks. Growth costs are paid evenly from week 1. Each new customer&apos;s monthly contribution (revenue × margin) starts after your payment delay and falls with churn. Customers arrive on each play&apos;s modeled ramp. Payments after this period are not counted.
+          For {data.selected.join(" + ")} over {data.horizonWeeks} weeks. Recurring growth costs are paid evenly from week 1 and one-time setup costs in week 1. Each new customer&apos;s monthly contribution (revenue × margin) starts after your payment delay and falls with churn. Customers arrive on each play&apos;s modeled ramp. Payments after this period are not counted.
         </p>
       </div>
       <dl className="grid gap-2 text-sm sm:grid-cols-3">
-        <div><dt className="text-xs text-ink-3">Growth cash out</dt><dd className="font-semibold tabular-nums text-ink">{money(data.weeklyCashOutUsd, c)}/week · {money(data.cashOutOverPeriodUsd, c)} over the period</dd></div>
+        <div><dt className="text-xs text-ink-3">Growth cash out</dt><dd className="font-semibold tabular-nums text-ink">{money(data.weeklyCashOutUsd, c)}/week{data.setupCashUsd > 0 ? ` + ${money(data.setupCashUsd, c)} one-time setup in week 1` : ""} · {money(data.cashOutOverPeriodUsd, c)} over the period</dd></div>
         <div><dt className="text-xs text-ink-3">Growth reserve</dt><dd className="font-semibold tabular-nums text-ink">{data.reserveUsd === null ? "Unknown · not assumed" : `${money(data.reserveUsd, c)} · you reported`}</dd></div>
         <div><dt className="text-xs text-ink-3">Days until a new customer pays</dt><dd className="font-semibold tabular-nums text-ink">{data.paymentLagDays === null ? "Unknown · not assumed" : `${data.paymentLagDays} days · you reported`}</dd></div>
       </dl>

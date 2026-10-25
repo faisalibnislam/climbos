@@ -319,6 +319,7 @@ const growthPlayValidator = v.object({
     spendSource: growthSourceTagValidator,
     ownerHoursPerWeek: v.number(),
     otherMonthlyUsd: v.optional(v.number()),
+    setupCashUsd: v.optional(v.number()),
     otherSource: v.optional(growthSourceTagValidator),
     hoursSource: growthSourceTagValidator,
   }),

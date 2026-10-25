@@ -112,3 +112,25 @@ describe("growth cash timing in plan generation", () => {
     expect(growthCashTimingLine(null)).toBe("");
   });
 });
+
+describe("one-time setup costs", () => {
+  it("count once in fully loaded cost and cost per customer, and land in week 1 of the cash timing", async () => {
+    const { playMaths } = await import("../../shared/agents/economics");
+    const withSetup = play({ setupCashUsd: 600 });
+    const m = playMaths(withSetup, owned());
+    const base = playMaths(play(), owned());
+    expect(m.costBreakdown.cashSetupUsd).toBe(600);
+    expect(m.costUsd - base.costUsd).toBeCloseTo(600, 6);
+    expect(m.costBreakdown.cashMediaUsd + m.costBreakdown.cashOtherUsd + m.costBreakdown.cashSetupUsd + m.costBreakdown.ownerTimeUsd).toBeCloseTo(m.costBreakdown.fullyLoadedUsd, 6);
+    expect(m.cacUsd! - base.cacUsd!).toBeCloseTo(600 / 40, 6);
+
+    // Paid up front, setup deepens week 1: −150 − 600 = −750, then −750, −600, −300.
+    const t = growthCashTiming({ economics: owned(), plays: [withSetup] }, ["Partner referrals"], { horizonDays: 28, paymentLagDays: 0, reserveUsd: 700 })!;
+    expect(t.setupCashUsd).toBe(600);
+    expect(t.cashOutOverPeriodUsd).toBeCloseTo(1_800, 6);
+    expect(t.mostLikely!.lowestBalanceUsd).toBeCloseTo(-750, 6);
+    expect(t.mostLikely).toMatchObject({ lowestWeek: 1, reserveCovers: false });
+    expect(t.mostLikely!.endBalanceUsd).toBeCloseTo(-300, 6);
+    expect(growthCashTimingLine(t, "USD")).toContain("plus $600 one-time setup in week 1");
+  });
+});
