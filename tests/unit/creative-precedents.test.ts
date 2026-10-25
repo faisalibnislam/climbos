@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(17);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(18);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -24,6 +24,11 @@ describe("creative strategy precedent retrieval", () => {
 
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {
     expect(retrieveCreativePrecedents("Test compact packaging and customer assembly for bulky furniture to reduce shipping damage")[0]?.precedent.id).toBe("CP-017");
+  });
+
+  it("retrieves collaboration-led bottom-up adoption through its product mechanism", () => {
+    const matches = retrieveCreativePrecedents("Help individual users invite coworkers by sharing content and collaborating on a work platform, enabling bottom-up adoption within organizations", 2);
+    expect(matches.some(({ precedent }) => precedent.id === "CP-018")).toBe(true);
   });
 
   it("retrieves opt-in personalization and sharing as a separate customer mechanism", () => {
