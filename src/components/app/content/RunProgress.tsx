@@ -345,7 +345,7 @@ export function RunProgressCompact({ slug, runId, className }: { slug: string; r
 
 /** What the job already knows, shown while it keeps working: channels that fit, the first take, the chosen plays. */
 function EarlyPreview({ preview }: { preview: { headline?: string; points?: string[]; opportunities?: { title: string; why: string; nextStep: string; evidence: { factId: string; statement: string; kind?: string }[]; basis: "confirmed_facts" | "hypothesis" }[]; channels?: string[]; budget?: string; plays?: { name: string; kind: string; p50: number; unit: string }[] } }) {
-  const KIND: Record<string, string> = { bankable: "Bankable", creative: "Creative", moonshot: "Moonshot" };
+  const KIND: Record<string, string> = { bankable: "Practical · established practice", creative: "Adjacent · evidence-supported inference", moonshot: "Bold · speculative hypothesis" };
   return (
     <section aria-label="Early preview" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-brand-200 bg-brand-50 p-3">
       <p className="text-overline text-brand-800">Early preview · full plan coming</p>

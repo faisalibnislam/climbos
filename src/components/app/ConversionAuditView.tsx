@@ -1,9 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useMutation, useQuery } from "convex/react";
+import { useState } from "react";
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { ArrowRight, ExternalLink, Globe, Megaphone } from "@/components/icons";
-import { Badge } from "@/components/ui";
+import { Badge, Button, Field, Input, Select, Textarea, toast } from "@/components/ui";
 import { Prose } from "@/components/ds/content";
+import { errorMessage } from "@/components/app/errors";
 import { formatDateTime } from "./money";
 
 type VisualEvidence = { view?: string; sourceUrl?: string; observation?: string };
@@ -16,13 +21,17 @@ type SocialSourceCoverage = { source?: string; state?: string; postsReviewed?: n
 type SocialPostPerformance = { sourceArtifactId?: string; platform?: string; metrics?: { metric?: string; value?: number }[] };
 type SeoReadinessFinding = { pageUrl?: string; level?: string; title?: string; evidence?: string; nextStep?: string };
 type SeoReadinessPage = { url?: string; metadataState?: string; titleLength?: number | null; descriptionLength?: number | null; headingCounts?: { h1?: number; h2?: number; h3?: number } | null; canonicalUrl?: string | null; robotsDirectives?: string | null; structuredDataTypes?: string[] | null };
-type Coverage = { requestedUrl?: string | null; discoveredCandidates?: number; pagesAttempted?: number; pagesRead?: number; pages?: { url?: string; status?: string }[]; visualReview?: { state?: string; views?: string[] } };
+type Coverage = { requestedUrl?: string | null; discoveredCandidates?: number; pagesAttempted?: number; pagesRead?: number; pages?: { url?: string; status?: string }[]; visualReview?: { state?: string; views?: string[]; capturedAt?: number; screenshots?: { view?: string; width?: number; height?: number }[] } };
+type DesignDirection = { id?: string; name?: string; responseLevel?: "quick_fix" | "considered_redesign" | "bold_alternative"; communicates?: string; tradeoff?: string; change?: string; previewBrief?: string; measurementPlan?: string; effort?: string; assumptions?: string[]; risks?: string[] };
+type FindingStatus = "accepted" | "dismissed" | "deferred" | "resolved" | "reopened" | "corrected" | "needs_information";
+type FindingReview = { findingIndex: number; status: FindingStatus; note: string; sourceUrl?: string; evidenceRef?: string; viewport?: string | null; screenshotCapturedAt?: number | null; updatedAt: number };
+type DesignFinding = { lens?: string; classification?: string; region?: string; observation?: string; businessOrUserGoal?: string; whyItMatters?: string; severity?: string; confidence?: string; evidence?: string; sourceUrl?: string; proposedChange?: string; directions?: DesignDirection[]; visualEvidence?: { view?: string; observation?: string }; automatedCheckIds?: string[]; requiresHumanEvaluation?: boolean };
 
 const obj = (value: unknown): Record<string, unknown> => value && typeof value === "object" ? value as Record<string, unknown> : {};
 const list = <T,>(value: unknown): T[] => Array.isArray(value) ? value as T[] : [];
 const label = (value: unknown, fallback = "") => typeof value === "string" ? value : fallback;
 
-export function ConversionAuditView({ value, slug }: { value: unknown; slug: string }) {
+export function ConversionAuditView({ value, slug, runId }: { value: unknown; slug: string; runId: Id<"workflowRuns"> }) {
   const data = obj(value);
   const coverage = obj(data.auditCoverage);
   const website = obj(coverage.website) as Coverage;
@@ -54,6 +63,13 @@ export function ConversionAuditView({ value, slug }: { value: unknown; slug: str
   const socialSources = list<SocialSourceCoverage>(socialReview.coverage);
   const pages = list<unknown>(website.pages);
   const limitations = list<string>(coverage.limitations);
+  const designCritic = obj(data.designCritic);
+  const designFindings = list<DesignFinding>(designCritic.findings);
+  const approvedBrand = useQuery(api.brand.get, { slug });
+  const [creativeRanges, setCreativeRanges] = useState<Record<number, "safer" | "distinctive" | "unconventional">>({});
+  const [essentialElements, setEssentialElements] = useState<Record<number, string>>({});
+  const findingReview = useQuery(api.designCritic.feedback, { slug, runId });
+  const reviewsByIndex = new Map((findingReview?.rows ?? []).map((row) => [row.findingIndex, row as FindingReview]));
 
   return (
     <div className="flex flex-col gap-5">
@@ -63,7 +79,7 @@ export function ConversionAuditView({ value, slug }: { value: unknown; slug: str
         {search.state === "matched_to_read_pages" ? <p className="mt-2 text-xs text-ink-3">Search Console: {Number(search.observedRows ?? 0)} observations for pages read, {label(search.startDate)} to {label(search.endDate)}. These are search activity, not conversions.</p> : search.state === "not_used_property_mismatch" ? <p className="mt-2 text-xs text-ink-3">Search Console data was left out because its property did not match this business website.</p> : search.state === "property_matched_no_rows_for_read_pages" ? <p className="mt-2 text-xs text-ink-3">Search Console property matched, but no stored observations matched the pages read in this audit.</p> : null}
         {website.requestedUrl ? <a href={String(website.requestedUrl)} target="_blank" rel="noreferrer noopener" className="mt-2 inline-flex items-center gap-1 break-all text-xs text-link">{String(website.requestedUrl)} <ExternalLink aria-hidden className="size-3" /></a> : <p className="mt-2 text-xs text-ink-3">No website address was saved for this business.</p>}
         {pages.length > 0 ? <ul className="mt-3 flex flex-col gap-1 text-xs text-ink-2">{pages.map((raw, i) => { const page = obj(raw); return <li key={`${String(page.url)}-${i}`} className="flex flex-wrap items-center gap-2"><Badge tone={page.status === "read" ? "green" : "amber"}>{label(page.status, "not read").replaceAll("_", " ")}</Badge><span className="break-all">{label(page.url)}</span></li>; })}</ul> : null}
-        {websiteVisualReview.state ? <p className="mt-2 text-xs text-ink-3">Visual website sample: {websiteVisualReview.state === "reviewed" ? `one page captured in ${(Array.isArray(websiteVisualReview.views) ? websiteVisualReview.views : []).join(" and ")} view${Array.isArray(websiteVisualReview.views) && websiteVisualReview.views.length === 1 ? "" : "s"}` : websiteVisualReview.state === "unavailable" ? "screenshot unavailable" : "not attempted"}. Screenshots are synthetic snapshots, not customer behavior.</p> : null}
+        {websiteVisualReview.state ? <p className="mt-2 text-xs text-ink-3">Visual website sample: {websiteVisualReview.state === "reviewed" ? `one page captured in ${(Array.isArray(websiteVisualReview.views) ? websiteVisualReview.views : []).join(" and ")} view${Array.isArray(websiteVisualReview.views) && websiteVisualReview.views.length === 1 ? "" : "s"}${Array.isArray(websiteVisualReview.screenshots) ? ` (${websiteVisualReview.screenshots.map((shot) => `${shot.view} ${shot.width}×${shot.height}`).join(", ")})` : ""}${typeof websiteVisualReview.capturedAt === "number" ? ` at ${formatDateTime(websiteVisualReview.capturedAt)}` : ""}` : websiteVisualReview.state === "unavailable" ? `screenshot unavailable${typeof websiteVisualReview.capturedAt === "number" ? `; attempted at ${formatDateTime(websiteVisualReview.capturedAt)}` : ""}` : "not attempted"}. Screenshots are synthetic snapshots, not customer behavior.</p> : null}
       </section>
 
       {seoReadiness.state ? <section className="rounded-xl border border-line p-4">
@@ -86,6 +102,45 @@ export function ConversionAuditView({ value, slug }: { value: unknown; slug: str
 
       {label(data.clarityVerdict) ? <div><p className="text-overline">Website clarity</p><Prose text={label(data.clarityVerdict)} tone="default" /></div> : null}
       {label(data.messageMatch) ? <div><p className="text-overline">Message match</p><Prose text={label(data.messageMatch)} tone="muted" /></div> : null}
+
+      {Object.keys(designCritic).length ? <section className="rounded-xl border border-line p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="heading-section">Design Critic</h3><p className="mt-1 text-xs text-ink-3">Brand, clarity, trust, craft, accessibility and measured behavior are judged as separate lenses. Subjective judgments are labeled.</p></div><Badge tone={designCritic.coverage === "visual_sampled" ? "blue" : "amber"}>{label(designCritic.coverage, "coverage unknown").replaceAll("_", " ")}</Badge></div>
+        {designCritic.summary ? <p className="mt-3 text-sm text-ink-2">{label(designCritic.summary)}</p> : null}
+        {designFindings.length ? <ul className="mt-3 grid gap-2">{designFindings.map((finding, i) => <li key={`${finding.sourceUrl}-${finding.region}-${i}`} className="rounded-lg border border-line bg-surface-2/60 p-3">
+          <div className="flex flex-wrap items-center gap-2"><Badge tone={finding.severity === "high" ? "amber" : "neutral"}>{label(finding.severity, "severity unknown")} priority</Badge><span className="text-sm font-semibold text-ink">{label(finding.region, "Page region")}</span><Badge>{label(finding.lens, "design lens").replaceAll("_", " ")}</Badge><Badge tone={finding.classification === "objective_defect" || finding.classification === "automated_check" ? "blue" : "violet"}>{label(finding.classification, "judgment unlabelled").replaceAll("_", " ")}</Badge><span className="text-xs text-ink-3">{label(finding.confidence, "confidence unknown")} confidence</span></div>
+          {finding.observation ? <p className="mt-2 text-sm text-ink-2">{label(finding.observation)}</p> : null}
+          {finding.businessOrUserGoal ? <p className="mt-1 text-sm text-ink"><span className="font-medium">Goal: </span>{label(finding.businessOrUserGoal)}</p> : null}
+          {finding.whyItMatters ? <p className="mt-1 text-sm text-ink-2"><span className="font-medium text-ink">Why it matters: </span>{label(finding.whyItMatters)}</p> : null}
+          {finding.evidence ? <p className="mt-2 rounded-md bg-surface p-2 text-xs text-ink-2"><span className="font-medium text-ink">Evidence: </span>{label(finding.evidence)}</p> : null}
+          {finding.visualEvidence?.observation ? <p className="mt-2 rounded-md border-l-2 border-violet-300 bg-surface p-2 text-sm text-ink-2">Visible in the {label(finding.visualEvidence.view)} screenshot: {label(finding.visualEvidence.observation)}</p> : null}
+          {finding.automatedCheckIds?.length ? <p className="mt-1 text-xs text-ink-3">Automated checks: {finding.automatedCheckIds.join(", ")}</p> : null}
+          {finding.requiresHumanEvaluation ? <p className="mt-1 text-xs text-amber-800">Needs human review; automated and screenshot checks cannot establish this finding alone.</p> : null}
+          {finding.proposedChange ? <p className="mt-2 text-sm text-ink"><span className="font-medium">Proposed change: </span>{label(finding.proposedChange)}</p> : null}
+          {finding.directions?.length ? <div className="mt-3 grid gap-2 border-t border-line pt-3">
+            <p className="text-xs font-medium text-ink">Design response options · each is a hypothesis</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Field label="Creative range for the editable brief"><Select value={creativeRanges[i] ?? "distinctive"} onValueChange={(value) => setCreativeRanges((current) => ({ ...current, [i]: value as "safer" | "distinctive" | "unconventional" }))} options={[{ value: "safer", label: "Safer" }, { value: "distinctive", label: "More distinctive" }, { value: "unconventional", label: "More unconventional" }]} /></Field>
+              <Field label="Essential brand elements to preserve"><Input value={essentialElements[i] ?? ""} onChange={(event) => setEssentialElements((current) => ({ ...current, [i]: event.target.value.slice(0, 240) }))} placeholder="Add owner-confirmed elements" /></Field>
+            </div>
+            {finding.directions.map((direction, directionIndex) => <div key={direction.id ?? directionIndex} className="rounded-lg border border-line bg-surface p-3">
+              {direction.responseLevel ? <Badge tone={direction.responseLevel === "bold_alternative" ? "violet" : direction.responseLevel === "quick_fix" ? "green" : "blue"}>{direction.responseLevel.replaceAll("_", " ")}</Badge> : null}
+              <p className="text-sm font-semibold text-ink">{label(direction.name, `Direction ${directionIndex + 1}`)}</p>
+              {direction.communicates ? <p className="mt-1 text-xs text-ink-2"><span className="font-medium text-ink">Communicates: </span>{label(direction.communicates)}</p> : null}
+              {direction.tradeoff ? <p className="mt-1 text-xs text-ink-2"><span className="font-medium text-ink">Tradeoff: </span>{label(direction.tradeoff)}</p> : null}
+              {direction.change ? <p className="mt-1 text-xs text-ink-2">{label(direction.change)}</p> : null}
+              {direction.effort ? <p className="mt-1 text-xs text-ink-3">Effort: {label(direction.effort)}</p> : null}
+              {direction.assumptions?.length ? <p className="mt-1 text-xs text-ink-3">Assumptions: {direction.assumptions.join("; ")}</p> : null}
+              {direction.risks?.length ? <p className="mt-1 text-xs text-ink-3">Risks: {direction.risks.join("; ")}</p> : null}
+              {direction.measurementPlan ? <p className="mt-1 text-xs text-ink-3"><span className="font-medium">Measure: </span>{label(direction.measurementPlan)}</p> : null}
+              {direction.previewBrief ? <Link href={`/app/${encodeURIComponent(slug)}/pages?brief=${encodeURIComponent(designBrief(finding, direction, approvedBrand, creativeRanges[i] ?? "distinctive", essentialElements[i] ?? ""))}`} className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-link">Prepare editable brief <ArrowRight aria-hidden className="size-3" /></Link> : null}
+            </div>)}
+            <p className="text-xs text-ink-3">The brief opens as editable text. Approved brand rules are not included unless explicitly attached; inferred cues remain hypotheses. Creating a draft does not change the audited website.</p>
+          </div> : null}
+          {finding.sourceUrl ? <a href={finding.sourceUrl} target="_blank" rel="noreferrer noopener" className="mt-2 inline-flex break-all text-xs text-link">Open evidence page <ExternalLink aria-hidden className="ml-1 size-3" /></a> : null}
+          <DesignFindingReview key={`${runId}:${i}:${reviewsByIndex.get(i)?.updatedAt ?? "open"}`} slug={slug} runId={runId} findingIndex={i} current={reviewsByIndex.get(i)} canEdit={findingReview?.canEdit === true} />
+        </li>)}</ul> : <p className="mt-3 text-sm text-ink-2">No design findings were returned for this sample.</p>}
+        {list<string>(designCritic.limitations).length ? <ul className="mt-3 list-disc pl-5 text-xs text-ink-3">{list<string>(designCritic.limitations).map((item, i) => <li key={i}>{item}</li>)}</ul> : null}
+      </section> : null}
 
       {(performance.pageUrl || fieldData.status || labData.status) ? <section className="rounded-xl border border-line p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -138,4 +193,51 @@ export function ConversionAuditView({ value, slug }: { value: unknown; slug: str
       {limitations.length ? <section className="rounded-lg border border-line bg-surface-2/50 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-ink-3">Limits of this review</p><ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-ink-3">{limitations.map((item, i) => <li key={i}>{item}</li>)}</ul></section> : null}
     </div>
   );
+}
+
+function DesignFindingReview({ slug, runId, findingIndex, current, canEdit }: { slug: string; runId: Id<"workflowRuns">; findingIndex: number; current?: FindingReview; canEdit: boolean }) {
+  const save = useMutation(api.designCritic.setFeedback);
+  const [status, setStatus] = useState<FindingStatus | "">(current?.status ?? "");
+  const [note, setNote] = useState(current?.note ?? "");
+  const [busy, setBusy] = useState(false);
+  if (current) return <div className="mt-3 border-t border-line pt-3">
+    <div className="flex flex-wrap items-center gap-2"><Badge tone={current.status === "resolved" ? "green" : current.status === "dismissed" ? "neutral" : "amber"}>Owner marked {current.status.replaceAll("_", " ")}</Badge><span className="text-xs text-ink-3">Saved to this audit</span></div>
+    <p className="mt-1 break-all text-xs text-ink-3">Reference {current.evidenceRef ?? `${runId}:${findingIndex}`} · {current.viewport ? `${current.viewport} view` : "viewport not recorded"}{current.screenshotCapturedAt ? ` captured ${formatDateTime(current.screenshotCapturedAt)}` : ""}{current.sourceUrl ? ` · ${current.sourceUrl}` : ""}</p>
+    {current.note ? <p className="mt-1 text-xs text-ink-2">{current.note}</p> : null}
+    {canEdit ? <form className="mt-2 flex flex-col gap-2" onSubmit={async (event) => { event.preventDefault(); if (!status) return; setBusy(true); try { await save({ slug, runId, findingIndex, status, note }); toast({ tone: "success", title: "Finding review updated" }); } catch (error) { toast({ tone: "danger", title: errorMessage(error) }); } finally { setBusy(false); } }}>
+      <Field label="Update review status"><Select value={status} onValueChange={(value) => setStatus(value as FindingStatus | "")} options={[{ value: "", label: "Keep current status" }, { value: "accepted", label: "Accepted" }, { value: "deferred", label: "Defer" }, { value: "corrected", label: "Corrected" }, { value: "resolved", label: "Resolved" }, { value: "dismissed", label: "Dismissed" }, { value: "reopened", label: "Reopen" }, { value: "needs_information", label: "Needs more information" }]} /></Field>
+      <Field label="Note or correction"><Textarea value={note} onChange={(event) => setNote(event.target.value.slice(0, 500))} rows={2} autosize placeholder="What should the team know?" /></Field>
+      <Button size="sm" variant="secondary" className="self-start" loading={busy} disabled={!status || (status === "corrected" && !note.trim())}>Save review</Button>
+    </form> : null}
+  </div>;
+  if (!canEdit) return null;
+  return <form className="mt-3 flex flex-col gap-2 border-t border-line pt-3" onSubmit={async (event) => { event.preventDefault(); if (!status) return; setBusy(true); try { await save({ slug, runId, findingIndex, status, note }); toast({ tone: "success", title: "Finding review saved" }); } catch (error) { toast({ tone: "danger", title: errorMessage(error) }); } finally { setBusy(false); } }}>
+    <Field label="Your review of this finding"><Select value={status} onValueChange={(value) => setStatus(value as FindingStatus | "")} options={[{ value: "", label: "Choose a status" }, { value: "accepted", label: "Accept" }, { value: "deferred", label: "Defer" }, { value: "corrected", label: "I corrected the finding" }, { value: "resolved", label: "Resolved" }, { value: "dismissed", label: "Not relevant" }, { value: "needs_information", label: "Needs more information" }]} /></Field>
+    <Field label="Correction or context" hint={status === "corrected" ? "Required for corrections." : "Optional; helps improve the review."}><Textarea value={note} onChange={(event) => setNote(event.target.value.slice(0, 500))} rows={2} autosize placeholder="Add context for your team" /></Field>
+    <Button size="sm" variant="secondary" className="self-start" loading={busy} disabled={!status || (status === "corrected" && !note.trim())}>Save review</Button>
+  </form>;
+}
+
+function designBrief(finding: DesignFinding, direction: DesignDirection, brand: { exists?: boolean; ownerConfirmed?: boolean; ownerConfirmedAt?: number | null; voice?: string; toneWords?: string[]; colors?: string[]; doNots?: string[]; approvedExamples?: string[] } | undefined, creativeRange: "safer" | "distinctive" | "unconventional", essentialElements: string) {
+  const brandRules = brand?.ownerConfirmed
+    ? `Workspace brand settings reviewed and confirmed by an owner/admin on ${brand.ownerConfirmedAt ? formatDateTime(brand.ownerConfirmedAt) : "an unknown date"}: voice ${brand.voice || "not set"}; tone ${brand.toneWords?.join(", ") || "not set"}; colors ${brand.colors?.join(", ") || "not set"}; avoid ${brand.doNots?.join("; ") || "not set"}; approved examples ${brand.approvedExamples?.join(" | ") || "none"}.`
+    : "Brand-kit context is not owner/admin-confirmed; onboarding or edited values may be inferred. Do not treat them as requirements. Ask the owner to review the brand kit; only the owner-entered essential elements below are confirmed for this brief.";
+  return [
+    `Design brief (${direction.responseLevel?.replaceAll("_", " ") ?? "selected response"})`,
+    `Business goal: ${finding.businessOrUserGoal ?? "Confirm with owner"}`,
+    "Audience: Confirm with owner; do not infer beyond the audit evidence.",
+    `Finding: ${finding.observation ?? "Review the linked finding"}`,
+    `Why it may matter: ${finding.whyItMatters ?? "See audit evidence and validate with the owner."}`,
+    `Evidence: ${finding.evidence ?? "No precise evidence text supplied."}`,
+    `Page/region: ${finding.sourceUrl ?? "No stable page URL supplied"} · ${finding.region ?? "region unspecified"}`,
+    `Evidence confidence: ${finding.confidence ?? "unknown"}; classification: ${finding.classification ?? "unclassified"}.`,
+    `Selected direction: ${direction.name ?? "Direction"} — ${direction.change ?? "Specify a change."}`,
+    `Requested creative range: ${creativeRange}. Preserve these owner-confirmed essentials: ${essentialElements.trim() || "none supplied; ask before assuming"}.`,
+    `Tradeoff: ${direction.tradeoff ?? "Confirm with owner."}`,
+    `Effort: ${direction.effort ?? "Unknown"}. Assumptions: ${direction.assumptions?.join("; ") ?? "Confirm with owner."}`,
+    `Risks: ${direction.risks?.join("; ") ?? "Confirm with owner."}`,
+    brandRules,
+    "Constraints, dependencies, unknowns: confirm with owner before finalizing.",
+    `Reviewer checks: compare desktop and mobile rendering, legibility, interaction, accessibility, customer-brand fit, and the intended metric before any approval. Measurement plan: ${direction.measurementPlan ?? "Define metric and source before launch."}`,
+  ].join("\n").slice(0, 2400);
 }

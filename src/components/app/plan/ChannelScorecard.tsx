@@ -70,10 +70,10 @@ export function ChannelScorecard({ slug }: { slug: string }) {
         </Callout>
       ) : null}
       <SplitStrip counts={{ plan: plan.length, later: later.length, notNow: notNow.length, ineligible: ineligible.length }} />
-      <Group title="In the plan" icon={CircleCheck} rows={plan} labels={data.factorLabels} rankStart={1} highlight />
-      <Group title="Later" icon={Hourglass} hint="Add once the first ones work." rows={later} labels={data.factorLabels} rankStart={plan.length + 1} />
+      <Group title="In the plan" icon={CircleCheck} rows={plan} labels={data.factorLabels} rankStart={1} highlight slug={slug} canEdit={data.canEdit} />
+      <Group title="Later" icon={Hourglass} hint="Add once the first ones work." rows={later} labels={data.factorLabels} rankStart={plan.length + 1} slug={slug} canEdit={data.canEdit} />
       <Collapsible title={`Not now (${notNow.length})`}>
-        <Group rows={notNow} labels={data.factorLabels} rankStart={plan.length + later.length + 1} />
+        <Group rows={notNow} labels={data.factorLabels} rankStart={plan.length + later.length + 1} slug={slug} canEdit={data.canEdit} />
       </Collapsible>
       <Collapsible title={`Not a fit (${ineligible.length})`}>
         <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -252,7 +252,7 @@ function Profile({ slug, data }: { slug: string; data: View }) {
   );
 }
 
-function Group({ title, icon, hint, rows, labels, rankStart, highlight }: { title?: string; icon?: LucideIcon; hint?: string; rows: Row[]; labels: View["factorLabels"]; rankStart: number; highlight?: boolean }) {
+function Group({ title, icon, hint, rows, labels, rankStart, highlight, slug, canEdit }: { title?: string; icon?: LucideIcon; hint?: string; rows: Row[]; labels: View["factorLabels"]; rankStart: number; highlight?: boolean; slug: string; canEdit: boolean }) {
   if (!rows.length) return null;
   return (
     <section aria-label={title}>
@@ -268,15 +268,16 @@ function Group({ title, icon, hint, rows, labels, rankStart, highlight }: { titl
       ) : null}
       <ol className={cn("divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border bg-surface shadow-[var(--card-shadow)]", highlight ? "border-brand-300" : "border-line")}>
         {rows.map((r, i) => (
-          <ChannelRow key={r.id} r={r} rank={rankStart + i} labels={labels} />
+          <ChannelRow key={r.id} r={r} rank={rankStart + i} labels={labels} slug={slug} canEdit={canEdit} />
         ))}
       </ol>
     </section>
   );
 }
 
-function ChannelRow({ r, rank, labels }: { r: Row; rank: number; labels: View["factorLabels"] }) {
+function ChannelRow({ r, rank, labels, slug, canEdit }: { r: Row; rank: number; labels: View["factorLabels"]; slug: string; canEdit: boolean }) {
   const [open, setOpen] = useState(false);
+  const savePreference = useMutation(api.acquisition.setChannelPreference);
   const Exec = EXEC_ICON[r.exec as keyof typeof EXEC_ICON] ?? Hand;
   return (
     <li {...climbTarget("channel", r.id, `${r.name}: ${r.score}/100, ${r.statusLabel}`)}>
@@ -326,12 +327,16 @@ function ChannelRow({ r, rank, labels }: { r: Row; rank: number; labels: View["f
                 {r.audience}
               </p>
             ) : null}
+            {r.purpose ? <p><span className="text-ink-3">Intended job: </span>{r.purpose}</p> : null}
+            {r.measurementPlan ? <p><span className="text-ink-3">Measure: </span>{r.measurementPlan}</p> : null}
             {r.evidence ? (
               <p>
-                <span className="text-ink-3">Evidence: </span>
+                <span className="text-ink-3">Evidence ({r.evidenceBasis ?? "basis unknown"} · confidence {r.evidenceConfidence ?? "unknown"}{r.evidenceDate ? ` · ${r.evidenceDate}` : " · date unknown"}): </span>
                 {r.evidence}
               </p>
             ) : null}
+            {r.sourceUrl ? <p><span className="text-ink-3">Source: </span><a href={r.sourceUrl} target="_blank" rel="noreferrer" className="break-all text-brand-800 underline">{r.sourceUrl}</a></p> : null}
+            {r.communityRulesUrl ? <p><span className="text-ink-3">Community rules checked {r.communityRulesCheckedAt ?? "date unknown"}: </span><a href={r.communityRulesUrl} target="_blank" rel="noreferrer" className="break-all text-brand-800 underline">{r.communityRulesUrl}</a></p> : null}
             {r.caution ? (
               <p className="flex items-start gap-1 rounded-[var(--radius-control)] bg-amber-100 px-2 py-1 text-amber-800">
                 <ShieldAlert aria-hidden className="mt-0.5 size-3.5 shrink-0" />
@@ -344,6 +349,21 @@ function ChannelRow({ r, rank, labels }: { r: Row; rank: number; labels: View["f
                 {l.reason}
               </p>
             ))}
+            {canEdit ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(["dismissed", "irrelevant"] as const).map((preference) => (
+                  <Button key={preference} size="sm" variant={r.ownerPreference?.preference === preference ? "secondary" : "ghost"} onClick={async () => {
+                    try {
+                      await savePreference({ slug, channelId: r.id, preference, rationale: preference === "irrelevant" ? "Marked irrelevant by workspace owner" : "Dismissed by workspace owner" });
+                      toast({ tone: "success", title: preference === "irrelevant" ? "Marked irrelevant" : "Recommendation dismissed", description: "This feedback is saved for future channel rankings." });
+                    } catch (error) { toast({ tone: "danger", title: errorMessage(error) }); }
+                  }}>{preference === "irrelevant" ? "Mark irrelevant" : "Dismiss recommendation"}</Button>
+                ))}
+                {r.ownerPreference && ["dismissed", "irrelevant"].includes(r.ownerPreference.preference) ? (
+                  <Button size="sm" variant="ghost" onClick={async () => { await savePreference({ slug, channelId: r.id, preference: "clear" }); }}>Restore recommendation</Button>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

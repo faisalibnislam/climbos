@@ -157,6 +157,47 @@ describe("research source assessment", () => {
     expect(lintConversionAuditSources(wrongPage, input)).toMatchObject([{ severity: "error", rule: "conversion_visual_evidence", path: "findings[0].visualEvidence" }]);
   });
 
+  it("keeps Design Critic visual and automated findings tied to supplied evidence", () => {
+    const pageUrl = "https://example.com/pricing/";
+    const input = {
+      task: "Audit the business website", brief: "Example Co", facts: [], availableSourceUrls: [pageUrl],
+      visualInputs: [{ sourceArtifactId: pageUrl, platform: "website_mobile", imageUrl: "data:image/png;base64,AA==", note: "Mobile capture" }],
+      untrustedContext: `<untrusted_content source="${pageUrl}">Plans start at $29 per month.</untrusted_content>`,
+    };
+    const base = {
+      findings: [], quickWins: [], clarityVerdict: "Reviewed", messageMatch: "Not measured.", prioritizedFixes: [],
+      socialReview: { summary: "No posts supplied", findings: [], contentMixSuggestions: [] },
+      designCritic: { coverage: "visual_sampled" as const, summary: "One mobile page was sampled.", limitations: [], findings: [{
+        lens: "communication_hierarchy" as const, classification: "heuristic" as const, region: "Top section", observation: "The price is visually prominent.",
+        businessOrUserGoal: "Understand the offer", whyItMatters: "Visitors need to compare value.", severity: "low" as const, confidence: "medium" as const,
+        evidence: "Observed in the sampled image.", sourceUrl: pageUrl, proposedChange: "Review the hierarchy with target customers.",
+        visualEvidence: { view: "mobile" as const, observation: "Price appears above the first explanatory paragraph." },
+        automatedCheckIds: [], requiresHumanEvaluation: true,
+      }] },
+    };
+    const valid = ConversionAuditV2Schema.parse(base);
+    expect(lintConversionAuditSources(valid, input)).toEqual([]);
+
+    const withDirections = ConversionAuditV2Schema.parse({
+      ...base,
+      designCritic: { ...base.designCritic, findings: [{ ...base.designCritic.findings[0], directions: [
+        { id: "evidence-led", name: "Evidence-led hierarchy", communicates: "Specific proof before broad claims.", tradeoff: "Less room for decorative storytelling.", change: "Move the verified customer outcome beside the primary action.", previewBrief: "Create a separate landing page draft that foregrounds the verified proof before the call to action.", measurementPlan: "Record qualified inquiry rate before the draft is published and compare the same measure afterward." },
+      ] }] },
+    });
+    expect(lintConversionAuditSources(withDirections, input)).toEqual([]);
+    expect(() => ConversionAuditV2Schema.parse({
+      ...base,
+      designCritic: { ...base.designCritic, findings: [{ ...base.designCritic.findings[0], directions: Array.from({ length: 4 }, (_, i) => ({
+        id: `direction-${i}`, name: `Direction ${i}`, communicates: "A distinct idea for the page.", tradeoff: "Requires review.", change: "Change the visible order of the page sections.", previewBrief: "Create a new page draft with this direction.", measurementPlan: "Record the baseline before launch and review the same measure after." })) }] },
+    })).toThrow();
+
+    const unsupportedMeasuredClaim = ConversionAuditV2Schema.parse({ ...base, designCritic: { ...base.designCritic, findings: [{ ...base.designCritic.findings[0], classification: "measured_performance" as const }] } });
+    expect(lintConversionAuditSources(unsupportedMeasuredClaim, input)).toMatchObject([{ severity: "error", rule: "design_measured_evidence", path: "designCritic.findings[0].automatedCheckIds" }]);
+
+    const wrongViewport = ConversionAuditV2Schema.parse({ ...base, designCritic: { ...base.designCritic, findings: [{ ...base.designCritic.findings[0], visualEvidence: { view: "desktop" as const, observation: "Different viewport" } }] } });
+    expect(lintConversionAuditSources(wrongViewport, input)).toMatchObject([{ severity: "error", rule: "conversion_visual_evidence", path: "designCritic.findings[0].visualEvidence" }]);
+  });
+
   it("requires implementation-ready page fixes to cite a read page and avoid unsupported sample-copy claims", () => {
     const input = { task: "Audit the business website", brief: "Example Co", facts: [], availableSourceUrls: ["https://example.com/pricing/"], untrustedContext: '<untrusted_content source="https://example.com/pricing/">TITLE: Pricing\nPAGE TEXT:\nPlans include the features you need.</untrusted_content>' };
     const audit = {

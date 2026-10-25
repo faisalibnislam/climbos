@@ -23,7 +23,7 @@ describe("brand kit + voice learning", () => {
     });
     await owner.client.mutation(api.brand.update, { slug, voice: "Friendly expert", toneWords: ["warm", " direct "], colors: ["#123456", "nope"], doNots: ["No emojis", ""], approvedExamples: ["  Example with spacing  ", "Example with spacing", "", "Second example", "Third example", "Fourth example"], socialHumor: "cheeky", socialTrendPolicy: "trend_aware", voiceLearningEnabled: true });
     let b = await owner.client.query(api.brand.get, { slug });
-    expect(b).toMatchObject({ voice: "Friendly expert", toneWords: ["warm", "direct"], colors: ["#123456"], doNots: ["No emojis"], approvedExamples: ["Example with spacing", "Second example", "Third example"], socialHumor: "cheeky", socialTrendPolicy: "trend_aware", voiceLearningEnabled: true, canEdit: true, canManageVoiceLearning: true });
+    expect(b).toMatchObject({ voice: "Friendly expert", toneWords: ["warm", "direct"], colors: ["#123456"], doNots: ["No emojis"], approvedExamples: ["Example with spacing", "Second example", "Third example"], socialHumor: "cheeky", socialTrendPolicy: "trend_aware", voiceLearningEnabled: true, ownerConfirmed: true, ownerConfirmedAt: expect.any(Number), canEdit: true, canManageVoiceLearning: true });
     await owner.client.mutation(api.brand.update, { slug, voice: "Friendly expert", toneWords: ["warm"], colors: ["#123456"], doNots: ["No emojis"] });
     expect((await owner.client.query(api.brand.get, { slug })).approvedExamples).toEqual(["Example with spacing", "Second example", "Third example"]);
     expect((await owner.client.query(api.brand.get, { slug })).socialHumor).toBe("cheeky");
@@ -55,6 +55,10 @@ describe("brand kit + voice learning", () => {
     expect(await editor.client.query(api.brand.get, { slug })).toMatchObject({ canEdit: true, canManageVoiceLearning: false });
     await expect(editor.client.mutation(api.brand.update, { slug, voice: "Plain", toneWords: [], colors: [], doNots: [], approvedExamples: ["Must be owner approved"] })).rejects.toThrow(/Only an owner or admin can approve brand examples/);
     await expect(editor.client.mutation(api.brand.update, { slug, voice: "Plain", toneWords: [], colors: [], doNots: [], voiceLearningEnabled: true })).rejects.toThrow(/Only an owner or admin can change voice learning consent/);
+    await owner.client.mutation(api.brand.update, { slug, voice: "Approved voice", toneWords: [], colors: [], doNots: [] });
+    expect((await owner.client.query(api.brand.get, { slug })).ownerConfirmed).toBe(true);
+    await editor.client.mutation(api.brand.update, { slug, voice: "Edited voice", toneWords: [], colors: [], doNots: [] });
+    expect((await owner.client.query(api.brand.get, { slug })).ownerConfirmed).toBe(false);
     const viewer = await asNewUser(t, "brand-access-viewer@example.com");
     await t.run(async (ctx) => ctx.db.insert("memberships", { orgId: orgId as Id<"organizations">, userId: viewer.userId as Id<"users">, role: "viewer", status: "active", createdAt: Date.now() }));
     expect(await viewer.client.query(api.brand.get, { slug })).toMatchObject({ canEdit: false, canManageVoiceLearning: false });

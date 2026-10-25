@@ -85,8 +85,10 @@ export interface DimensionValue {
 
 export interface OwnerChannelPreference {
   channelId: string;
-  preference: "prefer" | "avoid";
+  preference: "prefer" | "avoid" | "dismissed" | "irrelevant";
   rationale: string;
+  sourceUrl?: string;
+  evidenceDate?: string;
 }
 
 export interface AcquisitionProfile {
@@ -364,7 +366,26 @@ export interface Adjustment {
   platform?: string;
   tactic?: string;
   audienceName?: string;
+  evidenceBasis?: "measured" | "owner_reported" | "source_reported" | "inference" | "assumption" | "unknown";
+  evidenceConfidence?: "high" | "medium" | "low";
+  sourceUrl?: string;
+  evidenceDate?: string;
+  communityRulesUrl?: string;
+  communityRulesCheckedAt?: string;
+  purpose?: string;
+  measurementPlan?: string;
 }
+
+export const PLATFORM_EVIDENCE_CHANNELS = new Set([
+  "S04", "S05", "S18", "C01", "C18", "C26", "M02", "M03", "M04", "M05", "M06", "M07", "M08", "M09", "M10", "M11", "M12", "M13", "M14", "M15", "M18", "M20", "M21", "M22", "M23", "M24", "M25", "M26", "M27", "M28", "M29",
+  ...Array.from({ length: 15 }, (_, i) => `N${String(i + 1).padStart(2, "0")}`),
+  "O04", ...Array.from({ length: 7 }, (_, i) => `O${String(i + 14).padStart(2, "0")}`),
+]);
+export const COMMUNITY_CHANNELS = new Set([
+  ...Array.from({ length: 9 }, (_, i) => `N${String(i + 1).padStart(2, "0")}`),
+  "N13", "N14", "O04", ...Array.from({ length: 7 }, (_, i) => `O${String(i + 14).padStart(2, "0")}`),
+]);
+const isIsoDate = (value?: string) => Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)));
 
 export type ChannelStatus = "primary" | "in_plan" | "later" | "not_now" | "ineligible";
 export const STATUS_LABEL: Record<ChannelStatus, string> = { primary: "Primary", in_plan: "In the plan", later: "Later", not_now: "Not now", ineligible: "Not a fit" };
@@ -382,6 +403,14 @@ export interface ScoredChannel {
   status: ChannelStatus;
   why: string;
   evidence?: string;
+  evidenceBasis?: Adjustment["evidenceBasis"];
+  evidenceConfidence?: Adjustment["evidenceConfidence"];
+  evidenceDate?: string;
+  sourceUrl?: string;
+  communityRulesUrl?: string;
+  communityRulesCheckedAt?: string;
+  purpose?: string;
+  measurementPlan?: string;
   platform?: string;
   tactic?: string;
   audienceName?: string;
@@ -435,23 +464,57 @@ export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] =
       status: el.ok ? "not_now" : "ineligible",
       why: el.ok ? (a?.reason ?? priceFit ?? "") : el.reason!,
       evidence: a?.evidence,
+      evidenceBasis: a?.evidenceBasis,
+      evidenceConfidence: a?.evidenceConfidence,
+      evidenceDate: a?.evidenceDate,
+      sourceUrl: a?.sourceUrl,
+      communityRulesUrl: a?.communityRulesUrl,
+      communityRulesCheckedAt: a?.communityRulesCheckedAt,
+      purpose: a?.purpose,
+      measurementPlan: a?.measurementPlan,
       platform: a?.platform,
       tactic: a?.tactic,
       audienceName: a?.audienceName,
       caution: el.ok && c.regulatedCaution && regulated ? regulated : undefined,
       priceFit,
-      ...(ownerPreference ? { ownerPreference } : {}),
+    ...(ownerPreference ? { ownerPreference } : {}),
       ...(limits && el.ok ? { limits: limitChecks(c, p, limits) } : {}),
       ...(focus && DIAGNOSIS_STAGES[focus] ? { diagnosisFit: c.stages.some((stage) => DIAGNOSIS_STAGES[focus]!.includes(stage)) } : {}),
     };
   });
-  return select(rows, p, focus && DIAGNOSIS_STAGES[focus] ? focus : undefined);
+  const evidenceBlocked = new Set<string>();
+  for (const row of rows) {
+    const preference = ownerPreferences.get(row.id);
+    const evidence = adj.get(row.id);
+    if (row.status !== "ineligible" && PLATFORM_EVIDENCE_CHANNELS.has(row.id)) {
+      const ownerEvidence = preference?.preference === "prefer" && Boolean(preference.rationale.trim()) && isIsoDate(preference.evidenceDate);
+      const verifiedEvidence = Boolean(evidence?.evidence?.trim())
+        && ["measured", "owner_reported", "source_reported"].includes(evidence?.evidenceBasis ?? "")
+        && Boolean(evidence?.evidenceConfidence)
+        && isIsoDate(evidence?.evidenceDate)
+        && Boolean(evidence?.purpose?.trim())
+        && Boolean(evidence?.measurementPlan?.trim())
+        && (evidence?.evidenceBasis === "owner_reported" || evidence?.evidenceBasis === "measured" || Boolean(evidence?.sourceUrl));
+      const rulesOk = !COMMUNITY_CHANNELS.has(row.id) || (Boolean(evidence?.communityRulesUrl) && isIsoDate(evidence?.communityRulesCheckedAt));
+      if ((!ownerEvidence && !verifiedEvidence) || !rulesOk) {
+        evidenceBlocked.add(row.id);
+        row.why = !rulesOk
+          ? "The exact community and its current rules have not been checked. Verify the target community manually before considering participation."
+          : "Customer use and buyer fit for this specific platform are unknown. Confirm with customer evidence or an owner-reported source before recommending it.";
+      }
+    }
+    if (preference?.preference === "dismissed" || preference?.preference === "irrelevant") {
+      evidenceBlocked.add(row.id);
+      row.why = preference.preference === "irrelevant" ? "Your team marked this channel irrelevant; that feedback is saved for future rankings." : "Your team dismissed this channel; that feedback is saved for future rankings.";
+    }
+  }
+  return select(rows, p, focus && DIAGNOSIS_STAGES[focus] ? focus : undefined, evidenceBlocked);
 }
 
 /** Budget discipline (Part 7): a few focused channels, paid ones only when the budget can feed a real test. */
-function select(rows: ScoredChannel[], p: AcquisitionProfile, focus?: BindingConstraint): ScoredChannel[] {
+function select(rows: ScoredChannel[], p: AcquisitionProfile, focus?: BindingConstraint, evidenceBlocked = new Set<string>()): ScoredChannel[] {
   const band = budgetBand(p.budgetUsd);
-  const ranked = rows.filter((r) => r.status !== "ineligible").sort((a, b) =>
+  const ranked = rows.filter((r) => r.status !== "ineligible" && !evidenceBlocked.has(r.id)).sort((a, b) =>
     (focus ? Number(Boolean(b.diagnosisFit)) - Number(Boolean(a.diagnosisFit)) : 0) || b.score - a.score,
   );
   // Hard limits come before rank: a blocked channel is never picked; a late one only fills a slot no on-time channel can.
@@ -487,7 +550,9 @@ function select(rows: ScoredChannel[], p: AcquisitionProfile, focus?: BindingCon
     }
   }
   const ineligible = rows.filter((r) => r.status === "ineligible");
-  return [...ranked, ...ineligible];
+  for (const r of rows) if (evidenceBlocked.has(r.id)) r.status = "not_now";
+  const heldForEvidence = rows.filter((r) => evidenceBlocked.has(r.id));
+  return [...ranked, ...heldForEvidence, ...ineligible];
 }
 
 /** The candidates the scoring agent reviews: the best eligible priors plus every type starter. */
@@ -538,7 +603,7 @@ export function mergeFit(profile: AcquisitionProfile, fit: { types: string[]; di
 }
 
 /** The agent's channel rows as scoring adjustments. */
-export function adjustmentsFrom(fit: { channels: { id: string; deltas: number[]; reason: string; evidence: string; platform: string; tactic: string; audience: string }[] }): Adjustment[] {
+export function adjustmentsFrom(fit: { channels: { id: string; deltas: number[]; reason: string; evidence: string; platform: string; tactic: string; audience: string; evidenceBasis?: Adjustment["evidenceBasis"]; evidenceConfidence?: Adjustment["evidenceConfidence"]; sourceUrl?: string; evidenceDate?: string; communityRulesUrl?: string; communityRulesCheckedAt?: string; purpose?: string; measurementPlan?: string }[] }): Adjustment[] {
   return fit.channels.map((c) => ({
     channelId: c.id,
     deltas: Object.fromEntries(FACTORS.map((f, i) => [f, Math.max(-30, Math.min(30, Math.round(c.deltas[i] ?? 0)))])) as Partial<Record<Factor, number>>,
@@ -547,6 +612,14 @@ export function adjustmentsFrom(fit: { channels: { id: string; deltas: number[];
     platform: c.platform.slice(0, 80) || undefined,
     tactic: c.tactic.slice(0, 120) || undefined,
     audienceName: c.audience.slice(0, 120) || undefined,
+    evidenceBasis: c.evidenceBasis,
+    evidenceConfidence: c.evidenceConfidence,
+    sourceUrl: c.sourceUrl?.slice(0, 2000) || undefined,
+    evidenceDate: c.evidenceDate,
+    communityRulesUrl: c.communityRulesUrl?.slice(0, 2000) || undefined,
+    communityRulesCheckedAt: c.communityRulesCheckedAt,
+    purpose: c.purpose?.slice(0, 160) || undefined,
+    measurementPlan: c.measurementPlan?.slice(0, 240) || undefined,
   }));
 }
 

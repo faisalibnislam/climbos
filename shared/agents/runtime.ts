@@ -5,6 +5,7 @@ import { ROLE_CHARTERS, stripFactMarkers, untrusted } from "../ai/tasks";
 import type { ModelKey } from "../economics/rates";
 import { skillPlaybook, skillRubricText } from "../skills";
 import { formatGrowthKnowledge, knowledgeReferenceSet, retrieveGrowthKnowledge } from "../knowledge/retrieve";
+import { formatCreativePrecedents } from "../knowledge/creativePrecedents";
 import { KNOWLEDGE_LAYER_POLICY } from "../knowledge/layers";
 import { canonicalJson, sha256Hex } from "../policy";
 import type { AgentInput, AgentRunResult, AgentSpec, Assessment, CachedResearch, CritiqueResult, LintIssue, Rubric, RunQuality } from "./types";
@@ -318,8 +319,11 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
   const system = draftSystem(spec);
   const knowledgeRecords = retrieveGrowthKnowledge(`${input.task}\n${input.brief}`, { limit: 3, maxChars: 3_500, ...(input.industryBusinessTypeId ? { businessTypeId: input.industryBusinessTypeId } : {}) });
   const knowledge = formatGrowthKnowledge(knowledgeRecords);
+  const creativePrecedents = /STRATEGY EXPLORATION|CREATIVE STRATEGY EXPLORATION/i.test(input.task)
+    ? formatCreativePrecedents(`${input.brief}\n${input.facts.join("\n")}`, 2)
+    : "";
   const reviewerKnowledge = formatGrowthKnowledge(retrieveGrowthKnowledge(`${input.task}\n${input.brief}`, { limit: 2, maxChars: 1_800, ...(input.industryBusinessTypeId ? { businessTypeId: input.industryBusinessTypeId } : {}) }));
-  const baseUser = `${inputBlock(input, research?.notes ?? null, knowledge)}\n\nYOUR TASK:\n${input.task}\n\nBefore answering, check your work against the playbook's checklist. Respond only with JSON matching the schema.`;
+  const baseUser = `${inputBlock(input, research?.notes ?? null, knowledge)}${creativePrecedents ? `\n\nBOUNDED CREATIVE PRECEDENT RETRIEVAL (use only when the mechanism genuinely transfers; these are not evidence about this business):\n${creativePrecedents}` : ""}\n\nYOUR TASK:\n${input.task}\n\nBefore answering, check your work against the playbook's checklist. Respond only with JSON matching the schema.`;
   const baseMessages: MessageParam[] = [{
     role: "user",
     content: input.visualInputs?.length
@@ -375,7 +379,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
             role: "user",
             content: `CURRENT FACT STATEMENTS (source classes are identified in the business context; do not treat these statements as equal proof):\n${input.facts.length ? input.facts.map((f, i) => `${i + 1}. ${f}`).join("\n") : "(none)"}\n\nBUSINESS CONTEXT AND EVIDENCE LABELS:\n${input.brief}\n\n${
               research ? `RESEARCH THE WRITER HAD (claims may cite these):\n${research.notes}\n\n` : ""
-            }${reviewerKnowledge ? `GROWTH INTELLIGENCE LIBRARY (reference only, never business evidence):\n${untrusted("growth_intelligence_reference", reviewerKnowledge, 2_200)}\n\n` : ""}THE TASK THEY WERE GIVEN:\n${input.task}\n\nTHE WORK TO REVIEW (JSON):\n${JSON.stringify(output, null, 1)}\n\n${
+            }${reviewerKnowledge ? `GROWTH INTELLIGENCE LIBRARY (reference only, never business evidence):\n${untrusted("growth_intelligence_reference", reviewerKnowledge, 2_200)}\n\n` : ""}${creativePrecedents ? `CREATIVE PRECEDENTS (reference only; validate transfer conditions, evidence labels, and original expression):\n${untrusted("creative_precedent_reference", creativePrecedents, 3_200)}\n\n` : ""}THE TASK THEY WERE GIVEN:\n${input.task}\n\nTHE WORK TO REVIEW (JSON):\n${JSON.stringify(output, null, 1)}\n\n${
               lint.length ? `AUTOMATIC CHECK RESULTS:\n${lint.map((l) => `- [${l.severity}] ${l.path ? `${l.path}: ` : ""}${l.message}`).join("\n")}\n\n` : ""
             }Review it against the rubric.`,
           },

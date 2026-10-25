@@ -208,6 +208,29 @@ const growthPlayValidator = v.object({
       reasons: v.array(v.string()),
   }),
   ),
+  creativeReview: v.optional(
+    v.object({
+      challenge: v.string(),
+      conventionBasis: v.union(v.literal("verified_rule"), v.literal("common_habit"), v.literal("assumption"), v.literal("unknown")),
+      costOfBreaking: v.string(),
+      customerTensionOrAsset: v.string(),
+      precedentIds: v.array(v.string()),
+      transferLogic: v.string(),
+      keyDifferences: v.string(),
+      hopedCustomerBehavior: v.string(),
+      assumptions: v.array(v.string()),
+      novelty: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+      evidenceStrength: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+      businessFit: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+      feasibility: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+      risk: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+      reversibleTest: v.string(),
+      successSignal: v.string(),
+      guardrail: v.string(),
+      stopCondition: v.string(),
+      revisionEvidence: v.string(),
+    }),
+  ),
   climbosCanDo: v.string(),
   model: v.object({
     weeklyReach: v.number(),
@@ -752,7 +775,7 @@ export default defineSchema({
       }),
     ),
     summary: v.optional(v.string()),
-    /** Where happy customers leave a review (e.g. the Google review link). */
+    /** The public review destination shared consistently with every invited customer. */
     reviewUrl: v.optional(v.string()),
     /** Self-improvement loop 1: last weekly read of the business's own site (normalised text, for the diff). */
     /** Unit economics the owner confirmed; they replace the planner's assumptions. */
@@ -1153,8 +1176,10 @@ export default defineSchema({
           v.array(
             v.object({
               channelId: v.string(),
-              preference: v.union(v.literal("prefer"), v.literal("avoid")),
+              preference: v.union(v.literal("prefer"), v.literal("avoid"), v.literal("dismissed"), v.literal("irrelevant")),
               rationale: v.string(),
+              sourceUrl: v.optional(v.string()),
+              evidenceDate: v.optional(v.string()),
             }),
           ),
         ),
@@ -1311,6 +1336,9 @@ export default defineSchema({
     ),
     /** Explicit owner/admin opt-in; absent legacy values remain disabled. */
     voiceLearningEnabled: v.optional(v.boolean()),
+    /** Owner/admin reviewed the visible brand settings; inferred onboarding values remain unconfirmed until then. */
+    ownerConfirmedAt: v.optional(v.number()),
+    ownerConfirmedBy: v.optional(v.id("users")),
     updatedAt: v.number(),
   }).index("by_business", ["businessId"]),
 
@@ -2031,6 +2059,9 @@ export default defineSchema({
       v.literal("stopped"),
     ),
     winner: v.optional(v.string()),
+    /** Hash of the exact A version present when the approved test started. */
+    baselineHash: v.optional(v.string()),
+    appliedAt: v.optional(v.number()),
     note: v.optional(v.string()),
     /** Outcome collection window after the planned exposure sample is reached. */
     outcomeWindowMs: v.optional(v.number()),
@@ -2054,7 +2085,7 @@ export default defineSchema({
     .index("by_test_subject", ["testId", "subjectHash"])
     .index("by_test", ["testId", "assignedAt"]),
 
-  /** Airly apps (Formkit, Meetrao, Taskeni, Folevi): the owner's token for each, encrypted, plus sync state. */
+  /** Connected product account tokens, encrypted per workspace, plus sync state. */
   airlyLinks: defineTable({
     orgId: v.id("organizations"),
     app: v.union(
@@ -2277,11 +2308,57 @@ export default defineSchema({
     sentAt: v.optional(v.number()),
     clickedAt: v.optional(v.number()),
     feedbackAt: v.optional(v.number()),
+    approvalBatchId: v.optional(v.id("reviewInvitationBatches")),
     createdAt: v.number(),
   })
     .index("by_token", ["token"])
     .index("by_org_created", ["orgId", "createdAt"])
     .index("by_org_email", ["orgId", "email", "createdAt"]),
+
+  /** Immutable owner-approved scope for one neutral review invitation send. */
+  reviewInvitationBatches: defineTable({
+    orgId: v.id("organizations"),
+    createdBy: v.id("users"),
+    approvedBy: v.optional(v.id("users")),
+    connectionId: v.id("connections"),
+    destination: v.string(),
+    templateVersion: v.string(),
+    contentHash: v.string(),
+    scopeHash: v.string(),
+    recipients: v.array(v.object({ name: v.string(), email: v.string(), dealId: v.optional(v.id("deals")) })),
+    status: v.union(v.literal("pending"), v.literal("queued"), v.literal("expired")),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+    approvedAt: v.optional(v.number()),
+  })
+    .index("by_org_created", ["orgId", "createdAt"]),
+
+  /** Owner corrections to tentative, automatically grouped customer-voice signals. */
+  voiceThemeFeedback: defineTable({
+    orgId: v.id("organizations"),
+    themeKey: v.string(),
+    status: v.union(v.literal("dismissed"), v.literal("corrected")),
+    correctedLabel: v.optional(v.string()),
+    note: v.optional(v.string()),
+    updatedBy: v.id("users"),
+    updatedAt: v.number(),
+  }).index("by_org_theme", ["orgId", "themeKey"]),
+
+  /** Owner review of one immutable finding position in a saved website audit run. */
+  designFindingReviews: defineTable({
+    orgId: v.id("organizations"),
+    runId: v.id("workflowRuns"),
+    findingIndex: v.number(),
+    /** The immutable run plus finding index identifies the exact critique version. */
+    sourceUrl: v.optional(v.string()),
+    evidenceRef: v.optional(v.string()),
+    viewport: v.optional(v.union(v.literal("desktop"), v.literal("mobile"))),
+    screenshotCapturedAt: v.optional(v.number()),
+    status: v.union(v.literal("accepted"), v.literal("dismissed"), v.literal("deferred"), v.literal("resolved"), v.literal("reopened"), v.literal("corrected"), v.literal("needs_information")),
+    note: v.optional(v.string()),
+    updatedBy: v.id("users"),
+    updatedAt: v.number(),
+  }).index("by_org_run", ["orgId", "runId"]).index("by_org_run_finding", ["orgId", "runId", "findingIndex"]),
 
   /** Tracked links: our own short links (climbos.app/l/CODE) with UTM tags. */
   links: defineTable({
@@ -2584,8 +2661,10 @@ export default defineSchema({
               v.array(
                 v.object({
                   channelId: v.string(),
-                  preference: v.union(v.literal("prefer"), v.literal("avoid")),
+                  preference: v.union(v.literal("prefer"), v.literal("avoid"), v.literal("dismissed"), v.literal("irrelevant")),
                   rationale: v.string(),
+                  sourceUrl: v.optional(v.string()),
+                  evidenceDate: v.optional(v.string()),
                 }),
               ),
             ),

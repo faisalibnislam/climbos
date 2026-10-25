@@ -16,7 +16,7 @@ export default function BrandSettingsPage() {
   const { organization: slug } = useParams<{ organization: string }>();
   const data = useQuery(api.brand.get, { slug });
   if (data === undefined) return <LoadingBlock label="Loading brand kit" lines={4} />;
-  return <BrandForm key={JSON.stringify([data.voice, data.toneWords, data.colors, data.doNots, data.approvedExamples, data.socialHumor, data.socialTrendPolicy, data.voiceLearningEnabled])} slug={slug} data={data} />;
+  return <BrandForm key={JSON.stringify([data.voice, data.toneWords, data.colors, data.doNots, data.approvedExamples, data.socialHumor, data.socialTrendPolicy, data.voiceLearningEnabled, data.ownerConfirmedAt])} slug={slug} data={data} />;
 }
 
 type Brand = NonNullable<ReturnType<typeof useQuery<typeof api.brand.get>>>;
@@ -64,6 +64,9 @@ function BrandForm({ slug, data }: { slug: string; data: Brand }) {
   return (
     <div className="flex flex-col gap-6">
       <SettingsHeader title="Brand kit" />
+      <Callout tone={data.ownerConfirmed ? "success" : "warning"} live="none">
+        {data.ownerConfirmed ? "An owner or admin reviewed these brand settings. Editing them clears confirmation until they review and save again." : "These brand settings may include research-derived suggestions. An owner or admin must review and save them before ClimbOS treats them as approved design requirements."}
+      </Callout>
       <Card>
         <CardContent className="flex flex-col gap-4">
           <Field label="Voice" hint="1–2 sentences">
@@ -133,7 +136,7 @@ function BrandForm({ slug, data }: { slug: string; data: Brand }) {
             className="self-start"
             loading={busy === "save"}
             disabled={!data.exists || !data.canEdit}
-            onClick={() => run("save", () => save({ slug, voice, toneWords: tone.split(","), colors, doNots: doNots.split("\n"), socialHumor, socialTrendPolicy, ...(data.canManageVoiceLearning ? { approvedExamples, voiceLearningEnabled } : {}) }), "Brand kit saved")}
+            onClick={() => run("save", () => save({ slug, voice, toneWords: tone.split(","), colors, doNots: doNots.split("\n"), socialHumor, socialTrendPolicy, ...(data.canManageVoiceLearning ? { approvedExamples, voiceLearningEnabled } : {}) }), data.canManageVoiceLearning ? "Brand kit saved and confirmed" : "Brand kit saved; owner/admin confirmation is needed")}
           >
             Save
           </Button>

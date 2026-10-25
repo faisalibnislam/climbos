@@ -32,8 +32,11 @@ describe("channel scoring", () => {
     expect(rows[0].status).toBe("primary");
     expect(rows[0].family).not.toBe("outreach"); // low-ticket self-serve: not one-to-one selling
   });
-  it("local services: Google Maps ranks near the top", () => {
-    const rows = scoreChannels(plumber).filter((r) => r.status !== "ineligible");
+  it("local services: Google Business Profile requires customer-use evidence", () => {
+    const unknown = scoreChannels(plumber).find((r) => r.id === "S04")!;
+    expect(unknown.status).toBe("not_now");
+    expect(unknown.why).toMatch(/customer use and buyer fit.*unknown/i);
+    const rows = scoreChannels(plumber, [{ channelId: "S04", deltas: { audience: 15, intent: 10 }, reason: "Customers use local listings when choosing a provider.", evidence: "Owner reports recent customers found the business through Google Business Profile.", evidenceBasis: "owner_reported", evidenceConfidence: "medium", evidenceDate: "2026-10-25", purpose: "Local discovery and reputation", measurementPlan: "Track qualified calls and website visits; revenue attribution remains unknown." }]).filter((r) => r.status !== "ineligible");
     expect(rows.slice(0, 5).map((r) => r.id)).toContain("S04");
   });
   it("only a supported diagnosis changes channel shortlist priority toward the affected journey stage", () => {
@@ -48,10 +51,30 @@ describe("channel scoring", () => {
   });
   it("evidence-backed adjustments move a channel, within bounds", () => {
     const before = scoreChannels(formkit).find((r) => r.id === "M10")!.score;
-    const after = scoreChannels(formkit, [{ channelId: "M10", deltas: { competition: 90, audience: 20 }, reason: "No rival launched there in 2 years", evidence: "producthunt.com search" }]).find((r) => r.id === "M10")!;
+    const after = scoreChannels(formkit, [{ channelId: "M10", deltas: { competition: 90, audience: 20 }, reason: "No rival launched there in 2 years", evidence: "Owner verified relevant early adopters use this platform.", evidenceBasis: "owner_reported", evidenceConfidence: "medium", evidenceDate: "2026-10-25", purpose: "Launch feedback", measurementPlan: "Measure qualified signups and activation." }]).find((r) => r.id === "M10")!;
     expect(after.score).toBeGreaterThan(before);
     expect(after.factors.competition).toBe(80); // 50 + capped 30
     expect(after.why).toMatch(/No rival/);
+  });
+  it("does not rank specific review, launch, directory, or community platforms without customer evidence and current rules", () => {
+    const rows = scoreChannels(formkit);
+    for (const id of ["M10", "M11", "M26", "C26", "N01", "O14"]) {
+      expect(rows.find((r) => r.id === id)).toMatchObject({ status: "not_now" });
+    }
+    expect(rows.find((r) => r.id === "N01")?.why).toMatch(/exact community.*current rules/i);
+    const reddit = scoreChannels(formkit, [{ channelId: "N01", deltas: { audience: 15 }, reason: "Customers ask questions there", evidence: "Owner reports buyers discuss this topic in r/example.", evidenceBasis: "owner_reported", evidenceConfidence: "medium", evidenceDate: "2026-10-25", platform: "r/example", communityRulesUrl: "https://www.reddit.com/r/example/about/rules", communityRulesCheckedAt: "2026-10-25", purpose: "Customer research", measurementPlan: "Track questions answered and qualified visits; visits are not revenue." }]).find((r) => r.id === "N01")!;
+    expect(reddit.status).not.toBe("not_now");
+    const slackWithoutRules = scoreChannels(formkit, [{ channelId: "N03", deltas: { audience: 15 }, reason: "Owner reports relevant discussions", evidence: "Two customers say peers discuss onboarding in a private Slack community.", evidenceBasis: "owner_reported", evidenceConfidence: "low", evidenceDate: "2026-10-25", platform: "Private Slack community", purpose: "Customer research", measurementPlan: "Count questions answered and qualified introductions; revenue is unknown." }]).find((r) => r.id === "N03")!;
+    expect(slackWithoutRules.status).toBe("not_now");
+    expect(slackWithoutRules.why).toMatch(/exact community.*current rules/i);
+  });
+  it("retains dismiss and irrelevant feedback and moves channels out of the plan", () => {
+    for (const preference of ["dismissed", "irrelevant"] as const) {
+      const row = scoreChannels({ ...formkit, channelPreferences: [{ channelId: "S01", preference, rationale: `Owner marked ${preference}`, evidenceDate: "2026-10-25" }] }).find((r) => r.id === "S01")!;
+      expect(row.status).toBe("not_now");
+      expect(row.why).toMatch(/saved for future rankings/);
+      expect(row.ownerPreference?.preference).toBe(preference);
+    }
   });
   it("uses owner-reported channel experience as a soft, explained preference without bypassing hard limits", () => {
     const channelId = "M10";

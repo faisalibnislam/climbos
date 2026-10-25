@@ -11,7 +11,7 @@ import { useRef, useState } from "react";
 import { Badge, Button, Callout, Card, CardContent, EmptyState, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, buttonClasses, type Tone } from "@/components/ui";
 import { ChannelScorecard } from "@/components/app/plan/ChannelScorecard";
 import { GeneratePlanButton, PlanReviewCard, StrategyRunWatcher } from "@/components/app/plan/PlanActions";
-import { PlanToAirly } from "@/components/app/connections/AirlyApps";
+import { PlanToConnectedApps } from "@/components/app/connections/ConnectedProducts";
 import type { Economics } from "../../../../../shared/agents/economics";
 import { formatMoney } from "../../../../../shared/economics/currency";
 import type { KnowledgeReferenceSet } from "../../../../../shared/knowledge/retrieve";
@@ -215,7 +215,7 @@ function PlanScreen({ slug }: { slug: string }) {
         actions={
           s && plan.canEdit ? (
             <div className="flex flex-wrap items-start gap-2">
-              <PlanToAirly slug={slug} />
+              <PlanToConnectedApps slug={slug} />
               <GeneratePlanButton slug={slug} mode="refresh" nextVersion={s.version + 1} estimateMicros={plan.planEstimateMicros} onStarted={setStartedRunId} building={building} />
             </div>
           ) : null

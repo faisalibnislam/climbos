@@ -57,7 +57,7 @@ export const create = mutation({
   args: { slug: v.string(), brief: v.string() },
   handler: async (ctx, { slug, brief }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
-    const text = brief.trim().slice(0, 600);
+    const text = brief.trim().slice(0, 2400);
     if (text.length < 4) throw appError("INVALID", "Say what the page is for, e.g. “Free 15-minute audit”.");
     const count = (await ctx.db.query("landingPages").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(51)).length;
     if (count >= 50) throw appError("LIMIT_REACHED", "You have 50 pages. Delete some first.");

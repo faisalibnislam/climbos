@@ -73,6 +73,13 @@ describe("decision contract flag", () => {
     expect(defaultTask).toContain("When business-specific evidence of customer demand or willingness to pay is insufficient or mixed");
     expect(defaultTask).toContain("keep any acquisition spend bounded to the test");
     expect(defaultTask).toContain("Never infer viability from a polished website");
+    expect(defaultTask).toContain("STRATEGY EXPLORATION");
+    expect(defaultTask).toContain("adjacent industries, emerging behavior, unusual partnerships, product changes and non-obvious distribution mechanisms");
+    expect(defaultTask).toContain("don't discard a promising idea just because ClimbOS cannot execute it today");
+    expect(defaultTask).toContain("a practical established-practice option");
+    expect(defaultTask).toContain("an adjacent evidence-supported inference");
+    expect(defaultTask).toContain("a bold speculative hypothesis");
+    expect(defaultTask).toContain("Exploration is not execution");
     expect(defaultTask).toMatch(/best-supported binding constraint/);
     expect(defaultTask).not.toMatch(/one bankable play, one or two creative-but-proven plays/);
     expect(defaultTask).not.toContain("Fill decision");
@@ -108,6 +115,22 @@ describe("structured action contracts", () => {
     expect(prompt).toContain("fill actionContract");
     expect(prompt).toContain("primary measurement that matches the same business outcome as the play's forecast unit");
     expect(prompt).toContain("ClimbOS derives readiness");
+  });
+
+  it("requires creative dimensions to stay separate and rejects precedent IDs outside the retrieved library", () => {
+    const creativeReview = {
+      challenge: "A polished mascot is not always more memorable.", conventionBasis: "common_habit" as const,
+      costOfBreaking: "A distinctive character could distract from the offer.", customerTensionOrAsset: "Customers remember the founder's repair stories.",
+      precedentIds: ["CP-004"], transferLogic: "Constraint-led recognition can make a recurring identity easier to remember.", keyDifferences: "Nintendo had games and distribution at scale; this is a small service business.",
+      hopedCustomerBehavior: "Target buyers recall the service and ask about a repair.", assumptions: ["Target buyers like the founder's humor."],
+      novelty: "high" as const, evidenceStrength: "medium" as const, businessFit: "medium" as const, feasibility: "high" as const, risk: "medium" as const,
+      reversibleTest: "Show two original sketches to six target customers.", successSignal: "More customers correctly recall the service.", guardrail: "Offer comprehension does not fall.", stopCondition: "Stop if recall or offer comprehension declines.", revisionEvidence: "Revise if buyers find the character distracting.",
+    };
+    expect(lintPlays([play({ creativeReview })], econ, { decisionContract: true }).some((issue) => issue.rule === "creative_precedent")).toBe(false);
+    const invalid = { ...creativeReview, precedentIds: ["CP-999"] };
+    expect(lintPlays([play({ creativeReview: invalid })], econ, { decisionContract: true }).some((issue) => issue.rule === "creative_precedent" && issue.severity === "error")).toBe(true);
+    const unsupported = { ...creativeReview, precedentIds: [], evidenceStrength: "high" as const };
+    expect(lintPlays([play({ creativeReview: unsupported })], econ, { decisionContract: true }).some((issue) => issue.rule === "creative_evidence" && issue.severity === "warn")).toBe(true);
   });
 });
 

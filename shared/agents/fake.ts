@@ -27,7 +27,7 @@ function sample(s: JsonSchema, marker: string, key = ""): unknown {
       return out;
     }
     case "array":
-      if (key === "factIndexes" || key.endsWith("FactIndexes") || key.endsWith("SourceUrls") || key === "approvedExamples" || key === "evidenceRefs" || key === "dependencies") return [];
+      if (key === "factIndexes" || key.endsWith("FactIndexes") || key.endsWith("SourceUrls") || key === "approvedExamples" || key === "evidenceRefs" || key === "dependencies" || key === "precedentIds") return [];
       return s.items ? [sample(s.items, marker, key)] : [];
     case "number":
     case "integer":
@@ -104,6 +104,27 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         ...tmpl,
         name: `${marker} ${kind} play`,
         kind,
+        creativeReview: {
+          challenge: "Test one customer-facing change without assuming a universal growth convention.",
+          conventionBasis: "unknown",
+          costOfBreaking: "The change could confuse customers or consume owner time.",
+          customerTensionOrAsset: "No customer tension or distinctive asset was verified in this fake scenario.",
+          precedentIds: [],
+          transferLogic: "No precedent is claimed; validate the mechanism with a small owner-run test.",
+          keyDifferences: "This synthetic scenario does not establish similarity to a documented case.",
+          hopedCustomerBehavior: "A qualified buyer completes a paid booking.",
+          assumptions: ["The selected audience will notice the offer."],
+          novelty: "low",
+          evidenceStrength: "low",
+          businessFit: "low",
+          feasibility: "medium",
+          risk: "medium",
+          reversibleTest: "Run a small, time-boxed test and review the result before scaling.",
+          successSignal: "Count verified paid bookings against the established baseline.",
+          guardrail: "Monitor customer complaints and owner time.",
+          stopCondition: "Stop if customer confusion or workload rises without paid bookings.",
+          revisionEvidence: "Revise when measured buyer responses differ from this assumption.",
+        },
         // Five lenses (plays lint): positioning on the comparison page, a referral trigger and link, and a funnel play.
         oneLiner: "Comparison page vs Acme for small studios, via a partner newsletter.",
         hook: "Unlike Acme, no per-seat fees for small studios.",

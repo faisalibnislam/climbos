@@ -643,7 +643,7 @@ export function NavigationContent() {
         </Stage>
       </Specimen>
 
-      <Specimen title="App launcher" description="Airly apps in one grid. Arrow keys move across it.">
+      <Specimen title="App launcher" description="Connected apps in one grid. Arrow keys move across it.">
         <Stage>
           <SwitchersDemo kind="apps" />
         </Stage>

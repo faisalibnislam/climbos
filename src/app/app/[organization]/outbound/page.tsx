@@ -795,7 +795,7 @@ function SendPanel({ data }: { data: Data }) {
       </div>
       {data.campaign?.sequence[0] && data.campaign.kind !== "creators" ? (
         <div className="mt-4">
-          <AbTestPanel slug={data.slug} kind="email_subject" targetId={data.campaign.id as Id<"outboundCampaigns">} current={data.campaign.sequence[0].subject} canEdit={data.canEdit} />
+          <AbTestPanel slug={data.slug} kind="email_subject" targetId={data.campaign.id as Id<"outboundCampaigns">} current={data.campaign.sequence[0].subject} canApprove={data.canApprove} />
         </div>
       ) : null}
       {data.canExport ? (

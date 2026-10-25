@@ -67,7 +67,7 @@ describe("outgoing webhooks", () => {
   });
 });
 
-describe("Airly links", () => {
+describe("connected product links", () => {
   it("only accepts Taskeni's own hosts or its Convex deployment", () => {
     expect(taskeniBase("https://happy-cat-123.convex.site/api/v1")).toBe("https://happy-cat-123.convex.site/api/v1");
     expect(taskeniBase("https://app.taskeni.app/api/v1/")).toBe("https://app.taskeni.app/api/v1");

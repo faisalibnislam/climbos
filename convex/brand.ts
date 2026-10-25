@@ -7,6 +7,7 @@ import { getRateVersion } from "../shared/economics";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
+import { audit } from "./lib/audit";
 import { createRunWithReservation } from "./engine";
 import { claudeUsageRecords } from "./lib/usage";
 import { appError, requireOrgAccess } from "./lib/tenancy";
@@ -42,6 +43,8 @@ export const get = query({
       colors: b?.colors ?? [],
       doNots: b?.doNots ?? [],
       approvedExamples: b?.approvedExamples ?? [],
+      ownerConfirmedAt: b?.ownerConfirmedAt ?? null,
+      ownerConfirmed: b?.ownerConfirmedAt !== undefined,
       socialHumor: b?.socialHumor ?? "restrained",
       socialTrendPolicy: b?.socialTrendPolicy ?? "selective",
       voiceLearningEnabled: b?.voiceLearningEnabled === true,
@@ -55,7 +58,7 @@ export const get = query({
 export const update = mutation({
   args: { slug: v.string(), voice: v.string(), toneWords: v.array(v.string()), colors: v.array(v.string()), doNots: v.array(v.string()), approvedExamples: v.optional(v.array(v.string())), socialHumor: v.optional(v.union(v.literal("restrained"), v.literal("light"), v.literal("playful"), v.literal("cheeky"))), socialTrendPolicy: v.optional(v.union(v.literal("evergreen_first"), v.literal("selective"), v.literal("trend_aware"))), voiceLearningEnabled: v.optional(v.boolean()) },
   handler: async (ctx, a) => {
-    const { org, role } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
+    const { org, role, user } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
     if (a.approvedExamples !== undefined && role !== "owner" && role !== "admin") throw appError("FORBIDDEN", "Only an owner or admin can approve brand examples.");
     if (a.voiceLearningEnabled !== undefined && role !== "owner" && role !== "admin") throw appError("FORBIDDEN", "Only an owner or admin can change voice learning consent.");
     const b = await brandFor(ctx, org._id);
@@ -71,8 +74,11 @@ export const update = mutation({
       ...(a.socialHumor !== undefined ? { socialHumor: a.socialHumor } : {}),
       ...(a.socialTrendPolicy !== undefined ? { socialTrendPolicy: a.socialTrendPolicy } : {}),
       ...(a.voiceLearningEnabled !== undefined ? { voiceLearningEnabled: a.voiceLearningEnabled } : {}),
+      ...(role === "owner" || role === "admin" ? { ownerConfirmedAt: Date.now(), ownerConfirmedBy: user._id } : { ownerConfirmedAt: undefined, ownerConfirmedBy: undefined }),
       updatedAt: Date.now(),
     });
+    if (role === "owner" || role === "admin") await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "brand.settings_confirmed", subjectType: "brandProfile", subjectId: b._id, summary: "Owner/admin reviewed and confirmed the visible brand settings for workspace recommendations and drafts." });
+    else if (b.ownerConfirmedAt !== undefined) await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "brand.settings_confirmation_cleared", subjectType: "brandProfile", subjectId: b._id, summary: "An editor changed the brand settings, so owner/admin confirmation was cleared until they review the updated settings." });
     if (a.voiceLearningEnabled === false) {
       await ctx.db.patch(b._id, { learnedRules: [], updatedAt: Date.now() });
       await ctx.scheduler.runAfter(0, internal.brand.cleanupVoiceSamples, { orgId: org._id });

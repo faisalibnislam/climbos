@@ -322,7 +322,7 @@ function ActiveStates() {
 const PICK = [
   { id: "bookings", t: "Class bookings", d: "Most plays aim here" },
   { id: "orders", t: "Catering orders", d: "Offices nearby" },
-  { id: "reviews", t: "More reviews", d: "Ask happy guests" },
+  { id: "reviews", t: "More reviews", d: "Invite every customer fairly" },
 ];
 
 function SelectedStates() {

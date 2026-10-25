@@ -5,24 +5,26 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { ExternalLink, FileText, Plus, RotateCcw, Trash2, X } from "@/components/icons"
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { use, useState } from "react";
 import { AbTestPanel } from "@/components/app/AbTestPanel";
 import { BioEditor } from "@/components/app/BioEditor";
 import { RunProgressCompact } from "@/components/app/content/RunProgress";
 import { errorMessage } from "@/components/app/errors";
+import { LandingDraftPreview } from "@/components/app/landing/LandingDraftPreview";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { Badge, Button, Card, CardContent, ColorPicker, ConfirmDialog, EmptyState, Field, Input, Switch, Textarea, toast } from "@/components/ui";
 import { KeyValueList } from "@/components/ds/data/display";
 import type { LandingContent } from "../../../../../shared/landing";
 
 /** Landing pages: Climb AI writes the page, you edit and publish. Leads go to Pipeline and Inbox. */
-export default function PagesPage() {
+export default function PagesPage({ searchParams }: { searchParams: Promise<{ brief?: string | string[] }> }) {
   const { organization: slug } = useParams<{ organization: string }>();
+  const requestedBrief = use(searchParams).brief;
   const data = useQuery(api.landing.list, { slug });
   const create = useMutation(api.landing.create);
   const retry = useMutation(api.landing.retry);
   const remove = useMutation(api.landing.remove);
-  const [brief, setBrief] = useState("");
+  const [brief, setBrief] = useState(() => typeof requestedBrief === "string" ? requestedBrief.slice(0, 2400) : "");
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState<Id<"landingPages"> | null>(null);
   if (data === undefined) return <LoadingBlock label="Loading pages…" lines={3} />;
@@ -34,7 +36,7 @@ export default function PagesPage() {
         <Card>
           <CardContent className="flex flex-col gap-3">
             <Field label="What's the page for?">
-              <Textarea value={brief} onChange={(e) => setBrief(e.target.value.slice(0, 600))} rows={2} autosize placeholder="e.g. Free SEO audit for dentists" />
+              <Textarea value={brief} onChange={(e) => setBrief(e.target.value.slice(0, 2400))} rows={4} autosize placeholder="e.g. Free SEO audit for dentists" />
             </Field>
             <Button
               className="self-start"
@@ -207,7 +209,8 @@ function Editor({ slug, page, content, canEdit, canPublish, onClose }: { slug: s
             </Field>
           </div>
         </fieldset>
-        {page.status === "live" ? <AbTestPanel slug={slug} kind="landing" targetId={page.id} current={content.headline} canEdit={canEdit} /> : null}
+        <LandingDraftPreview name={page.title} color={page.color} content={c} />
+        {page.status === "live" ? <AbTestPanel slug={slug} kind="landing" targetId={page.id} current={content.headline} canApprove={canPublish} /> : null}
         <div className="flex flex-wrap items-center gap-3">
           {canEdit ? (
             <Button loading={busy === "save"} onClick={() => run("save", () => update({ slug, id: page.id, content: { ...c, steps: c.steps.filter((s) => s.trim()) } }), "Saved")}>

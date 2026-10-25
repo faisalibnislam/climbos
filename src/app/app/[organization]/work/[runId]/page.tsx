@@ -80,7 +80,7 @@ export default function WorkPage() {
           {run.output && typeof run.output === "object" && !isPlan && run.artifacts.length === 0 ? (
             <Card>
               <CardContent>
-                {run.kind === "conversion_audit" ? <ConversionAuditView value={run.output} slug={slug} /> : <OutputView value={run.output} />}
+                {run.kind === "conversion_audit" ? <ConversionAuditView value={run.output} slug={slug} runId={run.id as Id<"workflowRuns">} /> : <OutputView value={run.output} />}
               </CardContent>
             </Card>
           ) : null}

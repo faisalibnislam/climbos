@@ -8,12 +8,13 @@ import { useState } from "react";
 import { Badge, Button, Input, Progress, toast } from "@/components/ui";
 import { errorMessage } from "./errors";
 
-/** A/B test card: start a challenger, watch the numbers, keep the winner (auto-applied when clear). */
-export function AbTestPanel({ slug, kind, targetId, current, canEdit }: { slug: string; kind: "landing" | "email_subject"; targetId: Id<"landingPages"> | Id<"outboundCampaigns">; current: string; canEdit: boolean }) {
+/** A/B test card: an approver starts the exact test; no result is applied automatically. */
+export function AbTestPanel({ slug, kind, targetId, current, canApprove }: { slug: string; kind: "landing" | "email_subject"; targetId: Id<"landingPages"> | Id<"outboundCampaigns">; current: string; canApprove: boolean }) {
   const tests = useQuery(api.abtests.forTarget, { slug, targetId });
   const startLanding = useMutation(api.abtests.startLanding);
   const startSubject = useMutation(api.abtests.startSubject);
   const stop = useMutation(api.abtests.stop);
+  const applyWinner = useMutation(api.abtests.applyWinner);
   const [b, setB] = useState("");
   const [outcomeWindowDays, setOutcomeWindowDays] = useState(kind === "landing" ? 1 : 7);
   const [busy, setBusy] = useState(false);
@@ -62,15 +63,12 @@ export function AbTestPanel({ slug, kind, targetId, current, canEdit }: { slug: 
             {active.note}{" "}
             {active.status === "maturing"
               ? `The outcome window is open until ${active.maturesAt ? new Date(active.maturesAt).toLocaleString() : "the scheduled close"}.`
-              : `After ${active.outcomeWindowDays} outcome-window day${active.outcomeWindowDays === 1 ? "" : "s"} at the sample cap, ClimbOS will choose once and apply the result.`}
+              : `After ${active.outcomeWindowDays} outcome-window day${active.outcomeWindowDays === 1 ? "" : "s"} at the sample cap, ClimbOS will report a result for review. It will not change the live page or campaign.`}
           </p>
-          {canEdit ? (
+          {canApprove ? (
             <div className="flex gap-2">
-              <Button size="sm" variant="ghost" onClick={() => run(() => stop({ slug, id: active.id, keep: "A" }))}>
-                Stop, keep A
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => run(() => stop({ slug, id: active.id, keep: "B" }))}>
-                Stop, use B
+              <Button size="sm" variant="ghost" onClick={() => run(() => stop({ slug, id: active.id }))}>
+                Stop test; apply nothing
               </Button>
             </div>
           ) : null}
@@ -80,14 +78,15 @@ export function AbTestPanel({ slug, kind, targetId, current, canEdit }: { slug: 
           {last ? (
             <p className="flex flex-wrap items-center gap-2 text-xs text-ink-2">
               <Badge tone={last.status === "invalid" ? "amber" : last.winner === "B" && last.status !== "stopped" ? "green" : "neutral"}>
-                Last test: {last.status === "invalid" ? "invalid split" : last.status === "stopped" ? `stopped, kept ${last.winner ?? "A"}` : last.winner === "B" ? "B won" : last.winner === "A" ? "A won" : "A kept"}
+                Last test: {last.status === "invalid" ? "invalid split" : last.status === "stopped" ? "stopped; no version applied" : last.winner === "B" ? "B favored in this sample" : last.winner === "A" && /no clear difference/i.test(last.note) ? "no clear difference; original kept" : last.winner === "A" ? "A favored in this sample" : "no clear difference"}
               </Badge>
               {last.note}
             </p>
           ) : (
-            <p className="text-xs text-ink-3">50/50 split by {metric}. Winner kept.</p>
+            <p className="text-xs text-ink-3">50/50 split by {metric}. Results are descriptive signals, not guaranteed causal improvements.</p>
           )}
-          {canEdit ? (
+          {canApprove && last?.winner === "B" && last.status === "done" && !last.appliedAt ? <Button size="sm" loading={busy} onClick={() => run(() => applyWinner({ slug, id: last.id }))}>Review and apply exact version B</Button> : null}
+          {canApprove ? (
             <div className="flex flex-col gap-2">
               <Input value={b} placeholder={`Now: “${current.slice(0, 40)}”`} aria-label={`Second ${label}`} onChange={(e) => setB(e.target.value)} />
               <label className="flex items-center gap-2 text-xs text-ink-2">

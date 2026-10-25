@@ -2,10 +2,22 @@
   "id": "conversion-audit",
   "title": "Money-page conversion audit",
   "gates": [
-    { "id": "G1", "text": "Truth: no claim, number, customer, quote or result that isn't in confirmed facts or cited research; rewrites contain no invented proof, prices, guarantees or testimonials." },
-    { "id": "G2", "text": "Impact honesty: every expected impact is labelled a hypothesis with a reason; no promised percentage lifts and no cross-industry averages used as targets." },
-    { "id": "G3", "text": "Observed vs unverified: visuals, mobile layout, speed and analytics are only described if observed or measured; everything else is labelled 'not verified' with the check that would confirm it." },
-    { "id": "G4", "text": "Legal status is handled accurately: do not reject a tactic solely because it is called a dark pattern; verify current primary sources for the target jurisdiction and flag unresolved cases for qualified legal review. No fabricated claims, unauthorized charges or known law/platform violations." }
+    {
+      "id": "G1",
+      "text": "Truth: no claim, number, customer, quote or result that isn't in confirmed facts or cited research; rewrites contain no invented proof, prices, guarantees or testimonials."
+    },
+    {
+      "id": "G2",
+      "text": "Impact honesty: every expected impact is labelled a hypothesis with a reason; no promised percentage lifts and no cross-industry averages used as targets."
+    },
+    {
+      "id": "G3",
+      "text": "Observed vs unverified: visuals, mobile layout, speed and analytics are only described if observed or measured; everything else is labelled 'not verified' with the check that would confirm it."
+    },
+    {
+      "id": "G4",
+      "text": "Legal status is handled accurately: do not reject a tactic solely because it is called a dark pattern; verify current primary sources for the target jurisdiction and flag unresolved cases for qualified legal review. No fabricated claims, unauthorized charges or known law/platform violations."
+    }
   ],
   "criteria": [
     {
@@ -79,7 +91,28 @@
         "3": "A metric named for some fixes.",
         "5": "Each fix names the metric or check that verifies it; uncertain big swings are handed to a pre-registered test; tracking gaps fixed first."
       }
+    },
+    {
+      "id": "C9",
+      "name": "Design evidence and judgment",
+      "anchors": {
+        "1": "Generic style opinions or unverified layout claims; no business/audience context.",
+        "3": "Some screenshot or page evidence, but objective defects, heuristics, brand judgments and preferences are blurred.",
+        "5": "Each design finding names exact region, evidence, page goal, severity, confidence and proposed change; classifications clearly distinguish observed facts, automated checks, heuristics, brand judgments, stylistic preferences and measured behavior."
+      }
+    },
+    {
+      "id": "C10",
+      "name": "Accessibility, technical limits and coverage",
+      "anchors": {
+        "1": "Claims accessibility conformance, mobile behavior, speed, or conversion impact from a partial screenshot/review.",
+        "3": "Reports some checks and coverage but leaves automation, human review, measurement type or viewport unclear.",
+        "5": "Names exact page, screenshot viewport and capture time where available; cites actual automated checks; states remaining human evaluation; keeps Lighthouse/CrUX/PageSpeed/static checks distinct; never claims conformance or causality from a bounded review."
+      }
     }
   ],
-  "shipRule": { "minEach": 3, "minAverage": 4 }
+  "shipRule": {
+    "minEach": 3,
+    "minAverage": 4
+  }
 }

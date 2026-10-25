@@ -54,7 +54,7 @@ Each one was checked in code. Its effect on quality is listed separately (§3).
 | H2 | D2 truncation actually happens on Expert plans in prod. | Log context sizes per run; check the share above 14k. |
 | H3 | Best-of-two (Basic) and the critic loop add cost without enough quality. | Arm C (single call) vs arm B on the same evidence. |
 | H4 | Guessed economics (D3, D4) drive the judge's "unprofitable play" complaints. | Same case with and without owner numbers. |
-| H5 | JS-rendered sites give thin facts. | Compare text length from our fetcher vs a rendered fetch on the 5 Airly sites. |
+| H5 | JS-rendered sites give thin facts. | Compare text length from our fetcher vs a rendered fetch on five benchmark business sites. |
 
 ## 4. Likely causes of weak strategy quality (ranked)
 

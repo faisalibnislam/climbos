@@ -11,15 +11,15 @@ import { Badge, Button, Callout, Card, CardContent, Field, Input, Select, toast 
 
 type App = NonNullable<ReturnType<typeof useQuery<typeof api.airly.overview>>>[number];
 
-/** Your other Airly apps: Formkit and Meetrao feed leads in; Taskeni and Folevi receive plans and to-dos. */
-export function AirlyApps({ slug, canManage }: { slug: string; canManage: boolean }) {
+/** Connected products: form and booking tools feed leads in; project and note tools receive plans and tasks. */
+export function ConnectedProducts({ slug, canManage }: { slug: string; canManage: boolean }) {
   const apps = useQuery(api.airly.overview, { slug });
   if (!apps) return null;
   return (
-    <section aria-labelledby="airly-heading" className="flex flex-col gap-3">
+    <section aria-labelledby="connected-products-heading" className="flex flex-col gap-3">
       <div>
-        <h2 id="airly-heading" className="heading-section">
-          Airly apps
+        <h2 id="connected-products-heading" className="heading-section">
+          Connected products
         </h2>
         <p className="text-sm text-ink-3">One token per app.</p>
       </div>
@@ -124,7 +124,7 @@ function AppCard({ slug, a, canManage }: { slug: string; a: App; canManage: bool
 }
 
 /** On the plan: send the to-dos to Taskeni or save the plan to Folevi, when connected. */
-export function PlanToAirly({ slug }: { slug: string }) {
+export function PlanToConnectedApps({ slug }: { slug: string }) {
   const apps = useQuery(api.airly.overview, { slug });
   const toTaskeni = useAction(api.airlyActions.sendPlanToTaskeni);
   const toFolevi = useAction(api.airlyActions.savePlanToFolevi);

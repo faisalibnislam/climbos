@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { PlayActuals } from "../../../../shared/growth/actuals";
+import { CREATIVE_PRECEDENTS } from "../../../../shared/knowledge/creativePrecedents";
 import { PlayResults } from "./PlayResults";
 import {
   ArrowRight,
@@ -102,6 +103,15 @@ export interface PlayView {
     measurement: { metric: string; baseline: string; target: string; windowDays: number; source: string };
   };
   actionReadiness?: { status: "safe_to_start" | "depends_on_input"; reasons: string[] };
+  creativeReview?: {
+    challenge: string; conventionBasis: "verified_rule" | "common_habit" | "assumption" | "unknown"; costOfBreaking: string;
+    customerTensionOrAsset: string; precedentIds: string[]; transferLogic: string;
+    keyDifferences: string; hopedCustomerBehavior: string; assumptions: string[];
+    novelty: "low" | "medium" | "high"; evidenceStrength: "low" | "medium" | "high";
+    businessFit: "low" | "medium" | "high"; feasibility: "low" | "medium" | "high";
+    risk: "low" | "medium" | "high"; reversibleTest: string; successSignal: string;
+    guardrail: string; stopCondition: string; revisionEvidence: string;
+  };
   model?: PlayModel;
 }
 
@@ -153,9 +163,9 @@ const KIND: Record<
   { label: string; icon: LucideIcon; hint: string; band: string; rail: string; soft: string; tile: string; ink: string; quote: string; chart: string }
 > = {
   bankable: {
-    label: "Bankable",
+    label: "Practical · established practice",
     icon: ShieldCheck,
-    hint: "Most predictable: proven here or close to it.",
+    hint: "A practical move grounded in an established approach; fit and results still need business-specific evidence.",
     band: "bg-chart-1/10",
     rail: "bg-chart-1",
     soft: "bg-chart-1/30",
@@ -165,9 +175,9 @@ const KIND: Record<
     chart: CHART.sage,
   },
   creative: {
-    label: "Creative, proven",
+    label: "Adjacent · evidence-supported inference",
     icon: Gem,
-    hint: "A proven mechanic aimed where competitors aren't.",
+    hint: "A useful idea carried into a less familiar context; the evidence supports the inference, not a guaranteed result.",
     band: "bg-chart-3/10",
     rail: "bg-chart-3",
     soft: "bg-chart-3/30",
@@ -177,9 +187,9 @@ const KIND: Record<
     chart: CHART.slate,
   },
   moonshot: {
-    label: "Capped moonshot",
+    label: "Bold · speculative hypothesis",
     icon: Rocket,
-    hint: "High upside, low predictability: small budget, hard stop.",
+    hint: "A speculative high-upside hypothesis, not an established result. Use a small reversible test with a hard stop and name what would disprove it.",
     band: "bg-chart-4/10",
     rail: "bg-chart-4",
     soft: "bg-chart-4/30",
@@ -726,8 +736,35 @@ function PlayInputs({ play, economics }: { play: PlayView; economics: Economics 
 
 function PlayDetails({ play, economics, id }: { play: PlayView; economics?: Economics; id: string }) {
   const action = play.actionContract;
+  const creative = play.creativeReview;
+  const precedentById = new Map(CREATIVE_PRECEDENTS.map((precedent) => [precedent.id, precedent]));
   return (
     <div id={id} className="flex flex-col gap-4">
+      {creative ? (
+        <section aria-label="Creative strategy reasoning" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-chart-3/30 bg-chart-3/5 p-3">
+          <div className="flex flex-wrap items-center gap-2"><FieldLabel icon={Sparkles}>Why this is distinctive</FieldLabel><Badge>Exploration · not approval to execute</Badge></div>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <div><dt className="text-xs text-ink-3">Default it challenges</dt><dd className="text-ui text-ink">{creative.challenge}</dd></div>
+            <div><dt className="text-xs text-ink-3">What kind of default · what breaking it could cost</dt><dd className="text-ui text-ink">{creative.conventionBasis.replaceAll("_", " ")} · {creative.costOfBreaking}</dd></div>
+            <div><dt className="text-xs text-ink-3">Customer tension or business asset</dt><dd className="text-ui text-ink">{creative.customerTensionOrAsset}</dd></div>
+            <div><dt className="text-xs text-ink-3">Why the mechanism may transfer</dt><dd className="text-ui text-ink">{creative.transferLogic}</dd></div>
+            <div><dt className="text-xs text-ink-3">Important differences</dt><dd className="text-ui text-ink">{creative.keyDifferences}</dd></div>
+            <div><dt className="text-xs text-ink-3">Behavior it hopes to change</dt><dd className="text-ui text-ink">{creative.hopedCustomerBehavior}</dd></div>
+            <div><dt className="text-xs text-ink-3">Assumptions</dt><dd className="text-ui text-ink">{creative.assumptions.length ? creative.assumptions.join(" · ") : "No additional assumptions listed."}</dd></div>
+          </dl>
+          <div>
+            <p className="text-xs font-medium text-ink-2">Separate dimensions · low / medium / high</p>
+            <dl className="mt-1 grid grid-cols-2 gap-2 text-ui sm:grid-cols-5">
+              {(["novelty", "evidenceStrength", "businessFit", "feasibility", "risk"] as const).map((key) => <div key={key} className="rounded-[var(--radius-control)] bg-surface px-2 py-1.5"><dt className="text-xs text-ink-3">{key === "evidenceStrength" ? "Evidence" : key === "businessFit" ? "Business fit" : key[0].toUpperCase() + key.slice(1)}</dt><dd className="font-medium capitalize text-ink">{creative[key]}</dd></div>)}
+            </dl>
+          </div>
+          {creative.precedentIds.length ? <div className="flex flex-col gap-2"><p className="text-xs font-medium text-ink-2">Retrieved precedent mechanisms</p>{creative.precedentIds.map((id) => {
+            const precedent = precedentById.get(id);
+            return precedent ? <article key={id} className="rounded-[var(--radius-control)] border border-line bg-surface p-2.5"><h4 className="text-ui font-semibold text-ink">{precedent.title} · {precedent.organization} <span className="font-normal text-ink-3">({id})</span></h4><p className="mt-1 text-ui text-ink-2">{precedent.mechanism} {precedent.causalLimit}</p><ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">{precedent.sources.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer" className="text-brand-800 underline">{source.publisher}: {source.title}</a> · {source.publicationDate}</li>)}</ul></article> : <p key={id} className="text-ui text-amber-800">Precedent reference {id} could not be resolved; treat the analogy as unverified.</p>;
+          })}</div> : <p className="text-ui text-ink-2">No sufficiently relevant precedent was retrieved. This is presented as an original hypothesis and should be judged by its reversible test.</p>}
+          <dl className="grid gap-3 sm:grid-cols-2"><div><dt className="text-xs text-ink-3">Cheapest reversible test</dt><dd className="text-ui text-ink">{creative.reversibleTest}</dd></div><div><dt className="text-xs text-ink-3">Success signal</dt><dd className="text-ui text-ink">{creative.successSignal}</dd></div><div><dt className="text-xs text-ink-3">Guardrail</dt><dd className="text-ui text-ink">{creative.guardrail}</dd></div><div><dt className="text-xs text-ink-3">Stop condition</dt><dd className="text-ui text-ink">{creative.stopCondition}</dd></div><div className="sm:col-span-2"><dt className="text-xs text-ink-3">Evidence that would change the recommendation</dt><dd className="text-ui text-ink">{creative.revisionEvidence}</dd></div></dl>
+        </section>
+      ) : null}
       {action ? (
         <section aria-label="Action and measurement plan" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-surface-2 p-3">
           <div className="flex flex-wrap items-center gap-2">

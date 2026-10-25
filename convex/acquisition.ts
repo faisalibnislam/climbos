@@ -91,6 +91,14 @@ export const view = query({
         statusLabel: STATUS_LABEL[r.status],
         why: r.why,
         evidence: r.evidence ?? null,
+        evidenceBasis: r.evidenceBasis ?? null,
+        evidenceConfidence: r.evidenceConfidence ?? null,
+        evidenceDate: r.evidenceDate ?? null,
+        sourceUrl: r.sourceUrl ?? null,
+        communityRulesUrl: r.communityRulesUrl ?? null,
+        communityRulesCheckedAt: r.communityRulesCheckedAt ?? null,
+        purpose: r.purpose ?? null,
+        measurementPlan: r.measurementPlan ?? null,
         platform: r.platform ?? null,
         tactic: r.tactic ?? null,
         audience: r.audienceName ?? null,
@@ -141,8 +149,8 @@ const MAX_CHANNEL_PREFERENCES = 20;
 
 /** Save an owner-reported channel preference as a bounded soft ranking signal. */
 export const setChannelPreference = mutation({
-  args: { slug: v.string(), channelId: v.string(), preference: v.union(v.literal("prefer"), v.literal("avoid"), v.literal("clear")), rationale: v.optional(v.string()) },
-  handler: async (ctx, { slug, channelId, preference, rationale }) => {
+  args: { slug: v.string(), channelId: v.string(), preference: v.union(v.literal("prefer"), v.literal("avoid"), v.literal("dismissed"), v.literal("irrelevant"), v.literal("clear")), rationale: v.optional(v.string()), sourceUrl: v.optional(v.string()) },
+  handler: async (ctx, { slug, channelId, preference, rationale, sourceUrl }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     if (!CHANNEL_BY_ID[channelId]) throw appError("INVALID", "Choose a channel from the ClimbOS channel list.");
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
@@ -152,8 +160,10 @@ export const setChannelPreference = mutation({
     if (preference !== "clear") {
       const clean = rationale?.trim().slice(0, 280) ?? "";
       if (clean.length < 8) throw appError("INVALID", "Add a short reason so this owner-reported preference is useful later.");
+      const cleanSource = sourceUrl?.trim();
+      if (cleanSource && (!/^https:\/\//i.test(cleanSource) || cleanSource.length > 2000)) throw appError("INVALID", "Use a full https:// evidence link or leave it blank.");
       if (channelPreferences.length >= MAX_CHANNEL_PREFERENCES) throw appError("INVALID", `Keep up to ${MAX_CHANNEL_PREFERENCES} channel preferences; clear one before adding another.`);
-      channelPreferences.push({ channelId, preference, rationale: clean });
+      channelPreferences.push({ channelId, preference, rationale: clean, evidenceDate: new Date().toISOString().slice(0, 10), ...(cleanSource ? { sourceUrl: cleanSource } : {}) });
     }
     await ctx.db.patch(business._id, { acquisition: { types: prior.types, typesSource: prior.typesSource ?? "inferred", dims: prior.dims, channelPreferences, updatedAt: Date.now() } });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "acquisition.channel_preference", subjectType: "business", subjectId: business._id, summary: preference === "clear" ? `Cleared owner preference for ${CHANNEL_BY_ID[channelId]!.name}.` : `Marked ${CHANNEL_BY_ID[channelId]!.name} as ${preference}; owner-reported rationale saved.` });

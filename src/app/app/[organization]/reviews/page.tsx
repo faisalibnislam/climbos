@@ -10,20 +10,27 @@ import { useState } from "react";
 import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { StatBlocks } from "@/components/ds/content";
-import { Badge, Button, Card, CardContent, Checkbox, Field, IconTile, Input, Textarea, toast } from "@/components/ui";
+import { Badge, Button, Card, CardContent, Checkbox, ConfirmDialog, Field, IconTile, Input, Select, Textarea, toast } from "@/components/ui";
 
-/** Reviews: ask happy customers, share your review page, and reply to reviews with Climb AI. */
+/** Reviews: invite customers neutrally, share your review page, and draft replies with Climb AI. */
 export default function ReviewsPage() {
   const { organization: slug } = useParams<{ organization: string }>();
   const data = useQuery(api.reviews.overview, { slug });
+  const voice = useQuery(api.reviews.voiceThemes, { slug });
   const setUrl = useMutation(api.reviews.setReviewUrl);
-  const request = useMutation(api.reviews.request);
+  const prepareBatch = useMutation(api.reviews.prepareBatch);
+  const approveBatch = useMutation(api.reviews.approveBatch);
+  const setVoiceThemeFeedback = useMutation(api.reviews.setVoiceThemeFeedback);
   const addReview = useMutation(api.reviews.addReview);
   const [url, setUrlText] = useState<string | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [extra, setExtra] = useState("");
   const [review, setReview] = useState({ author: "", text: "", rating: "", sourceUrl: "" });
+  const [themeLabels, setThemeLabels] = useState<Record<string, string>>({});
+  const [themeNotes, setThemeNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  const [preview, setPreview] = useState<Awaited<ReturnType<typeof prepareBatch>> | null>(null);
+  const [confirmEligibleRecipients, setConfirmEligibleRecipients] = useState(false);
   async function run(key: string, fn: () => Promise<unknown>, ok?: string) {
     setBusy(key);
     try {
@@ -83,11 +90,55 @@ export default function ReviewsPage() {
 
       <Card>
         <CardContent className="flex flex-col gap-3">
+          <div>
+            <h2 className="heading-card">Possible customer themes</h2>
+            <p className="text-sm text-ink-3">Phrase matching across recent reviews, supported inbox records, and owner-entered CRM notes from the latest {voice?.windowDays ?? 180} days. These are signals to review, not findings about every customer; examples retain source and date.</p>
+          </div>
+          {voice === undefined ? <p className="text-sm text-ink-3">Loading message themes…</p> : voice.themes.length ? (
+            <ul className="flex flex-col divide-y divide-line">
+              {voice.themes.map((theme) => (
+                <li key={theme.key} className="flex flex-col gap-2 py-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong>{theme.label}</strong>
+                    <Badge tone={theme.confidence === "medium" ? "blue" : "amber"}>{theme.confidence} heuristic confidence</Badge>
+                    <Badge>{theme.evidenceBasis === "owner_reported" ? "Owner-entered notes" : theme.evidenceBasis === "mixed" ? "Messages + owner notes" : "Customer messages"}</Badge>
+                    <Badge>{theme.count} matching messages</Badge>
+                    {theme.status === "dismissed" ? <Badge>Dismissed</Badge> : null}
+                  </div>
+                  <p className="text-xs text-ink-3">{theme.channels.join(", ")} · {new Date(theme.firstSeenAt).toLocaleDateString()}–{new Date(theme.lastSeenAt).toLocaleDateString()}. Heuristic phrase grouping; the example count is not the total customer population.</p>
+                  <ul className="flex flex-col gap-2">
+                    {theme.examples.map((example) => <li key={example.id} className="rounded-md bg-surface-2 p-2 text-sm"><span className="text-xs text-ink-3">{example.source} · {new Date(example.date).toLocaleDateString()}{example.sourceUrl ? <> · <a href={example.sourceUrl} target="_blank" rel="noreferrer" className="text-brand-800 underline">source</a></> : null}</span><p className="mt-1">“{example.excerpt}”</p></li>)}
+                  </ul>
+                  {theme.ownerNote ? <p className="text-xs text-ink-3">Owner note: {theme.ownerNote}</p> : null}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {theme.status === "dismissed" ? (
+                      <Button size="sm" variant="ghost" onClick={() => run(`theme-${theme.key}`, () => setVoiceThemeFeedback({ slug, themeKey: theme.key, status: "clear" }), "Theme restored")}>Restore</Button>
+                    ) : (
+                      <>
+                        <Button size="sm" variant="ghost" onClick={() => run(`theme-${theme.key}`, () => setVoiceThemeFeedback({ slug, themeKey: theme.key, status: "dismissed", note: "Dismissed by workspace owner" }), "Theme dismissed")}>Dismiss</Button>
+                        <Select aria-label={`Correct theme ${theme.label}`} value={themeLabels[theme.key] ?? theme.label} onValueChange={(value) => setThemeLabels({ ...themeLabels, [theme.key]: value })} options={Object.entries({ onboarding: "Getting started", reliability: "Reliability", response_time: "Response time", value: "Price and value", product_gap: "Product requests", service: "Service experience" }).map(([, label]) => ({ value: label, label }))} />
+                        <Input aria-label={`Correction note for ${theme.label}`} placeholder="Why is this grouping wrong?" value={themeNotes[theme.key] ?? ""} onChange={(e) => setThemeNotes({ ...themeNotes, [theme.key]: e.target.value })} className="h-8 max-w-64 text-xs" />
+                        <Button size="sm" variant="secondary" disabled={!themeNotes[theme.key]?.trim()} onClick={() => run(`theme-${theme.key}`, () => setVoiceThemeFeedback({ slug, themeKey: theme.key, status: "corrected", correctedLabel: themeLabels[theme.key] ?? theme.label, note: themeNotes[theme.key] }), "Correction saved")}>Correct</Button>
+                      </>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-ink-3">No repeated phrase groups found in {voice.sourceCount} recent records. That does not mean customers have no concerns or questions.</p>
+          )}
+          {voice ? <p className="text-xs text-ink-3">Coverage: at most {voice.sampleLimit} inbox and owner-entered CRM records from {voice.windowDays} days; at least {voice.minimumRepeatedSources} matching sources are required. Private message text is only shown to workspace members with inbox access.</p> : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <IconTile icon={Send} tone="brand" size="sm" />
             <div>
-              <h2 className="heading-card">Ask customers</h2>
-              <p className="text-sm text-ink-3">Sent from your mailbox.</p>
+              <h2 className="heading-card">Invite customers to review</h2>
+              <p className="text-sm text-ink-3">Everyone receives the same public review destination, regardless of feedback or sentiment. Review the exact recipients and message before sending.</p>
             </div>
           </div>
           {data.candidates.length ? (
@@ -115,8 +166,8 @@ export default function ReviewsPage() {
           <Field label="Or add people" hint="One per line: Name <email@example.com>">
             <Textarea value={extra} onChange={(e) => setExtra(e.target.value)} rows={3} autosize />
           </Field>
-          <Button className="self-start" loading={busy === "ask"} disabled={!data.reviewUrl || people().length === 0} onClick={() => run("ask", async () => { const r = await request({ slug, people: people() }); setPicked(new Set()); setExtra(""); toast({ tone: "success", title: `Asking ${r.queued} ${r.queued === 1 ? "person" : "people"}`, description: r.recentlyAsked ? `Skipped ${r.recentlyAsked} (asked < 90 days)` : undefined }); })}>
-            <Send aria-hidden /> Ask
+          <Button className="self-start" loading={busy === "preview"} disabled={!data.reviewUrl || people().length === 0} onClick={() => run("preview", async () => { setConfirmEligibleRecipients(false); setPreview(await prepareBatch({ slug, people: people() })); })}>
+            <Send aria-hidden /> Review invitation
           </Button>
           {data.recent.length ? (
             <ul className="mt-2 flex flex-col divide-y divide-line text-sm">
@@ -134,6 +185,35 @@ export default function ReviewsPage() {
           ) : null}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={Boolean(preview)}
+        onOpenChange={(open) => { if (!open) { setPreview(null); setConfirmEligibleRecipients(false); } }}
+        title={`Send to ${preview?.count ?? 0} customers?`}
+        description="This will send the reviewed invitation from your connected mailbox. The recipients, message version, mailbox and review destination are bound to this approval."
+        confirmLabel={`Approve and send ${preview?.count ?? 0}`}
+        confirmDisabled={!confirmEligibleRecipients}
+        onConfirm={async () => {
+          if (!preview) return;
+          const result = await approveBatch({ slug, batchId: preview.batchId, contentHash: preview.contentHash, scopeHash: preview.scopeHash, confirmEligibleRecipients });
+          setPreview(null);
+          setConfirmEligibleRecipients(false);
+          setPicked(new Set());
+          setExtra("");
+          toast({ tone: "success", title: `Sending to ${result.queued} ${result.queued === 1 ? "customer" : "customers"}` });
+        }}
+      >
+        {preview ? (
+          <div className="flex max-h-72 flex-col gap-3 overflow-y-auto rounded-lg bg-surface-2 p-3 text-sm">
+            <p><span className="font-medium">Public review destination:</span> <span className="break-all">{preview.destination}</span></p>
+            <p><span className="font-medium">Message preview:</span></p>
+            <pre className="whitespace-pre-wrap font-sans text-ink-2">{preview.preview}</pre>
+            <p className="font-medium">Recipients ({preview.count})</p>
+            <ul className="list-disc pl-5 text-ink-2">{preview.recipients.map((person, i) => <li key={`${person.email}-${i}`}>{person.name} · {person.email}</li>)}</ul>
+            <Checkbox label="I confirm every recipient is an eligible customer who may receive this review invitation. I have not selected them based on expected satisfaction or review rating." checked={confirmEligibleRecipients} onCheckedChange={(checked) => setConfirmEligibleRecipients(checked === true)} />
+          </div>
+        ) : null}
+      </ConfirmDialog>
 
       <Card>
         <CardContent className="flex flex-col gap-3">

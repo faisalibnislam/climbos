@@ -1,5 +1,5 @@
 /**
- * Benchmark cases: the owner's own Airly apps (approved 2026-10-18), plus a mixed set of other
+ * Benchmark cases: the owner's connected products (approved 2026-10-18), plus a mixed set of other
  * business types. Facts are extracted from each public website once (cached in bench/cache)
  * so every engine gets identical inputs.
  */

@@ -47,6 +47,7 @@ import type * as crm from "../crm.js";
 import type * as crons from "../crons.js";
 import type * as demo from "../demo.js";
 import type * as designs from "../designs.js";
+import type * as designCritic from "../designCritic.js";
 import type * as emailActions from "../emailActions.js";
 import type * as engine from "../engine.js";
 import type * as engineFlags from "../engineFlags.js";
@@ -171,6 +172,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   demo: typeof demo;
   designs: typeof designs;
+  designCritic: typeof designCritic;
   emailActions: typeof emailActions;
   engine: typeof engine;
   engineFlags: typeof engineFlags;

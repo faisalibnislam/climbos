@@ -35,7 +35,7 @@ crons.interval("push notifications", { minutes: 2 }, internal.push.fanout, {});
 crons.interval("status sample", { minutes: 5 }, internal.status.sample, {});
 crons.interval("booking reminders", { minutes: 15 }, internal.bookings.sendReminders, {});
 crons.interval("webhook deliveries", { minutes: 1 }, internal.webhooks.deliverDue, {});
-crons.interval("airly apps sync", { minutes: 15 }, internal.airlyActions.syncAll, {});
+crons.interval("connected products sync", { minutes: 15 }, internal.airlyActions.syncAll, {});
 // Self-improvement loop 2: refresh first-party rates every Sunday night.
 // Self-improvement loop 1: re-read each business's own site weekly.
 crons.weekly("site watch", { dayOfWeek: "monday", hourUTC: 6, minuteUTC: 0 }, internal.siteWatchActions.weekly, {});

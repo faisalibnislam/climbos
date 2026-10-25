@@ -25,7 +25,7 @@ The approved paid evaluation budget is **$0**: the owner set it on 2026-10-18, a
 | Plan quality fixtures | `tests/unit/plan-quality.test.ts`, `tests/convex/plan-approval.test.ts` | A failed plan can't be approved |
 | Goal gap fixtures | `tests/unit/goal-gap.test.ts` | Goal stays as stated; the gap is computed in code |
 | Context-size probe | Replay saved bench inputs, measure characters per block | How often the 14k cuts bite (H2) |
-| Website depth | Our fetcher on 5 Airly sites (fetch only, no LLM) | Text length per site (H5) |
+| Website depth | Our fetcher on five benchmark business sites (fetch only, no LLM) | Text length per site (H5) |
 
 ## 2. Paid comparison (needs approval)
 

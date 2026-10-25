@@ -67,23 +67,62 @@ describe("reviews engine", () => {
     await expect(owner.client.mutation(api.inbox.draftReply, { slug, id: review.id })).rejects.toThrow(/direct owner review/);
   });
 
-  it("asks won customers from the mailbox, tracks the click and routes private notes to the Inbox", async () => {
+  it("shows tentative repeated voice themes with provenance and retains owner corrections per tenant", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "voice-themes@example.com");
+    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Review Co" });
+    await owner.client.mutation(api.reviews.addReview, { slug, author: "Pat", text: "Setup was confusing; write to pat@example.com", source: "google", sourceUrl: "https://reviews.example/1" });
+    await owner.client.mutation(api.reviews.addReview, { slug, author: "Lee", text: "Getting started was confusing", source: "trustpilot", sourceUrl: "https://reviews.example/2" });
+    let result = await owner.client.query(api.reviews.voiceThemes, { slug });
+    expect(result.themes[0]).toMatchObject({ key: "onboarding", count: 2, channels: ["google", "trustpilot"], confidence: "low" });
+    expect(result.themes[0]!.examples[0]).toMatchObject({ source: "review · trustpilot" });
+    expect(result.themes[0]!.examples.some((row) => row.excerpt.includes("pat@example.com"))).toBe(false);
+
+    await owner.client.mutation(api.reviews.setVoiceThemeFeedback, { slug, themeKey: "onboarding", status: "corrected", correctedLabel: "Reliability", note: "These comments refer to recurring app errors, not onboarding." });
+    result = await owner.client.query(api.reviews.voiceThemes, { slug });
+    expect(result.themes[0]).toMatchObject({ label: "Reliability", status: "corrected", ownerNote: "These comments refer to recurring app errors, not onboarding." });
+
+    const other = await asNewUser(t, "voice-theme-other@example.com");
+    await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other Co" });
+    await expect(other.client.mutation(api.reviews.setVoiceThemeFeedback, { slug, themeKey: "onboarding", status: "dismissed" })).rejects.toThrow(/workspace|access/i);
+    await owner.client.mutation(api.reviews.setVoiceThemeFeedback, { slug, themeKey: "onboarding", status: "dismissed", note: "Not relevant" });
+    result = await owner.client.query(api.reviews.voiceThemes, { slug });
+    expect(result.themes[0]).toMatchObject({ status: "dismissed" });
+    await owner.client.mutation(api.reviews.setVoiceThemeFeedback, { slug, themeKey: "onboarding", status: "clear" });
+    expect((await owner.client.query(api.reviews.voiceThemes, { slug })).themes[0]).toMatchObject({ status: "suggested", label: "Getting started" });
+  });
+
+  it("shows a neutral invitation preview, requires exact-scope approval, and tracks clicks and private notes", async () => {
     const t = setup();
     const owner = await asNewUser(t, "reviews@example.com");
     const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Review Co", website: "https://review.example" });
     // Free: sending is a paid feature.
-    await expect(owner.client.mutation(api.reviews.request, { slug, people: [{ name: "Ana", email: "ana@x.example" }] })).rejects.toThrow(/package/);
+    await expect(owner.client.mutation(api.reviews.prepareBatch, { slug, people: [{ name: "Ana", email: "ana@x.example" }] })).rejects.toThrow(/package/);
     await makePaid(t, orgId);
-    await expect(owner.client.mutation(api.reviews.request, { slug, people: [{ name: "Ana", email: "ana@x.example" }] })).rejects.toThrow(/review link/);
+    await expect(owner.client.mutation(api.reviews.prepareBatch, { slug, people: [{ name: "Ana", email: "ana@x.example" }] })).rejects.toThrow(/review link/);
     await expect(owner.client.mutation(api.reviews.setReviewUrl, { slug, url: "javascript:alert(1)" })).rejects.toThrow();
     await owner.client.mutation(api.reviews.setReviewUrl, { slug, url: "https://g.page/r/abc/review" });
-    await expect(owner.client.mutation(api.reviews.request, { slug, people: [{ name: "Ana", email: "ana@x.example" }] })).rejects.toThrow(/mailbox/);
+    await expect(owner.client.mutation(api.reviews.prepareBatch, { slug, people: [{ name: "Ana", email: "ana@x.example" }] })).rejects.toThrow(/mailbox/);
     await owner.client.action(api.mailbox.connect, { slug, preset: "gmail", email: "me@review.example", password: "pw" });
 
     const dealId = await owner.client.mutation(api.crm.create, { slug, name: "Ana Lopez", email: "ana@x.example", stage: "won" });
     let o = await owner.client.query(api.reviews.overview, { slug });
     expect(o.candidates).toEqual([{ dealId, name: "Ana Lopez", email: "ana@x.example" }]);
-    expect(await owner.client.mutation(api.reviews.request, { slug, people: [{ name: "Ana Lopez", email: "ana@x.example", dealId }, { name: "Bad", email: "nope" }] })).toEqual({ queued: 1, skipped: 1, recentlyAsked: 0 });
+    const staged = await owner.client.mutation(api.reviews.prepareBatch, { slug, people: [{ name: "Ana Lopez", email: "ana@x.example", dealId }, { name: "Bad", email: "nope" }] });
+    expect(staged).toMatchObject({ count: 1, skipped: 1, destination: "https://g.page/r/abc/review" });
+    expect(staged.preview).toContain("honest review");
+    expect(staged.preview).not.toMatch(/happy|satisfied|positive/i);
+    expect(await t.run(async (ctx) => (await ctx.db.query("reviewRequests").collect()).length)).toBe(0); // Staging does not send.
+    const other = await asNewUser(t, "other-review-tenant@example.com");
+    const otherWorkspace = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other Co" });
+    await expect(other.client.mutation(api.reviews.approveBatch, { slug: otherWorkspace.slug, batchId: staged.batchId, contentHash: staged.contentHash, scopeHash: staged.scopeHash, confirmEligibleRecipients: true })).rejects.toThrow(/not found/);
+    await expect(owner.client.mutation(api.reviews.approveBatch, { slug, batchId: staged.batchId, contentHash: "changed", scopeHash: staged.scopeHash, confirmEligibleRecipients: true })).rejects.toThrow(/changed/);
+    const businessId = await t.run(async (ctx) => (await ctx.db.query("businesses").first())!._id);
+    await t.run((ctx) => ctx.db.patch(businessId, { name: "Renamed Co" }));
+    await expect(owner.client.mutation(api.reviews.approveBatch, { slug, batchId: staged.batchId, contentHash: staged.contentHash, scopeHash: staged.scopeHash, confirmEligibleRecipients: true })).rejects.toThrow(/changed/);
+    await t.run((ctx) => ctx.db.patch(businessId, { name: "Review Co" }));
+    await expect(owner.client.mutation(api.reviews.approveBatch, { slug, batchId: staged.batchId, contentHash: staged.contentHash, scopeHash: staged.scopeHash, confirmEligibleRecipients: false })).rejects.toThrow(/eligible customer/);
+    await owner.client.mutation(api.reviews.approveBatch, { slug, batchId: staged.batchId, contentHash: staged.contentHash, scopeHash: staged.scopeHash, confirmEligibleRecipients: true });
     // The email has a real unsubscribe link (no "reply stop" promise nobody reads).
     const reqId = await t.run(async (ctx) => (await ctx.db.query("reviewRequests").first())!._id);
     const mail = (await t.query(internal.reviews.prepareRequest, { id: reqId }))!;
@@ -95,19 +134,27 @@ describe("reviews engine", () => {
     expect(o.stats.sent).toBe(1);
     expect(o.candidates).toHaveLength(0);
     // The same customer isn't asked again within 90 days.
-    await expect(owner.client.mutation(api.reviews.request, { slug, people: [{ name: "Ana Lopez", email: "ana@x.example" }] })).rejects.toThrow(/last 90 days/);
-    expect(await owner.client.mutation(api.reviews.request, { slug, people: [{ name: "Ana Lopez", email: "ana@x.example" }, { name: "Bo", email: "bo@x.example" }] })).toMatchObject({ queued: 1, recentlyAsked: 1 });
-    // Bo unsubscribes from the link: suppressed, never asked again.
+    await expect(owner.client.mutation(api.reviews.prepareBatch, { slug, people: [{ name: "Ana Lopez", email: "ana@x.example" }] })).rejects.toThrow(/last 90 days/);
+    const bo = await owner.client.mutation(api.reviews.prepareBatch, { slug, people: [{ name: "Ana Lopez", email: "ana@x.example" }, { name: "Bo", email: "bo@x.example" }] });
+    expect(bo).toMatchObject({ count: 1, skipped: 1, recentlyAsked: 1, destination: staged.destination });
+    await owner.client.mutation(api.reviews.approveBatch, { slug, batchId: bo.batchId, contentHash: bo.contentHash, scopeHash: bo.scopeHash, confirmEligibleRecipients: true });
+    // Private feedback, including a low rating, does not remove the public review option.
     const boId = await t.run(async (ctx) => (await ctx.db.query("reviewRequests").collect()).find((r) => r.email === "bo@x.example")!._id);
+    const boRequest = await t.run((ctx) => ctx.db.get(boId));
+    await t.mutation(api.reviews.privateFeedback, { slug, t: boRequest!.token, text: "Delivery was late", rating: 1 });
+    const boMail = await t.query(internal.reviews.prepareRequest, { id: boId });
+    expect(boMail?.text).toContain("you can share an honest review here:");
+    expect(boMail?.text).toContain("/review/");
+    // Unsubscribing still suppresses the queued email.
     expect(await t.mutation(api.outboundSending.unsubscribe, { token: await unsubscribeToken(boId, "test-server-secret") })).toEqual({ company: expect.any(String) });
-    await expect(owner.client.mutation(api.reviews.request, { slug, people: [{ name: "Bo", email: "bo@x.example" }] })).rejects.toThrow(/No valid emails/);
+    await expect(owner.client.mutation(api.reviews.prepareBatch, { slug, people: [{ name: "Bo", email: "bo@x.example" }] })).rejects.toThrow(/No eligible/);
 
     const tok = await t.run(async (ctx) => (await ctx.db.query("reviewRequests").first())!.token);
     expect(await t.query(api.reviews.publicPage, { slug })).toEqual({ name: "Review Co", reviewUrl: "https://g.page/r/abc/review" });
     await t.mutation(api.reviews.opened, { slug, t: tok });
     await t.mutation(api.reviews.privateFeedback, { slug, t: tok, text: "Great work, slow delivery though", rating: 4 });
     o = await owner.client.query(api.reviews.overview, { slug });
-    expect(o.stats).toMatchObject({ clicked: 1, feedback: 1 });
+    expect(o.stats).toMatchObject({ clicked: 1, feedback: 2 });
     const inbox = await owner.client.query(api.inbox.list, { slug, box: "open" });
     expect(inbox[0]).toMatchObject({ kind: "review", from: "Ana Lopez", canReply: true });
     expect(inbox[0].text).toContain("★★★★☆");

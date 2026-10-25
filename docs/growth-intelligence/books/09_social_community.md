@@ -42,7 +42,7 @@ Separate topic from point of view. “Automation” is a topic. “Automate stab
 
 Create a proof ladder. Observed customer problems support relevance. Demonstrations support capability. Documented methods support credibility. Permissioned customer stories support specific reported outcomes. Independent evidence can support broader claims where available. Do not climb from a polished visual to an unsupported statement about revenue impact.
 
-For an agency such as Airly, a hypothetical editorial system could examine revenue friction, operational bottlenecks, and product opportunities. Specific claims about the agency's projects still require approved evidence. The topic architecture can be designed without inventing client names, quantified results, or testimonials.
+For a hypothetical agency, an editorial system could examine revenue friction, operational bottlenecks, and product opportunities. Specific claims about the agency's projects still require approved evidence. The topic architecture can be designed without inventing client names, quantified results, or testimonials.
 
 ## 4. Turn customer questions into an editorial portfolio
 

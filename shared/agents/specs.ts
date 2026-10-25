@@ -10,7 +10,7 @@ import type { RefundExposure } from "../attribution/refundExposure";
 import type { PlatformConcentration } from "../attribution/platformConcentration";
 import type { KnowledgeReferenceSet } from "../knowledge/retrieve";
 import type { PlanConstraints } from "./types";
-import { LOW_TICKET_USD_MONTH } from "../acquisition/scoring";
+import { COMMUNITY_CHANNELS, LOW_TICKET_USD_MONTH, PLATFORM_EVIDENCE_CHANNELS } from "../acquisition/scoring";
 import { formatMoney, toUsd } from "../economics/currency";
 import { sampleSize } from "../analysis/decisions";
 import { citedCreatorCompetitorCollaborations, citedCreatorFact } from "../growth/targets";
@@ -31,6 +31,7 @@ import {
 } from "../ai/tasks";
 import { skillRubric } from "../skills";
 import { lintEvidenceStrength } from "./evidenceKind";
+import { CREATIVE_PRECEDENTS } from "../knowledge/creativePrecedents";
 import { inferSearchIntentStage } from "./searchIntent";
 import { lintFactIndexes } from "./factIndexes";
 import { lintDiagnosisFit, playWorksOnConstraint } from "./diagnosis";
@@ -211,6 +212,28 @@ export const PlaySchema = z.object({
   }),
   /** Derived by ClimbOS from the action's declared dependencies and capability. */
   actionReadiness: z.object({ status: z.enum(["safe_to_start", "depends_on_input"]), reasons: z.array(z.string()) }).optional(),
+  /** Inspectable creative-strategy reasoning; separate ratings are not collapsed into the commercial score. */
+  creativeReview: z.object({
+    challenge: z.string().min(1),
+    conventionBasis: z.enum(["verified_rule", "common_habit", "assumption", "unknown"]),
+    costOfBreaking: z.string().min(1),
+    customerTensionOrAsset: z.string().min(1),
+    precedentIds: z.array(z.string()).max(3),
+    transferLogic: z.string().min(1),
+    keyDifferences: z.string().min(1),
+    hopedCustomerBehavior: z.string().min(1),
+    assumptions: z.array(z.string()).max(5),
+    novelty: z.enum(["low", "medium", "high"]),
+    evidenceStrength: z.enum(["low", "medium", "high"]),
+    businessFit: z.enum(["low", "medium", "high"]),
+    feasibility: z.enum(["low", "medium", "high"]),
+    risk: z.enum(["low", "medium", "high"]),
+    reversibleTest: z.string().min(1),
+    successSignal: z.string().min(1),
+    guardrail: z.string().min(1),
+    stopCondition: z.string().min(1),
+    revisionEvidence: z.string().min(1),
+  }).optional(),
   climbosCanDo: z.string(),
   /** The play's numbers; ClimbOS code (not the model) turns them into customers, cost per customer and payback. */
   model: z.object({
@@ -282,7 +305,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; portfolio?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null };
 export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number; leads?: number; qualifiedLeads?: number; qualificationDefinition?: string; activated?: number; newCustomers?: number; activationKind?: "value" | "habit" | "setup" | "unknown"; signupKind?: "free_plan" | "trial_no_card" | "trial_card" | "unknown"; updatedAt: number }
 export interface GoalInputSnapshot { id: string; kind: "more_sales" | "more_customers" | "more_reach" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
-export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid"; rationale: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
+export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
 export const ENGINE_VERSION = "v3.60-social-visual-review";
 
@@ -333,6 +356,15 @@ const overlap = (a: Set<string>, b: Set<string>) => {
 export function lintPlays(drafts: PlayDraft[], economics?: Economics, opts: { decisionContract?: boolean } = {}): LintIssue[] {
   const plays = economics ? withForecasts({ economics, plays: drafts }).plays : (drafts as Play[]);
   const issues: LintIssue[] = [];
+  const precedentIds = new Set(CREATIVE_PRECEDENTS.map((precedent) => precedent.id));
+  plays.forEach((play, index) => {
+    for (const id of play.creativeReview?.precedentIds ?? []) {
+      if (!precedentIds.has(id)) issues.push({ severity: "error", rule: "creative_precedent", message: `Unknown creative precedent ${id}; cite only a case actually retrieved by ClimbOS.`, path: `plays[${index}].creativeReview.precedentIds` });
+    }
+    if (play.creativeReview && play.creativeReview.novelty === "high" && play.creativeReview.evidenceStrength === "high" && play.creativeReview.precedentIds.length === 0) {
+      issues.push({ severity: "warn", rule: "creative_evidence", message: "A highly novel idea with no precedent should not be labeled high evidence; explain its assumptions and keep it a hypothesis.", path: `plays[${index}].creativeReview.evidenceStrength` });
+    }
+  });
   const err = (message: string, path = "plays") => issues.push({ severity: "error", rule: "portfolio", message, path });
   const scored = plays.map((p) => ({ p, s: playScores(p) }));
   const bankable = scored.filter((x) => x.p.kind === "bankable");
@@ -490,6 +522,40 @@ export const ConversionAuditV2Schema = ConversionAuditSchema.extend({
   })),
   clarityVerdict: z.string(),
   messageMatch: z.string(),
+  designCritic: z.object({
+    coverage: z.enum(["visual_sampled", "page_source_only", "no_design_evidence"]),
+    summary: z.string(),
+    findings: z.array(z.object({
+      lens: z.enum(["brand_identity", "communication_hierarchy", "conversion_trust", "visual_craft", "accessibility_usability", "performance_technical"]),
+      classification: z.enum(["objective_defect", "automated_check", "heuristic", "brand_judgment", "style_preference", "measured_performance"]),
+      region: z.string(),
+      observation: z.string(),
+      businessOrUserGoal: z.string(),
+      whyItMatters: z.string(),
+      severity: z.enum(["high", "medium", "low"]),
+      confidence: z.enum(["high", "medium", "low"]),
+      evidence: z.string(),
+      sourceUrl: z.string(),
+      proposedChange: z.string(),
+      directions: z.array(z.object({
+        id: z.string().trim().min(1).max(40),
+        name: z.string().trim().min(2).max(80),
+        responseLevel: z.enum(["quick_fix", "considered_redesign", "bold_alternative"]).optional(),
+        communicates: z.string().trim().min(8).max(240),
+        tradeoff: z.string().trim().min(8).max(240),
+        change: z.string().trim().min(8).max(360),
+        previewBrief: z.string().trim().min(8).max(600),
+        measurementPlan: z.string().trim().min(8).max(360),
+        effort: z.enum(["small", "medium", "large"]).optional(),
+        assumptions: z.array(z.string().trim().min(1).max(180)).max(4).optional(),
+        risks: z.array(z.string().trim().min(1).max(180)).max(4).optional(),
+      })).max(3).optional(),
+      visualEvidence: z.object({ view: z.enum(["desktop", "mobile"]), observation: z.string() }).optional(),
+      automatedCheckIds: z.array(z.string()).max(8),
+      requiresHumanEvaluation: z.boolean(),
+    })).max(12),
+    limitations: z.array(z.string()).max(8),
+  }).optional(),
   prioritizedFixes: z.array(z.object({
     fix: z.string(),
     pageUrl: z.string(),
@@ -1881,6 +1947,7 @@ export function lintConversionAuditSources(out: z.infer<typeof ConversionAuditV2
   const refs = [
     ...out.findings.map((finding, i) => ({ url: finding.sourceUrl, path: `findings[${i}].sourceUrl` })),
     ...out.prioritizedFixes.map((fix, i) => ({ url: fix.pageUrl, path: `prioritizedFixes[${i}].pageUrl` })),
+    ...(out.designCritic?.findings.map((finding, i) => ({ url: finding.sourceUrl, path: `designCritic.findings[${i}].sourceUrl` })) ?? []),
   ];
   const copyClaims = out.prioritizedFixes.map((fix, i) => ({ path: `prioritizedFixes[${i}].sampleCopy`, text: fix.sampleCopy }));
   const normalizeQuote = (text: string) => text.replace(/\s+/g, " ").trim().toLocaleLowerCase();
@@ -1906,6 +1973,11 @@ export function lintConversionAuditSources(out: z.infer<typeof ConversionAuditV2
   out.prioritizedFixes.forEach((fix, i) => checkQuote(fix.pageUrl, fix.evidenceQuote, `prioritizedFixes[${i}].evidenceQuote`));
   out.findings.forEach((finding, i) => checkVisual(finding.sourceUrl, finding.visualEvidence, `findings[${i}].visualEvidence`));
   out.prioritizedFixes.forEach((fix, i) => checkVisual(fix.pageUrl, fix.visualEvidence, `prioritizedFixes[${i}].visualEvidence`));
+  out.designCritic?.findings.forEach((finding, i) => {
+    if (finding.visualEvidence) checkVisual(finding.sourceUrl, { ...finding.visualEvidence, sourceUrl: finding.sourceUrl }, `designCritic.findings[${i}].visualEvidence`);
+    if (finding.classification === "measured_performance" && finding.automatedCheckIds.length === 0) visualIssues.push({ severity: "error", rule: "design_measured_evidence", message: "A performance finding must cite an actual supplied measurement or automated check ID; otherwise classify it as a heuristic or inference.", path: `designCritic.findings[${i}].automatedCheckIds` });
+    if (finding.classification === "automated_check" && finding.automatedCheckIds.length === 0) visualIssues.push({ severity: "error", rule: "design_automated_evidence", message: "Automated accessibility or technical findings must name the checks actually run.", path: `designCritic.findings[${i}].automatedCheckIds` });
+  });
   const socialBlock = /<untrusted_content source="conversion_audit_social_posts">\s*([\s\S]*?)\s*<\/untrusted_content>/i.exec(input.untrustedContext ?? "");
   const suppliedPosts = new Map<string, string>();
   if (socialBlock?.[1]) {
@@ -2376,6 +2448,14 @@ export const ChannelFitSchema = z.object({
       platform: z.string(),
       tactic: z.string(),
       audience: z.string(),
+      evidenceBasis: z.enum(["measured", "owner_reported", "source_reported", "inference", "assumption", "unknown"]).optional(),
+      evidenceConfidence: z.enum(["high", "medium", "low"]).optional(),
+      sourceUrl: z.string().optional(),
+      evidenceDate: z.string().optional(),
+      communityRulesUrl: z.string().optional(),
+      communityRulesCheckedAt: z.string().optional(),
+      purpose: z.string().optional(),
+      measurementPlan: z.string().optional(),
     }),
   ),
   /** Two short bullets for the owner: what wins and why. */
@@ -2401,8 +2481,17 @@ function lintChannelFit(out: ChannelFit, input: AgentInput, candidateIds: string
     if (c.deltas.length !== 8) issues.push({ severity: "error", rule: "deltas", message: "deltas needs 8 numbers in factor order.", path: `${path}.deltas` });
     if (c.deltas.some((d) => Math.abs(d) > 30)) issues.push({ severity: "error", rule: "deltas", message: "Each delta is between −30 and +30.", path: `${path}.deltas` });
     if (c.deltas.some((d) => d !== 0) && !c.evidence.trim()) issues.push({ severity: "error", rule: "evidence", message: "Any change needs evidence (a source, a confirmed fact or the owner's data).", path: `${path}.evidence` });
+    if (PLATFORM_EVIDENCE_CHANNELS.has(c.id) && (c.deltas[0] > 0 || c.deltas[1] > 0)) {
+      if (!["measured", "owner_reported", "source_reported"].includes(c.evidenceBasis ?? "") || !c.evidenceConfidence || !/^\d{4}-\d{2}-\d{2}$/.test(c.evidenceDate ?? "")) issues.push({ severity: "error", rule: "platform_evidence", message: "A platform audience or buyer-intent adjustment needs dated measured, owner-reported, or source-reported evidence and an explicit confidence level.", path: `${path}.evidenceBasis` });
+      if (!c.purpose?.trim() || !c.measurementPlan?.trim()) issues.push({ severity: "error", rule: "platform_job", message: "Explain this platform's specific job and how to measure qualified outcomes; do not use impressions, votes, or comments alone.", path: `${path}.measurementPlan` });
+      if (c.evidenceBasis === "source_reported" && !c.sourceUrl?.trim()) issues.push({ severity: "error", rule: "platform_source", message: "Source-reported platform fit needs an exact source URL ClimbOS read.", path: `${path}.sourceUrl` });
+      if (COMMUNITY_CHANNELS.has(c.id) && (!c.communityRulesUrl?.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(c.communityRulesCheckedAt ?? ""))) issues.push({ severity: "error", rule: "community_rules", message: "Name the exact community and provide its rules URL and check date; otherwise leave it unranked for promotion.", path: `${path}.communityRulesUrl` });
+    }
   });
-  return issues;
+  return [...issues, ...lintAvailableSourceUrls(out.channels.flatMap((c, i) => [
+    ...(c.sourceUrl ? [{ url: c.sourceUrl, path: `channels[${i}].sourceUrl` }] : []),
+    ...(c.communityRulesUrl ? [{ url: c.communityRulesUrl, path: `channels[${i}].communityRulesUrl` }] : []),
+  ]), input)];
 }
 
 /** Scores the library's candidate channels for this business with evidence (Acquisition Intelligence). */

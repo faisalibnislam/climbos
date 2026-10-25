@@ -72,7 +72,7 @@ describe("landing A/B test", () => {
     delete process.env.CLIMBOS_FAKE_LLM;
   });
 
-  it("splits views, counts leads per version and applies a clear B win", async () => {
+  it("splits views and reports a B-favored sample without changing the live page until approval", async () => {
     const t = setup();
     const owner = await asNewUser(t, "ab@example.com");
     const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "AB Co" });
@@ -119,9 +119,35 @@ describe("landing A/B test", () => {
     const lateHash = await sha256Hex(`abTestAssignment:v1|${test.id}|${visitors.B[18].key}`);
     const late = await t.run(async (ctx) => ctx.db.query("abTestAssignments").withIndex("by_test_subject", (q) => q.eq("testId", test.id).eq("subjectHash", lateHash)).first());
     expect(late?.outcomeAt).toBeTypeOf("number");
-    expect((await owner.client.query(api.landing.list, { slug })).pages[0].content?.headline).toBe("Double your leads in 30 days");
+    expect((await owner.client.query(api.landing.list, { slug })).pages[0].content?.headline).toBe(page.content!.headline);
     expect((await t.query(api.landing.publicPage, { slug: page.slug }))?.test).toBeNull();
+    await owner.client.mutation(api.abtests.applyWinner, { slug, id: test.id });
+    expect((await owner.client.query(api.landing.list, { slug })).pages[0].content?.headline).toBe("Double your leads in 30 days");
+    expect((await owner.client.query(api.abtests.forTarget, { slug, targetId: id }))[0].appliedAt).toBeTypeOf("number");
   }, 15_000);
+
+  it("requires approval to start a live test and refuses to apply a result over a changed baseline", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "ab-approval@example.com");
+    const editor = await asNewUser(t, "ab-editor@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Approved Test Co" });
+    const pageId = await owner.client.mutation(api.landing.create, { slug, brief: "Free audit" });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await owner.client.mutation(api.landing.setLive, { slug, id: pageId, live: true });
+    await t.run(async (ctx) => ctx.db.insert("memberships", { orgId: orgId as never, userId: editor.userId, role: "editor", status: "active", createdAt: Date.now() }));
+    await expect(editor.client.mutation(api.abtests.startLanding, { slug, pageId, headline: "Approved challenger headline" })).rejects.toThrow(/can't do this|permission/i);
+    const id = await owner.client.mutation(api.abtests.startLanding, { slug, pageId, headline: "Approved challenger headline" });
+    await t.run(async (ctx) => {
+      const test = await ctx.db.get(id);
+      await ctx.db.patch(id, { status: "done", winner: "B", endedAt: Date.now() });
+      const target = await ctx.db.get(pageId);
+      await ctx.db.patch(pageId, { content: JSON.stringify({ ...JSON.parse(target!.content!), headline: "Owner changed this after the test" }), updatedAt: Date.now() });
+      expect(test?.baselineHash).toBeTypeOf("string");
+    });
+    await expect(editor.client.mutation(api.abtests.applyWinner, { slug, id })).rejects.toThrow(/can't do this|permission/i);
+    await expect(owner.client.mutation(api.abtests.applyWinner, { slug, id })).rejects.toThrow(/page changed/i);
+    expect((await owner.client.query(api.landing.list, { slug })).pages[0].content?.headline).toBe("Owner changed this after the test");
+  });
 
   it("persists a sample-ratio mismatch as invalid with no winner or challenger rollout", async () => {
     const t = setup();
