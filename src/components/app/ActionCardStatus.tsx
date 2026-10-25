@@ -26,6 +26,10 @@ export function actionCardStatusLabel(status: ActionCardStatusValue, externalEff
   return status === "done" && externalEffect ? "Ready for review" : LABELS[status];
 }
 
+export function actionCardStartLabel(kind: string, externalEffect: boolean): string {
+  return kind === "note" ? "Got it" : externalEffect ? "Prepare it" : "Do it";
+}
+
 export function ActionCardStatus({ status, externalEffect }: { status: ActionCardStatusValue; externalEffect: boolean }) {
   const readyForReview = status === "done" && externalEffect;
   return (

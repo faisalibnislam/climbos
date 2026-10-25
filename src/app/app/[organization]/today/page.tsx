@@ -32,7 +32,7 @@ import { WordHelp } from "@/components/ui/word-help";
 import { PageHeader } from "@/components/app/results/QueryBoundary";
 import { WishComposer, wishSuggestions, type WishComposerHandle } from "@/components/app/wish/WishComposer";
 import { RetryRunIfPossible, RunProgressCompact } from "@/components/app/content/RunProgress";
-import { ActionCardStatus, actionCardStatusExplanation } from "@/components/app/ActionCardStatus";
+import { ActionCardStatus, actionCardStartLabel, actionCardStatusExplanation } from "@/components/app/ActionCardStatus";
 import { WishFeed } from "@/components/app/wish/WishFeed";
 import { IdeaDeck } from "@/components/app/today/IdeaDeck";
 import { TodayTargetPreviewCard } from "@/components/app/today/TodayTargetPreview";
@@ -451,7 +451,7 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
                 }
               }}
             >
-              {card.kind === "note" ? "Got it" : card.externalEffect ? "Prepare it" : "Do it"}
+              {actionCardStartLabel(card.kind, card.externalEffect)}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => dismiss({ slug, cardId: card.id as Id<"actionCards"> }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
               Not now

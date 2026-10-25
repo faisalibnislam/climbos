@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { ActionCardStatus, actionCardStatusExplanation, actionCardStatusLabel } from "@/components/app/ActionCardStatus";
+import { ActionCardStatus, actionCardStartLabel, actionCardStatusExplanation, actionCardStatusLabel } from "@/components/app/ActionCardStatus";
 
 describe("owner-facing action card status", () => {
   it("uses plain labels for each saved card state", () => {
@@ -21,5 +21,11 @@ describe("owner-facing action card status", () => {
     const markup = renderToStaticMarkup(createElement(ActionCardStatus, { status: "done", externalEffect: true }));
     expect(markup).toContain("Ready for review");
     expect(markup).toContain("Nothing has gone live");
+  });
+
+  it("names the action that the button actually starts", () => {
+    expect(actionCardStartLabel("generate_content", true)).toBe("Prepare it");
+    expect(actionCardStartLabel("generate_content", false)).toBe("Do it");
+    expect(actionCardStartLabel("note", false)).toBe("Got it");
   });
 });

@@ -16,7 +16,7 @@ import { RetryRunIfPossible, RunProgressCompact } from "@/components/app/content
 import { climbTarget } from "@/components/climb/context";
 import { wishesFrom } from "./pairing";
 import { Prose } from "@/components/ds/content";
-import { ActionCardStatus, actionCardStatusExplanation } from "@/components/app/ActionCardStatus";
+import { ActionCardStatus, actionCardStartLabel, actionCardStatusExplanation } from "@/components/app/ActionCardStatus";
 import { wishProgressKind, WISH_PROGRESS_LABELS } from "./progress";
 
 type Today = NonNullable<ReturnType<typeof useQuery<typeof api.workspace.today>>>;
@@ -226,7 +226,7 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
                 }
               }}
             >
-              {card.kind === "note" ? "Got it" : card.externalEffect ? "Prepare it" : "Do it"}
+              {actionCardStartLabel(card.kind, card.externalEffect)}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => dismiss({ slug, cardId: card.id as Id<"actionCards"> }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
               Not now
