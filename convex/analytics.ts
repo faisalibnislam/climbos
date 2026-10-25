@@ -257,18 +257,45 @@ async function series(ctx: { db: QueryCtx["db"] }, orgId: Id<"organizations">, m
     .take(2000);
   const byDate = new Map<string, number>();
   let freshness = 0;
-  let source = "";
+  const sources = new Set<string>();
   let isFixture = false;
   for (const r of rows) {
     if (r.kind !== kind || r.channel) continue;
     byDate.set(r.date, (byDate.get(r.date) ?? 0) + r.value);
     freshness = Math.max(freshness, r.ingestedAt);
-    source = r.source;
+    sources.add(r.source);
     isFixture = isFixture || r.isFixture;
   }
   const points: DailyPoint[] = [...byDate.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([date, value]) => ({ date, value }));
-  return { points, freshness, source, isFixture };
+  return { points, freshness, source: sources.size === 1 ? [...sources][0] : sources.size > 1 ? "Multiple sources" : "", isFixture };
 }
+
+/** Small, read-only Home snapshot. Keep this cheaper than the full Results overview. */
+export const homeSnapshot = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const today = dayKey(Date.now(), org.timezone);
+    const to = addDays(today, -1);
+    const from = addDays(today, -30);
+    const metrics = [];
+    for (const key of ["visits", "signups"] as const) {
+      const current = await series(ctx, org._id, key, from, to);
+      metrics.push({
+        key,
+        label: METRICS[key].label,
+        definition: METRICS[key].definition,
+        hasData: current.points.length > 0,
+        total: current.points.reduce((sum, point) => sum + point.value, 0),
+        recordedDays: current.points.length,
+        sourceName: current.source || null,
+        freshness: current.freshness || null,
+        isFixture: current.isFixture,
+      });
+    }
+    return { from, to, timezone: org.timezone, metrics };
+  },
+});
 
 async function aiReferralSummary(ctx: { db: QueryCtx["db"] }, orgId: Id<"organizations">, from: string, to: string) {
   const sourceRows = [];

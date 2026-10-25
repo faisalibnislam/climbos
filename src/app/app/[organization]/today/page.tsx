@@ -35,6 +35,7 @@ import { RetryRunIfPossible, RunProgressCompact } from "@/components/app/content
 import { ActionCardStatus, actionCardSetupHref, actionCardStartLabel, actionCardStatusExplanation } from "@/components/app/ActionCardStatus";
 import { WishFeed } from "@/components/app/wish/WishFeed";
 import { IdeaDeck } from "@/components/app/today/IdeaDeck";
+import { HomeBusinessSnapshot } from "@/components/app/today/HomeBusinessSnapshot";
 import { OwnerGoalTarget } from "@/components/app/today/OwnerGoalTarget";
 import { TodayTargetPreviewCard } from "@/components/app/today/TodayTargetPreview";
 import { Prose } from "@/components/ds/content";
@@ -74,6 +75,7 @@ function greeting(): string {
 export default function TodayPage() {
   const { organization: slug } = useParams<{ organization: string }>();
   const data = useQuery(api.workspace.today, { slug });
+  const homeSnapshot = useQuery(api.analytics.homeSnapshot, { slug });
   const composer = useRef<WishComposerHandle>(null);
   const me = useQuery(api.orgs.me);
   useEffect(() => {
@@ -182,6 +184,7 @@ export default function TodayPage() {
         isDemo={data.org.kind === "demo"}
       />
       <WishFeed slug={slug} chat={data.chat} />
+      <HomeBusinessSnapshot slug={slug} snapshot={homeSnapshot} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.45fr_1fr]">
         <div className="flex min-w-0 flex-col gap-6">
