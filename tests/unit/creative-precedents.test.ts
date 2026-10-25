@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(38);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(39);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -141,6 +141,19 @@ describe("creative strategy precedent retrieval", () => {
     expect(match?.precedent.sources).toEqual(expect.arrayContaining([
       expect.objectContaining({ url: "https://www.prnewswire.com/news-releases/rihanna-launches-fenty-beauty-a-global-makeup-brand-in-17-countries-643185393.html", claimRole: "action" }),
       expect.objectContaining({ url: "https://www.elle.com/beauty/makeup-skin-care/a20967710/makeup-companies-40-foundation-shades-fenty-beauty-influence/", sourceRole: "independent_secondary" }),
+    ]));
+  });
+
+  it("retrieves a market-entry beachhead while preserving localization and capacity limits", () => {
+    const query = "Use a community beachhead, local tastes, supply-chain investment, and aligned franchise partners for market entry";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-039");
+    expect(match).toBeDefined();
+    expect(match?.precedent.outcome).toContain("do not estimate how much any one mechanism contributed");
+    expect(match?.precedent.causalLimit).toContain("do not isolate diaspora-led entry or menu localization as causal");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.jollibeegroup.com/history-milestones/", sourceRole: "company_primary" }),
+      expect.objectContaining({ url: "https://www.marketing-interactive.com/team-sport-global-cmo-david-beal-jollibee-interview", publicationDate: "2024-10-28" }),
+      expect.objectContaining({ url: "https://time.com/6258979/jollibee-interview-ceo-ernesto-tanmantiong/", publicationDate: "2023-02-28" }),
     ]));
   });
 
