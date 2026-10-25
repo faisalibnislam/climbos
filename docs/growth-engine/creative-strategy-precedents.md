@@ -4,7 +4,7 @@ Last reviewed: 25 October 2026. This is a curated retrieval set for strategy exp
 
 ## Verified coverage
 
-The current runtime library contains **48 editorially reviewed cases** (`CP-001`–`CP-048`). The requested target is 100 useful cases, leaving **52 cases unverified and not yet included**. The general growth case collection is separate and is not counted as creative-strategy coverage.
+The current runtime library contains **49 editorially reviewed cases** (`CP-001`–`CP-049`). The requested target is 100 useful cases, leaving **51 cases unverified and not yet included**. The general growth case collection is separate and is not counted as creative-strategy coverage.
 
 Each case records its reported choice and mechanism, evidence class, causal limits, transfer conditions and risks, a small-business adaptation, editorial audience/goal/constraint/scale/geography/business-model tags, and a reversible test. Runtime retrieval requires a mechanism match, then ranks with available audience, goal, constraint, scale, geography, and business-model context. The model receives short match explanations with each case rather than an opaque relevance score. Retrieval returns at most two cases to the production growth-plan task and never treats a precedent as evidence about the target business; when those context dimensions are absent, they do not contribute a match.
 
@@ -48,3 +48,7 @@ Added Canva World Tour 2025 as CP-047 after checking Canva's first-party recap a
 ## Resumption note (2026-10-25, owned content as customer research)
 
 Added Glossier / Into the Gloss as CP-048 after checking Glossier's company account against HBR case-author discussion, Digiday's interview with the company CTO, and TIME's founder profile. The case combines an audience built before products, customer-language research, and a first product informed by reader responses; it also preserves evidence that content readers did not automatically become buyers. The regression checks retrieval from the research-and-content mechanism. Current reviewed corpus: 48 of 100; 52 remain unverified.
+
+## Resumption note (2026-10-25, constraint-to-format creative mechanism)
+
+Added NPR Music's Tiny Desk origin as CP-049 after checking first-person retrospectives from NPR producers against Associated Press reporting on the series' later evolution. The transferable mechanism is turning a real audience problem and an existing production constraint into a distinctive repeatable experience, then learning through iteration; the entry does not present NPR's format as a template or its later reach as a forecast. It retains the team's initial uncertainty, the years before a viral moment, and the roles of curation, staff, production, and distribution. The regression verifies retrieval and production-strategy injection. Current reviewed corpus: 49 of 100; 51 remain unverified.

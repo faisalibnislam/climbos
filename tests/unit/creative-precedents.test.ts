@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(48);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(49);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -57,6 +57,18 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://hbr.org/podcast/2020/08/glossier-built-a-cult-brand-and-a-digital-community-but-whats-next" }),
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Build a product plan", query)).toContain("CP-048");
+  });
+
+  it("retrieves a constraint-to-format creative mechanism without promising reach", () => {
+    const query = "Convert a quiet singer who is inaudible in a noisy venue into an intimate workplace desk performance, then repeat the office series for the audience";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-049");
+    expect(match).toBeDefined();
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.cpr.org/2018/04/23/tiny-desk-concerts-at-10-how-one-miserable-show-led-to-a-magical-concert-series/", sourceRole: "company_primary" }),
+      expect.objectContaining({ url: "https://apnews.com/article/tiny-desk-concert-npr-64c4e1c29d81eb0be389aebc2591d92e", sourceRole: "independent_secondary" }),
+    ]));
+    expect(match?.precedent.causalLimit).toContain("remained niche");
+    expect(creativePrecedentsForAgent("growth_plays", "Explore an original content strategy", query)).toContain("CP-049");
   });
 
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {
