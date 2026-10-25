@@ -35,7 +35,7 @@ function suffix(): string {
 function view(p: Doc<"landingPages">) {
   const version = p.version ?? 0;
   const publishedVersion = p.publishedVersion ?? (p.status === "live" && p.publishedContent === undefined ? version : null);
-  return { id: p._id, title: p.title, slug: p.slug, url: `${SITE()}/p/${p.slug}`, status: p.status, brief: p.brief, color: p.color, content: p.content ? (JSON.parse(p.content) as LandingContent) : null, version, publishedVersion, hasUnpublishedChanges: p.status === "live" && publishedVersion !== null && version > publishedVersion, runId: p.runId ?? null, designCriticSource: p.designCriticSource ?? null, views: p.views, leads: p.leads, updatedAt: p.updatedAt };
+  return { id: p._id, title: p.title, slug: p.slug, url: `${SITE()}/p/${p.slug}`, status: p.status, brief: p.brief, color: p.color, content: p.content ? (JSON.parse(p.content) as LandingContent) : null, version, publishedVersion, hasUnpublishedChanges: p.status === "live" && publishedVersion !== null && version > publishedVersion, runId: p.runId ?? null, designCriticSource: p.designCriticSource ?? null, designMeasurementPlan: p.designMeasurementPlan ?? null, views: p.views, leads: p.leads, updatedAt: p.updatedAt };
 }
 
 export const list = query({
@@ -66,6 +66,7 @@ export const history = query({
       color: version.color,
       content: JSON.parse(version.content) as LandingContent,
       kind: version.kind,
+      designMeasurementPlan: version.designMeasurementPlan ?? null,
       createdAt: version.createdAt,
       isPublished: version.version === (page.publishedVersion ?? (page.status === "live" && page.publishedContent === undefined ? (page.version ?? 0) : null)),
     }));
@@ -92,7 +93,8 @@ export const create = mutation({
       const direction = finding?.directions?.find((item) => item.id === designCriticSource.directionId);
       const selection = await ctx.db.query("designFindingReviews").withIndex("by_org_run_finding", (q) => q.eq("orgId", org._id).eq("runId", designCriticSource.runId).eq("findingIndex", designCriticSource.findingIndex)).first();
       if (!finding || !direction?.id || !direction.name || selection?.selectedDirectionId !== direction.id) throw appError("INVALID", "Choose and save this direction on the same audit before preparing its page draft.");
-      savedDesignSource = { runId: designCriticSource.runId, findingIndex: designCriticSource.findingIndex, directionId: direction.id, directionName: direction.name.slice(0, 160), ...(finding.region ? { region: finding.region.slice(0, 160) } : {}), ...(finding.sourceUrl ? { sourceUrl: finding.sourceUrl.slice(0, 500) } : {}), selectedAt: selection.selectedDirectionAt ?? selection.updatedAt };
+      const findingMeasurementPlan = (finding as { directions?: { id?: string; measurementPlan?: unknown }[] }).directions?.find((item) => item.id === direction.id)?.measurementPlan;
+      savedDesignSource = { runId: designCriticSource.runId, findingIndex: designCriticSource.findingIndex, directionId: direction.id, directionName: direction.name.slice(0, 160), ...(finding.region ? { region: finding.region.slice(0, 160) } : {}), ...(finding.sourceUrl ? { sourceUrl: finding.sourceUrl.slice(0, 500) } : {}), ...(typeof findingMeasurementPlan === "string" && findingMeasurementPlan.trim() ? { suggestedMeasurementPlan: findingMeasurementPlan.trim().slice(0, 600) } : {}), selectedAt: selection.selectedDirectionAt ?? selection.updatedAt };
     }
     const count = (await ctx.db.query("landingPages").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(51)).length;
     if (count >= 50) throw appError("LIMIT_REACHED", "You have 50 pages. Delete some first.");
@@ -219,6 +221,45 @@ export const update = mutation({
   },
 });
 
+const designBaselineV = v.union(
+  v.object({ state: v.literal("recorded"), value: v.string(), source: v.string() }),
+  v.object({ state: v.literal("unknown"), reason: v.string(), collectionPlan: v.string() }),
+);
+
+/** Saves an owner-reviewed measurement plan as a version-bound page revision. */
+export const saveDesignMeasurementPlan = mutation({
+  args: { slug: v.string(), id: v.id("landingPages"), expectedVersion: v.number(), metric: v.string(), method: v.string(), baseline: designBaselineV },
+  handler: async (ctx, args) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
+    const page = assertSameOrg(await ctx.db.get(args.id), org._id, "page");
+    const version = page.version ?? 0;
+    if (!page.designCriticSource) throw appError("INVALID", "A Design Critic measurement plan can only be saved for a page draft linked to an audit.");
+    if (!page.content || page.status === "drafting") throw appError("INVALID", "Wait until the page draft is written before saving its measurement plan.");
+    if (version !== args.expectedVersion) throw appError("INVALID", "The page changed. Review its current version before saving a measurement plan.");
+    const metric = args.metric.trim().slice(0, 160);
+    const method = args.method.trim().slice(0, 600);
+    if (!metric || !method) throw appError("INVALID", "Add the result you want to measure and how you will measure it.");
+    let baseline: typeof args.baseline;
+    if (args.baseline.state === "recorded") {
+      const value = args.baseline.value.trim().slice(0, 240);
+      const source = args.baseline.source.trim().slice(0, 240);
+      if (!value || !source) throw appError("INVALID", "For a recorded baseline, add the current result and where it came from.");
+      baseline = { state: "recorded", value, source };
+    } else {
+      const reason = args.baseline.reason.trim().slice(0, 240);
+      const collectionPlan = args.baseline.collectionPlan.trim().slice(0, 300);
+      if (!reason || !collectionPlan) throw appError("INVALID", "If the current result is unknown, explain why and how you will collect it.");
+      baseline = { state: "unknown", reason, collectionPlan };
+    }
+    const appliesToVersion = version + 1;
+    const designMeasurementPlan = { metric, method, baseline, appliesToVersion, confirmedBy: user._id, confirmedAt: Date.now() };
+    const next = { title: page.title, color: page.color, content: page.content, designMeasurementPlan };
+    await recordLandingVersion(ctx, page, next, "measurement", user._id);
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "landing.measurement_plan_saved", subjectType: "landingPage", subjectId: page._id, summary: `Saved an owner-reviewed measurement plan for landing page version ${appliesToVersion}.` });
+    return { version: appliesToVersion, appliesToVersion };
+  },
+});
+
 export const restoreVersion = mutation({
   args: { slug: v.string(), id: v.id("landingPages"), version: v.number() },
   handler: async (ctx, { slug, id, version }) => {
@@ -226,7 +267,7 @@ export const restoreVersion = mutation({
     const page = assertSameOrg(await ctx.db.get(id), org._id, "page");
     const prior = await ctx.db.query("landingPageVersions").withIndex("by_page_version", (q) => q.eq("pageId", page._id).eq("version", version)).first();
     if (!prior || prior.orgId !== org._id) throw appError("NOT_FOUND", "That page version isn't available in this workspace.");
-    const restoredVersion = await recordLandingVersion(ctx, page, { title: prior.title, color: prior.color, content: prior.content }, "restored", user._id);
+    const restoredVersion = await recordLandingVersion(ctx, page, { title: prior.title, color: prior.color, content: prior.content, designMeasurementPlan: prior.designMeasurementPlan }, "restored", user._id);
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "landing.version_restored", subjectType: "landingPage", subjectId: page._id, summary: `Restored page version ${version} as a new draft version ${restoredVersion}.` });
     return { version: restoredVersion };
   },
@@ -241,6 +282,7 @@ export const setLive = mutation({
       if (!p.content) throw appError("INVALID", "The page isn't written yet.");
       const version = p.version ?? 0;
       if (expectedVersion === undefined || expectedVersion !== version) throw appError("INVALID", "The page changed after review. Review the current version before publishing.");
+      if (p.designCriticSource && p.designMeasurementPlan?.appliesToVersion !== version) throw appError("INVALID", "Save an owner-reviewed measurement plan for this exact page version before publishing it.");
       const limit = (await isPaid(ctx, org)) ? LIVE_LIMIT.paid : LIVE_LIMIT.free;
       const liveNow = (await ctx.db.query("landingPages").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(60)).filter((x) => x.status === "live" && x._id !== id).length;
       if (liveNow >= limit) throw appError(limit === LIVE_LIMIT.free ? "PAYMENT_REQUIRED" : "LIMIT_REACHED", limit === LIVE_LIMIT.free ? "Free accounts have 1 live page. Packages have 20." : `You have ${limit} live pages.`);

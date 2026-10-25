@@ -2392,7 +2392,20 @@ export default defineSchema({
       directionName: v.string(),
       region: v.optional(v.string()),
       sourceUrl: v.optional(v.string()),
+      suggestedMeasurementPlan: v.optional(v.string()),
       selectedAt: v.number(),
+    })),
+    /** Owner-confirmed measurement definition bound to one exact editable page version. */
+    designMeasurementPlan: v.optional(v.object({
+      metric: v.string(),
+      method: v.string(),
+      baseline: v.union(
+        v.object({ state: v.literal("recorded"), value: v.string(), source: v.string() }),
+        v.object({ state: v.literal("unknown"), reason: v.string(), collectionPlan: v.string() }),
+      ),
+      appliesToVersion: v.number(),
+      confirmedBy: v.id("users"),
+      confirmedAt: v.number(),
     })),
     views: v.number(),
     leads: v.number(),
@@ -2410,7 +2423,18 @@ export default defineSchema({
     title: v.string(),
     color: v.string(),
     content: v.string(),
-    kind: v.union(v.literal("generated"), v.literal("edited"), v.literal("restored"), v.literal("experiment"), v.literal("legacy")),
+    kind: v.union(v.literal("generated"), v.literal("edited"), v.literal("restored"), v.literal("experiment"), v.literal("measurement"), v.literal("legacy")),
+    designMeasurementPlan: v.optional(v.object({
+      metric: v.string(),
+      method: v.string(),
+      baseline: v.union(
+        v.object({ state: v.literal("recorded"), value: v.string(), source: v.string() }),
+        v.object({ state: v.literal("unknown"), reason: v.string(), collectionPlan: v.string() }),
+      ),
+      appliesToVersion: v.number(),
+      confirmedBy: v.id("users"),
+      confirmedAt: v.number(),
+    })),
     actorId: v.optional(v.id("users")),
     createdAt: v.number(),
   })

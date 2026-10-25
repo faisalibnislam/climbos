@@ -2,13 +2,13 @@ import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 
 type LandingPage = Doc<"landingPages">;
-type VersionKind = "generated" | "edited" | "restored" | "experiment" | "legacy";
+type VersionKind = "generated" | "edited" | "restored" | "experiment" | "measurement" | "legacy";
 
 /** Save a new immutable draft revision, preserving legacy live content before its first edit. */
 export async function recordLandingVersion(
   ctx: MutationCtx,
   page: LandingPage,
-  value: { title: string; color: string; content: string },
+  value: { title: string; color: string; content: string; designMeasurementPlan?: LandingPage["designMeasurementPlan"] },
   kind: VersionKind,
   actorId?: Doc<"users">["_id"],
 ) {
@@ -42,12 +42,14 @@ export async function recordLandingVersion(
     color: value.color,
     content: value.content,
     kind,
+    ...(Object.hasOwn(value, "designMeasurementPlan") ? value.designMeasurementPlan ? { designMeasurementPlan: value.designMeasurementPlan } : {} : page.designMeasurementPlan ? { designMeasurementPlan: page.designMeasurementPlan } : {}),
     ...(actorId ? { actorId } : {}),
     createdAt: now,
   });
 
   await ctx.db.patch(page._id, {
     ...value,
+    designMeasurementPlan: Object.hasOwn(value, "designMeasurementPlan") ? value.designMeasurementPlan : page.designMeasurementPlan,
     version,
     ...(page.status === "live" && page.publishedContent === undefined && page.content
       ? { publishedContent: page.content, publishedColor: page.color, publishedTitle: page.title, publishedVersion: currentVersion }

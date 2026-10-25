@@ -10,7 +10,7 @@ async function addAudit(t: ReturnType<typeof setup>, orgId: string) {
     title: "Website review",
     status: "verified",
     input: "{}",
-    output: JSON.stringify({ auditCoverage: { website: { visualReview: { capturedAt: now } } }, designCritic: { findings: [{ region: "Hero", sourceUrl: "https://example.com/", visualEvidence: { view: "mobile" }, directions: [{ id: "hero-concise", name: "Make the offer clearer", previewBrief: "Clarify the offer in the hero." }, { id: "hero-proof", name: "Show proof earlier", previewBrief: "Move confirmed proof above the fold." }] }] } }),
+    output: JSON.stringify({ auditCoverage: { website: { visualReview: { capturedAt: now } } }, designCritic: { findings: [{ region: "Hero", sourceUrl: "https://example.com/", visualEvidence: { view: "mobile" }, directions: [{ id: "hero-concise", name: "Make the offer clearer", previewBrief: "Clarify the offer in the hero." }, { id: "hero-proof", name: "Show proof earlier", previewBrief: "Move confirmed proof above the fold.", measurementPlan: "Record the current qualified-inquiry baseline before launch." }] }] } }),
     roles: [],
     estimateMicros: 0,
     actualMicros: 0,
@@ -57,10 +57,12 @@ describe("Design Critic finding review", () => {
     const t = setup();
     const owner = await asNewUser(t, "design-source-owner@example.com");
     const other = await asNewUser(t, "design-source-other@example.com");
+    const viewer = await asNewUser(t, "design-source-viewer@example.com");
     const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Design Co" });
     const { slug: otherSlug } = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other Co" });
     const runId = await addAudit(t, orgId);
     const source = { runId, findingIndex: 0, directionId: "hero-proof" };
+    await t.run(async (ctx) => ctx.db.insert("memberships", { orgId: orgId as never, userId: viewer.userId, role: "viewer", status: "active", createdAt: Date.now() }));
 
     await expect(owner.client.mutation(api.landing.create, { slug, brief: "Redesign our landing page", designCriticSource: source })).rejects.toThrow(/choose and save this direction/i);
     await expect(other.client.mutation(api.landing.create, { slug: otherSlug, brief: "Redesign another page", designCriticSource: source })).rejects.toThrow(/same workspace|couldn't find/i);
@@ -68,7 +70,27 @@ describe("Design Critic finding review", () => {
     await expect(owner.client.mutation(api.landing.create, { slug, brief: "Redesign our landing page", designCriticSource: source })).rejects.toThrow(/choose and save this direction/i);
     await owner.client.mutation(api.designCritic.selectDirection, { slug, ...source });
     const pageId = await owner.client.mutation(api.landing.create, { slug, brief: "Redesign our landing page", designCriticSource: source });
-    expect((await owner.client.query(api.landing.list, { slug })).pages.find((page) => page.id === pageId)?.designCriticSource).toMatchObject({ ...source, directionName: "Show proof earlier", region: "Hero", sourceUrl: "https://example.com/", selectedAt: expect.any(Number) });
+    const page = (await owner.client.query(api.landing.list, { slug })).pages.find((item) => item.id === pageId)!;
+    expect(page.designCriticSource).toMatchObject({ ...source, directionName: "Show proof earlier", region: "Hero", sourceUrl: "https://example.com/", suggestedMeasurementPlan: "Record the current qualified-inquiry baseline before launch.", selectedAt: expect.any(Number) });
+
+    const content = { headline: "A clear offer", subhead: "Details for the right customer.", benefits: [{ title: "Useful", text: "A concrete benefit." }], steps: ["Ask a question"], proof: "", faq: [{ q: "Who is this for?", a: "Ask us." }], ctaLabel: "Get details", formIntro: "Tell us what you need." };
+    await t.run(async (ctx) => ctx.db.patch(pageId, { status: "draft", content: JSON.stringify(content), version: 1, updatedAt: Date.now() }));
+    await expect(owner.client.mutation(api.landing.setLive, { slug, id: pageId, live: true, expectedVersion: 1 })).rejects.toThrow(/measurement plan for this exact page version/i);
+
+    const plan = { metric: "Qualified enquiries per page visit", method: "Compare the current page period with the same-length period after launch using the website analytics and the business's qualification records.", baseline: { state: "unknown" as const, reason: "The existing site has no saved qualified-enquiry baseline.", collectionPlan: "Record page visits and qualified enquiries weekly before comparing; keep the first post-launch result unknown until a full period is available." } };
+    await expect(viewer.client.mutation(api.landing.saveDesignMeasurementPlan, { slug, id: pageId, expectedVersion: 1, ...plan })).rejects.toThrow(/can't/i);
+    await expect(owner.client.mutation(api.landing.saveDesignMeasurementPlan, { slug, id: pageId, expectedVersion: 1, ...plan, baseline: { state: "unknown", reason: "", collectionPlan: "" } })).rejects.toThrow(/explain why and how/i);
+    await expect(owner.client.mutation(api.landing.saveDesignMeasurementPlan, { slug, id: pageId, expectedVersion: 1, ...plan })).resolves.toMatchObject({ version: 2, appliesToVersion: 2 });
+    const measuredPage = (await owner.client.query(api.landing.list, { slug })).pages.find((item) => item.id === pageId)!;
+    expect(measuredPage.designMeasurementPlan).toMatchObject({ metric: plan.metric, baseline: { state: "unknown" }, appliesToVersion: 2, confirmedAt: expect.any(Number) });
+    await owner.client.mutation(api.landing.setLive, { slug, id: pageId, live: true, expectedVersion: 2 });
+
+    await owner.client.mutation(api.landing.update, { slug, id: pageId, content: { ...content, headline: "A revised clear offer" } });
+    await expect(owner.client.mutation(api.landing.setLive, { slug, id: pageId, live: true, expectedVersion: 3 })).rejects.toThrow(/measurement plan for this exact page version/i);
+    await owner.client.mutation(api.landing.saveDesignMeasurementPlan, { slug, id: pageId, expectedVersion: 3, ...plan });
+    const history = await owner.client.query(api.landing.history, { slug, id: pageId });
+    expect(history[0]).toMatchObject({ version: 4, kind: "measurement", designMeasurementPlan: { appliesToVersion: 4 } });
+    await owner.client.mutation(api.landing.setLive, { slug, id: pageId, live: true, expectedVersion: 4 });
   });
 
   it("rejects a direction that is not in the immutable audit finding", async () => {

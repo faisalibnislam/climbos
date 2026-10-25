@@ -12,7 +12,7 @@ import { RunProgressCompact } from "@/components/app/content/RunProgress";
 import { errorMessage } from "@/components/app/errors";
 import { LandingDraftPreview } from "@/components/app/landing/LandingDraftPreview";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
-import { Badge, Button, Card, CardContent, ColorPicker, ConfirmDialog, EmptyState, Field, Input, Switch, Textarea, toast } from "@/components/ui";
+import { Badge, Button, Card, CardContent, ColorPicker, ConfirmDialog, EmptyState, Field, Input, Select, Switch, Textarea, toast } from "@/components/ui";
 import { KeyValueList } from "@/components/ds/data/display";
 import type { LandingContent } from "../../../../../shared/landing";
 
@@ -149,12 +149,20 @@ function DeletePage({ page, onDelete }: { page: Page; onDelete: () => Promise<un
 
 function Editor({ slug, page, content, canEdit, canPublish, onClose }: { slug: string; page: Page; content: LandingContent; canEdit: boolean; canPublish: boolean; onClose: () => void }) {
   const update = useMutation(api.landing.update);
+  const saveMeasurementPlan = useMutation(api.landing.saveDesignMeasurementPlan);
   const setLive = useMutation(api.landing.setLive);
   const restoreVersion = useMutation(api.landing.restoreVersion);
   const history = useQuery(api.landing.history, { slug, id: page.id });
   const remove = useMutation(api.landing.remove);
   const [c, setC] = useState<LandingContent>(content);
   const [busy, setBusy] = useState<string | null>(null);
+  const [measurementMetric, setMeasurementMetric] = useState(page.designMeasurementPlan?.metric ?? "");
+  const [measurementMethod, setMeasurementMethod] = useState(page.designMeasurementPlan?.method ?? page.designCriticSource?.suggestedMeasurementPlan ?? "");
+  const [baselineState, setBaselineState] = useState<"recorded" | "unknown">(page.designMeasurementPlan?.baseline.state ?? "unknown");
+  const [baselineValue, setBaselineValue] = useState(page.designMeasurementPlan?.baseline.state === "recorded" ? page.designMeasurementPlan.baseline.value : "");
+  const [baselineSource, setBaselineSource] = useState(page.designMeasurementPlan?.baseline.state === "recorded" ? page.designMeasurementPlan.baseline.source : "");
+  const [baselineReason, setBaselineReason] = useState(page.designMeasurementPlan?.baseline.state === "unknown" ? page.designMeasurementPlan.baseline.reason : "");
+  const [baselineCollectionPlan, setBaselineCollectionPlan] = useState(page.designMeasurementPlan?.baseline.state === "unknown" ? page.designMeasurementPlan.baseline.collectionPlan : "");
   async function run(key: string, fn: () => Promise<unknown>, ok?: string) {
     setBusy(key);
     try {
@@ -167,6 +175,17 @@ function Editor({ slug, page, content, canEdit, canPublish, onClose }: { slug: s
     }
   }
   const lines = (arr: string[]) => arr.join("\n");
+  const measurementPlanCurrent = page.designMeasurementPlan?.appliesToVersion === page.version;
+  const hasUnsavedChanges = JSON.stringify({ ...c, steps: c.steps.filter((step) => step.trim()) }) !== JSON.stringify(content);
+  const savedMeasurementPlan = page.designMeasurementPlan;
+  const hasUnsavedMeasurementChanges = Boolean(savedMeasurementPlan && (
+    measurementMetric.trim() !== savedMeasurementPlan.metric ||
+    measurementMethod.trim() !== savedMeasurementPlan.method ||
+    baselineState !== savedMeasurementPlan.baseline.state ||
+    (baselineState === "recorded" && savedMeasurementPlan.baseline.state === "recorded" && (baselineValue.trim() !== savedMeasurementPlan.baseline.value || baselineSource.trim() !== savedMeasurementPlan.baseline.source)) ||
+    (baselineState === "unknown" && savedMeasurementPlan.baseline.state === "unknown" && (baselineReason.trim() !== savedMeasurementPlan.baseline.reason || baselineCollectionPlan.trim() !== savedMeasurementPlan.baseline.collectionPlan))
+  ));
+  const canPublishCurrentVersion = (!page.designCriticSource || measurementPlanCurrent) && !hasUnsavedChanges && !hasUnsavedMeasurementChanges;
   return (
     <Card>
       <CardContent className="flex flex-col gap-4">
@@ -220,6 +239,34 @@ function Editor({ slug, page, content, canEdit, canPublish, onClose }: { slug: s
           </div>
         </fieldset>
         <LandingDraftPreview name={page.title} color={page.color} content={c} />
+        {page.designCriticSource ? <section className="rounded-[var(--radius-card)] border border-line bg-surface-2/60 p-4">
+          <h3 className="heading-card">Measure this design change</h3>
+          <p className="mt-1 text-sm text-ink-2">Choose what result to watch and how you will check it before publishing. ClimbOS can report this page&apos;s own views and leads, but those counts do not prove what caused a change.</p>
+          {page.designCriticSource.suggestedMeasurementPlan ? <p className="mt-3 rounded-md bg-surface p-3 text-sm text-ink-2"><span className="font-medium text-ink">Design Critic suggestion; review before using: </span>{page.designCriticSource.suggestedMeasurementPlan}</p> : null}
+          <fieldset disabled={!canEdit} className="mt-3 grid gap-3">
+            <Field label="What result will you track?" hint="For example, qualified enquiries or completed bookings.">
+              <Input value={measurementMetric} onChange={(event) => setMeasurementMetric(event.target.value.slice(0, 160))} maxLength={160} />
+            </Field>
+            <Field label="How will you measure it?" hint="Name the data source, comparison, and observation window where known.">
+              <Textarea value={measurementMethod} onChange={(event) => setMeasurementMethod(event.target.value.slice(0, 600))} rows={3} autosize maxLength={600} />
+            </Field>
+            <Field label="Do you have a current baseline?" hint="A baseline is the current result before a change goes live.">
+              <Select value={baselineState} onValueChange={(value) => setBaselineState(value as "recorded" | "unknown")} options={[{ value: "recorded", label: "Yes, I have a current result" }, { value: "unknown", label: "Not yet; keep it unknown" }]} />
+            </Field>
+            {baselineState === "recorded" ? <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Current result" hint="Include its unit and the period it covers."><Input value={baselineValue} onChange={(event) => setBaselineValue(event.target.value.slice(0, 240))} maxLength={240} /></Field>
+              <Field label="Where did it come from?" hint="For example, an analytics report and date."><Input value={baselineSource} onChange={(event) => setBaselineSource(event.target.value.slice(0, 240))} maxLength={240} /></Field>
+            </div> : <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Why is it unknown?"><Input value={baselineReason} onChange={(event) => setBaselineReason(event.target.value.slice(0, 240))} maxLength={240} /></Field>
+              <Field label="How will you collect it?" hint="If no baseline is available, say what you will record and when."><Input value={baselineCollectionPlan} onChange={(event) => setBaselineCollectionPlan(event.target.value.slice(0, 300))} maxLength={300} /></Field>
+            </div>}
+            <div className="flex flex-wrap items-center gap-3">
+              {canEdit ? <Button size="sm" variant="secondary" disabled={busy === "measurement" || !measurementMetric.trim() || !measurementMethod.trim() || (baselineState === "recorded" ? !baselineValue.trim() || !baselineSource.trim() : !baselineReason.trim() || !baselineCollectionPlan.trim())} loading={busy === "measurement"} onClick={() => run("measurement", () => saveMeasurementPlan({ slug, id: page.id, expectedVersion: page.version, metric: measurementMetric, method: measurementMethod, baseline: baselineState === "recorded" ? { state: "recorded", value: baselineValue, source: baselineSource } : { state: "unknown", reason: baselineReason, collectionPlan: baselineCollectionPlan } }), "Measurement plan saved for this page version")}>Save measurement plan</Button> : null}
+              {measurementPlanCurrent ? <Badge tone="green">Saved for version {page.version}</Badge> : <Badge tone="amber">Needs saving for version {page.version}</Badge>}
+            </div>
+            {page.designCriticSource && !measurementPlanCurrent ? <p className="text-xs text-amber-900">Publishing is blocked until a measurement plan is saved for this exact page version.{!canEdit ? " Ask an owner, admin, or editor to save it." : ""}</p> : null}
+          </fieldset>
+        </section> : null}
         {history?.length ? (
           <details className="rounded-[var(--radius-card)] border border-line bg-surface-2 p-3">
             <summary className="cursor-pointer text-sm font-medium text-ink">Version history ({history.length})</summary>
@@ -231,6 +278,7 @@ function Editor({ slug, page, content, canEdit, canPublish, onClose }: { slug: s
                     <span className="text-ink-3"> · {revision.kind} · {new Date(revision.createdAt).toLocaleString()}</span>
                     {revision.version === page.version ? <Badge className="ml-2" tone="brand">Current draft</Badge> : null}
                     {revision.isPublished ? <Badge className="ml-2" tone="green">Published</Badge> : null}
+                    {revision.designMeasurementPlan ? <span className="mt-1 block text-xs text-ink-3">Measure: {revision.designMeasurementPlan.metric} · baseline {revision.designMeasurementPlan.baseline.state === "recorded" ? "recorded" : "unknown"}</span> : null}
                   </span>
                   {canEdit && revision.version !== page.version ? (
                     <Button size="sm" variant="secondary" disabled={busy === "restore"} onClick={() => run("restore", async () => {
@@ -246,6 +294,8 @@ function Editor({ slug, page, content, canEdit, canPublish, onClose }: { slug: s
         ) : null}
         {page.status === "live" ? <AbTestPanel slug={slug} kind="landing" targetId={page.id} current={content.headline} canApprove={canPublish && !page.hasUnpublishedChanges} /> : null}
         <div className="flex flex-wrap items-center gap-3">
+          {hasUnsavedChanges && canPublish ? <p className="w-full text-xs text-amber-900">Save your edits before reviewing or publishing them. The publish action applies only to the saved version.</p> : null}
+          {hasUnsavedMeasurementChanges && canPublish ? <p className="w-full text-xs text-amber-900">Save your measurement-plan edits before reviewing or publishing them.</p> : null}
           {canEdit ? (
             <Button loading={busy === "save"} onClick={() => run("save", () => update({ slug, id: page.id, content: { ...c, steps: c.steps.filter((s) => s.trim()) } }), "Saved")}>
               Save
@@ -253,16 +303,16 @@ function Editor({ slug, page, content, canEdit, canPublish, onClose }: { slug: s
           ) : null}
           {canPublish && page.status !== "live" ? (
             <ConfirmDialog
-              trigger={<Button variant="secondary" disabled={busy === "live" || !page.content}>Publish version {page.version}</Button>}
+              trigger={<Button variant="secondary" disabled={busy === "live" || !page.content || !canPublishCurrentVersion}>Publish version {page.version}</Button>}
               title={`Publish landing page version ${page.version}?`}
-              description="This approval applies to the exact saved version shown above. Later edits remain drafts until reviewed and published separately."
+              description={`This approval applies to the exact saved version shown above${page.designCriticSource ? ` and its measurement plan for “${page.designMeasurementPlan?.metric}” (baseline ${page.designMeasurementPlan?.baseline.state ?? "not recorded"})` : ""}. Later edits remain drafts until reviewed and published separately.`}
               confirmLabel={`Publish version ${page.version}`}
               onConfirm={() => run("live", () => setLive({ slug, id: page.id, live: true, expectedVersion: page.version }), `Version ${page.version} is live`)}
             />
           ) : null}
           {canPublish && page.status === "live" && page.hasUnpublishedChanges ? (
             <ConfirmDialog
-              trigger={<Button variant="secondary" disabled={busy === "live"}>Publish draft version {page.version}</Button>}
+              trigger={<Button variant="secondary" disabled={busy === "live" || !canPublishCurrentVersion}>Publish draft version {page.version}</Button>}
               title={`Publish landing page version ${page.version}?`}
               description={`This replaces public version ${page.publishedVersion} with the exact saved draft version ${page.version}.`}
               confirmLabel={`Publish version ${page.version}`}
