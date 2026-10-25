@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(67);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(68);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -83,6 +83,19 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://journals.sagepub.com/doi/10.1177/0379572119895860", publicationDate: "2020-01-29", sourceRole: "independent_secondary" }),
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Explore a distribution and positioning strategy", query)).toContain("CP-065");
+  });
+
+  it("retrieves mission-protecting ownership design without presenting it as a growth tactic", () => {
+    const query = "Protect a founder's mission through succession by separating voting control from economic ownership and defining reinvestment and distribution rights";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-068");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("Separating voting control from most economic ownership");
+    expect(match?.precedent.outcome).toContain("do not establish that the ownership change increased customer demand");
+    expect(match?.precedent.transferRisk).toContain("hard to reverse");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.patagoniaworks.com/press/2022/9/14/patagonias-next-chapter-earth-is-now-our-only-shareholder" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Explore a succession and mission strategy", query)).toContain("CP-068");
   });
 
   it("retrieves open innovation while separating proxy scores, implementation value, and data privacy", () => {
