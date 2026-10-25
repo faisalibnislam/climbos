@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(50);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(51);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -82,6 +82,19 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://review.firstround.com/the-5-phases-of-figmas-community-led-growth-from-stealth-to-enterprise/", publicationDate: "2022-08-31", sourceRole: "independent_secondary" }),
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Explore community-led distribution", query)).toContain("CP-050");
+  });
+
+  it("retrieves transparent operating rules without treating recruiting reports as customer growth", () => {
+    const query = "Make a pay formula or service pricing rule publicly transparent to build trust and attract qualified applicants";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-051");
+    expect(match).toBeDefined();
+    expect(match?.precedent.outcome).toContain("applications rose 50% the next month");
+    expect(match?.precedent.causalLimit).toContain("do not show that customers bought");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://buffer.com/resources/introducing-open-salaries-at-buffer-including-our-transparent-formula-and-all-individual-salaries/", publicationDate: "2013-12-19", sourceRole: "company_primary" }),
+      expect.objectContaining({ url: "https://www.fastcompany.com/40416506/is-pay-transparency-right-for-your-company-we-asked-a-few-that-tried-it", publicationDate: "2017-05-05", sourceRole: "independent_secondary" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Explore distinctive trust mechanisms", query)).toContain("CP-051");
   });
 
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {
