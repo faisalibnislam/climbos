@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(64);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(65);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -69,6 +69,20 @@ describe("creative strategy precedent retrieval", () => {
     ]));
     expect(match?.precedent.causalLimit).toContain("remained niche");
     expect(creativePrecedentsForAgent("growth_plays", "Explore an original content strategy", query)).toContain("CP-049");
+  });
+
+  it("retrieves local distribution and segment-specific value research without claiming commercial viability", () => {
+    const query = "Test whether trusted local distribution and a clear explanation of a hard-to-evaluate product benefit fit different customer segments, affordability, and delivery costs";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-065");
+    expect(match).toBeDefined();
+    expect(match?.precedent.outcome).toContain("price increases in response to production and distribution costs were followed by lower sales");
+    expect(match?.precedent.causalLimit).toContain("not current prices, market demand forecasts");
+    expect(match?.precedent.transferRisk).toContain("may exclude the people it is intended to help");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://opendocs.ids.ac.uk/articles/report/Business-Based_Strategies_for_Improved_Nutrition_The_Case_of_Grameen_Danone_Foods/26483392", sourceRole: "independent_secondary" }),
+      expect.objectContaining({ url: "https://journals.sagepub.com/doi/10.1177/0379572119895860", publicationDate: "2020-01-29", sourceRole: "independent_secondary" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Explore a distribution and positioning strategy", query)).toContain("CP-065");
   });
 
   it("retrieves practitioner-community learning without treating invitations as causal growth evidence", () => {
