@@ -8,6 +8,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import type { PlayActuals } from "../../../../shared/growth/actuals";
 import { CREATIVE_PRECEDENTS } from "../../../../shared/knowledge/creativePrecedents";
 import { PlayResults } from "./PlayResults";
+import { EvidenceReferences } from "./EvidenceReferences";
 import {
   ArrowRight,
   Ban,
@@ -798,7 +799,7 @@ function PlayDetails({ play, economics, id }: { play: PlayView; economics?: Econ
             <div><dt className="text-xs text-ink-3">Diagnosis</dt><dd className="text-ui text-ink">{action.diagnosis}</dd></div>
             <div><dt className="text-xs text-ink-3">Intended effect</dt><dd className="text-ui text-ink">{action.intendedEffect}</dd></div>
             <div><dt className="text-xs text-ink-3">Evidence basis</dt><dd className="text-ui text-ink">{EVIDENCE_BASIS_LABEL[action.evidenceBasis]} · {action.evidenceNote}</dd></div>
-            {action.evidenceRefs.length ? <div><dt className="text-xs text-ink-3">Evidence references</dt><dd className="break-words text-ui text-ink">{action.evidenceRefs.join(" · ")}</dd></div> : null}
+            {action.evidenceRefs.length ? <div><dt className="text-xs text-ink-3">Evidence references</dt><dd className="break-words text-ui text-ink"><EvidenceReferences references={action.evidenceRefs} /></dd></div> : null}
             <div><dt className="text-xs text-ink-3">Target or asset</dt><dd className="text-ui text-ink">{action.targetOrAsset}</dd></div>
             <div><dt className="text-xs text-ink-3">Resources</dt><dd className="text-ui text-ink">{action.resourcePlan}</dd></div>
             <div><dt className="text-xs text-ink-3">Execution</dt><dd className="text-ui text-ink">{CAPABILITY_LABEL[action.executionCapability]}</dd></div>
