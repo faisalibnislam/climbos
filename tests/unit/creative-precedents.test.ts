@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(35);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(36);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -111,6 +111,14 @@ describe("creative strategy precedent retrieval", () => {
     expect(match?.precedent.outcome).toContain("not independently audited data");
     expect(match?.precedent.causalLimit).toContain("does not isolate either effect");
     expect(match?.precedent.sources[0]?.url).toBe("https://sequoiacap.com/podcast/crucible-moments-dropbox");
+  });
+
+  it("retrieves offer simplification while preserving concurrent-change and margin caveats", () => {
+    const match = retrieveCreativePrecedents("Remove confusing contract terms and upfront payment barriers by separating service pricing from device financing").find(({ precedent }) => precedent.id === "CP-036");
+    expect(match).toBeDefined();
+    expect(match?.precedent.outcome).toContain("do not isolate the effect");
+    expect(match?.precedent.causalLimit).toContain("MetroPCS acquisition and network investment");
+    expect(match?.precedent.sources.some((source) => source.url.includes("sec.gov/Archives/edgar/data/1283699"))).toBe(true);
   });
 
   it("retrieves opt-in personalization and sharing as a separate customer mechanism", () => {
