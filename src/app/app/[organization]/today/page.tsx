@@ -35,6 +35,7 @@ import { RetryRunIfPossible, RunProgressCompact } from "@/components/app/content
 import { ActionCardStatus, actionCardSetupHref, actionCardStartLabel, actionCardStatusExplanation } from "@/components/app/ActionCardStatus";
 import { WishFeed } from "@/components/app/wish/WishFeed";
 import { IdeaDeck } from "@/components/app/today/IdeaDeck";
+import { OwnerGoalTarget } from "@/components/app/today/OwnerGoalTarget";
 import { TodayTargetPreviewCard } from "@/components/app/today/TodayTargetPreview";
 import { Prose } from "@/components/ds/content";
 import { climbTarget } from "@/components/climb/context";
@@ -249,6 +250,7 @@ export default function TodayPage() {
               <div className="min-w-0 flex-1">
                 <p className="text-overline">Your goal</p>
                 <p className="heading-card mt-0.5">{data.goal ? data.goal.statement : "No goal yet"}</p>
+                {data.goal ? <OwnerGoalTarget target={data.goal.target} currency={data.goal.currency} horizonDays={data.goal.horizonDays} /> : null}
                 {data.goal ? (
                   <p className="mt-2 flex flex-wrap gap-1.5">
                     <Badge tone="neutral">{data.goal.horizonDays} days</Badge>

@@ -47,6 +47,21 @@ describe("wishes", () => {
     expect(today.approvalsCountIsLowerBound).toBe(false);
   });
 
+  it("returns the owner's structured goal target to Home without turning it into a result", async () => {
+    const t = setup();
+    const u = await asNewUser(t, "wish-home-goal-target@example.com", { anonymous: true });
+    const { slug } = await u.client.mutation(api.demo.createDemoWorkspace, {});
+    const target = { metric: "customers" as const, baseline: 12, desired: 30, mode: "incremental" as const };
+    await t.run(async (ctx) => {
+      const org = (await ctx.db.query("organizations").withIndex("by_slug", (q) => q.eq("slug", slug)).unique())!;
+      const goal = (await ctx.db.query("goals").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active")).first())!;
+      await ctx.db.patch(goal._id, { target });
+    });
+
+    const today = await u.client.query(api.workspace.today, { slug });
+    expect(today.goal?.target).toEqual(target);
+  });
+
   it("seeds a clearly fictional opportunity for the editable Growth Home question flow", async () => {
     const t = setup();
     const u = await asNewUser(t, "demo-opportunity@example.com", { anonymous: true });
