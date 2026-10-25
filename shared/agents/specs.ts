@@ -313,7 +313,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { id: string; kind: "more_sales" | "more_customers" | "more_reach" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.65-evidence-bounded-alt-draft";
+export const ENGINE_VERSION = "v3.66-seo-contribution-evidence";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -2064,13 +2064,16 @@ export function lintSearchIntent(out: z.infer<typeof SeoBriefV2Schema>): LintIss
 }
 
 export function lintSeoEvidence(out: z.infer<typeof SeoBriefV2Schema>, input: AgentInput): LintIssue[] {
+  const contribution = out.originalContributionEvidence;
   const factIndexes: LintIssue[] = [
     ...out.faqs.flatMap((faq, i) => lintFactIndexes(faq.factIndexes, input.facts.length, `faqs[${i}].factIndexes`)),
     ...out.citableClaims.flatMap((claim, i) => lintFactIndexes(claim.factIndexes, input.facts.length, `citableClaims[${i}].factIndexes`)),
+    ...lintFactIndexes(contribution.factIndexes, input.facts.length, "originalContributionEvidence.factIndexes"),
   ];
   const sourceRefs = [
     ...out.faqs.flatMap((faq, i) => faq.sourceUrls.map((url) => ({ url, path: `faqs[${i}].sourceUrls` }))),
     ...out.citableClaims.flatMap((claim, i) => claim.sourceUrls.map((url) => ({ url, path: `citableClaims[${i}].sourceUrls` }))),
+    ...contribution.sourceUrls.map((url) => ({ url, path: "originalContributionEvidence.sourceUrls" })),
   ];
   const internalLinkRefs = out.internalLinks.map((url, i) => ({ url, path: `internalLinks[${i}]` }));
   const businessHost = input.businessWebsite ? domainOf(input.businessWebsite) : null;
@@ -2090,7 +2093,13 @@ export function lintSeoEvidence(out: z.infer<typeof SeoBriefV2Schema>, input: Ag
     message: "A citable claim needs at least one confirmed fact index or source page read in this run.",
     path: `citableClaims[${i}]`,
   }]);
-  return [...factIndexes, ...citationIssues, ...internalLinkHostIssues, ...claimIssues];
+  const hasContributionEvidence = contribution.factIndexes.length > 0 || contribution.sourceUrls.length > 0;
+  const contributionIssues: LintIssue[] = contribution.status === "evidence_linked" && !hasContributionEvidence
+    ? [{ severity: "error", rule: "seo_original_contribution", message: "Link the proposed contribution to a supplied business fact or a page read in this run, or label it as a hypothesis that needs owner evidence.", path: "originalContributionEvidence" }]
+    : contribution.status === "hypothesis_pending_owner_evidence" && !out.ownerEvidenceNeeded.some((item) => item.trim())
+      ? [{ severity: "error", rule: "seo_original_contribution", message: "A proposed contribution without linked evidence must name the specific owner evidence needed before it can be presented as first-hand or distinctive expertise.", path: "ownerEvidenceNeeded" }]
+      : [];
+  return [...factIndexes, ...citationIssues, ...internalLinkHostIssues, ...claimIssues, ...contributionIssues];
 }
 
 export function lintSeoRecommendation(out: z.infer<typeof SeoBriefV2Schema>, input: AgentInput): LintIssue[] {

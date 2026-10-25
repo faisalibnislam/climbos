@@ -215,6 +215,7 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
           { question: `When should I add payment fields?`, answer: "Add payment when the form is part of a purchase or booking flow, and state the price and refund terms before submission.", factIndexes: [], sourceUrls: [] },
         ],
         originalContribution: "Use the confirmed product flow and real customer tasks to make the steps specific to this service.",
+        originalContributionEvidence: { status: "hypothesis_pending_owner_evidence", factIndexes: [], sourceUrls: [] },
         ownerEvidenceNeeded: ["Add a reviewed customer example or owner-tested setup detail before publication."],
         measurementPlan: "After owner review and publication, compare this page's Search Console clicks and qualified site outcomes with its prior period; baseline is not supplied here.",
         citableClaims: ctx.facts.length ? [{ statement: ctx.facts[0].statement, factIndexes: [0], sourceUrls: [] }] : [],

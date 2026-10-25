@@ -16,6 +16,7 @@ describe("SEO answer-first artifact export", () => {
       answerFirst: "A good intake form collects only the information needed for the next service step.",
       faqs: [{ question: "What should it ask?", answer: "Ask for details needed to deliver the service.", factIndexes: [0], sourceUrls: ["https://example.com/intake-guide"] }],
       originalContribution: "Explain the service's actual intake process and when a client gets a response.",
+      originalContributionEvidence: { status: "evidence_linked", factIndexes: [0], sourceUrls: ["https://example.com/intake-guide"] },
       ownerEvidenceNeeded: ["Confirm the actual response-time promise with the business owner."],
       measurementPlan: "Compare page clicks and qualified inquiries after publication with the pre-publication baseline, if tracking is connected.",
       citableClaims: [{ statement: "The service uses a monthly plan.", factIndexes: [1], sourceUrls: [] }],
@@ -30,6 +31,8 @@ describe("SEO answer-first artifact export", () => {
     expect(artifact.body).toContain("[Source](https://example.com/intake-guide)");
     expect(artifact.body).toContain("## Verified facts");
     expect(artifact.body).toContain("## Original contribution");
+    expect(artifact.body).toContain("This linkage does not prove that the contribution is unique");
+    expect(artifact.body).toContain("[Evidence](https://example.com/intake-guide)");
     expect(artifact.body).toContain("## Suggested internal links");
     expect(artifact.body).toContain("[https://example.com/templates](https://example.com/templates)");
     expect(artifact.body).toContain("Confirm the actual response-time promise");

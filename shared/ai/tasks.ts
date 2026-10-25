@@ -222,6 +222,12 @@ export const SeoBriefSchema = z.object({
   faqs: z.array(z.object({ question: z.string(), answer: z.string(), factIndexes: z.array(z.number()), sourceUrls: z.array(z.string()) })),
   /** Concrete information gain: the business-specific evidence or useful answer this page adds beyond a generic summary. */
   originalContribution: z.string(),
+  /** Evidence attached to the proposed contribution; evidence linkage does not prove uniqueness or semantic support. */
+  originalContributionEvidence: z.object({
+    status: z.enum(["evidence_linked", "hypothesis_pending_owner_evidence"]),
+    factIndexes: z.array(z.number()),
+    sourceUrls: z.array(z.string()),
+  }),
   /** Specific owner-supplied material required before a genuinely original page can be finalized. Empty only when none is needed. */
   ownerEvidenceNeeded: z.array(z.string()),
   /** What to measure after review/publication; this is a plan, never a forecast or guarantee. */

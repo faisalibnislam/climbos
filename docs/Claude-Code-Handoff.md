@@ -5,7 +5,7 @@
 | Prepared | 25 October 2026 |
 | Repository | `climbos` |
 | Branch | `growth-engine-v2` |
-| Git state | Use `git status --short --branch` and `git log -5 --oneline` as the live source of truth; this handoff includes the CP-075 and evidence-bounded alternative-draft follow-ups described below. |
+| Git state | Use `git status --short --branch` and `git log -5 --oneline` as the live source of truth; this handoff includes CP-075, evidence-bounded alternative drafts, retention outcome entry, and SEO contribution evidence linkage. |
 | Remote | `origin/growth-engine-v2` |
 | Deployment | None performed by this work; a branch push is not a production release. |
 
@@ -112,6 +112,28 @@ git diff --check
   passed
 ```
 
+### Follow-up implementation: SEO contribution evidence status
+
+The SEO brief now requires a structured status for its claimed original contribution: either `evidence_linked` with fact indexes and/or exact source URLs read during the current run, or `hypothesis_pending_owner_evidence` with a specific owner-evidence request. The existing SEO evidence linter validates the references against this run; unsupported indexes/URLs are rejected. The saved draft labels the status, includes source links and stores linked fact references. The prompt warns that linkage does not prove semantic support or uniqueness. The engine version is `v3.66-seo-contribution-evidence`, and requirement-audit row 104 now describes this bounded behavior.
+
+Verified commands:
+
+```text
+pnpm exec vitest run tests/unit/search-intent.test.ts tests/unit/seo-artifacts.test.ts
+  2 files passed; 6 tests passed
+
+pnpm typecheck
+  app and Convex TypeScript checks passed
+
+pnpm exec eslint convex/ai/fixtures.ts convex/jobWrites.ts convex/jobs.ts shared/agents/specs.ts shared/ai/tasks.ts tests/unit/search-intent.test.ts tests/unit/seo-artifacts.test.ts
+  passed
+
+git diff --check
+  passed
+```
+
+No live model call or publishing action was performed. This does not independently establish semantic support, content uniqueness, or competitor-level originality.
+
 ### Follow-up work after the first handoff push
 
 - Corrected the 73-versus-74 case-count mismatch in `docs/Capabilities.md`; after CP-075 was added, the runtime library and capability summaries now agree at 75 reviewed / 25 unverified.
@@ -128,7 +150,7 @@ These are known open gaps, not a complete substitute for checking the requiremen
 2. **Retention evidence:** Owners can now enter weekly repeat-customer, revenue, and contribution aggregates from the plan card. There is no customer-level cohort history, repeat-purchase timing, churn reason/satisfaction workflow, or verified retention attribution; do not infer unique retained customers from customer-week totals.
 3. **Traceability and evidence:** Research sources are often linked to a run or object rather than every claim/sentence. A URL's presence does not prove the cited page supports the exact claim. Expand claim-level linkage where material, and test support matching and provenance preservation.
 4. **Design critique limits:** The external customer website is not edited or re-rendered. The current draft flow creates a ClimbOS-hosted page, with limited sampled screenshots and version-bound measurement. Cross-page brand consistency mapping, a deduplicated opportunity queue, full journey interaction checks, customer-site re-rendering, and measured external-site outcomes remain open. Automated checks and screenshots are not WCAG conformance.
-5. **SEO limits:** The site audit is bounded and primarily static-HTML; JavaScript-rendered pages, full crawl coverage, local/off-site factors, continuous answer-engine checks, and proof of citations remain unsupported or unverified. Search Console and manually observed answers are samples with setup constraints. Never state that an SEO recommendation guarantees ranking, traffic, or AI citation.
+5. **SEO limits:** Original-contribution evidence references are now validated for run membership, but semantic support, uniqueness, and competitor-content comparison remain human-review work. The site audit is bounded and primarily static-HTML; JavaScript-rendered pages, full crawl coverage, local/off-site factors, continuous answer-engine checks, and proof of citations remain unsupported or unverified. Search Console and manually observed answers are samples with setup constraints. Never state that an SEO recommendation guarantees ranking, traffic, or AI citation.
 6. **Review and platform integrations:** Native review sync/replies and several platform integrations are blocked or unsupported pending official API access, credentials, provider eligibility, scopes, plan limits, and data-retention verification. Keep manual paths clear. Do not scrape platforms or imply an API exists without checking current primary documentation.
 7. **Autopilot/calendar scale and validation:** Existing caps and policy behavior are explicit, but calendar completeness at maximum query caps and live scheduling/publishing with each provider must be separately validated. Approval must remain bound to tenant, exact content version, destination, audience/schedule, budget, and action scope.
 8. **Accessibility and UX:** Some keyboard/accessibility safeguards exist, but there is no app-wide accessibility conformance result. Continue with focused keyboard and assistive-technology checks and plain-language owner review.
@@ -190,7 +212,7 @@ One initial test attempt failed only because the existing snapshot-version asser
 
 ## Suggested first Claude Code session
 
-Start by verifying the checked-out state and reading the files listed under **Start here**. Creative-precedent counts now agree at 75 reviewed / 25 unverified; compare `docs/Capabilities.md`, the 410-row audit, and the implementation ledger for other stale claims. Choose a high-impact, bounded runtime gap by evidence and owner impact, trace its complete current flow, and implement only the confirmed gap with focused permission/regression tests. Continue on `growth-engine-v2`, keep work synced to `origin/growth-engine-v2` after successful verification, and do not deploy or create a PR unless the owner separately asks.
+Start by verifying the checked-out state and reading the files listed under **Start here**. Confirm the branch is clean and synced to `origin/growth-engine-v2`; the latest pushed work exposes retention results in the plan card, and the SEO contribution evidence increment is included in this handoff. Creative-precedent counts now agree at 75 reviewed / 25 unverified; compare `docs/Capabilities.md`, the 410-row audit, and the implementation ledger for other stale claims. Choose a high-impact, bounded runtime gap by evidence and owner impact, trace its complete current flow, and implement only the confirmed gap with focused permission/regression tests. Continue on `growth-engine-v2`, keep work synced to `origin/growth-engine-v2` after successful verification, and do not deploy or create a PR unless the owner separately asks.
 
 ## Prompt to give Claude Code
 
@@ -200,6 +222,8 @@ Continue ClimbOS development from the current repository and branch. Read docs/C
 Treat the handoff as a status snapshot, not proof of implementation. Audit the actual code before editing. Follow the relevant growth-intelligence reading route and read the current Next.js guide under node_modules/next/dist/docs/ before changing Next.js code. Creative-precedent counts currently agree at 75 reviewed and 25 unverified; check for any other stale owner-facing claims against current runtime behavior.
 
 Then continue the remaining ClimbOS work in small, complete, evidence-based increments. Choose the next material gap from the requirement audit and implementation ledger, trace its existing path end to end, and implement only what that audit confirms. Preserve the existing shared engine and original grounded/adjacent/bold strategy capability. Never invent missing business facts or suppress bold ideas because they are novel. Keep unknowns and provenance explicit; use deterministic code for material calculations and authorization. Preserve tenant isolation and exact approval binding for external actions. Do not send, publish, schedule, spend, alter live pricing, deploy, or create a PR.
+
+Use parallel agents when the environment supports them to shorten independent audits or bounded tasks. Keep concurrent work to available slots, assign read-only or non-overlapping scopes, designate one integration owner, and review every result before incorporating it. Do not have agents edit the same files or assume that launching more agents than available slots makes work faster.
 
 Run focused regression and permission tests for each change, typecheck and targeted lint where relevant, update the requirement audit and implementation ledger, and report files, behavior, exact test commands/results, and limitations. Keep this branch synced to origin/growth-engine-v2 after verified work, as previously authorized. Use the currently selected model; ask me before changing to a different Codex model tier if that becomes necessary. Do not stop after a plan or partial implementation—continue until the selected gap is completed and verified, then proceed to the next clear gap.
 ```

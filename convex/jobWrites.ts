@@ -1026,7 +1026,11 @@ export function seoToArtifacts(out: SeoBriefOutput): Omit<ArtifactInput, "imageS
   const internalLinks = out.internalLinks.length ? `## Suggested internal links\n\n${out.internalLinks.map((url) => `- [${url}](${url})`).join("\n")}` : "";
   const faqs = out.faqs.length ? `## Frequently asked questions\n\n${out.faqs.map((faq) => `### ${faq.question}\n\n${linked(faq.answer, faq.sourceUrls)}`).join("\n\n")}` : "";
   const citableClaims = out.citableClaims.length ? `## Verified facts\n\n${out.citableClaims.map((claim) => `- ${linked(claim.statement, claim.sourceUrls)}`).join("\n")}` : "";
-  const factIndexes = [...new Set([...out.factIndexes, ...out.faqs.flatMap((faq) => faq.factIndexes), ...out.citableClaims.flatMap((claim) => claim.factIndexes)])];
+  const contributionBasis = out.originalContributionEvidence.status === "evidence_linked"
+    ? "Evidence linked below. This linkage does not prove that the contribution is unique or that each source semantically supports every part of the statement."
+    : "HYPOTHESIS — owner evidence is needed before presenting this as first-hand or distinctive business expertise.";
+  const originalContribution = `## Original contribution\n\n${out.originalContribution}\n\n**Evidence status:** ${contributionBasis}${out.originalContributionEvidence.sourceUrls.length ? `\n\n${out.originalContributionEvidence.sourceUrls.map((url) => `[Evidence](${url})`).join(" ")}` : ""}`;
+  const factIndexes = [...new Set([...out.factIndexes, ...out.originalContributionEvidence.factIndexes, ...out.faqs.flatMap((faq) => faq.factIndexes), ...out.citableClaims.flatMap((claim) => claim.factIndexes)])];
   const recommendation = out.recommendedAction === "refresh_existing_page"
     ? `## Recommended action: refresh existing page\n\nTarget page: ${out.targetPageUrl ?? ""}\n\nWhy: ${out.recommendationReason ?? ""}`
     : out.recommendedAction === "create_new_page"
@@ -1038,7 +1042,7 @@ export function seoToArtifacts(out: SeoBriefOutput): Omit<ArtifactInput, "imageS
       channel: "blog",
       title: out.title,
       headline: out.metaDescription,
-      body: [recommendation, `## Quick answer\n\n${out.answerFirst}`, `## Original contribution\n\n${out.originalContribution}`, out.ownerEvidenceNeeded.length ? `## Owner evidence needed before publication\n\n${out.ownerEvidenceNeeded.map((item) => `- ${item}`).join("\n")}` : "", outline, internalLinks, "---", out.draft, faqs, citableClaims, `## Measurement plan\n\n${out.measurementPlan}`].filter(Boolean).join("\n\n"),
+      body: [recommendation, `## Quick answer\n\n${out.answerFirst}`, originalContribution, out.ownerEvidenceNeeded.length ? `## Owner evidence needed before publication\n\n${out.ownerEvidenceNeeded.map((item) => `- ${item}`).join("\n")}` : "", outline, internalLinks, "---", out.draft, faqs, citableClaims, `## Measurement plan\n\n${out.measurementPlan}`].filter(Boolean).join("\n\n"),
       destinationUrl: out.recommendedAction === "refresh_existing_page" && out.targetPageUrl ? out.targetPageUrl : undefined,
       hashtags: [out.primaryKeyword, ...out.secondaryKeywords].slice(0, 8),
       factIndexes,

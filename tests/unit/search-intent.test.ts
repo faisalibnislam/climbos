@@ -33,6 +33,7 @@ describe("search intent stage", () => {
       faqs: [],
       citableClaims: [],
       originalContribution: "Use real customer questions and verified plan details.",
+      originalContributionEvidence: { status: "hypothesis_pending_owner_evidence", factIndexes: [], sourceUrls: [] },
       ownerEvidenceNeeded: [],
       measurementPlan: "Review page clicks and qualified inquiries if analytics are connected.",
       recommendedAction: "create_new_page",
@@ -62,6 +63,7 @@ describe("search intent stage", () => {
       faqs: [{ question: "How much does it cost?", answer: "See the current pricing page.", factIndexes: [], sourceUrls: ["https://example.com/pricing"] }],
       citableClaims: [{ statement: "The plan includes appointment reminders.", factIndexes: [2], sourceUrls: ["https://example.com/unread"] }],
       originalContribution: "Use verified plan details and customer questions to answer pricing clearly.",
+      originalContributionEvidence: { status: "evidence_linked", factIndexes: [0], sourceUrls: ["https://example.com/pricing"] },
       ownerEvidenceNeeded: ["Confirm which plans include appointment reminders."],
       measurementPlan: "Compare clicks and qualified leads with the connected pre-publication baseline.",
       recommendedAction: "refresh_existing_page",
@@ -89,5 +91,32 @@ describe("search intent stage", () => {
     expect(lintSeoRecommendation(inventedTarget, input)).toMatchObject([{ rule: "citation", path: "targetPageUrl" }]);
     const missingTarget = SeoBriefV2Schema.parse({ ...valid, targetPageUrl: "" });
     expect(lintSeoRecommendation(missingTarget, input)).toMatchObject([{ rule: "seo_recommendation", path: "targetPageUrl" }]);
+  });
+
+  it("requires contribution evidence links to resolve or remain an explicit owner-evidence hypothesis", () => {
+    const base = SeoBriefV2Schema.parse({
+      title: "Pricing", metaDescription: "Compare plans", primaryKeyword: "appointment scheduling pricing",
+      secondaryKeywords: [], searchIntent: "pricing", outline: [], internalLinks: [], draft: "",
+      factIndexes: [], pageType: "pricing", intentStage: "purchase", intentEvidence: "pricing query",
+      eeatSignals: [], answerFirst: "Plans vary by team size.", faqs: [], citableClaims: [],
+      originalContribution: "Explain how the service handles plan selection.",
+      originalContributionEvidence: { status: "evidence_linked", factIndexes: [0], sourceUrls: ["https://example.com/pricing"] },
+      ownerEvidenceNeeded: [], measurementPlan: "Review qualified page outcomes after publication.",
+      recommendedAction: "create_new_page", targetPageUrl: "", recommendationReason: "No page observed.",
+    });
+    const input = { task: "SEO", brief: "", facts: ["Owner reported a plan selection flow."], businessWebsite: "https://www.example.com", availableSourceUrls: ["https://example.com/pricing"] };
+    expect(lintSeoEvidence(base, input)).toEqual([]);
+    expect(lintSeoEvidence(SeoBriefV2Schema.parse({ ...base, originalContributionEvidence: { status: "evidence_linked", factIndexes: [], sourceUrls: [] } }), input)).toMatchObject([
+      { rule: "seo_original_contribution", path: "originalContributionEvidence" },
+    ]);
+    expect(lintSeoEvidence(SeoBriefV2Schema.parse({ ...base, originalContributionEvidence: { status: "evidence_linked", factIndexes: [4], sourceUrls: ["https://example.com/unread"] } }), input)).toMatchObject([
+      { rule: "fact_reference", path: "originalContributionEvidence.factIndexes" },
+      { rule: "citation", path: "originalContributionEvidence.sourceUrls" },
+    ]);
+    const hypothesis = SeoBriefV2Schema.parse({ ...base, originalContributionEvidence: { status: "hypothesis_pending_owner_evidence", factIndexes: [], sourceUrls: [] }, ownerEvidenceNeeded: ["Provide a reviewed customer example."] });
+    expect(lintSeoEvidence(hypothesis, input)).toEqual([]);
+    expect(lintSeoEvidence(SeoBriefV2Schema.parse({ ...hypothesis, ownerEvidenceNeeded: [] }), input)).toMatchObject([
+      { rule: "seo_original_contribution", path: "ownerEvidenceNeeded" },
+    ]);
   });
 });
