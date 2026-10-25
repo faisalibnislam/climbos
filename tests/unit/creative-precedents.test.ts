@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(28);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(30);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -75,6 +75,14 @@ describe("creative strategy precedent retrieval", () => {
 
   it("retrieves a change in payer and payment timing without promising subscription economics", () => {
     expect(retrieveCreativePrecedents("Test a monthly fee-for-service option where landlords pay for maintained toilets instead of tenants paying per use").some(({ precedent }) => precedent.id === "CP-028")).toBe(true);
+  });
+
+  it("retrieves a managed equipment-service model through asset responsibility and predictable cost", () => {
+    expect(retrieveCreativePrecedents("Offer a fixed monthly fee to manage customer equipment, repairs, replacements, and tracking instead of selling tools outright").some(({ precedent }) => precedent.id === "CP-029")).toBe(true);
+  });
+
+  it("retrieves usage-linked service pricing with provider-held maintenance risk", () => {
+    expect(retrieveCreativePrecedents("Price a maintenance service per engine flying hour and share uptime risk with customers").some(({ precedent }) => precedent.id === "CP-030")).toBe(true);
   });
 
   it("retrieves opt-in personalization and sharing as a separate customer mechanism", () => {
