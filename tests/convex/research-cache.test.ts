@@ -20,12 +20,14 @@ describe("tenant research cache", () => {
     ).orgId as Id<"organizations">;
     const cacheKey = "a".repeat(64);
     const expiresAt = Date.now() + 60_000;
+    const retrievedAt = Date.now() - 2_000;
     await t.mutation(internal.engine.putResearchCache, {
       orgId: orgA,
       cacheKey,
       agentId: "growth_strategy",
       modelKey: "gpt-6-luna",
       notes: "Sourced market evidence",
+      retrievedAt,
       sources: [{ url: "https://example.com/source", title: "Source" }],
       expiresAt,
     });
@@ -35,7 +37,7 @@ describe("tenant research cache", () => {
         orgId: orgA,
         cacheKey,
       }),
-    ).toMatchObject({ notes: "Sourced market evidence" });
+    ).toMatchObject({ notes: "Sourced market evidence", retrievedAt });
     expect(
       await t.query(internal.engine.getResearchCache, {
         orgId: orgB,

@@ -39,6 +39,8 @@ export interface ResearchSpec {
 export interface CachedResearch {
   notes: string;
   sources: { url: string; title?: string }[];
+  /** Time this exact evidence set was retrieved; old cache rows may not have it. */
+  retrievedAt?: number;
   expiresAt: number;
 }
 
@@ -92,7 +94,11 @@ export interface AgentInput {
   /** Research to do for this job (overrides nothing; omit for no research phase). */
   research?: ResearchSpec;
   /** Research already done for this job (e.g. in parallel with an earlier step): used instead of a research phase. */
-  precomputedResearch?: { notes: string; sources: { url: string; title?: string }[] };
+  precomputedResearch?: { notes: string; sources: { url: string; title?: string }[]; retrievedAt?: number };
+  /** Deterministic timing context assembled by the application for date validation. */
+  timingContext?: { today: string; timezone: string; geography?: string };
+  /** Exact approved offer prices allowed in copy for this tenant's active plan. */
+  approvedOfferTerms?: { playName: string; recommendation: string; currency: string; allowedPrices: number[]; urgencyClaim: string | null }[];
   /** Exact pages read by the application for this run; internal input for source-reference validation. */
   availableSourceUrls?: string[];
   /** Exact first-party page titles/headings observed by this run; lints only, not extra prompt evidence. */
@@ -168,7 +174,7 @@ export interface AgentRunResult<T> {
   output: T;
   assessment: Assessment | null;
   rounds: number;
-  research: { notes: string; sources: { url: string; title?: string }[] } | null;
+  research: { notes: string; sources: { url: string; title?: string }[]; retrievedAt?: number } | null;
   history: { round: number; average: number; gatesPassed: boolean; lintErrors: number }[];
   /** Versioned guidance passages the drafting agent actually received; separate from business evidence. */
   knowledgeReferences?: KnowledgeReferenceSet;

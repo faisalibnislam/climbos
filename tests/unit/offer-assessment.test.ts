@@ -1,0 +1,154 @@
+import { describe, expect, it } from "vitest";
+import { approvedPlanContext, approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
+import { evaluateOfferUnitEconomics, lintApprovedOfferCopy, lintOfferAssessment, type OfferAssessment } from "../../shared/agents/offerAssessment";
+import { OFFER_DECISION_POLICY, playsTask } from "../../shared/agents/planTasks";
+import { adsSpec, emailSpec, socialSpec } from "../../shared/agents/specs";
+
+const fact = "Owner reports that qualified quote requests do not book because of stated price objections. Current offer is $100 per service. Proposed offer is $95 per service. Variable labor is $40 per service, payment fee is $3 per sale, fulfillment costs $7 per service, and the proposed bonus costs $5 per service. Owner minimum contribution is $35 per sale and minimum contribution margin is 30%. The team has capacity for 20 additional jobs per month.";
+const context = { facts: [fact], researchNotes: "", sourceUrls: [], evidenceText: fact };
+const value = (amount: number | null, claim: string, reference: string | null = "fact:0") => ({ amount, basis: "owner_reported" as const, reference, claim });
+const costs = (bonus = false) => [
+  { category: "variable labor", value: value(40, "Variable labor is $40 per service") },
+  { category: "payment fee", value: value(3, "payment fee is $3 per sale") },
+  { category: "fulfillment", value: value(7, "fulfillment costs $7 per service") },
+  ...(bonus ? [{ category: "bonus", value: value(5, "proposed bonus costs $5 per service") }] : []),
+];
+const assessment = (overrides: Partial<OfferAssessment> = {}): OfferAssessment => ({
+  recommendation: "recommend_promotion",
+  mechanism: "discount",
+  segment: "First-time local service customers who have requested a quote",
+  needOrObstacle: "Owner reports price is the main stated reason qualified quote requests do not book.",
+  objective: "Increase completed first-time jobs while preserving unit contribution.",
+  diagnosis: "Qualified quote requests are not booking because of stated price objections",
+  evidenceBasis: "owner_reported",
+  evidenceRefs: ["fact:0"],
+  evidenceNote: "Owner reports that qualified quote requests do not book because of stated price objections.",
+  alternatives: [
+    { alternative: "positioning", reason: "Test clearer explanation of the included work before lowering price." },
+    { alternative: "conversion_path", reason: "Review quote follow-up and booking friction." },
+    { alternative: "retention", reason: "A repeat-customer program would not directly address first-time quote objections." },
+    { alternative: "capacity", reason: "Capacity is confirmed for a bounded incremental test." },
+    { alternative: "no_change", reason: "Keep the current offer if a price test would add complexity without sufficient contribution." },
+  ],
+  costBoundary: "Per completed service: net price less variable labor, payment fee, fulfillment, and any bonus; excludes fixed overhead and acquisition cost.",
+  horizonDays: 30,
+  currency: "USD",
+  current: { netPrice: value(100, "Current offer is $100 per service"), variableCosts: costs(), unknownCosts: [] },
+  proposed: { netPrice: value(95, "Proposed offer is $95 per service"), variableCosts: costs(true), unknownCosts: [] },
+  minimumContribution: value(35, "Owner minimum contribution is $35 per sale"),
+  minimumMarginRate: value(0.3, "minimum contribution margin is 30%"),
+  risks: [
+    { kind: "margin", status: "calculated", note: "Compare the calculated unit contribution with the owner guardrail.", evidenceRef: null, evidenceClaim: "" },
+    { kind: "wait_for_sale", status: "hypothesis", note: "Repeated discounts may teach eligible customers to wait.", evidenceRef: null, evidenceClaim: "" },
+    { kind: "pull_forward", status: "unknown", note: "The test cannot yet distinguish incremental jobs from earlier purchases.", evidenceRef: null, evidenceClaim: "" },
+    { kind: "cannibalization", status: "hypothesis", note: "Some full-price buyers may use the promotion.", evidenceRef: null, evidenceClaim: "" },
+    { kind: "capacity", status: "measured", note: "Owner reports 20 additional jobs monthly.", evidenceRef: "fact:0", evidenceClaim: "The team has capacity for 20 additional jobs per month." },
+    { kind: "support_burden", status: "unknown", note: "Incremental support time has not been measured.", evidenceRef: null, evidenceClaim: "" },
+    { kind: "poor_fit", status: "hypothesis", note: "Price-led acquisition may attract lower-fit customers.", evidenceRef: null, evidenceClaim: "" },
+  ],
+  capacity: { status: "available", evidenceRef: "fact:0", claim: "The team has capacity for 20 additional jobs per month." },
+  test: {
+    eligibleAudience: "First-time quote requesters who cite price; exclude existing full-price bookings.",
+    baselineOrComparison: "Compare completed jobs and contribution with the current price for similar eligible quote requests.",
+    primaryOutcome: "Incremental completed first-time jobs and contribution per eligible quote request",
+    observationWindowDays: 21,
+    continueCriteria: "Continue only if contribution clears the owner-set floor and service quality holds.",
+    stopCriteria: "Stop if unit contribution falls below the owner floor or the team reaches its safe capacity.",
+    thresholdEvidenceRef: "fact:0",
+    ownerInputs: [],
+  },
+  urgencyClaim: null,
+  urgencyEvidenceRef: null,
+  unknowns: ["Incrementality versus purchases brought forward"],
+  authorizationNote: "This assessment is advisory only and requires owner approval before any external change.",
+  ...overrides,
+});
+const play = (overrides: Record<string, unknown> = {}) => ({
+  name: "Bounded introductory price test",
+  oneLiner: "Test a lower net price with eligible first-time quote requesters.",
+  hook: "A clear price for the service you requested.",
+  mechanic: "Offer an introductory discount at a $95 net price to eligible first-time quote requesters.",
+  test: "Compare eligible quote requests with the existing full-price baseline.",
+  killIf: "Stop at the owner-set contribution floor or safe service capacity.",
+  scaleIf: "Continue only after measured contribution and service outcomes meet owner-set criteria.",
+  actionContract: { diagnosis: "Qualified quote requests are not booking because of stated price objections" },
+  ...overrides,
+});
+
+describe("offer and promotion recommendations", () => {
+  it("computes positive unit contribution and the deterministic volume needed to match current contribution", () => {
+    const offer = assessment();
+    expect(evaluateOfferUnitEconomics(offer)).toMatchObject({ currentContribution: 50, proposedContribution: 40, priceChangeFromCurrent: -5, currentMarginRate: 0.5, proposedMarginRate: 40 / 95, proposedUnitsPerCurrentUnitToMatchContribution: 50 / 40, contributionBreakEvenUnits: 2, known: true });
+    expect(lintOfferAssessment(offer, play(), context, "plays[0].offerAssessment")).toEqual([]);
+  });
+
+  it("blocks a promotion that fails the supplied contribution or margin guardrail", () => {
+    const belowFloor = assessment({ minimumContribution: value(45, "Owner minimum contribution is $45 per sale") });
+    const guardrailContext = { ...context, facts: [fact.replace("minimum contribution is $35", "minimum contribution is $45")], evidenceText: fact.replace("minimum contribution is $35", "minimum contribution is $45") };
+    const issues = lintOfferAssessment(belowFloor, play(), guardrailContext, "plays[0].offerAssessment");
+    expect(issues.some((issue) => /fails the supplied minimum contribution/u.test(issue.message))).toBe(true);
+  });
+
+  it("keeps missing price or variable cost unknown and blocks a promotion recommendation", () => {
+    const missing = assessment({ proposed: { netPrice: value(95, "Proposed offer is $95 per service"), variableCosts: [{ category: "variable labor", value: value(null, "") }], unknownCosts: ["payment and fulfillment cost per service"] } });
+    const economics = evaluateOfferUnitEconomics(missing);
+    expect(economics.known).toBe(false);
+    expect(economics.proposedContribution).toBeNull();
+    expect(lintOfferAssessment(missing, play(), context, "plays[0].offerAssessment").some((issue) => /cannot be recommended while unit costs or price are unknown/u.test(issue.message))).toBe(true);
+  });
+
+  it("blocks an irrelevant discount when the supported diagnosis is retention", () => {
+    const irrelevant = assessment({ recommendation: "recommend_promotion", diagnosis: "Measured retention loss after onboarding", evidenceNote: "The measured issue is retention, not a first-purchase price obstacle." });
+    const issues = lintOfferAssessment(irrelevant, play({ actionContract: { diagnosis: "Measured retention loss after onboarding" } }), { ...context, diagnosedConstraint: "retention", diagnosisMeasured: true }, "plays[0].offerAssessment");
+    expect(issues.some((issue) => /measured constraint is retention/u.test(issue.message))).toBe(true);
+  });
+
+  it("rejects unsupported deadline or scarcity language", () => {
+    const issues = lintOfferAssessment(assessment(), play({ mechanic: "Offer a limited-time $95 price; sale ends tomorrow." }), context, "plays[0].offerAssessment");
+    expect(issues.some((issue) => /Deadline, scarcity, or limited-availability copy needs direct/u.test(issue.message))).toBe(true);
+  });
+
+  it("blocks a promotion when delivery capacity is constrained", () => {
+    const full = assessment({ capacity: { status: "constrained", evidenceRef: "fact:0", claim: "The team has capacity for 20 additional jobs per month." } });
+    expect(lintOfferAssessment(full, play(), context, "plays[0].offerAssessment").some((issue) => /capacity is unknown or constrained/u.test(issue.message))).toBe(true);
+  });
+
+  it("keeps non-promotion constraint fixes available and makes approved offer context advisory", () => {
+    const noOffer = assessment({ recommendation: "improve_other_constraint", mechanism: "none", diagnosis: "Measured retention loss after onboarding" });
+    expect(lintOfferAssessment(noOffer, play({ mechanic: "Improve first-week product onboarding for new customers.", actionContract: { diagnosis: "Measured retention loss after onboarding" } }), { ...context, diagnosedConstraint: "retention", diagnosisMeasured: true }, "plays[0].offerAssessment")).toEqual([]);
+    expect(OFFER_DECISION_POLICY).toContain("never changes price or billing terms");
+    expect(playsTask({ scorecard: "", insights: "" })).toContain("OFFER AND PROMOTION DECISION");
+    const approved = approvedPlanContext({ status: "approved", version: 1, expert: { version: 7, plays: [{ name: "Test offer", oneLiner: "Compare a bounded price test", offerAssessment: noOffer }] } });
+    expect(approved).toContain("Offer decision: improve_other_constraint");
+    expect(approved).toContain("no offer change is recommended");
+    expect(approved).toContain("do not use hypothetical proposed terms");
+    expect(approved).not.toContain("proposed net price 95 USD");
+
+    const offerContext = approvedPlanContext({ status: "approved", version: 2, expert: { version: 7, plays: [{ name: "Test offer", oneLiner: "Compare a bounded price test", mechanic: "Test a $95 introductory service price with qualified new customers.", offerAssessment: assessment() }] } });
+    expect(offerContext).toContain("current net price 100 USD");
+    expect(offerContext).toContain("proposed net price 95 USD");
+    expect(offerContext).toContain("eligibility First-time quote requesters");
+    expect(offerContext).toContain("Use these stated terms consistently in drafts");
+    expect(offerContext).toContain("not an offer currently available to customers");
+
+    const termContext = { status: "approved", version: 2, expert: { version: 7, plays: [{ name: "Test offer", offerAssessment: assessment() }] } };
+    const terms = approvedPlanOfferTerms(termContext);
+    expect(terms).toEqual([{ playName: "Test offer", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [100, 95], urgencyClaim: null }]);
+    expect(lintApprovedOfferCopy("Try it for $95 USD.", terms, "email.body")).toEqual([]);
+    expect(lintApprovedOfferCopy("Try it for $89 USD.", terms, "email.body")).toMatchObject([{ rule: "approved_offer_price", severity: "error" }]);
+    expect(lintApprovedOfferCopy("The first offer is $95 USD and the second is $200 USD.", [...terms, { playName: "Annual service", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [200], urgencyClaim: null }], "email.body")).toEqual([]);
+    expect(lintApprovedOfferCopy("Limited-time offer ends tomorrow.", terms, "email.body").some((issue) => issue.rule === "approved_offer_urgency")).toBe(true);
+    const supportedUrgency = [{ ...terms[0], urgencyClaim: "Limited-time offer ends November 30, 2026." }];
+    expect(lintApprovedOfferCopy("Limited-time offer ends November 30, 2026.", supportedUrgency, "email.body").some((issue) => issue.rule === "approved_offer_urgency")).toBe(false);
+    expect(approvedPlanOfferTerms({ ...termContext, status: "needs_approval" })).toEqual([]);
+
+    const copyBrief = { reader: "new buyer", situation: "reviewing the service", awarenessStage: "unknown" as const, relationshipStage: "unknown" as const, objective: "explain the offer", offerFactIndexes: [], problemJob: "choose a service", trigger: "need", centralIdea: "clear terms", objection: "price", proofFactIndexes: [], prohibitedClaims: [], channel: "email", format: "plain text", deliveryContext: "draft only", brandVoice: "clear", approvedExamples: [], cta: "learn more", afterAction: "measure qualified replies", trackingMetric: "qualified replies", trackingMethod: "count replies", supportingFactIndexes: [], supportingSourceUrls: [], unknowns: [] };
+    const copyInput = { task: "Draft", brief: "", facts: [], approvedOfferTerms: terms };
+    const emailOutput = { copyBrief, angle: "clear service terms", emails: [{ subject: "A service option", previewText: "Review the details", body: "This offer costs $89 USD.", callToAction: "Learn more", sendAfterDays: 0, angle: "clear details" }], sender: "Owner", goal: "Explain the offer", successMetric: "qualified replies", name: "Offer details", audience: "new buyers", factIndexes: [] };
+    const socialOutput = { copyBrief, posts: [{ channel: "instagram" as const, title: "Offer details", body: "Review the service offer and ask us what is included.", hashtags: [], altText: "", imageIdea: "", factIndexes: [], suggestedDay: 2, angle: "clear details", format: "text" as const, hook: "The service costs $89 USD.", slides: [], videoScript: "", visualBrief: "", firstComment: "" }] };
+    const adsOutput = { copyBrief, searchAds: [], metaAds: [{ primaryText: "Try the service for $89 USD.", headline: "Clear service terms", description: "Review the details.", imageIdea: "", audience: "new buyers", concept: "service offer", angle: "clear offer", format: "image" as const, creativeBrief: "A simple service card." }], budgetNote: "No spend authorized", factIndexes: [] };
+    expect(emailSpec().lint?.(emailOutput, copyInput).some((issue) => issue.rule === "approved_offer_price")).toBe(true);
+    expect(socialSpec(["instagram"]).lint?.(socialOutput, copyInput).some((issue) => issue.rule === "approved_offer_price")).toBe(true);
+    expect(adsSpec().lint?.(adsOutput, copyInput).some((issue) => issue.rule === "approved_offer_price")).toBe(true);
+  });
+});

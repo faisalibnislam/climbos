@@ -36,10 +36,12 @@ import { inferSearchIntentStage } from "./searchIntent";
 import { lintFactIndexes } from "./factIndexes";
 import { lintDiagnosisFit, playWorksOnConstraint } from "./diagnosis";
 import { lintEligibilityIds } from "../playbooks/contracts";
+import { OfferAssessmentSchema, lintApprovedOfferCopy, lintOfferAssessment, type OfferAssessmentContext } from "./offerAssessment";
 import { lintPlatformEligibility } from "../acquisition/platformRules";
 import { validateResearchUrl } from "../integrations/website";
 import { hookBeforeFold, lintClaims, lintCopy, maxItems, maxLength, minItems, stringFields } from "./lint";
 import type { AgentInput, AgentSpec, LintIssue, PhaseModels, ResearchSpec, Rubric } from "./types";
+import { CampaignTimingSchema, lintCampaignTiming } from "./campaignTiming";
 
 /**
  * Engine v2 agent definitions: one expert agent per kind of work. Schemas
@@ -234,6 +236,10 @@ export const PlaySchema = z.object({
     stopCondition: z.string().min(1),
     revisionEvidence: z.string().min(1),
   }).optional(),
+  /** Advisory campaign timing; absent only on historical saved plays. */
+  timingAssessment: CampaignTimingSchema.extend({ researchRetrievedAt: z.string().datetime().nullable().optional() }).optional(),
+  /** Structured evidence, economics, alternatives, and test plan for an offer change; absent on legacy/non-offer plays. */
+  offerAssessment: OfferAssessmentSchema.optional(),
   climbosCanDo: z.string(),
   /** The play's numbers; ClimbOS code (not the model) turns them into customers, cost per customer and payback. */
   model: z.object({
@@ -261,7 +267,7 @@ export const PlaySchema = z.object({
 });
 export type Play = z.infer<typeof PlaySchema>;
 /** What the plays agent writes: no forecast numbers (ClimbOS code computes P10/P50/P90 from the model). */
-export const PlayDraftSchema = PlaySchema.omit({ p10: true, p50: true, p90: true, outcomeAccounting: true, forecastUncertainty: true, financialEvidence: true, actionReadiness: true });
+export const PlayDraftSchema = PlaySchema.omit({ p10: true, p50: true, p90: true, outcomeAccounting: true, forecastUncertainty: true, financialEvidence: true, actionReadiness: true }).extend({ timingAssessment: CampaignTimingSchema });
 export type PlayDraft = z.infer<typeof PlayDraftSchema>;
 
 export function actionReadinessOf(action: PlayDraft["actionContract"]): NonNullable<Play["actionReadiness"]> {
@@ -307,7 +313,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { id: string; kind: "more_sales" | "more_customers" | "more_reach" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.62-creative-learning";
+export const ENGINE_VERSION = "v3.64-offer-assessment";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -429,7 +435,7 @@ const overlap = (a: Set<string>, b: Set<string>) => {
 };
 
 export function lintPlays(drafts: PlayDraft[], economics?: Economics, opts: { decisionContract?: boolean } = {}): LintIssue[] {
-  const plays = economics ? withForecasts({ economics, plays: drafts }).plays : (drafts as Play[]);
+  const plays = (economics ? withForecasts({ economics, plays: drafts }).plays : drafts) as unknown as Play[];
   const issues: LintIssue[] = [];
   const precedentIds = new Set(CREATIVE_PRECEDENTS.map((precedent) => precedent.id));
   plays.forEach((play, index) => {
@@ -445,13 +451,13 @@ export function lintPlays(drafts: PlayDraft[], economics?: Economics, opts: { de
   const bankable = scored.filter((x) => x.p.kind === "bankable");
   // "Bankable" is decided by computed robustness when what a customer is worth is known (Hubbard Ch 6/14): it must pay back
   // even at the low end of its own range. The model's 1–5 predictability score only decides when robustness can't be computed.
-  const robust = (p: PlayDraft) => (economics && (p as { model?: { steps?: unknown[] } }).model?.steps?.length ? playMaths(p as never, economics).robustness : "unknown");
+  const robust = (p: PlayDraft | Play) => (economics && (p as { model?: { steps?: unknown[] } }).model?.steps?.length ? playMaths(p as never, economics).robustness : "unknown");
   scored.forEach((x, i) => {
     if (x.p.kind !== "bankable") return;
     const r = robust(x.p);
     if (r === "fragile") err(`"${x.p.name}" is labelled bankable but pays back only at its most-likely rates, not at the low end of its range (computed). Firm up the deciding input or call it creative with a capped test.`, `plays[${i}]`);
   });
-  const scoreGate = (x: { p: PlayDraft; s: ReturnType<typeof playScores> }) => robust(x.p) === "unknown" && x.s.predictability < 4;
+  const scoreGate = (x: { p: PlayDraft | Play; s: ReturnType<typeof playScores> }) => robust(x.p) === "unknown" && x.s.predictability < 4;
   if (opts.decisionContract) {
     // Focus over shape: 1–4 plays of any kind; the goal gap (code) reports a shortfall instead of pushing volume.
     if (plays.length < 1 || plays.length > 4) err(`${plays.length} plays; give 1 to 4.`);
@@ -1099,7 +1105,7 @@ export function lintAnyPaidPlan(items: { text: string; path: string }[]): LintIs
 
 /* ---------------- Five lenses (marketing books, in our own words; skills/growth-plays "Five lenses") ---------------- */
 
-type LensPlay = { name?: string; oneLiner?: string; audience?: string; trigger?: string; hook?: string; mechanic?: string; assetUsed?: string; unit?: string; route?: string; test?: string; firstActionToday?: string };
+type LensPlay = { name?: string; oneLiner?: string; audience?: string; trigger?: string; hook?: string; mechanic?: string; assetUsed?: string; unit?: string; route?: string; test?: string; firstActionToday?: string; killIf?: string; scaleIf?: string; actionContract?: { diagnosis?: string }; offerAssessment?: z.infer<typeof OfferAssessmentSchema> };
 const playText = (p: LensPlay, keys: (keyof LensPlay)[]) => keys.map((k) => p[k] ?? "").join(" ");
 const lowPrice = (economics: { revenuePerCustomerMonthUsd?: number } | undefined) => {
   const price = economics?.revenuePerCustomerMonthUsd ?? 0;
@@ -1144,13 +1150,14 @@ export function lintComparisonPositioning(plays: LensPlay[]): LintIssue[] {
 const GUARANTEE = /\b(?:money[- ]back|refunds? (?:if|guarantee)|guarantee[sd]?|risk[- ]free|no[- ]risk|or (?:it'?s|your money) (?:free|back)|results? guaranteed)\b/i;
 
 /** Lens 3 (offers): a guarantee or refund promise only when the owner's facts or the research confirm it. */
-export function lintOfferClaims(plays: LensPlay[], evidence: string): LintIssue[] {
-  if (GUARANTEE.test(evidence)) return [];
-  return plays.flatMap((p, i) =>
+export function lintOfferClaims(plays: LensPlay[], evidence: string, context?: OfferAssessmentContext): LintIssue[] {
+  const claims = GUARANTEE.test(evidence) ? [] : plays.flatMap((p, i) =>
     GUARANTEE.test(playText(p, ["oneLiner", "hook", "mechanic"]))
       ? [{ severity: "error" as const, rule: "offer_claim", message: `"${p.name ?? `Play ${i + 1}`}" promises a guarantee or refund the owner hasn't confirmed. Use another lever (a faster first result, less effort to start, proof from real customers), or ask the owner first.`, path: `plays[${i}].hook` }]
       : [],
   );
+  if (!context) return claims;
+  return [...claims, ...plays.flatMap((play, index) => lintOfferAssessment(play.offerAssessment, play, context, `plays[${index}].offerAssessment`))];
 }
 
 const VANITY_METRIC = /\b(?:followers?|impressions?|views?|likes?|reach|traffic|visits?|visitors?|sessions?|page ?views?|clicks?|engagement|downloads?|subscribers?)\b/i;
@@ -1618,6 +1625,7 @@ function lintSocial(out: SocialPostsV2, input: AgentInput, requestedChannels: st
     const lim = CHANNEL_LIMITS[p.channel] ?? CHANNEL_LIMITS.instagram;
     const path = `posts[${i}]`;
     issues.push(
+      ...lintApprovedOfferCopy([p.title, p.hook, p.body, ...p.slides.map((slide) => `${slide.heading} ${slide.body}`), p.videoScript, p.firstComment].join("\n"), input.approvedOfferTerms, `${path}.body`),
       ...lintCopy({ title: p.title, hook: p.hook, angle: p.angle, body: p.body, slides: p.slides, script: p.videoScript, firstComment: p.firstComment, altText: p.altText }, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), emojiPer150: lim.emojiPer150, publishable: true }).map((l) => ({ ...l, path: `${path}.${l.path ?? ""}` })),
       ...lintFactIndexes(p.factIndexes, input.facts.length, `${path}.factIndexes`),
       // Internal creative notes are not publishable claims, but cannot contain owner questions.
@@ -1663,6 +1671,8 @@ function lintAds(out: AdDraftsV2, input: AgentInput): LintIssue[] {
     ...out.searchAds.flatMap((ad, i) => ad.headlines.concat(ad.descriptions).map((text) => ({ path: `searchAds[${i}]`, text }))),
     ...out.metaAds.flatMap((ad, i) => [ad.primaryText, ad.headline, ad.description].map((text) => ({ path: `metaAds[${i}]`, text }))),
   ], input), ...lintAdDestinations(out, input), ...lintFactIndexes(out.factIndexes, input.facts.length)];
+  out.searchAds.forEach((ad, index) => issues.push(...lintApprovedOfferCopy([...ad.headlines, ...ad.descriptions].join("\n"), input.approvedOfferTerms, `searchAds[${index}]`)));
+  out.metaAds.forEach((ad, index) => issues.push(...lintApprovedOfferCopy([ad.headline, ad.primaryText, ad.description].join("\n"), input.approvedOfferTerms, `metaAds[${index}]`)));
   out.searchAds.forEach((a, i) => {
     const path = `searchAds[${i}]`;
     issues.push(...minItems(a.headlines, 3, `${path}.headlines`, "headlines"), ...maxItems(a.headlines, 15, `${path}.headlines`, "headlines"));
@@ -2316,7 +2326,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintStrategyExploration(out.strategyExploration, input), ...lintActionContracts(out.plays, input.facts.length, evidenceOf(input), input.constraints?.horizonDays, input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url)), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, { ...out.economics, currency: input.constraints?.currency }, evidenceOf(input)), ...lintSelfServeFunnel(out.plays, out.economics), ...lintComparisonPositioning(out.plays), ...lintOfferClaims(out.plays, evidenceOf(input)), ...lintReferralDrivers(out.plays), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints, out.economics), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays, { factCount: input.facts.length, availableSourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [] }), ...lintDecisionConstraintFit(out.decision, out.plays, input.constraints?.diagnosis), ...lintDecisionOptionChoice(out.decision, out.plays, out.economics, input.constraints), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintNoAudience(out.plays, input.constraints, input.facts.join("\n")), ...lintBorrowedUplift(out.plays), ...lintDiagnosisFit(out.plays, o.decisionContract && out.decision ? undefined : input.constraints?.diagnosis), ...lintEligibilityIds(out.plays, input.constraints?.ineligiblePlaybooks), ...lintPlatformEligibility(out.plays.map((p, i) => ({ path: `plays[${i}]`, text: JSON.stringify(p) })), input.constraints?.businessTypes ?? []), ...(input.constraints?.factKinds ? lintEvidenceStrength(out.plays.flatMap((p, i) => [{ path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }, { path: `plays[${i}].mechanic`, text: (p as { mechanic?: string }).mechanic ?? "" }]), input.constraints.factKinds) : []), ...lintClaims(out.plays.flatMap((p, i) => [{ path: `plays[${i}].hook`, text: (p as { hook?: string }).hook ?? "" }, { path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }]), verifiedCapabilityEvidence(input)), ...lintDeliveryCapacity(portfolioP50(out, input.constraints?.horizonDays), input.constraints), ...lintServiceArea(out.plays.map((p, i) => ({ path: `plays[${i}]`, spend: p.model?.monthlySpendUsd ?? 0, text: JSON.stringify(p) })), input.constraints), ...lintEconomics({ ...out, economics: { ...out.economics, currency: input.constraints?.currency } })],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintStrategyExploration(out.strategyExploration, input), ...out.plays.flatMap((play, index) => lintCampaignTiming(play.timingAssessment, { today: input.timingContext?.today ?? "1970-01-01", ...(input.timingContext?.timezone ? { timezone: input.timingContext.timezone } : {}), facts: input.facts, researchNotes: input.precomputedResearch?.notes ?? input.untrustedContext ?? "", sourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [], researchRetrievedAt: input.precomputedResearch?.retrievedAt }, `plays[${index}].timingAssessment`)), ...lintActionContracts(out.plays, input.facts.length, evidenceOf(input), input.constraints?.horizonDays, input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url)), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, { ...out.economics, currency: input.constraints?.currency }, evidenceOf(input)), ...lintSelfServeFunnel(out.plays, out.economics), ...lintComparisonPositioning(out.plays), ...lintOfferClaims(out.plays, evidenceOf(input), { facts: input.facts, researchNotes: input.precomputedResearch?.notes ?? input.untrustedContext ?? "", sourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [], evidenceText: evidenceOf(input), diagnosedConstraint: input.constraints?.diagnosis?.status === "supported" && input.constraints.diagnosis.basis === "measured" ? input.constraints.diagnosis.constraint : out.decision?.constraint, diagnosisMeasured: input.constraints?.diagnosis?.status === "supported" && input.constraints.diagnosis.basis === "measured" }), ...lintReferralDrivers(out.plays), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints, out.economics), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays, { factCount: input.facts.length, availableSourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [] }), ...lintDecisionConstraintFit(out.decision, out.plays, input.constraints?.diagnosis), ...lintDecisionOptionChoice(out.decision, out.plays, out.economics, input.constraints), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintNoAudience(out.plays, input.constraints, input.facts.join("\n")), ...lintBorrowedUplift(out.plays), ...lintDiagnosisFit(out.plays, o.decisionContract && out.decision ? undefined : input.constraints?.diagnosis), ...lintEligibilityIds(out.plays, input.constraints?.ineligiblePlaybooks), ...lintPlatformEligibility(out.plays.map((p, i) => ({ path: `plays[${i}]`, text: JSON.stringify(p) })), input.constraints?.businessTypes ?? []), ...(input.constraints?.factKinds ? lintEvidenceStrength(out.plays.flatMap((p, i) => [{ path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }, { path: `plays[${i}].mechanic`, text: (p as { mechanic?: string }).mechanic ?? "" }]), input.constraints.factKinds) : []), ...lintClaims(out.plays.flatMap((p, i) => [{ path: `plays[${i}].hook`, text: (p as { hook?: string }).hook ?? "" }, { path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }]), verifiedCapabilityEvidence(input)), ...lintDeliveryCapacity(portfolioP50(out, input.constraints?.horizonDays), input.constraints), ...lintServiceArea(out.plays.map((p, i) => ({ path: `plays[${i}]`, spend: p.model?.monthlySpendUsd ?? 0, text: JSON.stringify(p) })), input.constraints), ...lintEconomics({ ...out, economics: { ...out.economics, currency: input.constraints?.currency } })],
     },
     o,
     "expert",
@@ -2386,7 +2396,7 @@ export function emailSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof EmailSe
       skills: ["copy-fundamentals", "lifecycle-email"],
       schema: EmailSequenceV2Schema,
       rubric: rubricOf("lifecycle-email"),
-      lint: (out, input) => [...lintCopyBrief(out.copyBrief, input), ...lintPublishable(out, input), ...lintDistinctAngles(out.emails.map((e, i) => ({ path: `emails[${i}].angle`, angle: e.angle }))), ...lintRepeatedCopyPieces(out.emails.map((e, i) => ({ path: `emails[${i}]`, text: `${e.subject}\n${e.previewText}\n${e.body}` }))), ...lintEmbeddedUrls(out.emails.flatMap((email, i) => [
+      lint: (out, input) => [...lintCopyBrief(out.copyBrief, input), ...lintPublishable(out, input), ...out.emails.flatMap((email, index) => lintApprovedOfferCopy([email.subject, email.previewText, email.body, email.callToAction].join("\n"), input.approvedOfferTerms, `emails[${index}]`)), ...lintDistinctAngles(out.emails.map((e, i) => ({ path: `emails[${i}].angle`, angle: e.angle }))), ...lintRepeatedCopyPieces(out.emails.map((e, i) => ({ path: `emails[${i}]`, text: `${e.subject}\n${e.previewText}\n${e.body}` }))), ...lintEmbeddedUrls(out.emails.flatMap((email, i) => [
         { path: `emails[${i}].subject`, text: email.subject },
         { path: `emails[${i}].previewText`, text: email.previewText },
         { path: `emails[${i}].body`, text: email.body },
@@ -2478,7 +2488,7 @@ export function socialCalendarSpec(cadence: Record<string, number>, o: SpecOptio
       rubric: rubricOf("social-calendar"),
       criticSkills: ["copy-fundamentals", "social-intelligence"],
       lint: (out, input) => {
-        const issues = lintCopy({ theme: out.weekTheme, slots: out.slots.map((s) => ({ idea: s.idea, hook: s.hookDraft })) }, { evidence: evidenceOf(input) });
+        const issues = [...lintCopy({ theme: out.weekTheme, slots: out.slots.map((s) => ({ idea: s.idea, hook: s.hookDraft })) }, { evidence: evidenceOf(input) }), ...out.slots.flatMap((slot, index) => lintApprovedOfferCopy(`${slot.idea}\n${slot.hookDraft}`, input.approvedOfferTerms, `slots[${index}]`))];
         const trendReferences: { url: string; path: string }[] = [];
         for (const [channel, n] of Object.entries(cadence)) {
           const got = out.slots.filter((s) => s.channel === channel).length;
@@ -2856,7 +2866,7 @@ export function creatorOutreachSpec(o: SpecOptions = {}): AgentSpec<OutreachOutp
 }
 
 /** Research briefs per job (what the research phase should find). */
-export function researchFor(task: TaskType | "business_insights" | "prospecting" | "creator_scout", ctx: { website?: string; businessName: string; country?: string; marketScope?: string; platforms?: string[] }): ResearchSpec | undefined {
+export function researchFor(task: TaskType | "business_insights" | "prospecting" | "creator_scout", ctx: { website?: string; businessName: string; country?: string; marketScope?: string; platforms?: string[]; timezone?: string; today?: string; horizonDays?: number }): ResearchSpec | undefined {
   const site = ctx.website ? ` (${ctx.website})` : "";
   const market = ctx.country ? ` Owner-stated market: ${ctx.country}.` : "";
   const scope = ctx.marketScope ? ` Business reach is classified as ${ctx.marketScope}; this is scope only, not a named city or country.` : "";
@@ -2873,11 +2883,12 @@ export function researchFor(task: TaskType | "business_insights" | "prospecting"
         maxSearches: 7,
         maxFetches: 4,
         cacheTtlMs: 6 * 60 * 60_000,
-        brief: `Find the specific, named places where ${ctx.businessName}${site}'s best-fit customers already gather or decide, so growth plays can name real audiences.${market}${scope} First identify the business's served geography from its own pages or supplied owner facts. Use a local market only when a named location is supported; never infer a city or country from currency, timezone, domain suffix or search ranking. If the location is unknown, say so and keep findings geography-neutral. For local or regional businesses, prioritize sources and channels available in that served area:
+        ...(ctx.timezone ? { userLocation: { timezone: ctx.timezone } } : {}),
+        brief: `Find the specific, named places where ${ctx.businessName}${site}'s best-fit customers already gather or decide, so growth plays can name real audiences.${market}${scope} Planning date: ${ctx.today ?? "unknown"}; workspace timezone: ${ctx.timezone ?? "unknown"}; planning horizon: ${ctx.horizonDays ?? 90} days. First identify the business's served geography from its own pages or supplied owner facts. Use a local market only when a named location is supported; never infer a city or country from currency, timezone, domain suffix or search ranking. If the location is unknown, say so and keep findings geography-neutral. For possible dates, search only for a near-term holiday, season, or event within that planning horizon that clearly fits the identified audience and business objective; use an official or primary date source where possible. Give exact event date, exact URL, checked/retrieved date, publication date if shown, and the sentence supporting the date. Record conflicting or stale date evidence explicitly and recommend no date until resolved. Never present a calendar date alone as a campaign reason. For local or regional businesses, prioritize sources and channels available in that served area:
 1. Communities, newsletters, podcasts, YouTube/TikTok creators, directories, marketplaces, review sites and app stores relevant to this business and its location (name, URL, rough size/audience if visible).
 2. Complementary businesses or platforms that could partner (who already serves the same customer before or after this business).
 3. Where competitors are present or absent (review sites, marketplaces, launches, local listings, comparison pages).
-4. Seasonal or event windows in the next 90 days that matter to these customers.
+4. Relevant holiday, season or event windows within the planning horizon that matter to these customers, with why this business can help them and what preparation or delivery constraint matters.
 Only report what you actually found, with URLs.`,
       };
     case "business_insights":

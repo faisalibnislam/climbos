@@ -103,8 +103,9 @@ import { estimateRun, MAX_RUN_COST_MULTIPLE } from "./engine";
 import { fitJson, fitText, reportDropped } from "../shared/agents/context";
 import { linkQuickTakeEvidence } from "../shared/agents/opportunities";
 import { sha256Hex } from "../shared/policy";
+import { localToday } from "../shared/agents/campaignTiming";
 import { mediaBreakEvenRoas } from "../shared/attribution/roi";
-import { approvedPlanContext } from "../shared/agents/approvedPlanContext";
+import { approvedPlanContext, approvedPlanOfferTerms } from "../shared/agents/approvedPlanContext";
 import { readExpertPlan } from "../shared/agents/planCompatibility";
 import { customerNeedPerMonth, revenueGoalNewCustomersPerMonth } from "../shared/agents/goal";
 import type { BindingConstraint } from "../shared/agents/decision";
@@ -364,7 +365,7 @@ async function runAgentTask<T>(
     ...(process.env.CLIMBOS_FAKE_LLM ? {} : {
       researchCache: {
         get: async (cacheKey: string) => ctx.runQuery(internal.engine.getResearchCache, { orgId: job.org._id, cacheKey }),
-        put: async (cacheKey: string, value: { notes: string; sources: { url: string; title?: string }[] }, expiresAt: number) => {
+        put: async (cacheKey: string, value: { notes: string; sources: { url: string; title?: string }[]; retrievedAt?: number }, expiresAt: number) => {
           await ctx.runMutation(internal.engine.putResearchCache, { orgId: job.org._id, cacheKey, agentId: spec.id, modelKey: spec.models.research, ...value, expiresAt });
         },
       },
@@ -546,7 +547,9 @@ function marketChangeContext(job: JobCtx): string {
 }
 
 function agentInput(job: JobCtx, task: string, extra: Partial<AgentInput> = {}): AgentInput {
-  return { task, brief: businessBrief(job), facts: job.facts.map((f) => f.statement), ownerApprovedExamples: job.brand?.approvedExamples ?? [], constraints: constraintsOf(job), ...(job.business?.website ? { businessWebsite: job.business.website } : {}), ...(job.business?.industryBusinessTypeId ? { industryBusinessTypeId: job.business.industryBusinessTypeId } : {}), ...extra };
+  const pinnedSuperseded = job.strategyPinned && job.strategy?.status === "superseded";
+  const approvedOfferTerms = job.strategy ? approvedPlanOfferTerms(job.strategy as never, { pinnedAtLaunch: Boolean(pinnedSuperseded) }) : [];
+  return { task, brief: businessBrief(job), facts: job.facts.map((f) => f.statement), ownerApprovedExamples: job.brand?.approvedExamples ?? [], constraints: constraintsOf(job), ...(approvedOfferTerms.length ? { approvedOfferTerms } : {}), ...(job.business?.website ? { businessWebsite: job.business.website } : {}), ...(job.business?.industryBusinessTypeId ? { industryBusinessTypeId: job.business.industryBusinessTypeId } : {}), ...extra };
 }
 
 /** Cap visual input and reserve its estimated image-token cost before provider calls. */
@@ -1037,7 +1040,7 @@ async function consistencyStep(ctx: ActionCtx, job: JobCtx, index: number, plan:
   }
 }
 
-type PrecomputedResearch = { notes: string; sources: { url: string; title?: string }[] };
+type PrecomputedResearch = { notes: string; sources: { url: string; title?: string }[]; retrievedAt?: number };
 
 /** The previous plan's channel scoring, when nothing it depended on has changed since. */
 function reusableChannelFit(job: JobCtx): { adjustments: Adjustment[]; summary: string[] } | null {
@@ -1279,12 +1282,13 @@ export const buildStrategy = internalAction({
       const playsSpec = growthPlaysSpec({ decisionContract: hasFlag(job, "decision_contract") }, playCatalogsFor(job.business?.businessType));
       // Cycle 2: the weak link and the playbooks that fit are decided in code (after channel scoring) and carried to the plays agent.
       const decided: { diagnosis?: Diagnosis; ineligible?: { id: string; reasons: string[] }[] } = {};
-      const creativeTask = (scorecard: string) => playsTask({ scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: `${capabilityContext(job.capabilities)}\n${platformNotes(profile.types)}`, decisionContract: hasFlag(job, "decision_contract"), creativeRange: creativeRangeOf(job), ownerLearning: job.creativeStrategyLearning });
+      const timingContext = { today: localToday(job.org.timezone), timezone: job.org.timezone, ...(profile.dims.geography?.value ? { geography: `${profile.dims.geography.value} (${profile.dims.geography.source ?? "unverified classification"})` } : {}) };
+      const creativeTask = (scorecard: string) => playsTask({ scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: `${capabilityContext(job.capabilities)}\n${platformNotes(profile.types)}`, decisionContract: hasFlag(job, "decision_contract"), creativeRange: creativeRangeOf(job), ownerLearning: job.creativeStrategyLearning, timingContext });
       const playsInput = (scorecard: string) =>
         agentInput(
           job,
           creativeTask(scorecard),
-          { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name, ...(profile.dims.geography?.value ? { marketScope: profile.dims.geography.value } : {}) }), constraints: { ...constraintsOf(job), horizonDays: job.goal?.horizonDays ?? 90, ...(profile.dims.geography?.value ? { serviceArea: profile.dims.geography.value } : {}), businessTypes: profile.types, ...(decided.diagnosis ? { diagnosis: decided.diagnosis } : {}), ...(decided.ineligible ? { ineligiblePlaybooks: decided.ineligible } : {}) } },
+          { timingContext, research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name, today: timingContext.today, timezone: timingContext.timezone, horizonDays: job.goal?.horizonDays ?? 90, ...(profile.dims.geography?.value ? { marketScope: profile.dims.geography.value } : {}) }), constraints: { ...constraintsOf(job), horizonDays: job.goal?.horizonDays ?? 90, ...(profile.dims.geography?.value ? { serviceArea: profile.dims.geography.value } : {}), businessTypes: profile.types, ...(decided.diagnosis ? { diagnosis: decided.diagnosis } : {}), ...(decided.ineligible ? { ineligiblePlaybooks: decided.ineligible } : {}) } },
         );
       const fixtureIn = { task: "growth_strategy" as const, context: "", ctx: fixtureCtx(job), text: "" };
       const researchRun = v2 ? runAgentTask<PrecomputedResearch | null>(ctx, job, 0, playsSpec, playsInput(""), startedAt, fixtureIn, undefined, { researchOnly: true }) : Promise.resolve(null);
@@ -1372,7 +1376,7 @@ export const buildStrategy = internalAction({
         : null;
       // Forecasts are computed here from each play's inputs and ranges, never written by the model.
       // The owner's confirmed unit economics always replace the planner's assumptions.
-      const plays = playsDraft ? withForecasts(await ownedAndChecked(playsDraft, job, playsMeta.sources ?? [])) : null;
+      const plays = playsDraft ? withForecasts(await ownedAndChecked({ ...playsDraft, plays: playsDraft.plays.map((play) => ({ ...play, timingAssessment: { ...play.timingAssessment, researchRetrievedAt: research?.retrievedAt ? new Date(research.retrievedAt).toISOString() : null } })) }, job, playsMeta.sources ?? [])) : null;
       // Speed: the chosen plays (with computed forecasts) show while the plan is written around them.
       if (plays) await previewPlays(ctx, job, plays);
       // 2. The 90-day plan, built around those plays.

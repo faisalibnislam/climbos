@@ -353,7 +353,7 @@ export const getResearchCache = internalQuery({
     if (!/^[a-f0-9]{64}$/.test(cacheKey) || !(await ctx.db.get(orgId))) return null;
     const row = await ctx.db.query("researchCache").withIndex("by_org_key", (q) => q.eq("orgId", orgId).eq("cacheKey", cacheKey)).first();
     if (!row || row.expiresAt <= Date.now()) return null;
-    return { notes: row.notes, sources: row.sources, expiresAt: row.expiresAt };
+    return { notes: row.notes, sources: row.sources, retrievedAt: row.retrievedAt ?? row.createdAt, expiresAt: row.expiresAt };
   },
 });
 
@@ -366,12 +366,14 @@ export const putResearchCache = internalMutation({
     modelKey: v.string(),
     notes: v.string(),
     sources: v.array(v.object({ url: v.string(), title: v.optional(v.string()) })),
+    retrievedAt: v.optional(v.number()),
     expiresAt: v.number(),
   },
   handler: async (ctx, args) => {
     if (!/^[a-f0-9]{64}$/.test(args.cacheKey) || args.notes.length > 40_000 || args.sources.length > 50 || args.expiresAt <= Date.now() || !(await ctx.db.get(args.orgId))) return null;
     const existing = await ctx.db.query("researchCache").withIndex("by_org_key", (q) => q.eq("orgId", args.orgId).eq("cacheKey", args.cacheKey)).first();
-    const data = { agentId: args.agentId.slice(0, 80), modelKey: args.modelKey.slice(0, 80), notes: args.notes, sources: args.sources, createdAt: Date.now(), expiresAt: args.expiresAt };
+    const createdAt = Date.now();
+    const data = { agentId: args.agentId.slice(0, 80), modelKey: args.modelKey.slice(0, 80), notes: args.notes, sources: args.sources, createdAt, retrievedAt: args.retrievedAt ?? createdAt, expiresAt: args.expiresAt };
     if (existing) await ctx.db.patch(existing._id, data);
     else await ctx.db.insert("researchCache", { orgId: args.orgId, cacheKey: args.cacheKey, ...data });
     return true;

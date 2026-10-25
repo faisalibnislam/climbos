@@ -166,6 +166,22 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         // A concrete test on an existing, researched asset (plays lint: existing assets first, never data-only).
         assetUsed: "Existing comparison page: https://example.com/compare",
         firstActionToday: "Update the comparison page with the referral offer.",
+        timingAssessment: {
+          decision: "not_relevant",
+          proposedWindow: null,
+          timezone: null,
+          timezoneBasis: "No calendar timing applies.",
+          timezoneEvidenceRef: null,
+          geographyBasis: "No timing-sensitive geography or event is needed for this synthetic example.",
+          moment: { name: null, businessReason: "This play is an evergreen referral and comparison-page test.", evidence: [] },
+          preparation: { leadTimeDays: null, deliveryLeadTimeDays: null, feasible: null, basis: "No event preparation window applies.", evidenceRef: null, deliveryBasis: "Not applicable to this evergreen test.", deliveryEvidenceRef: null },
+          capacity: { status: "unknown", basis: "No service-capacity data was supplied.", evidenceRef: null },
+          assumptions: [],
+          unknowns: [],
+          rationale: "The proposed comparison-page change is evergreen and does not depend on a calendar date.",
+        },
+        // This synthetic play is not an offer experiment; do not fabricate the new commercial inputs.
+        offerAssessment: undefined,
         // How visitors reach the page (plays lint: distribution route).
         route: "Partner newsletter test: 10 pitches a week (planned), ~100 visits a week (assumption); $0, 1 owner hour a week.",
         test: "a hundred contacts · small budget · three weeks",

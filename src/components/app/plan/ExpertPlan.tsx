@@ -59,6 +59,8 @@ import { ProseBullets } from "@/components/app/ProseBullets";
 import { StatBlocks } from "@/components/ds/content";
 import { climbTarget } from "@/components/climb/context";
 import type { StrategyExploration } from "../../../../shared/agents/specs";
+import type { CampaignTiming } from "../../../../shared/agents/campaignTiming";
+import { evaluateOfferUnitEconomics, type OfferAssessment } from "../../../../shared/agents/offerAssessment";
 
 /** Mirrors shared/agents/specs PlaySchema (stored loosely in Convex). */
 export interface PlayView {
@@ -114,6 +116,8 @@ export interface PlayView {
     guardrail: string; stopCondition: string; revisionEvidence: string;
   };
   model?: PlayModel;
+  timingAssessment?: CampaignTiming & { researchRetrievedAt?: string | null };
+  offerAssessment?: OfferAssessment;
 }
 
 const EVIDENCE_BASIS_LABEL: Record<NonNullable<PlayView["actionContract"]>["evidenceBasis"], string> = {
@@ -740,9 +744,31 @@ function PlayInputs({ play, economics }: { play: PlayView; economics: Economics 
 function PlayDetails({ play, economics, id }: { play: PlayView; economics?: Economics; id: string }) {
   const action = play.actionContract;
   const creative = play.creativeReview;
+  const offer = play.offerAssessment;
+  const offerEconomics = offer ? evaluateOfferUnitEconomics(offer) : null;
   const precedentById = new Map(CREATIVE_PRECEDENTS.map((precedent) => [precedent.id, precedent]));
   return (
     <div id={id} className="flex flex-col gap-4">
+      {offer ? (
+        <section aria-label="Offer recommendation and test" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-surface-2 p-3">
+          <div className="flex flex-wrap items-center gap-2"><FieldLabel icon={Wallet}>Offer decision</FieldLabel><Badge tone={offer.recommendation === "recommend_promotion" ? "green" : "amber"}>{offer.recommendation.replaceAll("_", " ")}</Badge><Badge>{offer.mechanism.replaceAll("_", " ")}</Badge><Badge>Advisory · owner approval required</Badge></div>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <div><dt className="text-xs text-ink-3">Who and why</dt><dd className="text-ui text-ink">{offer.segment} · {offer.needOrObstacle} · objective: {offer.objective}</dd></div>
+            <div><dt className="text-xs text-ink-3">Evidence</dt><dd className="text-ui text-ink">{offer.evidenceBasis.replaceAll("_", " ")} · {offer.evidenceNote}{offer.evidenceRefs.length ? ` · ${offer.evidenceRefs.join(" · ")}` : ""}</dd></div>
+            {offerEconomics?.known ? <>
+              <div><dt className="text-xs text-ink-3">Contribution per sale · {offer.currency}</dt><dd className="text-ui text-ink">Current {formatMoney(offerEconomics.currentContribution, offer.currency)} ({offerEconomics.currentMarginRate === null ? "margin unknown" : `${(offerEconomics.currentMarginRate * 100).toFixed(1)}%`}) · proposed {formatMoney(offerEconomics.proposedContribution, offer.currency)} ({offerEconomics.proposedMarginRate === null ? "margin unknown" : `${(offerEconomics.proposedMarginRate * 100).toFixed(1)}%`})<span className="mt-1 block text-xs text-ink-3">Current net {formatMoney(offer.current.netPrice.amount, offer.currency)} less {offer.current.variableCosts.map((cost) => `${cost.category} ${formatMoney(cost.value.amount, offer.currency)}`).join(", ")}; proposed net {formatMoney(offer.proposed.netPrice.amount, offer.currency)} ({offerEconomics.priceChangeFromCurrent === null ? "price change unknown" : `change ${formatMoney(offerEconomics.priceChangeFromCurrent, offer.currency)}`}) less {offer.proposed.variableCosts.map((cost) => `${cost.category} ${formatMoney(cost.value.amount, offer.currency)}`).join(", ")}.</span></dd></div>
+              <div><dt className="text-xs text-ink-3">Contribution comparison</dt><dd className="text-ui text-ink">{offerEconomics.proposedUnitsPerCurrentUnitToMatchContribution === null ? (offerEconomics.currentContribution !== null && offerEconomics.currentContribution <= 0 ? "Current offer has non-positive contribution; a sales multiple is not meaningful." : "Proposed unit contribution is zero or negative; no finite break-even volume.") : `${offerEconomics.proposedUnitsPerCurrentUnitToMatchContribution.toFixed(2)} proposed sales to match the contribution of one current-offer sale.`} Boundary: {offer.costBoundary} · horizon: {offer.horizonDays} days.</dd></div>
+            </> : <div><dt className="text-xs text-ink-3">Economics · {offer.currency}</dt><dd className="text-ui text-amber-800">Not enough inputs to calculate unit contribution: {offerEconomics?.unknowns.join(" · ")}</dd></div>}
+            <div><dt className="text-xs text-ink-3">Capacity</dt><dd className="text-ui text-ink">{offer.capacity.status.replaceAll("_", " ")}{offer.capacity.claim ? ` · ${offer.capacity.claim}` : ""}</dd></div>
+            <div><dt className="text-xs text-ink-3">Test audience and comparison</dt><dd className="text-ui text-ink">{offer.test.eligibleAudience} · {offer.test.baselineOrComparison}</dd></div>
+            <div><dt className="text-xs text-ink-3">Primary outcome and window</dt><dd className="text-ui text-ink">{offer.test.primaryOutcome} · {offer.test.observationWindowDays} days</dd></div>
+            <div><dt className="text-xs text-ink-3">Continue / stop</dt><dd className="text-ui text-ink">{offer.test.continueCriteria} / {offer.test.stopCriteria}</dd></div>
+          </dl>
+          <div><p className="text-xs font-medium text-ink-2">Alternatives considered</p><ul className="mt-1 list-disc pl-5 text-ui text-ink">{offer.alternatives.map((item) => <li key={item.alternative}>{item.alternative.replaceAll("_", " ")}: {item.reason}</li>)}</ul></div>
+          <div><p className="text-xs font-medium text-ink-2">Risks and unknowns</p><ul className="mt-1 list-disc pl-5 text-ui text-ink">{offer.risks.map((risk) => <li key={risk.kind}>{risk.kind.replaceAll("_", " ")} · {risk.status}: {risk.note}</li>)}</ul><p className="mt-1 text-ui text-amber-800">{offer.unknowns.length ? offer.unknowns.join(" · ") : "No material offer inputs listed as unknown."}{offer.test.ownerInputs.length ? ` · Owner input needed: ${offer.test.ownerInputs.join(" · ")}` : ""}</p></div>
+          <p className="text-xs text-ink-3">{offer.authorizationNote}</p>
+        </section>
+      ) : null}
       {creative ? (
         <section aria-label="Creative strategy reasoning" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-chart-3/30 bg-chart-3/5 p-3">
           <div className="flex flex-wrap items-center gap-2"><FieldLabel icon={Sparkles}>Why this is distinctive</FieldLabel><Badge>Exploration · not approval to execute</Badge></div>
@@ -1061,6 +1087,7 @@ function PlayCard({ play, slug, economics, results, planId, targets, canEdit = f
         <p className="text-ui text-ink-2">
           <Lead text={play.oneLiner} open={open} />
         </p>
+        {play.offerAssessment ? <p className="text-xs text-ink-3">Offer decision: {play.offerAssessment.recommendation.replaceAll("_", " ")} · {play.offerAssessment.mechanism.replaceAll("_", " ")} · owner approval required</p> : null}
       </header>
       <div className="flex flex-1 flex-col gap-4 p-4">
         <figure className={cn("rounded-r-[var(--radius-control)] border-l-2 bg-surface-2 px-3 py-2", k.quote)}>
@@ -1076,6 +1103,20 @@ function PlayCard({ play, slug, economics, results, planId, targets, canEdit = f
           <Row icon={CalendarClock} label="When">
             <Lead text={play.trigger} open={open} />
           </Row>
+          {play.timingAssessment && play.timingAssessment.decision !== "not_relevant" ? (
+            <div className="rounded-[var(--radius-control)] border border-line bg-surface-2 px-3 py-2" aria-label="Campaign timing assessment">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-ink-2">Timing · {play.timingAssessment.decision.replaceAll("_", " ")}</span>
+                {play.timingAssessment.proposedWindow ? <Badge>{play.timingAssessment.proposedWindow.startDate}–{play.timingAssessment.proposedWindow.endDate}</Badge> : null}
+              </div>
+              <p className="mt-1 text-xs text-ink-2">{play.timingAssessment.rationale}</p>
+              <p className="mt-1 text-xs text-ink-3">Calendar basis: {play.timingAssessment.timezone ?? "timezone unknown"} · {play.timingAssessment.timezoneBasis} · {play.timingAssessment.geographyBasis}</p>
+              {play.timingAssessment.moment.name ? <p className="mt-1 text-xs text-ink-2">{play.timingAssessment.moment.name}: {play.timingAssessment.moment.businessReason}</p> : null}
+              <p className="mt-1 text-xs text-ink-3">Prep: {play.timingAssessment.preparation.leadTimeDays === null ? "unknown" : `${play.timingAssessment.preparation.leadTimeDays}d`} · delivery: {play.timingAssessment.preparation.deliveryLeadTimeDays === null ? "unknown" : `${play.timingAssessment.preparation.deliveryLeadTimeDays}d`} · lead-time feasibility: {play.timingAssessment.preparation.feasible === null ? "unknown" : play.timingAssessment.preparation.feasible ? "feasible" : "not feasible"} · capacity: {play.timingAssessment.capacity.status.replaceAll("_", " ")}</p>
+              {play.timingAssessment.unknowns.length ? <p className="mt-1 text-xs text-amber-800">Unknown: {play.timingAssessment.unknowns.join(" · ")}</p> : null}
+              {play.timingAssessment.moment.evidence.map((evidence) => evidence.sourceUrl ? <a key={evidence.sourceUrl} href={evidence.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs text-brand-800 underline">Timing evidence · {evidence.publishedDate ? `published ${evidence.publishedDate} · ` : ""}{play.timingAssessment?.researchRetrievedAt ? `retrieved ${play.timingAssessment.researchRetrievedAt.slice(0, 10)}` : "retrieval date unknown"}<ExternalLink aria-hidden className="size-3" /></a> : null)}
+            </div>
+          ) : null}
           {edge ? (
             <Row icon={Zap} label="Edge">
               <Lead text={edge.text || play.assetUsed} open={open} />

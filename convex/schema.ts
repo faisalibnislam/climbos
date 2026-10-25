@@ -64,6 +64,61 @@ const growthStepValidator = v.object({
     v.object({ fetchedAt: v.number(), contentHash: v.string() }),
   ),
 });
+const timingEvidenceValidator = v.object({
+  basis: v.union(v.literal("owner_reported"), v.literal("measured"), v.literal("source_reported")),
+  reference: v.string(),
+  sourceUrl: v.union(v.string(), v.null()),
+  publishedDate: v.union(v.string(), v.null()),
+  eventDate: v.union(v.string(), v.null()),
+  claim: v.string(),
+});
+const campaignTimingValidator = v.object({
+  decision: v.union(v.literal("proceed"), v.literal("prepare_first"), v.literal("defer"), v.literal("skip"), v.literal("not_enough_evidence"), v.literal("not_relevant")),
+  proposedWindow: v.union(v.null(), v.object({ startDate: v.string(), endDate: v.string() })),
+  timezone: v.union(v.string(), v.null()),
+  timezoneBasis: v.string(),
+  timezoneEvidenceRef: v.union(v.string(), v.null()),
+  geographyBasis: v.string(),
+  moment: v.object({ name: v.union(v.string(), v.null()), businessReason: v.string(), evidence: v.array(timingEvidenceValidator) }),
+  preparation: v.object({ leadTimeDays: v.union(v.number(), v.null()), deliveryLeadTimeDays: v.union(v.number(), v.null()), feasible: v.union(v.boolean(), v.null()), basis: v.string(), evidenceRef: v.union(v.string(), v.null()), deliveryBasis: v.string(), deliveryEvidenceRef: v.union(v.string(), v.null()) }),
+  capacity: v.object({ status: v.union(v.literal("available"), v.literal("constrained"), v.literal("unknown"), v.literal("not_applicable")), basis: v.string(), evidenceRef: v.union(v.string(), v.null()) }),
+  assumptions: v.array(v.string()),
+  unknowns: v.array(v.string()),
+  rationale: v.string(),
+  researchRetrievedAt: v.optional(v.union(v.string(), v.null())),
+});
+const offerEvidenceValueValidator = v.object({
+  amount: v.union(v.number(), v.null()),
+  basis: v.union(v.literal("owner_reported"), v.literal("measured"), v.literal("source_reported"), v.literal("inferred"), v.literal("assumed")),
+  reference: v.union(v.string(), v.null()),
+  claim: v.string(),
+});
+const offerAssessmentValidator = v.object({
+  recommendation: v.union(v.literal("recommend_promotion"), v.literal("validate_first"), v.literal("improve_other_constraint"), v.literal("no_change")),
+  mechanism: v.union(v.literal("discount"), v.literal("bundle"), v.literal("bonus"), v.literal("trial"), v.literal("payment_terms"), v.literal("guarantee"), v.literal("referral_incentive"), v.literal("non_price_change"), v.literal("none")),
+  segment: v.string(),
+  needOrObstacle: v.string(),
+  objective: v.string(),
+  diagnosis: v.string(),
+  evidenceBasis: v.union(v.literal("owner_reported"), v.literal("measured"), v.literal("source_reported"), v.literal("inferred"), v.literal("assumed")),
+  evidenceRefs: v.array(v.string()),
+  evidenceNote: v.string(),
+  alternatives: v.array(v.object({ alternative: v.union(v.literal("positioning"), v.literal("conversion_path"), v.literal("retention"), v.literal("capacity"), v.literal("no_change")), reason: v.string() })),
+  costBoundary: v.string(),
+  horizonDays: v.number(),
+  currency: v.string(),
+  current: v.object({ netPrice: offerEvidenceValueValidator, variableCosts: v.array(v.object({ category: v.string(), value: offerEvidenceValueValidator })), unknownCosts: v.array(v.string()) }),
+  proposed: v.object({ netPrice: offerEvidenceValueValidator, variableCosts: v.array(v.object({ category: v.string(), value: offerEvidenceValueValidator })), unknownCosts: v.array(v.string()) }),
+  minimumContribution: v.union(offerEvidenceValueValidator, v.null()),
+  minimumMarginRate: v.union(offerEvidenceValueValidator, v.null()),
+  risks: v.array(v.object({ kind: v.union(v.literal("margin"), v.literal("wait_for_sale"), v.literal("pull_forward"), v.literal("cannibalization"), v.literal("capacity"), v.literal("support_burden"), v.literal("poor_fit")), status: v.union(v.literal("measured"), v.literal("calculated"), v.literal("hypothesis"), v.literal("unknown"), v.literal("not_applicable")), note: v.string(), evidenceRef: v.union(v.string(), v.null()), evidenceClaim: v.string() })),
+  capacity: v.object({ status: v.union(v.literal("available"), v.literal("constrained"), v.literal("unknown"), v.literal("not_applicable")), evidenceRef: v.union(v.string(), v.null()), claim: v.string() }),
+  test: v.object({ eligibleAudience: v.string(), baselineOrComparison: v.string(), primaryOutcome: v.string(), observationWindowDays: v.number(), continueCriteria: v.string(), stopCriteria: v.string(), thresholdEvidenceRef: v.union(v.string(), v.null()), ownerInputs: v.array(v.string()) }),
+  urgencyClaim: v.union(v.string(), v.null()),
+  urgencyEvidenceRef: v.union(v.string(), v.null()),
+  unknowns: v.array(v.string()),
+  authorizationNote: v.string(),
+});
 const growthPlayValidator = v.object({
   id: v.optional(v.string()),
   name: v.string(),
@@ -231,6 +286,9 @@ const growthPlayValidator = v.object({
       revisionEvidence: v.string(),
     }),
   ),
+  /** Advisory campaign timing; the shared Zod schema applies additional domain validation before save. */
+  timingAssessment: v.optional(campaignTimingValidator),
+  offerAssessment: v.optional(offerAssessmentValidator),
   climbosCanDo: v.string(),
   model: v.object({
     weeklyReach: v.number(),
@@ -4392,6 +4450,7 @@ export default defineSchema({
     notes: v.string(),
     sources: v.array(v.object({ url: v.string(), title: v.optional(v.string()) })),
     createdAt: v.number(),
+    retrievedAt: v.optional(v.number()),
     expiresAt: v.number(),
   })
     .index("by_org_key", ["orgId", "cacheKey"])
