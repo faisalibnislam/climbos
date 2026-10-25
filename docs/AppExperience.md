@@ -15,6 +15,8 @@ The content calendar has day, week, and month views in the workspace timezone. I
 
 Plan version comparison starts with a plain-language list of changes to the saved diagnosis, plays, selected set, channels, and customer groups. It uses the original values saved with each version, not forecasts recalculated from today's inputs. Older plans without enough saved detail are labeled unavailable; modeled customer ranges remain scenarios, not results.
 
+When a saved growth decision includes its structured focus, the plan names the first move in the summary and keeps the supporting move and recurring check in the existing details section. Older decisions without that saved focus continue to show the rest of their available explanation without blank placeholders.
+
 Saved plans also become due for refresh when a confirmed business fact crosses its category review interval. The age is a reminder to recheck, not evidence that the fact is false; approval and starting work wait until the plan is refreshed. Older snapshots without a recorded freshness state remain comparable by their saved fact IDs and edit times, and conservatively require refresh when any current fact is already due for review.
 
 The plan's Pages read list labels same-domain pages as published business claims. Other domains are shown as references whose independence is unverified; being on another website alone does not prove a claim.

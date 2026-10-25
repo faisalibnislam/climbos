@@ -9,6 +9,7 @@ import type { PlayActuals } from "../../../../shared/growth/actuals";
 import { CREATIVE_PRECEDENTS } from "../../../../shared/knowledge/creativePrecedents";
 import { PlayResults } from "./PlayResults";
 import { EvidenceReferences } from "./EvidenceReferences";
+import { DecisionFocus } from "./DecisionFocus";
 import {
   ArrowRight,
   Ban,
@@ -307,6 +308,7 @@ function DecisionSummary({ d }: { d: Decision }) {
           <dt className="inline font-semibold text-ink">Recommendation: </dt>
           <dd className="inline text-ink-2">{d.guidingPolicy}</dd>
         </div>
+        <DecisionFocus focus={d.focus} />
         <div>
           <dt className="inline font-semibold text-ink">We&apos;re wrong if: </dt>
           <dd className="inline text-ink-2">{d.falsifier}</dd>
@@ -314,6 +316,7 @@ function DecisionSummary({ d }: { d: Decision }) {
       </dl>
       {open ? (
         <div id={panel} className="flex flex-col gap-3 border-t border-line pt-2.5 text-ui">
+          <DecisionFocus focus={d.focus} details />
           {d.observations.length ? (
             <div className="flex flex-col gap-1">
               <FieldLabel icon={Eye}>What we saw</FieldLabel>
