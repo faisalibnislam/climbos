@@ -906,8 +906,8 @@ export function decisionQuestions(out: { economics: Economics; plays: PlayLike[]
   const candidates: { key: QuestionKey; value: number; low: number; high: number }[] = [];
   if (assumed.has("revenue")) candidates.push({ key: "revenuePerCustomerMonthUsd", value: e.revenuePerCustomerMonthUsd, low: e.revenuePerCustomerMonthUsd * 0.5, high: e.revenuePerCustomerMonthUsd * 1.5 });
   if (assumed.has("margin")) candidates.push({ key: "grossMargin", value: e.grossMargin, low: Math.max(0.05, e.grossMargin * 0.6), high: Math.min(1, e.grossMargin * 1.25) });
-  const churn = churnOf(e) ?? 0.05;
-  if (assumed.has("churn")) candidates.push({ key: "monthlyChurn", value: churn, low: churn * 0.5, high: Math.min(0.9, churn * 2) });
+  const churn = churnOf(e);
+  if (assumed.has("churn") && churn !== null) candidates.push({ key: "monthlyChurn", value: churn, low: churn * 0.5, high: Math.min(0.9, churn * 2) });
   if (!(owner?.ownerHourUsd && owner.ownerHourUsd > 0) && plays.some((p) => p.model.ownerHoursPerWeek > 0)) candidates.push({ key: "ownerHourUsd", value: ownerHourOf(e), low: thresholdIn(20, e.currency), high: thresholdIn(150, e.currency) });
   // Switch values (Hubbard Ch 7): the value where each play flips; shown to the owner instead of a bare question.
   const switchOf = (key: QuestionKey) => {
@@ -932,6 +932,12 @@ export function decisionQuestions(out: { economics: Economics; plays: PlayLike[]
   const hours = plays.reduce((t, p) => t + Math.max(0, p.model.ownerHoursPerWeek), 0);
   const capacity: OwnerQuestion[] =
     owner?.ownerHoursPerWeek === undefined && hours > 3 ? [{ key: "ownerHoursPerWeek", question: QUESTION.ownerHoursPerWeek.q, assumed: Math.round(hours * 10) / 10, unit: "hours_week", why: `The plays need about ${Math.round(hours)} hours a week from you.` }] : [];
+  // Missing churn is not a sensitivity midpoint. Keep it unknown and ask for the
+  // missing owner input so customer value and payback are not framed around a
+  // fabricated 5% baseline.
+  const unknownChurn: OwnerQuestion[] = churn === null
+    ? [{ key: "monthlyChurn", question: QUESTION.monthlyChurn.q, unit: "share_month", why: "Customer value and payback stay unknown until ClimbOS knows how many customers stop buying each month." }]
+    : [];
   // Delivery: a service business can only take so many new clients; ask when the plays forecast any.
   const months = (opts.horizonDays || 90) / DAYS_PER_MONTH;
   const perMonth = portfolioP50(out, opts.horizonDays || 90) / months;
@@ -942,6 +948,7 @@ export function decisionQuestions(out: { economics: Economics; plays: PlayLike[]
     ? [{ key: "monthlyGrowthCashUsd", question: QUESTION.monthlyGrowthCashUsd.q, ...(owner?.monthlyGrowthCashUsd !== undefined ? { assumed: owner.monthlyGrowthCashUsd, ownerReported: true } : {}), unit: "usd_month", why: `${owner?.monthlyGrowthCashUsd !== undefined ? `Your saved owner-reported limit is ${formatMoney(owner.monthlyGrowthCashUsd, e.currency)} a month. ` : ""}The current best modeled set needs about ${formatMoney(unconstrainedPortfolio!.cashSpendUsdMonth, e.currency)} a month for media and other cash costs. This limit excludes the value of your time.` }]
     : [];
   return [
+    ...unknownChurn,
     ...cashQuestion,
     ...delivery,
     ...capacity,

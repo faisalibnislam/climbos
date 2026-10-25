@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assessSearchReadiness } from "@shared/seo/readiness";
+import { extractPageContent } from "@shared/integrations/website";
 import type { ExtractedPage } from "@shared/integrations/website";
 
 const page = (overrides: Partial<ExtractedPage> = {}): ExtractedPage => ({
@@ -101,6 +102,66 @@ describe("homepage search readiness", () => {
     });
     expect(findings).toContainEqual(expect.objectContaining({ id: "page-noindex", level: "attention" }));
     expect(findings.find((finding) => finding.id === "page-noindex")?.evidence).toContain("X-Robots-Tag: noindex, follow");
+  });
+
+  it("keeps user-agent-scoped X-Robots-Tag rules distinct from a general noindex rule", () => {
+    const findings = assessSearchReadiness(page(), {
+      httpStatus: 200,
+      pageUrl: "https://site.example/guide",
+      xRobotsTag: "googlebot: noindex, follow, GPTBot: noindex",
+      robotsFileStatus: "not_found",
+      crawlerChecks: [{ crawler: "Googlebot", allowed: true }, { crawler: "Bingbot", allowed: true }],
+    });
+    expect(findings).toContainEqual(expect.objectContaining({ id: "crawler-specific-noindex", level: "attention" }));
+    expect(findings.find((item) => item.id === "crawler-specific-noindex")?.evidence).toContain("googlebot (X-Robots-Tag), gptbot (X-Robots-Tag)");
+    expect(findings.map((item) => item.id)).not.toContain("page-noindex");
+    expect(findings.find((item) => item.id === "crawler-specific-noindex")?.nextStep).toMatch(/do not by themselves establish a general noindex rule/i);
+  });
+
+  it("preserves Googlebot-only meta noindex through extraction into readiness findings", () => {
+    const extracted = extractPageContent(`<html><head>
+      <meta name="robots" content="index, follow">
+      <meta name="googlebot" content="noindex, nofollow">
+      <meta name="description" content="Page summary">
+    </head><body><h1>Guide</h1><p>${"Useful content. ".repeat(20)}</p></body></html>`, "https://site.example/guide");
+    expect(extracted.robotsDirectives).toBe("index, follow");
+    expect(extracted.crawlerRobotsDirectives).toEqual([{ crawler: "googlebot", directives: "noindex, nofollow" }]);
+    const findings = assessSearchReadiness(extracted, {
+      httpStatus: 200,
+      pageUrl: "https://site.example/guide",
+      robotsDirectives: extracted.robotsDirectives,
+      robotsFileStatus: "not_found",
+      crawlerChecks: [{ crawler: "Googlebot", allowed: true }, { crawler: "Bingbot", allowed: true }],
+    });
+    expect(findings).toContainEqual(expect.objectContaining({ id: "crawler-specific-noindex", level: "attention" }));
+    expect(findings.find((item) => item.id === "crawler-specific-noindex")?.evidence).toContain("googlebot (robots meta)");
+    expect(findings.map((item) => item.id)).not.toContain("page-noindex");
+  });
+
+  it("preserves Googlebot News scoped meta directives as crawler-specific", () => {
+    const extracted = extractPageContent(`<html><head><meta name="googlebot-news" content="noindex"></head><body><h1>News</h1></body></html>`, "https://site.example/news");
+    expect(extracted.robotsDirectives).toBeUndefined();
+    expect(extracted.crawlerRobotsDirectives).toEqual([{ crawler: "googlebot-news", directives: "noindex" }]);
+    const findings = assessSearchReadiness(extracted, {
+      httpStatus: 200,
+      pageUrl: "https://site.example/news",
+      robotsFileStatus: "not_found",
+      crawlerChecks: [],
+    });
+    expect(findings.map((item) => item.id)).toContain("crawler-specific-noindex");
+    expect(findings.map((item) => item.id)).not.toContain("page-noindex");
+  });
+
+  it("still reports a general X-Robots-Tag rule when scoped rules are also present", () => {
+    const findings = assessSearchReadiness(page(), {
+      httpStatus: 200,
+      pageUrl: "https://site.example/guide",
+      xRobotsTag: "noindex, googlebot: follow",
+      robotsFileStatus: "not_found",
+      crawlerChecks: [],
+    });
+    expect(findings.map((item) => item.id)).toContain("page-noindex");
+    expect(findings.map((item) => item.id)).not.toContain("crawler-specific-noindex");
   });
 
   it("flags missing viewport and image alt attributes as checks, not ranking claims", () => {

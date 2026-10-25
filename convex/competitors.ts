@@ -48,6 +48,8 @@ export const overview = query({
       } : null,
       watches: watches.map((w) => ({ id: w._id, name: w.name, url: w.url, active: w.active, autoSeeded: w.autoSeededAt !== undefined, needsConfirmation: w.autoSeededAt !== undefined && w.ownerConfirmedAt === undefined, discoverySourceUrl: w.discoverySourceUrl ?? null, lastCheckedAt: w.lastCheckedAt ?? null, lastError: w.lastError ?? null })),
       canConfirmLegacyWatch: role === "owner" || role === "admin",
+      canManageDigestCadence: role === "owner" || role === "admin",
+      digestCadence: org.competitorDigestCadence ?? "per_run",
       dismissedSuggestions: allWatches.filter((w) => !w.active && w.exclusionReason === "not_relevant").map((w) => ({ name: w.name, url: w.url, sourceUrl: w.dismissalSourceUrl ?? null, dismissedAt: w.excludedAt ?? null })),
       changes: changes.map((c) => ({ id: c._id, name: c.name, summary: c.summary, bullets: c.bullets, soWhat: c.soWhat ?? null, suggestedAction: c.suggestedAction ?? null, sourceUrls: c.sourceUrls ?? watches.find((w) => w._id === c.watchId)?.lastSourceUrls ?? [], evidence: c.evidence ?? null, at: c.at })),
       suggested: suggested.slice(0, 6),
@@ -195,6 +197,26 @@ export const setScheduledMonitoring = mutation({
   },
 });
 
+/** Configure how often owner/admin in-app notices are emitted for observed changes. */
+export const setDigestCadence = mutation({
+  args: { slug: v.string(), cadence: v.union(v.literal("per_run"), v.literal("daily"), v.literal("weekly"), v.literal("off")) },
+  handler: async (ctx, { slug, cadence }) => {
+    const { org, user, role } = await requireOrgAccess(ctx, { slug }, "edit");
+    if (role !== "owner" && role !== "admin") throw appError("FORBIDDEN", "Only an owner or admin can change competitor alert settings.");
+    await ctx.db.patch(org._id, { competitorDigestCadence: cadence });
+    await audit(ctx, {
+      orgId: org._id,
+      actorType: "user",
+      actorId: user._id,
+      action: "competitor_digest.cadence_changed",
+      subjectType: "workspace",
+      subjectId: org._id,
+      summary: `Changed competitor-change notices to ${cadence.replaceAll("_", " ")}.`,
+    });
+    return { cadence };
+  },
+});
+
 export const watchesFor = internalQuery({
   args: { orgId: v.id("organizations"), watchIds: v.array(v.id("competitorWatches")), scheduled: v.optional(v.boolean()) },
   handler: async (ctx, { orgId, watchIds, scheduled }) => {
@@ -270,17 +292,38 @@ export const notifyDigest = internalMutation({
     if (!Number.isSafeInteger(count) || count < 1) return;
     const org = await ctx.db.get(orgId);
     if (!org) return;
-    const sites = count === 1 ? "one watched competitor site" : `${Math.min(count, 5)} watched competitor sites`;
-    await notifyOwners(ctx, orgId, `ClimbOS found meaningful changes across ${sites}. Review the dated sources and summaries.`);
+    const cadence = org.competitorDigestCadence ?? "per_run";
+    if (cadence === "off") return;
+    const now = Date.now();
+    const windowMs = cadence === "daily" ? 24 * 60 * 60_000 : cadence === "weekly" ? 7 * 24 * 60 * 60_000 : 0;
+    const lastNotifiedAt = org.competitorDigestLastNotifiedAt;
+    if (windowMs && lastNotifiedAt !== undefined && now - lastNotifiedAt < windowMs) return;
+
+    let siteCount = count;
+    if (windowMs) {
+      const from = lastNotifiedAt ?? now - windowMs;
+      const changes = await ctx.db.query("competitorChanges")
+        .withIndex("by_org_at", (q) => q.eq("orgId", orgId).gte("at", from))
+        .take(200);
+      siteCount = new Set(changes.map((change) => change.watchId)).size || count;
+    }
+    const sites = siteCount === 1 ? "one watched competitor site" : `${Math.min(siteCount, 5)} watched competitor sites`;
+    const sent = await notifyOwners(ctx, orgId, `ClimbOS found meaningful changes across ${sites} since your last digest. Review the dated sources and summaries.`);
+    if (sent) await ctx.db.patch(orgId, { competitorDigestLastNotifiedAt: now });
   },
 });
 
-async function notifyOwners(ctx: MutationCtx, orgId: Id<"organizations">, text: string) {
+async function notifyOwners(ctx: MutationCtx, orgId: Id<"organizations">, text: string): Promise<number> {
   const org = await ctx.db.get(orgId);
-  if (!org) return;
+  if (!org) return 0;
+  let sent = 0;
   for (const m of await ctx.db.query("memberships").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(50)) {
-    if (m.status === "active" && m.userId && ["owner", "admin"].includes(m.role)) await ctx.db.insert("notices", { userId: m.userId, orgId, kind: "system", text, href: `/app/${org.slug}/competitors`, createdAt: Date.now() });
+    if (m.status === "active" && m.userId && ["owner", "admin"].includes(m.role)) {
+      await ctx.db.insert("notices", { userId: m.userId, orgId, kind: "system", text, href: `/app/${org.slug}/competitors`, createdAt: Date.now() });
+      sent++;
+    }
   }
+  return sent;
 }
 
 /** Mondays: check every confirmed active watch in enabled workspaces, one action per workspace. */

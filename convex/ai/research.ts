@@ -29,6 +29,7 @@ export interface ResearchedPage {
   description?: string;
   canonicalUrl?: string;
   robotsDirectives?: string;
+  crawlerRobotsDirectives?: { crawler: string; directives: string }[];
   headings?: string[];
   headingCounts?: { h1: number; h2: number; h3: number };
   internalLinks?: string[];
@@ -117,6 +118,7 @@ async function fetchOne(url: string, robots?: RobotsRead): Promise<ResearchedPag
           ...(meta?.metaDescription ? { description: meta.metaDescription } : {}),
           ...(meta?.canonicalUrl ? { canonicalUrl: meta.canonicalUrl } : {}),
           ...(meta?.robotsDirectives ? { robotsDirectives: meta.robotsDirectives } : {}),
+          ...(meta?.crawlerRobotsDirectives ? { crawlerRobotsDirectives: meta.crawlerRobotsDirectives } : {}),
           ...(meta ? {
             headings: meta.headings.slice(0, 12).map((heading) => heading.text),
             headingCounts: { h1: meta.headings.filter((heading) => heading.level === 1).length, h2: meta.headings.filter((heading) => heading.level === 2).length, h3: meta.headings.filter((heading) => heading.level === 3).length },
@@ -151,6 +153,7 @@ async function fetchOne(url: string, robots?: RobotsRead): Promise<ResearchedPag
     description: page.metaDescription,
     ...(page.canonicalUrl ? { canonicalUrl: page.canonicalUrl } : {}),
     ...(page.robotsDirectives ? { robotsDirectives: page.robotsDirectives } : {}),
+    ...(page.crawlerRobotsDirectives ? { crawlerRobotsDirectives: page.crawlerRobotsDirectives } : {}),
     ...(htmlMetadataRead ? { headingCounts: { h1: page.headings.filter((heading) => heading.level === 1).length, h2: page.headings.filter((heading) => heading.level === 2).length, h3: page.headings.filter((heading) => heading.level === 3).length } } : {}),
     headings: page.headings.slice(0, 12).map((heading) => heading.text),
     internalLinks: page.links.slice(0, 30).map((link) => link.url),

@@ -128,6 +128,50 @@ describe("competitor watch", () => {
     expect(overview.changes).toHaveLength(2);
   });
 
+  it("lets only owners/admins set digest cadence and debounces daily notices while aggregating distinct changed sites", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "competitor-digest-cadence@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Digest Cadence Co" });
+    await makePaid(t, orgId);
+    const firstWatchId = await owner.client.mutation(api.competitors.add, { slug, name: "Rival A", url: "rival-a.example" });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    const secondWatchId = await t.run((ctx) => ctx.db.insert("competitorWatches", {
+      orgId, name: "Rival B", url: "https://rival-b.example", active: true, createdAt: Date.now(),
+    }));
+
+    const { token } = await owner.client.mutation(api.team.createInviteLink, { slug, role: "editor", days: 7, maxUses: 1 });
+    const editor = await asNewUser(t, "competitor-digest-editor@example.com");
+    await editor.client.mutation(api.settings.acceptInvite, { token });
+    await expect(editor.client.mutation(api.competitors.setDigestCadence, { slug, cadence: "daily" })).rejects.toThrow(/Only an owner or admin/);
+    const outsider = await asNewUser(t, "competitor-digest-outsider@example.com");
+    await expect(outsider.client.mutation(api.competitors.setDigestCadence, { slug, cadence: "weekly" })).rejects.toThrow(/find that workspace/u);
+
+    await owner.client.mutation(api.competitors.setDigestCadence, { slug, cadence: "daily" });
+    expect((await owner.client.query(api.competitors.overview, { slug })).digestCadence).toBe("daily");
+    const firstAt = Date.now();
+    await t.mutation(internal.competitors.notifyDigest, { orgId, count: 1 });
+    vi.setSystemTime(firstAt + 60 * 60_000);
+    await t.mutation(internal.competitors.notifyDigest, { orgId, count: 1 });
+    let notices = await t.run(async (ctx) => (await ctx.db.query("notices").collect()).filter((notice) => notice.orgId === orgId && notice.href.endsWith("/competitors")));
+    expect(notices).toHaveLength(1);
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("competitorChanges", { orgId, watchId: firstWatchId, name: "Rival A", summary: "First change", bullets: [], at: firstAt + 2 * 60 * 60_000 });
+      await ctx.db.insert("competitorChanges", { orgId, watchId: secondWatchId, name: "Rival B", summary: "Second change", bullets: [], at: firstAt + 2 * 60 * 60_000 });
+    });
+    vi.setSystemTime(firstAt + 24 * 60 * 60_000 + 1);
+    await t.mutation(internal.competitors.notifyDigest, { orgId, count: 1 });
+    notices = await t.run(async (ctx) => (await ctx.db.query("notices").collect()).filter((notice) => notice.orgId === orgId && notice.href.endsWith("/competitors")));
+    expect(notices).toHaveLength(2);
+    expect(notices[1]?.text).toContain("2 watched competitor sites");
+    await owner.client.mutation(api.competitors.setDigestCadence, { slug, cadence: "off" });
+    await t.mutation(internal.competitors.notifyDigest, { orgId, count: 1 });
+    expect(await t.run(async (ctx) => (await ctx.db.query("notices").collect()).filter((notice) => notice.orgId === orgId && notice.href.endsWith("/competitors")))).toHaveLength(2);
+    expect(await t.run((ctx) => ctx.db.query("auditEvents").withIndex("by_org_created", (q) => q.eq("orgId", orgId)).collect())).toEqual(expect.arrayContaining([
+      expect.objectContaining({ action: "competitor_digest.cadence_changed" }),
+    ]));
+  });
+
   it("shows sourced watch candidates while filtering self, directory, and duplicate domains", async () => {
     const t = setup();
     const owner = await asNewUser(t, "competitor-candidates@example.com");

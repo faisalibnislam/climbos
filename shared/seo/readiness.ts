@@ -25,13 +25,44 @@ export type TechnicalEvidence = {
   crawlerChecks: CrawlerCheck[];
 };
 
+function noindexRules(header: string | undefined): { global: boolean; scoped: string[] } {
+  let scope: string | null = null;
+  let global = false;
+  const scoped = new Set<string>();
+  const nonAgentDirectives = new Set(["unavailable_after", "max-snippet", "max-image-preview", "max-video-preview"]);
+  for (const part of (header ?? "").split(",")) {
+    const scopedRule = /^\s*([a-z0-9._-]+)\s*:\s*(.*)$/i.exec(part);
+    let rule = part;
+    if (scopedRule && !nonAgentDirectives.has(scopedRule[1]!.toLowerCase())) {
+      scope = scopedRule[1]!.toLowerCase();
+      rule = scopedRule[2] ?? "";
+    }
+    const tokens = rule.split(/[\s,;]+/).map((token) => token.trim().toLowerCase()).filter(Boolean);
+    if (!tokens.some((token) => token === "noindex" || token === "none")) continue;
+    if (scope) scoped.add(scope);
+    else global = true;
+  }
+  return { global, scoped: [...scoped] };
+}
+
 /** Observable page checks only. This deliberately does not predict ranking or citation. */
 export function assessSearchReadiness(page: ExtractedPage, technical?: TechnicalEvidence): ReadinessFinding[] {
   const findings: ReadinessFinding[] = [];
   if (technical) {
     if (technical.httpStatus < 200 || technical.httpStatus >= 300) findings.push({ id: "http-status", level: "attention", title: "Page did not return a successful response", evidence: `The checked page returned HTTP ${technical.httpStatus}.`, nextStep: "Check the public page response and redirect destination, then confirm the page is available to visitors and crawlers." });
-    const directives = `${technical.robotsDirectives ?? ""},${technical.xRobotsTag ?? ""}`.split(/[\s,]+/).map((item) => item.trim().toLowerCase());
-    if (directives.includes("noindex") || directives.includes("none")) findings.push({ id: "page-noindex", level: "attention", title: "A noindex directive was found for this page", evidence: `The checked page includes the directive “${directives.includes("none") ? "none" : "noindex"}” (${[technical.robotsDirectives, technical.xRobotsTag ? `X-Robots-Tag: ${technical.xRobotsTag}` : undefined].filter(Boolean).join("; ")}).`, nextStep: "Review which crawlers the directive applies to, and remove it only if you want those crawlers to index the page." });
+    const pageTokens = (technical.robotsDirectives ?? "").split(/[\s,;]+/).map((item) => item.trim().toLowerCase());
+    const pageNoindex = pageTokens.includes("noindex") || pageTokens.includes("none");
+    const headerRules = noindexRules(technical.xRobotsTag);
+    const scopedMetaRules = (page.crawlerRobotsDirectives ?? [])
+      .filter((item) => item.directives.split(/[\s,;]+/).some((token) => ["noindex", "none"].includes(token.trim().toLowerCase())))
+      .map((item) => `${item.crawler} (robots meta)`);
+    if (pageNoindex || headerRules.global) {
+      const evidence = [technical.robotsDirectives, technical.xRobotsTag ? `X-Robots-Tag: ${technical.xRobotsTag}` : undefined].filter(Boolean).join("; ");
+      findings.push({ id: "page-noindex", level: "attention", title: "A noindex directive was found for this page", evidence: `The checked page includes a general noindex rule (${evidence}).`, nextStep: "Review which crawlers the directive applies to, and remove it only if you want those crawlers to index the page." });
+    } else if (headerRules.scoped.length || scopedMetaRules.length) {
+      const scopedRules = [...headerRules.scoped.map((crawler) => `${crawler} (X-Robots-Tag)`), ...scopedMetaRules];
+      findings.push({ id: "crawler-specific-noindex", level: "attention", title: "A crawler-specific noindex rule was observed", evidence: `The inspected directives apply noindex to ${scopedRules.join(", ")}; no general robots meta or X-Robots-Tag noindex rule was detected.`, nextStep: "Review whether each named crawler should be excluded. These scoped rules do not by themselves establish a general noindex rule for all crawlers." });
+    }
     if (technical.canonicalUrl) {
       try {
         if (new URL(technical.canonicalUrl).origin !== new URL(technical.pageUrl).origin) findings.push({ id: "cross-site-canonical", level: "check", title: "The page canonical points to another site", evidence: `The declared canonical is ${technical.canonicalUrl}.`, nextStep: "Confirm this cross-site canonical is intentional; otherwise set it to the preferred URL for this page." });

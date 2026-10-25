@@ -148,6 +148,22 @@ describe("owner numbers and decision questions", () => {
     const cheap = play({ model: { weeklyReach: 5000, steps: [{ name: "paid", rate: 0.05 }], monthlySpendUsd: 0, ownerHoursPerWeek: 0 } });
     expect(decisionQuestions({ economics: { ...econ, monthlyChurn: 0.02 }, plays: [cheap] })).toEqual([]);
   });
+
+  it("asks for unknown churn without substituting a 5% placeholder", async () => {
+    const { decisionQuestions } = await import("../../shared/agents/economics");
+    const questions = decisionQuestions({
+      economics: { ...econ, monthlyChurn: undefined, assumed: ["churn"] },
+      plays: [marginal],
+    });
+    const churn = questions.find((question) => question.key === "monthlyChurn");
+
+    expect(churn).toMatchObject({
+      unit: "share_month",
+      why: expect.stringContaining("stay unknown"),
+    });
+    expect(churn?.assumed).toBeUndefined();
+    expect(JSON.stringify(churn)).not.toContain("5%");
+  });
 });
 
 describe("plan fits budget, time and the computed total", () => {

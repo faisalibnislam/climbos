@@ -508,7 +508,10 @@ export interface ExtractedPage {
   title?: string;
   metaDescription?: string;
   canonicalUrl?: string;
+  /** General robots meta directives only; user-agent-specific directives are kept separately. */
   robotsDirectives?: string;
+  /** Directives from user-agent-specific meta tags such as `name="googlebot"`. */
+  crawlerRobotsDirectives?: { crawler: string; directives: string }[];
   htmlLang?: string;
   viewportPresent: boolean;
   imageCount: number;
@@ -634,13 +637,22 @@ export function extractPageContent(
 
   let metaDescription: string | undefined;
   const robotsDirectives: string[] = [];
+  const crawlerRobotsDirectives = new Map<string, string[]>();
   const og: Record<string, string> = {};
   for (const tag of src.match(/<meta\b[^>]*>/gi) ?? []) {
     const a = parseAttributes(tag);
     const content = (a.content ?? "").trim().slice(0, 1000);
     if (!content) continue;
     if (a.name?.toLowerCase() === "description" && metaDescription === undefined) metaDescription = content;
-    if (["robots", "googlebot"].includes(a.name?.toLowerCase() ?? "")) robotsDirectives.push(content.toLowerCase());
+    const robotsName = a.name?.toLowerCase();
+    if (robotsName === "robots") robotsDirectives.push(content.toLowerCase());
+    else if (robotsName && (/(?:bot|crawler|spider)$/i.test(robotsName) || ["google-extended", "googlebot-news"].includes(robotsName)) && /^[a-z0-9._-]{1,80}$/i.test(robotsName)) {
+      // Any named robots meta tag is scoped to that user-agent token; do not
+      // merge it into the general robots meta directives.
+      const directives = crawlerRobotsDirectives.get(robotsName) ?? [];
+      directives.push(content.toLowerCase());
+      crawlerRobotsDirectives.set(robotsName, directives);
+    }
     const prop = (a.property ?? a.name ?? "").toLowerCase();
     const dateKind = prop === "article:published_time" || (a.itemprop ?? "").toLowerCase() === "datepublished" ? "published" : prop === "article:modified_time" || (a.itemprop ?? "").toLowerCase() === "datemodified" ? "updated" : undefined;
     const date = dateKind ? pageDate(content) : undefined;
@@ -718,6 +730,7 @@ export function extractPageContent(
   if (metaDescription) page.metaDescription = metaDescription;
   if (canonicalUrl) page.canonicalUrl = canonicalUrl;
   if (robotsDirectives.length) page.robotsDirectives = [...new Set(robotsDirectives)].join(", ");
+  if (crawlerRobotsDirectives.size) page.crawlerRobotsDirectives = [...crawlerRobotsDirectives.entries()].slice(0, 20).map(([crawler, directives]) => ({ crawler, directives: [...new Set(directives)].join(", ").slice(0, 1000) }));
   if (htmlLang) page.htmlLang = htmlLang;
   return page;
 }

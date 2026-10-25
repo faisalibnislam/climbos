@@ -227,7 +227,8 @@ describe("extractPageContent", () => {
     const page = extractPageContent(html, "https://example.com/shoes");
     expect(page.title).toBe("Acme & Co — Climbing Shoes");
     expect(page.metaDescription).toBe('Best shoes "ever"');
-    expect(page.robotsDirectives).toBe("index,follow, max-snippet:-1");
+    expect(page.robotsDirectives).toBe("index,follow");
+    expect(page.crawlerRobotsDirectives).toEqual([{ crawler: "googlebot", directives: "max-snippet:-1" }]);
     expect(page.canonicalUrl).toBe("https://example.com/climbing-shoes");
     expect(page.og["og:title"]).toBe("Acme OG");
     expect(page.htmlLang).toBe("en");

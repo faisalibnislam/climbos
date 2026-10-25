@@ -10,7 +10,10 @@ export function wishProgressKind(cards: WishCardProgressInput[], thinking: boole
   if (thinking) return "reading";
   if (failed) return "failed";
   if (cards.some((card) => card.status === "running")) return "working";
-  const resolved = cards.length > 0 && cards.every((card) => ["done", "rejected"].includes(card.status) || card.kind === "note");
+  // Notes still need the owner's acknowledgement (runCard marks them done).
+  // Treating every note as resolved made a proposed note look completed before
+  // the owner had selected “Got it”.
+  const resolved = cards.length > 0 && cards.every((card) => ["done", "rejected"].includes(card.status));
   if (resolved) {
     if (cards.every((card) => card.status === "rejected")) return "skipped";
     if (cards.some((card) => card.status === "done" && card.externalEffect)) return "ready_for_review";

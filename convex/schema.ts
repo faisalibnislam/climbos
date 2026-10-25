@@ -823,6 +823,10 @@ export default defineSchema({
     ),
     /** Whether owner-selected competitor watches may run on the weekly schedule; manual checks remain available. Default true. */
     competitorWatchEnabled: v.optional(v.boolean()),
+    /** Owner-selected in-app alert cadence for meaningful competitor changes. Missing legacy value means per-run. */
+    competitorDigestCadence: v.optional(v.union(v.literal("per_run"), v.literal("daily"), v.literal("weekly"), v.literal("off"))),
+    /** Last successful owner/admin competitor digest; used to debounce daily and weekly summaries. */
+    competitorDigestLastNotifiedAt: v.optional(v.number()),
     /** Whether non-manual specialist profiles may start on their saved schedule. Default true. */
     scheduledSpecialistsEnabled: v.optional(v.boolean()),
     /** Bounded cursor for one-time initialization of refresh times on legacy businesses. */

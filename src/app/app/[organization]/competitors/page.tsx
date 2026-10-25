@@ -9,7 +9,7 @@ import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
 import { Scannable, toBullets } from "@/components/ds/content";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
-import { Button, Callout, Card, CardContent, EmptyState, Input, toast } from "@/components/ui";
+import { Button, Callout, Card, CardContent, EmptyState, Input, Select, toast } from "@/components/ui";
 
 /** Competitor watch: their sites, checked weekly; only real changes reach you. */
 export default function CompetitorsPage() {
@@ -19,6 +19,7 @@ export default function CompetitorsPage() {
   const remove = useMutation(api.competitors.remove);
   const confirmLegacyWatch = useMutation(api.competitors.confirmLegacyWatch);
   const checkNow = useMutation(api.competitors.checkNow);
+  const setDigestCadence = useMutation(api.competitors.setDigestCadence);
   const dismissSuggestion = useMutation(api.competitors.dismissSuggestion);
   const [f, setF] = useState({ name: "", url: "" });
   const [busy, setBusy] = useState<string | null>(null);
@@ -35,6 +36,9 @@ export default function CompetitorsPage() {
   }
   if (data === undefined) return <LoadingBlock label="Loading competitors…" lines={4} />;
   const full = data.watches.filter((w) => w.active).length >= data.limit;
+  async function changeDigestCadence(cadence: "per_run" | "daily" | "weekly" | "off") {
+    await run("digest", () => setDigestCadence({ slug, cadence }), "Competitor alert preference saved");
+  }
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <PageHeader
@@ -51,6 +55,26 @@ export default function CompetitorsPage() {
       />
       <Card>
         <CardContent className="flex flex-col gap-3">
+          <div className="grid gap-2 border-b border-line pb-3 sm:grid-cols-[minmax(0,1fr)_14rem] sm:items-center">
+            <div>
+              <p className="text-sm font-medium text-ink">Change alerts</p>
+              <p className="text-xs leading-5 text-ink-3">Weekly checks stay on their schedule. This controls in-app notices; summaries remain on this page when alerts are off.</p>
+            </div>
+            {data.canManageDigestCadence ? (
+              <Select
+                aria-label="Competitor change alert cadence"
+                value={data.digestCadence}
+                disabled={busy === "digest"}
+                onValueChange={(value) => void changeDigestCadence(value as "per_run" | "daily" | "weekly" | "off")}
+                options={[
+                  { value: "per_run", label: "Every meaningful run" },
+                  { value: "daily", label: "At most once a day" },
+                  { value: "weekly", label: "At most once a week" },
+                  { value: "off", label: "Off" },
+                ]}
+              />
+            ) : <p className="text-sm text-ink-2">{({ per_run: "Every meaningful run", daily: "At most once a day", weekly: "At most once a week", off: "Off" } as const)[data.digestCadence]}</p>}
+          </div>
           {data.watches.length ? (
             <ul className="flex flex-col divide-y divide-line">
               {data.watches.map((w) => (
