@@ -1,6 +1,6 @@
 import { ExternalLink } from "@/components/icons";
 import { Badge } from "@/components/ui";
-import { evaluateOfferUnitEconomics, type OfferAssessment } from "../../../../shared/agents/offerAssessment";
+import { evaluateOfferUnitEconomics, type OfferAssessment, type OfferEvidenceValue } from "../../../../shared/agents/offerAssessment";
 import { formatMoney } from "../../../../shared/economics/currency";
 import { offerAlternativeLabel, offerCapacityLabel, offerEvidenceLabel, offerEvidenceStatusLabel, offerMechanismLabel, offerRecommendationLabel, offerReferenceLabel, offerRiskLabel } from "./offerPresentation";
 
@@ -25,7 +25,7 @@ export function OfferAssessmentPanel({ offer }: { offer: OfferAssessment }) {
         <div><dt className="text-xs text-ink-3">Who it is for and why</dt><dd className="text-ui text-ink">{offer.segment} · {offer.needOrObstacle} · goal: {offer.objective}</dd></div>
         <div><dt className="text-xs text-ink-3">What supports this idea</dt><dd className="text-ui text-ink">{offerEvidenceLabel(offer.evidenceBasis)} · {offer.evidenceNote}{offer.evidenceRefs.length ? <span className="mt-1 flex flex-wrap gap-x-2">{offer.evidenceRefs.map((reference, index) => /^https?:\/\//i.test(reference) ? <a key={`${reference}-${index}`} href={reference} target="_blank" rel="noopener noreferrer" className="text-brand-800 underline">Open source<ExternalLink aria-hidden className="inline size-3" /></a> : <span key={`${reference}-${index}`}>{offerReferenceLabel(reference)}</span>)}</span> : null}</dd></div>
         {economics.known ? <>
-          <div><dt className="text-xs text-ink-3">Money left per sale after listed costs · {offer.currency}</dt><dd className="text-ui text-ink">Current {formatMoney(economics.currentContribution, offer.currency)} from {formatMoney(offer.current.netPrice.amount, offer.currency)} · proposed {formatMoney(economics.proposedContribution, offer.currency)} from {formatMoney(offer.proposed.netPrice.amount, offer.currency)}<span className="mt-1 block text-xs text-ink-3">Cost boundary: {offer.costBoundary} · comparison period: {offer.horizonDays} days.</span><details className="mt-2"><summary className="min-h-8 cursor-pointer py-1 text-xs font-medium text-ink-2">See the listed cost breakdown</summary><span className="mt-1 block text-xs text-ink-3">Current: {offer.current.variableCosts.map((cost) => `${cost.category} ${formatMoney(cost.value.amount, offer.currency)}`).join(", ")}; proposed: {offer.proposed.variableCosts.map((cost) => `${cost.category} ${formatMoney(cost.value.amount, offer.currency)}`).join(", ")}.</span></details></dd></div>
+          <div><dt className="text-xs text-ink-3">Money left per sale after listed costs · {offer.currency}</dt><dd className="text-ui text-ink">Current {formatMoney(economics.currentContribution, offer.currency)} from {formatMoney(offer.current.netPrice.amount, offer.currency)} · proposed {formatMoney(economics.proposedContribution, offer.currency)} from {formatMoney(offer.proposed.netPrice.amount, offer.currency)}<span className="mt-1 block text-xs text-ink-3">Calculated from the listed inputs. Cost boundary: {offer.costBoundary} · comparison period: {offer.horizonDays} days.</span><details className="mt-2"><summary className="min-h-8 cursor-pointer py-1 text-xs font-medium text-ink-2">See cost inputs, sources, and evidence types</summary><div className="mt-2 grid gap-3 text-xs"><OfferSideEvidence label="Current offer" side={offer.current} currency={offer.currency} /><OfferSideEvidence label="Proposed offer" side={offer.proposed} currency={offer.currency} /></div></details></dd></div>
           <div><dt className="text-xs text-ink-3">Sales needed to match one current sale</dt><dd className="text-ui text-ink">{economics.proposedUnitsPerCurrentUnitToMatchContribution === null ? (economics.currentContribution !== null && economics.currentContribution <= 0 ? "The current offer leaves no positive amount after these costs, so a sales comparison is not useful." : "The proposed offer leaves no positive amount after these costs, so there is no finite break-even number of sales.") : `About ${economics.proposedUnitsPerCurrentUnitToMatchContribution.toFixed(2)} proposed-price sales would leave the same amount as one current sale, using the listed costs.`}</dd></div>
         </> : <div><dt className="text-xs text-ink-3">Offer economics · {offer.currency}</dt><dd className="text-ui text-amber-800">Not enough inputs to calculate money left per sale: {economics.unknowns.join(" · ")}</dd></div>}
         <div><dt className="text-xs text-ink-3">Ability to take on more work</dt><dd className="text-ui text-ink">{offerCapacityLabel(offer.capacity.status)}{offer.capacity.claim ? ` · ${offer.capacity.claim}` : ""}</dd></div>
@@ -48,5 +48,33 @@ export function OfferAssessmentPanel({ offer }: { offer: OfferAssessment }) {
         </div>
       </details>
     </section>
+  );
+}
+
+function OfferSideEvidence({ label, side, currency }: { label: string; side: OfferAssessment["current"]; currency: string }) {
+  return (
+    <div>
+      <p className="font-semibold text-ink-2">{label}</p>
+      <ul className="mt-1 grid gap-1.5">
+        <li><OfferValueEvidence label="Net price" value={side.netPrice} currency={currency} /></li>
+        {side.variableCosts.map((cost, index) => <li key={`${cost.category}-${index}`}><OfferValueEvidence label={cost.category} value={cost.value} currency={currency} /></li>)}
+        {side.unknownCosts.map((cost, index) => <li key={`${cost}-${index}`} className="text-amber-800">{cost}: not provided</li>)}
+      </ul>
+    </div>
+  );
+}
+
+function OfferValueEvidence({ label, value, currency }: { label: string; value: OfferEvidenceValue; currency: string }) {
+  const reference = value.reference?.trim() ?? "";
+  return (
+    <span className="block text-ink-2">
+      <span className="font-medium">{label}: {value.amount === null ? "unknown" : formatMoney(value.amount, currency)}</span>
+      <span className="text-ink-3"> · {offerEvidenceLabel(value.basis)}</span>
+      {value.claim ? <span className="block text-ink-3">{value.claim}</span> : null}
+      {reference ? /^https?:\/\//i.test(reference)
+        ? <a href={reference} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-8 items-center gap-1 text-brand-800 underline">Open source<ExternalLink aria-hidden className="size-3" /></a>
+        : <span className="block text-ink-3">{offerReferenceLabel(reference)}</span>
+        : null}
+    </span>
   );
 }

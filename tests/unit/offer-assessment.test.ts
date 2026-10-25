@@ -95,6 +95,29 @@ describe("offer and promotion recommendations", () => {
     expect(markup.indexOf("See the test plan")).toBeLessThan(markup.indexOf("Other options considered"));
   });
 
+  it("shows the provenance and supporting evidence for each price and cost input", () => {
+    const offer = assessment({
+      current: {
+        ...assessment().current,
+        netPrice: { ...assessment().current.netPrice, basis: "measured", reference: "https://example.com/sales-report", claim: "Sales report shows $100 per service." },
+        variableCosts: assessment().current.variableCosts.map((cost, index) => index === 0 ? { ...cost, value: { ...cost.value, basis: "inferred", reference: null, claim: "Labor cost inferred from the owner's estimate." } } : cost),
+      },
+      proposed: {
+        ...assessment().proposed,
+        netPrice: { ...assessment().proposed.netPrice, basis: "source_reported", reference: "https://example.com/pricing", claim: "Published proposed price is $95 per service." },
+        variableCosts: assessment().proposed.variableCosts.map((cost, index) => index === 0 ? { ...cost, value: { ...cost.value, basis: "assumed", reference: null, claim: "Assumption pending an updated labor estimate." } } : cost),
+      },
+    });
+    const markup = renderToStaticMarkup(createElement(OfferAssessmentPanel, { offer }));
+    expect(markup).toContain("Calculated from the listed inputs.");
+    expect(markup).toContain("Measured in this business");
+    expect(markup).toContain("Open source");
+    expect(markup).toContain("Reasoned from the available information");
+    expect(markup).toContain("Reported by a source");
+    expect(markup).toContain("Assumption to check");
+    expect(markup).toContain("Labor cost inferred from the owner&#x27;s estimate.");
+  });
+
   it("uses owner-facing labels without exposing internal decision values or fact IDs", () => {
     expect(offerRecommendationLabel("improve_other_constraint")).toBe("Improve another part of the business first");
     expect(offerMechanismLabel("referral_incentive")).toBe("Referral reward");

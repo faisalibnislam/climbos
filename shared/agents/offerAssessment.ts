@@ -7,6 +7,7 @@ export const OfferEvidenceValueSchema = z.object({
   reference: z.string().nullable(),
   claim: z.string().max(500),
 });
+export type OfferEvidenceValue = z.infer<typeof OfferEvidenceValueSchema>;
 
 const OfferCostSchema = z.object({
   category: z.string().min(1).max(100),
