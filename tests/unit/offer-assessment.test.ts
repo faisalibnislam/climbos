@@ -201,6 +201,13 @@ describe("offer and promotion recommendations", () => {
     expect(lintApprovedOfferCopy("The offer is $95 USD.", twoOffers, "email.body", "Test offer")).toEqual([]);
     expect(lintApprovedOfferCopy("The offer is $200 USD.", twoOffers, "email.body", "Test offer")).toMatchObject([{ rule: "approved_offer_price", severity: "error" }]);
     expect(lintApprovedOfferCopy("The offer is $200 USD.", twoOffers, "email.body", "Missing play")).toMatchObject([{ rule: "approved_offer_play", severity: "error" }]);
+    const paymentOffers = [
+      { ...terms[0], allowedMechanisms: ["discount"] },
+      { ...twoOffers[1], allowedMechanisms: ["payment_terms"] },
+    ];
+    expect(lintApprovedOfferCopy("Pay in installments for first-time quote requesters.", paymentOffers, "email.body")).toMatchObject([{ rule: "approved_offer_play", severity: "error" }]);
+    expect(lintApprovedOfferCopy("Pay in installments for first-time quote requesters.", paymentOffers, "email.body", "Test offer")).toMatchObject([{ rule: "approved_offer_mechanism", severity: "error" }]);
+    expect(lintApprovedOfferCopy("Pay in installments.", paymentOffers, "email.body", "Annual service")).toEqual([]);
     expect(lintApprovedOfferCopy("The offer costs 200 BDT.", [{ ...twoOffers[0], currency: "BDT" }, { ...twoOffers[1], currency: "BDT", allowedPrices: [300] }], "email.body")).toMatchObject([{ rule: "approved_offer_play", severity: "error" }]);
     expect(lintApprovedOfferCopy("Limited-time offer ends tomorrow.", terms, "email.body").some((issue) => issue.rule === "approved_offer_urgency")).toBe(true);
     const supportedUrgency = [{ ...terms[0], urgencyClaim: "Limited-time offer ends November 30, 2026." }];

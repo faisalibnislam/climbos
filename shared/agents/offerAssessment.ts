@@ -202,7 +202,7 @@ export interface OfferAssessmentContext {
 }
 
 const REQUIRED_ALTERNATIVES = ["positioning", "conversion_path", "retention", "capacity", "no_change"] as const;
-const PROMOTION_WORDS = /\b(?:discount|%\s*off|save\s+\$|sale price|coupon|promo code|limited[- ]time|bonus|bundle|free trial|payment terms|pay later|guarantee|referral reward|incentive|special offer|offer change|change the offer|non[- ]price offer|free (?:setup|shipping|delivery|consultation|onboarding))\b/i;
+const PROMOTION_WORDS = /\b(?:discount|%\s*off|save\s+\$|sale price|coupon|promo code|limited[- ]time|bonus|bundle|free trial|payment terms|pay later|installments?|split payments?|guarantee|referral reward|incentive|special offer|offer change|change the offer|non[- ]price offer|free (?:setup|shipping|delivery|consultation|onboarding))\b/i;
 const URGENCY_WORDS = /\b(?:limited[- ]time|ends? (?:today|tomorrow|this week|on|in)|last chance|only \d+|limited (?:spots?|seats?|stock|inventory)|while supplies last|deadline|scarcity|expires? (?:today|tomorrow|on|in))\b/i;
 const RESTRICTED_AUDIENCE = /\b(?:first[- ]time|new (?:customers?|clients?|buyers?|users?)|existing (?:customers?|clients?|buyers?|users?|subscribers?|members?)|qualified|invited|waitlist|members? only|(?:for )?(?:returning|current) (?:customers?|clients?|buyers?|users?|subscribers?|members?))\b/i;
 const UNIVERSAL_AUDIENCE = /\b(?:available to everyone|open to everyone|for everyone|all customers|all users|any customer|any user|anyone can|no restrictions)\b/i;
@@ -226,8 +226,13 @@ const OFFER_MECHANISM_PATTERNS: Record<string, RegExp> = {
   referral_incentive: /\b(?:referral reward|referral incentive|refer (?:a friend|someone) and get)\b/i,
 };
 
-/** Adds approved-plan deadline/scarcity checks to deterministic price consistency. */
-const OFFER_SPECIFIC_COPY = new RegExp(`${PROMOTION_WORDS.source}|${URGENCY_WORDS.source}|(?:[$£€]\\s*\\d|\\b\\d[\\d,.]*\\s*(?:USD|EUR|GBP|CAD|AUD)\\b)`, "i");
+/** Bind every recognized offer mechanism, deadline, or price to its exact approved play. */
+const OFFER_SPECIFIC_COPY = new RegExp([
+  PROMOTION_WORDS.source,
+  URGENCY_WORDS.source,
+  ...Object.values(OFFER_MECHANISM_PATTERNS).map((pattern) => pattern.source),
+  String.raw`(?:[$£€]\s*\d|\b\d[\d,.]*\s*(?:USD|EUR|GBP|CAD|AUD)\b)`,
+].join("|"), "i");
 
 function hasOfferCurrencyAmount(text: string, offers: ApprovedOfferCopyTerms[]): boolean {
   const amount = "(\\d{1,3}(?:,\\d{3})+(?:\\.\\d+)?|\\d+(?:\\.\\d+)?)";

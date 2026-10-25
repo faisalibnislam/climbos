@@ -481,6 +481,8 @@ New-business setup now stores its chat and conventional-form draft in the curren
 
 The campaign timing card now displays the named event or season as well as its business-specific reason; the prior card carried the name in structured data but did not render it. A focused rendering regression checks both fields. This makes the date's context clearer without changing the existing timing prompt or advisory-only behavior.
 
+Approved-plan offer-copy validation now treats installment and split-payment language as offer-specific, then requires the exact approved play when a plan contains multiple offers. The existing mechanism check rejects payment terms that belong to a different play. This closes a phrase-detection gap without changing authorization or applying terms; focused offer tests cover both cases.
+
 ## Resumption note (2026-10-25, bounded Home approval counts)
 
 Home now reads one draft beyond its 20-item cap. Counts display `20+` when the returned set is capped, and the assistant's workspace-overview tool carries an explicit lower-bound flag so it does not treat the capped value as an exact total. The six-row review preview remains bounded. Focused Convex tests cover more than 20 drafts and an exact count below the cap; tenant access continues through the existing `today` query authorization.
