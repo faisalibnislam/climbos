@@ -12,10 +12,16 @@ Run `pnpm setup:check` (or `pnpm setup:check --prod`) at any time. It lists what
 
 | Variable | Notes |
 |---|---|
-| `OPENAI_API_KEY` | Required for real text-agent work. Basic mode uses `gpt-6-luna`; selected Expert-mode strategy tasks may escalate to `gpt-6.1-sol` after a measured review condition. There is no silent provider fallback. |
-| `GEMINI_API_KEY` | Used for image generation and video workflows. Image model routes and per-attempt budgets are defined in `shared/ai/models.ts`; video generation is separately metered. |
+| `OPENAI_API_KEY` | Required in the Convex deployment for real text-agent work. Both Basic and Expert runs start on `gpt-6-luna`. In an explicitly selected Expert run, only eligible agents can use `gpt-6.1-sol` for a revision after the critic reports an eligible issue with evidence. This is a bounded revision route, not a workspace-wide model switch. There is no silent provider fallback. |
+| `GEMINI_API_KEY` | Optional in setup checks; used for configured image and video generation routes. Image model IDs and per-attempt planning allowances are in `shared/ai/models.ts`; video generation is separately metered. Missing Gemini configuration does not disable OpenAI text work. |
 
 Without `OPENAI_API_KEY`, real text-agent work is unavailable; the demo still works on fixtures. Without `GEMINI_API_KEY`, the configured image/video generation routes are unavailable while text work can continue.
+
+These are **server-side Convex secrets**. Put them in `.env.local` for development or `.env.production.local` for production, then use `pnpm env:sync` or `pnpm env:sync --prod --file .env.production.local`; `scripts/env-sync.mjs` copies these values to Convex and does not put them in browser variables. `pnpm setup:check` reports whether the required OpenAI key is present and whether optional Gemini setup is present without printing secret values.
+
+For the code-controlled routes and exact API model IDs, see [`shared/agents/routes.ts`](../shared/agents/routes.ts), [`shared/ai/models.ts`](../shared/ai/models.ts), and [`convex/ai/providers.ts`](../convex/ai/providers.ts). A configured key does not by itself prove that the provider account can access every model or that a request will succeed. Check the current [OpenAI model catalog](https://developers.openai.com/api/docs/models/all) and [Gemini model catalog](https://ai.google.dev/gemini-api/docs/models) when changing a route; provider model availability can change independently of this repository.
+
+ClimbOS's reservation and cost reports use the versioned rate snapshots in [`shared/economics/rates.ts`](../shared/economics/rates.ts), not a live provider price lookup. The snapshot records its source and effective date and can differ from an invoice because of later price changes, account terms, provider-side caching, or other billable features. Recheck the official [OpenAI API pricing](https://developers.openai.com/api/docs/pricing) and [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing) before updating rates; do not treat ClimbOS estimates as a provider quote.
 
 ## 3. Resend (platform email: sign-in codes, invitations, alerts, digests)
 

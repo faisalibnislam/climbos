@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { citedCreatorCompetitorCollaborations, citedCreatorContentSamples, citedCreatorFact, creatorIdentity, creatorMetricAnomalies, targetBrief, targetKindOf, targetReadiness, type TargetRow } from "../../shared/growth/targets";
+import { citedCreatorCompetitorCollaborations, citedCreatorContentSamples, citedCreatorFact, creatorEvidenceIsStale, CREATOR_EVIDENCE_MAX_AGE_MS, creatorIdentity, creatorMetricAnomalies, targetBrief, targetKindOf, targetReadiness, type TargetRow } from "../../shared/growth/targets";
 import { creatorOutreachSpec, creatorScoutSpec } from "../../shared/agents/specs";
 
 /** S6 (REQ-TARGET-01..06, REQ-CREATOR-01): which plays need targets, creator identity, honest readiness. */
@@ -21,6 +21,13 @@ describe("which plays need targets", () => {
 });
 
 describe("creator identity (REQ-TARGET-03)", () => {
+  it("flags unknown, future, and older-than-policy evidence as stale", () => {
+    const now = Date.UTC(2026, 9, 25);
+    expect(creatorEvidenceIsStale(undefined, now)).toBe(true);
+    expect(creatorEvidenceIsStale(now + 1, now)).toBe(true);
+    expect(creatorEvidenceIsStale(now - CREATOR_EVIDENCE_MAX_AGE_MS, now)).toBe(true);
+    expect(creatorEvidenceIsStale(now - CREATOR_EVIDENCE_MAX_AGE_MS + 1, now)).toBe(false);
+  });
   it("two creators on one platform stay distinct; a shared domain is never the identity", () => {
     const a = creatorIdentity("https://www.instagram.com/studio.ana/");
     const b = creatorIdentity("instagram.com/bodybyben");

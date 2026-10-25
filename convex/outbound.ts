@@ -8,7 +8,7 @@ import { cancelQueued, cancelQueuedFirstTouch } from "./outboundSending";
 import type { OutreachOutput, ProspectsOutput } from "../shared/agents/specs";
 import { can, sha256Hex } from "../shared/policy";
 import { DEFAULT_BOOKING, bookingSlug, domainOf, fixtureOutbound, openSlots, prospectScore, type BookingRules } from "../shared/outbound";
-import { citedCreatorCompetitorCollaborations, citedCreatorContentSamples, citedCreatorFact, creatorIdentity, creatorMetricAnomalies } from "../shared/growth/targets";
+import { citedCreatorCompetitorCollaborations, citedCreatorContentSamples, citedCreatorFact, creatorEvidenceIsStale, creatorIdentity, creatorMetricAnomalies } from "../shared/growth/targets";
 import { expertPlaysOf } from "../shared/agents/planCompatibility";
 import { approvedPlanOfferTerms } from "../shared/agents/approvedPlanContext";
 import { lintApprovedOfferCopy } from "../shared/agents/offerAssessment";
@@ -245,6 +245,12 @@ export const setStage = mutation({
     const now = Date.now();
     for (const id of prospectIds.slice(0, 200)) {
       const p = assertSameOrg(await ctx.db.get(id), org._id, "prospect");
+      if (stage === "approved") {
+        const campaign = assertSameOrg(await ctx.db.get(p.campaignId), org._id, "campaign");
+        if ((campaign.kind ?? "customers") === "creators" && creatorEvidenceIsStale(p.creatorEvidenceObservedAt, now)) {
+          throw appError("INVALID", "Refresh this creator's public profile and content evidence before approving outreach.");
+        }
+      }
       await ctx.db.patch(p._id, {
         ...(p.stage !== stage ? { stage, stageUpdatedAt: now } : {}),
         ...(stage === "contacted" ? { replyDisposition: undefined, replyDispositionUpdatedAt: undefined } : {}),
@@ -677,6 +683,7 @@ export const saveResult = internalMutation({
       const byKey = (key: string) => ctx.db.query("prospects").withIndex("by_org_domain", (q) => q.eq("orgId", c.orgId).eq("domain", key)).first();
       // Creators saved before platform + handle keys used the bare profile path.
       const existing = (await byKey(domain)) ?? (c.kind === "creators" && profileKey(p.website) !== domain ? await byKey(profileKey(p.website)) : null);
+      const hasPublicCreatorEvidence = c.kind === "creators" && p.evidence.some((item) => validPublicHttpUrl(item.url) && item.observation.trim());
       if (existing) {
         const audienceSize = c.kind === "creators" ? citedCreatorFact(p.audienceSize, p.evidence) : null;
         const contentLanguage = c.kind === "creators" ? citedCreatorFact(p.contentLanguage, p.evidence) : null;
@@ -686,6 +693,7 @@ export const saveResult = internalMutation({
         const competitorCollaborations = c.kind === "creators" ? citedCreatorCompetitorCollaborations(p.competitorCollaborations, p.evidence, now) : [];
         const playIds = c.playId && !(existing.playIds ?? []).includes(c.playId) ? [...(existing.playIds ?? []), c.playId] : undefined;
         const creatorUpdates = c.kind === "creators" ? {
+          ...(hasPublicCreatorEvidence ? { creatorEvidenceObservedAt: now } : {}),
           ...(audienceSize ? { audienceSize } : {}),
           ...(contentLanguage ? { contentLanguage } : {}),
           ...(audienceLocation ? { audienceLocation } : {}),
@@ -729,6 +737,7 @@ export const saveResult = internalMutation({
         stageUpdatedAt: now,
         ...(c.playId ? { playIds: [c.playId] } : {}),
         ...("platform" in ident && ident.platform ? { platform: ident.platform, handle: ident.handle } : {}),
+        ...(hasPublicCreatorEvidence ? { creatorEvidenceObservedAt: now } : {}),
         ...(audienceSize ? { audienceSize } : {}),
         ...(contentLanguage ? { contentLanguage } : {}),
         ...(audienceLocation ? { audienceLocation } : {}),

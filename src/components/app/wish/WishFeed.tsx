@@ -169,13 +169,13 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
           <Tooltip content={card.description}>
             <p tabIndex={0} className="truncate text-ui font-medium text-ink">{card.title}</p>
           </Tooltip>
-          {actionCardStatusExplanation(card.status, card.externalEffect) ? <p className="text-xs text-ink-3">{actionCardStatusExplanation(card.status, card.externalEffect)}</p> : null}
+          {actionCardStatusExplanation(card.status, card.externalEffect, card.kind) ? <p className="text-xs text-ink-3">{actionCardStatusExplanation(card.status, card.externalEffect, card.kind)}</p> : null}
           {card.status === "running" && card.runId ? <RunProgressCompact slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" /> : card.status === "blocked" || (card.status === "proposed" && card.blockedReason) ? <p className="truncate text-xs text-ink-3">{card.blockedReason}</p> : null}
           {card.status === "failed" && card.runId ? <RetryRunIfPossible slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" /> : null}
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2 pl-8 sm:pl-0">
-        <ActionCardStatus status={card.status} externalEffect={card.externalEffect} />
+        <ActionCardStatus status={card.status} externalEffect={card.externalEffect} kind={card.kind} />
         {card.status === "running" ? (
           null
         ) : card.status === "done" ? (

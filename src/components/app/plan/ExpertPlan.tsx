@@ -1012,6 +1012,7 @@ function PlayTargetsBlock({ t, slug, strategyId, playId, canEdit }: { t: PlayTar
               <span className="flex flex-wrap gap-1">
                 <Badge tone={x.suppressed ? "neutral" : x.contactRoute === "email" ? "green" : "amber"}>{x.suppressed ? "Opted out" : x.contactRoute === "email" ? "Public email" : "No contact route"}</Badge>
                 {x.stage !== "suggested" ? <Badge>{cap(x.stage)}</Badge> : null}
+                {x.creatorEvidenceStale ? <Badge tone="amber">Refresh public evidence</Badge> : null}
               </span>
             </li>
           ))}

@@ -87,6 +87,18 @@ describe("hard limits before ranking", () => {
     expect(limitChecks(CHANNEL_BY_ID.P01, saas, {}).some((x) => x.kind === "capacity")).toBe(false);
   });
 
+  it("capacity: surfaces unknown remaining service capacity without treating it as zero or blocking channels", () => {
+    const service: AcquisitionProfile = { ...saas, types: ["local_services"] };
+    const unknown = limitChecks(CHANNEL_BY_ID.P01, service, {}).find((x) => x.kind === "capacity");
+    expect(unknown).toMatchObject({ verdict: "setup", reason: expect.stringMatching(/remaining delivery capacity is unknown/i) });
+    expect(limitChecks(CHANNEL_BY_ID.P01, service, { newCustomersPerMonth: 4 }).some((x) => x.kind === "capacity")).toBe(false);
+    expect(limitChecks(CHANNEL_BY_ID.R02, service, {}).some((x) => x.kind === "capacity")).toBe(false);
+
+    const rows = scoreChannels(service, [], undefined, {});
+    expect(rows.find((r) => r.id === "P01")?.limits).toContainEqual(expect.objectContaining({ kind: "capacity", verdict: "setup" }));
+    expect(picked(rows).some((r) => r.id === "P01")).toBe(true);
+  });
+
   it("paid readiness: a supported downstream bottleneck blocks paid acquisition until repaired", () => {
     const rows = scoreChannels(saas, [], undefined, {}, "conversion");
     expect(rows.find((r) => r.id === "P01")).toMatchObject({ status: "not_now", limits: expect.arrayContaining([expect.objectContaining({ kind: "diagnosis", verdict: "blocked" })]) });

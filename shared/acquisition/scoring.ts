@@ -1,5 +1,5 @@
 import { formatMoney, fromUsd, minorToMajor, thresholdIn, toUsd } from "../economics/currency";
-import { budgetBand, CHANNELS, TYPE_BY_KEY, type Channel, type Execution, type Requirement, type Stage } from "./library";
+import { budgetBand, CHANNELS, SERVICE_TYPES, TYPE_BY_KEY, type Channel, type Execution, type Requirement, type Stage } from "./library";
 import type { BindingConstraint } from "../agents/decision";
 
 /**
@@ -308,7 +308,7 @@ export interface ChannelLimits {
 }
 
 export type LimitKind = "cash" | "owner_time" | "sales_cycle" | "capability" | "measurement" | "capacity" | "diagnosis" | "economics";
-/** blocked: can't be in the plan now. late: first revenue lands after the goal date. setup: needs a connection first. */
+/** blocked: can't be in the plan now. late: first revenue lands after the goal date. setup: needs an owner input or connection first. */
 export interface LimitCheck {
   kind: LimitKind;
   verdict: "blocked" | "late" | "setup";
@@ -343,6 +343,15 @@ export function limitChecks(c: Channel, p: AcquisitionProfile, l: ChannelLimits 
   // Don't acquire new buyers when the owner says there is no delivery capacity.
   // Existing/returning-customer work can still improve value without adding net-new customers.
   if (l.newCustomersPerMonth === 0 && !ownBase(c)) out.push({ kind: "capacity", verdict: "blocked", reason: "You said you cannot take on any new customers this month; improve delivery, retention or pricing before creating more demand." });
+  // A positive cap is a ceiling on *additional* customers, not a measure of spare
+  // capacity after an unrecorded pipeline. Forecasted plan demand is checked in the
+  // economics/plan validators; channel ranking has no channel-level demand forecast.
+  // Keep the missing operational input visible without inventing utilization or
+  // blocking a potentially useful channel.
+  if (l.newCustomersPerMonth === undefined && c.stages.some((stage) => stage !== "existing" && stage !== "returning")
+    && p.types.some((type) => SERVICE_TYPES.has(type))) {
+    out.push({ kind: "capacity", verdict: "setup", reason: "Remaining delivery capacity is unknown. Confirm how many additional customers you can serve each month before scaling net-new demand." });
+  }
   if (paid && l.ownerGrossMargin !== undefined && l.ownerGrossMargin <= 0) {
     out.push({ kind: "economics", verdict: "blocked", reason: "Your confirmed contribution margin is at or below zero. Fix pricing or delivery costs before paying to acquire more customers." });
   }

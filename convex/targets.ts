@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { creatorMetricAnomalies, targetBrief, targetKindOf, targetReadiness, TARGET_STATE_LABEL, type PlayText, type TargetKind } from "../shared/growth/targets";
+import { creatorEvidenceIsStale, creatorMetricAnomalies, targetBrief, targetKindOf, targetReadiness, TARGET_STATE_LABEL, type PlayText, type TargetKind } from "../shared/growth/targets";
 import { prospectScore } from "../shared/outbound";
 import { sha256Hex } from "../shared/policy";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -53,6 +53,7 @@ export const forStrategy = query({
       // Play IDs carry across plan versions, so a refreshed plan keeps its targets (REQ-TARGET-06).
       const campaign = campaigns.find((c) => c.playId === play.id) ?? null;
       const rows = all.filter((p) => p.playIds?.includes(play.id!));
+      const staleCreatorEvidence = kind === "creators" ? rows.filter((p) => ["suggested", "approved"].includes(p.stage) && creatorEvidenceIsStale(p.creatorEvidenceObservedAt, Date.now())) : [];
       const suppressed = new Set<string>();
       for (const p of rows) if (p.publicEmail && (await isSuppressed(ctx, org._id, p.publicEmail))) suppressed.add(p._id);
       const readiness = targetReadiness({
@@ -67,10 +68,10 @@ export const forStrategy = query({
         kind,
         state: readiness.state,
         label: TARGET_STATE_LABEL[readiness.state],
-        note: readiness.note,
+        note: staleCreatorEvidence.length ? `${staleCreatorEvidence.length} active creator profile${staleCreatorEvidence.length === 1 ? " needs" : "s need"} a fresh public-evidence check before outreach. Refresh the search to update them.` : readiness.note,
         counts: { found: readiness.found, eligible: readiness.eligible, contactable: readiness.contactable, excluded: readiness.excluded, inRelationship: readiness.inRelationship },
         campaignId: campaign?._id ?? null,
-        canStart: s.status === "approved" && (!campaign || campaign.status === "failed" || readiness.state === "none_found") && active?.status !== "researching",
+        canStart: s.status === "approved" && (!campaign || campaign.status === "failed" || readiness.state === "none_found" || staleCreatorEvidence.length > 0) && active?.status !== "researching",
         targets: rows
           .sort((a, b) => prospectScore(b) - prospectScore(a))
           .slice(0, 5)
@@ -92,6 +93,7 @@ export const forStrategy = query({
             contactRoute: p.publicEmail && !suppressed.has(p._id) ? ("email" as const) : ("none" as const),
             suppressed: suppressed.has(p._id),
             stage: p.stage,
+            creatorEvidenceStale: kind === "creators" && creatorEvidenceIsStale(p.creatorEvidenceObservedAt, Date.now()),
           })),
       };
     }
@@ -108,7 +110,7 @@ export interface PlayTargets {
   counts: { found: number; eligible: number; contactable: number; excluded: number; inRelationship: number };
   campaignId: Id<"outboundCampaigns"> | null;
   canStart: boolean;
-  targets: { id: Id<"prospects">; name: string; url: string; why: string; evidenceUrl: string | null; platform: string | null; handle: string | null; audienceSize: { value: string; sourceUrl: string } | null; contentLanguage: { value: string; sourceUrl: string } | null; audienceLocation: { value: string; sourceUrl: string } | null; contentSamples: NonNullable<Doc<"prospects">["contentSamples"]>; creatorMetricAnomalies: NonNullable<Doc<"prospects">["creatorMetricAnomalies"]>; competitorCollaborations: NonNullable<Doc<"prospects">["competitorCollaborations"]>; collaborationConcept: string | null; contactRoute: "email" | "none"; suppressed: boolean; stage: string }[];
+  targets: { id: Id<"prospects">; name: string; url: string; why: string; evidenceUrl: string | null; platform: string | null; handle: string | null; audienceSize: { value: string; sourceUrl: string } | null; contentLanguage: { value: string; sourceUrl: string } | null; audienceLocation: { value: string; sourceUrl: string } | null; contentSamples: NonNullable<Doc<"prospects">["contentSamples"]>; creatorMetricAnomalies: NonNullable<Doc<"prospects">["creatorMetricAnomalies"]>; competitorCollaborations: NonNullable<Doc<"prospects">["competitorCollaborations"]>; collaborationConcept: string | null; contactRoute: "email" | "none"; suppressed: boolean; stage: string; creatorEvidenceStale: boolean }[];
 }
 
 export interface TodayTargetPreview {

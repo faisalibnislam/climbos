@@ -7,6 +7,13 @@
 
 export type TargetKind = "customers" | "creators";
 
+/** Product freshness policy for public creator evidence; not a claim about how fast platforms change. */
+export const CREATOR_EVIDENCE_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+
+export function creatorEvidenceIsStale(observedAt: number | undefined, now: number): boolean {
+  return observedAt === undefined || !Number.isFinite(observedAt) || observedAt > now || now - observedAt >= CREATOR_EVIDENCE_MAX_AGE_MS;
+}
+
 export interface CitedCreatorFact { value: string; sourceUrl: string }
 export interface CreatorEvidence { url: string; observation: string }
 export interface CreatorContentSample {

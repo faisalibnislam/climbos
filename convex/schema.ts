@@ -1846,6 +1846,8 @@ export default defineSchema({
     /** Creators: canonical identity from the profile path (REQ-TARGET-03), e.g. instagram + "studio.ana". */
     platform: v.optional(v.string()),
     handle: v.optional(v.string()),
+    /** Last time public creator profile/content evidence was rechecked by a target research run. */
+    creatorEvidenceObservedAt: v.optional(v.number()),
     /** Creator audience figure copied as displayed, with its exact evidence URL; never a model estimate. */
     audienceSize: v.optional(
       v.object({ value: v.string(), sourceUrl: v.string() }),

@@ -408,7 +408,7 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
         <Tooltip content={card.description || card.proposedEffect}>
           <p tabIndex={0} className="text-sm font-medium text-ink">{card.title}</p>
         </Tooltip>
-        {actionCardStatusExplanation(status, card.externalEffect) ? <p className="text-xs text-ink-3">{actionCardStatusExplanation(status, card.externalEffect)}</p> : null}
+        {actionCardStatusExplanation(status, card.externalEffect, card.kind) ? <p className="text-xs text-ink-3">{actionCardStatusExplanation(status, card.externalEffect, card.kind)}</p> : null}
         {status === "running" && card.runId ? (
           <RunProgressCompact slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" />
         ) : (
@@ -417,7 +417,7 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
         {status === "failed" && card.runId ? <RetryRunIfPossible slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" /> : null}
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <ActionCardStatus status={status} externalEffect={card.externalEffect} />
+        <ActionCardStatus status={status} externalEffect={card.externalEffect} kind={card.kind} />
         {status === "running" ? (
           null
         ) : status === "done" ? (

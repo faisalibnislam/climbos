@@ -94,6 +94,31 @@ describe("plan targets (flagged)", () => {
     const listed = view!.pl_creators1.targets;
     expect(listed.find((x) => x.name.includes("benflows"))).toMatchObject({ suppressed: true, contactRoute: "none" });
     expect(listed.find((x) => x.name.includes("mia.moves"))).toMatchObject({ contactRoute: "none", url: "https://www.instagram.com/mia.moves/", audienceSize: { value: "12k followers", sourceUrl: "https://www.instagram.com/mia.moves/" }, contentLanguage: { value: "English", sourceUrl: "https://www.instagram.com/mia.moves/" }, audienceLocation: { value: "mostly UK", sourceUrl: "https://www.instagram.com/mia.moves/" }, contentSamples: [{ url: "https://www.instagram.com/p/miamoves/", views: "1K views", likes: "1.2K likes", comments: "14 comments" }], creatorMetricAnomalies: [{ code: "interactions_exceed_views", uncertainty: expect.stringContaining("not evidence of fake engagement") }], competitorCollaborations: [{ name: "Rival", publishedAt: "September 2025" }], collaborationConcept: expect.stringContaining("Proposed") });
+    const miaRow = rows.find((r) => r.domain === "instagram:mia.moves")!;
+    expect(miaRow.creatorEvidenceObservedAt).toBe(Date.now());
+    await t.run(async (ctx) => ctx.db.patch(miaRow._id, { creatorEvidenceObservedAt: Date.now() - 91 * 24 * 60 * 60 * 1000 }));
+    view = await w.client.query(api.targets.forStrategy, { slug: w.slug, strategyId: w.strategyId });
+    expect(view!.pl_creators1).toMatchObject({ canStart: true, note: expect.stringContaining("fresh public-evidence check") });
+    expect(view!.pl_creators1.targets.find((x) => x.id === miaRow._id)?.creatorEvidenceStale).toBe(true);
+    await expect(w.client.mutation(api.outbound.setStage, { slug: w.slug, prospectIds: [miaRow._id], stage: "approved" })).rejects.toThrow(/Refresh this creator's public profile/);
+    const staleAt = miaRow.creatorEvidenceObservedAt! - 91 * 24 * 60 * 60 * 1000;
+    await t.run(async (ctx) => ctx.db.patch(miaRow._id, { creatorEvidenceObservedAt: staleAt }));
+    await t.mutation(internal.outbound.saveResult, {
+      campaignId: campaign._id,
+      prospects: { icp: { summary: "", mustHaves: [], disqualifiers: [], triggers: [], decisionMaker: "" }, excluded: [], prospects: [{ ...creator("mia.moves"), evidence: [] }] },
+      outreach,
+    });
+    expect((await t.run((ctx) => ctx.db.get(miaRow._id)))?.creatorEvidenceObservedAt).toBe(staleAt);
+    const other = await workspace(t, "targets-other-tenant@example.com");
+    await expect(other.client.mutation(api.outbound.setStage, { slug: other.slug, prospectIds: [miaRow._id], stage: "approved" })).rejects.toThrow();
+    await t.mutation(internal.outbound.saveResult, {
+      campaignId: campaign._id,
+      prospects: { icp: { summary: "", mustHaves: [], disqualifiers: [], triggers: [], decisionMaker: "" }, excluded: [], prospects: [creator("mia.moves")] },
+      outreach,
+    });
+    view = await w.client.query(api.targets.forStrategy, { slug: w.slug, strategyId: w.strategyId });
+    expect(view!.pl_creators1.targets.find((x) => x.id === miaRow._id)?.creatorEvidenceStale).toBe(false);
+    expect(view!.pl_creators1.canStart).toBe(false);
     await w.client.mutation(api.outbound.recordCreatorCollaboration, { slug: w.slug, prospectId: mia._id, campaignId: view!.pl_creators1.campaignId!, status: "agreed", format: "co_created" });
     const collaboration = await w.client.query(api.outbound.creatorCollaborationHistory, { slug: w.slug, prospectId: mia._id });
     expect(collaboration[0]).toMatchObject({ strategyId: w.strategyId, playId: "pl_creators1", campaignId: view!.pl_creators1.campaignId, status: "agreed" });
@@ -107,6 +132,20 @@ describe("plan targets (flagged)", () => {
     const work2 = await w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: v2, decision: "approve" });
     expect(work2?.started.some((s) => s.startsWith("Targets"))).toBe(false);
     expect((await w.client.query(api.targets.forStrategy, { slug: w.slug, strategyId: v2 }))!.pl_creators1.counts.found).toBe(4);
+  });
+
+  it("does not apply creator-evidence freshness gates to customer prospects", async () => {
+    const t = setup();
+    const w = await workspace(t, "customer-targets@example.com");
+    const campaignId = await t.run(async (ctx) => {
+      const now = Date.now();
+      const id = await ctx.db.insert("outboundCampaigns", { orgId: w.orgId, title: "Find customers", kind: "customers", brief: { who: "", where: "", count: 5 }, status: "review", sequence: [], ownerNotes: [], excluded: [], createdBy: w.userId, createdAt: now, updatedAt: now });
+      await ctx.db.insert("prospects", { orgId: w.orgId, campaignId: id, company: "Customer prospect", domain: "customer.example", website: "https://customer.example", location: "", sizeBand: "", why: "", evidence: [], trigger: "", fit: 50, timing: 50, contact: "", firstLine: "", stage: "suggested", createdAt: now, updatedAt: now });
+      return id;
+    });
+    const prospect = await t.run((ctx) => ctx.db.query("prospects").withIndex("by_campaign", (q) => q.eq("campaignId", campaignId)).first());
+    await w.client.mutation(api.outbound.setStage, { slug: w.slug, prospectIds: [prospect!._id], stage: "approved" });
+    expect((await t.run((ctx) => ctx.db.get(prospect!._id)))?.stage).toBe("approved");
   });
 
   it("an open campaign that's sending is never paused on its own: the play waits for the owner", async () => {

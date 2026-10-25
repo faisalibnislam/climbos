@@ -9,6 +9,7 @@ describe("request feed progress summary", () => {
     expect(wishProgressKind([card("running")], false, false)).toBe("working");
     expect(wishProgressKind([card("done")], false, false)).toBe("completed");
     expect(wishProgressKind([card("done", true)], false, false)).toBe("ready_for_review");
+    expect(wishProgressKind([card("done", false, "schedule_content")], false, false)).toBe("ready_for_review");
     expect(wishProgressKind([card("rejected")], false, false)).toBe("skipped");
   });
 
