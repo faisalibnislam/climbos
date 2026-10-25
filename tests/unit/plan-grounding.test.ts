@@ -92,19 +92,21 @@ describe("money keeps the workspace currency", () => {
 
 describe("evidence pack per plan version (Book 13 §3)", () => {
   it("keeps facts, research and versions, bounded and marked when cut", () => {
+    const retrievedAt = Date.UTC(2026, 9, 25, 12);
     const ev = buildPlanEvidence({
       skillIds: ["growth-plays", "owner-brevity", "growth-plays"],
       currency: "USD",
       goal: { statement: "Get 50 customers", horizonDays: 90, monthlyAdBudget: 600 },
       facts: [{ id: "f1", statement: "Pro plan is $19/month", category: "pricing" }],
       insights: "x".repeat(30_000),
-      research: [{ agentId: "growth_plays", notes: "Pricing page lists Pro at $19.", sources: [{ url: "https://formkit.app/pricing" }] }, { agentId: "growth_strategy" }],
+      research: [{ agentId: "growth_plays", notes: "Pricing page lists Pro at $19.", sources: [{ url: "https://formkit.app/pricing" }], retrievedAt }, { agentId: "growth_strategy" }],
     });
     expect(Object.keys(ev.skills)).toEqual(["growth-plays", "owner-brevity"]);
     expect(ev.skills["growth-plays"]).not.toBe("missing");
     expect(ev.engine).toMatch(/^v\d/);
     expect(ev.facts[0]).toEqual({ id: "f1", statement: "Pro plan is $19/month", category: "pricing" });
     expect(ev.research).toHaveLength(1);
+    expect(ev.research[0]?.retrievedAt).toBe(retrievedAt);
     expect(ev.insights.length).toBe(24_000);
     expect(ev.truncated).toContain("insights");
   });

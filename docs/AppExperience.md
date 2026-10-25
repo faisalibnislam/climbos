@@ -19,6 +19,8 @@ Saved plans also become due for refresh when a confirmed business fact crosses i
 
 The plan's Pages read list labels same-domain pages as published business claims. Other domains are shown as references whose independence is unverified; being on another website alone does not prove a claim.
 
+The Sources section can also show the saved research notes for each plan version. The optional disclosure includes the notes, source links, and retrieval date when recorded. It identifies the notes as AI-written and source reliability/relevance as model assessments, not independent verification. Only the tenant's selected plan evidence with a matching stored hash is shown; missing or invalid evidence stays unavailable.
+
 Home and request results label action-card progress in plain language: Suggested, In progress, Completed, Ready for review, Needs setup, Couldn’t finish, or Skipped. Request summaries distinguish work that still needs a next step, drafts ready for owner review, completed work, and actions the owner skipped. A completed card that would affect something outside ClimbOS is labeled Ready for review and says that nothing has gone live; opening its result does not grant approval or publish it. External-effect actions say “Prepare it” in the request feed, Today list, and swipe deck.
 
 `src/components/app/navigation.ts` owns the navigation labels, tool explanations, aliases, and legacy-route grouping. Tool directories link to the real existing editors and records. Connections and review remain directly accessible; technical settings are grouped under Advanced tools without changing permission checks.

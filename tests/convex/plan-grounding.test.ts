@@ -3,6 +3,7 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { planContentHash } from "../../convex/lib/planHash";
 import type { PlanEvidence } from "../../shared/agents/evidence";
+import { sha256Hex } from "../../shared/policy";
 import { asNewUser, setup, type T } from "./helpers";
 
 /** P0 grounding slice: each plan version keeps what it knew, and approval binds to its content. */
@@ -52,6 +53,29 @@ describe("Plan grounding (Books 13/14, P0)", () => {
     // No hours and no contacts: listed as unknown, not assumed.
     const q = (s.expert as { quality?: { unknowns?: string[] } }).quality;
     expect(q?.unknowns).toEqual(expect.arrayContaining([expect.stringMatching(/Hours/), expect.stringMatching(/email/)]));
+  });
+
+  it("returns only hash-verified research notes for the selected tenant and plan", async () => {
+    const t = setup();
+    const w = await workspace(t, "grounded-research-view@example.com");
+    await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const s = await latestStrategy(t, w.orgId);
+    const retrievedAt = Date.now() - 1_000;
+    const data = JSON.stringify({ research: [{ agentId: "growth_plays", notes: "The source describes a published price; customer uptake was not reported.", sources: [{ url: "https://example.com/pricing", title: "Pricing" }], retrievedAt }] });
+    const evidenceId = await t.run(async (ctx) => {
+      const existing = await ctx.db.query("planEvidence").withIndex("by_strategy", (q) => q.eq("strategyId", s._id)).first();
+      if (!existing) throw new Error("Expected plan evidence record");
+      await ctx.db.patch(existing._id, { data, hash: await sha256Hex(data) });
+      return existing._id;
+    });
+
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: s._id });
+    expect(view.researchEvidence).toEqual([{ agentId: "growth_plays", notes: "The source describes a published price; customer uptake was not reported.", sources: [{ url: "https://example.com/pricing", title: "Pricing" }], retrievedAt, truncated: false }]);
+
+    await t.run((ctx) => ctx.db.patch(evidenceId, { hash: "0".repeat(64) }));
+    const invalidView = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: s._id });
+    expect(invalidView.researchEvidence).toEqual([]);
   });
 
   it("conflicting confirmed facts are kept, briefed and shown on the plan (item 9)", async () => {

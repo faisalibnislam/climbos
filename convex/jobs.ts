@@ -503,6 +503,7 @@ async function runAgentTask<T>(
       meta.shipped = result.assessment?.ship ?? null;
       meta.sources = result.research?.sources ?? [];
       meta.notes = result.research?.notes;
+      meta.retrievedAt = result.research?.retrievedAt;
       meta.skills = [...spec.skills, ...(spec.criticSkills ?? [])];
       meta.models = spec.models;
       meta.quality = agentQuality(spec.id, result.assessment, result.rounds, result.research ? result.research.sources.length : null);
@@ -632,7 +633,7 @@ function playbookContext(job: JobCtx, profile: AcquisitionProfile, d: Diagnosis)
 }
 
 /** What an agent run reports back for quality and the plan's evidence record. */
-type AgentMeta = { shipped?: boolean | null; sources?: { url: string; title?: string }[]; notes?: string; skills?: string[]; models?: unknown; quality?: AgentQuality; knowledgeReferences?: KnowledgeReferenceSet };
+type AgentMeta = { shipped?: boolean | null; sources?: { url: string; title?: string }[]; notes?: string; retrievedAt?: number; skills?: string[]; models?: unknown; quality?: AgentQuality; knowledgeReferences?: KnowledgeReferenceSet };
 
 /** Constraints once the plays' numbers are locked: the plan's prose must use these customer counts (Book 14 §7). */
 function lockedConstraints(job: JobCtx, plays: PlaysOutput, serviceArea?: string, businessTypes?: string[], diagnosis?: Diagnosis): PlanConstraints {
@@ -1485,8 +1486,8 @@ export const buildStrategy = internalAction({
             insights: insightsBrief,
             conflicts: conflictsForJob(job),
             research: [
-              { agentId: "growth_plays", notes: playsMeta.notes ?? research?.notes, sources: playsMeta.sources },
-              { agentId: "growth_strategy", notes: planMeta.notes, sources: planMeta.sources },
+              { agentId: "growth_plays", notes: playsMeta.notes ?? research?.notes, sources: playsMeta.sources ?? research?.sources, retrievedAt: playsMeta.retrievedAt ?? research?.retrievedAt },
+              { agentId: "growth_strategy", notes: planMeta.notes, sources: planMeta.sources, retrievedAt: planMeta.retrievedAt },
             ],
           }),
         ),

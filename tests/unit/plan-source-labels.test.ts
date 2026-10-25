@@ -28,4 +28,19 @@ describe("plan source relationship labels", () => {
     expect(html).toContain("Site relationship unknown · independence unverified");
     expect(html).not.toContain("Your website · published claim");
   });
+
+  it("keeps saved research detail behind an accessible disclosure and labels its limits", () => {
+    const retrievedAt = Date.UTC(2026, 9, 25);
+    const html = renderToStaticMarkup(createElement(Sources, {
+      sources: [],
+      researchEvidence: [{ agentId: "growth_plays", notes: "Source says the feature launched in 2025.", sources: [{ url: "https://example.com/news", title: "Launch note" }], retrievedAt, truncated: false }],
+    }));
+
+    expect(html).toContain("<details");
+    expect(html).toContain("Research notes and assessment");
+    expect(html).toContain("Retrieved 2026-10-25");
+    expect(html).toContain("written by AI from the listed sources");
+    expect(html).toContain("Source relevance and reliability are model assessments, not independent verification");
+    expect(html).toContain("https://example.com/news");
+  });
 });

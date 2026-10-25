@@ -8,7 +8,7 @@ import { internalAction, internalMutation, internalQuery, mutation, query, type 
 import { ACTIVE_RUN_STATUSES, createRunWithReservation, finishRunImpl, latestRunOfKind, reopenFailedRun } from "./engine";
 import { activePolicyVersion } from "./jobWrites";
 import { audit } from "./lib/audit";
-import { approvalHash, can, canonicalJson } from "../shared/policy";
+import { approvalHash, can, canonicalJson, sha256Hex } from "../shared/policy";
 import { assertCardDependenciesComplete, holdPlanChannel, startCardRun, startPlanWork, WISH_AUTO_BUDGET_MICROS, type PlanWorkResult } from "./lib/cards";
 import { autoStartPlanTargets, todayTargetPreview } from "./targets";
 import { notifyOwners } from "./lib/notify";
@@ -696,6 +696,34 @@ export const plan = query({
       if (f && f.orgId === org._id) facts.push({ id: f._id, statement: f.statement, category: f.category });
     }
     const strategyRun = await latestRunOfKind(ctx, org._id, "strategy");
+    const evidenceRecord = strategy
+      ? await ctx.db.query("planEvidence").withIndex("by_strategy", (q) => q.eq("strategyId", strategy._id)).first()
+      : null;
+    let researchEvidence: { agentId: string; notes: string; sources: { url: string; title?: string }[]; retrievedAt?: number; truncated: boolean }[] = [];
+    if (evidenceRecord && evidenceRecord.orgId === org._id && evidenceRecord.strategyId === strategy?._id && await sha256Hex(evidenceRecord.data) === evidenceRecord.hash) {
+      try {
+        const parsed = JSON.parse(evidenceRecord.data) as { research?: unknown; truncated?: unknown };
+        const researchWasTruncated = Array.isArray(parsed.truncated) && parsed.truncated.some((item) => typeof item === "string" && item.startsWith("research "));
+        if (Array.isArray(parsed.research)) {
+          researchEvidence = parsed.research.slice(0, 4).flatMap((item) => {
+            if (!item || typeof item !== "object") return [];
+            const entry = item as { agentId?: unknown; notes?: unknown; sources?: unknown; retrievedAt?: unknown };
+            if (typeof entry.agentId !== "string" || typeof entry.notes !== "string") return [];
+            const notes = entry.notes.slice(0, 6_000);
+            const sources = Array.isArray(entry.sources) ? entry.sources.slice(0, 6).flatMap((source) => {
+              if (!source || typeof source !== "object") return [];
+              const value = source as { url?: unknown; title?: unknown };
+              if (typeof value.url !== "string" || !/^https?:\/\//i.test(value.url) || value.url.length > 2_000) return [];
+              return [{ url: value.url, ...(typeof value.title === "string" ? { title: value.title.slice(0, 200) } : {}) }];
+            }) : [];
+            const retrievedAt = typeof entry.retrievedAt === "number" && Number.isFinite(entry.retrievedAt) && entry.retrievedAt >= 0 && entry.retrievedAt <= Date.now() ? entry.retrievedAt : undefined;
+            return [{ agentId: entry.agentId.slice(0, 80), notes, sources, ...(retrievedAt !== undefined ? { retrievedAt } : {}), truncated: researchWasTruncated || entry.notes.length > notes.length }];
+          });
+        }
+      } catch {
+        // An unreadable or outdated evidence snapshot is not shown as verified.
+      }
+    }
     const expert = strategy?.expert ? readExpertPlan(strategy.expert) : null;
     const savedDecisions = savedPlanDecisionSummary(expert);
     const currentEconomics = expert?.economics
@@ -801,6 +829,7 @@ export const plan = query({
       experiments: experiments.map((e) => ({ id: e._id, name: e.name, hypothesis: e.hypothesis, population: e.population, method: e.method, assignmentUnit: e.assignmentUnit, assignmentMethod: e.assignmentMethod, primaryMetric: e.primaryMetric, primaryMetricType: e.primaryMetricType, denominator: e.denominator, baselineRate: e.baselineRate, baselineProvenance: e.baselineProvenance, baselineEvidenceRefs: e.baselineEvidenceRefs, baselineBasis: e.baselineBasis, minimumMeaningfulEffect: e.minimumMeaningfulEffect, plannedSamplePerArm: e.plannedSamplePerArm, plannedSampleBasis: e.plannedSampleBasis, guardrails: e.guardrails, durationDays: e.durationDays, stoppingRule: e.stoppingRule, status: e.status, analyses: (e.analyses ?? []).map(({ reviewedBy: _by, ...x }) => x) })),
       insights: business?.insights ?? null,
       sources: facts,
+      researchEvidence,
       currency: org.currency,
       businessCurrency: business?.currency ?? org.currency,
     };

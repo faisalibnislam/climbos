@@ -359,7 +359,7 @@ function PlanScreen({ slug }: { slug: string }) {
       )}
 
       <BusinessInsights insights={plan.insights} />
-      {s ? <Sources sources={plan.sources} web={(s.expert as { webSources?: { url: string; title?: string }[] } | null)?.webSources ?? []} websiteUrl={savedBusinessWebsite} knowledge={(s.expert as { snapshot?: { knowledgeReferences?: KnowledgeReferenceSet } } | null)?.snapshot?.knowledgeReferences} /> : null}
+      {s ? <Sources sources={plan.sources} web={(s.expert as { webSources?: { url: string; title?: string }[] } | null)?.webSources ?? []} researchEvidence={plan.researchEvidence} websiteUrl={savedBusinessWebsite} knowledge={(s.expert as { snapshot?: { knowledgeReferences?: KnowledgeReferenceSet } } | null)?.snapshot?.knowledgeReferences} /> : null}
       {s ? <Discussion slug={slug} subjectType="strategy" subjectId={s.id} title={`Growth plan v${s.version}`} href={`/app/${slug}/plan`} /> : null}
         </TabsContent>
       </Tabs>

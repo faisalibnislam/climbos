@@ -1128,7 +1128,7 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
 
 /* ---------------- Sources ---------------- */
 
-export function Sources({ sources, web = [], websiteUrl, knowledge }: { sources: PlanView["sources"]; web?: { url: string; title?: string }[]; websiteUrl?: string; knowledge?: KnowledgeReferenceSet }) {
+export function Sources({ sources, web = [], researchEvidence = [], websiteUrl, knowledge }: { sources: PlanView["sources"]; web?: { url: string; title?: string }[]; researchEvidence?: { agentId: string; notes: string; sources: { url: string; title?: string }[]; retrievedAt?: number; truncated: boolean }[]; websiteUrl?: string; knowledge?: KnowledgeReferenceSet }) {
   const businessHost = websiteUrl ? hostOf(websiteUrl) : null;
   return (
     <PlanSection
@@ -1156,6 +1156,25 @@ export function Sources({ sources, web = [], websiteUrl, knowledge }: { sources:
           ))}
         </ul>
       )}
+      {researchEvidence.length ? (
+        <details className="border-t border-line pt-3">
+          <summary className="cursor-pointer text-sm font-medium text-ink">Research notes and assessment</summary>
+          <p className="mt-2 text-xs text-ink-3">These notes were written by AI from the listed sources. Source relevance and reliability are model assessments, not independent verification. Check important claims; dates or methods are shown only when the research recorded them.</p>
+          <ul className="mt-2 flex flex-col divide-y divide-line">
+            {researchEvidence.map((entry) => (
+              <li key={entry.agentId} className="flex flex-col gap-2 py-3 first:pt-1 last:pb-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-ink">{entry.agentId === "growth_plays" ? "Growth options research" : entry.agentId === "growth_strategy" ? "Plan research" : "Other research"}</span>
+                  {entry.retrievedAt !== undefined ? <Badge>Retrieved {new Date(entry.retrievedAt).toISOString().slice(0, 10)}</Badge> : <Badge tone="amber">Retrieval date unavailable</Badge>}
+                  {entry.truncated ? <Badge tone="amber">Notes shortened</Badge> : null}
+                </div>
+                <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-ink-2">{entry.notes}</p>
+                {entry.sources.length ? <ul className="flex flex-wrap gap-1.5">{entry.sources.map((source) => <li key={source.url}><LinkChip url={source.url} label={source.title ? `${source.title} · ${hostOf(source.url)}` : undefined} /></li>)}</ul> : <p className="text-xs text-ink-3">No source links were saved with these notes.</p>}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
       {web.length ? (
         <div className="flex flex-col gap-2 border-t border-line pt-3">
           <FieldLabel icon={Globe}>Pages read</FieldLabel>
