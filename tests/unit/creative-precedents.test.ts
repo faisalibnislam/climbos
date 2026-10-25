@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(30);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(33);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -83,6 +83,18 @@ describe("creative strategy precedent retrieval", () => {
 
   it("retrieves usage-linked service pricing with provider-held maintenance risk", () => {
     expect(retrieveCreativePrecedents("Price a maintenance service per engine flying hour and share uptime risk with customers").some(({ precedent }) => precedent.id === "CP-030")).toBe(true);
+  });
+
+  it("retrieves product demonstration as an entertainment mechanism", () => {
+    expect(retrieveCreativePrecedents("Show real product capabilities through low-cost funny demonstrations led by the founder").some(({ precedent }) => precedent.id === "CP-031")).toBe(true);
+  });
+
+  it("retrieves real-time audience responses through an established brand character", () => {
+    expect(retrieveCreativePrecedents("Use an established brand character to answer customer questions with fast personalized video responses").some(({ precedent }) => precedent.id === "CP-032")).toBe(true);
+  });
+
+  it("retrieves a transparent finite inventory offer without endorsing fake scarcity", () => {
+    expect(retrieveCreativePrecedents("Pre-sell a finite set of real advertising or sponsorship spaces using a simple unit and clear capacity").some(({ precedent }) => precedent.id === "CP-033")).toBe(true);
   });
 
   it("retrieves opt-in personalization and sharing as a separate customer mechanism", () => {
