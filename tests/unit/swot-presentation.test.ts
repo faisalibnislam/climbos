@@ -76,3 +76,33 @@ describe("SWOT presentation", () => {
     expect(html).toContain("What helps, what gets in the way, and what to watch");
   });
 });
+
+describe("competitor comparison presentation", () => {
+  it("keeps page observations, business-specific implications, and evidence links together", () => {
+    const html = renderToStaticMarkup(createElement(BusinessInsights, {
+      insights: insights({
+        competitors: [{
+          name: "Rival",
+          url: "https://rival.example",
+          sourceUrl: "https://rival.example/pricing",
+          note: "Offers appointment software for small clinics.",
+          kind: "direct",
+          comparison: [{
+            dimension: "pricing",
+            finding: "Lists annual billing at a lower monthly equivalent than month-to-month billing.",
+            sourceUrl: "https://rival.example/pricing",
+            implication: "Check whether this business's buyers value a lower commitment or lower monthly cost before changing its own terms.",
+          }],
+        }],
+      }),
+    }));
+
+    expect(html).toContain("Compare the evidence (1)");
+    expect(html).toContain("Their page says:");
+    expect(html).toContain("Lists annual billing at a lower monthly equivalent");
+    expect(html).toContain("Why it may matter here:");
+    expect(html).toContain("Check whether this business&#x27;s buyers value");
+    expect(html).toContain('href="https://rival.example/pricing"');
+    expect(html).toContain("These differences do not show why customers choose them.");
+  });
+});

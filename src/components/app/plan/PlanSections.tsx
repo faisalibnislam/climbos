@@ -934,15 +934,37 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
           ) : (
             <ul className="flex flex-col divide-y divide-line rounded-[var(--radius-card)] border border-line">
               {insights.competitors.map((c) => (
-                <li key={c.name} className="flex min-w-0 flex-col gap-1.5 p-3 sm:flex-row sm:items-start sm:gap-4">
-                  <span className="text-ui font-semibold text-ink sm:w-40 sm:shrink-0">{c.name}</span>
-                  <Clamp lines={1} className="flex-1 text-ui text-ink-2">
-                    {c.note}
-                  </Clamp>
-                  <span className="flex shrink-0 flex-wrap gap-1.5">
-                    {c.url ? <LinkChip url={c.url} label="Website" /> : null}
-                    {c.sourceUrl ? <LinkChip url={c.sourceUrl} label="Source" /> : <Badge tone="amber" icon={<TriangleAlert />}>No source: confirm</Badge>}
-                  </span>
+                <li key={c.name} className="flex min-w-0 flex-col gap-2 p-3">
+                  <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-4">
+                    <span className="text-ui font-semibold text-ink sm:w-40 sm:shrink-0">{c.name}</span>
+                    <Clamp lines={1} className="flex-1 text-ui text-ink-2">
+                      {c.note}
+                    </Clamp>
+                    <span className="flex shrink-0 flex-wrap gap-1.5">
+                      {c.url ? <LinkChip url={c.url} label="Website" /> : null}
+                      {c.sourceUrl ? <LinkChip url={c.sourceUrl} label="Source" /> : <Badge tone="amber" icon={<TriangleAlert />}>No source: confirm</Badge>}
+                    </span>
+                  </div>
+                  {c.comparison?.length ? (
+                    <details className="rounded-[var(--radius-control)] border border-line px-3 py-2">
+                      <summary className="min-h-8 cursor-pointer py-1 text-xs font-medium text-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-800">
+                        Compare the evidence ({c.comparison.length})
+                      </summary>
+                      <div className="mt-2 flex flex-col gap-3">
+                        {c.comparison.map((item, index) => (
+                          <div key={`${item.dimension}-${item.sourceUrl}-${index}`} className="grid min-w-0 gap-1 border-t border-line pt-2 text-xs sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-x-3">
+                            <span className="font-medium capitalize text-ink-2">{item.dimension.replaceAll("_", " ")}</span>
+                            <div className="min-w-0 space-y-1.5">
+                              <p className="text-ink"><span className="font-medium">Their page says: </span>{item.finding}</p>
+                              <p className="text-ink-2"><span className="font-medium">Why it may matter here: </span>{item.implication}</p>
+                              <LinkChip url={item.sourceUrl} label="Evidence page" />
+                            </div>
+                          </div>
+                        ))}
+                        <p className="text-xs text-ink-3">A competitor&apos;s page reports its own claims. These differences do not show why customers choose them.</p>
+                      </div>
+                    </details>
+                  ) : null}
                 </li>
               ))}
             </ul>
