@@ -12,6 +12,7 @@ import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, QueryBoundary } from "@/components/app/results/QueryBoundary";
 import { SettingsHeader } from "@/components/app/settings/SettingsNav";
 import { runStatusPresentation } from "../../../../../../shared/progress";
+import { SpecialistTriggerFields, triggerSummary } from "@/components/app/settings/SpecialistTrigger";
 
 const ACTION_LABEL: Record<(typeof AGENT_ACTIONS)[number], string> = {
   generate_content: "Prepare content drafts", refresh_plan: "Review the growth plan", research: "Research the website and market",
@@ -49,6 +50,9 @@ function SpecialistsSettings() {
   const [maxRunCredits, setMaxRunCredits] = useState(10);
   const [maxActionsPerRun, setMaxActionsPerRun] = useState(2);
   const [successMetric, setSuccessMetric] = useState("Every recommendation names its evidence, next step, and measure.");
+  const [trigger, setTrigger] = useState<"manual" | "daily" | "weekly" | "event">("manual");
+  const [triggerEvents, setTriggerEvents] = useState<string[]>([]);
+  const [cooldown, setCooldown] = useState(24);
   const [request, setRequest] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   if (data === undefined) return <LoadingBlock label="Loading specialist profiles" lines={4} />;
@@ -65,6 +69,9 @@ function SpecialistsSettings() {
     setMaxRunCredits(10);
     setMaxActionsPerRun(2);
     setSuccessMetric("Every recommendation names its evidence, next step, and measure.");
+    setTrigger("manual");
+    setTriggerEvents([]);
+    setCooldown(24);
   }
 
   function selectArchetype(id: string) {
@@ -85,7 +92,7 @@ function SpecialistsSettings() {
   async function save() {
     setBusy(true);
     try {
-      const fields = { slug, archetypeId, name, objective, instructions, allowedActions, knowledge: ["growth_library" as const], permission, maxRunCredits, maxActionsPerRun, successMetric };
+      const fields = { slug, archetypeId, name, objective, instructions, allowedActions, knowledge: ["growth_library" as const], permission, maxRunCredits, maxActionsPerRun, successMetric, trigger, ...(trigger === "event" ? { triggerEvents, eventCooldownHours: cooldown } : {}) };
       if (editing) await update({ ...fields, agentId: editing });
       else await create(fields);
       toast({ tone: "success", title: editing ? "Specialist updated" : "Specialist created" });
@@ -98,7 +105,7 @@ function SpecialistsSettings() {
     <div className="flex flex-col gap-6">
       <SettingsHeader title="Specialists" intro="Build a small, focused team from ClimbOS capabilities." />
       <Callout tone="info" title="Profiles use the existing ClimbOS engine">
-        Specialist roles share metered model routes, business facts, and the approval workflow. Runs start only when you ask. External publishing, messages, and spend still need your approval.
+        Specialist roles share metered model routes, business facts, and the approval workflow. Runs start when you ask, on a schedule, or after an event you choose. Every run only prepares drafts; external publishing, messages, and spend still need your approval.
       </Callout>
 
       <Card>
@@ -136,7 +143,8 @@ function SpecialistsSettings() {
             <Field label="Maximum actions per request"><Segmented label="Maximum actions per request" value={maxActionsPerRun} onChange={setMaxActionsPerRun} options={[{ value: 1, label: "1" }, { value: 2, label: "2" }, { value: 3, label: "3" }, { value: 4, label: "4" }]} /></Field>
           </div>
           <Field label="Success measure"><Input value={successMetric} onChange={(event) => setSuccessMetric(event.target.value)} maxLength={300} /></Field>
-          <p className="text-xs text-ink-3">Knowledge: verified business facts and the versioned Growth Intelligence library. Trigger: manual request only.</p>
+          <SpecialistTriggerFields trigger={trigger} onTrigger={setTrigger} events={triggerEvents} onEvents={setTriggerEvents} cooldown={cooldown} onCooldown={setCooldown} />
+          <p className="text-xs text-ink-3">Knowledge: verified business facts and the versioned Growth Intelligence library.</p>
           <div className="flex flex-wrap gap-2">
             <Button loading={busy} disabled={!allowedActions.length || !objective.trim() || !successMetric.trim()} onClick={() => void save()}>{editing ? <Check aria-hidden /> : <Plus aria-hidden />}{editing ? "Save specialist" : "Create specialist"}</Button>
             {editing ? <Button variant="secondary" onClick={resetForm}>Cancel</Button> : null}
@@ -155,7 +163,7 @@ function SpecialistsSettings() {
               </div>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
-              <p className="text-xs text-ink-3">{agent.permission.replaceAll("_", " ")} · up to {agent.maxActionsPerRun} actions · {agent.maxRunCredits} credits per run · {agent.trigger === "manual" ? "Runs when you ask" : `Runs ${agent.trigger}`}</p>
+              <p className="text-xs text-ink-3">{agent.permission.replaceAll("_", " ")} · up to {agent.maxActionsPerRun} actions · {agent.maxRunCredits} credits per run · {triggerSummary(agent)}</p>
               <section aria-label={`${agent.name} cost and usefulness`} className="flex flex-col gap-3 rounded-lg border border-line bg-surface-2 p-3">
                 <h4 className="text-ui font-semibold text-ink">Cost and usefulness</h4>
                 {agent.monthlyCreditsUsed === null ? (
@@ -224,7 +232,7 @@ function SpecialistsSettings() {
               <Field label={`Ask ${agent.name}`}><Textarea rows={2} value={request[agent.id] ?? ""} onChange={(event) => setRequest((current) => ({ ...current, [agent.id]: event.target.value }))} maxLength={1500} placeholder="What should this specialist help with?" disabled={agent.status !== "active"} /></Field>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" disabled={agent.status !== "active" || !(request[agent.id] ?? "").trim()} onClick={async () => { try { await run({ slug, agentId: agent.id as Id<"customAgents">, request: request[agent.id] }); setRequest((current) => ({ ...current, [agent.id]: "" })); toast({ tone: "success", title: "Specialist started", description: "Follow its progress in Today and review any proposed actions." }); } catch (error) { toast({ tone: "danger", title: errorMessage(error) }); } }}><Play aria-hidden /> Run specialist</Button>
-                {data.canManage && agent.status === "active" ? <Button size="sm" variant="secondary" onClick={() => { setEditing(agent.id as Id<"customAgents">); setArchetypeId(agent.archetypeId); setName(agent.name); setObjective(agent.objective); setInstructions(agent.instructions); setAllowedActions([...agent.allowedActions]); setPermission(agent.permission as Permission); setMaxRunCredits(agent.maxRunCredits); setMaxActionsPerRun(agent.maxActionsPerRun); setSuccessMetric(agent.successMetric); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit</Button> : null}
+                {data.canManage && agent.status === "active" ? <Button size="sm" variant="secondary" onClick={() => { setEditing(agent.id as Id<"customAgents">); setArchetypeId(agent.archetypeId); setName(agent.name); setObjective(agent.objective); setInstructions(agent.instructions); setAllowedActions([...agent.allowedActions]); setPermission(agent.permission as Permission); setMaxRunCredits(agent.maxRunCredits); setMaxActionsPerRun(agent.maxActionsPerRun); setSuccessMetric(agent.successMetric); setTrigger(agent.trigger); setTriggerEvents([...agent.triggerEvents]); setCooldown(agent.eventCooldownHours ?? 24); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit</Button> : null}
                 {data.canManage ? <Button size="sm" variant="ghost" onClick={() => void archive({ slug, agentId: agent.id as Id<"customAgents"> }).catch((error) => toast({ tone: "danger", title: errorMessage(error) }))}>{agent.status === "active" ? "Archive" : "Restore"}</Button> : null}
               </div>
             </CardContent>

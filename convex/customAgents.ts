@@ -1,3 +1,4 @@
+import { DEFAULT_EVENT_COOLDOWN_HOURS, isSpecialistEvent } from "../shared/agents/specialistEvents";
 import { v } from "convex/values";
 import { AGENT_ACTIONS, AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
 import { microsToCredits } from "../shared/economics";
@@ -8,7 +9,7 @@ import { audit } from "./lib/audit";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
 const DAY = 86_400_000;
-const triggerDelay = (trigger: "manual" | "daily" | "weekly") => trigger === "daily" ? DAY : trigger === "weekly" ? 7 * DAY : null;
+const triggerDelay = (trigger: "manual" | "daily" | "weekly" | "event") => trigger === "daily" ? DAY : trigger === "weekly" ? 7 * DAY : null;
 
 const permission = v.union(v.literal("read_only"), v.literal("draft"), v.literal("request_approval"));
 const knowledgeSource = v.union(v.literal("growth_library"));
@@ -18,7 +19,8 @@ const DRAFT = new Set(AGENT_ACTIONS.filter((kind) => !["ad_change", "email_send"
 function cleanConfiguration(input: {
   archetypeId: string; name: string; objective: string; instructions: string;
   allowedActions: string[]; knowledge: string[]; permission: "read_only" | "draft" | "request_approval";
-  maxRunCredits: number; monthlyBudgetCredits?: number; maxActionsPerRun: number; successMetric: string; trigger?: "manual" | "daily" | "weekly";
+  maxRunCredits: number; monthlyBudgetCredits?: number; maxActionsPerRun: number; successMetric: string; trigger?: "manual" | "daily" | "weekly" | "event";
+  triggerEvents?: string[]; eventCooldownHours?: number;
 }) {
   const archetype = AGENT_ARCHETYPE_BY_ID.get(input.archetypeId);
   if (!archetype) throw appError("INVALID", "Choose one of the ClimbOS specialist roles.");
@@ -38,6 +40,12 @@ function cleanConfiguration(input: {
   if (!Number.isFinite(maxRunCredits) || maxRunCredits < 1 || maxRunCredits > 100) throw appError("INVALID", "Set a per-run cap from 1 to 100 credits.");
   if (!Number.isFinite(monthlyBudgetCredits) || monthlyBudgetCredits < maxRunCredits || monthlyBudgetCredits > 1000) throw appError("INVALID", "Set a monthly cap at least as high as the per-run cap, up to 1,000 credits.");
   if (!Number.isFinite(maxActionsPerRun) || maxActionsPerRun < 1 || maxActionsPerRun > 4) throw appError("INVALID", "An agent can prepare 1 to 4 actions per request.");
+  const triggerEvents = [...new Set(input.triggerEvents ?? [])];
+  if (input.trigger === "event") {
+    if (!triggerEvents.length || triggerEvents.some((event) => !isSpecialistEvent(event))) throw appError("INVALID", "Choose at least one supported event to start this specialist.");
+    const cooldown = input.eventCooldownHours ?? DEFAULT_EVENT_COOLDOWN_HOURS;
+    if (!Number.isInteger(cooldown) || cooldown < 6 || cooldown > 168) throw appError("INVALID", "Set a gap between event runs from 6 to 168 hours.");
+  }
   return {
     archetypeId: archetype.id,
     name: input.name.trim().slice(0, 60) || archetype.name,
@@ -51,6 +59,7 @@ function cleanConfiguration(input: {
     maxActionsPerRun,
     successMetric: input.successMetric.trim().slice(0, 300),
     trigger: input.trigger ?? "manual",
+    ...(input.trigger === "event" ? { triggerEvents, eventCooldownHours: input.eventCooldownHours ?? DEFAULT_EVENT_COOLDOWN_HOURS } : { triggerEvents: undefined, eventCooldownHours: undefined }),
     modelRouting: "automatic" as const,
   };
 }
@@ -60,7 +69,9 @@ const configArgs = {
   allowedActions: v.array(v.string()), knowledge: v.array(knowledgeSource), permission,
   maxRunCredits: v.number(), maxActionsPerRun: v.number(), successMetric: v.string(),
   monthlyBudgetCredits: v.optional(v.number()),
-  trigger: v.optional(v.union(v.literal("manual"), v.literal("daily"), v.literal("weekly"))),
+  trigger: v.optional(v.union(v.literal("manual"), v.literal("daily"), v.literal("weekly"), v.literal("event"))),
+  triggerEvents: v.optional(v.array(v.string())),
+  eventCooldownHours: v.optional(v.number()),
 };
 
 export const list = query({
@@ -73,7 +84,7 @@ export const list = query({
     return {
       canManage: ["owner", "admin", "editor"].includes(role),
       archetypes: [...AGENT_ARCHETYPE_BY_ID.values()],
-      agents: await Promise.all(agents.map(async ({ _id, archetypeId, name, objective, instructions, allowedActions, knowledge, permission, maxRunCredits, monthlyBudgetCredits, maxActionsPerRun, successMetric, trigger, nextTriggerAt, modelRouting, status, updatedAt }) => {
+      agents: await Promise.all(agents.map(async ({ _id, archetypeId, name, objective, instructions, allowedActions, knowledge, permission, maxRunCredits, monthlyBudgetCredits, maxActionsPerRun, triggerEvents, eventCooldownHours, successMetric, trigger, nextTriggerAt, modelRouting, status, updatedAt }) => {
         const monthlyCap = monthlyBudgetCredits ?? null;
         const runs = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", org._id).eq("customAgentId", _id).gte("createdAt", monthStart)).take(501);
         // More than 500 rows means this bounded summary is incomplete. Do not
@@ -105,7 +116,7 @@ export const list = query({
         }));
         return {
           id: _id, archetypeId, name, objective, instructions, allowedActions, knowledge, permission,
-          maxRunCredits, monthlyBudgetCredits: monthlyCap, monthlyCreditsUsed: usedMicros === null ? null : microsToCredits(usedMicros), maxActionsPerRun, successMetric, trigger, nextTriggerAt: nextTriggerAt ?? null, modelRouting, status, updatedAt, recentRuns,
+          maxRunCredits, monthlyBudgetCredits: monthlyCap, monthlyCreditsUsed: usedMicros === null ? null : microsToCredits(usedMicros), maxActionsPerRun, successMetric, trigger, triggerEvents: triggerEvents ?? [], eventCooldownHours: eventCooldownHours ?? null, nextTriggerAt: nextTriggerAt ?? null, modelRouting, status, updatedAt, recentRuns,
           workspaceReportedFeedback: { source: "workspace_member_report", windowDays: 90, sampleSize: feedbackSample.length, helpful: feedbackSample.filter((entry) => entry.rating === "helpful").length, needsWork: feedbackSample.filter((entry) => entry.rating === "needs_work").length, timeSavedRunCount: perRunMinutes.length, medianMinutesSavedPerRun, outcomeCount: feedbackSample.filter((entry) => entry.outcome).length, recentOutcomes, capped: feedbackRows.length > 100 },
         };
       })),
@@ -134,7 +145,7 @@ export const update = mutation({
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const agent = assertSameOrg(await ctx.db.get(agentId), org._id, "specialist");
     if (agent.status !== "active") throw appError("INVALID", "Restore this specialist before editing it.");
-    const config = cleanConfiguration({ ...args, trigger: args.trigger ?? agent.trigger });
+    const config = cleanConfiguration({ ...args, trigger: args.trigger ?? agent.trigger, triggerEvents: args.triggerEvents ?? agent.triggerEvents, eventCooldownHours: args.eventCooldownHours ?? agent.eventCooldownHours });
     const now = Date.now();
     const delay = triggerDelay(config.trigger);
     const nextTriggerAt = delay ? config.trigger !== agent.trigger || agent.nextTriggerAt === undefined ? now + delay : agent.nextTriggerAt : undefined;

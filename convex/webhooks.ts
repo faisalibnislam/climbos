@@ -1,3 +1,4 @@
+import { eventMayTrigger, isSpecialistEvent } from "../shared/agents/specialistEvents";
 import { v } from "convex/values";
 import { isWebhookEvent, RETRY_MS, signWebhook, WEBHOOK_EVENTS, type WebhookEvent } from "../shared/webhooks";
 import { internal } from "./_generated/api";
@@ -18,6 +19,7 @@ const MAX_WEBHOOK_PAYLOAD_CHARS = 60_000;
 
 /** Queue an event for every active endpoint of the workspace that wants it. */
 export async function emitEvent(ctx: MutationCtx, orgId: Id<"organizations">, event: WebhookEvent, data: Record<string, unknown>) {
+  await queueEventSpecialists(ctx, orgId, event);
   const endpoints = (await ctx.db.query("webhookEndpoints").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(20)).filter((e) => e.active && e.events.includes(event));
   if (!endpoints.length) return;
   const now = Date.now();
@@ -25,6 +27,22 @@ export async function emitEvent(ctx: MutationCtx, orgId: Id<"organizations">, ev
   if (payload.length > MAX_WEBHOOK_PAYLOAD_CHARS) throw new Error(`Webhook event ${event} exceeded the ${MAX_WEBHOOK_PAYLOAD_CHARS}-character payload limit.`);
   for (const e of endpoints) await ctx.db.insert("webhookDeliveries", { orgId, endpointId: e._id, event, payload, status: "pending", attempts: 0, nextAt: now, createdAt: now });
   await ctx.scheduler.runAfter(0, internal.webhooks.deliverDue, {});
+}
+
+/**
+ * Start event-triggered specialists for this workspace. The cooldown is claimed here so a burst of events starts
+ * at most one run; the run itself goes through the scheduled path (draft-only, metered, pause-aware).
+ */
+async function queueEventSpecialists(ctx: MutationCtx, orgId: Id<"organizations">, event: WebhookEvent) {
+  if (!isSpecialistEvent(event)) return;
+  const org = await ctx.db.get(orgId);
+  if (!org || org.deletedAt || org.kind === "demo" || org.scheduledSpecialistsEnabled === false || org.emergencyStop?.active) return;
+  const now = Date.now();
+  const agents = (await ctx.db.query("customAgents").withIndex("by_org_updated", (q) => q.eq("orgId", orgId)).take(30)).filter((agent) => eventMayTrigger(agent, event, now));
+  for (const agent of agents.slice(0, 5)) {
+    await ctx.db.patch(agent._id, { lastEventRunAt: now });
+    await ctx.scheduler.runAfter(0, internal.workspace.runScheduledCustomAgent, { agentId: agent._id, triggerEvent: event });
+  }
 }
 
 export const list = query({

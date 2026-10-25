@@ -3945,8 +3945,13 @@ export default defineSchema({
       v.literal("manual"),
       v.literal("daily"),
       v.literal("weekly"),
+      v.literal("event"),
     ),
     nextTriggerAt: v.optional(v.number()),
+    /** Event trigger: which business events start a run, the minimum gap between event runs, and the last one. */
+    triggerEvents: v.optional(v.array(v.string())),
+    eventCooldownHours: v.optional(v.number()),
+    lastEventRunAt: v.optional(v.number()),
     modelRouting: v.literal("automatic"),
     status: v.union(v.literal("active"), v.literal("archived")),
     createdBy: v.id("users"),

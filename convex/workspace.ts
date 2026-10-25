@@ -1,3 +1,4 @@
+import { SPECIALIST_EVENT_LABEL, type SpecialistEvent } from "../shared/agents/specialistEvents";
 import { isServiceBusiness } from "../shared/acquisition/library";
 import { legacyPlanHash, planContentHash } from "./lib/planHash";
 import { majorToMinor, minorToMajor } from "../shared/economics/currency";
@@ -233,8 +234,8 @@ export const runCustomAgent = mutation({
 
 /** Scheduled custom-agent work is internal, metered, and produces suggestions for the member to review. */
 export const runScheduledCustomAgent = internalMutation({
-  args: { agentId: v.id("customAgents") },
-  handler: async (ctx, { agentId }) => {
+  args: { agentId: v.id("customAgents"), triggerEvent: v.optional(v.string()) },
+  handler: async (ctx, { agentId, triggerEvent }) => {
     const agent = await ctx.db.get(agentId);
     if (!agent || agent.status !== "active" || agent.trigger === "manual") return { started: false, reason: "inactive" };
     const org = await ctx.db.get(agent.orgId);
@@ -247,7 +248,7 @@ export const runScheduledCustomAgent = internalMutation({
     if (!userId) return { started: false, reason: "no_active_member" };
     const recent = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", org._id).eq("customAgentId", agent._id)).order("desc").take(5);
     if (recent.some((run) => ["cost_reserved", "preparing", "needs_approval", "approved", "scheduled", "executing", "paused"].includes(run.status))) return { started: false, reason: "already_running" };
-    const request = `Scheduled ${agent.trigger} review. Use the latest approved plan, measured workspace results, and confirmed business facts. Objective: ${agent.objective}. Success measure: ${agent.successMetric}. Identify missing evidence clearly and prepare only the smallest useful next step. Do not publish, send, spend, or change external accounts.`;
+    const request = `${triggerEvent ? `Triggered by a business event (${triggerEvent}: ${SPECIALIST_EVENT_LABEL[triggerEvent as SpecialistEvent] ?? "workspace event"}); review what it means and prepare drafts only.` : `Scheduled ${agent.trigger} review.`} Use the latest approved plan, measured workspace results, and confirmed business facts. Objective: ${agent.objective}. Success measure: ${agent.successMetric}. Identify missing evidence clearly and prepare only the smallest useful next step. Do not publish, send, spend, or change external accounts.`;
     await postChat(ctx, org, userId, request, agent._id);
     return { started: true };
   },
