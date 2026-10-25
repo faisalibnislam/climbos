@@ -1326,7 +1326,7 @@ function EconomicsLine({ economics: e }: { economics: Economics }) {
   );
 }
 
-function PortfolioObjectiveCard({ label, explanation, choice, noChoice, economics, days }: { label: string; explanation: string; choice: PortfolioChoice | null; noChoice: string; economics?: Economics; days: number }) {
+export function PortfolioObjectiveCard({ label, explanation, choice, noChoice, economics, days }: { label: string; explanation: string; choice: PortfolioChoice | null; noChoice: string; economics?: Economics; days: number }) {
   return (
     <article className="flex min-w-0 flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-3">
       <div>
@@ -1345,6 +1345,7 @@ function PortfolioObjectiveCard({ label, explanation, choice, noChoice, economic
             {choice.netUsd !== null ? <div><dt className="text-xs text-ink-3">Modeled net contribution over this period</dt><dd className="font-semibold tabular-nums text-ink">{usd(choice.netUsd, economics?.currency)}</dd></div> : null}
             <div><dt className="text-xs text-ink-3">Limits</dt><dd className="font-medium text-ink">{choice.allFit ? "Fits supplied cash, ad budget and capacity limits" : "Some drafted plays do not fit supplied cash, ad budget or capacity limits"}</dd></div>
           </dl>
+          <p className="text-xs text-ink-3">Cash feasibility here checks modeled monthly growth costs against your monthly limit. It does not forecast your bank balance or the timing of customer payments, refunds, taxes, or existing bills.</p>
           {choice.runnerUp ? <p className="text-xs text-ink-3">Closest alternative: {choice.runnerUp.selected.join(" + ") || "No play"} · {fmtN(choice.runnerUp.customers)} customers at stated rates.</p> : null}
           {choice.left.length ? <details className="text-xs text-ink-3"><summary className="cursor-pointer font-medium text-ink-2">Why other plays were left out ({choice.left.length})</summary><ul className="mt-1 list-disc pl-5">{choice.left.map((item, i) => <li key={`${item.name}-${i}`}>{item.name}: {item.why}</li>)}</ul></details> : null}
         </>
