@@ -66,12 +66,38 @@ export default function CompetitorsPage() {
             </ul>
           ) : null}
           {data.suggested.length && !full ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-ink-3">Suggested:</span>
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-medium text-ink-2">Similar businesses found in your research</p>
               {data.suggested.map((s) => (
-                <Button key={s.url} size="sm" variant="secondary" loading={busy === s.url} onClick={() => run(s.url, () => add({ slug, name: s.name, url: s.url }), `Watching ${s.name}`)}>
-                  <Plus aria-hidden /> {s.name}
-                </Button>
+                <div key={s.url} className="rounded-lg border border-line bg-surface-2 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-ink">{s.name}</p>
+                      <p className="text-xs text-ink-3">{s.kind === "direct" ? "Listed as a direct competitor in business research; customer overlap has not been confirmed." : "Competitor type is not recorded in this research; review the source before adding it."}</p>
+                    </div>
+                    <Button size="sm" variant="secondary" loading={busy === s.url} onClick={() => run(s.url, () => add({ slug, name: s.name, url: s.url }), `Watching ${s.name}`)}>
+                      <Plus aria-hidden /> Add to watch list
+                    </Button>
+                  </div>
+                  {s.comparison?.length ? (
+                    <details className="mt-2 rounded-[var(--radius-control)] border border-line px-3 py-2">
+                      <summary className="min-h-8 cursor-pointer py-1 text-xs font-medium text-ink-2">Why it may be relevant</summary>
+                      <div className="mt-2 flex flex-col gap-2">
+                        {s.comparison.map((item, index) => (
+                          <div key={`${item.dimension}-${item.sourceUrl}-${index}`} className="grid min-w-0 gap-1 border-t border-line pt-2 text-xs sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-x-3">
+                            <span className="font-medium capitalize text-ink-2">{item.dimension.replaceAll("_", " ")}</span>
+                            <div className="min-w-0 space-y-1.5">
+                              <p className="break-words text-ink"><span className="font-medium">Research summary: </span>{item.finding}</p>
+                              <p className="break-words text-ink-2"><span className="font-medium">Possible relevance: </span>{item.implication}</p>
+                              <a className="inline-flex max-w-full break-all font-medium text-brand underline underline-offset-2" href={item.sourceUrl} target="_blank" rel="noopener noreferrer">Open source page</a>
+                            </div>
+                          </div>
+                        ))}
+                        <p className="text-xs text-ink-3">These page claims do not prove that customers choose this business or that the comparison fits your market.</p>
+                      </div>
+                    </details>
+                  ) : <p className="mt-2 text-xs text-ink-3">No comparison detail was recorded. <a className="font-medium text-brand underline underline-offset-2" href={s.sourceUrl} target="_blank" rel="noopener noreferrer">Review the research source</a> before adding it.</p>}
+                </div>
               ))}
             </div>
           ) : null}

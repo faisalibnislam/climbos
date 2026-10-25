@@ -26,12 +26,17 @@ export const overview = query({
     const watches = allWatches.filter((w) => w.active);
     const changes = await ctx.db.query("competitorChanges").withIndex("by_org_at", (q) => q.eq("orgId", org._id)).order("desc").take(30);
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    const researchedCompetitors = business?.insights?.competitors ?? [];
     const suggested = selectWatchCandidates(
-      (business?.insights?.competitors ?? []).flatMap((c) => c.url ? [{ name: c.name, url: c.url, sourceUrl: c.sourceUrl, kind: c.kind }] : []),
+      researchedCompetitors.flatMap((c) => c.url ? [{ name: c.name, url: c.url, sourceUrl: c.sourceUrl, kind: c.kind }] : []),
       business?.website,
       allWatches.map((w) => w.url),
       6,
-    );
+    ).map((candidate) => {
+      const match = researchedCompetitors.find((item) => item.url && sameCompetitorSite(item.url, candidate.url));
+      const comparison = match?.comparison?.slice(0, 2);
+      return { ...candidate, ...(comparison?.length ? { comparison } : {}) };
+    });
     return {
       limit: (await isPaid(ctx, org)) ? LIMIT.paid : LIMIT.free,
       researchRefresh: business?.insights ? {

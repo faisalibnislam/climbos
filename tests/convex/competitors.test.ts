@@ -141,7 +141,7 @@ describe("competitor watch", () => {
         competitors: [
           { name: "Our own comparison page", url: "https://owner.example/compare/rival", sourceUrl: "https://owner.example/compare/rival", note: "Comparison page" },
           { name: "Directory listing", url: "https://g2.com/products/rival", sourceUrl: "https://g2.com/products/rival", note: "Directory" },
-          { name: "Rival", url: "https://www.rival.example/pricing", sourceUrl: "https://rival.example/pricing", note: "Sourced rival" },
+          { name: "Rival", url: "https://www.rival.example/pricing", sourceUrl: "https://rival.example/pricing", note: "Sourced rival", kind: "direct", comparison: [{ dimension: "offer", finding: "Lists onboarding with annual plans.", sourceUrl: "https://rival.example/pricing", implication: "May be relevant if switching support is an owner-confirmed buyer concern." }] },
           { name: "Adjacent", url: "https://adjacent.example", sourceUrl: "https://adjacent.example", note: "Related tool", kind: "adjacent" },
           { name: "Duplicate", url: "http://rival.example/", sourceUrl: "https://rival.example/", note: "Duplicate host" },
         ],
@@ -154,7 +154,7 @@ describe("competitor watch", () => {
       },
     }));
     const overview = await owner.client.query(api.competitors.overview, { slug });
-    expect(overview.suggested).toEqual([{ name: "Rival", url: "https://rival.example", sourceUrl: "https://rival.example/pricing" }]);
+    expect(overview.suggested).toEqual([{ name: "Rival", url: "https://rival.example", sourceUrl: "https://rival.example/pricing", kind: "direct", comparison: [{ dimension: "offer", finding: "Lists onboarding with annual plans.", sourceUrl: "https://rival.example/pricing", implication: "May be relevant if switching support is an owner-confirmed buyer concern." }] }]);
   });
 
   it("auto-seeds only identity-checked direct candidates within the free allowance and honors exclusions", async () => {
@@ -191,6 +191,8 @@ describe("competitor watch", () => {
     expect(overview.watches).toHaveLength(1);
     expect(overview.watches[0]).toMatchObject({ name: "Rival", autoSeeded: true, discoverySourceUrl: "https://research.example/rival" });
     expect(overview.suggested.map((candidate) => candidate.name)).toEqual(["Other"]);
+    expect(overview.suggested[0]).toMatchObject({ sourceUrl: "https://research.example/other", kind: "direct" });
+    expect(overview.suggested[0]).not.toHaveProperty("comparison");
 
     const watchId = overview.watches[0].id;
     await owner.client.mutation(api.competitors.remove, { slug, id: watchId });
