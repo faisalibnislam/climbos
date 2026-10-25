@@ -21,7 +21,7 @@ Growth Home opportunity questions open an editable field instead of sending a fi
 
 Home reads a bounded set of drafts waiting for review. When more than 20 are waiting, counts say “20+” instead of implying the returned sample is the exact total; the assistant receives the same lower-bound label. The review list remains limited to six recent drafts, with the link to the full review queue available.
 
-Date-sensitive growth recommendations lead with a plain-language timing choice, suggested dates when supported, and why that moment may matter to the business. Missing information stays visible; preparation, delivery, capacity, source claims, and evidence dates are available in an expandable detail section.
+Date-sensitive growth recommendations lead with a plain-language timing choice, suggested dates when supported, the named event or season, and why that moment may matter to the business. Missing information stays visible; preparation, delivery, capacity, source claims, and evidence dates are available in an expandable detail section.
 
 Offer recommendations explain whether to consider a change, check details first, improve another business issue, or keep the offer. The first view shows who the idea is for, its evidence, money left after listed costs, capacity, key risks, unknowns, the next step, and the approval boundary. The test plan, alternatives, promotion history, and full risk list open only when requested; the listed cost breakdown has its own disclosure. Missing facts remain unknown and any live change still needs the existing approval.
 

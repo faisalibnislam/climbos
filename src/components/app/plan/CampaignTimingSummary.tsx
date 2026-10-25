@@ -12,7 +12,10 @@ export function CampaignTimingSummary({ timing }: { timing: CampaignTiming & { r
         {windowLabel ? <Badge>{windowLabel}</Badge> : <span className="text-xs text-ink-3">No dates suggested</span>}
       </div>
       <p className="mt-1 text-xs text-ink-2">{timing.rationale}</p>
-      {timing.moment.name ? <p className="mt-1 text-xs text-ink-2"><span className="font-semibold">Why this date may matter:</span> {timing.moment.businessReason}</p> : null}
+      {timing.moment.name ? <>
+        <p className="mt-1 text-xs text-ink-2"><span className="font-semibold">Timing to consider:</span> {timing.moment.name}</p>
+        <p className="mt-1 text-xs text-ink-2"><span className="font-semibold">Why it may matter to this business:</span> {timing.moment.businessReason}</p>
+      </> : null}
       {timing.unknowns.length ? <p className="mt-1 text-xs text-amber-800"><span className="font-semibold">Still to confirm:</span> {timing.unknowns.slice(0, 2).join(" · ")}{timing.unknowns.length > 2 ? ` · and ${timing.unknowns.length - 2} more` : ""}</p> : null}
       <p className="mt-1 text-xs text-ink-3">This is a suggestion only. Nothing is scheduled.</p>
       <details className="mt-2 border-t border-line pt-2 text-xs text-ink-2">

@@ -54,7 +54,8 @@ describe("campaign timing recommendations", () => {
     const markup = renderToStaticMarkup(createElement(CampaignTimingSummary, { timing }));
     expect(markup).toContain("Recommended window");
     expect(markup).toContain("Nov 20–27, 2026");
-    expect(markup).toContain("Why this date may matter");
+    expect(markup).toContain("Timing to consider:</span> Thanksgiving shopping period");
+    expect(markup).toContain("Why it may matter to this business");
     expect(markup).toContain("Still to confirm");
     expect(markup).toContain("This is a suggestion only. Nothing is scheduled.");
     expect(markup).toContain("<details");
