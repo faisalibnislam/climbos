@@ -137,7 +137,10 @@ describe("Plan version history", () => {
 
     const saved = await t.run((ctx) => ctx.db.get(plan.id));
     const refreshed = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    const savedExpert = readExpertPlan(saved!.expert!);
     expect(refreshed.strategy?.expert?.economics).toMatchObject({ revenuePerCustomerMonthUsd: 250, grossMargin: 0.7, monthlyChurn: 0.04 });
+    expect(refreshed.strategy?.savedDecisions?.plays?.[0]).toMatchObject({ id: (savedExpert.plays as { id: string }[])[0].id, p50: (savedExpert.plays as { p50: number }[])[0].p50 });
+    expect(refreshed.strategy?.savedDecisions?.portfolio?.selected).toEqual((savedExpert.portfolio as { selected: string[] }).selected);
     expect(refreshed.staleInputs.ownerEconomics).toBe(true);
     expect(refreshed.unitEconomics?.segmentEconomics?.[0]).toMatchObject({ segment: "Small accounts", netRevenue: 1200, variableCosts: 800 });
     expect(refreshed.strategy?.expert?.portfolio).toBeTruthy();

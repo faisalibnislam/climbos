@@ -21,7 +21,89 @@ export interface ComparablePlan {
   channels: { name: string; priority: number; status: string; why: string; monthlyCostMicros: number; adSpendMinor: number }[];
   constraints: string[];
   measurementPlan: string;
+  savedDecisions?: {
+    diagnosis: string | null;
+    plays: { id: string; name: string; kind: string; oneLiner: string; unit: string; p10: number | null; p50: number | null; p90: number | null }[] | null;
+    portfolio: { selected: string[]; customers: number | null; horizonDays: number | null } | null;
+  } | null;
   expert?: unknown;
+}
+
+export interface DecisionChange {
+  key: string;
+  label: string;
+  before: string;
+  after: string;
+}
+
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+const number = (n: number | null) => n === null ? "unknown" : new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(n);
+
+type SavedPlay = NonNullable<NonNullable<ComparablePlan["savedDecisions"]>["plays"]>[number];
+type SavedPortfolio = NonNullable<NonNullable<ComparablePlan["savedDecisions"]>["portfolio"]>;
+
+function savedPlayDescription(play: SavedPlay, portfolio: SavedPortfolio | null | undefined): string {
+  const range = play.p10 === null && play.p50 === null && play.p90 === null
+    ? "saved outcome range unknown"
+    : `saved lower/middle/upper modeled customers: ${number(play.p10)} / ${number(play.p50)} / ${number(play.p90)}${play.unit ? ` ${play.unit}` : ""}`;
+  const selected = portfolio && Array.isArray(portfolio.selected)
+    ? portfolio.selected.includes(play.name) ? "in the chosen set" : "not in the chosen set"
+    : "chosen set not recorded";
+  return [play.kind, play.oneLiner, range, selected].filter(Boolean).join(" · ");
+}
+
+/** Compares the choices as originally saved, not numbers recalculated from today's inputs. */
+export function compareSavedDecisions(a: ComparablePlan, b: ComparablePlan): DecisionChange[] | null {
+  const left = a.savedDecisions;
+  const right = b.savedDecisions;
+  if (!left?.plays || !right?.plays || !left.portfolio || !right.portfolio) return null;
+  const changes: DecisionChange[] = [];
+  if (left.diagnosis !== right.diagnosis && (left.diagnosis || right.diagnosis)) {
+    changes.push({ key: "diagnosis", label: "What ClimbOS thinks is holding growth back", before: left.diagnosis ?? "Not recorded", after: right.diagnosis ?? "Not recorded" });
+  }
+  if (left.plays && right.plays) {
+    const oldById = new Map(left.plays.map((play) => [play.id, play]));
+    const newById = new Map(right.plays.map((play) => [play.id, play]));
+    for (const id of new Set([...oldById.keys(), ...newById.keys()])) {
+      const oldPlay = oldById.get(id);
+      const newPlay = newById.get(id);
+      if (oldPlay && newPlay && same(oldPlay, newPlay) && same(left.portfolio?.selected.includes(oldPlay.name), right.portfolio?.selected.includes(newPlay.name))) continue;
+      const name = newPlay?.name ?? oldPlay?.name ?? "Growth play";
+      changes.push({
+        key: `play-${id}`,
+        label: name,
+        before: oldPlay ? savedPlayDescription(oldPlay, left.portfolio) : "Not recommended in this version",
+        after: newPlay ? savedPlayDescription(newPlay, right.portfolio) : "No longer recommended",
+      });
+    }
+  }
+  if (left.portfolio && right.portfolio && (
+    !same([...left.portfolio.selected].sort(), [...right.portfolio.selected].sort())
+      || left.portfolio.customers !== right.portfolio.customers
+      || left.portfolio.horizonDays !== right.portfolio.horizonDays
+  )) {
+    changes.push({
+      key: "chosen-set",
+      label: "Chosen set and modeled result",
+      before: describePortfolio(left.portfolio),
+      after: describePortfolio(right.portfolio),
+    });
+  }
+  const channels = (plan: ComparablePlan) => [...plan.channels].sort((x, y) => x.priority - y.priority).map((channel) => `${channel.priority}. ${channel.name} (${channel.status})`);
+  const oldChannels = channels(a);
+  const newChannels = channels(b);
+  if (!same(oldChannels, newChannels)) changes.push({ key: "channels", label: "Recommended places to reach customers", before: oldChannels.join("; ") || "None recorded", after: newChannels.join("; ") || "None recorded" });
+  const audienceNames = (plan: ComparablePlan) => plan.audiences.map((audience) => audience.name);
+  const oldAudiences = audienceNames(a);
+  const newAudiences = audienceNames(b);
+  if (!same(oldAudiences, newAudiences)) changes.push({ key: "audiences", label: "Customer groups", before: oldAudiences.join("; ") || "None recorded", after: newAudiences.join("; ") || "None recorded" });
+  return changes;
+}
+
+function describePortfolio(portfolio: SavedPortfolio): string {
+  const selected = portfolio.selected.join(" + ") || "No set recorded";
+  const modeled = portfolio.customers === null ? "modeled customer total unknown" : `${number(portfolio.customers)} modeled customers${portfolio.horizonDays === null ? "" : ` over ${portfolio.horizonDays} days`}`;
+  return `${selected} · ${modeled}`;
 }
 
 export interface ComparableExperiment {

@@ -25,6 +25,7 @@ import { projectGrowthOpportunities, type OpportunityPlayInput } from "../shared
 import { AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
 import { expertPlaysOf, readExpertPlan } from "../shared/agents/planCompatibility";
 import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
+import { savedPlanDecisionSummary } from "../shared/agents/planDecisionSummary";
 
 /** Everything the Today screen needs, in one bounded query. */
 export const today = query({
@@ -695,6 +696,7 @@ export const plan = query({
     }
     const strategyRun = await latestRunOfKind(ctx, org._id, "strategy");
     const expert = strategy?.expert ? readExpertPlan(strategy.expert) : null;
+    const savedDecisions = savedPlanDecisionSummary(expert);
     const currentEconomics = expert?.economics
       ? { ...applyOwnerEconomics(expert.economics as Economics, business?.unitEconomics), currency: goal?.currency ?? business?.currency }
       : null;
@@ -768,6 +770,7 @@ export const plan = query({
             measurementPlan: strategy.measurementPlan,
             reviewDate: strategy.reviewDate,
             createdAt: strategy.createdAt,
+            savedDecisions,
             // Owner-confirmed unit economics apply on read: cost per customer and payback update at once.
             expert: expert ? {
               ...expert,

@@ -274,9 +274,12 @@ function PlanScreen({ slug }: { slug: string }) {
               : `v${other.version} is in use until you approve this one`
           }
           action={
-            <Button size="sm" variant="secondary" onClick={() => setViewId(s.status === "approved" ? other.id : null)}>
-              {s.status === "approved" ? `See v${other.version}` : `See v${other.version}`}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="secondary" onClick={() => setViewId(s.status === "approved" ? other.id : null)}>
+                See v{other.version}
+              </Button>
+              {versions && versions.length > 1 ? <Button size="sm" variant="secondary" onClick={openCompare}>Compare changes</Button> : null}
+            </div>
           }
         />
       ) : null}
