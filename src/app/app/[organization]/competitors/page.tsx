@@ -10,6 +10,7 @@ import { relativeTime } from "@/components/app/money";
 import { Scannable, toBullets } from "@/components/ds/content";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { Button, Callout, Card, CardContent, EmptyState, Input, Select, toast } from "@/components/ui";
+import { ReadinessComparison } from "@/components/app/competitors/ReadinessComparison";
 
 /** Competitor watch: their sites, checked weekly; only real changes reach you. */
 export default function CompetitorsPage() {
@@ -176,6 +177,7 @@ export default function CompetitorsPage() {
           {full && data.limit === 1 ? <p className="text-xs text-ink-3">Packages watch up to 5.</p> : null}
         </CardContent>
       </Card>
+      <ReadinessComparison slug={slug} />
       {data.changes.length === 0 ? (
         <EmptyState icon={<Eye />} title="No changes yet" body="Price and offer changes show here." />
       ) : (

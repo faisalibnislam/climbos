@@ -2557,6 +2557,9 @@ export default defineSchema({
     lastText: v.optional(v.string()),
     /** Pages included in lastText, retained so future change summaries can cite their origin. */
     lastSourceUrls: v.optional(v.array(v.string())),
+    /** Page-level search readiness finding IDs from the last homepage read (shared/seo/readinessCompare.ts). */
+    lastReadinessFindingIds: v.optional(v.array(v.string())),
+    lastReadinessAt: v.optional(v.number()),
     lastError: v.optional(v.string()),
     createdAt: v.number(),
   })

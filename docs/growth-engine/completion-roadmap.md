@@ -25,8 +25,8 @@ Status: **Done**, **Next**, or **Planned**. Size: S (one module + tests), M (bac
 | 12 | Lead fit and timing scores checked against outreach outcomes | 278, 290, 400 | S | Done (see ledger) |
 | 13 | Owner-recorded AI-answer accuracy (incorrect claim vs correct fact) | 372, 374, 397 | M | Done (see ledger) |
 | 14 | LocalBusiness structured data and `sameAs` links with owner attestation | 365–367 | S–M | Done (see ledger) |
-| 15 | Search readiness compared with monitored competitors | 357, 359, 364 | M | Next |
-| 16 | Structured, sourced competitor battlecards | 206, 207, 393 | M | Planned |
+| 15 | Search readiness compared with monitored competitors | 357, 359, 364 | M | Done (see ledger) |
+| 16 | Structured, sourced competitor battlecards | 206, 207, 393 | M | Next |
 | 17 | Owner view, retire and expiry of past strategy feedback | 135 | M | Planned |
 | 18 | Owner-set contact frequency limit across broadcasts, outreach and review invitations | 148 | M | Planned |
 | 19 | Warning when a link destination no longer shows the approved offer | 44 | M | Planned |
