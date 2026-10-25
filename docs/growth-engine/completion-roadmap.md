@@ -17,8 +17,8 @@ Status: **Done**, **Next**, or **Planned**. Size: S (one module + tests), M (bac
 | 4 | Lost-deal reasons and objections captured in the CRM and given to the diagnosis | 3, 81–90, 111–120, 232, 238, 248, 249, 399 | M | Done (see ledger) |
 | 5 | Stalled deals and overdue next steps detected (stage-change time) | 234, 239, 245, 246 | S–M | Done (see ledger) |
 | 6 | One-time setup costs in plays, timed by the cash view and reserve check | 122, 319; handoff 12 | M | Done (see ledger) |
-| 7 | Design and conversion finding decisions carried across audit runs, with a deduplicated queue | 71–80; handoff 4 | M–L | Next |
-| 8 | Saved forecasts scored against actuals (error, bias, interval coverage) | 314, 315, 327, 408 | S–M | Planned |
+| 7 | Design and conversion finding decisions carried across audit runs, with a deduplicated queue | 71–80; handoff 4 | M–L | Done (see ledger) |
+| 8 | Saved forecasts scored against actuals (error, bias, interval coverage) | 314, 315, 327, 408 | S–M | Next |
 | 9 | Possible tracking breaks and unusual swings in connected metrics | 292, 293, 295, 407 | S–M | Planned |
 | 10 | Owner-chosen Meta conversion action so cost-per-conversion advice works | 46 | M | Planned |
 | 11 | Excerpt checks extended to audience needs, decision observations and other prose references | 24; handoff 3 | S–M | Planned |

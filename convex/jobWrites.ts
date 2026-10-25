@@ -1,3 +1,4 @@
+import { latestDecisions, priorDecisionsBrief, type PriorDecision } from "../shared/agents/designDecisions";
 import { BusinessModelCheckSchema, businessModelPlanContext, businessModelTestsBrief, ownerModelSignals, ownerModelSignalsBrief } from "../shared/agents/businessModel";
 import { feedbackBrief } from "./feedback";
 import { EVIDENCE_KIND_LABEL, evidenceKind } from "../shared/agents/evidenceKind";
@@ -40,7 +41,7 @@ import { actionReadinessOf, analyzeDecisionOptions, type CopyBrief, type Insight
 import { approvalHash, contentHash } from "../shared/policy";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
-import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
+import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { audit } from "./lib/audit";
 import { AUTO_RUN_KINDS, CHANNEL_JOBS, jobForAction, startCardRun, WISH_AUTO_BUDGET_MICROS } from "./lib/cards";
 import { estimateJobMicros, planJob } from "./lib/jobPlans";
@@ -207,6 +208,8 @@ export const jobContext = internalQuery({
     const pipeline = pipelineOutcomes(pipelineDeals.slice(0, 2_000), { nowMs: concentrationToMs });
     const pipelineOutcomesText = run.kind === "strategy" ? `${pipelineOutcomesBrief(pipeline)}${pipelineDeals.length > 2_000 && pipelineOutcomesBrief(pipeline) ? " Only the 2,000 most recently updated deals were read, so totals may be partial." : ""}` : "";
     const pipelineLossNotes = run.kind === "strategy" ? pipeline.recentLossNotes : [];
+    // Website audits: owner decisions on earlier Design Critic findings, so dismissed findings aren't re-raised blindly.
+    const priorDesign = run.kind === "conversion_audit" ? await priorDesignDecisions(ctx, org._id, run._id) : { summary: "", notes: [] as string[] };
     // Business model check: first-party signals computed here; strategy runs read the latest verified check.
     const businessModelSignalsText = run.kind === "business_model_check" && concentrationCurrency
       ? ownerModelSignalsBrief(ownerModelSignals({ nowMs: concentrationToMs, currency: concentrationCurrency, revenueEvents: concentrationEvents, deals: pipelineDeals.slice(0, 2_000), lifecycleStage: business?.lifecycleStage?.stage ?? null, competitorChanges90d: marketChanges.filter((change) => change.at >= concentrationToMs - 90 * DAY).length }))
@@ -298,6 +301,8 @@ export const jobContext = internalQuery({
       businessModelContext,
       businessModelTestsText,
       businessModelTestNotes,
+      priorDesignDecisionsText: priorDesign.summary,
+      priorDesignDecisionNotes: priorDesign.notes,
       stripeReceivables,
       audience: { contacts, consented },
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },
@@ -1238,3 +1243,28 @@ export const updateActionCard = internalMutation({
     await ctx.db.patch(cardId, { status, ...(runId ? { runId } : {}), updatedAt: Date.now() });
   },
 });
+
+/** Owner decisions on Design Critic findings from up to five earlier, finished audits in this workspace. */
+export async function priorDesignDecisions(ctx: QueryCtx, orgId: Id<"organizations">, currentRunId?: Id<"workflowRuns">): Promise<{ summary: string; notes: string[]; latest: Map<string, PriorDecision> }> {
+  const audits = (await ctx.db.query("workflowRuns").withIndex("by_org_kind_created", (q) => q.eq("orgId", orgId).eq("kind", "conversion_audit")).order("desc").take(12))
+    .filter((r) => r._id !== currentRunId && r.status === "verified" && typeof r.output === "string")
+    .slice(0, 5);
+  const decisions: PriorDecision[] = [];
+  for (const audit of audits) {
+    let findings: { lens?: string; sourceUrl?: string; region?: string; observation?: string }[] = [];
+    try {
+      const parsed = JSON.parse(audit.output!) as { designCritic?: { findings?: typeof findings } };
+      findings = Array.isArray(parsed.designCritic?.findings) ? parsed.designCritic.findings : [];
+    } catch {
+      continue;
+    }
+    const reviews = await ctx.db.query("designFindingReviews").withIndex("by_org_run", (q) => q.eq("orgId", orgId).eq("runId", audit._id)).take(20);
+    for (const review of reviews) {
+      const finding = findings[review.findingIndex];
+      if (!finding || !review.status) continue;
+      decisions.push({ lens: finding.lens, sourceUrl: finding.sourceUrl, region: finding.region, observation: finding.observation, status: review.status, ...(review.note ? { note: review.note } : {}), decidedAt: review.updatedAt, runId: String(audit._id), runCreatedAt: audit.createdAt });
+    }
+  }
+  const latest = latestDecisions(decisions);
+  return { ...priorDecisionsBrief(latest), latest };
+}

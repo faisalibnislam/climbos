@@ -1,3 +1,5 @@
+import { priorDesignDecisions } from "./jobWrites";
+import { findingFingerprint } from "../shared/agents/designDecisions";
 import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { audit } from "./lib/audit";
@@ -45,6 +47,24 @@ export const feedback = query({
       capturedAt: shot.capturedAt,
       url: await ctx.storage.getUrl(shot.storageId),
     }))) };
+  },
+});
+
+/** Earlier owner decisions that match this audit's findings by lens, page and region (a review aid, not proof of the same issue). */
+export const priorDecisions = query({
+  args: { slug: v.string(), runId: v.id("workflowRuns") },
+  handler: async (ctx, { slug, runId }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const run = assertSameOrg(await ctx.db.get(runId), org._id, "audit");
+    if (run.kind !== "conversion_audit") throw appError("INVALID", "Earlier decisions are only available for website audits.");
+    const findings = findingsFromRun(run) as { lens?: string; sourceUrl?: string; region?: string }[];
+    // Only decisions from audits before this one count as "earlier".
+    const { latest } = await priorDesignDecisions(ctx, org._id, runId);
+    return findings.flatMap((finding, findingIndex) => {
+      const key = findingFingerprint(finding);
+      const prior = key ? latest.get(key) : undefined;
+      return prior && prior.runCreatedAt < run.createdAt ? [{ findingIndex, status: prior.status, decidedAt: prior.decidedAt, note: prior.note ?? null }] : [];
+    });
   },
 });
 

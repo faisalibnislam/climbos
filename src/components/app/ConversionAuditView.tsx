@@ -74,6 +74,7 @@ export function ConversionAuditView({ value, slug, runId }: { value: unknown; sl
   const selectDirection = useMutation(api.designCritic.selectDirection);
   const findingReview = useQuery(api.designCritic.feedback, { slug, runId });
   const reviewsByIndex = new Map((findingReview?.rows ?? []).map((row) => [row.findingIndex, row as FindingReview]));
+  const priorByIndex = new Map((useQuery(api.designCritic.priorDecisions, { slug, runId }) ?? []).map((row) => [row.findingIndex, row]));
 
   return (
     <div className="flex flex-col gap-5">
@@ -169,6 +170,7 @@ export function ConversionAuditView({ value, slug, runId }: { value: unknown; sl
             <p className="text-xs text-ink-3">The brief opens as editable text. Approved brand rules are not included unless explicitly attached; inferred cues remain hypotheses. Creating a draft does not change the audited website.</p>
           </div> : null}
           {finding.sourceUrl ? <a href={finding.sourceUrl} target="_blank" rel="noreferrer noopener" className="mt-2 inline-flex break-all text-xs text-link">Open evidence page <ExternalLink aria-hidden className="ml-1 size-3" /></a> : null}
+          {priorByIndex.get(i) ? <PriorDecisionNote prior={priorByIndex.get(i)!} /> : null}
           <DesignFindingReview key={`${runId}:${i}:${reviewsByIndex.get(i)?.updatedAt ?? "open"}`} slug={slug} runId={runId} findingIndex={i} current={reviewsByIndex.get(i)} canEdit={findingReview?.canEdit === true} />
         </li>)}</ul> : <p className="mt-3 text-sm text-ink-2">No design findings were returned for this sample.</p>}
         {list<string>(designCritic.limitations).length ? <ul className="mt-3 list-disc pl-5 text-xs text-ink-3">{list<string>(designCritic.limitations).map((item, i) => <li key={i}>{item}</li>)}</ul> : null}
@@ -224,6 +226,17 @@ export function ConversionAuditView({ value, slug, runId }: { value: unknown; sl
 
       {limitations.length ? <section className="rounded-lg border border-line bg-surface-2/50 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-ink-3">Limits of this review</p><ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-ink-3">{limitations.map((item, i) => <li key={i}>{item}</li>)}</ul></section> : null}
     </div>
+  );
+}
+
+const PRIOR_LABEL: Record<string, string> = { accepted: "accepted", dismissed: "dismissed", deferred: "deferred", resolved: "marked resolved", reopened: "reopened", corrected: "corrected", needs_information: "asked for more information on" };
+
+/** A matching decision from an earlier audit (same lens, page and region), shown so dismissed findings aren't reviewed from scratch. */
+export function PriorDecisionNote({ prior }: { prior: { status: string; decidedAt: number; note: string | null } }) {
+  return (
+    <p className="mt-2 rounded-[var(--radius-control)] bg-surface-2 px-2 py-1.5 text-xs text-ink-2">
+      In an earlier audit you {PRIOR_LABEL[prior.status] ?? prior.status} a finding in the same place ({formatDateTime(prior.decidedAt)}){prior.note ? `: “${prior.note}”` : "."} Matched by page, region and lens; check it&apos;s the same issue.
+    </p>
   );
 }
 
