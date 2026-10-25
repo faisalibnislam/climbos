@@ -12,6 +12,107 @@ export type OpportunityPriority = {
   nextUsefulCheck: string;
 };
 
+export type AiAnswerSample = {
+  provider: string;
+  query: string;
+  location?: string | null;
+  checkedAt: number;
+  answerStatus: string;
+  brandMention: string;
+  citedUrls: string[];
+};
+
+export type SearchQueryRow = { query: string; page: string; clicks: number; impressions: number };
+
+export type AiVisibilityOpportunity = {
+  provider: string;
+  query: string;
+  location: string | null;
+  priority: "investigate_repeated_gap" | "recheck_single_gap";
+  answerSamples: number;
+  knownMentionSamples: number;
+  observedNoMention: number;
+  citationSamples: number;
+  observedNoOwnCitation: number;
+  lastCheckedAt: number;
+  exactSearchConsoleMatch: { query: string; page: string; clicks: number; impressions: number } | null;
+  customerRelevance: "owner_tracked_question";
+  businessValue: "unknown";
+  effort: "unknown_until_target_page_is_reviewed";
+  nextCheck: string;
+};
+
+const normalizeQuery = (value: string) => value.trim().toLocaleLowerCase("en-US").replace(/\s+/gu, " ");
+
+function isFirstPartyCitation(citedUrls: string[], website: string): boolean {
+  let businessHost: string;
+  try { businessHost = new URL(website).hostname.toLocaleLowerCase("en-US").replace(/^www\./u, ""); }
+  catch { return false; }
+  return citedUrls.some((raw) => {
+    try {
+      const host = new URL(raw).hostname.toLocaleLowerCase("en-US").replace(/^www\./u, "");
+      return host === businessHost || host.endsWith(`.${businessHost}`);
+    } catch { return false; }
+  });
+}
+
+/**
+ * Rank only owner-recorded, answered samples with explicit negative evidence.
+ * Exact Search Console phrase matches add property context, never a conversion
+ * or qualified-demand claim. Unlinked value and implementation effort stay unknown.
+ */
+export function prioritizeAiVisibilityGaps(input: {
+  observations: AiAnswerSample[];
+  website?: string | null;
+  searchQueries?: SearchQueryRow[];
+}): AiVisibilityOpportunity[] {
+  const grouped = new Map<string, AiAnswerSample[]>();
+  for (const observation of input.observations) {
+    if (observation.answerStatus !== "answered") continue;
+    const key = [observation.provider, normalizeQuery(observation.query), normalizeQuery(observation.location ?? "")].join("\u0000");
+    grouped.set(key, [...(grouped.get(key) ?? []), observation]);
+  }
+  const queryMap = new Map<string, SearchQueryRow>();
+  for (const row of input.searchQueries ?? []) {
+    const key = normalizeQuery(row.query);
+    const current = queryMap.get(key);
+    if (!current || row.impressions > current.impressions) queryMap.set(key, row);
+  }
+  const opportunities: AiVisibilityOpportunity[] = [];
+  for (const samples of grouped.values()) {
+    const latest = samples.reduce((a, b) => a.checkedAt > b.checkedAt ? a : b);
+    const mentionSamples = samples.filter((sample) => sample.brandMention === "yes" || sample.brandMention === "no");
+    const noMention = mentionSamples.filter((sample) => sample.brandMention === "no").length;
+    const citationSamples = input.website ? samples.filter((sample) => sample.citedUrls.length > 0) : [];
+    const noOwnCitation = input.website
+      ? citationSamples.filter((sample) => !isFirstPartyCitation(sample.citedUrls, input.website!)).length
+      : 0;
+    if (!noMention && !noOwnCitation) continue;
+    const repeated = noMention >= 2 || noOwnCitation >= 2;
+    const exactSearchConsoleMatch = queryMap.get(normalizeQuery(latest.query)) ?? null;
+    opportunities.push({
+      provider: latest.provider,
+      query: latest.query,
+      location: latest.location ?? null,
+      priority: repeated ? "investigate_repeated_gap" : "recheck_single_gap",
+      answerSamples: samples.length,
+      knownMentionSamples: mentionSamples.length,
+      observedNoMention: noMention,
+      citationSamples: citationSamples.length,
+      observedNoOwnCitation: noOwnCitation,
+      lastCheckedAt: latest.checkedAt,
+      exactSearchConsoleMatch: exactSearchConsoleMatch ? { query: exactSearchConsoleMatch.query, page: exactSearchConsoleMatch.page, clicks: exactSearchConsoleMatch.clicks, impressions: exactSearchConsoleMatch.impressions } : null,
+      customerRelevance: "owner_tracked_question",
+      businessValue: "unknown",
+      effort: "unknown_until_target_page_is_reviewed",
+      nextCheck: exactSearchConsoleMatch
+        ? "Review the strongest matching Search Console page and the recorded answer together, confirm that the phrase reflects a real customer need, then identify the smallest page or entity change worth testing."
+        : "Repeat the same question in the same provider and market, inspect the exact answer and cited URLs, then compare with a real customer question before proposing a content change.",
+    });
+  }
+  return opportunities.sort((a, b) => Number(b.priority === "investigate_repeated_gap") - Number(a.priority === "investigate_repeated_gap") || Math.max(b.observedNoMention, b.observedNoOwnCitation) - Math.max(a.observedNoMention, a.observedNoOwnCitation) || b.lastCheckedAt - a.lastCheckedAt);
+}
+
 const ACCESS_BLOCKERS = new Set(["http-status", "page-noindex"]);
 const CONTENT_CLARITY = new Set(["missing-title", "missing-description", "missing-h1", "thin-readable-content"]);
 const SMALL_FIXES = new Set(["missing-title", "missing-description", "missing-h1", "missing-document-language", "missing-viewport"]);
