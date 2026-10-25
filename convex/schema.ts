@@ -2134,6 +2134,9 @@ export default defineSchema({
     outcomeEvidence: v.union(v.literal("measured"), v.literal("owner_reported"), v.literal("source_reported"), v.literal("inferred"), v.literal("unknown")),
     createdBy: v.id("users"),
     createdAt: v.number(),
+    /** The owner stopped this feedback from guiding future plans (kept for history). */
+    retiredAt: v.optional(v.number()),
+    retiredBy: v.optional(v.id("users")),
   })
     .index("by_org_strategy", ["orgId", "strategyId", "createdAt"])
     .index("by_strategy_mode", ["strategyId", "mode", "createdAt"]),
@@ -3341,6 +3344,8 @@ export default defineSchema({
     restoredFrom: v.optional(
       v.object({ version: v.number(), parts: v.array(v.string()) }),
     ),
+    /** The owner stopped this plan's send-back note from guiding future plans. */
+    rejectionNoteRetiredAt: v.optional(v.number()),
     createdAt: v.number(),
   }).index("by_org", ["orgId"]),
 

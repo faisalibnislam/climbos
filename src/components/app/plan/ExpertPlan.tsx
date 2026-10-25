@@ -11,6 +11,7 @@ import { PlayResults } from "./PlayResults";
 import { EvidenceReferences } from "./EvidenceReferences";
 import { DecisionFocus } from "./DecisionFocus";
 import { GrowthCashTimingPanel, type GrowthCashTimingView } from "./GrowthCashTiming";
+import { StrategyLearningSources } from "./StrategyLearningSources";
 import {
   ArrowRight,
   Ban,
@@ -1516,6 +1517,7 @@ export function GrowthPlays({ plays, slug, economics, portfolioComparisons, stra
       })}
     >
       {strategyExploration ? <StrategyExplorationPanel options={strategyExploration} slug={slug} strategyId={planId} canEdit={canEdit} /> : null}
+      {strategyExploration ? <StrategyLearningSources slug={slug} /> : null}
       {economics ? <EconomicsLine economics={economics} /> : null}
       {portfolioComparisons ? <PortfolioComparisons data={portfolioComparisons} economics={economics} /> : null}
       {portfolioComparisons?.cashTiming ? <GrowthCashTimingPanel data={portfolioComparisons.cashTiming} slug={slug} canEdit={canEdit} /> : null}
