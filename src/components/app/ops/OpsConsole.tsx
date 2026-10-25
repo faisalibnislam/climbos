@@ -333,8 +333,41 @@ export function OpsConsole() {
           <Stat label="Full preview complete, P50" value={durationLabel(d.costs.previewLearning.completedP50Ms)} sublabel={`${formatNumber(d.costs.previewLearning.completedSamples)} completed previews${d.costs.previewLearningCoverageCapped ? "; sample capped" : ""}`} />
           <Stat label="Snapshot marked useful" value={d.costs.previewLearning.usefulnessRate == null ? "Not enough responses" : `${Math.round(d.costs.previewLearning.usefulnessRate * 100)}%`} sublabel={`${formatNumber(d.costs.previewLearning.usefulnessResponses)} optional, user-reported responses${d.costs.previewLearningCoverageCapped ? "; sample capped" : ""}`} />
           <Stat label="Research cache hits, 24h" value={formatNumber(d.costs.researchCache24h.hits)} sublabel={d.costs.researchCache24h.coverageCapped ? "At least this many; view is capped" : "Reused tenant-scoped research results; not a dollar-savings estimate"} />
+          <Stat
+            label="Tagged research spend, 24h"
+            value={microsToUsd(d.costs.researchCost24h.recordedMicros + d.costs.researchCost24h.estimatedMicros)}
+            sublabel={`${microsToUsd(d.costs.researchCost24h.recordedMicros)} recorded · ${microsToUsd(d.costs.researchCost24h.estimatedMicros)} estimated across ${formatNumber(d.costs.researchCost24h.events)} tagged research events; step type recorded for ${formatNumber(d.costs.researchCost24h.taggedEvents)} / ${formatNumber(d.costs.researchCost24h.eventsRead)} usage events${d.costs.researchCost24h.coverageCapped ? "; sample capped" : ""}`}
+          />
           <Stat label="Preview daily budget" value={microsToUsd(d.fleet.previewDailyBudgetMicros)} sublabel="Change in Fleet controls" />
         </StatGroup>
+        <DataTable
+          caption="Strategy workflow speed and task status, last 30 days"
+          rows={[
+            { measure: "First confirmed finding", p50: d.costs.workflowMetrics.firstFindingP50Ms, samples: d.costs.workflowMetrics.firstFindingSamples },
+            { measure: "First owner-started action", p50: d.costs.workflowMetrics.firstActionP50Ms, samples: d.costs.workflowMetrics.firstActionSamples },
+          ]}
+          rowKey={(row) => row.measure}
+          emptyText="No strategy workflow timings yet."
+          columns={[
+            { key: "measure", header: "Strategy timing", rowHeader: true },
+            { key: "median", header: "Median", align: "right", cell: (row) => durationLabel(row.p50) },
+            { key: "sample", header: "Runs with timing", align: "right", cell: (row) => `${formatNumber(row.samples)} / ${formatNumber(d.costs.workflowMetrics.strategyRuns)}` },
+          ]}
+        />
+        <p className="text-xs text-ink-3">
+          Timing appears after at least 5 runs. Status counts below describe current task states, not business results.
+          {d.costs.workflowMetrics.coverageCapped ? " The 30-day sample is capped." : ""}
+        </p>
+        <DataTable
+          caption="Current task status for runs started in the last 30 days"
+          rows={Object.entries(d.costs.workflowMetrics.statusCounts).map(([status, count]) => ({ status, count })).filter((row) => row.count > 0)}
+          rowKey={(row) => row.status}
+          emptyText="No tasks started in the last 30 days."
+          columns={[
+            { key: "status", header: "Current status", rowHeader: true, cell: (row) => row.status.replace(/_/g, " ") },
+            { key: "count", header: "Tasks", align: "right", cell: (row) => formatNumber(row.count) },
+          ]}
+        />
         <DataTable
           caption="Spend by provider, last 24 hours"
           rows={[...d.costs.byProvider].sort((a, b) => b.costMicros - a.costMicros)}

@@ -76,7 +76,7 @@ export interface PhaseKey {
   /** Stable small integer per phase+round, used for idempotent step keys. */
   index: number;
   /** Cache reads are measured as compute work, not provider/model attempts. */
-  stepKind?: "model" | "compute";
+  stepKind?: "model" | "compute" | "research";
 }
 
 export const OPERATING_RULES = `# Role
@@ -241,7 +241,7 @@ export async function runResearch<T>(spec: AgentSpec<T>, input: AgentInput, deps
     }
   }
   return deps.phase(
-    { phase: "research", round: 0, index: 0, ...(cached ? { stepKind: "compute" as const } : {}) },
+    { phase: "research", round: 0, index: 0, stepKind: cached ? "compute" : "research" },
     `${spec.label}: research${cached ? " (cached)" : ""}`,
     async () => {
       if (cached) {

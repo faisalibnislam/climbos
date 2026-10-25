@@ -105,4 +105,93 @@ describe("operator accepted-plan costs", () => {
       ],
     });
   });
+
+  it("shows bounded workflow timing, task status, and research cost without counting fixtures", async () => {
+    const t = setup();
+    const ops = await asNewUser(t, "ops@example.com");
+    const { orgId } = await ops.client.mutation(api.orgs.createWorkspace, { businessName: "Learning Co" });
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      for (let index = 0; index < 5; index++) {
+        await ctx.db.insert("workflowRuns", {
+          orgId: orgId as Id<"organizations">,
+          kind: "strategy",
+          title: `Strategy ${index}`,
+          status: index === 0 ? "verified" : "needs_approval",
+          input: "{}",
+          roles: [],
+          estimateMicros: 100,
+          actualMicros: 100,
+          rateVersionId: "test",
+          entitlementVersionId: "test",
+          routingVersionId: "test",
+          budget: { modelSteps: 1, researchTools: 1, repairs: 0 },
+          used: { modelSteps: 1, researchTools: 1, repairs: 0 },
+          isFixture: false,
+          createdAt: now - 10_000,
+          updatedAt: now,
+          firstFindingAt: now - 8_000 + index * 1_000,
+          ...(index < 4 ? { firstActionAt: now - 7_000 + index * 1_000 } : {}),
+        });
+      }
+      await ctx.db.insert("workflowRuns", {
+        orgId: orgId as Id<"organizations">,
+        kind: "strategy",
+        title: "Fixture",
+        status: "verified",
+        input: "{}",
+        roles: [],
+        estimateMicros: 100,
+        actualMicros: 100,
+        rateVersionId: "test",
+        entitlementVersionId: "test",
+        routingVersionId: "test",
+        budget: { modelSteps: 1, researchTools: 1, repairs: 0 },
+        used: { modelSteps: 1, researchTools: 1, repairs: 0 },
+        isFixture: true,
+        createdAt: now - 10_000,
+        updatedAt: now,
+        firstFindingAt: now - 1_000,
+        firstActionAt: now - 500,
+      });
+      for (const [costMicros, estimated] of [[40_000, false], [10_000, true]] as const) {
+        await ctx.db.insert("usageEvents", {
+          orgId: orgId as Id<"organizations">,
+          taskKind: "strategy",
+          stepKind: "research",
+          stepIndex: 0,
+          routingVersionId: "openai-v1",
+          aiMode: "basic",
+          type: "search_call",
+          provider: "openai",
+          inputTokens: 0,
+          outputTokens: 0,
+          reasoningTokens: 0,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
+          quantity: 1,
+          costMicros,
+          estimated,
+          createdAt: now,
+        });
+      }
+    });
+
+    const dashboard = await ops.client.query(api.ops.dashboard, {});
+    expect(dashboard.costs.workflowMetrics).toMatchObject({
+      runs: 5,
+      strategyRuns: 5,
+      firstFindingSamples: 5,
+      firstActionSamples: 4,
+      firstFindingP50Ms: 4_000,
+      firstActionP50Ms: null,
+      statusCounts: { verified: 1, needs_approval: 4 },
+    });
+    expect(dashboard.costs.researchCost24h).toMatchObject({
+      events: 2,
+      recordedMicros: 40_000,
+      estimatedMicros: 10_000,
+      coverageCapped: false,
+    });
+  });
 });

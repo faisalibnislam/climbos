@@ -4436,6 +4436,7 @@ export default defineSchema({
     /** When owners were told this run failed (one notice per run). */
     failNoticeAt: v.optional(v.number()),
   })
+    .index("by_created", ["createdAt"])
     .index("by_org_created", ["orgId", "createdAt"])
     .index("by_org_kind_created", ["orgId", "kind", "createdAt"])
     .index("by_org_custom_agent", ["orgId", "customAgentId", "createdAt"])

@@ -17,6 +17,7 @@ import { action, internalMutation, internalQuery, mutation, query, type Mutation
 import type { Id } from "./_generated/dataModel";
 import { currentPeriod } from "./lib/periods";
 import { summarizePreviewLearning } from "../shared/preview/metrics";
+import { summarizeWorkflowMetrics } from "../shared/workflow/metrics";
 import { settleCredits } from "./lib/credits";
 import { ensureFleet } from "./circuits";
 import { audit } from "./lib/audit";
@@ -96,6 +97,11 @@ export const dashboard = query({
       .withIndex("by_created", (q) => q.gt("createdAt", now - 8 * DAY))
       .order("desc")
       .take(25_001);
+    const workflowRows = await ctx.db
+      .query("workflowRuns")
+      .withIndex("by_created", (q) => q.gt("createdAt", now - 30 * DAY))
+      .order("desc")
+      .take(5_001);
     const researchCacheHits = await ctx.db
       .query("workflowSteps")
       .withIndex("by_cache_hit_finished", (q) => q.eq("cacheHit", true).gt("finishedAt", now - DAY))
@@ -105,6 +111,15 @@ export const dashboard = query({
     const usageCoverageCapped = lastDayRows.length > 5_000;
     const recentUsage = lastDayRows.slice(0, 5_000);
     const spend24h = recentUsage.reduce((s, e) => s + e.costMicros, 0);
+    const researchEvents = recentUsage.filter((event) => event.stepKind === "research");
+    const researchCost24h = {
+      events: researchEvents.length,
+      recordedMicros: researchEvents.filter((event) => !event.estimated).reduce((sum, event) => sum + event.costMicros, 0),
+      estimatedMicros: researchEvents.filter((event) => event.estimated).reduce((sum, event) => sum + event.costMicros, 0),
+      taggedEvents: recentUsage.filter((event) => event.stepKind !== undefined).length,
+      eventsRead: recentUsage.length,
+      coverageCapped: usageCoverageCapped,
+    };
     const byProvider = new Map<string, { calls: number; costMicros: number }>();
     for (const e of recentUsage) {
       const p = byProvider.get(e.provider) ?? { calls: 0, costMicros: 0 };
@@ -144,6 +159,7 @@ export const dashboard = query({
       .withIndex("by_created", (q) => q.gt("createdAt", now - DAY))
       .take(1000);
     const previewLearning = summarizePreviewLearning(previews);
+    const workflowMetrics = summarizeWorkflowMetrics(workflowRows.slice(0, 5_000), workflowRows.length > 5_000);
     const orgs = await ctx.db
       .query("organizations")
       .withIndex("by_kind_created", (q) => q.eq("kind", "customer"))
@@ -175,6 +191,8 @@ export const dashboard = query({
         spend24hMicros: spend24h,
         usage24h: { eventsRead: recentUsage.length, coverageCapped: usageCoverageCapped },
         researchCache24h: { hits: Math.min(researchCacheHits.length, 1_000), coverageCapped: researchCacheHits.length > 1_000 },
+        researchCost24h,
+        workflowMetrics,
         byProvider: [...byProvider.entries()].map(([provider, x]) => ({ provider, ...x })),
         byModel24h: summarizeModelUsage(recentUsage.map((event) => ({
           provider: event.provider,
