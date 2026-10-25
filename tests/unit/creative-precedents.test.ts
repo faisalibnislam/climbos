@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(45);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(46);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -31,6 +31,12 @@ describe("creative strategy precedent retrieval", () => {
     const matches = retrieveCreativePrecedents("Connect rural craft producers with urban buyers through a branded retail route, clearer product quality, and faster supplier payment");
     expect(matches.some(({ precedent }) => precedent.id === "CP-045")).toBe(true);
     expect(formatCreativePrecedents("Connect rural craft producers with urban buyers through a branded retail route and faster supplier payment")).toContain("Aarong / BRAC");
+  });
+
+  it("retrieves recurring fan support as an alternative to advertising-led creator income", () => {
+    const query = "Fund ongoing creative work through recurring payments from a small group of committed fans instead of relying only on ad-supported views";
+    expect(retrieveCreativePrecedents(query).some(({ precedent }) => precedent.id === "CP-046")).toBe(true);
+    expect(creativePrecedentsForAgent("growth_plays", "Build a creator growth plan", query)).toContain("Patreon");
   });
 
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {
