@@ -13,14 +13,45 @@ export interface WishComposerHandle {
   fill: (text: string) => void;
 }
 
-/** Everyday requests, not platform recommendations or promised outcomes. */
-export function wishSuggestions(_type?: string | null): string[] {
-  return [
-    "Help me choose what to do next",
-    "Prepare posts for next week",
-    "Help me find more customers",
-    "Explain my recent results",
-  ];
+/** Everyday, business-type-aware request starters; choosing one only fills the draft. */
+export function wishSuggestions(type?: string | null): string[] {
+  switch (type) {
+    case "saas":
+      return [
+        "Help me choose the next step for my software business",
+        "Find out what may stop the right people from signing up",
+        "Help new customers reach their first useful result",
+        "Explain what my recent results say about growth",
+      ];
+    case "ecommerce":
+      return [
+        "Help me choose the next step for my online store",
+        "Help more shoppers finish an order",
+        "Find out what may bring past customers back",
+        "Explain what my recent results say about sales",
+      ];
+    case "physical_products":
+      return [
+        "Help me choose the next step for my product business",
+        "Help shoppers understand what makes my product useful",
+        "Find a practical way to reach people who may need my product",
+        "Explain what my recent results say about sales",
+      ];
+    case "services":
+      return [
+        "Help me choose the next step for my service business",
+        "Help more of the right people book with me",
+        "Find out what may stop enquiries from becoming bookings",
+        "Prepare posts that answer common customer questions",
+      ];
+    default:
+      return [
+        "Help me choose what to do next",
+        "Prepare posts for next week",
+        "Help me find more customers",
+        "Explain my recent results",
+      ];
+  }
 }
 
 /** Uses the existing costed work flow; inserting a suggestion never starts it. */
