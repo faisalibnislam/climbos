@@ -513,6 +513,12 @@ export function lintPlays(drafts: PlayDraft[], economics?: Economics, opts: { de
 
 const postFormat = z.enum(["text", "single_image", "carousel", "document", "reel", "thread", "story"]);
 const copyAngleSchema = z.string().min(4).max(180);
+const TrendEvidenceSchema = z.object({
+  sourceUrl: z.string().url(),
+  observationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  /** Short source observation copied exactly from this run's bounded research notes. */
+  observation: z.string().min(8).max(500),
+});
 export const CopyBriefSchema = z.object({
   reader: z.string(),
   situation: z.string(),
@@ -539,6 +545,8 @@ export const CopyBriefSchema = z.object({
   trackingMethod: z.string(),
   supportingFactIndexes: z.array(z.number()),
   supportingSourceUrls: z.array(z.string()),
+  /** Dated source evidence for a trend reference on this individual asset. */
+  trendEvidence: TrendEvidenceSchema.optional(),
   unknowns: z.array(z.string()),
 });
 export type CopyBrief = z.infer<typeof CopyBriefSchema>;
@@ -553,6 +561,8 @@ export const SocialPostsV2Schema = z.object({
       approvedOfferPlayName: z.string().min(1).max(120).optional(),
       /** Exact run-supplied source for this post's trend or meme reference. */
       trendSourceUrl: z.string().url().optional(),
+      /** Source, date, and observation must match a dated record in this run's research notes. */
+      trendEvidence: TrendEvidenceSchema.optional(),
       format: postFormat,
       hook: z.string(),
       slides: z.array(z.object({ heading: z.string(), body: z.string() })),
@@ -1591,6 +1601,53 @@ export function lintRepeatedCopyPieces(items: { path: string; text: string }[]):
   return issues;
 }
 
+const MAX_CURRENT_TREND_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+type DatedTrendResearch = { sourceUrl: string; observationDate: string; observation: string };
+
+function datedTrendResearch(notes: string): DatedTrendResearch[] {
+  const blocks = notes.split(/(?=^TREND SIGNAL(?:\s+\d+)?:?\s*$)/gim).filter((block) => /^TREND SIGNAL(?:\s+\d+)?:?\s*$/im.test(block));
+  return blocks.flatMap((block) => {
+    const read = (label: string) => block.match(new RegExp(`^\\s*(?:[-*]\\s*)?${label}:\\s*(.+?)\\s*$`, "im"))?.[1]?.trim();
+    const sourceUrl = read("Source URL");
+    const observationDate = read("Observed date");
+    const observation = read("Observed signal");
+    if (!sourceUrl || !observationDate || !observation || !/^\d{4}-\d{2}-\d{2}$/.test(observationDate)) return [];
+    const parsedDate = new Date(`${observationDate}T00:00:00.000Z`);
+    if (Number.isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== observationDate) return [];
+    return [{ sourceUrl, observationDate, observation }];
+  });
+}
+
+function normalizedEvidenceText(value: string): string {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function lintTrendEvidence(post: SocialPostsV2["posts"][number], input: AgentInput, path: string): LintIssue[] {
+  const evidence = post.trendEvidence;
+  if (!evidence) return [{ severity: "error", rule: "trend_evidence", message: "Add the dated observation copied from this run's research, or remove the current-trend reference and use an evergreen idea.", path }];
+  const trendUrl = normalizeSourceUrl(post.trendSourceUrl ?? "");
+  const evidenceUrl = normalizeSourceUrl(evidence.sourceUrl);
+  if (!trendUrl || trendUrl !== evidenceUrl) return [{ severity: "error", rule: "trend_evidence", message: "The dated observation must point to the same exact source used by this post.", path }];
+
+  const matchingRecord = datedTrendResearch(input.precomputedResearch?.notes ?? "").find((record) =>
+    normalizeSourceUrl(record.sourceUrl) === evidenceUrl
+    && record.observationDate === evidence.observationDate
+    && normalizedEvidenceText(record.observation) === normalizedEvidenceText(evidence.observation),
+  );
+  if (!matchingRecord) return [{ severity: "error", rule: "trend_evidence", message: "The source, date, and observation must match one dated signal record in this run's research notes.", path }];
+
+  const retrievedAt = input.precomputedResearch?.retrievedAt;
+  if (!Number.isFinite(retrievedAt)) return [{ severity: "error", rule: "trend_evidence", message: "This research has no recorded retrieval date, so ClimbOS cannot verify that the trend is current. Use an evergreen idea or refresh the research.", path }];
+  const observedAt = Date.parse(`${evidence.observationDate}T00:00:00.000Z`);
+  const retrievedDate = new Date(retrievedAt!).toISOString().slice(0, 10);
+  const retrievedDay = Date.parse(`${retrievedDate}T00:00:00.000Z`);
+  const age = retrievedDay - observedAt;
+  if (age < 0) return [{ severity: "error", rule: "trend_evidence", message: "The source observation date is after the research retrieval date. Correct the source date or use an evergreen idea.", path }];
+  if (age > MAX_CURRENT_TREND_AGE_MS) return [{ severity: "error", rule: "trend_evidence", message: "This source observation is more than ClimbOS's 30-day current-trend window old. Refresh the research or use an evergreen idea.", path }];
+  return [];
+}
+
 function lintSocial(out: SocialPostsV2, input: AgentInput, requestedChannels: string[]): LintIssue[] {
   const issues: LintIssue[] = [];
   issues.push(...lintCopyBrief(out.copyBrief, input));
@@ -1608,6 +1665,7 @@ function lintSocial(out: SocialPostsV2, input: AgentInput, requestedChannels: st
     if (namesTrend && !post.trendSourceUrl) {
       issues.push({ severity: "error", rule: "trend_source", message: "Each trend or meme-inspired post needs its own exact source URL from this run; otherwise use an evergreen idea.", path: trendPath });
     }
+    if (namesTrend) issues.push(...lintTrendEvidence(post, input, `posts[${index}].trendEvidence`));
     if (post.trendSourceUrl) trendReferences.push({ url: post.trendSourceUrl, path: trendPath });
   });
   issues.push(...lintAvailableSourceUrls(trendReferences, input));
@@ -2939,7 +2997,7 @@ export function researchFor(task: TaskType | "business_insights" | "prospecting"
         maxSearches: 3,
         maxFetches: 3,
         cacheTtlMs: 15 * 60_000,
-        brief: `Find at most three recent social trends or meme-inspired formats that could fit ${ctx.businessName}${site} on these requested platforms: ${(ctx.platforms ?? []).join(", ") || "the platforms in the task"}.${market}${scope} Prefer sources with visible recent activity and a date. Use official platform trend resources where available, but label ad-library or paid-creative examples as paid evidence, not proof of organic popularity. For each useful signal, report the exact URL, what was observed, date/freshness if shown, platform/market, and a cautious fit idea. Do not call an undated signal current. Skip unrelated viral items, tragedy, sensitive news, political bait, copied creator assets, and trends incompatible with the business or platform. If no source supports a relevant current signal, say so and recommend evergreen ideas instead. Do not recommend a specific song, meme image, creator clip, or branded character for reuse; original and licensed assets only.`,
+        brief: `Find at most three recent social trends or meme-inspired formats that could fit ${ctx.businessName}${site} on these requested platforms: ${(ctx.platforms ?? []).join(", ") || "the platforms in the task"}.${market}${scope} Prefer sources with visible recent activity and a date. Use official platform trend resources where available, but label ad-library or paid-creative examples as paid evidence, not proof of organic popularity. For each useful signal, write one exact record using these lines: TREND SIGNAL 1; Platform: [platform]; Market: [market or unknown]; Observed date: [YYYY-MM-DD or unknown]; Source URL: [exact URL]; Observed signal: [one short source-reported observation copied from the page]; Fit idea: [cautious idea]. Number each record. Never make up a date or observation, and do not call an undated signal current. Skip unrelated viral items, tragedy, sensitive news, political bait, copied creator assets, and trends incompatible with the business or platform. If no source supports a relevant current signal, say so and recommend evergreen ideas instead. Do not recommend a specific song, meme image, creator clip, or branded character for reuse; original and licensed assets only.`,
       };
     case "growth_strategy":
       return {

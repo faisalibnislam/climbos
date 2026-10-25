@@ -27,6 +27,7 @@ import { ApprovalPanel } from "@/components/app/content/detail/ApprovalPanel";
 import { ChannelPreview } from "@/components/app/content/detail/ChannelPreview";
 import { DraftEditor } from "@/components/app/content/detail/DraftEditor";
 import { RepurposeDialog } from "@/components/app/content/RepurposeDialog";
+import { TrendEvidenceNote } from "@/components/app/content/TrendEvidenceNote";
 import { TranslateDialog } from "@/components/app/content/TranslateDialog";
 import { FactsList, FlaggedClaims, ReceiptsTimeline, VersionHistory } from "@/components/app/content/detail/HistoryPanels";
 import { EmailSendPanel, isEmailKind } from "@/components/app/content/detail/EmailSendPanel";
@@ -179,6 +180,7 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
                           <p className="mt-1 text-xs text-ink-3">These are the source URLs the draft records. Check the page and date before treating a trend as current.</p>
                         </div>
                       ) : null}
+                      {cur.copyBrief.trendEvidence ? <TrendEvidenceNote evidence={cur.copyBrief.trendEvidence} /> : null}
                       {cur.copyBrief.unknowns.length ? (
                         <div className="rounded-[var(--radius-control)] bg-amber-100 p-2.5">
                           <p className="text-xs font-semibold text-amber-900">Still unknown</p>

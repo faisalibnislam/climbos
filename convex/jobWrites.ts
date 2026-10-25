@@ -905,7 +905,7 @@ export const saveArtifacts = internalMutation({
 });
 
 /** Convert task outputs into artifact inputs (pure helpers used by jobs). */
-export function socialToArtifacts(out: Omit<SocialPostsOutput, "posts"> & { copyBrief?: CopyBrief; posts: (SocialPostsOutput["posts"][number] & { angle?: string; trendSourceUrl?: string; approvedOfferPlayName?: string })[] }, now: number): Omit<ArtifactInput, "imageStorageId">[] {
+export function socialToArtifacts(out: Omit<SocialPostsOutput, "posts"> & { copyBrief?: CopyBrief; posts: (SocialPostsOutput["posts"][number] & { angle?: string; trendSourceUrl?: string; trendEvidence?: NonNullable<CopyBrief["trendEvidence"]>; approvedOfferPlayName?: string })[] }, now: number): Omit<ArtifactInput, "imageStorageId">[] {
   return out.posts.map((p, i) => ({
     kind: "social_post" as const,
     channel: p.channel,
@@ -916,6 +916,7 @@ export function socialToArtifacts(out: Omit<SocialPostsOutput, "posts"> & { copy
       ...out.copyBrief,
       approvedOfferPlayName: p.approvedOfferPlayName ?? out.copyBrief.approvedOfferPlayName,
       supportingSourceUrls: [...new Set([...out.copyBrief.supportingSourceUrls, ...(p.trendSourceUrl ? [p.trendSourceUrl] : [])])],
+      trendEvidence: p.trendEvidence,
     } : undefined,
     hashtags: p.hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)),
     altText: p.altText,

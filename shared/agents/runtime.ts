@@ -409,6 +409,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
   // Numbers may trace to this job's research as well as the brief and facts.
   const lintOf = (o: T) => (spec.lint ? spec.lint(o, {
     ...input,
+    precomputedResearch: research ?? input.precomputedResearch,
     untrustedContext: [input.untrustedContext ?? "", research?.notes ?? "", ...(research?.sources ?? []).map((x) => x.url)].join("\n"),
     availableSourceUrls: [...new Set([...(input.availableSourceUrls ?? []), ...(research?.sources ?? []).map((x) => x.url)])],
   }) : []);

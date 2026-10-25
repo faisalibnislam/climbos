@@ -162,7 +162,8 @@ describe("publishing lifecycle", () => {
       objective: "Request a consultation", offerFactIds: [supportingFactId], problemJob: "Choose a provider", trigger: "An active need", centralIdea: "Make the next step clear",
       objection: "Unknown", proofFactIds: [], prohibitedClaims: [], channel: "facebook", format: "single image", deliveryContext: "Organic post",
       brandVoice: "Clear and practical", approvedExamples: [], cta: "Ask for details", afterAction: "Reply to the inquiry", trackingMetric: "Qualified inquiries",
-      trackingMethod: "Unknown", supportingFactIds: [supportingFactId], supportingSourceUrls: ["https://example.com/trends/dated-format"], unknowns: ["Availability"],
+      trackingMethod: "Unknown", supportingFactIds: [supportingFactId], supportingSourceUrls: ["https://example.com/trends/dated-format"],
+      trendEvidence: { sourceUrl: "https://example.com/trends/dated-format", observationDate: "2026-10-20", observation: "The source reports a dated format example." }, unknowns: ["Availability"],
     };
     await t.run(async (ctx) => {
       const artifact = await ctx.db.get(artifactId);

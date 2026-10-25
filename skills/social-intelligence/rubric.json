@@ -3,7 +3,7 @@
   "title": "Business-fit social intelligence",
   "gates": [
     { "id": "G1", "text": "Voice and humor fit the business evidence, audience, approved brand style, market and destination platform; sensitive topics are not trivialized." },
-    { "id": "G2", "text": "Any claim that a topic, format, hashtag or meme is currently trending has a recent, exact source URL in the run; undated or stale signals are labeled unverified or omitted." },
+    { "id": "G2", "text": "Any current-trend claim has a source URL, date, and source-reported observation tied to the same research record; the deterministic freshness check passes, otherwise the idea is evergreen or labeled unverified." },
     { "id": "G3", "text": "The post uses an original, useful business-specific idea and does not promise virality, copy protected creator assets, or use engagement bait." }
   ],
   "criteria": [

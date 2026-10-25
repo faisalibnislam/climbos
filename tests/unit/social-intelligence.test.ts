@@ -15,7 +15,9 @@ describe("social intelligence routing", () => {
     const research = researchFor("social_posts", { businessName: "Northstar SaaS", platforms: ["linkedin"] });
     expect(research).toMatchObject({ maxSearches: 3, maxFetches: 3 });
     expect(research?.brief).toContain("linkedin");
-    expect(research?.brief).toContain("Do not call an undated signal current");
+    expect(research?.brief).toContain("do not call an undated signal current");
+    expect(research?.brief).toContain("TREND SIGNAL 1");
+    expect(research?.brief).toContain("Observed date:");
   });
 
   it("warns when an allowed copy link was not actually opened in the run", () => {
@@ -111,23 +113,93 @@ describe("social intelligence routing", () => {
     expect(issues.some((issue) => issue.rule === "platform_adaptation" && issue.path === "posts[1].body")).toBe(true);
 
     const sourceUrl = "https://trends.example/current";
-    const citedInput: AgentInput = { ...input, availableSourceUrls: [sourceUrl] };
+    const trendNotes = [
+      "TREND SIGNAL 1",
+      "Platform: Instagram",
+      "Market: unknown",
+      "Observed date: 2026-10-20",
+      `Source URL: ${sourceUrl}`,
+      "Observed signal: A creator trend uses short before-and-after clips.",
+      "Fit idea: Explain a useful before-and-after decision.",
+    ].join("\n");
+    const citedInput: AgentInput = {
+      ...input,
+      availableSourceUrls: [sourceUrl],
+      precomputedResearch: { notes: trendNotes, sources: [{ url: sourceUrl }], retrievedAt: Date.parse("2026-10-25T12:00:00.000Z") },
+    };
     const citedOutput = {
       ...output,
       copyBrief: { ...copyBrief, supportingSourceUrls: [sourceUrl] },
-      posts: output.posts.map((post) => ({ ...post, trendSourceUrl: sourceUrl })),
+      posts: output.posts.map((post) => ({
+        ...post,
+        trendSourceUrl: sourceUrl,
+        trendEvidence: { sourceUrl, observationDate: "2026-10-20", observation: "A creator trend uses short before-and-after clips." },
+      })),
     };
     const citedIssues = spec.lint?.(citedOutput as never, citedInput) ?? [];
     expect(citedIssues.some((issue) => issue.rule === "trend_source" || issue.rule === "citation")).toBe(false);
-    expect(socialToArtifacts(citedOutput as never, 1).map((artifact) => artifact.copyBrief?.supportingSourceUrls)).toEqual([
-      [sourceUrl], [sourceUrl],
-    ]);
+    const artifacts = socialToArtifacts(citedOutput as never, 1);
+    expect(artifacts.map((artifact) => artifact.copyBrief?.supportingSourceUrls)).toEqual([[sourceUrl], [sourceUrl]]);
+    expect(artifacts[0]?.copyBrief?.trendEvidence).toEqual({
+      sourceUrl,
+      observationDate: "2026-10-20",
+      observation: "A creator trend uses short before-and-after clips.",
+    });
 
     const mismatchedOutput = {
       ...citedOutput,
       posts: citedOutput.posts.map((post) => ({ ...post, trendSourceUrl: "https://other.example/trend" })),
     };
     expect((spec.lint?.(mismatchedOutput as never, citedInput) ?? []).some((issue) => issue.rule === "citation")).toBe(true);
+  });
+
+  it("requires a current trend date and observation tied to the same research record", () => {
+    const spec = socialSpec(["instagram"]);
+    const sourceUrl = "https://trends.example/current";
+    const notes = [
+      "TREND SIGNAL 1",
+      "Platform: Instagram",
+      "Market: unknown",
+      "Observed date: 2026-10-20",
+      `Source URL: ${sourceUrl}`,
+      "Observed signal: Creators are using a short progress-reveal format.",
+      "Fit idea: Show one practical step before the reveal.",
+    ].join("\n");
+    const input: AgentInput = {
+      task: "Write a current trend post",
+      brief: "A business",
+      facts: [],
+      precomputedResearch: { notes, sources: [{ url: sourceUrl }], retrievedAt: Date.parse("2026-10-25T12:00:00.000Z") },
+    };
+    const copyBrief = {
+      reader: "customers", situation: "planning", awarenessStage: "unknown", relationshipStage: "unknown", objective: "teach",
+      offerFactIndexes: [], problemJob: "understand a choice", trigger: "planning", centralIdea: "A useful reveal", objection: "none known",
+      proofFactIndexes: [], prohibitedClaims: [], channel: "social", format: "text", deliveryContext: "organic", brandVoice: "clear",
+      approvedExamples: [], cta: "Save the steps", afterAction: "none", trackingMetric: "unknown", trackingMethod: "unknown",
+      supportingFactIndexes: [], supportingSourceUrls: [], unknowns: [],
+    };
+    const post = {
+      channel: "instagram", title: "A current trend worth trying", body: "A practical way to show the progress before the reveal.",
+      hashtags: [], altText: "", imageIdea: "", factIndexes: [], suggestedDay: 1, angle: "Show the work behind a result", format: "text",
+      hook: "A current trend can clarify the steps", slides: [], videoScript: "", visualBrief: "", firstComment: "", trendSourceUrl: sourceUrl,
+      trendEvidence: { sourceUrl, observationDate: "2026-10-20", observation: "Creators are using a short progress-reveal format." },
+    };
+    const good = spec.lint?.({ copyBrief, posts: [post] } as never, input) ?? [];
+    expect(good.filter((issue) => issue.rule === "trend_evidence")).toEqual([]);
+
+    const missingDate = spec.lint?.({ copyBrief, posts: [{ ...post, trendEvidence: undefined }] } as never, input) ?? [];
+    expect(missingDate.some((issue) => issue.rule === "trend_evidence")).toBe(true);
+    const wrongObservation = spec.lint?.({ copyBrief, posts: [{ ...post, trendEvidence: { ...post.trendEvidence, observation: "Another source claim not present in the notes." } }] } as never, input) ?? [];
+    expect(wrongObservation.some((issue) => issue.rule === "trend_evidence")).toBe(true);
+    const wrongUrl = spec.lint?.({ copyBrief, posts: [{ ...post, trendEvidence: { ...post.trendEvidence, sourceUrl: "https://other.example/signal" } }] } as never, input) ?? [];
+    expect(wrongUrl.some((issue) => issue.rule === "trend_evidence")).toBe(true);
+    const staleInput: AgentInput = { ...input, precomputedResearch: { ...input.precomputedResearch!, retrievedAt: Date.parse("2026-12-01T12:00:00.000Z") } };
+    expect((spec.lint?.({ copyBrief, posts: [post] } as never, staleInput) ?? []).some((issue) => issue.rule === "trend_evidence")).toBe(true);
+    const undatedResearch: AgentInput = { ...input, precomputedResearch: { notes, sources: [{ url: sourceUrl }] } };
+    expect((spec.lint?.({ copyBrief, posts: [post] } as never, undatedResearch) ?? []).some((issue) => issue.rule === "trend_evidence")).toBe(true);
+    const future = { ...post, trendEvidence: { ...post.trendEvidence, observationDate: "2026-10-26" } };
+    const futureInput: AgentInput = { ...input, precomputedResearch: { ...input.precomputedResearch!, notes: notes.replace("2026-10-20", "2026-10-26") } };
+    expect((spec.lint?.({ copyBrief, posts: [future] } as never, futureInput) ?? []).some((issue) => issue.rule === "trend_evidence")).toBe(true);
   });
 
   it("checks titles, hooks, and image alt text against confirmed claim evidence", () => {
