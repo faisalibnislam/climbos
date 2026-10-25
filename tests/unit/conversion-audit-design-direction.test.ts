@@ -32,6 +32,9 @@ describe("Conversion audit design direction choices", () => {
     expect(html).toContain("Saved against this audit finding. It does not change or publish the audited website.");
     expect(html).toContain("Prepare editable brief");
     expect(html).toContain("Selected");
+    expect(html).toContain("designRunId=audit_run");
+    expect(html).toContain("designFindingIndex=0");
+    expect(html).toContain("designDirectionId=hero-proof");
   });
 
   it("requires saving the exact direction before opening its editable brief", () => {

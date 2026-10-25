@@ -2384,6 +2384,16 @@ export default defineSchema({
     publishedTitle: v.optional(v.string()),
     publishedVersion: v.optional(v.number()),
     runId: v.optional(v.id("workflowRuns")),
+    /** Source decision for pages prepared from a saved Design Critic finding; this never implies approval or publication. */
+    designCriticSource: v.optional(v.object({
+      runId: v.id("workflowRuns"),
+      findingIndex: v.number(),
+      directionId: v.string(),
+      directionName: v.string(),
+      region: v.optional(v.string()),
+      sourceUrl: v.optional(v.string()),
+      selectedAt: v.number(),
+    })),
     views: v.number(),
     leads: v.number(),
     createdAt: v.number(),

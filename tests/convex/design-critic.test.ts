@@ -53,6 +53,24 @@ describe("Design Critic finding review", () => {
     expect(await t.run(async (ctx) => (await ctx.db.query("auditEvents").withIndex("by_org_created", (q) => q.eq("orgId", orgId as never)).collect()).map((event) => event.action))).toContain("design_finding.direction_selected");
   });
 
+  it("binds a landing-page draft to the exact saved finding and direction and rejects forged or cross-tenant sources", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "design-source-owner@example.com");
+    const other = await asNewUser(t, "design-source-other@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Design Co" });
+    const { slug: otherSlug } = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other Co" });
+    const runId = await addAudit(t, orgId);
+    const source = { runId, findingIndex: 0, directionId: "hero-proof" };
+
+    await expect(owner.client.mutation(api.landing.create, { slug, brief: "Redesign our landing page", designCriticSource: source })).rejects.toThrow(/choose and save this direction/i);
+    await expect(other.client.mutation(api.landing.create, { slug: otherSlug, brief: "Redesign another page", designCriticSource: source })).rejects.toThrow(/same workspace|couldn't find/i);
+    await owner.client.mutation(api.designCritic.selectDirection, { slug, runId, findingIndex: 0, directionId: "hero-concise" });
+    await expect(owner.client.mutation(api.landing.create, { slug, brief: "Redesign our landing page", designCriticSource: source })).rejects.toThrow(/choose and save this direction/i);
+    await owner.client.mutation(api.designCritic.selectDirection, { slug, ...source });
+    const pageId = await owner.client.mutation(api.landing.create, { slug, brief: "Redesign our landing page", designCriticSource: source });
+    expect((await owner.client.query(api.landing.list, { slug })).pages.find((page) => page.id === pageId)?.designCriticSource).toMatchObject({ ...source, directionName: "Show proof earlier", region: "Hero", sourceUrl: "https://example.com/", selectedAt: expect.any(Number) });
+  });
+
   it("rejects a direction that is not in the immutable audit finding", async () => {
     const t = setup();
     const owner = await asNewUser(t, "design-direction-invalid@example.com");

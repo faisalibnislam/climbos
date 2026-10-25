@@ -17,9 +17,13 @@ import { KeyValueList } from "@/components/ds/data/display";
 import type { LandingContent } from "../../../../../shared/landing";
 
 /** Landing pages: Climb AI writes the page, you edit and publish. Leads go to Pipeline and Inbox. */
-export default function PagesPage({ searchParams }: { searchParams: Promise<{ brief?: string | string[] }> }) {
+export default function PagesPage({ searchParams }: { searchParams: Promise<{ brief?: string | string[]; designRunId?: string | string[]; designFindingIndex?: string | string[]; designDirectionId?: string | string[] }> }) {
   const { organization: slug } = useParams<{ organization: string }>();
-  const requestedBrief = use(searchParams).brief;
+  const params = use(searchParams);
+  const requestedBrief = params.brief;
+  const requestedRunId = params.designRunId;
+  const requestedFindingIndex = params.designFindingIndex;
+  const requestedDirectionId = params.designDirectionId;
   const data = useQuery(api.landing.list, { slug });
   const create = useMutation(api.landing.create);
   const retry = useMutation(api.landing.retry);
@@ -35,6 +39,7 @@ export default function PagesPage({ searchParams }: { searchParams: Promise<{ br
       {data.canEdit ? (
         <Card>
           <CardContent className="flex flex-col gap-3">
+            {typeof requestedRunId === "string" && typeof requestedFindingIndex === "string" && typeof requestedDirectionId === "string" ? <p className="rounded-md bg-surface-2/70 p-3 text-sm text-ink-2">This new page draft will keep a link to the saved Design Critic finding and direction. It will not change the reviewed website.</p> : null}
             <Field label="What's the page for?">
               <Textarea value={brief} onChange={(e) => setBrief(e.target.value.slice(0, 2400))} rows={4} autosize placeholder="e.g. Free SEO audit for dentists" />
             </Field>
@@ -45,7 +50,9 @@ export default function PagesPage({ searchParams }: { searchParams: Promise<{ br
               onClick={async () => {
                 setBusy(true);
                 try {
-                  const id = await create({ slug, brief });
+                  const findingIndex = typeof requestedFindingIndex === "string" ? Number(requestedFindingIndex) : Number.NaN;
+                  const hasDesignSource = typeof requestedRunId === "string" && typeof requestedDirectionId === "string" && Number.isSafeInteger(findingIndex) && findingIndex >= 0;
+                  const id = await create({ slug, brief, ...(hasDesignSource ? { designCriticSource: { runId: requestedRunId as Id<"workflowRuns">, findingIndex, directionId: requestedDirectionId } } : {}) });
                   setBrief("");
                   setOpenId(id);
                 } catch (e) {
@@ -74,6 +81,7 @@ export default function PagesPage({ searchParams }: { searchParams: Promise<{ br
                     <span className="text-sm font-semibold text-ink">{p.content?.headline ?? p.title}</span>
                     <Badge tone={p.status === "live" ? "green" : p.status === "failed" ? "red" : p.status === "drafting" ? "blue" : "neutral"}>{p.status === "live" ? "Live" : p.status === "failed" ? "Didn't finish" : p.status === "drafting" ? "Writing" : "Draft"}</Badge>
                   </p>
+                  {p.designCriticSource ? <div className="rounded-md bg-surface-2/70 p-2 text-xs text-ink-2"><span className="font-medium text-ink">Design Critic source: </span>{p.designCriticSource.region || `Finding ${p.designCriticSource.findingIndex + 1}`} · {p.designCriticSource.directionName}{p.designCriticSource.sourceUrl ? <> · <a href={p.designCriticSource.sourceUrl} target="_blank" rel="noreferrer noopener" className="text-link">Open reviewed page</a></> : null}</div> : null}
                   {p.status === "drafting" && p.runId ? <RunProgressCompact slug={slug} runId={p.runId} /> : null}
                   <KeyValueList
                     variant="inline"

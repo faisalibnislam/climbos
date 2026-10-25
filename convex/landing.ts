@@ -35,7 +35,7 @@ function suffix(): string {
 function view(p: Doc<"landingPages">) {
   const version = p.version ?? 0;
   const publishedVersion = p.publishedVersion ?? (p.status === "live" && p.publishedContent === undefined ? version : null);
-  return { id: p._id, title: p.title, slug: p.slug, url: `${SITE()}/p/${p.slug}`, status: p.status, brief: p.brief, color: p.color, content: p.content ? (JSON.parse(p.content) as LandingContent) : null, version, publishedVersion, hasUnpublishedChanges: p.status === "live" && publishedVersion !== null && version > publishedVersion, runId: p.runId ?? null, views: p.views, leads: p.leads, updatedAt: p.updatedAt };
+  return { id: p._id, title: p.title, slug: p.slug, url: `${SITE()}/p/${p.slug}`, status: p.status, brief: p.brief, color: p.color, content: p.content ? (JSON.parse(p.content) as LandingContent) : null, version, publishedVersion, hasUnpublishedChanges: p.status === "live" && publishedVersion !== null && version > publishedVersion, runId: p.runId ?? null, designCriticSource: p.designCriticSource ?? null, views: p.views, leads: p.leads, updatedAt: p.updatedAt };
 }
 
 export const list = query({
@@ -77,11 +77,23 @@ async function startWriting(ctx: MutationCtx, org: Doc<"organizations">, userId:
 }
 
 export const create = mutation({
-  args: { slug: v.string(), brief: v.string() },
-  handler: async (ctx, { slug, brief }) => {
+  args: { slug: v.string(), brief: v.string(), designCriticSource: v.optional(v.object({ runId: v.id("workflowRuns"), findingIndex: v.number(), directionId: v.string() })) },
+  handler: async (ctx, { slug, brief, designCriticSource }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const text = brief.trim().slice(0, 2400);
     if (text.length < 4) throw appError("INVALID", "Say what the page is for, e.g. “Free 15-minute audit”.");
+    let savedDesignSource: Doc<"landingPages">["designCriticSource"];
+    if (designCriticSource) {
+      const auditRun = assertSameOrg(await ctx.db.get(designCriticSource.runId), org._id, "audit");
+      if (auditRun.kind !== "conversion_audit" || !Number.isSafeInteger(designCriticSource.findingIndex) || designCriticSource.findingIndex < 0 || designCriticSource.findingIndex >= 12) throw appError("INVALID", "This Design Critic source is not a valid website finding.");
+      let findings: { region?: string; sourceUrl?: string; directions?: { id?: string; name?: string }[] }[] = [];
+      try { findings = (JSON.parse(auditRun.output ?? "{}") as { designCritic?: { findings?: typeof findings } }).designCritic?.findings ?? []; } catch { throw appError("INVALID", "The Design Critic source could not be read."); }
+      const finding = findings[designCriticSource.findingIndex];
+      const direction = finding?.directions?.find((item) => item.id === designCriticSource.directionId);
+      const selection = await ctx.db.query("designFindingReviews").withIndex("by_org_run_finding", (q) => q.eq("orgId", org._id).eq("runId", designCriticSource.runId).eq("findingIndex", designCriticSource.findingIndex)).first();
+      if (!finding || !direction?.id || !direction.name || selection?.selectedDirectionId !== direction.id) throw appError("INVALID", "Choose and save this direction on the same audit before preparing its page draft.");
+      savedDesignSource = { runId: designCriticSource.runId, findingIndex: designCriticSource.findingIndex, directionId: direction.id, directionName: direction.name.slice(0, 160), ...(finding.region ? { region: finding.region.slice(0, 160) } : {}), ...(finding.sourceUrl ? { sourceUrl: finding.sourceUrl.slice(0, 500) } : {}), selectedAt: selection.selectedDirectionAt ?? selection.updatedAt };
+    }
     const count = (await ctx.db.query("landingPages").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(51)).length;
     if (count >= 50) throw appError("LIMIT_REACHED", "You have 50 pages. Delete some first.");
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
@@ -90,7 +102,7 @@ export const create = mutation({
     let pageSlug = landingSlug(text, suffix());
     while (await ctx.db.query("landingPages").withIndex("by_slug", (q) => q.eq("slug", pageSlug)).first()) pageSlug = landingSlug(text, suffix());
     const now = Date.now();
-    const id = await ctx.db.insert("landingPages", { orgId: org._id, slug: pageSlug, title: text.slice(0, 80), brief: text, status: "drafting", color: brand?.colors?.[0] ?? "#0b5d46", runId, views: 0, leads: 0, createdAt: now, updatedAt: now });
+    const id = await ctx.db.insert("landingPages", { orgId: org._id, slug: pageSlug, title: text.slice(0, 80), brief: text, status: "drafting", color: brand?.colors?.[0] ?? "#0b5d46", runId, ...(savedDesignSource ? { designCriticSource: savedDesignSource } : {}), views: 0, leads: 0, createdAt: now, updatedAt: now });
     await ctx.scheduler.runAfter(0, internal.landing.write, { pageId: id, runId });
     return id;
   },
