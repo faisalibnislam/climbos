@@ -20,7 +20,7 @@ Keep exploration separate from execution. Research, drafts, and recommendations 
 ## Existing architecture to reuse
 
 - Business research, evidence, diagnosis, growth plays, deterministic economics, plan quality, and orchestration live in `shared/agents/`, `shared/knowledge/`, and `convex/jobs.ts`.
-- The operator-facing Growth Home is `/app/[organization]/today`; it shows the top three plan opportunities, offers Simple/Detailed/Expert explanations, supports contextual questions, shows first-take results during eligible runs, and links to the complete plan.
+- The operator-facing Growth Home is `/app/[organization]/today`; it shows the top three plan opportunities, offers Simple/Detailed/Expert explanations, supports contextual questions, shows first-take results during eligible runs, and links to the complete plan. Initial onboarding research also retains its preliminary first take on the fact-review screen after the research run completes, before the owner builds a full plan.
 - `convex/preview.ts` and `convex/previewRunner.ts` provide a bounded anonymous website preview. It is a single-page, low-cost preview, not a full site or market audit.
 - Built-in specialist roles and routing are in `shared/agents/registry.ts`; user-configured specialist profiles and scheduled manual/daily/weekly runs are in `convex/customAgents.ts` and `/app/[organization]/settings/agents`.
 - Customer outcomes, experiment records, deterministic analysis, and reusable learning are handled by `convex/playResults.ts`, `convex/learning.ts`, and `shared/growth/`. Weekly play-result gaps remain unknown rather than zeros; the owner-facing plan labels incomplete logs so partial periods are not described as on track or behind.

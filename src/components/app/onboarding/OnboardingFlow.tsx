@@ -32,7 +32,7 @@ import { Scannable } from "@/components/ds/content";
 import { cn } from "@/lib/utils";
 import { errorInfo, errorMessage } from "../errors";
 import { parseIntro, type ParsedIntro } from "./parseIntro";
-import { RetryRunIfPossible, RunProgress, RunProgressCompact } from "../content/RunProgress";
+import { RetryRunIfPossible, RunPreviewSummary, RunProgress, RunProgressCompact } from "../content/RunProgress";
 import { AiModeChoice, AiModePicker, useAiMode } from "../AiModePicker";
 import { microsToCreditsLabel } from "../money";
 import { BUSINESS_TYPE_OPTIONS, CURRENCY_OPTIONS, GOAL_KIND_OPTIONS, HORIZON_OPTIONS, REVIEW_DAY_OPTIONS, defaultEvents, goalDefaults } from "./options";
@@ -636,6 +636,7 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
           {state.business?.summary ? <Scannable text={state.business.summary} tone="muted" max={3} className="mt-2" /> : null}
         </>
       )}
+      {state.research?.preview ? <RunPreviewSummary preview={state.research.preview} researchComplete={state.research.status === "verified"} /> : null}
       {/* Facts grouped by what they're about, so each group can be checked at a glance. */}
       {groupFacts(state.facts).map(([category, facts]) => (
         <section key={category} aria-labelledby={`facts-${category}`} className="mt-6">

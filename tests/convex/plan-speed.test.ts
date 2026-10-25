@@ -106,6 +106,39 @@ describe("Plan speed", () => {
     expect(JSON.parse(run!.preview!)).toEqual({ channels: ["SEO pages"], headline: "Start with SEO", points: ["a"] });
   });
 
+  it("keeps a completed onboarding first take visible during fact review, scoped to its workspace", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "onboarding-preview-owner@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Preview Co" });
+    const now = Date.now();
+    const runId = await t.run(async (ctx) => ctx.db.insert("workflowRuns", {
+      orgId: orgId as Id<"organizations">,
+      kind: "onboarding_research",
+      title: "Business research",
+      status: "verified",
+      input: "{}",
+      roles: ["data_analyst"],
+      estimateMicros: 0,
+      actualMicros: 0,
+      rateVersionId: "r",
+      entitlementVersionId: "e",
+      routingVersionId: "x",
+      budget: { modelSteps: 1, researchTools: 0, repairs: 0 },
+      used: { modelSteps: 0, researchTools: 0, repairs: 0 },
+      isFixture: false,
+      createdAt: now,
+      updatedAt: now,
+      finishedAt: now,
+      preview: JSON.stringify({ headline: "Check the clearest next step", opportunities: [{ title: "Make the main offer easier to find", why: "The homepage places details before the offer.", nextStep: "Review the page and confirm the main customer benefit.", evidence: [], basis: "hypothesis" }] }),
+    } as never));
+
+    const state = await owner.client.query(api.orgs.onboardingState, { slug });
+    expect(state.research).toMatchObject({ id: runId, status: "verified", preview: { headline: "Check the clearest next step", opportunities: [{ title: "Make the main offer easier to find", basis: "hypothesis", evidence: [] }] } });
+
+    const other = await asNewUser(t, "onboarding-preview-other@example.com");
+    await expect(other.client.query(api.orgs.onboardingState, { slug })).rejects.toThrow(/couldn't find/i);
+  });
+
   it("records the first evidence-backed finding, excluding hypotheses and generic previews", async () => {
     const t = setup();
     const owner = await asNewUser(t, "finding-owner@example.com");

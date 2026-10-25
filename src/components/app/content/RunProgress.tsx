@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { FunctionReturnType } from "convex/server";
+import type { RunPreview as RunPreviewData } from "@convex/content";
 import { useEffect, useState, type ReactNode } from "react";
 import { Badge, Button, Callout, Progress, Skeleton, type StepItem, type StepStatus } from "@/components/ui";
 import { errorMessage } from "../errors";
@@ -16,6 +17,12 @@ import { MessageText, useWorkspaceMember } from "./shared";
 import { can } from "@shared/policy";
 
 export type RunStatusView = FunctionReturnType<typeof api.content.runStatus>;
+
+/** Retain the useful first take after onboarding research finishes, before a full plan exists. */
+export function RunPreviewSummary({ preview, researchComplete = true }: { preview: RunPreviewData | null; researchComplete?: boolean }) {
+  if (!preview || (!preview.headline && !preview.points?.length && !preview.opportunities?.length && !preview.channels?.length && !preview.plays?.length)) return null;
+  return <EarlyPreview preview={preview} finished researchComplete={researchComplete} />;
+}
 
 export const RUN_STATUS_LABEL: Record<string, string> = {
   proposed: "Queued",
@@ -344,11 +351,11 @@ export function RunProgressCompact({ slug, runId, className }: { slug: string; r
 
 
 /** What the job already knows, shown while it keeps working: channels that fit, the first take, the chosen plays. */
-function EarlyPreview({ preview }: { preview: { headline?: string; points?: string[]; opportunities?: { title: string; why: string; nextStep: string; evidence: { factId: string; statement: string; kind?: string }[]; basis: "confirmed_facts" | "hypothesis" }[]; channels?: string[]; budget?: string; plays?: { name: string; kind: string; p50: number; unit: string }[] } }) {
+function EarlyPreview({ preview, finished = false, researchComplete = true }: { preview: RunPreviewData; finished?: boolean; researchComplete?: boolean }) {
   const KIND: Record<string, string> = { bankable: "Practical · established practice", creative: "Adjacent · evidence-supported inference", moonshot: "Bold · speculative hypothesis" };
   return (
     <section aria-label="Early preview" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-brand-200 bg-brand-50 p-3">
-      <p className="text-overline text-brand-800">Early preview · full plan coming</p>
+      <p className="text-overline text-brand-800">{finished ? researchComplete ? "First take · preliminary, based on available evidence" : "Partial first take · some research did not finish" : "Early preview · more research coming"}</p>
       {preview.plays?.length ? (
         <div className="flex flex-col gap-1.5">
           <p className="text-xs font-medium text-ink-2">Chosen plays</p>

@@ -21,6 +21,7 @@ import { chargeableAccess, isPaid } from "./lib/access";
 import { can } from "../shared/policy";
 import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 import { BUSINESS_LIFECYCLE_STAGES } from "../shared/agents/lifecycle";
+import type { RunPreview } from "./content";
 
 function slugify(name: string): string {
   const base = name
@@ -287,6 +288,10 @@ export const onboardingState = query({
           .withIndex("by_run", (q) => q.eq("runId", researchRun._id))
           .take(20)
       : [];
+    let researchPreview: RunPreview | null = null;
+    if (researchRun?.preview) {
+      try { researchPreview = JSON.parse(researchRun.preview) as RunPreview; } catch { /* A malformed preview must not block fact review. */ }
+    }
     const goal = await ctx.db
       .query("goals")
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
@@ -346,6 +351,7 @@ export const onboardingState = query({
                   ? ("site_unreadable" as const)
                   : ("other" as const),
             engine: researchRun.engine ?? null,
+            preview: researchPreview,
             createdAt: researchRun.createdAt,
             finishedAt: researchRun.finishedAt ?? null,
             steps: researchSteps.filter((s) => s.index < 1000).map((s) => ({ label: s.label, status: s.status, kind: s.kind, startedAt: s.startedAt ?? null, finishedAt: s.finishedAt ?? null })),

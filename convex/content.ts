@@ -9,6 +9,13 @@ import { v } from "convex/values";
 export interface RunPreview {
   headline?: string;
   points?: string[];
+  opportunities?: {
+    title: string;
+    why: string;
+    nextStep: string;
+    evidence: { factId: string; statement: string; kind?: string }[];
+    basis: "confirmed_facts" | "hypothesis";
+  }[];
   channels?: string[];
   budget?: string;
   plays?: { name: string; kind: string; p50: number; unit: string }[];
