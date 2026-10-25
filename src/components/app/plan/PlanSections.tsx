@@ -847,6 +847,44 @@ function SubHead({ icon: Icon, children, meta }: { icon: LucideIcon; children: R
   );
 }
 
+type EvidenceRow = { statement?: string; channel?: string; rationale?: string; basis: string; evidenceRefs: string[]; evidenceExcerpt?: string; evidenceSupport?: "found_in_source" | "not_found" | "not_checked" | "no_excerpt" };
+const EVIDENCE_BASIS: Record<string, string> = { owner_report: "owner-reported", measured: "measured", research: "research", inference: "inference" };
+const SUPPORT_TEXT: Record<NonNullable<EvidenceRow["evidenceSupport"]>, string> = {
+  found_in_source: "excerpt found in its source",
+  not_found: "excerpt not found in its source · treat as unconfirmed",
+  not_checked: "source not checked",
+  no_excerpt: "no supporting excerpt",
+};
+
+/** An audience's needs, objections, motivations and channel preferences, each with its basis and code-checked excerpt status. */
+export function AudienceEvidence({ audience }: { audience: { needs?: EvidenceRow[]; objections?: EvidenceRow[]; purchasingMotivations?: EvidenceRow[]; channelPreferences?: EvidenceRow[] } }) {
+  const groups = ([["Needs", audience.needs], ["Objections", audience.objections], ["Why they buy", audience.purchasingMotivations], ["Where they look", audience.channelPreferences]] as const).filter(([, rows]) => rows?.length);
+  if (!groups.length) return null;
+  const count = groups.reduce((n, [, rows]) => n + (rows?.length ?? 0), 0);
+  return (
+    <details className="mt-1 text-xs text-ink-3">
+      <summary className="cursor-pointer font-medium text-ink-2">Evidence behind this audience ({count})</summary>
+      <div className="mt-2 flex flex-col gap-2">
+        {groups.map(([title, rows]) => (
+          <div key={title}>
+            <p className="font-medium text-ink-2">{title}</p>
+            <ul className="mt-0.5 list-disc pl-4">
+              {rows!.map((row, i) => (
+                <li key={i}>
+                  <span className="text-ink">{row.statement ?? `${row.channel}: ${row.rationale}`}</span> · {EVIDENCE_BASIS[row.basis] ?? row.basis}
+                  {row.evidenceExcerpt ? <> · <q>{row.evidenceExcerpt}</q></> : null}
+                  {row.evidenceSupport ? <span className={row.evidenceSupport === "not_found" ? "font-medium text-amber-800" : undefined}> · {SUPPORT_TEXT[row.evidenceSupport]}</span> : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+        <p>A found excerpt shows the words are in the source, not that they prove the claim.</p>
+      </div>
+    </details>
+  );
+}
+
 export function BusinessInsights({ insights }: { insights: Insights | null }) {
   const now = useNow();
   if (!insights) {
@@ -880,6 +918,7 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
                   <Clamp lines={2} className="text-ui text-ink-2">
                     {a.description}
                   </Clamp>
+                  <AudienceEvidence audience={a} />
                 </span>
               </li>
             ))}

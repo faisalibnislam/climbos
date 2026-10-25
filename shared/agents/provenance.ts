@@ -441,3 +441,30 @@ export const CHECK_LABEL: Record<TagCheck, string> = {
   retrieved: "page retrieved, claim not matched",
   reported: "not checked",
 };
+
+export type ClaimSupportStatus = "found_in_source" | "not_found" | "not_checked" | "no_excerpt";
+
+/**
+ * One claim's excerpt against its references: found when any referenced confirmed fact or loaded page contains it;
+ * not found only when every reference could be checked; otherwise not checked. Words only, not semantic proof.
+ */
+export function claimSupport(refs: readonly string[], excerpt: string | undefined, ctx: { facts: readonly string[]; pages: Record<string, string | null> }): ClaimSupportStatus {
+  if (!excerpt?.trim() || !refs.length) return "no_excerpt";
+  let checkable = 0;
+  for (const ref of refs) {
+    const fact = /^fact:(\d+)$/i.exec(ref.trim());
+    const text = fact ? ctx.facts[Number(fact[1])] : ctx.pages[urlKey(ref)];
+    if (typeof text !== "string") continue;
+    checkable++;
+    if (excerptIn(excerpt, text)) return "found_in_source";
+  }
+  return checkable === refs.length ? "not_found" : "not_checked";
+}
+
+type AudienceEvidence = { evidenceRefs: string[]; evidenceExcerpt?: string; evidenceSupport?: ClaimSupportStatus };
+
+/** Sets code-owned `evidenceSupport` on each audience need, objection, motivation and channel preference. */
+export function verifyAudienceEvidence<A extends { needs?: AudienceEvidence[]; objections?: AudienceEvidence[]; purchasingMotivations?: AudienceEvidence[]; channelPreferences?: AudienceEvidence[] }>(audiences: A[], ctx: { facts: readonly string[]; pages: Record<string, string | null> }): A[] {
+  const mark = <T extends AudienceEvidence>(rows: T[] | undefined) => rows?.map((row) => ({ ...row, evidenceSupport: claimSupport(row.evidenceRefs, row.evidenceExcerpt, ctx) }));
+  return audiences.map((a) => ({ ...a, ...(a.needs ? { needs: mark(a.needs) } : {}), ...(a.objections ? { objections: mark(a.objections) } : {}), ...(a.purchasingMotivations ? { purchasingMotivations: mark(a.purchasingMotivations) } : {}), ...(a.channelPreferences ? { channelPreferences: mark(a.channelPreferences) } : {}) }));
+}

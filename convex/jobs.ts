@@ -60,7 +60,7 @@ import { choosePlaybooks, playbookBrief, type PlaybookContext } from "../shared/
 import { applyOwnerEconomics, churnOf, forecastCustomers, growthCashInputsIn, growthCashReserveConstraint, growthCashTiming, growthCashTimingContext, growthCashTimingInput, growthCashTimingLine, lockedNumbers, playsGoalGap, portfolioP50, selectPortfolio, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { segmentEconomicsBrief } from "../shared/agents/segmentEconomics";
 import { CREATIVE_STRATEGY_PROMPT_VERSION, planTask, playsTask, type CreativeRange } from "../shared/agents/planTasks";
-import { citedUrls, urlKey, verifyActionEvidence, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
+import { citedUrls, urlKey, verifyActionEvidence, verifyAudienceEvidence, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
 import { agentQuality, HARD_RULES, planQuality, withoutHard, type AgentQuality } from "../shared/agents/quality";
 import { capabilityContext } from "../shared/agents/capacity";
 import { capsHint, PLAN_CAPS } from "../shared/agents/wordCaps";
@@ -1273,7 +1273,12 @@ export const onboardingResearch = internalAction({
         startedAt,
         { task: "business_insights", text: v1InsightsTask, context: pagesText, ctx: fixtureCtx(job) },
       );
-      await ctx.runMutation(internal.jobWrites.saveInsights, { runId, businessId: business._id, insights: JSON.stringify(insights) });
+      // Claim support for audience evidence: excerpts are checked against confirmed facts and the site pages read here.
+      const pageText = Object.fromEntries(pages.filter((p) => p.status === "ok").map((p) => [urlKey(p.url), p.text]));
+      const checkedInsights = insights && typeof insights === "object" && Array.isArray((insights as { audiences?: unknown }).audiences)
+        ? { ...(insights as Record<string, unknown>), audiences: verifyAudienceEvidence((insights as { audiences: Parameters<typeof verifyAudienceEvidence>[0] }).audiences, { facts: job.facts.map((f) => f.statement), pages: pageText }) }
+        : insights;
+      await ctx.runMutation(internal.jobWrites.saveInsights, { runId, businessId: business._id, insights: JSON.stringify(checkedInsights) });
       await firstTake;
       await finish(ctx, runId, "verified", { output: { facts: profile.facts.length }, meters: { scrapeCredits: pagesFetched, searchCalls: 0 } });
     }, undefined, resumeAs(ctx, "onboardingResearch", { runId, ownerText }));
