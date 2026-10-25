@@ -1286,6 +1286,7 @@ export const runDetail = query({
       title: run.title,
       kind: run.kind,
       status: run.status,
+      canReportSpecialistOutcome: !run.customAgentId && Boolean(run.agentArchetypeSnapshot?.id ?? run.agentArchetypeId) && ["verified", "uncertain"].includes(run.status),
       roles: run.roles,
       brief: typeof input.brief === "string" ? input.brief : null,
       createdAt: run.createdAt,

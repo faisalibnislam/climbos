@@ -13,6 +13,7 @@ import { OutputView } from "@/components/app/OutputView";
 import { ConversionAuditView } from "@/components/app/ConversionAuditView";
 import { relativeTime } from "@/components/app/money";
 import { RunProgress } from "@/components/app/content/RunProgress";
+import { RunOutcomeReport } from "@/components/app/content/RunOutcomeReport";
 import { ClampText } from "@/components/app/results/ClampText";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 
@@ -84,6 +85,8 @@ export default function WorkPage() {
               </CardContent>
             </Card>
           ) : null}
+
+          {run.canReportSpecialistOutcome ? <RunOutcomeReport slug={slug} runId={run.id as Id<"workflowRuns">} /> : null}
         </div>
 
         <aside className="flex flex-col gap-4">

@@ -121,6 +121,7 @@ describe("wishes", () => {
     expect(JSON.parse(social.payload).brief).toContain("Dec 20");
     const run = runs.find((r) => r._id === social.runId)!;
     expect(run.agentArchetypeId).toBe("social_media_marketing");
+    expect(await u.client.query(api.workspace.runDetail, { slug, runId: run._id })).toMatchObject({ canReportSpecialistOutcome: true });
     expect(run.agentArchetypeSnapshot).toMatchObject({
       version: 1,
       id: "social_media_marketing",
