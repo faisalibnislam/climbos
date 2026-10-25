@@ -7,7 +7,7 @@
 **Repository branch at preparation:** `growth-engine-v2`
 
 **Last committed repository state observed:** `c9736c6` (`Keep sourced competitor battlecards from research`), matching `origin/growth-engine-v2`.
-**Working-tree state observed:** uncommitted edits in `convex/creativeStrategy.ts`, `convex/schema.ts`, and `src/components/app/plan/ExpertPlan.tsx`, plus new `src/components/app/plan/StrategyLearningSources.tsx`. These appear to be active creative-strategy work. This document did not edit them. Preserve and inspect them before continuing; do not stage, reset, or overwrite them as part of this document task.
+**Working-tree state observed:** uncommitted edits in `convex/creativeStrategy.ts`, `convex/schema.ts`, and `src/components/app/plan/ExpertPlan.tsx`, plus new `src/components/app/plan/StrategyLearningSources.tsx`, `tests/convex/strategy-learning-sources.test.ts`, and `tests/unit/strategy-learning-list.test.tsx`. These appear to be active creative-strategy work. This document did not edit them. Preserve and inspect them before continuing; do not stage, reset, or overwrite them as part of this document task.
 
 ## 1. Product purpose
 
@@ -339,7 +339,7 @@ These are areas documented by current repository materials, not a claim that eve
 
 Known limits documented at the last handoff include no broad held-out live-model evaluation proving expert-level recommendations; no claim of causal business outcomes from most owner logs; bounded/static website sampling; semantic source support and originality not fully verified; manual/sample AI-search monitoring; no customer-level retention cohorts; some native review/platform integrations pending official access/credentials; no app-wide accessibility conformance claim; and provider/runtime setup not verified for each customer. Re-check current docs and code; this list may have changed since the handoff.
 
-The current git state observed when preparing this document includes in-progress creative-strategy source-learning work in `convex/creativeStrategy.ts`, `convex/schema.ts`, and `src/components/app/plan/ExpertPlan.tsx`, plus new `src/components/app/plan/StrategyLearningSources.tsx`. Preserve and inspect these changes; do not assume they are complete or verified.
+The current git state observed when preparing this document includes in-progress creative-strategy source-learning work in `convex/creativeStrategy.ts`, `convex/schema.ts`, and `src/components/app/plan/ExpertPlan.tsx`, plus new `src/components/app/plan/StrategyLearningSources.tsx`, `tests/convex/strategy-learning-sources.test.ts`, and `tests/unit/strategy-learning-list.test.tsx`. Preserve and inspect these changes; do not assume they are complete or verified.
 
 ## 16. Core architecture expectations
 
