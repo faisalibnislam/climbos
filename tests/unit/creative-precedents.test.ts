@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(53);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(54);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -123,6 +123,20 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://fortune.com/2018/04/16/how-to-create-a-great-brand-for-your-small-business/", sourceRole: "independent_secondary", publicationDate: "2018-04-16" }),
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Explore original product communication", query)).toContain("CP-053");
+  });
+
+  it("retrieves a negative positioning case without reducing it to a universal pricing rule", () => {
+    const query = "Check whether calling our product the cheapest will attract our target buyers or conflict with their category aspirations and comparison set";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-054");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("low headline price can attract attention");
+    expect(match?.precedent.causalLimit).toContain("intertwined constraints");
+    expect(match?.precedent.transferRisk).toContain("varies by customer and culture");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.tatamotors.com/press-releases/tata-motors-announces-the-launch-of-tata-nano/", sourceRole: "company_primary" }),
+      expect.objectContaining({ url: "https://journals.sagepub.com/doi/full/10.1177/02560909211044253", sourceRole: "independent_secondary", publicationDate: "2021-09-26" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Review whether a lower price fits this segment", query)).toContain("CP-054");
   });
 
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {

@@ -596,3 +596,7 @@ Home, Your plan, specialist run history, and detailed work receipts now draw the
 ## Resumption note (2026-10-25, packaging as an owned explanation channel)
 
 Added Oatly as CP-053 to the structured case library consumed by production creative-strategy retrieval. The record focuses on packaging as an owned explanation surface and preserves the limits: its agency and press sources do not isolate design from product, category growth, distribution, or expansion, and attention is not treated as demand. A focused regression verifies mechanism retrieval, production task injection, source roles, and the causal caveat. Current reviewed corpus: 53 cases; 47 of the 100-case research target remain unverified. The attached Simple UX prompt was reviewed as the owner-facing contract; this increment did not change interface behavior.
+
+## Resumption note (2026-10-25, Tata Nano pricing-positioning failure case CP-054)
+
+Added a source-checked negative case about the Tata Nano to the production creative-strategy retrieval set. Tata Motors' launch and price statements are paired with a peer-reviewed Vikalpa case analysis. The entry keeps price positioning only one of several interacting possible factors, alongside product expectations, aspirational meanings, safety reporting, factory disruption, and repositioning. The regression verifies retrieval through mechanism language and injection into the growth-strategy task. Reviewed corpus: 54 cases; 46 of the 100-case research target remain unverified.
