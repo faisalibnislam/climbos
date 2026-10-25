@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(65);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(66);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -83,6 +83,20 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://journals.sagepub.com/doi/10.1177/0379572119895860", publicationDate: "2020-01-29", sourceRole: "independent_secondary" }),
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Explore a distribution and positioning strategy", query)).toContain("CP-065");
+  });
+
+  it("retrieves open innovation while separating proxy scores, implementation value, and data privacy", () => {
+    const query = "Run an open challenge for outside experts using a measurable proxy, but check deployment effort and privacy before adopting the winning solution";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-066");
+    expect(match).toBeDefined();
+    expect(match?.precedent.outcome).toContain("final grand-prize ensemble's incremental offline accuracy did not justify its engineering effort");
+    expect(match?.precedent.distinctiveness).toContain("could be re-identified");
+    expect(match?.precedent.transferRisk).toContain("wrong proxy");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://medium.com/netflix-techblog/netflix-recommendations-beyond-the-5-stars-part-1-55838468f429", sourceRole: "company_primary" }),
+      expect.objectContaining({ url: "https://ieeexplore.ieee.org/document/4531148", sourceRole: "independent_secondary" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Explore external challenge strategy", query)).toContain("CP-066");
   });
 
   it("retrieves practitioner-community learning without treating invitations as causal growth evidence", () => {
