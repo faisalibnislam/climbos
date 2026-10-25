@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(49);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(50);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -69,6 +69,19 @@ describe("creative strategy precedent retrieval", () => {
     ]));
     expect(match?.precedent.causalLimit).toContain("remained niche");
     expect(creativePrecedentsForAgent("growth_plays", "Explore an original content strategy", query)).toContain("CP-049");
+  });
+
+  it("retrieves practitioner-community learning without treating invitations as causal growth evidence", () => {
+    const query = "Build a practitioner community for product feedback, peer discovery, expert content and product adoption";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-050");
+    expect(match).toBeDefined();
+    expect(match?.precedent.outcome).toContain("87% of first-time users had been invited by a colleague");
+    expect(match?.precedent.causalLimit).toContain("not proof that a community program caused activation");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.figma.com/blog/introducing-figma-community/", publicationDate: "2019-10-22", sourceRole: "company_primary" }),
+      expect.objectContaining({ url: "https://review.firstround.com/the-5-phases-of-figmas-community-led-growth-from-stealth-to-enterprise/", publicationDate: "2022-08-31", sourceRole: "independent_secondary" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Explore community-led distribution", query)).toContain("CP-050");
   });
 
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {
