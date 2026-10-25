@@ -516,3 +516,8 @@ Added Aarong / BRAC as CP-045 after checking BRAC's 1978 market-linkage and time
 ## Resumption note (2026-10-25, Patreon precedent)
 
 Added Patreon as CP-046 after verifying the creator-origin mechanism against Patreon's current about page, TechCrunch's 2019 founding report, and the peer-reviewed 2022 ICWSM analysis of historical pledge data. The record treats the founder's early pledges as one reported example and distinguishes descriptive platform-wide patron loyalty/churn findings from causal or transferable income forecasts. A focused regression verifies retrieval from the advertising-to-recurring-support mechanism and through the production strategy injection path. The creative-precedent suite passes (42 tests); `npm run typecheck`, changed-file ESLint, and `git diff --check` pass. Current verified corpus is 46 of 100 research-target cases; 54 remain unverified.
+
+
+## Resumption note (2026-10-25, education-first launch precedent)
+
+Added Canva World Tour 2025 as CP-047 to the structured source library used by production growth-strategy retrieval. Canva's own recap and The Drum's 2026 award case support the campaign sequence and participation claims; the two sources report different reach measures, and the reported lead comparison lacks enough detail to establish causality. The record limits transfer to businesses that can teach a useful task, reach a relevant audience, and measure qualified next steps within capacity. A focused regression verifies retrieval and strategy-task injection. Current reviewed corpus is 47 of the 100-case research target; 53 remain unverified.

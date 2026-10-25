@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(46);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(47);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -37,6 +37,13 @@ describe("creative strategy precedent retrieval", () => {
     const query = "Fund ongoing creative work through recurring payments from a small group of committed fans instead of relying only on ad-supported views";
     expect(retrieveCreativePrecedents(query).some(({ precedent }) => precedent.id === "CP-046")).toBe(true);
     expect(creativePrecedentsForAgent("growth_plays", "Build a creator growth plan", query)).toContain("Patreon");
+  });
+
+  it("retrieves education-first local participation as a product-launch sequence", () => {
+    const query = "Teach customers through practical workshops, online lessons, local community champions and creator-led events before revealing the new product";
+    expect(retrieveCreativePrecedents(query).some(({ precedent }) => precedent.id === "CP-047")).toBe(true);
+    expect(creativePrecedentsForAgent("growth_plays", "Build a launch strategy", query)).toContain("CP-047");
+    expect(formatCreativePrecedents(query)).toContain("Attendance and training completions do not establish qualified demand or revenue");
   });
 
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {
