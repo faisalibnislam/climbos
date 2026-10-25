@@ -9,7 +9,7 @@ import { ACTIVE_RUN_STATUSES, createRunWithReservation, finishRunImpl, latestRun
 import { activePolicyVersion } from "./jobWrites";
 import { audit } from "./lib/audit";
 import { approvalHash, can, canonicalJson } from "../shared/policy";
-import { assertCardDependenciesComplete, holdPlanChannel, startCardRun, startPlanWork, type PlanWorkResult } from "./lib/cards";
+import { assertCardDependenciesComplete, holdPlanChannel, startCardRun, startPlanWork, WISH_AUTO_BUDGET_MICROS, type PlanWorkResult } from "./lib/cards";
 import { autoStartPlanTargets } from "./targets";
 import { notifyOwners } from "./lib/notify";
 import { chargeableAccess, isPaid } from "./lib/access";
@@ -133,6 +133,8 @@ export const today = query({
 
     return {
       org: { slug: org.slug, name: org.name, kind: org.kind, onboardingStep: org.onboardingStep, currency: org.currency, timezone: org.timezone },
+      requestCostEstimateMicros: org.kind === "demo" ? 0 : estimateJobMicros(planJob("chat_intent")),
+      autoDraftBudgetMicros: org.kind === "demo" ? 0 : WISH_AUTO_BUDGET_MICROS,
       role,
       userName: user.name ?? user.email ?? null,
       emergencyStop: org.emergencyStop?.active ? { at: org.emergencyStop.at, reason: org.emergencyStop.reason ?? null } : null,

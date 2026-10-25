@@ -52,6 +52,8 @@ describe("wishes", () => {
     const u = await asNewUser(t, "demo-opportunity@example.com", { anonymous: true });
     const { slug } = await u.client.mutation(api.demo.createDemoWorkspace, {});
     const today = await u.client.query(api.workspace.today, { slug });
+    expect(today.requestCostEstimateMicros).toBe(0);
+    expect(today.autoDraftBudgetMicros).toBe(0);
     expect(today.strategy?.opportunities).toMatchObject([
       {
         id: "demo_opportunity",

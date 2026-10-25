@@ -6,6 +6,7 @@ test("plain-language Home, suggestions, tools, and review links @mobile", async 
   const slug = await openDemo(page);
   const request = page.getByLabel("Your request", { exact: true });
   await expect(request).toBeVisible();
+  await expect(page.getByText(/Demo requests use no paid AI credits/u)).toBeVisible();
   const history = page.getByRole("region", { name: "Your requests", exact: true });
   const before = await history.innerText();
   await page.screenshot({ path: test.info().outputPath("home.png"), fullPage: false });

@@ -185,6 +185,9 @@ export default function TodayPage() {
         suggestions={wishSuggestions(data.business?.type)}
         disabled={!data.canRunAi || !me?.userId}
         disabledReason={!me?.userId ? "Checking your account before opening saved requests…" : !data.canRunAi ? (data.accessMessage ?? null) : null}
+        requestCostEstimateMicros={data.requestCostEstimateMicros}
+        autoDraftBudgetMicros={data.autoDraftBudgetMicros}
+        isDemo={data.org.kind === "demo"}
       />
       <WishFeed slug={slug} chat={data.chat} />
 
