@@ -600,3 +600,7 @@ Added Oatly as CP-053 to the structured case library consumed by production crea
 ## Resumption note (2026-10-25, Tata Nano pricing-positioning failure case CP-054)
 
 Added a source-checked negative case about the Tata Nano to the production creative-strategy retrieval set. Tata Motors' launch and price statements are paired with a peer-reviewed Vikalpa case analysis. The entry keeps price positioning only one of several interacting possible factors, alongside product expectations, aspirational meanings, safety reporting, factory disruption, and repositioning. The regression verifies retrieval through mechanism language and injection into the growth-strategy task. Reviewed corpus: 54 cases; 46 of the 100-case research target remain unverified.
+
+## Resumption note (2026-10-25, Juicero product-value validation case CP-055)
+
+Added Juicero as a negative product-value precedent in the production strategy library. The company's product-release statement is paired with Ars Technica's reporting on Bloomberg's bounded hand-squeeze comparison and Axios's report of the company's closure letter. The record does not treat one demonstration as representative customer research or as the sole cause of shutdown; it retains the product's claimed convenience/freshness benefits, a reported food-service niche, and the stated nationwide supply-chain limit. Focused retrieval and task-injection coverage added. Reviewed corpus: 55 cases; 45 of the 100-case target remain unverified.

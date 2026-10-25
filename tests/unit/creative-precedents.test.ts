@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(54);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(55);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -137,6 +137,21 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://journals.sagepub.com/doi/full/10.1177/02560909211044253", sourceRole: "independent_secondary", publicationDate: "2021-09-26" }),
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Review whether a lower price fits this segment", query)).toContain("CP-054");
+  });
+
+  it("retrieves a product-workaround test without treating one demo as proof of failure", () => {
+    const query = "Compare our expensive connected product feature with the simplest manual workaround and learn whether buyers value the difference";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-055");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("one demonstration is a prompt for customer research");
+    expect(match?.precedent.causalLimit).toContain("not a representative customer study");
+    expect(match?.precedent.distinctiveness).toContain("food-service niche");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.accessnewswire.com/newsroom/en/consumer-and-retail-products/juicero-expands-highly-anticipated-no-mess-cold-pressed-juicing-experie-459986", sourceRole: "company_primary" }),
+      expect.objectContaining({ url: "https://arstechnica.com/information-technology/2017/04/this-400-appliance-that-squeezes-juice-out-of-a-bag-appears-unnecessary/", sourceRole: "independent_secondary", publicationDate: "2017-04-19" }),
+      expect.objectContaining({ url: "https://www.axios.com/2017/12/15/juicero-is-shutting-down-draining-vcs-120-million-1513305243", sourceRole: "independent_secondary", publicationDate: "2017-09-01" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Test product value before expanding production", query)).toContain("CP-055");
   });
 
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {
