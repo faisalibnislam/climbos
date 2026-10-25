@@ -1,6 +1,6 @@
 /**
  * Small, source-checked creative-strategy precedent set. This is deliberately
- * not padded to 100: the source corpus currently supports eighteen reviewed cases.
+ * not padded to 100: the source corpus currently supports twenty-one reviewed cases.
  * Additions require claim-level source verification and editorial review.
  */
 export interface CreativePrecedent {
@@ -419,6 +419,70 @@ export const CREATIVE_PRECEDENTS: readonly CreativePrecedent[] = [
     editorialStatus: "verified_primary", researchConfidence: "medium", accessedAt: "2026-10-25",
     sources: [
       { title: "Dropbox, Inc. Form S-1/A", url: "https://www.sec.gov/Archives/edgar/data/1467623/000119312518089786/d553522ds1a.htm", publisher: "Dropbox, Inc. / U.S. Securities and Exchange Commission", publicationDate: "2018-03-21", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action_and_outcome", supports: "The filing's 'Viral, bottom-up adoption' and sales-and-marketing sections say users shared content and collaborated, introduced and invited users, individuals signed up for work, bottom-up adoption was important, and over 90% of revenue came from self-serve channels; it also reports 500 million registered users and 11 million paying users." },
+    ],
+  },
+  {
+    id: "CP-019", title: "Nintendo Wii made shared, accessible play the product strategy", organization: "Nintendo", sector: "Video games and consumer electronics", geography: "Japan, United States, then global", approximateScale: "Established global hardware and software company", businessModel: "Game hardware sales with first-party and licensed software", period: "2006–2009",
+    families: ["product_service_design", "customer_participation", "category_boundary_challenge"],
+    transferProfile: { audiences: ["non-users", "lapsed players", "families", "older adults"], goals: ["audience expansion", "adoption", "shared experience", "product differentiation"], constraints: ["category competition", "accessibility", "new user learning", "family participation"], scale: ["established company", "global hardware launch"], geographies: ["Japan", "United States", "global"], businessModels: ["consumer hardware", "video games", "software platform"] },
+    convention: "A game console should compete mainly by advancing technical performance for existing, experienced players.",
+    choice: "Nintendo positioned Wii around easy-to-understand physical interaction and shared living-room play, explicitly aiming to expand the gaming population across ages and experience levels.",
+    mechanism: "The product changed the first-use interaction and social setting, lowering the need to identify as a conventional gamer before joining in. The transferable mechanism is removing an adoption barrier through product design, not copying motion controls or assuming every non-user wants the same experience.",
+    distinctiveness: "Nintendo named audience expansion as a strategy and paired it with a materially different input and social use case rather than relying only on higher technical specifications.",
+    outcome: "Nintendo reported that its twice-yearly Japan survey showed the gaming population rising by about 9 million around the January 2007 Wii launch and that non-users fell; the company also reported 18.61 million Wii units sold in fiscal 2008. These are company-reported survey and sales results, not independent causal evidence.",
+    evidenceClass: "Company-reported strategy, survey estimates, and unit sales; measured by Nintendo's stated methods; no independent causal estimate.",
+    causalLimit: "The survey coincided with Nintendo DS, software releases, distribution, and other changes. It does not isolate Wii design as the cause of audience expansion or sales.",
+    conditions: ["A specific adoption barrier supported by customer evidence", "A product change that makes first use easier or more social", "Ability to serve new users without alienating core users", "Support and capacity for the wider audience"],
+    transferRisk: "Designing for an assumed non-user can miss real motivations, make the core experience weaker, or create accessibility problems if tested only with a narrow group.",
+    smallBusinessAdaptation: "Find a real first-use or participation barrier in customer evidence, then redesign one small step so a new customer can understand or try it without learning the category's insider language.",
+    reversibleTest: "Prototype one simplified or shared-use path and test it with a few current customers and people who have not bought before. Measure task completion, comprehension, qualified next steps, and support needs; stop if the change reduces value for existing customers.",
+    editorialStatus: "verified_primary", researchConfidence: "medium", accessedAt: "2026-10-25",
+    sources: [
+      { title: "Nintendo Interim Results Briefing for the Six Months Ended September 30, 2007", url: "https://www.nintendo.co.jp/ir/pdf/2007/071025e.pdf", publisher: "Nintendo Co., Ltd.", publicationDate: "2007-10-25", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action", supports: "Nintendo states its audience-expansion strategy and positions Wii as shared, daily entertainment for people regardless of age, gender, or gaming experience." },
+      { title: "Financial Results Briefing for Fiscal Year Ended March 2009", url: "https://www.nintendo.co.jp/ir/en/events/090508/02.html", publisher: "Nintendo Co., Ltd.", publicationDate: "2009-05-08", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "outcome", supports: "Nintendo describes its Japan and U.S. gaming-population survey methods and reports the post-launch increase, including about 9 million more active users in Japan around January 2007; the presentation attributes growth to its DS/Wii activity rather than isolating Wii causally." },
+      { title: "Annual Report 2008", url: "https://www.nintendo.co.jp/ir/pdf/2008/080424e.pdf", publisher: "Nintendo Co., Ltd.", publicationDate: "2008-04-24", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "outcome", supports: "Nintendo reports Wii hardware sales of 18.61 million units in fiscal 2008 and 24.45 million units life to date." },
+    ],
+  },
+  {
+    id: "CP-020", title: "Taco Bell and Doritos made a branded snack into a menu format", organization: "Taco Bell / Frito-Lay", sector: "Quick-service restaurants and packaged snacks", geography: "United States", approximateScale: "Large national restaurant and packaged-food brands", businessModel: "Restaurant menu sales and licensed branded food products", period: "2012–2013",
+    families: ["product_service_design", "distribution_partnership", "category_boundary_challenge"],
+    transferProfile: { audiences: ["existing restaurant customers", "fans of adjacent food brands", "novelty-seeking diners"], goals: ["product trial", "menu differentiation", "partner distribution", "earned attention"], constraints: ["product engineering", "brand rights", "restaurant operations", "supply reliability"], scale: ["established brand", "national launch"], geographies: ["United States"], businessModels: ["restaurant", "consumer packaged goods", "licensing partnership"] },
+    convention: "A familiar restaurant product should retain its standard format, while a co-branding partnership is mainly a promotional placement.",
+    choice: "Taco Bell and Frito-Lay developed a taco using a Doritos-flavored shell, integrating the partner brand into the product itself rather than only advertising alongside it.",
+    mechanism: "A recognizable flavor and brand helped make a familiar menu item feel new, while the restaurant supplied broad access and operational distribution. The mechanism depends on product compatibility and a genuine partner contribution, not just adding a logo.",
+    distinctiveness: "The partnership altered the customer's core product experience and required product development across company boundaries; it was not only a shared campaign or discount.",
+    outcome: "Yum Brands reported 375 million Doritos Locos Tacos sold in the first year and described it as a record launch. This is company-reported unit volume and launch significance, not proof the partnership alone caused sales or profit.",
+    evidenceClass: "Company-reported product decision and sales outcome; no independent causal or profit estimate.",
+    causalLimit: "The report does not separate the effects of the partner brand, product novelty, advertising, price, distribution, or other menu activity, and unit sales do not reveal contribution margin.",
+    conditions: ["A partner with real audience or product relevance", "Rights and economics agreed by both parties", "A product experience improved by the partnership", "Operational capacity for quality and fulfillment"],
+    transferRisk: "A partner may dilute a brand, complicate production, introduce licensing costs, or attract one-time trial without repeat demand.",
+    smallBusinessAdaptation: "Pair a product or service with a nearby business or ingredient whose customers share a real use occasion; co-design a small offer that improves the experience for both audiences.",
+    reversibleTest: "Test a limited, clearly priced co-created offer with both partners' permissioned audiences. Track qualified trials, repeat use, margin after partner costs, operational time, and complaints before expanding.",
+    editorialStatus: "verified_primary_and_secondary", researchConfidence: "medium", accessedAt: "2026-10-25",
+    sources: [
+      { title: "2012 Annual Report", url: "https://s2.q4cdn.com/890585342/files/doc_financials/2012/ar/2012yumAnnualReport.pdf", publisher: "Yum! Brands, Inc.", publicationDate: "2013", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action_and_outcome", supports: "Yum reports the Doritos Locos Taco as a Taco Bell/Frito-Lay product innovation, 375 million units sold in one year, and a record launch; these are company claims." },
+      { title: "Deep Inside Taco Bell's Doritos Locos Taco", url: "https://www.fastcompany.com/3008346/deep-inside-taco-bells-doritos-locos-taco", publisher: "Fast Company", publicationDate: "2013-05-01", accessedAt: "2026-10-25", sourceRole: "independent_secondary", claimRole: "action_and_outcome", supports: "Reports the multi-year product-development process, cross-company collaboration, and more than 450 million units sold after launch." },
+    ],
+  },
+  {
+    id: "CP-021", title: "Gmail's capacity-limited beta created an invitation loop", organization: "Google", sector: "Email and internet services", geography: "United States, then global", approximateScale: "Large technology company with a constrained early service rollout", businessModel: "Free email supporting a broader advertising and account ecosystem", period: "2004–2019",
+    families: ["distribution_partnership", "customer_participation", "constraint_transformation", "earned_attention"],
+    transferProfile: { audiences: ["early adopters", "existing Google users", "people curious about a new service"], goals: ["controlled onboarding", "referral", "early adoption", "product learning"], constraints: ["limited server capacity", "beta quality", "trust", "controlled rollout"], scale: ["early product launch", "large platform"], geographies: ["United States", "global"], businessModels: ["free digital service", "advertising-supported software", "platform ecosystem"] },
+    convention: "A new online service should open sign-ups widely at launch to maximize immediate registration.",
+    choice: "Google launched Gmail as a limited beta in 2004, initially inviting a small number of outsiders who could invite others. The Associated Press reports the restriction was initially driven by limited server capacity; invitation exclusivity became an unintended side effect.",
+    mechanism: "A capacity constraint became a small, invitation-based onboarding loop that also gave early users a reason to introduce contacts. The invitation scarcity was not purely a deliberate marketing trick, so the case does not justify manufacturing artificial urgency.",
+    distinctiveness: "The service combined unusually generous storage and useful search with a constrained launch, letting early users help control the rate at which new users arrived.",
+    outcome: "Google reported 1.5 billion Gmail users in 2019. The Associated Press reported invitations became sought after during the restricted rollout. These are respectively a company-reported adoption count and independent reporting of invitation demand; neither proves the invite system caused long-term adoption.",
+    evidenceClass: "Company-reported historical product and user count; independent secondary account of rollout and invitation demand; no causal estimate.",
+    causalLimit: "Gmail's product utility, free storage, spam filtering, Google distribution, infrastructure investment, and later integrations all contributed to its trajectory. The available evidence does not isolate invitations as a growth cause.",
+    conditions: ["A real operational or quality constraint that justifies a bounded rollout", "A product useful enough that early users willingly introduce relevant peers", "Clear expectations about access and timing", "A way to protect service quality as adoption grows"],
+    transferRisk: "Artificial scarcity can damage trust, exclude customers unfairly, or mask a weak product; invitations can also create privacy and spam concerns.",
+    smallBusinessAdaptation: "If delivery capacity is genuinely limited, invite a small, representative group to a transparent pilot and ask for useful feedback or introductions only when appropriate; explain when broader access may open.",
+    reversibleTest: "Run a time-boxed pilot with a few qualified, consenting customers. Measure successful onboarding, service quality, referral relevance, support effort, and who was excluded; expand only when capacity and customer value hold.",
+    editorialStatus: "verified_primary_and_secondary", researchConfidence: "medium", accessedAt: "2026-10-25",
+    sources: [
+      { title: "Gmail revolutionized email 20 years ago. People thought it was Google's April Fools' Day joke", url: "https://apnews.com/article/google-gmail-anniversary-email-web-application-8ca1601944845282ecbc87ac9c335a6e", publisher: "The Associated Press", publicationDate: "2024-03-31", accessedAt: "2026-10-25", sourceRole: "independent_secondary", claimRole: "action_and_outcome", supports: "AP reports that Gmail initially had enough computing capacity for only about 10,000 users, that invitations produced unintended exclusivity and social currency, and that universal signup began in 2007. This retrospective does not establish that invites caused long-term adoption." },
+      { title: "Hitting send on the next 15 years of Gmail", url: "https://blog.google/products-and-platforms/products/gmail/hitting-send-on-the-next-15-years-of-gmail/", publisher: "Google Blog", publicationDate: "2019-04-01", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "outcome", supports: "Google reports Gmail launched on April 1, 2004 with search and 1 GB of storage, and says 1.5 billion users relied on Gmail in 2019; the user figure is company-reported and not attributed to the invitation system." },
     ],
   },
 

@@ -104,11 +104,11 @@ function ScenarioInputs({
           {input("paidPct", { max: "100" })}
         </Field>
       </div>
-      <Field label={`Revenue per customer / month (${currency})`} error={errors.arpu}>
+      <Field label={`Money from each customer per month (${currency})`} error={errors.arpu}>
         {input("arpu", {})}
       </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Monthly churn (%)" error={errors.churnPct}>
+        <Field label="Customers who stop paying each month (%)" error={errors.churnPct}>
           {input("churnPct", { max: "99.99" })}
         </Field>
         <Field label="Days to first payment" error={errors.lagDays}>
@@ -148,7 +148,7 @@ export function ScenarioCalculator({ currency }: { currency: string }) {
   const rows: { label: string; get: (r: FunnelResult) => string }[] = [
     { label: "New paying customers", get: (r) => count(r.expectedNewPayingAccounts) },
     { label: "New monthly revenue", get: (r) => money(r.newCohortMrrAtMaturation, currency) },
-    { label: `Monthly revenue at day ${horizonDays} (after churn)`, get: (r) => money(r.expectedMrrAtHorizon, currency) },
+    { label: `Monthly revenue at day ${horizonDays} (after customers leave)`, get: (r) => money(r.expectedMrrAtHorizon, currency) },
   ];
 
   return (
@@ -158,7 +158,7 @@ export function ScenarioCalculator({ currency }: { currency: string }) {
       </h2>
 
       <div className="max-w-xs">
-        <Field label="Horizon">
+        <Field label="How far ahead?">
           <Select
             value={horizon}
             onValueChange={setHorizon}

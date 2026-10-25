@@ -338,7 +338,19 @@ function BusinessStep({
           </CardContent>
         </Card>
       )}
-      <Button type="button" variant="link" className="mt-4" onClick={() => setMode((current) => current === "chat" ? "form" : "chat")}>
+      <Button type="button" variant="link" className="mt-4" onClick={() => {
+        if (mode === "chat") {
+          setName(nameOverride ?? parsed.businessName ?? name);
+          setWebsite(parsed.website ?? website);
+          setDescription(chat);
+          setNoWebsite(!parsed.website && !website);
+          setMode("form");
+        } else {
+          setChat([name ? `My business is called ${name}.` : "", !noWebsite ? website : "", noWebsite ? description : parsed.goalStatement].filter(Boolean).join(" "));
+          setNameOverride(name || null);
+          setMode("chat");
+        }
+      }}>
         {mode === "chat" ? "Prefer a simple form?" : "Describe it in your own words instead"}
       </Button>
       {additional ? <Link href="/app" className="ml-3 text-sm text-ink-3 underline">Back to my businesses</Link> : null}

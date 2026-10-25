@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(18);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(21);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -34,6 +34,18 @@ describe("creative strategy precedent retrieval", () => {
   it("retrieves collaboration-led bottom-up adoption through its product mechanism", () => {
     const matches = retrieveCreativePrecedents("Help individual users invite coworkers by sharing content and collaborating on a work platform, enabling bottom-up adoption within organizations", 2);
     expect(matches.some(({ precedent }) => precedent.id === "CP-018")).toBe(true);
+  });
+
+  it("retrieves audience expansion through accessible shared product design", () => {
+    expect(retrieveCreativePrecedents("Make an accessible product experience that helps non-users and families participate together").some(({ precedent }) => precedent.id === "CP-019")).toBe(true);
+  });
+
+  it("retrieves a product-integrated partnership across adjacent brands", () => {
+    expect(retrieveCreativePrecedents("Redesign a familiar restaurant product format through a co-branding partnership", 3).some(({ precedent }) => precedent.id === "CP-020")).toBe(true);
+  });
+
+  it("retrieves a capacity-led invitation rollout without endorsing artificial scarcity", () => {
+    expect(retrieveCreativePrecedents("Run a capacity-limited beta with an invitation loop and transparent onboarding").some(({ precedent }) => precedent.id === "CP-021")).toBe(true);
   });
 
   it("retrieves opt-in personalization and sharing as a separate customer mechanism", () => {

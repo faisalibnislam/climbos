@@ -8,6 +8,7 @@ test("plain-language Home, suggestions, tools, and review links @mobile", async 
   await expect(request).toBeVisible();
   const history = page.getByRole("region", { name: "Your requests", exact: true });
   const before = await history.innerText();
+  await page.screenshot({ path: test.info().outputPath("home.png"), fullPage: false });
   await request.fill("Keep this draft.");
   await page.getByRole("button", { name: "Prepare posts for next week", exact: true }).click();
   await expect(request).toHaveValue("Keep this draft.\nPrepare posts for next week");
@@ -18,9 +19,15 @@ test("plain-language Home, suggestions, tools, and review links @mobile", async 
   await page.getByRole("button", { name: /Ask for help with this/ }).click();
   await expect(request).toHaveValue("Keep this draft.\nPrepare posts for next week\nHelp me understand my sales");
   await expect(history).toHaveText(before, { useInnerText: true });
+  await page.getByRole("button", { name: "Ask Climb about this page", exact: true }).click();
+  await page.getByLabel("Message Climb AI", { exact: true }).fill("Keep this question.");
+  await page.getByRole("button", { name: "What needs my attention today?", exact: true }).click();
+  await expect(page.getByLabel("Message Climb AI", { exact: true })).toHaveValue("Keep this question.\nWhat needs my attention today?");
+  await page.getByRole("button", { name: "Close Climb AI", exact: true }).click();
+  await expect(history).toHaveText(before, { useInnerText: true });
   await expectAccessible(page, "simple Home");
   await expectNoHorizontalScroll(page);
-  await page.screenshot({ path: test.info().outputPath("home.png"), fullPage: false });
+  await page.screenshot({ path: test.info().outputPath("home-request.png"), fullPage: false });
 
   await page.getByRole("link", { name: "Your work", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Your work", exact: true })).toBeVisible();
@@ -28,6 +35,9 @@ test("plain-language Home, suggestions, tools, and review links @mobile", async 
   await expect(page).toHaveURL(new RegExp(`/app/${slug}/content`));
   await expect(page.getByRole("heading", { name: "Posts, emails & ads", exact: true })).toBeVisible();
 
+  await page.goto(`/app/${slug}/customers`);
+  await page.getByRole("link", { name: /Customer progress/ }).click();
+  await expect(page.getByRole("heading", { name: "Customer progress", exact: true })).toBeVisible();
   await page.goto(`/app/${slug}/tools`);
   await page.getByLabel("Find a tool", { exact: true }).fill("SEO");
   await expect(page.getByRole("link", { name: /Help people find you/ })).toBeVisible();
@@ -40,6 +50,9 @@ test("plain-language Home, suggestions, tools, and review links @mobile", async 
   await expectAccessible(page, "plain-language tool directory");
   await expectNoHorizontalScroll(page);
   await page.screenshot({ path: test.info().outputPath("tools.png"), fullPage: false });
+  if ((page.viewportSize()?.width ?? 1366) < 1024) await page.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("link", { name: "Review work", exact: true }).click();
+  await expect(page.locator("#review")).toBeInViewport();
 });
 
 test("shared composer protects drafts and treats IME input as composition @mobile", async ({ page }) => {

@@ -18,11 +18,11 @@ function parseMoney(s: string): number {
 }
 
 const STAGES = [
-  { value: "lead", label: "Lead" },
-  { value: "talking", label: "Talking" },
+  { value: "lead", label: "Possible customer" },
+  { value: "talking", label: "In conversation" },
   { value: "booked", label: "Call booked" },
-  { value: "won", label: "Won" },
-  { value: "lost", label: "Lost" },
+  { value: "won", label: "Sale recorded" },
+  { value: "lost", label: "Did not go ahead" },
 ] as const;
 type Stage = (typeof STAGES)[number]["value"];
 const NEXT: Partial<Record<Stage, Stage>> = { lead: "talking", talking: "booked", booked: "won" };
@@ -47,14 +47,14 @@ export default function PipelinePage() {
       {data && data.deals.length ? (
         <StatBlocks
           stats={[
-            { label: "Open", value: data.totals.open },
-            { label: "In play", value: money(data.totals.pipelineValue, data.totals.currency) },
-            { label: "Won", value: money(data.totals.wonValue, data.totals.currency), tone: data.totals.wonValue ? "good" : "default" },
+            { label: "Still in progress", value: data.totals.open },
+            { label: "Possible sales value", value: money(data.totals.pipelineValue, data.totals.currency) },
+            { label: "Sale recorded", value: money(data.totals.wonValue, data.totals.currency), tone: data.totals.wonValue ? "good" : "default" },
           ]}
         />
       ) : null}
       {data === undefined ? (
-        <LoadingBlock label="Loading your pipeline…" lines={4} />
+        <LoadingBlock label="Loading customer progress…" lines={4} />
       ) : data.deals.length === 0 ? (
         <EmptyState icon={<Users />} title="No one here yet" body="Replies and bookings land here." />
       ) : (
@@ -92,7 +92,7 @@ export default function PipelinePage() {
           })}
         </div>
       )}
-      <Sheet open={Boolean(open)} onOpenChange={(o) => !o && setOpenId(null)} title={open?.name ?? "Deal"}>
+      <Sheet open={Boolean(open)} onOpenChange={(o) => !o && setOpenId(null)} title={open?.name ?? "Possible sale"}>
         {open ? <DealPanel key={open.id} slug={slug} d={open} onDeleted={() => setOpenId(null)} /> : <span />}
       </Sheet>
     </div>
@@ -127,10 +127,10 @@ function DealPanel({ slug, d, onDeleted }: { slug: string; d: Deal; onDeleted: (
         <dt className="text-ink-3">Source</dt>
         <dd className="text-ink">{SOURCE[d.source]}</dd>
       </dl>
-      <Field label="Stage">
+      <Field label="Where are you with this person?">
         <Select options={STAGES.map((s) => ({ value: s.value, label: s.label }))} value={d.stage} onValueChange={(v) => save({ slug, id: d.id, stage: v as Stage })} />
       </Field>
-      <Field label={`Deal value (${d.currency})`} hint="Won value counts as revenue.">
+      <Field label={`Possible sale value (${d.currency})`} hint="This amount is included in recorded sales when you choose Sale recorded.">
         <Input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value.replace(/[^0-9.]/g, ""))} onBlur={() => {
             if (value && !Number.isFinite(parseMoney(value))) return void toast({ tone: "danger", title: "Use a number, like 1200.50" });
             void save({ slug, id: d.id, value: value ? parseMoney(value) : null });
@@ -227,7 +227,7 @@ function AddDeal({ slug }: { slug: string }) {
         <Field label="Email" optional>
           <Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
         </Field>
-        <Field label="Deal value" optional>
+        <Field label="Possible sale value" optional>
           <Input inputMode="decimal" value={f.value} onChange={(e) => setF({ ...f, value: e.target.value.replace(/[^0-9.]/g, "") })} />
         </Field>
         <Button type="submit" loading={busy} disabled={!f.name.trim()}>

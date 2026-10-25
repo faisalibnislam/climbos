@@ -45,6 +45,8 @@ export function ClimbPanel({ slug }: { slug: string }) {
   const [busy, setBusy] = useState(false);
   const listRef = useRef<HTMLOListElement>(null);
   const area = useRef<HTMLTextAreaElement>(null);
+  const pending = useRef(false);
+  const followLatest = useRef(true);
   const handledUi = useRef(new Set<string>());
 
   // Text queued from elsewhere ("Ask Climb AI about this").
@@ -61,7 +63,7 @@ export function ClimbPanel({ slug }: { slug: string }) {
   // Keep the newest message in view.
   useEffect(() => {
     const el = listRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el && followLatest.current) el.scrollTop = el.scrollHeight;
   }, [thread?.length, busy]);
 
   // Run screen commands from the agent once (open a page, point at something).
@@ -79,7 +81,8 @@ export function ClimbPanel({ slug }: { slug: string }) {
 
   const submit = async (value?: string) => {
     const message = (value ?? text).trim();
-    if (!message || busy) return;
+    if (!message || pending.current) return;
+    pending.current = true;
     setBusy(true);
     setText("");
     const selection = climb.selection;
@@ -91,6 +94,7 @@ export function ClimbPanel({ slug }: { slug: string }) {
       toast({ tone: "danger", title: errorInfo(e).message });
       setText(message);
     } finally {
+      pending.current = false;
       setBusy(false);
     }
   };
@@ -115,7 +119,8 @@ export function ClimbPanel({ slug }: { slug: string }) {
         </span>
       </header>
 
-      <ol ref={listRef} className="flex flex-1 flex-col gap-3 overflow-y-auto px-3 py-4" aria-live="polite">
+      <p className="border-b border-line px-3 py-2 text-xs text-ink-3">Help with this page. Requests you make on Home stay on Home.</p>
+      <ol ref={listRef} onScroll={(event) => { const list = event.currentTarget; followLatest.current = list.scrollHeight - list.scrollTop - list.clientHeight < 80; }} className="flex flex-1 flex-col gap-3 overflow-y-auto px-3 py-4" aria-live="polite">
         {thread === undefined ? (
           <li className="text-ui text-ink-3">Loading…</li>
         ) : empty ? (
@@ -134,12 +139,12 @@ export function ClimbPanel({ slug }: { slug: string }) {
                 </li>
               </ul>
               <p className="mt-2 flex items-center gap-1.5 text-xs text-ink-3">
-                <MousePointerClick aria-hidden className="size-3.5" /> Tip: press the pointer to pick something on the screen.
+                <MousePointerClick aria-hidden className="size-3.5" /> Choose a suggestion to edit it first. The pointer can select something on this page.
               </p>
             </div>
             <div className="flex flex-col gap-1.5">
               {suggestionsFor(pathname).map((s) => (
-                <button key={s} type="button" onClick={() => void submit(s)} className="rounded-lg border border-line px-3 py-2 text-left text-ui text-ink-2 transition-colors hover:border-line-strong hover:bg-surface-2 hover:text-ink">
+                <button key={s} type="button" disabled={busy} onClick={() => { setText((current) => current.trim() ? `${current.trimEnd()}\n${s}` : s); requestAnimationFrame(() => area.current?.focus()); }} className="rounded-lg border border-line px-3 py-2 text-left text-ui text-ink-2 transition-colors hover:border-line-strong hover:bg-surface-2 hover:text-ink">
                   {s}
                 </button>
               ))}
@@ -202,6 +207,7 @@ export function ClimbPanel({ slug }: { slug: string }) {
             id="climb-input"
             ref={area}
             rows={1}
+            disabled={busy}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onInput={(e) => {
@@ -210,7 +216,7 @@ export function ClimbPanel({ slug }: { slug: string }) {
               el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
             }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && window.matchMedia("(pointer: fine)").matches) {
                 e.preventDefault();
                 void submit();
               }

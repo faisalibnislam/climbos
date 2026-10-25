@@ -53,8 +53,9 @@ const MOBILE_PRIMARY = ["today", "work", "customers", "results"];
  * component only renders what the backend returns.
  */
 export function AppShell({ slug, children, workspace = false }: { slug: string; children: ReactNode; workspace?: boolean }) {
+  const identity = useQuery(api.orgs.me);
   return (
-    <ClimbProvider key={slug}>
+    <ClimbProvider key={`${slug}:${identity?.userId ?? "loading"}`}>
       <Shell slug={slug} workspace={workspace}>
         {children}
       </Shell>
