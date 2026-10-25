@@ -11,6 +11,7 @@ import { errorInfo } from "../errors";
 import { relativeTime } from "../money";
 import { LoadingBlock } from "../results/QueryBoundary";
 import { SettingsHeader } from "./SettingsNav";
+import { ContactFrequencySetting } from "./ContactFrequencySetting";
 
 type Policies = FunctionReturnType<typeof api.settings.policies>;
 type Policy = NonNullable<Policies["policy"]>;
@@ -57,6 +58,7 @@ export function PoliciesSettings({ slug }: { slug: string }) {
               Created when setup finishes. <Link href="/onboarding">Continue setup</Link>
             </Callout>
           )}
+          <ContactFrequencySetting slug={slug} days={data.contactFrequencyDays} canManage={data.canManage} />
           <section aria-labelledby="always-heading" className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
             <h2 id="always-heading" className="heading-section flex items-center gap-2">
               <ShieldCheck aria-hidden className="size-4 text-brand-800" /> Always needs your approval

@@ -1,3 +1,5 @@
+import { checkContactFrequency, frequencyBlockMessage, type ContactHistory } from "../shared/growth/contactFrequency";
+import { outreachHistoryByHash } from "./lib/contactPressure";
 import { v } from "convex/values";
 import { requirePaid } from "./lib/access";
 import { parseCsv } from "../shared/integrations/csvRevenue";
@@ -15,7 +17,7 @@ import {
 import { approvalHash, canonicalJson, sha256Hex } from "../shared/policy";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { action, internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { action, internalAction, internalMutation, internalQuery, mutation, query, type QueryCtx } from "./_generated/server";
 import { decideReservation, releaseReservation } from "../shared/economics/ledger";
 import { activePolicyVersion } from "./jobWrites";
 import { audit } from "./lib/audit";
@@ -173,6 +175,30 @@ export const markCrmConnected = internalMutation({
   },
 });
 
+/** Owner-set frequency limit over the consented, unsuppressed contacts in one segment (null when no limit is set). */
+async function segmentFrequency(ctx: QueryCtx, orgId: Id<"organizations">, segment: string, limitDays: number | undefined) {
+  if (!limitDays) return null;
+  const contacts = (await ctx.db.query("contacts").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(10_000)).filter((c) => !c.deletedAt && c.segments.includes(segment));
+  const people: ContactHistory[] = [];
+  for (const c of contacts) {
+    const consented = (await ctx.db.query("consentRecords").withIndex("by_org_contact", (q) => q.eq("orgId", orgId).eq("contactId", c._id)).take(5)).some((r) => r.purpose === "marketing_email" && !r.withdrawnAt);
+    const suppressed = Boolean(await ctx.db.query("suppressions").withIndex("by_org_email", (q) => q.eq("orgId", orgId).eq("emailHash", c.emailHash)).first());
+    if (!consented || suppressed) continue;
+    people.push({ ...(c.lastMarketingEmailAt ? { lastMarketingEmailAt: c.lastMarketingEmailAt } : {}), ...(await outreachHistoryByHash(ctx, orgId, c.emailHash)) });
+  }
+  return checkContactFrequency(people, limitDays, Date.now());
+}
+
+/** Before approving a broadcast: who in the segment the owner's contact limit would hold back. */
+export const frequencyPreview = query({
+  args: { slug: v.string(), segment: v.string() },
+  handler: async (ctx, { slug, segment }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const check = await segmentFrequency(ctx, org._id, segment, org.contactFrequencyDays);
+    return check ? { limitDays: org.contactFrequencyDays!, ...check, message: frequencyBlockMessage(check, org.contactFrequencyDays!) } : null;
+  },
+});
+
 async function segmentStats(ctx: { db: import("./_generated/server").QueryCtx["db"] }, orgId: Id<"organizations">) {
   const contacts = await ctx.db
     .query("contacts")
@@ -285,6 +311,10 @@ export const approveSend = mutation({
     if (!email) throw appError("INVALID", "We couldn't find that email in the draft.");
     const stats = (await segmentStats(ctx, org._id)).find((s) => s.segment === args.segment);
     if (!stats || stats.sendable === 0) throw appError("INVALID", "Nobody in this segment has a recorded marketing opt-in. ClimbOS won't send without one.");
+    // The owner's contact frequency limit holds the whole send rather than silently dropping people from an approved segment.
+    const frequency = await segmentFrequency(ctx, org._id, args.segment, org.contactFrequencyDays);
+    const blocked = frequency ? frequencyBlockMessage(frequency, org.contactFrequencyDays!) : null;
+    if (blocked) throw appError("INVALID", blocked);
     // Reserve the send volume against the plan's marketing-send quota (customer's provider bill is separate).
     const period = access.period;
     const decision = decideReservation(ledgerOf(period), { costMicros: 0, topupCostMicros: 0, meters: { byoMarketingSends: stats.sendable } });
@@ -365,11 +395,20 @@ export const finishSend = internalMutation({
     sent: v.number(),
     externalId: v.optional(v.string()),
     summary: v.string(),
+    /** Normalized-email hashes of the contacts the provider accepted, to record when they were last emailed. */
+    recipientHashes: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const approval = await ctx.db.get(args.approvalId);
     const reservation = await ctx.db.get(args.reservationId);
     if (!approval || !reservation) return;
+    if (args.status === "verified" && args.recipientHashes?.length) {
+      const now = Date.now();
+      for (const emailHash of args.recipientHashes.slice(0, 10_000)) {
+        const contact = await ctx.db.query("contacts").withIndex("by_org_email", (q) => q.eq("orgId", approval.orgId).eq("emailHash", emailHash)).first();
+        if (contact) await ctx.db.patch(contact._id, { lastMarketingEmailAt: now });
+      }
+    }
     const period = await ctx.db.get(reservation.periodId);
     if (period && reservation.status === "held") {
       const released = releaseReservation(ledgerOf(period), { walletMicros: 0, topupMicros: 0, meters: reservation.meters });
@@ -456,6 +495,7 @@ export const executeSend = internalAction({
       status: sent.status,
       sent: sent.status === "verified" ? expectedRecipients.size : 0,
       externalId: draft.externalId,
+      ...(sent.status === "verified" ? { recipientHashes: await Promise.all([...expectedRecipients].map((email) => sha256Hex(email))) } : {}),
       summary: sent.status === "verified" ? `Accepted by your email provider for ${expectedRecipients.size} opted-in contact(s) after the provider segment matched the approved audience.` : (sent.providerMessage ?? "Your email provider didn't send it."),
     });
   },

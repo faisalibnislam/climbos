@@ -35,3 +35,13 @@ export async function hasQueuedReviewInvitation(ctx: QueryCtx | MutationCtx, org
     q.eq("orgId", orgId).eq("email", email.trim().toLowerCase()).eq("status", "queued"),
   ).first());
 }
+
+/** History for one contact hash: last ClimbOS outreach send and whether an outreach sequence is still active. */
+export async function outreachHistoryByHash(ctx: QueryCtx | MutationCtx, orgId: Id<"organizations">, recipientHash: string): Promise<{ activeOutreach: boolean; lastOutreachSentAt?: number }> {
+  const active = await Promise.all(ACTIVE_OUTBOUND_STATUSES.map((status) =>
+    ctx.db.query("outboundSends").withIndex("by_org_recipient_status", (q) => q.eq("orgId", orgId).eq("recipientHash", recipientHash).eq("status", status)).first(),
+  ));
+  const sent = await ctx.db.query("outboundSends").withIndex("by_org_recipient_status", (q) => q.eq("orgId", orgId).eq("recipientHash", recipientHash).eq("status", "sent")).take(20);
+  const last = sent.reduce((m, row) => Math.max(m, row.sentAt ?? 0), 0);
+  return { activeOutreach: active.some(Boolean), ...(last ? { lastOutreachSentAt: last } : {}) };
+}

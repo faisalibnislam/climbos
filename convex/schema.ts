@@ -781,6 +781,8 @@ export default defineSchema({
     kind: v.union(v.literal("customer"), v.literal("demo")),
     /** Engine rollout flags for this workspace (REQ-ENG-01), set by ClimbOS staff only, e.g. "decision_contract". */
     engineFlags: v.optional(v.array(v.string())),
+    /** Owner-set minimum days between ClimbOS emails to the same person (marketing broadcasts, outreach); unset = no limit. */
+    contactFrequencyDays: v.optional(v.number()),
     createdBy: v.id("users"),
     timezone: v.string(),
     /** Default Climb AI mode for new jobs (Expert needs a paid plan). Absent = expert when paid, else basic. */
@@ -1604,6 +1606,8 @@ export default defineSchema({
   contacts: defineTable({
     orgId: v.id("organizations"),
     emailHash: v.string(),
+    /** When a ClimbOS marketing broadcast to this contact was last accepted by the provider. */
+    lastMarketingEmailAt: v.optional(v.number()),
     emailCiphertext: v.optional(v.string()),
     emailIv: v.optional(v.string()),
     emailDomain: v.string(),

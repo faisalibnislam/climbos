@@ -47,6 +47,7 @@ export function EmailSendPanel({ slug, artifact }: { slug: string; artifact: Art
   const [reloadKey, setReloadKey] = useState(0);
   const [emailIndex, setEmailIndex] = useState("0");
   const [segment, setSegment] = useState("");
+  const frequency = useQuery(api.marketing.frequencyPreview, segment ? { slug, segment } : "skip");
   const [providerSegmentId, setProviderSegmentId] = useState("");
   const [from, setFrom] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -175,6 +176,7 @@ export function EmailSendPanel({ slug, artifact }: { slug: string; artifact: Art
           }))}
         />
       </Field>
+      {frequency?.message ? <Callout tone="warning" title="Your contact limit will hold this send">{frequency.message}</Callout> : null}
       {chosen && chosen.total > chosen.sendable ? (
         <p className="-mt-2 text-sm text-ink-3">
           {(chosen.total - chosen.sendable).toLocaleString("en-US")} excluded: {chosen.suppressed.toLocaleString("en-US")} unsubscribed/bounced, rest no opt-in.
