@@ -616,3 +616,7 @@ Added the ALS Ice Bucket Challenge as a social-participation mechanism in the pr
 ## Resumption note (2026-10-25, prepared real-time social response CP-058)
 
 Added Oreo's 2013 Super Bowl blackout response to the production creative-strategy precedent library. Contemporaneous WIRED reporting supports the event, prepared social team, early engagement counts, and unclear sales effect; Digiday's participant interviews describe pre-planning, context checks, and human approval. The case distinguishes readiness from trend-chasing, excludes emergencies and automated posting, and does not treat engagement as customer or revenue impact. Focused regression verifies mechanism retrieval, production task injection, source dates, and preserved approval and causal caveats. Reviewed corpus: 58 cases; 42 of 100 remain unverified.
+
+## Resumption note (2026-10-25, bold exploration regression)
+
+Added a schema regression for a high-novelty, low-evidence, low-fit, low-feasibility, high-risk bold option with no matching precedent. It confirms the structured strategy exploration contract accepts uncertainty and does not require retrieval to display a genuinely original idea; no generation behavior or execution permission changed. Focused decision, offer, and timing tests pass (49); app/Convex typecheck, targeted ESLint, and `git diff --check` pass.

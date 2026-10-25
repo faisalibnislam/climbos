@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DECISION_FIELDS, DecisionSchema, lintDecision, type Decision } from "../../shared/agents/decision";
 import { playsTask } from "../../shared/agents/planTasks";
 import { planQuality } from "../../shared/agents/quality";
-import { analyzeDecisionOptions, growthPlaysSpec, lintDecisionConstraintFit, lintDecisionOptionChoice } from "../../shared/agents/specs";
+import { analyzeDecisionOptions, growthPlaysSpec, lintDecisionConstraintFit, lintDecisionOptionChoice, StrategyExplorationSchema } from "../../shared/agents/specs";
 import { diagnose } from "../../shared/agents/diagnosis";
 import { portfolioRange, type PlayLike } from "../../shared/agents/economics";
 
@@ -205,6 +205,46 @@ describe("deterministic comparison of decision options", () => {
 });
 
 describe("flag wiring", () => {
+  it("keeps a highly uncertain bold option valid without a matching precedent", () => {
+    const option = {
+      title: "Turn unused expertise into a public challenge",
+      challengedConvention: "Businesses in this category should keep their expertise behind paid consultations.",
+      whyConventionPersists: "A paid format feels familiar and limits public work.",
+      costOfBreaking: "A public format could expose incomplete ideas or attract the wrong audience.",
+      businessMechanism: "Combine a rare internal skill with a customer-created weekly challenge and publish the most useful result.",
+      businessAction: "Invite customers to submit a real problem for a short, owner-reviewed public response.",
+      whyItCouldMatter: "A useful public response could make an unusual expertise asset recognizable to people who do not know the business yet.",
+      customerBehavior: "A relevant buyer submits a problem or requests a private next step.",
+      audienceOrCondition: "Only for a business with public-safe expertise and a reachable, interested audience.",
+      evidenceBasis: "speculative_hypothesis" as const,
+      evidenceNote: "No matching precedent or business outcome is currently established.",
+      evidenceRefs: [],
+      precedentIds: [],
+      transferLogic: "No precedent is required; test the customer behavior directly with a small, reversible prompt.",
+      keyDifferences: "The idea deliberately combines a public challenge format with this business's own expertise asset.",
+      assumptions: ["Customers will share a useful problem."],
+      uncertainties: ["Audience response and qualified demand are unknown."],
+      risks: ["The challenge could create unpaid support work."],
+      costAndCapacity: "One owner-reviewed response per week; stop if available time is exceeded.",
+      novelty: "high" as const,
+      evidenceStrength: "low" as const,
+      businessFit: "low" as const,
+      feasibility: "low" as const,
+      risk: "high" as const,
+      reversibleTest: {
+        method: "Draft one invitation and show it to a few existing customers before publishing anything.",
+        metric: "Qualified problem submissions",
+        duration: "One week",
+        resourceLimit: "One owner hour",
+        continueIf: "A right-fit customer submits a specific problem.",
+        changeIf: "People like the idea but do not share a usable problem.",
+        stopIf: "The request creates unsupported expectations or excessive support work.",
+      },
+    };
+    const exploration = { grounded: option, adjacent: option, bold: option };
+    expect(StrategyExplorationSchema.safeParse(exploration).success).toBe(true);
+  });
+
   it("on: the plays schema requires a decision; off: the default schema is unchanged", () => {
     const on = growthPlaysSpec({ decisionContract: true }).schema;
     const off = growthPlaysSpec().schema;
