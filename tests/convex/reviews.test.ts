@@ -1,7 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
+import { sha256Hex } from "../../shared/policy";
 import { unsubscribeToken } from "../../shared/outbound/sending";
-import { asNewUser, makePaid, setup } from "./helpers";
+import { asNewUser, makePaid, setup, type T } from "./helpers";
+
+async function startProspectSequence(t: T, owner: Awaited<ReturnType<typeof asNewUser>>, slug: string, email: string) {
+  await owner.client.mutation(api.outbound.start, { slug, who: "Agencies", where: "UK", count: 5 });
+  await t.finishAllScheduledFunctions(vi.runAllTimers);
+  const view = await owner.client.query(api.outbound.get, { slug });
+  const person = view.prospects[0]!;
+  await t.run(async (ctx) => ctx.db.patch(person.id as Id<"prospects">, { publicEmail: email }));
+  await owner.client.mutation(api.outbound.setStage, { slug, prospectIds: [person.id as Id<"prospects">], stage: "approved" });
+  await owner.client.mutation(api.outboundSending.start, { slug, campaignId: view.campaign!.id as Id<"outboundCampaigns">, senderName: "Sam", company: "Review Co", address: "1 High St, London E1 1AA" });
+  return view.campaign!.id;
+}
 
 describe("reviews engine", () => {
   beforeEach(() => {
@@ -158,5 +171,96 @@ describe("reviews engine", () => {
     const inbox = await owner.client.query(api.inbox.list, { slug, box: "open" });
     expect(inbox[0]).toMatchObject({ kind: "review", from: "Ana Lopez", canReply: true });
     expect(inbox[0].text).toContain("★★★★☆");
+  });
+
+  it("keeps review invitations out of active prospect email sequences at preview and approval", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "review-pressure@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Review Co" });
+    await makePaid(t, orgId);
+    await owner.client.mutation(api.reviews.setReviewUrl, { slug, url: "https://g.page/r/pressure/review" });
+    await owner.client.action(api.mailbox.connect, { slug, preset: "gmail", email: "me@review.example", password: "pw" });
+
+    const previousLlm = process.env.CLIMBOS_FAKE_LLM;
+    process.env.CLIMBOS_FAKE_LLM = "ship";
+    try {
+      const email = "ana@customer.example";
+      const staged = await owner.client.mutation(api.reviews.prepareBatch, { slug, people: [{ name: "Ana", email }] });
+      await startProspectSequence(t, owner, slug, email);
+      await expect(owner.client.mutation(api.reviews.approveBatch, {
+        slug,
+        batchId: staged.batchId,
+        contentHash: staged.contentHash,
+        scopeHash: staged.scopeHash,
+        confirmEligibleRecipients: true,
+      })).rejects.toThrow(/active ClimbOS email sequence/);
+      await expect(owner.client.mutation(api.reviews.prepareBatch, { slug, people: [{ name: "Ana", email }] })).rejects.toThrow(/active ClimbOS email sequence/);
+      expect(await t.run(async (ctx) => ctx.db.query("reviewRequests").collect())).toHaveLength(0);
+    } finally {
+      if (previousLlm === undefined) delete process.env.CLIMBOS_FAKE_LLM;
+      else process.env.CLIMBOS_FAKE_LLM = previousLlm;
+    }
+  });
+
+  it("rechecks for an active prospect sequence immediately before a queued review email is sent", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "review-final-check@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Review Co" });
+    await makePaid(t, orgId);
+    await owner.client.mutation(api.reviews.setReviewUrl, { slug, url: "https://g.page/r/final-check/review" });
+    await owner.client.action(api.mailbox.connect, { slug, preset: "gmail", email: "me@review.example", password: "pw" });
+    const email = "ana@customer.example";
+    const staged = await owner.client.mutation(api.reviews.prepareBatch, { slug, people: [{ name: "Ana", email }] });
+    await owner.client.mutation(api.reviews.approveBatch, { slug, batchId: staged.batchId, contentHash: staged.contentHash, scopeHash: staged.scopeHash, confirmEligibleRecipients: true });
+    const request = await t.run(async (ctx) => (await ctx.db.query("reviewRequests").first())!);
+
+    await t.run(async (ctx) => {
+      const campaignId = await ctx.db.insert("outboundCampaigns", {
+        orgId: orgId as Id<"organizations">,
+        title: "Queued prospect email",
+        brief: { who: "Agencies", where: "UK", count: 1 },
+        status: "review",
+        sequence: [{ day: 0, subject: "Hello", body: "Hello", purpose: "intro" }],
+        ownerNotes: [],
+        excluded: [],
+        createdBy: owner.userId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const prospectId = await ctx.db.insert("prospects", {
+        orgId: orgId as Id<"organizations">,
+        campaignId,
+        company: "Customer Co",
+        domain: "customer.example",
+        website: "https://customer.example",
+        location: "Unknown",
+        sizeBand: "Unknown",
+        why: "Test fixture",
+        evidence: [],
+        trigger: "Test fixture",
+        fit: 0,
+        timing: 0,
+        contact: "Ana",
+        publicEmail: email,
+        firstLine: "",
+        stage: "approved",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      await ctx.db.insert("outboundSends", {
+        orgId: orgId as Id<"organizations">,
+        campaignId,
+        prospectId,
+        step: 0,
+        to: email,
+        recipientHash: await sha256Hex(email),
+        scheduledFor: Date.now(),
+        status: "queued",
+        attempts: 0,
+        createdAt: Date.now(),
+      });
+    });
+
+    expect(await t.query(internal.reviews.prepareRequest, { id: request._id })).toBeNull();
   });
 });

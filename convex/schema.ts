@@ -2511,7 +2511,8 @@ export default defineSchema({
   })
     .index("by_token", ["token"])
     .index("by_org_created", ["orgId", "createdAt"])
-    .index("by_org_email", ["orgId", "email", "createdAt"]),
+    .index("by_org_email", ["orgId", "email", "createdAt"])
+    .index("by_org_email_status", ["orgId", "email", "status"]),
 
   /** Immutable owner-approved scope for one neutral review invitation send. */
   reviewInvitationBatches: defineTable({

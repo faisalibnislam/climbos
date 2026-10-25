@@ -82,7 +82,7 @@ describe("cold email: one send per key", () => {
     expect(fakeMailbox().sent[0].messageId).toBe(sendMessageId(handed.opKey!, "sam@seller.example"));
     const after = await rows(t, w.campaignId);
     expect(after.map((r) => `${r.step}:${r.status}`).sort()).toEqual(["0:canceled", "0:sent", "1:queued"]);
-    expect(after.find((r) => r.status === "canceled")?.error).toMatch(/duplicate|active email/i);
+    expect(after.find((r) => r.status === "canceled")?.error).toMatch(/duplicate|active ClimbOS email/i);
     const events = await t.run(async (ctx) => ctx.db.query("outboundSendEvents").withIndex("by_campaign", (q) => q.eq("campaignId", w.campaignId)).collect());
     expect(events.map((event) => event.event)).toEqual(expect.arrayContaining(["claimed", "provider_accepted", "duplicate_blocked"]));
     expect(events.every((event) => !("to" in event) && !("body" in event))).toBe(true);
@@ -107,9 +107,9 @@ describe("cold email: one send per key", () => {
     });
 
     const result = await w.owner.client.mutation(api.outboundSending.addApproved, { slug: w.slug, campaignId: w.campaignId });
-    expect(result).toEqual({ queued: 0, skippedDuplicateRecipients: 1, paused: false });
+    expect(result).toEqual({ queued: 0, skippedActiveAddresses: 1, paused: false });
     const status = await w.owner.client.query(api.outboundSending.status, { slug: w.slug, campaignId: w.campaignId });
-    expect(status).toMatchObject({ newlyApproved: 0, duplicateRecipientsWaiting: 1 });
+    expect(status).toMatchObject({ newlyApproved: 0, activeEmailFlowsWaiting: 1 });
     expect((await rows(t, w.campaignId)).filter((row) => row.status === "queued")).toHaveLength(1);
     expect(await t.run(async (ctx) => (await ctx.db.get(duplicateId))?.stage)).toBe("approved");
   });
@@ -137,7 +137,7 @@ describe("cold email: one send per key", () => {
     });
 
     const result = await w.owner.client.mutation(api.outboundSending.addApproved, { slug: w.slug, campaignId: w.campaignId });
-    expect(result).toEqual({ queued: 1, skippedDuplicateRecipients: 0, paused: false });
+    expect(result).toEqual({ queued: 1, skippedActiveAddresses: 0, paused: false });
   });
 
   it("rechecks legacy duplicate queue rows immediately before mailbox handoff", async () => {
@@ -178,7 +178,7 @@ describe("cold email: one send per key", () => {
       payloadHash: job.payloadHash,
       ...(job.abTestId ? { abTestId: job.abTestId } : {}),
     })).toBe(false);
-    expect((await rows(t, w.campaignId)).find((row) => row._id === handed._id)).toMatchObject({ status: "canceled", error: expect.stringContaining("active email sequence") });
+    expect((await rows(t, w.campaignId)).find((row) => row._id === handed._id)).toMatchObject({ status: "canceled", error: expect.stringContaining("active ClimbOS email") });
     const events = await t.run(async (ctx) => ctx.db.query("outboundSendEvents").withIndex("by_campaign", (q) => q.eq("campaignId", w.campaignId)).collect());
     expect(events.map((event) => event.event)).toContain("duplicate_blocked");
   });

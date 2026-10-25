@@ -10,7 +10,7 @@ import { useState } from "react";
 import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { StatBlocks } from "@/components/ds/content";
-import { Badge, Button, Card, CardContent, Checkbox, ConfirmDialog, Field, IconTile, Input, Select, Textarea, toast } from "@/components/ui";
+import { Badge, Button, Callout, Card, CardContent, Checkbox, ConfirmDialog, Field, IconTile, Input, Select, Textarea, toast } from "@/components/ui";
 
 /** Reviews: invite customers neutrally, share your review page, and draft replies with Climb AI. */
 export default function ReviewsPage() {
@@ -200,12 +200,19 @@ export default function ReviewsPage() {
           setConfirmEligibleRecipients(false);
           setPicked(new Set());
           setExtra("");
-          toast({ tone: "success", title: `Sending to ${result.queued} ${result.queued === 1 ? "customer" : "customers"}` });
+          toast({
+            tone: "success",
+            title: `Queued ${result.queued} ${result.queued === 1 ? "review invitation" : "review invitations"}`,
+            description: result.activeOutreach ? `${result.activeOutreach} address${result.activeOutreach === 1 ? " already has" : "es already have"} an active email sequence and was left out.` : undefined,
+          });
         }}
       >
         {preview ? (
           <div className="flex max-h-72 flex-col gap-3 overflow-y-auto rounded-lg bg-surface-2 p-3 text-sm">
             <p><span className="font-medium">Public review destination:</span> <span className="break-all">{preview.destination}</span></p>
+            {preview.activeOutreach > 0 ? (
+              <Callout tone="warning">{preview.activeOutreach} address{preview.activeOutreach === 1 ? " already has" : "es already have"} an active ClimbOS email sequence and {preview.activeOutreach === 1 ? "was" : "were"} left out of this invitation.</Callout>
+            ) : null}
             <p><span className="font-medium">Message preview:</span></p>
             <pre className="whitespace-pre-wrap font-sans text-ink-2">{preview.preview}</pre>
             <p className="font-medium">Recipients ({preview.count})</p>

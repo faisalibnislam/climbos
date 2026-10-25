@@ -8,6 +8,7 @@ import { notifyOwners } from "./lib/notify";
 import { appError, requireOrgAccess } from "./lib/tenancy";
 import { sha256Hex } from "../shared/policy";
 import { unsubscribeToken } from "../shared/outbound/sending";
+import { hasActiveOutboundSequence } from "./lib/contactPressure";
 import { serverSecret } from "./lib/crypto";
 import { reviewSafetySignals } from "../shared/reviews/safety";
 import { groupVoiceThemes, VOICE_THEME_LABELS, type VoiceThemeKey } from "../shared/reviews/voiceThemes";
@@ -162,6 +163,7 @@ export const prepareBatch = mutation({
     const recipients: { name: string; email: string; dealId?: Id<"deals"> }[] = [];
     const seen = new Set<string>();
     let recentlyAsked = 0;
+    let activeOutreach = 0;
     const now = Date.now();
     for (const p of people.slice(0, room)) {
       const email = p.email.trim().toLowerCase();
@@ -173,6 +175,10 @@ export const prepareBatch = mutation({
       }
       const emailHash = await sha256Hex(email);
       if (await ctx.db.query("suppressions").withIndex("by_org_email", (q) => q.eq("orgId", org._id).eq("emailHash", emailHash)).first()) continue;
+      if (await hasActiveOutboundSequence(ctx, org._id, email)) {
+        activeOutreach++;
+        continue;
+      }
       // Ask each customer at most once every 90 days.
       if (await ctx.db.query("reviewRequests").withIndex("by_org_email", (q) => q.eq("orgId", org._id).eq("email", email).gte("createdAt", now - ASK_AGAIN_AFTER)).first()) {
         recentlyAsked++;
@@ -180,13 +186,13 @@ export const prepareBatch = mutation({
       }
       recipients.push({ name: p.name.trim().slice(0, 80) || email, email, ...(p.dealId ? { dealId: p.dealId } : {}) });
     }
-    if (!recipients.length) throw appError("INVALID", recentlyAsked ? "Everyone here was asked in the last 90 days." : "No eligible email addresses to review.");
+    if (!recipients.length) throw appError("INVALID", activeOutreach ? "These addresses already have an active ClimbOS email sequence. Wait until it finishes before preparing a review invitation." : recentlyAsked ? "Everyone here was asked in the last 90 days." : "No eligible email addresses to review.");
     const destination = publicReviewUrl(business.reviewUrl)!;
     const scopeHash = await inviteScopeHash(recipients);
     const reviewPageUrl = `${SITE()}/review/${org.slug}`;
     const contentHash = await inviteContentHash(business.name, destination, reviewPageUrl);
     const batchId = await ctx.db.insert("reviewInvitationBatches", { orgId: org._id, createdBy: user._id, connectionId: mailbox._id, destination, templateVersion: INVITE_TEMPLATE_VERSION, contentHash, scopeHash, recipients, status: "pending", createdAt: now, expiresAt: now + 30 * 60_000 });
-    return { batchId, count: recipients.length, skipped: people.length - recipients.length, recentlyAsked, destination, templateVersion: INVITE_TEMPLATE_VERSION, contentHash, scopeHash, businessName: business.name, recipients, preview: INVITE_BODY(business.name, recipients[0].name.split(/\s+/)[0], `${reviewPageUrl}?t={recipient_token}`, "your personal unsubscribe link") };
+    return { batchId, count: recipients.length, skipped: people.length - recipients.length, recentlyAsked, activeOutreach, destination, templateVersion: INVITE_TEMPLATE_VERSION, contentHash, scopeHash, businessName: business.name, recipients, preview: INVITE_BODY(business.name, recipients[0].name.split(/\s+/)[0], `${reviewPageUrl}?t={recipient_token}`, "your personal unsubscribe link") };
   },
 });
 
@@ -209,17 +215,22 @@ export const approveBatch = mutation({
     const today = await ctx.db.query("reviewRequests").withIndex("by_org_created", (q) => q.eq("orgId", org._id).gte("createdAt", Date.now() - 86_400_000)).take(DAILY_LIMIT + 1);
     if (today.length + batch.recipients.length > DAILY_LIMIT) throw appError("RATE_LIMITED", "The daily review invitation limit changed. Prepare a smaller batch.");
     const ids: Id<"reviewRequests">[] = [];
+    let activeOutreach = 0;
     for (const person of batch.recipients) {
       const emailHash = await sha256Hex(person.email);
       if (await ctx.db.query("suppressions").withIndex("by_org_email", (q) => q.eq("orgId", org._id).eq("emailHash", emailHash)).first()) continue;
       if (await ctx.db.query("reviewRequests").withIndex("by_org_email", (q) => q.eq("orgId", org._id).eq("email", person.email).gte("createdAt", Date.now() - ASK_AGAIN_AFTER)).first()) continue;
+      if (await hasActiveOutboundSequence(ctx, org._id, person.email)) {
+        activeOutreach++;
+        continue;
+      }
       ids.push(await ctx.db.insert("reviewRequests", { orgId: org._id, dealId: person.dealId, name: person.name, email: person.email, token: token(), status: "queued", approvalBatchId: batch._id, createdAt: Date.now() }));
     }
-    if (!ids.length) throw appError("INVALID", "No recipients remain eligible. Prepare a fresh preview.");
+    if (!ids.length) throw appError("INVALID", activeOutreach ? "No invitations were queued because every remaining address has an active ClimbOS email sequence." : "No recipients remain eligible. Prepare a fresh preview.");
     await ctx.db.patch(batch._id, { status: "queued", approvedBy: user._id, approvedAt: Date.now() });
     await ctx.scheduler.runAfter(0, internal.mailbox.sendReviewRequests, { ids });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "reviews.requested", subjectType: "review_invitation_batch", subjectId: batch._id, summary: `Approved and queued ${ids.length} neutral review invitation${ids.length === 1 ? "" : "s"}; destination and recipient scope were frozen.` });
-    return { queued: ids.length, skipped: batch.recipients.length - ids.length };
+    return { queued: ids.length, skipped: batch.recipients.length - ids.length, activeOutreach };
   },
 });
 
@@ -242,6 +253,7 @@ export const prepareRequest = internalQuery({
     const hashOf = await sha256Hex(r.email);
     // Unsubscribed since it was queued: don't send.
     if (await ctx.db.query("suppressions").withIndex("by_org_email", (q) => q.eq("orgId", r.orgId).eq("emailHash", hashOf)).first()) return null;
+    if (await hasActiveOutboundSequence(ctx, r.orgId, r.email)) return null;
     if (publicReviewUrl(business.reviewUrl) !== batch.destination) return null;
     const link = `${SITE()}/review/${org.slug}?t=${r.token}`;
     const first = r.name.split(/\s+/)[0];

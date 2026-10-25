@@ -163,9 +163,9 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
               ...(s.counts.bounced ? [{ label: "Bounced", value: s.counts.bounced, tone: "bad" as const }] : []),
             ]}
           />
-          {s.duplicateRecipientsWaiting > 0 ? (
+          {s.activeEmailFlowsWaiting > 0 ? (
             <Callout tone="warning">
-              {s.duplicateRecipientsWaiting} possible {s.duplicateRecipientsWaiting === 1 ? "customer was" : "customers were"} left out because the address already has an active sequence or could not be checked safely.
+              {s.activeEmailFlowsWaiting} possible {s.activeEmailFlowsWaiting === 1 ? "customer was" : "customers were"} left out because another ClimbOS email is already queued, in progress, or unresolved for that address, or the address could not be checked safely.
             </Callout>
           ) : null}
           {s.review.length ? (
@@ -213,8 +213,8 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
                     toast({
                       tone: "success",
                       title: r.queued ? `Added ${r.queued} possible ${r.queued === 1 ? "customer" : "customers"}` : "No new emails queued",
-                      description: r.skippedDuplicateRecipients
-                        ? `${r.skippedDuplicateRecipients} address${r.skippedDuplicateRecipients === 1 ? " already has an active sequence or needs" : "es already have active sequences or need"} a duplicate check.`
+                      description: r.skippedActiveAddresses
+                        ? `${r.skippedActiveAddresses} address${r.skippedActiveAddresses === 1 ? " has an active ClimbOS email or needs" : "es have active ClimbOS emails or need"} a duplicate check.`
                         : r.paused ? "Sends when you resume." : undefined,
                     });
                   })
@@ -280,8 +280,8 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
                 toast({
                   tone: "success",
                   title: `${r.queued} possible ${r.queued === 1 ? "customer is" : "customers are"} in the queue`,
-                  description: r.skippedDuplicateRecipients
-                    ? `${r.skippedDuplicateRecipients} address${r.skippedDuplicateRecipients === 1 ? " already has an active sequence or needs" : "es already have active sequences or need"} a duplicate check.`
+                  description: r.skippedActiveAddresses
+                    ? `${r.skippedActiveAddresses} address${r.skippedActiveAddresses === 1 ? " has an active ClimbOS email or needs" : "es have active ClimbOS emails or need"} a duplicate check.`
                     : undefined,
                 });
               })

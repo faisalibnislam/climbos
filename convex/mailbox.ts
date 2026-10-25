@@ -263,7 +263,7 @@ export const sendReviewRequests = internalAction({
     for (const id of ids) {
       const job = await ctx.runQuery(internal.reviews.prepareRequest, { id });
       if (!job) {
-        await ctx.runMutation(internal.reviews.recordRequest, { id, ok: false, error: "Not sent: mailbox disconnected or they unsubscribed" });
+        await ctx.runMutation(internal.reviews.recordRequest, { id, ok: false, error: "Not sent: a current mailbox, unsubscribe, approval, or active-email check failed." });
         continue;
       }
       if (process.env.CLIMBOS_FAKE_MAILBOX) {

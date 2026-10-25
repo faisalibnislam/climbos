@@ -17,6 +17,8 @@ Home and first/additional business onboarding share `RequestComposer`. A suggest
 
 Content review shows the draft's intended reader, objective, core idea, and exact growth-plan item when the copy is tied to one. Planned Autopilot slots show the same plan item before drafting, so owners can see which approved offer the post will use.
 
+Owner-started prospect emails and review invitations check for an unresolved email to the same workspace address before queuing and again before mailbox handoff. The review preview and sending panel explain addresses left out; no arbitrary cross-workflow cooldown is applied. Sending still requires the existing recipient confirmation, workspace access, and mailbox controls.
+
 Growth Home opportunity questions open an editable field instead of sending a fixed prompt. The owner sees that sending uses AI credits and does not alter the plan or publish anything. The backend supplies the saved, tenant-checked opportunity context to the existing Today conversation.
 
 Home reads a bounded set of drafts waiting for review. When more than 20 are waiting, counts say “20+” instead of implying the returned sample is the exact total; the assistant receives the same lower-bound label. The review list remains limited to six recent drafts, with the link to the full review queue available.
