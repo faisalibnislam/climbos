@@ -1,6 +1,6 @@
 /**
  * Small, source-checked creative-strategy precedent set. This is deliberately
- * not padded to 100: the source corpus currently supports thirty-five reviewed cases.
+ * not padded to 100: the source corpus currently supports thirty-six reviewed cases.
  * Additions require claim-level source verification and editorial review.
  */
 export interface CreativePrecedent {
