@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(69);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(70);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -111,6 +111,20 @@ describe("creative strategy precedent retrieval", () => {
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Explore a low-tech service reliability strategy", query)).toContain("CP-069");
     expect(formatCreativePrecedents(query, 3)).toContain("Reported throughput and error-rate claims vary");
+  });
+
+  it("retrieves frontline quality escalation without treating Toyota's system as a small-business benchmark", () => {
+    const query = "A small customer service team wants frontline staff to flag a problem, pause a low-risk workflow, alert a named responder, resolve the root cause, and prevent repeat defects without increasing workload";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-070");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("at the place where work happens");
+    expect(match?.precedent.outcome).toContain("no independent estimate");
+    expect(match?.precedent.transferRisk).toContain("alert fatigue");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://global.toyota/en/company/vision-and-philosophy/production-system/", sourceRole: "company_primary" }),
+      expect.objectContaining({ url: "https://global.toyota/en/company/plant-tours/production-system/", sourceRole: "company_primary" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Explore a service reliability strategy", query)).toContain("CP-070");
   });
 
   it("retrieves open innovation while separating proxy scores, implementation value, and data privacy", () => {
