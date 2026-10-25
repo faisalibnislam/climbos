@@ -161,6 +161,46 @@ describe("Plan version history", () => {
     })).rejects.toThrow(/numbers changed after this plan was created/);
   });
 
+  it("requires review when a confirmed pricing fact ages past its review interval", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-fact-age@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
+    expect(playId).toBeTruthy();
+    const factId = await w.client.mutation(api.orgs.addFact, {
+      slug: w.slug,
+      category: "pricing",
+      statement: "The Pro plan costs $19 per month.",
+    });
+
+    await t.run(async (ctx) => {
+      const fact = await ctx.db.get(factId);
+      expect(fact?.reviewState).toBe("confirmed");
+      const savedPlan = (await ctx.db.get(plan.id))!;
+      const expert = savedPlan.expert as { snapshot?: Record<string, unknown> } & Record<string, unknown>;
+      // Represent the fact's state at the plan's save time, then age only its verification timestamp.
+      await ctx.db.patch(plan.id, {
+        expert: {
+          ...expert,
+          snapshot: {
+            ...expert.snapshot,
+            snapshotVersion: 21,
+            businessFactVersions: [{ id: String(factId), updatedAt: fact!.updatedAt, reviewSuggested: false }],
+          },
+        } as never,
+      });
+      await ctx.db.patch(factId, { verifiedAt: Date.now() - 61 * 86_400_000 });
+    });
+
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toMatchObject({ businessFacts: true, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/changed or are due for review/);
+    await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/changed or are due for review/);
+  });
+
   it("requires refresh when the owner-reported business stage changes after planning", async () => {
     const t = setup();
     const w = await workspace(t, "history-stale-stage@example.com");

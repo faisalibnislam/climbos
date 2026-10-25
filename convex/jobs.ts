@@ -806,8 +806,8 @@ function stripeReceivablesLine(signal: JobCtx["stripeReceivables"]): string {
 }
 
 async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[], knowledgeReferences: KnowledgeReferenceSet): Promise<PlanSnapshot> {
-  const facts = job.facts.map((f) => ({ id: String(f.id), updatedAt: f.updatedAt, statement: f.statement, category: f.category })).sort((a, b) => a.id.localeCompare(b.id));
-  const staleFacts = job.staleFacts.map((f) => ({ id: String(f.id), updatedAt: f.updatedAt, statement: f.statement, category: f.category })).sort((a, b) => a.id.localeCompare(b.id));
+  const facts = job.facts.map((f) => ({ id: String(f.id), updatedAt: f.updatedAt, reviewSuggested: f.freshness.reviewSuggested, statement: f.statement, category: f.category })).sort((a, b) => a.id.localeCompare(b.id));
+  const staleFacts = job.staleFacts.map((f) => ({ id: String(f.id), updatedAt: f.updatedAt, reviewSuggested: f.freshness.reviewSuggested, statement: f.statement, category: f.category })).sort((a, b) => a.id.localeCompare(b.id));
   const goal = job.goal ? { id: String(job.goal._id), statement: job.goal.statement, horizonDays: job.goal.horizonDays, monthlyAdBudgetMinor: job.goal.monthlyAdBudgetMinor, currency: job.goal.currency, target: job.goal.target } : null;
   const ownerEconomics = job.business?.unitEconomics ?? null;
   const capabilities = [...job.capabilities.connected].sort();
@@ -816,7 +816,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   const readUrls = [...new Set(sourceUrls)].sort();
   const insightsHash = await sha256Hex(insights);
   const material = {
-    snapshotVersion: 20,
+    snapshotVersion: 21,
     orgId: String(job.org._id),
     businessId: job.business ? String(job.business._id) : null,
     business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, socialUrls: job.business.socialUrls, businessType: job.business.businessType, lifecycleStage: job.business.lifecycleStage ?? null, funnel: job.business.funnel ?? null, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
@@ -837,7 +837,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   };
   const snapshotId = await sha256Hex(JSON.stringify(material));
   return {
-    snapshotVersion: 20,
+    snapshotVersion: 21,
     snapshotId,
     capturedAt: Date.now(),
     engine: ENGINE_VERSION,
@@ -869,7 +869,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
       .sort((a, b) => a.channelId.localeCompare(b.channelId)),
     businessResearchAt: job.business?.insights?.generatedAt ?? null,
     marketChangeVersions: job.marketChanges.map(({ id, at }) => ({ id, at })),
-    businessFactVersions: [...facts, ...staleFacts].map(({ id, updatedAt }) => ({ id, updatedAt })).sort((a, b) => a.id.localeCompare(b.id)),
+    businessFactVersions: [...facts, ...staleFacts].map(({ id, updatedAt, reviewSuggested }) => ({ id, updatedAt, reviewSuggested })).sort((a, b) => a.id.localeCompare(b.id)),
     brandProfile: job.brand ? {
       voice: job.brand.voice,
       toneWords: [...job.brand.toneWords],

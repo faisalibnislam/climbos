@@ -2869,6 +2869,7 @@ export default defineSchema({
               v.literal(18),
               v.literal(19),
               v.literal(20),
+              v.literal(21),
             ),
             snapshotId: v.string(),
             capturedAt: v.number(),
@@ -2884,7 +2885,7 @@ export default defineSchema({
             ),
             businessProfile: v.optional(v.any()),
             businessFactVersions: v.optional(
-              v.array(v.object({ id: v.string(), updatedAt: v.number() })),
+              v.array(v.object({ id: v.string(), updatedAt: v.number(), reviewSuggested: v.optional(v.boolean()) })),
             ),
             brandProfile: v.optional(v.any()),
             ownerAcquisitionTypes: v.optional(

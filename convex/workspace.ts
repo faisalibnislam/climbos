@@ -26,6 +26,7 @@ import { AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
 import { expertPlaysOf, readExpertPlan } from "../shared/agents/planCompatibility";
 import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 import { savedPlanDecisionSummary } from "../shared/agents/planDecisionSummary";
+import { factFreshness } from "../shared/agents/factFreshness";
 
 /** Everything the Today screen needs, in one bounded query. */
 export const today = query({
@@ -436,7 +437,7 @@ export const startPlay = mutation({
     if (staleInputs.funnel) throw appError("INVALID", "Your owner-reported funnel measurements changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.goal) throw appError("INVALID", "Your active growth goal or budget changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.businessProfile) throw appError("INVALID", "Your business profile changed after this plan was created. Refresh the plan before starting this play.");
-    if (staleInputs.businessFacts) throw appError("INVALID", "Your confirmed business facts changed after this plan was created. Refresh the plan before starting this play.");
+    if (staleInputs.businessFacts) throw appError("INVALID", "Your confirmed business facts changed or are due for review. Refresh the plan before starting this play.");
     if (staleInputs.brandGuidance) throw appError("INVALID", "Your brand guidance changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.capabilities) throw appError("INVALID", "Your connected tools changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.businessResearch) throw appError("INVALID", "Your business and audience research changed after this plan was created. Refresh the plan before starting this play.");
@@ -931,7 +932,7 @@ export const decidePlan = mutation({
       if (staleInputs.funnel) throw appError("INVALID", "Your owner-reported funnel measurements changed after this plan was created. Refresh the plan before approving it.");
       if (staleInputs.goal) throw appError("INVALID", "Your active growth goal or budget changed after this plan was created. Refresh the plan before approving it.");
       if (staleInputs.businessProfile) throw appError("INVALID", "Your business profile changed after this plan was created. Refresh the plan before approving it.");
-      if (staleInputs.businessFacts) throw appError("INVALID", "Your confirmed business facts changed after this plan was created. Refresh the plan before approving it.");
+      if (staleInputs.businessFacts) throw appError("INVALID", "Your confirmed business facts changed or are due for review. Refresh the plan before approving it.");
       if (staleInputs.brandGuidance) throw appError("INVALID", "Your brand guidance changed after this plan was created. Refresh the plan before approving it.");
       if (staleInputs.capabilities) throw appError("INVALID", "Your connected tools changed after this plan was created. Refresh the plan before approving it.");
       if (staleInputs.businessResearch) throw appError("INVALID", "Your business and audience research changed after this plan was created. Refresh the plan before approving it.");
@@ -1014,12 +1015,12 @@ function planStaleInputs(
   strategy: Pick<Doc<"strategies">, "createdAt" | "expert" | "goalId">,
   business: Pick<Doc<"businesses">, "unitEconomics" | "lifecycleStage" | "funnel" | "name" | "website" | "socialUrls" | "businessType" | "industryBusinessTypeId" | "summary" | "acquisition" | "currency" | "insights"> | null,
   goal: Pick<Doc<"goals">, "_id" | "kind" | "statement" | "horizonDays" | "monthlyAdBudgetMinor" | "currency" | "target"> | null,
-  businessFactVersions: { id: string; updatedAt: number }[] = [],
+  businessFactVersions: { id: string; updatedAt: number; reviewSuggested?: boolean }[] = [],
   brand: Pick<Doc<"brandProfiles">, "voice" | "toneWords" | "colors" | "doNots" | "learnedRules" | "socialHumor" | "socialTrendPolicy"> | null,
   connectedCapabilities: string[] = [],
   marketChangeVersions: { id: string; at: number }[] = [],
 ): { ownerEconomics: boolean; lifecycleStage: boolean; funnel: boolean; goal: boolean; businessProfile: boolean; businessFacts: boolean; brandGuidance: boolean; capabilities: boolean; businessResearch: boolean; marketChanges: boolean } {
-  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid"; rationale: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; capabilities?: string[] } | undefined;
+  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid"; rationale: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; capabilities?: string[] } | undefined;
   const savedStage = snapshot?.businessLifecycleStage?.stage ?? null;
   const currentStage = business?.lifecycleStage?.stage ?? null;
   const savedFunnel = funnelDecisionValues(snapshot?.businessFunnel);
@@ -1033,6 +1034,7 @@ function planStaleInputs(
   const hasOwnerChannelPreferenceSnapshot = (snapshot?.snapshotVersion ?? 0) >= 13;
   const hasBusinessResearchSnapshot = (snapshot?.snapshotVersion ?? 0) >= 14;
   const hasMarketChangeSnapshot = (snapshot?.snapshotVersion ?? 0) >= 15;
+  const hasFactFreshnessSnapshot = (snapshot?.snapshotVersion ?? 0) >= 21;
   const ownerAcquisitionDimensions = Object.fromEntries(
     Object.entries(business?.acquisition?.dims as Record<string, { value: string; source: string }> | undefined ?? {})
       .filter(([, value]) => value?.source === "owner")
@@ -1051,7 +1053,9 @@ function planStaleInputs(
     // Goals are replaced when edited; legacy plans fall back to their bound goal ID.
     goal: hasGoalSnapshot ? JSON.stringify(goalDecisionValues(snapshot?.goalInput)) !== JSON.stringify(goalDecisionValues(goal)) : !goal || String(strategy.goalId) !== String(goal._id),
     businessProfile: (hasProfileAndFactSnapshot && canonicalJson(snapshot?.businessProfile as never) !== canonicalJson(businessProfileValues(business) as never)) || (hasOwnerAcquisitionTypeSnapshot && canonicalJson(snapshot?.ownerAcquisitionTypes as never) !== canonicalJson((business?.acquisition?.typesSource === "owner" ? [...business.acquisition.types].sort() : null) as never)) || (hasOwnerAcquisitionDimensionSnapshot && canonicalJson(snapshot?.ownerAcquisitionDimensions as never) !== canonicalJson(ownerAcquisitionDimensions as never)) || (hasOwnerChannelPreferenceSnapshot && canonicalJson(snapshot?.ownerChannelPreferences as never) !== canonicalJson(ownerChannelPreferences as never)),
-    businessFacts: hasProfileAndFactSnapshot && canonicalJson(snapshot?.businessFactVersions as never) !== canonicalJson(businessFactVersions as never),
+    businessFacts: hasProfileAndFactSnapshot && (hasFactFreshnessSnapshot
+      ? canonicalJson(snapshot?.businessFactVersions as never) !== canonicalJson(businessFactVersions as never)
+      : canonicalJson((snapshot?.businessFactVersions ?? []).map(({ id, updatedAt }) => ({ id, updatedAt })) as never) !== canonicalJson(businessFactVersions.map(({ id, updatedAt }) => ({ id, updatedAt })) as never) || businessFactVersions.some((fact) => fact.reviewSuggested)),
     brandGuidance: hasBrandSnapshot && canonicalJson(snapshot?.brandProfile as never) !== canonicalJson(brandProfileValues(brand) as never),
     capabilities: Array.isArray(snapshot?.capabilities) && canonicalJson([...snapshot.capabilities].sort() as never) !== canonicalJson([...connectedCapabilities].sort() as never),
     businessResearch: hasBusinessResearchSnapshot && (snapshot?.businessResearchAt ?? null) !== (business?.insights?.generatedAt ?? null),
@@ -1099,7 +1103,7 @@ function brandProfileValues(brand: Pick<Doc<"brandProfiles">, "voice" | "toneWor
 }
 
 /** Same bounded, confirmed-fact basis supplied to plan generation, including fresh and review-suggested facts. */
-async function currentBusinessFactVersions(ctx: QueryCtx | MutationCtx, businessId: Id<"businesses">): Promise<{ id: string; updatedAt: number }[]> {
+async function currentBusinessFactVersions(ctx: QueryCtx | MutationCtx, businessId: Id<"businesses">): Promise<{ id: string; updatedAt: number; reviewSuggested: boolean }[]> {
   const records = await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", businessId)).take(200);
   const canonical = groupExactDuplicateFacts(
     records
@@ -1107,7 +1111,12 @@ async function currentBusinessFactVersions(ctx: QueryCtx | MutationCtx, business
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .map((fact) => ({ ...fact, id: String(fact._id) })),
   ).map(({ primary }) => primary);
-  return canonical.map((fact) => ({ id: fact.id, updatedAt: fact.updatedAt })).sort((a, b) => a.id.localeCompare(b.id));
+  const now = Date.now();
+  return canonical.map((fact) => ({
+    id: fact.id,
+    updatedAt: fact.updatedAt,
+    reviewSuggested: factFreshness(fact.category, fact.updatedAt, now, fact.verifiedAt ?? fact.updatedAt).reviewSuggested,
+  })).sort((a, b) => a.id.localeCompare(b.id));
 }
 
 function goalDecisionValues(goal: { _id?: unknown; id?: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target?: unknown } | null | undefined): unknown {

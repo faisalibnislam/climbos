@@ -178,7 +178,7 @@ function PlanScreen({ slug }: { slug: string }) {
     ["funnel", "funnel measurements"],
     ["goal", "goal or budget"],
     ["businessProfile", "business profile"],
-    ["businessFacts", "confirmed business facts"],
+    ["businessFacts", "confirmed business facts changed or due for review"],
     ["brandGuidance", "brand guidance"],
     ["capabilities", "connected tools"],
     ["businessResearch", "business and audience research"],
@@ -231,7 +231,7 @@ function PlanScreen({ slug }: { slug: string }) {
           title="This plan uses older business inputs"
           action={plan.canEdit ? <GeneratePlanButton slug={slug} mode="refresh" nextVersion={s.version + 1} estimateMicros={plan.planEstimateMicros} onStarted={setStartedRunId} building={building} /> : null}
         >
-          Changed since this plan was prepared: {staleInputLabels.join(", ") || "important business inputs"}. The figures shown here recalculate from current numbers, while the written recommendations still reflect the saved plan. Refresh before approving or starting work.
+          These inputs changed or are due for review: {staleInputLabels.join(", ") || "important business inputs"}. The figures shown here recalculate from current numbers, while the written recommendations still reflect the saved plan. Refresh before approving or starting work.
         </Callout>
       ) : null}
       {s && plan.planImpact && !olderView ? <PlanImpactSummary impact={plan.planImpact} /> : null}
