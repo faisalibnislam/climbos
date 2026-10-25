@@ -503,6 +503,39 @@ describe("resendMarketing", () => {
     expect(calls[1]?.headers.Authorization).toBe(`Bearer ${key}`);
   });
 
+  it("reads every provider segment page with unsubscribe state for audience reconciliation", async () => {
+    const { fetchImpl, calls } = scripted([
+      { match: "/segments/seg_1/contacts?limit=100", respond: json(200, { has_more: true, data: [{ id: "ct_1", email: "A@example.com", unsubscribed: false }] }) },
+      { match: "/segments/seg_1/contacts?limit=100&after=ct_1", respond: json(200, { has_more: false, data: [{ id: "ct_2", email: "b@example.com", unsubscribed: true }] }) },
+    ]);
+    const result = await resend.listSegmentContacts({ apiKey: key, segmentId: "seg_1", fetchImpl });
+    expect(result).toMatchObject({ ok: true, data: { pages: 2, truncated: false, items: [{ id: "ct_1", email: "a@example.com", unsubscribed: false }, { id: "ct_2", email: "b@example.com", unsubscribed: true }] } });
+    expect(calls).toHaveLength(2);
+    expect(calls.every((call) => call.headers.Authorization === `Bearer ${key}`)).toBe(true);
+  });
+
+  it("marks an incomplete segment read as truncated and compares active recipients without exposing addresses", async () => {
+    const { fetchImpl } = scripted([
+      { match: "/segments/seg_1/contacts?limit=100", respond: json(200, { has_more: true, data: [{ id: "ct_1", email: "a@example.com", unsubscribed: false }] }) },
+    ]);
+    const truncated = await resend.listSegmentContacts({ apiKey: key, segmentId: "seg_1", maxPages: 1, fetchImpl });
+    expect(truncated).toMatchObject({ ok: true, data: { truncated: true, nextCursor: "ct_1" } });
+    expect(resend.compareSegmentRecipients(["A@example.com", "b@example.com"], [
+      { id: "ct_1", email: "a@example.com", unsubscribed: false },
+      { id: "ct_2", email: "b@example.com", unsubscribed: true },
+    ])).toEqual({ matches: false, expectedCount: 2, actualCount: 1, missing: 1, additional: 0 });
+    expect(resend.compareSegmentRecipients(["A@example.com"], [
+      { id: "ct_1", email: "a@example.com", unsubscribed: false },
+      { id: "ct_2", email: "old@example.com", unsubscribed: true },
+    ])).toEqual({ matches: true, expectedCount: 1, actualCount: 1, missing: 0, additional: 0 });
+    const mismatch = resend.compareSegmentRecipients(["a@example.com"], [
+      { id: "ct_1", email: "a@example.com", unsubscribed: false },
+      { id: "ct_2", email: "outside@example.com", unsubscribed: false },
+    ]);
+    expect(mismatch).toEqual({ matches: false, expectedCount: 1, actualCount: 2, missing: 0, additional: 1 });
+    expect(JSON.stringify(mismatch)).not.toContain("@example.com");
+  });
+
   it("requires {{{RESEND_UNSUBSCRIBE_URL}}} as a link in marketing HTML", async () => {
     expect(resend.validateMarketingHtml("<p>Hi</p>").join()).toMatch(/RESEND_UNSUBSCRIBE_URL/);
     expect(resend.validateMarketingHtml("<p>{{{RESEND_UNSUBSCRIBE_URL}}}</p>").join()).toMatch(/href/);

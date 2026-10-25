@@ -3,7 +3,9 @@ import { requirePaid } from "./lib/access";
 import { parseCsv } from "../shared/integrations/csvRevenue";
 import {
   contactRefusalReason,
+  compareSegmentRecipients,
   createDraftBroadcast,
+  listSegmentContacts,
   listSegments,
   RESEND_UNSUBSCRIBE_PLACEHOLDER,
   SEND_BROADCAST_ACTION,
@@ -410,11 +412,16 @@ export const executeSend = internalAction({
     };
     if (c.paused) return fail("Not sent: all activity is paused.");
     if (c.approval.status !== "approved" || c.approval.expiresAt < Date.now()) return fail("Not sent: the approval is no longer valid.");
+    const scope = c.approval.scope;
+    if (scope.destination !== args.providerSegmentId || scope.audience !== args.segment || scope.spendLimitMinor === undefined) {
+      return fail("Not sent: the reviewed email audience no longer matches this approval. Review and approve the send again.");
+    }
     if (!c.connectionId) return fail("Not sent: connect your own Resend account first.");
     const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId: c.connectionId });
     if (!secret) return fail("Not sent: the email provider connection was removed.");
     const { apiKey } = JSON.parse(secret.value) as { apiKey: string };
-    let synced = 0;
+    const expectedRecipients = new Set<string>();
+    let syncUnverified = false;
     for (const r of c.recipients) {
       if (!r.consent || r.suppressed || !r.ciphertext) continue;
       const [keyId, iv] = r.iv.split(":");
@@ -422,9 +429,21 @@ export const executeSend = internalAction({
       const contact = { email, firstName: r.firstName, consent: { purpose: "marketing_email", source: r.consent.source, grantedAt: r.consent.grantedAt }, suppressed: r.suppressed, segmentIds: [args.providerSegmentId] };
       if (contactRefusalReason(contact)) continue;
       const res = await upsertMarketingContact({ apiKey, contact });
-      if (res.status === "verified") synced++;
+      if (res.status !== "verified" || !res.data || res.data.email.trim().toLowerCase() !== email.trim().toLowerCase()) syncUnverified = true;
+      else if (!res.data.unsubscribed) expectedRecipients.add(res.data.email.trim().toLowerCase());
     }
-    if (synced === 0) return fail("Not sent: no opted-in, unsuppressed contacts could be synced.");
+    if (syncUnverified) return fail("Not sent: the email provider could not verify every opted-in contact. Check the connection and try again.");
+    if (expectedRecipients.size === 0) return fail("Not sent: no opted-in, unsuppressed contacts could be synced.");
+    if (expectedRecipients.size !== scope.spendLimitMinor) {
+      return fail("Not sent: the eligible contact count changed after approval. Review the current audience and approve the send again.");
+    }
+    const providerRecipients = await listSegmentContacts({ apiKey, segmentId: args.providerSegmentId });
+    if (!providerRecipients.ok) return fail("Not sent: ClimbOS could not verify who is in the selected email segment. Check the connection and try again.");
+    if (providerRecipients.data.truncated) return fail("Not sent: the email segment is too large for ClimbOS to verify completely. Narrow it to a segment of 10,000 contacts or fewer, then try again.");
+    const match = compareSegmentRecipients(expectedRecipients, providerRecipients.data.items);
+    if (!match.matches) {
+      return fail(`Not sent: the selected email segment does not match the ${match.expectedCount} opted-in contacts you approved (${match.additional} extra active contact${match.additional === 1 ? "" : "s"}, ${match.missing} approved contact${match.missing === 1 ? " is" : "s are"} missing). Align the segment and approve again.`);
+    }
     const draft = await createDraftBroadcast({ apiKey, draft: { segmentId: args.providerSegmentId, from: args.from, subject: args.subject, html: args.html, name: `climbos-${args.approvalId}` } });
     if (draft.status !== "verified" || !draft.externalId) {
       await ctx.runMutation(internal.marketing.finishSend, { approvalId: args.approvalId, reservationId: args.reservationId, status: draft.status === "uncertain" ? "uncertain" : "failed", sent: 0, summary: draft.providerMessage ?? "Your email provider didn't accept the draft." });
@@ -435,9 +454,9 @@ export const executeSend = internalAction({
       approvalId: args.approvalId,
       reservationId: args.reservationId,
       status: sent.status,
-      sent: sent.status === "verified" ? synced : 0,
+      sent: sent.status === "verified" ? expectedRecipients.size : 0,
       externalId: draft.externalId,
-      summary: sent.status === "verified" ? `Accepted by your email provider for ${synced} opted-in contact(s).` : (sent.providerMessage ?? "Your email provider didn't send it."),
+      summary: sent.status === "verified" ? `Accepted by your email provider for ${expectedRecipients.size} opted-in contact(s) after the provider segment matched the approved audience.` : (sent.providerMessage ?? "Your email provider didn't send it."),
     });
   },
 });

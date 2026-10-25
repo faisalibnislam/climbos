@@ -105,6 +105,46 @@ export async function getContact(call: ResendCall & { idOrEmail: string }): Prom
   return { ok: true, data: { id: asString(d.id) ?? "", email: (asString(d.email) ?? "").toLowerCase(), unsubscribed: d.unsubscribed === true } };
 }
 
+/** Read the complete provider segment before send; a partial result is unsafe for audience reconciliation. */
+export async function listSegmentContacts(call: ResendCall & { segmentId: string; maxPages?: number }): Promise<ReadResult<PaginationResult<ResendContactState>>> {
+  if (!call.segmentId.trim()) return { ok: false, providerMessage: "A provider segment is required.", retryable: false };
+  return collectPages<ResendContactState>(
+    async (cursor) => {
+      const url = new URL(`${RESEND_BASE}/segments/${encodeURIComponent(call.segmentId)}/contacts`);
+      url.searchParams.set("limit", "100");
+      if (cursor) url.searchParams.set("after", cursor);
+      const out = await requestJson({ url: url.toString(), headers: headers(call), fetchImpl: call.fetchImpl, timeoutMs: call.timeoutMs });
+      if (out.kind !== "ok") return readFailure(out);
+      const d = isRecord(out.data) ? out.data : {};
+      const items: ResendContactState[] = [];
+      for (const entry of asArray(d.data)) {
+        if (!isRecord(entry)) return { ok: false, providerMessage: "The email provider returned an unreadable segment member.", retryable: true };
+        const id = asString(entry.id);
+        const email = asString(entry.email)?.trim().toLowerCase();
+        if (!id || !email || typeof entry.unsubscribed !== "boolean") {
+          return { ok: false, providerMessage: "The email provider returned incomplete segment member details.", retryable: true };
+        }
+        items.push({ id, email, unsubscribed: entry.unsubscribed });
+      }
+      const last = items[items.length - 1];
+      if (d.has_more === true && !last) return { ok: false, providerMessage: "The email provider reported another segment page without a usable cursor.", retryable: true };
+      return { ok: true, data: { items, nextCursor: d.has_more === true ? last!.id : undefined } };
+    },
+    { maxPages: call.maxPages ?? 100 },
+  );
+}
+
+/** Compare the approved local audience with active members of the provider segment, without returning addresses. */
+export function compareSegmentRecipients(expectedEmails: Iterable<string>, segmentContacts: Iterable<ResendContactState>) {
+  const expected = new Set([...expectedEmails].map((email) => email.trim().toLowerCase()).filter(Boolean));
+  const actual = new Set([...segmentContacts].filter((contact) => !contact.unsubscribed).map((contact) => contact.email.trim().toLowerCase()).filter(Boolean));
+  let missing = 0;
+  let additional = 0;
+  for (const email of expected) if (!actual.has(email)) missing++;
+  for (const email of actual) if (!expected.has(email)) additional++;
+  return { matches: missing === 0 && additional === 0, expectedCount: expected.size, actualCount: actual.size, missing, additional };
+}
+
 /**
  * Create or update a consented contact, add it to segments, then read it back.
  * Never sends `unsubscribed: false` — an opt-out made in Resend is never reversed.
