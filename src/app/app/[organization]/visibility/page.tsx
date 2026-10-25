@@ -17,6 +17,7 @@ import { planAiSearchQueries } from "@shared/aiSearch/queryPlanner";
 import { AI_DATA_USE_CONTROLS } from "@shared/seo/readiness";
 import { parseGoogleAiReportCsv } from "@shared/aiSearch/googleReportCsv";
 import { StructuredDataGenerator } from "@/components/app/visibility/StructuredDataGenerator";
+import { prioritizeSearchOpportunities } from "@shared/seo/opportunityPriority";
 
 export default function SearchReadinessPage() {
   const { organization: slug } = useParams<{ organization: string }>();
@@ -29,6 +30,7 @@ export default function SearchReadinessPage() {
   if (data === undefined) return <LoadingBlock label="Loading search readiness" lines={4} />;
   if (data === null) return <p className="text-sm text-ink-3">Finish onboarding first.</p>;
   const current = data.scan;
+  const prioritizedFindings = current?.findings ? prioritizeSearchOpportunities(current.findings) : [];
   const searchCrawlerChecks = current?.crawlerChecks?.filter((item) => !AI_DATA_USE_CONTROLS.includes(item.crawler as typeof AI_DATA_USE_CONTROLS[number])) ?? [];
   const dataUseChecks = current?.crawlerChecks?.filter((item) => AI_DATA_USE_CONTROLS.includes(item.crawler as typeof AI_DATA_USE_CONTROLS[number])) ?? [];
   const run = () => scan({ slug }).then(() => toast({ tone: "success", title: "Homepage check started" }), (error) => toast({ tone: "danger", title: errorMessage(error) }));
@@ -73,8 +75,12 @@ export default function SearchReadinessPage() {
             {dataUseChecks.length ? <div><h3 className="text-xs font-semibold text-ink">AI model data-use controls</h3><dl className="mt-2 grid gap-3 text-sm sm:grid-cols-2">{dataUseChecks.map((item) => <div key={item.crawler}><dt className="text-xs text-ink-3">{item.crawler}</dt><dd className="text-ink-2">{current.robotsFileStatus === "unavailable" ? "Unknown" : item.allowed ? "Allowed by robots.txt for homepage" : "Disallowed by robots.txt for homepage"}</dd></div>)}</dl><p className="mt-2 text-xs text-ink-3">These provider directives describe data use, not ordinary search visibility. Google-Extended affects some Gemini model training and grounding controls; it does not control Google Search or AI Overviews.</p></div> : null}
             <p className="text-xs text-ink-3">Robots.txt checks do not test firewall rules or actual crawler requests. User initiated fetchers are not represented as general search crawlers.</p>
           </CardContent></Card>
-          <section className="flex flex-col gap-3"><div><h2 className="heading-card">What to review</h2><p className="mt-1 text-sm text-ink-3">These checks describe this page only; they are not ranking or citation predictions.</p></div>
-            {current.findings?.length ? <ul className="flex flex-col gap-3">{current.findings.map((finding) => <li key={finding.id}><Card><CardContent className="flex flex-col gap-2"><div className="flex items-start justify-between gap-3"><h3 className="text-sm font-semibold text-ink">{finding.title}</h3><span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-xs text-ink-3">{finding.level === "attention" ? "Needs attention" : "Review"}</span></div><p className="text-sm text-ink-2">{finding.evidence}</p><p className="text-sm"><span className="font-medium text-ink">Next step: </span><span className="text-ink-2">{finding.nextStep}</span></p></CardContent></Card></li>)}</ul> : <EmptyState icon={<Search />} title="No obvious issues found" body="The checks we ran found a title, description, main heading, readable text, and structured data. This does not guarantee rankings or citations." />}
+          <section className="flex flex-col gap-3"><div><h2 className="heading-card">What to review first</h2><p className="mt-1 text-sm text-ink-3">Order reflects observed access prerequisites and page checks. Customer demand, actual visibility, and business value are separate and remain unknown unless measured.</p></div>
+            {prioritizedFindings.length ? <ul className="flex flex-col gap-3">{prioritizedFindings.map((item) => {
+              const finding = item.finding;
+              const priorityLabel = item.priority === "check_first" ? "Check first" : item.priority === "verify" ? "Verify access" : "Review";
+              return <li key={finding.id}><Card><CardContent className="flex flex-col gap-3"><div className="flex items-start justify-between gap-3"><h3 className="text-sm font-semibold text-ink">{finding.title}</h3><span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-xs text-ink-3">{priorityLabel} · {finding.level === "attention" ? "Needs attention" : "Check"}</span></div><p className="text-sm text-ink-2">{finding.evidence}</p><p className="text-sm text-ink-2">{item.priorityReason}</p><dl className="grid gap-2 rounded-lg bg-surface-2 p-3 text-xs sm:grid-cols-2"><div><dt className="text-ink-3">Evidence</dt><dd className="text-ink-2">{item.evidenceQuality === "direct_observation" ? "Direct page or robots observation" : "Could not fully verify"}</dd></div><div><dt className="text-ink-3">Relative effort</dt><dd className="text-ink-2">{item.effort === "small" ? "Usually a small technical edit; confirm with your site maintainer" : item.effort === "moderate" ? "May need a more involved technical edit; confirm with your site maintainer" : "Unknown; ask your site maintainer"}</dd></div><div><dt className="text-ink-3">Customer relevance</dt><dd className="text-ink-2">This scan covers the business homepage only; customer-question fit is not established.</dd></div><div><dt className="text-ink-3">Observed visibility / business value</dt><dd className="text-ink-2">Not measured by this check; no traffic, citation, signup, or revenue effect is inferred.</dd></div></dl><p className="text-sm"><span className="font-medium text-ink">Next step: </span><span className="text-ink-2">{finding.nextStep} {item.nextUsefulCheck}</span></p></CardContent></Card></li>;
+            })}</ul> : <EmptyState icon={<Search />} title="No obvious issues found" body="The checks we ran found a title, description, main heading, readable text, and structured data. This does not guarantee rankings or citations." />}
           </section>
         </>
       )}
