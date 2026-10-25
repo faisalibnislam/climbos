@@ -847,6 +847,23 @@ function SubHead({ icon: Icon, children, meta }: { icon: LucideIcon; children: R
   );
 }
 
+/** A sourced sales battlecard for one competitor; comparative claims come from the cited pages, not proof of why buyers choose. */
+export function Battlecard({ card }: { card: { winsWith: string; theyAreStrongerAt: string; weAreStrongerAt: string; landmineQuestion: string; sourceUrls: string[] } }) {
+  return (
+    <details className="rounded-[var(--radius-control)] border border-line px-3 py-2">
+      <summary className="min-h-8 cursor-pointer py-1 text-xs font-medium text-ink-2">Battlecard</summary>
+      <dl className="mt-2 grid gap-2 text-xs sm:grid-cols-2">
+        <div><dt className="text-ink-3">Who they win with</dt><dd className="text-ink">{card.winsWith}</dd></div>
+        <div><dt className="text-ink-3">Where they&apos;re stronger</dt><dd className="text-ink">{card.theyAreStrongerAt}</dd></div>
+        <div><dt className="text-ink-3">Where you&apos;re stronger</dt><dd className="text-ink">{card.weAreStrongerAt}</dd></div>
+        <div><dt className="text-ink-3">A fair question for buyers to ask</dt><dd className="text-ink">{card.landmineQuestion}</dd></div>
+      </dl>
+      <div className="mt-2 flex flex-wrap gap-1.5">{card.sourceUrls.map((url) => <LinkChip key={url} url={url} label="Source" />)}</div>
+      <p className="mt-1 text-xs text-ink-3">Drawn from the cited pages. Check each point before using it with customers; it doesn&apos;t show why buyers choose either business.</p>
+    </details>
+  );
+}
+
 type EvidenceRow = { statement?: string; channel?: string; rationale?: string; basis: string; evidenceRefs: string[]; evidenceExcerpt?: string; evidenceSupport?: "found_in_source" | "not_found" | "not_checked" | "no_excerpt" };
 const EVIDENCE_BASIS: Record<string, string> = { owner_report: "owner-reported", measured: "measured", research: "research", inference: "inference" };
 const SUPPORT_TEXT: Record<NonNullable<EvidenceRow["evidenceSupport"]>, string> = {
@@ -984,6 +1001,7 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
                       {c.sourceUrl ? <LinkChip url={c.sourceUrl} label="Source" /> : <Badge tone="amber" icon={<TriangleAlert />}>No source: confirm</Badge>}
                     </span>
                   </div>
+                  {c.battlecard ? <Battlecard card={c.battlecard} /> : null}
                   {c.comparison?.length ? (
                     <details className="rounded-[var(--radius-control)] border border-line px-3 py-2">
                       <summary className="min-h-8 cursor-pointer py-1 text-xs font-medium text-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-800">

@@ -459,6 +459,7 @@ export const saveInsights = internalMutation({
           sourceUrl: c.sourceUrl || undefined,
           kind: v2Competitors?.[index]?.kind,
           comparison: v2Competitors?.[index]?.comparison?.slice(0, 8).map((finding) => ({ ...finding, finding: finding.finding.slice(0, 500), implication: finding.implication.slice(0, 500) })),
+          ...(v2Competitors?.[index]?.battlecard ? { battlecard: v2Competitors[index].battlecard } : {}),
         })),
         positioning: i.positioning,
         pricingNotes: i.pricingNotes,

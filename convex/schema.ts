@@ -1172,6 +1172,7 @@ export default defineSchema({
                 }),
               ),
             ),
+            battlecard: v.optional(v.object({ winsWith: v.string(), theyAreStrongerAt: v.string(), weAreStrongerAt: v.string(), landmineQuestion: v.string(), sourceUrls: v.array(v.string()) })),
           }),
         ),
         positioning: v.string(),
