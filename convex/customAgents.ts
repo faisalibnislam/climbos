@@ -1,3 +1,4 @@
+import { customAgentMonthlyUsage } from "./engine";
 import { DEFAULT_EVENT_COOLDOWN_HOURS, isSpecialistEvent } from "../shared/agents/specialistEvents";
 import { v } from "convex/values";
 import { AGENT_ACTIONS, AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
@@ -79,21 +80,17 @@ export const list = query({
   handler: async (ctx, { slug }) => {
     const { org, role, user } = await requireOrgAccess(ctx, { slug }, "view");
     const agents = await ctx.db.query("customAgents").withIndex("by_org_updated", (q) => q.eq("orgId", org._id)).order("desc").take(30);
-    const monthStart = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1);
     const feedbackSince = Date.now() - 90 * 86_400_000;
     return {
       canManage: ["owner", "admin", "editor"].includes(role),
       archetypes: [...AGENT_ARCHETYPE_BY_ID.values()],
       agents: await Promise.all(agents.map(async ({ _id, archetypeId, name, objective, instructions, allowedActions, knowledge, permission, maxRunCredits, monthlyBudgetCredits, maxActionsPerRun, triggerEvents, eventCooldownHours, successMetric, trigger, nextTriggerAt, modelRouting, status, updatedAt }) => {
         const monthlyCap = monthlyBudgetCredits ?? null;
-        const runs = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", org._id).eq("customAgentId", _id).gte("createdAt", monthStart)).take(501);
-        // More than 500 rows means this bounded summary is incomplete. Do not
-        // replace missing usage with the budget cap; that would report an
-        // estimate as if it were recorded spend.
-        const usedMicros = runs.length > 500 ? null : runs.reduce((sum, run) => sum + (["cost_reserved", "preparing", "needs_approval", "approved", "scheduled", "executing"].includes(run.status) ? Math.max(run.actualMicros, run.estimateMicros) : run.actualMicros), 0);
+        // Running monthly total plus in-progress runs; null (not the budget cap) when the total is incomplete.
+        const usedMicros = await customAgentMonthlyUsage(ctx, org._id, _id, Date.now());
         const activity = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", org._id).eq("customAgentId", _id)).order("desc").take(8);
-        const feedbackRows = await ctx.db.query("customAgentFeedback").withIndex("by_agent_updated", (q) => q.eq("orgId", org._id).eq("customAgentId", _id).gte("updatedAt", feedbackSince)).order("desc").take(101);
-        const feedbackSample = feedbackRows.slice(0, 100);
+        const feedbackRows = await ctx.db.query("customAgentFeedback").withIndex("by_agent_updated", (q) => q.eq("orgId", org._id).eq("customAgentId", _id).gte("updatedAt", feedbackSince)).order("desc").take(501);
+        const feedbackSample = feedbackRows.slice(0, 500);
         const recentOutcomes = feedbackSample.filter((feedback) => feedback.outcome).slice(0, 3).map((feedback) => ({
           ...feedback.outcome!, reportedAt: feedback.updatedAt,
         }));
@@ -117,7 +114,7 @@ export const list = query({
         return {
           id: _id, archetypeId, name, objective, instructions, allowedActions, knowledge, permission,
           maxRunCredits, monthlyBudgetCredits: monthlyCap, monthlyCreditsUsed: usedMicros === null ? null : microsToCredits(usedMicros), maxActionsPerRun, successMetric, trigger, triggerEvents: triggerEvents ?? [], eventCooldownHours: eventCooldownHours ?? null, nextTriggerAt: nextTriggerAt ?? null, modelRouting, status, updatedAt, recentRuns,
-          workspaceReportedFeedback: { source: "workspace_member_report", windowDays: 90, sampleSize: feedbackSample.length, helpful: feedbackSample.filter((entry) => entry.rating === "helpful").length, needsWork: feedbackSample.filter((entry) => entry.rating === "needs_work").length, timeSavedRunCount: perRunMinutes.length, medianMinutesSavedPerRun, outcomeCount: feedbackSample.filter((entry) => entry.outcome).length, recentOutcomes, capped: feedbackRows.length > 100 },
+          workspaceReportedFeedback: { source: "workspace_member_report", windowDays: 90, sampleSize: feedbackSample.length, helpful: feedbackSample.filter((entry) => entry.rating === "helpful").length, needsWork: feedbackSample.filter((entry) => entry.rating === "needs_work").length, timeSavedRunCount: perRunMinutes.length, medianMinutesSavedPerRun, outcomeCount: feedbackSample.filter((entry) => entry.outcome).length, recentOutcomes, capped: feedbackRows.length > 500 },
         };
       })),
     };

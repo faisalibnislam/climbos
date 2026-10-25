@@ -407,7 +407,7 @@ describe("custom specialist profiles", () => {
     await expect(owner.client.mutation(api.workspace.runCustomAgent, { slug, agentId: id, request: "Draft one new campaign idea." })).rejects.toThrow(/monthly budget/);
   });
 
-  it("reports monthly specialist usage as unknown when its bounded query is incomplete", async () => {
+  it("counts monthly specialist usage beyond the old 500-run cap and is unknown only when the total is incomplete", async () => {
     const t = setup();
     const owner = await asNewUser(t, "too-many-runs-specialist@example.com", { anonymous: true });
     const { slug } = await owner.client.mutation(api.demo.createDemoWorkspace, {});
@@ -438,7 +438,45 @@ describe("custom specialist profiles", () => {
       }
     });
 
+    // 501 finished runs of 1,000 micros each are now summed rather than reported as unknown.
     const view = await owner.client.query(api.customAgents.list, { slug });
-    expect(view.agents.find((agent) => agent.id === id)).toMatchObject({ monthlyBudgetCredits: 100, monthlyCreditsUsed: null });
+    const counted = view.agents.find((agent) => agent.id === id)!;
+    expect(counted.monthlyCreditsUsed).toEqual(expect.any(Number));
+    expect(counted.monthlyCreditsUsed).toBeGreaterThan(0);
+
+    // A running total whose one-time seed couldn't read every run is reported as unknown, not estimated.
+    const month = new Date().toISOString().slice(0, 7);
+    await t.run(async (ctx) => {
+      const org = (await ctx.db.query("organizations").withIndex("by_slug", (q) => q.eq("slug", slug)).unique())!;
+      await ctx.db.insert("customAgentUsage", { orgId: org._id, customAgentId: id, month, finishedMicros: 5_000, partial: true, updatedAt: Date.now() });
+    });
+    expect((await owner.client.query(api.customAgents.list, { slug })).agents.find((agent) => agent.id === id)).toMatchObject({ monthlyBudgetCredits: 100, monthlyCreditsUsed: null });
+  });
+
+  it("keeps a running monthly total that adds only new cost when a specialist run finishes again", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "usage-total-specialist@example.com", { anonymous: true });
+    const { slug } = await owner.client.mutation(api.demo.createDemoWorkspace, {});
+    const { id } = await owner.client.mutation(api.customAgents.create, { slug, ...profile });
+    const base = { kind: "climb_chat", input: "{}", roles: [], rateVersionId: "verified-2026-10-17", entitlementVersionId: "ent-credits-2026-10-18", routingVersionId: "r1", budget: { modelSteps: 1, researchTools: 0, repairs: 0 }, used: { modelSteps: 1, researchTools: 0, repairs: 0 }, isFixture: true };
+    const { runId, orgId } = await t.run(async (ctx) => {
+      const org = (await ctx.db.query("organizations").withIndex("by_slug", (q) => q.eq("slug", slug)).unique())!;
+      const now = Date.now();
+      // An earlier finished run this month seeds the total.
+      await ctx.db.insert("workflowRuns", { ...base, orgId: org._id, customAgentId: id, title: "Earlier", status: "verified", estimateMicros: 2_000, actualMicros: 2_000, createdAt: now - 1_000, updatedAt: now - 1_000 } as never);
+      const runId = await ctx.db.insert("workflowRuns", { ...base, orgId: org._id, customAgentId: id, title: "Current", status: "executing", estimateMicros: 3_000, actualMicros: 1_500, createdAt: now, updatedAt: now } as never);
+      return { runId, orgId: org._id };
+    });
+    await t.mutation(internal.engine.finishRun, { runId, status: "verified" });
+    const usage = () => t.run(async (ctx) => (await ctx.db.query("customAgentUsage").collect()).find((row) => row.customAgentId === id && row.orgId === orgId)!);
+    expect((await usage()).finishedMicros).toBe(3_500);
+    // Finishing the same run again with no new cost changes nothing.
+    await t.run(async (ctx) => ctx.db.patch(runId, { status: "executing" }));
+    await t.mutation(internal.engine.finishRun, { runId, status: "verified" });
+    expect((await usage()).finishedMicros).toBe(3_500);
+    // A retry that spent 500 more adds only the 500.
+    await t.run(async (ctx) => ctx.db.patch(runId, { status: "executing", actualMicros: 2_000 }));
+    await t.mutation(internal.engine.finishRun, { runId, status: "verified" });
+    expect((await usage()).finishedMicros).toBe(4_000);
   });
 });

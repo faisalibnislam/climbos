@@ -3964,6 +3964,18 @@ export default defineSchema({
     .index("by_status_trigger_next", ["status", "trigger", "nextTriggerAt"]),
 
   /** Human outcome notes on a specialist run; separates owner-reported results from platform measurements. */
+  /** Running monthly credit totals of finished specialist runs (updated on finish; seeded once from earlier runs that month). */
+  customAgentUsage: defineTable({
+    orgId: v.id("organizations"),
+    customAgentId: v.id("customAgents"),
+    /** UTC month, YYYY-MM. */
+    month: v.string(),
+    finishedMicros: v.number(),
+    /** The one-time seed could not read every earlier run this month, so the total is incomplete. */
+    partial: v.boolean(),
+    updatedAt: v.number(),
+  }).index("by_agent_month", ["customAgentId", "month"]),
+
   customAgentFeedback: defineTable({
     orgId: v.id("organizations"),
     customAgentId: v.id("customAgents"),
@@ -4468,6 +4480,8 @@ export default defineSchema({
     orgId: v.id("organizations"),
     /** Profile and originating request let budgets and outcome reporting follow child work. */
     customAgentId: v.optional(v.id("customAgents")),
+    /** Specialist runs: micros already added to the monthly usage total, so retried finishes add only the change. */
+    customAgentUsageCountedMicros: v.optional(v.number()),
     customAgentParentRunId: v.optional(v.id("workflowRuns")),
     /** Built-in specialist selected by the coordinator for this action. */
     agentArchetypeId: v.optional(v.string()),

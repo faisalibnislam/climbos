@@ -32,7 +32,7 @@ Status: **Done**, **Next**, or **Planned**. Size: S (one module + tests), M (bac
 | 19 | Warning when a link destination no longer shows the approved offer | 44 | M | Done (see ledger) |
 | 20 | Per-provider sync freshness limits | 147 | S | Done (see ledger) |
 | 21 | Event-triggered specialist runs (draft-only, budgeted, debounced) | 337, 349, 381–410 | L | Done (see ledger) |
-| 22 | Specialist usage summary beyond the 500-run / 100-report caps | 149 | S | Next |
+| 22 | Specialist usage summary beyond the 500-run / 100-report caps | 149 | S | Done (see ledger) |
 
 ## Release steps (after the gaps)
 
