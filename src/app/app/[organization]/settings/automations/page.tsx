@@ -22,6 +22,7 @@ function AutomationsSettings() {
   const { organization: slug } = useParams<{ organization: string }>();
   const data = useQuery(api.automationRegistry.get, { slug });
   const setWebsiteMonitor = useMutation(api.automationRegistry.setWebsiteMonitor);
+  const setCompetitorMonitoring = useMutation(api.competitors.setScheduledMonitoring);
   const [busy, setBusy] = useState(false);
   if (data === undefined) return <LoadingBlock label="Loading automations" lines={5} />;
 
@@ -37,6 +38,18 @@ function AutomationsSettings() {
     }
   }
 
+  async function toggleCompetitorMonitoring(enabled: boolean) {
+    setBusy(true);
+    try {
+      await setCompetitorMonitoring({ slug, enabled });
+      toast({ tone: "success", title: enabled ? "Weekly competitor checks resumed" : "Weekly competitor checks paused", description: "You can still check a site manually." });
+    } catch (error) {
+      toast({ tone: "danger", title: errorMessage(error) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <SettingsHeader title="Automations" intro="See what runs on a schedule, what it can access, and where to pause it." />
@@ -44,6 +57,7 @@ function AutomationsSettings() {
       <div className="grid gap-3 md:grid-cols-2">
         {data.entries.map((automation) => {
           const siteMonitorEnabled = "siteWatchEnabled" in automation && automation.siteWatchEnabled === true;
+          const competitorMonitoringEnabled = "competitorWatchEnabled" in automation && automation.competitorWatchEnabled === true;
           return (
           <Card key={automation.id}>
             <CardHeader>
@@ -64,6 +78,11 @@ function AutomationsSettings() {
                 {automation.id === "website_change_watch" && data.canManage && automation.state !== "not_configured" ? (
                   <Button size="sm" variant="ghost" loading={busy} onClick={() => void toggleWebsiteMonitor(!siteMonitorEnabled)}>
                     {siteMonitorEnabled ? <><Pause aria-hidden />Pause scheduled checks</> : <><Play aria-hidden />Resume scheduled checks</>}
+                  </Button>
+                ) : null}
+                {automation.id === "competitor_watch" && data.canManage && automation.state !== "not_configured" ? (
+                  <Button size="sm" variant="ghost" loading={busy} onClick={() => void toggleCompetitorMonitoring(!competitorMonitoringEnabled)}>
+                    {competitorMonitoringEnabled ? <><Pause aria-hidden />Pause weekly checks</> : <><Play aria-hidden />Resume weekly checks</>}
                   </Button>
                 ) : null}
               </div>

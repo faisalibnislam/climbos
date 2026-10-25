@@ -39,7 +39,7 @@ export const AUTOMATION_REGISTRY = [
     scope: "Only websites the workspace actively watches; page reads use the existing SSRF-safe fetcher.",
     permission: "Read-only monitoring. Suggested experiments remain hypotheses for owner review and never change the saved plan or execute external work.",
     limits: "Existing package limits allow 1 active watch on free accounts and up to 5 on paid packages; each scheduled run reads at most the active-watch query cap.",
-    stop: "Remove or deactivate a watch. A redirect to a different domain pauses that watch for owner confirmation.",
+    stop: "Pause scheduled checks in Settings or remove a site. Manual checks remain available; a redirect to a different domain pauses that site for owner confirmation.",
     receipt: "Watch check timestamps/errors, sourced competitor changes and owner notices.",
     href: "competitors",
     stopOnEmergency: false,

@@ -37,6 +37,7 @@ export const get = query({
       return sentAt !== undefined && (latest === null || sentAt > latest) ? sentAt : latest;
     }, null);
     const researchCadence = org.competitorResearchRefreshDays ?? 90;
+    const competitorWatchEnabled = org.competitorWatchEnabled !== false;
     const siteEnabled = business?.siteWatchEnabled !== false;
     const emergencyStopped = org.emergencyStop?.active === true;
 
@@ -53,12 +54,15 @@ export const get = query({
         }
         case "competitor_watch": {
           const latestChecked = activeWatches.reduce<number | null>((latest, watch) => watch.lastCheckedAt !== undefined && (latest === null || watch.lastCheckedAt > latest) ? watch.lastCheckedAt : latest, null);
-          const state: RegistryState = activeWatches.length ? "active" : confirmationWatches.length || watches.length ? "paused" : "not_configured";
+          const savedActiveCount = watches.filter((watch) => watch.active).length;
+          const state: RegistryState = !savedActiveCount ? "not_configured" : competitorWatchEnabled && activeWatches.length ? "active" : "paused";
           const lastReceipt = latestChecked !== null ? { at: latestChecked, summary: changes[0] ? `${changes[0].name}: ${changes[0].summary}` : "Latest active-watch check" } : null;
-          const summary = confirmationWatches.length
-            ? `${activeWatches.length} confirmed · ${confirmationWatches.length} older site${confirmationWatches.length === 1 ? "" : "s"} paused for owner confirmation`
-            : `${activeWatches.length} active of ${watches.length} saved watches`;
-          return entry(definition, state, summary, lastReceipt, activeWatches.length, { savedCount: watches.length, confirmationCount: confirmationWatches.length });
+          const summary = !competitorWatchEnabled
+            ? `${savedActiveCount} saved site${savedActiveCount === 1 ? "" : "s"} · weekly checks paused; manual checks remain available`
+            : confirmationWatches.length
+              ? `${activeWatches.length} active · ${confirmationWatches.length} older site${confirmationWatches.length === 1 ? "" : "s"} paused for owner confirmation`
+              : `${activeWatches.length} active of ${savedActiveCount} saved watches`;
+          return entry(definition, state, summary, lastReceipt, competitorWatchEnabled ? activeWatches.length : 0, { savedCount: savedActiveCount, confirmationCount: confirmationWatches.length, competitorWatchEnabled, canManage });
         }
         case "competitor_research_refresh": {
           const state: RegistryState = !business?.insights ? "not_configured" : researchCadence === 0 ? "paused" : "active";

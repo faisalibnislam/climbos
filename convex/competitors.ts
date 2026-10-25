@@ -176,10 +176,34 @@ export const checkNow = mutation({
   },
 });
 
+/** Pause or resume weekly checks without removing owner-selected sites. Manual checks remain available. */
+export const setScheduledMonitoring = mutation({
+  args: { slug: v.string(), enabled: v.boolean() },
+  handler: async (ctx, { slug, enabled }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    await ctx.db.patch(org._id, { competitorWatchEnabled: enabled });
+    await audit(ctx, {
+      orgId: org._id,
+      actorType: "user",
+      actorId: user._id,
+      action: enabled ? "automation.competitor_watch_enabled" : "automation.competitor_watch_paused",
+      subjectType: "workspace",
+      subjectId: org._id,
+      summary: enabled ? "Resumed weekly competitor-site checks." : "Paused weekly competitor-site checks; manual checks remain available.",
+    });
+    return { enabled };
+  },
+});
+
 export const watchesFor = internalQuery({
-  args: { orgId: v.id("organizations"), watchIds: v.array(v.id("competitorWatches")) },
-  handler: async (ctx, { orgId, watchIds }) =>
-    (await Promise.all(watchIds.map((id) => ctx.db.get(id)))).filter((w): w is Doc<"competitorWatches"> => Boolean(w?.active && w.orgId === orgId && (w.autoSeededAt === undefined || w.ownerConfirmedAt !== undefined))),
+  args: { orgId: v.id("organizations"), watchIds: v.array(v.id("competitorWatches")), scheduled: v.optional(v.boolean()) },
+  handler: async (ctx, { orgId, watchIds, scheduled }) => {
+    if (scheduled) {
+      const org = await ctx.db.get(orgId);
+      if (!org || org.deletedAt || org.competitorWatchEnabled === false) return [];
+    }
+    return (await Promise.all(watchIds.map((id) => ctx.db.get(id)))).filter((w): w is Doc<"competitorWatches"> => Boolean(w?.active && w.orgId === orgId && (w.autoSeededAt === undefined || w.ownerConfirmedAt !== undefined)));
+  },
 });
 
 export const saveCheck = internalMutation({
@@ -259,7 +283,7 @@ async function notifyOwners(ctx: MutationCtx, orgId: Id<"organizations">, text: 
   }
 }
 
-/** Mondays: check every active watch, one action per workspace. */
+/** Mondays: check every confirmed active watch in enabled workspaces, one action per workspace. */
 export const weekly = internalMutation({
   args: {},
   handler: async (ctx) => {
@@ -269,7 +293,13 @@ export const weekly = internalMutation({
       byOrg.set(w.orgId, [...(byOrg.get(w.orgId) ?? []), w._id]);
     }
     let i = 0;
-    for (const [orgId, watchIds] of byOrg) await ctx.scheduler.runAfter((i++ % 60) * 5_000, internal.competitorActions.check, { orgId, watchIds });
-    return byOrg.size;
+    let started = 0;
+    for (const [orgId, watchIds] of byOrg) {
+      const org = await ctx.db.get(orgId);
+      if (!org || org.deletedAt || org.competitorWatchEnabled === false) continue;
+      await ctx.scheduler.runAfter((i++ % 60) * 5_000, internal.competitorActions.check, { orgId, watchIds, scheduled: true });
+      started++;
+    }
+    return started;
   },
 });

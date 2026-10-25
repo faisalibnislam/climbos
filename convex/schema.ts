@@ -821,6 +821,8 @@ export default defineSchema({
         v.literal(180),
       ),
     ),
+    /** Whether owner-selected competitor watches may run on the weekly schedule; manual checks remain available. Default true. */
+    competitorWatchEnabled: v.optional(v.boolean()),
     /** Bounded cursor for one-time initialization of refresh times on legacy businesses. */
     competitorResearchBackfillCursor: v.optional(v.string()),
     competitorResearchBackfillDone: v.optional(v.boolean()),

@@ -286,6 +286,37 @@ describe("competitor watch", () => {
     expect(run?.estimateMicros).toBeGreaterThan(0);
   });
 
+  it("pauses weekly competitor checks without blocking an owner-requested manual check", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "competitor-schedule-pause@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Pause Watch Co" });
+    await makePaid(t, orgId);
+    const watchId = await owner.client.mutation(api.competitors.add, { slug, name: "Rival", url: "rival.example" });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    const baseline = await t.run((ctx) => ctx.db.get(watchId));
+    if (!baseline?.lastCheckedAt) throw new Error("Expected an initial free baseline check.");
+
+    vi.setSystemTime(baseline.lastCheckedAt + 7 * 3_600_000);
+    process.env.CLIMBOS_FAKE_SITE_TEXT = "Plans from $14/mo\nA new service tier is available.";
+    await owner.client.mutation(api.competitors.setScheduledMonitoring, { slug, enabled: false });
+    let automation = (await owner.client.query(api.automationRegistry.get, { slug })).entries.find((entry) => entry.id === "competitor_watch");
+    expect(automation).toMatchObject({ state: "paused", activeCount: 0, competitorWatchEnabled: false });
+    expect(automation?.summary).toContain("manual checks remain available");
+
+    expect(await t.mutation(internal.competitors.weekly, {})).toBe(0);
+    await t.action(internal.competitorActions.check, { orgId, watchIds: [watchId], scheduled: true });
+    expect((await t.run((ctx) => ctx.db.get(watchId)))?.lastCheckedAt).toBe(baseline.lastCheckedAt);
+    expect((await owner.client.query(api.competitors.overview, { slug })).changes).toHaveLength(0);
+
+    await owner.client.mutation(api.competitors.checkNow, { slug });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    expect((await owner.client.query(api.competitors.overview, { slug })).changes).toHaveLength(1);
+
+    await owner.client.mutation(api.competitors.setScheduledMonitoring, { slug, enabled: true });
+    automation = (await owner.client.query(api.automationRegistry.get, { slug })).entries.find((entry) => entry.id === "competitor_watch");
+    expect(automation).toMatchObject({ state: "active", competitorWatchEnabled: true });
+  });
+
   it("refreshes competitor research on its owner-configured cadence and keeps scheduled work under the approval cap", async () => {
     const t = setup();
     const owner = await asNewUser(t, "competitor-refresh@example.com");
