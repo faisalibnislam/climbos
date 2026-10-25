@@ -29,6 +29,7 @@ describe("landing pages", () => {
     const id = await owner.client.mutation(api.landing.create, { slug, brief: "Free 15-minute audit" });
     await t.finishAllScheduledFunctions(vi.runAllTimers);
     let page = (await owner.client.query(api.landing.list, { slug })).pages[0];
+    expect(await owner.client.query(api.landing.list, { slug })).toMatchObject({ businessName: "Landing Co", website: null, badge: true });
     expect(page.status).toBe("draft");
     expect(page.content?.headline).toBeTruthy();
     expect(await t.query(api.landing.publicPage, { slug: page.slug })).toBeNull();
@@ -100,6 +101,7 @@ describe("landing pages", () => {
     const current = (await owner.client.query(api.landing.list, { slug })).pages[0];
     await expect(editor.client.mutation(api.landing.setLive, { slug, id, live: true, expectedVersion: current.version })).rejects.toThrow(/can't do this|permission/i);
     const { slug: otherSlug } = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other Workspace" });
+    await expect(other.client.query(api.landing.list, { slug })).rejects.toThrow(/workspace|permission/i);
     await expect(other.client.query(api.landing.history, { slug: otherSlug, id })).rejects.toThrow(/find that page|workspace|permission/i);
     await expect(other.client.mutation(api.landing.restoreVersion, { slug: otherSlug, id, version: 1 })).rejects.toThrow(/find that page|workspace|permission/i);
   });

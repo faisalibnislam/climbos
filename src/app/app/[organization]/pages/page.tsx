@@ -115,7 +115,7 @@ export default function PagesPage({ searchParams }: { searchParams: Promise<{ br
           ))}
         </ul>
       )}
-      {open?.content ? <Editor key={open.id} slug={slug} page={open} content={open.content} canEdit={data.canEdit} canPublish={data.canPublish} onClose={() => setOpenId(null)} /> : null}
+      {open?.content ? <Editor key={open.id} slug={slug} page={open} content={open.content} businessName={data.businessName} website={data.website} badge={data.badge} canEdit={data.canEdit} canPublish={data.canPublish} onClose={() => setOpenId(null)} /> : null}
     </div>
   );
 }
@@ -147,7 +147,7 @@ function DeletePage({ page, onDelete }: { page: Page; onDelete: () => Promise<un
   );
 }
 
-function Editor({ slug, page, content, canEdit, canPublish, onClose }: { slug: string; page: Page; content: LandingContent; canEdit: boolean; canPublish: boolean; onClose: () => void }) {
+function Editor({ slug, page, content, businessName, website, badge, canEdit, canPublish, onClose }: { slug: string; page: Page; content: LandingContent; businessName: string; website: string | null; badge: boolean; canEdit: boolean; canPublish: boolean; onClose: () => void }) {
   const update = useMutation(api.landing.update);
   const saveMeasurementPlan = useMutation(api.landing.saveDesignMeasurementPlan);
   const setLive = useMutation(api.landing.setLive);
@@ -238,7 +238,7 @@ function Editor({ slug, page, content, canEdit, canPublish, onClose }: { slug: s
             </Field>
           </div>
         </fieldset>
-        <LandingDraftPreview name={page.title} color={page.color} content={c} />
+        <LandingDraftPreview name={businessName} color={page.color} content={c} website={website} badge={badge} />
         {page.designCriticSource ? <section className="rounded-[var(--radius-card)] border border-line bg-surface-2/60 p-4">
           <h3 className="heading-card">Measure this design change</h3>
           <p className="mt-1 text-sm text-ink-2">Choose what result to watch and how you will check it before publishing. ClimbOS can report this page&apos;s own views and leads, but those counts do not prove what caused a change.</p>

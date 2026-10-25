@@ -43,8 +43,12 @@ export const list = query({
   handler: async (ctx, { slug }) => {
     const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
     const pages = await ctx.db.query("landingPages").withIndex("by_org", (q) => q.eq("orgId", org._id)).order("desc").take(50);
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     return {
       pages: pages.map(view),
+      businessName: business?.name ?? org.name,
+      website: business?.website ?? null,
+      badge: !(await featureAllowed(ctx, org, "no_badge")),
       liveLimit: (await isPaid(ctx, org)) ? LIVE_LIMIT.paid : LIVE_LIMIT.free,
       canEdit: ["owner", "admin", "editor"].includes(role),
       /** Putting a page live or offline (approver roles). */
