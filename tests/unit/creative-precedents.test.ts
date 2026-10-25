@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(44);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(45);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -25,6 +25,12 @@ describe("creative strategy precedent retrieval", () => {
 
   it("retrieves a product-prototyping mechanism from mechanism language", () => {
     expect(retrieveCreativePrecedents("borrow a pattern from another industry and prototype it with athletes").some(({ precedent }) => precedent.id === "CP-003")).toBe(true);
+  });
+
+  it("retrieves Aarong's market-linkage and payment-timing mechanism", () => {
+    const matches = retrieveCreativePrecedents("Connect rural craft producers with urban buyers through a branded retail route, clearer product quality, and faster supplier payment");
+    expect(matches.some(({ precedent }) => precedent.id === "CP-045")).toBe(true);
+    expect(formatCreativePrecedents("Connect rural craft producers with urban buyers through a branded retail route and faster supplier payment")).toContain("Aarong / BRAC");
   });
 
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {
