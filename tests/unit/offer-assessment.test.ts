@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { approvedPlanContext, approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
 import { evaluateOfferUnitEconomics, lintApprovedOfferCopy, lintOfferAssessment, type OfferAssessment } from "../../shared/agents/offerAssessment";
 import { OFFER_DECISION_POLICY, playsTask } from "../../shared/agents/planTasks";
 import { adsSpec, emailSpec, socialCalendarSpec, socialSpec } from "../../shared/agents/specs";
 import { offerAlternativeLabel, offerCapacityLabel, offerEvidenceLabel, offerEvidenceStatusLabel, offerMechanismLabel, offerRecommendationLabel, offerReferenceLabel, offerRiskLabel } from "../../src/components/app/plan/offerPresentation";
+import { OfferAssessmentPanel } from "../../src/components/app/plan/OfferAssessmentPanel";
 
 const fact = "Owner reports that qualified quote requests do not book because of stated price objections. Current offer is $100 per service. Proposed offer is $95 per service. Variable labor is $40 per service, payment fee is $3 per sale, fulfillment costs $7 per service, and the proposed bonus costs $5 per service. Owner minimum contribution is $35 per sale and minimum contribution margin is 30%. The team has capacity for 20 additional jobs per month.";
 const context = { facts: [fact], researchNotes: "", sourceUrls: [], evidenceText: fact };
@@ -78,6 +81,20 @@ const play = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe("offer and promotion recommendations", () => {
+  it("shows the decision-critical offer details first and places the full comparison behind a disclosure", () => {
+    const markup = renderToStaticMarkup(createElement(OfferAssessmentPanel, { offer: assessment() }));
+    expect(markup).toContain("Advice only · changes need your approval");
+    expect(markup).toContain("Who it is for and why");
+    expect(markup).toContain("Money left per sale after listed costs");
+    expect(markup).toContain("Ability to take on more work");
+    expect(markup).toContain("Next step: Review the test and confirm the details before deciding.");
+    expect(markup).toContain("Still to confirm:");
+    expect(markup).toContain("See the test plan, other options, and full risks");
+    expect(markup).not.toMatch(/<details[^>]*open/);
+    expect(markup.indexOf("Money left per sale") ).toBeLessThan(markup.indexOf("See the test plan"));
+    expect(markup.indexOf("See the test plan")).toBeLessThan(markup.indexOf("Other options considered"));
+  });
+
   it("uses owner-facing labels without exposing internal decision values or fact IDs", () => {
     expect(offerRecommendationLabel("improve_other_constraint")).toBe("Improve another part of the business first");
     expect(offerMechanismLabel("referral_incentive")).toBe("Referral reward");

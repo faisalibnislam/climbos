@@ -60,9 +60,9 @@ import { StatBlocks } from "@/components/ds/content";
 import { climbTarget } from "@/components/climb/context";
 import type { StrategyExploration } from "../../../../shared/agents/specs";
 import type { CampaignTiming } from "../../../../shared/agents/campaignTiming";
-import { evaluateOfferUnitEconomics, type OfferAssessment } from "../../../../shared/agents/offerAssessment";
+import type { OfferAssessment } from "../../../../shared/agents/offerAssessment";
 import { CampaignTimingSummary } from "./CampaignTimingSummary";
-import { offerAlternativeLabel, offerCapacityLabel, offerEvidenceLabel, offerEvidenceStatusLabel, offerMechanismLabel, offerRecommendationLabel, offerReferenceLabel, offerRiskLabel } from "./offerPresentation";
+import { OfferAssessmentPanel } from "./OfferAssessmentPanel";
 
 /** Mirrors shared/agents/specs PlaySchema (stored loosely in Convex). */
 export interface PlayView {
@@ -755,38 +755,10 @@ function PlayDetails({ play, economics, id }: { play: PlayView; economics?: Econ
   const action = play.actionContract;
   const creative = play.creativeReview;
   const offer = play.offerAssessment;
-  const offerEconomics = offer ? evaluateOfferUnitEconomics(offer) : null;
   const precedentById = new Map(CREATIVE_PRECEDENTS.map((precedent) => [precedent.id, precedent]));
   return (
     <div id={id} className="flex flex-col gap-4">
-      {offer ? (
-        <section aria-label="Offer recommendation and test" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-surface-2 p-3">
-          <div className="flex flex-wrap items-center gap-2"><FieldLabel icon={Wallet}>Offer recommendation</FieldLabel><Badge tone={offer.recommendation === "recommend_promotion" ? "green" : "amber"}>{offerRecommendationLabel(offer.recommendation)}</Badge><Badge>{offerMechanismLabel(offer.mechanism)}</Badge><Badge>Advice only · changes need your approval</Badge></div>
-          <dl className="grid gap-3 sm:grid-cols-2">
-            <div><dt className="text-xs text-ink-3">Who it is for and why</dt><dd className="text-ui text-ink">{offer.segment} · {offer.needOrObstacle} · goal: {offer.objective}</dd></div>
-            <div><dt className="text-xs text-ink-3">What supports this idea</dt><dd className="text-ui text-ink">{offerEvidenceLabel(offer.evidenceBasis)} · {offer.evidenceNote}{offer.evidenceRefs.length ? <span className="mt-1 flex flex-wrap gap-x-2">{offer.evidenceRefs.map((reference, index) => /^https?:\/\//i.test(reference) ? <a key={`${reference}-${index}`} href={reference} target="_blank" rel="noopener noreferrer" className="text-brand-800 underline">Open source<ExternalLink aria-hidden className="inline size-3" /></a> : <span key={`${reference}-${index}`}>{offerReferenceLabel(reference)}</span>)}</span> : null}</dd></div>
-            {offerEconomics?.known ? <>
-              <div><dt className="text-xs text-ink-3">Money left per sale after listed costs · {offer.currency}</dt><dd className="text-ui text-ink">Current {formatMoney(offerEconomics.currentContribution, offer.currency)} ({offerEconomics.currentMarginRate === null ? "share of price unknown" : `${(offerEconomics.currentMarginRate * 100).toFixed(1)}% of price left`}) · proposed {formatMoney(offerEconomics.proposedContribution, offer.currency)} ({offerEconomics.proposedMarginRate === null ? "share of price unknown" : `${(offerEconomics.proposedMarginRate * 100).toFixed(1)}% of price left`})<span className="mt-1 block text-xs text-ink-3">Current net {formatMoney(offer.current.netPrice.amount, offer.currency)} less {offer.current.variableCosts.map((cost) => `${cost.category} ${formatMoney(cost.value.amount, offer.currency)}`).join(", ")}; proposed net {formatMoney(offer.proposed.netPrice.amount, offer.currency)} ({offerEconomics.priceChangeFromCurrent === null ? "price change unknown" : `change ${formatMoney(offerEconomics.priceChangeFromCurrent, offer.currency)}`}) less {offer.proposed.variableCosts.map((cost) => `${cost.category} ${formatMoney(cost.value.amount, offer.currency)}`).join(", ")}.</span></dd></div>
-              <div><dt className="text-xs text-ink-3">Sales needed to match the money left from one current sale</dt><dd className="text-ui text-ink">{offerEconomics.proposedUnitsPerCurrentUnitToMatchContribution === null ? (offerEconomics.currentContribution !== null && offerEconomics.currentContribution <= 0 ? "The current offer leaves no positive amount after these costs, so a sales comparison is not useful." : "The proposed offer leaves no positive amount after these costs, so there is no finite break-even number of sales.") : `About ${offerEconomics.proposedUnitsPerCurrentUnitToMatchContribution.toFixed(2)} sales at the proposed offer would leave the same amount as one current-offer sale, using the listed costs.`} Based on: {offer.costBoundary} · comparison period: {offer.horizonDays} days.</dd></div>
-            </> : <div><dt className="text-xs text-ink-3">Economics · {offer.currency}</dt><dd className="text-ui text-amber-800">Not enough inputs to calculate unit contribution: {offerEconomics?.unknowns.join(" · ")}</dd></div>}
-            <div><dt className="text-xs text-ink-3">Ability to take on more work</dt><dd className="text-ui text-ink">{offerCapacityLabel(offer.capacity.status)}{offer.capacity.claim ? ` · ${offer.capacity.claim}` : ""}</dd></div>
-            <div><dt className="text-xs text-ink-3">Test audience and comparison</dt><dd className="text-ui text-ink">{offer.test.eligibleAudience} · {offer.test.baselineOrComparison}</dd></div>
-            <div><dt className="text-xs text-ink-3">Primary outcome and window</dt><dd className="text-ui text-ink">{offer.test.primaryOutcome} · {offer.test.observationWindowDays} days</dd></div>
-            <div><dt className="text-xs text-ink-3">Continue / stop</dt><dd className="text-ui text-ink">{offer.test.continueCriteria} / {offer.test.stopCriteria}</dd></div>
-          </dl>
-          {offer.promotionHistory ? (
-            <div className="rounded-[var(--radius-control)] border border-line bg-surface px-3 py-2">
-              <p className="text-xs font-medium text-ink-2">Past offer results · {offer.promotionHistory.status === "unknown" ? "not available" : offer.promotionHistory.status === "measured" ? "measured" : "reported by your team"}{offer.promotionHistory.period ? ` · ${offer.promotionHistory.period}` : ""}</p>
-              {offer.promotionHistory.claim ? <p className="mt-1 text-ui text-ink">Evidence: {offer.promotionHistory.claim}{offer.promotionHistory.reference ? ` · ${offerReferenceLabel(offer.promotionHistory.reference)}` : ""}</p> : null}
-              <p className="mt-1 text-xs text-ink-2">Frequency: {offer.promotionHistory.promotionPattern} · Repeat purchases: {offer.promotionHistory.repeatPurchaseComparison} · Full price: {offer.promotionHistory.fullPriceComparison}</p>
-              <p className="mt-1 text-xs text-ink-3">Limit: {offer.promotionHistory.limitation}</p>
-            </div>
-          ) : <p className="text-xs text-ink-3">Promotion and repeat-purchase history was not available for this older plan.</p>}
-          <div><p className="text-xs font-medium text-ink-2">Other options considered</p><ul className="mt-1 list-disc pl-5 text-ui text-ink">{offer.alternatives.map((item) => <li key={item.alternative}><span className="font-medium">{offerAlternativeLabel(item.alternative)}:</span> {item.reason}</li>)}</ul></div>
-          <div><p className="text-xs font-medium text-ink-2">Risks and unknowns</p><ul className="mt-1 list-disc pl-5 text-ui text-ink">{offer.risks.map((risk) => <li key={risk.kind}><span className="font-medium">{offerRiskLabel(risk.kind)}</span> · {offerEvidenceStatusLabel(risk.status)}: {risk.note}</li>)}</ul><p className="mt-1 text-ui text-amber-800">{offer.unknowns.length ? offer.unknowns.join(" · ") : "No material offer inputs are listed as unknown."}{offer.test.ownerInputs.length ? ` · Information your team needs to provide: ${offer.test.ownerInputs.join(" · ")}` : ""}</p></div>
-          <p className="text-xs text-ink-3">{offer.authorizationNote}</p>
-        </section>
-      ) : null}
+      {offer ? <OfferAssessmentPanel offer={offer} /> : null}
       {creative ? (
         <section aria-label="Creative strategy reasoning" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-chart-3/30 bg-chart-3/5 p-3">
           <div className="flex flex-wrap items-center gap-2"><FieldLabel icon={Sparkles}>Why this is distinctive</FieldLabel><Badge>Exploration · not approval to execute</Badge></div>

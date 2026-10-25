@@ -21,7 +21,7 @@ Growth Home opportunity questions open an editable field instead of sending a fi
 
 Date-sensitive growth recommendations lead with a plain-language timing choice, suggested dates when supported, and why that moment may matter to the business. Missing information stays visible; preparation, delivery, capacity, source claims, and evidence dates are available in an expandable detail section.
 
-Offer recommendations explain whether to consider a change, check details first, improve another business issue, or keep the offer. They describe who the idea is for, what evidence supports it, money left after listed costs, risks, and a small test; missing facts remain unknown and any live change still needs the existing approval.
+Offer recommendations explain whether to consider a change, check details first, improve another business issue, or keep the offer. The first view shows who the idea is for, its evidence, money left after listed costs, capacity, key risks, unknowns, the next step, and the approval boundary. The test plan, alternatives, promotion history, and full risk list open only when requested; the listed cost breakdown has its own disclosure. Missing facts remain unknown and any live change still needs the existing approval.
 
 Command search uses local filtering. A natural-language request is handed to Home as an editable draft rather than dispatched from search. Handoff keys are scoped to the signed-in person and workspace. The assistant provider resets transient state when the workspace or authenticated identity changes.
 
