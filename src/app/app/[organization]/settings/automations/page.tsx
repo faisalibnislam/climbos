@@ -23,8 +23,10 @@ function AutomationsSettings() {
   const data = useQuery(api.automationRegistry.get, { slug });
   const setWebsiteMonitor = useMutation(api.automationRegistry.setWebsiteMonitor);
   const setCompetitorMonitoring = useMutation(api.competitors.setScheduledMonitoring);
+  const setScheduledSpecialists = useMutation(api.customAgents.setScheduledEnabled);
   const [busy, setBusy] = useState(false);
   if (data === undefined) return <LoadingBlock label="Loading automations" lines={5} />;
+  const emergencyStopped = data.emergencyStopped;
 
   async function toggleWebsiteMonitor(enabled: boolean) {
     setBusy(true);
@@ -50,6 +52,18 @@ function AutomationsSettings() {
     }
   }
 
+  async function toggleScheduledSpecialists(enabled: boolean) {
+    setBusy(true);
+    try {
+      await setScheduledSpecialists({ slug, enabled });
+      toast({ tone: "success", title: enabled ? "Scheduled specialist runs enabled" : "Scheduled specialist runs paused", description: enabled ? emergencyStopped ? "The workspace emergency stop still prevents scheduled runs. Manual runs remain available." : "Due profiles may run on the next scheduler check. Manual runs remain available." : "Manual runs remain available." });
+    } catch (error) {
+      toast({ tone: "danger", title: errorMessage(error) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <SettingsHeader title="Automations" intro="See what runs on a schedule, what it can access, and where to pause it." />
@@ -58,6 +72,7 @@ function AutomationsSettings() {
         {data.entries.map((automation) => {
           const siteMonitorEnabled = "siteWatchEnabled" in automation && automation.siteWatchEnabled === true;
           const competitorMonitoringEnabled = "competitorWatchEnabled" in automation && automation.competitorWatchEnabled === true;
+          const scheduledSpecialistsEnabled = "scheduledSpecialistsEnabled" in automation && automation.scheduledSpecialistsEnabled === true;
           return (
           <Card key={automation.id}>
             <CardHeader>
@@ -83,6 +98,11 @@ function AutomationsSettings() {
                 {automation.id === "competitor_watch" && data.canManage && automation.state !== "not_configured" ? (
                   <Button size="sm" variant="ghost" loading={busy} onClick={() => void toggleCompetitorMonitoring(!competitorMonitoringEnabled)}>
                     {competitorMonitoringEnabled ? <><Pause aria-hidden />Pause weekly checks</> : <><Play aria-hidden />Resume weekly checks</>}
+                  </Button>
+                ) : null}
+                {automation.id === "scheduled_specialists" && data.canManage && "configuredScheduledCount" in automation && automation.configuredScheduledCount > 0 ? (
+                  <Button size="sm" variant="ghost" loading={busy} onClick={() => void toggleScheduledSpecialists(!scheduledSpecialistsEnabled)}>
+                    {scheduledSpecialistsEnabled ? <><Pause aria-hidden />Pause scheduled runs</> : <><Play aria-hidden />Enable scheduled runs</>}
                   </Button>
                 ) : null}
               </div>

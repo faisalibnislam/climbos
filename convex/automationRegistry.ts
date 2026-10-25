@@ -38,6 +38,7 @@ export const get = query({
     }, null);
     const researchCadence = org.competitorResearchRefreshDays ?? 90;
     const competitorWatchEnabled = org.competitorWatchEnabled !== false;
+    const scheduledSpecialistsEnabled = org.scheduledSpecialistsEnabled !== false;
     const siteEnabled = business?.siteWatchEnabled !== false;
     const emergencyStopped = org.emergencyStop?.active === true;
 
@@ -48,9 +49,15 @@ export const get = query({
           return entry(definition, state, !autopilot ? "Set up social Autopilot to create a weekly calendar." : emergencyStopped ? "Workspace emergency stop is active." : autopilot.enabled ? `${autopilot.channels.length} selected channels · ${autopilot.mode.replaceAll("_", " ")}` : "Autopilot is turned off.", lastAutopilotRun?.finishedAt ? { at: lastAutopilotRun.finishedAt, summary: `${lastAutopilotRun.title} · ${lastAutopilotRun.status}` } : null, autopilot?.enabled ? 1 : 0, { weeklyPostLimit: 21, perChannelWeeklyLimit: 6 });
         }
         case "scheduled_specialists": {
-          const state: RegistryState = scheduledAgents.length ? emergencyStopped ? "paused" : "active" : activeAgents.length ? "manual_only" : "not_configured";
+          const configuredScheduledCount = scheduledAgents.length;
+          const state: RegistryState = configuredScheduledCount ? emergencyStopped || !scheduledSpecialistsEnabled ? "paused" : "active" : activeAgents.length ? "manual_only" : "not_configured";
           const lastReceipt = latestSpecialistRun ? { at: latestSpecialistRun.finishedAt ?? latestSpecialistRun.updatedAt, summary: `${latestSpecialistRun.title} · ${latestSpecialistRun.status}` } : null;
-          return entry(definition, state, `${scheduledAgents.length} scheduled · ${activeAgents.length} active profile${activeAgents.length === 1 ? "" : "s"}`, lastReceipt, scheduledAgents.length, { configuredCount: agents.length });
+          const summary = !configuredScheduledCount
+            ? `${activeAgents.length} active profile${activeAgents.length === 1 ? "" : "s"} · none scheduled`
+            : !scheduledSpecialistsEnabled
+              ? `${configuredScheduledCount} scheduled profile${configuredScheduledCount === 1 ? "" : "s"} · recurring runs paused; manual runs remain available`
+              : `${configuredScheduledCount} scheduled · ${activeAgents.length} active profile${activeAgents.length === 1 ? "" : "s"}`;
+          return entry(definition, state, summary, lastReceipt, scheduledSpecialistsEnabled ? configuredScheduledCount : 0, { configuredCount: agents.length, configuredScheduledCount, scheduledSpecialistsEnabled, canManage });
         }
         case "competitor_watch": {
           const latestChecked = activeWatches.reduce<number | null>((latest, watch) => watch.lastCheckedAt !== undefined && (latest === null || watch.lastCheckedAt > latest) ? watch.lastCheckedAt : latest, null);

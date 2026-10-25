@@ -26,7 +26,7 @@ export const AUTOMATION_REGISTRY = [
     scope: "Only the configured agent profile, selected actions, knowledge source and business workspace.",
     permission: "The saved read-only, draft or request-approval level is enforced. Runs create reviewable action cards; they do not publish or send directly.",
     limits: "Each profile sets a 1–100 credit run cap, a monthly cap up to 1,000 credits, and 1–4 actions per run; current account and workspace budgets also apply.",
-    stop: "Change the trigger to manual or archive the profile; workspace emergency stop, suspension and credit gates also apply.",
+    stop: "Pause all scheduled specialist runs in Settings or change one profile to manual. Manual runs remain available; workspace emergency stop, suspension and credit gates also apply.",
     receipt: "Profile-linked workflow runs, action cards, usage records and owner feedback.",
     href: "settings/specialists",
     stopOnEmergency: true,

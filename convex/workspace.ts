@@ -233,6 +233,7 @@ export const runScheduledCustomAgent = internalMutation({
     if (!agent || agent.status !== "active" || agent.trigger === "manual") return { started: false, reason: "inactive" };
     const org = await ctx.db.get(agent.orgId);
     if (!org || org.deletedAt || org.kind === "demo" || org.emergencyStop?.active) return { started: false, reason: "workspace_unavailable" };
+    if (org.scheduledSpecialistsEnabled === false) return { started: false, reason: "scheduled_paused" };
     const memberships = await ctx.db.query("memberships").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(100);
     const creator = memberships.find((membership) => membership.userId === agent.createdBy && membership.status === "active" && ["owner", "admin", "editor"].includes(membership.role));
     const fallbackOwner = memberships.find((membership) => membership.status === "active" && membership.role === "owner" && membership.userId);

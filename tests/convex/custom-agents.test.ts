@@ -91,6 +91,35 @@ describe("custom specialist profiles", () => {
     expect(await t.query(internal.customAgents.dueAgentIds, { now })).toEqual([]);
   });
 
+  it("pauses scheduled specialist profiles workspace-wide while preserving manual starts", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "pause-scheduled-specialists@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Scheduled Profile Co" });
+    const { id } = await owner.client.mutation(api.customAgents.create, { slug, ...profile, trigger: "daily" });
+    const now = Date.now();
+    await t.run(async (ctx) => { await ctx.db.patch(id, { nextTriggerAt: now - 1 }); });
+
+    expect(await t.query(internal.customAgents.dueAgentIds, { now })).toEqual([id]);
+    const viewer = await asNewUser(t, "scheduled-profile-viewer@example.com");
+    await t.run(async (ctx) => ctx.db.insert("memberships", { orgId, userId: viewer.userId, role: "viewer", status: "active", createdAt: now }));
+    await expect(viewer.client.mutation(api.customAgents.setScheduledEnabled, { slug, enabled: false })).rejects.toThrow(/role \(viewer\) can't/);
+    await owner.client.mutation(api.customAgents.setScheduledEnabled, { slug, enabled: false });
+    const paused = (await owner.client.query(api.automationRegistry.get, { slug })).entries.find((entry) => entry.id === "scheduled_specialists");
+    expect(paused).toMatchObject({ state: "paused", activeCount: 0, configuredScheduledCount: 1, scheduledSpecialistsEnabled: false });
+    expect(paused?.summary).toContain("manual runs remain available");
+    expect(await t.query(internal.customAgents.dueAgentIds, { now })).toEqual([]);
+    expect(await t.mutation(internal.customAgents.claimDueAgent, { agentId: id, now })).toBeNull();
+    expect(await t.mutation(internal.workspace.runScheduledCustomAgent, { agentId: id })).toEqual({ started: false, reason: "scheduled_paused" });
+
+    const manualStart = await owner.client.mutation(api.workspace.runCustomAgent, { slug, agentId: id, request: "Review our current growth plan." });
+    expect(manualStart.messageId).toBeTruthy();
+
+    await owner.client.mutation(api.customAgents.setScheduledEnabled, { slug, enabled: true });
+    const resumed = (await owner.client.query(api.automationRegistry.get, { slug })).entries.find((entry) => entry.id === "scheduled_specialists");
+    expect(resumed).toMatchObject({ state: "active", activeCount: 1, scheduledSpecialistsEnabled: true });
+    expect(await t.query(internal.customAgents.dueAgentIds, { now })).toEqual([id]);
+  });
+
   it("does not start scheduled work for demo workspaces", async () => {
     const t = setup();
     const owner = await asNewUser(t, "demo-scheduled-specialist@example.com", { anonymous: true });

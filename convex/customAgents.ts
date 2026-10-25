@@ -147,7 +147,11 @@ export const dueAgentIds = internalQuery({
   handler: async (ctx, { now }) => {
     const daily = await ctx.db.query("customAgents").withIndex("by_status_trigger_next", (q) => q.eq("status", "active").eq("trigger", "daily").lte("nextTriggerAt", now)).take(50);
     const weekly = await ctx.db.query("customAgents").withIndex("by_status_trigger_next", (q) => q.eq("status", "active").eq("trigger", "weekly").lte("nextTriggerAt", now)).take(50);
-    return [...daily, ...weekly].map((agent) => agent._id);
+    const due = [...daily, ...weekly];
+    const orgIds = [...new Set(due.map((agent) => agent.orgId))];
+    const orgs = await Promise.all(orgIds.map((orgId) => ctx.db.get(orgId)));
+    const enabledOrgIds = new Set(orgs.filter((org) => org && !org.deletedAt && org.scheduledSpecialistsEnabled !== false).map((org) => org!._id));
+    return due.filter((agent) => enabledOrgIds.has(agent.orgId)).map((agent) => agent._id);
   },
 });
 
@@ -156,10 +160,31 @@ export const claimDueAgent = internalMutation({
   handler: async (ctx, { agentId, now }) => {
     const agent = await ctx.db.get(agentId);
     if (!agent || agent.status !== "active" || agent.trigger === "manual" || !agent.nextTriggerAt || agent.nextTriggerAt > now) return null;
+    const org = await ctx.db.get(agent.orgId);
+    if (!org || org.deletedAt || org.scheduledSpecialistsEnabled === false) return null;
     const delay = triggerDelay(agent.trigger);
     if (!delay) return null;
     await ctx.db.patch(agentId, { nextTriggerAt: now + delay, updatedAt: now });
     return { agentId };
+  },
+});
+
+/** Workspace-level control for recurring specialist profiles; manually started profile runs remain available. */
+export const setScheduledEnabled = mutation({
+  args: { slug: v.string(), enabled: v.boolean() },
+  handler: async (ctx, { slug, enabled }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    await ctx.db.patch(org._id, { scheduledSpecialistsEnabled: enabled });
+    await audit(ctx, {
+      orgId: org._id,
+      actorType: "user",
+      actorId: user._id,
+      action: enabled ? "automation.scheduled_specialists_enabled" : "automation.scheduled_specialists_paused",
+      subjectType: "workspace",
+      subjectId: org._id,
+      summary: enabled ? "Resumed scheduled specialist profiles." : "Paused scheduled specialist profiles; manual runs remain available.",
+    });
+    return { enabled };
   },
 });
 
