@@ -489,7 +489,6 @@ export const saveInsights = internalMutation({
       competitorResearchLastStatus: undefined,
       updatedAt: Date.now(),
     });
-    await ctx.scheduler.runAfter(0, internal.competitorDiscovery.seedFromInsights, { orgId: run.orgId, businessId, insightsAt });
     if (org) await notifyOwners(ctx, org._id, `Research on ${business.name} is done. Check what we learned.`, org.onboardingStep !== "done" ? `/onboarding?workspace=${org.slug}` : "settings/business");
   },
 });

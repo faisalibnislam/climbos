@@ -189,7 +189,7 @@ describe("competitor watch", () => {
     await expect(outsider.client.mutation(api.competitors.dismissSuggestion, { slug, url: "https://rival.example" })).rejects.toThrow(/find that workspace/u);
   });
 
-  it("auto-seeds only identity-checked direct candidates within the free allowance and honors exclusions", async () => {
+  it("keeps researched competitors as suggestions until an owner starts monitoring", async () => {
     const t = setup();
     const owner = await asNewUser(t, "competitor-auto-seed@example.com");
     const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Owner Co" });
@@ -214,33 +214,38 @@ describe("competitor watch", () => {
       },
     }));
 
-    process.env.CLIMBOS_FAKE_SITE_TEXT = "A different company provides accounting tools.";
     expect(await t.action(internal.competitorDiscovery.seedFromInsights, { orgId, businessId: business._id, insightsAt })).toBe(0);
-    delete process.env.CLIMBOS_FAKE_SITE_TEXT;
-    expect(await t.action(internal.competitorDiscovery.seedFromInsights, { orgId, businessId: business._id, insightsAt })).toBe(1);
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
-    let overview = await owner.client.query(api.competitors.overview, { slug });
-    expect(overview.watches).toHaveLength(1);
-    expect(overview.watches[0]).toMatchObject({ name: "Rival", autoSeeded: true, discoverySourceUrl: "https://research.example/rival" });
-    expect(overview.suggested.map((candidate) => candidate.name)).toEqual(["Other"]);
-    expect(overview.suggested[0]).toMatchObject({ sourceUrl: "https://research.example/other", kind: "direct" });
-    expect(overview.suggested[0]).not.toHaveProperty("comparison");
-
-    const watchId = overview.watches[0].id;
-    await owner.client.mutation(api.competitors.remove, { slug, id: watchId });
-    expect(await t.action(internal.competitorDiscovery.seedFromInsights, { orgId, businessId: business._id, insightsAt })).toBe(1);
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
-    overview = await owner.client.query(api.competitors.overview, { slug });
-    expect(overview.watches.map((watch) => watch.name)).toEqual(["Other"]);
-    expect(overview.suggested).toEqual([]);
-
-    await owner.client.mutation(api.competitors.remove, { slug, id: overview.watches[0].id });
+    const overview = await owner.client.query(api.competitors.overview, { slug });
+    expect(overview.watches).toEqual([]);
+    expect(overview.suggested.map((candidate) => candidate.name)).toEqual(["Rival", "Other"]);
+    expect(overview.suggested[0]).toMatchObject({ sourceUrl: "https://research.example/rival", kind: "direct" });
+    expect(await t.run((ctx) => ctx.db.query("workflowRuns").withIndex("by_org_kind_created", (q) => q.eq("orgId", orgId).eq("kind", "competitor_watch")).collect())).toEqual([]);
 
     const restoredId = await owner.client.mutation(api.competitors.add, { slug, name: "Rival", url: "https://www.unrelated.example/pricing" });
-    expect(restoredId).toBe(watchId);
-    overview = await owner.client.query(api.competitors.overview, { slug });
-    expect(overview.watches).toHaveLength(1);
-    expect(overview.watches[0]).toMatchObject({ autoSeeded: false, discoverySourceUrl: null });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    const afterOwnerAdd = await owner.client.query(api.competitors.overview, { slug });
+    expect(afterOwnerAdd.watches).toHaveLength(1);
+    expect(afterOwnerAdd.watches[0].id).toBe(restoredId);
+    expect(afterOwnerAdd.watches[0]).toMatchObject({ autoSeeded: false, discoverySourceUrl: null });
+  });
+
+  it("keeps scheduled competitor summaries within the workspace credit approval limit", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "competitor-watch-credit-cap@example.com");
+    const { orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Watch Budget Co" });
+    await makePaid(t, orgId);
+    await t.run((ctx) => ctx.db.patch(orgId, { creditApprovalLimit: 0 }));
+
+    expect(await t.mutation(internal.competitors.startSummaryRun, { orgId, count: 1 })).toBeNull();
+    expect(await t.run((ctx) => ctx.db.query("workflowRuns").withIndex("by_org_kind_created", (q) => q.eq("orgId", orgId).eq("kind", "competitor_watch")).collect())).toEqual([]);
+
+    await t.run((ctx) => ctx.db.patch(orgId, { creditApprovalLimit: undefined }));
+    const runId = await t.mutation(internal.competitors.startSummaryRun, { orgId, count: 1 });
+    if (!runId) throw new Error("Expected a summary run when the workspace has no approval cap.");
+    const run = await t.run((ctx) => ctx.db.get(runId));
+    expect(run?.status).toBe("cost_reserved");
+    expect(run?.actualMicros).toBe(0);
+    expect(run?.estimateMicros).toBeGreaterThan(0);
   });
 
   it("refreshes competitor research on its owner-configured cadence and keeps scheduled work under the approval cap", async () => {

@@ -140,61 +140,6 @@ export const dismissSuggestion = mutation({
   },
 });
 
-/** Candidate snapshot stays tied to the exact insight run that requested auto-seeding. */
-export const discoveryContext = internalQuery({
-  args: { orgId: v.id("organizations"), businessId: v.id("businesses"), insightsAt: v.number() },
-  handler: async (ctx, { orgId, businessId, insightsAt }) => {
-    const [org, business, watches] = await Promise.all([
-      ctx.db.get(orgId),
-      ctx.db.get(businessId),
-      ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(1000),
-    ]);
-    if (!org || !business || business.orgId !== orgId || business.insights?.generatedAt !== insightsAt) return null;
-    return {
-      website: business.website ?? undefined,
-      candidates: business.insights.competitors.flatMap((c) => c.url ? [{ name: c.name, url: c.url, sourceUrl: c.sourceUrl, kind: c.kind }] : []),
-      watches: watches.map((w) => ({ url: w.url, active: w.active })),
-      limit: (await isPaid(ctx, org)) ? LIMIT.paid : LIMIT.free,
-    };
-  },
-});
-
-/** Auto-watch only identity-checked direct competitors, within the existing package limit. */
-export const seedWatches = internalMutation({
-  args: {
-    orgId: v.id("organizations"),
-    businessId: v.id("businesses"),
-    insightsAt: v.number(),
-    candidates: v.array(v.object({ name: v.string(), url: v.string(), sourceUrl: v.string(), kind: v.literal("direct") })),
-  },
-  handler: async (ctx, { orgId, businessId, insightsAt, candidates }) => {
-    const org = await ctx.db.get(orgId);
-    const business = await ctx.db.get(businessId);
-    if (!org || !business || business.orgId !== orgId || business.insights?.generatedAt !== insightsAt) return [];
-    const existing = await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(1000);
-    const limit = (await isPaid(ctx, org)) ? LIMIT.paid : LIMIT.free;
-    const activeCount = existing.filter((w) => w.active).length;
-    const available = Math.max(0, limit - activeCount);
-    if (!available) return [];
-    const selected = selectWatchCandidates(candidates, business.website, existing.map((w) => w.url), available);
-    const ids = [];
-    for (const candidate of selected) {
-      const id = await ctx.db.insert("competitorWatches", {
-        orgId,
-        name: candidate.name,
-        url: candidate.url,
-        active: true,
-        autoSeededAt: Date.now(),
-        discoverySourceUrl: candidate.sourceUrl,
-        createdAt: Date.now(),
-      });
-      ids.push(id);
-    }
-    if (ids.length) await ctx.scheduler.runAfter(0, internal.competitorActions.check, { orgId, watchIds: ids });
-    return ids;
-  },
-});
-
 /** "Check now": each competitor at most every 6 hours (a newly added one can be checked right away). */
 export const checkNow = mutation({
   args: { slug: v.string() },
@@ -231,7 +176,7 @@ export const startSummaryRun = internalMutation({
     const org = await ctx.db.get(orgId);
     if (!org) return null;
     try {
-      return await createRunWithReservation(ctx, { org, kind: "competitor_watch", title: "Competitor watch", roles: ["data_analyst"], input: { count }, steps: Array.from({ length: Math.min(5, count) }, () => ({ kind: "model" as const, role: "data_analyst" as const, modelKey: MODEL, inputBudget: 5_000, outputBudget: 1_000 })), meters: {}, isFixture: org.kind === "demo" });
+      return await createRunWithReservation(ctx, { org, kind: "competitor_watch", title: "Competitor watch", roles: ["data_analyst"], input: { count }, steps: Array.from({ length: Math.min(5, count) }, () => ({ kind: "model" as const, role: "data_analyst" as const, modelKey: MODEL, inputBudget: 5_000, outputBudget: 1_000 })), meters: {}, isFixture: org.kind === "demo", enforceCreditApprovalLimit: true });
     } catch {
       return null;
     }
