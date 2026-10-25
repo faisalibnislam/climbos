@@ -151,7 +151,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
               <TeamActivity slug={slug} />
               <Button
                 size="sm"
-                variant={climb.open ? "primary" : "secondary"}
+                variant="secondary"
                 aria-pressed={climb.open}
                 aria-label="Ask Climb about this page"
                 onClick={() => climb.setOpen((o) => !o)}

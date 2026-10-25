@@ -98,6 +98,28 @@ export default function TodayPage() {
     return () => window.removeEventListener("climbos:compose", loadDraft);
   }, [data, me, slug]);
 
+  // The review section arrives with the query result. Next's initial hash
+  // scroll can run while only loading placeholders exist, especially on phones.
+  const ready = data !== undefined;
+  useEffect(() => {
+    if (!ready) return;
+    let frame = 0;
+    const openReview = () => {
+      if (window.location.hash !== "#review") return;
+      frame = requestAnimationFrame(() => {
+        const section = document.getElementById("review");
+        section?.scrollIntoView({ block: "start" });
+        section?.focus({ preventScroll: true });
+      });
+    };
+    openReview();
+    window.addEventListener("hashchange", openReview);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("hashchange", openReview);
+    };
+  }, [ready, slug]);
+
   if (data === undefined) {
     return (
       <div className="space-y-6" aria-busy="true">
@@ -432,7 +454,7 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
 
 function ApprovalsPanel({ slug, data }: { slug: string; data: Today }) {
   return (
-    <section id="review" aria-labelledby="approvals-heading" className="scroll-mt-20">
+    <section id="review" tabIndex={-1} aria-labelledby="approvals-heading" className="scroll-mt-20">
       <div className="flex items-center justify-between">
         <h2 id="approvals-heading" className="heading-section">Review before it goes ahead</h2>
         {data.approvalsCount > 0 && <Badge tone="amber">{data.approvalsCount}</Badge>}

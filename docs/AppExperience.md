@@ -26,3 +26,13 @@ Pages explain their purpose before technical details. Optional “What do these 
 `shared/agents/ownerLanguage.ts` supplies the same everyday-language guidance to the contextual assistant and the agent runtime. The owner-brevity skill and generated registry have matching guidance. The change applies to owner-facing explanations, preserves technical field names, source labels, uncertainty, and permissions, and keeps requested publishable copy subject to its channel requirements. Backend instruction changes require the normal backend release process to take effect outside local tests.
 
 Verification lives in `tests/unit/app-navigation.test.ts`, `tests/unit/onboarding-language.test.ts`, the parser regressions, and `e2e/simple-app.spec.ts`. Browser checks use synthetic demo data and the design-system specimen; they do not perform live customer sends, publishing, ad activation, or paid AI generation. Authenticated owner onboarding is covered by rendering and permission regressions, rather than creating real additional customer companies during UI checks.
+
+
+## Verification on 25 October 2026
+
+- Full suite: `pnpm exec vitest run --maxWorkers=2` — 201 files, 1,503 tests passed. The first unrestricted run hit 5-second timeouts under parallel load; reducing workers resolved them without weakening assertions or changing timeouts.
+- Focused onboarding, navigation, parser, and permission checks: 33 passed after the later wording changes.
+- Browser: `E2E_BASE_URL=http://127.0.0.1:3000 pnpm exec playwright test e2e/simple-app.spec.ts --project=desktop --project=mobile` — all 4 passed, including accessibility scans, draft preservation in both chat paths, local tool search, existing editor links, and the loaded review-section scroll/focus handoff.
+- Type checks and the app lint checks passed. No live customer publishing, outreach, ad activation, or paid AI generation was used for verification.
+- `pnpm build` was blocked by a Turbopack CSS worker's port-binding restriction (`EPERM`) in this environment. The supported Webpack fallback compiled and completed TypeScript checks, but does not produce the existing Tailwind utility styling with the current Turbopack-only loader setup. It is not a verified production artifact. The existing build configuration was retained, and visual/browser verification used the styled development app.
+- The local frontend is available with `pnpm dev --hostname 127.0.0.1`. Backend instruction changes remain source changes until the normal backend release process is performed. No deployment was performed here.
