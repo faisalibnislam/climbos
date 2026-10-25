@@ -23,7 +23,12 @@ function sample(s: JsonSchema, marker: string, key = ""): unknown {
   switch (type) {
     case "object": {
       const out: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(s.properties ?? {})) out[k] = sample(v, marker, k);
+      for (const [k, v] of Object.entries(s.properties ?? {})) {
+        // A test double cannot infer which approved offer a draft represents.
+        // Omit this optional reference rather than inventing a play name.
+        if (k === "approvedOfferPlayName") continue;
+        out[k] = sample(v, marker, k);
+      }
       return out;
     }
     case "array":
