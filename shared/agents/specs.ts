@@ -10,7 +10,7 @@ import type { RefundExposure } from "../attribution/refundExposure";
 import type { PlatformConcentration } from "../attribution/platformConcentration";
 import type { KnowledgeReferenceSet } from "../knowledge/retrieve";
 import type { PlanConstraints } from "./types";
-import { COMMUNITY_CHANNELS, LOW_TICKET_USD_MONTH, PLATFORM_EVIDENCE_CHANNELS } from "../acquisition/scoring";
+import { COMMUNITY_CHANNELS, isEvidenceDateOnOrBefore, LOW_TICKET_USD_MONTH, PLATFORM_EVIDENCE_CHANNELS } from "../acquisition/scoring";
 import { formatMoney, toUsd } from "../economics/currency";
 import { sampleSize } from "../analysis/decisions";
 import { citedCreatorCompetitorCollaborations, citedCreatorFact } from "../growth/targets";
@@ -2688,10 +2688,10 @@ function lintChannelFit(out: ChannelFit, input: AgentInput, candidateIds: string
     if (c.deltas.some((d) => Math.abs(d) > 30)) issues.push({ severity: "error", rule: "deltas", message: "Each delta is between −30 and +30.", path: `${path}.deltas` });
     if (c.deltas.some((d) => d !== 0) && !c.evidence.trim()) issues.push({ severity: "error", rule: "evidence", message: "Any change needs evidence (a source, a confirmed fact or the owner's data).", path: `${path}.evidence` });
     if (PLATFORM_EVIDENCE_CHANNELS.has(c.id) && (c.deltas[0] > 0 || c.deltas[1] > 0)) {
-      if (!["measured", "owner_reported", "source_reported"].includes(c.evidenceBasis ?? "") || !c.evidenceConfidence || !/^\d{4}-\d{2}-\d{2}$/.test(c.evidenceDate ?? "")) issues.push({ severity: "error", rule: "platform_evidence", message: "A platform audience or buyer-intent adjustment needs dated measured, owner-reported, or source-reported evidence and an explicit confidence level.", path: `${path}.evidenceBasis` });
+      if (!["measured", "owner_reported", "source_reported"].includes(c.evidenceBasis ?? "") || !c.evidenceConfidence || !isEvidenceDateOnOrBefore(c.evidenceDate, new Date().toISOString().slice(0, 10))) issues.push({ severity: "error", rule: "platform_evidence", message: "A platform audience or buyer-intent adjustment needs dated measured, owner-reported, or source-reported evidence and an explicit confidence level.", path: `${path}.evidenceBasis` });
       if (!c.purpose?.trim() || !c.measurementPlan?.trim()) issues.push({ severity: "error", rule: "platform_job", message: "Explain this platform's specific job and how to measure qualified outcomes; do not use impressions, votes, or comments alone.", path: `${path}.measurementPlan` });
       if (c.evidenceBasis === "source_reported" && !c.sourceUrl?.trim()) issues.push({ severity: "error", rule: "platform_source", message: "Source-reported platform fit needs an exact source URL ClimbOS read.", path: `${path}.sourceUrl` });
-      if (COMMUNITY_CHANNELS.has(c.id) && (!c.communityRulesUrl?.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(c.communityRulesCheckedAt ?? ""))) issues.push({ severity: "error", rule: "community_rules", message: "Name the exact community and provide its rules URL and check date; otherwise leave it unranked for promotion.", path: `${path}.communityRulesUrl` });
+      if (COMMUNITY_CHANNELS.has(c.id) && (!c.communityRulesUrl?.trim() || !isEvidenceDateOnOrBefore(c.communityRulesCheckedAt, new Date().toISOString().slice(0, 10)))) issues.push({ severity: "error", rule: "community_rules", message: "Name the exact community and provide its rules URL and check date; otherwise leave it unranked for promotion.", path: `${path}.communityRulesUrl` });
     }
   });
   return [...issues, ...lintAvailableSourceUrls(out.channels.flatMap((c, i) => [

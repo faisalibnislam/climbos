@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BUSINESS_TYPES, CHANNELS, CHANNEL_BY_ID, budgetBand } from "../../shared/acquisition/library";
-import { candidatesFor, dimensionsToConfirm, mergeFit, scoreChannels, type AcquisitionProfile } from "../../shared/acquisition/scoring";
+import { candidatesFor, dimensionsToConfirm, isEvidenceDateOnOrBefore, mergeFit, scoreChannels, type AcquisitionProfile } from "../../shared/acquisition/scoring";
+import { channelFitSpec } from "../../shared/agents/specs";
 
 const v = (value: string) => ({ value, confidence: "high" as const, source: "owner" as const });
 const formkit: AcquisitionProfile = { types: ["b2b_saas"], budgetUsd: 600, horizonDays: 90, dims: { customerType: v("b2b"), geography: v("global"), aov: v("low"), salesMotion: v("self_service"), team: v("solo") } };
@@ -20,6 +21,14 @@ describe("acquisition library", () => {
 });
 
 describe("channel scoring", () => {
+  it("accepts only real evidence dates on or before the scoring date", () => {
+    expect(isEvidenceDateOnOrBefore("2026-10-25", "2026-10-25")).toBe(true);
+    expect(isEvidenceDateOnOrBefore("2026-10-24", "2026-10-25")).toBe(true);
+    expect(isEvidenceDateOnOrBefore("2026-10-26", "2026-10-25")).toBe(false);
+    expect(isEvidenceDateOnOrBefore("2026-02-30", "2026-10-25")).toBe(false);
+    expect(isEvidenceDateOnOrBefore("not-a-date", "2026-10-25")).toBe(false);
+    expect(isEvidenceDateOnOrBefore("2026-10-24", "2026-02-30")).toBe(false);
+  });
   it("B2B SaaS at $600: focused, at most one paid channel, no local or app-store channels", () => {
     const rows = scoreChannels(formkit);
     const plan = rows.filter((r) => r.status === "primary" || r.status === "in_plan");
@@ -67,6 +76,29 @@ describe("channel scoring", () => {
     const slackWithoutRules = scoreChannels(formkit, [{ channelId: "N03", deltas: { audience: 15 }, reason: "Owner reports relevant discussions", evidence: "Two customers say peers discuss onboarding in a private Slack community.", evidenceBasis: "owner_reported", evidenceConfidence: "low", evidenceDate: "2026-10-25", platform: "Private Slack community", purpose: "Customer research", measurementPlan: "Count questions answered and qualified introductions; revenue is unknown." }]).find((r) => r.id === "N03")!;
     expect(slackWithoutRules.status).toBe("not_now");
     expect(slackWithoutRules.why).toMatch(/exact community.*current rules/i);
+  });
+  it("keeps future platform evidence and future community-rule checks unranked", () => {
+    const futureEvidence = scoreChannels(plumber, [{ channelId: "S04", deltas: { audience: 15, intent: 10 }, reason: "Customers use local listings when choosing a provider.", evidence: "Owner reports customers found the business through Google Business Profile.", evidenceBasis: "owner_reported", evidenceConfidence: "medium", evidenceDate: "2026-10-26", purpose: "Local discovery", measurementPlan: "Track qualified calls." }], undefined, undefined, undefined, "2026-10-25").find((r) => r.id === "S04")!;
+    expect(futureEvidence.status).toBe("not_now");
+    expect(futureEvidence.why).toMatch(/customer use and buyer fit.*unknown/i);
+
+    const futureRules = scoreChannels(formkit, [{ channelId: "N01", deltas: { audience: 15 }, reason: "Customers ask questions there", evidence: "Owner reports buyers discuss this topic in r/example.", evidenceBasis: "owner_reported", evidenceConfidence: "medium", evidenceDate: "2026-10-25", platform: "r/example", communityRulesUrl: "https://www.reddit.com/r/example/about/rules", communityRulesCheckedAt: "2026-10-26", purpose: "Customer research", measurementPlan: "Track questions answered and qualified visits." }], undefined, undefined, undefined, "2026-10-25").find((r) => r.id === "N01")!;
+    expect(futureRules.status).toBe("not_now");
+    expect(futureRules.why).toMatch(/exact community.*current rules/i);
+  });
+  it("rejects invalid or future platform evidence dates in model output", () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const tomorrow = new Date(`${today}T00:00:00.000Z`);
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const baseChannel = { id: "S04", deltas: [15, 10, 0, 0, 0, 0, 0, 0], reason: "Local discovery", evidence: "The owner reports customers use this platform.", platform: "Google Business Profile", tactic: "Reviews", audience: "Local customers", evidenceBasis: "owner_reported" as const, evidenceConfidence: "medium" as const, evidenceDate: tomorrow.toISOString().slice(0, 10), purpose: "Local discovery", measurementPlan: "Track qualified calls." };
+    const candidateIds = ["S04", "N01", "S01", "S02", "S03", "S05", "S06", "S07", "S08"];
+    const spec = channelFitSpec({ candidateIds, typeKeys: ["local_services"], dims: {} });
+    const output = { types: ["local_services"], dimensions: [], channels: candidateIds.map((id) => ({ ...baseChannel, id, deltas: id === "S04" ? baseChannel.deltas : id === "N01" ? [15, 0, 0, 0, 0, 0, 0, 0] : [0, 0, 0, 0, 0, 0, 0, 0], ...(id === "N01" ? { evidenceDate: today, communityRulesUrl: "https://www.reddit.com/r/example/about/rules", communityRulesCheckedAt: tomorrow.toISOString().slice(0, 10) } : {}) })), summary: ["Local discovery can help customers find the business."] };
+    const input = { task: "", brief: "", facts: [], untrustedContext: "" } as never;
+    expect(spec.lint!(output as never, input).some((issue) => issue.rule === "platform_evidence")).toBe(true);
+    expect(spec.lint!(output as never, input).some((issue) => issue.rule === "community_rules")).toBe(true);
+    const invalid = { ...output, channels: output.channels.map((channel) => channel.id === "S04" ? { ...channel, evidenceDate: "2026-02-30" } : channel) };
+    expect(spec.lint!(invalid as never, input).some((issue) => issue.rule === "platform_evidence")).toBe(true);
   });
   it("retains dismiss and irrelevant feedback and moves channels out of the plan", () => {
     for (const preference of ["dismissed", "irrelevant"] as const) {

@@ -394,7 +394,14 @@ export const COMMUNITY_CHANNELS = new Set([
   ...Array.from({ length: 9 }, (_, i) => `N${String(i + 1).padStart(2, "0")}`),
   "N13", "N14", "O04", ...Array.from({ length: 7 }, (_, i) => `O${String(i + 14).padStart(2, "0")}`),
 ]);
-const isIsoDate = (value?: string) => Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)));
+export function isEvidenceDateOnOrBefore(value: string | undefined, asOfDate: string): boolean {
+  const isRealDate = (date: string | undefined) => {
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+    const parsed = new Date(`${date}T00:00:00.000Z`);
+    return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === date;
+  };
+  return isRealDate(value) && isRealDate(asOfDate) && value! <= asOfDate;
+}
 
 export type ChannelStatus = "primary" | "in_plan" | "later" | "not_now" | "ineligible";
 export const STATUS_LABEL: Record<ChannelStatus, string> = { primary: "Primary", in_plan: "In the plan", later: "Later", not_now: "Not now", ineligible: "Not a fit" };
@@ -447,7 +454,7 @@ const DIAGNOSIS_STAGES: Partial<Record<BindingConstraint, readonly Stage[]>> = {
   economics: ["product", "high_intent"],
 };
 
-export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] = [], weights = DEFAULT_WEIGHTS, limits?: ChannelLimits, focus?: BindingConstraint): ScoredChannel[] {
+export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] = [], weights = DEFAULT_WEIGHTS, limits?: ChannelLimits, focus?: BindingConstraint, asOfDate = new Date().toISOString().slice(0, 10)): ScoredChannel[] {
   const adj = new Map(adjustments.map((a) => [a.channelId, a]));
   const ownerPreferences = new Map((p.channelPreferences ?? []).map((preference) => [preference.channelId, preference]));
   const regulated = p.types.map((k) => TYPE_BY_KEY[k]?.regulated).find(Boolean) ?? (dim(p, "regulation") === "high" ? "Regulated industry: check advertising rules before running this." : undefined);
@@ -496,15 +503,15 @@ export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] =
     const preference = ownerPreferences.get(row.id);
     const evidence = adj.get(row.id);
     if (row.status !== "ineligible" && PLATFORM_EVIDENCE_CHANNELS.has(row.id)) {
-      const ownerEvidence = preference?.preference === "prefer" && Boolean(preference.rationale.trim()) && isIsoDate(preference.evidenceDate);
+      const ownerEvidence = preference?.preference === "prefer" && Boolean(preference.rationale.trim()) && isEvidenceDateOnOrBefore(preference.evidenceDate, asOfDate);
       const verifiedEvidence = Boolean(evidence?.evidence?.trim())
         && ["measured", "owner_reported", "source_reported"].includes(evidence?.evidenceBasis ?? "")
         && Boolean(evidence?.evidenceConfidence)
-        && isIsoDate(evidence?.evidenceDate)
+        && isEvidenceDateOnOrBefore(evidence?.evidenceDate, asOfDate)
         && Boolean(evidence?.purpose?.trim())
         && Boolean(evidence?.measurementPlan?.trim())
         && (evidence?.evidenceBasis === "owner_reported" || evidence?.evidenceBasis === "measured" || Boolean(evidence?.sourceUrl));
-      const rulesOk = !COMMUNITY_CHANNELS.has(row.id) || (Boolean(evidence?.communityRulesUrl) && isIsoDate(evidence?.communityRulesCheckedAt));
+      const rulesOk = !COMMUNITY_CHANNELS.has(row.id) || (Boolean(evidence?.communityRulesUrl) && isEvidenceDateOnOrBefore(evidence?.communityRulesCheckedAt, asOfDate));
       if ((!ownerEvidence && !verifiedEvidence) || !rulesOk) {
         evidenceBlocked.add(row.id);
         row.why = !rulesOk
