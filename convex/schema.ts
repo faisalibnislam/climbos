@@ -2578,6 +2578,19 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_org_run", ["orgId", "runId"]).index("by_org_run_finding", ["orgId", "runId", "findingIndex"]),
 
+  /** Private, short-lived viewport captures attached to one immutable website audit run. */
+  websiteAuditScreenshots: defineTable({
+    orgId: v.id("organizations"),
+    runId: v.id("workflowRuns"),
+    pageUrl: v.string(),
+    view: v.union(v.literal("desktop"), v.literal("mobile")),
+    storageId: v.id("_storage"),
+    width: v.number(),
+    height: v.number(),
+    capturedAt: v.number(),
+    expiresAt: v.number(),
+  }).index("by_org_run_view", ["orgId", "runId", "view"]).index("by_expires", ["expiresAt"]),
+
   /** Tracked links: our own short links (climbos.app/l/CODE) with UTM tags. */
   links: defineTable({
     orgId: v.id("organizations"),

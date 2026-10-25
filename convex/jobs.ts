@@ -2028,8 +2028,8 @@ function siteSeoReadiness(pages: Awaited<ReturnType<typeof researchWebsite>>["pa
 
 type WebsiteVisualReview = { state: "not_attempted" | "unavailable" | "reviewed"; pageUrl: string | null; views: ("desktop" | "mobile")[]; capturedAt?: number; screenshots?: { view: "desktop" | "mobile"; width: number; height: number }[] };
 
-/** Capture at most one already-read page for ephemeral desktop/mobile model review. */
-async function captureWebsiteVisuals(pageUrl: string): Promise<{ inputs: NonNullable<AgentInput["visualInputs"]>; coverage: WebsiteVisualReview }> {
+/** Capture one already-read page for model review and short-lived, owner-visible evidence. */
+async function captureWebsiteVisuals(ctx: ActionCtx, orgId: Id<"organizations">, runId: Id<"workflowRuns">, pageUrl: string): Promise<{ inputs: NonNullable<AgentInput["visualInputs"]>; coverage: WebsiteVisualReview }> {
   const unavailable: WebsiteVisualReview = { state: "unavailable", pageUrl, views: [], capturedAt: Date.now(), screenshots: [] };
   const secret = process.env.CLIMBOS_SERVER_SECRET;
   if (!secret) return { inputs: [], coverage: unavailable };
@@ -2048,11 +2048,22 @@ async function captureWebsiteVisuals(pageUrl: string): Promise<{ inputs: NonNull
     const result = JSON.parse(raw) as { url?: string; shots?: { kind?: string; width?: number; height?: number; png?: string }[] };
     if (typeof result.url !== "string" || !samePublicSiteLink(pageUrl, result.url) || !Array.isArray(result.shots)) return { inputs: [], coverage: unavailable };
     const inputs: NonNullable<AgentInput["visualInputs"]> = [];
+    const capturedAt = Date.now();
     for (const shot of result.shots) {
       if ((shot.kind !== "desktop" && shot.kind !== "mobile") || typeof shot.png !== "string" || shot.png.length < 100 || shot.png.length > 4_000_000 || !/^[A-Za-z0-9+/=]+$/.test(shot.png)) continue;
+      const view = shot.kind;
+      const width = Number.isSafeInteger(shot.width) && (shot.width ?? 0) > 0 ? shot.width! : view === "desktop" ? 1440 : 390;
+      const height = Number.isSafeInteger(shot.height) && (shot.height ?? 0) > 0 ? shot.height! : view === "desktop" ? 900 : 844;
+      let storageId: Id<"_storage"> | undefined;
+      try {
+        storageId = await ctx.storage.store(new Blob([Buffer.from(shot.png, "base64")], { type: "image/png" }));
+        await ctx.runMutation(internal.designCritic.saveScreenshot, { orgId, runId, pageUrl, view, storageId, width, height, capturedAt });
+      } catch {
+        if (storageId) await ctx.storage.delete(storageId).catch(() => undefined);
+      }
       inputs.push({ sourceArtifactId: pageUrl, platform: `website_${shot.kind}`, imageUrl: `data:image/png;base64,${shot.png}`, note: `ClimbOS captured the publicly visible ${shot.kind} viewport (${shot.width ?? "unknown"}×${shot.height ?? "unknown"}) for this exact page during the audit at ${new Date().toISOString()}. This is one synthetic screenshot, not evidence of actual customer behavior or conversion performance.` });
     }
-    return inputs.length ? { inputs, coverage: { state: "reviewed", pageUrl, capturedAt: Date.now(), views: inputs.map((input) => input.platform === "website_desktop" ? "desktop" : "mobile"), screenshots: inputs.map((input) => ({ view: input.platform === "website_desktop" ? "desktop" as const : "mobile" as const, width: input.platform === "website_desktop" ? 1440 : 390, height: input.platform === "website_desktop" ? 900 : 844 })) } } : { inputs: [], coverage: unavailable };
+    return inputs.length ? { inputs, coverage: { state: "reviewed", pageUrl, capturedAt, views: inputs.map((input) => input.platform === "website_desktop" ? "desktop" : "mobile"), screenshots: inputs.map((input) => { const view = input.platform === "website_desktop" ? "desktop" as const : "mobile" as const; const shot = result.shots?.find((item) => item.kind === view); return { view, width: Number.isSafeInteger(shot?.width) && (shot?.width ?? 0) > 0 ? shot!.width! : view === "desktop" ? 1440 : 390, height: Number.isSafeInteger(shot?.height) && (shot?.height ?? 0) > 0 ? shot!.height! : view === "desktop" ? 900 : 844 }; }) } } : { inputs: [], coverage: unavailable };
   } catch {
     return { inputs: [], coverage: unavailable };
   }
@@ -2224,7 +2235,7 @@ export const conversionAudit = internalAction({
       const performanceContext = untrusted("Google PageSpeed / Chrome UX performance observations (machine-measured; use only for the exact URL shown)", JSON.stringify(performance), 2_500);
       const technicalSeoContext = untrusted("Existing ClimbOS Search Readiness checks applied to the exact sampled pages (static HTML observations; not proof of indexing, ranking, or causation)", JSON.stringify(seoReadiness), 3_500);
       const visualPageUrl = !job.run.isFixture ? pages.find((page) => page.status === "read")?.url : undefined;
-      const websiteVisual = visualPageUrl ? await captureWebsiteVisuals(visualPageUrl) : { inputs: [], coverage: { state: "not_attempted" as const, pageUrl: null, views: [] } };
+      const websiteVisual = visualPageUrl ? await captureWebsiteVisuals(ctx, job.org._id, runId, visualPageUrl) : { inputs: [], coverage: { state: "not_attempted" as const, pageUrl: null, views: [] } };
       const out = await runAgentTask<unknown>(
         ctx,
         job,

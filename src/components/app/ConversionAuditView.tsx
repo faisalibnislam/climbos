@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import { api } from "@convex/_generated/api";
@@ -25,6 +26,7 @@ type Coverage = { requestedUrl?: string | null; discoveredCandidates?: number; p
 type DesignDirection = { id?: string; name?: string; responseLevel?: "quick_fix" | "considered_redesign" | "bold_alternative"; communicates?: string; tradeoff?: string; change?: string; previewBrief?: string; measurementPlan?: string; effort?: string; assumptions?: string[]; risks?: string[] };
 type FindingStatus = "accepted" | "dismissed" | "deferred" | "resolved" | "reopened" | "corrected" | "needs_information";
 type FindingReview = { findingIndex: number; status?: FindingStatus; note: string; sourceUrl?: string; evidenceRef?: string; viewport?: string | null; screenshotCapturedAt?: number | null; selectedDirectionId?: string | null; selectedDirectionName?: string | null; selectedDirectionAt?: number | null; updatedAt: number };
+type AuditScreenshot = { view: "desktop" | "mobile"; pageUrl: string; width: number; height: number; capturedAt: number; url: string | null };
 type DesignFinding = { lens?: string; classification?: string; region?: string; observation?: string; businessOrUserGoal?: string; whyItMatters?: string; severity?: string; confidence?: string; evidence?: string; sourceUrl?: string; proposedChange?: string; directions?: DesignDirection[]; visualEvidence?: { view?: string; observation?: string }; automatedCheckIds?: string[]; requiresHumanEvaluation?: boolean };
 
 const obj = (value: unknown): Record<string, unknown> => value && typeof value === "object" ? value as Record<string, unknown> : {};
@@ -108,6 +110,13 @@ export function ConversionAuditView({ value, slug, runId }: { value: unknown; sl
       {Object.keys(designCritic).length ? <section className="rounded-xl border border-line p-4">
         <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="heading-section">Design Critic</h3><p className="mt-1 text-xs text-ink-3">Brand, clarity, trust, craft, accessibility and measured behavior are judged as separate lenses. Subjective judgments are labeled.</p></div><Badge tone={designCritic.coverage === "visual_sampled" ? "blue" : "amber"}>{label(designCritic.coverage, "coverage unknown").replaceAll("_", " ")}</Badge></div>
         {designCritic.summary ? <p className="mt-3 text-sm text-ink-2">{label(designCritic.summary)}</p> : null}
+        {findingReview?.screenshots?.length ? <div className="mt-3 grid gap-3 sm:grid-cols-2" aria-label="Website screenshots reviewed by Design Critic">{findingReview.screenshots.map((shot) => {
+          const capture = shot as AuditScreenshot;
+          return <figure key={capture.view} className="overflow-hidden rounded-lg border border-line bg-surface-2">
+            {capture.url ? <a href={capture.url} target="_blank" rel="noreferrer noopener" aria-label={`Open full ${capture.view} screenshot of the reviewed page`}><Image src={capture.url} alt={`${capture.view === "desktop" ? "Desktop" : "Mobile"} screenshot of ${capture.pageUrl}`} width={capture.width} height={capture.height} unoptimized className="block max-h-72 w-full object-contain object-top" loading="lazy" /></a> : <div className="p-3 text-sm text-ink-3">This screenshot is no longer available.</div>}
+            <figcaption className="p-3 text-xs text-ink-2"><span className="font-semibold capitalize text-ink">{capture.view} capture</span> · {capture.width} × {capture.height} · {formatDateTime(capture.capturedAt)}<a href={capture.pageUrl} target="_blank" rel="noreferrer noopener" className="mt-1 block break-all text-link">Open reviewed page <ExternalLink aria-hidden className="ml-1 inline size-3" /></a></figcaption>
+          </figure>;
+        })}</div> : null}
         {designFindings.length ? <ul className="mt-3 grid gap-2">{designFindings.map((finding, i) => <li key={`${finding.sourceUrl}-${finding.region}-${i}`} className="rounded-lg border border-line bg-surface-2/60 p-3">
           <div className="flex flex-wrap items-center gap-2"><Badge tone={finding.severity === "high" ? "amber" : "neutral"}>{label(finding.severity, "severity unknown")} priority</Badge><span className="text-sm font-semibold text-ink">{label(finding.region, "Page region")}</span><Badge>{label(finding.lens, "design lens").replaceAll("_", " ")}</Badge><Badge tone={finding.classification === "objective_defect" || finding.classification === "automated_check" ? "blue" : "violet"}>{label(finding.classification, "judgment unlabelled").replaceAll("_", " ")}</Badge><span className="text-xs text-ink-3">{label(finding.confidence, "confidence unknown")} confidence</span></div>
           {finding.observation ? <p className="mt-2 text-sm text-ink-2">{label(finding.observation)}</p> : null}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { api } from "../../convex/_generated/api";
+import { api, internal } from "../../convex/_generated/api";
 import { asNewUser, setup } from "./helpers";
 
 async function addAudit(t: ReturnType<typeof setup>, orgId: string) {
@@ -77,6 +77,36 @@ describe("Design Critic finding review", () => {
     await expect(other.client.query(api.designCritic.feedback, { slug: otherSlug, runId })).rejects.toThrow(/couldn't find/i);
     await expect(viewer.client.mutation(api.designCritic.setFeedback, { slug, runId, findingIndex: 0, status: "resolved" })).rejects.toThrow(/can't/i);
     expect(await viewer.client.query(api.designCritic.feedback, { slug, runId })).toMatchObject({ canEdit: false, rows: [{ status: "dismissed" }] });
+  });
+
+  it("shows private viewport captures only to members of the audit tenant and expires them", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "design-screenshot-owner@example.com");
+    const other = await asNewUser(t, "design-screenshot-other@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Design Co" });
+    const { slug: otherSlug } = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other Co" });
+    const runId = await addAudit(t, orgId);
+    const storageId = await t.run(async (ctx) => ctx.storage.store(new Blob([new Uint8Array([137, 80, 78, 71])], { type: "image/png" })));
+    const capturedAt = Date.now();
+
+    await t.mutation(internal.designCritic.saveScreenshot, { orgId: orgId as never, runId, pageUrl: "https://example.com/", view: "mobile", storageId, width: 390, height: 844, capturedAt });
+    expect(await owner.client.query(api.designCritic.feedback, { slug, runId })).toMatchObject({ screenshots: [{ view: "mobile", pageUrl: "https://example.com/", width: 390, height: 844, capturedAt, url: expect.any(String) }] });
+    await expect(other.client.query(api.designCritic.feedback, { slug: otherSlug, runId })).rejects.toThrow(/couldn't find/i);
+
+    await t.run(async (ctx) => ctx.db.patch((await ctx.db.query("websiteAuditScreenshots").first())!._id, { expiresAt: capturedAt - 1 }));
+    expect(await t.mutation(internal.maintenance.purgeWebsiteAuditScreenshots, {})).toBe(1);
+    expect(await owner.client.query(api.designCritic.feedback, { slug, runId })).toMatchObject({ screenshots: [] });
+  });
+
+  it("rejects screenshot records that do not belong to the exact audit tenant", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "design-screenshot-run-owner@example.com");
+    const other = await asNewUser(t, "design-screenshot-run-other@example.com");
+    const { orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Design Co" });
+    const runId = await addAudit(t, orgId);
+    const { orgId: otherOrgId } = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other Co" });
+    const storageId = await t.run(async (ctx) => ctx.storage.store(new Blob([new Uint8Array([137, 80, 78, 71])], { type: "image/png" })));
+    await expect(t.mutation(internal.designCritic.saveScreenshot, { orgId: otherOrgId as never, runId, pageUrl: "https://example.com/", view: "mobile", storageId, width: 390, height: 844, capturedAt: Date.now() })).rejects.toThrow(/same workspace/i);
   });
 
   it("rejects indices not present in the cited audit", async () => {

@@ -18,6 +18,19 @@ export const purgeExpiredSources = internalMutation({
   },
 });
 
+/** Website screenshots used for visual critique are private and retained for at most 30 days. */
+export const purgeWebsiteAuditScreenshots = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query("websiteAuditScreenshots").withIndex("by_expires", (q) => q.lte("expiresAt", Date.now())).take(100);
+    for (const row of rows) {
+      await ctx.storage.delete(row.storageId).catch(() => undefined);
+      await ctx.db.delete(row._id);
+    }
+    return rows.length;
+  },
+});
+
 /** Detailed activity retention: chat and step details older than the policy are removed; costs and audit stay. */
 export const purgeOldActivity = internalMutation({
   args: {},

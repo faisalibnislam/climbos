@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { audit } from "./lib/audit";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
@@ -32,11 +32,49 @@ export const feedback = query({
     if (run.kind !== "conversion_audit") throw appError("INVALID", "Review feedback is only available for website audits.");
     const findings = findingsFromRun(run);
     const rows = await ctx.db.query("designFindingReviews").withIndex("by_org_run", (q) => q.eq("orgId", org._id).eq("runId", runId)).take(20);
+    const screenshots = await ctx.db.query("websiteAuditScreenshots").withIndex("by_org_run_view", (q) => q.eq("orgId", org._id).eq("runId", runId)).take(2);
     return { canEdit: role === "owner" || role === "admin" || role === "editor", rows: rows.filter((row) => row.findingIndex < findings.length).map((row) => {
       const finding = findings[row.findingIndex] as { directions?: { id?: string; name?: string }[] };
       const selectedDirection = finding.directions?.find((direction) => direction.id === row.selectedDirectionId);
       return { findingIndex: row.findingIndex, status: row.status, note: row.note ?? "", sourceUrl: row.sourceUrl ?? "", evidenceRef: row.evidenceRef ?? `${runId}:${row.findingIndex}`, viewport: row.viewport ?? null, screenshotCapturedAt: row.screenshotCapturedAt ?? null, selectedDirectionId: selectedDirection?.id ?? null, selectedDirectionName: selectedDirection?.name ?? null, selectedDirectionAt: row.selectedDirectionAt ?? null, updatedAt: row.updatedAt };
-    }) };
+    }), screenshots: await Promise.all(screenshots.filter((shot) => shot.expiresAt > Date.now()).map(async (shot) => ({
+      view: shot.view,
+      pageUrl: shot.pageUrl,
+      width: shot.width,
+      height: shot.height,
+      capturedAt: shot.capturedAt,
+      url: await ctx.storage.getUrl(shot.storageId),
+    }))) };
+  },
+});
+
+/** Internal only: saves a render-worker screenshot for the exact tenant-owned audit run. */
+export const saveScreenshot = internalMutation({
+  args: {
+    orgId: v.id("organizations"),
+    runId: v.id("workflowRuns"),
+    pageUrl: v.string(),
+    view: v.union(v.literal("desktop"), v.literal("mobile")),
+    storageId: v.id("_storage"),
+    width: v.number(),
+    height: v.number(),
+    capturedAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const run = await ctx.db.get(args.runId);
+    if (!run || run.orgId !== args.orgId || run.kind !== "conversion_audit") throw appError("INVALID", "Screenshot must belong to a website audit in the same workspace.");
+    let page: URL;
+    try { page = new URL(args.pageUrl); } catch { throw appError("INVALID", "Screenshot source URL is invalid."); }
+    if (page.protocol !== "https:" || page.username || page.password || !Number.isSafeInteger(args.width) || !Number.isSafeInteger(args.height) || args.width < 1 || args.height < 1 || args.width > 4096 || args.height > 4096 || !Number.isFinite(args.capturedAt)) {
+      throw appError("INVALID", "Screenshot metadata is invalid.");
+    }
+    const existing = await ctx.db.query("websiteAuditScreenshots").withIndex("by_org_run_view", (q) => q.eq("orgId", args.orgId).eq("runId", args.runId).eq("view", args.view)).first();
+    if (existing) {
+      await ctx.storage.delete(existing.storageId).catch(() => undefined);
+      await ctx.db.patch(existing._id, { pageUrl: args.pageUrl, storageId: args.storageId, width: args.width, height: args.height, capturedAt: args.capturedAt, expiresAt: args.capturedAt + 30 * 86_400_000 });
+    } else {
+      await ctx.db.insert("websiteAuditScreenshots", { ...args, expiresAt: args.capturedAt + 30 * 86_400_000 });
+    }
   },
 });
 
