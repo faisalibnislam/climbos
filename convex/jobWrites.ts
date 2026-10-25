@@ -855,7 +855,7 @@ const artifactInputValidator = v.object({
   body: v.string(),
   contentAngle: v.optional(v.string()),
   copyBrief: v.optional(v.object({
-    reader: v.string(), situation: v.string(), awarenessStage: v.string(), relationshipStage: v.string(), objective: v.string(),
+    reader: v.string(), situation: v.string(), awarenessStage: v.string(), relationshipStage: v.string(), objective: v.string(), approvedOfferPlayName: v.optional(v.string()),
     offerFactIndexes: v.array(v.number()), problemJob: v.string(), trigger: v.string(), centralIdea: v.string(), objection: v.string(),
     proofFactIndexes: v.array(v.number()), prohibitedClaims: v.array(v.string()), channel: v.string(), format: v.string(), deliveryContext: v.string(),
     brandVoice: v.string(), approvedExamples: v.array(v.string()), cta: v.string(), afterAction: v.string(), trackingMetric: v.string(), trackingMethod: v.string(),
@@ -904,7 +904,7 @@ export const saveArtifacts = internalMutation({
 });
 
 /** Convert task outputs into artifact inputs (pure helpers used by jobs). */
-export function socialToArtifacts(out: Omit<SocialPostsOutput, "posts"> & { copyBrief?: CopyBrief; posts: (SocialPostsOutput["posts"][number] & { angle?: string; trendSourceUrl?: string })[] }, now: number): Omit<ArtifactInput, "imageStorageId">[] {
+export function socialToArtifacts(out: Omit<SocialPostsOutput, "posts"> & { copyBrief?: CopyBrief; posts: (SocialPostsOutput["posts"][number] & { angle?: string; trendSourceUrl?: string; approvedOfferPlayName?: string })[] }, now: number): Omit<ArtifactInput, "imageStorageId">[] {
   return out.posts.map((p, i) => ({
     kind: "social_post" as const,
     channel: p.channel,
@@ -913,6 +913,7 @@ export function socialToArtifacts(out: Omit<SocialPostsOutput, "posts"> & { copy
     contentAngle: p.angle,
     copyBrief: out.copyBrief ? {
       ...out.copyBrief,
+      approvedOfferPlayName: p.approvedOfferPlayName ?? out.copyBrief.approvedOfferPlayName,
       supportingSourceUrls: [...new Set([...out.copyBrief.supportingSourceUrls, ...(p.trendSourceUrl ? [p.trendSourceUrl] : [])])],
     } : undefined,
     hashtags: p.hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)),

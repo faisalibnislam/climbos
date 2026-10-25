@@ -160,6 +160,7 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
                       <dl className="grid gap-2 text-sm sm:grid-cols-2">
                         <div><dt className="text-xs text-ink-3">Intended reader</dt><dd className="text-ink">{cur.copyBrief.reader}</dd></div>
                         <div><dt className="text-xs text-ink-3">Objective</dt><dd className="text-ink">{cur.copyBrief.objective}</dd></div>
+                        {cur.copyBrief.approvedOfferPlayName ? <div className="sm:col-span-2"><dt className="text-xs text-ink-3">Plan item used</dt><dd className="text-ink">{cur.copyBrief.approvedOfferPlayName}</dd></div> : null}
                         <div className="sm:col-span-2"><dt className="text-xs text-ink-3">Core idea</dt><dd className="text-ink">{cur.copyBrief.centralIdea}</dd></div>
                       </dl>
                       {cur.copyBrief.supportingSourceUrls.some((url) => /^https?:\/\//i.test(url)) ? (

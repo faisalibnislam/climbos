@@ -519,6 +519,8 @@ export const CopyBriefSchema = z.object({
   awarenessStage: z.enum(["unaware", "problem_aware", "solution_aware", "product_aware", "most_aware", "unknown"]),
   relationshipStage: z.enum(["cold", "prospect", "consented_lead", "customer", "returning_customer", "unknown"]),
   objective: z.string(),
+  /** Exact approved-plan play whose terms this campaign copy represents, when applicable. */
+  approvedOfferPlayName: z.string().min(1).max(120).optional(),
   offerFactIndexes: z.array(z.number()),
   problemJob: z.string(),
   trigger: z.string(),
@@ -547,6 +549,8 @@ export const SocialPostsV2Schema = z.object({
     SocialPostsSchema.shape.posts.element.extend({
       /** Internal strategy cue shown to the owner; keep it to one specific idea. */
       angle: copyAngleSchema,
+      /** Exact approved-plan play whose terms this post represents, when applicable. */
+      approvedOfferPlayName: z.string().min(1).max(120).optional(),
       /** Exact run-supplied source for this post's trend or meme reference. */
       trendSourceUrl: z.string().url().optional(),
       format: postFormat,
@@ -1628,7 +1632,7 @@ function lintSocial(out: SocialPostsV2, input: AgentInput, requestedChannels: st
     const lim = CHANNEL_LIMITS[p.channel] ?? CHANNEL_LIMITS.instagram;
     const path = `posts[${i}]`;
     issues.push(
-      ...lintApprovedOfferCopy([p.title, p.hook, p.body, ...p.slides.map((slide) => `${slide.heading} ${slide.body}`), p.videoScript, p.firstComment].join("\n"), input.approvedOfferTerms, `${path}.body`),
+      ...lintApprovedOfferCopy([p.title, p.hook, p.body, ...p.slides.map((slide) => `${slide.heading} ${slide.body}`), p.videoScript, p.firstComment].join("\n"), input.approvedOfferTerms, `${path}.body`, p.approvedOfferPlayName ?? out.copyBrief.approvedOfferPlayName),
       ...lintCopy({ title: p.title, hook: p.hook, angle: p.angle, body: p.body, slides: p.slides, script: p.videoScript, firstComment: p.firstComment, altText: p.altText }, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), emojiPer150: lim.emojiPer150, publishable: true }).map((l) => ({ ...l, path: `${path}.${l.path ?? ""}` })),
       ...lintFactIndexes(p.factIndexes, input.facts.length, `${path}.factIndexes`),
       // Internal creative notes are not publishable claims, but cannot contain owner questions.
@@ -1674,8 +1678,8 @@ function lintAds(out: AdDraftsV2, input: AgentInput): LintIssue[] {
     ...out.searchAds.flatMap((ad, i) => ad.headlines.concat(ad.descriptions).map((text) => ({ path: `searchAds[${i}]`, text }))),
     ...out.metaAds.flatMap((ad, i) => [ad.primaryText, ad.headline, ad.description].map((text) => ({ path: `metaAds[${i}]`, text }))),
   ], input), ...lintAdDestinations(out, input), ...lintFactIndexes(out.factIndexes, input.facts.length)];
-  out.searchAds.forEach((ad, index) => issues.push(...lintApprovedOfferCopy([...ad.headlines, ...ad.descriptions].join("\n"), input.approvedOfferTerms, `searchAds[${index}]`)));
-  out.metaAds.forEach((ad, index) => issues.push(...lintApprovedOfferCopy([ad.headline, ad.primaryText, ad.description].join("\n"), input.approvedOfferTerms, `metaAds[${index}]`)));
+  out.searchAds.forEach((ad, index) => issues.push(...lintApprovedOfferCopy([...ad.headlines, ...ad.descriptions].join("\n"), input.approvedOfferTerms, `searchAds[${index}]`, out.copyBrief.approvedOfferPlayName)));
+  out.metaAds.forEach((ad, index) => issues.push(...lintApprovedOfferCopy([ad.headline, ad.primaryText, ad.description].join("\n"), input.approvedOfferTerms, `metaAds[${index}]`, out.copyBrief.approvedOfferPlayName)));
   out.searchAds.forEach((a, i) => {
     const path = `searchAds[${i}]`;
     issues.push(...minItems(a.headlines, 3, `${path}.headlines`, "headlines"), ...maxItems(a.headlines, 15, `${path}.headlines`, "headlines"));
@@ -1800,8 +1804,12 @@ export function lintCopyBrief(brief: CopyBrief | undefined, input: AgentInput): 
   const inventedExamples = brief.approvedExamples.flatMap((example, i) => approvedExamples.has(normalizeExample(example))
     ? []
     : [{ severity: "error" as const, rule: "approved_example", message: "Use only an exact example the owner saved as approved; omit this field when none was supplied.", path: `copyBrief.approvedExamples[${i}]` }]);
+  const offerPlayIssue = brief.approvedOfferPlayName && !input.approvedOfferTerms?.some((offer) => offer.playName === brief.approvedOfferPlayName)
+    ? [{ severity: "error" as const, rule: "approved_offer_play", message: "Choose an exact play name from the currently approved plan, or leave this field out when the draft is not about a planned offer.", path: "copyBrief.approvedOfferPlayName" }]
+    : [];
   return [
     ...inventedExamples,
+    ...offerPlayIssue,
     ...refs.flatMap(({ index, path }) => lintFactIndexes([index], input.facts.length, path)),
     ...lintAvailableSourceUrls(brief.supportingSourceUrls.map((url, i) => ({ url, path: `copyBrief.supportingSourceUrls[${i}]` })), input),
   ];
@@ -2402,7 +2410,7 @@ export function emailSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof EmailSe
       skills: ["copy-fundamentals", "lifecycle-email"],
       schema: EmailSequenceV2Schema,
       rubric: rubricOf("lifecycle-email"),
-      lint: (out, input) => [...lintCopyBrief(out.copyBrief, input), ...lintPublishable(out, input), ...out.emails.flatMap((email, index) => lintApprovedOfferCopy([email.subject, email.previewText, email.body, email.callToAction].join("\n"), input.approvedOfferTerms, `emails[${index}]`)), ...lintDistinctAngles(out.emails.map((e, i) => ({ path: `emails[${i}].angle`, angle: e.angle }))), ...lintRepeatedCopyPieces(out.emails.map((e, i) => ({ path: `emails[${i}]`, text: `${e.subject}\n${e.previewText}\n${e.body}` }))), ...lintEmbeddedUrls(out.emails.flatMap((email, i) => [
+      lint: (out, input) => [...lintCopyBrief(out.copyBrief, input), ...lintPublishable(out, input), ...out.emails.flatMap((email, index) => lintApprovedOfferCopy([email.subject, email.previewText, email.body, email.callToAction].join("\n"), input.approvedOfferTerms, `emails[${index}]`, out.copyBrief.approvedOfferPlayName)), ...lintDistinctAngles(out.emails.map((e, i) => ({ path: `emails[${i}].angle`, angle: e.angle }))), ...lintRepeatedCopyPieces(out.emails.map((e, i) => ({ path: `emails[${i}]`, text: `${e.subject}\n${e.previewText}\n${e.body}` }))), ...lintEmbeddedUrls(out.emails.flatMap((email, i) => [
         { path: `emails[${i}].subject`, text: email.subject },
         { path: `emails[${i}].previewText`, text: email.previewText },
         { path: `emails[${i}].body`, text: email.body },
@@ -2517,6 +2525,8 @@ export const SocialCalendarSchema = z.object({
       format: postFormat,
       idea: z.string(),
       angle: z.string(),
+      /** Exact approved-plan play whose terms this slot represents, when applicable. */
+      approvedOfferPlayName: z.string().min(1).max(120).optional(),
       hookDraft: z.string(),
       proof: z.string(),
       callToAction: z.string(),
@@ -2541,7 +2551,7 @@ export function socialCalendarSpec(cadence: Record<string, number>, o: SpecOptio
       rubric: rubricOf("social-calendar"),
       criticSkills: ["copy-fundamentals", "social-intelligence"],
       lint: (out, input) => {
-        const issues = [...lintCopy({ theme: out.weekTheme, slots: out.slots.map((s) => ({ idea: s.idea, hook: s.hookDraft })) }, { evidence: evidenceOf(input) }), ...out.slots.flatMap((slot, index) => lintApprovedOfferCopy(`${slot.idea}\n${slot.hookDraft}`, input.approvedOfferTerms, `slots[${index}]`))];
+        const issues = [...lintCopy({ theme: out.weekTheme, slots: out.slots.map((s) => ({ idea: s.idea, hook: s.hookDraft })) }, { evidence: evidenceOf(input) }), ...out.slots.flatMap((slot, index) => lintApprovedOfferCopy(`${slot.idea}\n${slot.hookDraft}\n${slot.callToAction}`, input.approvedOfferTerms, `slots[${index}]`, slot.approvedOfferPlayName))];
         const trendReferences: { url: string; path: string }[] = [];
         for (const [channel, n] of Object.entries(cadence)) {
           const got = out.slots.filter((s) => s.channel === channel).length;

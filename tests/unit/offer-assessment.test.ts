@@ -165,7 +165,13 @@ describe("offer and promotion recommendations", () => {
     expect(terms).toEqual([{ playName: "Test offer", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [100, 95], allowedDiscountPercentages: [5], allowedMechanisms: ["discount"], urgencyClaim: null, eligibleAudience: "First-time quote requesters who cite price; exclude existing full-price bookings." }]);
     expect(lintApprovedOfferCopy("Try it for $95 USD.", terms, "email.body")).toEqual([]);
     expect(lintApprovedOfferCopy("Try it for $89 USD.", terms, "email.body")).toMatchObject([{ rule: "approved_offer_price", severity: "error" }]);
-    expect(lintApprovedOfferCopy("The first offer is $95 USD and the second is $200 USD.", [...terms, { playName: "Annual service", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [200], urgencyClaim: null, eligibleAudience: null }], "email.body")).toEqual([]);
+    const twoOffers = [...terms, { playName: "Annual service", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [200], urgencyClaim: null, eligibleAudience: null }];
+    expect(lintApprovedOfferCopy("A helpful note about preparing for a service visit.", twoOffers, "email.body")).toEqual([]);
+    expect(lintApprovedOfferCopy("The offer is $95 USD.", twoOffers, "email.body")).toMatchObject([{ rule: "approved_offer_play", severity: "error" }]);
+    expect(lintApprovedOfferCopy("The offer is $95 USD.", twoOffers, "email.body", "Test offer")).toEqual([]);
+    expect(lintApprovedOfferCopy("The offer is $200 USD.", twoOffers, "email.body", "Test offer")).toMatchObject([{ rule: "approved_offer_price", severity: "error" }]);
+    expect(lintApprovedOfferCopy("The offer is $200 USD.", twoOffers, "email.body", "Missing play")).toMatchObject([{ rule: "approved_offer_play", severity: "error" }]);
+    expect(lintApprovedOfferCopy("The offer costs 200 BDT.", [{ ...twoOffers[0], currency: "BDT" }, { ...twoOffers[1], currency: "BDT", allowedPrices: [300] }], "email.body")).toMatchObject([{ rule: "approved_offer_play", severity: "error" }]);
     expect(lintApprovedOfferCopy("Limited-time offer ends tomorrow.", terms, "email.body").some((issue) => issue.rule === "approved_offer_urgency")).toBe(true);
     const supportedUrgency = [{ ...terms[0], urgencyClaim: "Limited-time offer ends November 30, 2026." }];
     expect(lintApprovedOfferCopy("Limited-time offer ends November 30, 2026.", supportedUrgency, "email.body").some((issue) => issue.rule === "approved_offer_urgency")).toBe(false);
@@ -176,7 +182,9 @@ describe("offer and promotion recommendations", () => {
       ...terms,
       { ...terms[0], playName: "Member offer", eligibleAudience: "Current subscribers" },
     ];
-    expect(lintApprovedOfferCopy("Get a 5% discount today.", separateAudiences, "email.body").some((issue) => issue.rule === "approved_offer_eligibility")).toBe(false);
+    expect(lintApprovedOfferCopy("Get a 5% discount for first-time quote requesters.", separateAudiences, "email.body")).toMatchObject([{ rule: "approved_offer_play", severity: "error" }]);
+    expect(lintApprovedOfferCopy("Get a 5% discount for first-time quote requesters.", separateAudiences, "email.body", "Test offer").some((issue) => issue.rule === "approved_offer_eligibility")).toBe(false);
+    expect(lintApprovedOfferCopy("Get a 5% discount for current subscribers.", separateAudiences, "email.body", "Test offer")).toMatchObject([{ rule: "approved_offer_eligibility", severity: "error" }]);
     expect(lintApprovedOfferCopy("Get a free trial for first-time quote requesters.", terms, "email.body").some((issue) => issue.rule === "approved_offer_mechanism")).toBe(true);
     expect(lintApprovedOfferCopy("Get a 5% discount for first-time quote requesters.", terms, "email.body").some((issue) => issue.rule === "approved_offer_mechanism")).toBe(false);
     expect(lintApprovedOfferCopy("Get a 10% discount for first-time quote requesters.", terms, "email.body")).toMatchObject([{ rule: "approved_offer_discount", severity: "error" }]);
@@ -192,5 +200,15 @@ describe("offer and promotion recommendations", () => {
     expect(adsSpec().lint?.(adsOutput, copyInput).some((issue) => issue.rule === "approved_offer_price")).toBe(true);
     const calendarOutput = { weekTheme: "Service offers", pillars: [], slots: [{ channel: "instagram", day: 1, pillar: "offers", purpose: "teach" as const, format: "text" as const, idea: "Share a 5% discount.", angle: "price", hookDraft: "Get a 5% discount today.", proof: "", callToAction: "Learn more", needsOwner: false, ownerNote: "" }], learningsApplied: [] };
     expect(socialCalendarSpec({ instagram: 1 }).lint?.(calendarOutput, copyInput).some((issue) => issue.rule === "approved_offer_eligibility")).toBe(true);
+    const multipleOfferInput = { ...copyInput, approvedOfferTerms: twoOffers };
+    expect(socialCalendarSpec({ instagram: 1 }).lint?.(calendarOutput, multipleOfferInput).some((issue) => issue.rule === "approved_offer_play")).toBe(true);
+    const offerInCalendarCta = { ...calendarOutput, slots: [{ ...calendarOutput.slots[0], idea: "Explain how to prepare.", hookDraft: "Planning starts with one small step.", callToAction: "Claim the $95 USD offer." }] };
+    expect(socialCalendarSpec({ instagram: 1 }).lint?.(offerInCalendarCta, multipleOfferInput).some((issue) => issue.rule === "approved_offer_play")).toBe(true);
+    const boundCalendarOutput = { ...calendarOutput, slots: [{ ...calendarOutput.slots[0], approvedOfferPlayName: "Test offer" }] };
+    expect(socialCalendarSpec({ instagram: 1 }).lint?.(boundCalendarOutput, multipleOfferInput).some((issue) => issue.rule === "approved_offer_play")).toBe(false);
+    const postBoundToSecondOffer = { ...socialOutput, posts: [{ ...socialOutput.posts[0], hook: "The annual service is $200 USD.", approvedOfferPlayName: "Annual service" }] };
+    expect(socialSpec(["instagram"]).lint?.(postBoundToSecondOffer, multipleOfferInput).some((issue) => issue.rule === "approved_offer_play" || issue.rule === "approved_offer_price")).toBe(false);
+    const postBoundToWrongOffer = { ...postBoundToSecondOffer, posts: [{ ...postBoundToSecondOffer.posts[0], approvedOfferPlayName: "Test offer" }] };
+    expect(socialSpec(["instagram"]).lint?.(postBoundToWrongOffer, multipleOfferInput).some((issue) => issue.rule === "approved_offer_price")).toBe(true);
   });
 });

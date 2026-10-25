@@ -15,6 +15,8 @@ The application uses task-based navigation and plain-language explanations. Exis
 
 Home and first/additional business onboarding share `RequestComposer`. A suggestion only adds editable text; it never starts work. Existing input is preserved when another suggestion is selected. The contextual Climb panel follows the same suggestion behavior and labels its separate page-help conversation.
 
+Content review shows the draft's intended reader, objective, core idea, and exact growth-plan item when the copy is tied to one. Planned Autopilot slots show the same plan item before drafting, so owners can see which approved offer the post will use.
+
 Command search uses local filtering. A natural-language request is handed to Home as an editable draft rather than dispatched from search. Handoff keys are scoped to the signed-in person and workspace. The assistant provider resets transient state when the workspace or authenticated identity changes.
 
 Onboarding starts with a business description, accepts a business without a website, shows an editable name, and offers a conventional form using the supplied information. Additional-business setup explains its separate data context and retains the existing workspace creation and research functions. An explicit unauthorized setup URL shows an access explanation rather than silently falling back to another company's setup.

@@ -74,6 +74,7 @@ export const get = query({
                 purpose: s.purpose,
                 format: s.format,
                 idea: s.idea,
+                approvedOfferPlayName: s.approvedOfferPlayName ?? null,
                 hookDraft: s.hookDraft,
                 status: s.status,
                 needsOwner: s.needsOwner,
@@ -498,6 +499,7 @@ export const saveWeekPlan = internalMutation({
         format: s.format,
         idea: s.idea.slice(0, 400),
         angle: s.angle.slice(0, 300),
+        approvedOfferPlayName: s.approvedOfferPlayName?.slice(0, 120),
         hookDraft: s.hookDraft.slice(0, 300),
         callToAction: s.callToAction.slice(0, 200),
         needsOwner: s.needsOwner,
@@ -569,7 +571,7 @@ function draftBrief(slots: Doc<"calendarSlots">[], timeZone: string) {
   const day = (t: number) => new Date(t).toLocaleString("en-US", { timeZone, weekday: "long", hour: "numeric", minute: "2-digit" });
   return [
     `Write exactly ${slots.length} post${slots.length === 1 ? "" : "s"}, one per planned slot below, in this order. Follow each slot's idea, format and call to action; the hook draft is a starting point you may improve.`,
-    ...slots.map((s, i) => `${i + 1}. ${day(s.slotAt)} · ${s.format} · ${s.purpose} · pillar "${s.pillar}"\n   Idea: ${s.idea}\n   Angle: ${s.angle}\n   Hook draft: ${s.hookDraft}\n   Call to action: ${s.callToAction}${s.ownerNote ? `\n   Note: ${s.ownerNote}` : ""}`),
+    ...slots.map((s, i) => `${i + 1}. ${day(s.slotAt)} · ${s.format} · ${s.purpose} · pillar "${s.pillar}"\n   Idea: ${s.idea}\n   Angle: ${s.angle}${s.approvedOfferPlayName ? `\n   Exact approved offer play: ${s.approvedOfferPlayName}` : ""}\n   Hook draft: ${s.hookDraft}\n   Call to action: ${s.callToAction}${s.ownerNote ? `\n   Note: ${s.ownerNote}` : ""}`),
   ].join("\n");
 }
 

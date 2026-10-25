@@ -227,12 +227,44 @@ const OFFER_MECHANISM_PATTERNS: Record<string, RegExp> = {
 };
 
 /** Adds approved-plan deadline/scarcity checks to deterministic price consistency. */
-export function lintApprovedOfferCopy(text: string, offers: ApprovedOfferCopyTerms[] | undefined, path: string): LintIssue[] {
-  const issues = lintApprovedOfferPrices(text, offers, path);
-  if (!offers?.length) return issues;
-  const mechanismBound = offers.some((offer) => offer.allowedMechanisms?.length);
+const OFFER_SPECIFIC_COPY = new RegExp(`${PROMOTION_WORDS.source}|${URGENCY_WORDS.source}|(?:[$£€]\\s*\\d|\\b\\d[\\d,.]*\\s*(?:USD|EUR|GBP|CAD|AUD)\\b)`, "i");
+
+function hasOfferCurrencyAmount(text: string, offers: ApprovedOfferCopyTerms[]): boolean {
+  const amount = "(\\d{1,3}(?:,\\d{3})+(?:\\.\\d+)?|\\d+(?:\\.\\d+)?)";
+  return offers.some((offer) => {
+    if (!/^[A-Z]{3}$/.test(offer.currency)) return false;
+    let symbol = offer.currency;
+    try {
+      symbol = new Intl.NumberFormat("en", { style: "currency", currency: offer.currency }).formatToParts(1).find((part) => part.type === "currency")?.value ?? symbol;
+    } catch { /* Fall back to matching the ISO currency code. */ }
+    const escape = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const marker = `(?:${escape(symbol)}|${escape(offer.currency)})`;
+    return new RegExp(`(?:${marker}\\s*${amount}|${amount}\\s*${marker})`, "i").test(text);
+  });
+}
+
+/** Validate offer language against the exact approved plan play it represents. */
+export function lintApprovedOfferCopy(text: string, offers: ApprovedOfferCopyTerms[] | undefined, path: string, approvedOfferPlayName?: string): LintIssue[] {
+  if (!offers?.length) return [];
+  const hasOfferSpecificCopy = OFFER_SPECIFIC_COPY.test(text) || hasOfferCurrencyAmount(text, offers);
+  const issues: LintIssue[] = [];
+  let applicableOffers = offers;
+  if (approvedOfferPlayName) {
+    const selected = offers.find((offer) => offer.playName === approvedOfferPlayName);
+    if (!selected) {
+      if (hasOfferSpecificCopy) issues.push({ severity: "error", rule: "approved_offer_play", message: "This draft names an approved plan play that is not available in the current approved plan. Choose its exact play name or remove the offer claims.", path });
+      applicableOffers = [];
+    } else applicableOffers = [selected];
+  } else if (offers.length > 1 && hasOfferSpecificCopy) {
+    issues.push({ severity: "error", rule: "approved_offer_play", message: "This draft uses offer terms but does not identify which approved plan play it belongs to. Add the exact play name to the campaign brief or calendar slot so its price, audience, and conditions can be checked together.", path });
+    applicableOffers = [];
+  }
+  const priceIssues = lintApprovedOfferPrices(text, applicableOffers, path);
+  issues.push(...priceIssues);
+  if (!applicableOffers.length) return issues;
+  const mechanismBound = applicableOffers.some((offer) => offer.allowedMechanisms?.length);
   if (mechanismBound) {
-    const approvedMechanisms = new Set(offers.flatMap((offer) => offer.allowedMechanisms ?? []));
+    const approvedMechanisms = new Set(applicableOffers.flatMap((offer) => offer.allowedMechanisms ?? []));
     for (const [mechanism, pattern] of Object.entries(OFFER_MECHANISM_PATTERNS)) {
       if (pattern.test(text) && !approvedMechanisms.has(mechanism)) {
         issues.push({ severity: "error", rule: "approved_offer_mechanism", message: `This copy introduces a ${mechanism.replaceAll("_", " ")} mechanism that is not in the owner-approved promotion terms. Keep the offer mechanism consistent with the approved plan.`, path });
@@ -240,14 +272,14 @@ export function lintApprovedOfferCopy(text: string, offers: ApprovedOfferCopyTer
     }
   }
   if (URGENCY_WORDS.test(text)) {
-    const supportedClaims = offers.map((offer) => offer.urgencyClaim?.trim()).filter((claim): claim is string => Boolean(claim));
+    const supportedClaims = applicableOffers.map((offer) => offer.urgencyClaim?.trim()).filter((claim): claim is string => Boolean(claim));
     const normalizedText = text.normalize("NFKC").replace(/\s+/gu, " ").toLocaleLowerCase("en-US");
     const exactSupportedClaim = supportedClaims.some((claim) => normalizedText.includes(claim.normalize("NFKC").replace(/\s+/gu, " ").toLocaleLowerCase("en-US")));
     if (!exactSupportedClaim) {
       issues.push({ severity: "error", rule: "approved_offer_urgency", message: "This copy adds a deadline, scarcity, or limited-availability claim that is not present in the approved offer evidence. Remove it or use the exact supported claim from the plan.", path });
     }
   }
-  const promotionOffers = offers.filter((offer) => offer.recommendation === "recommend_promotion" || offer.recommendation === "validate_first");
+  const promotionOffers = applicableOffers.filter((offer) => offer.recommendation === "recommend_promotion" || offer.recommendation === "validate_first");
   const restrictedAudiences = promotionOffers
     .map((offer) => offer.eligibleAudience?.split(/;\s*(?:exclude|except|not eligible)\b/i)[0]?.trim())
     .filter((audience): audience is string => Boolean(audience && RESTRICTED_AUDIENCE.test(audience)));

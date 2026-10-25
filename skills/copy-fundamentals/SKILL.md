@@ -120,6 +120,7 @@ Other useful levers include clear language, salience, credible demonstrations, h
 - Real deadlines only. If the brief has no deadline, there is no urgency.
 - Never present an anchor, decoy, tier order, bundle, trial, or default as inherently optimal. Explain the customer value and test business outcomes with trust and cancellation guardrails.
 - **Use the strongest confirmed offer.** If the site states it (free trial, no card, free quote, live demo), it is a confirmed fact: lead with it. Hiding a stated offer "until confirmed" loses the reader.
+- When using a promotion or offer from the approved growth plan, name the exact approved play in the copy brief. Check its price, audience, mechanism, deadline, and conditions only against that play; never borrow a term from another play. If the plan has multiple plays and the draft does not identify one, ask for the missing choice or remove offer-specific claims.
 
 ### Voice and channel-native craft (lessons from blind expert reviews)
 

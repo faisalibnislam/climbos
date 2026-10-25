@@ -545,6 +545,7 @@ function SlotCard({ slug, slot, tz, canAct }: { slug: string; slot: Slot; tz: st
       ) : (
         <p className="line-clamp-2 text-ui text-ink-2">{slot.idea}</p>
       )}
+      {slot.approvedOfferPlayName ? <p className="text-xs text-ink-3">Plan item: {slot.approvedOfferPlayName}</p> : null}
       <Tooltip content={reasons.length ? reasons.join(" ") : `${slot.purpose} · ${slot.format.replace("_", " ")} · ${slot.pillar}`}>
         <span tabIndex={0} className="self-start rounded-md">
           <Badge tone={st.tone} icon={st.icon}>
