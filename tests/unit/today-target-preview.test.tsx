@@ -17,16 +17,25 @@ const preview: TodayTargetPreview = {
   hasMore: true,
 };
 
-describe("Home possible-customer preview", () => {
-  it("shows a few public-research suggestions and links to full plan evidence", () => {
+describe("Home plan target preview", () => {
+  it("labels creator suggestions as possible partners and links to full plan evidence", () => {
     const html = renderToStaticMarkup(createElement(TodayTargetPreviewCard, { slug: "flow-studio", preview }));
-    expect(html).toContain("Possible customers");
+    expect(html).toContain("Possible creator partners");
     expect(html).toContain("Ready to review");
     expect(html).toContain("Sample Creator");
     expect(html).toContain("More creator profiles are listed in your plan.");
-    expect(html).toContain("not confirmed customers");
+    expect(html).toContain("not confirmed partners");
     expect(html).toContain("Nothing is sent from Home.");
     expect(html).toContain("/app/flow-studio/plan#plays");
+  });
+
+  it("keeps business target suggestions labeled as possible customers", () => {
+    const html = renderToStaticMarkup(createElement(TodayTargetPreviewCard, {
+      slug: "flow-studio", preview: { ...preview, kind: "customers", playId: "customer-play", matches: [{ id: "target-1" as TodayTargetPreview["matches"][number]["id"], name: "Sample Company" }], hasMore: false },
+    }));
+    expect(html).toContain("Possible customers");
+    expect(html).toContain("not confirmed customers");
+    expect(html).not.toContain("creator partners");
   });
 
   it("keeps progress useful when research is still running and hides absent previews", () => {

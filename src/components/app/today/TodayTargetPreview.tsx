@@ -13,12 +13,17 @@ const STATUS: Record<TodayTargetPreview["status"], { label: string; tone: "blue"
 export function TodayTargetPreviewCard({ slug, preview }: { slug: string; preview: TodayTargetPreview | null }) {
   if (!preview) return null;
   const status = STATUS[preview.status];
-  const kind = preview.kind === "creators" ? "creator profiles" : "businesses";
+  const isCreatorSearch = preview.kind === "creators";
+  const kind = isCreatorSearch ? "creator profiles" : "businesses";
+  const title = isCreatorSearch ? "Possible creator partners" : "Possible customers";
+  const evidenceNote = isCreatorSearch
+    ? "These are creator suggestions from public research, not confirmed partners. Check their fit and evidence before deciding whether to contact them. Nothing is sent from Home."
+    : "These are business suggestions from public research, not confirmed customers. Check their fit and evidence before deciding whether to contact them. Nothing is sent from Home.";
 
   return (
     <section aria-labelledby="today-targets-heading" className="rounded-xl border border-line bg-surface p-4 shadow-[var(--card-shadow)]">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="today-targets-heading" className="heading-card">Possible customers</h2>
+        <h2 id="today-targets-heading" className="heading-card">{title}</h2>
         <Badge tone={status.tone}>{status.label}</Badge>
       </div>
       <p className="mt-1 text-xs text-ink-3">From your plan: {preview.playName}</p>
@@ -29,7 +34,7 @@ export function TodayTargetPreviewCard({ slug, preview }: { slug: string; previe
             {preview.matches.map((match) => <li key={match.id} className="px-3 py-2 text-sm font-medium text-ink">{match.name}</li>)}
           </ul>
           {preview.hasMore ? <p className="mt-2 text-xs text-ink-3">More {kind} are listed in your plan.</p> : null}
-          <p className="mt-2 text-xs text-ink-3">These are suggestions from public research, not confirmed customers. Check their fit and evidence before deciding whether to contact them. Nothing is sent from Home.</p>
+          <p className="mt-2 text-xs text-ink-3">{evidenceNote}</p>
         </>
       ) : null}
       <Link href={`/app/${slug}/plan#plays`} className={`${buttonClasses({ variant: "link" })} mt-3`}>
