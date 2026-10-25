@@ -3,6 +3,7 @@ import { approvedPlanContext, approvedPlanOfferTerms } from "../../shared/agents
 import { evaluateOfferUnitEconomics, lintApprovedOfferCopy, lintOfferAssessment, type OfferAssessment } from "../../shared/agents/offerAssessment";
 import { OFFER_DECISION_POLICY, playsTask } from "../../shared/agents/planTasks";
 import { adsSpec, emailSpec, socialCalendarSpec, socialSpec } from "../../shared/agents/specs";
+import { offerAlternativeLabel, offerCapacityLabel, offerEvidenceLabel, offerEvidenceStatusLabel, offerMechanismLabel, offerRecommendationLabel, offerReferenceLabel, offerRiskLabel } from "../../src/components/app/plan/offerPresentation";
 
 const fact = "Owner reports that qualified quote requests do not book because of stated price objections. Current offer is $100 per service. Proposed offer is $95 per service. Variable labor is $40 per service, payment fee is $3 per sale, fulfillment costs $7 per service, and the proposed bonus costs $5 per service. Owner minimum contribution is $35 per sale and minimum contribution margin is 30%. The team has capacity for 20 additional jobs per month.";
 const context = { facts: [fact], researchNotes: "", sourceUrls: [], evidenceText: fact };
@@ -77,6 +78,18 @@ const play = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe("offer and promotion recommendations", () => {
+  it("uses owner-facing labels without exposing internal decision values or fact IDs", () => {
+    expect(offerRecommendationLabel("improve_other_constraint")).toBe("Improve another part of the business first");
+    expect(offerMechanismLabel("referral_incentive")).toBe("Referral reward");
+    expect(offerEvidenceLabel("owner_reported")).toBe("Reported by your team");
+    expect(offerCapacityLabel("unknown")).toBe("Ability to take on more work is not confirmed");
+    expect(offerAlternativeLabel("conversion_path")).toBe("Make it easier to buy or book");
+    expect(offerRiskLabel("pull_forward")).toBe("Purchases may happen earlier, not increase");
+    expect(offerEvidenceStatusLabel("hypothesis")).toBe("possible risk to test");
+    expect(offerReferenceLabel("fact:3")).toBe("Your business information");
+    expect(offerReferenceLabel("https://example.com/offer")).toBe("https://example.com/offer");
+  });
+
   it("computes positive unit contribution and the deterministic volume needed to match current contribution", () => {
     const offer = assessment();
     expect(evaluateOfferUnitEconomics(offer)).toMatchObject({ currentContribution: 50, proposedContribution: 40, priceChangeFromCurrent: -5, currentMarginRate: 0.5, proposedMarginRate: 40 / 95, proposedUnitsPerCurrentUnitToMatchContribution: 50 / 40, contributionBreakEvenUnits: 2, known: true });

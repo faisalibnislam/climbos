@@ -19,6 +19,8 @@ Content review shows the draft's intended reader, objective, core idea, and exac
 
 Date-sensitive growth recommendations lead with a plain-language timing choice, suggested dates when supported, and why that moment may matter to the business. Missing information stays visible; preparation, delivery, capacity, source claims, and evidence dates are available in an expandable detail section.
 
+Offer recommendations explain whether to consider a change, check details first, improve another business issue, or keep the offer. They describe who the idea is for, what evidence supports it, money left after listed costs, risks, and a small test; missing facts remain unknown and any live change still needs the existing approval.
+
 Command search uses local filtering. A natural-language request is handed to Home as an editable draft rather than dispatched from search. Handoff keys are scoped to the signed-in person and workspace. The assistant provider resets transient state when the workspace or authenticated identity changes.
 
 Onboarding starts with a business description, accepts a business without a website, shows an editable name, and offers a conventional form using the supplied information. Additional-business setup explains its separate data context and retains the existing workspace creation and research functions. An explicit unauthorized setup URL shows an access explanation rather than silently falling back to another company's setup.
