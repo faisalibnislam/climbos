@@ -265,6 +265,9 @@ export function lintApprovedOfferCopy(text: string, offers: ApprovedOfferCopyTer
     issues.push({ severity: "error", rule: "approved_offer_play", message: "This draft uses offer terms but does not identify which approved plan play it belongs to. Add the exact play name to the campaign brief or calendar slot so its price, audience, and conditions can be checked together.", path });
     applicableOffers = [];
   }
+  if (applicableOffers.some((offer) => offer.recommendation === "validate_first") && PROMOTION_WORDS.test(text)) {
+    issues.push({ severity: "error", rule: "offer_validation_only", message: "This promotion is only a test proposal, not an offer available to customers. Remove customer-facing promotion terms until the test is validated and the offer is approved.", path });
+  }
   const priceIssues = lintApprovedOfferPrices(text, applicableOffers, path);
   issues.push(...priceIssues);
   if (!applicableOffers.length) return issues;

@@ -53,13 +53,13 @@ export const source = internalQuery({
     const run = await ctx.db.get(runId);
     const a = await ctx.db.get(artifactId);
     const ver = a?.currentVersionId ? await ctx.db.get(a.currentVersionId) : null;
-    return run && a && ver ? { run, artifact: { kind: a.kind, channel: a.channel, title: a.title }, version: { headline: ver.headline ?? "", body: ver.body, callToAction: ver.callToAction ?? "", hashtags: ver.hashtags, altText: ver.altText ?? "", destinationUrl: ver.destinationUrl } } : null;
+    return run && a && ver ? { run, artifact: { kind: a.kind, channel: a.channel, title: a.title }, version: { headline: ver.headline ?? "", body: ver.body, callToAction: ver.callToAction ?? "", hashtags: ver.hashtags, altText: ver.altText ?? "", destinationUrl: ver.destinationUrl, approvedOfferTermsSnapshot: ver.approvedOfferTermsSnapshot, offerPlayNameSnapshot: ver.offerPlayNameSnapshot } } : null;
   },
 });
 
 export const save = internalMutation({
-  args: { runId: v.id("workflowRuns"), artifactId: v.id("artifacts"), language: v.string(), out: v.object({ title: v.string(), headline: v.string(), body: v.string(), callToAction: v.string(), hashtags: v.array(v.string()), altText: v.string() }) },
-  handler: async (ctx, { runId, artifactId, language, out }) => {
+  args: { runId: v.id("workflowRuns"), artifactId: v.id("artifacts"), language: v.string(), out: v.object({ title: v.string(), headline: v.string(), body: v.string(), callToAction: v.string(), hashtags: v.array(v.string()), altText: v.string() }), offerTermsSnapshot: v.optional(v.array(v.object({ playName: v.string(), recommendation: v.string(), currency: v.string(), allowedPrices: v.array(v.number()), allowedDiscountPercentages: v.optional(v.array(v.number())), allowedMechanisms: v.optional(v.array(v.string())), urgencyClaim: v.union(v.string(), v.null()), eligibleAudience: v.union(v.string(), v.null()) }))), offerPlayNameSnapshot: v.optional(v.string()) },
+  handler: async (ctx, { runId, artifactId, language, out, offerTermsSnapshot, offerPlayNameSnapshot }) => {
     const run = await ctx.db.get(runId);
     const a = await ctx.db.get(artifactId);
     const ver = a?.currentVersionId ? await ctx.db.get(a.currentVersionId) : null;
@@ -71,6 +71,8 @@ export const save = internalMutation({
       runId,
       factIds: ver?.claimFactIds ?? [],
       createdBy: run.createdBy,
+      offerTermsSnapshot,
+      offerPlayNameSnapshot,
       item: { kind: a.kind, channel: a.channel, title: `${out.title || a.title} (${language})`.slice(0, 140), headline: out.headline || undefined, body: out.body, callToAction: out.callToAction || undefined, destinationUrl: ver?.destinationUrl, hashtags: out.hashtags.slice(0, 12), altText: out.altText || undefined, imageStorageId: ver?.imageStorageId, imageR2Key: ver?.imageR2Key, factIndexes: [], role: a.createdByRole ?? "social_media_manager" },
     });
   },
@@ -100,7 +102,7 @@ export const run = internalAction({
       await ctx.runMutation(internal.engine.finishRun, { runId, status: "failed", userMessage: "Couldn't translate this time. Try again." });
       return;
     }
-    await ctx.runMutation(internal.translate.save, { runId, artifactId, language, out: parsed.data });
+    await ctx.runMutation(internal.translate.save, { runId, artifactId, language, out: parsed.data, offerTermsSnapshot: c.version.approvedOfferTermsSnapshot, offerPlayNameSnapshot: c.version.offerPlayNameSnapshot });
     await ctx.runMutation(internal.engine.finishRun, { runId, status: "verified" });
   },
 });

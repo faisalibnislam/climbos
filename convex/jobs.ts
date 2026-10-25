@@ -1661,7 +1661,10 @@ export const createContent = internalAction({
           await ctx.runMutation(internal.engine.completeStep, { stepId: s.stepId!, output: JSON.stringify(stored ?? null) });
         }
 
-        const artifactIds = await ctx.runMutation(internal.jobWrites.saveArtifacts, { runId: args.runId, items: withImages as never, factIds });
+        const offerTermsSnapshot = job.strategy
+          ? approvedPlanOfferTerms(job.strategy as never, { pinnedAtLaunch: Boolean(job.strategyPinned && job.strategy.status === "superseded") })
+          : [];
+        const artifactIds = await ctx.runMutation(internal.jobWrites.saveArtifacts, { runId: args.runId, items: withImages as never, factIds, offerTermsSnapshot });
         await finish(ctx, args.runId, "verified", {
           output: { artifacts: withImages.length },
           meters: { socialPosts: posts, imageAttempts: attempts, deliveredImages: delivered },

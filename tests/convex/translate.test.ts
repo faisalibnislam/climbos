@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../convex/_generated/api";
+import { contentHash } from "../../shared/policy";
 import { asNewUser, setup } from "./helpers";
 
 describe("content languages", () => {
@@ -25,11 +26,20 @@ describe("content languages", () => {
     await owner.client.mutation(api.repurpose.start, { slug, text, formats: ["linkedin"] });
     await t.finishAllScheduledFunctions(vi.runAllTimers);
     const [first] = await t.run(async (ctx) => ctx.db.query("artifacts").collect());
+    const offerTermsSnapshot = [{ playName: "New customer trial", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [100], allowedDiscountPercentages: [], allowedMechanisms: ["free_trial"], urgencyClaim: null, eligibleAudience: "New customers" }];
+    await t.run(async (ctx) => {
+      const version = await ctx.db.get(first.currentVersionId!);
+      const hash = await contentHash({ body: version!.body, hashtags: version!.hashtags, channel: first.channel, approvedOfferTermsSnapshot: offerTermsSnapshot, offerPlayNameSnapshot: "New customer trial" });
+      await ctx.db.patch(version!._id, { approvedOfferTermsSnapshot: offerTermsSnapshot, offerPlayNameSnapshot: "New customer trial", contentHash: hash });
+    });
     await owner.client.mutation(api.translate.start, { slug, artifactId: first._id, language: "German" });
     await t.finishAllScheduledFunctions(vi.runAllTimers);
     const arts = await t.run(async (ctx) => ctx.db.query("artifacts").collect());
     expect(arts).toHaveLength(2);
     expect(arts[1].title).toContain("(German)");
     expect(arts[1].channel).toBe("linkedin");
+    const translatedVersion = await t.run(async (ctx) => ctx.db.get(arts[1].currentVersionId!));
+    expect(translatedVersion?.approvedOfferTermsSnapshot).toEqual(offerTermsSnapshot);
+    expect(translatedVersion?.offerPlayNameSnapshot).toBe("New customer trial");
   });
 });

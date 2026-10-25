@@ -2,6 +2,7 @@ import { paginationOptsValidator } from "convex/server";
 import { featureAllowed, requirePaid } from "./lib/access";
 import { aiModeView, resolveAiMode } from "./lib/aiMode";
 import { EXPERT_KINDS } from "../shared/agents/routes";
+import { lintApprovedOfferCopy } from "../shared/agents/offerAssessment";
 import { v } from "convex/values";
 
 /** A running job's early output, filled in as it arrives (first take, channels that fit, chosen plays). */
@@ -388,6 +389,8 @@ export const edit = mutation({
       body,
       contentAngle: args.contentAngle ?? prev?.contentAngle,
       copyBrief: prev?.copyBrief,
+      approvedOfferTermsSnapshot: prev?.approvedOfferTermsSnapshot,
+      offerPlayNameSnapshot: prev?.offerPlayNameSnapshot,
       callToAction: args.callToAction,
       destinationUrl: args.destinationUrl,
       hashtags: args.hashtags,
@@ -406,6 +409,8 @@ export const edit = mutation({
       body,
       contentAngle: (args.contentAngle ?? prev?.contentAngle)?.slice(0, 500),
       copyBrief: prev?.copyBrief,
+      approvedOfferTermsSnapshot: prev?.approvedOfferTermsSnapshot,
+      offerPlayNameSnapshot: prev?.offerPlayNameSnapshot,
       callToAction: args.callToAction?.slice(0, 120),
       destinationUrl: args.destinationUrl?.trim(),
       hashtags: args.hashtags.slice(0, 30).map((h) => h.slice(0, 60)),
@@ -456,6 +461,16 @@ export const decide = mutation({
     if (!ver) throw appError("INVALID", "Nothing to approve yet.");
     if (a.status === "uncertain") throw appError("INVALID", "Check whether it was posted first.");
     if (!["draft", "in_review", "failed", "approved"].includes(a.status)) throw appError("INVALID", "This can't be approved or sent back in its current state.");
+    if (args.decision === "approve" && ver.approvedOfferTermsSnapshot?.length) {
+      const offerIssues = lintApprovedOfferCopy(
+        [a.title, ver.headline, ver.body, ver.callToAction, ...ver.hashtags, ver.altText].filter(Boolean).join("\n"),
+        ver.approvedOfferTermsSnapshot,
+        "content",
+        ver.copyBrief?.approvedOfferPlayName ?? ver.offerPlayNameSnapshot,
+      );
+      const blockingOfferIssue = offerIssues.find((issue) => issue.severity === "error");
+      if (blockingOfferIssue) throw appError("INVALID", `This copy doesn't match the offer terms approved with its plan. ${blockingOfferIssue.message}`);
+    }
     const { connection } = await publishTarget(ctx, org._id, a.channel);
     if (a.status === "approved" && !approvalProblem(a.approvalId ? await ctx.db.get(a.approvalId) : null, ver, connection, a.scheduledFor)) {
       throw appError("INVALID", "This version is already approved.");

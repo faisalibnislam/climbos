@@ -67,12 +67,14 @@ export function approvedPlanOfferTerms(plan: ApprovedPlanContextInput, opts: { p
     const recommendation = clean(offer.recommendation, 60);
     const allowedPrices = new Set<number>();
     if (typeof current === "number" && Number.isFinite(current)) allowedPrices.add(current);
-    if ((recommendation === "recommend_promotion" || recommendation === "validate_first") && typeof proposed === "number" && Number.isFinite(proposed)) allowedPrices.add(proposed);
-    const eligibleAudience = recommendation === "recommend_promotion" || recommendation === "validate_first" ? clean(offer.test?.eligibleAudience, 240) || null : null;
-    const allowedMechanisms = recommendation === "recommend_promotion" || recommendation === "validate_first"
+    if (recommendation === "recommend_promotion" && typeof proposed === "number" && Number.isFinite(proposed)) allowedPrices.add(proposed);
+    // validate_first is an internal experiment proposal, not an offer currently
+    // available to customers. Only a recommended promotion is customer-copy eligible.
+    const eligibleAudience = recommendation === "recommend_promotion" ? clean(offer.test?.eligibleAudience, 240) || null : null;
+    const allowedMechanisms = recommendation === "recommend_promotion"
       ? [clean(offer.mechanism, 60)].filter((mechanism) => mechanism && mechanism !== "none")
       : [];
-    const allowedDiscountPercentages = (recommendation === "recommend_promotion" || recommendation === "validate_first") && clean(offer.mechanism, 60) === "discount" && typeof current === "number" && Number.isFinite(current) && current > 0 && typeof proposed === "number" && Number.isFinite(proposed) && proposed >= 0 && proposed < current
+    const allowedDiscountPercentages = recommendation === "recommend_promotion" && clean(offer.mechanism, 60) === "discount" && typeof current === "number" && Number.isFinite(current) && current > 0 && typeof proposed === "number" && Number.isFinite(proposed) && proposed >= 0 && proposed < current
       ? [...new Set([Number((((current - proposed) / current) * 100).toFixed(2)), Number((((current - proposed) / current) * 100).toFixed(1))])]
       : [];
     return [{ playName: clean(play.name, 120), recommendation, currency: clean(offer.currency, 3).toUpperCase(), allowedPrices: [...allowedPrices], allowedDiscountPercentages, allowedMechanisms, urgencyClaim: clean(offer.urgencyClaim, 160) || null, eligibleAudience }];

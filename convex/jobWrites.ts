@@ -22,6 +22,7 @@ import { formatCreatorOutcomeContext } from "../shared/agents/creatorOutcomes";
 import { shortenable, utmFor, withUtm } from "../shared/links";
 import { createLink } from "./links";
 import { creativeStrategyLearningBrief } from "./creativeStrategy";
+import type { ApprovedOfferTermConstraint } from "../shared/agents/approvedPlanContext";
 import type {
   AdDraftsOutput,
   BusinessInsights,
@@ -766,7 +767,7 @@ async function linkTrackingOn(ctx: MutationCtx, orgId: Id<"organizations">): Pro
 
 export async function insertArtifact(
   ctx: MutationCtx,
-  params: { orgId: Id<"organizations">; businessId: Id<"businesses">; runId?: Id<"workflowRuns">; factIds: Id<"businessFacts">[]; item: ArtifactInput; createdBy?: Id<"users"> },
+  params: { orgId: Id<"organizations">; businessId: Id<"businesses">; runId?: Id<"workflowRuns">; factIds: Id<"businessFacts">[]; item: ArtifactInput; createdBy?: Id<"users">; offerTermsSnapshot?: ApprovedOfferTermConstraint[]; offerPlayNameSnapshot?: string },
 ) {
   const { item: raw } = params;
   const now = Date.now();
@@ -813,6 +814,17 @@ export async function insertArtifact(
     body: item.body,
     contentAngle: item.contentAngle,
     copyBrief: persistedCopyBrief(item.copyBrief, params.factIds),
+    approvedOfferTermsSnapshot: params.offerTermsSnapshot?.map((term) => ({
+      playName: term.playName,
+      recommendation: term.recommendation,
+      currency: term.currency,
+      allowedPrices: term.allowedPrices,
+      allowedDiscountPercentages: term.allowedDiscountPercentages,
+      allowedMechanisms: term.allowedMechanisms,
+      urgencyClaim: term.urgencyClaim,
+      eligibleAudience: term.eligibleAudience,
+    })),
+    offerPlayNameSnapshot: params.offerPlayNameSnapshot ?? item.copyBrief?.approvedOfferPlayName,
     callToAction: item.callToAction,
     destinationUrl: item.destinationUrl,
     hashtags: item.hashtags,
@@ -828,6 +840,17 @@ export async function insertArtifact(
     body: item.body,
     contentAngle: item.contentAngle,
     copyBrief: persistedCopyBrief(item.copyBrief, params.factIds),
+    approvedOfferTermsSnapshot: params.offerTermsSnapshot?.map((term) => ({
+      playName: term.playName,
+      recommendation: term.recommendation,
+      currency: term.currency,
+      allowedPrices: term.allowedPrices,
+      allowedDiscountPercentages: term.allowedDiscountPercentages,
+      allowedMechanisms: term.allowedMechanisms,
+      urgencyClaim: term.urgencyClaim,
+      eligibleAudience: term.eligibleAudience,
+    })),
+    offerPlayNameSnapshot: params.offerPlayNameSnapshot ?? item.copyBrief?.approvedOfferPlayName,
     callToAction: item.callToAction,
     destinationUrl: item.destinationUrl,
     hashtags: item.hashtags.slice(0, 12),
@@ -878,8 +901,17 @@ const artifactInputValidator = v.object({
 });
 
 export const saveArtifacts = internalMutation({
-  args: { runId: v.id("workflowRuns"), items: v.array(artifactInputValidator), factIds: v.array(v.id("businessFacts")) },
-  handler: async (ctx, { runId, items, factIds }) => {
+  args: {
+    runId: v.id("workflowRuns"),
+    items: v.array(artifactInputValidator),
+    factIds: v.array(v.id("businessFacts")),
+    offerTermsSnapshot: v.optional(v.array(v.object({
+      playName: v.string(), recommendation: v.string(), currency: v.string(), allowedPrices: v.array(v.number()),
+      allowedDiscountPercentages: v.optional(v.array(v.number())), allowedMechanisms: v.optional(v.array(v.string())),
+      urgencyClaim: v.union(v.string(), v.null()), eligibleAudience: v.union(v.string(), v.null()),
+    }))),
+  },
+  handler: async (ctx, { runId, items, factIds, offerTermsSnapshot }) => {
     const run = await ensureRunOrg(ctx, runId);
     const business = await ctx.db
       .query("businesses")
@@ -896,6 +928,7 @@ export const saveArtifacts = internalMutation({
           factIds,
           item: item as unknown as ArtifactInput,
           createdBy: run.createdBy,
+          offerTermsSnapshot,
         }),
       );
     }

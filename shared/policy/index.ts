@@ -139,6 +139,10 @@ export interface MaterialContent {
   hashtags: string[];
   altText?: string;
   imageRef?: string;
+  /** Immutable snapshot of approved offer terms used to validate this draft. */
+  approvedOfferTermsSnapshot?: Json;
+  /** Exact plan play this artifact represents when the source copy identified one. */
+  offerPlayNameSnapshot?: string;
   channel: string;
 }
 
@@ -154,6 +158,8 @@ export function contentHash(content: MaterialContent): Promise<string> {
       hashtags: [...content.hashtags].map((h) => h.trim().toLowerCase()).sort(),
       altText: content.altText?.trim(),
       imageRef: content.imageRef,
+      approvedOfferTermsSnapshot: content.approvedOfferTermsSnapshot,
+      offerPlayNameSnapshot: content.offerPlayNameSnapshot?.trim(),
       channel: content.channel,
     }),
   );

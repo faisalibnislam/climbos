@@ -182,6 +182,61 @@ describe("publishing lifecycle", () => {
     expect(versions[0]?.contentHash).not.toBe(versions[1]?.contentHash);
   });
 
+  it("keeps offer terms attached through edits and blocks approval of mismatched customer copy", async () => {
+    const t = setup();
+    const w = await workspace(t, "offer-copy-approval@flow.example");
+    const artifactId = await draft(t, w.orgId, "facebook");
+    const offerTermsSnapshot = [{
+      playName: "First-time service offer",
+      recommendation: "recommend_promotion",
+      currency: "USD",
+      allowedPrices: [100, 80],
+      allowedDiscountPercentages: [20],
+      allowedMechanisms: ["discount"],
+      urgencyClaim: null,
+      eligibleAudience: "First-time quote requesters",
+    }];
+    await t.run(async (ctx) => {
+      const artifact = await ctx.db.get(artifactId);
+      const version = await ctx.db.get(artifact!.currentVersionId!);
+      const snapshotHash = await contentHash({
+        body: version!.body,
+        hashtags: version!.hashtags,
+        channel: artifact!.channel,
+        approvedOfferTermsSnapshot: offerTermsSnapshot,
+        offerPlayNameSnapshot: "First-time service offer",
+      });
+      await ctx.db.patch(version!._id, {
+        approvedOfferTermsSnapshot: offerTermsSnapshot,
+        offerPlayNameSnapshot: "First-time service offer",
+        contentHash: snapshotHash,
+      });
+    });
+
+    await w.owner.client.mutation(api.content.edit, {
+      slug: w.slug,
+      artifactId,
+      body: "First-time quote requesters: save 40% today and pay $60 USD.",
+      hashtags: [],
+    });
+    const editedVersion = await t.run(async (ctx) => {
+      const artifact = await ctx.db.get(artifactId);
+      return ctx.db.get(artifact!.currentVersionId!);
+    });
+    expect(editedVersion?.approvedOfferTermsSnapshot).toEqual(offerTermsSnapshot);
+    expect(editedVersion?.offerPlayNameSnapshot).toBe("First-time service offer");
+    await expect(w.owner.client.mutation(api.content.decide, { slug: w.slug, artifactId, decision: "approve" })).rejects.toThrow(/doesn't match the offer terms approved with its plan/i);
+
+    await w.owner.client.mutation(api.content.edit, {
+      slug: w.slug,
+      artifactId,
+      body: "First-time quote requesters: save 20% and pay $80 USD.",
+      hashtags: [],
+    });
+    await w.owner.client.mutation(api.content.decide, { slug: w.slug, artifactId, decision: "approve" });
+    expect((await w.owner.client.query(api.content.get, { slug: w.slug, artifactId })).status).toBe("approved");
+  });
+
   it("shows only same-business evidence sources on the artifact review screen", async () => {
     const t = setup();
     const w = await workspace(t, "fact-source-review@flow.example");

@@ -250,6 +250,12 @@ describe("offer and promotion recommendations", () => {
     expect(lintApprovedOfferCopy("Get a 10% discount for first-time quote requesters.", terms, "email.body")).toMatchObject([{ rule: "approved_offer_discount", severity: "error" }]);
     expect(approvedPlanOfferTerms({ ...termContext, status: "needs_approval" })).toEqual([]);
 
+    const validationOnlyAssessment = assessment({ recommendation: "validate_first" });
+    const validationOnlyPlan = { ...termContext, expert: { version: 7, plays: [{ name: "Test offer", offerAssessment: validationOnlyAssessment }] } };
+    const validationOnlyTerms = approvedPlanOfferTerms(validationOnlyPlan);
+    expect(validationOnlyTerms[0]).toMatchObject({ allowedPrices: [100], allowedDiscountPercentages: [], allowedMechanisms: [], eligibleAudience: null });
+    expect(lintApprovedOfferCopy("Get 5% off for first-time quote requesters.", validationOnlyTerms, "email.body", "Test offer")).toEqual(expect.arrayContaining([expect.objectContaining({ rule: "offer_validation_only", severity: "error" })]));
+
     const copyBrief = { reader: "new buyer", situation: "reviewing the service", awarenessStage: "unknown" as const, relationshipStage: "unknown" as const, objective: "explain the offer", offerFactIndexes: [], problemJob: "choose a service", trigger: "need", centralIdea: "clear terms", objection: "price", proofFactIndexes: [], prohibitedClaims: [], channel: "email", format: "plain text", deliveryContext: "draft only", brandVoice: "clear", approvedExamples: [], cta: "learn more", afterAction: "measure qualified replies", trackingMetric: "qualified replies", trackingMethod: "count replies", supportingFactIndexes: [], supportingSourceUrls: [], unknowns: [] };
     const copyInput = { task: "Draft", brief: "", facts: [], approvedOfferTerms: terms };
     const emailOutput = { copyBrief, angle: "clear service terms", emails: [{ subject: "A service option", previewText: "Review the details", body: "This offer costs $89 USD.", callToAction: "Learn more", sendAfterDays: 0, angle: "clear details" }], sender: "Owner", goal: "Explain the offer", successMetric: "qualified replies", name: "Offer details", audience: "new buyers", factIndexes: [] };

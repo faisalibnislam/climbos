@@ -3573,6 +3573,18 @@ export default defineSchema({
         unknowns: v.array(v.string()),
       }),
     ),
+    /** Exact approved offer terms used for copy review; part of the content hash and carried through edits. */
+    approvedOfferTermsSnapshot: v.optional(v.array(v.object({
+      playName: v.string(),
+      recommendation: v.string(),
+      currency: v.string(),
+      allowedPrices: v.array(v.number()),
+      allowedDiscountPercentages: v.optional(v.array(v.number())),
+      allowedMechanisms: v.optional(v.array(v.string())),
+      urgencyClaim: v.union(v.string(), v.null()),
+      eligibleAudience: v.union(v.string(), v.null()),
+    }))),
+    offerPlayNameSnapshot: v.optional(v.string()),
     callToAction: v.optional(v.string()),
     destinationUrl: v.optional(v.string()),
     hashtags: v.array(v.string()),
