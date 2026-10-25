@@ -9,11 +9,13 @@ import { RefreshCw, Search } from "@/components/icons";
 import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
-import { Button, Callout, Card, CardContent, DatePicker, EmptyState, Field, Input, Select, Textarea, toast } from "@/components/ui";
+import { Button, Callout, Card, CardContent, Checkbox, DatePicker, EmptyState, Field, Input, Select, Textarea, toast } from "@/components/ui";
 import { useWorkspaceMember } from "@/components/app/content/shared";
 import { can } from "@shared/policy";
 import { searchConsolePropertyMatchesWebsite } from "@shared/integrations/searchConsole";
 import { planAiSearchQueries } from "@shared/aiSearch/queryPlanner";
+import { buildAiSearchPanelQueries } from "@shared/aiSearch/panelQueries";
+import type { AiSearchProvider } from "@shared/aiSearch/visibility";
 import { AI_DATA_USE_CONTROLS } from "@shared/seo/readiness";
 import { parseGoogleAiReportCsv } from "@shared/aiSearch/googleReportCsv";
 import { StructuredDataGenerator } from "@/components/app/visibility/StructuredDataGenerator";
@@ -131,6 +133,7 @@ function AiAnswerObservations({ slug, canEdit, website }: { slug: string; canEdi
   const [panelQueryKey, setPanelQueryKey] = useState("choose");
   const [panelName, setPanelName] = useState("");
   const [panelQuestions, setPanelQuestions] = useState("");
+  const [panelProviders, setPanelProviders] = useState<AiSearchProvider[]>(["chatgpt"]);
   const [selectedObservedQueries, setSelectedObservedQueries] = useState<string[]>([]);
   const [creatingPanel, setCreatingPanel] = useState(false);
   const [status, setStatus] = useState("answered");
@@ -149,6 +152,7 @@ function AiAnswerObservations({ slug, canEdit, website }: { slug: string; canEdi
   const [googleReportKind, setGoogleReportKind] = useState<"search" | "discover">("search");
   const [importingGoogleReport, setImportingGoogleReport] = useState(false);
   const selectedPanelQuery = report?.panel?.queries?.find((item) => item.key === panelQueryKey);
+  const panelBuild = buildAiSearchPanelQueries(panelQuestions, panelProviders, location);
   const addObservedQueries = () => {
     const selected = querySuggestions.filter((item) => selectedObservedQueries.includes(item.query)).map((item) => item.query);
     const existing = new Set(panelQuestions.split(/\n+/u).map((item) => item.trim().toLocaleLowerCase("en-US")).filter(Boolean));
@@ -159,16 +163,13 @@ function AiAnswerObservations({ slug, canEdit, website }: { slug: string; canEdi
   const makePanel = async () => {
     setCreatingPanel(true);
     try {
-      const queries = panelQuestions.split(/\n+/u).map((item) => item.trim()).filter(Boolean).map((item) => ({
-        provider: provider as "chatgpt" | "gemini" | "perplexity" | "google_ai_overview" | "other",
-        query: item,
-        ...(location.trim() ? { location: location.trim() } : {}),
-      }));
-      const id = await createPanel({ slug, name: panelName, queries });
+      if (panelBuild.error) throw new Error(panelBuild.error);
+      const id = await createPanel({ slug, name: panelName, queries: panelBuild.queries });
       setPanelId(id);
       setPanelQueryKey("choose");
       setPanelName("");
       setPanelQuestions("");
+      setPanelProviders(["chatgpt"]);
       setSelectedObservedQueries([]);
       toast({ tone: "success", title: "Comparable question panel created" });
     } catch (error) {
@@ -257,16 +258,22 @@ function AiAnswerObservations({ slug, canEdit, website }: { slug: string; canEdi
         </div> : null}
       </CardContent></Card>
       <Card><CardContent className="flex flex-col gap-4">
-        <div><h3 className="text-sm font-semibold text-ink">Track a consistent question set</h3><p className="mt-1 text-sm text-ink-3">A panel keeps the provider, questions, and market fixed so later checks can be compared. Repeated manual checks are still samples, not a platform-wide visibility rate.</p></div>
+        <div><h3 className="text-sm font-semibold text-ink">Track the same questions over time</h3><p className="mt-1 text-sm text-ink-3">Save questions for one or more answer tools, then check them yourself. ClimbOS records your samples; it does not automatically search these tools or measure everyone’s results.</p></div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Saved question panel"><Select value={panelId} onValueChange={(value) => { setPanelId(value === "all" ? "all" : value as Id<"aiSearchPanels">); setPanelQueryKey("choose"); }} options={[{ value: "all", label: "All observations" }, ...(panels ?? []).map((item) => ({ value: item.id, label: `${item.name} · ${item.queryCount} questions` }))]} disabled={!canEdit || panels === undefined} /></Field>
+          <Field label="Saved question panel"><Select value={panelId} onValueChange={(value) => { setPanelId(value === "all" ? "all" : value as Id<"aiSearchPanels">); setPanelQueryKey("choose"); }} options={[{ value: "all", label: "All observations" }, ...(panels ?? []).map((item) => ({ value: item.id, label: `${item.name} · ${item.queryCount} checks` }))]} disabled={!canEdit || panels === undefined} /></Field>
           {panelId !== "all" ? <Field label="Question in this panel"><Select value={panelQueryKey} onValueChange={(value) => { setPanelQueryKey(value); const selected = report?.panel?.queries?.find((item) => item.key === value); if (selected) { setProvider(selected.provider); setQuery(selected.query); setLocation(selected.location ?? ""); } }} options={[{ value: "choose", label: "Choose a saved question" }, ...(report?.panel?.queries ?? []).map((item) => ({ value: item.key, label: `${item.provider.replaceAll("_", " ")} · ${item.query}${item.location ? ` · ${item.location}` : ""}` }))]} disabled={!canEdit || !report?.panel} /></Field> : <p className="self-end text-xs text-ink-3">Create a panel below to compare repeat checks of the same questions.</p>}
         </div>
         {canEdit ? <details className="rounded-xl border border-line p-3">
           <summary className="cursor-pointer text-sm font-medium text-ink">Create a question panel</summary>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <Field label="Panel name"><Input value={panelName} onChange={(event) => setPanelName(event.target.value)} maxLength={120} placeholder="Core buyer questions" /></Field>
-            <Field label="Provider for these questions"><Select value={provider} onValueChange={setProvider} options={[{ value: "chatgpt", label: "ChatGPT search" }, { value: "google_ai_overview", label: "Google AI Overview" }, { value: "gemini", label: "Gemini" }, { value: "perplexity", label: "Perplexity" }, { value: "other", label: "Other" }]} /></Field>
+            <fieldset className="min-w-0">
+              <legend className="mb-1.5 text-sm font-medium text-ink">Where will you check these questions?</legend>
+              <p className="mb-2 text-xs text-ink-3">Choose more than one to compare the same questions. You will check each tool yourself.</p>
+              <div className="grid gap-1 sm:grid-cols-2">
+                {([{ value: "chatgpt", label: "ChatGPT" }, { value: "google_ai_overview", label: "Google AI Overview" }, { value: "gemini", label: "Gemini" }, { value: "perplexity", label: "Perplexity" }, { value: "other", label: "Another tool" }] as const).map(({ value, label }) => <Checkbox key={value} label={label} checked={panelProviders.includes(value)} onCheckedChange={(checked) => setPanelProviders((current) => checked ? [...new Set([...current, value])] : current.filter((item) => item !== value))} />)}
+              </div>
+            </fieldset>
             <div className="sm:col-span-2"><Field label="Questions (one per line)"><Textarea value={panelQuestions} onChange={(event) => setPanelQuestions(event.target.value)} rows={4} maxLength={20_000} placeholder={"Best [category] for [buyer]?\nHow does [business] compare with alternatives?"} /></Field></div>
             <div className="sm:col-span-2 rounded-lg border border-line p-3">
               <h4 className="text-sm font-medium text-ink">Start with observed Google searches</h4>
@@ -285,7 +292,11 @@ function AiAnswerObservations({ slug, canEdit, website }: { slug: string; canEdi
               </> : <p className="mt-2 text-xs text-ink-3">No usable query phrases were returned for this property and period.</p>}
             </div>
             <Field label="Market for all questions (optional)"><Input value={location} onChange={(event) => setLocation(event.target.value)} maxLength={160} placeholder="e.g. Dhaka, Bangladesh" /></Field>
-            <div className="flex items-end"><Button size="sm" loading={creatingPanel} disabled={!panelName.trim() || !panelQuestions.split(/\n+/u).some((item) => item.trim())} onClick={() => void makePanel()}>Save question panel</Button></div>
+            <div className="flex flex-col items-start justify-end gap-1">
+              <p className="text-xs text-ink-3">{panelBuild.queries.length} checks in this panel · up to 100</p>
+              {panelBuild.error ? <p role="status" className="text-xs text-danger">{panelBuild.error}</p> : null}
+              <Button size="sm" loading={creatingPanel} disabled={!panelName.trim() || Boolean(panelBuild.error)} onClick={() => void makePanel()}>Save question panel</Button>
+            </div>
           </div>
         </details> : null}
       </CardContent></Card>
