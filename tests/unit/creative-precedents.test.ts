@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(59);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(60);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -216,6 +216,24 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://beta.designmuseum.org/exhibitions/beazley-designs-of-the-year/product-2019/thisables", publicationDate: "2019-09-11" }),
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Explore an accessibility-led product adaptation", query)).toContain("CP-059");
+  });
+
+  it("retrieves entertaining message design while separating attention from comprehension and behavior", () => {
+    const query = "Darkly comic animated song turns ignored railway safety warnings into an entertaining character-led story; check whether the audience understood the intended safety message";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-060");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("may overpower the intended instruction");
+    expect(match?.precedent.outcome).toContain("does not provide a controlled causal estimate");
+    expect(match?.precedent.causalLimit).toContain("do not isolate campaign effect");
+    expect(match?.precedent.transferRisk).toContain("Do not imitate the name, characters, song, visual identity, or dark humor");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.warc.com/en/article/metro-trains-melbourne:-dumb-ways-to-die-b6a698a8c91447eab68a2c191b96aa46", publicationDate: "2013-05-09" }),
+      expect.objectContaining({ url: "https://eprints.whiterose.ac.uk/id/eprint/208869/", publicationDate: "2024-01-30" }),
+      expect.objectContaining({ url: "https://opus.lib.uts.edu.au/bitstream/10453/162579/2/02whole.pdf", publicationDate: "2022" }),
+    ]));
+    const formatted = creativePrecedentsForAgent("growth_plays", "Explore an entertaining way to communicate a safety message", query);
+    expect(formatted).toContain("CP-060");
+    expect(formatted).toContain("Views, shares, chart position, pledges");
   });
 
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {
