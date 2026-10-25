@@ -525,21 +525,21 @@ describe("creative strategy precedent retrieval", () => {
     expect(injected).toContain("Do not choose thresholds after seeing results");
   });
 
-  it("retrieves product-level inclusion and preserves the difference between range count and real customer fit", () => {
-    const query = "A product category leaves a customer group underserved; instead of merely changing inclusive advertising, redesign the flagship range around verified fit, representative product testing, reliable availability and honest support";
+  it("retrieves an event-as-proof strategy while keeping live audience separate from commercial outcomes", () => {
+    const query = "Turn a real, technically verifiable product challenge into a multi-year story with preparation milestones, a live demonstration and partner distribution; keep views separate from customers and revenue, and adapt it safely for a small business";
     const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-064");
     expect(match).toBeDefined();
-    expect(match?.precedent.mechanism).toContain("solving that functional gap in the flagship product");
-    expect(match?.precedent.causalLimit).toContain("celebrity reach, LVMH resources, Sephora distribution");
-    expect(match?.precedent.transferRisk).toContain("stocked availability");
+    expect(match?.precedent.mechanism).toContain("make a brand's point of view observable");
+    expect(match?.precedent.causalLimit).toContain("Views and world records do not demonstrate product demand");
+    expect(match?.precedent.transferRisk).toContain("serious physical and reputational harm");
     expect(match?.precedent.sources).toEqual(expect.arrayContaining([
-      expect.objectContaining({ url: "https://www.lvmh.com/our-maisons/perfumes-cosmetics/fenty-beauty-by-rihanna", sourceRole: "company_primary", claimRole: "action" }),
-      expect.objectContaining({ url: "https://www.rotman.utoronto.ca/faculty-and-research/research-centres/gender-economy/teaching--learning/case-studies/2020/fenty-beauty---diversity-business-model/", sourceRole: "independent_secondary" }),
-      expect.objectContaining({ url: "https://www.businessoffashion.com/articles/beauty/the-downsides-of-the-fenty-effect/", claimRole: "context" }),
+      expect.objectContaining({ url: "https://blog.youtube/news-and-events/mission-complete-red-bull-stratos-lands/", sourceRole: "platform_primary", claimRole: "outcome" }),
+      expect.objectContaining({ url: "https://www.redbull.com/car-en/one-jump-eight-records-scientific-achievement", sourceRole: "company_primary" }),
+      expect.objectContaining({ url: "https://www.fai.org/news/10-year-anniversary-baumgartners-jump-edge-space", sourceRole: "organization_primary" }),
     ]));
-    const injected = creativePrecedentsForAgent("growth_plays", "Find an original product strategy", query);
+    const injected = creativePrecedentsForAgent("growth_plays", "Find an original demonstration strategy", query);
     expect(injected).toContain("CP-064");
-    expect(injected).toContain("Do not treat social reactions or stated interest alone as demand");
+    expect(injected).toContain("Do not invent a numerical success threshold");
   });
 
   it("injects bounded precedents into every production growth-plays run", () => {
