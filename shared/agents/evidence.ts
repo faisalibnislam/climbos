@@ -10,8 +10,9 @@
 import { skillVersion } from "../skills";
 import { ENGINE_VERSION } from "./specs";
 import type { FactConflict } from "./conflicts";
+import type { Source } from "../ai/types";
 
-export const EVIDENCE_VERSION = 1;
+export const EVIDENCE_VERSION = 2;
 
 const CAP = { facts: 60, fact: 600, insights: 24_000, notes: 20_000, sources: 40, goal: 400 };
 
@@ -26,14 +27,16 @@ export interface PlanEvidence {
   currency: string;
   goal: { statement: string; horizonDays: number; monthlyAdBudget: number; target?: unknown } | null;
   /** Confirmed facts given to the agents, with their ids (owner-confirmed or edited). */
-  facts: { id: string; statement: string; category?: string }[];
+  facts: { id: string; statement: string; category?: string; confidence?: "high" | "medium" | "low"; provenance?: string; evidenceKind?: string; verifiedAt?: number; daysSinceVerification?: number }[];
+  /** Previously confirmed facts that were shown only as stale context and could not ground current claims. */
+  staleFacts?: { id: string; statement: string; category?: string; confidence?: "high" | "medium" | "low"; provenance?: string; verifiedAt?: number; daysSinceVerification?: number }[];
   /** Owner-confirmed unit economics at the time. */
   ownerEconomics?: unknown;
   insights: string;
   /** Confirmed facts that disagree, kept side by side. */
   conflicts?: FactConflict[];
   /** Each agent's research, as it reached the writer. */
-  research: { agentId: string; notes: string; sources: { url: string; title?: string }[] }[];
+  research: { agentId: string; notes: string; sources: Source[]; retrievedAt?: number }[];
   /** True where a cap cut something (so a reader knows the record is partial). */
   truncated: string[];
 }
@@ -43,11 +46,12 @@ export function buildPlanEvidence(p: {
   models?: Record<string, unknown>;
   currency: string;
   goal: PlanEvidence["goal"];
-  facts: { id: string; statement: string; category?: string }[];
+  facts: PlanEvidence["facts"];
+  staleFacts?: NonNullable<PlanEvidence["staleFacts"]>;
   ownerEconomics?: unknown;
   insights: string;
   conflicts?: FactConflict[];
-  research: { agentId: string; notes?: string; sources?: { url: string; title?: string }[] }[];
+  research: { agentId: string; notes?: string; sources?: Source[]; retrievedAt?: number }[];
 }): PlanEvidence {
   const truncated: string[] = [];
   const cut = (s: string, n: number, what: string) => {
@@ -63,13 +67,14 @@ export function buildPlanEvidence(p: {
     ...(p.models ? { models: p.models } : {}),
     currency: p.currency,
     goal: p.goal ? { ...p.goal, statement: cut(p.goal.statement, CAP.goal, "goal") } : null,
-    facts: p.facts.slice(0, CAP.facts).map((f) => ({ id: f.id, statement: cut(f.statement, CAP.fact, `fact ${f.id}`), ...(f.category ? { category: f.category } : {}) })),
+    facts: p.facts.slice(0, CAP.facts).map((f) => ({ ...f, statement: cut(f.statement, CAP.fact, `fact ${f.id}`) })),
+    ...(p.staleFacts?.length ? { staleFacts: p.staleFacts.slice(0, CAP.facts).map((f) => ({ ...f, statement: cut(f.statement, CAP.fact, `stale fact ${f.id}`) })) } : {}),
     ...(p.ownerEconomics ? { ownerEconomics: p.ownerEconomics } : {}),
     insights: cut(p.insights, CAP.insights, "insights"),
     ...(p.conflicts?.length ? { conflicts: p.conflicts } : {}),
     research: p.research
       .filter((r) => r.notes || r.sources?.length)
-      .map((r) => ({ agentId: r.agentId, notes: cut(r.notes ?? "", CAP.notes, `research ${r.agentId}`), sources: (r.sources ?? []).slice(0, CAP.sources).map((x) => ({ url: x.url.slice(0, 500), ...(x.title ? { title: x.title.slice(0, 200) } : {}) })) })),
+      .map((r) => ({ agentId: r.agentId, notes: cut(r.notes ?? "", CAP.notes, `research ${r.agentId}`), sources: (r.sources ?? []).slice(0, CAP.sources).map((x) => ({ url: x.url.slice(0, 500), ...(x.title ? { title: x.title.slice(0, 200) } : {}), ...(x.pageReportedDates?.length ? { pageReportedDates: x.pageReportedDates.slice(0, 20) } : {}) })), ...(typeof r.retrievedAt === "number" && Number.isFinite(r.retrievedAt) ? { retrievedAt: r.retrievedAt } : {}) })),
     truncated,
   };
 }

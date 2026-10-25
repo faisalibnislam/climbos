@@ -36,6 +36,14 @@ export const EVIDENCE_KIND_LABEL: Record<EvidenceKind, string> = {
   owner: "owner report",
 };
 
+/** Guardrail for brand-trust recommendations without inferring reputation from age or claims. */
+export function trustPostureContext(kinds: EvidenceKind[]): string {
+  if (kinds.some((k) => k === "behavior" || k === "commitment" || k === "measured")) {
+    return "TRUST EVIDENCE: Current facts include observed customer behaviour, commitments, or measurements. Use only the specific evidence that matches the claim, preserve its population and time period, and do not infer overall brand maturity from it.";
+  }
+  return "TRUST EVIDENCE: No observed behaviour, customer commitment, or measurement is recorded in current facts. Brand age and reputation are unknown; do not call the business new or established or imply social proof. Recommend proportionate proof-building (for example, a working demo, transparent terms, or a small pilot) and test trust concerns before treating them as the purchase barrier.";
+}
+
 /** Proof-of-demand language: "validated demand", "customers love it", "proven need". */
 const DEMAND_CLAIM = /\b(?:validated|proven|confirmed|clear|strong)\s+(?:demand|need|willingness to pay|product[- ]market fit)\b|\b(?:customers?|users?|people|everyone)\s+(?:love|want|are asking for|are begging for)\b|\bmarket wants\b|\bdemand is (?:there|proven|clear)\b/i;
 

@@ -4,7 +4,7 @@ import { Discussion } from "@/components/app/Discussion";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Archive, ArchiveRestore, ArrowLeft, Ellipsis, Pencil } from "@/components/icons"
+import { Archive, ArchiveRestore, ArrowLeft, Ellipsis, ExternalLink, Pencil } from "@/components/icons"
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -27,6 +27,7 @@ import { ApprovalPanel } from "@/components/app/content/detail/ApprovalPanel";
 import { ChannelPreview } from "@/components/app/content/detail/ChannelPreview";
 import { DraftEditor } from "@/components/app/content/detail/DraftEditor";
 import { RepurposeDialog } from "@/components/app/content/RepurposeDialog";
+import { TrendEvidenceNote } from "@/components/app/content/TrendEvidenceNote";
 import { TranslateDialog } from "@/components/app/content/TranslateDialog";
 import { FactsList, FlaggedClaims, ReceiptsTimeline, VersionHistory } from "@/components/app/content/detail/HistoryPanels";
 import { EmailSendPanel, isEmailKind } from "@/components/app/content/detail/EmailSendPanel";
@@ -149,6 +150,50 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
             {cur ? <ChannelPreview channel={artifact.channel} version={cur} accountLabel={artifact.publishTarget?.accountLabel} /> : <p className="text-sm text-ink-3">No text yet.</p>}
             {locked ? <p className="text-sm text-ink-3">{artifact.status === "uncertain" ? "Check if it posted before editing." : "Published content can't be edited."}</p> : null}
           </Section>
+
+          {cur?.copyBrief || cur?.contentAngle ? (
+            <Section id="intent-heading" title="Why this draft">
+              <Card>
+                <CardContent className="flex flex-col gap-3">
+                  {cur.contentAngle ? <div><p className="text-xs font-medium text-ink-3">Writing angle</p><p className="text-sm text-ink">{cur.contentAngle}</p></div> : null}
+                  {cur.copyBrief ? (
+                    <>
+                      <dl className="grid gap-2 text-sm sm:grid-cols-2">
+                        <div><dt className="text-xs text-ink-3">Intended reader</dt><dd className="text-ink">{cur.copyBrief.reader}</dd></div>
+                        <div><dt className="text-xs text-ink-3">Objective</dt><dd className="text-ink">{cur.copyBrief.objective}</dd></div>
+                        {cur.copyBrief.approvedOfferPlayName ? <div className="sm:col-span-2"><dt className="text-xs text-ink-3">Plan item used</dt><dd className="text-ink">{cur.copyBrief.approvedOfferPlayName}</dd></div> : null}
+                        <div className="sm:col-span-2"><dt className="text-xs text-ink-3">Core idea</dt><dd className="text-ink">{cur.copyBrief.centralIdea}</dd></div>
+                      </dl>
+                      {cur.copyBrief.supportingSourceUrls.some((url) => /^https?:\/\//i.test(url)) ? (
+                        <div>
+                          <p className="text-xs font-medium text-ink-2">Sources attached to this draft</p>
+                          <ul className="mt-1 flex flex-col gap-1">
+                            {cur.copyBrief.supportingSourceUrls.filter((url) => /^https?:\/\//i.test(url)).map((url) => (
+                              <li key={url}>
+                                <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-1 break-all text-sm text-brand-800 underline-offset-2 hover:underline">
+                                  {url}<ExternalLink aria-hidden="true" className="size-3 shrink-0" />
+                                  <span className="sr-only">(opens in a new tab)</span>
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="mt-1 text-xs text-ink-3">These are the source URLs the draft records. Check the page and date before treating a trend as current.</p>
+                        </div>
+                      ) : null}
+                      {cur.copyBrief.trendEvidence ? <TrendEvidenceNote evidence={cur.copyBrief.trendEvidence} /> : null}
+                      {cur.copyBrief.unknowns.length ? (
+                        <div className="rounded-[var(--radius-control)] bg-amber-100 p-2.5">
+                          <p className="text-xs font-semibold text-amber-900">Still unknown</p>
+                          <ul className="mt-1 list-disc pl-5 text-sm text-amber-900">{cur.copyBrief.unknowns.map((item, i) => <li key={`${item}-${i}`}>{item}</li>)}</ul>
+                        </div>
+                      ) : null}
+                      <p className="text-xs text-ink-3">This explains how the draft was framed. It does not establish that a trend fits, that a claim is true, or that the post will perform.</p>
+                    </>
+                  ) : null}
+                </CardContent>
+              </Card>
+            </Section>
+          ) : null}
 
           <Section id="versions-heading" title="Version history">
             <VersionHistory artifact={artifact} myUserId={member?.userId ?? null} now={now} />

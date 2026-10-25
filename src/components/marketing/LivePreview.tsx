@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { ArrowRight, ExternalLink, Globe, Lightbulb, RotateCcw, Sparkles } from "@/components/icons"
 import { api } from "../../../convex/_generated/api";
 import { Badge, type Tone } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import { SocialIcon, type SocialNetwork } from "@/components/ui/social-icon";
 import { StepList, type StepItem } from "@/components/ui/stepper";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { PreviewOpportunity } from "./PreviewOpportunity";
 import { normalizeWebsite } from "./website";
 
 const GOALS = ["More customers", "More sales", "More reach", "Something else"] as const;
@@ -247,8 +248,11 @@ const confidenceTone: Record<string, Tone> = { high: "green", medium: "blue", lo
 
 function PreviewPanel({ token, website, onReset }: { token: string; website: string; onReset: () => void }) {
   const data = useQuery(api.preview.get, { token });
+  const recordUsefulness = useMutation(api.preview.recordUsefulness);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [seconds, setSeconds] = useState(0);
+  const [sendingUsefulness, setSendingUsefulness] = useState(false);
+  const [usefulnessError, setUsefulnessError] = useState<string | null>(null);
   const finished = data === null || data?.status === "done" || data?.status === "failed";
 
   useEffect(() => {
@@ -279,6 +283,18 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
   const saveHref = `/sign-in?next=/onboarding%3Fpreview%3D${encodeURIComponent(token)}`;
   const slow = !finished && seconds >= SLOW_AFTER_SECONDS;
 
+  async function submitUsefulness(usefulness: "useful" | "not_yet") {
+    setSendingUsefulness(true);
+    setUsefulnessError(null);
+    try {
+      await recordUsefulness({ token, usefulness });
+    } catch {
+      setUsefulnessError("We couldn't save that response. You can try again.");
+    } finally {
+      setSendingUsefulness(false);
+    }
+  }
+
   return (
     <section
       aria-labelledby="preview-heading"
@@ -307,9 +323,10 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
       <p className="mt-3 flex items-start gap-2 rounded-lg bg-surface-2 px-3 py-2 text-sm text-ink-2">
         <Sparkles aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand-700" />
         <span>
-          <strong className="font-semibold text-ink">Preview</strong> — based only on your public homepage. Nothing is published.
+          <strong className="font-semibold text-ink">One-page snapshot, not a full audit.</strong> It is based only on your public homepage. We have not independently verified its claims or reviewed your other pages, competitors, customer data, or results. Nothing is published.
         </span>
       </p>
+      {data?.firstValueMs != null ? <p className="mt-2 text-xs text-ink-3">Your first homepage snapshot was ready after {(data.firstValueMs / 1_000).toFixed(1)} seconds. This is processing time, not a measure of business impact.</p> : null}
 
       {data === undefined ? (
         <div className="mt-6 flex flex-col gap-3" aria-hidden="true">
@@ -375,7 +392,7 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
 
           {data.business ? (
             <div className="mt-6 rounded-xl border border-line bg-surface-2 p-4 animate-step-in">
-              <h3 className="text-overline">What we understood</h3>
+              <h3 className="text-overline">AI read of your homepage</h3>
               <p className="mt-2 text-base text-ink">{data.business.summary}</p>
               <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
                 <div>
@@ -390,9 +407,14 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
             </div>
           ) : null}
 
+          {data.initialFinding ? (
+            <PreviewOpportunity finding={data.initialFinding} />
+          ) : null}
+
           {data.facts.length > 0 ? (
             <div className="mt-6 animate-step-in">
-              <h3 className="text-overline">What we found on your site</h3>
+              <h3 className="text-overline">Statements extracted from this page</h3>
+              <p className="mt-1 text-xs text-ink-3">These are website claims, not independently verified business facts. Review them before relying on them.</p>
               <ul className="mt-3 flex flex-col gap-2">
                 {data.facts.slice(0, 8).map((f, i) => {
                   const conf = f.confidence.toLowerCase();
@@ -425,7 +447,8 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
 
           {data.ideas.length > 0 ? (
             <div className="mt-6 animate-step-in">
-              <h3 className="text-overline">First growth ideas</h3>
+              <h3 className="text-overline">A few ideas to explore</h3>
+              <p className="mt-1 text-xs text-ink-3">These are starting points based on one page; check them against your customers, budget, and capacity.</p>
               <ul className="mt-3 grid gap-3">
                 {data.ideas.slice(0, 3).map((idea, i) => (
                   <li key={i} className="rounded-xl border border-line bg-surface p-4">
@@ -444,18 +467,39 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
               </ul>
             </div>
           ) : null}
+
+          {data.status === "done" ? (
+            <div className="mt-6 rounded-xl border border-line bg-surface-2 p-4" aria-label="Preview feedback">
+              {data.usefulness ? (
+                <p className="text-sm text-ink-2" role="status">Thanks — your response helps us assess this first look.</p>
+              ) : (
+                <>
+                  <p className="text-sm font-medium text-ink">Was this first look useful?</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button size="sm" variant="secondary" disabled={sendingUsefulness} onClick={() => void submitUsefulness("useful")}>Yes, useful</Button>
+                    <Button size="sm" variant="ghost" disabled={sendingUsefulness} onClick={() => void submitUsefulness("not_yet")}>Not yet</Button>
+                  </div>
+                  {usefulnessError ? <p className="mt-2 text-xs text-danger" role="alert">{usefulnessError}</p> : null}
+                  <p className="mt-2 text-xs text-ink-3">Optional. One response per preview; it is not a customer outcome measure.</p>
+                </>
+              )}
+            </div>
+          ) : null}
         </>
       )}
 
       {data?.status === "done" ? (
-        <div className="mt-6 flex flex-col gap-2 border-t border-line pt-5 sm:flex-row">
+        <div className="mt-6 border-t border-line pt-5">
+          <p className="mb-3 text-sm text-ink-2">A full plan can use more website pages, your business details, and competitor research. Add context before relying on a recommendation.</p>
+          <div className="flex flex-col gap-2 sm:flex-row">
           <Link href={saveHref} className={buttonClasses({ size: "lg", className: "w-full sm:w-auto" })}>
-            Save this and build my full plan
+            Save this snapshot and build a full plan
             <ArrowRight aria-hidden="true" />
           </Link>
           <Link href="/demo" className={buttonClasses({ variant: "secondary", size: "lg", className: "w-full sm:w-auto" })}>
             Try the full demo
           </Link>
+          </div>
         </div>
       ) : null}
     </section>

@@ -24,6 +24,56 @@ export interface ResultEntry {
   steps: number[];
   spendUsd: number;
   ownerHours: number;
+  /** Existing customers who repeated or renewed during this week; a customer may appear in multiple weeks. */
+  repeatCustomers?: number;
+  /** Owner-reported net repeat-customer receipts for the week, in the workspace currency's minor unit. */
+  retainedRevenueMinor?: number;
+  /** Owner-reported retained contribution after variable delivery costs, in the workspace currency's minor unit. */
+  retainedContributionMinor?: number;
+  retentionCurrency?: string;
+}
+
+export interface RetentionActuals {
+  /** Weeks with at least one retention field reported. */
+  weeksReported: number;
+  /** Weeks with an explicit repeat-customer count; distinct from weeks reporting money. */
+  repeatCustomerWeeksReported: number;
+  /** Customer-weeks, not unique retained customers over the whole period. */
+  repeatCustomerWeeks: number;
+  revenueByCurrency: { currency: string; netRevenueMinor: number; weeksReported: number }[];
+  contributionByCurrency: { currency: string; contributionMinor: number; weeksReported: number }[];
+  limitations: string[];
+}
+
+/** Summarize owner-reported repeat-customer activity without mixing currencies or inferring causality. */
+export function retentionActuals(entries: Pick<ResultEntry, "repeatCustomers" | "retainedRevenueMinor" | "retainedContributionMinor" | "retentionCurrency">[]): RetentionActuals {
+  const weeks = entries.filter((entry) => entry.repeatCustomers !== undefined || entry.retainedRevenueMinor !== undefined || entry.retainedContributionMinor !== undefined);
+  const revenue = new Map<string, { amount: number; weeks: number }>();
+  const contribution = new Map<string, { amount: number; weeks: number }>();
+  for (const entry of weeks) {
+    const currency = entry.retentionCurrency?.toUpperCase();
+    if (!currency) continue;
+    if (entry.retainedRevenueMinor !== undefined) {
+      const current = revenue.get(currency) ?? { amount: 0, weeks: 0 };
+      current.amount += entry.retainedRevenueMinor;
+      current.weeks++;
+      revenue.set(currency, current);
+    }
+    if (entry.retainedContributionMinor !== undefined) {
+      const current = contribution.get(currency) ?? { amount: 0, weeks: 0 };
+      current.amount += entry.retainedContributionMinor;
+      current.weeks++;
+      contribution.set(currency, current);
+    }
+  }
+  return {
+    weeksReported: weeks.length,
+    repeatCustomerWeeksReported: weeks.filter((entry) => entry.repeatCustomers !== undefined).length,
+    repeatCustomerWeeks: weeks.reduce((sum, entry) => sum + (entry.repeatCustomers ?? 0), 0),
+    revenueByCurrency: [...revenue].sort(([a], [b]) => a.localeCompare(b)).map(([currency, row]) => ({ currency, netRevenueMinor: row.amount, weeksReported: row.weeks })),
+    contributionByCurrency: [...contribution].sort(([a], [b]) => a.localeCompare(b)).map(([currency, row]) => ({ currency, contributionMinor: row.amount, weeksReported: row.weeks })),
+    limitations: ["Owner-reported play association is not proof of attribution or incremental impact.", "Repeat customer totals are customer-weeks; a person can be counted again in a later week.", "Only weeks with reported amounts are included; missing weeks are unknown."],
+  };
 }
 
 export interface StepActual {
@@ -45,12 +95,14 @@ export interface PlayActuals {
   ownerHours: number;
   /** Customers the plan expected by now (P10/P50/P90 scaled to the weeks logged). */
   expectedByNow: { p10: number; p50: number; p90: number };
-  status: "ahead" | "on_track" | "behind" | "too_early";
+  status: "ahead" | "on_track" | "behind" | "too_early" | "incomplete_log";
   steps: StepActual[];
   /** Weekly reach actually achieved vs planned. */
   reachVsPlan: number | null;
   /** Weeks from the first week to the latest logged one; more than `weeks` means some weeks weren't logged. */
   weeksSinceStart: number;
+  /** Elapsed plan weeks without a logged result; missing weeks are unknown, not zero. */
+  unloggedWeeks: number;
   /** Logged weeks before the play's start (ignored). */
   ignoredBeforeStart: number;
 }
@@ -81,9 +133,9 @@ export function playActuals(model: PlayModel, all: ResultEntry[], forecast: { p1
   const avg = (fn: (l: number) => number) => (lams.length ? lams.reduce((s, l) => s + fn(l), 0) / lams.length : 1);
   const surprisinglyLow = lams.length > 0 && avg((l) => poissonCdf(customers, l)) <= 0.05;
   const surprisinglyHigh = lams.length ? avg((l) => 1 - poissonCdf(customers - 1, l)) <= 0.05 : customers > 0;
-  const gaps = weeksSinceStart > weeks;
+  const unloggedWeeks = Math.max(0, weeksSinceStart - weeks);
   const status: PlayActuals["status"] =
-    weeks < 2 ? "too_early" : customers > expectedByNow.p90 && surprisinglyHigh && !gaps ? "ahead" : customers < expectedByNow.p10 && (leading(steps) === "short" || (surprisinglyLow && leading(steps) === "thin")) ? "behind" : "on_track";
+    unloggedWeeks > 0 ? "incomplete_log" : weeks < 2 ? "too_early" : customers > expectedByNow.p90 && surprisinglyHigh ? "ahead" : customers < expectedByNow.p10 && (leading(steps) === "short" || (surprisinglyLow && leading(steps) === "thin")) ? "behind" : "on_track";
   return {
     weeks,
     reach,
@@ -95,6 +147,7 @@ export function playActuals(model: PlayModel, all: ResultEntry[], forecast: { p1
     steps,
     reachVsPlan: weeks > 0 && model.weeklyReach > 0 ? reach / weeks / model.weeklyReach : null,
     weeksSinceStart,
+    unloggedWeeks,
     ignoredBeforeStart: all.length - entries.length,
   };
 }
@@ -137,5 +190,6 @@ export function resultsLine(name: string, a: PlayActuals): string {
     .filter((s) => s.trials > 0)
     .map((s) => `${s.name} ${s.successes}/${s.trials} (${Math.round((s.successes / s.trials) * 1000) / 10}%, planned ${Math.round(s.planned * 1000) / 10}%)`)
     .join("; ");
-  return `${name}: ${a.weeks} week${a.weeks === 1 ? "" : "s"}, reached ${a.reach}, ${a.customers} new customers, spent $${Math.round(a.spendUsd)}, ${Math.round(a.ownerHours)} owner hours. ${rates}.`;
+  const coverage = a.unloggedWeeks > 0 ? ` ${a.unloggedWeeks} elapsed week${a.unloggedWeeks === 1 ? " is" : "s are"} unlogged; missing weeks are unknown, not zero, so do not read this as a complete-period result.` : "";
+  return `${name}: ${a.weeks} week${a.weeks === 1 ? "" : "s"}, reached ${a.reach}, ${a.customers} new customers, spent $${Math.round(a.spendUsd)}, ${Math.round(a.ownerHours)} owner hours.${coverage} ${rates}.`;
 }

@@ -8,7 +8,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { httpAction, internalMutation, internalQuery } from "./_generated/server";
 import { featureAllowed } from "./lib/access";
 import { audit } from "./lib/audit";
-import { CLIMB_TOOLS, toolByName, type Caller } from "./lib/climbTools";
+import { CLIMB_TOOLS, encodeToolOutput, toolByName, type Caller } from "./lib/climbTools";
 
 /**
  * ClimbOS MCP server (Streamable HTTP, stateless JSON responses). External
@@ -186,8 +186,10 @@ export const handle = httpAction(async (ctx, req) => {
         }
         try {
           const out = await tool.run!(await getCaller(), slug, parsed.data as never);
-          const text = JSON.stringify(out ?? { ok: true });
-          return rpcResult(r.id, { content: [{ type: "text", text: text.slice(0, 50_000) }], ...(out && typeof out === "object" && !Array.isArray(out) ? { structuredContent: out } : {}) });
+          const text = encodeToolOutput(out, 50_000, tool.output);
+          const safeOut = JSON.parse(text) as unknown;
+          const structuredContent = safeOut && typeof safeOut === "object" && !Array.isArray(safeOut) && !("truncated" in safeOut) ? { structuredContent: safeOut } : {};
+          return rpcResult(r.id, { content: [{ type: "text", text }], ...structuredContent });
         } catch (e) {
           const msg = ((e as { data?: { message?: string } }).data?.message ?? (e as Error).message ?? "Failed").slice(0, 400);
           return rpcResult(r.id, { isError: true, content: [{ type: "text", text: msg }] });

@@ -1,0 +1,33 @@
+{
+  "playbook_id": "email_holdout_evaluation_v1",
+  "status": "proposed",
+  "assignment_entity": "account",
+  "assignment_method": "deterministic_randomized_hash",
+  "required_fields": [
+    "eligible_population_snapshot",
+    "primary_outcome_definition",
+    "observation_window",
+    "analysis_plan_version"
+  ],
+  "exclude_from_holdout": ["essential_security", "necessary_service"],
+  "calculations": {
+    "treatment_rate": "treatment_outcomes / treatment_assigned",
+    "control_rate": "control_outcomes / control_assigned",
+    "absolute_lift": "treatment_rate - control_rate",
+    "incremental_contribution": "eligible_population * absolute_lift * contribution_per_outcome - incremental_cost"
+  },
+  "invalid_conditions": [
+    "zero_denominator",
+    "incompatible_outcome_windows",
+    "material_cross_group_contamination",
+    "missing_assignment_records"
+  ],
+  "report_requirements": [
+    "counts_and_denominators",
+    "uncertainty_method",
+    "guardrail_outcomes",
+    "assumptions",
+    "decision_and_limitations"
+  ],
+  "automatic_scale": false
+}

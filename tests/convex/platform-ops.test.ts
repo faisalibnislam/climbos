@@ -67,7 +67,38 @@ describe("outgoing webhooks", () => {
   });
 });
 
-describe("Airly links", () => {
+describe("integration sync health", () => {
+  it("marks analytics reads delayed after a failed latest sync", async () => {
+    const t = setup();
+    process.env.GOOGLE_OAUTH_CLIENT_ID = "google-client";
+    process.env.GOOGLE_OAUTH_CLIENT_SECRET = "google-secret";
+    const o = await owned(t, "sync-health@example.com");
+    const connectionId = await t.mutation(internal.connections.storeConnection, {
+      orgId: o.orgId,
+      userId: o.userId,
+      provider: "ga4",
+      secret: JSON.stringify({ accessToken: "token" }),
+      secretKind: "oauth",
+      scopes: ["https://www.googleapis.com/auth/analytics.readonly"],
+      externalAccountId: "properties/1",
+    });
+    await t.mutation(internal.connections.markSync, {
+      connectionId,
+      ok: true,
+    });
+    await t.mutation(internal.connections.markSync, {
+      connectionId,
+      ok: false,
+      error: "Temporary provider error",
+    });
+
+    const item = (await o.client.query(api.connections.list, { slug: o.slug })).items.find((row) => row.provider === "ga4");
+    expect(item?.connection).toMatchObject({ status: "connected", lastSyncError: "Temporary provider error" });
+    expect(item?.capabilities.find((capability) => capability.capability === "ga4.read_reports")).toMatchObject({ state: "sync_delayed" });
+  });
+});
+
+describe("connected product links", () => {
   it("only accepts Taskeni's own hosts or its Convex deployment", () => {
     expect(taskeniBase("https://happy-cat-123.convex.site/api/v1")).toBe("https://happy-cat-123.convex.site/api/v1");
     expect(taskeniBase("https://app.taskeni.app/api/v1/")).toBe("https://app.taskeni.app/api/v1");
@@ -238,6 +269,124 @@ describe("connections", () => {
     expect((await t.run(async (ctx) => ctx.db.get(connectionId)))?.status).toBe("expired");
   });
 
+  it("GA4 sync stores explicit AI assistant referrals but excludes Google organic and tagged email", async () => {
+    const t = setup();
+    const o = await owned(t);
+    const date = new Date(Date.now() - 3 * DAY).toISOString().slice(0, 10);
+    await t.mutation(internal.connections.storeConnection, {
+      orgId: o.orgId,
+      userId: o.userId,
+      provider: "ga4",
+      secret: JSON.stringify({ accessToken: "google-token" }),
+      secretKind: "oauth",
+      scopes: [],
+      externalAccountId: "properties/1",
+    });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      dimensionHeaders: [{ name: "date" }, { name: "sessionSource" }, { name: "sessionMedium" }],
+      metricHeaders: [{ name: "sessions" }, { name: "totalUsers" }, { name: "keyEvents" }, { name: "purchaseRevenue" }],
+      rowCount: 3,
+      rows: [
+        { dimensionValues: [{ value: date.replaceAll("-", "") }, { value: "chatgpt.com" }, { value: "referral" }], metricValues: [{ value: "8" }, { value: "7" }, { value: "2" }, { value: "0" }] },
+        { dimensionValues: [{ value: date.replaceAll("-", "") }, { value: "google" }, { value: "organic" }], metricValues: [{ value: "40" }, { value: "35" }, { value: "4" }, { value: "0" }] },
+        { dimensionValues: [{ value: date.replaceAll("-", "") }, { value: "chatgpt.com" }, { value: "email" }], metricValues: [{ value: "3" }, { value: "3" }, { value: "1" }, { value: "0" }] },
+      ],
+    }), { status: 200 })));
+
+    await t.action(internal.connectionActions.syncGa4, { orgId: o.orgId });
+    const rows = await t.run(async (ctx) => ctx.db.query("metricDaily").withIndex("by_org_metric_date", (q) => q.eq("orgId", o.orgId).eq("metricKey", "ai_referral_sessions").eq("date", date)).collect());
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ value: 8, channel: "AI referral / ChatGPT", source: "ga4", kind: "observed" });
+    const keyEvents = await t.run(async (ctx) => ctx.db.query("metricDaily").withIndex("by_org_metric_date", (q) => q.eq("orgId", o.orgId).eq("metricKey", "ai_referral_key_events").eq("date", date)).collect());
+    expect(keyEvents).toHaveLength(1);
+    expect(keyEvents[0]?.value).toBe(2);
+  });
+
+  it("Search Console sync stores dated query and page observations for the selected property", async () => {
+    const t = setup();
+    const o = await owned(t);
+    const property = "https://example.com/";
+    const connectionId = await t.mutation(internal.connections.storeConnection, {
+      orgId: o.orgId,
+      userId: o.userId,
+      provider: "search_console",
+      secret: JSON.stringify({ accessToken: "google-token" }),
+      secretKind: "oauth",
+      scopes: ["https://www.googleapis.com/auth/webmasters.readonly"],
+      externalAccountId: property,
+    });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ rows: [
+      { keys: ["best climbing shoes", "https://example.com/shoes"], clicks: 12, impressions: 150, ctr: 0.08, position: 4.2 },
+      { keys: ["best climbing shoes", "https://example.com/best-shoes"], clicks: 3, impressions: 25, ctr: 0.12, position: 6.1 },
+    ] }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await t.action(internal.connectionActions.syncSearchConsole, { orgId: o.orgId });
+
+    const observations = await o.client.query(api.searchConsole.observations, { slug: o.slug });
+    expect(observations).toMatchObject({
+      property,
+      dataState: "final",
+      truncated: false,
+      rows: [
+        { query: "best climbing shoes", page: "https://example.com/shoes", clicks: 12, impressions: 150, ctr: 0.08, position: 4.2 },
+        { query: "best climbing shoes", page: "https://example.com/best-shoes", clicks: 3, impressions: 25, ctr: 0.12, position: 6.1 },
+      ],
+    });
+    expect(observations!.queryOverlaps).toMatchObject([
+      { query: "best climbing shoes", pageCount: 2, pages: [{ page: "https://example.com/shoes" }, { page: "https://example.com/best-shoes" }] },
+    ]);
+    expect(observations!.startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(observations!.endDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(observations!.note).toContain("not universal search volume");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, request] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toContain(encodeURIComponent(property));
+    expect(JSON.parse(String(request.body))).toMatchObject({ dimensions: ["query", "page"], dataState: "final" });
+    expect((await t.query(internal.connections.connectionFor, { orgId: o.orgId, provider: "search_console" }))!.lastSyncAt).toBeGreaterThan(0);
+    expect(await t.query(internal.connections.getSecret, { connectionId })).not.toBeNull();
+  });
+
+  it("Search Console observations and property selection stay scoped to the owning workspace", async () => {
+    const t = setup();
+    const owner = await owned(t, "search-owner@example.com", "Owner Business");
+    const other = await owned(t, "search-other@example.com", "Other Business");
+    const connectionId = await t.mutation(internal.connections.storeConnection, {
+      orgId: owner.orgId,
+      userId: owner.userId,
+      provider: "search_console",
+      secret: JSON.stringify({ accessToken: "google-token" }),
+      secretKind: "oauth",
+      scopes: [],
+    });
+    const snapshotId = await t.mutation(internal.searchConsole.startSnapshot, {
+      orgId: owner.orgId,
+      connectionId,
+      property: "https://example.com/",
+      startDate: "2026-07-01",
+      endDate: "2026-09-29",
+    });
+    await t.mutation(internal.searchConsole.writeSnapshotRows, {
+      snapshotId,
+      rows: [{ query: "climbing shoes", page: "https://example.com/shoes", clicks: 1, impressions: 2, ctr: 0.5, position: 3 }],
+    });
+    await t.mutation(internal.searchConsole.finishSnapshot, { snapshotId, status: "complete", rowCount: 1, truncated: false });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ siteEntry: [{ siteUrl: "https://example.com/", permissionLevel: "siteOwner" }] }), { status: 200 })));
+
+    expect(await other.client.query(api.searchConsole.observations, { slug: other.slug })).toBeNull();
+    expect((await owner.client.query(api.searchConsole.observations, { slug: owner.slug }))?.rows).toMatchObject([{ query: "climbing shoes" }]);
+    const history = await owner.client.query(api.searchConsole.history, { slug: owner.slug });
+    expect(history).toMatchObject([{ id: snapshotId, property: "https://example.com/", rowCount: 1 }]);
+    expect(await other.client.query(api.searchConsole.snapshot, { slug: other.slug, snapshotId })).toBeNull();
+    expect((await owner.client.query(api.searchConsole.snapshot, { slug: owner.slug, snapshotId }))?.rows).toMatchObject([{ query: "climbing shoes" }]);
+    await expect(owner.client.action(api.connectionActions.selectSearchConsoleSite, { slug: owner.slug, siteUrl: "https://not-authorized.example/" })).rejects.toThrow("Choose a property returned by the connected Search Console account.");
+    await expect(owner.client.action(api.connectionActions.selectSearchConsoleSite, { slug: owner.slug, siteUrl: "https://example.com/" })).resolves.toMatchObject({ ok: true, siteUrl: "https://example.com/" });
+    expect((await t.query(internal.connections.connectionFor, { orgId: owner.orgId, provider: "search_console" }))!.externalAccountId).toBe("https://example.com/");
+    expect((await owner.client.query(api.connections.list, { slug: owner.slug })).items.find((item) => item.provider === "search_console")?.connection).toMatchObject({ externalAccountId: "https://example.com/" });
+    expect((await t.query(internal.connections.connectionFor, { orgId: other.orgId, provider: "search_console" }))).toBeNull();
+    expect(await t.query(internal.connections.getSecret, { connectionId })).not.toBeNull();
+  });
+
   it("a quick reconnect after disconnecting keeps the new token", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
     vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200 })));
@@ -330,5 +479,32 @@ describe("status page", () => {
       await ctx.db.insert("statusSamples", sample("down", 5));
     });
     expect(await today()).toBe("down");
+  });
+});
+
+describe("Search Console URL inspection", () => {
+  it("limits inspection to one owner-triggered URL inside the selected tenant property", async () => {
+    const t = setup();
+    const owner = await owned(t, "url-inspection-owner@example.com", "Search Company");
+    const connectionId = await t.mutation(internal.connections.storeConnection, {
+      orgId: owner.orgId,
+      userId: owner.userId,
+      provider: "search_console",
+      secret: JSON.stringify({ accessToken: "google-token" }),
+      secretKind: "oauth",
+      scopes: ["https://www.googleapis.com/auth/webmasters.readonly"],
+    });
+    await t.mutation(internal.connections.selectSearchConsoleSite, {
+      orgId: owner.orgId, connectionId, siteUrl: "sc-domain:example.com", accountLabel: "sc-domain:example.com",
+    });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ inspectionResult: {
+      indexStatusResult: { verdict: "PASS", coverageState: "Submitted and indexed", robotsTxtState: "ALLOWED", indexingState: "INDEXING_ALLOWED", pageFetchState: "SUCCESSFUL" },
+    } }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await owner.client.action(api.connectionActions.inspectSearchConsoleUrl, { slug: owner.slug, pageUrl: "https://www.example.com/pricing" });
+    expect(result).toMatchObject({ property: "sc-domain:example.com", inspectionUrl: "https://www.example.com/pricing", verdict: "PASS", pageFetchState: "SUCCESSFUL" });
+    await expect(owner.client.action(api.connectionActions.inspectSearchConsoleUrl, { slug: owner.slug, pageUrl: "https://other.example/pricing" })).rejects.toThrow(/inside the Search Console property/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

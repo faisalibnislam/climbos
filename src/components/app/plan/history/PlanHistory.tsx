@@ -16,7 +16,8 @@ import { formatDateTime } from "@/components/app/money";
 import { cn } from "@/lib/utils";
 import { PLAN_PARTS, describeParts, type PlanPartKey } from "../../../../../shared/planParts";
 import { lineDiff, type DiffRow, type WordOp } from "./diff";
-import { comparePlans, type ComparableExperiment, type ComparablePlan, type PartComparison } from "./parts";
+import { comparePlans, compareSavedDecisions, type ComparableExperiment, type ComparablePlan, type PartComparison } from "./parts";
+import { DecisionChangesSummary } from "./DecisionChangesSummary";
 
 type Version = NonNullable<ReturnType<typeof useQuery<typeof api.planHistory.versions>>>[number];
 
@@ -348,6 +349,7 @@ export function PlanCompare({ slug, versions, initialLeft, initialRight, canEdit
   const R = versions.find((v) => v.id === rightId);
   const latest = versions[0];
   const parts = useMemo(() => (a && b ? comparePlans(a.plan, a.experiments, b.plan, b.experiments) : null), [a, b]);
+  const decisionChanges = useMemo(() => (a && b ? compareSavedDecisions(a.plan, b.plan) : null), [a, b]);
   const changed = parts?.filter((p) => p.changed) ?? [];
   // Parts can be restored from the left side when the right side is the latest version.
   const selectable = canEdit && Boolean(L && R && R.isLatest && !L.isLatest);
@@ -405,6 +407,7 @@ export function PlanCompare({ slug, versions, initialLeft, initialRight, canEdit
               </a>
             ))}
           </div>
+          <DecisionChangesSummary changes={decisionChanges} beforeLabel={label(L)} afterLabel={label(R)} />
           {!changed.length ? (
             <div className="rounded-[var(--radius-card)] border border-line bg-surface p-8 text-center">
               <p className="heading-empty">These versions match</p>

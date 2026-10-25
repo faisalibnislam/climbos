@@ -3,7 +3,7 @@ import { api } from "../../convex/_generated/api";
 import { planMarkdown, planTasks } from "../../shared/airly/plan";
 import { asNewUser, setup } from "./helpers";
 
-describe("Airly apps", () => {
+describe("connected products", () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
     process.env.CLIMBOS_FAKE_AIRLY = "1";
@@ -15,8 +15,8 @@ describe("Airly apps", () => {
 
   it("checks token formats, imports Formkit responses and Meetrao bookings once", async () => {
     const t = setup();
-    const owner = await asNewUser(t, "airly@example.com");
-    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Airly Co" });
+    const owner = await asNewUser(t, "connected-products@example.com");
+    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Connected Products Co" });
     expect(await owner.client.action(api.airlyActions.connect, { slug, app: "formkit", token: "nope" })).toMatchObject({ ok: false });
     expect(await owner.client.action(api.airlyActions.connect, { slug, app: "formkit", token: `fk_live_${"a".repeat(48)}` })).toMatchObject({ ok: true });
     expect(await owner.client.action(api.airlyActions.connect, { slug, app: "meetrao", token: `mk_live_${"b".repeat(48)}` })).toMatchObject({ ok: true });

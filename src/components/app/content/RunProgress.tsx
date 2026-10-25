@@ -4,11 +4,12 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { FunctionReturnType } from "convex/server";
+import type { RunPreview as RunPreviewData } from "@convex/content";
 import { useEffect, useState, type ReactNode } from "react";
 import { Badge, Button, Callout, Progress, Skeleton, type StepItem, type StepStatus } from "@/components/ui";
 import { errorMessage } from "../errors";
 import { cn } from "@/lib/utils";
-import { formatDuration, formatEta, phaseOf, progressOfRun } from "../../../../shared/progress";
+import { formatDuration, formatEta, phaseOf, progressOfRun, runStatusPresentation } from "../../../../shared/progress";
 import { microsToCreditsLabel } from "../money";
 import { roleTitle } from "../roles";
 import { Highlight } from "@/components/ds/content";
@@ -17,35 +18,13 @@ import { can } from "@shared/policy";
 
 export type RunStatusView = FunctionReturnType<typeof api.content.runStatus>;
 
-export const RUN_STATUS_LABEL: Record<string, string> = {
-  proposed: "Queued",
-  cost_reserved: "Getting ready",
-  preparing: "Working on it",
-  needs_approval: "Waiting for approval",
-  approved: "Approved",
-  scheduled: "Scheduled",
-  executing: "Working on it",
-  verified: "Done",
-  failed: "Didn't finish",
-  uncertain: "Outcome uncertain",
-  paused: "Paused",
-  canceled: "Canceled",
-};
+/** Retain the useful first take after onboarding research finishes, before a full plan exists. */
+export function RunPreviewSummary({ preview, researchComplete = true }: { preview: RunPreviewData | null; researchComplete?: boolean }) {
+  if (!preview || (!preview.headline && !preview.points?.length && !preview.opportunities?.length && !preview.channels?.length && !preview.plays?.length)) return null;
+  return <EarlyPreview preview={preview} finished researchComplete={researchComplete} />;
+}
 
-export const RUN_STATUS_TONE: Record<string, "neutral" | "green" | "amber" | "red" | "blue" | "violet"> = {
-  proposed: "neutral",
-  cost_reserved: "blue",
-  preparing: "blue",
-  needs_approval: "amber",
-  approved: "green",
-  scheduled: "blue",
-  executing: "blue",
-  verified: "green",
-  failed: "red",
-  uncertain: "amber",
-  paused: "amber",
-  canceled: "neutral",
-};
+export { RUN_STATUS_LABEL, RUN_STATUS_TONE } from "../../../../shared/progress";
 
 /** Statuses after which a run won't change on its own. */
 export const RUN_FINISHED = new Set(["verified", "failed", "canceled", "uncertain", "needs_approval"]);
@@ -175,7 +154,7 @@ export function RunProgress({
       </div>
     );
   }
-  const label = RUN_STATUS_LABEL[run.status] ?? run.status;
+  const { label } = runStatusPresentation(run.status);
   const finished = RUN_FINISHED.has(run.status);
   const groups = groupSteps(run);
   const running = groups.flatMap((g) => g.phases).find((p) => p.status === "running");
@@ -191,7 +170,7 @@ export function RunProgress({
         <H className="heading-card">{run.title}</H>
         <span className="flex flex-wrap gap-2">
           {run.isFixture ? <Badge tone="violet">Demo: simulated</Badge> : null}
-          <Badge tone={RUN_STATUS_TONE[run.status] ?? "neutral"}>{label}</Badge>
+          <Badge tone={runStatusPresentation(run.status).tone}>{label}</Badge>
         </span>
       </div>
       <p className="sr-only" role="status" aria-live="polite">
@@ -324,7 +303,7 @@ export function RunProgressCompact({ slug, runId, className }: { slug: string; r
       {progress ? <Progress value={progress.percent} label={`${run.title} progress`} /> : <Skeleton className="h-2 w-full" />}
       <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-xs">
         <span className="min-w-0 truncate font-medium text-brand-800">
-          {finished ? (RUN_STATUS_LABEL[run.status] ?? run.status) : current ? `${current.title}${phase && current.phases.length > 1 ? ` · ${phase.name}` : ""}` : "Starting…"}
+          {finished ? runStatusPresentation(run.status).label : current ? `${current.title}${phase && current.phases.length > 1 ? ` · ${phase.name}` : ""}` : "Starting…"}
         </span>
         {progress && !finished ? <span className="shrink-0 tabular-nums text-ink-3">{progress.percent}% · {formatEta(progress.etaSeconds).replace("About ", "~")}</span> : null}
       </p>
@@ -344,11 +323,11 @@ export function RunProgressCompact({ slug, runId, className }: { slug: string; r
 
 
 /** What the job already knows, shown while it keeps working: channels that fit, the first take, the chosen plays. */
-function EarlyPreview({ preview }: { preview: { headline?: string; points?: string[]; channels?: string[]; budget?: string; plays?: { name: string; kind: string; p50: number; unit: string }[] } }) {
-  const KIND: Record<string, string> = { bankable: "Bankable", creative: "Creative", moonshot: "Moonshot" };
+function EarlyPreview({ preview, finished = false, researchComplete = true }: { preview: RunPreviewData; finished?: boolean; researchComplete?: boolean }) {
+  const KIND: Record<string, string> = { bankable: "Practical · established practice", creative: "Adjacent · evidence-supported inference", moonshot: "Bold · speculative hypothesis" };
   return (
     <section aria-label="Early preview" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-brand-200 bg-brand-50 p-3">
-      <p className="text-overline text-brand-800">Early preview · full plan coming</p>
+      <p className="text-overline text-brand-800">{finished ? researchComplete ? "First take · preliminary, based on available evidence" : "Partial first take · some research did not finish" : "Early preview · more research coming"}</p>
       {preview.plays?.length ? (
         <div className="flex flex-col gap-1.5">
           <p className="text-xs font-medium text-ink-2">Chosen plays</p>
@@ -368,7 +347,31 @@ function EarlyPreview({ preview }: { preview: { headline?: string; points?: stri
       {preview.headline ? (
         <div className="flex flex-col gap-1">
           <p className="text-sm font-medium text-ink">{preview.headline}</p>
-          {preview.points?.length ? (
+          {preview.opportunities?.length ? (
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {preview.opportunities.map((opportunity, index) => (
+                <li key={`${opportunity.title}-${index}`} className="flex flex-col gap-1 rounded-[var(--radius-control)] bg-surface px-2.5 py-2">
+                  <p className="text-ui font-medium text-ink">{opportunity.title}</p>
+                  {opportunity.why ? <p className="text-xs text-ink-2">{opportunity.why}</p> : null}
+                  {opportunity.nextStep ? <p className="text-xs text-ink"><span className="font-medium">First step:</span> {opportunity.nextStep}</p> : null}
+                  {opportunity.evidence.length ? (
+                    <div className="mt-1 border-t border-line pt-1.5">
+                      <p className="text-2xs font-medium uppercase tracking-wide text-ink-3">What this is based on</p>
+                      <ul className="mt-1 flex flex-col gap-1 text-2xs text-ink-2">
+                        {opportunity.evidence.map((fact, evidenceIndex) => (
+                          <li key={fact.factId ?? `${fact.sourceUrl ?? "source"}-${evidenceIndex}`}>
+                            <span className="font-medium">{fact.provenance === "source_reported" ? "The website says · check this: " : "Confirmed input: "}</span>
+                            {fact.statement}
+                            {fact.provenance === "source_reported" && fact.sourceUrl ? <> <a className="underline underline-offset-2" href={fact.sourceUrl} target="_blank" rel="noreferrer">View page</a></> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : <p className="mt-1 text-2xs text-ink-3">Hypothesis · no supporting fact or page linked yet</p>}
+                </li>
+              ))}
+            </ul>
+          ) : preview.points?.length ? (
             <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-ink-2">
               {preview.points.map((p) => (
                 <li key={p}>

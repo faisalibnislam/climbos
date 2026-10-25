@@ -8,6 +8,7 @@
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { useRouter } from "next/navigation";
 import { useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import { Check, CircleDashed, Lightbulb, Magic, ShieldCheck, X } from "@/components/icons";
 import { Badge, Button, toast } from "@/components/ui";
@@ -17,6 +18,7 @@ import { microsToCreditsLabel } from "@/components/app/money";
 import { RoleAvatar } from "@/components/app/RoleAvatar";
 import { roleTitle } from "@/components/app/roles";
 import { cn } from "@/lib/utils";
+import { actionCardSetupHref, actionCardStartLabel } from "@/components/app/ActionCardStatus";
 
 export interface IdeaCard {
   id: string;
@@ -71,7 +73,7 @@ function CardFace({ card }: { card: IdeaCard }) {
       {blocked && card.blockedReason ? <p className="rounded-[var(--radius-control)] bg-amber-100 px-3 py-2 text-ui text-amber-800">{card.blockedReason}</p> : null}
       {card.externalEffect && !note ? (
         <p className="flex items-center gap-1.5 text-xs text-ink-3">
-          <ShieldCheck aria-hidden className="size-3.5 text-brand-800" /> Prepared for your approval; nothing goes live by itself.
+          <ShieldCheck aria-hidden className="size-3.5 text-brand-800" /> This prepares it for your review. Nothing goes live.
         </p>
       ) : null}
     </div>
@@ -79,6 +81,7 @@ function CardFace({ card }: { card: IdeaCard }) {
 }
 
 export function IdeaDeck({ slug, cards }: { slug: string; cards: IdeaCard[] }) {
+  const router = useRouter();
   const run = useMutation(api.workspace.runCard);
   const dismiss = useMutation(api.workspace.dismissCard);
   const [gone, setGone] = useState<Set<string>>(new Set());
@@ -95,6 +98,11 @@ export function IdeaDeck({ slug, cards }: { slug: string; cards: IdeaCard[] }) {
 
   const decide = async (dir: "left" | "right") => {
     if (!top || busy) return;
+    const setupHref = actionCardSetupHref(slug, top.kind);
+    if (dir === "right" && setupHref) {
+      router.push(setupHref);
+      return;
+    }
     if (dir === "right" && top.status === "blocked") {
       toast({ tone: "info", title: "Needs setup first", description: top.blockedReason ?? undefined });
       setDx(0);
@@ -159,7 +167,7 @@ export function IdeaDeck({ slug, cards }: { slug: string; cards: IdeaCard[] }) {
       tabIndex={0}
       role="group"
       aria-roledescription="card deck"
-      aria-label={`Idea ${position} of ${total}. Right arrow to ${note ? "mark as read" : "do it"}, left arrow for not now.`}
+      aria-label={`Idea ${position} of ${total}. Right arrow to ${note ? "mark as read" : actionCardStartLabel(top.kind, top.externalEffect).toLowerCase()}, left arrow for not now.`}
       onKeyDown={(e) => {
         if (e.key === "ArrowRight") {
           e.preventDefault();
@@ -195,7 +203,7 @@ export function IdeaDeck({ slug, cards }: { slug: string; cards: IdeaCard[] }) {
         >
           {/* Swipe labels */}
           <span aria-hidden className="pointer-events-none absolute right-4 top-4 z-10 rounded-[var(--radius-badge)] border-2 border-brand-800 bg-lime px-2 py-0.5 text-xs font-semibold tracking-wide text-ink" style={{ opacity: yes, transform: "rotate(8deg)" }}>
-            {note ? "GOT IT" : "DO IT"}
+            {actionCardStartLabel(top.kind, top.externalEffect).toUpperCase()}
           </span>
           <span aria-hidden className="pointer-events-none absolute left-4 top-4 z-10 rounded-[var(--radius-badge)] border-2 border-ink-3 bg-surface px-2 py-0.5 text-xs font-semibold tracking-wide text-ink-2" style={{ opacity: no, transform: "rotate(-8deg)" }}>
             NOT NOW
@@ -211,7 +219,7 @@ export function IdeaDeck({ slug, cards }: { slug: string; cards: IdeaCard[] }) {
           {position} / {total}
         </span>
         <Button onClick={() => void decide("right")} loading={busy && leaving === "right"} disabled={busy || top.status === "blocked"}>
-          <Check aria-hidden /> {note ? "Got it" : "Do it"}
+          <Check aria-hidden /> {actionCardStartLabel(top.kind, top.externalEffect)}
         </Button>
       </div>
     </div>

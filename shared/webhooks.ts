@@ -6,6 +6,7 @@ export const WEBHOOK_EVENTS = {
   "chat.started": "A new website chat",
   "reply.received": "Someone replied to your outreach",
   "post.published": "A post went live",
+  "content.approved": "An approved blog draft is ready for export (not published)",
 } as const;
 export type WebhookEvent = keyof typeof WEBHOOK_EVENTS;
 export const isWebhookEvent = (s: string): s is WebhookEvent => s in WEBHOOK_EVENTS;

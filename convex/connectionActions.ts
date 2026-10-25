@@ -1,10 +1,16 @@
+"use node";
+
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { lookup } from "node:dns/promises";
+import { request as httpsRequest } from "node:https";
+import { isIP } from "node:net";
 import { v } from "convex/values";
-import { runDailyReport, listAccessibleProperties } from "../shared/integrations/ga4";
+import { aiReferralAttribution, runDailyReport, listAccessibleProperties } from "../shared/integrations/ga4";
 import { getAccount as getInstagramAccount } from "../shared/integrations/instagram";
 import { listManagedPages } from "../shared/integrations/facebookPages";
 import { getMember as getLinkedInMember } from "../shared/integrations/linkedin";
 import { getMe as getXUser } from "../shared/integrations/x";
+import { getCustomerSettings, listAccessibleCustomers, GOOGLE_ADS_SCOPE } from "../shared/integrations/googleAds";
 import {
   buildCodeExchangeRequest,
   buildInstagramLongLivedExchangeRequest,
@@ -17,9 +23,11 @@ import {
 import { parseRevenueCsv } from "../shared/integrations/csvRevenue";
 import { classifyStripeKey, importStripeRevenue } from "../shared/integrations/stripeRevenue";
 import { listSegments } from "../shared/integrations/resendMarketing";
+import { inspectSearchUrl, listSites as listSearchConsoleSites, querySearchAnalytics, searchConsolePropertyMatchesWebsite, type SearchUrlInspection } from "../shared/integrations/searchConsole";
+import { probeWordPressCredentials } from "../shared/integrations/wordpress";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { action, internalAction } from "./_generated/server";
+import { action, internalAction, type ActionCtx } from "./_generated/server";
 import { providerValidator } from "./schema";
 import { appError } from "./lib/tenancy";
 
@@ -52,6 +60,53 @@ const CLIENT_ENV = {
 /** Providers whose access tokens we refresh with a stored refresh token before use (Google's last about an hour). */
 export const REFRESHABLE = new Set(["linkedin", "x", "ga4", "search_console", "google_ads"]);
 const REFRESH_MARGIN_MS = 5 * 60_000;
+const SEARCH_CONSOLE_ROW_LIMIT = 1_000;
+const SEARCH_CONSOLE_MAX_PAGES = 3;
+
+/** Pin authenticated WordPress requests to the public address validated immediately beforehand. */
+function wordpressPinnedFetch(url: string, init: RequestInit | undefined, addresses: string[]): Promise<Response> {
+  const parsed = new URL(url);
+  const address = addresses[0];
+  const family = address ? isIP(address) : 0;
+  if (parsed.protocol !== "https:" || !address || !family) return Promise.reject(new Error("WordPress requests require a validated public HTTPS address."));
+  const headers: Record<string, string> = {};
+  new Headers(init?.headers).forEach((value, key) => { headers[key] = value; });
+  return new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks: Buffer[] = [];
+    const req = httpsRequest(parsed, {
+      method: init?.method ?? "GET",
+      headers,
+      signal: init?.signal ?? undefined,
+      timeout: 8_000,
+      lookup: (_hostname, options, callback) => {
+        if (options.all) callback(null, [{ address, family }]);
+        else callback(null, address, family);
+      },
+    }, (res) => {
+      res.on("data", (chunk: Buffer | string) => {
+        const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        size += bytes.length;
+        if (size > 100_000) {
+          req.destroy(new Error("WordPress response exceeded its size limit."));
+          return;
+        }
+        chunks.push(bytes);
+      });
+      res.on("end", () => {
+        const headers = new Headers();
+        for (const [key, value] of Object.entries(res.headers)) {
+          if (Array.isArray(value)) value.forEach((part) => headers.append(key, part));
+          else if (typeof value === "string") headers.set(key, value);
+        }
+        resolve(new Response(Buffer.concat(chunks), { status: res.statusCode ?? 502, headers }));
+      });
+      res.on("error", reject);
+    });
+    req.on("error", reject);
+    req.end();
+  });
+}
 
 /** Scopes we ask for, used when the token response doesn't echo them back. */
 const REQUESTED_SCOPES: Record<string, string[]> = {
@@ -62,6 +117,21 @@ const REQUESTED_SCOPES: Record<string, string[]> = {
 function clientCreds(group: keyof typeof OAUTH_PROVIDERS): { clientId?: string; clientSecret?: string } {
   const [idEnv, secretEnv] = CLIENT_ENV[group];
   return { clientId: process.env[idEnv], clientSecret: process.env[secretEnv] };
+}
+
+async function googleAccessToken(ctx: ActionCtx, connectionId: Id<"connections">, expiresAt?: number): Promise<string | null> {
+  if (expiresAt && expiresAt < Date.now() + REFRESH_MARGIN_MS) {
+    const refreshed = await ctx.runAction(internal.connectionActions.refreshAccessToken, { connectionId });
+    if (!refreshed.ok) return null;
+  }
+  const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId });
+  if (!secret) return null;
+  try {
+    const value = JSON.parse(secret.value) as { accessToken?: unknown };
+    return typeof value.accessToken === "string" ? value.accessToken : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -112,6 +182,29 @@ export const completeOAuth = action({
         // Publishing uses the Page access token, not the user token.
         if (page.pageAccessToken) token = { ...token, accessToken: page.pageAccessToken };
       }
+    } else if (st.provider === "google_ads") {
+      accountType = "google_ads_account_selection_required";
+      accountLabel = "Choose a Google Ads advertiser account";
+      const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+      if (developerToken) {
+        const accessible = await listAccessibleCustomers({ accessToken: token.accessToken, developerToken });
+        if (accessible.ok && accessible.data.length === 1) {
+          const customerId = accessible.data[0]!;
+          const settings = await getCustomerSettings({ accessToken: token.accessToken, developerToken, customerId });
+          if (settings.ok && !settings.data.managerAccount) {
+            externalAccountId = customerId;
+            accountLabel = `Google Ads · ${customerId}`;
+            accountType = "google_ads_advertiser";
+          }
+        } else if (!accessible.ok) {
+          accountLabel = "Google Ads connected · account selection needs retry";
+        } else if (accessible.data.length === 0) {
+          accountLabel = "No directly accessible Google Ads accounts";
+        }
+      } else {
+        accountType = "google_ads_setup_needed";
+        accountLabel = "Google Ads connected · ClimbOS setup needed";
+      }
     } else if (group === "linkedin" || group === "x") {
       // Posts need the author id, so a failed profile probe means no connection.
       if (token.scopes.length === 0) token = { ...token, scopes: REQUESTED_SCOPES[group] ?? [] };
@@ -132,6 +225,19 @@ export const completeOAuth = action({
       if (props.ok && props.data.items[0]) {
         accountLabel = props.data.items[0].displayName;
         externalAccountId = props.data.items[0].property;
+      }
+    } else if (st.provider === "search_console") {
+      const properties = await listSearchConsoleSites({ accessToken: token.accessToken });
+      if (properties.ok && properties.data.length === 1) {
+        accountLabel = properties.data[0]!.siteUrl;
+        externalAccountId = properties.data[0]!.siteUrl;
+        accountType = "search_console_property";
+      } else if (properties.ok && properties.data.length > 1) {
+        accountLabel = `${properties.data.length} Search Console properties`;
+        accountType = "search_console_property_selection_required";
+      } else if (properties.ok) {
+        accountLabel = "No Search Console properties available";
+        accountType = "search_console_no_properties";
       }
     }
 
@@ -165,7 +271,7 @@ export const connectApiKey = action({
         return { ok: false, message: "Please use a read-only restricted key (it starts with rk_). Never share your secret key." };
       }
       const probe = await importStripeRevenue({ restrictedKey: key, createdGte: Math.floor(Date.now() / 1000) - 86_400, maxPages: 1 });
-      if (!probe.ok) return { ok: false, message: "Stripe rejected this key or it lacks read access to charges and refunds." };
+      if (!probe.ok) return { ok: false, message: "Stripe rejected this key or it lacks read access to charges, refunds and invoices." };
       accountLabel = key.startsWith("rk_test_") ? "Stripe (test mode)" : "Stripe";
     } else {
       if (!key.startsWith("re_")) return { ok: false, message: "That doesn't look like a Resend API key (they start with re_)." };
@@ -186,6 +292,46 @@ export const connectApiKey = action({
     return { ok: true, message: "Connected." };
   },
 });
+
+/** Verify a revocable WordPress Application Password before storing it encrypted. */
+export const connectWordPress = action({
+  args: { slug: v.string(), siteUrl: v.string(), username: v.string(), applicationPassword: v.string() },
+  handler: async (ctx, { slug, siteUrl, username, applicationPassword }): Promise<{ ok: boolean; message: string }> => {
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_connections" });
+    if (!access) throw appError("NOT_FOUND", "We couldn't find that workspace.");
+    if (access.kind === "demo") return { ok: false, message: "Demo workspaces can't connect real accounts." };
+    let validatedAddresses: string[] = [];
+    const probe = await probeWordPressCredentials({ siteUrl, username, applicationPassword }, {
+      resolveHost: async (hostname) => {
+        validatedAddresses = (await lookup(hostname, { all: true, verbatim: true })).map((entry) => entry.address);
+        return validatedAddresses;
+      },
+      fetchImpl: (url, init) => wordpressPinnedFetch(url, init, validatedAddresses),
+    });
+    if (!probe.ok) {
+      const message = probe.reason === "credentials" ? "WordPress rejected the username or Application Password. Check it and try again."
+        : probe.reason === "permission" ? "This WordPress user needs permission to edit posts. Use an account with the edit_posts capability."
+          : probe.reason === "unsafe_host" ? "That site resolves to a private or reserved network address, so ClimbOS will not send credentials there."
+            : probe.reason === "invalid_site" ? "Enter the public HTTPS address of your WordPress site, without a query or fragment."
+              : probe.reason === "unsupported" ? "The site did not return the expected WordPress REST API response, or redirected the request. Check that its REST API is enabled."
+                : "ClimbOS couldn't reach the site's WordPress REST API. Check the address and try again.";
+      return { ok: false, message };
+    }
+    await ctx.runMutation(internal.connections.storeConnection, {
+      orgId: access.orgId,
+      userId: access.userId,
+      provider: "wordpress",
+      secret: JSON.stringify({ siteUrl: probe.siteUrl, username: username.trim(), applicationPassword: applicationPassword.replace(/\s+/gu, "") }),
+      secretKind: "api_key",
+      scopes: ["wordpress.users.read_self", "wordpress.posts.edit"],
+      accountLabel: `${probe.accountName} · ${new URL(probe.siteUrl).host}`.slice(0, 200),
+      externalAccountId: probe.siteUrl,
+      accountType: "wordpress_application_password",
+    });
+    return { ok: true, message: "WordPress access verified and the credential stored encrypted." };
+  },
+});
+
 
 export const revokeProviderToken = internalAction({
   args: { connectionId: v.id("connections"), secretIds: v.optional(v.array(v.id("connectionSecrets"))) },
@@ -279,19 +425,203 @@ export const syncGa4 = internalAction({
       return;
     }
     const byDay = new Map<string, { sessions: number; users: number; keyEvents: number }>();
+    const aiByDayProvider = new Map<string, { date: string; provider: string; sessions: number; keyEvents: number }>();
     for (const r of report.data.items) {
       const d = byDay.get(r.date) ?? { sessions: 0, users: 0, keyEvents: 0 };
       d.sessions += r.sessions;
       d.users += r.totalUsers;
       d.keyEvents += r.keyEvents;
       byDay.set(r.date, d);
+      const provider = aiReferralAttribution(r.sessionSource, r.sessionMedium);
+      if (provider) {
+        const key = `${r.date}\u0000${provider}`;
+        const traffic = aiByDayProvider.get(key) ?? { date: r.date, provider, sessions: 0, keyEvents: 0 };
+        traffic.sessions += r.sessions;
+        traffic.keyEvents += r.keyEvents;
+        aiByDayProvider.set(key, traffic);
+      }
     }
     const rows = [...byDay.entries()].flatMap(([date, d]) => [
       { metricKey: "visits", date, value: d.sessions },
       { metricKey: "signups", date, value: d.keyEvents },
     ]);
+    rows.push(...[...aiByDayProvider.values()].flatMap(({ date, provider, sessions, keyEvents }) => [
+      { metricKey: "ai_referral_sessions", date, value: sessions, channel: `AI referral / ${provider}` },
+      { metricKey: "ai_referral_key_events", date, value: keyEvents, channel: `AI referral / ${provider}` },
+    ]));
     await ctx.runMutation(internal.analytics.upsertDaily, { orgId, source: "ga4", kind: "observed", rows });
     await ctx.runMutation(internal.connections.markSync, { connectionId: conn._id, ok: true });
+  },
+});
+
+/** Read available Search Console properties for an owner/admin to select explicitly. */
+export const availableSearchConsoleSites = action({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_connections" });
+    if (!access) throw appError("NOT_FOUND", "We couldn't find that workspace.");
+    const connection = await ctx.runQuery(internal.connections.connectionFor, { orgId: access.orgId, provider: "search_console" });
+    if (!connection || connection.status !== "connected" || connection.isFixture) return { ok: false as const, sites: [], message: "Connect Search Console first." };
+    const accessToken = await googleAccessToken(ctx, connection._id, connection.expiresAt);
+    if (!accessToken) return { ok: false as const, sites: [], message: "Search Console access expired. Reconnect the account." };
+    const result = await listSearchConsoleSites({ accessToken });
+    return result.ok
+      ? { ok: true as const, sites: result.data, message: "Choose the Search Console property for this business." }
+      : { ok: false as const, sites: [], message: "Couldn't load Search Console properties. Try again or reconnect the account." };
+  },
+});
+
+/** List directly accessible Google Ads accounts for an owner/admin to select. */
+export const availableGoogleAdsAccounts = action({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_connections" });
+    if (access.kind === "demo") return { ok: false as const, customerIds: [], truncated: false, message: "Demo workspaces do not connect real accounts." };
+    const connection = await ctx.runQuery(internal.connections.connectionFor, { orgId: access.orgId, provider: "google_ads" });
+    if (!connection || connection.status !== "connected" || connection.isFixture) return { ok: false as const, customerIds: [], truncated: false, message: "Connect Google Ads first." };
+    if (!connection.scopes.includes(GOOGLE_ADS_SCOPE)) return { ok: false as const, customerIds: [], truncated: false, message: "Reconnect Google Ads and grant Ads reporting access." };
+    const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+    if (!developerToken) return { ok: false as const, customerIds: [], truncated: false, message: "Google Ads account selection needs ClimbOS developer-token setup." };
+    const accessToken = await googleAccessToken(ctx, connection._id, connection.expiresAt);
+    if (!accessToken) return { ok: false as const, customerIds: [], truncated: false, message: "Google Ads access expired. Reconnect the account." };
+    const result = await listAccessibleCustomers({ accessToken, developerToken });
+    if (!result.ok) return { ok: false as const, customerIds: [], truncated: false, message: `Google Ads accounts could not be loaded: ${result.providerMessage}` };
+    return {
+      ok: true as const,
+      customerIds: result.data.slice(0, 100),
+      truncated: result.data.length > 100,
+      message: "Choose the business's advertiser account. Manager accounts cannot be selected in this setup.",
+    };
+  },
+});
+
+/** Validate the selected account against Google's live access list before binding it to this workspace. */
+export const selectGoogleAdsAccount = action({
+  args: { slug: v.string(), customerId: v.string() },
+  handler: async (ctx, { slug, customerId }) => {
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_connections" });
+    if (access.kind === "demo") throw appError("FORBIDDEN", "Demo workspaces can't connect real accounts.");
+    if (!/^\d{10}$/.test(customerId)) throw appError("INVALID", "Choose a valid Google Ads customer ID from the connected account.");
+    const connection = await ctx.runQuery(internal.connections.connectionFor, { orgId: access.orgId, provider: "google_ads" });
+    if (!connection || connection.status !== "connected" || connection.isFixture) throw appError("INVALID", "Connect Google Ads first.");
+    if (!connection.scopes.includes(GOOGLE_ADS_SCOPE)) throw appError("FORBIDDEN", "Reconnect Google Ads and grant Ads reporting access.");
+    const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+    if (!developerToken) throw appError("UNAVAILABLE", "Google Ads account selection needs ClimbOS developer-token setup.");
+    const accessToken = await googleAccessToken(ctx, connection._id, connection.expiresAt);
+    if (!accessToken) throw appError("UNAVAILABLE", "Google Ads access expired. Reconnect the account.");
+    const accessible = await listAccessibleCustomers({ accessToken, developerToken });
+    if (!accessible.ok || !accessible.data.includes(customerId)) throw appError("FORBIDDEN", "Choose an advertiser account returned by the connected Google sign-in.");
+    const settings = await getCustomerSettings({ accessToken, developerToken, customerId });
+    if (!settings.ok) throw appError("UNAVAILABLE", `Google Ads account details could not be read: ${settings.providerMessage}`);
+    if (settings.data.managerAccount) throw appError("UNAVAILABLE", "This ClimbOS connection supports advertiser accounts. Google Ads manager accounts and their child-account selection are not supported yet.");
+    const accountLabel = `${customerId} · ${settings.data.currencyCode}`;
+    const saved = await ctx.runMutation(internal.connections.selectGoogleAdsAccount, {
+      orgId: access.orgId,
+      userId: access.userId,
+      connectionId: connection._id,
+      customerId,
+      accountLabel,
+    });
+    if (!saved) throw appError("INVALID", "Reconnect Google Ads and select the account again.");
+    return { ok: true as const, customerId, accountLabel, currency: settings.data.currencyCode };
+  },
+});
+
+/** Verify the selected property against the user's live sites.list result before storing it. */
+export const selectSearchConsoleSite = action({
+  args: { slug: v.string(), siteUrl: v.string() },
+  handler: async (ctx, { slug, siteUrl }) => {
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_connections" });
+    if (!access) throw appError("NOT_FOUND", "We couldn't find that workspace.");
+    if (access.kind === "demo") throw appError("FORBIDDEN", "Demo workspaces can't connect real accounts.");
+    const connection = await ctx.runQuery(internal.connections.connectionFor, { orgId: access.orgId, provider: "search_console" });
+    if (!connection || connection.status !== "connected" || connection.isFixture) throw appError("INVALID", "Connect Search Console first.");
+    const accessToken = await googleAccessToken(ctx, connection._id, connection.expiresAt);
+    if (!accessToken) throw appError("INVALID", "Search Console access expired. Reconnect the account.");
+    const result = await listSearchConsoleSites({ accessToken });
+    const site = result.ok ? result.data.find((item) => item.siteUrl === siteUrl) : undefined;
+    if (!site) throw appError("INVALID", "Choose a property returned by the connected Search Console account.");
+    const selected = await ctx.runMutation(internal.connections.selectSearchConsoleSite, { orgId: access.orgId, connectionId: connection._id, siteUrl: site.siteUrl, accountLabel: site.siteUrl });
+    if (!selected) throw appError("INVALID", "Reconnect Search Console and choose the property again.");
+    await ctx.scheduler.runAfter(0, internal.connectionActions.syncSearchConsole, { orgId: access.orgId });
+    return { ok: true, siteUrl: site.siteUrl };
+  },
+});
+
+/** Owner-triggered, single-URL read of Google's indexed snapshot for the selected property. */
+export const inspectSearchConsoleUrl = action({
+  args: { slug: v.string(), pageUrl: v.string() },
+  handler: async (ctx: ActionCtx, { slug, pageUrl }): Promise<SearchUrlInspection & { inspectedAt: number; property: string }> => {
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_connections" });
+    if (!access) throw appError("NOT_FOUND", "We couldn't find that workspace.");
+    if (access.kind === "demo") throw appError("FORBIDDEN", "Demo workspaces can't inspect a live Search Console property.");
+    const connection = await ctx.runQuery(internal.connections.connectionFor, { orgId: access.orgId, provider: "search_console" });
+    if (!connection || connection.status !== "connected" || connection.isFixture || !connection.externalAccountId) {
+      throw appError("INVALID", "Connect Search Console and select a property before checking a page.");
+    }
+    const page = pageUrl.trim();
+    if (!searchConsolePropertyMatchesWebsite(connection.externalAccountId, page)) {
+      throw appError("INVALID", "Enter a page inside the Search Console property selected for this business.");
+    }
+    const accessToken = await googleAccessToken(ctx, connection._id, connection.expiresAt);
+    if (!accessToken) throw appError("INVALID", "Search Console access expired. Reconnect the account.");
+    const result = await inspectSearchUrl({ accessToken, siteUrl: connection.externalAccountId, inspectionUrl: page });
+    if (!result.ok) throw appError("INVALID", "Google Search Console couldn't inspect that page. Check the URL and property access, then try again.");
+    return { ...result.data, inspectedAt: Date.now(), property: connection.externalAccountId };
+  },
+});
+
+export const syncSearchConsole = internalAction({
+  args: { orgId: v.id("organizations") },
+  handler: async (ctx, { orgId }) => {
+    const connection = await ctx.runQuery(internal.connections.connectionFor, { orgId, provider: "search_console" });
+    if (!connection || connection.status !== "connected" || connection.isFixture) return;
+    if (!connection.externalAccountId) {
+      await ctx.runMutation(internal.connections.markSync, { connectionId: connection._id, ok: false, error: "Choose a Search Console property before syncing." });
+      return;
+    }
+    const accessToken = await googleAccessToken(ctx, connection._id, connection.expiresAt);
+    if (!accessToken) {
+      await ctx.runMutation(internal.connections.markSync, { connectionId: connection._id, ok: false, error: "Search Console access expired. Reconnect the account.", expired: true });
+      return;
+    }
+    const endDate = isoDay(Date.now() - 3 * 86_400_000);
+    const startDate = isoDay(Date.now() - 93 * 86_400_000);
+    const snapshotId = await ctx.runMutation(internal.searchConsole.startSnapshot, {
+      orgId, connectionId: connection._id, property: connection.externalAccountId, startDate, endDate,
+    });
+    const report = await querySearchAnalytics({
+      accessToken,
+      siteUrl: connection.externalAccountId,
+      startDate,
+      endDate,
+      dimensions: ["query", "page"],
+      rowLimit: SEARCH_CONSOLE_ROW_LIMIT,
+      maxPages: SEARCH_CONSOLE_MAX_PAGES,
+      dataState: "final",
+    });
+    if (!report.ok) {
+      await ctx.runMutation(internal.searchConsole.finishSnapshot, { snapshotId, status: "failed", rowCount: 0, truncated: false, error: report.providerMessage });
+      await ctx.runMutation(internal.connections.markSync, { connectionId: connection._id, ok: false, error: "Search Console couldn't return performance data. Check property access and try again." });
+      return;
+    }
+    const uniqueRows = new Map<string, { query: string; page: string; clicks: number; impressions: number; ctr: number; position: number }>();
+    for (const row of report.data.items) {
+      const [query, page] = row.keys;
+      if (!query || !page || query.length > 2_000 || page.length > 2_000) continue;
+      uniqueRows.set(`${query}\u0000${page}`, { query, page, clicks: row.clicks, impressions: row.impressions, ctr: row.ctr, position: row.position });
+    }
+    const rows = [...uniqueRows.values()];
+    for (let i = 0; i < rows.length; i += 250) {
+      await ctx.runMutation(internal.searchConsole.writeSnapshotRows, { snapshotId, rows: rows.slice(i, i + 250) });
+    }
+    await ctx.runMutation(internal.searchConsole.finishSnapshot, {
+      snapshotId,
+      status: "complete",
+      rowCount: rows.length,
+      truncated: report.data.truncated || report.data.items.length >= SEARCH_CONSOLE_ROW_LIMIT * SEARCH_CONSOLE_MAX_PAGES,
+    });
+    await ctx.runMutation(internal.connections.markSync, { connectionId: connection._id, ok: true });
   },
 });
 
@@ -323,7 +653,15 @@ export const syncStripe = internalAction({
         kind: e.kind,
       })),
     });
-    await ctx.runMutation(internal.connections.markSync, { connectionId: conn._id, ok: true });
+    await ctx.runMutation(internal.connections.markSync, {
+      connectionId: conn._id,
+      ok: true,
+      stripeOpenInvoiceSnapshot: {
+        asOf: Date.now(),
+        partial: res.data.openInvoicesPartial,
+        byCurrency: res.data.openInvoiceExposure,
+      },
+    });
   },
 });
 
@@ -369,6 +707,7 @@ export const syncNow = action({
     const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_connections" });
     if (!access) throw appError("NOT_FOUND", "We couldn't find that workspace.");
     if (provider === "ga4") await ctx.runAction(internal.connectionActions.syncGa4, { orgId: access.orgId });
+    if (provider === "search_console") await ctx.runAction(internal.connectionActions.syncSearchConsole, { orgId: access.orgId });
     if (provider === "stripe_revenue") await ctx.runAction(internal.connectionActions.syncStripe, { orgId: access.orgId });
     return { ok: true };
   },

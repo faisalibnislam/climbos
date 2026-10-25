@@ -8,7 +8,10 @@
  */
 
 export interface CohortPayment {
+  /** Provider namespace for customerRef; optional only for legacy callers. */
+  source?: string;
   customerRef?: string;
+  orderRef?: string;
   occurredAt: number;
   amountMinor: number;
   refundedMinor: number;
@@ -27,6 +30,34 @@ export interface CohortRow {
   revenueMinor: (number | null)[];
 }
 
+/** Compact, evidence-labeled subscription cohort context for growth planning. */
+export function subscriptionCohortBrief(
+  rows: readonly CohortRow[],
+  options: { currency: string; hasCustomerIds: boolean; truncated: boolean },
+): string {
+  const currency = options.currency.toUpperCase();
+  if (!options.hasCustomerIds) {
+    return `OBSERVED SUBSCRIPTION COHORTS: unavailable for ${currency}; loaded billing events do not include customer IDs. Do not infer subscription retention, churn, or expansion from aggregate revenue.`;
+  }
+  if (!rows.length) {
+    return `OBSERVED SUBSCRIPTION COHORTS: no same-currency subscription-payment cohorts could be calculated for ${currency}; treat retention as unknown.`;
+  }
+  const recent = rows.slice(-6);
+  const observations = recent.map((row) => {
+    const months = row.activeCustomers.slice(1, 6).map((count, index) => {
+      const offset = index + 1;
+      if (count === null) return `M${offset} incomplete`;
+      const rate = row.retention[offset];
+      return `M${offset} ${count}/${row.size}${rate === null ? "" : ` (${(rate * 100).toFixed(1)}%)`}`;
+    });
+    return `${row.cohort}: ${row.size} first-paid customers; ${months.join(", ") || "no completed follow-up month"}`;
+  });
+  return [
+    `OBSERVED SUBSCRIPTION PAYMENT COHORTS (${currency}; latest six cohorts from the loaded billing-event history${options.truncated ? "; history is truncated to the latest 10,000 events" : ""}): ${observations.join("; ")}.`,
+    "Each cohort is grouped by month of first positive subscription payment and counts same-currency customers with a positive subscription payment in each completed month. This is observed payer retention, not contractual churn, gross/net revenue retention, a forecast, or causal evidence. Incomplete months are explicitly omitted; do not treat them as zero.",
+  ].join(" ");
+}
+
 function monthKey(ms: number): string {
   return new Date(ms).toISOString().slice(0, 7);
 }
@@ -43,12 +74,20 @@ export function computeCohorts(
   const maxMonths = options.maxMonths ?? 12;
   const nowIndex = monthIndex(monthKey(options.nowMs));
   const firstMonth = new Map<string, number>();
+  const customerKey = (payment: CohortPayment) => `${payment.source ?? ""}\u0000${payment.customerRef}`;
   const valid = payments
     .filter((p) => p.customerRef && p.kind !== "refund" && p.currency === options.currency && p.amountMinor - p.refundedMinor > 0)
     .sort((a, b) => a.occurredAt - b.occurredAt);
   for (const p of valid) {
     const idx = monthIndex(monthKey(p.occurredAt));
-    if (!firstMonth.has(p.customerRef!)) firstMonth.set(p.customerRef!, idx);
+    const customer = customerKey(p);
+    if (!firstMonth.has(customer)) firstMonth.set(customer, idx);
+  }
+  const customerByOrder = new Map<string, string>();
+  for (const p of valid) {
+    if (!p.orderRef || !p.customerRef) continue;
+    const key = `${p.source ?? ""}\u0000${p.currency}\u0000${p.orderRef}`;
+    if (!customerByOrder.has(key)) customerByOrder.set(key, customerKey(p));
   }
   const cohorts = new Map<number, { members: Set<string>; active: Map<number, Set<string>>; revenue: Map<number, number> }>();
   for (const [customer, idx] of firstMonth) {
@@ -56,15 +95,33 @@ export function computeCohorts(
     c.members.add(customer);
     cohorts.set(idx, c);
   }
-  for (const p of valid) {
-    const start = firstMonth.get(p.customerRef!)!;
+  const ledger: { payment: CohortPayment; customer: string; netMinor: number; isRefund: boolean }[] = valid.map((payment) => ({
+    payment,
+    customer: customerKey(payment),
+    netMinor: payment.amountMinor - payment.refundedMinor,
+    isRefund: false,
+  }));
+  for (const refund of payments) {
+    if (refund.kind !== "refund" || refund.currency !== options.currency) continue;
+    const customer = refund.customerRef
+      ? customerKey(refund)
+      : refund.orderRef
+        ? customerByOrder.get(`${refund.source ?? ""}\u0000${refund.currency}\u0000${refund.orderRef}`)
+        : undefined;
+    if (customer && firstMonth.has(customer)) ledger.push({ payment: refund, customer, netMinor: -Math.abs(refund.amountMinor), isRefund: true });
+  }
+
+  for (const { payment: p, customer, netMinor, isRefund } of ledger) {
+    const start = firstMonth.get(customer)!;
     const k = monthIndex(monthKey(p.occurredAt)) - start;
     if (k < 0 || k >= maxMonths) continue;
     const c = cohorts.get(start)!;
-    const set = c.active.get(k) ?? new Set<string>();
-    set.add(p.customerRef!);
-    c.active.set(k, set);
-    c.revenue.set(k, (c.revenue.get(k) ?? 0) + p.amountMinor - p.refundedMinor);
+    if (!isRefund) {
+      const set = c.active.get(k) ?? new Set<string>();
+      set.add(customer);
+      c.active.set(k, set);
+    }
+    c.revenue.set(k, (c.revenue.get(k) ?? 0) + netMinor);
   }
   return [...cohorts.entries()]
     .sort((a, b) => a[0] - b[0])

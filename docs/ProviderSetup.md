@@ -12,10 +12,16 @@ Run `pnpm setup:check` (or `pnpm setup:check --prod`) at any time. It lists what
 
 | Variable | Notes |
 |---|---|
-| `ANTHROPIC_API_KEY` | Models `claude-sonnet-5-5` and `claude-haiku-5-5` (verified 17 Oct 2026). The web search tool is `web_search_20250305` at $10 per 1k searches. |
-| `GEMINI_API_KEY` | Models `gemini-3.8-flash` and `gemini-3.1-flash-lite`. Images use `gemini-3.1-flash-lite-image`. `gemini-2.5-flash-image` was shut down on 2 Oct 2026. |
+| `OPENAI_API_KEY` | Required in the Convex deployment for real text-agent work. Both Basic and Expert runs start on `gpt-6-luna`. In an explicitly selected Expert run, only eligible agents can use `gpt-6.1-sol` for a revision after the critic reports an eligible issue with evidence. This is a bounded revision route, not a workspace-wide model switch. There is no silent provider fallback. |
+| `GEMINI_API_KEY` | Optional in setup checks; used for configured image and video generation routes. Image model IDs and per-attempt planning allowances are in `shared/ai/models.ts`; video generation is separately metered. Missing Gemini configuration does not disable OpenAI text work. |
 
-Without keys, real workspaces show "AI providers aren't available". The demo still works on fixtures.
+Without `OPENAI_API_KEY`, real text-agent work is unavailable; the demo still works on fixtures. Without `GEMINI_API_KEY`, the configured image/video generation routes are unavailable while text work can continue.
+
+These are **server-side Convex secrets**. Put them in `.env.local` for development or `.env.production.local` for production, then use `pnpm env:sync` or `pnpm env:sync --prod --file .env.production.local`; `scripts/env-sync.mjs` copies these values to Convex and does not put them in browser variables. `pnpm setup:check` reports whether the required OpenAI key is present and whether optional Gemini setup is present without printing secret values.
+
+For the code-controlled routes and exact API model IDs, see [`shared/agents/routes.ts`](../shared/agents/routes.ts), [`shared/ai/models.ts`](../shared/ai/models.ts), and [`convex/ai/providers.ts`](../convex/ai/providers.ts). A configured key does not by itself prove that the provider account can access every model or that a request will succeed. Check the current [OpenAI model catalog](https://developers.openai.com/api/docs/models/all) and [Gemini model catalog](https://ai.google.dev/gemini-api/docs/models) when changing a route; provider model availability can change independently of this repository.
+
+ClimbOS's reservation and cost reports use the versioned rate snapshots in [`shared/economics/rates.ts`](../shared/economics/rates.ts), not a live provider price lookup. The snapshot records its source and effective date and can differ from an invoice because of later price changes, account terms, provider-side caching, or other billable features. Recheck the official [OpenAI API pricing](https://developers.openai.com/api/docs/pricing) and [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing) before updating rates; do not treat ClimbOS estimates as a provider quote.
 
 ## 3. Resend (platform email: sign-in codes, invitations, alerts, digests)
 
@@ -90,9 +96,12 @@ OAuth runs on our own domain. `CUSTOM_AUTH_SITE_URL` on the Convex deployment po
 | Integration | Variables | Provider approvals needed before customer use |
 |---|---|---|
 | GA4 + Search Console | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`. Redirect URI: `https://climbos.app/api/oauth/callback`. Scopes: `analytics.readonly`, `webmasters.readonly`. | Google OAuth consent screen verification (sensitive scopes) |
+| Mobile site checks | `GOOGLE_PAGESPEED_API_KEY` (optional), `GOOGLE_CRUX_API_KEY` (optional) | PageSpeed runs one synthetic mobile Lighthouse check for performance, accessibility, and basic SEO signals on a page ClimbOS already read. SEO checks do not confirm indexing or rankings; accessibility checks are not a WCAG audit. The CrUX key enables 28-day aggregated phone performance metrics; without it, field data is shown as not configured. Create the key for Google's Chrome UX Report API. See [PageSpeed Insights API](https://developers.google.com/speed/docs/insights/rest) and [CrUX API](https://developer.chrome.com/docs/crux/api). |
 | Google Ads (API v26) | Same client plus `GOOGLE_ADS_DEVELOPER_TOKEN`, `GOOGLE_ADS_ACCESS_LEVEL` (test, explorer, basic or standard) | Developer token **Basic or Standard** access. Test access can't touch production accounts. Permissible-use review. |
 | Facebook Pages + Meta Ads (Graph v26.0) | `META_APP_ID`, `META_APP_SECRET`, `META_ADS_ACCESS_TIER` (limited or full) | App Review for `pages_manage_posts`, `pages_read_engagement`, `ads_management` and `ads_read`; Business Verification; Marketing API access tier |
 | Instagram (Instagram Login) | `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET` | App Review for `instagram_business_basic` and `instagram_business_content_publish`. Business or Creator accounts only. |
+| LinkedIn | `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` | LinkedIn app setup and the permissions required by the selected organization/profile publishing capability. |
+| X | `X_CLIENT_ID`, `X_CLIENT_SECRET` | X developer app and API access needed for the approved publishing capability. |
 | Firecrawl | `FIRECRAWL_API_KEY` | None. Without it, the built-in bounded fetcher is used. |
 | Cloudflare R2 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` (a **private** bucket; an API token with Object Read & Write on that bucket only) | None. When set, new AI images and privacy exports go to R2 behind presigned URLs. |
 | PostHog | `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` | None. Session replay is off and text is masked. |

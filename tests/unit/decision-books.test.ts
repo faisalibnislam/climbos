@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { betaPosterior, probBelow, probLess, poissonCdf } from "../../shared/analysis/bayes";
 import { compareRates } from "../../shared/analysis/decisions";
 import { diagnose, diagnosisBrief } from "../../shared/agents/diagnosis";
-import { combinePlays, lintEconomics, playMaths, portfolioRange, selectPortfolio, type Economics, type PlayLike } from "../../shared/agents/economics";
+import { combinePlays, lintEconomics, lockedNumbers, playMaths, portfolioRange, selectPortfolio, type Economics, type PlayLike } from "../../shared/agents/economics";
 import { lintFeasibility } from "../../shared/agents/specs";
 import { playActuals } from "../../shared/growth/actuals";
 import { diagnoseShortfall } from "../../shared/growth/diagnostics";
@@ -21,7 +21,7 @@ const play = (name: string, o: Partial<PlayLike["model"]> = {}, kind = "bankable
   horizonDays,
   model: { weeklyReach: 100, steps: [{ name: "lead", rate: 0.05 }, { name: "paid", rate: 0.2 }], monthlySpendUsd: 100, ownerHoursPerWeek: 1, ...o },
 });
-const ctx = (o: Partial<PlaybookContext> = {}): PlaybookContext => ({ types: ["b2b_saas"], budgetUsd: 600, connected: [], constraint: "unknown", ...o });
+const ctx = (o: Partial<PlaybookContext> = {}): PlaybookContext => ({ types: ["b2b_saas"], budgetUsd: 600, connected: [], constraint: "unknown", tracking: "full", ...o });
 const pb = (id: string) => PLAYBOOKS.find((p) => p.id === id)!;
 
 describe("rate uncertainty helpers", () => {
@@ -102,6 +102,16 @@ describe("acceptance cases (owner prompt §7)", () => {
     expect(issues.map((i) => i.message).join(" ")).toMatch(/Best set that fits \(computed\)/);
   });
 
+  it("keeps a high-variance play out when its P90 customer scenario exceeds confirmed delivery capacity", () => {
+    const volatile = play("Volatile demand", { weeklyReach: 100, steps: [{ name: "paid", rate: 0.005, low: 0.001, high: 0.1 }], monthlySpendUsd: 0, ownerHoursPerWeek: 0 }, "bankable", 30);
+    const steady = play("Steady demand", { weeklyReach: 10, steps: [{ name: "paid", rate: 0.1 }], monthlySpendUsd: 0, ownerHoursPerWeek: 0 }, "bankable", 30);
+    expect(portfolioRange({ economics: econ, plays: [volatile] }, 30).p50).toBeLessThan(5);
+    expect(portfolioRange({ economics: econ, plays: [volatile] }, 30).p90).toBeGreaterThan(5);
+    const choice = selectPortfolio({ economics: econ, plays: [volatile, steady] }, { newCustomersPerMonth: 5, horizonDays: 30 })!;
+    expect(choice.selected).toEqual(["Steady demand"]);
+    expect(choice.left).toContainEqual({ name: "Volatile demand", why: "exceeds the owner's delivery limit in the P90 customer scenario" });
+  });
+
   it("8. relabelling activation without outcome evidence doesn't manufacture uplift", () => {
     const setup = diagnose({ funnel: { leads: 100, activated: 60, newCustomers: 3, activationKind: "setup" }, types: ["b2b_saas"] });
     expect(setup.basis).toBe("partial");
@@ -175,7 +185,8 @@ describe("before/after examples from the reading", () => {
     const a = playActuals(m, rows, { p10: 6.5, p50: 13, p90: 19.5 }, 13, { startWeek: 0 });
     expect(a.ignoredBeforeStart).toBe(1);
     expect(a.weeksSinceStart).toBe(4);
-    expect(a.status).not.toBe("ahead");
+    expect(a.status).toBe("incomplete_log");
+    expect(a.unloggedWeeks).toBe(2);
   });
 
   it("portfolio: adding a play never lowers the total; same-step plays count once", () => {
@@ -219,7 +230,7 @@ describe("before/after examples from the reading", () => {
 describe("experiment feasibility uses the population's own denominator (Kohavi Ch 17)", () => {
   it("a visitor population is sized with visitor → paid, not the per-lead purchase rate", async () => {
     const { lintExperimentFeasibility } = await import("../../shared/agents/specs");
-    const exp = { name: "Pricing page test", method: "ab_split", population: "about 750 visitors a week", durationDays: 14, stoppingRule: "Read once on day 14; stop early if refunds rise above 3%", primaryMetric: "paid customers", guardrails: ["refunds above 3%"] };
+    const exp = { name: "Pricing page test", method: "ab_split", population: "about 750 visitors a week", durationDays: 14, stoppingRule: "Read once on day 14; stop early if refunds rise above 3%", primaryMetric: "paid customers", primaryMetricType: "binary_rate" as const, assignmentUnit: "eligible visitor", assignmentMethod: "randomized", denominator: "eligible pricing-page visitors assigned per arm", baselineRate: 0.25, baselineProvenance: "owner_report" as const, baselineEvidenceRefs: ["synthetic owner-report fixture"], baselineBasis: "Test deliberately supplies the per-lead rate as a mismatched basis.", minimumMeaningfulEffect: { value: 0.125, unit: "absolute_rate", basis: "synthetic fixture threshold" }, plannedSamplePerArm: 700, plannedSampleBasis: "fixture estimate", guardrails: ["refunds above 3%"] };
     // Per lead 25% would pass; per visitor (5% × 12% × 25% = 0.15%) it can't finish.
     const issues = lintExperimentFeasibility({ experiments: [exp] }, { funnelRates: { lead: 0.05, activation: 0.12, purchase: 0.25 } });
     expect(issues.map((i) => i.message).join(" ")).toMatch(/visitor → purchase/);
@@ -227,6 +238,36 @@ describe("experiment feasibility uses the population's own denominator (Kohavi C
 });
 
 describe("follow-up reading (ADM exercise sets)", () => {
+  it("labels portfolio customer totals when they mix attributed and modeled baseline-delta outcomes", () => {
+    const attributed = play("New search channel", { monthlySpendUsd: 0, ownerHoursPerWeek: 0, steps: [{ name: "paid", rate: 0.05 }] });
+    const baselineDelta = play("Checkout improvement", { monthlySpendUsd: 100, ownerHoursPerWeek: 0, steps: [{ name: "paid", rate: 0.2, baselineRate: 0.1 }] });
+    expect(portfolioRange({ economics: econ, plays: [attributed] }).outcomeBasis).toBe("attributed_only");
+    expect(portfolioRange({ economics: econ, plays: [baselineDelta] }).outcomeBasis).toBe("modeled_baseline_delta");
+    expect(portfolioRange({ economics: econ, plays: [attributed, baselineDelta] }).outcomeBasis).toBe("mixed");
+    const selected = selectPortfolio({ economics: econ, plays: [attributed, baselineDelta] }, {})!;
+    expect(selected.outcomeBasis).toBe("mixed");
+    expect(selected.basis).toContain("not a causal lift estimate");
+  });
+
+  it("ranks attributed outcomes and modeled baseline deltas in separate portfolio objectives", () => {
+    const nearBaseline = play("Near-baseline optimization", { steps: [{ name: "paid", rate: 0.2, baselineRate: 0.199 }], monthlySpendUsd: 1 });
+    const largerDelta = play("Higher-lift optimization", { steps: [{ name: "paid", rate: 0.1, baselineRate: 0.05 }], monthlySpendUsd: 1 });
+    const plays = [nearBaseline, largerDelta];
+
+    const attributed = selectPortfolio({ economics: econ, plays }, { objective: "play_attributed", monthlyBudgetUsd: 1 })!;
+    const incremental = selectPortfolio({ economics: econ, plays }, { objective: "modeled_incremental", monthlyBudgetUsd: 1 })!;
+    expect(attributed.objective).toBe("play_attributed");
+    expect(attributed.outcomeBasis).toBe("attributed_only");
+    expect(attributed.selected).toEqual(["Near-baseline optimization"]);
+    expect(incremental.objective).toBe("modeled_incremental");
+    expect(incremental.outcomeBasis).toBe("modeled_baseline_delta");
+    expect(incremental.selected).toEqual(["Higher-lift optimization"]);
+
+    const locked = lockedNumbers({ economics: econ, plays });
+    expect(locked).toContain("PORTFOLIO CHECK · PLAY-ATTRIBUTED OUTCOMES");
+    expect(locked).toContain("PORTFOLIO CHECK · MODELED BASELINE DELTA");
+  });
+
   it("huge counts don't rank two links that convert within 10% of each other", () => {
     const d = diagnose({ funnel: { leads: 100_000, activated: 30_000, newCustomers: 8_850 }, types: ["b2b_saas"] });
     expect(d.status).toBe("ambiguous");

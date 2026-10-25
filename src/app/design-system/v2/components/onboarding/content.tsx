@@ -221,7 +221,7 @@ function WizardDemo() {
                 options={[
                   { value: "calls", title: "More calls", description: "Ads and listings that ring", icon: <Smartphone /> },
                   { value: "bookings", title: "More bookings", description: "Landing pages and follow-ups", icon: <CalendarDays /> },
-                  { value: "reviews", title: "More reviews", description: "Ask happy customers", icon: <Star /> },
+                  { value: "reviews", title: "More reviews", description: "Invite customers fairly", icon: <Star /> },
                   { value: "repeat", title: "Repeat visits", description: "Email and SMS win-backs", icon: <Mail /> },
                 ]}
               />

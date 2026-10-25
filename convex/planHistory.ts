@@ -11,6 +11,27 @@ import { PLAN_PARTS, PLAN_PART_KEYS, describeParts, type PlanPartKey } from "../
 const DAY = 24 * 60 * 60 * 1000;
 const MAX_VERSIONS = 50;
 
+type SnapshotSummary = Record<string, unknown> & { snapshotId?: string };
+
+/** Describe only recorded input changes between two plan snapshots; don't infer causation from plan text. */
+function changedPlanningInputs(previous: Strategy, current: Strategy): string[] {
+  const before = previous.expert?.snapshot as SnapshotSummary | undefined;
+  const after = current.expert?.snapshot as SnapshotSummary | undefined;
+  if (!before || !after) return [];
+  const same = (key: string) => JSON.stringify(before[key] ?? null) === JSON.stringify(after[key] ?? null);
+  const changes: string[] = [];
+  if (!same("goalInput") || previous.goalId !== current.goalId || !same("goal") || !same("horizonDays") || !same("monthlyAdBudget")) changes.push("goal or budget");
+  if (!same("businessProfile") || !same("businessLifecycleStage") || !same("businessFunnel")) changes.push("business profile or operating data");
+  if (!same("businessFactVersions") || !same("staleFactIds") || !same("contradictions")) changes.push("business facts");
+  if (!same("ownerEconomics")) changes.push("unit economics");
+  if (!same("growthCashTiming")) changes.push("growth cash timing");
+  if (!same("brandProfile") || !same("ownerChannelPreferences")) changes.push("brand or channel preferences");
+  if (!same("businessResearchAt") || !same("sourceUrls") || !same("marketChangeVersions") || !same("knowledgeReferences")) changes.push("research or market evidence");
+  if (!same("capabilities")) changes.push("connected capabilities");
+  if (!changes.length && before.snapshotId !== after.snapshotId) changes.push("other recorded planning inputs");
+  return changes;
+}
+
 async function userName(ctx: QueryCtx, id: Id<"users"> | undefined): Promise<string | null> {
   if (!id) return null;
   const u = await ctx.db.get(id);
@@ -41,11 +62,14 @@ export const versions = query({
       if (s.restoredFrom) reason = `Restored ${describeParts(s.restoredFrom.parts)} from v${s.restoredFrom.version}`;
       else if (!prev) reason = "First plan";
       else if (prevApproval?.status === "rejected") reason = prevApproval.decisionNote?.trim() ? `Sent back: ${prevApproval.decisionNote.trim()}` : `v${prev.version} sent back`;
-      else if (prev.goalId !== s.goalId) reason = "New goal";
       else {
         const run = s.runId ? await ctx.db.get(s.runId) : null;
         const by = await userName(ctx, run?.createdBy);
-        reason = by ? `Refreshed by ${by}` : "Refreshed";
+        const changes = changedPlanningInputs(prev, s);
+        if (prev.goalId !== s.goalId && !changes.includes("goal or budget")) changes.unshift("goal or budget");
+        reason = changes.length
+          ? `Refreshed after recorded changes to ${changes.slice(0, 3).join(", ")}`
+          : by ? `Refreshed by ${by}; no material input change is recorded` : "Refresh requested; no material input change is recorded";
       }
       const approved = approval?.status === "approved";
       out.push({
@@ -105,6 +129,7 @@ export const restore = mutation({
         }
       }
       if (!expert.diagnosis && !expert.northStar) expert = from.expert && take.size === PLAN_PARTS.length ? from.expert : expert;
+      if (expert && take.has("plays")) expert.version = from.expert?.version ?? 0;
     }
     // Restored channels start over: they become active again only when this version is approved.
     const channels = pick("channels", (s) => s.channels).map((c) => {

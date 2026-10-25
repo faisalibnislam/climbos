@@ -7,6 +7,9 @@ import { createRunWithReservation } from "./engine";
 import { audit } from "./lib/audit";
 import { notifyOwners } from "./lib/notify";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+import { findConflicts } from "../shared/agents/conflicts";
+import { findPossibleDuplicateFacts, groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
+import { extractSiteInventory } from "../shared/seo/inventory";
 
 /**
  * Self-improvement loop 1 — keep researching each business. Weekly, ClimbOS
@@ -27,12 +30,80 @@ export const facts = query({
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     if (!business) return null;
     const rows = (await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", business._id)).take(300)).filter((f) => f.reviewState !== "rejected");
+    const conflictCandidates = rows.filter((f) => f.reviewState !== "rejected");
+    const conflicts = findConflicts(conflictCandidates.map((f) => ({ id: String(f._id), statement: f.statement, category: f.category })));
+    const conflictFactIds = [...new Set(conflicts.flatMap((conflict) => conflict.factIds))];
+    const conflictFacts = new Map(conflictCandidates.filter((fact) => conflictFactIds.includes(String(fact._id))).map((fact) => [String(fact._id), fact]));
+    const conflictSourceIds = [...new Set([...conflictFacts.values()].flatMap((fact) => fact.sourceIds.map(String)))];
+    const conflictSources = new Map<string, { kind: string; url?: string; title?: string; excerpt?: string; fetchedAt: number }>();
+    for (const id of conflictSourceIds) {
+      const source = await ctx.db.get(ctx.db.normalizeId("factSources", id) as Id<"factSources">);
+      if (source && source.orgId === org._id) conflictSources.set(id, { kind: source.kind, url: source.url, title: source.title, excerpt: source.excerpt, fetchedAt: source.fetchedAt });
+    }
     const order = { needs_review: 0, edited: 1, confirmed: 1, rejected: 2 } as const;
     rows.sort((a, b) => order[a.reviewState] - order[b.reviewState] || b.updatedAt - a.updatedAt);
+    const groupedFacts = groupExactDuplicateFacts(rows.map((fact) => ({
+      ...fact,
+      id: String(fact._id),
+      state: fact.reviewState,
+    })));
+    const possibleDuplicateFacts = findPossibleDuplicateFacts(groupedFacts.map(({ primary }) => ({
+      ...primary,
+      id: String(primary._id),
+      state: primary.reviewState,
+    }))).map(({ first, second }) => ({
+      first: { id: first._id, statement: first.statement },
+      second: { id: second._id, statement: second.statement },
+    }));
+    const sourceIds = [...new Set(groupedFacts.flatMap(({ primary, duplicates }) => [primary, ...duplicates].flatMap((fact) => fact.sourceIds.map(String))))];
+    const sourceIdSet = new Set(sourceIds);
+    const sourceMap = new Map<string, { kind: string; url?: string; title?: string; excerpt?: string; fetchedAt: number; status: string }>();
+    const sources = await ctx.db.query("factSources").withIndex("by_business", (q) => q.eq("businessId", business._id)).take(1000);
+    for (const source of sources) if (source.orgId === org._id && sourceIdSet.has(String(source._id))) {
+      sourceMap.set(String(source._id), { kind: source.kind, url: source.url, title: source.title, excerpt: source.excerpt, fetchedAt: source.fetchedAt, status: source.status });
+    }
     return {
       website: business.website ?? null,
       siteCheckedAt: business.siteCheckedAt ?? null,
-      facts: rows.map((f) => ({ id: f._id, category: f.category, statement: f.statement, state: f.reviewState, provenance: f.provenance, replaces: f.replacesFactId ?? null })),
+      siteWatchLastAttemptAt: business.siteWatchLastAttemptAt ?? null,
+      siteWatchLastError: business.siteWatchLastError ?? null,
+      facts: groupedFacts.map(({ primary, duplicates }) => {
+        const members = [primary, ...duplicates];
+        const mergedSourceIds = [...new Set(members.flatMap((fact) => fact.sourceIds.map(String)))];
+        return {
+          id: primary._id,
+          duplicateIds: duplicates.map((fact) => fact._id),
+          duplicateRecords: duplicates.map((fact) => ({
+            id: fact._id,
+            statement: fact.statement,
+            provenance: fact.provenance,
+            updatedAt: fact.updatedAt,
+            sources: [...new Set(fact.sourceIds.map(String))].map((id) => sourceMap.get(id)).filter((source): source is NonNullable<typeof source> => source !== undefined),
+          })),
+          category: primary.category,
+          statement: primary.statement,
+          state: primary.reviewState,
+          provenance: primary.provenance,
+          replaces: primary.replacesFactId ?? null,
+          updatedAt: primary.updatedAt,
+          verifiedAt: primary.verifiedAt ?? primary.updatedAt,
+          sources: mergedSourceIds.map((id) => sourceMap.get(id)).filter((source): source is NonNullable<typeof source> => source !== undefined),
+        };
+      }),
+      possibleDuplicateFacts,
+      conflicts: conflicts.map((conflict) => ({
+        ...conflict,
+        facts: conflict.factIds.map((id) => {
+          const fact = conflictFacts.get(id);
+          return fact ? {
+            id: fact._id,
+            statement: fact.statement,
+            provenance: fact.provenance,
+            state: fact.reviewState,
+            sources: fact.sourceIds.map(String).map((sourceId) => conflictSources.get(sourceId)).filter((source): source is NonNullable<typeof source> => source !== undefined),
+          } : null;
+        }).filter((fact): fact is NonNullable<typeof fact> => fact !== null),
+      })),
     };
   },
 });
@@ -44,12 +115,17 @@ export const confirmUpdate = mutation({
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const f = assertSameOrg(await ctx.db.get(factId), org._id, "fact");
     const now = Date.now();
-    await ctx.db.patch(f._id, { reviewState: "confirmed", updatedBy: user._id, updatedAt: now });
-    if (f.replacesFactId) {
-      const old = await ctx.db.get(f.replacesFactId);
+    const businessFacts = await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", f.businessId)).take(300);
+    const group = groupExactDuplicateFacts(businessFacts.map((row) => ({ ...row, id: String(row._id), state: row.reviewState })))
+      .find(({ primary, duplicates }) => [primary, ...duplicates].some((row) => row.id === String(f._id)));
+    const targets = group ? [group.primary, ...group.duplicates].map((row) => businessFacts.find((candidate) => String(candidate._id) === row.id)!).filter((row) => row.orgId === org._id) : [f];
+    for (const target of targets) await ctx.db.patch(target._id, { reviewState: "confirmed", updatedBy: user._id, verifiedAt: now, updatedAt: now });
+    const replacedIds = [...new Set(targets.flatMap((target) => target.replacesFactId ? [String(target.replacesFactId)] : []))];
+    for (const replacedId of replacedIds) {
+      const old = await ctx.db.get(ctx.db.normalizeId("businessFacts", replacedId) as Id<"businessFacts">);
       if (old && old.orgId === org._id) await ctx.db.patch(old._id, { reviewState: "rejected", updatedBy: user._id, updatedAt: now });
     }
-    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "fact.confirm", subjectType: "fact", subjectId: f._id, summary: "Fact confirmed." });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "fact.confirm", subjectType: "fact", subjectId: f._id, summary: `Fact confirmed${targets.length > 1 ? ` with ${targets.length - 1} duplicate${targets.length === 2 ? "" : "s"}` : ""}.` });
   },
 });
 
@@ -59,8 +135,71 @@ export const checkNow = mutation({
     const { org } = await requireOrgAccess(ctx, { slug }, "edit");
     const b = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     if (!b?.website) throw appError("INVALID", "Add your website first.");
-    if (b.siteCheckedAt && Date.now() - b.siteCheckedAt < 6 * 3_600_000) throw appError("RATE_LIMITED", "Checked in the last 6 hours.");
+    const lastAttemptAt = b.siteWatchLastAttemptAt ?? b.siteCheckedAt;
+    if (lastAttemptAt && Date.now() - lastAttemptAt < 6 * 3_600_000) throw appError("RATE_LIMITED", "Checked in the last 6 hours.");
     await ctx.scheduler.runAfter(0, internal.siteWatchActions.check, { orgId: org._id });
+  },
+});
+
+export const searchReadiness = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    if (!business) return null;
+    const audits = business.website
+      ? await ctx.db.query("workflowRuns")
+          .withIndex("by_org_kind_created", (q) => q.eq("orgId", org._id).eq("kind", "conversion_audit"))
+          .order("desc")
+          .take(30)
+      : [];
+    const inventory = (business.website ? audits : [])
+      .filter((run) => run.status === "verified" && !run.isFixture && typeof run.output === "string")
+      .flatMap((run) => {
+        const snapshot = extractSiteInventory({ output: run.output!, runId: String(run._id), checkedAt: run.finishedAt ?? run.updatedAt, website: business.website! });
+        return snapshot ? [snapshot] : [];
+      })
+      .slice(0, 5);
+    for (const snapshot of inventory) {
+      const states = await ctx.db.query("seoOpportunityStates")
+        .withIndex("by_org_run", (q) => q.eq("orgId", org._id).eq("runId", snapshot.runId as Id<"workflowRuns">))
+        .take(250);
+      const stateByFinding = new Map(states.map((item) => [`${item.pageUrl}\u0000${item.findingId}`, item.state]));
+      for (const page of snapshot.pages) {
+        page.findings = page.findings.map((finding) => ({
+          ...finding,
+          state: stateByFinding.get(`${page.url}\u0000${finding.id}`) ?? "open",
+        }));
+      }
+    }
+    return { businessName: business.name, website: business.website ?? null, scan: business.siteReadiness ?? null, inventory };
+  },
+});
+
+export const scanSearchReadiness = mutation({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "edit");
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    if (!business?.website) throw appError("INVALID", "Add your website first.");
+    if (business.siteReadiness?.status === "queued" && Date.now() - business.siteReadiness.startedAt < 10 * 60_000) throw appError("RATE_LIMITED", "A site check is already running.");
+    if (business.siteReadiness?.checkedAt && Date.now() - business.siteReadiness.checkedAt < 60 * 60_000) throw appError("RATE_LIMITED", "This page was checked in the last hour.");
+    const startedAt = Date.now();
+    await ctx.db.patch(business._id, { siteReadiness: { status: "queued", startedAt } });
+    await ctx.scheduler.runAfter(0, internal.siteWatchActions.scanReadiness, { businessId: business._id, website: business.website, startedAt });
+  },
+});
+
+export const saveSearchReadiness = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    startedAt: v.number(),
+    result: v.object({ status: v.union(v.literal("complete"), v.literal("failed")), checkedAt: v.number(), pageUrl: v.optional(v.string()), pageTitle: v.optional(v.string()), description: v.optional(v.string()), canonicalUrl: v.optional(v.string()), httpStatus: v.optional(v.number()), robotsFileStatus: v.optional(v.union(v.literal("available"), v.literal("not_found"), v.literal("unavailable"))), crawlerChecks: v.optional(v.array(v.object({ crawler: v.union(v.literal("Googlebot"), v.literal("Bingbot"), v.literal("OAI-SearchBot"), v.literal("PerplexityBot"), v.literal("Claude-SearchBot"), v.literal("GPTBot"), v.literal("ClaudeBot"), v.literal("Google-Extended")), allowed: v.boolean() }))), headingCount: v.optional(v.number()), structuredDataTypes: v.optional(v.array(v.string())), findings: v.optional(v.array(v.object({ id: v.string(), level: v.union(v.literal("check"), v.literal("attention")), title: v.string(), evidence: v.string(), nextStep: v.string() }))), error: v.optional(v.string()) }),
+  },
+  handler: async (ctx, { businessId, startedAt, result }) => {
+    const business = await ctx.db.get(businessId);
+    if (!business || business.siteReadiness?.startedAt !== startedAt) return;
+    await ctx.db.patch(businessId, { siteReadiness: { ...result, startedAt } });
   },
 });
 
@@ -73,6 +212,8 @@ export const targets = internalQuery({
     const since = Date.now() - 45 * DAY;
     for (const o of await ctx.db.query("organizations").withIndex("by_kind_created", (q) => q.eq("kind", "customer")).take(3000)) {
       if (o.deletedAt || o.suspendedAt) continue;
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", o._id)).first();
+      if (!business?.website || business.siteWatchEnabled === false) continue;
       // Only workspaces in use: someone ran a job in the last 45 days.
       const recent = await ctx.db.query("workflowRuns").withIndex("by_org_created", (q) => q.eq("orgId", o._id).gte("createdAt", since)).first();
       if (recent) out.push(o._id);
@@ -87,14 +228,24 @@ export const siteState = internalQuery({
     const b = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first();
     if (!b?.website) return null;
     const facts = (await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", b._id)).take(200)).filter((f) => f.reviewState === "confirmed" || f.reviewState === "edited");
-    return { businessId: b._id, website: b.website, siteHash: b.siteHash ?? null, siteText: b.siteText ?? null, name: b.name, facts: facts.map((f) => ({ id: f._id as string, category: f.category, statement: f.statement })) };
+    return { businessId: b._id, website: b.website, enabled: b.siteWatchEnabled !== false, siteHash: b.siteHash ?? null, siteText: b.siteText ?? null, name: b.name, facts: facts.map((f) => ({ id: f._id as string, category: f.category, statement: f.statement })) };
   },
 });
 
 export const saveSite = internalMutation({
   args: { businessId: v.id("businesses"), hash: v.string(), text: v.string() },
   handler: async (ctx, a) => {
-    await ctx.db.patch(a.businessId, { siteHash: a.hash, siteText: a.text.slice(0, 60_000), siteCheckedAt: Date.now() });
+    const now = Date.now();
+    await ctx.db.patch(a.businessId, { siteHash: a.hash, siteText: a.text.slice(0, 60_000), siteCheckedAt: now, siteWatchLastAttemptAt: now, siteWatchLastError: undefined });
+  },
+});
+
+export const saveSiteFailure = internalMutation({
+  args: { businessId: v.id("businesses"), error: v.string() },
+  handler: async (ctx, { businessId, error }) => {
+    const business = await ctx.db.get(businessId);
+    if (!business) return;
+    await ctx.db.patch(businessId, { siteWatchLastAttemptAt: Date.now(), siteWatchLastError: error.trim().slice(0, 240) || "Couldn't read the website. Check the address and try again." });
   },
 });
 

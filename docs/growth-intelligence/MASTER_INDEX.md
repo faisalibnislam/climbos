@@ -45,6 +45,7 @@ Read this library as a decision system: understand the business, gather evidence
 - [Claude Code integration instructions](integration/CLAUDE_CODE_INTEGRATION.md).
 - [Book manifest and hashes](manifest.json).
 - [Extracted playbook catalog](playbooks/catalog.json). The authoritative context for a playbook remains its parent book.
+- The [500-business, 25,000-playbook industry reference](../growth-expansion/collections/INDUSTRY_PLAYBOOK_QUALITY.md) has an ingestion-quality note and links to its source archive; the runtime retrieves at most one matching hypothesis for a clearly identified business type.
 - [Retrieval section builder](integration/build_retrieval_index.py) and [validation script](integration/validate_library.py).
 
 ## Operating contract

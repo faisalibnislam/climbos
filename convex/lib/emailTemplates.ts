@@ -98,7 +98,7 @@ export function weeklyReportEmail(params: { orgName: string; report: WeeklyRepor
   const rows = report.lines.map((l) => `${l.label}: ${l.value.toLocaleString("en-US")}${delta(l.change)}`);
   return {
     subject: `${orgName} this week: ${report.headline.replace(/\.$/, "")}`,
-    text: `${report.headline}\n\n${rows.join("\n")}\n\nNext week:\n${report.next.map((n) => `- ${n}`).join("\n")}\n\n${url}`,
+    text: `${report.headline}\n\n${rows.join("\n")}${report.competitors?.length ? `\n\nCompetitors:\n${report.competitors.map((c) => `- ${c.name}: ${c.summary}${c.sourceUrls?.[0] ? ` (source: ${c.sourceUrls[0]})` : ""}`).join("\n")}` : ""}\n\nNext week:\n${report.next.map((n) => `- ${n}`).join("\n")}\n\n${url}`,
     html: layout(
       `Week of ${range}`,
       `<h1 style="margin:0 0 6px;font-size:22px">${escapeHtml(report.headline)}</h1>
@@ -106,7 +106,7 @@ export function weeklyReportEmail(params: { orgName: string; report: WeeklyRepor
 <table style="width:100%;border-collapse:collapse;margin:0 0 20px">${report.lines
         .map((l) => `<tr><td style="padding:6px 0;border-bottom:1px solid #ecebe6;color:#454a44">${escapeHtml(l.label)}</td><td style="padding:6px 0;border-bottom:1px solid #ecebe6;text-align:right;font-weight:600">${l.value.toLocaleString("en-US")}<span style="color:${(l.change ?? 0) >= 0 ? GREEN : "#b42318"};font-weight:500">${escapeHtml(delta(l.change))}</span></td></tr>`)
         .join("")}</table>
-${report.competitors?.length ? `<p style="margin:0 0 6px;font-weight:600">Competitors</p><ul style="margin:0 0 20px;padding-left:18px;color:#454a44">${report.competitors.map((c) => `<li style="margin-bottom:4px"><strong>${escapeHtml(c.name)}</strong>: ${escapeHtml(c.summary)}</li>`).join("")}</ul>` : ""}
+${report.competitors?.length ? `<p style="margin:0 0 6px;font-weight:600">Competitors</p><ul style="margin:0 0 20px;padding-left:18px;color:#454a44">${report.competitors.map((c) => `<li style="margin-bottom:4px"><strong>${escapeHtml(c.name)}</strong>: ${escapeHtml(c.summary)}${c.sourceUrls?.[0] ? ` <a href="${escapeHtml(c.sourceUrls[0])}" style="color:${GREEN}">Source</a>` : ""}</li>`).join("")}</ul>` : ""}
 ${report.next.length ? `<p style="margin:0 0 6px;font-weight:600">Next week</p><ul style="margin:0 0 20px;padding-left:18px;color:#454a44">${report.next.map((n) => `<li style="margin-bottom:4px">${escapeHtml(n)}</li>`).join("")}</ul>` : ""}
 <p style="margin:0"><a href="${escapeHtml(url)}" style="color:${GREEN};font-weight:600">Open the full report</a></p>`,
     ),

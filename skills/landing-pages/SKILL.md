@@ -57,6 +57,8 @@ When something is missing:
 
    For B2B or higher-ticket offers, use the sales-narrative order: insight (what changed), the alternatives and their trade-offs, what a good solution needs, how this delivers it, proof, objections, ask.
 
+   On pricing and offer sections, choice architecture may intentionally steer when the owner requests it. State the intended effect and possible poor-fit, regret, refund, and trust costs; do not claim the design is neutral. Check price, savings, billing, trial, renewal, and fee statements against current requirements in the target market; flag unresolved legal status for qualified local review. Urgency and proof claims must be current and factually supportable.
+
 5. **Place proof next to claims.** Use the hierarchy: verifiable number with source, named quote, demonstration or mechanism, guarantee, credentials. Superlatives are not proof. Every claim gets evidence within two sentences. A testimonial needs a name, a role or context, and a specific result or detail; "Great service!" is filler.
 
 6. **Map objections.** List the top 3–5 objections from the VOC bank (price, time, trust, switching effort, fit). For each, write the answer and choose where it sits: near the CTA if it blocks the click, in the FAQ otherwise. Habit and anxiety objections need concrete reducers: trial, import help, cancellation terms, a named person.
@@ -110,6 +112,7 @@ When asked for a brief (or before drafting a full page), include:
 
 - Never invent testimonials, names, star ratings, customer counts, logos, "as featured in", or "trusted by 10,000+".
 - Never use fake urgency (countdown timers with no real deadline, "only 2 spots left" without proof).
+- Never hide a suitable lower-priced option, mandatory fee, renewal, or cancellation term to steer a buyer toward a higher-priced choice.
 - Never write a clever or vague H1 ("Reimagine your workday") or open with "Welcome to…".
 - Never promise outcomes the business can't guarantee ("Double your bookings").
 - Never pre-tick consent boxes or bundle marketing consent into terms acceptance.

@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, BookOpenCheck, Bot, CreditCard, Gauge, LayoutGrid, Palette, ShieldCheck, SlidersHorizontal, Sparkles, Target, UserRound, Users, Webhook } from "@/components/icons"
+import { Activity, BookOpenCheck, Bot, CreditCard, Gauge, LayoutGrid, Palette, ShieldCheck, SlidersHorizontal, Sparkles, Target, UserRound, Users, Webhook, Workflow } from "@/components/icons"
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { can, type MemberRole } from "@shared/policy";
@@ -12,17 +12,19 @@ import { PageHeader } from "../results/QueryBoundary";
 
 /** Each section shows only to roles that can use it (the server checks again on every call). */
 export const SETTINGS_SECTIONS = [
-  { key: "business", label: "Business & goal", icon: Target, tone: "brand", permission: "view" },
+  { key: "business", label: "Your business & goal", icon: Target, tone: "brand", permission: "view" },
   { key: "team", label: "Team", icon: Users, tone: "brand", permission: "view" },
-  { key: "workspaces", label: "Workspaces", icon: LayoutGrid, tone: "teal", permission: "manage_team" },
-  { key: "billing", label: "Billing", icon: CreditCard, tone: "violet", permission: "view" },
+  { key: "workspaces", label: "Your businesses", icon: LayoutGrid, tone: "teal", permission: "manage_team" },
+  { key: "billing", label: "Plan & payments", icon: CreditCard, tone: "violet", permission: "view" },
   { key: "ai", label: "Climb AI", icon: Sparkles, tone: "brand", permission: "view" },
-  { key: "brand", label: "Brand kit", icon: Palette, tone: "pink", permission: "view" },
+  { key: "brand", label: "Your look & writing style", icon: Palette, tone: "pink", permission: "view" },
   { key: "facts", label: "Business facts", icon: BookOpenCheck, tone: "green", permission: "view" },
-  { key: "policies", label: "Policies", icon: SlidersHorizontal, tone: "orange", permission: "view" },
+  { key: "policies", label: "Approval & spending rules", icon: SlidersHorizontal, tone: "orange", permission: "view" },
   { key: "activity", label: "Activity", icon: Activity, tone: "teal", permission: "view" },
-  { key: "usage", label: "Usage", icon: Gauge, tone: "pink", permission: "view" },
+  { key: "usage", label: "Credits used", icon: Gauge, tone: "pink", permission: "view" },
   { key: "agents", label: "Agents & MCP", icon: Bot, tone: "violet", permission: "edit" },
+  { key: "automations", label: "Scheduled work", icon: Workflow, tone: "teal", permission: "view" },
+  { key: "specialists", label: "Specialists", icon: Sparkles, tone: "teal", permission: "edit" },
   { key: "webhooks", label: "Webhooks", icon: Webhook, tone: "teal", permission: "manage_connections" },
   { key: "privacy", label: "Privacy", icon: ShieldCheck, tone: "green", permission: "export" },
   { key: "profile", label: "Profile", icon: UserRound, tone: "blue", permission: null },
@@ -40,7 +42,7 @@ export function SettingsNav({ slug }: { slug: string }) {
     <nav aria-label="Settings" className="-mx-4 overflow-x-auto px-4 lg:mx-0 lg:w-52 lg:shrink-0 lg:overflow-visible lg:px-0">
       <p className="text-overline mb-1 hidden px-2 lg:block">Settings</p>
       <ul className="flex gap-1 lg:flex-col">
-        {sections.map((s) => {
+        {sections.filter((section) => !["agents", "specialists", "webhooks"].includes(section.key)).map((s) => {
           const active = current === s.key;
           return (
             <li key={s.key} className="shrink-0">
@@ -59,6 +61,16 @@ export function SettingsNav({ slug }: { slug: string }) {
           );
         })}
       </ul>
+      {sections.some((section) => ["agents", "specialists", "webhooks"].includes(section.key)) ? (
+        <details key={current} open={["agents", "specialists", "webhooks"].includes(current)} className="mt-4 px-2">
+          <summary className="cursor-pointer text-ui font-medium text-ink">Advanced tools</summary>
+          <ul className="mt-2 flex flex-wrap gap-1 lg:flex-col">
+            {sections.filter((section) => ["agents", "specialists", "webhooks"].includes(section.key)).map((section) => <li key={section.key}>
+              <Link href={`/app/${slug}/settings/${section.key}`} aria-current={current === section.key ? "page" : undefined} className="flex min-h-8 items-center gap-2 py-1 text-ui text-ink-2 hover:text-ink"><section.icon aria-hidden className="size-4" />{section.label}</Link>
+            </li>)}
+          </ul>
+        </details>
+      ) : null}
     </nav>
   );
 }

@@ -17,6 +17,41 @@ async function artifactsByStatus(t: T, orgId: Id<"organizations">, status: strin
 }
 
 describe("cost reservations under concurrency", () => {
+  it("atomically accounts for concurrent provider calls before they start", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "provider-call-cap@example.com");
+    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Call Cap Co" });
+    await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "More", horizonDays: 90, monthlyAdBudget: 0 });
+    const { runId } = await owner.client.mutation(api.content.generate, { slug, job: "content_email" });
+    await t.run(async (ctx) => {
+      await ctx.db.patch(runId, { estimateMicros: 100, actualMicros: 0, costCapMicros: 100, inFlightMicros: 0 });
+    });
+    const steps = await Promise.all([0, 1].map((index) => t.mutation(internal.engine.beginStep, { runId, index, kind: "model", label: `Call ${index}` })));
+    const claims = await Promise.all(steps.map((step) => t.mutation(internal.engine.claimProviderCall, { runId, stepId: step.stepId!, costMicros: 60 })));
+    expect(claims.filter((claim) => claim.ok)).toHaveLength(1);
+    expect(claims.filter((claim) => !claim.ok)).toHaveLength(1);
+
+    const heldIndex = claims.findIndex((claim) => claim.ok);
+    await t.mutation(internal.engine.recordUsage, {
+      stepId: steps[heldIndex]!.stepId!,
+      settleProviderCall: true,
+      records: [{ type: "model_call", provider: "openai", model: "gpt-6-luna", inputTokens: 1000, outputTokens: 100, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: 40, estimated: false }],
+    });
+    const next = await t.mutation(internal.engine.claimProviderCall, { runId, stepId: steps[1 - heldIndex]!.stepId!, costMicros: 60 });
+    expect(next.ok).toBe(true);
+    await t.mutation(internal.engine.recordUsage, {
+      stepId: steps[1 - heldIndex]!.stepId!,
+      settleProviderCall: true,
+      records: [{ type: "model_call", provider: "openai", model: "gpt-6-luna", inputTokens: 1000, outputTokens: 100, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: 60, estimated: false }],
+    });
+    const run = await t.run(async (ctx) => ctx.db.get(runId));
+    expect(run?.actualMicros).toBe(100);
+    expect(run?.inFlightMicros).toBe(0);
+    const usage = await t.run(async (ctx) => ctx.db.query("usageEvents").withIndex("by_run", (q) => q.eq("runId", runId)).collect());
+    expect(usage).toHaveLength(2);
+    expect(usage[0]).toMatchObject({ taskKind: "content_email", stepKind: "model", stepIndex: expect.any(Number), routingVersionId: expect.any(String) });
+  });
+
   it("parallel jobs can never overspend the account's credits", async () => {
     const t = setup();
     const owner = await asNewUser(t, "owner@example.com");
@@ -84,6 +119,49 @@ describe("cost reservations under concurrency", () => {
 });
 
 describe("approvals and execution safety", () => {
+  it("unschedules every waiting post when the workspace pauses, beyond one query page", async () => {
+    const t = setup();
+    const d = await demo(t);
+    const template = await t.run(async (ctx) => (await ctx.db.query("artifacts").withIndex("by_org_updated", (q) => q.eq("orgId", d.orgId)).first())!);
+    const seededScheduled = await t.run(async (ctx) => (await ctx.db.query("artifacts").withIndex("by_org_status", (q) => q.eq("orgId", d.orgId).eq("status", "scheduled")).collect()).length);
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      for (let i = 0; i < 301; i++) {
+        await ctx.db.insert("artifacts", {
+          orgId: d.orgId,
+          businessId: template.businessId,
+          kind: template.kind,
+          channel: template.channel,
+          title: `Scheduled post ${i}`,
+          status: "scheduled",
+          currentVersion: template.currentVersion,
+          scheduledFor: now + (i + 1) * 60_000,
+          createdAt: now + i,
+          updatedAt: now + i,
+        });
+      }
+      for (let i = 0; i < 201; i++) {
+        await ctx.db.insert("campaigns", {
+          orgId: d.orgId,
+          channel: "google_search_ad",
+          name: `Active campaign ${i}`,
+          status: "active",
+          budgetEnvelopeMinor: 0,
+          currency: "USD",
+          stopRules: [],
+          createdAt: now + i,
+          updatedAt: now + i,
+        });
+      }
+    });
+
+    const result = await d.client.mutation(api.workspace.pauseAll, { slug: d.slug });
+    expect(result.unscheduled).toBe(seededScheduled + 301);
+    expect(result.campaignsPausing).toBe(201);
+    const remaining = await t.run(async (ctx) => ctx.db.query("artifacts").withIndex("by_org_status", (q) => q.eq("orgId", d.orgId).eq("status", "scheduled")).collect());
+    expect(remaining).toHaveLength(0);
+  });
+
   it("editing an approved artifact invalidates its approval and requires a new one", async () => {
     const t = setup();
     const d = await demo(t);
@@ -175,12 +253,27 @@ describe("approvals and execution safety", () => {
   it("ad campaigns respect the owner's monthly envelope", async () => {
     const t = setup();
     const d = await demo(t);
+    // The synthetic demo seeds an existing campaign. Remove it here so this
+    // case isolates the owner's envelope and cross-provider reservation rule.
+    await t.run(async (ctx) => {
+      const campaigns = await ctx.db.query("campaigns").withIndex("by_org", (q) => q.eq("orgId", d.orgId)).collect();
+      await Promise.all(campaigns.map((campaign) => ctx.db.delete(campaign._id)));
+    });
     const ad = (await artifactsByStatus(t, d.orgId, "approved")).find((a) => a.kind === "ad")!;
     await expect(
-      d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 50, startDate: "2026-11-01", endDate: "2026-11-30" }),
+      d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 50, startDate: "2026-11-01", endDate: "2026-11-30", reviewAfterDays: 7 }),
     ).rejects.toThrow(/approved monthly ad budget/);
-    const ok = await d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 15, startDate: "2026-11-01", endDate: "2026-11-30" });
+    const ok = await d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 15, startDate: "2026-11-01", endDate: "2026-11-30", reviewAfterDays: 7 });
     expect(ok).toBeTruthy();
+
+    // A second provider cannot each consume the same full monthly envelope.
+    await t.run(async (ctx) => ctx.db.patch(ad._id, { channel: "meta_ad" }));
+    await expect(
+      d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 6, startDate: "2026-11-01", endDate: "2026-11-30", reviewAfterDays: 7 }),
+    ).rejects.toThrow(/across Google and Meta/);
+    // The shared limit is over overlapping 31-day windows, so a later flight can still fit.
+    const later = await d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 15, startDate: "2026-12-01", endDate: "2026-12-30", reviewAfterDays: 7 });
+    expect(later).toBeTruthy();
   });
 });
 

@@ -61,7 +61,7 @@ Default structure for any of these: a scene or news sentence, one specific detai
 5. **Add the one detail** that makes it real and specific to this business.
 6. **Write the practical line:** day, date, time, place, price, how to book. Check each against the confirmed facts.
 7. **Write one CTA** with the method that fits a local reader: "Ring Jess on [number]", "Book on the website", "Directions: [address]".
-8. **Brief the visual:** an original photo or short video the owner can take (the shop, the product, the person, the event setup). Write alt text that describes it, including any text on the image. No stock photos, memes or reposted images.
+8. **Brief the visual:** an original photo or short video the owner can take (the shop, the product, the person, the event setup). Write alt text that describes it, including any text on the image. Do not copy a third-party meme image or reposted content. An original meme-inspired format is possible only when the current trend, audience, brand and Facebook context fit; follow social-intelligence.
 9. **Hashtags:** none, or one or two specific local tags (#Shrewsbury, #WyleCop). Never a block.
 10. **Run the checklist.**
 
@@ -101,7 +101,7 @@ Local groups are communities, not ad boards. Many ban promotion outright or allo
 - Greeting openers ("Happy Friday everyone!!!", "Morning all!") or questions you answer yourself.
 - Engagement bait: "Like if…", "Share if…", "Comment YES", "Tag a friend", share-to-enter giveaways.
 - Invent an offer, discount, event detail, deadline, review or "voted best in town".
-- Stock images, memes, AI-generated "customers", or reposts of other pages' content.
+- Stock images, third-party meme images, AI-generated "customers", or reposts of other pages' content. Original meme-inspired copy or visuals are allowed only when they pass the social-intelligence checks.
 - Hashtag blocks or emoji walls; emoji as bullets.
 - Paste the Instagram caption or LinkedIn post.
 - Spam groups: the same post in several groups, links where they're banned, undisclosed self-promotion.

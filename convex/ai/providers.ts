@@ -83,6 +83,13 @@ export function providerConfigured(provider: "openai" | "google"): boolean {
   return provider === "openai" ? Boolean(process.env.OPENAI_API_KEY) : Boolean(process.env.GEMINI_API_KEY);
 }
 
+/** Match readiness to the provider that will actually serve a selected model. */
+export function modelProviderConfigured(modelKey: ModelKey): boolean {
+  const spec = MODEL_SPECS[modelKey];
+  if (!spec || spec.availability !== "enabled") return false;
+  return providerConfigured(spec.provider === "openai" ? "openai" : "google");
+}
+
 
 async function callGemini(req: ModelRequest, rates: RateVersion): Promise<ModelResult> {
   const apiKey = process.env.GEMINI_API_KEY;

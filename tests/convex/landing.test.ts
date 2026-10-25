@@ -1,6 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { api } from "../../convex/_generated/api";
+import { api, internal } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
+import { sha256Hex } from "../../shared/policy";
 import { asNewUser, setup } from "./helpers";
+
+type UserClient = Awaited<ReturnType<typeof asNewUser>>["client"];
+
+async function publish(client: UserClient, slug: string, id: Id<"landingPages">) {
+  const page = (await client.query(api.landing.list, { slug })).pages.find((item) => item.id === id);
+  if (!page) throw new Error("Landing page not found.");
+  return client.mutation(api.landing.setLive, { slug, id, live: true, expectedVersion: page.version });
+}
 
 describe("landing pages", () => {
   beforeEach(() => {
@@ -19,12 +29,13 @@ describe("landing pages", () => {
     const id = await owner.client.mutation(api.landing.create, { slug, brief: "Free 15-minute audit" });
     await t.finishAllScheduledFunctions(vi.runAllTimers);
     let page = (await owner.client.query(api.landing.list, { slug })).pages[0];
+    expect(await owner.client.query(api.landing.list, { slug })).toMatchObject({ businessName: "Landing Co", website: null, badge: true });
     expect(page.status).toBe("draft");
     expect(page.content?.headline).toBeTruthy();
     expect(await t.query(api.landing.publicPage, { slug: page.slug })).toBeNull();
 
     await owner.client.mutation(api.landing.update, { slug, id, content: { ...page.content!, headline: "Get your free audit" } });
-    await owner.client.mutation(api.landing.setLive, { slug, id, live: true });
+    await publish(owner.client, slug, id);
     const pub = await t.query(api.landing.publicPage, { slug: page.slug });
     expect(pub?.content.headline).toBe("Get your free audit");
     expect(pub?.badge).toBe(true);
@@ -39,11 +50,81 @@ describe("landing pages", () => {
 
     const second = await owner.client.mutation(api.landing.create, { slug, brief: "Second offer" });
     await t.finishAllScheduledFunctions(vi.runAllTimers);
-    await expect(owner.client.mutation(api.landing.setLive, { slug, id: second, live: true })).rejects.toThrow(/1 live page/);
+    await expect(publish(owner.client, slug, second)).rejects.toThrow(/1 live page/);
+  });
+
+  it("keeps published content frozen, requires the reviewed draft version, and restores history as a new draft", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "landing-versions@example.com");
+    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Versioned Co" });
+    const id = await owner.client.mutation(api.landing.create, { slug, brief: "A versioned offer page" });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    const initial = (await owner.client.query(api.landing.list, { slug })).pages[0];
+    expect(initial.version).toBe(1);
+
+    await owner.client.mutation(api.landing.update, { slug, id, content: { ...initial.content!, headline: "Published headline" } });
+    const approved = (await owner.client.query(api.landing.list, { slug })).pages[0];
+    await owner.client.mutation(api.landing.setLive, { slug, id, live: true, expectedVersion: approved.version });
+
+    await owner.client.mutation(api.landing.update, { slug, id, content: { ...approved.content!, headline: "Unpublished draft headline" } });
+    const draft = (await owner.client.query(api.landing.list, { slug })).pages[0];
+    expect(draft).toMatchObject({ status: "live", publishedVersion: approved.version, hasUnpublishedChanges: true });
+    expect((await t.query(api.landing.publicPage, { slug: draft.slug }))?.content.headline).toBe("Published headline");
+    await expect(owner.client.mutation(api.landing.setLive, { slug, id, live: true, expectedVersion: approved.version })).rejects.toThrow(/changed after review/);
+    await expect(owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: "Test while draft is pending" })).rejects.toThrow(/Publish or discard the saved draft/);
+
+    const history = await owner.client.query(api.landing.history, { slug, id });
+    expect(history.map((revision) => revision.version)).toEqual([3, 2, 1]);
+    expect(history.find((revision) => revision.isPublished)?.version).toBe(2);
+    await owner.client.mutation(api.landing.restoreVersion, { slug, id, version: 1 });
+    const restored = (await owner.client.query(api.landing.list, { slug })).pages[0];
+    expect(restored).toMatchObject({ version: 4, publishedVersion: 2, hasUnpublishedChanges: true });
+    expect((await t.query(api.landing.publicPage, { slug: restored.slug }))?.content.headline).toBe("Published headline");
+    await owner.client.mutation(api.landing.setLive, { slug, id, live: true, expectedVersion: restored.version });
+    expect((await t.query(api.landing.publicPage, { slug: restored.slug }))?.content.headline).toBe(initial.content?.headline);
+    const events = await t.run(async (ctx) => ctx.db.query("auditEvents").collect());
+    expect(events.some((event) => event.action === "landing.published" && event.summary.includes("version 4"))).toBe(true);
+    expect(events.some((event) => event.action === "landing.version_restored")).toBe(true);
+  });
+
+  it("scopes revision history and restore access to the owning workspace", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "landing-owner@example.com");
+    const editor = await asNewUser(t, "landing-editor@example.com");
+    const other = await asNewUser(t, "landing-other@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Private Page Co" });
+    const id = await owner.client.mutation(api.landing.create, { slug, brief: "Private draft" });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    const versions = await owner.client.query(api.landing.history, { slug, id });
+    expect(versions).toHaveLength(1);
+    await t.run(async (ctx) => ctx.db.insert("memberships", { orgId: orgId as never, userId: editor.userId, role: "editor", status: "active", createdAt: Date.now() }));
+    const current = (await owner.client.query(api.landing.list, { slug })).pages[0];
+    await expect(editor.client.mutation(api.landing.setLive, { slug, id, live: true, expectedVersion: current.version })).rejects.toThrow(/can't do this|permission/i);
+    const { slug: otherSlug } = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other Workspace" });
+    await expect(other.client.query(api.landing.list, { slug })).rejects.toThrow(/workspace|permission/i);
+    await expect(other.client.query(api.landing.history, { slug: otherSlug, id })).rejects.toThrow(/find that page|workspace|permission/i);
+    await expect(other.client.mutation(api.landing.restoreVersion, { slug: otherSlug, id, version: 1 })).rejects.toThrow(/find that page|workspace|permission/i);
   });
 });
 
 describe("landing A/B test", () => {
+  async function assignVisitors(t: ReturnType<typeof setup>, slug: string, targets: { A: number; B: number }) {
+    const visitors: Record<"A" | "B", { key: string; testId: Id<"abTests"> }[]> = { A: [], B: [] };
+    for (let i = 0; (visitors.A.length < targets.A || visitors.B.length < targets.B) && i < 5000; i++) {
+      const key = `ab-test-visitor-${String(i).padStart(8, "0")}`;
+      const result = await t.mutation(api.landing.assignLanding, { slug, visitorKey: key });
+      if (result.variant && result.testId && visitors[result.variant].length < targets[result.variant]) {
+        visitors[result.variant].push({ key, testId: result.testId });
+      }
+    }
+    if (visitors.A.length !== targets.A || visitors.B.length !== targets.B) throw new Error("Could not create the requested balanced assignment sample.");
+    return visitors;
+  }
+
+  async function exposeVisitors(t: ReturnType<typeof setup>, slug: string, visitors: { key: string; testId: Id<"abTests"> }[]) {
+    for (const visitor of visitors) await t.mutation(api.landing.viewed, { slug, visitorKey: visitor.key, testId: visitor.testId, countView: false });
+  }
+
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
     process.env.CLIMBOS_FAKE_LLM = "ship";
@@ -53,33 +134,113 @@ describe("landing A/B test", () => {
     delete process.env.CLIMBOS_FAKE_LLM;
   });
 
-  it("splits views, counts leads per version and applies a clear B win", async () => {
+  it("splits views and reports a B-favored sample without changing the live page until approval", async () => {
     const t = setup();
     const owner = await asNewUser(t, "ab@example.com");
     const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "AB Co" });
     const id = await owner.client.mutation(api.landing.create, { slug, brief: "Free audit" });
     await t.finishAllScheduledFunctions(vi.runAllTimers);
-    await owner.client.mutation(api.landing.setLive, { slug, id, live: true });
+    await publish(owner.client, slug, id);
     const page = (await owner.client.query(api.landing.list, { slug })).pages[0];
     await expect(owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: page.content!.headline })).rejects.toThrow(/different/);
+    await expect(owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: "Another message", outcomeWindowDays: 31 })).rejects.toThrow(/0 to 30/);
     await owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: "Double your leads in 30 days" });
     expect((await t.query(api.landing.publicPage, { slug: page.slug }))?.test?.b.headline).toBe("Double your leads in 30 days");
-    await t.mutation(api.landing.submit, { slug: page.slug, name: "A1", email: "a1@x.example", variant: "A" });
-    for (let i = 0; i < 18; i++) await t.mutation(api.landing.submit, { slug: page.slug, name: `B${i}`, email: `b${i}@x.example`, variant: "B" });
-    for (let i = 0; i < 110; i++) {
-      await t.mutation(api.landing.viewed, { slug: page.slug, variant: "A" });
-      await t.mutation(api.landing.viewed, { slug: page.slug, variant: "B" });
-    }
-    // Decision books: a clear early lead is not read; the test runs to its planned end (1,000 views).
-    expect((await owner.client.query(api.abtests.forTarget, { slug, targetId: id }))[0]).toMatchObject({ status: "running" });
-    for (let i = 110; i < 500; i++) {
-      await t.mutation(api.landing.viewed, { slug: page.slug, variant: "A" });
-      await t.mutation(api.landing.viewed, { slug: page.slug, variant: "B" });
-    }
+    const visitors = await assignVisitors(t, page.slug, { A: 500, B: 500 });
+    // Assignment does not count as a trial. Only a rendered version is an exposure.
+    expect((await owner.client.query(api.abtests.forTarget, { slug, targetId: id }))[0].stats).toMatchObject([
+      { key: "A", assigned: expect.any(Number), exposed: 0, trials: 0 },
+      { key: "B", assigned: expect.any(Number), exposed: 0, trials: 0 },
+    ]);
+    await exposeVisitors(t, page.slug, visitors.A.slice(0, 1));
+    await exposeVisitors(t, page.slug, visitors.A.slice(0, 1)); // Repeated renders from the same assignment are one exposure.
+    await t.mutation(api.landing.submit, { slug: page.slug, name: "A1", email: "a1@x.example", visitorKey: visitors.A[0].key, testId: visitors.A[0].testId });
+    await t.mutation(api.landing.submit, { slug: page.slug, name: "A1", email: "a1@x.example", visitorKey: visitors.A[0].key, testId: visitors.A[0].testId });
+    await exposeVisitors(t, page.slug, visitors.B.slice(0, 18));
+    for (let i = 0; i < 17; i++) await t.mutation(api.landing.submit, { slug: page.slug, name: `B${i}`, email: `b${i}@x.example`, visitorKey: visitors.B[i].key, testId: visitors.B[i].testId });
+    await exposeVisitors(t, page.slug, visitors.A.slice(1));
+    await exposeVisitors(t, page.slug, visitors.B.slice(18));
+    const [maturing] = await owner.client.query(api.abtests.forTarget, { slug, targetId: id });
+    expect(maturing).toMatchObject({ status: "maturing", outcomeWindowDays: 1, winner: null, confidence: 0 });
+    await expect(owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: "A second test" })).rejects.toThrow(/already active/);
+    await t.mutation(internal.abtests.finalize, { testId: maturing.id });
+    expect((await owner.client.query(api.abtests.forTarget, { slug, targetId: id }))[0].status).toBe("maturing");
+    // One delayed lead inside the declared window still contributes before the decision is read.
+    await t.mutation(api.landing.submit, { slug: page.slug, name: "B17", email: "b17@x.example", visitorKey: visitors.B[17].key, testId: visitors.B[17].testId });
+    expect((await owner.client.query(api.abtests.forTarget, { slug, targetId: id }))[0].stats[1]).toMatchObject({ wins: 18 });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
     const [test] = await owner.client.query(api.abtests.forTarget, { slug, targetId: id });
     expect(test).toMatchObject({ status: "done", winner: "B" });
-    expect((await owner.client.query(api.landing.list, { slug })).pages[0].content?.headline).toBe("Double your leads in 30 days");
+    expect(test.stats).toMatchObject([
+      { key: "A", assigned: expect.any(Number), exposed: 500, trials: 500, wins: 1 },
+      { key: "B", assigned: expect.any(Number), exposed: 500, trials: 500, wins: 18 },
+    ]);
+    // A conversion after the window is retained on its assignment but doesn't change the frozen decision.
+    await t.mutation(api.landing.submit, { slug: page.slug, name: "B18", email: "b18@x.example", visitorKey: visitors.B[18].key, testId: visitors.B[18].testId });
+    expect((await owner.client.query(api.abtests.forTarget, { slug, targetId: id }))[0].stats[1]).toMatchObject({ wins: 18 });
+    const lateHash = await sha256Hex(`abTestAssignment:v1|${test.id}|${visitors.B[18].key}`);
+    const late = await t.run(async (ctx) => ctx.db.query("abTestAssignments").withIndex("by_test_subject", (q) => q.eq("testId", test.id).eq("subjectHash", lateHash)).first());
+    expect(late?.outcomeAt).toBeTypeOf("number");
+    expect((await owner.client.query(api.landing.list, { slug })).pages[0].content?.headline).toBe(page.content!.headline);
     expect((await t.query(api.landing.publicPage, { slug: page.slug }))?.test).toBeNull();
+    await owner.client.mutation(api.abtests.applyWinner, { slug, id: test.id });
+    expect((await owner.client.query(api.landing.list, { slug })).pages[0].content?.headline).toBe("Double your leads in 30 days");
+    expect((await owner.client.query(api.abtests.forTarget, { slug, targetId: id }))[0].appliedAt).toBeTypeOf("number");
+  }, 15_000);
+
+  it("requires approval to start a live test and refuses to apply a result over a changed baseline", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "ab-approval@example.com");
+    const editor = await asNewUser(t, "ab-editor@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Approved Test Co" });
+    const pageId = await owner.client.mutation(api.landing.create, { slug, brief: "Free audit" });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await publish(owner.client, slug, pageId);
+    await t.run(async (ctx) => ctx.db.insert("memberships", { orgId: orgId as never, userId: editor.userId, role: "editor", status: "active", createdAt: Date.now() }));
+    await expect(editor.client.mutation(api.abtests.startLanding, { slug, pageId, headline: "Approved challenger headline" })).rejects.toThrow(/can't do this|permission/i);
+    const id = await owner.client.mutation(api.abtests.startLanding, { slug, pageId, headline: "Approved challenger headline" });
+    await t.run(async (ctx) => {
+      const test = await ctx.db.get(id);
+      await ctx.db.patch(id, { status: "done", winner: "B", endedAt: Date.now() });
+      const target = await ctx.db.get(pageId);
+      await ctx.db.patch(pageId, { content: JSON.stringify({ ...JSON.parse(target!.content!), headline: "Owner changed this after the test" }), updatedAt: Date.now() });
+      expect(test?.baselineHash).toBeTypeOf("string");
+    });
+    await expect(editor.client.mutation(api.abtests.applyWinner, { slug, id })).rejects.toThrow(/can't do this|permission/i);
+    await expect(owner.client.mutation(api.abtests.applyWinner, { slug, id })).rejects.toThrow(/page changed/i);
+    expect((await owner.client.query(api.landing.list, { slug })).pages[0].content?.headline).toBe("Owner changed this after the test");
+  });
+
+  it("persists a sample-ratio mismatch as invalid with no winner or challenger rollout", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "ab-invalid@example.com");
+    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Invalid Split Co" });
+    const pageId = await owner.client.mutation(api.landing.create, { slug, brief: "Free audit" });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await publish(owner.client, slug, pageId);
+    const page = (await owner.client.query(api.landing.list, { slug })).pages[0];
+    const originalHeadline = page.content!.headline;
+    await owner.client.mutation(api.abtests.startLanding, { slug, pageId, headline: "A challenger headline" });
+    const [started] = await owner.client.query(api.abtests.forTarget, { slug, targetId: pageId });
+
+    // Put the run one view short of its fixed horizon with an already broken 90/10 split.
+    let visitorKey = "";
+    let testId: Id<"abTests"> | null = null;
+    for (let i = 0; i < 10 && !visitorKey; i++) {
+      const key = `srm-test-visitor-${i.toString().padStart(8, "0")}`;
+      const assigned = await t.mutation(api.landing.assignLanding, { slug: page.slug, visitorKey: key });
+      if (assigned.variant === "A" && assigned.testId) { visitorKey = key; testId = assigned.testId; }
+    }
+    expect(visitorKey).toBeTruthy();
+    await t.run(async (ctx) => ctx.db.patch(started.id, {
+      stats: [{ key: "A", assigned: 900, exposed: 899, trials: 899, wins: 1 }, { key: "B", assigned: 100, exposed: 100, trials: 100, wins: 50 }],
+    }));
+    await t.mutation(api.landing.viewed, { slug: page.slug, visitorKey, testId: testId! });
+
+    const [finished] = await owner.client.query(api.abtests.forTarget, { slug, targetId: pageId });
+    expect(finished).toMatchObject({ status: "invalid", winner: null, confidence: 0 });
+    expect(finished.note).toMatch(/Invalid test/);
+    expect((await owner.client.query(api.landing.list, { slug })).pages[0].content?.headline).toBe(originalHeadline);
   });
 
   it("a page that didn't finish can be written again; deleting a page ends its running test", async () => {
@@ -100,7 +261,7 @@ describe("landing A/B test", () => {
     expect(list.pages[0].status).toBe("draft");
     await expect(owner.client.mutation(api.landing.retry, { slug, id })).rejects.toThrow(/didn't finish/);
 
-    await owner.client.mutation(api.landing.setLive, { slug, id, live: true });
+    await publish(owner.client, slug, id);
     await owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: "A brand new headline" });
     await owner.client.mutation(api.landing.remove, { slug, id });
     const tests = await t.run(async (ctx) => ctx.db.query("abTests").collect());

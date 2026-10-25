@@ -1,44 +1,28 @@
 "use client";
 
-import { BarChart3, CalendarDays, Compass, CreditCard, Home, Palette, Plug, Search, Settings, Sparkles, Target, type LucideIcon } from "@/components/icons"
-import { useMutation } from "convex/react";
+import { Search, Sparkles, ArrowRight } from "@/components/icons";
+import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { toast } from "@/components/ui";
-import { errorInfo } from "@/components/app/errors";
+import { Dialog, DialogContent, toast } from "@/components/ui";
+import { APP_TOOLS, PRIMARY_NAV, appHref } from "./navigation";
+import { askDraftKey } from "./draftKeys";
 
-interface Command {
-  id: string;
-  label: string;
-  hint?: string;
-  icon: LucideIcon;
-  run: () => void;
-}
-
-/** Key Today reads to prefill a wish typed in the palette when it couldn't be sent (kept out of the URL). */
-export const ASK_KEY = "climbos:ask";
-
-/**
- * ⌘K palette: make a wish from anywhere (it's sent at once and Today shows
- * the team working on it) or jump to any part of the workspace.
- */
 export function CommandPalette({ slug }: { slug: string }) {
   const router = useRouter();
-  const sendWish = useMutation(api.workspace.sendChat);
+  const me = useQuery(api.orgs.me);
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setOpen((o) => !o);
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setOpen((value) => !value);
       }
-      if (e.key === "Escape") setOpen(false);
     };
     const onOpen = () => setOpen(true);
     window.addEventListener("keydown", onKey);
@@ -49,106 +33,60 @@ export function CommandPalette({ slug }: { slug: string }) {
     };
   }, []);
 
-  useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 0);
-  }, [open]);
-
-  const go = (path: string) => () => {
+  const go = (key: string) => {
     setOpen(false);
     setQ("");
-    router.push(path);
+    router.push(key.startsWith("settings/") ? `/app/${slug}/${key}` : appHref(slug, key));
   };
-  const commands = useMemo<Command[]>(() => {
-    const base: Command[] = [
-      { id: "today", label: "Today", icon: Home, run: go(`/app/${slug}/today`) },
-      { id: "plan", label: "Growth plan", icon: Compass, run: go(`/app/${slug}/plan`) },
-      { id: "content", label: "Content", icon: CalendarDays, run: go(`/app/${slug}/content`) },
-      { id: "studio", label: "Design studio", hint: "Images, carousels", icon: Palette, run: go(`/studio/${slug}`) },
-      { id: "results", label: "Results", icon: BarChart3, run: go(`/app/${slug}/results`) },
-      { id: "connections", label: "Connections", icon: Plug, run: go(`/app/${slug}/connections`) },
-      { id: "business", label: "Business & goal", hint: "Goal, budget, research", icon: Target, run: go(`/app/${slug}/settings/business`) },
-      { id: "billing", label: "Billing", hint: "Plans, credits", icon: CreditCard, run: go(`/app/${slug}/settings/billing`) },
-      { id: "settings", label: "Settings", icon: Settings, run: go(`/app/${slug}/settings/team`) },
-    ];
-    const term = q.trim().toLowerCase();
-    const matches = term ? base.filter((c) => c.label.toLowerCase().includes(term) || c.hint?.toLowerCase().includes(term)) : base;
-    if (!term) return matches;
-    const ask: Command = {
-      id: "ask",
-      label: `Make it happen: “${q.trim()}”`,
-      hint: "Starts now",
-      icon: Sparkles,
-      run: () => {
-        const wish = q.trim();
-        go(`/app/${slug}/today`)();
-        sendWish({ slug, text: wish }).catch((err) => {
-          // Couldn't send (e.g. on hold): keep the words ready on Today.
-          try {
-            sessionStorage.setItem(ASK_KEY, wish);
-          } catch {
-            // Storage unavailable.
-          }
-          toast({ tone: "danger", title: errorInfo(err).message });
-        });
-      },
-    };
-    // Jumping somewhere is free; a wish spends credits. Enter picks a matching screen first.
-    return matches.length ? [...matches, ask] : [ask];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, slug]);
-
-  if (!open) return null;
+  const base = [
+    ...PRIMARY_NAV.map((item) => ({ id: item.key as string, label: item.label, hint: item.description, search: "" })),
+    ...APP_TOOLS.map((item) => ({ id: item.key, label: item.label, hint: item.description, search: item.search })),
+    { id: "review", label: "Review work", hint: "Check what needs your approval.", search: "approve" },
+    { id: "settings/business", label: "Your business & goal", hint: "Change business details and what you want to achieve.", search: "budget" },
+    { id: "settings/billing", label: "Plan & payments", hint: "Check your subscription and credits.", search: "billing" },
+    { id: "settings/team", label: "Settings", hint: "Manage your team and business settings.", search: "" },
+  ];
+  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const matches = base.filter((item) => words.every((word) => `${item.label} ${item.hint} ${item.search}`.toLowerCase().includes(word)));
+  const commands = matches.map((item) => ({ ...item, run: () => go(item.id) }));
+  if (q.trim()) commands.push({
+    id: "ask", label: "Ask for help with this", hint: "Opens an editable request. Nothing starts yet.", search: "",
+    run: () => {
+      if (!me) return;
+      try {
+        sessionStorage.setItem(askDraftKey(slug, me.userId), q.trim());
+        // A same-page handoff needs an event as well as the navigation fallback.
+        window.dispatchEvent(new CustomEvent("climbos:compose", { detail: { slug, userId: me.userId } }));
+        go("today");
+      } catch {
+        toast({ tone: "danger", title: "We could not keep this request. Copy it, then open Home." });
+      }
+    },
+  });
   const clamp = Math.min(active, Math.max(0, commands.length - 1));
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-ink/40 px-4 pt-[12vh]" onMouseDown={() => setOpen(false)}>
-      <div role="dialog" aria-modal="true" aria-label="Make a wish or search" className="w-full max-w-lg overflow-hidden rounded-2xl border border-line bg-surface shadow-lg" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-2 border-b border-line px-3">
-          <Search className="size-4 text-ink-3" aria-hidden="true" />
-          <input
-            ref={inputRef}
-            value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              setActive(0);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "ArrowDown") {
-                e.preventDefault();
-                setActive((a) => Math.min(a + 1, commands.length - 1));
-              } else if (e.key === "ArrowUp") {
-                e.preventDefault();
-                setActive((a) => Math.max(a - 1, 0));
-              } else if (e.key === "Enter") {
-                e.preventDefault();
-                commands[clamp]?.run();
-              }
-            }}
-            placeholder="Make a wish or jump to…"
-            aria-label="Make a wish or search"
-            role="combobox"
-            aria-expanded="true"
-            aria-controls="palette-list"
-            aria-activedescendant={commands[clamp] ? `cmd-${commands[clamp].id}` : undefined}
-            className="h-10 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-3"
-          />
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent title="Find a tool or ask for help" description="Opening a page is free. Requests are prepared for you to check before sending." onOpenAutoFocus={(event) => { event.preventDefault(); inputRef.current?.focus(); }}>
+        <div className="flex items-center gap-2 border-b border-line pb-3">
+          <Search className="size-4 shrink-0 text-ink-3" aria-hidden />
+          <input ref={inputRef} value={q} onChange={(event) => { setQ(event.target.value); setActive(0); }} onKeyDown={(event) => {
+            // Do not activate a result on the IME confirmation Enter key.
+            // Safari may expose that final keydown as legacy keyCode 229.
+            if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
+            if (event.key === "ArrowDown") { event.preventDefault(); setActive((value) => Math.min(value + 1, commands.length - 1)); }
+            if (event.key === "ArrowUp") { event.preventDefault(); setActive((value) => Math.max(value - 1, 0)); }
+            if (event.key === "Enter") { event.preventDefault(); commands[clamp]?.run(); }
+          }} placeholder="Try posts, customers, or website…" aria-label="Find a tool or prepare a request" role="combobox" aria-expanded={open} aria-controls="palette-list" aria-activedescendant={commands[clamp] ? `cmd-${commands[clamp].id}` : undefined} className="h-10 w-full min-w-0 bg-transparent text-base text-ink outline-none placeholder:text-ink-3" />
         </div>
-        <ul id="palette-list" role="listbox" className="max-h-80 overflow-y-auto p-1">
-          {commands.map((c, i) => (
-            <li key={c.id} id={`cmd-${c.id}`} role="option" aria-selected={i === clamp}>
-              <button
-                type="button"
-                onMouseEnter={() => setActive(i)}
-                onClick={c.run}
-                className={cn("flex min-h-8 w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-ui", i === clamp ? "bg-surface-2 text-ink" : "text-ink-2")}
-              >
-                <c.icon className={cn("size-4 shrink-0", c.id === "ask" ? "text-brand-800" : "text-ink-3")} aria-hidden="true" />
-                <span className="min-w-0 flex-1 truncate">{c.label}</span>
-                {c.hint ? <span className="hidden truncate text-xs text-ink-3 sm:inline">{c.hint}</span> : null}
-              </button>
-            </li>
-          ))}
+        <ul id="palette-list" role="listbox" className="max-h-80 overflow-y-auto py-2">
+          {commands.map((command, index) => <li key={command.id} id={`cmd-${command.id}`} role="option" aria-selected={index === clamp}>
+            <button type="button" disabled={command.id === "ask" && !me} onMouseEnter={() => setActive(index)} onClick={command.run} className={cn("flex min-h-11 w-full items-start gap-2 rounded-[var(--radius-control)] px-2.5 py-2 text-left", index === clamp ? "bg-surface-2 text-ink" : "text-ink-2")}>
+              {command.id === "ask" ? <Sparkles className="mt-1 size-4 shrink-0" aria-hidden /> : <ArrowRight className="mt-1 size-4 shrink-0" aria-hidden />}
+              <span className="min-w-0"><span className="block text-ui font-medium">{command.label}</span><span className="mt-0.5 block text-xs text-ink-3">{command.hint}</span></span>
+            </button>
+          </li>)}
         </ul>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

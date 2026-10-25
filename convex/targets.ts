@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { targetBrief, targetKindOf, targetReadiness, TARGET_STATE_LABEL, type PlayText, type TargetKind } from "../shared/growth/targets";
+import { creatorEvidenceIsStale, creatorMetricAnomalies, targetBrief, targetKindOf, targetReadiness, TARGET_STATE_LABEL, type PlayText, type TargetKind } from "../shared/growth/targets";
 import { prospectScore } from "../shared/outbound";
 import { sha256Hex } from "../shared/policy";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -7,6 +7,7 @@ import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/s
 import { audit } from "./lib/audit";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { startCampaign } from "./outbound";
+import { expertPlaysOf } from "../shared/agents/planCompatibility";
 
 /**
  * S6 behind the `plan_targets` engine flag (REQ-TARGET-01..06, REQ-UX-02/03):
@@ -20,7 +21,7 @@ export const FLAG = "plan_targets";
 const hasTargets = (org: Doc<"organizations">) => Boolean(org.engineFlags?.includes(FLAG));
 
 type StoredPlay = PlayText & { id?: string };
-const playsOf = (s: Doc<"strategies">): StoredPlay[] => ((s.expert?.plays ?? []) as StoredPlay[]).filter((p) => p && typeof p.name === "string");
+const playsOf = (s: Doc<"strategies">): StoredPlay[] => (expertPlaysOf(s.expert) as StoredPlay[]).filter((p) => p && typeof p.name === "string");
 
 async function campaignsOf(ctx: QueryCtx | MutationCtx, orgId: Id<"organizations">) {
   return ctx.db.query("outboundCampaigns").withIndex("by_org_created", (q) => q.eq("orgId", orgId)).order("desc").take(50);
@@ -52,6 +53,7 @@ export const forStrategy = query({
       // Play IDs carry across plan versions, so a refreshed plan keeps its targets (REQ-TARGET-06).
       const campaign = campaigns.find((c) => c.playId === play.id) ?? null;
       const rows = all.filter((p) => p.playIds?.includes(play.id!));
+      const staleCreatorEvidence = kind === "creators" ? rows.filter((p) => ["suggested", "approved"].includes(p.stage) && creatorEvidenceIsStale(p.creatorEvidenceObservedAt, Date.now())) : [];
       const suppressed = new Set<string>();
       for (const p of rows) if (p.publicEmail && (await isSuppressed(ctx, org._id, p.publicEmail))) suppressed.add(p._id);
       const readiness = targetReadiness({
@@ -66,10 +68,10 @@ export const forStrategy = query({
         kind,
         state: readiness.state,
         label: TARGET_STATE_LABEL[readiness.state],
-        note: readiness.note,
+        note: staleCreatorEvidence.length ? `${staleCreatorEvidence.length} active creator profile${staleCreatorEvidence.length === 1 ? " needs" : "s need"} a fresh public-evidence check before outreach. Refresh the search to update them.` : readiness.note,
         counts: { found: readiness.found, eligible: readiness.eligible, contactable: readiness.contactable, excluded: readiness.excluded, inRelationship: readiness.inRelationship },
         campaignId: campaign?._id ?? null,
-        canStart: s.status === "approved" && (!campaign || campaign.status === "failed" || readiness.state === "none_found") && active?.status !== "researching",
+        canStart: s.status === "approved" && (!campaign || campaign.status === "failed" || readiness.state === "none_found" || staleCreatorEvidence.length > 0) && active?.status !== "researching",
         targets: rows
           .sort((a, b) => prospectScore(b) - prospectScore(a))
           .slice(0, 5)
@@ -81,9 +83,17 @@ export const forStrategy = query({
             evidenceUrl: p.evidence[0]?.url ?? null,
             platform: p.platform ?? null,
             handle: p.handle ?? null,
+            audienceSize: p.audienceSize ?? null,
+            contentLanguage: p.contentLanguage ?? null,
+            audienceLocation: p.audienceLocation ?? null,
+            contentSamples: p.contentSamples ?? [],
+            creatorMetricAnomalies: p.creatorMetricAnomalies ?? creatorMetricAnomalies(p.contentSamples ?? [], p.updatedAt),
+            competitorCollaborations: p.competitorCollaborations ?? [],
+            collaborationConcept: p.collaborationConcept ?? null,
             contactRoute: p.publicEmail && !suppressed.has(p._id) ? ("email" as const) : ("none" as const),
             suppressed: suppressed.has(p._id),
             stage: p.stage,
+            creatorEvidenceStale: kind === "creators" && creatorEvidenceIsStale(p.creatorEvidenceObservedAt, Date.now()),
           })),
       };
     }
@@ -100,7 +110,55 @@ export interface PlayTargets {
   counts: { found: number; eligible: number; contactable: number; excluded: number; inRelationship: number };
   campaignId: Id<"outboundCampaigns"> | null;
   canStart: boolean;
-  targets: { id: Id<"prospects">; name: string; url: string; why: string; evidenceUrl: string | null; platform: string | null; handle: string | null; contactRoute: "email" | "none"; suppressed: boolean; stage: string }[];
+  targets: { id: Id<"prospects">; name: string; url: string; why: string; evidenceUrl: string | null; platform: string | null; handle: string | null; audienceSize: { value: string; sourceUrl: string } | null; contentLanguage: { value: string; sourceUrl: string } | null; audienceLocation: { value: string; sourceUrl: string } | null; contentSamples: NonNullable<Doc<"prospects">["contentSamples"]>; creatorMetricAnomalies: NonNullable<Doc<"prospects">["creatorMetricAnomalies"]>; competitorCollaborations: NonNullable<Doc<"prospects">["competitorCollaborations"]>; collaborationConcept: string | null; contactRoute: "email" | "none"; suppressed: boolean; stage: string; creatorEvidenceStale: boolean }[];
+}
+
+export interface TodayTargetPreview {
+  campaignId: Id<"outboundCampaigns">;
+  playId: string;
+  playName: string;
+  kind: TargetKind;
+  status: "researching" | "review" | "failed";
+  matches: { id: Id<"prospects">; name: string }[];
+  hasMore: boolean;
+}
+
+/** A small, read-only Home summary. Do not run the full suppression/readiness scan here. */
+export async function todayTargetPreview(
+  ctx: QueryCtx,
+  org: Doc<"organizations">,
+  strategy: Doc<"strategies"> | null,
+): Promise<TodayTargetPreview | null> {
+  if (!hasTargets(org) || !strategy || strategy.status !== "approved") return null;
+  const eligiblePlays = playsOf(strategy).filter((play) => play.id && targetKindOf(play));
+  if (!eligiblePlays.length) return null;
+
+  const campaigns = await campaignsOf(ctx, org._id);
+  const campaign = campaigns.find((item) => item.strategyId === strategy._id && item.playId && item.status !== "archived" && eligiblePlays.some((play) => play.id === item.playId));
+  if (!campaign?.playId || campaign.status === "archived") return null;
+  const play = eligiblePlays.find((item) => item.id === campaign.playId)!;
+
+  // Bound the preview. Include suggestions linked from older searches as well as
+  // rows from this campaign, without loading contact routes or suppression data.
+  const [currentCampaignRows, suggested, approved] = await Promise.all([
+    ctx.db.query("prospects").withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id)).take(30),
+    ctx.db.query("prospects").withIndex("by_org_stage", (q) => q.eq("orgId", org._id).eq("stage", "suggested")).take(30),
+    ctx.db.query("prospects").withIndex("by_org_stage", (q) => q.eq("orgId", org._id).eq("stage", "approved")).take(30),
+  ]);
+  const rows = [...new Map([...currentCampaignRows, ...suggested, ...approved]
+    .filter((prospect) => prospect.orgId === org._id && ["suggested", "approved"].includes(prospect.stage) && (prospect.campaignId === campaign._id || prospect.playIds?.includes(campaign.playId!)))
+    .sort((a, b) => prospectScore(b) - prospectScore(a))
+    .map((prospect) => [prospect._id, prospect])).values()];
+
+  return {
+    campaignId: campaign._id,
+    playId: play.id!,
+    playName: play.name,
+    kind: targetKindOf(play)!,
+    status: campaign.status,
+    matches: rows.slice(0, 3).map((prospect) => ({ id: prospect._id, name: prospect.company })),
+    hasMore: rows.length > 3,
+  };
 }
 
 async function isSuppressed(ctx: QueryCtx, orgId: Id<"organizations">, email: string): Promise<boolean> {

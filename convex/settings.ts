@@ -46,6 +46,7 @@ export const team = query({
       yourRole: role,
       seatLimit,
       creditApprovalLimit: org.creditApprovalLimit ?? null,
+      competitorResearchRefreshDays: org.competitorResearchRefreshDays ?? 90,
       /** Seats are per account: people across all of the account's workspaces. */
       seatsUsed: seats.used,
       roles: Object.entries(ROLE_DESCRIPTIONS).map(([key, description]) => ({ key, description })),
@@ -559,6 +560,7 @@ export async function endBillingIfLastWorkspace(ctx: MutationCtx, org: Doc<"orga
 /** Tables purged by an index whose first field is orgId (children are removed with their parents). */
 const PURGE_BY_ORG: { table: string; index: string }[] = [
   { table: "artifacts", index: "by_org_updated" },
+  { table: "wordpressDraftOperations", index: "by_org_created" },
   { table: "approvals", index: "by_org_status" },
   { table: "actionCards", index: "by_org_status" },
   { table: "chatMessages", index: "by_org_created" },
@@ -575,6 +577,7 @@ const PURGE_BY_ORG: { table: string; index: string }[] = [
   { table: "strategies", index: "by_org" },
   { table: "goals", index: "by_org_status" },
   { table: "businesses", index: "by_org" },
+  { table: "builtInAgentOutcomeReports", index: "by_archetype_updated" },
   { table: "workflowRuns", index: "by_org_created" },
   // Integrations and keys first, so nothing keeps acting for a deleted workspace.
   { table: "airlyLinks", index: "by_org" },

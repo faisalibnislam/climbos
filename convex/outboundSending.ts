@@ -1,9 +1,9 @@
 import { v } from "convex/values";
 import { syncDealFromProspect } from "./crm";
 import { emitEvent } from "./webhooks";
-import { recordAb, runningTest } from "./abtests";
-import { variantFor } from "../shared/abtest";
+import { assignSubject, recordExposure, recordOutcome, subjectAssignment, variantForSubject } from "./abtests";
 import { can, sha256Hex } from "../shared/policy";
+import { lintApprovedOfferCopy } from "../shared/agents/offerAssessment";
 import { bookingLinkFor, composeEmail, dailyCap, followUpAt, inSendWindow, localDayKey, nextSendWindow, sendMessageId, sendOpKey, sendPayloadHash, SPACING_MINUTES, unsubscribeToken, verifyUnsubscribeToken } from "../shared/outbound/sending";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -14,6 +14,7 @@ import { serverSecret } from "./lib/crypto";
 import { notifyOwners } from "./lib/notify";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { refuseInCopilot } from "./lib/approvals";
+import { hasActiveOutboundSequence, hasQueuedReviewInvitation } from "./lib/contactPressure";
 
 /**
  * Sending outbound emails from the owner's own mailbox (owner decision: the
@@ -50,6 +51,15 @@ export async function cancelQueued(ctx: MutationCtx, prospectId: Id<"prospects">
   }
 }
 
+/** An owner marked the person as already emailed: stop a pending first touch, but preserve planned follow-ups. */
+export async function cancelQueuedFirstTouch(ctx: MutationCtx, prospectId: Id<"prospects">) {
+  for (const s of await ctx.db.query("outboundSends").withIndex("by_prospect", (q) => q.eq("prospectId", prospectId)).take(20)) {
+    if (s.step === 0 && (s.status === "queued" || (s.status === "sending" && !s.claimedAt))) {
+      await ctx.db.patch(s._id, { status: "canceled", ...RELEASE });
+    }
+  }
+}
+
 async function mailboxOf(ctx: QueryCtx | MutationCtx, orgId: Id<"organizations">) {
   return ctx.db.query("connections").withIndex("by_org_provider", (q) => q.eq("orgId", orgId).eq("provider", "email_mailbox")).first();
 }
@@ -78,24 +88,34 @@ export async function mailboxDay(ctx: QueryCtx | MutationCtx, org: Doc<"organiza
 /** Approved prospects with a published email who aren't queued yet (and not unsubscribed). */
 async function unqueuedApproved(ctx: QueryCtx | MutationCtx, c: Doc<"outboundCampaigns">) {
   const out: Doc<"prospects">[] = [];
+  const recipientHashes = new Set<string>();
+  let skippedActiveAddresses = 0;
   for (const p of await ctx.db.query("prospects").withIndex("by_campaign", (q) => q.eq("campaignId", c._id)).take(300)) {
     if (p.stage !== "approved" || !p.publicEmail) continue;
     if (await ctx.db.query("outboundSends").withIndex("by_prospect", (q) => q.eq("prospectId", p._id)).first()) continue;
     if (await isSuppressed(ctx, c.orgId, p.publicEmail)) continue;
+    const recipientHash = await sha256Hex(p.publicEmail.trim().toLowerCase());
+    if (recipientHashes.has(recipientHash) || await hasActiveOutboundSequence(ctx, c.orgId, p.publicEmail) || await hasQueuedReviewInvitation(ctx, c.orgId, p.publicEmail)) {
+      skippedActiveAddresses++;
+      continue;
+    }
+    recipientHashes.add(recipientHash);
     out.push(p);
   }
-  return out.slice(0, 200);
+  return { prospects: out.slice(0, 200), skippedActiveAddresses };
 }
 
-async function queueApproved(ctx: MutationCtx, org: Doc<"organizations">, c: Doc<"outboundCampaigns">): Promise<number> {
+async function queueApproved(ctx: MutationCtx, org: Doc<"organizations">, c: Doc<"outboundCampaigns">): Promise<{ queued: number; skippedActiveAddresses: number }> {
   let at = nextSendWindow(Date.now() + 60_000, org.timezone);
   let queued = 0;
-  for (const p of await unqueuedApproved(ctx, c)) {
-    await ctx.db.insert("outboundSends", { orgId: org._id, campaignId: c._id, prospectId: p._id, step: 0, to: p.publicEmail!, scheduledFor: at, status: "queued", attempts: 0, createdAt: Date.now() });
+  const ready = await unqueuedApproved(ctx, c);
+  for (const p of ready.prospects) {
+    const recipientHash = await sha256Hex(p.publicEmail!.trim().toLowerCase());
+    await ctx.db.insert("outboundSends", { orgId: org._id, campaignId: c._id, prospectId: p._id, step: 0, to: p.publicEmail!, recipientHash, scheduledFor: at, status: "queued", attempts: 0, createdAt: Date.now() });
     at = nextSendWindow(at + SPACING_MINUTES * 60_000, org.timezone);
     queued++;
   }
-  return queued;
+  return { queued, skippedActiveAddresses: ready.skippedActiveAddresses };
 }
 
 /* ---------------- owner controls ---------------- */
@@ -107,10 +127,12 @@ export const status = query({
     const c = assertSameOrg(await ctx.db.get(campaignId), org._id, "campaign");
     const mailbox = await mailboxOf(ctx, org._id);
     const sends = await ctx.db.query("outboundSends").withIndex("by_campaign", (q) => q.eq("campaignId", campaignId)).order("desc").take(300);
+    const attemptEvents = await ctx.db.query("outboundSendEvents").withIndex("by_campaign", (q) => q.eq("campaignId", campaignId)).order("desc").take(40);
     const count = (st: Doc<"outboundSends">["status"]) => sends.filter((s) => s.status === st).length;
     const now = Date.now();
     const day = await mailboxDay(ctx, org, now);
     const others = (await ctx.db.query("outboundCampaigns").withIndex("by_org_created", (q) => q.eq("orgId", org._id)).order("desc").take(50)).filter((x) => x._id !== c._id && (x.sending?.status === "on" || x.sending?.status === "paused"));
+    const pendingApproved = c.sending ? await unqueuedApproved(ctx, c) : { prospects: [], skippedActiveAddresses: 0 };
     return {
       mailbox: mailbox && mailbox.status === "connected" ? { label: mailbox.accountLabel ?? "Your mailbox" } : null,
       sending: c.sending ?? null,
@@ -119,9 +141,14 @@ export const status = query({
       counts: { queued: count("queued") + count("sending"), sent: count("sent"), failed: count("failed"), bounced: count("bounced"), canceled: count("canceled"), uncertain: count("uncertain") },
       // May have gone out: the owner checks their Sent folder and says.
       review: sends.filter((s) => s.status === "uncertain").slice(0, 10).map((s) => ({ id: s._id, to: s.to, step: s.step, reason: s.reviewReason ?? "unverifiable" })),
+      attemptEvents: attemptEvents.map((item) => {
+        const send = sends.find((row) => row._id === item.sendId);
+        return { id: item._id, step: send?.step ?? null, to: send?.to ?? null, attempt: item.attempt, event: item.event, actor: item.actor, summary: item.summary, happenedAt: item.happenedAt, providerMessageId: item.providerMessageId ?? null };
+      }),
       next: sends.filter((s) => s.status === "queued").sort((a, b) => a.scheduledFor - b.scheduledFor)[0]?.scheduledFor ?? null,
       recent: sends.filter((s) => s.status !== "queued").slice(0, 20).map((s) => ({ id: s._id, to: s.to, step: s.step, status: s.status, at: s.sentAt ?? s.scheduledFor, error: s.error ?? null })),
-      newlyApproved: c.sending ? (await unqueuedApproved(ctx, c)).length : 0,
+      newlyApproved: pendingApproved.prospects.length,
+      activeEmailFlowsWaiting: pendingApproved.skippedActiveAddresses,
       others: others.map((x) => ({ id: x._id, title: x.title, status: x.sending!.status, pausedReason: x.sending!.pausedReason ?? null })),
       can: { approve: can(role, "approve"), pause: can(role, "pause"), connect: can(role, "manage_connections") },
     };
@@ -129,8 +156,8 @@ export const status = query({
 });
 
 /** What the owner approves when sending starts: every email in the sequence and the sender details. */
-export async function sendingHash(c: Pick<Doc<"outboundCampaigns">, "sequence">, sender: { senderName: string; company: string; address: string; bookingUrl?: string }): Promise<string> {
-  return sha256Hex(JSON.stringify({ sequence: c.sequence.map((s) => ({ day: s.day, subject: s.subject, body: s.body })), sender: [sender.senderName, sender.company, sender.address, sender.bookingUrl ?? ""] }));
+export async function sendingHash(c: Pick<Doc<"outboundCampaigns">, "sequence" | "approvedOfferPlayName" | "approvedOfferTermsSnapshot">, sender: { senderName: string; company: string; address: string; bookingUrl?: string }): Promise<string> {
+  return sha256Hex(JSON.stringify({ sequence: c.sequence.map((s) => ({ day: s.day, subject: s.subject, body: s.body })), offerPlayName: c.approvedOfferPlayName ?? null, offerTerms: c.approvedOfferTermsSnapshot ?? null, sender: [sender.senderName, sender.company, sender.address, sender.bookingUrl ?? ""] }));
 }
 
 /** Start sending to the approved prospects that publish an email. The owner confirms the sender details first. */
@@ -142,19 +169,21 @@ export const start = mutation({
     await requirePaid(ctx, org, "sending");
     const c = assertSameOrg(await ctx.db.get(a.campaignId), org._id, "campaign");
     if (!c.sequence.length) throw appError("INVALID", "This campaign has no emails yet.");
+    const offerIssue = c.sequence.flatMap((step, index) => lintApprovedOfferCopy(`${step.subject}\n${step.body.replace(/\{\{firstLine\}\}/g, "")}`, c.approvedOfferTermsSnapshot, `sequence[${index}]`, c.approvedOfferPlayName)).find((issue) => issue.severity === "error");
+    if (offerIssue) throw appError("INVALID", offerIssue.message);
     const mailbox = await mailboxOf(ctx, org._id);
     if (mailbox?.status !== "connected") throw appError("INVALID", "Connect your mailbox first (Connections → Your mailbox).");
     if (a.address.trim().length < 8) throw appError("INVALID", "Add your business's postal address. The law requires it in cold emails.");
     if (!a.senderName.trim() || !a.company.trim()) throw appError("INVALID", "Add your name and company.");
-    const queued = await queueApproved(ctx, org, c);
-    if (!queued) throw appError("INVALID", "No approved prospects with a published email to send to.");
+    const { queued, skippedActiveAddresses } = await queueApproved(ctx, org, c);
+    if (!queued) throw appError("INVALID", skippedActiveAddresses ? "No messages were queued because another ClimbOS email is already queued, in progress, or unresolved for those addresses, or the check could not be completed safely." : "No approved possible customers with a published email to send to.");
     const sender = { senderName: a.senderName.trim().slice(0, 80), company: a.company.trim().slice(0, 80), address: a.address.trim().slice(0, 200), bookingUrl: a.bookingUrl?.trim().slice(0, 300) || undefined };
     await ctx.db.patch(c._id, {
       sending: { status: "on", startedAt: c.sending?.startedAt ?? Date.now(), startedBy: user._id, firstSentAt: c.sending?.firstSentAt, lastSentAt: c.sending?.lastSentAt, ...sender, contentHash: await sendingHash(c, sender) },
       updatedAt: Date.now(),
     });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "outbound.sending_started", subjectType: "campaign", subjectId: c._id, summary: `Started sending to ${queued} prospect${queued === 1 ? "" : "s"} from your mailbox (warm-up limits apply).` });
-    return { queued };
+    return { queued, skippedActiveAddresses };
   },
 });
 
@@ -169,11 +198,11 @@ export const addApproved = mutation({
     if (!c.sending) throw appError("INVALID", "Start sending first.");
     if (c.sending.contentHash && c.sending.contentHash !== (await sendingHash(c, c.sending))) throw appError("INVALID", "The emails changed. Resume sending to approve them first.");
     if ((await mailboxOf(ctx, org._id))?.status !== "connected") throw appError("INVALID", "Connect your mailbox first (Connections → Your mailbox).");
-    const queued = await queueApproved(ctx, org, c);
-    if (!queued) throw appError("INVALID", "Nobody new to send to.");
+    const { queued, skippedActiveAddresses } = await queueApproved(ctx, org, c);
+    if (!queued && !skippedActiveAddresses) throw appError("INVALID", "Nobody new to send to.");
     if (c.sending.status === "done") await ctx.db.patch(c._id, { sending: { ...c.sending, status: "on" }, updatedAt: Date.now() });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "outbound.sending_added", subjectType: "campaign", subjectId: c._id, summary: `Added ${queued} newly approved prospect${queued === 1 ? "" : "s"} to sending.` });
-    return { queued, paused: c.sending.status === "paused" };
+    return { queued, skippedActiveAddresses, paused: c.sending.status === "paused" };
   },
 });
 
@@ -198,12 +227,36 @@ async function keyTaken(ctx: MutationCtx, opKey: string, self: Id<"outboundSends
   return rows.some((r) => r._id !== self && (r.status === "sent" || r.status === "sending" || r.status === "uncertain" || r.status === "bounced"));
 }
 
+/** Retain send-attempt and reconciliation outcomes without copying addresses or message bodies. */
+async function recordSendEvent(
+  ctx: MutationCtx,
+  send: Doc<"outboundSends">,
+  event: Doc<"outboundSendEvents">["event"],
+  summary: string,
+  actor: Doc<"outboundSendEvents">["actor"] = "system",
+  providerMessageId?: string,
+) {
+  await ctx.db.insert("outboundSendEvents", {
+    orgId: send.orgId,
+    campaignId: send.campaignId,
+    sendId: send._id,
+    attempt: send.attempts,
+    ...(send.opKey ? { opKey: send.opKey } : {}),
+    event,
+    actor,
+    summary: summary.slice(0, 300),
+    ...(providerMessageId ? { providerMessageId: providerMessageId.slice(0, 300) } : {}),
+    happenedAt: Date.now(),
+  });
+}
+
 /**
  * It may have gone out. Never back to the queue from here: the Sent folder is
  * checked first (by the Message-ID derived from the key), or the owner decides.
  */
 async function markUncertain(ctx: MutationCtx, s: Doc<"outboundSends">, reason: NonNullable<Doc<"outboundSends">["reviewReason"]>, error?: string) {
   await ctx.db.patch(s._id, { status: "uncertain", reviewReason: reason, leaseExpiresAt: undefined, ...(error ? { error: error.slice(0, 300) } : {}) });
+  await recordSendEvent(ctx, s, "outcome_uncertain", error ?? "The mailbox outcome could not be confirmed. ClimbOS will check the Sent folder or ask the owner.");
   if (reason === "payload_changed") await askOwner(ctx, s);
   // A lost answer: give the Sent copy a moment to land before looking.
   else await ctx.scheduler.runAfter(reason === "no_response" ? 120_000 : 0, internal.mailbox.reconcileOne, { sendId: s._id, lease: s.lease });
@@ -268,6 +321,7 @@ export const dispatch = internalMutation({
         const opKey = await sendOpKey({ orgId, prospectId: s.prospectId, step: s.step, contentHash: approved.get(s.campaignId)! });
         if (await keyTaken(ctx, opKey, s._id)) {
           await ctx.db.patch(s._id, { status: "canceled", opKey, error: "Duplicate of an email already sent or on its way." });
+          await recordSendEvent(ctx, { ...s, opKey }, "duplicate_blocked", "A duplicate send was blocked because the same approved email is already sent or in progress.");
           continue;
         }
         const lease = `${s.attempts + 1}.${now.toString(36)}`;
@@ -296,6 +350,10 @@ export const prepareSend = internalQuery({
     const p = await ctx.db.get(s.prospectId);
     const org = await ctx.db.get(s.orgId);
     if (!c?.sending || !p || !org) return null;
+    // The owner may have contacted this person outside ClimbOS after the queue
+    // was created. Do not send a duplicate first touch; scheduled sequence
+    // follow-ups remain eligible because they belong to the approved message.
+    if (s.step === 0 && p.stage === "contacted") return null;
     if (STOPPED_STAGES.includes(p.stage)) return null;
     if (await isSuppressed(ctx, s.orgId, s.to)) return null;
     const step = c.sequence[s.step];
@@ -312,12 +370,12 @@ export const prepareSend = internalQuery({
     const oneClick = process.env.CONVEX_SITE_URL ? `${process.env.CONVEX_SITE_URL}/unsubscribe?token=${encodeURIComponent(token)}` : unsub;
     // A/B subject test: half the prospects get subject B on the first email.
     const test = s.step === 0 ? await ctx.db.query("abTests").withIndex("by_target", (q) => q.eq("targetId", c._id).eq("status", "running")).first() : null;
-    const b = test && variantFor(p._id) === "B" ? test.variants.find((x) => x.key === "B")?.value : undefined;
+    const b = test && await variantForSubject(test._id, p._id) === "B" ? test.variants.find((x) => x.key === "B")?.value : undefined;
     // The booking link carries the prospect, so a booking stops their sequence and joins their deal.
     const bookingUrl = c.sending.bookingUrl ? bookingLinkFor(c.sending.bookingUrl, p._id) : undefined;
     const email = composeEmail({ step: b ? { ...step, subject: b } : step, stepIndex: s.step, firstLine: p.firstLine, contactName: p.contact, sender: { name: c.sending.senderName, company: c.sending.company, address: c.sending.address, bookingUrl }, unsubscribeUrl: unsub });
     const inReplyTo = previous?.messageId ?? null;
-    return { hold: false as const, to: s.to, subject: email.subject, text: email.text, unsubscribeUrl: oneClick, connectionId: mailbox._id, inReplyTo, opKey: s.opKey ?? null, payloadHash: await sendPayloadHash({ to: s.to, subject: email.subject, text: email.text, inReplyTo }) };
+    return { hold: false as const, to: s.to, subject: email.subject, text: email.text, unsubscribeUrl: oneClick, connectionId: mailbox._id, inReplyTo, opKey: s.opKey ?? null, abTestId: test?._id ?? null, payloadHash: await sendPayloadHash({ to: s.to, subject: email.subject, text: email.text, inReplyTo }) };
   },
 });
 
@@ -327,14 +385,33 @@ export const prepareSend = internalQuery({
  * one first tried under its key. True = send now.
  */
 export const claimSend = internalMutation({
-  args: { sendId: v.id("outboundSends"), lease: v.optional(v.string()), payloadHash: v.string() },
-  handler: async (ctx, { sendId, lease, payloadHash }) => {
+  args: { sendId: v.id("outboundSends"), lease: v.optional(v.string()), payloadHash: v.string(), abTestId: v.optional(v.id("abTests")) },
+  handler: async (ctx, { sendId, lease, payloadHash, abTestId }) => {
     const s = await ctx.db.get(sendId);
     const now = Date.now();
     if (!s || s.status !== "sending" || s.lease !== lease || s.claimedAt) return false;
     if (s.leaseExpiresAt !== undefined && s.leaseExpiresAt <= now) return false;
+    if (s.step === 0) {
+      const prospect = await ctx.db.get(s.prospectId);
+      if (!prospect || prospect.stage === "contacted" || STOPPED_STAGES.includes(prospect.stage)) {
+        await ctx.db.patch(s._id, { status: "canceled", ...RELEASE });
+        await recordSendEvent(ctx, s, "not_sent", "The owner marked this person as already contacted before the email was sent.");
+        return false;
+      }
+      if (await isSuppressed(ctx, s.orgId, s.to)) {
+        await ctx.db.patch(s._id, { status: "canceled", ...RELEASE });
+        await recordSendEvent(ctx, s, "not_sent", "The address was suppressed before the email was sent.");
+        return false;
+      }
+      if (await hasActiveOutboundSequence(ctx, s.orgId, s.to, s._id) || await hasQueuedReviewInvitation(ctx, s.orgId, s.to)) {
+        await ctx.db.patch(s._id, { status: "canceled", error: "Another active ClimbOS email uses this address.", ...RELEASE });
+        await recordSendEvent(ctx, s, "duplicate_blocked", "This email was stopped because another ClimbOS email to this address is queued, in progress, or unresolved.");
+        return false;
+      }
+    }
     if (s.opKey && (await keyTaken(ctx, s.opKey, s._id))) {
       await ctx.db.patch(s._id, { status: "canceled", error: "Duplicate of an email already sent or on its way.", ...RELEASE });
+      await recordSendEvent(ctx, s, "duplicate_blocked", "A duplicate send was blocked because the same approved email is already sent or in progress.");
       return false;
     }
     if (s.payloadHash && s.payloadHash !== payloadHash) {
@@ -342,28 +419,50 @@ export const claimSend = internalMutation({
       await markUncertain(ctx, s, "payload_changed", "The email changed since the first try.");
       return false;
     }
-    await ctx.db.patch(s._id, { claimedAt: now, leaseExpiresAt: now + SEND_LEASE_MS, payloadHash });
+    let activeTestId: Id<"abTests"> | undefined;
+    if (s.step === 0 && abTestId) {
+      const test = await ctx.db.get(abTestId);
+      if (!test || test.targetId !== s.campaignId || test.status !== "running") {
+        await ctx.db.patch(s._id, { status: "queued", ...RELEASE });
+        await ctx.scheduler.runAfter(0, internal.outboundSending.dispatch, {});
+        return false;
+      }
+      await assignSubject(ctx, test, s.prospectId);
+      activeTestId = test._id;
+    }
+    await ctx.db.patch(s._id, { claimedAt: now, leaseExpiresAt: now + SEND_LEASE_MS, payloadHash, abTestId: activeTestId });
+    await recordSendEvent(ctx, s, "claimed", "The mailbox worker claimed this email immediately before contacting the provider.");
     return true;
   },
 });
 
 /** Sent: record it, then queue the next step once (or stop). */
-async function markSent(ctx: MutationCtx, s: Doc<"outboundSends">, messageId: string | undefined, now: number) {
+async function markSent(
+  ctx: MutationCtx,
+  s: Doc<"outboundSends">,
+  messageId: string | undefined,
+  now: number,
+  event: "provider_accepted" | "sent_folder_confirmed" | "owner_confirmed_sent" = "provider_accepted",
+) {
   await ctx.db.patch(s._id, { status: "sent", sentAt: now, messageId, leaseExpiresAt: undefined, reviewReason: undefined, error: undefined });
-  if (s.step === 0) {
-    const test = await runningTest(ctx, s.campaignId);
-    if (test) await recordAb(ctx, test, variantFor(s.prospectId), "trials");
+  await recordSendEvent(ctx, s, event, event === "provider_accepted" ? "The mailbox provider accepted the email." : event === "sent_folder_confirmed" ? "The email was found in the mailbox Sent folder." : "The owner confirmed the email was sent.", event === "owner_confirmed_sent" ? "owner" : "system", messageId);
+  if (s.step === 0 && s.abTestId) {
+    const test = await ctx.db.get(s.abTestId);
+    if (test) {
+      const assignment = await subjectAssignment(ctx, test, s.prospectId);
+      if (assignment) await recordExposure(ctx, assignment, test);
+    }
   }
   const c = await ctx.db.get(s.campaignId);
   const p = await ctx.db.get(s.prospectId);
   const org = await ctx.db.get(s.orgId);
   if (c?.sending) await ctx.db.patch(c._id, { sending: { ...c.sending, firstSentAt: c.sending.firstSentAt ?? now, lastSentAt: now } });
-  if (p && p.stage === "approved") await ctx.db.patch(p._id, { stage: "contacted", updatedAt: now });
+  if (p && p.stage === "approved") await ctx.db.patch(p._id, { stage: "contacted", stageUpdatedAt: now, updatedAt: now });
   const next = c?.sequence[s.step + 1];
   if (!c || !next || !org) return;
   if (await ctx.db.query("outboundSends").withIndex("by_prospect", (q) => q.eq("prospectId", s.prospectId).eq("step", s.step + 1)).first()) return;
   const gap = next.day - (c.sequence[s.step]?.day ?? 0);
-  await ctx.db.insert("outboundSends", { orgId: s.orgId, campaignId: s.campaignId, prospectId: s.prospectId, step: s.step + 1, to: s.to, scheduledFor: followUpAt(now, gap, org.timezone), status: "queued", attempts: 0, createdAt: now });
+  await ctx.db.insert("outboundSends", { orgId: s.orgId, campaignId: s.campaignId, prospectId: s.prospectId, step: s.step + 1, to: s.to, recipientHash: s.recipientHash ?? await sha256Hex(s.to.trim().toLowerCase()), scheduledFor: followUpAt(now, gap, org.timezone), status: "queued", attempts: 0, createdAt: now });
 }
 
 /**
@@ -395,8 +494,13 @@ export const recordSend = internalMutation({
       // Only before the mailbox was reached.
       if (s.claimedAt) return;
       // Back in the queue for when sending resumes (this attempt doesn't count).
-      if (hold) await ctx.db.patch(s._id, { status: "queued", attempts: Math.max(0, s.attempts - 1), ...RELEASE });
-      else await ctx.db.patch(s._id, { status: "canceled", ...RELEASE });
+      if (hold) {
+        await ctx.db.patch(s._id, { status: "queued", attempts: Math.max(0, s.attempts - 1), ...RELEASE });
+        await recordSendEvent(ctx, s, "not_sent", "The mailbox was unavailable or sending was paused before this email reached the provider.");
+      } else {
+        await ctx.db.patch(s._id, { status: "canceled", ...RELEASE });
+        await recordSendEvent(ctx, s, "not_sent", "The email was stopped before it reached the mailbox provider.");
+      }
       return;
     }
     if (outcome === "unclear") {
@@ -405,11 +509,13 @@ export const recordSend = internalMutation({
     }
     if (outcome === "auth") {
       // The mailbox refused the sign-in (its connection is now marked expired): wait in the queue, no retry.
+      await recordSendEvent(ctx, s, "provider_rejected", "The mailbox provider rejected the sign-in; reconnect before sending resumes.");
       await ctx.db.patch(s._id, { status: "queued", attempts: Math.max(0, s.attempts - 1), error: "Mailbox sign-in failed", ...RELEASE });
       await notifyOwners(ctx, s.orgId, "Your mailbox sign-in stopped working. Reconnect it in Connections to keep sending.", "connections");
       return;
     }
     // The server said no: one retry after 30 minutes, then give up on this email.
+    await recordSendEvent(ctx, s, "provider_rejected", error ?? "The mailbox provider rejected this attempt.");
     if (s.attempts < 2) await ctx.db.patch(s._id, { status: "queued", scheduledFor: now + 30 * 60_000, error: error?.slice(0, 300), ...RELEASE });
     else await ctx.db.patch(s._id, { status: "failed", error: error?.slice(0, 300), ...RELEASE });
   },
@@ -433,7 +539,9 @@ export const recordReconcile = internalMutation({
     const s = await ctx.db.get(sendId);
     if (!s || s.status !== "uncertain" || s.lease !== lease) return;
     const now = Date.now();
-    if (found) await markSent(ctx, s, messageId, now);
+    if (found === false) await recordSendEvent(ctx, s, "sent_folder_not_found", "The Sent-folder check did not find the email; ClimbOS will use the safe retry limit.");
+    if (found === null) await recordSendEvent(ctx, s, "sent_folder_unavailable", "The Sent-folder check could not determine whether the email went out.");
+    if (found) await markSent(ctx, s, messageId, now, "sent_folder_confirmed");
     else if (found === false && s.attempts >= MAX_ATTEMPTS) await ctx.db.patch(s._id, { status: "failed", reviewReason: undefined, error: `Not sent after ${MAX_ATTEMPTS} tries.`, ...RELEASE });
     else if (found === false) await ctx.db.patch(s._id, { status: "queued", scheduledFor: now, reviewReason: undefined, error: "Not in your Sent folder; sending again.", ...RELEASE });
     else {
@@ -453,12 +561,16 @@ export const resolveUncertain = mutation({
     const now = Date.now();
     if (outcome === "sent") {
       const mailbox = await mailboxOf(ctx, org._id);
-      await markSent(ctx, s, s.opKey && mailbox?.accountLabel ? sendMessageId(s.opKey, mailbox.accountLabel) : undefined, now);
+      await markSent(ctx, s, s.opKey && mailbox?.accountLabel ? sendMessageId(s.opKey, mailbox.accountLabel) : undefined, now, "owner_confirmed_sent");
     } else if (outcome === "resend") {
       await refuseInCopilot(ctx, org._id, "send email");
       // The owner confirmed it didn't go out: the current approved email is bound afresh.
+      await recordSendEvent(ctx, s, "owner_requested_retry", "The owner confirmed the email was not sent and requested one approved retry.", "owner");
       await ctx.db.patch(s._id, { status: "queued", scheduledFor: now, payloadHash: undefined, reviewReason: undefined, error: undefined, ...RELEASE });
-    } else await ctx.db.patch(s._id, { status: "canceled", reviewReason: undefined, ...RELEASE });
+    } else {
+      await recordSendEvent(ctx, s, "owner_skipped", "The owner marked this email as not sent and skipped it.", "owner");
+      await ctx.db.patch(s._id, { status: "canceled", reviewReason: undefined, ...RELEASE });
+    }
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "outbound.send_resolved", subjectType: "campaign", subjectId: s.campaignId, summary: `Unclear email to ${s.to}: ${outcome === "sent" ? "marked sent" : outcome === "resend" ? "sending again" : "skipped"}.` });
   },
 });
@@ -484,18 +596,22 @@ export const applyInbox = internalMutation({
         // An opt-out always stops everything, even after an earlier reply.
         await cancelQueued(ctx, p._id);
         await suppress(ctx, c.orgId, r.from, "unsubscribe", "reply");
-        if (p.stage !== "booked" && p.stage !== "won" && p.stage !== "lost") await ctx.db.patch(p._id, { stage: "lost", updatedAt: now });
+        if (p.stage !== "booked" && p.stage !== "won" && p.stage !== "lost") await ctx.db.patch(p._id, { stage: "lost", stageUpdatedAt: now, updatedAt: now });
         continue;
       }
       const already = p.stage === "replied" || p.stage === "booked" || p.stage === "won";
       await syncDealFromProspect(ctx, p, "talking", "outbound", r.text ? `Replied: “${r.text.slice(0, 160)}”` : "Replied to your email.");
       if (!already && r.text) await emitEvent(ctx, c.orgId, "reply.received", { company: p.company, email: r.from, subject: r.subject ?? null, text: r.text.slice(0, 1000) });
       if (!already) {
-        const test = await runningTest(ctx, campaignId);
-        if (test) await recordAb(ctx, test, variantFor(p._id), "wins");
+        const firstSend = await ctx.db.query("outboundSends").withIndex("by_prospect", (q) => q.eq("prospectId", p._id).eq("step", 0)).first();
+        const test = firstSend?.abTestId ? await ctx.db.get(firstSend.abTestId) : null;
+        if (test) {
+          const assignment = await subjectAssignment(ctx, test, p._id);
+          if (assignment?.exposedAt && !assignment.outcomeAt) await recordOutcome(ctx, assignment, test, r.at ?? now);
+        }
       }
       if (already || p.stage === "lost") continue;
-      await ctx.db.patch(p._id, { stage: "replied", updatedAt: now });
+      await ctx.db.patch(p._id, { stage: "replied", stageUpdatedAt: now, updatedAt: now });
       await cancelQueued(ctx, p._id);
       await ctx.db.insert("notices", { userId: c.sending.startedBy, orgId: c.orgId, kind: "system", text: `${p.company} replied to your email. Their sequence is stopped so you can answer personally.`, href: `/app/${(await ctx.db.get(c.orgId))?.slug ?? ""}/outbound`, createdAt: now });
     }
@@ -549,7 +665,10 @@ export const unsubscribe = mutation({
     if (p) {
       await cancelQueued(ctx, p._id);
       if (p.publicEmail) await suppress(ctx, p.orgId, p.publicEmail, "unsubscribe", "link");
-      if (p.stage !== "won" && p.stage !== "booked") await ctx.db.patch(p._id, { stage: "lost", updatedAt: Date.now() });
+      if (p.stage !== "won" && p.stage !== "booked") {
+        const now = Date.now();
+        await ctx.db.patch(p._id, { stage: "lost", stageUpdatedAt: now, updatedAt: now });
+      }
       return { company: (await ctx.db.get(p.orgId))?.name ?? "the sender" };
     }
     // Review requests carry the same signed link.

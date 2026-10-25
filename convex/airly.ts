@@ -7,11 +7,7 @@ import { notifyOwners } from "./lib/notify";
 import { requireOrgAccess } from "./lib/tenancy";
 import { emitEvent } from "./webhooks";
 
-/**
- * Airly apps: Formkit responses and Meetrao bookings flow into the Pipeline
- * and Inbox; plans and reports go out to Taskeni and Folevi. Each link holds
- * the owner's own token (encrypted). Polling every 15 minutes, no app changes.
- */
+/** Connected products import leads/bookings and export plans using encrypted owner tokens. */
 
 const AAD = (orgId: string) => `climbos:${orgId}:airly`;
 export { AAD as airlyAad };

@@ -27,7 +27,12 @@ export const OPTION_KINDS = ["acquisition", "conversion", "offer", "retention", 
 
 export const DecisionSchema = z.object({
   /** What was seen, each with where it came from. */
-  observations: z.array(z.object({ observation: z.string(), source: z.enum(["owner", "site", "research", "results", "inference"]) })),
+  observations: z.array(z.object({
+    observation: z.string(),
+    source: z.enum(["owner", "site", "research", "results", "inference"]),
+    /** `fact:N` from this run's confirmed facts, or an exact page read during this run. */
+    evidenceRefs: z.array(z.string()).max(8).optional(),
+  })),
   constraint: z.enum(CONSTRAINTS),
   /** Competing explanations for the constraint, with what supports and undercuts each. */
   explanations: z.array(z.object({ explanation: z.string(), evidenceFor: z.string(), evidenceAgainst: z.string() })),
@@ -37,6 +42,8 @@ export const DecisionSchema = z.object({
   options: z.array(z.object({ name: z.string(), kind: z.enum(OPTION_KINDS), plays: z.array(z.string()), chosen: z.boolean(), whyNot: z.string() })),
   /** One sentence: the approach every play serves. */
   guidingPolicy: z.string(),
+  /** The strategic shape, separate from the explanation of why it should work. */
+  focus: z.object({ primaryPlay: z.string(), supportingMove: z.string(), maintenanceWork: z.string() }),
   /** The observation, with a number and a date, that would show this diagnosis is wrong. */
   falsifier: z.string(),
 });
@@ -52,24 +59,42 @@ export const DECISION_CAPS: WordCaps = {
   "decision.options[].name": 8,
   "decision.options[].whyNot": 20,
   "decision.guidingPolicy": 20,
+  "decision.focus.primaryPlay": 8,
+  "decision.focus.supportingMove": 16,
+  "decision.focus.maintenanceWork": 12,
   "decision.falsifier": 25,
 };
 
 /** The plays task's extra instruction when the flag is on. */
 export const DECISION_FIELDS =
-  `${capsHint(DECISION_CAPS)} Fill decision: observations (what you saw, each with its source; results means the owner's measured results), the binding constraint, 2 or 3 competing explanations with the evidence for and against each, what the evidence can't tell yet (limits), the options you considered (2 to 4 when the choice is real, just one when it's obvious; include fixing the offer, conversion, retention or capacity when that could be the constraint), exactly one chosen with the play names it uses, and for every other option why it lost (whyNot). Then the guiding policy in one sentence, and the falsifier: the observation with a number and a date that would show this diagnosis is wrong.`;
+  `${capsHint(DECISION_CAPS)} Fill decision: observations (what you saw, each with its source; results means the owner's measured results), and add evidenceRefs using only fact:N from the supplied confirmed facts or an exact page URL read in this run; use [] when there is no direct reference and label that observation as an inference. Then give the binding constraint, 2 or 3 competing explanations with the evidence for and against each, what the evidence can't tell yet (limits), the options you considered (2 to 4 when the choice is real, just one when it's obvious; include fixing the offer, conversion, retention or capacity when that could be the constraint), exactly one chosen with the play names it uses, and for every other option why it lost (whyNot). Compare mapped options against the locked customer, cost, margin, budget, time and delivery numbers; if the numbers favor another option, state the evidence-based factor that changes the choice. Then set the strategic focus: name the exact primary play, one supporting move, and the recurring maintenance work that keeps the plan healthy. Finish with the guiding policy in one sentence and the falsifier: the observation with a number and a date that would show this diagnosis is wrong.`;
 
 const DATED = /\b(day|days|week|weeks|month|months|by|within|after)\b|\d{4}-\d{2}-\d{2}/i;
 const norm = (s: string) => s.trim().toLowerCase();
 
 /** Deterministic checks: complete, one chosen option, losers explained, plays referenced exist, falsifier testable. */
-export function lintDecision(d: Decision | undefined, plays: { name: string }[]): LintIssue[] {
+export function lintDecision(d: Decision | undefined, plays: { name: string }[], evidence: { factCount?: number; availableSourceUrls?: string[] } = {}): LintIssue[] {
   const issues: LintIssue[] = [];
   const err = (message: string, path = "decision") => issues.push({ severity: "error", rule: "decision", message, path });
   const warn = (message: string, path = "decision") => issues.push({ severity: "warn", rule: "decision", message, path });
   if (!d) return [{ severity: "error", rule: "decision", message: "Fill decision: observations, the binding constraint, explanations, options and the falsifier.", path: "decision" }];
   if (!d.observations.some((o) => o.observation.trim())) err("Name at least one observation and its source.", "decision.observations");
   if (d.observations.length && d.observations.every((o) => o.source === "inference")) warn("Every observation is an inference; add one the owner, site, research or results show.", "decision.observations");
+  d.observations.forEach((observation, i) => {
+    const refs = observation.evidenceRefs ?? [];
+    if (observation.source !== "inference" && refs.length === 0) warn("This observation has a source category but no traceable fact or page reference.", `decision.observations[${i}].evidenceRefs`);
+    for (const ref of refs) {
+      const fact = /^fact:(\d+)$/i.exec(ref.trim());
+      const isUrl = /^https?:\/\//i.test(ref.trim());
+      if (!fact && !isUrl) {
+        err(`Evidence reference "${ref.slice(0, 80)}" must be fact:N or an HTTP(S) page URL.`, `decision.observations[${i}].evidenceRefs`);
+      } else if (fact && evidence.factCount !== undefined && Number(fact[1]) >= evidence.factCount) {
+        err(`Evidence reference "${ref.trim()}" is outside this run's confirmed fact list.`, `decision.observations[${i}].evidenceRefs`);
+      } else if (isUrl && evidence.availableSourceUrls && !evidence.availableSourceUrls.some((url) => citeKey(url) === citeKey(ref))) {
+        err(`Evidence page "${ref.slice(0, 120)}" was not read during this run.`, `decision.observations[${i}].evidenceRefs`);
+      }
+    }
+  });
   if (d.explanations.filter((e) => e.explanation.trim()).length < 2) err("Give at least 2 competing explanations for the constraint, with evidence for and against each.", "decision.explanations");
   d.explanations.forEach((e, i) => {
     if (e.explanation.trim() && !e.evidenceFor.trim() && !e.evidenceAgainst.trim()) err("Say what supports or undercuts this explanation.", `decision.explanations[${i}]`);
@@ -90,6 +115,14 @@ export function lintDecision(d: Decision | undefined, plays: { name: string }[])
     if (loose.length) warn(`Plays outside the chosen option: ${loose.map((p) => p.name).join(", ")}. Every play should serve the guiding policy.`, "decision.options");
   }
   if (!d.guidingPolicy.trim()) err("State the guiding policy in one sentence.", "decision.guidingPolicy");
+  const primaryPlay = plays.find((p) => norm(p.name) === norm(d.focus.primaryPlay));
+  if (!d.focus.primaryPlay.trim() || !primaryPlay) err("Name one exact play from the plan as the primary play.", "decision.focus.primaryPlay");
+  if (!d.focus.supportingMove.trim()) err("Name one concrete supporting move for the primary play.", "decision.focus.supportingMove");
+  if (!d.focus.maintenanceWork.trim()) err("Name the recurring maintenance work that keeps this strategy healthy.", "decision.focus.maintenanceWork");
   if (!/\d/.test(d.falsifier) || !DATED.test(d.falsifier)) err("The falsifier needs a number and a date, e.g. \"fewer than 3 booked calls from 200 sends by day 21\".", "decision.falsifier");
   return issues;
+}
+
+function citeKey(url: string): string {
+  return url.trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, "").replace(/[#?].*$/, "").replace(/\/+$/, "");
 }

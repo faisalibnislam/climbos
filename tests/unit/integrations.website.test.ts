@@ -103,6 +103,59 @@ describe("validateResearchUrl (SSRF)", () => {
     expect(ok.ok).toBe(true);
     expect(ok.body).toContain("hi");
   });
+
+  it("returns validators and sends conditional headers on the original origin", async () => {
+    let requestHeaders: HeadersInit | undefined;
+    const fetchImpl: FetchLike = async (_url, init) => {
+      requestHeaders = init?.headers;
+      return new Response("<p>unchanged</p>", { status: 200, headers: { "content-type": "text/html", etag: '"v2"', "last-modified": "Mon, 19 Oct 2026 00:00:00 GMT", "x-robots-tag": "noindex, follow" } });
+    };
+    const first = await safeFetchPage({ url: "https://example.com/page", fetchImpl });
+    expect(first).toMatchObject({ ok: true, etag: '"v2"', lastModified: "Mon, 19 Oct 2026 00:00:00 GMT", xRobotsTag: "noindex, follow" });
+
+    const notModified: FetchLike = async (_url, init) => {
+      requestHeaders = init?.headers;
+      return new Response(null, { status: 304, headers: { etag: '"v2"' } });
+    };
+    const next = await safeFetchPage({ url: "https://example.com/page", fetchImpl: notModified, ifNoneMatch: first.etag, ifModifiedSince: first.lastModified });
+    expect(requestHeaders).toMatchObject({ "If-None-Match": '"v2"', "If-Modified-Since": "Mon, 19 Oct 2026 00:00:00 GMT" });
+    expect(next).toMatchObject({ ok: true, status: 304, body: "", notModified: true, etag: '"v2"' });
+  });
+
+  it("does not forward conditional validators to a different redirect origin", async () => {
+    const seen: { url: string; headers: HeadersInit | undefined }[] = [];
+    const fetchImpl: FetchLike = async (url, init) => {
+      seen.push({ url, headers: init?.headers });
+      return url === "https://example.com/page"
+        ? new Response(null, { status: 302, headers: { location: "https://other.example.net/page" } })
+        : new Response("<p>ok</p>", { status: 200, headers: { "content-type": "text/html" } });
+    };
+    const result = await safeFetchPage({ url: "https://example.com/page", fetchImpl, ifNoneMatch: '"private-validator"' });
+    expect(result.ok).toBe(true);
+    expect(seen[0]?.headers).toMatchObject({ "If-None-Match": '"private-validator"' });
+    expect(seen[1]?.headers).not.toHaveProperty("If-None-Match");
+  });
+
+  it("applies the caller's redirect policy before requesting a redirected page", async () => {
+    const seen: string[] = [];
+    const fetchImpl: FetchLike = async (url) => {
+      seen.push(url);
+      return new Response(null, { status: 302, headers: { location: "/private/next" } });
+    };
+    const result = await safeFetchPage({
+      url: "https://example.com/public", fetchImpl,
+      allowRedirect: (_from, to) => new URL(to).pathname.startsWith("/public/"),
+    });
+    expect(result).toMatchObject({ ok: false, error: "Redirect was rejected by caller policy" });
+    expect(seen).toEqual(["https://example.com/public"]);
+  });
+
+  it("stops reading a response at the byte budget", async () => {
+    const fetchImpl: FetchLike = async () => new Response("x".repeat(10_000));
+    const result = await safeFetchPage({ url: "https://example.com/large", fetchImpl, maxBytes: 32 });
+    expect(result.truncated).toBe(true);
+    expect(new TextEncoder().encode(result.body).byteLength).toBe(32);
+  });
 });
 
 describe("robots.txt", () => {
@@ -148,9 +201,13 @@ describe("robots.txt", () => {
 });
 
 describe("extractPageContent", () => {
-  const html = `<!doctype html><html><head>
+  const html = `<!doctype html><html lang="en"><head>
     <title>Acme &amp; Co — Climbing Shoes</title>
     <meta name="description" content="Best shoes &quot;ever&quot;">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="index,follow">
+    <meta name="googlebot" content="max-snippet:-1">
+    <link rel="canonical" href="/climbing-shoes">
     <meta property="og:title" content="Acme OG">
     <meta property="og:image" content="https://cdn.example.com/a.jpg">
     <style>.x{color:red}</style>
@@ -158,6 +215,7 @@ describe("extractPageContent", () => {
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Rock Shoe","offers":{"@type":"Offer","price":"129.99","priceCurrency":"usd","availability":"https://schema.org/InStock"}}</script>
     </head><body>
     <h1>Shoes</h1><h2>Best <em>sellers</em></h2>
+    <img src="/shoe.jpg" alt="Red climbing shoe"><img src="/decorative.png">
     <p>Hello&nbsp;world &#x2014; caf&eacute; &#169;</p>
     <!-- hidden comment -->
     <noscript>enable js</noscript>
@@ -169,13 +227,21 @@ describe("extractPageContent", () => {
     const page = extractPageContent(html, "https://example.com/shoes");
     expect(page.title).toBe("Acme & Co — Climbing Shoes");
     expect(page.metaDescription).toBe('Best shoes "ever"');
+    expect(page.robotsDirectives).toBe("index,follow");
+    expect(page.crawlerRobotsDirectives).toEqual([{ crawler: "googlebot", directives: "max-snippet:-1" }]);
+    expect(page.canonicalUrl).toBe("https://example.com/climbing-shoes");
     expect(page.og["og:title"]).toBe("Acme OG");
+    expect(page.htmlLang).toBe("en");
+    expect(page.viewportPresent).toBe(true);
+    expect(page.imageCount).toBe(2);
+    expect(page.imagesWithAltAttribute).toBe(1);
     expect(page.headings).toEqual([
       { level: 1, text: "Shoes" },
       { level: 2, text: "Best sellers" },
     ]);
     expect(page.links).toEqual([{ url: "https://example.com/about", text: "About" }]);
     expect(page.jsonLdPrices).toEqual([{ name: "Rock Shoe", price: "129.99", currency: "USD", availability: "https://schema.org/InStock", type: "Offer" }]);
+    expect(page.jsonLdTypes).toEqual(["Product", "Offer"]);
     expect(page.text).toContain("Hello world —");
     expect(page.text).not.toContain("secret");
     expect(page.text).not.toContain("color:red");
@@ -189,6 +255,28 @@ describe("extractPageContent", () => {
     expect(page.text.length).toBeLessThanOrEqual(40_000);
     expect(page.truncated).toBe(true);
     expect(page.links.length).toBe(50);
+  });
+
+  it("counts malformed JSON-LD blocks without treating them as absent markup", () => {
+    const page = extractPageContent('<script type="application/ld+json">{"@type": "Product", }</script>', "https://example.com/product");
+    expect(page.jsonLdScriptParseErrors).toBe(1);
+    expect(page.jsonLdTypes).toEqual([]);
+  });
+
+  it("keeps valid page-reported publication and update dates separate from retrieval dates", () => {
+    const page = extractPageContent(`<head>
+      <meta property="article:published_time" content="2024-05-06T10:00:00Z">
+      <meta property="article:modified_time" content="2025-02-03">
+      <script type="application/ld+json">{"@type":"Article","datePublished":"2024-05-06","dateModified":"2025-02-03"}</script>
+      <script type="application/ld+json">{"@type":"NewsArticle","datePublished":"2026-02-30"}</script>
+      <script type="application/ld+json">{"@type":"Product","datePublished":"2022-01-01"}</script>
+    </head>`, "https://example.com/story");
+    expect(page.pageReportedDates).toEqual([
+      { kind: "published", date: "2024-05-06", source: "json_ld" },
+      { kind: "updated", date: "2025-02-03", source: "json_ld" },
+      { kind: "published", date: "2024-05-06", source: "meta" },
+      { kind: "updated", date: "2025-02-03", source: "meta" },
+    ]);
   });
 });
 

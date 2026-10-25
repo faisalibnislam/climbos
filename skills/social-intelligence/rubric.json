@@ -1,0 +1,16 @@
+{
+  "id": "social-intelligence",
+  "title": "Business-fit social intelligence",
+  "gates": [
+    { "id": "G1", "text": "Voice and humor fit the business evidence, audience, approved brand style, market and destination platform; sensitive topics are not trivialized." },
+    { "id": "G2", "text": "Any current-trend claim has a source URL, date, and source-reported observation tied to the same research record; the deterministic freshness check passes, otherwise the idea is evergreen or labeled unverified." },
+    { "id": "G3", "text": "The post uses an original, useful business-specific idea and does not promise virality, copy protected creator assets, or use engagement bait." }
+  ],
+  "criteria": [
+    { "id": "C1", "name": "Business and audience fit", "anchors": { "1": "Uses a generic voice or a stereotype about the industry; the audience fit is unclear.", "3": "Generally fits the category and audience but could belong to many businesses.", "5": "The tone and idea fit this business's approved voice, customer situation, offer and risk level." } },
+    { "id": "C2", "name": "Platform adaptation", "anchors": { "1": "Copies the same joke, format or copy across platforms, including a mismatch with platform norms.", "3": "Makes some format changes but misses a meaningful audience or policy distinction.", "5": "Rewrites the idea natively for each platform and avoids formats or tone that conflict with its current context." } },
+    { "id": "C3", "name": "Trend judgment", "anchors": { "1": "Invents or overstates a trend, or uses one only because it is popular.", "3": "Finds a plausible current reference but its audience or business connection is weak.", "5": "Uses a recent cited signal only when audience, brand and platform fit are clear; otherwise chooses evergreen content." } },
+    { "id": "C4", "name": "Original value", "anchors": { "1": "A copied meme wrapper with no useful business point.", "3": "A recognizable format with a relevant but familiar point.", "5": "An original, shareable expression of a specific customer insight that remains useful without the trend." } }
+  ],
+  "shipRule": { "minEach": 3, "minAverage": 4 }
+}

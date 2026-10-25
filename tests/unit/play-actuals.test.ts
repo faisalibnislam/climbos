@@ -25,6 +25,13 @@ describe("play results vs plan", () => {
     expect(playActuals(model, weak, forecast).status).toBe("behind");
   });
 
+  it("does not label a play on track or behind when elapsed weeks are missing from the log", () => {
+    const rows = [week(0, 250, [0, 0, 0]), week(3, 250, [0, 0, 0])];
+    const a = playActuals(model, rows, forecast, 13, { startWeek: week(0, 250, [0, 0, 0]).weekStart });
+    expect(a).toMatchObject({ weeks: 2, weeksSinceStart: 4, unloggedWeeks: 2, status: "incomplete_log" });
+    expect(resultsLine("Outreach", a)).toContain("2 elapsed weeks are unlogged; missing weeks are unknown, not zero");
+  });
+
   it("writes a factual line for the next plan", () => {
     const line = resultsLine("Agency outreach", playActuals(model, [week(0, 250, [6, 3, 1]), week(1, 250, [4, 2, 1])], forecast));
     expect(line).toContain("reply 10/500 (2%, planned 2%)");

@@ -4,9 +4,9 @@ import type { PhaseModels } from "./types";
 /**
  * Model routes (owner decision, 18 Oct 2026): OpenAI only, Anthropic dropped.
  * - Climb AI Basic (free, and paid by choice): Luna for every phase.
- * - Climb AI Expert (paid only): Sol writes the draft (and any revision) for
- *   the growth plan, business insights, ads and the weekly autopilot plan;
- *   Luna researches and reviews. Every other job stays on Luna.
+ * - Climb AI Expert (paid only): Luna researches, drafts and reviews. Eligible
+ *   strategy agents can escalate a failed/complex review to Sol for revision.
+ *   Every other job stays on Luna.
  * No fallback model: when OpenAI is unavailable a job pauses and resumes
  * from its checkpoints (Retry).
  */
@@ -23,16 +23,22 @@ export const AI_MODES: Record<AiMode, { label: string; short: string }> = {
   expert: { label: "Climb AI Expert", short: "Deeper analysis for plans, insights, ads and the weekly plan." },
 };
 
-/** Agents whose draft Sol writes in Expert mode. */
+/** Agents eligible to escalate an Expert revision after a measured failure class. */
 export const EXPERT_AGENTS: ReadonlySet<string> = new Set(["business_insights", "channel_fit", "growth_plays", "growth_strategy", "ad_drafts", "social_calendar"]);
 
 /** Job kinds where the Basic/Expert choice changes anything. */
 export const EXPERT_KINDS: ReadonlySet<string> = new Set(["onboarding_research", "strategy", "content_ads", "social_calendar"]);
 
-/** Models for an agent in a mode. Basic is all Luna; Expert swaps in Sol for the draft on EXPERT_AGENTS. */
+/** Baseline models for a job. Higher-cost Expert escalation follows a measured review result. */
 export function routeModels(id: string, mode: AiMode = "basic"): PhaseModels {
-  const sol = mode === "expert" && EXPERT_AGENTS.has(id);
-  return { research: LUNA, draft: sol ? SOL : LUNA, critic: LUNA, revise: sol ? SOL : LUNA };
+  void id;
+  void mode;
+  return { research: LUNA, draft: LUNA, critic: LUNA, revise: LUNA };
+}
+
+/** Sol is available only after a measured review classification in explicitly selected Expert mode. */
+export function expertEscalationModel(id: string, mode: AiMode): ModelKey | undefined {
+  return mode === "expert" && EXPERT_AGENTS.has(id) ? SOL : undefined;
 }
 
 /** Basic strategy work: Luna writes two first drafts and the reviewer keeps the stronger (still far cheaper than Sol). */

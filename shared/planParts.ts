@@ -6,7 +6,7 @@ export const PLAN_PARTS = [
   { key: "summary", label: "Summary", fields: ["summary"], expert: [] },
   { key: "positioning", label: "How you stand out", fields: ["positioning"], expert: [] },
   { key: "target", label: "Diagnosis and target", fields: [], expert: ["diagnosis", "affordableCac", "northStar", "leadingIndicators"] },
-  { key: "plays", label: "Growth plays", fields: [], expert: ["plays", "economics"] },
+  { key: "plays", label: "Growth plays", fields: [], expert: ["plays", "economics", "growthPlanV8", "growthPlanV9"] },
   { key: "execution", label: "Execution plan", fields: [], expert: ["phases", "weekOneChecklist", "risks", "notDoing"] },
   { key: "audiences", label: "Audiences", fields: ["audiences"], expert: [] },
   { key: "channels", label: "Channels", fields: ["channels"], expert: [] },

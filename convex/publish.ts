@@ -256,7 +256,7 @@ export const publishArtifact = internalAction({
         subjectId: artifact._id,
         actionKind: approval.actionKind,
         contentHash: version.contentHash,
-        scope: { connectionId: c.connection._id, destination: artifact.channel },
+        scope: { connectionId: c.connection._id, destination: artifact.channel, ...(artifact.scheduledFor !== undefined ? { scheduledFor: artifact.scheduledFor } : {}) },
         policyVersion: c.policyVersion,
         expiresAt: approval.expiresAt,
       },
@@ -272,6 +272,22 @@ export const publishArtifact = internalAction({
     if (c.copilot) {
       await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: "Copilot mode is on: post it yourself from the export pack, or switch to Review in Settings → Policies.", backTo: "approved" });
       return;
+    }
+
+    const outboundLinks = [...new Set([
+      ...(version.destinationUrl ? [version.destinationUrl] : []),
+      ...[...`${version.body}\n${version.hashtags.join(" ")}`.matchAll(/https?:\/\/[^\s<>"')\]]+/gi)].map((match) => match[0].replace(/[.,;!?]+$/, "")),
+    ])];
+    if (outboundLinks.length) {
+      const linkChecks = await ctx.runAction(internal.publishLinks.check, { urls: outboundLinks });
+      const unavailable = linkChecks.filter((link) => link.status !== "reachable");
+      if (unavailable.length) {
+        const detail = unavailable.length === 1
+          ? `The link ${unavailable[0]?.url} could not be safely confirmed (HTTP ${unavailable[0]?.httpStatus ?? "status unavailable"}).`
+          : `${unavailable.length} links could not be safely confirmed before posting.`;
+        await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: `${detail} Check or remove the link, then approve the post again.`, backTo: "approved" });
+        return;
+      }
     }
 
     const action = ACTION_FOR[c.provider];

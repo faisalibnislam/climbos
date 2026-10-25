@@ -1,5 +1,6 @@
 import { formatMoney, fromUsd, minorToMajor, thresholdIn, toUsd } from "../economics/currency";
-import { budgetBand, CHANNELS, TYPE_BY_KEY, type Channel, type Execution, type Requirement, type Stage } from "./library";
+import { budgetBand, CHANNELS, SERVICE_TYPES, TYPE_BY_KEY, type Channel, type Execution, type Requirement, type Stage } from "./library";
+import type { BindingConstraint } from "../agents/decision";
 
 /**
  * Acquisition Intelligence: hard eligibility checks, rule-based priors for the
@@ -82,10 +83,22 @@ export interface DimensionValue {
   evidence?: string;
 }
 
+export interface OwnerChannelPreference {
+  channelId: string;
+  preference: "prefer" | "avoid" | "dismissed" | "irrelevant";
+  rationale: string;
+  sourceUrl?: string;
+  evidenceDate?: string;
+}
+
 export interface AcquisitionProfile {
   /** Business type keys from the library (multi-label). */
   types: string[];
+  /** Type labels can steer soft scores when inferred, but only owner-confirmed labels establish hard eligibility. */
+  typesSource?: "owner" | "inferred";
   dims: Partial<Record<DimensionKey, DimensionValue>>;
+  /** Owner-reported prior experience. Soft ranking input only; never bypasses eligibility or hard limits. */
+  channelPreferences?: OwnerChannelPreference[];
   /** Monthly marketing budget in USD terms (the owner's budget scaled by a reference rate), to compare with the library's USD thresholds. */
   budgetUsd: number;
   /** Goal horizon in days. */
@@ -101,7 +114,11 @@ const shown = (p: AcquisitionProfile, usd: number) => formatMoney(fromUsd(usd, p
 /** A library threshold (written in USD), shown as a round amount in the owner's currency. */
 const shownThreshold = (p: AcquisitionProfile, usd: number) => formatMoney(thresholdIn(usd, p.currency), p.currency);
 
-const dim = (p: AcquisitionProfile, k: DimensionKey) => p.dims[k]?.value;
+/** Low-confidence model guesses are questions to resolve, not decision inputs. */
+const dim = (p: AcquisitionProfile, k: DimensionKey) => {
+  const value = p.dims[k];
+  return value?.source === "inferred" && value.confidence === "low" ? undefined : value?.value;
+};
 
 /* ---------------- price fit ---------------- */
 
@@ -164,8 +181,10 @@ export function dimensionsToConfirm(p: AcquisitionProfile, max = 3): DimensionKe
 
 export function traitsOf(p: AcquisitionProfile): Set<Requirement> {
   const t = new Set<Requirement>();
-  for (const k of p.types) for (const r of TYPE_BY_KEY[k]?.traits ?? []) t.add(r);
-  const c = dim(p, "customerType");
+  if (p.typesSource !== "inferred") for (const k of p.types) for (const r of TYPE_BY_KEY[k]?.traits ?? []) t.add(r);
+  // Only an owner-confirmed dimension can unlock or exclude hard channel eligibility.
+  // Inferred classifications may inform soft scores, but must not silently rule out a route.
+  const c = p.dims.customerType?.source === "owner" ? p.dims.customerType.value : undefined;
   if (c === "b2b" || c === "b2b2c") t.add("b2b");
   if (c === "b2c" || c === "b2b2c") t.add("b2c");
   if (c === "b2g") {
@@ -176,7 +195,7 @@ export function traitsOf(p: AcquisitionProfile): Set<Requirement> {
     t.add("b2b");
     t.add("b2c");
   }
-  if (dim(p, "geography") === "local") t.add("location");
+  if (p.dims.geography?.source === "owner" && p.dims.geography.value === "local") t.add("location");
   return t;
 }
 
@@ -282,10 +301,14 @@ export interface ChannelLimits {
   ownerHoursPerWeek?: number;
   /** Providers with status "connected" (null when unknown). */
   connected?: readonly string[] | null;
+  /** Owner-confirmed number of additional customers the business can serve monthly with current operations. */
+  newCustomersPerMonth?: number;
+  /** Owner-confirmed contribution margin before acquisition; omitted when unknown. */
+  ownerGrossMargin?: number;
 }
 
-export type LimitKind = "cash" | "owner_time" | "sales_cycle" | "capability";
-/** blocked: can't be in the plan now. late: first revenue lands after the goal date. setup: needs a connection first. */
+export type LimitKind = "cash" | "owner_time" | "sales_cycle" | "capability" | "measurement" | "capacity" | "diagnosis" | "economics";
+/** blocked: can't be in the plan now. late: first revenue lands after the goal date. setup: needs an owner input or connection first. */
 export interface LimitCheck {
   kind: LimitKind;
   verdict: "blocked" | "late" | "setup";
@@ -310,12 +333,36 @@ const NEEDS: Partial<Record<Channel["family"], { any: string[]; label: string }>
 const ownBase = (c: Channel) => c.stages.every((st) => st === "existing" || st === "returning");
 
 /** Cash, owner time, sales cycle and capability, checked before ranking. Pure and deterministic. */
-export function limitChecks(c: Channel, p: AcquisitionProfile, l: ChannelLimits = {}): LimitCheck[] {
+export function limitChecks(c: Channel, p: AcquisitionProfile, l: ChannelLimits = {}, focus?: BindingConstraint): LimitCheck[] {
   const out: LimitCheck[] = [];
+  const paid = PAID_FAMILIES.has(c.family) || c.minMonthly > 0;
   if (c.minMonthly > p.budgetUsd) out.push({ kind: "cash", verdict: "blocked", reason: `Needs at least ${shownThreshold(p, c.minMonthly)}/month to learn anything; the budget is ${shown(p, p.budgetUsd)}.` });
   else if (p.budgetUsd === 0 && c.cash >= 2) out.push({ kind: "cash", verdict: "blocked", reason: "Needs upfront cash and there's no budget." });
   const need = MIN_OWNER_HOURS[c.exec];
   if (l.ownerHoursPerWeek !== undefined && need > l.ownerHoursPerWeek) out.push({ kind: "owner_time", verdict: "blocked", reason: `Needs about ${need} of your hours a week; you have ${l.ownerHoursPerWeek}.` });
+  // Don't acquire new buyers when the owner says there is no delivery capacity.
+  // Existing/returning-customer work can still improve value without adding net-new customers.
+  if (l.newCustomersPerMonth === 0 && !ownBase(c)) out.push({ kind: "capacity", verdict: "blocked", reason: "You said you cannot take on any new customers this month; improve delivery, retention or pricing before creating more demand." });
+  // A positive cap is a ceiling on *additional* customers, not a measure of spare
+  // capacity after an unrecorded pipeline. Forecasted plan demand is checked in the
+  // economics/plan validators; channel ranking has no channel-level demand forecast.
+  // Keep the missing operational input visible without inventing utilization or
+  // blocking a potentially useful channel.
+  if (l.newCustomersPerMonth === undefined && c.stages.some((stage) => stage !== "existing" && stage !== "returning")
+    && p.types.some((type) => SERVICE_TYPES.has(type))) {
+    out.push({ kind: "capacity", verdict: "setup", reason: "Remaining delivery capacity is unknown. Confirm how many additional customers you can serve each month before scaling net-new demand." });
+  }
+  if (paid && l.ownerGrossMargin !== undefined && l.ownerGrossMargin <= 0) {
+    out.push({ kind: "economics", verdict: "blocked", reason: "Your confirmed contribution margin is at or below zero. Fix pricing or delivery costs before paying to acquire more customers." });
+  }
+  if (paid && focus && ["activation", "conversion", "retention", "delivery", "economics"].includes(focus)) {
+    out.push({ kind: "diagnosis", verdict: "blocked", reason: `The current supported diagnosis is ${focus}; improve that part of the customer or delivery system before paying to bring in more prospects.` });
+  }
+  // Paid media without conversion tracking cannot be evaluated for customer economics.
+  // This gate is only supplied for an owner-confirmed "none" value; inferred or unknown tracking stays a question.
+  if (p.dims.tracking?.source === "owner" && p.dims.tracking.value === "none" && ["paid_search", "paid_social", "retargeting"].includes(c.family)) {
+    out.push({ kind: "measurement", verdict: "blocked", reason: "Set up conversion tracking before paying for traffic, so the test can measure qualified leads or customers rather than clicks alone." });
+  }
   const cycle = CYCLE_DAYS[dim(p, "salesCycle") ?? ""];
   if (cycle !== undefined && !ownBase(c)) {
     const first = LEARN_DAYS[c.learn] + cycle;
@@ -337,6 +384,32 @@ export interface Adjustment {
   platform?: string;
   tactic?: string;
   audienceName?: string;
+  evidenceBasis?: "measured" | "owner_reported" | "source_reported" | "inference" | "assumption" | "unknown";
+  evidenceConfidence?: "high" | "medium" | "low";
+  sourceUrl?: string;
+  evidenceDate?: string;
+  communityRulesUrl?: string;
+  communityRulesCheckedAt?: string;
+  purpose?: string;
+  measurementPlan?: string;
+}
+
+export const PLATFORM_EVIDENCE_CHANNELS = new Set([
+  "S04", "S05", "S18", "C01", "C18", "C26", "M02", "M03", "M04", "M05", "M06", "M07", "M08", "M09", "M10", "M11", "M12", "M13", "M14", "M15", "M18", "M20", "M21", "M22", "M23", "M24", "M25", "M26", "M27", "M28", "M29",
+  ...Array.from({ length: 15 }, (_, i) => `N${String(i + 1).padStart(2, "0")}`),
+  "O04", ...Array.from({ length: 7 }, (_, i) => `O${String(i + 14).padStart(2, "0")}`),
+]);
+export const COMMUNITY_CHANNELS = new Set([
+  ...Array.from({ length: 9 }, (_, i) => `N${String(i + 1).padStart(2, "0")}`),
+  "N13", "N14", "O04", ...Array.from({ length: 7 }, (_, i) => `O${String(i + 14).padStart(2, "0")}`),
+]);
+export function isEvidenceDateOnOrBefore(value: string | undefined, asOfDate: string): boolean {
+  const isRealDate = (date: string | undefined) => {
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+    const parsed = new Date(`${date}T00:00:00.000Z`);
+    return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === date;
+  };
+  return isRealDate(value) && isRealDate(asOfDate) && value! <= asOfDate;
 }
 
 export type ChannelStatus = "primary" | "in_plan" | "later" | "not_now" | "ineligible";
@@ -355,6 +428,14 @@ export interface ScoredChannel {
   status: ChannelStatus;
   why: string;
   evidence?: string;
+  evidenceBasis?: Adjustment["evidenceBasis"];
+  evidenceConfidence?: Adjustment["evidenceConfidence"];
+  evidenceDate?: string;
+  sourceUrl?: string;
+  communityRulesUrl?: string;
+  communityRulesCheckedAt?: string;
+  purpose?: string;
+  measurementPlan?: string;
   platform?: string;
   tactic?: string;
   audienceName?: string;
@@ -363,20 +444,38 @@ export interface ScoredChannel {
   priceFit?: string;
   /** Hard-limit findings, when limits were applied (decision_contract plans). */
   limits?: LimitCheck[];
+  /** True when this channel directly serves the supported, owner-data diagnosis. */
+  diagnosisFit?: boolean;
+  ownerPreference?: OwnerChannelPreference;
 }
 
 const PAID_FAMILIES = new Set(["paid_search", "paid_social", "traditional"]);
 
-export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] = [], weights = DEFAULT_WEIGHTS, limits?: ChannelLimits): ScoredChannel[] {
+/** Buyer-journey stages a channel can directly help when the measured constraint is supported. */
+const DIAGNOSIS_STAGES: Partial<Record<BindingConstraint, readonly Stage[]>> = {
+  demand: ["unaware", "problem", "solution"],
+  activation: ["product", "existing"],
+  conversion: ["product", "high_intent"],
+  offer: ["product", "high_intent"],
+  positioning: ["problem", "solution", "product"],
+  retention: ["existing", "returning"],
+  delivery: ["existing", "returning"],
+  economics: ["product", "high_intent"],
+};
+
+export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] = [], weights = DEFAULT_WEIGHTS, limits?: ChannelLimits, focus?: BindingConstraint, asOfDate = new Date().toISOString().slice(0, 10)): ScoredChannel[] {
   const adj = new Map(adjustments.map((a) => [a.channelId, a]));
+  const ownerPreferences = new Map((p.channelPreferences ?? []).map((preference) => [preference.channelId, preference]));
   const regulated = p.types.map((k) => TYPE_BY_KEY[k]?.regulated).find(Boolean) ?? (dim(p, "regulation") === "high" ? "Regulated industry: check advertising rules before running this." : undefined);
   const rows = CHANNELS.map((c): ScoredChannel => {
     const el = eligibility(c, p);
     const base = priors(c, p);
     const a = adj.get(c.id);
+    const ownerPreference = ownerPreferences.get(c.id);
     const priceFit = el.ok ? priceFitReason(c, p) : undefined;
     const factors = Object.fromEntries(FACTORS.map((f) => [f, clamp(base[f] + Math.max(-30, Math.min(30, a?.deltas[f] ?? 0)))])) as Record<Factor, number>;
-    const score = clamp(FACTORS.reduce((s, f) => s + factors[f] * weights[f], 0));
+    const baseScore = FACTORS.reduce((s, f) => s + factors[f] * weights[f], 0);
+    const score = clamp(baseScore + (ownerPreference ? (ownerPreference.preference === "prefer" ? 12 : -12) : 0));
     return {
       id: c.id,
       name: c.name,
@@ -390,21 +489,59 @@ export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] =
       status: el.ok ? "not_now" : "ineligible",
       why: el.ok ? (a?.reason ?? priceFit ?? "") : el.reason!,
       evidence: a?.evidence,
+      evidenceBasis: a?.evidenceBasis,
+      evidenceConfidence: a?.evidenceConfidence,
+      evidenceDate: a?.evidenceDate,
+      sourceUrl: a?.sourceUrl,
+      communityRulesUrl: a?.communityRulesUrl,
+      communityRulesCheckedAt: a?.communityRulesCheckedAt,
+      purpose: a?.purpose,
+      measurementPlan: a?.measurementPlan,
       platform: a?.platform,
       tactic: a?.tactic,
       audienceName: a?.audienceName,
       caution: el.ok && c.regulatedCaution && regulated ? regulated : undefined,
       priceFit,
-      ...(limits && el.ok ? { limits: limitChecks(c, p, limits) } : {}),
+    ...(ownerPreference ? { ownerPreference } : {}),
+      ...(limits && el.ok ? { limits: limitChecks(c, p, limits, focus) } : {}),
+      ...(focus && DIAGNOSIS_STAGES[focus] ? { diagnosisFit: c.stages.some((stage) => DIAGNOSIS_STAGES[focus]!.includes(stage)) } : {}),
     };
   });
-  return select(rows, p);
+  const evidenceBlocked = new Set<string>();
+  for (const row of rows) {
+    const preference = ownerPreferences.get(row.id);
+    const evidence = adj.get(row.id);
+    if (row.status !== "ineligible" && PLATFORM_EVIDENCE_CHANNELS.has(row.id)) {
+      const ownerEvidence = preference?.preference === "prefer" && Boolean(preference.rationale.trim()) && isEvidenceDateOnOrBefore(preference.evidenceDate, asOfDate);
+      const verifiedEvidence = Boolean(evidence?.evidence?.trim())
+        && ["measured", "owner_reported", "source_reported"].includes(evidence?.evidenceBasis ?? "")
+        && Boolean(evidence?.evidenceConfidence)
+        && isEvidenceDateOnOrBefore(evidence?.evidenceDate, asOfDate)
+        && Boolean(evidence?.purpose?.trim())
+        && Boolean(evidence?.measurementPlan?.trim())
+        && (evidence?.evidenceBasis === "owner_reported" || evidence?.evidenceBasis === "measured" || Boolean(evidence?.sourceUrl));
+      const rulesOk = !COMMUNITY_CHANNELS.has(row.id) || (Boolean(evidence?.communityRulesUrl) && isEvidenceDateOnOrBefore(evidence?.communityRulesCheckedAt, asOfDate));
+      if ((!ownerEvidence && !verifiedEvidence) || !rulesOk) {
+        evidenceBlocked.add(row.id);
+        row.why = !rulesOk
+          ? "The exact community and its current rules have not been checked. Verify the target community manually before considering participation."
+          : "Customer use and buyer fit for this specific platform are unknown. Confirm with customer evidence or an owner-reported source before recommending it.";
+      }
+    }
+    if (preference?.preference === "dismissed" || preference?.preference === "irrelevant") {
+      evidenceBlocked.add(row.id);
+      row.why = preference.preference === "irrelevant" ? "Your team marked this channel irrelevant; that feedback is saved for future rankings." : "Your team dismissed this channel; that feedback is saved for future rankings.";
+    }
+  }
+  return select(rows, p, focus && DIAGNOSIS_STAGES[focus] ? focus : undefined, evidenceBlocked);
 }
 
 /** Budget discipline (Part 7): a few focused channels, paid ones only when the budget can feed a real test. */
-function select(rows: ScoredChannel[], p: AcquisitionProfile): ScoredChannel[] {
+function select(rows: ScoredChannel[], p: AcquisitionProfile, focus?: BindingConstraint, evidenceBlocked = new Set<string>()): ScoredChannel[] {
   const band = budgetBand(p.budgetUsd);
-  const ranked = rows.filter((r) => r.status !== "ineligible").sort((a, b) => b.score - a.score);
+  const ranked = rows.filter((r) => r.status !== "ineligible" && !evidenceBlocked.has(r.id)).sort((a, b) =>
+    (focus ? Number(Boolean(b.diagnosisFit)) - Number(Boolean(a.diagnosisFit)) : 0) || b.score - a.score,
+  );
   // Hard limits come before rank: a blocked channel is never picked; a late one only fills a slot no on-time channel can.
   const blocked = (r: ScoredChannel) => r.limits?.find((x) => x.verdict === "blocked");
   const late = (r: ScoredChannel) => r.limits?.find((x) => x.verdict === "late");
@@ -427,7 +564,9 @@ function select(rows: ScoredChannel[], p: AcquisitionProfile): ScoredChannel[] {
         paid++;
         spend += r.minMonthly;
       }
-      if (!r.why) r.why = picked === 1 ? "Highest score for your business, goal and budget." : "Strong fit that the budget can support alongside the primary channel.";
+      if (!r.why) r.why = r.diagnosisFit
+        ? `Fits the measured ${focus} bottleneck and the budget.`
+        : picked === 1 ? "Highest score for your business, goal and budget." : "Strong fit that the budget can support alongside the primary channel.";
     } else if (r.score >= 60) {
       r.status = "later";
       if (!r.why) r.why = !affordable ? `Needs about ${shownThreshold(p, r.minMonthly)}/month on top of the plan.` : "Good fit; add once the first channels show results.";
@@ -436,7 +575,9 @@ function select(rows: ScoredChannel[], p: AcquisitionProfile): ScoredChannel[] {
     }
   }
   const ineligible = rows.filter((r) => r.status === "ineligible");
-  return [...ranked, ...ineligible];
+  for (const r of rows) if (evidenceBlocked.has(r.id)) r.status = "not_now";
+  const heldForEvidence = rows.filter((r) => evidenceBlocked.has(r.id));
+  return [...ranked, ...heldForEvidence, ...ineligible];
 }
 
 /** The candidates the scoring agent reviews: the best eligible priors plus every type starter. */
@@ -452,7 +593,9 @@ export function candidatesFor(p: AcquisitionProfile, n = 30): ScoredChannel[] {
 
 export interface SavedAcquisition {
   types: string[];
+  typesSource?: "owner" | "inferred";
   dims: Partial<Record<DimensionKey, DimensionValue>>;
+  channelPreferences?: OwnerChannelPreference[];
 }
 
 /** Profile from what's saved, the onboarding type guess and the goal. */
@@ -461,7 +604,9 @@ export function profileFrom(p: { saved?: SavedAcquisition | null; legacyType?: s
   const cur = p.currency;
   return {
     types: p.saved?.types.length ? p.saved.types : p.legacyTypes(p.legacyType),
+    typesSource: p.saved?.types.length ? p.saved.typesSource ?? "inferred" : "inferred",
     dims: { ...(p.saved?.dims ?? {}) },
+    ...(p.saved?.channelPreferences ? { channelPreferences: [...p.saved.channelPreferences] } : {}),
     budgetUsd: Math.max(0, Math.round(toUsd(minorToMajor(p.budgetMinor, cur), cur))),
     horizonDays: p.horizonDays,
     ...(p.priceUsdMonth !== undefined && p.priceUsdMonth > 0 ? { priceUsdMonth: Math.round(toUsd(p.priceUsdMonth, cur) * 100) / 100 } : {}),
@@ -479,11 +624,11 @@ export function mergeFit(profile: AcquisitionProfile, fit: { types: string[]; di
     dims[key] = { value: d.value, confidence: d.confidence, source: "inferred", evidence: d.evidence.slice(0, 240) };
   }
   const types = fit.types.filter((t) => validTypes.has(t)).slice(0, 3);
-  return { ...profile, types: types.length ? types : profile.types, dims };
+  return { ...profile, types: profile.typesSource === "owner" ? profile.types : types.length ? types : profile.types, typesSource: profile.typesSource === "owner" ? "owner" : "inferred", dims };
 }
 
 /** The agent's channel rows as scoring adjustments. */
-export function adjustmentsFrom(fit: { channels: { id: string; deltas: number[]; reason: string; evidence: string; platform: string; tactic: string; audience: string }[] }): Adjustment[] {
+export function adjustmentsFrom(fit: { channels: { id: string; deltas: number[]; reason: string; evidence: string; platform: string; tactic: string; audience: string; evidenceBasis?: Adjustment["evidenceBasis"]; evidenceConfidence?: Adjustment["evidenceConfidence"]; sourceUrl?: string; evidenceDate?: string; communityRulesUrl?: string; communityRulesCheckedAt?: string; purpose?: string; measurementPlan?: string }[] }): Adjustment[] {
   return fit.channels.map((c) => ({
     channelId: c.id,
     deltas: Object.fromEntries(FACTORS.map((f, i) => [f, Math.max(-30, Math.min(30, Math.round(c.deltas[i] ?? 0)))])) as Partial<Record<Factor, number>>,
@@ -492,6 +637,14 @@ export function adjustmentsFrom(fit: { channels: { id: string; deltas: number[];
     platform: c.platform.slice(0, 80) || undefined,
     tactic: c.tactic.slice(0, 120) || undefined,
     audienceName: c.audience.slice(0, 120) || undefined,
+    evidenceBasis: c.evidenceBasis,
+    evidenceConfidence: c.evidenceConfidence,
+    sourceUrl: c.sourceUrl?.slice(0, 2000) || undefined,
+    evidenceDate: c.evidenceDate,
+    communityRulesUrl: c.communityRulesUrl?.slice(0, 2000) || undefined,
+    communityRulesCheckedAt: c.communityRulesCheckedAt,
+    purpose: c.purpose?.slice(0, 160) || undefined,
+    measurementPlan: c.measurementPlan?.slice(0, 240) || undefined,
   }));
 }
 
@@ -515,7 +668,7 @@ export function scorecardText(rows: ScoredChannel[], n = 14, currency?: string):
   return rows
     .filter((r) => r.status !== "ineligible")
     .slice(0, n)
-    .map((r) => `- ${r.id} ${r.name}: ${r.score}/100 · ${STATUS_LABEL[r.status]}${r.paid ? ` · min ${formatMoney(thresholdIn(r.minMonthly, currency), currency)}/mo` : ""}${r.tactic ? ` · tactic: ${r.tactic}` : ""}${r.why ? ` · ${r.why}` : ""}${r.priceFit && r.priceFit !== r.why ? ` · price: ${r.priceFit}` : ""}${(r.limits ?? []).filter((x) => x.reason !== r.why).map((x) => ` · ${x.verdict === "setup" ? "setup" : x.kind.replace("_", " ")}: ${x.reason}`).join("")}`)
+    .map((r) => `- ${r.id} ${r.name}: ${r.score}/100 · ${STATUS_LABEL[r.status]}${r.diagnosisFit ? " · fits measured bottleneck" : ""}${r.ownerPreference ? ` · owner-reported ${r.ownerPreference.preference}: ${r.ownerPreference.rationale}` : ""}${r.paid ? ` · min ${formatMoney(thresholdIn(r.minMonthly, currency), currency)}/mo` : ""}${r.tactic ? ` · tactic: ${r.tactic}` : ""}${r.why ? ` · ${r.why}` : ""}${r.priceFit && r.priceFit !== r.why ? ` · price: ${r.priceFit}` : ""}${(r.limits ?? []).filter((x) => x.reason !== r.why).map((x) => ` · ${x.verdict === "setup" ? "setup" : x.kind.replace("_", " ")}: ${x.reason}`).join("")}`)
     .join("\n")
     .concat(pair ? `\nThe picked channels are pages that wait for visitors: pair them with a route that sends qualified people, e.g. ${pair.id} ${pair.name} (${pair.score}/100), and give each page play its route.` : "");
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { lintClaims, lintCopy } from "../../shared/agents/lint";
-import { lintBorrowedUplift } from "../../shared/agents/specs";
+import { lintBorrowedUplift, verifiedCapabilityEvidence } from "../../shared/agents/specs";
+import type { EvidenceKind } from "../../shared/agents/evidenceKind";
 
 /** Slices 5 and 10: claims need support; other businesses' results are hypotheses, not forecasts (EV04, EV07, EV11, EV23, EV30). */
 describe("claim ledger", () => {
@@ -18,9 +19,41 @@ describe("claim ledger", () => {
     expect(lintClaims([{ path: "hook", text: "3x faster checkout" }], "Case study on our site: checkout 3x faster after redesign")).toEqual([]);
     expect(lintClaims([{ path: "hook", text: "Build a payment form in minutes" }], "")).toEqual([]);
   });
+  it("requires confirmed current evidence for scarcity and expiring-offer claims", () => {
+    const check = (text: string, evidence: string) => lintClaims([{ path: "social.body", text }], evidence);
+    expect(check("Only 4 seats left. Book today!", "Owner confirmed: enrollment ends Friday.")).toMatchObject([
+      { rule: "unsupported_scarcity", path: "social.body" },
+    ]);
+    expect(check("Offer ends Friday.", "Owner confirmed: four seats remain.")).toMatchObject([
+      { rule: "unsupported_deadline", path: "social.body" },
+    ]);
+    expect(check("Only 4 seats left; offer ends Friday.", "Owner confirmed that 4 seats remain and enrollment ends Friday.")).toEqual([]);
+    expect(check("Limited stock available.", "There is no limited stock; inventory is replenished daily.")).toMatchObject([
+      { rule: "unsupported_scarcity", path: "social.body" },
+    ]);
+  });
   it("applies to all publishable copy", () => {
     expect(lintCopy({ body: "The #1 platform for florists" }, { evidence: "", publishable: true }).some((i) => i.rule === "unsupported_claim")).toBe(true);
     expect(lintCopy({ body: "The #1 platform for florists" }, { evidence: "" }).some((i) => i.rule === "unsupported_claim")).toBe(false);
+  });
+  it("does not let website promises or stated opinions verify marketing claims", () => {
+    const input = {
+      task: "Write marketing copy",
+      brief: "The site claims 24/7 chat support.",
+      facts: ["The site claims 24/7 chat support", "Customers said they would use chat support", "Owner confirmed live chat support 24/7"],
+      constraints: { factKinds: ["published", "stated", "owner"] as EvidenceKind[] },
+    };
+    const verified = verifiedCapabilityEvidence(input);
+    expect(verified).toBe("Owner confirmed live chat support 24/7");
+    expect(lintCopy({ body: "Support 24/7 by chat" }, { evidence: input.brief, claimEvidence: "", publishable: true })).toMatchObject([{ rule: "unsupported_claim" }]);
+    expect(lintCopy({ body: "Support 24/7 by chat" }, { evidence: input.brief, claimEvidence: verified, publishable: true })).toEqual([]);
+    expect(lintCopy({ body: "Support 24/7 by chat" }, { claimEvidence: "Customers requested 24/7 chat support", publishable: true })).toMatchObject([{ rule: "unsupported_claim" }]);
+  });
+  it("requires confirmed evidence for named product integrations", () => {
+    const check = (evidence: string) => lintClaims([{ path: "body", text: "Connects directly to Slack" }], evidence);
+    expect(check("The homepage mentions Slack and our team uses it internally.")).toMatchObject([{ rule: "unsupported_capability" }]);
+    expect(check("We do not have a Slack integration yet.")).toMatchObject([{ rule: "unsupported_capability" }]);
+    expect(check("Owner confirmed: Slack integration connects ClimbOS to the workspace.")).toEqual([]);
   });
 });
 

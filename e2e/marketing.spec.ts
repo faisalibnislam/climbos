@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { expectAccessible, expectNoHorizontalScroll } from "./helpers";
+import { CREDIT_PACKAGES, CREDIT_TOPUPS } from "../shared/economics/credits";
 
 test.describe("public site", () => {
   test("landing page explains the product honestly and validates the preview form", async ({ page }) => {
@@ -14,9 +15,11 @@ test.describe("public site", () => {
 
   test("pricing lists every plan from the entitlement registry", async ({ page }) => {
     await page.goto("/pricing");
-    for (const price of ["$19", "$169", "$449", "$999", "$2,299"]) await expect(page.getByText(price).first()).toBeVisible();
-    await expect(page.getByText(/\$29/).first()).toBeVisible();
-    await expect(page.getByText(/most popular/i)).toHaveCount(0);
+    const prices = [0, ...Object.values(CREDIT_PACKAGES).map((tier) => tier.priceUsd)];
+    for (const price of prices) await expect(page.getByText(`$${price.toLocaleString("en-US")}`, { exact: true }).first()).toBeVisible();
+    const lowestTopup = Math.min(...CREDIT_TOPUPS.map((topup) => topup.priceUsd));
+    await expect(page.getByText(new RegExp(`from\\s+\\$${lowestTopup}`, "i")).first()).toBeVisible();
+    await expect(page.getByText(/most popular/i)).toHaveCount(1);
     await expectAccessible(page, "pricing");
   });
 

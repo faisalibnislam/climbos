@@ -10,6 +10,25 @@ import type { RoleKey } from "../economics/roles";
 
 const confidence = z.enum(["high", "medium", "low"]);
 const factCategory = z.enum(["product", "audience", "pricing", "brand", "offer", "proof", "competitor", "other"]);
+export const SWOT_DIMENSIONS = ["strength", "weakness", "opportunity", "threat"] as const;
+export const SwotEvidenceSchema = z.object({
+  dimension: z.enum(SWOT_DIMENSIONS),
+  /** Must match one legacy SWOT statement exactly so the evidence survives old consumers. */
+  finding: z.string().max(300),
+  basis: z.enum(["owner_report", "source_claim", "measured", "research", "inference"]),
+  evidenceRefs: z.array(z.string()).max(8),
+  strategicImplication: z.string().max(400),
+  confidence,
+});
+export const SwotMoveSchema = z.object({
+  kind: z.enum(["strength_opportunity", "weakness_opportunity", "strength_threat", "weakness_threat"]),
+  firstIndex: z.number().int().nonnegative(),
+  secondIndex: z.number().int().nonnegative(),
+  /** A concrete strategic choice formed by connecting the two cited SWOT findings. */
+  move: z.string().max(400),
+  firstTest: z.string().max(300),
+  measure: z.string().max(200),
+});
 
 export const BusinessProfileSchema = z.object({
   name: z.string(),
@@ -29,6 +48,17 @@ export const BusinessProfileSchema = z.object({
   suggestedSuccessEvents: z.array(z.object({ key: z.string(), label: z.string(), definition: z.string() })),
 });
 export type BusinessProfile = z.infer<typeof BusinessProfileSchema>;
+
+/** One-page preview adds a source-quoted, explicitly preliminary observation. */
+export const PreviewSnapshotSchema = BusinessProfileSchema.extend({
+  initialFinding: z.object({
+    observation: z.string().max(240),
+    evidenceQuote: z.string().max(300),
+    whyItMayMatter: z.string().max(300),
+    firstStep: z.string().max(200),
+  }).nullable(),
+});
+export type PreviewSnapshot = z.infer<typeof PreviewSnapshotSchema>;
 
 export const PreviewIdeasSchema = z.object({
   ideas: z.array(
@@ -53,6 +83,28 @@ export const BusinessInsightsSchema = z.object({
     opportunities: z.array(z.string()),
     threats: z.array(z.string()),
   }),
+  /** Additive structured support; absent on legacy insight records. */
+  swotEvidence: z.array(SwotEvidenceSchema).max(16).optional(),
+  /** TOWS-style combinations; indices point to exact entries in the relevant SWOT sections. */
+  swotMoves: z.array(SwotMoveSchema).max(8).optional(),
+  /** Evidence map for a bounded commercial validation decision; this is not a viability verdict. */
+  commercialAssessment: z.object({
+    status: z.enum(["evidence_supports_testing", "mixed_evidence", "insufficient_business_specific_evidence"]),
+    evidence: z.array(z.object({
+      dimension: z.enum(["problem", "demand", "alternatives", "differentiation", "willingness_to_pay"]),
+      finding: z.string().max(360),
+      basis: z.enum(["owner_report", "measured", "research", "site_claim", "inference"]),
+      evidenceRefs: z.array(z.string()).max(4),
+      limitation: z.string().max(240),
+    })).max(12),
+    unknowns: z.array(z.string().max(240)).max(8),
+    nextTest: z.object({
+      question: z.string().max(240),
+      smallestTest: z.string().max(400),
+      successSignal: z.string().max(240),
+      decisionRule: z.string().max(300),
+    }),
+  }).optional(),
   journey: z.array(z.object({ stage: z.string(), observation: z.string(), opportunity: z.string() })),
   opportunities: z.array(z.object({ title: z.string(), why: z.string(), effort: z.enum(["small", "medium", "large"]) })),
 });
@@ -90,7 +142,22 @@ export const StrategySchema = z.object({
       hypothesis: z.string(),
       population: z.string(),
       method: z.enum(["holdout", "ab_split", "pre_post_observational", "export_instructions"]),
+      /** Person/account/session/etc. assigned; use an explicit not-applicable value for non-assignment methods. */
+      assignmentUnit: z.string(),
+      assignmentMethod: z.enum(["randomized", "deterministic_hash", "platform_randomized", "matched", "owner_selected", "time_based", "not_applicable"]),
       primaryMetric: z.string(),
+      primaryMetricType: z.enum(["binary_rate", "count", "continuous", "monetary"]),
+      denominator: z.string(),
+      /** Null means no business-specific measured baseline is available; never silently substitute a prior. */
+      baselineRate: z.number().nullable(),
+      baselineProvenance: z.enum(["measured", "owner_report", "source_reported", "unknown"]),
+      /** Input fact IDs or exact evidence URLs supporting a non-null baseline; empty when unknown. */
+      baselineEvidenceRefs: z.array(z.string()),
+      baselineBasis: z.string(),
+      minimumMeaningfulEffect: z.object({ value: z.number().nullable(), unit: z.string(), basis: z.string() }),
+      /** Null is allowed when no reliable estimate exists; basis must say why. */
+      plannedSamplePerArm: z.number().nullable(),
+      plannedSampleBasis: z.string(),
       guardrails: z.array(z.string()),
       durationDays: z.number(),
       stoppingRule: z.string(),
@@ -149,7 +216,29 @@ export const SeoBriefSchema = z.object({
   outline: z.array(z.object({ heading: z.string(), points: z.array(z.string()) })),
   internalLinks: z.array(z.string()),
   draft: z.string(),
+  /** A concise, direct answer to the target query before supporting detail. */
+  answerFirst: z.string(),
+  /** Questions grounded in observed queries or customer language where available. */
+  faqs: z.array(z.object({ question: z.string(), answer: z.string(), factIndexes: z.array(z.number()), sourceUrls: z.array(z.string()) })),
+  /** Concrete information gain: the business-specific evidence or useful answer this page adds beyond a generic summary. */
+  originalContribution: z.string(),
+  /** Evidence attached to the proposed contribution; evidence linkage does not prove uniqueness or semantic support. */
+  originalContributionEvidence: z.object({
+    status: z.enum(["evidence_linked", "hypothesis_pending_owner_evidence"]),
+    factIndexes: z.array(z.number()),
+    sourceUrls: z.array(z.string()),
+  }),
+  /** Specific owner-supplied material required before a genuinely original page can be finalized. Empty only when none is needed. */
+  ownerEvidenceNeeded: z.array(z.string()),
+  /** What to measure after review/publication; this is a plan, never a forecast or guarantee. */
+  measurementPlan: z.string(),
+  /** Standalone business statements that can be quoted accurately, traceable to facts or read sources. */
+  citableClaims: z.array(z.object({ statement: z.string(), factIndexes: z.array(z.number()), sourceUrls: z.array(z.string()) })),
   factIndexes: z.array(z.number()),
+  /** Explicitly distinguishes refreshing an observed page from proposing a new one. */
+  recommendedAction: z.enum(["refresh_existing_page", "create_new_page"]).optional(),
+  targetPageUrl: z.string().optional(),
+  recommendationReason: z.string().optional(),
 });
 export type SeoBriefOutput = z.infer<typeof SeoBriefSchema>;
 
@@ -183,8 +272,10 @@ export const ChatIntentSchema = z.object({
       quantity: z.number(),
       /** Detailed instructions for the specialist: the owner's words, facts to use, angle, deadline. */
       brief: z.string(),
+      /** Zero-based indexes of earlier actions whose output is required before this action can start. */
+      dependsOnActionIndexes: z.array(z.number().int().nonnegative()).max(4),
     }),
-  ),
+  ).max(4),
   /** At most one question, only if the answer would change the work; otherwise "". */
   followUp: z.string(),
 });
@@ -206,7 +297,35 @@ export const ConversionAuditSchema = z.object({
 
 export const RetentionPlanSchema = z.object({
   segments: z.array(z.object({ name: z.string(), definition: z.string(), goal: z.string() })),
-  plays: z.array(z.object({ name: z.string(), trigger: z.string(), message: z.string(), channel: z.string() })),
+  plays: z.array(z.object({
+    type: z.enum(["retention", "upsell", "cross_sell"]),
+    name: z.string(),
+    trigger: z.string(),
+    message: z.string(),
+    channel: z.string(),
+    expansionAssessment: z.object({
+      decision: z.enum(["recommend", "validate_first", "no_expansion"]),
+      offering: z.string().nullable(),
+      customerNeed: z.string(),
+      customerValueSignal: z.string().nullable(),
+      offerEvidenceBasis: z.enum(["owner_reported", "measured", "source_reported", "inferred", "assumed", "unknown"]),
+      offerEvidenceRef: z.string().nullable(),
+      offerEvidenceClaim: z.string(),
+      valueEvidenceBasis: z.enum(["owner_reported", "measured", "source_reported", "inferred", "assumed", "unknown"]),
+      valueEvidenceRef: z.string().nullable(),
+      valueEvidenceClaim: z.string(),
+      timingEvidenceBasis: z.enum(["owner_reported", "measured", "source_reported", "inferred", "assumed", "unknown"]),
+      timingEvidenceRef: z.string().nullable(),
+      timingEvidenceClaim: z.string(),
+      primaryOutcome: z.string(),
+      comparison: z.string(),
+      observationWindowDays: z.number().int().min(1).max(365),
+      continueRule: z.string(),
+      stopRule: z.string(),
+      ownerInputs: z.array(z.string()),
+      unknowns: z.array(z.string()),
+    }),
+  })),
 });
 
 export const SalesSequenceSchema = z.object({
@@ -255,7 +374,7 @@ export const TASKS: Record<TaskType, TaskContract> = {
   seo_brief: { type: "seo_brief", role: "seo_specialist", label: "SEO page", schema: SeoBriefSchema, inputBudget: 10_000, outputBudget: 6_000, allowWebSearch: true },
   chat_intent: { type: "chat_intent", role: "coo", label: "Understand your wish", schema: ChatIntentSchema, inputBudget: 9_000, outputBudget: 1_800, allowWebSearch: false, primaryModel: "gpt-6-luna" },
   metric_explanation: { type: "metric_explanation", role: "data_analyst", label: "Explain results", schema: MetricExplanationSchema, inputBudget: 8_000, outputBudget: 1_200, allowWebSearch: false },
-  conversion_audit: { type: "conversion_audit", role: "cso", label: "Conversion audit", schema: ConversionAuditSchema, inputBudget: 10_000, outputBudget: 2_000, allowWebSearch: false },
+  conversion_audit: { type: "conversion_audit", role: "cso", label: "Conversion audit", schema: ConversionAuditSchema, inputBudget: 10_000, outputBudget: 3_200, allowWebSearch: false },
   retention_plan: { type: "retention_plan", role: "customer_success_manager", label: "Retention plan", schema: RetentionPlanSchema, inputBudget: 5_000, outputBudget: 1_500, allowWebSearch: false },
   sales_sequence: { type: "sales_sequence", role: "cso", label: "Sales follow-up", schema: SalesSequenceSchema, inputBudget: 6_000, outputBudget: 1_500, allowWebSearch: false },
 };
@@ -297,10 +416,26 @@ export function untrusted(source: string, text: string, maxChars = 24_000): stri
   return `<untrusted_content source="${safeSource}">\n${clean}\n</untrusted_content>`;
 }
 
+/** Research inputs for downstream content agents. Competitor findings are context, not proof or publishing claims. */
+export function businessResearchContext(insights?: Record<string, unknown>): string {
+  if (!insights) return "";
+  const fields = ["positioningStatement", "positioning", "commercialAssessment", "siteAssessment", "vocPhrases", "objections", "audiences", "competitors"];
+  const context = Object.fromEntries(fields.filter((key) => insights[key] !== undefined && insights[key] !== null).map((key) => [key, insights[key]]));
+  if (!Object.keys(context).length) return "";
+  return `\n\nPOSITIONING, COMMERCIAL VALIDATION, WEBSITE, CUSTOMER LANGUAGE AND COMPETITOR RESEARCH:\nThe commercialAssessment is an evidence map and proposal for a bounded validation test, never a binary judgment that the business is viable or nonviable. Preserve evidence basis and limitations. Owner reports are not independent verification; a research source about a market is not proof of this business's own demand; website claims are not proof of customer demand, product quality, conversion performance, or willingness to pay. Treat competitor-site findings as published claims, not independent proof of effectiveness or customer preference. Use them to understand category expectations and possible differentiation; do not copy their wording, name a competitor, claim superiority, or present their pricing/features as current unless the owner explicitly asks and the current source is included.\n${untrusted("business research", JSON.stringify(context), 8_000)}`;
+}
+
 /** `kind` (when given) is the fact's strength as evidence (shared/agents/evidenceKind.ts), e.g. "stated opinion" vs "measured". */
-export function factsBlock(facts: { statement: string; category: string; kind?: string }[]): string {
-  if (facts.length === 0) return "CONFIRMED FACTS: (none yet — keep claims general)";
-  return `CONFIRMED FACTS (cite them only through the fact index fields; never write "[n]" markers in text the owner reads; a "stated opinion" is a signal, not proof of demand):\n${facts.map((f, i) => `[${i}] (${f.category}${f.kind ? `; ${f.kind}` : ""}) ${f.statement}`).join("\n")}`;
+export function factsBlock(facts: { statement: string; category: string; kind?: string; confidence?: string; provenance?: string; verifiedAt?: number; freshness?: { reviewSuggested: boolean; daysOld: number } }[]): string {
+  if (facts.length === 0) return "BUSINESS EVIDENCE: (none yet — keep claims general)";
+  return `BUSINESS EVIDENCE (cite through fact index fields only; never write "[n]" markers in text the owner reads. Preserve the source kind: "site says" is a published claim, "owner report" is not independent verification, and a stated opinion is a signal, not proof of demand. No source kind alone proves viability or willingness to pay. Provenance and stored confidence describe where the fact came from and its prior evidence quality; neither guarantees that it remains accurate. Facts marked "review suggested" may be outdated; treat their current accuracy as unknown until rechecked):\n${facts.map((f, i) => `[${i}] (${f.category}${f.kind ? `; ${f.kind}` : ""}${f.provenance ? `; provenance ${f.provenance}` : ""}${f.confidence ? `; stored confidence ${f.confidence}` : ""}${f.verifiedAt ? `; verified ${new Date(f.verifiedAt).toISOString().slice(0, 10)}` : ""}${f.freshness?.reviewSuggested ? `; review suggested, ${f.freshness.daysOld} days since last verification` : ""}) ${f.statement}`).join("\n")}`;
+}
+
+/** Stale facts inform what to recheck, but are excluded from the evidence list used to ground claims. */
+export function staleFactsBlock(facts: { statement: string; category: string; confidence?: string; provenance?: string; verifiedAt?: number; freshness: { daysOld: number } }[]): string {
+  if (!facts.length) return "";
+  const rows = facts.map((f) => `- (${f.category}; ${f.provenance ? `provenance ${f.provenance}; ` : ""}${f.confidence ? `stored confidence ${f.confidence}; ` : ""}${f.verifiedAt ? `last verified ${new Date(f.verifiedAt).toISOString().slice(0, 10)}; ` : ""}${f.freshness.daysOld} days ago) ${f.statement}`).join("\n");
+  return `FRESHNESS RULE: The following previously confirmed facts are past their category review interval. Their present accuracy is unknown. Do not cite them as current facts or use them to justify current price, product, offer, or market decisions. Recheck a material item using current evidence or ask the owner.\n${untrusted("stale business facts", rows, 5_000)}`;
 }
 
 /**
@@ -333,10 +468,12 @@ export function validateFactIndexes(indexes: number[], factCount: number): { val
 const RISKY_CLAIM_PATTERNS = [
   /\bguarantee(d|s)?\b/i,
   /\b#1\b|\bnumber one\b|\bbest in the world\b/i,
-  /\b\d{2,3}% (more|increase|growth|off)\b/i,
+  /\b\d+(?:\.\d+)?\s?(?:%|x|×)\s?(?:faster|quicker|cheaper|more|fewer|better|easier|less|lower|higher|increase|growth|reduction|reduced|off)\b/i,
+  /\b(?:save|saves|saved|cut|cuts|reduce|reduces|reduced|boost|boosts|increase|increases|grow|grows|grew)\b[^.!?]{0,40}\b(?:\d{1,3}(?:\.\d+)?\s?%|\$\s?\d[\d,.]*)/i,
   /\b(thousands|millions) of (customers|users|happy)\b/i,
   /\btrusted by\b/i,
   /\bclinically\b|\bcure[sd]?\b/i,
+  /\b(?:100%|fully|completely)\s+(?:secure|safe|accurate|compliant|risk[- ]free)\b/i,
 ];
 
 export function findRiskyClaims(text: string): string[] {

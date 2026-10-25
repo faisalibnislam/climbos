@@ -1,0 +1,16 @@
+{
+  "playbook_id": "paid_media_review_v1",
+  "inputs": ["campaign_snapshot", "metric_definitions", "matured_cohorts", "approval"],
+  "checks_in_order": [
+    "tenant_and_account_match",
+    "tracking_reliability",
+    "conversion_delay",
+    "remaining_commitment",
+    "contribution_economics",
+    "operational_capacity"
+  ],
+  "allowed_recommendations": ["hold", "investigate", "repair", "pause", "bounded_scale"],
+  "execution_requires": ["valid_approval", "idempotency_key", "budget_reservation"],
+  "on_ambiguous_external_result": "reconcile_before_retry",
+  "report": ["evidence", "assumptions", "uncertainty", "decision", "next_observation"]
+}

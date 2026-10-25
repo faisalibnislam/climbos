@@ -1,0 +1,159 @@
+{
+  "research_cutoff": "2026-10-19",
+  "method": "Live primary-source retrieval using Firecrawl targeted page reads; summaries inspected, claims limited to supported scope. Established frameworks are combined with original ClimbOS design recommendations and labeled hypothetical examples.",
+  "sources": [
+    {
+      "id": "B12-S01",
+      "title": "Forecasting: Principles and Practice — The forecaster's toolbox / forecast accuracy",
+      "url": "https://otexts.com/fpp3/accuracy.html",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Out-of-sample accuracy, simple forecasting benchmarks, temporal evaluation, and limitations of error metrics.",
+      "evidence_summary": "HTTP 200; redirected to toolbox.html#sec-accuracy. Retrieved guidance distinguishes training and test evaluation, rolling forecasting origins, and scale-dependent and percentage errors. No publication date established.",
+      "books": [12],
+      "verification_status": "retrieved_primary_source_http_200"
+    },
+    {
+      "id": "B12-S02",
+      "title": "Google Analytics — Get started with attribution",
+      "url": "https://support.google.com/analytics/answer/10596866",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Attribution credit assignment, model-dependent reporting, and possible conversion-credit revisions.",
+      "evidence_summary": "HTTP 200; current page describes available attribution models and conversion reattribution. Supports treating attribution settings and revisions explicitly; does not establish experimental causal lift for customers.",
+      "books": [12],
+      "verification_status": "retrieved_primary_source_http_200"
+    },
+    {
+      "id": "B12-S03",
+      "title": "Stripe — Usage-based pricing for SaaS: A guide",
+      "url": "https://stripe.com/resources/more/usage-based-pricing-for-saas-how-to-make-the-most-of-this-pricing-model",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Usage-based pricing mechanics, metering, predictability, billing surprise, hybrid packages, and usage transparency.",
+      "evidence_summary": "HTTP 200 after search located canonical URL. Page describes consumption-based charges and risks of unpredictable bills and revenue. Used for model tradeoffs, not provider fees or optimal ClimbOS pricing.",
+      "books": [12],
+      "verification_status": "retrieved_primary_source_http_200"
+    },
+    {
+      "id": "B12-S04",
+      "title": "Stripe — CAC SaaS: A guide for businesses",
+      "url": "https://stripe.com/en-mt/resources/more/cac-in-saas",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "CAC numerator, acquired paying-customer denominator, and sales/marketing cost context.",
+      "evidence_summary": "HTTP 200. Retrieved definition divides sales and marketing costs by new paying customers. Book does not adopt article's broad ratio benchmarks as universal operating thresholds.",
+      "books": [12],
+      "verification_status": "retrieved_primary_source_http_200"
+    },
+    {
+      "id": "B12-S05",
+      "title": "R stats — Power Calculations for Two-Sample Test for Proportions",
+      "url": "https://stat.ethz.ch/R-manual/R-devel/library/stats/html/power.prop.test.html",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Reference implementation for proportion-test power calculations and parameter constraints.",
+      "evidence_summary": "HTTP 200. Reference describes solving for one unspecified parameter and warns about impossible conditions and numerical root-finding limits. Book does not assert a particular ClimbOS sample-size implementation was tested.",
+      "books": [12],
+      "verification_status": "retrieved_primary_source_http_200"
+    },
+    {
+      "id": "B13-S01",
+      "title": "OpenAI — Evaluation best practices",
+      "url": "https://developers.openai.com/api/docs/guides/evaluation-best-practices",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Task-specific representative evaluation, human calibration, comparison, and continuous evaluation.",
+      "evidence_summary": "HTTP 200; current guide discusses nondeterminism, task-specific evaluation, grader bias, and avoiding unnecessary multi-agent complexity. Page also notes hosted Evals lifecycle dates. No model recommendation or price imported into the book.",
+      "books": [13],
+      "verification_status": "retrieved_primary_source_http_200"
+    },
+    {
+      "id": "B13-S02",
+      "title": "OpenAI — Structured model outputs",
+      "url": "https://developers.openai.com/api/docs/guides/structured-outputs",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Schema-based responses, supported schema behavior, refusals, and incomplete-output handling.",
+      "evidence_summary": "HTTP 200. Guide documents JSON Schema adherence features and limitations. Book separates structural validity from truth and semantic validation; avoids copying volatile numeric schema limits.",
+      "books": [13],
+      "verification_status": "retrieved_primary_source_http_200"
+    },
+    {
+      "id": "B13-S03",
+      "title": "Convex — Actions",
+      "url": "https://docs.convex.dev/functions/actions",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "External calls and side effects in actions; transactional boundaries and explicit failure handling.",
+      "evidence_summary": "HTTP 200. Page describes actions, runtime restrictions, nonautomatic action retry, and database interactions. Book uses architectural implications rather than unneeded exact limits.",
+      "books": [13],
+      "verification_status": "retrieved_primary_source_http_200"
+    },
+    {
+      "id": "B13-S04",
+      "title": "Vercel — Function limits",
+      "url": "https://vercel.com/docs/functions/limitations",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Plan-, runtime-, and feature-dependent execution constraints.",
+      "evidence_summary": "HTTP 200. Targeted read reported last updated August 24, 2026. Book intentionally avoids fixed timeout or pricing tables and requires implementation-time verification.",
+      "books": [13],
+      "verification_status": "retrieved_primary_source_http_200"
+    },
+    {
+      "id": "B13-S05",
+      "title": "Resend — Idempotency keys",
+      "url": "https://resend.com/docs/dashboard/emails/idempotency-keys",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Supported request deduplication and documented 24-hour idempotency-key retention.",
+      "evidence_summary": "HTTP 200. Supports stable-key retries for supported endpoints within a limited retention window. Application outbox and longer-lived ledger are original ClimbOS design recommendations, not claims of indefinite provider deduplication.",
+      "books": [13],
+      "verification_status": "retrieved_primary_source_http_200"
+    },
+    {
+      "id": "B13-S06",
+      "title": "OpenAI — Safety in building agents",
+      "url": "https://developers.openai.com/api/docs/guides/agent-builder-safety",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Untrusted-input handling, prompt injection, data leakage, constrained data flow, and approval boundaries.",
+      "evidence_summary": "HTTP 200. Page advises keeping untrusted variables outside developer messages and combining safeguards. Its builder is subject to lifecycle changes; book cites safety principles without recommending adoption of a retiring product.",
+      "books": [13],
+      "verification_status": "retrieved_primary_source_http_200"
+    },
+    {
+      "id": "B13-S07",
+      "title": "OpenAI — Data controls",
+      "url": "https://developers.openai.com/api/docs/guides/your-data",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Feature-specific retention, storage, and data-control requirements.",
+      "evidence_summary": "HTTP 200. Page distinguishes abuse monitoring, retention controls, and feature-specific conditions. Book makes no blanket zero-retention claim and requires endpoint-specific review.",
+      "books": [13],
+      "verification_status": "retrieved_primary_source_http_200"
+    },
+    {
+      "id": "B13-S08",
+      "title": "OpenAI — Deprecations",
+      "url": "https://developers.openai.com/api/docs/deprecations",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Need to monitor current service/model lifecycle and hosted Evals/Agent Builder retirement notices.",
+      "evidence_summary": "HTTP 200. Retrieved notice includes products with October–November 2026 sunset timelines. Book directs implementers to verify dates and avoid new dependencies on retiring hosted evaluation or builder products.",
+      "books": [13],
+      "verification_status": "retrieved_primary_source_http_200"
+    }
+  ],
+  "limitations": [
+    "Living documentation is mutable. Retrieval on the cutoff date does not establish its historical contents on another date.",
+    "Publication dates were not established; null means unknown, not equal to retrieval date. Vercel page's reported last-update date is distinguished from publication date.",
+    "The original guessed Stripe usage-pricing URL returned HTTP 404 and was replaced after search by the verified canonical URL. The failed URL is not used as support in final books.",
+    "Research used targeted retrieved answers rather than full-page archival copies. Claims were kept within inspected content; no exhaustive literature-review claim is made.",
+    "No live ClimbOS repository behavior, provider benchmark, market willingness to pay, advertising performance, or production deployment was verified by these books.",
+    "All worked business metrics, prices, fees, policy thresholds, and implementation outcomes are hypothetical unless separately attributed. No hypothetical values describe Formkit.",
+    "Current model identifiers and provider price tables are deliberately omitted; implementers must verify actual model availability, pricing, billing definitions, and SDK/runtime versions.",
+    "Search feedback was attempted once but the provider rejected it because its 120-second window had expired; no research result depended on feedback acceptance."
+  ]
+}

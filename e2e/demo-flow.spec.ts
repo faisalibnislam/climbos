@@ -26,8 +26,8 @@ test.describe.serial("Formkit demo end-to-end", () => {
     await expect(page.getByText(/Help Formkit acquire more paying customers/i)).toBeVisible();
     await expect(page.getByRole("heading", { name: /do these next/i })).toBeVisible();
     // Make a wish: safe work starts on its own; anything else waits for "Do it".
-    await page.getByLabel("Your wish for the team").fill("Write a welcome email sequence for new sign-ups");
-    await page.getByRole("button", { name: "Make it happen" }).click();
+    await page.getByLabel("Your request", { exact: true }).fill("Write a welcome email sequence for new sign-ups");
+    await page.getByRole("button", { name: "Send request" }).click();
     const step = page.locator("li", { hasText: /email/i }).filter({ has: page.getByRole("button").or(page.getByText(/Working|Done|See result/)) }).first();
     await expect(step).toBeVisible({ timeout: 30_000 });
     const doIt = step.getByRole("button", { name: /^do it$/i });
@@ -38,7 +38,7 @@ test.describe.serial("Formkit demo end-to-end", () => {
 
   test("content: approve an Instagram draft, publish it (simulated receipt) and never duplicate", async () => {
     await page.goto(`/app/${slug}/content?status=in_review`);
-    await expect(page.getByRole("heading", { level: 1, name: "Content" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Posts, emails & ads" })).toBeVisible();
     await expectAccessible(page, "content list");
     const instagram = page.locator("li, article", { hasText: "Instagram" }).locator("a[href*='/content/']").first();
     await instagram.click();

@@ -1,6 +1,5 @@
 import type {
   AdDraftsOutput,
-  BusinessInsights,
   BusinessProfile,
   ChatIntentOutput,
   EmailSequenceOutput,
@@ -72,11 +71,11 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
         ],
       };
     case "business_insights": {
-      const out: BusinessInsights = {
+      const out = {
         audiences: [
-          { name: "Solo founders and freelancers", description: "Need lead capture and payments without a developer.", confidence: "medium" },
-          { name: "Small marketing teams", description: "Run campaigns and need fast forms with logic.", confidence: "medium" },
-          { name: "Coaches and course creators", description: "Collect applications and payments.", confidence: "low" },
+          { name: "Solo founders and freelancers", description: "Need lead capture and payments without a developer.", confidence: "medium", needs: [{ statement: "Collect leads and payments without developer help.", basis: "inference", evidenceRefs: [] }], objections: [{ statement: "Setting up a form may take too much technical work.", basis: "inference", evidenceRefs: [] }], purchasingMotivations: [{ statement: "Get a working form online quickly.", basis: "inference", evidenceRefs: [] }], channelPreferences: [{ channel: "Use-case search", rationale: "Specific form needs may be expressed in search.", basis: "inference", evidenceRefs: [] }] },
+          { name: "Small marketing teams", description: "Run campaigns and need fast forms with logic.", confidence: "medium", needs: [{ statement: "Launch campaign forms with conditional questions.", basis: "inference", evidenceRefs: [] }], objections: [{ statement: "A generic form may not support campaign-specific logic.", basis: "inference", evidenceRefs: [] }], purchasingMotivations: [{ statement: "Publish campaign assets without waiting on engineering.", basis: "inference", evidenceRefs: [] }], channelPreferences: [{ channel: "Product demos", rationale: "A short demo can show the setup workflow.", basis: "inference", evidenceRefs: [] }] },
+          { name: "Coaches and course creators", description: "Collect applications and payments.", confidence: "low", needs: [{ statement: "Collect applications and payment details in one flow.", basis: "inference", evidenceRefs: [] }], objections: [{ statement: "The form may not match the enrollment process.", basis: "inference", evidenceRefs: [] }], purchasingMotivations: [{ statement: "Reduce manual work when accepting clients or students.", basis: "inference", evidenceRefs: [] }], channelPreferences: [{ channel: "Creator partnerships", rationale: "Relevant creators may reach course sellers.", basis: "inference", evidenceRefs: [] }] },
         ],
         competitors: [
           { name: "General form builders", url: "", note: "Broad tools; ClimbOS should verify which ones the owner competes with most.", sourceUrl: "" },
@@ -117,8 +116,8 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
           { key: "search_ads", name: "Small Google search-ad test", why: "Learn which use cases convert before investing more.", priority: 4, deliverables: ["2 ad groups", "Paused campaign for your approval"], dependencies: ["Google Ads connection", "Conversion tracking verified"], measurement: "Cost per paid conversion vs. organic baseline", suggestedMonthlyAdSpend: 600 },
         ],
         experiments: [
-          { name: "Welcome sequence vs. no sequence", hypothesis: "A 3-email sequence raises 7-day first-form publishing.", population: "New sign-ups who agreed to product emails", method: "holdout", primaryMetric: "First form published within 7 days", guardrails: ["Unsubscribe rate below 1%"], durationDays: 28, stoppingRule: "Stop after 28 days or 400 sign-ups, whichever comes first" },
-          { name: "Use-case ad groups", hypothesis: "Payment-form searches convert better than general form searches.", population: "Search ad clicks", method: "ab_split", primaryMetric: "Paid conversions per $100 spend", guardrails: ["Stay within the approved $600/month"], durationDays: 30, stoppingRule: "Pause any ad group that spends $150 with zero sign-ups" },
+          { name: "Welcome sequence baseline and pilot", hypothesis: "A 3-email sequence may raise 7-day first-form publishing; measure baseline first.", population: "New sign-ups who agreed to product emails", method: "pre_post_observational", assignmentUnit: "Not applicable; consecutive eligible cohorts", assignmentMethod: "not_applicable", primaryMetric: "First form published within 7 days", primaryMetricType: "binary_rate", denominator: "eligible opted-in new signups observed in each cohort window", baselineRate: null, baselineProvenance: "unknown", baselineEvidenceRefs: [], baselineBasis: "No measured activation baseline is present in this fixture; establish it before interpretation.", minimumMeaningfulEffect: { value: null, unit: "absolute_rate", basis: "Owner decision threshold not supplied." }, plannedSamplePerArm: null, plannedSampleBasis: "Observational pilot; not a powered randomized test.", guardrails: ["Unsubscribe rate below 1%"], durationDays: 28, stoppingRule: "Review once after 28 days; stop early only if unsubscribes exceed 1%" },
+          { name: "Use-case ad-group baseline and pilot", hypothesis: "Payment-form searches may produce more paid conversions per $100 spend than general form searches; compare cautiously.", population: "Search ad clicks", method: "pre_post_observational", assignmentUnit: "Not applicable; observed ad-group periods", assignmentMethod: "not_applicable", primaryMetric: "Paid conversions per $100 spend", primaryMetricType: "monetary", denominator: "ad spend in $100 increments per ad group", baselineRate: null, baselineProvenance: "unknown", baselineEvidenceRefs: [], baselineBasis: "A binary baseline does not apply to this monetary metric, and no business-specific spend-return distribution was supplied.", minimumMeaningfulEffect: { value: null, unit: "USD per $100 spend", basis: "Owner value threshold not supplied." }, plannedSamplePerArm: null, plannedSampleBasis: "Observational pilot; variance and minimum effect are unavailable so no powered sample claim is made.", guardrails: ["Stay within the approved $600/month"], durationDays: 30, stoppingRule: "Pause any ad group that spends $150 with zero sign-ups" },
         ],
         constraints: ["Ad spend stays within $600/month, paid directly to Google", "Content reviewed on Fridays", "No claims beyond confirmed facts"],
         measurementPlan: "Billing revenue is the source of truth. Sign-ups and first-form publishing come from your analytics. Ad platform conversions are shown separately and never added together.",
@@ -209,7 +208,21 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
         ],
         internalLinks: ["/templates", "/pricing"],
         draft: `A ${topic} should be short, clear and lead to an obvious next step...\n\n(Draft continues — review before publishing.)`,
+        answerFirst: `A useful ${topic} collects only the information needed for the next step and makes that step clear.`,
+        faqs: [
+          { question: `What should a ${topic} include?`, answer: "Start with only the details needed to complete the task, then explain what happens after submission.", factIndexes: [], sourceUrls: [] },
+          { question: `How can I make a ${topic} easier to complete?`, answer: "Use plain labels, remove questions that do not change the next step, and test it on a phone.", factIndexes: [], sourceUrls: [] },
+          { question: `When should I add payment fields?`, answer: "Add payment when the form is part of a purchase or booking flow, and state the price and refund terms before submission.", factIndexes: [], sourceUrls: [] },
+        ],
+        originalContribution: "Use the confirmed product flow and real customer tasks to make the steps specific to this service.",
+        originalContributionEvidence: { status: "hypothesis_pending_owner_evidence", factIndexes: [], sourceUrls: [] },
+        ownerEvidenceNeeded: ["Add a reviewed customer example or owner-tested setup detail before publication."],
+        measurementPlan: "After owner review and publication, compare this page's Search Console clicks and qualified site outcomes with its prior period; baseline is not supplied here.",
+        citableClaims: ctx.facts.length ? [{ statement: ctx.facts[0].statement, factIndexes: [0], sourceUrls: [] }] : [],
         factIndexes: ctx.facts.length ? [0] : [],
+        recommendedAction: "create_new_page",
+        targetPageUrl: "",
+        recommendationReason: "The fixture has no inspected site inventory for this scenario.",
       };
       return out;
     }
@@ -218,28 +231,28 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
       const actions: ChatIntentOutput["actions"] = [];
       const outbound = /find (?:me )?(?:more )?(?:customers|clients|leads|people)|prospect|outreach|cold email|book(?:s|ed)? (?:the )?calls/.test(text);
       if (outbound) {
-        actions.push({ kind: "find_customers", title: "Find customers and write the emails", description: "Finds companies that need you, with evidence, and drafts the emails. Nothing is sent.", channel: "", quantity: 15, brief: ctx.request ?? "" });
+        actions.push({ kind: "find_customers", title: "Find customers and write the emails", description: "Finds companies that need you, with evidence, and drafts the emails. Nothing is sent.", channel: "", quantity: 15, brief: ctx.request ?? "", dependsOnActionIndexes: [] });
       }
       if (/post|instagram|social|linkedin|facebook/.test(text)) {
-        actions.push({ kind: "generate_content", title: "Draft social posts", description: "Create posts for your connected channels using confirmed facts.", channel: /linkedin/.test(text) ? "linkedin" : "instagram", quantity: 3, brief: ctx.request ?? "" });
+        actions.push({ kind: "generate_content", title: "Draft social posts", description: "Create posts for your connected channels using confirmed facts.", channel: /linkedin/.test(text) ? "linkedin" : "instagram", quantity: 3, brief: ctx.request ?? "", dependsOnActionIndexes: [] });
       }
       if (!outbound && /email|newsletter|welcome/.test(text)) {
-        actions.push({ kind: "generate_content", title: "Draft an email sequence", description: "A short sequence for people who agreed to hear from you.", channel: "email", quantity: 1, brief: ctx.request ?? "" });
+        actions.push({ kind: "generate_content", title: "Draft an email sequence", description: "A short sequence for people who agreed to hear from you.", channel: "email", quantity: 1, brief: ctx.request ?? "", dependsOnActionIndexes: [] });
       }
       if (/ad|google|meta|budget/.test(text)) {
-        actions.push({ kind: "generate_content", title: "Draft ads (paused until you approve)", description: "Search and social ad drafts within your approved budget.", channel: "google_search_ad", quantity: 1, brief: ctx.request ?? "" });
+        actions.push({ kind: "generate_content", title: "Draft ads (paused until you approve)", description: "Search and social ad drafts within your approved budget.", channel: "google_search_ad", quantity: 1, brief: ctx.request ?? "", dependsOnActionIndexes: [] });
       }
       if (/seo|blog|search|page/.test(text)) {
-        actions.push({ kind: "generate_content", title: "Write an SEO page", description: "A use-case page aimed at real searches.", channel: "blog", quantity: 1, brief: ctx.request ?? "" });
+        actions.push({ kind: "generate_content", title: "Write an SEO page", description: "A use-case page aimed at real searches.", channel: "blog", quantity: 1, brief: ctx.request ?? "", dependsOnActionIndexes: [] });
       }
       if (/plan|strategy|priorit/.test(text)) {
-        actions.push({ kind: "refresh_plan", title: "Refresh the growth plan", description: "Update priorities using the latest facts and results.", channel: "", quantity: 1, brief: ctx.request ?? "" });
+        actions.push({ kind: "refresh_plan", title: "Refresh the growth plan", description: "Update priorities using the latest facts and results.", channel: "", quantity: 1, brief: ctx.request ?? "", dependsOnActionIndexes: [] });
       }
       if (/result|working|perform|number|forecast/.test(text)) {
-        actions.push({ kind: "analyze_results", title: "Explain recent results", description: "Plain-English summary of what changed and why it might have.", channel: "", quantity: 1, brief: ctx.request ?? "" });
+        actions.push({ kind: "analyze_results", title: "Explain recent results", description: "Plain-English summary of what changed and why it might have.", channel: "", quantity: 1, brief: ctx.request ?? "", dependsOnActionIndexes: [] });
       }
       if (actions.length === 0) {
-        actions.push({ kind: "generate_content", title: "Draft 3 social posts", description: "A quick start based on your plan.", channel: "instagram", quantity: 3, brief: ctx.request ?? "" });
+        actions.push({ kind: "generate_content", title: "Draft 3 social posts", description: "A quick start based on your plan.", channel: "instagram", quantity: 3, brief: ctx.request ?? "", dependsOnActionIndexes: [] });
       }
       return {
         understood: ctx.request ? `You want: ${ctx.request.slice(0, 140)}` : "You want a quick start.",
@@ -257,11 +270,17 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
       };
     case "conversion_audit":
       return {
+        clarityVerdict: "The supplied pages provide a useful starting point; confirm each change with customer and analytics evidence.",
+        messageMatch: "No acquisition-message or conversion analytics were supplied, so message match cannot be measured.",
         findings: [
           { area: "Homepage", observation: "The main benefit is clear, but there's no example of a finished form above the fold.", recommendation: "Show a real example form next to the headline.", impact: "high", sourceUrl: ctx.website ?? "" },
           { area: "Pricing", observation: "Plan differences need a quick comparison.", recommendation: "Add a 3-row comparison of what each plan unlocks.", impact: "medium", sourceUrl: ctx.website ?? "" },
         ],
         quickWins: ["Add one example form to the homepage", "Make the sign-up button text specific: 'Build my first form'"],
+        prioritizedFixes: [
+          { fix: "Make the next step clear on the homepage.", pageUrl: ctx.website ?? "", why: "A visitor should be able to tell what to do after understanding the offer.", effort: "small", expectedEffect: "Visitors may find the next step more easily; any conversion effect is unknown.", contentStructure: ["Main benefit", "What the visitor can do", "One next step"], sampleCopy: "Start with the form your business needs.", uxChanges: ["Keep the primary next step consistent between the headline and button."], measurementPlan: "Record the current qualified signup rate and its denominator before the change; compare the same metric and traffic source afterward." },
+        ],
+        socialReview: { summary: "Demo data does not represent a live review of this workspace's social accounts.", findings: [], contentMixSuggestions: [{ platform: "linkedin", format: "educational text post", concept: "Answer one question a likely buyer asks before choosing a form tool.", fitHypothesis: "A practical explanation could fit a business buyer; this demo is not evidence about the workspace or expected results.", basis: "business_fit_hypothesis", sourceArtifactIds: [], testSignal: "Track qualified replies after establishing a baseline." }] },
       };
     case "retention_plan":
       return {
@@ -270,8 +289,8 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
           { name: "Active free users", definition: "2+ forms, no paid plan", goal: "Upgrade when payments or AI replies are needed" },
         ],
         plays: [
-          { name: "Nudge to first form", trigger: "Day 3 with no form", message: "Describe the form you need — we'll build it.", channel: "email" },
-          { name: "Payments moment", trigger: "Form gets 20+ responses", message: "Ready to collect payments with this form?", channel: "in-app" },
+          { type: "retention", name: "Nudge to first form", trigger: "An account has not published a form after setup", message: "Describe the form you need — we'll build it.", channel: "email", expansionAssessment: { decision: "no_expansion", offering: null, customerNeed: "Help complete first value", customerValueSignal: null, offerEvidenceBasis: "unknown", offerEvidenceRef: null, offerEvidenceClaim: "", valueEvidenceBasis: "unknown", valueEvidenceRef: null, valueEvidenceClaim: "", timingEvidenceBasis: "unknown", timingEvidenceRef: null, timingEvidenceClaim: "", primaryOutcome: "First form published by an eligible account", comparison: "Compare with a prior or concurrent eligible account cohort when available", observationWindowDays: 14, continueRule: "Continue only if the owner-defined activation outcome improves without worse complaints or support burden.", stopRule: "Stop if customer complaints or support load materially worsen.", ownerInputs: [], unknowns: ["No workspace customer-activity feed was supplied to establish eligibility or the trigger."] } },
+          { type: "upsell", name: "Check for an expansion need", trigger: "After the owner confirms an account has reached a product limit or asks for a paid capability", message: "Ask whether the customer needs a paid capability before suggesting an upgrade.", channel: "in-app", expansionAssessment: { decision: "validate_first", offering: null, customerNeed: "Unknown until the customer or product-use evidence identifies the need", customerValueSignal: null, offerEvidenceBasis: "unknown", offerEvidenceRef: null, offerEvidenceClaim: "", valueEvidenceBasis: "unknown", valueEvidenceRef: null, valueEvidenceClaim: "", timingEvidenceBasis: "unknown", timingEvidenceRef: null, timingEvidenceClaim: "", primaryOutcome: "Qualified upgrade interest or paid expansion, if measured", comparison: "Establish a baseline among eligible accounts before testing a prompt", observationWindowDays: 30, continueRule: "Continue only after the owner sets a threshold using a baseline and contribution economics.", stopRule: "Stop if the prompt creates confusion, complaints, or support burden.", ownerInputs: ["Confirm the current paid capabilities and prices", "Define the product-use signal and a contribution threshold"], unknowns: ["Customer-level product usage and purchase history are unavailable in this fixture."] } },
         ],
       };
     case "sales_sequence":

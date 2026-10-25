@@ -125,7 +125,7 @@ export const sendOne = internalAction({
       return;
     }
     const secret = JSON.parse(raw.value) as MailboxSecret;
-    if (!(await ctx.runMutation(internal.outboundSending.claimSend, { sendId, lease, payloadHash: job.payloadHash }))) return;
+    if (!(await ctx.runMutation(internal.outboundSending.claimSend, { sendId, lease, payloadHash: job.payloadHash, ...(job.abTestId ? { abTestId: job.abTestId } : {}) }))) return;
     const messageId = job.opKey ? sendMessageId(job.opKey, secret.email) : undefined;
     try {
       const info = process.env.CLIMBOS_FAKE_MAILBOX
@@ -263,7 +263,7 @@ export const sendReviewRequests = internalAction({
     for (const id of ids) {
       const job = await ctx.runQuery(internal.reviews.prepareRequest, { id });
       if (!job) {
-        await ctx.runMutation(internal.reviews.recordRequest, { id, ok: false, error: "Not sent: mailbox disconnected or they unsubscribed" });
+        await ctx.runMutation(internal.reviews.recordRequest, { id, ok: false, error: "Not sent: a current mailbox, unsubscribe, approval, or active-email check failed." });
         continue;
       }
       if (process.env.CLIMBOS_FAKE_MAILBOX) {

@@ -4,6 +4,8 @@ import { getLiveConfig } from "./lib/config";
 import { attribute, computeCohorts, OVERLAP_WARNING, summarizePlatformClaims } from "../shared/attribution";
 import type { RevenueEvent, Touch } from "../shared/attribution/types";
 import { addDays, fillMissingDays, runForecast, type DailyPoint } from "../shared/forecasting";
+import { majorToMinor } from "../shared/economics/currency";
+import { summarizeAiReferralRows } from "../shared/integrations/ga4";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { audit } from "./lib/audit";
@@ -15,7 +17,7 @@ const DAY = 86_400_000;
 export const METRICS = {
   visits: { label: "Website visits", unit: "count", definition: "Sessions reported by your analytics.", source: "Google Analytics 4" },
   signups: { label: "Sign-ups", unit: "count", definition: "Key events you confirmed as a sign-up (e.g. account created).", source: "Google Analytics 4" },
-  paid_conversions: { label: "New paying customers", unit: "count", definition: "Paid orders or first subscription payments from your billing system, deduplicated.", source: "Billing" },
+  paid_conversions: { label: "First recorded paying customers", unit: "count", definition: "Distinct source-scoped customer IDs whose first positive, non-refund payment in imported billing data falls in this period. Payments without a customer ID are excluded; the same person across billing systems may count more than once, and incomplete billing history can make this count low.", source: "Billing" },
   revenue: { label: "Revenue (net of refunds)", unit: "currency_minor", definition: "Paid billing amounts minus refunds, by the day they happened in your business timezone.", source: "Billing" },
 } as const;
 export type MetricKey = keyof typeof METRICS;
@@ -100,6 +102,7 @@ export const ingestRevenue = internalMutation({
         await ctx.db.insert("touches", {
           orgId,
           customerRef: e.customerRef,
+          source: e.source,
           occurredAt: e.occurredAt - 1,
           channel: e.utmMedium === "cpc" ? `${e.utmSource ?? "paid"} ads` : (e.utmSource ?? e.utmMedium ?? "tagged"),
           utmSource: e.utmSource,
@@ -125,19 +128,63 @@ async function rematerializeRevenueDay(ctx: MutationCtx, orgId: Id<"organization
     .withIndex("by_org_occurred", (q) => q.eq("orgId", orgId).gte("occurredAt", start).lt("occurredAt", end))
     .take(10_000);
   let revenue = 0;
-  let conversions = 0;
   for (const e of events) {
     if (dayKey(e.occurredAt, timezone) !== day || e.currency !== currency) continue;
     if (e.kind === "refund") revenue -= Math.abs(e.amountMinor);
-    else {
-      revenue += e.amountMinor - e.refundedMinor;
-      conversions++;
-    }
+    else revenue += e.amountMinor - e.refundedMinor;
   }
   await upsertDailyImpl(ctx, orgId, "billing", "observed", [
     { metricKey: "revenue", date: day, value: revenue },
-    { metricKey: "paid_conversions", date: day, value: conversions },
   ]);
+}
+
+/** First recorded paying customer, counted once per customer ID across imported billing history. */
+async function firstRecordedPayerDays(
+  ctx: { db: QueryCtx["db"] },
+  orgId: Id<"organizations">,
+  from: string,
+  to: string,
+  timezone: string,
+): Promise<{ counts: Map<string, number>; hasIdentifiedCustomers: boolean; isFixture: boolean; partial: boolean; freshness: number }> {
+  // Include a UTC day on either side; `from`/`to` are business-local dates.
+  const fromMs = Date.parse(`${from}T00:00:00Z`) - DAY;
+  const toMs = Date.parse(`${to}T23:59:59.999Z`) + DAY;
+  const rows = await ctx.db
+    .query("revenueEvents")
+    .withIndex("by_org_occurred", (q) => q.eq("orgId", orgId).gte("occurredAt", fromMs).lte("occurredAt", toMs))
+    .take(10_000);
+  const inRange = rows.filter((r) => {
+    const date = dayKey(r.occurredAt, timezone);
+    return date >= from && date <= to;
+  });
+  const customerKeys = [...new Set(inRange.flatMap((event) =>
+    event.customerRef && event.kind !== "refund" && event.amountMinor - event.refundedMinor > 0
+      ? [`${event.source}\u0000${event.customerRef}`]
+      : [],
+  ))];
+  const counts = new Map<string, number>();
+  let historyPartial = false;
+  for (const key of customerKeys.slice(0, 2_000)) {
+    const [source, customerRef] = key.split("\u0000", 2);
+    const history = await ctx.db
+      .query("revenueEvents")
+      .withIndex("by_org_source_customer_occurred", (q) => q.eq("orgId", orgId).eq("source", source).eq("customerRef", customerRef))
+      .filter((q) => q.neq(q.field("kind"), "refund"))
+      .take(1_000);
+    if (history.length >= 1_000) historyPartial = true;
+    const first = history.find((event) => event.amountMinor - event.refundedMinor > 0);
+    if (!first) continue;
+    const firstDay = dayKey(first.occurredAt, timezone);
+    if (firstDay < from || firstDay > to) continue;
+    counts.set(firstDay, (counts.get(firstDay) ?? 0) + 1);
+  }
+  return {
+    counts,
+    hasIdentifiedCustomers: customerKeys.length > 0,
+    isFixture: inRange.some((r) => r.isFixture),
+    partial: rows.length >= 10_000 || customerKeys.length > 2_000 || historyPartial,
+    freshness: Math.max(0, ...rows.map((r) => r.ingestedAt)),
+  };
 }
 
 export const markCsvConnected = internalMutation({
@@ -155,6 +202,54 @@ export const markCsvConnected = internalMutation({
   },
 });
 
+/** Owner-imported daily ad reports make media efficiency measurable without pretending ClimbOS fetched the platform data. */
+export const importPlatformClaims = mutation({
+  args: {
+    slug: v.string(),
+    rows: v.array(v.object({
+      platform: v.union(v.literal("google_ads"), v.literal("meta_ads")),
+      date: v.string(),
+      conversions: v.number(),
+      conversionValue: v.number(),
+      spend: v.number(),
+      currency: v.string(),
+    })),
+  },
+  handler: async (ctx, { slug, rows }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    if (rows.length < 1 || rows.length > 400) throw appError("INVALID", "Import between 1 and 400 daily platform rows at a time.");
+    const keys = new Set<string>();
+    for (const row of rows) {
+      const dayMs = /^\d{4}-\d{2}-\d{2}$/.test(row.date) ? Date.parse(`${row.date}T00:00:00.000Z`) : Number.NaN;
+      if (!Number.isFinite(dayMs) || new Date(dayMs).toISOString().slice(0, 10) !== row.date) {
+        throw appError("INVALID", "Each report date must be a real calendar date in YYYY-MM-DD format.");
+      }
+      if (!/^[A-Z]{3}$/i.test(row.currency)) throw appError("INVALID", "Use a three-letter ISO currency code for every report row.");
+      if (!Number.isSafeInteger(row.conversions) || row.conversions < 0 || row.conversions > 100_000_000) throw appError("INVALID", "Conversions must be a nonnegative whole number.");
+      for (const [label, value] of [["conversion value", row.conversionValue], ["spend", row.spend]] as const) {
+        if (!Number.isFinite(value) || value < 0 || !Number.isSafeInteger(majorToMinor(value, row.currency)) || majorToMinor(value, row.currency) > 9_000_000_000_000) throw appError("INVALID", `${label} must be a nonnegative amount within the safe range for its currency.`);
+      }
+      const key = `${row.platform}\u0000${row.date}\u0000${row.currency.toUpperCase()}`;
+      if (keys.has(key)) throw appError("INVALID", "The import contains duplicate platform, date and currency rows.");
+      keys.add(key);
+    }
+
+    for (const row of rows) {
+      const currency = row.currency.toUpperCase();
+      const existing = await ctx.db
+        .query("platformClaims")
+        .withIndex("by_org_platform_date", (q) => q.eq("orgId", org._id).eq("platform", row.platform).eq("date", row.date))
+        .take(20);
+      const same = existing.find((claim) => !claim.isFixture && claim.currency === currency);
+      const values = { conversions: row.conversions, conversionValueMinor: majorToMinor(row.conversionValue, currency), spendMinor: majorToMinor(row.spend, currency), currency, spendOrigin: "owner_reported" as const };
+      if (same) await ctx.db.patch(same._id, values);
+      else await ctx.db.insert("platformClaims", { orgId: org._id, platform: row.platform, date: row.date, ...values, isFixture: false });
+    }
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "analytics.platform_claims_imported", summary: `Imported ${rows.length} owner-reported daily ad platform row(s).` });
+    return rows.length;
+  },
+});
+
 async function series(ctx: { db: QueryCtx["db"] }, orgId: Id<"organizations">, metricKey: string, from: string, to: string, kind: "observed" = "observed") {
   const rows = await ctx.db
     .query("metricDaily")
@@ -162,17 +257,65 @@ async function series(ctx: { db: QueryCtx["db"] }, orgId: Id<"organizations">, m
     .take(2000);
   const byDate = new Map<string, number>();
   let freshness = 0;
-  let source = "";
+  const sources = new Set<string>();
   let isFixture = false;
   for (const r of rows) {
     if (r.kind !== kind || r.channel) continue;
     byDate.set(r.date, (byDate.get(r.date) ?? 0) + r.value);
     freshness = Math.max(freshness, r.ingestedAt);
-    source = r.source;
+    sources.add(r.source);
     isFixture = isFixture || r.isFixture;
   }
   const points: DailyPoint[] = [...byDate.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([date, value]) => ({ date, value }));
-  return { points, freshness, source, isFixture };
+  return { points, freshness, source: sources.size === 1 ? [...sources][0] : sources.size > 1 ? "Multiple sources" : "", isFixture };
+}
+
+/** Small, read-only Home snapshot. Keep this cheaper than the full Results overview. */
+export const homeSnapshot = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const today = dayKey(Date.now(), org.timezone);
+    const to = addDays(today, -1);
+    const from = addDays(today, -30);
+    const metrics = [];
+    for (const key of ["visits", "signups"] as const) {
+      const current = await series(ctx, org._id, key, from, to);
+      metrics.push({
+        key,
+        label: METRICS[key].label,
+        definition: METRICS[key].definition,
+        hasData: current.points.length > 0,
+        total: current.points.reduce((sum, point) => sum + point.value, 0),
+        recordedDays: current.points.length,
+        sourceName: current.source || null,
+        freshness: current.freshness || null,
+        isFixture: current.isFixture,
+      });
+    }
+    return { from, to, timezone: org.timezone, metrics };
+  },
+});
+
+async function aiReferralSummary(ctx: { db: QueryCtx["db"] }, orgId: Id<"organizations">, from: string, to: string) {
+  const sourceRows = [];
+  for (const metricKey of ["ai_referral_sessions", "ai_referral_key_events"] as const) {
+    const rows = await ctx.db
+      .query("metricDaily")
+      .withIndex("by_org_metric_date", (q) => q.eq("orgId", orgId).eq("metricKey", metricKey).gte("date", from).lte("date", to))
+      .take(1000);
+    sourceRows.push(...rows);
+  }
+  const providers = summarizeAiReferralRows(sourceRows);
+  return {
+    sessions: providers.reduce((sum, row) => sum + row.sessions, 0),
+    keyEvents: providers.reduce((sum, row) => sum + row.keyEvents, 0),
+    providers,
+    freshness: providers.reduce((latest, row) => Math.max(latest, row.freshness), 0) || null,
+    period: { from, to },
+    source: "Google Analytics 4",
+    note: "Includes only sessions attributed to recognized AI-assistant source hosts in GA4. GA4 source labels may vary. Google Search AI feature visibility is not classified here; use the Search Console Generative AI report for that view. Key events follow the events this property owner configured in GA4. These are observed associations, not proof of cause.",
+  };
 }
 
 export const overview = query({
@@ -204,7 +347,31 @@ export const overview = query({
         isFixture: cur.isFixture,
         currency: key === "revenue" ? org.currency : null,
         timezone: org.timezone,
+        partial: false as boolean,
+        partialReason: null as string | null,
       });
+    }
+    const aiReferrals = await aiReferralSummary(ctx, org._id, from, addDays(today, -1));
+
+    const yesterday = addDays(today, -1);
+    const payerHistory = await firstRecordedPayerDays(ctx, org._id, prevFrom, yesterday, org.timezone);
+    const payerPoints = [];
+    for (let date = from; date <= yesterday; date = addDays(date, 1)) payerPoints.push({ date, value: payerHistory.counts.get(date) ?? 0 });
+    const previousEnd = addDays(from, -1);
+    const previousPayers = [...payerHistory.counts.entries()].reduce((sum, [date, count]) => date >= prevFrom && date <= previousEnd ? sum + count : sum, 0);
+    const payerMetric = metrics.find((metric) => metric.key === "paid_conversions");
+    if (payerMetric) {
+      payerMetric.label = METRICS.paid_conversions.label;
+      payerMetric.definition = METRICS.paid_conversions.definition;
+      payerMetric.hasData = payerHistory.hasIdentifiedCustomers;
+      payerMetric.total = payerPoints.reduce((sum, point) => sum + point.value, 0);
+      payerMetric.previousTotal = historyLimited ? null : previousPayers;
+      payerMetric.points = payerPoints;
+      payerMetric.freshness = payerHistory.freshness || null;
+      payerMetric.sourceName = payerHistory.hasIdentifiedCustomers ? "Billing" : null;
+      payerMetric.isFixture = payerHistory.isFixture;
+      payerMetric.partial = payerHistory.partial;
+      payerMetric.partialReason = payerHistory.partial ? "The billing history window exceeded the calculation limit; this customer count may be incomplete." : null;
     }
 
     // Attribution: billing revenue is the truth; ad-platform claims shown separately.
@@ -220,6 +387,9 @@ export const overview = query({
       occurredAt: r.occurredAt,
       customerRef: r.customerRef,
       orderRef: r.orderRef,
+      utmSource: r.utmSource,
+      utmMedium: r.utmMedium,
+      utmCampaign: r.utmCampaign,
       currency: r.currency,
       amountMinor: r.amountMinor,
       refundedMinor: r.refundedMinor,
@@ -232,7 +402,7 @@ export const overview = query({
         .query("touches")
         .withIndex("by_org_customer", (q) => q.eq("orgId", org._id).eq("customerRef", c))
         .take(20);
-      for (const t of ts) touches.push({ customerRef: t.customerRef, occurredAt: t.occurredAt, channel: t.channel, utmSource: t.utmSource, utmMedium: t.utmMedium, utmCampaign: t.utmCampaign });
+      for (const t of ts) touches.push({ customerRef: t.customerRef, source: t.source, occurredAt: t.occurredAt, channel: t.channel, utmSource: t.utmSource, utmMedium: t.utmMedium, utmCampaign: t.utmCampaign });
     }
     const lastTouch = events.length ? attribute(events, touches, { model: "last_touch", lookbackDays: 30 }) : null;
     const firstTouch = events.length ? attribute(events, touches, { model: "first_touch", lookbackDays: 30 }) : null;
@@ -248,7 +418,13 @@ export const overview = query({
     const claims = claimsRows.length
       ? summarizePlatformClaims(claimsRows.map((c) => ({ platform: c.platform, date: c.date, conversions: c.conversions, conversionValueMinor: c.conversionValueMinor, currency: c.currency })))
       : null;
-    const adSpendMinor = claimsRows.reduce((s, c) => s + c.spendMinor, 0);
+    const adSpendByCurrency = claimsRows.reduce<Record<string, number>>((totals, claim) => {
+      if (claim.isFixture && org.kind !== "demo") return totals;
+      const currency = claim.currency.toUpperCase();
+      totals[currency] = (totals[currency] ?? 0) + claim.spendMinor;
+      return totals;
+    }, {});
+    const adSpendMinor = adSpendByCurrency[org.currency.toUpperCase()] ?? null;
 
     const forecasts = await ctx.db
       .query("forecastRuns")
@@ -275,13 +451,14 @@ export const overview = query({
       timezone: org.timezone,
       isDemo: org.kind === "demo",
       metrics,
+      aiReferrals,
       attribution: {
         lastTouch: lastTouch ? summarizeAttribution(lastTouch) : null,
         firstTouch: firstTouch ? summarizeAttribution(firstTouch) : null,
         note: "Billing revenue is the source of truth. Channel credit uses tracked links (UTM) within 30 days; revenue with no tracked source stays in “Unattributed”. Attribution shows association, not cause.",
       },
       platformClaims: claims
-        ? { platforms: claims.platforms, warning: OVERLAP_WARNING, adSpendMinor }
+        ? { platforms: claims.platforms, warning: OVERLAP_WARNING, adSpendMinor, adSpendByCurrency }
         : null,
       forecasts: forecasts.map((f) => ({ id: f._id, metricKey: f.metricKey, status: f.status, horizonDays: f.horizonDays, createdAt: f.createdAt, isFixture: f.isFixture })),
       gaps,
@@ -308,7 +485,16 @@ export const cohorts = query({
       .query("revenueEvents")
       .withIndex("by_org_occurred", (q) => q.eq("orgId", org._id).gte("occurredAt", start.getTime()))
       .take(10_000);
-    const result = computeCohorts(rows, { currency: org.currency, nowMs: now, maxMonths: 6 });
+    const result = computeCohorts(rows.map((row) => ({
+      source: row.source,
+      customerRef: row.customerRef,
+      orderRef: row.orderRef,
+      occurredAt: row.occurredAt,
+      amountMinor: row.amountMinor,
+      refundedMinor: row.refundedMinor,
+      kind: row.kind,
+      currency: row.currency,
+    })), { currency: org.currency, nowMs: now, maxMonths: 6 });
     return {
       currency: org.currency,
       truncated: rows.length >= 10_000,

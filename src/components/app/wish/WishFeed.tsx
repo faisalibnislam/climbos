@@ -3,10 +3,10 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { CircleCheck, CircleDashed, CircleX, Lightbulb, Loader2, Plug, Sparkles, Zap } from "@/components/icons"
+import { CircleCheck, CircleX, Lightbulb, Plug, Sparkles, Zap } from "@/components/icons"
 import Link from "next/link";
 import { useState } from "react";
-import { Badge, Button, Skeleton, SocialIcon, Tooltip, networkOf, toast } from "@/components/ui";
+import { Button, Skeleton, SocialIcon, Tooltip, networkOf, toast } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import { microsToCreditsLabel, relativeTime } from "@/components/app/money";
 import { RoleAvatar } from "@/components/app/RoleAvatar";
@@ -16,6 +16,8 @@ import { RetryRunIfPossible, RunProgressCompact } from "@/components/app/content
 import { climbTarget } from "@/components/climb/context";
 import { wishesFrom } from "./pairing";
 import { Prose } from "@/components/ds/content";
+import { ActionCardStatus, actionCardSetupHref, actionCardStartLabel, actionCardStatusExplanation } from "@/components/app/ActionCardStatus";
+import { wishProgressKind, WISH_PROGRESS_LABELS } from "./progress";
 
 type Today = NonNullable<ReturnType<typeof useQuery<typeof api.workspace.today>>>;
 type ChatMessage = Today["chat"][number];
@@ -34,7 +36,7 @@ export function WishFeed({ slug, chat }: { slug: string; chat: ChatMessage[] }) 
   return (
     <section aria-labelledby="wishes-heading" className="flex flex-col gap-3">
       <h2 id="wishes-heading" className="heading-section">
-        Your wishes
+        Your requests
       </h2>
       <ol className="flex flex-col gap-3" aria-live="polite" aria-relevant="additions text">
         {shown.map((w) => (
@@ -57,20 +59,21 @@ function WishCard({ slug, wish }: { slug: string; wish: Wish }) {
   const thinking = ask.status === "thinking" && !answer;
   const failed = ask.status === "failed" && !answer?.cards.length;
   const cards = answer?.cards ?? [];
-  const allDone = cards.length > 0 && cards.every((c) => ["done", "rejected"].includes(c.status) || c.kind === "note");
+  const progress = wishProgressKind(cards, thinking, failed);
+  const positiveResolution = progress === "completed" || progress === "ready_for_review";
   return (
     <article {...climbTarget("wish", ask.id, ask.text)} className="overflow-hidden rounded-xl border border-line bg-surface">
       <header className="flex items-start gap-3 border-b border-line bg-surface-2/60 px-4 py-3">
-        <span aria-hidden className={cn("mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg", thinking ? "bg-sun-soft text-sun-strong" : allDone ? "bg-brand-100 text-brand-800" : "bg-surface-3 text-ink-2")}>
-          {thinking ? <Sparkles className="size-4 animate-soft-pulse" /> : allDone ? <CircleCheck className="size-4" /> : <Zap className="size-4" />}
+        <span aria-hidden className={cn("mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg", thinking ? "bg-sun-soft text-sun-strong" : positiveResolution ? "bg-brand-100 text-brand-800" : "bg-surface-3 text-ink-2")}>
+          {thinking ? <Sparkles className="size-4 animate-soft-pulse" /> : positiveResolution ? <CircleCheck className="size-4" /> : <Zap className="size-4" />}
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-ink">
-            <span className="sr-only">You wished: </span>“{ask.text}”
+            <span className="sr-only">You asked: </span>“{ask.text}”
           </p>
           <p className="mt-0.5 text-xs text-ink-3">
             {relativeTime(ask.createdAt)}
-            {thinking ? " · Reading…" : allDone ? " · Done" : cards.some((c) => c.status === "running") ? " · Working" : ""}
+            {progress ? ` · ${WISH_PROGRESS_LABELS[progress]}` : ""}
           </p>
         </div>
       </header>
@@ -152,6 +155,7 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
   const role = card.roles[0] ?? "coo";
   const network = card.channel ? networkOf(card.channel) : null;
   const href = resultHref(slug, card);
+  const setupHref = actionCardSetupHref(slug, card.kind);
   return (
     <div className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -165,15 +169,15 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
           <Tooltip content={card.description}>
             <p tabIndex={0} className="truncate text-ui font-medium text-ink">{card.title}</p>
           </Tooltip>
+          {actionCardStatusExplanation(card.status, card.externalEffect, card.kind) ? <p className="text-xs text-ink-3">{actionCardStatusExplanation(card.status, card.externalEffect, card.kind)}</p> : null}
           {card.status === "running" && card.runId ? <RunProgressCompact slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" /> : card.status === "blocked" || (card.status === "proposed" && card.blockedReason) ? <p className="truncate text-xs text-ink-3">{card.blockedReason}</p> : null}
           {card.status === "failed" && card.runId ? <RetryRunIfPossible slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" /> : null}
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2 pl-8 sm:pl-0">
+        <ActionCardStatus status={card.status} externalEffect={card.externalEffect} kind={card.kind} />
         {card.status === "running" ? (
-          <Badge tone="blue" icon={<Loader2 className="animate-spin" />}>
-            Working
-          </Badge>
+          null
         ) : card.status === "done" ? (
           href ? (
             <Button asChild size="sm" variant="secondary">
@@ -182,9 +186,7 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
               </Link>
             </Button>
           ) : (
-            <Badge tone="green" icon={<CircleCheck />}>
-              Done
-            </Badge>
+            null
           )
         ) : card.status === "failed" ? (
           card.runId ? (
@@ -194,20 +196,15 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
               </Link>
             </Button>
           ) : (
-            <Badge tone="red" icon={<CircleX />}>
-              Didn’t finish
-            </Badge>
+            null
           )
         ) : card.status === "rejected" ? (
-          <Badge tone="neutral">Skipped</Badge>
-        ) : card.kind === "set_up_autopilot" && card.status === "proposed" ? (
-          <Button asChild size="sm">
-            <Link href={`/app/${slug}/autopilot`}>Set up autopilot</Link>
-          </Button>
-        ) : card.kind === "connect_account" ? (
+          null
+        ) : setupHref && card.status === "proposed" ? (
           <Button asChild size="sm" variant="secondary">
-            <Link href={`/app/${slug}/connections`}>
-              <Plug aria-hidden /> Connect
+            <Link href={setupHref}>
+              {card.kind === "connect_account" ? <Plug aria-hidden /> : null}
+              {actionCardStartLabel(card.kind, card.externalEffect)}
             </Link>
           </Button>
         ) : card.status === "proposed" ? (
@@ -227,16 +224,14 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
                 }
               }}
             >
-              {card.kind === "note" ? "Got it" : card.externalEffect ? "Prepare it" : "Do it"}
+              {actionCardStartLabel(card.kind, card.externalEffect)}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => dismiss({ slug, cardId: card.id as Id<"actionCards"> }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
               Not now
             </Button>
           </>
         ) : card.status === "blocked" ? (
-          <Badge tone="amber" icon={<CircleDashed />}>
-            Needs setup
-          </Badge>
+          null
         ) : null}
       </div>
     </div>

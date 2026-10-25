@@ -39,9 +39,8 @@ const SUPERLATIVES = /\b(best|#1|number one|leading|top-rated|fastest|cheapest|m
 /**
  * Claim ledger (expansion slice 5; BK03 Ch 2 "your opinion isn't proof", BK02
  * Ch 10 "don't headline advantages you can't prove"): capability, scale and
- * leadership claims a buyer would rely on. Each needs the same claim in the
- * facts or research; otherwise it's an unsupported claim. `key` finds the
- * claim in the evidence.
+ * leadership claims a buyer would rely on. Each needs matching, permitted
+ * evidence; otherwise it's unsupported. `key` finds the claim in the evidence.
  */
 const CLAIMS: { kind: string; re: RegExp; key: (m: RegExpMatchArray) => RegExp }[] = [
   { kind: "a speed or cost multiplier", re: /\b(\d+(?:\.\d+)?)\s?[x×]\s+(?:faster|quicker|cheaper|more|better|easier|less)\b/i, key: (m) => new RegExp(`\\b${m[1].replace(".", "\\.")}\\s?[x×]`, "i") },
@@ -52,16 +51,58 @@ const CLAIMS: { kind: string; re: RegExp; key: (m: RegExpMatchArray) => RegExp }
   { kind: "full automation", re: /\bfully[- ]automat\w+\b|\bhands[- ]free\b|\bno human\b/i, key: () => /fully[- ]automat|hands[- ]free|no human|automat/i },
 ];
 
+/** Availability and deadline claims must be grounded in a confirmed current offer. */
+const SCARCITY_CLAIM = /\b(?:only\s+\d[\d,.]*\s+(?:spots?|seats?|places?|tickets?|items?|rooms?|appointments?|openings?)\s+(?:left|remain(?:ing)?|available)|last\s+(?:few|\d+[\d,.]*|remaining)\s+(?:spots?|seats?|places?|tickets?|items?|rooms?|appointments?|openings?)|limited[- ](?:time|availability|quantity|stock|seats?|spots?|places?|tickets?)|while\s+(?:supplies|stocks?)\s+last|almost\s+sold\s+out|last\s+chance)\b/i;
+const DEADLINE_CLAIM = /\b(?:offer|sale|discount|price|registration|enrollment|booking|application)\s+(?:ends?|expires?|closes?)\s+(?:today|tonight|tomorrow|on\s+[\p{L}\d, -]{3,30}|in\s+\d+\s+(?:hours?|days?|weeks?)|at\s+midnight|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|\b(?:ends?|expires?|closes?)\s+(?:today|tonight|tomorrow|on\s+[\p{L}\d, -]{3,30}|in\s+\d+\s+(?:hours?|days?|weeks?)|at\s+midnight|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/iu;
+const SCARCITY_EVIDENCE = /\b(?:limited|only\s+\d|\d[\d,.]*\s+(?:spots?|seats?|places?|tickets?|items?|rooms?|appointments?|openings?)\s+(?:left|remain(?:ing)?|available)|last\s+(?:few|\d+|remaining)|while\s+(?:supplies|stocks?)\s+last|almost\s+sold\s+out|last\s+chance)\b/i;
+const DEADLINE_EVIDENCE = /\b(?:ends?|expires?|closes?|deadline|through|until|by\s+(?:today|tonight|tomorrow|\w+\s+\d{1,2}|\d{1,2}\s+\w+)|today|tonight|tomorrow|midnight)\b/i;
+
+/** Named integrations create concrete buyer expectations and are easy to overstate. */
+const NAMED_INTEGRATION = /\b(?:[Ii]ntegrat\w*\s+with|[Cc]onnects?\s+(?:directly\s+)?to|[Cc]onnects?\s+with|[Ss]yncs?\s+with)\s+([A-Z][\w.+-]*(?:\s+[A-Z][\w.+-]*){0,2}|CRM|API)\b/g;
+const INTEGRATION_EVIDENCE = /\b(?:integrat\w*|connect\w*|sync\w*)\b/i;
+const NON_AFFIRMATIVE_EVIDENCE = /\b(?:no|not|isn't|aren't|doesn't|does not|never|no longer|without|lack(?:s|ing)?|unavailable|not yet|request(?:ed|ing)?|ask(?:ed|ing)? for|want(?:s|ed)?|would|could|might|may|plan(?:s|ned)? to|hope to)\b/i;
+
+function supportedByAffirmativeEvidence(pattern: RegExp, evidence: string): boolean {
+  return evidence.split(/[\n.!?;]+/).some((sentence) => pattern.test(sentence) && !NON_AFFIRMATIVE_EVIDENCE.test(sentence));
+}
+
+function hasIntegrationEvidence(service: string, evidence: string): boolean {
+  return evidence.split(/[\n.!?;]+/).some((sentence) => sentence.toLocaleLowerCase("en-US").includes(service.toLocaleLowerCase("en-US")) && INTEGRATION_EVIDENCE.test(sentence) && !NON_AFFIRMATIVE_EVIDENCE.test(sentence));
+}
+
+function supportsUrgencyClaim(claim: string, evidence: string, kind: "scarcity" | "deadline"): boolean {
+  const numbers = (value: string) => (value.match(/\b\d[\d,.]*\b/g) ?? []).map((item) => item.replace(/[,.]/g, ""));
+  const number = numbers(claim)[0];
+  const claimEvidence = kind === "scarcity" ? SCARCITY_EVIDENCE : DEADLINE_EVIDENCE;
+  return evidence.split(/[\n.!?;]+/).some((sentence) => {
+    return claimEvidence.test(sentence) && !NON_AFFIRMATIVE_EVIDENCE.test(sentence) && (!number || numbers(sentence).includes(number));
+  });
+}
+
 /** Unsupported capability, scale or leadership claims in customer-facing text. */
 export function lintClaims(fields: { path: string; text: string }[], evidence: string): LintIssue[] {
   const issues: LintIssue[] = [];
   for (const { path, text } of fields) {
-    for (const c of CLAIMS) {
-      const m = text.match(c.re);
-      if (m && !c.key(m).test(evidence)) {
-        issues.push({ severity: "error", rule: "unsupported_claim", message: `"${m[0]}" is ${c.kind} no fact or research supports. Say what the product verifiably does, or drop it.`, path });
+    for (const m of text.matchAll(NAMED_INTEGRATION)) {
+      if (!hasIntegrationEvidence(m[1], evidence)) {
+        issues.push({ severity: "error", rule: "unsupported_capability", message: `The integration with "${m[1]}" has no matching verified capability fact. Remove the promise or confirm the integration first.`, path });
         break;
       }
+    }
+    for (const c of CLAIMS) {
+      const m = text.match(c.re);
+      if (m && !supportedByAffirmativeEvidence(c.key(m), evidence)) {
+        issues.push({ severity: "error", rule: "unsupported_claim", message: `"${m[0]}" is ${c.kind} no verified capability evidence supports. Say what the product verifiably does, or drop it.`, path });
+        break;
+      }
+    }
+    const scarcity = text.match(SCARCITY_CLAIM);
+    if (scarcity && !supportsUrgencyClaim(scarcity[0], evidence, "scarcity")) {
+      issues.push({ severity: "error", rule: "unsupported_scarcity", message: "Scarcity or inventory claims need current confirmed availability evidence, including the same quantity when one is stated. Remove the urgency or confirm the real limit first.", path });
+    }
+    const deadline = text.match(DEADLINE_CLAIM);
+    if (deadline && !supportsUrgencyClaim(deadline[0], evidence, "deadline")) {
+      issues.push({ severity: "error", rule: "unsupported_deadline", message: "A deadline or expiring offer needs a current confirmed end date or time. Remove the deadline or confirm the real terms first.", path });
     }
   }
   return issues;
@@ -97,6 +138,8 @@ export interface CopyLintOptions {
   skip?: (path: string) => boolean;
   /** Text the numbers in the output must trace back to (facts, brief, research). */
   evidence?: string;
+  /** Evidence allowed to substantiate customer-facing product and performance claims. */
+  claimEvidence?: string;
   maxExclamations?: number;
   /** Max emoji per 150 characters (0 = no emoji). */
   emojiPer150?: number;
@@ -164,7 +207,9 @@ export function lintCopy(output: unknown, opts: CopyLintOptions = {}): LintIssue
       issues.push({ severity: "warn", rule: "superlative", message: "Superlative claim (best, #1, leading…) needs a cited source or should go.", path });
     }
     if (/\[\s*\d+\s*\]/.test(text)) issues.push({ severity: "error", rule: "fact_marker", message: "Contains a [n] fact marker in reader-facing text.", path });
-    if (opts.publishable && opts.evidence !== undefined) issues.push(...lintClaims([{ path, text }], opts.evidence));
+    if (opts.publishable && (opts.claimEvidence !== undefined || opts.evidence !== undefined)) {
+      issues.push(...lintClaims([{ path, text }], opts.claimEvidence ?? opts.evidence ?? ""));
+    }
     if (opts.evidence !== undefined) {
       const untraced = untracedNumbers(text, opts.evidence, { labelled: opts.labelled });
       if (untraced.length)

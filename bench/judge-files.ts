@@ -63,7 +63,7 @@ Weigh, in order:
 2. Strategic quality and specificity: is it unmistakably for THIS business and audience, focused, prioritized and actionable?
 3. Craft for the channel: would it perform on the platform as written (hooks, structure, limits, native style)?
 4. Usefulness to a non-expert owner: clear, honest, ready to use.
-5. For plans and strategy: creative but predictable. Non-obvious plays built on proven mechanics, with honest evidence-based forecasts and tests, beat generic channel lists. Unsupported optimism is not creativity.
+5. For plans and strategy: creative and business-relevant across grounded, adjacent, and bold options. Reward surprising, explainable originality and a useful reversible test; bold ideas need not have a precedent or predictable forecast. Keep evidence and execution feasibility visible without letting them suppress a bold hypothesis. Generic channel lists and unsupported certainty score poorly.
 
 Ignore formatting style (one may read like structured fields, the other like a document). Do not reward length for its own sake. If both are equally good or equally weak, say tie.`;
 
@@ -73,7 +73,7 @@ const SCORE_SYSTEM = `You are a strict senior marketing expert. Score one piece 
 - strategy: focused, prioritized, sound judgement for this goal and budget
 - craft: would perform on the channel as written
 - usefulness: ready for a non-expert owner to use
-- creativity: non-obvious ideas a competitor isn't using, still grounded in proven mechanics and evidence
+- creativity: meaningful originality that is surprising and relevant to this business; distinguish grounded evidence, explainable transfer, and speculative bold hypotheses. Reward a strong reversible test; do not require a precedent for bold ideas or penalize novelty solely for low evidence or feasibility
 - overall: your overall verdict
 - topIssue: the single biggest problem, in one sentence.
 Ignore formatting style.`;

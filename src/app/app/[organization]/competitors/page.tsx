@@ -2,14 +2,14 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Eye, Plus, RefreshCw, Trash2 } from "@/components/icons"
+import { ExternalLink, Eye, Plus, RefreshCw, Trash2 } from "@/components/icons"
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
 import { Scannable, toBullets } from "@/components/ds/content";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
-import { Button, Callout, Card, CardContent, EmptyState, Input, toast } from "@/components/ui";
+import { Button, Callout, Card, CardContent, EmptyState, Input, Select, toast } from "@/components/ui";
 
 /** Competitor watch: their sites, checked weekly; only real changes reach you. */
 export default function CompetitorsPage() {
@@ -17,7 +17,10 @@ export default function CompetitorsPage() {
   const data = useQuery(api.competitors.overview, { slug });
   const add = useMutation(api.competitors.add);
   const remove = useMutation(api.competitors.remove);
+  const confirmLegacyWatch = useMutation(api.competitors.confirmLegacyWatch);
   const checkNow = useMutation(api.competitors.checkNow);
+  const setDigestCadence = useMutation(api.competitors.setDigestCadence);
+  const dismissSuggestion = useMutation(api.competitors.dismissSuggestion);
   const [f, setF] = useState({ name: "", url: "" });
   const [busy, setBusy] = useState<string | null>(null);
   async function run(key: string, fn: () => Promise<unknown>, ok?: string) {
@@ -33,11 +36,14 @@ export default function CompetitorsPage() {
   }
   if (data === undefined) return <LoadingBlock label="Loading competitors…" lines={4} />;
   const full = data.watches.filter((w) => w.active).length >= data.limit;
+  async function changeDigestCadence(cadence: "per_run" | "daily" | "weekly" | "off") {
+    await run("digest", () => setDigestCadence({ slug, cadence }), "Competitor alert preference saved");
+  }
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <PageHeader
         section="competitors"
-        title="Competitors"
+        title="Similar businesses"
         intro={`${data.watches.length} of ${data.limit} · checked Mondays`}
         actions={
           data.watches.length ? (
@@ -49,31 +55,107 @@ export default function CompetitorsPage() {
       />
       <Card>
         <CardContent className="flex flex-col gap-3">
+          <div className="grid gap-2 border-b border-line pb-3 sm:grid-cols-[minmax(0,1fr)_14rem] sm:items-center">
+            <div>
+              <p className="text-sm font-medium text-ink">Change alerts</p>
+              <p className="text-xs leading-5 text-ink-3">Weekly checks stay on their schedule. This controls in-app notices; summaries remain on this page when alerts are off.</p>
+            </div>
+            {data.canManageDigestCadence ? (
+              <Select
+                aria-label="Competitor change alert cadence"
+                value={data.digestCadence}
+                disabled={busy === "digest"}
+                onValueChange={(value) => void changeDigestCadence(value as "per_run" | "daily" | "weekly" | "off")}
+                options={[
+                  { value: "per_run", label: "Every meaningful run" },
+                  { value: "daily", label: "At most once a day" },
+                  { value: "weekly", label: "At most once a week" },
+                  { value: "off", label: "Off" },
+                ]}
+              />
+            ) : <p className="text-sm text-ink-2">{({ per_run: "Every meaningful run", daily: "At most once a day", weekly: "At most once a week", off: "Off" } as const)[data.digestCadence]}</p>}
+          </div>
           {data.watches.length ? (
             <ul className="flex flex-col divide-y divide-line">
               {data.watches.map((w) => (
-                <li key={w.id} className="flex items-center justify-between gap-3 py-2">
+                <li key={w.id} className="flex flex-wrap items-start justify-between gap-3 py-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-ink">{w.name}</p>
                     <p className="truncate text-xs text-ink-3">{w.url.replace(/^https?:\/\//, "")}</p>
-                    <p className={w.lastError ? "text-xs text-red-800" : "text-xs text-ink-3"}>{w.lastError ? `Couldn't read: ${w.lastError}` : w.lastCheckedAt ? `Checked ${relativeTime(w.lastCheckedAt)}` : "Reading…"}</p>
+                    <p className={w.needsConfirmation ? "text-xs text-ink-3" : w.lastError ? "text-xs text-red-800" : "text-xs text-ink-3"}>{w.needsConfirmation ? "Paused until an owner or admin confirms recurring monitoring." : w.lastError ? `Couldn't read: ${w.lastError}` : w.lastCheckedAt ? `Checked ${relativeTime(w.lastCheckedAt)}` : "Reading…"}</p>
                   </div>
-                  <Button size="sm" variant="ghost" aria-label={`Stop watching ${w.name}`} onClick={() => run("rm", () => remove({ slug, id: w.id }))}>
-                    <Trash2 aria-hidden />
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {w.needsConfirmation && data.canConfirmLegacyWatch ? (
+                      <Button size="sm" variant="secondary" loading={busy === `confirm:${w.id}`} onClick={() => run(`confirm:${w.id}`, () => confirmLegacyWatch({ slug, id: w.id }), `Monitoring confirmed for ${w.name}`)}>
+                        Confirm weekly monitoring
+                      </Button>
+                    ) : null}
+                    {w.needsConfirmation && !data.canConfirmLegacyWatch ? <span className="text-xs text-ink-3">Ask an owner or admin to confirm.</span> : null}
+                    <Button size="sm" variant="ghost" aria-label={`Stop watching ${w.name}`} onClick={() => run(`rm:${w.id}`, () => remove({ slug, id: w.id }))}>
+                      <Trash2 aria-hidden />
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
           ) : null}
-          {data.suggested.length && !full ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-ink-3">Suggested:</span>
+          {data.suggested.length ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-medium text-ink-2">Competitor suggestions from business research</p>
+              {full ? <p className="text-xs text-ink-3">Your watch list is full. You can still mark a suggestion as not relevant, or stop watching a site before adding another.</p> : null}
               {data.suggested.map((s) => (
-                <Button key={s.url} size="sm" variant="secondary" loading={busy === s.url} onClick={() => run(s.url, () => add({ slug, name: s.name, url: s.url }), `Watching ${s.name}`)}>
-                  <Plus aria-hidden /> {s.name}
-                </Button>
+                <div key={s.url} className="rounded-lg border border-line bg-surface-2 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-ink">{s.name}</p>
+                      <p className="text-xs text-ink-3">{s.kind === "direct" ? "Research classifies this as a direct competitor. Customer-segment and geography fit have not been verified." : "Research has not verified competitor type, customer-segment fit, or geography fit. Review the source before adding it."}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button size="sm" variant="ghost" loading={busy === `dismiss:${s.url}`} aria-label={`Mark ${s.name} as not relevant`} onClick={() => run(`dismiss:${s.url}`, () => dismissSuggestion({ slug, url: s.url }), `${s.name} won't appear in future suggestions`)}>
+                        Not relevant
+                      </Button>
+                      <Button size="sm" variant="secondary" disabled={full} loading={busy === s.url} onClick={() => run(s.url, () => add({ slug, name: s.name, url: s.url }), `Watching ${s.name}`)}>
+                        <Plus aria-hidden /> Add to watch list
+                      </Button>
+                    </div>
+                  </div>
+                  {s.comparison?.length ? (
+                    <details className="mt-2 rounded-[var(--radius-control)] border border-line px-3 py-2">
+                      <summary className="min-h-8 cursor-pointer py-1 text-xs font-medium text-ink-2">Why it may be relevant</summary>
+                      <div className="mt-2 flex flex-col gap-2">
+                        {s.comparison.map((item, index) => (
+                          <div key={`${item.dimension}-${item.sourceUrl}-${index}`} className="grid min-w-0 gap-1 border-t border-line pt-2 text-xs sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-x-3">
+                            <span className="font-medium capitalize text-ink-2">{item.dimension.replaceAll("_", " ")}</span>
+                            <div className="min-w-0 space-y-1.5">
+                              <p className="break-words text-ink"><span className="font-medium">Research summary: </span>{item.finding}</p>
+                              <p className="break-words text-ink-2"><span className="font-medium">Possible relevance: </span>{item.implication}</p>
+                              <a className="inline-flex max-w-full break-all font-medium text-brand underline underline-offset-2" href={item.sourceUrl} target="_blank" rel="noopener noreferrer">Open source page</a>
+                            </div>
+                          </div>
+                        ))}
+                        <p className="text-xs text-ink-3">These page claims do not prove that customers choose this business or that the comparison fits your market.</p>
+                      </div>
+                    </details>
+                  ) : <p className="mt-2 text-xs text-ink-3">No comparison detail was recorded. <a className="font-medium text-brand underline underline-offset-2" href={s.sourceUrl} target="_blank" rel="noopener noreferrer">Review the research source</a> before adding it.</p>}
+                </div>
               ))}
             </div>
+          ) : null}
+          {data.dismissedSuggestions.length ? (
+            <details className="rounded-lg border border-line px-3 py-2">
+              <summary className="min-h-8 cursor-pointer py-1 text-xs font-medium text-ink-2">Suggestions marked not relevant ({data.dismissedSuggestions.length})</summary>
+              <div className="mt-2 flex flex-col gap-2">
+                <p className="text-xs text-ink-3">These are kept out of future suggestions for this workspace. To watch one later, enter its website below.</p>
+                <ul className="flex flex-col gap-1">
+                  {data.dismissedSuggestions.slice(0, 10).map((item) => (
+                    <li key={item.url} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span className="font-medium text-ink-2">{item.name}</span>
+                      {item.sourceUrl ? <a className="text-brand underline underline-offset-2" href={item.sourceUrl} target="_blank" rel="noopener noreferrer">Research source</a> : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </details>
           ) : null}
           <form
             className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]"
@@ -113,6 +195,36 @@ export default function CompetitorsPage() {
                     <Scannable text={c.summary} max={3} tone="muted" />
                   ) : null}
                   {c.soWhat ? <Callout tone="info">{c.soWhat}</Callout> : null}
+                  <div className="rounded-lg border border-line bg-surface-2 p-3">
+                    <p className="text-xs font-semibold text-ink">AI interpretation of observed page changes</p>
+                    {c.sourceUrls.length ? (
+                      <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                        {c.sourceUrls.filter((url) => /^https?:\/\//i.test(url)).map((url) => (
+                          <li key={url}>
+                            <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-1 break-all text-xs font-medium text-brand underline underline-offset-2">
+                              View source <ExternalLink aria-hidden className="size-3 shrink-0" />
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : <p className="mt-1 text-xs text-ink-3">No source page was saved for this change.</p>}
+                    {c.evidence ? (
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        {c.evidence.removed.length ? <div><p className="text-xs font-medium text-ink-2">Text no longer observed</p><ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-ink-3">{c.evidence.removed.slice(0, 3).map((line, i) => <li key={`${i}-${line}`}>{line}</li>)}</ul></div> : null}
+                        {c.evidence.added.length ? <div><p className="text-xs font-medium text-ink-2">New text observed</p><ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-ink-3">{c.evidence.added.slice(0, 3).map((line, i) => <li key={`${i}-${line}`}>{line}</li>)}</ul></div> : null}
+                      </div>
+                    ) : null}
+                  </div>
+                  {c.suggestedAction ? (
+                    <Callout tone="warning" title="Possible test idea · review before acting">
+                      <p className="font-medium">{c.suggestedAction.action}</p>
+                      {c.suggestedAction.evidenceQuote ? <blockquote className="mt-2 break-words border-l-2 border-line pl-3 text-xs text-ink-2"><span className="font-medium">Page change behind this idea:</span> “{c.suggestedAction.evidenceQuote}”</blockquote> : null}
+                      <p className="mt-1">First step: {c.suggestedAction.firstStep}</p>
+                      <p className="mt-1">Success signal: {c.suggestedAction.successMetric} · review after {c.suggestedAction.reviewAfterDays} days</p>
+                      <p className="mt-1 text-xs">Caveat: {c.suggestedAction.caveat}</p>
+                    </Callout>
+                  ) : null}
+                  <p className="text-xs text-ink-3">A changed competitor page is a market signal. It does not show why customers choose that competitor or prove a test will work for your business.</p>
                 </CardContent>
               </Card>
             </li>

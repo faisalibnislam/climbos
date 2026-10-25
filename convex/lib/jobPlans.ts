@@ -50,9 +50,9 @@ export function agentSteps(spec: AgentSpec<unknown>, research?: { maxSearches: n
 }
 
 /** The two steps (revised draft + review) one extra revision round needs. */
-export function agentRevisionSteps(spec: AgentSpec<unknown>): PlannedStep[] {
+export function agentRevisionSteps(spec: AgentSpec<unknown>, revisionModel?: AgentSpec<unknown>["models"]["draft"]): PlannedStep[] {
   return [
-    { kind: "model", role: spec.role, modelKey: spec.models.revise ?? spec.models.draft, inputBudget: 40_000, outputBudget: spec.maxTokens.draft },
+    { kind: "model", role: spec.role, modelKey: revisionModel ?? spec.models.revise ?? spec.models.draft, inputBudget: 40_000, outputBudget: spec.maxTokens.draft },
     { kind: "model", role: spec.role, modelKey: spec.models.critic, inputBudget: 40_000, outputBudget: spec.maxTokens.critic },
   ];
 }
@@ -63,7 +63,7 @@ const CONSISTENCY: PlannedStep = { kind: "model", role: "ceo", modelKey: CALL_RO
 const QUICK_TAKE: PlannedStep = { kind: "model", role: "ceo", modelKey: CALL_ROUTES.chat_intent, inputBudget: 8_000, outputBudget: 3_000 };
 
 function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string }, mode: AiMode): JobPlan | null {
-  // Priced with the models this mode runs (Expert: Sol drafts the expert agents).
+  // Priced at Luna baseline; an eligible Expert revision reserves its selected model before running.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const any = (s: AgentSpec<any>) => (mode === "expert" ? { ...s, models: routeModels(s.id, "expert") } : { ...s, drafts: draftsFor(s.id, "basic") }) as AgentSpec<unknown>;
   const plan = (title: string, roles: RoleKey[], tasks: TaskType[], steps: PlannedStep[], meters: PartialMeters): JobPlan => ({ kind, title, roles, tasks, steps, meters, aiMode: mode });
@@ -85,12 +85,14 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
     case "content_social": {
       const qty = Math.max(1, Math.min(params.quantity ?? 3, 6));
       const images = Math.max(0, Math.min(params.images ?? 0, qty, 2));
+      const r = { maxSearches: searches("social_posts") };
+      const spec = any(socialSpec([params.channel ?? "instagram"]));
       return plan(
         `Draft ${qty} social post${qty === 1 ? "" : "s"}`,
         images ? ["social_media_manager", "creative_director"] : ["social_media_manager"],
         ["social_posts"],
-        [...agentSteps(any(socialSpec([params.channel ?? "instagram"]))), ...Array.from({ length: images }, (): PlannedStep => ({ kind: "image", role: "creative_director", imageAttempts: 2 }))],
-        { socialPosts: qty, imageAttempts: images * 2, deliveredImages: images },
+        [...agentSteps(spec, r), ...Array.from({ length: images }, (): PlannedStep => ({ kind: "image", role: "creative_director", imageAttempts: 2 }))],
+        { socialPosts: qty, searchCalls: r.maxSearches, imageAttempts: images * 2, deliveredImages: images },
       );
     }
     case "content_ads": {
@@ -105,8 +107,8 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
     }
     case "conversion_audit": {
       const r = { maxSearches: searches("conversion_audit") };
-      return plan("Audit your website for conversions", ["cso", "cmo"], ["conversion_audit"], [{ kind: "research", scrapeCredits: 2 }, ...agentSteps(any(conversionAuditSpec()), r)], {
-        scrapeCredits: 2,
+      return plan("Review your website and social content", ["cso", "cmo"], ["conversion_audit"], [{ kind: "research", scrapeCredits: 5 }, ...agentSteps(any(conversionAuditSpec()), r)], {
+        scrapeCredits: 5,
         searchCalls: r.maxSearches,
       });
     }
@@ -114,8 +116,10 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
       return plan("Plan retention and loyalty", ["customer_success_manager"], ["retention_plan"], agentSteps(any(retentionSpec())), {});
     case "sales_sequence":
       return plan("Plan sales follow-ups", ["cso"], ["sales_sequence"], agentSteps(any(salesSpec())), {});
-    case "social_calendar":
-      return plan("Plan next week's posts", ["social_media_manager"], ["social_posts"], agentSteps(any(socialCalendarSpec({ instagram: 3 }))), {});
+    case "social_calendar": {
+      const r = { maxSearches: searches("social_posts") };
+      return plan("Plan next week's posts", ["social_media_manager"], ["social_posts"], agentSteps(any(socialCalendarSpec({ instagram: 3 })), r), { searchCalls: r.maxSearches });
+    }
     case "outbound": {
       const r = { maxSearches: searches("prospecting") };
       // Our own website and email checks (up to 3 pages per prospect) use our fetcher: counted, not charged.
@@ -232,11 +236,11 @@ function v1Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
     case "conversion_audit":
       return {
         kind,
-        title: "Audit your website for conversions",
+        title: "Review your website and social content",
         roles: ["cso", "cmo"],
         tasks: ["conversion_audit"],
-        steps: [{ kind: "research", scrapeCredits: 2 }, modelStep("conversion_audit")],
-        meters: { scrapeCredits: 2 },
+        steps: [{ kind: "research", scrapeCredits: 5 }, modelStep("conversion_audit")],
+        meters: { scrapeCredits: 5 },
       };
     case "retention_plan":
       return { kind, title: "Plan retention and loyalty", roles: ["customer_success_manager"], tasks: ["retention_plan"], steps: [modelStep("retention_plan")], meters: {} };
@@ -270,6 +274,7 @@ function v1Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
 }
 
 /** Worst-case cost estimate shown on action cards before anything runs. */
-export function estimateJobMicros(plan: JobPlan): number {
-  return estimateRun(plan.steps, currentRateVersion().id).costMicros;
+export function estimateJobMicros(plan: JobPlan, { fixture = false }: { fixture?: boolean } = {}): number {
+  const usesV2 = !fixture && (engineV2() || plan.kind === "social_calendar" || plan.kind === "outbound");
+  return estimateRun(plan.steps, currentRateVersion().id, { repair: !usesV2 }).costMicros;
 }

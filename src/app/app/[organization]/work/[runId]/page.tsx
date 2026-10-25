@@ -10,8 +10,10 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { BackLink, Badge, Button, Card, CardContent, CardHeader, CardTitle, NetworkLabel, StatusPill } from "@/components/ui";
 import { OutputView } from "@/components/app/OutputView";
+import { ConversionAuditView } from "@/components/app/ConversionAuditView";
 import { relativeTime } from "@/components/app/money";
 import { RunProgress } from "@/components/app/content/RunProgress";
+import { RunOutcomeReport } from "@/components/app/content/RunOutcomeReport";
 import { ClampText } from "@/components/app/results/ClampText";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 
@@ -79,10 +81,12 @@ export default function WorkPage() {
           {run.output && typeof run.output === "object" && !isPlan && run.artifacts.length === 0 ? (
             <Card>
               <CardContent>
-                <OutputView value={run.output} />
+                {run.kind === "conversion_audit" ? <ConversionAuditView value={run.output} slug={slug} runId={run.id as Id<"workflowRuns">} /> : <OutputView value={run.output} />}
               </CardContent>
             </Card>
           ) : null}
+
+          {run.canReportSpecialistOutcome ? <RunOutcomeReport slug={slug} runId={run.id as Id<"workflowRuns">} /> : null}
         </div>
 
         <aside className="flex flex-col gap-4">

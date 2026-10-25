@@ -71,7 +71,7 @@ export async function scheduleSlot(ctx: MutationCtx, slot: Doc<"calendarSlots">,
     return "needs_time";
   }
   // Approvals expire after a few days; a post planned further out keeps its approval until its slot.
-  if (!(await extendApprovalUntil(ctx, a, slot.slotAt + SCHEDULE_GRACE_MS))) {
+  if (!(await extendApprovalUntil(ctx, a, slot.slotAt + SCHEDULE_GRACE_MS, slot.slotAt))) {
     await ctx.db.patch(slot._id, { status: "needs_approval", updatedAt: now });
     return "needs_approval";
   }

@@ -1,0 +1,15 @@
+{
+  "id": "b01-investment-gate",
+  "version": 1,
+  "status": "proposed_policy",
+  "requirements": {
+    "positive_unit_contribution": true,
+    "cash_downside_reviewed": true,
+    "delivery_capacity_reviewed": true,
+    "measurement_definition_present": true,
+    "explicit_budget_authorization": true
+  },
+  "outcomes": ["eligible_for_owner_review", "collect_evidence", "reject_with_reason"],
+  "missing_input_behavior": "return_unknown_and_name_the_missing_input",
+  "execution_permission": "none"
+}

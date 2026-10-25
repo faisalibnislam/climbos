@@ -1,6 +1,6 @@
 {
   "id": "growth-plays",
-  "title": "Growth plays: creative but predictable",
+  "title": "Growth strategy options and execution plays",
   "gates": [
     {
       "id": "P1",
@@ -8,7 +8,7 @@
     },
     {
       "id": "P2",
-      "text": "Portfolio: at most 4 plays; exactly one bankable play (predictability \u2265 4); at least one creative play with distinctiveness \u2265 4 and predictability \u2265 3; at most one moonshot, capped at \u2264 10% of budget with a kill rule."
+      "text": "Execution portfolio: limit costed plays to the confirmed budget, capacity, evidence and permission gates. Separately preserve grounded, adjacent and bold strategy options; do not require a precedent, high predictability, immediate feasibility or budget share to generate/display a bold option. Keep novelty, evidence, fit, feasibility and risk separate."
     },
     {
       "id": "P3",
@@ -86,6 +86,15 @@
         "1": "Hooks pull no lever (no bigger outcome, confidence, speed or ease); comparison pages list features with no named alternative or best-fit segment; referral asks have no trigger.",
         "3": "Some hooks name a lever and some pages name the alternative, but the best-fit segment or the share moment is vague.",
         "5": "Every hook names the lever it pulls in the customer's words; comparison pages lead with one strength for a named segment against a named alternative; referral plays have a trigger and a built-in share moment; self-serve products get a funnel play."
+      }
+    },
+    {
+      "id": "Q_BOLD",
+      "name": "Original strategic range",
+      "anchors": {
+        "1": "No grounded, adjacent and bold options, or bold is omitted because it lacks precedent or has low feasibility.",
+        "3": "Three options appear but are only weakly distinct, weakly tied to the business, or the bold test is vague.",
+        "5": "Grounded, adjacent and genuinely original bold choices are distinct; uncertainty and upside are clear; the test is reversible and decision-relevant."
       }
     }
   ],

@@ -103,6 +103,197 @@ describe("publishing lifecycle", () => {
     expect(stub.posts()).toBe(2);
   });
 
+  it("blocks an approved post when its link is unsafe and never calls the social provider", async () => {
+    const t = setup();
+    const w = await workspace(t, "unsafe-link@flow.example");
+    await connectLinkedIn(t, w);
+    const artifactId = await draft(t, w.orgId, "linkedin", "Book here: https://127.0.0.1/private");
+    const stub = linkedInStub(0);
+
+    await w.owner.client.mutation(api.content.decide, { slug: w.slug, artifactId, decision: "approve" });
+    await w.owner.client.mutation(api.content.publishNow, { slug: w.slug, artifactId });
+    await run(t);
+
+    const view = await w.owner.client.query(api.content.get, { slug: w.slug, artifactId });
+    expect(view.status).toBe("approved");
+    expect(view.lastPublishError?.message).toMatch(/could not be safely confirmed/i);
+    expect(view.receipts).toHaveLength(0);
+    expect(stub.posts()).toBe(0);
+  });
+
+  it("rechecks risky claims after an owner edits a draft instead of clearing the flags", async () => {
+    const t = setup();
+    const w = await workspace(t, "claim-review@flow.example");
+    const artifactId = await draft(t, w.orgId, "facebook");
+
+    await w.owner.client.mutation(api.content.edit, {
+      slug: w.slug,
+      artifactId,
+      body: "We guarantee a 2x faster result for every customer.",
+      hashtags: [],
+    });
+
+    const updated = await w.owner.client.query(api.content.get, { slug: w.slug, artifactId });
+    expect(updated.current?.unsupportedClaims).toEqual(expect.arrayContaining([
+      expect.stringMatching(/guarantee/i),
+    ]));
+    expect(updated.status).toBe("in_review");
+
+    await w.owner.client.mutation(api.content.edit, {
+      slug: w.slug,
+      artifactId,
+      body: "A result designed for your team.",
+      hashtags: [],
+    });
+    const corrected = await w.owner.client.query(api.content.get, { slug: w.slug, artifactId });
+    expect(corrected.current?.unsupportedClaims).toEqual([]);
+  });
+
+  it("preserves the structured copy brief and its approval hash through owner edits", async () => {
+    const t = setup();
+    const w = await workspace(t, "copy-brief@flow.example");
+    const artifactId = await draft(t, w.orgId, "facebook");
+    const supportingFactId = await t.run(async (ctx) => {
+      const business = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).first())!;
+      return ctx.db.insert("businessFacts", { orgId: w.orgId, businessId: business._id, category: "audience", statement: "Customers book through the website.", confidence: "high", reviewState: "confirmed", provenance: "owner_supplied", sourceIds: [], createdAt: Date.now(), updatedAt: Date.now() });
+    });
+    const copyBrief = {
+      reader: "Local service owners", situation: "They need qualified bookings", awarenessStage: "problem_aware", relationshipStage: "unknown",
+      objective: "Request a consultation", offerFactIds: [supportingFactId], problemJob: "Choose a provider", trigger: "An active need", centralIdea: "Make the next step clear",
+      objection: "Unknown", proofFactIds: [], prohibitedClaims: [], channel: "facebook", format: "single image", deliveryContext: "Organic post",
+      brandVoice: "Clear and practical", approvedExamples: [], cta: "Ask for details", afterAction: "Reply to the inquiry", trackingMetric: "Qualified inquiries",
+      trackingMethod: "Unknown", supportingFactIds: [supportingFactId], supportingSourceUrls: ["https://example.com/trends/dated-format"],
+      trendEvidence: { sourceUrl: "https://example.com/trends/dated-format", observationDate: "2026-10-20", observation: "The source reports a dated format example." }, unknowns: ["Availability"],
+    };
+    await t.run(async (ctx) => {
+      const artifact = await ctx.db.get(artifactId);
+      const version = await ctx.db.get(artifact!.currentVersionId!);
+      const nextHash = await contentHash({ body: version!.body, hashtags: version!.hashtags, channel: artifact!.channel, copyBrief });
+      await ctx.db.patch(version!._id, { copyBrief, contentHash: nextHash });
+    });
+
+    await w.owner.client.mutation(api.content.edit, { slug: w.slug, artifactId, body: "An edited draft with its strategy context.", hashtags: [] });
+    const updated = await w.owner.client.query(api.content.get, { slug: w.slug, artifactId });
+    expect(updated.current?.copyBrief).toEqual(copyBrief);
+    expect(updated.facts).toContainEqual(expect.objectContaining({ id: supportingFactId, statement: "Customers book through the website." }));
+    const versions = await t.run(async (ctx) => ctx.db.query("artifactVersions").withIndex("by_artifact", (q) => q.eq("artifactId", artifactId)).collect());
+    expect(versions).toHaveLength(2);
+    expect(versions[1]?.copyBrief).toEqual(copyBrief);
+    expect(versions[0]?.contentHash).not.toBe(versions[1]?.contentHash);
+  });
+
+  it("keeps offer terms attached through edits and blocks approval of mismatched customer copy", async () => {
+    const t = setup();
+    const w = await workspace(t, "offer-copy-approval@flow.example");
+    const artifactId = await draft(t, w.orgId, "facebook");
+    const offerTermsSnapshot = [{
+      playName: "First-time service offer",
+      recommendation: "recommend_promotion",
+      currency: "USD",
+      allowedPrices: [100, 80],
+      allowedDiscountPercentages: [20],
+      allowedMechanisms: ["discount"],
+      urgencyClaim: null,
+      eligibleAudience: "First-time quote requesters",
+    }];
+    await t.run(async (ctx) => {
+      const artifact = await ctx.db.get(artifactId);
+      const version = await ctx.db.get(artifact!.currentVersionId!);
+      const snapshotHash = await contentHash({
+        body: version!.body,
+        hashtags: version!.hashtags,
+        channel: artifact!.channel,
+        approvedOfferTermsSnapshot: offerTermsSnapshot,
+        offerPlayNameSnapshot: "First-time service offer",
+      });
+      await ctx.db.patch(version!._id, {
+        approvedOfferTermsSnapshot: offerTermsSnapshot,
+        offerPlayNameSnapshot: "First-time service offer",
+        contentHash: snapshotHash,
+      });
+    });
+
+    await w.owner.client.mutation(api.content.edit, {
+      slug: w.slug,
+      artifactId,
+      body: "First-time quote requesters: save 40% today and pay $60 USD.",
+      hashtags: [],
+    });
+    const editedVersion = await t.run(async (ctx) => {
+      const artifact = await ctx.db.get(artifactId);
+      return ctx.db.get(artifact!.currentVersionId!);
+    });
+    expect(editedVersion?.approvedOfferTermsSnapshot).toEqual(offerTermsSnapshot);
+    expect(editedVersion?.offerPlayNameSnapshot).toBe("First-time service offer");
+    await expect(w.owner.client.mutation(api.content.decide, { slug: w.slug, artifactId, decision: "approve" })).rejects.toThrow(/doesn't match the offer terms approved with its plan/i);
+
+    await w.owner.client.mutation(api.content.edit, {
+      slug: w.slug,
+      artifactId,
+      body: "First-time quote requesters: save 20% and pay $80 USD.",
+      hashtags: [],
+    });
+    await w.owner.client.mutation(api.content.decide, { slug: w.slug, artifactId, decision: "approve" });
+    expect((await w.owner.client.query(api.content.get, { slug: w.slug, artifactId })).status).toBe("approved");
+  });
+
+  it("shows only same-business evidence sources on the artifact review screen", async () => {
+    const t = setup();
+    const w = await workspace(t, "fact-source-review@flow.example");
+    const artifactId = await draft(t, w.orgId, "facebook");
+    const foreign = await workspace(t, "foreign-fact-source@flow.example");
+    const factId = await t.run(async (ctx) => {
+      const business = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).first())!;
+      const foreignBusiness = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", foreign.orgId)).first())!;
+      const localSourceId = await ctx.db.insert("factSources", {
+        orgId: w.orgId,
+        businessId: business._id,
+        kind: "website",
+        url: "https://flow.example/pricing",
+        title: "Pricing page",
+        excerpt: "Plans are billed monthly.",
+        fetchedAt: Date.now() - 1_000,
+        status: "ok",
+        expiresAt: Date.now() + 60_000,
+      });
+      const foreignSourceId = await ctx.db.insert("factSources", {
+        orgId: foreign.orgId,
+        businessId: foreignBusiness._id,
+        kind: "website",
+        url: "https://private.example/secret",
+        fetchedAt: Date.now(),
+        status: "ok",
+        expiresAt: Date.now() + 60_000,
+      });
+      const id = await ctx.db.insert("businessFacts", {
+        orgId: w.orgId,
+        businessId: business._id,
+        category: "pricing",
+        statement: "Plans are billed monthly.",
+        confidence: "high",
+        reviewState: "confirmed",
+        provenance: "researched",
+        sourceIds: [localSourceId, foreignSourceId],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const artifact = await ctx.db.get(artifactId);
+      const version = await ctx.db.get(artifact!.currentVersionId!);
+      await ctx.db.patch(version!._id, { claimFactIds: [id] });
+      return id;
+    });
+
+    const view = await w.owner.client.query(api.content.get, { slug: w.slug, artifactId });
+    expect(view.facts).toContainEqual(expect.objectContaining({
+      id: factId,
+      category: "pricing",
+      confidence: "high",
+      provenance: "researched",
+      sources: [expect.objectContaining({ url: "https://flow.example/pricing", expired: false })],
+    }));
+    expect(JSON.stringify(view.facts)).not.toContain("private.example");
+  });
+
   it("a repeat call on an already-attempted approval settles the post instead of leaving it sending", async () => {
     const t = setup();
     const w = await workspace(t);
@@ -135,6 +326,37 @@ describe("publishing lifecycle", () => {
     const done = await c.query(api.content.get, { slug: w.slug, artifactId });
     expect(done.receipts[0]?.summary ?? done.lastPublishError?.message).toMatch(/Accepted by LinkedIn/);
     expect(done.status).toBe("published");
+  });
+
+  it("binds a scheduled approval to its exact time and rejects a later unapproved time change", async () => {
+    const t = setup();
+    const w = await workspace(t, "schedule-scope@flow.example");
+    await connectLinkedIn(t, w);
+    const artifactId = await draft(t, w.orgId, "linkedin");
+    const stub = linkedInStub(0);
+    const c = w.owner.client;
+    await c.mutation(api.content.decide, { slug: w.slug, artifactId, decision: "approve" });
+
+    const firstTime = Date.now() + 2 * 86_400_000;
+    const secondTime = firstTime + 86_400_000;
+    await c.mutation(api.content.schedule, { slug: w.slug, artifactId, when: firstTime });
+    const firstApproval = await t.run(async (ctx) => ctx.db.get((await ctx.db.get(artifactId))!.approvalId!));
+    expect(firstApproval!.scope.scheduledFor).toBe(firstTime);
+
+    await c.mutation(api.content.schedule, { slug: w.slug, artifactId, when: secondTime });
+    const secondApproval = await t.run(async (ctx) => ctx.db.get((await ctx.db.get(artifactId))!.approvalId!));
+    expect(secondApproval!.scope.scheduledFor).toBe(secondTime);
+    expect(secondApproval!.approvalHash).not.toBe(firstApproval!.approvalHash);
+
+    // A timer for the old time cannot publish a post that was rescheduled.
+    await t.action(internal.publish.scheduledPublish, { artifactId, expectedScheduledFor: firstTime });
+    expect((await c.query(api.content.get, { slug: w.slug, artifactId })).status).toBe("scheduled");
+    expect(stub.posts()).toBe(0);
+
+    // Even a direct schedule mutation cannot reuse the approval for the old timestamp.
+    await t.run(async (ctx) => ctx.db.patch(artifactId, { scheduledFor: secondTime + 1 }));
+    await expect(c.mutation(api.content.publishNow, { slug: w.slug, artifactId })).rejects.toThrow(/scheduled time changed after approval/i);
+    expect(stub.posts()).toBe(0);
   });
 
   it("a blocked publish records why, tells approvers and never stays sending", async () => {

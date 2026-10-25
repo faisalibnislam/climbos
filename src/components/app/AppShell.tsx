@@ -7,7 +7,7 @@ import { CreditMeter } from "./CreditMeter";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { BarChart3, CalendarDays, ChevronDown, Clapperboard, Compass, Eye, Home, Images, Inbox, Link2, LogOut, Magic, Menu, MessageCircle, Palette, PanelLeftClose, PanelLeftOpen, PanelsTopLeft, PauseCircle, Plane, PlayCircle, Plug, Settings, Sparkles, Star, Target, Users, type LucideIcon } from "@/components/icons";
+import { BarChart3, CalendarDays, ChevronDown, Compass, Home, Inbox, LogOut, Magic, Menu, PanelLeftClose, PanelLeftOpen, PanelsTopLeft, PauseCircle, PlayCircle, Plug, Settings, Sparkles, Users, type LucideIcon } from "@/components/icons";
 import { CommandPalette } from "./CommandPalette";
 import { TeamActivity } from "./TeamActivity";
 import { ClimbProvider, useClimb } from "@/components/climb/context";
@@ -39,39 +39,24 @@ import {
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { errorMessage } from "./errors";
+import { PRIMARY_NAV, appArea, appHref } from "./navigation";
+import { SkipLink } from "@shared/a11y/SkipLink";
 
-const NAV: { key: string; label: string; icon: LucideIcon; group: string; href?: string }[] = [
-  { key: "today", label: "Today", icon: Home, group: "" },
-  { key: "inbox", label: "Inbox", icon: Inbox, group: "" },
-  { key: "plan", label: "Growth plan", icon: Compass, group: "Grow" },
-  { key: "content", label: "Content", icon: CalendarDays, group: "Grow" },
-  { key: "autopilot", label: "Autopilot", icon: Plane, group: "Grow" },
-  { key: "outbound", label: "Find customers", icon: Target, group: "Grow" },
-  { key: "pipeline", label: "Pipeline", icon: Users, group: "Grow" },
-  { key: "reviews", label: "Reviews", icon: Star, group: "Grow" },
-  { key: "pages", label: "Landing pages", icon: PanelsTopLeft, group: "Grow" },
-  { key: "images", label: "Images", icon: Images, group: "Grow" },
-  { key: "reels", label: "Reels", icon: Clapperboard, group: "Grow" },
-  { key: "studio", label: "Design studio", icon: Palette, group: "Grow", href: "" },
-  { key: "results", label: "Results", icon: BarChart3, group: "Measure" },
-  { key: "links", label: "Links", icon: Link2, group: "Measure" },
-  { key: "competitors", label: "Competitors", icon: Eye, group: "Measure" },
-  { key: "connections", label: "Connections", icon: Plug, group: "Setup" },
-  { key: "chat", label: "Website chat", icon: MessageCircle, group: "Setup" },
-];
-const NAV_GROUPS = ["", "Grow", "Measure", "Setup"];
-/** Bottom-bar destinations on phones; everything else lives under More. */
-const MOBILE_PRIMARY = ["today", "plan", "content", "results"];
+const NAV_ICONS: Record<string, LucideIcon> = { today: Home, plan: Compass, work: CalendarDays, customers: Users, results: BarChart3, tools: PanelsTopLeft };
+const NAV: { key: string; label: string; icon: LucideIcon; group: string }[] = PRIMARY_NAV.map((item) => ({ ...item, icon: NAV_ICONS[item.key], group: "" }));
+const NAV_GROUPS = [""];
+const MOBILE_PRIMARY = ["today", "work", "customers", "results"];
 
 /**
- * Authenticated app frame: five primary destinations, Settings, a workspace
+ * Authenticated app frame: six primary destinations, Settings, a workspace
  * switcher, a persistent "Demo data" indicator and a Pause all control that
  * works on mobile. Permission and existence checks happen in Convex; this
  * component only renders what the backend returns.
  */
 export function AppShell({ slug, children, workspace = false }: { slug: string; children: ReactNode; workspace?: boolean }) {
+  const identity = useQuery(api.orgs.me);
   return (
-    <ClimbProvider>
+    <ClimbProvider key={`${slug}:${identity?.userId ?? "loading"}`}>
       <Shell slug={slug} workspace={workspace}>
         {children}
       </Shell>
@@ -92,11 +77,12 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
   const pathname = usePathname();
   const current = me?.orgs.find((o) => o.slug === slug);
   const isDemo = current?.kind === "demo";
-  const section = pathname.startsWith("/studio/") ? "studio" : (pathname.split("/")[3] ?? "today");
+  const section = appArea(pathname.startsWith("/studio/") ? "studio" : (pathname.split("/")[3] ?? "today"));
   const [rail, setRail] = useState(workspace);
 
   return (
     <div className={cn("bg-bg", workspace ? "flex h-dvh flex-col" : "min-h-dvh")}>
+      <SkipLink />
       <Toaster />
       <CommandPalette slug={slug} />
       <ClimbPanel slug={slug} />
@@ -130,7 +116,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
             {NAV_GROUPS.map((group) => (
               <NavGroup key={group || "home"} label={rail ? "" : group}>
                 {NAV.filter((n) => n.group === group).map((item) => (
-                  <NavLink key={item.key} compact={rail} href={item.key === "studio" ? `/studio/${slug}` : `/app/${slug}/${item.key}`} active={section === item.key} icon={<item.icon className="size-4" aria-hidden />} badge={item.key === "inbox" ? inboxUnread : undefined}>
+                  <NavLink key={item.key} compact={rail} href={appHref(slug, item.key)} active={section === item.key} icon={<item.icon className="size-4" aria-hidden />} badge={item.key === "customers" ? inboxUnread : undefined}>
                     {item.label}
                   </NavLink>
                 ))}
@@ -138,8 +124,10 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
             ))}
           </nav>
           <div className={cn("mt-auto flex flex-col gap-1 pt-4", rail && "items-center")}>
+            <NavLink compact={rail} href={`/app/${slug}/today#review`} active={false} icon={<Inbox className="size-4" aria-hidden />}>Review work</NavLink>
+            <NavLink compact={rail} href={`/app/${slug}/connections`} active={pathname.endsWith("/connections")} icon={<Plug className="size-4" aria-hidden />}>Connected accounts</NavLink>
             <CreditMeter slug={slug} rail={rail} />
-            <NavLink compact={rail} href={`/app/${slug}/settings/team`} active={section === "settings"} icon={<Settings className="size-4" aria-hidden />}>
+            <NavLink compact={rail} href={`/app/${slug}/settings/team`} active={section === "settings" && !pathname.endsWith("/connections")} icon={<Settings className="size-4" aria-hidden />}>
               Settings
             </NavLink>
             {rail ? null : <PauseAllButton slug={slug} paused={Boolean(pause?.paused)} variant="sidebar" />}
@@ -158,19 +146,20 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
               className="mx-auto flex h-8 w-full min-w-0 max-w-md items-center gap-2 rounded-lg border border-line-strong bg-surface px-2.5 text-left text-ui text-ink-3 transition-colors hover:border-ink-3"
             >
               <Magic className="size-4 shrink-0 text-sun-strong" aria-hidden="true" />
-              <span className="flex-1 truncate">Make a wish or search…</span>
+              <span className="flex-1 truncate">Ask for help or find a tool…</span>
               <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
             </button>
             <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
               <TeamActivity slug={slug} />
               <Button
                 size="sm"
-                variant={climb.open ? "primary" : "secondary"}
+                variant="secondary"
                 aria-pressed={climb.open}
+                aria-label="Ask Climb about this page"
                 onClick={() => climb.setOpen((o) => !o)}
                 className="gap-1.5"
               >
-                <Magic aria-hidden /> <span className="hidden md:inline">Climb AI</span>
+                <Magic aria-hidden /> <span className="hidden md:inline">Ask Climb</span>
               </Button>
               <PauseAllButton slug={slug} paused={Boolean(pause?.paused)} variant="compact" />
               <Presence slug={slug} />
@@ -179,7 +168,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
             </div>
           </header>
           <LowCreditBanner slug={slug} />
-          <main id="main" className={workspace ? "min-h-0 flex-1 overflow-auto" : "flex-1 px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12"}>
+          <main id="main" tabIndex={-1} className={workspace ? "min-h-0 flex-1 overflow-auto" : "flex-1 px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12"}>
             {children}
           </main>
         </div>
@@ -221,11 +210,11 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
               }
             >
               <ul className="grid grid-cols-3 gap-2 pb-[env(safe-area-inset-bottom)]">
-                {[...NAV.filter((n) => !MOBILE_PRIMARY.includes(n.key)), { key: "settings", label: "Settings", icon: Settings, group: "" }].map((item) => (
+                {[...NAV.filter((n) => !MOBILE_PRIMARY.includes(n.key)), { key: "review", label: "Review work", icon: Inbox, group: "" }, { key: "connections", label: "Connected accounts", icon: Plug, group: "" }, { key: "settings", label: "Settings", icon: Settings, group: "" }].map((item) => (
                   <li key={item.key}>
                     <SheetClose asChild>
                       <Link
-                        href={item.key === "studio" ? `/studio/${slug}` : item.key === "settings" ? `/app/${slug}/settings/team` : `/app/${slug}/${item.key}`}
+                        href={item.key === "settings" ? `/app/${slug}/settings/team` : appHref(slug, item.key)}
                         aria-current={section === item.key ? "page" : undefined}
                         className={cn(
                           "flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-[var(--radius-card)] border px-2 text-center text-ui font-medium",
@@ -316,7 +305,7 @@ function WorkspaceSwitcher({ slug }: { slug: string }) {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-60">
-        <DropdownMenuLabel>Your workspaces</DropdownMenuLabel>
+        <DropdownMenuLabel>Your businesses</DropdownMenuLabel>
         {me.orgs.map((o) => (
           <DropdownMenuItem key={o.slug} onSelect={() => router.push(`/app/${o.slug}/today`)}>
             <span className="truncate">{o.name}</span>
@@ -325,7 +314,7 @@ function WorkspaceSwitcher({ slug }: { slug: string }) {
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => router.push("/onboarding?new=1")}>
-          <Sparkles className="size-4" aria-hidden /> New workspace
+          <Sparkles className="size-4" aria-hidden /> Add company or workspace
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

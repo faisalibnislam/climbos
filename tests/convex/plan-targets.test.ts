@@ -11,7 +11,7 @@ import { asNewUser, makePaid, setup, type T } from "./helpers";
  * and contacted targets are never counted as contactable; no flag, no change.
  */
 
-const creatorPlay = { id: "pl_creators1", name: "Studio creator demos", oneLiner: "Creators show a class", kind: "creative", audience: "Yoga creators in the UK with studio followings", mechanic: "Gifted class for a tutorial", climbosCanDo: "Creator finder drafts pitches", hook: "Film a class with us", p10: 1, p50: 3, p90: 6, horizonDays: 90 };
+const creatorPlay = { id: "pl_creators1", name: "Studio creator demos", oneLiner: "Creators show a class", kind: "creative", audience: "Yoga creators in the UK with studio followings", mechanic: "Gifted class for a tutorial", climbosCanDo: "Creator finder drafts pitches", hook: "Film a class with us", p10: 1, p50: 3, p90: 6, horizonDays: 90, offerAssessment: { recommendation: "recommend_promotion", mechanism: "discount", currency: "USD", current: { netPrice: { amount: 100 } }, proposed: { netPrice: { amount: 90 } }, urgencyClaim: null, test: { eligibleAudience: "First-time studio customers only" } } };
 const seoPlay = { id: "pl_seo1", name: "Comparison pages", oneLiner: "Vs pages", kind: "bankable", audience: "Buyers comparing tools", mechanic: "Write comparison pages", climbosCanDo: "Drafts the pages", hook: "h", p10: 1, p50: 2, p90: 3, horizonDays: 90 };
 
 async function workspace(t: T, email: string, flags: string[] = ["plan_targets"]) {
@@ -32,7 +32,13 @@ async function workspace(t: T, email: string, flags: string[] = ["plan_targets"]
   return { ...owner, slug, orgId: id, strategyId: strategyId as Id<"strategies"> };
 }
 
-const creator = (handle: string, email = "") => ({ company: `Creator ${handle}`, website: `https://www.instagram.com/${handle}/`, location: "London", sizeBand: "", why: "Teaches beginner flows", evidence: [{ url: `https://www.instagram.com/${handle}/`, observation: "Recent class reel" }], trigger: "", fit: 80, timing: 60, contact: email ? "Email in bio" : "Not found", publicEmail: email || undefined });
+const creator = (handle: string, email = "", inconsistentCounters = false) => {
+  const url = `https://www.instagram.com/${handle}/`;
+  const postUrl = `https://www.instagram.com/p/${handle.replace(/[^a-z0-9]/gi, "")}/`;
+  const views = inconsistentCounters ? "1K views" : "3.2k views";
+  const likes = inconsistentCounters ? "1.2K likes" : "210 likes";
+  return { company: `Creator ${handle}`, website: url, location: "London", sizeBand: "12k followers", why: "Teaches beginner flows", evidence: [{ url, observation: "12k followers; English-language profile; says audience is mostly UK; partnered with Rival in September 2025" }, { url: postUrl, observation: `Recent class reel, ${views}, ${likes}, 14 comments` }], trigger: "", fit: 80, timing: 60, contact: email ? "Email in bio" : "Not found", publicEmail: email || undefined, audienceSize: { value: "12k followers", sourceUrl: url }, contentLanguage: { value: "English", sourceUrl: url }, audienceLocation: { value: "mostly UK", sourceUrl: url }, contentSamples: [{ url: postUrl, format: "short_video", views, likes, comments: "14 comments" }], competitorCollaborations: [{ name: "Rival", type: "co_created_or_partnered", evidenceUrl: url, evidenceQuote: "partnered with Rival in September 2025", publishedAt: "September 2025" }], collaborationConcept: "Proposed beginner class tutorial; no agreement implied." };
+};
 const outreach = { sequence: [{ day: 0, subject: "Collab?", body: "{{firstLine}}", purpose: "open" }], firstLines: [], ownerNotes: [] };
 
 describe("plan targets (flagged)", () => {
@@ -65,11 +71,12 @@ describe("plan targets (flagged)", () => {
     let view = await w.client.query(api.targets.forStrategy, { slug: w.slug, strategyId: w.strategyId });
     expect(Object.keys(view!)).toEqual(["pl_creators1"]); // the SEO play needs no search
     expect(view!.pl_creators1).toMatchObject({ state: "researching", campaignId: campaign._id });
+    expect(campaign).toMatchObject({ approvedOfferPlayName: creatorPlay.name, approvedOfferTermsSnapshot: [{ playName: creatorPlay.name, recommendation: "recommend_promotion", currency: "USD", allowedPrices: [100, 90], allowedMechanisms: ["discount"], eligibleAudience: "First-time studio customers only" }] });
 
     // The search returns: Ana again (URL variant), two new creators on the same platform, Ben who opted out, and a duplicate row.
     await t.mutation(internal.outbound.saveResult, {
       campaignId: campaign._id,
-      prospects: { icp: { summary: "", mustHaves: [], disqualifiers: [], triggers: [], decisionMaker: "" }, excluded: [], prospects: [creator("Studio.Ana", "ana@studioana.com"), creator("mia.moves"), creator("mia.moves"), creator("benflows", "ben@benflows.com"), creator("leo.yoga", "leo@leoyoga.com")] },
+      prospects: { icp: { summary: "", mustHaves: [], disqualifiers: [], triggers: [], decisionMaker: "" }, excluded: [], prospects: [creator("Studio.Ana", "ana@studioana.com"), creator("mia.moves", "", true), creator("mia.moves", "", true), creator("benflows", "ben@benflows.com"), creator("leo.yoga", "leo@leoyoga.com")] },
       outreach,
     });
     const rows = await t.run(async (ctx) => ctx.db.query("prospects").withIndex("by_org_stage", (q) => q.eq("orgId", w.orgId)).collect());
@@ -77,7 +84,7 @@ describe("plan targets (flagged)", () => {
     const ana = rows.find((r) => r.domain === "instagram:studio.ana")!;
     expect(ana).toMatchObject({ stage: "contacted", playIds: ["pl_creators1"] }); // merged, stage kept
     const mia = rows.find((r) => r.domain === "instagram:mia.moves")!;
-    expect(mia).toMatchObject({ platform: "instagram", handle: "mia.moves", playIds: ["pl_creators1"] });
+    expect(mia).toMatchObject({ platform: "instagram", handle: "mia.moves", playIds: ["pl_creators1"], audienceSize: { value: "12k followers", sourceUrl: "https://www.instagram.com/mia.moves/" }, contentLanguage: { value: "English", sourceUrl: "https://www.instagram.com/mia.moves/" }, audienceLocation: { value: "mostly UK", sourceUrl: "https://www.instagram.com/mia.moves/" }, contentSamples: [{ url: "https://www.instagram.com/p/miamoves/", format: "short_video", views: "1K views", likes: "1.2K likes", comments: "14 comments" }], creatorMetricAnomalies: [{ code: "interactions_exceed_views", sampleUrl: "https://www.instagram.com/p/miamoves/", views: "1K views", interactions: [{ metric: "likes", value: "1.2K likes" }], observedAt: expect.any(Number), uncertainty: expect.stringContaining("not evidence of fake engagement") }], competitorCollaborations: [{ name: "Rival", type: "co_created_or_partnered", evidenceQuote: "partnered with Rival in September 2025", publishedAt: "September 2025", observedAt: expect.any(Number) }] });
     expect(mia.publicEmail).toBeUndefined(); // no email invented; the profile stays
 
 
@@ -86,7 +93,35 @@ describe("plan targets (flagged)", () => {
     expect(view!.pl_creators1).toMatchObject({ state: "needs_connection", counts: { found: 4, eligible: 2, contactable: 1, excluded: 1, inRelationship: 1 } });
     const listed = view!.pl_creators1.targets;
     expect(listed.find((x) => x.name.includes("benflows"))).toMatchObject({ suppressed: true, contactRoute: "none" });
-    expect(listed.find((x) => x.name.includes("mia.moves"))).toMatchObject({ contactRoute: "none", url: "https://www.instagram.com/mia.moves/" });
+    expect(listed.find((x) => x.name.includes("mia.moves"))).toMatchObject({ contactRoute: "none", url: "https://www.instagram.com/mia.moves/", audienceSize: { value: "12k followers", sourceUrl: "https://www.instagram.com/mia.moves/" }, contentLanguage: { value: "English", sourceUrl: "https://www.instagram.com/mia.moves/" }, audienceLocation: { value: "mostly UK", sourceUrl: "https://www.instagram.com/mia.moves/" }, contentSamples: [{ url: "https://www.instagram.com/p/miamoves/", views: "1K views", likes: "1.2K likes", comments: "14 comments" }], creatorMetricAnomalies: [{ code: "interactions_exceed_views", uncertainty: expect.stringContaining("not evidence of fake engagement") }], competitorCollaborations: [{ name: "Rival", publishedAt: "September 2025" }], collaborationConcept: expect.stringContaining("Proposed") });
+    const miaRow = rows.find((r) => r.domain === "instagram:mia.moves")!;
+    expect(miaRow.creatorEvidenceObservedAt).toBe(Date.now());
+    await t.run(async (ctx) => ctx.db.patch(miaRow._id, { creatorEvidenceObservedAt: Date.now() - 91 * 24 * 60 * 60 * 1000 }));
+    view = await w.client.query(api.targets.forStrategy, { slug: w.slug, strategyId: w.strategyId });
+    expect(view!.pl_creators1).toMatchObject({ canStart: true, note: expect.stringContaining("fresh public-evidence check") });
+    expect(view!.pl_creators1.targets.find((x) => x.id === miaRow._id)?.creatorEvidenceStale).toBe(true);
+    await expect(w.client.mutation(api.outbound.setStage, { slug: w.slug, prospectIds: [miaRow._id], stage: "approved" })).rejects.toThrow(/Refresh this creator's public profile/);
+    const staleAt = miaRow.creatorEvidenceObservedAt! - 91 * 24 * 60 * 60 * 1000;
+    await t.run(async (ctx) => ctx.db.patch(miaRow._id, { creatorEvidenceObservedAt: staleAt }));
+    await t.mutation(internal.outbound.saveResult, {
+      campaignId: campaign._id,
+      prospects: { icp: { summary: "", mustHaves: [], disqualifiers: [], triggers: [], decisionMaker: "" }, excluded: [], prospects: [{ ...creator("mia.moves"), evidence: [] }] },
+      outreach,
+    });
+    expect((await t.run((ctx) => ctx.db.get(miaRow._id)))?.creatorEvidenceObservedAt).toBe(staleAt);
+    const other = await workspace(t, "targets-other-tenant@example.com");
+    await expect(other.client.mutation(api.outbound.setStage, { slug: other.slug, prospectIds: [miaRow._id], stage: "approved" })).rejects.toThrow();
+    await t.mutation(internal.outbound.saveResult, {
+      campaignId: campaign._id,
+      prospects: { icp: { summary: "", mustHaves: [], disqualifiers: [], triggers: [], decisionMaker: "" }, excluded: [], prospects: [creator("mia.moves")] },
+      outreach,
+    });
+    view = await w.client.query(api.targets.forStrategy, { slug: w.slug, strategyId: w.strategyId });
+    expect(view!.pl_creators1.targets.find((x) => x.id === miaRow._id)?.creatorEvidenceStale).toBe(false);
+    expect(view!.pl_creators1.canStart).toBe(false);
+    await w.client.mutation(api.outbound.recordCreatorCollaboration, { slug: w.slug, prospectId: mia._id, campaignId: view!.pl_creators1.campaignId!, status: "agreed", format: "co_created" });
+    const collaboration = await w.client.query(api.outbound.creatorCollaborationHistory, { slug: w.slug, prospectId: mia._id });
+    expect(collaboration[0]).toMatchObject({ strategyId: w.strategyId, playId: "pl_creators1", campaignId: view!.pl_creators1.campaignId, status: "agreed" });
 
     // A refreshed plan keeps the play ID, so it keeps the targets and doesn't start a duplicate search.
     const v2 = await t.run(async (ctx) => {
@@ -97,6 +132,20 @@ describe("plan targets (flagged)", () => {
     const work2 = await w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: v2, decision: "approve" });
     expect(work2?.started.some((s) => s.startsWith("Targets"))).toBe(false);
     expect((await w.client.query(api.targets.forStrategy, { slug: w.slug, strategyId: v2 }))!.pl_creators1.counts.found).toBe(4);
+  });
+
+  it("does not apply creator-evidence freshness gates to customer prospects", async () => {
+    const t = setup();
+    const w = await workspace(t, "customer-targets@example.com");
+    const campaignId = await t.run(async (ctx) => {
+      const now = Date.now();
+      const id = await ctx.db.insert("outboundCampaigns", { orgId: w.orgId, title: "Find customers", kind: "customers", brief: { who: "", where: "", count: 5 }, status: "review", sequence: [], ownerNotes: [], excluded: [], createdBy: w.userId, createdAt: now, updatedAt: now });
+      await ctx.db.insert("prospects", { orgId: w.orgId, campaignId: id, company: "Customer prospect", domain: "customer.example", website: "https://customer.example", location: "", sizeBand: "", why: "", evidence: [], trigger: "", fit: 50, timing: 50, contact: "", firstLine: "", stage: "suggested", createdAt: now, updatedAt: now });
+      return id;
+    });
+    const prospect = await t.run((ctx) => ctx.db.query("prospects").withIndex("by_campaign", (q) => q.eq("campaignId", campaignId)).first());
+    await w.client.mutation(api.outbound.setStage, { slug: w.slug, prospectIds: [prospect!._id], stage: "approved" });
+    expect((await t.run((ctx) => ctx.db.get(prospect!._id)))?.stage).toBe("approved");
   });
 
   it("an open campaign that's sending is never paused on its own: the play waits for the owner", async () => {
@@ -124,6 +173,7 @@ describe("plan targets (flagged)", () => {
     expect(work?.started.some((s) => s.startsWith("Targets"))).toBe(false);
     expect(await t.run(async (ctx) => ctx.db.query("outboundCampaigns").collect())).toHaveLength(0);
     expect(await w.client.query(api.targets.forStrategy, { slug: w.slug, strategyId: w.strategyId })).toBeNull();
+    expect((await w.client.query(api.workspace.today, { slug: w.slug })).targetPreview).toBeNull();
     await expect(w.client.mutation(api.targets.startForPlay, { slug: w.slug, strategyId: w.strategyId, playId: "pl_creators1" })).rejects.toThrow(/isn't switched on/);
   });
 
@@ -134,6 +184,48 @@ describe("plan targets (flagged)", () => {
     await expect(other.client.query(api.targets.forStrategy, { slug: other.slug, strategyId: w.strategyId })).rejects.toThrow();
   });
 
+  it("Home shows a bounded, tenant-scoped preview of approved-plan suggestions without contact details", async () => {
+    const t = setup();
+    const w = await workspace(t, "home-targets@example.com");
+    const other = await workspace(t, "home-targets-other@example.com");
+    expect((await w.client.query(api.workspace.today, { slug: w.slug })).targetPreview).toBeNull();
+    const campaignId = await t.run(async (ctx) => {
+      await ctx.db.patch(w.strategyId, { status: "approved" });
+      const campaignId = await ctx.db.insert("outboundCampaigns", {
+        orgId: w.orgId, title: "Studio creator demos", kind: "creators", strategyId: w.strategyId, playId: "pl_creators1",
+        brief: { who: "Yoga creators", where: "UK", count: 10 }, status: "review", sequence: [], ownerNotes: [], excluded: [],
+        createdBy: w.userId, createdAt: Date.now(), updatedAt: Date.now(),
+      });
+      for (const name of ["Studio Ana", "Mia Moves", "Ben Flows", "Leo Yoga"]) {
+        await ctx.db.insert("prospects", {
+          orgId: w.orgId, campaignId, company: name, domain: name.toLowerCase().replaceAll(" ", "-"), website: "https://example.com/profile",
+          location: "UK", sizeBand: "Unknown", why: "Public profile describes relevant classes", evidence: [{ url: "https://example.com/profile", observation: "Public creator profile" }],
+          trigger: "", fit: 70, timing: 50, contact: "Public email listed", publicEmail: `${name.toLowerCase().replaceAll(" ", "-")}@example.com`, firstLine: "",
+          stage: "suggested", playIds: ["pl_creators1"], createdAt: Date.now(), updatedAt: Date.now(),
+        });
+      }
+      await ctx.db.insert("prospects", {
+        orgId: w.orgId, campaignId, company: "Already contacted", domain: "already-contacted", website: "https://example.com/contacted",
+        location: "UK", sizeBand: "Unknown", why: "Past contact", evidence: [], trigger: "", fit: 100, timing: 100, contact: "",
+        firstLine: "", stage: "contacted", playIds: ["pl_creators1"], createdAt: Date.now(), updatedAt: Date.now(),
+      });
+      return campaignId;
+    });
+
+    const today = await w.client.query(api.workspace.today, { slug: w.slug });
+    expect(today.targetPreview).toMatchObject({
+      campaignId,
+      playName: "Studio creator demos",
+      kind: "creators",
+      status: "review",
+      hasMore: true,
+      matches: [{ name: "Studio Ana" }, { name: "Mia Moves" }, { name: "Ben Flows" }],
+    });
+    expect(JSON.stringify(today.targetPreview)).not.toContain("@example.com");
+    expect(JSON.stringify(today.targetPreview)).not.toContain("Already contacted");
+    await expect(other.client.query(api.workspace.today, { slug: w.slug })).rejects.toThrow();
+  });
+
   it("Make it happen uses the stored play by ID (REQ-UX-03)", async () => {
     const t = setup();
     const w = await workspace(t, "start@example.com", []);
@@ -142,5 +234,17 @@ describe("plan targets (flagged)", () => {
     expect(msg?.text).toContain('Start the "Studio creator demos" play (plan v1, play pl_creators1)');
     expect(msg?.text).toContain("Creator finder drafts pitches");
     await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: w.strategyId, playId: "pl_nope" })).rejects.toThrow(/isn't in this plan/);
+  });
+
+  it("starts an opportunity conversation from tenant-checked, saved plan data", async () => {
+    const t = setup();
+    const w = await workspace(t, "ask-opportunity@example.com", []);
+    const { messageId } = await w.client.mutation(api.workspace.askAboutOpportunity, { slug: w.slug, strategyId: w.strategyId, opportunityId: "pl_creators1", question: "What should I verify first?" });
+    const msg = await t.run((ctx) => ctx.db.get(messageId));
+    expect(msg?.text).toContain("growth opportunity from plan v1");
+    expect(msg?.text).toContain("Studio creator demos");
+    expect(msg?.text).toContain("Audience: Yoga creators in the UK with studio followings");
+    expect(msg?.text).toContain("My question: What should I verify first?");
+    await expect(w.client.mutation(api.workspace.askAboutOpportunity, { slug: w.slug, strategyId: w.strategyId, opportunityId: "other-tenant-play" })).rejects.toThrow(/isn't in this plan/);
   });
 });

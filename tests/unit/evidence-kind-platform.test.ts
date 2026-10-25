@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { evidenceKind, lintEvidenceStrength } from "../../shared/agents/evidenceKind";
 import { lintPlatformEligibility, platformNotes } from "../../shared/acquisition/platformRules";
-import { factsBlock } from "../../shared/ai/tasks";
+import { factsBlock, staleFactsBlock } from "../../shared/ai/tasks";
 
 /** Slices 6 and 9: evidence strength in code (EV02, EV10, EV18, EV27, EV31); platform rules for planning (EV05). */
 describe("evidence kind", () => {
@@ -15,7 +15,19 @@ describe("evidence kind", () => {
     expect(evidenceKind("We have two people on the team", "owner_supplied")).toBe("owner");
   });
   it("labels the kind in the facts the writer sees", () => {
-    expect(factsBlock([{ statement: "Everyone loves it", category: "proof", kind: "stated opinion" }])).toMatch(/\[0\] \(proof; stated opinion\) Everyone loves it/);
+    expect(factsBlock([{ statement: "Everyone loves it", category: "proof", kind: "stated opinion", provenance: "owner_supplied", confidence: "medium", verifiedAt: Date.UTC(2026, 0, 2) }])).toMatch(/\[0\] \(proof; stated opinion; provenance owner_supplied; stored confidence medium; verified 2026-01-02\) Everyone loves it/);
+  });
+  it("marks old facts for review without treating age as proof they are wrong", () => {
+    expect(factsBlock([{ statement: "Pro costs $20 per month", category: "pricing", freshness: { daysOld: 61, reviewSuggested: true } }])).toContain("review suggested, 61 days since last verification");
+    expect(factsBlock([{ statement: "Pro costs $20 per month", category: "pricing", freshness: { daysOld: 10, reviewSuggested: false } }])).toMatch(/\[0\] \(pricing\) Pro costs/);
+  });
+  it("keeps stale facts out of the current fact index and labels their accuracy unknown", () => {
+    const stale = staleFactsBlock([{ statement: "Pro costs $20 per month", category: "pricing", provenance: "owner_supplied", confidence: "high", verifiedAt: Date.UTC(2026, 0, 2), freshness: { daysOld: 61 } }]);
+    expect(stale).toContain("present accuracy is unknown");
+    expect(stale).toMatch(/do not cite them as current facts/i);
+    expect(stale).toContain("<untrusted_content source=\"stale business facts\">");
+    expect(stale).toContain("provenance owner_supplied; stored confidence high; last verified 2026-01-02; 61 days ago");
+    expect(factsBlock([])).not.toContain("$20");
   });
   it("blocks proof-of-demand language when only opinions and site claims exist", () => {
     const f = [{ path: "summary", text: "Demand is proven: customers love the idea." }];

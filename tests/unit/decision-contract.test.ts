@@ -1,7 +1,7 @@
 import { playMaths } from "../../shared/agents/economics";
 import { describe, expect, it } from "vitest";
 import { DECISION_CONTRACT, playsTask } from "../../shared/agents/planTasks";
-import { growthPlaysSpec, lintPlays, type PlayDraft } from "../../shared/agents/specs";
+import { actionReadinessOf, growthPlaysSpec, lintActionContracts, lintPlays, type PlayDraft } from "../../shared/agents/specs";
 
 /** S5 flag (REQ-STRAT-05, REQ-OUT-03): a focused plan isn't forced into bankable + creative. */
 const tag = { source: "assumption" as const, ref: "", quote: "" };
@@ -25,6 +25,8 @@ const play = (o: Partial<PlayDraft> = {}): PlayDraft => ({
   scaleIf: "8+ orders in 14 days",
   scores: [5, 3, 3, 4, 3, 5, 5, 3],
   firstActionToday: "Export last year's customers",
+  timingAssessment: { decision: "not_relevant", proposedWindow: null, timezone: null, timezoneBasis: "No calendar timing applies.", timezoneEvidenceRef: null, geographyBasis: "No calendar-specific geography is needed for this evergreen retention test.", geographyEvidenceRef: null, moment: { name: null, businessReason: "This customer win-back mechanic is based on lifecycle behavior, not a date.", evidence: [] }, preparation: { leadTimeDays: null, deliveryLeadTimeDays: null, feasible: null, basis: "No event preparation window applies.", evidenceRef: null, deliveryBasis: "Not applicable to this evergreen test.", deliveryEvidenceRef: null }, capacity: { status: "unknown", basis: "Service capacity was not supplied.", evidenceRef: null }, assumptions: [], unknowns: [], rationale: "The play's trigger is customer behavior rather than a holiday or event." },
+  actionContract: { diagnosis: "Repeat purchase is weak", intendedEffect: "Recover paid orders", evidenceBasis: "assumption", evidenceNote: "The customer list size and response are unverified; validate while testing.", evidenceRefs: [], targetOrAsset: "Prior customer list", resourcePlan: "1 owner hour per week; no media spend", executionCapability: "owner", dependencies: [], measurement: { metric: "Recovered orders", baseline: "Establish from the prior 30 days", target: "8 orders", windowDays: 14, source: "Count paid orders during the test" } },
   climbosCanDo: "Drafts and sends the emails",
   model: { weeklyReach: 75, weeklyReachLow: 60, weeklyReachHigh: 75, reachSource: tag, steps: [{ name: "open", rate: 0.4, low: 0.3, high: 0.5, ...tag, source: "assumption" }, { name: "order", rate: 0.07, low: 0.05, high: 0.1, ...tag, source: "assumption" }], monthlySpendUsd: 0, spendSource: { source: "planned", ref: "", quote: "" }, ownerHoursPerWeek: 1, hoursSource: { source: "planned", ref: "", quote: "" } },
   ...o,
@@ -33,12 +35,27 @@ const econ = { revenuePerCustomerMonthUsd: 40, grossMargin: 0.6, monthlyChurn: 0
 const portfolio = (issues: { rule: string; severity: string }[]) => issues.filter((i) => i.rule === "portfolio" && i.severity === "error");
 
 describe("decision contract flag", () => {
+  it("treats open invoice balances as owner-review evidence, not collection permission", () => {
+    expect(DECISION_CONTRACT).toContain("An open balance is not expected or recoverable revenue");
+    expect(DECISION_CONTRACT).toContain("Do not retry payments, send reminders, or contact customers as a side effect");
+    expect(DECISION_CONTRACT).toContain("treat receivables and failed-payment recovery as unknown");
+  });
+
   it("off (default): a single retention play fails the fixed portfolio shape", () => {
     expect(portfolio(lintPlays([play()], econ)).length).toBeGreaterThan(0);
   });
 
   it("on: one focused retention play is a valid plan; no volume pressure", () => {
     expect(portfolio(lintPlays([play()], econ, { decisionContract: true }))).toEqual([]);
+  });
+
+  it("hard-fails a bare channel label while accepting a business-specific mechanic", () => {
+    const generic = play({ mechanic: "Use influencers", audience: "Everyone", hook: "Build awareness", firstActionToday: "Find influencers" });
+    const concrete = play({ mechanic: "Send 10 local coach YouTubers a tracked invite to the existing booking-workshop page.", audience: "Local coaches who publish scheduling advice", firstActionToday: "Select 10 coach channels from the researched list and draft the workshop invite." });
+    const genericIssues = lintPlays([generic], econ, { decisionContract: true });
+    expect(genericIssues.some((issue) => issue.rule === "generic_action" && issue.severity === "error")).toBe(true);
+    expect(lintPlays([concrete], econ, { decisionContract: true }).some((issue) => issue.rule === "generic_action")).toBe(false);
+    expect(playsTask({ scorecard: "", insights: "" })).toContain("A channel name is not a deliverable");
   });
 
   it("on: still at most 4 plays, one moonshot, and 'bankable' must be predictable", () => {
@@ -53,12 +70,74 @@ describe("decision contract flag", () => {
     expect(portfolio(lintPlays([play({ kind: "bankable" })], undefined, { decisionContract: true }))[0]).toBeTruthy(); // predictability 3
   });
 
-  it("the spec and task follow the flag; the default task is unchanged", () => {
+  it("the structured fields follow the flag while every default task uses constraint-first strategy", () => {
     const on = growthPlaysSpec({ decisionContract: true });
     expect(portfolio(on.lint!({ portfolioNote: "", economics: { ...econ, sources: { revenue: tag, margin: tag, churn: tag } }, plays: [play()] } as never, { task: "", brief: "", facts: [] } as never))).toEqual([]);
     expect(playsTask({ scorecard: "", insights: "", decisionContract: true })).toContain(DECISION_CONTRACT);
-    expect(playsTask({ scorecard: "", insights: "" })).toMatch(/one bankable play, one or two creative-but-proven plays/);
-    expect(playsTask({ scorecard: "", insights: "" })).not.toContain("DECISION CONTRACT");
+    const defaultTask = playsTask({ scorecard: "", insights: "" });
+    expect(defaultTask).toContain(DECISION_CONTRACT);
+    expect(defaultTask).toContain("COMMERCIAL EVIDENCE GATE");
+    expect(defaultTask).toContain("When business-specific evidence of customer demand or willingness to pay is insufficient or mixed");
+    expect(defaultTask).toContain("keep any acquisition spend bounded to the test");
+    expect(defaultTask).toContain("Never infer viability from a polished website");
+    expect(defaultTask).toContain("STRATEGY EXPLORATION");
+    expect(defaultTask).toContain("adjacent industries, emerging behavior, unusual partnerships, product changes and non-obvious distribution mechanisms");
+    expect(defaultTask).toContain("don't discard a promising idea just because ClimbOS cannot execute it today");
+    expect(defaultTask).toContain("grounded, adjacent, and bold");
+    expect(defaultTask).toContain("bold may have no direct precedent");
+    expect(defaultTask).toContain("low evidence, low business fit, low feasibility, or high risk");
+    expect(defaultTask).toContain("Exploration is not execution");
+    expect(defaultTask).toMatch(/best-supported binding constraint/);
+    expect(defaultTask).not.toMatch(/one bankable play, one or two creative-but-proven plays/);
+    expect(defaultTask).not.toContain("Fill decision");
+  });
+});
+
+describe("structured action contracts", () => {
+  it("derives safe-to-start versus dependency-gated readiness", () => {
+    expect(actionReadinessOf(play().actionContract)).toEqual({ status: "safe_to_start", reasons: [] });
+    expect(actionReadinessOf({ ...play().actionContract, dependencies: ["Confirm the customer list is consented"] })).toEqual({ status: "depends_on_input", reasons: ["Confirm the customer list is consented"] });
+    expect(actionReadinessOf({ ...play().actionContract, executionCapability: "external_setup" })).toEqual({ status: "depends_on_input", reasons: ["External setup is required."] });
+    expect(actionReadinessOf({ ...play().actionContract, executionCapability: "existing_integration" }).status).toBe("depends_on_input");
+    expect(actionReadinessOf({ ...play().actionContract, executionCapability: "climbos" }).status).toBe("depends_on_input");
+  });
+
+  it("rejects invented evidence references and measurement windows past the horizon", () => {
+    const draft = play({ actionContract: { ...play().actionContract, evidenceRefs: ["fact:4", "https://invented.example/pricing"], measurement: { ...play().actionContract.measurement, windowDays: 45 } } });
+    const issues = lintActionContracts([draft], 1, "https://real.example/pricing", 30, ["https://real.example/pricing"]);
+    expect(issues.filter((issue) => issue.severity === "error").map((issue) => issue.rule)).toEqual(["action_evidence", "action_evidence", "action_measurement"]);
+  });
+
+  it("requires the primary success metric to match the outcome forecast by the play", () => {
+    const clicks = play({ actionContract: { ...play().actionContract, measurement: { ...play().actionContract.measurement, metric: "Website clicks" } } });
+    const qualifiedLeads = play({ actionContract: { ...play().actionContract, measurement: { ...play().actionContract.measurement, metric: "Qualified leads" } } });
+    const valid = play({ actionContract: { ...play().actionContract, measurement: { ...play().actionContract.measurement, metric: "Recovered orders" } } });
+    expect(lintActionContracts([clicks], 0, "").map((issue) => issue.path)).toContain("plays[0].actionContract.measurement.metric");
+    expect(lintActionContracts([qualifiedLeads], 0, "").some((issue) => /does not match this play's forecast outcome/.test(issue.message))).toBe(true);
+    expect(lintActionContracts([valid], 0, "")).toEqual([]);
+  });
+
+  it("makes the plays agent populate the trace and leaves readiness to code", () => {
+    const prompt = playsTask({ scorecard: "", insights: "" });
+    expect(prompt).toContain("populate actionContract");
+    expect(prompt).toContain("primary measurement that matches the same business outcome as the play's forecast unit");
+    expect(prompt).toContain("ClimbOS derives readiness");
+  });
+
+  it("requires creative dimensions to stay separate and rejects precedent IDs outside the retrieved library", () => {
+    const creativeReview = {
+      challenge: "A polished mascot is not always more memorable.", conventionBasis: "common_habit" as const,
+      costOfBreaking: "A distinctive character could distract from the offer.", customerTensionOrAsset: "Customers remember the founder's repair stories.",
+      precedentIds: ["CP-004"], transferLogic: "Constraint-led recognition can make a recurring identity easier to remember.", keyDifferences: "Nintendo had games and distribution at scale; this is a small service business.",
+      hopedCustomerBehavior: "Target buyers recall the service and ask about a repair.", assumptions: ["Target buyers like the founder's humor."],
+      novelty: "high" as const, evidenceStrength: "medium" as const, businessFit: "medium" as const, feasibility: "high" as const, risk: "medium" as const,
+      reversibleTest: "Show two original sketches to six target customers.", successSignal: "More customers correctly recall the service.", guardrail: "Offer comprehension does not fall.", stopCondition: "Stop if recall or offer comprehension declines.", revisionEvidence: "Revise if buyers find the character distracting.",
+    };
+    expect(lintPlays([play({ creativeReview })], econ, { decisionContract: true }).some((issue) => issue.rule === "creative_precedent")).toBe(false);
+    const invalid = { ...creativeReview, precedentIds: ["CP-999"] };
+    expect(lintPlays([play({ creativeReview: invalid })], econ, { decisionContract: true }).some((issue) => issue.rule === "creative_precedent" && issue.severity === "error")).toBe(true);
+    const unsupported = { ...creativeReview, precedentIds: [], evidenceStrength: "high" as const };
+    expect(lintPlays([play({ creativeReview: unsupported })], econ, { decisionContract: true }).some((issue) => issue.rule === "creative_evidence" && issue.severity === "warn")).toBe(true);
   });
 });
 

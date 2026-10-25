@@ -1,4 +1,4 @@
-/** Airly apps: where each API lives and how its token looks (from each app's source, 18 Oct 2026). */
+/** Connected product API endpoints and token formats, checked against their provider documentation. */
 export type AirlyApp = "formkit" | "meetrao" | "taskeni" | "folevi";
 
 export const AIRLY_APPS: Record<AirlyApp, { name: string; what: string; base: string | null; tokenPattern: RegExp; tokenHelp: string; direction: "in" | "out" }> = {

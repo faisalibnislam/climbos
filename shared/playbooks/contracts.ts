@@ -44,6 +44,8 @@ export interface PlaybookContext {
   leadRate?: number;
   /** Diagnosis status: only a supported constraint lowers playbooks that would feed a leak. */
   constraintStatus?: "supported" | "ambiguous" | "insufficient_evidence" | "conflicting_inputs";
+  /** Owner-confirmed conversion tracking state; inferred or absent tracking stays unknown. */
+  tracking?: "none" | "basic" | "full";
 }
 
 /** hard: blocks the playbook; preference: keeps it eligible at lower priority, with the reason. */
@@ -53,6 +55,7 @@ type Requirement = (
   | { kind: "budget_min"; usd: number; why: string }
   /** Paid clicks must be affordable at all (no budget blocks); readability depends on cost per click, so unknown CPC is "check first". */
   | { kind: "paid_test"; minClicks: number; why: string }
+  | { kind: "tracking"; any: ("basic" | "full")[]; why: string }
   /** A split test must finish within `weeks` for a 50% relative swing on the owner's baseline (falls back to `weeklyFallback` visitors when the baseline is unknown). */
   | { kind: "split_readable"; weeks: number; weeklyFallback: number; why: string }
   /** Lower priority while a measured leak sits further down (referrals and paid scale feed it). */
@@ -72,6 +75,7 @@ type Requirement = (
 const DEFAULT_CLASS: Record<Requirement["kind"], RequirementClass> = {
   budget_min: "preference",
   paid_test: "hard",
+  tracking: "hard",
   split_readable: "hard",
   no_leak: "preference",
   traffic_min: "hard",
@@ -177,6 +181,7 @@ export const PLAYBOOKS: Playbook[] = [
     avoidWhen: "Low price per customer, no conversion tracking, or a leak further down the funnel.",
     requires: [
       { kind: "paid_test", minClicks: 100, why: "a search test needs enough clicks to read (about 100 a month is a small, learning-only test)" },
+      { kind: "tracking", any: ["basic", "full"], why: "conversion tracking is needed to evaluate paid traffic by qualified leads or customers, not clicks alone" },
       { kind: "price_min", usd: 25, why: "below $25 a month per customer paid clicks rarely pay back; check the break-even cost per click first" },
       { kind: "no_leak", constraints: ["activation", "retention", "conversion"], why: "a measured leak further down: run only as a capped test that also reads lead quality, no expansion" },
     ],
@@ -198,9 +203,9 @@ export const PLAYBOOKS: Playbook[] = [
     appliesWhen: "Customers find the business by place.",
     avoidWhen: "The business doesn't serve a local area.",
     requires: [{ kind: "geography", any: ["local", "regional"], why: "only for businesses customers find by place" }],
-    steps: ["Complete the profile and services", "Ask recent customers for reviews (email or SMS)", "Add photos and answer questions weekly"],
+    steps: ["Complete the profile and services", "Send every eligible customer the same neutral review invitation and public destination (email or SMS with appropriate permission)", "Add photos and answer questions weekly"],
     outcome: "Calls, bookings and direction requests from the listing",
-    guardrail: "No incentivised or fake reviews",
+    guardrail: "No sentiment filtering, incentives, or fake reviews; public replies need owner approval",
     stop: "No change in calls after 8 weeks",
     revise: "Views up, calls flat: fix services and hours",
     expand: "Calls up: add a second location page or service",
@@ -216,7 +221,7 @@ export const PLAYBOOKS: Playbook[] = [
     appliesWhen: "There are active, satisfied customers and a natural moment to share.",
     avoidWhen: "Few customers, or activation and retention are weak (referrals feed a leak).",
     requires: [
-      { kind: "customers_min", count: 20, why: "referral participation is 3–15% of customers, so a programme needs a base; with fewer, ask happy customers personally" },
+      { kind: "customers_min", count: 20, why: "referral participation is 3–15% of customers, so a programme needs a base; with fewer, invite willing customers to refer others in a personal, optional conversation" },
       { kind: "no_leak", constraints: ["activation", "retention"], why: "activation or retention is the measured weak link, so referrals would feed a leak" },
     ],
     steps: ["Pick the moment right after first value or a good result", "Add the share link or invite there", "Count invites and referred signups"],
@@ -315,7 +320,7 @@ export const PLAYBOOKS: Playbook[] = [
     requires: [],
     steps: ["Write the pricing decision down (goal, floor, max discount)", "Change one thing (package, anchor, billing unit) for new buyers", "Measure paid conversion and margin together"],
     outcome: "Paid conversion and contribution per customer",
-    guardrail: "Existing customers' terms unchanged; no decoy tiers or hidden costs",
+    guardrail: "Existing customers' terms unchanged; no invented prices or savings; flag jurisdiction-dependent disclosure or friction tactics for legal review",
     stop: "Conversion flat and margin down",
     revise: "Conversion up, margin down: adjust the package",
     expand: "Both hold: keep and test the next lever",
@@ -435,6 +440,10 @@ export function eligibility(pb: Playbook, ctx: PlaybookContext): { eligible: boo
         if (!(ctx.budgetUsd > 0)) reasons.push("no ad budget: paid clicks cost money");
         else if (ctx.cpcUsd === undefined || !(ctx.cpcUsd > 0)) unknown.push("cost per click for your search terms");
         else if (ctx.budgetUsd / ctx.cpcUsd < r.minClicks) soft.push(`about ${Math.round(ctx.budgetUsd / ctx.cpcUsd)} clicks a month at ${fmtUsd(ctx.cpcUsd)} each: a learning test that reads only a big difference`);
+        break;
+      case "tracking":
+        if (ctx.tracking === undefined) unknown.push("whether conversion tracking is set up");
+        else if (!r.any.includes(ctx.tracking as "basic" | "full")) fail(r.why);
         break;
       case "split_readable": {
         if (ctx.weeklyVisitors === undefined) {

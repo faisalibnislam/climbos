@@ -1,6 +1,7 @@
 import { majorToMinor, minorToMajor } from "../shared/economics/currency";
 import { isUnlimited } from "../shared/economics/credits";
 import { v } from "convex/values";
+import { isIndustryBusinessTypeId } from "../shared/knowledge/industryCatalog";
 import type { GoalTarget } from "../shared/agents/goal";
 import { accountWorkspaces, ensureAccountForOwner } from "./lib/accounts";
 import { recordReferral } from "./referrals";
@@ -13,11 +14,14 @@ import type { Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import { assertNoActiveRun, createRunWithReservation, latestRunOfKind } from "./engine";
 import { audit } from "./lib/audit";
-import { planJob } from "./lib/jobPlans";
+import { estimateJobMicros, planJob } from "./lib/jobPlans";
 import { createOnboardingPeriod } from "./lib/periods";
 import { appError, isOperator, optionalUser, requireOrgAccess, requireUser } from "./lib/tenancy";
 import { chargeableAccess, isPaid } from "./lib/access";
 import { can } from "../shared/policy";
+import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
+import { BUSINESS_LIFECYCLE_STAGES } from "../shared/agents/lifecycle";
+import type { RunPreview } from "./content";
 
 function slugify(name: string): string {
   const base = name
@@ -70,13 +74,23 @@ export const newWorkspaceAiMode = query({
   args: {},
   handler: async (ctx) => {
     const user = await optionalUser(ctx);
-    if (!user) return { expertUnlocked: false };
+    if (!user) return { expertUnlocked: false, estimates: { onboarding_research: onboardingResearchEstimates() } };
     const account = await ctx.db.query("accounts").withIndex("by_owner", (q) => q.eq("ownerUserId", user._id)).first();
-    if (!account || account.suspendedAt) return { expertUnlocked: false };
+    if (!account || account.suspendedAt) return { expertUnlocked: false, estimates: { onboarding_research: onboardingResearchEstimates() } };
     const first = (await accountWorkspaces(ctx, account._id))[0];
-    return { expertUnlocked: first ? await isPaid(ctx, { _id: first._id, accountId: account._id }) : false };
+    return {
+      expertUnlocked: first ? await isPaid(ctx, { _id: first._id, accountId: account._id }) : false,
+      estimates: { onboarding_research: onboardingResearchEstimates() },
+    };
   },
 });
+
+function onboardingResearchEstimates() {
+  return {
+    basic: estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "basic" })),
+    expert: estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "expert" })),
+  };
+}
 
 export const me = query({
   args: {},
@@ -274,6 +288,10 @@ export const onboardingState = query({
           .withIndex("by_run", (q) => q.eq("runId", researchRun._id))
           .take(20)
       : [];
+    let researchPreview: RunPreview | null = null;
+    if (researchRun?.preview) {
+      try { researchPreview = JSON.parse(researchRun.preview) as RunPreview; } catch { /* A malformed preview must not block fact review. */ }
+    }
     const goal = await ctx.db
       .query("goals")
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
@@ -298,6 +316,8 @@ export const onboardingState = query({
             website: business.website ?? null,
             summary: business.summary ?? null,
             businessType: business.businessType,
+            industryBusinessTypeId: business.industryBusinessTypeId ?? null,
+            lifecycleStage: business.lifecycleStage ?? null,
             researchStatus: business.researchStatus,
             successEvents: business.successEvents,
             currency: business.currency,
@@ -331,6 +351,7 @@ export const onboardingState = query({
                   ? ("site_unreadable" as const)
                   : ("other" as const),
             engine: researchRun.engine ?? null,
+            preview: researchPreview,
             createdAt: researchRun.createdAt,
             finishedAt: researchRun.finishedAt ?? null,
             steps: researchSteps.filter((s) => s.index < 1000).map((s) => ({ label: s.label, status: s.status, kind: s.kind, startedAt: s.startedAt ?? null, finishedAt: s.finishedAt ?? null })),
@@ -367,14 +388,23 @@ export const reviewFact = mutation({
   },
   handler: async (ctx, args) => {
     const { fact, user, org } = await requireFactInOrg(ctx, args.slug, args.factId);
+    const businessFacts = await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", fact.businessId)).take(300);
+    const group = groupExactDuplicateFacts(businessFacts.map((row) => ({ ...row, id: String(row._id), state: row.reviewState })))
+      .find(({ primary, duplicates }) => [primary, ...duplicates].some((row) => row.id === String(fact._id)));
+    const reviewTargets = group ? [group.primary, ...group.duplicates].map((row) => businessFacts.find((candidate) => String(candidate._id) === row.id)!).filter((row) => row.orgId === org._id) : [fact];
+    const now = Date.now();
     if (args.action === "edit") {
       const statement = args.statement?.trim().slice(0, 400);
       if (!statement) throw appError("INVALID", "The fact can't be empty.");
-      await ctx.db.patch(fact._id, { statement, reviewState: "edited", confidence: "high", updatedBy: user._id, updatedAt: Date.now() });
+      for (const target of reviewTargets) await ctx.db.patch(target._id, { statement, reviewState: "edited", confidence: "high", updatedBy: user._id, verifiedAt: now, updatedAt: now });
     } else {
-      await ctx.db.patch(fact._id, { reviewState: args.action === "confirm" ? "confirmed" : "rejected", updatedBy: user._id, updatedAt: Date.now() });
+      for (const target of reviewTargets) await ctx.db.patch(target._id, { reviewState: args.action === "confirm" ? "confirmed" : "rejected", updatedBy: user._id, ...(args.action === "confirm" ? { verifiedAt: now } : {}), updatedAt: now });
     }
-    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: `fact.${args.action}`, subjectType: "fact", subjectId: fact._id, summary: `Fact ${args.action}ed.` });
+    if (["product", "audience", "pricing", "offer", "competitor"].includes(fact.category)) {
+      const business = await ctx.db.get(fact.businessId);
+      if (business?.orgId === org._id) await ctx.db.patch(business._id, { competitorResearchNextAt: Date.now(), competitorResearchStaleAt: Date.now(), updatedAt: Date.now() });
+    }
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: `fact.${args.action}`, subjectType: "fact", subjectId: fact._id, summary: `Fact ${args.action}ed${reviewTargets.length > 1 ? ` with ${reviewTargets.length - 1} duplicate${reviewTargets.length === 2 ? "" : "s"}` : ""}.` });
   },
 });
 
@@ -386,7 +416,15 @@ export const confirmAllFacts = mutation({
       .query("businessFacts")
       .withIndex("by_org_state", (q) => q.eq("orgId", org._id).eq("reviewState", "needs_review"))
       .take(100);
-    for (const f of facts) await ctx.db.patch(f._id, { reviewState: "confirmed", updatedBy: user._id, updatedAt: Date.now() });
+    const now = Date.now();
+    for (const f of facts) await ctx.db.patch(f._id, { reviewState: "confirmed", updatedBy: user._id, verifiedAt: now, updatedAt: now });
+    if (facts.some((fact) => ["product", "audience", "pricing", "offer", "competitor"].includes(fact.category))) {
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+      if (business) {
+        const now = Date.now();
+        await ctx.db.patch(business._id, { competitorResearchNextAt: now, competitorResearchStaleAt: now, updatedAt: now });
+      }
+    }
     if (org.onboardingStep !== "done") await ctx.db.patch(org._id, { onboardingStep: "goal" });
     return facts.length;
   },
@@ -417,7 +455,7 @@ export const addFact = mutation({
     const statement = args.statement.trim().slice(0, 400);
     if (!statement) throw appError("INVALID", "Please write the fact.");
     const now = Date.now();
-    return ctx.db.insert("businessFacts", {
+    const factId = await ctx.db.insert("businessFacts", {
       orgId: org._id,
       businessId: business._id,
       category: args.category,
@@ -427,9 +465,14 @@ export const addFact = mutation({
       provenance: "owner_supplied",
       sourceIds: [],
       updatedBy: user._id,
+      verifiedAt: now,
       createdAt: now,
       updatedAt: now,
     });
+    if (["product", "audience", "pricing", "offer", "competitor"].includes(args.category)) {
+      await ctx.db.patch(business._id, { competitorResearchNextAt: now, competitorResearchStaleAt: now, updatedAt: now });
+    }
+    return factId;
   },
 });
 
@@ -442,12 +485,16 @@ export const saveBusinessDetails = mutation({
     businessType: v.optional(
       v.union(v.literal("saas"), v.literal("ecommerce"), v.literal("services"), v.literal("physical_products"), v.literal("other")),
     ),
+    /** Exact owner selection from the curated 500-type catalog; null clears it. */
+    industryBusinessTypeId: v.optional(v.union(v.string(), v.null())),
     currency: v.optional(v.string()),
     timezone: v.optional(v.string()),
+    /** Owner-reported business stage; null clears it. Website copy never sets this field. */
+    lifecycleStage: v.optional(v.union(v.literal("idea_validation"), v.literal("pre_launch"), v.literal("early_traction"), v.literal("growth"), v.literal("maturity"), v.literal("decline"), v.null())),
     successEvents: v.optional(v.array(v.object({ key: v.string(), label: v.string(), definition: v.string(), confirmed: v.boolean() }))),
   },
   handler: async (ctx, args) => {
-    const { org } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
+    const { org, user, role } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
     const business = await ctx.db
       .query("businesses")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
@@ -457,20 +504,48 @@ export const saveBusinessDetails = mutation({
     if (currency && !/^[A-Z]{3}$/.test(currency)) throw appError("INVALID", "Currency must be a 3-letter code like USD.");
     const website = args.website === undefined ? undefined : args.website.trim() ? normalizeWebsite(args.website) : "";
     if (website === undefined && args.website?.trim()) throw appError("INVALID", "That doesn't look like a website address. Try something like example.com.");
+    const businessChanged = Boolean((args.name && args.name.trim() !== business.name) || (website !== undefined && website !== (business.website ?? "")) || (args.businessType && args.businessType !== business.businessType));
+    const stageChanged = args.lifecycleStage !== undefined && args.lifecycleStage !== (business.lifecycleStage?.stage ?? null);
+    if (args.lifecycleStage !== undefined && role !== "owner" && role !== "admin") throw appError("FORBIDDEN", "Only a workspace owner or admin can set the business stage.");
+    if (args.industryBusinessTypeId !== undefined && args.industryBusinessTypeId !== null && !isIndustryBusinessTypeId(args.industryBusinessTypeId)) throw appError("INVALID", "Choose a business type from the ClimbOS industry catalog.");
+    if (args.lifecycleStage !== undefined && args.lifecycleStage !== null && !(BUSINESS_LIFECYCLE_STAGES as readonly string[]).includes(args.lifecycleStage)) throw appError("INVALID", "Choose a valid business stage.");
+    const now = Date.now();
+    const industryTypeChanged = args.industryBusinessTypeId !== undefined && args.industryBusinessTypeId !== (business.industryBusinessTypeId ?? null);
     await ctx.db.patch(business._id, {
       ...(args.name ? { name: args.name.trim().slice(0, 80) } : {}),
       ...(website !== undefined ? { website: website || undefined } : {}),
       ...(args.businessType ? { businessType: args.businessType } : {}),
+      ...(industryTypeChanged ? { industryBusinessTypeId: args.industryBusinessTypeId || undefined } : {}),
       ...(currency ? { currency } : {}),
       ...(args.timezone ? { timezone: args.timezone.slice(0, 64) } : {}),
+      ...(stageChanged ? { lifecycleStage: args.lifecycleStage === null ? undefined : { stage: args.lifecycleStage!, provenance: "owner_reported" as const, updatedAt: now } } : {}),
       ...(args.successEvents ? { successEvents: args.successEvents.slice(0, 6) } : {}),
-      updatedAt: Date.now(),
+      ...(businessChanged ? { competitorResearchNextAt: Date.now(), competitorResearchStaleAt: Date.now() } : {}),
+      updatedAt: now,
     });
     await ctx.db.patch(org._id, {
       ...(args.name ? { name: args.name.trim().slice(0, 80) } : {}),
       ...(currency ? { currency } : {}),
       ...(args.timezone ? { timezone: args.timezone.slice(0, 64) } : {}),
     });
+    if (stageChanged) await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "business.lifecycle_stage_changed", summary: args.lifecycleStage === null ? "Cleared the owner-reported business stage." : `Set the owner-reported business stage to ${args.lifecycleStage!.replace(/_/g, " ")}.` });
+    if (industryTypeChanged) await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "business.industry_type_changed", summary: args.industryBusinessTypeId ? `Selected industry playbook type ${args.industryBusinessTypeId}.` : "Cleared the selected industry playbook type." });
+  },
+});
+
+/** Set low-cadence competitor research; 0 stops scheduled refreshes. */
+export const setCompetitorResearchRefreshDays = mutation({
+  args: { slug: v.string(), days: v.union(v.literal(0), v.literal(30), v.literal(60), v.literal(90), v.literal(180)) },
+  handler: async (ctx, { slug, days }) => {
+    const { org, role, user } = await requireOrgAccess(ctx, { slug }, "manage_team");
+    if (role !== "owner" && role !== "admin") throw appError("FORBIDDEN", "Only an owner or admin can change scheduled research spending.");
+    const businesses = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(50);
+    await ctx.db.patch(org._id, { competitorResearchRefreshDays: days });
+    for (const business of businesses) if (business.insights) {
+      const nextAt = days === 0 ? undefined : business.competitorResearchStaleAt ?? (business.competitorResearchCompletedAt ?? business.insights.generatedAt) + days * 86_400_000;
+      await ctx.db.patch(business._id, { competitorResearchNextAt: nextAt, competitorResearchLastStatus: undefined });
+    }
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "competitor_research.cadence_changed", summary: days === 0 ? "Disabled scheduled competitor research." : `Set competitor research to refresh every ${days} days.` });
   },
 });
 
@@ -578,8 +653,8 @@ export const setAutonomy = mutation({
 });
 
 export const generatePlan = mutation({
-  args: { slug: v.string(), aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))) },
-  handler: async (ctx, { slug, aiMode: requested }) => {
+  args: { slug: v.string(), aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))), creativeRange: v.optional(v.union(v.literal("balanced"), v.literal("conventional"), v.literal("surprising"), v.literal("ambitious"))) },
+  handler: async (ctx, { slug, aiMode: requested, creativeRange }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const goal = await ctx.db
       .query("goals")
@@ -594,7 +669,7 @@ export const generatePlan = mutation({
       kind: plan.kind,
       title: plan.title,
       roles: plan.roles,
-      input: { goalId: goal._id },
+      input: { goalId: goal._id, creativeRange: creativeRange ?? "balanced" },
       steps: plan.steps,
       meters: plan.meters,
       createdBy: user._id,

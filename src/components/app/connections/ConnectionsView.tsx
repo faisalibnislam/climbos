@@ -9,7 +9,7 @@ import { LoadingBlock, PageHeader } from "../results/QueryBoundary";
 import { ConnectionCard, type ConnectionsData } from "./ConnectionCard";
 import { GROUPS } from "./labels";
 import { MailboxSection } from "./MailboxSection";
-import { AirlyApps } from "./AirlyApps";
+import { ConnectedProducts } from "./ConnectedProducts";
 
 export function ConnectionsView({ slug }: { slug: string }) {
   const data = useQuery(api.connections.list, { slug });
@@ -38,7 +38,7 @@ export function ConnectionsView({ slug }: { slug: string }) {
           ) : null}
 
           <MailboxSection slug={slug} />
-          <AirlyApps slug={slug} canManage={data.canManage} />
+          <ConnectedProducts slug={slug} canManage={data.canManage} />
 
           {GROUPS.map((g) => {
             const items = data.items.filter((i) => i.group === g.key);

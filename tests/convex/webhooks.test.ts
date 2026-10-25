@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { api, internal } from "../../convex/_generated/api";
+import { api } from "../../convex/_generated/api";
+import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { signWebhook } from "../../shared/webhooks";
+import { contentHash } from "../../shared/policy";
 import { asNewUser, setup } from "./helpers";
 
 describe("outgoing webhooks", () => {
@@ -35,5 +37,40 @@ describe("outgoing webhooks", () => {
     expect(sig).toMatch(/^[0-9a-f]{64}$/);
     expect(await signWebhook("whsec_test", 1_800_000_000, '{"a":1}')).toBe(sig);
     expect(await signWebhook("whsec_other", 1_800_000_000, '{"a":1}')).not.toBe(sig);
+  });
+
+  it("sends the exact approved blog version as an export handoff, never as publish authorization", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "seo-hooks@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "SEO Hooks Co" });
+    await owner.client.mutation(api.webhooks.create, { slug, url: "https://hooks.zapier.com/hooks/catch/1/seo", events: ["content.approved"] });
+    const body = "# A useful, evidence-based article\n\nThe approved article body.";
+    const artifactId = await t.run(async (ctx) => {
+      const business = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first()) as Doc<"businesses">;
+      const now = Date.now();
+      const id = await ctx.db.insert("artifacts", { orgId: orgId as Id<"organizations">, businessId: business._id, kind: "blog_post", channel: "blog", title: "Useful article", status: "in_review", currentVersion: 1, createdAt: now, updatedAt: now });
+      const versionId = await ctx.db.insert("artifactVersions", { orgId: orgId as Id<"organizations">, artifactId: id, version: 1, body, hashtags: [], claimFactIds: [], unsupportedClaims: [], contentHash: await contentHash({ body, hashtags: [], channel: "blog" }), createdAt: now });
+      await ctx.db.patch(id, { currentVersionId: versionId });
+      return id;
+    });
+    await owner.client.mutation(api.content.decide, { slug, artifactId, decision: "approve" });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const payload = await t.run(async (ctx) => {
+      const row = (await ctx.db.query("webhookDeliveries").collect()).find((item) => item.orgId === orgId);
+      return JSON.parse(row!.payload) as { event: string; data: Record<string, unknown> };
+    });
+    expect(payload.event).toBe("content.approved");
+    expect(payload.data).toMatchObject({
+      artifactId,
+      artifactVersion: 1,
+      actionScope: "approved_export",
+      publishAuthorized: false,
+      title: "Useful article",
+      contentFormat: "markdown",
+      content: body,
+      contentComplete: true,
+    });
+    expect(payload.data.contentHash).toBe(await contentHash({ body, hashtags: [], channel: "blog" }));
   });
 });

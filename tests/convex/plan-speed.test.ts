@@ -105,4 +105,131 @@ describe("Plan speed", () => {
     const run = await t.run(async (ctx) => ctx.db.get(runId));
     expect(JSON.parse(run!.preview!)).toEqual({ channels: ["SEO pages"], headline: "Start with SEO", points: ["a"] });
   });
+
+  it("keeps a completed onboarding first take visible during fact review, scoped to its workspace", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "onboarding-preview-owner@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Preview Co" });
+    const now = Date.now();
+    const runId = await t.run(async (ctx) => ctx.db.insert("workflowRuns", {
+      orgId: orgId as Id<"organizations">,
+      kind: "onboarding_research",
+      title: "Business research",
+      status: "verified",
+      input: "{}",
+      roles: ["data_analyst"],
+      estimateMicros: 0,
+      actualMicros: 0,
+      rateVersionId: "r",
+      entitlementVersionId: "e",
+      routingVersionId: "x",
+      budget: { modelSteps: 1, researchTools: 0, repairs: 0 },
+      used: { modelSteps: 0, researchTools: 0, repairs: 0 },
+      isFixture: false,
+      createdAt: now,
+      updatedAt: now,
+      finishedAt: now,
+      preview: JSON.stringify({ headline: "Check the clearest next step", opportunities: [{ title: "Make the main offer easier to find", why: "The homepage places details before the offer.", nextStep: "Review the page and confirm the main customer benefit.", evidence: [], basis: "hypothesis" }] }),
+    } as never));
+
+    const state = await owner.client.query(api.orgs.onboardingState, { slug });
+    expect(state.research).toMatchObject({ id: runId, status: "verified", preview: { headline: "Check the clearest next step", opportunities: [{ title: "Make the main offer easier to find", basis: "hypothesis", evidence: [] }] } });
+
+    const other = await asNewUser(t, "onboarding-preview-other@example.com");
+    await expect(other.client.query(api.orgs.onboardingState, { slug })).rejects.toThrow(/couldn't find/i);
+  });
+
+  it("records the first evidence-backed finding, excluding hypotheses and generic previews", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "finding-owner@example.com");
+    const { orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Finding Co" });
+    const createdAt = Date.now();
+    const runId = await t.run(async (ctx) => ctx.db.insert("workflowRuns", {
+      orgId: orgId as Id<"organizations">,
+      kind: "strategy",
+      title: "Plan",
+      status: "executing",
+      input: "{}",
+      roles: ["ceo"],
+      estimateMicros: 0,
+      actualMicros: 0,
+      rateVersionId: "r",
+      entitlementVersionId: "e",
+      routingVersionId: "x",
+      budget: { modelSteps: 1, researchTools: 0, repairs: 0 },
+      used: { modelSteps: 0, researchTools: 0, repairs: 0 },
+      isFixture: false,
+      createdAt,
+      updatedAt: createdAt,
+    } as never));
+
+    await t.mutation(internal.engine.setRunPreview, { runId, preview: JSON.stringify({ channels: ["SEO pages"] }) });
+    await t.mutation(internal.engine.setRunPreview, { runId, preview: JSON.stringify({ opportunities: [{ title: "A hypothesis", basis: "hypothesis", evidence: [] }] }) });
+    let run = await t.run(async (ctx) => ctx.db.get(runId));
+    expect(run?.firstFindingAt).toBeUndefined();
+
+    await t.mutation(internal.engine.setRunPreview, { runId, preview: JSON.stringify({ opportunities: [{ title: "Fix the unclear price", basis: "confirmed_facts", evidence: [{ factId: "fact_1", statement: "Prices are missing." }] }] }) });
+    run = await t.run(async (ctx) => ctx.db.get(runId));
+    expect(run?.firstFindingAt).toBeGreaterThanOrEqual(createdAt);
+    const firstFindingAt = run?.firstFindingAt;
+
+    await t.mutation(internal.engine.setRunPreview, { runId, preview: JSON.stringify({ opportunities: [{ title: "Another supported finding", basis: "confirmed_facts", evidence: [{ factId: "fact_2", statement: "A confirmed fact." }] }] }) });
+    run = await t.run(async (ctx) => ctx.db.get(runId));
+    expect(run?.firstFindingAt).toBe(firstFindingAt);
+  });
+
+  it("records owner follow-through for the source plan without crossing workspace boundaries", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "action-owner@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Action Co" });
+    const other = await asNewUser(t, "other-action-owner@example.com");
+    const { orgId: otherOrgId } = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other Co" });
+    const createdAt = Date.now();
+    const sourceRunId = await t.run(async (ctx) => ctx.db.insert("workflowRuns", {
+      orgId: orgId as Id<"organizations">,
+      kind: "strategy",
+      title: "Plan",
+      status: "verified",
+      input: "{}",
+      roles: ["ceo"],
+      estimateMicros: 0,
+      actualMicros: 0,
+      rateVersionId: "r",
+      entitlementVersionId: "e",
+      routingVersionId: "x",
+      budget: { modelSteps: 1, researchTools: 0, repairs: 0 },
+      used: { modelSteps: 0, researchTools: 0, repairs: 0 },
+      isFixture: false,
+      createdAt,
+      updatedAt: createdAt,
+    } as never));
+    const foreignRunId = await t.run(async (ctx) => ctx.db.insert("workflowRuns", {
+      orgId: otherOrgId as Id<"organizations">,
+      kind: "strategy",
+      title: "Other plan",
+      status: "verified",
+      input: "{}",
+      roles: ["ceo"],
+      estimateMicros: 0,
+      actualMicros: 0,
+      rateVersionId: "r",
+      entitlementVersionId: "e",
+      routingVersionId: "x",
+      budget: { modelSteps: 1, researchTools: 0, repairs: 0 },
+      used: { modelSteps: 0, researchTools: 0, repairs: 0 },
+      isFixture: false,
+      createdAt,
+      updatedAt: createdAt,
+    } as never));
+    const [cardId, foreignCardId] = await t.run(async (ctx) => Promise.all([
+      ctx.db.insert("actionCards", { orgId: orgId as Id<"organizations">, sourceRunId, title: "Confirm one next step", description: "A plan action.", proposedEffect: "A local checklist item.", kind: "note", roles: ["ceo"], payload: "{}", costEstimateMicros: 0, externalEffect: false, status: "proposed", priority: 1, createdAt, updatedAt: createdAt }),
+      ctx.db.insert("actionCards", { orgId: orgId as Id<"organizations">, sourceRunId: foreignRunId, title: "Foreign source", description: "Must not update another workspace.", proposedEffect: "A local checklist item.", kind: "note", roles: ["ceo"], payload: "{}", costEstimateMicros: 0, externalEffect: false, status: "proposed", priority: 2, createdAt, updatedAt: createdAt }),
+    ]));
+
+    await owner.client.mutation(api.workspace.runCard, { slug, cardId });
+    await owner.client.mutation(api.workspace.runCard, { slug, cardId: foreignCardId });
+    const [source, foreign] = await t.run(async (ctx) => Promise.all([ctx.db.get(sourceRunId), ctx.db.get(foreignRunId)]));
+    expect(source?.firstActionAt).toBeGreaterThanOrEqual(createdAt);
+    expect(foreign?.firstActionAt).toBeUndefined();
+  });
 });

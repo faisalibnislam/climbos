@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { creatorIdentity, targetBrief, targetKindOf, targetReadiness, type TargetRow } from "../../shared/growth/targets";
+import { citedCreatorCompetitorCollaborations, citedCreatorContentSamples, citedCreatorFact, creatorEvidenceIsStale, CREATOR_EVIDENCE_MAX_AGE_MS, creatorIdentity, creatorMetricAnomalies, targetBrief, targetKindOf, targetReadiness, type TargetRow } from "../../shared/growth/targets";
+import { creatorOutreachSpec, creatorScoutSpec } from "../../shared/agents/specs";
 
 /** S6 (REQ-TARGET-01..06, REQ-CREATOR-01): which plays need targets, creator identity, honest readiness. */
 describe("which plays need targets", () => {
@@ -20,6 +21,13 @@ describe("which plays need targets", () => {
 });
 
 describe("creator identity (REQ-TARGET-03)", () => {
+  it("flags unknown, future, and older-than-policy evidence as stale", () => {
+    const now = Date.UTC(2026, 9, 25);
+    expect(creatorEvidenceIsStale(undefined, now)).toBe(true);
+    expect(creatorEvidenceIsStale(now + 1, now)).toBe(true);
+    expect(creatorEvidenceIsStale(now - CREATOR_EVIDENCE_MAX_AGE_MS, now)).toBe(true);
+    expect(creatorEvidenceIsStale(now - CREATOR_EVIDENCE_MAX_AGE_MS + 1, now)).toBe(false);
+  });
   it("two creators on one platform stay distinct; a shared domain is never the identity", () => {
     const a = creatorIdentity("https://www.instagram.com/studio.ana/");
     const b = creatorIdentity("instagram.com/bodybyben");
@@ -46,6 +54,98 @@ describe("creator identity (REQ-TARGET-03)", () => {
   it("a creator's own site or newsletter keys by host", () => {
     expect(creatorIdentity("https://anaeats.substack.com/p/post")?.key).toBe("substack:anaeats");
     expect(creatorIdentity("https://anamoves.com/about")?.key).toBe("web:anamoves.com");
+  });
+});
+
+describe("source-bound creator facts (REQ-CREATOR-01)", () => {
+  const evidence = [{ url: "https://instagram.com/ana", observation: "12k followers. English language cooking tutorials. Audience: UK." }];
+  it("keeps the exact displayed value and exact source URL", () => {
+    expect(citedCreatorFact({ value: "12k followers", sourceUrl: evidence[0].url }, evidence)).toEqual({ value: "12k followers", sourceUrl: evidence[0].url });
+    expect(citedCreatorFact({ value: "English", sourceUrl: evidence[0].url }, evidence)).toEqual({ value: "English", sourceUrl: evidence[0].url });
+    expect(citedCreatorFact({ value: "UK", sourceUrl: evidence[0].url }, evidence)).toEqual({ value: "UK", sourceUrl: evidence[0].url });
+  });
+  it("rejects a value absent from the observation or a different source URL", () => {
+    expect(citedCreatorFact({ value: "120k followers", sourceUrl: evidence[0].url }, evidence)).toBeNull();
+    expect(citedCreatorFact({ value: "12k followers", sourceUrl: "https://other.example/profile" }, evidence)).toBeNull();
+    expect(citedCreatorFact({ value: "12k followers", sourceUrl: "javascript:alert(1)" }, evidence)).toBeNull();
+    expect(citedCreatorFact({ value: "12k followers", sourceUrl: evidence[0].url }, [{ url: evidence[0].url, observation: "112k followers" }])).toBeNull();
+  });
+  it("keeps visible post metrics only when the exact cited content observation contains them", () => {
+    const postUrl = "https://instagram.com/p/reel1";
+    const source = [...evidence, { url: postUrl, observation: "3.2k views, 210 likes, 14 comments" }];
+    expect(citedCreatorContentSamples([{ url: postUrl, format: "short_video", views: "3.2k views", likes: "210 likes", comments: "14 comments" }], source)).toEqual([
+      { url: postUrl, format: "short_video", views: "3.2k views", likes: "210 likes", comments: "14 comments" },
+    ]);
+    expect(citedCreatorContentSamples([{ url: postUrl, format: "short_video", views: "32k views" }], source)).toEqual([{ url: postUrl, format: "short_video" }]);
+    expect(citedCreatorContentSamples([{ url: postUrl, format: "short_video", views: "2k views" }], [{ url: postUrl, observation: "12k views" }])).toEqual([{ url: postUrl, format: "short_video" }]);
+    expect(citedCreatorContentSamples([{ url: "https://instagram.com/p/other", format: "short_video", likes: "210 likes" }], source)).toEqual([]);
+  });
+  it("records only displayed interaction/view counter inconsistencies, with explicit uncertainty and no fraud claim", () => {
+    const postUrl = "https://instagram.com/p/reel1";
+    expect(creatorMetricAnomalies([{ url: postUrl, format: "short_video", views: "1K views", likes: "1.2K likes", comments: "15 comments" }], 123)).toEqual([{
+      code: "interactions_exceed_views",
+      sampleUrl: postUrl,
+      views: "1K views",
+      interactions: [{ metric: "likes", value: "1.2K likes" }],
+      observedAt: 123,
+      uncertainty: expect.stringContaining("not evidence of fake engagement"),
+    }]);
+    expect(creatorMetricAnomalies([{ url: postUrl, format: "short_video", views: "1.2K", likes: "1,000", comments: "8" }], 123)).toEqual([]);
+    expect(creatorMetricAnomalies([{ url: postUrl, format: "short_video", views: "unavailable", likes: "2K" }], 123)).toEqual([]);
+  });
+  it("records prior competitor mentions with a source quote and observation date without implying current exclusivity", () => {
+    const source = [{ url: "https://instagram.com/ana", observation: "Partnered with Rival in September 2025." }];
+    const prior = [{ name: "Rival", type: "co_created_or_partnered", evidenceUrl: source[0].url, evidenceQuote: "Partnered with Rival in September 2025", publishedAt: "September 2025" }];
+    expect(citedCreatorCompetitorCollaborations(prior, source, 123)).toEqual([{ ...prior[0], observedAt: 123 }]);
+    expect(citedCreatorCompetitorCollaborations([{ ...prior[0], evidenceQuote: "Partnered with Rival in October 2025" }], source, 123)).toEqual([]);
+    expect(citedCreatorCompetitorCollaborations([{ ...prior[0], publishedAt: "2026" }], source, 123)).toEqual([]);
+  });
+  it("hard-fails creator facts that don't match their cited page evidence", () => {
+    const profile = "https://instagram.com/ana";
+    const post = "https://instagram.com/p/ana1";
+    const fullEvidence = [...evidence, { url: post, observation: "3.2k views, 210 likes, 14 comments on a cooking reel" }];
+    const prospect = { company: "Ana", website: profile, location: "unknown", sizeBand: "12k followers", why: "Cooking tutorials", evidence: fullEvidence, trigger: "", fit: 80, timing: 50, contact: "@ana", publicEmail: "", audienceSize: { value: "12k followers", sourceUrl: profile }, contentLanguage: { value: "English", sourceUrl: profile }, audienceLocation: { value: "UK", sourceUrl: profile }, contentSamples: [{ url: post, format: "short_video", views: "3.2k views", likes: "210 likes", comments: "14 comments" }] };
+    const output = { icp: { summary: "Cooking creators", mustHaves: [], disqualifiers: [], triggers: [], decisionMaker: "Creator" }, prospects: [prospect, { ...prospect, company: "Bea", website: "https://instagram.com/bea" }, { ...prospect, company: "Cam", website: "https://instagram.com/cam" }], excluded: [] };
+    const spec = creatorScoutSpec();
+    const input = { task: "", brief: "", facts: [], untrustedContext: [] };
+    expect(spec.lint!(output as never, input as never).some((issue) => issue.rule === "creator_fact_source")).toBe(false);
+    output.prospects[0].audienceSize = { value: "120k followers", sourceUrl: profile };
+    expect(spec.lint!(output as never, input as never).filter((issue) => issue.rule === "creator_fact_source" && issue.path === "prospects[0].audienceSize")).toHaveLength(1);
+    output.prospects[0].audienceSize = { value: "12k followers", sourceUrl: profile };
+    output.prospects[0].contentSamples[0].views = "32k views";
+    expect(spec.lint!(output as never, input as never).some((issue) => issue.rule === "creator_content_metric_source" && issue.path === "prospects[0].contentSamples[0].views")).toBe(true);
+  });
+});
+
+describe("creator opener source binding (REQ-CREATOR-05)", () => {
+  const sourceMap = { Ana: ["https://instagram.com/p/ana"], Bea: ["https://instagram.com/p/bea"], Cam: ["https://instagram.com/p/cam"] };
+  const output = {
+    sequence: [{ day: 0, subject: "A collaboration idea", body: "{{firstLine}}\nA short tutorial could be useful.", purpose: "Ask" }, { day: 4, subject: "Following up", body: "Would a short co-created example interest you?", purpose: "Follow up" }],
+    firstLines: Object.entries(sourceMap).map(([company, urls]) => ({ company, line: "Your recent cooking reel may fit this idea.", evidenceUrl: urls[0] })),
+    ownerNotes: [],
+  };
+  const input = { task: `CREATOR CONTENT SOURCE MAP:\n${JSON.stringify(sourceMap)}`, brief: "", facts: [] };
+
+  it("accepts an opener linked to the exact creator's observed content sample", () => {
+    const spec = creatorOutreachSpec();
+    expect(spec.lint!(output as never, input as never).filter((issue) => issue.rule.startsWith("creator_opener"))).toEqual([]);
+  });
+
+  it("rejects a source URL belonging to another creator or absent from the source map", () => {
+    const spec = creatorOutreachSpec();
+    const wrongTarget = structuredClone(output);
+    wrongTarget.firstLines[0].evidenceUrl = sourceMap.Bea[0];
+    expect(spec.lint!(wrongTarget as never, input as never).some((issue) => issue.rule === "creator_opener_source" && issue.path?.includes("Ana"))).toBe(true);
+    const unknownTarget = structuredClone(output);
+    unknownTarget.firstLines[0].evidenceUrl = "https://instagram.com/p/other";
+    expect(spec.lint!(unknownTarget as never, input as never).some((issue) => issue.rule === "creator_opener_source")).toBe(true);
+  });
+
+  it("keeps the shortlist usable when no creator has an accessible content sample", () => {
+    const spec = creatorOutreachSpec();
+    const noSamples = { ...output, firstLines: [] };
+    const noSourceMap = { ...input, task: "CREATOR CONTENT SOURCE MAP:\n{}" };
+    expect(spec.lint!(noSamples as never, noSourceMap as never).filter((issue) => issue.rule.startsWith("creator_opener"))).toEqual([]);
   });
 });
 

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { api } from "../../convex/_generated/api";
+import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { expertPlaysOf, readExpertPlan } from "../../shared/agents/planCompatibility";
 import { asNewUser, makePaid, setup, type T } from "./helpers";
 
 /** Plan version history: every version listed with why it changed and who approved it; restore makes a new version for approval. */
@@ -25,6 +26,53 @@ describe("Plan version history", () => {
   afterEach(() => {
     delete process.env.CLIMBOS_ENGINE;
     delete process.env.CLIMBOS_FAKE_LLM;
+  });
+
+  it("shows each linked fact's provenance and only source records from the same business", async () => {
+    const t = setup();
+    const w = await workspace(t, "source-owner@example.com");
+    const other = await workspace(t, "source-other-owner@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [version] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).first();
+      const otherBusiness = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", other.orgId)).first();
+      expect(business).toBeTruthy();
+      expect(otherBusiness).toBeTruthy();
+      const currentSource = await ctx.db.insert("factSources", {
+        orgId: w.orgId, businessId: business!._id, kind: "website", url: "https://example.com/pricing", title: "Pricing page", excerpt: "The Pro plan costs $20 per month.", fetchedAt: now - 1_000, status: "ok", expiresAt: now + 60_000,
+      });
+      const expiredSource = await ctx.db.insert("factSources", {
+        orgId: w.orgId, businessId: business!._id, kind: "website", url: "https://example.com/old-pricing", title: "Older pricing page", excerpt: "Old excerpt must not be returned.", fetchedAt: now - 40 * 86_400_000, status: "ok", expiresAt: now - 10_000,
+      });
+      const foreignSource = await ctx.db.insert("factSources", {
+        orgId: other.orgId, businessId: otherBusiness!._id, kind: "website", url: "https://other.example/private", title: "Other business source", excerpt: "Do not disclose.", fetchedAt: now, status: "ok", expiresAt: now + 60_000,
+      });
+      const factId = await ctx.db.insert("businessFacts", {
+        orgId: w.orgId, businessId: business!._id, category: "pricing", statement: "The Pro plan costs $20 per month.", confidence: "high", reviewState: "confirmed", provenance: "researched", sourceIds: [currentSource, expiredSource, foreignSource], verifiedAt: now - 500, createdAt: now - 1_000, updatedAt: now - 500,
+      });
+      await ctx.db.patch(version.id, { sourceFactIds: [factId] });
+    });
+
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: version.id });
+    expect(view.sources).toHaveLength(1);
+    expect(view.sources[0]).toMatchObject({
+      statement: "The Pro plan costs $20 per month.",
+      provenance: "researched",
+      reviewState: "confirmed",
+      confidence: "high",
+      sources: [
+        { kind: "website", url: "https://example.com/pricing", excerpt: "The Pro plan costs $20 per month.", excerptExpired: false },
+        { kind: "website", url: "https://example.com/old-pricing", excerpt: null, excerptExpired: true },
+      ],
+      sourceDetailsUnavailableCount: 1,
+      additionalSourceCount: 0,
+    });
+    expect(JSON.stringify(view.sources)).not.toContain("other.example/private");
+    expect(JSON.stringify(view.sources)).not.toContain("Do not disclose.");
   });
 
   it("lists versions with Latest / In use, reasons and approver, and restores parts as a new version", async () => {
@@ -69,6 +117,34 @@ describe("Plan version history", () => {
     await w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: r.strategyId, decision: "approve" });
     list = await w.client.query(api.planHistory.versions, { slug: w.slug });
     expect(list.find((v) => v.inUse)?.version).toBe(3);
+
+    // Restoring plays from an older schema keeps that part's own payload version.
+    await t.run(async (ctx) => {
+      const legacy = (await ctx.db.get(v1.id))!;
+      const decoded = readExpertPlan(legacy.expert!);
+      const expert = { ...decoded, version: 7 } as Record<string, unknown>;
+      delete expert.growthPlanV8;
+      delete expert.growthPlanV9;
+      await ctx.db.patch(legacy._id, { expert: expert as never });
+    });
+    const legacyRestore = await w.client.mutation(api.planHistory.restore, { slug: w.slug, fromId: v1.id, parts: ["plays"] });
+    const restoredExpert = await t.run(async (ctx) => (await ctx.db.get(legacyRestore.strategyId))?.expert);
+    expect(restoredExpert?.version).toBe(7);
+    expect(restoredExpert?.growthPlanV9).toBeUndefined();
+    expect(restoredExpert?.plays?.length).toBeGreaterThan(0);
+  });
+
+  it("explains which recorded planning inputs changed between refreshed versions", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-reason@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    await w.client.mutation(api.orgs.setGoal, { slug: w.slug, kind: "more_sales", statement: "Increase monthly sales", horizonDays: 120, monthlyAdBudget: 125 });
+    await buildPlan(t, w);
+
+    const versions = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    expect(versions[0].version).toBe(2);
+    expect(versions[0].reason).toMatch(/recorded changes to goal or budget/);
   });
 
   it("only editors restore, and the latest version can't be restored onto itself", async () => {
@@ -82,5 +158,470 @@ describe("Plan version history", () => {
     const viewer = await asNewUser(t, "history-viewer@example.com");
     await t.run(async (ctx) => ctx.db.insert("memberships", { orgId: w.orgId, userId: viewer.userId, role: "viewer", status: "active", createdAt: Date.now() }));
     await expect(viewer.client.mutation(api.planHistory.restore, { slug: w.slug, fromId: latest.id, parts: ["summary"] })).rejects.toThrow();
+  });
+
+  it("requires a fresh plan after owner economics change before approval or play launch", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-economics@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+
+    await w.client.mutation(api.workspace.setUnitEconomics, {
+      slug: w.slug,
+      revenuePerCustomerMonthUsd: 250,
+      grossMargin: 0.7,
+      monthlyChurn: 0.04,
+      monthlyGrowthCashUsd: 100,
+      segmentEconomics: [{ segment: "Small accounts", currency: "USD", periodDays: 90, customers: 12, netRevenue: 1200, variableCosts: 800, costBoundary: "Variable product, payment and support costs" }],
+    });
+
+    await expect(w.client.mutation(api.workspace.decidePlan, {
+      slug: w.slug,
+      strategyId: plan.id,
+      decision: "approve",
+    })).rejects.toThrow(/numbers changed after this plan was created/);
+
+    const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const refreshed = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    const savedExpert = readExpertPlan(saved!.expert!);
+    expect(refreshed.strategy?.expert?.economics).toMatchObject({ revenuePerCustomerMonthUsd: 250, grossMargin: 0.7, monthlyChurn: 0.04 });
+    expect(refreshed.strategy?.savedDecisions?.plays?.[0]).toMatchObject({ id: (savedExpert.plays as { id: string }[])[0].id, p50: (savedExpert.plays as { p50: number }[])[0].p50 });
+    expect(refreshed.strategy?.savedDecisions?.portfolio?.selected).toEqual((savedExpert.portfolio as { selected: string[] }).selected);
+    expect(refreshed.staleInputs.ownerEconomics).toBe(true);
+    expect(refreshed.unitEconomics?.segmentEconomics?.[0]).toMatchObject({ segment: "Small accounts", netRevenue: 1200, variableCosts: 800 });
+    expect(refreshed.strategy?.expert?.portfolio).toBeTruthy();
+    expect(refreshed.strategy?.expert?.portfolioComparisons).toMatchObject({ horizonDays: 90 });
+    expect(refreshed.strategy?.expert?.portfolioComparisons?.modeledPlayCount).toBeGreaterThan(0);
+    expect(refreshed.strategy?.expert?.portfolioComparisons?.playAttributed?.objective).toBe("play_attributed");
+    expect(refreshed.planImpact?.plays.length).toBeGreaterThan(0);
+    expect(refreshed.planImpact?.plays.some((play) => play.before.p50 !== null && play.after.p50 !== null && play.economicsBefore && play.economicsAfter)).toBe(true);
+    expect(refreshed.planImpact?.plays.some((play) => play.economicsBefore && play.economicsAfter && (play.economicsBefore.cacUsd !== play.economicsAfter.cacUsd || play.economicsBefore.paybackMonths !== play.economicsAfter.paybackMonths || play.economicsBefore.profitable !== play.economicsAfter.profitable))).toBe(true);
+    expect(refreshed.planImpact?.portfolio.before).toBeTruthy();
+    expect(refreshed.planImpact?.portfolio.after).toMatchObject({ cashSpendUsdMonth: expect.any(Number) });
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
+    expect(playId).toBeTruthy();
+    await expect(w.client.mutation(api.workspace.startPlay, {
+      slug: w.slug,
+      strategyId: plan.id,
+      playId: playId!,
+    })).rejects.toThrow(/numbers changed after this plan was created/);
+  });
+
+  it("requires review when a confirmed pricing fact ages past its review interval", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-fact-age@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
+    expect(playId).toBeTruthy();
+    const factId = await w.client.mutation(api.orgs.addFact, {
+      slug: w.slug,
+      category: "pricing",
+      statement: "The Pro plan costs $19 per month.",
+    });
+
+    await t.run(async (ctx) => {
+      const fact = await ctx.db.get(factId);
+      expect(fact?.reviewState).toBe("confirmed");
+      const savedPlan = (await ctx.db.get(plan.id))!;
+      const expert = savedPlan.expert as { snapshot?: Record<string, unknown> } & Record<string, unknown>;
+      // Represent the fact's state at the plan's save time, then age only its verification timestamp.
+      await ctx.db.patch(plan.id, {
+        expert: {
+          ...expert,
+          snapshot: {
+            ...expert.snapshot,
+            snapshotVersion: 21,
+            businessFactVersions: [{ id: String(factId), updatedAt: fact!.updatedAt, reviewSuggested: false }],
+          },
+        } as never,
+      });
+      await ctx.db.patch(factId, { verifiedAt: Date.now() - 61 * 86_400_000 });
+    });
+
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toMatchObject({ businessFacts: true, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/changed or are due for review/);
+    await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/changed or are due for review/);
+  });
+
+  it("requires refresh when the owner-reported business stage changes after planning", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-stage@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
+    expect(playId).toBeTruthy();
+
+    await w.client.mutation(api.orgs.saveBusinessDetails, { slug: w.slug, lifecycleStage: "growth" });
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: true, funnel: false, goal: false, businessProfile: false, businessFacts: false, brandGuidance: false, capabilities: false, businessResearch: false, marketChanges: false, cashTiming: false, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/business stage changed/);
+    await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/business stage changed/);
+  });
+
+  it("does not mark a plan stale when the owner re-saves the same business stage", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-same-stage@example.com");
+    await makePaid(t, w.orgId);
+    await w.client.mutation(api.orgs.saveBusinessDetails, { slug: w.slug, lifecycleStage: "growth" });
+    const funnel = { slug: w.slug, periodDays: 30, visitors: 100, leads: 20, activated: 10, newCustomers: 5 };
+    await w.client.mutation(api.workspace.setFunnel, funnel);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+
+    await w.client.mutation(api.orgs.saveBusinessDetails, { slug: w.slug, lifecycleStage: "growth" });
+    await w.client.mutation(api.workspace.setFunnel, funnel);
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: false, funnel: false, goal: false, businessProfile: false, businessFacts: false, brandGuidance: false, capabilities: false, businessResearch: false, marketChanges: false, cashTiming: false, requiresRefresh: false });
+  });
+
+  it("requires refresh when funnel measurements used by diagnosis change", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-funnel@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
+    expect(playId).toBeTruthy();
+
+    await w.client.mutation(api.workspace.setFunnel, { slug: w.slug, periodDays: 30, visitors: 1_000, leads: 20, activated: 10, newCustomers: 5 });
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: false, funnel: true, goal: false, businessProfile: false, businessFacts: false, brandGuidance: false, capabilities: false, businessResearch: false, marketChanges: false, cashTiming: false, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/funnel measurements changed/);
+    await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/funnel measurements changed/);
+  });
+
+  it("requires refresh when the active goal or budget changes", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-goal@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
+    expect(playId).toBeTruthy();
+
+    await w.client.mutation(api.orgs.setGoal, { slug: w.slug, kind: "more_sales", statement: "Increase monthly sales", target: { metric: "revenue_month", baseline: 1_000, desired: 2_000, mode: "incremental" }, horizonDays: 120, monthlyAdBudget: 125 });
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toEqual({ ownerEconomics: false, lifecycleStage: false, funnel: false, goal: true, businessProfile: false, businessFacts: false, brandGuidance: false, capabilities: false, businessResearch: false, marketChanges: false, cashTiming: false, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/active growth goal or budget changed/);
+    await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/active growth goal or budget changed/);
+  });
+
+  it("requires refresh when the material business profile changes", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-profile@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
+    expect(playId).toBeTruthy();
+
+    await w.client.mutation(api.orgs.saveBusinessDetails, { slug: w.slug, businessType: "services" });
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toMatchObject({ businessProfile: true, businessFacts: false, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/business profile changed/);
+    await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/business profile changed/);
+  });
+
+  it("requires refresh when the selected industry playbook type changes", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-industry-type@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+
+    await w.client.mutation(api.orgs.saveBusinessDetails, { slug: w.slug, industryBusinessTypeId: "BT-001" });
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toMatchObject({ businessProfile: true, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/business profile changed/);
+  });
+
+  it("requires refresh when confirmed business facts change", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-facts@example.com");
+    await makePaid(t, w.orgId);
+    const businessId = await t.run(async (ctx) => {
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).first();
+      expect(business).toBeTruthy();
+      await ctx.db.insert("businessFacts", {
+        orgId: w.orgId,
+        businessId: business!._id,
+        category: "audience",
+        statement: "Owner-confirmed audience buys online.",
+        confidence: "high",
+        reviewState: "confirmed",
+        provenance: "owner_supplied",
+        sourceIds: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      return business!._id;
+    });
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
+    expect(playId).toBeTruthy();
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("businessFacts", {
+        orgId: w.orgId,
+        businessId,
+        category: "offer",
+        statement: "Owner-confirmed offer includes a free consultation.",
+        confidence: "high",
+        reviewState: "confirmed",
+        provenance: "owner_supplied",
+        sourceIds: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    });
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toMatchObject({ businessProfile: false, businessFacts: true, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/confirmed business facts changed/);
+    await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/confirmed business facts changed/);
+  });
+
+  it("requires refresh when business and audience research changes after planning", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-research@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
+    expect(playId).toBeTruthy();
+
+    await t.run(async (ctx) => {
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).first();
+      expect(business).toBeTruthy();
+      await ctx.db.patch(business!._id, {
+        insights: {
+          audiences: [{ name: "Independent accountants", description: "Small practices", confidence: "medium", needs: [{ statement: "Reduce reconciliation work.", basis: "inference", evidenceRefs: [] }] }],
+          competitors: [],
+          positioning: "A simple bookkeeping workflow.", pricingNotes: "Unknown.",
+          swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] },
+          journey: [], opportunities: [],
+          expert: { alternatives: [], vocPhrases: [], objections: [], gaps: [], positioningStatement: "Simple workflow.", confidenceNotes: "Limited information." },
+          generatedAt: Date.now(),
+        },
+      });
+    });
+
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toMatchObject({ businessResearch: true, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/business and audience research changed/);
+    await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/business and audience research changed/);
+  });
+
+  it("binds monitored competitor changes into refreshed plans and blocks stale ones", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-market@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
+    expect(playId).toBeTruthy();
+    expect((saved?.expert?.snapshot as { marketChangeVersions?: unknown[] } | undefined)?.marketChangeVersions).toEqual([]);
+
+    await t.run(async (ctx) => {
+      const watchId = await ctx.db.insert("competitorWatches", { orgId: w.orgId, name: "Example Rival", url: "https://rival.example", active: true, createdAt: Date.now() });
+      await ctx.db.insert("competitorChanges", {
+        orgId: w.orgId,
+        watchId,
+        name: "Example Rival",
+        summary: "Added a new annual plan.",
+        bullets: ["Annual plan now shown on pricing page."],
+        sourceUrls: ["https://rival.example/pricing"],
+        evidence: { removed: [], added: ["Annual plan: $120 per year"] },
+        at: Date.now(),
+      });
+    });
+
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toMatchObject({ marketChanges: true, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/monitored competitor page changed/);
+    await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/monitored competitor page changed/);
+
+    await buildPlan(t, w);
+    const [refreshed] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const [refreshedStrategy, changeId] = await t.run(async (ctx) => [
+      await ctx.db.get(refreshed.id),
+      String((await ctx.db.query("competitorChanges").withIndex("by_org_at", (q) => q.eq("orgId", w.orgId)).first())!._id),
+    ] as const);
+    expect((refreshedStrategy?.expert?.snapshot as { marketChangeVersions?: { id: string; at: number }[] } | undefined)?.marketChangeVersions?.map((row) => row.id)).toContain(changeId);
+  });
+
+  it("requires refresh when brand guidance changes", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-brand@example.com");
+    await makePaid(t, w.orgId);
+    await t.run(async (ctx) => {
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).first();
+      expect(business).toBeTruthy();
+      await ctx.db.insert("brandProfiles", { orgId: w.orgId, businessId: business!._id, voice: "Friendly and practical", toneWords: ["helpful"], colors: [], doNots: ["No unsupported claims"], updatedAt: Date.now() });
+    });
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
+    expect(playId).toBeTruthy();
+
+    await w.client.mutation(api.brand.update, { slug: w.slug, voice: "Friendly and practical", toneWords: ["helpful"], colors: [], doNots: ["No unsupported claims"], approvedExamples: ["We make the next step clear."], socialHumor: "cheeky", socialTrendPolicy: "trend_aware" });
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toMatchObject({ businessProfile: false, businessFacts: false, brandGuidance: true, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/brand guidance changed/);
+    await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/brand guidance changed/);
+  });
+
+  it("requires refresh when an owner confirms channel-relevant business types", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-channel-types@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
+    expect(playId).toBeTruthy();
+
+    await w.client.mutation(api.acquisition.setTypes, { slug: w.slug, types: ["mobile_app"] });
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toMatchObject({ businessProfile: true, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/business profile changed/);
+    await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/business profile changed/);
+  });
+
+  it("requires refresh when an owner-confirmed acquisition dimension changes", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-acquisition-dimension@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
+    expect(playId).toBeTruthy();
+
+    await w.client.mutation(api.acquisition.setDimension, { slug: w.slug, key: "geography", value: "local" });
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toMatchObject({ businessProfile: true, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/business profile changed/);
+    await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/business profile changed/);
+  });
+
+  it("requires refresh when connected capabilities change after planning", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-capabilities@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const saved = await t.run((ctx) => ctx.db.get(plan.id));
+    const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
+    expect(playId).toBeTruthy();
+
+    await t.run((ctx) => ctx.db.insert("connections", {
+      orgId: w.orgId,
+      provider: "ga4",
+      status: "connected",
+      scopes: [],
+      isFixture: false,
+      createdBy: w.userId,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }));
+
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toMatchObject({ capabilities: true, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/connected tools changed/);
+    await expect(w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: plan.id, playId: playId! })).rejects.toThrow(/connected tools changed/);
+  });
+
+  it("requires refresh when owner channel experience changes after planning", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-stale-channel-experience@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+
+    await w.client.mutation(api.acquisition.setChannelPreference, { slug: w.slug, channelId: "M10", preference: "prefer", rationale: "Past tests brought qualified demos." });
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
+    expect(view.staleInputs).toMatchObject({ businessProfile: true, requiresRefresh: true });
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: plan.id, decision: "approve" })).rejects.toThrow(/business profile changed/);
+  });
+
+  it("migrates a valid legacy growth payload losslessly into the current nested schema", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-plan-migration@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const before = await t.run((ctx) => ctx.db.get(plan.id));
+    const decoded = readExpertPlan(before!.expert!);
+    const legacyExpert = { ...decoded, version: 7 } as Record<string, unknown>;
+    delete legacyExpert.growthPlanV8;
+    delete legacyExpert.growthPlanV9;
+    await t.run((ctx) => ctx.db.patch(plan.id, { expert: legacyExpert as never }));
+
+    const result = await t.mutation(internal.migrations.expertGrowthPlansToV9, { limit: 100 });
+    expect(result).toMatchObject({ migrated: 1, skippedInvalid: 0, skippedUnsupported: 0, done: true });
+    const migrated = (await t.run((ctx) => ctx.db.get(plan.id)))!.expert!;
+    expect(migrated.version).toBe(9);
+    expect(migrated.growthPlanV9).toEqual({ plays: decoded.plays, economics: decoded.economics });
+    expect(migrated.plays).toBeUndefined();
+    expect(migrated.economics).toBeUndefined();
+    expect(migrated.diagnosis).toBe(decoded.diagnosis);
+
+    expect(await t.mutation(internal.migrations.expertGrowthPlansToV9, { limit: 100 })).toMatchObject({ migrated: 0, done: true });
+  });
+
+  it("inventories legacy growth plans read-only across cursor pages", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-plan-inventory@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [plan] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const original = await t.run((ctx) => ctx.db.get(plan.id));
+    const decoded = readExpertPlan(original!.expert!);
+
+    await t.run(async (ctx) => {
+      const { _id: _id1, _creationTime: _created1, ...base } = original!;
+      const insert = async (expert: Record<string, unknown> | undefined) => ctx.db.insert("strategies", { ...base, expert: expert as never });
+
+      const legacyValid = { ...decoded, version: 7 } as Record<string, unknown>;
+      delete legacyValid.growthPlanV8;
+      delete legacyValid.growthPlanV9;
+      await insert(legacyValid);
+
+      const legacyInvalid = { ...legacyValid, plays: [], economics: {} };
+      await insert(legacyInvalid);
+      await insert({ ...decoded, version: 10 });
+      await insert(undefined);
+    });
+
+    const first = await t.query(internal.migrations.expertGrowthPlanInventory, { limit: 2 });
+    expect(first.scanned).toBe(2);
+    expect(first.done).toBe(false);
+    expect(first.cursor).toBeTruthy();
+    const second = await t.query(internal.migrations.expertGrowthPlanInventory, { limit: 2, cursor: first.cursor! });
+    const third = await t.query(internal.migrations.expertGrowthPlanInventory, { limit: 2, cursor: second.cursor! });
+    expect(third.done).toBe(true);
+    const counts = [first, second, third].reduce((total, page) => {
+      for (const [key, value] of Object.entries(page.counts)) total[key as keyof typeof total] += value;
+      return total;
+    }, { missingExpert: 0, currentValid: 0, currentInvalid: 0, legacyMigratable: 0, legacyInvalid: 0, futureUnsupported: 0 });
+    expect(counts).toEqual({ missingExpert: 1, currentValid: 1, currentInvalid: 0, legacyMigratable: 1, legacyInvalid: 1, futureUnsupported: 1 });
+
+    const after = await t.run((ctx) => ctx.db.get(plan.id));
+    expect(after!.expert).toEqual(original!.expert);
   });
 });

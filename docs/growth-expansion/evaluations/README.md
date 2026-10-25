@@ -15,6 +15,29 @@ Cases EV01–EV24 cover SaaS, Mac apps, agencies, ecommerce, local services, and
 5. Have a qualified reviewer assess both outputs against the same fixture, blinded to configuration where practical. For automatic graders, calibrate against human judgments and inspect disagreements.
 6. Compare critical failures, dimension scores, owner editing effort, cost per acceptable result, and latency. Report the complete tested population and uncertainty; a small fixture set does not prove universal quality.
 
+## Collect a blinded human comparison
+
+After saving baseline and candidate benchmark runs in the same format, export a paired review packet:
+
+```sh
+pnpm tsx bench/expansion/human-review.ts --mode export \
+  --baseline bench/results/baseline.json \
+  --candidate bench/results/candidate.json \
+  --seed review-round-01 \
+  --out bench/results/review-round-01.json
+```
+
+Send only the packet JSON to the qualified reviewer. The adjacent `.key.json` file reveals which answer came from which run; keep it private until the reviewer returns the completed packet. The seed makes answer ordering reproducible, and the same case/surface rows must exist in both runs. The reviewer fills every 0–2 rubric score, marks each listed hard failure `true` or `false`, records a preference (`A`, `B`, or `tie`), and adds a reviewer ID. Summarize the returned packet after validation:
+
+```sh
+pnpm tsx bench/expansion/human-review.ts --mode summarize \
+  --packet bench/results/review-round-01.json \
+  --key bench/results/review-round-01.key.json \
+  --out bench/results/review-round-01.summary.json
+```
+
+The summary maps preferences and scores back to baseline/candidate, reports incomplete reviews separately, and breaks preferences out by business type. Review packets also have optional editing-effort fields. A real owner or operator can record seconds from opening each answer until it is usable for the same task, and whether they accepted it unchanged. Independent reviewers are summarized separately. Missing measurements stay null; these are participant-reported task-effort observations, not business outcomes. Use multiple independent qualified reviewers for consequential comparisons; this tool reports ratings but does not claim statistical significance or reviewer agreement. Do not commit private review packets or keys unless their contents are cleared for the repository.
+
 No live publishing, sending, ad spending, or customer data access is needed to evaluate these cases. Simulate external tools with fixtures. An evaluation prompt cannot authorize real execution.
 
 ## Suggested review rubric

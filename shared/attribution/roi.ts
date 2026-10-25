@@ -33,6 +33,12 @@ export function roi(attributedRevenueMinor: number, adSpendMinor: number, otherC
   return contribution(attributedRevenueMinor, adSpendMinor, otherCostsMinor) / cost;
 }
 
+/** Media-only break-even ROAS for an owner-provided contribution/gross margin; excludes every other cost. */
+export function mediaBreakEvenRoas(grossMargin: number | null | undefined): number | null {
+  if (grossMargin === null || grossMargin === undefined || !Number.isFinite(grossMargin) || grossMargin <= 0 || grossMargin > 1) return null;
+  return 1 / grossMargin;
+}
+
 export interface ReturnMetrics {
   roas: number | null;
   roi: number | null;

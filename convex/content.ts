@@ -2,12 +2,20 @@ import { paginationOptsValidator } from "convex/server";
 import { featureAllowed, requirePaid } from "./lib/access";
 import { aiModeView, resolveAiMode } from "./lib/aiMode";
 import { EXPERT_KINDS } from "../shared/agents/routes";
+import { lintApprovedOfferCopy } from "../shared/agents/offerAssessment";
 import { v } from "convex/values";
 
 /** A running job's early output, filled in as it arrives (first take, channels that fit, chosen plays). */
 export interface RunPreview {
   headline?: string;
   points?: string[];
+  opportunities?: {
+    title: string;
+    why: string;
+    nextStep: string;
+    evidence: { factId?: string; statement: string; kind?: string; provenance: "confirmed_fact" | "source_reported"; sourceUrl?: string; confidence?: string }[];
+    basis: "confirmed_facts" | "source_reported" | "mixed" | "hypothesis";
+  }[];
   channels?: string[];
   budget?: string;
   plays?: { name: string; kind: string; p50: number; unit: string }[];
@@ -16,9 +24,11 @@ import { recordVoiceSample } from "./brand";
 import { findingsFor, plannedSteps } from "../shared/progress";
 import { buildManualExportPack, manualExportToCsv, type DraftPlatform } from "../shared/integrations/drafts";
 import { contentHash } from "../shared/policy";
+import { findRiskyClaims } from "../shared/ai/tasks";
+import { localDate, thisWeekOf } from "../shared/autopilot";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import { artifactStatusValidator, channelValidator } from "./schema";
 import { createRunWithReservation, MAX_RETRIES } from "./engine";
 import { audit } from "./lib/audit";
@@ -27,6 +37,33 @@ import { onOwnerDecision, onPublishOutcome } from "./lib/autopilot";
 import { estimateJobMicros, planJob } from "./lib/jobPlans";
 import { imageUrlFor } from "./lib/media";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+
+/** Read-only source set for the conversion/social audit; restricted to one tenant and confirmed published posts. */
+export const auditPublishedSocial = internalQuery({
+  args: { orgId: v.id("organizations"), limit: v.optional(v.number()) },
+  handler: async (ctx, { orgId, limit }) => {
+    const take = Math.max(1, Math.min(Math.floor(limit ?? 20), 30));
+    const channels = ["linkedin", "instagram", "facebook", "x", "tiktok", "youtube", "pinterest"] as const;
+    const posts = (await Promise.all(channels.map((channel) => ctx.db.query("artifacts")
+      .withIndex("by_org_status_channel", (q) => q.eq("orgId", orgId).eq("status", "published").eq("channel", channel))
+      .order("desc")
+      .take(take)))).flat().sort((a, b) => b.updatedAt - a.updatedAt).slice(0, take);
+    const social = posts;
+    return await Promise.all(social.map(async (post) => {
+      const version = post.currentVersionId ? await ctx.db.get(post.currentVersionId) : null;
+      return {
+        artifactId: post._id,
+        platform: post.channel,
+        title: post.title.slice(0, 160),
+        publishedAt: post.updatedAt,
+        headline: version?.headline?.slice(0, 300) ?? "",
+        body: (version?.body ?? "").slice(0, 1600),
+        angle: version?.contentAngle?.slice(0, 240) ?? "",
+        callToAction: version?.callToAction?.slice(0, 240) ?? "",
+      };
+    }));
+  },
+});
 
 /** The honest label shown with a library image on a post. */
 function assetPostLabel(a: Doc<"assets">): string {
@@ -48,6 +85,8 @@ async function versionView(
     version: v.version,
     headline: v.headline ?? null,
     body: v.body,
+    contentAngle: v.contentAngle ?? null,
+    copyBrief: v.copyBrief ?? null,
     callToAction: v.callToAction ?? null,
     destinationUrl: v.destinationUrl ?? null,
     hashtags: v.hashtags,
@@ -115,7 +154,76 @@ export const calendar = query({
       .query("artifacts")
       .withIndex("by_org_scheduled", (q) => q.eq("orgId", org._id).gte("scheduledFor", from).lt("scheduledFor", to))
       .take(300);
-    return rows.map((a) => ({ id: a._id, title: a.title, channel: a.channel, status: a.status, scheduledFor: a.scheduledFor! }));
+    type CalendarItem = {
+      id: string;
+      artifactId: Id<"artifacts"> | null;
+      slotId: Id<"calendarSlots"> | null;
+      title: string;
+      channel: string;
+      status: string;
+      scheduledFor: number;
+      autopilot: boolean;
+      autopilotStatus: string | null;
+    };
+    const events = new Map<string, CalendarItem>(rows.map((a) => [String(a._id), {
+      id: String(a._id),
+      artifactId: a._id,
+      slotId: null as Id<"calendarSlots"> | null,
+      title: a.title,
+      channel: a.channel,
+      status: a.status,
+      scheduledFor: a.scheduledFor!,
+      autopilot: false,
+      autopilotStatus: null as string | null,
+    }]));
+    const slots = await ctx.db
+      .query("calendarSlots")
+      .withIndex("by_org_slot", (q) => q.eq("orgId", org._id).gte("slotAt", from).lt("slotAt", to))
+      .take(300);
+    for (const slot of slots) {
+      if (slot.status === "skipped") continue;
+      const linked = slot.artifactId ? await ctx.db.get(slot.artifactId) : null;
+      const artifact = linked?.orgId === org._id ? linked : null;
+
+      if (artifact && artifact.scheduledFor !== undefined && (artifact.scheduledFor < from || artifact.scheduledFor >= to)) {
+        // A post may have been rescheduled since this slot was planned. Its actual schedule wins.
+        continue;
+      }
+      const existing = artifact ? events.get(String(artifact._id)) : undefined;
+      if (existing) {
+        events.set(existing.id, { ...existing, slotId: slot._id, autopilot: true, autopilotStatus: slot.status });
+        continue;
+      }
+
+      events.set(String(slot._id), {
+        id: String(slot._id),
+        artifactId: artifact?._id ?? null,
+        slotId: slot._id,
+        title: artifact?.title ?? slot.idea,
+        channel: slot.channel,
+        status: artifact?.status ?? slot.status,
+        scheduledFor: artifact?.scheduledFor ?? slot.slotAt,
+        autopilot: true,
+        autopilotStatus: slot.status,
+      });
+    }
+    return {
+      items: [...events.values()].sort((a, b) => a.scheduledFor - b.scheduledFor),
+      // Reaching a source cap means the range may contain more rows than we return.
+      limitsReached: {
+        scheduledPosts: rows.length === 300,
+        autopilotSlots: slots.length === 300,
+      },
+    };
+  },
+});
+
+/** Small calendar bootstrap query so calendar boundaries use the workspace's posting timezone. */
+export const calendarTimezone = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    return org.timezone;
   },
 });
 
@@ -139,11 +247,28 @@ export const get = query({
       .withIndex("by_artifact", (q) => q.eq("artifactId", a._id))
       .order("desc")
       .take(50);
-    const factIds = versions[0]?.claimFactIds ?? [];
+    const current = versions[0];
+    const copyBriefFactIds = current?.copyBrief
+      ? [...current.copyBrief.offerFactIds, ...current.copyBrief.proofFactIds, ...current.copyBrief.supportingFactIds]
+      : [];
+    const factIds = Array.from(new Set([...(current?.claimFactIds ?? []), ...copyBriefFactIds]));
     const facts = [];
-    for (const id of factIds.slice(0, 20)) {
+    for (const id of factIds.slice(0, 40)) {
       const f = await ctx.db.get(id);
-      if (f && f.orgId === org._id) facts.push({ id: f._id, statement: f.statement, reviewState: f.reviewState });
+      if (!f || f.orgId !== org._id || f.businessId !== a.businessId) continue;
+      const sources = await Promise.all(f.sourceIds.slice(0, 3).map((sourceId) => ctx.db.get(sourceId)));
+      facts.push({
+        id: f._id,
+        statement: f.statement,
+        reviewState: f.reviewState,
+        category: f.category,
+        confidence: f.confidence,
+        provenance: f.provenance,
+        verifiedAt: f.verifiedAt ?? null,
+        sources: sources.flatMap((source) => source && source.orgId === org._id && source.businessId === a.businessId
+          ? [{ kind: source.kind, url: source.url ?? null, title: source.title ?? null, excerpt: source.excerpt ?? null, fetchedAt: source.fetchedAt, expiresAt: source.expiresAt, expired: source.expiresAt < Date.now(), status: source.status }]
+          : []),
+      });
     }
     const target = DIRECT_PUBLISH[a.channel];
     const conn = target
@@ -154,6 +279,14 @@ export const get = query({
       : null;
     const currentApproval = a.approvalId ? await ctx.db.get(a.approvalId) : null;
     const curVer = a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null;
+    const wordpressConnection = a.kind === "blog_post" && a.channel === "blog"
+      ? await ctx.db.query("connections").withIndex("by_org_provider", (q) => q.eq("orgId", org._id).eq("provider", "wordpress")).first()
+      : null;
+    const wordpressDrafts = a.kind === "blog_post" && a.channel === "blog"
+      ? (await ctx.db.query("wordpressDraftOperations").withIndex("by_artifact", (q) => q.eq("artifactId", a._id)).order("desc").take(5))
+        .filter((row) => row.orgId === org._id)
+        .map((row) => ({ id: row._id, status: row.status, summary: row.summary, externalPostId: row.externalPostId ?? null, editUrl: row.editUrl ?? null, createdAt: row.createdAt }))
+      : [];
     const slot = await ctx.db
       .query("calendarSlots")
       .withIndex("by_artifact", (q) => q.eq("artifactId", a._id))
@@ -168,7 +301,7 @@ export const get = query({
       scheduledFor: a.scheduledFor ?? null,
       lastPublishError: a.lastPublishError ?? null,
       /** Why the current approval can't be used to publish (null when it can). */
-      approvalProblem: a.status === "approved" || a.status === "scheduled" ? approvalProblem(currentApproval, curVer, conn?.status === "connected" ? conn : null) : null,
+      approvalProblem: a.status === "approved" || a.status === "scheduled" ? approvalProblem(currentApproval, curVer, conn?.status === "connected" ? conn : null, a.scheduledFor) : null,
       autopilotSlot: slot && slot.status !== "skipped" ? { slotAt: slot.slotAt, status: slot.status } : null,
       reel: reel ? { id: reel._id, status: reel.status, videoUrl: reel.videoStorageId ? await ctx.storage.getUrl(reel.videoStorageId) : null, seconds: reel.seconds ?? null } : null,
       createdByRole: a.createdByRole ?? null,
@@ -197,6 +330,10 @@ export const get = query({
       })),
       receipts: receipts.map((r) => ({ id: r._id, provider: r.provider, action: r.action, status: r.status, externalId: r.externalId ?? null, summary: r.summary, createdAt: r.createdAt })),
       facts,
+      wordpressConnection: wordpressConnection?.status === "connected"
+        ? { accountLabel: wordpressConnection.accountLabel ?? null, siteUrl: wordpressConnection.externalAccountId ?? null }
+        : null,
+      wordpressDrafts,
       /** Copilot mode: the owner posts it themselves from the export pack. */
       copilot: (await autonomyMode(ctx, org._id)) === "copilot",
       publishTarget: target
@@ -222,6 +359,7 @@ export const edit = mutation({
     title: v.optional(v.string()),
     headline: v.optional(v.string()),
     body: v.string(),
+    contentAngle: v.optional(v.string()),
     callToAction: v.optional(v.string()),
     destinationUrl: v.optional(v.string()),
     hashtags: v.array(v.string()),
@@ -235,6 +373,8 @@ export const edit = mutation({
     const a = assertSameOrg(await ctx.db.get(args.artifactId), org._id, "draft");
     if (["publishing", "published"].includes(a.status)) throw appError("INVALID", "Published content can't be edited. Duplicate it instead.");
     if (a.status === "uncertain") throw appError("INVALID", "Check whether it was posted first, then edit it.");
+    const pendingWordPressDraft = await ctx.db.query("wordpressDraftOperations").withIndex("by_artifact", (q) => q.eq("artifactId", a._id)).order("desc").take(5);
+    if (pendingWordPressDraft.some((operation) => operation.orgId === org._id && operation.status === "pending")) throw appError("INVALID", "A WordPress draft request is still running. Wait for its result before editing this article.");
     const prev = a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null;
     const body = args.body.trim().slice(0, 20_000);
     if (!body) throw appError("INVALID", "The text can't be empty.");
@@ -246,9 +386,25 @@ export const edit = mutation({
     const imageStorageId = asset ? asset.storageId : args.removeImage ? undefined : prev?.imageStorageId;
     const imageR2Key = asset ? asset.r2Key : args.removeImage ? undefined : prev?.imageR2Key;
     const imageLabel = asset ? assetPostLabel(asset) : imageStorageId || imageR2Key ? prev?.imageLabel : undefined;
+    // Re-run the same deterministic claim screen after every owner edit. An
+    // edit is not evidence that a performance, guarantee, scale or medical
+    // claim has become supportable; stale warnings must not disappear silently.
+    const unsupportedClaims = findRiskyClaims([
+      args.title,
+      args.headline,
+      body,
+      args.callToAction,
+      args.altText,
+      ...args.hashtags,
+    ].filter(Boolean).join(" "))
+      .map((claim) => `Check claim: "${claim}"`);
     const ch = await contentHash({
       headline: args.headline,
       body,
+      contentAngle: args.contentAngle ?? prev?.contentAngle,
+      copyBrief: prev?.copyBrief,
+      approvedOfferTermsSnapshot: prev?.approvedOfferTermsSnapshot,
+      offerPlayNameSnapshot: prev?.offerPlayNameSnapshot,
       callToAction: args.callToAction,
       destinationUrl: args.destinationUrl,
       hashtags: args.hashtags,
@@ -265,6 +421,10 @@ export const edit = mutation({
       version,
       headline: args.headline?.slice(0, 500),
       body,
+      contentAngle: (args.contentAngle ?? prev?.contentAngle)?.slice(0, 500),
+      copyBrief: prev?.copyBrief,
+      approvedOfferTermsSnapshot: prev?.approvedOfferTermsSnapshot,
+      offerPlayNameSnapshot: prev?.offerPlayNameSnapshot,
       callToAction: args.callToAction?.slice(0, 120),
       destinationUrl: args.destinationUrl?.trim(),
       hashtags: args.hashtags.slice(0, 30).map((h) => h.slice(0, 60)),
@@ -274,7 +434,7 @@ export const edit = mutation({
       imagePrompt: asset ? undefined : prev?.imagePrompt,
       imageLabel,
       claimFactIds: prev?.claimFactIds ?? [],
-      unsupportedClaims: [],
+      unsupportedClaims,
       contentHash: ch,
       editedByUser: user._id,
       createdAt: now,
@@ -315,8 +475,18 @@ export const decide = mutation({
     if (!ver) throw appError("INVALID", "Nothing to approve yet.");
     if (a.status === "uncertain") throw appError("INVALID", "Check whether it was posted first.");
     if (!["draft", "in_review", "failed", "approved"].includes(a.status)) throw appError("INVALID", "This can't be approved or sent back in its current state.");
+    if (args.decision === "approve" && ver.approvedOfferTermsSnapshot?.length) {
+      const offerIssues = lintApprovedOfferCopy(
+        [a.title, ver.headline, ver.body, ver.callToAction, ...ver.hashtags, ver.altText].filter(Boolean).join("\n"),
+        ver.approvedOfferTermsSnapshot,
+        "content",
+        ver.copyBrief?.approvedOfferPlayName ?? ver.offerPlayNameSnapshot,
+      );
+      const blockingOfferIssue = offerIssues.find((issue) => issue.severity === "error");
+      if (blockingOfferIssue) throw appError("INVALID", `This copy doesn't match the offer terms approved with its plan. ${blockingOfferIssue.message}`);
+    }
     const { connection } = await publishTarget(ctx, org._id, a.channel);
-    if (a.status === "approved" && !approvalProblem(a.approvalId ? await ctx.db.get(a.approvalId) : null, ver, connection)) {
+    if (a.status === "approved" && !approvalProblem(a.approvalId ? await ctx.db.get(a.approvalId) : null, ver, connection, a.scheduledFor)) {
       throw appError("INVALID", "This version is already approved.");
     }
     // Instagram can't take a text-only post (demo publishing is simulated, so it's exempt).
@@ -335,7 +505,7 @@ export const decide = mutation({
 async function requireUsableApproval(ctx: MutationCtx, org: Doc<"organizations">, a: Doc<"artifacts">) {
   const { connection } = await publishTarget(ctx, org._id, a.channel);
   if (!connection) throw appError("INVALID", "Connect the account first, or use the export pack.");
-  const problem = approvalProblem(a.approvalId ? await ctx.db.get(a.approvalId) : null, a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null, connection);
+  const problem = approvalProblem(a.approvalId ? await ctx.db.get(a.approvalId) : null, a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null, connection, a.scheduledFor);
   if (problem) throw appError("INVALID", problem);
 }
 
@@ -355,8 +525,13 @@ export const schedule = mutation({
     if (when > Date.now() + 90 * 86_400_000) throw appError("INVALID", "Schedule within the next 90 days.");
     await requireUsableApproval(ctx, org, a);
     // Approvals expire after a few days: a post scheduled further out keeps its approval until it goes.
-    if (!(await extendApprovalUntil(ctx, a, when + SCHEDULE_GRACE_MS))) throw appError("INVALID", "The approval expired. Approve it again first.");
+    if (!(await extendApprovalUntil(ctx, a, when + SCHEDULE_GRACE_MS, when))) throw appError("INVALID", "The approval expired. Approve it again first.");
     await ctx.db.patch(a._id, { status: "scheduled", scheduledFor: when, lastPublishError: undefined, updatedAt: Date.now() });
+    const slot = await ctx.db.query("calendarSlots").withIndex("by_artifact", (q) => q.eq("artifactId", a._id)).first();
+    if (slot && slot.orgId === org._id) {
+      const local = localDate(when, org.timezone);
+      await ctx.db.patch(slot._id, { slotAt: when, weekOf: thisWeekOf(when, org.timezone), day: local.weekday, updatedAt: Date.now() });
+    }
     await ctx.scheduler.runAt(when, internal.publish.scheduledPublish, { artifactId, expectedScheduledFor: when });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "content.scheduled", subjectType: "artifact", subjectId: a._id, summary: `Scheduled "${a.title}" in ClimbOS for ${new Date(when).toISOString()}.` });
   },
@@ -506,7 +681,8 @@ export const estimate = query({
     const view = await aiModeView(ctx, org);
     const mode = EXPERT_KINDS.has(args.job) && view.expertUnlocked ? (args.aiMode ?? view.mode) : "basic";
     const plan = planJob(args.job, { quantity: args.quantity, images: args.images, channel: args.channel }, { fixture: org.kind === "demo", mode });
-    return { title: plan.title, roles: plan.roles, maxCostMicros: estimateJobMicros(plan), meters: plan.meters, aiMode: mode, expertUnlocked: view.expertUnlocked, expertApplies: EXPERT_KINDS.has(args.job) };
+    const fixture = org.kind === "demo";
+    return { title: plan.title, roles: plan.roles, maxCostMicros: estimateJobMicros(plan, { fixture }), meters: plan.meters, aiMode: mode, expertUnlocked: view.expertUnlocked, expertApplies: EXPERT_KINDS.has(args.job) };
   },
 });
 

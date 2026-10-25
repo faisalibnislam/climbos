@@ -21,6 +21,12 @@ export interface TextBlock {
   type: "text";
   text: string;
 }
+/** Ephemeral low-detail image input. The URL is sent to the configured model and must not be persisted. */
+export interface ImageBlock {
+  type: "image";
+  image_url: string;
+  detail: "low";
+}
 export interface ToolUseBlock {
   type: "tool_use";
   id: string;
@@ -33,7 +39,13 @@ export interface ToolResultBlock {
   content: string | TextBlock[];
   is_error?: boolean;
 }
-export type ContentBlock = TextBlock | ToolUseBlock | ToolResultBlock;
+/** Opaque provider continuation item; kept private to agent history, never rendered as user-facing text. */
+export interface ProviderItemBlock {
+  type: "provider_item";
+  provider: "openai";
+  item: Record<string, unknown>;
+}
+export type ContentBlock = TextBlock | ImageBlock | ToolUseBlock | ToolResultBlock | ProviderItemBlock;
 
 export interface MessageParam {
   role: "user" | "assistant";
@@ -106,7 +118,8 @@ export interface TurnUsage {
 export interface Source {
   url: string;
   title?: string;
-  pageAge?: string;
+  /** Dates explicitly present in HTML metadata on a page ClimbOS fetched. Not independently verified. */
+  pageReportedDates?: { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }[];
 }
 
 export type TurnFailureKind = "provider_unavailable" | "rate_limited" | "timeout" | "invalid_output" | "provider_error" | "refused" | "spend_limit" | "pending";

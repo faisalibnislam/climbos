@@ -48,6 +48,7 @@ import { callModel } from "../convex/ai/providers";
 import { fetchCitedPages, researchWebsite, resolveHost } from "../convex/ai/research";
 import { selectCases, TASKS_ALL, type BenchCase, type BenchTask } from "./cases";
 import { hardCheck, hardSection, withHardOverride, type HardCheck, type HardEvidence, type LintCase, type PairResult } from "./hard";
+import { evaluationEvidence } from "./evidence";
 
 // ---------- env & args ----------
 for (const line of readFileSync(".env.local", "utf8").split(/\r?\n/)) {
@@ -252,10 +253,10 @@ const DEFS: Record<BenchTask, TaskDef> = {
         `TASK: Using the business profile and website content, produce business intelligence: likely customer groups, competitors (only name competitors you can support with a source), positioning, pricing observations, SWOT, a customer journey and the top opportunities.\n\n${brief(p, false)}\n\n${p.pagesText}`,
     },
     spec: (o) => insightsSpec(o) as unknown as AgentSpec<unknown>,
-    task: () => "Produce business intelligence for this business: competitive alternatives, customer groups, a voice-of-customer phrase bank, objections, positioning, pricing observations, SWOT, journey, gaps and the top opportunities.",
+    task: () => "Produce business intelligence for this business: competitive alternatives, customer groups, a voice-of-customer phrase bank, objections, positioning, pricing observations, SWOT, journey, gaps and the top opportunities. Include a siteAssessment of the business's published website communication only when each observation can cite a verbatim quote and exact page URL read in this run; separate the observed page text from its cautious implication, and do not infer demand, conversion performance, product quality, willingness to pay, or viability from website copy.",
     research: (p) => researchFor("business_insights", { website: p.c.website, businessName: p.c.name }),
     pages: true,
-    judgeFocus: "business intelligence (competitors, customers, positioning, opportunities) an owner could act on",
+    judgeFocus: "business intelligence (competitors, customers, positioning, opportunities) an owner could act on, including whether website communication observations are specific, page-cited, and kept separate from proof of demand or viability",
   },
   strategy: {
     v1: {
@@ -587,7 +588,7 @@ Weigh, in order:
 2. Strategic quality and specificity: is it unmistakably for THIS business and audience, focused, prioritized and actionable?
 3. Craft for the channel: would it perform on the platform as written (hooks, structure, limits, native style)?
 4. Usefulness to a non-expert owner: clear, honest, ready to use.
-5. For plans and strategy: creative but predictable. Non-obvious plays built on proven mechanics, with honest evidence-based forecasts and tests, beat generic channel lists ("post on social", "run ads"). Unsupported optimism is not creativity.
+5. For plans and strategy: creative and business-relevant across grounded, adjacent, and bold options. Reward surprising, explainable originality and a useful reversible test; bold ideas need not have a precedent or predictable forecast. Keep evidence and execution feasibility visible without letting them suppress a bold hypothesis. Generic channel lists and unsupported certainty score poorly.
 
 Do not reward length or extra fields for their own sake. Do not reward polish over truth. If both are equally good or equally weak, say tie.`;
 
@@ -643,7 +644,7 @@ async function score(p: Prepared, t: BenchTask, work: unknown): Promise<Score | 
 - strategy: focused, prioritized, sound judgement for this goal and budget
 - craft: would perform on the channel as written
 - usefulness: ready for a non-expert owner to use
-- creativity: non-obvious ideas a competitor isn't using, still grounded in proven mechanics and evidence (generic best-practice lists score 3 or below)
+- creativity: meaningful originality that is surprising and relevant to this business; distinguish grounded evidence, explainable transfer, and speculative bold hypotheses. Reward a strong reversible test; do not require a precedent for bold ideas or penalize novelty solely for low evidence or feasibility (generic best-practice lists score 3 or below)
 - overall: your overall verdict
 - topIssue: the single biggest problem, in one sentence.`,
         cache: true,
@@ -743,6 +744,7 @@ function summarize(rows: Record<string, unknown>[]): string {
   type Row = { case: string; task: BenchTask; outs: Record<string, ArmResult>; comparisons: Record<string, Record<string, { result: string; reasons: string[]; hardOverride?: string }>>; scores: Record<string, Score | null>; hard?: Record<string, HardCheck | null> };
   const R = rows as unknown as Row[];
   const lines: string[] = [`# Benchmark: ${label} (${new Date().toISOString().slice(0, 10)})`, "", `Cases: ${[...new Set(R.map((r) => r.case))].join(", ")} · Tasks: ${tasks.join(", ")} · Arms: ${arms.join(", ")}`, ""];
+  lines.push(...evaluationEvidence(R, arms, judges, pointwise, process.argv.includes("--blind")));
   lines.push("## Pairwise (both orders; a win needs both orders to agree; a hard failure decides first)", "", "| Comparison | Judge | Wins | Ties | Losses | Win rate (excl. ties) | Decided by hard checks |", "|---|---|---|---|---|---|---|");
   for (const [x, y] of compare) {
     for (const j of judges) {

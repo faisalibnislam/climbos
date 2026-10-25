@@ -8,11 +8,16 @@ import {
   marginGuard,
   microsToUsd,
   RATE_VERSIONS,
+  detectModelCostAnomalies,
+  summarizeModelUsage,
+  summarizeTaskPhaseUsage,
 } from "../shared/economics";
 import { internal } from "./_generated/api";
 import { action, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { currentPeriod } from "./lib/periods";
+import { summarizePreviewLearning } from "../shared/preview/metrics";
+import { summarizeWorkflowMetrics } from "../shared/workflow/metrics";
 import { settleCredits } from "./lib/credits";
 import { ensureFleet } from "./circuits";
 import { audit } from "./lib/audit";
@@ -87,11 +92,34 @@ export const dashboard = query({
       .query("privacyRequests")
       .withIndex("by_status", (q) => q.eq("status", "pending"))
       .take(50);
-    const recentUsage = await ctx.db
+    const usageRows = await ctx.db
       .query("usageEvents")
-      .withIndex("by_created", (q) => q.gt("createdAt", now - DAY))
-      .take(5000);
+      .withIndex("by_created", (q) => q.gt("createdAt", now - 8 * DAY))
+      .order("desc")
+      .take(25_001);
+    const workflowRows = await ctx.db
+      .query("workflowRuns")
+      .withIndex("by_created", (q) => q.gt("createdAt", now - 30 * DAY))
+      .order("desc")
+      .take(5_001);
+    const researchCacheHits = await ctx.db
+      .query("workflowSteps")
+      .withIndex("by_cache_hit_finished", (q) => q.eq("cacheHit", true).gt("finishedAt", now - DAY))
+      .take(1_001);
+    const historyCapped = usageRows.length > 25_000;
+    const lastDayRows = usageRows.filter((event) => event.createdAt > now - DAY);
+    const usageCoverageCapped = lastDayRows.length > 5_000;
+    const recentUsage = lastDayRows.slice(0, 5_000);
     const spend24h = recentUsage.reduce((s, e) => s + e.costMicros, 0);
+    const researchEvents = recentUsage.filter((event) => event.stepKind === "research");
+    const researchCost24h = {
+      events: researchEvents.length,
+      recordedMicros: researchEvents.filter((event) => !event.estimated).reduce((sum, event) => sum + event.costMicros, 0),
+      estimatedMicros: researchEvents.filter((event) => event.estimated).reduce((sum, event) => sum + event.costMicros, 0),
+      taggedEvents: recentUsage.filter((event) => event.stepKind !== undefined).length,
+      eventsRead: recentUsage.length,
+      coverageCapped: usageCoverageCapped,
+    };
     const byProvider = new Map<string, { calls: number; costMicros: number }>();
     for (const e of recentUsage) {
       const p = byProvider.get(e.provider) ?? { calls: 0, costMicros: 0 };
@@ -103,6 +131,26 @@ export const dashboard = query({
       .query("workflowRuns")
       .withIndex("by_status_updated", (q) => q.eq("status", "verified").gt("updatedAt", now - 7 * DAY))
       .take(500);
+    const verifiedRuns30d = await ctx.db
+      .query("workflowRuns")
+      .withIndex("by_status_updated", (q) => q.eq("status", "verified").gt("updatedAt", now - 30 * DAY))
+      .take(1000);
+    const decisions30d = await ctx.db
+      .query("engineQuality")
+      .withIndex("by_created", (q) => q.gte("createdAt", now - 30 * DAY))
+      .order("desc")
+      .take(1000);
+    const approvedRunIds = new Set<string>();
+    for (const row of decisions30d) {
+      if (row.agentId !== "owner_decision") continue;
+      try {
+        const data = JSON.parse(row.data) as { decision?: string };
+        if (data.decision === "approve") approvedRunIds.add(String(row.runId));
+      } catch {
+        // A malformed historical quality row is not an approval record.
+      }
+    }
+    const approvedPlans30d = verifiedRuns30d.filter((run) => run.kind === "strategy" && approvedRunIds.has(String(run._id)));
     const drift = recentRuns.filter((r) => r.actualMicros > r.estimateMicros);
     const estimate = recentRuns.reduce((s, r) => s + r.estimateMicros, 0);
     const actual = recentRuns.reduce((s, r) => s + r.actualMicros, 0);
@@ -110,6 +158,8 @@ export const dashboard = query({
       .query("previews")
       .withIndex("by_created", (q) => q.gt("createdAt", now - DAY))
       .take(1000);
+    const previewLearning = summarizePreviewLearning(previews);
+    const workflowMetrics = summarizeWorkflowMetrics(workflowRows.slice(0, 5_000), workflowRows.length > 5_000);
     const orgs = await ctx.db
       .query("organizations")
       .withIndex("by_kind_created", (q) => q.eq("kind", "customer"))
@@ -139,12 +189,63 @@ export const dashboard = query({
       privacy: privacy.map((p) => ({ id: p._id, orgId: p.orgId, kind: p.kind, createdAt: p.createdAt })),
       costs: {
         spend24hMicros: spend24h,
+        usage24h: { eventsRead: recentUsage.length, coverageCapped: usageCoverageCapped },
+        researchCache24h: { hits: Math.min(researchCacheHits.length, 1_000), coverageCapped: researchCacheHits.length > 1_000 },
+        researchCost24h,
+        workflowMetrics,
         byProvider: [...byProvider.entries()].map(([provider, x]) => ({ provider, ...x })),
+        byModel24h: summarizeModelUsage(recentUsage.map((event) => ({
+          provider: event.provider,
+          model: event.model,
+          inputTokens: event.inputTokens,
+          outputTokens: event.outputTokens,
+          reasoningTokens: event.reasoningTokens,
+          cacheReadTokens: event.cacheReadTokens,
+          cacheWriteTokens: event.cacheWriteTokens,
+          costMicros: event.costMicros,
+          estimated: event.estimated,
+        }))),
+        byTaskPhase24h: summarizeTaskPhaseUsage(recentUsage.map((event) => ({
+          taskKind: event.taskKind,
+          stepKind: event.stepKind,
+          stepIndex: event.stepIndex,
+          role: event.role,
+          routingVersionId: event.routingVersionId,
+          aiMode: event.aiMode,
+          provider: event.provider,
+          model: event.model,
+          inputTokens: event.inputTokens,
+          outputTokens: event.outputTokens,
+          reasoningTokens: event.reasoningTokens,
+          cacheReadTokens: event.cacheReadTokens,
+          cacheWriteTokens: event.cacheWriteTokens,
+          costMicros: event.costMicros,
+          estimated: event.estimated,
+        }))),
+        modelCostAnomalies8d: detectModelCostAnomalies(usageRows.slice(0, 25_000).map((event) => ({
+          provider: event.provider,
+          model: event.model,
+          inputTokens: event.inputTokens,
+          outputTokens: event.outputTokens,
+          reasoningTokens: event.reasoningTokens,
+          cacheReadTokens: event.cacheReadTokens,
+          cacheWriteTokens: event.cacheWriteTokens,
+          costMicros: event.costMicros,
+          estimated: event.estimated,
+          createdAt: event.createdAt,
+        })), now, historyCapped),
         estimate7dMicros: estimate,
         actual7dMicros: actual,
         overEstimateRuns: drift.length,
+        approvedPlans30d: approvedPlans30d.length,
+        approvedPlanCost30dMicros: approvedPlans30d.reduce((sum, run) => sum + run.actualMicros, 0),
+        costPerApprovedPlan30dMicros: approvedPlans30d.length
+          ? Math.round(approvedPlans30d.reduce((sum, run) => sum + run.actualMicros, 0) / approvedPlans30d.length)
+          : null,
         previews24h: previews.length,
         previewSpend24hMicros: previews.reduce((s, p) => s + p.costMicros, 0),
+        previewLearning,
+        previewLearningCoverageCapped: previews.length === 1000,
       },
       margin: {
         ok: guard.ok,

@@ -48,6 +48,16 @@ export interface PagePostState {
   message?: string;
   createdTime?: string;
   permalinkUrl?: string;
+  /** Counts returned with this Page post snapshot; not account-wide Insights. */
+  reactions?: number;
+  comments?: number;
+  shares?: number;
+}
+
+function summaryCount(value: unknown): number | undefined {
+  if (!isRecord(value) || !isRecord(value.summary)) return undefined;
+  const count = value.summary.total_count;
+  return typeof count === "number" && Number.isSafeInteger(count) && count >= 0 ? count : undefined;
 }
 
 function parsePost(raw: Record<string, unknown>): PagePostState {
@@ -58,6 +68,14 @@ function parsePost(raw: Record<string, unknown>): PagePostState {
   if (c) p.createdTime = c;
   const l = asString(raw.permalink_url);
   if (l) p.permalinkUrl = l;
+  const reactions = summaryCount(raw.reactions);
+  if (reactions !== undefined) p.reactions = reactions;
+  const comments = summaryCount(raw.comments);
+  if (comments !== undefined) p.comments = comments;
+  if (isRecord(raw.shares)) {
+    const shares = raw.shares.count;
+    if (typeof shares === "number" && Number.isSafeInteger(shares) && shares >= 0) p.shares = shares;
+  }
   return p;
 }
 
@@ -68,6 +86,16 @@ export async function getPost(call: GraphCall & { postId: string }): Promise<Rea
   const out = await graphGet(call, url);
   if (out.kind !== "ok") return metaReadFailure(out);
   return { ok: true, data: parsePost(isRecord(out.data) ? out.data : {}) };
+}
+
+/** Read a small, recent Page-feed sample for an owner-requested audit. */
+export async function getRecentPosts(call: GraphCall & { pageId: string; limit?: number }): Promise<ReadResult<PaginationResult<PagePostState>>> {
+  if (!/^\d+$/.test(call.pageId)) return { ok: false, providerMessage: "Invalid Page id", retryable: false };
+  const limit = Math.max(1, Math.min(Math.floor(call.limit ?? 10), 10));
+  const url = new URL(`${GRAPH_BASE}/${call.pageId}/feed`);
+  url.searchParams.set("fields", "id,message,created_time,permalink_url,reactions.limit(0).summary(true),comments.limit(0).summary(true),shares");
+  url.searchParams.set("limit", String(limit));
+  return graphCollect(call, url, parsePost, 1);
 }
 
 export interface PagePostInput {

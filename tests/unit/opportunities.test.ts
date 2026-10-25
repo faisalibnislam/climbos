@@ -1,0 +1,135 @@
+import { describe, expect, it } from "vitest";
+import { linkQuickTakeEvidence, projectGrowthOpportunities, type OpportunityPlayInput } from "../../shared/agents/opportunities";
+
+describe("quick take evidence links", () => {
+  it("links only valid, unique indexes to the exact confirmed facts supplied", () => {
+    const facts = [
+      { id: "fact-a", statement: "Customers ask for weekend sessions.", kind: "owner_input" },
+      { id: "fact-b", statement: "The booking page has four steps.", kind: "observed" },
+    ];
+    const result = linkQuickTakeEvidence({
+      headline: "A useful first take",
+      opportunities: [{ title: "Test weekend slots", why: "There is stated demand.", nextStep: "Ask customers which hours work.", factIndexes: [0, 0, 1, -1, 4, 1.2] }],
+    }, facts);
+
+    expect(result).toEqual({
+      headline: "A useful first take",
+      opportunities: [{
+        title: "Test weekend slots",
+        why: "There is stated demand.",
+        nextStep: "Ask customers which hours work.",
+        evidence: [
+          { factId: "fact-a", statement: "Customers ask for weekend sessions.", kind: "owner_input", provenance: "confirmed_fact" },
+          { factId: "fact-b", statement: "The booking page has four steps.", kind: "observed", provenance: "confirmed_fact" },
+        ],
+        basis: "confirmed_facts",
+      }],
+    });
+  });
+
+  it("labels unsupported opportunities as hypotheses and bounds the preview", () => {
+    const result = linkQuickTakeEvidence({
+      headline: "  First take  ",
+      opportunities: Array.from({ length: 5 }, (_, index) => ({ title: `Idea ${index + 1}`, why: "", nextStep: "", factIndexes: [0] })),
+    }, []);
+
+    expect(result.headline).toBe("First take");
+    expect(result.opportunities).toHaveLength(3);
+    expect(result.opportunities[0]).toMatchObject({ title: "Idea 1", evidence: [], basis: "hypothesis" });
+  });
+
+  it("drops entries with blank titles", () => {
+    expect(linkQuickTakeEvidence({ headline: "take", opportunities: [{ title: " ", why: "", nextStep: "", factIndexes: [] }] }, []).opportunities).toEqual([]);
+  });
+
+  it("links a website profile claim only to an exact page URL read in this run", () => {
+    const result = linkQuickTakeEvidence({
+      headline: "First take",
+      opportunities: [{ title: "Clarify the booking path", why: "The site presents online booking.", nextStep: "Check the booking flow.", factIndexes: [], profileFactIndexes: [0, 1, 2] }],
+    }, [], [
+      { statement: "Online booking is available.", sourceUrl: "https://example.com/book", confidence: "high" },
+      { statement: "The business has 10,000 customers.", sourceUrl: "https://other.example/claim" },
+    ], ["https://example.com/book"]);
+
+    expect(result.opportunities[0]).toMatchObject({ basis: "source_reported", evidence: [{ statement: "Online booking is available.", sourceUrl: "https://example.com/book", provenance: "source_reported", confidence: "high" }] });
+  });
+
+  it("marks a take mixed when it cites both owner-confirmed facts and website claims", () => {
+    const result = linkQuickTakeEvidence({
+      headline: "First take",
+      opportunities: [{ title: "Improve booking", why: "Check the customer path.", nextStep: "Review it.", factIndexes: [0], profileFactIndexes: [0] }],
+    }, [{ id: "fact-a", statement: "The owner reports 20 monthly bookings." }], [{ statement: "Bookings can be made online.", sourceUrl: "https://example.com/book" }], ["https://example.com/book"]);
+
+    expect(result.opportunities[0]?.basis).toBe("mixed");
+    expect(result.opportunities[0]?.evidence.map((item) => item.provenance)).toEqual(["confirmed_fact", "source_reported"]);
+  });
+});
+
+describe("Growth Home opportunity projection", () => {
+  it("preserves the plan's ordering and makes evidence status explicit", () => {
+    const plays: OpportunityPlayInput[] = [
+      {
+        id: "creative-1",
+        name: "Interview recent customers",
+        kind: "creative",
+        oneLiner: "Learn why buyers chose the service.",
+        firstActionToday: "Invite three recent customers to a short call.",
+        model: { ownerHoursPerWeek: 1.5, steps: [{ source: "assumption", ref: "To test" }] },
+      },
+      {
+        id: "bankable-1",
+        name: "Fix the booking page",
+        kind: "bankable",
+        oneLiner: "Make the next step clearer.",
+        firstActionToday: "Rewrite the booking button label.",
+        model: {
+          reachSource: { source: "research", ref: "https://example.com/pricing", quote: "Plans start at $20 per month.", check: "source_verified", checkedBy: "climbos-provenance-1", access: "read" },
+          steps: [{ source: "owner", ref: "Confirmed conversion rate", check: "owner_input", checkedBy: "climbos-provenance-1" }],
+        },
+      },
+    ];
+
+    const result = projectGrowthOpportunities(plays);
+
+    expect(result.map((x) => x.id)).toEqual(["creative-1", "bankable-1"]);
+    expect(result[0].sources).toEqual([
+      { label: "Assumption to test", detail: "To test" },
+    ]);
+    expect(result[0].nextStep).toBe("Invite three recent customers to a short call.");
+    expect(result[0].ownerHoursPerWeek).toBe(1.5);
+    expect(result[1].ownerHoursPerWeek).toBeNull();
+    expect(result[1].sources.map((source) => source.label)).toEqual(["Page quote and number match; business fit unverified", "Owner-confirmed input"]);
+  });
+
+  it("does not turn unchecked research claims into verified citations", () => {
+    const [result] = projectGrowthOpportunities([
+      {
+        name: "Test a new offer",
+        kind: "bankable",
+        model: { steps: [{ source: "research", ref: "https://example.com/research", quote: "A reported figure.", check: "reported", checkedBy: "climbos-provenance-1", access: "read" }] },
+      },
+    ]);
+
+    expect(result.sources[0]).toMatchObject({ label: "Page read; quote or metric not matched", url: "https://example.com/research" });
+  });
+
+  it("projects only complete, ordered, nonnegative forecast ranges", () => {
+    const [valid, reversed, missing] = projectGrowthOpportunities([
+      { name: "Valid", p10: 2, p50: 5, p90: 9, unit: "bookings", horizonDays: 30 },
+      { name: "Reversed", p10: 5, p50: 2, p90: 9, unit: "bookings", horizonDays: 30 },
+      { name: "Missing", p10: 1, p50: 2, unit: "bookings", horizonDays: 30 },
+    ]);
+
+    expect(valid.forecast).toEqual({ low: 2, likely: 5, high: 9, unit: "bookings", days: 30 });
+    expect(reversed.forecast).toBeNull();
+    expect(missing.forecast).toBeNull();
+  });
+
+  it("bounds the number of projected opportunities and ignores nameless plays", () => {
+    const plays = Array.from({ length: 5 }, (_, index) => ({ name: `Opportunity ${index + 1}`, kind: "bankable" })) as OpportunityPlayInput[];
+    plays.unshift({ kind: "bankable", name: "   " });
+
+    expect(projectGrowthOpportunities(plays, 3).map((x) => x.title)).toEqual(["Opportunity 1", "Opportunity 2", "Opportunity 3"]);
+    expect(projectGrowthOpportunities(plays, 0)).toEqual([]);
+  });
+});

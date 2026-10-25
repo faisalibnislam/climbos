@@ -1,0 +1,82 @@
+/** Deterministic checks for sourced competitor suggestions before they reach watch controls. */
+export interface CompetitorCandidate {
+  name: string;
+  url: string;
+  sourceUrl?: string;
+  kind?: "direct" | "adjacent";
+}
+
+const DIRECTORY_HOSTS = [
+  "g2.com",
+  "capterra.com",
+  "getapp.com",
+  "trustpilot.com",
+  "yelp.com",
+  "clutch.co",
+  "producthunt.com",
+  "crunchbase.com",
+  "apps.apple.com",
+  "play.google.com",
+];
+const GENERIC_NAME_WORDS = new Set(["the", "inc", "llc", "ltd", "limited", "company", "co", "corporation", "corp", "group", "holding", "holdings", "software", "solutions", "solution", "platform", "app"]);
+
+/** Canonical host identity: scheme, path, query and a leading www do not create new vendors. */
+export function canonicalCompetitorHost(input: string): string | null {
+  try {
+    const url = new URL(/^https?:\/\//i.test(input.trim()) ? input.trim() : `https://${input.trim()}`);
+    if (!/^https?:$/.test(url.protocol) || url.username || url.password) return null;
+    const host = url.hostname.toLowerCase().replace(/^www\./, "").replace(/\.$/, "");
+    if (!host || !host.includes(".") || host === "localhost") return null;
+    return host;
+  } catch {
+    return null;
+  }
+}
+
+export function sameCompetitorSite(a: string, b: string): boolean {
+  const hostA = canonicalCompetitorHost(a);
+  const hostB = canonicalCompetitorHost(b);
+  if (!hostA || !hostB) return false;
+  return hostA === hostB || hostA.endsWith(`.${hostB}`) || hostB.endsWith(`.${hostA}`);
+}
+
+/** Require the vendor name (or its distinctive hostname) to appear in the fetched site identity. */
+export function candidateNameMatchesSite(candidateName: string, canonicalUrl: string, visibleText: string): boolean {
+  const tokens = candidateName.toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length >= 3 && !GENERIC_NAME_WORDS.has(token));
+  if (!tokens.length) return false;
+  const host = canonicalCompetitorHost(canonicalUrl) ?? "";
+  const haystack = `${host.replace(/\./g, " ")} ${visibleText.toLowerCase()}`;
+  const matches = tokens.filter((token) => new RegExp(`\\b${token}\\b`, "i").test(haystack)).length;
+  return matches >= Math.ceil(tokens.length * 0.75);
+}
+
+function sameSite(a: string, b: string): boolean {
+  return sameCompetitorSite(a, b);
+}
+
+function isDirectory(host: string): boolean {
+  return DIRECTORY_HOSTS.some((directory) => sameSite(host, directory));
+}
+
+/** Preserve research order; reject unsupported hosts, self references, directories and duplicate vendors. */
+export function selectWatchCandidates(
+  candidates: readonly CompetitorCandidate[],
+  ownWebsite?: string,
+  alreadyWatched: readonly string[] = [],
+  limit = 6,
+): CompetitorCandidate[] {
+  if (!Number.isFinite(limit) || limit <= 0) return [];
+  const ownHost = ownWebsite ? canonicalCompetitorHost(ownWebsite) : null;
+  const seen = new Set(alreadyWatched.map(canonicalCompetitorHost).filter((x): x is string => Boolean(x)));
+  const selected: CompetitorCandidate[] = [];
+  for (const candidate of candidates) {
+    const name = candidate.name.trim().slice(0, 80);
+    const host = canonicalCompetitorHost(candidate.url);
+    const source = candidate.sourceUrl ? canonicalCompetitorHost(candidate.sourceUrl) : null;
+    if (!name || !host || !source || !sameSite(host, source) || candidate.kind === "adjacent" || isDirectory(host) || (ownHost && sameSite(host, ownHost)) || seen.has(host)) continue;
+    seen.add(host);
+    selected.push({ name, url: `https://${host}`, sourceUrl: candidate.sourceUrl, ...(candidate.kind ? { kind: candidate.kind } : {}) });
+    if (selected.length >= Math.max(0, Math.floor(limit))) break;
+  }
+  return selected;
+}

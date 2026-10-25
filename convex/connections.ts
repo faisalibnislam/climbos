@@ -53,8 +53,8 @@ const OAUTH_CAPABILITIES: Partial<Record<OurProvider, ScopedCapability[]>> = {
   search_console: ["search_console.read_performance"],
   google_ads: ["google_ads.read_metrics", "google_ads.create_paused_campaign", "google_ads.set_campaign_status"],
   meta_ads: ["meta_ads.read_insights", "meta_ads.create_paused_campaign", "meta_ads.set_campaign_status"],
-  facebook_pages: ["facebook_pages.publish_post", "facebook_pages.read_insights"],
-  instagram: ["instagram.publish_media"],
+  facebook_pages: ["facebook_pages.publish_post", "facebook_pages.read_posts", "facebook_pages.read_insights"],
+  instagram: ["instagram.publish_media", "instagram.read_posts", "instagram.read_insights"],
   linkedin: ["linkedin.read_profile", "linkedin.publish_post"],
   x: ["x.read_profile", "x.publish_post"],
 };
@@ -96,6 +96,7 @@ export const CATALOG: { provider: OurProvider; group: "measure" | "publish" | "a
   { provider: "tiktok", group: "publish" },
   { provider: "pinterest", group: "publish" },
   { provider: "youtube", group: "publish" },
+  { provider: "wordpress", group: "publish" },
   { provider: "google_ads", group: "advertise" },
   { provider: "meta_ads", group: "advertise" },
   { provider: "email_resend", group: "email" },
@@ -210,6 +211,23 @@ export const list = query({
             ],
           };
         }
+        if (provider === "wordpress") {
+          return {
+            provider,
+            group,
+            name: "WordPress",
+            description: "Connect a WordPress user with a revocable Application Password. ClimbOS can send separately confirmed articles as private drafts and verify the saved status.",
+            connection: conn
+              ? { status: conn.status, accountLabel: conn.accountLabel ?? null, externalAccountId: conn.externalAccountId ?? null, lastSyncAt: conn.lastSyncAt ?? null, expiresAt: null, isFixture: conn.isFixture, lastSyncError: conn.lastSyncError ?? null }
+              : null,
+            connectMethod: "wordpress_app_password" as const,
+            capabilities: [
+              { capability: "wordpress.manual_export", label: "Article draft and export", state: "ready" as const, reason: "You can always review and export an approved ClimbOS article.", fix: "" },
+              { capability: "wordpress.authenticate", label: "Secure WordPress connection", state: conn?.status === "connected" ? "ready" as const : "setup_needed" as const, reason: conn?.status === "connected" ? "The stored Application Password was accepted and the account can edit posts." : "No WordPress account is connected.", fix: conn?.status === "connected" ? "" : "Connect using a revocable Application Password over HTTPS." },
+              { capability: "wordpress.create_draft", label: "Create a WordPress draft", state: conn?.status === "connected" ? "ready" as const : "setup_needed" as const, reason: conn?.status === "connected" ? "Approved blog articles can be sent as private WordPress drafts after a separate confirmation." : "Connect WordPress to create a private draft from an approved article.", fix: conn?.status === "connected" ? "" : "Connect using a revocable Application Password over HTTPS." },
+            ],
+          };
+        }
         const adapterId = ADAPTER_ID[provider]!;
         const meta = PROVIDERS[adapterId];
         const capCtx: CapabilityContext = {
@@ -220,6 +238,7 @@ export const list = query({
           canRefreshToken: true,
           accountType: conn?.accountType,
           lastSyncAt: conn?.lastSyncAt,
+          lastSyncError: conn?.lastSyncError,
           now,
         };
         let capabilities = evaluateCapabilities(adapterId, capCtx).map((c) => ({
@@ -243,6 +262,14 @@ export const list = query({
             reason: `Demo connection with synthetic data. ${c.state === "setup_needed" ? "In a real workspace this needs setup first." : c.reason}`,
           }));
         }
+        if (provider === "google_ads" && conn?.status === "connected" && !conn.isFixture && !conn.externalAccountId) {
+          capabilities = capabilities.map((c) => ({
+            ...c,
+            state: c.state === "ready" ? ("setup_needed" as const) : c.state,
+            reason: c.reason || "Choose the advertiser account this workspace should use.",
+            fix: c.fix || "Select a directly accessible advertiser account below. Manager accounts are not supported in this connection flow.",
+          }));
+        }
         return {
           provider,
           group,
@@ -252,6 +279,8 @@ export const list = query({
             ? {
                 status: conn.status,
                 accountLabel: conn.accountLabel ?? null,
+                externalAccountId: conn.externalAccountId ?? null,
+                accountType: conn.accountType ?? null,
                 lastSyncAt: conn.lastSyncAt ?? null,
                 expiresAt: conn.expiresAt ?? null,
                 isFixture: conn.isFixture,
@@ -355,6 +384,7 @@ export const storeConnection = internalMutation({
         externalAccountId: args.externalAccountId,
         accountType: args.accountType,
         lastSyncError: undefined,
+        ...(args.provider === "stripe_revenue" ? { stripeOpenInvoiceSnapshot: undefined, lastSyncAt: undefined } : {}),
         updatedAt: now,
       });
       const old = await ctx.db
@@ -408,6 +438,41 @@ export const rotateSecret = internalMutation({
     const enc = await encryptSecret(secret, secretAad(conn.orgId, connectionId));
     await ctx.db.insert("connectionSecrets", { orgId: conn.orgId, connectionId, kind: "oauth", keyId: enc.keyId, iv: enc.iv, ciphertext: enc.ciphertext, createdAt: now });
     await ctx.db.patch(connectionId, { expiresAt, lastSyncError: undefined, updatedAt: now });
+    return true;
+  },
+});
+
+/** Persist only a property returned by the connected account's sites.list response. */
+export const selectSearchConsoleSite = internalMutation({
+  args: { orgId: v.id("organizations"), connectionId: v.id("connections"), siteUrl: v.string(), accountLabel: v.string() },
+  handler: async (ctx, { orgId, connectionId, siteUrl, accountLabel }) => {
+    const connection = await ctx.db.query("connections").withIndex("by_org_provider", (q) => q.eq("orgId", orgId).eq("provider", "search_console")).first();
+    if (!connection || connection._id !== connectionId || connection.status !== "connected" || connection.isFixture) return false;
+    await ctx.db.patch(connection._id, { externalAccountId: siteUrl, accountLabel: accountLabel.slice(0, 200), accountType: "search_console_property", lastSyncError: undefined, updatedAt: Date.now() });
+    return true;
+  },
+});
+
+/** Save only a Google Ads advertiser ID verified against the connected user's live access list. */
+export const selectGoogleAdsAccount = internalMutation({
+  args: {
+    orgId: v.id("organizations"),
+    userId: v.id("users"),
+    connectionId: v.id("connections"),
+    customerId: v.string(),
+    accountLabel: v.string(),
+  },
+  handler: async (ctx, { orgId, userId, connectionId, customerId, accountLabel }) => {
+    const connection = await ctx.db.query("connections").withIndex("by_org_provider", (q) => q.eq("orgId", orgId).eq("provider", "google_ads")).first();
+    if (!connection || connection._id !== connectionId || connection.status !== "connected" || connection.isFixture) return false;
+    await ctx.db.patch(connection._id, {
+      externalAccountId: customerId,
+      accountLabel: accountLabel.slice(0, 200),
+      accountType: "google_ads_advertiser",
+      lastSyncError: undefined,
+      updatedAt: Date.now(),
+    });
+    await audit(ctx, { orgId, actorType: "user", actorId: userId, action: "connection.google_ads_account_selected", subjectType: "connection", subjectId: connection._id, summary: `Selected Google Ads advertiser account ${customerId}.` });
     return true;
   },
 });
@@ -495,14 +560,31 @@ export const secretsForRevocation = internalQuery({
 });
 
 export const markSync = internalMutation({
-  args: { connectionId: v.id("connections"), ok: v.boolean(), error: v.optional(v.string()), expired: v.optional(v.boolean()) },
-  handler: async (ctx, { connectionId, ok, error, expired }) => {
+  args: {
+    connectionId: v.id("connections"),
+    ok: v.boolean(),
+    error: v.optional(v.string()),
+    expired: v.optional(v.boolean()),
+    stripeOpenInvoiceSnapshot: v.optional(v.object({
+      asOf: v.number(),
+      partial: v.boolean(),
+      byCurrency: v.array(v.object({
+        currency: v.string(),
+        invoiceCount: v.number(),
+        remainingMinor: v.number(),
+        pastDueInvoiceCount: v.number(),
+        pastDueRemainingMinor: v.number(),
+        dueDateUnknownCount: v.number(),
+      })),
+    })),
+  },
+  handler: async (ctx, { connectionId, ok, error, expired, stripeOpenInvoiceSnapshot }) => {
     const conn = await ctx.db.get(connectionId);
     if (!conn) return;
     await ctx.db.patch(
       connectionId,
       ok
-        ? { lastSyncAt: Date.now(), lastSyncError: undefined, updatedAt: Date.now() }
+        ? { lastSyncAt: Date.now(), lastSyncError: undefined, updatedAt: Date.now(), ...(stripeOpenInvoiceSnapshot ? { stripeOpenInvoiceSnapshot } : {}) }
         : { lastSyncError: error?.slice(0, 300), updatedAt: Date.now(), ...(expired && conn.status === "connected" ? { status: "expired" as const } : {}) },
     );
   },

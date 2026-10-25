@@ -132,11 +132,17 @@ export async function sha256Hex(input: string): Promise<string> {
 export interface MaterialContent {
   headline?: string;
   body: string;
+  contentAngle?: string;
+  copyBrief?: Json;
   callToAction?: string;
   destinationUrl?: string;
   hashtags: string[];
   altText?: string;
   imageRef?: string;
+  /** Immutable snapshot of approved offer terms used to validate this draft. */
+  approvedOfferTermsSnapshot?: Json;
+  /** Exact plan play this artifact represents when the source copy identified one. */
+  offerPlayNameSnapshot?: string;
   channel: string;
 }
 
@@ -145,11 +151,15 @@ export function contentHash(content: MaterialContent): Promise<string> {
     canonicalJson({
       headline: content.headline?.trim(),
       body: content.body.trim(),
+      contentAngle: content.contentAngle?.trim(),
+      copyBrief: content.copyBrief,
       callToAction: content.callToAction?.trim(),
       destinationUrl: content.destinationUrl?.trim(),
       hashtags: [...content.hashtags].map((h) => h.trim().toLowerCase()).sort(),
       altText: content.altText?.trim(),
       imageRef: content.imageRef,
+      approvedOfferTermsSnapshot: content.approvedOfferTermsSnapshot,
+      offerPlayNameSnapshot: content.offerPlayNameSnapshot?.trim(),
       channel: content.channel,
     }),
   );
@@ -157,12 +167,15 @@ export function contentHash(content: MaterialContent): Promise<string> {
 
 export interface ApprovalScope {
   connectionId?: string;
+  externalAccountId?: string;
   destination?: string;
   audience?: string;
   spendLimitMinor?: number;
   currency?: string;
   windowStart?: number;
   windowEnd?: number;
+  /** Exact post time, when publishing a scheduled artifact. */
+  scheduledFor?: number;
 }
 
 export interface ApprovalBinding {
@@ -224,6 +237,9 @@ export async function checkApprovalForExecution(params: {
   }
   if (approval.scope.connectionId && current.scope.connectionId && approval.scope.connectionId !== current.scope.connectionId) {
     return { ok: false, reason: "wrong_account", message: "This would go to a different account than the one approved." };
+  }
+  if (approval.scope.externalAccountId && current.scope.externalAccountId && approval.scope.externalAccountId !== current.scope.externalAccountId) {
+    return { ok: false, reason: "wrong_account", message: "This would go to a different provider account than the one approved." };
   }
   if (canonicalJson(approval.scope as Json) !== canonicalJson(current.scope as Json)) {
     return { ok: false, reason: "scope_changed", message: "The audience, destination, budget or timing changed after approval." };

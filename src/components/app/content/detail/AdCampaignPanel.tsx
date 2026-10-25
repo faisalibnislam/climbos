@@ -28,6 +28,8 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
   const ads = useQuery(api.ads.list, { slug });
   const prepare = useMutation(api.ads.prepareCampaign);
   const [daily, setDaily] = useState("10");
+  const [targetCostPerConversion, setTargetCostPerConversion] = useState("");
+  const [reviewAfterDays, setReviewAfterDays] = useState("7");
   const [start, setStart] = useState(() => isoDay(now + 86_400_000));
   const [end, setEnd] = useState(() => isoDay(now + 14 * 86_400_000));
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -41,6 +43,8 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
   const accountConnected = artifact.channel === "google_search_ad" ? ads.googleAdsConnected : ads.metaAdsConnected;
   const currency = ads.currency;
   const dailyNum = Number(daily);
+  const targetCostNum = targetCostPerConversion.trim() ? Number(targetCostPerConversion) : undefined;
+  const reviewDaysNum = Number(reviewAfterDays);
   const days = dayCount(start, end);
   const total = Number.isFinite(dailyNum) && dailyNum > 0 ? dailyNum * days : 0;
   const platform = artifact.channel === "google_search_ad" ? "Google Ads" : "Meta";
@@ -49,6 +53,8 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
   const validate = () => {
     const e: Record<string, string> = {};
     if (!(dailyNum > 0)) e.daily = "Enter a daily budget greater than 0.";
+    if (targetCostNum !== undefined && (!(targetCostNum > 0) || !Number.isFinite(targetCostNum))) e.targetCostPerConversion = "Enter a positive target, or leave this blank to skip efficiency recommendations.";
+    if (!Number.isInteger(reviewDaysNum) || reviewDaysNum < 1 || reviewDaysNum > 90) e.reviewAfterDays = "Choose between 1 and 90 days.";
     if (!start) e.start = "Pick a start date.";
     if (!end || end < start) e.end = "Pick an end date on or after the start date.";
     if (start && start < isoDay(Date.now())) e.start = "The start date can't be in the past.";
@@ -87,6 +93,15 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
             <Field label={`Daily budget (${currency})`} error={fieldErrors.daily}>
               <Input type="number" inputMode="decimal" min={1} step="0.01" value={daily} onChange={(e) => setDaily(e.target.value)} />
             </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label={`Maximum cost per reported conversion (${currency}, optional)`} error={fieldErrors.targetCostPerConversion}>
+                <Input type="number" inputMode="decimal" min={0} step="0.01" value={targetCostPerConversion} onChange={(e) => setTargetCostPerConversion(e.target.value)} placeholder="Set your target" />
+              </Field>
+              <Field label="First review after (days)" error={fieldErrors.reviewAfterDays}>
+                <Input type="number" inputMode="numeric" min={1} max={90} step={1} value={reviewAfterDays} onChange={(e) => setReviewAfterDays(e.target.value)} />
+              </Field>
+            </div>
+            <p className="text-xs text-ink-3">ClimbOS compares reported Google Ads cost per conversion only when you set a target. The first review is advice for you; it never pauses ads automatically.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Start date" error={fieldErrors.start}>
                 <DatePicker value={start} min={isoDay(now)} onChange={setStart} />
@@ -129,7 +144,7 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
               onConfirm={async () => {
                 setError(null);
                 try {
-                  await prepare({ slug, artifactId: artifact.id, dailyBudget: dailyNum, startDate: start, endDate: end });
+                  await prepare({ slug, artifactId: artifact.id, dailyBudget: dailyNum, startDate: start, endDate: end, targetCostPerConversion: targetCostNum, reviewAfterDays: reviewDaysNum });
                   toast({ tone: "success", title: "Campaign prepared. Needs approval." });
                 } catch (e) {
                   setError(e);
@@ -141,6 +156,8 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
                   { term: "Daily", detail: `${majorToDisplay(dailyNum || 0, currency)}/day` },
                   { term: "Dates", detail: `${start} to ${end}` },
                   { term: "Max spend", detail: majorToDisplay(total, currency) },
+                  { term: "First review", detail: `${reviewDaysNum} days after it starts` },
+                  { term: "Cost target", detail: targetCostNum ? `${majorToDisplay(targetCostNum, currency)} per reported conversion` : "Not set; no efficiency recommendation" },
                 ]}
               />
             </ConfirmDialog>

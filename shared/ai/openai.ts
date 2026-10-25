@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import type { RateVersion } from "../economics/rates";
-import { turnCostMicros, jsonSchemaFor, parseJsonText, ZERO_USAGE, type ContentBlock, type MessageParam, type Source, type ToolUseBlock, type TurnRequest, type TurnResult, type TurnUsage } from "./types";
+import { turnCostMicros, jsonSchemaFor, parseJsonText, ZERO_USAGE, type ContentBlock, type MessageParam, type ProviderItemBlock, type Source, type ToolUseBlock, type TurnRequest, type TurnResult, type TurnUsage } from "./types";
 import { MODEL_SPECS } from "./models";
 import { FETCH_PAGE_TOOL, fetchPageToolDef, pageFetcherFor } from "./pageFetch";
 
@@ -81,14 +81,6 @@ export function dropNulls(v: unknown): unknown {
   return v;
 }
 
-function textOf(content: MessageParam["content"]): string {
-  if (typeof content === "string") return content;
-  return content
-    .map((b) => (b.type === "text" ? b.text : ""))
-    .filter(Boolean)
-    .join("\n");
-}
-
 /** Anthropic-shaped history → Responses API input items. */
 export function toInput(messages: MessageParam[]): Json[] {
   const items: Json[] = [];
@@ -97,10 +89,35 @@ export function toInput(messages: MessageParam[]): Json[] {
       items.push({ role: m.role, content: m.content });
       continue;
     }
-    const text = textOf(m.content);
-    if (text) items.push({ role: m.role, content: text });
+    if (m.content.some((block) => block.type === "image")) {
+      const content: Json[] = [];
+      const flushContent = () => {
+        if (content.length) items.push({ role: m.role, content: content.splice(0) });
+      };
+      for (const block of m.content) {
+        if (block.type === "text") content.push({ type: "input_text", text: block.text });
+        if (block.type === "image") content.push({ type: "input_image", image_url: block.image_url, detail: block.detail });
+        if (block.type === "tool_use") {
+          flushContent();
+          items.push({ type: "function_call", call_id: block.id, name: block.name, arguments: JSON.stringify(block.input ?? {}) });
+        }
+        if (block.type === "tool_result") {
+          flushContent();
+          const output = typeof block.content === "string" ? block.content : (block.content ?? []).map((part) => (part.type === "text" ? part.text : "")).join("\n");
+          items.push({ type: "function_call_output", call_id: block.tool_use_id, output });
+        }
+        if (block.type === "provider_item" && block.provider === "openai") {
+          flushContent();
+          items.push(block.item as Json);
+        }
+      }
+      flushContent();
+      continue;
+    }
     for (const b of m.content) {
+      if (b.type === "text") items.push({ role: m.role, content: b.text });
       if (b.type === "tool_use") items.push({ type: "function_call", call_id: b.id, name: b.name, arguments: JSON.stringify(b.input ?? {}) });
+      if (b.type === "provider_item" && b.provider === "openai") items.push(b.item as Json);
       if (b.type === "tool_result") {
         const out = typeof b.content === "string" ? b.content : (b.content ?? []).map((c) => (c.type === "text" ? c.text : "")).join("\n");
         items.push({ type: "function_call_output", call_id: b.tool_use_id, output: out });
@@ -117,10 +134,12 @@ function effortFor(req: TurnRequest, modelId: string): string | undefined {
 
 type ResponseItem = {
   type: string;
+  id?: string;
   status?: string;
   call_id?: string;
   name?: string;
   arguments?: string;
+  encrypted_content?: string;
   action?: { type?: string; sources?: { url?: string; title?: string }[] };
   content?: { type: string; text?: string; refusal?: string; annotations?: { type: string; url?: string; title?: string }[] }[];
 };
@@ -237,17 +256,23 @@ function addUsage(a: TurnUsage, b: TurnUsage): TurnUsage {
 
 /** Text and tool calls of one response, in the Anthropic shape the runtime appends. */
 function blocksOf(item: ResponseItem[]): ContentBlock[] {
-  let text = "";
-  for (const i of item) if (i.type === "message") for (const c of i.content ?? []) if (c.type === "output_text") text += c.text ?? "";
-  const blocks: ContentBlock[] = text ? [{ type: "text", text }] : [];
-  for (const c of item.filter((i) => i.type === "function_call")) {
-    let input: unknown = {};
-    try {
-      input = dropNulls(JSON.parse(c.arguments ?? "{}"));
-    } catch {
-      input = {};
+  const blocks: ContentBlock[] = [];
+  for (const i of item) {
+    if (i.type === "reasoning" && i.encrypted_content) {
+      // Never place plaintext reasoning in history.
+      blocks.push({ type: "provider_item", provider: "openai", item: i as unknown as Record<string, unknown> } satisfies ProviderItemBlock);
+    } else if (i.type === "message") {
+      const text = (i.content ?? []).filter((c) => c.type === "output_text").map((c) => c.text ?? "").join("");
+      if (text) blocks.push({ type: "text", text });
+    } else if (i.type === "function_call") {
+      let input: unknown = {};
+      try {
+        input = dropNulls(JSON.parse(i.arguments ?? "{}"));
+      } catch {
+        input = {};
+      }
+      blocks.push({ type: "tool_use", id: i.call_id!, name: i.name!, input });
     }
-    blocks.push({ type: "tool_use", id: c.call_id!, name: c.name!, input });
   }
   return blocks;
 }
@@ -279,12 +304,15 @@ export async function openaiTurn(req: TurnRequest, rates: RateVersion): Promise<
   for (const t of fnTools) tools.push({ type: "function", name: t.name, description: t.description ?? "", parameters: strictSchema(t.input_schema), strict: true });
   const effort = effortFor(req, spec.apiModelId);
   // Stateless follow-ups (store: false) resend the previous output, reasoning included (encrypted).
-  const include = [...(req.webSearch ? ["web_search_call.action.sources"] : []), ...(fetcher && !req.background ? ["reasoning.encrypted_content"] : [])];
+  const include = [...(req.webSearch ? ["web_search_call.action.sources"] : []), ...(fnTools.length && !req.background ? ["reasoning.encrypted_content"] : [])];
   const base: Json = {
     model: spec.apiModelId,
     instructions: req.system.map((b) => b.text).join("\n\n"),
     max_output_tokens: req.maxTokens,
     store: false,
+    // Responses API enforces this total built-in-tool limit; search context
+    // size alone is only a retrieval-depth hint, not a call budget.
+    ...(req.webSearch ? { max_tool_calls: req.webSearch.maxUses } : {}),
     ...(effort ? { reasoning: { effort } } : {}),
     ...(tools.length ? { tools, tool_choice: "auto", include: include.length ? include : undefined } : {}),
     ...(req.schema || req.verbosity ? { text: { ...(req.schema ? { format: { type: "json_schema", name: "answer", schema: strictSchema(jsonSchemaFor(req.schema)), strict: true } } : {}), ...(req.verbosity ? { verbosity: req.verbosity } : {}) } } : {}),

@@ -32,6 +32,8 @@ export interface ClimbTool<I extends z.ZodType = z.ZodType> {
   description: string;
   risk: Risk;
   input: I;
+  /** Validates the semantic result before it is passed back to the model. */
+  output?: z.ZodType;
   /** Plain-English summary of what will happen (shown on confirmation cards), in the workspace's timezone. */
   summarize?: (input: z.infer<I>, ctx?: { timeZone?: string }) => string;
   /** Narration while it runs, e.g. "Looking at your drafts". */
@@ -49,6 +51,226 @@ function short(s: unknown, n = 280): string {
 }
 
 const tool = <I extends z.ZodType>(t: ClimbTool<I>) => t as unknown as ClimbTool;
+
+const CalcOutputSchema = z.union([
+  z.object({ error: z.string() }),
+  z.object({ price: z.number(), totalCost: z.number(), contribution: z.number(), contributionMargin: z.number().nullable(), markupOnCost: z.number().nullable(), costBoundary: z.string(), meetsTarget: z.boolean().nullable(), notes: z.array(z.string()) }),
+  z.object({ floor: z.number(), marginAtStated: z.number().nullable(), gap: z.number().nullable(), notes: z.array(z.string()) }),
+  z.object({ controlRate: z.number(), treatmentRate: z.number(), absoluteChange: z.number(), relativeChange: z.number().nullable(), pValue: z.number(), method: z.enum(["fisher_exact", "two_proportion_z"]), verdict: z.enum(["no_reliable_difference", "difference_detected", "too_early"]), differenceInterval: z.tuple([z.number(), z.number()]), practical: z.enum(["worth_acting", "harmful", "flat", "small_but_real", "inconclusive"]).optional(), notes: z.array(z.string()) }),
+  z.object({ expected: z.array(z.number()), chiSquare: z.number(), pValue: z.number(), mismatch: z.boolean(), warning: z.boolean(), overArm: z.number().nullable(), checklist: z.array(z.string()), notes: z.array(z.string()) }),
+  z.object({ perArm: z.number(), total: z.number(), weeks: z.number().nullable(), notes: z.array(z.string()) }),
+  z.object({ change: z.number(), relativeChange: z.number().nullable(), label: z.literal("observed"), notes: z.array(z.string()) }),
+]);
+const DraftListOutputSchema = z.array(z.object({ id: z.string(), title: z.string(), channel: z.string(), kind: z.string(), status: z.string(), scheduledFor: z.string().nullable() }));
+const DraftReadOutputSchema = z.object({ id: z.string(), title: z.string(), channel: z.string(), status: z.string(), scheduledFor: z.string().nullable(), version: z.number().optional(), headline: z.string().nullable().optional(), body: z.string().optional(), callToAction: z.string().nullable().optional(), hashtags: z.array(z.string()).optional(), image: z.string().nullable().optional(), unsupportedClaims: z.array(z.string()).optional() });
+const HttpUrlSchema = z.string().url().refine((value) => {
+  return isHttpUrl(value);
+}, "Expected an HTTP(S) URL");
+const ImageListOutputSchema = z.object({ website: z.string().nullable(), returned: z.number().int().nonnegative(), truncated: z.boolean(), coverage: z.string(), images: z.array(z.object({ id: z.string(), kind: z.string(), view: z.string().nullable(), label: z.string(), product: z.object({ name: z.string(), price: z.string().optional(), url: HttpUrlSchema.optional() }).nullable() })) });
+const InboxOutputSchema = z.object({ openReturned: z.number().int().nonnegative(), truncated: z.boolean(), coverage: z.string(), items: z.array(z.object({ id: z.string(), kind: z.string(), from: z.string(), email: z.string().nullable(), text: z.string(), status: z.string(), hasDraftReply: z.boolean() })) });
+const PipelineOutputSchema = z.object({ totals: z.object({ open: z.number(), wonValue: z.number(), pipelineValue: z.number(), currency: z.string() }), truncated: z.boolean(), coverage: z.string(), deals: z.array(z.object({ name: z.string(), company: z.string().nullable(), stage: z.string(), value: z.number().nullable(), currency: z.string(), nextStep: z.string().nullable(), nextStepAt: z.string().nullable(), source: z.string() })) });
+const CompetitorsOutputSchema = z.object({
+  watching: z.array(z.object({ name: z.string(), url: HttpUrlSchema, status: z.enum(["checked", "pending", "error"]), lastCheckedAt: z.number().nullable(), lastError: z.string().nullable() })),
+  changes: z.array(z.object({ id: z.string(), name: z.string(), summary: z.string(), bullets: z.array(z.string()), soWhat: z.string().nullable(), sourceUrls: z.array(HttpUrlSchema), evidence: z.object({ removed: z.array(z.string()), added: z.array(z.string()) }).nullable(), at: z.number() })),
+  suggested: z.array(z.object({ name: z.string(), url: HttpUrlSchema, sourceUrl: HttpUrlSchema, kind: z.enum(["direct", "adjacent"]).optional() })),
+  coverage: z.object({ watched: z.number().int().nonnegative(), failed: z.number().int().nonnegative(), pending: z.number().int().nonnegative(), changesReturned: z.number().int().nonnegative(), changesTruncated: z.boolean(), note: z.string() }),
+});
+const LinksOutputSchema = z.object({ weekTotal: z.number(), returned: z.number().int().nonnegative(), truncated: z.boolean(), coverage: z.string(), links: z.array(z.object({ label: z.string(), url: HttpUrlSchema, clicks: z.number(), week: z.number() })) });
+const OverviewOutputSchema = z.object({
+  business: z.object({ name: z.string(), website: z.string().nullable(), summary: z.string().nullable(), type: z.string().nullable() }).nullable(),
+  goal: z.object({ statement: z.string(), horizonDays: z.number(), monthlyAdBudget: z.number(), currency: z.string(), createdAt: z.number() }).nullable(),
+  plan: z.object({ status: z.string(), version: z.number(), summary: z.string().nullable() }).nullable(),
+  waitingForApproval: z.array(z.object({ id: z.string(), title: z.string(), channel: z.string() })),
+  approvalsCount: z.number().int().nonnegative().describe("Number of drafts waiting for approval, capped at 20 when approvalsCountIsLowerBound is true."),
+  approvalsCountIsLowerBound: z.boolean().describe("True when more than 20 drafts are waiting; approvalsCount is then a lower bound, not an exact total."),
+  next: z.array(z.object({ title: z.string(), why: z.string(), href: z.string(), kind: z.string() })),
+  recentJobs: z.array(z.object({ id: z.string(), title: z.string(), status: z.string() })),
+  paused: z.boolean(),
+});
+const PlanOutputSchema = z.object({
+  goal: z.object({ statement: z.string(), horizonDays: z.number(), monthlyAdBudget: z.number(), currency: z.string() }).nullable(),
+  plan: z.null().optional(),
+  status: z.string().optional(),
+  summary: z.string().optional(),
+  diagnosis: z.string().optional(),
+  northStar: z.object({ metric: z.string(), baseline: z.string(), target: z.string() }).optional(),
+  plays: z.array(z.object({ name: z.string(), kind: z.string(), oneLiner: z.string(), forecast: z.string().nullable() })).optional(),
+  weekOne: z.array(z.string()).optional(),
+  channels: z.array(z.object({ name: z.string(), priority: z.number(), status: z.string() })).optional(),
+  experiments: z.array(z.object({ name: z.string(), status: z.string() })).optional(),
+});
+const AutopilotOutputSchema = z.object({
+  settings: z.object({
+    enabled: z.boolean(),
+    mode: z.enum(["always_ask", "trust_ladder", "auto"]),
+    channels: z.array(z.object({ channel: z.string(), postsPerWeek: z.number() })),
+    postingHours: z.array(z.number()),
+    alwaysAskTopics: z.array(z.string()),
+    imagesPerWeek: z.number(),
+    aiMode: z.enum(["basic", "expert"]).nullable(),
+    pausedReason: z.string().nullable(),
+    lastPlannedWeek: z.string().nullable(),
+  }).nullable(),
+  trust: z.array(z.object({ channel: z.string(), streak: z.number(), unlocked: z.boolean(), threshold: z.number() })),
+  connected: z.array(z.string()),
+  weeks: z.array(z.object({ weekOf: z.string(), theme: z.string().optional(), slots: z.array(z.object({ id: z.string(), channel: z.string(), when: z.string(), idea: z.string(), status: z.string(), draftId: z.string().nullable() })) })),
+});
+const AttributionViewSchema = z.object({
+  model: z.enum(["last_touch", "first_touch"]),
+  reconciled: z.boolean(),
+  byCurrency: z.array(z.object({
+    currency: z.string(),
+    channels: z.array(z.object({ channel: z.string(), netRevenueMinor: z.number(), conversions: z.number() })),
+    unattributed: z.object({ netRevenueMinor: z.number(), conversions: z.number() }),
+    totalNetBillingMinor: z.number(),
+    reconciled: z.boolean(),
+  })),
+});
+const ResultsOutputSchema = z.object({
+  span: z.number().int().min(7).max(365),
+  historyLimited: z.boolean(),
+  from: z.string(),
+  to: z.string(),
+  currency: z.string(),
+  timezone: z.string(),
+  isDemo: z.boolean(),
+  metrics: z.array(z.object({
+    key: z.enum(["visits", "signups", "paid_conversions", "revenue"]),
+    label: z.string(),
+    unit: z.string(),
+    definition: z.string(),
+    source: z.string(),
+    hasData: z.boolean(),
+    total: z.number(),
+    previousTotal: z.number().nullable(),
+    points: z.array(z.object({ date: z.string(), value: z.number() })),
+    freshness: z.number().nullable(),
+    sourceName: z.string().nullable(),
+    isFixture: z.boolean(),
+    currency: z.string().nullable(),
+    timezone: z.string(),
+    partial: z.boolean(),
+    partialReason: z.string().nullable(),
+  })),
+  attribution: z.object({
+    lastTouch: AttributionViewSchema.nullable(),
+    firstTouch: AttributionViewSchema.nullable(),
+    note: z.string(),
+  }),
+  platformClaims: z.object({
+    platforms: z.array(z.object({
+      platform: z.string(),
+      label: z.literal("platform_reported"),
+      conversions: z.number(),
+      conversionValueMinorByCurrency: z.record(z.string(), z.number()),
+      firstDate: z.string().nullable(),
+      lastDate: z.string().nullable(),
+      days: z.number(),
+    }).strict()),
+    warning: z.string(),
+    adSpendMinor: z.number().nullable(),
+    adSpendByCurrency: z.record(z.string(), z.number()),
+  }).strict().nullable(),
+  forecasts: z.array(z.object({ id: z.string(), metricKey: z.string(), status: z.string(), horizonDays: z.number(), createdAt: z.number(), isFixture: z.boolean() })),
+  gaps: z.array(z.object({ metric: z.string(), message: z.string(), fix: z.string() })),
+});
+const JobOutputSchema = z.object({ id: z.string(), title: z.string(), kind: z.string(), status: z.string(), roles: z.array(z.string()), brief: z.string().nullable(), createdAt: z.number(), updatedAt: z.number(), estimateMicros: z.number(), actualMicros: z.number(), userMessage: z.string().nullable(), isFixture: z.boolean(), engine: z.string().nullable(), output: z.string().nullable(), steps: z.array(z.object({ label: z.string(), status: z.string(), role: z.string().nullable(), kind: z.string() })), artifacts: z.array(z.object({ id: z.string(), title: z.string(), channel: z.string(), status: z.string(), kind: z.string() })) });
+const ProspectOutputSchema = z.object({
+  status: z.string(),
+  research: z.object({ campaignStatus: z.string(), runStatus: z.string().nullable(), runMessage: z.string().nullable(), requestedCount: z.number().nullable() }),
+  icp: z.string().nullable(),
+  prospectCount: z.number().int().nonnegative(),
+  prospectsTruncated: z.boolean(),
+  prospects: z.array(z.object({ id: z.string(), company: z.string(), why: z.string(), stage: z.enum(["suggested", "approved", "skipped", "contacted", "replied", "booked", "won", "lost"]), fit: z.number(), timing: z.number() })),
+  emails: z.array(z.object({ day: z.number(), subject: z.string() })),
+  bookingPage: z.string().nullable(),
+  upcomingCalls: z.array(z.object({ name: z.string(), company: z.string().nullable(), when: z.string() })),
+  pipeline: z.record(z.string(), z.number().int().nonnegative()),
+});
+const WeeklyReportOutputSchema = z.object({ weekStart: z.number(), weekEnd: z.number(), headline: z.string(), lines: z.array(z.object({ key: z.string(), label: z.string(), value: z.number(), change: z.number().nullable() })), next: z.array(z.string()), competitors: z.array(z.object({ name: z.string(), summary: z.string(), sourceUrls: z.array(HttpUrlSchema).optional(), observedAt: z.number().optional() })).optional() });
+const RunIdOutputSchema = z.object({ runId: z.string() });
+const CampaignStartOutputSchema = z.object({ campaignId: z.string(), pausedSending: z.boolean() });
+const SavedDraftOutputSchema = z.object({ saved: z.literal(true), note: z.string() });
+const OkOutputSchema = z.object({ ok: z.boolean() });
+const DraftDecisionOutputSchema = z.object({ approvalId: z.string(), slot: z.enum(["scheduled", "ready_to_post", "needs_time", "needs_approval", "not_autopilot"]) });
+const PauseOutputSchema = z.object({ canceledRuns: z.number().int().nonnegative(), unscheduled: z.number().int().nonnegative(), campaignsPausing: z.number().int().nonnegative() });
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return ["https:", "http:"].includes(url.protocol) && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
+function isIsoDateTimeWithOffset(value: string): boolean {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?(Z|([+-])(\d{2}):(\d{2}))$/.exec(value);
+  if (!parts || !Number.isFinite(Date.parse(value))) return false;
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText = "0", zone, , offsetHourText = "0", offsetMinuteText = "0"] = parts;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const calendar = new Date(0);
+  calendar.setUTCFullYear(year, month - 1, day);
+  calendar.setUTCHours(0, 0, 0, 0);
+  const offsetHours = Number(offsetHourText);
+  const offsetMinutes = Number(offsetMinuteText);
+  return calendar.getUTCFullYear() === year
+    && calendar.getUTCMonth() === month - 1
+    && calendar.getUTCDate() === day
+    && Number(hourText) <= 23
+    && Number(minuteText) <= 59
+    && Number(secondText) <= 59
+    && offsetMinutes <= 59
+    && (zone === "Z" || offsetHours < 14 || (offsetHours === 14 && offsetMinutes === 0));
+}
+
+/** URL-bearing fields from tools must not smuggle script, data, or credential URLs into either agent surface. */
+function validateToolUrls(value: unknown, path = "tool result"): void {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => validateToolUrls(item, `${path}[${index}]`));
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  for (const [key, child] of Object.entries(value)) {
+    const urlField = key.toLowerCase() === "website" || /urls?$/i.test(key);
+    if (urlField && child !== null) {
+      const values = Array.isArray(child) ? child : [child];
+      if (values.some((item) => typeof item !== "string" || !isHttpUrl(item))) {
+        throw new Error(`The tool returned an unsafe URL in ${path}.${key}.`);
+      }
+    } else {
+      validateToolUrls(child, `${path}.${key}`);
+    }
+  }
+}
+
+/** Validate and bound tool results before they re-enter the model context as untrusted data. */
+export function encodeToolOutput(output: unknown, maxChars = 7_800, outputSchema?: z.ZodType): string {
+  let normalized: unknown;
+  try {
+    const encoded = JSON.stringify(output ?? { ok: true }, (_key, value: unknown) => {
+      if (typeof value === "number" && !Number.isFinite(value)) throw new Error("non-finite number");
+      if (typeof value === "bigint" || typeof value === "function" || typeof value === "symbol") throw new Error("non-JSON value");
+      return value;
+    });
+    if (typeof encoded !== "string") throw new Error("empty result");
+    normalized = JSON.parse(encoded);
+  } catch {
+    throw new Error("The tool returned data that cannot be safely passed to the agent.");
+  }
+  const checked = z.json().safeParse(normalized);
+  if (!checked.success) throw new Error("The tool returned data that cannot be safely passed to the agent.");
+  validateToolUrls(checked.data);
+  const semantic = outputSchema?.safeParse(checked.data);
+  if (semantic && !semantic.success) throw new Error("The tool returned data that did not match its output contract.");
+  // Escape '<' so untrusted tool text cannot close the surrounding trust boundary.
+  const safe = JSON.stringify(semantic?.success ? semantic.data : checked.data).replace(/</g, "\\u003c");
+  if (safe.length <= maxChars) return safe;
+  const previewChars = Math.max(0, maxChars - 100);
+  return JSON.stringify({ truncated: true, preview: safe.slice(0, previewChars), note: "Tool result exceeded the context limit; preview only." });
+}
 
 /** A time as the owner reads it: in the workspace's timezone (UTC if it's unknown). */
 export function localTime(ms: number, timeZone = "UTC"): string {
@@ -70,6 +292,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Working out the numbers",
     input: CalcToolInput,
+    output: CalcOutputSchema,
     local: calculate,
     run: async (_c, _slug, input) => calculate(input),
   }),
@@ -80,6 +303,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Checking today's overview",
     input: z.object({}),
+    output: OverviewOutputSchema,
     run: async (c, slug) => {
       const t = await c.query(api.workspace.today, { slug });
       return {
@@ -88,6 +312,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
         plan: t.strategy ? { status: t.strategy.status, version: t.strategy.version, summary: short(t.strategy.summary, 400) } : null,
         waitingForApproval: t.approvals.map((a) => ({ id: a.id, title: a.title, channel: a.channel })),
         approvalsCount: t.approvalsCount,
+        approvalsCountIsLowerBound: t.approvalsCountIsLowerBound,
         next: t.next,
         recentJobs: t.recent.slice(0, 8).map((r) => ({ id: r.id, title: r.title, status: r.status })),
         paused: Boolean(t.emergencyStop),
@@ -100,7 +325,8 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     description: "Content items (posts, ads, emails, pages), newest first. Filter by status: in_review (waiting for approval), approved, scheduled, published, draft, failed.",
     risk: "read",
     doing: "Looking at your content",
-    input: z.object({ status: z.enum(["draft", "in_review", "approved", "scheduled", "published", "failed"]).optional(), limit: z.number().optional() }),
+    input: z.object({ status: z.enum(["draft", "in_review", "approved", "scheduled", "published", "failed"]).optional(), limit: z.number().int().min(1).max(25).optional() }),
+    output: DraftListOutputSchema,
     run: async (c, slug, i) => {
       const page = await c.query(api.content.list, { slug, status: i.status, paginationOpts: { numItems: Math.min(i.limit ?? 12, 25), cursor: null } });
       return (page.page as { id: string; title: string; channel: string; status: string; scheduledFor?: number | null; kind: string }[]).map((a) => ({ id: a.id, title: a.title, channel: a.channel, kind: a.kind, status: a.status, scheduledFor: a.scheduledFor ? new Date(a.scheduledFor).toISOString() : null }));
@@ -113,6 +339,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Reading the draft",
     input: z.object({ artifactId }),
+    output: DraftReadOutputSchema,
     run: async (c, slug, i) => {
       const d = await c.query(api.content.get, { slug, artifactId: i.artifactId as Id<"artifacts"> });
       const v = d.current as { body: string; headline: string | null; callToAction: string | null; hashtags: string[]; imageLabel: string | null; unsupportedClaims: string[]; version: number } | null;
@@ -126,6 +353,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Reading your growth plan",
     input: z.object({}),
+    output: PlanOutputSchema,
     run: async (c, slug) => {
       const p = await c.query(api.workspace.plan, { slug });
       const s = p.strategy;
@@ -150,7 +378,8 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     description: "Business results over the last N days (traffic, leads, sales and what the team attributes to which channel), with data freshness.",
     risk: "read",
     doing: "Checking your results",
-    input: z.object({ days: z.number().optional() }),
+    input: z.object({ days: z.number().int().min(7).max(365).optional() }),
+    output: ResultsOutputSchema,
     run: async (c, slug, i) => c.query(api.analytics.overview, { slug, days: i.days ?? 30 }),
   }),
   tool({
@@ -160,6 +389,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Checking autopilot",
     input: z.object({}),
+    output: AutopilotOutputSchema,
     run: async (c, slug) => {
       const a = await c.query(api.autopilot.get, { slug });
       return {
@@ -177,9 +407,11 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Looking at your images",
     input: z.object({ kind: z.enum(["screenshot", "product_photo", "upload", "ai_image"]).optional() }),
+    output: ImageListOutputSchema,
     run: async (c, slug, i) => {
       const l = await c.query(api.assets.list, { slug, kind: i.kind });
-      return { website: l.website, images: l.assets.slice(0, 40).map((a) => ({ id: a.id, kind: a.kind, view: a.view, label: a.label, product: a.product })) };
+      const images = l.assets.slice(0, 40);
+      return { website: l.website, returned: l.assets.length, truncated: l.assets.length > images.length || l.assets.length >= 200, coverage: "Newest 40 assets from a source capped at 200; older assets may be omitted.", images: images.map((a) => ({ id: a.id, kind: a.kind, view: a.view, label: a.label, product: a.product })) };
     },
   }),
   tool({
@@ -189,6 +421,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Checking that job",
     input: z.object({ runId: z.string() }),
+    output: JobOutputSchema,
     run: async (c, slug, i) => {
       const r = await c.query(api.workspace.runDetail, { slug, runId: i.runId as Id<"workflowRuns"> });
       return { ...r, output: r.output ? short(JSON.stringify(r.output), 3000) : null };
@@ -202,11 +435,20 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Checking your prospects",
     input: z.object({}),
+    output: ProspectOutputSchema,
     run: async (c, slug) => {
       const o = await c.query(api.outbound.get, { slug });
       return {
         status: o.campaign?.status ?? "none",
+        research: {
+          campaignStatus: o.campaign?.status ?? "none",
+          runStatus: o.campaign?.run?.status ?? null,
+          runMessage: o.campaign?.run?.message ? short(o.campaign.run.message, 240) : null,
+          requestedCount: o.campaign?.brief.count ?? null,
+        },
         icp: o.campaign?.icp?.summary ?? null,
+        prospectCount: o.prospects.length,
+        prospectsTruncated: o.prospects.length > 40,
         prospects: o.prospects.slice(0, 40).map((p) => ({ id: p.id, company: p.company, why: short(p.why, 140), stage: p.stage, fit: p.fit, timing: p.timing })),
         emails: o.campaign?.sequence.map((s) => ({ day: s.day, subject: s.subject })) ?? [],
         bookingPage: o.page ? `/book/${o.page.slug}` : null,
@@ -223,9 +465,11 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Checking your inbox",
     input: z.object({}),
+    output: InboxOutputSchema,
     run: async (c, slug) => {
       const items = await c.query(api.inbox.list, { slug, box: "open" });
-      return { open: items.length, items: items.slice(0, 25).map((m) => ({ id: m.id, kind: m.kind, from: m.from, email: m.fromEmail, text: short(m.text, 240), status: m.status, hasDraftReply: Boolean(m.suggestedReply) })) };
+      const shown = items.slice(0, 25);
+      return { openReturned: items.length, truncated: items.length > shown.length || items.length >= 150, coverage: "Newest 25 open messages from a source capped at 150; older messages may be omitted.", items: shown.map((m) => ({ id: m.id, kind: m.kind, from: m.from, email: m.fromEmail, text: short(m.text, 240), status: m.status, hasDraftReply: Boolean(m.suggestedReply) })) };
     },
   }),
 
@@ -236,9 +480,11 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Checking your pipeline",
     input: z.object({}),
+    output: PipelineOutputSchema,
     run: async (c, slug) => {
       const p = await c.query(api.crm.list, { slug });
-      return { totals: p.totals, deals: p.deals.slice(0, 40).map((d) => ({ name: d.name, company: d.company, stage: d.stage, value: d.value ? d.value / 100 : null, currency: d.currency, nextStep: d.nextStep, nextStepAt: d.nextStepAt ? new Date(d.nextStepAt).toISOString() : null, source: d.source })) };
+      const deals = p.deals.slice(0, 40);
+      return { totals: p.totals, truncated: p.deals.length > deals.length || p.deals.length >= 500, coverage: "Newest 40 deals from a source capped at 500; older deals may be omitted.", deals: deals.map((d) => ({ name: d.name, company: d.company, stage: d.stage, value: d.value ? d.value / 100 : null, currency: d.currency, nextStep: d.nextStep, nextStepAt: d.nextStepAt ? new Date(d.nextStepAt).toISOString() : null, source: d.source })) };
     },
   }),
 
@@ -248,7 +494,8 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     description: "This week's (or a past week's) outcomes vs the week before, competitor changes and what needs the owner.",
     risk: "read",
     doing: "Reading the weekly report",
-    input: z.object({ weeksAgo: z.number().optional() }),
+    input: z.object({ weeksAgo: z.number().int().min(0).max(12).optional() }),
+    output: WeeklyReportOutputSchema,
     run: async (c, slug, i) => c.query(api.reports.weekly, { slug, weeksAgo: i.weeksAgo }),
   }),
 
@@ -259,9 +506,25 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Checking your competitors",
     input: z.object({}),
+    output: CompetitorsOutputSchema,
     run: async (c, slug) => {
       const o = await c.query(api.competitors.overview, { slug });
-      return { watching: o.watches.map((w) => ({ name: w.name, url: w.url })), changes: o.changes.slice(0, 10) };
+      const failed = o.watches.filter((w) => Boolean(w.lastError)).length;
+      const pending = o.watches.filter((w) => !w.lastError && !w.lastCheckedAt).length;
+      const changes = o.changes.slice(0, 10);
+      return {
+        watching: o.watches.map((w) => ({ name: w.name, url: w.url, status: w.lastError ? "error" as const : w.lastCheckedAt ? "checked" as const : "pending" as const, lastCheckedAt: w.lastCheckedAt, lastError: w.lastError ? short(w.lastError, 200) : null })),
+        changes,
+        suggested: o.suggested,
+        coverage: {
+          watched: o.watches.length,
+          failed,
+          pending,
+          changesReturned: changes.length,
+          changesTruncated: o.changes.length > changes.length || o.changes.length >= 30,
+          note: "No change record means none is recorded in the returned history, not proof that a competitor made no change. Sites with error or pending status were not verified successfully.",
+        },
+      };
     },
   }),
 
@@ -272,9 +535,11 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "read",
     doing: "Checking your link clicks",
     input: z.object({}),
+    output: LinksOutputSchema,
     run: async (c, slug) => {
       const l = await c.query(api.links.list, { slug });
-      return { weekTotal: l.weekTotal, links: l.links.slice(0, 30).map((x) => ({ label: x.label, url: x.url.split("?")[0], clicks: x.clicks, week: x.week })) };
+      const links = l.links.slice(0, 30);
+      return { weekTotal: l.weekTotal, returned: l.links.length, truncated: l.links.length > links.length || l.links.length >= 300, coverage: "Newest 30 links from a source capped at 300; older links may be omitted.", links: links.map((x) => ({ label: x.label, url: x.url.split("?")[0], clicks: x.clicks, week: x.week })) };
     },
   }),
 
@@ -285,7 +550,8 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     description: "Research companies that need this business (public web, with evidence) and write the cold emails. Nothing is sent.",
     risk: "draft",
     doing: "Finding customers",
-    input: z.object({ who: z.string().optional(), where: z.string().optional(), count: z.number().optional() }),
+    input: z.object({ who: z.string().max(300).optional(), where: z.string().max(120).optional(), count: z.number().int().min(5).max(30).optional() }),
+    output: CampaignStartOutputSchema,
     run: async (c, slug, i) => c.mutation(api.outbound.start, { slug, who: i.who, where: i.where, count: i.count }),
   }),
   tool({
@@ -294,7 +560,8 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     description: "Mark prospects approved (ready to email) or skipped. Only changes the list; nothing is sent.",
     risk: "draft",
     doing: "Updating your prospect list",
-    input: z.object({ prospectIds: z.array(z.string()), stage: z.enum(["approved", "skipped"]) }),
+    input: z.object({ prospectIds: z.array(z.string()).min(1).max(200), stage: z.enum(["approved", "skipped"]) }),
+    output: OkOutputSchema,
     run: async (c, slug, i) => c.mutation(api.outbound.setStage, { slug, prospectIds: i.prospectIds as Id<"prospects">[], stage: i.stage }),
   }),
 
@@ -305,6 +572,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "draft",
     doing: "Drafting posts",
     input: z.object({ channel: z.enum(CHANNELS), quantity: z.number().min(1).max(6), brief: z.string(), imageIds: z.array(z.string()).optional() }),
+    output: RunIdOutputSchema,
     run: async (c, slug, i) => {
       if (i.imageIds?.length) return c.mutation(api.assets.makePosts, { slug, assetIds: i.imageIds as Id<"assets">[], channel: i.channel, brief: i.brief });
       return c.mutation(api.content.generate, { slug, job: "content_social", channel: i.channel, quantity: i.quantity, images: 1, brief: i.brief });
@@ -317,6 +585,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "draft",
     doing: "Drafting",
     input: z.object({ kind: z.enum(["ads", "email", "seo_page"]), brief: z.string() }),
+    output: RunIdOutputSchema,
     run: async (c, slug, i) => c.mutation(api.content.generate, { slug, job: i.kind === "ads" ? "content_ads" : i.kind === "email" ? "content_email" : "content_seo", brief: i.brief }),
   }),
   tool({
@@ -326,6 +595,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "draft",
     doing: "Editing the draft",
     input: z.object({ artifactId, title: z.string().optional(), headline: z.string().optional(), body: z.string().optional(), callToAction: z.string().optional(), hashtags: z.array(z.string()).optional() }),
+    output: SavedDraftOutputSchema,
     run: async (c, slug, i) => {
       const d = await c.query(api.content.get, { slug, artifactId: i.artifactId as Id<"artifacts"> });
       const v = d.current as { body: string; headline: string | null; callToAction: string | null; destinationUrl: string | null; hashtags: string[]; altText: string | null } | null;
@@ -350,6 +620,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "draft",
     doing: "Planning the week",
     input: z.object({}),
+    output: z.string(),
     run: async (c, slug) => c.mutation(api.autopilot.planNow, { slug }),
   }),
   tool({
@@ -359,6 +630,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "draft",
     doing: "Capturing your website",
     input: z.object({ url: z.string().optional() }),
+    output: z.string(),
     run: async (c, slug, i) => c.mutation(api.assets.captureWebsite, { slug, url: i.url }),
   }),
   tool({
@@ -368,6 +640,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "draft",
     doing: "Collecting product photos",
     input: z.object({}),
+    output: z.string(),
     run: async (c, slug) => c.mutation(api.assets.collectProducts, { slug }),
   }),
 
@@ -379,6 +652,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "confirm",
     doing: "Asking the strategist for a new plan",
     input: z.object({}),
+    output: RunIdOutputSchema,
     summarize: () => `Draft a new version of your growth plan. Uses up to ${microsToCredits(estimateJobMicros(planJob("strategy"))).toLocaleString("en-US")} credits; unused credits are returned.`,
     run: async (c, slug) => c.mutation(api.orgs.generatePlan, { slug }),
   }),
@@ -389,6 +663,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "confirm",
     doing: "Approving",
     input: z.object({ artifactId, note: z.string().optional() }),
+    output: DraftDecisionOutputSchema,
     summarize: () => "Approve this draft as it is now. Autopilot posts then go out at their planned time.",
     run: async (c, slug, i) => c.mutation(api.content.decide, { slug, artifactId: i.artifactId as Id<"artifacts">, decision: "approve", note: i.note }),
   }),
@@ -399,6 +674,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "confirm",
     doing: "Sending it back",
     input: z.object({ artifactId, note: z.string() }),
+    output: DraftDecisionOutputSchema,
     summarize: (i) => `Send this draft back with the note: "${i.note}"`,
     run: async (c, slug, i) => c.mutation(api.content.decide, { slug, artifactId: i.artifactId as Id<"artifacts">, decision: "reject", note: i.note }),
   }),
@@ -408,7 +684,8 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     description: "Schedule an approved draft to publish at a time (ISO 8601 with timezone).",
     risk: "confirm",
     doing: "Scheduling",
-    input: z.object({ artifactId, when: z.string().refine((s) => Number.isFinite(Date.parse(s)), "Use a full date and time with its offset, like 2026-10-20T09:00:00+01:00.") }),
+    input: z.object({ artifactId, when: z.string().refine(isIsoDateTimeWithOffset, "Use a real ISO 8601 date and time with a valid timezone offset, like 2026-10-20T09:00:00+01:00.") }),
+    output: OkOutputSchema,
     summarize: (i, c) => `Schedule it for ${localTime(Date.parse(i.when), c?.timeZone)}.`,
     run: async (c, slug, i) => c.mutation(api.content.schedule, { slug, artifactId: i.artifactId as Id<"artifacts">, when: Date.parse(i.when) }),
   }),
@@ -419,6 +696,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "confirm",
     doing: "Publishing",
     input: z.object({ artifactId }),
+    output: OkOutputSchema,
     summarize: () => "Publish this approved post right now.",
     run: async (c, slug, i) => c.mutation(api.content.publishNow, { slug, artifactId: i.artifactId as Id<"artifacts"> }),
   }),
@@ -429,6 +707,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "confirm",
     doing: "Skipping the post",
     input: z.object({ slotId: z.string() }),
+    output: OkOutputSchema,
     summarize: () => "Skip this planned post. Nothing will go out in that slot.",
     run: async (c, slug, i) => c.mutation(api.autopilot.skipSlot, { slug, slotId: i.slotId as Id<"calendarSlots"> }),
   }),
@@ -438,7 +717,13 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     description: "Turn autopilot on or off, or change its mode, channels and posts per week.",
     risk: "confirm",
     doing: "Updating autopilot",
-    input: z.object({ enabled: z.boolean(), mode: z.enum(["always_ask", "trust_ladder", "auto"]), channels: z.array(z.object({ channel: z.enum(CHANNELS), postsPerWeek: z.number().min(0).max(6) })) }),
+    input: z.object({ enabled: z.boolean(), mode: z.enum(["always_ask", "trust_ladder", "auto"]), channels: z.array(z.object({ channel: z.enum(CHANNELS), postsPerWeek: z.number().int().min(0).max(6) })).max(CHANNELS.length) }).superRefine((value, ctx) => {
+      const channels = value.channels.map((item) => item.channel);
+      if (new Set(channels).size !== channels.length) ctx.addIssue({ code: "custom", message: "Choose each channel once.", path: ["channels"] });
+      if (value.channels.reduce((sum, item) => sum + item.postsPerWeek, 0) > 21) ctx.addIssue({ code: "custom", message: "Keep it to 21 posts a week or fewer.", path: ["channels"] });
+      if (value.enabled && value.channels.every((item) => item.postsPerWeek === 0)) ctx.addIssue({ code: "custom", message: "Pick at least one post per week when autopilot is on.", path: ["channels"] });
+    }),
+    output: z.string(),
     summarize: (i) => (i.enabled ? `Autopilot on (${i.mode.replace("_", " ")}): ${i.channels.map((c) => `${c.channel} ${c.postsPerWeek}/week`).join(", ")}.` : "Turn autopilot off. Scheduled posts stay scheduled."),
     run: async (c, slug, i) => {
       const cur = await c.query(api.autopilot.get, { slug });
@@ -452,6 +737,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     risk: "confirm",
     doing: "Pausing everything",
     input: z.object({ reason: z.string().optional() }),
+    output: PauseOutputSchema,
     summarize: () => "Pause all activity in this workspace until you resume it.",
     run: async (c, slug, i) => c.mutation(api.workspace.pauseAll, { slug, reason: i.reason }),
   }),

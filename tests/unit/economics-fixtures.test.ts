@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { churnOf, customerValue, lintEconomics, lockedNumbers, monthlyContribution, playMaths } from "../../shared/agents/economics";
+import { CHECK_STAMP } from "../../shared/agents/provenance";
 import { lintFeasibility } from "../../shared/agents/specs";
 import { breakevenCpc, cacMedia, clicks, contributionMonth, contributionOver, funnelCustomers, paybackSimple, paybackWithChurn } from "../../shared/growth/calc";
 
 /** S3 (REQ-MATH): the spec §8.3 reference fixture plus the edge cases. */
 const DAYS_PER_MONTH = 365.25 / 12;
 const ref = { revenuePerCustomerMonthUsd: 30, grossMargin: 0.8, monthlyChurn: 0.05, basis: "reference" };
-const refPlay = (over: Partial<{ horizonDays: number; weeklyReach: number; steps: { name: string; rate: number }[]; monthlySpendUsd: number; ownerHoursPerWeek: number }> = {}) => {
+const refPlay = (over: Partial<{ horizonDays: number; weeklyReach: number; steps: { name: string; rate: number }[]; monthlySpendUsd: number; ownerHoursPerWeek: number; rampWeeks: number; salesLagDays: number }> = {}) => {
   const horizonDays = over.horizonDays ?? DAYS_PER_MONTH;
   return {
     name: "Search ads",
@@ -14,7 +15,7 @@ const refPlay = (over: Partial<{ horizonDays: number; weeklyReach: number; steps
     unit: "paying customers",
     horizonDays,
     // 300 clicks over one month, spread by week.
-    model: { weeklyReach: over.weeklyReach ?? 300 / (DAYS_PER_MONTH / 7), steps: over.steps ?? [{ name: "signup", rate: 0.08 }, { name: "paid", rate: 0.25 }], monthlySpendUsd: over.monthlySpendUsd ?? 600, ownerHoursPerWeek: over.ownerHoursPerWeek ?? 0 },
+    model: { weeklyReach: over.weeklyReach ?? 300 / (DAYS_PER_MONTH / 7), steps: over.steps ?? [{ name: "signup", rate: 0.08 }, { name: "paid", rate: 0.25 }], monthlySpendUsd: over.monthlySpendUsd ?? 600, ownerHoursPerWeek: over.ownerHoursPerWeek ?? 0, ...(over.rampWeeks !== undefined ? { rampWeeks: over.rampWeeks } : {}), ...(over.salesLagDays !== undefined ? { salesLagDays: over.salesLagDays } : {}) },
   };
 };
 
@@ -47,6 +48,32 @@ describe("§8.3 reference fixture", () => {
     expect(m.valueUsd).toBeCloseTo(220.6272, 3);
     expect(m.profitable).toBe(true);
     expect(m.invalidInputs).toEqual([]);
+  });
+
+  it("reports CAC bounds from the inverse of the same simulated customer range", () => {
+    const base = refPlay();
+    const ranged = {
+      ...base,
+      model: {
+        ...base.model,
+        weeklyReachLow: 30,
+        weeklyReachHigh: 120,
+        steps: [{ name: "paid", rate: 0.1, low: 0.05, high: 0.2 }],
+      },
+    };
+    const m = playMaths(ranged, ref);
+
+    expect(m.cacRange.p10).toBeCloseTo(m.costUsd / m.range.p90, 8);
+    expect(m.cacRange.p50).toBeCloseTo(m.costUsd / m.range.p50, 8);
+    expect(m.cacRange.p90).toBeCloseTo(m.costUsd / m.range.p10, 8);
+    expect(m.cacRange.p10!).toBeLessThanOrEqual(m.cacRange.p50!);
+    expect(m.cacRange.p50!).toBeLessThanOrEqual(m.cacRange.p90!);
+  });
+
+  it("marks the high CAC bound unbounded when the low customer draw is zero", () => {
+    const m = playMaths(refPlay({ steps: [{ name: "paid", rate: 0 }] }), ref);
+
+    expect(m.cacRange).toEqual({ p10: null, p50: null, p90: null });
   });
 });
 
@@ -96,11 +123,72 @@ describe("edge cases", () => {
     expect(playMaths(refPlay(), ref).costUsd).toBeCloseTo(600, 6);
   });
 
-  it("unprofitable action is a hard economics finding", () => {
+  it("models gradual reach and paid-conversion lag without discounting the planned cost", () => {
+    const base = refPlay({ horizonDays: 28, weeklyReach: 100, steps: [{ name: "paid", rate: 0.1 },], monthlySpendUsd: 700 });
+    const immediate = playMaths(base, ref);
+    const ramped = playMaths(refPlay({ horizonDays: 28, weeklyReach: 100, steps: [{ name: "paid", rate: 0.1 }], monthlySpendUsd: 700, rampWeeks: 4 }), ref);
+    const delayed = playMaths(refPlay({ horizonDays: 28, weeklyReach: 100, steps: [{ name: "paid", rate: 0.1 }], monthlySpendUsd: 700, salesLagDays: 7 }), ref);
+    const both = playMaths(refPlay({ horizonDays: 28, weeklyReach: 100, steps: [{ name: "paid", rate: 0.1 }], monthlySpendUsd: 700, rampWeeks: 4, salesLagDays: 7 }), ref);
+    expect(immediate.customers).toBeCloseTo(40, 9);
+    expect(ramped.customers).toBeCloseTo(20, 9);
+    expect(delayed.customers).toBeCloseTo(30, 9);
+    expect(both.customers).toBeCloseTo(11.25, 9);
+    expect([ramped.costUsd, delayed.costUsd, both.costUsd]).toEqual([immediate.costUsd, immediate.costUsd, immediate.costUsd]);
+    expect(lockedNumbers({ economics: ref, plays: [refPlay({ horizonDays: 28, weeklyReach: 100, steps: [{ name: "paid", rate: 0.1 }], rampWeeks: 4, salesLagDays: 7 })] })).toContain("reach ramps to full volume over 4 weeks; allows 7 days for paid conversion");
+  });
+
+  it("does not count paid conversions that fall after the forecast horizon", () => {
+    const p = refPlay({ horizonDays: 7, weeklyReach: 100, steps: [{ name: "paid", rate: 0.1 }], salesLagDays: 7 });
+    const m = playMaths(p, ref);
+    expect(m.customers).toBe(0);
+    expect(m.costUsd).toBeGreaterThan(0);
+    expect(m.cacUsd).toBeNull();
+  });
+
+  it("downgrades an unprofitable result based on unlabeled inputs to a conditional warning", () => {
     const losing = refPlay({ monthlySpendUsd: 6000 });
     const m = playMaths(losing, ref);
     expect(m.profitable).toBe(false);
-    expect(lintEconomics({ economics: ref, plays: [losing] }).some((l) => l.rule === "economics" && /Loses money/.test(l.message))).toBe(true);
+    expect(m.financialEvidence.status).toBe("unlabelled_scenario");
+    expect(lintEconomics({ economics: ref, plays: [losing] })).toContainEqual(expect.objectContaining({ severity: "warn", rule: "economics", message: expect.stringContaining("Does not pay back under the current scenario") }));
+  });
+
+  it("keeps a hard loss finding only when the inputs are explicitly checked", () => {
+    const tag = { source: "owner" as const, ref: "Owner confirmed", check: "owner_input" as const, checkedBy: CHECK_STAMP };
+    const e = { ...ref, sources: { revenue: tag, margin: tag, churn: tag, ownerHour: tag } };
+    const losing = {
+      ...refPlay({ monthlySpendUsd: 6000, ownerHoursPerWeek: 0 }),
+      model: { ...refPlay({ monthlySpendUsd: 6000, ownerHoursPerWeek: 0 }).model, reachSource: tag, spendSource: tag, hoursSource: tag, steps: [{ name: "signup", rate: 0.08, source: "owner" as const, ref: tag.ref, check: tag.check, checkedBy: CHECK_STAMP }, { name: "paid", rate: 0.25, source: "owner" as const, ref: tag.ref, check: tag.check, checkedBy: CHECK_STAMP }] },
+    };
+    const m = playMaths(losing, e);
+    const issue = lintEconomics({ economics: e, plays: [losing] }).find((l) => l.rule === "economics" && /Loses money/.test(l.message));
+    expect(m.financialEvidence.status).toBe("checked_inputs");
+    expect(issue?.severity).toBe("error");
+  });
+
+  it("keeps a page-matched research rate conditional until its fit to this business is established", () => {
+    const owner = { source: "owner" as const, ref: "Owner-confirmed", check: "owner_input" as const, checkedBy: CHECK_STAMP };
+    const research = { source: "research" as const, ref: "https://example.test/report", quote: "The conversion rate was 8% for qualified visitors in Q2.", population: "qualified visitors", period: "Q2", check: "source_verified" as const, checkedBy: CHECK_STAMP, access: "read" as const };
+    const economics = { ...ref, sources: { revenue: owner, margin: owner, churn: owner } };
+    const losing = {
+      ...refPlay({ monthlySpendUsd: 6000 }),
+      model: { ...refPlay({ monthlySpendUsd: 6000 }).model, reachSource: owner, spendSource: owner, hoursSource: owner, steps: [{ name: "paid", rate: 0.08, source: "research" as const, ref: research.ref, quote: research.quote, population: research.population, period: research.period, check: research.check, checkedBy: CHECK_STAMP, access: "read" as const }] },
+    };
+    const result = playMaths(losing, economics);
+    const issue = lintEconomics({ economics, plays: [losing] }).find((item) => item.rule === "economics" && /Does not pay back/.test(item.message));
+    expect(result.financialEvidence).toMatchObject({ status: "conditional_scenario", unchecked: expect.arrayContaining(["paid (source fit to this business unverified)"]) });
+    expect(issue?.severity).toBe("warn");
+  });
+
+  it("publishes structured conditional evidence for assumed and unchecked inputs", () => {
+    const tagged = {
+      ...refPlay(),
+      model: { ...refPlay().model, reachSource: { source: "benchmark" as const, ref: "Industry report" }, spendSource: { source: "planned" as const, ref: "Plan" }, hoursSource: { source: "assumption" as const, ref: "" }, steps: [{ name: "paid", rate: 0.2, source: "research" as const, ref: "https://example.test" }] },
+    };
+    const e = { ...ref, sources: { revenue: { source: "benchmark" as const, ref: "Industry report" }, margin: { source: "benchmark" as const, ref: "Industry report" }, churn: { source: "benchmark" as const, ref: "Industry report" } } };
+    const m = playMaths(tagged, e);
+    expect(m.financialEvidence).toMatchObject({ status: "conditional_scenario", assumed: ["Your hours a week"], unchecked: expect.arrayContaining(["Weekly reach", "paid", "Revenue per customer", "Margin", "Monthly churn"]), planned: ["Monthly spend"] });
+    expect(lockedNumbers({ economics: e, plays: [tagged] })).toContain("Financial comparison: conditional scenario");
   });
 
   it("no customers: no cost per customer, no verdict, flagged", () => {
@@ -136,5 +224,6 @@ describe("headline basis (REQ-MATH-06, regression check 2026-10-19)", () => {
     expect(m.headline.p90).toBeGreaterThanOrEqual(m.customers);
     const out = withForecasts({ economics: ref, plays: [skewed] });
     expect(out.plays[0].p50).toBeCloseTo(m.customers, 1);
+    expect(out.plays[0].cacRange).toEqual(m.cacRange);
   });
 });

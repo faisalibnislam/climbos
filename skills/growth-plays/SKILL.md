@@ -1,22 +1,22 @@
 ---
 name: growth-plays
-description: Method for turning a small business's facts into a growth plan of creative but predictable plays, going well beyond social posts and email. Use it whenever a job plans growth, picks channels or tactics, or answers "how do we get more customers". It covers generating 40+ candidate plays with proven frameworks (Bullseye, where customers gather, switch triggers, borrowed audiences, unfair assets, timing, loops, engineering as marketing, things that don't scale), transplanting mechanics with known base rates, forecasting with cited base rates and ranges, designing small tests with kill and scale rules, scoring and gating plays, and assembling a focused portfolio. The segment catalogs (plays-saas-b2b, plays-local, plays-ecommerce-consumer) supply the play library.
+description: Method for turning a small business's facts into a growth plan with separately explored grounded, adjacent, and bold strategies plus a costed execution portfolio, going well beyond social posts and email. Use it whenever a job plans growth, picks channels or tactics, or answers "how do we get more customers". It covers generating 40+ candidate plays with proven frameworks (Bullseye, where customers gather, switch triggers, borrowed audiences, unfair assets, timing, loops, engineering as marketing, things that don't scale), transplanting mechanics with known base rates, forecasting with cited base rates and ranges, designing small tests with kill and scale rules, scoring and gating plays, and assembling a focused portfolio. The segment catalogs (plays-saas-b2b, plays-local, plays-ecommerce-consumer) supply the play library.
 ---
 
 ## The rule
 
-**Creative = a proven mechanic, applied to a non-obvious audience, asset or moment.** The mechanic carries the predictability, because it has a base rate. The audience, asset or timing carries the creativity, because competitors aren't doing it here.
+A bold strategy can be original without a direct precedent or base rate. Keep exploration separate from costed execution: the idea can be shown with low evidence or feasibility, while its risks and reversible test remain explicit. A proven mechanic is useful when available, but it is not a prerequisite for novelty.
 
 A new-mover postcard is not creative for a dentist; every dentist does it. The same mechanic sent by an HVAC company to new movers before the first heat wave, offering a "first-summer system check" and pitching a maintenance plan at the end of the visit, is creative for HVAC and still has a measurable base rate. Produce plays like that.
 
-The owner asked for exactly this: out-of-the-box strategies with predictable results, never just the common solutions ("post on social", "run ads", "start a blog").
+The owner wants useful grounded plans and genuinely original options. Predictability belongs to execution forecasts, not the exploration quality bar.
 
 ## Procedure
 
 1. **Facts in.** Use the business profile, unit economics (price, gross margin, capacity), constraints (budget, owner hours per week), the goal, positioning, voice-of-customer, competitors and research notes. If unit economics are missing, state the assumption you use.
-2. **Generate 40+ raw candidates** across frameworks (aim for variety):
+2. **Explore broadly without quotas** across multiple lenses where they fit:
    - **Bullseye:** consider all 19 traction channels (viral, PR, unconventional PR, SEM, social ads, offline ads, SEO, content, email, engineering as marketing, targeting blogs, business development, sales, affiliates, existing platforms, trade shows, offline events, speaking, community).
-   - **Where customers already gather:** at least 10 named places (communities, newsletters, podcasts, creators, directories, marketplaces, events, local institutions), each with a URL or name and a size if the research found one.
+   - **Where customers already gather:** relevant communities, newsletters, podcasts, creators, directories, marketplaces, events, and local institutions. Name and source a destination only when verified; never invent audience size.
    - **Switch triggers (jobs to be done):** moments customers start looking, such as moving, hiring, a new regulation, a season, a competitor's price rise or a bad review.
    - **Borrowed audiences:** partners, creators, platforms and marketplaces that already have the audience.
    - **Unfair assets:** founder story, data the business has, community, location, inventory, expertise, existing customers.
@@ -25,13 +25,13 @@ The owner asked for exactly this: out-of-the-box strategies with predictable res
    - **Loops:** reviews, referrals, user-generated content, SEO pages that compound.
    - **Engineering as marketing:** free tools, calculators, templates, data reports.
    - **Things that don't scale:** personal videos, hand-delivered samples, founder calls.
-3. **Recombine.** Build at least 10 `mechanic × audience × asset × moment` combinations from different lists.
-4. **Transplant.** For each strong mechanic, ask which other industry uses it with a known base rate, and borrow that base rate (dental new-mover mail → HVAC; SaaS integration marketplace → a cleaning company in a property-management platform's vendor directory; a course creator's 5-day challenge → a gym's 6-week corporate league).
-5. **Score** every candidate with the rubric below and apply the gates.
-6. **Assemble the portfolio** (rules below) and write each play card in full.
+3. **Recombine.** Try `mechanic × audience × asset × moment` combinations where they produce a specific business hypothesis.
+4. **Transfer.** Retrieve source-backed precedent mechanisms by structural similarity and conditions. Explain differences. Never borrow a precedent's outcome rate into this business's forecast.
+5. **Critique exploration options** for originality, customer relevance, coherence, ownability, assumptions, and downside as separate considerations; do not use execution gates or a combined score to suppress an option.
+6. **Assemble the execution portfolio** separately, using confirmed budget, capability, economics, permissions, and the execution checks below.
 7. **Self-check** against the anti-patterns before you answer.
 
-Use the segment catalog's plays as a library of proven mechanics with sourced ranges, not a menu to copy. The best plays combine a catalog mechanic with this business's specific audience, asset and moment.
+Use the segment catalogs as hypothesis references, not proof or a menu to copy. The best transfer explains what is similar and different for this business. A bold idea may have no catalog or case-library match.
 
 ## Forecasting (predictable results)
 
@@ -65,7 +65,11 @@ Say it like this: "Expected: 3–9 booked tune-ups and 1–4 maintenance plans f
 - **Rule of three:** zero successes in n tries means the true rate is below 3/n.
 - **Time box:** leading signal by day 14–21, lagging check by day 30–45. At most three iterations, changing one variable at a time (audience → hook → offer → channel).
 
-## Scoring and gates
+## Strategic exploration is protected from execution scoring
+
+Every growth-strategy result includes three separate options in `strategyExploration`: grounded, adjacent and bold. These are idea-space options, not costed execution plays. Do not apply the score, fit gate, predictability gate, portfolio optimizer or 10% moonshot budget cap to whether an option is generated or displayed. A bold option may have no precedent, low evidence, low fit, low feasibility or high risk; show those dimensions plainly and give it a small reversible test. Its possible upside is qualitative and must not be inserted into customer/revenue forecasts. An owner may later choose an option and scope it as an execution play with explicit resources, approvals and safety controls.
+
+## Scoring and gates for costed execution plays only
 
 Score each play 1–5 on:
 - **Fit** (25%): a named, verified audience and place; the offer hits a trigger; it uses an asset.
@@ -86,13 +90,13 @@ Score each play 1–5 on:
 
 **Distinctiveness** (1–5, scored separately) uses the swap test. If you can paste a competitor's name in and the play is still true, it scores 1. A transplant from another industry scores 3. A play that depends on an asset or partnership only this business has scores 5.
 
-## Portfolio (how creative + predictable is enforced)
+## Execution portfolio
 
-- **One bankable play:** predictability ≥ 4, often an under-used existing lever (asking every customer for a review, a plan pitch at the end of a visit, reactivating past customers).
-- **One or two creative-proven plays:** distinctiveness ≥ 4 **and** predictability ≥ 3. This is what the owner asked for.
-- **At most one moonshot:** distinctiveness 5, predictability ≤ 2, capped at ≤ 10% of budget, with a hard kill rule.
+- The strategy exploration options remain visible separately; the owner can consider them even when they are not suitable for execution yet.
+- Costed execution plays are limited by the owner’s confirmed budget, time, delivery capacity, permissions and safety rules. A higher-risk execution attempt needs a smaller reversible test and explicit guardrails; it does not make the underlying idea disappear from exploration.
+- If a speculative option is not converted into a costed play, do not fabricate funnel numbers or treat its potential upside as a forecast.
 - **No more than 4 active plays** for a business with fewer than 10 people, and no two plays in the same channel unless one follows on from the other.
-- **No generic fallback:** if nothing reaches distinctiveness ≥ 4 with predictability ≥ 3, recombine and transplant again before accepting a generic plan.
+- **Keep original options:** do not let execution-score thresholds erase the distinct bold option in `strategyExploration`; if no costed play is ready, say what must be learned before execution.
 
 ## Five lenses every portfolio passes through
 
@@ -186,7 +190,7 @@ Before writing any play, decide in this order:
 | Timing-free | — | Attach a window and a lead time. |
 | No compounding play at all | — | Add a loop: reviews, referrals, user content or SEO. |
 | More than 4 plays | — | Apply the portfolio rule. |
-| Creative but unfalsifiable | "Go viral with a stunt" | Attach a base rate or cap it as a moonshot. |
+| Speculation presented as a forecast | "This stunt will bring 500 customers" | Keep upside qualitative and test a reversible hypothesis; cite a base rate only when verified. |
 
 **Banned unless followed in the same sentence by a specific audience, hook and number:** "post consistently", "build a community", "leverage social media", "increase brand awareness", "engage with your audience", "create valuable content", "optimise your SEO", "run targeted ads", "start a blog", "partner with influencers", "go viral", "establish thought leadership", "omnichannel", "drive engagement".
 

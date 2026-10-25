@@ -43,6 +43,9 @@ import { ApiKeyDialog } from "./ApiKeyDialog";
 import { AudienceSummary, ContactsCsvDialog } from "./ContactsCsvDialog";
 import { CAPABILITY_STATE, CONNECTION_STATUS, isPast, SYNCABLE, type CapabilityState } from "./labels";
 import { RevenueCsvDialog } from "./RevenueCsvDialog";
+import { SearchConsoleSetup } from "./SearchConsoleSetup";
+import { GoogleAdsSetup } from "./GoogleAdsSetup";
+import { WordPressConnectDialog } from "./WordPressConnectDialog";
 
 export type ConnectionsData = FunctionReturnType<typeof api.connections.list>;
 export type ConnectionItem = ConnectionsData["items"][number];
@@ -196,6 +199,24 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
       </div>
 
       {item.provider === "crm_csv" ? <AudienceSummary slug={slug} /> : null}
+      {item.provider === "search_console" ? (
+        <SearchConsoleSetup
+          slug={slug}
+          connected={connected}
+          canManage={canManage}
+          isDemo={isDemo || Boolean(conn?.isFixture)}
+          selectedProperty={"externalAccountId" in (conn ?? {}) ? conn?.externalAccountId ?? null : null}
+        />
+      ) : null}
+      {item.provider === "google_ads" ? (
+        <GoogleAdsSetup
+          slug={slug}
+          connected={connected}
+          canManage={canManage}
+          isDemo={isDemo || Boolean(conn?.isFixture)}
+          selectedAccount={conn?.externalAccountId ?? null}
+        />
+      ) : null}
 
       <div aria-live="polite">
         {problem ? (
@@ -266,6 +287,14 @@ function Actions({
             {connected ? "Replace key" : "Add key"}
           </Button>
         }
+      />,
+    );
+  } else if (item.connectMethod === "wordpress_app_password" && p === "wordpress") {
+    buttons.push(
+      <WordPressConnectDialog
+        key="wordpress"
+        slug={slug}
+        trigger={<Button variant="secondary" disabled={disabled}>{connected ? "Replace Application Password" : "Connect WordPress"}</Button>}
       />,
     );
   } else if (item.connectMethod === "file_upload" && p === "csv_revenue") {

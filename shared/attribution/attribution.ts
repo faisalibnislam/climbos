@@ -128,6 +128,13 @@ export function attribute(
   if (!(options.lookbackDays >= 0)) throw new RangeError("lookbackDays must be ≥ 0");
   const { events: unique, duplicates } = dedupeRevenueEvents(events);
 
+  const sourcesByCustomer = new Map<string, Set<string>>();
+  for (const e of unique) {
+    if (!e.customerRef) continue;
+    const sources = sourcesByCustomer.get(e.customerRef) ?? new Set<string>();
+    sources.add(e.source);
+    sourcesByCustomer.set(e.customerRef, sources);
+  }
   const touchesByCustomer = new Map<string, Touch[]>();
   for (const t of touches) {
     const list = touchesByCustomer.get(t.customerRef) ?? [];
@@ -137,7 +144,11 @@ export function attribute(
 
   const channelFor = (e: RevenueEvent): string | null => {
     if (!e.customerRef) return null;
-    const t = selectTouch(touchesByCustomer.get(e.customerRef) ?? [], e.occurredAt, options.model, options.lookbackDays);
+    const customerSources = sourcesByCustomer.get(e.customerRef);
+    const scopedTouches = (touchesByCustomer.get(e.customerRef) ?? []).filter(
+      (touch) => touch.source === e.source || (touch.source === undefined && customerSources?.size === 1),
+    );
+    const t = selectTouch(scopedTouches, e.occurredAt, options.model, options.lookbackDays);
     return t ? t.channel : null;
   };
 
@@ -148,13 +159,13 @@ export function attribute(
     if (e.kind === "refund") continue;
     const ch = channelFor(e);
     resolved.set(e, ch);
-    if (e.orderRef && !channelByOrder.has(`${e.currency}\u0000${e.orderRef}`)) {
-      channelByOrder.set(`${e.currency}\u0000${e.orderRef}`, ch);
+    if (e.orderRef && !channelByOrder.has(`${e.source}\u0000${e.currency}\u0000${e.orderRef}`)) {
+      channelByOrder.set(`${e.source}\u0000${e.currency}\u0000${e.orderRef}`, ch);
     }
   }
   for (const e of unique) {
     if (e.kind !== "refund") continue;
-    const key = e.orderRef ? `${e.currency}\u0000${e.orderRef}` : null;
+    const key = e.orderRef ? `${e.source}\u0000${e.currency}\u0000${e.orderRef}` : null;
     resolved.set(e, key !== null && channelByOrder.has(key) ? (channelByOrder.get(key) ?? null) : channelFor(e));
   }
 

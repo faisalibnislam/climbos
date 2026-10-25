@@ -73,13 +73,13 @@ Researched 2026-10-17. 40 plays, ranked by predictability x leverage.
 ### 1. Compliant review-velocity engine
 - id: review-velocity-engine
 - fits: every local business with at least ~20 completed jobs, visits or transactions a month and a Google Business Profile. Prerequisites: a customer list with phone or email, and a short direct review link (GBP > "Ask for reviews").
-- why it works: Reviews drive both ranking and conversion. Consumers now filter hard on recency and rating: 74% look for reviews written in the last 3 months, and the share who will only use 4.5+ star businesses rose from 17% to 31% (BrightLocal 2026). Most happy customers never review unasked (96% are open to it, but only 29% did so in the past year), so a systematic ask closes that gap.
+- why it works: Reviews can affect discovery and buying decisions. Consumers now filter hard on recency and rating: 74% look for reviews written in the last 3 months, and the share who will only use 4.5+ star businesses rose from 17% to 31% (BrightLocal 2026). Many surveyed consumers said they are open to reviewing a business, while fewer reported actually doing so in the prior year; invite customers neutrally rather than selecting by satisfaction.
 - steps:
   1. Generate the GBP short review link and a QR code; put them on invoices, receipts, the job-completion text and the counter card.
   2. Send **every** customer the same ask, positive or not, by SMS or email within 2–24 hours of service. No "how did we do?" pre-screen that routes unhappy people elsewhere: that is review gating and breaks Google policy.
   3. Use two touches maximum: the ask at T+2h, one reminder at T+3 days, then stop.
   4. Train staff to make a verbal ask at handoff ("we'd really value an honest Google review; I'll text you the link"). Don't hand over a tablet or wait while they write: Google bans pressuring a customer to review on premises.
-  5. Rotate the request across platforms the segment uses (Google first; Yelp for restaurants, where Yelp itself forbids soliciting, so only add "find us on Yelp" signage; Facebook; Healthgrades/Zocdoc for clinics; Houzz for remodelers).
+  5. Choose one eligible public destination for each campaign and use the same neutral invitation and destination for every eligible recipient, regardless of feedback, sentiment, or predicted rating. Consider a different platform only in a separate campaign when the business and customer evidence support it (Google first; Yelp forbids solicitation, so only add "find us on Yelp" signage; Facebook; Healthgrades/Zocdoc for clinics; Houzz for remodelers).
   6. Track weekly: requests sent, reviews received, average stars, days since the last review.
   7. Ask the customer to mention the specific service and neighborhood in their own words ("tell others what we did for you"), without scripting the content.
   8. Feed new reviews into the website as an embedded widget that shows *all* reviews, not a hand-picked set (FTC suppression rule).
@@ -757,7 +757,7 @@ Researched 2026-10-17. 40 plays, ranked by predictability x leverage.
 - why it works: Nextdoor's "who do you recommend for X?" threads are high-intent, neighbor-vouched referrals. A claimed business page collects "Faves" and recommendations that surface in those threads; paid neighborhood sponsorships add a persistent presence in chosen ZIPs.
 - steps:
   1. Claim and complete the free business page (photos, services, service area).
-  2. Ask happy customers who use Nextdoor to recommend you there (same compliance logic as reviews: no incentives).
+  2. Invite customers who use Nextdoor to share an honest recommendation through its allowed tools; do not filter by private feedback or predicted satisfaction, offer rewards, or post on a customer's behalf.
   3. Post useful free updates (the free tier allows a few per month): seasonal tips, community event announcements.
   4. Have the owner respond helpfully in recommendation threads only when tagged or clearly relevant, with disclosure that it's the owner.
   5. Test a Local Deal or neighborhood sponsorship in 1–3 ZIPs for 60 days with a unique code.

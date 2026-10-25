@@ -1,0 +1,208 @@
+{
+  "research_cutoff": "2026-10-19",
+  "sources": [
+    {
+      "id": "S06-01",
+      "title": "Google: Optimizing your website for generative AI features",
+      "url": "https://developers.google.com/search/docs/fundamentals/ai-optimization-guide",
+      "retrieved_at": "2026-10-19",
+      "publication_date": "2026-07-10",
+      "claim_scope": "SEO remains applicable; no special AI schema or Google benefit from llms.txt; current reporting and inclusion-control links.",
+      "evidence_summary": "Official guide describes Google generative search, myths, and technical foundations.",
+      "books": [
+        6
+      ],
+      "verification_status": "primary_page_content_inspected"
+    },
+    {
+      "id": "S06-02",
+      "title": "Google: AI features and your website",
+      "url": "https://developers.google.com/search/docs/appearance/ai-features",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Older page describes AI traffic in Web aggregate and basic eligibility.",
+      "evidence_summary": "Official page remains accessible; narrower measurement description coexists with newer dedicated-report docs.",
+      "books": [
+        6
+      ],
+      "verification_status": "primary_page_content_inspected"
+    },
+    {
+      "id": "S06-03",
+      "title": "Google: Generative AI performance report (Search)",
+      "url": "https://support.google.com/webmasters/answer/16984139",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Current AI impression reporting, August 31 2026 rollout, missing-report conditions, export ambiguity.",
+      "evidence_summary": "Page explicitly documents AI Overviews/AI Mode impressions, dimensions, and unavailable values becoming zeros on export.",
+      "books": [
+        6
+      ],
+      "verification_status": "primary_page_content_inspected"
+    },
+    {
+      "id": "S06-04",
+      "title": "Google: Search generative AI control",
+      "url": "https://support.google.com/webmasters/answer/16908024",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Inclusion control distinct from AI-training controls.",
+      "evidence_summary": "Page describes inclusion/exclusion/inheritance and August 31 2026 worldwide rollout.",
+      "books": [
+        6
+      ],
+      "verification_status": "primary_page_content_inspected"
+    },
+    {
+      "id": "S06-05",
+      "title": "Google: Spam policies for web search",
+      "url": "https://developers.google.com/search/docs/essentials/spam-policies",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Scaled content, doorway and link abuse.",
+      "evidence_summary": "Official policy covers low-value scaled generation regardless of production method.",
+      "books": [
+        6
+      ],
+      "verification_status": "primary_page_content_inspected"
+    },
+    {
+      "id": "S06-06",
+      "title": "Google: Technical requirements",
+      "url": "https://developers.google.com/search/docs/essentials/technical",
+      "retrieved_at": "2026-10-19",
+      "publication_date": "2025-12-18",
+      "claim_scope": "Basic technical eligibility is not guaranteed indexing.",
+      "evidence_summary": "Page lists accessible Googlebot, successful response and indexable content.",
+      "books": [
+        6
+      ],
+      "verification_status": "primary_page_content_inspected"
+    },
+    {
+      "id": "S06-07",
+      "title": "Google: JavaScript SEO basics",
+      "url": "https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Crawling, rendering, indexing; inspect rendered output.",
+      "evidence_summary": "Official guide explains JavaScript processing and common implementation considerations.",
+      "books": [
+        6
+      ],
+      "verification_status": "primary_page_content_inspected"
+    },
+    {
+      "id": "S06-08",
+      "title": "Google: Canonical URL guidance",
+      "url": "https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Canonicalization signals do not guarantee Google selection.",
+      "evidence_summary": "Official guide describes redirects, rel canonical and sitemap signals.",
+      "books": [
+        6
+      ],
+      "verification_status": "primary_page_content_inspected"
+    },
+    {
+      "id": "S06-09",
+      "title": "Google: Localized versions of pages",
+      "url": "https://developers.google.com/search/docs/specialty/international/localized-versions",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "hreflang/localized alternative implementation.",
+      "evidence_summary": "Official guide describes language and region alternate annotations.",
+      "books": [
+        6
+      ],
+      "verification_status": "primary_page_content_inspected"
+    },
+    {
+      "id": "S07-01",
+      "title": "Apple: Creating your product page",
+      "url": "https://developer.apple.com/app-store/product-page/",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "App name/subtitle length and screenshot/preview counts.",
+      "evidence_summary": "Apple documents metadata fields and product page assets.",
+      "books": [
+        7
+      ],
+      "verification_status": "primary_page_content_inspected"
+    },
+    {
+      "id": "S07-02",
+      "title": "Apple: App Store search",
+      "url": "https://developer.apple.com/app-store/search/",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Search factors, keyword rules, natural language, generated tags, custom page keyword search.",
+      "evidence_summary": "Apple documents current discovery behavior without disclosing scoring weights.",
+      "books": [
+        7
+      ],
+      "verification_status": "primary_page_content_inspected"
+    },
+    {
+      "id": "S07-03",
+      "title": "Apple: Product page optimization overview",
+      "url": "https://developer.apple.com/help/app-store-connect/create-product-page-optimization-tests/overview-of-product-page-optimization/",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Native testing scope is iOS/iPadOS; release changes may affect interpretation.",
+      "evidence_summary": "Help page explicitly describes iOS/iPadOS randomized treatments and review roles.",
+      "books": [
+        7
+      ],
+      "verification_status": "primary_page_content_inspected"
+    },
+    {
+      "id": "S07-04",
+      "title": "Apple: Custom product pages",
+      "url": "https://developer.apple.com/app-store/custom-product-pages/",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Custom pages for relevant audiences and current search keywords.",
+      "evidence_summary": "Current Apple product page covers audience message matching and custom page discovery.",
+      "books": [
+        7
+      ],
+      "verification_status": "primary_page_content_inspected"
+    },
+    {
+      "id": "S07-05",
+      "title": "Google Play: Metadata policy",
+      "url": "https://support.google.com/googleplay/android-developer/answer/9898842?hl=en",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "30-character title and truthful relevant metadata.",
+      "evidence_summary": "Official policy prohibits deceptive metadata and irrelevant keyword usage.",
+      "books": [
+        7
+      ],
+      "verification_status": "primary_page_content_inspected"
+    },
+    {
+      "id": "S07-06",
+      "title": "Google Play: Run A/B tests on your store listing",
+      "url": "https://support.google.com/googleplay/android-developer/answer/12053285?hl=en",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Current experiment types, maximum variants, install/open/pre-registration metrics.",
+      "evidence_summary": "Current instructions distinguish graphics/localized tests and unique-user click outcomes.",
+      "books": [
+        7
+      ],
+      "verification_status": "primary_page_content_inspected"
+    }
+  ],
+  "limitations": [
+    "No private Search Console or developer console accessed; account-level capability and API availability require implementation verification.",
+    "Publication dates are null when not explicitly observed; retrieval date does not prove publication date.",
+    "Older Google AI-features reporting description coexists with newer official dedicated-report documentation; book prioritizes newer direct report documentation.",
+    "Initial Apple custom-page overview help URL returned Page Not Found despite HTTP 200; replaced by official current custom-product-pages page and search guidance.",
+    "Google Play legacy answer/6227309 redirected to answer/12053285; canonical current URL used.",
+    "Examples and all outcome projections are hypothetical; no actual Formkit capabilities, app results or ClimbOS production behavior inferred."
+  ]
+}

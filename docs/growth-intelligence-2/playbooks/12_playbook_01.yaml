@@ -1,0 +1,40 @@
+playbook_id: analytics.forecast_readiness.v1
+purpose: Choose a defensible forecast mode
+required_inputs:
+  - business_snapshot_id
+  - target_metric_definition_id
+  - observation_window
+  - metric_quality_status
+optional_inputs:
+  - historical_series_id
+  - intervention_driver_assumptions
+steps:
+  - id: validate
+    operation: validate_metric_contract
+    fail_state: blocked_incompatible_definition
+  - id: quality
+    operation: check_freshness_coverage_duplicates
+    fail_state: blocked_unreliable_input
+  - id: choose_method
+    branches:
+      - when: no_valid_historical_series
+        result: assumption_scenarios_only
+      - when: historical_series_and_adequate_backtest_windows
+        result: compare_simple_baselines_and_candidate_models
+      - when: historical_series_but_insufficient_windows
+        result: descriptive_trend_with_explicit_limitations
+  - id: sensitivity
+    operation: identify_decision_changing_assumptions
+  - id: capacity
+    operation: validate_cash_labor_inventory_constraints
+output_contract:
+  fields:
+    - method
+    - input_evidence_ids
+    - formula_versions
+    - assumptions
+    - forecast_window
+    - scenario_or_interval_type
+    - limitations
+    - decision_recommendation
+execution_authority: none

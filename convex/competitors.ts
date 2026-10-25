@@ -6,6 +6,9 @@ import { internalMutation, internalQuery, mutation, query, type MutationCtx } fr
 import { createRunWithReservation } from "./engine";
 import { isPaid } from "./lib/access";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+import { audit } from "./lib/audit";
+import { selectWatchCandidates, sameCompetitorSite } from "../shared/competitors/candidates";
+import { isObservedChangeQuote } from "../shared/competitors";
 
 /**
  * Competitor watch: each week we read competitors' homepage and pricing page
@@ -19,19 +22,48 @@ const LIMIT = { free: 1, paid: 5 };
 export const overview = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "view");
-    const watches = await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(20);
+    const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
+    const allWatches = await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(1000);
+    const watches = allWatches.filter((w) => w.active);
     const changes = await ctx.db.query("competitorChanges").withIndex("by_org_at", (q) => q.eq("orgId", org._id)).order("desc").take(30);
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
-    const watched = new Set(watches.map((w) => w.url));
-    const suggested = (business?.insights?.competitors ?? []).filter((c) => c.url && !watched.has(normaliseUrl(c.url) ?? "")).map((c) => ({ name: c.name, url: c.url! }));
+    const researchedCompetitors = business?.insights?.competitors ?? [];
+    const suggested = selectWatchCandidates(
+      researchedCompetitors.flatMap((c) => c.url ? [{ name: c.name, url: c.url, sourceUrl: c.sourceUrl, kind: c.kind }] : []),
+      business?.website,
+      allWatches.map((w) => w.url),
+      6,
+    ).map((candidate) => {
+      const match = researchedCompetitors.find((item) => item.url && sameCompetitorSite(item.url, candidate.url));
+      const comparison = match?.comparison?.slice(0, 2);
+      return { ...candidate, ...(comparison?.length ? { comparison } : {}) };
+    });
     return {
       limit: (await isPaid(ctx, org)) ? LIMIT.paid : LIMIT.free,
-      watches: watches.map((w) => ({ id: w._id, name: w.name, url: w.url, active: w.active, lastCheckedAt: w.lastCheckedAt ?? null, lastError: w.lastError ?? null })),
-      changes: changes.map((c) => ({ id: c._id, name: c.name, summary: c.summary, bullets: c.bullets, soWhat: c.soWhat ?? null, at: c.at })),
+      researchRefresh: business?.insights ? {
+        cadenceDays: org.competitorResearchRefreshDays ?? 90,
+        nextAt: business.competitorResearchNextAt ?? null,
+        completedAt: business.competitorResearchCompletedAt ?? business.insights.generatedAt,
+        status: business.competitorResearchLastStatus ?? null,
+      } : null,
+      watches: watches.map((w) => ({ id: w._id, name: w.name, url: w.url, active: w.active, autoSeeded: w.autoSeededAt !== undefined, needsConfirmation: w.autoSeededAt !== undefined && w.ownerConfirmedAt === undefined, discoverySourceUrl: w.discoverySourceUrl ?? null, lastCheckedAt: w.lastCheckedAt ?? null, lastError: w.lastError ?? null })),
+      canConfirmLegacyWatch: role === "owner" || role === "admin",
+      canManageDigestCadence: role === "owner" || role === "admin",
+      digestCadence: org.competitorDigestCadence ?? "per_run",
+      dismissedSuggestions: allWatches.filter((w) => !w.active && w.exclusionReason === "not_relevant").map((w) => ({ name: w.name, url: w.url, sourceUrl: w.dismissalSourceUrl ?? null, dismissedAt: w.excludedAt ?? null })),
+      changes: changes.map((c) => ({ id: c._id, name: c.name, summary: c.summary, bullets: c.bullets, soWhat: c.soWhat ?? null, suggestedAction: c.suggestedAction ?? null, sourceUrls: c.sourceUrls ?? watches.find((w) => w._id === c.watchId)?.lastSourceUrls ?? [], evidence: c.evidence ?? null, at: c.at })),
       suggested: suggested.slice(0, 6),
     };
   },
+});
+
+/** Due queue is indexed and bounded; the daily cron never walks unchanged workspaces. */
+export const dueForResearch = internalQuery({
+  args: { now: v.number(), limit: v.number() },
+  handler: async (ctx, { now, limit }) => (await ctx.db.query("businesses")
+    .withIndex("by_competitor_research_due", (q) => q.lte("competitorResearchNextAt", now))
+    .take(Math.max(1, Math.min(50, Math.floor(limit)))))
+    .map((business) => business._id),
 });
 
 function normaliseUrl(input: string): string | null {
@@ -52,10 +84,16 @@ export const add = mutation({
     const { org } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
     const url = normaliseUrl(a.url);
     if (!url) throw appError("INVALID", "That website address doesn't look right.");
-    const existing = await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(20);
-    if (existing.some((w) => w.url === url)) throw appError("INVALID", "You're already watching that site.");
+    const existing = await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(1000);
+    const same = existing.find((w) => sameCompetitorSite(w.url, url));
+    if (same?.active) throw appError("INVALID", "You're already watching that site.");
     const limit = (await isPaid(ctx, org)) ? LIMIT.paid : LIMIT.free;
     if (existing.filter((w) => w.active).length >= limit) throw appError(limit === LIMIT.free ? "PAYMENT_REQUIRED" : "LIMIT_REACHED", limit === LIMIT.free ? "Free accounts watch 1 competitor. Packages watch 5." : `You can watch up to ${limit} competitors.`);
+    if (same) {
+      await ctx.db.patch(same._id, { name: a.name.trim().slice(0, 80) || new URL(url).hostname, url, active: true, excludedAt: undefined, exclusionReason: undefined, dismissalSourceUrl: undefined, dismissedBy: undefined, lastError: undefined, lastCheckedAt: undefined, lastHash: undefined, lastText: undefined, lastSourceUrls: undefined, discoverySourceUrl: undefined, autoSeededAt: undefined });
+      await ctx.scheduler.runAfter(0, internal.competitorActions.check, { orgId: org._id, watchIds: [same._id] });
+      return same._id;
+    }
     const id = await ctx.db.insert("competitorWatches", { orgId: org._id, name: a.name.trim().slice(0, 80) || new URL(url).hostname, url, active: true, createdAt: Date.now() });
     // First read sets the baseline (no credits).
     await ctx.scheduler.runAfter(0, internal.competitorActions.check, { orgId: org._id, watchIds: [id] });
@@ -68,7 +106,60 @@ export const remove = mutation({
   handler: async (ctx, { slug, id }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "edit");
     assertSameOrg(await ctx.db.get(id), org._id, "competitor");
-    await ctx.db.delete(id);
+    await ctx.db.patch(id, { active: false, excludedAt: Date.now(), exclusionReason: "stop_watching", dismissalSourceUrl: undefined, dismissedBy: undefined });
+  },
+});
+
+/** Explicit owner/admin consent to resume recurring monitoring for a legacy auto-added site. */
+export const confirmLegacyWatch = mutation({
+  args: { slug: v.string(), id: v.id("competitorWatches") },
+  handler: async (ctx, { slug, id }) => {
+    const { org, user, role } = await requireOrgAccess(ctx, { slug }, "edit");
+    if (role !== "owner" && role !== "admin") throw appError("FORBIDDEN", "Only an owner or admin can confirm recurring monitoring for this site.");
+    const watch = await ctx.db.get(id);
+    if (!watch) throw appError("NOT_FOUND", "Competitor watch not found.");
+    assertSameOrg(watch, org._id, "competitor");
+    if (!watch.active || watch.autoSeededAt === undefined) throw appError("INVALID", "This site does not need monitoring confirmation.");
+    if (watch.ownerConfirmedAt !== undefined) return { confirmed: false };
+    const now = Date.now();
+    await ctx.db.patch(watch._id, { ownerConfirmedAt: now });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "competitor_watch.confirmed", subjectType: "competitor_watch", subjectId: watch._id, summary: `Confirmed recurring public-site monitoring for ${watch.name}.` });
+    await ctx.scheduler.runAfter(0, internal.competitorActions.check, { orgId: org._id, watchIds: [watch._id] });
+    return { confirmed: true };
+  },
+});
+
+/** Store a workspace-scoped owner rejection without starting a watch or spending credits. */
+export const dismissSuggestion = mutation({
+  args: { slug: v.string(), url: v.string() },
+  handler: async (ctx, { slug, url: inputUrl }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const url = normaliseUrl(inputUrl);
+    if (!url) throw appError("INVALID", "That website address doesn't look right.");
+    const [business, existing] = await Promise.all([
+      ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first(),
+      ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(1000),
+    ]);
+    const candidate = selectWatchCandidates(
+      (business?.insights?.competitors ?? []).flatMap((item) => item.url ? [{ name: item.name, url: item.url, sourceUrl: item.sourceUrl, kind: item.kind }] : []),
+      business?.website,
+      existing.map((watch) => watch.url),
+      6,
+    ).find((item) => sameCompetitorSite(item.url, url));
+    if (!candidate) throw appError("INVALID", "This suggestion is no longer available. Refresh your research before changing it.");
+    const now = Date.now();
+    await ctx.db.insert("competitorWatches", {
+      orgId: org._id,
+      name: candidate.name,
+      url: candidate.url,
+      active: false,
+      excludedAt: now,
+      exclusionReason: "not_relevant",
+      dismissalSourceUrl: candidate.sourceUrl,
+      dismissedBy: user._id,
+      createdAt: now,
+    });
+    return { dismissed: true };
   },
 });
 
@@ -77,8 +168,9 @@ export const checkNow = mutation({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "edit");
-    const watches = (await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(20)).filter((w) => w.active);
-    if (!watches.length) throw appError("INVALID", "Add a competitor first.");
+    const savedWatches = (await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(20)).filter((w) => w.active);
+    const watches = savedWatches.filter((w) => w.autoSeededAt === undefined || w.ownerConfirmedAt !== undefined);
+    if (!watches.length) throw appError("INVALID", savedWatches.length ? "An owner or admin must confirm a saved site before ClimbOS checks it." : "Add a competitor first.");
     const due = watches.filter((w) => !w.lastCheckedAt || Date.now() - w.lastCheckedAt >= 6 * 3_600_000);
     if (!due.length) throw appError("RATE_LIMITED", "All checked in the last 6 hours. Sites rarely change faster than that.");
     await ctx.scheduler.runAfter(0, internal.competitorActions.check, { orgId: org._id, watchIds: due.map((w) => w._id) });
@@ -86,16 +178,62 @@ export const checkNow = mutation({
   },
 });
 
+/** Pause or resume weekly checks without removing owner-selected sites. Manual checks remain available. */
+export const setScheduledMonitoring = mutation({
+  args: { slug: v.string(), enabled: v.boolean() },
+  handler: async (ctx, { slug, enabled }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    await ctx.db.patch(org._id, { competitorWatchEnabled: enabled });
+    await audit(ctx, {
+      orgId: org._id,
+      actorType: "user",
+      actorId: user._id,
+      action: enabled ? "automation.competitor_watch_enabled" : "automation.competitor_watch_paused",
+      subjectType: "workspace",
+      subjectId: org._id,
+      summary: enabled ? "Resumed weekly competitor-site checks." : "Paused weekly competitor-site checks; manual checks remain available.",
+    });
+    return { enabled };
+  },
+});
+
+/** Configure how often owner/admin in-app notices are emitted for observed changes. */
+export const setDigestCadence = mutation({
+  args: { slug: v.string(), cadence: v.union(v.literal("per_run"), v.literal("daily"), v.literal("weekly"), v.literal("off")) },
+  handler: async (ctx, { slug, cadence }) => {
+    const { org, user, role } = await requireOrgAccess(ctx, { slug }, "edit");
+    if (role !== "owner" && role !== "admin") throw appError("FORBIDDEN", "Only an owner or admin can change competitor alert settings.");
+    await ctx.db.patch(org._id, { competitorDigestCadence: cadence });
+    await audit(ctx, {
+      orgId: org._id,
+      actorType: "user",
+      actorId: user._id,
+      action: "competitor_digest.cadence_changed",
+      subjectType: "workspace",
+      subjectId: org._id,
+      summary: `Changed competitor-change notices to ${cadence.replaceAll("_", " ")}.`,
+    });
+    return { cadence };
+  },
+});
+
 export const watchesFor = internalQuery({
-  args: { watchIds: v.array(v.id("competitorWatches")) },
-  handler: async (ctx, { watchIds }) => (await Promise.all(watchIds.map((id) => ctx.db.get(id)))).filter((w): w is Doc<"competitorWatches"> => Boolean(w?.active)),
+  args: { orgId: v.id("organizations"), watchIds: v.array(v.id("competitorWatches")), scheduled: v.optional(v.boolean()) },
+  handler: async (ctx, { orgId, watchIds, scheduled }) => {
+    if (scheduled) {
+      const org = await ctx.db.get(orgId);
+      if (!org || org.deletedAt || org.competitorWatchEnabled === false) return [];
+    }
+    return (await Promise.all(watchIds.map((id) => ctx.db.get(id)))).filter((w): w is Doc<"competitorWatches"> => Boolean(w?.active && w.orgId === orgId && (w.autoSeededAt === undefined || w.ownerConfirmedAt !== undefined)));
+  },
 });
 
 export const saveCheck = internalMutation({
-  args: { watchId: v.id("competitorWatches"), hash: v.optional(v.string()), text: v.optional(v.string()), error: v.optional(v.string()) },
-  handler: async (ctx, { watchId, hash, text, error }) => {
-    if (!(await ctx.db.get(watchId))) return;
-    await ctx.db.patch(watchId, error ? { lastCheckedAt: Date.now(), lastError: error.slice(0, 200) } : { lastCheckedAt: Date.now(), lastHash: hash, lastText: text?.slice(0, 60_000), lastError: undefined });
+  args: { orgId: v.id("organizations"), watchId: v.id("competitorWatches"), hash: v.optional(v.string()), text: v.optional(v.string()), sourceUrls: v.optional(v.array(v.string())), error: v.optional(v.string()) },
+  handler: async (ctx, { orgId, watchId, hash, text, sourceUrls, error }) => {
+    const watch = await ctx.db.get(watchId);
+    if (!watch || watch.orgId !== orgId) return;
+    await ctx.db.patch(watchId, error ? { lastCheckedAt: Date.now(), lastError: error.slice(0, 200) } : { lastCheckedAt: Date.now(), lastHash: hash, lastText: text?.slice(0, 60_000), lastSourceUrls: sourceUrls?.slice(0, 5), lastError: undefined });
   },
 });
 
@@ -106,7 +244,7 @@ export const startSummaryRun = internalMutation({
     const org = await ctx.db.get(orgId);
     if (!org) return null;
     try {
-      return await createRunWithReservation(ctx, { org, kind: "competitor_watch", title: "Competitor watch", roles: ["data_analyst"], input: { count }, steps: Array.from({ length: Math.min(5, count) }, () => ({ kind: "model" as const, role: "data_analyst" as const, modelKey: MODEL, inputBudget: 5_000, outputBudget: 700 })), meters: {}, isFixture: org.kind === "demo" });
+      return await createRunWithReservation(ctx, { org, kind: "competitor_watch", title: "Competitor watch", roles: ["data_analyst"], input: { count }, steps: Array.from({ length: Math.min(5, count) }, () => ({ kind: "model" as const, role: "data_analyst" as const, modelKey: MODEL, inputBudget: 5_000, outputBudget: 1_000 })), meters: {}, isFixture: org.kind === "demo", enforceCreditApprovalLimit: true });
     } catch {
       return null;
     }
@@ -114,30 +252,97 @@ export const startSummaryRun = internalMutation({
 });
 
 export const recordChange = internalMutation({
-  args: { orgId: v.id("organizations"), watchId: v.id("competitorWatches"), name: v.string(), summary: v.string(), bullets: v.array(v.string()), soWhat: v.optional(v.string()) },
+  args: {
+    orgId: v.id("organizations"), watchId: v.id("competitorWatches"), name: v.string(), summary: v.string(), bullets: v.array(v.string()), soWhat: v.optional(v.string()),
+    suggestedAction: v.optional(v.object({ action: v.string(), firstStep: v.string(), successMetric: v.string(), reviewAfterDays: v.number(), caveat: v.string(), evidenceQuote: v.string() })),
+    sourceUrls: v.optional(v.array(v.string())), evidence: v.optional(v.object({ removed: v.array(v.string()), added: v.array(v.string()) })),
+  },
   handler: async (ctx, a) => {
+    const watch = await ctx.db.get(a.watchId);
+    if (!watch || watch.orgId !== a.orgId) throw appError("NOT_FOUND", "Competitor watch not found.");
     const now = Date.now();
-    await ctx.db.insert("competitorChanges", { ...a, summary: a.summary.slice(0, 300), bullets: a.bullets.slice(0, 4).map((b) => b.slice(0, 300)), soWhat: a.soWhat?.slice(0, 300), at: now });
-    await notifyOwners(ctx, a.orgId, `${a.name}: ${a.summary}`.slice(0, 240));
+    const evidence = a.evidence ? { removed: a.evidence.removed.slice(0, 5).map((x) => x.slice(0, 300)), added: a.evidence.added.slice(0, 5).map((x) => x.slice(0, 300)) } : undefined;
+    const suggestedAction = a.suggestedAction && isObservedChangeQuote(a.suggestedAction.evidenceQuote, evidence)
+      ? a.suggestedAction
+      : undefined;
+    await ctx.db.insert("competitorChanges", {
+      ...a,
+      sourceUrls: a.sourceUrls?.slice(0, 5),
+      evidence,
+      summary: a.summary.slice(0, 300),
+      bullets: a.bullets.slice(0, 4).map((b) => b.slice(0, 300)),
+      soWhat: a.soWhat?.slice(0, 300),
+      suggestedAction: suggestedAction ? {
+        action: suggestedAction.action.slice(0, 120),
+        firstStep: suggestedAction.firstStep.slice(0, 240),
+        successMetric: suggestedAction.successMetric.slice(0, 160),
+        reviewAfterDays: Math.max(7, Math.min(90, Math.floor(suggestedAction.reviewAfterDays))),
+        caveat: suggestedAction.caveat.slice(0, 240),
+        evidenceQuote: suggestedAction.evidenceQuote.trim(),
+      } : undefined,
+      at: now,
+    });
   },
 });
 
-async function notifyOwners(ctx: MutationCtx, orgId: Id<"organizations">, text: string) {
+/** One digest per completed competitor-watch run, even when several sites changed. */
+export const notifyDigest = internalMutation({
+  args: { orgId: v.id("organizations"), count: v.number() },
+  handler: async (ctx, { orgId, count }) => {
+    if (!Number.isSafeInteger(count) || count < 1) return;
+    const org = await ctx.db.get(orgId);
+    if (!org) return;
+    const cadence = org.competitorDigestCadence ?? "per_run";
+    if (cadence === "off") return;
+    const now = Date.now();
+    const windowMs = cadence === "daily" ? 24 * 60 * 60_000 : cadence === "weekly" ? 7 * 24 * 60 * 60_000 : 0;
+    const lastNotifiedAt = org.competitorDigestLastNotifiedAt;
+    if (windowMs && lastNotifiedAt !== undefined && now - lastNotifiedAt < windowMs) return;
+
+    let siteCount = count;
+    if (windowMs) {
+      const from = lastNotifiedAt ?? now - windowMs;
+      const changes = await ctx.db.query("competitorChanges")
+        .withIndex("by_org_at", (q) => q.eq("orgId", orgId).gte("at", from))
+        .take(200);
+      siteCount = new Set(changes.map((change) => change.watchId)).size || count;
+    }
+    const sites = siteCount === 1 ? "one watched competitor site" : `${Math.min(siteCount, 5)} watched competitor sites`;
+    const sent = await notifyOwners(ctx, orgId, `ClimbOS found meaningful changes across ${sites} since your last digest. Review the dated sources and summaries.`);
+    if (sent) await ctx.db.patch(orgId, { competitorDigestLastNotifiedAt: now });
+  },
+});
+
+async function notifyOwners(ctx: MutationCtx, orgId: Id<"organizations">, text: string): Promise<number> {
   const org = await ctx.db.get(orgId);
-  if (!org) return;
+  if (!org) return 0;
+  let sent = 0;
   for (const m of await ctx.db.query("memberships").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(50)) {
-    if (m.status === "active" && m.userId && ["owner", "admin"].includes(m.role)) await ctx.db.insert("notices", { userId: m.userId, orgId, kind: "system", text, href: `/app/${org.slug}/competitors`, createdAt: Date.now() });
+    if (m.status === "active" && m.userId && ["owner", "admin"].includes(m.role)) {
+      await ctx.db.insert("notices", { userId: m.userId, orgId, kind: "system", text, href: `/app/${org.slug}/competitors`, createdAt: Date.now() });
+      sent++;
+    }
   }
+  return sent;
 }
 
-/** Mondays: check every active watch, one action per workspace. */
+/** Mondays: check every confirmed active watch in enabled workspaces, one action per workspace. */
 export const weekly = internalMutation({
   args: {},
   handler: async (ctx) => {
     const byOrg = new Map<Id<"organizations">, Id<"competitorWatches">[]>();
-    for (const w of await ctx.db.query("competitorWatches").withIndex("by_active", (q) => q.eq("active", true)).take(5000)) byOrg.set(w.orgId, [...(byOrg.get(w.orgId) ?? []), w._id]);
+    for (const w of await ctx.db.query("competitorWatches").withIndex("by_active", (q) => q.eq("active", true)).take(5000)) {
+      if (w.autoSeededAt !== undefined && w.ownerConfirmedAt === undefined) continue;
+      byOrg.set(w.orgId, [...(byOrg.get(w.orgId) ?? []), w._id]);
+    }
     let i = 0;
-    for (const [orgId, watchIds] of byOrg) await ctx.scheduler.runAfter((i++ % 60) * 5_000, internal.competitorActions.check, { orgId, watchIds });
-    return byOrg.size;
+    let started = 0;
+    for (const [orgId, watchIds] of byOrg) {
+      const org = await ctx.db.get(orgId);
+      if (!org || org.deletedAt || org.competitorWatchEnabled === false) continue;
+      await ctx.scheduler.runAfter((i++ % 60) * 5_000, internal.competitorActions.check, { orgId, watchIds, scheduled: true });
+      started++;
+    }
+    return started;
   },
 });

@@ -205,9 +205,80 @@ export interface SafeFetchResult {
   finalUrl: string;
   status: number;
   contentType: string;
+  /** HTTP indexing directives, kept separately from HTML meta robots tags. */
+  xRobotsTag?: string;
   body: string;
   truncated: boolean;
+  /** Present for conditional requests that returned 304 Not Modified. */
+  notModified?: boolean;
+  etag?: string;
+  lastModified?: string;
   error?: string;
+}
+
+export type PublicLinkCheck =
+  | { url: string; status: "reachable"; httpStatus: number; finalUrl: string }
+  | { url: string; status: "unavailable"; httpStatus?: number };
+
+/**
+ * Recheck a small set of approved outbound links immediately before an
+ * external write. No page content is retained; failures are intentionally
+ * summarized without exposing resolver or network details to the owner.
+ */
+export async function checkPublicLinks(
+  urls: string[],
+  options: { resolveHost: (hostname: string) => Promise<string[]>; fetchImpl?: FetchLike; timeoutMs?: number },
+): Promise<PublicLinkCheck[]> {
+  const unique = [...new Set(urls.map((url) => url.trim()).filter(Boolean))];
+  if (unique.length > 5) return unique.map((url) => ({ url, status: "unavailable" }));
+
+  return Promise.all(unique.map(async (url): Promise<PublicLinkCheck> => {
+    const validated = validateResearchUrl(url);
+    if (!validated.ok || !validated.url.startsWith("https:")) return { url, status: "unavailable" };
+    const result = await safeFetchPage({
+      url: validated.url,
+      resolveHost: options.resolveHost,
+      ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
+      maxBytes: 1_024,
+      timeoutMs: options.timeoutMs ?? 5_000,
+    });
+    if (!result.ok || result.status < 200 || result.status >= 300) return { url, status: "unavailable", ...(result.status > 0 ? { httpStatus: result.status } : {}) };
+    return { url, status: "reachable", httpStatus: result.status, finalUrl: result.finalUrl };
+  }));
+}
+
+async function readBoundedBody(response: Response, maxBytes: number): Promise<{ text: string; truncated: boolean }> {
+  if (!response.body) return { text: "", truncated: false };
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  let truncated = false;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (!value?.byteLength) continue;
+      const remaining = Math.max(0, maxBytes - total);
+      if (value.byteLength > remaining) {
+        if (remaining > 0) chunks.push(value.subarray(0, remaining));
+        total += remaining;
+        truncated = true;
+        await reader.cancel();
+        break;
+      }
+      chunks.push(value);
+      total += value.byteLength;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { text: new TextDecoder().decode(bytes), truncated };
 }
 
 /**
@@ -220,11 +291,17 @@ export async function safeFetchPage(input: {
   resolveHost?: (hostname: string) => Promise<string[]>;
   maxBytes?: number;
   timeoutMs?: number;
+  /** Conditional validators from a prior safe read. Sent only to the original origin across redirects. */
+  ifNoneMatch?: string;
+  ifModifiedSince?: string;
+  /** Optional caller policy applied to every redirect target before it is fetched. */
+  allowRedirect?: (fromUrl: string, toUrl: string) => boolean;
 }): Promise<SafeFetchResult> {
   const doFetch: FetchLike = input.fetchImpl ?? ((u, i) => fetch(u, i));
   const maxBytes = input.maxBytes ?? 2_000_000;
   const first = validateResearchUrl(input.url);
   if (!first.ok) return { ok: false, finalUrl: input.url, status: 0, contentType: "", body: "", truncated: false, error: first.reason };
+  const originalOrigin = new URL(first.url).origin;
   let current = first;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     if (input.resolveHost && classifyIpLiteral(current.hostname).kind === "not_ip") {
@@ -235,10 +312,24 @@ export async function safeFetchPage(input: {
     const timer = setTimeout(() => controller.abort(), input.timeoutMs ?? 15_000);
     let res: Response;
     try {
-      res = await doFetch(current.url, { redirect: "manual", signal: controller.signal, headers: { "User-Agent": `${RESEARCH_USER_AGENT}/1.0`, Accept: "text/html,text/plain;q=0.9,*/*;q=0.1" } });
+      const headers: Record<string, string> = { "User-Agent": `${RESEARCH_USER_AGENT}/1.0`, Accept: "text/html,text/plain;q=0.9,*/*;q=0.1" };
+      if (new URL(current.url).origin === originalOrigin) {
+        const etag = input.ifNoneMatch?.trim();
+        const modifiedSince = input.ifModifiedSince?.trim();
+        if (etag && etag.length <= 512 && !/[\r\n]/u.test(etag)) headers["If-None-Match"] = etag;
+        if (modifiedSince && modifiedSince.length <= 128 && !/[\r\n]/u.test(modifiedSince)) headers["If-Modified-Since"] = modifiedSince;
+      }
+      res = await doFetch(current.url, { redirect: "manual", signal: controller.signal, headers });
     } catch (err) {
       clearTimeout(timer);
       return { ok: false, finalUrl: current.url, status: 0, contentType: "", body: "", truncated: false, error: err instanceof Error ? err.message : String(err) };
+    }
+    if (res.status === 304) {
+      clearTimeout(timer);
+      const etag = res.headers.get("etag") ?? undefined;
+      const lastModified = res.headers.get("last-modified") ?? undefined;
+      const xRobotsTag = res.headers.get("x-robots-tag")?.slice(0, 1_000) ?? undefined;
+      return { ok: true, finalUrl: current.url, status: res.status, contentType: res.headers.get("content-type") ?? "", body: "", truncated: false, notModified: true, ...(xRobotsTag ? { xRobotsTag } : {}), ...(etag ? { etag } : {}), ...(lastModified ? { lastModified } : {}) };
     }
     if (res.status >= 300 && res.status < 400) {
       clearTimeout(timer);
@@ -246,22 +337,24 @@ export async function safeFetchPage(input: {
       if (!loc) return { ok: false, finalUrl: current.url, status: res.status, contentType: "", body: "", truncated: false, error: "Redirect without location" };
       const next = isAllowedRedirect(current.url, loc, hop + 1);
       if (!next.ok) return { ok: false, finalUrl: current.url, status: res.status, contentType: "", body: "", truncated: false, error: next.reason };
+      if (input.allowRedirect && !input.allowRedirect(current.url, next.url)) return { ok: false, finalUrl: current.url, status: res.status, contentType: "", body: "", truncated: false, error: "Redirect was rejected by caller policy" };
       current = next;
       continue;
     }
     const contentType = res.headers.get("content-type") ?? "";
+    const xRobotsTag = res.headers.get("x-robots-tag")?.slice(0, 1_000) ?? undefined;
+    const etag = res.headers.get("etag") ?? undefined;
+    const lastModified = res.headers.get("last-modified") ?? undefined;
     let text = "";
     let truncated = false;
     try {
-      text = await res.text();
+      const bounded = await readBoundedBody(res, maxBytes);
+      text = bounded.text;
+      truncated = bounded.truncated;
     } finally {
       clearTimeout(timer);
     }
-    if (text.length > maxBytes) {
-      text = text.slice(0, maxBytes);
-      truncated = true;
-    }
-    return { ok: res.ok, finalUrl: current.url, status: res.status, contentType, body: text, truncated };
+    return { ok: res.ok, finalUrl: current.url, status: res.status, contentType, ...(xRobotsTag ? { xRobotsTag } : {}), body: text, truncated, ...(etag ? { etag } : {}), ...(lastModified ? { lastModified } : {}) };
   }
   return { ok: false, finalUrl: current.url, status: 0, contentType: "", body: "", truncated: false, error: "Too many redirects" };
 }
@@ -414,12 +507,54 @@ export interface JsonLdPrice {
 export interface ExtractedPage {
   title?: string;
   metaDescription?: string;
+  canonicalUrl?: string;
+  /** General robots meta directives only; user-agent-specific directives are kept separately. */
+  robotsDirectives?: string;
+  /** Directives from user-agent-specific meta tags such as `name="googlebot"`. */
+  crawlerRobotsDirectives?: { crawler: string; directives: string }[];
+  htmlLang?: string;
+  viewportPresent: boolean;
+  imageCount: number;
+  imagesWithAltAttribute: number;
   og: Record<string, string>;
   headings: Array<{ level: 1 | 2 | 3; text: string }>;
   links: Array<{ url: string; text: string }>;
   jsonLdPrices: JsonLdPrice[];
+  jsonLdTypes: string[];
+  /** Valid calendar dates stated by recognized article/page metadata; metadata can be wrong or stale. */
+  pageReportedDates?: { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }[];
+  /** JSON parse failures among the first 50 application/ld+json script blocks inspected. */
+  jsonLdScriptParseErrors?: number;
   text: string;
   truncated: boolean;
+}
+
+function pageDate(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const match = /^(\d{4}-\d{2}-\d{2})(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/.exec(value.trim());
+  if (!match) return undefined;
+  const date = match[1]!;
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date && (!value.includes("T") || Number.isFinite(Date.parse(value))) ? date : undefined;
+}
+
+function collectPageDates(node: unknown, out: { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }[], depth: number): void {
+  if (depth > 10 || out.length >= 20) return;
+  if (Array.isArray(node)) {
+    for (const item of node) collectPageDates(item, out, depth + 1);
+    return;
+  }
+  if (typeof node !== "object" || node === null) return;
+  const record = node as Record<string, unknown>;
+  const types = asTypeList(record["@type"]);
+  const isArticleOrPage = types.some((type) => ["Article", "NewsArticle", "BlogPosting", "WebPage"].includes(type.split(/[\/#]/).at(-1) ?? type));
+  if (isArticleOrPage) {
+    for (const [key, kind] of [["datePublished", "published"], ["dateModified", "updated"]] as const) {
+      const date = pageDate(record[key]);
+      if (date && !out.some((item) => item.kind === kind && item.date === date && item.source === "json_ld")) out.push({ kind, date, source: "json_ld" });
+    }
+  }
+  for (const value of Object.values(record)) if (typeof value === "object" && value !== null) collectPageDates(value, out, depth + 1);
 }
 
 function asTypeList(t: unknown): string[] {
@@ -465,13 +600,21 @@ export function extractPageContent(
 
   // JSON-LD first (before scripts are removed).
   const jsonLdPrices: JsonLdPrice[] = [];
+  const pageReportedDates: ExtractedPage["pageReportedDates"] = [];
+  const jsonLdTypes = new Set<string>();
+  let jsonLdScriptParseErrors = 0;
+  let jsonLdScriptsParsed = 0;
   const ldRe = /<script\b[^>]*type\s*=\s*["']?application\/ld\+json["']?[^>]*>([\s\S]*?)<\/script\s*>/gi;
   let ld: RegExpExecArray | null;
-  while ((ld = ldRe.exec(src)) !== null) {
+  while ((ld = ldRe.exec(src)) !== null && jsonLdScriptsParsed < 50) {
+    jsonLdScriptsParsed++;
     try {
-      collectJsonLdPrices(JSON.parse((ld[1] ?? "").trim()) as unknown, jsonLdPrices, undefined, 0);
+      const data = JSON.parse((ld[1] ?? "").trim()) as unknown;
+      collectJsonLdPrices(data, jsonLdPrices, undefined, 0);
+      collectJsonLdTypes(data, jsonLdTypes, 0);
+      collectPageDates(data, pageReportedDates, 0);
     } catch {
-      /* ignore malformed JSON-LD */
+      jsonLdScriptParseErrors++;
     }
   }
 
@@ -482,16 +625,53 @@ export function extractPageContent(
 
   const titleMatch = /<title\b[^>]*>([\s\S]*?)<\/title\s*>/i.exec(src);
   const title = titleMatch ? stripTags(titleMatch[1] ?? "").slice(0, 500) : undefined;
+  const htmlTag = /<html\b[^>]*>/i.exec(src)?.[0];
+  const htmlLang = htmlTag ? parseAttributes(htmlTag).lang?.trim().slice(0, 32) : undefined;
+  const viewportPresent = (src.match(/<meta\b[^>]*>/gi) ?? []).some((tag) => {
+    const attrs = parseAttributes(tag);
+    return attrs.name?.toLowerCase() === "viewport" && Boolean(attrs.content?.trim());
+  });
+  const imageTags = src.match(/<img\b[^>]*>/gi) ?? [];
+  let imagesWithAltAttribute = 0;
+  for (const tag of imageTags) if (Object.prototype.hasOwnProperty.call(parseAttributes(tag), "alt")) imagesWithAltAttribute++;
 
   let metaDescription: string | undefined;
+  const robotsDirectives: string[] = [];
+  const crawlerRobotsDirectives = new Map<string, string[]>();
   const og: Record<string, string> = {};
   for (const tag of src.match(/<meta\b[^>]*>/gi) ?? []) {
     const a = parseAttributes(tag);
     const content = (a.content ?? "").trim().slice(0, 1000);
     if (!content) continue;
     if (a.name?.toLowerCase() === "description" && metaDescription === undefined) metaDescription = content;
+    const robotsName = a.name?.toLowerCase();
+    if (robotsName === "robots") robotsDirectives.push(content.toLowerCase());
+    else if (robotsName && (/(?:bot|crawler|spider)$/i.test(robotsName) || ["google-extended", "googlebot-news"].includes(robotsName)) && /^[a-z0-9._-]{1,80}$/i.test(robotsName)) {
+      // Any named robots meta tag is scoped to that user-agent token; do not
+      // merge it into the general robots meta directives.
+      const directives = crawlerRobotsDirectives.get(robotsName) ?? [];
+      directives.push(content.toLowerCase());
+      crawlerRobotsDirectives.set(robotsName, directives);
+    }
     const prop = (a.property ?? a.name ?? "").toLowerCase();
+    const dateKind = prop === "article:published_time" || (a.itemprop ?? "").toLowerCase() === "datepublished" ? "published" : prop === "article:modified_time" || (a.itemprop ?? "").toLowerCase() === "datemodified" ? "updated" : undefined;
+    const date = dateKind ? pageDate(content) : undefined;
+    if (dateKind && date && !pageReportedDates.some((item) => item.kind === dateKind && item.date === date && item.source === "meta")) pageReportedDates.push({ kind: dateKind, date, source: "meta" });
     if (prop.startsWith("og:") && !(prop in og) && Object.keys(og).length < 30) og[prop] = content;
+  }
+
+  let canonicalUrl: string | undefined;
+  for (const tag of src.match(/<link\b[^>]*>/gi) ?? []) {
+    const attrs = parseAttributes(tag);
+    if ((attrs.rel ?? "").toLowerCase().split(/\s+/).includes("canonical") && attrs.href) {
+      try {
+        const parsed = new URL(attrs.href, pageUrl);
+        if (parsed.protocol === "http:" || parsed.protocol === "https:") canonicalUrl = parsed.toString();
+      } catch {
+        // An invalid canonical is not an observed canonical URL.
+      }
+      if (canonicalUrl) break;
+    }
   }
 
   const headings: ExtractedPage["headings"] = [];
@@ -544,10 +724,29 @@ export function extractPageContent(
     truncated = true;
   }
 
-  const page: ExtractedPage = { og, headings, links, jsonLdPrices, text, truncated };
+  const page: ExtractedPage = { og, headings, links, jsonLdPrices, jsonLdTypes: [...jsonLdTypes].slice(0, 50), pageReportedDates: pageReportedDates.slice(0, 20), text, truncated, viewportPresent, imageCount: imageTags.length, imagesWithAltAttribute };
+  if (jsonLdScriptParseErrors) page.jsonLdScriptParseErrors = jsonLdScriptParseErrors;
   if (title) page.title = title;
   if (metaDescription) page.metaDescription = metaDescription;
+  if (canonicalUrl) page.canonicalUrl = canonicalUrl;
+  if (robotsDirectives.length) page.robotsDirectives = [...new Set(robotsDirectives)].join(", ");
+  if (crawlerRobotsDirectives.size) page.crawlerRobotsDirectives = [...crawlerRobotsDirectives.entries()].slice(0, 20).map(([crawler, directives]) => ({ crawler, directives: [...new Set(directives)].join(", ").slice(0, 1000) }));
+  if (htmlLang) page.htmlLang = htmlLang;
   return page;
+}
+
+function collectJsonLdTypes(node: unknown, out: Set<string>, depth: number): void {
+  if (depth > 10 || out.size >= 50) return;
+  if (Array.isArray(node)) {
+    for (const child of node) collectJsonLdTypes(child, out, depth + 1);
+    return;
+  }
+  if (typeof node !== "object" || node === null) return;
+  const record = node as Record<string, unknown>;
+  for (const type of asTypeList(record["@type"])) if (type.trim()) out.add(type.trim().split("/").pop()!.split("#").pop()!);
+  for (const [key, value] of Object.entries(record)) {
+    if (key !== "@context" && typeof value === "object" && value !== null) collectJsonLdTypes(value, out, depth + 1);
+  }
 }
 
 // ---------------------------------------------------------------------------

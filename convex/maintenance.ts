@@ -18,6 +18,19 @@ export const purgeExpiredSources = internalMutation({
   },
 });
 
+/** Website screenshots used for visual critique are private and retained for at most 30 days. */
+export const purgeWebsiteAuditScreenshots = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query("websiteAuditScreenshots").withIndex("by_expires", (q) => q.lte("expiresAt", Date.now())).take(100);
+    for (const row of rows) {
+      await ctx.storage.delete(row.storageId).catch(() => undefined);
+      await ctx.db.delete(row._id);
+    }
+    return rows.length;
+  },
+});
+
 /** Detailed activity retention: chat and step details older than the policy are removed; costs and audit stay. */
 export const purgeOldActivity = internalMutation({
   args: {},
@@ -45,13 +58,13 @@ export const purgeOldActivity = internalMutation({
 });
 
 export const connectedOrgs = internalQuery({
-  args: { provider: v.union(v.literal("ga4"), v.literal("stripe_revenue")) },
+  args: { provider: v.union(v.literal("ga4"), v.literal("stripe_revenue"), v.literal("search_console")) },
   handler: async (ctx, { provider }) => {
     const rows = await ctx.db
       .query("connections")
       .withIndex("by_provider_status", (q) => q.eq("provider", provider).eq("status", "connected"))
       .take(2000);
-    return [...new Set(rows.filter((r) => !r.isFixture).map((r) => r.orgId))];
+    return [...new Set(rows.filter((r) => !r.isFixture && (provider !== "search_console" || Boolean(r.externalAccountId))).map((r) => r.orgId))];
   },
 });
 
@@ -63,6 +76,9 @@ export const syncAll = internalAction({
     }
     for (const orgId of await ctx.runQuery(internal.maintenance.connectedOrgs, { provider: "stripe_revenue" })) {
       await ctx.runAction(internal.connectionActions.syncStripe, { orgId });
+    }
+    for (const orgId of await ctx.runQuery(internal.maintenance.connectedOrgs, { provider: "search_console" })) {
+      await ctx.runAction(internal.connectionActions.syncSearchConsole, { orgId });
     }
   },
 });

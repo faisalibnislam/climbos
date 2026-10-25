@@ -52,7 +52,7 @@ describe("mailbox sending", () => {
     await expect(w.owner.client.mutation(api.outboundSending.start, args)).rejects.toThrow(/Connect your mailbox/);
     await expect(w.owner.client.action(api.mailbox.connect, { slug: w.slug, preset: "gmail", email: "sam@seller.example", password: "abcd efgh ijkl mnop" })).resolves.toMatchObject({ ok: true });
     await expect(w.owner.client.mutation(api.outboundSending.start, { ...args, address: "x" })).rejects.toThrow(/postal address/);
-    expect(await w.owner.client.mutation(api.outboundSending.start, args)).toEqual({ queued: 1 });
+    expect(await w.owner.client.mutation(api.outboundSending.start, args)).toEqual({ queued: 1, skippedActiveAddresses: 0 });
     vi.setSystemTime(new Date("2026-10-20T09:05:00Z"));
     expect(await t.mutation(internal.outboundSending.dispatch, {})).toBe(1);
     await t.finishAllScheduledFunctions(vi.runAllTimers);
@@ -66,6 +66,63 @@ describe("mailbox sending", () => {
     s = await w.owner.client.query(api.outboundSending.status, { slug: w.slug, campaignId: w.campaignId });
     expect(s.counts).toMatchObject({ sent: 1, queued: 0, canceled: 1 });
     expect((await w.owner.client.query(api.team.myNotices, {})).items[0].text).toMatch(/replied/);
+  });
+
+  it("does not start a prospect sequence while a review invitation to the same address is queued", async () => {
+    const t = setup();
+    const w = await ready(t);
+    await w.owner.client.action(api.mailbox.connect, { slug: w.slug, preset: "gmail", email: "sam@seller.example", password: "pw" });
+    await t.run(async (ctx) => ctx.db.insert("reviewRequests", {
+      orgId: w.orgId,
+      name: "Jane Doe",
+      email: "jane@agency.example",
+      token: "review-pressure-token",
+      status: "queued",
+      createdAt: Date.now(),
+    }));
+
+    await expect(w.owner.client.mutation(api.outboundSending.start, {
+      slug: w.slug,
+      campaignId: w.campaignId,
+      senderName: "Sam",
+      company: "Seller Co",
+      address: "1 High St, London E1 1AA",
+    })).rejects.toThrow(/another ClimbOS email is already queued/);
+    expect(await t.run(async (ctx) => ctx.db.query("outboundSends").collect())).toHaveLength(0);
+  });
+
+  it("stops a queued prospect email if a review invitation appears before mailbox handoff", async () => {
+    const t = setup();
+    const w = await ready(t);
+    await w.owner.client.action(api.mailbox.connect, { slug: w.slug, preset: "gmail", email: "sam@seller.example", password: "pw" });
+    await w.owner.client.mutation(api.outboundSending.start, {
+      slug: w.slug,
+      campaignId: w.campaignId,
+      senderName: "Sam",
+      company: "Seller Co",
+      address: "1 High St, London E1 1AA",
+    });
+    await t.run(async (ctx) => ctx.db.insert("reviewRequests", {
+      orgId: w.orgId,
+      name: "Jane Doe",
+      email: "jane@agency.example",
+      token: "review-pressure-before-send",
+      status: "queued",
+      createdAt: Date.now(),
+    }));
+
+    vi.setSystemTime(new Date("2026-10-20T09:05:00Z"));
+    expect(await t.mutation(internal.outboundSending.dispatch, {})).toBe(1);
+    const send = await t.run(async (ctx) => ctx.db.query("outboundSends").withIndex("by_campaign", (q) => q.eq("campaignId", w.campaignId)).first());
+    const job = await t.query(internal.outboundSending.prepareSend, { sendId: send!._id });
+    if (!job || job.hold) throw new Error("Expected the queued prospect email to reach its pre-send check.");
+    expect(await t.mutation(internal.outboundSending.claimSend, {
+      sendId: send!._id,
+      lease: send!.lease,
+      payloadHash: job.payloadHash,
+      ...(job.abTestId ? { abTestId: job.abTestId } : {}),
+    })).toBe(false);
+    expect((await t.run((ctx) => ctx.db.get(send!._id)))).toMatchObject({ status: "canceled", error: expect.stringContaining("active ClimbOS email") });
   });
 
   it("an edit to the emails after approval pauses sending; resuming approves the new version", async () => {

@@ -83,6 +83,20 @@ describe("fetch_page (OpenAI adapter page reads)", () => {
     expect(r.appended.map((m) => m.role)).toEqual(["assistant", "user", "assistant"]);
   });
 
+  it("keeps page-reported dates on directly fetched sources without treating them as independently verified", async () => {
+    process.env.OPENAI_API_KEY = "test";
+    const web = webMock({ "https://rival.example/story": () => new Response('<html><head><title>Story</title><meta property="article:published_time" content="2024-03-04"><script type="application/ld+json">{"@type":"Article","dateModified":"2025-01-02"}</script></head><body>News</body></html>', { status: 200, headers: { "content-type": "text/html" } }) });
+    const { bodies } = openaiMock([() => ({ status: "completed", output: [call("c1", "https://rival.example/story")], usage }), () => ({ status: "completed", output: [answer("notes")], usage })]);
+    const result = await openaiTurn(req({ maxUses: 1, resolveHost: dns(), fetchImpl: web }), rates);
+    expect(result.ok && result.sources[0]).toMatchObject({ url: "https://rival.example/story", pageReportedDates: [{ kind: "updated", date: "2025-01-02", source: "json_ld" }, { kind: "published", date: "2024-03-04", source: "meta" }] });
+    const fetcher = new PageFetcher({ maxUses: 1, resolveHost: dns(), fetchImpl: web });
+    await fetcher.run({ call_id: "c2", arguments: JSON.stringify({ url: "https://rival.example/story" }) });
+    const restored = new PageFetcher({ maxUses: 1, resolveHost: dns(), fetchImpl: web });
+    restored.restore(fetcher.metadata());
+    expect(restored.fetched[0]?.pageReportedDates).toEqual(fetcher.fetched[0]?.pageReportedDates);
+    expect(outputsOf(bodies[1]!).length).toBe(1);
+  });
+
   it("refuses private, link-local and metadata addresses, private DNS answers and redirects to them", async () => {
     process.env.OPENAI_API_KEY = "test";
     const web = webMock({
@@ -182,7 +196,7 @@ describe("fetch_page (OpenAI adapter page reads)", () => {
     const p = await openaiTurn(req({ maxUses: 3, resolveHost: dns(), fetchImpl: web }, { background: { pollUntil: now + 10_000, onStarted: async (id) => { saved.push(id); now += 20_000; } } }), rates);
     vi.restoreAllMocks();
     expect(saved).toEqual(["resp_1", "resp_2"]);
-    expect(posts[1]).toMatchObject({ previous_response_id: "resp_1", metadata: { climbos_fetch_used: "1", climbos_fetched_0: "https://a.example/1" } });
+    expect(posts[1]).toMatchObject({ previous_response_id: "resp_1", metadata: { climbos_fetch_used: "1", climbos_fetched_0: JSON.stringify([{ url: "https://a.example/1" }]) } });
     expect(outputsOf(posts[1])).toHaveLength(1);
     expect(!p.ok && p.kind).toBe("pending");
     // The finished first call and the page read are carried for metering.
@@ -206,5 +220,11 @@ describe("fetch_page (OpenAI adapter page reads)", () => {
     f.restore({ climbos_fetch_used: "99", climbos_fetched_0: "https://a.example/1 http://10.0.0.1/ https://b.example/" });
     expect(f.left).toBe(0);
     expect(f.fetched.map((s) => s.url)).toEqual(["https://a.example/1", "https://b.example/"]);
+  });
+
+  it("ignores malformed date claims in resumable metadata without throwing", () => {
+    const f = new PageFetcher({ maxUses: 2, resolveHost: dns() });
+    f.restore({ climbos_fetched_0: JSON.stringify([{ url: "https://a.example/", pageReportedDates: [{ kind: "published", date: "2026-99-99", source: "json_ld" }] }]) });
+    expect(f.fetched).toEqual([{ url: "https://a.example/" }]);
   });
 });

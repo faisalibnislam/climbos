@@ -13,6 +13,7 @@ import { PERMISSION_WHO, majorToDisplay, type MemberRole } from "../content/shar
 import { errorMessage } from "../errors";
 import { microsToCreditsLabel, relativeTime } from "../money";
 import { BUSINESS_TYPE_OPTIONS, CURRENCY_OPTIONS, GOAL_KIND_OPTIONS, HORIZON_OPTIONS, REVIEW_DAY_OPTIONS, defaultEvents, goalDefaults, type BusinessType, type GoalKind } from "../onboarding/options";
+import { INDUSTRY_BUSINESS_TYPES } from "@shared/knowledge/industryCatalog";
 import { LoadingBlock } from "../results/QueryBoundary";
 import { SettingsHeader } from "./SettingsNav";
 
@@ -36,7 +37,7 @@ export function BusinessGoalSettings({ slug }: { slug: string }) {
       />
       {!canEdit ? <Callout tone="info">Changing these needs {PERMISSION_WHO.edit}.</Callout> : null}
       <GoalForm key={`${state.goal?.statement ?? ""}-${state.goal?.monthlyAdBudget ?? ""}`} slug={slug} state={state} canEdit={canEdit} canRaise={can(role, "manage_policies")} />
-      <BusinessForm key={`${state.business?.id ?? ""}-${state.business?.website ?? ""}`} slug={slug} state={state} canEdit={canEdit} />
+      <BusinessForm key={`${state.business?.id ?? ""}-${state.business?.website ?? ""}-${state.business?.industryBusinessTypeId ?? "unset"}-${state.business?.lifecycleStage?.stage ?? "unknown"}`} slug={slug} state={state} canEdit={canEdit} canSetStage={role === "owner" || role === "admin"} />
       <ResearchCard slug={slug} state={state} canEdit={canEdit} />
     </div>
   );
@@ -133,12 +134,23 @@ function GoalForm({ slug, state, canEdit, canRaise }: { slug: string; state: Sta
   );
 }
 
-function BusinessForm({ slug, state, canEdit }: { slug: string; state: State; canEdit: boolean }) {
+const LIFECYCLE_STAGE_OPTIONS = [
+  { value: "idea_validation", label: "Idea validation" },
+  { value: "pre_launch", label: "Pre-launch" },
+  { value: "early_traction", label: "Early traction" },
+  { value: "growth", label: "Growth" },
+  { value: "maturity", label: "Maturity" },
+  { value: "decline", label: "Possible decline" },
+];
+
+function BusinessForm({ slug, state, canEdit, canSetStage }: { slug: string; state: State; canEdit: boolean; canSetStage: boolean }) {
   const save = useMutation(api.orgs.saveBusinessDetails);
   const [website, setWebsite] = useState(state.business?.website ?? "");
   const [businessType, setBusinessType] = useState<BusinessType>((state.business?.businessType as BusinessType) ?? "other");
+  const [industryBusinessTypeId, setIndustryBusinessTypeId] = useState(state.business?.industryBusinessTypeId ?? "");
   const [currency, setCurrency] = useState(state.business?.currency ?? state.org.currency);
   const [events, setEvents] = useState(state.business?.successEvents ?? []);
+  const [lifecycleStage, setLifecycleStage] = useState(state.business?.lifecycleStage?.stage ?? "unknown");
   const [busy, setBusy] = useState(false);
   return (
     <Card>
@@ -151,6 +163,22 @@ function BusinessForm({ slug, state, canEdit }: { slug: string; state: State; ca
         </Field>
         <Field label="Type of business">
           <Select value={businessType} disabled={!canEdit} onValueChange={(v) => setBusinessType(v as BusinessType)} options={BUSINESS_TYPE_OPTIONS} />
+        </Field>
+        <Field label="Industry playbook type (optional)" hint="Choose the closest exact business type. ClimbOS uses its scenarios as hypotheses, then checks them against your facts. Leave blank if none fit.">
+          <Select
+            value={industryBusinessTypeId || "none"}
+            disabled={!canEdit}
+            onValueChange={(value) => setIndustryBusinessTypeId(value === "none" ? "" : value)}
+            options={[{ value: "none", label: "Not selected" }, ...INDUSTRY_BUSINESS_TYPES.map((item) => ({ value: item.id, label: `${item.name} · ${item.industry}` }))]}
+          />
+        </Field>
+        <Field label="Business stage" hint="Owner-reported planning context. ClimbOS won't infer this from your website.">
+          <Select
+            value={lifecycleStage}
+            disabled={!canSetStage}
+            onValueChange={setLifecycleStage}
+            options={[{ value: "unknown", label: "Not sure / leave unset" }, ...LIFECYCLE_STAGE_OPTIONS]}
+          />
         </Field>
         <Field label="Currency">
           <Select value={currency} disabled={!canEdit} onValueChange={setCurrency} options={CURRENCY_OPTIONS} />
@@ -186,8 +214,10 @@ function BusinessForm({ slug, state, canEdit }: { slug: string; state: State; ca
               onClick={async () => {
                 setBusy(true);
                 try {
-                  await save({ slug, website, businessType, currency, successEvents: events });
-                  toast({ tone: "success", title: "Business details saved." });
+                  const industryTypeChanged = industryBusinessTypeId !== (state.business?.industryBusinessTypeId ?? "");
+                  const stageChanged = lifecycleStage !== (state.business?.lifecycleStage?.stage ?? "unknown");
+                  await save({ slug, website, businessType, industryBusinessTypeId: industryBusinessTypeId || null, currency, successEvents: events, ...(canSetStage ? { lifecycleStage: lifecycleStage === "unknown" ? null : lifecycleStage as "idea_validation" | "pre_launch" | "early_traction" | "growth" | "maturity" | "decline" } : {}) });
+                  toast({ tone: "success", title: "Business details saved.", description: (industryTypeChanged || stageChanged) && state.strategy ? "Your current plan needs a refresh because business planning context changed." : undefined });
                 } catch (e) {
                   toast({ tone: "danger", title: errorMessage(e) });
                 } finally {

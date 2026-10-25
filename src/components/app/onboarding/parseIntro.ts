@@ -26,7 +26,7 @@ export function parseIntro(text: string): ParsedIntro {
   if (url) out.website = url[1].replace(/[.,;:!?)]+$/, "");
 
   const name =
-    t.match(/\b(?:[Ww]e(?:'| a)re|[Ii] run|[Ii] own|[Mm]y business is|[Mm]y company is|[Oo]ur company is|[Tt]his is)\s+([A-Z][\w&'-]*(?:\s+[A-Z][\w&'-]*){0,3})/) ??
+    t.match(/\b(?:[Ww]e(?:'|’| a)re|[Ii] run|[Ii] own|[Mm]y business is|[Mm]y company is|[Oo]ur company is|[Tt]his is)\s+(?:(?:called|named)\s+)?([A-Z][\w&'-]*(?:\s+[A-Z][\w&'-]*){0,3})/) ??
     t.match(/^([A-Z][\w&'.-]*(?:\s+[A-Z][\w&'.-]*){0,2})\s*(?:\(|-|—|,)/);
   if (name) out.businessName = name[1].trim();
   else if (out.website) {

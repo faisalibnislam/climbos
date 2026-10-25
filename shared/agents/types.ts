@@ -1,9 +1,10 @@
 import type { Diagnosis } from "./diagnosis";
 import type { EvidenceKind } from "./evidenceKind";
 import type { z } from "zod";
-import type { Effort } from "../ai/types";
+import type { Effort, Source } from "../ai/types";
 import type { ModelKey } from "../economics/rates";
 import type { RoleKey } from "../economics/roles";
+import type { KnowledgeReferenceSet } from "../knowledge/retrieve";
 
 /** A scoring rubric an expert would use, with hard gates that override the score. */
 export interface Rubric {
@@ -31,6 +32,16 @@ export interface ResearchSpec {
   brief: string;
   allowedDomains?: string[];
   userLocation?: { country?: string; region?: string; city?: string; timezone?: string };
+  /** How long an exact tenant-scoped research result may be reused; absent means no cross-run reuse. */
+  cacheTtlMs?: number;
+}
+
+export interface CachedResearch {
+  notes: string;
+  sources: Source[];
+  /** Time this exact evidence set was retrieved; old cache rows may not have it. */
+  retrievedAt?: number;
+  expiresAt: number;
 }
 
 export interface PhaseModels {
@@ -76,16 +87,36 @@ export interface AgentSpec<T> {
 export interface AgentInput {
   /** The job, e.g. "Write 3 LinkedIn posts for the founder that support the plan." */
   task: string;
-  /** Business brief: confirmed facts, positioning, goal, constraints. Trusted. */
+  /** Application-assembled business context. Evidence labels inside it determine what each statement supports. */
   brief: string;
   /** Owner text, website text, research from earlier jobs. Wrapped as untrusted. */
   untrustedContext?: string;
   /** Research to do for this job (overrides nothing; omit for no research phase). */
   research?: ResearchSpec;
   /** Research already done for this job (e.g. in parallel with an earlier step): used instead of a research phase. */
-  precomputedResearch?: { notes: string; sources: { url: string; title?: string }[] };
+  precomputedResearch?: { notes: string; sources: Source[]; retrievedAt?: number };
+  /** Deterministic timing context assembled by the application for date validation. */
+  timingContext?: { today: string; timezone: string; geography?: string };
+  /** Exact approved offer prices allowed in copy for this tenant's active plan. */
+  approvedOfferTerms?: { playName: string; recommendation: string; currency: string; allowedPrices: number[]; allowedDiscountPercentages?: number[]; allowedMechanisms?: string[]; urgencyClaim: string | null; eligibleAudience: string | null }[];
+  /** Exact play selected when a campaign is launched from a growth plan. */
+  approvedOfferPlayName?: string;
+  /** Exact pages read by the application for this run; internal input for source-reference validation. */
+  availableSourceUrls?: string[];
+  /** Exact first-party page titles/headings observed by this run; lints only, not extra prompt evidence. */
+  observedSitePages?: { url: string; title?: string; headings?: string[] }[];
+  /** First-party website on the current business record; used to validate outbound destinations. */
+  businessWebsite?: string;
+  /** Owner-selected niche from the versioned industry corpus; unset means no niche-specific playbook. */
+  industryBusinessTypeId?: string;
+  /** Short-lived visual references for this run; never saved to jobs, checkpoints or knowledge records. `sourceArtifactId` is an exact post ID or captured page URL. */
+  visualInputs?: { sourceArtifactId: string; platform: string; imageUrl: string; note: string }[];
+  /** Exact URLs copied from the owner's request; external destinations need this provenance. */
+  ownerSuppliedUrls?: string[];
   /** Facts the critic must check claims against (statements). */
   facts: string[];
+  /** Explicit examples the owner approved for brand guidance; model output must not invent these. */
+  ownerApprovedExamples?: string[];
   /** Hard limits the output is checked against in code (spec §13). */
   constraints?: PlanConstraints;
 }
@@ -93,6 +124,8 @@ export interface AgentInput {
 export interface PlanConstraints {
   /** Cash the owner will pay ad platforms each month, in `currency` (the name predates currencies). */
   monthlyAdBudgetUsd?: number;
+  /** Owner-confirmed monthly cash available for growth work, including media and other cash costs (excludes owner time). */
+  monthlyGrowthCashUsd?: number;
   /** Workspace currency (ISO code) for every amount here; absent means USD. */
   currency?: string;
   /** Hours a week the owner can give growth work (when they said). */
@@ -107,7 +140,7 @@ export interface PlanConstraints {
   goalNumbers?: number[];
   /** Contacts with marketing-email consent in ClimbOS (capped at 1,000); 0 = no list to send to. */
   emailAudience?: number;
-  /** Most new customers the business can take on a month (owner-reported delivery limit). */
+  /** Additional new customers the owner can accept each month with current operations. */
   newCustomersPerMonth?: number;
   /** Where customers can be served (acquisition geography): local or regional limits paid reach. */
   serviceArea?: string;
@@ -118,7 +151,7 @@ export interface PlanConstraints {
   /** The weakest link computed from the owner's numbers; the plays must work on it. */
   diagnosis?: Diagnosis;
   /** The owner's measured funnel rates (lead, activation, purchase) for sizing tests on real baselines. */
-  funnelRates?: { lead?: number; activation?: number; purchase?: number };
+  funnelRates?: { lead?: number; qualification?: number; activation?: number; purchase?: number };
   /** Playbooks the business isn't eligible for now (ids and reasons); plays can't rely on them. */
   ineligiblePlaybooks?: { id: string; reasons: string[] }[];
 }
@@ -128,6 +161,8 @@ export interface CritiqueResult {
   scores: { id: string; score: number; note: string; fix: string }[];
   strengths: string[];
   fixes: string[];
+  /** A measured reason to spend more on an Expert-mode revision; none is the default. */
+  escalation?: { reason: "none" | "complex_tradeoff" | "conflicting_evidence" | "unresolved_quality_failure"; evidence: string };
 }
 
 export interface Assessment {
@@ -143,8 +178,10 @@ export interface AgentRunResult<T> {
   output: T;
   assessment: Assessment | null;
   rounds: number;
-  research: { notes: string; sources: { url: string; title?: string }[] } | null;
+  research: { notes: string; sources: Source[]; retrievedAt?: number } | null;
   history: { round: number; average: number; gatesPassed: boolean; lintErrors: number }[];
+  /** Versioned guidance passages the drafting agent actually received; separate from business evidence. */
+  knowledgeReferences?: KnowledgeReferenceSet;
   /** Run quality signals for the engine dashboard (spec §27). */
   quality?: RunQuality;
 }

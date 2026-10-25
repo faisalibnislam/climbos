@@ -1,16 +1,16 @@
 import { isServiceBusiness } from "../shared/acquisition/library";
 import { legacyPlanHash, planContentHash } from "./lib/planHash";
-import { minorToMajor } from "../shared/economics/currency";
+import { majorToMinor, minorToMajor } from "../shared/economics/currency";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { ACTIVE_RUN_STATUSES, createRunWithReservation, finishRunImpl, latestRunOfKind, reopenFailedRun } from "./engine";
-import { activePolicyVersion, jobForAction } from "./jobWrites";
+import { activePolicyVersion } from "./jobWrites";
 import { audit } from "./lib/audit";
-import { approvalHash, can } from "../shared/policy";
-import { holdPlanChannel, startCardRun, startPlanWork, type PlanWorkResult } from "./lib/cards";
-import { autoStartPlanTargets } from "./targets";
+import { approvalHash, can, canonicalJson, sha256Hex } from "../shared/policy";
+import { assertCardDependenciesComplete, holdPlanChannel, startCardRun, startPlanWork, WISH_AUTO_BUDGET_MICROS, type PlanWorkResult } from "./lib/cards";
+import { autoStartPlanTargets, todayTargetPreview } from "./targets";
 import { notifyOwners } from "./lib/notify";
 import { chargeableAccess, isPaid } from "./lib/access";
 import { creditBalance } from "./lib/credits";
@@ -20,7 +20,13 @@ import { currentPeriod } from "./lib/periods";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { redactFeedback } from "../shared/lab/redact";
 import { canDriveWork, type QualityState } from "../shared/agents/quality";
-import { applyOwnerEconomics, decisionQuestions, type Economics, type PlayLike } from "../shared/agents/economics";
+import { applyOwnerEconomics, decisionQuestions, growthCashInputsIn, growthCashTiming, growthCashTimingInput, playMaths, playsGoalGap, selectPortfolio, withForecasts, type Economics, type OwnerEconomics, type PlayLike } from "../shared/agents/economics";
+import { projectGrowthOpportunities, type OpportunityPlayInput } from "../shared/agents/opportunities";
+import { AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
+import { expertPlaysOf, readExpertPlan } from "../shared/agents/planCompatibility";
+import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
+import { savedPlanDecisionSummary } from "../shared/agents/planDecisionSummary";
+import { factFreshness } from "../shared/agents/factFreshness";
 
 /** Everything the Today screen needs, in one bounded query. */
 export const today = query({
@@ -39,12 +45,14 @@ export const today = query({
       .query("artifacts")
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "in_review"))
       .order("desc")
-      .take(20);
+      // Read one past the display cap so owners are told when this is a lower bound.
+      .take(21);
     const strategy = await ctx.db
       .query("strategies")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
       .order("desc")
       .first();
+    const targetPreview = await todayTargetPreview(ctx, org, strategy);
     const cards = await ctx.db
       .query("actionCards")
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "proposed"))
@@ -107,8 +115,9 @@ export const today = query({
       next.push({ title: "Build your growth plan", why: "Your team turns your goal into a short, costed plan you approve.", href: `/app/${slug}/plan`, kind: "plan" });
     }
     if (pendingApprovals.length > 0) {
+      const approvalCountLabel = pendingApprovals.length > 20 ? "20+" : String(pendingApprovals.length);
       next.push({
-        title: `Review ${pendingApprovals.length} draft${pendingApprovals.length === 1 ? "" : "s"}`,
+        title: `Review ${approvalCountLabel} draft${pendingApprovals.length === 1 ? "" : "s"}`,
         why: "Nothing goes live until you approve it.",
         href: `/app/${slug}/content?status=in_review`,
         kind: "approvals",
@@ -127,15 +136,27 @@ export const today = query({
 
     return {
       org: { slug: org.slug, name: org.name, kind: org.kind, onboardingStep: org.onboardingStep, currency: org.currency, timezone: org.timezone },
+      requestCostEstimateMicros: org.kind === "demo" ? 0 : estimateJobMicros(planJob("chat_intent")),
+      autoDraftBudgetMicros: org.kind === "demo" ? 0 : WISH_AUTO_BUDGET_MICROS,
       role,
       userName: user.name ?? user.email ?? null,
       emergencyStop: org.emergencyStop?.active ? { at: org.emergencyStop.at, reason: org.emergencyStop.reason ?? null } : null,
-      goal: goal ? { statement: goal.statement, horizonDays: goal.horizonDays, monthlyAdBudget: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency), currency: goal.currency, createdAt: goal.createdAt } : null,
+      goal: goal ? { statement: goal.statement, target: goal.target ?? null, horizonDays: goal.horizonDays, monthlyAdBudget: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency), currency: goal.currency, createdAt: goal.createdAt } : null,
       business: business ? { name: business.name, website: business.website ?? null, summary: business.summary ?? null, type: business.businessType ?? null } : null,
       next: next.slice(0, 3),
       approvals: pendingApprovals.slice(0, 6).map((a) => ({ id: a._id, title: a.title, channel: a.channel, kind: a.kind, createdByRole: a.createdByRole ?? null, updatedAt: a.updatedAt })),
-      approvalsCount: pendingApprovals.length,
-      strategy: strategy ? { id: strategy._id, status: strategy.status, version: strategy.version, summary: strategy.summary } : null,
+      approvalsCount: Math.min(pendingApprovals.length, 20),
+      approvalsCountIsLowerBound: pendingApprovals.length > 20,
+      strategy: strategy
+        ? {
+            id: strategy._id,
+            status: strategy.status,
+            version: strategy.version,
+            summary: strategy.summary,
+            opportunities: projectGrowthOpportunities(expertPlaysOf(strategy.expert) as OpportunityPlayInput[]),
+          }
+        : null,
+      targetPreview,
       cards: [...cards, ...running]
         .sort((a, b) => a.priority - b.priority)
         .slice(0, 6)
@@ -162,13 +183,15 @@ export const today = query({
 function cardView(c: Doc<"actionCards">) {
   const payload = (() => {
     try {
-      return JSON.parse(c.payload) as { job?: string | null; channel?: string };
+      return JSON.parse(c.payload) as { job?: string | null; channel?: string; agentArchetypeId?: string };
     } catch {
       return {};
     }
   })();
   return {
     job: payload.job ?? null,
+    agentId: payload.agentArchetypeId ?? null,
+    agentName: payload.agentArchetypeId ? AGENT_ARCHETYPE_BY_ID.get(payload.agentArchetypeId)?.name ?? null : null,
     channel: payload.channel ?? "",
     id: c._id,
     title: c.title,
@@ -180,6 +203,7 @@ function cardView(c: Doc<"actionCards">) {
     externalEffect: c.externalEffect,
     status: c.status,
     blockedReason: c.blockedReason ?? null,
+    dependsOnActionCardIds: c.dependsOnActionCardIds ?? [],
     runId: c.runId ?? null,
   };
 }
@@ -193,6 +217,205 @@ export const sendChat = mutation({
   },
 });
 
+/** Run a saved specialist profile manually through the existing metered COO workflow. */
+export const runCustomAgent = mutation({
+  args: { slug: v.string(), agentId: v.id("customAgents"), request: v.string() },
+  handler: async (ctx, { slug, agentId, request }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
+    const agent = assertSameOrg(await ctx.db.get(agentId), org._id, "specialist");
+    if (agent.status !== "active") throw appError("INVALID", "This specialist is archived.");
+    if (!AGENT_ARCHETYPE_BY_ID.has(agent.archetypeId)) throw appError("INVALID", "This specialist role is no longer available.");
+    const clean = request.trim().slice(0, 1500);
+    if (!clean) throw appError("INVALID", "Describe what you want this specialist to do.");
+    return postChat(ctx, org, user._id, clean, agentId);
+  },
+});
+
+/** Scheduled custom-agent work is internal, metered, and produces suggestions for the member to review. */
+export const runScheduledCustomAgent = internalMutation({
+  args: { agentId: v.id("customAgents") },
+  handler: async (ctx, { agentId }) => {
+    const agent = await ctx.db.get(agentId);
+    if (!agent || agent.status !== "active" || agent.trigger === "manual") return { started: false, reason: "inactive" };
+    const org = await ctx.db.get(agent.orgId);
+    if (!org || org.deletedAt || org.kind === "demo" || org.emergencyStop?.active) return { started: false, reason: "workspace_unavailable" };
+    if (org.scheduledSpecialistsEnabled === false) return { started: false, reason: "scheduled_paused" };
+    const memberships = await ctx.db.query("memberships").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(100);
+    const creator = memberships.find((membership) => membership.userId === agent.createdBy && membership.status === "active" && ["owner", "admin", "editor"].includes(membership.role));
+    const fallbackOwner = memberships.find((membership) => membership.status === "active" && membership.role === "owner" && membership.userId);
+    const userId = creator?.userId ?? fallbackOwner?.userId;
+    if (!userId) return { started: false, reason: "no_active_member" };
+    const recent = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", org._id).eq("customAgentId", agent._id)).order("desc").take(5);
+    if (recent.some((run) => ["cost_reserved", "preparing", "needs_approval", "approved", "scheduled", "executing", "paused"].includes(run.status))) return { started: false, reason: "already_running" };
+    const request = `Scheduled ${agent.trigger} review. Use the latest approved plan, measured workspace results, and confirmed business facts. Objective: ${agent.objective}. Success measure: ${agent.successMetric}. Identify missing evidence clearly and prepare only the smallest useful next step. Do not publish, send, spend, or change external accounts.`;
+    await postChat(ctx, org, userId, request, agent._id);
+    return { started: true };
+  },
+});
+
+/** Record a workspace member's report of usefulness after a custom specialist run finishes. */
+export const rateCustomAgentRun = mutation({
+  args: {
+    slug: v.string(), runId: v.id("workflowRuns"), rating: v.union(v.literal("helpful"), v.literal("needs_work")), note: v.optional(v.string()), minutesSaved: v.optional(v.number()),
+    outcome: v.optional(v.union(v.null(), v.object({
+      metric: v.string(), measureType: v.union(v.literal("count"), v.literal("rate"), v.literal("currency"), v.literal("duration")), value: v.number(), unit: v.string(),
+      denominator: v.optional(v.number()), comparisonValue: v.optional(v.number()), comparisonLabel: v.optional(v.string()), cohort: v.string(), periodStart: v.number(), periodEnd: v.number(),
+    }))),
+  },
+  handler: async (ctx, { slug, runId, rating, note, minutesSaved, outcome }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
+    const run = assertSameOrg(await ctx.db.get(runId), org._id, "specialist run");
+    if (!run.customAgentId || !["verified", "failed", "uncertain", "canceled"].includes(run.status)) throw appError("INVALID", "Rate a finished specialist run.");
+    assertSameOrg(await ctx.db.get(run.customAgentId), org._id, "specialist");
+    if (minutesSaved !== undefined && (!Number.isInteger(minutesSaved) || minutesSaved < 0 || minutesSaved > 1440)) throw appError("INVALID", "Time saved must be a whole number of minutes from 0 to 1,440, or left unknown.");
+    let cleanOutcome: typeof outcome extends infer T ? Exclude<T, undefined | null> | undefined : never;
+    if (outcome && outcome !== null) {
+      if (!outcome.metric.trim() || outcome.metric.length > 120 || !outcome.unit.trim() || outcome.unit.length > 30 || !outcome.cohort.trim() || outcome.cohort.length > 160) throw appError("INVALID", "Add a metric, unit, and audience or cohort for the reported result.");
+      if (!Number.isFinite(outcome.value) || outcome.value < 0 || outcome.value > 1_000_000_000_000) throw appError("INVALID", "Reported outcome value must be a finite nonnegative number.");
+      if (outcome.measureType === "count" && !Number.isSafeInteger(outcome.value)) throw appError("INVALID", "Count outcomes must be whole numbers.");
+      if (outcome.measureType === "rate" && (outcome.value > 1 || !Number.isSafeInteger(outcome.denominator) || (outcome.denominator ?? 0) < 1)) throw appError("INVALID", "Rate outcomes must be between 0 and 1 and include a whole-number denominator.");
+      if (outcome.denominator !== undefined && (!Number.isSafeInteger(outcome.denominator) || outcome.denominator < 1)) throw appError("INVALID", "An outcome denominator must be a positive whole number.");
+      if (outcome.comparisonValue !== undefined && (!Number.isFinite(outcome.comparisonValue) || outcome.comparisonValue < 0 || outcome.comparisonValue > 1_000_000_000_000)) throw appError("INVALID", "Comparison value must be a finite nonnegative number.");
+      if ((outcome.comparisonValue === undefined) !== (outcome.comparisonLabel === undefined) || (outcome.comparisonLabel !== undefined && (!outcome.comparisonLabel.trim() || outcome.comparisonLabel.length > 80))) throw appError("INVALID", "Give a comparison value and its label together, or leave both blank.");
+      if (!Number.isSafeInteger(outcome.periodStart) || !Number.isSafeInteger(outcome.periodEnd) || outcome.periodStart > outcome.periodEnd || outcome.periodEnd > Date.now()) throw appError("INVALID", "Outcome dates must be valid, in order, and cannot end in the future.");
+      cleanOutcome = { ...outcome, metric: outcome.metric.trim().slice(0, 120), unit: outcome.unit.trim().slice(0, 30), cohort: outcome.cohort.trim().slice(0, 160), comparisonLabel: outcome.comparisonLabel?.trim().slice(0, 80) };
+    }
+    const prior = await ctx.db.query("customAgentFeedback").withIndex("by_run_user", (q) => q.eq("workflowRunId", run._id).eq("userId", user._id)).unique();
+    const cleanNote = note?.trim().slice(0, 800) || undefined;
+    const now = Date.now();
+    const outcomePatch = outcome === undefined ? {} : outcome === null ? { outcome: undefined } : { outcome: cleanOutcome };
+    if (prior) await ctx.db.patch(prior._id, { rating, note: cleanNote, minutesSaved, ...outcomePatch, updatedAt: now });
+    else await ctx.db.insert("customAgentFeedback", { orgId: org._id, customAgentId: run.customAgentId, workflowRunId: run._id, userId: user._id, rating, note: cleanNote, minutesSaved, ...(cleanOutcome ? { outcome: cleanOutcome } : {}), evidenceKind: "member_reported", createdAt: now, updatedAt: now });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "custom_agent.outcome_rated", subjectType: "workflowRun", subjectId: run._id, summary: `Recorded ${rating === "helpful" ? "helpful" : "needs work"} feedback for a specialist run${minutesSaved === undefined ? "; time saved left unknown." : `; member reported ${minutesSaved} minutes saved.`}${cleanOutcome ? ` A member-reported ${cleanOutcome.metric} result was recorded for its stated cohort and period.` : ""}` });
+  },
+});
+
+/** Record a workspace member's usefulness report for a finished built-in agent run. */
+export const rateBuiltInAgentRun = mutation({
+  args: { slug: v.string(), runId: v.id("workflowRuns"), rating: v.union(v.literal("helpful"), v.literal("needs_work")), note: v.optional(v.string()) },
+  handler: async (ctx, { slug, runId, rating, note }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
+    const run = assertSameOrg(await ctx.db.get(runId), org._id, "specialist run");
+    const archetypeId = run.agentArchetypeSnapshot?.id ?? run.agentArchetypeId;
+    if (run.customAgentId || !archetypeId || !["verified", "failed", "uncertain", "canceled"].includes(run.status)) {
+      throw appError("INVALID", "Rate a finished built-in specialist run.");
+    }
+    if (!AGENT_ARCHETYPE_BY_ID.has(archetypeId)) throw appError("INVALID", "This built-in specialist role is no longer available.");
+    const prior = await ctx.db.query("builtInAgentFeedback").withIndex("by_run_user", (q) => q.eq("workflowRunId", run._id).eq("userId", user._id)).unique();
+    const cleanNote = redactFeedback(note?.trim().slice(0, 800) ?? "", [org.name], { keepNumbers: true }) || undefined;
+    const now = Date.now();
+    if (prior) await ctx.db.patch(prior._id, { rating, note: cleanNote, updatedAt: now });
+    else await ctx.db.insert("builtInAgentFeedback", { orgId: org._id, agentArchetypeId: archetypeId, workflowRunId: run._id, userId: user._id, rating, note: cleanNote, evidenceKind: "member_reported", createdAt: now, updatedAt: now });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "built_in_agent.usefulness_rated", subjectType: "workflowRun", subjectId: run._id, summary: `Recorded ${rating === "helpful" ? "helpful" : "needs work"} feedback for a built-in specialist run.` });
+  },
+});
+
+/** Let the current member restore their own rating in a future UI. */
+export const builtInAgentRunFeedback = query({
+  args: { slug: v.string(), runId: v.id("workflowRuns") },
+  handler: async (ctx, { slug, runId }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "view");
+    const run = assertSameOrg(await ctx.db.get(runId), org._id, "specialist run");
+    if (!run.agentArchetypeSnapshot && !run.agentArchetypeId) return null;
+    const feedback = await ctx.db.query("builtInAgentFeedback").withIndex("by_run_user", (q) => q.eq("workflowRunId", run._id).eq("userId", user._id)).unique();
+    return feedback ? { rating: feedback.rating, note: feedback.note ?? null, updatedAt: feedback.updatedAt } : null;
+  },
+});
+
+/** Record one member-reported outcome measure for a finished built-in specialist run. */
+export const reportBuiltInAgentOutcome = mutation({
+  args: {
+    slug: v.string(),
+    runId: v.id("workflowRuns"),
+    metric: v.string(),
+    measureType: v.union(v.literal("count"), v.literal("rate"), v.literal("currency"), v.literal("duration")),
+    unit: v.string(),
+    value: v.number(),
+    denominator: v.optional(v.number()),
+    comparisonValue: v.optional(v.number()),
+    comparisonDenominator: v.optional(v.number()),
+    comparisonLabel: v.optional(v.string()),
+    cohort: v.string(),
+    periodStart: v.number(),
+    periodEnd: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "chat");
+    const run = assertSameOrg(await ctx.db.get(args.runId), org._id, "specialist run");
+    const archetypeId = run.agentArchetypeSnapshot?.id ?? run.agentArchetypeId;
+    if (run.customAgentId || !archetypeId || !["verified", "uncertain"].includes(run.status)) {
+      throw appError("INVALID", "Report outcomes for a finished built-in specialist run.");
+    }
+    if (!AGENT_ARCHETYPE_BY_ID.has(archetypeId)) throw appError("INVALID", "This built-in specialist role is no longer available.");
+
+    const now = Date.now();
+    const metric = redactFeedback(args.metric.trim().slice(0, 100), [org.name], { keepNumbers: true });
+    const unit = redactFeedback(args.unit.trim().slice(0, 30), [org.name], { keepNumbers: true });
+    const cohort = redactFeedback(args.cohort.trim().slice(0, 120), [org.name], { keepNumbers: true });
+    const comparisonLabel = args.comparisonLabel ? redactFeedback(args.comparisonLabel.trim().slice(0, 80), [org.name], { keepNumbers: true }) : undefined;
+    const metricKey = metric.toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    const finite = (value: number) => Number.isFinite(value);
+    const validNumber = (value: number) => finite(value) && (args.measureType === "currency" || value >= 0);
+    const validRateDenominator = (value: number | undefined) => Number.isSafeInteger(value) && (value ?? 0) > 0;
+    if (!metricKey || metric.length < 2 || !unit || !cohort || !validNumber(args.value)) throw appError("INVALID", "Enter a metric, unit, cohort, and a valid observed value.");
+    if (args.measureType === "count" && !Number.isSafeInteger(args.value)) throw appError("INVALID", "Count outcomes must be whole numbers.");
+    if (args.measureType === "rate" && (args.value < 0 || args.value > 1 || !validRateDenominator(args.denominator))) throw appError("INVALID", "Rate outcomes must be between 0 and 1 and include a positive whole-number denominator.");
+    if (args.measureType !== "rate" && args.denominator !== undefined) throw appError("INVALID", "Only rate outcomes use a denominator.");
+    if (args.measureType !== "rate" && args.comparisonDenominator !== undefined) throw appError("INVALID", "Only rate comparisons use a denominator.");
+    if (args.comparisonValue !== undefined) {
+      if (!validNumber(args.comparisonValue) || !comparisonLabel) throw appError("INVALID", "A comparison needs a valid value and a label for the comparison period or group.");
+      if (args.measureType === "count" && !Number.isSafeInteger(args.comparisonValue)) throw appError("INVALID", "Count comparisons must be whole numbers.");
+      if (args.measureType === "rate" && (args.comparisonValue < 0 || args.comparisonValue > 1 || !validRateDenominator(args.comparisonDenominator))) throw appError("INVALID", "Rate comparisons must be between 0 and 1 and include a positive whole-number denominator.");
+    } else if (args.comparisonDenominator !== undefined || comparisonLabel) {
+      throw appError("INVALID", "Provide a comparison value before adding comparison details.");
+    }
+    if (!Number.isSafeInteger(args.periodStart) || !Number.isSafeInteger(args.periodEnd) || args.periodStart >= args.periodEnd || args.periodEnd > now || args.periodEnd - args.periodStart > 366 * 86_400_000) {
+      throw appError("INVALID", "Use a completed measurement period no longer than one year.");
+    }
+
+    const prior = await ctx.db.query("builtInAgentOutcomeReports")
+      .withIndex("by_run_user_metric", (q) => q.eq("workflowRunId", run._id).eq("userId", user._id).eq("metricKey", metricKey))
+      .unique();
+    const record = {
+      orgId: org._id,
+      agentArchetypeId: archetypeId,
+      workflowRunId: run._id,
+      userId: user._id,
+      metricKey,
+      metric,
+      measureType: args.measureType,
+      unit,
+      value: args.value,
+      ...(args.denominator !== undefined ? { denominator: args.denominator } : {}),
+      ...(args.comparisonValue !== undefined ? { comparisonValue: args.comparisonValue } : {}),
+      ...(args.comparisonDenominator !== undefined ? { comparisonDenominator: args.comparisonDenominator } : {}),
+      ...(comparisonLabel ? { comparisonLabel } : {}),
+      cohort,
+      periodStart: args.periodStart,
+      periodEnd: args.periodEnd,
+      evidenceKind: "member_reported" as const,
+      updatedAt: now,
+    };
+    if (prior) await ctx.db.patch(prior._id, record);
+    else await ctx.db.insert("builtInAgentOutcomeReports", { ...record, createdAt: now });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "built_in_agent.outcome_reported", subjectType: "workflowRun", subjectId: run._id, summary: `Recorded a member-reported ${metric.slice(0, 80)} outcome for a built-in specialist run.` });
+  },
+});
+
+/** Return only the current member's outcome reports for one built-in specialist run. */
+export const builtInAgentRunOutcomes = query({
+  args: { slug: v.string(), runId: v.id("workflowRuns") },
+  handler: async (ctx, { slug, runId }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "view");
+    const run = assertSameOrg(await ctx.db.get(runId), org._id, "specialist run");
+    if (run.customAgentId || !(run.agentArchetypeSnapshot ?? run.agentArchetypeId)) return [];
+    const reports = await ctx.db.query("builtInAgentOutcomeReports")
+      .withIndex("by_run_user_metric", (q) => q.eq("workflowRunId", run._id).eq("userId", user._id))
+      .take(20);
+    return reports.map(({ metricKey: _metricKey, orgId: _orgId, userId: _userId, ...report }) => ({ ...report, source: "workspace_member_report" as const }));
+  },
+});
+
 /**
  * "Make it happen" on a play (REQ-UX-03): the request is built here from the
  * stored play, found by plan and play ID, never from text the page assembled.
@@ -202,13 +425,58 @@ export const startPlay = mutation({
   handler: async (ctx, { slug, strategyId, playId }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
     const s = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan");
-    const play = ((s.expert?.plays ?? []) as { id?: string; name: string; oneLiner: string; audience: string; hook: string; climbosCanDo: string }[]).find((p) => p.id === playId);
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    const goal = await ctx.db.query("goals").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active")).first();
+    const businessFactVersions = business ? await currentBusinessFactVersions(ctx, business._id) : [];
+    const brand = business ? await ctx.db.query("brandProfiles").withIndex("by_business", (q) => q.eq("businessId", business._id)).first() : null;
+    const connectedCapabilities = await currentConnectedCapabilities(ctx, org._id);
+    const marketChangeVersions = await currentMarketChangeVersions(ctx, org._id);
+    const staleInputs = planStaleInputs(s, business, goal, businessFactVersions, brand, connectedCapabilities, marketChangeVersions);
+    if (staleInputs.ownerEconomics) throw appError("INVALID", "Your confirmed business numbers changed after this plan was created. Refresh the plan before starting this play.");
+    if (staleInputs.lifecycleStage) throw appError("INVALID", "Your owner-reported business stage changed after this plan was created. Refresh the plan before starting this play.");
+    if (staleInputs.funnel) throw appError("INVALID", "Your owner-reported funnel measurements changed after this plan was created. Refresh the plan before starting this play.");
+    if (staleInputs.goal) throw appError("INVALID", "Your active growth goal or budget changed after this plan was created. Refresh the plan before starting this play.");
+    if (staleInputs.businessProfile) throw appError("INVALID", "Your business profile changed after this plan was created. Refresh the plan before starting this play.");
+    if (staleInputs.businessFacts) throw appError("INVALID", "Your confirmed business facts changed or are due for review. Refresh the plan before starting this play.");
+    if (staleInputs.brandGuidance) throw appError("INVALID", "Your brand guidance changed after this plan was created. Refresh the plan before starting this play.");
+    if (staleInputs.capabilities) throw appError("INVALID", "Your connected tools changed after this plan was created. Refresh the plan before starting this play.");
+    if (staleInputs.businessResearch) throw appError("INVALID", "Your business and audience research changed after this plan was created. Refresh the plan before starting this play.");
+    if (staleInputs.marketChanges) throw appError("INVALID", "A monitored competitor page changed after this plan was created. Refresh the plan before starting this play.");
+    if (staleInputs.cashTiming) throw appError("INVALID", "Your growth cash reserve or customer payment delay changed after this plan was created. Refresh the plan before starting this play.");
+    const play = (expertPlaysOf(s.expert) as { id?: string; name: string; oneLiner: string; audience: string; hook: string; climbosCanDo: string }[]).find((p) => p.id === playId);
     if (!play) throw appError("NOT_FOUND", "That play isn't in this plan.");
     return postChat(ctx, org, user._id, `Start the "${play.name}" play (plan v${s.version}, play ${playId}): ${play.oneLiner} Audience: ${play.audience}. Hook: ${play.hook}. Prepare everything your team can do for it now: ${play.climbosCanDo}`);
   },
 });
 
-async function postChat(ctx: MutationCtx, org: Doc<"organizations">, userId: Id<"users">, text: string): Promise<{ messageId: Id<"chatMessages"> }> {
+/** Starts a contextual conversation from a saved opportunity, using stored plan data rather than browser-authored context. */
+export const askAboutOpportunity = mutation({
+  args: { slug: v.string(), strategyId: v.id("strategies"), opportunityId: v.string(), question: v.optional(v.string()) },
+  handler: async (ctx, { slug, strategyId, opportunityId, question }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
+    const strategy = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan");
+    const play = (expertPlaysOf(strategy.expert) as { id?: string; name: string; oneLiner: string; audience?: string; hook?: string; firstActionToday?: string; biggestUnknown?: string; model?: { reachSource?: { source?: string; ref?: string; quote?: string }; steps?: { source?: string; ref?: string; quote?: string }[] } }[]).find((item) => item.id === opportunityId);
+    if (!play) throw appError("NOT_FOUND", "That opportunity isn't in this plan.");
+    const ownerQuestion = question?.trim().slice(0, 500) || "Why is this a good opportunity for my business?";
+    const evidence = [play.model?.reachSource, ...(play.model?.steps ?? [])]
+      .filter((item): item is { source?: string; ref?: string; quote?: string } => Boolean(item))
+      .slice(0, 6)
+      .map((item) => `${item.source ?? "unlabeled"}${item.ref ? ` · ${item.ref.slice(0, 240)}` : ""}${item.quote ? ` · “${item.quote.slice(0, 180)}”` : ""}`);
+    const text = [
+      `Help me understand this growth opportunity from plan v${strategy.version}. Plan text is prior analysis, not new proof. Preserve whether each input is owner-reported, research, benchmark, planned, or assumed. Do not start work or change the plan unless I explicitly ask.`,
+      `Opportunity: ${play.name}. ${play.oneLiner}`,
+      play.audience ? `Audience: ${play.audience}` : "",
+      play.hook ? `Approach: ${play.hook}` : "",
+      play.firstActionToday ? `Suggested first step: ${play.firstActionToday}` : "",
+      play.biggestUnknown ? `Biggest unknown: ${play.biggestUnknown}` : "",
+      evidence.length ? `Saved evidence basis (provenance · reference · quote):\n${evidence.join("\n")}` : "No evidence references were saved with this opportunity.",
+      `My question: ${ownerQuestion}`,
+    ].filter(Boolean).join("\n");
+    return postChat(ctx, org, user._id, text);
+  },
+});
+
+async function postChat(ctx: MutationCtx, org: Doc<"organizations">, userId: Id<"users">, text: string, customAgentId?: Id<"customAgents">): Promise<{ messageId: Id<"chatMessages"> }> {
   const clean = text.trim().slice(0, 2000);
   if (!clean) throw appError("INVALID", "Type a message first.");
   const now = Date.now();
@@ -219,17 +487,17 @@ async function postChat(ctx: MutationCtx, org: Doc<"organizations">, userId: Id<
   if (recent.filter((m) => m.author === "user").length >= 6) {
     throw appError("RATE_LIMITED", "That's a lot of messages in a minute. Give the team a moment to catch up.");
   }
-  const messageId = await ctx.db.insert("chatMessages", { orgId: org._id, author: "user", userId, text: clean, roles: [], actionCardIds: [], status: "thinking", createdAt: now });
+  const messageId = await ctx.db.insert("chatMessages", { orgId: org._id, author: "user", userId, text: clean, customAgentId, roles: [], actionCardIds: [], status: "thinking", createdAt: now });
   const plan = planJob("chat_intent");
   let runId;
   try {
-    runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: plan.title, roles: plan.roles, input: { messageId }, steps: plan.steps, meters: plan.meters, createdBy: userId, isFixture: org.kind === "demo" });
+    runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: plan.title, roles: plan.roles, input: { messageId, customAgentId }, steps: plan.steps, meters: plan.meters, createdBy: userId, isFixture: org.kind === "demo", customAgentId });
   } catch (e) {
     await ctx.db.patch(messageId, { status: "failed" });
     throw e;
   }
   await ctx.db.patch(messageId, { runId });
-  await ctx.scheduler.runAfter(0, internal.jobs.chatIntent, { runId, messageId, text: clean });
+  await ctx.scheduler.runAfter(0, internal.jobs.chatIntent, { runId, messageId, text: clean, customAgentId });
   return { messageId };
 }
 
@@ -240,12 +508,27 @@ export const runCard = mutation({
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const card = assertSameOrg(await ctx.db.get(cardId), org._id, "action");
     if (card.status !== "proposed") throw appError("INVALID", "This action has already been handled.");
+    await assertCardDependenciesComplete(ctx, card, org._id);
     if (card.kind === "note") {
-      await ctx.db.patch(card._id, { status: "done", updatedAt: Date.now() });
+      const now = Date.now();
+      await ctx.db.patch(card._id, { status: "done", updatedAt: now });
+      if (card.sourceRunId) {
+        const source = await ctx.db.get(card.sourceRunId);
+        if (source?.orgId === org._id && source.firstActionAt === undefined) {
+          await ctx.db.patch(source._id, { firstActionAt: now, updatedAt: now });
+        }
+      }
       return { runId: null };
     }
     const runId = await startCardRun(ctx, { org, card, userId: user._id, auto: false });
     if (!runId) throw appError("UNAVAILABLE", card.blockedReason ?? "ClimbOS can't prepare this automatically yet.");
+    if (card.sourceRunId) {
+      const source = await ctx.db.get(card.sourceRunId);
+      const now = Date.now();
+      if (source?.orgId === org._id && source.firstActionAt === undefined) {
+        await ctx.db.patch(source._id, { firstActionAt: now, updatedAt: now });
+      }
+    }
     return { runId };
   },
 });
@@ -300,37 +583,43 @@ export const pauseAll = mutation({
     await ctx.db.patch(org._id, { emergencyStop: { active: true, at: now, by: user._id, reason: reason?.slice(0, 300) } });
     let canceledRuns = 0;
     for (const status of ["proposed", "cost_reserved", "needs_approval", "approved", "scheduled"] as const) {
-      const runs = await ctx.db
-        .query("workflowRuns")
-        .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", status))
-        .take(100);
-      for (const r of runs) {
-        await finishRunImpl(ctx, { runId: r._id, status: "canceled", error: "Paused by owner", userMessage: "Canceled because all activity was paused." });
-        canceledRuns++;
+      while (true) {
+        const runs = await ctx.db
+          .query("workflowRuns")
+          .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", status))
+          .take(100);
+        if (!runs.length) break;
+        for (const r of runs) {
+          await finishRunImpl(ctx, { runId: r._id, status: "canceled", error: "Paused by owner", userMessage: "Canceled because all activity was paused." });
+          canceledRuns++;
+        }
       }
     }
-    const scheduled = await ctx.db
-      .query("artifacts")
-      .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "scheduled"))
-      .take(300);
-    for (const a of scheduled) await ctx.db.patch(a._id, { status: "approved", scheduledFor: undefined, updatedAt: now });
-    const activeCampaigns = (
-      await ctx.db
-        .query("campaigns")
-        .withIndex("by_org", (q) => q.eq("orgId", org._id))
-        .take(200)
-    ).filter((c) => c.status === "active");
-    for (const c of activeCampaigns) {
-      await ctx.scheduler.runAfter(0, internal.ads.pauseCampaignForStop, { campaignId: c._id });
+    let unscheduled = 0;
+    while (true) {
+      const scheduled = await ctx.db
+        .query("artifacts")
+        .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "scheduled"))
+        .take(100);
+      if (!scheduled.length) break;
+      for (const artifact of scheduled) {
+        await ctx.db.patch(artifact._id, { status: "approved", scheduledFor: undefined, updatedAt: now });
+        unscheduled++;
+      }
     }
+    const activeCampaigns = (await ctx.db.query("campaigns").withIndex("by_org", (q) => q.eq("orgId", org._id)).collect()).filter((campaign) => campaign.status === "active");
+    for (const campaign of activeCampaigns) {
+      await ctx.scheduler.runAfter(0, internal.ads.pauseCampaignForStop, { campaignId: campaign._id });
+    }
+    const campaignsPausing = activeCampaigns.length;
     await audit(ctx, {
       orgId: org._id,
       actorType: "user",
       actorId: user._id,
       action: "workspace.paused",
-      summary: `Paused all activity: ${canceledRuns} job(s) canceled, ${scheduled.length} post(s) unscheduled, ${activeCampaigns.length} ad campaign pause(s) requested.`,
+      summary: `Paused all activity: ${canceledRuns} job(s) canceled, ${unscheduled} post(s) unscheduled, ${campaignsPausing} ad campaign pause(s) requested.`,
     });
-    return { canceledRuns, unscheduled: scheduled.length, campaignsPausing: activeCampaigns.length };
+    return { canceledRuns, unscheduled, campaignsPausing };
   },
 });
 
@@ -390,6 +679,9 @@ export const plan = query({
       .query("goals")
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
       .first();
+    const businessFactVersions = business ? await currentBusinessFactVersions(ctx, business._id) : [];
+    const brand = business ? await ctx.db.query("brandProfiles").withIndex("by_business", (q) => q.eq("businessId", business._id)).first() : null;
+    const connectedCapabilities = strategy ? await currentConnectedCapabilities(ctx, org._id) : [];
     const experiments = strategy
       ? (
           await ctx.db
@@ -399,12 +691,155 @@ export const plan = query({
             .take(20)
         ).filter((e) => e.strategyId === strategy._id)
       : [];
-    const facts = [];
+    const facts: {
+      id: Id<"businessFacts">;
+      statement: string;
+      category: string;
+      provenance: Doc<"businessFacts">["provenance"];
+      reviewState: Doc<"businessFacts">["reviewState"];
+      confidence: Doc<"businessFacts">["confidence"];
+      verifiedAt: number | null;
+      sourceCount: number;
+      sourceIds: Id<"factSources">[];
+    }[] = [];
     for (const id of (strategy?.sourceFactIds ?? []).slice(0, 40)) {
       const f = await ctx.db.get(id);
-      if (f && f.orgId === org._id) facts.push({ id: f._id, statement: f.statement, category: f.category });
+      if (f && f.orgId === org._id && f.businessId === business?._id) {
+        facts.push({ id: f._id, statement: f.statement, category: f.category, provenance: f.provenance, reviewState: f.reviewState, confidence: f.confidence, verifiedAt: f.verifiedAt ?? null, sourceCount: f.sourceIds.length, sourceIds: f.sourceIds.slice(0, 4) });
+      }
     }
+    const sourceIds = [...new Set(facts.flatMap((fact) => fact.sourceIds))].slice(0, 120);
+    const sourceDocs = await Promise.all(sourceIds.map((id) => ctx.db.get(id)));
+    const sourceById = new Map(sourceDocs.flatMap((source) => source && source.orgId === org._id && source.businessId === business?._id ? [[String(source._id), source] as const] : []));
+    const factViews = facts.map((fact) => {
+      const linkedSources = fact.sourceIds.flatMap((id) => {
+        const source = sourceById.get(String(id));
+        if (!source) return [];
+        const excerptAvailable = source.expiresAt > Date.now();
+        return [{
+          id: source._id,
+          kind: source.kind,
+          url: source.url ?? null,
+          title: source.title ?? null,
+          excerpt: excerptAvailable ? source.excerpt ?? null : null,
+          excerptExpired: Boolean(source.excerpt && !excerptAvailable),
+          fetchedAt: source.fetchedAt,
+          status: source.status,
+        }];
+      });
+      return {
+        id: fact.id,
+        statement: fact.statement,
+        category: fact.category,
+        provenance: fact.provenance,
+        reviewState: fact.reviewState,
+        confidence: fact.confidence,
+        verifiedAt: fact.verifiedAt,
+        sources: linkedSources,
+        sourceDetailsUnavailableCount: fact.sourceIds.length - linkedSources.length,
+        additionalSourceCount: Math.max(0, fact.sourceCount - fact.sourceIds.length),
+      };
+    });
     const strategyRun = await latestRunOfKind(ctx, org._id, "strategy");
+    const evidenceRecord = strategy
+      ? await ctx.db.query("planEvidence").withIndex("by_strategy", (q) => q.eq("strategyId", strategy._id)).first()
+      : null;
+    let researchEvidence: { agentId: string; notes: string; sources: { url: string; title?: string; pageReportedDates?: { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }[] }[]; retrievedAt?: number; truncated: boolean }[] = [];
+    if (evidenceRecord && evidenceRecord.orgId === org._id && evidenceRecord.strategyId === strategy?._id && await sha256Hex(evidenceRecord.data) === evidenceRecord.hash) {
+      try {
+        const parsed = JSON.parse(evidenceRecord.data) as { research?: unknown; truncated?: unknown };
+        const researchWasTruncated = Array.isArray(parsed.truncated) && parsed.truncated.some((item) => typeof item === "string" && item.startsWith("research "));
+        if (Array.isArray(parsed.research)) {
+          researchEvidence = parsed.research.slice(0, 4).flatMap((item) => {
+            if (!item || typeof item !== "object") return [];
+            const entry = item as { agentId?: unknown; notes?: unknown; sources?: unknown; retrievedAt?: unknown };
+            if (typeof entry.agentId !== "string" || typeof entry.notes !== "string") return [];
+            const notes = entry.notes.slice(0, 6_000);
+            const sources = Array.isArray(entry.sources) ? entry.sources.slice(0, 6).flatMap((source) => {
+              if (!source || typeof source !== "object") return [];
+              const value = source as { url?: unknown; title?: unknown; pageReportedDates?: unknown };
+              if (typeof value.url !== "string" || !/^https?:\/\//i.test(value.url) || value.url.length > 2_000) return [];
+              const pageReportedDates = Array.isArray(value.pageReportedDates) ? value.pageReportedDates.flatMap((item) => {
+                if (!item || typeof item !== "object") return [];
+                const date = item as { kind?: unknown; date?: unknown; source?: unknown };
+                if ((date.kind !== "published" && date.kind !== "updated") || (date.source !== "json_ld" && date.source !== "meta") || typeof date.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date.date) || !Number.isFinite(Date.parse(`${date.date}T00:00:00Z`)) || new Date(`${date.date}T00:00:00Z`).toISOString().slice(0, 10) !== date.date) return [];
+                return [{ kind: date.kind, date: date.date, source: date.source } as { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }];
+              }).slice(0, 20) : [];
+              return [{ url: value.url, ...(typeof value.title === "string" ? { title: value.title.slice(0, 200) } : {}), ...(pageReportedDates.length ? { pageReportedDates } : {}) }];
+            }) : [];
+            const retrievedAt = typeof entry.retrievedAt === "number" && Number.isFinite(entry.retrievedAt) && entry.retrievedAt >= 0 && entry.retrievedAt <= Date.now() ? entry.retrievedAt : undefined;
+            return [{ agentId: entry.agentId.slice(0, 80), notes, sources, ...(retrievedAt !== undefined ? { retrievedAt } : {}), truncated: researchWasTruncated || entry.notes.length > notes.length }];
+          });
+        }
+      } catch {
+        // An unreadable or outdated evidence snapshot is not shown as verified.
+      }
+    }
+    const expert = strategy?.expert ? readExpertPlan(strategy.expert) : null;
+    const savedDecisions = savedPlanDecisionSummary(expert);
+    const currentEconomics = expert?.economics
+      ? { ...applyOwnerEconomics(expert.economics as Economics, business?.unitEconomics), currency: goal?.currency ?? business?.currency }
+      : null;
+    const currentPlays = Array.isArray(expert?.plays) && expert.plays.length && currentEconomics
+      ? withForecasts({ economics: currentEconomics as Economics, plays: expert.plays as PlayLike[] })
+      : null;
+    const marketChangeVersions = await currentMarketChangeVersions(ctx, org._id);
+    const staleInputs = strategy ? planStaleInputs(strategy, business, goal, businessFactVersions, brand, connectedCapabilities, marketChangeVersions) : { ownerEconomics: false, lifecycleStage: false, funnel: false, goal: false, businessProfile: false, businessFacts: false, brandGuidance: false, capabilities: false, businessResearch: false, marketChanges: false, cashTiming: false };
+    const requiresRefresh = staleInputs.ownerEconomics || staleInputs.lifecycleStage || staleInputs.funnel || staleInputs.goal || staleInputs.businessProfile || staleInputs.businessFacts || staleInputs.brandGuidance || staleInputs.capabilities || staleInputs.businessResearch || staleInputs.marketChanges || staleInputs.cashTiming;
+    // Owner edits immediately refresh every deterministic derived number in the returned plan view.
+    const portfolioLimits = {
+      ...(goal ? { monthlyBudgetUsd: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency) } : {}),
+      ...(business?.unitEconomics?.monthlyGrowthCashUsd !== undefined ? { monthlyGrowthCashUsd: business.unitEconomics.monthlyGrowthCashUsd } : {}),
+      ...(business?.unitEconomics?.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: business.unitEconomics.ownerHoursPerWeek } : {}),
+      ...(business?.unitEconomics?.newCustomersPerMonth !== undefined ? { newCustomersPerMonth: business.unitEconomics.newCustomersPerMonth } : {}),
+      horizonDays: goal?.horizonDays,
+    };
+    const currentPortfolio = currentPlays ? selectPortfolio(currentPlays, portfolioLimits) : null;
+    const savedPlayForecasts = Array.isArray(expert?.plays) ? expert.plays as Record<string, unknown>[] : [];
+    const currentPlayForecasts = currentPlays?.plays as (Record<string, unknown> & { p10?: number; p50?: number; p90?: number })[] | undefined;
+    const planImpact = requiresRefresh && currentPlayForecasts?.length
+      ? {
+          currency: goal?.currency ?? org.currency,
+          plays: currentPlayForecasts.map((after) => {
+            const id = typeof after.id === "string" ? after.id : typeof after.name === "string" ? after.name : "";
+            const before = savedPlayForecasts.find((play) => (typeof play.id === "string" ? play.id : typeof play.name === "string" ? play.name : "") === id);
+            const value = (play: Record<string, unknown> | undefined, key: "p10" | "p50" | "p90") => typeof play?.[key] === "number" && Number.isFinite(play[key]) ? play[key] as number : null;
+            const beforeMath = before && expert?.economics && before.model ? playMaths(before as unknown as PlayLike, expert.economics as Economics) : null;
+            const afterMath = currentEconomics && after.model ? playMaths(after as unknown as PlayLike, currentEconomics as Economics) : null;
+            return {
+              id,
+              name: typeof after.name === "string" ? after.name : id,
+              before: { p10: value(before, "p10"), p50: value(before, "p50"), p90: value(before, "p90") },
+              after: { p10: value(after, "p10"), p50: value(after, "p50"), p90: value(after, "p90") },
+              economicsBefore: beforeMath ? { cacUsd: beforeMath.cacUsd, paybackMonths: beforeMath.paybackMonths, profitable: beforeMath.profitable } : null,
+              economicsAfter: afterMath ? { cacUsd: afterMath.cacUsd, paybackMonths: afterMath.paybackMonths, profitable: afterMath.profitable } : null,
+            };
+          }),
+          portfolio: {
+            before: expert?.portfolio && typeof expert.portfolio === "object" ? {
+              selected: Array.isArray((expert.portfolio as Record<string, unknown>).selected) ? (expert.portfolio as { selected: string[] }).selected : [],
+              customers: typeof (expert.portfolio as Record<string, unknown>).customers === "number" ? (expert.portfolio as { customers: number }).customers : null,
+              cashSpendUsdMonth: typeof (expert.portfolio as Record<string, unknown>).cashSpendUsdMonth === "number" ? (expert.portfolio as { cashSpendUsdMonth: number }).cashSpendUsdMonth : null,
+            } : null,
+            after: currentPortfolio ? { selected: currentPortfolio.selected, customers: currentPortfolio.customers, cashSpendUsdMonth: currentPortfolio.cashSpendUsdMonth } : null,
+          },
+        }
+      : null;
+    const portfolioComparisons = currentPlays ? {
+      horizonDays: goal?.horizonDays ?? 90,
+      modeledPlayCount: currentPlays.plays.filter((play) => play.model?.steps?.length).length,
+      baselinePlayCount: currentPlays.plays.filter((play) => play.model?.steps?.some((step) => step.baselineRate !== undefined)).length,
+      playAttributed: selectPortfolio(currentPlays, { ...portfolioLimits, objective: "play_attributed" }),
+      modeledIncremental: selectPortfolio(currentPlays, { ...portfolioLimits, objective: "modeled_incremental" }),
+      cashTiming: currentPortfolio?.selected.length ? (() => {
+        // A reserve saved in another currency is not converted: it stays unknown until re-entered.
+        const saved = business?.growthCashTiming;
+        const planCurrency = (currentEconomics as Economics).currency ?? "USD";
+        const { reserveCurrencyMismatch, ...inputs } = growthCashInputsIn(growthCashTimingInput(saved), planCurrency);
+        const timing = growthCashTiming(currentPlays, currentPortfolio.selected, { horizonDays: goal?.horizonDays, ...inputs });
+        return timing ? { ...timing, selected: currentPortfolio.selected, currency: planCurrency, reserveCurrencyMismatch, ownerInputsUpdatedAt: saved?.updatedAt ?? null } : null;
+      })() : null,
+    } : null;
     return {
       role,
       canApprove: ["owner", "admin", "reviewer"].includes(role),
@@ -423,26 +858,39 @@ export const plan = query({
             measurementPlan: strategy.measurementPlan,
             reviewDate: strategy.reviewDate,
             createdAt: strategy.createdAt,
+            savedDecisions,
             // Owner-confirmed unit economics apply on read: cost per customer and payback update at once.
-            expert: strategy.expert ? { ...strategy.expert, economics: strategy.expert.economics ? { currency: goal?.currency ?? business?.currency, ...applyOwnerEconomics(strategy.expert.economics as Economics, business?.unitEconomics) } : undefined } : null,
+            expert: expert ? {
+              ...expert,
+              ...(currentEconomics ? { economics: currentEconomics } : {}),
+              ...(currentPlays ? { plays: currentPlays.plays } : {}),
+              ...(currentPortfolio ? { portfolio: currentPortfolio } : {}),
+              ...(portfolioComparisons ? { portfolioComparisons } : {}),
+              ...(currentPlays ? { goalGap: playsGoalGap(currentPlays, goal ? { target: goal.target, horizonDays: goal.horizonDays } : null) } : {}),
+            } : null,
           }
         : null,
+      planImpact,
       /** Up to 3 questions whose answers would change this plan's verdicts (computed, not written by the model). */
-      questions: strategy?.expert?.plays?.length && strategy.expert.economics ? decisionQuestions({ economics: strategy.expert.economics as Economics, plays: strategy.expert.plays as PlayLike[] }, business?.unitEconomics, 3, { serviceBusiness: isServiceBusiness(business?.acquisition?.types, business?.businessType), horizonDays: goal?.horizonDays }) : [],
+      questions: Array.isArray(expert?.plays) && expert.plays.length && expert.economics ? decisionQuestions({ economics: expert.economics as Economics, plays: expert.plays as PlayLike[] }, business?.unitEconomics, 3, { serviceBusiness: isServiceBusiness(business?.acquisition?.types, business?.businessType), horizonDays: goal?.horizonDays }) : [],
       unitEconomics: business?.unitEconomics ?? null,
       funnel: business?.funnel ?? null,
       /** The owner answered after this plan was written: numbers are current, the text may not be. */
-      answersNewerThanPlan: Boolean(strategy && business?.unitEconomics && business.unitEconomics.updatedAt > strategy.createdAt),
+      answersNewerThanPlan: staleInputs.ownerEconomics,
+      /** Material owner inputs that differ from the plan snapshot; signal refresh before execution. */
+      staleInputs: { ...staleInputs, requiresRefresh },
       strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null, createdAt: strategyRun.createdAt } : null,
       /** When the newest version was written (a failed refresh after it is shown). */
       latestVersionAt: latest?.createdAt ?? null,
       /** The other version worth seeing: a newer one waiting or sent back, or the approved one while viewing it. */
       otherVersion: other ? { id: other._id, version: other.version, status: other.status, createdAt: other.createdAt } : null,
-      planEstimateMicros: estimateJobMicros(planJob("strategy")),
-      experiments: experiments.map((e) => ({ id: e._id, name: e.name, hypothesis: e.hypothesis, population: e.population, method: e.method, primaryMetric: e.primaryMetric, guardrails: e.guardrails, durationDays: e.durationDays, stoppingRule: e.stoppingRule, status: e.status, analyses: (e.analyses ?? []).map(({ reviewedBy: _by, ...x }) => x) })),
+      planEstimateMicros: estimateJobMicros(planJob("strategy", {}, { fixture: org.kind === "demo" }), { fixture: org.kind === "demo" }),
+      experiments: experiments.map((e) => ({ id: e._id, name: e.name, hypothesis: e.hypothesis, population: e.population, method: e.method, assignmentUnit: e.assignmentUnit, assignmentMethod: e.assignmentMethod, primaryMetric: e.primaryMetric, primaryMetricType: e.primaryMetricType, denominator: e.denominator, baselineRate: e.baselineRate, baselineProvenance: e.baselineProvenance, baselineEvidenceRefs: e.baselineEvidenceRefs, baselineBasis: e.baselineBasis, minimumMeaningfulEffect: e.minimumMeaningfulEffect, plannedSamplePerArm: e.plannedSamplePerArm, plannedSampleBasis: e.plannedSampleBasis, guardrails: e.guardrails, durationDays: e.durationDays, stoppingRule: e.stoppingRule, status: e.status, analyses: (e.analyses ?? []).map(({ reviewedBy: _by, ...x }) => x) })),
       insights: business?.insights ?? null,
-      sources: facts,
+      sources: factViews,
+      researchEvidence,
       currency: org.currency,
+      businessCurrency: business?.currency ?? org.currency,
     };
   },
 });
@@ -457,6 +905,8 @@ export const setUnitEconomics = mutation({
     ownerHourUsd: v.optional(v.number()),
     ownerHoursPerWeek: v.optional(v.number()),
     newCustomersPerMonth: v.optional(v.number()),
+    monthlyGrowthCashUsd: v.optional(v.number()),
+    segmentEconomics: v.optional(v.array(v.object({ segment: v.string(), currency: v.string(), periodDays: v.number(), customers: v.number(), netRevenue: v.number(), variableCosts: v.number(), costBoundary: v.string(), unknownCosts: v.optional(v.array(v.string())), strategicValueNote: v.optional(v.string()) }))),
     ranges: v.optional(v.object({ revenue: v.optional(v.object({ low: v.number(), high: v.number() })), margin: v.optional(v.object({ low: v.number(), high: v.number() })), churn: v.optional(v.object({ low: v.number(), high: v.number() })) })),
   },
   handler: async (ctx, { slug, ranges, ...vals }) => {
@@ -472,6 +922,24 @@ export const setUnitEconomics = mutation({
     check(vals.ownerHourUsd, 1, 5_000, "Hourly value");
     check(vals.ownerHoursPerWeek, 0, 80, "Hours a week");
     check(vals.newCustomersPerMonth, 0, 100_000, "New customers a month");
+    check(vals.monthlyGrowthCashUsd, 0, 100_000_000, "Monthly growth cash");
+    if (vals.segmentEconomics) {
+      if (vals.segmentEconomics.length > 8) throw appError("INVALID", "Compare up to eight customer groups at a time.");
+      const names = new Set<string>();
+      for (const item of vals.segmentEconomics) {
+        const key = item.segment.trim().toLocaleLowerCase("en-US");
+        if (!key || item.segment.length > 80 || names.has(key)) throw appError("INVALID", "Each customer group needs a unique name of 1–80 characters.");
+        names.add(key);
+        if (!/^[A-Z]{3}$/.test(item.currency)) throw appError("INVALID", "Use a three-letter currency code for each segment total.");
+        if (!Number.isSafeInteger(item.periodDays) || item.periodDays < 1 || item.periodDays > 3650) throw appError("INVALID", "Segment comparison period must be 1–3650 days.");
+        if (!Number.isSafeInteger(item.customers) || item.customers < 1 || item.customers > 10_000_000) throw appError("INVALID", "Segment customer count must be a whole number above zero.");
+        check(item.netRevenue, 0, 1_000_000_000, "Segment net revenue");
+        check(item.variableCosts, 0, 1_000_000_000, "Segment variable costs");
+        if (item.costBoundary.trim().length < 12 || item.costBoundary.length > 240) throw appError("INVALID", "Describe the variable costs included, or name the missing costs.");
+        if ((item.unknownCosts?.length ?? 0) > 8 || item.unknownCosts?.some((cost) => !cost.trim() || cost.length > 100)) throw appError("INVALID", "List up to eight specific unknown costs.");
+        if (item.strategicValueNote && item.strategicValueNote.length > 240) throw appError("INVALID", "Strategic value note must be 240 characters or less.");
+      }
+    }
     // A range must be low < high and pass the same checks; its value is the midpoint (set by the client, re-checked here).
     const pairs = { revenue: ["revenuePerCustomerMonthUsd", 0.01, 1_000_000, "Revenue range"], margin: ["grossMargin", 0.01, 1, "Margin range"], churn: ["monthlyChurn", 0.001, 0.95, "Churn range"] } as const;
     for (const [k, [field, lo, hi, what]] of Object.entries(pairs)) {
@@ -490,6 +958,8 @@ export const setUnitEconomics = mutation({
       ownerHourUsd: vals.ownerHourUsd ?? prev?.ownerHourUsd,
       ownerHoursPerWeek: vals.ownerHoursPerWeek ?? prev?.ownerHoursPerWeek,
       newCustomersPerMonth: vals.newCustomersPerMonth ?? prev?.newCustomersPerMonth,
+      monthlyGrowthCashUsd: vals.monthlyGrowthCashUsd ?? prev?.monthlyGrowthCashUsd,
+      segmentEconomics: vals.segmentEconomics ?? prev?.segmentEconomics,
       // A new single number replaces its old range; a new range replaces the old one.
       ...(() => {
         const keep = { ...(prev?.ranges ?? {}) } as Record<string, { low: number; high: number }>;
@@ -506,23 +976,57 @@ export const setUnitEconomics = mutation({
   },
 });
 
+/** Owner-reported growth cash timing for the plan's cash view and the next plan; changes mark v22+ plans stale. `null` clears a value. */
+export const setGrowthCashTiming = mutation({
+  args: { slug: v.string(), reserve: v.optional(v.union(v.number(), v.null())), paymentLagDays: v.optional(v.union(v.number(), v.null())) },
+  handler: async (ctx, { slug, reserve, paymentLagDays }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    if (!business) throw appError("NOT_FOUND", "Add your business first.");
+    if (reserve === undefined && paymentLagDays === undefined) throw appError("INVALID", "Enter a reserve or a payment delay.");
+    if (reserve !== undefined && reserve !== null && !(Number.isFinite(reserve) && reserve >= 0 && reserve <= 1_000_000_000)) throw appError("INVALID", "Growth cash reserve looks wrong.");
+    if (paymentLagDays !== undefined && paymentLagDays !== null && !(Number.isInteger(paymentLagDays) && paymentLagDays >= 0 && paymentLagDays <= 365)) throw appError("INVALID", "Payment delay must be a whole number of days from 0 to 365.");
+    const currency = business.currency ?? org.currency;
+    const prev = business.growthCashTiming;
+    // A reserve kept from another currency is dropped rather than relabelled.
+    const keptReserve = prev?.reserveMinor !== undefined && prev.currency === currency ? prev.reserveMinor : undefined;
+    const reserveMinor = reserve === null ? undefined : reserve === undefined ? keptReserve : majorToMinor(reserve, currency);
+    const lag = paymentLagDays === null ? undefined : paymentLagDays ?? prev?.paymentLagDays;
+    await ctx.db.patch(business._id, {
+      growthCashTiming: reserveMinor === undefined && lag === undefined ? undefined : {
+        ...(reserveMinor !== undefined ? { reserveMinor } : {}),
+        currency,
+        ...(lag !== undefined ? { paymentLagDays: lag } : {}),
+        provenance: "owner_reported" as const,
+        updatedBy: user._id,
+        updatedAt: Date.now(),
+      },
+    });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "business.growth_cash_timing", subjectType: "business", subjectId: business._id, summary: "Growth cash timing updated." });
+  },
+});
+
 /** The owner's last-period funnel: the plan's diagnosis reads the weakest link from it (shared/agents/diagnosis.ts). */
 export const setFunnel = mutation({
-  args: { slug: v.string(), periodDays: v.number(), visitors: v.optional(v.number()), leads: v.optional(v.number()), activated: v.optional(v.number()), newCustomers: v.optional(v.number()), activationKind: v.optional(v.union(v.literal("value"), v.literal("habit"), v.literal("setup"), v.literal("unknown"))), signupKind: v.optional(v.union(v.literal("free_plan"), v.literal("trial_no_card"), v.literal("trial_card"), v.literal("unknown"))) },
-  handler: async (ctx, { slug, periodDays, activationKind, signupKind, ...counts }) => {
+  args: { slug: v.string(), periodDays: v.number(), visitors: v.optional(v.number()), leads: v.optional(v.number()), qualifiedLeads: v.optional(v.number()), qualificationDefinition: v.optional(v.string()), activated: v.optional(v.number()), newCustomers: v.optional(v.number()), activationKind: v.optional(v.union(v.literal("value"), v.literal("habit"), v.literal("setup"), v.literal("unknown"))), signupKind: v.optional(v.union(v.literal("free_plan"), v.literal("trial_no_card"), v.literal("trial_card"), v.literal("unknown"))) },
+  handler: async (ctx, { slug, periodDays, activationKind, signupKind, qualificationDefinition, ...counts }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     if (!business) throw appError("NOT_FOUND", "Add your business first.");
     if (!(periodDays >= 7 && periodDays <= 365)) throw appError("INVALID", "Pick a period between 7 and 365 days.");
     for (const [k, n] of Object.entries(counts)) if (n !== undefined && !(Number.isInteger(n) && n >= 0 && n <= 100_000_000)) throw appError("INVALID", `${k} must be a whole number.`);
-    const { visitors, leads, activated, newCustomers } = counts;
+    const { visitors, leads, qualifiedLeads, activated, newCustomers } = counts;
+    const qualificationRule = qualificationDefinition?.trim();
+    if (qualificationRule && (qualificationRule.length < 5 || qualificationRule.length > 160 || /[\r\n]/.test(qualificationRule))) throw appError("INVALID", "The qualification rule must be one short sentence (5–160 characters).");
+    if (qualifiedLeads !== undefined && (leads === undefined || !qualificationRule)) throw appError("INVALID", "Enter the total leads and a clear rule for what counts as qualified before adding a qualified-lead count.");
+    if (qualificationRule && qualifiedLeads === undefined) throw appError("INVALID", "Add the qualified-lead count for the period using this rule.");
     // Each step can't exceed the one before it (when both are given).
-    const order = [visitors, leads, activated, newCustomers];
+    const order = qualifiedLeads === undefined ? [visitors, leads, activated, newCustomers] : [visitors, leads, qualifiedLeads, activated, newCustomers];
     for (let i = 1; i < order.length; i++) {
       const prev = order.slice(0, i).reverse().find((x) => x !== undefined);
-      if (order[i] !== undefined && prev !== undefined && order[i]! > prev) throw appError("INVALID", "Each step should be smaller than the one before (visitors ≥ leads ≥ activated ≥ new customers).");
+      if (order[i] !== undefined && prev !== undefined && order[i]! > prev) throw appError("INVALID", "Each step should be smaller than the one before (visitors ≥ leads ≥ qualified leads ≥ first value ≥ paying customers).");
     }
-    await ctx.db.patch(business._id, { funnel: { periodDays, ...counts, ...(activationKind ? { activationKind } : {}), ...(signupKind ? { signupKind } : {}), updatedAt: Date.now() } });
+    await ctx.db.patch(business._id, { funnel: { periodDays, ...counts, ...(qualificationRule ? { qualificationDefinition: qualificationRule } : {}), ...(activationKind ? { activationKind } : {}), ...(signupKind ? { signupKind } : {}), updatedAt: Date.now() } });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "business.funnel", subjectType: "business", subjectId: business._id, summary: "Funnel numbers updated." });
   },
 });
@@ -533,8 +1037,30 @@ export const decidePlan = mutation({
     const { org, user, role } = await requireOrgAccess(ctx, { slug }, "approve");
     const s = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan");
     if (s.status !== "needs_approval") throw appError("INVALID", "This plan isn't waiting for approval.");
-    // A plan that failed ClimbOS's hard checks can be read and sent back, never approved into work.
-    if (decision === "approve" && !canDriveWork((s.expert as { quality?: { state: QualityState } } | undefined)?.quality)) throw appError("INVALID", "This plan didn't pass ClimbOS checks, so it can't start work. Refresh the plan or send it back.");
+    if (decision === "approve") {
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+      const goal = await ctx.db.query("goals").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active")).first();
+      const businessFactVersions = business ? await currentBusinessFactVersions(ctx, business._id) : [];
+      const brand = business ? await ctx.db.query("brandProfiles").withIndex("by_business", (q) => q.eq("businessId", business._id)).first() : null;
+      const connectedCapabilities = await currentConnectedCapabilities(ctx, org._id);
+      const marketChangeVersions = await currentMarketChangeVersions(ctx, org._id);
+      const staleInputs = planStaleInputs(s, business, goal, businessFactVersions, brand, connectedCapabilities, marketChangeVersions);
+      if (staleInputs.ownerEconomics) throw appError("INVALID", "Your confirmed business numbers changed after this plan was created. Refresh the plan before approving it.");
+      if (staleInputs.lifecycleStage) throw appError("INVALID", "Your owner-reported business stage changed after this plan was created. Refresh the plan before approving it.");
+      if (staleInputs.funnel) throw appError("INVALID", "Your owner-reported funnel measurements changed after this plan was created. Refresh the plan before approving it.");
+      if (staleInputs.goal) throw appError("INVALID", "Your active growth goal or budget changed after this plan was created. Refresh the plan before approving it.");
+      if (staleInputs.businessProfile) throw appError("INVALID", "Your business profile changed after this plan was created. Refresh the plan before approving it.");
+      if (staleInputs.businessFacts) throw appError("INVALID", "Your confirmed business facts changed or are due for review. Refresh the plan before approving it.");
+      if (staleInputs.brandGuidance) throw appError("INVALID", "Your brand guidance changed after this plan was created. Refresh the plan before approving it.");
+      if (staleInputs.capabilities) throw appError("INVALID", "Your connected tools changed after this plan was created. Refresh the plan before approving it.");
+      if (staleInputs.businessResearch) throw appError("INVALID", "Your business and audience research changed after this plan was created. Refresh the plan before approving it.");
+      if (staleInputs.marketChanges) throw appError("INVALID", "A monitored competitor page changed after this plan was created. Refresh the plan before approving it.");
+    if (staleInputs.cashTiming) throw appError("INVALID", "Your growth cash reserve or customer payment delay changed after this plan was created. Refresh the plan before approving it.");
+    }
+    // Hard failures and unresolved material fact conflicts must not reach execution.
+    const planQuality = (s.expert as { quality?: { state: QualityState; conflicts?: string[] } } | undefined)?.quality;
+    if (decision === "approve" && planQuality?.conflicts?.length) throw appError("INVALID", "This plan depends on conflicting business information. Confirm the current facts and refresh the plan before approving it.");
+    if (decision === "approve" && !canDriveWork(planQuality)) throw appError("INVALID", "This plan didn't pass ClimbOS checks, so it can't start work. Refresh the plan or send it back.");
     const now = Date.now();
     // The decision follows the current approval rules: who may approve, and a binding that hasn't expired.
     const policy = await ctx.db
@@ -589,6 +1115,141 @@ export const decidePlan = mutation({
     return work;
   },
 });
+
+/** Approval and play launch must use the economics the plan actually analyzed. */
+function hasNewerOwnerEconomics(
+  strategy: Pick<Doc<"strategies">, "createdAt" | "expert">,
+  owner: Doc<"businesses">["unitEconomics"],
+): boolean {
+  if (!owner) return false;
+  const snapshot = strategy.expert?.snapshot as { ownerEconomics?: OwnerEconomics } | undefined;
+  if (snapshot?.ownerEconomics) {
+    const keys = ["revenuePerCustomerMonthUsd", "grossMargin", "monthlyChurn", "ownerHourUsd", "ownerHoursPerWeek", "newCustomersPerMonth", "monthlyGrowthCashUsd", "segmentEconomics", "ranges"] as const;
+    return keys.some((key) => JSON.stringify(snapshot.ownerEconomics?.[key]) !== JSON.stringify(owner[key]));
+  }
+  return owner.updatedAt > strategy.createdAt;
+}
+
+function planStaleInputs(
+  strategy: Pick<Doc<"strategies">, "createdAt" | "expert" | "goalId">,
+  business: Pick<Doc<"businesses">, "unitEconomics" | "lifecycleStage" | "funnel" | "name" | "website" | "socialUrls" | "businessType" | "industryBusinessTypeId" | "summary" | "acquisition" | "currency" | "insights" | "growthCashTiming"> | null,
+  goal: Pick<Doc<"goals">, "_id" | "kind" | "statement" | "horizonDays" | "monthlyAdBudgetMinor" | "currency" | "target"> | null,
+  businessFactVersions: { id: string; updatedAt: number; reviewSuggested?: boolean }[] = [],
+  brand: Pick<Doc<"brandProfiles">, "voice" | "toneWords" | "colors" | "doNots" | "learnedRules" | "socialHumor" | "socialTrendPolicy"> | null,
+  connectedCapabilities: string[] = [],
+  marketChangeVersions: { id: string; at: number }[] = [],
+): { ownerEconomics: boolean; lifecycleStage: boolean; funnel: boolean; goal: boolean; businessProfile: boolean; businessFacts: boolean; brandGuidance: boolean; capabilities: boolean; businessResearch: boolean; marketChanges: boolean; cashTiming: boolean } {
+  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid"; rationale: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; capabilities?: string[]; growthCashTiming?: unknown } | undefined;
+  const savedStage = snapshot?.businessLifecycleStage?.stage ?? null;
+  const currentStage = business?.lifecycleStage?.stage ?? null;
+  const savedFunnel = funnelDecisionValues(snapshot?.businessFunnel);
+  const currentFunnel = funnelDecisionValues(business?.funnel);
+  const hasFunnelSnapshot = (snapshot?.snapshotVersion ?? 0) >= 7;
+  const hasGoalSnapshot = (snapshot?.snapshotVersion ?? 0) >= 8;
+  const hasProfileAndFactSnapshot = (snapshot?.snapshotVersion ?? 0) >= 9;
+  const hasBrandSnapshot = (snapshot?.snapshotVersion ?? 0) >= 10;
+  const hasOwnerAcquisitionTypeSnapshot = (snapshot?.snapshotVersion ?? 0) >= 11;
+  const hasOwnerAcquisitionDimensionSnapshot = (snapshot?.snapshotVersion ?? 0) >= 12;
+  const hasOwnerChannelPreferenceSnapshot = (snapshot?.snapshotVersion ?? 0) >= 13;
+  const hasBusinessResearchSnapshot = (snapshot?.snapshotVersion ?? 0) >= 14;
+  const hasMarketChangeSnapshot = (snapshot?.snapshotVersion ?? 0) >= 15;
+  // Snapshots before v22 were not given cash timing, so they are not compared with it.
+  const hasCashTimingSnapshot = (snapshot?.snapshotVersion ?? 0) >= 22;
+  const hasFactFreshnessSnapshot = (snapshot?.snapshotVersion ?? 0) >= 21;
+  const ownerAcquisitionDimensions = Object.fromEntries(
+    Object.entries(business?.acquisition?.dims as Record<string, { value: string; source: string }> | undefined ?? {})
+      .filter(([, value]) => value?.source === "owner")
+      .map(([key, value]) => [key, value.value])
+      .sort(([a], [b]) => a.localeCompare(b)),
+  );
+  const ownerChannelPreferences = [...(business?.acquisition?.channelPreferences ?? [])]
+    .map(({ channelId, preference, rationale }) => ({ channelId, preference, rationale }))
+    .sort((a, b) => a.channelId.localeCompare(b.channelId));
+  return {
+    ownerEconomics: hasNewerOwnerEconomics(strategy, business?.unitEconomics),
+    // Re-saving the same stage is not a material decision-input change.
+    lifecycleStage: snapshot ? savedStage !== currentStage : Boolean(currentStage && (business?.lifecycleStage?.updatedAt ?? 0) > strategy.createdAt),
+    // Compare decision values, not timestamps; legacy snapshots fall back to the saved input's update time.
+    funnel: hasFunnelSnapshot ? JSON.stringify(savedFunnel) !== JSON.stringify(currentFunnel) : Boolean(business?.funnel && business.funnel.updatedAt > strategy.createdAt),
+    // Goals are replaced when edited; legacy plans fall back to their bound goal ID.
+    goal: hasGoalSnapshot ? JSON.stringify(goalDecisionValues(snapshot?.goalInput)) !== JSON.stringify(goalDecisionValues(goal)) : !goal || String(strategy.goalId) !== String(goal._id),
+    businessProfile: (hasProfileAndFactSnapshot && canonicalJson(snapshot?.businessProfile as never) !== canonicalJson(businessProfileValues(business) as never)) || (hasOwnerAcquisitionTypeSnapshot && canonicalJson(snapshot?.ownerAcquisitionTypes as never) !== canonicalJson((business?.acquisition?.typesSource === "owner" ? [...business.acquisition.types].sort() : null) as never)) || (hasOwnerAcquisitionDimensionSnapshot && canonicalJson(snapshot?.ownerAcquisitionDimensions as never) !== canonicalJson(ownerAcquisitionDimensions as never)) || (hasOwnerChannelPreferenceSnapshot && canonicalJson(snapshot?.ownerChannelPreferences as never) !== canonicalJson(ownerChannelPreferences as never)),
+    businessFacts: hasProfileAndFactSnapshot && (hasFactFreshnessSnapshot
+      ? canonicalJson(snapshot?.businessFactVersions as never) !== canonicalJson(businessFactVersions as never)
+      : canonicalJson((snapshot?.businessFactVersions ?? []).map(({ id, updatedAt }) => ({ id, updatedAt })) as never) !== canonicalJson(businessFactVersions.map(({ id, updatedAt }) => ({ id, updatedAt })) as never) || businessFactVersions.some((fact) => fact.reviewSuggested)),
+    brandGuidance: hasBrandSnapshot && canonicalJson(snapshot?.brandProfile as never) !== canonicalJson(brandProfileValues(brand) as never),
+    capabilities: Array.isArray(snapshot?.capabilities) && canonicalJson([...snapshot.capabilities].sort() as never) !== canonicalJson([...connectedCapabilities].sort() as never),
+    businessResearch: hasBusinessResearchSnapshot && (snapshot?.businessResearchAt ?? null) !== (business?.insights?.generatedAt ?? null),
+    marketChanges: hasMarketChangeSnapshot && canonicalJson(snapshot?.marketChangeVersions as never) !== canonicalJson(marketChangeVersions as never),
+    cashTiming: hasCashTimingSnapshot && canonicalJson((snapshot?.growthCashTiming ?? null) as never) !== canonicalJson(growthCashTimingInput(business?.growthCashTiming) as never),
+  };
+}
+
+async function currentMarketChangeVersions(ctx: QueryCtx | MutationCtx, orgId: Id<"organizations">): Promise<{ id: string; at: number }[]> {
+  return (await ctx.db.query("competitorChanges").withIndex("by_org_at", (q) => q.eq("orgId", orgId)).order("desc").take(8))
+    .map((change) => ({ id: String(change._id), at: change.at }));
+}
+
+async function currentConnectedCapabilities(ctx: QueryCtx | MutationCtx, orgId: Id<"organizations">): Promise<string[]> {
+  return (await ctx.db.query("connections").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(50))
+    .filter((connection) => connection.status === "connected")
+    .map((connection) => connection.provider)
+    .sort();
+}
+
+function businessProfileValues(business: Pick<Doc<"businesses">, "name" | "website" | "socialUrls" | "businessType" | "industryBusinessTypeId" | "summary" | "acquisition" | "currency"> | null): unknown {
+  if (!business) return null;
+  return {
+    name: business.name,
+    website: business.website ?? null,
+    socialUrls: [...business.socialUrls].sort(),
+    businessType: business.businessType,
+    industryBusinessTypeId: business.industryBusinessTypeId ?? null,
+    summary: business.summary ?? null,
+    currency: business.currency ?? null,
+  };
+}
+
+function brandProfileValues(brand: Pick<Doc<"brandProfiles">, "voice" | "toneWords" | "colors" | "doNots" | "approvedExamples" | "learnedRules" | "socialHumor" | "socialTrendPolicy"> | null): unknown {
+  if (!brand) return null;
+  return {
+    voice: brand.voice,
+    toneWords: [...brand.toneWords],
+    colors: [...brand.colors],
+    doNots: [...brand.doNots],
+    ...(brand.approvedExamples?.length ? { approvedExamples: [...brand.approvedExamples] } : {}),
+    ...(brand.socialHumor ? { socialHumor: brand.socialHumor } : {}),
+    ...(brand.socialTrendPolicy ? { socialTrendPolicy: brand.socialTrendPolicy } : {}),
+    learnedRules: (brand.learnedRules ?? []).map(({ text }) => text),
+  };
+}
+
+/** Same bounded, confirmed-fact basis supplied to plan generation, including fresh and review-suggested facts. */
+async function currentBusinessFactVersions(ctx: QueryCtx | MutationCtx, businessId: Id<"businesses">): Promise<{ id: string; updatedAt: number; reviewSuggested: boolean }[]> {
+  const records = await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", businessId)).take(200);
+  const canonical = groupExactDuplicateFacts(
+    records
+      .filter((fact) => fact.reviewState === "confirmed" || fact.reviewState === "edited")
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .map((fact) => ({ ...fact, id: String(fact._id) })),
+  ).map(({ primary }) => primary);
+  const now = Date.now();
+  return canonical.map((fact) => ({
+    id: fact.id,
+    updatedAt: fact.updatedAt,
+    reviewSuggested: factFreshness(fact.category, fact.updatedAt, now, fact.verifiedAt ?? fact.updatedAt).reviewSuggested,
+  })).sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function goalDecisionValues(goal: { _id?: unknown; id?: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target?: unknown } | null | undefined): unknown {
+  if (!goal) return null;
+  return [goal.id ?? String(goal._id), goal.kind, goal.statement, goal.horizonDays, goal.monthlyAdBudgetMinor, goal.currency, goal.target ?? null];
+}
+
+function funnelDecisionValues(funnel: Doc<"businesses">["funnel"] | null | undefined): unknown {
+  if (!funnel) return null;
+  return [funnel.periodDays, funnel.visitors ?? null, funnel.leads ?? null, funnel.qualifiedLeads ?? null, funnel.qualificationDefinition ?? null, funnel.activated ?? null, funnel.newCustomers ?? null, funnel.activationKind ?? null, funnel.signupKind ?? null];
+}
 
 /** Re-bind a plan's approval to the current policy version and a fresh expiry (the owner is deciding now, on this version). */
 async function refreshPlanApproval(ctx: MutationCtx, s: Doc<"strategies">, userId: Id<"users">) {
@@ -694,6 +1355,31 @@ export const wishContext = internalQuery({
   },
 });
 
+/** Internal jobs receive the saved profile only after the caller has tenant-checked it. */
+export const customAgentForRun = internalQuery({
+  args: { orgId: v.id("organizations"), agentId: v.id("customAgents") },
+  handler: async (ctx, { orgId, agentId }) => {
+    const agent = assertSameOrg(await ctx.db.get(agentId), orgId, "specialist");
+    if (agent.status !== "active") return null;
+    const archetype = AGENT_ARCHETYPE_BY_ID.get(agent.archetypeId);
+    if (!archetype) return null;
+    return {
+      id: agent._id,
+      archetypeId: agent.archetypeId,
+      name: agent.name,
+      objective: agent.objective,
+      instructions: agent.instructions,
+      allowedActions: agent.allowedActions,
+      knowledge: agent.knowledge,
+      permission: agent.permission,
+      maxRunCredits: agent.maxRunCredits,
+      maxActionsPerRun: agent.maxActionsPerRun,
+      successMetric: agent.successMetric,
+      role: archetype.role,
+    };
+  },
+});
+
 const ACTIVE_RUN = new Set(["cost_reserved", "preparing", "executing"]);
 
 /** Live "team at work" feed for the top bar: what's running now and what just finished. */
@@ -757,6 +1443,7 @@ export const runDetail = query({
       title: run.title,
       kind: run.kind,
       status: run.status,
+      canReportSpecialistOutcome: !run.customAgentId && Boolean(run.agentArchetypeSnapshot?.id ?? run.agentArchetypeId) && ["verified", "uncertain"].includes(run.status),
       roles: run.roles,
       brief: typeof input.brief === "string" ? input.brief : null,
       createdAt: run.createdAt,
@@ -814,8 +1501,8 @@ export const aiMode = query({
     const view = await aiModeView(ctx, org);
     const fixture = org.kind === "demo";
     const estimates = (kind: "onboarding_research" | "strategy" | "content_ads" | "social_calendar") => ({
-      basic: estimateJobMicros(planJob(kind, {}, { fixture, mode: "basic" })),
-      expert: estimateJobMicros(planJob(kind, {}, { fixture, mode: "expert" })),
+      basic: estimateJobMicros(planJob(kind, {}, { fixture, mode: "basic" }), { fixture }),
+      expert: estimateJobMicros(planJob(kind, {}, { fixture, mode: "expert" }), { fixture }),
     });
     return {
       ...view,

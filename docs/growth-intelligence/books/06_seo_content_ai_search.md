@@ -78,7 +78,7 @@ Google documents a rendering process for JavaScript pages and potential differen
 
 Treat performance as a user and conversion concern with search implications, not a competition to achieve a perfect synthetic score. First fix failures that stop people using the page: unstable layouts near the purchase action, blocked interactions, unreadable text, and excessively delayed primary content. Then evaluate the cost of remaining enhancements. A decorative effect that adds complexity but no useful communication should earn its place through user benefit.
 
-For an animation-heavy Airly-style site, use progressive enhancement. Present the proposition and navigation immediately; layer motion onto those fundamentals. This recommendation is an implementation judgment, not a claim about Airly's current code. In ClimbOS, distinguish a measured production issue from a design heuristic and show the owner why each proposed repair matters.
+For an animation-heavy business site, use progressive enhancement. Present the proposition and navigation immediately; layer motion onto those fundamentals. In ClimbOS, distinguish a measured production issue from a design heuristic and show the owner why each proposed repair matters.
 
 ## 8. Canonicals, duplicates, and information architecture
 

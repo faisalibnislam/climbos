@@ -9,6 +9,7 @@ Condensed from `docs/research/plays/local.md` (researched 2026-10-17). The numbe
 
 - **FTC review rule (16 CFR 465, in force Oct 2024):** no fake or AI-written reviews, no sentiment-conditioned incentives, no undisclosed insider reviews, no company-run "independent" review sites, no suppressing reviews by threats, no bought followers/views. ~$51,744 per violation (2024).
 - **Google review policy is stricter:** no incentive of any kind, even neutral; no gating (asking only happy customers); no discouraging negatives; no requiring or pressuring reviews on the premises; no staff quotas. Yelp forbids soliciting reviews at all.
+- **Fair review invitation:** for each campaign, use one eligible public destination and send every eligible recipient the same neutral invitation, regardless of satisfaction, private feedback, sentiment, or predicted rating. Keep private feedback optional and equally visible; never reward, fabricate, or post a review for a customer.
 - **TCPA/SMS:** marketing texts need prior express written consent; FCC one-to-one rule vacated (Jan 2025) but carriers may still require it. Quiet hours 8am–9pm local; Florida FTSA 8am–8pm, max 3/24h, $500–$1,500 per message; other state mini-TCPAs. Honor STOP; register 10DLC.
 - **CAN-SPAM:** accurate headers/subjects, postal address, opt-out honored within 10 business days; ~$53,088 per email.
 - **Endorsements:** any comp, free meal or fee is disclosed clearly in the post itself (#hosted/#comped are unclear); never ask a creator to hide it; referrers posting codes disclose rewards.
@@ -27,12 +28,12 @@ Condensed from `docs/research/plays/local.md` (researched 2026-10-17). The numbe
 
 ### 1. Compliant review-velocity engine (`review-velocity-engine`) · evidence strong · predictability 4 · leverage 4
 - **Fits:** any business with ~20+ jobs/visits a month, a GBP and customer phones/emails.
-- **Why:** reviews drive ranking and conversion; most happy customers never review unasked.
-- **Do:** 1) GBP short link + QR on invoices, receipts, counter; 2) ask every customer, no pre-screen, by SMS/email at T+2h, one reminder T+3d; 3) staff verbal ask at handoff, never wait while they write; 4) Google first, then vertical sites; Yelp signage only; 5) embed all reviews on site.
+- **Why:** reviews can influence local discovery and buying decisions; available survey figures report that some customers who are open to reviewing do not leave one without an invitation. Use a neutral invitation rather than targeting people by satisfaction.
+- **Do:** 1) GBP short link + QR on invoices, receipts, counter; 2) send every eligible customer the same neutral invitation and public destination, with no sentiment pre-screen; SMS/email only with appropriate permission; 3) one reminder only where the chosen platform and contact rules allow it; 4) ask without pressure and never wait while the customer writes; 5) choose a different eligible platform only for a separate evidence-supported campaign; Yelp signage only; 6) embed all reviews on site.
 - **Expect:** 74% want reviews from the last 3 months; 4.5+-only buyers rose 17%→31%; 96% open to reviewing, 29% did [brightlocal.com]. Email asks 8–15% response [fera.ai]; SMS + verbal 15–30% [practitioner estimate]. +1 Yelp star ≈ +5–9% revenue, independents only [harvardmagazine.com].
 - **Cost / time:** $0–$60/mo; 2–3h + 15 min/wk; first reviews 1–7 days, rating shift 4–8 wks.
 - **Track:** request-to-review %; days since last review (<7); new-review stars.
-- **Rules & risks:** no incentives, gating, quotas or AI/staff reviews; clinics: don't prompt treatment details.
+- **Rules & risks:** same invitation and destination for every eligible recipient; no sentiment filtering, incentives, gating, quotas, fake/AI/staff reviews, or customer review posting; clinics: don't prompt treatment details.
 - **ClimbOS does:** link/QR, auto-asks from job/POS feed, dashboard, no-review alert. Owner: verbal ask, POS hookup.
 
 ### 2. Speed-to-lead + missed-call text-back (`speed-to-lead-missed-call`) · evidence moderate · predictability 4 · leverage 4
@@ -378,7 +379,7 @@ Condensed from `docs/research/plays/local.md` (researched 2026-10-17). The numbe
 ### 36. Nextdoor presence and neighborhood sponsorship (`nextdoor`) · evidence weak · predictability 2 · leverage 3
 - **Fits:** home services, pet care, restaurants, dentists, realtors in active suburbs.
 - **Why:** "who do you recommend?" threads are high-intent neighbor referrals.
-- **Do:** 1) claim free page; 2) ask happy customers to recommend you; 3) owner replies only when relevant, disclosed; 4) test a ZIP sponsorship 60 days with a code; 5) keep only if cost per job beats LSA or mail.
+- **Do:** 1) claim free page; 2) invite customers to recommend you without filtering by satisfaction or private feedback; 3) owner replies only when relevant, disclosed; 4) test a ZIP sponsorship 60 days with a code; 5) keep only if cost per job beats LSA or mail.
 - **Expect:** no published benchmarks.
 - **Cost / time:** ~$32–$150+/mo per ZIP, Local Deals ~$60–$90 [powerdigitalmarketing.com]; 1h/wk; 2–6 wks.
 - **Track:** recommendations; Nextdoor-code calls.

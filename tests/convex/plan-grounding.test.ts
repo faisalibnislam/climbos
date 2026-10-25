@@ -3,6 +3,7 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { planContentHash } from "../../convex/lib/planHash";
 import type { PlanEvidence } from "../../shared/agents/evidence";
+import { sha256Hex } from "../../shared/policy";
 import { asNewUser, setup, type T } from "./helpers";
 
 /** P0 grounding slice: each plan version keeps what it knew, and approval binds to its content. */
@@ -54,6 +55,29 @@ describe("Plan grounding (Books 13/14, P0)", () => {
     expect(q?.unknowns).toEqual(expect.arrayContaining([expect.stringMatching(/Hours/), expect.stringMatching(/email/)]));
   });
 
+  it("returns only hash-verified research notes for the selected tenant and plan", async () => {
+    const t = setup();
+    const w = await workspace(t, "grounded-research-view@example.com");
+    await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const s = await latestStrategy(t, w.orgId);
+    const retrievedAt = Date.now() - 1_000;
+    const data = JSON.stringify({ research: [{ agentId: "growth_plays", notes: "The source describes a published price; customer uptake was not reported.", sources: [{ url: "https://example.com/pricing", title: "Pricing" }], retrievedAt }] });
+    const evidenceId = await t.run(async (ctx) => {
+      const existing = await ctx.db.query("planEvidence").withIndex("by_strategy", (q) => q.eq("strategyId", s._id)).first();
+      if (!existing) throw new Error("Expected plan evidence record");
+      await ctx.db.patch(existing._id, { data, hash: await sha256Hex(data) });
+      return existing._id;
+    });
+
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: s._id });
+    expect(view.researchEvidence).toEqual([{ agentId: "growth_plays", notes: "The source describes a published price; customer uptake was not reported.", sources: [{ url: "https://example.com/pricing", title: "Pricing" }], retrievedAt, truncated: false }]);
+
+    await t.run((ctx) => ctx.db.patch(evidenceId, { hash: "0".repeat(64) }));
+    const invalidView = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: s._id });
+    expect(invalidView.researchEvidence).toEqual([]);
+  });
+
   it("conflicting confirmed facts are kept, briefed and shown on the plan (item 9)", async () => {
     const t = setup();
     const w = await workspace(t, "grounded-conflict@example.com");
@@ -65,21 +89,58 @@ describe("Plan grounding (Books 13/14, P0)", () => {
     await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
     await t.finishAllScheduledFunctions(() => undefined);
     const s = await latestStrategy(t, w.orgId);
-    expect((s.expert as { quality?: { conflicts?: string[] } }).quality?.conflicts).toEqual(["Pro price per month: $19 vs $24"]);
+    const quality = (s.expert as { quality?: { state?: string; reasons?: string[]; conflicts?: string[] } }).quality;
+    expect(quality?.conflicts).toEqual(["Pro price per month: $19 vs $24"]);
+    expect(quality?.state).toBe("needs_input");
+    expect(quality?.reasons?.join(" ")).toMatch(/Confirm the current source and value/);
     const ev = await t.run(async (ctx) => ctx.db.query("planEvidence").withIndex("by_strategy", (q) => q.eq("strategyId", s._id)).first());
     expect((JSON.parse(ev!.data) as PlanEvidence).conflicts?.[0].factIds).toHaveLength(2);
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: s._id, decision: "approve" })).rejects.toThrow(/conflicting business information/);
+  });
+
+  it("keeps overdue confirmed facts out of current evidence and records their provenance for recheck", async () => {
+    const t = setup();
+    const w = await workspace(t, "grounded-stale@example.com");
+    const verifiedAt = Date.now() - 90 * 86_400_000;
+    const factId = await t.run(async (ctx) => {
+      const b = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).first())!;
+      return ctx.db.insert("businessFacts", {
+        orgId: w.orgId,
+        businessId: b._id,
+        category: "pricing",
+        statement: "Pro used to cost $24/month",
+        confidence: "high",
+        reviewState: "confirmed",
+        provenance: "owner_supplied",
+        sourceIds: [],
+        createdAt: verifiedAt,
+        updatedAt: Date.now(),
+        verifiedAt,
+      });
+    });
+    await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const s = await latestStrategy(t, w.orgId);
+    const evidence = await t.run(async (ctx) => ctx.db.query("planEvidence").withIndex("by_strategy", (q) => q.eq("strategyId", s._id)).first());
+    const data = JSON.parse(evidence!.data) as PlanEvidence;
+    expect(data.facts.some((fact) => fact.id === String(factId))).toBe(false);
+    expect(data.staleFacts).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: String(factId), provenance: "owner_supplied", confidence: "high", verifiedAt, daysSinceVerification: expect.any(Number) }),
+    ]));
   });
 
   it("the owner's funnel decides the weak link in code; playbooks are gated and saved with the plan (cycle 2)", async () => {
     const t = setup();
     const w = await workspace(t, "grounded-funnel@example.com");
     await expect(w.client.mutation(api.workspace.setFunnel, { slug: w.slug, periodDays: 30, leads: 10, activated: 50 })).rejects.toThrow(/smaller than the one before/);
-    await w.client.mutation(api.workspace.setFunnel, { slug: w.slug, periodDays: 30, visitors: 2000, leads: 100, activated: 12, newCustomers: 3 });
+    await expect(w.client.mutation(api.workspace.setFunnel, { slug: w.slug, periodDays: 30, leads: 100, qualifiedLeads: 20, activated: 10 })).rejects.toThrow(/clear rule for what counts as qualified/);
+    await w.client.mutation(api.workspace.setFunnel, { slug: w.slug, periodDays: 30, visitors: 2000, leads: 100, qualifiedLeads: 20, qualificationDefinition: "Has a current project and budget", activated: 12, newCustomers: 3 });
     await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
     await t.finishAllScheduledFunctions(() => undefined);
     const s = await latestStrategy(t, w.orgId);
-    const x = s.expert as { constraintDiagnosis?: { constraint: string; basis: string }; playbooks?: { eligible: { id: string }[]; ineligible: { id: string; reasons: string[] }[] }; diagnosis?: string };
+    const x = s.expert as { constraintDiagnosis?: { constraint: string; basis: string; readings: { stage: string; rate: number | null; definition?: string }[] }; playbooks?: { eligible: { id: string }[]; ineligible: { id: string; reasons: string[] }[] }; diagnosis?: string };
     expect(x.constraintDiagnosis).toMatchObject({ basis: "measured" });
+    expect(x.constraintDiagnosis?.readings.find((reading) => reading.stage === "qualification")).toMatchObject({ rate: 0.2, definition: "Has a current project and budget" });
     expect(typeof x.diagnosis).toBe("string");
     expect(x.playbooks?.eligible.length).toBeGreaterThan(0);
     // No consented contacts: lifecycle email isn't eligible.

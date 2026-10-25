@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { budgetBand, EXECUTION_LABEL, FAMILIES, typesFromLegacy, TYPE_BY_KEY } from "../shared/acquisition/library";
+import { budgetBand, BUSINESS_TYPES, CHANNEL_BY_ID, EXECUTION_LABEL, FAMILIES, typesFromLegacy, TYPE_BY_KEY } from "../shared/acquisition/library";
 import {
   DIMENSIONS,
   dimensionsToConfirm,
@@ -11,6 +11,7 @@ import {
   VALUE_LABEL,
   type Adjustment,
   type DimensionKey,
+  type OwnerChannelPreference,
   type SavedAcquisition,
 } from "../shared/acquisition/scoring";
 import { mutation, query } from "./_generated/server";
@@ -45,11 +46,15 @@ export const view = query({
     const strategy = strategies.find((s) => s.status === "approved") ?? strategies[0] ?? null;
     const planned = strategy?.acquisition ?? null;
     // The business's saved classification (owner confirmations) wins over the plan's snapshot.
-    const saved: SavedAcquisition | null = business.acquisition ? { types: business.acquisition.types, dims: business.acquisition.dims } : planned ? { types: planned.profile.types, dims: planned.profile.dims } : null;
+    const saved: SavedAcquisition | null = business.acquisition ? { types: business.acquisition.types, typesSource: business.acquisition.typesSource ?? "inferred", dims: business.acquisition.dims, channelPreferences: business.acquisition.channelPreferences } : planned ? { types: planned.profile.types, typesSource: planned.profile.typesSource ?? "inferred", dims: planned.profile.dims } : null;
     const profile = profileFrom({ saved, legacyType: business.businessType, currency: goal.currency ?? business.currency, budgetMinor: goal.monthlyAdBudgetMinor, horizonDays: goal.horizonDays, legacyTypes: typesFromLegacy, priceUsdMonth: business.unitEconomics?.revenuePerCustomerMonthUsd ?? (planned?.profile as { priceUsdMonth?: number } | undefined)?.priceUsdMonth });
-    // decision_contract plans: the same hard limits as the plan, with today's connections.
+    // Apply saved owner limits consistently on the Channels view; connections stay live.
     const connected = planned?.limits ? (await ctx.db.query("connections").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(50)).filter((c) => c.status === "connected").map((c) => c.provider) : null;
-    const limits = planned?.limits ? { ownerHoursPerWeek: planned.limits.ownerHoursPerWeek ?? undefined, connected } : undefined;
+    const limits = planned?.limits ? {
+      ownerHoursPerWeek: planned.limits.ownerHoursPerWeek ?? undefined,
+      newCustomersPerMonth: business.unitEconomics?.newCustomersPerMonth,
+      connected,
+    } : undefined;
     const rows = scoreChannels(profile, (planned?.adjustments as Adjustment[] | undefined) ?? [], undefined, limits);
     const band = budgetBand(profile.budgetUsd);
     return {
@@ -58,6 +63,8 @@ export const view = query({
       summary: planned?.summary ?? [],
       budget: { usd: profile.budgetUsd, band: band.label, approach: band.approach },
       types: profile.types.map((k) => ({ key: k, label: TYPE_BY_KEY[k]?.label ?? k, regulated: TYPE_BY_KEY[k]?.regulated ?? null })),
+      typesSource: profile.typesSource ?? "inferred",
+      availableTypes: BUSINESS_TYPES.map(({ key, label, category, customer, regulated }) => ({ key, label, category, customer, regulated: regulated ?? null })),
       dimensions: (Object.keys(DIMENSIONS) as DimensionKey[]).map((k) => ({
         key: k,
         label: DIMENSIONS[k].label,
@@ -84,13 +91,38 @@ export const view = query({
         statusLabel: STATUS_LABEL[r.status],
         why: r.why,
         evidence: r.evidence ?? null,
+        evidenceBasis: r.evidenceBasis ?? null,
+        evidenceConfidence: r.evidenceConfidence ?? null,
+        evidenceDate: r.evidenceDate ?? null,
+        sourceUrl: r.sourceUrl ?? null,
+        communityRulesUrl: r.communityRulesUrl ?? null,
+        communityRulesCheckedAt: r.communityRulesCheckedAt ?? null,
+        purpose: r.purpose ?? null,
+        measurementPlan: r.measurementPlan ?? null,
         platform: r.platform ?? null,
         tactic: r.tactic ?? null,
         audience: r.audienceName ?? null,
         caution: r.caution ?? null,
         limits: r.limits ?? [],
+        ownerPreference: r.ownerPreference ?? null,
       })),
     };
+  },
+});
+
+/** The owner confirms the business identities that may enable hard channel eligibility. */
+export const setTypes = mutation({
+  args: { slug: v.string(), types: v.array(v.string()) },
+  handler: async (ctx, { slug, types }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    if (types.length < 1 || types.length > 3 || new Set(types).size !== types.length || types.some((type) => !TYPE_BY_KEY[type])) {
+      throw appError("INVALID", `Choose 1–3 distinct business types from the ${BUSINESS_TYPES.length} available categories.`);
+    }
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    if (!business) throw appError("NOT_FOUND", "Set up your business first.");
+    const prior = business.acquisition;
+    await ctx.db.patch(business._id, { acquisition: { types, typesSource: "owner", dims: prior?.dims ?? {}, channelPreferences: prior?.channelPreferences ?? [], updatedAt: Date.now() } });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "acquisition.types_confirmed", subjectType: "business", subjectId: business._id, summary: `Confirmed ${types.length} business type${types.length === 1 ? "" : "s"} for channel eligibility.` });
   },
 });
 
@@ -108,7 +140,32 @@ export const setDimension = mutation({
     if (!business) throw appError("NOT_FOUND", "Set up your business first.");
     const prior = business.acquisition ?? { types: typesFromLegacy(business.businessType), dims: {}, updatedAt: 0 };
     const dims = { ...(prior.dims as Record<string, unknown>), [k]: { value, confidence: "high", source: "owner" } };
-    await ctx.db.patch(business._id, { acquisition: { types: prior.types, dims, updatedAt: Date.now() } });
+    await ctx.db.patch(business._id, { acquisition: { types: prior.types, typesSource: prior.typesSource ?? "inferred", dims, channelPreferences: prior.channelPreferences ?? [], updatedAt: Date.now() } });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "acquisition.dimension", subjectType: "business", subjectId: business._id, summary: `${DIMENSIONS[k].label}: ${VALUE_LABEL[value] ?? value}` });
+  },
+});
+
+const MAX_CHANNEL_PREFERENCES = 20;
+
+/** Save an owner-reported channel preference as a bounded soft ranking signal. */
+export const setChannelPreference = mutation({
+  args: { slug: v.string(), channelId: v.string(), preference: v.union(v.literal("prefer"), v.literal("avoid"), v.literal("dismissed"), v.literal("irrelevant"), v.literal("clear")), rationale: v.optional(v.string()), sourceUrl: v.optional(v.string()) },
+  handler: async (ctx, { slug, channelId, preference, rationale, sourceUrl }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    if (!CHANNEL_BY_ID[channelId]) throw appError("INVALID", "Choose a channel from the ClimbOS channel list.");
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    if (!business) throw appError("NOT_FOUND", "Set up your business first.");
+    const prior = business.acquisition ?? { types: typesFromLegacy(business.businessType), dims: {}, updatedAt: 0 };
+    const channelPreferences = (prior.channelPreferences ?? []).filter((item) => item.channelId !== channelId) as OwnerChannelPreference[];
+    if (preference !== "clear") {
+      const clean = rationale?.trim().slice(0, 280) ?? "";
+      if (clean.length < 8) throw appError("INVALID", "Add a short reason so this owner-reported preference is useful later.");
+      const cleanSource = sourceUrl?.trim();
+      if (cleanSource && (!/^https:\/\//i.test(cleanSource) || cleanSource.length > 2000)) throw appError("INVALID", "Use a full https:// evidence link or leave it blank.");
+      if (channelPreferences.length >= MAX_CHANNEL_PREFERENCES) throw appError("INVALID", `Keep up to ${MAX_CHANNEL_PREFERENCES} channel preferences; clear one before adding another.`);
+      channelPreferences.push({ channelId, preference, rationale: clean, evidenceDate: new Date().toISOString().slice(0, 10), ...(cleanSource ? { sourceUrl: cleanSource } : {}) });
+    }
+    await ctx.db.patch(business._id, { acquisition: { types: prior.types, typesSource: prior.typesSource ?? "inferred", dims: prior.dims, channelPreferences, updatedAt: Date.now() } });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "acquisition.channel_preference", subjectType: "business", subjectId: business._id, summary: preference === "clear" ? `Cleared owner preference for ${CHANNEL_BY_ID[channelId]!.name}.` : `Marked ${CHANNEL_BY_ID[channelId]!.name} as ${preference}; owner-reported rationale saved.` });
   },
 });

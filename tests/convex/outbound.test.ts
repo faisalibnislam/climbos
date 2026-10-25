@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { api } from "../../convex/_generated/api";
+import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { asNewUser, makePaid, setup, type T } from "./helpers";
 
@@ -66,9 +66,44 @@ describe("outbound", () => {
 
     view = await w.client.query(api.outbound.get, { slug: w.slug });
     expect(view.prospects.find((p) => p.id === view.prospects[0].id)?.stage).toBe("booked");
+    await w.client.mutation(api.outbound.setReplyDisposition, { slug: w.slug, prospectId: view.prospects[0].id, disposition: "qualified" });
     expect(view.bookings).toHaveLength(1);
-    const stored = await t.run(async (ctx) => ctx.db.query("bookings").first());
+    const [stored, prospect] = await t.run(async (ctx) => Promise.all([ctx.db.query("bookings").first(), ctx.db.get(view.prospects[0].id)]));
     expect(stored?.emailCiphertext).not.toContain("ada@");
+    expect(prospect?.replyDisposition).toBe("qualified");
+  });
+
+  it("blocks cold-email edits that drift from the campaign's frozen offer terms", async () => {
+    const t = setup();
+    const w = await workspace(t, "ob-offer-terms@example.com");
+    await w.client.mutation(api.outbound.start, { slug: w.slug, who: "Agencies that build Webflow sites", where: "UK", count: 10 });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    const view = await w.client.query(api.outbound.get, { slug: w.slug });
+    const campaignId = view.campaign!.id as Id<"outboundCampaigns">;
+    await t.run(async (ctx) => ctx.db.patch(campaignId, {
+      approvedOfferPlayName: "First-time service offer",
+      approvedOfferTermsSnapshot: [{ playName: "First-time service offer", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [100, 95], allowedDiscountPercentages: [5], allowedMechanisms: ["discount"], urgencyClaim: null, eligibleAudience: "First-time quote requesters only; exclude existing customers." }],
+    }));
+
+    await expect(w.client.mutation(api.outbound.updateStep, {
+      slug: w.slug, campaignId, index: 0, subject: "A service option", body: "For first-time quote requesters only, the service costs $89 USD.",
+    })).rejects.toThrow(/approved|offer|price/i);
+    await w.client.mutation(api.outbound.updateStep, {
+      slug: w.slug, campaignId, index: 0, subject: "A service option", body: "For first-time quote requesters only, the service costs $95 USD.",
+    });
+    const saved = await w.client.query(api.outbound.get, { slug: w.slug, campaignId });
+    expect(saved.campaign?.sequence[0].body).toContain("$95 USD");
+    await makePaid(t, w.orgId);
+    await t.run(async (ctx) => {
+      const campaign = (await ctx.db.get(campaignId))!;
+      await ctx.db.patch(campaignId, { sequence: campaign.sequence.map((step, index) => index ? step : { ...step, body: "For first-time quote requesters only, the service costs $89 USD." }) });
+    });
+    await expect(w.client.mutation(api.outboundSending.start, {
+      slug: w.slug, campaignId, senderName: "Sam", company: "Wire Co", address: "1 High Street, London E1 1AA",
+    })).rejects.toThrow(/approved|offer|price/i);
+    const campaign = await t.run(async (ctx) => ctx.db.get(campaignId));
+    expect(campaign?.sending).toBeUndefined();
+    expect(await t.run(async (ctx) => ctx.db.query("outboundSends").withIndex("by_campaign", (q) => q.eq("campaignId", campaignId)).collect())).toHaveLength(0);
   });
 
   it("starts from a wish and links the card to the campaign", async () => {
@@ -95,6 +130,7 @@ describe("outbound", () => {
     const view = await w.client.query(api.outbound.get, { slug: w.slug });
     const other = await workspace(t, "ob-b@example.com");
     await expect(other.client.mutation(api.outbound.setStage, { slug: other.slug, prospectIds: [view.prospects[0].id], stage: "skipped" })).rejects.toThrow();
+    await expect(other.client.mutation(api.outbound.setReplyDisposition, { slug: other.slug, prospectId: view.prospects[0].id, disposition: "qualified" })).rejects.toThrow();
     await expect(other.client.query(api.outbound.get, { slug: w.slug })).rejects.toThrow();
   });
 
@@ -106,7 +142,99 @@ describe("outbound", () => {
     const view = await w.client.query(api.outbound.get, { slug: w.slug });
     expect(view.campaign).toMatchObject({ kind: "creators", status: "review", title: "Find creators" });
     expect(view.prospects.length).toBeGreaterThan(0);
+    expect(view.prospects[0].firstLineEvidenceUrl).toBe(view.prospects[0].contentSamples[0].url);
+    expect(view.prospects[0].firstLine).toContain("grounded in the recent public content");
     const run = await t.run(async (ctx) => ctx.db.query("workflowSteps").collect());
     expect(run.some((s) => s.label.startsWith("Find creators"))).toBe(true);
+  });
+
+  it("stores creator audience and language only when the cited evidence contains the exact values", async () => {
+    const t = setup();
+    const w = await workspace(t, "creator-evidence@example.com");
+    await w.client.mutation(api.outbound.start, { slug: w.slug, kind: "creators", count: 5 });
+    const campaign = await t.run((ctx) => ctx.db.query("outboundCampaigns").first());
+    const profile = "https://www.instagram.com/studio.ana/";
+    await t.mutation(internal.outbound.saveResult, {
+      campaignId: campaign!._id,
+      prospects: {
+        icp: { summary: "A relevant cooking creator", mustHaves: [], disqualifiers: [], triggers: [], decisionMaker: "Creator" },
+        prospects: [{
+          company: "Studio Ana", website: profile, location: "London", sizeBand: "12k followers",
+          why: "Publishes relevant cooking lessons", evidence: [{ url: profile, observation: "12k followers. English language cooking tutorials." }],
+          trigger: "Recent cooking tutorial", fit: 80, timing: 70, contact: "@studio.ana (Instagram)", publicEmail: "",
+          audienceSize: { value: "12k followers", sourceUrl: profile },
+          contentLanguage: { value: "English", sourceUrl: profile },
+          collaborationConcept: "Proposed short cooking tutorial featuring the product; owner and creator have not agreed.",
+        }],
+        excluded: [],
+      },
+      outreach: { sequence: [], firstLines: [{ company: "Studio Ana", line: "I loved your recent post.", evidenceUrl: profile }], ownerNotes: [] },
+    });
+    const view = await w.client.query(api.outbound.get, { slug: w.slug });
+    expect(view.prospects[0]).toMatchObject({
+      audienceSize: { value: "12k followers", sourceUrl: profile },
+      contentLanguage: { value: "English", sourceUrl: profile },
+      collaborationConcept: expect.stringContaining("Proposed"),
+      firstLine: "",
+      firstLineEvidenceUrl: null,
+    });
+    expect(view.campaign?.ownerNotes).toContain("1 creator opener was omitted because no exact content sample was cited. Add a sourced opener before sending.");
+  });
+
+  it("records an append-only creator collaboration lifecycle and returns it as owner-reported context", async () => {
+    const t = setup();
+    const w = await workspace(t, "creator-collaboration@example.com");
+    await w.client.mutation(api.outbound.start, { slug: w.slug, kind: "creators", count: 5 });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    let view = await w.client.query(api.outbound.get, { slug: w.slug });
+    const creator = view.prospects[0];
+    const now = Date.now();
+    await expect(w.client.mutation(api.outbound.recordCreatorCollaboration, {
+      slug: w.slug, prospectId: creator.id, status: "agreed", format: "paid",
+      metric: { name: "Click-through rate", kind: "rate", value: 0.04, unit: "rate", periodStartAt: now - 7 * 86_400_000, periodEndAt: now },
+    })).rejects.toThrow(/denominator/);
+
+    await w.client.mutation(api.outbound.recordCreatorCollaboration, {
+      slug: w.slug, prospectId: creator.id, status: "agreed", format: "paid", agreedValueMinor: 25_000,
+      actualCostMinor: 20_000,
+      metric: { name: "Click-through rate", kind: "rate", value: 0.04, unit: "rate", denominator: 1_000, eligible: 1_500, exposed: 1_000, periodStartAt: now - 7 * 86_400_000, periodEndAt: now, sourceUrl: "https://creator.example/insights" },
+      note: "Owner-entered from the creator's report.",
+    });
+    await w.client.mutation(api.outbound.recordCreatorCollaboration, {
+      slug: w.slug, prospectId: creator.id, status: "content_published", format: "paid", publishedUrl: "https://creator.example/post-1",
+    });
+
+    const history = await w.client.query(api.outbound.creatorCollaborationHistory, { slug: w.slug, prospectId: creator.id });
+    expect(history).toHaveLength(2);
+    expect(history[0]).toMatchObject({ status: "content_published", basis: "owner_reported", basisLabel: "Owner reported; not independently verified" });
+    expect(history[1]).toMatchObject({ status: "agreed", agreedValueMinor: 25_000, actualCostMinor: 20_000, currency: "USD", basis: "owner_reported", metric: { value: 0.04, denominator: 1_000, eligible: 1_500, exposed: 1_000 } });
+    const campaign = await t.run((ctx) => ctx.db.query("outboundCampaigns").first());
+    const context = await t.query(internal.outbound.campaignContext, { campaignId: campaign!._id });
+    expect(context?.collaborationHistory[0]).toMatchObject({ creator: creator.company, status: "content_published", basis: "owner_reported" });
+    expect(await t.run((ctx) => ctx.db.query("outboundSends").collect())).toHaveLength(0);
+
+    await makePaid(t, w.orgId);
+    await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
+    const strategyRun = await t.run(async (ctx) => (await ctx.db.query("workflowRuns").withIndex("by_org_created", (q) => q.eq("orgId", w.orgId)).order("desc").collect()).find((run) => run.kind === "strategy"));
+    expect(strategyRun).toBeTruthy();
+    const strategyContext = await t.query(internal.jobWrites.jobContext, { runId: strategyRun!._id });
+    expect(strategyContext?.creatorOutcomeText).toContain(creator.company);
+    expect(strategyContext?.creatorOutcomeText).toContain("denominator");
+
+    const other = await workspace(t, "creator-collaboration-other@example.com");
+    await makePaid(t, other.orgId);
+    await other.client.mutation(api.orgs.generatePlan, { slug: other.slug });
+    const otherStrategyRun = await t.run(async (ctx) => (await ctx.db.query("workflowRuns").withIndex("by_org_created", (q) => q.eq("orgId", other.orgId)).order("desc").collect()).find((run) => run.kind === "strategy"));
+    const otherStrategyContext = await t.query(internal.jobWrites.jobContext, { runId: otherStrategyRun!._id });
+    expect(otherStrategyContext?.creatorOutcomeText).toBe("");
+
+    await expect(other.client.query(api.outbound.creatorCollaborationHistory, { slug: other.slug, prospectId: creator.id })).rejects.toThrow();
+    await expect(other.client.mutation(api.outbound.recordCreatorCollaboration, { slug: other.slug, prospectId: creator.id, status: "interested" })).rejects.toThrow();
+
+    await w.client.mutation(api.outbound.start, { slug: w.slug, kind: "customers", count: 5 });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    view = await w.client.query(api.outbound.get, { slug: w.slug });
+    expect(view.campaign?.kind).toBe("customers");
+    await expect(w.client.mutation(api.outbound.recordCreatorCollaboration, { slug: w.slug, prospectId: view.prospects[0].id, status: "interested" })).rejects.toThrow(/only available for creator targets/);
   });
 });

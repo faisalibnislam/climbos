@@ -11,8 +11,10 @@ import { useRef, useState } from "react";
 import { Badge, Button, Callout, Card, CardContent, EmptyState, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, buttonClasses, type Tone } from "@/components/ui";
 import { ChannelScorecard } from "@/components/app/plan/ChannelScorecard";
 import { GeneratePlanButton, PlanReviewCard, StrategyRunWatcher } from "@/components/app/plan/PlanActions";
-import { PlanToAirly } from "@/components/app/connections/AirlyApps";
+import { PlanToConnectedApps } from "@/components/app/connections/ConnectedProducts";
 import type { Economics } from "../../../../../shared/agents/economics";
+import { formatMoney } from "../../../../../shared/economics/currency";
+import type { KnowledgeReferenceSet } from "../../../../../shared/knowledge/retrieve";
 import { FunnelNumbers, SharpenPlan } from "@/components/app/plan/SharpenPlan";
 import type { QualityFix, QualityState } from "../../../../../shared/agents/quality";
 import type { Diagnosis } from "../../../../../shared/agents/diagnosis";
@@ -81,6 +83,60 @@ function GoalCard({ goal, slug }: { goal: PlanView["goal"]; slug: string }) {
   );
 }
 
+function PlanImpactSummary({ impact }: { impact: NonNullable<PlanView["planImpact"]> }) {
+  const formatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
+  const changed = impact.plays.filter((play) =>
+    play.before.p10 !== play.after.p10 || play.before.p50 !== play.after.p50 || play.before.p90 !== play.after.p90
+      || Boolean(play.economicsBefore && play.economicsAfter && (play.economicsBefore.cacUsd !== play.economicsAfter.cacUsd || play.economicsBefore.paybackMonths !== play.economicsAfter.paybackMonths || play.economicsBefore.profitable !== play.economicsAfter.profitable)),
+  );
+  const portfolioChanged = impact.portfolio.before && impact.portfolio.after
+    ? impact.portfolio.before.selected.join("\u0000") !== impact.portfolio.after.selected.join("\u0000")
+      || impact.portfolio.before.customers !== impact.portfolio.after.customers
+      || impact.portfolio.before.cashSpendUsdMonth !== impact.portfolio.after.cashSpendUsdMonth
+    : false;
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-3">
+        <div>
+          <h2 className="heading-section">What changed in the modeled outlook</h2>
+          <p className="mt-1 text-sm text-ink-2">The saved play models stay fixed while current unit economics and portfolio limits are recalculated. Changes to your funnel, research, business facts, brand, or tools need a full plan refresh and are not represented here. These are scenarios, not actual results or a refreshed recommendation.</p>
+        </div>
+        {changed.length ? (
+          <div className="flex flex-col gap-2">
+            {changed.map((play) => (
+              <div key={play.id} className="grid gap-1 rounded-[var(--radius-control)] border border-line p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                <p className="min-w-0 text-sm font-medium">{play.name}</p>
+                <p className="text-xs tabular-nums text-ink-2">
+                  P10 / P50 / P90 customers: {play.before.p10 === null ? "—" : formatter.format(play.before.p10)} / {play.before.p50 === null ? "—" : formatter.format(play.before.p50)} / {play.before.p90 === null ? "—" : formatter.format(play.before.p90)}
+                  <span aria-hidden="true"> → </span>
+                  {play.after.p10 === null ? "—" : formatter.format(play.after.p10)} / {play.after.p50 === null ? "—" : formatter.format(play.after.p50)} / {play.after.p90 === null ? "—" : formatter.format(play.after.p90)}
+                  {play.economicsBefore && play.economicsAfter ? (
+                    <span className="block mt-1">
+                      CAC {play.economicsBefore.cacUsd === null ? "unknown" : formatMoney(play.economicsBefore.cacUsd, impact.currency)} → {play.economicsAfter.cacUsd === null ? "unknown" : formatMoney(play.economicsAfter.cacUsd, impact.currency)}
+                      {" · "}payback {play.economicsBefore.paybackMonths === null ? "unknown" : `${formatter.format(play.economicsBefore.paybackMonths)} mo`} → {play.economicsAfter.paybackMonths === null ? "unknown" : `${formatter.format(play.economicsAfter.paybackMonths)} mo`}
+                      {" · "}payback verdict {play.economicsBefore.profitable === null ? "unknown" : play.economicsBefore.profitable ? "within horizon" : "outside horizon"} → {play.economicsAfter.profitable === null ? "unknown" : play.economicsAfter.profitable ? "within horizon" : "outside horizon"}
+                    </span>
+                  ) : null}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : <p className="text-sm text-ink-2">No play forecast changed in the fields this view can recalculate. Other changed inputs may affect the written recommendation after the plan is refreshed.</p>}
+        {impact.portfolio.after ? (
+          <div className="rounded-[var(--radius-control)] bg-surface-2 p-3 text-sm">
+            <p className="font-medium">Portfolio choice</p>
+            <p className="mt-1 text-ink-2">
+              {impact.portfolio.before
+                ? <>{portfolioChanged ? "Saved choice" : "Choice unchanged"}: {impact.portfolio.before.selected.join(" + ") || "No selected plays"} ({impact.portfolio.before.customers === null ? "customers unavailable" : `${formatter.format(impact.portfolio.before.customers)} modeled customers`}; {impact.portfolio.before.cashSpendUsdMonth === null ? "cash outlay unknown" : `${formatMoney(impact.portfolio.before.cashSpendUsdMonth, impact.currency)}/mo cash outlay`}) <span aria-hidden="true">→</span> {impact.portfolio.after.selected.join(" + ") || "No selected plays"} ({formatter.format(impact.portfolio.after.customers)} modeled customers; {formatMoney(impact.portfolio.after.cashSpendUsdMonth, impact.currency)}/mo cash outlay).</>
+                : <>Saved portfolio comparison unavailable; current choice: {impact.portfolio.after.selected.join(" + ") || "No selected plays"} ({formatter.format(impact.portfolio.after.customers)} modeled customers; {formatMoney(impact.portfolio.after.cashSpendUsdMonth, impact.currency)}/mo cash outlay).</>}
+            </p>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 function PlanScreen({ slug }: { slug: string }) {
   // Which version is on screen: the approved one by default, or a newer one being reviewed.
   const [viewId, setViewId] = useState<Id<"strategies"> | null>(null);
@@ -106,6 +162,7 @@ function PlanScreen({ slug }: { slug: string }) {
   }
 
   const s = plan.strategy;
+  const savedBusinessWebsite = (s?.expert as { snapshot?: { businessProfile?: { website?: string | null } } } | null)?.snapshot?.businessProfile?.website ?? undefined;
   const status = s ? (STRATEGY_STATUS[s.status] ?? { label: s.status, tone: "neutral" as Tone }) : null;
   const other = plan.otherVersion;
   const building = Boolean(plan.strategyRun && !RUN_FINISHED.has(plan.strategyRun.status));
@@ -116,6 +173,19 @@ function PlanScreen({ slug }: { slug: string }) {
   const viewingV = s ? (versions?.find((v) => v.id === s.id) ?? null) : null;
   // An older version that isn't the one guiding the team: read-only, with compare and restore.
   const olderView = Boolean(viewingV && latestV && !viewingV.isLatest && !viewingV.inUse);
+  const staleInputLabels = [
+    ["ownerEconomics", "confirmed business numbers"],
+    ["lifecycleStage", "business stage"],
+    ["funnel", "funnel measurements"],
+    ["goal", "goal or budget"],
+    ["businessProfile", "business profile"],
+    ["businessFacts", "confirmed business facts changed or due for review"],
+    ["brandGuidance", "brand guidance"],
+    ["capabilities", "connected tools"],
+    ["businessResearch", "business and audience research"],
+    ["marketChanges", "monitored competitor pages"],
+    ["cashTiming", "growth cash reserve or payment delay"],
+  ].filter(([key]) => Boolean(plan.staleInputs[key as keyof typeof plan.staleInputs])).map(([, label]) => label);
   const openCompare = () => {
     if (!versions || versions.length < 2 || !latestV) return;
     const left = viewingV && !viewingV.isLatest ? viewingV.id : versions[1].id;
@@ -148,7 +218,7 @@ function PlanScreen({ slug }: { slug: string }) {
         actions={
           s && plan.canEdit ? (
             <div className="flex flex-wrap items-start gap-2">
-              <PlanToAirly slug={slug} />
+              <PlanToConnectedApps slug={slug} />
               <GeneratePlanButton slug={slug} mode="refresh" nextVersion={s.version + 1} estimateMicros={plan.planEstimateMicros} onStarted={setStartedRunId} building={building} />
             </div>
           ) : null
@@ -156,6 +226,17 @@ function PlanScreen({ slug }: { slug: string }) {
       />
 
       <GoalCard goal={plan.goal} slug={slug} />
+
+      {s && plan.staleInputs.requiresRefresh && !olderView ? (
+        <Callout
+          tone="warning"
+          title="This plan uses older business inputs"
+          action={plan.canEdit ? <GeneratePlanButton slug={slug} mode="refresh" nextVersion={s.version + 1} estimateMicros={plan.planEstimateMicros} onStarted={setStartedRunId} building={building} /> : null}
+        >
+          These inputs changed or are due for review: {staleInputLabels.join(", ") || "important business inputs"}. The figures shown here recalculate from current numbers, while the written recommendations still reflect the saved plan. Refresh before approving or starting work.
+        </Callout>
+      ) : null}
+      {s && plan.planImpact && !olderView ? <PlanImpactSummary impact={plan.planImpact} /> : null}
 
       <SectionBoundary label="plan progress">
         <StrategyRunWatcher
@@ -195,9 +276,12 @@ function PlanScreen({ slug }: { slug: string }) {
               : `v${other.version} is in use until you approve this one`
           }
           action={
-            <Button size="sm" variant="secondary" onClick={() => setViewId(s.status === "approved" ? other.id : null)}>
-              {s.status === "approved" ? `See v${other.version}` : `See v${other.version}`}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="secondary" onClick={() => setViewId(s.status === "approved" ? other.id : null)}>
+                See v{other.version}
+              </Button>
+              {versions && versions.length > 1 ? <Button size="sm" variant="secondary" onClick={openCompare}>Compare changes</Button> : null}
+            </div>
           }
         />
       ) : null}
@@ -256,17 +340,17 @@ function PlanScreen({ slug }: { slug: string }) {
         </>
       ) : (
         <>
-          {s.status === "needs_approval" && !olderView ? <PlanReviewCard slug={slug} strategyId={s.id} version={s.version} canApprove={plan.canApprove} onDecided={() => setViewId(null)} quality={(s.expert as { quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[]; conflicts?: string[] } } | null)?.quality ?? null} /> : null}
+          {s.status === "needs_approval" && !olderView ? <PlanReviewCard slug={slug} strategyId={s.id} version={s.version} canApprove={plan.canApprove} onDecided={() => setViewId(null)} staleReason={plan.staleInputs.requiresRefresh ? staleInputLabels.join(", ") || "important business inputs changed" : undefined} quality={(s.expert as { quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[]; conflicts?: string[] } } | null)?.quality ?? null} /> : null}
           {s.status === "draft" ? (
             <Callout tone="warning" title="Sent back">
               {plan.canEdit ? "Refresh for a new version." : `Ask ${PERMISSION_WHO.edit} to refresh.`}
             </Callout>
           ) : null}
           <ShortVersion strategy={s} />
-          {s.expert ? <NorthStar expert={s.expert as ExpertView} /> : null}
-          {s.expert?.plays?.length ? <SharpenPlan slug={slug} questions={plan.questions} canEdit={plan.canEdit} answersNewer={plan.answersNewerThanPlan} /> : null}
+          {s.expert ? <NorthStar expert={s.expert as ExpertView} slug={slug} /> : null}
+          {s.expert?.plays?.length ? <SharpenPlan slug={slug} questions={plan.questions} canEdit={plan.canEdit} answersNewer={plan.answersNewerThanPlan} currency={plan.businessCurrency} segmentEconomics={plan.unitEconomics?.segmentEconomics} /> : null}
           {s.expert?.plays?.length ? <FunnelNumbers slug={slug} funnel={plan.funnel} canEdit={plan.canEdit} /> : null}
-          {s.expert?.plays?.length ? <GrowthPlays plays={s.expert.plays as PlayView[]} slug={slug} economics={(s.expert as { economics?: Economics }).economics} diagnosis={(s.expert as { constraintDiagnosis?: Diagnosis }).constraintDiagnosis ?? null} strategyId={s.status === "approved" ? s.id : undefined} planId={s.id} canEdit={plan.canEdit} focused={Boolean((s.expert as ExpertView).decision)} /> : null}
+          {s.expert && (s.expert.plays?.length || (s.expert as ExpertView).strategyExploration) ? <GrowthPlays plays={(s.expert.plays ?? []) as PlayView[]} slug={slug} economics={(s.expert as { economics?: Economics }).economics} portfolioComparisons={(s.expert as ExpertView).portfolioComparisons} strategyExploration={(s.expert as ExpertView).strategyExploration} diagnosis={(s.expert as { constraintDiagnosis?: Diagnosis }).constraintDiagnosis ?? null} strategyId={s.status === "approved" ? s.id : undefined} planId={s.id} canEdit={plan.canEdit} focused={Boolean((s.expert as ExpertView).decision)} /> : null}
           {s.expert ? <ExecutionPlan expert={s.expert as ExpertView} /> : null}
           <Audiences strategy={s} facts={plan.sources} />
           <Channels slug={slug} strategy={s} canEdit={plan.canEdit} currency={plan.currency} facts={plan.sources} />
@@ -276,7 +360,7 @@ function PlanScreen({ slug }: { slug: string }) {
       )}
 
       <BusinessInsights insights={plan.insights} />
-      {s ? <Sources sources={plan.sources} web={(s.expert as { webSources?: { url: string; title?: string }[] } | null)?.webSources ?? []} /> : null}
+      {s ? <Sources sources={plan.sources} web={(s.expert as { webSources?: { url: string; title?: string }[] } | null)?.webSources ?? []} researchEvidence={plan.researchEvidence} websiteUrl={savedBusinessWebsite} knowledge={(s.expert as { snapshot?: { knowledgeReferences?: KnowledgeReferenceSet } } | null)?.snapshot?.knowledgeReferences} /> : null}
       {s ? <Discussion slug={slug} subjectType="strategy" subjectId={s.id} title={`Growth plan v${s.version}`} href={`/app/${slug}/plan`} /> : null}
         </TabsContent>
       </Tabs>

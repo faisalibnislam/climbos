@@ -5,7 +5,7 @@
     { "id": "G1", "text": "Truth: no claim, number, customer, quote or result that isn't in confirmed facts or cited research; offers and guarantees not confirmed by the owner are marked 'owner to decide'." },
     { "id": "G2", "text": "Consent: marketing messages only to contacts with marketing consent or a valid existing-customer basis; SMS marketing only with separate SMS opt-in; every marketing message has a working unsubscribe; no cold-sourced contacts in lifecycle flows." },
     { "id": "G3", "text": "Review and referral compliance: no review gating, no fake or bought reviews, no incentives tied to positive sentiment or forbidden by the platform, no collecting friends' contact details for the business to message." },
-    { "id": "G4", "text": "No manipulative tactics: no fake urgency, fake scarcity or misleading subject lines." }
+    { "id": "G4", "text": "Truth and compliance: no fabricated urgency, scarcity or misleading subject lines; aggressive lawful tactics are not rejected solely as manipulative, and legally unresolved subscription or cancellation tactics are flagged for qualified local review." }
   ],
   "criteria": [
     {

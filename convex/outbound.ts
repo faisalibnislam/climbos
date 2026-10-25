@@ -4,11 +4,14 @@ import { notifyOwners } from "./lib/notify";
 import { emitEvent } from "./webhooks";
 import { manageToken } from "./bookings";
 import { featureAllowed, requirePaid } from "./lib/access";
-import { cancelQueued } from "./outboundSending";
+import { cancelQueued, cancelQueuedFirstTouch } from "./outboundSending";
 import type { OutreachOutput, ProspectsOutput } from "../shared/agents/specs";
 import { can, sha256Hex } from "../shared/policy";
 import { DEFAULT_BOOKING, bookingSlug, domainOf, fixtureOutbound, openSlots, prospectScore, type BookingRules } from "../shared/outbound";
-import { creatorIdentity } from "../shared/growth/targets";
+import { citedCreatorCompetitorCollaborations, citedCreatorContentSamples, citedCreatorFact, creatorEvidenceIsStale, creatorIdentity, creatorMetricAnomalies } from "../shared/growth/targets";
+import { expertPlaysOf } from "../shared/agents/planCompatibility";
+import { approvedPlanOfferTerms } from "../shared/agents/approvedPlanContext";
+import { lintApprovedOfferCopy } from "../shared/agents/offerAssessment";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
@@ -112,6 +115,7 @@ export const get = query({
       canExport: can(role, "export"),
       website: business?.website ?? null,
       businessType: business?.businessType ?? null,
+      currency: business?.currency ?? null,
       campaign: campaign
         ? {
             id: campaign._id,
@@ -143,8 +147,16 @@ export const get = query({
           timing: p.timing,
           contact: p.contact,
           publicEmail: p.publicEmail ?? null,
+          audienceSize: p.audienceSize ?? null,
+          contentLanguage: p.contentLanguage ?? null,
+          audienceLocation: p.audienceLocation ?? null,
+          contentSamples: p.contentSamples ?? [],
+          creatorMetricAnomalies: p.creatorMetricAnomalies ?? creatorMetricAnomalies(p.contentSamples ?? [], p.updatedAt),
+          competitorCollaborations: p.competitorCollaborations ?? [],
+          collaborationConcept: p.collaborationConcept ?? null,
           check: p.check ?? null,
           firstLine: p.firstLine,
+          firstLineEvidenceUrl: p.firstLineEvidenceUrl ?? null,
           stage: p.stage,
         })),
       funnel,
@@ -172,9 +184,19 @@ export const start = mutation({
 /** Create a campaign and its research run (also used by wishes). */
 export async function startCampaign(
   ctx: MutationCtx,
-  p: { org: Doc<"organizations">; userId: Id<"users">; brief: { who: string; where: string; count: number }; auto: boolean; cardId?: Id<"actionCards">; kind?: "customers" | "creators"; play?: { strategyId: Id<"strategies">; playId: string; name: string } },
+  p: { org: Doc<"organizations">; userId: Id<"users">; brief: { who: string; where: string; count: number }; auto: boolean; cardId?: Id<"actionCards">; kind?: "customers" | "creators"; customAgentId?: Id<"customAgents">; customAgentParentRunId?: Id<"workflowRuns">; agentArchetypeId?: string; play?: { strategyId: Id<"strategies">; playId: string; name: string } },
 ): Promise<Id<"outboundCampaigns">> {
   const { org, brief } = p;
+  let approvedOfferTermsSnapshot: ReturnType<typeof approvedPlanOfferTerms> = [];
+  let approvedOfferPlayName: string | undefined;
+  if (p.play) {
+    const strategy = assertSameOrg(await ctx.db.get(p.play.strategyId), org._id, "plan");
+    if (strategy.status !== "approved") throw appError("INVALID", "Approve the growth plan again before starting this play.");
+    const selectedPlay = (expertPlaysOf(strategy.expert) as { id?: string; name?: string }[]).find((play) => play.id === p.play!.playId);
+    if (!selectedPlay || selectedPlay.name !== p.play.name) throw appError("INVALID", "This play changed in the growth plan. Refresh the plan and try again.");
+    approvedOfferPlayName = selectedPlay.name;
+    approvedOfferTermsSnapshot = approvedPlanOfferTerms(strategy as never).filter((term) => term.playName === approvedOfferPlayName);
+  }
   const busy = await ctx.db
     .query("outboundCampaigns")
     .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
@@ -183,7 +205,7 @@ export async function startCampaign(
   if (busy?.status === "researching") throw appError("INVALID", "Your team is already searching. It'll be ready in a few minutes.");
   const creators = p.kind === "creators";
   const plan = planJob("outbound", { quantity: brief.count }, { fixture: org.kind === "demo" });
-  const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: plan.title, roles: plan.roles, input: brief, steps: plan.steps, meters: plan.meters, createdBy: p.userId, isFixture: org.kind === "demo" });
+  const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: plan.title, roles: plan.roles, input: brief, steps: plan.steps, meters: plan.meters, createdBy: p.userId, isFixture: org.kind === "demo", customAgentId: p.customAgentId, customAgentParentRunId: p.customAgentParentRunId, agentArchetypeId: p.agentArchetypeId });
   const now = Date.now();
   // Older campaigns stay in the pipeline but leave the main view. Their sending pauses (resume it from Send).
   if (busy && busy.status !== "archived") {
@@ -196,6 +218,8 @@ export async function startCampaign(
     title: p.play ? `Targets: ${p.play.name}`.slice(0, 120) : brief.who ? `Find: ${brief.who}` : creators ? "Find creators" : "Find customers",
     ...(creators ? { kind: "creators" as const } : {}),
     ...(p.play ? { strategyId: p.play.strategyId, playId: p.play.playId } : {}),
+    ...(approvedOfferPlayName ? { approvedOfferPlayName } : {}),
+    ...(approvedOfferTermsSnapshot.length ? { approvedOfferTermsSnapshot } : {}),
     brief,
     status: "researching",
     sequence: [],
@@ -221,9 +245,22 @@ export const setStage = mutation({
     const now = Date.now();
     for (const id of prospectIds.slice(0, 200)) {
       const p = assertSameOrg(await ctx.db.get(id), org._id, "prospect");
-      await ctx.db.patch(p._id, { stage, updatedAt: now });
+      if (stage === "approved") {
+        const campaign = assertSameOrg(await ctx.db.get(p.campaignId), org._id, "campaign");
+        if ((campaign.kind ?? "customers") === "creators" && creatorEvidenceIsStale(p.creatorEvidenceObservedAt, now)) {
+          throw appError("INVALID", "Refresh this creator's public profile and content evidence before approving outreach.");
+        }
+      }
+      await ctx.db.patch(p._id, {
+        ...(p.stage !== stage ? { stage, stageUpdatedAt: now } : {}),
+        ...(stage === "contacted" ? { replyDisposition: undefined, replyDispositionUpdatedAt: undefined } : {}),
+        updatedAt: now,
+      });
       // Leaving the sequence: nothing more goes out.
       if (stage !== "approved" && stage !== "contacted") await cancelQueued(ctx, p._id);
+      // If the owner says they already emailed this person, cancel an unsent
+      // initial message while keeping follow-ups for an earlier approved send.
+      if (stage === "contacted") await cancelQueuedFirstTouch(ctx, p._id);
       // Conversations move into the pipeline (CRM) automatically.
       const dealStage = stage === "replied" ? "talking" : stage === "booked" || stage === "won" || stage === "lost" ? stage : null;
       if (dealStage) await syncDealFromProspect(ctx, p, dealStage, "outbound");
@@ -231,6 +268,161 @@ export const setStage = mutation({
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "outbound.stage", subjectType: "prospects", subjectId: String(prospectIds.length), summary: `${prospectIds.length} prospect${prospectIds.length === 1 ? "" : "s"} → ${stage}` });
   },
 });
+
+/** Record a human judgment about a reply; generic "replied" stages are never treated as qualified by inference. */
+export const setReplyDisposition = mutation({
+  args: {
+    slug: v.string(),
+    prospectId: v.id("prospects"),
+    disposition: v.union(v.literal("qualified"), v.literal("not_qualified"), v.literal("unclear")),
+  },
+  handler: async (ctx, { slug, prospectId, disposition }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const prospect = assertSameOrg(await ctx.db.get(prospectId), org._id, "prospect");
+    if (!["replied", "booked", "won"].includes(prospect.stage)) {
+      throw appError("INVALID", "Record reply quality after the prospect has replied.");
+    }
+    const now = Date.now();
+    await ctx.db.patch(prospect._id, { replyDisposition: disposition, replyDispositionUpdatedAt: now, updatedAt: now });
+    await audit(ctx, {
+      orgId: org._id,
+      actorType: "user",
+      actorId: user._id,
+      action: "outbound.reply_disposition",
+      subjectType: "prospects",
+      subjectId: prospect._id,
+      summary: `Recorded a ${disposition.replaceAll("_", " ")} reply outcome for a prospect.`,
+    });
+  },
+});
+
+/** Append a creator collaboration status/result report; this records owner input and sends nothing. */
+export const recordCreatorCollaboration = mutation({
+  args: {
+    slug: v.string(),
+    prospectId: v.id("prospects"),
+    campaignId: v.optional(v.id("outboundCampaigns")),
+    status: v.union(v.literal("discussion_started"), v.literal("interested"), v.literal("negotiating"), v.literal("agreed"), v.literal("content_published"), v.literal("completed"), v.literal("declined"), v.literal("cancelled")),
+    format: v.optional(v.union(v.literal("paid"), v.literal("gifted"), v.literal("affiliate"), v.literal("co_created"), v.literal("event"), v.literal("other"))),
+    agreedValueMinor: v.optional(v.number()),
+    actualCostMinor: v.optional(v.number()),
+    publishedUrl: v.optional(v.string()),
+    metric: v.optional(v.object({
+      name: v.string(),
+      kind: v.union(v.literal("count"), v.literal("rate"), v.literal("amount")),
+      value: v.number(),
+      unit: v.string(),
+      denominator: v.optional(v.number()),
+      eligible: v.optional(v.number()),
+      exposed: v.optional(v.number()),
+      periodStartAt: v.number(),
+      periodEndAt: v.number(),
+      sourceUrl: v.optional(v.string()),
+    })),
+    note: v.optional(v.string()),
+  },
+  handler: async (ctx, a) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
+    const prospect = assertSameOrg(await ctx.db.get(a.prospectId), org._id, "prospect");
+    const candidateCampaign = a.campaignId ? await ctx.db.get(a.campaignId) : await ctx.db.get(prospect.campaignId);
+    const campaign = assertSameOrg(candidateCampaign, org._id, "campaign");
+    if (campaign.kind !== "creators") throw appError("INVALID", "Collaboration tracking is only available for creator targets.");
+    if (campaign._id !== prospect.campaignId && (!campaign.playId || !(prospect.playIds ?? []).includes(campaign.playId))) throw appError("INVALID", "That creator isn't linked to this campaign's play.");
+    if (Boolean(campaign.strategyId) !== Boolean(campaign.playId)) throw appError("INVALID", "The creator campaign has incomplete plan linkage; contact support before reporting against it.");
+    if (campaign.strategyId && campaign.playId) {
+      const strategy = assertSameOrg(await ctx.db.get(campaign.strategyId), org._id, "plan");
+      if (!(expertPlaysOf(strategy.expert) as { id?: string }[]).some((play) => play.id === campaign.playId)) throw appError("INVALID", "The creator play is no longer available in that plan.");
+    }
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    if (a.agreedValueMinor !== undefined && (!Number.isSafeInteger(a.agreedValueMinor) || a.agreedValueMinor < 0 || a.agreedValueMinor > 1_000_000_000_000)) throw appError("INVALID", "Agreed value must be a nonnegative amount in minor currency units.");
+    if (a.actualCostMinor !== undefined && (!Number.isSafeInteger(a.actualCostMinor) || a.actualCostMinor < 0 || a.actualCostMinor > 1_000_000_000_000)) throw appError("INVALID", "Actual cost must be a nonnegative amount in minor currency units.");
+    if ((a.agreedValueMinor !== undefined || a.actualCostMinor !== undefined) && !business?.currency) throw appError("INVALID", "Set the business currency before recording a collaboration value or cost.");
+    if (a.publishedUrl !== undefined && !validPublicHttpUrl(a.publishedUrl)) throw appError("INVALID", "Published content needs a valid HTTP or HTTPS URL.");
+
+    let metric: Doc<"creatorCollaborationReports">["metric"];
+    if (a.metric) {
+      const m = a.metric;
+      if (!m.name.trim() || m.name.length > 100 || !m.unit.trim() || m.unit.length > 40) throw appError("INVALID", "Add a short metric name and unit.");
+      if (!Number.isFinite(m.value) || m.value < 0 || m.value > 1_000_000_000_000) throw appError("INVALID", "Metric value must be a finite nonnegative number.");
+      if (!Number.isSafeInteger(m.periodStartAt) || !Number.isSafeInteger(m.periodEndAt) || m.periodStartAt > m.periodEndAt || m.periodEndAt > Date.now()) throw appError("INVALID", "Metric period must be valid and cannot end in the future.");
+      if (m.kind === "count" && !Number.isSafeInteger(m.value)) throw appError("INVALID", "Count metrics must be whole numbers.");
+      if (m.kind === "rate" && (m.value > 1 || !Number.isSafeInteger(m.denominator) || (m.denominator ?? 0) < 1)) throw appError("INVALID", "Rate metrics must be between 0 and 1 and include a whole-number denominator.");
+      if (m.denominator !== undefined && (!Number.isSafeInteger(m.denominator) || m.denominator < 1)) throw appError("INVALID", "A metric denominator must be a positive whole number.");
+      if ((m.eligible === undefined) !== (m.exposed === undefined) || (m.eligible !== undefined && (!Number.isSafeInteger(m.eligible) || m.eligible < 0 || !Number.isSafeInteger(m.exposed) || (m.exposed ?? 0) < 0 || m.exposed! > m.eligible))) throw appError("INVALID", "Eligible and exposed counts must be provided together, as whole numbers, with exposed no greater than eligible.");
+      if (m.kind === "amount" && !business?.currency) throw appError("INVALID", "Set the business currency before recording a monetary result.");
+      if (m.sourceUrl !== undefined && !validPublicHttpUrl(m.sourceUrl)) throw appError("INVALID", "A metric source needs a valid HTTP or HTTPS URL.");
+      metric = {
+        name: m.name.trim().slice(0, 100), kind: m.kind, value: m.value, unit: m.unit.trim().slice(0, 40),
+        ...(m.denominator !== undefined ? { denominator: m.denominator } : {}),
+        ...(m.eligible !== undefined ? { eligible: m.eligible } : {}),
+        ...(m.exposed !== undefined ? { exposed: m.exposed } : {}),
+        ...(m.kind === "amount" && business?.currency ? { currency: business.currency } : {}),
+        periodStartAt: m.periodStartAt, periodEndAt: m.periodEndAt,
+        ...(m.sourceUrl ? { sourceUrl: m.sourceUrl.trim().slice(0, 500) } : {}),
+      };
+    }
+
+    const reportId = await ctx.db.insert("creatorCollaborationReports", {
+      orgId: org._id,
+      prospectId: prospect._id,
+      campaignId: campaign._id,
+      ...(campaign.strategyId ? { strategyId: campaign.strategyId } : {}),
+      ...(campaign.playId ? { playId: campaign.playId } : {}),
+      status: a.status,
+      ...(a.format ? { format: a.format } : {}),
+      ...(a.agreedValueMinor !== undefined ? { agreedValueMinor: a.agreedValueMinor } : {}),
+      ...(a.actualCostMinor !== undefined ? { actualCostMinor: a.actualCostMinor } : {}),
+      ...((a.agreedValueMinor !== undefined || a.actualCostMinor !== undefined || a.metric?.kind === "amount") && business?.currency ? { currency: business.currency } : {}),
+      ...(a.publishedUrl ? { publishedUrl: a.publishedUrl.trim().slice(0, 500) } : {}),
+      ...(metric ? { metric } : {}),
+      ...(a.note?.trim() ? { note: a.note.trim().slice(0, 500) } : {}),
+      basis: "owner_reported",
+      reportedBy: user._id,
+      createdAt: Date.now(),
+    });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "creator.collaboration_reported", subjectType: "prospects", subjectId: prospect._id, summary: `Recorded creator collaboration status: ${a.status.replaceAll("_", " ")}.` });
+    return { reportId, basis: "owner_reported" as const };
+  },
+});
+
+/** Read the append-only collaboration history for one creator target. */
+export const creatorCollaborationHistory = query({
+  args: { slug: v.string(), prospectId: v.id("prospects") },
+  handler: async (ctx, { slug, prospectId }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const prospect = assertSameOrg(await ctx.db.get(prospectId), org._id, "prospect");
+    const campaign = assertSameOrg(await ctx.db.get(prospect.campaignId), org._id, "campaign");
+    if (campaign.kind !== "creators") throw appError("INVALID", "Collaboration history is only available for creator targets.");
+    return (await ctx.db.query("creatorCollaborationReports").withIndex("by_prospect_created", (q) => q.eq("prospectId", prospect._id)).order("desc").take(50))
+      .filter((report) => report.orgId === org._id)
+      .map((report) => ({
+        id: report._id,
+        campaignId: report.campaignId,
+        status: report.status,
+        strategyId: report.strategyId ?? null,
+        playId: report.playId ?? null,
+        format: report.format ?? null,
+        agreedValueMinor: report.agreedValueMinor ?? null,
+        actualCostMinor: report.actualCostMinor ?? null,
+        currency: report.currency ?? null,
+        publishedUrl: report.publishedUrl ?? null,
+        metric: report.metric ?? null,
+        note: report.note ?? null,
+        basis: report.basis,
+        createdAt: report.createdAt,
+        basisLabel: "Owner reported; not independently verified",
+      }));
+  },
+});
+
+function validPublicHttpUrl(input: string): boolean {
+  try {
+    const url = new URL(input.trim());
+    return (url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
 
 export const updateFirstLine = mutation({
   args: { slug: v.string(), prospectId: v.id("prospects"), firstLine: v.string() },
@@ -247,6 +439,8 @@ export const updateStep = mutation({
     const { org } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
     const c = assertSameOrg(await ctx.db.get(a.campaignId), org._id, "campaign");
     if (!c.sequence[a.index]) throw appError("NOT_FOUND", "We couldn't find that email.");
+    const offerIssue = lintApprovedOfferCopy(`${a.subject}\n${a.body.replace(/\{\{firstLine\}\}/g, "")}`, c.approvedOfferTermsSnapshot, `sequence[${a.index}]`, c.approvedOfferPlayName).find((issue) => issue.severity === "error");
+    if (offerIssue) throw appError("INVALID", offerIssue.message);
     const sequence = c.sequence.map((s, i) => (i === a.index ? { ...s, subject: a.subject.trim().slice(0, 120), body: a.body.trim().slice(0, 2000) } : s));
     await ctx.db.patch(c._id, { sequence, updatedAt: Date.now() });
   },
@@ -370,7 +564,7 @@ export const book = mutation({
     });
     await ctx.db.patch(id, { manageTokenHash: await sha256Hex(await manageToken(id)) });
     if (prospect) {
-      if (prospect.stage !== "won") await ctx.db.patch(prospect._id, { stage: "booked", updatedAt: now });
+      if (prospect.stage !== "won" && prospect.stage !== "booked") await ctx.db.patch(prospect._id, { stage: "booked", stageUpdatedAt: now, updatedAt: now });
       // They booked: no more follow-ups.
       await cancelQueued(ctx, prospect._id);
       await syncDealFromProspect(ctx, prospect, "booked", "outbound", "Booked a call.");
@@ -432,7 +626,15 @@ export const campaignContext = internalQuery({
       .query("prospects")
       .withIndex("by_org_stage", (q) => q.eq("orgId", c.orgId))
       .take(500);
-    return { brief: c.brief, kind: c.kind ?? "customers", knownDomains: [...new Set(existing.map((p) => p.domain))].slice(0, 200) };
+    const kind = c.kind ?? "customers";
+    const collaborationHistory = kind === "creators"
+      ? await Promise.all((await ctx.db.query("creatorCollaborationReports").withIndex("by_org_created", (q) => q.eq("orgId", c.orgId)).order("desc").take(30)).map(async (report) => {
+        const prospect = await ctx.db.get(report.prospectId);
+        if (!prospect || prospect.orgId !== c.orgId) return null;
+        return { creator: prospect.company, profile: prospect.website, campaignId: report.campaignId, status: report.status, strategyId: report.strategyId ?? null, playId: report.playId ?? null, format: report.format ?? null, agreedValueMinor: report.agreedValueMinor ?? null, actualCostMinor: report.actualCostMinor ?? null, currency: report.currency ?? null, publishedUrl: report.publishedUrl ?? null, metric: report.metric ?? null, note: report.note ?? null, basis: report.basis, reportedAt: report.createdAt };
+      }))
+      : [];
+    return { brief: c.brief, kind, knownDomains: [...new Set(existing.map((p) => p.domain))].slice(0, 200), collaborationHistory: collaborationHistory.filter((item): item is NonNullable<typeof item> => Boolean(item)), approvedOfferPlayName: c.approvedOfferPlayName, approvedOfferTerms: c.approvedOfferTermsSnapshot };
   },
 });
 
@@ -458,28 +660,61 @@ export const saveResult = internalMutation({
     if (!c) return;
     const found = a.prospects as ProspectsOutput;
     const outreach = a.outreach as OutreachOutput;
+    const offerIssues = outreach.sequence.flatMap((step, index) => lintApprovedOfferCopy(`${step.subject}\n${step.body.replace(/\{\{firstLine\}\}/g, "")}`, c.approvedOfferTermsSnapshot, `sequence[${index}]`, c.approvedOfferPlayName));
+    const offerError = offerIssues.find((issue) => issue.severity === "error");
+    if (offerError) throw appError("INVALID", offerError.message);
     const now = Date.now();
-    const lines = new Map(outreach.firstLines.map((f) => [f.company.trim().toLowerCase(), f.line]));
+    const lines = new Map(outreach.firstLines.map((f) => [f.company.trim().toLowerCase(), f]));
     const seen = new Set<string>();
     let added = 0;
     let merged = 0;
+    let omittedCreatorOpeners = 0;
     for (const p of found.prospects) {
+      const opener = lines.get(p.company.trim().toLowerCase());
+      const openerSource = c.kind === "creators" && opener?.evidenceUrl && (p.contentSamples ?? []).some((sample) => sample.url === opener.evidenceUrl) ? opener.evidenceUrl : undefined;
+      const firstLine = c.kind === "creators" ? (openerSource ? opener?.line ?? "" : "") : opener?.line ?? "";
       // Creators share platform domains (instagram.com/…): key them by platform + handle instead.
       const ident = c.kind === "creators" ? creatorKey(p.website) : { key: domainOf(p.website) };
       const domain = ident.key;
       if (!domain || seen.has(domain)) continue;
       seen.add(domain);
+      if (c.kind === "creators" && !openerSource) omittedCreatorOpeners++;
       // Anyone already in the pipeline (any campaign) stays one record with its stage; a play search links it (REQ-TARGET-06).
       const byKey = (key: string) => ctx.db.query("prospects").withIndex("by_org_domain", (q) => q.eq("orgId", c.orgId).eq("domain", key)).first();
       // Creators saved before platform + handle keys used the bare profile path.
       const existing = (await byKey(domain)) ?? (c.kind === "creators" && profileKey(p.website) !== domain ? await byKey(profileKey(p.website)) : null);
+      const hasPublicCreatorEvidence = c.kind === "creators" && p.evidence.some((item) => validPublicHttpUrl(item.url) && item.observation.trim());
       if (existing) {
-        if (c.playId && !(existing.playIds ?? []).includes(c.playId)) {
-          await ctx.db.patch(existing._id, { playIds: [...(existing.playIds ?? []), c.playId], updatedAt: now });
+        const audienceSize = c.kind === "creators" ? citedCreatorFact(p.audienceSize, p.evidence) : null;
+        const contentLanguage = c.kind === "creators" ? citedCreatorFact(p.contentLanguage, p.evidence) : null;
+        const audienceLocation = c.kind === "creators" ? citedCreatorFact(p.audienceLocation, p.evidence) : null;
+        const contentSamples = c.kind === "creators" ? citedCreatorContentSamples(p.contentSamples, p.evidence) : [];
+        const creatorDataChecks = c.kind === "creators" && contentSamples.length ? creatorMetricAnomalies(contentSamples, now) : null;
+        const competitorCollaborations = c.kind === "creators" ? citedCreatorCompetitorCollaborations(p.competitorCollaborations, p.evidence, now) : [];
+        const playIds = c.playId && !(existing.playIds ?? []).includes(c.playId) ? [...(existing.playIds ?? []), c.playId] : undefined;
+        const creatorUpdates = c.kind === "creators" ? {
+          ...(hasPublicCreatorEvidence ? { creatorEvidenceObservedAt: now } : {}),
+          ...(audienceSize ? { audienceSize } : {}),
+          ...(contentLanguage ? { contentLanguage } : {}),
+          ...(audienceLocation ? { audienceLocation } : {}),
+          ...(contentSamples.length ? { contentSamples } : {}),
+          ...(creatorDataChecks ? { creatorMetricAnomalies: creatorDataChecks } : {}),
+          ...(competitorCollaborations.length ? { competitorCollaborations } : {}),
+          ...(openerSource ? { firstLine: firstLine.slice(0, 400), firstLineEvidenceUrl: openerSource } : {}),
+          ...(typeof p.collaborationConcept === "string" && p.collaborationConcept.trim() ? { collaborationConcept: p.collaborationConcept.trim().slice(0, 240) } : {}),
+        } : {};
+        if (playIds || Object.keys(creatorUpdates).length) {
+          await ctx.db.patch(existing._id, { ...(playIds ? { playIds } : {}), ...creatorUpdates, updatedAt: now });
           merged++;
         }
         continue;
       }
+      const audienceSize = c.kind === "creators" ? citedCreatorFact(p.audienceSize, p.evidence) : null;
+      const contentLanguage = c.kind === "creators" ? citedCreatorFact(p.contentLanguage, p.evidence) : null;
+      const audienceLocation = c.kind === "creators" ? citedCreatorFact(p.audienceLocation, p.evidence) : null;
+      const contentSamples = c.kind === "creators" ? citedCreatorContentSamples(p.contentSamples, p.evidence) : [];
+      const creatorDataChecks = c.kind === "creators" && contentSamples.length ? creatorMetricAnomalies(contentSamples, now) : null;
+      const competitorCollaborations = c.kind === "creators" ? citedCreatorCompetitorCollaborations(p.competitorCollaborations, p.evidence, now) : [];
       await ctx.db.insert("prospects", {
         orgId: c.orgId,
         campaignId: c._id,
@@ -496,10 +731,20 @@ export const saveResult = internalMutation({
         contact: p.contact.slice(0, 120),
         publicEmail: p.publicEmail?.trim().toLowerCase() || undefined,
         ...((p as { check?: Doc<"prospects">["check"] }).check ? { check: (p as { check?: Doc<"prospects">["check"] }).check } : {}),
-        firstLine: (lines.get(p.company.trim().toLowerCase()) ?? "").slice(0, 400),
+        firstLine: firstLine.slice(0, 400),
+        ...(openerSource ? { firstLineEvidenceUrl: openerSource } : {}),
         stage: "suggested",
+        stageUpdatedAt: now,
         ...(c.playId ? { playIds: [c.playId] } : {}),
         ...("platform" in ident && ident.platform ? { platform: ident.platform, handle: ident.handle } : {}),
+        ...(hasPublicCreatorEvidence ? { creatorEvidenceObservedAt: now } : {}),
+        ...(audienceSize ? { audienceSize } : {}),
+        ...(contentLanguage ? { contentLanguage } : {}),
+        ...(audienceLocation ? { audienceLocation } : {}),
+        ...(contentSamples.length ? { contentSamples } : {}),
+        ...(creatorDataChecks ? { creatorMetricAnomalies: creatorDataChecks } : {}),
+        ...(competitorCollaborations.length ? { competitorCollaborations } : {}),
+        ...(c.kind === "creators" && typeof p.collaborationConcept === "string" && p.collaborationConcept.trim() ? { collaborationConcept: p.collaborationConcept.trim().slice(0, 240) } : {}),
         createdAt: now,
         updatedAt: now,
       });
@@ -509,7 +754,7 @@ export const saveResult = internalMutation({
       status: "review",
       icp: found.icp,
       sequence: outreach.sequence.slice(0, 5),
-      ownerNotes: outreach.ownerNotes.slice(0, 3),
+      ownerNotes: [...outreach.ownerNotes.slice(0, omittedCreatorOpeners ? 2 : 3), ...(omittedCreatorOpeners ? [`${omittedCreatorOpeners} creator opener${omittedCreatorOpeners === 1 ? " was" : "s were"} omitted because no exact content sample was cited. Add a sourced opener before sending.`] : [])],
       excluded: found.excluded.slice(0, 30),
       updatedAt: now,
     });

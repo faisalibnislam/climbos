@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { CLIMB_TOOLS, safeAppPath, type Caller } from "../../convex/lib/climbTools";
+import { CLIMB_TOOLS, encodeToolOutput, safeAppPath, type Caller } from "../../convex/lib/climbTools";
 import { asNewUser, setup, type T } from "./helpers";
 
 /**
@@ -33,12 +33,25 @@ describe("Climb AI tools", () => {
     for (const tool of CLIMB_TOOLS.filter((x) => x.risk === "read" && !x.local && x.name !== "get_job" && x.name !== "get_draft")) {
       const out = await tool.run!(w.caller, w.slug, tool.input.parse({}) as never);
       expect(out, tool.name).toBeTruthy();
+      expect(() => encodeToolOutput(out, 50_000, tool.output), tool.name).not.toThrow();
     }
     const drafts = (await CLIMB_TOOLS.find((x) => x.name === "list_drafts")!.run!(w.caller, w.slug, {} as never)) as { id: string; title: string }[];
+    expect(() => encodeToolOutput(drafts, 50_000, CLIMB_TOOLS.find((x) => x.name === "list_drafts")!.output)).not.toThrow();
     expect(drafts.length).toBeGreaterThan(0);
     const draft = (await CLIMB_TOOLS.find((x) => x.name === "get_draft")!.run!(w.caller, w.slug, { artifactId: drafts[0].id } as never)) as { title: string; body: string };
     expect(draft.title).toBe(drafts[0].title);
     expect(draft.body.length).toBeGreaterThan(10);
+    expect(() => encodeToolOutput(draft, 50_000, CLIMB_TOOLS.find((x) => x.name === "get_draft")!.output)).not.toThrow();
+    const runId = await t.run(async (ctx) => {
+      const org = await ctx.db.query("organizations").withIndex("by_slug", (q) => q.eq("slug", w.slug)).unique();
+      if (!org) return null;
+      return (await ctx.db.query("workflowRuns").withIndex("by_org_created", (q) => q.eq("orgId", org._id)).order("desc").first())?._id ?? null;
+    });
+    if (runId) {
+      const jobTool = CLIMB_TOOLS.find((x) => x.name === "get_job")!;
+      const job = await jobTool.run!(w.caller, w.slug, { runId: String(runId) } as never);
+      expect(() => encodeToolOutput(job, 50_000, jobTool.output)).not.toThrow();
+    }
   });
 
   it("draft tools prepare work; edits keep the other fields", async () => {
@@ -46,9 +59,12 @@ describe("Climb AI tools", () => {
     const w = await demo(t, "climb-draft@example.com");
     const made = (await CLIMB_TOOLS.find((x) => x.name === "create_posts")!.run!(w.caller, w.slug, { channel: "linkedin", quantity: 1, brief: "Our Dec 20 holiday deadline" } as never)) as { runId: string };
     expect(made.runId).toBeTruthy();
+    expect(() => encodeToolOutput(made, 50_000, CLIMB_TOOLS.find((x) => x.name === "create_posts")!.output)).not.toThrow();
     const drafts = (await CLIMB_TOOLS.find((x) => x.name === "list_drafts")!.run!(w.caller, w.slug, { status: "in_review" } as never)) as { id: string }[];
     const before = (await CLIMB_TOOLS.find((x) => x.name === "get_draft")!.run!(w.caller, w.slug, { artifactId: drafts[0].id } as never)) as { hashtags: string[]; version: number };
-    await CLIMB_TOOLS.find((x) => x.name === "edit_draft")!.run!(w.caller, w.slug, { artifactId: drafts[0].id, body: "A shorter, sharper version." } as never);
+    const editTool = CLIMB_TOOLS.find((x) => x.name === "edit_draft")!;
+    const editResult = await editTool.run!(w.caller, w.slug, { artifactId: drafts[0].id, body: "A shorter, sharper version." } as never);
+    expect(() => encodeToolOutput(editResult, 50_000, editTool.output)).not.toThrow();
     const after = (await CLIMB_TOOLS.find((x) => x.name === "get_draft")!.run!(w.caller, w.slug, { artifactId: drafts[0].id } as never)) as { body: string; hashtags: string[]; version: number };
     expect(after.body).toBe("A shorter, sharper version.");
     expect(after.hashtags).toEqual(before.hashtags);

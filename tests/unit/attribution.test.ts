@@ -5,6 +5,8 @@ import {
   computeReturnMetrics,
   dedupeConversionEvents,
   dedupeRevenueEvents,
+  mediaBreakEvenRoas,
+  platformConcentration,
   roas,
   roi,
   summarizePlatformClaims,
@@ -36,6 +38,16 @@ const touches: Touch[] = [
   { customerRef: "c1", occurredAt: T0 + DAY, channel: "meta_ads" }, // after the event: ineligible
   { customerRef: "c2", occurredAt: T0 - 60 * DAY, channel: "organic" }, // outside lookback
 ];
+
+describe("media break-even", () => {
+  it("uses only a valid owner-provided margin and labels the media-only threshold", () => {
+    expect(mediaBreakEvenRoas(0.8)).toBe(1.25);
+    expect(mediaBreakEvenRoas(0.5)).toBe(2);
+    expect(mediaBreakEvenRoas(0)).toBeNull();
+    expect(mediaBreakEvenRoas(1.1)).toBeNull();
+    expect(mediaBreakEvenRoas(undefined)).toBeNull();
+  });
+});
 
 describe("dedupe", () => {
   it("dedupes revenue events by (source, sourceEventId)", () => {
@@ -92,6 +104,33 @@ describe("attribute", () => {
     expect(r.reconciled).toBe(true);
   });
 
+  it("keeps customer and order attribution scoped to their billing source", () => {
+    const events = [
+      ev({ id: "stripe-order", source: "stripe", customerRef: "same-id", orderRef: "same-order", amountMinor: 10_000 }),
+      ev({ id: "polar-order", source: "polar", customerRef: "same-id", orderRef: "same-order", amountMinor: 20_000 }),
+      ev({ id: "stripe-refund", source: "stripe", orderRef: "same-order", amountMinor: 1_000, kind: "refund", occurredAt: T0 + DAY }),
+    ];
+    const sourceTouches: Touch[] = [
+      { customerRef: "same-id", source: "stripe", occurredAt: T0 - DAY, channel: "stripe_ads" },
+      { customerRef: "same-id", source: "polar", occurredAt: T0 - DAY, channel: "polar_ads" },
+    ];
+
+    const result = attribute(events, sourceTouches, { model: "last_touch", lookbackDays: 30 });
+    expect(result.byCurrency.USD.channels.stripe_ads.netRevenueMinor).toBe(9_000);
+    expect(result.byCurrency.USD.channels.polar_ads.netRevenueMinor).toBe(20_000);
+    expect(result.byCurrency.USD.reconciled).toBe(true);
+  });
+
+  it("does not apply a legacy unscoped touch when a customer ID appears in multiple sources", () => {
+    const events = [
+      ev({ id: "stripe-order", source: "stripe", customerRef: "same-id" }),
+      ev({ id: "polar-order", source: "polar", customerRef: "same-id" }),
+    ];
+    const result = attribute(events, [{ customerRef: "same-id", occurredAt: T0 - DAY, channel: "unknown_source" }], { model: "last_touch", lookbackDays: 30 });
+    expect(result.byCurrency.USD.unattributed.eventIds).toEqual(["stripe-order", "polar-order"]);
+    expect(result.byCurrency.USD.channels.unknown_source).toBeUndefined();
+  });
+
   it("keeps currencies separate without FX and reports unconverted currencies with FX", () => {
     const mixed = [
       ev({ id: "u1", customerRef: "c1", amountMinor: 10_000 }),
@@ -117,6 +156,115 @@ describe("attribute", () => {
 
   it("rejects non-integer minor amounts", () => {
     expect(() => attribute([ev({ id: "x", amountMinor: 10.5 })], [], { model: "last_touch", lookbackDays: 7 })).toThrow(/integer/);
+  });
+});
+
+describe("platform concentration", () => {
+  it("uses recognized tagged billing paths, attaches refunds, and leaves unknown sources out", () => {
+    const result = platformConcentration([
+      ev({ id: "google-order", customerRef: "c1", orderRef: "g1", amountMinor: 10_000, utmSource: "google", utmMedium: "cpc" }),
+      ev({ id: "google-refund", orderRef: "g1", amountMinor: 2_000, kind: "refund", occurredAt: T0 + DAY }),
+      ev({ id: "meta-order", source: "polar", customerRef: "c2", orderRef: "m1", amountMinor: 6_000, utmSource: "instagram", utmMedium: "paid_social" }),
+      ev({ id: "unknown-order", source: "shopify", customerRef: "c3", orderRef: "u1", amountMinor: 5_000, utmSource: "made-up-channel", utmMedium: "cpc" }),
+    ], {
+      currency: "USD",
+      fromMs: T0,
+      toMs: T0 + 2 * DAY,
+      reportedSpend: [
+        { platform: "google_ads", date: "2025-01-10", currency: "USD", spendMinor: 4_000 },
+        { platform: "meta_ads", date: "2025-01-10", currency: "USD", spendMinor: 10_000 },
+      ],
+    })!;
+
+    expect(result.topSource).toBe("Google ads");
+    expect(result.attributedPositiveNetMinor).toBe(14_000);
+    expect(result.topSourceShare).toBeCloseTo(8 / 14);
+    expect(result.attributedConversions).toBe(2);
+    expect(result.totalConversions).toBe(3);
+    expect(result.topThreeShare).toBe(1);
+    expect(result.sources).toEqual([
+      { source: "Google ads", paymentEvents: 1, identifiedCustomers: 1, firstRecordedCustomers: 1, netRevenueMinor: 8_000, refundMinor: 2_000, mediaSpendStatus: "matched", mediaSpendOrigin: "unknown", adSpendMinor: 4_000, mediaRoas: 2 },
+      { source: "Meta ads", paymentEvents: 1, identifiedCustomers: 1, firstRecordedCustomers: 1, netRevenueMinor: 6_000, refundMinor: 0, mediaSpendStatus: "matched", mediaSpendOrigin: "unknown", adSpendMinor: 10_000, mediaRoas: 0.6 },
+    ]);
+    expect(JSON.stringify(result.sources)).not.toContain("c1");
+  });
+
+  it("does not calculate media efficiency across currencies or a capped spend read", () => {
+    const event = ev({ id: "google-order", customerRef: "c1", utmSource: "google", utmMedium: "cpc", amountMinor: 10_000 });
+    const mismatched = platformConcentration([event], {
+      currency: "USD", fromMs: T0, toMs: T0 + DAY,
+      reportedSpend: [{ platform: "google_ads", date: "2025-01-10", currency: "EUR", spendMinor: 2_000 }],
+    })!;
+    expect(mismatched.sources[0]).toMatchObject({ mediaSpendStatus: "currency_mismatch" });
+    expect(mismatched.sources[0]).not.toHaveProperty("mediaRoas");
+
+    const partial = platformConcentration([event], {
+      currency: "USD", fromMs: T0, toMs: T0 + DAY, spendPartial: true,
+      reportedSpend: [{ platform: "google_ads", date: "2025-01-10", currency: "USD", spendMinor: 2_000 }],
+    })!;
+    expect(partial.spendPartial).toBe(true);
+    expect(partial.sources[0]).toMatchObject({ mediaSpendStatus: "partial" });
+    expect(partial.sources[0]).not.toHaveProperty("mediaRoas");
+  });
+
+  it("estimates source-level contribution after media spend from net billing and an owner margin", () => {
+    const result = platformConcentration([
+      ev({ id: "google-order", customerRef: "c1", orderRef: "g1", amountMinor: 10_000, utmSource: "google", utmMedium: "cpc" }),
+      ev({ id: "google-refund", orderRef: "g1", amountMinor: 2_000, kind: "refund", occurredAt: T0 + DAY }),
+    ], {
+      currency: "USD",
+      fromMs: T0,
+      toMs: T0 + 2 * DAY,
+      grossMargin: 0.6,
+      reportedSpend: [{ platform: "google_ads", date: "2025-01-10", currency: "USD", spendMinor: 4_000, origin: "owner_reported" }],
+    })!;
+    expect(result.sources[0]).toMatchObject({
+      netRevenueMinor: 8_000,
+      adSpendMinor: 4_000,
+      modeledContributionAfterMediaSpendMinor: 800,
+    });
+    expect(result.sources[0]).not.toHaveProperty("customerAcquisitionCost");
+  });
+
+  it("keeps a losing media contribution negative and rejects invalid margins", () => {
+    const event = ev({ id: "google-order", customerRef: "c1", utmSource: "google", utmMedium: "cpc", amountMinor: 10_000 });
+    const result = platformConcentration([event], {
+      currency: "USD", fromMs: T0, toMs: T0 + DAY, grossMargin: 0.5,
+      reportedSpend: [{ platform: "google_ads", date: "2025-01-10", currency: "USD", spendMinor: 6_000 }],
+    })!;
+    expect(result.sources[0].modeledContributionAfterMediaSpendMinor).toBe(-1_000);
+    expect(() => platformConcentration([event], { currency: "USD", fromMs: T0, toMs: T0 + DAY, grossMargin: 1.1 })).toThrow(/Gross margin/);
+  });
+
+  it("does not count a repeat payment as a first recorded payer for its tagged source", () => {
+    const previous = ev({ id: "first", occurredAt: T0 - 10 * DAY, customerRef: "repeat-customer", utmSource: "google", utmMedium: "cpc" });
+    const renewal = ev({ id: "renewal", occurredAt: T0, customerRef: "repeat-customer", kind: "subscription_payment", utmSource: undefined, utmMedium: undefined });
+    const result = platformConcentration([previous, renewal], { currency: "USD", fromMs: T0, toMs: T0 + DAY })!;
+    expect(result.sources).toMatchObject([{ source: "Google ads", paymentEvents: 1, identifiedCustomers: 1, firstRecordedCustomers: 0 }]);
+  });
+
+  it("withholds first-payer claims when an earlier customer payment is malformed", () => {
+    const invalidEarlier = ev({ id: "invalid-earlier", occurredAt: T0 - 10 * DAY, customerRef: "uncertain-customer", amountMinor: 100.5, utmSource: "google", utmMedium: "cpc" });
+    const later = ev({ id: "later-valid", occurredAt: T0, customerRef: "uncertain-customer", utmSource: "google", utmMedium: "cpc" });
+    const result = platformConcentration([invalidEarlier, later], { currency: "USD", fromMs: T0, toMs: T0 + DAY })!;
+    expect(result.partial).toBe(true);
+    expect(result.sources).toMatchObject([{ source: "Google ads", firstRecordedCustomers: 0 }]);
+  });
+
+  it("counts a fully refunded first charge as a recorded payer, not a later retry", () => {
+    const firstCharge = ev({ id: "first-charge", occurredAt: T0 - 10 * DAY, customerRef: "refunded-customer", amountMinor: 5_000, refundedMinor: 5_000, utmSource: "google", utmMedium: "cpc" });
+    const laterCharge = ev({ id: "later-charge", occurredAt: T0, customerRef: "refunded-customer", amountMinor: 5_000, utmSource: "google", utmMedium: "cpc" });
+    const result = platformConcentration([firstCharge, laterCharge], { currency: "USD", fromMs: T0, toMs: T0 + DAY })!;
+    expect(result.sources).toMatchObject([{ source: "Google ads", paymentEvents: 1, firstRecordedCustomers: 0 }]);
+  });
+
+  it("returns a truthful empty attribution state when no recognized UTMs exist", () => {
+    const result = platformConcentration([
+      ev({ id: "no-utm", customerRef: "c1", amountMinor: 4_000 }),
+    ], { currency: "USD", fromMs: T0, toMs: T0 + DAY })!;
+    expect(result.topSource).toBeNull();
+    expect(result.topSourceShare).toBeNull();
+    expect(result.attributedPositiveNetMinor).toBe(0);
   });
 });
 

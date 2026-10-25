@@ -36,7 +36,7 @@ import { CLIMB_CONFIG } from "../../convex/lib/climbConfig";
 import { climbToolDefs, toolByName } from "../../convex/lib/climbTools";
 import { evidenceKind } from "../../shared/agents/evidenceKind";
 import { platformNotes } from "../../shared/acquisition/platformRules";
-import { LIBRARY_TYPE, loadCases, loadPrompts, PLAN_CASES, type ExpansionCase } from "./cases";
+import { fixtureIdentity, LIBRARY_TYPE, loadCases, loadPrompts, PLAN_CASES, type ExpansionCase } from "./cases";
 
 // ---------- args ----------
 const arg = (name: string) => {
@@ -64,6 +64,12 @@ const rates = currentRateVersion();
 const cases = loadCases();
 const prompts = new Map(loadPrompts().map((p) => [p.case_id, p.prompt]));
 const wanted = (arg("cases") ?? cases.map((c) => c.id).join(",")).split(",");
+const knownCaseIds = new Set(cases.map((c) => c.id));
+const unknownCaseIds = wanted.filter((id) => !knownCaseIds.has(id));
+if (unknownCaseIds.length) throw new Error(`Unknown evaluation case id(s): ${[...new Set(unknownCaseIds)].join(", ")}`);
+if (new Set(wanted).size !== wanted.length) throw new Error("--cases cannot contain duplicate case ids.");
+if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 16) throw new Error("--concurrency must be an integer from 1 to 16.");
+if (!(["all", "advisor", "plan"] as string[]).includes(surface)) throw new Error("--surface must be all, advisor, or plan.");
 
 // ---------- spend cap ----------
 const capMicros = maxUsd ? Math.round(maxUsd * 1e6) : Infinity;
@@ -242,8 +248,8 @@ async function main() {
   } catch {
     /* not a git checkout */
   }
-  const knowledge = (JSON.parse(readFileSync("docs/growth-expansion/evaluations/cases.json", "utf8")) as { version?: unknown }).version ?? null;
-  const meta = { label, fake: FAKE, engine_version: ENGINE_VERSION, git_ref: gitRef, knowledge_version: knowledge, climb_model: CLIMB_CONFIG.model, climb_turn: CLIMB_CONFIG.turn, surface, started_at: new Date(t0).toISOString(), elapsed_seconds: Math.round((Date.now() - t0) / 1000), spent_usd: Math.round(spentMicros) / 1e6, cap_usd: maxUsd };
+  const fixtures = fixtureIdentity();
+  const meta = { label, fake: FAKE, engine_version: ENGINE_VERSION, git_ref: gitRef, fixture_version: fixtures.version, fixture_sha256: fixtures.sha256, climb_model: CLIMB_CONFIG.model, climb_turn: CLIMB_CONFIG.turn, surface, started_at: new Date(t0).toISOString(), elapsed_seconds: Math.round((Date.now() - t0) / 1000), spent_usd: Math.round(spentMicros) / 1e6, cap_usd: maxUsd };
   mkdirSync("bench/results", { recursive: true });
   const file = `bench/results/expansion-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}-${label}.json`;
   writeFileSync(file, JSON.stringify({ meta, rows }, null, 2));

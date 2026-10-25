@@ -41,6 +41,11 @@ function OkBadge({ ok, okText, badText }: { ok: boolean; okText: string; badText
 }
 
 const shortId = (id: string) => `…${id.slice(-6)}`;
+const durationLabel = (milliseconds: number | null) => milliseconds == null
+  ? "Need at least 5 samples"
+  : milliseconds < 1_000
+    ? `${milliseconds} ms`
+    : `${(milliseconds / 1_000).toFixed(1)} s`;
 
 export function OpsConsole() {
   const d = useQuery(api.ops.dashboard, {});
@@ -324,8 +329,45 @@ export function OpsConsole() {
             change={`${formatNumber(d.costs.overEstimateRuns)} runs over estimate`}
           />
           <Stat label="Previews, 24h" value={formatNumber(d.costs.previews24h)} sublabel={`Spend ${microsToUsd(d.costs.previewSpend24hMicros)}`} />
+          <Stat label="Homepage snapshot ready, P50" value={durationLabel(d.costs.previewLearning.firstValueP50Ms)} sublabel={`${formatNumber(d.costs.previewLearning.firstValueSamples)} timed previews${d.costs.previewLearningCoverageCapped ? "; sample capped" : ""}`} />
+          <Stat label="Full preview complete, P50" value={durationLabel(d.costs.previewLearning.completedP50Ms)} sublabel={`${formatNumber(d.costs.previewLearning.completedSamples)} completed previews${d.costs.previewLearningCoverageCapped ? "; sample capped" : ""}`} />
+          <Stat label="Snapshot marked useful" value={d.costs.previewLearning.usefulnessRate == null ? "Not enough responses" : `${Math.round(d.costs.previewLearning.usefulnessRate * 100)}%`} sublabel={`${formatNumber(d.costs.previewLearning.usefulnessResponses)} optional, user-reported responses${d.costs.previewLearningCoverageCapped ? "; sample capped" : ""}`} />
+          <Stat label="Research cache hits, 24h" value={formatNumber(d.costs.researchCache24h.hits)} sublabel={d.costs.researchCache24h.coverageCapped ? "At least this many; view is capped" : "Reused tenant-scoped research results; not a dollar-savings estimate"} />
+          <Stat
+            label="Tagged research spend, 24h"
+            value={microsToUsd(d.costs.researchCost24h.recordedMicros + d.costs.researchCost24h.estimatedMicros)}
+            sublabel={`${microsToUsd(d.costs.researchCost24h.recordedMicros)} recorded · ${microsToUsd(d.costs.researchCost24h.estimatedMicros)} estimated across ${formatNumber(d.costs.researchCost24h.events)} tagged research events; step type recorded for ${formatNumber(d.costs.researchCost24h.taggedEvents)} / ${formatNumber(d.costs.researchCost24h.eventsRead)} usage events${d.costs.researchCost24h.coverageCapped ? "; sample capped" : ""}`}
+          />
           <Stat label="Preview daily budget" value={microsToUsd(d.fleet.previewDailyBudgetMicros)} sublabel="Change in Fleet controls" />
         </StatGroup>
+        <DataTable
+          caption="Strategy workflow speed and task status, last 30 days"
+          rows={[
+            { measure: "First confirmed finding", p50: d.costs.workflowMetrics.firstFindingP50Ms, samples: d.costs.workflowMetrics.firstFindingSamples },
+            { measure: "First owner-started action", p50: d.costs.workflowMetrics.firstActionP50Ms, samples: d.costs.workflowMetrics.firstActionSamples },
+          ]}
+          rowKey={(row) => row.measure}
+          emptyText="No strategy workflow timings yet."
+          columns={[
+            { key: "measure", header: "Strategy timing", rowHeader: true },
+            { key: "median", header: "Median", align: "right", cell: (row) => durationLabel(row.p50) },
+            { key: "sample", header: "Runs with timing", align: "right", cell: (row) => `${formatNumber(row.samples)} / ${formatNumber(d.costs.workflowMetrics.strategyRuns)}` },
+          ]}
+        />
+        <p className="text-xs text-ink-3">
+          Timing appears after at least 5 runs. Status counts below describe current task states, not business results.
+          {d.costs.workflowMetrics.coverageCapped ? " The 30-day sample is capped." : ""}
+        </p>
+        <DataTable
+          caption="Current task status for runs started in the last 30 days"
+          rows={Object.entries(d.costs.workflowMetrics.statusCounts).map(([status, count]) => ({ status, count })).filter((row) => row.count > 0)}
+          rowKey={(row) => row.status}
+          emptyText="No tasks started in the last 30 days."
+          columns={[
+            { key: "status", header: "Current status", rowHeader: true, cell: (row) => row.status.replace(/_/g, " ") },
+            { key: "count", header: "Tasks", align: "right", cell: (row) => formatNumber(row.count) },
+          ]}
+        />
         <DataTable
           caption="Spend by provider, last 24 hours"
           rows={[...d.costs.byProvider].sort((a, b) => b.costMicros - a.costMicros)}
@@ -335,6 +377,27 @@ export function OpsConsole() {
             { key: "provider", header: "Provider", rowHeader: true },
             { key: "calls", header: "Events", align: "right", cell: (p) => formatNumber(p.calls) },
             { key: "cost", header: "Cost", align: "right", cell: (p) => microsToUsd(p.costMicros) },
+          ]}
+        />
+        <h3 className="heading-card mt-2">Cost by task and step, last 24 hours</h3>
+        <p className="text-xs text-ink-3">
+          Execution tags cover {d.costs.byTaskPhase24h.taggedEvents} of {d.costs.byTaskPhase24h.events} recent usage events
+          {d.costs.byTaskPhase24h.coverage === null ? "." : ` (${Math.round(d.costs.byTaskPhase24h.coverage * 100)}%).`}
+          {" "}Older events are shown as untagged; task and step labels describe where cost was recorded, not output quality.
+        </p>
+        <DataTable
+          caption="AI and service spend by task, step, role, route and model in the last 24 hours"
+          rows={d.costs.byTaskPhase24h.groups.slice(0, 50)}
+          rowKey={(row) => [row.taskKind, row.stepKind, row.role ?? "", row.routingVersionId, row.aiMode, row.provider, row.model ?? ""].join(":")}
+          emptyText="No usage in the last 24 hours."
+          columns={[
+            { key: "task", header: "Task", rowHeader: true, cell: (row) => row.taskKind.replace(/_/g, " ") },
+            { key: "step", header: "Step", cell: (row) => row.stepKind.replace(/_/g, " ") },
+            { key: "role", header: "Role", cell: (row) => row.role ?? "—" },
+            { key: "model", header: "Provider / model", cell: (row) => `${row.provider} · ${row.model ?? "unknown"}` },
+            { key: "route", header: "Route", cell: (row) => `${row.routingVersionId} · ${row.aiMode}` },
+            { key: "events", header: "Events", align: "right", cell: (row) => formatNumber(row.calls) },
+            { key: "cost", header: "Cost", align: "right", cell: (row) => microsToUsd(row.costMicros) },
           ]}
         />
         {!d.margin.ok ? (

@@ -47,7 +47,7 @@ export interface VerifiedFact {
   value: string;
   docsUrl: string;
   verified: boolean;
-  verifiedAt: typeof VERIFIED_AT;
+  verifiedAt: string;
   note?: string;
 }
 
@@ -68,7 +68,7 @@ export interface ProviderMetadata {
   connection: "oauth_google" | "oauth_meta" | "oauth_instagram" | "oauth_linkedin" | "oauth_x" | "api_key" | "file_upload" | "none";
   apiVersion: string;
   verified: boolean;
-  verifiedAt: typeof VERIFIED_AT;
+  verifiedAt: string;
   capabilities: CapabilityDefinition[];
   /** Platform-level env vars that must be set by the ClimbOS operator. */
   requiredEnv: string[];
@@ -77,7 +77,7 @@ export interface ProviderMetadata {
   docs: VerifiedFact[];
 }
 
-const fact = (f: Omit<VerifiedFact, "verifiedAt">): VerifiedFact => ({ ...f, verifiedAt: VERIFIED_AT });
+const fact = (f: Omit<VerifiedFact, "verifiedAt"> & { verifiedAt?: string }): VerifiedFact => ({ ...f, verifiedAt: f.verifiedAt ?? VERIFIED_AT });
 
 export const PROVIDERS: Record<ProviderId, ProviderMetadata> = {
   ga4: {
@@ -112,11 +112,13 @@ export const PROVIDERS: Record<ProviderId, ProviderMetadata> = {
     capabilities: [
       { id: "search_console.list_sites", kind: "read", label: "See your Search Console sites", description: "Lists the sites you have verified in Search Console." },
       { id: "search_console.read_performance", kind: "read", label: "Read search performance", description: "Clicks, impressions, CTR and position by date, query and page." },
+      { id: "search_console.inspect_url", kind: "read", label: "Inspect one page's indexed status", description: "Owner-triggered read of Google's indexed URL state for one page inside the selected property." },
     ],
     requiredEnv: ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
     requiredReviewSteps: ["Google OAuth consent screen verification for webmasters.readonly (sensitive scope)"],
     docs: [
       fact({ fact: "searchAnalytics.query", value: "POST https://www.googleapis.com/webmasters/v3/sites/{siteUrl}/searchAnalytics/query (rowLimit 1..25,000, startRow)", docsUrl: "https://developers.google.com/webmaster-tools/v1/searchanalytics/query", verified: true }),
+      fact({ fact: "urlInspection.index.inspect", value: "POST https://searchconsole.googleapis.com/v1/urlInspection/index:inspect; inspect one URL inside the exact selected property", docsUrl: "https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect", verified: true }),
       fact({ fact: "sites.list", value: "GET https://www.googleapis.com/webmasters/v3/sites", docsUrl: "https://developers.google.com/webmaster-tools/v1/sites/list", verified: true }),
       fact({ fact: "OAuth scope", value: "https://www.googleapis.com/auth/webmasters.readonly", docsUrl: "https://developers.google.com/webmaster-tools/v1/searchanalytics/query", verified: true }),
     ],
@@ -166,7 +168,7 @@ export const PROVIDERS: Record<ProviderId, ProviderMetadata> = {
       fact({ fact: "Graph/Marketing API version", value: "v26.0 (introduced 2026-07-29)", docsUrl: "https://developers.facebook.com/docs/graph-api/changelog", verified: true }),
       fact({ fact: "Create campaign", value: "POST /act_{id}/campaigns: special_ad_categories required; objective OUTCOME_*; status ACTIVE|PAUSED; spend_cap in currency subunits (min ≈ $100)", docsUrl: "https://developers.facebook.com/docs/marketing-api/reference/ad-account/campaigns/", verified: true }),
       fact({ fact: "Rate-limit headers", value: "X-App-Usage, X-Business-Use-Case-Usage (estimated_time_to_regain_access in minutes), X-Ad-Account-Usage", docsUrl: "https://developers.facebook.com/docs/graph-api/overview/rate-limiting", verified: true }),
-      fact({ fact: "Insights fields", value: "GET /act_{id}/insights fields=spend,impressions,clicks,actions time_increment=1", docsUrl: "https://developers.facebook.com/docs/marketing-api/insights", verified: false, note: "Insights page not re-fetched." }),
+      fact({ fact: "Insights fields", value: "Meta's official Marketing API collection shows ad-account and campaign Insights requests with spend, impressions, clicks, actions, date ranges, and daily time_increment=1; the app requires an access token and the access tier depends on whose ad accounts it manages.", docsUrl: "https://www.postman.com/meta/facebook-marketing-api/request/5wdl62t/attributionsetting", verified: true, verifiedAt: "2026-10-25", note: "Meta developer documentation returned HTTP 429 on this check; verified against Meta's official Postman API collection." }),
     ],
   },
   facebook_pages: {
@@ -179,6 +181,7 @@ export const PROVIDERS: Record<ProviderId, ProviderMetadata> = {
     verifiedAt: VERIFIED_AT,
     capabilities: [
       { id: "facebook_pages.list_pages", kind: "read", label: "See your Pages", description: "Lists the Facebook Pages you manage." },
+      { id: "facebook_pages.read_posts", kind: "read", label: "Review recent Page posts", description: "Reads a small sample of recent Page post text for a content audit." },
       { id: "facebook_pages.publish_post", kind: "write", label: "Publish Page posts", description: "Publishes a text, link or photo post to your Page after your approval." },
       { id: "facebook_pages.read_insights", kind: "read", label: "Read Page results", description: "Reads Page-level metrics where Meta still provides them." },
     ],
@@ -193,13 +196,15 @@ export const PROVIDERS: Record<ProviderId, ProviderMetadata> = {
   instagram: {
     id: "instagram",
     displayName: "Instagram (Business or Creator)",
-    description: "Publishes photos to an Instagram professional account and checks Instagram's daily posting allowance.",
+    description: "Reviews a small sample of recent captions, publishes photos to an Instagram professional account, and checks Instagram's daily posting allowance.",
     connection: "oauth_instagram",
     apiVersion: GRAPH_API_VERSION,
     verified: true,
     verifiedAt: VERIFIED_AT,
     capabilities: [
       { id: "instagram.read_profile", kind: "read", label: "Check your Instagram account", description: "Confirms the account is a Business or Creator account." },
+      { id: "instagram.read_posts", kind: "read", label: "Review recent Instagram posts", description: "Reads a small sample of recent post captions for a content audit." },
+      { id: "instagram.read_insights", kind: "read", label: "Read Instagram post results", description: "Reads lifetime views, reach, likes, comments, saves and shares for sampled posts when Meta provides them." },
       { id: "instagram.publish_media", kind: "write", label: "Publish Instagram posts", description: "Publishes approved photo posts and verifies they are live." },
     ],
     requiredEnv: ["INSTAGRAM_APP_ID", "INSTAGRAM_APP_SECRET"],
@@ -282,12 +287,12 @@ export const PROVIDERS: Record<ProviderId, ProviderMetadata> = {
   stripe: {
     id: "stripe",
     displayName: "Stripe",
-    description: "Imports your payments, invoices and refunds as revenue using a read-only restricted key.",
+    description: "Imports payment and refund history, and reads open invoice balances for owner review using a read-only restricted key.",
     connection: "api_key",
     apiVersion: STRIPE_API_VERSION,
     verified: true,
     verifiedAt: VERIFIED_AT,
-    capabilities: [{ id: "stripe.import_revenue", kind: "read", label: "Import revenue", description: "Reads charges, invoices and refunds since the last import." }],
+    capabilities: [{ id: "stripe.import_revenue", kind: "read", label: "Read payments, refunds and open invoices", description: "Imports payment/refund history and reads open invoice balances without attempting payment or contacting customers." }],
     requiredEnv: [],
     requiredReviewSteps: ["Create a restricted key (rk_…) with Read access to Charges, Invoices and Refunds only"],
     docs: [

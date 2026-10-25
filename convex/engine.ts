@@ -1,6 +1,6 @@
 import type { FunctionReference } from "convex/server";
 import { v } from "convex/values";
-import { CURRENT_ENTITLEMENTS, CURRENT_ROUTING, currentRateVersion, microsToCredits } from "../shared/economics";
+import { CURRENT_ENTITLEMENTS, CURRENT_ROUTING, creditsToMicros, currentRateVersion, microsToCredits } from "../shared/economics";
 import type { PartialMeters } from "../shared/economics/ledger";
 import { assertTransition, type RunStatus } from "../shared/policy";
 import { estimateRun, type PlannedStep } from "./lib/estimate";
@@ -12,7 +12,10 @@ import { chargeableAccess, fleetStopped } from "./lib/access";
 import { audit } from "./lib/audit";
 import { notifyOwners } from "./lib/notify";
 import { reserveCredits, settleCredits, tryReserveCredits } from "./lib/credits";
-import { appError } from "./lib/tenancy";
+import { appError, assertSameOrg } from "./lib/tenancy";
+import { AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
+
+export const MAX_RUN_COST_MULTIPLE = 1.5;
 
 /**
  * Durable job engine. A run is created with an atomic worst-case cost
@@ -97,8 +100,13 @@ export async function createRunWithReservation(
     meters: PartialMeters;
     createdBy?: Id<"users">;
     isFixture: boolean;
+    /** Enforce workspace approval thresholds even for system-scheduled work with no user creator. */
+    enforceCreditApprovalLimit?: boolean;
     /** Climb AI mode (resolve with resolveAiMode). Absent = basic. */
     aiMode?: "basic" | "expert";
+    customAgentId?: Id<"customAgents">;
+    customAgentParentRunId?: Id<"workflowRuns">;
+    agentArchetypeId?: string;
   },
 ): Promise<Id<"workflowRuns">> {
   const { org } = params;
@@ -133,9 +141,142 @@ export async function createRunWithReservation(
   // Agent-only jobs (no single-call version) always run on Engine v2 outside demos.
   const v2 = (process.env.CLIMBOS_ENGINE === "v2" && !params.isFixture) || (!params.isFixture && AGENT_ONLY_KINDS.has(params.kind));
   const estimate = estimateRun(params.steps, rateVersion.id, { repair: !v2 });
+  if (params.customAgentParentRunId && !params.customAgentId) {
+    throw appError("INVALID", "Specialist action runs must identify their specialist profile.");
+  }
+  if (params.customAgentId && params.agentArchetypeId) {
+    throw appError("INVALID", "Choose either a custom specialist or a built-in specialist for this run.");
+  }
+  if (params.agentArchetypeId && !AGENT_ARCHETYPE_BY_ID.has(params.agentArchetypeId)) {
+    throw appError("INVALID", "This specialist role is no longer available.");
+  }
+  const archetype = params.agentArchetypeId ? AGENT_ARCHETYPE_BY_ID.get(params.agentArchetypeId) : undefined;
+  const agentArchetypeSnapshot = archetype ? {
+    version: 1 as const,
+    id: archetype.id,
+    name: archetype.name,
+    objective: archetype.objective,
+    role: archetype.role,
+    defaultActions: [...archetype.defaultActions],
+    successMeasures: { ...archetype.successMeasures },
+  } : undefined;
+  let agentArchetypeFeedbackSnapshot: NonNullable<Doc<"workflowRuns">["agentArchetypeFeedbackSnapshot"]> | undefined;
+  let agentArchetypeOutcomeSnapshot: NonNullable<Doc<"workflowRuns">["agentArchetypeOutcomeSnapshot"]> | undefined;
+  if (archetype) {
+    const feedbackSince = Date.now() - 90 * 86_400_000;
+    const feedback = await ctx.db.query("builtInAgentFeedback")
+      .withIndex("by_archetype_updated", (q) => q.eq("orgId", org._id).eq("agentArchetypeId", archetype.id).gte("updatedAt", feedbackSince))
+      .order("desc")
+      .take(101);
+    const sample = feedback.slice(0, 100);
+    agentArchetypeFeedbackSnapshot = {
+      source: "workspace_member_report",
+      windowDays: 90,
+      capturedAt: Date.now(),
+      sampleSize: sample.length,
+      helpful: sample.filter((entry) => entry.rating === "helpful").length,
+      needsWork: sample.filter((entry) => entry.rating === "needs_work").length,
+      capped: feedback.length > 100,
+      notes: sample.filter((entry) => entry.note).slice(0, 5).map((entry) => ({ rating: entry.rating, note: entry.note!, updatedAt: entry.updatedAt })),
+    };
+    const outcomeSince = Date.now() - 180 * 86_400_000;
+    const outcomes = await ctx.db.query("builtInAgentOutcomeReports")
+      .withIndex("by_archetype_period", (q) => q.eq("orgId", org._id).eq("agentArchetypeId", archetype.id).gte("periodEnd", outcomeSince))
+      .order("desc")
+      .take(11);
+    agentArchetypeOutcomeSnapshot = {
+      source: "workspace_member_report",
+      windowDays: 180,
+      capturedAt: Date.now(),
+      reports: outcomes.slice(0, 10).map(({ metric, measureType, unit, value, denominator, comparisonValue, comparisonDenominator, comparisonLabel, cohort, periodStart, periodEnd, updatedAt }) => ({
+        metric,
+        measureType,
+        unit,
+        value,
+        ...(denominator !== undefined ? { denominator } : {}),
+        ...(comparisonValue !== undefined ? { comparisonValue } : {}),
+        ...(comparisonDenominator !== undefined ? { comparisonDenominator } : {}),
+        ...(comparisonLabel ? { comparisonLabel } : {}),
+        cohort,
+        periodStart,
+        periodEnd,
+        updatedAt,
+      })),
+      capped: outcomes.length > 10,
+    };
+  }
+  let customAgentSnapshot: NonNullable<Doc<"workflowRuns">["customAgentSnapshot"]> | undefined;
+  let customAgentFeedbackSnapshot: NonNullable<Doc<"workflowRuns">["customAgentFeedbackSnapshot"]> | undefined;
+  if (params.customAgentId) {
+    const profile = assertSameOrg(await ctx.db.get(params.customAgentId), org._id, "specialist");
+    if (profile.status !== "active") throw appError("INVALID", "This specialist is archived and cannot start work.");
+    const archetype = AGENT_ARCHETYPE_BY_ID.get(profile.archetypeId);
+    if (!archetype) throw appError("INVALID", "This specialist role is no longer available.");
+    const snapshot = {
+      archetypeId: profile.archetypeId,
+      name: profile.name,
+      objective: profile.objective,
+      instructions: profile.instructions,
+      allowedActions: profile.allowedActions,
+      knowledge: profile.knowledge,
+      permission: profile.permission,
+      maxRunCredits: profile.maxRunCredits,
+      monthlyBudgetCredits: profile.monthlyBudgetCredits,
+      maxActionsPerRun: profile.maxActionsPerRun,
+      successMetric: profile.successMetric,
+      role: archetype.role,
+      profileUpdatedAt: profile.updatedAt,
+    };
+    customAgentSnapshot = snapshot;
+    const feedbackSince = Date.now() - 90 * 86_400_000;
+    let runCapCredits = profile.maxRunCredits;
+    if (params.customAgentParentRunId) {
+      const parent = assertSameOrg(await ctx.db.get(params.customAgentParentRunId), org._id, "specialist request");
+      if (parent.customAgentId !== profile._id || parent.customAgentParentRunId) throw appError("INVALID", "This action is not linked to the active specialist request.");
+      customAgentSnapshot = parent.customAgentSnapshot ?? snapshot;
+      customAgentFeedbackSnapshot = parent.customAgentFeedbackSnapshot;
+      runCapCredits = customAgentSnapshot.maxRunCredits;
+      const siblings = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent_parent", (q) => q.eq("orgId", org._id).eq("customAgentId", profile._id).eq("customAgentParentRunId", parent._id)).take(100);
+      const committedForRequest = parent.estimateMicros + siblings.reduce((sum, run) => sum + run.estimateMicros, 0);
+      if (committedForRequest + estimate.costMicros > creditsToMicros(runCapCredits)) throw appError("LIMIT_REACHED", `This exceeds ${profile.name}'s configured ${runCapCredits}-credit per-run budget.`);
+    } else if (estimate.costMicros > creditsToMicros(runCapCredits)) {
+      throw appError("LIMIT_REACHED", `This request exceeds ${profile.name}'s configured ${profile.maxRunCredits}-credit per-run budget.`);
+    }
+    if (!params.customAgentParentRunId) {
+      const feedback = await ctx.db
+        .query("customAgentFeedback")
+        .withIndex("by_agent_updated", (q) => q.eq("orgId", org._id).eq("customAgentId", profile._id).gte("updatedAt", feedbackSince))
+        .order("desc")
+        .take(100);
+      customAgentFeedbackSnapshot = {
+        source: "workspace_member_report",
+        windowDays: 90,
+        capturedAt: Date.now(),
+        sampleSize: feedback.length,
+        helpful: feedback.filter((entry) => entry.rating === "helpful").length,
+        needsWork: feedback.filter((entry) => entry.rating === "needs_work").length,
+        notes: feedback.filter((entry) => entry.note).slice(0, 5).map((entry) => ({ rating: entry.rating, note: entry.note!, updatedAt: entry.updatedAt })),
+      };
+    }
+    if (profile.monthlyBudgetCredits !== undefined) {
+      const monthStart = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1);
+      const monthlyRuns = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", org._id).eq("customAgentId", profile._id).gte("createdAt", monthStart)).take(501);
+      if (monthlyRuns.length > 500) throw appError("LIMIT_REACHED", "This specialist reached the monthly run limit for safe budget accounting.");
+      const usedMicros = monthlyRuns.reduce((sum, run) => {
+        const reservedRun = ["cost_reserved", "preparing", "needs_approval", "approved", "scheduled", "executing", "paused"].includes(run.status);
+        return sum + (reservedRun ? Math.max(run.actualMicros, run.estimateMicros) : run.actualMicros);
+      }, 0);
+      if (usedMicros + estimate.costMicros > creditsToMicros(profile.monthlyBudgetCredits)) {
+        throw appError("LIMIT_REACHED", `This would exceed ${profile.name}'s ${profile.monthlyBudgetCredits}-credit monthly budget.`, { reason: "custom_agent_budget" });
+      }
+    }
+  }
   const period = access.period;
   // Team rule: jobs above the workspace's approval limit need an owner or admin to start them.
-  if (org.creditApprovalLimit !== undefined && params.createdBy && microsToCredits(estimate.costMicros) > org.creditApprovalLimit) {
+  if (org.creditApprovalLimit !== undefined && (params.createdBy !== undefined || params.enforceCreditApprovalLimit) && microsToCredits(estimate.costMicros) > org.creditApprovalLimit) {
+    if (!params.createdBy && params.enforceCreditApprovalLimit) {
+      throw appError("LIMIT_REACHED", `This scheduled job exceeds the workspace's ${org.creditApprovalLimit}-credit approval limit. An owner or admin can start the refresh manually.`, { reason: "approval_limit", title: params.title.slice(0, 120), credits: microsToCredits(estimate.costMicros) });
+    }
     const m = await ctx.db.query("memberships").withIndex("by_org_user", (q) => q.eq("orgId", org._id).eq("userId", params.createdBy!)).unique();
     if (m && m.role !== "owner" && m.role !== "admin") {
       throw appError("FORBIDDEN", `Jobs over ${org.creditApprovalLimit} credits need an owner or admin to start them.`, { reason: "approval_limit", title: params.title.slice(0, 120), credits: microsToCredits(estimate.costMicros) });
@@ -146,6 +287,14 @@ export async function createRunWithReservation(
   const now = Date.now();
   const runId = await ctx.db.insert("workflowRuns", {
     orgId: org._id,
+    ...(params.customAgentId ? { customAgentId: params.customAgentId } : {}),
+    ...(params.customAgentParentRunId ? { customAgentParentRunId: params.customAgentParentRunId } : {}),
+    ...(params.agentArchetypeId ? { agentArchetypeId: params.agentArchetypeId } : {}),
+    ...(agentArchetypeSnapshot ? { agentArchetypeSnapshot } : {}),
+    ...(agentArchetypeFeedbackSnapshot ? { agentArchetypeFeedbackSnapshot } : {}),
+    ...(agentArchetypeOutcomeSnapshot ? { agentArchetypeOutcomeSnapshot } : {}),
+    ...(customAgentSnapshot ? { customAgentSnapshot } : {}),
+    ...(customAgentFeedbackSnapshot ? { customAgentFeedbackSnapshot } : {}),
     kind: params.kind,
     ...(v2 ? { engine: "v2" as const } : {}),
     ...(params.aiMode === "expert" ? { aiMode: "expert" as const } : {}),
@@ -155,6 +304,8 @@ export async function createRunWithReservation(
     roles: params.roles,
     estimateMicros: estimate.costMicros,
     actualMicros: 0,
+    costCapMicros: Math.ceil(estimate.costMicros * MAX_RUN_COST_MULTIPLE),
+    inFlightMicros: 0,
     rateVersionId: rateVersion.id,
     entitlementVersionId: period.entitlementVersionId,
     routingVersionId: CURRENT_ROUTING.id,
@@ -192,6 +343,51 @@ export const getRun = internalQuery({
     if (!run) return null;
     const org = await ctx.db.get(run.orgId);
     return { run, org };
+  },
+});
+
+/** Fetch reusable research only inside the same workspace and while still fresh. */
+export const getResearchCache = internalQuery({
+  args: { orgId: v.id("organizations"), cacheKey: v.string() },
+  handler: async (ctx, { orgId, cacheKey }) => {
+    if (!/^[a-f0-9]{64}$/.test(cacheKey) || !(await ctx.db.get(orgId))) return null;
+    const row = await ctx.db.query("researchCache").withIndex("by_org_key", (q) => q.eq("orgId", orgId).eq("cacheKey", cacheKey)).first();
+    if (!row || row.expiresAt <= Date.now()) return null;
+    return { notes: row.notes, sources: row.sources, retrievedAt: row.retrievedAt ?? row.createdAt, expiresAt: row.expiresAt };
+  },
+});
+
+/** Store exact-request research without including the prompt or business data in the index key. */
+export const putResearchCache = internalMutation({
+  args: {
+    orgId: v.id("organizations"),
+    cacheKey: v.string(),
+    agentId: v.string(),
+    modelKey: v.string(),
+    notes: v.string(),
+    sources: v.array(v.object({ url: v.string(), title: v.optional(v.string()), pageReportedDates: v.optional(v.array(v.object({ kind: v.union(v.literal("published"), v.literal("updated")), date: v.string(), source: v.union(v.literal("json_ld"), v.literal("meta")) }))) })),
+    retrievedAt: v.optional(v.number()),
+    expiresAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    if (!/^[a-f0-9]{64}$/.test(args.cacheKey) || args.notes.length > 40_000 || args.sources.length > 50 || args.expiresAt <= Date.now() || !(await ctx.db.get(args.orgId))) return null;
+    const existing = await ctx.db.query("researchCache").withIndex("by_org_key", (q) => q.eq("orgId", args.orgId).eq("cacheKey", args.cacheKey)).first();
+    const createdAt = Date.now();
+    const data = { agentId: args.agentId.slice(0, 80), modelKey: args.modelKey.slice(0, 80), notes: args.notes, sources: args.sources, createdAt, retrievedAt: args.retrievedAt ?? createdAt, expiresAt: args.expiresAt };
+    if (existing) await ctx.db.patch(existing._id, data);
+    else await ctx.db.insert("researchCache", { orgId: args.orgId, cacheKey: args.cacheKey, ...data });
+    return true;
+  },
+});
+
+/** Delete expired cache entries in bounded pages; repeat until less than a page remains. */
+export const purgeExpiredResearchCache = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query("researchCache").withIndex("by_expires", (q) => q.lte("expiresAt", Date.now())).take(100);
+    for (const row of rows) await ctx.db.delete(row._id);
+    if (rows.length === 100) await ctx.scheduler.runAfter(0, internal.engine.purgeExpiredResearchCache, {});
+    return rows.length;
   },
 });
 
@@ -246,7 +442,18 @@ export const beginStep = internalMutation({
         await ctx.db.patch(existing._id, { status: "uncertain", error: "Outcome unknown after interruption" });
         return { proceed: false as const, reason: "uncertain" };
       }
-      await ctx.db.patch(existing._id, { status: "running", attempt: existing.attempt + 1, leaseUntil: now + 5 * 60_000, startedAt: now });
+      const nextAttempt = existing.attempt + 1;
+      const resumeHeldCall = Boolean(existing.providerRef && existing.providerCallMicros && existing.providerCallAttempt === existing.attempt);
+      const staleCallMicros = !resumeHeldCall && existing.providerCallAttempt === existing.attempt ? (existing.providerCallMicros ?? 0) : 0;
+      await ctx.db.patch(existing._id, {
+        status: "running",
+        attempt: nextAttempt,
+        leaseUntil: now + 5 * 60_000,
+        startedAt: now,
+        providerCallMicros: resumeHeldCall ? existing.providerCallMicros : undefined,
+        providerCallAttempt: resumeHeldCall ? nextAttempt : undefined,
+      });
+      if (staleCallMicros > 0) await ctx.db.patch(run._id, { inFlightMicros: Math.max(0, (run.inFlightMicros ?? 0) - staleCallMicros), updatedAt: now });
       return { proceed: true as const, stepId: existing._id, idempotencyKey: key };
     }
     const stepId = await ctx.db.insert("workflowSteps", {
@@ -290,8 +497,8 @@ const usageRecordValidator = v.object({
 
 /** Record usage for a step (also used for failed calls that still cost money). */
 export const recordUsage = internalMutation({
-  args: { stepId: v.id("workflowSteps"), records: v.array(usageRecordValidator) },
-  handler: async (ctx, { stepId, records }) => {
+  args: { stepId: v.id("workflowSteps"), records: v.array(usageRecordValidator), settleProviderCall: v.optional(v.boolean()) },
+  handler: async (ctx, { stepId, records, settleProviderCall }) => {
     const step = await ctx.db.get(stepId);
     if (!step) return;
     const run = await ctx.db.get(step.runId);
@@ -306,21 +513,65 @@ export const recordUsage = internalMutation({
         periodId: reservation?.periodId,
         runId: run._id,
         stepId,
+        taskKind: run.kind,
+        stepKind: step.kind,
+        stepIndex: step.index,
+        routingVersionId: run.routingVersionId,
+        aiMode: run.aiMode ?? "basic",
         role: step.role,
         createdAt: Date.now(),
       });
     }
-    await ctx.db.patch(stepId, { costMicros: step.costMicros + total, provider: records[0]?.provider, model: records[0]?.model });
-    await ctx.db.patch(run._id, { actualMicros: run.actualMicros + total, updatedAt: Date.now() });
+    const heldCall = settleProviderCall && step.providerCallAttempt === step.attempt ? (step.providerCallMicros ?? 0) : 0;
+    await ctx.db.patch(stepId, {
+      costMicros: step.costMicros + total,
+      provider: records[0]?.provider,
+      model: records[0]?.model,
+      ...(heldCall > 0 ? { providerCallMicros: undefined, providerCallAttempt: undefined } : {}),
+    });
+    await ctx.db.patch(run._id, { actualMicros: run.actualMicros + total, inFlightMicros: Math.max(0, (run.inFlightMicros ?? 0) - heldCall), updatedAt: Date.now() });
+  },
+});
+
+/** Atomically hold the worst-case cost of a provider turn before it starts. */
+export const claimProviderCall = internalMutation({
+  args: { runId: v.id("workflowRuns"), stepId: v.id("workflowSteps"), costMicros: v.number() },
+  handler: async (ctx, { runId, stepId, costMicros }) => {
+    const [run, step] = await Promise.all([ctx.db.get(runId), ctx.db.get(stepId)]);
+    if (!run || !step || step.runId !== runId || step.orgId !== run.orgId) return { ok: false as const, message: "Provider call is not linked to this run." };
+    if (!Number.isSafeInteger(costMicros) || costMicros <= 0) return { ok: false as const, message: "Provider call budget must be a positive whole number of microcredits." };
+    if (step.providerCallMicros && step.providerCallAttempt === step.attempt) return { ok: true as const, heldMicros: step.providerCallMicros };
+    const cap = run.costCapMicros ?? Math.ceil(run.estimateMicros * MAX_RUN_COST_MULTIPLE);
+    const inFlight = run.inFlightMicros ?? 0;
+    if (!Number.isSafeInteger(cap) || run.actualMicros + inFlight + costMicros > cap) {
+      return { ok: false as const, message: "This job reached its reserved AI spending limit. Progress is saved; retry to continue." };
+    }
+    await ctx.db.patch(stepId, { providerCallMicros: costMicros, providerCallAttempt: step.attempt });
+    await ctx.db.patch(runId, { inFlightMicros: inFlight + costMicros, updatedAt: Date.now() });
+    return { ok: true as const, heldMicros: costMicros };
+  },
+});
+
+/** Release a call claim when the provider returned no billable usage. */
+export const releaseProviderCall = internalMutation({
+  args: { runId: v.id("workflowRuns"), stepId: v.id("workflowSteps") },
+  handler: async (ctx, { runId, stepId }) => {
+    const [run, step] = await Promise.all([ctx.db.get(runId), ctx.db.get(stepId)]);
+    if (!run || !step || step.runId !== runId || step.orgId !== run.orgId) return false;
+    if (step.providerCallAttempt !== step.attempt || !step.providerCallMicros) return true;
+    await ctx.db.patch(stepId, { providerCallMicros: undefined, providerCallAttempt: undefined });
+    await ctx.db.patch(runId, { inFlightMicros: Math.max(0, (run.inFlightMicros ?? 0) - step.providerCallMicros), updatedAt: Date.now() });
+    return true;
   },
 });
 
 export const completeStep = internalMutation({
-  args: { stepId: v.id("workflowSteps"), output: v.optional(v.string()) },
-  handler: async (ctx, { stepId, output }) => {
+  args: { stepId: v.id("workflowSteps"), output: v.optional(v.string()), cacheHit: v.optional(v.boolean()) },
+  handler: async (ctx, { stepId, output, cacheHit }) => {
     await ctx.db.patch(stepId, {
       status: "succeeded",
       output: output && output.length < 400_000 ? output : undefined,
+      cacheHit: cacheHit === true ? true : undefined,
       finishedAt: Date.now(),
       leaseUntil: undefined,
     });
@@ -339,24 +590,73 @@ export const failStep = internalMutation({
   },
 });
 
+/** Recheck immutable specialist ceilings when an active or retried run reserves more credits. */
+async function customAgentBudgetError(
+  ctx: MutationCtx,
+  run: Doc<"workflowRuns">,
+  additionalMicros: number,
+  replaceFailedEstimate = false,
+): Promise<string | null> {
+  if (!run.customAgentId || !run.customAgentSnapshot) return null;
+  const parent = run.customAgentParentRunId ? await ctx.db.get(run.customAgentParentRunId) : run;
+  if (!parent || parent.orgId !== run.orgId || parent.customAgentId !== run.customAgentId || parent.customAgentParentRunId) {
+    return "Specialist request budget could not be verified.";
+  }
+  const siblings = await ctx.db.query("workflowRuns")
+    .withIndex("by_org_custom_agent_parent", (q) => q.eq("orgId", run.orgId).eq("customAgentId", run.customAgentId!).eq("customAgentParentRunId", parent._id))
+    .take(101);
+  if (siblings.length > 100) return "This specialist request reached the safe action-count limit.";
+  const requestRuns = [parent, ...siblings];
+  const requestCommitted = requestRuns.reduce((sum, item) => {
+    const committed = item._id === run._id && replaceFailedEstimate ? item.actualMicros : Math.max(item.actualMicros, item.estimateMicros);
+    return sum + committed;
+  }, 0);
+  const runCapMicros = creditsToMicros(run.customAgentSnapshot.maxRunCredits);
+  if (!Number.isSafeInteger(runCapMicros) || requestCommitted + additionalMicros > runCapMicros) {
+    return `This would exceed ${run.customAgentSnapshot.maxRunCredits}-credit specialist request limit.`;
+  }
+
+  const monthlyCapCredits = run.customAgentSnapshot.monthlyBudgetCredits;
+  if (monthlyCapCredits !== undefined) {
+    const monthStart = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1);
+    const monthlyRuns = await ctx.db.query("workflowRuns")
+      .withIndex("by_org_custom_agent", (q) => q.eq("orgId", run.orgId).eq("customAgentId", run.customAgentId!).gte("createdAt", monthStart))
+      .take(501);
+    if (monthlyRuns.length > 500) return "This specialist reached the monthly run limit for safe budget accounting.";
+    const usedMicros = monthlyRuns.reduce((sum, item) => {
+      if (item._id === run._id && replaceFailedEstimate) return sum + item.actualMicros;
+      const active = ["cost_reserved", "preparing", "needs_approval", "approved", "scheduled", "executing", "paused"].includes(item.status);
+      return sum + (active ? Math.max(item.actualMicros, item.estimateMicros) : item.actualMicros);
+    }, 0);
+    if (usedMicros + additionalMicros > creditsToMicros(monthlyCapCredits)) {
+      return `This would exceed the ${monthlyCapCredits}-credit specialist monthly budget.`;
+    }
+  }
+  return null;
+}
+
 /** Reserve more before a fallback route. Fails closed when capacity is gone. */
 export const reserveAdditional = internalMutation({
   args: { runId: v.id("workflowRuns"), costMicros: v.number() },
   handler: async (ctx, { runId, costMicros }) => {
     const run = await ctx.db.get(runId);
     if (!run?.reservationId) return { ok: false as const, message: "No reservation for this run." };
+    if (!Number.isSafeInteger(costMicros) || costMicros <= 0) return { ok: false as const, message: "Additional cost must be a positive whole number of microcredits." };
     const reservation = await ctx.db.get(run.reservationId);
     const period = reservation ? await ctx.db.get(reservation.periodId) : null;
     if (!reservation || !period || reservation.status !== "held") return { ok: false as const, message: "Reservation is not active." };
     const org = await ctx.db.get(run.orgId);
     if (!org) return { ok: false as const, message: "Workspace not found." };
+    const budgetError = await customAgentBudgetError(ctx, run, costMicros);
+    if (budgetError) return { ok: false as const, message: budgetError };
     const decision = await tryReserveCredits(ctx, { org, period, costMicros, meters: {} });
     if (!decision.ok) return { ok: false as const, message: decision.message };
     await ctx.db.patch(reservation._id, {
       walletMicros: reservation.walletMicros + decision.walletMicros,
       topupMicros: reservation.topupMicros + decision.topupMicros,
     });
-    await ctx.db.patch(run._id, { estimateMicros: run.estimateMicros + costMicros, updatedAt: Date.now() });
+    const estimateMicros = run.estimateMicros + costMicros;
+    await ctx.db.patch(run._id, { estimateMicros, costCapMicros: Math.ceil(estimateMicros * MAX_RUN_COST_MULTIPLE), updatedAt: Date.now() });
     return { ok: true as const };
   },
 });
@@ -498,6 +798,8 @@ export async function reopenFailedRun(ctx: MutationCtx, run: Doc<"workflowRuns">
 
   // Reserve the rest of the estimate (at least a third of it: the unfinished step runs again).
   const remaining = Math.max(run.estimateMicros - run.actualMicros, Math.ceil(run.estimateMicros / 3));
+  const budgetError = await customAgentBudgetError(ctx, run, remaining, true);
+  if (budgetError) throw appError("LIMIT_REACHED", budgetError, { reason: "custom_agent_budget" });
   const old = run.reservationId ? await ctx.db.get(run.reservationId) : null;
   const settled = run.settled ?? { micros: 0, searchCalls: 0, imageAttempts: 0, scrapeCredits: 0 };
   const meters: PartialMeters = {};
@@ -596,15 +898,30 @@ export const setRunPreview = internalMutation({
   handler: async (ctx, { runId, preview }) => {
     // Previews arrive in pieces (channels, first take, plays): merge them into one object.
     const run = await ctx.db.get(runId);
+    const now = Date.now();
     let merged = preview;
+    let hasConfirmedFinding = false;
     try {
+      const incoming = JSON.parse(preview) as { opportunities?: unknown };
+      hasConfirmedFinding = Array.isArray(incoming.opportunities) && incoming.opportunities.some((raw) => {
+        if (!raw || typeof raw !== "object") return false;
+        const opportunity = raw as { title?: unknown; basis?: unknown; evidence?: unknown };
+        return typeof opportunity.title === "string"
+          && opportunity.title.trim().length > 0
+          && opportunity.basis === "confirmed_facts"
+          && Array.isArray(opportunity.evidence)
+          && opportunity.evidence.length > 0;
+      });
       const prev = run?.preview ? (JSON.parse(run.preview) as Record<string, unknown>) : {};
       merged = JSON.stringify({ ...prev, ...(JSON.parse(preview) as Record<string, unknown>) });
     } catch {
       // Not JSON: keep the new value.
     }
     if (merged.length > 4000) merged = preview;
-    await ctx.db.patch(runId, { preview: merged.slice(0, 4000) });
+    await ctx.db.patch(runId, {
+      preview: merged.slice(0, 4000),
+      ...(run && !run.isFixture && hasConfirmedFinding && run.firstFindingAt === undefined ? { firstFindingAt: now } : {}),
+    });
   },
 });
 

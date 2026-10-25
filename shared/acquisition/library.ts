@@ -187,6 +187,7 @@ export const CHANNELS: Channel[] = [
   ch("C23", "Comparison guides", { stages: ["solution", "high_intent"], measure: 65 }),
   ch("C24", "Buyer guides", { stages: ["solution", "high_intent"], measure: 65 }),
   ch("C25", "Industry reports", { requires: ["b2b"], cash: 1, stages: ["unaware", "problem"] }),
+  ch("C26", "Medium articles", { learn: "weeks", measure: 35, exec: "human" }),
   // E. Direct sales & outreach
   ch("D01", "Cold email"),
   ch("D02", "Cold calling", { exec: "human" }),
@@ -255,6 +256,10 @@ export const CHANNELS: Channel[] = [
   ch("M23", "Browser extension stores", { requires: ["software"] }),
   ch("M24", "AI tool directories", { requires: ["ai"], learn: "days" }),
   ch("M25", "Template marketplaces", { requires: ["digital_goods"] }),
+  ch("M26", "Trustpilot", { family: "local", learn: "weeks", stages: ["product", "high_intent"], measure: 55 }),
+  ch("M27", "Yelp", { family: "local", learn: "weeks", requires: ["location"], stages: ["high_intent"], measure: 55, exec: "human" }),
+  ch("M28", "Tripadvisor", { family: "local", learn: "weeks", requires: ["booking", "location"], stages: ["high_intent"], measure: 55, exec: "human" }),
+  ch("M29", "GetApp", { requires: ["software", "b2b"] }),
   // H. Community & relationships
   ch("N01", "Reddit communities"),
   ch("N02", "Discord servers"),

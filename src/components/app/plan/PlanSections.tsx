@@ -43,7 +43,8 @@ import { HorizontalBarChart } from "@/components/ds/charts";
 import { cn } from "@/lib/utils";
 import { microsToCreditsLabel, minorToDisplay, relativeTime } from "../money";
 import { microsToCredits } from "../../../../shared/economics/credits";
-import { RUN_STATUS_LABEL, RUN_STATUS_TONE } from "../content/RunProgress";
+import type { KnowledgeReferenceSet } from "../../../../shared/knowledge/retrieve";
+import { runStatusPresentation } from "../../../../shared/progress";
 import { ErrorCallout, PERMISSION_WHO, RoleName, useNow } from "../content/shared";
 import { ROLE_META } from "../roles";
 import { approvedToast } from "./PlanActions";
@@ -788,6 +789,53 @@ const SWOT: { key: keyof Insights["swot"]; label: string; icon: LucideIcon; box:
   { key: "opportunities", label: "Opportunities", icon: Lightbulb, box: "bg-blue-100", ink: "text-blue-800" },
   { key: "threats", label: "Threats", icon: TriangleAlert, box: "bg-amber-100", ink: "text-amber-800" },
 ];
+const SWOT_DIMENSION: Record<keyof Insights["swot"], "strength" | "weakness" | "opportunity" | "threat"> = {
+  strengths: "strength", weaknesses: "weakness", opportunities: "opportunity", threats: "threat",
+};
+const SWOT_BASIS: Record<string, string> = {
+  owner_report: "Owner reported",
+  source_claim: "Public source claim",
+  measured: "Measured result",
+  research: "Public research",
+  inference: "ClimbOS inference",
+};
+
+function swotEvidenceOf(insights: Insights, dimension: keyof Insights["swot"], finding: string) {
+  return insights.swotEvidence?.find((item) => item.dimension === SWOT_DIMENSION[dimension] && item.finding === finding);
+}
+
+function swotReference(ref: string, index: number) {
+  if (/^https?:\/\//i.test(ref)) {
+    try {
+      const url = new URL(ref);
+      if (url.protocol === "https:" || url.protocol === "http:") return <LinkChip key={`${ref}-${index}`} url={url.href} label="Source" />;
+    } catch {
+      // Invalid model-produced references stay visible as unlinked evidence labels.
+    }
+  }
+  return <Badge key={`${ref}-${index}`}>{/^fact:\d+$/i.test(ref) ? "Business fact" : "Evidence reference"}</Badge>;
+}
+
+const SWOT_MOVE_LABEL: Record<NonNullable<Insights["swotMoves"]>[number]["kind"], string> = {
+  strength_opportunity: "Use a strength to pursue an opportunity",
+  weakness_opportunity: "Address a weakness to pursue an opportunity",
+  strength_threat: "Use a strength to respond to a threat",
+  weakness_threat: "Reduce a weakness exposed to a threat",
+};
+
+const COMMERCIAL_STATUS_LABEL: Record<NonNullable<Insights["commercialAssessment"]>["status"], string> = {
+  evidence_supports_testing: "Evidence supports a small test",
+  mixed_evidence: "Some evidence, some uncertainty",
+  insufficient_business_specific_evidence: "More business evidence is needed",
+};
+
+function swotMovePair(insights: Insights, move: NonNullable<Insights["swotMoves"]>[number]) {
+  const first = move.kind.startsWith("strength_") ? insights.swot.strengths : insights.swot.weaknesses;
+  const second = move.kind.endsWith("_opportunity") ? insights.swot.opportunities : insights.swot.threats;
+  const firstFinding = first[move.firstIndex];
+  const secondFinding = second[move.secondIndex];
+  return firstFinding && secondFinding ? { firstFinding, secondFinding } : null;
+}
 
 function SubHead({ icon: Icon, children, meta }: { icon: LucideIcon; children: ReactNode; meta?: ReactNode }) {
   return (
@@ -838,6 +886,45 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
           </ul>
         </div>
 
+        {insights.commercialAssessment ? (
+          <div>
+            <SubHead icon={ShieldAlert} meta={<Badge tone={insights.commercialAssessment.status === "evidence_supports_testing" ? "green" : insights.commercialAssessment.status === "mixed_evidence" ? "amber" : "neutral"}>{COMMERCIAL_STATUS_LABEL[insights.commercialAssessment.status]}</Badge>}>
+              What we know about sales and what to check next
+            </SubHead>
+            <Callout tone="info" title="A validation guide, not a viability verdict">
+              These findings separate business-specific evidence from owner reports, public research, website claims, and hypotheses. A small or selected sample does not establish a whole market.
+            </Callout>
+            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+              <Card>
+                <CardContent className="flex flex-col gap-3 p-4">
+                  <h4 className="text-ui font-semibold text-ink">What the evidence says</h4>
+                  {insights.commercialAssessment.evidence.length ? (
+                    <ul className="flex flex-col gap-3">
+                      {insights.commercialAssessment.evidence.map((item, index) => (
+                        <li key={`${item.dimension}-${index}`} className="flex flex-col gap-1.5 border-b border-line pb-3 last:border-0 last:pb-0">
+                          <span className="flex flex-wrap items-center gap-2"><Badge>{item.dimension.replaceAll("_", " ")}</Badge><Badge tone={item.basis === "measured" ? "green" : item.basis === "inference" ? "amber" : "neutral"}>{item.basis.replaceAll("_", " ")}</Badge></span>
+                          <p className="text-ui text-ink">{item.finding}</p>
+                          <p className="text-sm text-ink-3">Limit: {item.limitation}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : <p className="text-ui text-ink-3">No business-specific commercial evidence was supplied. The gaps below are hypotheses to validate.</p>}
+                  {insights.commercialAssessment.unknowns.length ? <div><p className="text-sm font-semibold text-ink-2">Still unknown</p><ul className="mt-1 list-inside list-disc text-sm text-ink-2">{insights.commercialAssessment.unknowns.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul></div> : null}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="flex flex-col gap-3 p-4">
+                  <h4 className="text-ui font-semibold text-ink">Smallest useful validation test</h4>
+                  <p className="text-ui text-ink-2"><span className="font-semibold text-ink">Question: </span>{insights.commercialAssessment.nextTest.question}</p>
+                  <p className="text-ui text-ink-2"><span className="font-semibold text-ink">Try: </span>{insights.commercialAssessment.nextTest.smallestTest}</p>
+                  <p className="text-ui text-ink-2"><span className="font-semibold text-ink">Look for: </span>{insights.commercialAssessment.nextTest.successSignal}</p>
+                  <p className="text-ui text-ink-2"><span className="font-semibold text-ink">Decide in advance: </span>{insights.commercialAssessment.nextTest.decisionRule}</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        ) : null}
+
         <div>
           <SubHead icon={Target} meta={<Badge>{String(insights.competitors.length)}</Badge>}>
             Competitors
@@ -847,15 +934,37 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
           ) : (
             <ul className="flex flex-col divide-y divide-line rounded-[var(--radius-card)] border border-line">
               {insights.competitors.map((c) => (
-                <li key={c.name} className="flex min-w-0 flex-col gap-1.5 p-3 sm:flex-row sm:items-start sm:gap-4">
-                  <span className="text-ui font-semibold text-ink sm:w-40 sm:shrink-0">{c.name}</span>
-                  <Clamp lines={1} className="flex-1 text-ui text-ink-2">
-                    {c.note}
-                  </Clamp>
-                  <span className="flex shrink-0 flex-wrap gap-1.5">
-                    {c.url ? <LinkChip url={c.url} label="Website" /> : null}
-                    {c.sourceUrl ? <LinkChip url={c.sourceUrl} label="Source" /> : <Badge tone="amber" icon={<TriangleAlert />}>No source: confirm</Badge>}
-                  </span>
+                <li key={c.name} className="flex min-w-0 flex-col gap-2 p-3">
+                  <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-4">
+                    <span className="text-ui font-semibold text-ink sm:w-40 sm:shrink-0">{c.name}</span>
+                    <Clamp lines={1} className="flex-1 text-ui text-ink-2">
+                      {c.note}
+                    </Clamp>
+                    <span className="flex shrink-0 flex-wrap gap-1.5">
+                      {c.url ? <LinkChip url={c.url} label="Website" /> : null}
+                      {c.sourceUrl ? <LinkChip url={c.sourceUrl} label="Source" /> : <Badge tone="amber" icon={<TriangleAlert />}>No source: confirm</Badge>}
+                    </span>
+                  </div>
+                  {c.comparison?.length ? (
+                    <details className="rounded-[var(--radius-control)] border border-line px-3 py-2">
+                      <summary className="min-h-8 cursor-pointer py-1 text-xs font-medium text-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-800">
+                        Compare the evidence ({c.comparison.length})
+                      </summary>
+                      <div className="mt-2 flex flex-col gap-3">
+                        {c.comparison.map((item, index) => (
+                          <div key={`${item.dimension}-${item.sourceUrl}-${index}`} className="grid min-w-0 gap-1 border-t border-line pt-2 text-xs sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-x-3">
+                            <span className="font-medium capitalize text-ink-2">{item.dimension.replaceAll("_", " ")}</span>
+                            <div className="min-w-0 space-y-1.5">
+                              <p className="text-ink"><span className="font-medium">Their page says: </span>{item.finding}</p>
+                              <p className="text-ink-2"><span className="font-medium">Why it may matter here: </span>{item.implication}</p>
+                              <LinkChip url={item.sourceUrl} label="Evidence page" />
+                            </div>
+                          </div>
+                        ))}
+                        <p className="text-xs text-ink-3">A competitor&apos;s page reports its own claims. These differences do not show why customers choose them.</p>
+                      </div>
+                    </details>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -874,7 +983,8 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
         </div>
 
         <div>
-          <SubHead icon={Compass}>Strengths, weaknesses, opportunities, threats</SubHead>
+          <SubHead icon={Compass}>What helps, what gets in the way, and what to watch</SubHead>
+          <p className="mb-3 max-w-[70ch] text-sm text-ink-3">A quick view of what is working inside the business and what may change outside it. Items without direct support are labeled as ideas to check.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {SWOT.map((s) => (
               <div key={s.key} className={cn("flex min-w-0 flex-col gap-2 rounded-[var(--radius-card)] p-3", s.box)}>
@@ -886,13 +996,30 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
                 {insights.swot[s.key].length === 0 ? (
                   <p className="text-ui text-ink-2">None noted.</p>
                 ) : (
-                  <ul className="flex flex-col gap-1">
+                  <ul className="flex flex-col gap-2">
                     {insights.swot[s.key].map((it) => (
                       <li key={it} className="flex min-w-0 items-start gap-2 text-ui text-ink">
                         <span aria-hidden className={cn("mt-[7px] size-1.5 shrink-0 rounded-full bg-current", s.ink)} />
-                        <Clamp lines={1} className="flex-1">
-                          {it}
-                        </Clamp>
+                        <span className="flex min-w-0 flex-1 flex-col gap-1">
+                          <Clamp lines={2}>{it}</Clamp>
+                          <details className="text-xs text-ink-2">
+                            <summary className="min-h-6 cursor-pointer font-medium text-brand-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-800">Evidence and why it matters</summary>
+                            {(() => {
+                              const evidence = swotEvidenceOf(insights, s.key, it);
+                              if (!evidence) return <p className="mt-1 text-ink-3">No supporting evidence is saved for this item. Treat it as an idea to check, not a confirmed fact.</p>;
+                              return (
+                                <div className="mt-1 flex flex-col gap-1.5">
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    <Badge tone={evidence.basis === "measured" ? "green" : evidence.basis === "inference" ? "amber" : "neutral"}>{SWOT_BASIS[evidence.basis] ?? "Evidence basis not labeled"}</Badge>
+                                    <Badge tone={CONFIDENCE_TONE[evidence.confidence] ?? "neutral"}>{`${evidence.confidence} confidence`}</Badge>
+                                  </div>
+                                  <p><span className="font-semibold">Why it may matter: </span>{evidence.strategicImplication}</p>
+                                  {evidence.evidenceRefs.length ? <div className="flex flex-wrap gap-1.5">{evidence.evidenceRefs.map(swotReference)}</div> : <p className="text-ink-3">No direct source is linked, so check this before relying on it.</p>}
+                                </div>
+                              );
+                            })()}
+                          </details>
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -901,6 +1028,30 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
             ))}
           </div>
         </div>
+
+        {insights.swotMoves?.length ? (
+          <details className="rounded-[var(--radius-card)] border border-line bg-surface p-3">
+            <summary className="min-h-8 cursor-pointer text-ui font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-800">
+              Possible next steps ({insights.swotMoves.length})
+            </summary>
+            <p className="mb-3 text-sm text-ink-3">These suggestions connect findings above. They are not proven advantages; check the small test before acting.</p>
+            <ol className="flex flex-col gap-3">
+              {insights.swotMoves.map((move, index) => {
+                const pair = swotMovePair(insights, move);
+                if (!pair) return null;
+                return (
+                  <li key={`${move.kind}-${index}`} className="rounded-[var(--radius-card)] border border-line bg-surface-2 p-3">
+                    <Badge>{SWOT_MOVE_LABEL[move.kind]}</Badge>
+                    <p className="mt-1 text-sm text-ink-3">Based on: {pair.firstFinding} · {pair.secondFinding}</p>
+                    <p className="mt-2 text-ui text-ink">{move.move}</p>
+                    <p className="mt-1 text-sm text-ink-2"><span className="font-semibold">Small first test: </span>{move.firstTest}</p>
+                    <p className="mt-1 text-sm text-ink-2"><span className="font-semibold">Measure: </span>{move.measure}</p>
+                  </li>
+                );
+              })}
+            </ol>
+          </details>
+        ) : null}
 
         <div>
           <SubHead icon={Workflow}>Customer journey</SubHead>
@@ -977,7 +1128,8 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
 
 /* ---------------- Sources ---------------- */
 
-export function Sources({ sources, web = [] }: { sources: PlanView["sources"]; web?: { url: string; title?: string }[] }) {
+export function Sources({ sources, web = [], researchEvidence = [], websiteUrl, knowledge }: { sources: PlanView["sources"]; web?: { url: string; title?: string }[]; researchEvidence?: { agentId: string; notes: string; sources: { url: string; title?: string; pageReportedDates?: { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }[] }[]; retrievedAt?: number; truncated: boolean }[]; websiteUrl?: string; knowledge?: KnowledgeReferenceSet }) {
+  const businessHost = websiteUrl ? hostOf(websiteUrl) : null;
   return (
     <PlanSection
       id="sources-heading"
@@ -996,21 +1148,114 @@ export function Sources({ sources, web = [] }: { sources: PlanView["sources"]; w
         <ul className="flex flex-col divide-y divide-line">
           {sources.map((s) => (
             <li key={s.id} className="flex min-w-0 flex-col gap-1.5 py-2 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:gap-3">
-              <Badge tone="brand" className="shrink-0 self-start capitalize">
-                {s.category}
-              </Badge>
-              <LinkedText text={s.statement} className="flex-1 text-ui text-ink" />
+              <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:max-w-48">
+                <Badge tone="brand" className="capitalize">{s.category}</Badge>
+                <Badge>{s.provenance === "owner_supplied" ? "From your team" : s.provenance === "researched" ? "From research" : "Demo example"}</Badge>
+                <Badge tone={s.reviewState === "confirmed" || s.reviewState === "edited" ? "green" : s.reviewState === "rejected" ? "red" : "amber"}>
+                  {s.reviewState === "confirmed" ? "Confirmed" : s.reviewState === "edited" ? "Edited by your team" : s.reviewState === "rejected" ? "Rejected" : "Needs review"}
+                </Badge>
+              </div>
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <LinkedText text={s.statement} className="text-ui text-ink" />
+                <p className="text-xs text-ink-3">
+                  {s.confidence} confidence{s.verifiedAt ? ` · last checked ${new Date(s.verifiedAt).toISOString().slice(0, 10)}` : " · check date unavailable"}
+                </p>
+                {s.sources.length || s.sourceDetailsUnavailableCount || s.additionalSourceCount ? (
+                  <details className="text-xs">
+                    <summary className="min-h-6 cursor-pointer font-medium text-link">View source details</summary>
+                    <ul className="mt-2 flex flex-col gap-2">
+                      {s.sources.map((source) => (
+                        <li key={source.id} className="rounded-[var(--radius-control)] border border-line bg-surface px-2.5 py-2">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge>{source.kind === "website" ? "Website" : source.kind === "search" ? "Public research" : source.kind === "owner_text" ? "Your note" : source.kind === "owner_upload" ? "Your file" : "Demo source"}</Badge>
+                            <Badge>{source.status === "ok" ? `Read ${new Date(source.fetchedAt).toISOString().slice(0, 10)}` : source.status === "blocked_by_robots" ? "Page access blocked" : source.status === "failed" ? "Page could not be read" : "Not read"}</Badge>
+                          </div>
+                          {source.url ? <p className="mt-1.5"><LinkChip url={source.url} label={source.title ? `${source.title} · ${hostOf(source.url)}` : undefined} /></p> : source.title ? <p className="mt-1.5 text-ink-2">{source.title}</p> : null}
+                          {source.excerpt ? <p className="mt-1.5 whitespace-pre-wrap break-words leading-relaxed text-ink-2">Saved excerpt: {source.excerpt}</p> : null}
+                          {source.excerptExpired ? <p className="mt-1.5 text-ink-3">The saved page excerpt is no longer retained. The link opens the current page, which may have changed.</p> : null}
+                        </li>
+                      ))}
+                      {s.sourceDetailsUnavailableCount ? <li className="text-ink-3">Some linked source details are unavailable.</li> : null}
+                      {s.additionalSourceCount ? <li className="text-ink-3">{s.additionalSourceCount} more source(s) are not shown here.</li> : null}
+                    </ul>
+                  </details>
+                ) : <p className="text-xs text-ink-3">No supporting page or file was saved with this fact.</p>}
+              </div>
             </li>
           ))}
         </ul>
       )}
+      {researchEvidence.length ? (
+        <details className="border-t border-line pt-3">
+          <summary className="cursor-pointer text-sm font-medium text-ink">Research notes and assessment</summary>
+          <p className="mt-2 text-xs text-ink-3">These notes were written by AI from the listed sources. The links are for this research run; they are not connected to each sentence, and source relevance and reliability are not independently verified. Open the source and check important claims, dates, and methods before relying on them.</p>
+          <ul className="mt-2 flex flex-col divide-y divide-line">
+            {researchEvidence.map((entry) => (
+              <li key={entry.agentId} className="flex flex-col gap-2 py-3 first:pt-1 last:pb-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-ink">{entry.agentId === "growth_plays" ? "Growth options research" : entry.agentId === "growth_strategy" ? "Plan research" : "Other research"}</span>
+                  {entry.retrievedAt !== undefined ? <Badge>Retrieved {new Date(entry.retrievedAt).toISOString().slice(0, 10)}</Badge> : <Badge tone="amber">Retrieval date unavailable</Badge>}
+                  {entry.truncated ? <Badge tone="amber">Notes shortened</Badge> : null}
+                </div>
+                <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-ink-2">{entry.notes}</p>
+                {entry.sources.length ? <ul className="flex flex-col gap-2">{entry.sources.map((source) => <li key={source.url} className="flex flex-col items-start gap-1"><LinkChip url={source.url} label={source.title ? `${source.title} · ${hostOf(source.url)}` : undefined} />{source.pageReportedDates?.length ? <p className="text-xs text-ink-3">Page-reported {(["published", "updated"] as const).flatMap((kind) => { const dates = [...new Set(source.pageReportedDates?.filter((item) => item.kind === kind).map((item) => item.date) ?? [])]; return dates.length ? [`${kind}: ${dates.join(", ")}`] : []; }).join(" · ")} · page metadata, not independently verified</p> : null}</li>)}</ul> : <p className="text-xs text-ink-3">No source links were saved with these notes.</p>}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
       {web.length ? (
         <div className="flex flex-col gap-2 border-t border-line pt-3">
           <FieldLabel icon={Globe}>Pages read</FieldLabel>
+          <p className="text-xs text-ink-3">A page on your website shows what your business publishes. Other pages are references; a different website does not by itself make a source independent or prove its claims.</p>
           <ul className="flex flex-wrap gap-1.5">
             {web.map((w) => (
-              <li key={w.url} className="min-w-0 max-w-full">
+              <li key={w.url} className="flex min-w-0 max-w-full flex-col items-start gap-1">
                 <LinkChip url={w.url} label={w.title ? `${w.title} · ${hostOf(w.url)}` : undefined} />
+                <Badge tone={businessHost && hostOf(w.url) === businessHost ? "amber" : "neutral"}>
+                  {businessHost
+                    ? hostOf(w.url) === businessHost ? "Your website · published claim" : "Other website · independence unverified"
+                    : "Site relationship unknown · independence unverified"}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {knowledge?.records.length ? (
+        <div className="flex flex-col gap-3 border-t border-line pt-3">
+          <div>
+            <FieldLabel icon={BookOpenCheck}>Reference guidance used</FieldLabel>
+            <p className="mt-1 text-xs text-ink-3">
+              These curated references helped shape the plan. They are not evidence about your business, and proposed scenarios are unvalidated hypotheses.
+            </p>
+            <p className="mt-1 text-xs text-ink-3">{knowledge.edition} · research cutoff {knowledge.researchCutoff}</p>
+          </div>
+          <ul className="flex flex-col divide-y divide-line">
+            {knowledge.records.map((record) => (
+              <li key={record.id} className="flex flex-col gap-1.5 py-2 first:pt-0 last:pb-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={record.kind === "industry_playbook" || record.kind === "scenario" ? "amber" : "neutral"}>
+                    {record.kind === "industry_playbook" || record.kind === "scenario" ? "Proposed hypothesis" : "Reference guidance"}
+                  </Badge>
+                  {record.businessType ? <Badge>{record.businessType}</Badge> : null}
+                  {record.industry ? <Badge>{record.industry}</Badge> : null}
+                </div>
+                <p className="text-sm font-medium text-ink">{record.heading}</p>
+                <p className="text-xs text-ink-3">{record.path} · reference checksum {record.sha256.slice(0, 12)}</p>
+                {record.sources.length ? (
+                  <ul className="flex flex-col gap-1 text-xs">
+                    {record.sources.map((source) => (
+                      <li key={source.registryId} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <a href={source.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                          {source.title}
+                        </a>
+                        <span className="text-ink-3">Checked {source.retrievedAt} · {source.freshness.status}</span>
+                        {source.claims[0]?.scope ? <span className="text-ink-3">Scope: {source.claims[0].scope}</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                ) : <p className="text-xs text-ink-3">Curated library reference; no external source was attached.</p>}
               </li>
             ))}
           </ul>
@@ -1038,13 +1283,14 @@ export function RecentWork({ slug }: { slug: string }) {
         <ul className="flex flex-col divide-y divide-line">
           {runs.slice(0, 12).map((r) => {
             const finished = ["verified", "failed", "canceled", "uncertain"].includes(r.status);
+            const runStatus = runStatusPresentation(r.status);
             return (
               <li key={r.id} className="flex min-w-0 flex-col gap-1 py-2.5 first:pt-0 last:pb-0">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="min-w-0 truncate text-ui font-medium text-ink">{r.title}</span>
                   <span className="flex flex-wrap gap-1.5">
                     {r.isFixture ? <Badge tone="violet">Demo</Badge> : null}
-                    <Badge tone={RUN_STATUS_TONE[r.status] ?? "neutral"}>{RUN_STATUS_LABEL[r.status] ?? r.status}</Badge>
+                    <Badge tone={runStatus.tone}>{runStatus.label}</Badge>
                   </span>
                 </div>
                 <span className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-3">

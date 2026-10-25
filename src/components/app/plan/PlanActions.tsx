@@ -8,7 +8,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { ClipboardList, Magic, RefreshCw } from "@/components/icons";
 import { useState } from "react";
-import { Button, Callout, Card, CardContent, ConfirmDialog, Field, IconTile, Textarea, toast } from "@/components/ui";
+import { Button, Callout, Card, CardContent, ConfirmDialog, Field, IconTile, Select, Textarea, toast } from "@/components/ui";
 import { RUN_FINISHED, RunProgress } from "../content/RunProgress";
 import { ErrorCallout, PERMISSION_WHO } from "../content/shared";
 import { microsToCreditsLabel } from "../money";
@@ -34,6 +34,7 @@ export function GeneratePlanButton({
 }) {
   const generate = useMutation(api.orgs.generatePlan);
   const [error, setError] = useState<unknown>(null);
+  const [creativeRange, setCreativeRange] = useState<"balanced" | "conventional" | "surprising" | "ambitious">("balanced");
   const ai = useAiMode(slug);
   const build = mode === "build";
   const max = ai.data?.estimates.strategy[ai.mode] ?? estimateMicros;
@@ -64,7 +65,7 @@ export function GeneratePlanButton({
         onConfirm={async () => {
           setError(null);
           try {
-            const res = await generate({ slug, aiMode: ai.mode });
+            const res = await generate({ slug, aiMode: ai.mode, creativeRange });
             onStarted(res.runId);
           } catch (e) {
             setError(e);
@@ -72,6 +73,7 @@ export function GeneratePlanButton({
         }}
       >
         <AiModePicker slug={slug} kind="strategy" value={ai.mode} onChange={ai.setMode} />
+        <Field label="Creative strategy range"><Select value={creativeRange} onValueChange={(value) => setCreativeRange(value as typeof creativeRange)} options={[{ value: "balanced", label: "Balanced" }, { value: "conventional", label: "More conventional" }, { value: "surprising", label: "More surprising" }, { value: "ambitious", label: "More ambitious" }]} /></Field>
       </ConfirmDialog>
       <p className="text-xs tabular-nums text-ink-3">≤ {microsToCreditsLabel(max)}</p>
       {error ? <ErrorCallout error={error} /> : null}
@@ -124,8 +126,8 @@ export function approvedToast(work: PlanWork): { tone: "success" | "info"; title
 }
 
 /** Prominent review card for a plan waiting for approval. */
-export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecided, quality }: { slug: string; strategyId: Id<"strategies">; version: number; canApprove: boolean; onDecided?: () => void; quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[]; conflicts?: string[] } | null }) {
-  const blocked = quality?.state === "failed";
+export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecided, staleReason, quality }: { slug: string; strategyId: Id<"strategies">; version: number; canApprove: boolean; onDecided?: () => void; staleReason?: string; quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[]; conflicts?: string[] } | null }) {
+  const blocked = quality?.state === "failed" || Boolean(staleReason);
   const decide = useMutation(api.workspace.decidePlan);
   const [note, setNote] = useState("");
   const [error, setError] = useState<unknown>(null);
@@ -155,9 +157,10 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecide
           </ul>
         </div>
       </div>
-      {quality && quality.state !== "passed" ? (
-        <Callout tone={blocked ? "danger" : "warning"} live="none" title={QUALITY_LABEL[quality.state]} className={cn(!blocked && "bg-surface")}>
-          {quality.reasons.length ? (
+      {(quality && quality.state !== "passed") || staleReason ? (
+        <Callout tone={blocked ? "danger" : "warning"} live="none" title={staleReason ? "Refresh this plan before approval" : QUALITY_LABEL[quality!.state]} className={cn(!blocked && "bg-surface")}>
+          {staleReason ? <p>The following changed after this version was prepared: {staleReason}. Draft a fresh version before approving or starting work.</p> : null}
+          {quality?.reasons.length ? (
             <ul className="flex flex-col gap-1">
               {quality.reasons.map((r) => (
                 <li key={r} className="flex min-w-0 items-start gap-2">
@@ -167,7 +170,7 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecide
               ))}
             </ul>
           ) : null}
-          {blocked && quality.fixes?.length ? (
+          {blocked && quality?.fixes?.length ? (
             <div className="mt-2">
               <p className="text-xs font-semibold text-red-800">What to fix</p>
               <ul className="mt-1 flex flex-col gap-1 text-sm">
@@ -180,9 +183,11 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecide
             </div>
           ) : null}
           {blocked ? (
-            <p className="mt-1.5 font-medium text-red-800">
-              Can&apos;t start work. Add a missing number in <Link href={`/app/${slug}/settings/facts`} className="underline">Business facts</Link>, then refresh the plan. Or send it back.
-            </p>
+            staleReason ? <p className="mt-1.5 font-medium text-red-800">Refresh the plan before approving it. The current version remains available for review.</p> : (
+              <p className="mt-1.5 font-medium text-red-800">
+                Can&apos;t start work. Add a missing number in <Link href={`/app/${slug}/settings/facts`} className="underline">Business facts</Link>, then refresh the plan. Or send it back.
+              </p>
+            )
           ) : null}
         </Callout>
       ) : null}

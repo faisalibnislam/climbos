@@ -1,0 +1,36 @@
+{
+  "playbook_id": "execution.approved_asset.v1",
+  "required_records": [
+    "asset_version",
+    "approval_or_standing_policy",
+    "destination_account",
+    "execution_budget_reservation",
+    "outbox_intent"
+  ],
+  "preflight_checks": [
+    "authenticated_tenant_matches_all_records",
+    "content_hash_matches_authorization",
+    "destination_and_audience_in_scope",
+    "authorization_not_expired_or_revoked",
+    "claims_have_evidence",
+    "budget_and_channel_policy_valid",
+    "recipient_eligibility_valid_if_email"
+  ],
+  "states": [
+    "queued",
+    "claimed",
+    "attempted",
+    "confirmed",
+    "reconciling",
+    "failed",
+    "cancelled"
+  ],
+  "retry_policy": {
+    "stable_idempotency_key": true,
+    "ambiguous_external_result": "reconcile_before_retry",
+    "permission_denied": "stop_and_request_reconnection",
+    "maximum_attempts": 3
+  },
+  "success_definition": "provider_confirmed_external_result",
+  "measurement_success_is_separate": true
+}

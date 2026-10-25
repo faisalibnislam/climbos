@@ -1,0 +1,15 @@
+{
+  "id": "seo.content_review.v1",
+  "required_inputs": ["asset_version", "business_snapshot_id", "claim_ledger"],
+  "checks": {
+    "unsupported_business_claims": "block",
+    "fabricated_results": "block",
+    "broken_required_links": "repair",
+    "duplicate_intent": "review_existing_asset",
+    "missing_maintenance_owner": "return_for_completion"
+  },
+  "review_dimensions": ["task_completion", "accuracy", "readability", "commercial_fit"],
+  "approval_binding": ["tenant_id", "asset_version", "destination", "action_scope"],
+  "publication": {"default": "disabled", "requires": "valid_execution_permission"},
+  "outcome_states": ["not_published", "published_observing", "matured", "inconclusive"]
+}

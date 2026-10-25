@@ -2,147 +2,137 @@
 
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { ArrowUp, Magic } from "@/components/icons";
-import { forwardRef, useImperativeHandle, useRef, useState } from "react";
-import { Button, toast } from "@/components/ui";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { toast } from "@/components/ui";
+import { RequestComposer } from "@/components/ui/request-composer";
 import { errorInfo } from "@/components/app/errors";
-import { cn } from "@/lib/utils";
+import { wishDraftKey } from "@/components/app/draftKeys";
+import { microsToCreditsLabel } from "@/components/app/money";
 
 export interface WishComposerHandle {
   fill: (text: string) => void;
 }
 
-/** Wish ideas that fit the business, mixing everyday work with less obvious growth plays. */
-export function wishSuggestions(type: string | null | undefined): string[] {
+/** Everyday, business-type-aware request starters; choosing one only fills the draft. */
+export function wishSuggestions(type?: string | null): string[] {
   switch (type) {
     case "saas":
       return [
-        "Plan a Product Hunt launch",
-        "Get 10 G2 reviews",
-        "Pitch YouTube reviewers",
-        "5 founder-story LinkedIn posts",
+        "Help me choose the next step for my software business",
+        "Find out what may stop the right people from signing up",
+        "Help new customers reach their first useful result",
+        "Explain what my recent results say about growth",
       ];
     case "ecommerce":
+      return [
+        "Help me choose the next step for my online store",
+        "Help more shoppers finish an order",
+        "Find out what may bring past customers back",
+        "Explain what my recent results say about sales",
+      ];
     case "physical_products":
       return [
-        "Send our product to 20 creators",
-        "Get into holiday gift guides",
-        "Plan a pre-order drop",
-        "Win back lapsed customers",
+        "Help me choose the next step for my product business",
+        "Help shoppers understand what makes my product useful",
+        "Find a practical way to reach people who may need my product",
+        "Explain what my recent results say about sales",
       ];
     case "services":
       return [
-        "Get more Google reviews",
-        "Find local partners",
-        "Plan a seasonal offer",
-        "Write a referral offer",
+        "Help me choose the next step for my service business",
+        "Help more of the right people book with me",
+        "Find out what may stop enquiries from becoming bookings",
+        "Prepare posts that answer common customer questions",
       ];
     default:
       return [
-        "3 Instagram posts for next week",
-        "Audit my site for enquiries",
-        "Autopilot for Instagram",
-        "Why did sign-ups change?",
+        "Help me choose what to do next",
+        "Prepare posts for next week",
+        "Help me find more customers",
+        "Explain my recent results",
       ];
   }
 }
 
-/**
- * The wish bar: say what you want in your own words. Drafts, plans and
- * research start right away; anything that would go live waits for you.
- */
-export const WishComposer = forwardRef<WishComposerHandle, { slug: string; suggestions: string[]; disabled?: boolean; disabledReason?: string | null }>(function WishComposer(
-  { slug, suggestions, disabled, disabledReason },
-  ref,
+/** Uses the existing costed work flow; inserting a suggestion never starts it. */
+export const WishComposer = forwardRef<WishComposerHandle, { slug: string; userId?: string; identityReady: boolean; suggestions: string[]; disabled?: boolean; disabledReason?: string | null; requestCostEstimateMicros: number; autoDraftBudgetMicros: number; isDemo: boolean }>(function WishComposer(
+  { slug, userId, identityReady, suggestions, disabled, disabledReason, requestCostEstimateMicros, autoDraftBudgetMicros, isDemo }, ref,
 ) {
   const send = useMutation(api.workspace.sendChat);
-  const [text, setText] = useState("");
+  const scope = identityReady && userId ? wishDraftKey(slug, userId) : null;
+  const [draft, setDraft] = useState<{ scope: string | null; text: string }>({ scope: null, text: "" });
+  const [loadedScope, setLoadedScope] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const pending = useRef(false);
   const area = useRef<HTMLTextAreaElement>(null);
+  const text = draft.scope === scope ? draft.text : "";
+
+  useEffect(() => {
+    setLoadedScope(null);
+    if (!scope) {
+      setDraft({ scope: null, text: "" });
+      return;
+    }
+    let saved = "";
+    try { saved = window.sessionStorage.getItem(scope) ?? ""; } catch { /* Storage may be unavailable. */ }
+    setDraft({ scope, text: saved });
+    setLoadedScope(scope);
+  }, [scope]);
+
+  useEffect(() => {
+    if (!scope || loadedScope !== scope || draft.scope !== scope) return;
+    try {
+      if (draft.text.trim()) window.sessionStorage.setItem(scope, draft.text);
+      else window.sessionStorage.removeItem(scope);
+    } catch { /* The request remains editable if browser storage is unavailable. */ }
+  }, [draft, loadedScope, scope]);
+
   useImperativeHandle(ref, () => ({
-    fill: (t: string) => {
-      setText(t);
-      requestAnimationFrame(() => {
-        area.current?.focus();
-        area.current?.setSelectionRange(t.length, t.length);
+    fill: (value) => {
+      // A queued request must not discard a draft someone is already writing.
+      setDraft((current) => {
+        const currentText = current.scope === scope ? current.text : "";
+        return { scope, text: currentText.trim() ? `${currentText.trimEnd()}\n${value}` : value };
       });
+      requestAnimationFrame(() => area.current?.focus());
     },
-  }));
+  }), [scope]);
 
   const submit = async () => {
-    const wish = text.trim();
-    if (!wish || busy || disabled) return;
+    const request = text.trim();
+    if (!request || pending.current || disabled || !scope) return;
+    pending.current = true;
     setBusy(true);
     try {
-      await send({ slug, text: wish });
-      setText("");
-    } catch (err) {
-      toast({ tone: "danger", title: errorInfo(err).message });
+      await send({ slug, text: request });
+      setDraft({ scope, text: "" });
+    } catch (error) {
+      toast({ tone: "danger", title: errorInfo(error).message });
     } finally {
+      pending.current = false;
       setBusy(false);
     }
   };
 
   return (
-    <section aria-labelledby="wish-heading" className="rounded-[var(--radius-card)] border border-line bg-surface p-[var(--card-p)] shadow-[var(--card-shadow)]">
-      <h2 id="wish-heading" className="heading-section flex items-center gap-2">
-        <Magic aria-hidden className="size-4 text-sun-strong" /> What should your team do?
-      </h2>
-      <form
-        className={cn(
-          "mt-4 flex items-end gap-2 rounded-xl border border-control bg-surface p-2 pl-3.5 transition-colors focus-within:border-brand-800 focus-within:ring-2 focus-within:ring-brand-100",
-          disabled && "opacity-60",
-        )}
-        onSubmit={(e) => {
-          e.preventDefault();
-          void submit();
-        }}
-      >
-        <label htmlFor="wish-input" className="sr-only">
-          Your wish for the team
-        </label>
-        <textarea
-          id="wish-input"
-          ref={area}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onInput={(e) => {
-            const el = e.currentTarget;
-            el.style.height = "auto";
-            el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              void submit();
-            }
-          }}
-          rows={1}
-          disabled={disabled}
-          placeholder={`${suggestions[0] ?? "Posts for our launch"}…`}
-          className="min-h-9 flex-1 resize-none bg-transparent py-2 text-base text-ink outline-none placeholder:text-ink-3"
-        />
-        <Button type="submit" loading={busy} disabled={!text.trim() || disabled} aria-label="Send">
-          <ArrowUp aria-hidden className="sm:hidden" />
-          <span className="hidden sm:inline">Send</span>
-        </Button>
-      </form>
-      {disabled && disabledReason ? <p className="mt-2 text-ui text-ink-3">{disabledReason}</p> : null}
-      <div className="mt-3 flex flex-wrap gap-2" aria-label="Ideas">
-        {suggestions.slice(0, 3).map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => {
-              setText(s);
-              requestAnimationFrame(() => area.current?.focus());
-            }}
-            className="inline-flex min-h-8 items-center rounded-lg border border-line bg-surface-2 px-2.5 py-1 text-left text-ui text-ink-2 transition-colors hover:border-line-strong hover:bg-surface hover:text-ink"
-          >
-            {s}
-          </button>
-        ))}
-      </div>
+    <section aria-labelledby="request-heading" className="space-y-3">
+      <h2 id="request-heading" className="heading-section">What would you like help with?</h2>
+      <p className="text-sm text-ink-3">Use your own words. You do not need to know marketing or business terms.</p>
+      <RequestComposer
+        label="Your request"
+        inputRef={area}
+        value={text}
+        onChange={(next) => setDraft({ scope, text: next })}
+        onSubmit={() => void submit()}
+        placeholder="For example: I want more people to book my services. Where should I start?"
+        suggestions={suggestions}
+        busy={busy}
+        disabled={disabled || !scope}
+        helper={!identityReady ? "Checking your account…" : isDemo
+          ? "Your draft stays in this browser tab and this business. Demo requests use no paid AI credits and do not contact customers or publish anything."
+          : `Your draft stays in this browser tab and this business. Sending sets aside up to ${microsToCreditsLabel(requestCostEstimateMicros)} to understand your request. ClimbOS may also reserve up to ${microsToCreditsLabel(autoDraftBudgetMicros)} for safe draft or analysis work that starts automatically, when workspace rules allow. Each job has its own cost guard; unused reserved credits return. External messages, publishing, and ad spend still need your approval.`}
+      />
+      {(disabled || !scope) && disabledReason ? <p role="status" className="text-sm text-ink-3">{disabledReason}</p> : null}
     </section>
   );
 });

@@ -1,0 +1,32 @@
+id: b01-business-diagnostic
+version: 1
+mode: analysis_only
+required_inputs:
+  - business_snapshot_id
+  - goal_definition
+  - currency
+  - observation_window
+  - cost_boundary
+  - capacity_definition
+steps:
+  - id: identity
+    instruction: Verify canonical business and separate reported from measured facts.
+  - id: mechanism
+    instruction: Map buyer, problem, offer, delivery, collection, and repeat value.
+  - id: economics
+    instruction: Calculate contribution using explicit cost inclusions and exclusions.
+  - id: diagnosis
+    instruction: Compare demand, activation, retention, capacity, and cash constraints.
+  - id: alternatives
+    instruction: Produce competing approaches with evidence and trade-offs.
+  - id: decision
+    instruction: Select a bounded experiment or request material missing evidence.
+outputs:
+  - diagnosis_with_counterevidence
+  - unit_economics_with_assumptions
+  - alternatives_and_deferred_work
+  - experiment_and_review_date
+stop_conditions:
+  - unresolved_business_identity
+  - inconsistent_currency_or_period
+  - missing_authorization_for_external_action

@@ -1,11 +1,141 @@
 /**
- * S6 (REQ-TARGET-01..06, REQ-CREATOR-01/03): a plan's target-heavy plays get
+ * S6 (REQ-TARGET-01..06, REQ-CREATOR-01/03/04): a plan's target-heavy plays get
  * named targets from the existing Find customers / creator search, linked by
  * the play's stable ID. Pure and deterministic: which plays need targets,
  * what a creator's identity is, and how ready a play's targets honestly are.
  */
 
 export type TargetKind = "customers" | "creators";
+
+/** Product freshness policy for public creator evidence; not a claim about how fast platforms change. */
+export const CREATOR_EVIDENCE_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+
+export function creatorEvidenceIsStale(observedAt: number | undefined, now: number): boolean {
+  return observedAt === undefined || !Number.isFinite(observedAt) || observedAt > now || now - observedAt >= CREATOR_EVIDENCE_MAX_AGE_MS;
+}
+
+export interface CitedCreatorFact { value: string; sourceUrl: string }
+export interface CreatorEvidence { url: string; observation: string }
+export interface CreatorContentSample {
+  url: string;
+  format: "short_video" | "long_video" | "image" | "text" | "live" | "other";
+  views?: string;
+  likes?: string;
+  comments?: string;
+}
+export interface CreatorMetricAnomaly {
+  code: "interactions_exceed_views";
+  sampleUrl: string;
+  views: string;
+  interactions: { metric: "likes" | "comments"; value: string }[];
+  observedAt: number;
+  uncertainty: string;
+}
+export interface CreatorCompetitorCollaboration {
+  name: string;
+  type: "paid_or_sponsored" | "affiliate" | "gifted_or_product" | "co_created_or_partnered" | "mentioned_only" | "unclear";
+  evidenceUrl: string;
+  evidenceQuote: string;
+  publishedAt?: string;
+  observedAt: number;
+}
+
+function containsExactPhrase(source: string, phrase: string): boolean {
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|[^\\p{L}\\p{N}])${escaped}(?=$|[^\\p{L}\\p{N}])`, "iu").test(source);
+}
+
+/** Keep at most five samples and accept visible counts only when the same URL's observation contains them verbatim. */
+export function citedCreatorContentSamples(value: unknown, evidence: readonly CreatorEvidence[]): CreatorContentSample[] {
+  if (!Array.isArray(value)) return [];
+  const accepted: CreatorContentSample[] = [];
+  for (const raw of value.slice(0, 5)) {
+    if (!raw || typeof raw !== "object") continue;
+    const sample = raw as Record<string, unknown>;
+    if (typeof sample.url !== "string" || !/^https?:\/\//i.test(sample.url)) continue;
+    if (!["short_video", "long_video", "image", "text", "live", "other"].includes(String(sample.format))) continue;
+    const source = evidence.find((item) => item.url === sample.url)?.observation;
+    if (!source) continue;
+    const result: CreatorContentSample = { url: sample.url.slice(0, 500), format: sample.format as CreatorContentSample["format"] };
+    for (const metric of ["views", "likes", "comments"] as const) {
+      const count = sample[metric];
+      if (typeof count === "string" && count.trim() && count.length <= 40 && containsExactPhrase(source, count.trim())) result[metric] = count.trim();
+    }
+    accepted.push(result);
+  }
+  return accepted;
+}
+
+/** Parse only a simple, explicitly displayed count. Unknown formats stay unknown. */
+function displayedCount(value: string | undefined, label: "views" | "likes" | "comments"): number | null {
+  if (!value) return null;
+  const escapedLabel = label === "views" ? "views?" : label;
+  const match = value.trim().match(new RegExp(`^(?:~|≈)?\\s*(\\d[\\d,]*(?:\\.\\d+)?)\\s*([kmb])?(?:\\s+${escapedLabel})?$`, "i"));
+  if (!match) return null;
+  const amount = Number(match[1]!.replaceAll(",", ""));
+  const multiplier = ({ k: 1_000, m: 1_000_000, b: 1_000_000_000 } as const)[(match[2] ?? "").toLowerCase() as "k" | "m" | "b"] ?? 1;
+  const total = amount * multiplier;
+  return Number.isFinite(total) ? total : null;
+}
+
+/**
+ * Flag only a source-visible count inconsistency. This is explicitly not an
+ * authenticity or fraud score; counters may have different definitions.
+ */
+export function creatorMetricAnomalies(samples: readonly CreatorContentSample[], observedAt: number): CreatorMetricAnomaly[] {
+  const anomalies: CreatorMetricAnomaly[] = [];
+  for (const sample of samples) {
+    const views = displayedCount(sample.views, "views");
+    if (views === null) continue;
+    const interactions = (["likes", "comments"] as const).flatMap((metric) => {
+      const value = sample[metric];
+      const count = displayedCount(value, metric);
+      return value && count !== null && count > views ? [{ metric, value }] : [];
+    });
+    if (!interactions.length || !sample.views) continue;
+    anomalies.push({
+      code: "interactions_exceed_views",
+      sampleUrl: sample.url,
+      views: sample.views,
+      interactions,
+      observedAt,
+      uncertainty: "The displayed interaction count exceeds the displayed view count. This is a counter inconsistency, not evidence of fake engagement; metric definitions or refresh times may differ. Verify the source before using these counts to compare creators.",
+    });
+  }
+  return anomalies;
+}
+
+/** Preserve prior competitor collaborations as dated, source-bound signals without asserting current exclusivity. */
+export function citedCreatorCompetitorCollaborations(value: unknown, evidence: readonly CreatorEvidence[], observedAt: number): CreatorCompetitorCollaboration[] {
+  if (!Array.isArray(value)) return [];
+  const accepted: CreatorCompetitorCollaboration[] = [];
+  for (const raw of value.slice(0, 5)) {
+    if (!raw || typeof raw !== "object") continue;
+    const item = raw as Record<string, unknown>;
+    const name = typeof item.name === "string" ? item.name.trim() : "";
+    const evidenceUrl = typeof item.evidenceUrl === "string" ? item.evidenceUrl.trim() : "";
+    const evidenceQuote = typeof item.evidenceQuote === "string" ? item.evidenceQuote.trim() : "";
+    const type = item.type;
+    if (!name || name.length > 100 || !/^https?:\/\//i.test(evidenceUrl) || !evidenceQuote || evidenceQuote.length > 240) continue;
+    if (!["paid_or_sponsored", "affiliate", "gifted_or_product", "co_created_or_partnered", "mentioned_only", "unclear"].includes(String(type))) continue;
+    const source = evidence.find((row) => row.url === evidenceUrl)?.observation;
+    if (!source || !containsExactPhrase(source, evidenceQuote) || !containsExactPhrase(evidenceQuote, name)) continue;
+    const publishedAt = typeof item.publishedAt === "string" ? item.publishedAt.trim() : "";
+    if (publishedAt && (publishedAt.length > 80 || !containsExactPhrase(evidenceQuote, publishedAt))) continue;
+    accepted.push({ name: name.slice(0, 100), type: type as CreatorCompetitorCollaboration["type"], evidenceUrl: evidenceUrl.slice(0, 500), evidenceQuote: evidenceQuote.slice(0, 240), ...(publishedAt ? { publishedAt: publishedAt.slice(0, 80) } : {}), observedAt });
+  }
+  return accepted;
+}
+
+/** Accept a creator metric/language only when its exact value appears in evidence from the same cited URL. */
+export function citedCreatorFact(value: unknown, evidence: readonly CreatorEvidence[]): CitedCreatorFact | null {
+  if (!value || typeof value !== "object") return null;
+  const detail = value as { value?: unknown; sourceUrl?: unknown };
+  if (typeof detail.value !== "string" || !detail.value.trim() || typeof detail.sourceUrl !== "string" || !/^https?:\/\//i.test(detail.sourceUrl)) return null;
+  const text = evidence.find((item) => item.url === detail.sourceUrl)?.observation;
+  if (typeof text !== "string" || !containsExactPhrase(text, detail.value.trim())) return null;
+  return { value: detail.value.trim().slice(0, 100), sourceUrl: detail.sourceUrl.slice(0, 500) };
+}
 
 /** The play fields the classifier reads. */
 export interface PlayText {

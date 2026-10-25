@@ -22,7 +22,7 @@ export default function ContentPage() {
     <div className="mx-auto w-full max-w-6xl">
       <PageHeader
         section="content"
-        title="Content"
+        title="Posts, emails & ads"
         actions={
           <>
             <Button asChild variant="secondary">

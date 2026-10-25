@@ -5,8 +5,24 @@
  * hard failures and numeric checks are read by the grader alone.
  */
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 
 const ROOT = "docs/growth-expansion/evaluations";
+
+export interface FixtureIdentity {
+  version: number;
+  sha256: string;
+}
+
+/** Identifies the exact cases and prompts used by a run, not just the hand-set version. */
+export function fixtureIdentity(root = ROOT): FixtureIdentity {
+  const cases = readFileSync(`${root}/cases.json`);
+  const prompts = readFileSync(`${root}/prompts.jsonl`);
+  const parsed = JSON.parse(cases.toString("utf8")) as { version?: unknown };
+  if (!Number.isSafeInteger(parsed.version) || Number(parsed.version) < 1) throw new Error("Evaluation fixture version must be a positive integer.");
+  const hash = createHash("sha256").update("climbos-expansion-fixtures-v1\0").update(cases).update("\0").update(prompts).digest("hex");
+  return { version: Number(parsed.version), sha256: hash };
+}
 
 export type ExpansionBusinessType = "saas" | "mac_app" | "agency" | "ecommerce" | "local_service" | "marketplace" | "cross_business";
 

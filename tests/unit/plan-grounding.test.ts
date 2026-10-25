@@ -83,29 +83,49 @@ describe("money keeps the workspace currency", () => {
     const e: Economics = { revenuePerCustomerMonthUsd: 600, grossMargin: 0.8, monthlyChurn: 0.05, basis: "", currency: "BDT", ownerHourUsd: 100 };
     const plays = [{ name: "Ads", kind: "bankable", horizonDays: 90, model: { weeklyReach: 10, steps: [{ name: "pay", rate: 0.001 }], monthlySpendUsd: 50_000, ownerHoursPerWeek: 1 } }];
     const issues = lintEconomics({ economics: e, plays: plays as never });
-    const loses = issues.find((i) => /Loses money/.test(i.message));
+    const loses = issues.find((i) => /Does not pay back under the current scenario/.test(i.message));
     expect(loses?.message).toMatch(/৳|BDT/);
     expect(loses?.message).not.toMatch(/\$/);
+    expect(loses?.severity).toBe("warn");
   });
 });
 
 describe("evidence pack per plan version (Book 13 §3)", () => {
   it("keeps facts, research and versions, bounded and marked when cut", () => {
+    const retrievedAt = Date.UTC(2026, 9, 25, 12);
     const ev = buildPlanEvidence({
       skillIds: ["growth-plays", "owner-brevity", "growth-plays"],
       currency: "USD",
       goal: { statement: "Get 50 customers", horizonDays: 90, monthlyAdBudget: 600 },
       facts: [{ id: "f1", statement: "Pro plan is $19/month", category: "pricing" }],
       insights: "x".repeat(30_000),
-      research: [{ agentId: "growth_plays", notes: "Pricing page lists Pro at $19.", sources: [{ url: "https://formkit.app/pricing" }] }, { agentId: "growth_strategy" }],
+      research: [{ agentId: "growth_plays", notes: "Pricing page lists Pro at $19.", sources: [{ url: "https://formkit.app/pricing", pageReportedDates: [{ kind: "published", date: "2025-02-03", source: "json_ld" }] }], retrievedAt }, { agentId: "growth_strategy" }],
     });
     expect(Object.keys(ev.skills)).toEqual(["growth-plays", "owner-brevity"]);
     expect(ev.skills["growth-plays"]).not.toBe("missing");
     expect(ev.engine).toMatch(/^v\d/);
     expect(ev.facts[0]).toEqual({ id: "f1", statement: "Pro plan is $19/month", category: "pricing" });
     expect(ev.research).toHaveLength(1);
+    expect(ev.research[0]?.retrievedAt).toBe(retrievedAt);
+    expect(ev.research[0]?.sources[0]?.pageReportedDates).toEqual([{ kind: "published", date: "2025-02-03", source: "json_ld" }]);
     expect(ev.insights.length).toBe(24_000);
     expect(ev.truncated).toContain("insights");
+  });
+
+  it("keeps provenance and verification age with current and stale facts", () => {
+    const verifiedAt = Date.UTC(2026, 0, 2);
+    const ev = buildPlanEvidence({
+      skillIds: [],
+      currency: "USD",
+      goal: null,
+      facts: [{ id: "current", statement: "Pro is $19/month", category: "pricing", confidence: "high", provenance: "owner_supplied", evidenceKind: "owner", verifiedAt, daysSinceVerification: 10 }],
+      staleFacts: [{ id: "stale", statement: "Pro used to be $24/month", category: "pricing", confidence: "medium", provenance: "researched", verifiedAt, daysSinceVerification: 90 }],
+      insights: "",
+      research: [],
+    });
+    expect(ev.version).toBe(2);
+    expect(ev.facts[0]).toMatchObject({ id: "current", provenance: "owner_supplied", evidenceKind: "owner", verifiedAt, daysSinceVerification: 10 });
+    expect(ev.staleFacts?.[0]).toMatchObject({ id: "stale", provenance: "researched", verifiedAt, daysSinceVerification: 90 });
   });
 });
 

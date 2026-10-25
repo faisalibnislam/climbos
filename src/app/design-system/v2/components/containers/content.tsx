@@ -58,7 +58,7 @@ const HISTORY = (seed: number): ServiceState[] =>
 const PLAYS = [
   { title: "Win back lapsed regulars", meta: "Email · 214 people" },
   { title: "Weekend brunch promo", meta: "Instagram · 3 posts" },
-  { title: "Ask happy customers for reviews", meta: "SMS · 58 people" },
+  { title: "Invite customers to review", meta: "Email · 58 people" },
   { title: "Local SEO refresh", meta: "Website · 4 pages" },
 ];
 

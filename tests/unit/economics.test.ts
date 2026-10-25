@@ -28,6 +28,9 @@ import {
   rateVersionForDate,
   RESEARCH_2026_10_17,
   roleTextCosts,
+  detectModelCostAnomalies,
+  summarizeModelUsage,
+  summarizeTaskPhaseUsage,
   ROUTING_CLIMBOS_2026_10_17,
   topupEconomics,
   USAGE_PROFILES,
@@ -53,6 +56,64 @@ describe("rate registry", () => {
     expect(rateVersionForDate("2027-01-01").id).toBe(GEMINI_FLASH_REPRICE_2027_01_01.id);
     expect(() => rateVersionForDate("2025-01-01")).toThrow();
     expect(() => rateVersionForDate("17/10/2026")).toThrow(RangeError);
+  });
+});
+
+describe("model usage analysis", () => {
+  it("aggregates calls, tokens, cost and estimate status by provider/model", () => {
+    const summary = summarizeModelUsage([
+      { provider: "openai", model: "gpt-6.1-sol", inputTokens: 100, outputTokens: 20, reasoningTokens: 5, cacheReadTokens: 40, cacheWriteTokens: 0, costMicros: 90, estimated: false },
+      { provider: "openai", model: "gpt-6.1-sol", inputTokens: 50, outputTokens: 10, reasoningTokens: 2, cacheReadTokens: 0, cacheWriteTokens: 10, costMicros: 60, estimated: true },
+      { provider: "openai", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, costMicros: 100, estimated: false },
+    ]);
+
+    expect(summary).toEqual([
+      { provider: "openai", model: "gpt-6.1-sol", calls: 2, estimatedCalls: 1, recordedCalls: 1, inputTokens: 150, outputTokens: 30, reasoningTokens: 7, cacheReadTokens: 40, cacheWriteTokens: 10, costMicros: 150, cacheReadRate: 0.2 },
+      { provider: "openai", model: null, calls: 1, estimatedCalls: 0, recordedCalls: 1, inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, costMicros: 100, cacheReadRate: null },
+    ]);
+  });
+
+  it("keeps cache-hit rates unavailable for providers with unknown token semantics", () => {
+    const summary = summarizeModelUsage([
+      { provider: "google", model: "gemini", inputTokens: 100, outputTokens: 10, reasoningTokens: 0, cacheReadTokens: 20, cacheWriteTokens: 0, costMicros: 10, estimated: false },
+      { provider: "other", model: "unknown", inputTokens: 100, outputTokens: 10, reasoningTokens: 0, cacheReadTokens: 20, cacheWriteTokens: 0, costMicros: 5, estimated: false },
+    ]);
+    expect(summary.map((row) => row.cacheReadRate)).toEqual([0.2, null]);
+  });
+
+  it("groups usage by immutable task, step, mode and route while disclosing legacy coverage", () => {
+    const usage = (costMicros: number, tagged = true) => ({
+      provider: "openai",
+      model: "gpt-6-luna",
+      inputTokens: 100,
+      outputTokens: 20,
+      reasoningTokens: 0,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+      costMicros,
+      estimated: false,
+      ...(tagged ? { taskKind: "strategy", stepKind: "model", role: "strategist", routingVersionId: "openai-v1", aiMode: "basic" } : {}),
+    });
+    const summary = summarizeTaskPhaseUsage([usage(40), usage(60), usage(25, false)]);
+    expect(summary).toMatchObject({ events: 3, taggedEvents: 2, coverage: 2 / 3 });
+    expect(summary.groups).toEqual([
+      { taskKind: "legacy / untagged", stepKind: "unknown", role: null, routingVersionId: "unknown", aiMode: "unknown", provider: "openai", model: "gpt-6-luna", calls: 1, estimatedCalls: 0, recordedCalls: 1, costMicros: 25 },
+      { taskKind: "strategy", stepKind: "model", role: "strategist", routingVersionId: "openai-v1", aiMode: "basic", provider: "openai", model: "gpt-6-luna", calls: 2, estimatedCalls: 0, recordedCalls: 2, costMicros: 100 },
+    ].sort((a, b) => b.costMicros - a.costMicros || a.taskKind.localeCompare(b.taskKind) || a.stepKind.localeCompare(b.stepKind)));
+  });
+
+  it("flags only a large rise over a sufficiently populated rolling-day baseline", () => {
+    const now = 8 * 86_400_000;
+    const event = (ageDays: number, costMicros: number) => ({ provider: "openai", model: "gpt-6-luna", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, costMicros, estimated: false, createdAt: now - ageDays * 86_400_000 });
+    const rows = [event(0, 31), ...[1, 2, 3, 4, 5].map((day) => event(day, 10)), { ...event(0, 10_000), estimated: true }];
+
+    expect(detectModelCostAnomalies(rows, now, false)).toMatchObject({
+      available: true,
+      thresholdMultiple: 3,
+      alerts: [{ provider: "openai", model: "gpt-6-luna", currentMicros: 31, priorDailyMedianMicros: 10, multipleOfMedian: 3.1, baselineDaysWithUsage: 5, heuristic: true }],
+    });
+    expect(detectModelCostAnomalies(rows, now, true)).toMatchObject({ available: false, reason: "history_capped", alerts: [] });
+    expect(detectModelCostAnomalies(rows.slice(0, 4), now, false)).toMatchObject({ available: false, reason: "insufficient_baseline", alerts: [] });
   });
 });
 

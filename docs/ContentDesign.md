@@ -44,3 +44,11 @@ Owners don't read long text. Every screen turns continuous text into **scannable
 - Lead with the answer. Labels and buttons are 1–2 words.
 - Lead-in labels: "**Budget:** $500/month".
 - Numbers as numerals with units: "4 h/week", "$31 per customer".
+
+## People without business training
+
+- Start with the owner's task and one useful next step. Do not assume familiarity with marketing, finance, or software terminology.
+- Use everyday labels such as Customer progress instead of Pipeline. Explain necessary terms the first time; retain precise source labels, units, and uncertainty.
+- Keep technical controls discoverable under More options or Advanced tools. Costs, permissions, and approval consequences remain visible where the decision happens.
+- Suggestions fill an editable draft. Navigation and search do not silently dispatch AI work.
+- Follow [App experience](AppExperience.md) for the implemented navigation, shared composer, onboarding, and glossary behavior.

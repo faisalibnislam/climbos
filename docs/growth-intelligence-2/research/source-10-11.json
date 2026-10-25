@@ -1,0 +1,156 @@
+{
+  "sources": [
+    {
+      "id": "PM01",
+      "title": "Google Ads: Budgets overview",
+      "url": "https://support.google.com/google-ads/answer/10486536?hl=en",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Average daily budget versus daily and monthly limits",
+      "evidence_summary": "Official page states that for most campaigns daily spending limit is 2 times average daily budget and monthly limit is 30.4 times it; account and campaign details require checking.",
+      "books": [
+        10
+      ],
+      "verification_status": "verified_full_page"
+    },
+    {
+      "id": "PM02",
+      "title": "Google Ads: About enhanced conversions",
+      "url": "https://support.google.com/google-ads/answer/9888656?hl=en-EN",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Enhanced conversion measurement",
+      "evidence_summary": "Official indexed content states hashed first-party data supplements existing conversion measurement. No universal privacy or performance guarantee inferred.",
+      "books": [
+        10
+      ],
+      "verification_status": "verified_official_search_content"
+    },
+    {
+      "id": "PM03",
+      "title": "Google Ads: Campaign experiment definition",
+      "url": "https://support.google.com/google-ads/answer/6318742?hl=en",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Campaign experiments",
+      "evidence_summary": "Official indexed content describes parallel experiment using original traffic and budget over a specified duration.",
+      "books": [
+        10
+      ],
+      "verification_status": "verified_official_search_content"
+    },
+    {
+      "id": "PM04",
+      "title": "Meta: Instagram and Facebook Reels ads",
+      "url": "https://www.facebook.com/business/ads/facebook-instagram-reels-ads",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Format and test considerations",
+      "evidence_summary": "Official indexed page describes vertical creative, audio, safe zones, placement options and A/B testing. Published vendor uplift figures not adopted.",
+      "books": [
+        10
+      ],
+      "verification_status": "verified_official_search_content"
+    },
+    {
+      "id": "PM05",
+      "title": "Meta Engineering: GEM Training at LLM Scale",
+      "url": "https://engineering.fb.com/2026/08/03/ml-applications/training-gem-at-llm-scale-meta-ads-recommendation-foundation-model/",
+      "retrieved_at": "2026-10-19",
+      "publication_date": "2026-08-03",
+      "claim_scope": "Meta advertising recommendation infrastructure",
+      "evidence_summary": "Official engineering article describes GEM as a foundation model for advertising recommendations across Instagram and Facebook and discusses training infrastructure.",
+      "books": [
+        10
+      ],
+      "verification_status": "verified_full_page"
+    },
+    {
+      "id": "PM06",
+      "title": "R stats: Power Calculations for Two-Sample Test for Proportions",
+      "url": "https://stat.ethz.ch/R-manual/R-devel/library/stats/html/power.prop.test.html",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Power calculation implementation reference",
+      "evidence_summary": "Official R documentation specifies sample size per group, p1, p2, significance and power parameters. The book labels its simple formula an approximation rather than the exact R calculation.",
+      "books": [
+        10
+      ],
+      "verification_status": "verified_full_page"
+    },
+    {
+      "id": "SP01",
+      "title": "Huthwaite International: The SPIN Methodology",
+      "url": "https://www.huthwaiteinternational.com/spin-methodology",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "SPIN discovery categories",
+      "evidence_summary": "Authoritative methodology provider describes Situation, Problem, Implication and Need-payoff questions. Book applications are original and vendor outcome claims are not adopted.",
+      "books": [
+        11
+      ],
+      "verification_status": "verified_full_page"
+    },
+    {
+      "id": "SP02",
+      "title": "MEDDICC: MEDDPICC Sales Methodology and Process",
+      "url": "https://meddicc.com/meddpicc-sales-methodology-and-process",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Complex-sales qualification vocabulary",
+      "evidence_summary": "Provider page describes metrics, economic buyer, decision criteria/process, paper process, pain, champion and competition and the role of complex buying processes.",
+      "books": [
+        11
+      ],
+      "verification_status": "verified_full_page"
+    },
+    {
+      "id": "SP03",
+      "title": "FTC: Endorsement Guides \u2014 What People Are Asking",
+      "url": "https://www.ftc.gov/business-guidance/resources/ftcs-endorsement-guides-what-people-are-asking",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Affiliate relationships and disclosures",
+      "evidence_summary": "Official guidance discusses material connections, endorsements and affiliate relationships; book does not extrapolate it into worldwide compliance.",
+      "books": [
+        11
+      ],
+      "verification_status": "verified_full_page"
+    },
+    {
+      "id": "SP04",
+      "title": "FTC Announces Updated Advertising Guides to Combat Deceptive Reviews and Endorsements",
+      "url": "https://www.ftc.gov/news-events/news/press-releases/2023/06/federal-trade-commission-announces-updated-advertising-guides-combat-deceptive-reviews-endorsements",
+      "retrieved_at": "2026-10-19",
+      "publication_date": "2023-06-29",
+      "claim_scope": "Revision date and nature of guidance",
+      "evidence_summary": "Official release announces revised endorsement guidance dated June 29, 2023.",
+      "books": [
+        11
+      ],
+      "verification_status": "verified_official_search_content"
+    }
+  ],
+  "limitations": [
+    {
+      "url": "https://developers.facebook.com/docs/marketing-api/conversions-api/deduplicate-pixel-and-server-events/",
+      "status": "blocked_http_429",
+      "consequence": "No current API parameter or deduplication rule claimed from blocked page."
+    },
+    {
+      "url": "https://www.facebook.com/business/ads/meta-advantage-plus",
+      "status": "login_redirect_and_temporary_block",
+      "consequence": "No precise Advantage+ account eligibility or current control claim."
+    },
+    {
+      "scope": "Book 11 legal/outreach",
+      "status": "jurisdiction_limited",
+      "consequence": "FTC guidance is US context; global outreach and privacy requirements require separate verification."
+    },
+    {
+      "scope": "Current documentation",
+      "status": "retrieval_date_not_publication_date",
+      "consequence": "Undated pages have null publication_date. Retrieval on cutoff date does not establish when each page was updated."
+    }
+  ]
+}

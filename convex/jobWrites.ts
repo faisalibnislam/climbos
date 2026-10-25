@@ -1,13 +1,28 @@
 import { feedbackBrief } from "./feedback";
 import { EVIDENCE_KIND_LABEL, evidenceKind } from "../shared/agents/evidenceKind";
+import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
+import { factFreshness } from "../shared/agents/factFreshness";
+import { EXPERT_PLAN_SCHEMA_VERSION, LEGACY_EXPERT_PLAN_SCHEMA_VERSION, expertPlaysOf } from "../shared/agents/planCompatibility";
+import { buildCurrentExpertGrowthPayload } from "../shared/agents/growthPlanPersistence";
 import { planContentHash } from "./lib/planHash";
 import { resolveCites } from "../shared/agents/evidence";
-import { majorToMinor } from "../shared/economics/currency";
+import { majorToMinor, minorToMajor } from "../shared/economics/currency";
+import { creditsToMicros } from "../shared/economics/credits";
+import { AGENT_ARCHETYPE_BY_ID, agentForAction } from "../shared/agents/registry";
+import { validateActionDependencies } from "../shared/agents/actionDependencies";
 import { sha256Hex } from "../shared/policy";
 import { v } from "convex/values";
 import { resultsBrief } from "./playResults";
+import { customerConcentration } from "../shared/attribution/concentration";
+import { computeCohorts, subscriptionCohortBrief } from "../shared/attribution/cohorts";
+import { refundExposure } from "../shared/attribution/refundExposure";
+import { platformConcentration } from "../shared/attribution/platformConcentration";
+import { summarizeAiReferralRows, type AiReferralMetricRow } from "../shared/integrations/ga4";
+import { formatCreatorOutcomeContext } from "../shared/agents/creatorOutcomes";
 import { shortenable, utmFor, withUtm } from "../shared/links";
 import { createLink } from "./links";
+import { creativeStrategyLearningBrief } from "./creativeStrategy";
+import type { ApprovedOfferTermConstraint } from "../shared/agents/approvedPlanContext";
 import type {
   AdDraftsOutput,
   BusinessInsights,
@@ -19,7 +34,7 @@ import type {
   StrategyOutput,
 } from "../shared/ai/tasks";
 import { findRiskyClaims, validateFactIndexes } from "../shared/ai/tasks";
-import type { InsightsV2, StrategyV2 } from "../shared/agents/specs";
+import { actionReadinessOf, analyzeDecisionOptions, type CopyBrief, type InsightsV2, type StrategyV2 } from "../shared/agents/specs";
 import { approvalHash, contentHash } from "../shared/policy";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
@@ -28,6 +43,7 @@ import { audit } from "./lib/audit";
 import { AUTO_RUN_KINDS, CHANNEL_JOBS, jobForAction, startCardRun, WISH_AUTO_BUDGET_MICROS } from "./lib/cards";
 import { estimateJobMicros, planJob } from "./lib/jobPlans";
 import { notifyOwners } from "./lib/notify";
+import { appError } from "./lib/tenancy";
 
 const DAY = 86_400_000;
 
@@ -49,7 +65,18 @@ export const jobContext = internalQuery({
           .withIndex("by_business", (q) => q.eq("businessId", business._id))
           .take(200)
       : [];
-    const usable = facts.filter((f) => f.reviewState === "confirmed" || f.reviewState === "edited");
+    // Keep the canonical, newest version of an exactly repeated fact in model context.
+    // The underlying rows and their source history remain untouched for audit/display.
+    const usable = groupExactDuplicateFacts(
+      facts
+        .filter((f) => f.reviewState === "confirmed" || f.reviewState === "edited")
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .map((f) => ({ ...f, id: String(f._id) })),
+    ).map(({ primary }) => primary);
+    const factNow = Date.now();
+    const freshnessOf = (fact: (typeof usable)[number]) => factFreshness(fact.category, fact.updatedAt, factNow, fact.verifiedAt ?? fact.updatedAt);
+    const currentFacts = usable.filter((f) => !freshnessOf(f).reviewSuggested);
+    const staleFacts = usable.filter((f) => freshnessOf(f).reviewSuggested);
     const goal = await ctx.db
       .query("goals")
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
@@ -66,10 +93,65 @@ export const jobContext = internalQuery({
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
       .order("desc")
       .take(10);
-    const strategy = recentPlans.find((s) => s.status === "approved") ?? recentPlans[0] ?? null;
+    let requestedStrategyId: string | undefined;
+    try {
+      const input = JSON.parse(run.input) as { strategyId?: unknown };
+      if (typeof input?.strategyId === "string") requestedStrategyId = input.strategyId;
+    } catch {
+      // Legacy and non-JSON run inputs do not name a plan.
+    }
+    const requestedId = requestedStrategyId ? ctx.db.normalizeId("strategies", requestedStrategyId) : null;
+    const requestedStrategy = requestedId ? await ctx.db.get(requestedId) : null;
+    const strategy = requestedStrategy?.orgId === org._id
+      ? requestedStrategy
+      : recentPlans.find((s) => s.status === "approved") ?? recentPlans[0] ?? null;
+    const marketChanges = await ctx.db.query("competitorChanges")
+      .withIndex("by_org_at", (q) => q.eq("orgId", org._id))
+      .order("desc")
+      .take(8);
     // What this workspace can actually run (REQ-ENG-11): live connections and the approval mode.
     const connections = await ctx.db.query("connections").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(50);
+    const stripeConnection = connections.find((connection) => connection.provider === "stripe_revenue" && !connection.isFixture);
+    const stripeReceivables = run.kind === "strategy"
+      ? {
+          connected: stripeConnection?.status === "connected",
+          lastSyncAt: stripeConnection?.lastSyncAt ?? null,
+          syncFailed: Boolean(stripeConnection?.lastSyncError),
+          snapshot: stripeConnection?.stripeOpenInvoiceSnapshot ?? null,
+        }
+      : null;
     const policy = await ctx.db.query("autonomyPolicies").withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true)).first();
+    // Read the immutable rating snapshot captured when this specialist request was created.
+    const feedbackSnapshot = run.customAgentFeedbackSnapshot;
+    const specialistFeedbackText = feedbackSnapshot?.sampleSize
+      ? [
+          `WORKSPACE MEMBER-REPORTED SPECIALIST FEEDBACK (last ${feedbackSnapshot.windowDays} days; sample of ${feedbackSnapshot.sampleSize} ratings: ${feedbackSnapshot.helpful} helpful, ${feedbackSnapshot.needsWork} needs work; captured ${new Date(feedbackSnapshot.capturedAt).toISOString()}; these are usefulness reports, not measured business outcomes):`,
+          ...feedbackSnapshot.notes.map((r) => `- ${new Date(r.updatedAt).toISOString().slice(0, 10)} · ${r.rating}: ${r.note.slice(0, 400)}`),
+        ].join("\n")
+      : "";
+    const archetypeFeedbackSnapshot = run.agentArchetypeFeedbackSnapshot;
+    const agentArchetypeFeedbackText = archetypeFeedbackSnapshot?.sampleSize
+      ? [
+          `WORKSPACE MEMBER-REPORTED FEEDBACK ABOUT THIS BUILT-IN SPECIALIST (last ${archetypeFeedbackSnapshot.windowDays} days; ${archetypeFeedbackSnapshot.capped ? `at least ${archetypeFeedbackSnapshot.sampleSize}` : archetypeFeedbackSnapshot.sampleSize} ratings: ${archetypeFeedbackSnapshot.helpful} helpful, ${archetypeFeedbackSnapshot.needsWork} needs work; captured ${new Date(archetypeFeedbackSnapshot.capturedAt).toISOString()}; this is usefulness feedback, not measured business performance):`,
+          ...archetypeFeedbackSnapshot.notes.map((entry) => `- ${new Date(entry.updatedAt).toISOString().slice(0, 10)} · ${entry.rating}: ${entry.note.slice(0, 400)}`),
+        ].join("\n")
+      : "";
+    const archetypeOutcomeSnapshot = run.agentArchetypeOutcomeSnapshot;
+    const formatOutcomeValue = (entry: NonNullable<typeof archetypeOutcomeSnapshot>["reports"][number], value: number, denominator?: number) => {
+      if (entry.measureType === "rate") return `${(value * 100).toFixed(2)}%${denominator !== undefined ? ` (${denominator} eligible)` : ""}`;
+      return `${value} ${entry.unit}`.trim();
+    };
+    const agentArchetypeOutcomeText = archetypeOutcomeSnapshot?.reports.length
+      ? [
+          `WORKSPACE MEMBER-REPORTED OUTCOME OBSERVATIONS (same specialist role; up to ${archetypeOutcomeSnapshot.windowDays} days old; captured ${new Date(archetypeOutcomeSnapshot.capturedAt).toISOString()}; not independently verified or causal evidence):`,
+          ...archetypeOutcomeSnapshot.reports.map((entry) => {
+            const period = `${new Date(entry.periodStart).toISOString().slice(0, 10)} to ${new Date(entry.periodEnd).toISOString().slice(0, 10)}`;
+            const comparison = entry.comparisonValue === undefined ? "" : `; reported comparison ${formatOutcomeValue(entry, entry.comparisonValue, entry.comparisonDenominator)}${entry.comparisonLabel ? ` (${entry.comparisonLabel})` : ""}`;
+            return `- ${entry.metric}: ${formatOutcomeValue(entry, entry.value, entry.denominator)}; cohort: ${entry.cohort}; period: ${period}${comparison}.`;
+          }),
+          "Treat each entry as a descriptive workspace report. Match metric, cohort, offer, channel and period before applying it; do not pool unlike businesses or claim the specialist caused a change. Member reports are separate from usefulness ratings and do not authorize any action.",
+        ].join("\n")
+      : "";
     // Who the business can email (Book 14 §4: no audience is assumed). Bounded counts; 1,000 means "1,000 or more".
     const contacts = (await ctx.db.query("contacts").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(1000)).filter((c) => !c.deletedAt).length;
     const consented = new Set(
@@ -77,19 +159,132 @@ export const jobContext = internalQuery({
         .filter((r) => r.purpose === "marketing_email" && !r.withdrawnAt)
         .map((r) => r.contactId),
     ).size;
+    const concentrationToMs = Date.now();
+    const concentrationFromMs = concentrationToMs - 365 * DAY;
+    const concentrationFromDay = new Date(concentrationFromMs).toISOString().slice(0, 10);
+    const concentrationToDay = new Date(concentrationToMs).toISOString().slice(0, 10);
+    const revenueRows = await ctx.db
+      .query("revenueEvents")
+      .withIndex("by_org_occurred", (q) => q.eq("orgId", org._id).lte("occurredAt", concentrationToMs))
+      .order("desc")
+      .take(10_001);
+    const usableRevenueRows = revenueRows.filter((event) => !event.isFixture);
+    const concentrationIsPartial = revenueRows.length > 10_000;
+    const concentrationCurrency = business?.currency ?? org.currency;
+    const concentrationEvents = usableRevenueRows.map((event) => ({
+          id: String(event._id), sourceEventId: event.sourceEventId, source: event.source, occurredAt: event.occurredAt,
+          customerRef: event.customerRef, orderRef: event.orderRef, currency: event.currency,
+          amountMinor: event.amountMinor, refundedMinor: event.refundedMinor, kind: event.kind,
+          utmSource: event.utmSource, utmMedium: event.utmMedium,
+        }));
+    const subscriptionEvents = usableRevenueRows.filter((event) => event.kind === "subscription_payment");
+    const subscriptionCohorts = concentrationCurrency
+      ? computeCohorts(subscriptionEvents.map((event) => ({
+          source: event.source,
+          customerRef: event.customerRef,
+          orderRef: event.orderRef,
+          occurredAt: event.occurredAt,
+          amountMinor: event.amountMinor,
+          refundedMinor: event.refundedMinor,
+          kind: event.kind,
+          currency: event.currency,
+        })), { currency: concentrationCurrency, nowMs: concentrationToMs, maxMonths: 6 })
+      : [];
+    const subscriptionCohortText = run.kind === "strategy" && concentrationCurrency
+      ? subscriptionCohortBrief(subscriptionCohorts, {
+          currency: concentrationCurrency,
+          hasCustomerIds: subscriptionEvents.some((event) => Boolean(event.customerRef)),
+          truncated: concentrationIsPartial,
+        })
+      : "";
+    const concentration = concentrationCurrency
+      ? customerConcentration(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
+      : null;
+    const spendRows = [];
+    let spendPartial = false;
+    for (const platform of ["google_ads", "meta_ads"]) {
+      const rows = await ctx.db
+        .query("platformClaims")
+        .withIndex("by_org_platform_date", (q) => q.eq("orgId", org._id).eq("platform", platform).gte("date", concentrationFromDay).lte("date", concentrationToDay))
+        .take(401);
+      spendPartial ||= rows.length > 400;
+      spendRows.push(...rows);
+    }
+    const platformSourceConcentration = concentrationCurrency
+      ? platformConcentration(concentrationEvents, {
+          currency: concentrationCurrency,
+          fromMs: concentrationFromMs,
+          toMs: concentrationToMs,
+          partial: concentrationIsPartial,
+          spendPartial,
+          ...(typeof business?.unitEconomics?.grossMargin === "number" && business.unitEconomics.grossMargin >= 0 && business.unitEconomics.grossMargin <= 1 ? { grossMargin: business.unitEconomics.grossMargin } : {}),
+          reportedSpend: spendRows.filter((row) => !row.isFixture).map((row) => ({ platform: row.platform, date: row.date, currency: row.currency, spendMinor: row.spendMinor, ...(row.spendOrigin ? { origin: row.spendOrigin } : {}) })),
+        })
+      : null;
+    const aiReferralTo = new Date(Date.now()).toISOString().slice(0, 10);
+    const aiReferralFrom = new Date(Date.now() - 90 * DAY).toISOString().slice(0, 10);
+    const aiReferralRows: AiReferralMetricRow[] = [];
+    for (const metricKey of ["ai_referral_sessions", "ai_referral_key_events"] as const) {
+      aiReferralRows.push(...(await ctx.db.query("metricDaily")
+        .withIndex("by_org_metric_date", (q) => q.eq("orgId", org._id).eq("metricKey", metricKey).gte("date", aiReferralFrom).lte("date", aiReferralTo))
+        .take(1_000)));
+    }
+    const aiReferralSignals = { from: aiReferralFrom, to: aiReferralTo, providers: summarizeAiReferralRows(aiReferralRows) };
+    const creatorOutcomeRows = run.kind === "strategy" && !run.isFixture
+      ? await ctx.db.query("creatorCollaborationReports").withIndex("by_org_created", (q) => q.eq("orgId", org._id)).order("desc").take(30)
+      : [];
+    const creatorOutcomeReports = [];
+    for (const report of creatorOutcomeRows) {
+      if (report.orgId !== org._id) continue;
+      const [prospect, campaign] = await Promise.all([ctx.db.get(report.prospectId), ctx.db.get(report.campaignId)]);
+      if (!prospect || prospect.orgId !== org._id || !campaign || campaign.orgId !== org._id || campaign.kind !== "creators") continue;
+      creatorOutcomeReports.push({
+        creator: prospect.company,
+        status: report.status,
+        reportedAt: report.createdAt,
+        ...(report.format ? { format: report.format } : {}),
+        ...(report.agreedValueMinor !== undefined ? { agreedValueMinor: report.agreedValueMinor, currency: report.currency } : {}),
+        ...(report.actualCostMinor !== undefined ? { actualCostMinor: report.actualCostMinor, currency: report.currency } : {}),
+        ...(report.publishedUrl ? { publishedUrl: report.publishedUrl } : {}),
+        ...(report.metric ? { metric: report.metric } : {}),
+        ...(report.note ? { note: report.note } : {}),
+      });
+    }
+    const creatorOutcomeText = formatCreatorOutcomeContext(creatorOutcomeReports, 12);
+    const refundExposureSignal = concentrationCurrency
+      ? refundExposure(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
+      : null;
     return {
+      customerConcentration: concentration,
+      platformSourceConcentration,
+      aiReferralSignals,
+      creatorOutcomeText,
+      refundExposure: refundExposureSignal,
+      subscriptionCohortText,
+      stripeReceivables,
       audience: { contacts, consented },
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },
       run,
+      specialist: run.customAgentSnapshot ?? null,
+      specialistFeedbackText,
+      agentArchetypeFeedbackText,
+      agentArchetypeOutcomeText,
+      agentArchetype: run.agentArchetypeSnapshot ?? (run.agentArchetypeId ? AGENT_ARCHETYPE_BY_ID.get(run.agentArchetypeId) ?? null : null),
       org,
       business,
+      /** Recent, source-backed competitor page changes are market signals, not customer evidence. */
+      marketChanges: marketChanges.map(({ _id, at, name, summary, bullets, soWhat, suggestedAction, sourceUrls, evidence }) => ({ id: String(_id), at, name, summary, bullets, soWhat: soWhat ?? null, suggestedAction: suggestedAction ?? null, sourceUrls: sourceUrls ?? [], evidence: evidence ?? null })),
       /** Plans start from what earlier plays actually did. */
       resultsText: run.kind === "strategy" ? [await resultsBrief(ctx, org._id), await feedbackBrief(ctx, org._id)].filter(Boolean).join("\n\n") : "",
-      facts: usable.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, kind: EVIDENCE_KIND_LABEL[evidenceKind(f.statement, f.provenance)], evidenceKind: evidenceKind(f.statement, f.provenance) })),
+      creativeStrategyLearning: run.kind === "strategy" && !run.isFixture ? await creativeStrategyLearningBrief(ctx, org._id) : "",
+      facts: currentFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, confidence: f.confidence, provenance: f.provenance, createdAt: f.createdAt, updatedAt: f.updatedAt, verifiedAt: f.verifiedAt ?? f.updatedAt, kind: EVIDENCE_KIND_LABEL[evidenceKind(f.statement, f.provenance)], evidenceKind: evidenceKind(f.statement, f.provenance), freshness: freshnessOf(f) })),
+      staleFacts: staleFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, confidence: f.confidence, provenance: f.provenance, updatedAt: f.updatedAt, verifiedAt: f.verifiedAt ?? f.updatedAt, freshness: freshnessOf(f) })),
       unconfirmedCount: facts.filter((f) => f.reviewState === "needs_review").length,
       goal,
       brand,
       strategy,
+      /** True when this run was created from a specific plan card while that plan was approved. */
+      strategyPinned: Boolean(requestedStrategy && requestedStrategy.orgId === org._id),
     };
   },
 });
@@ -194,10 +389,35 @@ export const saveInsights = internalMutation({
     const business = await ctx.db.get(businessId);
     if (!business || business.orgId !== run.orgId) throw new Error("Business mismatch");
     const i = JSON.parse(insights) as BusinessInsights;
+    const v2 = i as unknown as Partial<InsightsV2>;
+    const v2Competitors = v2.competitors;
+    const commercialAssessment = v2.commercialAssessment;
+    const insightsAt = Date.now();
+    const org = await ctx.db.get(run.orgId);
+    const refreshDays = org?.competitorResearchRefreshDays ?? 90;
     await ctx.db.patch(businessId, {
       insights: {
-        audiences: i.audiences.slice(0, 5),
-        competitors: i.competitors.slice(0, 6).map((c) => ({ name: c.name, url: c.url || undefined, note: c.note, sourceUrl: c.sourceUrl || undefined })),
+        audiences: i.audiences.slice(0, 5).map((audience, index) => {
+          const profile = v2.audiences?.[index];
+          const evidenceItems = (rows: { statement: string; basis: "owner_report" | "measured" | "research" | "inference"; evidenceRefs: string[] }[] | undefined) => rows?.slice(0, 4).map((row) => ({ ...row, statement: row.statement.slice(0, 240), evidenceRefs: row.evidenceRefs.slice(0, 4) }));
+          return {
+            ...audience,
+            ...(profile ? {
+              needs: evidenceItems(profile.needs),
+              objections: evidenceItems(profile.objections),
+              purchasingMotivations: evidenceItems(profile.purchasingMotivations),
+              channelPreferences: profile.channelPreferences.slice(0, 4).map((row) => ({ ...row, channel: row.channel.slice(0, 100), rationale: row.rationale.slice(0, 240), evidenceRefs: row.evidenceRefs.slice(0, 4) })),
+            } : {}),
+          };
+        }),
+        competitors: i.competitors.slice(0, 6).map((c, index) => ({
+          name: c.name,
+          url: c.url || undefined,
+          note: c.note,
+          sourceUrl: c.sourceUrl || undefined,
+          kind: v2Competitors?.[index]?.kind,
+          comparison: v2Competitors?.[index]?.comparison?.slice(0, 8).map((finding) => ({ ...finding, finding: finding.finding.slice(0, 500), implication: finding.implication.slice(0, 500) })),
+        })),
         positioning: i.positioning,
         pricingNotes: i.pricingNotes,
         swot: {
@@ -206,12 +426,42 @@ export const saveInsights = internalMutation({
           opportunities: i.swot.opportunities.slice(0, 5),
           threats: i.swot.threats.slice(0, 5),
         },
+        swotEvidence: i.swotEvidence?.slice(0, 16).map((finding) => ({
+          ...finding,
+          finding: finding.finding.slice(0, 300),
+          evidenceRefs: finding.evidenceRefs.slice(0, 8),
+          strategicImplication: finding.strategicImplication.slice(0, 400),
+        })),
+        swotMoves: i.swotMoves?.slice(0, 8).map((move) => ({
+          ...move,
+          move: move.move.slice(0, 400),
+          firstTest: move.firstTest.slice(0, 300),
+          measure: move.measure.slice(0, 200),
+        })),
+        ...(commercialAssessment ? {
+          commercialAssessment: {
+            ...commercialAssessment,
+            evidence: commercialAssessment.evidence.slice(0, 12).map((item) => ({
+              ...item,
+              finding: item.finding.slice(0, 360),
+              evidenceRefs: item.evidenceRefs.slice(0, 4),
+              limitation: item.limitation.slice(0, 240),
+            })),
+            unknowns: commercialAssessment.unknowns.slice(0, 8).map((item) => item.slice(0, 240)),
+            nextTest: {
+              question: commercialAssessment.nextTest.question.slice(0, 240),
+              smallestTest: commercialAssessment.nextTest.smallestTest.slice(0, 400),
+              successSignal: commercialAssessment.nextTest.successSignal.slice(0, 240),
+              decisionRule: commercialAssessment.nextTest.decisionRule.slice(0, 300),
+            },
+          },
+        } : {}),
         journey: i.journey.slice(0, 6),
         opportunities: i.opportunities.slice(0, 6),
         ...("vocPhrases" in i
           ? {
               expert: (() => {
-                const x = i as unknown as InsightsV2;
+                const x = v2 as InsightsV2;
                 const url = (u: string) => u || undefined;
                 return {
                   alternatives: x.alternatives.slice(0, 10).map((a) => ({ ...a, sourceUrl: url(a.sourceUrl) })),
@@ -220,16 +470,26 @@ export const saveInsights = internalMutation({
                   gaps: x.gaps.slice(0, 10).map((a) => ({ ...a, sourceUrl: url(a.sourceUrl) })),
                   positioningStatement: x.positioningStatement,
                   confidenceNotes: x.confidenceNotes,
+                  siteAssessment: x.siteAssessment.slice(0, 8).map((finding) => ({
+                    ...finding,
+                    observation: finding.observation.slice(0, 360),
+                    evidenceQuote: finding.evidenceQuote.slice(0, 240),
+                    implication: finding.implication.slice(0, 360),
+                    sourceUrl: url(finding.sourceUrl),
+                  })),
                 };
               })(),
             }
           : {}),
-        generatedAt: Date.now(),
+        generatedAt: insightsAt,
         runId,
       },
+      competitorResearchCompletedAt: insightsAt,
+      competitorResearchNextAt: refreshDays > 0 ? insightsAt + refreshDays * 86_400_000 : undefined,
+      competitorResearchStaleAt: undefined,
+      competitorResearchLastStatus: undefined,
       updatedAt: Date.now(),
     });
-    const org = await ctx.db.get(run.orgId);
     if (org) await notifyOwners(ctx, org._id, `Research on ${business.name} is done. Check what we learned.`, org.onboardingStep !== "done" ? `/onboarding?workspace=${org.slug}` : "settings/business");
   },
 });
@@ -241,7 +501,7 @@ export const saveInsights = internalMutation({
  */
 export function withPlayIds<P extends { name: string; id?: string }>(plays: P[], prior: Doc<"strategies">[]): (P & { id: string })[] {
   const known = new Map<string, string>();
-  for (const s of [...prior].reverse()) for (const p of (s.expert?.plays ?? []) as { name?: string; id?: string }[]) if (p.id && p.name) known.set(p.name.trim().toLowerCase(), p.id);
+  for (const s of [...prior].reverse()) for (const p of expertPlaysOf(s.expert) as { name?: string; id?: string }[]) if (p.id && p.name) known.set(p.name.trim().toLowerCase(), p.id);
   const used = new Set<string>();
   return plays.map((p) => {
     let id = p.id ?? known.get(p.name.trim().toLowerCase());
@@ -274,8 +534,11 @@ export const saveStrategy = internalMutation({
     const version = (prior[0]?.version ?? 0) + 1;
     const now = Date.now();
     const contentPlans = CHANNEL_JOBS;
-    const acq = acquisition ? (JSON.parse(acquisition) as { libraryVersion: string; profile: { types: string[]; dims: unknown }; adjustments: unknown; summary: string[]; limits?: { ownerHoursPerWeek: number | null } }) : null;
-    if (acq) await ctx.db.patch(business._id, { acquisition: { types: acq.profile.types, dims: acq.profile.dims, updatedAt: now } });
+    const acq = acquisition ? (JSON.parse(acquisition) as { libraryVersion: string; profile: { types: string[]; dims: unknown }; adjustments: unknown; summary: string[]; limits?: { ownerHoursPerWeek: number | null; ownerGrossMargin?: number | null } }) : null;
+    if (acq) {
+      const priorTypesSource = business.acquisition?.typesSource;
+      await ctx.db.patch(business._id, { acquisition: { types: priorTypesSource === "owner" ? business.acquisition!.types : acq.profile.types, typesSource: priorTypesSource === "owner" ? "owner" : "inferred", dims: { ...((acq.profile.dims as Record<string, unknown> | undefined) ?? {}), ...((business.acquisition?.dims as Record<string, unknown> | undefined) ?? {}) }, updatedAt: now } });
+    }
     // Pages the run read, so cited URLs keep their titles.
     const webSources = ((s as { webSources?: { url: string; title?: string }[] }).webSources ?? []).slice(0, 40);
     const strategyId = await ctx.db.insert("strategies", {
@@ -304,7 +567,7 @@ export const saveStrategy = internalMutation({
             why: c.why,
             priority: i + 1,
             status: i < 4 ? ("proposed" as const) : ("parked" as const),
-            monthlyCostMicros: job ? estimateJobMicros(planJob(job)) * 4 : 0,
+            monthlyCostMicros: job ? estimateJobMicros(planJob(job, {}, { fixture: run.isFixture }), { fixture: run.isFixture }) * 4 : 0,
             // Never exceed the owner's stated monthly ad budget.
             adSpendMinor: Math.min(adSpend, goal.monthlyAdBudgetMinor),
             deliverables: c.deliverables.slice(0, 6),
@@ -325,7 +588,21 @@ export const saveStrategy = internalMutation({
         ? {
             expert: (() => {
               const x = s as unknown as StrategyV2;
+              const savedPlays = (x.plays ?? []).slice(0, 4);
+              const expertPlays = withPlayIds(savedPlays.map((play) => ({ ...play, actionReadiness: actionReadinessOf(play.actionContract) })), prior);
+              const growthPlanV9 = buildCurrentExpertGrowthPayload(expertPlays, x.economics);
+              const ownerEconomics = x.snapshot?.ownerEconomics as { newCustomersPerMonth?: unknown } | undefined;
+              const monthlyBudget = typeof x.snapshot?.monthlyAdBudget === "number" ? x.snapshot.monthlyAdBudget : minorToMajor(goal.monthlyAdBudgetMinor, goal.currency);
+              const decisionAnalysis = x.decision && x.economics && savedPlays.length
+                ? analyzeDecisionOptions(x.decision, savedPlays, x.economics, {
+                    ...(typeof x.snapshot?.horizonDays === "number" ? { horizonDays: x.snapshot.horizonDays } : {}),
+                    monthlyAdBudgetUsd: monthlyBudget,
+                    ...(typeof acq?.limits?.ownerHoursPerWeek === "number" ? { ownerHoursPerWeek: acq.limits.ownerHoursPerWeek } : {}),
+                    ...(typeof ownerEconomics?.newCustomersPerMonth === "number" ? { newCustomersPerMonth: ownerEconomics.newCustomersPerMonth } : {}),
+                  })
+                : undefined;
               return {
+                version: growthPlanV9 ? EXPERT_PLAN_SCHEMA_VERSION : LEGACY_EXPERT_PLAN_SCHEMA_VERSION,
                 diagnosis: x.diagnosis,
                 affordableCac: x.affordableCac,
                 notDoing: x.notDoing.slice(0, 10),
@@ -334,9 +611,10 @@ export const saveStrategy = internalMutation({
                 phases: x.phases.slice(0, 4),
                 weekOneChecklist: x.weekOneChecklist.slice(0, 7),
                 risks: x.risks.slice(0, 6),
-                plays: withPlayIds((x.plays ?? []).slice(0, 4), prior),
-                economics: x.economics,
+                ...(growthPlanV9 ? { growthPlanV9 } : { plays: expertPlays, economics: x.economics }),
+                ...("strategyExploration" in x && x.strategyExploration ? { strategyExploration: x.strategyExploration } : {}),
                 ...(x.decision ? { decision: x.decision } : {}),
+                ...(decisionAnalysis ? { decisionAnalysis: { snapshotId: x.snapshot?.snapshotId ?? null, ...decisionAnalysis } } : {}),
                 ...(x.snapshot ? { snapshot: x.snapshot } : {}),
                 ...(x.quality ? { quality: x.quality } : {}),
                 ...(x.goalGap ? { goalGap: x.goalGap } : {}),
@@ -363,7 +641,18 @@ export const saveStrategy = internalMutation({
         hypothesis: e.hypothesis,
         population: e.population,
         method: e.method,
+        assignmentUnit: e.assignmentUnit,
+        assignmentMethod: e.assignmentMethod,
         primaryMetric: e.primaryMetric,
+        primaryMetricType: e.primaryMetricType,
+        denominator: e.denominator,
+        baselineRate: e.baselineRate,
+        baselineProvenance: e.baselineProvenance,
+        baselineEvidenceRefs: e.baselineEvidenceRefs.slice(0, 12),
+        baselineBasis: e.baselineBasis,
+        minimumMeaningfulEffect: e.minimumMeaningfulEffect,
+        plannedSamplePerArm: e.plannedSamplePerArm,
+        plannedSampleBasis: e.plannedSampleBasis,
         guardrails: e.guardrails.slice(0, 4),
         durationDays: Math.max(7, Math.min(120, Math.round(e.durationDays))),
         stoppingRule: e.stoppingRule,
@@ -400,6 +689,7 @@ export const saveStrategy = internalMutation({
     for (const a of s.firstActions.slice(0, 3)) {
       await ctx.db.insert("actionCards", {
         orgId: run.orgId,
+        sourceRunId: runId,
         title: a.title,
         description: a.why,
         proposedEffect: "A suggestion from your plan. Nothing happens until you choose to act on it.",
@@ -437,6 +727,9 @@ export type ArtifactInput = {
   title: string;
   headline?: string;
   body: string;
+  /** Owner-facing strategy cue; not included in the publishable copy body. */
+  contentAngle?: string;
+  copyBrief?: CopyBrief;
   callToAction?: string;
   destinationUrl?: string;
   hashtags: string[];
@@ -450,13 +743,31 @@ export type ArtifactInput = {
   role: NonNullable<Doc<"artifacts">["createdByRole"]>;
 };
 
+type PersistedCopyBrief = Omit<CopyBrief, "offerFactIndexes" | "proofFactIndexes" | "supportingFactIndexes"> & {
+  offerFactIds: Id<"businessFacts">[];
+  proofFactIds: Id<"businessFacts">[];
+  supportingFactIds: Id<"businessFacts">[];
+};
+
+function persistedCopyBrief(brief: CopyBrief | undefined, factIds: Id<"businessFacts">[]): PersistedCopyBrief | undefined {
+  if (!brief) return undefined;
+  const toIds = (indexes: number[]) => indexes.flatMap((index) => factIds[index] ? [factIds[index]!] : []);
+  const { offerFactIndexes, proofFactIndexes, supportingFactIndexes, ...rest } = brief;
+  return {
+    ...rest,
+    offerFactIds: toIds(offerFactIndexes),
+    proofFactIds: toIds(proofFactIndexes),
+    supportingFactIds: toIds(supportingFactIndexes),
+  };
+}
+
 async function linkTrackingOn(ctx: MutationCtx, orgId: Id<"organizations">): Promise<boolean> {
   return (await ctx.db.get(orgId))?.linkTracking !== false;
 }
 
 export async function insertArtifact(
   ctx: MutationCtx,
-  params: { orgId: Id<"organizations">; businessId: Id<"businesses">; runId?: Id<"workflowRuns">; factIds: Id<"businessFacts">[]; item: ArtifactInput; createdBy?: Id<"users"> },
+  params: { orgId: Id<"organizations">; businessId: Id<"businesses">; runId?: Id<"workflowRuns">; factIds: Id<"businessFacts">[]; item: ArtifactInput; createdBy?: Id<"users">; offerTermsSnapshot?: ApprovedOfferTermConstraint[]; offerPlayNameSnapshot?: string },
 ) {
   const { item: raw } = params;
   const now = Date.now();
@@ -474,7 +785,14 @@ export async function insertArtifact(
     }
   }
   const { valid, invalid } = validateFactIndexes(item.factIndexes, params.factIds.length);
-  const risky = findRiskyClaims(`${item.headline ?? ""} ${item.body}`);
+  const risky = findRiskyClaims([
+    item.title,
+    item.headline,
+    item.body,
+    item.callToAction,
+    item.altText,
+    ...item.hashtags,
+  ].filter(Boolean).join(" "));
   const unsupported = [...risky.map((r) => `Check claim: "${r}"`), ...(invalid.length ? ["References a fact that doesn't exist"] : [])];
   const artifactId = await ctx.db.insert("artifacts", {
     orgId: params.orgId,
@@ -494,6 +812,19 @@ export async function insertArtifact(
   const ch = await contentHash({
     headline: item.headline,
     body: item.body,
+    contentAngle: item.contentAngle,
+    copyBrief: persistedCopyBrief(item.copyBrief, params.factIds),
+    approvedOfferTermsSnapshot: params.offerTermsSnapshot?.map((term) => ({
+      playName: term.playName,
+      recommendation: term.recommendation,
+      currency: term.currency,
+      allowedPrices: term.allowedPrices,
+      allowedDiscountPercentages: term.allowedDiscountPercentages,
+      allowedMechanisms: term.allowedMechanisms,
+      urgencyClaim: term.urgencyClaim,
+      eligibleAudience: term.eligibleAudience,
+    })),
+    offerPlayNameSnapshot: params.offerPlayNameSnapshot ?? item.copyBrief?.approvedOfferPlayName,
     callToAction: item.callToAction,
     destinationUrl: item.destinationUrl,
     hashtags: item.hashtags,
@@ -507,6 +838,19 @@ export async function insertArtifact(
     version: 1,
     headline: item.headline,
     body: item.body,
+    contentAngle: item.contentAngle,
+    copyBrief: persistedCopyBrief(item.copyBrief, params.factIds),
+    approvedOfferTermsSnapshot: params.offerTermsSnapshot?.map((term) => ({
+      playName: term.playName,
+      recommendation: term.recommendation,
+      currency: term.currency,
+      allowedPrices: term.allowedPrices,
+      allowedDiscountPercentages: term.allowedDiscountPercentages,
+      allowedMechanisms: term.allowedMechanisms,
+      urgencyClaim: term.urgencyClaim,
+      eligibleAudience: term.eligibleAudience,
+    })),
+    offerPlayNameSnapshot: params.offerPlayNameSnapshot ?? item.copyBrief?.approvedOfferPlayName,
     callToAction: item.callToAction,
     destinationUrl: item.destinationUrl,
     hashtags: item.hashtags.slice(0, 12),
@@ -532,6 +876,16 @@ const artifactInputValidator = v.object({
   title: v.string(),
   headline: v.optional(v.string()),
   body: v.string(),
+  contentAngle: v.optional(v.string()),
+  copyBrief: v.optional(v.object({
+    reader: v.string(), situation: v.string(), awarenessStage: v.string(), relationshipStage: v.string(), objective: v.string(), approvedOfferPlayName: v.optional(v.string()),
+    offerFactIndexes: v.array(v.number()), problemJob: v.string(), trigger: v.string(), centralIdea: v.string(), objection: v.string(),
+    proofFactIndexes: v.array(v.number()), prohibitedClaims: v.array(v.string()), channel: v.string(), format: v.string(), deliveryContext: v.string(),
+    brandVoice: v.string(), approvedExamples: v.array(v.string()), cta: v.string(), afterAction: v.string(), trackingMetric: v.string(), trackingMethod: v.string(),
+    supportingFactIndexes: v.array(v.number()), supportingSourceUrls: v.array(v.string()),
+    trendEvidence: v.optional(v.object({ sourceUrl: v.string(), observationDate: v.string(), observation: v.string() })),
+    unknowns: v.array(v.string()),
+  })),
   callToAction: v.optional(v.string()),
   destinationUrl: v.optional(v.string()),
   hashtags: v.array(v.string()),
@@ -547,8 +901,17 @@ const artifactInputValidator = v.object({
 });
 
 export const saveArtifacts = internalMutation({
-  args: { runId: v.id("workflowRuns"), items: v.array(artifactInputValidator), factIds: v.array(v.id("businessFacts")) },
-  handler: async (ctx, { runId, items, factIds }) => {
+  args: {
+    runId: v.id("workflowRuns"),
+    items: v.array(artifactInputValidator),
+    factIds: v.array(v.id("businessFacts")),
+    offerTermsSnapshot: v.optional(v.array(v.object({
+      playName: v.string(), recommendation: v.string(), currency: v.string(), allowedPrices: v.array(v.number()),
+      allowedDiscountPercentages: v.optional(v.array(v.number())), allowedMechanisms: v.optional(v.array(v.string())),
+      urgencyClaim: v.union(v.string(), v.null()), eligibleAudience: v.union(v.string(), v.null()),
+    }))),
+  },
+  handler: async (ctx, { runId, items, factIds, offerTermsSnapshot }) => {
     const run = await ensureRunOrg(ctx, runId);
     const business = await ctx.db
       .query("businesses")
@@ -565,6 +928,7 @@ export const saveArtifacts = internalMutation({
           factIds,
           item: item as unknown as ArtifactInput,
           createdBy: run.createdBy,
+          offerTermsSnapshot,
         }),
       );
     }
@@ -575,12 +939,19 @@ export const saveArtifacts = internalMutation({
 });
 
 /** Convert task outputs into artifact inputs (pure helpers used by jobs). */
-export function socialToArtifacts(out: SocialPostsOutput, now: number): Omit<ArtifactInput, "imageStorageId">[] {
+export function socialToArtifacts(out: Omit<SocialPostsOutput, "posts"> & { copyBrief?: CopyBrief; posts: (SocialPostsOutput["posts"][number] & { angle?: string; trendSourceUrl?: string; trendEvidence?: NonNullable<CopyBrief["trendEvidence"]>; approvedOfferPlayName?: string })[] }, now: number): Omit<ArtifactInput, "imageStorageId">[] {
   return out.posts.map((p, i) => ({
     kind: "social_post" as const,
     channel: p.channel,
     title: p.title,
     body: p.body,
+    contentAngle: p.angle,
+    copyBrief: out.copyBrief ? {
+      ...out.copyBrief,
+      approvedOfferPlayName: p.approvedOfferPlayName ?? out.copyBrief.approvedOfferPlayName,
+      supportingSourceUrls: [...new Set([...out.copyBrief.supportingSourceUrls, ...(p.trendSourceUrl ? [p.trendSourceUrl] : [])])],
+      trendEvidence: p.trendEvidence,
+    } : undefined,
     hashtags: p.hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)),
     altText: p.altText,
     imagePrompt: p.imageIdea,
@@ -590,7 +961,11 @@ export function socialToArtifacts(out: SocialPostsOutput, now: number): Omit<Art
   }));
 }
 
-export function adsToArtifacts(out: AdDraftsOutput, website?: string): Omit<ArtifactInput, "imageStorageId">[] {
+export function adsToArtifacts(out: Omit<AdDraftsOutput, "searchAds" | "metaAds"> & {
+  copyBrief?: CopyBrief;
+  searchAds: (AdDraftsOutput["searchAds"][number] & { angle?: string })[];
+  metaAds: (AdDraftsOutput["metaAds"][number] & { angle?: string })[];
+}, website?: string): Omit<ArtifactInput, "imageStorageId">[] {
   const items: Omit<ArtifactInput, "imageStorageId">[] = [];
   for (const a of out.searchAds.slice(0, 2)) {
     items.push({
@@ -599,6 +974,8 @@ export function adsToArtifacts(out: AdDraftsOutput, website?: string): Omit<Arti
       title: `Search ad: ${a.headlines[0] ?? "Draft"}`,
       headline: a.headlines.map((h) => h.slice(0, 30)).join(" | "),
       body: a.descriptions.map((d) => d.slice(0, 90)).join("\n"),
+      contentAngle: a.angle,
+      copyBrief: out.copyBrief,
       destinationUrl: a.finalUrl || website,
       hashtags: a.keywords.slice(0, 10),
       factIndexes: out.factIndexes,
@@ -612,6 +989,8 @@ export function adsToArtifacts(out: AdDraftsOutput, website?: string): Omit<Arti
       title: `Social ad: ${m.headline}`,
       headline: m.headline,
       body: `${m.primaryText}\n\n${m.description}`,
+      contentAngle: m.angle,
+      copyBrief: out.copyBrief,
       destinationUrl: website,
       hashtags: [],
       imagePrompt: m.imageIdea,
@@ -622,7 +1001,7 @@ export function adsToArtifacts(out: AdDraftsOutput, website?: string): Omit<Arti
   return items;
 }
 
-export function emailToArtifacts(out: EmailSequenceOutput): Omit<ArtifactInput, "imageStorageId">[] {
+export function emailToArtifacts(out: Omit<EmailSequenceOutput, "emails"> & { angle?: string; copyBrief?: CopyBrief; emails: (EmailSequenceOutput["emails"][number] & { angle?: string })[] }): Omit<ArtifactInput, "imageStorageId">[] {
   return [
     {
       kind: "email_sequence",
@@ -632,6 +1011,8 @@ export function emailToArtifacts(out: EmailSequenceOutput): Omit<ArtifactInput, 
       body: out.emails
         .map((e, i) => `Email ${i + 1} — day ${e.sendAfterDays}\nSubject: ${e.subject}\nPreview: ${e.previewText}\n\n${e.body}\n\n[${e.callToAction}]`)
         .join("\n\n———\n\n"),
+      contentAngle: [out.angle, ...out.emails.map((email, i) => (email.angle ? `Email ${i + 1}: ${email.angle}` : ""))].filter(Boolean).join("\n").slice(0, 500) || undefined,
+      copyBrief: out.copyBrief,
       hashtags: [],
       factIndexes: out.factIndexes,
       role: "customer_success_manager",
@@ -640,26 +1021,49 @@ export function emailToArtifacts(out: EmailSequenceOutput): Omit<ArtifactInput, 
 }
 
 export function seoToArtifacts(out: SeoBriefOutput): Omit<ArtifactInput, "imageStorageId">[] {
+  const linked = (text: string, urls: string[]) => `${text}${urls.length ? ` ${urls.map((url) => `[Source](${url})`).join(" ")}` : ""}`;
+  const outline = out.outline.map((o) => `## ${o.heading}\n${o.points.map((p) => `- ${p}`).join("\n")}`).join("\n\n");
+  const internalLinks = out.internalLinks.length ? `## Suggested internal links\n\n${out.internalLinks.map((url) => `- [${url}](${url})`).join("\n")}` : "";
+  const faqs = out.faqs.length ? `## Frequently asked questions\n\n${out.faqs.map((faq) => `### ${faq.question}\n\n${linked(faq.answer, faq.sourceUrls)}`).join("\n\n")}` : "";
+  const citableClaims = out.citableClaims.length ? `## Verified facts\n\n${out.citableClaims.map((claim) => `- ${linked(claim.statement, claim.sourceUrls)}`).join("\n")}` : "";
+  const contributionBasis = out.originalContributionEvidence.status === "evidence_linked"
+    ? "Evidence linked below. This linkage does not prove that the contribution is unique or that each source semantically supports every part of the statement."
+    : "HYPOTHESIS — owner evidence is needed before presenting this as first-hand or distinctive business expertise.";
+  const originalContribution = `## Original contribution\n\n${out.originalContribution}\n\n**Evidence status:** ${contributionBasis}${out.originalContributionEvidence.sourceUrls.length ? `\n\n${out.originalContributionEvidence.sourceUrls.map((url) => `[Evidence](${url})`).join(" ")}` : ""}`;
+  const factIndexes = [...new Set([...out.factIndexes, ...out.originalContributionEvidence.factIndexes, ...out.faqs.flatMap((faq) => faq.factIndexes), ...out.citableClaims.flatMap((claim) => claim.factIndexes)])];
+  const recommendation = out.recommendedAction === "refresh_existing_page"
+    ? `## Recommended action: refresh existing page\n\nTarget page: ${out.targetPageUrl ?? ""}\n\nWhy: ${out.recommendationReason ?? ""}`
+    : out.recommendedAction === "create_new_page"
+      ? `## Recommended action: create a new page\n\nWhy: ${out.recommendationReason ?? ""}`
+      : "";
   return [
     {
       kind: "blog_post",
       channel: "blog",
       title: out.title,
       headline: out.metaDescription,
-      body: `${out.outline.map((o) => `## ${o.heading}\n${o.points.map((p) => `- ${p}`).join("\n")}`).join("\n\n")}\n\n---\n\n${out.draft}`,
+      body: [recommendation, `## Quick answer\n\n${out.answerFirst}`, originalContribution, out.ownerEvidenceNeeded.length ? `## Owner evidence needed before publication\n\n${out.ownerEvidenceNeeded.map((item) => `- ${item}`).join("\n")}` : "", outline, internalLinks, "---", out.draft, faqs, citableClaims, `## Measurement plan\n\n${out.measurementPlan}`].filter(Boolean).join("\n\n"),
+      destinationUrl: out.recommendedAction === "refresh_existing_page" && out.targetPageUrl ? out.targetPageUrl : undefined,
       hashtags: [out.primaryKeyword, ...out.secondaryKeywords].slice(0, 8),
-      factIndexes: out.factIndexes,
+      factIndexes,
       role: "seo_specialist",
     },
   ];
 }
 
 export const saveChatResult = internalMutation({
-  args: { runId: v.id("workflowRuns"), messageId: v.id("chatMessages"), result: v.string(), isFixture: v.boolean() },
-  handler: async (ctx, { runId, messageId, result }) => {
+  args: { runId: v.id("workflowRuns"), messageId: v.id("chatMessages"), result: v.string(), isFixture: v.boolean(), customAgentId: v.optional(v.id("customAgents")) },
+  handler: async (ctx, { runId, messageId, result, customAgentId }) => {
     const run = await ensureRunOrg(ctx, runId);
     const org = await ctx.db.get(run.orgId);
     const out = JSON.parse(result) as ChatIntentOutput;
+    if (validateActionDependencies(out.actions).length) {
+      throw appError("INVALID", "The action plan has an invalid prerequisite order. Please try again.");
+    }
+    const profile = customAgentId ? await ctx.db.get(customAgentId) : null;
+    if (customAgentId && (!profile || profile.orgId !== run.orgId || profile.status !== "active")) throw appError("NOT_FOUND", "We couldn't find that specialist.");
+    const specialist = run.customAgentSnapshot ?? profile;
+    const allowedActions = specialist ? new Set(specialist.allowedActions) : null;
     const now = Date.now();
     const cardIds: Id<"actionCards">[] = [];
     let priority = 1;
@@ -667,14 +1071,37 @@ export const saveChatResult = internalMutation({
     let autoBudget = WISH_AUTO_BUDGET_MICROS;
     const started: string[] = [];
     const waiting: string[] = [];
-    for (const a of out.actions.slice(0, 4)) {
+    const budgetBlocked: string[] = [];
+    const permittedActions = out.actions.map((action, sourceIndex) => ({ action, sourceIndex })).filter(({ action }) => !allowedActions || allowedActions.has(action.kind));
+    const selectedActions = permittedActions.slice(0, specialist?.maxActionsPerRun ?? 4);
+    const restrictedCount = out.actions.length - permittedActions.length;
+    const cappedCount = permittedActions.length - selectedActions.length;
+    const selectedSourceIndexes = new Set(selectedActions.map(({ sourceIndex }) => sourceIndex));
+    const cardsBySourceIndex = new Map<number, Id<"actionCards">>();
+    const blockedSourceIndexes = new Set<number>();
+    let specialistBudgetMicros = specialist ? creditsToMicros(specialist.maxRunCredits) : Number.POSITIVE_INFINITY;
+    if (specialist) specialistBudgetMicros = Math.max(0, specialistBudgetMicros - run.estimateMicros);
+    for (const { action: a, sourceIndex } of selectedActions) {
+      const unavailablePrerequisite = a.dependsOnActionIndexes.find((index) => !selectedSourceIndexes.has(index) || blockedSourceIndexes.has(index));
+      const dependencyIds = a.dependsOnActionIndexes.map((index) => cardsBySourceIndex.get(index)).filter((id): id is Id<"actionCards"> => Boolean(id));
       const job = jobForAction(a.kind, a.channel);
+      const builtinAgent = specialist ? null : agentForAction(a.kind, a.channel, a.brief ?? "");
       const plan = job ? planJob(job, { quantity: a.quantity, images: job === "content_social" ? 1 : 0, channel: a.channel }, { fixture: org?.kind === "demo" }) : null;
       const external = a.kind === "ad_change" || a.kind === "email_send" || a.kind === "schedule_content";
       const isLink = a.kind === "connect_account" || a.kind === "set_up_autopilot";
-      const cost = plan ? estimateJobMicros(plan) : 0;
+      const cost = plan ? estimateJobMicros(plan, { fixture: org?.kind === "demo" }) : 0;
+      const overSpecialistBudget = Boolean(specialist && cost > specialistBudgetMicros);
+      if (specialist && !overSpecialistBudget) specialistBudgetMicros -= cost;
+      const prerequisiteReason = unavailablePrerequisite === undefined
+        ? undefined
+        : `This depends on “${out.actions[unavailablePrerequisite]?.title ?? "an earlier action"}”, which is unavailable under this specialist's action permissions or run limit.`;
+      const blockedReason = prerequisiteReason ?? (overSpecialistBudget
+        ? `This exceeds ${specialist?.name}'s configured ${specialist?.maxRunCredits}-credit per-run budget.`
+        : job || a.kind === "note" || isLink ? undefined : "This needs a connected account and an approval rule before ClimbOS can prepare it.");
+      const cardStatus = prerequisiteReason || overSpecialistBudget || (!job && a.kind !== "note" && !isLink) ? "blocked" : "proposed";
       const cardId = await ctx.db.insert("actionCards", {
         orgId: run.orgId,
+        ...(dependencyIds.length ? { dependsOnActionCardIds: dependencyIds } : {}),
         title: a.title.slice(0, 120),
         description: a.description.slice(0, 400),
         proposedEffect: external
@@ -690,18 +1117,20 @@ export const saveChatResult = internalMutation({
               : "A note for your team. No cost.",
         kind: a.kind,
         roles: plan?.roles ?? ["coo"],
-        payload: JSON.stringify({ job, channel: a.channel, quantity: a.quantity, brief: a.brief?.slice(0, 1500) ?? "" }),
+        payload: JSON.stringify({ job, channel: a.channel, quantity: a.quantity, brief: a.brief?.slice(0, 1500) ?? "", ...(customAgentId ? { customAgentId, customAgentParentRunId: run._id } : {}), ...(builtinAgent ? { agentArchetypeId: builtinAgent.id } : {}) }),
         costEstimateMicros: cost,
         externalEffect: external,
-        status: job || a.kind === "note" || isLink ? "proposed" : "blocked",
-        blockedReason: job || a.kind === "note" || isLink ? undefined : "This needs a connected account and an approval rule before ClimbOS can prepare it.",
+        status: cardStatus,
+        blockedReason,
         priority: priority++,
         createdAt: now,
         updatedAt: now,
       });
       cardIds.push(cardId);
+      cardsBySourceIndex.set(sourceIndex, cardId);
+      if (cardStatus === "blocked") blockedSourceIndexes.add(sourceIndex);
       const card = await ctx.db.get(cardId);
-      if (org && card && job && !external && AUTO_RUN_KINDS.has(a.kind) && cost <= autoBudget && run.createdBy) {
+      if (!prerequisiteReason && dependencyIds.length === 0 && !specialist && org && card && job && !external && AUTO_RUN_KINDS.has(a.kind) && cost <= autoBudget && run.createdBy) {
         try {
           await startCardRun(ctx, { org, card, userId: run.createdBy, auto: true });
           autoBudget -= cost;
@@ -712,7 +1141,10 @@ export const saveChatResult = internalMutation({
           if (message) await ctx.db.patch(cardId, { blockedReason: message });
         }
       }
-      if (job || isLink) waiting.push(a.title);
+      if (job || isLink) {
+        if (overSpecialistBudget) budgetBlocked.push(a.title);
+        else waiting.push(a.title);
+      }
     }
     await ctx.db.patch(messageId, { status: "done" });
     const status =
@@ -726,9 +1158,10 @@ export const saveChatResult = internalMutation({
     await ctx.db.insert("chatMessages", {
       orgId: run.orgId,
       author: "climbos",
-      text: `${out.reply}${status}${out.followUp ? `\n\n${out.followUp}` : ""}`.slice(0, 1600),
+      customAgentId,
+      text: `${specialist ? selectedActions.length ? `${specialist.name} prepared suggestions for your review.` : `${specialist.name} could not prepare an action within its configured capabilities; no work was started.` : out.reply}${specialist && restrictedCount ? ` ${restrictedCount} suggestion${restrictedCount === 1 ? " was" : "s were"} outside the configured capabilities and was not added.` : ""}${specialist && cappedCount ? ` ${cappedCount} additional suggestion${cappedCount === 1 ? " was" : "s were"} left out to stay within the action limit.` : ""}${specialist && budgetBlocked.length ? ` ${budgetBlocked.length} action${budgetBlocked.length === 1 ? " was" : "s were"} blocked by the per-run budget.` : ""}${status}${out.followUp ? `\n\n${out.followUp}` : ""}`.slice(0, 1600),
       understood: out.understood?.slice(0, 300) || undefined,
-      roles: ["coo"],
+      roles: [specialist ? AGENT_ARCHETYPE_BY_ID.get(specialist.archetypeId)?.role ?? "coo" : "coo"],
       actionCardIds: cardIds,
       status: "done",
       replyTo: messageId,

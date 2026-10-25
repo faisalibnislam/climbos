@@ -1,0 +1,126 @@
+{
+  "sources": [
+    {
+      "id": "B01-S01",
+      "title": "Creating a Successful Strategy",
+      "url": "https://www.isc.hbs.edu/strategy/creating-a-successful-strategy/Pages/default.aspx",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Distinctive activities, trade-offs and strategic fit.",
+      "evidence_summary": "Distinctive activities, trade-offs and strategic fit.",
+      "books": [
+        1
+      ],
+      "verification_status": "verified_primary_page"
+    },
+    {
+      "id": "B01-S02",
+      "title": "Making Strategic Trade-offs",
+      "url": "https://www.isc.hbs.edu/strategy/creating-a-successful-strategy/Pages/making-strategic-trade-offs.aspx",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Incompatible positions and activity trade-offs.",
+      "evidence_summary": "Incompatible positions and activity trade-offs.",
+      "books": [
+        1
+      ],
+      "verification_status": "verified_primary_page"
+    },
+    {
+      "id": "B01-S03",
+      "title": "The Business Model Canvas",
+      "url": "https://www.strategyzer.com/library/the-business-model-canvas",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Nine connected blocks describing creation, delivery and capture of value.",
+      "evidence_summary": "Nine connected blocks describing creation, delivery and capture of value.",
+      "books": [
+        1
+      ],
+      "verification_status": "verified_primary_page"
+    },
+    {
+      "id": "B14-S01",
+      "title": "Convex Actions",
+      "url": "https://docs.convex.dev/functions/actions",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "External API calls and database interaction through queries and mutations.",
+      "evidence_summary": "External API calls and database interaction through queries and mutations.",
+      "books": [
+        14
+      ],
+      "verification_status": "verified_primary_page"
+    },
+    {
+      "id": "B14-S02",
+      "title": "Convex Mutations",
+      "url": "https://docs.convex.dev/functions/mutation-functions",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Transactional database reads and writes; not a remote API transaction.",
+      "evidence_summary": "Transactional database reads and writes; not a remote API transaction.",
+      "books": [
+        14
+      ],
+      "verification_status": "verified_primary_page"
+    },
+    {
+      "id": "B14-S03",
+      "title": "Resend Idempotency Keys",
+      "url": "https://resend.com/docs/dashboard/emails/idempotency-keys",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Provider idempotency keys with finite 24-hour retention.",
+      "evidence_summary": "Provider idempotency keys with finite 24-hour retention.",
+      "books": [
+        14
+      ],
+      "verification_status": "verified_primary_page"
+    },
+    {
+      "id": "B14-S04",
+      "title": "Resend Verify Webhook Requests",
+      "url": "https://resend.com/docs/webhooks/verify-webhooks-requests",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Signature verification requires the unmodified raw request body.",
+      "evidence_summary": "Signature verification requires the unmodified raw request body.",
+      "books": [
+        14
+      ],
+      "verification_status": "verified_primary_page"
+    },
+    {
+      "id": "B14-S05",
+      "title": "Vercel Functions Limits",
+      "url": "https://vercel.com/docs/functions/limitations",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Function runtime limits vary by plan and configuration; verify deployed settings.",
+      "evidence_summary": "Function runtime limits vary by plan and configuration; verify deployed settings.",
+      "books": [
+        14
+      ],
+      "verification_status": "verified_primary_page"
+    },
+    {
+      "id": "B14-S06",
+      "title": "How Claude Remembers Your Project",
+      "url": "https://code.claude.com/docs/en/memory",
+      "retrieved_at": "2026-10-19",
+      "publication_date": null,
+      "claim_scope": "Project instruction context and the distinction from technical enforcement.",
+      "evidence_summary": "Project instruction context and the distinction from technical enforcement.",
+      "books": [
+        14
+      ],
+      "verification_status": "verified_primary_page"
+    }
+  ],
+  "limitations": [
+    "Original formulas, scenarios, architectures and policies are instructional synthesis, not observed ClimbOS performance.",
+    "The actual ClimbOS application repository was not available for audit or deployment.",
+    "Edition cutoff is October 19, 2026, not the entire month."
+  ]
+}

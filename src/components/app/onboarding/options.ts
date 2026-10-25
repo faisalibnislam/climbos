@@ -4,9 +4,9 @@ export type BusinessType = "saas" | "ecommerce" | "services" | "physical_product
 export type GoalKind = "more_sales" | "more_customers" | "more_reach" | "custom";
 
 export const BUSINESS_TYPE_OPTIONS: { value: BusinessType; label: string }[] = [
-  { value: "saas", label: "Software / app (subscriptions)" },
+  { value: "saas", label: "Software or an app" },
   { value: "ecommerce", label: "Online store" },
-  { value: "services", label: "Services (bookings, clients)" },
+  { value: "services", label: "Services or appointments" },
   { value: "physical_products", label: "Physical products" },
   { value: "other", label: "Something else" },
 ];
@@ -24,9 +24,9 @@ export const HORIZON_OPTIONS = [
 export const REVIEW_DAY_OPTIONS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((d) => ({ value: d, label: d }));
 
 export const GOAL_KIND_OPTIONS: { value: GoalKind; title: string; description: string; icon: string }[] = [
-  { value: "more_customers", title: "More customers", description: "New sign-ups or buyers", icon: "🙋" },
-  { value: "more_sales", title: "More sales", description: "More revenue", icon: "💰" },
-  { value: "more_reach", title: "More reach", description: "More awareness", icon: "📣" },
+  { value: "more_customers", title: "More customers", description: "Help more people become customers", icon: "🙋" },
+  { value: "more_sales", title: "More sales", description: "Get more purchases or orders", icon: "💰" },
+  { value: "more_reach", title: "Help people find me", description: "Introduce your business to more people", icon: "📣" },
   { value: "custom", title: "Something else", description: "Your own words", icon: "✏️" },
 ];
 
@@ -50,8 +50,8 @@ export function defaultEvents(type: string) {
     case "physical_products":
       return [ev("add_to_cart", "Add to cart", "A visitor adds a product to the cart"), ev("purchase", "Purchase", "A paid order is placed"), ev("repeat_purchase", "Repeat purchase", "A customer places a second order")];
     case "services":
-      return [ev("inquiry", "Qualified inquiry", "Someone asks about a service and fits your criteria"), ev("booking", "Booking", "A call or appointment is booked"), ev("closed", "Closed deal", "A client signs or pays")];
+      return [ev("inquiry", "An inquiry from someone you can help", "Someone asks about a service and fits your criteria"), ev("booking", "Booking", "A call or appointment is booked"), ev("closed", "New paying client", "A client signs or pays")];
     default:
-      return [ev("lead", "New lead", "Someone gets in touch or signs up"), ev("customer", "New customer", "Someone pays for the first time")];
+      return [ev("lead", "Someone gets in touch", "Someone gets in touch or signs up"), ev("customer", "New customer", "Someone pays for the first time")];
   }
 }

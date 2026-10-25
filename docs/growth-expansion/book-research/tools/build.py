@@ -14,7 +14,7 @@ import os
 import re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-READINGS = os.environ.get("BOOK_READINGS", "/private/tmp/claude-501/-Users-faisalislam-Documents-GitHub-Airly-Studio-climbos/c9c0166c-2982-4b67-9049-1304df437b0e/scratchpad/books2/out")
+READINGS = os.environ.get("BOOK_READINGS", "/private/tmp/climbos-book-readings/out")
 EDITION = "2026-10-20"
 READING_IDS = ["BK07", "BK08", "BK09a", "BK09b", "BK10", "BK11", "BK12", "BK13", "BK14", "BK15"]
 SHA = {  # SHA-256 prefixes of the supplied files (docs/reference-books/, not committed)

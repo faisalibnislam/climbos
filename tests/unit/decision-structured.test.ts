@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { DECISION_FIELDS, lintDecision, type Decision } from "../../shared/agents/decision";
+import { DECISION_FIELDS, DecisionSchema, lintDecision, type Decision } from "../../shared/agents/decision";
 import { playsTask } from "../../shared/agents/planTasks";
 import { planQuality } from "../../shared/agents/quality";
-import { growthPlaysSpec } from "../../shared/agents/specs";
+import { analyzeDecisionOptions, growthPlaysSpec, lintDecisionConstraintFit, lintDecisionOptionChoice, StrategyExplorationSchema } from "../../shared/agents/specs";
+import { diagnose } from "../../shared/agents/diagnosis";
+import { portfolioRange, type PlayLike } from "../../shared/agents/economics";
 
 /** S5 (REQ-STRAT-01/02/04) behind decision_contract: the decision is structured and checked in code. */
 const decision = (o: Partial<Decision> = {}): Decision => ({
@@ -21,11 +23,20 @@ const decision = (o: Partial<Decision> = {}): Decision => ({
     { name: "Buy more traffic", kind: "acquisition", plays: [], chosen: false, whyNot: "More visitors leak out the same way; traffic is already up." },
   ],
   guidingPolicy: "Keep the customers we already win before paying for new ones.",
+  focus: { primaryPlay: "Win back lapsed customers", supportingMove: "Ask recent buyers what blocked reorder", maintenanceWork: "Review reorder rate weekly" },
   falsifier: "Fewer than 10 of 300 lapsed customers reorder by day 21.",
   ...o,
 });
 const plays = [{ name: "Win back lapsed customers" }];
 const errors = (d: Decision | undefined, p = plays) => lintDecision(d, p).filter((i) => i.severity === "error");
+
+const measurablePlay = (name: string, weeklyReach: number, rate: number, monthlySpendUsd: number): PlayLike => ({
+  name,
+  kind: "bankable",
+  unit: "customers",
+  horizonDays: 30,
+  model: { weeklyReach, steps: [{ name: "paid customers", rate }], monthlySpendUsd, ownerHoursPerWeek: 0 },
+});
 
 describe("structured decision (flagged)", () => {
   it("a retention decision that outranks acquisition, with a dated falsifier, passes", () => {
@@ -57,6 +68,11 @@ describe("structured decision (flagged)", () => {
     expect(warns.some((i) => /TikTok tests/.test(i.message))).toBe(true);
   });
 
+  it("requires the strategic focus to name an exact primary play and concrete support and upkeep", () => {
+    const issues = errors(decision({ focus: { primaryPlay: "Referral loop", supportingMove: " ", maintenanceWork: " " } }));
+    expect(issues.map((i) => i.path)).toEqual(expect.arrayContaining(["decision.focus.primaryPlay", "decision.focus.supportingMove", "decision.focus.maintenanceWork"]));
+  });
+
   it("the falsifier needs a number and a date", () => {
     expect(errors(decision({ falsifier: "If customers don't come back" })).map((i) => i.path)).toContain("decision.falsifier");
     expect(errors(decision({ falsifier: "Fewer than 10 reorders" })).map((i) => i.path)).toContain("decision.falsifier");
@@ -67,17 +83,173 @@ describe("structured decision (flagged)", () => {
     expect(lintDecision(decision({ observations: obs }), plays).some((i) => i.severity === "warn" && i.path === "decision.observations")).toBe(true);
   });
 
+  it("links strategic observations to only the supplied fact indexes and research URLs", () => {
+    const linked = decision({ observations: [
+      { observation: "Orders stayed flat", source: "owner", evidenceRefs: ["fact:0"] },
+      { observation: "The pricing page lists a monthly plan", source: "site", evidenceRefs: ["https://example.com/pricing"] },
+    ] });
+    const issues = lintDecision(linked, plays, { factCount: 1, availableSourceUrls: ["https://www.example.com/pricing/"] });
+    expect(issues.filter((issue) => issue.severity === "error")).toEqual([]);
+    expect(DecisionSchema.safeParse(linked).success).toBe(true);
+  });
+
+  it("rejects fabricated or out-of-run decision references and flags missing provenance", () => {
+    const linked = decision({ observations: [
+      { observation: "Orders stayed flat", source: "owner", evidenceRefs: ["fact:4"] },
+      { observation: "Competitor has a new offer", source: "research", evidenceRefs: ["https://not-read.example/offer"] },
+      { observation: "Maybe the price is high", source: "owner" },
+    ] });
+    const issues = lintDecision(linked, plays, { factCount: 1, availableSourceUrls: ["https://example.com/pricing"] });
+    expect(issues.filter((issue) => issue.severity === "error")).toHaveLength(2);
+    expect(issues.some((issue) => issue.severity === "warn" && issue.path === "decision.observations[2].evidenceRefs")).toBe(true);
+  });
+
   it("decision findings are soft: the plan is provisional, not failed", () => {
     const q = planQuality([{ agentId: "growth_plays", shipped: false, gatesPassed: true, average: 8, rounds: 2, errors: { decision: 2 }, researchSources: 4 }]);
     expect(q.state).toBe("provisional");
   });
 });
 
+describe("deterministic comparison of decision options", () => {
+  const economics = { revenuePerCustomerMonthUsd: 100, grossMargin: 1, monthlyChurn: 0, basis: "test" };
+  const optionPlays = [measurablePlay("Volume", 1, 1, 10_000), measurablePlay("Efficient", 5, 1, 100)];
+  const options = [
+    { name: "Buy volume", kind: "acquisition" as const, plays: ["Volume"], chosen: true, whyNot: "" },
+    { name: "Use the efficient channel", kind: "acquisition" as const, plays: ["Efficient"], chosen: false, whyNot: "Smaller reach." },
+  ];
+
+  it("flags a chosen option with lower modeled contribution than another feasible option", () => {
+    const issues = lintDecisionOptionChoice(decision({ options }), optionPlays, economics);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].rule).toBe("decision_choice");
+    expect(issues[0].message).toContain("lower modeled net contribution");
+  });
+
+  it("returns an auditable, explicitly uncalibrated calculation trace for mapped options", () => {
+    const trace = analyzeDecisionOptions(decision({ options }), optionPlays, economics, { monthlyAdBudgetUsd: 1_000, horizonDays: 90 });
+    expect(trace).toMatchObject({
+      method: "seeded_joint_scenario_mean_v1",
+      horizonDays: 90,
+      currency: "USD",
+      probabilityCalibrated: false,
+      constraints: { monthlyAdBudgetUsd: 1_000 },
+      options: [
+        { name: "Buy volume", chosen: true, calculated: true, playNames: ["Volume"], customerRange: { p10: expect.any(Number), p50: expect.any(Number), p90: expect.any(Number) }, netContribution: expect.any(Number) },
+        { name: "Use the efficient channel", chosen: false, calculated: true, playNames: ["Efficient"] },
+      ],
+    });
+    const unavailable = analyzeDecisionOptions(decision({ options: options.map((option) => ({ ...option, plays: [] })) }), optionPlays, economics);
+    expect(unavailable?.options[0]).toMatchObject({ calculated: false, unavailableReason: "No mapped plays", netContribution: null });
+  });
+
+  it("flags a chosen option that breaches a confirmed monthly budget when another fits", () => {
+    const issues = lintDecisionOptionChoice(decision({ options }), optionPlays, economics, { monthlyAdBudgetUsd: 1_000 });
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toContain("exceeds a confirmed cash, budget");
+  });
+
+  it("flags an option that exceeds the owner-set monthly growth-cash limit", () => {
+    const cashHeavy = measurablePlay("Cash heavy", 100, 0.2, 0);
+    cashHeavy.model = { ...cashHeavy.model!, otherMonthlyUsd: 120 };
+    const lean = measurablePlay("Lean", 50, 0.2, 0);
+    const options = [
+      { name: "Cash-heavy growth", kind: "acquisition" as const, plays: ["Cash heavy"], chosen: true, whyNot: "" },
+      { name: "Lean test", kind: "acquisition" as const, plays: ["Lean"], chosen: false, whyNot: "Smaller reach." },
+    ];
+    const issues = lintDecisionOptionChoice(decision({ options }), [cashHeavy, lean], economics, { monthlyGrowthCashUsd: 100 });
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain("exceeds a confirmed cash, budget, time or delivery limit");
+    expect(analyzeDecisionOptions(decision({ options }), [cashHeavy, lean], economics, { monthlyGrowthCashUsd: 100 })?.constraints.monthlyGrowthCashUsd).toBe(100);
+  });
+
+  it("does not score options whose alternatives have no measurable play mapping", () => {
+    const nonComparable = options.map((option) => ({ ...option, plays: [] }));
+    expect(lintDecisionOptionChoice(decision({ options: nonComparable }), optionPlays, economics)).toEqual([]);
+  });
+
+  it("uses mean joint scenario outcomes instead of the middle scenario to compare ranged options", () => {
+    const skewed = { ...measurablePlay("Skewed", 10, 1, 0), model: { ...measurablePlay("Skewed", 10, 1, 0).model!, weeklyReachLow: 1, weeklyReachHigh: 100 } };
+    const steady = measurablePlay("Steady", 20, 1, 0);
+    const rangedOptions = [
+      { name: "Test the upside", kind: "acquisition" as const, plays: ["Skewed"], chosen: true, whyNot: "" },
+      { name: "Take the steady path", kind: "acquisition" as const, plays: ["Steady"], chosen: false, whyNot: "Lower potential." },
+    ];
+    expect(lintDecisionOptionChoice(decision({ options: rangedOptions }), [skewed, steady], economics)).toEqual([]);
+  });
+
+  it("uses the P90 customer scenario when checking a confirmed delivery-capacity limit", () => {
+    const ranged = measurablePlay("Ranged", 10, 1, 0);
+    ranged.model = { ...ranged.model!, weeklyReachLow: 1, weeklyReachHigh: 1_000 };
+    const steady = measurablePlay("Steady", 5, 1, 0);
+    const rangedOptions = [
+      { name: "Ranged option", kind: "acquisition" as const, plays: ["Ranged"], chosen: true, whyNot: "" },
+      { name: "Steady option", kind: "acquisition" as const, plays: ["Steady"], chosen: false, whyNot: "Lower volume." },
+    ];
+    expect(portfolioRange({ economics, plays: [ranged] }, 30).p90).toBeGreaterThan(30);
+    const issues = lintDecisionOptionChoice(decision({ options: rangedOptions }), [ranged, steady], economics, { newCustomersPerMonth: 30 });
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toContain("exceeds a confirmed cash, budget, time or delivery limit");
+  });
+
+  it("fails when the structured decision contradicts a supported owner diagnosis", () => {
+    const diagnosis = diagnose({ funnel: { leads: 100, activated: 12, newCustomers: 3 }, types: ["b2b_saas"] });
+    expect(diagnosis).toMatchObject({ constraint: "activation", status: "supported" });
+    const issues = lintDecisionConstraintFit(decision({ constraint: "retention" }), [{ name: "Onboarding fix", mechanic: "Improve first value activation" }], diagnosis);
+    expect(issues).toMatchObject([{ severity: "error", rule: "diagnosis_fit", path: "decision.constraint" }]);
+  });
+
+  it("warns when a model-selected constraint has no play that visibly addresses it", () => {
+    const issues = lintDecisionConstraintFit(decision({ constraint: "retention" }), [{ name: "More traffic", mechanic: "Acquire new leads" }]);
+    expect(issues).toMatchObject([{ severity: "warn", rule: "diagnosis_fit", path: "plays" }]);
+  });
+});
+
 describe("flag wiring", () => {
+  it("keeps a highly uncertain bold option valid without a matching precedent", () => {
+    const option = {
+      title: "Turn unused expertise into a public challenge",
+      challengedConvention: "Businesses in this category should keep their expertise behind paid consultations.",
+      whyConventionPersists: "A paid format feels familiar and limits public work.",
+      costOfBreaking: "A public format could expose incomplete ideas or attract the wrong audience.",
+      businessMechanism: "Combine a rare internal skill with a customer-created weekly challenge and publish the most useful result.",
+      businessAction: "Invite customers to submit a real problem for a short, owner-reviewed public response.",
+      whyItCouldMatter: "A useful public response could make an unusual expertise asset recognizable to people who do not know the business yet.",
+      customerBehavior: "A relevant buyer submits a problem or requests a private next step.",
+      audienceOrCondition: "Only for a business with public-safe expertise and a reachable, interested audience.",
+      evidenceBasis: "speculative_hypothesis" as const,
+      evidenceNote: "No matching precedent or business outcome is currently established.",
+      evidenceRefs: [],
+      precedentIds: [],
+      transferLogic: "No precedent is required; test the customer behavior directly with a small, reversible prompt.",
+      keyDifferences: "The idea deliberately combines a public challenge format with this business's own expertise asset.",
+      assumptions: ["Customers will share a useful problem."],
+      uncertainties: ["Audience response and qualified demand are unknown."],
+      risks: ["The challenge could create unpaid support work."],
+      costAndCapacity: "One owner-reviewed response per week; stop if available time is exceeded.",
+      novelty: "high" as const,
+      evidenceStrength: "low" as const,
+      businessFit: "low" as const,
+      feasibility: "low" as const,
+      risk: "high" as const,
+      reversibleTest: {
+        method: "Draft one invitation and show it to a few existing customers before publishing anything.",
+        metric: "Qualified problem submissions",
+        duration: "One week",
+        resourceLimit: "One owner hour",
+        continueIf: "A right-fit customer submits a specific problem.",
+        changeIf: "People like the idea but do not share a usable problem.",
+        stopIf: "The request creates unsupported expectations or excessive support work.",
+      },
+    };
+    const exploration = { grounded: option, adjacent: option, bold: option };
+    expect(StrategyExplorationSchema.safeParse(exploration).success).toBe(true);
+  });
+
   it("on: the plays schema requires a decision; off: the default schema is unchanged", () => {
     const on = growthPlaysSpec({ decisionContract: true }).schema;
     const off = growthPlaysSpec().schema;
-    const base = { portfolioNote: "", economics: { revenuePerCustomerMonthUsd: 0, grossMargin: 0, monthlyChurn: 0, basis: "", sources: { revenue: { source: "assumption", ref: "", quote: "" }, margin: { source: "assumption", ref: "", quote: "" }, churn: { source: "assumption", ref: "", quote: "" } } }, plays: [] };
+    const option = { title: "Test an existing customer question", challengedConvention: "A business should only announce finished ideas.", whyConventionPersists: "This feels easier to control.", costOfBreaking: "Early feedback can expose an unfinished idea.", businessMechanism: "Invite a few customers to react to a low-cost concept.", businessAction: "Share one private mockup with a few eligible customers.", whyItCouldMatter: "The business may learn what buyers actually understand.", customerBehavior: "A buyer explains a use case or objection.", audienceOrCondition: "Only with customer permission.", evidenceBasis: "speculative_hypothesis", evidenceNote: "No business-specific outcome is known yet.", evidenceRefs: [], precedentIds: [], transferLogic: "No precedent is needed for this small direct test.", keyDifferences: "This is a small private customer test.", assumptions: [], uncertainties: ["Buyer interest is unknown."], risks: ["The concept may create an expectation."], costAndCapacity: "One hour, no spend.", novelty: "medium", evidenceStrength: "low", businessFit: "medium", feasibility: "high", risk: "low", reversibleTest: { method: "Show a mockup to two eligible customers.", metric: "Useful buyer feedback", duration: "One week", resourceLimit: "One hour", continueIf: "A buyer names a useful next step.", changeIf: "The idea is understood but not relevant.", stopIf: "No buyer finds it useful." } };
+    const base = { portfolioNote: "", strategyExploration: { grounded: option, adjacent: option, bold: option }, economics: { revenuePerCustomerMonthUsd: 0, grossMargin: 0, monthlyChurn: 0, basis: "", sources: { revenue: { source: "assumption", ref: "", quote: "" }, margin: { source: "assumption", ref: "", quote: "" }, churn: { source: "assumption", ref: "", quote: "" } } }, plays: [] };
     expect(on.safeParse(base).success).toBe(false);
     expect(on.safeParse({ ...base, decision: decision() }).success).toBe(true);
     expect(off.safeParse(base).success).toBe(true);
@@ -85,7 +257,12 @@ describe("flag wiring", () => {
 
   it("on: the task asks for the decision fields; off: it doesn't", () => {
     expect(playsTask({ scorecard: "", insights: "", decisionContract: true })).toContain(DECISION_FIELDS);
-    expect(playsTask({ scorecard: "", insights: "" })).not.toContain("Fill decision");
+    const defaultTask = playsTask({ scorecard: "", insights: "" });
+    expect(defaultTask).not.toContain("Fill decision");
+    expect(defaultTask).toContain("best-supported binding constraint");
+    expect(defaultTask).toContain("Fixing the offer, conversion, retention or capacity can outrank new acquisition");
+    expect(defaultTask).not.toContain("one bankable play, one or two creative-but-proven plays");
+    expect(defaultTask).not.toContain("capped moonshot");
   });
 
   it("on: the plays lint includes the decision checks", () => {

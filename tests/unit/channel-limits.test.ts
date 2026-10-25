@@ -68,6 +68,51 @@ describe("hard limits before ranking", () => {
     expect(limitChecks(d01, saas, { connected: null })).toEqual([]);
   });
 
+  it("measurement: owner-confirmed missing conversion tracking blocks paid acquisition before ranking", () => {
+    const noTracking = { ...saas, dims: { ...saas.dims, tracking: v("none") } };
+    const rows = scoreChannels(noTracking, [], undefined, {});
+    expect(rows.find((r) => r.id === "P01")?.limits).toContainEqual(expect.objectContaining({ kind: "measurement", verdict: "blocked" }));
+    expect(picked(rows).some((r) => r.paid)).toBe(false);
+  });
+
+  it("measurement: inferred or unknown tracking does not hard-block paid tests", () => {
+    const inferred = { ...saas, dims: { ...saas.dims, tracking: { value: "none", confidence: "medium" as const, source: "inferred" as const } } };
+    expect(limitChecks(CHANNEL_BY_ID.P01, inferred, {}).some((x) => x.kind === "measurement")).toBe(false);
+    expect(limitChecks(CHANNEL_BY_ID.P01, saas, {}).some((x) => x.kind === "measurement")).toBe(false);
+  });
+
+  it("capacity: zero owner-confirmed delivery capacity blocks new-buyer channels but permits existing-base work", () => {
+    expect(limitChecks(CHANNEL_BY_ID.P01, saas, { newCustomersPerMonth: 0 }).some((x) => x.kind === "capacity" && x.verdict === "blocked")).toBe(true);
+    expect(limitChecks(CHANNEL_BY_ID.R02, saas, { newCustomersPerMonth: 0 }).some((x) => x.kind === "capacity")).toBe(false);
+    expect(limitChecks(CHANNEL_BY_ID.P01, saas, {}).some((x) => x.kind === "capacity")).toBe(false);
+  });
+
+  it("capacity: surfaces unknown remaining service capacity without treating it as zero or blocking channels", () => {
+    const service: AcquisitionProfile = { ...saas, types: ["local_services"] };
+    const unknown = limitChecks(CHANNEL_BY_ID.P01, service, {}).find((x) => x.kind === "capacity");
+    expect(unknown).toMatchObject({ verdict: "setup", reason: expect.stringMatching(/remaining delivery capacity is unknown/i) });
+    expect(limitChecks(CHANNEL_BY_ID.P01, service, { newCustomersPerMonth: 4 }).some((x) => x.kind === "capacity")).toBe(false);
+    expect(limitChecks(CHANNEL_BY_ID.R02, service, {}).some((x) => x.kind === "capacity")).toBe(false);
+
+    const rows = scoreChannels(service, [], undefined, {});
+    expect(rows.find((r) => r.id === "P01")?.limits).toContainEqual(expect.objectContaining({ kind: "capacity", verdict: "setup" }));
+    expect(picked(rows).some((r) => r.id === "P01")).toBe(true);
+  });
+
+  it("paid readiness: a supported downstream bottleneck blocks paid acquisition until repaired", () => {
+    const rows = scoreChannels(saas, [], undefined, {}, "conversion");
+    expect(rows.find((r) => r.id === "P01")).toMatchObject({ status: "not_now", limits: expect.arrayContaining([expect.objectContaining({ kind: "diagnosis", verdict: "blocked" })]) });
+    expect(picked(rows).some((row) => row.paid)).toBe(false);
+    expect(limitChecks(CHANNEL_BY_ID.P01, saas, {}, "demand").some((limit) => limit.kind === "diagnosis")).toBe(false);
+  });
+
+  it("paid readiness: only an owner-confirmed non-positive margin blocks on economics", () => {
+    expect(limitChecks(CHANNEL_BY_ID.P01, saas, { ownerGrossMargin: 0 }).find((limit) => limit.kind === "economics")?.verdict).toBe("blocked");
+    expect(limitChecks(CHANNEL_BY_ID.P01, saas, { ownerGrossMargin: -0.1 }).find((limit) => limit.kind === "economics")?.verdict).toBe("blocked");
+    expect(limitChecks(CHANNEL_BY_ID.P01, saas, { ownerGrossMargin: 0.2 }).some((limit) => limit.kind === "economics")).toBe(false);
+    expect(limitChecks(CHANNEL_BY_ID.P01, saas, {}).some((limit) => limit.kind === "economics")).toBe(false);
+  });
+
   it("the planner's scorecard names the limit", () => {
     const text = scorecardText(scoreChannels({ ...saas, budgetUsd: 0 }, [], undefined, { connected: [] }), 400);
     expect(text).toMatch(/P01 Google Search Ads: .*Not now · .*Needs at least \$300\/month to learn anything; the budget is \$0/);

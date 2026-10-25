@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { checkInvariants } from "../../shared/economics/ledger";
-import { api } from "../../convex/_generated/api";
+import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { ledgerOf } from "../../convex/lib/periods";
+import { readExpertPlan } from "../../shared/agents/planCompatibility";
 import { asNewUser, setup, type T } from "./helpers";
 
 /**
@@ -49,6 +50,72 @@ describe("Engine v2 wiring", () => {
   it("runs a growth plan as draft + review steps, meters every call and reconciles once", async () => {
     const t = setup();
     const w = await workspace(t, "v2-plan@example.com");
+    await w.client.mutation(api.orgs.saveBusinessDetails, { slug: w.slug, lifecycleStage: "early_traction" });
+    await w.client.mutation(api.workspace.setFunnel, { slug: w.slug, periodDays: 30, visitors: 100, leads: 20, activated: 10, newCustomers: 5 });
+    const now = Date.now();
+    await w.client.mutation(api.analytics.importPlatformClaims, {
+      slug: w.slug,
+      rows: [{ platform: "google_ads", date: new Date(now - 30 * 86_400_000).toISOString().slice(0, 10), conversions: 2, conversionValue: 60, spend: 100, currency: "USD" }],
+    });
+    await t.run(async (ctx) => {
+      await ctx.db.insert("revenueEvents", {
+        orgId: w.orgId,
+        source: "stripe",
+        sourceEventId: "earlier-payment-before-window",
+        occurredAt: now - 400 * 86_400_000,
+        customerRef: "private-customer",
+        orderRef: "earlier-order",
+        currency: "USD",
+        amountMinor: 10_000,
+        refundedMinor: 0,
+        kind: "order",
+        isFixture: false,
+        ingestedAt: now,
+      });
+      await ctx.db.insert("revenueEvents", {
+        orgId: w.orgId,
+        source: "stripe",
+        sourceEventId: "refund-exposure-payment",
+        occurredAt: now - 30 * 86_400_000,
+        customerRef: "private-customer",
+        orderRef: "refund-exposure-order",
+        utmSource: "google",
+        utmMedium: "cpc",
+        currency: "USD",
+        amountMinor: 10_000,
+        refundedMinor: 1_500,
+        kind: "order",
+        isFixture: false,
+        ingestedAt: now,
+      });
+      await ctx.db.insert("revenueEvents", {
+        orgId: w.orgId,
+        source: "stripe",
+        sourceEventId: "refund-exposure-payment-2",
+        occurredAt: now - 20 * 86_400_000,
+        customerRef: "private-customer-2",
+        orderRef: "refund-exposure-order-2",
+        currency: "USD",
+        amountMinor: 5_000,
+        refundedMinor: 0,
+        kind: "order",
+        isFixture: false,
+        ingestedAt: now,
+      });
+      await ctx.db.insert("revenueEvents", {
+        orgId: w.orgId,
+        source: "stripe",
+        sourceEventId: "refund-exposure-standalone-refund",
+        occurredAt: now - 10 * 86_400_000,
+        orderRef: "refund-exposure-order-2",
+        currency: "USD",
+        amountMinor: 500,
+        refundedMinor: 0,
+        kind: "refund",
+        isFixture: false,
+        ingestedAt: now,
+      });
+    });
     await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
     await t.finishAllScheduledFunctions(() => undefined);
     const run = await latestRun(t, w.orgId, "strategy");
@@ -68,9 +135,20 @@ describe("Engine v2 wiring", () => {
     // The expert plan fields are saved.
     const strategy = await t.run(async (ctx) => ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).order("desc").first());
     expect(strategy?.expert?.diagnosis).toContain("fake-v1");
-    expect(strategy?.expert?.weekOneChecklist.length).toBeGreaterThan(0);
+    expect(strategy?.expert?.version).toBe(9);
+    const expert = readExpertPlan(strategy!.expert as Record<string, unknown>);
+    expect(expert.growthPlanV9).toMatchObject({ plays: expect.any(Array), economics: expect.any(Object) });
+    expect((expert.plays as { outcomeAccounting?: { incrementalityBasis?: string; modeledIncrementalRevenue12m?: unknown } }[])[0].outcomeAccounting).toMatchObject({
+      attributionBasis: "modeled_play_funnel",
+      incrementalityBasis: "not_estimated",
+      modeledIncrementalRevenue12m: null,
+      revenueHorizonMonths: 12,
+    });
+    expect(strategy?.expert?.plays).toBeUndefined();
+    expect(strategy?.expert?.economics).toBeUndefined();
+    expect((expert.weekOneChecklist as unknown[]).length).toBeGreaterThan(0);
     // Forecasts are computed in code from each play's model and ranges (never written by the model).
-    const plays = strategy?.expert?.plays as { p10: number; p50: number; p90: number }[];
+    const plays = expert.plays as { p10: number; p50: number; p90: number }[];
     expect(plays.length).toBe(2);
     for (const p of plays) {
       expect(p.p10).toBeLessThan(p.p50);
@@ -80,11 +158,65 @@ describe("Engine v2 wiring", () => {
     // Pages the research read are saved, and so is what the plan was built from.
     expect(strategy?.expert?.webSources?.[0]?.url).toBe("https://example.com");
     expect(strategy?.expert?.snapshot?.engine).toMatch(/^v\d/);
+    expect(strategy?.expert?.snapshot?.snapshotVersion).toBe(22);
+    expect(strategy?.expert?.snapshot?.growthCashTiming).toBeNull();
+    expect(strategy?.expert?.snapshot?.knowledgeReferences?.records.length).toBeGreaterThan(0);
+    expect(strategy?.expert?.snapshot?.knowledgeReferences?.records.every((record) => /^[a-f0-9]{64}$/u.test(record.sha256))).toBe(true);
+    expect(strategy?.expert?.snapshot?.businessLifecycleStage).toMatchObject({ stage: "early_traction", provenance: "owner_reported" });
+    expect(strategy?.expert?.snapshot?.businessFunnel).toMatchObject({ periodDays: 30, visitors: 100, leads: 20, activated: 10, newCustomers: 5 });
+    expect(strategy?.expert?.snapshot?.goalInput).toMatchObject({ kind: "more_customers", statement: "More paying customers", horizonDays: 90, currency: "USD" });
+    expect(strategy?.expert?.snapshot?.snapshotId).toMatch(/^[a-f0-9]{64}$/);
+    expect(strategy?.expert?.snapshot?.refundExposure).toMatchObject({
+      paymentCount: 2,
+      grossPaidMinor: 15_000,
+      refundsRecordedMinor: 2_000,
+      netPaidMinor: 13_000,
+      refundToGrossShare: 2_000 / 15_000,
+      partial: false,
+    });
+    expect(JSON.stringify(strategy?.expert?.snapshot?.refundExposure)).not.toContain("private-customer");
+    expect(strategy?.expert?.snapshot?.channelOutcomes).toMatchObject({
+      currency: "USD",
+      sources: [{ source: "Google ads", paymentEvents: 1, identifiedCustomers: 1, firstRecordedCustomers: 0, netRevenueMinor: 8_500, refundMinor: 1_500, mediaSpendStatus: "matched", mediaSpendOrigin: "owner_reported", adSpendMinor: 10_000, mediaRoas: 0.85 }],
+      partial: false,
+    });
+    expect(JSON.stringify(strategy?.expert?.snapshot?.channelOutcomes)).not.toContain("private-customer");
+    expect(strategy?.expert?.snapshot?.factVersions).toEqual([]);
+    expect(strategy?.expert?.snapshot?.staleFactIds).toEqual([]);
+    expect(strategy?.expert?.snapshot?.contradictions).toEqual([]);
+    expect(strategy?.expert?.snapshot?.insightsHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(strategy?.expert?.snapshot?.sourceUrls).toContain("https://example.com");
     // Every input keeps its source; the "assumed" list is derived from the tags.
-    const econ = strategy?.expert?.economics as { sources: Record<string, { source: string }>; assumed: string[] };
+    const econ = expert.economics as { sources: Record<string, { source: string }>; assumed: string[] };
     expect(econ.sources.revenue.source).toBe("research");
     expect(econ.assumed).toEqual(["margin", "churn"]);
-    expect((strategy?.expert?.plays as { model: { reachSource: { source: string } } }[])[0].model.reachSource.source).toBe("assumption");
+    expect((expert.plays as { model: { reachSource: { source: string } } }[])[0].model.reachSource.source).toBe("assumption");
+  });
+
+  it("records owner cash timing in the plan snapshot and requires a refresh only when its values change", async () => {
+    const t = setup();
+    const w = await workspace(t, "v2-cash-timing@example.com");
+    await w.client.mutation(api.workspace.setGrowthCashTiming, { slug: w.slug, reserve: 750, paymentLagDays: 14 });
+    await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const run = await latestRun(t, w.orgId, "strategy");
+    expect((await runData(t, run._id)).run?.status).toBe("verified");
+    const strategy = await t.run(async (ctx) => (await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).order("desc").first())!);
+    expect(strategy.expert?.snapshot).toMatchObject({ snapshotVersion: 22, growthCashTiming: { reserveMinor: 75_000, currency: "USD", paymentLagDays: 14 } });
+    expect((await w.client.query(api.workspace.plan, { slug: w.slug })).staleInputs).toMatchObject({ cashTiming: false });
+
+    // Re-saving the same values is not a material change.
+    await w.client.mutation(api.workspace.setGrowthCashTiming, { slug: w.slug, reserve: 750 });
+    expect((await w.client.query(api.workspace.plan, { slug: w.slug })).staleInputs).toMatchObject({ cashTiming: false });
+
+    await w.client.mutation(api.workspace.setGrowthCashTiming, { slug: w.slug, paymentLagDays: 30 });
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug });
+    expect(view.staleInputs).toMatchObject({ cashTiming: true, requiresRefresh: true });
+    expect(strategy.status).toBe("needs_approval");
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: strategy._id, decision: "approve" })).rejects.toThrow(/growth cash reserve or customer payment delay changed/i);
+    // Clearing the inputs is also a change from what the plan used.
+    await w.client.mutation(api.workspace.setGrowthCashTiming, { slug: w.slug, reserve: null, paymentLagDays: null });
+    expect((await w.client.query(api.workspace.plan, { slug: w.slug })).staleInputs).toMatchObject({ cashTiming: true });
   });
 
   it("revises when the review fails, reserving each extra round first, and keeps the better version", async () => {
@@ -153,6 +285,27 @@ describe("Engine v2 wiring", () => {
     const artifacts = await t.run(async (ctx) => ctx.db.query("artifacts").withIndex("by_run", (q) => q.eq("runId", runId)).collect());
     expect(artifacts.length).toBe(1);
     expect(artifacts[0].status).toBe("in_review");
+
+    const sourceUrl = "https://example.com/current-format";
+    const trendEvidence = { sourceUrl, observationDate: "2026-10-20", observation: "A dated source reports this short video format." };
+    const [trendArtifactId] = await t.mutation(internal.jobWrites.saveArtifacts, {
+      runId,
+      factIds: [],
+      items: [{
+        kind: "social_post", channel: "instagram", title: "A sourced format", body: "A useful evergreen example.", hashtags: [], factIndexes: [], role: "social_media_manager",
+        copyBrief: {
+          reader: "possible customers", situation: "choosing a service", awarenessStage: "unknown", relationshipStage: "unknown", objective: "explain an option",
+          offerFactIndexes: [], problemJob: "compare options", trigger: "researching", centralIdea: "make the choice easier", objection: "uncertainty", proofFactIndexes: [], prohibitedClaims: [],
+          channel: "instagram", format: "reel", deliveryContext: "organic post", brandVoice: "clear", approvedExamples: [], cta: "learn more", afterAction: "review replies", trackingMetric: "qualified questions", trackingMethod: "owner record",
+          supportingFactIndexes: [], supportingSourceUrls: [sourceUrl], trendEvidence, unknowns: [],
+        },
+      }],
+    });
+    const savedTrendEvidence = await t.run(async (ctx) => {
+      const artifact = await ctx.db.get(trendArtifactId!);
+      return artifact?.currentVersionId ? (await ctx.db.get(artifact.currentVersionId))?.copyBrief?.trendEvidence : undefined;
+    });
+    expect(savedTrendEvidence).toEqual(trendEvidence);
   });
 
   it("demo workspaces never use the paid engine", async () => {

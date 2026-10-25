@@ -137,6 +137,24 @@ async function seedDemo(ctx: MutationCtx, userId: Id<"users">): Promise<string> 
     version: 1,
     status: "approved",
     summary: s.summary,
+    expert: {
+      version: 7,
+      diagnosis: "Fictional sample plan for demonstrating ClimbOS.",
+      affordableCac: "Unknown in this demo.",
+      notDoing: [],
+      northStar: { metric: "Demo metric only", baseline: "Unknown", target: "Not set" },
+      leadingIndicators: [],
+      phases: [],
+      weekOneChecklist: [],
+      risks: [],
+      plays: [{
+        id: "demo_opportunity",
+        name: "Demo opportunity",
+        oneLiner: "This fictional example shows how an opportunity can be explored; it is not a recommendation for your business.",
+        firstActionToday: "Ask what evidence would be needed to assess an opportunity for your business.",
+        kind: "research",
+      }],
+    },
     audiences: s.audiences,
     positioning: s.positioning,
     channels: s.channels.map((c, i) => ({
@@ -321,7 +339,7 @@ export const seedMetrics = internalMutation({
         }
         if (rng.uniform() < 0.72) {
           const ch = channels[Math.floor(rng.uniform() * channels.length)];
-          touches.push({ orgId, customerRef: ref, occurredAt: dayStart - Math.floor(rng.uniform() * 5) * DAY - 3_600_000, channel: ch, utmSource: ch.split(" ")[0], utmMedium: ch === "google ads" ? "cpc" : ch === "email" ? "email" : "organic", isFixture: true });
+          touches.push({ orgId, customerRef: ref, source: "stripe", occurredAt: dayStart - Math.floor(rng.uniform() * 5) * DAY - 3_600_000, channel: ch, utmSource: ch.split(" ")[0], utmMedium: ch === "google ads" ? "cpc" : ch === "email" ? "email" : "organic", isFixture: true });
         }
       }
       rows.push({ metricKey: "visits", date: p.date, value: p.value }, { metricKey: "signups", date: p.date, value: signups }, { metricKey: "paid_conversions", date: p.date, value: paid }, { metricKey: "revenue", date: p.date, value: revenue });

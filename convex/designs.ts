@@ -280,7 +280,7 @@ export const attachImage = mutation({
     if (!meta || (meta.contentType && !meta.contentType.startsWith("image/"))) throw appError("INVALID", "The image didn't render. Try again.");
     const prev = art.currentVersionId ? await ctx.db.get(art.currentVersionId) : null;
     if (!prev) throw appError("INVALID", "This post has no text yet.");
-    const ch = await contentHash({ headline: prev.headline, body: prev.body, callToAction: prev.callToAction, destinationUrl: prev.destinationUrl, hashtags: prev.hashtags, altText: prev.altText, imageRef: a.storageId, channel: art.channel });
+    const ch = await contentHash({ headline: prev.headline, body: prev.body, contentAngle: prev.contentAngle, copyBrief: prev.copyBrief, approvedOfferTermsSnapshot: prev.approvedOfferTermsSnapshot, offerPlayNameSnapshot: prev.offerPlayNameSnapshot, callToAction: prev.callToAction, destinationUrl: prev.destinationUrl, hashtags: prev.hashtags, altText: prev.altText, imageRef: a.storageId, channel: art.channel });
     const now = Date.now();
     const version = art.currentVersion + 1;
     const { _id: _ignore, _creationTime: _t, ...rest } = prev;

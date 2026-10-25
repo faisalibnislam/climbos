@@ -5,7 +5,8 @@
  *
  * - failed: a hard check failed (economics that don't add up or lose money,
  *   budget or capacity breached, a fabricated or unverifiable citation, a number
- *   with no source or label, a customer count that contradicts the plays).
+ *   with no source or label, a customer count that contradicts the plays, or
+ *   unsupported scarcity or offer deadlines).
  *   Saved for inspection; it can't start work.
  * - needs_input: what a customer is worth is missing, so money decisions wait.
  * - provisional: usable, but the review didn't pass or research came back thin.
@@ -16,7 +17,7 @@ import type { Assessment, LintIssue } from "./types";
 export type QualityState = "passed" | "provisional" | "needs_input" | "failed";
 
 /** Lint rules whose failure means the plan must not drive work (REQ-EVAL hard failures). */
-export const HARD_RULES = new Set(["economics", "budget", "capacity", "citation", "provenance", "consistency", "no_plays", "invented_fact"]);
+export const HARD_RULES = new Set(["economics", "budget", "capacity", "citation", "provenance", "consistency", "no_plays", "invented_fact", "generic_action", "unsupported_scarcity", "unsupported_deadline"]);
 
 /** One hard finding the owner can act on: what failed and where. */
 export interface QualityFix {
@@ -52,7 +53,7 @@ export interface PlanQuality {
   fixes?: QualityFix[];
   /** Inputs the plan had to work without (Book 14 §4: unknown is a state, not a default). Doesn't change the state. */
   unknowns?: string[];
-  /** Confirmed facts that disagree (e.g. two prices for one plan); the owner should settle them. */
+  /** Material pricing, trial, or feature facts that conflict; resolve before approving dependent work. */
   conflicts?: string[];
   agents: AgentQuality[];
 }
@@ -85,6 +86,8 @@ const LABEL: Record<string, string> = {
   consistency: "a customer number doesn't match what the plays add up to",
   invented_fact: "a number has no source and isn't labelled as an estimate or target",
   no_plays: "the plan has no plays to run",
+  unsupported_scarcity: "a scarcity or inventory claim has no current confirmed evidence",
+  unsupported_deadline: "an offer deadline has no current confirmed evidence",
 };
 
 /** Combine the plays and plan agents' results (plus any extra hard lint on the final plan) into one quality state. */
@@ -113,7 +116,13 @@ export function planQuality(agents: AgentQuality[], finalLint: LintIssue[] = [],
   }
   const reasons: string[] = [...hardRules].map((r) => `Checks failed: ${LABEL[r] ?? r}.`);
   if (hardRules.size) return { version: 1, state: "failed", reasons, hard, ...(fixes.length ? { fixes } : {}), ...u, agents };
-  if (opts.economicsMissing) return { version: 1, state: "needs_input", reasons: ["What one customer is worth (price, margin or churn) is missing, so spending decisions wait for your numbers."], hard, ...u, agents };
+  if (opts.economicsMissing || opts.conflicts?.length) {
+    const reasons = [
+      ...(opts.conflicts?.length ? [`Business information conflicts on ${opts.conflicts.join("; ")}. Confirm the current source and value before approving work that depends on it.`] : []),
+      ...(opts.economicsMissing ? ["What one customer is worth (price, margin or churn) is missing, so spending decisions wait for your numbers."] : []),
+    ];
+    return { version: 1, state: "needs_input", reasons, hard, ...u, agents };
+  }
   const soft: string[] = [];
   if (agents.some((a) => !a.gatesPassed)) soft.push("The review didn't sign off on every required point.");
   else if (agents.some((a) => !a.shipped)) soft.push("The review scored some parts below the bar after the allowed revisions.");
@@ -123,10 +132,10 @@ export function planQuality(agents: AgentQuality[], finalLint: LintIssue[] = [],
   return { version: 1, state: soft.length ? "provisional" : "passed", reasons: soft, hard, ...u, agents };
 }
 
-/** Plans in this state may be approved to start work (owner approval is still required). */
-export function canDriveWork(q: Pick<PlanQuality, "state"> | null | undefined): boolean {
+/** Owner approval is still required; hard failures and material fact conflicts cannot drive work. */
+export function canDriveWork(q: Pick<PlanQuality, "state"> & Partial<Pick<PlanQuality, "conflicts">> | null | undefined): boolean {
   // Older plans have no quality record: keep their behaviour.
-  return !q || q.state !== "failed";
+  return !q || (q.state !== "failed" && !q.conflicts?.length);
 }
 
 export const QUALITY_LABEL: Record<QualityState, string> = {

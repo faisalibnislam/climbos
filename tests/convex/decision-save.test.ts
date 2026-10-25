@@ -5,7 +5,7 @@ import { asNewUser, setup } from "./helpers";
 
 /** S5 (REQ-STRAT-01/02/03): the flagged plan's decision and limits survive saving, and the Channels view applies the limits. */
 const decision = {
-  observations: [{ observation: "Orders flat while traffic grew", source: "owner" }],
+  observations: [{ observation: "Orders flat while traffic grew", source: "owner", evidenceRefs: ["fact:0"] }],
   constraint: "retention",
   explanations: [
     { explanation: "Weak first order", evidenceFor: "Late-delivery reviews", evidenceAgainst: "4.6 rating" },
@@ -17,6 +17,7 @@ const decision = {
     { name: "Buy traffic", kind: "acquisition", plays: [], chosen: false, whyNot: "Leaks the same way." },
   ],
   guidingPolicy: "Keep customers before buying new ones.",
+  focus: { primaryPlay: "Win back", supportingMove: "Ask recent buyers what blocked reorder", maintenanceWork: "Review reorder rate weekly" },
   falsifier: "Fewer than 10 of 300 reorder by day 21.",
 };
 
@@ -60,12 +61,31 @@ describe("decision contract persistence", () => {
     const profile = { types: ["b2b_saas"], dims: { customerType: { value: "b2b", confidence: "high", source: "owner" } }, budgetUsd: 0, horizonDays: 90 };
     await t.mutation(internal.jobWrites.saveStrategy, {
       runId: await run(t, id),
-      strategy: strategy({ decision }),
+      strategy: strategy({
+        decision,
+        plays: [{
+          name: "Win back", kind: "creative", unit: "customers", horizonDays: 90,
+          actionContract: { diagnosis: "Retention", intendedEffect: "Recover customers", evidenceBasis: "assumption", evidenceNote: "Test the assumption.", evidenceRefs: [], targetOrAsset: "Past customers", resourcePlan: "One hour weekly", executionCapability: "owner", dependencies: [], measurement: { metric: "Orders", baseline: "Unknown", target: "10 orders", windowDays: 21, source: "Billing" } },
+          model: { weeklyReach: 10, steps: [{ name: "order", rate: 0.2, low: 0.1, high: 0.3 }], monthlySpendUsd: 0, ownerHoursPerWeek: 1 },
+        }],
+      }),
       factIds: [],
       acquisition: JSON.stringify({ libraryVersion: "acq-2026-10-18", profile, adjustments: [], summary: [], limits: { ownerHoursPerWeek: 0 } }),
     });
     const saved = await t.run(async (ctx) => (await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", id)).first())!);
+    expect(saved.expert?.version).toBe(7);
+    expect(saved.expert?.growthPlanV8).toBeUndefined();
     expect(saved.expert?.decision).toEqual(decision);
+    expect(saved.expert?.decisionAnalysis).toMatchObject({
+      snapshotId: null,
+      method: "seeded_joint_scenario_mean_v1",
+      probabilityCalibrated: false,
+      constraints: { monthlyAdBudgetUsd: 0, ownerHoursPerWeek: 0 },
+      options: [
+        { name: "Keep first-time buyers", chosen: true, calculated: true, feasible: false, playNames: ["Win back"] },
+        { name: "Buy traffic", chosen: false, calculated: false, unavailableReason: "No mapped plays" },
+      ],
+    });
     expect(saved.acquisition?.limits).toEqual({ ownerHoursPerWeek: 0 });
     const view = await owner.client.query(api.acquisition.view, { slug });
     const picked = view!.channels.filter((c) => c.status === "primary" || c.status === "in_plan");
@@ -76,7 +96,7 @@ describe("decision contract persistence", () => {
     expect(view!.channels.find((c) => c.id === "P01")?.limits.some((l) => l.kind === "cash" && l.verdict === "blocked")).toBe(true);
   });
 
-  it("a plan without the flag saves no decision and no limits (default path unchanged)", async () => {
+  it("a plan without the structured-decision flag still saves and applies known hard limits", async () => {
     const t = setup();
     const owner = await asNewUser(t, "nodecision@example.com");
     const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Plain Co" });
@@ -86,12 +106,18 @@ describe("decision contract persistence", () => {
       runId: await run(t, id),
       strategy: strategy({}),
       factIds: [],
-      acquisition: JSON.stringify({ libraryVersion: "acq-2026-10-18", profile: { types: ["b2b_saas"], dims: {} }, adjustments: [], summary: [] }),
+      acquisition: JSON.stringify({ libraryVersion: "acq-2026-10-18", profile: { types: ["b2b_saas"], dims: {} }, adjustments: [], summary: [], limits: { ownerHoursPerWeek: 0, newCustomersPerMonth: 0 } }),
     });
     const saved = await t.run(async (ctx) => (await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", id)).first())!);
     expect(saved.expert?.decision).toBeUndefined();
-    expect(saved.acquisition?.limits).toBeUndefined();
+    expect(saved.expert?.decisionAnalysis).toBeUndefined();
+    expect(saved.acquisition?.limits).toEqual({ ownerHoursPerWeek: 0, newCustomersPerMonth: 0 });
+    await t.run(async (ctx) => {
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", id)).first();
+      if (!business) throw new Error("Business not found");
+      await ctx.db.patch(business._id, { unitEconomics: { ownerHoursPerWeek: 0, newCustomersPerMonth: 0, updatedAt: Date.now() } });
+    });
     const view = await owner.client.query(api.acquisition.view, { slug });
-    expect(view!.channels.every((c) => c.limits.length === 0)).toBe(true);
+    expect(view!.channels.some((c) => c.limits.some((limit) => limit.kind === "capacity" && limit.verdict === "blocked"))).toBe(true);
   });
 });

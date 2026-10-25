@@ -75,6 +75,7 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderConfig["id"], OAuthProviderCon
 export const CAPABILITY_SCOPES = {
   "ga4.read_reports": ["https://www.googleapis.com/auth/analytics.readonly"],
   "search_console.read_performance": ["https://www.googleapis.com/auth/webmasters.readonly"],
+  "search_console.inspect_url": ["https://www.googleapis.com/auth/webmasters.readonly"],
   // Google Ads has a single scope for both read and write.
   "google_ads.read_metrics": ["https://www.googleapis.com/auth/adwords"],
   "google_ads.create_paused_campaign": ["https://www.googleapis.com/auth/adwords"],
@@ -84,8 +85,11 @@ export const CAPABILITY_SCOPES = {
   "meta_ads.set_campaign_status": ["ads_management"],
   "facebook_pages.list_pages": ["pages_show_list"],
   "facebook_pages.publish_post": ["pages_show_list", "pages_manage_posts", "pages_read_engagement"],
+  "facebook_pages.read_posts": ["pages_show_list", "pages_read_engagement"],
   "facebook_pages.read_insights": ["pages_show_list", "read_insights", "pages_read_engagement"],
   "instagram.read_profile": ["instagram_business_basic"],
+  "instagram.read_posts": ["instagram_business_basic"],
+  "instagram.read_insights": ["instagram_business_basic", "instagram_business_manage_insights"],
   "instagram.publish_media": ["instagram_business_basic", "instagram_business_content_publish"],
   "linkedin.read_profile": ["openid", "profile"],
   "linkedin.publish_post": ["w_member_social"],

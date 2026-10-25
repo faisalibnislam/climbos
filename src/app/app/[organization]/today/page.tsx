@@ -7,33 +7,40 @@ import {
   ArrowRight,
   CheckCircle2,
   CircleHelp,
-  Clock3,
   Compass,
   FileCheck2,
   Hourglass,
   Lightbulb,
+  MessageCircle,
   Sparkles,
   Target,
   Zap,
+  ExternalLink,
   type LucideIcon,
 } from "@/components/icons"
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Badge, Button, Callout, Card, CardContent, CardHeader, CardTitle, EmptyState, IconTile, Skeleton, SocialIcon, Tooltip, buttonClasses, toast, type Tone } from "@/components/ui";
+import { Badge, Button, Callout, Card, CardContent, CardHeader, CardTitle, EmptyState, Field, IconTile, Input, Segmented, Skeleton, SocialIcon, Tooltip, buttonClasses, toast, type Tone } from "@/components/ui";
 import { PauseAllButton } from "@/components/app/AppShell";
 import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
 import { CHANNEL_LABELS } from "@/components/app/roles";
 import { RoleAvatar, RoleStack } from "@/components/app/RoleAvatar";
-import { ASK_KEY } from "@/components/app/CommandPalette";
+import { askDraftKey } from "@/components/app/draftKeys";
+import { WordHelp } from "@/components/ui/word-help";
 import { PageHeader } from "@/components/app/results/QueryBoundary";
 import { WishComposer, wishSuggestions, type WishComposerHandle } from "@/components/app/wish/WishComposer";
 import { RetryRunIfPossible, RunProgressCompact } from "@/components/app/content/RunProgress";
+import { ActionCardStatus, actionCardSetupHref, actionCardStartLabel, actionCardStatusExplanation } from "@/components/app/ActionCardStatus";
 import { WishFeed } from "@/components/app/wish/WishFeed";
 import { IdeaDeck } from "@/components/app/today/IdeaDeck";
+import { HomeBusinessSnapshot } from "@/components/app/today/HomeBusinessSnapshot";
+import { OwnerGoalTarget } from "@/components/app/today/OwnerGoalTarget";
+import { TodayTargetPreviewCard } from "@/components/app/today/TodayTargetPreview";
 import { Prose } from "@/components/ds/content";
 import { climbTarget } from "@/components/climb/context";
+import { runStatusPresentation } from "../../../../../shared/progress";
 
 const NEXT_VISUAL: Record<string, { icon: LucideIcon; tone: Tone }> = {
   plan: { icon: Compass, tone: "violet" },
@@ -58,17 +65,7 @@ function StatCard({ icon: Icon, tone, label, value }: { icon: LucideIcon; tone: 
 
 type Today = NonNullable<ReturnType<typeof useQuery<typeof api.workspace.today>>>;
 type CardView = Today["cards"][number];
-
-const RUN_STATUS: Record<string, { label: string; tone: "neutral" | "green" | "amber" | "red" | "blue" }> = {
-  cost_reserved: { label: "Starting", tone: "blue" },
-  preparing: { label: "Working", tone: "blue" },
-  executing: { label: "Working", tone: "blue" },
-  verified: { label: "Done", tone: "green" },
-  failed: { label: "Didn't finish", tone: "red" },
-  uncertain: { label: "Outcome uncertain", tone: "amber" },
-  canceled: { label: "Canceled", tone: "neutral" },
-  needs_approval: { label: "Needs approval", tone: "amber" },
-};
+type GrowthOpportunity = NonNullable<Today["strategy"]>["opportunities"][number];
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -78,19 +75,44 @@ function greeting(): string {
 export default function TodayPage() {
   const { organization: slug } = useParams<{ organization: string }>();
   const data = useQuery(api.workspace.today, { slug });
+  const homeSnapshot = useQuery(api.analytics.homeSnapshot, { slug });
   const composer = useRef<WishComposerHandle>(null);
+  const me = useQuery(api.orgs.me);
   useEffect(() => {
-    // A wish typed in the ⌘K palette before Today loaded arrives ready to send.
-    try {
-      const asked = sessionStorage.getItem(ASK_KEY);
-      if (asked && data) {
-        sessionStorage.removeItem(ASK_KEY);
-        composer.current?.fill(asked);
-      }
-    } catch {
-      // Storage unavailable.
-    }
-  }, [data]);
+    if (!me || !data) return;
+    const loadDraft = () => {
+      try {
+        const key = askDraftKey(slug, me.userId);
+        const draft = sessionStorage.getItem(key);
+        if (draft) { sessionStorage.removeItem(key); composer.current?.fill(draft); }
+      } catch { /* Storage may be unavailable. */ }
+    };
+    loadDraft();
+    window.addEventListener("climbos:compose", loadDraft);
+    return () => window.removeEventListener("climbos:compose", loadDraft);
+  }, [data, me, slug]);
+
+  // The review section arrives with the query result. Next's initial hash
+  // scroll can run while only loading placeholders exist, especially on phones.
+  const ready = data !== undefined;
+  useEffect(() => {
+    if (!ready) return;
+    let frame = 0;
+    const openReview = () => {
+      if (window.location.hash !== "#review") return;
+      frame = requestAnimationFrame(() => {
+        const section = document.getElementById("review");
+        section?.scrollIntoView({ block: "start" });
+        section?.focus({ preventScroll: true });
+      });
+    };
+    openReview();
+    window.addEventListener("hashchange", openReview);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("hashchange", openReview);
+    };
+  }, [ready, slug]);
 
   if (data === undefined) {
     return (
@@ -123,6 +145,7 @@ export default function TodayPage() {
             {firstName ? `, ${firstName}` : ""}
           </>
         }
+        intro="Tell us what you need. We’ll help you take it one step at a time."
       />
 
       {!data.canRunAi && data.accessMessage && (
@@ -148,16 +171,24 @@ export default function TodayPage() {
       )}
 
       <WishComposer
+        key={`${slug}:${me?.userId ?? "identity-pending"}`}
         ref={composer}
         slug={slug}
+        userId={me?.userId}
+        identityReady={me !== undefined && Boolean(me?.userId)}
         suggestions={wishSuggestions(data.business?.type)}
-        disabled={!data.canRunAi}
-        disabledReason={!data.canRunAi ? (data.accessMessage ?? null) : null}
+        disabled={!data.canRunAi || !me?.userId}
+        disabledReason={!me?.userId ? "Checking your account before opening saved requests…" : !data.canRunAi ? (data.accessMessage ?? null) : null}
+        requestCostEstimateMicros={data.requestCostEstimateMicros}
+        autoDraftBudgetMicros={data.autoDraftBudgetMicros}
+        isDemo={data.org.kind === "demo"}
       />
       <WishFeed slug={slug} chat={data.chat} />
+      <HomeBusinessSnapshot slug={slug} snapshot={homeSnapshot} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.45fr_1fr]">
         <div className="flex min-w-0 flex-col gap-6">
+          {data.strategy?.opportunities?.length ? <GrowthOpportunities slug={slug} strategyId={data.strategy.id} status={data.strategy.status} opportunities={data.strategy.opportunities} /> : null}
           {/* Next actions */}
           <section aria-labelledby="next-heading" className="rounded-xl border border-line bg-surface">
             <div className="px-5 pt-5">
@@ -167,7 +198,7 @@ export default function TodayPage() {
             </div>
             {data.next.length === 0 ? (
               <div className="p-5">
-                <EmptyState icon={<CheckCircle2 aria-hidden />} title="All caught up" />
+                <EmptyState icon={<CheckCircle2 aria-hidden />} title="No next step waiting" body="Ask a question above, or open Your plan to choose what to work on." />
               </div>
             ) : (
               <ol className="mt-3 divide-y divide-line border-t border-line">
@@ -175,14 +206,12 @@ export default function TodayPage() {
                   const v = NEXT_VISUAL[n.kind] ?? NEXT_VISUAL.card;
                   return (
                     <li key={`${n.kind}-${i}`}>
-                      <Link href={n.href} className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-surface-2">
+                      <Link href={n.href} className="flex items-start gap-3 px-5 py-3.5 transition-colors hover:bg-surface-2">
                         <IconTile icon={v.icon} tone={v.tone} size="sm" />
-                        <Tooltip content={n.why}>
-                          <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
-                            <span className="sr-only">Step {i + 1} of {data.next.length}: </span>
-                            {n.title}
-                          </p>
-                        </Tooltip>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-ink"><span className="sr-only">Step {i + 1} of {data.next.length}: </span>{n.title}</span>
+                          <span className="mt-1 block text-sm text-ink-3">{n.why}</span>
+                        </span>
                         <ArrowRight aria-hidden className="size-4 shrink-0 text-ink-3" />
                       </Link>
                     </li>
@@ -191,6 +220,7 @@ export default function TodayPage() {
               </ol>
             )}
           </section>
+          <TodayTargetPreviewCard slug={slug} preview={data.targetPreview} />
           {suggested.length > 0 && (
             <section aria-labelledby="suggested-heading" className="flex flex-col gap-3">
               <div className="flex items-baseline justify-between gap-2">
@@ -223,6 +253,7 @@ export default function TodayPage() {
               <div className="min-w-0 flex-1">
                 <p className="text-overline">Your goal</p>
                 <p className="heading-card mt-0.5">{data.goal ? data.goal.statement : "No goal yet"}</p>
+                {data.goal ? <OwnerGoalTarget target={data.goal.target} currency={data.goal.currency} horizonDays={data.goal.horizonDays} /> : null}
                 {data.goal ? (
                   <p className="mt-2 flex flex-wrap gap-1.5">
                     <Badge tone="neutral">{data.goal.horizonDays} days</Badge>
@@ -251,17 +282,117 @@ export default function TodayPage() {
 
       {/* At a glance */}
       <section aria-label="At a glance" className="grid gap-3 sm:grid-cols-3">
-        <StatCard icon={Hourglass} tone="amber" label="Needs your OK" value={data.approvalsCount + (data.strategy?.status === "needs_approval" ? 1 : 0)} />
+        <StatCard icon={Hourglass} tone="amber" label="Needs your OK" value={data.approvalsCountIsLowerBound ? "20+" : data.approvalsCount + (data.strategy?.status === "needs_approval" ? 1 : 0)} />
         <StatCard icon={Zap} tone="blue" label="Working now" value={running} />
         <StatCard icon={CheckCircle2} tone="green" label="Done this week" value={doneThisWeek} />
       </section>
       <AttentionStrip slug={slug} />
 
       <RecentWork slug={slug} data={data} />
+      <WordHelp />
       <div className="md:hidden">
         <PauseAllButton slug={slug} paused={Boolean(data.emergencyStop)} variant="large" />
       </div>
     </div>
+  );
+}
+
+function GrowthOpportunities({ slug, strategyId, status, opportunities }: { slug: string; strategyId: Id<"strategies">; status: NonNullable<Today["strategy"]>["status"]; opportunities: GrowthOpportunity[] }) {
+  const askAbout = useMutation(api.workspace.askAboutOpportunity);
+  const [asking, setAsking] = useState<string | null>(null);
+  const [questionFor, setQuestionFor] = useState<string | null>(null);
+  const [question, setQuestion] = useState("");
+  const [detail, setDetail] = useState<"simple" | "detailed" | "expert">("simple");
+  const planStatus = status === "needs_approval" ? "Plan needs your OK" : status === "approved" ? "From your approved plan" : status === "draft" ? "Draft plan" : "Plan update";
+  const tone = status === "needs_approval" ? "amber" : status === "approved" ? "green" : "neutral";
+  const visibleOpportunities = opportunities.slice(0, 3);
+  async function ask(opportunity: GrowthOpportunity) {
+    if (!opportunity.id) return;
+    const request = question.trim();
+    if (!request) return;
+    setAsking(opportunity.id);
+    try {
+      await askAbout({ slug, strategyId, opportunityId: opportunity.id, question: request });
+      setQuestion("");
+      setQuestionFor(null);
+      toast({ tone: "success", title: "Question sent to ClimbOS", description: "The reply will appear in your Today conversation." });
+    } catch (error) {
+      toast({ tone: "danger", title: errorMessage(error) });
+    } finally {
+      setAsking(null);
+    }
+  }
+
+  return (
+    <section aria-labelledby="opportunities-heading" className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <h2 id="opportunities-heading" className="heading-section">Here’s where I’d start</h2>
+          <p className="mt-1 text-sm text-ink-3">A short list from your growth plan, in the order it recommends.</p>
+        </div>
+        <span className="flex flex-wrap items-center gap-2"><Badge tone={tone}>{planStatus}</Badge><Segmented label="Opportunity explanation level" value={detail} onChange={setDetail} options={[{ value: "simple", label: "Simple" }, { value: "detailed", label: "Detailed" }, { value: "expert", label: "Expert" }]} /></span>
+      </div>
+      <ol className="grid gap-3">
+        {visibleOpportunities.map((opportunity, index) => (
+          <li key={opportunity.id ?? `${opportunity.title}-${index}`}>
+            <article className={`flex flex-col gap-3 rounded-xl border bg-surface p-4 ${index === 0 ? "border-brand/40 shadow-[var(--card-shadow)]" : "border-line"}`}>
+              <div>
+                <p className="text-overline">{index === 0 ? "First recommendation" : `Also worth exploring · ${index + 1}`}</p>
+                <h3 className="heading-card mt-0.5">{opportunity.title}</h3>
+                {opportunity.why ? <p className="mt-1 text-sm text-ink-2">{opportunity.why}</p> : null}
+              </div>
+              {opportunity.nextStep ? (
+                <div className="rounded-lg bg-surface-2 px-3 py-2">
+                  <p className="text-xs font-medium text-ink-3">First step</p>
+                  <p className="mt-0.5 text-sm text-ink">{opportunity.nextStep}</p>
+                </div>
+              ) : null}
+              {detail !== "simple" && opportunity.ownerHoursPerWeek !== null ? <p className="text-xs text-ink-3">Planned owner time: {opportunity.ownerHoursPerWeek} {opportunity.ownerHoursPerWeek === 1 ? "hour" : "hours"}/week</p> : null}
+              {detail === "expert" && opportunity.forecast ? (
+                <div className="rounded-lg border border-line px-3 py-2">
+                  <p className="text-xs font-medium text-ink-3">Modelled scenario · {opportunity.forecast.days} days</p>
+                  <p className="mt-0.5 text-sm text-ink-2">{opportunity.forecast.low}–{opportunity.forecast.high} {opportunity.forecast.unit} · midpoint {opportunity.forecast.likely}</p>
+                  <p className="mt-1 text-xs text-ink-3">A simulated estimate from the plan’s stated inputs, not a measured result or guarantee.</p>
+                </div>
+              ) : null}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="flex flex-wrap items-center gap-2">
+                  <Link href={`/app/${slug}/plan#plays`} className={buttonClasses({ variant: "link" })}>
+                    Open plan <ArrowRight aria-hidden />
+                  </Link>
+                  {opportunity.id ? <Button size="sm" variant="secondary" disabled={asking !== null} onClick={() => { setQuestionFor(questionFor === opportunity.id ? null : opportunity.id!); setQuestion(""); }}><MessageCircle aria-hidden /> Ask a question</Button> : null}
+                </span>
+              </div>
+              {questionFor === opportunity.id ? (
+                <form className="flex flex-col gap-2 border-t border-line pt-3 sm:flex-row sm:items-end" onSubmit={(event) => { event.preventDefault(); void ask(opportunity); }}>
+                  <Field label={`Ask about “${opportunity.title}”`} hint="This uses AI credits. It will not change your plan or publish anything." className="min-w-0 flex-1">
+                    <Input value={question} onChange={(event) => setQuestion(event.target.value.slice(0, 500))} maxLength={500} placeholder="What would you like to understand or check?" autoComplete="off" />
+                  </Field>
+                  <Button type="submit" size="sm" loading={asking === opportunity.id} disabled={asking !== null || !question.trim()}>Send question</Button>
+                </form>
+              ) : null}
+              {detail !== "simple" && opportunity.sources.length ? (
+                <div className="border-t border-line pt-2">
+                  <p className="text-xs font-medium text-ink-2">Evidence basis</p>
+                  <ul className="mt-2 flex flex-col gap-2">
+                    {opportunity.sources.map((source, sourceIndex) => (
+                      <li key={`${source.label}-${source.url ?? source.detail ?? sourceIndex}`} className="text-xs text-ink-2">
+                        {source.url ? (
+                          <a href={source.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium underline decoration-line underline-offset-2">
+                            {source.label} <ExternalLink aria-hidden className="size-3" />
+                          </a>
+                        ) : <span className="font-medium">{source.label}{source.detail ? ` · ${source.detail}` : ""}</span>}
+                        {source.quote ? <p className="mt-1 text-ink-3">“{source.quote}”</p> : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : detail !== "simple" ? <p className="border-t border-line pt-2 text-xs text-ink-3">No linked source was saved for this play.</p> : null}
+            </article>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
@@ -270,12 +401,14 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
   const dismiss = useMutation(api.workspace.dismissCard);
   const [busy, setBusy] = useState(false);
   const status = card.status;
+  const setupHref = actionCardSetupHref(slug, card.kind);
   return (
     <div id={`card-${card.id}`} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
         <Tooltip content={card.description || card.proposedEffect}>
           <p tabIndex={0} className="text-sm font-medium text-ink">{card.title}</p>
         </Tooltip>
+        {actionCardStatusExplanation(status, card.externalEffect, card.kind) ? <p className="text-xs text-ink-3">{actionCardStatusExplanation(status, card.externalEffect, card.kind)}</p> : null}
         {status === "running" && card.runId ? (
           <RunProgressCompact slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" />
         ) : (
@@ -284,19 +417,16 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
         {status === "failed" && card.runId ? <RetryRunIfPossible slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" /> : null}
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        <ActionCardStatus status={status} externalEffect={card.externalEffect} kind={card.kind} />
         {status === "running" ? (
-          <Badge tone="blue" icon={<Clock3 />}>
-            Working
-          </Badge>
+          null
         ) : status === "done" ? (
           card.runId ? (
             <Button asChild size="sm" variant="secondary">
               <Link href={`/app/${slug}/work/${card.runId}`}>See result</Link>
             </Button>
           ) : (
-            <Badge tone="green" icon={<CheckCircle2 />}>
-              Done
-            </Badge>
+            null
           )
         ) : status === "failed" ? (
           card.runId ? (
@@ -304,10 +434,16 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
               <Link href={`/app/${slug}/work/${card.runId}`}>See why</Link>
             </Button>
           ) : (
-            <Badge tone="red">Didn’t finish</Badge>
+            null
           )
         ) : status === "blocked" ? (
-          <Badge tone="amber">Needs setup</Badge>
+          null
+        ) : status === "rejected" || status === "approved" ? (
+          null
+        ) : status === "proposed" && setupHref ? (
+          <Button asChild size="sm" variant="secondary">
+            <Link href={setupHref}>{actionCardStartLabel(card.kind, card.externalEffect)}</Link>
+          </Button>
         ) : (
           <>
             <Button
@@ -325,7 +461,7 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
                 }
               }}
             >
-              {card.kind === "note" ? "Got it" : "Do it"}
+              {actionCardStartLabel(card.kind, card.externalEffect)}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => dismiss({ slug, cardId: card.id as Id<"actionCards"> }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
               Not now
@@ -339,10 +475,10 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
 
 function ApprovalsPanel({ slug, data }: { slug: string; data: Today }) {
   return (
-    <section aria-labelledby="approvals-heading">
+    <section id="review" tabIndex={-1} aria-labelledby="approvals-heading" className="scroll-mt-20">
       <div className="flex items-center justify-between">
-        <h2 id="approvals-heading" className="heading-section">Waiting for you</h2>
-        {data.approvalsCount > 0 && <Badge tone="amber">{data.approvalsCount}</Badge>}
+        <h2 id="approvals-heading" className="heading-section">Review before it goes ahead</h2>
+        {data.approvalsCount > 0 && <Badge tone="amber">{data.approvalsCountIsLowerBound ? "20+" : data.approvalsCount}</Badge>}
       </div>
       <Card className="mt-4">
         <CardContent className="p-0">
@@ -357,7 +493,7 @@ function ApprovalsPanel({ slug, data }: { slug: string; data: Today }) {
             </Link>
           )}
           {data.approvals.length === 0 && data.strategy?.status !== "needs_approval" ? (
-            <p className="p-5 text-sm text-ink-3">Nothing waiting.</p>
+            <p className="p-5 text-sm text-ink-3">Nothing needs your review right now.</p>
           ) : (
             <ul>
               {data.approvals.map((a) => (
@@ -399,7 +535,7 @@ function RecentWork({ slug, data }: { slug: string; data: Today }) {
           <CardContent className="p-0">
             <ul>
               {data.recent.map((r) => {
-                const s = RUN_STATUS[r.status] ?? { label: r.status, tone: "neutral" as const };
+                const s = runStatusPresentation(r.status);
                 return (
                   <li key={r.id} className="relative flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-2">
                     <RoleStack roles={r.roles} size="sm" />

@@ -15,6 +15,10 @@ export interface RevenueEvent {
   occurredAt: number;
   customerRef?: string;
   orderRef?: string;
+  /** Acquisition tags carried on the billing event, when available. */
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
   /** ISO 4217 code. */
   currency: string;
   /**
@@ -32,6 +36,8 @@ export interface RevenueEvent {
 
 export interface Touch {
   customerRef: string;
+  /** Billing/source system that owns the customer reference; omitted only on legacy touches. */
+  source?: string;
   /** Epoch milliseconds. */
   occurredAt: number;
   channel: string;

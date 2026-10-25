@@ -77,6 +77,7 @@ export interface ConfirmDialogProps {
    * Never "OK" or "Yes".
    */
   confirmLabel: string;
+  confirmDisabled?: boolean;
   cancelLabel?: string;
   tone?: "primary" | "danger";
   /** May return a promise; the button shows a loading state until it settles. */
@@ -95,6 +96,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel,
+  confirmDisabled = false,
   cancelLabel = "Cancel",
   tone = "primary",
   onConfirm,
@@ -127,6 +129,7 @@ export function ConfirmDialog({
             <Button
               variant={tone === "danger" ? "danger" : "primary"}
               loading={busy}
+              disabled={confirmDisabled}
               onClick={async () => {
                 setBusy(true);
                 try {

@@ -4,7 +4,7 @@ import { currentRateVersion } from "../../shared/economics";
 import { dropNulls, openaiTurn, strictSchema, toInput, usageOf } from "../../shared/ai/openai";
 import { jsonSchemaFor } from "../../shared/ai/types";
 import { modelTurn } from "../../shared/ai/turn";
-import { routeModels } from "../../shared/agents/routes";
+import { expertEscalationModel, routeModels } from "../../shared/agents/routes";
 
 const rates = currentRateVersion();
 
@@ -38,6 +38,43 @@ describe("OpenAI adapter", () => {
     ]);
   });
 
+  it("maps low-detail visual references to Responses image inputs", () => {
+    expect(toInput([{ role: "user", content: [{ type: "text", text: "Review this post creative." }, { type: "image", image_url: "https://scontent.cdninstagram.com/a.jpg?sig=x", detail: "low" }] }])).toEqual([
+      { role: "user", content: [{ type: "input_text", text: "Review this post creative." }, { type: "input_image", image_url: "https://scontent.cdninstagram.com/a.jpg?sig=x", detail: "low" }] },
+    ]);
+  });
+
+  it("round-trips encrypted reasoning through caller-managed stateless tool turns", async () => {
+    process.env.OPENAI_API_KEY = "test-key";
+    const reasoning = { type: "reasoning", id: "rs_tool_1", encrypted_content: "opaque-encrypted-payload" };
+    const posts: { body: Record<string, unknown> }[] = [];
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+      posts.push({ body });
+      const output = posts.length === 1
+        ? [reasoning, { type: "function_call", call_id: "call_1", name: "get_plan", arguments: "{}" }]
+        : [{ type: "message", content: [{ type: "output_text", text: "done" }] }];
+      return new Response(JSON.stringify({ status: "completed", output, usage: { input_tokens: 10, output_tokens: 5 } }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const request = { modelKey: "gpt-6-luna" as const, system: [], maxTokens: 100, customTools: [{ name: "get_plan", input_schema: { type: "object" as const, properties: {} } }] };
+    const first = await openaiTurn({ ...request, messages: [{ role: "user", content: "inspect plan" }] }, rates);
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect(posts[0].body.include).toContain("reasoning.encrypted_content");
+    const second = await openaiTurn({
+      ...request,
+      messages: [
+        { role: "user", content: "inspect plan" },
+        ...first.appended,
+        { role: "user", content: [{ type: "tool_result", tool_use_id: "call_1", content: "plan output" }] },
+      ],
+    }, rates);
+    expect(second.ok).toBe(true);
+    expect(posts[1].body.input).toEqual(expect.arrayContaining([reasoning, { type: "function_call", call_id: "call_1", name: "get_plan", arguments: "{}" }, { type: "function_call_output", call_id: "call_1", output: "plan output" }]));
+    expect(posts[1].body.input).not.toContainEqual(expect.objectContaining({ type: "reasoning_text" }));
+  });
+
   it("meters cached input separately, reasoning inside output, and search calls", () => {
     const u = usageOf({ usage: { input_tokens: 10_000, output_tokens: 2_000, input_tokens_details: { cached_tokens: 3_000, cache_write_tokens: 1_000 }, output_tokens_details: { reasoning_tokens: 1_500 } }, output: [{ type: "web_search_call", action: { type: "search" } }, { type: "web_search_call", action: { type: "open_page" } }] });
     expect(u).toMatchObject({ inputTokens: 6_000, cacheReadTokens: 3_000, cacheWriteTokens: 1_000, outputTokens: 2_000, thinkingTokens: 1_500, webSearches: 1 });
@@ -50,6 +87,7 @@ describe("OpenAI adapter", () => {
       expect(body.model).toBe("gpt-6.1-sol");
       expect(body.text.format.strict).toBe(true);
       expect(body.tools[0].type).toBe("web_search");
+      expect(body.max_tool_calls).toBe(5);
       expect(body.reasoning.effort).toBe("high");
       return new Response(
         JSON.stringify({
@@ -117,12 +155,14 @@ describe("OpenAI adapter", () => {
     delete process.env.OPENAI_API_KEY;
   });
 
-  it("routes: Basic is all Luna; Expert has Sol draft only the expert agents", () => {
+  it("uses Luna by default and permits Sol escalation only for eligible Expert agents", () => {
     const luna = { research: "gpt-6-luna", draft: "gpt-6-luna", critic: "gpt-6-luna", revise: "gpt-6-luna" };
     for (const id of ["business_insights", "growth_strategy", "social_posts", "ad_drafts", "prospecting"]) expect(routeModels(id)).toEqual(luna);
-    for (const id of ["business_insights", "growth_plays", "growth_strategy", "ad_drafts", "social_calendar"]) {
-      expect(routeModels(id, "expert")).toEqual({ research: "gpt-6-luna", draft: "gpt-6.1-sol", critic: "gpt-6-luna", revise: "gpt-6.1-sol" });
-    }
+    for (const id of ["business_insights", "growth_plays", "growth_strategy", "ad_drafts", "social_calendar"])
+      expect(routeModels(id, "expert")).toEqual(luna);
     for (const id of ["social_posts", "email_sequence", "seo_brief", "prospecting", "cold_outreach", "conversion_audit"]) expect(routeModels(id, "expert")).toEqual(luna);
+    expect(expertEscalationModel("growth_strategy", "expert")).toBe("gpt-6.1-sol");
+    expect(expertEscalationModel("growth_strategy", "basic")).toBeUndefined();
+    expect(expertEscalationModel("social_posts", "expert")).toBeUndefined();
   });
 });

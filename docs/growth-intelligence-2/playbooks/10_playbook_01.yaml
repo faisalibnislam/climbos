@@ -1,0 +1,23 @@
+playbook_id: paid_media_readiness_v1
+mode: recommendation_only
+required_inputs:
+  business_snapshot_id: null
+  currency: null
+  contribution_horizon_days: null
+  conservative_contribution_per_customer: null
+  required_retained_contribution: null
+  authorized_media_commitment: null
+  measurement_audit_id: null
+hard_gates:
+  contribution_allowance_positive: required
+  destination_functional: required
+  outcome_event_verified: required
+  service_geography_verified: required
+  claim_evidence_complete: required
+  external_action_approval: required
+outputs:
+  states: [ready_to_test, preparation_required, unsuitable, insufficient_evidence]
+  include: [reasons, assumptions, economics, next_action, review_date]
+execution:
+  enabled: false
+  fail_closed_on_missing_input: true

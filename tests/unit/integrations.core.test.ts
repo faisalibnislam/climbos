@@ -11,6 +11,7 @@ import {
   createPkcePair,
   generateState,
   OAUTH_PROVIDERS,
+  CAPABILITY_SCOPES,
   parseTokenResponse,
   scopesFor,
   timingSafeEqual,
@@ -28,6 +29,9 @@ function ctx(partial: Partial<CapabilityContext>): CapabilityContext {
 }
 
 describe("evaluateCapabilities", () => {
+  it("requests the least scopes needed for optional Instagram post insights", () => {
+    expect(CAPABILITY_SCOPES["instagram.read_insights"]).toEqual(["instagram_business_basic", "instagram_business_manage_insights"]);
+  });
   it("returns only the exact state strings with reason and fix", () => {
     for (const id of Object.keys(PROVIDERS) as ProviderId[]) {
       for (const e of evaluateCapabilities(id, ctx({}))) {
@@ -77,6 +81,20 @@ describe("evaluateCapabilities", () => {
     expect(evaluateCapability("google_ads", "google_ads.read_metrics", stale).state).toBe("sync_delayed");
     expect(evaluateCapability("google_ads", "google_ads.create_paused_campaign", stale).state).toBe("ready");
     expect(evaluateCapability("google_ads", "google_ads.read_metrics", ctx({ env: GOOGLE_ENV, grantedScopes: scopes, lastSyncAt: NOW - 47 * 3_600_000 })).state).toBe("ready");
+  });
+
+  it("marks reads delayed after the latest sync fails while keeping writes available", () => {
+    const scopes = ["https://www.googleapis.com/auth/adwords"];
+    const failedSync = ctx({
+      env: GOOGLE_ENV,
+      grantedScopes: scopes,
+      lastSyncAt: NOW - 60_000,
+      lastSyncError: "Temporary provider error",
+    });
+    const read = evaluateCapability("google_ads", "google_ads.read_metrics", failedSync);
+    expect(read.state).toBe("sync_delayed");
+    expect(read.reason).toMatch(/did not sync successfully/);
+    expect(evaluateCapability("google_ads", "google_ads.create_paused_campaign", failedSync).state).toBe("ready");
   });
 
   it("Meta limited tier → approval_needed for writes; pending review → provider_review_pending", () => {

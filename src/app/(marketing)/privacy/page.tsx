@@ -15,7 +15,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy Policy"
-      updated="18 October 2026"
+      updated="25 October 2026"
       draft
       intro="This explains, in plain English, what information ClimbOS collects, why, and the choices you have."
     >
@@ -52,7 +52,7 @@ export default function PrivacyPage() {
       <h2>How we use it</h2>
       <ul>
         <li>To provide ClimbOS: researching your business, building your plan, creating work and measuring results.</li>
-        <li>To publish or send things you&apos;ve approved, on the accounts you&apos;ve connected.</li>
+        <li>To create a private WordPress draft or publish or send content you&apos;ve separately confirmed or approved, on the accounts you&apos;ve connected.</li>
         <li>To send you sign-in codes, approval requests, alerts and service messages.</li>
         <li>To keep the service secure, prevent abuse and meet legal obligations.</li>
         <li>
@@ -78,16 +78,34 @@ export default function PrivacyPage() {
       <h2>Who we share it with</h2>
       <p>
         We use service providers for hosting and our database, email delivery, payments, product analytics and AI models. They may
-        process your information only to provide their service to us. We share information with the platforms you connect (such as
-        Meta or Google) only when you ask us to publish, send or launch something there. We may disclose information if the law
-        requires it.
+        process your information only to provide their service to us. When you run a website audit, we send the public page URL being
+        checked to Google PageSpeed Insights for synthetic mobile performance, accessibility, and basic SEO checks and, when configured,
+        the Chrome UX Report API for aggregated mobile performance measurements. If the authenticated render worker is available,
+        we also capture one already-read public page in desktop and mobile viewports and send those temporary screenshots to our AI
+        provider for visible-page review. They are not saved with the audit. This is a synthetic sample and does not measure customer
+        behavior. When you run a social content audit, we send a bounded sample of recent post text/captions, platform, post
+        identifiers, timestamps, content type, available post links and platform-returned engagement counts from ClimbOS and
+        connected Facebook Pages or Instagram professional accounts to our AI provider for review. Engagement values are limited
+        to the sampled posts and are not account-wide analytics. For connected Instagram accounts, we may also send up to three
+        temporary image URLs returned by Meta for still-image posts to the AI provider for low-detail visual review; URLs are
+        used only for that audit and are not saved. We do not analyze video or full carousel content.
+        LinkedIn post history is not read because this app does not have the required restricted permission. We read from the
+        platforms you connect (such as Meta or Google) when you ask us to audit, publish, send or launch something there. Before
+        a supported social post is published, ClimbOS also checks up to five HTTPS links in the approved post for safe reachability;
+        this check does not retrieve or retain the linked page content. If you
+        confirm creating a WordPress draft, we send the exact approved article title and body to the WordPress site you connected,
+        using your encrypted Application Password. ClimbOS reads back the new post&apos;s ID, title and draft status to confirm it was
+        saved; it does not publish the post. We retain the site, approved version hash, request status and WordPress draft link with
+        your workspace until you delete the workspace. The post itself remains on your WordPress site unless you remove it there.
+        We may disclose information if the law requires it.
       </p>
 
       <h2>How long we keep it</h2>
       <p>
         We keep your account information while your account is open. Detailed technical records are kept for up to {r.rawPayloads}{" "}
         days, detailed activity for up to {r.detailedActivity} days, and summary numbers for up to {r.aggregates} days. Free website
-        previews expire after 7 days. When you delete your workspace, we delete its data, except where we must keep something for
+        previews expire from public access after 7 days and are deleted within 30 days. A preview may include processing timestamps
+        and, if you choose, one optional usefulness response stored with that preview. When you delete your workspace, we delete its data, except where we must keep something for
         legal or billing reasons.
       </p>
 

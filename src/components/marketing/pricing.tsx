@@ -100,29 +100,32 @@ export function PlanComparison({ headingId }: { headingId: string }) {
   );
 }
 
-/** "What things cost": the most each action can use, from the live estimates. */
+/** "What things cost": starting estimates from the live plans. */
 export function CreditExamples({ headingId }: { headingId: string }) {
   return (
-    <TableFrame role="region" aria-labelledby={headingId} tabIndex={0} className="mt-8">
-      <Table className="min-w-[480px]">
-        <caption className="sr-only">The most credits each action can use. Jobs charge only what they actually use.</caption>
-        <THead>
-          <tr>
-            <Th>Action</Th>
-            <Th className="text-right">Basic</Th>
-            <Th className="text-right">Expert</Th>
-          </tr>
-        </THead>
-        <TBody>
-          {CREDIT_EXAMPLES.map((e) => (
-            <Tr key={e.kind}>
-              <Td className="text-ink">{e.label}</Td>
-              <Td className="text-right tabular-nums text-ink-2">up to {formatNumber(e.basic)}</Td>
-              <Td className="text-right tabular-nums text-ink-2">{e.expert !== undefined ? `up to ${formatNumber(e.expert)}` : "same"}</Td>
-            </Tr>
-          ))}
-        </TBody>
-      </Table>
-    </TableFrame>
+    <div className="mt-8">
+      <p className="mb-3 text-sm text-ink-3">Starting estimates. Extra review work, including a higher quality model when Expert review finds a specific need, may use more credits. You pay for actual usage.</p>
+      <TableFrame role="region" aria-labelledby={headingId} tabIndex={0}>
+        <Table className="min-w-[480px]">
+          <caption className="sr-only">Starting credit estimates for each action. Additional review work is reserved only when needed, and jobs charge only what they actually use.</caption>
+          <THead>
+            <tr>
+              <Th>Action</Th>
+              <Th className="text-right">Basic</Th>
+              <Th className="text-right">Expert</Th>
+            </tr>
+          </THead>
+          <TBody>
+            {CREDIT_EXAMPLES.map((e) => (
+              <Tr key={e.kind}>
+                <Td className="text-ink">{e.label}</Td>
+                <Td className="text-right tabular-nums text-ink-2">from {formatNumber(e.basic)}</Td>
+                <Td className="text-right tabular-nums text-ink-2">{e.expert !== undefined ? `from ${formatNumber(e.expert)}` : "same"}</Td>
+              </Tr>
+            ))}
+          </TBody>
+        </Table>
+      </TableFrame>
+    </div>
   );
 }

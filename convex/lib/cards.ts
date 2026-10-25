@@ -27,7 +27,7 @@ const PLAN_CARD: Partial<Record<JobKind, { what: string; channel?: string; quant
   content_email: { what: "first email sequence", channel: "email" },
   sales_sequence: { what: "outreach sequence" },
   retention_plan: { what: "retention plan" },
-  conversion_audit: { what: "conversion check" },
+  conversion_audit: { what: "website & social review" },
 };
 
 export type PlanWorkResult = { started: string[]; waiting: { title: string; reason: string }[]; covered: string[]; busy: boolean };
@@ -72,7 +72,7 @@ export async function startPlanWork(
         kind: "generate_content",
         roles: plan.roles,
         payload: JSON.stringify({ job, channel, quantity: shape.quantity, brief, strategyId: s._id, planChannel: c.key }),
-        costEstimateMicros: estimateJobMicros(plan),
+        costEstimateMicros: estimateJobMicros(plan, { fixture: p.org.kind === "demo" }),
         externalEffect: false,
         status: "proposed",
         priority: c.priority,
@@ -131,7 +131,16 @@ export const AUTO_RUN_KINDS = new Set(["generate_content", "refresh_plan", "rese
  */
 export const WISH_AUTO_BUDGET_MICROS = 5_000_000;
 
-export type CardPayload = { job?: string; channel?: string; quantity?: number; brief?: string; strategyId?: string; planChannel?: string };
+export type CardPayload = { job?: string; channel?: string; quantity?: number; brief?: string; strategyId?: string; planChannel?: string; customAgentId?: string; customAgentParentRunId?: string; agentArchetypeId?: string };
+
+/** Keep dependent work gated even when a card is started outside the chat UI. */
+export async function assertCardDependenciesComplete(ctx: MutationCtx, card: Doc<"actionCards">, orgId: Id<"organizations">) {
+  for (const dependencyId of card.dependsOnActionCardIds ?? []) {
+    const dependency = await ctx.db.get(dependencyId);
+    if (!dependency || dependency.orgId !== orgId) throw appError("INVALID", "A prerequisite for this action is unavailable.");
+    if (dependency.status !== "done") throw appError("INVALID", `Complete “${dependency.title}” first.`);
+  }
+}
 
 /**
  * Start exactly the job an action card describes, with the owner's brief.
@@ -142,6 +151,7 @@ export async function startCardRun(
   p: { org: Doc<"organizations">; card: Doc<"actionCards">; userId: Id<"users">; auto: boolean },
 ): Promise<Id<"workflowRuns"> | null> {
   const { org, card } = p;
+  await assertCardDependenciesComplete(ctx, card, org._id);
   const payload = JSON.parse(card.payload) as CardPayload;
   // Plan cards name their job; wish cards derive it from the kind and channel.
   const job = ((payload.planChannel && payload.job) || jobForAction(card.kind, payload.channel ?? "") || payload.job) as JobKind | undefined;
@@ -157,14 +167,14 @@ export async function startCardRun(
   if (job === "outbound") {
     // Outbound owns its campaign record; the card follows its run.
     const brief = { who: (payload.brief ?? "").slice(0, 300), where: "", count: Math.max(5, Math.min(Math.round(payload.quantity || 15), 30)) };
-    await startCampaign(ctx, { org, userId: p.userId, brief, auto: p.auto, cardId: card._id });
+    await startCampaign(ctx, { org, userId: p.userId, brief, auto: p.auto, cardId: card._id, customAgentId: payload.customAgentId as Id<"customAgents"> | undefined, customAgentParentRunId: payload.customAgentParentRunId as Id<"workflowRuns"> | undefined, agentArchetypeId: payload.agentArchetypeId });
     const fresh = await ctx.db.get(card._id);
     return fresh?.runId ?? null;
   }
   const images = job === "content_social" ? 1 : 0;
   const aiMode = await resolveAiMode(ctx, org, job);
   const plan = planJob(job, { quantity: payload.quantity, images, channel: payload.channel }, { fixture: org.kind === "demo", mode: aiMode });
-  const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: card.title || plan.title, roles: plan.roles, input: payload, steps: plan.steps, meters: plan.meters, createdBy: p.userId, isFixture: org.kind === "demo", aiMode });
+  const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: card.title || plan.title, roles: plan.roles, input: payload, steps: plan.steps, meters: plan.meters, createdBy: p.userId, isFixture: org.kind === "demo", aiMode, customAgentId: payload.customAgentId as Id<"customAgents"> | undefined, customAgentParentRunId: payload.customAgentParentRunId as Id<"workflowRuns"> | undefined, agentArchetypeId: payload.agentArchetypeId });
   await ctx.db.patch(card._id, { status: "running", runId, updatedAt: Date.now() });
   const brief = payload.brief?.slice(0, 1500) || undefined;
   if (job === "content_social" || job === "content_ads" || job === "content_email" || job === "content_seo") {

@@ -1,7 +1,7 @@
 "use client";
 
 /*
- * Context switchers (workspace, organization, project, account) and the Airly app launcher.
+ * Context switchers (workspace, organization, project, account) and the connected-app launcher.
  * All share SwitcherMenu: optional filter, arrow-key list, current item checked, footer actions.
  */
 import { useState, type KeyboardEvent, type ReactNode } from "react";
@@ -259,7 +259,7 @@ export interface LauncherApp {
   connected?: boolean;
 }
 
-/** Grid of Airly apps. Arrow keys move across the grid; connected apps say so. */
+/** Grid of connected apps. Arrow keys move across the grid; connected apps say so. */
 export function AppLauncher({ apps, current, onOpen }: { apps: LauncherApp[]; current?: string; onOpen: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const cols = 3;
@@ -275,15 +275,15 @@ export function AppLauncher({ apps, current, onOpen }: { apps: LauncherApp[]; cu
   };
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <Tooltip content="Airly apps">
+      <Tooltip content="Connected apps">
         <PopoverTrigger asChild>
-          <button type="button" aria-label="Airly apps" className="grid size-[var(--h-md)] place-items-center rounded-[var(--radius-control)] text-ink-2 outline-none hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] data-[state=open]:bg-surface">
+          <button type="button" aria-label="Connected apps" className="grid size-[var(--h-md)] place-items-center rounded-[var(--radius-control)] text-ink-2 outline-none hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] data-[state=open]:bg-surface">
             <LayoutGrid aria-hidden className="size-[18px]" />
           </button>
         </PopoverTrigger>
       </Tooltip>
       <PopoverContent className="w-80 p-2" align="end">
-        <p className="text-overline px-1.5 pb-2 pt-1">Airly apps</p>
+        <p className="text-overline px-1.5 pb-2 pt-1">Connected apps</p>
         <ul onKeyDown={onKey} className="grid grid-cols-3 gap-1">
           {apps.map((a) => (
             <li key={a.id}>

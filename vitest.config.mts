@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@shared": path.resolve(__dirname, "shared"),
+      "@convex": path.resolve(__dirname, "convex"),
       "@": path.resolve(__dirname, "src"),
     },
   },
@@ -17,7 +18,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: "unit",
-          include: ["tests/unit/**/*.test.ts"],
+          include: ["tests/unit/**/*.test.ts", "tests/unit/**/*.test.tsx"],
           environment: "node",
         },
       },

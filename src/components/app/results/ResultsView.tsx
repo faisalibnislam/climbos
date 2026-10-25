@@ -10,6 +10,7 @@ import { Button, Callout, LineChart, buttonClasses } from "@/components/ui";
 import { formatNumber } from "@/lib/utils";
 import { minorToDisplay } from "../money";
 import { AttributionSection, PlatformClaimsSection } from "./AttributionSection";
+import { WordHelp } from "@/components/ui/word-help";
 import { CohortsSection } from "./CohortsSection";
 import { ForecastsSection } from "./ForecastsSection";
 import { changeText, formatMetric, formatPercent, freshnessText, longDate, shortDate, sourceLabel } from "./format";
@@ -82,13 +83,42 @@ export function ResultsView({ slug }: { slug: string }) {
           <OutcomeSection slug={slug} data={data} />
           <FunnelSection slug={slug} data={data} />
           <AttributionSection slug={slug} data={data} />
+          <AiReferralsSection data={data} />
           <CohortsSection slug={slug} />
           <PlatformClaimsSection slug={slug} data={data} />
           <ForecastsSection slug={slug} data={data} />
           <ScenarioCalculator currency={data.currency} />
+          <WordHelp />
         </>
       )}
     </div>
+  );
+}
+
+function AiReferralsSection({ data }: { data: Overview }) {
+  const referrals = data.aiReferrals;
+  return (
+    <section aria-labelledby="ai-referrals-heading" className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 id="ai-referrals-heading" className="heading-section">AI assistant referrals</h2>
+        <ValueKind kind="observed" />
+      </div>
+      <p className="text-sm text-ink-2">Visits GA4 attributes to recognized AI assistant websites, with the key events configured in your GA4 property.</p>
+      {referrals.providers.length ? (
+        <>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg bg-surface-2 p-3"><dt className="text-xs text-ink-3">Sessions</dt><dd className="metric mt-1">{formatNumber(referrals.sessions)}</dd></div>
+            <div className="rounded-lg bg-surface-2 p-3"><dt className="text-xs text-ink-3">GA4 key events</dt><dd className="metric mt-1">{formatNumber(referrals.keyEvents)}</dd></div>
+          </dl>
+          <div className="overflow-x-auto rounded-lg border border-line">
+            <table className="w-full text-sm"><thead><tr className="border-b border-line text-left text-xs text-ink-3"><th className="px-3 py-2 font-medium">Source</th><th className="px-3 py-2 text-right font-medium">Sessions</th><th className="px-3 py-2 text-right font-medium">Key events</th></tr></thead>
+              <tbody>{referrals.providers.map((provider) => <tr key={provider.provider} className="border-b border-line last:border-0"><th scope="row" className="px-3 py-2 text-left font-medium text-ink">{provider.provider}</th><td className="px-3 py-2 text-right tabular-nums">{formatNumber(provider.sessions)}</td><td className="px-3 py-2 text-right tabular-nums">{formatNumber(provider.keyEvents)}</td></tr>)}</tbody>
+            </table>
+          </div>
+        </>
+      ) : <p className="rounded-lg bg-surface-2 p-3 text-sm text-ink-2">No sessions from recognized AI assistant source websites were recorded in this period. That does not rule out visits that GA4 labels under another source.</p>}
+      <p className="text-xs text-ink-3">{referrals.note}</p>
+    </section>
   );
 }
 
@@ -160,7 +190,7 @@ function OutcomeSection({ slug, data }: { slug: string; data: Overview }) {
   return (
     <section aria-labelledby="outcome-heading" className="flex flex-col gap-4">
       <h2 id="outcome-heading" className="heading-section flex items-center gap-2">
-        <CircleDollarSign aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> Business outcome
+        <CircleDollarSign aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> Sales and paying customers
       </h2>
       <div className="grid gap-3 sm:grid-cols-2">
         {revenue ? <MetricCard slug={slug} metric={revenue} span={data.span} /> : null}
@@ -200,12 +230,12 @@ function FunnelSection({ slug, data }: { slug: string; data: Overview }) {
   return (
     <section aria-labelledby="funnel-heading" className="flex flex-col gap-4">
       <h2 id="funnel-heading" className="heading-section flex items-center gap-2">
-        <Filter aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> Funnel
+        <Filter aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> From visits to customers
       </h2>
       {!anyData ? (
         <Callout
           tone="info"
-          title="No funnel data yet"
+          title="No customer-step data yet"
           action={
             <Button variant="secondary" asChild>
               <Link href={`/app/${slug}/connections`}>Connect</Link>

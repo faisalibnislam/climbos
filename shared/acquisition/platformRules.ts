@@ -1,7 +1,6 @@
 /**
  * Platform rules for planning (expansion slice 9). Reference notes from
- * docs/growth-expansion/collections/platform_rules.json, as that pack read the
- * official pages on 2026-10-20. They guide what a plan may assume. They are
+ * official platform documentation and policies checked on 2026-10-25. They guide what a plan may assume. They are
  * not permission checks: execution keeps its own adapters and approvals, and
  * every rule needs re-checking against the source before an action relies on it.
  */
@@ -18,6 +17,78 @@ export interface PlatformRule {
 }
 
 export const PLATFORM_RULES: PlatformRule[] = [
+  {
+    id: "RULE-GBP-REVIEWS",
+    platform: "Google Business Profile reviews and API access",
+    sourceUrl: "https://developers.google.com/my-business/content/policies",
+    retrievedAt: "2026-10-25",
+    planningNote: "GBP API access is restricted and must be requested; verified-profile age, OAuth and end-client project rules apply. Review replies require client authorization. Until credentials and per-client project eligibility are verified, use a manual review link or owner-entered reviews; do not promise review sync.",
+    types: ["local_services", "local_retail", "food_beverage", "hospitality", "healthcare"],
+  },
+  {
+    id: "RULE-G2",
+    platform: "G2",
+    sourceUrl: "https://legal.g2.com/terms-of-use",
+    retrievedAt: "2026-10-25",
+    planningNote: "Only consider for a relevant verified software category and buyer evidence. Do not scrape or collect review data, or use G2 content for AI, without express permission. Review campaigns and access depend on the owner's G2 account and current terms.",
+    types: ["b2b_saas", "enterprise_software", "developer_tool", "ai_software"],
+  },
+  {
+    id: "RULE-TRUSTPILOT",
+    platform: "Trustpilot",
+    sourceUrl: "https://developers.trustpilot.com/introduction",
+    retrievedAt: "2026-10-25",
+    planningNote: "Business API access requires a Trustpilot for Business account with API module access. Verify region, account tier, invitation allowance, OAuth/API access, retention and deletion conditions before claiming sync or sending invitations; a manual profile link remains possible.",
+    types: [],
+  },
+  {
+    id: "RULE-PRODUCT-HUNT",
+    platform: "Product Hunt",
+    sourceUrl: "https://help.producthunt.com/en/articles/17350772-launch-guide",
+    retrievedAt: "2026-10-25",
+    planningNote: "Use only for a relevant software launch or major update with early-adopter fit. Prepare launch assets and feedback measures for owner review; never ask for upvotes, coordinate votes, mass-message, or promise reach or customers.",
+    types: ["b2b_saas", "consumer_software", "developer_tool", "ai_software"],
+  },
+  {
+    id: "RULE-REDDIT",
+    platform: "Reddit communities",
+    sourceUrl: "https://support.reddithelp.com/hc/en-us/articles/205926439-Reddiquette",
+    retrievedAt: "2026-10-25",
+    planningNote: "Treat 9:1 as a non-universal rule of thumb. Check the exact target community's current rules; listen and contribute helpfully before any promotion. Never automate posts, comments, DMs, voting or account activity. Do not scrape communities.",
+    types: [],
+  },
+  {
+    id: "RULE-MEDIUM",
+    platform: "Medium",
+    sourceUrl: "https://help.medium.com/hc/en-us/articles/22576852947223-Artificial-Intelligence-AI-content-policy",
+    retrievedAt: "2026-10-25",
+    planningNote: "Require meaningful human authorship, fact-checking, and any current AI disclosure. Undisclosed AI-assisted/generative writing can be limited to network distribution, AI-generated writing is not paywall-eligible under the Partner Program, and Boost is editorial with no reach guarantee.",
+    types: [],
+  },
+  {
+    id: "RULE-YELP",
+    platform: "Yelp reviews",
+    sourceUrl: "https://business.yelp.com/resources/articles/using-customer-reviews-to-promote-your-business-and-inspire-your-staff/",
+    retrievedAt: "2026-10-25",
+    planningNote: "Yelp says businesses should not solicit reviews. Do not route the neutral review-invitation workflow to Yelp. For eligible local businesses, consider accurate profile information only when customer-use evidence supports it.",
+    types: ["local_services", "local_retail", "food_beverage", "hospitality"],
+  },
+  {
+    id: "RULE-TRIPADVISOR",
+    platform: "Tripadvisor",
+    sourceUrl: "https://www.tripadvisor.com/Trust-lvBd3L1aU38Y.html",
+    retrievedAt: "2026-10-25",
+    planningNote: "Consider only for eligible travel, lodging, food, or activity businesses and traveler evidence. Reviews must reflect the reviewer's own experience and the business must have a relevant listing. Business-side API and commercial terms remain unverified.",
+    types: ["hospitality", "food_beverage", "travel_tourism", "activities"],
+  },
+  {
+    id: "RULE-GOOGLE-PLAY-REVIEWS",
+    platform: "Google Play reviews",
+    sourceUrl: "https://support.google.com/googleplay/android-developer/answer/9898684?hl=en",
+    retrievedAt: "2026-10-25",
+    planningNote: "Only for an eligible Android app. Do not manipulate ratings, incentivize reviews, force prompts, scrape, or promise cross-account sync. Use the developer's own Play Console and verify current official APIs and scopes before integration.",
+    types: ["mobile_app"],
+  },
   {
     id: "RULE-01",
     platform: "Google Search",

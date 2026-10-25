@@ -67,7 +67,13 @@ export function playConfidence(play: ConfPlay, economics: Economics, diagnosis?:
     const ownRates = sources.length > 0 && sources.every((s) => s === "owner");
     if (b.kind === "sourced_estimate" && !(economics.assumed ?? []).length) {
       forecast = ownRates ? "strong" : "some";
-      cWhy = ownRates ? "Built on your own results and numbers." : "Built on sourced inputs; your results will firm it up.";
+      cWhy = ownRates
+        ? "Built on your own results and numbers."
+        : b.unchecked.some((input) => input.includes("source fit to this business unverified"))
+          ? "A source quote matches, but its fit to this business is not established; compare with your results before treating it as a forecast."
+          : b.unchecked.length
+            ? "Some source inputs are not fully checked; compare them with your results before treating this as a forecast."
+          : "Built on sourced inputs; your results will firm it up.";
     } else if (b.kind === "sourced_estimate") cWhy = "Sourced rates, but what a customer is worth is assumed.";
   }
   return { problem, fix, forecast, why: { problem: pWhy, fix: fWhy, forecast: cWhy } };
