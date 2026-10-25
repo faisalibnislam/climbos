@@ -903,7 +903,7 @@ export default defineSchema({
     /** Self-improvement loop 1: last weekly read of the business's own site (normalised text, for the diff). */
     /**
      * Owner-reported growth cash timing for the plan's cash view (shared/agents/economics.ts growthCashTiming).
-     * Read live, not a plan-generation input; neither value is a bank balance or verified payment terms.
+     * Also given to plan generation and recorded in the plan snapshot (v22+); neither value is a bank balance or verified payment terms.
      */
     growthCashTiming: v.optional(v.object({
       /** Cash set aside to carry growth costs until customer payments arrive, in minor units of `currency`. */
@@ -2924,6 +2924,7 @@ export default defineSchema({
               v.literal(19),
               v.literal(20),
               v.literal(21),
+              v.literal(22),
             ),
             snapshotId: v.string(),
             capturedAt: v.number(),
@@ -3098,6 +3099,8 @@ export default defineSchema({
               }),
             ),
             ownerEconomics: v.optional(v.any()),
+            /** Owner-reported growth cash timing decision values the plan used (snapshot v22+); null = none saved. */
+            growthCashTiming: v.optional(v.union(v.object({ reserveMinor: v.union(v.number(), v.null()), currency: v.string(), paymentLagDays: v.union(v.number(), v.null()) }), v.null())),
             refundExposure: v.optional(
               v.object({
               currency: v.string(),

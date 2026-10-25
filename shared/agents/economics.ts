@@ -1,4 +1,4 @@
-import { formatMoney, thresholdIn } from "../economics/currency";
+import { formatMoney, fractionDigits, thresholdIn } from "../economics/currency";
 import type { LintIssue } from "./types";
 import { CHECK_STAMP, economicsSources, financialEvidence, forecastBasis, type EconomicsSources, type FinancialEvidence, type Provenance, type SourceTag, type TagCheck } from "./provenance";
 import { createRng } from "../forecasting/prng";
@@ -863,6 +863,43 @@ export function growthCashTiming(out: { economics: Economics; plays: PlayLike[] 
     mostLikely: scenario(ms.map((m) => m.headline.p50)),
     lowCase: scenario(ms.map((m) => m.headline.p10)),
   };
+}
+
+/** The decision values of a saved owner cash-timing record (who/when excluded, so re-saving the same values is not a change). */
+export function growthCashTimingInput(saved: { reserveMinor?: number; currency: string; paymentLagDays?: number } | null | undefined): { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null {
+  if (!saved || (saved.reserveMinor === undefined && saved.paymentLagDays === undefined)) return null;
+  return { reserveMinor: saved.reserveMinor ?? null, currency: saved.currency, paymentLagDays: saved.paymentLagDays ?? null };
+}
+
+/** Owner cash-timing inputs usable in `currency`: a reserve saved in another currency is withheld, not converted. */
+export function growthCashInputsIn(saved: ReturnType<typeof growthCashTimingInput>, currency: string): GrowthCashInputs & { reserveCurrencyMismatch: boolean } {
+  const mismatch = saved?.reserveMinor !== null && saved?.reserveMinor !== undefined && saved.currency !== currency;
+  return {
+    ...(saved?.reserveMinor !== null && saved?.reserveMinor !== undefined && !mismatch ? { reserveUsd: saved.reserveMinor / 10 ** fractionDigits(saved.currency) } : {}),
+    ...(saved?.paymentLagDays !== null && saved?.paymentLagDays !== undefined ? { paymentLagDays: saved.paymentLagDays } : {}),
+    reserveCurrencyMismatch: mismatch,
+  };
+}
+
+/** Owner-reported growth cash timing for planning; unknown values are named, never filled in. */
+export function growthCashTimingContext(saved: ReturnType<typeof growthCashTimingInput>, currency: string): string {
+  if (!saved) return "";
+  const inputs = growthCashInputsIn(saved, currency);
+  const reserve = inputs.reserveUsd !== undefined ? formatMoney(inputs.reserveUsd, currency) : inputs.reserveCurrencyMismatch ? `unknown (saved in ${saved.currency}; not converted)` : "unknown";
+  const lag = inputs.paymentLagDays !== undefined ? `${inputs.paymentLagDays} days` : "unknown";
+  return `GROWTH CASH TIMING (owner-reported; not a bank balance or verified payment terms): cash set aside to carry growth costs until customer payments arrive ${reserve}; a new customer typically pays ${lag} after being won. Prefer plays and sequencing whose growth costs before customer payments arrive stay within the reserve. Don't assume an unknown value, and don't write your own cash forecast: ClimbOS computes the timing for the selected plays.`;
+}
+
+/** The computed cash timing as a locked line for the plan writer; empty when there is nothing to report. */
+export function growthCashTimingLine(t: GrowthCashTiming | null, currency?: string): string {
+  if (!t) return "";
+  const m = (n: number) => formatMoney(Math.round(n * 100) / 100, currency);
+  const inputs = `owner-reported reserve ${t.reserveUsd === null ? "unknown" : m(t.reserveUsd)}, payment delay ${t.paymentLagDays === null ? "unknown" : `${t.paymentLagDays} days`}`;
+  const scen = (label: string, s: GrowthCashScenario) => `${label}: ${s.lowestWeek === 0 ? "never below zero" : `lowest ${m(s.lowestBalanceUsd)} in week ${s.lowestWeek}, ${s.recoveredWeek === null ? "not back to zero in the period" : `back to zero by week ${s.recoveredWeek}`}`}${s.reserveCovers === false ? `, reserve short by ${m(s.shortfallUsd ?? 0)}` : s.reserveCovers ? ", within the reserve" : ""}`;
+  const body = t.mostLikely && t.lowCase
+    ? `${scen("most-likely", t.mostLikely)}; ${scen("low-end P10 customers", t.lowCase)}`
+    : `customer payments not timed (missing ${t.missing.filter((x) => x !== "reserve").join(", ")}); growth costs total ${m(t.cashOutOverPeriodUsd)} before any customer pays`;
+  return `- GROWTH CASH TIMING · selected set (${inputs}; ${m(t.weeklyCashOutUsd)}/week growth cash out): ${body}. Computed by ClimbOS from play costs, ramps and economics; quote it, don't recompute it. Not a bank-balance or cash-flow forecast. If the reserve is short, sequence or cap cash-heavy plays and say so; if inputs are unknown, don't assume them.`;
 }
 
 /** Every customer count the calculations produce: portfolio and each play's P10/P50/P90, at the goal's horizon and each play's own. */

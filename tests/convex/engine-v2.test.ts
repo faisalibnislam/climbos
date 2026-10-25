@@ -158,7 +158,8 @@ describe("Engine v2 wiring", () => {
     // Pages the research read are saved, and so is what the plan was built from.
     expect(strategy?.expert?.webSources?.[0]?.url).toBe("https://example.com");
     expect(strategy?.expert?.snapshot?.engine).toMatch(/^v\d/);
-    expect(strategy?.expert?.snapshot?.snapshotVersion).toBe(21);
+    expect(strategy?.expert?.snapshot?.snapshotVersion).toBe(22);
+    expect(strategy?.expert?.snapshot?.growthCashTiming).toBeNull();
     expect(strategy?.expert?.snapshot?.knowledgeReferences?.records.length).toBeGreaterThan(0);
     expect(strategy?.expert?.snapshot?.knowledgeReferences?.records.every((record) => /^[a-f0-9]{64}$/u.test(record.sha256))).toBe(true);
     expect(strategy?.expert?.snapshot?.businessLifecycleStage).toMatchObject({ stage: "early_traction", provenance: "owner_reported" });
@@ -190,6 +191,32 @@ describe("Engine v2 wiring", () => {
     expect(econ.sources.revenue.source).toBe("research");
     expect(econ.assumed).toEqual(["margin", "churn"]);
     expect((expert.plays as { model: { reachSource: { source: string } } }[])[0].model.reachSource.source).toBe("assumption");
+  });
+
+  it("records owner cash timing in the plan snapshot and requires a refresh only when its values change", async () => {
+    const t = setup();
+    const w = await workspace(t, "v2-cash-timing@example.com");
+    await w.client.mutation(api.workspace.setGrowthCashTiming, { slug: w.slug, reserve: 750, paymentLagDays: 14 });
+    await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const run = await latestRun(t, w.orgId, "strategy");
+    expect((await runData(t, run._id)).run?.status).toBe("verified");
+    const strategy = await t.run(async (ctx) => (await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).order("desc").first())!);
+    expect(strategy.expert?.snapshot).toMatchObject({ snapshotVersion: 22, growthCashTiming: { reserveMinor: 75_000, currency: "USD", paymentLagDays: 14 } });
+    expect((await w.client.query(api.workspace.plan, { slug: w.slug })).staleInputs).toMatchObject({ cashTiming: false });
+
+    // Re-saving the same values is not a material change.
+    await w.client.mutation(api.workspace.setGrowthCashTiming, { slug: w.slug, reserve: 750 });
+    expect((await w.client.query(api.workspace.plan, { slug: w.slug })).staleInputs).toMatchObject({ cashTiming: false });
+
+    await w.client.mutation(api.workspace.setGrowthCashTiming, { slug: w.slug, paymentLagDays: 30 });
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug });
+    expect(view.staleInputs).toMatchObject({ cashTiming: true, requiresRefresh: true });
+    expect(strategy.status).toBe("needs_approval");
+    await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: strategy._id, decision: "approve" })).rejects.toThrow(/growth cash reserve or customer payment delay changed/i);
+    // Clearing the inputs is also a change from what the plan used.
+    await w.client.mutation(api.workspace.setGrowthCashTiming, { slug: w.slug, reserve: null, paymentLagDays: null });
+    expect((await w.client.query(api.workspace.plan, { slug: w.slug })).staleInputs).toMatchObject({ cashTiming: true });
   });
 
   it("revises when the review fails, reserving each extra round first, and keeps the better version", async () => {

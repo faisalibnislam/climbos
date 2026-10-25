@@ -5,7 +5,7 @@
 | Prepared | 25 October 2026 |
 | Repository | `climbos` |
 | Branch | `growth-engine-v2` |
-| Git state | Use `git status --short --branch` and `git log -5 --oneline` as the live source of truth; this handoff includes CP-075, evidence-bounded alternative drafts, retention outcome entry, SEO contribution evidence linkage, and growth cash timing. |
+| Git state | Use `git status --short --branch` and `git log -5 --oneline` as the live source of truth; this handoff includes CP-075, evidence-bounded alternative drafts, retention outcome entry, SEO contribution evidence linkage, and growth cash timing (view and plan input). |
 | Remote | `origin/growth-engine-v2` |
 | Deployment | None performed by this work; a branch push is not a production release. |
 
@@ -140,6 +140,12 @@ A portfolio-card disclosure (`8844f68`) now states that the monthly growth-cash 
 
 Verified: `pnpm exec vitest run tests/unit/growth-cash-timing.test.ts tests/unit/growth-cash-timing-panel.test.tsx tests/convex/growth-cash-timing.test.ts` (12 tests), 13 adjacent plan/economics files (128 tests), `pnpm typecheck`, targeted ESLint, and `git diff --check`. No browser preview, because the local app targets a remote Convex deployment without these functions and nothing was deployed. Limits: not a whole-business cash forecast; one-time setup costs (absent from the play model), refunds, taxes, failed payments, existing bills, seasonality, and later payments are excluded; it is uncalibrated against real payments.
 
+### Follow-up implementation: cash timing as a plan input
+
+Plan generation now receives the owner-reported growth cash timing in two forms. The first is a business-brief line for strategy runs (`growthCashTimingContext`), which names unknowns and withholds a reserve saved in another currency. The second is a locked line computed by `growthCashTiming` for the selected portfolio (`growthCashTimingLine`), which the writer must quote rather than recompute. Plan snapshots are version 22 and record `growthCashTiming` decision values (reserve minor units, currency, payment delay; not who or when). `planStaleInputs` returns `cashTiming`, which is true only for v22+ plans whose recorded values differ from the current ones. That blocks approval and play start with a refresh message, and the plan page lists it as a stale input. Re-saving identical values is not a change, and older plans are not marked stale because they never used these inputs. Plan history reports "growth cash timing" changes. `ENGINE_VERSION` is `v3.67-growth-cash-timing`.
+
+Verified: `pnpm exec vitest run` over 20 related files (211 tests, including the new engine-v2 snapshot/staleness/approval test and prompt-helper unit tests), `pnpm typecheck`, ESLint on changed TypeScript, and `git diff --check`. No live model call was made; the fixture LLM can't show whether a real model respects the reserve.
+
 ### Follow-up work after the first handoff push
 
 - Corrected the 73-versus-74 case-count mismatch in `docs/Capabilities.md`; after CP-075 was added, the runtime library and capability summaries now agree at 75 reviewed / 25 unverified.
@@ -163,7 +169,7 @@ These are known open gaps, not a complete substitute for checking the requiremen
 9. **Documentation drift:** The creative-precedent counts now agree at 75 reviewed / 25 unverified across runtime, `docs/Capabilities.md`, and the creative-strategy summary. Continue checking all owner-facing capability statements against runtime behavior; other copy may still drift.
 10. **Requirement completion:** `docs/growth-engine/improvement-requirement-audit.md` maps 410 numbered items. Its own introduction says most are partially implemented and that the first 350, AEO/GEO items, and specialist requirements are shared/cross-cutting. Do not mark a row complete merely because one path or fixture exists. Update row status only after checking current code and coverage; distinguish shipped, fixture-only, blocked, and unverified behavior.
 11. **Provider setup and production:** This branch is not a deployment. Verify environment variables, provider credentials, permissions, migrations, and account eligibility in an authorized environment before claiming a live integration. Do not deploy or change live business campaigns as part of a code change.
-12. **Cash timing:** The growth-cash view is not yet fed to plan generation, and its staleness tracking was intentionally left out. One-time setup costs need a play-model field and validator before they can be timed. Real payment timing (for example from Stripe imports) is not used to check the owner's delay.
+12. **Cash timing:** Plan generation now receives the owner-reported inputs and a computed locked line, with v22 snapshot staleness; no deterministic validator yet rejects a plan whose selected set exceeds the reserve. One-time setup costs need a play-model field and validator before they can be timed. Real payment timing (for example from Stripe imports) is not used to check the owner's delay.
 
 ## Repository guardrails
 

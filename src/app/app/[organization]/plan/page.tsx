@@ -184,6 +184,7 @@ function PlanScreen({ slug }: { slug: string }) {
     ["capabilities", "connected tools"],
     ["businessResearch", "business and audience research"],
     ["marketChanges", "monitored competitor pages"],
+    ["cashTiming", "growth cash reserve or payment delay"],
   ].filter(([key]) => Boolean(plan.staleInputs[key as keyof typeof plan.staleInputs])).map(([, label]) => label);
   const openCompare = () => {
     if (!versions || versions.length < 2 || !latestV) return;

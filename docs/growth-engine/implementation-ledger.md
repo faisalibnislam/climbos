@@ -791,3 +791,25 @@ git diff --check
 ```
 
 Limitations: this is not a bank-balance or whole-business cash-flow forecast. It excludes one-time setup costs (the play model has no such field), refunds, taxes, failed or partial payments, invoicing cycles beyond a single delay, existing bills, seasonality, and payments after the period. Monthly payments are spread evenly across weeks. The view is uncalibrated against actual payment data and is not used by plan generation or approval. No browser preview was run: the local web app targets a remote Convex deployment that does not have these backend changes, and no backend was deployed.
+
+## Resumption note (2026-10-25, growth cash timing as a plan-generation input)
+
+This supersedes the previous note's "not a plan-generation input" boundary. For strategy runs, the business brief now includes the owner-reported reserve and payment delay (`growthCashTimingContext`): unknown values are named, and a reserve saved in another currency is reported as unknown rather than converted. After plays are drafted and the portfolio is selected, `convex/jobs.ts` computes `growthCashTiming` for the selected set. It appends `growthCashTimingLine` to the locked numbers, so the writer quotes the computed low point, recovery, and reserve gap and is told to sequence or cap cash-heavy plays when the reserve is short. Plan snapshots are now version 22 and record `growthCashTiming` decision values (`growthCashTimingInput`: reserve minor units, currency, payment delay). The schema validator and `PlanSnapshot` type accept them. `planStaleInputs` gained `cashTiming`: only v22+ snapshots are compared, re-saving identical values is not a change, and clearing values is. A change blocks `decidePlan` approval and play start with a refresh message. The plan page lists "growth cash reserve or payment delay" among stale inputs, and plan history reports "growth cash timing" changes. `ENGINE_VERSION` is `v3.67-growth-cash-timing`.
+
+Verified commands:
+
+```text
+pnpm exec vitest run <20 files referencing portfolio selection, plan view/staleness/history, decidePlan, locked numbers, snapshots, engine version, and growth cash>
+  20 files passed; 211 tests passed (new: engine-v2 snapshot v22 records inputs, unchanged re-save not stale, changed delay stale and blocks approval, clearing stale; unit tests for decision-value normalization, currency withholding, prompt context, and locked line)
+
+pnpm typecheck
+  app and Convex TypeScript checks passed
+
+pnpm exec eslint <changed TypeScript files>
+  passed
+
+git diff --check
+  passed
+```
+
+The first full run failed four `tests/convex/plan-history.test.ts` assertions that compare the entire `staleInputs` object; that suite passed with the changes stashed. They were updated to include `cashTiming: false` (their v21 snapshots are correctly not compared). Limitations: the reserve guidance is a prompt instruction and locked text, not a deterministic validator that rejects an over-reserve plan. The fixture LLM cannot show whether a real model follows it, and the cash-view limitations above still apply.

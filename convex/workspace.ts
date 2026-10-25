@@ -20,7 +20,7 @@ import { currentPeriod } from "./lib/periods";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { redactFeedback } from "../shared/lab/redact";
 import { canDriveWork, type QualityState } from "../shared/agents/quality";
-import { applyOwnerEconomics, decisionQuestions, growthCashTiming, playMaths, playsGoalGap, selectPortfolio, withForecasts, type Economics, type OwnerEconomics, type PlayLike } from "../shared/agents/economics";
+import { applyOwnerEconomics, decisionQuestions, growthCashInputsIn, growthCashTiming, growthCashTimingInput, playMaths, playsGoalGap, selectPortfolio, withForecasts, type Economics, type OwnerEconomics, type PlayLike } from "../shared/agents/economics";
 import { projectGrowthOpportunities, type OpportunityPlayInput } from "../shared/agents/opportunities";
 import { AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
 import { expertPlaysOf, readExpertPlan } from "../shared/agents/planCompatibility";
@@ -442,6 +442,7 @@ export const startPlay = mutation({
     if (staleInputs.capabilities) throw appError("INVALID", "Your connected tools changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.businessResearch) throw appError("INVALID", "Your business and audience research changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.marketChanges) throw appError("INVALID", "A monitored competitor page changed after this plan was created. Refresh the plan before starting this play.");
+    if (staleInputs.cashTiming) throw appError("INVALID", "Your growth cash reserve or customer payment delay changed after this plan was created. Refresh the plan before starting this play.");
     const play = (expertPlaysOf(s.expert) as { id?: string; name: string; oneLiner: string; audience: string; hook: string; climbosCanDo: string }[]).find((p) => p.id === playId);
     if (!play) throw appError("NOT_FOUND", "That play isn't in this plan.");
     return postChat(ctx, org, user._id, `Start the "${play.name}" play (plan v${s.version}, play ${playId}): ${play.oneLiner} Audience: ${play.audience}. Hook: ${play.hook}. Prepare everything your team can do for it now: ${play.climbosCanDo}`);
@@ -783,8 +784,8 @@ export const plan = query({
       ? withForecasts({ economics: currentEconomics as Economics, plays: expert.plays as PlayLike[] })
       : null;
     const marketChangeVersions = await currentMarketChangeVersions(ctx, org._id);
-    const staleInputs = strategy ? planStaleInputs(strategy, business, goal, businessFactVersions, brand, connectedCapabilities, marketChangeVersions) : { ownerEconomics: false, lifecycleStage: false, funnel: false, goal: false, businessProfile: false, businessFacts: false, brandGuidance: false, capabilities: false, businessResearch: false, marketChanges: false };
-    const requiresRefresh = staleInputs.ownerEconomics || staleInputs.lifecycleStage || staleInputs.funnel || staleInputs.goal || staleInputs.businessProfile || staleInputs.businessFacts || staleInputs.brandGuidance || staleInputs.capabilities || staleInputs.businessResearch || staleInputs.marketChanges;
+    const staleInputs = strategy ? planStaleInputs(strategy, business, goal, businessFactVersions, brand, connectedCapabilities, marketChangeVersions) : { ownerEconomics: false, lifecycleStage: false, funnel: false, goal: false, businessProfile: false, businessFacts: false, brandGuidance: false, capabilities: false, businessResearch: false, marketChanges: false, cashTiming: false };
+    const requiresRefresh = staleInputs.ownerEconomics || staleInputs.lifecycleStage || staleInputs.funnel || staleInputs.goal || staleInputs.businessProfile || staleInputs.businessFacts || staleInputs.brandGuidance || staleInputs.capabilities || staleInputs.businessResearch || staleInputs.marketChanges || staleInputs.cashTiming;
     // Owner edits immediately refresh every deterministic derived number in the returned plan view.
     const portfolioLimits = {
       ...(goal ? { monthlyBudgetUsd: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency) } : {}),
@@ -834,12 +835,8 @@ export const plan = query({
         // A reserve saved in another currency is not converted: it stays unknown until re-entered.
         const saved = business?.growthCashTiming;
         const planCurrency = (currentEconomics as Economics).currency ?? "USD";
-        const reserveCurrencyMismatch = saved?.reserveMinor !== undefined && saved.currency !== planCurrency;
-        const timing = growthCashTiming(currentPlays, currentPortfolio.selected, {
-          horizonDays: goal?.horizonDays,
-          ...(saved?.reserveMinor !== undefined && !reserveCurrencyMismatch ? { reserveUsd: minorToMajor(saved.reserveMinor, saved.currency) } : {}),
-          ...(saved?.paymentLagDays !== undefined ? { paymentLagDays: saved.paymentLagDays } : {}),
-        });
+        const { reserveCurrencyMismatch, ...inputs } = growthCashInputsIn(growthCashTimingInput(saved), planCurrency);
+        const timing = growthCashTiming(currentPlays, currentPortfolio.selected, { horizonDays: goal?.horizonDays, ...inputs });
         return timing ? { ...timing, selected: currentPortfolio.selected, currency: planCurrency, reserveCurrencyMismatch, ownerInputsUpdatedAt: saved?.updatedAt ?? null } : null;
       })() : null,
     } : null;
@@ -979,7 +976,7 @@ export const setUnitEconomics = mutation({
   },
 });
 
-/** Owner-reported growth cash timing: read live by the plan's cash view; not a plan-generation input. `null` clears a value. */
+/** Owner-reported growth cash timing for the plan's cash view and the next plan; changes mark v22+ plans stale. `null` clears a value. */
 export const setGrowthCashTiming = mutation({
   args: { slug: v.string(), reserve: v.optional(v.union(v.number(), v.null())), paymentLagDays: v.optional(v.union(v.number(), v.null())) },
   handler: async (ctx, { slug, reserve, paymentLagDays }) => {
@@ -1058,6 +1055,7 @@ export const decidePlan = mutation({
       if (staleInputs.capabilities) throw appError("INVALID", "Your connected tools changed after this plan was created. Refresh the plan before approving it.");
       if (staleInputs.businessResearch) throw appError("INVALID", "Your business and audience research changed after this plan was created. Refresh the plan before approving it.");
       if (staleInputs.marketChanges) throw appError("INVALID", "A monitored competitor page changed after this plan was created. Refresh the plan before approving it.");
+    if (staleInputs.cashTiming) throw appError("INVALID", "Your growth cash reserve or customer payment delay changed after this plan was created. Refresh the plan before approving it.");
     }
     // Hard failures and unresolved material fact conflicts must not reach execution.
     const planQuality = (s.expert as { quality?: { state: QualityState; conflicts?: string[] } } | undefined)?.quality;
@@ -1134,14 +1132,14 @@ function hasNewerOwnerEconomics(
 
 function planStaleInputs(
   strategy: Pick<Doc<"strategies">, "createdAt" | "expert" | "goalId">,
-  business: Pick<Doc<"businesses">, "unitEconomics" | "lifecycleStage" | "funnel" | "name" | "website" | "socialUrls" | "businessType" | "industryBusinessTypeId" | "summary" | "acquisition" | "currency" | "insights"> | null,
+  business: Pick<Doc<"businesses">, "unitEconomics" | "lifecycleStage" | "funnel" | "name" | "website" | "socialUrls" | "businessType" | "industryBusinessTypeId" | "summary" | "acquisition" | "currency" | "insights" | "growthCashTiming"> | null,
   goal: Pick<Doc<"goals">, "_id" | "kind" | "statement" | "horizonDays" | "monthlyAdBudgetMinor" | "currency" | "target"> | null,
   businessFactVersions: { id: string; updatedAt: number; reviewSuggested?: boolean }[] = [],
   brand: Pick<Doc<"brandProfiles">, "voice" | "toneWords" | "colors" | "doNots" | "learnedRules" | "socialHumor" | "socialTrendPolicy"> | null,
   connectedCapabilities: string[] = [],
   marketChangeVersions: { id: string; at: number }[] = [],
-): { ownerEconomics: boolean; lifecycleStage: boolean; funnel: boolean; goal: boolean; businessProfile: boolean; businessFacts: boolean; brandGuidance: boolean; capabilities: boolean; businessResearch: boolean; marketChanges: boolean } {
-  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid"; rationale: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; capabilities?: string[] } | undefined;
+): { ownerEconomics: boolean; lifecycleStage: boolean; funnel: boolean; goal: boolean; businessProfile: boolean; businessFacts: boolean; brandGuidance: boolean; capabilities: boolean; businessResearch: boolean; marketChanges: boolean; cashTiming: boolean } {
+  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid"; rationale: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; capabilities?: string[]; growthCashTiming?: unknown } | undefined;
   const savedStage = snapshot?.businessLifecycleStage?.stage ?? null;
   const currentStage = business?.lifecycleStage?.stage ?? null;
   const savedFunnel = funnelDecisionValues(snapshot?.businessFunnel);
@@ -1155,6 +1153,8 @@ function planStaleInputs(
   const hasOwnerChannelPreferenceSnapshot = (snapshot?.snapshotVersion ?? 0) >= 13;
   const hasBusinessResearchSnapshot = (snapshot?.snapshotVersion ?? 0) >= 14;
   const hasMarketChangeSnapshot = (snapshot?.snapshotVersion ?? 0) >= 15;
+  // Snapshots before v22 were not given cash timing, so they are not compared with it.
+  const hasCashTimingSnapshot = (snapshot?.snapshotVersion ?? 0) >= 22;
   const hasFactFreshnessSnapshot = (snapshot?.snapshotVersion ?? 0) >= 21;
   const ownerAcquisitionDimensions = Object.fromEntries(
     Object.entries(business?.acquisition?.dims as Record<string, { value: string; source: string }> | undefined ?? {})
@@ -1181,6 +1181,7 @@ function planStaleInputs(
     capabilities: Array.isArray(snapshot?.capabilities) && canonicalJson([...snapshot.capabilities].sort() as never) !== canonicalJson([...connectedCapabilities].sort() as never),
     businessResearch: hasBusinessResearchSnapshot && (snapshot?.businessResearchAt ?? null) !== (business?.insights?.generatedAt ?? null),
     marketChanges: hasMarketChangeSnapshot && canonicalJson(snapshot?.marketChangeVersions as never) !== canonicalJson(marketChangeVersions as never),
+    cashTiming: hasCashTimingSnapshot && canonicalJson((snapshot?.growthCashTiming ?? null) as never) !== canonicalJson(growthCashTimingInput(business?.growthCashTiming) as never),
   };
 }
 

@@ -24,6 +24,7 @@ function changedPlanningInputs(previous: Strategy, current: Strategy): string[] 
   if (!same("businessProfile") || !same("businessLifecycleStage") || !same("businessFunnel")) changes.push("business profile or operating data");
   if (!same("businessFactVersions") || !same("staleFactIds") || !same("contradictions")) changes.push("business facts");
   if (!same("ownerEconomics")) changes.push("unit economics");
+  if (!same("growthCashTiming")) changes.push("growth cash timing");
   if (!same("brandProfile") || !same("ownerChannelPreferences")) changes.push("brand or channel preferences");
   if (!same("businessResearchAt") || !same("sourceUrls") || !same("marketChangeVersions") || !same("knowledgeReferences")) changes.push("research or market evidence");
   if (!same("capabilities")) changes.push("connected capabilities");

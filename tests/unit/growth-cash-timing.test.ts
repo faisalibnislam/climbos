@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyOwnerEconomics, growthCashTiming, selectPortfolio, type Economics, type PlayLike } from "../../shared/agents/economics";
+import { applyOwnerEconomics, growthCashInputsIn, growthCashTiming, growthCashTimingContext, growthCashTimingInput, growthCashTimingLine, selectPortfolio, type Economics, type PlayLike } from "../../shared/agents/economics";
 
 // 100 reached a week × 10% paid = 10 customers a week; 1,300/month cash = 300 a week.
 const play = (over: Partial<PlayLike["model"]> = {}): PlayLike => ({
@@ -77,5 +77,38 @@ describe("growth cash timing", () => {
     expect(t.mostLikely!.customers).toBeCloseTo(pick.customers, 6);
     // A ramp delays customers, so the low point is lower than at immediate full volume.
     expect(t.mostLikely!.lowestBalanceUsd).toBeLessThan(-150);
+  });
+
+  it("normalizes saved inputs to decision values so re-saving the same values is not a change", () => {
+    expect(growthCashTimingInput(undefined)).toBeNull();
+    expect(growthCashTimingInput({ currency: "USD" })).toBeNull();
+    expect(growthCashTimingInput({ reserveMinor: 50_000, currency: "USD" })).toEqual({ reserveMinor: 50_000, currency: "USD", paymentLagDays: null });
+    expect(growthCashInputsIn({ reserveMinor: 50_000, currency: "USD", paymentLagDays: 0 }, "USD")).toEqual({ reserveUsd: 500, paymentLagDays: 0, reserveCurrencyMismatch: false });
+    expect(growthCashInputsIn({ reserveMinor: 50_000, currency: "EUR", paymentLagDays: 3 }, "USD")).toEqual({ paymentLagDays: 3, reserveCurrencyMismatch: true });
+    expect(growthCashInputsIn({ reserveMinor: 5_000, currency: "JPY", paymentLagDays: null }, "JPY")).toEqual({ reserveUsd: 5_000, reserveCurrencyMismatch: false });
+  });
+});
+
+describe("growth cash timing in plan generation", () => {
+  it("tells the planner the owner-reported inputs and names unknowns without filling them in", () => {
+    const text = growthCashTimingContext({ reserveMinor: 50_000, currency: "USD", paymentLagDays: null }, "USD");
+    expect(text).toContain("owner-reported; not a bank balance");
+    expect(text).toContain("$500");
+    expect(text).toContain("pays unknown after being won");
+    expect(text).toContain("Don't assume an unknown value");
+    expect(growthCashTimingContext(null, "USD")).toBe("");
+    expect(growthCashTimingContext({ reserveMinor: 50_000, currency: "EUR", paymentLagDays: 7 }, "USD")).toContain("unknown (saved in EUR; not converted)");
+  });
+
+  it("locks the computed low point and reserve gap for the plan writer", () => {
+    const t = growthCashTiming({ economics: owned(), plays: [play()] }, ["Partner referrals"], { horizonDays: 28, paymentLagDays: 14, reserveUsd: 500 });
+    const line = growthCashTimingLine(t, "USD");
+    expect(line).toContain("GROWTH CASH TIMING · selected set (owner-reported reserve $500, payment delay 14 days");
+    expect(line).toContain("most-likely: lowest -$750 in week 3, not back to zero in the period, reserve short by $250");
+    expect(line).toContain("quote it, don't recompute it");
+    const untimed = growthCashTimingLine(growthCashTiming({ economics: owned(), plays: [play()] }, ["Partner referrals"], { horizonDays: 28 }), "USD");
+    expect(untimed).toContain("customer payments not timed (missing payment_lag)");
+    expect(untimed).toContain("reserve unknown");
+    expect(growthCashTimingLine(null)).toBe("");
   });
 });

@@ -34,8 +34,8 @@ describe("growth cash timing", () => {
     expect(timing).toMatchObject({ reserveUsd: 1_000, paymentLagDays: 14, currency: "USD", selected: ["Partner referrals"], unconfirmedEconomics: [] });
     expect(timing.mostLikely.lowestBalanceUsd).toBeCloseTo(-750, 6);
     expect(timing.mostLikely).toMatchObject({ lowestWeek: 3, reserveCovers: true });
-    // Cash timing is read live; it doesn't mark the generated plan stale.
-    expect(view.staleInputs.requiresRefresh).toBe(false);
+    // Plans whose snapshot predates cash timing (v22) never used it, so changing it doesn't mark them stale.
+    expect(view.staleInputs).toMatchObject({ cashTiming: false, requiresRefresh: false });
 
     const stored = await t.run(async (ctx) => (await ctx.db.query("businesses").collect()).find((b) => b.growthCashTiming)!.growthCashTiming);
     expect(stored).toMatchObject({ reserveMinor: 100_000, currency: "USD", paymentLagDays: 14, provenance: "owner_reported" });

@@ -56,7 +56,7 @@ import { formatBusinessKnowledgeLayers } from "../shared/knowledge/layers";
 import { diagnose, diagnosisBrief, funnelRatesOf, type Diagnosis, type OwnerFunnel } from "../shared/agents/diagnosis";
 import { businessLifecycleContext } from "../shared/agents/lifecycle";
 import { choosePlaybooks, playbookBrief, type PlaybookContext } from "../shared/playbooks/contracts";
-import { applyOwnerEconomics, churnOf, forecastCustomers, lockedNumbers, playsGoalGap, portfolioP50, selectPortfolio, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
+import { applyOwnerEconomics, churnOf, forecastCustomers, growthCashInputsIn, growthCashTiming, growthCashTimingContext, growthCashTimingInput, growthCashTimingLine, lockedNumbers, playsGoalGap, portfolioP50, selectPortfolio, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { segmentEconomicsBrief } from "../shared/agents/segmentEconomics";
 import { CREATIVE_STRATEGY_PROMPT_VERSION, planTask, playsTask, type CreativeRange } from "../shared/agents/planTasks";
 import { citedUrls, urlKey, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
@@ -690,6 +690,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     job.org.contentLanguage && job.org.contentLanguage !== "English" ? `LANGUAGE: write every customer-facing word (posts, emails, ads, pages) in ${job.org.contentLanguage}. Notes to the owner stay in English.` : "",
     job.run.kind === "strategy" && b?.unitEconomics?.ownerHoursPerWeek === undefined ? "OWNER TIME: unknown (the owner hasn't said). Keep owner work small, prefer work ClimbOS can do, and state the hours each play needs so the owner can check." : "",
     ownerEconomicsLine(b?.unitEconomics, workspaceCurrency(job)),
+    job.run.kind === "strategy" ? growthCashTimingContext(growthCashTimingInput(b?.growthCashTiming), workspaceCurrency(job)) : "",
     job.run.kind === "strategy" && b?.unitEconomics?.segmentEconomics?.length
       ? `SEGMENT ECONOMICS INPUT:\n${untrusted("owner-reported segment economics", segmentEconomicsBrief(b.unitEconomics.segmentEconomics, b.currency ?? workspaceCurrency(job)), 3_000)}`
       : job.run.kind === "strategy" ? segmentEconomicsBrief(undefined, b?.currency ?? workspaceCurrency(job)) : "",
@@ -817,7 +818,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   const readUrls = [...new Set(sourceUrls)].sort();
   const insightsHash = await sha256Hex(insights);
   const material = {
-    snapshotVersion: 21,
+    snapshotVersion: 22,
     orgId: String(job.org._id),
     businessId: job.business ? String(job.business._id) : null,
     business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, socialUrls: job.business.socialUrls, businessType: job.business.businessType, lifecycleStage: job.business.lifecycleStage ?? null, funnel: job.business.funnel ?? null, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
@@ -826,6 +827,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
     goalKind: job.goal?.kind ?? null,
     facts: [...facts, ...staleFacts].map(({ id, updatedAt, statement }) => ({ id, updatedAt, statement })).sort((a, b) => a.id.localeCompare(b.id)),
     ownerEconomics,
+    growthCashTiming: growthCashTimingInput(job.business?.growthCashTiming),
     refundExposure: job.refundExposure ?? null,
     channelOutcomes: job.platformSourceConcentration ?? null,
     capabilities,
@@ -838,7 +840,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   };
   const snapshotId = await sha256Hex(JSON.stringify(material));
   return {
-    snapshotVersion: 21,
+    snapshotVersion: 22,
     snapshotId,
     capturedAt: Date.now(),
     engine: ENGINE_VERSION,
@@ -892,6 +894,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
     goalInput: job.goal ? { id: String(job.goal._id), kind: job.goal.kind, statement: job.goal.statement, horizonDays: job.goal.horizonDays, monthlyAdBudgetMinor: job.goal.monthlyAdBudgetMinor, currency: job.goal.currency, target: job.goal.target ?? null } : null,
     knowledgeReferences,
     ...(ownerEconomics ? { ownerEconomics } : {}),
+    growthCashTiming: growthCashTimingInput(job.business?.growthCashTiming),
     ...(job.refundExposure ? { refundExposure: job.refundExposure } : {}),
     ...(job.platformSourceConcentration ? { channelOutcomes: job.platformSourceConcentration } : {}),
     ...(job.goal?.target ? { goalTarget: job.goal.target } : {}),
@@ -1431,7 +1434,9 @@ export const buildStrategy = internalAction({
       const lim = constraintsOf(job);
       const ownerLimits = { ...(lim.monthlyAdBudgetUsd !== undefined ? { monthlyBudgetUsd: lim.monthlyAdBudgetUsd } : {}), ...(job.business?.unitEconomics?.monthlyGrowthCashUsd !== undefined ? { monthlyGrowthCashUsd: job.business.unitEconomics.monthlyGrowthCashUsd } : {}), ...(lim.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: lim.ownerHoursPerWeek } : {}), ...(lim.newCustomersPerMonth !== undefined ? { newCustomersPerMonth: lim.newCustomersPerMonth } : {}) };
       const portfolio = plays ? selectPortfolio(plays, { ...ownerLimits, horizonDays: job.goal?.horizonDays }) : null;
-      const locked = plays ? lockedNumbers(plays, job.goal ? { statement: job.goal.statement, target: job.goal.target ?? null, horizonDays: job.goal.horizonDays } : null, ownerLimits) : "";
+      // The selected set's growth cash timing from the owner's reported reserve and payment delay (read in code, not by the model).
+      const cashTiming = plays && portfolio?.selected.length ? growthCashTiming(plays, portfolio.selected, { horizonDays: job.goal?.horizonDays, ...growthCashInputsIn(growthCashTimingInput(job.business?.growthCashTiming), workspaceCurrency(job)) }) : null;
+      const locked = plays ? [lockedNumbers(plays, job.goal ? { statement: job.goal.statement, target: job.goal.target ?? null, horizonDays: job.goal.horizonDays } : null, ownerLimits), growthCashTimingLine(cashTiming, workspaceCurrency(job))].filter(Boolean).join("\n") : "";
       let strategy = await runAgentTask<StrategyOutput>(
         ctx,
         job,
