@@ -33,6 +33,28 @@ describe("site watch (keeps researching the business)", () => {
     expect((await owner.client.query(api.team.myNotices, {})).items.some((n) => /website changed/.test(n.text))).toBe(true);
   });
 
+  it("records failed check attempts without replacing the last successful website snapshot", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "site-failed-check@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Site Co", website: "https://site.example" });
+    await t.action(internal.siteWatchActions.check, { orgId: orgId as Id<"organizations"> });
+    const before = await owner.client.query(api.siteWatch.facts, { slug });
+    const business = await t.run((ctx) => ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId as Id<"organizations">)).first());
+    expect(business).toBeTruthy();
+    const oldText = await t.run((ctx) => ctx.db.get(business!._id));
+
+    await t.mutation(internal.siteWatch.saveSiteFailure, { businessId: business!._id, error: "The website returned an error." });
+    const after = await owner.client.query(api.siteWatch.facts, { slug });
+    expect(after).toMatchObject({
+      siteCheckedAt: before?.siteCheckedAt,
+      siteWatchLastAttemptAt: expect.any(Number),
+      siteWatchLastError: "The website returned an error.",
+    });
+    expect(await t.run((ctx) => ctx.db.get(business!._id))).toMatchObject({ siteHash: oldText?.siteHash, siteText: oldText?.siteText, siteCheckedAt: oldText?.siteCheckedAt });
+    const receipt = (await owner.client.query(api.automationRegistry.get, { slug })).entries.find((entry) => entry.id === "website_change_watch");
+    expect(receipt?.lastReceipt?.summary).toContain("Check failed");
+  });
+
   it("surfaces conflicting confirmed prices with links to the facts that disagree", async () => {
     const t = setup();
     const owner = await asNewUser(t, "conflict@example.com");

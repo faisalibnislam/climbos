@@ -65,6 +65,8 @@ export const facts = query({
     return {
       website: business.website ?? null,
       siteCheckedAt: business.siteCheckedAt ?? null,
+      siteWatchLastAttemptAt: business.siteWatchLastAttemptAt ?? null,
+      siteWatchLastError: business.siteWatchLastError ?? null,
       facts: groupedFacts.map(({ primary, duplicates }) => {
         const members = [primary, ...duplicates];
         const mergedSourceIds = [...new Set(members.flatMap((fact) => fact.sourceIds.map(String)))];
@@ -133,7 +135,8 @@ export const checkNow = mutation({
     const { org } = await requireOrgAccess(ctx, { slug }, "edit");
     const b = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     if (!b?.website) throw appError("INVALID", "Add your website first.");
-    if (b.siteCheckedAt && Date.now() - b.siteCheckedAt < 6 * 3_600_000) throw appError("RATE_LIMITED", "Checked in the last 6 hours.");
+    const lastAttemptAt = b.siteWatchLastAttemptAt ?? b.siteCheckedAt;
+    if (lastAttemptAt && Date.now() - lastAttemptAt < 6 * 3_600_000) throw appError("RATE_LIMITED", "Checked in the last 6 hours.");
     await ctx.scheduler.runAfter(0, internal.siteWatchActions.check, { orgId: org._id });
   },
 });
@@ -232,7 +235,17 @@ export const siteState = internalQuery({
 export const saveSite = internalMutation({
   args: { businessId: v.id("businesses"), hash: v.string(), text: v.string() },
   handler: async (ctx, a) => {
-    await ctx.db.patch(a.businessId, { siteHash: a.hash, siteText: a.text.slice(0, 60_000), siteCheckedAt: Date.now() });
+    const now = Date.now();
+    await ctx.db.patch(a.businessId, { siteHash: a.hash, siteText: a.text.slice(0, 60_000), siteCheckedAt: now, siteWatchLastAttemptAt: now, siteWatchLastError: undefined });
+  },
+});
+
+export const saveSiteFailure = internalMutation({
+  args: { businessId: v.id("businesses"), error: v.string() },
+  handler: async (ctx, { businessId, error }) => {
+    const business = await ctx.db.get(businessId);
+    if (!business) return;
+    await ctx.db.patch(businessId, { siteWatchLastAttemptAt: Date.now(), siteWatchLastError: error.trim().slice(0, 240) || "Couldn't read the website. Check the address and try again." });
   },
 });
 

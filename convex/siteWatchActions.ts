@@ -66,8 +66,17 @@ export const check = internalAction({
   handler: async (ctx, { orgId, scheduled }): Promise<void> => {
     const s = await ctx.runQuery(internal.siteWatch.siteState, { orgId });
     if (!s || (scheduled && !s.enabled)) return;
-    const site = process.env.CLIMBOS_FAKE_LLM ? { text: `${s.name}\n${process.env.CLIMBOS_FAKE_SITE_TEXT ?? "Plans from $10/mo"}` } : await readSite(s.website);
-    if ("error" in site) return;
+    let site: Awaited<ReturnType<typeof readSite>> | { text: string };
+    try {
+      site = process.env.CLIMBOS_FAKE_LLM ? { text: `${s.name}\n${process.env.CLIMBOS_FAKE_SITE_TEXT ?? "Plans from $10/mo"}` } : await readSite(s.website);
+    } catch {
+      await ctx.runMutation(internal.siteWatch.saveSiteFailure, { businessId: s.businessId, error: "The website check stopped unexpectedly. Try again later." });
+      return;
+    }
+    if ("error" in site) {
+      await ctx.runMutation(internal.siteWatch.saveSiteFailure, { businessId: s.businessId, error: site.error });
+      return;
+    }
     const lines = normaliseForDiff(site.text);
     const hash = await textHash(lines);
     const before = s.siteText?.split("\n") ?? null;

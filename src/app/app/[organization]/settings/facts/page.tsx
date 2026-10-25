@@ -10,7 +10,7 @@ import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
 import { LoadingBlock } from "@/components/app/results/QueryBoundary";
 import { SettingsHeader } from "@/components/app/settings/SettingsNav";
-import { Button, Card, CardContent, Input, Select, toast } from "@/components/ui";
+import { Button, Callout, Card, CardContent, Input, Select, toast } from "@/components/ui";
 import { PERMISSION_WHO, useWorkspaceMember } from "@/components/app/content/shared";
 import { can } from "@shared/policy";
 import { factFreshness } from "@shared/agents/factFreshness";
@@ -110,7 +110,7 @@ export default function FactsPage() {
           ) : null
         }
       />
-      {data.siteCheckedAt ? <p className="-mt-4 text-xs text-ink-3">Site checked {relativeTime(data.siteCheckedAt)}.</p> : null}
+      {data.siteWatchLastError ? <Callout tone="warning" title="The latest website check could not finish">{data.siteWatchLastError}{data.siteWatchLastAttemptAt ? ` · Tried ${relativeTime(data.siteWatchLastAttemptAt)}.` : ""} Your last successful snapshot and confirmed facts are unchanged.</Callout> : data.siteCheckedAt ? <p className="-mt-4 text-xs text-ink-3">Site checked {relativeTime(data.siteCheckedAt)}.</p> : null}
       {data.conflicts.length ? (
         <Card className="border-amber-300 bg-amber-50">
           <CardContent className="flex flex-col gap-2">

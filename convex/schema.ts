@@ -968,6 +968,9 @@ export default defineSchema({
     siteHash: v.optional(v.string()),
     siteText: v.optional(v.string()),
     siteCheckedAt: v.optional(v.number()),
+    /** Latest completed website-monitor attempt; a failure never overwrites the last good snapshot. */
+    siteWatchLastAttemptAt: v.optional(v.number()),
+    siteWatchLastError: v.optional(v.string()),
     /** Pauses only the scheduled weekly site-change monitor; manual checks remain available. Legacy businesses default to enabled. */
     siteWatchEnabled: v.optional(v.boolean()),
     siteReadiness: v.optional(

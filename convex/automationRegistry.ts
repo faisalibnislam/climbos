@@ -78,7 +78,8 @@ export const get = query({
         }
         case "website_change_watch": {
           const state: RegistryState = !business?.website ? "not_configured" : siteEnabled ? "active" : "paused";
-          const lastReceipt = business?.siteCheckedAt ? { at: business.siteCheckedAt, summary: "Website snapshot", href: "visibility" } : null;
+          const lastAttemptAt = business?.siteWatchLastAttemptAt ?? business?.siteCheckedAt;
+          const lastReceipt = lastAttemptAt ? { at: lastAttemptAt, summary: business?.siteWatchLastError ? `Check failed: ${business.siteWatchLastError}` : "Website snapshot checked", href: "visibility" } : null;
           return entry(definition, state, !business?.website ? "Add a public website to use this monitor." : siteEnabled ? "Checks the recorded website for material changes; proposed fact updates need owner confirmation." : "Scheduled website monitoring is paused. Manual checks remain available.", lastReceipt, state === "active" ? 1 : 0, { canManage, siteWatchEnabled: siteEnabled });
         }
         case "approved_outbound_sending": {

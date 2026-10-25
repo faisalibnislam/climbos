@@ -556,3 +556,7 @@ Custom specialist run feedback now optionally records a member-reported business
 ## Resumption note (2026-10-25, automation receipt navigation)
 
 The Automations inventory now links each available latest receipt to its existing workflow detail or domain page: autopilot and specialist runs open the work receipt; competitor monitoring, research refresh, website checks, and outbound activity open their existing review pages. The website-check regression verifies the receipt link is tenant-scoped through the authenticated inventory query. This improves navigation without creating or duplicating execution records. A unified immutable receipt stream, per-run notification preferences, and a complete inventory of system jobs remain unimplemented; source pages continue to provide their own history and detail.
+
+## Resumption note (2026-10-25, website monitor failure visibility)
+
+The website change monitor now records the latest completed attempt and a bounded failure message when a fetch returns an error or throws. A failed check preserves the last successful text/hash and timestamp, appears on the Business Facts page and in Automations activity, and participates in the six-hour manual-check throttle so repeated failures cannot be hammered immediately. Focused regression coverage verifies failure state is tenant-visible and does not overwrite a known-good snapshot. This does not retry automatically or report a check as successful; a process terminated before its error handler persists remains an unrecorded attempt.

@@ -30,7 +30,7 @@ describe("automation registry", () => {
     await t.action(internal.siteWatchActions.check, { orgId: orgId as Id<"organizations"> });
     expect((await owner.client.query(api.siteWatch.facts, { slug }))?.siteCheckedAt).toEqual(expect.any(Number));
     const latestActivity = (await owner.client.query(api.automationRegistry.get, { slug })).entries.find((entry) => entry.id === "website_change_watch");
-    expect(latestActivity?.lastReceipt).toMatchObject({ summary: "Website snapshot", href: "visibility", at: expect.any(Number) });
+    expect(latestActivity?.lastReceipt).toMatchObject({ summary: "Website snapshot checked", href: "visibility", at: expect.any(Number) });
     delete process.env.CLIMBOS_FAKE_LLM;
   });
 
