@@ -183,7 +183,13 @@ function SpecialistsSettings() {
                   ) : (
                     <p className="text-sm text-ink-3">No team ratings recorded in the last 90 days.</p>
                   )}
-                  <p className="text-xs text-ink-3">These are team opinions about usefulness, not measured business results or time saved.</p>
+                  {agent.workspaceReportedFeedback.timeSavedRunCount ? (
+                    <p className="text-sm text-ink-2">Median team-reported time saved: {creditsText(agent.workspaceReportedFeedback.medianMinutesSavedPerRun ?? 0)} minutes per run across {agent.workspaceReportedFeedback.timeSavedRunCount} runs. Reports from the same run are averaged first.</p>
+                  ) : (
+                    <p className="text-sm text-ink-3">No time-saved reports yet. Leaving time unknown is fine.</p>
+                  )}
+                  <p className="text-xs text-ink-3">Time saved and usefulness are member reports, not measured business results or proof that a run caused an outcome.</p>
+                  <p className="text-xs text-ink-3">ClimbOS credits measure product usage. This screen does not convert reported time into cash value or calculate return on investment.</p>
                 </div>
                 {agent.recentRuns.length ? (
                   <div className="flex flex-col gap-2 border-t border-line pt-3">
@@ -198,7 +204,10 @@ function SpecialistsSettings() {
                           <p className="text-xs text-ink-3">
                             {new Date(run.createdAt).toLocaleDateString()} · {run.status === "verified" || run.status === "failed" || run.status === "canceled" ? `${creditsText(run.actualCredits)} credits recorded` : `${creditsText(run.actualCredits)} recorded so far; ${creditsText(run.estimateCredits)} estimated for this run`}
                           </p>
-                          {run.rating ? <p className="text-xs text-ink-2">Your rating: {run.rating === "helpful" ? "Helpful" : "Needs work"}{run.feedbackNote ? ` · ${run.feedbackNote}` : ""}</p> : null}
+                          {run.rating ? <p className="text-xs text-ink-2">Your rating: {run.rating === "helpful" ? "Helpful" : "Needs work"}{run.minutesSaved !== null ? ` · You reported ${run.minutesSaved} minutes saved` : " · Time saved unknown"}{run.feedbackNote ? ` · ${run.feedbackNote}` : ""}</p> : null}
+                          {data.canManage && ["verified", "failed", "uncertain", "canceled"].includes(run.status) ? (
+                            <SpecialistRunFeedback slug={slug} runId={run.id as Id<"workflowRuns">} rating={run.rating} minutesSaved={run.minutesSaved} />
+                          ) : null}
                         </li>
                       ))}
                     </ul>
@@ -215,6 +224,55 @@ function SpecialistsSettings() {
           </Card>
         ))}
       </section>
+    </div>
+  );
+}
+
+function SpecialistRunFeedback({
+  slug,
+  runId,
+  rating: initialRating,
+  minutesSaved: initialMinutesSaved,
+}: {
+  slug: string;
+  runId: Id<"workflowRuns">;
+  rating: "helpful" | "needs_work" | null;
+  minutesSaved: number | null;
+}) {
+  const saveFeedback = useMutation(api.workspace.rateCustomAgentRun);
+  const [rating, setRating] = useState<"helpful" | "needs_work" | null>(initialRating);
+  const [minutesSaved, setMinutesSaved] = useState(initialMinutesSaved === null ? "" : String(initialMinutesSaved));
+  const [busy, setBusy] = useState(false);
+
+  async function save() {
+    if (!rating) return;
+    const parsedMinutes = minutesSaved.trim() === "" ? undefined : Number(minutesSaved);
+    if (parsedMinutes !== undefined && (!Number.isInteger(parsedMinutes) || parsedMinutes < 0 || parsedMinutes > 1440)) {
+      toast({ tone: "danger", title: "Enter whole minutes from 0 to 1,440, or leave the answer blank." });
+      return;
+    }
+    setBusy(true);
+    try {
+      await saveFeedback({ slug, runId, rating, ...(parsedMinutes !== undefined ? { minutesSaved: parsedMinutes } : {}) });
+      toast({ tone: "success", title: "Feedback saved", description: "Your time estimate is recorded as a member report." });
+    } catch (error) {
+      toast({ tone: "danger", title: errorMessage(error) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-2 flex flex-col gap-2 rounded-md bg-surface-2 p-2.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-ink-2">Was this run useful?</span>
+        <Button type="button" size="sm" variant={rating === "helpful" ? "primary" : "secondary"} aria-pressed={rating === "helpful"} onClick={() => setRating("helpful")}>Helpful</Button>
+        <Button type="button" size="sm" variant={rating === "needs_work" ? "primary" : "secondary"} aria-pressed={rating === "needs_work"} onClick={() => setRating("needs_work")}>Needs work</Button>
+      </div>
+      <Field label="Time you estimate it saved" optional hint="For this run, in minutes. Leave blank if unknown; this is your report, not a measured result.">
+        <Input type="number" min={0} max={1440} step={1} value={minutesSaved} onChange={(event) => setMinutesSaved(event.target.value)} />
+      </Field>
+      <div><Button size="sm" loading={busy} disabled={!rating} onClick={() => void save()}>{initialRating ? "Update feedback" : "Save feedback"}</Button></div>
     </div>
   );
 }

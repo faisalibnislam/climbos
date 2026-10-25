@@ -120,6 +120,52 @@ describe("custom specialist profiles", () => {
     expect(await t.query(internal.customAgents.dueAgentIds, { now })).toEqual([id]);
   });
 
+  it("records bounded member-reported time saved separately from measured outcomes", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "specialist-time-report@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Time Report Co" });
+    const { id: agentId } = await owner.client.mutation(api.customAgents.create, { slug, ...profile });
+    const now = Date.now();
+    const runId = await t.run((ctx) => ctx.db.insert("workflowRuns", {
+      orgId,
+      customAgentId: agentId,
+      kind: "climb_chat",
+      title: "Review onboarding flow",
+      status: "verified",
+      input: "{}",
+      roles: [],
+      estimateMicros: 12_000,
+      actualMicros: 9_000,
+      rateVersionId: "test-rate-version",
+      entitlementVersionId: "test-entitlement-version",
+      routingVersionId: "test-routing-version",
+      budget: { modelSteps: 1, researchTools: 0, repairs: 0 },
+      used: { modelSteps: 1, researchTools: 0, repairs: 0 },
+      isFixture: false,
+      createdAt: now,
+      updatedAt: now,
+    }));
+    await owner.client.mutation(api.workspace.rateCustomAgentRun, { slug, runId, rating: "helpful", minutesSaved: 31 });
+    await expect(owner.client.mutation(api.workspace.rateCustomAgentRun, { slug, runId, rating: "helpful", minutesSaved: 1441 })).rejects.toThrow(/whole number of minutes/);
+
+    const teammate = await asNewUser(t, "specialist-time-report-teammate@example.com");
+    await t.run((ctx) => ctx.db.insert("memberships", { orgId, userId: teammate.userId, role: "editor", status: "active", createdAt: now }));
+    await teammate.client.mutation(api.workspace.rateCustomAgentRun, { slug, runId, rating: "needs_work", minutesSaved: 45 });
+    const viewer = await asNewUser(t, "specialist-time-report-viewer@example.com");
+    await t.run((ctx) => ctx.db.insert("memberships", { orgId, userId: viewer.userId, role: "viewer", status: "active", createdAt: now }));
+    await expect(viewer.client.mutation(api.workspace.rateCustomAgentRun, { slug, runId, rating: "helpful", minutesSaved: 5 })).rejects.toThrow(/role \(viewer\) can't/);
+
+    const saved = await owner.client.query(api.customAgents.list, { slug });
+    expect(saved.agents[0]?.recentRuns).toContainEqual(expect.objectContaining({ id: runId, rating: "helpful", minutesSaved: 31 }));
+    expect(saved.agents[0]?.workspaceReportedFeedback).toMatchObject({ source: "workspace_member_report", sampleSize: 2, helpful: 1, needsWork: 1, timeSavedRunCount: 1, medianMinutesSavedPerRun: 38 });
+
+    await owner.client.mutation(api.workspace.rateCustomAgentRun, { slug, runId, rating: "helpful" });
+    const clearedTimeEstimate = await owner.client.query(api.customAgents.list, { slug });
+    expect(clearedTimeEstimate.agents[0]?.recentRuns[0]).toMatchObject({ id: runId, rating: "helpful", minutesSaved: null });
+    expect(clearedTimeEstimate.agents[0]?.workspaceReportedFeedback).toMatchObject({ timeSavedRunCount: 1, medianMinutesSavedPerRun: 45 });
+
+  });
+
   it("does not start scheduled work for demo workspaces", async () => {
     const t = setup();
     const owner = await asNewUser(t, "demo-scheduled-specialist@example.com", { anonymous: true });

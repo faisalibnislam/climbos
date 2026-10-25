@@ -3796,6 +3796,8 @@ export default defineSchema({
     workflowRunId: v.id("workflowRuns"),
     userId: v.id("users"),
     rating: v.union(v.literal("helpful"), v.literal("needs_work")),
+    /** Optional member estimate of minutes saved for this run; absent means unknown. */
+    minutesSaved: v.optional(v.number()),
     note: v.optional(v.string()),
     evidenceKind: v.literal("member_reported"),
     createdAt: v.number(),

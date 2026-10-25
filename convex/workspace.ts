@@ -249,17 +249,19 @@ export const runScheduledCustomAgent = internalMutation({
 
 /** Record a workspace member's report of usefulness after a custom specialist run finishes. */
 export const rateCustomAgentRun = mutation({
-  args: { slug: v.string(), runId: v.id("workflowRuns"), rating: v.union(v.literal("helpful"), v.literal("needs_work")), note: v.optional(v.string()) },
-  handler: async (ctx, { slug, runId, rating, note }) => {
+  args: { slug: v.string(), runId: v.id("workflowRuns"), rating: v.union(v.literal("helpful"), v.literal("needs_work")), note: v.optional(v.string()), minutesSaved: v.optional(v.number()) },
+  handler: async (ctx, { slug, runId, rating, note, minutesSaved }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
     const run = assertSameOrg(await ctx.db.get(runId), org._id, "specialist run");
     if (!run.customAgentId || !["verified", "failed", "uncertain", "canceled"].includes(run.status)) throw appError("INVALID", "Rate a finished specialist run.");
     assertSameOrg(await ctx.db.get(run.customAgentId), org._id, "specialist");
+    if (minutesSaved !== undefined && (!Number.isInteger(minutesSaved) || minutesSaved < 0 || minutesSaved > 1440)) throw appError("INVALID", "Time saved must be a whole number of minutes from 0 to 1,440, or left unknown.");
     const prior = await ctx.db.query("customAgentFeedback").withIndex("by_run_user", (q) => q.eq("workflowRunId", run._id).eq("userId", user._id)).unique();
     const cleanNote = note?.trim().slice(0, 800) || undefined;
-    if (prior) await ctx.db.patch(prior._id, { rating, note: cleanNote, updatedAt: Date.now() });
-    else await ctx.db.insert("customAgentFeedback", { orgId: org._id, customAgentId: run.customAgentId, workflowRunId: run._id, userId: user._id, rating, note: cleanNote, evidenceKind: "member_reported", createdAt: Date.now(), updatedAt: Date.now() });
-    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "custom_agent.outcome_rated", subjectType: "workflowRun", subjectId: run._id, summary: `Recorded ${rating === "helpful" ? "helpful" : "needs work"} feedback for a specialist run${cleanNote ? `: ${cleanNote.slice(0, 120)}` : "."}` });
+    const now = Date.now();
+    if (prior) await ctx.db.patch(prior._id, { rating, note: cleanNote, minutesSaved, updatedAt: now });
+    else await ctx.db.insert("customAgentFeedback", { orgId: org._id, customAgentId: run.customAgentId, workflowRunId: run._id, userId: user._id, rating, note: cleanNote, minutesSaved, evidenceKind: "member_reported", createdAt: now, updatedAt: now });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "custom_agent.outcome_rated", subjectType: "workflowRun", subjectId: run._id, summary: `Recorded ${rating === "helpful" ? "helpful" : "needs work"} feedback for a specialist run${minutesSaved === undefined ? "; time saved left unknown." : `; member reported ${minutesSaved} minutes saved.`}` });
   },
 });
 
