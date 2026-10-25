@@ -22,8 +22,8 @@ Status: **Done**, **Next**, or **Planned**. Size: S (one module + tests), M (bac
 | 9 | Possible tracking breaks and unusual swings in connected metrics | 292, 293, 295, 407 | S–M | Done (see ledger) |
 | 10 | Owner-chosen Meta conversion action so cost-per-conversion advice works | 46 | M | Done (see ledger) |
 | 11 | Excerpt checks extended to audience needs, decision observations and other prose references | 24; handoff 3 | S–M | Done (see ledger) |
-| 12 | Lead fit and timing scores checked against outreach outcomes | 278, 290, 400 | S | Next |
-| 13 | Owner-recorded AI-answer accuracy (incorrect claim vs correct fact) | 372, 374, 397 | M | Planned |
+| 12 | Lead fit and timing scores checked against outreach outcomes | 278, 290, 400 | S | Done (see ledger) |
+| 13 | Owner-recorded AI-answer accuracy (incorrect claim vs correct fact) | 372, 374, 397 | M | Next |
 | 14 | LocalBusiness structured data and `sameAs` links with owner attestation | 365–367 | S–M | Planned |
 | 15 | Search readiness compared with monitored competitors | 357, 359, 364 | M | Planned |
 | 16 | Structured, sourced competitor battlecards | 206, 207, 393 | M | Planned |

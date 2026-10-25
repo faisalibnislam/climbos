@@ -22,8 +22,8 @@ describe("audience evidence excerpts", () => {
   it("marks every audience item and leaves other fields unchanged", () => {
     const [a] = verifyAudienceEvidence([{ name: "Busy families", needs: [{ statement: "Less food waste", basis: "research", evidenceRefs: ["https://acme.example/about"], evidenceExcerpt: "they hate wasting food every week" }], channelPreferences: [{ channel: "Referrals", rationale: "Book after referrals", basis: "owner_report", evidenceRefs: ["fact:0"] }] }], { facts, pages });
     expect(a.name).toBe("Busy families");
-    expect(a.needs?.[0].evidenceSupport).toBe("found_in_source");
-    expect(a.channelPreferences?.[0].evidenceSupport).toBe("no_excerpt");
+    expect((a.needs?.[0] as { evidenceSupport?: string }).evidenceSupport).toBe("found_in_source");
+    expect((a.channelPreferences?.[0] as { evidenceSupport?: string }).evidenceSupport).toBe("no_excerpt");
   });
 
   it("shows each item's basis, excerpt and check, with the not-proof caveat", () => {
