@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(42);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(43);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -185,6 +185,17 @@ describe("creative strategy precedent retrieval", () => {
     expect(match?.precedent.sources).toEqual(expect.arrayContaining([
       expect.objectContaining({ url: expect.stringContaining("i.dell.com/sites/csdocuments"), sourceRole: "company_primary" }),
       expect.objectContaining({ url: "https://pubsonline.informs.org/doi/10.1287/mnsc.1120.1599", publicationDate: "2013-01" }),
+    ]));
+  });
+
+  it("retrieves a multi-barrier service offer without treating it as a discount", () => {
+    const match = retrieveCreativePrecedents("Combine building materials, financing, expert design help, and delivery for customers who lack savings, storage, and construction know-how").find(({ precedent }) => precedent.id === "CP-043");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("rather than product price alone");
+    expect(match?.precedent.transferRisk).toContain("Credit can create repayment harm");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.cemexmexico.com/sostenibilidad/vivienda/patrimonio-hoy", sourceRole: "company_primary" }),
+      expect.objectContaining({ url: expect.stringContaining("documents1.worldbank.org/curated/en/426791468030548664"), sourceRole: "independent_secondary" }),
     ]));
   });
 
