@@ -537,37 +537,43 @@ export const pauseAll = mutation({
     await ctx.db.patch(org._id, { emergencyStop: { active: true, at: now, by: user._id, reason: reason?.slice(0, 300) } });
     let canceledRuns = 0;
     for (const status of ["proposed", "cost_reserved", "needs_approval", "approved", "scheduled"] as const) {
-      const runs = await ctx.db
-        .query("workflowRuns")
-        .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", status))
-        .take(100);
-      for (const r of runs) {
-        await finishRunImpl(ctx, { runId: r._id, status: "canceled", error: "Paused by owner", userMessage: "Canceled because all activity was paused." });
-        canceledRuns++;
+      while (true) {
+        const runs = await ctx.db
+          .query("workflowRuns")
+          .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", status))
+          .take(100);
+        if (!runs.length) break;
+        for (const r of runs) {
+          await finishRunImpl(ctx, { runId: r._id, status: "canceled", error: "Paused by owner", userMessage: "Canceled because all activity was paused." });
+          canceledRuns++;
+        }
       }
     }
-    const scheduled = await ctx.db
-      .query("artifacts")
-      .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "scheduled"))
-      .take(300);
-    for (const a of scheduled) await ctx.db.patch(a._id, { status: "approved", scheduledFor: undefined, updatedAt: now });
-    const activeCampaigns = (
-      await ctx.db
-        .query("campaigns")
-        .withIndex("by_org", (q) => q.eq("orgId", org._id))
-        .take(200)
-    ).filter((c) => c.status === "active");
-    for (const c of activeCampaigns) {
-      await ctx.scheduler.runAfter(0, internal.ads.pauseCampaignForStop, { campaignId: c._id });
+    let unscheduled = 0;
+    while (true) {
+      const scheduled = await ctx.db
+        .query("artifacts")
+        .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "scheduled"))
+        .take(100);
+      if (!scheduled.length) break;
+      for (const artifact of scheduled) {
+        await ctx.db.patch(artifact._id, { status: "approved", scheduledFor: undefined, updatedAt: now });
+        unscheduled++;
+      }
     }
+    const activeCampaigns = (await ctx.db.query("campaigns").withIndex("by_org", (q) => q.eq("orgId", org._id)).collect()).filter((campaign) => campaign.status === "active");
+    for (const campaign of activeCampaigns) {
+      await ctx.scheduler.runAfter(0, internal.ads.pauseCampaignForStop, { campaignId: campaign._id });
+    }
+    const campaignsPausing = activeCampaigns.length;
     await audit(ctx, {
       orgId: org._id,
       actorType: "user",
       actorId: user._id,
       action: "workspace.paused",
-      summary: `Paused all activity: ${canceledRuns} job(s) canceled, ${scheduled.length} post(s) unscheduled, ${activeCampaigns.length} ad campaign pause(s) requested.`,
+      summary: `Paused all activity: ${canceledRuns} job(s) canceled, ${unscheduled} post(s) unscheduled, ${campaignsPausing} ad campaign pause(s) requested.`,
     });
-    return { canceledRuns, unscheduled: scheduled.length, campaignsPausing: activeCampaigns.length };
+    return { canceledRuns, unscheduled, campaignsPausing };
   },
 });
 
@@ -744,11 +750,12 @@ export const plan = query({
       latestVersionAt: latest?.createdAt ?? null,
       /** The other version worth seeing: a newer one waiting or sent back, or the approved one while viewing it. */
       otherVersion: other ? { id: other._id, version: other.version, status: other.status, createdAt: other.createdAt } : null,
-      planEstimateMicros: estimateJobMicros(planJob("strategy")),
+      planEstimateMicros: estimateJobMicros(planJob("strategy", {}, { fixture: org.kind === "demo" }), { fixture: org.kind === "demo" }),
       experiments: experiments.map((e) => ({ id: e._id, name: e.name, hypothesis: e.hypothesis, population: e.population, method: e.method, assignmentUnit: e.assignmentUnit, assignmentMethod: e.assignmentMethod, primaryMetric: e.primaryMetric, primaryMetricType: e.primaryMetricType, denominator: e.denominator, baselineRate: e.baselineRate, baselineProvenance: e.baselineProvenance, baselineEvidenceRefs: e.baselineEvidenceRefs, baselineBasis: e.baselineBasis, minimumMeaningfulEffect: e.minimumMeaningfulEffect, plannedSamplePerArm: e.plannedSamplePerArm, plannedSampleBasis: e.plannedSampleBasis, guardrails: e.guardrails, durationDays: e.durationDays, stoppingRule: e.stoppingRule, status: e.status, analyses: (e.analyses ?? []).map(({ reviewedBy: _by, ...x }) => x) })),
       insights: business?.insights ?? null,
       sources: facts,
       currency: org.currency,
+      businessCurrency: business?.currency ?? org.currency,
     };
   },
 });
@@ -764,6 +771,7 @@ export const setUnitEconomics = mutation({
     ownerHoursPerWeek: v.optional(v.number()),
     newCustomersPerMonth: v.optional(v.number()),
     monthlyGrowthCashUsd: v.optional(v.number()),
+    segmentEconomics: v.optional(v.array(v.object({ segment: v.string(), currency: v.string(), periodDays: v.number(), customers: v.number(), netRevenue: v.number(), variableCosts: v.number(), costBoundary: v.string(), unknownCosts: v.optional(v.array(v.string())), strategicValueNote: v.optional(v.string()) }))),
     ranges: v.optional(v.object({ revenue: v.optional(v.object({ low: v.number(), high: v.number() })), margin: v.optional(v.object({ low: v.number(), high: v.number() })), churn: v.optional(v.object({ low: v.number(), high: v.number() })) })),
   },
   handler: async (ctx, { slug, ranges, ...vals }) => {
@@ -780,6 +788,23 @@ export const setUnitEconomics = mutation({
     check(vals.ownerHoursPerWeek, 0, 80, "Hours a week");
     check(vals.newCustomersPerMonth, 0, 100_000, "New customers a month");
     check(vals.monthlyGrowthCashUsd, 0, 100_000_000, "Monthly growth cash");
+    if (vals.segmentEconomics) {
+      if (vals.segmentEconomics.length > 8) throw appError("INVALID", "Compare up to eight customer groups at a time.");
+      const names = new Set<string>();
+      for (const item of vals.segmentEconomics) {
+        const key = item.segment.trim().toLocaleLowerCase("en-US");
+        if (!key || item.segment.length > 80 || names.has(key)) throw appError("INVALID", "Each customer group needs a unique name of 1–80 characters.");
+        names.add(key);
+        if (!/^[A-Z]{3}$/.test(item.currency)) throw appError("INVALID", "Use a three-letter currency code for each segment total.");
+        if (!Number.isSafeInteger(item.periodDays) || item.periodDays < 1 || item.periodDays > 3650) throw appError("INVALID", "Segment comparison period must be 1–3650 days.");
+        if (!Number.isSafeInteger(item.customers) || item.customers < 1 || item.customers > 10_000_000) throw appError("INVALID", "Segment customer count must be a whole number above zero.");
+        check(item.netRevenue, 0, 1_000_000_000, "Segment net revenue");
+        check(item.variableCosts, 0, 1_000_000_000, "Segment variable costs");
+        if (item.costBoundary.trim().length < 12 || item.costBoundary.length > 240) throw appError("INVALID", "Describe the variable costs included, or name the missing costs.");
+        if ((item.unknownCosts?.length ?? 0) > 8 || item.unknownCosts?.some((cost) => !cost.trim() || cost.length > 100)) throw appError("INVALID", "List up to eight specific unknown costs.");
+        if (item.strategicValueNote && item.strategicValueNote.length > 240) throw appError("INVALID", "Strategic value note must be 240 characters or less.");
+      }
+    }
     // A range must be low < high and pass the same checks; its value is the midpoint (set by the client, re-checked here).
     const pairs = { revenue: ["revenuePerCustomerMonthUsd", 0.01, 1_000_000, "Revenue range"], margin: ["grossMargin", 0.01, 1, "Margin range"], churn: ["monthlyChurn", 0.001, 0.95, "Churn range"] } as const;
     for (const [k, [field, lo, hi, what]] of Object.entries(pairs)) {
@@ -799,6 +824,7 @@ export const setUnitEconomics = mutation({
       ownerHoursPerWeek: vals.ownerHoursPerWeek ?? prev?.ownerHoursPerWeek,
       newCustomersPerMonth: vals.newCustomersPerMonth ?? prev?.newCustomersPerMonth,
       monthlyGrowthCashUsd: vals.monthlyGrowthCashUsd ?? prev?.monthlyGrowthCashUsd,
+      segmentEconomics: vals.segmentEconomics ?? prev?.segmentEconomics,
       // A new single number replaces its old range; a new range replaces the old one.
       ...(() => {
         const keep = { ...(prev?.ranges ?? {}) } as Record<string, { low: number; high: number }>;
@@ -932,7 +958,7 @@ function hasNewerOwnerEconomics(
   if (!owner) return false;
   const snapshot = strategy.expert?.snapshot as { ownerEconomics?: OwnerEconomics } | undefined;
   if (snapshot?.ownerEconomics) {
-    const keys = ["revenuePerCustomerMonthUsd", "grossMargin", "monthlyChurn", "ownerHourUsd", "ownerHoursPerWeek", "newCustomersPerMonth", "monthlyGrowthCashUsd", "ranges"] as const;
+    const keys = ["revenuePerCustomerMonthUsd", "grossMargin", "monthlyChurn", "ownerHourUsd", "ownerHoursPerWeek", "newCustomersPerMonth", "monthlyGrowthCashUsd", "segmentEconomics", "ranges"] as const;
     return keys.some((key) => JSON.stringify(snapshot.ownerEconomics?.[key]) !== JSON.stringify(owner[key]));
   }
   return owner.updatedAt > strategy.createdAt;
@@ -1297,8 +1323,8 @@ export const aiMode = query({
     const view = await aiModeView(ctx, org);
     const fixture = org.kind === "demo";
     const estimates = (kind: "onboarding_research" | "strategy" | "content_ads" | "social_calendar") => ({
-      basic: estimateJobMicros(planJob(kind, {}, { fixture, mode: "basic" })),
-      expert: estimateJobMicros(planJob(kind, {}, { fixture, mode: "expert" })),
+      basic: estimateJobMicros(planJob(kind, {}, { fixture, mode: "basic" }), { fixture }),
+      expert: estimateJobMicros(planJob(kind, {}, { fixture, mode: "expert" }), { fixture }),
     });
     return {
       ...view,

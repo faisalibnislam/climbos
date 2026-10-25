@@ -19,6 +19,7 @@ export const CampaignTimingSchema = z.object({
   timezoneBasis: z.string().min(1).max(240),
   timezoneEvidenceRef: z.string().nullable(),
   geographyBasis: z.string().min(1).max(240),
+  geographyEvidenceRef: z.string().nullable(),
   moment: z.object({
     name: z.string().nullable(),
     businessReason: z.string().min(1).max(360),
@@ -97,6 +98,16 @@ export function lintCampaignTiming(timing: CampaignTiming | undefined, context: 
     const source = context.sourceUrls.includes(timing.timezoneEvidenceRef) ? context.researchNotes : undefined;
     if (!timing.timezone || !(fact ?? source)?.includes(timing.timezone)) error("Timezone evidence must resolve to an owner fact or source that states the timezone.", "timezoneEvidenceRef");
   }
+  if (timing.geographyEvidenceRef) {
+    const factIndex = /^fact:(\d+)$/.exec(timing.geographyEvidenceRef)?.[1];
+    const fact = factIndex === undefined ? undefined : context.facts[Number(factIndex)];
+    const source = context.sourceUrls.includes(timing.geographyEvidenceRef) ? context.researchNotes : undefined;
+    const evidenceText = fact ?? source;
+    if (!evidenceText || !evidenceText.includes(timing.geographyBasis)) error("Served geography must quote an exact owner fact or retrieved source claim.", "geographyEvidenceRef");
+  }
+  const geographyUnknown = /\b(?:unknown|not supplied|not confirmed)\b/i.test(timing.geographyBasis);
+  if (timing.decision === "proceed" && timing.moment.name && geographyUnknown) error("A local or seasonal event cannot proceed while the served geography is unknown.", "geographyBasis");
+  if (timing.decision === "proceed" && !geographyUnknown && !timing.geographyEvidenceRef) error("A dated campaign needs a fact or source reference for its served-geography basis.", "geographyEvidenceRef");
   if (timing.decision === "proceed" && !timing.timezone) error("Proceed requires a known timezone for interpreting the proposed local window.", "timezone");
   if (window && (!validDate(window.startDate) || !validDate(window.endDate) || window.endDate < window.startDate)) error("The proposed window must use real calendar dates in chronological order.", "proposedWindow");
   if (timing.decision === "not_relevant") {

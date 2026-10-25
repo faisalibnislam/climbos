@@ -171,8 +171,8 @@ export const estimate = query({
     const { org } = await requireOrgAccess(ctx, { slug }, "view");
     const fixture = org.kind === "demo";
     return {
-      maxCostMicros: estimateJobMicros(planJob("reel", { images: 2 }, { fixture })),
-      withClipsMicros: estimateJobMicros(planJob("reel", { images: 2, clips: 1 }, { fixture })),
+      maxCostMicros: estimateJobMicros(planJob("reel", { images: 2 }, { fixture }), { fixture }),
+      withClipsMicros: estimateJobMicros(planJob("reel", { images: 2, clips: 1 }, { fixture }), { fixture }),
       clipsUnlocked: await featureAllowed(ctx, org, "expert"),
     };
   },

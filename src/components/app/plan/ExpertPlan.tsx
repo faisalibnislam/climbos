@@ -297,11 +297,11 @@ function DecisionSummary({ d }: { d: Decision }) {
   const lost = d.options.filter((o) => !o.chosen);
   return (
     <div className="flex flex-col gap-2 rounded-[var(--radius-card)] bg-surface-2 p-3">
-      <FieldLabel icon={Crosshair}>Main constraint</FieldLabel>
+      <FieldLabel icon={Crosshair}>Likely constraint · ClimbOS interpretation</FieldLabel>
       <h3 className="heading-card">{CONSTRAINT_LABEL[d.constraint as BindingConstraint] ?? d.constraint}</h3>
       <dl className="flex flex-col gap-1 text-ui">
         <div>
-          <dt className="inline font-semibold text-ink">Approach: </dt>
+          <dt className="inline font-semibold text-ink">Recommendation: </dt>
           <dd className="inline text-ink-2">{d.guidingPolicy}</dd>
         </div>
         <div>
@@ -328,7 +328,7 @@ function DecisionSummary({ d }: { d: Decision }) {
           ) : null}
           {d.explanations.length ? (
             <div className="flex flex-col gap-1">
-              <FieldLabel icon={Lightbulb}>Other explanations</FieldLabel>
+              <FieldLabel icon={Lightbulb}>Competing explanations to check</FieldLabel>
               <ul className="flex flex-col gap-1.5">
                 {d.explanations.map((e, i) => (
                   <li key={i} className="flex min-w-0 flex-col gap-0.5 rounded-[var(--radius-control)] bg-surface px-2.5 py-1.5">
@@ -623,14 +623,14 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
         className="grid-cols-3 sm:grid-cols-3"
         stats={[
           {
-            label: "Cost / customer",
+            label: "Cost to win one customer",
             value: usd(m.cacUsd, economics.currency),
             tone: m.profitable === true ? "good" : m.profitable === false ? "bad" : "default",
             hint: m.profitable === true ? "Below modeled 12-month contribution" : m.profitable === false ? "Above modeled 12-month contribution" : undefined,
           },
-          m.valueUsd === null ? { label: "Worth / year", value: "Unknown", hint: "Add price, margin and churn" } : { label: "Worth / year", value: usd(m.valueUsd, economics.currency) },
+          m.valueUsd === null ? { label: "Modeled money left in 12 months", value: "Unknown", hint: "Add price, margin and churn" } : { label: "Modeled money left in 12 months", value: usd(m.valueUsd, economics.currency) },
           {
-            label: "Payback",
+            label: "Months to recover the cost",
             value: pb === null ? "—" : `${pb} mo`,
             tone: pb === null ? "default" : pb <= 6 ? "good" : pb <= 12 ? "warn" : "bad",
             // Churn-weighted payback (longer than "per surviving customer"); named so it isn't compared with other definitions.
@@ -644,6 +644,14 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
         </Badge>
         <span className="text-xs text-ink-3">Conditional on the listed inputs; not a guaranteed result.</span>
       </div>
+      <details className="rounded-[var(--radius-control)] border border-line px-3 py-2">
+        <summary className="cursor-pointer text-xs font-medium text-ink-2">What these money estimates mean</summary>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-ink-3">
+          <li>Cost to win one customer divides this play&apos;s estimated cash costs and the value of your time by its modeled new paying customers.</li>
+          <li>Modeled money left in 12 months applies the supplied share of revenue left after variable costs to each month the customer is expected to remain active. Monthly cancellations reduce the estimate. It is before fixed overhead, taxes, and any costs not included in those inputs.</li>
+          <li>Months to recover the cost estimates how long that customer&apos;s money left after variable costs takes to cover the cost to win them, allowing for cancellations. It is a model, not a promised result.</li>
+        </ul>
+      </details>
       <dl className="grid gap-2 rounded-[var(--radius-control)] bg-surface-2 p-3 text-sm sm:grid-cols-3">
         <div><dt className="text-xs text-ink-3">Cash over {play.horizonDays} days</dt><dd className="font-medium tabular-nums text-ink">{money(m.costBreakdown.cashMediaUsd + m.costBreakdown.cashOtherUsd)}</dd><dd className="text-xs text-ink-3">Media {money(m.costBreakdown.cashMediaUsd)} + other cash costs {money(m.costBreakdown.cashOtherUsd)}</dd></div>
         <div><dt className="text-xs text-ink-3">Owner time value</dt><dd className="font-medium tabular-nums text-ink">{money(m.costBreakdown.ownerTimeUsd)}</dd><dd className="text-xs text-ink-3">Hours × your hourly value</dd></div>
@@ -756,14 +764,22 @@ function PlayDetails({ play, economics, id }: { play: PlayView; economics?: Econ
             <div><dt className="text-xs text-ink-3">Who and why</dt><dd className="text-ui text-ink">{offer.segment} · {offer.needOrObstacle} · objective: {offer.objective}</dd></div>
             <div><dt className="text-xs text-ink-3">Evidence</dt><dd className="text-ui text-ink">{offer.evidenceBasis.replaceAll("_", " ")} · {offer.evidenceNote}{offer.evidenceRefs.length ? ` · ${offer.evidenceRefs.join(" · ")}` : ""}</dd></div>
             {offerEconomics?.known ? <>
-              <div><dt className="text-xs text-ink-3">Contribution per sale · {offer.currency}</dt><dd className="text-ui text-ink">Current {formatMoney(offerEconomics.currentContribution, offer.currency)} ({offerEconomics.currentMarginRate === null ? "margin unknown" : `${(offerEconomics.currentMarginRate * 100).toFixed(1)}%`}) · proposed {formatMoney(offerEconomics.proposedContribution, offer.currency)} ({offerEconomics.proposedMarginRate === null ? "margin unknown" : `${(offerEconomics.proposedMarginRate * 100).toFixed(1)}%`})<span className="mt-1 block text-xs text-ink-3">Current net {formatMoney(offer.current.netPrice.amount, offer.currency)} less {offer.current.variableCosts.map((cost) => `${cost.category} ${formatMoney(cost.value.amount, offer.currency)}`).join(", ")}; proposed net {formatMoney(offer.proposed.netPrice.amount, offer.currency)} ({offerEconomics.priceChangeFromCurrent === null ? "price change unknown" : `change ${formatMoney(offerEconomics.priceChangeFromCurrent, offer.currency)}`}) less {offer.proposed.variableCosts.map((cost) => `${cost.category} ${formatMoney(cost.value.amount, offer.currency)}`).join(", ")}.</span></dd></div>
-              <div><dt className="text-xs text-ink-3">Contribution comparison</dt><dd className="text-ui text-ink">{offerEconomics.proposedUnitsPerCurrentUnitToMatchContribution === null ? (offerEconomics.currentContribution !== null && offerEconomics.currentContribution <= 0 ? "Current offer has non-positive contribution; a sales multiple is not meaningful." : "Proposed unit contribution is zero or negative; no finite break-even volume.") : `${offerEconomics.proposedUnitsPerCurrentUnitToMatchContribution.toFixed(2)} proposed sales to match the contribution of one current-offer sale.`} Boundary: {offer.costBoundary} · horizon: {offer.horizonDays} days.</dd></div>
+              <div><dt className="text-xs text-ink-3">Money left per sale after listed costs · {offer.currency}</dt><dd className="text-ui text-ink">Current {formatMoney(offerEconomics.currentContribution, offer.currency)} ({offerEconomics.currentMarginRate === null ? "share of price unknown" : `${(offerEconomics.currentMarginRate * 100).toFixed(1)}% of price left`}) · proposed {formatMoney(offerEconomics.proposedContribution, offer.currency)} ({offerEconomics.proposedMarginRate === null ? "share of price unknown" : `${(offerEconomics.proposedMarginRate * 100).toFixed(1)}% of price left`})<span className="mt-1 block text-xs text-ink-3">Current net {formatMoney(offer.current.netPrice.amount, offer.currency)} less {offer.current.variableCosts.map((cost) => `${cost.category} ${formatMoney(cost.value.amount, offer.currency)}`).join(", ")}; proposed net {formatMoney(offer.proposed.netPrice.amount, offer.currency)} ({offerEconomics.priceChangeFromCurrent === null ? "price change unknown" : `change ${formatMoney(offerEconomics.priceChangeFromCurrent, offer.currency)}`}) less {offer.proposed.variableCosts.map((cost) => `${cost.category} ${formatMoney(cost.value.amount, offer.currency)}`).join(", ")}.</span></dd></div>
+              <div><dt className="text-xs text-ink-3">Sales needed to match one current sale&apos;s contribution</dt><dd className="text-ui text-ink">{offerEconomics.proposedUnitsPerCurrentUnitToMatchContribution === null ? (offerEconomics.currentContribution !== null && offerEconomics.currentContribution <= 0 ? "Current offer has non-positive contribution; a sales multiple is not meaningful." : "Proposed unit contribution is zero or negative; no finite break-even volume.") : `${offerEconomics.proposedUnitsPerCurrentUnitToMatchContribution.toFixed(2)} proposed sales to match the contribution of one current-offer sale.`} Based on: {offer.costBoundary} · comparison horizon: {offer.horizonDays} days.</dd></div>
             </> : <div><dt className="text-xs text-ink-3">Economics · {offer.currency}</dt><dd className="text-ui text-amber-800">Not enough inputs to calculate unit contribution: {offerEconomics?.unknowns.join(" · ")}</dd></div>}
             <div><dt className="text-xs text-ink-3">Capacity</dt><dd className="text-ui text-ink">{offer.capacity.status.replaceAll("_", " ")}{offer.capacity.claim ? ` · ${offer.capacity.claim}` : ""}</dd></div>
             <div><dt className="text-xs text-ink-3">Test audience and comparison</dt><dd className="text-ui text-ink">{offer.test.eligibleAudience} · {offer.test.baselineOrComparison}</dd></div>
             <div><dt className="text-xs text-ink-3">Primary outcome and window</dt><dd className="text-ui text-ink">{offer.test.primaryOutcome} · {offer.test.observationWindowDays} days</dd></div>
             <div><dt className="text-xs text-ink-3">Continue / stop</dt><dd className="text-ui text-ink">{offer.test.continueCriteria} / {offer.test.stopCriteria}</dd></div>
           </dl>
+          {offer.promotionHistory ? (
+            <div className="rounded-[var(--radius-control)] border border-line bg-surface px-3 py-2">
+              <p className="text-xs font-medium text-ink-2">Promotion history · {offer.promotionHistory.status.replaceAll("_", " ")}{offer.promotionHistory.period ? ` · ${offer.promotionHistory.period}` : ""}</p>
+              {offer.promotionHistory.claim ? <p className="mt-1 text-ui text-ink">Evidence: {offer.promotionHistory.claim}{offer.promotionHistory.reference ? ` · ${offer.promotionHistory.reference}` : ""}</p> : null}
+              <p className="mt-1 text-xs text-ink-2">Frequency: {offer.promotionHistory.promotionPattern} · Repeat purchases: {offer.promotionHistory.repeatPurchaseComparison} · Full price: {offer.promotionHistory.fullPriceComparison}</p>
+              <p className="mt-1 text-xs text-ink-3">Limit: {offer.promotionHistory.limitation}</p>
+            </div>
+          ) : <p className="text-xs text-ink-3">Promotion and repeat-purchase history was not available for this older plan.</p>}
           <div><p className="text-xs font-medium text-ink-2">Alternatives considered</p><ul className="mt-1 list-disc pl-5 text-ui text-ink">{offer.alternatives.map((item) => <li key={item.alternative}>{item.alternative.replaceAll("_", " ")}: {item.reason}</li>)}</ul></div>
           <div><p className="text-xs font-medium text-ink-2">Risks and unknowns</p><ul className="mt-1 list-disc pl-5 text-ui text-ink">{offer.risks.map((risk) => <li key={risk.kind}>{risk.kind.replaceAll("_", " ")} · {risk.status}: {risk.note}</li>)}</ul><p className="mt-1 text-ui text-amber-800">{offer.unknowns.length ? offer.unknowns.join(" · ") : "No material offer inputs listed as unknown."}{offer.test.ownerInputs.length ? ` · Owner input needed: ${offer.test.ownerInputs.join(" · ")}` : ""}</p></div>
           <p className="text-xs text-ink-3">{offer.authorizationNote}</p>
@@ -1111,6 +1127,7 @@ function PlayCard({ play, slug, economics, results, planId, targets, canEdit = f
               </div>
               <p className="mt-1 text-xs text-ink-2">{play.timingAssessment.rationale}</p>
               <p className="mt-1 text-xs text-ink-3">Calendar basis: {play.timingAssessment.timezone ?? "timezone unknown"} · {play.timingAssessment.timezoneBasis} · {play.timingAssessment.geographyBasis}</p>
+              {play.timingAssessment.geographyEvidenceRef?.startsWith("https://") ? <a href={play.timingAssessment.geographyEvidenceRef} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs text-brand-800 underline">Geography evidence<ExternalLink aria-hidden className="size-3" /></a> : null}
               {play.timingAssessment.moment.name ? <p className="mt-1 text-xs text-ink-2">{play.timingAssessment.moment.name}: {play.timingAssessment.moment.businessReason}</p> : null}
               <p className="mt-1 text-xs text-ink-3">Prep: {play.timingAssessment.preparation.leadTimeDays === null ? "unknown" : `${play.timingAssessment.preparation.leadTimeDays}d`} · delivery: {play.timingAssessment.preparation.deliveryLeadTimeDays === null ? "unknown" : `${play.timingAssessment.preparation.deliveryLeadTimeDays}d`} · lead-time feasibility: {play.timingAssessment.preparation.feasible === null ? "unknown" : play.timingAssessment.preparation.feasible ? "feasible" : "not feasible"} · capacity: {play.timingAssessment.capacity.status.replaceAll("_", " ")}</p>
               {play.timingAssessment.unknowns.length ? <p className="mt-1 text-xs text-amber-800">Unknown: {play.timingAssessment.unknowns.join(" · ")}</p> : null}

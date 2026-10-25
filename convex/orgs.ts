@@ -14,7 +14,7 @@ import type { Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import { assertNoActiveRun, createRunWithReservation, latestRunOfKind } from "./engine";
 import { audit } from "./lib/audit";
-import { planJob } from "./lib/jobPlans";
+import { estimateJobMicros, planJob } from "./lib/jobPlans";
 import { createOnboardingPeriod } from "./lib/periods";
 import { appError, isOperator, optionalUser, requireOrgAccess, requireUser } from "./lib/tenancy";
 import { chargeableAccess, isPaid } from "./lib/access";
@@ -73,13 +73,23 @@ export const newWorkspaceAiMode = query({
   args: {},
   handler: async (ctx) => {
     const user = await optionalUser(ctx);
-    if (!user) return { expertUnlocked: false };
+    if (!user) return { expertUnlocked: false, estimates: { onboarding_research: onboardingResearchEstimates() } };
     const account = await ctx.db.query("accounts").withIndex("by_owner", (q) => q.eq("ownerUserId", user._id)).first();
-    if (!account || account.suspendedAt) return { expertUnlocked: false };
+    if (!account || account.suspendedAt) return { expertUnlocked: false, estimates: { onboarding_research: onboardingResearchEstimates() } };
     const first = (await accountWorkspaces(ctx, account._id))[0];
-    return { expertUnlocked: first ? await isPaid(ctx, { _id: first._id, accountId: account._id }) : false };
+    return {
+      expertUnlocked: first ? await isPaid(ctx, { _id: first._id, accountId: account._id }) : false,
+      estimates: { onboarding_research: onboardingResearchEstimates() },
+    };
   },
 });
+
+function onboardingResearchEstimates() {
+  return {
+    basic: estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "basic" })),
+    expert: estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "expert" })),
+  };
+}
 
 export const me = query({
   args: {},

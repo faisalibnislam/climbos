@@ -57,6 +57,7 @@ import { diagnose, diagnosisBrief, funnelRatesOf, type Diagnosis, type OwnerFunn
 import { businessLifecycleContext } from "../shared/agents/lifecycle";
 import { choosePlaybooks, playbookBrief, type PlaybookContext } from "../shared/playbooks/contracts";
 import { applyOwnerEconomics, churnOf, forecastCustomers, lockedNumbers, playsGoalGap, portfolioP50, selectPortfolio, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
+import { segmentEconomicsBrief } from "../shared/agents/segmentEconomics";
 import { CREATIVE_STRATEGY_PROMPT_VERSION, planTask, playsTask, type CreativeRange } from "../shared/agents/planTasks";
 import { citedUrls, urlKey, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
 import { agentQuality, HARD_RULES, planQuality, withoutHard, type AgentQuality } from "../shared/agents/quality";
@@ -112,6 +113,8 @@ import type { BindingConstraint } from "../shared/agents/decision";
 import { strategyQuickTakeTask } from "../shared/agents/quickTake";
 import { searchConsoleSeoContext, searchConsoleStrategyContext } from "../shared/agents/searchConsoleEvidence";
 import { searchConsolePropertyMatchesWebsite } from "../shared/integrations/searchConsole";
+
+const DAY = 86_400_000;
 
 /** Computed results for the explainer: valid JSON within budget, drops logged. */
 function fitMetrics(json: string): string {
@@ -686,6 +689,9 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     job.org.contentLanguage && job.org.contentLanguage !== "English" ? `LANGUAGE: write every customer-facing word (posts, emails, ads, pages) in ${job.org.contentLanguage}. Notes to the owner stay in English.` : "",
     job.run.kind === "strategy" && b?.unitEconomics?.ownerHoursPerWeek === undefined ? "OWNER TIME: unknown (the owner hasn't said). Keep owner work small, prefer work ClimbOS can do, and state the hours each play needs so the owner can check." : "",
     ownerEconomicsLine(b?.unitEconomics, workspaceCurrency(job)),
+    job.run.kind === "strategy" && b?.unitEconomics?.segmentEconomics?.length
+      ? `SEGMENT ECONOMICS INPUT:\n${untrusted("owner-reported segment economics", segmentEconomicsBrief(b.unitEconomics.segmentEconomics, b.currency ?? workspaceCurrency(job)), 3_000)}`
+      : job.run.kind === "strategy" ? segmentEconomicsBrief(undefined, b?.currency ?? workspaceCurrency(job)) : "",
     audienceLine(job.audience),
     trustPostureContext(job.facts.map((f) => f.evidenceKind)),
     conflictsLine(job),
@@ -699,6 +705,8 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     customerConcentrationLine(job.customerConcentration),
     channelOutcomesLine(job.platformSourceConcentration, b?.unitEconomics?.grossMargin),
     refundExposureLine(job.refundExposure),
+    job.run.kind === "strategy" ? stripeReceivablesLine(job.stripeReceivables) : "",
+    job.subscriptionCohortText,
     job.resultsText ?? "",
   ];
   return formatBusinessKnowledgeLayers(truth, performance);
@@ -782,6 +790,21 @@ function refundExposureLine(signal: JobCtx["refundExposure"]): string {
   return `${base} ${ratio} This is an amount ratio, not the share of customers who refund and not proof of cause. ${signal.partial ? "The 10,000-event read limit was reached; figures may be incomplete. " : ""}${signal.duplicatesRemoved ? `${signal.duplicatesRemoved} duplicate event(s) removed. ` : ""}Use it as a reason to inspect refund reasons and delivery costs before scaling; do not invent a refund threshold or infer why refunds happened.`;
 }
 
+/** Current open Stripe balances are owner-review signals, never assumed recoverable revenue. */
+function stripeReceivablesLine(signal: JobCtx["stripeReceivables"]): string {
+  if (!signal?.connected) return "STRIPE RECEIVABLES: unknown; no connected non-demo Stripe invoice snapshot is available. Do not assume failed, overdue, or recoverable payments.";
+  if (!signal.snapshot) return "STRIPE RECEIVABLES: unknown; Stripe is connected, but no successful open-invoice snapshot is available yet.";
+  const snapshot = signal.snapshot;
+  const ageDays = Math.max(0, Math.floor((Date.now() - snapshot.asOf) / DAY));
+  const stale = signal.syncFailed || !signal.lastSyncAt || signal.lastSyncAt < snapshot.asOf;
+  const rows = snapshot.byCurrency.map((row) => {
+    const amount = (minor: number) => formatMoney(minorToMajor(minor, row.currency), row.currency);
+    return `${row.currency}: ${row.invoiceCount} open invoice(s), remaining balance ${amount(row.remainingMinor)}, past due by invoice UTC due date ${row.pastDueInvoiceCount} totaling ${amount(row.pastDueRemainingMinor)}, due date unavailable for ${row.dueDateUnknownCount}`;
+  });
+  const result = rows.length ? rows.join("; ") : "no open invoice balances at snapshot time";
+  return `STRIPE OPEN INVOICES (read-only aggregate, captured ${new Date(snapshot.asOf).toISOString()}, ${ageDays} day(s) old${stale ? `; stale or sync is not current${signal.syncFailed ? ", and the latest sync failed" : ""}` : ""}${snapshot.partial ? "; list was truncated and totals are partial" : ""}): ${result}. An open invoice is an outstanding billed balance, not proof that payment is recoverable or that a customer should be contacted. Review invoice status, terms, disputes, and customer context with the owner; never retry payment, send a reminder, or contact anyone from this recommendation.`;
+}
+
 async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[], knowledgeReferences: KnowledgeReferenceSet): Promise<PlanSnapshot> {
   const facts = job.facts.map((f) => ({ id: String(f.id), updatedAt: f.updatedAt, statement: f.statement, category: f.category })).sort((a, b) => a.id.localeCompare(b.id));
   const staleFacts = job.staleFacts.map((f) => ({ id: String(f.id), updatedAt: f.updatedAt, statement: f.statement, category: f.category })).sort((a, b) => a.id.localeCompare(b.id));
@@ -793,7 +816,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   const readUrls = [...new Set(sourceUrls)].sort();
   const insightsHash = await sha256Hex(insights);
   const material = {
-    snapshotVersion: 19,
+    snapshotVersion: 20,
     orgId: String(job.org._id),
     businessId: job.business ? String(job.business._id) : null,
     business: job.business ? { name: job.business.name, summary: job.business.summary, website: job.business.website, socialUrls: job.business.socialUrls, businessType: job.business.businessType, lifecycleStage: job.business.lifecycleStage ?? null, funnel: job.business.funnel ?? null, acquisition: job.business.acquisition, currency: job.business.currency, unitEconomics: ownerEconomics, updatedAt: job.business.updatedAt } : null,
@@ -814,7 +837,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
   };
   const snapshotId = await sha256Hex(JSON.stringify(material));
   return {
-    snapshotVersion: 19,
+    snapshotVersion: 20,
     snapshotId,
     capturedAt: Date.now(),
     engine: ENGINE_VERSION,
@@ -1436,7 +1459,8 @@ export const buildStrategy = internalAction({
             models: { ...(playsMeta.models ? { growth_plays: playsMeta.models } : {}), ...(planMeta.models ? { growth_strategy: planMeta.models } : {}) },
             currency: workspaceCurrency(job),
             goal: job.goal ? { statement: job.goal.statement, horizonDays: job.goal.horizonDays, monthlyAdBudget: minorToMajor(job.goal.monthlyAdBudgetMinor, job.goal.currency), ...(job.goal.target ? { target: job.goal.target } : {}) } : null,
-            facts: job.facts.map((f) => ({ id: String(f.id), statement: f.statement, ...(f.category ? { category: f.category } : {}) })),
+            facts: job.facts.map((f) => ({ id: String(f.id), statement: f.statement, ...(f.category ? { category: f.category } : {}), confidence: f.confidence, provenance: f.provenance, evidenceKind: f.evidenceKind, verifiedAt: f.verifiedAt, daysSinceVerification: f.freshness.daysOld })),
+            staleFacts: job.staleFacts.map((f) => ({ id: String(f.id), statement: f.statement, category: f.category, confidence: f.confidence, provenance: f.provenance, verifiedAt: f.verifiedAt, daysSinceVerification: f.freshness.daysOld })),
             ownerEconomics: job.business?.unitEconomics,
             insights: insightsBrief,
             conflicts: conflictsForJob(job),
@@ -2249,7 +2273,7 @@ export const simplePlanJob = internalAction({
     await guarded(ctx, runId, async () => {
       const text =
         task === "retention_plan"
-          ? "TASK: Design customer segments and retention plays (trigger, message, channel) for people who already use the product and agreed to hear from the business."
+          ? "TASK: Design concise lifecycle plays for existing customers and people who agreed to hear from the business. Include retention, upsell, or cross-sell only when the supplied business facts identify the specific product/service, a relevant customer need or value signal, and a credible behavior-based trigger. For each play, fill expansionAssessment. Never infer a customer's value from age, spend, or plan alone; distinguish measured, owner-reported, source-reported, inferred, assumed, and unknown. For an expansion recommendation, quote separate supplied evidence for the offering, customer value signal, and timing trigger, cite each by fact:N or an exact source URL actually supplied to this run, and state a qualified outcome and baseline/comparison. If product catalog, customer need/value, consent, or trigger evidence is missing, choose validate_first, leave invented offers out, list the smallest useful owner input or validation step, and keep unknowns explicit. Use a behavior or lifecycle event for timing; do not invent a calendar deadline or customer activity. Define stop/continue rules without guessed numeric thresholds. This output is advice and draft direction only; do not contact customers, change billing or publish."
           : "TASK: Define the ideal customer, qualification questions and a follow-up sequence for leads the business ALREADY has (inbound or CRM). Never imply access to a contact database.";
       const out = await runAgentTask<unknown>(
         ctx,

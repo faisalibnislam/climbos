@@ -23,6 +23,7 @@ const assessment = (overrides: Partial<OfferAssessment> = {}): OfferAssessment =
   evidenceBasis: "owner_reported",
   evidenceRefs: ["fact:0"],
   evidenceNote: "Owner reports that qualified quote requests do not book because of stated price objections.",
+  promotionHistory: { status: "unknown", reference: null, claim: "", period: null, promotionPattern: "Promotion frequency is unknown.", repeatPurchaseComparison: "Repeat purchase after a promotion is unknown.", fullPriceComparison: "Full-price comparison is unavailable.", limitation: "No comparable promotion history was supplied.", },
   alternatives: [
     { alternative: "positioning", reason: "Test clearer explanation of the included work before lowering price." },
     { alternative: "conversion_path", reason: "Review quote follow-up and booking friction." },
@@ -59,7 +60,7 @@ const assessment = (overrides: Partial<OfferAssessment> = {}): OfferAssessment =
   },
   urgencyClaim: null,
   urgencyEvidenceRef: null,
-  unknowns: ["Incrementality versus purchases brought forward"],
+  unknowns: ["Incrementality versus purchases brought forward", "No measured or owner-reported promotion and repeat-purchase history was supplied."],
   authorizationNote: "This assessment is advisory only and requires owner approval before any external change.",
   ...overrides,
 });
@@ -87,6 +88,26 @@ describe("offer and promotion recommendations", () => {
     const guardrailContext = { ...context, facts: [fact.replace("minimum contribution is $35", "minimum contribution is $45")], evidenceText: fact.replace("minimum contribution is $35", "minimum contribution is $45") };
     const issues = lintOfferAssessment(belowFloor, play(), guardrailContext, "plays[0].offerAssessment");
     expect(issues.some((issue) => /fails the supplied minimum contribution/u.test(issue.message))).toBe(true);
+  });
+
+  it("uses sourced promotion and repeat-purchase history when available, and keeps it unknown otherwise", () => {
+    expect(lintOfferAssessment(assessment(), play(), context, "plays[0].offerAssessment")).toEqual([]);
+    const historyFact = `${fact} The owner reports two comparable seasonal promotions in the last 12 months; customers who first purchased with a promotion had the same observed repeat purchase count as full-price customers during the following 90 days.`;
+    const withHistory = assessment({
+      promotionHistory: {
+        status: "owner_reported",
+        reference: "fact:0",
+        claim: "The owner reports two comparable seasonal promotions in the last 12 months; customers who first purchased with a promotion had the same observed repeat purchase count as full-price customers during the following 90 days.",
+        period: "Last 12 months; 90-day repeat-purchase observation.",
+        promotionPattern: "Two comparable seasonal promotions were reported.",
+        repeatPurchaseComparison: "Same observed repeat purchase count for promotion and full-price cohorts.",
+        fullPriceComparison: "Full-price customers are the comparison group.",
+        limitation: "Owner-reported comparison; cohort size and causal effect are unknown.",
+      },
+    });
+    expect(lintOfferAssessment(withHistory, play(), { ...context, facts: [historyFact] }, "plays[0].offerAssessment")).toEqual([]);
+    const unsupported = assessment({ promotionHistory: { status: "measured", reference: null, claim: "Promotion buyers repeat 30% less.", period: "Last year.", promotionPattern: "Promotions were frequent.", repeatPurchaseComparison: "Promotion buyers repeat less.", fullPriceComparison: "Compared with full-price buyers.", limitation: "Not supported by supplied evidence." } });
+    expect(lintOfferAssessment(unsupported, play(), context, "plays[0].offerAssessment").some((issue) => /promotion history must quote/u.test(issue.message))).toBe(true);
   });
 
   it("keeps missing price or variable cost unknown and blocks a promotion recommendation", () => {
@@ -134,13 +155,14 @@ describe("offer and promotion recommendations", () => {
     const offerContext = approvedPlanContext({ status: "approved", version: 2, expert: { version: 7, plays: [{ name: "Test offer", oneLiner: "Compare a bounded price test", mechanic: "Test a $95 introductory service price with qualified new customers.", offerAssessment: assessment() }] } });
     expect(offerContext).toContain("current net price 100 USD");
     expect(offerContext).toContain("proposed net price 95 USD");
+    expect(offerContext).toContain("supported discount percentage 5%");
     expect(offerContext).toContain("eligibility First-time quote requesters");
     expect(offerContext).toContain("Use these stated terms consistently in drafts");
     expect(offerContext).toContain("not an offer currently available to customers");
 
     const termContext = { status: "approved", version: 2, expert: { version: 7, plays: [{ name: "Test offer", offerAssessment: assessment() }] } };
     const terms = approvedPlanOfferTerms(termContext);
-    expect(terms).toEqual([{ playName: "Test offer", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [100, 95], urgencyClaim: null, eligibleAudience: "First-time quote requesters who cite price; exclude existing full-price bookings." }]);
+    expect(terms).toEqual([{ playName: "Test offer", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [100, 95], allowedDiscountPercentages: [5], allowedMechanisms: ["discount"], urgencyClaim: null, eligibleAudience: "First-time quote requesters who cite price; exclude existing full-price bookings." }]);
     expect(lintApprovedOfferCopy("Try it for $95 USD.", terms, "email.body")).toEqual([]);
     expect(lintApprovedOfferCopy("Try it for $89 USD.", terms, "email.body")).toMatchObject([{ rule: "approved_offer_price", severity: "error" }]);
     expect(lintApprovedOfferCopy("The first offer is $95 USD and the second is $200 USD.", [...terms, { playName: "Annual service", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [200], urgencyClaim: null, eligibleAudience: null }], "email.body")).toEqual([]);
@@ -149,6 +171,9 @@ describe("offer and promotion recommendations", () => {
     expect(lintApprovedOfferCopy("Limited-time offer ends November 30, 2026.", supportedUrgency, "email.body").some((issue) => issue.rule === "approved_offer_urgency")).toBe(false);
     expect(lintApprovedOfferCopy("Special offer available to everyone.", terms, "email.body").some((issue) => issue.rule === "approved_offer_eligibility")).toBe(true);
     expect(lintApprovedOfferCopy("Special offer for first-time quote requesters only.", terms, "email.body").some((issue) => issue.rule === "approved_offer_eligibility")).toBe(false);
+    expect(lintApprovedOfferCopy("Get a free trial for first-time quote requesters.", terms, "email.body").some((issue) => issue.rule === "approved_offer_mechanism")).toBe(true);
+    expect(lintApprovedOfferCopy("Get a 5% discount for first-time quote requesters.", terms, "email.body").some((issue) => issue.rule === "approved_offer_mechanism")).toBe(false);
+    expect(lintApprovedOfferCopy("Get a 10% discount for first-time quote requesters.", terms, "email.body")).toMatchObject([{ rule: "approved_offer_discount", severity: "error" }]);
     expect(approvedPlanOfferTerms({ ...termContext, status: "needs_approval" })).toEqual([]);
 
     const copyBrief = { reader: "new buyer", situation: "reviewing the service", awarenessStage: "unknown" as const, relationshipStage: "unknown" as const, objective: "explain the offer", offerFactIndexes: [], problemJob: "choose a service", trigger: "need", centralIdea: "clear terms", objection: "price", proofFactIndexes: [], prohibitedClaims: [], channel: "email", format: "plain text", deliveryContext: "draft only", brandVoice: "clear", approvedExamples: [], cta: "learn more", afterAction: "measure qualified replies", trackingMetric: "qualified replies", trackingMethod: "count replies", supportingFactIndexes: [], supportingSourceUrls: [], unknowns: [] };

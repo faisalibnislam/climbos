@@ -33,6 +33,7 @@ import { errorInfo, errorMessage } from "../errors";
 import { parseIntro, type ParsedIntro } from "./parseIntro";
 import { RetryRunIfPossible, RunProgress, RunProgressCompact } from "../content/RunProgress";
 import { AiModeChoice, AiModePicker, useAiMode } from "../AiModePicker";
+import { microsToCreditsLabel } from "../money";
 import { BUSINESS_TYPE_OPTIONS, CURRENCY_OPTIONS, GOAL_KIND_OPTIONS, HORIZON_OPTIONS, REVIEW_DAY_OPTIONS, defaultEvents, goalDefaults } from "./options";
 
 
@@ -227,6 +228,10 @@ function BusinessStep({
   const [picked, setAiMode] = useState<"basic" | "expert" | null>(null);
   // Paid accounts default to Expert, like the workspace picker; free ones stay on Basic.
   const aiMode: "basic" | "expert" = expertUnlocked ? (picked ?? "expert") : "basic";
+  const researchEstimate = aiView?.estimates?.onboarding_research?.[aiMode];
+  const researchCost = researchEstimate === undefined
+    ? "Research uses credits; the estimate will appear when it is ready."
+    : `Research uses up to ${microsToCreditsLabel(researchEstimate)}. We charge only for the work completed; unused reserved credits are returned.`;
 
   const parsed: ParsedIntro = useMemo(() => parseIntro(chat), [chat]);
 
@@ -290,7 +295,7 @@ function BusinessStep({
             placeholder="My business is called Northstar Bakery. I sell bread and cakes, and I want more local orders."
             submitLabel="Create business & continue"
             busy={busy}
-            helper="Creates your business space and starts research using credits. You check the details before choosing your next steps."
+            helper={`Creates your business space and starts research. ${researchCost} You check the details before choosing your next steps.`}
             suggestions={["I want help finding customers.", "I want to sell more.", "I am not sure where to start.", "I do not have a website yet."]}
           />
             {chat.trim().length > 8 && (
@@ -334,6 +339,7 @@ function BusinessStep({
               <Button size="lg" loading={busy} loadingText="Setting up…" onClick={() => submit({ name, website: noWebsite ? undefined : website, ownerText: noWebsite ? description : undefined })}>
                 Continue
               </Button>
+              <p className="mt-2 max-w-[70ch] text-xs text-ink-3">{researchCost}</p>
             </div>
           </CardContent>
         </Card>
@@ -357,7 +363,7 @@ function BusinessStep({
       {/* Expert unlocks when the owner's account has a paid (or comped) package; new workspaces join that account. */}
       <details className="mt-6 rounded-[var(--radius-card)] border border-line bg-surface p-4">
         <summary className="cursor-pointer text-sm font-medium text-ink">More options: how much detail to use</summary>
-        <div className="mt-4"><AiModeChoice unlocked={expertUnlocked} value={aiMode} onChange={setAiMode} label="Analysis detail" /></div>
+        <div className="mt-4"><AiModeChoice unlocked={expertUnlocked} costs={aiView?.estimates?.onboarding_research} value={aiMode} onChange={setAiMode} label="Analysis detail" /></div>
       </details>
       <div className="mt-6"><WordHelp /></div>
       <p className="mt-6 text-sm text-ink-3">

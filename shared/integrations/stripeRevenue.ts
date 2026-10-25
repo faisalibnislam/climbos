@@ -38,6 +38,15 @@ function headers(call: StripeCall): Record<string, string> {
 
 export type StripeResource = "charges" | "invoices" | "refunds";
 
+export interface OpenInvoiceExposure {
+  currency: string;
+  invoiceCount: number;
+  remainingMinor: number;
+  pastDueInvoiceCount: number;
+  pastDueRemainingMinor: number;
+  dueDateUnknownCount: number;
+}
+
 /** List objects created at or after `createdGte` (unix seconds), newest first, bounded pages. */
 export async function listSince(
   call: StripeCall & { resource: StripeResource; createdGte: number; maxPages?: number; startingAfter?: string },
@@ -65,6 +74,64 @@ export async function listSince(
     },
     { maxPages: call.maxPages ?? 50, startCursor: call.startingAfter },
   );
+}
+
+/** Current open invoices are a receivables review signal, not forecast revenue. */
+export async function listOpenInvoices(
+  call: StripeCall & { maxPages?: number; startingAfter?: string },
+): Promise<ReadResult<PaginationResult<Record<string, unknown>>>> {
+  let h: Record<string, string>;
+  try {
+    h = headers(call);
+  } catch (err) {
+    return { ok: false, providerMessage: err instanceof Error ? err.message : String(err), retryable: false };
+  }
+  return collectPages<Record<string, unknown>>(
+    async (cursor) => {
+      const url = new URL(`${STRIPE_BASE}/invoices`);
+      url.searchParams.set("status", "open");
+      url.searchParams.set("limit", "100");
+      if (cursor) url.searchParams.set("starting_after", cursor);
+      const out = await requestJson({ url: url.toString(), headers: h, fetchImpl: call.fetchImpl, timeoutMs: call.timeoutMs });
+      if (out.kind !== "ok") return readFailure(out);
+      const d = isRecord(out.data) ? out.data : {};
+      const items = asArray(d.data).filter(isRecord);
+      const last = items[items.length - 1];
+      return { ok: true, data: { items, nextCursor: d.has_more === true && last ? asString(last.id) : undefined } };
+    },
+    { maxPages: call.maxPages ?? 20, startCursor: call.startingAfter },
+  );
+}
+
+export function summarizeOpenInvoices(
+  invoices: readonly Record<string, unknown>[],
+  options: { asOf?: number } = {},
+): OpenInvoiceExposure[] {
+  const asOf = options.asOf ?? Date.now();
+  const day = new Date(asOf).toISOString().slice(0, 10);
+  const rows = new Map<string, OpenInvoiceExposure>();
+  for (const invoice of invoices) {
+    if (asString(invoice.object) !== "invoice" || asString(invoice.status) !== "open") continue;
+    const currency = asString(invoice.currency)?.toUpperCase();
+    const remaining = asNumber(invoice.amount_remaining);
+    if (!currency || !Number.isSafeInteger(remaining) || remaining <= 0) continue;
+    const row = rows.get(currency) ?? { currency, invoiceCount: 0, remainingMinor: 0, pastDueInvoiceCount: 0, pastDueRemainingMinor: 0, dueDateUnknownCount: 0 };
+    if (!Number.isSafeInteger(row.remainingMinor + remaining)) throw new RangeError(`Stripe open-invoice total exceeds safe integer minor units for ${currency}`);
+    row.invoiceCount++;
+    row.remainingMinor += remaining;
+    const dueDate = asNumber(invoice.due_date);
+    if (dueDate > 0) {
+      if (new Date(dueDate * 1000).toISOString().slice(0, 10) < day) {
+        if (!Number.isSafeInteger(row.pastDueRemainingMinor + remaining)) throw new RangeError(`Stripe past-due invoice total exceeds safe integer minor units for ${currency}`);
+        row.pastDueInvoiceCount++;
+        row.pastDueRemainingMinor += remaining;
+      }
+    } else {
+      row.dueDateUnknownCount++;
+    }
+    rows.set(currency, row);
+  }
+  return [...rows.values()].sort((a, b) => a.currency.localeCompare(b.currency));
 }
 
 function idOf(v: unknown): string | undefined {
@@ -151,6 +218,9 @@ export function normalizeRefund(r: Record<string, unknown>): ImportedRevenueEven
 
 export interface StripeImportResult {
   events: ImportedRevenueEvent[];
+  /** Aggregated current receivables only; invoice/customer detail is not retained. */
+  openInvoiceExposure: OpenInvoiceExposure[];
+  openInvoicesPartial: boolean;
   /** Next created[gte] cursor (unix seconds). Boundary duplicates are removed by sourceEventId dedupe. */
   nextCreatedGte: number;
   truncated: boolean;
@@ -175,6 +245,8 @@ export async function importStripeRevenue(
   if (!gross.ok) return gross;
   const refunds = refundsDone ? empty : await listSince({ ...call, resource: "refunds", startingAfter: call.resume?.refundsStartingAfter });
   if (!refunds.ok) return refunds;
+  const openInvoices = await listOpenInvoices({ ...call, maxPages: call.maxPages ?? 20 });
+  if (!openInvoices.ok) return openInvoices;
 
   const events: ImportedRevenueEvent[] = [];
   let skipped = 0;
@@ -200,7 +272,14 @@ export async function importStripeRevenue(
     else skipped++;
   }
   const truncated = gross.data.truncated || refunds.data.truncated;
-  const result: StripeImportResult = { events, nextCreatedGte: maxCreated, truncated, skipped };
+  const result: StripeImportResult = {
+    events,
+    openInvoiceExposure: summarizeOpenInvoices(openInvoices.data.items),
+    openInvoicesPartial: openInvoices.data.truncated,
+    nextCreatedGte: maxCreated,
+    truncated,
+    skipped,
+  };
   if (truncated) {
     // Keep the old cursor until every older page has been read; continue with `resume`.
     result.nextCreatedGte = call.createdGte;

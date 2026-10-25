@@ -15,6 +15,11 @@ export interface ExpansionRun {
 
 type ScoreFields = Record<RubricKey, number | null>;
 type FailureFields = Record<string, boolean | null>;
+type EditingEffort = {
+  participant: "owner_or_operator" | "independent_reviewer" | null;
+  seconds_to_usable: number | null;
+  accepted_without_edits: boolean | null;
+};
 
 export interface HumanReviewItem {
   item_id: string;
@@ -30,6 +35,8 @@ export interface HumanReviewItem {
     answer_b: ScoreFields;
     hard_failures_a: FailureFields;
     hard_failures_b: FailureFields;
+    editing_effort_a: EditingEffort;
+    editing_effort_b: EditingEffort;
     preferred: "A" | "B" | "tie" | null;
     notes: string;
   };
@@ -39,6 +46,7 @@ export interface HumanReviewPacket {
   version: 1;
   packet_id: string;
   reviewer_id: string;
+  editing_effort_instructions: string;
   rubric: typeof RUBRIC;
   hard_failure_definitions: string[];
   items: HumanReviewItem[];
@@ -65,6 +73,7 @@ function packetContentHash(packet: HumanReviewPacket): string {
   return digest(JSON.stringify(canonical({
     version: packet.version,
     packet_id: packet.packet_id,
+    editing_effort_instructions: packet.editing_effort_instructions,
     rubric: packet.rubric,
     hard_failure_definitions: packet.hard_failure_definitions,
     items: packet.items.map(({ ratings: _ratings, ...item }) => item),
@@ -83,6 +92,10 @@ function rowMap(run: ExpansionRun, label: string): Map<string, ExpansionRow> {
 
 function blankScores(): ScoreFields {
   return Object.fromEntries(RUBRIC.map(({ key }) => [key, null])) as ScoreFields;
+}
+
+function blankEditingEffort(): EditingEffort {
+  return { participant: null, seconds_to_usable: null, accepted_without_edits: null };
 }
 
 /** Produce a reproducible randomized A/B order; the mapping is stored separately. */
@@ -129,12 +142,22 @@ export function createHumanReviewPacket(
         answer_b: blankScores(),
         hard_failures_a: Object.fromEntries(hardFailures.map((failure) => [failure, null])),
         hard_failures_b: Object.fromEntries(hardFailures.map((failure) => [failure, null])),
+        editing_effort_a: blankEditingEffort(),
+        editing_effort_b: blankEditingEffort(),
         preferred: null,
         notes: "",
       },
     };
   });
-  const packet: HumanReviewPacket = { version: 1, packet_id: packetId, reviewer_id: "", rubric: RUBRIC, hard_failure_definitions: [...GLOBAL_HARD_FAILURES], items };
+  const packet: HumanReviewPacket = {
+    version: 1,
+    packet_id: packetId,
+    reviewer_id: "",
+    editing_effort_instructions: "For each answer, record edit time only when a real participant completes the same business task. Use owner_or_operator for a business owner or staff member responsible for this work, and independent_reviewer for an outside reviewer. Measure seconds from opening the answer until it is usable for the task. Record whether it was accepted unchanged. Leave fields null when not measured. This is participant-reported task effort, not a business outcome.",
+    rubric: RUBRIC,
+    hard_failure_definitions: [...GLOBAL_HARD_FAILURES],
+    items,
+  };
   return {
     packet,
     key: { version: 1, packet_id: packetId, content_sha256: packetContentHash(packet), baseline_label: labelOf(baseline, "baseline"), candidate_label: labelOf(candidate, "candidate"), mapping },
@@ -148,6 +171,12 @@ export interface HumanReviewSummary {
   incomplete: number;
   pairwise: { baseline: number; candidate: number; tie: number };
   hard_failures: { baseline: number; candidate: number };
+  editing_effort: Record<"baseline" | "candidate", Record<"owner_or_operator" | "independent_reviewer", {
+    observations: number;
+    incomplete: number;
+    median_seconds_to_usable: number | null;
+    accepted_without_edits_rate: number | null;
+  }>>;
   mean_scores: Record<string, { baseline: number | null; candidate: number | null }>;
   by_business_type: Record<string, { reviewed: number; baseline_preferred: number; candidate_preferred: number; tie: number }>;
 }
@@ -168,6 +197,16 @@ export function summarizeHumanReview(packet: HumanReviewPacket, key: HumanReview
   let ties = 0;
   let baselineFailures = 0;
   let candidateFailures = 0;
+  const effortRows: Record<"baseline" | "candidate", Record<EditingEffort["participant"] & string, { seconds: number[]; accepted: number; incomplete: number }>> = {
+    baseline: {
+      owner_or_operator: { seconds: [], accepted: 0, incomplete: 0 },
+      independent_reviewer: { seconds: [], accepted: 0, incomplete: 0 },
+    },
+    candidate: {
+      owner_or_operator: { seconds: [], accepted: 0, incomplete: 0 },
+      independent_reviewer: { seconds: [], accepted: 0, incomplete: 0 },
+    },
+  };
   const caseMap = new Map(loadCases().map((c) => [c.id, c]));
   for (const item of packet.items) {
     const c = caseMap.get(item.case_id);
@@ -177,6 +216,27 @@ export function summarizeHumanReview(packet: HumanReviewPacket, key: HumanReview
       if (Object.keys(field).sort().join("\n") !== expectedFailures.join("\n")) throw new Error(`Review item has missing or extra hard-failure checks: ${item.item_id}`);
     }
     const arm = key.mapping[item.item_id].baseline;
+    for (const [field, baselineArm] of [["editing_effort_a", arm === "A"], ["editing_effort_b", arm === "B"]] as const) {
+      const effort = item.ratings[field];
+      if (!effort) continue; // Older review packets predate edit-effort tracking.
+      const empty = effort.participant === null && effort.seconds_to_usable === null && effort.accepted_without_edits === null;
+      if (empty) continue;
+      if (effort.participant === null) {
+        if (effort.seconds_to_usable !== null || effort.accepted_without_edits !== null) throw new Error(`Editing effort is missing its participant type: ${item.item_id}`);
+        continue;
+      }
+      if (effort.participant !== "owner_or_operator" && effort.participant !== "independent_reviewer") throw new Error(`Editing effort has an unsupported participant type: ${item.item_id}`);
+      if (effort.seconds_to_usable === null || typeof effort.accepted_without_edits !== "boolean") {
+        effortRows[baselineArm ? "baseline" : "candidate"][effort.participant].incomplete++;
+        continue;
+      }
+      if (!Number.isFinite(effort.seconds_to_usable) || effort.seconds_to_usable < 0 || effort.seconds_to_usable > 86_400) throw new Error(`Editing effort time must be between zero and 86400 seconds: ${item.item_id}`);
+      const side = baselineArm ? "baseline" : "candidate";
+      const aggregate = effortRows[side][effort.participant];
+      if (!aggregate) throw new Error(`Editing effort has an unsupported participant type: ${item.item_id}`);
+      aggregate.seconds.push(effort.seconds_to_usable!);
+      aggregate.accepted += Number(effort.accepted_without_edits);
+    }
     const baselineScores = arm === "A" ? item.ratings.answer_a : item.ratings.answer_b;
     const candidateScores = arm === "A" ? item.ratings.answer_b : item.ratings.answer_a;
     const baselineHard = arm === "A" ? item.ratings.hard_failures_a : item.ratings.hard_failures_b;
@@ -204,6 +264,18 @@ export function summarizeHumanReview(packet: HumanReviewPacket, key: HumanReview
     group.reviewed++;
     group[preference === "baseline" ? "baseline_preferred" : preference === "candidate" ? "candidate_preferred" : "tie"]++;
   }
+  const median = (values: number[]) => {
+    if (!values.length) return null;
+    const sorted = [...values].sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
+  };
+  const effortSummary = Object.fromEntries(([["baseline", effortRows.baseline], ["candidate", effortRows.candidate]] as const).map(([side, groups]) => [side, Object.fromEntries(([["owner_or_operator", groups.owner_or_operator], ["independent_reviewer", groups.independent_reviewer]] as const).map(([participant, values]) => [participant, {
+    observations: values.seconds.length,
+    incomplete: values.incomplete,
+    median_seconds_to_usable: median(values.seconds),
+    accepted_without_edits_rate: values.seconds.length ? values.accepted / values.seconds.length : null,
+  }]))])) as HumanReviewSummary["editing_effort"];
   return {
     packet_id: packet.packet_id,
     reviewer_id: packet.reviewer_id,
@@ -211,6 +283,7 @@ export function summarizeHumanReview(packet: HumanReviewPacket, key: HumanReview
     incomplete,
     pairwise: { baseline: baselinePreferred, candidate: candidatePreferred, tie: ties },
     hard_failures: { baseline: baselineFailures, candidate: candidateFailures },
+    editing_effort: effortSummary,
     mean_scores: Object.fromEntries(RUBRIC.map((d) => [d.key, {
       baseline: sums[d.key].baselineN ? Math.round((sums[d.key].baseline / sums[d.key].baselineN) * 100) / 100 : null,
       candidate: sums[d.key].candidateN ? Math.round((sums[d.key].candidate / sums[d.key].candidateN) * 100) / 100 : null,

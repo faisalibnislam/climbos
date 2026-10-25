@@ -25,6 +25,12 @@ describe("experiment inference label (Book 14 §14)", () => {
   it("is not_run when the test wasn't carried out", () => {
     expect(inferenceOf({ ...base, executed: false, design: "randomized", exposed: 100, controlSize: 100 })).toBe("not_run");
   });
+  it("keeps met, missed, unclear and not-run outcomes distinct in future-plan learning", () => {
+    expect(outcomeLine("Test", { ...base, inference: "observed", redefined: false })).toContain("met its success rule");
+    expect(outcomeLine("Test", { ...base, result: "missed", inference: "observed", redefined: false })).toContain("missed its success rule");
+    expect(outcomeLine("Test", { ...base, result: "unclear", inference: "observed", redefined: false })).toContain("unclear against its success rule");
+    expect(outcomeLine("Test", { ...base, executed: false, inference: "not_run", redefined: false })).toContain("NOT RUN. No evidence about the channel either way.");
+  });
 });
 
 describe("outcome checks and wording", () => {

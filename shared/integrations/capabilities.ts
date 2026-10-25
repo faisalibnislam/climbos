@@ -40,6 +40,8 @@ export interface CapabilityContext {
   stripeKeyKind?: "restricted" | "secret" | "publishable";
   /** Last successful sync, epoch ms. */
   lastSyncAt?: number;
+  /** Most recent sync attempt failed; the last successful snapshot may still be older. */
+  lastSyncError?: string;
   /** Known provider outage. */
   providerStatus?: "operational" | "degraded" | "down";
   now?: number;
@@ -212,6 +214,17 @@ function evaluateOne(provider: ProviderId, cap: CapabilityDefinition, ctx: Capab
       state: "action_required",
       reason: "For your safety ClimbOS only accepts a read-only Stripe restricted key, not a full secret key.",
       fix: "In Stripe → Developers → API keys, create a restricted key with Read access to Charges, Invoices and Refunds, then paste it here.",
+    };
+  }
+
+  // A failed latest sync means the connection is currently unhealthy for reads,
+  // even if an earlier successful snapshot is still within the normal freshness
+  // window. Keep write capabilities independent of a read-only sync failure.
+  if (cap.kind === "read" && ctx.lastSyncError) {
+    return {
+      state: "sync_delayed",
+      reason: `${name} did not sync successfully, so the latest numbers may be incomplete or out of date.`,
+      fix: "Try syncing again. If it keeps failing, reconnect the account and check its access.",
     };
   }
 

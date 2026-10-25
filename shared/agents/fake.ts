@@ -173,6 +173,7 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
           timezoneBasis: "No calendar timing applies.",
           timezoneEvidenceRef: null,
           geographyBasis: "No timing-sensitive geography or event is needed for this synthetic example.",
+          geographyEvidenceRef: null,
           moment: { name: null, businessReason: "This play is an evergreen referral and comparison-page test.", evidence: [] },
           preparation: { leadTimeDays: null, deliveryLeadTimeDays: null, feasible: null, basis: "No event preparation window applies.", evidenceRef: null, deliveryBasis: "Not applicable to this evergreen test.", deliveryEvidenceRef: null },
           capacity: { status: "unknown", basis: "No service-capacity data was supplied.", evidenceRef: null },

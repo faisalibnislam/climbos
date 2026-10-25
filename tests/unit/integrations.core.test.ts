@@ -83,6 +83,20 @@ describe("evaluateCapabilities", () => {
     expect(evaluateCapability("google_ads", "google_ads.read_metrics", ctx({ env: GOOGLE_ENV, grantedScopes: scopes, lastSyncAt: NOW - 47 * 3_600_000 })).state).toBe("ready");
   });
 
+  it("marks reads delayed after the latest sync fails while keeping writes available", () => {
+    const scopes = ["https://www.googleapis.com/auth/adwords"];
+    const failedSync = ctx({
+      env: GOOGLE_ENV,
+      grantedScopes: scopes,
+      lastSyncAt: NOW - 60_000,
+      lastSyncError: "Temporary provider error",
+    });
+    const read = evaluateCapability("google_ads", "google_ads.read_metrics", failedSync);
+    expect(read.state).toBe("sync_delayed");
+    expect(read.reason).toMatch(/did not sync successfully/);
+    expect(evaluateCapability("google_ads", "google_ads.create_paused_campaign", failedSync).state).toBe("ready");
+  });
+
   it("Meta limited tier → approval_needed for writes; pending review → provider_review_pending", () => {
     const env = { META_APP_ID: "a", META_APP_SECRET: "b", META_ADS_ACCESS_TIER: "limited" };
     const scopes = ["ads_read", "ads_management"];

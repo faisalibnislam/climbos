@@ -95,6 +95,18 @@ export interface OwnerEconomics {
   newCustomersPerMonth?: number;
   /** Owner-confirmed monthly cash available for growth work (media plus other cash costs; excludes owner time). */
   monthlyGrowthCashUsd?: number;
+  /** Owner-reported aggregate segment economics in the business currency; not connected billing identity. */
+  segmentEconomics?: {
+    segment: string;
+    currency: string;
+    periodDays: number;
+    customers: number;
+    netRevenue: number;
+    variableCosts: number;
+    costBoundary: string;
+    unknownCosts?: string[];
+    strategicValueNote?: string;
+  }[];
   /** When the owner last confirmed these numbers. */
   updatedAt?: number;
   ranges?: OwnerRanges;

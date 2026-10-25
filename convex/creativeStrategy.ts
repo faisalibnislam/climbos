@@ -101,13 +101,27 @@ export async function creativeStrategyLearningBrief(ctx: QueryCtx, orgId: Id<"or
   const rows = await ctx.db.query("strategyExplorationFeedback")
     .withIndex("by_org_strategy", (q) => q.eq("orgId", orgId))
     .order("desc").take(20);
-  const lines = rows.slice(0, 10).map((row) => {
+  const lines = rows.slice(0, 8).map((row) => {
     const evidenceLabel = row.outcomeEvidence.replaceAll("_", "-");
     const result = row.testState === "observed"
       ? `reported observation (${evidenceLabel}): ${row.outcomeNote ?? ""}`
       : `test state: ${row.testState}; outcome evidence: ${row.outcomeEvidence}${row.testState === "unknown" ? "; outcome remains unknown" : ""}`;
     return `- ${row.mode} option “${row.optionTitle}”: owner decision ${row.decision}; ${result}${row.ownerEdit ? `; owner edit: ${row.ownerEdit}` : ""}`;
   });
+  // Plan rejections already retain their note in the tenant-owned approval record.
+  // Reuse only those explicit notes, and verify the approval belongs to this exact
+  // strategy and tenant before making the preference available to future runs.
+  const plans = await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", orgId)).order("desc").take(20);
+  let planNotes = 0;
+  for (const plan of plans) {
+    if (planNotes >= 5 || !plan.approvalId) continue;
+    const approval = await ctx.db.get(plan.approvalId);
+    if (!approval || approval.orgId !== orgId || approval.status !== "rejected" || approval.subjectType !== "strategy" || approval.subjectId !== String(plan._id)) continue;
+    const note = approval.decisionNote?.trim();
+    if (!note) continue;
+    lines.push(`- Growth plan v${plan.version} sent back: owner-reported rationale: ${note.slice(0, 500)} (preference only; reassess if current evidence or constraints differ)`);
+    planNotes += 1;
+  }
   if (!lines.length) return "";
-  return `Tenant-scoped strategy option feedback (captured ${new Date(Date.now()).toISOString().slice(0, 10)}; decisions are preference signals, not proof of business performance):\n${lines.join("\n")}\nUse only as this business owner's prior preference and reported learning. Keep unknown outcomes unknown, match test conditions before reusing a result, and never treat selection as approval to execute.`;
+  return `Tenant-scoped strategy learning (captured ${new Date(Date.now()).toISOString().slice(0, 10)}; owner decisions and rejection notes are preference signals, not proof of business performance):\n${lines.join("\n")}\nUse only as this business owner's prior preference and reported learning. Recheck current facts, goal and constraints before applying a prior rejection; a changed situation may justify reconsideration. Keep unknown outcomes unknown, match test conditions before reusing a result, and never treat selection as approval to execute.`;
 }

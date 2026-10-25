@@ -34,6 +34,16 @@ export const OfferAssessmentSchema = z.object({
   evidenceBasis: z.enum(["owner_reported", "measured", "source_reported", "inferred", "assumed"]),
   evidenceRefs: z.array(z.string()).max(8),
   evidenceNote: z.string().min(1).max(500),
+  promotionHistory: z.object({
+    status: z.enum(["measured", "owner_reported", "unknown"]),
+    reference: z.string().nullable(),
+    claim: z.string().max(500),
+    period: z.string().nullable(),
+    promotionPattern: z.string().min(1).max(240),
+    repeatPurchaseComparison: z.string().min(1).max(240),
+    fullPriceComparison: z.string().min(1).max(240),
+    limitation: z.string().min(1).max(240),
+  }).optional(),
   alternatives: z.array(OfferComparisonSchema).length(5),
   costBoundary: z.string().min(1).max(240),
   horizonDays: z.number().int().min(1).max(365),
@@ -77,6 +87,8 @@ export interface ApprovedOfferCopyTerms {
   recommendation: string;
   currency: string;
   allowedPrices: number[];
+  allowedDiscountPercentages?: number[];
+  allowedMechanisms?: string[];
   urgencyClaim: string | null;
   eligibleAudience: string | null;
 }
@@ -115,6 +127,24 @@ export function lintApprovedOfferPrices(text: string, offers: ApprovedOfferCopyT
     const [currency, value] = entry.split(":");
     const names = [...(rules.get(currency)?.playNames ?? [])].slice(0, 3).map((name) => `“${name}”`).join(", ");
     issues.push({ severity: "error", rule: "approved_offer_price", message: `This copy states ${value} ${currency}, which is not an approved price${names ? ` for ${names}` : ""}. Use a stated plan price or remove the amount; unknown pricing must remain unknown.`, path });
+  }
+  const statedDiscounts = new Set<number>();
+  const discountPatterns = [
+    /\b(\d+(?:\.\d+)?)\s*(?:%|percent)\s*(?:off|discount|savings?)\b/gi,
+    /\b(?:discount|savings?)\s*(?:of\s*)?(\d+(?:\.\d+)?)\s*(?:%|percent)\b/gi,
+  ];
+  for (const pattern of discountPatterns) {
+    for (const match of text.matchAll(pattern)) {
+      const amount = Number(match[1]);
+      if (Number.isFinite(amount)) statedDiscounts.add(amount);
+    }
+  }
+  const allowedDiscounts = new Set((offers ?? []).flatMap((offer) => offer.allowedDiscountPercentages ?? []));
+  for (const discount of statedDiscounts) {
+    if (![...allowedDiscounts].some((allowed) => Math.abs(allowed - discount) < 0.005)) {
+      const allowed = [...allowedDiscounts].map((value) => `${value}%`).join(" or ");
+      issues.push({ severity: "error", rule: "approved_offer_discount", message: `This copy states a ${discount}% discount, which does not match the owner-approved offer${allowed ? ` (${allowed})` : ""}. Use only a supported discount level or remove the percentage.`, path });
+    }
   }
   return issues;
 }
@@ -176,11 +206,29 @@ const PROMOTION_WORDS = /\b(?:discount|%\s*off|save\s+\$|sale price|coupon|promo
 const URGENCY_WORDS = /\b(?:limited[- ]time|ends? (?:today|tomorrow|this week|on|in)|last chance|only \d+|limited (?:spots?|seats?|stock|inventory)|while supplies last|deadline|scarcity|expires? (?:today|tomorrow|on|in))\b/i;
 const RESTRICTED_AUDIENCE = /\b(?:first[- ]time|new (?:customers?|clients?|buyers?|users?)|existing (?:customers?|clients?|buyers?|users?)|qualified|invited|waitlist|members? only|for (?:returning|current) (?:customers?|clients?|buyers?|users?))\b/i;
 const UNIVERSAL_AUDIENCE = /\b(?:available to everyone|open to everyone|for everyone|all customers|all users|any customer|any user|anyone can|no restrictions)\b/i;
+const OFFER_MECHANISM_PATTERNS: Record<string, RegExp> = {
+  discount: /\b(?:discount|\d+(?:\.\d+)?%\s*off|save\s+(?:[$£€]\s*)?\d|promo(?:tion)? code|coupon|sale price|introductory price)\b/i,
+  bundle: /\bbundles?\b/i,
+  bonus: /\b(?:bonus|free gift|free add[- ]on|complimentary (?:item|service|month))\b/i,
+  trial: /\b(?:free trial|trial period|try(?: it)? free)\b/i,
+  payment_terms: /\b(?:pay later|installments?|payment terms|split payments?)\b/i,
+  guarantee: /\b(?:guarantee|money[- ]back|refund promise)\b/i,
+  referral_incentive: /\b(?:referral reward|referral incentive|refer (?:a friend|someone) and get)\b/i,
+};
 
 /** Adds approved-plan deadline/scarcity checks to deterministic price consistency. */
 export function lintApprovedOfferCopy(text: string, offers: ApprovedOfferCopyTerms[] | undefined, path: string): LintIssue[] {
   const issues = lintApprovedOfferPrices(text, offers, path);
   if (!offers?.length) return issues;
+  const mechanismBound = offers.some((offer) => offer.allowedMechanisms?.length);
+  if (mechanismBound) {
+    const approvedMechanisms = new Set(offers.flatMap((offer) => offer.allowedMechanisms ?? []));
+    for (const [mechanism, pattern] of Object.entries(OFFER_MECHANISM_PATTERNS)) {
+      if (pattern.test(text) && !approvedMechanisms.has(mechanism)) {
+        issues.push({ severity: "error", rule: "approved_offer_mechanism", message: `This copy introduces a ${mechanism.replaceAll("_", " ")} mechanism that is not in the owner-approved promotion terms. Keep the offer mechanism consistent with the approved plan.`, path });
+      }
+    }
+  }
   if (URGENCY_WORDS.test(text)) {
     const supportedClaims = offers.map((offer) => offer.urgencyClaim?.trim()).filter((claim): claim is string => Boolean(claim));
     const normalizedText = text.normalize("NFKC").replace(/\s+/gu, " ").toLocaleLowerCase("en-US");
@@ -248,6 +296,18 @@ export function lintOfferAssessment(
   const supportingEvidence = assessment.evidenceRefs.map((ref) => resolveEvidence(ref, context));
   assessment.evidenceRefs.forEach((ref, index) => { if (!supportingEvidence[index]) error(`Evidence reference ${ref} was not supplied or retrieved.`, "evidenceRefs"); });
   if (assessment.recommendation === "recommend_promotion" && !supportingEvidence.some((source) => source?.includes(assessment.evidenceNote))) error("A promotion recommendation needs a verbatim owner or measured evidence claim that supports the stated customer obstacle.", "evidenceNote");
+
+  if (!assessment.promotionHistory) {
+    error("State whether prior promotion and repeat-purchase history is evidenced or unknown.", "promotionHistory");
+  } else if (assessment.promotionHistory.status === "unknown") {
+    if (assessment.promotionHistory.reference || assessment.promotionHistory.claim || assessment.promotionHistory.period) error("Unknown promotion history must not contain an unsupported citation, claim, or period.", "promotionHistory");
+    if (!assessment.unknowns.some((item) => /promotion|discount|repeat purchase|full.price/i.test(item))) error("When promotion history is unavailable, name the missing history as an unknown.", "unknowns");
+  } else {
+    const historyEvidence = resolveEvidence(assessment.promotionHistory.reference, context);
+    if (!historyEvidence || !assessment.promotionHistory.claim || !historyEvidence.includes(assessment.promotionHistory.claim)) error("Measured or owner-reported promotion history must quote a supplied fact or retrieved source.", "promotionHistory.reference");
+    if (!assessment.promotionHistory.period?.trim()) error("State the observed period for promotion and repeat-purchase history, or leave the history unknown.", "promotionHistory.period");
+    if (assessment.promotionHistory.status === "measured" && !/^fact:\d+$/.test(assessment.promotionHistory.reference ?? "") && !context.sourceUrls.includes(assessment.promotionHistory.reference ?? "")) error("Measured promotion history must point to a measured fact or exact retrieved source.", "promotionHistory.reference");
+  }
 
   const checkValue = (value: OfferAssessment["current"]["netPrice"], field: string, isRate = false) => {
     if (value.amount === null) return;

@@ -79,6 +79,7 @@ const campaignTimingValidator = v.object({
   timezoneBasis: v.string(),
   timezoneEvidenceRef: v.union(v.string(), v.null()),
   geographyBasis: v.string(),
+  geographyEvidenceRef: v.optional(v.union(v.string(), v.null())),
   moment: v.object({ name: v.union(v.string(), v.null()), businessReason: v.string(), evidence: v.array(timingEvidenceValidator) }),
   preparation: v.object({ leadTimeDays: v.union(v.number(), v.null()), deliveryLeadTimeDays: v.union(v.number(), v.null()), feasible: v.union(v.boolean(), v.null()), basis: v.string(), evidenceRef: v.union(v.string(), v.null()), deliveryBasis: v.string(), deliveryEvidenceRef: v.union(v.string(), v.null()) }),
   capacity: v.object({ status: v.union(v.literal("available"), v.literal("constrained"), v.literal("unknown"), v.literal("not_applicable")), basis: v.string(), evidenceRef: v.union(v.string(), v.null()) }),
@@ -103,6 +104,16 @@ const offerAssessmentValidator = v.object({
   evidenceBasis: v.union(v.literal("owner_reported"), v.literal("measured"), v.literal("source_reported"), v.literal("inferred"), v.literal("assumed")),
   evidenceRefs: v.array(v.string()),
   evidenceNote: v.string(),
+  promotionHistory: v.optional(v.object({
+    status: v.union(v.literal("measured"), v.literal("owner_reported"), v.literal("unknown")),
+    reference: v.union(v.string(), v.null()),
+    claim: v.string(),
+    period: v.union(v.string(), v.null()),
+    promotionPattern: v.string(),
+    repeatPurchaseComparison: v.string(),
+    fullPriceComparison: v.string(),
+    limitation: v.string(),
+  })),
   alternatives: v.array(v.object({ alternative: v.union(v.literal("positioning"), v.literal("conversion_path"), v.literal("retention"), v.literal("capacity"), v.literal("no_change")), reason: v.string() })),
   costBoundary: v.string(),
   horizonDays: v.number(),
@@ -894,6 +905,18 @@ export default defineSchema({
         newCustomersPerMonth: v.optional(v.number()),
         /** Monthly cash the owner can safely commit to growth work; excludes non-cash owner time. */
         monthlyGrowthCashUsd: v.optional(v.number()),
+        /** Owner-reported segment totals; no customer-level identity or cross-tenant data is inferred. */
+        segmentEconomics: v.optional(v.array(v.object({
+          segment: v.string(),
+          currency: v.string(),
+          periodDays: v.number(),
+          customers: v.number(),
+          netRevenue: v.number(),
+          variableCosts: v.number(),
+          costBoundary: v.string(),
+          unknownCosts: v.optional(v.array(v.string())),
+          strategicValueNote: v.optional(v.string()),
+        }))),
         /** Owner-stated ranges (their judgement, low–high); the value above is the midpoint (shared/agents/voi.ts). */
         ranges: v.optional(
           v.object({
@@ -1477,6 +1500,19 @@ export default defineSchema({
     expiresAt: v.optional(v.number()),
     lastSyncAt: v.optional(v.number()),
     lastSyncError: v.optional(v.string()),
+    /** Aggregated Stripe open-invoice signal; no invoice IDs or customer data are retained. */
+    stripeOpenInvoiceSnapshot: v.optional(v.object({
+      asOf: v.number(),
+      partial: v.boolean(),
+      byCurrency: v.array(v.object({
+        currency: v.string(),
+        invoiceCount: v.number(),
+        remainingMinor: v.number(),
+        pastDueInvoiceCount: v.number(),
+        pastDueRemainingMinor: v.number(),
+        dueDateUnknownCount: v.number(),
+      })),
+    })),
     /** The expiry we already warned the owner about (one notice per token). */
     expiryNoticeFor: v.optional(v.number()),
     isFixture: v.boolean(),
@@ -2786,6 +2822,7 @@ export default defineSchema({
               v.literal(17),
               v.literal(18),
               v.literal(19),
+              v.literal(20),
             ),
             snapshotId: v.string(),
             capturedAt: v.number(),
@@ -3580,6 +3617,7 @@ export default defineSchema({
       currency: v.optional(v.string()),
       windowStart: v.optional(v.number()),
       windowEnd: v.optional(v.number()),
+      scheduledFor: v.optional(v.number()),
     }),
     costEstimateMicros: v.number(),
     policyVersion: v.number(),

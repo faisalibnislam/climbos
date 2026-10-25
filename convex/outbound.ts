@@ -4,7 +4,7 @@ import { notifyOwners } from "./lib/notify";
 import { emitEvent } from "./webhooks";
 import { manageToken } from "./bookings";
 import { featureAllowed, requirePaid } from "./lib/access";
-import { cancelQueued } from "./outboundSending";
+import { cancelQueued, cancelQueuedFirstTouch } from "./outboundSending";
 import type { OutreachOutput, ProspectsOutput } from "../shared/agents/specs";
 import { can, sha256Hex } from "../shared/policy";
 import { DEFAULT_BOOKING, bookingSlug, domainOf, fixtureOutbound, openSlots, prospectScore, type BookingRules } from "../shared/outbound";
@@ -238,6 +238,9 @@ export const setStage = mutation({
       });
       // Leaving the sequence: nothing more goes out.
       if (stage !== "approved" && stage !== "contacted") await cancelQueued(ctx, p._id);
+      // If the owner says they already emailed this person, cancel an unsent
+      // initial message while keeping follow-ups for an earlier approved send.
+      if (stage === "contacted") await cancelQueuedFirstTouch(ctx, p._id);
       // Conversations move into the pipeline (CRM) automatically.
       const dealStage = stage === "replied" ? "talking" : stage === "booked" || stage === "won" || stage === "lost" ? stage : null;
       if (dealStage) await syncDealFromProspect(ctx, p, dealStage, "outbound");

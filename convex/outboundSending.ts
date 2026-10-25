@@ -49,6 +49,15 @@ export async function cancelQueued(ctx: MutationCtx, prospectId: Id<"prospects">
   }
 }
 
+/** An owner marked the person as already emailed: stop a pending first touch, but preserve planned follow-ups. */
+export async function cancelQueuedFirstTouch(ctx: MutationCtx, prospectId: Id<"prospects">) {
+  for (const s of await ctx.db.query("outboundSends").withIndex("by_prospect", (q) => q.eq("prospectId", prospectId)).take(20)) {
+    if (s.step === 0 && (s.status === "queued" || (s.status === "sending" && !s.claimedAt))) {
+      await ctx.db.patch(s._id, { status: "canceled", ...RELEASE });
+    }
+  }
+}
+
 async function mailboxOf(ctx: QueryCtx | MutationCtx, orgId: Id<"organizations">) {
   return ctx.db.query("connections").withIndex("by_org_provider", (q) => q.eq("orgId", orgId).eq("provider", "email_mailbox")).first();
 }
@@ -325,6 +334,10 @@ export const prepareSend = internalQuery({
     const p = await ctx.db.get(s.prospectId);
     const org = await ctx.db.get(s.orgId);
     if (!c?.sending || !p || !org) return null;
+    // The owner may have contacted this person outside ClimbOS after the queue
+    // was created. Do not send a duplicate first touch; scheduled sequence
+    // follow-ups remain eligible because they belong to the approved message.
+    if (s.step === 0 && p.stage === "contacted") return null;
     if (STOPPED_STAGES.includes(p.stage)) return null;
     if (await isSuppressed(ctx, s.orgId, s.to)) return null;
     const step = c.sequence[s.step];
@@ -362,6 +375,19 @@ export const claimSend = internalMutation({
     const now = Date.now();
     if (!s || s.status !== "sending" || s.lease !== lease || s.claimedAt) return false;
     if (s.leaseExpiresAt !== undefined && s.leaseExpiresAt <= now) return false;
+    if (s.step === 0) {
+      const prospect = await ctx.db.get(s.prospectId);
+      if (!prospect || prospect.stage === "contacted" || STOPPED_STAGES.includes(prospect.stage)) {
+        await ctx.db.patch(s._id, { status: "canceled", ...RELEASE });
+        await recordSendEvent(ctx, s, "not_sent", "The owner marked this person as already contacted before the email was sent.");
+        return false;
+      }
+      if (await isSuppressed(ctx, s.orgId, s.to)) {
+        await ctx.db.patch(s._id, { status: "canceled", ...RELEASE });
+        await recordSendEvent(ctx, s, "not_sent", "The address was suppressed before the email was sent.");
+        return false;
+      }
+    }
     if (s.opKey && (await keyTaken(ctx, s.opKey, s._id))) {
       await ctx.db.patch(s._id, { status: "canceled", error: "Duplicate of an email already sent or on its way.", ...RELEASE });
       await recordSendEvent(ctx, s, "duplicate_blocked", "A duplicate send was blocked because the same approved email is already sent or in progress.");

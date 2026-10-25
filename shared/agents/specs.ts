@@ -311,7 +311,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; portfolio?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null; strategyExploration?: StrategyExploration };
 export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number; leads?: number; qualifiedLeads?: number; qualificationDefinition?: string; activated?: number; newCustomers?: number; activationKind?: "value" | "habit" | "setup" | "unknown"; signupKind?: "free_plan" | "trial_no_card" | "trial_card" | "unknown"; updatedAt: number }
 export interface GoalInputSnapshot { id: string; kind: "more_sales" | "more_customers" | "more_reach" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
-export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
+export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
 export const ENGINE_VERSION = "v3.64-offer-assessment";
 
@@ -2441,10 +2441,57 @@ export function conversionAuditSpec(o: SpecOptions = {}): AgentSpec<z.infer<type
 
 export function retentionSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof RetentionPlanSchema>> {
   return base(
-    { id: "retention_plan", role: "customer_success_manager", label: "Retention plan", skills: ["owner-brevity", "retention-lifecycle", "lifecycle-email"], schema: RetentionPlanSchema, rubric: rubricOf("retention-lifecycle"), lint: lintGeneric },
+    { id: "retention_plan", role: "customer_success_manager", label: "Retention plan", skills: ["owner-brevity", "retention-lifecycle", "lifecycle-email"], schema: RetentionPlanSchema, rubric: rubricOf("retention-lifecycle"), lint: lintRetentionPlan },
     o,
     "lean",
   );
+}
+
+function retentionEvidence(ref: string | null, input: AgentInput): string | undefined {
+  if (!ref) return undefined;
+  const factIndex = /^fact:(\d+)$/.exec(ref)?.[1];
+  if (factIndex !== undefined) return input.facts[Number(factIndex)];
+  const sourceUrls = [
+    ...(input.availableSourceUrls ?? []),
+    ...(input.precomputedResearch?.sources.map((source) => source.url) ?? []),
+  ];
+  return sourceUrls.some((url) => normalizeSourceUrl(url) === normalizeSourceUrl(ref))
+    ? input.precomputedResearch?.notes
+    : undefined;
+}
+
+/** Keeps expansion plays tied to verified offers, customer-value signals, and timing evidence. */
+function lintRetentionPlan(output: z.infer<typeof RetentionPlanSchema>, input: AgentInput): LintIssue[] {
+  const issues: LintIssue[] = [];
+  output.plays.forEach((play, index) => {
+    const path = `plays[${index}].expansionAssessment`;
+    const assessment = play.expansionAssessment;
+    const error = (message: string, field = "") => issues.push({ severity: "error", rule: "retention_expansion", message, path: field ? `${path}.${field}` : path });
+    if (play.type === "retention") {
+      if (assessment.decision === "recommend") error("Use retention for a non-expansion play; do not label it as an upsell or cross-sell.", "decision");
+      return;
+    }
+    if (assessment.decision === "recommend") {
+      if (!assessment.offering || !assessment.customerValueSignal) error("An expansion recommendation needs a specific verified offering and customer-value signal.");
+      for (const [field, basis, ref, claim, requiredText] of [
+        ["offerEvidence", assessment.offerEvidenceBasis, assessment.offerEvidenceRef, assessment.offerEvidenceClaim, assessment.offering] as const,
+        ["valueEvidence", assessment.valueEvidenceBasis, assessment.valueEvidenceRef, assessment.valueEvidenceClaim, assessment.customerValueSignal] as const,
+        ["timingEvidence", assessment.timingEvidenceBasis, assessment.timingEvidenceRef, assessment.timingEvidenceClaim, play.trigger] as const,
+      ]) {
+        const source = retentionEvidence(ref, input);
+        if (!["owner_reported", "measured", "source_reported"].includes(basis)) error(`A recommendation requires evidence for its ${field.replace("Evidence", "").toLowerCase()} basis; use validate_first when this is only inferred or assumed.`, `${field}Basis`);
+        if (!source || !claim.trim() || !source.includes(claim)) error(`The ${field.replace("Evidence", "").toLowerCase()} claim must quote a fact or source available to this run.`, `${field}Ref`);
+        if (requiredText && !claim.toLocaleLowerCase().includes(requiredText.toLocaleLowerCase())) error(`The cited ${field.replace("Evidence", "").toLowerCase()} claim must support the named offering, value signal, or trigger.`, `${field}Claim`);
+      }
+    } else if (assessment.decision === "validate_first") {
+      if (!assessment.ownerInputs.length && !assessment.unknowns.length) error("Name the missing owner input or unknown that prevents a grounded expansion recommendation.");
+      if (assessment.offering && ["inferred", "assumed", "unknown"].includes(assessment.offerEvidenceBasis) && !assessment.unknowns.some((item) => /offer|product|upgrade|catalog/i.test(item))) error("An unverified offering must be identified as an unknown.", "unknowns");
+    }
+    if (!assessment.primaryOutcome.trim() || !assessment.comparison.trim() || !assessment.continueRule.trim() || !assessment.stopRule.trim()) error("Each expansion opportunity needs an outcome, comparison, and owner-set continue/stop rules.");
+    const numericRules = `${assessment.continueRule} ${assessment.stopRule}`;
+    if (/\d/.test(numericRules) && !assessment.ownerInputs.some((item) => /threshold|target|minimum|maximum|set|confirm/i.test(item))) error("Numeric continue or stop thresholds need evidence or an explicit owner input to set them.", "ownerInputs");
+  });
+  return [...issues, ...lintGeneric(output, input)];
 }
 
 export function salesSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof SalesSequenceSchema>> {

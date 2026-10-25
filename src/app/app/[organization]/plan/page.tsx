@@ -343,7 +343,7 @@ function PlanScreen({ slug }: { slug: string }) {
           ) : null}
           <ShortVersion strategy={s} />
           {s.expert ? <NorthStar expert={s.expert as ExpertView} slug={slug} /> : null}
-          {s.expert?.plays?.length ? <SharpenPlan slug={slug} questions={plan.questions} canEdit={plan.canEdit} answersNewer={plan.answersNewerThanPlan} currency={plan.goal?.currency ?? "USD"} /> : null}
+          {s.expert?.plays?.length ? <SharpenPlan slug={slug} questions={plan.questions} canEdit={plan.canEdit} answersNewer={plan.answersNewerThanPlan} currency={plan.businessCurrency} segmentEconomics={plan.unitEconomics?.segmentEconomics} /> : null}
           {s.expert?.plays?.length ? <FunnelNumbers slug={slug} funnel={plan.funnel} canEdit={plan.canEdit} /> : null}
           {s.expert && (s.expert.plays?.length || (s.expert as ExpertView).strategyExploration) ? <GrowthPlays plays={(s.expert.plays ?? []) as PlayView[]} slug={slug} economics={(s.expert as { economics?: Economics }).economics} portfolioComparisons={(s.expert as ExpertView).portfolioComparisons} strategyExploration={(s.expert as ExpertView).strategyExploration} diagnosis={(s.expert as { constraintDiagnosis?: Diagnosis }).constraintDiagnosis ?? null} strategyId={s.status === "approved" ? s.id : undefined} planId={s.id} canEdit={plan.canEdit} focused={Boolean((s.expert as ExpertView).decision)} /> : null}
           {s.expert ? <ExecutionPlan expert={s.expert as ExpertView} /> : null}

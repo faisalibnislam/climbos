@@ -274,6 +274,7 @@ function v1Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
 }
 
 /** Worst-case cost estimate shown on action cards before anything runs. */
-export function estimateJobMicros(plan: JobPlan): number {
-  return estimateRun(plan.steps, currentRateVersion().id).costMicros;
+export function estimateJobMicros(plan: JobPlan, { fixture = false }: { fixture?: boolean } = {}): number {
+  const usesV2 = !fixture && (engineV2() || plan.kind === "social_calendar" || plan.kind === "outbound");
+  return estimateRun(plan.steps, currentRateVersion().id, { repair: !usesV2 }).costMicros;
 }

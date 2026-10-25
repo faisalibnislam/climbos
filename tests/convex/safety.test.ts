@@ -119,6 +119,49 @@ describe("cost reservations under concurrency", () => {
 });
 
 describe("approvals and execution safety", () => {
+  it("unschedules every waiting post when the workspace pauses, beyond one query page", async () => {
+    const t = setup();
+    const d = await demo(t);
+    const template = await t.run(async (ctx) => (await ctx.db.query("artifacts").withIndex("by_org_updated", (q) => q.eq("orgId", d.orgId)).first())!);
+    const seededScheduled = await t.run(async (ctx) => (await ctx.db.query("artifacts").withIndex("by_org_status", (q) => q.eq("orgId", d.orgId).eq("status", "scheduled")).collect()).length);
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      for (let i = 0; i < 301; i++) {
+        await ctx.db.insert("artifacts", {
+          orgId: d.orgId,
+          businessId: template.businessId,
+          kind: template.kind,
+          channel: template.channel,
+          title: `Scheduled post ${i}`,
+          status: "scheduled",
+          currentVersion: template.currentVersion,
+          scheduledFor: now + (i + 1) * 60_000,
+          createdAt: now + i,
+          updatedAt: now + i,
+        });
+      }
+      for (let i = 0; i < 201; i++) {
+        await ctx.db.insert("campaigns", {
+          orgId: d.orgId,
+          channel: "google_search_ad",
+          name: `Active campaign ${i}`,
+          status: "active",
+          budgetEnvelopeMinor: 0,
+          currency: "USD",
+          stopRules: [],
+          createdAt: now + i,
+          updatedAt: now + i,
+        });
+      }
+    });
+
+    const result = await d.client.mutation(api.workspace.pauseAll, { slug: d.slug });
+    expect(result.unscheduled).toBe(seededScheduled + 301);
+    expect(result.campaignsPausing).toBe(201);
+    const remaining = await t.run(async (ctx) => ctx.db.query("artifacts").withIndex("by_org_status", (q) => q.eq("orgId", d.orgId).eq("status", "scheduled")).collect());
+    expect(remaining).toHaveLength(0);
+  });
+
   it("editing an approved artifact invalidates its approval and requires a new one", async () => {
     const t = setup();
     const d = await demo(t);

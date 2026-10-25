@@ -61,7 +61,7 @@ export async function recordArtifactDecision(
   const { connection } = await publishTarget(ctx, org._id, a.channel);
   const now = Date.now();
   const expiresAt = now + (policy?.approvalTtlHours ?? 72) * 3_600_000;
-  const scope = { connectionId: connection ? connection._id : undefined, destination: a.channel };
+  const scope = { connectionId: connection ? connection._id : undefined, destination: a.channel, ...(a.scheduledFor !== undefined ? { scheduledFor: a.scheduledFor } : {}) };
   const actionKind = connection ? "publish" : "export";
   const binding = { orgId: org._id, subjectType: "artifact", subjectId: a._id, actionKind, contentHash: ver.contentHash, scope, policyVersion, expiresAt };
   await invalidateApprovals(ctx, a._id, "Superseded by a newer decision");
@@ -111,12 +111,14 @@ export const SCHEDULE_GRACE_MS = 6 * 3_600_000;
  * Keep an artifact's approval valid until `until` (re-hashed, since the expiry
  * is part of the binding). Returns false when there is no live approval.
  */
-export async function extendApprovalUntil(ctx: MutationCtx, a: Doc<"artifacts">, until: number): Promise<boolean> {
+export async function extendApprovalUntil(ctx: MutationCtx, a: Doc<"artifacts">, until: number, scheduledFor?: number): Promise<boolean> {
   const ap = a.approvalId ? await ctx.db.get(a.approvalId) : null;
   if (!ap || ap.status !== "approved" || ap.expiresAt <= Date.now()) return false;
-  if (ap.expiresAt >= until) return true;
-  const binding = { orgId: ap.orgId, subjectType: ap.subjectType, subjectId: ap.subjectId, actionKind: ap.actionKind, contentHash: ap.contentHash, scope: ap.scope, policyVersion: ap.policyVersion, expiresAt: until };
-  await ctx.db.patch(ap._id, { expiresAt: until, approvalHash: await approvalHash(binding) });
+  const expiresAt = Math.max(ap.expiresAt, until);
+  const scope = scheduledFor === undefined ? ap.scope : { ...ap.scope, scheduledFor };
+  if (ap.expiresAt === expiresAt && ap.scope.scheduledFor === scope.scheduledFor) return true;
+  const binding = { orgId: ap.orgId, subjectType: ap.subjectType, subjectId: ap.subjectId, actionKind: ap.actionKind, contentHash: ap.contentHash, scope, policyVersion: ap.policyVersion, expiresAt };
+  await ctx.db.patch(ap._id, { expiresAt, scope, approvalHash: await approvalHash(binding) });
   return true;
 }
 
@@ -129,11 +131,13 @@ export function approvalProblem(
   ap: Doc<"approvals"> | null,
   ver: Doc<"artifactVersions"> | null,
   connection: Doc<"connections"> | null,
+  scheduledFor?: number,
   now = Date.now(),
 ): string | null {
   if (!ap || ap.status !== "approved") return "Approve this first.";
   if (ap.expiresAt <= now) return "The approval expired. Approve it again first.";
   if (!ver || ap.contentHash !== ver.contentHash) return "The content changed after approval. Approve the new version.";
+  if (ap.scope.scheduledFor !== scheduledFor) return "The scheduled time changed after approval. Review and schedule it again.";
   const wanted = connection ? "publish" : "export";
   if (ap.actionKind !== wanted || (ap.scope.connectionId ?? null) !== (connection?._id ?? null)) {
     return connection ? "Approved before this account was connected. Approve it again to publish it." : "The connected account changed. Approve it again.";

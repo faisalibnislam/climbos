@@ -14,6 +14,7 @@ import { sha256Hex } from "../shared/policy";
 import { v } from "convex/values";
 import { resultsBrief } from "./playResults";
 import { customerConcentration } from "../shared/attribution/concentration";
+import { computeCohorts, subscriptionCohortBrief } from "../shared/attribution/cohorts";
 import { refundExposure } from "../shared/attribution/refundExposure";
 import { platformConcentration } from "../shared/attribution/platformConcentration";
 import { summarizeAiReferralRows, type AiReferralMetricRow } from "../shared/integrations/ga4";
@@ -109,6 +110,15 @@ export const jobContext = internalQuery({
       .take(8);
     // What this workspace can actually run (REQ-ENG-11): live connections and the approval mode.
     const connections = await ctx.db.query("connections").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(50);
+    const stripeConnection = connections.find((connection) => connection.provider === "stripe_revenue" && !connection.isFixture);
+    const stripeReceivables = run.kind === "strategy"
+      ? {
+          connected: stripeConnection?.status === "connected",
+          lastSyncAt: stripeConnection?.lastSyncAt ?? null,
+          syncFailed: Boolean(stripeConnection?.lastSyncError),
+          snapshot: stripeConnection?.stripeOpenInvoiceSnapshot ?? null,
+        }
+      : null;
     const policy = await ctx.db.query("autonomyPolicies").withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true)).first();
     // Read the immutable rating snapshot captured when this specialist request was created.
     const feedbackSnapshot = run.customAgentFeedbackSnapshot;
@@ -166,6 +176,26 @@ export const jobContext = internalQuery({
           amountMinor: event.amountMinor, refundedMinor: event.refundedMinor, kind: event.kind,
           utmSource: event.utmSource, utmMedium: event.utmMedium,
         }));
+    const subscriptionEvents = usableRevenueRows.filter((event) => event.kind === "subscription_payment");
+    const subscriptionCohorts = concentrationCurrency
+      ? computeCohorts(subscriptionEvents.map((event) => ({
+          source: event.source,
+          customerRef: event.customerRef,
+          orderRef: event.orderRef,
+          occurredAt: event.occurredAt,
+          amountMinor: event.amountMinor,
+          refundedMinor: event.refundedMinor,
+          kind: event.kind,
+          currency: event.currency,
+        })), { currency: concentrationCurrency, nowMs: concentrationToMs, maxMonths: 6 })
+      : [];
+    const subscriptionCohortText = run.kind === "strategy" && concentrationCurrency
+      ? subscriptionCohortBrief(subscriptionCohorts, {
+          currency: concentrationCurrency,
+          hasCustomerIds: subscriptionEvents.some((event) => Boolean(event.customerRef)),
+          truncated: concentrationIsPartial,
+        })
+      : "";
     const concentration = concentrationCurrency
       ? customerConcentration(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
       : null;
@@ -229,6 +259,8 @@ export const jobContext = internalQuery({
       aiReferralSignals,
       creatorOutcomeText,
       refundExposure: refundExposureSignal,
+      subscriptionCohortText,
+      stripeReceivables,
       audience: { contacts, consented },
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },
       run,
@@ -244,8 +276,8 @@ export const jobContext = internalQuery({
       /** Plans start from what earlier plays actually did. */
       resultsText: run.kind === "strategy" ? [await resultsBrief(ctx, org._id), await feedbackBrief(ctx, org._id)].filter(Boolean).join("\n\n") : "",
       creativeStrategyLearning: run.kind === "strategy" && !run.isFixture ? await creativeStrategyLearningBrief(ctx, org._id) : "",
-      facts: currentFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, createdAt: f.createdAt, updatedAt: f.updatedAt, verifiedAt: f.verifiedAt ?? f.updatedAt, kind: EVIDENCE_KIND_LABEL[evidenceKind(f.statement, f.provenance)], evidenceKind: evidenceKind(f.statement, f.provenance), freshness: freshnessOf(f) })),
-      staleFacts: staleFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, updatedAt: f.updatedAt, verifiedAt: f.verifiedAt ?? f.updatedAt, freshness: freshnessOf(f) })),
+      facts: currentFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, confidence: f.confidence, provenance: f.provenance, createdAt: f.createdAt, updatedAt: f.updatedAt, verifiedAt: f.verifiedAt ?? f.updatedAt, kind: EVIDENCE_KIND_LABEL[evidenceKind(f.statement, f.provenance)], evidenceKind: evidenceKind(f.statement, f.provenance), freshness: freshnessOf(f) })),
+      staleFacts: staleFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, confidence: f.confidence, provenance: f.provenance, updatedAt: f.updatedAt, verifiedAt: f.verifiedAt ?? f.updatedAt, freshness: freshnessOf(f) })),
       unconfirmedCount: facts.filter((f) => f.reviewState === "needs_review").length,
       goal,
       brand,
@@ -535,7 +567,7 @@ export const saveStrategy = internalMutation({
             why: c.why,
             priority: i + 1,
             status: i < 4 ? ("proposed" as const) : ("parked" as const),
-            monthlyCostMicros: job ? estimateJobMicros(planJob(job)) * 4 : 0,
+            monthlyCostMicros: job ? estimateJobMicros(planJob(job, {}, { fixture: run.isFixture }), { fixture: run.isFixture }) * 4 : 0,
             // Never exceed the owner's stated monthly ad budget.
             adSpendMinor: Math.min(adSpend, goal.monthlyAdBudgetMinor),
             deliverables: c.deliverables.slice(0, 6),
@@ -1016,7 +1048,7 @@ export const saveChatResult = internalMutation({
       const plan = job ? planJob(job, { quantity: a.quantity, images: job === "content_social" ? 1 : 0, channel: a.channel }, { fixture: org?.kind === "demo" }) : null;
       const external = a.kind === "ad_change" || a.kind === "email_send" || a.kind === "schedule_content";
       const isLink = a.kind === "connect_account" || a.kind === "set_up_autopilot";
-      const cost = plan ? estimateJobMicros(plan) : 0;
+      const cost = plan ? estimateJobMicros(plan, { fixture: org?.kind === "demo" }) : 0;
       const overSpecialistBudget = Boolean(specialist && cost > specialistBudgetMicros);
       if (specialist && !overSpecialistBudget) specialistBudgetMicros -= cost;
       const prerequisiteReason = unavailablePrerequisite === undefined

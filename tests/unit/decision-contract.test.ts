@@ -25,7 +25,7 @@ const play = (o: Partial<PlayDraft> = {}): PlayDraft => ({
   scaleIf: "8+ orders in 14 days",
   scores: [5, 3, 3, 4, 3, 5, 5, 3],
   firstActionToday: "Export last year's customers",
-  timingAssessment: { decision: "not_relevant", proposedWindow: null, timezone: null, timezoneBasis: "No calendar timing applies.", timezoneEvidenceRef: null, geographyBasis: "No calendar-specific geography is needed for this evergreen retention test.", moment: { name: null, businessReason: "This customer win-back mechanic is based on lifecycle behavior, not a date.", evidence: [] }, preparation: { leadTimeDays: null, deliveryLeadTimeDays: null, feasible: null, basis: "No event preparation window applies.", evidenceRef: null, deliveryBasis: "Not applicable to this evergreen test.", deliveryEvidenceRef: null }, capacity: { status: "unknown", basis: "Service capacity was not supplied.", evidenceRef: null }, assumptions: [], unknowns: [], rationale: "The play's trigger is customer behavior rather than a holiday or event." },
+  timingAssessment: { decision: "not_relevant", proposedWindow: null, timezone: null, timezoneBasis: "No calendar timing applies.", timezoneEvidenceRef: null, geographyBasis: "No calendar-specific geography is needed for this evergreen retention test.", geographyEvidenceRef: null, moment: { name: null, businessReason: "This customer win-back mechanic is based on lifecycle behavior, not a date.", evidence: [] }, preparation: { leadTimeDays: null, deliveryLeadTimeDays: null, feasible: null, basis: "No event preparation window applies.", evidenceRef: null, deliveryBasis: "Not applicable to this evergreen test.", deliveryEvidenceRef: null }, capacity: { status: "unknown", basis: "Service capacity was not supplied.", evidenceRef: null }, assumptions: [], unknowns: [], rationale: "The play's trigger is customer behavior rather than a holiday or event." },
   actionContract: { diagnosis: "Repeat purchase is weak", intendedEffect: "Recover paid orders", evidenceBasis: "assumption", evidenceNote: "The customer list size and response are unverified; validate while testing.", evidenceRefs: [], targetOrAsset: "Prior customer list", resourcePlan: "1 owner hour per week; no media spend", executionCapability: "owner", dependencies: [], measurement: { metric: "Recovered orders", baseline: "Establish from the prior 30 days", target: "8 orders", windowDays: 14, source: "Count paid orders during the test" } },
   climbosCanDo: "Drafts and sends the emails",
   model: { weeklyReach: 75, weeklyReachLow: 60, weeklyReachHigh: 75, reachSource: tag, steps: [{ name: "open", rate: 0.4, low: 0.3, high: 0.5, ...tag, source: "assumption" }, { name: "order", rate: 0.07, low: 0.05, high: 0.1, ...tag, source: "assumption" }], monthlySpendUsd: 0, spendSource: { source: "planned", ref: "", quote: "" }, ownerHoursPerWeek: 1, hoursSource: { source: "planned", ref: "", quote: "" } },
@@ -35,6 +35,12 @@ const econ = { revenuePerCustomerMonthUsd: 40, grossMargin: 0.6, monthlyChurn: 0
 const portfolio = (issues: { rule: string; severity: string }[]) => issues.filter((i) => i.rule === "portfolio" && i.severity === "error");
 
 describe("decision contract flag", () => {
+  it("treats open invoice balances as owner-review evidence, not collection permission", () => {
+    expect(DECISION_CONTRACT).toContain("An open balance is not expected or recoverable revenue");
+    expect(DECISION_CONTRACT).toContain("Do not retry payments, send reminders, or contact customers as a side effect");
+    expect(DECISION_CONTRACT).toContain("treat receivables and failed-payment recovery as unknown");
+  });
+
   it("off (default): a single retention play fails the fixed portfolio shape", () => {
     expect(portfolio(lintPlays([play()], econ)).length).toBeGreaterThan(0);
   });
@@ -113,7 +119,7 @@ describe("structured action contracts", () => {
 
   it("makes the plays agent populate the trace and leaves readiness to code", () => {
     const prompt = playsTask({ scorecard: "", insights: "" });
-    expect(prompt).toContain("fill actionContract");
+    expect(prompt).toContain("populate actionContract");
     expect(prompt).toContain("primary measurement that matches the same business outcome as the play's forecast unit");
     expect(prompt).toContain("ClimbOS derives readiness");
   });

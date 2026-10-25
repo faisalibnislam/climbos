@@ -108,6 +108,22 @@ describe("evidence pack per plan version (Book 13 §3)", () => {
     expect(ev.insights.length).toBe(24_000);
     expect(ev.truncated).toContain("insights");
   });
+
+  it("keeps provenance and verification age with current and stale facts", () => {
+    const verifiedAt = Date.UTC(2026, 0, 2);
+    const ev = buildPlanEvidence({
+      skillIds: [],
+      currency: "USD",
+      goal: null,
+      facts: [{ id: "current", statement: "Pro is $19/month", category: "pricing", confidence: "high", provenance: "owner_supplied", evidenceKind: "owner", verifiedAt, daysSinceVerification: 10 }],
+      staleFacts: [{ id: "stale", statement: "Pro used to be $24/month", category: "pricing", confidence: "medium", provenance: "researched", verifiedAt, daysSinceVerification: 90 }],
+      insights: "",
+      research: [],
+    });
+    expect(ev.version).toBe(2);
+    expect(ev.facts[0]).toMatchObject({ id: "current", provenance: "owner_supplied", evidenceKind: "owner", verifiedAt, daysSinceVerification: 10 });
+    expect(ev.staleFacts?.[0]).toMatchObject({ id: "stale", provenance: "researched", verifiedAt, daysSinceVerification: 90 });
+  });
 });
 
 describe("the consistency pass sees what's failing", () => {

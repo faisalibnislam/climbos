@@ -128,6 +128,7 @@ describe("social autopilot", () => {
     const approval = await t.run(async (ctx) => ctx.db.query("approvals").filter((q) => q.eq(q.field("subjectId"), s[0].artifactId!)).first());
     expect(approval?.decidedBy).toBeUndefined();
     expect(approval?.decisionNote).toMatch(/^Autopilot/);
+    expect(approval?.scope.scheduledFor).toBe(s[0].slotAt);
   });
 
   it("always-ask topics and the emergency stop keep posts waiting even in fully auto", async () => {

@@ -87,6 +87,19 @@ describe("Plan version history", () => {
     expect(restoredExpert?.plays?.length).toBeGreaterThan(0);
   });
 
+  it("explains which recorded planning inputs changed between refreshed versions", async () => {
+    const t = setup();
+    const w = await workspace(t, "history-reason@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    await w.client.mutation(api.orgs.setGoal, { slug: w.slug, kind: "more_sales", statement: "Increase monthly sales", horizonDays: 120, monthlyAdBudget: 125 });
+    await buildPlan(t, w);
+
+    const versions = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    expect(versions[0].version).toBe(2);
+    expect(versions[0].reason).toMatch(/recorded changes to goal or budget/);
+  });
+
   it("only editors restore, and the latest version can't be restored onto itself", async () => {
     const t = setup();
     const w = await workspace(t, "history-roles@example.com");
@@ -113,6 +126,7 @@ describe("Plan version history", () => {
       grossMargin: 0.7,
       monthlyChurn: 0.04,
       monthlyGrowthCashUsd: 100,
+      segmentEconomics: [{ segment: "Small accounts", currency: "USD", periodDays: 90, customers: 12, netRevenue: 1200, variableCosts: 800, costBoundary: "Variable product, payment and support costs" }],
     });
 
     await expect(w.client.mutation(api.workspace.decidePlan, {
@@ -124,6 +138,8 @@ describe("Plan version history", () => {
     const saved = await t.run((ctx) => ctx.db.get(plan.id));
     const refreshed = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: plan.id });
     expect(refreshed.strategy?.expert?.economics).toMatchObject({ revenuePerCustomerMonthUsd: 250, grossMargin: 0.7, monthlyChurn: 0.04 });
+    expect(refreshed.staleInputs.ownerEconomics).toBe(true);
+    expect(refreshed.unitEconomics?.segmentEconomics?.[0]).toMatchObject({ segment: "Small accounts", netRevenue: 1200, variableCosts: 800 });
     expect(refreshed.strategy?.expert?.portfolio).toBeTruthy();
     expect(refreshed.strategy?.expert?.portfolioComparisons).toMatchObject({ horizonDays: 90 });
     expect(refreshed.strategy?.expert?.portfolioComparisons?.modeledPlayCount).toBeGreaterThan(0);

@@ -19,5 +19,11 @@ describe("owner ranges for unit economics", () => {
     await owner.client.mutation(api.workspace.setUnitEconomics, { slug, monthlyGrowthCashUsd: 0 });
     expect((await read())?.monthlyGrowthCashUsd).toBe(0);
     await expect(owner.client.mutation(api.workspace.setUnitEconomics, { slug, monthlyGrowthCashUsd: -1 })).rejects.toThrow(/Monthly growth cash looks wrong/);
+    await owner.client.mutation(api.workspace.setUnitEconomics, { slug, segmentEconomics: [{ segment: "Solo", currency: "USD", periodDays: 90, customers: 12, netRevenue: 1200, variableCosts: 700, costBoundary: "Payment, service and support costs", unknownCosts: ["refund timing"] }] });
+    expect((await read())?.segmentEconomics?.[0]).toMatchObject({ segment: "Solo", periodDays: 90, customers: 12, netRevenue: 1200, variableCosts: 700, unknownCosts: ["refund timing"] });
+    await expect(owner.client.mutation(api.workspace.setUnitEconomics, { slug, segmentEconomics: [{ segment: "solo", currency: "USD", periodDays: 90, customers: 12, netRevenue: 1200, variableCosts: 700, costBoundary: "Payment, service and support costs" }, { segment: "Solo", currency: "USD", periodDays: 90, customers: 10, netRevenue: 900, variableCosts: 600, costBoundary: "Payment, service and support costs" }] })).rejects.toThrow(/unique name/);
+    await expect(owner.client.mutation(api.workspace.setUnitEconomics, { slug, segmentEconomics: [{ segment: "Solo", currency: "USD", periodDays: 0, customers: 12, netRevenue: 1200, variableCosts: 700, costBoundary: "Payment, service and support costs" }] })).rejects.toThrow(/period must be/);
+    await owner.client.mutation(api.workspace.setUnitEconomics, { slug, segmentEconomics: [] });
+    expect((await read())?.segmentEconomics).toEqual([]);
   });
 });

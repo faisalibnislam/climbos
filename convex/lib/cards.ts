@@ -72,7 +72,7 @@ export async function startPlanWork(
         kind: "generate_content",
         roles: plan.roles,
         payload: JSON.stringify({ job, channel, quantity: shape.quantity, brief, strategyId: s._id, planChannel: c.key }),
-        costEstimateMicros: estimateJobMicros(plan),
+        costEstimateMicros: estimateJobMicros(plan, { fixture: p.org.kind === "demo" }),
         externalEffect: false,
         status: "proposed",
         priority: c.priority,

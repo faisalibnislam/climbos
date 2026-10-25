@@ -88,6 +88,40 @@ describe("cold email: one send per key", () => {
     expect(events.every((event) => !("to" in event) && !("body" in event))).toBe(true);
   });
 
+  it("stops an unsent first touch when the owner marks the person contacted", async () => {
+    const t = setup();
+    const w = await ready(t);
+    const [first] = await rows(t, w.campaignId);
+    expect(first).toMatchObject({ step: 0, status: "queued" });
+
+    await w.owner.client.mutation(api.outbound.setStage, {
+      slug: w.slug,
+      prospectIds: [w.people[0]],
+      stage: "contacted",
+    });
+    expect((await rows(t, w.campaignId))[0]).toMatchObject({ step: 0, status: "canceled" });
+    at("09:05");
+    expect(await dispatch(t)).toBe(0);
+    await runAll(t);
+    expect(fakeMailbox().sent).toHaveLength(0);
+  });
+
+  it("keeps an approved sequence follow-up when the owner stage is contacted", async () => {
+    const t = setup();
+    const w = await ready(t);
+    at("09:05");
+    expect(await dispatch(t)).toBe(1);
+    await runAll(t);
+    expect((await rows(t, w.campaignId)).map((send) => `${send.step}:${send.status}`)).toEqual(["0:sent", "1:queued"]);
+
+    await w.owner.client.mutation(api.outbound.setStage, {
+      slug: w.slug,
+      prospectIds: [w.people[0]],
+      stage: "contacted",
+    });
+    expect((await rows(t, w.campaignId)).map((send) => `${send.step}:${send.status}`)).toEqual(["0:sent", "1:queued"]);
+  });
+
   it("a worker crash after the mailbox took the email: the Sent folder is checked, no second send", async () => {
     const t = setup();
     const w = await ready(t);

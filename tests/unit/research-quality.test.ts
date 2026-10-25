@@ -54,6 +54,20 @@ describe("research source assessment", () => {
     expect(task).toContain("Never invent a reliability score");
   });
 
+  it("requires the independent critic to challenge material recommendations against assumptions and alternatives", () => {
+    expect(CRITIC_RULES).toContain("the single assumption most likely to change the decision");
+    expect(CRITIC_RULES).toContain("one concrete plausible way the recommendation could fail for this business");
+    expect(CRITIC_RULES).toContain("the strongest relevant alternative");
+    expect(CRITIC_RULES).toContain("put the specific correction in fixes so the revision loop addresses it");
+    expect(CRITIC_RULES).toContain("never invent evidence to make a challenge sound stronger");
+  });
+
+  it("requires the critic to surface unresolved disagreement among supplied analyses without inventing consensus", () => {
+    expect(CRITIC_RULES).toContain("when the supplied context contains findings from earlier analyses or specialist roles");
+    expect(CRITIC_RULES).toContain("do not average or silently erase a material disagreement");
+    expect(CRITIC_RULES).toContain("do not imply a panel or consensus that did not run");
+  });
+
   it("accepts insight citations only when their URLs were supplied to the run", () => {
     const input = { task: "Assess alternatives", brief: "Business facts", facts: [], precomputedResearch: { notes: "Review page", sources: [{ url: "https://example.com/reviews/" }] } };
     const base = { audiences: [], competitors: [], alternatives: [], objections: [], gaps: [], siteAssessment: [], commercialAssessment: { status: "insufficient_business_specific_evidence" as const, evidence: [], unknowns: [], nextTest: { question: "What remains unknown?", smallestTest: "Ask a small set of prospective buyers.", successSignal: "A measured buyer commitment.", decisionRule: "Continue only if the predeclared signal appears." } }, swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, swotEvidence: [], swotMoves: [] };

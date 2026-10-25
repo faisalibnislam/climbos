@@ -6,6 +6,45 @@ import { asNewUser, setup } from "./helpers";
 const DAY = 86_400_000;
 
 describe("first recorded paying customers", () => {
+  it("gives the strategy job tenant-scoped observed subscription cohorts without mixing one-off or fixture payments", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "strategy-subscription-cohorts@example.com");
+    const { orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Subscription Cohort Co" });
+    const other = await asNewUser(t, "other-strategy-subscription-cohorts@example.com");
+    const otherWorkspace = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other Subscription Co" });
+    const now = Date.now();
+    const runId = await t.run(async (ctx) => {
+      const org = orgId as Id<"organizations">;
+      const otherOrg = otherWorkspace.orgId as Id<"organizations">;
+      const insert = (workspace: Id<"organizations">, id: string, month: string, customerRef: string, kind: "subscription_payment" | "order", isFixture = false) => ctx.db.insert("revenueEvents", {
+        orgId: workspace,
+        source: "csv",
+        sourceEventId: id,
+        occurredAt: Date.parse(`${month}-15T12:00:00Z`),
+        customerRef,
+        orderRef: id,
+        currency: "USD",
+        amountMinor: 5_000,
+        refundedMinor: 0,
+        kind,
+        isFixture,
+        ingestedAt: now,
+      });
+      await insert(org, "sub-a-mar", "2026-03", "sub-a", "subscription_payment");
+      await insert(org, "sub-a-apr", "2026-04", "sub-a", "subscription_payment");
+      await insert(org, "sub-b-mar", "2026-03", "sub-b", "subscription_payment");
+      await insert(org, "one-off-apr", "2026-04", "one-off", "order");
+      await insert(org, "fixture-apr", "2026-04", "fixture-user", "subscription_payment", true);
+      await insert(otherOrg, "other-sub-apr", "2026-04", "other-user", "subscription_payment");
+      return ctx.db.insert("workflowRuns", { orgId: org, kind: "strategy", title: "Plan", status: "executing", input: "{}", roles: [], estimateMicros: 0, actualMicros: 0, rateVersionId: "verified-2026-10-17", entitlementVersionId: "ent-credits-2026-10-18", routingVersionId: "r1", budget: { modelSteps: 1, researchTools: 0, repairs: 0 }, used: { modelSteps: 0, researchTools: 0, repairs: 0 }, isFixture: false, createdAt: now, updatedAt: now });
+    });
+    const context = await t.query(internal.jobWrites.jobContext, { runId });
+    expect(context?.subscriptionCohortText).toContain("2026-03: 2 first-paid customers; M1 1/2 (50.0%)");
+    expect(context?.subscriptionCohortText).not.toContain("one-off");
+    expect(context?.subscriptionCohortText).not.toContain("other-user");
+    expect(context?.subscriptionCohortText).toContain("observed payer retention, not contractual churn");
+  });
+
   it("shows only identified GA4 AI-assistant referral sources in the workspace results", async () => {
     const t = setup();
     const owner = await asNewUser(t, "ai-referrals@example.com");

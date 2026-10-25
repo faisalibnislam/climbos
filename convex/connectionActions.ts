@@ -271,7 +271,7 @@ export const connectApiKey = action({
         return { ok: false, message: "Please use a read-only restricted key (it starts with rk_). Never share your secret key." };
       }
       const probe = await importStripeRevenue({ restrictedKey: key, createdGte: Math.floor(Date.now() / 1000) - 86_400, maxPages: 1 });
-      if (!probe.ok) return { ok: false, message: "Stripe rejected this key or it lacks read access to charges and refunds." };
+      if (!probe.ok) return { ok: false, message: "Stripe rejected this key or it lacks read access to charges, refunds and invoices." };
       accountLabel = key.startsWith("rk_test_") ? "Stripe (test mode)" : "Stripe";
     } else {
       if (!key.startsWith("re_")) return { ok: false, message: "That doesn't look like a Resend API key (they start with re_)." };
@@ -653,7 +653,15 @@ export const syncStripe = internalAction({
         kind: e.kind,
       })),
     });
-    await ctx.runMutation(internal.connections.markSync, { connectionId: conn._id, ok: true });
+    await ctx.runMutation(internal.connections.markSync, {
+      connectionId: conn._id,
+      ok: true,
+      stripeOpenInvoiceSnapshot: {
+        asOf: Date.now(),
+        partial: res.data.openInvoicesPartial,
+        byCurrency: res.data.openInvoiceExposure,
+      },
+    });
   },
 });
 

@@ -286,7 +286,7 @@ export const get = query({
       scheduledFor: a.scheduledFor ?? null,
       lastPublishError: a.lastPublishError ?? null,
       /** Why the current approval can't be used to publish (null when it can). */
-      approvalProblem: a.status === "approved" || a.status === "scheduled" ? approvalProblem(currentApproval, curVer, conn?.status === "connected" ? conn : null) : null,
+      approvalProblem: a.status === "approved" || a.status === "scheduled" ? approvalProblem(currentApproval, curVer, conn?.status === "connected" ? conn : null, a.scheduledFor) : null,
       autopilotSlot: slot && slot.status !== "skipped" ? { slotAt: slot.slotAt, status: slot.status } : null,
       reel: reel ? { id: reel._id, status: reel.status, videoUrl: reel.videoStorageId ? await ctx.storage.getUrl(reel.videoStorageId) : null, seconds: reel.seconds ?? null } : null,
       createdByRole: a.createdByRole ?? null,
@@ -457,7 +457,7 @@ export const decide = mutation({
     if (a.status === "uncertain") throw appError("INVALID", "Check whether it was posted first.");
     if (!["draft", "in_review", "failed", "approved"].includes(a.status)) throw appError("INVALID", "This can't be approved or sent back in its current state.");
     const { connection } = await publishTarget(ctx, org._id, a.channel);
-    if (a.status === "approved" && !approvalProblem(a.approvalId ? await ctx.db.get(a.approvalId) : null, ver, connection)) {
+    if (a.status === "approved" && !approvalProblem(a.approvalId ? await ctx.db.get(a.approvalId) : null, ver, connection, a.scheduledFor)) {
       throw appError("INVALID", "This version is already approved.");
     }
     // Instagram can't take a text-only post (demo publishing is simulated, so it's exempt).
@@ -476,7 +476,7 @@ export const decide = mutation({
 async function requireUsableApproval(ctx: MutationCtx, org: Doc<"organizations">, a: Doc<"artifacts">) {
   const { connection } = await publishTarget(ctx, org._id, a.channel);
   if (!connection) throw appError("INVALID", "Connect the account first, or use the export pack.");
-  const problem = approvalProblem(a.approvalId ? await ctx.db.get(a.approvalId) : null, a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null, connection);
+  const problem = approvalProblem(a.approvalId ? await ctx.db.get(a.approvalId) : null, a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null, connection, a.scheduledFor);
   if (problem) throw appError("INVALID", problem);
 }
 
@@ -496,7 +496,7 @@ export const schedule = mutation({
     if (when > Date.now() + 90 * 86_400_000) throw appError("INVALID", "Schedule within the next 90 days.");
     await requireUsableApproval(ctx, org, a);
     // Approvals expire after a few days: a post scheduled further out keeps its approval until it goes.
-    if (!(await extendApprovalUntil(ctx, a, when + SCHEDULE_GRACE_MS))) throw appError("INVALID", "The approval expired. Approve it again first.");
+    if (!(await extendApprovalUntil(ctx, a, when + SCHEDULE_GRACE_MS, when))) throw appError("INVALID", "The approval expired. Approve it again first.");
     await ctx.db.patch(a._id, { status: "scheduled", scheduledFor: when, lastPublishError: undefined, updatedAt: Date.now() });
     const slot = await ctx.db.query("calendarSlots").withIndex("by_artifact", (q) => q.eq("artifactId", a._id)).first();
     if (slot && slot.orgId === org._id) {
@@ -652,7 +652,8 @@ export const estimate = query({
     const view = await aiModeView(ctx, org);
     const mode = EXPERT_KINDS.has(args.job) && view.expertUnlocked ? (args.aiMode ?? view.mode) : "basic";
     const plan = planJob(args.job, { quantity: args.quantity, images: args.images, channel: args.channel }, { fixture: org.kind === "demo", mode });
-    return { title: plan.title, roles: plan.roles, maxCostMicros: estimateJobMicros(plan), meters: plan.meters, aiMode: mode, expertUnlocked: view.expertUnlocked, expertApplies: EXPERT_KINDS.has(args.job) };
+    const fixture = org.kind === "demo";
+    return { title: plan.title, roles: plan.roles, maxCostMicros: estimateJobMicros(plan, { fixture }), meters: plan.meters, aiMode: mode, expertUnlocked: view.expertUnlocked, expertApplies: EXPERT_KINDS.has(args.job) };
   },
 });
 

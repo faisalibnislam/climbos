@@ -67,6 +67,37 @@ describe("outgoing webhooks", () => {
   });
 });
 
+describe("integration sync health", () => {
+  it("marks analytics reads delayed after a failed latest sync", async () => {
+    const t = setup();
+    process.env.GOOGLE_OAUTH_CLIENT_ID = "google-client";
+    process.env.GOOGLE_OAUTH_CLIENT_SECRET = "google-secret";
+    const o = await owned(t, "sync-health@example.com");
+    const connectionId = await t.mutation(internal.connections.storeConnection, {
+      orgId: o.orgId,
+      userId: o.userId,
+      provider: "ga4",
+      secret: JSON.stringify({ accessToken: "token" }),
+      secretKind: "oauth",
+      scopes: ["https://www.googleapis.com/auth/analytics.readonly"],
+      externalAccountId: "properties/1",
+    });
+    await t.mutation(internal.connections.markSync, {
+      connectionId,
+      ok: true,
+    });
+    await t.mutation(internal.connections.markSync, {
+      connectionId,
+      ok: false,
+      error: "Temporary provider error",
+    });
+
+    const item = (await o.client.query(api.connections.list, { slug: o.slug })).items.find((row) => row.provider === "ga4");
+    expect(item?.connection).toMatchObject({ status: "connected", lastSyncError: "Temporary provider error" });
+    expect(item?.capabilities.find((capability) => capability.capability === "ga4.read_reports")).toMatchObject({ state: "sync_delayed" });
+  });
+});
+
 describe("connected product links", () => {
   it("only accepts Taskeni's own hosts or its Convex deployment", () => {
     expect(taskeniBase("https://happy-cat-123.convex.site/api/v1")).toBe("https://happy-cat-123.convex.site/api/v1");

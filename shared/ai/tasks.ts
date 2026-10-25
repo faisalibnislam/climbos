@@ -280,7 +280,35 @@ export const ConversionAuditSchema = z.object({
 
 export const RetentionPlanSchema = z.object({
   segments: z.array(z.object({ name: z.string(), definition: z.string(), goal: z.string() })),
-  plays: z.array(z.object({ name: z.string(), trigger: z.string(), message: z.string(), channel: z.string() })),
+  plays: z.array(z.object({
+    type: z.enum(["retention", "upsell", "cross_sell"]),
+    name: z.string(),
+    trigger: z.string(),
+    message: z.string(),
+    channel: z.string(),
+    expansionAssessment: z.object({
+      decision: z.enum(["recommend", "validate_first", "no_expansion"]),
+      offering: z.string().nullable(),
+      customerNeed: z.string(),
+      customerValueSignal: z.string().nullable(),
+      offerEvidenceBasis: z.enum(["owner_reported", "measured", "source_reported", "inferred", "assumed", "unknown"]),
+      offerEvidenceRef: z.string().nullable(),
+      offerEvidenceClaim: z.string(),
+      valueEvidenceBasis: z.enum(["owner_reported", "measured", "source_reported", "inferred", "assumed", "unknown"]),
+      valueEvidenceRef: z.string().nullable(),
+      valueEvidenceClaim: z.string(),
+      timingEvidenceBasis: z.enum(["owner_reported", "measured", "source_reported", "inferred", "assumed", "unknown"]),
+      timingEvidenceRef: z.string().nullable(),
+      timingEvidenceClaim: z.string(),
+      primaryOutcome: z.string(),
+      comparison: z.string(),
+      observationWindowDays: z.number().int().min(1).max(365),
+      continueRule: z.string(),
+      stopRule: z.string(),
+      ownerInputs: z.array(z.string()),
+      unknowns: z.array(z.string()),
+    }),
+  })),
 });
 
 export const SalesSequenceSchema = z.object({
@@ -381,15 +409,15 @@ export function businessResearchContext(insights?: Record<string, unknown>): str
 }
 
 /** `kind` (when given) is the fact's strength as evidence (shared/agents/evidenceKind.ts), e.g. "stated opinion" vs "measured". */
-export function factsBlock(facts: { statement: string; category: string; kind?: string; freshness?: { reviewSuggested: boolean; daysOld: number } }[]): string {
+export function factsBlock(facts: { statement: string; category: string; kind?: string; confidence?: string; provenance?: string; verifiedAt?: number; freshness?: { reviewSuggested: boolean; daysOld: number } }[]): string {
   if (facts.length === 0) return "BUSINESS EVIDENCE: (none yet — keep claims general)";
-  return `BUSINESS EVIDENCE (cite through fact index fields only; never write "[n]" markers in text the owner reads. Preserve the source kind: "site says" is a published claim, "owner report" is not independent verification, and a stated opinion is a signal, not proof of demand. No source kind alone proves viability or willingness to pay. Facts marked "review suggested" may be outdated; treat their current accuracy as unknown until rechecked):\n${facts.map((f, i) => `[${i}] (${f.category}${f.kind ? `; ${f.kind}` : ""}${f.freshness?.reviewSuggested ? `; review suggested, ${f.freshness.daysOld} days since last update` : ""}) ${f.statement}`).join("\n")}`;
+  return `BUSINESS EVIDENCE (cite through fact index fields only; never write "[n]" markers in text the owner reads. Preserve the source kind: "site says" is a published claim, "owner report" is not independent verification, and a stated opinion is a signal, not proof of demand. No source kind alone proves viability or willingness to pay. Provenance and stored confidence describe where the fact came from and its prior evidence quality; neither guarantees that it remains accurate. Facts marked "review suggested" may be outdated; treat their current accuracy as unknown until rechecked):\n${facts.map((f, i) => `[${i}] (${f.category}${f.kind ? `; ${f.kind}` : ""}${f.provenance ? `; provenance ${f.provenance}` : ""}${f.confidence ? `; stored confidence ${f.confidence}` : ""}${f.verifiedAt ? `; verified ${new Date(f.verifiedAt).toISOString().slice(0, 10)}` : ""}${f.freshness?.reviewSuggested ? `; review suggested, ${f.freshness.daysOld} days since last verification` : ""}) ${f.statement}`).join("\n")}`;
 }
 
 /** Stale facts inform what to recheck, but are excluded from the evidence list used to ground claims. */
-export function staleFactsBlock(facts: { statement: string; category: string; freshness: { daysOld: number } }[]): string {
+export function staleFactsBlock(facts: { statement: string; category: string; confidence?: string; provenance?: string; verifiedAt?: number; freshness: { daysOld: number } }[]): string {
   if (!facts.length) return "";
-  const rows = facts.map((f) => `- (${f.category}; last confirmed ${f.freshness.daysOld} days ago) ${f.statement}`).join("\n");
+  const rows = facts.map((f) => `- (${f.category}; ${f.provenance ? `provenance ${f.provenance}; ` : ""}${f.confidence ? `stored confidence ${f.confidence}; ` : ""}${f.verifiedAt ? `last verified ${new Date(f.verifiedAt).toISOString().slice(0, 10)}; ` : ""}${f.freshness.daysOld} days ago) ${f.statement}`).join("\n");
   return `FRESHNESS RULE: The following previously confirmed facts are past their category review interval. Their present accuracy is unknown. Do not cite them as current facts or use them to justify current price, product, offer, or market decisions. Recheck a material item using current evidence or ask the owner.\n${untrusted("stale business facts", rows, 5_000)}`;
 }
 

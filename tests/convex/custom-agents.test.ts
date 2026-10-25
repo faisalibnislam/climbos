@@ -46,6 +46,21 @@ describe("custom specialist profiles", () => {
     expect(saved.agents.find((agent) => agent.id === id)?.monthlyBudgetCredits).toBe(100);
   });
 
+  it("keeps recorded usage available when a legacy specialist has no stored monthly limit", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "legacy-limit-specialist@example.com", { anonymous: true });
+    const { slug } = await owner.client.mutation(api.demo.createDemoWorkspace, {});
+    const { id } = await owner.client.mutation(api.customAgents.create, { slug, ...profile });
+    const { messageId } = await owner.client.mutation(api.workspace.runCustomAgent, { slug, agentId: id, request: "Review our current growth plan." });
+    const message = await t.run((ctx) => ctx.db.get(messageId));
+    expect(message?.runId).toBeTruthy();
+    await t.run(async (ctx) => ctx.db.patch(id, { monthlyBudgetCredits: undefined }));
+
+    const agent = (await owner.client.query(api.customAgents.list, { slug })).agents.find((item) => item.id === id);
+    expect(agent?.monthlyBudgetCredits).toBeNull();
+    expect(agent?.monthlyCreditsUsed).toBeGreaterThan(0);
+  });
+
   it("schedules daily profiles and preserves their trigger when older clients edit settings", async () => {
     const t = setup();
     const owner = await asNewUser(t, "scheduled-specialist@example.com", { anonymous: true });
@@ -154,6 +169,8 @@ describe("custom specialist profiles", () => {
     const profileView = await alice.client.query(api.customAgents.list, { slug: aliceWorkspace.slug });
     expect(profileView.agents[0]?.recentRuns[0]).toMatchObject({ id: message.runId, rating: "needs_work", feedbackNote: "That request was outside the profile's research scope." });
     expect(profileView.agents[0]?.workspaceReportedFeedback).toMatchObject({ source: "workspace_member_report", windowDays: 90, sampleSize: 1, helpful: 0, needsWork: 1, capped: false });
+    expect(profileView.agents[0]?.monthlyCreditsUsed).toEqual(expect.any(Number));
+    expect(profileView.agents[0]?.recentRuns[0]?.actualCredits).toEqual(expect.any(Number));
     await alice.client.mutation(api.workspace.rateCustomAgentRun, { slug: aliceWorkspace.slug, runId: message.runId, rating: "helpful", note: "The research checklist was useful." });
     await t.run(async (ctx) => {
       const rating = await ctx.db.query("customAgentFeedback").withIndex("by_run_user", (q) => q.eq("workflowRunId", message.runId!).eq("userId", alice.userId)).unique();
@@ -310,5 +327,40 @@ describe("custom specialist profiles", () => {
     });
 
     await expect(owner.client.mutation(api.workspace.runCustomAgent, { slug, agentId: id, request: "Draft one new campaign idea." })).rejects.toThrow(/monthly budget/);
+  });
+
+  it("reports monthly specialist usage as unknown when its bounded query is incomplete", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "too-many-runs-specialist@example.com", { anonymous: true });
+    const { slug } = await owner.client.mutation(api.demo.createDemoWorkspace, {});
+    const { id } = await owner.client.mutation(api.customAgents.create, { slug, ...profile });
+    await t.run(async (ctx) => {
+      const org = (await ctx.db.query("organizations").withIndex("by_slug", (q) => q.eq("slug", slug)).unique())!;
+      const now = Date.now();
+      for (let i = 0; i < 501; i++) {
+        await ctx.db.insert("workflowRuns", {
+          orgId: org._id,
+          customAgentId: id,
+          kind: "climb_chat",
+          title: `Specialist run ${i}`,
+          status: "verified",
+          input: "{}",
+          roles: [],
+          estimateMicros: 1_000,
+          actualMicros: 1_000,
+          rateVersionId: "verified-2026-10-17",
+          entitlementVersionId: "ent-credits-2026-10-18",
+          routingVersionId: "r1",
+          budget: { modelSteps: 1, researchTools: 0, repairs: 0 },
+          used: { modelSteps: 1, researchTools: 0, repairs: 0 },
+          isFixture: true,
+          createdAt: now + i,
+          updatedAt: now + i,
+        });
+      }
+    });
+
+    const view = await owner.client.query(api.customAgents.list, { slug });
+    expect(view.agents.find((agent) => agent.id === id)).toMatchObject({ monthlyBudgetCredits: 100, monthlyCreditsUsed: null });
   });
 });

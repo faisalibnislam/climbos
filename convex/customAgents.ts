@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { AGENT_ACTIONS, AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
-import { creditsToMicros, microsToCredits } from "../shared/economics";
+import { microsToCredits } from "../shared/economics";
 import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -76,7 +76,10 @@ export const list = query({
       agents: await Promise.all(agents.map(async ({ _id, archetypeId, name, objective, instructions, allowedActions, knowledge, permission, maxRunCredits, monthlyBudgetCredits, maxActionsPerRun, successMetric, trigger, nextTriggerAt, modelRouting, status, updatedAt }) => {
         const monthlyCap = monthlyBudgetCredits ?? null;
         const runs = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", org._id).eq("customAgentId", _id).gte("createdAt", monthStart)).take(501);
-        const usedMicros = runs.length > 500 ? (monthlyCap === null ? null : creditsToMicros(monthlyCap)) : runs.reduce((sum, run) => sum + (["cost_reserved", "preparing", "needs_approval", "approved", "scheduled", "executing"].includes(run.status) ? Math.max(run.actualMicros, run.estimateMicros) : run.actualMicros), 0);
+        // More than 500 rows means this bounded summary is incomplete. Do not
+        // replace missing usage with the budget cap; that would report an
+        // estimate as if it were recorded spend.
+        const usedMicros = runs.length > 500 ? null : runs.reduce((sum, run) => sum + (["cost_reserved", "preparing", "needs_approval", "approved", "scheduled", "executing"].includes(run.status) ? Math.max(run.actualMicros, run.estimateMicros) : run.actualMicros), 0);
         const activity = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", org._id).eq("customAgentId", _id)).order("desc").take(8);
         const feedbackRows = await ctx.db.query("customAgentFeedback").withIndex("by_agent_updated", (q) => q.eq("orgId", org._id).eq("customAgentId", _id).gte("updatedAt", feedbackSince)).order("desc").take(101);
         const feedbackSample = feedbackRows.slice(0, 100);

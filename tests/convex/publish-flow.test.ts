@@ -272,6 +272,37 @@ describe("publishing lifecycle", () => {
     expect(done.status).toBe("published");
   });
 
+  it("binds a scheduled approval to its exact time and rejects a later unapproved time change", async () => {
+    const t = setup();
+    const w = await workspace(t, "schedule-scope@flow.example");
+    await connectLinkedIn(t, w);
+    const artifactId = await draft(t, w.orgId, "linkedin");
+    const stub = linkedInStub(0);
+    const c = w.owner.client;
+    await c.mutation(api.content.decide, { slug: w.slug, artifactId, decision: "approve" });
+
+    const firstTime = Date.now() + 2 * 86_400_000;
+    const secondTime = firstTime + 86_400_000;
+    await c.mutation(api.content.schedule, { slug: w.slug, artifactId, when: firstTime });
+    const firstApproval = await t.run(async (ctx) => ctx.db.get((await ctx.db.get(artifactId))!.approvalId!));
+    expect(firstApproval!.scope.scheduledFor).toBe(firstTime);
+
+    await c.mutation(api.content.schedule, { slug: w.slug, artifactId, when: secondTime });
+    const secondApproval = await t.run(async (ctx) => ctx.db.get((await ctx.db.get(artifactId))!.approvalId!));
+    expect(secondApproval!.scope.scheduledFor).toBe(secondTime);
+    expect(secondApproval!.approvalHash).not.toBe(firstApproval!.approvalHash);
+
+    // A timer for the old time cannot publish a post that was rescheduled.
+    await t.action(internal.publish.scheduledPublish, { artifactId, expectedScheduledFor: firstTime });
+    expect((await c.query(api.content.get, { slug: w.slug, artifactId })).status).toBe("scheduled");
+    expect(stub.posts()).toBe(0);
+
+    // Even a direct schedule mutation cannot reuse the approval for the old timestamp.
+    await t.run(async (ctx) => ctx.db.patch(artifactId, { scheduledFor: secondTime + 1 }));
+    await expect(c.mutation(api.content.publishNow, { slug: w.slug, artifactId })).rejects.toThrow(/scheduled time changed after approval/i);
+    expect(stub.posts()).toBe(0);
+  });
+
   it("a blocked publish records why, tells approvers and never stays sending", async () => {
     const t = setup();
     const w = await workspace(t);

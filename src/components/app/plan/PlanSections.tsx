@@ -789,6 +789,53 @@ const SWOT: { key: keyof Insights["swot"]; label: string; icon: LucideIcon; box:
   { key: "opportunities", label: "Opportunities", icon: Lightbulb, box: "bg-blue-100", ink: "text-blue-800" },
   { key: "threats", label: "Threats", icon: TriangleAlert, box: "bg-amber-100", ink: "text-amber-800" },
 ];
+const SWOT_DIMENSION: Record<keyof Insights["swot"], "strength" | "weakness" | "opportunity" | "threat"> = {
+  strengths: "strength", weaknesses: "weakness", opportunities: "opportunity", threats: "threat",
+};
+const SWOT_BASIS: Record<string, string> = {
+  owner_report: "Owner reported",
+  source_claim: "Public source claim",
+  measured: "Measured result",
+  research: "Public research",
+  inference: "ClimbOS inference",
+};
+
+function swotEvidenceOf(insights: Insights, dimension: keyof Insights["swot"], finding: string) {
+  return insights.swotEvidence?.find((item) => item.dimension === SWOT_DIMENSION[dimension] && item.finding === finding);
+}
+
+function swotReference(ref: string, index: number) {
+  if (/^https?:\/\//i.test(ref)) {
+    try {
+      const url = new URL(ref);
+      if (url.protocol === "https:" || url.protocol === "http:") return <LinkChip key={`${ref}-${index}`} url={url.href} label="Source" />;
+    } catch {
+      // Invalid model-produced references stay visible as unlinked evidence labels.
+    }
+  }
+  return <Badge key={`${ref}-${index}`}>{/^fact:\d+$/i.test(ref) ? "Business fact" : "Evidence reference"}</Badge>;
+}
+
+const SWOT_MOVE_LABEL: Record<NonNullable<Insights["swotMoves"]>[number]["kind"], string> = {
+  strength_opportunity: "Use a strength to pursue an opportunity",
+  weakness_opportunity: "Address a weakness to pursue an opportunity",
+  strength_threat: "Use a strength to respond to a threat",
+  weakness_threat: "Reduce a weakness exposed to a threat",
+};
+
+const COMMERCIAL_STATUS_LABEL: Record<NonNullable<Insights["commercialAssessment"]>["status"], string> = {
+  evidence_supports_testing: "Evidence supports a small test",
+  mixed_evidence: "Some evidence, some uncertainty",
+  insufficient_business_specific_evidence: "More business evidence is needed",
+};
+
+function swotMovePair(insights: Insights, move: NonNullable<Insights["swotMoves"]>[number]) {
+  const first = move.kind.startsWith("strength_") ? insights.swot.strengths : insights.swot.weaknesses;
+  const second = move.kind.endsWith("_opportunity") ? insights.swot.opportunities : insights.swot.threats;
+  const firstFinding = first[move.firstIndex];
+  const secondFinding = second[move.secondIndex];
+  return firstFinding && secondFinding ? { firstFinding, secondFinding } : null;
+}
 
 function SubHead({ icon: Icon, children, meta }: { icon: LucideIcon; children: ReactNode; meta?: ReactNode }) {
   return (
@@ -841,8 +888,8 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
 
         {insights.commercialAssessment ? (
           <div>
-            <SubHead icon={ShieldAlert} meta={<Badge tone={insights.commercialAssessment.status === "evidence_supports_testing" ? "green" : insights.commercialAssessment.status === "mixed_evidence" ? "amber" : "neutral"}>{insights.commercialAssessment.status.replaceAll("_", " ")}</Badge>}>
-              Commercial evidence and next test
+            <SubHead icon={ShieldAlert} meta={<Badge tone={insights.commercialAssessment.status === "evidence_supports_testing" ? "green" : insights.commercialAssessment.status === "mixed_evidence" ? "amber" : "neutral"}>{COMMERCIAL_STATUS_LABEL[insights.commercialAssessment.status]}</Badge>}>
+              What we know about sales and what to check next
             </SubHead>
             <Callout tone="info" title="A validation guide, not a viability verdict">
               These findings separate business-specific evidence from owner reports, public research, website claims, and hypotheses. A small or selected sample does not establish a whole market.
@@ -914,7 +961,8 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
         </div>
 
         <div>
-          <SubHead icon={Compass}>Strengths, weaknesses, opportunities, threats</SubHead>
+          <SubHead icon={Compass}>What helps, what gets in the way, and what to watch</SubHead>
+          <p className="mb-3 max-w-[70ch] text-sm text-ink-3">A quick view of what is working inside the business and what may change outside it. Items without direct support are labeled as ideas to check.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {SWOT.map((s) => (
               <div key={s.key} className={cn("flex min-w-0 flex-col gap-2 rounded-[var(--radius-card)] p-3", s.box)}>
@@ -926,13 +974,30 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
                 {insights.swot[s.key].length === 0 ? (
                   <p className="text-ui text-ink-2">None noted.</p>
                 ) : (
-                  <ul className="flex flex-col gap-1">
+                  <ul className="flex flex-col gap-2">
                     {insights.swot[s.key].map((it) => (
                       <li key={it} className="flex min-w-0 items-start gap-2 text-ui text-ink">
                         <span aria-hidden className={cn("mt-[7px] size-1.5 shrink-0 rounded-full bg-current", s.ink)} />
-                        <Clamp lines={1} className="flex-1">
-                          {it}
-                        </Clamp>
+                        <span className="flex min-w-0 flex-1 flex-col gap-1">
+                          <Clamp lines={2}>{it}</Clamp>
+                          <details className="text-xs text-ink-2">
+                            <summary className="min-h-6 cursor-pointer font-medium text-brand-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-800">Evidence and why it matters</summary>
+                            {(() => {
+                              const evidence = swotEvidenceOf(insights, s.key, it);
+                              if (!evidence) return <p className="mt-1 text-ink-3">No supporting evidence is saved for this item. Treat it as an idea to check, not a confirmed fact.</p>;
+                              return (
+                                <div className="mt-1 flex flex-col gap-1.5">
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    <Badge tone={evidence.basis === "measured" ? "green" : evidence.basis === "inference" ? "amber" : "neutral"}>{SWOT_BASIS[evidence.basis] ?? "Evidence basis not labeled"}</Badge>
+                                    <Badge tone={CONFIDENCE_TONE[evidence.confidence] ?? "neutral"}>{`${evidence.confidence} confidence`}</Badge>
+                                  </div>
+                                  <p><span className="font-semibold">Why it may matter: </span>{evidence.strategicImplication}</p>
+                                  {evidence.evidenceRefs.length ? <div className="flex flex-wrap gap-1.5">{evidence.evidenceRefs.map(swotReference)}</div> : <p className="text-ink-3">No direct source is linked, so check this before relying on it.</p>}
+                                </div>
+                              );
+                            })()}
+                          </details>
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -941,6 +1006,30 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
             ))}
           </div>
         </div>
+
+        {insights.swotMoves?.length ? (
+          <details className="rounded-[var(--radius-card)] border border-line bg-surface p-3">
+            <summary className="min-h-8 cursor-pointer text-ui font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-800">
+              Possible next steps ({insights.swotMoves.length})
+            </summary>
+            <p className="mb-3 text-sm text-ink-3">These suggestions connect findings above. They are not proven advantages; check the small test before acting.</p>
+            <ol className="flex flex-col gap-3">
+              {insights.swotMoves.map((move, index) => {
+                const pair = swotMovePair(insights, move);
+                if (!pair) return null;
+                return (
+                  <li key={`${move.kind}-${index}`} className="rounded-[var(--radius-card)] border border-line bg-surface-2 p-3">
+                    <Badge>{SWOT_MOVE_LABEL[move.kind]}</Badge>
+                    <p className="mt-1 text-sm text-ink-3">Based on: {pair.firstFinding} · {pair.secondFinding}</p>
+                    <p className="mt-2 text-ui text-ink">{move.move}</p>
+                    <p className="mt-1 text-sm text-ink-2"><span className="font-semibold">Small first test: </span>{move.firstTest}</p>
+                    <p className="mt-1 text-sm text-ink-2"><span className="font-semibold">Measure: </span>{move.measure}</p>
+                  </li>
+                );
+              })}
+            </ol>
+          </details>
+        ) : null}
 
         <div>
           <SubHead icon={Workflow}>Customer journey</SubHead>

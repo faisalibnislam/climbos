@@ -168,6 +168,8 @@ export interface ApprovalScope {
   currency?: string;
   windowStart?: number;
   windowEnd?: number;
+  /** Exact post time, when publishing a scheduled artifact. */
+  scheduledFor?: number;
 }
 
 export interface ApprovalBinding {

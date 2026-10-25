@@ -256,7 +256,7 @@ export const publishArtifact = internalAction({
         subjectId: artifact._id,
         actionKind: approval.actionKind,
         contentHash: version.contentHash,
-        scope: { connectionId: c.connection._id, destination: artifact.channel },
+        scope: { connectionId: c.connection._id, destination: artifact.channel, ...(artifact.scheduledFor !== undefined ? { scheduledFor: artifact.scheduledFor } : {}) },
         policyVersion: c.policyVersion,
         expiresAt: approval.expiresAt,
       },

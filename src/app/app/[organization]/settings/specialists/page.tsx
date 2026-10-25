@@ -7,7 +7,7 @@ import { Bot, Check, Play, Plus } from "@/components/icons";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { AGENT_ACTIONS } from "@shared/agents/registry";
-import { Badge, Button, Callout, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, EmptyState, Field, Input, Select, Segmented, Textarea, toast } from "@/components/ui";
+import { Badge, Button, Callout, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, EmptyState, Field, Input, Meter, Select, Segmented, Textarea, toast } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, QueryBoundary } from "@/components/app/results/QueryBoundary";
 import { SettingsHeader } from "@/components/app/settings/SettingsNav";
@@ -20,6 +20,9 @@ const ACTION_LABEL: Record<(typeof AGENT_ACTIONS)[number], string> = {
 };
 
 type Permission = "read_only" | "draft" | "request_approval";
+const creditsText = (value: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(value);
+const runStatusText = (status: string) => status === "verified" ? "Complete" : status === "needs_approval" ? "Waiting for review" : status.replaceAll("_", " ");
+
 const PERMISSION_OPTIONS = [
   { value: "read_only" as const, label: "Read only" },
   { value: "draft" as const, label: "Prepare drafts" },
@@ -153,7 +156,55 @@ function SpecialistsSettings() {
               </div>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
-              <p className="text-xs text-ink-3">{agent.permission.replaceAll("_", " ")} · up to {agent.maxActionsPerRun} actions · {agent.maxRunCredits} credits per run · manual trigger</p>
+              <p className="text-xs text-ink-3">{agent.permission.replaceAll("_", " ")} · up to {agent.maxActionsPerRun} actions · {agent.maxRunCredits} credits per run · {agent.trigger === "manual" ? "Runs when you ask" : `Runs ${agent.trigger}`}</p>
+              <section aria-label={`${agent.name} cost and usefulness`} className="flex flex-col gap-3 rounded-lg border border-line bg-surface-2 p-3">
+                <h4 className="text-ui font-semibold text-ink">Cost and usefulness</h4>
+                {agent.monthlyCreditsUsed === null ? (
+                  <p className="text-sm text-ink-2">Monthly usage is unavailable from the records shown; no total is estimated.</p>
+                ) : agent.monthlyBudgetCredits !== null ? (
+                  <Meter
+                    label="ClimbOS credits used or set aside this month"
+                    used={agent.monthlyCreditsUsed}
+                    max={agent.monthlyBudgetCredits}
+                    unit="credits"
+                    fullText="Monthly limit reached. This specialist will wait until the budget resets or an owner changes its limit."
+                    footnote="Work that is still running or waiting for review may include estimates. Credits are not customer sales or business profit."
+                  />
+                ) : (
+                  <p className="text-sm text-ink-2">{creditsText(agent.monthlyCreditsUsed)} ClimbOS credits used or set aside this month. No monthly credit limit is recorded for this specialist; in-progress work may include estimates.</p>
+                )}
+                <div className="flex flex-col gap-1.5">
+                  <h5 className="text-ui font-medium text-ink-2">Team feedback · last 90 days</h5>
+                  {agent.workspaceReportedFeedback.sampleSize ? (
+                    <p className="text-sm text-ink-2">
+                      {agent.workspaceReportedFeedback.helpful} helpful and {agent.workspaceReportedFeedback.needsWork} needing work, from {agent.workspaceReportedFeedback.sampleSize} team rating{agent.workspaceReportedFeedback.sampleSize === 1 ? "" : "s"}.
+                      {agent.workspaceReportedFeedback.capped ? " Showing up to 100 recent ratings." : ""}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-ink-3">No team ratings recorded in the last 90 days.</p>
+                  )}
+                  <p className="text-xs text-ink-3">These are team opinions about usefulness, not measured business results or time saved.</p>
+                </div>
+                {agent.recentRuns.length ? (
+                  <div className="flex flex-col gap-2 border-t border-line pt-3">
+                    <h5 className="text-ui font-medium text-ink-2">Recent runs</h5>
+                    <ul className="flex flex-col gap-2">
+                      {agent.recentRuns.slice(0, 3).map((run) => (
+                        <li key={run.id} className="flex flex-col gap-1 rounded-md border border-line bg-surface p-2.5">
+                          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                            <span className="text-sm font-medium text-ink">{run.title}</span>
+                            <Badge tone={run.status === "verified" ? "green" : run.status === "failed" ? "red" : "neutral"}>{runStatusText(run.status)}</Badge>
+                          </div>
+                          <p className="text-xs text-ink-3">
+                            {new Date(run.createdAt).toLocaleDateString()} · {run.status === "verified" || run.status === "failed" || run.status === "canceled" ? `${creditsText(run.actualCredits)} credits recorded` : `${creditsText(run.actualCredits)} recorded so far; ${creditsText(run.estimateCredits)} estimated for this run`}
+                          </p>
+                          {run.rating ? <p className="text-xs text-ink-2">Your rating: {run.rating === "helpful" ? "Helpful" : "Needs work"}{run.feedbackNote ? ` · ${run.feedbackNote}` : ""}</p> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </section>
               <Field label={`Ask ${agent.name}`}><Textarea rows={2} value={request[agent.id] ?? ""} onChange={(event) => setRequest((current) => ({ ...current, [agent.id]: event.target.value }))} maxLength={1500} placeholder="What should this specialist help with?" disabled={agent.status !== "active"} /></Field>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" disabled={agent.status !== "active" || !(request[agent.id] ?? "").trim()} onClick={async () => { try { await run({ slug, agentId: agent.id as Id<"customAgents">, request: request[agent.id] }); setRequest((current) => ({ ...current, [agent.id]: "" })); toast({ tone: "success", title: "Specialist started", description: "Follow its progress in Today and review any proposed actions." }); } catch (error) { toast({ tone: "danger", title: errorMessage(error) }); } }}><Play aria-hidden /> Run specialist</Button>

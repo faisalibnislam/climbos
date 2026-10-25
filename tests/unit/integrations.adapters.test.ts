@@ -588,6 +588,17 @@ describe("stripeRevenue", () => {
           ],
         }),
       },
+      {
+        match: "/v1/invoices?status=open",
+        respond: json(200, {
+          has_more: false,
+          data: [
+            { object: "invoice", id: "in_past", status: "open", amount_remaining: 9000, currency: "usd", due_date: 1_760_000_000, customer: "cus_private" },
+            { object: "invoice", id: "in_unknown_due", status: "open", amount_remaining: 10000, currency: "usd", due_date: null, customer: "cus_private_2" },
+            { object: "invoice", id: "in_paid", status: "paid", amount_remaining: 0, currency: "usd", due_date: 1_760_000_000 },
+          ],
+        }),
+      },
     ]);
     const res = await stripe.importStripeRevenue({ restrictedKey: "rk_test_abc", fetchImpl, createdGte: 1_759_999_999 });
     expect(res.ok).toBe(true);
@@ -597,8 +608,31 @@ describe("stripeRevenue", () => {
       { sourceEventId: "re_2", source: "stripe", occurredAt: 1_760_000_300_000, currency: "JPY", amountMinor: 700, refundedMinor: 0, kind: "refund", orderRef: "ch_old" },
     ]);
     expect(res.data.nextCreatedGte).toBe(1_760_000_300);
+    expect(res.data.openInvoiceExposure).toEqual([{
+      currency: "USD",
+      invoiceCount: 2,
+      remainingMinor: 19000,
+      pastDueInvoiceCount: 1,
+      pastDueRemainingMinor: 9000,
+      dueDateUnknownCount: 1,
+    }]);
+    expect(JSON.stringify(res.data.openInvoiceExposure)).not.toContain("cus_private");
     expect(calls[0]?.url).toContain("created%5Bgte%5D=1759999999");
     expect(calls[0]?.headers["Stripe-Version"]).toBe("2026-09-30.endive");
+    expect(calls[2]?.url).toContain("status=open");
+  });
+
+  it("aggregates only valid, positive open balances and marks a truncated list as partial", () => {
+    const exposure = stripe.summarizeOpenInvoices([
+      { object: "invoice", status: "open", amount_remaining: 2500, currency: "eur", due_date: 1_900_000_000 },
+      { object: "invoice", status: "paid", amount_remaining: 4000, currency: "EUR", due_date: 1_600_000_000 },
+      { object: "invoice", status: "open", amount_remaining: 0, currency: "EUR", due_date: null },
+      { object: "invoice", status: "open", amount_remaining: 1000, currency: "usd", due_date: null },
+    ], { asOf: 1_800_000_000_000 });
+    expect(exposure).toEqual([
+      { currency: "EUR", invoiceCount: 1, remainingMinor: 2500, pastDueInvoiceCount: 0, pastDueRemainingMinor: 0, dueDateUnknownCount: 0 },
+      { currency: "USD", invoiceCount: 1, remainingMinor: 1000, pastDueInvoiceCount: 0, pastDueRemainingMinor: 0, dueDateUnknownCount: 1 },
+    ]);
   });
 });
 

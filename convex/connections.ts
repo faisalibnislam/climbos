@@ -238,6 +238,7 @@ export const list = query({
           canRefreshToken: true,
           accountType: conn?.accountType,
           lastSyncAt: conn?.lastSyncAt,
+          lastSyncError: conn?.lastSyncError,
           now,
         };
         let capabilities = evaluateCapabilities(adapterId, capCtx).map((c) => ({
@@ -383,6 +384,7 @@ export const storeConnection = internalMutation({
         externalAccountId: args.externalAccountId,
         accountType: args.accountType,
         lastSyncError: undefined,
+        ...(args.provider === "stripe_revenue" ? { stripeOpenInvoiceSnapshot: undefined, lastSyncAt: undefined } : {}),
         updatedAt: now,
       });
       const old = await ctx.db
@@ -558,14 +560,31 @@ export const secretsForRevocation = internalQuery({
 });
 
 export const markSync = internalMutation({
-  args: { connectionId: v.id("connections"), ok: v.boolean(), error: v.optional(v.string()), expired: v.optional(v.boolean()) },
-  handler: async (ctx, { connectionId, ok, error, expired }) => {
+  args: {
+    connectionId: v.id("connections"),
+    ok: v.boolean(),
+    error: v.optional(v.string()),
+    expired: v.optional(v.boolean()),
+    stripeOpenInvoiceSnapshot: v.optional(v.object({
+      asOf: v.number(),
+      partial: v.boolean(),
+      byCurrency: v.array(v.object({
+        currency: v.string(),
+        invoiceCount: v.number(),
+        remainingMinor: v.number(),
+        pastDueInvoiceCount: v.number(),
+        pastDueRemainingMinor: v.number(),
+        dueDateUnknownCount: v.number(),
+      })),
+    })),
+  },
+  handler: async (ctx, { connectionId, ok, error, expired, stripeOpenInvoiceSnapshot }) => {
     const conn = await ctx.db.get(connectionId);
     if (!conn) return;
     await ctx.db.patch(
       connectionId,
       ok
-        ? { lastSyncAt: Date.now(), lastSyncError: undefined, updatedAt: Date.now() }
+        ? { lastSyncAt: Date.now(), lastSyncError: undefined, updatedAt: Date.now(), ...(stripeOpenInvoiceSnapshot ? { stripeOpenInvoiceSnapshot } : {}) }
         : { lastSyncError: error?.slice(0, 300), updatedAt: Date.now(), ...(expired && conn.status === "connected" ? { status: "expired" as const } : {}) },
     );
   },

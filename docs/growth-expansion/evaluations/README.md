@@ -36,7 +36,7 @@ pnpm tsx bench/expansion/human-review.ts --mode summarize \
   --out bench/results/review-round-01.summary.json
 ```
 
-The summary maps preferences and scores back to baseline/candidate, reports incomplete reviews separately, and breaks preferences out by business type. Use multiple independent qualified reviewers for consequential comparisons; this tool reports ratings but does not claim statistical significance or reviewer agreement. Do not commit private review packets or keys unless their contents are cleared for the repository.
+The summary maps preferences and scores back to baseline/candidate, reports incomplete reviews separately, and breaks preferences out by business type. Review packets also have optional editing-effort fields. A real owner or operator can record seconds from opening each answer until it is usable for the same task, and whether they accepted it unchanged. Independent reviewers are summarized separately. Missing measurements stay null; these are participant-reported task-effort observations, not business outcomes. Use multiple independent qualified reviewers for consequential comparisons; this tool reports ratings but does not claim statistical significance or reviewer agreement. Do not commit private review packets or keys unless their contents are cleared for the repository.
 
 No live publishing, sending, ad spending, or customer data access is needed to evaluate these cases. Simulate external tools with fixtures. An evaluation prompt cannot authorize real execution.
 

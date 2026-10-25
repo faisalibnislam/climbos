@@ -66,4 +66,25 @@ describe("creative strategy preference and tenant-scoped learning", () => {
     expect(records[0]).toMatchObject({ optionHash: expect.stringMatching(/^[a-f0-9]{64}$/), strategyStatusAtFeedback: "needs_approval" });
     expect(records.find((record) => record.ownerEdit)?.ownerEditHash).toMatch(/^[a-f0-9]{64}$/);
   });
+
+  it("reuses explicit plan rejection notes as tenant-scoped preferences, not evidence", async () => {
+    const t = setup();
+    const workspace = await makeWorkspace(t, "creative-rejected-plan@example.com");
+    const other = await makeWorkspace(t, "creative-rejected-other@example.com");
+    const rejected = await generate(t, workspace, "balanced");
+    await workspace.client.mutation(api.workspace.decidePlan, {
+      slug: workspace.slug,
+      strategyId: rejected._id,
+      decision: "reject",
+      note: "We cannot support another live workshop this quarter; keep work asynchronous.",
+    });
+
+    const learning = await t.run(async (ctx) => creativeStrategyLearningBrief(ctx, workspace.orgId));
+    const otherLearning = await t.run(async (ctx) => creativeStrategyLearningBrief(ctx, other.orgId));
+    expect(learning).toContain("owner-reported rationale");
+    expect(learning).toContain("keep work asynchronous");
+    expect(learning).toContain("preference signals, not proof of business performance");
+    expect(learning).toContain("Recheck current facts, goal and constraints");
+    expect(otherLearning).not.toContain("keep work asynchronous");
+  });
 });

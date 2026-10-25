@@ -287,12 +287,12 @@ export const PROVIDERS: Record<ProviderId, ProviderMetadata> = {
   stripe: {
     id: "stripe",
     displayName: "Stripe",
-    description: "Imports your payments, invoices and refunds as revenue using a read-only restricted key.",
+    description: "Imports payment and refund history, and reads open invoice balances for owner review using a read-only restricted key.",
     connection: "api_key",
     apiVersion: STRIPE_API_VERSION,
     verified: true,
     verifiedAt: VERIFIED_AT,
-    capabilities: [{ id: "stripe.import_revenue", kind: "read", label: "Import revenue", description: "Reads charges, invoices and refunds since the last import." }],
+    capabilities: [{ id: "stripe.import_revenue", kind: "read", label: "Read payments, refunds and open invoices", description: "Imports payment/refund history and reads open invoice balances without attempting payment or contacting customers." }],
     requiredEnv: [],
     requiredReviewSteps: ["Create a restricted key (rk_…) with Read access to Charges, Invoices and Refunds only"],
     docs: [

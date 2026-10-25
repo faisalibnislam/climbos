@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { estimateJobMicros, planJob } from "../../convex/lib/jobPlans";
 import { asNewUser, setup, type T } from "./helpers";
 
 /** Climb AI Basic is available to all; Expert (paid) allows measured Sol escalation on eligible work. */
@@ -57,6 +58,7 @@ describe("Climb AI Basic / Expert", () => {
     await t.finishAllScheduledFunctions(() => undefined);
     const run = await lastRun(t, w.orgId, "strategy");
     expect(run.aiMode).toBe("expert");
+    expect(run.estimateMicros).toBe(estimateJobMicros(planJob("strategy", {}, { mode: "expert" })));
     const steps = await t.run(async (ctx) => ctx.db.query("workflowSteps").withIndex("by_run", (q) => q.eq("runId", run._id)).collect());
     const modelOf = (label: string) => steps.find((s) => s.label === label)?.model;
     expect(modelOf("Growth plan: draft")).toBe("gpt-6-luna");
@@ -65,5 +67,42 @@ describe("Climb AI Basic / Expert", () => {
     // The owner can save Basic as the default.
     await w.client.mutation(api.workspace.setAiMode, { slug: w.slug, mode: "basic" });
     expect(await w.client.query(api.workspace.aiMode, { slug: w.slug })).toMatchObject({ mode: "basic", expertUnlocked: true });
+  });
+
+  it("shows first-research credit estimates and honors a paid owner's Basic choice", async () => {
+    const t = setup();
+    const w = await workspace(t, "mode-onboarding-choice@example.com");
+    await makePaid(t, w.orgId);
+
+    const available = await w.client.query(api.orgs.newWorkspaceAiMode, {});
+    expect(available.expertUnlocked).toBe(true);
+    expect(available.estimates.onboarding_research.basic).toBeGreaterThan(0);
+    expect(available.estimates.onboarding_research.expert).toBeGreaterThan(0);
+    expect(available.estimates.onboarding_research.basic).toBe(estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "basic" })));
+    expect(available.estimates.onboarding_research.expert).toBe(estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "expert" })));
+
+    await w.client.mutation(api.orgs.startResearch, {
+      slug: w.slug,
+      website: "https://mode.example",
+      ownerText: "We provide a local repair service.",
+      aiMode: "basic",
+    });
+    const run = await lastRun(t, w.orgId, "onboarding_research");
+    expect(run.estimateMicros).toBe(estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "basic" })));
+    expect(run.estimateMicros).not.toBe(estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "expert" })));
+  });
+
+  it("matches the legacy-engine reservation estimate when Engine v2 is disabled", async () => {
+    delete process.env.CLIMBOS_ENGINE;
+    const t = setup();
+    const w = await workspace(t, "mode-legacy-estimate@example.com");
+    await w.client.mutation(api.orgs.startResearch, {
+      slug: w.slug,
+      website: "https://legacy-mode.example",
+      ownerText: "We provide a local repair service.",
+      aiMode: "basic",
+    });
+    const run = await lastRun(t, w.orgId, "onboarding_research");
+    expect(run.estimateMicros).toBe(estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "basic" })));
   });
 });

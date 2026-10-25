@@ -74,6 +74,37 @@ describe("Plan grounding (Books 13/14, P0)", () => {
     await expect(w.client.mutation(api.workspace.decidePlan, { slug: w.slug, strategyId: s._id, decision: "approve" })).rejects.toThrow(/conflicting business information/);
   });
 
+  it("keeps overdue confirmed facts out of current evidence and records their provenance for recheck", async () => {
+    const t = setup();
+    const w = await workspace(t, "grounded-stale@example.com");
+    const verifiedAt = Date.now() - 90 * 86_400_000;
+    const factId = await t.run(async (ctx) => {
+      const b = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).first())!;
+      return ctx.db.insert("businessFacts", {
+        orgId: w.orgId,
+        businessId: b._id,
+        category: "pricing",
+        statement: "Pro used to cost $24/month",
+        confidence: "high",
+        reviewState: "confirmed",
+        provenance: "owner_supplied",
+        sourceIds: [],
+        createdAt: verifiedAt,
+        updatedAt: Date.now(),
+        verifiedAt,
+      });
+    });
+    await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const s = await latestStrategy(t, w.orgId);
+    const evidence = await t.run(async (ctx) => ctx.db.query("planEvidence").withIndex("by_strategy", (q) => q.eq("strategyId", s._id)).first());
+    const data = JSON.parse(evidence!.data) as PlanEvidence;
+    expect(data.facts.some((fact) => fact.id === String(factId))).toBe(false);
+    expect(data.staleFacts).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: String(factId), provenance: "owner_supplied", confidence: "high", verifiedAt, daysSinceVerification: expect.any(Number) }),
+    ]));
+  });
+
   it("the owner's funnel decides the weak link in code; playbooks are gated and saved with the plan (cycle 2)", async () => {
     const t = setup();
     const w = await workspace(t, "grounded-funnel@example.com");

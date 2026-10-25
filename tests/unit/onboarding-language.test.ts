@@ -12,7 +12,7 @@ vi.mock("convex/react", () => ({
   useQuery: (reference: Parameters<typeof getFunctionName>[0]) => {
     const name = getFunctionName(reference);
     if (name === "orgs:me") return { userId: "test-owner", isAnonymous: false, orgs: state.orgs };
-    if (name === "orgs:newWorkspaceAiMode") return { expertUnlocked: false };
+    if (name === "orgs:newWorkspaceAiMode") return { expertUnlocked: false, estimates: { onboarding_research: { basic: 190_000, expert: 160_000 } } };
     return undefined;
   },
   useMutation: () => vi.fn(),
@@ -28,6 +28,8 @@ describe("business setup starts with understandable, isolated intake", () => {
     expect(html).toContain("Tell us about your business");
     expect(html).toContain("I do not have a website yet.");
     expect(html).toContain("Your business and what you need");
+    expect(html).toContain("Research uses up to 19 credits.");
+    expect(html).toContain("unused reserved credits are returned.");
     expect(html).not.toContain("bristolcrumb.co.uk");
     expect(html).not.toContain("AI CEO");
   });

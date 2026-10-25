@@ -158,7 +158,7 @@ describe("Engine v2 wiring", () => {
     // Pages the research read are saved, and so is what the plan was built from.
     expect(strategy?.expert?.webSources?.[0]?.url).toBe("https://example.com");
     expect(strategy?.expert?.snapshot?.engine).toMatch(/^v\d/);
-    expect(strategy?.expert?.snapshot?.snapshotVersion).toBe(19);
+    expect(strategy?.expert?.snapshot?.snapshotVersion).toBe(20);
     expect(strategy?.expert?.snapshot?.knowledgeReferences?.records.length).toBeGreaterThan(0);
     expect(strategy?.expert?.snapshot?.knowledgeReferences?.records.every((record) => /^[a-f0-9]{64}$/u.test(record.sha256))).toBe(true);
     expect(strategy?.expert?.snapshot?.businessLifecycleStage).toMatchObject({ stage: "early_traction", provenance: "owner_reported" });

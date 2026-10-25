@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeCohorts, type CohortPayment } from "../../shared/attribution";
+import { computeCohorts, subscriptionCohortBrief, type CohortPayment } from "../../shared/attribution";
 
 const d = (s: string) => Date.parse(`${s}T12:00:00Z`);
 const pay = (customerRef: string, date: string, amountMinor = 2500, extra: Partial<CohortPayment> = {}): CohortPayment => ({ customerRef, occurredAt: d(date), amountMinor, refundedMinor: 0, kind: "subscription_payment", currency: "USD", ...extra });
@@ -55,5 +55,18 @@ describe("monthly cohorts", () => {
 
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({ size: 2, activeCustomers: [2, 0, null], revenueMinor: [30_000, -3_000, null] });
+  });
+
+  it("formats payer cohorts as observed retention and leaves incomplete months unknown", () => {
+    const done = computeCohorts(payments, { currency: "USD", nowMs: d("2026-10-02"), maxMonths: 4 });
+    const brief = subscriptionCohortBrief(done, { currency: "USD", hasCustomerIds: true, truncated: true });
+    expect(brief).toContain("2026-07: 3 first-paid customers; M1 2/3 (66.7%), M2 1/3 (33.3%), M3 incomplete");
+    expect(brief).toContain("history is truncated to the latest 10,000 events");
+    expect(brief).toContain("observed payer retention, not contractual churn, gross/net revenue retention, a forecast, or causal evidence");
+    expect(brief).not.toContain("M3 0/3");
+  });
+
+  it("does not infer retention when billing customer IDs are missing", () => {
+    expect(subscriptionCohortBrief([], { currency: "USD", hasCustomerIds: false, truncated: false })).toContain("billing events do not include customer IDs");
   });
 });

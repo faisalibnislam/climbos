@@ -30,6 +30,34 @@ export interface CohortRow {
   revenueMinor: (number | null)[];
 }
 
+/** Compact, evidence-labeled subscription cohort context for growth planning. */
+export function subscriptionCohortBrief(
+  rows: readonly CohortRow[],
+  options: { currency: string; hasCustomerIds: boolean; truncated: boolean },
+): string {
+  const currency = options.currency.toUpperCase();
+  if (!options.hasCustomerIds) {
+    return `OBSERVED SUBSCRIPTION COHORTS: unavailable for ${currency}; loaded billing events do not include customer IDs. Do not infer subscription retention, churn, or expansion from aggregate revenue.`;
+  }
+  if (!rows.length) {
+    return `OBSERVED SUBSCRIPTION COHORTS: no same-currency subscription-payment cohorts could be calculated for ${currency}; treat retention as unknown.`;
+  }
+  const recent = rows.slice(-6);
+  const observations = recent.map((row) => {
+    const months = row.activeCustomers.slice(1, 6).map((count, index) => {
+      const offset = index + 1;
+      if (count === null) return `M${offset} incomplete`;
+      const rate = row.retention[offset];
+      return `M${offset} ${count}/${row.size}${rate === null ? "" : ` (${(rate * 100).toFixed(1)}%)`}`;
+    });
+    return `${row.cohort}: ${row.size} first-paid customers; ${months.join(", ") || "no completed follow-up month"}`;
+  });
+  return [
+    `OBSERVED SUBSCRIPTION PAYMENT COHORTS (${currency}; latest six cohorts from the loaded billing-event history${options.truncated ? "; history is truncated to the latest 10,000 events" : ""}): ${observations.join("; ")}.`,
+    "Each cohort is grouped by month of first positive subscription payment and counts same-currency customers with a positive subscription payment in each completed month. This is observed payer retention, not contractual churn, gross/net revenue retention, a forecast, or causal evidence. Incomplete months are explicitly omitted; do not treat them as zero.",
+  ].join(" ");
+}
+
 function monthKey(ms: number): string {
   return new Date(ms).toISOString().slice(0, 7);
 }

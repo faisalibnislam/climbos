@@ -130,6 +130,33 @@ describe("blinded human review", () => {
     expect(Object.values(summary.by_business_type).reduce((n, g) => n + g.reviewed, 0)).toBe(2);
   });
 
+  it("reports owner/operator editing effort separately by blinded arm and leaves missing effort unknown", () => {
+    const { packet, key } = createHumanReviewPacket(run("baseline", "one"), run("candidate", "two"), allCases, "effort-seed");
+    packet.reviewer_id = "reviewer-1";
+    for (const item of packet.items) {
+      item.ratings.answer_a = Object.fromEntries(RUBRIC.map(({ key: k }) => [k, 2])) as typeof item.ratings.answer_a;
+      item.ratings.answer_b = Object.fromEntries(RUBRIC.map(({ key: k }) => [k, 1])) as typeof item.ratings.answer_b;
+      item.ratings.hard_failures_a = Object.fromEntries(Object.keys(item.ratings.hard_failures_a).map((k) => [k, false]));
+      item.ratings.hard_failures_b = Object.fromEntries(Object.keys(item.ratings.hard_failures_b).map((k) => [k, false]));
+      item.ratings.preferred = key.mapping[item.item_id].baseline;
+      const baselineArm = key.mapping[item.item_id].baseline;
+      item.ratings[baselineArm === "A" ? "editing_effort_a" : "editing_effort_b"] = {
+        participant: "owner_or_operator",
+        seconds_to_usable: item.case_id === "EV01" ? 60 : 30,
+        accepted_without_edits: false,
+      };
+      item.ratings[baselineArm === "A" ? "editing_effort_b" : "editing_effort_a"] = {
+        participant: "owner_or_operator",
+        seconds_to_usable: item.case_id === "EV01" ? 40 : 20,
+        accepted_without_edits: item.case_id === "EV01",
+      };
+    }
+    const summary = summarizeHumanReview(packet, key);
+    expect(summary.editing_effort.baseline.owner_or_operator).toMatchObject({ observations: 2, incomplete: 0, median_seconds_to_usable: 45, accepted_without_edits_rate: 0 });
+    expect(summary.editing_effort.candidate.owner_or_operator).toMatchObject({ observations: 2, incomplete: 0, median_seconds_to_usable: 30, accepted_without_edits_rate: 0.5 });
+    expect(summary.editing_effort.baseline.independent_reviewer).toMatchObject({ observations: 0, median_seconds_to_usable: null, accepted_without_edits_rate: null });
+  });
+
   it("rejects mismatched and malformed review files and reports incomplete rows", () => {
     const { packet, key } = createHumanReviewPacket(run("baseline", "one"), run("candidate", "two"), allCases, "seed-3");
     packet.reviewer_id = "reviewer-1";
