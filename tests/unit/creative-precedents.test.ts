@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(55);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(56);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -152,6 +152,22 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://www.axios.com/2017/12/15/juicero-is-shutting-down-draining-vcs-120-million-1513305243", sourceRole: "independent_secondary", publicationDate: "2017-09-01" }),
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Test product value before expanding production", query)).toContain("CP-055");
+  });
+
+  it("retrieves a customer-insight creative platform while keeping outcomes and cultural limits clear", () => {
+    const query = "Build a repeatable hunger-based creative platform from a customer situation, connect it to the product benefit, and adapt it across markets";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-056");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("repeatable creative rule");
+    expect(match?.precedent.outcome).toContain("not forecasts");
+    expect(match?.precedent.causalLimit).toContain("predict lift");
+    expect(match?.precedent.transferRisk).toContain("local fit");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.prnewswire.com/news-releases/snickersr-kicks-off-new-advertising-campaign-at-super-bowl-xliv-82931857.html", sourceRole: "company_primary" }),
+      expect.objectContaining({ url: "https://www.warc.com/en/article/snickers%3A-you%26%2339%3Bre-not-you-when-you%26%2339%3Bre-hungry-global-case-study-ac4913912d984ad8b8658fa29c814d8f", sourceRole: "independent_secondary", publicationDate: "2012-06-16" }),
+      expect.objectContaining({ url: "https://www.tandfonline.com/doi/full/10.1080/17459435.2019.1605403", claimRole: "context" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Develop an original product-linked creative platform", query)).toContain("CP-056");
   });
 
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {
