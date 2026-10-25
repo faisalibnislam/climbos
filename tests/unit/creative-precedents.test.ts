@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(51);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(52);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -95,6 +95,20 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://www.fastcompany.com/40416506/is-pay-transparency-right-for-your-company-we-asked-a-few-that-tried-it", publicationDate: "2017-05-05", sourceRole: "independent_secondary" }),
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Explore distinctive trust mechanisms", query)).toContain("CP-051");
+  });
+
+  it("retrieves a brand-quirk creative portfolio without treating reported reach as customer growth", () => {
+    const query = "Create fictional product concepts, interconnected microsites, and campaign content around the company's mispronounced name";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-052");
+    expect(match).toBeDefined();
+    expect(match?.precedent.outcome).toContain("company-reported reach comparison");
+    expect(match?.precedent.causalLimit).toContain("does not show that a portfolio of fictional projects caused customer acquisition");
+    expect(match?.precedent.transferRisk).toContain("Do not rely on a search engine correction");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.oneclub.org/awards/theoneshow/-award/26134/did-you-mean-mailchimpa/", publicationDate: "2017", sourceRole: "creator_primary" }),
+      expect.objectContaining({ url: "https://www.entrepreneur.com/starting-a-business/why-mailchimps-insane-fake-ad-campaign-paid-off/294550", publicationDate: "2017-06-05", sourceRole: "independent_secondary" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Explore a surprising brand-discovery strategy", query)).toContain("CP-052");
   });
 
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {
