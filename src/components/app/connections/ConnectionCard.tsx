@@ -44,6 +44,7 @@ import { AudienceSummary, ContactsCsvDialog } from "./ContactsCsvDialog";
 import { CAPABILITY_STATE, CONNECTION_STATUS, isPast, SYNCABLE, type CapabilityState } from "./labels";
 import { RevenueCsvDialog } from "./RevenueCsvDialog";
 import { SearchConsoleSetup } from "./SearchConsoleSetup";
+import { GoogleAdsSetup } from "./GoogleAdsSetup";
 import { WordPressConnectDialog } from "./WordPressConnectDialog";
 
 export type ConnectionsData = FunctionReturnType<typeof api.connections.list>;
@@ -205,6 +206,15 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
           canManage={canManage}
           isDemo={isDemo || Boolean(conn?.isFixture)}
           selectedProperty={"externalAccountId" in (conn ?? {}) ? conn?.externalAccountId ?? null : null}
+        />
+      ) : null}
+      {item.provider === "google_ads" ? (
+        <GoogleAdsSetup
+          slug={slug}
+          connected={connected}
+          canManage={canManage}
+          isDemo={isDemo || Boolean(conn?.isFixture)}
+          selectedAccount={conn?.externalAccountId ?? null}
         />
       ) : null}
 

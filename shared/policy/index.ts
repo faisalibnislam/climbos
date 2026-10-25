@@ -161,6 +161,7 @@ export function contentHash(content: MaterialContent): Promise<string> {
 
 export interface ApprovalScope {
   connectionId?: string;
+  externalAccountId?: string;
   destination?: string;
   audience?: string;
   spendLimitMinor?: number;
@@ -228,6 +229,9 @@ export async function checkApprovalForExecution(params: {
   }
   if (approval.scope.connectionId && current.scope.connectionId && approval.scope.connectionId !== current.scope.connectionId) {
     return { ok: false, reason: "wrong_account", message: "This would go to a different account than the one approved." };
+  }
+  if (approval.scope.externalAccountId && current.scope.externalAccountId && approval.scope.externalAccountId !== current.scope.externalAccountId) {
+    return { ok: false, reason: "wrong_account", message: "This would go to a different provider account than the one approved." };
   }
   if (canonicalJson(approval.scope as Json) !== canonicalJson(current.scope as Json)) {
     return { ok: false, reason: "scope_changed", message: "The audience, destination, budget or timing changed after approval." };

@@ -218,18 +218,18 @@ describe("approvals and execution safety", () => {
     });
     const ad = (await artifactsByStatus(t, d.orgId, "approved")).find((a) => a.kind === "ad")!;
     await expect(
-      d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 50, startDate: "2026-11-01", endDate: "2026-11-30" }),
+      d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 50, startDate: "2026-11-01", endDate: "2026-11-30", reviewAfterDays: 7 }),
     ).rejects.toThrow(/approved monthly ad budget/);
-    const ok = await d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 15, startDate: "2026-11-01", endDate: "2026-11-30" });
+    const ok = await d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 15, startDate: "2026-11-01", endDate: "2026-11-30", reviewAfterDays: 7 });
     expect(ok).toBeTruthy();
 
     // A second provider cannot each consume the same full monthly envelope.
     await t.run(async (ctx) => ctx.db.patch(ad._id, { channel: "meta_ad" }));
     await expect(
-      d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 6, startDate: "2026-11-01", endDate: "2026-11-30" }),
+      d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 6, startDate: "2026-11-01", endDate: "2026-11-30", reviewAfterDays: 7 }),
     ).rejects.toThrow(/across Google and Meta/);
     // The shared limit is over overlapping 31-day windows, so a later flight can still fit.
-    const later = await d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 15, startDate: "2026-12-01", endDate: "2026-12-30" });
+    const later = await d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 15, startDate: "2026-12-01", endDate: "2026-12-30", reviewAfterDays: 7 });
     expect(later).toBeTruthy();
   });
 });

@@ -22,6 +22,11 @@ describe("onboarding chat parser", () => {
     expect(p.monthlyAdBudget).toBe(0);
   });
 
+  it("understands ordinary name introductions and curly apostrophes", () => {
+    expect(parseIntro("My business is called Northstar Bakery. I want more local orders.").businessName).toBe("Northstar Bakery");
+    expect(parseIntro("We’re Bloom Bakery. We need help.").businessName).toBe("Bloom Bakery");
+  });
+
   it("does not mistake an email address for a website", () => {
     const p = parseIntro("Contact me at owner@shop.com about growing reach");
     expect(p.website).toBeUndefined();

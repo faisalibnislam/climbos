@@ -37,7 +37,7 @@ export default function CompetitorsPage() {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <PageHeader
         section="competitors"
-        title="Competitors"
+        title="Similar businesses"
         intro={`${data.watches.length} of ${data.limit} · checked Mondays`}
         actions={
           data.watches.length ? (

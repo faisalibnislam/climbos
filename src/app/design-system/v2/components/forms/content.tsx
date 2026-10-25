@@ -1,5 +1,6 @@
 "use client";
 
+import { RequestComposer } from "@/components/ui/request-composer";
 import { useId, useState } from "react";
 import { AtSign, Building2, Globe, Mail, Megaphone, Sparkles, Store, Tag, Users } from "@/components/icons";
 import { Button, Checkbox, ColorPicker, DatePicker, DateTimePicker, Field, FileInput, HexInput, Input, Label, Select, Switch, Textarea } from "@/components/ui";
@@ -44,6 +45,7 @@ import { DocPage, Spec, Specimen, Stage } from "../../_kit/doc";
 export function FormsContent() {
   return (
     <DocPage eyebrow="Components" title="Forms" intro="Every field has a visible label, says what it wants in plain words, and explains errors next to the field.">
+      <RequestComposerSpecimen />
       <TextInputSpecimen />
       <TextareaSpecimen />
       <NumberSpecimen />
@@ -829,3 +831,17 @@ function SectionSpecimen() {
   );
 }
 
+
+
+function RequestComposerSpecimen() {
+  const [value, setValue] = useState("");
+  const [sent, setSent] = useState("");
+  return (
+    <section id="request-composer-example" className="space-y-3" aria-labelledby="request-specimen">
+      <h2 id="request-specimen" className="heading-section">Guided request</h2>
+      <p className="text-sm text-ink-3">The shared input for Home and business setup. This example does not run AI or create a business.</p>
+      <RequestComposer label="Example request" value={value} onChange={setValue} onSubmit={() => { setSent(value); setValue(""); }} placeholder="Tell us what you need help with…" suggestions={["Help me choose what to do next", "Prepare posts for next week"]} helper="Suggestions only add text. You choose when to send." />
+      {sent ? <p role="status" className="text-sm text-ink-2">Example received: {sent}</p> : null}
+    </section>
+  );
+}

@@ -178,7 +178,7 @@ const KIND: Record<
     chart: CHART.sage,
   },
   creative: {
-    label: "Adjacent · evidence-supported inference",
+    label: "A related approach · needs checking",
     icon: Gem,
     hint: "A useful idea carried into a less familiar context; the evidence supports the inference, not a guaranteed result.",
     band: "bg-chart-3/10",
@@ -190,7 +190,7 @@ const KIND: Record<
     chart: CHART.slate,
   },
   moonshot: {
-    label: "Bold · speculative hypothesis",
+    label: "A bold idea · not proven",
     icon: Rocket,
     hint: "A speculative high-upside hypothesis, not an established result. Use a small reversible test with a hard stop and name what would disprove it.",
     band: "bg-chart-4/10",
@@ -398,14 +398,14 @@ export function NorthStar({ expert, slug }: { expert: ExpertView; slug: string }
   const goal = gap && expert.snapshot?.goal ? expert.snapshot.goal : null;
   const nextMeasurement = expert.constraintDiagnosis?.nextMeasurement;
   const conflicts = expert.constraintDiagnosis?.conflicts ?? [];
-  const targetLabel = gap ? "Plays support" : "Target";
+  const targetLabel = gap ? "What the actions may achieve" : "Target";
   const allShort = isShort(ns.baseline) && isShort(ns.target) && (goal === null || isShort(goal));
   return (
-    <PlanSection id="northstar-heading" title="Where you stand" navLabel="North star" icon={Target} bare>
+    <PlanSection id="northstar-heading" title="Where you stand" navLabel="Where you stand" icon={Target} bare>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <Card>
           <CardContent className="flex h-full flex-col gap-3">
-            <p className="text-overline">Diagnosis</p>
+            <p className="text-overline">What needs attention</p>
             {expert.decision ? <DecisionSummary d={expert.decision} /> : null}
             <ProseBullets text={expert.diagnosis} max={3} />
             {conflicts.length ? <Callout tone="warning" title="Check these business numbers first" action={<Link href={`/app/${encodeURIComponent(slug)}/settings/business`}>Update business numbers <ArrowRight aria-hidden className="inline size-3.5" /></Link>}>

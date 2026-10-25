@@ -78,10 +78,10 @@ export function CohortsSection({ slug }: { slug: string }) {
   return (
     <section aria-labelledby="cohorts-heading" className="flex flex-col gap-4">
       <h2 id="cohorts-heading" className="heading-section flex flex-wrap items-center gap-2">
-        <Repeat2 aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> Retention <ValueKind kind="observed" />
+        <Repeat2 aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> Customers who keep paying <ValueKind kind="observed" />
       </h2>
       {data === undefined ? (
-        <LoadingBlock label="Loading customer cohorts…" lines={3} />
+        <LoadingBlock label="Loading returning-customer information…" lines={3} />
       ) : data.rows.length === 0 ? (
         <Callout tone="info" title={data.hasCustomerIds ? "No paying customers this year" : "No customer-level billing data"}>
           Needs payments with customer IDs. <Link href={`/app/${slug}/connections`}>Connect billing</Link>

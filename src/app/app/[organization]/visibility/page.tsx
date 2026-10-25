@@ -48,7 +48,7 @@ export default function SearchReadinessPage() {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <PageHeader
         section="search readiness"
-        title="Search readiness"
+        title="Help people find you"
         intro="Check what search tools and answer systems can read from your homepage."
         actions={data.website && canEdit ? <Button size="sm" variant="secondary" loading={current?.status === "queued"} disabled={current?.status === "queued"} onClick={run}><RefreshCw aria-hidden /> Check homepage</Button> : null}
       />

@@ -3,10 +3,12 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { ArrowUp, Building2, CalendarDays, Check, Clock, Coins, ExternalLink, Globe, ListChecks, Magic, MessageSquareText, Pencil, Plus, Sparkles, Target, X, type LucideIcon } from "@/components/icons";
+import { Building2, CalendarDays, Check, Clock, Coins, ExternalLink, Globe, Magic, Pencil, Plus, Sparkles, Target, X, type LucideIcon } from "@/components/icons";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { RequestComposer } from "@/components/ui/request-composer";
+import { WordHelp } from "@/components/ui/word-help";
 import { Logo } from "@/components/brand/Logo";
 import {
   Badge,
@@ -25,10 +27,9 @@ import {
   toast,
   Toaster,
 } from "@/components/ui";
-import { Scannable, StepFlow } from "@/components/ds/content";
+import { Scannable } from "@/components/ds/content";
 import { cn } from "@/lib/utils";
 import { errorInfo, errorMessage } from "../errors";
-import { RoleAvatar } from "../RoleAvatar";
 import { parseIntro, type ParsedIntro } from "./parseIntro";
 import { RetryRunIfPossible, RunProgress, RunProgressCompact } from "../content/RunProgress";
 import { AiModeChoice, AiModePicker, useAiMode } from "../AiModePicker";
@@ -39,11 +40,11 @@ type Step = "business" | "research" | "facts" | "goal" | "preferences" | "plan" 
 const STEP_ORDER: Step[] = ["business", "research", "facts", "goal", "preferences", "plan"];
 const STEP_LABEL: Record<Step, string> = {
   business: "Business",
-  research: "Research",
-  facts: "Facts",
-  goal: "Goal",
-  preferences: "Approvals",
-  plan: "Plan",
+  research: "Learn about you",
+  facts: "Check details",
+  goal: "Choose a goal",
+  preferences: "Your control",
+  plan: "Next steps",
   done: "Done",
 };
 
@@ -52,13 +53,13 @@ const STEP_HELP: Record<Step, { title: string; roles: string[]; points: string[]
   business: {
     title: "What happens next",
     roles: ["data_analyst", "cmo", "ceo"],
-    points: ["We read your public site", "You check every fact", "You OK the plan"],
+    points: ["We read your public site", "You check every fact", "You choose what to do next"],
     ordered: true,
   },
   research: {
     title: "Your team is on it",
     roles: ["data_analyst", "cmo"],
-    points: ["Pulling out facts", "Studying customers and rivals", "Nothing is published"],
+    points: ["Reading your business details", "Looking at who you help", "Nothing is published"],
   },
   facts: {
     title: "Why facts matter",
@@ -67,14 +68,9 @@ const STEP_HELP: Record<Step, { title: string; roles: string[]; points: string[]
   },
   goal: { title: "Your goal", roles: ["ceo"], points: ["One goal keeps focus", "Change it any time"] },
   preferences: { title: "You stay in control", roles: ["coo"], points: ["Pause all in one click", "Budgets are hard limits"] },
-  plan: { title: "Your plan covers", roles: ["ceo", "cmo"], points: ["Who to reach, what to say", "1–2 channels, with costs", "How we measure progress"] },
+  plan: { title: "Your plan covers", roles: ["ceo", "cmo"], points: ["Who to reach, what to say", "Where to start and what it may cost", "How we measure progress"] },
   done: { title: "All set", roles: ["ceo"], points: [] },
 };
-
-/** Segmented-control look shared with Tabs: 32px track, 28px options. */
-const segmentClasses =
-  "inline-flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-md px-2.5 text-ui font-medium text-ink-3 transition-colors hover:text-ink";
-const segmentActive = "bg-surface text-ink shadow-sm";
 
 const TIMEZONE = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC";
 
@@ -116,10 +112,14 @@ export function OnboardingFlow() {
       </Shell>
     );
   }
+  if (workspaceParam && !me.orgs.some((org) => org.slug === workspaceParam && (org.role === "owner" || org.role === "admin"))) {
+    return <Shell step="business"><Callout tone="info" title="You cannot set up this business">Ask its owner for help, or <Link href="/app" className="underline">return to your businesses</Link>.</Callout></Shell>;
+  }
   if (!slug) {
     return (
       <BusinessStep
-        key={preview?.website ?? "blank"}
+        key={`${me.userId}:${wantNew ? "new" : "first"}:${preview?.website ?? "blank"}`}
+        additional={wantNew}
         prefillWebsite={preview?.website ?? ""}
         prefillGoal={preview?.goal ?? ""}
         previewToken={preview?.status === "done" ? previewToken : null}
@@ -169,12 +169,7 @@ function Shell({ step, children, slug }: { step: Step; children: ReactNode; slug
         </div>
         {help.points.length ? (
           <aside className="hidden h-fit rounded-xl border border-line bg-surface p-5 lg:block" aria-label={help.title}>
-            <div className="flex">
-              {help.roles.map((r, i) => (
-                <RoleAvatar key={r} role={r} size="md" className={cn("ring-2 ring-surface", i > 0 && "-ml-2")} />
-              ))}
-            </div>
-            <p className="heading-card mt-4">{help.title}</p>
+            <p className="heading-card">{help.title}</p>
             {(() => {
               const List = help.ordered ? "ol" : "ul";
               return (
@@ -202,19 +197,23 @@ function Shell({ step, children, slug }: { step: Step; children: ReactNode; slug
 /* ------------------------------------------------------------------ */
 
 function BusinessStep({
+  additional,
   prefillWebsite,
   prefillGoal,
   previewToken,
   onCreated,
 }: {
+  additional: boolean;
   prefillWebsite: string;
   prefillGoal: string;
   previewToken: string | null;
   onCreated: (slug: string) => void;
 }) {
-  const [mode, setMode] = useState<"chat" | "form">(prefillWebsite ? "form" : "chat");
-  const [chat, setChat] = useState("");
+  const [mode, setMode] = useState<"chat" | "form">("chat");
+  const [chat, setChat] = useState([prefillWebsite, prefillGoal].filter(Boolean).join(". "));
   const [name, setName] = useState("");
+  const [nameOverride, setNameOverride] = useState<string | null>(null);
+  const creating = useRef(false);
   const [website, setWebsite] = useState(prefillWebsite);
   const [noWebsite, setNoWebsite] = useState(false);
   const [description, setDescription] = useState("");
@@ -232,6 +231,7 @@ function BusinessStep({
   const parsed: ParsedIntro = useMemo(() => parseIntro(chat), [chat]);
 
   async function submit(fields: { name: string; website?: string; ownerText?: string; parsed?: ParsedIntro }) {
+    if (creating.current) return;
     setError(null);
     if (!fields.name.trim()) {
       setError("Add your business name.");
@@ -241,6 +241,7 @@ function BusinessStep({
       setError("Add a website or a description.");
       return;
     }
+    creating.current = true;
     setBusy(true);
     try {
       const referralCode = /(?:^|;\s*)climbos_ref=([a-z0-9]+)/.exec(document.cookie)?.[1];
@@ -266,100 +267,48 @@ function BusinessStep({
       onCreated(slug);
     } catch (e) {
       setError(errorMessage(e));
+      creating.current = false;
       setBusy(false);
     }
   }
 
   return (
     <Shell step="business">
-      <h1 className="heading-page">Let’s meet your business</h1>
-      <StepFlow className="mt-5 lg:hidden" steps={STEP_HELP.business.points.map((title) => ({ title }))} />
-
-      <div className="mt-6 inline-flex gap-0.5 rounded-lg border border-line bg-surface-2 p-0.5" role="tablist" aria-label="How do you want to start?">
-        <button type="button" role="tab" aria-selected={mode === "chat"} onClick={() => setMode("chat")} className={cn(segmentClasses, mode === "chat" && segmentActive)}>
-          <MessageSquareText className="size-4" aria-hidden /> Just tell us
-        </button>
-        <button type="button" role="tab" aria-selected={mode === "form"} onClick={() => setMode("form")} className={cn(segmentClasses, mode === "form" && segmentActive)}>
-          <ListChecks className="size-4" aria-hidden /> Step by step
-        </button>
-      </div>
+      <h1 className="heading-page">{additional ? "Tell us about your next business" : "Tell us about your business"}</h1>
+      <p className="mt-2 max-w-2xl text-sm text-ink-3">Describe what you do and what you need help with. A website is helpful, but you do not need one. We’ll guide you from there.</p>
+      {additional ? <p className="mt-2 text-sm text-ink-3">This creates a separate space for this business. Your other businesses keep their own details and accounts.</p> : null}
 
       {error && <Callout tone="danger" className="mt-6">{error}</Callout>}
 
       {mode === "chat" ? (
         <div className="mt-6 space-y-4">
-          <div className="rounded-xl border border-line-strong bg-surface transition-colors focus-within:border-brand-700">
-            <div className="rounded-xl p-4">
-              <label htmlFor="intro-chat" className="text-ui font-medium text-ink">
-                Your business and goal
-              </label>
-              <Textarea
-                id="intro-chat"
-                value={chat}
-                onChange={(e) => setChat(e.target.value)}
-                rows={4}
-                autosize
-                placeholder="e.g. We’re Formkit (formkit.app). More paying customers in 90 days. $600 a month on ads."
-                className="mt-2 border-0 px-0 text-sm focus-visible:outline-none"
-              />
-              <div className="flex items-center justify-between gap-3 border-t border-line pt-3">
-                <span className="text-xs text-ink-3">Include your website</span>
-                <Button
-                  size="md"
-                  loading={busy}
-                  loadingText="Setting up…"
-                  onClick={() =>
-                    submit({
-                      name: parsed.businessName ?? name,
-                      website: parsed.website,
-                      ownerText: parsed.website ? undefined : chat,
-                      parsed,
-                    })
-                  }
-                >
-                  Start <ArrowUp aria-hidden />
-                </Button>
-              </div>
-            </div>
-          </div>
-          {chat.trim().length === 0 && (
-            <div className="flex flex-wrap gap-2" aria-label="Examples">
-              {[
-                "I run a bakery in Bristol (bristolcrumb.co.uk). I want more office catering orders.",
-                "We're Formkit (formkit.app). Help us get more paying customers in 90 days.",
-                "I'm a wedding photographer in Austin. I want more bookings for next spring.",
-              ].map((ex) => (
-                <Button
-                  key={ex}
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setChat(ex)}
-                  className="h-auto min-h-8 justify-start whitespace-normal py-1.5 text-left font-normal text-ink-2 hover:text-ink"
-                >
-                  <Sparkles className="text-brand-800" aria-hidden />
-                  {ex}
-                </Button>
-              ))}
-            </div>
-          )}
+          <RequestComposer
+            label="Your business and what you need"
+            value={chat}
+            onChange={setChat}
+            onSubmit={() => void submit({ name: nameOverride ?? parsed.businessName ?? name, website: parsed.website, ownerText: chat, parsed })}
+            placeholder="My business is called Northstar Bakery. I sell bread and cakes, and I want more local orders."
+            submitLabel="Create business & continue"
+            busy={busy}
+            helper="Creates your business space and starts research using credits. You check the details before choosing your next steps."
+            suggestions={["I want help finding customers.", "I want to sell more.", "I am not sure where to start.", "I do not have a website yet."]}
+          />
             {chat.trim().length > 8 && (
               <div className="rounded-xl border border-line bg-surface p-4 text-ui" aria-live="polite">
                 <p className="heading-card flex flex-wrap items-center gap-2">
                   <Sparkles className="size-4 text-brand-800" aria-hidden /> What we understood
                 </p>
                 <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <Understood icon={Building2} label="Business" value={parsed.businessName} />
+                  <Understood icon={Building2} label="Business" value={nameOverride ?? parsed.businessName} />
                   <Understood icon={Globe} label="Website" value={parsed.website} />
                   <Understood icon={Target} label="Goal" value={parsed.goalStatement} wide />
                   <Understood icon={Coins} label="Ad budget" value={parsed.monthlyAdBudget !== undefined ? `$${parsed.monthlyAdBudget.toLocaleString()} / month` : undefined} />
-                  <Understood icon={Clock} label="Time frame" value={parsed.horizonDays ? `${parsed.horizonDays} days` : undefined} />
-                  <Understood icon={CalendarDays} label="Review day" value={parsed.reviewDay} />
+                  <Understood icon={Clock} label="When would you like to review progress?" value={parsed.horizonDays ? `${parsed.horizonDays} days` : undefined} />
+                  <Understood icon={CalendarDays} label="Which day should we review your progress?" value={parsed.reviewDay} />
                 </dl>
-                {!parsed.businessName && (
-                  <Field label="Business name" className="mt-3">
-                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Formkit" />
-                  </Field>
-                )}
+                <Field label="Name to use for this business" hint="Check this name. You can change it before continuing." className="mt-3">
+                  <Input value={nameOverride ?? parsed.businessName ?? name} onChange={(event) => setNameOverride(event.target.value)} placeholder="What is your business called?" autoComplete="organization" />
+                </Field>
               </div>
             )}
         </div>
@@ -389,10 +338,16 @@ function BusinessStep({
           </CardContent>
         </Card>
       )}
+      <Button type="button" variant="link" className="mt-4" onClick={() => setMode((current) => current === "chat" ? "form" : "chat")}>
+        {mode === "chat" ? "Prefer a simple form?" : "Describe it in your own words instead"}
+      </Button>
+      {additional ? <Link href="/app" className="ml-3 text-sm text-ink-3 underline">Back to my businesses</Link> : null}
       {/* Expert unlocks when the owner's account has a paid (or comped) package; new workspaces join that account. */}
-      <div className="mt-6">
-        <AiModeChoice unlocked={expertUnlocked} value={aiMode} onChange={setAiMode} label="Your team" />
-      </div>
+      <details className="mt-6 rounded-[var(--radius-card)] border border-line bg-surface p-4">
+        <summary className="cursor-pointer text-sm font-medium text-ink">More options: how much detail to use</summary>
+        <div className="mt-4"><AiModeChoice unlocked={expertUnlocked} value={aiMode} onChange={setAiMode} label="Analysis detail" /></div>
+      </details>
+      <div className="mt-6"><WordHelp /></div>
       <p className="mt-6 text-sm text-ink-3">
         <Link href="/demo" className={buttonClasses({ variant: "link" })}>Try the demo first</Link>
       </p>
@@ -611,7 +566,7 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
       {state.facts.length === 0 || state.facts.every((f) => f.provenance === "owner_supplied") ? (
         <>
           <h1 className="heading-page">{state.facts.length === 0 ? "Tell us the key facts" : "Your key facts"}</h1>
-          <p className="mt-1 text-sm text-ink-3">Add 3–5 short facts.</p>
+          <p className="mt-1 text-sm text-ink-3">Tell us what you sell, who it is for, and anything customers should know.</p>
         </>
       ) : (
         <>
@@ -633,7 +588,7 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
                   <CardContent className="p-4 sm:p-5">
                     <div className="flex flex-wrap items-center gap-2 text-xs">
                       {f.provenance === "owner_supplied" ? <Badge tone="blue">From you</Badge> : f.provenance === "demo_fixture" ? <Badge tone="violet">Demo data</Badge> : <Badge tone="neutral">From website</Badge>}
-                      {f.confidence === "low" && f.reviewState === "needs_review" && <Badge tone="amber">Low confidence</Badge>}
+                      {f.confidence === "low" && f.reviewState === "needs_review" && <Badge tone="amber">Please double-check</Badge>}
                       {f.reviewState === "confirmed" || f.reviewState === "edited" ? <Badge tone="green" icon={<Check />}>Confirmed</Badge> : null}
                     </div>
                     {editing === f.id ? (
@@ -712,7 +667,7 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
         </CardContent>
       </Card>
 
-      <h2 className="heading-section mt-8">Details</h2>
+      <h2 className="heading-section mt-8">About your business</h2>
       <Card className="mt-4">
         <CardContent className="grid gap-5 sm:grid-cols-2">
           <Field label="Type of business">
@@ -768,9 +723,9 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
             }
           }}
         >
-          Looks right
+          Confirm details & continue
         </Button>
-        <span className="text-xs text-ink-3">Unchecked facts become confirmed.</span>
+        <span className="text-xs text-ink-3">Continuing confirms all remaining details above. Correct or remove anything that is wrong first.</span>
       </div>
     </div>
   );
@@ -796,7 +751,8 @@ function GoalStep({ slug, state }: { slug: string; state: State }) {
   const defaults: Record<string, string> = goalDefaults(name);
   return (
     <div>
-      <h1 className="heading-page">What would you like to achieve?</h1>
+      <h1 className="heading-page">What would you like help with first?</h1>
+      <p className="mt-2 text-sm text-ink-3">Choose the closest option. You can describe a different goal in your own words and change it later.</p>
       {error && <Callout tone="danger" className="mt-4">{error}</Callout>}
       <RadioCards
         className="mt-6"
@@ -813,13 +769,13 @@ function GoalStep({ slug, state }: { slug: string; state: State }) {
           <Field label="Goal" className="sm:col-span-2">
             <Textarea value={statement} onChange={(e) => setStatement(e.target.value)} rows={2} autosize placeholder={defaults[kind]} />
           </Field>
-          <Field label="Time frame">
+          <Field label="When would you like to review progress?">
             <Select value={horizon} onValueChange={setHorizon} options={HORIZON_OPTIONS} />
           </Field>
-          <Field label={`Monthly ad budget (${state.business?.currency ?? "USD"})`} hint="Paid to Google/Meta, not us. 0 = no ads.">
+          <Field label={`Most you want to spend on ads each month (${state.business?.currency ?? "USD"})`} hint="Advertising is optional. Enter 0 for no paid ads. This money goes to Google or Meta, separate from ClimbOS.">
             <Input inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value.replace(/[^\d.]/g, ""))} />
           </Field>
-          <Field label="Review day">
+          <Field label="Which day should we review your progress?">
             <Select value={reviewDay} onValueChange={setReviewDay} options={REVIEW_DAY_OPTIONS} />
           </Field>
         </CardContent>
@@ -852,7 +808,8 @@ function PreferencesStep({ slug, current }: { slug: string; current: string }) {
   const [busy, setBusy] = useState(false);
   return (
     <div>
-      <h1 className="heading-page">How hands-on?</h1>
+      <h1 className="heading-page">Who should publish or send the work?</h1>
+      <p className="mt-2 text-sm text-ink-3">ClimbOS prepares the work. Choose how you want to check it before it goes ahead.</p>
       <RadioCards
         className="mt-6"
         columns={1}
@@ -861,8 +818,8 @@ function PreferencesStep({ slug, current }: { slug: string; current: string }) {
         onValueChange={setMode}
         options={[
           { value: "review", title: "Review first (recommended)", description: "You approve each post, email and ad.", icon: "✅" },
-          { value: "copilot", title: "Copilot", description: "We draft. You publish and send.", icon: "🧭" },
-          { value: "bounded_autopilot", title: "Bounded Autopilot", description: "Pre-approved work runs within your limits. Paid plans; owners and admins.", icon: "🛟" },
+          { value: "copilot", title: "Draft only", description: "We prepare the work. You publish and send it yourself.", icon: "🧭" },
+          { value: "bounded_autopilot", title: "Approved recurring work", description: "Repeat eligible work only within rules you approve. Needs a paid plan and an owner or admin.", icon: "🛟" },
         ]}
       />
       <Callout tone="info" className="mt-6" title="Always needs you">

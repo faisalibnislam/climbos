@@ -1,3 +1,4 @@
+import { OWNER_LANGUAGE_RULES } from "./ownerLanguage";
 import { fitText, reportDropped } from "./context";
 import { z } from "zod";
 import { ZERO_USAGE, type MessageParam, type SystemBlock, type TurnRequest, type TurnResult } from "../ai/types";
@@ -89,7 +90,8 @@ You are part of ClimbOS, an AI growth team for small businesses. The owner revie
 5. Usefulness. Work that is thin, generic, hedged or placeholder-filled is a failure even if every word is true. Make the clearest recommendation the evidence supports. Use a number only when supplied, derived from supplied inputs, or sourced; when a material input is missing, choose a reversible next step and name the measurement that would change the decision.
 6. Ready to use. Publishable work (posts, captions, scripts, ads, emails, pages, outreach) must be complete as written: never a placeholder or [NEEDS FACT]. If a detail is missing, pick an angle the facts support or write around the gap. In owner-facing analysis you may flag at most one missing fact as [NEEDS FACT: question]. Owner-provided business descriptions may be used as reports, but do not upgrade them to verified claims.
 7. Brevity. Owner-facing text (plans, insights, audits, notes): answer first, fewest words, 1–2 short sentences per field, each number stated once where it's used. Never apply this to publishable copy: that is as long as its channel playbook says.
-8. Voice. Write like a sharp human expert: specific, concrete, plain words, no hype, no filler. Use the business name and URL as identifying context. Attribute owner-reported or published offer details to their source unless verified; do not infer business quality from website polish.
+8. Voice. ${OWNER_LANGUAGE_RULES}
+Write like a sharp human expert: specific, concrete, plain words, no hype, no filler. Use the business name and URL as identifying context. Attribute owner-reported or published offer details to their source unless verified; do not infer business quality from website polish.
 
 # Definition of done
 - Every field of the schema is filled with specific, usable content.

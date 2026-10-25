@@ -1,9 +1,7 @@
 import { v } from "convex/values";
 import { requirePaid } from "./lib/access";
-import {
-  createPausedSearchCampaign,
-  setCampaignStatus as setGoogleStatus,
-} from "../shared/integrations/googleAds";
+import { createPausedSearchCampaign, setCampaignStatus as setGoogleStatus } from "../shared/integrations/googleAds";
+import { decimalToMinor } from "../shared/integrations/currency";
 import {
   createPausedCampaign as createMetaPaused,
   SET_META_CAMPAIGN_STATUS_ACTION,
@@ -11,6 +9,7 @@ import {
 } from "../shared/integrations/metaAds";
 import { approvalHash, canonicalJson, checkApprovalForExecution, sha256Hex } from "../shared/policy";
 import { maxRolling31DaySpend, validCampaignDateRange } from "../shared/policy/campaignBudget";
+import { campaignApprovalScope } from "../shared/policy/campaignScope";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
@@ -45,16 +44,17 @@ export const list = query({
       .query("connections")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
       .take(50);
-    const connected = (p: string) => conns.some((c) => c.provider === p && c.status === "connected");
-    return {
-      monthlyEnvelopeMinor: policy?.maxMonthlyAdSpendMinor ?? 0,
-      currency: policy?.currency ?? org.currency,
-      googleAdsConnected: connected("google_ads"),
-      metaAdsConnected: connected("meta_ads"),
-      campaigns: rows.map((c) => ({
+    const connected = (p: string) => conns.some((c) => c.provider === p && c.status === "connected" && (c.isFixture || Boolean(c.externalAccountId)));
+    const campaigns = await Promise.all(rows.map(async (c) => {
+      const campaignConnection = c.connectionId ? await ctx.db.get(c.connectionId) : null;
+      const performance = await ctx.db
+        .query("campaignPerformance")
+        .withIndex("by_org_campaign", (q) => q.eq("orgId", org._id).eq("campaignId", c._id))
+        .first();
+      return {
         id: c._id,
         artifactId: c.artifactId ?? null,
-        accountConnected: Boolean(c.connectionId) || connected(c.channel === "google_search_ad" ? "google_ads" : "meta_ads"),
+        accountConnected: Boolean(campaignConnection?.status === "connected" && (campaignConnection.isFixture || campaignConnection.externalAccountId)) || connected(c.channel === "google_search_ad" ? "google_ads" : "meta_ads"),
         name: c.name,
         channel: c.channel,
         status: c.status,
@@ -63,25 +63,99 @@ export const list = query({
         currency: c.currency,
         startDate: c.startDate ?? null,
         endDate: c.endDate ?? null,
+        targetCostPerConversionMinor: c.targetCostPerConversionMinor ?? null,
+        reviewAfterDays: c.reviewAfterDays ?? null,
+        activatedAt: c.activatedAt ?? null,
         destinationUrl: c.destinationUrl ?? null,
         stopRules: c.stopRules,
         externalId: c.externalId ?? null,
-      })),
+        performance: performance ?? null,
+      };
+    }));
+    return {
+      monthlyEnvelopeMinor: policy?.maxMonthlyAdSpendMinor ?? 0,
+      currency: policy?.currency ?? org.currency,
+      googleAdsConnected: connected("google_ads"),
+      metaAdsConnected: connected("meta_ads"),
+      campaigns,
     };
   },
 });
 
-function campaignScope(c: Doc<"campaigns">) {
-  return {
-    connectionId: c.connectionId,
-    destination: c.destinationUrl,
-    audience: c.audience,
-    spendLimitMinor: c.dailyBudgetMinor,
-    currency: c.currency,
-    windowStart: c.startDate ? Date.parse(`${c.startDate}T00:00:00Z`) : undefined,
-    windowEnd: c.endDate ? Date.parse(`${c.endDate}T23:59:59Z`) : undefined,
-  };
-}
+export const performanceSyncContext = internalQuery({
+  args: { orgId: v.id("organizations"), campaignId: v.id("campaigns") },
+  handler: async (ctx, { orgId, campaignId }) => {
+    const campaign = assertSameOrg(await ctx.db.get(campaignId), orgId, "campaign");
+    const connection = campaign.connectionId ? await ctx.db.get(campaign.connectionId) : null;
+    if (campaign.channel !== "google_search_ad") throw appError("UNAVAILABLE", "Live campaign results are currently supported for Google Search campaigns only.");
+    if (!connection || connection.orgId !== orgId || connection.provider !== "google_ads" || connection.status !== "connected" || connection.isFixture) {
+      throw appError("UNAVAILABLE", "Connect a live Google Ads account before reading campaign results.");
+    }
+    if (!campaign.externalId || (!campaign.activatedAt && !campaign.startDate) || !["active", "paused", "ended"].includes(campaign.status)) {
+      throw appError("INVALID", "Start this campaign before reading its performance.");
+    }
+    return { campaign, connection };
+  },
+});
+
+export const recordPerformanceSnapshot = internalMutation({
+  args: {
+    slug: v.string(),
+    campaignId: v.id("campaigns"),
+    connectionId: v.id("connections"),
+    status: v.union(v.literal("ready"), v.literal("error")),
+    startDate: v.string(),
+    endDate: v.string(),
+    currency: v.string(),
+    spendMinor: v.optional(v.number()),
+    impressions: v.optional(v.number()),
+    clicks: v.optional(v.number()),
+    conversions: v.optional(v.number()),
+    conversionValueMinor: v.optional(v.number()),
+    error: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "view");
+    const campaign = assertSameOrg(await ctx.db.get(args.campaignId), org._id, "campaign");
+    if (campaign.connectionId !== args.connectionId || campaign.channel !== "google_search_ad") throw appError("FORBIDDEN", "This account is no longer connected to the campaign.");
+    const connection = await ctx.db.get(args.connectionId);
+    if (!connection || connection.orgId !== org._id || connection.provider !== "google_ads") throw appError("FORBIDDEN", "The connected account changed before this result could be saved.");
+    const old = await ctx.db.query("campaignPerformance")
+      .withIndex("by_org_campaign", (q) => q.eq("orgId", org._id).eq("campaignId", campaign._id))
+      .first();
+    if (old) await ctx.db.delete(old._id);
+    const syncedAt = Date.now();
+    await ctx.db.insert("campaignPerformance", {
+      orgId: org._id,
+      campaignId: campaign._id,
+      connectionId: connection._id,
+      source: "google_ads",
+      status: args.status,
+      startDate: args.startDate,
+      endDate: args.endDate,
+      currency: args.currency,
+      spendMinor: args.spendMinor,
+      impressions: args.impressions,
+      clicks: args.clicks,
+      conversions: args.conversions,
+      conversionValueMinor: args.conversionValueMinor,
+      syncedAt,
+      error: args.error?.slice(0, 300),
+    });
+    await audit(ctx, {
+      orgId: org._id,
+      actorType: "user",
+      actorId: user._id,
+      action: args.status === "ready" ? "campaign.performance_synced" : "campaign.performance_sync_failed",
+      subjectType: "campaign",
+      subjectId: campaign._id,
+      summary: args.status === "ready"
+        ? `Read Google Ads campaign metrics for ${args.startDate} through ${args.endDate}; no live settings were changed.`
+        : `Google Ads metric read did not complete: ${(args.error ?? "unknown error").slice(0, 180)}`,
+    });
+    return syncedAt;
+  },
+});
 
 export const prepareCampaign = mutation({
   args: {
@@ -90,6 +164,8 @@ export const prepareCampaign = mutation({
     dailyBudget: v.number(),
     startDate: v.string(),
     endDate: v.string(),
+    targetCostPerConversion: v.optional(v.number()),
+    reviewAfterDays: v.number(),
   },
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
@@ -103,6 +179,7 @@ export const prepareCampaign = mutation({
       .first();
     const dailyMinor = Math.round(args.dailyBudget * 100);
     if (!(dailyMinor > 0)) throw appError("INVALID", "Enter a daily budget greater than 0.");
+    if (!Number.isInteger(args.reviewAfterDays) || args.reviewAfterDays < 1 || args.reviewAfterDays > 90) throw appError("INVALID", "Choose a first review window from 1 to 90 days.");
     if (!validCampaignDateRange(args.startDate, args.endDate)) {
       throw appError("INVALID", "Pick a start date and an end date after it.");
     }
@@ -131,6 +208,13 @@ export const prepareCampaign = mutation({
       .withIndex("by_org_provider", (q) => q.eq("orgId", org._id).eq("provider", provider))
       .first();
     const now = Date.now();
+    let targetCostPerConversionMinor: number | undefined;
+    if (args.targetCostPerConversion !== undefined) {
+      if (!Number.isFinite(args.targetCostPerConversion) || args.targetCostPerConversion <= 0) throw appError("INVALID", "The target cost per conversion must be greater than zero.");
+      const parsed = decimalToMinor(String(args.targetCostPerConversion), policy?.currency ?? org.currency);
+      if (!parsed.ok || parsed.minor <= 0) throw appError("INVALID", "Enter a valid positive target cost for the workspace currency.");
+      targetCostPerConversionMinor = parsed.minor;
+    }
     const campaignId = await ctx.db.insert("campaigns", {
       orgId: org._id,
       artifactId: a._id,
@@ -142,6 +226,8 @@ export const prepareCampaign = mutation({
       currency: policy?.currency ?? org.currency,
       startDate: args.startDate,
       endDate: args.endDate,
+      targetCostPerConversionMinor,
+      reviewAfterDays: args.reviewAfterDays,
       destinationUrl: ver?.destinationUrl,
       audience: undefined,
       stopRules: [
@@ -149,7 +235,7 @@ export const prepareCampaign = mutation({
         "Pause if conversion tracking stops reporting for 48 hours",
         "Pause immediately when you press Pause all",
       ],
-      connectionId: conn?.status === "connected" ? conn._id : undefined,
+      connectionId: conn?.status === "connected" && (conn.isFixture || conn.externalAccountId) ? conn._id : undefined,
       createdAt: now,
       updatedAt: now,
     });
@@ -177,11 +263,19 @@ export const decide = mutation({
     }
     if (action === "create_paused" && c.status !== "needs_approval") throw appError("INVALID", "This campaign isn't waiting for approval.");
     if (action === "activate" && c.status !== "created_paused" && c.status !== "paused") throw appError("INVALID", "Create the campaign (paused) first.");
-    if (!c.connectionId) throw appError("UNAVAILABLE", "Connect your ad account first. Until then, use the ad drafts manually.");
+    if (!c.connectionId) throw appError("UNAVAILABLE", "Connect and select the advertiser account for this campaign first. Until then, use the ad drafts manually.");
+    const connection = await ctx.db.get(c.connectionId);
+    const provider = c.channel === "google_search_ad" ? "google_ads" : "meta_ads";
+    if (!connection || connection.orgId !== org._id || connection.provider !== provider || connection.status !== "connected") {
+      throw appError("UNAVAILABLE", "Reconnect the ad account for this campaign before approving a write.");
+    }
+    if (!connection.isFixture && !connection.externalAccountId) {
+      throw appError("UNAVAILABLE", "Select the advertiser account for this workspace before approving a campaign write.");
+    }
     const policyVersion = await activePolicyVersion(ctx, org._id);
     const now = Date.now();
     const expiresAt = now + 24 * 3_600_000;
-    const scope = campaignScope(c);
+    const scope = campaignApprovalScope(c, connection.externalAccountId);
     const contentHash = await sha256Hex(canonicalJson({ name: c.name, channel: c.channel, action }));
     const binding = { orgId: org._id, subjectType: "campaign_activation", subjectId: c._id, actionKind: action, contentHash, scope, policyVersion, expiresAt };
     const approvalId = await ctx.db.insert("approvals", {
@@ -252,7 +346,12 @@ export const recordCampaignResult = internalMutation({
       createdAt: now,
       verifiedAt: args.status === "verified" || args.status === "fixture_verified" ? now : undefined,
     });
-    if (args.newStatus) await ctx.db.patch(c._id, { status: args.newStatus, ...(args.externalId && !c.externalId ? { externalId: args.externalId } : {}), updatedAt: now });
+    if (args.newStatus) await ctx.db.patch(c._id, {
+      status: args.newStatus,
+      ...(args.externalId && !c.externalId ? { externalId: args.externalId } : {}),
+      ...(args.newStatus === "active" && !c.activatedAt ? { activatedAt: now } : {}),
+      updatedAt: now,
+    });
     if (args.approvalId && (args.status === "verified" || args.status === "fixture_verified")) await ctx.db.patch(args.approvalId, { status: "consumed" });
     await audit(ctx, { orgId: c.orgId, actorType: "system", action: `campaign.${args.action}.${args.status}`, subjectType: "campaign", subjectId: c._id, summary: `${c.name}: ${args.summary}` });
   },
@@ -275,10 +374,10 @@ export const executeCampaignWrite = internalAction({
     const contentHash = await sha256Hex(canonicalJson({ name: c.name, channel: c.channel, action }));
     const check = await checkApprovalForExecution({
       approval: { status: approval.status, approvalHash: approval.approvalHash, expiresAt: approval.expiresAt, scope: approval.scope, contentHash: approval.contentHash, policyVersion: approval.policyVersion },
-      current: { orgId: c.orgId, subjectType: "campaign_activation", subjectId: c._id, actionKind: action, contentHash, scope: campaignScope(c), policyVersion: cx.policyVersion, expiresAt: approval.expiresAt },
+      current: { orgId: c.orgId, subjectType: "campaign_activation", subjectId: c._id, actionKind: action, contentHash, scope: campaignApprovalScope(c, cx.connection?.externalAccountId), policyVersion: cx.policyVersion, expiresAt: approval.expiresAt },
       now: Date.now(),
       emergencyStop: Boolean(cx.org.emergencyStop?.active) || cx.fleetStop,
-      capabilityReady: cx.connection?.status === "connected",
+      capabilityReady: cx.connection?.status === "connected" && (cx.connection.isFixture || Boolean(cx.connection.externalAccountId)),
     });
     if (!check.ok) {
       await ctx.runMutation(internal.ads.recordCampaignResult, { campaignId, action, status: "failed", summary: check.message, approvalId });
@@ -299,6 +398,10 @@ export const executeCampaignWrite = internalAction({
     const creds = await adCredentials(ctx, c.connectionId!);
     if (!creds) {
       await ctx.runMutation(internal.ads.recordCampaignResult, { campaignId, action, status: "failed", summary: "The ad account connection was removed. Reconnect it.", approvalId });
+      return;
+    }
+    if (creds.accountId !== (cx.connection?.externalAccountId ?? "")) {
+      await ctx.runMutation(internal.ads.recordCampaignResult, { campaignId, action, status: "failed", summary: "The selected advertiser account changed after approval. Review and approve this campaign again.", approvalId });
       return;
     }
     const approvedAt = approval.decidedAt ?? approval.createdAt;

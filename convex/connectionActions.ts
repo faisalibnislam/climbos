@@ -10,6 +10,7 @@ import { getAccount as getInstagramAccount } from "../shared/integrations/instag
 import { listManagedPages } from "../shared/integrations/facebookPages";
 import { getMember as getLinkedInMember } from "../shared/integrations/linkedin";
 import { getMe as getXUser } from "../shared/integrations/x";
+import { getCustomerSettings, listAccessibleCustomers, GOOGLE_ADS_SCOPE } from "../shared/integrations/googleAds";
 import {
   buildCodeExchangeRequest,
   buildInstagramLongLivedExchangeRequest,
@@ -180,6 +181,29 @@ export const completeOAuth = action({
         externalAccountId = page.id;
         // Publishing uses the Page access token, not the user token.
         if (page.pageAccessToken) token = { ...token, accessToken: page.pageAccessToken };
+      }
+    } else if (st.provider === "google_ads") {
+      accountType = "google_ads_account_selection_required";
+      accountLabel = "Choose a Google Ads advertiser account";
+      const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+      if (developerToken) {
+        const accessible = await listAccessibleCustomers({ accessToken: token.accessToken, developerToken });
+        if (accessible.ok && accessible.data.length === 1) {
+          const customerId = accessible.data[0]!;
+          const settings = await getCustomerSettings({ accessToken: token.accessToken, developerToken, customerId });
+          if (settings.ok && !settings.data.managerAccount) {
+            externalAccountId = customerId;
+            accountLabel = `Google Ads · ${customerId}`;
+            accountType = "google_ads_advertiser";
+          }
+        } else if (!accessible.ok) {
+          accountLabel = "Google Ads connected · account selection needs retry";
+        } else if (accessible.data.length === 0) {
+          accountLabel = "No directly accessible Google Ads accounts";
+        }
+      } else {
+        accountType = "google_ads_setup_needed";
+        accountLabel = "Google Ads connected · ClimbOS setup needed";
       }
     } else if (group === "linkedin" || group === "x") {
       // Posts need the author id, so a failed profile probe means no connection.
@@ -444,6 +468,62 @@ export const availableSearchConsoleSites = action({
     return result.ok
       ? { ok: true as const, sites: result.data, message: "Choose the Search Console property for this business." }
       : { ok: false as const, sites: [], message: "Couldn't load Search Console properties. Try again or reconnect the account." };
+  },
+});
+
+/** List directly accessible Google Ads accounts for an owner/admin to select. */
+export const availableGoogleAdsAccounts = action({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_connections" });
+    if (access.kind === "demo") return { ok: false as const, customerIds: [], truncated: false, message: "Demo workspaces do not connect real accounts." };
+    const connection = await ctx.runQuery(internal.connections.connectionFor, { orgId: access.orgId, provider: "google_ads" });
+    if (!connection || connection.status !== "connected" || connection.isFixture) return { ok: false as const, customerIds: [], truncated: false, message: "Connect Google Ads first." };
+    if (!connection.scopes.includes(GOOGLE_ADS_SCOPE)) return { ok: false as const, customerIds: [], truncated: false, message: "Reconnect Google Ads and grant Ads reporting access." };
+    const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+    if (!developerToken) return { ok: false as const, customerIds: [], truncated: false, message: "Google Ads account selection needs ClimbOS developer-token setup." };
+    const accessToken = await googleAccessToken(ctx, connection._id, connection.expiresAt);
+    if (!accessToken) return { ok: false as const, customerIds: [], truncated: false, message: "Google Ads access expired. Reconnect the account." };
+    const result = await listAccessibleCustomers({ accessToken, developerToken });
+    if (!result.ok) return { ok: false as const, customerIds: [], truncated: false, message: `Google Ads accounts could not be loaded: ${result.providerMessage}` };
+    return {
+      ok: true as const,
+      customerIds: result.data.slice(0, 100),
+      truncated: result.data.length > 100,
+      message: "Choose the business's advertiser account. Manager accounts cannot be selected in this setup.",
+    };
+  },
+});
+
+/** Validate the selected account against Google's live access list before binding it to this workspace. */
+export const selectGoogleAdsAccount = action({
+  args: { slug: v.string(), customerId: v.string() },
+  handler: async (ctx, { slug, customerId }) => {
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_connections" });
+    if (access.kind === "demo") throw appError("FORBIDDEN", "Demo workspaces can't connect real accounts.");
+    if (!/^\d{10}$/.test(customerId)) throw appError("INVALID", "Choose a valid Google Ads customer ID from the connected account.");
+    const connection = await ctx.runQuery(internal.connections.connectionFor, { orgId: access.orgId, provider: "google_ads" });
+    if (!connection || connection.status !== "connected" || connection.isFixture) throw appError("INVALID", "Connect Google Ads first.");
+    if (!connection.scopes.includes(GOOGLE_ADS_SCOPE)) throw appError("FORBIDDEN", "Reconnect Google Ads and grant Ads reporting access.");
+    const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+    if (!developerToken) throw appError("UNAVAILABLE", "Google Ads account selection needs ClimbOS developer-token setup.");
+    const accessToken = await googleAccessToken(ctx, connection._id, connection.expiresAt);
+    if (!accessToken) throw appError("UNAVAILABLE", "Google Ads access expired. Reconnect the account.");
+    const accessible = await listAccessibleCustomers({ accessToken, developerToken });
+    if (!accessible.ok || !accessible.data.includes(customerId)) throw appError("FORBIDDEN", "Choose an advertiser account returned by the connected Google sign-in.");
+    const settings = await getCustomerSettings({ accessToken, developerToken, customerId });
+    if (!settings.ok) throw appError("UNAVAILABLE", `Google Ads account details could not be read: ${settings.providerMessage}`);
+    if (settings.data.managerAccount) throw appError("UNAVAILABLE", "This ClimbOS connection supports advertiser accounts. Google Ads manager accounts and their child-account selection are not supported yet.");
+    const accountLabel = `${customerId} · ${settings.data.currencyCode}`;
+    const saved = await ctx.runMutation(internal.connections.selectGoogleAdsAccount, {
+      orgId: access.orgId,
+      userId: access.userId,
+      connectionId: connection._id,
+      customerId,
+      accountLabel,
+    });
+    if (!saved) throw appError("INVALID", "Reconnect Google Ads and select the account again.");
+    return { ok: true as const, customerId, accountLabel, currency: settings.data.currencyCode };
   },
 });
 

@@ -28,7 +28,8 @@ import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
 import { CHANNEL_LABELS } from "@/components/app/roles";
 import { RoleAvatar, RoleStack } from "@/components/app/RoleAvatar";
-import { ASK_KEY } from "@/components/app/CommandPalette";
+import { askDraftKey } from "@/components/app/CommandPalette";
+import { WordHelp } from "@/components/ui/word-help";
 import { PageHeader } from "@/components/app/results/QueryBoundary";
 import { WishComposer, wishSuggestions, type WishComposerHandle } from "@/components/app/wish/WishComposer";
 import { RetryRunIfPossible, RunProgressCompact } from "@/components/app/content/RunProgress";
@@ -82,18 +83,20 @@ export default function TodayPage() {
   const { organization: slug } = useParams<{ organization: string }>();
   const data = useQuery(api.workspace.today, { slug });
   const composer = useRef<WishComposerHandle>(null);
+  const me = useQuery(api.orgs.me);
   useEffect(() => {
-    // A wish typed in the ⌘K palette before Today loaded arrives ready to send.
-    try {
-      const asked = sessionStorage.getItem(ASK_KEY);
-      if (asked && data) {
-        sessionStorage.removeItem(ASK_KEY);
-        composer.current?.fill(asked);
-      }
-    } catch {
-      // Storage unavailable.
-    }
-  }, [data]);
+    if (!me || !data) return;
+    const loadDraft = () => {
+      try {
+        const key = askDraftKey(slug, me.userId);
+        const draft = sessionStorage.getItem(key);
+        if (draft) { sessionStorage.removeItem(key); composer.current?.fill(draft); }
+      } catch { /* Storage may be unavailable. */ }
+    };
+    loadDraft();
+    window.addEventListener("climbos:compose", loadDraft);
+    return () => window.removeEventListener("climbos:compose", loadDraft);
+  }, [data, me, slug]);
 
   if (data === undefined) {
     return (
@@ -126,6 +129,7 @@ export default function TodayPage() {
             {firstName ? `, ${firstName}` : ""}
           </>
         }
+        intro="Tell us what you need. We’ll help you take it one step at a time."
       />
 
       {!data.canRunAi && data.accessMessage && (
@@ -151,6 +155,7 @@ export default function TodayPage() {
       )}
 
       <WishComposer
+        key={slug}
         ref={composer}
         slug={slug}
         suggestions={wishSuggestions(data.business?.type)}
@@ -161,7 +166,7 @@ export default function TodayPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.45fr_1fr]">
         <div className="flex min-w-0 flex-col gap-6">
-          {data.strategy?.opportunities.length ? <GrowthOpportunities slug={slug} strategyId={data.strategy.id} status={data.strategy.status} opportunities={data.strategy.opportunities} /> : null}
+          {data.strategy?.opportunities?.length ? <GrowthOpportunities slug={slug} strategyId={data.strategy.id} status={data.strategy.status} opportunities={data.strategy.opportunities} /> : null}
           {/* Next actions */}
           <section aria-labelledby="next-heading" className="rounded-xl border border-line bg-surface">
             <div className="px-5 pt-5">
@@ -171,7 +176,7 @@ export default function TodayPage() {
             </div>
             {data.next.length === 0 ? (
               <div className="p-5">
-                <EmptyState icon={<CheckCircle2 aria-hidden />} title="All caught up" />
+                <EmptyState icon={<CheckCircle2 aria-hidden />} title="No next step waiting" body="Ask a question above, or open Your plan to choose what to work on." />
               </div>
             ) : (
               <ol className="mt-3 divide-y divide-line border-t border-line">
@@ -179,14 +184,12 @@ export default function TodayPage() {
                   const v = NEXT_VISUAL[n.kind] ?? NEXT_VISUAL.card;
                   return (
                     <li key={`${n.kind}-${i}`}>
-                      <Link href={n.href} className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-surface-2">
+                      <Link href={n.href} className="flex items-start gap-3 px-5 py-3.5 transition-colors hover:bg-surface-2">
                         <IconTile icon={v.icon} tone={v.tone} size="sm" />
-                        <Tooltip content={n.why}>
-                          <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
-                            <span className="sr-only">Step {i + 1} of {data.next.length}: </span>
-                            {n.title}
-                          </p>
-                        </Tooltip>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-ink"><span className="sr-only">Step {i + 1} of {data.next.length}: </span>{n.title}</span>
+                          <span className="mt-1 block text-sm text-ink-3">{n.why}</span>
+                        </span>
                         <ArrowRight aria-hidden className="size-4 shrink-0 text-ink-3" />
                       </Link>
                     </li>
@@ -262,6 +265,7 @@ export default function TodayPage() {
       <AttentionStrip slug={slug} />
 
       <RecentWork slug={slug} data={data} />
+      <WordHelp />
       <div className="md:hidden">
         <PauseAllButton slug={slug} paused={Boolean(data.emergencyStop)} variant="large" />
       </div>
@@ -428,9 +432,9 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
 
 function ApprovalsPanel({ slug, data }: { slug: string; data: Today }) {
   return (
-    <section aria-labelledby="approvals-heading">
+    <section id="review" aria-labelledby="approvals-heading" className="scroll-mt-20">
       <div className="flex items-center justify-between">
-        <h2 id="approvals-heading" className="heading-section">Waiting for you</h2>
+        <h2 id="approvals-heading" className="heading-section">Review before it goes ahead</h2>
         {data.approvalsCount > 0 && <Badge tone="amber">{data.approvalsCount}</Badge>}
       </div>
       <Card className="mt-4">
@@ -446,7 +450,7 @@ function ApprovalsPanel({ slug, data }: { slug: string; data: Today }) {
             </Link>
           )}
           {data.approvals.length === 0 && data.strategy?.status !== "needs_approval" ? (
-            <p className="p-5 text-sm text-ink-3">Nothing waiting.</p>
+            <p className="p-5 text-sm text-ink-3">Nothing needs your review right now.</p>
           ) : (
             <ul>
               {data.approvals.map((a) => (

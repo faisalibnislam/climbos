@@ -80,7 +80,8 @@ export default function AutopilotPage() {
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
       <PageHeader
         eyebrow="Social media"
-        title="Autopilot"
+        title="Regular posting"
+        intro="Prepare repeated posts within rules you choose. Check the approval and account requirements before enabling it."
         actions={on ? <HeaderActions slug={slug} onEdit={() => setEditing((v) => !v)} editing={editing} canManage={data.canApprove} /> : undefined}
       />
       {data.activeRuns?.length ? (

@@ -1,15 +1,16 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
-import { CircleAlert, CircleCheck, CircleQuestionMark, Clock, Hourglass, Megaphone, Pause, Play, type LucideIcon } from "@/components/icons"
+import { CircleAlert, CircleCheck, CircleQuestionMark, Clock, Hourglass, Megaphone, Pause, Play, RefreshCw, type LucideIcon } from "@/components/icons"
 import Link from "next/link";
 import { useState } from "react";
 import { Badge, Button, Callout, ConfirmDialog, EmptyState, Skeleton, Tooltip, toast, type Tone } from "@/components/ui";
 import { minorToDisplay } from "../money";
 import { KeyTakeaways, StatBlocks } from "@/components/ds/content";
 import { ChannelTag, ErrorCallout, FactList, PERMISSION_WHO, useWorkspaceMember } from "./shared";
+import { reviewCampaignPerformance } from "../../../../shared/acquisition/campaignPerformance";
 
 export type AdsList = FunctionReturnType<typeof api.ads.list>;
 export type Campaign = AdsList["campaigns"][number];
@@ -62,12 +63,26 @@ export function CampaignStatusPill({ status }: { status: string }) {
 export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo }: { slug: string; campaign: Campaign; headingLevel?: "h2" | "h3" | "h4"; isDemo?: boolean }) {
   const member = useWorkspaceMember(slug);
   const decide = useMutation(api.ads.decide);
+  const syncPerformance = useAction(api.adPerformance.syncPerformance);
   const [error, setError] = useState<unknown>(null);
+  const [performanceError, setPerformanceError] = useState<unknown>(null);
+  const [syncingPerformance, setSyncingPerformance] = useState(false);
   const canApprove = member?.role ? ["owner", "admin", "reviewer"].includes(member.role) : false;
   const days = daysBetween(c.startDate, c.endDate);
   const daily = minorToDisplay(c.dailyBudgetMinor, c.currency);
   const total = minorToDisplay(c.budgetEnvelopeMinor, c.currency);
   const platform = platformName(c.channel);
+  const performance = c.performance?.status === "ready" ? c.performance : null;
+  const review = performance && performance.spendMinor !== undefined && performance.conversions !== undefined && performance.endDate
+    ? reviewCampaignPerformance({
+        spendMinor: performance.spendMinor,
+        conversions: performance.conversions,
+        observedThrough: performance.endDate,
+        campaignStartDate: performance.startDate,
+        reviewAfterDays: c.reviewAfterDays ?? 7,
+        targetCostPerConversionMinor: c.targetCostPerConversionMinor ?? undefined,
+      })
+    : null;
 
   const run = async (action: "create_paused" | "activate" | "reject", success: string) => {
     setError(null);
@@ -79,12 +94,27 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
     }
   };
 
+  const refreshPerformance = async () => {
+    setPerformanceError(null);
+    setSyncingPerformance(true);
+    try {
+      await syncPerformance({ slug, campaignId: c.id });
+      toast({ tone: "success", title: "Google Ads results refreshed." });
+    } catch (e) {
+      setPerformanceError(e);
+    } finally {
+      setSyncingPerformance(false);
+    }
+  };
+
   const facts = (
     <FactList
       items={[
         { term: "Daily budget", detail: daily },
         { term: "Dates", detail: `${formatDay(c.startDate)} to ${formatDay(c.endDate)}${days ? ` (${days} day${days === 1 ? "" : "s"})` : ""}` },
         { term: "Max total", detail: total },
+        { term: "First results review", detail: `${c.reviewAfterDays ?? 7} days after start` },
+        { term: "Cost / conversion target", detail: c.targetCostPerConversionMinor !== null ? `${minorToDisplay(c.targetCostPerConversionMinor, c.currency)} (owner set)` : "not set" },
         { term: "Link", detail: c.destinationUrl ?? "none" },
       ]}
     />
@@ -107,6 +137,14 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
           <dd className="font-medium text-ink">{total}</dd>
         </div>
         <div>
+          <dt className="text-xs text-ink-3">First results review</dt>
+          <dd className="font-medium text-ink">{c.reviewAfterDays ?? 7} days after start</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-ink-3">Cost / conversion target</dt>
+          <dd className="font-medium text-ink">{c.targetCostPerConversionMinor !== null ? `${minorToDisplay(c.targetCostPerConversionMinor, c.currency)} (owner set)` : "Not set"}</dd>
+        </div>
+        <div>
           <dt className="text-xs text-ink-3">Dates</dt>
           <dd className="font-medium text-ink">
             {formatDay(c.startDate)} – {formatDay(c.endDate)}
@@ -126,6 +164,45 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
             ))}
           </ul>
         </div>
+      ) : null}
+      {c.channel === "google_search_ad" && c.externalId && ["active", "paused", "ended"].includes(c.status) ? (
+        <section aria-label="Campaign performance" className="flex flex-col gap-2 rounded-lg border border-line bg-surface-2 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-sm font-semibold text-ink">Google Ads results</h4>
+            <Button type="button" variant="secondary" size="sm" onClick={refreshPerformance} disabled={syncingPerformance}>
+              <RefreshCw aria-hidden="true" className={syncingPerformance ? "animate-spin" : ""} />
+              {syncingPerformance ? "Refreshing…" : "Refresh results"}
+            </Button>
+          </div>
+          {performance ? (
+            <>
+              <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
+                <div><dt className="text-xs text-ink-3">Reported spend</dt><dd className="font-medium text-ink">{minorToDisplay(performance.spendMinor ?? 0, performance.currency)}</dd></div>
+                <div><dt className="text-xs text-ink-3">Reported conversions</dt><dd className="font-medium text-ink">{performance.conversions ?? 0}</dd></div>
+                <div><dt className="text-xs text-ink-3">Clicks / impressions</dt><dd className="font-medium text-ink">{(performance.clicks ?? 0).toLocaleString()} / {(performance.impressions ?? 0).toLocaleString()}</dd></div>
+                <div><dt className="text-xs text-ink-3">Report window</dt><dd className="font-medium text-ink">{performance.startDate} to {performance.endDate}</dd></div>
+                {performance.conversions && performance.conversions > 0 ? (
+                  <div><dt className="text-xs text-ink-3">Reported cost / conversion</dt><dd className="font-medium text-ink">{minorToDisplay(Math.round((performance.spendMinor ?? 0) / performance.conversions), performance.currency)}</dd></div>
+                ) : null}
+              </dl>
+              {review ? (
+                <Callout tone={review.status === "review" ? "warning" : review.status === "within_target" ? "success" : "info"} title={review.status === "review" ? "Review this campaign" : review.status === "within_target" ? "Within the owner-set target" : review.status === "target_needed" ? "Set a success target" : "Continue the agreed review window"}>
+                  {review.message}
+                </Callout>
+              ) : null}
+              <p className="text-xs text-ink-3">
+                Source: Google Ads, synced {new Date(performance.syncedAt).toLocaleString()}. Platform reports can change and reflect its conversion settings; they do not establish incremental customers or profit. This recommendation never pauses or edits the campaign.
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-ink-2">Refresh to read daily results from the connected account. ClimbOS compares results only with a cost target you set.</p>
+          )}
+          {performanceError ? <ErrorCallout error={performanceError} /> : null}
+        </section>
+      ) : c.channel === "meta_ad" && c.externalId ? (
+        <Callout tone="info" title="Performance review requires owner input">
+          Meta results are not currently synced into this view. Use Meta Ads Manager to review them; ClimbOS will not infer a pause recommendation without verified campaign data.
+        </Callout>
       ) : null}
       {error ? <ErrorCallout error={error} /> : null}
       {!c.accountConnected && (c.status === "needs_approval" || c.status === "created_paused" || c.status === "paused") ? (

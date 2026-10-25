@@ -46,6 +46,24 @@ export function gaqlString(value: string): string {
   return `'${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
 }
 
+export async function listAccessibleCustomers(auth: Pick<GoogleAdsAuth, "accessToken" | "developerToken" | "fetchImpl" | "timeoutMs">): Promise<ReadResult<string[]>> {
+  const out = await requestJson({
+    url: `${GOOGLE_ADS_BASE}/customers:listAccessibleCustomers`,
+    method: "GET",
+    headers: googleAdsHeaders(auth),
+    fetchImpl: auth.fetchImpl,
+    timeoutMs: auth.timeoutMs,
+  });
+  if (out.kind !== "ok") return readFailure(out);
+  const data = isRecord(out.data) ? out.data : {};
+  return {
+    ok: true,
+    data: asArray(data.resourceNames)
+      .map((name) => typeof name === "string" ? name.match(/^customers\/(\d+)$/)?.[1] ?? "" : "")
+      .filter((id) => /^\d{10}$/.test(id)),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Reads
 // ---------------------------------------------------------------------------
@@ -87,14 +105,15 @@ export async function searchStreamGaql(auth: GoogleAdsAuth & { query: string }):
   return { ok: true, data: rows };
 }
 
-export function buildCampaignMetricsQuery(startDate: string, endDate: string): string {
+export function buildCampaignMetricsQuery(startDate: string, endDate: string, campaignId?: string): string {
   if (!DATE_RE.test(startDate) || !DATE_RE.test(endDate)) throw new Error("Dates must be YYYY-MM-DD");
   if (startDate > endDate) throw new Error("startDate must be on or before endDate");
+  if (campaignId !== undefined && !/^\d+$/.test(campaignId)) throw new Error("campaignId must contain digits only");
   return [
     "SELECT campaign.id, campaign.name, campaign.status, segments.date,",
     "metrics.cost_micros, metrics.clicks, metrics.impressions, metrics.conversions, metrics.conversions_value",
     "FROM campaign",
-    `WHERE segments.date BETWEEN '${startDate}' AND '${endDate}'`,
+    `WHERE segments.date BETWEEN '${startDate}' AND '${endDate}'${campaignId ? ` AND campaign.id = ${campaignId}` : ""}`,
     "ORDER BY segments.date",
   ].join(" ");
 }
@@ -133,9 +152,9 @@ export function parseCampaignMetricsRow(row: Record<string, unknown>): CampaignD
 }
 
 export async function getCampaignMetrics(
-  auth: GoogleAdsAuth & { startDate: string; endDate: string; maxPages?: number },
+  auth: GoogleAdsAuth & { startDate: string; endDate: string; campaignId?: string; maxPages?: number },
 ): Promise<ReadResult<PaginationResult<CampaignDailyMetrics>>> {
-  const res = await searchGaql({ ...auth, query: buildCampaignMetricsQuery(auth.startDate, auth.endDate) });
+  const res = await searchGaql({ ...auth, query: buildCampaignMetricsQuery(auth.startDate, auth.endDate, auth.campaignId) });
   if (!res.ok) return res;
   return { ok: true, data: { ...res.data, items: res.data.items.map(parseCampaignMetricsRow) } };
 }
@@ -144,15 +163,16 @@ export interface CustomerSettings {
   currencyCode: string;
   timeZone: string;
   testAccount: boolean;
+  managerAccount: boolean;
 }
 
 export async function getCustomerSettings(auth: GoogleAdsAuth): Promise<ReadResult<CustomerSettings>> {
-  const res = await searchGaql({ ...auth, query: "SELECT customer.currency_code, customer.time_zone, customer.test_account FROM customer", maxPages: 1 });
+  const res = await searchGaql({ ...auth, query: "SELECT customer.currency_code, customer.time_zone, customer.test_account, customer.manager FROM customer", maxPages: 1 });
   if (!res.ok) return res;
   const first = res.data.items[0];
   if (!first) return { ok: false, providerMessage: "Customer not found", retryable: false };
   const c = sub(first, "customer");
-  return { ok: true, data: { currencyCode: asString(c.currencyCode) ?? "", timeZone: asString(c.timeZone) ?? "", testAccount: c.testAccount === true } };
+  return { ok: true, data: { currencyCode: asString(c.currencyCode) ?? "", timeZone: asString(c.timeZone) ?? "", testAccount: c.testAccount === true, managerAccount: c.manager === true } };
 }
 
 export interface CampaignState {

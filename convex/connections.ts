@@ -261,6 +261,14 @@ export const list = query({
             reason: `Demo connection with synthetic data. ${c.state === "setup_needed" ? "In a real workspace this needs setup first." : c.reason}`,
           }));
         }
+        if (provider === "google_ads" && conn?.status === "connected" && !conn.isFixture && !conn.externalAccountId) {
+          capabilities = capabilities.map((c) => ({
+            ...c,
+            state: c.state === "ready" ? ("setup_needed" as const) : c.state,
+            reason: c.reason || "Choose the advertiser account this workspace should use.",
+            fix: c.fix || "Select a directly accessible advertiser account below. Manager accounts are not supported in this connection flow.",
+          }));
+        }
         return {
           provider,
           group,
@@ -271,6 +279,7 @@ export const list = query({
                 status: conn.status,
                 accountLabel: conn.accountLabel ?? null,
                 externalAccountId: conn.externalAccountId ?? null,
+                accountType: conn.accountType ?? null,
                 lastSyncAt: conn.lastSyncAt ?? null,
                 expiresAt: conn.expiresAt ?? null,
                 isFixture: conn.isFixture,
@@ -438,6 +447,30 @@ export const selectSearchConsoleSite = internalMutation({
     const connection = await ctx.db.query("connections").withIndex("by_org_provider", (q) => q.eq("orgId", orgId).eq("provider", "search_console")).first();
     if (!connection || connection._id !== connectionId || connection.status !== "connected" || connection.isFixture) return false;
     await ctx.db.patch(connection._id, { externalAccountId: siteUrl, accountLabel: accountLabel.slice(0, 200), accountType: "search_console_property", lastSyncError: undefined, updatedAt: Date.now() });
+    return true;
+  },
+});
+
+/** Save only a Google Ads advertiser ID verified against the connected user's live access list. */
+export const selectGoogleAdsAccount = internalMutation({
+  args: {
+    orgId: v.id("organizations"),
+    userId: v.id("users"),
+    connectionId: v.id("connections"),
+    customerId: v.string(),
+    accountLabel: v.string(),
+  },
+  handler: async (ctx, { orgId, userId, connectionId, customerId, accountLabel }) => {
+    const connection = await ctx.db.query("connections").withIndex("by_org_provider", (q) => q.eq("orgId", orgId).eq("provider", "google_ads")).first();
+    if (!connection || connection._id !== connectionId || connection.status !== "connected" || connection.isFixture) return false;
+    await ctx.db.patch(connection._id, {
+      externalAccountId: customerId,
+      accountLabel: accountLabel.slice(0, 200),
+      accountType: "google_ads_advertiser",
+      lastSyncError: undefined,
+      updatedAt: Date.now(),
+    });
+    await audit(ctx, { orgId, actorType: "user", actorId: userId, action: "connection.google_ads_account_selected", subjectType: "connection", subjectId: connection._id, summary: `Selected Google Ads advertiser account ${customerId}.` });
     return true;
   },
 });

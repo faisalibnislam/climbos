@@ -41,7 +41,7 @@ export default function PipelinePage() {
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
       <PageHeader
         section="pipeline"
-        title="Pipeline"
+        title="Customer progress"
         actions={<AddDeal slug={slug} />}
       />
       {data && data.deals.length ? (

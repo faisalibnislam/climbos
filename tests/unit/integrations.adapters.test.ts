@@ -76,7 +76,19 @@ describe("googleAds", () => {
   it("builds a metrics GAQL query with the required fields", () => {
     const q = googleAds.buildCampaignMetricsQuery("2026-10-01", "2026-10-16");
     for (const f of ["metrics.cost_micros", "metrics.clicks", "metrics.impressions", "metrics.conversions", "metrics.conversions_value", "segments.date"]) expect(q).toContain(f);
+    expect(googleAds.buildCampaignMetricsQuery("2026-10-01", "2026-10-16", "12345")).toContain("AND campaign.id = 12345");
     expect(() => googleAds.buildCampaignMetricsQuery("2026-10-16", "2026-10-01")).toThrow();
+    expect(() => googleAds.buildCampaignMetricsQuery("2026-10-01", "2026-10-16", "12345 OR 1=1")).toThrow();
+  });
+
+  it("lists only well-formed accessible Google Ads customer resource names", async () => {
+    const { fetchImpl, calls } = scripted([
+      { match: "customers:listAccessibleCustomers", method: "GET", respond: json(200, { resourceNames: ["customers/1234567890", "not-a-customer", "customers/123456789", "customers/0987654321"] }) },
+    ]);
+    const result = await googleAds.listAccessibleCustomers({ accessToken: "at", developerToken: "dev-token", fetchImpl });
+    expect(result).toEqual({ ok: true, data: ["1234567890", "0987654321"] });
+    expect(calls[0]?.headers.Authorization).toBe("Bearer at");
+    expect(calls[0]?.headers["developer-token"]).toBe("dev-token");
   });
 
   it("reads metrics with pagination and sends developer-token + login-customer-id", async () => {

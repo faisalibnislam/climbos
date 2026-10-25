@@ -13,6 +13,7 @@ import type * as access from "../access.js";
 import type * as acquisition from "../acquisition.js";
 import type * as admin from "../admin.js";
 import type * as ads from "../ads.js";
+import type * as adPerformance from "../adPerformance.js";
 import type * as agentTokens from "../agentTokens.js";
 import type * as ai_fixtures from "../ai/fixtures.js";
 import type * as ai_prospectCheck from "../ai/prospectCheck.js";
@@ -139,6 +140,7 @@ declare const fullApi: ApiFromModules<{
   acquisition: typeof acquisition;
   admin: typeof admin;
   ads: typeof ads;
+  adPerformance: typeof adPerformance;
   agentTokens: typeof agentTokens;
   "ai/fixtures": typeof ai_fixtures;
   "ai/prospectCheck": typeof ai_prospectCheck;

@@ -3356,6 +3356,11 @@ export default defineSchema({
     currency: v.string(),
     startDate: v.optional(v.string()),
     endDate: v.optional(v.string()),
+    /** Owner-entered efficiency limit used only for review advice, never auto-pausing. */
+    targetCostPerConversionMinor: v.optional(v.number()),
+    /** Owner-confirmed elapsed-day point for first performance review. */
+    reviewAfterDays: v.optional(v.number()),
+    activatedAt: v.optional(v.number()),
     destinationUrl: v.optional(v.string()),
     audience: v.optional(v.string()),
     stopRules: v.array(v.string()),
@@ -3364,6 +3369,25 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_org", ["orgId"]),
+
+  /** Latest read-only campaign performance snapshot; replaced on each manual sync. */
+  campaignPerformance: defineTable({
+    orgId: v.id("organizations"),
+    campaignId: v.id("campaigns"),
+    connectionId: v.id("connections"),
+    source: v.literal("google_ads"),
+    status: v.union(v.literal("ready"), v.literal("error")),
+    startDate: v.string(),
+    endDate: v.string(),
+    currency: v.string(),
+    spendMinor: v.optional(v.number()),
+    impressions: v.optional(v.number()),
+    clicks: v.optional(v.number()),
+    conversions: v.optional(v.number()),
+    conversionValueMinor: v.optional(v.number()),
+    syncedAt: v.number(),
+    error: v.optional(v.string()),
+  }).index("by_org_campaign", ["orgId", "campaignId"]),
 
   /* ---------------- Content ---------------- */
   artifacts: defineTable({

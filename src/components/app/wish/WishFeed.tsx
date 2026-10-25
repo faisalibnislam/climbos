@@ -34,7 +34,7 @@ export function WishFeed({ slug, chat }: { slug: string; chat: ChatMessage[] }) 
   return (
     <section aria-labelledby="wishes-heading" className="flex flex-col gap-3">
       <h2 id="wishes-heading" className="heading-section">
-        Your wishes
+        Your requests
       </h2>
       <ol className="flex flex-col gap-3" aria-live="polite" aria-relevant="additions text">
         {shown.map((w) => (
@@ -66,7 +66,7 @@ function WishCard({ slug, wish }: { slug: string; wish: Wish }) {
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-ink">
-            <span className="sr-only">You wished: </span>“{ask.text}”
+            <span className="sr-only">You asked: </span>“{ask.text}”
           </p>
           <p className="mt-0.5 text-xs text-ink-3">
             {relativeTime(ask.createdAt)}
