@@ -749,7 +749,7 @@ export async function finishRunImpl(
 /* ---------------- resume from checkpoints ---------------- */
 
 /** Job actions that continue a run from its checkpoints (finished steps are skipped). */
-const RESUMABLE = new Set(["onboardingResearch", "buildStrategy", "createContent", "planSocialWeek", "findCustomers", "conversionAudit", "simplePlanJob", "makeReel"]);
+const RESUMABLE = new Set(["onboardingResearch", "buildStrategy", "createContent", "planSocialWeek", "findCustomers", "conversionAudit", "simplePlanJob", "makeReel", "businessModelCheck"]);
 /** Automatic resumes after an interrupted action before the run fails. */
 export const MAX_AUTO_RESUMES = 2;
 /** Owner retries of one run. */

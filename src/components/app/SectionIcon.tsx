@@ -5,6 +5,7 @@ import { IconTile, type Tone } from "@/components/ui";
 export const SECTION_VISUAL: Record<string, { icon: LucideIcon; tone: Tone }> = {
   today: { icon: Home, tone: "brand" },
   plan: { icon: Compass, tone: "violet" },
+  "business-model": { icon: Compass, tone: "violet" },
   content: { icon: CalendarDays, tone: "pink" },
   results: { icon: BarChart3, tone: "teal" },
   connections: { icon: Plug, tone: "orange" },

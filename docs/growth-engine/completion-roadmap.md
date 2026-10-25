@@ -10,6 +10,7 @@ Status: **Done**, **Next**, or **Planned**. Size: S (one module + tests), M (bac
 |---:|---|---|:-:|---|
 | 0a | Growth cash timing view, plan input, reserve and monthly-limit hard checks | 122, 319 | M | Done (`48176a7`, `2fd5207`, `00d1b6d`, `590d9a9`) |
 | 0b | Verbatim excerpt checks for play action evidence | 24; handoff 3 | M | Done (`9faf0d7`) |
+| BM | Business model check: outdated-model detection, three alternative models, pivot-or-persist, test tracking (owner request) | 2, 9 | L | Done (see ledger) |
 | 1 | Logged cost per customer compared with the plan's affordable cost per customer; spend advice withheld when it isn't justified | 296–298, 324, 403 | S–M | Done (see ledger) |
 | 2 | Repeat-purchase rate and time to second order for order-based businesses (unknown without customer IDs) | 30, 37, 121–130; handoff 2 | S–M | Done (see ledger) |
 | 3 | "Still accurate" reconfirmation for facts due for review | 22–29, 136 | S | Done (see ledger) |

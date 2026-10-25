@@ -32,6 +32,7 @@ import type * as billing from "../billing.js";
 import type * as bio from "../bio.js";
 import type * as bookings from "../bookings.js";
 import type * as brand from "../brand.js";
+import type * as businessModel from "../businessModel.js";
 import type * as chat from "../chat.js";
 import type * as circuits from "../circuits.js";
 import type * as clientReports from "../clientReports.js";
@@ -160,6 +161,7 @@ declare const fullApi: ApiFromModules<{
   bio: typeof bio;
   bookings: typeof bookings;
   brand: typeof brand;
+  businessModel: typeof businessModel;
   chat: typeof chat;
   circuits: typeof circuits;
   clientReports: typeof clientReports;

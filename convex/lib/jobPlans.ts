@@ -16,7 +16,7 @@ import {
   outreachSpec,
   prospectingSpec,
   researchFor,
-  retentionSpec,
+  businessModelCheckSpec, retentionSpec,
   salesSpec,
   seoSpec,
   socialCalendarSpec,
@@ -112,6 +112,10 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
         searchCalls: r.maxSearches,
       });
     }
+    case "business_model_check": {
+      const r = { maxSearches: searches("business_model_check") };
+      return plan("Check your business model", ["cmo"], ["business_model_check"], agentSteps(any(businessModelCheckSpec()), r), { searchCalls: r.maxSearches });
+    }
     case "retention_plan":
       return plan("Plan retention and loyalty", ["customer_success_manager"], ["retention_plan"], agentSteps(any(retentionSpec())), {});
     case "sales_sequence":
@@ -148,6 +152,7 @@ export type JobKind =
   | "conversion_audit"
   | "retention_plan"
   | "sales_sequence"
+  | "business_model_check"
   | "social_calendar"
   | "outbound"
   | "reel";
@@ -242,6 +247,8 @@ function v1Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
         steps: [{ kind: "research", scrapeCredits: 5 }, modelStep("conversion_audit")],
         meters: { scrapeCredits: 5 },
       };
+    case "business_model_check":
+      return { kind, title: "Check your business model", roles: ["cmo"], tasks: ["business_model_check"], steps: [modelStep("business_model_check")], meters: {} };
     case "retention_plan":
       return { kind, title: "Plan retention and loyalty", roles: ["customer_success_manager"], tasks: ["retention_plan"], steps: [modelStep("retention_plan")], meters: {} };
     case "sales_sequence":

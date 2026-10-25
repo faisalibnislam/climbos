@@ -1,5 +1,6 @@
 "use node";
 
+import { BUSINESS_MODEL_TASK, type BusinessModelCheck } from "../shared/agents/businessModel";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { checkProspects } from "./ai/prospectCheck";
 import { downloadVeo, pollVeo, startVeo } from "./ai/veo";
@@ -74,7 +75,7 @@ import {
   creatorScoutSpec,
   prospectingSpec,
   researchFor,
-  retentionSpec,
+  businessModelCheckSpec, retentionSpec,
   salesSpec,
   seoSpec,
   growthPlaysSpec,
@@ -718,6 +719,9 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     job.subscriptionCohortText,
     job.repeatPurchaseText,
     job.pipelineOutcomesText,
+    job.businessModelContext ? untrusted("latest saved business model check (AI judgment)", job.businessModelContext, 1_500) : "",
+    job.businessModelTestsText,
+    job.businessModelTestNotes.length ? `OWNER NOTES ON BUSINESS MODEL TESTS:\n${untrusted("owner business model test notes", job.businessModelTestNotes.join("\n"), 1_200)}` : "",
     job.pipelineLossNotes.length ? `OWNER NOTES ON RECENTLY LOST DEALS (untrusted, owner-entered; may be partial or wrong):\n${untrusted("owner lost-deal notes", job.pipelineLossNotes.join("\n"), 1_500)}` : "",
     job.resultsText ?? "",
   ];
@@ -995,7 +999,7 @@ async function finish(
   });
 }
 
-type ResumableJob = "onboardingResearch" | "buildStrategy" | "createContent" | "planSocialWeek" | "findCustomers" | "conversionAudit" | "simplePlanJob" | "makeReel";
+type ResumableJob = "onboardingResearch" | "buildStrategy" | "createContent" | "planSocialWeek" | "findCustomers" | "conversionAudit" | "simplePlanJob" | "makeReel" | "businessModelCheck";
 interface Resume {
   fn: ResumableJob;
   args: Record<string, unknown>;
@@ -2339,6 +2343,29 @@ export const simplePlanJob = internalAction({
       await finish(ctx, runId, "verified", { output: out });
       if (cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId, status: "done" });
     }, undefined, resumeAs(ctx, "simplePlanJob", { runId, task, cardId }));
+  },
+});
+
+/** Owner-started business model check: how the business makes money, market signals, three alternatives, pivot-or-persist. */
+export const businessModelCheck = internalAction({
+  args: { runId: v.id("workflowRuns") },
+  handler: async (ctx, { runId }) => {
+    const startedAt = Date.now();
+    const job = await loadContext(ctx, runId);
+    if (!job) return;
+    await guarded(ctx, runId, async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const out = await runAgentTask<BusinessModelCheck>(
+        ctx,
+        job,
+        0,
+        businessModelCheckSpec(),
+        agentInput(job, `${BUSINESS_MODEL_TASK}\n\n${job.businessModelSignalsText}`, { research: researchFor("business_model_check", { website: job.business?.website, businessName: job.business?.name ?? job.org.name, today }) }),
+        startedAt,
+        { task: "business_model_check", context: "", ctx: fixtureCtx(job), text: `${BUSINESS_MODEL_TASK}\n\n${businessBrief(job)}` },
+      );
+      await finish(ctx, runId, "verified", { output: out });
+    }, undefined, resumeAs(ctx, "businessModelCheck", { runId }));
   },
 });
 

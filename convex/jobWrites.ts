@@ -1,3 +1,4 @@
+import { BusinessModelCheckSchema, businessModelPlanContext, businessModelTestsBrief, ownerModelSignals, ownerModelSignalsBrief } from "../shared/agents/businessModel";
 import { feedbackBrief } from "./feedback";
 import { EVIDENCE_KIND_LABEL, evidenceKind } from "../shared/agents/evidenceKind";
 import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
@@ -202,10 +203,30 @@ export const jobContext = internalQuery({
       ? repeatPurchaseBrief(repeatPurchaseSummary(concentrationEvents, { currency: concentrationCurrency, nowMs: concentrationToMs }), { truncated: concentrationIsPartial })
       : "";
     // The owner's own pipeline: closed deals, win rate and recorded loss reasons (bounded; owner-entered).
-    const pipelineDeals = run.kind === "strategy" ? await ctx.db.query("deals").withIndex("by_org_updated", (q) => q.eq("orgId", org._id)).order("desc").take(2_001) : [];
+    const pipelineDeals = run.kind === "strategy" || run.kind === "business_model_check" ? await ctx.db.query("deals").withIndex("by_org_updated", (q) => q.eq("orgId", org._id)).order("desc").take(2_001) : [];
     const pipeline = pipelineOutcomes(pipelineDeals.slice(0, 2_000), { nowMs: concentrationToMs });
     const pipelineOutcomesText = run.kind === "strategy" ? `${pipelineOutcomesBrief(pipeline)}${pipelineDeals.length > 2_000 && pipelineOutcomesBrief(pipeline) ? " Only the 2,000 most recently updated deals were read, so totals may be partial." : ""}` : "";
     const pipelineLossNotes = run.kind === "strategy" ? pipeline.recentLossNotes : [];
+    // Business model check: first-party signals computed here; strategy runs read the latest verified check.
+    const businessModelSignalsText = run.kind === "business_model_check" && concentrationCurrency
+      ? ownerModelSignalsBrief(ownerModelSignals({ nowMs: concentrationToMs, currency: concentrationCurrency, revenueEvents: concentrationEvents, deals: pipelineDeals.slice(0, 2_000), lifecycleStage: business?.lifecycleStage?.stage ?? null, competitorChanges90d: marketChanges.filter((change) => change.at >= concentrationToMs - 90 * DAY).length }))
+      : "";
+    const latestModelCheck = run.kind === "strategy" || run.kind === "business_model_check"
+      ? (await ctx.db.query("workflowRuns").withIndex("by_org_kind_created", (q) => q.eq("orgId", org._id).eq("kind", "business_model_check")).order("desc").take(10))
+          .find((r) => r.status === "verified" && !r.isFixture && typeof r.output === "string")
+      : undefined;
+    const modelTests = businessModelTestsBrief(latestModelCheck ? (await ctx.db.query("businessModelTests").withIndex("by_run_target", (q) => q.eq("runId", latestModelCheck._id)).collect()).sort((a, b) => b.createdAt - a.createdAt || b._creationTime - a._creationTime).slice(0, 200).filter((t) => t.orgId === org._id) : []);
+    const businessModelTestsText = modelTests.summary;
+    const businessModelTestNotes = modelTests.notes;
+    const businessModelContext = (() => {
+      if (run.kind !== "strategy" || !latestModelCheck?.output) return "";
+      try {
+        const parsed = BusinessModelCheckSchema.safeParse(JSON.parse(latestModelCheck.output));
+        return parsed.success ? businessModelPlanContext(parsed.data, latestModelCheck.createdAt) : "";
+      } catch {
+        return "";
+      }
+    })();
     const concentration = concentrationCurrency
       ? customerConcentration(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
       : null;
@@ -273,6 +294,10 @@ export const jobContext = internalQuery({
       repeatPurchaseText,
       pipelineOutcomesText,
       pipelineLossNotes,
+      businessModelSignalsText,
+      businessModelContext,
+      businessModelTestsText,
+      businessModelTestNotes,
       stripeReceivables,
       audience: { contacts, consented },
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },

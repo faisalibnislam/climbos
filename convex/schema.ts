@@ -2128,6 +2128,22 @@ export default defineSchema({
     .index("by_org_strategy", ["orgId", "strategyId", "createdAt"])
     .index("by_strategy_mode", ["strategyId", "mode", "createdAt"]),
 
+  /** Owner-recorded results of a business model check's deciding or alternative test (append-only; latest row wins). */
+  businessModelTests: defineTable({
+    orgId: v.id("organizations"),
+    runId: v.id("workflowRuns"),
+    /** Which test: the recommendation's deciding test or one alternative's smallest test. */
+    target: v.union(v.literal("deciding"), v.literal("grounded"), v.literal("adjacent"), v.literal("bold")),
+    testState: v.union(v.literal("not_started"), v.literal("designed"), v.literal("run"), v.literal("observed")),
+    outcomeNote: v.optional(v.string()),
+    outcomeEvidence: v.union(v.literal("measured"), v.literal("owner_reported"), v.literal("unknown")),
+    ownerDecision: v.union(v.literal("undecided"), v.literal("keep_current_model"), v.literal("keep_testing"), v.literal("adopt_alternative"), v.literal("drop_alternative")),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_org_created", ["orgId", "createdAt"])
+    .index("by_run_target", ["runId", "target", "createdAt"]),
+
   /** Engine quality per agent run (spec §27): context sizes, lint by rule draft → final, numbers lost in revision. No tenant text. */
   engineQuality: defineTable({
     runId: v.id("workflowRuns"),

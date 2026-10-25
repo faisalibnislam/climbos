@@ -1,3 +1,4 @@
+import { BusinessModelCheckSchema, lintBusinessModelCheck, type BusinessModelCheck } from "./businessModel";
 import { z } from "zod";
 import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
 import { applyOwnerEconomics, customerValue, growthCashTiming, lintEconomics, playMaths, portfolioExpectedCustomers, portfolioP50, portfolioRange, selectPortfolio, withForecasts, type Economics, type ForecastUncertainty, type PlayLike, type PlaySensitivity } from "./economics";
@@ -2580,6 +2581,22 @@ export function conversionAuditSpec(o: SpecOptions = {}): AgentSpec<z.infer<type
   );
 }
 
+export function businessModelCheckSpec(o: SpecOptions = {}): AgentSpec<BusinessModelCheck> {
+  return base(
+    {
+      id: "business_model_check",
+      role: "cmo",
+      label: "Business model check",
+      skills: ["owner-brevity", "growth-strategy", "positioning", "competitor-teardown"],
+      schema: BusinessModelCheckSchema,
+      rubric: rubricOf("growth-strategy"),
+      lint: (out, input) => [...lintGeneric(out, input), ...lintBusinessModelCheck(out, { factCount: input.facts.length, readUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [] })],
+    },
+    o,
+    "lean",
+  );
+}
+
 export function retentionSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof RetentionPlanSchema>> {
   return base(
     { id: "retention_plan", role: "customer_success_manager", label: "Retention plan", skills: ["owner-brevity", "retention-lifecycle", "lifecycle-email"], schema: RetentionPlanSchema, rubric: rubricOf("retention-lifecycle"), lint: lintRetentionPlan },
@@ -3076,6 +3093,13 @@ export function researchFor(task: TaskType | "business_insights" | "prospecting"
   const market = ctx.country ? ` Owner-stated market: ${ctx.country}.` : "";
   const scope = ctx.marketScope ? ` Business reach is classified as ${ctx.marketScope}; this is scope only, not a named city or country.` : "";
   switch (task) {
+    case "business_model_check":
+      return {
+        maxSearches: 5,
+        maxFetches: 4,
+        cacheTtlMs: 6 * 60 * 60_000,
+        brief: `For ${ctx.businessName}${site}.${market}${scope} Planning date: ${ctx.today ?? "unknown"}. Find dated evidence about how this business's market and business model are changing: 1. Demand and customer-behavior shifts for its category. 2. How competitors and substitutes charge (subscription, usage, retainer, bundles, marketplaces) and any recent pricing changes. 3. Distribution, platform, regulatory, technology or cost changes that affect how the category makes money. 4. Named examples of businesses in this or a nearby category that changed how they make money, with what is known about results. Only report what you found, with URLs and the dates the sources describe.`,
+      };
     case "social_posts":
       return {
         maxSearches: 3,

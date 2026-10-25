@@ -112,6 +112,7 @@ const PAGE_GUIDANCE: Record<string, string> = {
   pipeline: "Keep track of people who may buy from you, from first contact to a recorded sale.",
   outbound: "Find relevant businesses, check the sources, and review messages before sending.",
   visibility: "See what search tools can read from your website and check the data you have connected.",
+  "business-model": "Check whether the way you make money is holding up, and test alternatives.",
   competitors: "Look at similar businesses to understand their offers and how yours differs.",
   reviews: "Read customer feedback and prepare replies. Imported reviews do not automatically sync with public sites.",
   results: "See recorded visits, inquiries, and sales. Missing data is not the same as no results.",
