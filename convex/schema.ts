@@ -2568,7 +2568,11 @@ export default defineSchema({
     evidenceRef: v.optional(v.string()),
     viewport: v.optional(v.union(v.literal("desktop"), v.literal("mobile"))),
     screenshotCapturedAt: v.optional(v.number()),
-    status: v.union(v.literal("accepted"), v.literal("dismissed"), v.literal("deferred"), v.literal("resolved"), v.literal("reopened"), v.literal("corrected"), v.literal("needs_information")),
+    status: v.optional(v.union(v.literal("accepted"), v.literal("dismissed"), v.literal("deferred"), v.literal("resolved"), v.literal("reopened"), v.literal("corrected"), v.literal("needs_information"))),
+    /** Owner's chosen response, bound to one direction in this immutable finding. */
+    selectedDirectionId: v.optional(v.string()),
+    selectedDirectionBy: v.optional(v.id("users")),
+    selectedDirectionAt: v.optional(v.number()),
     note: v.optional(v.string()),
     updatedBy: v.id("users"),
     updatedAt: v.number(),

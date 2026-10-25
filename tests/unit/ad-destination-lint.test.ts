@@ -20,6 +20,16 @@ function destinationIssues(finalUrl: string, input: AgentInput = base) {
 }
 
 describe("ad destination validation", () => {
+  it("tolerates legacy ad drafts without a copy brief", () => {
+    const output = {
+      searchAds: [{ headlines: [], descriptions: [], keywords: [], finalUrl: "https://example.com", angle: "Clear service booking", paths: [], negativeKeywords: [], landingPageMatch: "" }],
+      metaAds: [{ primaryText: "", headline: "", description: "", imageIdea: "", audience: "", concept: "", angle: "Simple weekly service planning", format: "image", creativeBrief: "" }],
+      budgetNote: "",
+      factIndexes: [],
+    };
+    expect(() => adsSpec().lint!(output as never, base)).not.toThrow();
+  });
+
   it("allows the business site and its subdomains", () => {
     expect(destinationIssues("https://www.example.com/pricing")).toEqual([]);
     expect(destinationIssues("https://shop.example.com/products/item")).toEqual([]);

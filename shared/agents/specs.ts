@@ -1736,8 +1736,8 @@ function lintAds(out: AdDraftsV2, input: AgentInput): LintIssue[] {
     ...out.searchAds.flatMap((ad, i) => ad.headlines.concat(ad.descriptions).map((text) => ({ path: `searchAds[${i}]`, text }))),
     ...out.metaAds.flatMap((ad, i) => [ad.primaryText, ad.headline, ad.description].map((text) => ({ path: `metaAds[${i}]`, text }))),
   ], input), ...lintAdDestinations(out, input), ...lintFactIndexes(out.factIndexes, input.facts.length)];
-  out.searchAds.forEach((ad, index) => issues.push(...lintApprovedOfferCopy([...ad.headlines, ...ad.descriptions].join("\n"), input.approvedOfferTerms, `searchAds[${index}]`, out.copyBrief.approvedOfferPlayName)));
-  out.metaAds.forEach((ad, index) => issues.push(...lintApprovedOfferCopy([ad.headline, ad.primaryText, ad.description].join("\n"), input.approvedOfferTerms, `metaAds[${index}]`, out.copyBrief.approvedOfferPlayName)));
+  out.searchAds.forEach((ad, index) => issues.push(...lintApprovedOfferCopy([...ad.headlines, ...ad.descriptions].join("\n"), input.approvedOfferTerms, `searchAds[${index}]`, out.copyBrief?.approvedOfferPlayName)));
+  out.metaAds.forEach((ad, index) => issues.push(...lintApprovedOfferCopy([ad.headline, ad.primaryText, ad.description].join("\n"), input.approvedOfferTerms, `metaAds[${index}]`, out.copyBrief?.approvedOfferPlayName)));
   out.searchAds.forEach((a, i) => {
     const path = `searchAds[${i}]`;
     issues.push(...minItems(a.headlines, 3, `${path}.headlines`, "headlines"), ...maxItems(a.headlines, 15, `${path}.headlines`, "headlines"));

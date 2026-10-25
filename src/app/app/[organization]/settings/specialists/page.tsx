@@ -7,7 +7,7 @@ import { Bot, Check, Play, Plus } from "@/components/icons";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { AGENT_ACTIONS } from "@shared/agents/registry";
-import { Badge, Button, Callout, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, EmptyState, Field, Input, Meter, Select, Segmented, Textarea, toast } from "@/components/ui";
+import { Badge, Button, Callout, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, DatePicker, EmptyState, Field, Input, Meter, Select, Segmented, Textarea, toast } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, QueryBoundary } from "@/components/app/results/QueryBoundary";
 import { SettingsHeader } from "@/components/app/settings/SettingsNav";
@@ -317,8 +317,8 @@ function SpecialistRunFeedback({
           <Field label="Unit" hint="For example: customers, sign-ups, USD, or hours."><Input value={unit} onChange={(event) => setUnit(event.target.value)} maxLength={30} /></Field>
           {measureType === "rate" ? <Field label="Number measured"><Input type="number" min={1} step={1} value={denominator} onChange={(event) => setDenominator(event.target.value)} /></Field> : null}
           <Field label="Who or what did this cover?" hint="Name the group or period cohort, such as first-time buyers."><Input value={cohort} onChange={(event) => setCohort(event.target.value)} maxLength={160} /></Field>
-          <Field label="Period start"><Input type="date" value={periodStart} onChange={(event) => setPeriodStart(event.target.value)} /></Field>
-          <Field label="Period end"><Input type="date" value={periodEnd} onChange={(event) => setPeriodEnd(event.target.value)} /></Field>
+          <Field label="Period start"><DatePicker value={periodStart} onChange={setPeriodStart} /></Field>
+          <Field label="Period end"><DatePicker value={periodEnd} onChange={setPeriodEnd} min={periodStart || undefined} /></Field>
         </div>
         <p className="mt-2 text-xs text-ink-3">This is your report about what happened, not proof this specialist caused it. Leave the fields blank if the result is unknown.</p>
       </details>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Field, Input, Select, toast } from "@/components/ui";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, DatePicker, Field, Input, Select, toast } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 
 type MeasureType = "count" | "rate" | "currency" | "duration";
@@ -137,8 +137,8 @@ export function RunOutcomeReport({ slug, runId }: { slug: string; runId: Id<"wor
                 <Field label="Compared with" optional hint="For example, the previous 2 weeks."><Input value={comparisonLabel} onChange={(event) => setComparisonLabel(event.target.value)} maxLength={80} /></Field>
                 <Field label="Comparison result" optional><Input type="number" min={measureType === "currency" ? undefined : 0} max={measureType === "rate" ? 100 : undefined} step={measureType === "count" ? 1 : "any"} value={comparisonValue} onChange={(event) => setComparisonValue(event.target.value)} /></Field>
                 {measureType === "rate" && hasComparison ? <Field label="Number in comparison" hint="How many people or items were counted in the comparison."><Input type="number" min={1} step={1} value={comparisonDenominator} onChange={(event) => setComparisonDenominator(event.target.value)} /></Field> : null}
-                <Field label="Period started"><Input type="date" value={periodStart} max={latestCompletedDate} onChange={(event) => setPeriodStart(event.target.value)} /></Field>
-                <Field label="Period ended" hint="Choose a completed period."><Input type="date" value={periodEnd} max={latestCompletedDate} onChange={(event) => setPeriodEnd(event.target.value)} /></Field>
+                <Field label="Period started"><DatePicker value={periodStart} max={latestCompletedDate} onChange={setPeriodStart} /></Field>
+                <Field label="Period ended" hint="Choose a completed period."><DatePicker value={periodEnd} min={periodStart || undefined} max={latestCompletedDate} onChange={setPeriodEnd} /></Field>
               </div>
               {!periodValid && periodStart && periodEnd ? <p className="text-sm text-danger-800" role="alert">Choose a completed period no longer than one year, with the start before the end.</p> : null}
               <div><Button size="sm" loading={busy} disabled={!canSave} onClick={() => void save()}>Save reported result</Button></div>

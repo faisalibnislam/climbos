@@ -24,7 +24,7 @@ type SeoReadinessPage = { url?: string; metadataState?: string; titleLength?: nu
 type Coverage = { requestedUrl?: string | null; discoveredCandidates?: number; pagesAttempted?: number; pagesRead?: number; pages?: { url?: string; status?: string }[]; visualReview?: { state?: string; views?: string[]; capturedAt?: number; screenshots?: { view?: string; width?: number; height?: number }[] } };
 type DesignDirection = { id?: string; name?: string; responseLevel?: "quick_fix" | "considered_redesign" | "bold_alternative"; communicates?: string; tradeoff?: string; change?: string; previewBrief?: string; measurementPlan?: string; effort?: string; assumptions?: string[]; risks?: string[] };
 type FindingStatus = "accepted" | "dismissed" | "deferred" | "resolved" | "reopened" | "corrected" | "needs_information";
-type FindingReview = { findingIndex: number; status: FindingStatus; note: string; sourceUrl?: string; evidenceRef?: string; viewport?: string | null; screenshotCapturedAt?: number | null; updatedAt: number };
+type FindingReview = { findingIndex: number; status?: FindingStatus; note: string; sourceUrl?: string; evidenceRef?: string; viewport?: string | null; screenshotCapturedAt?: number | null; selectedDirectionId?: string | null; selectedDirectionName?: string | null; selectedDirectionAt?: number | null; updatedAt: number };
 type DesignFinding = { lens?: string; classification?: string; region?: string; observation?: string; businessOrUserGoal?: string; whyItMatters?: string; severity?: string; confidence?: string; evidence?: string; sourceUrl?: string; proposedChange?: string; directions?: DesignDirection[]; visualEvidence?: { view?: string; observation?: string }; automatedCheckIds?: string[]; requiresHumanEvaluation?: boolean };
 
 const obj = (value: unknown): Record<string, unknown> => value && typeof value === "object" ? value as Record<string, unknown> : {};
@@ -68,6 +68,8 @@ export function ConversionAuditView({ value, slug, runId }: { value: unknown; sl
   const approvedBrand = useQuery(api.brand.get, { slug });
   const [creativeRanges, setCreativeRanges] = useState<Record<number, "safer" | "distinctive" | "unconventional">>({});
   const [essentialElements, setEssentialElements] = useState<Record<number, string>>({});
+  const [selectDirectionBusy, setSelectDirectionBusy] = useState<string | null>(null);
+  const selectDirection = useMutation(api.designCritic.selectDirection);
   const findingReview = useQuery(api.designCritic.feedback, { slug, runId });
   const reviewsByIndex = new Map((findingReview?.rows ?? []).map((row) => [row.findingIndex, row as FindingReview]));
 
@@ -122,8 +124,12 @@ export function ConversionAuditView({ value, slug, runId }: { value: unknown; sl
               <Field label="Creative range for the editable brief"><Select value={creativeRanges[i] ?? "distinctive"} onValueChange={(value) => setCreativeRanges((current) => ({ ...current, [i]: value as "safer" | "distinctive" | "unconventional" }))} options={[{ value: "safer", label: "Safer" }, { value: "distinctive", label: "More distinctive" }, { value: "unconventional", label: "More unconventional" }]} /></Field>
               <Field label="Essential brand elements to preserve"><Input value={essentialElements[i] ?? ""} onChange={(event) => setEssentialElements((current) => ({ ...current, [i]: event.target.value.slice(0, 240) }))} placeholder="Add owner-confirmed elements" /></Field>
             </div>
-            {finding.directions.map((direction, directionIndex) => <div key={direction.id ?? directionIndex} className="rounded-lg border border-line bg-surface p-3">
+            {finding.directions.map((direction, directionIndex) => {
+              const selected = Boolean(direction.id && reviewsByIndex.get(i)?.selectedDirectionId === direction.id);
+              const selectionKey = `${i}:${direction.id ?? directionIndex}`;
+              return <div key={direction.id ?? directionIndex} className="rounded-lg border border-line bg-surface p-3">
               {direction.responseLevel ? <Badge tone={direction.responseLevel === "bold_alternative" ? "violet" : direction.responseLevel === "quick_fix" ? "green" : "blue"}>{direction.responseLevel.replaceAll("_", " ")}</Badge> : null}
+              {selected ? <Badge tone="green" className="ml-2">Owner chose this direction</Badge> : null}
               <p className="text-sm font-semibold text-ink">{label(direction.name, `Direction ${directionIndex + 1}`)}</p>
               {direction.communicates ? <p className="mt-1 text-xs text-ink-2"><span className="font-medium text-ink">Communicates: </span>{label(direction.communicates)}</p> : null}
               {direction.tradeoff ? <p className="mt-1 text-xs text-ink-2"><span className="font-medium text-ink">Tradeoff: </span>{label(direction.tradeoff)}</p> : null}
@@ -132,8 +138,19 @@ export function ConversionAuditView({ value, slug, runId }: { value: unknown; sl
               {direction.assumptions?.length ? <p className="mt-1 text-xs text-ink-3">Assumptions: {direction.assumptions.join("; ")}</p> : null}
               {direction.risks?.length ? <p className="mt-1 text-xs text-ink-3">Risks: {direction.risks.join("; ")}</p> : null}
               {direction.measurementPlan ? <p className="mt-1 text-xs text-ink-3"><span className="font-medium">Measure: </span>{label(direction.measurementPlan)}</p> : null}
-              {direction.previewBrief ? <Link href={`/app/${encodeURIComponent(slug)}/pages?brief=${encodeURIComponent(designBrief(finding, direction, approvedBrand, creativeRanges[i] ?? "distinctive", essentialElements[i] ?? ""))}`} className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-link">Prepare editable brief <ArrowRight aria-hidden className="size-3" /></Link> : null}
-            </div>)}
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                {findingReview?.canEdit && direction.id ? <Button size="sm" variant={selected ? "secondary" : "primary"} disabled={selected || selectDirectionBusy === selectionKey} loading={selectDirectionBusy === selectionKey} onClick={async () => {
+                  setSelectDirectionBusy(selectionKey);
+                  try {
+                    await selectDirection({ slug, runId, findingIndex: i, directionId: direction.id! });
+                    toast({ tone: "success", title: "Direction saved for this audit" });
+                  } catch (error) { toast({ tone: "danger", title: errorMessage(error) }); }
+                  finally { setSelectDirectionBusy(null); }
+                }}>{selected ? "Selected" : "Choose this direction"}</Button> : null}
+                {direction.previewBrief ? <Link href={`/app/${encodeURIComponent(slug)}/pages?brief=${encodeURIComponent(designBrief(finding, direction, approvedBrand, creativeRanges[i] ?? "distinctive", essentialElements[i] ?? ""))}`} className="inline-flex items-center gap-1 text-xs font-medium text-link">Prepare editable brief <ArrowRight aria-hidden className="size-3" /></Link> : null}
+              </div>
+              {selected ? <p className="mt-2 text-xs text-ink-3">Saved against this audit finding. It does not change or publish the audited website.</p> : null}
+            </div>; })}
             <p className="text-xs text-ink-3">The brief opens as editable text. Approved brand rules are not included unless explicitly attached; inferred cues remain hypotheses. Creating a draft does not change the audited website.</p>
           </div> : null}
           {finding.sourceUrl ? <a href={finding.sourceUrl} target="_blank" rel="noreferrer noopener" className="mt-2 inline-flex break-all text-xs text-link">Open evidence page <ExternalLink aria-hidden className="ml-1 size-3" /></a> : null}
@@ -200,7 +217,7 @@ function DesignFindingReview({ slug, runId, findingIndex, current, canEdit }: { 
   const [status, setStatus] = useState<FindingStatus | "">(current?.status ?? "");
   const [note, setNote] = useState(current?.note ?? "");
   const [busy, setBusy] = useState(false);
-  if (current) return <div className="mt-3 border-t border-line pt-3">
+  if (current?.status) return <div className="mt-3 border-t border-line pt-3">
     <div className="flex flex-wrap items-center gap-2"><Badge tone={current.status === "resolved" ? "green" : current.status === "dismissed" ? "neutral" : "amber"}>Owner marked {current.status.replaceAll("_", " ")}</Badge><span className="text-xs text-ink-3">Saved to this audit</span></div>
     <p className="mt-1 break-all text-xs text-ink-3">Reference {current.evidenceRef ?? `${runId}:${findingIndex}`} · {current.viewport ? `${current.viewport} view` : "viewport not recorded"}{current.screenshotCapturedAt ? ` captured ${formatDateTime(current.screenshotCapturedAt)}` : ""}{current.sourceUrl ? ` · ${current.sourceUrl}` : ""}</p>
     {current.note ? <p className="mt-1 text-xs text-ink-2">{current.note}</p> : null}
