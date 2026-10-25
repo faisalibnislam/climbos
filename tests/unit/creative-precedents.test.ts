@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(68);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(69);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -96,6 +96,21 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://www.patagoniaworks.com/press/2022/9/14/patagonias-next-chapter-earth-is-now-our-only-shareholder" }),
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Explore a succession and mission strategy", query)).toContain("CP-068");
+  });
+
+  it("retrieves a local handoff and visual workflow mechanism without using its reported volume as a benchmark", () => {
+    const query = "Improve a multi-step local delivery service with visual route codes carried by the item, repeatable handoff points, existing public transport, and backup workers for exceptions";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-069");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("Put the information needed for the next handoff on the object moving through the process");
+    expect(match?.precedent.causalLimit).toContain("Mumbai's population density");
+    expect(match?.precedent.transferRisk).toContain("increase labor burden");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://research.iimb.ac.in/imr/vol13/iss4/11/", sourceRole: "independent_secondary" }),
+      expect.objectContaining({ url: "https://elpais.com/eps/2025-03-14/dabbawala-un-sistema-casi-infalible-de-reparto-de-comida-que-lleva-un-siglo-alimentando-bombay.html", publicationDate: "2025-03-14" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Explore a low-tech service reliability strategy", query)).toContain("CP-069");
+    expect(formatCreativePrecedents(query, 3)).toContain("Reported throughput and error-rate claims vary");
   });
 
   it("retrieves open innovation while separating proxy scores, implementation value, and data privacy", () => {
