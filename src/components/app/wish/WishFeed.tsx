@@ -3,10 +3,10 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { CircleCheck, CircleDashed, CircleX, Lightbulb, Loader2, Plug, Sparkles, Zap } from "@/components/icons"
+import { CircleCheck, CircleX, Lightbulb, Plug, Sparkles, Zap } from "@/components/icons"
 import Link from "next/link";
 import { useState } from "react";
-import { Badge, Button, Skeleton, SocialIcon, Tooltip, networkOf, toast } from "@/components/ui";
+import { Button, Skeleton, SocialIcon, Tooltip, networkOf, toast } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import { microsToCreditsLabel, relativeTime } from "@/components/app/money";
 import { RoleAvatar } from "@/components/app/RoleAvatar";
@@ -16,6 +16,7 @@ import { RetryRunIfPossible, RunProgressCompact } from "@/components/app/content
 import { climbTarget } from "@/components/climb/context";
 import { wishesFrom } from "./pairing";
 import { Prose } from "@/components/ds/content";
+import { ActionCardStatus, actionCardStatusExplanation } from "@/components/app/ActionCardStatus";
 
 type Today = NonNullable<ReturnType<typeof useQuery<typeof api.workspace.today>>>;
 type ChatMessage = Today["chat"][number];
@@ -165,15 +166,15 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
           <Tooltip content={card.description}>
             <p tabIndex={0} className="truncate text-ui font-medium text-ink">{card.title}</p>
           </Tooltip>
+          {actionCardStatusExplanation(card.status, card.externalEffect) ? <p className="text-xs text-ink-3">{actionCardStatusExplanation(card.status, card.externalEffect)}</p> : null}
           {card.status === "running" && card.runId ? <RunProgressCompact slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" /> : card.status === "blocked" || (card.status === "proposed" && card.blockedReason) ? <p className="truncate text-xs text-ink-3">{card.blockedReason}</p> : null}
           {card.status === "failed" && card.runId ? <RetryRunIfPossible slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" /> : null}
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2 pl-8 sm:pl-0">
+        <ActionCardStatus status={card.status} externalEffect={card.externalEffect} />
         {card.status === "running" ? (
-          <Badge tone="blue" icon={<Loader2 className="animate-spin" />}>
-            Working
-          </Badge>
+          null
         ) : card.status === "done" ? (
           href ? (
             <Button asChild size="sm" variant="secondary">
@@ -182,9 +183,7 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
               </Link>
             </Button>
           ) : (
-            <Badge tone="green" icon={<CircleCheck />}>
-              Done
-            </Badge>
+            null
           )
         ) : card.status === "failed" ? (
           card.runId ? (
@@ -194,12 +193,10 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
               </Link>
             </Button>
           ) : (
-            <Badge tone="red" icon={<CircleX />}>
-              Didn’t finish
-            </Badge>
+            null
           )
         ) : card.status === "rejected" ? (
-          <Badge tone="neutral">Skipped</Badge>
+          null
         ) : card.kind === "set_up_autopilot" && card.status === "proposed" ? (
           <Button asChild size="sm">
             <Link href={`/app/${slug}/autopilot`}>Set up autopilot</Link>
@@ -234,9 +231,7 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
             </Button>
           </>
         ) : card.status === "blocked" ? (
-          <Badge tone="amber" icon={<CircleDashed />}>
-            Needs setup
-          </Badge>
+          null
         ) : null}
       </div>
     </div>

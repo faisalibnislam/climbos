@@ -7,7 +7,6 @@ import {
   ArrowRight,
   CheckCircle2,
   CircleHelp,
-  Clock3,
   Compass,
   FileCheck2,
   Hourglass,
@@ -33,6 +32,7 @@ import { WordHelp } from "@/components/ui/word-help";
 import { PageHeader } from "@/components/app/results/QueryBoundary";
 import { WishComposer, wishSuggestions, type WishComposerHandle } from "@/components/app/wish/WishComposer";
 import { RetryRunIfPossible, RunProgressCompact } from "@/components/app/content/RunProgress";
+import { ActionCardStatus, actionCardStatusExplanation } from "@/components/app/ActionCardStatus";
 import { WishFeed } from "@/components/app/wish/WishFeed";
 import { IdeaDeck } from "@/components/app/today/IdeaDeck";
 import { TodayTargetPreviewCard } from "@/components/app/today/TodayTargetPreview";
@@ -402,6 +402,7 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
         <Tooltip content={card.description || card.proposedEffect}>
           <p tabIndex={0} className="text-sm font-medium text-ink">{card.title}</p>
         </Tooltip>
+        {actionCardStatusExplanation(status, card.externalEffect) ? <p className="text-xs text-ink-3">{actionCardStatusExplanation(status, card.externalEffect)}</p> : null}
         {status === "running" && card.runId ? (
           <RunProgressCompact slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" />
         ) : (
@@ -410,19 +411,16 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
         {status === "failed" && card.runId ? <RetryRunIfPossible slug={slug} runId={card.runId as Id<"workflowRuns">} className="mt-1.5" /> : null}
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        <ActionCardStatus status={status} externalEffect={card.externalEffect} />
         {status === "running" ? (
-          <Badge tone="blue" icon={<Clock3 />}>
-            Working
-          </Badge>
+          null
         ) : status === "done" ? (
           card.runId ? (
             <Button asChild size="sm" variant="secondary">
               <Link href={`/app/${slug}/work/${card.runId}`}>See result</Link>
             </Button>
           ) : (
-            <Badge tone="green" icon={<CheckCircle2 />}>
-              Done
-            </Badge>
+            null
           )
         ) : status === "failed" ? (
           card.runId ? (
@@ -430,10 +428,12 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
               <Link href={`/app/${slug}/work/${card.runId}`}>See why</Link>
             </Button>
           ) : (
-            <Badge tone="red">Didn’t finish</Badge>
+            null
           )
         ) : status === "blocked" ? (
-          <Badge tone="amber">Needs setup</Badge>
+          null
+        ) : status === "rejected" || status === "approved" ? (
+          null
         ) : (
           <>
             <Button
@@ -451,7 +451,7 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
                 }
               }}
             >
-              {card.kind === "note" ? "Got it" : "Do it"}
+              {card.kind === "note" ? "Got it" : card.externalEffect ? "Prepare it" : "Do it"}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => dismiss({ slug, cardId: card.id as Id<"actionCards"> }).catch((e) => toast({ tone: "danger", title: errorMessage(e) }))}>
               Not now
