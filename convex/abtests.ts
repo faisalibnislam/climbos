@@ -6,6 +6,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
 import { audit } from "./lib/audit";
+import { recordLandingVersion } from "./lib/landingVersions";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
 /** A/B tests on landing page headlines (leads per view) and outreach subjects (reply rate). */
@@ -104,7 +105,9 @@ async function applyB(ctx: MutationCtx, test: Doc<"abTests">) {
     const id = ctx.db.normalizeId("landingPages", test.targetId);
     const page = id ? await ctx.db.get(id) : null;
     if (!page?.content || await sha256Hex(page.content) !== test.baselineHash) throw appError("INVALID", "The landing page changed after this test began. Review the current page and create a fresh test.");
-    await ctx.db.patch(page._id, { content: JSON.stringify(cleanLanding({ ...(JSON.parse(page.content) as LandingContent), ...(JSON.parse(b) as Partial<LandingContent>) })), updatedAt: Date.now() });
+    const content = JSON.stringify(cleanLanding({ ...(JSON.parse(page.content) as LandingContent), ...(JSON.parse(b) as Partial<LandingContent>) }));
+    const version = await recordLandingVersion(ctx, page, { title: page.title, color: page.color, content }, "experiment");
+    if (page.status === "live") await ctx.db.patch(page._id, { publishedContent: content, publishedColor: page.color, publishedTitle: page.title, publishedVersion: version, status: "live", updatedAt: Date.now() });
   } else {
     const id = ctx.db.normalizeId("outboundCampaigns", test.targetId);
     const c = id ? await ctx.db.get(id) : null;
@@ -154,12 +157,15 @@ export const startLanding = mutation({
   handler: async (ctx, a) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: a.slug }, "approve");
     const page = assertSameOrg(await ctx.db.get(a.pageId), org._id, "page");
-    if (!page.content) throw appError("INVALID", "The page isn't written yet.");
+    if (page.status !== "live") throw appError("INVALID", "Publish the landing page before starting an experiment.");
+    const publishedContent = page.publishedContent ?? page.content;
+    if (!publishedContent) throw appError("INVALID", "The page isn't written yet.");
+    if ((page.publishedVersion ?? page.version ?? 0) !== (page.version ?? 0) || (page.content && page.content !== publishedContent)) throw appError("INVALID", "Publish or discard the saved draft before starting an experiment so both versions use the current public page.");
     if (await activeTest(ctx, page._id)) throw appError("INVALID", "A test is already active on this page.");
-    const cur = JSON.parse(page.content) as LandingContent;
+    const cur = JSON.parse(publishedContent) as LandingContent;
     const b = { headline: a.headline.trim().slice(0, 90), ...(a.subhead?.trim() ? { subhead: a.subhead.trim().slice(0, 220) } : {}), ...(a.ctaLabel?.trim() ? { ctaLabel: a.ctaLabel.trim().slice(0, 32) } : {}) };
     if (!b.headline || b.headline === cur.headline) throw appError("INVALID", "Write a different headline to test.");
-    const baseline = await sha256Hex(page.content);
+    const baseline = await sha256Hex(publishedContent);
     const challenger = JSON.stringify(b);
     const id = await start(ctx, org._id, "landing", page._id, JSON.stringify({ headline: cur.headline, subhead: cur.subhead, ctaLabel: cur.ctaLabel }), challenger, a.outcomeWindowDays, baseline);
     const challengerHash = await sha256Hex(challenger);

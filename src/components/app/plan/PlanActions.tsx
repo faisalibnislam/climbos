@@ -8,7 +8,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { ClipboardList, Magic, RefreshCw } from "@/components/icons";
 import { useState } from "react";
-import { Button, Callout, Card, CardContent, ConfirmDialog, Field, IconTile, Textarea, toast } from "@/components/ui";
+import { Button, Callout, Card, CardContent, ConfirmDialog, Field, IconTile, Select, Textarea, toast } from "@/components/ui";
 import { RUN_FINISHED, RunProgress } from "../content/RunProgress";
 import { ErrorCallout, PERMISSION_WHO } from "../content/shared";
 import { microsToCreditsLabel } from "../money";
@@ -34,6 +34,7 @@ export function GeneratePlanButton({
 }) {
   const generate = useMutation(api.orgs.generatePlan);
   const [error, setError] = useState<unknown>(null);
+  const [creativeRange, setCreativeRange] = useState<"balanced" | "conventional" | "surprising" | "ambitious">("balanced");
   const ai = useAiMode(slug);
   const build = mode === "build";
   const max = ai.data?.estimates.strategy[ai.mode] ?? estimateMicros;
@@ -64,7 +65,7 @@ export function GeneratePlanButton({
         onConfirm={async () => {
           setError(null);
           try {
-            const res = await generate({ slug, aiMode: ai.mode });
+            const res = await generate({ slug, aiMode: ai.mode, creativeRange });
             onStarted(res.runId);
           } catch (e) {
             setError(e);
@@ -72,6 +73,7 @@ export function GeneratePlanButton({
         }}
       >
         <AiModePicker slug={slug} kind="strategy" value={ai.mode} onChange={ai.setMode} />
+        <Field label="Creative strategy range"><Select value={creativeRange} onValueChange={(value) => setCreativeRange(value as typeof creativeRange)} options={[{ value: "balanced", label: "Balanced" }, { value: "conventional", label: "More conventional" }, { value: "surprising", label: "More surprising" }, { value: "ambitious", label: "More ambitious" }]} /></Field>
       </ConfirmDialog>
       <p className="text-xs tabular-nums text-ink-3">≤ {microsToCreditsLabel(max)}</p>
       {error ? <ErrorCallout error={error} /> : null}

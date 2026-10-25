@@ -20,6 +20,7 @@ import { summarizeAiReferralRows, type AiReferralMetricRow } from "../shared/int
 import { formatCreatorOutcomeContext } from "../shared/agents/creatorOutcomes";
 import { shortenable, utmFor, withUtm } from "../shared/links";
 import { createLink } from "./links";
+import { creativeStrategyLearningBrief } from "./creativeStrategy";
 import type {
   AdDraftsOutput,
   BusinessInsights,
@@ -242,6 +243,7 @@ export const jobContext = internalQuery({
       marketChanges: marketChanges.map(({ _id, at, name, summary, bullets, soWhat, suggestedAction, sourceUrls, evidence }) => ({ id: String(_id), at, name, summary, bullets, soWhat: soWhat ?? null, suggestedAction: suggestedAction ?? null, sourceUrls: sourceUrls ?? [], evidence: evidence ?? null })),
       /** Plans start from what earlier plays actually did. */
       resultsText: run.kind === "strategy" ? [await resultsBrief(ctx, org._id), await feedbackBrief(ctx, org._id)].filter(Boolean).join("\n\n") : "",
+      creativeStrategyLearning: run.kind === "strategy" && !run.isFixture ? await creativeStrategyLearningBrief(ctx, org._id) : "",
       facts: currentFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, createdAt: f.createdAt, updatedAt: f.updatedAt, verifiedAt: f.verifiedAt ?? f.updatedAt, kind: EVIDENCE_KIND_LABEL[evidenceKind(f.statement, f.provenance)], evidenceKind: evidenceKind(f.statement, f.provenance), freshness: freshnessOf(f) })),
       staleFacts: staleFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, updatedAt: f.updatedAt, verifiedAt: f.verifiedAt ?? f.updatedAt, freshness: freshnessOf(f) })),
       unconfirmedCount: facts.filter((f) => f.reviewState === "needs_review").length,
@@ -578,6 +580,7 @@ export const saveStrategy = internalMutation({
                 weekOneChecklist: x.weekOneChecklist.slice(0, 7),
                 risks: x.risks.slice(0, 6),
                 ...(growthPlanV9 ? { growthPlanV9 } : { plays: expertPlays, economics: x.economics }),
+                ...("strategyExploration" in x && x.strategyExploration ? { strategyExploration: x.strategyExploration } : {}),
                 ...(x.decision ? { decision: x.decision } : {}),
                 ...(decisionAnalysis ? { decisionAnalysis: { snapshotId: x.snapshot?.snapshotId ?? null, ...decisionAnalysis } } : {}),
                 ...(x.snapshot ? { snapshot: x.snapshot } : {}),

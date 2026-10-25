@@ -1,6 +1,6 @@
 /**
  * Small, source-checked creative-strategy precedent set. This is deliberately
- * not padded to 100: the source corpus currently supports four usable cases.
+ * not padded to 100: the source corpus currently supports fourteen reviewed cases.
  * Additions require claim-level source verification and editorial review.
  */
 export interface CreativePrecedent {
@@ -13,6 +13,8 @@ export interface CreativePrecedent {
   businessModel: string;
   period: string;
   families: string[];
+  /** Editorial transfer tags, not claims reported by the source organization. */
+  transferProfile: { audiences: string[]; goals: string[]; constraints: string[]; scale: string[]; geographies: string[]; businessModels: string[] };
   convention: string;
   choice: string;
   mechanism: string;
@@ -27,13 +29,29 @@ export interface CreativePrecedent {
   editorialStatus: "verified_primary_and_secondary" | "verified_primary";
   researchConfidence: "medium" | "low";
   accessedAt: string;
-  sources: { title: string; url: string; publisher: string; publicationDate: string; supports: string }[];
+  sources: { title: string; url: string; publisher: string; publicationDate: string; accessedAt: string; sourceRole: "company_primary" | "creator_primary" | "independent_secondary"; claimRole: "action" | "outcome" | "action_and_outcome" | "context"; supports: string }[];
+}
+
+export interface CreativePrecedentContext {
+  task: string;
+  brief: string;
+  facts: string[];
+  industryBusinessTypeId?: string;
+  constraints?: {
+    monthlyAdBudgetUsd?: number;
+    ownerHoursPerWeek?: number;
+    newCustomersPerMonth?: number;
+    emailAudience?: number;
+    serviceArea?: string;
+    businessTypes?: string[];
+  };
 }
 
 export const CREATIVE_PRECEDENTS: readonly CreativePrecedent[] = [
   {
     id: "CP-001", title: "Airbnb's election cereal boxes", organization: "Airbnb", sector: "Travel marketplace / early startup", geography: "United States", approximateScale: "Pre-seed startup", businessModel: "Two-sided accommodation marketplace (then pre-launch)", period: "2008",
     families: ["distribution_partnership", "constraint_transformation", "spectacle_earned_attention"],
+    transferProfile: { audiences: ["early adopters", "investors", "press"], goals: ["runway", "fundraising", "earned attention", "launch"], constraints: ["low budget", "resource constrained", "fast production", "timely hook"], scale: ["pre-launch", "pre-seed", "small startup"], geographies: ["United States"], businessModels: ["marketplace", "early venture", "consumer startup"] },
     convention: "A cash-constrained startup should focus only on its core product and conventional fundraising.",
     choice: "The founders created and sold limited election-themed cereal boxes, using design and a current cultural moment to raise cash and create a memorable story.",
     mechanism: "A productized story turned a severe funding constraint into a saleable artifact and a conversation opener. The later investor conversation is part of the reported sequence, not proof the stunt caused Airbnb's later scale.",
@@ -47,13 +65,14 @@ export const CREATIVE_PRECEDENTS: readonly CreativePrecedent[] = [
     reversibleTest: "Offer a preorder for a tiny batch to a small, permissioned audience; stop before production unless paid demand covers the stated cost.",
     editorialStatus: "verified_primary_and_secondary", researchConfidence: "medium", accessedAt: "2026-10-25",
     sources: [
-      { title: "A letter from co-founder Nathan Blecharczyk", url: "https://news.airbnb.com/a-letter-from-co-founder-nathan-blecharczyk", publisher: "Airbnb Newsroom", publicationDate: "2022", supports: "Founders made Obama O's and Captain McCain's; the unusual story was shared in the Y Combinator interview." },
-      { title: "Airbnb's Surprising Path to Y Combinator", url: "https://www.wired.com/2017/02/airbnbs-surprising-path-to-y-combinator/", publisher: "WIRED", publicationDate: "2017-02-23", supports: "Independent retrospective account of the cereal effort and early company context." },
+      { title: "A letter from co-founder Nathan Blecharczyk", url: "https://news.airbnb.com/a-letter-from-co-founder-nathan-blecharczyk", publisher: "Airbnb Newsroom", publicationDate: "2022", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action", supports: "Founders made Obama O's and Captain McCain's; the unusual story was shared in the Y Combinator interview." },
+      { title: "Airbnb's Surprising Path to Y Combinator", url: "https://www.wired.com/2017/02/airbnbs-surprising-path-to-y-combinator/", publisher: "WIRED", publicationDate: "2017-02-23", accessedAt: "2026-10-25", sourceRole: "independent_secondary", claimRole: "action_and_outcome", supports: "Independent retrospective account of the cereal effort and early company context." },
     ],
   },
   {
     id: "CP-002", title: "Patagonia's 'Don't Buy This Jacket' message", organization: "Patagonia", sector: "Outdoor apparel", geography: "United States", approximateScale: "Established specialist retailer", businessModel: "Premium branded apparel retail", period: "2011 onward",
     families: ["distinctive_identity", "customer_experience_retention", "product_service_design"],
+    transferProfile: { audiences: ["sustainability minded buyers", "durability focused customers"], goals: ["trust", "differentiation", "retention", "brand meaning"], constraints: ["credible operations", "repair capability", "mission consistency", "long term proof"], scale: ["established retailer", "specialist brand"], geographies: ["United States"], businessModels: ["premium retail", "apparel", "durable products"] },
     convention: "A retailer should maximize immediate sales messaging during the largest shopping weekend.",
     choice: "Patagonia ran a Black Friday ad asking customers to consider the environmental cost and buy less, while connecting the message to repair, reuse, and product durability practices.",
     mechanism: "The message could signal consistency between a stated environmental position and customer guidance. The fit depended on prior practices and a durable product proposition, not contrarian wording alone.",
@@ -67,13 +86,14 @@ export const CREATIVE_PRECEDENTS: readonly CreativePrecedent[] = [
     reversibleTest: "Compare one honest, evidence-backed decision guide against the usual sales message with a small audience; measure qualified inquiries and returns/support guardrails, not clicks alone.",
     editorialStatus: "verified_primary_and_secondary", researchConfidence: "medium", accessedAt: "2026-10-25",
     sources: [
-      { title: "Don't Buy This Jacket, Black Friday and the New York Times", url: "https://www.patagonia.com/stories/planet/activism/dont-buy-this-jacket-black-friday-and-the-new-york-times/story-18615.html", publisher: "Patagonia Stories", publicationDate: "2011-11-25 (updated 2022)", supports: "Ad, date, and company's stated purpose and rationale." },
-      { title: "Patagonia's sustainability strategy: Don't buy our products", url: "https://www.imd.org/research-knowledge/sustainability/case-studies/patagonia-s-sustainability-strategy-don-t-buy-our-products/", publisher: "IMD", publicationDate: "2016", supports: "Secondary report of the approximate post-ad sales change and its time window." },
+      { title: "Don't Buy This Jacket, Black Friday and the New York Times", url: "https://www.patagonia.com/stories/planet/activism/dont-buy-this-jacket-black-friday-and-the-new-york-times/story-18615.html", publisher: "Patagonia Stories", publicationDate: "2011-11-25 (updated 2022)", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action", supports: "Ad, date, and company's stated purpose and rationale." },
+      { title: "Patagonia's sustainability strategy: Don't buy our products", url: "https://www.imd.org/research-knowledge/sustainability/case-studies/patagonia-s-sustainability-strategy-don-t-buy-our-products/", publisher: "IMD", publicationDate: "2016", accessedAt: "2026-10-25", sourceRole: "independent_secondary", claimRole: "outcome", supports: "Secondary report of the approximate post-ad sales change and its time window." },
     ],
   },
   {
     id: "CP-003", title: "Nike's waffle-sole product experiment", organization: "Nike", sector: "Athletic footwear", geography: "United States", approximateScale: "Early-stage footwear company; exact scale not verified", businessModel: "Designed and sold athletic footwear", period: "1971–1975",
     families: ["product_service_design", "constraint_transformation", "customer_participation"],
+    transferProfile: { audiences: ["athletes", "product users", "builders"], goals: ["product differentiation", "performance", "product learning"], constraints: ["prototype", "field test", "low cost iteration", "external expertise"], scale: ["early stage", "small team"], geographies: ["United States"], businessModels: ["physical product", "footwear", "consumer product"] },
     convention: "Running traction should be solved through familiar footwear design and conventional development resources.",
     choice: "Bill Bowerman used a waffle-iron pattern as a prototype prompt, iterated with local tradespeople, and let athletes test early versions before the product evolved into the Waffle Trainer.",
     mechanism: "A constraint-led prototype borrowed a pattern from outside the category, then moved through repeated field tests. The transferable mechanism is cross-domain observation plus low-cost iteration, not copying the shoe design.",
@@ -87,12 +107,13 @@ export const CREATIVE_PRECEDENTS: readonly CreativePrecedent[] = [
     reversibleTest: "Build a non-production mock or supervised prototype and test task completion, failure modes, and willingness to continue with a small user group.",
     editorialStatus: "verified_primary", researchConfidence: "medium", accessedAt: "2026-10-25",
     sources: [
-      { title: "From Waffle Iron to World Stage: The True Story of the Nike Moon Shoe", url: "https://about.nike.com/en/magazine/nike-moon-shoe-waffle-iron-true-history", publisher: "NIKE, Inc. Archives", publicationDate: "2025-09-15", supports: "Prototype mechanism, athlete testing, product sequence, and reported 100,000 orders." },
+      { title: "From Waffle Iron to World Stage: The True Story of the Nike Moon Shoe", url: "https://about.nike.com/en/magazine/nike-moon-shoe-waffle-iron-true-history", publisher: "NIKE, Inc. Archives", publicationDate: "2025-09-15", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action_and_outcome", supports: "Prototype mechanism, athlete testing, product sequence, and reported 100,000 orders." },
     ],
   },
   {
     id: "CP-004", title: "Mario: designing a character around constraints and reuse", organization: "Nintendo", sector: "Video games and entertainment", geography: "Japan / global", approximateScale: "Established game maker; exact initial scale not verified", businessModel: "Video-game design and publishing", period: "1981 onward",
     families: ["distinctive_identity", "constraint_transformation", "product_service_design"],
+    transferProfile: { audiences: ["players", "children", "families", "game audiences"], goals: ["recognition", "character recall", "product differentiation"], constraints: ["hardware limits", "technical limits", "reusable assets", "limited visual detail"], scale: ["early game development", "established publisher"], geographies: ["Japan", "global"], businessModels: ["video game", "entertainment", "digital product"] },
     convention: "A character's design should begin with detailed realism or a fully developed backstory.",
     choice: "Miyamoto describes designing Mario within severe sprite limits: a hat reduced the need to draw hair, a moustache avoided a detailed mouth, and overalls separated body parts. He also described wanting a character he could use across games.",
     mechanism: "Visible constraints produced a simple, recognizable form that could recur across different game contexts. This is a design mechanism under a particular medium and production system, not evidence that every brand needs a mascot.",
@@ -106,38 +127,301 @@ export const CREATIVE_PRECEDENTS: readonly CreativePrecedent[] = [
     reversibleTest: "Show two original, legally reviewed identity directions to a small set of target customers; measure unaided recall and correct offer comprehension before investing in a full system.",
     editorialStatus: "verified_primary_and_secondary", researchConfidence: "medium", accessedAt: "2026-10-25",
     sources: [
-      { title: "Iwata Asks: The Reason Mario Wears Overalls", url: "https://www.nintendo.com/en-gb/Iwata-Asks/Iwata-Asks-New-Super-Mario-Bros-Wii/Volume-1/2-The-Reason-Mario-Wears-Overalls/2-The-Reason-Mario-Wears-Overalls-210759.html", publisher: "Nintendo UK", publicationDate: "2009", supports: "Miyamoto's description of pixel constraints and design decisions." },
-      { title: "E3 Video: Miyamoto talks about creating Mario", url: "https://www.latimes.com/archives/blogs/technology-blog/story/2009-06-04/e3-video-miyamoto-talks-about-creating-mario", publisher: "Los Angeles Times", publicationDate: "2009-06-04", supports: "Interview report that Miyamoto wanted a character usable across his games." },
-      { title: "The official home of Super Mario: History", url: "https://mario.nintendo.com/history/", publisher: "Nintendo", publicationDate: "Undated; accessed 2026-10-25", supports: "Official chronology of releases from 1985 onward." },
+      { title: "Iwata Asks: The Reason Mario Wears Overalls", url: "https://www.nintendo.com/en-gb/Iwata-Asks/Iwata-Asks-New-Super-Mario-Bros-Wii/Volume-1/2-The-Reason-Mario-Wears-Overalls/2-The-Reason-Mario-Wears-Overalls-210759.html", publisher: "Nintendo UK", publicationDate: "2009", accessedAt: "2026-10-25", sourceRole: "creator_primary", claimRole: "action", supports: "Miyamoto's description of pixel constraints and design decisions." },
+      { title: "E3 Video: Miyamoto talks about creating Mario", url: "https://www.latimes.com/archives/blogs/technology-blog/story/2009-06-04/e3-video-miyamoto-talks-about-creating-mario", publisher: "Los Angeles Times", publicationDate: "2009-06-04", accessedAt: "2026-10-25", sourceRole: "independent_secondary", claimRole: "action", supports: "Interview report that Miyamoto wanted a character usable across his games." },
+      { title: "The official home of Super Mario: History", url: "https://mario.nintendo.com/history/", publisher: "Nintendo", publicationDate: "Undated", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "context", supports: "Official chronology of releases from 1985 onward." },
+    ],
+  },
+  {
+    id: "CP-005", title: "LEGO turns fan submissions into a bounded product-development route", organization: "The LEGO Group", sector: "Toys and construction play", geography: "Japan, then global", approximateScale: "Established global manufacturer; exact pilot scale not verified", businessModel: "Consumer products with a fan-supported licensing and product-selection program", period: "2008 onward",
+    families: ["customer_participation", "product_service_design", "distribution_partnership"],
+    transferProfile: { audiences: ["fans", "collectors", "product enthusiasts"], goals: ["co creation", "product validation", "community participation", "product development"], constraints: ["community moderation", "intellectual property", "selection rules", "long development cycle"], scale: ["pilot", "established manufacturer"], geographies: ["Japan", "global"], businessModels: ["consumer products", "toys", "licensing"] },
+    convention: "Product development is primarily an internal process; customers can provide feedback but should not help select products.",
+    choice: "LEGO piloted CUUSOO with a Japanese crowdsourcing platform, then developed LEGO Ideas so fans could submit concepts and build support before a review board selected products.",
+    mechanism: "A permissioned participation funnel can surface committed fan interest before internal product review while also giving fans a visible role. Support thresholds are an input to review, not proof of broad demand or a guarantee of production.",
+    distinctiveness: "The company formalized a recurring fan-to-review-to-product pathway, rather than using one-off ideation contests as a substitute for product research.",
+    outcome: "LEGO reports that the pilot exceeded half a million members and led to a more robust platform. In 2018 it reported more than one million members, over 26,000 submitted ideas, and 23 released sets across CUUSOO/Ideas. These are company-reported counts, not causal evidence of incremental sales.",
+    evidenceClass: "Company-reported history and participation metrics; no independent causal estimate of product success or revenue impact.",
+    causalLimit: "Membership and submission volume do not establish buyer demand, incremental sales, or representative customer preferences; selected products also face LEGO's review and production constraints.",
+    conditions: ["Customers have relevant creative knowledge or strong product use", "The organization can review, prototype, and fulfill selected ideas", "Rules, ownership, eligibility, and selection criteria are transparent"],
+    transferRisk: "An open call can attract low-fit ideas, overrepresent highly engaged fans, create IP or moderation burdens, and raise expectations that every popular idea will ship.",
+    smallBusinessAdaptation: "Invite a small, relevant customer group to submit or rank one narrowly scoped improvement, while clearly stating that feedback informs but does not guarantee a roadmap decision.",
+    reversibleTest: "Run a two-week, permissioned request for one product improvement with a small customer cohort; compare useful, feasible suggestions and follow-up behavior with normal feedback, then stop before promising delivery.",
+    editorialStatus: "verified_primary", researchConfidence: "medium", accessedAt: "2026-10-25",
+    sources: [
+      { title: "LEGO Ideas | LEGO History", url: "https://www.lego.com/en-us/history/articles/j-lego-ideas", publisher: "The LEGO Group", publicationDate: "Undated", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action_and_outcome", supports: "CUUSOO pilot in Japan, global expansion, two pilot ideas becoming sets, growth beyond half a million members, and the 2014 transition to LEGO Ideas." },
+      { title: "Celebrating 10 Years of Crowdsourcing and Co-creation with LEGO Fans", url: "https://www.lego.com/en-us/aboutus/news/2019/october/ideas-10th-anniversary", publisher: "The LEGO Group", publicationDate: "2018-11-08", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "outcome", supports: "Company-reported 1 million members, 26,000 ideas, 166 ideas reaching 10,000 supporters, and 23 sets released." },
+    ],
+  },
+  {
+    id: "CP-006", title: "Amazon keeps negative product reviews visible", organization: "Amazon.com", sector: "Online retail", geography: "United States", approximateScale: "Early online retailer; launched in 1995, scale at feature launch not specified in the source", businessModel: "Online marketplace and retailer", period: "1995 onward; described in 2004",
+    families: ["customer_experience_retention", "product_service_design", "constraint_transformation"],
+    transferProfile: { audiences: ["online shoppers", "product researchers", "buyers seeking trustworthy feedback"], goals: ["purchase confidence", "trust", "customer decision quality"], constraints: ["moderation", "negative feedback", "short term lost sales", "authentic reviews"], scale: ["early online retailer", "small commerce"], geographies: ["United States"], businessModels: ["online retail", "marketplace", "consumer commerce"] },
+    convention: "A seller should suppress customer criticism that may reduce immediate purchases.",
+    choice: "Amazon introduced customer product reviews shortly after launch and continued to allow negative or lukewarm reviews despite vendor complaints and acknowledged short-term lost sales.",
+    mechanism: "Visible mixed feedback can help customers make a more informed decision, even when it lowers conversion on some products. The mechanism is decision usefulness and trust, not indiscriminate display of every unverified claim.",
+    distinctiveness: "The choice accepted short-term lost sales in service of a stated long-term customer decision benefit; the shareholder letter explicitly describes the tradeoff.",
+    outcome: "In a 2004 shareholder letter, Jeff Bezos described reviews as a routine site practice and said negative reviews had sometimes changed his own purchase decisions; the letter makes no measured estimate of the feature's net long-term effect.",
+    evidenceClass: "Primary company-reported retrospective account; qualitative adoption and founder-reported experience; no quantified causal outcome for reviews.",
+    causalLimit: "A shareholder letter states management's rationale but does not independently establish customer trust, incremental sales, or net long-run value caused by reviews.",
+    conditions: ["Reviews are authentic, relevant, and governed by clear moderation rules", "Customers need decision evidence that the seller cannot credibly provide alone", "The business can tolerate and respond to accurate criticism"],
+    transferRisk: "Unmoderated abuse, fake reviews, privacy disclosures, or misleading claims can harm customers and violate platform rules or law. Review requests must remain neutral and ungated.",
+    smallBusinessAdaptation: "Provide a fair, transparent way to surface verified customer feedback, including criticism, and respond with specific fixes rather than filtering by sentiment.",
+    reversibleTest: "For one eligible product or service, publish a neutral feedback summary with consent and moderation safeguards; measure qualified questions, returns or complaint resolution, while tracking trust and privacy concerns.",
+    editorialStatus: "verified_primary", researchConfidence: "medium", accessedAt: "2026-10-25",
+    sources: [
+      { title: "2003 Annual Report: Letter to Shareholders", url: "https://ir.aboutamazon.com/files/doc_financials/annual/Annual_Report_2003041304.pdf", publisher: "Amazon.com, Inc.", publicationDate: "2004", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action_and_outcome", supports: "Reviews launched shortly after the 1995 site launch; vendor objections, founder-reported effect of negative reviews on purchase decisions, and the qualitative short-term sales tradeoff." },
+    ],
+  },
+  {
+    id: "CP-007", title: "REI closes on Black Friday and invites people outdoors", organization: "REI Co-op", sector: "Outdoor retail and recreation", geography: "United States", approximateScale: "Large cooperative retailer; 143 stores and about 12,000 employees in 2015", businessModel: "Member-owned specialty retailer with outdoor classes, trips, and nonprofit partnerships", period: "2015 onward",
+    families: ["distinctive_identity", "distribution_partnership", "customer_participation", "constraint_transformation", "spectacle_earned_attention"],
+    transferProfile: { audiences: ["outdoor community", "local customers", "employees", "nonprofit partners"], goals: ["community participation", "brand trust", "earned attention", "shared ritual"], constraints: ["missed sales day", "employee time", "local partner capacity", "safe accessible activity"], scale: ["large retailer", "small business adaptation"], geographies: ["United States", "local"], businessModels: ["specialty retail", "cooperative", "community service"] },
+    convention: "A retailer should open on Black Friday to capture one of the busiest shopping days.",
+    choice: "REI closed its stores, headquarters, and distribution centers, paid employees for the day off, and invited the public and partner organizations to spend Black Friday outdoors.",
+    mechanism: "A costly operating choice made the brand's outdoor purpose observable, then gave customers, nonprofits, parks, and community groups a simple shared ritual. Participation is evidence of resonance, not evidence of incremental sales.",
+    distinctiveness: "The company altered its own operations and employee schedule instead of making only a promotional claim, and invited partners to turn a brand message into a local activity.",
+    outcome: "REI's 2015 report says more than 1.4 million supporters and 175 organizations and companies joined the first campaign; its November 2015 newsroom report described nearly one million endorsements before Black Friday. These are company-reported participation figures, not independently audited customer or revenue outcomes.",
+    evidenceClass: "Company-reported action and participation, with dated contemporary reporting; no causal sales estimate.",
+    causalLimit: "The participation counts do not establish new customers, sales lift, or that the campaign alone created longer-term brand value. REI had a large member base, employees, stores, and outdoor nonprofit relationships that most small businesses lack.",
+    conditions: ["A real business purpose that customers already value", "Ability to absorb the missed trading day and pay employees", "A safe, accessible activity customers can join", "Local partners who can add useful participation"],
+    transferRisk: "Copying the closure without financial capacity or authentic connection to the mission may harm revenue and look performative. Outdoor activities also require accessibility and safety planning.",
+    smallBusinessAdaptation: "Replace a promotional day with a small, relevant customer ritual, service day, or partner activity tied to a real business value; keep the scale and cost within actual capacity.",
+    reversibleTest: "Run one low-cost local event or useful service ritual on a traditionally promotional date; track eligible attendance, qualified inquiries, repeat participation, partner effort, and the opportunity cost of time or sales.",
+    editorialStatus: "verified_primary_and_secondary", researchConfidence: "medium", accessedAt: "2026-10-25",
+    sources: [
+      { title: "REI’s #OptOutside Movement Close to 1 Million Mark as Black Friday Approaches", url: "https://www.rei.com/newsroom/article/reis-optoutside-movement-close-to-1-million-mark-as-black-friday-approaches", publisher: "REI Co-op Newsroom", publicationDate: "2015-11-23", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action_and_outcome", supports: "The 2015 closure, paid day off for about 12,000 employees, store and distribution-center scope, nearly one million endorsements before Black Friday, and partner participation." },
+      { title: "2015 Stewardship Report", url: "https://www.rei.com/dam/18553215_impact-report-2015.pdf", publisher: "REI Co-op", publicationDate: "2016", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "outcome", supports: "REI's reported post-campaign count of more than 1.4 million supporters and 175 organizations and companies." },
+    ],
+  },
+  {
+    id: "CP-008", title: "Dollar Shave Club coordinates a founder-led launch video", organization: "Dollar Shave Club", sector: "Personal care and subscription commerce", geography: "United States", approximateScale: "Early startup at launch; size not reported", businessModel: "Direct-to-consumer razor subscription", period: "2012",
+    families: ["founder_presence", "content_entertainment", "distribution_partnership", "constraint_transformation"],
+    transferProfile: { audiences: ["early adopters", "value seeking buyers", "press"], goals: ["launch awareness", "subscriber acquisition", "earned media", "explain offer"], constraints: ["low production budget", "founder time", "website capacity", "fulfillment capacity"], scale: ["early startup", "small team"], geographies: ["United States"], businessModels: ["subscription", "direct to consumer", "personal care"] },
+    convention: "A new commodity product needs conventional product advertising and a large production budget to introduce itself.",
+    choice: "The founder starred in a low-cost comedic YouTube video explaining the offer, coordinating the release with the website relaunch, a seed-funding announcement, and the week before SXSW.",
+    mechanism: "A clear value proposition and founder's comic delivery created a distinctive story; coordinated timing gave press multiple reasons to cover the launch. The traffic spike also overwhelmed the company's site, exposing an operational dependency.",
+    distinctiveness: "The founder acted as the brand's recognizable narrator and combined the product explanation, fundraising news, website relaunch, and a relevant media moment into one launch window.",
+    outcome: "In a 2015 first-person interview, founder Michael Dubin said the video cost about $4,500, the site crashed for 24 hours, then gained 12,000 subscribers by the next day and reached three million views within days. These are founder-reported retrospective figures; the video was not tested against a counterfactual.",
+    evidenceClass: "Founder-reported action and early metrics published in an independent interview; no causal estimate beyond the reported launch sequence.",
+    causalLimit: "The launch also included a financing announcement, website relaunch, press timing, product demand, and other work. Views and signups in one launch do not show that comedy or founder presence alone caused adoption or predict a result for another business.",
+    conditions: ["A founder who can explain the product clearly and comfortably", "A real customer pain point with a concise offer", "Reliable checkout, inventory, and service capacity for a traffic spike", "A distribution moment with relevant press or audience fit"],
+    transferRisk: "Copying the tone or viral-video format can look derivative, attract unqualified attention, or expose a fragile fulfillment system. Humor may not fit a sensitive or high-trust purchase.",
+    smallBusinessAdaptation: "Have the owner demonstrate one useful product truth in their natural voice, using an inexpensive, short format only if the audience consumes that format; make capacity checks part of launch planning.",
+    reversibleTest: "Show one low-cost founder explanation to a small relevant audience before a broad launch; compare qualified visits, checkout starts, signups, and support load with the usual product explanation.",
+    editorialStatus: "verified_primary_and_secondary", researchConfidence: "medium", accessedAt: "2026-10-25",
+    sources: [
+      { title: "How Dollar Shave Club Rode a Viral Video to Sales Success", url: "https://www.inc.com/magazine/201507/diana-ransom/how-youtube-crashed-our-website.html", publisher: "Inc.", publicationDate: "2015-06-23", accessedAt: "2026-10-25", sourceRole: "independent_secondary", claimRole: "action_and_outcome", supports: "A first-person founder account of the $4,500 production, coordinated launch timing, 24-hour site outage, 12,000 new subscribers the next day, and three million views within days." },
+    ],
+  },
+  {
+    id: "CP-009", title: "Warby Parker lets online eyewear shoppers try frames at home", organization: "Warby Parker", sector: "Eyewear retail", geography: "United States and Canada", approximateScale: "Early online-only retailer when launched; later a public omnichannel company", businessModel: "Direct-to-consumer eyewear with later retail and eye-care services", period: "2010–2025",
+    families: ["product_service_design", "customer_experience_retention", "constraint_transformation"],
+    transferProfile: { audiences: ["online eyewear shoppers", "buyers with product uncertainty"], goals: ["conversion", "purchase confidence", "brand awareness"], constraints: ["shipping cost", "return logistics", "inventory", "customer support capacity"], scale: ["early online retailer", "small business pilot"], geographies: ["United States", "Canada"], businessModels: ["direct to consumer", "eyewear", "retail"] },
+    convention: "Prescription eyewear is difficult to sell online because customers need to see frames on their own face before choosing.",
+    choice: "Warby Parker shipped a set of five selected frames for a five-day at-home try-on, free to the customer, while it initially sold frames online.",
+    mechanism: "The physical trial reduced uncertainty and returned an offline product-selection behavior to an online purchase path. It also required reverse logistics, inventory, and customer support, so the mechanism depended on operational capability.",
+    distinctiveness: "It made the product's biggest online limitation—the inability to try eyewear in person—into a branded acquisition and decision experience rather than hiding the limitation.",
+    outcome: "The company's 2022 SEC-filed annual report described Home Try-On as a viral brand-awareness program and reported an exceptionally high conversion rate among Home Try-On purchases. In 2025, the company said it sunset the program as its omnichannel presence scaled, while describing it as foundational to the brand. The conversion description is company-reported and unquantified; the later sunset shows the model's usefulness can change with stage and channel mix.",
+    evidenceClass: "Company-reported in SEC filings; qualitatively described business role, with no public causal estimate for incremental sales.",
+    causalLimit: "The filing does not publish the conversion rate or isolate Home Try-On's effect from its design, price, marketing, service, or retail expansion. Its later sunset is not proof that trial programs are generally ineffective.",
+    conditions: ["A product with high pre-purchase uncertainty that a sample can resolve", "Affordable shipping, cleaning, return, and inventory processes", "A clear return path and time limit", "Enough conversion or learning value to justify fulfillment cost"],
+    transferRisk: "A free sample can create high return cost, damage, fraud, or an unprofitable customer-acquisition path if trial users do not convert or the item is expensive to fulfill.",
+    smallBusinessAdaptation: "Offer a tiny, trackable sample, consultation, or reversible demonstration for one high-uncertainty purchase, and set an explicit cost and capacity limit before launch.",
+    reversibleTest: "Pilot the smallest sample set with a bounded group; compare qualified conversion and returns/support cost against a matched standard path, then stop if contribution or capacity guardrails fail.",
+    editorialStatus: "verified_primary", researchConfidence: "medium", accessedAt: "2026-10-25",
+    sources: [
+      { title: "Warby Parker 2022 Annual Report", url: "https://www.sec.gov/Archives/edgar/data/1504776/000150477623000006/wrby-20221231.htm", publisher: "U.S. Securities and Exchange Commission", publicationDate: "2023-03-01", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action_and_outcome", supports: "Five frames for five days at home, the company's claim that the program built brand awareness and had a high conversion rate, and the described online uncertainty it was designed to reduce." },
+      { title: "Warby Parker 2025 Annual Report", url: "https://www.sec.gov/Archives/edgar/data/1504776/000110465926050446/tm2612757d2_ars.pdf", publisher: "U.S. Securities and Exchange Commission", publicationDate: "2026", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "context", supports: "The company says it sunset Home Try-On at the end of 2025 as its omnichannel presence scaled and calls the program foundational to its brand." },
+    ],
+  },
+  {
+    id: "CP-010", title: "Liquid Death gives canned water a heavy-metal identity", organization: "Liquid Death", sector: "Beverages", geography: "United States", approximateScale: "Small company at product launch; later venture-backed national brand", businessModel: "Packaged water and beverages sold direct and through retail", period: "2017–2023",
+    families: ["distinctive_identity", "content_entertainment", "constraint_transformation", "customer_participation"],
+    transferProfile: { audiences: ["identity seeking consumers", "younger beverage buyers", "social audiences"], goals: ["differentiation", "attention", "community", "distribution"], constraints: ["brand safety", "retail eligibility", "packaging cost", "production capacity"], scale: ["small company", "venture backed"], geographies: ["United States"], businessModels: ["beverage", "consumer brand", "packaged goods"] },
+    convention: "Water brands should foreground purity, luxury, or wellness cues, and product advertising should wait until physical product is available.",
+    choice: "Liquid Death tested a humorous, heavy-metal brand concept and mock-up cans online before manufacturing product, then sold water in tallboy-style aluminum cans with a deliberately provocative name and visual identity.",
+    mechanism: "The presentation made a low-differentiation commodity legible as an identity and entertainment choice; pre-product reactions gave the founders cheap directional feedback. Attention and follower counts are not evidence of repeat purchase or profit.",
+    distinctiveness: "It transferred visual and verbal codes associated with music and energy drinks into still water, including a bold brand name and can format that invited people to notice and discuss the product.",
+    outcome: "The Washington Post reported that the pre-product concept was tested with about $2,000 in Facebook ads and attracted followers/comments; first-year sales after launch reached $3 million, and by 2023 the brand was sold in 90,000 locations. The dollar and distribution figures are source-reported, not audited causal effects of the branding.",
+    evidenceClass: "Independent secondary reporting of founder-reported actions and business figures; qualitative evidence of attention and distribution, not causal evidence that the brand expression alone produced sales.",
+    causalLimit: "The company also raised capital, expanded retail distribution, added product variants, and operated with a team and marketing capabilities that smaller businesses may not have. Followers, locations, and sales are different measures and should not be treated as interchangeable.",
+    conditions: ["An audience segment that welcomes irreverent identity cues", "A product and fulfillment system that can meet demand", "A brand voice that can be sustained across product, service, and community", "Honest, substantiated environmental claims if packaging is positioned as a sustainability benefit"],
+    transferRisk: "Provocation can alienate important buyers or partners; an edgy name can create regulatory, retail, or brand-safety friction. Aluminum's environmental impact is not automatically lower in every lifecycle context.",
+    smallBusinessAdaptation: "Test one ownable, audience-fit point of view using a mock-up, concept page, or small batch before committing to expensive packaging, inventory, or brand change.",
+    reversibleTest: "Present two clearly labeled concepts to qualified target buyers and measure comprehension, preference with reasons, and willingness to take a meaningful next step; do not treat social reactions as sales evidence.",
+    editorialStatus: "verified_primary_and_secondary", researchConfidence: "medium", accessedAt: "2026-10-25",
+    sources: [
+      { title: "Liquid Death is a mindset. And also just canned water.", url: "https://www.washingtonpost.com/lifestyle/2023/06/17/liquid-death-water-brand/", publisher: "The Washington Post", publicationDate: "2023-06-17", accessedAt: "2026-10-25", sourceRole: "independent_secondary", claimRole: "action_and_outcome", supports: "Founder context for the unusual water brand and tallboy packaging; reported $2,000 pre-product concept test, first-year sales, 2023 retail distribution, and the distinction between early attention and later product availability." },
+    ],
+  },
+  {
+    id: "CP-011", title: "Spotify turns personal listening history into a shareable annual ritual", organization: "Spotify", sector: "Music streaming", geography: "Global", approximateScale: "Large global subscription and advertising platform", businessModel: "Freemium music streaming with subscription and advertising revenue", period: "Annual Wrapped campaigns; 2025 share count reported in 2026",
+    families: ["personalization", "customer_participation", "content_entertainment", "referral_word_of_mouth"],
+    transferProfile: { audiences: ["existing users", "fans", "social audiences", "music listeners"], goals: ["retention", "sharing", "referral", "personalization", "community"], constraints: ["reliable first-party data", "privacy", "annual cadence", "shareable format", "editorial review"], scale: ["large platform", "established product"], geographies: ["global", "multi-market"], businessModels: ["subscription", "freemium", "digital product", "media"] },
+    convention: "A year-end campaign should mainly advertise the product or summarize aggregate company performance.",
+    choice: "Spotify packages each user's listening history into a personalized annual experience and shareable creative, then supports that ritual with broader editorial and real-world campaign work.",
+    mechanism: "A useful personal reflection becomes an identity-bearing artifact the user can choose to share. The mechanism depends on meaningful underlying data, an output users understand, consent-aware controls, and a product that can generate the experience reliably; sharing itself is not a customer or revenue outcome.",
+    distinctiveness: "The audience is invited to distribute a story about itself, rather than repeat a brand slogan. The recap is grounded in a user's actual product behavior and returns that data in a designed format.",
+    outcome: "Spotify reported that Wrapped generated more than 620 million shares in 2025. That is a company-reported sharing count, not a count of unique people, new customers, incremental subscriptions, or revenue caused by Wrapped.",
+    evidenceClass: "Company-reported product and campaign description plus company-reported share count; no causal estimate of retention, acquisition, or revenue impact.",
+    causalLimit: "The public source does not define whether shares are unique, how repeat shares are counted, or what conversion followed. Spotify has exceptional first-party data, global reach, and distribution; those conditions do not transfer to a small business by default.",
+    conditions: ["A permissioned, accurate first-party data source", "A customer-level insight that is useful or identity-relevant", "A share format that reveals no sensitive information by default", "A clear follow-up path that does not make sharing a condition of product value"],
+    transferRisk: "A thin recap can feel like surveillance or vanity content; incorrect data can damage trust. A high share count may produce no qualified visits or customers, and a forced-sharing mechanic can undermine customer experience.",
+    smallBusinessAdaptation: "Create an optional, accurate milestone or progress recap from data the customer already expects the business to use, and make the private view useful even if it is never shared.",
+    reversibleTest: "Offer one opt-in recap to a small eligible customer group; measure successful delivery, customer comprehension, voluntary shares, qualified visits, signups, and support/privacy concerns separately. Continue only if the recap is accurate and customers find it useful; stop on a material privacy or trust issue.",
+    editorialStatus: "verified_primary", researchConfidence: "medium", accessedAt: "2026-10-25",
+    sources: [
+      { title: "The Art and Science Behind Spotify Wrapped", url: "https://newsroom.spotify.com/2024-12-04/the-art-and-science-behind-spotify-wrapped/", publisher: "Spotify Newsroom", publicationDate: "2024-12-04", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action", supports: "Spotify describes Wrapped as a personalized look back at listening behavior combining user-specific data and editorial context." },
+      { title: "Spotify's 2026 Investor Day Recap", url: "https://newsroom.spotify.com/2026-05-21/investor-day-recap/", publisher: "Spotify Newsroom", publicationDate: "2026-05-21", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "outcome", supports: "Spotify reports more than 620 million shares of Wrapped in 2025; it does not establish unique sharers or incremental commercial impact." },
+    ],
+  },
+  {
+    id: "CP-012", title: "IKEA connects product resale with a customer buyback service", organization: "IKEA U.S.", sector: "Furniture retail", geography: "United States; participating stores only", approximateScale: "Large national retailer", businessModel: "Furniture retail with store-credit buyback and resale", period: "FY2024 program and current service description",
+    families: ["product_service_design", "customer_experience_retention", "circular_distribution", "distinctive_identity"],
+    transferProfile: { audiences: ["value-conscious shoppers", "existing customers", "sustainability-minded buyers"], goals: ["retention", "repeat purchase", "affordability", "product lifecycle", "differentiation"], constraints: ["reverse logistics", "inspection", "resale space", "local eligibility", "inventory handling"], scale: ["established retailer", "multi-location operator"], geographies: ["United States", "local markets"], businessModels: ["retail", "physical product", "furniture", "resale"] },
+    convention: "A retailer's customer relationship ends at the original sale, while used products are handled outside the brand's commerce system.",
+    choice: "IKEA buys back eligible used furniture from members for store credit and offers accepted items for resale through participating stores' As-Is areas; it also describes parts and circular services as related customer offers.",
+    mechanism: "A resale path can address affordability and give an existing product another use while creating a return visit and recirculating inventory through the retailer. This requires inspection, local eligibility, handling capacity, and a financially workable resale path.",
+    distinctiveness: "The customer can return a product to the same brand's system for a second commercial life, connecting after-sale service, resale supply, and a new purchase opportunity.",
+    outcome: "IKEA U.S. reported that almost all its U.S. stores had implemented Buy back & resell by the end of FY2024 and that more than 2,700 products were eligible for buyback and resale in-store and online. These are company-reported operational counts, not proof of incremental profit, environmental impact, or customer retention.",
+    evidenceClass: "Company-reported service description and FY2024 operational counts; no public causal estimate of sales, margin, retention, or environmental impact.",
+    causalLimit: "The cited company report does not disclose the program's unit economics, resale sell-through, total customer use, or a comparison group. Availability is local, item eligibility is limited, and IKEA's store network and logistics are not transferable to most small businesses.",
+    conditions: ["Products retain resale, repair, refill, or reuse value", "The business can inspect and safely handle returned items", "Local law and product rules permit the resale route", "The economics include collection, storage, refurbishment, and support costs"],
+    transferRisk: "Reverse logistics can cost more than resale value; poorly assessed goods create safety, quality, warranty, or fraud issues. Sustainability claims require lifecycle evidence rather than assuming resale is always better.",
+    smallBusinessAdaptation: "For a durable product or equipment business, test a limited trade-in, repair, refill, or certified-preowned offer with clear condition rules and a cost cap before promising broad eligibility.",
+    reversibleTest: "Run a small, owner-reviewed pilot for one eligible product class in one service area; record offers accepted, inspection time, resale time, net contribution, customer questions, and unsold inventory. Stop if handling costs or safety exceptions exceed the preset limit.",
+    editorialStatus: "verified_primary", researchConfidence: "medium", accessedAt: "2026-10-25",
+    sources: [
+      { title: "IKEA U.S. Annual Summary FY24", url: "https://www.ikea.com/us/en/files/pdf/6c/17/6c17e4d6/us_annual_summary_fy24.pdf", publisher: "IKEA U.S.", publicationDate: "2024", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "outcome", supports: "IKEA reports near-nationwide store implementation by FY2024 year end, over 2,700 products eligible for resale, and a related integrated marketing campaign." },
+      { title: "IKEA Buyback & Resell Service", url: "https://www.ikea.com/us/en/circular/buy-back/", publisher: "IKEA U.S.", publicationDate: "Undated; current service page", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action", supports: "Current service description, participating-location limits, membership eligibility, inspection, and store-credit mechanics." },
+    ],
+  },
+  {
+    id: "CP-013", title: "Duolingo and Netflix connect a popular series to language learning", organization: "Duolingo and Netflix", sector: "Language learning and entertainment", geography: "United States with digital distribution", approximateScale: "Large consumer apps and global entertainment franchise", businessModel: "Freemium education app and licensed entertainment partnership", period: "2021–2024",
+    families: ["distribution_partnership", "distinctive_identity", "content_entertainment", "product_service_design"],
+    transferProfile: { audiences: ["fans", "language learners", "younger social audiences", "existing app users"], goals: ["activation", "product engagement", "cultural relevance", "partnership", "brand distinctiveness"], constraints: ["licensed intellectual property", "partner approval", "product localization", "cultural accuracy", "campaign timing"], scale: ["large consumer platform", "established brand"], geographies: ["United States", "global entertainment audience"], businessModels: ["freemium app", "education technology", "entertainment", "licensing partnership"] },
+    convention: "A product's educational or functional benefit should be promoted separately from entertainment culture and brand characters.",
+    choice: "For Squid Game season two, Duolingo and Netflix combined an update to Duolingo's Korean course with a licensed campaign starring Duo the Owl as a Pink Guard, including social videos, a music collaboration, an interactive filter, and outdoor creative.",
+    mechanism: "A timely shared audience interest can become a product-relevant participation path when the partnership changes the experience itself, not just the ad. The mascot made the cross-over recognizable, while Korean lessons supplied the product action. The campaign's creative stunts are not evidence of learning, conversion, or retention impact.",
+    distinctiveness: "The partnership translated a major entertainment release into additional course content and interactive learning prompts, using a deliberately characterful mascot in a licensed role rather than merely placing two logos together.",
+    outcome: "Duolingo's release says Korean learners increased 40% just after Squid Game season one; this is a company-reported before/after observation without a disclosed method or causal attribution. The 2024 release describes campaign assets but does not report their resulting signups, lesson completion, or revenue.",
+    evidenceClass: "Company press release describing the partnership and campaign; learner-change figure is company-reported and method-unspecified; no campaign outcome estimate reported.",
+    causalLimit: "The reported change followed a hit series and may reflect broader interest, season timing, press, course changes, or other factors. The 2024 campaign source is promotional and does not quantify campaign performance. Do not infer a lift for another brand or claim that mascot provocation is universally suitable.",
+    conditions: ["A verified overlap between the partner's audience and the business's target customers", "Rights and partner approval for characters, marks, music, and content", "A product or useful action that makes the collaboration meaningful", "Cultural and category review, plus capacity to serve resulting interest"],
+    transferRisk: "A large partner can dominate the relationship; rights and launch timing create dependency. A threatening or edgy character voice may alienate learners, especially when detached from the specific brand and licensed context.",
+    smallBusinessAdaptation: "Find a complementary organization, local event, creator, or cultural moment already relevant to customers, then co-create a genuinely useful experience that connects directly to the product; use only original or licensed assets.",
+    reversibleTest: "Before production, validate audience overlap and partner interest with a small co-designed lesson, guide, demo, or event concept. Measure qualified participation, product activation, and partner effort; treat views and reactions as reach signals only, and stop if rights, cultural fit, or delivery capacity are unresolved.",
+    editorialStatus: "verified_primary", researchConfidence: "medium", accessedAt: "2026-10-25",
+    sources: [
+      { title: "Duolingo and Netflix Partner Launch 'Learn Korean or Else' Campaign", url: "https://investors.duolingo.com/news-releases/news-release-details/duolingo-and-netflix-partner-launch-learn-korean-or-else", publisher: "Duolingo Investor Relations", publicationDate: "2024-12-10", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action_and_outcome", supports: "Duolingo's company-reported 40% increase in Korean learners after season one and description of the licensed 2024 course update, mascot, social, music, interactive, and out-of-home campaign; no 2024 campaign results are reported." },
+    ],
+  },
+  {
+    id: "CP-014", title: "Burger King redirects a competitor-location moment into app ordering", organization: "Burger King / Restaurant Brands International", sector: "Quick-service restaurants", geography: "United States", approximateScale: "National multi-location restaurant chain", businessModel: "Franchised restaurant network with app-based ordering and promotions", period: "December 2018",
+    families: ["location_based_offer", "competitor_distribution", "product_led", "spectacle_earned_attention"],
+    transferProfile: { audiences: ["nearby restaurant customers", "mobile-order users", "deal-seeking diners"], goals: ["app adoption", "first purchase", "competitive displacement", "earned attention"], constraints: ["location permission", "app reliability", "redemption economics", "participating locations", "privacy and advertising rules"], scale: ["national chain", "multi-location business"], geographies: ["United States", "local catchment areas"], businessModels: ["restaurant", "franchise", "mobile ordering", "local commerce"] },
+    convention: "A competitor's larger store footprint is an insurmountable disadvantage for a smaller restaurant brand, and app promotion should focus only on the brand's own locations.",
+    choice: "Burger King's Whopper Detour unlocked a one-cent Whopper offer in its app when a customer was within roughly 600 feet of a McDonald's location, then directed the customer to a nearby Burger King for pickup. The promotion ran for nine days and supported a redesigned app with mobile ordering.",
+    mechanism: "The competitor's locations became a time-and-place trigger for a valuable offer that introduced a customer to Burger King's own app and ordering path. The transferable idea is to connect a verified buying moment to a genuinely useful next step; the geofence, price, and competitor target are not portable templates.",
+    distinctiveness: "Instead of buying reach around its own stores, Burger King used the rival's footprint as a contextual signal and turned the customer journey itself into the campaign story.",
+    outcome: "Restaurant Brands International's CEO reported over 1.5 million campaign-attributed app downloads and top app-store rankings during the period. These are company-reported downloads and rankings; the cited earnings-call source does not establish unique new customers, incremental profit, or long-term retention caused by the campaign.",
+    evidenceClass: "Campaign creator case submission plus parent-company CEO statement reported in an earnings-call transcript; download totals and rankings are company-reported; no causal profit estimate in the cited evidence.",
+    causalLimit: "The app was redesigned, mobile ordering was newly available, and the one-cent offer, media, novelty, and broad restaurant network operated together. Downloads, impressions, and rankings are not paying customers or incremental revenue. No public comparison isolates the geofence from these other factors.",
+    conditions: ["A useful destination offer and operational capacity near the trigger location", "A working mobile order and redemption path", "Transparent, optional location permission and compliant data handling", "A promotion whose subsidy and repeat-purchase economics are understood", "Current legal, privacy, advertising-platform, and franchise approval"],
+    transferRisk: "Deep discounts can destroy contribution, attract one-time bargain seekers, or overload nearby staff. Location targeting can feel invasive if permission is unclear; competitor-directed claims can create legal or platform-policy risk. Do not copy the campaign's exact name, price, creative, or geofencing plan.",
+    smallBusinessAdaptation: "Find a legitimate moment when the customer is already solving the relevant problem—such as a nearby event, complementary service, or scheduled need—and offer a useful, capacity-limited next step through an existing permissioned channel.",
+    reversibleTest: "First test the trigger without sensitive location tracking: ask one complementary venue or event partner to share a trackable, useful offer with an eligible audience. Measure qualified visits, completed purchases, contribution after discount and operating time; compare with the ordinary path and stop if margin, privacy, partner fit, or service capacity fails its preset guardrail.",
+    editorialStatus: "verified_primary_and_secondary", researchConfidence: "medium", accessedAt: "2026-10-25",
+    sources: [
+      { title: "Burger King: The Whopper Detour", url: "https://www.oneclub.org/awards/theoneshow/-award/34109/the-whopper-detour/", publisher: "The One Club for Creativity (campaign case submitted by the credited agency team)", publicationDate: "2019", accessedAt: "2026-10-25", sourceRole: "creator_primary", claimRole: "action_and_outcome", supports: "Campaign mechanics, 14,000 McDonald's locations, the approximately 600-foot trigger, 1.5 million app downloads, and app-store rankings; results are campaign-submitter reported." },
+      { title: "Restaurant Brands International Inc. Q4 2018 Earnings Conference Call Transcript", url: "https://finance.yahoo.com/news/restaurant-brands-international-inc-qsr-183056130.html", publisher: "Yahoo Finance (earnings call transcript)", publicationDate: "2019-02-11", accessedAt: "2026-10-25", sourceRole: "independent_secondary", claimRole: "outcome", supports: "Restaurant Brands International's CEO says Whopper Detour generated over 1.5 million downloads and made the app the most downloaded in the Apple Store for several days; the statement does not quantify incremental customer or profit effects." },
     ],
   },
 ];
 
-const words = (s: string) => new Set(s.toLocaleLowerCase("en-US").normalize("NFKC").match(/[a-z0-9]{3,}/g) ?? []);
 const STOP = new Set(["and", "the", "for", "with", "from", "into", "that", "this", "business", "company", "customer", "strategy", "strategic", "growth", "marketing"]);
+const words = (s: string) => new Set((s.toLocaleLowerCase("en-US").normalize("NFKC").match(/[a-z0-9]{3,}/g) ?? []).map((term) => STOP.has(term) || term.length <= 4 || term.endsWith("ss") ? term : term.endsWith("s") ? term.slice(0, -1) : term));
+const SCALE_ALIASES: Record<string, string[]> = { small: ["startup", "early", "resource", "limited"], startup: ["early", "small"], micro: ["small", "limited"] };
 
-/** Retrieval by mechanism and transferable constraints, never industry match alone. */
-export function retrieveCreativePrecedents(query: string, limit = 2): { precedent: CreativePrecedent; score: number }[] {
-  const queryTerms = [...words(query)].filter((term) => !STOP.has(term));
-  if (!queryTerms.length) return [];
-  return CREATIVE_PRECEDENTS.map((precedent) => {
-    const searchable = words([
-      precedent.title, precedent.sector, precedent.families.join(" "), precedent.convention,
-      precedent.choice, precedent.mechanism, precedent.conditions.join(" "), precedent.smallBusinessAdaptation,
-    ].join(" "));
-    let score = 0;
-    for (const term of queryTerms) if (searchable.has(term)) score += 1 + (precedent.families.some((family) => family.includes(term)) ? 0.5 : 0);
-    // Context relevance is a weak tie-breaker only; a sector name alone cannot qualify a case.
-    if (queryTerms.some((term) => words(precedent.sector).has(term))) score += 0.35;
-    return { precedent, score };
-  }).filter(({ score }) => score >= 2.5).sort((a, b) => b.score - a.score || a.precedent.id.localeCompare(b.precedent.id)).slice(0, Math.max(1, Math.min(3, limit)));
+function contextFor(value: string | CreativePrecedentContext): { core: Set<string>; audience: Set<string>; goals: Set<string>; constraints: Set<string>; geography: Set<string>; scale: Set<string>; model: Set<string> } {
+  if (typeof value === "string") {
+    const core = words(value);
+    return { core, audience: new Set(), goals: new Set(), constraints: new Set(), geography: new Set(), scale: new Set(), model: new Set() };
+  }
+  const evidenceText = [value.brief, ...value.facts].join("\n");
+  const task = words(value.task);
+  const evidence = words(evidenceText);
+  // Business profile facts help rank transferability, but must not masquerade
+  // as a mechanism request (e.g. "local retail" matching an unrelated case).
+  const core = task;
+  const constraint = value.constraints;
+  const constraintText = [
+    ...(constraint?.monthlyAdBudgetUsd === undefined ? [] : [`monthly ad budget ${constraint.monthlyAdBudgetUsd}`]),
+    ...(constraint?.ownerHoursPerWeek === undefined ? [] : [`owner hours per week ${constraint.ownerHoursPerWeek}`]),
+    ...(constraint?.newCustomersPerMonth === undefined ? [] : [`capacity new customers per month ${constraint.newCustomersPerMonth}`]),
+    ...(constraint?.emailAudience === undefined ? [] : [`consented email audience ${constraint.emailAudience}`]),
+    constraint?.serviceArea ?? "",
+    ...(constraint?.businessTypes ?? []),
+  ].join(" ");
+  const geography = words([constraint?.serviceArea ?? "", evidenceText].join(" "));
+  const scale = words([value.industryBusinessTypeId ?? "", ...(constraint?.businessTypes ?? []), evidenceText].join(" "));
+  for (const term of [...scale]) for (const alias of SCALE_ALIASES[term] ?? []) scale.add(alias);
+  return {
+    core,
+    audience: evidence,
+    goals: task,
+    constraints: words(`${constraintText} ${evidenceText}`),
+    geography,
+    scale,
+    model: words([value.industryBusinessTypeId ?? "", ...(constraint?.businessTypes ?? []), evidenceText].join(" ")),
+  };
 }
 
-export function formatCreativePrecedents(query: string, limit = 2): string {
+function overlap(context: Set<string>, sourceText: string, weight: number, max = 1.5): { score: number; matched: string[] } {
+  if (!context.size) return { score: 0, matched: [] };
+  const source = words(sourceText);
+  const matched = [...context].filter((term) => !STOP.has(term) && source.has(term));
+  return { score: Math.min(max, matched.length * weight), matched: matched.slice(0, 4) };
+}
+
+/** Retrieval by mechanism and transferable constraints, never industry match alone. */
+export function retrieveCreativePrecedents(query: string | CreativePrecedentContext, limit = 2): { precedent: CreativePrecedent; score: number; matchReasons: string[] }[] {
+  const context = contextFor(query);
+  const queryTerms = [...context.core].filter((term) => !STOP.has(term));
+  if (!queryTerms.length) return [];
+  return CREATIVE_PRECEDENTS.map((precedent) => {
+    const mechanisms = overlap(context.core, `${precedent.families.join(" ")} ${precedent.convention} ${precedent.choice} ${precedent.mechanism} ${precedent.transferProfile.goals.join(" ")} ${precedent.transferProfile.constraints.join(" ")}`, 0.75, 3);
+    // Require a mechanism match so geography, company names, or sector alone cannot create a false analogy.
+    const audience = overlap(context.audience, `${precedent.transferProfile.audiences.join(" ")} ${precedent.sector} ${precedent.conditions.join(" ")} ${precedent.smallBusinessAdaptation}`, 0.2);
+    const goals = overlap(context.goals, `${precedent.transferProfile.goals.join(" ")} ${precedent.mechanism} ${precedent.outcome} ${precedent.reversibleTest}`, 0.2);
+    const constraints = overlap(context.constraints, `${precedent.transferProfile.constraints.join(" ")} ${precedent.conditions.join(" ")} ${precedent.transferRisk} ${precedent.reversibleTest}`, 0.2);
+    const geography = overlap(context.geography, `${precedent.transferProfile.geographies.join(" ")} ${precedent.geography}`, 0.35, 0.7);
+    const scale = overlap(context.scale, `${precedent.transferProfile.scale.join(" ")} ${precedent.approximateScale} ${precedent.smallBusinessAdaptation}`, 0.2, 0.7);
+    const model = overlap(context.model, `${precedent.transferProfile.businessModels.join(" ")} ${precedent.businessModel}`, 0.2, 0.7);
+    const score = mechanisms.score + audience.score + goals.score + constraints.score + geography.score + scale.score + model.score;
+    const matchReasons = [
+      ...(mechanisms.matched.length ? [`mechanism: ${mechanisms.matched.join(", ")}`] : []),
+      ...(audience.matched.length ? [`audience/context: ${audience.matched.join(", ")}`] : []),
+      ...(goals.matched.length ? [`goal: ${goals.matched.join(", ")}`] : []),
+      ...(constraints.matched.length ? [`constraint: ${constraints.matched.join(", ")}`] : []),
+      ...(geography.matched.length ? [`geography: ${geography.matched.join(", ")}`] : []),
+      ...(scale.matched.length ? [`scale: ${scale.matched.join(", ")}`] : []),
+      ...(model.matched.length ? [`business model: ${model.matched.join(", ")}`] : []),
+    ];
+    return { precedent, score, matchReasons, mechanismScore: mechanisms.score };
+  }).filter(({ score, mechanismScore }) => mechanismScore >= 1.5 && score >= 1.5)
+    .sort((a, b) => b.score - a.score || a.precedent.id.localeCompare(b.precedent.id))
+    .slice(0, Math.max(1, Math.min(3, limit)))
+    .map(({ precedent, score, matchReasons }) => ({ precedent, score, matchReasons }));
+}
+
+export function formatCreativePrecedents(query: string | CreativePrecedentContext, limit = 2): string {
   const matches = retrieveCreativePrecedents(query, limit);
   if (!matches.length) return "No sufficiently relevant sourced creative precedent was retrieved. Generate an original hypothesis from this business's own evidence and label the uncertainty.";
-  return matches.map(({ precedent: p, score }) => [
-    `[${p.id} · score ${score} · precedent, not a forecast] ${p.title} — ${p.organization} (${p.period}; ${p.geography}; ${p.approximateScale})`,
+  return matches.map(({ precedent: p, matchReasons }) => [
+    `[${p.id} · precedent, not a forecast] ${p.title} — ${p.organization} (${p.period}; ${p.geography}; ${p.approximateScale})`,
+    `Why retrieved: ${matchReasons.join("; ") || "mechanism relevance"}`,
     `Category convention: ${p.convention}`,
     `Choice and mechanism: ${p.choice} ${p.mechanism}`,
     `Documented outcome: ${p.outcome}`,
@@ -148,4 +432,10 @@ export function formatCreativePrecedents(query: string, limit = 2): string {
     `Reversible test: ${p.reversibleTest}`,
     `Sources (accessed 2026-10-25; cite only for this precedent, never as evidence about the target business): ${p.sources.map((s) => `${s.title} — ${s.publisher}, ${s.publicationDate}: ${s.supports} ${s.url}`).join(" | ")}`,
   ].join("\n")).join("\n\n");
+}
+
+/** Runtime entry point: every growth-plays generation receives a bounded context, even if its task label changes. */
+export function creativePrecedentsForAgent(agentId: string, task: string, businessContext: string | CreativePrecedentContext): string {
+  if (agentId !== "growth_plays" && !/STRATEGY EXPLORATION|CREATIVE STRATEGY EXPLORATION/i.test(task)) return "";
+  return formatCreativePrecedents(businessContext, 2);
 }

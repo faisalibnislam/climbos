@@ -5,7 +5,7 @@ import { ROLE_CHARTERS, stripFactMarkers, untrusted } from "../ai/tasks";
 import type { ModelKey } from "../economics/rates";
 import { skillPlaybook, skillRubricText } from "../skills";
 import { formatGrowthKnowledge, knowledgeReferenceSet, retrieveGrowthKnowledge } from "../knowledge/retrieve";
-import { formatCreativePrecedents } from "../knowledge/creativePrecedents";
+import { creativePrecedentsForAgent } from "../knowledge/creativePrecedents";
 import { KNOWLEDGE_LAYER_POLICY } from "../knowledge/layers";
 import { canonicalJson, sha256Hex } from "../policy";
 import type { AgentInput, AgentRunResult, AgentSpec, Assessment, CachedResearch, CritiqueResult, LintIssue, Rubric, RunQuality } from "./types";
@@ -319,9 +319,13 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
   const system = draftSystem(spec);
   const knowledgeRecords = retrieveGrowthKnowledge(`${input.task}\n${input.brief}`, { limit: 3, maxChars: 3_500, ...(input.industryBusinessTypeId ? { businessTypeId: input.industryBusinessTypeId } : {}) });
   const knowledge = formatGrowthKnowledge(knowledgeRecords);
-  const creativePrecedents = /STRATEGY EXPLORATION|CREATIVE STRATEGY EXPLORATION/i.test(input.task)
-    ? formatCreativePrecedents(`${input.brief}\n${input.facts.join("\n")}`, 2)
-    : "";
+  const creativePrecedents = creativePrecedentsForAgent(spec.id, input.task, {
+    task: input.task,
+    brief: input.brief,
+    facts: input.facts,
+    ...(input.industryBusinessTypeId ? { industryBusinessTypeId: input.industryBusinessTypeId } : {}),
+    ...(input.constraints ? { constraints: input.constraints } : {}),
+  });
   const reviewerKnowledge = formatGrowthKnowledge(retrieveGrowthKnowledge(`${input.task}\n${input.brief}`, { limit: 2, maxChars: 1_800, ...(input.industryBusinessTypeId ? { businessTypeId: input.industryBusinessTypeId } : {}) }));
   const baseUser = `${inputBlock(input, research?.notes ?? null, knowledge)}${creativePrecedents ? `\n\nBOUNDED CREATIVE PRECEDENT RETRIEVAL (use only when the mechanism genuinely transfers; these are not evidence about this business):\n${creativePrecedents}` : ""}\n\nYOUR TASK:\n${input.task}\n\nBefore answering, check your work against the playbook's checklist. Respond only with JSON matching the schema.`;
   const baseMessages: MessageParam[] = [{

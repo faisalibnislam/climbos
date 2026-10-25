@@ -42,6 +42,7 @@ import type * as automationRegistry from "../automationRegistry.js";
 import type * as connectionActions from "../connectionActions.js";
 import type * as connections from "../connections.js";
 import type * as content from "../content.js";
+import type * as creativeStrategy from "../creativeStrategy.js";
 import type * as customAgents from "../customAgents.js";
 import type * as crm from "../crm.js";
 import type * as crons from "../crons.js";
@@ -167,6 +168,7 @@ declare const fullApi: ApiFromModules<{
   connectionActions: typeof connectionActions;
   connections: typeof connections;
   content: typeof content;
+  creativeStrategy: typeof creativeStrategy;
   customAgents: typeof customAgents;
   crm: typeof crm;
   crons: typeof crons;

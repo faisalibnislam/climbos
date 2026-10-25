@@ -298,6 +298,52 @@ const growthPlanV9Validator = v.object({
   }),
 });
 
+const strategyExplorationOptionValidator = v.object({
+  title: v.string(),
+  challengedConvention: v.string(),
+  whyConventionPersists: v.string(),
+  costOfBreaking: v.string(),
+  businessMechanism: v.string(),
+  businessAction: v.string(),
+  whyItCouldMatter: v.string(),
+  customerBehavior: v.string(),
+  audienceOrCondition: v.string(),
+  evidenceBasis: v.union(v.literal("established_practice"), v.literal("evidence_supported_inference"), v.literal("speculative_hypothesis")),
+  evidenceNote: v.string(),
+  evidenceRefs: v.array(v.string()),
+  precedentIds: v.array(v.string()),
+  transferLogic: v.string(),
+  keyDifferences: v.string(),
+  assumptions: v.array(v.string()),
+  uncertainties: v.array(v.string()),
+  risks: v.array(v.string()),
+  costAndCapacity: v.string(),
+  novelty: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+  evidenceStrength: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+  businessFit: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+  feasibility: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+  risk: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+  reversibleTest: v.object({
+    method: v.string(),
+    metric: v.string(),
+    duration: v.string(),
+    resourceLimit: v.string(),
+    continueIf: v.string(),
+    changeIf: v.string(),
+    stopIf: v.string(),
+  }),
+});
+const strategyExplorationValidator = v.object({
+  grounded: strategyExplorationOptionValidator,
+  adjacent: strategyExplorationOptionValidator,
+  bold: strategyExplorationOptionValidator,
+  requestedRange: v.optional(v.union(v.literal("balanced"), v.literal("conventional"), v.literal("surprising"), v.literal("ambitious"))),
+  retrievedPrecedentIds: v.optional(v.array(v.string())),
+  promptVersion: v.optional(v.string()),
+  promptHash: v.optional(v.string()),
+  inputHash: v.optional(v.string()),
+});
+
 /**
  * ClimbOS data model. Every tenant-owned table carries `orgId` and is indexed
  * by it first. Queries must go through the guards in `lib/tenancy.ts`; no
@@ -1917,6 +1963,27 @@ export default defineSchema({
     .index("by_org", ["orgId", "createdAt"])
     .index("by_strategy", ["strategyId", "createdAt"]),
 
+  /** Tenant-scoped, append-only decisions and outcome notes for exploratory strategy options. */
+  strategyExplorationFeedback: defineTable({
+    orgId: v.id("organizations"),
+    strategyId: v.id("strategies"),
+    mode: v.union(v.literal("grounded"), v.literal("adjacent"), v.literal("bold")),
+    optionTitle: v.string(),
+    /** Binds this feedback to the exact option the owner reviewed. */
+    optionHash: v.string(),
+    ownerEditHash: v.optional(v.string()),
+    strategyStatusAtFeedback: v.union(v.literal("draft"), v.literal("needs_approval"), v.literal("approved"), v.literal("superseded")),
+    decision: v.union(v.literal("considering"), v.literal("selected"), v.literal("rejected"), v.literal("edited")),
+    ownerEdit: v.optional(v.string()),
+    testState: v.union(v.literal("not_started"), v.literal("designed"), v.literal("executed"), v.literal("observed"), v.literal("unknown")),
+    outcomeNote: v.optional(v.string()),
+    outcomeEvidence: v.union(v.literal("measured"), v.literal("owner_reported"), v.literal("source_reported"), v.literal("inferred"), v.literal("unknown")),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_org_strategy", ["orgId", "strategyId", "createdAt"])
+    .index("by_strategy_mode", ["strategyId", "mode", "createdAt"]),
+
   /** Engine quality per agent run (spec §27): context sizes, lint by rule draft → final, numbers lost in revision. No tenant text. */
   engineQuality: defineTable({
     runId: v.id("workflowRuns"),
@@ -2191,6 +2258,13 @@ export default defineSchema({
     /** JSON of LandingContent (shared/landing). */
     content: v.optional(v.string()),
     color: v.string(),
+    /** Monotonic owner-editable draft revision. Older rows begin at version 0. */
+    version: v.optional(v.number()),
+    /** Frozen content approved for public display; edits never mutate this snapshot. */
+    publishedContent: v.optional(v.string()),
+    publishedColor: v.optional(v.string()),
+    publishedTitle: v.optional(v.string()),
+    publishedVersion: v.optional(v.number()),
     runId: v.optional(v.id("workflowRuns")),
     views: v.number(),
     leads: v.number(),
@@ -2199,6 +2273,21 @@ export default defineSchema({
   })
     .index("by_slug", ["slug"])
     .index("by_org", ["orgId", "createdAt"]),
+
+  /** Immutable draft revisions; publishing points at one exact version. */
+  landingPageVersions: defineTable({
+    orgId: v.id("organizations"),
+    pageId: v.id("landingPages"),
+    version: v.number(),
+    title: v.string(),
+    color: v.string(),
+    content: v.string(),
+    kind: v.union(v.literal("generated"), v.literal("edited"), v.literal("restored"), v.literal("experiment"), v.literal("legacy")),
+    actorId: v.optional(v.id("users")),
+    createdAt: v.number(),
+  })
+    .index("by_page_version", ["pageId", "version"])
+    .index("by_org_created", ["orgId", "createdAt"]),
 
   /** Website chat widget (one per workspace) and its conversations. */
   chatWidgets: defineTable({
@@ -2577,6 +2666,8 @@ export default defineSchema({
         risks: v.array(v.object({ risk: v.string(), mitigation: v.string() })),
         /** Growth play cards (shared/agents/specs PlaySchema), validated by the agent schema. */
         plays: v.optional(v.array(v.any())),
+        /** Grounded, adjacent, and bold exploration; validated before this persisted envelope is written. */
+        strategyExploration: v.optional(strategyExplorationValidator),
         /** What one customer is worth (from the plays agent); the UI computes each play's cost per customer from it. */
         economics: v.optional(v.any()),
         /** Previous v8 JSON envelope; accepted for historical compatibility. */

@@ -160,7 +160,7 @@ export const searchReadiness = query({
         }));
       }
     }
-    return { website: business.website ?? null, scan: business.siteReadiness ?? null, inventory };
+    return { businessName: business.name, website: business.website ?? null, scan: business.siteReadiness ?? null, inventory };
   },
 });
 

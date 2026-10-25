@@ -8,7 +8,7 @@
     },
     {
       "id": "P2",
-      "text": "Portfolio: at most 4 plays; exactly one bankable play (predictability ≥ 4); at least one creative play with distinctiveness ≥ 4 and predictability ≥ 3; at most one moonshot, capped at ≤ 10% of budget with a kill rule."
+      "text": "Execution portfolio: limit costed plays to the confirmed budget, capacity, evidence and permission gates. Separately preserve grounded, adjacent and bold strategy options; do not require a precedent, high predictability, immediate feasibility or budget share to generate/display a bold option. Keep novelty, evidence, fit, feasibility and risk separate."
     },
     {
       "id": "P3",
@@ -68,6 +68,15 @@
         "1": "Abstract advice.",
         "3": "Clear steps but no first action.",
         "5": "Each play ends with a first action under 30 minutes and what ClimbOS will do for the owner."
+      }
+    },
+    {
+      "id": "Q_BOLD",
+      "name": "Original strategic range",
+      "anchors": {
+        "1": "No grounded, adjacent and bold options, or bold is omitted because it lacks precedent or has low feasibility.",
+        "3": "Three options appear but are only weakly distinct, weakly tied to the business, or the bold test is vague.",
+        "5": "Grounded, adjacent and genuinely original bold choices are distinct; uncertainty and upside are clear; the test is reversible and decision-relevant."
       }
     }
   ],

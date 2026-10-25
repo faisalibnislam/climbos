@@ -51,12 +51,13 @@ import { trustPostureContext } from "../shared/agents/evidenceKind";
 import { conflictLines, findConflicts } from "../shared/agents/conflicts";
 import { platformNotes } from "../shared/acquisition/platformRules";
 import { growthKnowledgeContext, type KnowledgeReferenceSet } from "../shared/knowledge/retrieve";
+import { retrieveCreativePrecedents } from "../shared/knowledge/creativePrecedents";
 import { formatBusinessKnowledgeLayers } from "../shared/knowledge/layers";
 import { diagnose, diagnosisBrief, funnelRatesOf, type Diagnosis, type OwnerFunnel } from "../shared/agents/diagnosis";
 import { businessLifecycleContext } from "../shared/agents/lifecycle";
 import { choosePlaybooks, playbookBrief, type PlaybookContext } from "../shared/playbooks/contracts";
 import { applyOwnerEconomics, churnOf, forecastCustomers, lockedNumbers, playsGoalGap, portfolioP50, selectPortfolio, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
-import { planTask, playsTask } from "../shared/agents/planTasks";
+import { CREATIVE_STRATEGY_PROMPT_VERSION, planTask, playsTask, type CreativeRange } from "../shared/agents/planTasks";
 import { citedUrls, urlKey, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
 import { agentQuality, HARD_RULES, planQuality, withoutHard, type AgentQuality } from "../shared/agents/quality";
 import { capabilityContext } from "../shared/agents/capacity";
@@ -563,6 +564,15 @@ function ownerSuppliedUrls(text?: string): string[] {
 /** Engine rollout flags (REQ-ENG-01): per workspace, staff-set; the old path is the default. */
 function hasFlag(job: JobCtx, flag: string): boolean {
   return Boolean(job.org.engineFlags?.includes(flag));
+}
+
+function creativeRangeOf(job: JobCtx): CreativeRange {
+  try {
+    const value = (JSON.parse(job.run.input || "{}") as { creativeRange?: unknown }).creativeRange;
+    return value === "conventional" || value === "surprising" || value === "ambitious" ? value : "balanced";
+  } catch {
+    return "balanced";
+  }
 }
 
 /** The currency every plan amount is in: the business's, else the workspace's. */
@@ -1254,10 +1264,11 @@ export const buildStrategy = internalAction({
       const playsSpec = growthPlaysSpec({ decisionContract: hasFlag(job, "decision_contract") }, playCatalogsFor(job.business?.businessType));
       // Cycle 2: the weak link and the playbooks that fit are decided in code (after channel scoring) and carried to the plays agent.
       const decided: { diagnosis?: Diagnosis; ineligible?: { id: string; reasons: string[] }[] } = {};
+      const creativeTask = (scorecard: string) => playsTask({ scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: `${capabilityContext(job.capabilities)}\n${platformNotes(profile.types)}`, decisionContract: hasFlag(job, "decision_contract"), creativeRange: creativeRangeOf(job), ownerLearning: job.creativeStrategyLearning });
       const playsInput = (scorecard: string) =>
         agentInput(
           job,
-          playsTask({ scorecard, insights: insightsBrief, horizonDays: job.goal?.horizonDays, engines: `${capabilityContext(job.capabilities)}\n${platformNotes(profile.types)}`, decisionContract: hasFlag(job, "decision_contract") }),
+          creativeTask(scorecard),
           { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name, ...(profile.dims.geography?.value ? { marketScope: profile.dims.geography.value } : {}) }), constraints: { ...constraintsOf(job), horizonDays: job.goal?.horizonDays ?? 90, ...(profile.dims.geography?.value ? { serviceArea: profile.dims.geography.value } : {}), businessTypes: profile.types, ...(decided.diagnosis ? { diagnosis: decided.diagnosis } : {}), ...(decided.ineligible ? { ineligiblePlaybooks: decided.ineligible } : {}) } },
         );
       const fixtureIn = { task: "growth_strategy" as const, context: "", ctx: fixtureCtx(job), text: "" };
@@ -1328,8 +1339,20 @@ export const buildStrategy = internalAction({
       const playsMeta: AgentMeta = {};
       const planMeta: AgentMeta = {};
       const research = await researchRun;
+      const playsAgentInput = v2 ? { ...playsInput(scorecard + decisionBrief), ...(research ? { precomputedResearch: research } : {}) } : null;
+      const retrievedPrecedentIds = playsAgentInput
+        ? retrieveCreativePrecedents({
+          task: playsAgentInput.task,
+          brief: playsAgentInput.brief,
+          facts: playsAgentInput.facts,
+          ...(playsAgentInput.industryBusinessTypeId ? { industryBusinessTypeId: playsAgentInput.industryBusinessTypeId } : {}),
+          ...(playsAgentInput.constraints ? { constraints: playsAgentInput.constraints } : {}),
+        }, 2).map(({ precedent }) => precedent.id)
+        : [];
+      const creativePromptHash = playsAgentInput ? await sha256Hex(playsAgentInput.task) : undefined;
+      const creativeInputHash = playsAgentInput ? await sha256Hex(JSON.stringify(playsAgentInput)) : undefined;
       const playsDraft = v2
-        ? await runAgentTask<PlaysOutput>(ctx, job, 0, playsSpec, { ...playsInput(scorecard + decisionBrief), ...(research ? { precomputedResearch: research } : {}) }, startedAt, fixtureIn, playsMeta)
+        ? await runAgentTask<PlaysOutput>(ctx, job, 0, playsSpec, playsAgentInput!, startedAt, fixtureIn, playsMeta)
         : null;
       // Forecasts are computed here from each play's inputs and ranges, never written by the model.
       // The owner's confirmed unit economics always replace the planner's assumptions.
@@ -1381,7 +1404,7 @@ export const buildStrategy = internalAction({
       await firstTake;
       await ctx.runMutation(internal.jobWrites.saveStrategy, {
         runId,
-        strategy: JSON.stringify(plays ? { ...strategy, plays: plays.plays, economics: plays.economics, ...(plays.decision ? { decision: plays.decision } : {}), webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: await planSnapshot(job, insightsBrief, uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]).map((source) => source.url), mergeKnowledgeReferences(playsMeta.knowledgeReferences, planMeta.knowledgeReferences)), quality, goalGap: playsGoalGap(plays, job.goal), constraintDiagnosis: diagnosis, ...(portfolio ? { portfolio } : {}), playbooks: { eligible: playbookChoice.eligible.map(({ pb, unknown, soft, status }) => ({ id: pb.id, name: pb.name, unknown, ...(soft?.length ? { soft } : {}), ...(status ? { status } : {}) })), ineligible: playbookChoice.ineligible.map(({ pb, reasons }) => ({ id: pb.id, name: pb.name, reasons })) } } : strategy),
+        strategy: JSON.stringify(plays ? { ...strategy, strategyExploration: { ...plays.strategyExploration, requestedRange: creativeRangeOf(job), retrievedPrecedentIds, promptVersion: CREATIVE_STRATEGY_PROMPT_VERSION, ...(creativePromptHash ? { promptHash: creativePromptHash } : {}), ...(creativeInputHash ? { inputHash: creativeInputHash } : {}) }, plays: plays.plays, economics: plays.economics, ...(plays.decision ? { decision: plays.decision } : {}), webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: await planSnapshot(job, insightsBrief, uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]).map((source) => source.url), mergeKnowledgeReferences(playsMeta.knowledgeReferences, planMeta.knowledgeReferences)), quality, goalGap: playsGoalGap(plays, job.goal), constraintDiagnosis: diagnosis, ...(portfolio ? { portfolio } : {}), playbooks: { eligible: playbookChoice.eligible.map(({ pb, unknown, soft, status }) => ({ id: pb.id, name: pb.name, unknown, ...(soft?.length ? { soft } : {}), ...(status ? { status } : {}) })), ineligible: playbookChoice.ineligible.map(({ pb, reasons }) => ({ id: pb.id, name: pb.name, reasons })) } } : strategy),
         factIds: job.facts.map((f) => f.id),
         acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary, ...(limits ? { limits: { ownerHoursPerWeek: limits.ownerHoursPerWeek ?? null, newCustomersPerMonth: limits.newCustomersPerMonth ?? null } } : {}) }),
         evidence: JSON.stringify(

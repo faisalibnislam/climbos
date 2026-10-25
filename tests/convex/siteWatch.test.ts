@@ -111,13 +111,13 @@ describe("site watch (keeps researching the business)", () => {
     const t = setup();
     const owner = await asNewUser(t, "readiness@example.com");
     const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Site Co", website: "https://site.example" });
-    expect(await owner.client.query(api.siteWatch.searchReadiness, { slug })).toEqual({ website: "https://site.example", scan: null, inventory: [] });
+    expect(await owner.client.query(api.siteWatch.searchReadiness, { slug })).toEqual({ businessName: "Site Co", website: "https://site.example", scan: null, inventory: [] });
     await owner.client.mutation(api.siteWatch.scanSearchReadiness, { slug });
     const result = await owner.client.query(api.siteWatch.searchReadiness, { slug });
     expect(result?.scan).toEqual(expect.objectContaining({ status: "queued", startedAt: expect.any(Number) }));
     const viewer = await asNewUser(t, "readiness-viewer@example.com");
     await t.run(async (ctx) => ctx.db.insert("memberships", { orgId: orgId as Id<"organizations">, userId: viewer.userId, role: "viewer", status: "active", createdAt: Date.now() }));
-    await expect(viewer.client.query(api.siteWatch.searchReadiness, { slug })).resolves.toMatchObject({ website: "https://site.example" });
+    await expect(viewer.client.query(api.siteWatch.searchReadiness, { slug })).resolves.toMatchObject({ businessName: "Site Co", website: "https://site.example" });
     await expect(viewer.client.mutation(api.siteWatch.scanSearchReadiness, { slug })).rejects.toThrow(/role \(viewer\) can't/);
   });
 

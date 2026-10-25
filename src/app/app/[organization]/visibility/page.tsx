@@ -16,6 +16,7 @@ import { searchConsolePropertyMatchesWebsite } from "@shared/integrations/search
 import { planAiSearchQueries } from "@shared/aiSearch/queryPlanner";
 import { AI_DATA_USE_CONTROLS } from "@shared/seo/readiness";
 import { parseGoogleAiReportCsv } from "@shared/aiSearch/googleReportCsv";
+import { StructuredDataGenerator } from "@/components/app/visibility/StructuredDataGenerator";
 
 export default function SearchReadinessPage() {
   const { organization: slug } = useParams<{ organization: string }>();
@@ -50,6 +51,7 @@ export default function SearchReadinessPage() {
         actions={data.website && canEdit ? <Button size="sm" variant="secondary" loading={current?.status === "queued"} disabled={current?.status === "queued"} onClick={run}><RefreshCw aria-hidden /> Check homepage</Button> : null}
       />
       <Callout tone="info">Google’s AI search features use the same core search eligibility signals; there is no special markup that guarantees AI citations. These checks read the homepage and robots.txt rules only. They cannot verify indexing, firewall access, rankings, or AI citations.</Callout>
+      {data.website ? <StructuredDataGenerator businessName={data.businessName} website={data.website} /> : null}
       {!data.website ? (
         <EmptyState icon={<Search />} title="Add your website first" body={<span>Set your business website in <a className="underline underline-offset-2" href={`/app/${slug}/settings/facts`}>Business facts</a>, then run a homepage check.</span>} />
       ) : !current ? (

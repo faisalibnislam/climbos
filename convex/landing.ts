@@ -4,6 +4,7 @@ import { CALL_ROUTES } from "../shared/agents/routes";
 import { modelTurn } from "../shared/ai/turn";
 import { getRateVersion } from "../shared/economics";
 import { cleanLanding, LandingContent, landingSlug } from "../shared/landing";
+import { sha256Hex } from "../shared/policy";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
@@ -11,6 +12,7 @@ import { assignSubject, recordExposure, recordOutcome, runningTest } from "./abt
 import { createRunWithReservation } from "./engine";
 import { featureAllowed, isPaid } from "./lib/access";
 import { audit } from "./lib/audit";
+import { recordLandingVersion } from "./lib/landingVersions";
 import { notifyOwners } from "./lib/notify";
 import { emitEvent } from "./webhooks";
 import { claudeUsageRecords } from "./lib/usage";
@@ -31,7 +33,9 @@ function suffix(): string {
 }
 
 function view(p: Doc<"landingPages">) {
-  return { id: p._id, title: p.title, slug: p.slug, url: `${SITE()}/p/${p.slug}`, status: p.status, brief: p.brief, color: p.color, content: p.content ? (JSON.parse(p.content) as LandingContent) : null, runId: p.runId ?? null, views: p.views, leads: p.leads, updatedAt: p.updatedAt };
+  const version = p.version ?? 0;
+  const publishedVersion = p.publishedVersion ?? (p.status === "live" && p.publishedContent === undefined ? version : null);
+  return { id: p._id, title: p.title, slug: p.slug, url: `${SITE()}/p/${p.slug}`, status: p.status, brief: p.brief, color: p.color, content: p.content ? (JSON.parse(p.content) as LandingContent) : null, version, publishedVersion, hasUnpublishedChanges: p.status === "live" && publishedVersion !== null && version > publishedVersion, runId: p.runId ?? null, views: p.views, leads: p.leads, updatedAt: p.updatedAt };
 }
 
 export const list = query({
@@ -46,6 +50,25 @@ export const list = query({
       /** Putting a page live or offline (approver roles). */
       canPublish: ["owner", "admin", "reviewer"].includes(role),
     };
+  },
+});
+
+export const history = query({
+  args: { slug: v.string(), id: v.id("landingPages") },
+  handler: async (ctx, { slug, id }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const page = assertSameOrg(await ctx.db.get(id), org._id, "page");
+    const versions = await ctx.db.query("landingPageVersions").withIndex("by_page_version", (q) => q.eq("pageId", page._id)).order("desc").take(50);
+    return versions.filter((version) => version.orgId === org._id).map((version) => ({
+      id: version._id,
+      version: version.version,
+      title: version.title,
+      color: version.color,
+      content: JSON.parse(version.content) as LandingContent,
+      kind: version.kind,
+      createdAt: version.createdAt,
+      isPublished: version.version === (page.publishedVersion ?? (page.status === "live" && page.publishedContent === undefined ? (page.version ?? 0) : null)),
+    }));
   },
 });
 
@@ -103,8 +126,14 @@ export const writeContext = internalQuery({
 export const saveWritten = internalMutation({
   args: { pageId: v.id("landingPages"), content: v.optional(v.string()) },
   handler: async (ctx, { pageId, content }) => {
-    if (!(await ctx.db.get(pageId))) return;
-    await ctx.db.patch(pageId, content ? { content, status: "draft", updatedAt: Date.now() } : { status: "failed", updatedAt: Date.now() });
+    const page = await ctx.db.get(pageId);
+    if (!page) return;
+    if (!content) {
+      await ctx.db.patch(pageId, { status: "failed", updatedAt: Date.now() });
+      return;
+    }
+    await recordLandingVersion(ctx, page, { title: page.title, color: page.color, content }, "generated");
+    await ctx.db.patch(pageId, { status: "draft", updatedAt: Date.now() });
   },
 });
 
@@ -163,29 +192,55 @@ const contentV = v.object({
 export const update = mutation({
   args: { slug: v.string(), id: v.id("landingPages"), content: v.optional(contentV), color: v.optional(v.string()), title: v.optional(v.string()) },
   handler: async (ctx, a) => {
-    const { org } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
+    const { org, user } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
     const p = assertSameOrg(await ctx.db.get(a.id), org._id, "page");
-    await ctx.db.patch(p._id, {
-      ...(a.content ? { content: JSON.stringify(cleanLanding(a.content)) } : {}),
-      ...(a.color && /^#[0-9a-f]{6}$/i.test(a.color) ? { color: a.color } : {}),
-      ...(a.title?.trim() ? { title: a.title.trim().slice(0, 80) } : {}),
-      updatedAt: Date.now(),
-    });
+    const next = {
+      title: a.title?.trim() ? a.title.trim().slice(0, 80) : p.title,
+      color: a.color && /^#[0-9a-f]{6}$/i.test(a.color) ? a.color : p.color,
+      content: a.content ? JSON.stringify(cleanLanding(a.content)) : p.content,
+    };
+    if (!next.content) throw appError("INVALID", "Write the page before saving a version.");
+    if (next.title === p.title && next.color === p.color && next.content === p.content) return { version: p.version ?? 0, unchanged: true };
+    const version = await recordLandingVersion(ctx, p, { ...next, content: next.content }, "edited", user._id);
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "landing.version_created", subjectType: "landingPage", subjectId: p._id, summary: `Saved landing page draft version ${version}; public version was not changed.` });
+    return { version, unchanged: false };
+  },
+});
+
+export const restoreVersion = mutation({
+  args: { slug: v.string(), id: v.id("landingPages"), version: v.number() },
+  handler: async (ctx, { slug, id, version }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const page = assertSameOrg(await ctx.db.get(id), org._id, "page");
+    const prior = await ctx.db.query("landingPageVersions").withIndex("by_page_version", (q) => q.eq("pageId", page._id).eq("version", version)).first();
+    if (!prior || prior.orgId !== org._id) throw appError("NOT_FOUND", "That page version isn't available in this workspace.");
+    const restoredVersion = await recordLandingVersion(ctx, page, { title: prior.title, color: prior.color, content: prior.content }, "restored", user._id);
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "landing.version_restored", subjectType: "landingPage", subjectId: page._id, summary: `Restored page version ${version} as a new draft version ${restoredVersion}.` });
+    return { version: restoredVersion };
   },
 });
 
 export const setLive = mutation({
-  args: { slug: v.string(), id: v.id("landingPages"), live: v.boolean() },
-  handler: async (ctx, { slug, id, live }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "approve");
+  args: { slug: v.string(), id: v.id("landingPages"), live: v.boolean(), expectedVersion: v.optional(v.number()) },
+  handler: async (ctx, { slug, id, live, expectedVersion }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
     const p = assertSameOrg(await ctx.db.get(id), org._id, "page");
     if (live) {
       if (!p.content) throw appError("INVALID", "The page isn't written yet.");
+      const version = p.version ?? 0;
+      if (expectedVersion === undefined || expectedVersion !== version) throw appError("INVALID", "The page changed after review. Review the current version before publishing.");
       const limit = (await isPaid(ctx, org)) ? LIVE_LIMIT.paid : LIVE_LIMIT.free;
       const liveNow = (await ctx.db.query("landingPages").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(60)).filter((x) => x.status === "live" && x._id !== id).length;
       if (liveNow >= limit) throw appError(limit === LIVE_LIMIT.free ? "PAYMENT_REQUIRED" : "LIMIT_REACHED", limit === LIVE_LIMIT.free ? "Free accounts have 1 live page. Packages have 20." : `You have ${limit} live pages.`);
+      const existingRevision = await ctx.db.query("landingPageVersions").withIndex("by_page_version", (q) => q.eq("pageId", p._id).eq("version", version)).first();
+      if (!existingRevision) await ctx.db.insert("landingPageVersions", { orgId: org._id, pageId: p._id, version, title: p.title, color: p.color, content: p.content, kind: "legacy", actorId: user._id, createdAt: p.updatedAt });
+      await ctx.db.patch(id, { status: "live", publishedContent: p.content, publishedColor: p.color, publishedTitle: p.title, publishedVersion: version, updatedAt: Date.now() });
+      await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "landing.published", subjectType: "landingPage", subjectId: p._id, summary: `Published landing page version ${version}; approved content hash ${await sha256Hex(p.content)}.` });
+      return { publishedVersion: version };
     }
-    await ctx.db.patch(id, { status: live ? "live" : "draft", updatedAt: Date.now() });
+    await ctx.db.patch(id, { status: "draft", updatedAt: Date.now() });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "landing.unpublished", subjectType: "landingPage", subjectId: p._id, summary: `Unpublished landing page version ${p.publishedVersion ?? p.version ?? 0}.` });
+    return { publishedVersion: null };
   },
 });
 
@@ -208,14 +263,14 @@ export const publicPage = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
     const p = await ctx.db.query("landingPages").withIndex("by_slug", (q) => q.eq("slug", slug)).first();
-    if (!p || p.status !== "live" || !p.content) return null;
+    if (!p || p.status !== "live" || !(p.publishedContent ?? p.content)) return null;
     const org = await ctx.db.get(p.orgId);
     if (!org || org.deletedAt || org.suspendedAt) return null;
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", p.orgId)).first();
     const booking = await ctx.db.query("bookingPages").withIndex("by_org", (q) => q.eq("orgId", p.orgId)).first();
     const test = await ctx.db.query("abTests").withIndex("by_target", (q) => q.eq("targetId", p._id).eq("status", "running")).first();
     const b = test?.variants.find((x) => x.key === "B")?.value;
-    return { name: business?.name ?? org.name, website: business?.website ?? null, color: p.color, content: JSON.parse(p.content) as LandingContent, bookingUrl: booking?.active ? `${SITE()}/book/${booking.slug}` : null, badge: !(await featureAllowed(ctx, org, "no_badge")), test: test && b ? { id: test._id, b: JSON.parse(b) as Partial<LandingContent> } : null };
+    return { name: business?.name ?? org.name, website: business?.website ?? null, color: p.publishedColor ?? p.color, content: JSON.parse(p.publishedContent ?? p.content!) as LandingContent, bookingUrl: booking?.active ? `${SITE()}/book/${booking.slug}` : null, badge: !(await featureAllowed(ctx, org, "no_badge")), test: test && b ? { id: test._id, b: JSON.parse(b) as Partial<LandingContent> } : null };
   },
 });
 

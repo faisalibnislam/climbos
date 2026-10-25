@@ -637,8 +637,8 @@ export const setAutonomy = mutation({
 });
 
 export const generatePlan = mutation({
-  args: { slug: v.string(), aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))) },
-  handler: async (ctx, { slug, aiMode: requested }) => {
+  args: { slug: v.string(), aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))), creativeRange: v.optional(v.union(v.literal("balanced"), v.literal("conventional"), v.literal("surprising"), v.literal("ambitious"))) },
+  handler: async (ctx, { slug, aiMode: requested, creativeRange }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const goal = await ctx.db
       .query("goals")
@@ -653,7 +653,7 @@ export const generatePlan = mutation({
       kind: plan.kind,
       title: plan.title,
       roles: plan.roles,
-      input: { goalId: goal._id },
+      input: { goalId: goal._id, creativeRange: creativeRange ?? "balanced" },
       steps: plan.steps,
       meters: plan.meters,
       createdBy: user._id,

@@ -8,6 +8,7 @@ import { Badge, Button, Callout, ChoiceChips, EmptyState, IconTile, Select, Skel
 import { errorMessage } from "@/components/app/errors";
 import { climbTarget } from "@/components/climb/context";
 import { cn } from "@/lib/utils";
+import { recommendationGuidance } from "@shared/acquisition/recommendationGroups";
 
 type View = NonNullable<ReturnType<typeof useQuery<typeof api.acquisition.view>>>;
 type Row = View["channels"][number];
@@ -69,6 +70,7 @@ export function ChannelScorecard({ slug }: { slug: string }) {
           From business type and budget only. Refresh the plan for research-backed scores.
         </Callout>
       ) : null}
+      <p className="text-xs text-ink-3">Order is a relative fit guide based on audience, buying intent, budget, time, team capacity, competition, scalability, and measurement. These rule-guided signals are not probabilities of success.</p>
       <SplitStrip counts={{ plan: plan.length, later: later.length, notNow: notNow.length, ineligible: ineligible.length }} />
       <Group title="In the plan" icon={CircleCheck} rows={plan} labels={data.factorLabels} rankStart={1} highlight slug={slug} canEdit={data.canEdit} />
       <Group title="Later" icon={Hourglass} hint="Add once the first ones work." rows={later} labels={data.factorLabels} rankStart={plan.length + 1} slug={slug} canEdit={data.canEdit} />
@@ -279,14 +281,16 @@ function ChannelRow({ r, rank, labels, slug, canEdit }: { r: Row; rank: number; 
   const [open, setOpen] = useState(false);
   const savePreference = useMutation(api.acquisition.setChannelPreference);
   const Exec = EXEC_ICON[r.exec as keyof typeof EXEC_ICON] ?? Hand;
+  const recommendation = recommendationGuidance(r.id);
   return (
-    <li {...climbTarget("channel", r.id, `${r.name}: ${r.score}/100, ${r.statusLabel}`)}>
+    <li {...climbTarget("channel", r.id, `${r.name}: priority ${rank}, ${r.statusLabel}`)}>
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2">
         <span className="mt-0.5 w-5 shrink-0 text-right text-xs tabular-nums text-ink-3">{rank}</span>
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-medium text-ink">{r.name}</span>
             <span className="text-xs text-ink-3">{r.family}</span>
+            {recommendation ? <Badge tone="blue">{recommendation.label}</Badge> : null}
             {r.status === "primary" ? <Badge tone="brand">Primary</Badge> : null}
           </span>
           {r.why ? <span className={cn("mt-0.5 block text-ui text-ink-2", !open && "line-clamp-1")}>{r.why}</span> : null}
@@ -298,19 +302,18 @@ function ChannelRow({ r, rank, labels, slug, canEdit }: { r: Row; rank: number; 
             {r.minMonthly ? <Badge icon={<Wallet />}>{`From $${r.minMonthly}/mo`}</Badge> : null}
           </span>
         </span>
-        <ScoreBar score={r.score} />
         <ChevronDown aria-hidden className={cn("mt-1 size-4 shrink-0 text-ink-3 transition-transform", open && "rotate-180")} />
       </button>
       {open ? (
         <div className="grid grid-cols-1 gap-4 px-4 pb-4 pl-12 sm:grid-cols-2">
           <ul className="flex flex-col gap-1.5" aria-label={`${r.name} factor scores`}>
             {labels.map((f, i) => (
-              <li key={f.key} className="grid grid-cols-[9.5rem_1fr_2rem] items-center gap-2 text-xs">
+              <li key={f.key} aria-label={`${f.label}: ${factorLevel(r.factors[i])} signal`} className="grid grid-cols-[9.5rem_1fr_4.5rem] items-center gap-2 text-xs">
                 <span className="text-ink-2">{f.label}</span>
                 <span aria-hidden className="h-1.5 overflow-hidden rounded-full bg-surface-3">
                   <span className="block h-full rounded-full bg-brand-700" style={{ width: `${r.factors[i]}%` }} />
                 </span>
-                <span className="text-right tabular-nums text-ink-2">{r.factors[i]}</span>
+                <span className="text-right text-ink-2">{factorLevel(r.factors[i])}</span>
               </li>
             ))}
           </ul>
@@ -327,8 +330,8 @@ function ChannelRow({ r, rank, labels, slug, canEdit }: { r: Row; rank: number; 
                 {r.audience}
               </p>
             ) : null}
-            {r.purpose ? <p><span className="text-ink-3">Intended job: </span>{r.purpose}</p> : null}
-            {r.measurementPlan ? <p><span className="text-ink-3">Measure: </span>{r.measurementPlan}</p> : null}
+            {recommendation ? <p><span className="text-ink-3">Purpose: </span>{r.purpose ?? recommendation.purpose}</p> : r.purpose ? <p><span className="text-ink-3">Intended job: </span>{r.purpose}</p> : null}
+            {recommendation ? <p><span className="text-ink-3">Useful outcomes: </span>{r.measurementPlan ?? recommendation.measurement}</p> : r.measurementPlan ? <p><span className="text-ink-3">Measure: </span>{r.measurementPlan}</p> : null}
             {r.evidence ? (
               <p>
                 <span className="text-ink-3">Evidence ({r.evidenceBasis ?? "basis unknown"} · confidence {r.evidenceConfidence ?? "unknown"}{r.evidenceDate ? ` · ${r.evidenceDate}` : " · date unknown"}): </span>
@@ -371,18 +374,8 @@ function ChannelRow({ r, rank, labels, slug, canEdit }: { r: Row; rank: number; 
   );
 }
 
-function ScoreBar({ score }: { score: number }) {
-  return (
-    <span className="mt-0.5 flex w-24 shrink-0 items-center gap-2">
-      <span aria-hidden className="h-2 flex-1 overflow-hidden rounded-full bg-surface-3">
-        <span className={cn("block h-full rounded-full", score >= 70 ? "bg-green-500" : score >= 55 ? "bg-amber-500" : "bg-chart-6")} style={{ width: `${score}%` }} />
-      </span>
-      <span className="w-7 text-right text-ui font-semibold tabular-nums text-ink">
-        {score}
-        <span className="sr-only"> out of 100</span>
-      </span>
-    </span>
-  );
+function factorLevel(value: number): "Strong" | "Mixed" | "Limited" {
+  return value >= 70 ? "Strong" : value >= 45 ? "Mixed" : "Limited";
 }
 
 function Collapsible({ title, children }: { title: string; children: React.ReactNode }) {

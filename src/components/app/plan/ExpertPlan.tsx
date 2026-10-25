@@ -43,7 +43,7 @@ import Link from "next/link";
 import type { PlayTargets } from "@convex/targets";
 import { useRouter } from "next/navigation";
 import { useId, useState, type ReactNode } from "react";
-import { Badge, Button, Callout, Card, CardContent, Segmented, Tooltip, toast, type CalloutTone, type Tone } from "@/components/ui";
+import { Badge, Button, Callout, Card, CardContent, Field, Select, Segmented, Textarea, Tooltip, toast, type CalloutTone, type Tone } from "@/components/ui";
 import { ChartTooltip, CHART, ScatterPlot, SrTable, XTicks, focusRing, niceScale, useKeyNav } from "@/components/ds/charts";
 import { errorMessage } from "@/components/app/errors";
 import { cn } from "@/lib/utils";
@@ -58,6 +58,7 @@ import { FeedbackButton } from "./Feedback";
 import { ProseBullets } from "@/components/app/ProseBullets";
 import { StatBlocks } from "@/components/ds/content";
 import { climbTarget } from "@/components/climb/context";
+import type { StrategyExploration } from "../../../../shared/agents/specs";
 
 /** Mirrors shared/agents/specs PlaySchema (stored loosely in Convex). */
 export interface PlayView {
@@ -143,6 +144,8 @@ export interface ExpertView {
   weekOneChecklist: string[];
   risks: { risk: string; mitigation: string }[];
   plays?: PlayView[];
+  /** Exploratory alternatives are not part of the ranked execution portfolio. */
+  strategyExploration?: StrategyExploration;
   /** Owner goal vs what the plays support (computed in code). */
   goalGap?: GoalGap | null;
   snapshot?: { goal?: string };
@@ -1354,11 +1357,110 @@ function PortfolioComparisons({ data, economics }: { data: NonNullable<ExpertVie
   );
 }
 
-export function GrowthPlays({ plays, slug, economics, portfolioComparisons, strategyId, planId, canEdit = false, focused = false, diagnosis }: { plays: PlayView[]; slug: string; economics?: Economics; portfolioComparisons?: ExpertView["portfolioComparisons"]; strategyId?: Id<"strategies">; planId?: Id<"strategies">; canEdit?: boolean; focused?: boolean; diagnosis?: Diagnosis | null }) {
+type ExplorationMode = "grounded" | "adjacent" | "bold";
+type ExplorationDecision = "considering" | "selected" | "rejected" | "edited";
+type ExplorationTestState = "not_started" | "designed" | "executed" | "observed" | "unknown";
+type ExplorationEvidence = "measured" | "owner_reported" | "source_reported" | "inferred" | "unknown";
+type ExplorationFeedbackDraft = { decision: ExplorationDecision; ownerEdit: string; testState: ExplorationTestState; outcomeNote: string; outcomeEvidence: ExplorationEvidence };
+const EMPTY_EXPLORATION_FEEDBACK: Record<ExplorationMode, ExplorationFeedbackDraft> = {
+  grounded: { decision: "considering", ownerEdit: "", testState: "not_started", outcomeNote: "", outcomeEvidence: "unknown" },
+  adjacent: { decision: "considering", ownerEdit: "", testState: "not_started", outcomeNote: "", outcomeEvidence: "unknown" },
+  bold: { decision: "considering", ownerEdit: "", testState: "not_started", outcomeNote: "", outcomeEvidence: "unknown" },
+};
+
+function StrategyExplorationPanel({ options, slug, strategyId, canEdit }: { options: StrategyExploration; slug: string; strategyId?: Id<"strategies">; canEdit: boolean }) {
+  const saved = useQuery(api.creativeStrategy.feedbackForStrategy, strategyId ? { slug, strategyId } : "skip");
+  const recordFeedback = useMutation(api.creativeStrategy.recordFeedback);
+  const [drafts, setDrafts] = useState<Record<ExplorationMode, ExplorationFeedbackDraft>>(() => structuredClone(EMPTY_EXPLORATION_FEEDBACK));
+  const [saving, setSaving] = useState<ExplorationMode | null>(null);
+  const update = (mode: ExplorationMode, patch: Partial<ExplorationFeedbackDraft>) => setDrafts((current) => ({ ...current, [mode]: { ...current[mode], ...patch } }));
+  const submit = async (mode: ExplorationMode) => {
+    if (!strategyId) return;
+    const draft = drafts[mode];
+    if (draft.decision === "edited" && !draft.ownerEdit.trim()) {
+      toast({ tone: "info", title: "Describe your version first" });
+      return;
+    }
+    if (draft.testState === "observed" && !draft.outcomeNote.trim()) {
+      toast({ tone: "info", title: "Add the result or mark it unknown" });
+      return;
+    }
+    setSaving(mode);
+    try {
+      await recordFeedback({ slug, strategyId, mode, decision: draft.decision, ownerEdit: draft.ownerEdit.trim() || undefined, testState: draft.testState, outcomeNote: draft.outcomeNote.trim() || undefined, outcomeEvidence: draft.testState === "unknown" ? "unknown" : draft.outcomeEvidence });
+      setDrafts((current) => ({ ...current, [mode]: { ...EMPTY_EXPLORATION_FEEDBACK[mode] } }));
+      toast({ tone: "success", title: "Saved for this workspace" });
+    } catch (error) {
+      toast({ tone: "danger", title: errorMessage(error) });
+    } finally {
+      setSaving(null);
+    }
+  };
+  const previous = saved?.feedback as Partial<Record<ExplorationMode, { decision: string; ownerEdit: string; testState: string; outcomeNote: string; outcomeEvidence: string }>> | undefined;
+  const entries = [
+    { key: "grounded" as const, mode: "Grounded", description: "The strongest available evidence and practical constraints.", value: options.grounded },
+    { key: "adjacent" as const, mode: "Adjacent", description: "A transfer or combination from a less familiar mechanism.", value: options.adjacent },
+    { key: "bold" as const, mode: "Bold", description: "An original, higher-uncertainty hypothesis; no direct precedent is required.", value: options.bold },
+  ];
+  return (
+    <section aria-label="Grounded, adjacent and bold strategy options" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-chart-3/30 bg-chart-3/5 p-3">
+      <div>
+        <div className="flex flex-wrap items-center gap-2"><FieldLabel icon={Sparkles}>Three strategy options</FieldLabel><Badge>Exploration · not an execution ranking</Badge></div>
+        <p className="mt-1 text-sm text-ink-2">Evidence, novelty, business fit, feasibility and risk stay separate. A bold option remains visible even when evidence or immediate feasibility is low. Requested range: {(options.requestedRange ?? "balanced").replaceAll("_", " ")}.</p>
+      </div>
+      <div className="grid gap-3 lg:grid-cols-3">
+        {entries.map(({ key, mode, description, value }) => (
+          <article key={mode} className="flex min-w-0 flex-col gap-2 rounded-[var(--radius-control)] border border-line bg-surface p-3">
+            <div className="flex flex-wrap items-center gap-2"><Badge>{mode}</Badge><span className="text-xs text-ink-3">{value.evidenceBasis.replaceAll("_", " ")}</span></div>
+            <h3 className="heading-card">{value.title}</h3>
+            <p className="text-xs text-ink-3">{description}</p>
+            <dl className="grid gap-2 text-ui">
+              <div><dt className="text-xs text-ink-3">What it challenges</dt><dd className="text-ink">{value.challengedConvention}</dd></div>
+              <div><dt className="text-xs text-ink-3">Why it is the default · cost of breaking it</dt><dd className="text-ink">{value.whyConventionPersists} {value.costOfBreaking}</dd></div>
+              <div><dt className="text-xs text-ink-3">Business mechanism</dt><dd className="text-ink">{value.businessMechanism}</dd></div>
+              <div><dt className="text-xs text-ink-3">What the business would do</dt><dd className="text-ink">{value.businessAction}</dd></div>
+              <div><dt className="text-xs text-ink-3">Customer behavior sought</dt><dd className="text-ink">{value.customerBehavior}</dd></div>
+              <div><dt className="text-xs text-ink-3">Possible upside · hypothesis</dt><dd className="text-ink">{value.whyItCouldMatter}</dd></div>
+              <div><dt className="text-xs text-ink-3">Audience or condition</dt><dd className="text-ink">{value.audienceOrCondition}</dd></div>
+              <div><dt className="text-xs text-ink-3">Evidence and precedent transfer</dt><dd className="text-ink">{value.evidenceNote}{value.precedentIds.length ? ` · Cases: ${value.precedentIds.join(", ")}` : " · No matching precedent used"} {value.transferLogic} Differences: {value.keyDifferences}</dd>{value.precedentIds.length || value.evidenceRefs.length ? <ul className="mt-1 list-disc pl-4">{value.precedentIds.flatMap((id) => { const precedent = CREATIVE_PRECEDENTS.find((item) => item.id === id); return precedent ? precedent.sources.map((source) => <li key={`${id}:${source.url}`}><a className="text-link underline" href={source.url} target="_blank" rel="noreferrer">{id}: {source.title} · {source.publisher} · {source.publicationDate}<ExternalLink aria-hidden className="ml-1 inline size-3" /></a><span className="text-xs text-ink-3"> — supports: {source.supports}</span></li>) : []; })}{value.evidenceRefs.map((ref) => <li key={ref}>{/^https:\/\//i.test(ref) ? <a className="text-link underline" href={ref} target="_blank" rel="noreferrer">Source <ExternalLink aria-hidden className="inline size-3" /></a> : ref}</li>)}</ul> : null}</div>
+            </dl>
+            <div>
+              <p className="text-xs font-medium text-ink-2">Separate dimensions · low / medium / high</p>
+              <dl className="mt-1 grid grid-cols-2 gap-1.5 text-xs sm:grid-cols-3">
+                {(["novelty", "evidenceStrength", "businessFit", "feasibility", "risk"] as const).map((key) => <div key={key} className="rounded-[var(--radius-control)] bg-surface-2 px-2 py-1"><dt className="text-ink-3">{key === "evidenceStrength" ? "Evidence" : key === "businessFit" ? "Business fit" : key[0].toUpperCase() + key.slice(1)}</dt><dd className="font-medium capitalize text-ink">{value[key]}</dd></div>)}
+              </dl>
+            </div>
+            <div className="mt-auto border-t border-line pt-2 text-ui">
+              <p className="text-xs font-medium text-ink-2">Small reversible test</p>
+              <p className="text-ink">{value.reversibleTest.method}</p>
+              <p className="mt-1 text-xs text-ink-3">Measure: {value.reversibleTest.metric} · {value.reversibleTest.duration} · {value.reversibleTest.resourceLimit}</p>
+              <ul className="mt-1 list-disc pl-4 text-xs text-ink-2">
+                <li>Continue if: {value.reversibleTest.continueIf}</li>
+                <li>Change if: {value.reversibleTest.changeIf}</li>
+                <li>Stop if: {value.reversibleTest.stopIf}</li>
+              </ul>
+              {value.assumptions.length || value.uncertainties.length || value.risks.length ? <p className="mt-2 text-xs text-ink-3">Assumptions: {value.assumptions.join(" · ") || "None listed"}. Unknowns: {value.uncertainties.join(" · ") || "None listed"}. Risks: {value.risks.join(" · ") || "None listed"}. Resources: {value.costAndCapacity}</p> : null}
+            </div>
+            {previous?.[key] ? <p className="rounded bg-surface-2 p-2 text-xs text-ink-2">Last owner record: {previous[key]!.decision}; test {previous[key]!.testState}; outcome evidence {previous[key]!.outcomeEvidence}{previous[key]!.ownerEdit ? `. Owner edit: ${previous[key]!.ownerEdit}` : ""}{previous[key]!.outcomeNote ? `. Outcome: ${previous[key]!.outcomeNote}` : previous[key]!.testState === "unknown" ? ". Outcome unknown." : ""}</p> : null}
+            {canEdit && strategyId ? <div className="flex flex-col gap-2 border-t border-line pt-2">
+              <Field label="Your decision"><Select value={drafts[key].decision} onValueChange={(choice) => update(key, { decision: choice as ExplorationDecision })} options={[{ value: "considering", label: "Still considering" }, { value: "selected", label: "Select this option" }, { value: "rejected", label: "Reject this option" }, { value: "edited", label: "I changed it" }]} /></Field>
+              <Field label="Your edit or reason" hint={drafts[key].decision === "edited" ? "Required to preserve the changed version separately." : "Optional owner note."}><Textarea value={drafts[key].ownerEdit} onChange={(event) => update(key, { ownerEdit: event.target.value.slice(0, 2_000) })} maxLength={2_000} rows={2} /></Field>
+              <Field label="Test progress"><Select value={drafts[key].testState} onValueChange={(choice) => update(key, { testState: choice as ExplorationTestState, ...(choice === "unknown" ? { outcomeEvidence: "unknown" as const } : {}) })} options={[{ value: "not_started", label: "Not started" }, { value: "designed", label: "Test designed" }, { value: "executed", label: "Test run" }, { value: "observed", label: "Outcome recorded" }, { value: "unknown", label: "Outcome unknown" }]} /></Field>
+              {drafts[key].testState === "observed" ? <><Field label="Outcome evidence"><Select value={drafts[key].outcomeEvidence} onValueChange={(evidence) => update(key, { outcomeEvidence: evidence as ExplorationEvidence })} options={[{ value: "measured", label: "Measured" }, { value: "owner_reported", label: "Owner reported" }, { value: "source_reported", label: "Source reported" }, { value: "inferred", label: "Inferred" }, { value: "unknown", label: "Unknown" }]} /></Field><Field label="Observed outcome" hint="State the measure and period when known; leave causality unclaimed."><Textarea value={drafts[key].outcomeNote} onChange={(event) => update(key, { outcomeNote: event.target.value.slice(0, 1_500) })} maxLength={1_500} rows={2} /></Field></> : null}
+              <Button size="sm" variant="secondary" disabled={saving !== null || (drafts[key].decision === "edited" && !drafts[key].ownerEdit.trim()) || (drafts[key].testState === "observed" && !drafts[key].outcomeNote.trim())} onClick={() => void submit(key)}>{saving === key ? "Saving…" : "Save owner feedback"}</Button>
+            </div> : null}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export function GrowthPlays({ plays, slug, economics, portfolioComparisons, strategyExploration, strategyId, planId, canEdit = false, focused = false, diagnosis }: { plays: PlayView[]; slug: string; economics?: Economics; portfolioComparisons?: ExpertView["portfolioComparisons"]; strategyExploration?: StrategyExploration; strategyId?: Id<"strategies">; planId?: Id<"strategies">; canEdit?: boolean; focused?: boolean; diagnosis?: Diagnosis | null }) {
   const byPlay = useQuery(api.playResults.forStrategy, strategyId ? { slug, strategyId } : "skip");
   // plan_targets workspaces only (null otherwise): named targets per play.
   const targets = useQuery(api.targets.forStrategy, planId ? { slug, strategyId: planId } : "skip");
-  if (!plays.length) return null;
+  if (!plays.length && !strategyExploration) return null;
   const results = strategyId ? { strategyId, canEdit, byPlay: (byPlay ?? {}) as Record<string, PlayActuals | undefined> } : undefined;
   const order = { bankable: 0, creative: 1, moonshot: 2 } as const;
   const sorted = [...plays].sort((a, b) => order[a.kind] - order[b.kind]);
@@ -1380,6 +1482,7 @@ export function GrowthPlays({ plays, slug, economics, portfolioComparisons, stra
         );
       })}
     >
+      {strategyExploration ? <StrategyExplorationPanel options={strategyExploration} slug={slug} strategyId={planId} canEdit={canEdit} /> : null}
       {economics ? <EconomicsLine economics={economics} /> : null}
       {portfolioComparisons ? <PortfolioComparisons data={portfolioComparisons} economics={economics} /> : null}
       {sorted.length > 1 ? <PlaysChart plays={sorted} economics={economics} /> : null}

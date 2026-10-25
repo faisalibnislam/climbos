@@ -142,6 +142,8 @@ function DeletePage({ page, onDelete }: { page: Page; onDelete: () => Promise<un
 function Editor({ slug, page, content, canEdit, canPublish, onClose }: { slug: string; page: Page; content: LandingContent; canEdit: boolean; canPublish: boolean; onClose: () => void }) {
   const update = useMutation(api.landing.update);
   const setLive = useMutation(api.landing.setLive);
+  const restoreVersion = useMutation(api.landing.restoreVersion);
+  const history = useQuery(api.landing.history, { slug, id: page.id });
   const remove = useMutation(api.landing.remove);
   const [c, setC] = useState<LandingContent>(content);
   const [busy, setBusy] = useState<string | null>(null);
@@ -210,15 +212,56 @@ function Editor({ slug, page, content, canEdit, canPublish, onClose }: { slug: s
           </div>
         </fieldset>
         <LandingDraftPreview name={page.title} color={page.color} content={c} />
-        {page.status === "live" ? <AbTestPanel slug={slug} kind="landing" targetId={page.id} current={content.headline} canApprove={canPublish} /> : null}
+        {history?.length ? (
+          <details className="rounded-[var(--radius-card)] border border-line bg-surface-2 p-3">
+            <summary className="cursor-pointer text-sm font-medium text-ink">Version history ({history.length})</summary>
+            <ul className="mt-3 flex flex-col gap-2">
+              {history.map((revision) => (
+                <li key={revision.id} className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] bg-surface p-2.5 text-sm">
+                  <span className="min-w-0">
+                    <span className="font-medium text-ink">Version {revision.version}</span>
+                    <span className="text-ink-3"> · {revision.kind} · {new Date(revision.createdAt).toLocaleString()}</span>
+                    {revision.version === page.version ? <Badge className="ml-2" tone="brand">Current draft</Badge> : null}
+                    {revision.isPublished ? <Badge className="ml-2" tone="green">Published</Badge> : null}
+                  </span>
+                  {canEdit && revision.version !== page.version ? (
+                    <Button size="sm" variant="secondary" disabled={busy === "restore"} onClick={() => run("restore", async () => {
+                      await restoreVersion({ slug, id: page.id, version: revision.version });
+                    }, `Restored as a new draft version`)}>
+                      Restore as draft
+                    </Button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
+        {page.status === "live" ? <AbTestPanel slug={slug} kind="landing" targetId={page.id} current={content.headline} canApprove={canPublish && !page.hasUnpublishedChanges} /> : null}
         <div className="flex flex-wrap items-center gap-3">
           {canEdit ? (
             <Button loading={busy === "save"} onClick={() => run("save", () => update({ slug, id: page.id, content: { ...c, steps: c.steps.filter((s) => s.trim()) } }), "Saved")}>
               Save
             </Button>
           ) : null}
-          {/* Only the live status changes here: unsaved edits are kept in the form until you press Save. */}
-          {canPublish ? <Switch label="Live" checked={page.status === "live"} disabled={busy === "live"} onCheckedChange={(on) => run("live", () => setLive({ slug, id: page.id, live: on }), on ? "Page is live" : "Page is offline")} /> : null}
+          {canPublish && page.status !== "live" ? (
+            <ConfirmDialog
+              trigger={<Button variant="secondary" disabled={busy === "live" || !page.content}>Publish version {page.version}</Button>}
+              title={`Publish landing page version ${page.version}?`}
+              description="This approval applies to the exact saved version shown above. Later edits remain drafts until reviewed and published separately."
+              confirmLabel={`Publish version ${page.version}`}
+              onConfirm={() => run("live", () => setLive({ slug, id: page.id, live: true, expectedVersion: page.version }), `Version ${page.version} is live`)}
+            />
+          ) : null}
+          {canPublish && page.status === "live" && page.hasUnpublishedChanges ? (
+            <ConfirmDialog
+              trigger={<Button variant="secondary" disabled={busy === "live"}>Publish draft version {page.version}</Button>}
+              title={`Publish landing page version ${page.version}?`}
+              description={`This replaces public version ${page.publishedVersion} with the exact saved draft version ${page.version}.`}
+              confirmLabel={`Publish version ${page.version}`}
+              onConfirm={() => run("live", () => setLive({ slug, id: page.id, live: true, expectedVersion: page.version }), `Version ${page.version} is live`)}
+            />
+          ) : null}
+          {canPublish && page.status === "live" ? <Switch label="Live" checked disabled={busy === "live"} onCheckedChange={(on) => { if (!on) void run("live", () => setLive({ slug, id: page.id, live: false }), "Page is offline"); }} /> : null}
           {page.status === "live" ? (
             <a href={page.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-medium text-brand-800 underline-offset-2 hover:underline">
               {page.url.replace(/^https?:\/\//, "")} <ExternalLink className="size-3.5" aria-hidden />

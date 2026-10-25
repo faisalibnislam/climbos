@@ -4,6 +4,14 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { sha256Hex } from "../../shared/policy";
 import { asNewUser, setup } from "./helpers";
 
+type UserClient = Awaited<ReturnType<typeof asNewUser>>["client"];
+
+async function publish(client: UserClient, slug: string, id: Id<"landingPages">) {
+  const page = (await client.query(api.landing.list, { slug })).pages.find((item) => item.id === id);
+  if (!page) throw new Error("Landing page not found.");
+  return client.mutation(api.landing.setLive, { slug, id, live: true, expectedVersion: page.version });
+}
+
 describe("landing pages", () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
@@ -26,7 +34,7 @@ describe("landing pages", () => {
     expect(await t.query(api.landing.publicPage, { slug: page.slug })).toBeNull();
 
     await owner.client.mutation(api.landing.update, { slug, id, content: { ...page.content!, headline: "Get your free audit" } });
-    await owner.client.mutation(api.landing.setLive, { slug, id, live: true });
+    await publish(owner.client, slug, id);
     const pub = await t.query(api.landing.publicPage, { slug: page.slug });
     expect(pub?.content.headline).toBe("Get your free audit");
     expect(pub?.badge).toBe(true);
@@ -41,7 +49,59 @@ describe("landing pages", () => {
 
     const second = await owner.client.mutation(api.landing.create, { slug, brief: "Second offer" });
     await t.finishAllScheduledFunctions(vi.runAllTimers);
-    await expect(owner.client.mutation(api.landing.setLive, { slug, id: second, live: true })).rejects.toThrow(/1 live page/);
+    await expect(publish(owner.client, slug, second)).rejects.toThrow(/1 live page/);
+  });
+
+  it("keeps published content frozen, requires the reviewed draft version, and restores history as a new draft", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "landing-versions@example.com");
+    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Versioned Co" });
+    const id = await owner.client.mutation(api.landing.create, { slug, brief: "A versioned offer page" });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    const initial = (await owner.client.query(api.landing.list, { slug })).pages[0];
+    expect(initial.version).toBe(1);
+
+    await owner.client.mutation(api.landing.update, { slug, id, content: { ...initial.content!, headline: "Published headline" } });
+    const approved = (await owner.client.query(api.landing.list, { slug })).pages[0];
+    await owner.client.mutation(api.landing.setLive, { slug, id, live: true, expectedVersion: approved.version });
+
+    await owner.client.mutation(api.landing.update, { slug, id, content: { ...approved.content!, headline: "Unpublished draft headline" } });
+    const draft = (await owner.client.query(api.landing.list, { slug })).pages[0];
+    expect(draft).toMatchObject({ status: "live", publishedVersion: approved.version, hasUnpublishedChanges: true });
+    expect((await t.query(api.landing.publicPage, { slug: draft.slug }))?.content.headline).toBe("Published headline");
+    await expect(owner.client.mutation(api.landing.setLive, { slug, id, live: true, expectedVersion: approved.version })).rejects.toThrow(/changed after review/);
+    await expect(owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: "Test while draft is pending" })).rejects.toThrow(/Publish or discard the saved draft/);
+
+    const history = await owner.client.query(api.landing.history, { slug, id });
+    expect(history.map((revision) => revision.version)).toEqual([3, 2, 1]);
+    expect(history.find((revision) => revision.isPublished)?.version).toBe(2);
+    await owner.client.mutation(api.landing.restoreVersion, { slug, id, version: 1 });
+    const restored = (await owner.client.query(api.landing.list, { slug })).pages[0];
+    expect(restored).toMatchObject({ version: 4, publishedVersion: 2, hasUnpublishedChanges: true });
+    expect((await t.query(api.landing.publicPage, { slug: restored.slug }))?.content.headline).toBe("Published headline");
+    await owner.client.mutation(api.landing.setLive, { slug, id, live: true, expectedVersion: restored.version });
+    expect((await t.query(api.landing.publicPage, { slug: restored.slug }))?.content.headline).toBe(initial.content?.headline);
+    const events = await t.run(async (ctx) => ctx.db.query("auditEvents").collect());
+    expect(events.some((event) => event.action === "landing.published" && event.summary.includes("version 4"))).toBe(true);
+    expect(events.some((event) => event.action === "landing.version_restored")).toBe(true);
+  });
+
+  it("scopes revision history and restore access to the owning workspace", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "landing-owner@example.com");
+    const editor = await asNewUser(t, "landing-editor@example.com");
+    const other = await asNewUser(t, "landing-other@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Private Page Co" });
+    const id = await owner.client.mutation(api.landing.create, { slug, brief: "Private draft" });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    const versions = await owner.client.query(api.landing.history, { slug, id });
+    expect(versions).toHaveLength(1);
+    await t.run(async (ctx) => ctx.db.insert("memberships", { orgId: orgId as never, userId: editor.userId, role: "editor", status: "active", createdAt: Date.now() }));
+    const current = (await owner.client.query(api.landing.list, { slug })).pages[0];
+    await expect(editor.client.mutation(api.landing.setLive, { slug, id, live: true, expectedVersion: current.version })).rejects.toThrow(/can't do this|permission/i);
+    const { slug: otherSlug } = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other Workspace" });
+    await expect(other.client.query(api.landing.history, { slug: otherSlug, id })).rejects.toThrow(/find that page|workspace|permission/i);
+    await expect(other.client.mutation(api.landing.restoreVersion, { slug: otherSlug, id, version: 1 })).rejects.toThrow(/find that page|workspace|permission/i);
   });
 });
 
@@ -78,7 +138,7 @@ describe("landing A/B test", () => {
     const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "AB Co" });
     const id = await owner.client.mutation(api.landing.create, { slug, brief: "Free audit" });
     await t.finishAllScheduledFunctions(vi.runAllTimers);
-    await owner.client.mutation(api.landing.setLive, { slug, id, live: true });
+    await publish(owner.client, slug, id);
     const page = (await owner.client.query(api.landing.list, { slug })).pages[0];
     await expect(owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: page.content!.headline })).rejects.toThrow(/different/);
     await expect(owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: "Another message", outcomeWindowDays: 31 })).rejects.toThrow(/0 to 30/);
@@ -133,7 +193,7 @@ describe("landing A/B test", () => {
     const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Approved Test Co" });
     const pageId = await owner.client.mutation(api.landing.create, { slug, brief: "Free audit" });
     await t.finishAllScheduledFunctions(vi.runAllTimers);
-    await owner.client.mutation(api.landing.setLive, { slug, id: pageId, live: true });
+    await publish(owner.client, slug, pageId);
     await t.run(async (ctx) => ctx.db.insert("memberships", { orgId: orgId as never, userId: editor.userId, role: "editor", status: "active", createdAt: Date.now() }));
     await expect(editor.client.mutation(api.abtests.startLanding, { slug, pageId, headline: "Approved challenger headline" })).rejects.toThrow(/can't do this|permission/i);
     const id = await owner.client.mutation(api.abtests.startLanding, { slug, pageId, headline: "Approved challenger headline" });
@@ -155,7 +215,7 @@ describe("landing A/B test", () => {
     const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Invalid Split Co" });
     const pageId = await owner.client.mutation(api.landing.create, { slug, brief: "Free audit" });
     await t.finishAllScheduledFunctions(vi.runAllTimers);
-    await owner.client.mutation(api.landing.setLive, { slug, id: pageId, live: true });
+    await publish(owner.client, slug, pageId);
     const page = (await owner.client.query(api.landing.list, { slug })).pages[0];
     const originalHeadline = page.content!.headline;
     await owner.client.mutation(api.abtests.startLanding, { slug, pageId, headline: "A challenger headline" });
@@ -199,7 +259,7 @@ describe("landing A/B test", () => {
     expect(list.pages[0].status).toBe("draft");
     await expect(owner.client.mutation(api.landing.retry, { slug, id })).rejects.toThrow(/didn't finish/);
 
-    await owner.client.mutation(api.landing.setLive, { slug, id, live: true });
+    await publish(owner.client, slug, id);
     await owner.client.mutation(api.abtests.startLanding, { slug, pageId: id, headline: "A brand new headline" });
     await owner.client.mutation(api.landing.remove, { slug, id });
     const tests = await t.run(async (ctx) => ctx.db.query("abTests").collect());

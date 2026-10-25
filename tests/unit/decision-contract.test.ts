@@ -76,9 +76,9 @@ describe("decision contract flag", () => {
     expect(defaultTask).toContain("STRATEGY EXPLORATION");
     expect(defaultTask).toContain("adjacent industries, emerging behavior, unusual partnerships, product changes and non-obvious distribution mechanisms");
     expect(defaultTask).toContain("don't discard a promising idea just because ClimbOS cannot execute it today");
-    expect(defaultTask).toContain("a practical established-practice option");
-    expect(defaultTask).toContain("an adjacent evidence-supported inference");
-    expect(defaultTask).toContain("a bold speculative hypothesis");
+    expect(defaultTask).toContain("grounded, adjacent, and bold");
+    expect(defaultTask).toContain("bold may have no direct precedent");
+    expect(defaultTask).toContain("low evidence, low business fit, low feasibility, or high risk");
     expect(defaultTask).toContain("Exploration is not execution");
     expect(defaultTask).toMatch(/best-supported binding constraint/);
     expect(defaultTask).not.toMatch(/one bankable play, one or two creative-but-proven plays/);

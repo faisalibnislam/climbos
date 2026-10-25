@@ -174,6 +174,42 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         scores: [4, predictability, 3, 3, 3, 4, 5, distinctiveness],
       });
       (output as { plays: unknown[] }).plays = [play("bankable", 4, 2), play("creative", 3, 4)];
+      const option = (title: string, basis: string, ratings: string[]) => ({
+        title,
+        challengedConvention: "A small studio must rely only on referrals to grow.",
+        whyConventionPersists: "Referrals are familiar, low-cost and can arrive from customers who already trust the studio.",
+        costOfBreaking: "A new public format could consume delivery time or make the studio's offer harder to understand.",
+        businessMechanism: "Use a customer-approved portfolio review as a useful public learning resource, without claiming it proves demand.",
+        businessAction: "Create one anonymized process card with customer permission, then share it privately with a few qualified buyers.",
+        whyItCouldMatter: "It could make the studio's working method easier for a well-fit buyer to understand before booking.",
+        customerBehavior: "A qualified prospect asks a specific question or books a conversation about the process.",
+        audienceOrCondition: "Only if past customers consent to share the work and the studio has capacity for a few new projects.",
+        evidenceBasis: basis,
+        evidenceNote: "This is a synthetic test fixture, not a claim about a real business or customer outcome.",
+        evidenceRefs: [],
+        precedentIds: [],
+        transferLogic: "No precedent is required for this deliberately speculative bold option; test the business's own mechanism directly.",
+        keyDifferences: "The studio has a small client base and no evidence yet that prospects want to participate publicly.",
+        assumptions: ["Target buyers find the process useful."],
+        uncertainties: ["Buyer interest and referral impact are unknown."],
+        risks: ["Public work could reveal confidential client details."],
+        costAndCapacity: "Start with one owner hour; obtain client permission and anonymize sensitive work.",
+        novelty: ratings[0], evidenceStrength: ratings[1], businessFit: ratings[2], feasibility: ratings[3], risk: ratings[4],
+        reversibleTest: {
+          method: "Ask two past clients to review one anonymized process card before sharing it publicly.",
+          metric: "Qualified buyer questions about the method",
+          duration: "Two weeks",
+          resourceLimit: "One owner hour; no ad spend",
+          continueIf: "At least one right-fit buyer asks a substantive follow-up and no privacy concern appears.",
+          changeIf: "Reviewers understand the example but buyers do not ask about it.",
+          stopIf: "A client objects, confidential detail is exposed, or the work distracts from delivery.",
+        },
+      });
+      (output as { strategyExploration?: unknown }).strategyExploration = {
+        grounded: option("Clarify the existing referral handoff", "established_practice", ["low", "medium", "medium", "high", "low"]),
+        adjacent: option("Turn project retrospectives into buyer education", "evidence_supported_inference", ["medium", "low", "medium", "medium", "medium"]),
+        bold: option("Let prospects commission a tiny public design challenge", "speculative_hypothesis", ["high", "low", "low", "low", "high"]),
+      };
       (output as { economics?: unknown }).economics = { revenuePerCustomerMonthUsd: 20, grossMargin: 0.8, monthlyChurn: 0.05, basis: "fake assumptions", sources: { revenue: { source: "research", ref: "https://example.com", quote: "Plans cost $20 per month.", population: "Plans", period: "month" }, margin: { source: "assumption", ref: "", quote: "" }, churn: { source: "assumption", ref: "", quote: "" } } };
     }
     // Growth plan: a dated action, not only measurement, and a route to the page (plan lint: never data-only, distribution).
