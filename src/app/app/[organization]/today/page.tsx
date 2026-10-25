@@ -22,7 +22,7 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Badge, Button, Callout, Card, CardContent, CardHeader, CardTitle, EmptyState, IconTile, Segmented, Skeleton, SocialIcon, Tooltip, buttonClasses, toast, type Tone } from "@/components/ui";
+import { Badge, Button, Callout, Card, CardContent, CardHeader, CardTitle, EmptyState, Field, IconTile, Input, Segmented, Skeleton, SocialIcon, Tooltip, buttonClasses, toast, type Tone } from "@/components/ui";
 import { PauseAllButton } from "@/components/app/AppShell";
 import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
@@ -298,15 +298,21 @@ export default function TodayPage() {
 function GrowthOpportunities({ slug, strategyId, status, opportunities }: { slug: string; strategyId: Id<"strategies">; status: NonNullable<Today["strategy"]>["status"]; opportunities: GrowthOpportunity[] }) {
   const askAbout = useMutation(api.workspace.askAboutOpportunity);
   const [asking, setAsking] = useState<string | null>(null);
+  const [questionFor, setQuestionFor] = useState<string | null>(null);
+  const [question, setQuestion] = useState("");
   const [detail, setDetail] = useState<"simple" | "detailed" | "expert">("simple");
   const planStatus = status === "needs_approval" ? "Plan needs your OK" : status === "approved" ? "From your approved plan" : status === "draft" ? "Draft plan" : "Plan update";
   const tone = status === "needs_approval" ? "amber" : status === "approved" ? "green" : "neutral";
   const visibleOpportunities = opportunities.slice(0, 3);
   async function ask(opportunity: GrowthOpportunity) {
     if (!opportunity.id) return;
+    const request = question.trim();
+    if (!request) return;
     setAsking(opportunity.id);
     try {
-      await askAbout({ slug, strategyId, opportunityId: opportunity.id, question: "Explain why this may fit my business, what evidence supports it, and what I should verify before acting." });
+      await askAbout({ slug, strategyId, opportunityId: opportunity.id, question: request });
+      setQuestion("");
+      setQuestionFor(null);
       toast({ tone: "success", title: "Question sent to ClimbOS", description: "The reply will appear in your Today conversation." });
     } catch (error) {
       toast({ tone: "danger", title: errorMessage(error) });
@@ -352,9 +358,17 @@ function GrowthOpportunities({ slug, strategyId, status, opportunities }: { slug
                   <Link href={`/app/${slug}/plan#plays`} className={buttonClasses({ variant: "link" })}>
                     Open plan <ArrowRight aria-hidden />
                   </Link>
-                  {opportunity.id ? <Button size="sm" variant="secondary" loading={asking === opportunity.id} disabled={asking !== null} onClick={() => void ask(opportunity)}><MessageCircle aria-hidden /> Ask about this</Button> : null}
+                  {opportunity.id ? <Button size="sm" variant="secondary" disabled={asking !== null} onClick={() => { setQuestionFor(questionFor === opportunity.id ? null : opportunity.id!); setQuestion(""); }}><MessageCircle aria-hidden /> Ask a question</Button> : null}
                 </span>
               </div>
+              {questionFor === opportunity.id ? (
+                <form className="flex flex-col gap-2 border-t border-line pt-3 sm:flex-row sm:items-end" onSubmit={(event) => { event.preventDefault(); void ask(opportunity); }}>
+                  <Field label={`Ask about “${opportunity.title}”`} hint="This uses AI credits. It will not change your plan or publish anything." className="min-w-0 flex-1">
+                    <Input value={question} onChange={(event) => setQuestion(event.target.value.slice(0, 500))} maxLength={500} placeholder="What would you like to understand or check?" autoComplete="off" />
+                  </Field>
+                  <Button type="submit" size="sm" loading={asking === opportunity.id} disabled={asking !== null || !question.trim()}>Send question</Button>
+                </form>
+              ) : null}
               {detail !== "simple" && opportunity.sources.length ? (
                 <div className="border-t border-line pt-2">
                   <p className="text-xs font-medium text-ink-2">Evidence basis</p>

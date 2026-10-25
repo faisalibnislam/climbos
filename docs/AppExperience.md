@@ -17,6 +17,8 @@ Home and first/additional business onboarding share `RequestComposer`. A suggest
 
 Content review shows the draft's intended reader, objective, core idea, and exact growth-plan item when the copy is tied to one. Planned Autopilot slots show the same plan item before drafting, so owners can see which approved offer the post will use.
 
+Growth Home opportunity questions open an editable field instead of sending a fixed prompt. The owner sees that sending uses AI credits and does not alter the plan or publish anything. The backend supplies the saved, tenant-checked opportunity context to the existing Today conversation.
+
 Date-sensitive growth recommendations lead with a plain-language timing choice, suggested dates when supported, and why that moment may matter to the business. Missing information stays visible; preparation, delivery, capacity, source claims, and evidence dates are available in an expandable detail section.
 
 Offer recommendations explain whether to consider a change, check details first, improve another business issue, or keep the offer. They describe who the idea is for, what evidence supports it, money left after listed costs, risks, and a small test; missing facts remain unknown and any live change still needs the existing approval.

@@ -9,6 +9,21 @@ import { asNewUser, setup } from "./helpers";
  * and nothing external runs without approval.
  */
 describe("wishes", () => {
+  it("seeds a clearly fictional opportunity for the editable Growth Home question flow", async () => {
+    const t = setup();
+    const u = await asNewUser(t, "demo-opportunity@example.com", { anonymous: true });
+    const { slug } = await u.client.mutation(api.demo.createDemoWorkspace, {});
+    const today = await u.client.query(api.workspace.today, { slug });
+    expect(today.strategy?.opportunities).toMatchObject([
+      {
+        id: "demo_opportunity",
+        title: "Demo opportunity",
+        why: expect.stringMatching(/fictional example/i),
+        nextStep: expect.stringMatching(/evidence would be needed/i),
+      },
+    ]);
+  });
+
   it("does not let a dependent action start until its prerequisite is complete", async () => {
     const t = setup();
     const u = await asNewUser(t, "wish-dependency@example.com", { anonymous: true });
