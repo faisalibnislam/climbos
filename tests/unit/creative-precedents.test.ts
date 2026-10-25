@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(74);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(75);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -184,6 +184,22 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://www.ncat.org/publication/community-supported-agriculture/", sourceRole: "independent_secondary" }),
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Explore a lower-commitment recurring offer", query)).toContain("CP-074");
+  });
+
+  it("retrieves a purpose-model pivot while separating beneficiary impact from commercial outcomes", () => {
+    const query = "A cause-related offer uses a simple buy-one give-one promise, but local partners need a more targeted community program with measurable outcomes and sustainable unit economics";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-075");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("locally selected partner work");
+    expect(match?.precedent.outcome).toContain("cluster-randomized study of 1,578 children");
+    expect(match?.precedent.causalLimit).toContain("No cited source isolates the effect of TOMS' giving model on sales");
+    expect(match?.precedent.transferRisk).toContain("Never copy TOMS' one-third figure");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.responsibilityreports.com/HostedData/ResponsibilityReportArchive/t/toms_2020.pdf", sourceRole: "company_primary" }),
+      expect.objectContaining({ url: "https://documents.worldbank.org/curated/en/960091473863696457/pdf/WPS7822.pdf", publisher: "World Bank Policy Research Working Paper 7822" }),
+      expect.objectContaining({ url: "https://tomsaustralia.com.au/pages/our-story", sourceRole: "company_primary" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Explore a purpose-linked offer that works with local community partners", query)).toContain("CP-075");
   });
 
   it("retrieves open innovation while separating proxy scores, implementation value, and data privacy", () => {

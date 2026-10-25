@@ -4,7 +4,7 @@ Last reviewed: 25 October 2026. This is a curated retrieval set for strategy exp
 
 ## Verified coverage
 
-The current runtime library contains **74 editorially reviewed cases** (`CP-001`–`CP-074`). The requested target is 100 useful cases, leaving **26 cases unverified and not yet included**. The general growth case collection is separate and is not counted as creative-strategy coverage.
+The current runtime library contains **75 editorially reviewed cases** (`CP-001`–`CP-075`). The requested target is 100 useful cases, leaving **25 cases unverified and not yet included**. The general growth case collection is separate and is not counted as creative-strategy coverage.
 
 Each case records its reported choice and mechanism, evidence class, causal limits, transfer conditions and risks, a small-business adaptation, editorial audience/goal/constraint/scale/geography/business-model tags, and a reversible test. Runtime retrieval requires a mechanism match, then ranks with available audience, goal, constraint, scale, geography, and business-model context. The model receives short match explanations with each case rather than an opaque relevance score. Retrieval returns at most two cases to the production growth-plan task and never treats a precedent as evidence about the target business; when those context dimensions are absent, they do not contribute a match.
 
@@ -47,6 +47,10 @@ Added three runtime-retrieved cases after source review: Too Good To Go's variab
 ## Resumption note (2026-10-25, flexible customer cadence CP-074)
 
 Added J&P Organics' variable-frequency, pay-as-you-go CSA ordering as a distinct offer-architecture case. A UC Santa Cruz oral-history profile documents the operator's historical ordering options; a peer-reviewed survey of 536 current and former subscribers reports a qualified, non-causal indication that flexibility could help some lower-frequency subscribers. An agricultural extension guide corroborates the model and highlights seasonal cost planning. The case does not establish incremental orders, retention, or profit, and warns that flexibility can harm predictability and fulfillment economics. The production retrieval regression checks the mechanism and evidence limits. The reviewed corpus is 74 of 100; 26 remain unverified.
+
+## Resumption note (2026-10-25, purpose-linked offer evolution CP-075)
+
+Added TOMS' evolution from a simple purchase-linked giving promise toward partner-directed grants as a purpose and offer-architecture case. TOMS' own impact materials describe the model change and its stated learning; a World Bank randomized field study reports context-specific beneficiary outcomes from shoe donations in rural El Salvador. The case does not attribute the company's strategy change to that study or claim that the later giving model improved commercial performance. It requires local beneficiary fit, partner capacity, sustainable economics, and beneficiary-relevant measurement. Production retrieval tests preserve the distinction between impact evidence and sales outcomes. The reviewed corpus is 75 of 100; 25 cases remain unverified.
 
 
 ## Resumption note (2026-10-25, value-chain and community mechanisms)

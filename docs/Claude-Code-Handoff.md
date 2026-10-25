@@ -5,7 +5,7 @@
 | Prepared | 25 October 2026 |
 | Repository | `climbos` |
 | Branch | `growth-engine-v2` |
-| Handoff commit before this document | `7ee9e8b` (`Improve competitor discovery evidence and creative cases`) |
+| Git state | Use `git status --short --branch` and `git log -5 --oneline` as the live source of truth; this handoff includes the CP-075 and evidence-bounded alternative-draft follow-ups described below. |
 | Remote | `origin/growth-engine-v2` |
 | Deployment | None performed by this work; a branch push is not a production release. |
 
@@ -63,7 +63,7 @@ The branch contains many earlier changes beyond the latest batch. The current le
 - Growth diagnosis and acquisition improvements, including explicit unknown-capacity handling and a zero-capacity block; budgets, hours, known capacity, channel evidence, and existing capability influence recommendations.
 - Offer and campaign safeguards, evidence-bound offer facts/terms, urgency/scarcity checks, cost/profit distinctions, and approval boundaries for consequential work.
 - Strategy execution and decision contracts extended with more owner context and deterministic checks; historical outcomes stay unknown when data are incomplete.
-- A production creative-strategy retrieval library that informs the existing growth-strategy task. As of this handoff it contains **74 reviewed cases (CP-001–CP-074)**; **26** of the 100-case research target remain unverified and excluded. Do not fabricate cases to reach 100. Each case is source-backed and retains transfer conditions and causal limits. Retrieval informs but does not gate bold ideas.
+- A production creative-strategy retrieval library that informs the existing growth-strategy task. It contains **75 reviewed cases (CP-001–CP-075)**; **25** of the 100-case research target remain unverified and excluded. Do not fabricate cases to reach 100. Each case is source-backed and retains transfer conditions and causal limits. Retrieval informs but does not gate bold ideas.
 - Social publishing intelligence includes owner-selected brand humor/trend preferences, run-bound source evidence for trend references, platform-destination validation, and copy-similarity warnings. This is implementation and fixture coverage, not proof of recommendation quality or platform-policy compliance in live outputs.
 - A bounded website conversion audit with sourced page observations, proposed implementation directions, screenshot review where configured, a ClimbOS-hosted landing-page draft path, version-bound measurement plans, and approval boundaries. It does not edit or re-render the customer's external website or prove conversion impact.
 - Search Readiness and AI-search workflows covering sampled static HTML, crawler rules, Google Search Console context/imports, manual AI-answer observations, and limited PageSpeed paths. Sampling does not establish indexing, ranking, complete crawl coverage, AI-answer share, or business impact.
@@ -86,12 +86,19 @@ Files changed in the latest pushed batch:
 
 The J&P Organics record uses a 2009 university oral-history profile, a 2016 peer-reviewed survey of 536 current/former subscribers, and an agricultural extension guide. The survey is non-randomized and does not establish incremental orders, retention, or profit. The case is a transfer hypothesis, not a forecast for a ClimbOS customer.
 
+### Latest handoff batch: CP-075
+
+The latest local batch adds CP-075, a source-backed TOMS purpose-linked offer evolution precedent, to the production retrieval library. It updates the runtime corpus count and owner-facing count to **75 reviewed / 25 unverified**, adds a retrieval regression for the business mechanism and evidence limits, and records the change in the creative-strategy reference, implementation ledger, and this handoff. The TOMS company materials document its stated model and evolution; the World Bank randomized evaluation concerns a specific shoe-donation program in rural El Salvador. Do not say that study caused the model change, or use beneficiary outcomes as evidence of sales, retention, or profitability. See the source record in `shared/knowledge/creativePrecedents.ts` and the detailed resumption entry in `docs/growth-engine/implementation-ledger.md`.
+
+Before this handoff was finalized, the CP-075 batch passed `pnpm exec vitest run tests/unit/creative-precedents.test.ts tests/unit/product-brand-copy.test.ts` (72 tests across two files), `pnpm typecheck`, targeted ESLint for the changed TypeScript files, and `git diff --check`. These are focused checks, not a full suite or live-model evaluation.
+
 ### Follow-up work after the first handoff push
 
-- Corrected the 73-versus-74 case-count mismatch in `docs/Capabilities.md`; the runtime library and two capability summaries now agree at 74 reviewed / 26 unverified.
+- Corrected the 73-versus-74 case-count mismatch in `docs/Capabilities.md`; after CP-075 was added, the runtime library and capability summaries now agree at 75 reviewed / 25 unverified.
 - Fixed a shared alternative-draft prompt that had asked every two-draft agent to use audiences in the thousands and weekly volumes that add up to a goal. It now encourages a bolder/original angle while grounding numbers in owner facts, calculations, or cited research, preserving unknowns, and keeping grounded/adjacent/bold strategy options. The critic no longer penalizes an unsupported target being unknown; it asks for the smallest useful measurement instead. `ENGINE_VERSION` is `v3.65-evidence-bounded-alt-draft`.
 - Updated audit rows 25, 26, and 31 to cite this prompt-level correction and retain its limitation: prompt guidance is not a semantic guarantee or live-model quality evidence.
 - Corrected a stale `tests/convex/engine-v2.test.ts` assertion from snapshot version 20 to 21 after verifying `convex/jobs.ts` writes version 21 and the schema supports it.
+- Added CP-075, TOMS' purpose-linked offer evolution, with company reports and a World Bank randomized evaluation of one context-specific donation program. The case distinguishes beneficiary-impact evidence from sales or profitability and does not claim the evaluation caused the company's strategy change. Current coverage is 75 reviewed / 25 unverified.
 
 ## What remains and should guide the next work
 
@@ -104,7 +111,7 @@ These are known open gaps, not a complete substitute for checking the requiremen
 5. **Review and platform integrations:** Native review sync/replies and several platform integrations are blocked or unsupported pending official API access, credentials, provider eligibility, scopes, plan limits, and data-retention verification. Keep manual paths clear. Do not scrape platforms or imply an API exists without checking current primary documentation.
 6. **Autopilot/calendar scale and validation:** Existing caps and policy behavior are explicit, but calendar completeness at maximum query caps and live scheduling/publishing with each provider must be separately validated. Approval must remain bound to tenant, exact content version, destination, audience/schedule, budget, and action scope.
 7. **Accessibility and UX:** Some keyboard/accessibility safeguards exist, but there is no app-wide accessibility conformance result. Continue with focused keyboard and assistive-technology checks and plain-language owner review.
-8. **Documentation drift:** The confirmed 73-versus-74 creative-precedent count discrepancy in `docs/Capabilities.md` has been corrected in the current follow-up change. Continue checking all owner-facing capability statements against runtime behavior; other copy may still drift.
+8. **Documentation drift:** The creative-precedent counts now agree at 75 reviewed / 25 unverified across runtime, `docs/Capabilities.md`, and the creative-strategy summary. Continue checking all owner-facing capability statements against runtime behavior; other copy may still drift.
 9. **Requirement completion:** `docs/growth-engine/improvement-requirement-audit.md` maps 410 numbered items. Its own introduction says most are partially implemented and that the first 350, AEO/GEO items, and specialist requirements are shared/cross-cutting. Do not mark a row complete merely because one path or fixture exists. Update row status only after checking current code and coverage; distinguish shipped, fixture-only, blocked, and unverified behavior.
 10. **Provider setup and production:** This branch is not a deployment. Verify environment variables, provider credentials, permissions, migrations, and account eligibility in an authorized environment before claiming a live integration. Do not deploy or change live business campaigns as part of a code change.
 
@@ -156,18 +163,20 @@ git diff --check
   passed
 ```
 
+The CP-075 library addition passed `pnpm exec vitest run tests/unit/creative-precedents.test.ts tests/unit/product-brand-copy.test.ts` (72 tests across two files), app/Convex typecheck, changed-file ESLint, and `git diff --check`. No live-model call was made.
+
 One initial test attempt failed only because the existing snapshot-version assertion still expected 20; after confirming the current writer and schema use 21, the assertion was updated and the rerun passed. No live model call or provider was used.
 
 ## Suggested first Claude Code session
 
-Start by verifying the checked-out state and reading the files listed under **Start here**. The 73/74 creative-case documentation mismatch has been corrected; compare `docs/Capabilities.md`, the 410-row audit, and the implementation ledger for other stale claims. Choose a high-impact, bounded runtime gap by evidence and owner impact, trace its complete current flow, and implement only the confirmed gap with focused permission/regression tests. Continue on `growth-engine-v2`, keep work synced to `origin/growth-engine-v2` after successful verification, and do not deploy or create a PR unless the owner separately asks.
+Start by verifying the checked-out state and reading the files listed under **Start here**. Creative-precedent counts now agree at 75 reviewed / 25 unverified; compare `docs/Capabilities.md`, the 410-row audit, and the implementation ledger for other stale claims. Choose a high-impact, bounded runtime gap by evidence and owner impact, trace its complete current flow, and implement only the confirmed gap with focused permission/regression tests. Continue on `growth-engine-v2`, keep work synced to `origin/growth-engine-v2` after successful verification, and do not deploy or create a PR unless the owner separately asks.
 
 ## Prompt to give Claude Code
 
 ```text
 Continue ClimbOS development from the current repository and branch. Read docs/Claude-Code-Handoff.md, AGENTS.md, docs/Capabilities.md, docs/growth-intelligence/MASTER_INDEX.md, docs/growth-engine/improvement-requirement-audit.md, and docs/growth-engine/implementation-ledger.md first. Verify the current git state and preserve every existing change.
 
-Treat the handoff as a status snapshot, not proof of implementation. Audit the actual code before editing. Follow the relevant growth-intelligence reading route and read the current Next.js guide under node_modules/next/dist/docs/ before changing Next.js code. The confirmed 73-versus-74 creative-precedent count in docs/Capabilities.md has been corrected; check for any other stale owner-facing claims against current runtime behavior.
+Treat the handoff as a status snapshot, not proof of implementation. Audit the actual code before editing. Follow the relevant growth-intelligence reading route and read the current Next.js guide under node_modules/next/dist/docs/ before changing Next.js code. Creative-precedent counts currently agree at 75 reviewed and 25 unverified; check for any other stale owner-facing claims against current runtime behavior.
 
 Then continue the remaining ClimbOS work in small, complete, evidence-based increments. Choose the next material gap from the requirement audit and implementation ledger, trace its existing path end to end, and implement only what that audit confirms. Preserve the existing shared engine and original grounded/adjacent/bold strategy capability. Never invent missing business facts or suppress bold ideas because they are novel. Keep unknowns and provenance explicit; use deterministic code for material calculations and authorization. Preserve tenant isolation and exact approval binding for external actions. Do not send, publish, schedule, spend, alter live pricing, deploy, or create a PR.
 
