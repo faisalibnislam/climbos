@@ -813,3 +813,28 @@ git diff --check
 ```
 
 The first full run failed four `tests/convex/plan-history.test.ts` assertions that compare the entire `staleInputs` object; that suite passed with the changes stashed. They were updated to include `cashTiming: false` (their v21 snapshots are correctly not compared). Limitations: the reserve guidance is a prompt instruction and locked text, not a deterministic validator that rejects an over-reserve plan. The fixture LLM cannot show whether a real model follows it, and the cash-view limitations above still apply.
+
+## Resumption note (2026-10-25, deterministic growth-reserve plan check)
+
+This replaces the previous note's prompt-only reserve guidance with a code check. `lintGrowthCashReserve` in `shared/agents/specs.ts` runs inside `lintFeasibility` on the plays draft. It applies owner-confirmed revenue, margin, and churn to the draft economics, selects the portfolio under the owner's existing limits, and computes `growthCashTiming` for that set. If the most-likely low point exceeds the owner-reported reserve, it returns an `error` (`growth_cash_reserve`) naming the set, the low point and week, the reserve, the shortfall, and the payment delay. A computed hint says whether deferring the most cash-heavy selected play would bring the low point within the reserve. A shortfall only at P10 customers is a `warn` asking how spend would be paused or capped. With no reserve, payment delay, price, margin, or churn, nothing is checked. `PlanConstraints.growthCashTiming` is filled by `growthCashReserveConstraint` (shared, unit-tested), called from `constraintsOf` in `convex/jobs.ts`, only when both inputs are reported and the reserve is in the plan currency. `growth_cash_reserve` is now a `HARD_RULES` entry with an owner-facing label: a shortfall that survives revision makes plan quality `failed`, and `canDriveWork` blocks approval and work.
+
+Verified commands:
+
+```text
+pnpm exec vitest run tests/unit/growth-cash-reserve-lint.test.ts
+  1 file passed; 7 tests passed (error with fix hint; "even without" hint; owner economics override draft; P10-only warning; no check on unknown inputs or zero-cost plays; constraint builder currency/inputs; failed quality blocks work while a warning does not)
+
+pnpm exec vitest run <30 files referencing portfolio, plan view/staleness, decidePlan, locked numbers, snapshots, lintFeasibility, quality, and growth cash>
+  30 files passed; 405 tests passed
+
+pnpm typecheck
+  app and Convex TypeScript checks passed
+
+pnpm exec eslint <changed TypeScript files>
+  passed
+
+git diff --check
+  passed
+```
+
+Limitations: fixture plays have zero cash cost, so no engine-level fixture run trips the check, and its effect on live revisions is unmeasured. The pre-existing monthly `growth_cash` limit remains a soft rule (provisional, approvable), so the two cash rules now differ in severity; aligning them is an owner decision. The cash-view limits (no one-time costs, refunds, taxes, existing bills, or later payments) still apply.

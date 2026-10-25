@@ -890,6 +890,18 @@ export function growthCashTimingContext(saved: ReturnType<typeof growthCashTimin
   return `GROWTH CASH TIMING (owner-reported; not a bank balance or verified payment terms): cash set aside to carry growth costs until customer payments arrive ${reserve}; a new customer typically pays ${lag} after being won. Prefer plays and sequencing whose growth costs before customer payments arrive stay within the reserve. Don't assume an unknown value, and don't write your own cash forecast: ClimbOS computes the timing for the selected plays.`;
 }
 
+/** The plan check's reserve constraint: only when both a reserve (usable in `currency`) and a payment delay are reported. */
+export function growthCashReserveConstraint(saved: ReturnType<typeof growthCashTimingInput>, owner: Pick<OwnerEconomics, "revenuePerCustomerMonthUsd" | "grossMargin" | "monthlyChurn"> | null | undefined, currency: string, horizonDays: number): { reserveUsd: number; paymentLagDays: number; horizonDays: number; ownerEconomics?: Pick<OwnerEconomics, "revenuePerCustomerMonthUsd" | "grossMargin" | "monthlyChurn"> } | null {
+  const inputs = growthCashInputsIn(saved, currency);
+  if (inputs.reserveUsd === undefined || inputs.paymentLagDays === undefined) return null;
+  const ownerEconomics = {
+    ...(owner?.revenuePerCustomerMonthUsd !== undefined ? { revenuePerCustomerMonthUsd: owner.revenuePerCustomerMonthUsd } : {}),
+    ...(owner?.grossMargin !== undefined ? { grossMargin: owner.grossMargin } : {}),
+    ...(owner?.monthlyChurn !== undefined ? { monthlyChurn: owner.monthlyChurn } : {}),
+  };
+  return { reserveUsd: inputs.reserveUsd, paymentLagDays: inputs.paymentLagDays, horizonDays, ...(Object.keys(ownerEconomics).length ? { ownerEconomics } : {}) };
+}
+
 /** The computed cash timing as a locked line for the plan writer; empty when there is nothing to report. */
 export function growthCashTimingLine(t: GrowthCashTiming | null, currency?: string): string {
   if (!t) return "";

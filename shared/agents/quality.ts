@@ -17,7 +17,7 @@ import type { Assessment, LintIssue } from "./types";
 export type QualityState = "passed" | "provisional" | "needs_input" | "failed";
 
 /** Lint rules whose failure means the plan must not drive work (REQ-EVAL hard failures). */
-export const HARD_RULES = new Set(["economics", "budget", "capacity", "citation", "provenance", "consistency", "no_plays", "invented_fact", "generic_action", "unsupported_scarcity", "unsupported_deadline"]);
+export const HARD_RULES = new Set(["economics", "budget", "capacity", "citation", "provenance", "consistency", "no_plays", "invented_fact", "generic_action", "unsupported_scarcity", "unsupported_deadline", "growth_cash_reserve"]);
 
 /** One hard finding the owner can act on: what failed and where. */
 export interface QualityFix {
@@ -88,6 +88,7 @@ const LABEL: Record<string, string> = {
   no_plays: "the plan has no plays to run",
   unsupported_scarcity: "a scarcity or inventory claim has no current confirmed evidence",
   unsupported_deadline: "an offer deadline has no current confirmed evidence",
+  growth_cash_reserve: "the selected plays' modeled growth costs run past the cash you set aside before customer payments catch up",
 };
 
 /** Combine the plays and plan agents' results (plus any extra hard lint on the final plan) into one quality state. */

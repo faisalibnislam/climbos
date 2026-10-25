@@ -146,6 +146,10 @@ Plan generation now receives the owner-reported growth cash timing in two forms.
 
 Verified: `pnpm exec vitest run` over 20 related files (211 tests, including the new engine-v2 snapshot/staleness/approval test and prompt-helper unit tests), `pnpm typecheck`, ESLint on changed TypeScript, and `git diff --check`. No live model call was made; the fixture LLM can't show whether a real model respects the reserve.
 
+### Follow-up implementation: deterministic growth-reserve plan check
+
+`lintGrowthCashReserve` (`shared/agents/specs.ts`, called from `lintFeasibility` on the plays draft) selects the portfolio with the owner's limits and recomputes `growthCashTiming` using owner-confirmed revenue, margin, and churn instead of the draft's assumptions. A most-likely low point beyond the reserve is an `error` with a computed hint: whether deferring the most cash-heavy selected play fits. A shortfall only at P10 customers is a `warn`. Unknown reserve, delay, price, margin, or churn means no check. `growth_cash_reserve` is a quality hard rule, so an unresolved shortfall fails plan quality and `canDriveWork` blocks approval. The constraint is built by `growthCashReserveConstraint` only when both inputs are reported and the reserve is in the plan currency. Verified: `tests/unit/growth-cash-reserve-lint.test.ts` (7 tests), 30 related files (405 tests), typecheck, ESLint, and diff check. The fixture plays have no cash cost, so no engine-level run trips the check; its effect on live model revisions is unmeasured.
+
 ### Follow-up work after the first handoff push
 
 - Corrected the 73-versus-74 case-count mismatch in `docs/Capabilities.md`; after CP-075 was added, the runtime library and capability summaries now agree at 75 reviewed / 25 unverified.
@@ -169,7 +173,7 @@ These are known open gaps, not a complete substitute for checking the requiremen
 9. **Documentation drift:** The creative-precedent counts now agree at 75 reviewed / 25 unverified across runtime, `docs/Capabilities.md`, and the creative-strategy summary. Continue checking all owner-facing capability statements against runtime behavior; other copy may still drift.
 10. **Requirement completion:** `docs/growth-engine/improvement-requirement-audit.md` maps 410 numbered items. Its own introduction says most are partially implemented and that the first 350, AEO/GEO items, and specialist requirements are shared/cross-cutting. Do not mark a row complete merely because one path or fixture exists. Update row status only after checking current code and coverage; distinguish shipped, fixture-only, blocked, and unverified behavior.
 11. **Provider setup and production:** This branch is not a deployment. Verify environment variables, provider credentials, permissions, migrations, and account eligibility in an authorized environment before claiming a live integration. Do not deploy or change live business campaigns as part of a code change.
-12. **Cash timing:** Plan generation now receives the owner-reported inputs and a computed locked line, with v22 snapshot staleness; no deterministic validator yet rejects a plan whose selected set exceeds the reserve. One-time setup costs need a play-model field and validator before they can be timed. Real payment timing (for example from Stripe imports) is not used to check the owner's delay.
+12. **Cash timing:** Plan generation receives the owner-reported inputs and a computed locked line, with v22 snapshot staleness, and a hard deterministic check rejects an unresolved most-likely reserve shortfall. Inconsistency to resolve with the owner: the older monthly `growth_cash` limit rule is still soft (provisional, approvable). One-time setup costs need a play-model field and validator before they can be timed. Real payment timing (for example from Stripe imports) is not used to check the owner's delay.
 
 ## Repository guardrails
 

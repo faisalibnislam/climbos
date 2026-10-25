@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
-import { customerValue, lintEconomics, playMaths, portfolioExpectedCustomers, portfolioP50, portfolioRange, selectPortfolio, withForecasts, type Economics, type ForecastUncertainty, type PlayLike, type PlaySensitivity } from "./economics";
+import { applyOwnerEconomics, customerValue, growthCashTiming, lintEconomics, playMaths, portfolioExpectedCustomers, portfolioP50, portfolioRange, selectPortfolio, withForecasts, type Economics, type ForecastUncertainty, type PlayLike, type PlaySensitivity } from "./economics";
 import type { FinancialEvidence } from "./provenance";
 import { PROVENANCE } from "./provenance";
 import { DECISION_CAPS, DecisionSchema, lintDecision, type Decision } from "./decision";
@@ -1224,7 +1224,38 @@ export function lintFeasibility(plays: { name: string; kind: string; model?: { m
     issues.push({ severity: "error", rule: "capacity", message: `The plays need ${Math.round(hours * 10) / 10} owner hours a week; the owner has ${c.ownerHoursPerWeek}. Move work to ClimbOS or drop a play.${fixHint()}`, path: "plays" });
   else if (c.ownerHoursPerWeek === undefined && hours > 10)
     issues.push({ severity: "warn", rule: "capacity", message: `The plays need ${Math.round(hours)} owner hours a week; most owners have under 10. Move work to ClimbOS where you can.`, path: "plays" });
+  issues.push(...lintGrowthCashReserve(plays, c, economics));
   return issues;
+}
+
+/**
+ * The selected set's modeled low point must fit the owner-reported growth reserve (computed with growthCashTiming,
+ * never estimated by the model). Most-likely shortfall is an error; a shortfall only at P10 customers is a warning.
+ * Unknown reserve, payment delay, price, margin or churn: no check rather than an assumed value.
+ */
+export function lintGrowthCashReserve(plays: { name: string; kind: string; model?: { monthlySpendUsd: number; otherMonthlyUsd?: number; ownerHoursPerWeek: number } }[], c: PlanConstraints | undefined, economics?: Economics): LintIssue[] {
+  const g = c?.growthCashTiming;
+  if (!c || !g || !economics) return [];
+  const m = (n: number) => formatMoney(Math.round(n * 100) / 100, c.currency);
+  const e = { ...applyOwnerEconomics(economics, g.ownerEconomics), currency: c.currency };
+  const out = { economics: e, plays: plays as never as PlayLike[] };
+  const pick = selectPortfolio(out, { monthlyBudgetUsd: c.monthlyAdBudgetUsd, monthlyGrowthCashUsd: c.monthlyGrowthCashUsd, ownerHoursPerWeek: c.ownerHoursPerWeek, newCustomersPerMonth: c.newCustomersPerMonth, horizonDays: g.horizonDays });
+  if (!pick?.selected.length) return [];
+  const timing = (selected: string[]) => growthCashTiming(out, selected, { horizonDays: g.horizonDays, reserveUsd: g.reserveUsd, paymentLagDays: g.paymentLagDays });
+  const t = timing(pick.selected);
+  if (!t?.mostLikely || !t.lowCase) return [];
+  const lows = (s: NonNullable<typeof t.mostLikely>) => `a modeled low point of ${m(s.lowestBalanceUsd)} in week ${s.lowestWeek}`;
+  if (t.mostLikely.reserveCovers === false) {
+    // The computed fix: would deferring the most cash-heavy selected play bring the low point within the reserve?
+    const cashOf = (name: string) => { const p = plays.find((x) => x.name === name); return Math.max(0, p?.model?.monthlySpendUsd ?? 0) + Math.max(0, p?.model?.otherMonthlyUsd ?? 0); };
+    const heaviest = [...pick.selected].sort((a, b) => cashOf(b) - cashOf(a))[0];
+    const without = pick.selected.length > 1 && cashOf(heaviest) > 0 ? timing(pick.selected.filter((n) => n !== heaviest)) : null;
+    const hint = without?.mostLikely ? without.mostLikely.reserveCovers ? ` Deferring "${heaviest}" (computed) keeps the low point at ${m(without.mostLikely.lowestBalanceUsd)}, within the reserve.` : ` Even without "${heaviest}" the low point is ${m(without.mostLikely.lowestBalanceUsd)}; cut cash costs or start cash-heavy plays later.` : " Cut cash costs or start cash-heavy plays later.";
+    return [{ severity: "error", rule: "growth_cash_reserve", message: `The selected plays (${pick.selected.join(" + ")}) reach ${lows(t.mostLikely)} at the most-likely rates, before customer payments catch up; the owner-reported growth reserve is ${m(g.reserveUsd)} (short by ${m(t.mostLikely.shortfallUsd ?? 0)}, payment delay ${g.paymentLagDays} days).${hint}`, path: "plays" }];
+  }
+  if (t.lowCase.reserveCovers === false)
+    return [{ severity: "warn", rule: "growth_cash_reserve", message: `At the low end of the customer range (P10), the selected plays reach ${lows(t.lowCase)}, beyond the owner-reported growth reserve of ${m(g.reserveUsd)} by ${m(t.lowCase.shortfallUsd ?? 0)}. Say how the owner would pause or cap spend if customers come in slowly.`, path: "plays" }];
+  return [];
 }
 
 /** The plan's paid channels must fit the budget, and its North Star must be the plays' computed total. */

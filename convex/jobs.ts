@@ -56,7 +56,7 @@ import { formatBusinessKnowledgeLayers } from "../shared/knowledge/layers";
 import { diagnose, diagnosisBrief, funnelRatesOf, type Diagnosis, type OwnerFunnel } from "../shared/agents/diagnosis";
 import { businessLifecycleContext } from "../shared/agents/lifecycle";
 import { choosePlaybooks, playbookBrief, type PlaybookContext } from "../shared/playbooks/contracts";
-import { applyOwnerEconomics, churnOf, forecastCustomers, growthCashInputsIn, growthCashTiming, growthCashTimingContext, growthCashTimingInput, growthCashTimingLine, lockedNumbers, playsGoalGap, portfolioP50, selectPortfolio, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
+import { applyOwnerEconomics, churnOf, forecastCustomers, growthCashInputsIn, growthCashReserveConstraint, growthCashTiming, growthCashTimingContext, growthCashTimingInput, growthCashTimingLine, lockedNumbers, playsGoalGap, portfolioP50, selectPortfolio, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { segmentEconomicsBrief } from "../shared/agents/segmentEconomics";
 import { CREATIVE_STRATEGY_PROMPT_VERSION, planTask, playsTask, type CreativeRange } from "../shared/agents/planTasks";
 import { citedUrls, urlKey, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
@@ -596,9 +596,16 @@ function constraintsOf(job: JobCtx, extra: Partial<PlanConstraints> = {}): PlanC
     ...(job.business?.unitEconomics?.monthlyGrowthCashUsd !== undefined ? { monthlyGrowthCashUsd: job.business.unitEconomics.monthlyGrowthCashUsd } : {}),
     ...(job.audience ? { emailAudience: job.audience.consented } : {}),
     ...(job.business?.unitEconomics?.newCustomersPerMonth !== undefined ? { newCustomersPerMonth: job.business.unitEconomics.newCustomersPerMonth } : {}),
+    ...growthCashConstraint(job),
     factKinds: job.facts.map((f) => f.evidenceKind),
     ...extra,
   };
+}
+
+/** The reserve check runs only when the owner reported both a reserve (in this currency) and a payment delay. */
+function growthCashConstraint(job: JobCtx): Pick<PlanConstraints, "growthCashTiming"> {
+  const g = growthCashReserveConstraint(growthCashTimingInput(job.business?.growthCashTiming), job.business?.unitEconomics, workspaceCurrency(job), job.goal?.horizonDays ?? 90);
+  return g ? { growthCashTiming: g } : {};
 }
 
 /** Inputs the plan worked without, shown to the owner (the plan is bounded instead of assuming them). */

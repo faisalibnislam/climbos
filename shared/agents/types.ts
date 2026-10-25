@@ -5,6 +5,7 @@ import type { Effort, Source } from "../ai/types";
 import type { ModelKey } from "../economics/rates";
 import type { RoleKey } from "../economics/roles";
 import type { KnowledgeReferenceSet } from "../knowledge/retrieve";
+import type { OwnerEconomics } from "./economics";
 
 /** A scoring rubric an expert would use, with hard gates that override the score. */
 export interface Rubric {
@@ -126,6 +127,11 @@ export interface PlanConstraints {
   monthlyAdBudgetUsd?: number;
   /** Owner-confirmed monthly cash available for growth work, including media and other cash costs (excludes owner time). */
   monthlyGrowthCashUsd?: number;
+  /**
+   * Owner-reported growth cash timing for the selected set's reserve check (lintFeasibility); set only when both values are
+   * known and usable in `currency`. Owner unit economics replace the draft's assumptions in that check.
+   */
+  growthCashTiming?: { reserveUsd: number; paymentLagDays: number; horizonDays: number; ownerEconomics?: Pick<OwnerEconomics, "revenuePerCustomerMonthUsd" | "grossMargin" | "monthlyChurn"> };
   /** Workspace currency (ISO code) for every amount here; absent means USD. */
   currency?: string;
   /** Hours a week the owner can give growth work (when they said). */
