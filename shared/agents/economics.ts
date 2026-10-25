@@ -669,6 +669,11 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
     if (!cols) return combinePlays(idx.map((i) => ms[i].headline.p50), idx.map((i) => stages[i]));
     return expectedCombinedDraws(cols, idx, stages);
   };
+  const capacityP90 = (idx: number[]) => {
+    if (!cols) return combinePlays(idx.map((i) => ms[i].headline.p90), idx.map((i) => stages[i]));
+    const totals = Array.from({ length: RUNS }, (_, draw) => combinePlays(idx.map((i) => cols[i][draw]), idx.map((i) => stages[i]))).sort((a, b) => a - b);
+    return Math.max(combinePlays(idx.map((i) => ms[i].headline.p50), idx.map((i) => stages[i])), quantile(totals, 0.9));
+  };
   type Opt = { idx: number[]; customers: number; expectedCustomers: number; spend: number; cashSpend: number; hours: number; net: number | null; cost: number };
   const opts: Opt[] = [];
   for (let mask = 1; mask < 1 << ps.length; mask++) {
@@ -678,11 +683,12 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
     const cashSpend = idx.reduce((s, i) => s + Math.max(0, ps[i].model.monthlySpendUsd) + Math.max(0, ps[i].model.otherMonthlyUsd ?? 0), 0);
     const hours = idx.reduce((s, i) => s + Math.max(0, ps[i].model.ownerHoursPerWeek), 0);
     const customers = combinePlays(idx.map((i) => ms[i].headline.p50), idx.map((i) => stages[i]));
+    const capacityCustomers = capacityP90(idx);
     const cost = idx.reduce((s, i) => s + ms[i].costUsd, 0);
     if (limits.monthlyBudgetUsd !== undefined && spend > limits.monthlyBudgetUsd * 1.001) continue;
     if (limits.monthlyGrowthCashUsd !== undefined && cashSpend > limits.monthlyGrowthCashUsd * 1.001) continue;
     if (limits.ownerHoursPerWeek !== undefined && hours > limits.ownerHoursPerWeek + 0.01) continue;
-    if (capLimit !== undefined && customers > capLimit * 1.001) continue;
+    if (capLimit !== undefined && capacityCustomers > capLimit * 1.001) continue;
     const expectedCustomers = expected(idx);
     opts.push({ idx, customers, expectedCustomers, spend, cashSpend, hours, cost, net: value === null ? null : expectedCustomers * value - cost });
   }
@@ -690,7 +696,7 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
   opts.sort((a, b) => score(b) - score(a) || a.cost - b.cost || a.idx.length - b.idx.length);
   // Doing nothing new is always an option: a set whose expected contribution is below its cost loses to it (Hubbard Ch 14; Kochenderfer Ch 6).
   const best = opts[0] && (opts[0].net === null || opts[0].net >= 0) ? opts[0] : undefined;
-  const leftWhy = (i: number) => (losers.has(i) ? ms[i].financialEvidence.status === "checked_inputs" ? "loses money at its most-likely rates" : "does not pay back under its current scenario inputs" : limits.monthlyGrowthCashUsd !== undefined && Math.max(0, ps[i].model.monthlySpendUsd) + Math.max(0, ps[i].model.otherMonthlyUsd ?? 0) > limits.monthlyGrowthCashUsd * 1.001 ? "exceeds the owner's monthly growth-cash limit" : "doesn't fit with the others under one or more cash, ad budget, owner time or service capacity limits");
+  const leftWhy = (i: number) => (losers.has(i) ? ms[i].financialEvidence.status === "checked_inputs" ? "loses money at its most-likely rates" : "does not pay back under its current scenario inputs" : capLimit !== undefined && capacityP90([i]) > capLimit * 1.001 ? "exceeds the owner's delivery limit in the P90 customer scenario" : limits.monthlyGrowthCashUsd !== undefined && Math.max(0, ps[i].model.monthlySpendUsd) + Math.max(0, ps[i].model.otherMonthlyUsd ?? 0) > limits.monthlyGrowthCashUsd * 1.001 ? "exceeds the owner's monthly growth-cash limit" : "doesn't fit with the others under one or more cash, ad budget, owner time or service capacity limits");
   const all = ps.map((_, i) => i);
   if (!best)
     return {

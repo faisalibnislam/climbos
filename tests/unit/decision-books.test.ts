@@ -102,6 +102,16 @@ describe("acceptance cases (owner prompt §7)", () => {
     expect(issues.map((i) => i.message).join(" ")).toMatch(/Best set that fits \(computed\)/);
   });
 
+  it("keeps a high-variance play out when its P90 customer scenario exceeds confirmed delivery capacity", () => {
+    const volatile = play("Volatile demand", { weeklyReach: 100, steps: [{ name: "paid", rate: 0.005, low: 0.001, high: 0.1 }], monthlySpendUsd: 0, ownerHoursPerWeek: 0 }, "bankable", 30);
+    const steady = play("Steady demand", { weeklyReach: 10, steps: [{ name: "paid", rate: 0.1 }], monthlySpendUsd: 0, ownerHoursPerWeek: 0 }, "bankable", 30);
+    expect(portfolioRange({ economics: econ, plays: [volatile] }, 30).p50).toBeLessThan(5);
+    expect(portfolioRange({ economics: econ, plays: [volatile] }, 30).p90).toBeGreaterThan(5);
+    const choice = selectPortfolio({ economics: econ, plays: [volatile, steady] }, { newCustomersPerMonth: 5, horizonDays: 30 })!;
+    expect(choice.selected).toEqual(["Steady demand"]);
+    expect(choice.left).toContainEqual({ name: "Volatile demand", why: "exceeds the owner's delivery limit in the P90 customer scenario" });
+  });
+
   it("8. relabelling activation without outcome evidence doesn't manufacture uplift", () => {
     const setup = diagnose({ funnel: { leads: 100, activated: 60, newCustomers: 3, activationKind: "setup" }, types: ["b2b_saas"] });
     expect(setup.basis).toBe("partial");
