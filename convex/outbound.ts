@@ -10,6 +10,8 @@ import { can, sha256Hex } from "../shared/policy";
 import { DEFAULT_BOOKING, bookingSlug, domainOf, fixtureOutbound, openSlots, prospectScore, type BookingRules } from "../shared/outbound";
 import { citedCreatorCompetitorCollaborations, citedCreatorContentSamples, citedCreatorFact, creatorIdentity, creatorMetricAnomalies } from "../shared/growth/targets";
 import { expertPlaysOf } from "../shared/agents/planCompatibility";
+import { approvedPlanOfferTerms } from "../shared/agents/approvedPlanContext";
+import { lintApprovedOfferCopy } from "../shared/agents/offerAssessment";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
@@ -185,6 +187,16 @@ export async function startCampaign(
   p: { org: Doc<"organizations">; userId: Id<"users">; brief: { who: string; where: string; count: number }; auto: boolean; cardId?: Id<"actionCards">; kind?: "customers" | "creators"; customAgentId?: Id<"customAgents">; customAgentParentRunId?: Id<"workflowRuns">; agentArchetypeId?: string; play?: { strategyId: Id<"strategies">; playId: string; name: string } },
 ): Promise<Id<"outboundCampaigns">> {
   const { org, brief } = p;
+  let approvedOfferTermsSnapshot: ReturnType<typeof approvedPlanOfferTerms> = [];
+  let approvedOfferPlayName: string | undefined;
+  if (p.play) {
+    const strategy = assertSameOrg(await ctx.db.get(p.play.strategyId), org._id, "plan");
+    if (strategy.status !== "approved") throw appError("INVALID", "Approve the growth plan again before starting this play.");
+    const selectedPlay = (expertPlaysOf(strategy.expert) as { id?: string; name?: string }[]).find((play) => play.id === p.play!.playId);
+    if (!selectedPlay || selectedPlay.name !== p.play.name) throw appError("INVALID", "This play changed in the growth plan. Refresh the plan and try again.");
+    approvedOfferPlayName = selectedPlay.name;
+    approvedOfferTermsSnapshot = approvedPlanOfferTerms(strategy as never).filter((term) => term.playName === approvedOfferPlayName);
+  }
   const busy = await ctx.db
     .query("outboundCampaigns")
     .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
@@ -206,6 +218,8 @@ export async function startCampaign(
     title: p.play ? `Targets: ${p.play.name}`.slice(0, 120) : brief.who ? `Find: ${brief.who}` : creators ? "Find creators" : "Find customers",
     ...(creators ? { kind: "creators" as const } : {}),
     ...(p.play ? { strategyId: p.play.strategyId, playId: p.play.playId } : {}),
+    ...(approvedOfferPlayName ? { approvedOfferPlayName } : {}),
+    ...(approvedOfferTermsSnapshot.length ? { approvedOfferTermsSnapshot } : {}),
     brief,
     status: "researching",
     sequence: [],
@@ -419,6 +433,8 @@ export const updateStep = mutation({
     const { org } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
     const c = assertSameOrg(await ctx.db.get(a.campaignId), org._id, "campaign");
     if (!c.sequence[a.index]) throw appError("NOT_FOUND", "We couldn't find that email.");
+    const offerIssue = lintApprovedOfferCopy(`${a.subject}\n${a.body.replace(/\{\{firstLine\}\}/g, "")}`, c.approvedOfferTermsSnapshot, `sequence[${a.index}]`, c.approvedOfferPlayName).find((issue) => issue.severity === "error");
+    if (offerIssue) throw appError("INVALID", offerIssue.message);
     const sequence = c.sequence.map((s, i) => (i === a.index ? { ...s, subject: a.subject.trim().slice(0, 120), body: a.body.trim().slice(0, 2000) } : s));
     await ctx.db.patch(c._id, { sequence, updatedAt: Date.now() });
   },
@@ -612,7 +628,7 @@ export const campaignContext = internalQuery({
         return { creator: prospect.company, profile: prospect.website, campaignId: report.campaignId, status: report.status, strategyId: report.strategyId ?? null, playId: report.playId ?? null, format: report.format ?? null, agreedValueMinor: report.agreedValueMinor ?? null, actualCostMinor: report.actualCostMinor ?? null, currency: report.currency ?? null, publishedUrl: report.publishedUrl ?? null, metric: report.metric ?? null, note: report.note ?? null, basis: report.basis, reportedAt: report.createdAt };
       }))
       : [];
-    return { brief: c.brief, kind, knownDomains: [...new Set(existing.map((p) => p.domain))].slice(0, 200), collaborationHistory: collaborationHistory.filter((item): item is NonNullable<typeof item> => Boolean(item)) };
+    return { brief: c.brief, kind, knownDomains: [...new Set(existing.map((p) => p.domain))].slice(0, 200), collaborationHistory: collaborationHistory.filter((item): item is NonNullable<typeof item> => Boolean(item)), approvedOfferPlayName: c.approvedOfferPlayName, approvedOfferTerms: c.approvedOfferTermsSnapshot };
   },
 });
 
@@ -638,6 +654,9 @@ export const saveResult = internalMutation({
     if (!c) return;
     const found = a.prospects as ProspectsOutput;
     const outreach = a.outreach as OutreachOutput;
+    const offerIssues = outreach.sequence.flatMap((step, index) => lintApprovedOfferCopy(`${step.subject}\n${step.body.replace(/\{\{firstLine\}\}/g, "")}`, c.approvedOfferTermsSnapshot, `sequence[${index}]`, c.approvedOfferPlayName));
+    const offerError = offerIssues.find((issue) => issue.severity === "error");
+    if (offerError) throw appError("INVALID", offerError.message);
     const now = Date.now();
     const lines = new Map(outreach.firstLines.map((f) => [f.company.trim().toLowerCase(), f]));
     const seen = new Set<string>();

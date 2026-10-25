@@ -268,6 +268,9 @@ export function lintApprovedOfferCopy(text: string, offers: ApprovedOfferCopyTer
   if (applicableOffers.some((offer) => offer.recommendation === "validate_first") && PROMOTION_WORDS.test(text)) {
     issues.push({ severity: "error", rule: "offer_validation_only", message: "This promotion is only a test proposal, not an offer available to customers. Remove customer-facing promotion terms until the test is validated and the offer is approved.", path });
   }
+  if (applicableOffers.some((offer) => offer.recommendation !== "recommend_promotion" && offer.recommendation !== "validate_first") && PROMOTION_WORDS.test(text)) {
+    issues.push({ severity: "error", rule: "offer_not_recommended", message: "The selected plan play does not recommend changing the offer. Remove customer-facing promotion terms or review the plan with its owner first.", path });
+  }
   const priceIssues = lintApprovedOfferPrices(text, applicableOffers, path);
   issues.push(...priceIssues);
   if (!applicableOffers.length) return issues;

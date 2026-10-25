@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { approvedPlanContext, approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
 import { evaluateOfferUnitEconomics, lintApprovedOfferCopy, lintOfferAssessment, type OfferAssessment } from "../../shared/agents/offerAssessment";
 import { OFFER_DECISION_POLICY, playsTask } from "../../shared/agents/planTasks";
-import { adsSpec, emailSpec, socialCalendarSpec, socialSpec } from "../../shared/agents/specs";
+import { adsSpec, emailSpec, outreachSpec, socialCalendarSpec, socialSpec } from "../../shared/agents/specs";
 import { offerAlternativeLabel, offerCapacityLabel, offerEvidenceLabel, offerEvidenceStatusLabel, offerMechanismLabel, offerRecommendationLabel, offerReferenceLabel, offerRiskLabel } from "../../src/components/app/plan/offerPresentation";
 import { OfferAssessmentPanel } from "../../src/components/app/plan/OfferAssessmentPanel";
 
@@ -218,6 +218,8 @@ describe("offer and promotion recommendations", () => {
     expect(terms).toEqual([{ playName: "Test offer", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [100, 95], allowedDiscountPercentages: [5], allowedMechanisms: ["discount"], urgencyClaim: null, eligibleAudience: "First-time quote requesters who cite price; exclude existing full-price bookings." }]);
     expect(lintApprovedOfferCopy("Try it for $95 USD.", terms, "email.body")).toEqual([]);
     expect(lintApprovedOfferCopy("Try it for $89 USD.", terms, "email.body")).toMatchObject([{ rule: "approved_offer_price", severity: "error" }]);
+    const noOfferTerms = approvedPlanOfferTerms({ status: "approved", version: 3, expert: { version: 7, plays: [{ name: "Fix onboarding", offerAssessment: assessment({ recommendation: "improve_other_constraint", mechanism: "none" }) }] } });
+    expect(lintApprovedOfferCopy("Special offer: save 10% this week.", noOfferTerms, "email.body", "Fix onboarding")).toMatchObject([{ rule: "offer_not_recommended", severity: "error" }]);
     const twoOffers = [...terms, { playName: "Annual service", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [200], urgencyClaim: null, eligibleAudience: null }];
     expect(lintApprovedOfferCopy("A helpful note about preparing for a service visit.", twoOffers, "email.body")).toEqual([]);
     expect(lintApprovedOfferCopy("The offer is $95 USD.", twoOffers, "email.body")).toMatchObject([{ rule: "approved_offer_play", severity: "error" }]);
@@ -276,5 +278,24 @@ describe("offer and promotion recommendations", () => {
     expect(socialSpec(["instagram"]).lint?.(postBoundToSecondOffer, multipleOfferInput).some((issue) => issue.rule === "approved_offer_play" || issue.rule === "approved_offer_price")).toBe(false);
     const postBoundToWrongOffer = { ...postBoundToSecondOffer, posts: [{ ...postBoundToSecondOffer.posts[0], approvedOfferPlayName: "Test offer" }] };
     expect(socialSpec(["instagram"]).lint?.(postBoundToWrongOffer, multipleOfferInput).some((issue) => issue.rule === "approved_offer_price")).toBe(true);
+  });
+
+  it("checks cold outreach against the selected approved offer terms", () => {
+    const terms = approvedPlanOfferTerms({ status: "approved", version: 2, expert: { version: 7, plays: [{ name: "Test offer", offerAssessment: assessment() }] } });
+    const output = {
+      approvedOfferPlayName: "Test offer",
+      sequence: [
+        { day: 0, subject: "A question", body: "{{firstLine}}\nFirst-time quote requesters can try the service for $95 USD.", purpose: "Introduce the service" },
+        { day: 3, subject: "Following up", body: "A short note for first-time quote requesters about the service.", purpose: "Follow up" },
+      ],
+      firstLines: [{ company: "Example Co", line: "Your recent service launch caught my eye." }],
+      ownerNotes: [],
+    };
+    const input = { task: "Write outreach", brief: "", facts: [], approvedOfferTerms: terms };
+    expect(outreachSpec().lint?.(output, input)).not.toContainEqual(expect.objectContaining({ rule: "approved_offer_price", severity: "error" }));
+    const unsupported = { ...output, sequence: output.sequence.map((step, i) => i ? step : { ...step, body: step.body.replace("$95", "$89") }) };
+    expect(outreachSpec().lint?.(unsupported, input)).toContainEqual(expect.objectContaining({ rule: "approved_offer_price", severity: "error" }));
+    const wrongPlay = { ...output, approvedOfferPlayName: "Missing play" };
+    expect(outreachSpec().lint?.(wrongPlay, input)).toContainEqual(expect.objectContaining({ rule: "approved_offer_play", severity: "error" }));
   });
 });

@@ -99,6 +99,8 @@ export interface AgentInput {
   timingContext?: { today: string; timezone: string; geography?: string };
   /** Exact approved offer prices allowed in copy for this tenant's active plan. */
   approvedOfferTerms?: { playName: string; recommendation: string; currency: string; allowedPrices: number[]; allowedDiscountPercentages?: number[]; allowedMechanisms?: string[]; urgencyClaim: string | null; eligibleAudience: string | null }[];
+  /** Exact play selected when a campaign is launched from a growth plan. */
+  approvedOfferPlayName?: string;
   /** Exact pages read by the application for this run; internal input for source-reference validation. */
   availableSourceUrls?: string[];
   /** Exact first-party page titles/headings observed by this run; lints only, not extra prompt evidence. */

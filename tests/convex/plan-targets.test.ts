@@ -11,7 +11,7 @@ import { asNewUser, makePaid, setup, type T } from "./helpers";
  * and contacted targets are never counted as contactable; no flag, no change.
  */
 
-const creatorPlay = { id: "pl_creators1", name: "Studio creator demos", oneLiner: "Creators show a class", kind: "creative", audience: "Yoga creators in the UK with studio followings", mechanic: "Gifted class for a tutorial", climbosCanDo: "Creator finder drafts pitches", hook: "Film a class with us", p10: 1, p50: 3, p90: 6, horizonDays: 90 };
+const creatorPlay = { id: "pl_creators1", name: "Studio creator demos", oneLiner: "Creators show a class", kind: "creative", audience: "Yoga creators in the UK with studio followings", mechanic: "Gifted class for a tutorial", climbosCanDo: "Creator finder drafts pitches", hook: "Film a class with us", p10: 1, p50: 3, p90: 6, horizonDays: 90, offerAssessment: { recommendation: "recommend_promotion", mechanism: "discount", currency: "USD", current: { netPrice: { amount: 100 } }, proposed: { netPrice: { amount: 90 } }, urgencyClaim: null, test: { eligibleAudience: "First-time studio customers only" } } };
 const seoPlay = { id: "pl_seo1", name: "Comparison pages", oneLiner: "Vs pages", kind: "bankable", audience: "Buyers comparing tools", mechanic: "Write comparison pages", climbosCanDo: "Drafts the pages", hook: "h", p10: 1, p50: 2, p90: 3, horizonDays: 90 };
 
 async function workspace(t: T, email: string, flags: string[] = ["plan_targets"]) {
@@ -71,6 +71,7 @@ describe("plan targets (flagged)", () => {
     let view = await w.client.query(api.targets.forStrategy, { slug: w.slug, strategyId: w.strategyId });
     expect(Object.keys(view!)).toEqual(["pl_creators1"]); // the SEO play needs no search
     expect(view!.pl_creators1).toMatchObject({ state: "researching", campaignId: campaign._id });
+    expect(campaign).toMatchObject({ approvedOfferPlayName: creatorPlay.name, approvedOfferTermsSnapshot: [{ playName: creatorPlay.name, recommendation: "recommend_promotion", currency: "USD", allowedPrices: [100, 90], allowedMechanisms: ["discount"], eligibleAudience: "First-time studio customers only" }] });
 
     // The search returns: Ana again (URL variant), two new creators on the same platform, Ben who opted out, and a duplicate row.
     await t.mutation(internal.outbound.saveResult, {

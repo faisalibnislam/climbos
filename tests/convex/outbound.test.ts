@@ -73,6 +73,39 @@ describe("outbound", () => {
     expect(prospect?.replyDisposition).toBe("qualified");
   });
 
+  it("blocks cold-email edits that drift from the campaign's frozen offer terms", async () => {
+    const t = setup();
+    const w = await workspace(t, "ob-offer-terms@example.com");
+    await w.client.mutation(api.outbound.start, { slug: w.slug, who: "Agencies that build Webflow sites", where: "UK", count: 10 });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    const view = await w.client.query(api.outbound.get, { slug: w.slug });
+    const campaignId = view.campaign!.id as Id<"outboundCampaigns">;
+    await t.run(async (ctx) => ctx.db.patch(campaignId, {
+      approvedOfferPlayName: "First-time service offer",
+      approvedOfferTermsSnapshot: [{ playName: "First-time service offer", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [100, 95], allowedDiscountPercentages: [5], allowedMechanisms: ["discount"], urgencyClaim: null, eligibleAudience: "First-time quote requesters only; exclude existing customers." }],
+    }));
+
+    await expect(w.client.mutation(api.outbound.updateStep, {
+      slug: w.slug, campaignId, index: 0, subject: "A service option", body: "For first-time quote requesters only, the service costs $89 USD.",
+    })).rejects.toThrow(/approved|offer|price/i);
+    await w.client.mutation(api.outbound.updateStep, {
+      slug: w.slug, campaignId, index: 0, subject: "A service option", body: "For first-time quote requesters only, the service costs $95 USD.",
+    });
+    const saved = await w.client.query(api.outbound.get, { slug: w.slug, campaignId });
+    expect(saved.campaign?.sequence[0].body).toContain("$95 USD");
+    await makePaid(t, w.orgId);
+    await t.run(async (ctx) => {
+      const campaign = (await ctx.db.get(campaignId))!;
+      await ctx.db.patch(campaignId, { sequence: campaign.sequence.map((step, index) => index ? step : { ...step, body: "For first-time quote requesters only, the service costs $89 USD." }) });
+    });
+    await expect(w.client.mutation(api.outboundSending.start, {
+      slug: w.slug, campaignId, senderName: "Sam", company: "Wire Co", address: "1 High Street, London E1 1AA",
+    })).rejects.toThrow(/approved|offer|price/i);
+    const campaign = await t.run(async (ctx) => ctx.db.get(campaignId));
+    expect(campaign?.sending).toBeUndefined();
+    expect(await t.run(async (ctx) => ctx.db.query("outboundSends").withIndex("by_campaign", (q) => q.eq("campaignId", campaignId)).collect())).toHaveLength(0);
+  });
+
   it("starts from a wish and links the card to the campaign", async () => {
     const t = setup();
     const u = await asNewUser(t, "ob-wish@example.com", { anonymous: true });

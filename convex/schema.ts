@@ -1628,6 +1628,18 @@ export default defineSchema({
     /** plan_targets (S6, REQ-TARGET-01/04): the plan and the play (stable ID) this search finds targets for. */
     strategyId: v.optional(v.id("strategies")),
     playId: v.optional(v.string()),
+    /** Frozen offer-copy rules from the exact approved plan play that launched this campaign. */
+    approvedOfferPlayName: v.optional(v.string()),
+    approvedOfferTermsSnapshot: v.optional(v.array(v.object({
+      playName: v.string(),
+      recommendation: v.string(),
+      currency: v.string(),
+      allowedPrices: v.array(v.number()),
+      allowedDiscountPercentages: v.optional(v.array(v.number())),
+      allowedMechanisms: v.optional(v.array(v.string())),
+      urgencyClaim: v.union(v.string(), v.null()),
+      eligibleAudience: v.union(v.string(), v.null()),
+    }))),
     /** Owner's optional steer: who, where, how many. */
     brief: v.object({ who: v.string(), where: v.string(), count: v.number() }),
     status: v.union(

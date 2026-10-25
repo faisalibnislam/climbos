@@ -2781,6 +2781,8 @@ export const ProspectsOutputSchema = z.object({
 export type ProspectsOutput = z.infer<typeof ProspectsOutputSchema>;
 
 export const OutreachOutputSchema = z.object({
+  /** Exact approved plan play this sequence follows, when the campaign was launched from a play. */
+  approvedOfferPlayName: z.string().min(1).max(120).optional(),
   sequence: z.array(
     z.object({
       /** Business days after the first email (0, 3, 7, 14). */
@@ -2818,6 +2820,13 @@ function lintProspects(out: ProspectsOutput, input: AgentInput): LintIssue[] {
 
 function lintOutreach(out: OutreachOutput, input: AgentInput): LintIssue[] {
   const issues: LintIssue[] = lintCopy({ sequence: out.sequence.map((s) => ({ subject: s.subject, body: s.body.replace(/\{\{firstLine\}\}/g, "") })), firstLines: out.firstLines.map((f) => f.line) }, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), publishable: true });
+  const offerPlayName = input.approvedOfferPlayName ?? out.approvedOfferPlayName;
+  for (const [index, step] of out.sequence.entries()) {
+    issues.push(...lintApprovedOfferCopy(`${step.subject}\n${step.body.replace(/\{\{firstLine\}\}/g, "")}`, input.approvedOfferTerms, `sequence[${index}]`, offerPlayName));
+  }
+  if (input.approvedOfferPlayName && out.approvedOfferPlayName && input.approvedOfferPlayName !== out.approvedOfferPlayName) {
+    issues.push({ severity: "error", rule: "approved_offer_play", message: "Use the exact play selected for this campaign.", path: "approvedOfferPlayName" });
+  }
   if (out.sequence.length < 2 || out.sequence.length > 5) issues.push({ severity: "error", rule: "count", message: "Write 2-5 steps.", path: "sequence" });
   out.sequence.forEach((s, i) => {
     const words = s.body.replace(/\{\{firstLine\}\}/g, "").split(/\s+/).filter(Boolean).length;

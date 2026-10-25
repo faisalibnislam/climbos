@@ -3,6 +3,7 @@ import { syncDealFromProspect } from "./crm";
 import { emitEvent } from "./webhooks";
 import { assignSubject, recordExposure, recordOutcome, subjectAssignment, variantForSubject } from "./abtests";
 import { can, sha256Hex } from "../shared/policy";
+import { lintApprovedOfferCopy } from "../shared/agents/offerAssessment";
 import { bookingLinkFor, composeEmail, dailyCap, followUpAt, inSendWindow, localDayKey, nextSendWindow, sendMessageId, sendOpKey, sendPayloadHash, SPACING_MINUTES, unsubscribeToken, verifyUnsubscribeToken } from "../shared/outbound/sending";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -155,8 +156,8 @@ export const status = query({
 });
 
 /** What the owner approves when sending starts: every email in the sequence and the sender details. */
-export async function sendingHash(c: Pick<Doc<"outboundCampaigns">, "sequence">, sender: { senderName: string; company: string; address: string; bookingUrl?: string }): Promise<string> {
-  return sha256Hex(JSON.stringify({ sequence: c.sequence.map((s) => ({ day: s.day, subject: s.subject, body: s.body })), sender: [sender.senderName, sender.company, sender.address, sender.bookingUrl ?? ""] }));
+export async function sendingHash(c: Pick<Doc<"outboundCampaigns">, "sequence" | "approvedOfferPlayName" | "approvedOfferTermsSnapshot">, sender: { senderName: string; company: string; address: string; bookingUrl?: string }): Promise<string> {
+  return sha256Hex(JSON.stringify({ sequence: c.sequence.map((s) => ({ day: s.day, subject: s.subject, body: s.body })), offerPlayName: c.approvedOfferPlayName ?? null, offerTerms: c.approvedOfferTermsSnapshot ?? null, sender: [sender.senderName, sender.company, sender.address, sender.bookingUrl ?? ""] }));
 }
 
 /** Start sending to the approved prospects that publish an email. The owner confirms the sender details first. */
@@ -168,6 +169,8 @@ export const start = mutation({
     await requirePaid(ctx, org, "sending");
     const c = assertSameOrg(await ctx.db.get(a.campaignId), org._id, "campaign");
     if (!c.sequence.length) throw appError("INVALID", "This campaign has no emails yet.");
+    const offerIssue = c.sequence.flatMap((step, index) => lintApprovedOfferCopy(`${step.subject}\n${step.body.replace(/\{\{firstLine\}\}/g, "")}`, c.approvedOfferTermsSnapshot, `sequence[${index}]`, c.approvedOfferPlayName)).find((issue) => issue.severity === "error");
+    if (offerIssue) throw appError("INVALID", offerIssue.message);
     const mailbox = await mailboxOf(ctx, org._id);
     if (mailbox?.status !== "connected") throw appError("INVALID", "Connect your mailbox first (Connections → Your mailbox).");
     if (a.address.trim().length < 8) throw appError("INVALID", "Add your business's postal address. The law requires it in cold emails.");
