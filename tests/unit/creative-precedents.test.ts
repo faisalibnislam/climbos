@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(61);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(62);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -490,6 +490,21 @@ describe("creative strategy precedent retrieval", () => {
 
   it("does not retrieve a case from geography or sector overlap without a mechanism match", () => {
     expect(retrieveCreativePrecedents({ task: "Compare retail businesses in the United States", brief: "Outdoor retail, local retail stores.", facts: [], constraints: { serviceArea: "United States" } })).toEqual([]);
+  });
+
+  it("retrieves a capacity-risk promotion case and separates aggregate profit from local service harm", () => {
+    const query = "Turn a Pay Your Age birthday promotion from one overloaded event into an eligibility-bound offer with redemptions spread across several weeks and local appointment slots capped by staffing, queue, and safety capacity";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-062");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("profitable demand in aggregate");
+    expect(match?.precedent.outcome).toContain("210-basis-point decline");
+    expect(match?.precedent.causalLimit).toContain("event's standalone contribution");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://ir.buildabear.com/news-releases/news-release-details/everybody-come-build-bear-workshop-announces-pay-your-age-day", sourceRole: "company_primary", claimRole: "action" }),
+      expect.objectContaining({ url: "https://abcnews.com/amp/US/build-bear-closes-lines-nationwide-safety-concerns-pay/story?id=56546711", sourceRole: "independent_secondary" }),
+      expect.objectContaining({ url: "https://ir.buildabear.com/node/16491/pdf", claimRole: "outcome" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Assess a customer promotion", query)).toContain("CP-062");
   });
 
   it("injects bounded precedents into every production growth-plays run", () => {
