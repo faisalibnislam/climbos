@@ -49,6 +49,17 @@ export const BusinessProfileSchema = z.object({
 });
 export type BusinessProfile = z.infer<typeof BusinessProfileSchema>;
 
+/** One-page preview adds a source-quoted, explicitly preliminary observation. */
+export const PreviewSnapshotSchema = BusinessProfileSchema.extend({
+  initialFinding: z.object({
+    observation: z.string().max(240),
+    evidenceQuote: z.string().max(300),
+    whyItMayMatter: z.string().max(300),
+    firstStep: z.string().max(200),
+  }).nullable(),
+});
+export type PreviewSnapshot = z.infer<typeof PreviewSnapshotSchema>;
+
 export const PreviewIdeasSchema = z.object({
   ideas: z.array(
     z.object({

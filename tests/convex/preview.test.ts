@@ -53,11 +53,22 @@ describe("public website preview claiming", () => {
       stepKey: "understanding",
       stepStatus: "done",
       business: { name: "Example", summary: "A page summary", audience: "Page visitors", category: "services" },
+      initialFinding: {
+        observation: "The page explains the process before the customer outcome.",
+        evidenceQuote: "We guide you through each step of our process.",
+        whyItMayMatter: "A visitor may need the customer result before the process details.",
+        firstStep: "Ask one recent customer what they expected to achieve.",
+        sourceUrl: "https://example.com/",
+      },
       firstValueReady: true,
     } });
     const first = await t.query(api.preview.get, { token: "timing-preview-token" });
     expect(first?.firstValueMs).toBeGreaterThanOrEqual(15_000);
     expect(first?.completedMs).toBeNull();
+    expect(first?.initialFinding).toMatchObject({
+      evidenceQuote: "We guide you through each step of our process.",
+      sourceUrl: "https://example.com/",
+    });
 
     await t.mutation(internal.preview.update, { token: "timing-preview-token", patch: {
       status: "done",

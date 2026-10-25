@@ -14,6 +14,7 @@ import { SocialIcon, type SocialNetwork } from "@/components/ui/social-icon";
 import { StepList, type StepItem } from "@/components/ui/stepper";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { PreviewOpportunity } from "./PreviewOpportunity";
 import { normalizeWebsite } from "./website";
 
 const GOALS = ["More customers", "More sales", "More reach", "Something else"] as const;
@@ -404,6 +405,10 @@ function PreviewPanel({ token, website, onReset }: { token: string; website: str
                 </div>
               </dl>
             </div>
+          ) : null}
+
+          {data.initialFinding ? (
+            <PreviewOpportunity finding={data.initialFinding} />
           ) : null}
 
           {data.facts.length > 0 ? (

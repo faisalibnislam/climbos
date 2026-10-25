@@ -5227,6 +5227,13 @@ export default defineSchema({
         category: v.string(),
       }),
     ),
+    initialFinding: v.optional(v.object({
+      observation: v.string(),
+      evidenceQuote: v.string(),
+      whyItMayMatter: v.string(),
+      firstStep: v.string(),
+      sourceUrl: v.string(),
+    })),
     facts: v.array(
       v.object({
         statement: v.string(),

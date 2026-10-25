@@ -117,6 +117,7 @@ export const get = query({
       goal: p.goal,
       steps: p.steps,
       business: p.business ?? null,
+      initialFinding: p.initialFinding ?? null,
       facts: p.facts,
       ideas: p.ideas,
       error: p.error ?? null,
@@ -173,6 +174,13 @@ export const update = internalMutation({
       business: v.optional(
         v.object({ name: v.string(), summary: v.string(), audience: v.string(), category: v.string() }),
       ),
+      initialFinding: v.optional(v.union(v.null(), v.object({
+        observation: v.string(),
+        evidenceQuote: v.string(),
+        whyItMayMatter: v.string(),
+        firstStep: v.string(),
+        sourceUrl: v.string(),
+      }))),
       facts: v.optional(
         v.array(v.object({ statement: v.string(), sourceUrl: v.optional(v.string()), confidence: v.string(), category: v.optional(v.union(v.literal("product"), v.literal("audience"), v.literal("pricing"), v.literal("brand"), v.literal("offer"), v.literal("proof"), v.literal("competitor"), v.literal("other"))) })),
       ),
@@ -199,6 +207,7 @@ export const update = internalMutation({
       ...(patch.status ? { status: patch.status } : {}),
       steps,
       ...(patch.business ? { business: patch.business } : {}),
+      ...(patch.initialFinding !== undefined ? { initialFinding: patch.initialFinding ?? undefined } : {}),
       ...(patch.facts ? { facts: patch.facts.slice(0, 8) } : {}),
       ...(patch.ideas ? { ideas: patch.ideas.slice(0, 3) } : {}),
       ...(patch.error ? { error: patch.error } : {}),
