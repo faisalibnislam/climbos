@@ -2442,6 +2442,8 @@ export default defineSchema({
     /** Discovery provenance for auto-seeded watches; legacy/manual watches omit these fields. */
     autoSeededAt: v.optional(v.number()),
     discoverySourceUrl: v.optional(v.string()),
+    /** Owner/admin approval to resume recurring monitoring of a legacy auto-seeded site. */
+    ownerConfirmedAt: v.optional(v.number()),
     lastCheckedAt: v.optional(v.number()),
     lastHash: v.optional(v.string()),
     /** Normalised text of the last check (homepage + pricing), for the next diff. */

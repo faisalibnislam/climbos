@@ -6,6 +6,7 @@ import { internalMutation, internalQuery, mutation, query, type MutationCtx } fr
 import { createRunWithReservation } from "./engine";
 import { isPaid } from "./lib/access";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+import { audit } from "./lib/audit";
 import { selectWatchCandidates, sameCompetitorSite } from "../shared/competitors/candidates";
 import { isObservedChangeQuote } from "../shared/competitors";
 
@@ -21,7 +22,7 @@ const LIMIT = { free: 1, paid: 5 };
 export const overview = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
     const allWatches = await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(1000);
     const watches = allWatches.filter((w) => w.active);
     const changes = await ctx.db.query("competitorChanges").withIndex("by_org_at", (q) => q.eq("orgId", org._id)).order("desc").take(30);
@@ -45,7 +46,8 @@ export const overview = query({
         completedAt: business.competitorResearchCompletedAt ?? business.insights.generatedAt,
         status: business.competitorResearchLastStatus ?? null,
       } : null,
-      watches: watches.map((w) => ({ id: w._id, name: w.name, url: w.url, active: w.active, autoSeeded: w.autoSeededAt !== undefined, discoverySourceUrl: w.discoverySourceUrl ?? null, lastCheckedAt: w.lastCheckedAt ?? null, lastError: w.lastError ?? null })),
+      watches: watches.map((w) => ({ id: w._id, name: w.name, url: w.url, active: w.active, autoSeeded: w.autoSeededAt !== undefined, needsConfirmation: w.autoSeededAt !== undefined && w.ownerConfirmedAt === undefined, discoverySourceUrl: w.discoverySourceUrl ?? null, lastCheckedAt: w.lastCheckedAt ?? null, lastError: w.lastError ?? null })),
+      canConfirmLegacyWatch: role === "owner" || role === "admin",
       dismissedSuggestions: allWatches.filter((w) => !w.active && w.exclusionReason === "not_relevant").map((w) => ({ name: w.name, url: w.url, sourceUrl: w.dismissalSourceUrl ?? null, dismissedAt: w.excludedAt ?? null })),
       changes: changes.map((c) => ({ id: c._id, name: c.name, summary: c.summary, bullets: c.bullets, soWhat: c.soWhat ?? null, suggestedAction: c.suggestedAction ?? null, sourceUrls: c.sourceUrls ?? watches.find((w) => w._id === c.watchId)?.lastSourceUrls ?? [], evidence: c.evidence ?? null, at: c.at })),
       suggested: suggested.slice(0, 6),
@@ -106,6 +108,25 @@ export const remove = mutation({
   },
 });
 
+/** Explicit owner/admin consent to resume recurring monitoring for a legacy auto-added site. */
+export const confirmLegacyWatch = mutation({
+  args: { slug: v.string(), id: v.id("competitorWatches") },
+  handler: async (ctx, { slug, id }) => {
+    const { org, user, role } = await requireOrgAccess(ctx, { slug }, "edit");
+    if (role !== "owner" && role !== "admin") throw appError("FORBIDDEN", "Only an owner or admin can confirm recurring monitoring for this site.");
+    const watch = await ctx.db.get(id);
+    if (!watch) throw appError("NOT_FOUND", "Competitor watch not found.");
+    assertSameOrg(watch, org._id, "competitor");
+    if (!watch.active || watch.autoSeededAt === undefined) throw appError("INVALID", "This site does not need monitoring confirmation.");
+    if (watch.ownerConfirmedAt !== undefined) return { confirmed: false };
+    const now = Date.now();
+    await ctx.db.patch(watch._id, { ownerConfirmedAt: now });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "competitor_watch.confirmed", subjectType: "competitor_watch", subjectId: watch._id, summary: `Confirmed recurring public-site monitoring for ${watch.name}.` });
+    await ctx.scheduler.runAfter(0, internal.competitorActions.check, { orgId: org._id, watchIds: [watch._id] });
+    return { confirmed: true };
+  },
+});
+
 /** Store a workspace-scoped owner rejection without starting a watch or spending credits. */
 export const dismissSuggestion = mutation({
   args: { slug: v.string(), url: v.string() },
@@ -145,8 +166,9 @@ export const checkNow = mutation({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "edit");
-    const watches = (await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(20)).filter((w) => w.active);
-    if (!watches.length) throw appError("INVALID", "Add a competitor first.");
+    const savedWatches = (await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(20)).filter((w) => w.active);
+    const watches = savedWatches.filter((w) => w.autoSeededAt === undefined || w.ownerConfirmedAt !== undefined);
+    if (!watches.length) throw appError("INVALID", savedWatches.length ? "An owner or admin must confirm a saved site before ClimbOS checks it." : "Add a competitor first.");
     const due = watches.filter((w) => !w.lastCheckedAt || Date.now() - w.lastCheckedAt >= 6 * 3_600_000);
     if (!due.length) throw appError("RATE_LIMITED", "All checked in the last 6 hours. Sites rarely change faster than that.");
     await ctx.scheduler.runAfter(0, internal.competitorActions.check, { orgId: org._id, watchIds: due.map((w) => w._id) });
@@ -157,7 +179,7 @@ export const checkNow = mutation({
 export const watchesFor = internalQuery({
   args: { orgId: v.id("organizations"), watchIds: v.array(v.id("competitorWatches")) },
   handler: async (ctx, { orgId, watchIds }) =>
-    (await Promise.all(watchIds.map((id) => ctx.db.get(id)))).filter((w): w is Doc<"competitorWatches"> => Boolean(w?.active && w.orgId === orgId)),
+    (await Promise.all(watchIds.map((id) => ctx.db.get(id)))).filter((w): w is Doc<"competitorWatches"> => Boolean(w?.active && w.orgId === orgId && (w.autoSeededAt === undefined || w.ownerConfirmedAt !== undefined))),
 });
 
 export const saveCheck = internalMutation({
@@ -242,7 +264,10 @@ export const weekly = internalMutation({
   args: {},
   handler: async (ctx) => {
     const byOrg = new Map<Id<"organizations">, Id<"competitorWatches">[]>();
-    for (const w of await ctx.db.query("competitorWatches").withIndex("by_active", (q) => q.eq("active", true)).take(5000)) byOrg.set(w.orgId, [...(byOrg.get(w.orgId) ?? []), w._id]);
+    for (const w of await ctx.db.query("competitorWatches").withIndex("by_active", (q) => q.eq("active", true)).take(5000)) {
+      if (w.autoSeededAt !== undefined && w.ownerConfirmedAt === undefined) continue;
+      byOrg.set(w.orgId, [...(byOrg.get(w.orgId) ?? []), w._id]);
+    }
     let i = 0;
     for (const [orgId, watchIds] of byOrg) await ctx.scheduler.runAfter((i++ % 60) * 5_000, internal.competitorActions.check, { orgId, watchIds });
     return byOrg.size;

@@ -27,7 +27,8 @@ export const get = query({
     ]);
     const lastAutopilotRun = autopilot?.lastPlanRunId ? await ctx.db.get(autopilot.lastPlanRunId) : null;
     const latestSpecialistRun = recentRuns.find((run) => run.customAgentId) ?? null;
-    const activeWatches = watches.filter((watch) => watch.active);
+    const activeWatches = watches.filter((watch) => watch.active && (watch.autoSeededAt === undefined || watch.ownerConfirmedAt !== undefined));
+    const confirmationWatches = watches.filter((watch) => watch.active && watch.autoSeededAt !== undefined && watch.ownerConfirmedAt === undefined);
     const activeAgents = agents.filter((agent) => agent.status === "active");
     const scheduledAgents = activeAgents.filter((agent) => agent.trigger !== "manual");
     const sendingCampaigns = campaigns.filter((campaign) => campaign.sending?.status === "on");
@@ -52,9 +53,12 @@ export const get = query({
         }
         case "competitor_watch": {
           const latestChecked = activeWatches.reduce<number | null>((latest, watch) => watch.lastCheckedAt !== undefined && (latest === null || watch.lastCheckedAt > latest) ? watch.lastCheckedAt : latest, null);
-          const state: RegistryState = activeWatches.length ? "active" : watches.length ? "paused" : "not_configured";
+          const state: RegistryState = activeWatches.length ? "active" : confirmationWatches.length || watches.length ? "paused" : "not_configured";
           const lastReceipt = latestChecked !== null ? { at: latestChecked, summary: changes[0] ? `${changes[0].name}: ${changes[0].summary}` : "Latest active-watch check" } : null;
-          return entry(definition, state, `${activeWatches.length} active of ${watches.length} saved watches`, lastReceipt, activeWatches.length, { savedCount: watches.length });
+          const summary = confirmationWatches.length
+            ? `${activeWatches.length} confirmed · ${confirmationWatches.length} older site${confirmationWatches.length === 1 ? "" : "s"} paused for owner confirmation`
+            : `${activeWatches.length} active of ${watches.length} saved watches`;
+          return entry(definition, state, summary, lastReceipt, activeWatches.length, { savedCount: watches.length, confirmationCount: confirmationWatches.length });
         }
         case "competitor_research_refresh": {
           const state: RegistryState = !business?.insights ? "not_configured" : researchCadence === 0 ? "paused" : "active";

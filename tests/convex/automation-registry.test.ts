@@ -38,4 +38,22 @@ describe("automation registry", () => {
     const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "No Site Co" });
     await expect(owner.client.mutation(api.automationRegistry.setWebsiteMonitor, { slug, enabled: false })).rejects.toThrow(/website/i);
   });
+
+  it("reports legacy competitor sites as paused until owner confirmation", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "registry-legacy-watch@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Legacy Registry Co" });
+    await t.run((ctx) => ctx.db.insert("competitorWatches", {
+      orgId,
+      name: "Old Rival",
+      url: "https://old-rival.example",
+      active: true,
+      autoSeededAt: Date.now() - 1_000,
+      createdAt: Date.now() - 1_000,
+    }));
+
+    const competitorWatch = (await owner.client.query(api.automationRegistry.get, { slug })).entries.find((entry) => entry.id === "competitor_watch");
+    expect(competitorWatch).toMatchObject({ state: "paused", activeCount: 0, savedCount: 1, confirmationCount: 1 });
+    expect(competitorWatch?.summary).toContain("paused for owner confirmation");
+  });
 });

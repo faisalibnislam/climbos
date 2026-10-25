@@ -45,7 +45,7 @@ Suggested competitor sites show the saved research summary and a separate possib
 
 Owners can mark an unadded competitor suggestion “Not relevant.” ClimbOS retains that choice for the workspace and leaves the site out of later suggestions. This does not start monitoring or use research credits. The owner can still add the site manually later if they change their mind.
 
-Researching a possible competitor only creates a sourced suggestion. It does not start recurring website monitoring. An owner must add the specific site in the competitor tool; scheduled summaries also stay within the workspace credit approval limit. Existing watches and their controls remain intact.
+Researching a possible competitor only creates a sourced suggestion. It does not start recurring website monitoring. An owner must add the specific site in the competitor tool; scheduled summaries also stay within the workspace credit approval limit. Watches created automatically by an older version are held until an owner or admin confirms each site. Existing manually added watches and their controls remain intact.
 
 When a social draft uses a current trend or meme format, its review details retain the exact source URL, date, and source-reported observation. ClimbOS requires the fields to match a dated record from the current research run and rejects future or over-30-day-old signals as current. The 30-day limit is a product validation rule; it does not describe how long trends universally last. The source statement remains source-reported, not proof that the idea fits the audience or will perform.
 

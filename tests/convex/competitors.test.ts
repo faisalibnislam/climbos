@@ -229,6 +229,44 @@ describe("competitor watch", () => {
     expect(afterOwnerAdd.watches[0]).toMatchObject({ autoSeeded: false, discoverySourceUrl: null });
   });
 
+  it("holds legacy auto-added sites until an owner or admin confirms the recurring check", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "legacy-watch-owner@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Legacy Watch Co" });
+    await makePaid(t, orgId);
+    const watchId = await t.run((ctx) => ctx.db.insert("competitorWatches", {
+      orgId,
+      name: "Legacy Rival",
+      url: "https://legacy-rival.example",
+      active: true,
+      autoSeededAt: Date.now() - 10_000,
+      discoverySourceUrl: "https://research.example/legacy-rival",
+      createdAt: Date.now() - 10_000,
+    }));
+
+    const { token } = await owner.client.mutation(api.team.createInviteLink, { slug, role: "editor", days: 7, maxUses: 1 });
+    const editor = await asNewUser(t, "legacy-watch-editor@example.com");
+    await editor.client.mutation(api.settings.acceptInvite, { token });
+    await expect(editor.client.mutation(api.competitors.confirmLegacyWatch, { slug, id: watchId })).rejects.toThrow(/Only an owner or admin/);
+
+    let overview = await owner.client.query(api.competitors.overview, { slug });
+    expect(overview.canConfirmLegacyWatch).toBe(true);
+    expect(overview.watches[0]).toMatchObject({ id: watchId, needsConfirmation: true, autoSeeded: true });
+    await expect(owner.client.mutation(api.competitors.checkNow, { slug })).rejects.toThrow(/must confirm a saved site/i);
+    await t.mutation(internal.competitors.weekly, {});
+    await t.action(internal.competitorActions.check, { orgId, watchIds: [watchId] });
+    expect((await t.run((ctx) => ctx.db.get(watchId)))?.lastCheckedAt).toBeUndefined();
+
+    await owner.client.mutation(api.competitors.confirmLegacyWatch, { slug, id: watchId });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    overview = await owner.client.query(api.competitors.overview, { slug });
+    expect(overview.watches[0]).toMatchObject({ id: watchId, needsConfirmation: false });
+    expect(overview.watches[0].lastCheckedAt).toEqual(expect.any(Number));
+    expect(await t.run((ctx) => ctx.db.query("auditEvents").withIndex("by_org_created", (q) => q.eq("orgId", orgId)).collect())).toEqual(expect.arrayContaining([
+      expect.objectContaining({ action: "competitor_watch.confirmed", subjectId: watchId }),
+    ]));
+  });
+
   it("keeps scheduled competitor summaries within the workspace credit approval limit", async () => {
     const t = setup();
     const owner = await asNewUser(t, "competitor-watch-credit-cap@example.com");

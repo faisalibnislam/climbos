@@ -17,6 +17,7 @@ export default function CompetitorsPage() {
   const data = useQuery(api.competitors.overview, { slug });
   const add = useMutation(api.competitors.add);
   const remove = useMutation(api.competitors.remove);
+  const confirmLegacyWatch = useMutation(api.competitors.confirmLegacyWatch);
   const checkNow = useMutation(api.competitors.checkNow);
   const dismissSuggestion = useMutation(api.competitors.dismissSuggestion);
   const [f, setF] = useState({ name: "", url: "" });
@@ -53,15 +54,23 @@ export default function CompetitorsPage() {
           {data.watches.length ? (
             <ul className="flex flex-col divide-y divide-line">
               {data.watches.map((w) => (
-                <li key={w.id} className="flex items-center justify-between gap-3 py-2">
+                <li key={w.id} className="flex flex-wrap items-start justify-between gap-3 py-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-ink">{w.name}</p>
                     <p className="truncate text-xs text-ink-3">{w.url.replace(/^https?:\/\//, "")}</p>
-                    <p className={w.lastError ? "text-xs text-red-800" : "text-xs text-ink-3"}>{w.lastError ? `Couldn't read: ${w.lastError}` : w.lastCheckedAt ? `Checked ${relativeTime(w.lastCheckedAt)}` : "Reading…"}</p>
+                    <p className={w.needsConfirmation ? "text-xs text-ink-3" : w.lastError ? "text-xs text-red-800" : "text-xs text-ink-3"}>{w.needsConfirmation ? "Paused until an owner or admin confirms recurring monitoring." : w.lastError ? `Couldn't read: ${w.lastError}` : w.lastCheckedAt ? `Checked ${relativeTime(w.lastCheckedAt)}` : "Reading…"}</p>
                   </div>
-                  <Button size="sm" variant="ghost" aria-label={`Stop watching ${w.name}`} onClick={() => run("rm", () => remove({ slug, id: w.id }))}>
-                    <Trash2 aria-hidden />
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {w.needsConfirmation && data.canConfirmLegacyWatch ? (
+                      <Button size="sm" variant="secondary" loading={busy === `confirm:${w.id}`} onClick={() => run(`confirm:${w.id}`, () => confirmLegacyWatch({ slug, id: w.id }), `Monitoring confirmed for ${w.name}`)}>
+                        Confirm weekly monitoring
+                      </Button>
+                    ) : null}
+                    {w.needsConfirmation && !data.canConfirmLegacyWatch ? <span className="text-xs text-ink-3">Ask an owner or admin to confirm.</span> : null}
+                    <Button size="sm" variant="ghost" aria-label={`Stop watching ${w.name}`} onClick={() => run(`rm:${w.id}`, () => remove({ slug, id: w.id }))}>
+                      <Trash2 aria-hidden />
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
