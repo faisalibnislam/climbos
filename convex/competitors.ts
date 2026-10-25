@@ -46,6 +46,7 @@ export const overview = query({
         status: business.competitorResearchLastStatus ?? null,
       } : null,
       watches: watches.map((w) => ({ id: w._id, name: w.name, url: w.url, active: w.active, autoSeeded: w.autoSeededAt !== undefined, discoverySourceUrl: w.discoverySourceUrl ?? null, lastCheckedAt: w.lastCheckedAt ?? null, lastError: w.lastError ?? null })),
+      dismissedSuggestions: allWatches.filter((w) => !w.active && w.exclusionReason === "not_relevant").map((w) => ({ name: w.name, url: w.url, sourceUrl: w.dismissalSourceUrl ?? null, dismissedAt: w.excludedAt ?? null })),
       changes: changes.map((c) => ({ id: c._id, name: c.name, summary: c.summary, bullets: c.bullets, soWhat: c.soWhat ?? null, suggestedAction: c.suggestedAction ?? null, sourceUrls: c.sourceUrls ?? watches.find((w) => w._id === c.watchId)?.lastSourceUrls ?? [], evidence: c.evidence ?? null, at: c.at })),
       suggested: suggested.slice(0, 6),
     };
@@ -85,7 +86,7 @@ export const add = mutation({
     const limit = (await isPaid(ctx, org)) ? LIMIT.paid : LIMIT.free;
     if (existing.filter((w) => w.active).length >= limit) throw appError(limit === LIMIT.free ? "PAYMENT_REQUIRED" : "LIMIT_REACHED", limit === LIMIT.free ? "Free accounts watch 1 competitor. Packages watch 5." : `You can watch up to ${limit} competitors.`);
     if (same) {
-      await ctx.db.patch(same._id, { name: a.name.trim().slice(0, 80) || new URL(url).hostname, url, active: true, excludedAt: undefined, lastError: undefined, lastCheckedAt: undefined, lastHash: undefined, lastText: undefined, lastSourceUrls: undefined, discoverySourceUrl: undefined, autoSeededAt: undefined });
+      await ctx.db.patch(same._id, { name: a.name.trim().slice(0, 80) || new URL(url).hostname, url, active: true, excludedAt: undefined, exclusionReason: undefined, dismissalSourceUrl: undefined, dismissedBy: undefined, lastError: undefined, lastCheckedAt: undefined, lastHash: undefined, lastText: undefined, lastSourceUrls: undefined, discoverySourceUrl: undefined, autoSeededAt: undefined });
       await ctx.scheduler.runAfter(0, internal.competitorActions.check, { orgId: org._id, watchIds: [same._id] });
       return same._id;
     }
@@ -101,7 +102,41 @@ export const remove = mutation({
   handler: async (ctx, { slug, id }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "edit");
     assertSameOrg(await ctx.db.get(id), org._id, "competitor");
-    await ctx.db.patch(id, { active: false, excludedAt: Date.now() });
+    await ctx.db.patch(id, { active: false, excludedAt: Date.now(), exclusionReason: "stop_watching", dismissalSourceUrl: undefined, dismissedBy: undefined });
+  },
+});
+
+/** Store a workspace-scoped owner rejection without starting a watch or spending credits. */
+export const dismissSuggestion = mutation({
+  args: { slug: v.string(), url: v.string() },
+  handler: async (ctx, { slug, url: inputUrl }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const url = normaliseUrl(inputUrl);
+    if (!url) throw appError("INVALID", "That website address doesn't look right.");
+    const [business, existing] = await Promise.all([
+      ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first(),
+      ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(1000),
+    ]);
+    const candidate = selectWatchCandidates(
+      (business?.insights?.competitors ?? []).flatMap((item) => item.url ? [{ name: item.name, url: item.url, sourceUrl: item.sourceUrl, kind: item.kind }] : []),
+      business?.website,
+      existing.map((watch) => watch.url),
+      6,
+    ).find((item) => sameCompetitorSite(item.url, url));
+    if (!candidate) throw appError("INVALID", "This suggestion is no longer available. Refresh your research before changing it.");
+    const now = Date.now();
+    await ctx.db.insert("competitorWatches", {
+      orgId: org._id,
+      name: candidate.name,
+      url: candidate.url,
+      active: false,
+      excludedAt: now,
+      exclusionReason: "not_relevant",
+      dismissalSourceUrl: candidate.sourceUrl,
+      dismissedBy: user._id,
+      createdAt: now,
+    });
+    return { dismissed: true };
   },
 });
 

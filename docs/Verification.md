@@ -4,12 +4,12 @@ Last full-repository verification: **18 Oct 2026** on macOS, Node 24.21, pnpm 10
 
 ## Latest focused verification — 25 Oct 2026
 
-- Competitor watcher and research presentation regressions: `pnpm exec vitest run tests/convex/competitors.test.ts tests/unit/swot-presentation.test.ts tests/unit/research-quality.test.ts` — **33 passed**. Covers exact changed-line binding for suggested tests, dropping unsupported suggestions, retained evidence, sourced comparison details for watch suggestions, and tenant isolation. The competitor file alone has **12 passed**.
+- Competitor watcher and research presentation regressions: `pnpm exec vitest run tests/convex/competitors.test.ts tests/unit/swot-presentation.test.ts tests/unit/research-quality.test.ts` — **34 passed**. Covers exact changed-line binding for suggested tests, dropping unsupported suggestions, retained evidence, sourced comparison details, retained not-relevant feedback, no watch/credit side effect on dismissal, manual re-add, and tenant isolation. The competitor file alone has **13 passed**.
 - Offer and campaign timing regressions: `pnpm exec vitest run tests/unit/offer-assessment.test.ts tests/unit/campaign-timing.test.ts tests/unit/decision-contract.test.ts tests/convex/plan-history.test.ts tests/convex/publish-flow.test.ts` — **72 passed**.
 - Type checks: `pnpm typecheck` — clean for app/shared and Convex.
-- Focused lint: `pnpm exec eslint convex/competitorActions.ts convex/competitors.ts convex/schema.ts shared/competitors/index.ts shared/agents/fake.ts src/app/app/'[organization]'/competitors/page.tsx tests/convex/competitors.test.ts` — clean.
+- Focused lint: `pnpm exec eslint convex/competitors.ts convex/schema.ts src/app/app/'[organization]'/competitors/page.tsx tests/convex/competitors.test.ts` — clean.
 - `git diff --check` — clean.
-- No browser verification of the competitor page was run for this change; the quote is rendered as escaped text in the existing page card.
+- No browser verification of the competitor page was run for these latest changes.
 
 ## Automated checks
 

@@ -18,6 +18,7 @@ export default function CompetitorsPage() {
   const add = useMutation(api.competitors.add);
   const remove = useMutation(api.competitors.remove);
   const checkNow = useMutation(api.competitors.checkNow);
+  const dismissSuggestion = useMutation(api.competitors.dismissSuggestion);
   const [f, setF] = useState({ name: "", url: "" });
   const [busy, setBusy] = useState<string | null>(null);
   async function run(key: string, fn: () => Promise<unknown>, ok?: string) {
@@ -65,9 +66,10 @@ export default function CompetitorsPage() {
               ))}
             </ul>
           ) : null}
-          {data.suggested.length && !full ? (
+          {data.suggested.length ? (
             <div className="flex flex-col gap-2">
               <p className="text-xs font-medium text-ink-2">Similar businesses found in your research</p>
+              {full ? <p className="text-xs text-ink-3">Your watch list is full. You can still mark a suggestion as not relevant, or stop watching a site before adding another.</p> : null}
               {data.suggested.map((s) => (
                 <div key={s.url} className="rounded-lg border border-line bg-surface-2 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -75,9 +77,14 @@ export default function CompetitorsPage() {
                       <p className="text-sm font-medium text-ink">{s.name}</p>
                       <p className="text-xs text-ink-3">{s.kind === "direct" ? "Listed as a direct competitor in business research; customer overlap has not been confirmed." : "Competitor type is not recorded in this research; review the source before adding it."}</p>
                     </div>
-                    <Button size="sm" variant="secondary" loading={busy === s.url} onClick={() => run(s.url, () => add({ slug, name: s.name, url: s.url }), `Watching ${s.name}`)}>
-                      <Plus aria-hidden /> Add to watch list
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button size="sm" variant="ghost" loading={busy === `dismiss:${s.url}`} aria-label={`Mark ${s.name} as not relevant`} onClick={() => run(`dismiss:${s.url}`, () => dismissSuggestion({ slug, url: s.url }), `${s.name} won't appear in future suggestions`)}>
+                        Not relevant
+                      </Button>
+                      <Button size="sm" variant="secondary" disabled={full} loading={busy === s.url} onClick={() => run(s.url, () => add({ slug, name: s.name, url: s.url }), `Watching ${s.name}`)}>
+                        <Plus aria-hidden /> Add to watch list
+                      </Button>
+                    </div>
                   </div>
                   {s.comparison?.length ? (
                     <details className="mt-2 rounded-[var(--radius-control)] border border-line px-3 py-2">
@@ -100,6 +107,22 @@ export default function CompetitorsPage() {
                 </div>
               ))}
             </div>
+          ) : null}
+          {data.dismissedSuggestions.length ? (
+            <details className="rounded-lg border border-line px-3 py-2">
+              <summary className="min-h-8 cursor-pointer py-1 text-xs font-medium text-ink-2">Suggestions marked not relevant ({data.dismissedSuggestions.length})</summary>
+              <div className="mt-2 flex flex-col gap-2">
+                <p className="text-xs text-ink-3">These are kept out of future suggestions for this workspace. To watch one later, enter its website below.</p>
+                <ul className="flex flex-col gap-1">
+                  {data.dismissedSuggestions.slice(0, 10).map((item) => (
+                    <li key={item.url} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span className="font-medium text-ink-2">{item.name}</span>
+                      {item.sourceUrl ? <a className="text-brand underline underline-offset-2" href={item.sourceUrl} target="_blank" rel="noopener noreferrer">Research source</a> : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </details>
           ) : null}
           <form
             className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]"

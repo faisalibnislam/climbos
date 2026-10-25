@@ -2434,8 +2434,11 @@ export default defineSchema({
     name: v.string(),
     url: v.string(),
     active: v.boolean(),
-    /** The owner removed this watch; keep its host as a tombstone so discovery does not re-add it. */
+    /** The owner excluded this host; keep the row so discovery does not re-add it. */
     excludedAt: v.optional(v.number()),
+    exclusionReason: v.optional(v.union(v.literal("stop_watching"), v.literal("not_relevant"))),
+    dismissalSourceUrl: v.optional(v.string()),
+    dismissedBy: v.optional(v.id("users")),
     /** Discovery provenance for auto-seeded watches; legacy/manual watches omit these fields. */
     autoSeededAt: v.optional(v.number()),
     discoverySourceUrl: v.optional(v.string()),
