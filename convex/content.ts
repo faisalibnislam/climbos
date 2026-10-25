@@ -13,8 +13,8 @@ export interface RunPreview {
     title: string;
     why: string;
     nextStep: string;
-    evidence: { factId: string; statement: string; kind?: string }[];
-    basis: "confirmed_facts" | "hypothesis";
+    evidence: { factId?: string; statement: string; kind?: string; provenance: "confirmed_fact" | "source_reported"; sourceUrl?: string; confidence?: string }[];
+    basis: "confirmed_facts" | "source_reported" | "mixed" | "hypothesis";
   }[];
   channels?: string[];
   budget?: string;

@@ -19,8 +19,8 @@ describe("quick take evidence links", () => {
         why: "There is stated demand.",
         nextStep: "Ask customers which hours work.",
         evidence: [
-          { factId: "fact-a", statement: "Customers ask for weekend sessions.", kind: "owner_input" },
-          { factId: "fact-b", statement: "The booking page has four steps.", kind: "observed" },
+          { factId: "fact-a", statement: "Customers ask for weekend sessions.", kind: "owner_input", provenance: "confirmed_fact" },
+          { factId: "fact-b", statement: "The booking page has four steps.", kind: "observed", provenance: "confirmed_fact" },
         ],
         basis: "confirmed_facts",
       }],
@@ -40,6 +40,28 @@ describe("quick take evidence links", () => {
 
   it("drops entries with blank titles", () => {
     expect(linkQuickTakeEvidence({ headline: "take", opportunities: [{ title: " ", why: "", nextStep: "", factIndexes: [] }] }, []).opportunities).toEqual([]);
+  });
+
+  it("links a website profile claim only to an exact page URL read in this run", () => {
+    const result = linkQuickTakeEvidence({
+      headline: "First take",
+      opportunities: [{ title: "Clarify the booking path", why: "The site presents online booking.", nextStep: "Check the booking flow.", factIndexes: [], profileFactIndexes: [0, 1, 2] }],
+    }, [], [
+      { statement: "Online booking is available.", sourceUrl: "https://example.com/book", confidence: "high" },
+      { statement: "The business has 10,000 customers.", sourceUrl: "https://other.example/claim" },
+    ], ["https://example.com/book"]);
+
+    expect(result.opportunities[0]).toMatchObject({ basis: "source_reported", evidence: [{ statement: "Online booking is available.", sourceUrl: "https://example.com/book", provenance: "source_reported", confidence: "high" }] });
+  });
+
+  it("marks a take mixed when it cites both owner-confirmed facts and website claims", () => {
+    const result = linkQuickTakeEvidence({
+      headline: "First take",
+      opportunities: [{ title: "Improve booking", why: "Check the customer path.", nextStep: "Review it.", factIndexes: [0], profileFactIndexes: [0] }],
+    }, [{ id: "fact-a", statement: "The owner reports 20 monthly bookings." }], [{ statement: "Bookings can be made online.", sourceUrl: "https://example.com/book" }], ["https://example.com/book"]);
+
+    expect(result.opportunities[0]?.basis).toBe("mixed");
+    expect(result.opportunities[0]?.evidence.map((item) => item.provenance)).toEqual(["confirmed_fact", "source_reported"]);
   });
 });
 

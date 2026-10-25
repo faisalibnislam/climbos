@@ -1028,6 +1028,7 @@ const QuickTakeSchema = z.object({
     why: z.string(),
     nextStep: z.string(),
     factIndexes: z.array(z.number().int().nonnegative()),
+    profileFactIndexes: z.array(z.number().int().nonnegative()).optional(),
   })).max(3),
 });
 
@@ -1115,7 +1116,14 @@ async function previewPlays(ctx: ActionCtx, job: JobCtx, plays: { plays: { name:
   }
 }
 
-async function quickTake(ctx: ActionCtx, job: JobCtx, index: number, label: string, task: string) {
+async function quickTake(
+  ctx: ActionCtx,
+  job: JobCtx,
+  index: number,
+  label: string,
+  task: string,
+  websiteEvidence?: { facts: { statement: string; sourceUrl: string; confidence?: string }[]; allowedSourceUrls: string[] },
+) {
   if (job.run.isFixture || job.run.engine !== "v2" || process.env.CLIMBOS_FAKE_LLM) return;
   try {
     const step = await begin(ctx, job.run._id, index, "model", label, "ceo");
@@ -1125,7 +1133,7 @@ async function quickTake(ctx: ActionCtx, job: JobCtx, index: number, label: stri
       {
         modelKey: CALL_ROUTES.chat_intent,
         system: [{ text: "You are a senior growth advisor writing a fast first take for a small-business owner. Be specific to this business, plain and brief. Do not invent facts, numbers, effort estimates or evidence. If a cause or opportunity is not supported by a confirmed fact, say it is a hypothesis in why and leave factIndexes empty." }],
-        messages: [{ role: "user", content: `${businessBrief(job)}\n\n${task}\n\nReturn JSON: headline (one sentence) and up to 3 opportunities. Each opportunity has title, why, nextStep, and factIndexes. Use only the numbered CONFIRMED FACTS above for factIndexes; do not cite the website profile or inferred claims as confirmed facts. Use [] when the finding is only a hypothesis.` }],
+        messages: [{ role: "user", content: `${businessBrief(job)}\n\n${websiteEvidence ? `WEBSITE PROFILE FACTS (source-reported claims, not owner-confirmed or independently verified):\n${websiteEvidence.facts.map((fact, i) => `${i}. ${fact.statement} [page: ${fact.sourceUrl}; extraction confidence: ${fact.confidence ?? "unknown"}]`).join("\n") || "(none)"}\nAllowed page URLs read in this run: ${websiteEvidence.allowedSourceUrls.join(", ") || "(none)"}\n\n` : ""}${task}\n\nReturn JSON: headline (one sentence) and up to 3 opportunities. Each opportunity has title, why, nextStep, and factIndexes. Use only the numbered CONFIRMED FACTS above for factIndexes. For a direct observation supported by a numbered website profile fact, use profileFactIndexes for that separate source-reported claim; the cited fact must link to one of the exact allowed page URLs. Do not cite inferred customer, market, or performance claims as website evidence. Use [] for unsupported indexes and leave profileFactIndexes empty when the finding is only a hypothesis.` }],
         schema: QuickTakeSchema,
         maxTokens: 3_000,
         effort: "low",
@@ -1137,7 +1145,12 @@ async function quickTake(ctx: ActionCtx, job: JobCtx, index: number, label: stri
     if (r.usage.calls > 0) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId!, records: claudeUsageRecords(CALL_ROUTES.chat_intent, r, rates) });
     if (r.ok) {
       const out = r.output as z.infer<typeof QuickTakeSchema>;
-      const preview = linkQuickTakeEvidence(out, job.facts.map((fact) => ({ id: String(fact.id), statement: fact.statement, kind: fact.kind })));
+      const preview = linkQuickTakeEvidence(
+        out,
+        job.facts.map((fact) => ({ id: String(fact.id), statement: fact.statement, kind: fact.kind })),
+        websiteEvidence?.facts ?? [],
+        websiteEvidence?.allowedSourceUrls ?? [],
+      );
       await ctx.runMutation(internal.engine.setRunPreview, { runId: job.run._id, preview: JSON.stringify(preview) });
       await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify(out) });
     } else {
@@ -1214,7 +1227,14 @@ export const onboardingResearch = internalAction({
 
       // Start the first take as soon as the profile is saved. It writes its own
       // preview while deeper business intelligence runs below.
-      const firstTake = quickTake(ctx, job, 300, "First take", `From this profile, give the owner a first take: who the best customers probably are, what makes the business stand out, and the 2-3 biggest growth opportunities you already see. Deeper research with competitors and customer language follows.\n\nPROFILE:\n${reportDropped("first take profile", fitJson(profile, 5000, "profile"))}`);
+      const firstTake = quickTake(
+        ctx,
+        job,
+        300,
+        "First take",
+        `From this profile, give the owner a first take: who the best customers probably are, what makes the business stand out, and the 2-3 biggest growth opportunities you already see. Deeper research with competitors and customer language follows.\n\nPROFILE:\n${reportDropped("first take profile", fitJson(profile, 5000, "profile"))}`,
+        { facts: profile.facts, allowedSourceUrls: pages.filter((page) => page.status === "ok").map((page) => page.url) },
+      );
 
       // Step 2: CMO builds business intelligence (audience, competitors, VoC, SWOT, journey).
       const v1InsightsTask = `TASK: Using the business profile and website content, produce business intelligence: likely customer groups, competitors (only name competitors you can support with a source; if you used web search, put the URL in sourceUrl; otherwise say the owner should confirm), positioning, pricing observations, SWOT, a customer journey and the top opportunities.\n\nPROFILE:\n${reportDropped("insights profile", fitJson(profile, 6000, "profile"))}`;

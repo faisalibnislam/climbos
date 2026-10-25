@@ -10,14 +10,18 @@ describe("saved onboarding first take", () => {
         headline: "Start by checking the main customer benefit.",
         opportunities: [
           { title: "Clarify the homepage offer", why: "The offer appears after several feature details.", nextStep: "Ask three recent visitors what the business sells.", evidence: [], basis: "hypothesis" },
-          { title: "Keep the confirmed booking route", why: "Customers can book online.", nextStep: "Check that the route is still current.", evidence: [{ factId: "fact_1", statement: "Online booking is available.", kind: "owner_report" }], basis: "confirmed_facts" },
+          { title: "Keep the confirmed booking route", why: "The site says customers can book online.", nextStep: "Check that the route is still current.", evidence: [{ factId: "fact_1", statement: "Online booking is available.", kind: "owner_report", provenance: "confirmed_fact" }], basis: "confirmed_facts" },
+          { title: "Check the online booking offer", why: "The business site mentions booking.", nextStep: "Review the booking page.", evidence: [{ statement: "Bookings are available online.", provenance: "source_reported", sourceUrl: "https://example.com/book" }], basis: "source_reported" },
         ],
       },
     }));
 
     expect(html).toContain("First take · preliminary, based on available evidence");
-    expect(html).toContain("Hypothesis · no confirmed fact linked yet");
-    expect(html).toContain("Based on confirmed inputs");
+    expect(html).toContain("Hypothesis · no supporting fact or page linked yet");
+    expect(html).toContain("What this is based on");
+    expect(html).toContain("The website says · check this:");
+    expect(html).toContain('href="https://example.com/book"');
+    expect(html).toContain("View page");
     expect(html).toContain("Ask three recent visitors what the business sells.");
   });
 

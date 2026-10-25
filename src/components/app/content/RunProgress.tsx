@@ -384,12 +384,18 @@ function EarlyPreview({ preview, finished = false, researchComplete = true }: { 
                   {opportunity.nextStep ? <p className="text-xs text-ink"><span className="font-medium">First step:</span> {opportunity.nextStep}</p> : null}
                   {opportunity.evidence.length ? (
                     <div className="mt-1 border-t border-line pt-1.5">
-                      <p className="text-2xs font-medium uppercase tracking-wide text-ink-3">Based on confirmed inputs</p>
+                      <p className="text-2xs font-medium uppercase tracking-wide text-ink-3">What this is based on</p>
                       <ul className="mt-1 flex flex-col gap-1 text-2xs text-ink-2">
-                        {opportunity.evidence.map((fact) => <li key={fact.factId}>{fact.statement}</li>)}
+                        {opportunity.evidence.map((fact, evidenceIndex) => (
+                          <li key={fact.factId ?? `${fact.sourceUrl ?? "source"}-${evidenceIndex}`}>
+                            <span className="font-medium">{fact.provenance === "source_reported" ? "The website says · check this: " : "Confirmed input: "}</span>
+                            {fact.statement}
+                            {fact.provenance === "source_reported" && fact.sourceUrl ? <> <a className="underline underline-offset-2" href={fact.sourceUrl} target="_blank" rel="noreferrer">View page</a></> : null}
+                          </li>
+                        ))}
                       </ul>
                     </div>
-                  ) : <p className="mt-1 text-2xs text-ink-3">Hypothesis · no confirmed fact linked yet</p>}
+                  ) : <p className="mt-1 text-2xs text-ink-3">Hypothesis · no supporting fact or page linked yet</p>}
                 </li>
               ))}
             </ul>

@@ -46,7 +46,7 @@ export interface GrowthOpportunity {
 
 export interface QuickTakeDraft {
   headline: string;
-  opportunities: { title: string; why: string; nextStep: string; factIndexes: number[] }[];
+  opportunities: { title: string; why: string; nextStep: string; factIndexes: number[]; profileFactIndexes?: number[] }[];
 }
 
 export interface QuickTakeFactInput {
@@ -55,25 +55,44 @@ export interface QuickTakeFactInput {
   kind?: string;
 }
 
+export interface QuickTakeProfileFactInput {
+  statement: string;
+  sourceUrl: string;
+  confidence?: string;
+}
+
 export interface QuickTakePreview {
   title: string;
   why: string;
   nextStep: string;
-  evidence: { factId: string; statement: string; kind?: string }[];
-  basis: "confirmed_facts" | "hypothesis";
+  evidence: { factId?: string; statement: string; kind?: string; provenance: "confirmed_fact" | "source_reported"; sourceUrl?: string; confidence?: string }[];
+  basis: "confirmed_facts" | "source_reported" | "mixed" | "hypothesis";
 }
 
-/** Resolve model-selected fact indexes to IDs from the exact ordered input, dropping invalid indexes. */
-export function linkQuickTakeEvidence(draft: QuickTakeDraft, facts: readonly QuickTakeFactInput[]): { headline: string; opportunities: QuickTakePreview[] } {
+/** Resolve fact indexes against exact inputs; website claims require an exact URL from successfully read pages. */
+export function linkQuickTakeEvidence(
+  draft: QuickTakeDraft,
+  facts: readonly QuickTakeFactInput[],
+  profileFacts: readonly QuickTakeProfileFactInput[] = [],
+  allowedSourceUrls: readonly string[] = [],
+): { headline: string; opportunities: QuickTakePreview[] } {
   const opportunities = draft.opportunities.slice(0, 3).map((opportunity) => {
     const indexes = [...new Set(opportunity.factIndexes)].filter((index) => Number.isInteger(index) && index >= 0 && index < facts.length).slice(0, 4);
-    const evidence = indexes.map((index) => ({ factId: facts[index].id, statement: facts[index].statement.slice(0, 400), ...(facts[index].kind ? { kind: facts[index].kind } : {}) }));
+    const confirmed = indexes.map((index) => ({ factId: facts[index].id, statement: facts[index].statement.slice(0, 400), ...(facts[index].kind ? { kind: facts[index].kind } : {}), provenance: "confirmed_fact" as const }));
+    const profileIndexes = [...new Set(opportunity.profileFactIndexes ?? [])].filter((index) => Number.isInteger(index) && index >= 0 && index < profileFacts.length).slice(0, 4);
+    const sourceReported = profileIndexes.flatMap((index) => {
+      const fact = profileFacts[index];
+      if (!allowedSourceUrls.includes(fact.sourceUrl) || !/^https?:\/\//i.test(fact.sourceUrl)) return [];
+      return [{ statement: fact.statement.slice(0, 400), sourceUrl: fact.sourceUrl, provenance: "source_reported" as const, ...(fact.confidence ? { confidence: fact.confidence } : {}) }];
+    });
+    const evidence = [...confirmed, ...sourceReported].slice(0, 6);
+    const basis = confirmed.length && sourceReported.length ? "mixed" as const : confirmed.length ? "confirmed_facts" as const : sourceReported.length ? "source_reported" as const : "hypothesis" as const;
     return {
       title: opportunity.title.trim().slice(0, 120),
       why: opportunity.why.trim().slice(0, 400),
       nextStep: opportunity.nextStep.trim().slice(0, 300),
       evidence,
-      basis: evidence.length ? "confirmed_facts" as const : "hypothesis" as const,
+      basis,
     };
   }).filter((opportunity) => opportunity.title);
 
