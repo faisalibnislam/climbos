@@ -303,9 +303,11 @@ export interface ChannelLimits {
   connected?: readonly string[] | null;
   /** Owner-confirmed number of additional customers the business can serve monthly with current operations. */
   newCustomersPerMonth?: number;
+  /** Owner-confirmed contribution margin before acquisition; omitted when unknown. */
+  ownerGrossMargin?: number;
 }
 
-export type LimitKind = "cash" | "owner_time" | "sales_cycle" | "capability" | "measurement" | "capacity";
+export type LimitKind = "cash" | "owner_time" | "sales_cycle" | "capability" | "measurement" | "capacity" | "diagnosis" | "economics";
 /** blocked: can't be in the plan now. late: first revenue lands after the goal date. setup: needs a connection first. */
 export interface LimitCheck {
   kind: LimitKind;
@@ -331,8 +333,9 @@ const NEEDS: Partial<Record<Channel["family"], { any: string[]; label: string }>
 const ownBase = (c: Channel) => c.stages.every((st) => st === "existing" || st === "returning");
 
 /** Cash, owner time, sales cycle and capability, checked before ranking. Pure and deterministic. */
-export function limitChecks(c: Channel, p: AcquisitionProfile, l: ChannelLimits = {}): LimitCheck[] {
+export function limitChecks(c: Channel, p: AcquisitionProfile, l: ChannelLimits = {}, focus?: BindingConstraint): LimitCheck[] {
   const out: LimitCheck[] = [];
+  const paid = PAID_FAMILIES.has(c.family) || c.minMonthly > 0;
   if (c.minMonthly > p.budgetUsd) out.push({ kind: "cash", verdict: "blocked", reason: `Needs at least ${shownThreshold(p, c.minMonthly)}/month to learn anything; the budget is ${shown(p, p.budgetUsd)}.` });
   else if (p.budgetUsd === 0 && c.cash >= 2) out.push({ kind: "cash", verdict: "blocked", reason: "Needs upfront cash and there's no budget." });
   const need = MIN_OWNER_HOURS[c.exec];
@@ -340,6 +343,12 @@ export function limitChecks(c: Channel, p: AcquisitionProfile, l: ChannelLimits 
   // Don't acquire new buyers when the owner says there is no delivery capacity.
   // Existing/returning-customer work can still improve value without adding net-new customers.
   if (l.newCustomersPerMonth === 0 && !ownBase(c)) out.push({ kind: "capacity", verdict: "blocked", reason: "You said you cannot take on any new customers this month; improve delivery, retention or pricing before creating more demand." });
+  if (paid && l.ownerGrossMargin !== undefined && l.ownerGrossMargin <= 0) {
+    out.push({ kind: "economics", verdict: "blocked", reason: "Your confirmed contribution margin is at or below zero. Fix pricing or delivery costs before paying to acquire more customers." });
+  }
+  if (paid && focus && ["activation", "conversion", "retention", "delivery", "economics"].includes(focus)) {
+    out.push({ kind: "diagnosis", verdict: "blocked", reason: `The current supported diagnosis is ${focus}; improve that part of the customer or delivery system before paying to bring in more prospects.` });
+  }
   // Paid media without conversion tracking cannot be evaluated for customer economics.
   // This gate is only supplied for an owner-confirmed "none" value; inferred or unknown tracking stays a question.
   if (p.dims.tracking?.source === "owner" && p.dims.tracking.value === "none" && ["paid_search", "paid_social", "retargeting"].includes(c.family)) {
@@ -478,7 +487,7 @@ export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] =
       caution: el.ok && c.regulatedCaution && regulated ? regulated : undefined,
       priceFit,
     ...(ownerPreference ? { ownerPreference } : {}),
-      ...(limits && el.ok ? { limits: limitChecks(c, p, limits) } : {}),
+      ...(limits && el.ok ? { limits: limitChecks(c, p, limits, focus) } : {}),
       ...(focus && DIAGNOSIS_STAGES[focus] ? { diagnosisFit: c.stages.some((stage) => DIAGNOSIS_STAGES[focus]!.includes(stage)) } : {}),
     };
   });

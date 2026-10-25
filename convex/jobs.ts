@@ -107,6 +107,7 @@ import { mediaBreakEvenRoas } from "../shared/attribution/roi";
 import { approvedPlanContext } from "../shared/agents/approvedPlanContext";
 import { readExpertPlan } from "../shared/agents/planCompatibility";
 import { customerNeedPerMonth, revenueGoalNewCustomersPerMonth } from "../shared/agents/goal";
+import type { BindingConstraint } from "../shared/agents/decision";
 import { strategyQuickTakeTask } from "../shared/agents/quickTake";
 import { searchConsoleSeoContext, searchConsoleStrategyContext } from "../shared/agents/searchConsoleEvidence";
 import { searchConsolePropertyMatchesWebsite } from "../shared/integrations/searchConsole";
@@ -1051,10 +1052,21 @@ function reusableChannelFit(job: JobCtx): { adjustments: Adjustment[]; summary: 
 }
 
 /** Instant preview from code: the channels that fit and the budget approach (merged with later previews). */
-async function previewChannels(ctx: ActionCtx, job: JobCtx, profile: AcquisitionProfile) {
+async function previewChannels(ctx: ActionCtx, job: JobCtx, profile: AcquisitionProfile, focus?: BindingConstraint) {
   try {
-    const top = scoreChannels(profile, [])
-      .filter((r) => r.status !== "ineligible")
+    const top = scoreChannels(
+      profile,
+      [],
+      undefined,
+      {
+        ownerHoursPerWeek: constraintsOf(job).ownerHoursPerWeek,
+        newCustomersPerMonth: job.business?.unitEconomics?.newCustomersPerMonth,
+        ownerGrossMargin: job.business?.unitEconomics?.grossMargin,
+        connected: job.capabilities.connected,
+      },
+      focus,
+    )
+      .filter((r) => r.status !== "ineligible" && r.status !== "not_now")
       .slice(0, 4)
       .map((r) => r.name);
     const band = budgetBand(profile.budgetUsd);
@@ -1257,7 +1269,10 @@ export const buildStrategy = internalAction({
         }),
       );
       // Speed: something useful in seconds, from code alone (no model): the channels that fit and the budget approach.
-      if (v2) await previewChannels(ctx, job, profile);
+      if (v2) {
+        const previewFocus = diagnosis.status === "supported" && diagnosis.constraint !== "unknown" ? diagnosis.constraint : undefined;
+        await previewChannels(ctx, job, profile, previewFocus);
+      }
       let adjustments: Adjustment[] = [];
       let channelSummary: string[] = [];
       // Plays research doesn't depend on channel scoring, so it runs alongside it.
@@ -1325,6 +1340,7 @@ export const buildStrategy = internalAction({
       const limits = {
         ownerHoursPerWeek: constraintsOf(job).ownerHoursPerWeek,
         newCustomersPerMonth: job.business?.unitEconomics?.newCustomersPerMonth,
+        ownerGrossMargin: job.business?.unitEconomics?.grossMargin,
         connected: job.capabilities.connected,
       };
       // A supported diagnosis can change which channels lead the shortlist; an uncertain one never forces a ranking change.
@@ -1406,7 +1422,7 @@ export const buildStrategy = internalAction({
         runId,
         strategy: JSON.stringify(plays ? { ...strategy, strategyExploration: { ...plays.strategyExploration, requestedRange: creativeRangeOf(job), retrievedPrecedentIds, promptVersion: CREATIVE_STRATEGY_PROMPT_VERSION, ...(creativePromptHash ? { promptHash: creativePromptHash } : {}), ...(creativeInputHash ? { inputHash: creativeInputHash } : {}) }, plays: plays.plays, economics: plays.economics, ...(plays.decision ? { decision: plays.decision } : {}), webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: await planSnapshot(job, insightsBrief, uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]).map((source) => source.url), mergeKnowledgeReferences(playsMeta.knowledgeReferences, planMeta.knowledgeReferences)), quality, goalGap: playsGoalGap(plays, job.goal), constraintDiagnosis: diagnosis, ...(portfolio ? { portfolio } : {}), playbooks: { eligible: playbookChoice.eligible.map(({ pb, unknown, soft, status }) => ({ id: pb.id, name: pb.name, unknown, ...(soft?.length ? { soft } : {}), ...(status ? { status } : {}) })), ineligible: playbookChoice.ineligible.map(({ pb, reasons }) => ({ id: pb.id, name: pb.name, reasons })) } } : strategy),
         factIds: job.facts.map((f) => f.id),
-        acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary, ...(limits ? { limits: { ownerHoursPerWeek: limits.ownerHoursPerWeek ?? null, newCustomersPerMonth: limits.newCustomersPerMonth ?? null } } : {}) }),
+        acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary, ...(limits ? { limits: { ownerHoursPerWeek: limits.ownerHoursPerWeek ?? null, newCustomersPerMonth: limits.newCustomersPerMonth ?? null, ownerGrossMargin: limits.ownerGrossMargin ?? null } } : {}) }),
         evidence: JSON.stringify(
           buildPlanEvidence({
             skillIds: [...(playsMeta.skills ?? []), ...(planMeta.skills ?? [])],

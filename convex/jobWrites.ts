@@ -502,7 +502,7 @@ export const saveStrategy = internalMutation({
     const version = (prior[0]?.version ?? 0) + 1;
     const now = Date.now();
     const contentPlans = CHANNEL_JOBS;
-    const acq = acquisition ? (JSON.parse(acquisition) as { libraryVersion: string; profile: { types: string[]; dims: unknown }; adjustments: unknown; summary: string[]; limits?: { ownerHoursPerWeek: number | null } }) : null;
+    const acq = acquisition ? (JSON.parse(acquisition) as { libraryVersion: string; profile: { types: string[]; dims: unknown }; adjustments: unknown; summary: string[]; limits?: { ownerHoursPerWeek: number | null; ownerGrossMargin?: number | null } }) : null;
     if (acq) {
       const priorTypesSource = business.acquisition?.typesSource;
       await ctx.db.patch(business._id, { acquisition: { types: priorTypesSource === "owner" ? business.acquisition!.types : acq.profile.types, typesSource: priorTypesSource === "owner" ? "owner" : "inferred", dims: { ...((acq.profile.dims as Record<string, unknown> | undefined) ?? {}), ...((business.acquisition?.dims as Record<string, unknown> | undefined) ?? {}) }, updatedAt: now } });

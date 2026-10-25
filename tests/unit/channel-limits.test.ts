@@ -87,6 +87,20 @@ describe("hard limits before ranking", () => {
     expect(limitChecks(CHANNEL_BY_ID.P01, saas, {}).some((x) => x.kind === "capacity")).toBe(false);
   });
 
+  it("paid readiness: a supported downstream bottleneck blocks paid acquisition until repaired", () => {
+    const rows = scoreChannels(saas, [], undefined, {}, "conversion");
+    expect(rows.find((r) => r.id === "P01")).toMatchObject({ status: "not_now", limits: expect.arrayContaining([expect.objectContaining({ kind: "diagnosis", verdict: "blocked" })]) });
+    expect(picked(rows).some((row) => row.paid)).toBe(false);
+    expect(limitChecks(CHANNEL_BY_ID.P01, saas, {}, "demand").some((limit) => limit.kind === "diagnosis")).toBe(false);
+  });
+
+  it("paid readiness: only an owner-confirmed non-positive margin blocks on economics", () => {
+    expect(limitChecks(CHANNEL_BY_ID.P01, saas, { ownerGrossMargin: 0 }).find((limit) => limit.kind === "economics")?.verdict).toBe("blocked");
+    expect(limitChecks(CHANNEL_BY_ID.P01, saas, { ownerGrossMargin: -0.1 }).find((limit) => limit.kind === "economics")?.verdict).toBe("blocked");
+    expect(limitChecks(CHANNEL_BY_ID.P01, saas, { ownerGrossMargin: 0.2 }).some((limit) => limit.kind === "economics")).toBe(false);
+    expect(limitChecks(CHANNEL_BY_ID.P01, saas, {}).some((limit) => limit.kind === "economics")).toBe(false);
+  });
+
   it("the planner's scorecard names the limit", () => {
     const text = scorecardText(scoreChannels({ ...saas, budgetUsd: 0 }, [], undefined, { connected: [] }), 400);
     expect(text).toMatch(/P01 Google Search Ads: .*Not now · .*Needs at least \$300\/month to learn anything; the budget is \$0/);

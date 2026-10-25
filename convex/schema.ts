@@ -3083,6 +3083,7 @@ export default defineSchema({
           v.object({
           ownerHoursPerWeek: v.union(v.number(), v.null()),
           newCustomersPerMonth: v.optional(v.union(v.number(), v.null())),
+            ownerGrossMargin: v.optional(v.union(v.number(), v.null())),
           }),
         ),
       }),
