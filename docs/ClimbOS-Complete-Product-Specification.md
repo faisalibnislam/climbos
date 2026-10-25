@@ -6,8 +6,9 @@
 
 **Repository branch at preparation:** `growth-engine-v2`
 
-**Last committed repository state observed:** `c9736c6` (`Keep sourced competitor battlecards from research`), matching `origin/growth-engine-v2`.
-**Working-tree state observed:** uncommitted edits in `convex/creativeStrategy.ts`, `convex/schema.ts`, and `src/components/app/plan/ExpertPlan.tsx`, plus new `src/components/app/plan/StrategyLearningSources.tsx`, `tests/convex/strategy-learning-sources.test.ts`, and `tests/unit/strategy-learning-list.test.tsx`. These appear to be active creative-strategy work. This document did not edit them. Preserve and inspect them before continuing; do not stage, reset, or overwrite them as part of this document task.
+**Repository state at handoff:** `a4289d6` (`docs: link source playbook archive in handoff`), matching `origin/growth-engine-v2`.
+
+**Creative-strategy work completed during handoff:** `8b7e618` (`Let owners retire strategy feedback that guides new plans`) is now on the branch. The implementation ledger reports tenant-scoped owner review/retire/restore controls for past feedback and send-back notes, 365-day expiry, and the focused test/typecheck/lint/diff-check results. See the final “owner control over strategy learning” entry in `docs/growth-engine/implementation-ledger.md`. The working tree was clean at the final status check. Recheck `git status` before editing.
 
 ## 1. Product purpose
 
@@ -329,6 +330,7 @@ The current implementation ledger reports a broad shared intelligence path and m
 - business model viability check, alternative models, test progress, customer segment and market signals;
 - growth diagnosis, economics, portfolio selection, cash/capacity limits, offers, campaign timing, and channel fit;
 - protected grounded/adjacent/bold strategy, precedent retrieval, owner decisions, and tenant-scoped outcome learning;
+- owner visibility and retire/restore controls for prior strategy feedback, with 365-day expiry and focused regression/permission coverage (commit `8b7e618`);
 - website/search readiness, Search Console, AI-search visibility samples, SEO content briefs, page evidence, and limited CMS draft flows;
 - Design Critic and design-to-growth versions/decisions;
 - social calendar/Autopilot/publishing capabilities under provider constraints;
@@ -339,7 +341,7 @@ These are areas documented by current repository materials, not a claim that eve
 
 Known limits documented at the last handoff include no broad held-out live-model evaluation proving expert-level recommendations; no claim of causal business outcomes from most owner logs; bounded/static website sampling; semantic source support and originality not fully verified; manual/sample AI-search monitoring; no customer-level retention cohorts; some native review/platform integrations pending official access/credentials; no app-wide accessibility conformance claim; and provider/runtime setup not verified for each customer. Re-check current docs and code; this list may have changed since the handoff.
 
-The current git state observed when preparing this document includes in-progress creative-strategy source-learning work in `convex/creativeStrategy.ts`, `convex/schema.ts`, and `src/components/app/plan/ExpertPlan.tsx`, plus new `src/components/app/plan/StrategyLearningSources.tsx`, `tests/convex/strategy-learning-sources.test.ts`, and `tests/unit/strategy-learning-list.test.tsx`. Preserve and inspect these changes; do not assume they are complete or verified.
+The creative-strategy source-learning work seen during initial document preparation was committed as `8b7e618` and pushed before this handoff snapshot. Its test commands/results and limits are recorded in the implementation ledger. The working tree was clean at the final status check. Read the commit, ledger, and current `git status` before deciding what remains.
 
 ## 16. Core architecture expectations
 
@@ -399,7 +401,7 @@ These attachment paths are under `/Users/faisalislam/.codex/` on the owner’s m
 Paste this into Claude Code after opening the ClimbOS repository:
 
 ```text
-Read docs/ClimbOS-Complete-Product-Specification.md first, then read AGENTS.md, docs/Capabilities.md, docs/Architecture.md, docs/SecurityAndData.md, docs/ProviderSetup.md, docs/Verification.md, docs/growth-intelligence/MASTER_INDEX.md, docs/growth-engine/improvement-requirement-audit.md, and docs/growth-engine/implementation-ledger.md. Inspect the current branch, git status, diffs, and recent history before editing. Preserve all existing uncommitted work, especially the in-progress creative-strategy learning-source changes recorded in the specification; do not reset, overwrite, or commit another workstream's changes without inspecting and integrating them deliberately.
+Read docs/ClimbOS-Complete-Product-Specification.md first, then read AGENTS.md, docs/Capabilities.md, docs/Architecture.md, docs/SecurityAndData.md, docs/ProviderSetup.md, docs/Verification.md, docs/growth-intelligence/MASTER_INDEX.md, docs/growth-engine/improvement-requirement-audit.md, and docs/growth-engine/implementation-ledger.md. Inspect the current branch, git status, diffs, and recent history before editing. Preserve all existing uncommitted work; do not reset, overwrite, or commit another workstream's changes without inspecting and integrating them deliberately. The handoff snapshot records a clean working tree at commit `a4289d6`; verify it live because the repository can continue changing.
 
 Treat this specification as the consolidated owner requirement, not as proof that a capability is already implemented. Verify important claims in runtime code, schemas, permissions, UI, persistence, and focused tests. Read only the relevant growth-intelligence chapters, following MASTER_INDEX.md. Before changing Next.js code, read the corresponding guide in node_modules/next/dist/docs for this installed version.
 
