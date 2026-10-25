@@ -15,12 +15,13 @@ export interface DisplayFactGroup<T extends DisplayFact> {
 function canonicalMeaning(value: string): string {
   const text = value.normalize("NFKC").toLocaleLowerCase("en-US")
     .replace(/[$]/gu, " usd ").replace(/[€]/gu, " eur ").replace(/[£]/gu, " gbp ").replace(/[₹]/gu, " inr ").replace(/[৳]/gu, " bdt ")
-    .replace(/\b(?:per\s+month|a\s+month|monthly|\/\s?mo|\/\s?month|mo\s+subscription)\b/gu, " month ")
-    .replace(/\b(?:costs?|pricing|priced)\b/gu, " price ")
+    .replace(/\b(?:per\s+month|a\s+month|each\s+month|every\s+month|monthly|\/\s?mo|\/\s?month|mo\s+subscription)\b/gu, " month ")
+    .replace(/\b(?:tiers?|packages?|subscriptions?)\b/gu, " plan ")
+    .replace(/\b(?:costs?|pricing|priced|fees?|charges?|charged)\b/gu, " price ")
     .replace(/\b(?:customers|clients|users)\b/gu, " customer ")
     .replace(/\b(?:plans)\b/gu, " plan ")
     .replace(/[^\p{L}\p{N}]+/gu, " ");
-  const stop = new Set(["a", "an", "and", "are", "as", "at", "for", "from", "in", "is", "of", "our", "the", "to", "with"]);
+  const stop = new Set(["a", "an", "and", "are", "as", "at", "for", "from", "has", "in", "is", "of", "our", "the", "to", "with"]);
   return text.split(/\s+/u).filter((token) => token && !stop.has(token)).sort().join(" ");
 }
 

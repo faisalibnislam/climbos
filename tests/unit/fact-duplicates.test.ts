@@ -46,4 +46,17 @@ describe("exact duplicate business facts", () => {
     expect(groups).toHaveLength(5);
     expect(groups.find((group) => group.primary.id === "a")?.duplicates.map((fact) => fact.id)).toEqual(["b"]);
   });
+
+  it("normalizes common plan and monthly-price wording while preserving material differences", () => {
+    const groups = groupExactDuplicateFacts([
+      { id: "plan", category: "pricing", statement: "Pro plan costs $20 per month." },
+      { id: "tier", category: "pricing", statement: "The Pro tier has a $20 monthly fee." },
+      { id: "yearly", category: "pricing", statement: "Pro plan costs $20 per year." },
+      { id: "starter", category: "pricing", statement: "Starter plan costs $20 per month." },
+      { id: "otherCurrency", category: "pricing", statement: "Pro plan costs €20 per month." },
+    ]);
+
+    expect(groups).toHaveLength(4);
+    expect(groups.find((group) => group.primary.id === "plan")?.duplicates.map((fact) => fact.id)).toEqual(["tier"]);
+  });
 });
