@@ -78,4 +78,16 @@ describe("growth cash reserve plan check", () => {
     const warned = planQuality([agent(lintGrowthCashReserve([play("Partner referrals", 1_300, 0.1, 0.01)], limits(200, 0), draft))]);
     expect(canDriveWork(warned)).toBe(true);
   });
+
+  it("treats going over the monthly growth-cash limit as a hard failure too", () => {
+    const issues = lintFeasibility([play("Partner referrals", 1_300)], { currency: "USD", monthlyGrowthCashUsd: 500 }, draft);
+    expect(issues.map((i) => i.rule)).toEqual(["growth_cash"]);
+    const agent: AgentQuality = { agentId: "growth_strategy", shipped: true, gatesPassed: true, average: 8, rounds: 2, errors: { growth_cash: 1 }, researchSources: 2 };
+    const q = planQuality([agent]);
+    expect(q.state).toBe("failed");
+    expect(q.reasons.join(" ")).toContain("monthly growth cash you said you can commit");
+    expect(canDriveWork(q)).toBe(false);
+    // Within the limit: no finding.
+    expect(lintFeasibility([play("Partner referrals", 1_300)], { currency: "USD", monthlyGrowthCashUsd: 1_300 }, draft)).toEqual([]);
+  });
 });

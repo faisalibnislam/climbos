@@ -838,3 +838,7 @@ git diff --check
 ```
 
 Limitations: fixture plays have zero cash cost, so no engine-level fixture run trips the check, and its effect on live revisions is unmeasured. The pre-existing monthly `growth_cash` limit remains a soft rule (provisional, approvable), so the two cash rules now differ in severity; aligning them is an owner decision. The cash-view limits (no one-time costs, refunds, taxes, existing bills, or later payments) still apply.
+
+## Resumption note (2026-10-25, monthly growth-cash limit is a hard rule)
+
+At the owner's direction, `growth_cash` (all drafted plays' monthly media plus other cash costs above the owner-set monthly growth-cash limit) is now in `HARD_RULES`, with an owner-facing label. If the finding survives revision, plan quality is `failed` and approval and work are blocked, matching `budget` and `growth_cash_reserve`. Previously it only made a plan provisional. `tests/unit/growth-cash-reserve-lint.test.ts` adds a regression (8 tests in the file); 30 related files (406 tests), typecheck, ESLint, and the diff check passed. Effect on live plan pass rates is unmeasured.
