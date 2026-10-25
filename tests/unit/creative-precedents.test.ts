@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(52);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(53);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -109,6 +109,20 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://www.entrepreneur.com/starting-a-business/why-mailchimps-insane-fake-ad-campaign-paid-off/294550", publicationDate: "2017-06-05", sourceRole: "independent_secondary" }),
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Explore a surprising brand-discovery strategy", query)).toContain("CP-052");
+  });
+
+  it("retrieves packaging as an owned explanation channel without attributing sales growth to design", () => {
+    const query = "Use product packaging and package copy as a brand medium to explain what is inside at the retail shelf and help shoppers choose";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-053");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("does not create demand");
+    expect(match?.precedent.outcome).toContain("No controlled evidence isolates packaging's contribution");
+    expect(match?.precedent.transferRisk).toContain("regulatory or accessibility problems");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.forsman.com/work/oatly/", sourceRole: "creator_primary" }),
+      expect.objectContaining({ url: "https://fortune.com/2018/04/16/how-to-create-a-great-brand-for-your-small-business/", sourceRole: "independent_secondary", publicationDate: "2018-04-16" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Explore original product communication", query)).toContain("CP-053");
   });
 
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {

@@ -592,3 +592,7 @@ The conversion-audit render worker's desktop/mobile captures are now saved priva
 ## Resumption note (2026-10-25, shared plain-language run statuses)
 
 Home, Your plan, specialist run history, and detailed work receipts now draw their known status labels and badge tones from one shared status presentation map. This covers approval, scheduled, approved, and paused states that some lists previously displayed as raw internal values, and future unknown statuses now render as a neutral “Status update” rather than an internal code. Focused tests cover every saved state and the fallback; the existing desktop/mobile Home e2e also passes. This improves progress communication without changing run state or execution.
+
+## Resumption note (2026-10-25, packaging as an owned explanation channel)
+
+Added Oatly as CP-053 to the structured case library consumed by production creative-strategy retrieval. The record focuses on packaging as an owned explanation surface and preserves the limits: its agency and press sources do not isolate design from product, category growth, distribution, or expansion, and attention is not treated as demand. A focused regression verifies mechanism retrieval, production task injection, source roles, and the causal caveat. Current reviewed corpus: 53 cases; 47 of the 100-case research target remain unverified. The attached Simple UX prompt was reviewed as the owner-facing contract; this increment did not change interface behavior.
