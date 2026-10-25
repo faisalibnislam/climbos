@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(56);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(57);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -168,6 +168,20 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://www.tandfonline.com/doi/full/10.1080/17459435.2019.1605403", claimRole: "context" }),
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Develop an original product-linked creative platform", query)).toContain("CP-056");
+  });
+
+  it("retrieves a participatory campaign while separating visible participation from its intended outcome", () => {
+    const query = "Cause-linked participant referral loop with nomination and a donation request";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-057");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("probability of donating");
+    expect(match?.precedent.causalLimit).toContain("Participation, video uploads, donations, customers, and revenue are not interchangeable");
+    expect(match?.precedent.transferRisk).toContain("public nomination as a coercive mechanic");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.als.org/blog/als-ice-bucket-challenge-year-end-update-over-94-million-commitments-2014", sourceRole: "organization_primary" }),
+      expect.objectContaining({ url: "https://doi.org/10.1016/j.joep.2023.102624", sourceRole: "independent_secondary", publicationDate: "2023-06" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Explore an optional, accessible community participation idea", query)).toContain("CP-057");
   });
 
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {
