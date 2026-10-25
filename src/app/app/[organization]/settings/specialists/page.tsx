@@ -11,6 +11,7 @@ import { Badge, Button, Callout, Card, CardContent, CardDescription, CardHeader,
 import { errorMessage } from "@/components/app/errors";
 import { LoadingBlock, QueryBoundary } from "@/components/app/results/QueryBoundary";
 import { SettingsHeader } from "@/components/app/settings/SettingsNav";
+import { runStatusPresentation } from "../../../../../../shared/progress";
 
 const ACTION_LABEL: Record<(typeof AGENT_ACTIONS)[number], string> = {
   generate_content: "Prepare content drafts", refresh_plan: "Review the growth plan", research: "Research the website and market",
@@ -21,8 +22,6 @@ const ACTION_LABEL: Record<(typeof AGENT_ACTIONS)[number], string> = {
 
 type Permission = "read_only" | "draft" | "request_approval";
 const creditsText = (value: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(value);
-const runStatusText = (status: string) => status === "verified" ? "Complete" : status === "needs_approval" ? "Waiting for review" : status.replaceAll("_", " ");
-
 const PERMISSION_OPTIONS = [
   { value: "read_only" as const, label: "Read only" },
   { value: "draft" as const, label: "Prepare drafts" },
@@ -202,11 +201,12 @@ function SpecialistsSettings() {
                   <div className="flex flex-col gap-2 border-t border-line pt-3">
                     <h5 className="text-ui font-medium text-ink-2">Recent runs</h5>
                     <ul className="flex flex-col gap-2">
-                      {agent.recentRuns.slice(0, 3).map((run) => (
-                        <li key={run.id} className="flex flex-col gap-1 rounded-md border border-line bg-surface p-2.5">
+                      {agent.recentRuns.slice(0, 3).map((run) => {
+                        const status = runStatusPresentation(run.status);
+                        return <li key={run.id} className="flex flex-col gap-1 rounded-md border border-line bg-surface p-2.5">
                           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                             <span className="text-sm font-medium text-ink">{run.title}</span>
-                            <Badge tone={run.status === "verified" ? "green" : run.status === "failed" ? "red" : "neutral"}>{runStatusText(run.status)}</Badge>
+                            <Badge tone={status.tone}>{status.label}</Badge>
                           </div>
                           <p className="text-xs text-ink-3">
                             {new Date(run.createdAt).toLocaleDateString()} · {run.status === "verified" || run.status === "failed" || run.status === "canceled" ? `${creditsText(run.actualCredits)} credits recorded` : `${creditsText(run.actualCredits)} recorded so far; ${creditsText(run.estimateCredits)} estimated for this run`}
@@ -215,8 +215,8 @@ function SpecialistsSettings() {
                           {data.canManage && ["verified", "failed", "uncertain", "canceled"].includes(run.status) ? (
                             <SpecialistRunFeedback slug={slug} runId={run.id as Id<"workflowRuns">} rating={run.rating} minutesSaved={run.minutesSaved} outcome={run.outcome} successMetric={agent.successMetric} />
                           ) : null}
-                        </li>
-                      ))}
+                        </li>;
+                      })}
                     </ul>
                   </div>
                 ) : null}
