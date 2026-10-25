@@ -2949,8 +2949,10 @@ export default defineSchema({
         ),
         /** What this plan was built from (spec §04), for tracing results back to inputs. */
         snapshot: v.optional(
+          // Older plans saved smaller snapshots, so every top-level field is optional here; new snapshots
+          // are written with the full PlanSnapshot type (shared/agents/specs.ts).
           v.object({
-            snapshotVersion: v.union(
+            snapshotVersion: v.optional(v.union(
               v.literal(1),
               v.literal(2),
               v.literal(3),
@@ -2973,19 +2975,19 @@ export default defineSchema({
               v.literal(20),
               v.literal(21),
               v.literal(22),
-            ),
-            snapshotId: v.string(),
-            capturedAt: v.number(),
-            engine: v.string(),
-            aiMode: v.string(),
-            goal: v.string(),
-            horizonDays: v.number(),
-            monthlyAdBudget: v.number(),
+            )),
+            snapshotId: v.optional(v.string()),
+            capturedAt: v.optional(v.number()),
+            engine: v.optional(v.string()),
+            aiMode: v.optional(v.string()),
+            goal: v.optional(v.string()),
+            horizonDays: v.optional(v.number()),
+            monthlyAdBudget: v.optional(v.number()),
             currency: v.optional(v.string()),
-            facts: v.number(),
-            factVersions: v.array(
+            facts: v.optional(v.number()),
+            factVersions: v.optional(v.array(
               v.object({ id: v.string(), updatedAt: v.number() }),
-            ),
+            )),
             businessProfile: v.optional(v.any()),
             businessFactVersions: v.optional(
               v.array(v.object({ id: v.string(), updatedAt: v.number(), reviewSuggested: v.optional(v.boolean()) })),
@@ -3010,18 +3012,18 @@ export default defineSchema({
             marketChangeVersions: v.optional(
               v.array(v.object({ id: v.string(), at: v.number() })),
             ),
-            staleFactIds: v.array(v.string()),
-            contradictions: v.array(
+            staleFactIds: v.optional(v.array(v.string())),
+            contradictions: v.optional(v.array(
               v.object({
                 subject: v.string(),
                 values: v.array(v.string()),
                 factIds: v.array(v.string()),
               }),
-            ),
-            insightsChars: v.number(),
-            insightsHash: v.string(),
-            sourceUrls: v.array(v.string()),
-            capabilities: v.array(v.string()),
+            )),
+            insightsChars: v.optional(v.number()),
+            insightsHash: v.optional(v.string()),
+            sourceUrls: v.optional(v.array(v.string())),
+            capabilities: v.optional(v.array(v.string())),
             businessLifecycleStage: v.optional(
               v.union(
                 v.object({
