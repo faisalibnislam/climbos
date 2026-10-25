@@ -96,11 +96,61 @@ export const recordFeedback = mutation({
   },
 });
 
-/** Only this tenant's recent owner decisions are reusable; they are guidance, never outcome proof. */
+/** Feedback and send-back notes older than this stop guiding plans; owners can also retire them sooner. */
+export const LEARNING_MAX_AGE_DAYS = 365;
+const usable = (createdAt: number, retiredAt: number | undefined, now: number) => !retiredAt && now - createdAt <= LEARNING_MAX_AGE_DAYS * 86_400_000;
+
+/** Every strategy preference ClimbOS may reuse, with whether it is currently used, so the owner can retire it. */
+export const learningSources = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
+    const now = Date.now();
+    const feedback = await ctx.db.query("strategyExplorationFeedback").withIndex("by_org_strategy", (q) => q.eq("orgId", org._id)).order("desc").take(40);
+    const plans = await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", org._id)).order("desc").take(20);
+    const notes = [];
+    for (const plan of plans) {
+      if (!plan.approvalId) continue;
+      const approval = await ctx.db.get(plan.approvalId);
+      const note = approval && approval.orgId === org._id && approval.status === "rejected" && approval.subjectType === "strategy" && approval.subjectId === String(plan._id) ? approval.decisionNote?.trim() : undefined;
+      if (note) notes.push({ strategyId: plan._id, version: plan.version, note: note.slice(0, 500), createdAt: plan.createdAt, retired: Boolean(plan.rejectionNoteRetiredAt), used: usable(plan.createdAt, plan.rejectionNoteRetiredAt, now) });
+    }
+    return {
+      canEdit: role === "owner" || role === "admin" || role === "editor",
+      maxAgeDays: LEARNING_MAX_AGE_DAYS,
+      feedback: feedback.map((row) => ({ id: row._id, mode: row.mode, optionTitle: row.optionTitle, decision: row.decision, testState: row.testState, outcomeNote: row.outcomeNote ?? null, createdAt: row.createdAt, retired: Boolean(row.retiredAt), used: usable(row.createdAt, row.retiredAt, now) })),
+      planNotes: notes.slice(0, 10),
+    };
+  },
+});
+
+/** Stop (or resume) one piece of feedback guiding future plans; the record itself is kept. */
+export const setFeedbackRetired = mutation({
+  args: { slug: v.string(), feedbackId: v.id("strategyExplorationFeedback"), retired: v.boolean() },
+  handler: async (ctx, { slug, feedbackId, retired }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const row = assertSameOrg(await ctx.db.get(feedbackId), org._id, "feedback");
+    await ctx.db.patch(row._id, retired ? { retiredAt: Date.now(), retiredBy: user._id } : { retiredAt: undefined, retiredBy: undefined });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: retired ? "strategy_learning.retired" : "strategy_learning.restored", subjectType: "strategy", subjectId: row.strategyId, summary: `${retired ? "Retired" : "Restored"} feedback on the ${row.mode} option “${row.optionTitle.slice(0, 80)}”.` });
+  },
+});
+
+export const setPlanNoteRetired = mutation({
+  args: { slug: v.string(), strategyId: v.id("strategies"), retired: v.boolean() },
+  handler: async (ctx, { slug, strategyId, retired }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const plan = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan");
+    await ctx.db.patch(plan._id, { rejectionNoteRetiredAt: retired ? Date.now() : undefined });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: retired ? "strategy_learning.retired" : "strategy_learning.restored", subjectType: "strategy", subjectId: plan._id, summary: `${retired ? "Retired" : "Restored"} the send-back note on plan v${plan.version}.` });
+  },
+});
+
+/** Only this tenant's recent, unretired owner decisions are reusable; they are guidance, never outcome proof. */
 export async function creativeStrategyLearningBrief(ctx: QueryCtx, orgId: Id<"organizations">): Promise<string> {
-  const rows = await ctx.db.query("strategyExplorationFeedback")
+  const now = Date.now();
+  const rows = (await ctx.db.query("strategyExplorationFeedback")
     .withIndex("by_org_strategy", (q) => q.eq("orgId", orgId))
-    .order("desc").take(20);
+    .order("desc").take(40)).filter((row) => usable(row.createdAt, row.retiredAt, now));
   const lines = rows.slice(0, 8).map((row) => {
     const evidenceLabel = row.outcomeEvidence.replaceAll("_", "-");
     const result = row.testState === "observed"
@@ -114,7 +164,7 @@ export async function creativeStrategyLearningBrief(ctx: QueryCtx, orgId: Id<"or
   const plans = await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", orgId)).order("desc").take(20);
   let planNotes = 0;
   for (const plan of plans) {
-    if (planNotes >= 5 || !plan.approvalId) continue;
+    if (planNotes >= 5 || !plan.approvalId || !usable(plan.createdAt, plan.rejectionNoteRetiredAt, now)) continue;
     const approval = await ctx.db.get(plan.approvalId);
     if (!approval || approval.orgId !== orgId || approval.status !== "rejected" || approval.subjectType !== "strategy" || approval.subjectId !== String(plan._id)) continue;
     const note = approval.decisionNote?.trim();

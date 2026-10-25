@@ -89,6 +89,11 @@ export default function FactsPage() {
         ) : null}
       </div>
       {canEdit ? <span className="flex shrink-0 gap-1">
+        {factFreshness(f.category, f.updatedAt, undefined, f.verifiedAt).reviewSuggested ? (
+          <Button size="sm" variant="secondary" aria-label={`Still accurate: ${f.statement}`} onClick={() => run(() => review({ slug, factId: f.id, action: "confirm" }), "Marked as still accurate")}>
+            <Check aria-hidden /> Still accurate
+          </Button>
+        ) : null}
         <Button size="sm" variant="ghost" aria-label="Edit" onClick={() => setEditing({ id: f.id, text: f.statement })}>
           <Pencil aria-hidden />
         </Button>

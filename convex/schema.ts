@@ -247,6 +247,12 @@ const growthPlayValidator = v.object({
     ),
     evidenceNote: v.string(),
     evidenceRefs: v.array(v.string()),
+    evidenceExcerpts: v.optional(v.array(v.object({ ref: v.string(), excerpt: v.string() }))),
+    /** Set by code (verifyActionEvidence): whether each reference's excerpt was found in its fact or loaded page. */
+    evidenceSupport: v.optional(v.array(v.object({
+      ref: v.string(),
+      status: v.union(v.literal("found_on_page"), v.literal("found_in_fact"), v.literal("not_found"), v.literal("page_unavailable"), v.literal("not_loaded"), v.literal("no_excerpt")),
+    }))),
     targetOrAsset: v.string(),
     resourcePlan: v.string(),
     executionCapability: v.union(
@@ -313,6 +319,7 @@ const growthPlayValidator = v.object({
     spendSource: growthSourceTagValidator,
     ownerHoursPerWeek: v.number(),
     otherMonthlyUsd: v.optional(v.number()),
+    setupCashUsd: v.optional(v.number()),
     otherSource: v.optional(growthSourceTagValidator),
     hoursSource: growthSourceTagValidator,
   }),
@@ -774,6 +781,8 @@ export default defineSchema({
     kind: v.union(v.literal("customer"), v.literal("demo")),
     /** Engine rollout flags for this workspace (REQ-ENG-01), set by ClimbOS staff only, e.g. "decision_contract". */
     engineFlags: v.optional(v.array(v.string())),
+    /** Owner-set minimum days between ClimbOS emails to the same person (marketing broadcasts, outreach); unset = no limit. */
+    contactFrequencyDays: v.optional(v.number()),
     createdBy: v.id("users"),
     timezone: v.string(),
     /** Default Climb AI mode for new jobs (Expert needs a paid plan). Absent = expert when paid, else basic. */
@@ -1081,6 +1090,8 @@ export default defineSchema({
                     v.literal("inference"),
                   ),
                   evidenceRefs: v.array(v.string()),
+                  evidenceExcerpt: v.optional(v.string()),
+                  evidenceSupport: v.optional(v.union(v.literal("found_in_source"), v.literal("not_found"), v.literal("not_checked"), v.literal("no_excerpt"))),
                 }),
               ),
             ),
@@ -1095,6 +1106,8 @@ export default defineSchema({
                     v.literal("inference"),
                   ),
                   evidenceRefs: v.array(v.string()),
+                  evidenceExcerpt: v.optional(v.string()),
+                  evidenceSupport: v.optional(v.union(v.literal("found_in_source"), v.literal("not_found"), v.literal("not_checked"), v.literal("no_excerpt"))),
                 }),
               ),
             ),
@@ -1109,6 +1122,8 @@ export default defineSchema({
                     v.literal("inference"),
                   ),
                   evidenceRefs: v.array(v.string()),
+                  evidenceExcerpt: v.optional(v.string()),
+                  evidenceSupport: v.optional(v.union(v.literal("found_in_source"), v.literal("not_found"), v.literal("not_checked"), v.literal("no_excerpt"))),
                 }),
               ),
             ),
@@ -1124,6 +1139,8 @@ export default defineSchema({
                     v.literal("inference"),
                   ),
                   evidenceRefs: v.array(v.string()),
+                  evidenceExcerpt: v.optional(v.string()),
+                  evidenceSupport: v.optional(v.union(v.literal("found_in_source"), v.literal("not_found"), v.literal("not_checked"), v.literal("no_excerpt"))),
                 }),
               ),
             ),
@@ -1157,6 +1174,7 @@ export default defineSchema({
                 }),
               ),
             ),
+            battlecard: v.optional(v.object({ winsWith: v.string(), theyAreStrongerAt: v.string(), weAreStrongerAt: v.string(), landmineQuestion: v.string(), sourceUrls: v.array(v.string()) })),
           }),
         ),
         positioning: v.string(),
@@ -1588,6 +1606,8 @@ export default defineSchema({
   contacts: defineTable({
     orgId: v.id("organizations"),
     emailHash: v.string(),
+    /** When a ClimbOS marketing broadcast to this contact was last accepted by the provider. */
+    lastMarketingEmailAt: v.optional(v.number()),
     emailCiphertext: v.optional(v.string()),
     emailIv: v.optional(v.string()),
     emailDomain: v.string(),
@@ -2118,9 +2138,28 @@ export default defineSchema({
     outcomeEvidence: v.union(v.literal("measured"), v.literal("owner_reported"), v.literal("source_reported"), v.literal("inferred"), v.literal("unknown")),
     createdBy: v.id("users"),
     createdAt: v.number(),
+    /** The owner stopped this feedback from guiding future plans (kept for history). */
+    retiredAt: v.optional(v.number()),
+    retiredBy: v.optional(v.id("users")),
   })
     .index("by_org_strategy", ["orgId", "strategyId", "createdAt"])
     .index("by_strategy_mode", ["strategyId", "mode", "createdAt"]),
+
+  /** Owner-recorded results of a business model check's deciding or alternative test (append-only; latest row wins). */
+  businessModelTests: defineTable({
+    orgId: v.id("organizations"),
+    runId: v.id("workflowRuns"),
+    /** Which test: the recommendation's deciding test or one alternative's smallest test. */
+    target: v.union(v.literal("deciding"), v.literal("grounded"), v.literal("adjacent"), v.literal("bold")),
+    testState: v.union(v.literal("not_started"), v.literal("designed"), v.literal("run"), v.literal("observed")),
+    outcomeNote: v.optional(v.string()),
+    outcomeEvidence: v.union(v.literal("measured"), v.literal("owner_reported"), v.literal("unknown")),
+    ownerDecision: v.union(v.literal("undecided"), v.literal("keep_current_model"), v.literal("keep_testing"), v.literal("adopt_alternative"), v.literal("drop_alternative")),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_org_created", ["orgId", "createdAt"])
+    .index("by_run_target", ["runId", "target", "createdAt"]),
 
   /** Engine quality per agent run (spec §27): context sizes, lint by rule draft → final, numbers lost in revision. No tenant text. */
   engineQuality: defineTable({
@@ -2526,6 +2565,9 @@ export default defineSchema({
     lastText: v.optional(v.string()),
     /** Pages included in lastText, retained so future change summaries can cite their origin. */
     lastSourceUrls: v.optional(v.array(v.string())),
+    /** Page-level search readiness finding IDs from the last homepage read (shared/seo/readinessCompare.ts). */
+    lastReadinessFindingIds: v.optional(v.array(v.string())),
+    lastReadinessAt: v.optional(v.number()),
     lastError: v.optional(v.string()),
     createdAt: v.number(),
   })
@@ -2713,6 +2755,12 @@ export default defineSchema({
     nextStep: v.optional(v.string()),
     nextStepAt: v.optional(v.number()),
     wonAt: v.optional(v.number()),
+    /** When the deal moved to lost, and the owner-recorded reason (shared/growth/pipeline.ts); unknown when absent. */
+    lostAt: v.optional(v.number()),
+    lostReason: v.optional(v.union(v.literal("price"), v.literal("timing"), v.literal("no_need"), v.literal("chose_competitor"), v.literal("no_response"), v.literal("not_a_fit"), v.literal("other"))),
+    lostReasonNote: v.optional(v.string()),
+    /** Last stage change (older deals: unknown; updatedAt changes on every edit). */
+    stageChangedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -2901,8 +2949,10 @@ export default defineSchema({
         ),
         /** What this plan was built from (spec §04), for tracing results back to inputs. */
         snapshot: v.optional(
+          // Older plans saved smaller snapshots, so every top-level field is optional here; new snapshots
+          // are written with the full PlanSnapshot type (shared/agents/specs.ts).
           v.object({
-            snapshotVersion: v.union(
+            snapshotVersion: v.optional(v.union(
               v.literal(1),
               v.literal(2),
               v.literal(3),
@@ -2925,19 +2975,19 @@ export default defineSchema({
               v.literal(20),
               v.literal(21),
               v.literal(22),
-            ),
-            snapshotId: v.string(),
-            capturedAt: v.number(),
-            engine: v.string(),
-            aiMode: v.string(),
-            goal: v.string(),
-            horizonDays: v.number(),
-            monthlyAdBudget: v.number(),
+            )),
+            snapshotId: v.optional(v.string()),
+            capturedAt: v.optional(v.number()),
+            engine: v.optional(v.string()),
+            aiMode: v.optional(v.string()),
+            goal: v.optional(v.string()),
+            horizonDays: v.optional(v.number()),
+            monthlyAdBudget: v.optional(v.number()),
             currency: v.optional(v.string()),
-            facts: v.number(),
-            factVersions: v.array(
+            facts: v.optional(v.number()),
+            factVersions: v.optional(v.array(
               v.object({ id: v.string(), updatedAt: v.number() }),
-            ),
+            )),
             businessProfile: v.optional(v.any()),
             businessFactVersions: v.optional(
               v.array(v.object({ id: v.string(), updatedAt: v.number(), reviewSuggested: v.optional(v.boolean()) })),
@@ -2962,18 +3012,18 @@ export default defineSchema({
             marketChangeVersions: v.optional(
               v.array(v.object({ id: v.string(), at: v.number() })),
             ),
-            staleFactIds: v.array(v.string()),
-            contradictions: v.array(
+            staleFactIds: v.optional(v.array(v.string())),
+            contradictions: v.optional(v.array(
               v.object({
                 subject: v.string(),
                 values: v.array(v.string()),
                 factIds: v.array(v.string()),
               }),
-            ),
-            insightsChars: v.number(),
-            insightsHash: v.string(),
-            sourceUrls: v.array(v.string()),
-            capabilities: v.array(v.string()),
+            )),
+            insightsChars: v.optional(v.number()),
+            insightsHash: v.optional(v.string()),
+            sourceUrls: v.optional(v.array(v.string())),
+            capabilities: v.optional(v.array(v.string())),
             businessLifecycleStage: v.optional(
               v.union(
                 v.object({
@@ -3300,6 +3350,8 @@ export default defineSchema({
     restoredFrom: v.optional(
       v.object({ version: v.number(), parts: v.array(v.string()) }),
     ),
+    /** The owner stopped this plan's send-back note from guiding future plans. */
+    rejectionNoteRetiredAt: v.optional(v.number()),
     createdAt: v.number(),
   }).index("by_org", ["orgId"]),
 
@@ -3509,6 +3561,11 @@ export default defineSchema({
     citedUrls: v.array(v.string()),
     competitorMentions: v.array(v.string()),
     answerExcerpt: v.optional(v.string()),
+    /** Owner check of what the answer says about the business (only when the business is mentioned). */
+    accuracy: v.optional(v.union(v.literal("accurate"), v.literal("contains_error"), v.literal("not_checked"))),
+    /** Words quoted from the answer excerpt that are wrong, and the owner-stated correct fact. */
+    incorrectClaim: v.optional(v.string()),
+    correctFact: v.optional(v.string()),
     evidenceBasis: v.literal("owner_observed"),
     enteredBy: v.id("users"),
     enteredAt: v.number(),
@@ -3561,6 +3618,10 @@ export default defineSchema({
     endDate: v.optional(v.string()),
     /** Owner-entered efficiency limit used only for review advice, never auto-pausing. */
     targetCostPerConversionMinor: v.optional(v.number()),
+    /** Meta only: the reported action type the owner confirmed as this campaign's conversion (must be one Meta reported). */
+    conversionActionType: v.optional(v.string()),
+    conversionActionSetBy: v.optional(v.id("users")),
+    conversionActionSetAt: v.optional(v.number()),
     /** Owner-confirmed elapsed-day point for first performance review. */
     reviewAfterDays: v.optional(v.number()),
     activatedAt: v.optional(v.number()),
@@ -3664,6 +3725,8 @@ export default defineSchema({
       }),
     ),
     /** Exact approved offer terms used for copy review; part of the content hash and carried through edits. */
+    /** Last check of whether the link destination still shows an approved offer price (warning only). */
+    destinationOfferCheck: v.optional(v.object({ checkedAt: v.number(), url: v.string(), status: v.union(v.literal("found"), v.literal("not_found"), v.literal("unavailable")), found: v.array(v.number()) })),
     approvedOfferTermsSnapshot: v.optional(v.array(v.object({
       playName: v.string(),
       recommendation: v.string(),
@@ -3884,8 +3947,13 @@ export default defineSchema({
       v.literal("manual"),
       v.literal("daily"),
       v.literal("weekly"),
+      v.literal("event"),
     ),
     nextTriggerAt: v.optional(v.number()),
+    /** Event trigger: which business events start a run, the minimum gap between event runs, and the last one. */
+    triggerEvents: v.optional(v.array(v.string())),
+    eventCooldownHours: v.optional(v.number()),
+    lastEventRunAt: v.optional(v.number()),
     modelRouting: v.literal("automatic"),
     status: v.union(v.literal("active"), v.literal("archived")),
     createdBy: v.id("users"),
@@ -3898,6 +3966,18 @@ export default defineSchema({
     .index("by_status_trigger_next", ["status", "trigger", "nextTriggerAt"]),
 
   /** Human outcome notes on a specialist run; separates owner-reported results from platform measurements. */
+  /** Running monthly credit totals of finished specialist runs (updated on finish; seeded once from earlier runs that month). */
+  customAgentUsage: defineTable({
+    orgId: v.id("organizations"),
+    customAgentId: v.id("customAgents"),
+    /** UTC month, YYYY-MM. */
+    month: v.string(),
+    finishedMicros: v.number(),
+    /** The one-time seed could not read every earlier run this month, so the total is incomplete. */
+    partial: v.boolean(),
+    updatedAt: v.number(),
+  }).index("by_agent_month", ["customAgentId", "month"]),
+
   customAgentFeedback: defineTable({
     orgId: v.id("organizations"),
     customAgentId: v.id("customAgents"),
@@ -4402,6 +4482,8 @@ export default defineSchema({
     orgId: v.id("organizations"),
     /** Profile and originating request let budgets and outcome reporting follow child work. */
     customAgentId: v.optional(v.id("customAgents")),
+    /** Specialist runs: micros already added to the monthly usage total, so retried finishes add only the change. */
+    customAgentUsageCountedMicros: v.optional(v.number()),
     customAgentParentRunId: v.optional(v.id("workflowRuns")),
     /** Built-in specialist selected by the coordinator for this action. */
     agentArchetypeId: v.optional(v.string()),

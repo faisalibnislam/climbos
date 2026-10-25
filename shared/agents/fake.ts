@@ -1,3 +1,4 @@
+import { demoBusinessModelCheck } from "./businessModel";
 import { z } from "zod";
 import { turnCostMicros, ZERO_USAGE, type TurnRequest, type TurnResult } from "../ai/types";
 import type { RateVersion } from "../economics/rates";
@@ -35,7 +36,7 @@ function sample(s: JsonSchema, marker: string, key = ""): unknown {
       return out;
     }
     case "array":
-      if (key === "factIndexes" || key.endsWith("FactIndexes") || key.endsWith("SourceUrls") || key === "approvedExamples" || key === "evidenceRefs" || key === "dependencies" || key === "precedentIds") return [];
+      if (key === "factIndexes" || key.endsWith("FactIndexes") || key.endsWith("SourceUrls") || key === "approvedExamples" || key === "evidenceRefs" || key === "evidenceExcerpts" || key === "dependencies" || key === "precedentIds") return [];
       return s.items ? [sample(s.items, marker, key)] : [];
     case "number":
     case "integer":
@@ -110,6 +111,10 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
       insights.swot = { strengths: [], weaknesses: [], opportunities: [], threats: [] };
       insights.swotEvidence = [];
       insights.swotMoves = [];
+    }
+    // Business model checks: the labelled demo output (one alternative per mode, honest unknowns).
+    if (output && typeof output === "object" && Array.isArray((output as { alternatives?: unknown }).alternatives) && (output as { verdict?: unknown }).verdict) {
+      output = demoBusinessModelCheck("Fake business");
     }
     // Growth plans: a portfolio that satisfies the deterministic play rules.
     if (output && typeof output === "object" && Array.isArray((output as { plays?: unknown }).plays)) {

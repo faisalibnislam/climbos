@@ -9,6 +9,7 @@ import { GrowthCashTimingPanel, type GrowthCashTimingView } from "../../src/comp
 const base: GrowthCashTimingView = {
   horizonWeeks: 4,
   weeklyCashOutUsd: 300,
+  setupCashUsd: 0,
   cashOutOverPeriodUsd: 1_200,
   reserveUsd: 100,
   paymentLagDays: 14,

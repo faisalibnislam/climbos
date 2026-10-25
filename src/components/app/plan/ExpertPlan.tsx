@@ -11,6 +11,7 @@ import { PlayResults } from "./PlayResults";
 import { EvidenceReferences } from "./EvidenceReferences";
 import { DecisionFocus } from "./DecisionFocus";
 import { GrowthCashTimingPanel, type GrowthCashTimingView } from "./GrowthCashTiming";
+import { StrategyLearningSources } from "./StrategyLearningSources";
 import {
   ArrowRight,
   Ban,
@@ -53,9 +54,9 @@ import { cn } from "@/lib/utils";
 import { formatMoney } from "../../../../shared/economics/currency";
 import { playConfidence, type EvidenceLevel, type PlayConfidence } from "../../../../shared/agents/confidence";
 import type { Diagnosis } from "../../../../shared/agents/diagnosis";
-import { churnOf, ownerHourOf, playMaths, type Economics, type ForecastUncertainty, type PlayModel, type PlaySensitivity, type PortfolioChoice } from "../../../../shared/agents/economics";
+import { churnOf, customerValue, ownerHourOf, playMaths, type Economics, type ForecastUncertainty, type PlayModel, type PlaySensitivity, type PortfolioChoice } from "../../../../shared/agents/economics";
 import { fmtInput as fmtSwitch, switchPoints } from "../../../../shared/agents/voi";
-import { ACCESS_LABEL, BASIS_LABEL, CHECK_LABEL, COST_BASIS_LABEL, economicsSources, forecastBasis, playInputs, SOURCE_LABEL, type InputRow } from "../../../../shared/agents/provenance";
+import { ACCESS_LABEL, BASIS_LABEL, CHECK_LABEL, COST_BASIS_LABEL, economicsSources, forecastBasis, playInputs, SOURCE_LABEL, type ActionEvidenceSupport, type InputRow } from "../../../../shared/agents/provenance";
 import { Clamp, DetailsToggle, ExpandAll, FieldLabel, PlanSection, splitLinks, LinkChip } from "./PlanSections";
 import { FeedbackButton } from "./Feedback";
 import { ProseBullets } from "@/components/app/ProseBullets";
@@ -104,6 +105,8 @@ export interface PlayView {
     evidenceBasis: "assumption" | "inference" | "measured" | "owner_report" | "source_claim";
     evidenceNote: string;
     evidenceRefs: string[];
+    evidenceExcerpts?: { ref: string; excerpt: string }[];
+    evidenceSupport?: ActionEvidenceSupport[];
     targetOrAsset: string;
     resourcePlan: string;
     executionCapability: "owner" | "climbos" | "existing_integration" | "external_setup" | "unknown";
@@ -662,7 +665,7 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
         </ul>
       </details>
       <dl className="grid gap-2 rounded-[var(--radius-control)] bg-surface-2 p-3 text-sm sm:grid-cols-3">
-        <div><dt className="text-xs text-ink-3">Cash over {play.horizonDays} days</dt><dd className="font-medium tabular-nums text-ink">{money(m.costBreakdown.cashMediaUsd + m.costBreakdown.cashOtherUsd)}</dd><dd className="text-xs text-ink-3">Media {money(m.costBreakdown.cashMediaUsd)} + other cash costs {money(m.costBreakdown.cashOtherUsd)}</dd></div>
+        <div><dt className="text-xs text-ink-3">Cash over {play.horizonDays} days</dt><dd className="font-medium tabular-nums text-ink">{money(m.costBreakdown.cashMediaUsd + m.costBreakdown.cashOtherUsd + m.costBreakdown.cashSetupUsd)}</dd><dd className="text-xs text-ink-3">Media {money(m.costBreakdown.cashMediaUsd)} + other cash costs {money(m.costBreakdown.cashOtherUsd)}{m.costBreakdown.cashSetupUsd > 0 ? ` + one-time setup ${money(m.costBreakdown.cashSetupUsd)}` : ""}</dd></div>
         <div><dt className="text-xs text-ink-3">Owner time value</dt><dd className="font-medium tabular-nums text-ink">{money(m.costBreakdown.ownerTimeUsd)}</dd><dd className="text-xs text-ink-3">Hours × your hourly value</dd></div>
         <div><dt className="text-xs text-ink-3">Fully loaded total</dt><dd className="font-semibold tabular-nums text-ink">{money(m.costBreakdown.fullyLoadedUsd)}</dd><dd className="text-xs text-ink-3">Cash + owner time; used for cost per customer</dd></div>
       </dl>
@@ -707,13 +710,14 @@ const fmtInput = (r: InputRow, currency?: string): string => {
       case "share_month":
         return `${Math.round(v * 1000) / 10}%`;
       case "usd_month":
+      case "usd_once":
       case "usd_hour":
         return usd(v, currency);
       default:
         return Math.round(v).toLocaleString("en-US");
     }
   };
-  const suffix = { people_week: "/week", share: "", share_month: "/month", usd_month: "/month", hours_week: " h/week", usd_hour: "/hour" }[r.unit];
+  const suffix = { people_week: "/week", share: "", share_month: "/month", usd_month: "/month", usd_once: " once", hours_week: " h/week", usd_hour: "/hour" }[r.unit];
   const range = r.low !== undefined && r.high !== undefined && (r.low !== r.value || r.high !== r.value) ? ` (${n(r.low)}–${n(r.high)})` : "";
   return `${n(r.value)}${suffix}${range}`;
 };
@@ -805,7 +809,7 @@ function PlayDetails({ play, economics, id }: { play: PlayView; economics?: Econ
             <div><dt className="text-xs text-ink-3">Diagnosis</dt><dd className="text-ui text-ink">{action.diagnosis}</dd></div>
             <div><dt className="text-xs text-ink-3">Intended effect</dt><dd className="text-ui text-ink">{action.intendedEffect}</dd></div>
             <div><dt className="text-xs text-ink-3">Evidence basis</dt><dd className="text-ui text-ink">{EVIDENCE_BASIS_LABEL[action.evidenceBasis]} · {action.evidenceNote}</dd></div>
-            {action.evidenceRefs.length ? <div><dt className="text-xs text-ink-3">Evidence references</dt><dd className="break-words text-ui text-ink"><EvidenceReferences references={action.evidenceRefs} /></dd></div> : null}
+            {action.evidenceRefs.length ? <div><dt className="text-xs text-ink-3">Evidence references</dt><dd className="break-words text-ui text-ink"><EvidenceReferences references={action.evidenceRefs} excerpts={action.evidenceExcerpts} support={action.evidenceSupport} /></dd></div> : null}
             <div><dt className="text-xs text-ink-3">Target or asset</dt><dd className="text-ui text-ink">{action.targetOrAsset}</dd></div>
             <div><dt className="text-xs text-ink-3">Resources</dt><dd className="text-ui text-ink">{action.resourcePlan}</dd></div>
             <div><dt className="text-xs text-ink-3">Execution</dt><dd className="text-ui text-ink">{CAPABILITY_LABEL[action.executionCapability]}</dd></div>
@@ -1127,7 +1131,7 @@ function PlayCard({ play, slug, economics, results, planId, targets, canEdit = f
         <Forecast f={play} economics={economics} open={open} diagnosis={diagnosis} />
         {play.model && economics ? <PlayEconomics play={play} economics={economics} /> : null}
         {targets && planId && play.id ? <PlayTargetsBlock t={targets} slug={slug} strategyId={planId} playId={play.id} canEdit={canEdit} /> : null}
-        {play.model?.steps?.length && results ? <PlayResults slug={slug} strategyId={results.strategyId} playName={play.name} model={play.model} actuals={results.byPlay[play.name]} retention={results.byPlay[play.name]?.retention} currency={results.currency} canEdit={results.canEdit} /> : null}
+        {play.model?.steps?.length && results ? <PlayResults slug={slug} strategyId={results.strategyId} playName={play.name} model={play.model} actuals={results.byPlay[play.name]} retention={results.byPlay[play.name]?.retention} currency={results.currency} canEdit={results.canEdit}  affordableCacUsd={economics ? customerValue(economics) : null}/> : null}
 
         {open ? <PlayDetails play={play} economics={economics} id={panel} /> : null}
 
@@ -1513,6 +1517,7 @@ export function GrowthPlays({ plays, slug, economics, portfolioComparisons, stra
       })}
     >
       {strategyExploration ? <StrategyExplorationPanel options={strategyExploration} slug={slug} strategyId={planId} canEdit={canEdit} /> : null}
+      {strategyExploration ? <StrategyLearningSources slug={slug} /> : null}
       {economics ? <EconomicsLine economics={economics} /> : null}
       {portfolioComparisons ? <PortfolioComparisons data={portfolioComparisons} economics={economics} /> : null}
       {portfolioComparisons?.cashTiming ? <GrowthCashTimingPanel data={portfolioComparisons.cashTiming} slug={slug} canEdit={canEdit} /> : null}

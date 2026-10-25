@@ -182,6 +182,7 @@ export const policies = query({
     const plan = CURRENT_ENTITLEMENTS.plans[sub?.planKey ?? "basic"];
     return {
       canManage: ["owner", "admin"].includes(role),
+      contactFrequencyDays: org.contactFrequencyDays ?? null,
       allowedModes: org.kind === "demo" ? (["copilot", "review", "bounded_autopilot"] as const) : plan.autonomyModes,
       policy: p
         ? {
@@ -197,6 +198,17 @@ export const policies = query({
         : null,
       emergencyStop: org.emergencyStop?.active ? { at: org.emergencyStop.at } : null,
     };
+  },
+});
+
+/** Owner-set minimum days between ClimbOS emails to the same person; `null` removes the limit. */
+export const setContactFrequency = mutation({
+  args: { slug: v.string(), days: v.union(v.number(), v.null()) },
+  handler: async (ctx, { slug, days }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "manage_policies");
+    if (days !== null && !(Number.isInteger(days) && days >= 1 && days <= 90)) throw appError("INVALID", "Choose a whole number of days from 1 to 90, or no limit.");
+    await ctx.db.patch(org._id, { contactFrequencyDays: days ?? undefined });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "policy.contact_frequency", subjectType: "organization", subjectId: org._id, summary: days === null ? "Removed the contact frequency limit." : `Set the contact frequency limit to ${days} days.` });
   },
 });
 

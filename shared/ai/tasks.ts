@@ -1,3 +1,4 @@
+import { BusinessModelCheckSchema } from "../agents/businessModel";
 import { z } from "zod";
 import type { RoleKey } from "../economics/roles";
 
@@ -348,7 +349,8 @@ export type TaskType =
   | "metric_explanation"
   | "conversion_audit"
   | "retention_plan"
-  | "sales_sequence";
+  | "sales_sequence"
+  | "business_model_check";
 
 export interface TaskContract {
   type: TaskType;
@@ -375,6 +377,7 @@ export const TASKS: Record<TaskType, TaskContract> = {
   chat_intent: { type: "chat_intent", role: "coo", label: "Understand your wish", schema: ChatIntentSchema, inputBudget: 9_000, outputBudget: 1_800, allowWebSearch: false, primaryModel: "gpt-6-luna" },
   metric_explanation: { type: "metric_explanation", role: "data_analyst", label: "Explain results", schema: MetricExplanationSchema, inputBudget: 8_000, outputBudget: 1_200, allowWebSearch: false },
   conversion_audit: { type: "conversion_audit", role: "cso", label: "Conversion audit", schema: ConversionAuditSchema, inputBudget: 10_000, outputBudget: 3_200, allowWebSearch: false },
+  business_model_check: { type: "business_model_check", role: "cmo", label: "Business model check", schema: BusinessModelCheckSchema, inputBudget: 9_000, outputBudget: 4_000, allowWebSearch: true },
   retention_plan: { type: "retention_plan", role: "customer_success_manager", label: "Retention plan", schema: RetentionPlanSchema, inputBudget: 5_000, outputBudget: 1_500, allowWebSearch: false },
   sales_sequence: { type: "sales_sequence", role: "cso", label: "Sales follow-up", schema: SalesSequenceSchema, inputBudget: 6_000, outputBudget: 1_500, allowWebSearch: false },
 };

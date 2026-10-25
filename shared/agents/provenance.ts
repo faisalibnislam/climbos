@@ -243,7 +243,43 @@ function verifyTag(t: SourceTag | undefined, c: Claim, ctx: VerifyContext): Sour
   }
 }
 
-type PlaysLike = { economics: Economics; plays: { model?: PlayModel }[] };
+type ActionEvidenceLike = { evidenceRefs: string[]; evidenceExcerpts?: { ref: string; excerpt: string }[]; evidenceSupport?: ActionEvidenceSupport[] };
+type PlaysLike = { economics: Economics; plays: { model?: PlayModel; actionContract?: ActionEvidenceLike }[] };
+
+/** Whether a claim's excerpt appears in the source text (case, quotes and spacing normalized). Words only; not semantic proof. */
+export function excerptIn(excerpt: string, text: string): boolean {
+  const e = norm(excerpt);
+  return e.length >= 12 && norm(text).includes(e);
+}
+
+export type ActionEvidenceStatus = "found_on_page" | "found_in_fact" | "not_found" | "page_unavailable" | "not_loaded" | "no_excerpt";
+export interface ActionEvidenceSupport { ref: string; status: ActionEvidenceStatus }
+
+/**
+ * Claim-level support for each action evidence reference, set by code: the excerpt must appear in the confirmed fact
+ * (`fact:N`, by the run's fact order) or in the page ClimbOS loaded. A page that wasn't loaded stays unchecked.
+ */
+export function verifyActionEvidence<O extends PlaysLike>(out: O, ctx: { pages: Record<string, string | null>; facts: string[] }): O {
+  const plays = out.plays.map((p) => {
+    const a = p.actionContract;
+    if (!a?.evidenceRefs?.length) return p;
+    const evidenceSupport = a.evidenceRefs.map((ref): ActionEvidenceSupport => {
+      const excerpt = a.evidenceExcerpts?.find((item) => item.ref.trim() === ref.trim())?.excerpt;
+      if (!excerpt?.trim()) return { ref, status: "no_excerpt" };
+      const fact = /^fact:(\d+)$/i.exec(ref.trim());
+      if (fact) {
+        const statement = ctx.facts[Number(fact[1])];
+        return { ref, status: statement !== undefined && excerptIn(excerpt, statement) ? "found_in_fact" : "not_found" };
+      }
+      const page = ctx.pages[urlKey(ref)];
+      if (page === undefined) return { ref, status: "not_loaded" };
+      if (page === null) return { ref, status: "page_unavailable" };
+      return { ref, status: excerptIn(excerpt, page) ? "found_on_page" : "not_found" };
+    });
+    return { ...p, actionContract: { ...a, evidenceSupport } };
+  });
+  return { ...out, plays } as O;
+}
 
 /** Research URLs with quotes that need their page loaded (only ones this run's search returned are fetched). */
 export function citedUrls(out: PlaysLike): string[] {
@@ -255,6 +291,7 @@ export function citedUrls(out: PlaysLike): string[] {
   for (const p of out.plays) {
     add(p.model?.reachSource);
     for (const st of p.model?.steps ?? []) add(st);
+    for (const item of p.actionContract?.evidenceExcerpts ?? []) if (/^https?:\/\//i.test(item.ref.trim()) && item.excerpt.trim()) urls.add(item.ref.trim());
   }
   return [...urls];
 }
@@ -283,6 +320,7 @@ export function verifyTags<O extends PlaysLike>(out: O, ctx: VerifyContext): O {
           return { ...st, source: t.source, ref: t.ref, quote: t.quote, population: t.population, denominator: t.denominator, period: t.period, check: t.check, checkedBy: t.checkedBy, access: t.access, receipt: t.receipt };
         }),
         spendSource: verifyTag(m.spendSource, { values: [m.monthlySpendUsd, undefined, undefined], unit: "usd_month", metricWords: [], kind: "allocation" }, ctx),
+        ...(m.setupSource ? { setupSource: verifyTag(m.setupSource, { values: [m.setupCashUsd ?? 0, undefined, undefined], unit: "usd_month", metricWords: [], kind: "allocation" }, ctx) } : {}),
         hoursSource: verifyTag(m.hoursSource, { values: [m.ownerHoursPerWeek, undefined, undefined], unit: "count", metricWords: [], kind: "allocation" }, ctx),
       },
     };
@@ -292,7 +330,7 @@ export function verifyTags<O extends PlaysLike>(out: O, ctx: VerifyContext): O {
 
 /* ---------------- Rows and forecast basis ---------------- */
 
-export type InputUnit = "people_week" | "share" | "usd_month" | "hours_week" | "share_month" | "usd_hour";
+export type InputUnit = "people_week" | "share" | "usd_month" | "usd_once" | "hours_week" | "share_month" | "usd_hour";
 export interface InputRow {
   key: string;
   label: string;
@@ -320,6 +358,7 @@ export function playInputs(p: PlayLike, e: Economics): InputRow[] {
   ];
   if (typeof e.monthlyChurn === "number") rows.push({ key: "churn", label: "Monthly churn", value: e.monthlyChurn, unit: "share_month", tag: econ.churn, drives: "cost" });
   if ((m.otherMonthlyUsd ?? 0) > 0) rows.push({ key: "other", label: "Tools and freelancers", value: m.otherMonthlyUsd!, unit: "usd_month", tag: read(m.otherSource), drives: "cost" });
+  if ((m.setupCashUsd ?? 0) > 0) rows.push({ key: "setup", label: "One-time setup", value: m.setupCashUsd!, unit: "usd_once", tag: read(m.setupSource), drives: "cost" });
   if (m.ownerHoursPerWeek > 0) rows.push({ key: "ownerHour", label: "Value of your hour", value: ownerHourOf(e), unit: "usd_hour", tag: econ.ownerHour, drives: "cost" });
   return rows;
 }
@@ -402,3 +441,30 @@ export const CHECK_LABEL: Record<TagCheck, string> = {
   retrieved: "page retrieved, claim not matched",
   reported: "not checked",
 };
+
+export type ClaimSupportStatus = "found_in_source" | "not_found" | "not_checked" | "no_excerpt";
+
+/**
+ * One claim's excerpt against its references: found when any referenced confirmed fact or loaded page contains it;
+ * not found only when every reference could be checked; otherwise not checked. Words only, not semantic proof.
+ */
+export function claimSupport(refs: readonly string[], excerpt: string | undefined, ctx: { facts: readonly string[]; pages: Record<string, string | null> }): ClaimSupportStatus {
+  if (!excerpt?.trim() || !refs.length) return "no_excerpt";
+  let checkable = 0;
+  for (const ref of refs) {
+    const fact = /^fact:(\d+)$/i.exec(ref.trim());
+    const text = fact ? ctx.facts[Number(fact[1])] : ctx.pages[urlKey(ref)];
+    if (typeof text !== "string") continue;
+    checkable++;
+    if (excerptIn(excerpt, text)) return "found_in_source";
+  }
+  return checkable === refs.length ? "not_found" : "not_checked";
+}
+
+type AudienceEvidence = { evidenceRefs: string[]; evidenceExcerpt?: string; evidenceSupport?: ClaimSupportStatus };
+
+/** Sets code-owned `evidenceSupport` on each audience need, objection, motivation and channel preference. */
+export function verifyAudienceEvidence<A extends { needs?: AudienceEvidence[]; objections?: AudienceEvidence[]; purchasingMotivations?: AudienceEvidence[]; channelPreferences?: AudienceEvidence[] }>(audiences: A[], ctx: { facts: readonly string[]; pages: Record<string, string | null> }): A[] {
+  const mark = <T extends AudienceEvidence>(rows: T[] | undefined) => rows?.map((row) => ({ ...row, evidenceSupport: claimSupport(row.evidenceRefs, row.evidenceExcerpt, ctx) }));
+  return audiences.map((a) => ({ ...a, ...(a.needs ? { needs: mark(a.needs) } : {}), ...(a.objections ? { objections: mark(a.objections) } : {}), ...(a.purchasingMotivations ? { purchasingMotivations: mark(a.purchasingMotivations) } : {}), ...(a.channelPreferences ? { channelPreferences: mark(a.channelPreferences) } : {}) }));
+}

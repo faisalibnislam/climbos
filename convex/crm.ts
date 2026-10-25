@@ -15,6 +15,7 @@ export const STAGES = ["lead", "talking", "booked", "won", "lost"] as const;
 type Stage = (typeof STAGES)[number];
 const stageV = v.union(v.literal("lead"), v.literal("talking"), v.literal("booked"), v.literal("won"), v.literal("lost"));
 const ORDER: Record<Stage, number> = { lead: 0, talking: 1, booked: 2, won: 3, lost: 3 };
+const lossReasonV = v.union(v.literal("price"), v.literal("timing"), v.literal("no_need"), v.literal("chose_competitor"), v.literal("no_response"), v.literal("not_a_fit"), v.literal("other"));
 
 async function currencyOf(ctx: MutationCtx, orgId: Id<"organizations">) {
   return (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first())?.currency ?? "USD";
@@ -26,7 +27,7 @@ export async function syncDealFromProspect(ctx: MutationCtx, p: Doc<"prospects">
   const existing = await ctx.db.query("deals").withIndex("by_prospect", (q) => q.eq("prospectId", p._id)).first();
   if (existing) {
     if (existing.stage === "won" || existing.stage === "lost" || ORDER[stage] <= ORDER[existing.stage]) return existing._id;
-    await ctx.db.patch(existing._id, { stage, updatedAt: now, notes: note ? [...existing.notes, { text: note, at: now }] : existing.notes });
+    await ctx.db.patch(existing._id, { stage, stageChangedAt: now, updatedAt: now, notes: note ? [...existing.notes, { text: note, at: now }] : existing.notes });
     return existing._id;
   }
   return ctx.db.insert("deals", { orgId: p.orgId, name: p.company, company: p.company, email: p.publicEmail, stage, source, prospectId: p._id, currency: await currencyOf(ctx, p.orgId), notes: note ? [{ text: note, at: now }] : [], createdAt: now, updatedAt: now });
@@ -50,7 +51,7 @@ export async function bookingCancelled(ctx: MutationCtx, b: Doc<"bookings">, not
 }
 
 function view(d: Doc<"deals">) {
-  return { id: d._id, name: d.name, company: d.company ?? null, email: d.email ?? null, stage: d.stage, source: d.source, value: d.valueMinor ?? null, currency: d.currency, notes: d.notes.slice(-20), nextStep: d.nextStep ?? null, nextStepAt: d.nextStepAt ?? null, updatedAt: d.updatedAt, createdAt: d.createdAt };
+  return { id: d._id, name: d.name, company: d.company ?? null, email: d.email ?? null, stage: d.stage, source: d.source, value: d.valueMinor ?? null, currency: d.currency, notes: d.notes.slice(-20), nextStep: d.nextStep ?? null, nextStepAt: d.nextStepAt ?? null, lostReason: d.lostReason ?? null, lostReasonNote: d.lostReasonNote ?? null, lostAt: d.lostAt ?? null, stageChangedAt: d.stageChangedAt ?? null, updatedAt: d.updatedAt, createdAt: d.createdAt };
 }
 
 export const list = query({
@@ -78,7 +79,7 @@ export const create = mutation({
     const count = (await ctx.db.query("deals").withIndex("by_org_updated", (q) => q.eq("orgId", org._id)).take(5001)).length;
     if (count >= 5000) throw appError("LIMIT_REACHED", "The pipeline holds up to 5,000 people. Archive some lost ones first.");
     const now = Date.now();
-    const id = await ctx.db.insert("deals", { orgId: org._id, name, company: a.company?.trim().slice(0, 120) || undefined, email, stage: a.stage ?? "lead", source: "manual", valueMinor: a.value !== undefined ? Math.max(0, Math.round(a.value * 100)) : undefined, currency: await currencyOf(ctx, org._id), notes: [], createdAt: now, updatedAt: now });
+    const id = await ctx.db.insert("deals", { orgId: org._id, stageChangedAt: Date.now(), name, company: a.company?.trim().slice(0, 120) || undefined, email, stage: a.stage ?? "lead", source: "manual", valueMinor: a.value !== undefined ? Math.max(0, Math.round(a.value * 100)) : undefined, currency: await currencyOf(ctx, org._id), notes: [], createdAt: now, updatedAt: now });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "crm.created", subjectType: "deal", subjectId: id, summary: `Added ${name} to the pipeline.` });
     await emitEvent(ctx, org._id, "lead.created", { name, company: a.company ?? null, email: email ?? null, source: "manual" });
     return id;
@@ -97,6 +98,9 @@ export const update = mutation({
     name: v.optional(v.string()),
     company: v.optional(v.string()),
     email: v.optional(v.string()),
+    /** Why a lost deal was lost; only for deals that are (or are moving to) lost. `null` clears it. */
+    lostReason: v.optional(v.union(lossReasonV, v.null())),
+    lostReasonNote: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, a) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
@@ -116,8 +120,16 @@ export const update = mutation({
     if (a.nextStep !== undefined) patch.nextStep = a.nextStep?.trim().slice(0, 200) || undefined;
     if (a.nextStepAt !== undefined) patch.nextStepAt = a.nextStepAt ?? undefined;
     if (a.note?.trim()) patch.notes = [...d!.notes, { text: a.note.trim().slice(0, 2000), at: now, userId: user._id }].slice(-200);
+    const finalStage = a.stage ?? d!.stage;
+    if ((a.lostReason || a.lostReasonNote?.trim()) && finalStage !== "lost") throw appError("INVALID", "A loss reason can only be recorded for a lost deal.");
+    if (a.lostReason !== undefined) patch.lostReason = a.lostReason ?? undefined;
+    if (a.lostReasonNote !== undefined) patch.lostReasonNote = a.lostReasonNote?.trim().slice(0, 240) || undefined;
     if (a.stage && a.stage !== d!.stage) {
       patch.stage = a.stage;
+      patch.stageChangedAt = now;
+      if (a.stage === "lost") patch.lostAt = now;
+      // Reopening a lost deal clears its loss record rather than keeping a stale reason.
+      if (d!.stage === "lost") Object.assign(patch, { lostAt: undefined, lostReason: undefined, lostReasonNote: undefined });
       if (a.stage === "won") {
         patch.wonAt = now;
         await emitEvent(ctx, org._id, "deal.won", { name: d!.name, company: d!.company ?? null, email: d!.email ?? null, value: (patch.valueMinor ?? d!.valueMinor ?? 0) / 100, currency: d!.currency });

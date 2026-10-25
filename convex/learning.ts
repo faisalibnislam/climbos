@@ -1,3 +1,4 @@
+import { leadScoreBrief, leadScoreCheck, type LeadScoreRow } from "../shared/growth/leadScores";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import type { Id } from "./_generated/dataModel";
@@ -6,8 +7,10 @@ import {
   internalAction,
   internalMutation,
   internalQuery,
+  query,
   type QueryCtx,
 } from "./_generated/server";
+import { requireOrgAccess } from "./lib/tenancy";
 import {
   boundedPoolContribution,
   comparableLearningSegment,
@@ -53,8 +56,9 @@ async function orgInputs(
   ctx: QueryCtx,
   orgId: Id<"organizations">,
   since: number,
-): Promise<RawLearningInputs> {
+): Promise<RawLearningInputs & { leadScores: LeadScoreRow[] }> {
   const outreach: RawLearningInputs["outreach"] = [];
+  const leadScores: LeadScoreRow[] = [];
   const unavailableMetrics: string[] = [];
   // Use delivery time, not queue creation time: queued emails can wait, fail, or
   // be sent after the learning window. Only the first successfully sent step
@@ -125,6 +129,8 @@ async function orgInputs(
       booked: 0,
     };
     cohort.contacted += 1;
+    const followed = prospect.stageUpdatedAt !== undefined && prospect.stageUpdatedAt >= send.sentAt;
+    leadScores.push({ fit: prospect.fit, timing: prospect.timing, replied: followed && ["replied", "booked", "won"].includes(prospect.stage), booked: followed && (prospect.stage === "booked" || prospect.stage === "won") });
     // Stage is a current-state field. Only its own transition timestamp can
     // show whether the current outcome followed this contact; unrelated edits
     // to the prospect record are not outcome evidence.
@@ -191,6 +197,7 @@ async function orgInputs(
   return {
     unavailableMetrics,
     outreach,
+    leadScores,
     bookingOutcomes: bookings
       .filter((b) => b.status === "confirmed" && b.outcome)
       .map((b) => b.outcome!),
@@ -673,6 +680,15 @@ export const recompute = internalAction({
 });
 
 /** Text block for the planner: this business's own results, then a mature owner-reported stage cohort or broader type pool. */
+/** For the outbound page: do this workspace's prospect scores separate reply and booking outcomes? */
+export const leadScoreCalibration = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    return leadScoreCheck((await orgInputs(ctx, org._id, Date.now() - WINDOW)).leadScores);
+  },
+});
+
 export const contextFor = internalQuery({
   args: { orgId: v.id("organizations") },
   handler: async (ctx, { orgId }): Promise<string> => {
@@ -738,6 +754,8 @@ export const contextFor = internalQuery({
           ),
         );
     }
+    const scoreCheck = leadScoreBrief(leadScoreCheck((await orgInputs(ctx, orgId, Date.now() - WINDOW)).leadScores));
+    if (scoreCheck) lines.push(scoreCheck);
     return lines.length
       ? `RESULTS CLIMBOS HAS MEASURED (counts, not causes; prefer them to vendor benchmarks when the offer and channel match; a small sample's range is wide):\n${lines.join("\n")}`
       : "";

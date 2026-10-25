@@ -86,3 +86,6 @@ export {
   type VisitsInput,
 } from "./funnel";
 export { generateSyntheticDailySeries, type SyntheticSeriesOptions } from "./synthetic";
+
+export { scoreForecast, type ForwardScore } from "./forwardScore";
+export { metricHealth, type MetricHealthAlert } from "./health";

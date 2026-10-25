@@ -1,3 +1,4 @@
+import { compareReadiness } from "../shared/seo/readinessCompare";
 import { v } from "convex/values";
 import { CALL_ROUTES } from "../shared/agents/routes";
 import { internal } from "./_generated/api";
@@ -229,11 +230,33 @@ export const watchesFor = internalQuery({
 });
 
 export const saveCheck = internalMutation({
-  args: { orgId: v.id("organizations"), watchId: v.id("competitorWatches"), hash: v.optional(v.string()), text: v.optional(v.string()), sourceUrls: v.optional(v.array(v.string())), error: v.optional(v.string()) },
-  handler: async (ctx, { orgId, watchId, hash, text, sourceUrls, error }) => {
+  args: { orgId: v.id("organizations"), watchId: v.id("competitorWatches"), hash: v.optional(v.string()), text: v.optional(v.string()), sourceUrls: v.optional(v.array(v.string())), readinessFindingIds: v.optional(v.array(v.string())), error: v.optional(v.string()) },
+  handler: async (ctx, { orgId, watchId, hash, text, sourceUrls, readinessFindingIds, error }) => {
     const watch = await ctx.db.get(watchId);
     if (!watch || watch.orgId !== orgId) return;
-    await ctx.db.patch(watchId, error ? { lastCheckedAt: Date.now(), lastError: error.slice(0, 200) } : { lastCheckedAt: Date.now(), lastHash: hash, lastText: text?.slice(0, 60_000), lastSourceUrls: sourceUrls?.slice(0, 5), lastError: undefined });
+    await ctx.db.patch(watchId, error ? { lastCheckedAt: Date.now(), lastError: error.slice(0, 200) } : { lastCheckedAt: Date.now(), lastHash: hash, lastText: text?.slice(0, 60_000), lastSourceUrls: sourceUrls?.slice(0, 5), ...(readinessFindingIds ? { lastReadinessFindingIds: readinessFindingIds.slice(0, 30), lastReadinessAt: Date.now() } : {}), lastError: undefined });
+  },
+});
+
+/** Homepage search readiness for the business beside its monitored competitors (page-level checks only). */
+export const readinessComparison = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    const own = business?.siteReadiness?.status === "complete" ? business.siteReadiness : null;
+    const watches = (await ctx.db.query("competitorWatches").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(50))
+      .filter((w) => w.active && !w.excludedAt && w.lastReadinessFindingIds)
+      .slice(0, 6);
+    if (!watches.length) return null;
+    return {
+      ownCheckedAt: own?.checkedAt ?? null,
+      competitorsCheckedAt: Math.min(...watches.map((w) => w.lastReadinessAt ?? 0)),
+      ...compareReadiness(
+        { name: business?.name ?? "You", checkedAt: own?.checkedAt ?? null, findingIds: own?.findings ? own.findings.map((f) => f.id) : null },
+        watches.map((w) => ({ name: w.name, checkedAt: w.lastReadinessAt ?? null, findingIds: w.lastReadinessFindingIds ?? null })),
+      ),
+    };
   },
 });
 

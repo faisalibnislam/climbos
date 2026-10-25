@@ -18,10 +18,24 @@ vi.mock("convex/react", () => ({
   useMutation: () => vi.fn(),
 }));
 
+// Static rendering never runs effects; run each effect once so the form renders as it does after its
+// draft-restore step (no stored draft, so the intake starts empty).
+const ranEffects = vi.hoisted(() => new Set<string>());
+vi.mock("react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react")>();
+  return { ...actual, useEffect: (effect: () => void, deps?: unknown[]) => {
+    const key = `${effect.toString().length}:${JSON.stringify(deps ?? [])}`;
+    if (ranEffects.has(key)) return;
+    ranEffects.add(key);
+    effect();
+  } };
+});
+vi.stubGlobal("window", { requestAnimationFrame: (cb: () => void) => { cb(); return 0; }, cancelAnimationFrame: () => undefined, sessionStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } });
+
 import { OnboardingFlow } from "../../src/components/app/onboarding/OnboardingFlow";
 
 describe("business setup starts with understandable, isolated intake", () => {
-  beforeEach(() => { state.params = ""; state.orgs = []; });
+  beforeEach(() => { state.params = ""; state.orgs = []; ranEffects.clear(); });
 
   it("lets a first-time owner describe their business without a website or business jargon", () => {
     const html = renderToStaticMarkup(createElement(OnboardingFlow));

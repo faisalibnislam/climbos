@@ -10,6 +10,7 @@ import { diffLines, isObservedChangeQuote, meaningful, normaliseForDiff, textHas
 import { canonicalCompetitorHost, sameCompetitorSite } from "../shared/competitors/candidates";
 import { getRateVersion } from "../shared/economics";
 import { extractPageContent, safeFetchPage, type ExtractedPage } from "../shared/integrations/website";
+import { assessSearchReadiness } from "../shared/seo/readiness";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction } from "./_generated/server";
@@ -40,7 +41,7 @@ export const verifyCandidateSite = internalAction({
 });
 
 /** Homepage plus the pricing page if the homepage links to one (own fetcher, no credits). */
-export async function readSite(url: string): Promise<{ text: string; sourceUrls: string[]; canonicalUrl: string } | { error: string }> {
+export async function readSite(url: string): Promise<{ text: string; sourceUrls: string[]; canonicalUrl: string; readinessFindingIds: string[] } | { error: string }> {
   const home = await safeFetchPage({ url, resolveHost, maxBytes: 2_000_000, timeoutMs: 15_000 }).catch(() => null);
   if (!home?.ok) return { error: home?.error ?? "Couldn't reach the site" };
   const page = extractPageContent(home.body, home.finalUrl, { maxTextChars: 20_000, maxLinks: 80 });
@@ -61,7 +62,9 @@ export async function readSite(url: string): Promise<{ text: string; sourceUrls:
       parts.push("PRICING PAGE", ...pp.headings.map((h) => h.text), pp.text, ...pp.jsonLdPrices.map((x) => `${x.name ?? "Offer"}: ${x.price} ${x.currency ?? ""}`));
     }
   }
-  return { text: parts.filter(Boolean).join("\n"), sourceUrls: [...new Set(sourceUrls)], canonicalUrl: home.finalUrl };
+  // Page-only readiness checks on the homepage already fetched (no crawler or robots evidence for competitors).
+  const readinessFindingIds = assessSearchReadiness(page).map((finding) => finding.id);
+  return { text: parts.filter(Boolean).join("\n"), sourceUrls: [...new Set(sourceUrls)], canonicalUrl: home.finalUrl, readinessFindingIds };
 }
 
 const Summary = z.object({
@@ -109,7 +112,7 @@ export const check = internalAction({
         const before = w.lastText.split("\n");
         if (meaningful(diffLines(before, lines))) changed.push({ id: w._id, name: w.name, before, after: lines, sourceUrls: [...new Set([...(w.lastSourceUrls ?? [w.url]), ...site.sourceUrls])] });
       }
-      await ctx.runMutation(internal.competitors.saveCheck, { orgId, watchId: w._id, hash, text: lines.join("\n"), sourceUrls: site.sourceUrls });
+      await ctx.runMutation(internal.competitors.saveCheck, { orgId, watchId: w._id, hash, text: lines.join("\n"), sourceUrls: site.sourceUrls, ...("readinessFindingIds" in site ? { readinessFindingIds: site.readinessFindingIds } : {}) });
     }
     if (!changed.length) return;
     const runId = await ctx.runMutation(internal.competitors.startSummaryRun, { orgId, count: changed.length });

@@ -262,3 +262,19 @@ export function compareAiSearchObservationPeriods(
     };
   }).sort((a, b) => a.provider.localeCompare(b.provider) || cleanKey(a.query).localeCompare(cleanKey(b.query)) || cleanKey(a.location ?? "").localeCompare(cleanKey(b.location ?? "")));
 }
+
+export type AnswerAccuracy = "accurate" | "contains_error" | "not_checked";
+
+/** Owner-checked accuracy of answers that mention the business, per provider; recent errors listed for correction work. */
+export function answerAccuracySummary(observations: readonly { provider: AiSearchProvider; query: string; checkedAt: number; brandMention: BrandMention; accuracy?: AnswerAccuracy; incorrectClaim?: string; correctFact?: string }[]): { byProvider: { provider: AiSearchProvider; checked: number; withErrors: number }[]; recentErrors: { provider: AiSearchProvider; query: string; checkedAt: number; incorrectClaim: string; correctFact: string }[] } {
+  const mentioned = observations.filter((o) => o.brandMention === "yes" && (o.accuracy === "accurate" || o.accuracy === "contains_error"));
+  const providers = [...new Set(mentioned.map((o) => o.provider))];
+  return {
+    byProvider: providers.map((provider) => {
+      const rows = mentioned.filter((o) => o.provider === provider);
+      return { provider, checked: rows.length, withErrors: rows.filter((o) => o.accuracy === "contains_error").length };
+    }),
+    recentErrors: mentioned.filter((o) => o.accuracy === "contains_error" && o.incorrectClaim && o.correctFact).sort((a, b) => b.checkedAt - a.checkedAt).slice(0, 10)
+      .map((o) => ({ provider: o.provider, query: o.query, checkedAt: o.checkedAt, incorrectClaim: o.incorrectClaim!, correctFact: o.correctFact! })),
+  };
+}

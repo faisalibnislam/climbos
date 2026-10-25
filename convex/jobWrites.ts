@@ -1,3 +1,5 @@
+import { latestDecisions, priorDecisionsBrief, type PriorDecision } from "../shared/agents/designDecisions";
+import { BusinessModelCheckSchema, businessModelPlanContext, businessModelTestsBrief, ownerModelSignals, ownerModelSignalsBrief } from "../shared/agents/businessModel";
 import { feedbackBrief } from "./feedback";
 import { EVIDENCE_KIND_LABEL, evidenceKind } from "../shared/agents/evidenceKind";
 import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
@@ -14,7 +16,8 @@ import { sha256Hex } from "../shared/policy";
 import { v } from "convex/values";
 import { resultsBrief } from "./playResults";
 import { customerConcentration } from "../shared/attribution/concentration";
-import { computeCohorts, subscriptionCohortBrief } from "../shared/attribution/cohorts";
+import { pipelineOutcomes, pipelineOutcomesBrief } from "../shared/growth/pipeline";
+import { computeCohorts, repeatPurchaseBrief, repeatPurchaseSummary, subscriptionCohortBrief } from "../shared/attribution/cohorts";
 import { refundExposure } from "../shared/attribution/refundExposure";
 import { platformConcentration } from "../shared/attribution/platformConcentration";
 import { summarizeAiReferralRows, type AiReferralMetricRow } from "../shared/integrations/ga4";
@@ -38,7 +41,7 @@ import { actionReadinessOf, analyzeDecisionOptions, type CopyBrief, type Insight
 import { approvalHash, contentHash } from "../shared/policy";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
-import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
+import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { audit } from "./lib/audit";
 import { AUTO_RUN_KINDS, CHANNEL_JOBS, jobForAction, startCardRun, WISH_AUTO_BUDGET_MICROS } from "./lib/cards";
 import { estimateJobMicros, planJob } from "./lib/jobPlans";
@@ -197,6 +200,36 @@ export const jobContext = internalQuery({
           truncated: concentrationIsPartial,
         })
       : "";
+    const repeatPurchaseText = run.kind === "strategy" && concentrationCurrency
+      ? repeatPurchaseBrief(repeatPurchaseSummary(concentrationEvents, { currency: concentrationCurrency, nowMs: concentrationToMs }), { truncated: concentrationIsPartial })
+      : "";
+    // The owner's own pipeline: closed deals, win rate and recorded loss reasons (bounded; owner-entered).
+    const pipelineDeals = run.kind === "strategy" || run.kind === "business_model_check" ? await ctx.db.query("deals").withIndex("by_org_updated", (q) => q.eq("orgId", org._id)).order("desc").take(2_001) : [];
+    const pipeline = pipelineOutcomes(pipelineDeals.slice(0, 2_000), { nowMs: concentrationToMs });
+    const pipelineOutcomesText = run.kind === "strategy" ? `${pipelineOutcomesBrief(pipeline)}${pipelineDeals.length > 2_000 && pipelineOutcomesBrief(pipeline) ? " Only the 2,000 most recently updated deals were read, so totals may be partial." : ""}` : "";
+    const pipelineLossNotes = run.kind === "strategy" ? pipeline.recentLossNotes : [];
+    // Website audits: owner decisions on earlier Design Critic findings, so dismissed findings aren't re-raised blindly.
+    const priorDesign = run.kind === "conversion_audit" ? await priorDesignDecisions(ctx, org._id, run._id) : { summary: "", notes: [] as string[] };
+    // Business model check: first-party signals computed here; strategy runs read the latest verified check.
+    const businessModelSignalsText = run.kind === "business_model_check" && concentrationCurrency
+      ? ownerModelSignalsBrief(ownerModelSignals({ nowMs: concentrationToMs, currency: concentrationCurrency, revenueEvents: concentrationEvents, deals: pipelineDeals.slice(0, 2_000), lifecycleStage: business?.lifecycleStage?.stage ?? null, competitorChanges90d: marketChanges.filter((change) => change.at >= concentrationToMs - 90 * DAY).length }))
+      : "";
+    const latestModelCheck = run.kind === "strategy" || run.kind === "business_model_check"
+      ? (await ctx.db.query("workflowRuns").withIndex("by_org_kind_created", (q) => q.eq("orgId", org._id).eq("kind", "business_model_check")).order("desc").take(10))
+          .find((r) => r.status === "verified" && !r.isFixture && typeof r.output === "string")
+      : undefined;
+    const modelTests = businessModelTestsBrief(latestModelCheck ? (await ctx.db.query("businessModelTests").withIndex("by_run_target", (q) => q.eq("runId", latestModelCheck._id)).collect()).sort((a, b) => b.createdAt - a.createdAt || b._creationTime - a._creationTime).slice(0, 200).filter((t) => t.orgId === org._id) : []);
+    const businessModelTestsText = modelTests.summary;
+    const businessModelTestNotes = modelTests.notes;
+    const businessModelContext = (() => {
+      if (run.kind !== "strategy" || !latestModelCheck?.output) return "";
+      try {
+        const parsed = BusinessModelCheckSchema.safeParse(JSON.parse(latestModelCheck.output));
+        return parsed.success ? businessModelPlanContext(parsed.data, latestModelCheck.createdAt) : "";
+      } catch {
+        return "";
+      }
+    })();
     const concentration = concentrationCurrency
       ? customerConcentration(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
       : null;
@@ -261,6 +294,15 @@ export const jobContext = internalQuery({
       creatorOutcomeText,
       refundExposure: refundExposureSignal,
       subscriptionCohortText,
+      repeatPurchaseText,
+      pipelineOutcomesText,
+      pipelineLossNotes,
+      businessModelSignalsText,
+      businessModelContext,
+      businessModelTestsText,
+      businessModelTestNotes,
+      priorDesignDecisionsText: priorDesign.summary,
+      priorDesignDecisionNotes: priorDesign.notes,
       stripeReceivables,
       audience: { contacts, consented },
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },
@@ -417,6 +459,7 @@ export const saveInsights = internalMutation({
           sourceUrl: c.sourceUrl || undefined,
           kind: v2Competitors?.[index]?.kind,
           comparison: v2Competitors?.[index]?.comparison?.slice(0, 8).map((finding) => ({ ...finding, finding: finding.finding.slice(0, 500), implication: finding.implication.slice(0, 500) })),
+          ...(v2Competitors?.[index]?.battlecard ? { battlecard: v2Competitors[index].battlecard } : {}),
         })),
         positioning: i.positioning,
         pricingNotes: i.pricingNotes,
@@ -1201,3 +1244,28 @@ export const updateActionCard = internalMutation({
     await ctx.db.patch(cardId, { status, ...(runId ? { runId } : {}), updatedAt: Date.now() });
   },
 });
+
+/** Owner decisions on Design Critic findings from up to five earlier, finished audits in this workspace. */
+export async function priorDesignDecisions(ctx: QueryCtx, orgId: Id<"organizations">, currentRunId?: Id<"workflowRuns">): Promise<{ summary: string; notes: string[]; latest: Map<string, PriorDecision> }> {
+  const audits = (await ctx.db.query("workflowRuns").withIndex("by_org_kind_created", (q) => q.eq("orgId", orgId).eq("kind", "conversion_audit")).order("desc").take(12))
+    .filter((r) => r._id !== currentRunId && r.status === "verified" && typeof r.output === "string")
+    .slice(0, 5);
+  const decisions: PriorDecision[] = [];
+  for (const audit of audits) {
+    let findings: { lens?: string; sourceUrl?: string; region?: string; observation?: string }[] = [];
+    try {
+      const parsed = JSON.parse(audit.output!) as { designCritic?: { findings?: typeof findings } };
+      findings = Array.isArray(parsed.designCritic?.findings) ? parsed.designCritic.findings : [];
+    } catch {
+      continue;
+    }
+    const reviews = await ctx.db.query("designFindingReviews").withIndex("by_org_run", (q) => q.eq("orgId", orgId).eq("runId", audit._id)).take(20);
+    for (const review of reviews) {
+      const finding = findings[review.findingIndex];
+      if (!finding || !review.status) continue;
+      decisions.push({ lens: finding.lens, sourceUrl: finding.sourceUrl, region: finding.region, observation: finding.observation, status: review.status, ...(review.note ? { note: review.note } : {}), decidedAt: review.updatedAt, runId: String(audit._id), runCreatedAt: audit.createdAt });
+    }
+  }
+  const latest = latestDecisions(decisions);
+  return { ...priorDecisionsBrief(latest), latest };
+}

@@ -8,7 +8,7 @@ import { useState } from "react";
 import { Badge, Button, Field, Input, toast, type Tone } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import type { PlayModel } from "../../../../shared/agents/economics";
-import type { PlayActuals, RetentionActuals } from "../../../../shared/growth/actuals";
+import { costCheck, type CostCheck, type PlayActuals, type RetentionActuals } from "../../../../shared/growth/actuals";
 import { formatMoney, majorToMinor, minorToMajor } from "../../../../shared/economics/currency";
 import { diagnoseShortfall, type Shortfall } from "../../../../shared/growth/diagnostics";
 import { cn } from "@/lib/utils";
@@ -36,6 +36,19 @@ function ShortfallNote({ s }: { s: Shortfall }) {
 }
 const r1 = (x: number) => (x >= 10 ? Math.round(x) : Math.round(x * 10) / 10);
 
+/** Logged cash cost per customer against what a customer is worth (computed; owner time excluded). */
+export function CostPerCustomerLine({ check: c, currency }: { check: CostCheck; currency?: string }) {
+  const m = (n: number) => formatMoney(Math.round(n * 100) / 100, currency);
+  if (c.status === "no_spend") return null;
+  const cost = c.cashCostPerCustomerUsd === null ? "no customers logged yet" : m(c.cashCostPerCustomerUsd);
+  const versus = c.affordableUsd === null ? "what a customer is worth is unknown until price, margin and churn are known" : `a customer is worth ${m(c.affordableUsd)} within the payback window`;
+  return (
+    <p className={cn("text-xs", c.status === "above" || c.status === "no_customers" ? "font-medium text-red-800" : "text-ink-2")}>
+      Cash cost per customer: {cost} · {versus}. Logged spend ÷ new customers; your time isn&apos;t included.
+    </p>
+  );
+}
+
 /** Owner-reported repeat-customer outcomes stay separate from acquisition and from causal claims. */
 export function RetentionResultsSummary({ retention }: { retention?: RetentionActuals }) {
   if (!retention?.weeksReported) return <p className="text-xs text-ink-3">No repeat-customer outcomes recorded yet.</p>;
@@ -54,7 +67,7 @@ export function RetentionResultsSummary({ retention }: { retention?: RetentionAc
 }
 
 /** Plan vs actual for one play, and a weekly log (spec §28). */
-export function PlayResults({ slug, strategyId, playName, model, actuals, retention, currency, canEdit }: { slug: string; strategyId: Id<"strategies">; playName: string; model: PlayModel; actuals?: PlayActuals; retention?: RetentionActuals; currency?: string | null; canEdit: boolean }) {
+export function PlayResults({ slug, strategyId, playName, model, actuals, retention, currency, canEdit, affordableCacUsd = null }: { slug: string; strategyId: Id<"strategies">; playName: string; model: PlayModel; actuals?: PlayActuals; retention?: RetentionActuals; currency?: string | null; canEdit: boolean; affordableCacUsd?: number | null }) {
   const log = useMutation(api.playResults.log);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -108,7 +121,8 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, retent
             ) : null}
           </div>
           {actuals.unloggedWeeks > 0 ? <p className="text-xs text-ink-2">Only logged weeks are included. Missing weeks are unknown, not zero; fill them in before judging the full period.</p> : null}
-          {actuals.status === "behind" ? <ShortfallNote s={diagnoseShortfall(actuals)} /> : null}
+          <CostPerCustomerLine check={costCheck(actuals, affordableCacUsd)} currency={currency ?? undefined} />
+          {actuals.status === "behind" ? <ShortfallNote s={diagnoseShortfall(actuals, {}, { affordableCacUsd, currency: currency ?? undefined })} /> : null}
           <ul className="flex flex-col gap-1.5 text-xs">
             {actuals.steps
               .filter((s) => s.trials > 0)

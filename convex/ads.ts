@@ -64,6 +64,7 @@ export const list = query({
         startDate: c.startDate ?? null,
         endDate: c.endDate ?? null,
         targetCostPerConversionMinor: c.targetCostPerConversionMinor ?? null,
+        conversionActionType: c.conversionActionType ?? null,
         reviewAfterDays: c.reviewAfterDays ?? null,
         activatedAt: c.activatedAt ?? null,
         destinationUrl: c.destinationUrl ?? null,
@@ -97,6 +98,24 @@ export const performanceSyncContext = internalQuery({
       throw appError("INVALID", "Start this campaign before reading its performance.");
     }
     return { campaign, connection, timeZone: org?.timezone ?? "UTC" };
+  },
+});
+
+/** Meta: the owner confirms which reported action type counts as this campaign's conversion; advice only, no campaign change. */
+export const setConversionAction = mutation({
+  args: { slug: v.string(), campaignId: v.id("campaigns"), actionType: v.union(v.string(), v.null()) },
+  handler: async (ctx, { slug, campaignId, actionType }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const campaign = assertSameOrg(await ctx.db.get(campaignId), org._id, "campaign");
+    if (campaign.channel !== "meta_ad") throw appError("INVALID", "Only Meta campaigns need a conversion action choice; Google reports conversions directly.");
+    if (actionType !== null) {
+      const performance = await ctx.db.query("campaignPerformance").withIndex("by_org_campaign", (q) => q.eq("orgId", org._id).eq("campaignId", campaign._id)).first();
+      if (!performance?.reportedActions?.some((action) => action.actionType === actionType)) throw appError("INVALID", "Choose an action type Meta reported for this campaign. Refresh results first.");
+    }
+    await ctx.db.patch(campaign._id, actionType === null
+      ? { conversionActionType: undefined, conversionActionSetBy: undefined, conversionActionSetAt: undefined }
+      : { conversionActionType: actionType.slice(0, 120), conversionActionSetBy: user._id, conversionActionSetAt: Date.now() });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "campaign.conversion_action", subjectType: "campaign", subjectId: campaign._id, summary: actionType === null ? "Cleared the Meta conversion action." : `Counting Meta action "${actionType.slice(0, 80)}" as this campaign's conversion.` });
   },
 });
 

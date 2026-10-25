@@ -1,8 +1,9 @@
+import { BusinessModelCheckSchema, lintBusinessModelCheck, type BusinessModelCheck } from "./businessModel";
 import { z } from "zod";
 import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
-import { customerValue, lintEconomics, playMaths, portfolioExpectedCustomers, portfolioP50, portfolioRange, selectPortfolio, withForecasts, type Economics, type ForecastUncertainty, type PlayLike, type PlaySensitivity } from "./economics";
+import { applyOwnerEconomics, customerValue, growthCashTiming, lintEconomics, playMaths, portfolioExpectedCustomers, portfolioP50, portfolioRange, selectPortfolio, withForecasts, type Economics, type ForecastUncertainty, type PlayLike, type PlaySensitivity } from "./economics";
 import type { FinancialEvidence } from "./provenance";
-import { PROVENANCE } from "./provenance";
+import { excerptIn, PROVENANCE } from "./provenance";
 import { DECISION_CAPS, DecisionSchema, lintDecision, type Decision } from "./decision";
 import type { PlanQuality } from "./quality";
 import type { GoalGap, GoalTarget } from "./goal";
@@ -59,10 +60,10 @@ const force = z.enum(["push", "pull", "anxiety", "habit"]);
 
 export const InsightsV2Schema = BusinessInsightsSchema.extend({
   audiences: z.array(BusinessInsightsSchema.shape.audiences.element.extend({
-    needs: z.array(z.object({ statement: z.string().max(240), basis: z.enum(["owner_report", "measured", "research", "inference"]), evidenceRefs: z.array(z.string()).max(4) })).max(4),
-    objections: z.array(z.object({ statement: z.string().max(240), basis: z.enum(["owner_report", "measured", "research", "inference"]), evidenceRefs: z.array(z.string()).max(4) })).max(4),
-    purchasingMotivations: z.array(z.object({ statement: z.string().max(240), basis: z.enum(["owner_report", "measured", "research", "inference"]), evidenceRefs: z.array(z.string()).max(4) })).max(4),
-    channelPreferences: z.array(z.object({ channel: z.string().max(100), rationale: z.string().max(240), basis: z.enum(["owner_report", "measured", "research", "inference"]), evidenceRefs: z.array(z.string()).max(4) })).max(4),
+    needs: z.array(z.object({ statement: z.string().max(240), basis: z.enum(["owner_report", "measured", "research", "inference"]), evidenceRefs: z.array(z.string()).max(4), evidenceExcerpt: z.string().max(300).optional().describe("Optional: words copied exactly from one of evidenceRefs (a confirmed fact or a page read in this run) that support this item. ClimbOS checks it against that source.") })).max(4),
+    objections: z.array(z.object({ statement: z.string().max(240), basis: z.enum(["owner_report", "measured", "research", "inference"]), evidenceRefs: z.array(z.string()).max(4), evidenceExcerpt: z.string().max(300).optional().describe("Optional: words copied exactly from one of evidenceRefs (a confirmed fact or a page read in this run) that support this item. ClimbOS checks it against that source.") })).max(4),
+    purchasingMotivations: z.array(z.object({ statement: z.string().max(240), basis: z.enum(["owner_report", "measured", "research", "inference"]), evidenceRefs: z.array(z.string()).max(4), evidenceExcerpt: z.string().max(300).optional().describe("Optional: words copied exactly from one of evidenceRefs (a confirmed fact or a page read in this run) that support this item. ClimbOS checks it against that source.") })).max(4),
+    channelPreferences: z.array(z.object({ channel: z.string().max(100), rationale: z.string().max(240), basis: z.enum(["owner_report", "measured", "research", "inference"]), evidenceRefs: z.array(z.string()).max(4), evidenceExcerpt: z.string().max(300).optional().describe("Optional: words copied exactly from one of evidenceRefs (a confirmed fact or a page read in this run) that support this item. ClimbOS checks it against that source.") })).max(4),
   })).max(5),
   swot: z.object({
     strengths: z.array(z.string()).max(4),
@@ -105,6 +106,13 @@ export const InsightsV2Schema = BusinessInsightsSchema.extend({
         sourceUrl: z.string(),
         implication: z.string().max(500),
       })).max(8).optional(),
+      battlecard: z.object({
+        winsWith: z.string().min(4).max(240),
+        theyAreStrongerAt: z.string().min(4).max(240),
+        weAreStrongerAt: z.string().min(4).max(240),
+        landmineQuestion: z.string().min(8).max(240),
+        sourceUrls: z.array(z.string()).min(1).max(3),
+      }).optional().describe("Optional sales battlecard from pages read in this run: who this competitor wins with, where they are stronger, where this business is stronger, and one fair, checkable question a buyer could ask both. Every comparative claim must come from the cited pages; omit it when the evidence is thin."),
     }),
   ),
   alternatives: z.array(z.object({ name: z.string(), kind: z.enum(["competitor", "adjacent", "diy", "hire", "marketplace", "do_nothing", "other"]), evidence: z.string(), sourceUrl: z.string() })),
@@ -200,6 +208,8 @@ export const PlaySchema = z.object({
     evidenceBasis: z.enum(["assumption", "inference", "measured", "owner_report", "source_claim"]),
     evidenceNote: z.string().min(1),
     evidenceRefs: z.array(z.string()).max(8),
+    /** A short verbatim excerpt from each referenced fact or page; ClimbOS checks it against the source text. */
+    evidenceExcerpts: z.array(z.object({ ref: z.string().min(1).max(500), excerpt: z.string().min(1).max(300) })).max(8).optional(),
     targetOrAsset: z.string().min(1),
     resourcePlan: z.string().min(1),
     executionCapability: z.enum(["owner", "climbos", "existing_integration", "external_setup", "unknown"]),
@@ -262,6 +272,9 @@ export const PlaySchema = z.object({
     /** Monthly non-media costs for this play (tools, freelancers, creative); 0 when none. Counted in cost per customer. */
     otherMonthlyUsd: z.number().optional(),
     otherSource: SourceTagSchema.optional(),
+    /** One-time cash cost to start this play (setup, tooling, creative); omit or 0 when none. Counted once in cost per customer and in cash timing. */
+    setupCashUsd: z.number().min(0).optional().describe("One-time cash cost to start this play (setup, tooling, creative), in the workspace currency. Include only when the owner, a cited page or an explicitly labelled assumption supports it, with setupSource; omit when there is none."),
+    setupSource: SourceTagSchema.optional(),
     hoursSource: SourceTagSchema,
   }),
 });
@@ -313,7 +326,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { id: string; kind: "more_sales" | "more_customers" | "more_reach" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.67-growth-cash-timing";
+export const ENGINE_VERSION = "v3.71-competitor-battlecards";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -1224,7 +1237,38 @@ export function lintFeasibility(plays: { name: string; kind: string; model?: { m
     issues.push({ severity: "error", rule: "capacity", message: `The plays need ${Math.round(hours * 10) / 10} owner hours a week; the owner has ${c.ownerHoursPerWeek}. Move work to ClimbOS or drop a play.${fixHint()}`, path: "plays" });
   else if (c.ownerHoursPerWeek === undefined && hours > 10)
     issues.push({ severity: "warn", rule: "capacity", message: `The plays need ${Math.round(hours)} owner hours a week; most owners have under 10. Move work to ClimbOS where you can.`, path: "plays" });
+  issues.push(...lintGrowthCashReserve(plays, c, economics));
   return issues;
+}
+
+/**
+ * The selected set's modeled low point must fit the owner-reported growth reserve (computed with growthCashTiming,
+ * never estimated by the model). Most-likely shortfall is an error; a shortfall only at P10 customers is a warning.
+ * Unknown reserve, payment delay, price, margin or churn: no check rather than an assumed value.
+ */
+export function lintGrowthCashReserve(plays: { name: string; kind: string; model?: { monthlySpendUsd: number; otherMonthlyUsd?: number; setupCashUsd?: number; ownerHoursPerWeek: number } }[], c: PlanConstraints | undefined, economics?: Economics): LintIssue[] {
+  const g = c?.growthCashTiming;
+  if (!c || !g || !economics) return [];
+  const m = (n: number) => formatMoney(Math.round(n * 100) / 100, c.currency);
+  const e = { ...applyOwnerEconomics(economics, g.ownerEconomics), currency: c.currency };
+  const out = { economics: e, plays: plays as never as PlayLike[] };
+  const pick = selectPortfolio(out, { monthlyBudgetUsd: c.monthlyAdBudgetUsd, monthlyGrowthCashUsd: c.monthlyGrowthCashUsd, ownerHoursPerWeek: c.ownerHoursPerWeek, newCustomersPerMonth: c.newCustomersPerMonth, horizonDays: g.horizonDays });
+  if (!pick?.selected.length) return [];
+  const timing = (selected: string[]) => growthCashTiming(out, selected, { horizonDays: g.horizonDays, reserveUsd: g.reserveUsd, paymentLagDays: g.paymentLagDays });
+  const t = timing(pick.selected);
+  if (!t?.mostLikely || !t.lowCase) return [];
+  const lows = (s: NonNullable<typeof t.mostLikely>) => `a modeled low point of ${m(s.lowestBalanceUsd)} in week ${s.lowestWeek}`;
+  if (t.mostLikely.reserveCovers === false) {
+    // The computed fix: would deferring the most cash-heavy selected play bring the low point within the reserve?
+    const cashOf = (name: string) => { const p = plays.find((x) => x.name === name); return Math.max(0, p?.model?.monthlySpendUsd ?? 0) + Math.max(0, p?.model?.otherMonthlyUsd ?? 0) + Math.max(0, p?.model?.setupCashUsd ?? 0); };
+    const heaviest = [...pick.selected].sort((a, b) => cashOf(b) - cashOf(a))[0];
+    const without = pick.selected.length > 1 && cashOf(heaviest) > 0 ? timing(pick.selected.filter((n) => n !== heaviest)) : null;
+    const hint = without?.mostLikely ? without.mostLikely.reserveCovers ? ` Deferring "${heaviest}" (computed) keeps the low point at ${m(without.mostLikely.lowestBalanceUsd)}, within the reserve.` : ` Even without "${heaviest}" the low point is ${m(without.mostLikely.lowestBalanceUsd)}; cut cash costs or start cash-heavy plays later.` : " Cut cash costs or start cash-heavy plays later.";
+    return [{ severity: "error", rule: "growth_cash_reserve", message: `The selected plays (${pick.selected.join(" + ")}) reach ${lows(t.mostLikely)} at the most-likely rates, before customer payments catch up; the owner-reported growth reserve is ${m(g.reserveUsd)} (short by ${m(t.mostLikely.shortfallUsd ?? 0)}, payment delay ${g.paymentLagDays} days).${hint}`, path: "plays" }];
+  }
+  if (t.lowCase.reserveCovers === false)
+    return [{ severity: "warn", rule: "growth_cash_reserve", message: `At the low end of the customer range (P10), the selected plays reach ${lows(t.lowCase)}, beyond the owner-reported growth reserve of ${m(g.reserveUsd)} by ${m(t.lowCase.shortfallUsd ?? 0)}. Say how the owner would pause or cap spend if customers come in slowly.`, path: "plays" }];
+  return [];
 }
 
 /** The plan's paid channels must fit the budget, and its North Star must be the plays' computed total. */
@@ -1281,7 +1325,7 @@ function actionOutcomeFamilies(value: string): Set<string> {
   return new Set(ACTION_OUTCOME_FAMILIES.filter(([pattern]) => pattern.test(value)).map(([, family]) => family));
 }
 
-export function lintActionContracts(plays: PlayDraft[], factCount: number, evidence: string, horizonDays?: number, availableSourceUrls: string[] = []): LintIssue[] {
+export function lintActionContracts(plays: PlayDraft[], factCount: number, evidence: string, horizonDays?: number, availableSourceUrls: string[] = [], facts: string[] = []): LintIssue[] {
   const issues: LintIssue[] = [];
   const readUrls = new Set(availableSourceUrls.map(citeKey));
   plays.forEach((play, i) => {
@@ -1297,6 +1341,19 @@ export function lintActionContracts(plays: PlayDraft[], factCount: number, evide
       const fact = /^fact:(\d+)$/i.exec(ref.trim());
       const valid = fact ? Number(fact[1]) < factCount : /^https?:\/\//i.test(ref.trim()) && readUrls.has(citeKey(ref));
       if (!valid) issues.push({ severity: "error", rule: "action_evidence", message: `Evidence reference "${ref.slice(0, 80)}" is not a supplied fact or a page read for this run.`, path: `${path}.evidenceRefs` });
+    }
+    // Claim support: each reference carries a verbatim excerpt; fact excerpts are checked here, page excerpts after the pages load (verifyActionEvidence).
+    const refKeys = new Set(action.evidenceRefs.map((ref) => ref.trim()));
+    for (const item of action.evidenceExcerpts ?? []) {
+      if (!refKeys.has(item.ref.trim())) issues.push({ severity: "error", rule: "action_evidence", message: `The excerpt for "${item.ref.slice(0, 80)}" doesn't match one of this action's evidence references.`, path: `${path}.evidenceExcerpts` });
+      const fact = /^fact:(\d+)$/i.exec(item.ref.trim());
+      const statement = fact ? facts[Number(fact[1])] : undefined;
+      if (statement !== undefined && !excerptIn(item.excerpt, statement)) issues.push({ severity: "error", rule: "action_evidence", message: `The excerpt for ${item.ref.trim()} isn't in that fact. Copy the exact words from the fact, or remove the reference.`, path: `${path}.evidenceExcerpts` });
+    }
+    if (["measured", "owner_report", "source_claim"].includes(action.evidenceBasis)) {
+      const excerpted = new Set((action.evidenceExcerpts ?? []).map((item) => item.ref.trim()));
+      const missing = action.evidenceRefs.filter((ref) => !excerpted.has(ref.trim()));
+      if (missing.length) issues.push({ severity: "warn", rule: "action_evidence", message: `Add a verbatim excerpt for ${missing.map((ref) => `"${ref.slice(0, 60)}"`).join(", ")} so ClimbOS can check that the source says what the evidence note claims.`, path: `${path}.evidenceExcerpts` });
     }
     if (action.executionCapability === "unknown" && action.dependencies.length === 0) {
       issues.push({ severity: "error", rule: "action_readiness", message: "Name what must be confirmed before this play can start, or identify the available execution capability.", path: `${path}.executionCapability` });
@@ -1898,6 +1955,7 @@ export function lintInsightSources(out: Pick<InsightsV2, "audiences" | "competit
       competitorEvidenceIssues.push({ severity: "error", rule: "competitor_candidate_source", message: "A competitor suggestion must cite a page read on that candidate's own canonical website; a valid but unrelated source is not evidence for this watch destination.", path: `competitors[${i}].sourceUrl` });
     }
     competitor.comparison?.forEach((finding, j) => refs.push({ url: finding.sourceUrl, path: `competitors[${i}].comparison[${j}].sourceUrl` }));
+    competitor.battlecard?.sourceUrls.forEach((url, j) => refs.push({ url, path: `competitors[${i}].battlecard.sourceUrls[${j}]` }));
   });
   const groups: [string, { sourceUrl: string }[]][] = [
     ["alternatives", out.alternatives],
@@ -2427,7 +2485,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintStrategyExploration(out.strategyExploration, input), ...out.plays.flatMap((play, index) => lintCampaignTiming(play.timingAssessment, { today: input.timingContext?.today ?? "1970-01-01", ...(input.timingContext?.timezone ? { timezone: input.timingContext.timezone } : {}), facts: input.facts, researchNotes: input.precomputedResearch?.notes ?? input.untrustedContext ?? "", sourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [], researchRetrievedAt: input.precomputedResearch?.retrievedAt }, `plays[${index}].timingAssessment`)), ...lintActionContracts(out.plays, input.facts.length, evidenceOf(input), input.constraints?.horizonDays, input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url)), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, { ...out.economics, currency: input.constraints?.currency }, evidenceOf(input)), ...lintSelfServeFunnel(out.plays, out.economics), ...lintComparisonPositioning(out.plays), ...lintOfferClaims(out.plays, evidenceOf(input), { facts: input.facts, researchNotes: input.precomputedResearch?.notes ?? input.untrustedContext ?? "", sourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [], evidenceText: evidenceOf(input), diagnosedConstraint: input.constraints?.diagnosis?.status === "supported" && input.constraints.diagnosis.basis === "measured" ? input.constraints.diagnosis.constraint : out.decision?.constraint, diagnosisMeasured: input.constraints?.diagnosis?.status === "supported" && input.constraints.diagnosis.basis === "measured" }), ...lintReferralDrivers(out.plays), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints, out.economics), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays, { factCount: input.facts.length, availableSourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [] }), ...lintDecisionConstraintFit(out.decision, out.plays, input.constraints?.diagnosis), ...lintDecisionOptionChoice(out.decision, out.plays, out.economics, input.constraints), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintNoAudience(out.plays, input.constraints, input.facts.join("\n")), ...lintBorrowedUplift(out.plays), ...lintDiagnosisFit(out.plays, o.decisionContract && out.decision ? undefined : input.constraints?.diagnosis), ...lintEligibilityIds(out.plays, input.constraints?.ineligiblePlaybooks), ...lintPlatformEligibility(out.plays.map((p, i) => ({ path: `plays[${i}]`, text: JSON.stringify(p) })), input.constraints?.businessTypes ?? []), ...(input.constraints?.factKinds ? lintEvidenceStrength(out.plays.flatMap((p, i) => [{ path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }, { path: `plays[${i}].mechanic`, text: (p as { mechanic?: string }).mechanic ?? "" }]), input.constraints.factKinds) : []), ...lintClaims(out.plays.flatMap((p, i) => [{ path: `plays[${i}].hook`, text: (p as { hook?: string }).hook ?? "" }, { path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }]), verifiedCapabilityEvidence(input)), ...lintDeliveryCapacity(portfolioP50(out, input.constraints?.horizonDays), input.constraints), ...lintServiceArea(out.plays.map((p, i) => ({ path: `plays[${i}]`, spend: p.model?.monthlySpendUsd ?? 0, text: JSON.stringify(p) })), input.constraints), ...lintEconomics({ ...out, economics: { ...out.economics, currency: input.constraints?.currency } })],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintStrategyExploration(out.strategyExploration, input), ...out.plays.flatMap((play, index) => lintCampaignTiming(play.timingAssessment, { today: input.timingContext?.today ?? "1970-01-01", ...(input.timingContext?.timezone ? { timezone: input.timingContext.timezone } : {}), facts: input.facts, researchNotes: input.precomputedResearch?.notes ?? input.untrustedContext ?? "", sourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [], researchRetrievedAt: input.precomputedResearch?.retrievedAt }, `plays[${index}].timingAssessment`)), ...lintActionContracts(out.plays, input.facts.length, evidenceOf(input), input.constraints?.horizonDays, input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url), input.facts), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, { ...out.economics, currency: input.constraints?.currency }, evidenceOf(input)), ...lintSelfServeFunnel(out.plays, out.economics), ...lintComparisonPositioning(out.plays), ...lintOfferClaims(out.plays, evidenceOf(input), { facts: input.facts, researchNotes: input.precomputedResearch?.notes ?? input.untrustedContext ?? "", sourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [], evidenceText: evidenceOf(input), diagnosedConstraint: input.constraints?.diagnosis?.status === "supported" && input.constraints.diagnosis.basis === "measured" ? input.constraints.diagnosis.constraint : out.decision?.constraint, diagnosisMeasured: input.constraints?.diagnosis?.status === "supported" && input.constraints.diagnosis.basis === "measured" }), ...lintReferralDrivers(out.plays), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints, out.economics), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays, { factCount: input.facts.length, availableSourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [] }), ...lintDecisionConstraintFit(out.decision, out.plays, input.constraints?.diagnosis), ...lintDecisionOptionChoice(out.decision, out.plays, out.economics, input.constraints), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintNoAudience(out.plays, input.constraints, input.facts.join("\n")), ...lintBorrowedUplift(out.plays), ...lintDiagnosisFit(out.plays, o.decisionContract && out.decision ? undefined : input.constraints?.diagnosis), ...lintEligibilityIds(out.plays, input.constraints?.ineligiblePlaybooks), ...lintPlatformEligibility(out.plays.map((p, i) => ({ path: `plays[${i}]`, text: JSON.stringify(p) })), input.constraints?.businessTypes ?? []), ...(input.constraints?.factKinds ? lintEvidenceStrength(out.plays.flatMap((p, i) => [{ path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }, { path: `plays[${i}].mechanic`, text: (p as { mechanic?: string }).mechanic ?? "" }]), input.constraints.factKinds) : []), ...lintClaims(out.plays.flatMap((p, i) => [{ path: `plays[${i}].hook`, text: (p as { hook?: string }).hook ?? "" }, { path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }]), verifiedCapabilityEvidence(input)), ...lintDeliveryCapacity(portfolioP50(out, input.constraints?.horizonDays), input.constraints), ...lintServiceArea(out.plays.map((p, i) => ({ path: `plays[${i}]`, spend: p.model?.monthlySpendUsd ?? 0, text: JSON.stringify(p) })), input.constraints), ...lintEconomics({ ...out, economics: { ...out.economics, currency: input.constraints?.currency } })],
     },
     o,
     "expert",
@@ -2529,6 +2587,22 @@ export function seoSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof SeoBriefV
 export function conversionAuditSpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof ConversionAuditV2Schema>> {
   return base(
     { id: "conversion_audit", role: "cso", label: "Conversion audit", skills: ["owner-brevity", "conversion-audit", "landing-pages"], schema: ConversionAuditV2Schema, rubric: rubricOf("conversion-audit"), lint: (out, input) => [...lintGeneric(out, input), ...lintConversionAuditSources(out, input)] },
+    o,
+    "lean",
+  );
+}
+
+export function businessModelCheckSpec(o: SpecOptions = {}): AgentSpec<BusinessModelCheck> {
+  return base(
+    {
+      id: "business_model_check",
+      role: "cmo",
+      label: "Business model check",
+      skills: ["owner-brevity", "growth-strategy", "positioning", "competitor-teardown"],
+      schema: BusinessModelCheckSchema,
+      rubric: rubricOf("growth-strategy"),
+      lint: (out, input) => [...lintGeneric(out, input), ...lintBusinessModelCheck(out, { factCount: input.facts.length, readUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [] })],
+    },
     o,
     "lean",
   );
@@ -3030,6 +3104,13 @@ export function researchFor(task: TaskType | "business_insights" | "prospecting"
   const market = ctx.country ? ` Owner-stated market: ${ctx.country}.` : "";
   const scope = ctx.marketScope ? ` Business reach is classified as ${ctx.marketScope}; this is scope only, not a named city or country.` : "";
   switch (task) {
+    case "business_model_check":
+      return {
+        maxSearches: 5,
+        maxFetches: 4,
+        cacheTtlMs: 6 * 60 * 60_000,
+        brief: `For ${ctx.businessName}${site}.${market}${scope} Planning date: ${ctx.today ?? "unknown"}. Find dated evidence about how this business's market and business model are changing: 1. Demand and customer-behavior shifts for its category. 2. How competitors and substitutes charge (subscription, usage, retainer, bundles, marketplaces) and any recent pricing changes. 3. Distribution, platform, regulatory, technology or cost changes that affect how the category makes money. 4. Named examples of businesses in this or a nearby category that changed how they make money, with what is known about results. Only report what you found, with URLs and the dates the sources describe.`,
+      };
     case "social_posts":
       return {
         maxSearches: 3,

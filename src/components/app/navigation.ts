@@ -22,6 +22,7 @@ export const APP_TOOLS: { key: string; label: string; description: string; area:
   { key: "reviews", label: "Customer reviews", description: "Review imported feedback and prepare responses or eligible invitations.", area: "customers", search: "reputation feedback" },
   { key: "chat", label: "Chat on your website", description: "Set up the visitor chat that answers questions and collects inquiries.", area: "customers", search: "widget chatbot customer support" },
   { key: "visibility", label: "Help people find you", description: "Check website search readiness and the search data you provide.", area: "plan", search: "seo aeo geo ai visibility search console" },
+  { key: "business-model", label: "Business model check", description: "See whether the way you make money is holding up, with three alternatives to test.", area: "plan", search: "business model pivot viability outdated pricing subscription strategy" },
   { key: "competitors", label: "Similar businesses", description: "Research other businesses and compare what they offer.", area: "plan", search: "competitors competitive research" },
   { key: "links", label: "Links & clicks", description: "Manage links and inspect the clicks recorded for them.", area: "results", search: "tracking attribution bio" },
   { key: "connections", label: "Connected accounts", description: "Connect the accounts needed for a task and check what each can do.", area: "tools", search: "integrations setup oauth" },

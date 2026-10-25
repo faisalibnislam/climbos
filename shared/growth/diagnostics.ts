@@ -5,12 +5,13 @@
  * order and the first failing one decides the next step; more spend is only
  * suggested when reach is the sole shortfall and conversion holds.
  */
-import { stepClearlyShort, stepTooThin, type PlayActuals } from "./actuals";
+import { formatMoney } from "../economics/currency";
+import { costCheck, stepClearlyShort, stepTooThin, type PlayActuals } from "./actuals";
 
 export type ShortfallVerdict = "not_run" | "tracking" | "reach" | "conversion" | "reach_only" | "too_few" | "fine";
 
 export interface ShortfallCheck {
-  check: "executed" | "measured" | "reach" | "conversion" | "sample";
+  check: "executed" | "measured" | "reach" | "conversion" | "cost" | "sample";
   status: "pass" | "fail" | "unknown";
   detail: string;
 }
@@ -20,13 +21,15 @@ export interface Shortfall {
   checks: ShortfallCheck[];
   /** One next step for the owner. */
   next: string;
-  /** Only true when conversion holds and reach alone is short. */
+  /** Only true when conversion holds, reach alone is short, and logged cash cost per customer is within what a customer is worth. */
   moreSpendJustified: boolean;
 }
 
+const money = (n: number, currency?: string) => formatMoney(Math.round(n * 100) / 100, currency);
+
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 
-export function diagnoseShortfall(a: PlayActuals, play: { killIf?: string } = {}): Shortfall {
+export function diagnoseShortfall(a: PlayActuals, play: { killIf?: string } = {}, opts: { affordableCacUsd?: number | null; currency?: string } = {}): Shortfall {
   const checks: ShortfallCheck[] = [];
   const stop = play.killIf ? ` Your stop rule: ${play.killIf}` : "";
   // 1. Did it run?
@@ -54,7 +57,22 @@ export function diagnoseShortfall(a: PlayActuals, play: { killIf?: string } = {}
   const thinAny = a.steps.some((s) => stepTooThin(s));
   checks.push({ check: "conversion", status: weak ? "fail" : thin ? "unknown" : "pass", detail: weak ? `"${weak.name}" converts ${pct(weak.observed!)} vs ${pct(weak.planned)} planned (${weak.successes}/${weak.trials}).` : thin ? "Too few people at each step to judge conversion." : "Steps convert at or near plan." });
   if (weak) return { verdict: "conversion", checks, next: `Fix "${weak.name}" before adding people: test one change at that step.${stop}`, moreSpendJustified: false };
-  if (reachShort && !thin) return { verdict: "reach_only", checks, next: `Conversion holds; only reach is short. Fix the route to the page, or raise spend within the cap.${stop}`, moreSpendJustified: true };
+  if (reachShort && !thin) {
+    // More spend needs a logged cost per customer within what a customer is worth (decision books: don't scale an unprofitable channel).
+    const c = costCheck(a, opts.affordableCacUsd);
+    const m = (n: number) => money(n, opts.currency);
+    const detail = {
+      within: `Logged cash cost per customer ${m(c.cashCostPerCustomerUsd ?? 0)} is within the ${m(c.affordableUsd ?? 0)} a customer is worth in the payback window.`,
+      above: `Logged cash cost per customer ${m(c.cashCostPerCustomerUsd ?? 0)} is above the ${m(c.affordableUsd ?? 0)} a customer is worth in the payback window.`,
+      no_spend: "No spend logged, so there's no cost per customer to judge more spend by.",
+      no_customers: `${m(a.spendUsd)} spent with no customers logged yet.`,
+      value_unknown: `Logged cash cost per customer is ${m(c.cashCostPerCustomerUsd ?? 0)}, but what a customer is worth is unknown (price, margin or churn).`,
+    }[c.status];
+    checks.push({ check: "cost", status: c.status === "within" ? "pass" : c.status === "above" || c.status === "no_customers" ? "fail" : "unknown", detail });
+    if (c.status === "within") return { verdict: "reach_only", checks, next: `Conversion holds and cost per customer is affordable; only reach is short. Fix the route to the page, or raise spend within the cap.${stop}`, moreSpendJustified: true };
+    const why = { above: "cost per customer is above what a customer is worth, so lower it before adding spend", no_customers: "no customers yet, so more spend isn't justified", no_spend: "there's no logged cost per customer, so don't start or raise paid spend from this result", value_unknown: "confirm price, margin and churn before adding spend" }[c.status];
+    return { verdict: "reach_only", checks, next: `Conversion holds; only reach is short. Fix the route to the page; ${why}.${stop}`, moreSpendJustified: false };
+  }
   if (reachShort) return { verdict: "reach", checks, next: `Reach is short and there are too few people to judge conversion. Fix the route first; don't add spend yet.${stop}`, moreSpendJustified: false };
   // 5. Enough to judge every step?
   if (thinAny) {

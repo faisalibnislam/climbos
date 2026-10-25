@@ -702,6 +702,7 @@ export async function finishRunImpl(
       userMessage: args.userMessage,
       finishedAt: Date.now(),
     });
+    if (fresh.customAgentId) await addCustomAgentUsage(ctx, (await ctx.db.get(run._id))!);
     // Tell owners once per run (a retried run that fails again stays quiet).
     if (args.status === "failed" && !fresh.failNoticeAt && !fresh.isFixture && !QUIET_KINDS.has(fresh.kind)) {
       await ctx.db.patch(run._id, { failNoticeAt: Date.now() });
@@ -749,7 +750,7 @@ export async function finishRunImpl(
 /* ---------------- resume from checkpoints ---------------- */
 
 /** Job actions that continue a run from its checkpoints (finished steps are skipped). */
-const RESUMABLE = new Set(["onboardingResearch", "buildStrategy", "createContent", "planSocialWeek", "findCustomers", "conversionAudit", "simplePlanJob", "makeReel"]);
+const RESUMABLE = new Set(["onboardingResearch", "buildStrategy", "createContent", "planSocialWeek", "findCustomers", "conversionAudit", "simplePlanJob", "makeReel", "businessModelCheck"]);
 /** Automatic resumes after an interrupted action before the run fails. */
 export const MAX_AUTO_RESUMES = 2;
 /** Owner retries of one run. */
@@ -947,3 +948,51 @@ export const cancelRun = internalMutation({
     return true;
   },
 });
+
+const SPECIALIST_ACTIVE: RunStatus[] = ["cost_reserved", "preparing", "needs_approval", "approved", "scheduled", "executing", "paused"];
+const monthOf = (ms: number) => new Date(ms).toISOString().slice(0, 7);
+
+/**
+ * Add a finished specialist run's newly settled cost to its monthly total (delta since it was last counted). The
+ * first finish of a month seeds the total from that month's earlier runs; more than 2,000 marks it partial.
+ */
+async function addCustomAgentUsage(ctx: MutationCtx, run: Doc<"workflowRuns">): Promise<void> {
+  if (!run.customAgentId) return;
+  const month = monthOf(run.createdAt);
+  let row = await ctx.db.query("customAgentUsage").withIndex("by_agent_month", (q) => q.eq("customAgentId", run.customAgentId!).eq("month", month)).first();
+  if (!row) {
+    const monthStart = Date.parse(`${month}-01T00:00:00Z`);
+    const nextMonth = new Date(monthStart);
+    nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
+    const earlier = (await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", run.orgId).eq("customAgentId", run.customAgentId!).gte("createdAt", monthStart).lt("createdAt", nextMonth.getTime())).take(2_001))
+      .filter((r) => r._id !== run._id && !SPECIALIST_ACTIVE.includes(r.status as RunStatus));
+    let seeded = 0;
+    for (const r of earlier.slice(0, 2_000)) {
+      seeded += r.actualMicros;
+      if (r.customAgentUsageCountedMicros !== r.actualMicros) await ctx.db.patch(r._id, { customAgentUsageCountedMicros: r.actualMicros });
+    }
+    const id = await ctx.db.insert("customAgentUsage", { orgId: run.orgId, customAgentId: run.customAgentId, month, finishedMicros: seeded, partial: earlier.length > 2_000, updatedAt: Date.now() });
+    row = (await ctx.db.get(id))!;
+  }
+  const delta = run.actualMicros - (run.customAgentUsageCountedMicros ?? 0);
+  if (delta === 0) return;
+  await ctx.db.patch(row._id, { finishedMicros: Math.max(0, row.finishedMicros + delta), updatedAt: Date.now() });
+  await ctx.db.patch(run._id, { customAgentUsageCountedMicros: run.actualMicros });
+}
+
+/** This month's specialist usage: the running total plus runs still in progress; null when the total is incomplete. */
+export async function customAgentMonthlyUsage(ctx: QueryCtx, orgId: Id<"organizations">, customAgentId: Id<"customAgents">, nowMs: number): Promise<number | null> {
+  const month = monthOf(nowMs);
+  const monthStart = Date.parse(`${month}-01T00:00:00Z`);
+  const row = await ctx.db.query("customAgentUsage").withIndex("by_agent_month", (q) => q.eq("customAgentId", customAgentId).eq("month", month)).first();
+  if (row) {
+    if (row.partial || row.orgId !== orgId) return null;
+    const recent = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", orgId).eq("customAgentId", customAgentId).gte("createdAt", monthStart)).order("desc").take(100);
+    const active = recent.filter((r) => SPECIALIST_ACTIVE.includes(r.status as RunStatus));
+    return row.finishedMicros + active.reduce((sum, r) => sum + Math.max(0, Math.max(r.actualMicros, r.estimateMicros) - (r.customAgentUsageCountedMicros ?? 0)), 0);
+  }
+  // No finish recorded this month yet: read the month's runs directly (bounded; over the bound is incomplete).
+  const runs = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", orgId).eq("customAgentId", customAgentId).gte("createdAt", monthStart)).take(2_001);
+  if (runs.length > 2_000) return null;
+  return runs.reduce((sum, r) => sum + (SPECIALIST_ACTIVE.includes(r.status as RunStatus) ? Math.max(r.actualMicros, r.estimateMicros) : r.actualMicros), 0);
+}

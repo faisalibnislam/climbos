@@ -46,6 +46,7 @@ import {
 import { errorMessage } from "@/components/app/errors";
 import { minorToDisplay } from "@/components/app/money";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
+import { LeadScoreCheck } from "@/components/app/outbound/LeadScoreCheck";
 import { RetryRunIfPossible, RunProgress } from "@/components/app/content/RunProgress";
 import { climbTarget } from "@/components/climb/context";
 import { cn } from "@/lib/utils";
@@ -90,6 +91,7 @@ export default function OutboundPage() {
           ) : null
         }
       />
+      {c ? <LeadScoreCheck slug={slug} /> : null}
       {!c ? (
         <StartPanel slug={slug} businessType={data.businessType} canEdit={data.canEdit} />
       ) : c.status === "researching" ? (

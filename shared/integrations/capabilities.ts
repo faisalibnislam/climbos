@@ -10,6 +10,22 @@ import type { CapabilityState, ProviderId } from "./types";
 
 export const STALE_SYNC_MS = 48 * 60 * 60 * 1000;
 
+const HOUR = 60 * 60 * 1000;
+/**
+ * When a read connection's last successful sync counts as delayed. ClimbOS defaults, not provider guarantees:
+ * sources that report with a lag or refresh weekly get more room, and owner uploads never go stale on their own.
+ */
+const STALE_SYNC_BY_PROVIDER: Partial<Record<ProviderId, number | null>> = {
+  search_console: 96 * HOUR,
+  ga4: 72 * HOUR,
+  website: 8 * 24 * HOUR,
+  csv_revenue: null,
+};
+
+export function staleSyncMsFor(provider: ProviderId): number | null {
+  return provider in STALE_SYNC_BY_PROVIDER ? STALE_SYNC_BY_PROVIDER[provider]! : STALE_SYNC_MS;
+}
+
 export type GoogleAdsAccessLevel = "test" | "explorer" | "basic" | "standard";
 export type MetaAdsAccessTier = "limited" | "full";
 export type ReviewStatus = "approved" | "pending" | "not_submitted" | "rejected";
@@ -229,7 +245,8 @@ function evaluateOne(provider: ProviderId, cap: CapabilityDefinition, ctx: Capab
   }
 
   // Sync freshness (reads only).
-  if (cap.kind === "read" && ctx.lastSyncAt !== undefined && now - ctx.lastSyncAt > STALE_SYNC_MS) {
+  const staleAfter = staleSyncMsFor(provider);
+  if (cap.kind === "read" && ctx.lastSyncAt !== undefined && staleAfter !== null && now - ctx.lastSyncAt > staleAfter) {
     const hours = Math.floor((now - ctx.lastSyncAt) / 3_600_000);
     return {
       state: "sync_delayed",

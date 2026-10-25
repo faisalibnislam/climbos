@@ -3,8 +3,8 @@ import { featureAllowed } from "./lib/access";
 import { getLiveConfig } from "./lib/config";
 import { attribute, computeCohorts, OVERLAP_WARNING, summarizePlatformClaims } from "../shared/attribution";
 import type { RevenueEvent, Touch } from "../shared/attribution/types";
-import { addDays, fillMissingDays, runForecast, type DailyPoint } from "../shared/forecasting";
-import { majorToMinor } from "../shared/economics/currency";
+import { addDays, fillMissingDays, metricHealth, runForecast, type DailyPoint, scoreForecast } from "../shared/forecasting";
+import { formatMoney, majorToMinor, minorToMajor } from "../shared/economics/currency";
 import { summarizeAiReferralRows } from "../shared/integrations/ga4";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
@@ -441,8 +441,11 @@ export const overview = query({
     if (!connected("stripe_revenue") && !connected("csv_revenue")) gaps.push({ metric: "revenue", message: "Revenue needs your billing data.", fix: "Connect Stripe (read-only) or upload a revenue CSV" });
     if (!connected("search_console")) gaps.push({ metric: "search", message: "Search performance needs Google Search Console.", fix: "Connect Search Console" });
 
+    // Possible tracking breaks or unusual days in connected daily metrics (prompts to check, not causes).
+    const healthAlerts = metrics.filter((m) => m.hasData && m.key !== "paid_conversions" && !m.isFixture).flatMap((m) => metricHealth(m.points, { yesterday: addDays(today, -1), label: m.label, ...(m.key === "revenue" ? { format: (n: number) => formatMoney(minorToMajor(n, org.currency), org.currency) } : {}) }).map((alert) => ({ metric: m.key, ...alert })));
     return {
       span,
+      healthAlerts,
       /** Free accounts: only the last 30 days. */
       historyLimited,
       from,
@@ -575,8 +578,12 @@ export const getForecast = query({
       .first();
     const today = dayKey(Date.now(), org.timezone);
     const hist = await series(ctx, org._id, f.metricKey, addDays(today, -120), addDays(today, -1));
+    const saved = JSON.parse(f.result) as { points: { date: string; value: number; lo80?: number; hi80?: number; lo95?: number; hi95?: number }[] };
+    // Forward check: forecast days that have since been observed (history covers the last 120 days).
+    const forwardScore = scoreForecast(saved.points, hist.points, f.horizonDays);
     return {
       id: f._id,
+      forwardScore,
       metricKey: f.metricKey,
       metric: METRICS[f.metricKey as MetricKey],
       method: f.method,

@@ -73,3 +73,10 @@ export function reviewCampaignPerformance(input: CampaignPerformanceReviewInput)
     message: "Reported cost per conversion is at or below the owner's target. This is a platform-reported efficiency signal, not proof of incremental customers or profit.",
   };
 }
+
+/** Meta reports many action types; only an owner-confirmed type becomes the campaign's conversion count. */
+export function metaConversions(reportedActions: readonly { actionType: string; value: number }[] | undefined, confirmedType: string | null | undefined): number | undefined {
+  if (!confirmedType) return undefined;
+  const action = reportedActions?.find((a) => a.actionType === confirmedType);
+  return action && Number.isFinite(action.value) && action.value >= 0 ? action.value : undefined;
+}

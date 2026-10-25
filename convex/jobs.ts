@@ -1,5 +1,6 @@
 "use node";
 
+import { BUSINESS_MODEL_TASK, type BusinessModelCheck } from "../shared/agents/businessModel";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { checkProspects } from "./ai/prospectCheck";
 import { downloadVeo, pollVeo, startVeo } from "./ai/veo";
@@ -56,10 +57,10 @@ import { formatBusinessKnowledgeLayers } from "../shared/knowledge/layers";
 import { diagnose, diagnosisBrief, funnelRatesOf, type Diagnosis, type OwnerFunnel } from "../shared/agents/diagnosis";
 import { businessLifecycleContext } from "../shared/agents/lifecycle";
 import { choosePlaybooks, playbookBrief, type PlaybookContext } from "../shared/playbooks/contracts";
-import { applyOwnerEconomics, churnOf, forecastCustomers, growthCashInputsIn, growthCashTiming, growthCashTimingContext, growthCashTimingInput, growthCashTimingLine, lockedNumbers, playsGoalGap, portfolioP50, selectPortfolio, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
+import { applyOwnerEconomics, churnOf, forecastCustomers, growthCashInputsIn, growthCashReserveConstraint, growthCashTiming, growthCashTimingContext, growthCashTimingInput, growthCashTimingLine, lockedNumbers, playsGoalGap, portfolioP50, selectPortfolio, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { segmentEconomicsBrief } from "../shared/agents/segmentEconomics";
 import { CREATIVE_STRATEGY_PROMPT_VERSION, planTask, playsTask, type CreativeRange } from "../shared/agents/planTasks";
-import { citedUrls, urlKey, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
+import { citedUrls, urlKey, verifyActionEvidence, verifyAudienceEvidence, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
 import { agentQuality, HARD_RULES, planQuality, withoutHard, type AgentQuality } from "../shared/agents/quality";
 import { capabilityContext } from "../shared/agents/capacity";
 import { capsHint, PLAN_CAPS } from "../shared/agents/wordCaps";
@@ -74,7 +75,7 @@ import {
   creatorScoutSpec,
   prospectingSpec,
   researchFor,
-  retentionSpec,
+  businessModelCheckSpec, retentionSpec,
   salesSpec,
   seoSpec,
   growthPlaysSpec,
@@ -596,9 +597,16 @@ function constraintsOf(job: JobCtx, extra: Partial<PlanConstraints> = {}): PlanC
     ...(job.business?.unitEconomics?.monthlyGrowthCashUsd !== undefined ? { monthlyGrowthCashUsd: job.business.unitEconomics.monthlyGrowthCashUsd } : {}),
     ...(job.audience ? { emailAudience: job.audience.consented } : {}),
     ...(job.business?.unitEconomics?.newCustomersPerMonth !== undefined ? { newCustomersPerMonth: job.business.unitEconomics.newCustomersPerMonth } : {}),
+    ...growthCashConstraint(job),
     factKinds: job.facts.map((f) => f.evidenceKind),
     ...extra,
   };
+}
+
+/** The reserve check runs only when the owner reported both a reserve (in this currency) and a payment delay. */
+function growthCashConstraint(job: JobCtx): Pick<PlanConstraints, "growthCashTiming"> {
+  const g = growthCashReserveConstraint(growthCashTimingInput(job.business?.growthCashTiming), job.business?.unitEconomics, workspaceCurrency(job), job.goal?.horizonDays ?? 90);
+  return g ? { growthCashTiming: g } : {};
 }
 
 /** Inputs the plan worked without, shown to the owner (the plan is bounded instead of assuming them). */
@@ -709,6 +717,12 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     refundExposureLine(job.refundExposure),
     job.run.kind === "strategy" ? stripeReceivablesLine(job.stripeReceivables) : "",
     job.subscriptionCohortText,
+    job.repeatPurchaseText,
+    job.pipelineOutcomesText,
+    job.businessModelContext ? untrusted("latest saved business model check (AI judgment)", job.businessModelContext, 1_500) : "",
+    job.businessModelTestsText,
+    job.businessModelTestNotes.length ? `OWNER NOTES ON BUSINESS MODEL TESTS:\n${untrusted("owner business model test notes", job.businessModelTestNotes.join("\n"), 1_200)}` : "",
+    job.pipelineLossNotes.length ? `OWNER NOTES ON RECENTLY LOST DEALS (untrusted, owner-entered; may be partial or wrong):\n${untrusted("owner lost-deal notes", job.pipelineLossNotes.join("\n"), 1_500)}` : "",
     job.resultsText ?? "",
   ];
   return formatBusinessKnowledgeLayers(truth, performance);
@@ -922,7 +936,7 @@ async function ownedAndChecked(draft: PlaysOutput, job: JobCtx, searched: { url:
   const owner = job.business?.unitEconomics;
   // Tests and fixtures never touch the network.
   const pages = process.env.CLIMBOS_FAKE_LLM || job.run.isFixture ? {} : await fetchCitedPages(citedUrls(draft), searched.map((x) => x.url), urlKey).catch(() => ({}));
-  const checked = verifyTags(draft, { pages, owner, searched: searched.map((x) => urlKey(x.url)), fetchedAt: Date.now() });
+  const checked = verifyActionEvidence(verifyTags(draft, { pages, owner, searched: searched.map((x) => urlKey(x.url)), fetchedAt: Date.now() }), { pages, facts: job.facts.map((f) => f.statement) });
   return { ...checked, economics: { ...(applyOwnerEconomics(withDerivedAssumed(checked.economics), owner) as PlaysOutput["economics"]), currency: workspaceCurrency(job) } };
 }
 
@@ -985,7 +999,7 @@ async function finish(
   });
 }
 
-type ResumableJob = "onboardingResearch" | "buildStrategy" | "createContent" | "planSocialWeek" | "findCustomers" | "conversionAudit" | "simplePlanJob" | "makeReel";
+type ResumableJob = "onboardingResearch" | "buildStrategy" | "createContent" | "planSocialWeek" | "findCustomers" | "conversionAudit" | "simplePlanJob" | "makeReel" | "businessModelCheck";
 interface Resume {
   fn: ResumableJob;
   args: Record<string, unknown>;
@@ -1259,7 +1273,12 @@ export const onboardingResearch = internalAction({
         startedAt,
         { task: "business_insights", text: v1InsightsTask, context: pagesText, ctx: fixtureCtx(job) },
       );
-      await ctx.runMutation(internal.jobWrites.saveInsights, { runId, businessId: business._id, insights: JSON.stringify(insights) });
+      // Claim support for audience evidence: excerpts are checked against confirmed facts and the site pages read here.
+      const pageText = Object.fromEntries(pages.filter((p) => p.status === "ok").map((p) => [urlKey(p.url), p.text]));
+      const checkedInsights = insights && typeof insights === "object" && Array.isArray((insights as { audiences?: unknown }).audiences)
+        ? { ...(insights as Record<string, unknown>), audiences: verifyAudienceEvidence((insights as { audiences: Parameters<typeof verifyAudienceEvidence>[0] }).audiences, { facts: job.facts.map((f) => f.statement), pages: pageText }) }
+        : insights;
+      await ctx.runMutation(internal.jobWrites.saveInsights, { runId, businessId: business._id, insights: JSON.stringify(checkedInsights) });
       await firstTake;
       await finish(ctx, runId, "verified", { output: { facts: profile.facts.length }, meters: { scrapeCredits: pagesFetched, searchCalls: 0 } });
     }, undefined, resumeAs(ctx, "onboardingResearch", { runId, ownerText }));
@@ -2248,7 +2267,7 @@ export const conversionAudit = internalAction({
         2,
         conversionAuditSpec(),
         agentInput(job, "Audit the supplied website pages for conversion and acquisition: clarity, message match, offer, proof, objections, calls to action, friction, pricing presentation and trust. Also act as Design Critic using the page source and exact screenshots supplied: return designCritic with coverage (visual_sampled only when screenshot inputs exist; otherwise page_source_only or no_design_evidence) and up to twelve findings across brand_identity, communication_hierarchy, conversion_trust, visual_craft, accessibility_usability and performance_technical. Each finding must name a page region, observed issue, customer/business goal, why it matters, severity, confidence, evidence, exact source URL, concrete proposed change, and, only when multiple responsible responses are reasonable, up to three distinct directions tied to the same goal. Label suitable directions quick_fix, considered_redesign, or bold_alternative. Keep the bold alternative visible even when uncertain; state its assumptions, risks, effort, tradeoff, concrete change, editable separate-draft brief and baseline-first measurement plan. Do not invent options or numerical lift. classification (objective_defect, automated_check, heuristic, brand_judgment, style_preference, measured_performance), automatedCheckIds, and whether human evaluation is needed. Cite only screenshots actually supplied and their exact view. Treat visual quality judgments as judgments or heuristics, never objective defects. Use the business brand, audience and page goal; do not impose a house style or copy another brand. For accessibility, use the current W3C WCAG 2.2 guidance (https://www.w3.org/TR/wcag/) as a reference; distinguish actual automated checks from manual evaluation and never claim WCAG conformance from this bounded review. For speed and technical behavior, use only collected PageSpeed/CrUX/Lighthouse evidence and name its source and test type; do not infer performance from screenshots. Use deterministic technical SEO observations to distinguish crawl/indexing signals from content and user-experience findings; treat separate static accessibility observations only as limited HTML checks, not a WCAG audit. Describe only the measured sample and never equate these observations with actual indexing, ranking effects, accessibility conformance, or a complete crawl. Cite only exact supplied page URLs. Every website finding and prioritized fix must include a short verbatim evidenceQuote from its exact cited page plus evidenceKind observed or inference; never present an inference as a page fact. If a desktop or mobile website screenshot is supplied, you may make a separate visualEvidence observation about only what is directly visible in that exact viewport and must cite its page URL and view. One screenshot does not establish how controls work, full-page behavior, other devices, accessibility, or user outcomes. Give at most four prioritized fixes. Every fix must target an exact page URL read in this run and include: why the evidence supports it; effort; a proposed content-section order; brief sample copy; text/flow-level UX changes that follow from observed content; and a measurement plan that starts by recording the current baseline and names a relevant metric without inventing a target or expected numerical lift. Sample copy is a draft, not publish-ready; do not add capabilities, proof, offers, prices or guarantees absent from owner-confirmed facts. Do not infer visual layout, mobile behavior, forms, accessibility, speed, conversion rate or causal effects from text extraction. When supplied, report Lighthouse accessibility and SEO checks as separate synthetic mobile results; the accessibility result is not a WCAG audit and neither result establishes search indexing or rankings. Leave fixes empty when no page supports a concrete recommendation. When supplied, report CrUX metrics as real-user field data with the provided 28-day collection window and phone form factor; report Lighthouse values as a separate synthetic mobile lab test. Never substitute one for the other, infer conversions from them, or claim either proves a change caused a conversion result. If no performance data was supplied, say it was unavailable rather than guessing. Search Console observations, when present, are historical query/page impressions, clicks, CTR and position for this property's date window; use them only when tied to one of the pages actually read, and never call them conversions, total search demand, or causal evidence. Review the supplied ClimbOS and connected-account post sample for audience fit, purpose/format variety, platform adaptation, clarity, proof, CTA and reuse. For each social finding, cite the exact supplied sourceArtifactId and platform. For supplied Instagram still-image samples, assess only visible creative features such as focal subject, visual hierarchy, apparent text legibility, brand consistency and match with the caption; state visual observations separately from inferences and cite the exact source ID. Never claim to review a full carousel, Reel, video or account based on one still image. Give every content-mix test an explicit destination platform, format, concrete concept, business-fit hypothesis, test signal and evidence basis. Use sampled_post_pattern only when one or more exact supplied sourceArtifactIds support the pattern; use business_fit_hypothesis for a new idea based on confirmed business context, especially when no posts were available. When source-reported Instagram lifetime insights are supplied, cite the exact post IDs, name the metric and compare like metrics only among supplied posts; describe differences as observed associations, not causes or account-wide results. When Facebook reaction, comment, or share counts are supplied, treat them as sampled post-level snapshots, not Page Insights; compare only the same metric and platform, and make no causal or account-wide claim. Do not infer performance from captions alone or infer humor, sexual tone, or regulatory suitability from industry alone; preserve saved brand preferences and category-safety checks. Never imply this is a complete account history. If no posts were supplied, explain that and leave social findings empty while any business-fit content ideas remain explicitly hypothetical. Prioritize concrete fixes and never invent numerical lift.", {
-          untrustedContext: [text, technicalSeoContext, socialText, searchContext, performanceContext].filter(Boolean).join("\n\n"),
+          untrustedContext: [text, technicalSeoContext, socialText, searchContext, performanceContext, job.priorDesignDecisionsText, job.priorDesignDecisionNotes.length ? untrusted("owner notes on earlier website findings", job.priorDesignDecisionNotes.join("\n"), 1_500) : ""].filter(Boolean).join("\n\n"),
           visualInputs: [...websiteVisual.inputs, ...socialVisualInputs],
           research: researchFor("conversion_audit", { website, businessName: job.business?.name ?? job.org.name }),
         }),
@@ -2329,6 +2348,29 @@ export const simplePlanJob = internalAction({
       await finish(ctx, runId, "verified", { output: out });
       if (cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId, status: "done" });
     }, undefined, resumeAs(ctx, "simplePlanJob", { runId, task, cardId }));
+  },
+});
+
+/** Owner-started business model check: how the business makes money, market signals, three alternatives, pivot-or-persist. */
+export const businessModelCheck = internalAction({
+  args: { runId: v.id("workflowRuns") },
+  handler: async (ctx, { runId }) => {
+    const startedAt = Date.now();
+    const job = await loadContext(ctx, runId);
+    if (!job) return;
+    await guarded(ctx, runId, async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const out = await runAgentTask<BusinessModelCheck>(
+        ctx,
+        job,
+        0,
+        businessModelCheckSpec(),
+        agentInput(job, `${BUSINESS_MODEL_TASK}\n\n${job.businessModelSignalsText}`, { research: researchFor("business_model_check", { website: job.business?.website, businessName: job.business?.name ?? job.org.name, today }) }),
+        startedAt,
+        { task: "business_model_check", context: "", ctx: fixtureCtx(job), text: `${BUSINESS_MODEL_TASK}\n\n${businessBrief(job)}` },
+      );
+      await finish(ctx, runId, "verified", { output: out });
+    }, undefined, resumeAs(ctx, "businessModelCheck", { runId }));
   },
 });
 

@@ -11,6 +11,9 @@ import { relativeTime } from "@/components/app/money";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { StatBlocks } from "@/components/ds/content";
 import { Badge, Button, ConfirmDialog, DatePicker, EmptyState, Field, Input, Select, Sheet, Textarea, toast } from "@/components/ui";
+import { LossReasonFields } from "@/components/app/pipeline/LossReasonFields";
+import { DealAttentionBadges } from "@/components/app/pipeline/DealAttentionBadges";
+import { dealAttention } from "@shared/growth/pipeline";
 
 /** "1200" or "1200.50" → 1200.5; anything else ("1.2.3") → NaN. */
 function parseMoney(s: string): number {
@@ -36,6 +39,8 @@ export default function PipelinePage() {
   const data = useQuery(api.crm.list, { slug });
   const update = useMutation(api.crm.update);
   const [openId, setOpenId] = useState<Id<"deals"> | null>(null);
+  // One clock per page view keeps overdue and stalled labels stable while the board re-renders.
+  const [now] = useState(() => Date.now());
   const open = data?.deals.find((d) => d.id === openId) ?? null;
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
@@ -78,6 +83,7 @@ export default function PipelinePage() {
                       <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-ink-3">
                         {d.value ? <span className="font-medium text-ink-2">{money(d.value, d.currency)}</span> : null}
                         {d.nextStepAt ? <span>{d.nextStep ?? "Next"}: {new Date(d.nextStepAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span> : <span>{relativeTime(d.updatedAt)}</span>}
+                        <DealAttentionBadges attention={dealAttention(d, now)} />
                       </span>
                     </button>
                     {NEXT[d.stage] ? (
@@ -130,6 +136,7 @@ function DealPanel({ slug, d, onDeleted }: { slug: string; d: Deal; onDeleted: (
       <Field label="Where are you with this person?">
         <Select options={STAGES.map((s) => ({ value: s.value, label: s.label }))} value={d.stage} onValueChange={(v) => save({ slug, id: d.id, stage: v as Stage })} />
       </Field>
+      {d.stage === "lost" ? <LossReasonFields slug={slug} d={d} save={save} /> : null}
       <Field label={`Possible sale value (${d.currency})`} hint="This amount is included in recorded sales when you choose Sale recorded.">
         <Input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value.replace(/[^0-9.]/g, ""))} onBlur={() => {
             if (value && !Number.isFinite(parseMoney(value))) return void toast({ tone: "danger", title: "Use a number, like 1200.50" });

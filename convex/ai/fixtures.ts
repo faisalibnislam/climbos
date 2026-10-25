@@ -1,3 +1,4 @@
+import { demoBusinessModelCheck } from "../../shared/agents/businessModel";
 import type {
   AdDraftsOutput,
   BusinessProfile,
@@ -282,6 +283,8 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
         ],
         socialReview: { summary: "Demo data does not represent a live review of this workspace's social accounts.", findings: [], contentMixSuggestions: [{ platform: "linkedin", format: "educational text post", concept: "Answer one question a likely buyer asks before choosing a form tool.", fitHypothesis: "A practical explanation could fit a business buyer; this demo is not evidence about the workspace or expected results.", basis: "business_fit_hypothesis", sourceArtifactIds: [], testSignal: "Track qualified replies after establishing a baseline." }] },
       };
+    case "business_model_check":
+      return demoBusinessModelCheck(n);
     case "retention_plan":
       return {
         segments: [
