@@ -21,6 +21,8 @@ Owner-started prospect emails and review invitations check for an unresolved ema
 
 Growth Home opportunity questions open an editable field instead of sending a fixed prompt. The Home request composer shows the deterministic credit estimate for interpreting a request and the separate maximum budget for safe draft or analysis work that may start automatically; demo work is labeled as using no paid AI credits. The owner sees that sending does not alter the plan or publish anything. The backend supplies the saved, tenant-checked opportunity context to the existing Today conversation.
 
+When plan-target research is enabled and an approved plan has a linked search, Home shows its current status and up to three suggested business or creator names. It labels these as public-research suggestions, shows no contact details, and links to the plan for the full evidence and review. This is a bounded, read-only preview; it does not start a search or send outreach.
+
 Home reads a bounded set of drafts waiting for review. When more than 20 are waiting, counts say “20+” instead of implying the returned sample is the exact total; the assistant receives the same lower-bound label. The review list remains limited to six recent drafts, with the link to the full review queue available.
 
 Date-sensitive growth recommendations lead with a plain-language timing choice, suggested dates when supported, the named event or season, and why that moment may matter to the business. Missing information stays visible; preparation, delivery, capacity, source claims, and evidence dates are available in an expandable detail section.

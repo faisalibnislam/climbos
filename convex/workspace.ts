@@ -10,7 +10,7 @@ import { activePolicyVersion } from "./jobWrites";
 import { audit } from "./lib/audit";
 import { approvalHash, can, canonicalJson } from "../shared/policy";
 import { assertCardDependenciesComplete, holdPlanChannel, startCardRun, startPlanWork, WISH_AUTO_BUDGET_MICROS, type PlanWorkResult } from "./lib/cards";
-import { autoStartPlanTargets } from "./targets";
+import { autoStartPlanTargets, todayTargetPreview } from "./targets";
 import { notifyOwners } from "./lib/notify";
 import { chargeableAccess, isPaid } from "./lib/access";
 import { creditBalance } from "./lib/credits";
@@ -50,6 +50,7 @@ export const today = query({
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
       .order("desc")
       .first();
+    const targetPreview = await todayTargetPreview(ctx, org, strategy);
     const cards = await ctx.db
       .query("actionCards")
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "proposed"))
@@ -153,6 +154,7 @@ export const today = query({
             opportunities: projectGrowthOpportunities(expertPlaysOf(strategy.expert) as OpportunityPlayInput[]),
           }
         : null,
+      targetPreview,
       cards: [...cards, ...running]
         .sort((a, b) => a.priority - b.priority)
         .slice(0, 6)

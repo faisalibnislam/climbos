@@ -111,6 +111,54 @@ export interface PlayTargets {
   targets: { id: Id<"prospects">; name: string; url: string; why: string; evidenceUrl: string | null; platform: string | null; handle: string | null; audienceSize: { value: string; sourceUrl: string } | null; contentLanguage: { value: string; sourceUrl: string } | null; audienceLocation: { value: string; sourceUrl: string } | null; contentSamples: NonNullable<Doc<"prospects">["contentSamples"]>; creatorMetricAnomalies: NonNullable<Doc<"prospects">["creatorMetricAnomalies"]>; competitorCollaborations: NonNullable<Doc<"prospects">["competitorCollaborations"]>; collaborationConcept: string | null; contactRoute: "email" | "none"; suppressed: boolean; stage: string }[];
 }
 
+export interface TodayTargetPreview {
+  campaignId: Id<"outboundCampaigns">;
+  playId: string;
+  playName: string;
+  kind: TargetKind;
+  status: "researching" | "review" | "failed";
+  matches: { id: Id<"prospects">; name: string }[];
+  hasMore: boolean;
+}
+
+/** A small, read-only Home summary. Do not run the full suppression/readiness scan here. */
+export async function todayTargetPreview(
+  ctx: QueryCtx,
+  org: Doc<"organizations">,
+  strategy: Doc<"strategies"> | null,
+): Promise<TodayTargetPreview | null> {
+  if (!hasTargets(org) || !strategy || strategy.status !== "approved") return null;
+  const eligiblePlays = playsOf(strategy).filter((play) => play.id && targetKindOf(play));
+  if (!eligiblePlays.length) return null;
+
+  const campaigns = await campaignsOf(ctx, org._id);
+  const campaign = campaigns.find((item) => item.strategyId === strategy._id && item.playId && item.status !== "archived" && eligiblePlays.some((play) => play.id === item.playId));
+  if (!campaign?.playId || campaign.status === "archived") return null;
+  const play = eligiblePlays.find((item) => item.id === campaign.playId)!;
+
+  // Bound the preview. Include suggestions linked from older searches as well as
+  // rows from this campaign, without loading contact routes or suppression data.
+  const [currentCampaignRows, suggested, approved] = await Promise.all([
+    ctx.db.query("prospects").withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id)).take(30),
+    ctx.db.query("prospects").withIndex("by_org_stage", (q) => q.eq("orgId", org._id).eq("stage", "suggested")).take(30),
+    ctx.db.query("prospects").withIndex("by_org_stage", (q) => q.eq("orgId", org._id).eq("stage", "approved")).take(30),
+  ]);
+  const rows = [...new Map([...currentCampaignRows, ...suggested, ...approved]
+    .filter((prospect) => prospect.orgId === org._id && ["suggested", "approved"].includes(prospect.stage) && (prospect.campaignId === campaign._id || prospect.playIds?.includes(campaign.playId!)))
+    .sort((a, b) => prospectScore(b) - prospectScore(a))
+    .map((prospect) => [prospect._id, prospect])).values()];
+
+  return {
+    campaignId: campaign._id,
+    playId: play.id!,
+    playName: play.name,
+    kind: targetKindOf(play)!,
+    status: campaign.status,
+    matches: rows.slice(0, 3).map((prospect) => ({ id: prospect._id, name: prospect.company })),
+    hasMore: rows.length > 3,
+  };
+}
+
 async function isSuppressed(ctx: QueryCtx, orgId: Id<"organizations">, email: string): Promise<boolean> {
   const hash = await sha256Hex(email.trim().toLowerCase());
   return Boolean(await ctx.db.query("suppressions").withIndex("by_org_email", (q) => q.eq("orgId", orgId).eq("emailHash", hash)).first());

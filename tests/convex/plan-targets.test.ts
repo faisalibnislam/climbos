@@ -133,6 +133,7 @@ describe("plan targets (flagged)", () => {
     expect(work?.started.some((s) => s.startsWith("Targets"))).toBe(false);
     expect(await t.run(async (ctx) => ctx.db.query("outboundCampaigns").collect())).toHaveLength(0);
     expect(await w.client.query(api.targets.forStrategy, { slug: w.slug, strategyId: w.strategyId })).toBeNull();
+    expect((await w.client.query(api.workspace.today, { slug: w.slug })).targetPreview).toBeNull();
     await expect(w.client.mutation(api.targets.startForPlay, { slug: w.slug, strategyId: w.strategyId, playId: "pl_creators1" })).rejects.toThrow(/isn't switched on/);
   });
 
@@ -141,6 +142,48 @@ describe("plan targets (flagged)", () => {
     const w = await workspace(t, "a-tenant@example.com");
     const other = await workspace(t, "b-tenant@example.com");
     await expect(other.client.query(api.targets.forStrategy, { slug: other.slug, strategyId: w.strategyId })).rejects.toThrow();
+  });
+
+  it("Home shows a bounded, tenant-scoped preview of approved-plan suggestions without contact details", async () => {
+    const t = setup();
+    const w = await workspace(t, "home-targets@example.com");
+    const other = await workspace(t, "home-targets-other@example.com");
+    expect((await w.client.query(api.workspace.today, { slug: w.slug })).targetPreview).toBeNull();
+    const campaignId = await t.run(async (ctx) => {
+      await ctx.db.patch(w.strategyId, { status: "approved" });
+      const campaignId = await ctx.db.insert("outboundCampaigns", {
+        orgId: w.orgId, title: "Studio creator demos", kind: "creators", strategyId: w.strategyId, playId: "pl_creators1",
+        brief: { who: "Yoga creators", where: "UK", count: 10 }, status: "review", sequence: [], ownerNotes: [], excluded: [],
+        createdBy: w.userId, createdAt: Date.now(), updatedAt: Date.now(),
+      });
+      for (const name of ["Studio Ana", "Mia Moves", "Ben Flows", "Leo Yoga"]) {
+        await ctx.db.insert("prospects", {
+          orgId: w.orgId, campaignId, company: name, domain: name.toLowerCase().replaceAll(" ", "-"), website: "https://example.com/profile",
+          location: "UK", sizeBand: "Unknown", why: "Public profile describes relevant classes", evidence: [{ url: "https://example.com/profile", observation: "Public creator profile" }],
+          trigger: "", fit: 70, timing: 50, contact: "Public email listed", publicEmail: `${name.toLowerCase().replaceAll(" ", "-")}@example.com`, firstLine: "",
+          stage: "suggested", playIds: ["pl_creators1"], createdAt: Date.now(), updatedAt: Date.now(),
+        });
+      }
+      await ctx.db.insert("prospects", {
+        orgId: w.orgId, campaignId, company: "Already contacted", domain: "already-contacted", website: "https://example.com/contacted",
+        location: "UK", sizeBand: "Unknown", why: "Past contact", evidence: [], trigger: "", fit: 100, timing: 100, contact: "",
+        firstLine: "", stage: "contacted", playIds: ["pl_creators1"], createdAt: Date.now(), updatedAt: Date.now(),
+      });
+      return campaignId;
+    });
+
+    const today = await w.client.query(api.workspace.today, { slug: w.slug });
+    expect(today.targetPreview).toMatchObject({
+      campaignId,
+      playName: "Studio creator demos",
+      kind: "creators",
+      status: "review",
+      hasMore: true,
+      matches: [{ name: "Studio Ana" }, { name: "Mia Moves" }, { name: "Ben Flows" }],
+    });
+    expect(JSON.stringify(today.targetPreview)).not.toContain("@example.com");
+    expect(JSON.stringify(today.targetPreview)).not.toContain("Already contacted");
+    await expect(other.client.query(api.workspace.today, { slug: w.slug })).rejects.toThrow();
   });
 
   it("Make it happen uses the stored play by ID (REQ-UX-03)", async () => {

@@ -35,6 +35,7 @@ import { WishComposer, wishSuggestions, type WishComposerHandle } from "@/compon
 import { RetryRunIfPossible, RunProgressCompact } from "@/components/app/content/RunProgress";
 import { WishFeed } from "@/components/app/wish/WishFeed";
 import { IdeaDeck } from "@/components/app/today/IdeaDeck";
+import { TodayTargetPreviewCard } from "@/components/app/today/TodayTargetPreview";
 import { Prose } from "@/components/ds/content";
 import { climbTarget } from "@/components/climb/context";
 
@@ -225,6 +226,7 @@ export default function TodayPage() {
               </ol>
             )}
           </section>
+          <TodayTargetPreviewCard slug={slug} preview={data.targetPreview} />
           {suggested.length > 0 && (
             <section aria-labelledby="suggested-heading" className="flex flex-col gap-3">
               <div className="flex items-baseline justify-between gap-2">
