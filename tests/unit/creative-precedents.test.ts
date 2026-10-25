@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(57);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(58);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -182,6 +182,24 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://doi.org/10.1016/j.joep.2023.102624", sourceRole: "independent_secondary", publicationDate: "2023-06" }),
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Explore an optional, accessible community participation idea", query)).toContain("CP-057");
+  });
+
+  it("retrieves prepared real-time social response while preserving human approval and outcome limits", () => {
+    const query = "Respond to a live blackout with a prepared social team, a product-linked post within minutes, and human approval";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-058");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("not posting on every trend or automating reactions");
+    expect(match?.precedent.outcome).toContain("not verified customer or revenue outcomes");
+    expect(match?.precedent.transferRisk).toContain("Never automate posts, comments, DMs, or account activity");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.wired.com/2013/02/oreo-twitter-super-bowl/", publicationDate: "2013-02-04", sourceRole: "independent_secondary" }),
+      expect.objectContaining({ url: "https://digiday.com/marketing/oral-history-oreo-tweet/", publicationDate: "2017-02-03" }),
+      expect.objectContaining({ url: "https://www.socialmediatoday.com/news/was-oreos-dunk-in-the-dark-tweet-really-a-runaway-success/455422/", publicationDate: "2015-01-28" }),
+    ]));
+    const formatted = creativePrecedentsForAgent("growth_plays", "Explore a trend-aware social strategy", query);
+    expect(formatted).toContain("CP-058");
+    expect(formatted).toContain("every external post still needs the owner's approval");
+    expect(formatted).toContain("Sales or customer acquisition effect is not established");
   });
 
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {
