@@ -11,6 +11,7 @@ import { ExportPackPanel } from "./ExportPack";
 import { hasValidApproval } from "./ApprovalPanel";
 import type { ArtifactView } from "./model";
 import { WordPressDraftPanel } from "./WordPressDraftPanel";
+import { OfferDestinationCheck } from "./OfferDestinationCheck";
 
 /** Read the clock in event handlers. */
 const currentTime = () => Date.now();
@@ -195,6 +196,9 @@ export function PublishPanel({ slug, artifact, now }: { slug: string; artifact: 
       <p role="status" aria-live="polite" className="text-sm text-ink-2">
         {statusLine}
       </p>
+      {artifact.current?.destinationUrl && artifact.current.approvedOfferPrices.length ? (
+        <OfferDestinationCheck slug={slug} artifactId={artifact.id} check={artifact.current.destinationOfferCheck} prices={artifact.current.approvedOfferPrices} currency={artifact.current.approvedOfferCurrency ?? undefined} canEdit={artifact.canApprove} />
+      ) : null}
 
       {artifact.lastPublishError && ["approved", "in_review", "draft", "failed"].includes(s) ? (
         <Callout tone="warning" title="Last attempt wasn't posted">

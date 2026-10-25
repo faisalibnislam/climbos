@@ -29,8 +29,8 @@ Status: **Done**, **Next**, or **Planned**. Size: S (one module + tests), M (bac
 | 16 | Structured, sourced competitor battlecards | 206, 207, 393 | M | Done (see ledger) |
 | 17 | Owner view, retire and expiry of past strategy feedback | 135 | M | Done (see ledger) |
 | 18 | Owner-set contact frequency limit across broadcasts, outreach and review invitations | 148 | M | Done (see ledger) |
-| 19 | Warning when a link destination no longer shows the approved offer | 44 | M | Next |
-| 20 | Per-provider sync freshness limits | 147 | S | Planned |
+| 19 | Warning when a link destination no longer shows the approved offer | 44 | M | Done (see ledger) |
+| 20 | Per-provider sync freshness limits | 147 | S | Next |
 | 21 | Event-triggered specialist runs (draft-only, budgeted, debounced) | 337, 349, 381–410 | L | Planned |
 | 22 | Specialist usage summary beyond the 500-run / 100-report caps | 149 | S | Planned |
 

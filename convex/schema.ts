@@ -3723,6 +3723,8 @@ export default defineSchema({
       }),
     ),
     /** Exact approved offer terms used for copy review; part of the content hash and carried through edits. */
+    /** Last check of whether the link destination still shows an approved offer price (warning only). */
+    destinationOfferCheck: v.optional(v.object({ checkedAt: v.number(), url: v.string(), status: v.union(v.literal("found"), v.literal("not_found"), v.literal("unavailable")), found: v.array(v.number()) })),
     approvedOfferTermsSnapshot: v.optional(v.array(v.object({
       playName: v.string(),
       recommendation: v.string(),

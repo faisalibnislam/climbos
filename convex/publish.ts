@@ -17,7 +17,8 @@ import { publishTweet, PUBLISH_X_ACTION, reconcileTweet, xApprovalValue } from "
 import { checkApprovalForExecution } from "../shared/policy";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx } from "./_generated/server";
+import { action, internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx } from "./_generated/server";
+import { appError } from "./lib/tenancy";
 import { emitEvent } from "./webhooks";
 import { audit } from "./lib/audit";
 import { onPublishBlocked, onPublishOutcome } from "./lib/autopilot";
@@ -185,6 +186,41 @@ export const settleFromReceipt = internalMutation({
   },
 });
 
+/** Store the latest destination-offer check on the exact version it ran for (warning only; never blocks). */
+export const recordDestinationOfferCheck = internalMutation({
+  args: { versionId: v.id("artifactVersions"), url: v.string(), status: v.union(v.literal("found"), v.literal("not_found"), v.literal("unavailable")), found: v.array(v.number()) },
+  handler: async (ctx, { versionId, url, status, found }) => {
+    const version = await ctx.db.get(versionId);
+    if (!version) return;
+    await ctx.db.patch(versionId, { destinationOfferCheck: { checkedAt: Date.now(), url: url.slice(0, 500), status, found: found.slice(0, 10) } });
+  },
+});
+
+/** Owner-started check that the approved post's link still shows the approved offer price. */
+export const checkDestinationOffer = action({
+  args: { slug: v.string(), artifactId: v.id("artifacts") },
+  handler: async (ctx, { slug, artifactId }): Promise<{ status: "found" | "not_found" | "unavailable"; found: number[] } | null> => {
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "edit" });
+    if (!access) throw appError("NOT_FOUND", "We couldn't find that workspace.");
+    const target = await ctx.runQuery(internal.publish.offerCheckTarget, { orgId: access.orgId, artifactId });
+    if (!target) return null;
+    const result = await ctx.runAction(internal.publishLinks.checkOfferDestination, { url: target.url, prices: target.prices });
+    await ctx.runMutation(internal.publish.recordDestinationOfferCheck, { versionId: target.versionId, url: target.url, ...result });
+    return result;
+  },
+});
+
+export const offerCheckTarget = internalQuery({
+  args: { orgId: v.id("organizations"), artifactId: v.id("artifacts") },
+  handler: async (ctx, { orgId, artifactId }) => {
+    const artifact = await ctx.db.get(artifactId);
+    if (!artifact || artifact.orgId !== orgId || !artifact.currentVersionId) return null;
+    const version = await ctx.db.get(artifact.currentVersionId);
+    const prices = [...new Set((version?.approvedOfferTermsSnapshot ?? []).flatMap((term) => term.allowedPrices))];
+    return version?.destinationUrl && prices.length ? { versionId: version._id, url: version.destinationUrl, prices } : null;
+  },
+});
+
 export const blockPublish = internalMutation({
   args: { artifactId: v.id("artifacts"), reason: v.string(), backTo: v.union(v.literal("approved"), v.literal("in_review")) },
   handler: async (ctx, { artifactId, reason, backTo }) => {
@@ -288,6 +324,13 @@ export const publishArtifact = internalAction({
         await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: `${detail} Check or remove the link, then approve the post again.`, backTo: "approved" });
         return;
       }
+    }
+
+    // Warning only: record whether the destination still shows an approved offer price; publishing continues either way.
+    const offerPrices = [...new Set((version.approvedOfferTermsSnapshot ?? []).flatMap((term) => term.allowedPrices))];
+    if (version.destinationUrl && offerPrices.length) {
+      const offer = await ctx.runAction(internal.publishLinks.checkOfferDestination, { url: version.destinationUrl, prices: offerPrices }).catch(() => ({ status: "unavailable" as const, found: [] as number[] }));
+      await ctx.runMutation(internal.publish.recordDestinationOfferCheck, { versionId: version._id, url: version.destinationUrl, ...offer });
     }
 
     const action = ACTION_FOR[c.provider];
