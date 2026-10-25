@@ -898,15 +898,30 @@ export const setRunPreview = internalMutation({
   handler: async (ctx, { runId, preview }) => {
     // Previews arrive in pieces (channels, first take, plays): merge them into one object.
     const run = await ctx.db.get(runId);
+    const now = Date.now();
     let merged = preview;
+    let hasConfirmedFinding = false;
     try {
+      const incoming = JSON.parse(preview) as { opportunities?: unknown };
+      hasConfirmedFinding = Array.isArray(incoming.opportunities) && incoming.opportunities.some((raw) => {
+        if (!raw || typeof raw !== "object") return false;
+        const opportunity = raw as { title?: unknown; basis?: unknown; evidence?: unknown };
+        return typeof opportunity.title === "string"
+          && opportunity.title.trim().length > 0
+          && opportunity.basis === "confirmed_facts"
+          && Array.isArray(opportunity.evidence)
+          && opportunity.evidence.length > 0;
+      });
       const prev = run?.preview ? (JSON.parse(run.preview) as Record<string, unknown>) : {};
       merged = JSON.stringify({ ...prev, ...(JSON.parse(preview) as Record<string, unknown>) });
     } catch {
       // Not JSON: keep the new value.
     }
     if (merged.length > 4000) merged = preview;
-    await ctx.db.patch(runId, { preview: merged.slice(0, 4000) });
+    await ctx.db.patch(runId, {
+      preview: merged.slice(0, 4000),
+      ...(run && !run.isFixture && hasConfirmedFinding && run.firstFindingAt === undefined ? { firstFindingAt: now } : {}),
+    });
   },
 });
 

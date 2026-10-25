@@ -689,6 +689,7 @@ export const saveStrategy = internalMutation({
     for (const a of s.firstActions.slice(0, 3)) {
       await ctx.db.insert("actionCards", {
         orgId: run.orgId,
+        sourceRunId: runId,
         title: a.title,
         description: a.why,
         proposedEffect: "A suggestion from your plan. Nothing happens until you choose to act on it.",

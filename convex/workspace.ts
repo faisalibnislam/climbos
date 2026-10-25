@@ -478,11 +478,25 @@ export const runCard = mutation({
     if (card.status !== "proposed") throw appError("INVALID", "This action has already been handled.");
     await assertCardDependenciesComplete(ctx, card, org._id);
     if (card.kind === "note") {
-      await ctx.db.patch(card._id, { status: "done", updatedAt: Date.now() });
+      const now = Date.now();
+      await ctx.db.patch(card._id, { status: "done", updatedAt: now });
+      if (card.sourceRunId) {
+        const source = await ctx.db.get(card.sourceRunId);
+        if (source?.orgId === org._id && source.firstActionAt === undefined) {
+          await ctx.db.patch(source._id, { firstActionAt: now, updatedAt: now });
+        }
+      }
       return { runId: null };
     }
     const runId = await startCardRun(ctx, { org, card, userId: user._id, auto: false });
     if (!runId) throw appError("UNAVAILABLE", card.blockedReason ?? "ClimbOS can't prepare this automatically yet.");
+    if (card.sourceRunId) {
+      const source = await ctx.db.get(card.sourceRunId);
+      const now = Date.now();
+      if (source?.orgId === org._id && source.firstActionAt === undefined) {
+        await ctx.db.patch(source._id, { firstActionAt: now, updatedAt: now });
+      }
+    }
     return { runId };
   },
 });

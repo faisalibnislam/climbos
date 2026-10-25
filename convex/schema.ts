@@ -4256,6 +4256,8 @@ export default defineSchema({
     ),
     blockedReason: v.optional(v.string()),
     runId: v.optional(v.id("workflowRuns")),
+    /** Strategy run that proposed this action; used to measure owner follow-through. */
+    sourceRunId: v.optional(v.id("workflowRuns")),
     priority: v.number(),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -4408,6 +4410,10 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
     finishedAt: v.optional(v.number()),
+    /** First quick-take opportunity linked to confirmed business facts. Hypotheses do not count. */
+    firstFindingAt: v.optional(v.number()),
+    /** First owner-started action card created from this run. Does not mean an external action was executed. */
+    firstActionAt: v.optional(v.number()),
     /** Climb AI Basic or paid Expert (eligible, measured Sol escalation); absent = basic. */
     aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
     /** A quick first take shown while the full job works (JSON: { headline, points[] }). */
