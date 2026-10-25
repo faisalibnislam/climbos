@@ -59,7 +59,7 @@ import { choosePlaybooks, playbookBrief, type PlaybookContext } from "../shared/
 import { applyOwnerEconomics, churnOf, forecastCustomers, growthCashInputsIn, growthCashReserveConstraint, growthCashTiming, growthCashTimingContext, growthCashTimingInput, growthCashTimingLine, lockedNumbers, playsGoalGap, portfolioP50, selectPortfolio, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { segmentEconomicsBrief } from "../shared/agents/segmentEconomics";
 import { CREATIVE_STRATEGY_PROMPT_VERSION, planTask, playsTask, type CreativeRange } from "../shared/agents/planTasks";
-import { citedUrls, urlKey, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
+import { citedUrls, urlKey, verifyActionEvidence, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
 import { agentQuality, HARD_RULES, planQuality, withoutHard, type AgentQuality } from "../shared/agents/quality";
 import { capabilityContext } from "../shared/agents/capacity";
 import { capsHint, PLAN_CAPS } from "../shared/agents/wordCaps";
@@ -929,7 +929,7 @@ async function ownedAndChecked(draft: PlaysOutput, job: JobCtx, searched: { url:
   const owner = job.business?.unitEconomics;
   // Tests and fixtures never touch the network.
   const pages = process.env.CLIMBOS_FAKE_LLM || job.run.isFixture ? {} : await fetchCitedPages(citedUrls(draft), searched.map((x) => x.url), urlKey).catch(() => ({}));
-  const checked = verifyTags(draft, { pages, owner, searched: searched.map((x) => urlKey(x.url)), fetchedAt: Date.now() });
+  const checked = verifyActionEvidence(verifyTags(draft, { pages, owner, searched: searched.map((x) => urlKey(x.url)), fetchedAt: Date.now() }), { pages, facts: job.facts.map((f) => f.statement) });
   return { ...checked, economics: { ...(applyOwnerEconomics(withDerivedAssumed(checked.economics), owner) as PlaysOutput["economics"]), currency: workspaceCurrency(job) } };
 }
 

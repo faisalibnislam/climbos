@@ -247,6 +247,12 @@ const growthPlayValidator = v.object({
     ),
     evidenceNote: v.string(),
     evidenceRefs: v.array(v.string()),
+    evidenceExcerpts: v.optional(v.array(v.object({ ref: v.string(), excerpt: v.string() }))),
+    /** Set by code (verifyActionEvidence): whether each reference's excerpt was found in its fact or loaded page. */
+    evidenceSupport: v.optional(v.array(v.object({
+      ref: v.string(),
+      status: v.union(v.literal("found_on_page"), v.literal("found_in_fact"), v.literal("not_found"), v.literal("page_unavailable"), v.literal("not_loaded"), v.literal("no_excerpt")),
+    }))),
     targetOrAsset: v.string(),
     resourcePlan: v.string(),
     executionCapability: v.union(

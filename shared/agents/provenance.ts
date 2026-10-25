@@ -243,7 +243,43 @@ function verifyTag(t: SourceTag | undefined, c: Claim, ctx: VerifyContext): Sour
   }
 }
 
-type PlaysLike = { economics: Economics; plays: { model?: PlayModel }[] };
+type ActionEvidenceLike = { evidenceRefs: string[]; evidenceExcerpts?: { ref: string; excerpt: string }[]; evidenceSupport?: ActionEvidenceSupport[] };
+type PlaysLike = { economics: Economics; plays: { model?: PlayModel; actionContract?: ActionEvidenceLike }[] };
+
+/** Whether a claim's excerpt appears in the source text (case, quotes and spacing normalized). Words only; not semantic proof. */
+export function excerptIn(excerpt: string, text: string): boolean {
+  const e = norm(excerpt);
+  return e.length >= 12 && norm(text).includes(e);
+}
+
+export type ActionEvidenceStatus = "found_on_page" | "found_in_fact" | "not_found" | "page_unavailable" | "not_loaded" | "no_excerpt";
+export interface ActionEvidenceSupport { ref: string; status: ActionEvidenceStatus }
+
+/**
+ * Claim-level support for each action evidence reference, set by code: the excerpt must appear in the confirmed fact
+ * (`fact:N`, by the run's fact order) or in the page ClimbOS loaded. A page that wasn't loaded stays unchecked.
+ */
+export function verifyActionEvidence<O extends PlaysLike>(out: O, ctx: { pages: Record<string, string | null>; facts: string[] }): O {
+  const plays = out.plays.map((p) => {
+    const a = p.actionContract;
+    if (!a?.evidenceRefs?.length) return p;
+    const evidenceSupport = a.evidenceRefs.map((ref): ActionEvidenceSupport => {
+      const excerpt = a.evidenceExcerpts?.find((item) => item.ref.trim() === ref.trim())?.excerpt;
+      if (!excerpt?.trim()) return { ref, status: "no_excerpt" };
+      const fact = /^fact:(\d+)$/i.exec(ref.trim());
+      if (fact) {
+        const statement = ctx.facts[Number(fact[1])];
+        return { ref, status: statement !== undefined && excerptIn(excerpt, statement) ? "found_in_fact" : "not_found" };
+      }
+      const page = ctx.pages[urlKey(ref)];
+      if (page === undefined) return { ref, status: "not_loaded" };
+      if (page === null) return { ref, status: "page_unavailable" };
+      return { ref, status: excerptIn(excerpt, page) ? "found_on_page" : "not_found" };
+    });
+    return { ...p, actionContract: { ...a, evidenceSupport } };
+  });
+  return { ...out, plays } as O;
+}
 
 /** Research URLs with quotes that need their page loaded (only ones this run's search returned are fetched). */
 export function citedUrls(out: PlaysLike): string[] {
@@ -255,6 +291,7 @@ export function citedUrls(out: PlaysLike): string[] {
   for (const p of out.plays) {
     add(p.model?.reachSource);
     for (const st of p.model?.steps ?? []) add(st);
+    for (const item of p.actionContract?.evidenceExcerpts ?? []) if (/^https?:\/\//i.test(item.ref.trim()) && item.excerpt.trim()) urls.add(item.ref.trim());
   }
   return [...urls];
 }

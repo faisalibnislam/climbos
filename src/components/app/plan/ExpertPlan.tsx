@@ -55,7 +55,7 @@ import { playConfidence, type EvidenceLevel, type PlayConfidence } from "../../.
 import type { Diagnosis } from "../../../../shared/agents/diagnosis";
 import { churnOf, ownerHourOf, playMaths, type Economics, type ForecastUncertainty, type PlayModel, type PlaySensitivity, type PortfolioChoice } from "../../../../shared/agents/economics";
 import { fmtInput as fmtSwitch, switchPoints } from "../../../../shared/agents/voi";
-import { ACCESS_LABEL, BASIS_LABEL, CHECK_LABEL, COST_BASIS_LABEL, economicsSources, forecastBasis, playInputs, SOURCE_LABEL, type InputRow } from "../../../../shared/agents/provenance";
+import { ACCESS_LABEL, BASIS_LABEL, CHECK_LABEL, COST_BASIS_LABEL, economicsSources, forecastBasis, playInputs, SOURCE_LABEL, type ActionEvidenceSupport, type InputRow } from "../../../../shared/agents/provenance";
 import { Clamp, DetailsToggle, ExpandAll, FieldLabel, PlanSection, splitLinks, LinkChip } from "./PlanSections";
 import { FeedbackButton } from "./Feedback";
 import { ProseBullets } from "@/components/app/ProseBullets";
@@ -104,6 +104,8 @@ export interface PlayView {
     evidenceBasis: "assumption" | "inference" | "measured" | "owner_report" | "source_claim";
     evidenceNote: string;
     evidenceRefs: string[];
+    evidenceExcerpts?: { ref: string; excerpt: string }[];
+    evidenceSupport?: ActionEvidenceSupport[];
     targetOrAsset: string;
     resourcePlan: string;
     executionCapability: "owner" | "climbos" | "existing_integration" | "external_setup" | "unknown";
@@ -805,7 +807,7 @@ function PlayDetails({ play, economics, id }: { play: PlayView; economics?: Econ
             <div><dt className="text-xs text-ink-3">Diagnosis</dt><dd className="text-ui text-ink">{action.diagnosis}</dd></div>
             <div><dt className="text-xs text-ink-3">Intended effect</dt><dd className="text-ui text-ink">{action.intendedEffect}</dd></div>
             <div><dt className="text-xs text-ink-3">Evidence basis</dt><dd className="text-ui text-ink">{EVIDENCE_BASIS_LABEL[action.evidenceBasis]} · {action.evidenceNote}</dd></div>
-            {action.evidenceRefs.length ? <div><dt className="text-xs text-ink-3">Evidence references</dt><dd className="break-words text-ui text-ink"><EvidenceReferences references={action.evidenceRefs} /></dd></div> : null}
+            {action.evidenceRefs.length ? <div><dt className="text-xs text-ink-3">Evidence references</dt><dd className="break-words text-ui text-ink"><EvidenceReferences references={action.evidenceRefs} excerpts={action.evidenceExcerpts} support={action.evidenceSupport} /></dd></div> : null}
             <div><dt className="text-xs text-ink-3">Target or asset</dt><dd className="text-ui text-ink">{action.targetOrAsset}</dd></div>
             <div><dt className="text-xs text-ink-3">Resources</dt><dd className="text-ui text-ink">{action.resourcePlan}</dd></div>
             <div><dt className="text-xs text-ink-3">Execution</dt><dd className="text-ui text-ink">{CAPABILITY_LABEL[action.executionCapability]}</dd></div>
