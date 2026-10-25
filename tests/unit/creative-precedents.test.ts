@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(62);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(63);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -505,6 +505,24 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://ir.buildabear.com/node/16491/pdf", claimRole: "outcome" }),
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Assess a customer promotion", query)).toContain("CP-062");
+  });
+
+  it("retrieves optional pricing with a distinct premium edition and preserves channel-specific evidence limits", () => {
+    const query = "Test pay what you want voluntary pricing for a digital release, with a separate fixed-price premium edition and later standard retail release; measure digital demand and cannibalization rather than assuming free expands every channel";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-063");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("compare total contribution across channels");
+    expect(match?.precedent.outcome).toContain("higher subsequent digital album sales");
+    expect(match?.precedent.outcome).toContain("no detected effect on subsequent CD sales");
+    expect(match?.precedent.causalLimit).toContain("direct-offer sales and revenue were not available");
+    expect(match?.precedent.causalLimit).toContain("The Nine Inch Nails comparison");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://research.hks.harvard.edu/publications/getFile.aspx?Id=1073", sourceRole: "independent_secondary", claimRole: "outcome" }),
+      expect.objectContaining({ url: "https://www.latimes.com/archives/la-xpm-2007-nov-06-fi-radio6-story.html", claimRole: "context" }),
+    ]));
+    const injected = creativePrecedentsForAgent("growth_plays", "Assess an alternative digital offer", query);
+    expect(injected).toContain("CP-063");
+    expect(injected).toContain("Do not choose thresholds after seeing results");
   });
 
   it("injects bounded precedents into every production growth-plays run", () => {
