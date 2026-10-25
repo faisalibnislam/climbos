@@ -594,7 +594,7 @@ function RichTextSpecimen() {
 }
 
 function MarkdownSpecimen() {
-  const [md, setMd] = useState("## Weekly summary\n\nCalls are **up 18%** since the review push started.\n\n- 12 new Google reviews\n- 3 booked consultations\n\n> Next: ask happy customers for photos.\n\nSee the [full report](https://climbos.app/results).");
+  const [md, setMd] = useState("## Weekly summary\n\nCalls are **up 18%** since the review push started.\n\n- 12 new Google reviews\n- 3 booked consultations\n\n> Next: invite customers to share photos.\n\nSee the [full report](https://climbos.app/results).");
   return (
     <Specimen title="Markdown editor" description="Write and Preview tabs. The preview is rendered to elements, never raw HTML.">
       <Stage tone="white" className="max-w-2xl">

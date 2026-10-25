@@ -2,9 +2,18 @@ import { describe, expect, it } from "vitest";
 import { diagnose, diagnosisBrief, funnelRatesOf, lintDiagnosisFit, playStage } from "../../shared/agents/diagnosis";
 import { choosePlaybooks, eligibility, lintEligibility, lintEligibilityIds, playbookBrief, PLAYBOOKS, type PlaybookContext } from "../../shared/playbooks/contracts";
 import { strategyQuickTakeTask } from "../../shared/agents/quickTake";
+import { SKILLS } from "../../shared/skills/generated";
 
 /** Cycle 2: diagnosis decided in code from the owner's numbers; playbooks gated by typed contracts. */
 describe("diagnosis", () => {
+  it("keeps local review invitations neutral and consistent across eligible customers", () => {
+    const reviews = PLAYBOOKS.find((play) => play.id === "PB-local-listing");
+    expect(reviews?.steps.join(" ")).toContain("every eligible customer the same neutral review invitation and public destination");
+    expect(reviews?.guardrail).toContain("No sentiment filtering");
+    expect(reviews?.steps.join(" ")).not.toMatch(/happy customers|satisfied customers/i);
+    expect(SKILLS["plays-local"]?.playbook).toContain("send every eligible recipient the same neutral invitation");
+    expect(SKILLS["plays-local"]?.playbook).not.toMatch(/ask happy customers/i);
+  });
   it("grounds the fast first take in diagnosis and preserves uncertainty rules", () => {
     const task = strategyQuickTakeTask({ diagnosis: "Not enough evidence; count new paying customers.", businessIntelligence: "Owner-reported positioning hypothesis." });
     expect(task).toContain("Not enough evidence; count new paying customers.");

@@ -492,3 +492,7 @@ Added Ryanair's self-aware social voice as CP-044. The record connects the socia
 ## Resumption note (2026-10-25, bounded Home approval counts)
 
 Home now reads one draft beyond its 20-item cap. Counts display `20+` when the returned set is capped, and the assistant's workspace-overview tool carries an explicit lower-bound flag so it does not treat the capped value as an exact total. The six-row review preview remains bounded. Focused Convex tests cover more than 20 drafts and an exact count below the cap; tenant access continues through the existing `today` query authorization.
+
+## Resumption note (2026-10-25, fair review invitation guidance)
+
+The review-solicitation playbooks now specify one neutral invitation and one public destination for every eligible recipient in a campaign, regardless of satisfaction, private feedback, sentiment, or predicted rating. They also state no incentives, fake reviews, sentiment filtering, or customer-written review posting, and keep optional private feedback separate. The Nextdoor recommendation example and design-system sample no longer ask only “happy customers.” The existing Convex review workflow already preserved this fairness boundary; its six focused regressions plus 27 playbook regressions pass. `pnpm skills:build` regenerated the runtime skill from `skills/plays-local/SKILL.md`; changed-file ESLint reports zero errors (one pre-existing generated-file unused-disable warning), typecheck and whitespace checks pass. No live invitations were sent.
