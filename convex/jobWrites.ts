@@ -14,6 +14,7 @@ import { sha256Hex } from "../shared/policy";
 import { v } from "convex/values";
 import { resultsBrief } from "./playResults";
 import { customerConcentration } from "../shared/attribution/concentration";
+import { pipelineOutcomes, pipelineOutcomesBrief } from "../shared/growth/pipeline";
 import { computeCohorts, repeatPurchaseBrief, repeatPurchaseSummary, subscriptionCohortBrief } from "../shared/attribution/cohorts";
 import { refundExposure } from "../shared/attribution/refundExposure";
 import { platformConcentration } from "../shared/attribution/platformConcentration";
@@ -200,6 +201,11 @@ export const jobContext = internalQuery({
     const repeatPurchaseText = run.kind === "strategy" && concentrationCurrency
       ? repeatPurchaseBrief(repeatPurchaseSummary(concentrationEvents, { currency: concentrationCurrency, nowMs: concentrationToMs }), { truncated: concentrationIsPartial })
       : "";
+    // The owner's own pipeline: closed deals, win rate and recorded loss reasons (bounded; owner-entered).
+    const pipelineDeals = run.kind === "strategy" ? await ctx.db.query("deals").withIndex("by_org_updated", (q) => q.eq("orgId", org._id)).order("desc").take(2_001) : [];
+    const pipeline = pipelineOutcomes(pipelineDeals.slice(0, 2_000), { nowMs: concentrationToMs });
+    const pipelineOutcomesText = run.kind === "strategy" ? `${pipelineOutcomesBrief(pipeline)}${pipelineDeals.length > 2_000 && pipelineOutcomesBrief(pipeline) ? " Only the 2,000 most recently updated deals were read, so totals may be partial." : ""}` : "";
+    const pipelineLossNotes = run.kind === "strategy" ? pipeline.recentLossNotes : [];
     const concentration = concentrationCurrency
       ? customerConcentration(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
       : null;
@@ -265,6 +271,8 @@ export const jobContext = internalQuery({
       refundExposure: refundExposureSignal,
       subscriptionCohortText,
       repeatPurchaseText,
+      pipelineOutcomesText,
+      pipelineLossNotes,
       stripeReceivables,
       audience: { contacts, consented },
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },

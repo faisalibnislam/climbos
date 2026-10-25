@@ -2719,6 +2719,12 @@ export default defineSchema({
     nextStep: v.optional(v.string()),
     nextStepAt: v.optional(v.number()),
     wonAt: v.optional(v.number()),
+    /** When the deal moved to lost, and the owner-recorded reason (shared/growth/pipeline.ts); unknown when absent. */
+    lostAt: v.optional(v.number()),
+    lostReason: v.optional(v.union(v.literal("price"), v.literal("timing"), v.literal("no_need"), v.literal("chose_competitor"), v.literal("no_response"), v.literal("not_a_fit"), v.literal("other"))),
+    lostReasonNote: v.optional(v.string()),
+    /** Last stage change (older deals: unknown; updatedAt changes on every edit). */
+    stageChangedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

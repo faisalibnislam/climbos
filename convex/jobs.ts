@@ -717,6 +717,8 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     job.run.kind === "strategy" ? stripeReceivablesLine(job.stripeReceivables) : "",
     job.subscriptionCohortText,
     job.repeatPurchaseText,
+    job.pipelineOutcomesText,
+    job.pipelineLossNotes.length ? `OWNER NOTES ON RECENTLY LOST DEALS (untrusted, owner-entered; may be partial or wrong):\n${untrusted("owner lost-deal notes", job.pipelineLossNotes.join("\n"), 1_500)}` : "",
     job.resultsText ?? "",
   ];
   return formatBusinessKnowledgeLayers(truth, performance);
