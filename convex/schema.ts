@@ -3546,6 +3546,11 @@ export default defineSchema({
     citedUrls: v.array(v.string()),
     competitorMentions: v.array(v.string()),
     answerExcerpt: v.optional(v.string()),
+    /** Owner check of what the answer says about the business (only when the business is mentioned). */
+    accuracy: v.optional(v.union(v.literal("accurate"), v.literal("contains_error"), v.literal("not_checked"))),
+    /** Words quoted from the answer excerpt that are wrong, and the owner-stated correct fact. */
+    incorrectClaim: v.optional(v.string()),
+    correctFact: v.optional(v.string()),
     evidenceBasis: v.literal("owner_observed"),
     enteredBy: v.id("users"),
     enteredAt: v.number(),

@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { compareAiSearchObservationPeriods, summarizeAiSearchPanel, summarizeAiSearchVisibility, type AiSearchObservation } from "../shared/aiSearch/visibility";
+import { compareAiSearchObservationPeriods, summarizeAiSearchPanel, summarizeAiSearchVisibility, type AiSearchObservation, answerAccuracySummary } from "../shared/aiSearch/visibility";
 import { mutation, query } from "./_generated/server";
 import { audit } from "./lib/audit";
 import { appError, requireOrgAccess } from "./lib/tenancy";
@@ -169,6 +169,9 @@ export const recordObservation = mutation({
     citedUrls: v.array(v.string()),
     competitorMentions: v.array(v.string()),
     answerExcerpt: v.optional(v.string()),
+    accuracy: v.optional(v.union(v.literal("accurate"), v.literal("contains_error"), v.literal("not_checked"))),
+    incorrectClaim: v.optional(v.string()),
+    correctFact: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
@@ -201,6 +204,16 @@ export const recordObservation = mutation({
       throw appError("INVALID", "A failed or empty response cannot be counted as an answer, mention, sentiment or citation.");
     }
     if (args.brandMention !== "yes" && args.sentiment !== "unknown") throw appError("INVALID", "Only label sentiment when the answer mentions the business.");
+    const accuracy = args.accuracy && args.accuracy !== "not_checked" ? args.accuracy : undefined;
+    if (accuracy && args.brandMention !== "yes") throw appError("INVALID", "Only check accuracy when the answer mentions the business.");
+    const incorrectClaim = args.incorrectClaim?.trim().replace(/\s+/g, " ");
+    const correctFact = args.correctFact?.trim().replace(/\s+/g, " ");
+    if ((incorrectClaim || correctFact) && accuracy !== "contains_error") throw appError("INVALID", "Add an incorrect claim and correct fact only when the answer contains an error.");
+    if (accuracy === "contains_error") {
+      if (!incorrectClaim || !correctFact) throw appError("INVALID", "Quote the incorrect part of the answer and give the correct fact.");
+      if (incorrectClaim.length > 300 || correctFact.length > 300) throw appError("INVALID", "Keep the incorrect claim and the correct fact to 300 characters each.");
+      if (!answerExcerpt || !answerExcerpt.toLowerCase().replace(/\s+/g, " ").includes(incorrectClaim.toLowerCase())) throw appError("INVALID", "The incorrect claim must be copied from the answer excerpt.");
+    }
 
     const id = await ctx.db.insert("aiSearchObservations", {
       orgId: org._id,
@@ -215,6 +228,8 @@ export const recordObservation = mutation({
       citedUrls,
       competitorMentions,
       ...(answerExcerpt ? { answerExcerpt } : {}),
+      ...(accuracy ? { accuracy } : {}),
+      ...(accuracy === "contains_error" ? { incorrectClaim, correctFact } : {}),
       evidenceBasis: "owner_observed",
       enteredBy: user._id,
       enteredAt: Date.now(),
@@ -317,6 +332,7 @@ export const report = query({
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     const summary = summarizeAiSearchVisibility(observations as AiSearchObservation[], business?.website);
     const panelSummary = summarizeAiSearchPanel(observations as AiSearchObservation[], business?.website);
+    const accuracy = answerAccuracySummary(observations);
     const comparison = compareToPreviousWindow ? {
       kind: "observed_before_after_change_not_causal" as const,
       baselineWindow: { from: comparisonSince, toExclusive: currentSince },
@@ -349,6 +365,7 @@ export const report = query({
       panel: panel ? { id: panel._id, name: panel.name, status: panel.status, queryCount: panel.queries.length, queries: panelQueries } : null,
       summary,
       panelSummary,
+      accuracy,
       comparison,
       interventions: interventionQuery.map(({ _id, changedAt, kind, summary, expectedSignal, pageUrls, evidenceBasis }) => ({
         id: _id,

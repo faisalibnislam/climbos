@@ -10,6 +10,7 @@ import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { Button, Callout, Card, CardContent, Checkbox, DatePicker, EmptyState, Field, Input, Select, Textarea, toast } from "@/components/ui";
+import { AnswerAccuracyCard } from "@/components/app/visibility/AnswerAccuracy";
 import { useWorkspaceMember } from "@/components/app/content/shared";
 import { can } from "@shared/policy";
 import { searchConsolePropertyMatchesWebsite } from "@shared/integrations/searchConsole";
@@ -142,6 +143,9 @@ function AiAnswerObservations({ slug, canEdit, website }: { slug: string; canEdi
   const [citations, setCitations] = useState("");
   const [competitors, setCompetitors] = useState("");
   const [excerpt, setExcerpt] = useState("");
+  const [accuracy, setAccuracy] = useState("not_checked");
+  const [incorrectClaim, setIncorrectClaim] = useState("");
+  const [correctFact, setCorrectFact] = useState("");
   const [saving, setSaving] = useState(false);
   const [savingIntervention, setSavingIntervention] = useState(false);
   const [changeDate, setChangeDate] = useState(new Date().toISOString().slice(0, 10));
@@ -193,8 +197,10 @@ function AiAnswerObservations({ slug, canEdit, website }: { slug: string; canEdi
         citedUrls: answered ? citations.split(/[\n,]+/).map((value) => value.trim()).filter(Boolean) : [],
         competitorMentions: answered ? competitors.split(/[\n,]+/).map((value) => value.trim()).filter(Boolean) : [],
         ...(answered && excerpt.trim() ? { answerExcerpt: excerpt.trim() } : {}),
+        ...(answered && mentioned === "yes" && accuracy !== "not_checked" ? { accuracy: accuracy as "accurate" | "contains_error" } : {}),
+        ...(answered && mentioned === "yes" && accuracy === "contains_error" ? { incorrectClaim: incorrectClaim.trim(), correctFact: correctFact.trim() } : {}),
       });
-      setQuery(""); setCitations(""); setCompetitors(""); setExcerpt("");
+      setQuery(""); setCitations(""); setCompetitors(""); setExcerpt(""); setAccuracy("not_checked"); setIncorrectClaim(""); setCorrectFact("");
       toast({ tone: "success", title: "AI-search observation saved" });
     } catch (error) {
       toast({ tone: "danger", title: errorMessage(error) });
@@ -315,6 +321,11 @@ function AiAnswerObservations({ slug, canEdit, website }: { slug: string; canEdi
             <Field label="Cited page URLs (one per line)"><Textarea value={citations} onChange={(event) => setCitations(event.target.value)} rows={2} disabled={!canEdit} placeholder="Paste source URLs shown in the answer" /></Field>
             <Field label="Other businesses mentioned (one per line)"><Textarea value={competitors} onChange={(event) => setCompetitors(event.target.value)} rows={2} disabled={!canEdit} placeholder="Names as shown in the answer" /></Field>
             <Field label="Short answer excerpt"><Textarea value={excerpt} onChange={(event) => setExcerpt(event.target.value)} rows={3} maxLength={6000} disabled={!canEdit} placeholder="Paste enough of the answer to review this observation" /></Field>
+            {mentioned === "yes" ? <Field label="Is what it says about you accurate?"><Select value={accuracy} onValueChange={setAccuracy} options={[{ value: "not_checked", label: "Not checked" }, { value: "accurate", label: "Accurate" }, { value: "contains_error", label: "Contains an error" }]} disabled={!canEdit} /></Field> : null}
+            {mentioned === "yes" && accuracy === "contains_error" ? <>
+              <Field label="Wrong part (copy it from the excerpt)"><Input value={incorrectClaim} onChange={(event) => setIncorrectClaim(event.target.value)} maxLength={300} disabled={!canEdit} placeholder="e.g. open on Sundays" /></Field>
+              <Field label="Correct fact"><Input value={correctFact} onChange={(event) => setCorrectFact(event.target.value)} maxLength={300} disabled={!canEdit} placeholder="e.g. closed on Sundays" /></Field>
+            </> : null}
           </> : null}
         </div>
         <div><Button size="sm" disabled={!canEdit || (panelId !== "all" ? !selectedPanelQuery : !query.trim()) || (status === "answered" && !excerpt.trim())} loading={saving} onClick={() => void submit(Date.now())}>Save observation</Button></div>
@@ -332,6 +343,7 @@ function AiAnswerObservations({ slug, canEdit, website }: { slug: string; canEdi
         {report?.interventions?.length ? <ul className="flex flex-col gap-2">{report.interventions.map((item) => <li key={item.id} className="rounded-lg bg-surface-2 p-3"><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-medium text-ink">{new Date(item.changedAt).toLocaleDateString()} · {item.kind.replaceAll("_", " ")}</p><span className="text-xs text-ink-3">Owner-reported{item.comparisonWindow ? ` · ${item.comparisonWindow} window` : ""}</span></div><p className="mt-1 text-sm text-ink-2">{item.summary}</p><p className="mt-1 text-xs text-ink-3">Signal to watch: {item.expectedSignal}</p>{item.pageUrls.length ? <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">{item.pageUrls.map((url) => <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="break-all text-xs text-ink-3 underline underline-offset-2">{url}</a>)}</div> : null}</li>)}</ul> : <p className="text-xs text-ink-3">No owner-reported changes in this comparison window.</p>}
       </CardContent></Card> : null}
       {report === undefined ? <p className="text-sm text-ink-3">Loading recorded observations…</p> : report.observationCount === 0 ? <EmptyState icon={<Search />} title={panelId !== "all" ? "No checks in this panel yet" : "No AI-search observations yet"} body={panelId !== "all" ? "Choose a saved question above, check it in the named tool, and record what the answer shows." : "Save a few results for a consistent set of questions to establish an owner-observed baseline."} /> : <>
+        <AnswerAccuracyCard accuracy={report.accuracy} />
         <Card><CardContent className="flex flex-col gap-3"><div><h3 className="text-sm font-semibold text-ink">Recorded sample summary · last {report.windowDays} days</h3><p className="mt-1 text-sm text-ink-3">{report.observationCount} observation{report.observationCount === 1 ? "" : "s"}{report.truncated ? " shown (older samples are not included in this view)" : ""}. The sample is owner-recorded and is not a platform-wide rate.</p></div><dl className="grid gap-3 text-sm sm:grid-cols-3"><div><dt className="text-xs text-ink-3">Answered checks</dt><dd className="text-ink-2">{report.panelSummary.answered} of {report.observationCount}</dd></div><div><dt className="text-xs text-ink-3">Business mentioned</dt><dd className="text-ink-2">{knownMentionAnswers.length ? `${businessMentions} of ${knownMentionAnswers.length} answers with a known mention result` : "No labeled answers yet"}</dd></div><div><dt className="text-xs text-ink-3">Cited own-site answers</dt><dd className="text-ink-2">{report.panelSummary.observedFirstPartyCitationRate ? percent(report.panelSummary.observedFirstPartyCitationRate) : "No website recorded"}</dd></div></dl></CardContent></Card>
         {report.comparison ? <Card><CardContent className="flex flex-col gap-3"><div><h3 className="text-sm font-semibold text-ink">Observed period comparison</h3><p className="mt-1 text-sm text-ink-3">Prior {report.windowDays}-day sample: {report.comparison.baselineObservationCount}; current sample: {report.comparison.currentObservationCount}. Descriptive only; it does not show that a website or content change caused a visibility change.</p></div>{report.comparison.queryChanges.length ? <ul className="flex flex-col gap-2">{report.comparison.queryChanges.slice(0, 10).map((change) => <li key={`${change.provider}:${change.query}:${change.location ?? ""}`} className="rounded-lg bg-surface-2 p-3"><p className="text-sm font-medium text-ink">{change.query}</p><p className="mt-1 text-xs text-ink-3">{change.provider.replaceAll("_", " ")}{change.location ? ` · ${change.location}` : ""}</p><dl className="mt-2 grid gap-2 text-xs sm:grid-cols-3"><div><dt className="text-ink-3">Prior mention rate</dt><dd className="text-ink-2">{percentValue(change.baseline?.brandMentions.rate)}</dd></div><div><dt className="text-ink-3">Current mention rate</dt><dd className="text-ink-2">{percentValue(change.current?.brandMentions.rate)}</dd></div><div><dt className="text-ink-3">Observed change</dt><dd className="text-ink-2">{pointChange(change.brandMentionRateChange)}</dd></div></dl></li>)}</ul> : <p className="text-sm text-ink-3">No question has labeled answers in both periods yet.</p>}{report.comparison.truncated ? <p className="text-xs text-ink-3">The comparison is truncated to the latest recorded samples.</p> : null}</CardContent></Card> : null}
         <AiVisibilityGapList items={visibilityGaps} searchConsoleStatus={!searchConsole ? "not_connected" : matchedProperty ? "matched" : "property_mismatch"} searchConsoleWindow={matchedProperty && searchConsole ? `${searchConsole.startDate} to ${searchConsole.endDate}` : null} />

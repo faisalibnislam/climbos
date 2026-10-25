@@ -939,3 +939,9 @@ Roadmap gap 12. Prospects carry `fit` and `timing` scores (0–100), but learnin
 Also fixed: commit `5555985` had a type error in `tests/unit/audience-evidence-support.test.tsx`. My combined check printed lint success but skipped the typecheck success line, and I missed it. The test now casts the code-set field, and `pnpm typecheck` exits 0. Checks now confirm exit codes explicitly.
 
 Verified: `tests/unit/lead-score-check.test.tsx` (3 tests); 25 learning and outbound files (211 tests); typecheck exit 0; ESLint exit 0; diff check exit 0. Limitations: a fixed 70 threshold; one window; small workspaces will mostly see "too few".
+
+## Resumption note (2026-10-25, owner-recorded AI-answer accuracy)
+
+Roadmap gap 13. AI-answer observations captured mention, sentiment, citations, and competitors, but not whether the answer stated something wrong about the business. `aiSearchObservations` now accepts optional `accuracy` (accurate or contains error), `incorrectClaim`, and `correctFact`. `recordObservation` allows accuracy only when the business is mentioned. An error requires both texts (≤300 characters), and the incorrect claim must appear in the saved answer excerpt (case- and whitespace-insensitive), so the error is quoted, not paraphrased. Correction fields are rejected unless the answer contains an error. `answerAccuracySummary` returns checked and error counts per provider plus the ten most recent errors. `aiSearchVisibility.report` includes it, and `AnswerAccuracyCard` and new form fields appear on the visibility page.
+
+Verified: `tests/convex/ai-answer-accuracy.test.ts` (validation and summary) and `tests/unit/answer-accuracy-card.test.tsx`; 15 visibility files (94 tests); typecheck, ESLint, and diff check exit 0. Limitations: owner-observed samples only; no automated provider querying; correction tracking over time isn't modelled.
