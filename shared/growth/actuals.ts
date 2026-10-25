@@ -36,6 +36,8 @@ export interface ResultEntry {
 export interface RetentionActuals {
   /** Weeks with at least one retention field reported. */
   weeksReported: number;
+  /** Weeks with an explicit repeat-customer count; distinct from weeks reporting money. */
+  repeatCustomerWeeksReported: number;
   /** Customer-weeks, not unique retained customers over the whole period. */
   repeatCustomerWeeks: number;
   revenueByCurrency: { currency: string; netRevenueMinor: number; weeksReported: number }[];
@@ -66,6 +68,7 @@ export function retentionActuals(entries: Pick<ResultEntry, "repeatCustomers" | 
   }
   return {
     weeksReported: weeks.length,
+    repeatCustomerWeeksReported: weeks.filter((entry) => entry.repeatCustomers !== undefined).length,
     repeatCustomerWeeks: weeks.reduce((sum, entry) => sum + (entry.repeatCustomers ?? 0), 0),
     revenueByCurrency: [...revenue].sort(([a], [b]) => a.localeCompare(b)).map(([currency, row]) => ({ currency, netRevenueMinor: row.amount, weeksReported: row.weeks })),
     contributionByCurrency: [...contribution].sort(([a], [b]) => a.localeCompare(b)).map(([currency, row]) => ({ currency, contributionMinor: row.amount, weeksReported: row.weeks })),

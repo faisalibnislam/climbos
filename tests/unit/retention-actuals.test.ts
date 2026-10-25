@@ -12,6 +12,7 @@ describe("repeat-customer outcome summaries", () => {
     ]);
     expect(result).toEqual({
       weeksReported: 4,
+      repeatCustomerWeeksReported: 4,
       repeatCustomerWeeks: 6,
       revenueByCurrency: [
         { currency: "EUR", netRevenueMinor: 90_000, weeksReported: 1 },
@@ -27,5 +28,13 @@ describe("repeat-customer outcome summaries", () => {
         "Only weeks with reported amounts are included; missing weeks are unknown.",
       ],
     });
+  });
+
+  it("does not report repeat-customer counts from weeks that only contain money", () => {
+    const result = retentionActuals([
+      { retainedRevenueMinor: 1_200, retentionCurrency: "USD" },
+      { repeatCustomers: 0 },
+    ]);
+    expect(result).toMatchObject({ weeksReported: 2, repeatCustomerWeeksReported: 1, repeatCustomerWeeks: 0 });
   });
 });

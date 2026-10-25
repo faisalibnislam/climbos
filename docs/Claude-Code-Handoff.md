@@ -86,11 +86,31 @@ Files changed in the latest pushed batch:
 
 The J&P Organics record uses a 2009 university oral-history profile, a 2016 peer-reviewed survey of 536 current/former subscribers, and an agricultural extension guide. The survey is non-randomized and does not establish incremental orders, retention, or profit. The case is a transfer hypothesis, not a forecast for a ClimbOS customer.
 
-### Latest handoff batch: CP-075
+### Handoff baseline batch: CP-075
 
 The latest local batch adds CP-075, a source-backed TOMS purpose-linked offer evolution precedent, to the production retrieval library. It updates the runtime corpus count and owner-facing count to **75 reviewed / 25 unverified**, adds a retrieval regression for the business mechanism and evidence limits, and records the change in the creative-strategy reference, implementation ledger, and this handoff. The TOMS company materials document its stated model and evolution; the World Bank randomized evaluation concerns a specific shoe-donation program in rural El Salvador. Do not say that study caused the model change, or use beneficiary outcomes as evidence of sales, retention, or profitability. See the source record in `shared/knowledge/creativePrecedents.ts` and the detailed resumption entry in `docs/growth-engine/implementation-ledger.md`.
 
 Before this handoff was finalized, the CP-075 batch passed `pnpm exec vitest run tests/unit/creative-precedents.test.ts tests/unit/product-brand-copy.test.ts` (72 tests across two files), `pnpm typecheck`, targeted ESLint for the changed TypeScript files, and `git diff --check`. These are focused checks, not a full suite or live-model evaluation.
+
+### Follow-up implementation: owner-facing retention results
+
+After the handoff baseline, the plan's weekly result card was connected to retention fields that already existed in Convex. Owners can now record repeat-customer counts, retained revenue, and retained contribution; currency is read from the current business record, amounts are converted to stored minor units, and historical weekly amounts retain the currency used when entered. The plan displays each measure by currency and reported-week coverage, calls the numbers owner-reported, clarifies that customer-weeks may count a person again, and avoids a causal claim. A new UI regression covers displayed currency and unknown values; the Convex test verifies the current currency metadata is workspace-scoped and that historical values retain their original currency. This is aggregate manual reporting; cohort retention, churn reasons, satisfaction, and independent revenue verification remain open.
+
+Verified commands for this follow-up:
+
+```text
+pnpm exec vitest run tests/unit/retention-actuals.test.ts tests/unit/play-results-retention.test.tsx tests/convex/play-results.test.ts
+  3 files passed; 8 tests passed
+
+pnpm typecheck
+  app and Convex TypeScript checks passed
+
+pnpm exec eslint shared/growth/actuals.ts convex/playResults.ts src/components/app/plan/PlayResults.tsx src/components/app/plan/ExpertPlan.tsx tests/unit/retention-actuals.test.ts tests/unit/play-results-retention.test.tsx tests/convex/play-results.test.ts
+  passed
+
+git diff --check
+  passed
+```
 
 ### Follow-up work after the first handoff push
 
@@ -105,15 +125,16 @@ Before this handoff was finalized, the CP-075 batch passed `pnpm exec vitest run
 These are known open gaps, not a complete substitute for checking the requirement audit and ledger before choosing work:
 
 1. **Live quality and outcomes:** Most changed paths are fixture/regression tested. No broad held-out real-model evaluation demonstrates expert-level strategy quality across diverse businesses. Business outcomes, causality, channel fit, and forecast calibration remain limited or unmeasured.
-2. **Traceability and evidence:** Research sources are often linked to a run or object rather than every claim/sentence. A URL's presence does not prove the cited page supports the exact claim. Expand claim-level linkage where material, and test support matching and provenance preservation.
-3. **Design critique limits:** The external customer website is not edited or re-rendered. The current draft flow creates a ClimbOS-hosted page, with limited sampled screenshots and version-bound measurement. Cross-page brand consistency mapping, a deduplicated opportunity queue, full journey interaction checks, customer-site re-rendering, and measured external-site outcomes remain open. Automated checks and screenshots are not WCAG conformance.
-4. **SEO limits:** The site audit is bounded and primarily static-HTML; JavaScript-rendered pages, full crawl coverage, local/off-site factors, continuous answer-engine checks, and proof of citations remain unsupported or unverified. Search Console and manually observed answers are samples with setup constraints. Never state that an SEO recommendation guarantees ranking, traffic, or AI citation.
-5. **Review and platform integrations:** Native review sync/replies and several platform integrations are blocked or unsupported pending official API access, credentials, provider eligibility, scopes, plan limits, and data-retention verification. Keep manual paths clear. Do not scrape platforms or imply an API exists without checking current primary documentation.
-6. **Autopilot/calendar scale and validation:** Existing caps and policy behavior are explicit, but calendar completeness at maximum query caps and live scheduling/publishing with each provider must be separately validated. Approval must remain bound to tenant, exact content version, destination, audience/schedule, budget, and action scope.
-7. **Accessibility and UX:** Some keyboard/accessibility safeguards exist, but there is no app-wide accessibility conformance result. Continue with focused keyboard and assistive-technology checks and plain-language owner review.
-8. **Documentation drift:** The creative-precedent counts now agree at 75 reviewed / 25 unverified across runtime, `docs/Capabilities.md`, and the creative-strategy summary. Continue checking all owner-facing capability statements against runtime behavior; other copy may still drift.
-9. **Requirement completion:** `docs/growth-engine/improvement-requirement-audit.md` maps 410 numbered items. Its own introduction says most are partially implemented and that the first 350, AEO/GEO items, and specialist requirements are shared/cross-cutting. Do not mark a row complete merely because one path or fixture exists. Update row status only after checking current code and coverage; distinguish shipped, fixture-only, blocked, and unverified behavior.
-10. **Provider setup and production:** This branch is not a deployment. Verify environment variables, provider credentials, permissions, migrations, and account eligibility in an authorized environment before claiming a live integration. Do not deploy or change live business campaigns as part of a code change.
+2. **Retention evidence:** Owners can now enter weekly repeat-customer, revenue, and contribution aggregates from the plan card. There is no customer-level cohort history, repeat-purchase timing, churn reason/satisfaction workflow, or verified retention attribution; do not infer unique retained customers from customer-week totals.
+3. **Traceability and evidence:** Research sources are often linked to a run or object rather than every claim/sentence. A URL's presence does not prove the cited page supports the exact claim. Expand claim-level linkage where material, and test support matching and provenance preservation.
+4. **Design critique limits:** The external customer website is not edited or re-rendered. The current draft flow creates a ClimbOS-hosted page, with limited sampled screenshots and version-bound measurement. Cross-page brand consistency mapping, a deduplicated opportunity queue, full journey interaction checks, customer-site re-rendering, and measured external-site outcomes remain open. Automated checks and screenshots are not WCAG conformance.
+5. **SEO limits:** The site audit is bounded and primarily static-HTML; JavaScript-rendered pages, full crawl coverage, local/off-site factors, continuous answer-engine checks, and proof of citations remain unsupported or unverified. Search Console and manually observed answers are samples with setup constraints. Never state that an SEO recommendation guarantees ranking, traffic, or AI citation.
+6. **Review and platform integrations:** Native review sync/replies and several platform integrations are blocked or unsupported pending official API access, credentials, provider eligibility, scopes, plan limits, and data-retention verification. Keep manual paths clear. Do not scrape platforms or imply an API exists without checking current primary documentation.
+7. **Autopilot/calendar scale and validation:** Existing caps and policy behavior are explicit, but calendar completeness at maximum query caps and live scheduling/publishing with each provider must be separately validated. Approval must remain bound to tenant, exact content version, destination, audience/schedule, budget, and action scope.
+8. **Accessibility and UX:** Some keyboard/accessibility safeguards exist, but there is no app-wide accessibility conformance result. Continue with focused keyboard and assistive-technology checks and plain-language owner review.
+9. **Documentation drift:** The creative-precedent counts now agree at 75 reviewed / 25 unverified across runtime, `docs/Capabilities.md`, and the creative-strategy summary. Continue checking all owner-facing capability statements against runtime behavior; other copy may still drift.
+10. **Requirement completion:** `docs/growth-engine/improvement-requirement-audit.md` maps 410 numbered items. Its own introduction says most are partially implemented and that the first 350, AEO/GEO items, and specialist requirements are shared/cross-cutting. Do not mark a row complete merely because one path or fixture exists. Update row status only after checking current code and coverage; distinguish shipped, fixture-only, blocked, and unverified behavior.
+11. **Provider setup and production:** This branch is not a deployment. Verify environment variables, provider credentials, permissions, migrations, and account eligibility in an authorized environment before claiming a live integration. Do not deploy or change live business campaigns as part of a code change.
 
 ## Repository guardrails
 

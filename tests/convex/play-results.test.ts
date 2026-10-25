@@ -75,8 +75,16 @@ describe("play results", () => {
     await expect(owner.client.mutation(api.playResults.log, { slug, strategyId, playName: "Agency outreach", reach: 250, steps: [6, 1.5], spendUsd: 0, ownerHours: 1 })).rejects.toThrow(/counts must be whole numbers/);
     await owner.client.mutation(api.playResults.log, { slug, strategyId, playName: "Agency outreach", reach: 250, steps: [6, 1], spendUsd: 0, ownerHours: 1, repeatCustomers: 3, retainedRevenueMinor: 50_000, retainedContributionMinor: 32_000 });
     const view = await owner.client.query(api.playResults.forStrategy, { slug, strategyId });
-    expect(view["Agency outreach"]).toMatchObject({ weeks: 1, reach: 250, customers: 1, status: "too_early" });
-    expect(view["Agency outreach"].retention).toMatchObject({ weeksReported: 1, repeatCustomerWeeks: 3, revenueByCurrency: [{ currency: "USD", netRevenueMinor: 50_000, weeksReported: 1 }], contributionByCurrency: [{ currency: "USD", contributionMinor: 32_000, weeksReported: 1 }] });
+    expect(view.currency).toBe("USD");
+    expect(view.byPlay["Agency outreach"]).toMatchObject({ weeks: 1, reach: 250, customers: 1, status: "too_early" });
+    expect(view.byPlay["Agency outreach"].retention).toMatchObject({ weeksReported: 1, repeatCustomerWeeksReported: 1, repeatCustomerWeeks: 3, revenueByCurrency: [{ currency: "USD", netRevenueMinor: 50_000, weeksReported: 1 }], contributionByCurrency: [{ currency: "USD", contributionMinor: 32_000, weeksReported: 1 }] });
+    await t.run(async (ctx) => {
+      const business = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId as Id<"organizations">)).first())!;
+      await ctx.db.patch(business._id, { currency: "BDT" });
+    });
+    const currentCurrency = await owner.client.query(api.playResults.forStrategy, { slug, strategyId });
+    expect(currentCurrency.currency).toBe("BDT");
+    expect(currentCurrency.byPlay["Agency outreach"].retention.revenueByCurrency).toEqual([{ currency: "USD", netRevenueMinor: 50_000, weeksReported: 1 }]);
     const brief = await t.query(internal.playResults.briefFor, { orgId: orgId as Id<"organizations"> });
     expect(brief).toContain("reply 6/250 (2.4%, planned 2%)");
     expect(brief).toContain("WON DEALS ASSOCIATED WITH PLAYS");
@@ -88,7 +96,10 @@ describe("play results", () => {
     // Correcting a weekly row without the optional values clears the previous retention report.
     await owner.client.mutation(api.playResults.log, { slug, strategyId, playName: "Agency outreach", weekStart: Date.now(), reach: 250, steps: [6, 1], spendUsd: 0, ownerHours: 1 });
     const corrected = await owner.client.query(api.playResults.forStrategy, { slug, strategyId });
-    expect(corrected["Agency outreach"].retention).toMatchObject({ weeksReported: 0, repeatCustomerWeeks: 0 });
+    expect(corrected.byPlay["Agency outreach"].retention).toMatchObject({ weeksReported: 0, repeatCustomerWeeksReported: 0, repeatCustomerWeeks: 0 });
+    const other = await asNewUser(t, "other-results@example.com");
+    const otherWorkspace = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other Results Co" });
+    await expect(other.client.query(api.playResults.forStrategy, { slug: otherWorkspace.slug, strategyId })).rejects.toThrow();
   });
 
   it("rejects invalid repeat-customer measurements but allows negative contribution", async () => {
@@ -135,7 +146,7 @@ describe("play lineage (S4, REQ-LEARN-04)", () => {
       await ctx.db.patch(strategyId, { expert: { ...s.expert!, plays: [{ ...play, name: "Agency partner outreach" }] } } as never);
     });
     const view = await owner.client.query(api.playResults.forStrategy, { slug, strategyId });
-    expect(view["Agency partner outreach"]).toMatchObject({ weeks: 1, reach: 250 });
-    expect(view["Agency outreach"]).toBeUndefined();
+    expect(view.byPlay["Agency partner outreach"]).toMatchObject({ weeks: 1, reach: 250 });
+    expect(view.byPlay["Agency outreach"]).toBeUndefined();
   });
 });

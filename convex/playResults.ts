@@ -53,7 +53,12 @@ export const forStrategy = query({
     const { org } = await requireOrgAccess(ctx, { slug }, "view");
     const s = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan");
     const rows = await actualsFor(ctx, s);
-    return Object.fromEntries(rows.map((r) => [r.name, { ...r.actuals, retention: r.retention, entries: r.entries.map((e) => ({ weekStart: e.weekStart, reach: e.reach, steps: e.steps, spendUsd: e.spendUsd, ownerHours: e.ownerHours, ...(e.repeatCustomers !== undefined ? { repeatCustomers: e.repeatCustomers } : {}), ...(e.retainedRevenueMinor !== undefined ? { retainedRevenueMinor: e.retainedRevenueMinor } : {}), ...(e.retainedContributionMinor !== undefined ? { retainedContributionMinor: e.retainedContributionMinor } : {}), ...(e.retentionCurrency ? { retentionCurrency: e.retentionCurrency } : {}) })) }]));
+    const business = await ctx.db.get(s.businessId);
+    return {
+      /** Current workspace currency for new owner-entered money values; historical rows retain their own currency. */
+      currency: business?.currency ?? null,
+      byPlay: Object.fromEntries(rows.map((r) => [r.name, { ...r.actuals, retention: r.retention, entries: r.entries.map((e) => ({ weekStart: e.weekStart, reach: e.reach, steps: e.steps, spendUsd: e.spendUsd, ownerHours: e.ownerHours, ...(e.repeatCustomers !== undefined ? { repeatCustomers: e.repeatCustomers } : {}), ...(e.retainedRevenueMinor !== undefined ? { retainedRevenueMinor: e.retainedRevenueMinor } : {}), ...(e.retainedContributionMinor !== undefined ? { retainedContributionMinor: e.retainedContributionMinor } : {}), ...(e.retentionCurrency ? { retentionCurrency: e.retentionCurrency } : {}) })) }]))
+    };
   },
 });
 
@@ -231,4 +236,4 @@ export const briefFor = internalQuery({
   handler: async (ctx, { orgId }): Promise<string> => resultsBrief(ctx, orgId),
 });
 
-export type PlayResultsView = Record<string, PlayActuals & { retention: RetentionActuals; entries: { weekStart: number; reach: number; steps: number[]; spendUsd: number; ownerHours: number; repeatCustomers?: number; retainedRevenueMinor?: number; retainedContributionMinor?: number; retentionCurrency?: string }[] }>;
+export type PlayResultsView = { currency: string | null; byPlay: Record<string, PlayActuals & { retention: RetentionActuals; entries: { weekStart: number; reach: number; steps: number[]; spendUsd: number; ownerHours: number; repeatCustomers?: number; retainedRevenueMinor?: number; retainedContributionMinor?: number; retentionCurrency?: string }[] }> };
