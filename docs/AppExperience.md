@@ -47,7 +47,7 @@ Business insights describe what helps the business, what gets in the way, and wh
 
 Competitor-change test ideas show the exact retained page-diff line that prompted the idea. If a proposed test cannot point to one of those lines, ClimbOS keeps the observed change but omits the test idea. The line is source-reported page text; it does not prove customer demand or predict results.
 
-Suggested competitor sites show the saved research summary and a separate possible-relevance explanation when those details were recorded, with a link to the cited source. When comparison details are missing, the owner sees that limitation and can review the research source before adding the site. A “direct competitor” label comes from business research and does not confirm that the businesses serve the same buyers.
+Suggested competitor sites show the saved research summary and a separate possible-relevance explanation when those details were recorded, with a link to the cited source. When comparison details are missing, the owner sees that limitation and can review the research source before adding the site. A “direct competitor” label comes from business research and does not confirm customer-segment or geography fit.
 
 Owners can mark an unadded competitor suggestion “Not relevant.” ClimbOS retains that choice for the workspace and leaves the site out of later suggestions. This does not start monitoring or use research credits. The owner can still add the site manually later if they change their mind.
 

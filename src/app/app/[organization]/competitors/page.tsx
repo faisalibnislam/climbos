@@ -77,14 +77,14 @@ export default function CompetitorsPage() {
           ) : null}
           {data.suggested.length ? (
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-medium text-ink-2">Similar businesses found in your research</p>
+              <p className="text-xs font-medium text-ink-2">Competitor suggestions from business research</p>
               {full ? <p className="text-xs text-ink-3">Your watch list is full. You can still mark a suggestion as not relevant, or stop watching a site before adding another.</p> : null}
               {data.suggested.map((s) => (
                 <div key={s.url} className="rounded-lg border border-line bg-surface-2 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-ink">{s.name}</p>
-                      <p className="text-xs text-ink-3">{s.kind === "direct" ? "Listed as a direct competitor in business research; customer overlap has not been confirmed." : "Competitor type is not recorded in this research; review the source before adding it."}</p>
+                      <p className="text-xs text-ink-3">{s.kind === "direct" ? "Research classifies this as a direct competitor. Customer-segment and geography fit have not been verified." : "Research has not verified competitor type, customer-segment fit, or geography fit. Review the source before adding it."}</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Button size="sm" variant="ghost" loading={busy === `dismiss:${s.url}`} aria-label={`Mark ${s.name} as not relevant`} onClick={() => run(`dismiss:${s.url}`, () => dismissSuggestion({ slug, url: s.url }), `${s.name} won't appear in future suggestions`)}>
