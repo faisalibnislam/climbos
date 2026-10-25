@@ -690,11 +690,55 @@ export const plan = query({
             .take(20)
         ).filter((e) => e.strategyId === strategy._id)
       : [];
-    const facts = [];
+    const facts: {
+      id: Id<"businessFacts">;
+      statement: string;
+      category: string;
+      provenance: Doc<"businessFacts">["provenance"];
+      reviewState: Doc<"businessFacts">["reviewState"];
+      confidence: Doc<"businessFacts">["confidence"];
+      verifiedAt: number | null;
+      sourceCount: number;
+      sourceIds: Id<"factSources">[];
+    }[] = [];
     for (const id of (strategy?.sourceFactIds ?? []).slice(0, 40)) {
       const f = await ctx.db.get(id);
-      if (f && f.orgId === org._id) facts.push({ id: f._id, statement: f.statement, category: f.category });
+      if (f && f.orgId === org._id && f.businessId === business?._id) {
+        facts.push({ id: f._id, statement: f.statement, category: f.category, provenance: f.provenance, reviewState: f.reviewState, confidence: f.confidence, verifiedAt: f.verifiedAt ?? null, sourceCount: f.sourceIds.length, sourceIds: f.sourceIds.slice(0, 4) });
+      }
     }
+    const sourceIds = [...new Set(facts.flatMap((fact) => fact.sourceIds))].slice(0, 120);
+    const sourceDocs = await Promise.all(sourceIds.map((id) => ctx.db.get(id)));
+    const sourceById = new Map(sourceDocs.flatMap((source) => source && source.orgId === org._id && source.businessId === business?._id ? [[String(source._id), source] as const] : []));
+    const factViews = facts.map((fact) => {
+      const linkedSources = fact.sourceIds.flatMap((id) => {
+        const source = sourceById.get(String(id));
+        if (!source) return [];
+        const excerptAvailable = source.expiresAt > Date.now();
+        return [{
+          id: source._id,
+          kind: source.kind,
+          url: source.url ?? null,
+          title: source.title ?? null,
+          excerpt: excerptAvailable ? source.excerpt ?? null : null,
+          excerptExpired: Boolean(source.excerpt && !excerptAvailable),
+          fetchedAt: source.fetchedAt,
+          status: source.status,
+        }];
+      });
+      return {
+        id: fact.id,
+        statement: fact.statement,
+        category: fact.category,
+        provenance: fact.provenance,
+        reviewState: fact.reviewState,
+        confidence: fact.confidence,
+        verifiedAt: fact.verifiedAt,
+        sources: linkedSources,
+        sourceDetailsUnavailableCount: fact.sourceIds.length - linkedSources.length,
+        additionalSourceCount: Math.max(0, fact.sourceCount - fact.sourceIds.length),
+      };
+    });
     const strategyRun = await latestRunOfKind(ctx, org._id, "strategy");
     const evidenceRecord = strategy
       ? await ctx.db.query("planEvidence").withIndex("by_strategy", (q) => q.eq("strategyId", strategy._id)).first()
@@ -834,7 +878,7 @@ export const plan = query({
       planEstimateMicros: estimateJobMicros(planJob("strategy", {}, { fixture: org.kind === "demo" }), { fixture: org.kind === "demo" }),
       experiments: experiments.map((e) => ({ id: e._id, name: e.name, hypothesis: e.hypothesis, population: e.population, method: e.method, assignmentUnit: e.assignmentUnit, assignmentMethod: e.assignmentMethod, primaryMetric: e.primaryMetric, primaryMetricType: e.primaryMetricType, denominator: e.denominator, baselineRate: e.baselineRate, baselineProvenance: e.baselineProvenance, baselineEvidenceRefs: e.baselineEvidenceRefs, baselineBasis: e.baselineBasis, minimumMeaningfulEffect: e.minimumMeaningfulEffect, plannedSamplePerArm: e.plannedSamplePerArm, plannedSampleBasis: e.plannedSampleBasis, guardrails: e.guardrails, durationDays: e.durationDays, stoppingRule: e.stoppingRule, status: e.status, analyses: (e.analyses ?? []).map(({ reviewedBy: _by, ...x }) => x) })),
       insights: business?.insights ?? null,
-      sources: facts,
+      sources: factViews,
       researchEvidence,
       currency: org.currency,
       businessCurrency: business?.currency ?? org.currency,

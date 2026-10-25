@@ -1148,10 +1148,39 @@ export function Sources({ sources, web = [], researchEvidence = [], websiteUrl, 
         <ul className="flex flex-col divide-y divide-line">
           {sources.map((s) => (
             <li key={s.id} className="flex min-w-0 flex-col gap-1.5 py-2 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:gap-3">
-              <Badge tone="brand" className="shrink-0 self-start capitalize">
-                {s.category}
-              </Badge>
-              <LinkedText text={s.statement} className="flex-1 text-ui text-ink" />
+              <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:max-w-48">
+                <Badge tone="brand" className="capitalize">{s.category}</Badge>
+                <Badge>{s.provenance === "owner_supplied" ? "From your team" : s.provenance === "researched" ? "From research" : "Demo example"}</Badge>
+                <Badge tone={s.reviewState === "confirmed" || s.reviewState === "edited" ? "green" : s.reviewState === "rejected" ? "red" : "amber"}>
+                  {s.reviewState === "confirmed" ? "Confirmed" : s.reviewState === "edited" ? "Edited by your team" : s.reviewState === "rejected" ? "Rejected" : "Needs review"}
+                </Badge>
+              </div>
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <LinkedText text={s.statement} className="text-ui text-ink" />
+                <p className="text-xs text-ink-3">
+                  {s.confidence} confidence{s.verifiedAt ? ` · last checked ${new Date(s.verifiedAt).toISOString().slice(0, 10)}` : " · check date unavailable"}
+                </p>
+                {s.sources.length || s.sourceDetailsUnavailableCount || s.additionalSourceCount ? (
+                  <details className="text-xs">
+                    <summary className="min-h-6 cursor-pointer font-medium text-link">View source details</summary>
+                    <ul className="mt-2 flex flex-col gap-2">
+                      {s.sources.map((source) => (
+                        <li key={source.id} className="rounded-[var(--radius-control)] border border-line bg-surface px-2.5 py-2">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge>{source.kind === "website" ? "Website" : source.kind === "search" ? "Public research" : source.kind === "owner_text" ? "Your note" : source.kind === "owner_upload" ? "Your file" : "Demo source"}</Badge>
+                            <Badge>{source.status === "ok" ? `Read ${new Date(source.fetchedAt).toISOString().slice(0, 10)}` : source.status === "blocked_by_robots" ? "Page access blocked" : source.status === "failed" ? "Page could not be read" : "Not read"}</Badge>
+                          </div>
+                          {source.url ? <p className="mt-1.5"><LinkChip url={source.url} label={source.title ? `${source.title} · ${hostOf(source.url)}` : undefined} /></p> : source.title ? <p className="mt-1.5 text-ink-2">{source.title}</p> : null}
+                          {source.excerpt ? <p className="mt-1.5 whitespace-pre-wrap break-words leading-relaxed text-ink-2">Saved excerpt: {source.excerpt}</p> : null}
+                          {source.excerptExpired ? <p className="mt-1.5 text-ink-3">The saved page excerpt is no longer retained. The link opens the current page, which may have changed.</p> : null}
+                        </li>
+                      ))}
+                      {s.sourceDetailsUnavailableCount ? <li className="text-ink-3">Some linked source details are unavailable.</li> : null}
+                      {s.additionalSourceCount ? <li className="text-ink-3">{s.additionalSourceCount} more source(s) are not shown here.</li> : null}
+                    </ul>
+                  </details>
+                ) : <p className="text-xs text-ink-3">No supporting page or file was saved with this fact.</p>}
+              </div>
             </li>
           ))}
         </ul>

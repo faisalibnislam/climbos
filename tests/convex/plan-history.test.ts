@@ -28,6 +28,53 @@ describe("Plan version history", () => {
     delete process.env.CLIMBOS_FAKE_LLM;
   });
 
+  it("shows each linked fact's provenance and only source records from the same business", async () => {
+    const t = setup();
+    const w = await workspace(t, "source-owner@example.com");
+    const other = await workspace(t, "source-other-owner@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [version] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).first();
+      const otherBusiness = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", other.orgId)).first();
+      expect(business).toBeTruthy();
+      expect(otherBusiness).toBeTruthy();
+      const currentSource = await ctx.db.insert("factSources", {
+        orgId: w.orgId, businessId: business!._id, kind: "website", url: "https://example.com/pricing", title: "Pricing page", excerpt: "The Pro plan costs $20 per month.", fetchedAt: now - 1_000, status: "ok", expiresAt: now + 60_000,
+      });
+      const expiredSource = await ctx.db.insert("factSources", {
+        orgId: w.orgId, businessId: business!._id, kind: "website", url: "https://example.com/old-pricing", title: "Older pricing page", excerpt: "Old excerpt must not be returned.", fetchedAt: now - 40 * 86_400_000, status: "ok", expiresAt: now - 10_000,
+      });
+      const foreignSource = await ctx.db.insert("factSources", {
+        orgId: other.orgId, businessId: otherBusiness!._id, kind: "website", url: "https://other.example/private", title: "Other business source", excerpt: "Do not disclose.", fetchedAt: now, status: "ok", expiresAt: now + 60_000,
+      });
+      const factId = await ctx.db.insert("businessFacts", {
+        orgId: w.orgId, businessId: business!._id, category: "pricing", statement: "The Pro plan costs $20 per month.", confidence: "high", reviewState: "confirmed", provenance: "researched", sourceIds: [currentSource, expiredSource, foreignSource], verifiedAt: now - 500, createdAt: now - 1_000, updatedAt: now - 500,
+      });
+      await ctx.db.patch(version.id, { sourceFactIds: [factId] });
+    });
+
+    const view = await w.client.query(api.workspace.plan, { slug: w.slug, strategyId: version.id });
+    expect(view.sources).toHaveLength(1);
+    expect(view.sources[0]).toMatchObject({
+      statement: "The Pro plan costs $20 per month.",
+      provenance: "researched",
+      reviewState: "confirmed",
+      confidence: "high",
+      sources: [
+        { kind: "website", url: "https://example.com/pricing", excerpt: "The Pro plan costs $20 per month.", excerptExpired: false },
+        { kind: "website", url: "https://example.com/old-pricing", excerpt: null, excerptExpired: true },
+      ],
+      sourceDetailsUnavailableCount: 1,
+      additionalSourceCount: 0,
+    });
+    expect(JSON.stringify(view.sources)).not.toContain("other.example/private");
+    expect(JSON.stringify(view.sources)).not.toContain("Do not disclose.");
+  });
+
   it("lists versions with Latest / In use, reasons and approver, and restores parts as a new version", async () => {
     const t = setup();
     const w = await workspace(t, "history-owner@example.com");
