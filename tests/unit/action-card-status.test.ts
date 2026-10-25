@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { ActionCardStatus, actionCardStartLabel, actionCardStatusExplanation, actionCardStatusLabel } from "@/components/app/ActionCardStatus";
+import { ActionCardStatus, actionCardSetupHref, actionCardStartLabel, actionCardStatusExplanation, actionCardStatusLabel } from "@/components/app/ActionCardStatus";
 
 describe("owner-facing action card status", () => {
   it("uses plain labels for each saved card state", () => {
@@ -27,5 +27,13 @@ describe("owner-facing action card status", () => {
     expect(actionCardStartLabel("generate_content", true)).toBe("Prepare it");
     expect(actionCardStartLabel("generate_content", false)).toBe("Do it");
     expect(actionCardStartLabel("note", false)).toBe("Got it");
+  });
+
+  it("routes setup cards to their real destinations without implying setup is complete", () => {
+    expect(actionCardStartLabel("connect_account", false)).toBe("Connect account");
+    expect(actionCardStartLabel("set_up_autopilot", false)).toBe("Review autopilot setup");
+    expect(actionCardSetupHref("northstar", "connect_account")).toBe("/app/northstar/connections");
+    expect(actionCardSetupHref("northstar", "set_up_autopilot")).toBe("/app/northstar/autopilot");
+    expect(actionCardSetupHref("northstar", "generate_content")).toBeNull();
   });
 });

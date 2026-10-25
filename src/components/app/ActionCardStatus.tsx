@@ -26,8 +26,18 @@ export function actionCardStatusLabel(status: ActionCardStatusValue, externalEff
   return status === "done" && externalEffect ? "Ready for review" : LABELS[status];
 }
 
+/** Setup suggestions open the relevant screen; they do not perform setup or change permissions. */
+export function actionCardSetupHref(slug: string, kind: string): string | null {
+  if (kind === "connect_account") return `/app/${slug}/connections`;
+  if (kind === "set_up_autopilot") return `/app/${slug}/autopilot`;
+  return null;
+}
+
 export function actionCardStartLabel(kind: string, externalEffect: boolean): string {
-  return kind === "note" ? "Got it" : externalEffect ? "Prepare it" : "Do it";
+  if (kind === "note") return "Got it";
+  if (kind === "connect_account") return "Connect account";
+  if (kind === "set_up_autopilot") return "Review autopilot setup";
+  return externalEffect ? "Prepare it" : "Do it";
 }
 
 export function ActionCardStatus({ status, externalEffect }: { status: ActionCardStatusValue; externalEffect: boolean }) {

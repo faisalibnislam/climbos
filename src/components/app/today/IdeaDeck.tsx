@@ -8,6 +8,7 @@
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { useRouter } from "next/navigation";
 import { useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import { Check, CircleDashed, Lightbulb, Magic, ShieldCheck, X } from "@/components/icons";
 import { Badge, Button, toast } from "@/components/ui";
@@ -17,7 +18,7 @@ import { microsToCreditsLabel } from "@/components/app/money";
 import { RoleAvatar } from "@/components/app/RoleAvatar";
 import { roleTitle } from "@/components/app/roles";
 import { cn } from "@/lib/utils";
-import { actionCardStartLabel } from "@/components/app/ActionCardStatus";
+import { actionCardSetupHref, actionCardStartLabel } from "@/components/app/ActionCardStatus";
 
 export interface IdeaCard {
   id: string;
@@ -80,6 +81,7 @@ function CardFace({ card }: { card: IdeaCard }) {
 }
 
 export function IdeaDeck({ slug, cards }: { slug: string; cards: IdeaCard[] }) {
+  const router = useRouter();
   const run = useMutation(api.workspace.runCard);
   const dismiss = useMutation(api.workspace.dismissCard);
   const [gone, setGone] = useState<Set<string>>(new Set());
@@ -96,6 +98,11 @@ export function IdeaDeck({ slug, cards }: { slug: string; cards: IdeaCard[] }) {
 
   const decide = async (dir: "left" | "right") => {
     if (!top || busy) return;
+    const setupHref = actionCardSetupHref(slug, top.kind);
+    if (dir === "right" && setupHref) {
+      router.push(setupHref);
+      return;
+    }
     if (dir === "right" && top.status === "blocked") {
       toast({ tone: "info", title: "Needs setup first", description: top.blockedReason ?? undefined });
       setDx(0);
@@ -196,7 +203,7 @@ export function IdeaDeck({ slug, cards }: { slug: string; cards: IdeaCard[] }) {
         >
           {/* Swipe labels */}
           <span aria-hidden className="pointer-events-none absolute right-4 top-4 z-10 rounded-[var(--radius-badge)] border-2 border-brand-800 bg-lime px-2 py-0.5 text-xs font-semibold tracking-wide text-ink" style={{ opacity: yes, transform: "rotate(8deg)" }}>
-            {note ? "GOT IT" : top.externalEffect ? "PREPARE" : "DO IT"}
+            {actionCardStartLabel(top.kind, top.externalEffect).toUpperCase()}
           </span>
           <span aria-hidden className="pointer-events-none absolute left-4 top-4 z-10 rounded-[var(--radius-badge)] border-2 border-ink-3 bg-surface px-2 py-0.5 text-xs font-semibold tracking-wide text-ink-2" style={{ opacity: no, transform: "rotate(-8deg)" }}>
             NOT NOW

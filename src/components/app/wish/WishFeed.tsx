@@ -16,7 +16,7 @@ import { RetryRunIfPossible, RunProgressCompact } from "@/components/app/content
 import { climbTarget } from "@/components/climb/context";
 import { wishesFrom } from "./pairing";
 import { Prose } from "@/components/ds/content";
-import { ActionCardStatus, actionCardStartLabel, actionCardStatusExplanation } from "@/components/app/ActionCardStatus";
+import { ActionCardStatus, actionCardSetupHref, actionCardStartLabel, actionCardStatusExplanation } from "@/components/app/ActionCardStatus";
 import { wishProgressKind, WISH_PROGRESS_LABELS } from "./progress";
 
 type Today = NonNullable<ReturnType<typeof useQuery<typeof api.workspace.today>>>;
@@ -155,6 +155,7 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
   const role = card.roles[0] ?? "coo";
   const network = card.channel ? networkOf(card.channel) : null;
   const href = resultHref(slug, card);
+  const setupHref = actionCardSetupHref(slug, card.kind);
   return (
     <div className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -199,14 +200,11 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
           )
         ) : card.status === "rejected" ? (
           null
-        ) : card.kind === "set_up_autopilot" && card.status === "proposed" ? (
-          <Button asChild size="sm">
-            <Link href={`/app/${slug}/autopilot`}>Set up autopilot</Link>
-          </Button>
-        ) : card.kind === "connect_account" ? (
+        ) : setupHref && card.status === "proposed" ? (
           <Button asChild size="sm" variant="secondary">
-            <Link href={`/app/${slug}/connections`}>
-              <Plug aria-hidden /> Connect
+            <Link href={setupHref}>
+              {card.kind === "connect_account" ? <Plug aria-hidden /> : null}
+              {actionCardStartLabel(card.kind, card.externalEffect)}
             </Link>
           </Button>
         ) : card.status === "proposed" ? (

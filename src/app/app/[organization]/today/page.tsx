@@ -32,7 +32,7 @@ import { WordHelp } from "@/components/ui/word-help";
 import { PageHeader } from "@/components/app/results/QueryBoundary";
 import { WishComposer, wishSuggestions, type WishComposerHandle } from "@/components/app/wish/WishComposer";
 import { RetryRunIfPossible, RunProgressCompact } from "@/components/app/content/RunProgress";
-import { ActionCardStatus, actionCardStartLabel, actionCardStatusExplanation } from "@/components/app/ActionCardStatus";
+import { ActionCardStatus, actionCardSetupHref, actionCardStartLabel, actionCardStatusExplanation } from "@/components/app/ActionCardStatus";
 import { WishFeed } from "@/components/app/wish/WishFeed";
 import { IdeaDeck } from "@/components/app/today/IdeaDeck";
 import { TodayTargetPreviewCard } from "@/components/app/today/TodayTargetPreview";
@@ -396,6 +396,7 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
   const dismiss = useMutation(api.workspace.dismissCard);
   const [busy, setBusy] = useState(false);
   const status = card.status;
+  const setupHref = actionCardSetupHref(slug, card.kind);
   return (
     <div id={`card-${card.id}`} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
@@ -434,6 +435,10 @@ function ActionCard({ slug, card }: { slug: string; card: CardView }) {
           null
         ) : status === "rejected" || status === "approved" ? (
           null
+        ) : status === "proposed" && setupHref ? (
+          <Button asChild size="sm" variant="secondary">
+            <Link href={setupHref}>{actionCardStartLabel(card.kind, card.externalEffect)}</Link>
+          </Button>
         ) : (
           <>
             <Button
