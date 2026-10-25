@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(63);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(64);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -523,6 +523,23 @@ describe("creative strategy precedent retrieval", () => {
     const injected = creativePrecedentsForAgent("growth_plays", "Assess an alternative digital offer", query);
     expect(injected).toContain("CP-063");
     expect(injected).toContain("Do not choose thresholds after seeing results");
+  });
+
+  it("retrieves product-level inclusion and preserves the difference between range count and real customer fit", () => {
+    const query = "A product category leaves a customer group underserved; instead of merely changing inclusive advertising, redesign the flagship range around verified fit, representative product testing, reliable availability and honest support";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-064");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("solving that functional gap in the flagship product");
+    expect(match?.precedent.causalLimit).toContain("celebrity reach, LVMH resources, Sephora distribution");
+    expect(match?.precedent.transferRisk).toContain("stocked availability");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.lvmh.com/our-maisons/perfumes-cosmetics/fenty-beauty-by-rihanna", sourceRole: "company_primary", claimRole: "action" }),
+      expect.objectContaining({ url: "https://www.rotman.utoronto.ca/faculty-and-research/research-centres/gender-economy/teaching--learning/case-studies/2020/fenty-beauty---diversity-business-model/", sourceRole: "independent_secondary" }),
+      expect.objectContaining({ url: "https://www.businessoffashion.com/articles/beauty/the-downsides-of-the-fenty-effect/", claimRole: "context" }),
+    ]));
+    const injected = creativePrecedentsForAgent("growth_plays", "Find an original product strategy", query);
+    expect(injected).toContain("CP-064");
+    expect(injected).toContain("Do not treat social reactions or stated interest alone as demand");
   });
 
   it("injects bounded precedents into every production growth-plays run", () => {
