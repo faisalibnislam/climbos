@@ -699,7 +699,7 @@ export const plan = query({
     const evidenceRecord = strategy
       ? await ctx.db.query("planEvidence").withIndex("by_strategy", (q) => q.eq("strategyId", strategy._id)).first()
       : null;
-    let researchEvidence: { agentId: string; notes: string; sources: { url: string; title?: string }[]; retrievedAt?: number; truncated: boolean }[] = [];
+    let researchEvidence: { agentId: string; notes: string; sources: { url: string; title?: string; pageReportedDates?: { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }[] }[]; retrievedAt?: number; truncated: boolean }[] = [];
     if (evidenceRecord && evidenceRecord.orgId === org._id && evidenceRecord.strategyId === strategy?._id && await sha256Hex(evidenceRecord.data) === evidenceRecord.hash) {
       try {
         const parsed = JSON.parse(evidenceRecord.data) as { research?: unknown; truncated?: unknown };
@@ -712,9 +712,15 @@ export const plan = query({
             const notes = entry.notes.slice(0, 6_000);
             const sources = Array.isArray(entry.sources) ? entry.sources.slice(0, 6).flatMap((source) => {
               if (!source || typeof source !== "object") return [];
-              const value = source as { url?: unknown; title?: unknown };
+              const value = source as { url?: unknown; title?: unknown; pageReportedDates?: unknown };
               if (typeof value.url !== "string" || !/^https?:\/\//i.test(value.url) || value.url.length > 2_000) return [];
-              return [{ url: value.url, ...(typeof value.title === "string" ? { title: value.title.slice(0, 200) } : {}) }];
+              const pageReportedDates = Array.isArray(value.pageReportedDates) ? value.pageReportedDates.flatMap((item) => {
+                if (!item || typeof item !== "object") return [];
+                const date = item as { kind?: unknown; date?: unknown; source?: unknown };
+                if ((date.kind !== "published" && date.kind !== "updated") || (date.source !== "json_ld" && date.source !== "meta") || typeof date.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date.date) || !Number.isFinite(Date.parse(`${date.date}T00:00:00Z`)) || new Date(`${date.date}T00:00:00Z`).toISOString().slice(0, 10) !== date.date) return [];
+                return [{ kind: date.kind, date: date.date, source: date.source } as { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }];
+              }).slice(0, 20) : [];
+              return [{ url: value.url, ...(typeof value.title === "string" ? { title: value.title.slice(0, 200) } : {}), ...(pageReportedDates.length ? { pageReportedDates } : {}) }];
             }) : [];
             const retrievedAt = typeof entry.retrievedAt === "number" && Number.isFinite(entry.retrievedAt) && entry.retrievedAt >= 0 && entry.retrievedAt <= Date.now() ? entry.retrievedAt : undefined;
             return [{ agentId: entry.agentId.slice(0, 80), notes, sources, ...(retrievedAt !== undefined ? { retrievedAt } : {}), truncated: researchWasTruncated || entry.notes.length > notes.length }];

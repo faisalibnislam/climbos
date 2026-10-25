@@ -261,6 +261,22 @@ describe("extractPageContent", () => {
     expect(page.jsonLdScriptParseErrors).toBe(1);
     expect(page.jsonLdTypes).toEqual([]);
   });
+
+  it("keeps valid page-reported publication and update dates separate from retrieval dates", () => {
+    const page = extractPageContent(`<head>
+      <meta property="article:published_time" content="2024-05-06T10:00:00Z">
+      <meta property="article:modified_time" content="2025-02-03">
+      <script type="application/ld+json">{"@type":"Article","datePublished":"2024-05-06","dateModified":"2025-02-03"}</script>
+      <script type="application/ld+json">{"@type":"NewsArticle","datePublished":"2026-02-30"}</script>
+      <script type="application/ld+json">{"@type":"Product","datePublished":"2022-01-01"}</script>
+    </head>`, "https://example.com/story");
+    expect(page.pageReportedDates).toEqual([
+      { kind: "published", date: "2024-05-06", source: "json_ld" },
+      { kind: "updated", date: "2025-02-03", source: "json_ld" },
+      { kind: "published", date: "2024-05-06", source: "meta" },
+      { kind: "updated", date: "2025-02-03", source: "meta" },
+    ]);
+  });
 });
 
 describe("firecrawl", () => {

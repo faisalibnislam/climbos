@@ -99,7 +99,7 @@ describe("evidence pack per plan version (Book 13 §3)", () => {
       goal: { statement: "Get 50 customers", horizonDays: 90, monthlyAdBudget: 600 },
       facts: [{ id: "f1", statement: "Pro plan is $19/month", category: "pricing" }],
       insights: "x".repeat(30_000),
-      research: [{ agentId: "growth_plays", notes: "Pricing page lists Pro at $19.", sources: [{ url: "https://formkit.app/pricing" }], retrievedAt }, { agentId: "growth_strategy" }],
+      research: [{ agentId: "growth_plays", notes: "Pricing page lists Pro at $19.", sources: [{ url: "https://formkit.app/pricing", pageReportedDates: [{ kind: "published", date: "2025-02-03", source: "json_ld" }] }], retrievedAt }, { agentId: "growth_strategy" }],
     });
     expect(Object.keys(ev.skills)).toEqual(["growth-plays", "owner-brevity"]);
     expect(ev.skills["growth-plays"]).not.toBe("missing");
@@ -107,6 +107,7 @@ describe("evidence pack per plan version (Book 13 §3)", () => {
     expect(ev.facts[0]).toEqual({ id: "f1", statement: "Pro plan is $19/month", category: "pricing" });
     expect(ev.research).toHaveLength(1);
     expect(ev.research[0]?.retrievedAt).toBe(retrievedAt);
+    expect(ev.research[0]?.sources[0]?.pageReportedDates).toEqual([{ kind: "published", date: "2025-02-03", source: "json_ld" }]);
     expect(ev.insights.length).toBe(24_000);
     expect(ev.truncated).toContain("insights");
   });

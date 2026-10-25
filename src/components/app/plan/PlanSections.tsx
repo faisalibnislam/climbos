@@ -1128,7 +1128,7 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
 
 /* ---------------- Sources ---------------- */
 
-export function Sources({ sources, web = [], researchEvidence = [], websiteUrl, knowledge }: { sources: PlanView["sources"]; web?: { url: string; title?: string }[]; researchEvidence?: { agentId: string; notes: string; sources: { url: string; title?: string }[]; retrievedAt?: number; truncated: boolean }[]; websiteUrl?: string; knowledge?: KnowledgeReferenceSet }) {
+export function Sources({ sources, web = [], researchEvidence = [], websiteUrl, knowledge }: { sources: PlanView["sources"]; web?: { url: string; title?: string }[]; researchEvidence?: { agentId: string; notes: string; sources: { url: string; title?: string; pageReportedDates?: { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }[] }[]; retrievedAt?: number; truncated: boolean }[]; websiteUrl?: string; knowledge?: KnowledgeReferenceSet }) {
   const businessHost = websiteUrl ? hostOf(websiteUrl) : null;
   return (
     <PlanSection
@@ -1169,7 +1169,7 @@ export function Sources({ sources, web = [], researchEvidence = [], websiteUrl, 
                   {entry.truncated ? <Badge tone="amber">Notes shortened</Badge> : null}
                 </div>
                 <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-ink-2">{entry.notes}</p>
-                {entry.sources.length ? <ul className="flex flex-wrap gap-1.5">{entry.sources.map((source) => <li key={source.url}><LinkChip url={source.url} label={source.title ? `${source.title} · ${hostOf(source.url)}` : undefined} /></li>)}</ul> : <p className="text-xs text-ink-3">No source links were saved with these notes.</p>}
+                {entry.sources.length ? <ul className="flex flex-col gap-2">{entry.sources.map((source) => <li key={source.url} className="flex flex-col items-start gap-1"><LinkChip url={source.url} label={source.title ? `${source.title} · ${hostOf(source.url)}` : undefined} />{source.pageReportedDates?.length ? <p className="text-xs text-ink-3">Page-reported {(["published", "updated"] as const).flatMap((kind) => { const dates = [...new Set(source.pageReportedDates?.filter((item) => item.kind === kind).map((item) => item.date) ?? [])]; return dates.length ? [`${kind}: ${dates.join(", ")}`] : []; }).join(" · ")} · page metadata, not independently verified</p> : null}</li>)}</ul> : <p className="text-xs text-ink-3">No source links were saved with these notes.</p>}
               </li>
             ))}
           </ul>

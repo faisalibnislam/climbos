@@ -33,7 +33,7 @@ describe("plan source relationship labels", () => {
     const retrievedAt = Date.UTC(2026, 9, 25);
     const html = renderToStaticMarkup(createElement(Sources, {
       sources: [],
-      researchEvidence: [{ agentId: "growth_plays", notes: "Source says the feature launched in 2025.", sources: [{ url: "https://example.com/news", title: "Launch note" }], retrievedAt, truncated: false }],
+      researchEvidence: [{ agentId: "growth_plays", notes: "Source says the feature launched in 2025.", sources: [{ url: "https://example.com/news", title: "Launch note", pageReportedDates: [{ kind: "published", date: "2025-02-03", source: "json_ld" }] }], retrievedAt, truncated: false }],
     }));
 
     expect(html).toContain("<details");
@@ -42,5 +42,7 @@ describe("plan source relationship labels", () => {
     expect(html).toContain("written by AI from the listed sources");
     expect(html).toContain("Source relevance and reliability are model assessments, not independent verification");
     expect(html).toContain("https://example.com/news");
+    expect(html).toContain("Page-reported published: 2025-02-03");
+    expect(html).toContain("page metadata, not independently verified");
   });
 });

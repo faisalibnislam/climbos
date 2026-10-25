@@ -518,10 +518,40 @@ export interface ExtractedPage {
   links: Array<{ url: string; text: string }>;
   jsonLdPrices: JsonLdPrice[];
   jsonLdTypes: string[];
+  /** Valid calendar dates stated by recognized article/page metadata; metadata can be wrong or stale. */
+  pageReportedDates?: { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }[];
   /** JSON parse failures among the first 50 application/ld+json script blocks inspected. */
   jsonLdScriptParseErrors?: number;
   text: string;
   truncated: boolean;
+}
+
+function pageDate(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const match = /^(\d{4}-\d{2}-\d{2})(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/.exec(value.trim());
+  if (!match) return undefined;
+  const date = match[1]!;
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date && (!value.includes("T") || Number.isFinite(Date.parse(value))) ? date : undefined;
+}
+
+function collectPageDates(node: unknown, out: { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }[], depth: number): void {
+  if (depth > 10 || out.length >= 20) return;
+  if (Array.isArray(node)) {
+    for (const item of node) collectPageDates(item, out, depth + 1);
+    return;
+  }
+  if (typeof node !== "object" || node === null) return;
+  const record = node as Record<string, unknown>;
+  const types = asTypeList(record["@type"]);
+  const isArticleOrPage = types.some((type) => ["Article", "NewsArticle", "BlogPosting", "WebPage"].includes(type.split(/[\/#]/).at(-1) ?? type));
+  if (isArticleOrPage) {
+    for (const [key, kind] of [["datePublished", "published"], ["dateModified", "updated"]] as const) {
+      const date = pageDate(record[key]);
+      if (date && !out.some((item) => item.kind === kind && item.date === date && item.source === "json_ld")) out.push({ kind, date, source: "json_ld" });
+    }
+  }
+  for (const value of Object.values(record)) if (typeof value === "object" && value !== null) collectPageDates(value, out, depth + 1);
 }
 
 function asTypeList(t: unknown): string[] {
@@ -567,6 +597,7 @@ export function extractPageContent(
 
   // JSON-LD first (before scripts are removed).
   const jsonLdPrices: JsonLdPrice[] = [];
+  const pageReportedDates: ExtractedPage["pageReportedDates"] = [];
   const jsonLdTypes = new Set<string>();
   let jsonLdScriptParseErrors = 0;
   let jsonLdScriptsParsed = 0;
@@ -578,6 +609,7 @@ export function extractPageContent(
       const data = JSON.parse((ld[1] ?? "").trim()) as unknown;
       collectJsonLdPrices(data, jsonLdPrices, undefined, 0);
       collectJsonLdTypes(data, jsonLdTypes, 0);
+      collectPageDates(data, pageReportedDates, 0);
     } catch {
       jsonLdScriptParseErrors++;
     }
@@ -610,6 +642,9 @@ export function extractPageContent(
     if (a.name?.toLowerCase() === "description" && metaDescription === undefined) metaDescription = content;
     if (["robots", "googlebot"].includes(a.name?.toLowerCase() ?? "")) robotsDirectives.push(content.toLowerCase());
     const prop = (a.property ?? a.name ?? "").toLowerCase();
+    const dateKind = prop === "article:published_time" || (a.itemprop ?? "").toLowerCase() === "datepublished" ? "published" : prop === "article:modified_time" || (a.itemprop ?? "").toLowerCase() === "datemodified" ? "updated" : undefined;
+    const date = dateKind ? pageDate(content) : undefined;
+    if (dateKind && date && !pageReportedDates.some((item) => item.kind === dateKind && item.date === date && item.source === "meta")) pageReportedDates.push({ kind: dateKind, date, source: "meta" });
     if (prop.startsWith("og:") && !(prop in og) && Object.keys(og).length < 30) og[prop] = content;
   }
 
@@ -677,7 +712,7 @@ export function extractPageContent(
     truncated = true;
   }
 
-  const page: ExtractedPage = { og, headings, links, jsonLdPrices, jsonLdTypes: [...jsonLdTypes].slice(0, 50), text, truncated, viewportPresent, imageCount: imageTags.length, imagesWithAltAttribute };
+  const page: ExtractedPage = { og, headings, links, jsonLdPrices, jsonLdTypes: [...jsonLdTypes].slice(0, 50), pageReportedDates: pageReportedDates.slice(0, 20), text, truncated, viewportPresent, imageCount: imageTags.length, imagesWithAltAttribute };
   if (jsonLdScriptParseErrors) page.jsonLdScriptParseErrors = jsonLdScriptParseErrors;
   if (title) page.title = title;
   if (metaDescription) page.metaDescription = metaDescription;

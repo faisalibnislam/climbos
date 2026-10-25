@@ -10,6 +10,7 @@
 import { skillVersion } from "../skills";
 import { ENGINE_VERSION } from "./specs";
 import type { FactConflict } from "./conflicts";
+import type { Source } from "../ai/types";
 
 export const EVIDENCE_VERSION = 2;
 
@@ -35,7 +36,7 @@ export interface PlanEvidence {
   /** Confirmed facts that disagree, kept side by side. */
   conflicts?: FactConflict[];
   /** Each agent's research, as it reached the writer. */
-  research: { agentId: string; notes: string; sources: { url: string; title?: string }[]; retrievedAt?: number }[];
+  research: { agentId: string; notes: string; sources: Source[]; retrievedAt?: number }[];
   /** True where a cap cut something (so a reader knows the record is partial). */
   truncated: string[];
 }
@@ -50,7 +51,7 @@ export function buildPlanEvidence(p: {
   ownerEconomics?: unknown;
   insights: string;
   conflicts?: FactConflict[];
-  research: { agentId: string; notes?: string; sources?: { url: string; title?: string }[]; retrievedAt?: number }[];
+  research: { agentId: string; notes?: string; sources?: Source[]; retrievedAt?: number }[];
 }): PlanEvidence {
   const truncated: string[] = [];
   const cut = (s: string, n: number, what: string) => {
@@ -73,7 +74,7 @@ export function buildPlanEvidence(p: {
     ...(p.conflicts?.length ? { conflicts: p.conflicts } : {}),
     research: p.research
       .filter((r) => r.notes || r.sources?.length)
-      .map((r) => ({ agentId: r.agentId, notes: cut(r.notes ?? "", CAP.notes, `research ${r.agentId}`), sources: (r.sources ?? []).slice(0, CAP.sources).map((x) => ({ url: x.url.slice(0, 500), ...(x.title ? { title: x.title.slice(0, 200) } : {}) })), ...(typeof r.retrievedAt === "number" && Number.isFinite(r.retrievedAt) ? { retrievedAt: r.retrievedAt } : {}) })),
+      .map((r) => ({ agentId: r.agentId, notes: cut(r.notes ?? "", CAP.notes, `research ${r.agentId}`), sources: (r.sources ?? []).slice(0, CAP.sources).map((x) => ({ url: x.url.slice(0, 500), ...(x.title ? { title: x.title.slice(0, 200) } : {}), ...(x.pageReportedDates?.length ? { pageReportedDates: x.pageReportedDates.slice(0, 20) } : {}) })), ...(typeof r.retrievedAt === "number" && Number.isFinite(r.retrievedAt) ? { retrievedAt: r.retrievedAt } : {}) })),
     truncated,
   };
 }

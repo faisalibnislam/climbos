@@ -118,7 +118,8 @@ export interface TurnUsage {
 export interface Source {
   url: string;
   title?: string;
-  pageAge?: string;
+  /** Dates explicitly present in HTML metadata on a page ClimbOS fetched. Not independently verified. */
+  pageReportedDates?: { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }[];
 }
 
 export type TurnFailureKind = "provider_unavailable" | "rate_limited" | "timeout" | "invalid_output" | "provider_error" | "refused" | "spend_limit" | "pending";

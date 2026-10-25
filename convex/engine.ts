@@ -365,7 +365,7 @@ export const putResearchCache = internalMutation({
     agentId: v.string(),
     modelKey: v.string(),
     notes: v.string(),
-    sources: v.array(v.object({ url: v.string(), title: v.optional(v.string()) })),
+    sources: v.array(v.object({ url: v.string(), title: v.optional(v.string()), pageReportedDates: v.optional(v.array(v.object({ kind: v.union(v.literal("published"), v.literal("updated")), date: v.string(), source: v.union(v.literal("json_ld"), v.literal("meta")) }))) })),
     retrievedAt: v.optional(v.number()),
     expiresAt: v.number(),
   },

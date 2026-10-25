@@ -368,7 +368,7 @@ async function runAgentTask<T>(
     ...(process.env.CLIMBOS_FAKE_LLM ? {} : {
       researchCache: {
         get: async (cacheKey: string) => ctx.runQuery(internal.engine.getResearchCache, { orgId: job.org._id, cacheKey }),
-        put: async (cacheKey: string, value: { notes: string; sources: { url: string; title?: string }[]; retrievedAt?: number }, expiresAt: number) => {
+        put: async (cacheKey: string, value: { notes: string; sources: { url: string; title?: string; pageReportedDates?: { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }[] }[]; retrievedAt?: number }, expiresAt: number) => {
           await ctx.runMutation(internal.engine.putResearchCache, { orgId: job.org._id, cacheKey, agentId: spec.id, modelKey: spec.models.research, ...value, expiresAt });
         },
       },
@@ -633,7 +633,7 @@ function playbookContext(job: JobCtx, profile: AcquisitionProfile, d: Diagnosis)
 }
 
 /** What an agent run reports back for quality and the plan's evidence record. */
-type AgentMeta = { shipped?: boolean | null; sources?: { url: string; title?: string }[]; notes?: string; retrievedAt?: number; skills?: string[]; models?: unknown; quality?: AgentQuality; knowledgeReferences?: KnowledgeReferenceSet };
+type AgentMeta = { shipped?: boolean | null; sources?: { url: string; title?: string; pageReportedDates?: { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }[] }[]; notes?: string; retrievedAt?: number; skills?: string[]; models?: unknown; quality?: AgentQuality; knowledgeReferences?: KnowledgeReferenceSet };
 
 /** Constraints once the plays' numbers are locked: the plan's prose must use these customer counts (Book 14 §7). */
 function lockedConstraints(job: JobCtx, plays: PlaysOutput, serviceArea?: string, businessTypes?: string[], diagnosis?: Diagnosis): PlanConstraints {
@@ -1068,7 +1068,7 @@ async function consistencyStep(ctx: ActionCtx, job: JobCtx, index: number, plan:
   }
 }
 
-type PrecomputedResearch = { notes: string; sources: { url: string; title?: string }[]; retrievedAt?: number };
+type PrecomputedResearch = { notes: string; sources: { url: string; title?: string; pageReportedDates?: { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }[] }[]; retrievedAt?: number };
 
 /** The previous plan's channel scoring, when nothing it depended on has changed since. */
 function reusableChannelFit(job: JobCtx): { adjustments: Adjustment[]; summary: string[] } | null {

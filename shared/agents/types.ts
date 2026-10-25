@@ -1,7 +1,7 @@
 import type { Diagnosis } from "./diagnosis";
 import type { EvidenceKind } from "./evidenceKind";
 import type { z } from "zod";
-import type { Effort } from "../ai/types";
+import type { Effort, Source } from "../ai/types";
 import type { ModelKey } from "../economics/rates";
 import type { RoleKey } from "../economics/roles";
 import type { KnowledgeReferenceSet } from "../knowledge/retrieve";
@@ -38,7 +38,7 @@ export interface ResearchSpec {
 
 export interface CachedResearch {
   notes: string;
-  sources: { url: string; title?: string }[];
+  sources: Source[];
   /** Time this exact evidence set was retrieved; old cache rows may not have it. */
   retrievedAt?: number;
   expiresAt: number;
@@ -94,7 +94,7 @@ export interface AgentInput {
   /** Research to do for this job (overrides nothing; omit for no research phase). */
   research?: ResearchSpec;
   /** Research already done for this job (e.g. in parallel with an earlier step): used instead of a research phase. */
-  precomputedResearch?: { notes: string; sources: { url: string; title?: string }[]; retrievedAt?: number };
+  precomputedResearch?: { notes: string; sources: Source[]; retrievedAt?: number };
   /** Deterministic timing context assembled by the application for date validation. */
   timingContext?: { today: string; timezone: string; geography?: string };
   /** Exact approved offer prices allowed in copy for this tenant's active plan. */
@@ -178,7 +178,7 @@ export interface AgentRunResult<T> {
   output: T;
   assessment: Assessment | null;
   rounds: number;
-  research: { notes: string; sources: { url: string; title?: string }[]; retrievedAt?: number } | null;
+  research: { notes: string; sources: Source[]; retrievedAt?: number } | null;
   history: { round: number; average: number; gatesPassed: boolean; lintErrors: number }[];
   /** Versioned guidance passages the drafting agent actually received; separate from business evidence. */
   knowledgeReferences?: KnowledgeReferenceSet;
