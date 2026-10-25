@@ -38,6 +38,17 @@ describe("learned metrics", () => {
     expect(learningCounts(empty)).toEqual({});
   });
 
+  it("withholds a metric when its bounded source read is incomplete", () => {
+    const c = learningCounts({
+      ...empty,
+      unavailableMetrics: ["landing_lead"],
+      landing: [{ views: 100, leads: 20 }],
+      chats: { total: 20, withEmail: 4 },
+    });
+    expect(c.landing_lead).toBeUndefined();
+    expect(c.chat_lead).toEqual({ trials: 20, successes: 4 });
+  });
+
   it("each rate carries counts and a 90% range, not a grade", () => {
     const line = rateLine("chat_lead", "own", { trials: 20, successes: 5 });
     expect(line).toMatch(/5\/20, last 120 days, 90% range \d/);

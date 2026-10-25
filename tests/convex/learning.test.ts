@@ -9,6 +9,35 @@ async function runRecompute(t: T) {
 }
 
 describe("learning from results", () => {
+  it("does not turn a landing-page cap into a complete lifetime rate", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "learn-truncated-source@example.com");
+    const { orgId } = await owner.client.mutation(api.orgs.createWorkspace, {
+      businessName: "High-volume pages",
+    });
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      for (let index = 0; index < 51; index++)
+        await ctx.db.insert("landingPages", {
+          orgId: orgId as Id<"organizations">,
+          slug: `page-${index}`,
+          title: `Page ${index}`,
+          brief: "Test fixture",
+          status: "live",
+          color: "#000000",
+          views: 100,
+          leads: 10,
+          createdAt: now,
+          updatedAt: now,
+        });
+    });
+
+    const { counts } = await t.query(internal.learning.countsForOrg, {
+      orgId: orgId as Id<"organizations">,
+    });
+    expect(counts.landing_lead).toBeUndefined();
+  });
+
   it("paginates customer workspaces instead of truncating after a fixed tenant limit", async () => {
     const t = setup();
     const first = await asNewUser(t, "learn-page-one@example.com");

@@ -40,6 +40,7 @@ import {
 import { cn } from "@/lib/utils";
 import { errorMessage } from "./errors";
 import { PRIMARY_NAV, appArea, appHref } from "./navigation";
+import { SkipLink } from "@shared/a11y/SkipLink";
 
 const NAV_ICONS: Record<string, LucideIcon> = { today: Home, plan: Compass, work: CalendarDays, customers: Users, results: BarChart3, tools: PanelsTopLeft };
 const NAV: { key: string; label: string; icon: LucideIcon; group: string }[] = PRIMARY_NAV.map((item) => ({ ...item, icon: NAV_ICONS[item.key], group: "" }));
@@ -81,6 +82,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
 
   return (
     <div className={cn("bg-bg", workspace ? "flex h-dvh flex-col" : "min-h-dvh")}>
+      <SkipLink />
       <Toaster />
       <CommandPalette slug={slug} />
       <ClimbPanel slug={slug} />
@@ -166,7 +168,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
             </div>
           </header>
           <LowCreditBanner slug={slug} />
-          <main id="main" className={workspace ? "min-h-0 flex-1 overflow-auto" : "flex-1 px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12"}>
+          <main id="main" tabIndex={-1} className={workspace ? "min-h-0 flex-1 overflow-auto" : "flex-1 px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12"}>
             {children}
           </main>
         </div>

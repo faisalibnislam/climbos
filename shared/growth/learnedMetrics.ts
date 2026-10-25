@@ -84,6 +84,8 @@ export const METRIC_DEFS: Record<string, MetricDef> = {
 };
 
 export interface RawLearningInputs {
+  /** A capped source read was exceeded; those rates are unknown, not partial. */
+  unavailableMetrics?: string[];
   /** Per campaign: prospects sent a first email in the window, and their current stage. */
   outreach: { contacted: number; replied: number; qualified: number; booked: number }[];
   /** Bookings in the window with a recorded outcome. */
@@ -100,7 +102,9 @@ export type Counts = Record<string, { trials: number; successes: number }>;
 
 export function learningCounts(x: RawLearningInputs): Counts {
   const c: Counts = {};
+  const unavailable = new Set(x.unavailableMetrics ?? []);
   const add = (m: string, t: number, s: number) => {
+    if (unavailable.has(m)) return;
     if (!(t > 0)) return;
     c[m] = { trials: (c[m]?.trials ?? 0) + t, successes: (c[m]?.successes ?? 0) + Math.min(s, t) };
   };

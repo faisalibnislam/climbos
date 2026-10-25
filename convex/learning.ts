@@ -32,6 +32,12 @@ const DAY = 86_400_000;
 const WINDOW = LEARN_WINDOW_DAYS * DAY;
 const ORG_PAGE_SIZE = 100;
 const ORG_READ_CONCURRENCY = 8;
+const MAX_OUTREACH_SENDS = 3000;
+const MAX_BOOKINGS = 2000;
+const MAX_LANDING_PAGES = 50;
+const MAX_CHAT_THREADS = 2000;
+const MAX_REVIEW_REQUESTS = 1000;
+const MAX_BIO_MESSAGES = 5000;
 
 /** Kept for callers: label and minimum sample per metric (definitions live in shared/growth/learnedMetrics). */
 export const METRICS: Record<string, { label: string; minTrials: number }> =
@@ -49,6 +55,7 @@ async function orgInputs(
   since: number,
 ): Promise<RawLearningInputs> {
   const outreach: RawLearningInputs["outreach"] = [];
+  const unavailableMetrics: string[] = [];
   // Use delivery time, not queue creation time: queued emails can wait, fail, or
   // be sent after the learning window. Only the first successfully sent step
   // starts a prospect's measured cohort.
@@ -58,7 +65,9 @@ async function orgInputs(
       q.eq("orgId", orgId).gte("sentAt", since).lte("sentAt", Date.now()),
     )
     .order("desc")
-    .take(3000);
+    .take(MAX_OUTREACH_SENDS + 1);
+  if (sends.length > MAX_OUTREACH_SENDS)
+    unavailableMetrics.push("outreach_reply", "outreach_qualified_reply", "outreach_booking", "outreach_booked");
   const firstSends = new Map<
     string,
     {
@@ -143,39 +152,44 @@ async function orgInputs(
     .withIndex("by_org_start", (q) =>
       q.eq("orgId", orgId).gte("startAt", since).lte("startAt", Date.now()),
     )
-    .take(2000);
+    .take(MAX_BOOKINGS + 1);
+  if (bookings.length > MAX_BOOKINGS) unavailableMetrics.push("booking_attended");
   const landing = (
     await ctx.db
       .query("landingPages")
       .withIndex("by_org", (q) => q.eq("orgId", orgId))
-      .take(50)
+      .take(MAX_LANDING_PAGES + 1)
   ).map((p) => ({ views: p.views, leads: p.leads }));
+  if (landing.length > MAX_LANDING_PAGES) unavailableMetrics.push("landing_lead");
   const threads = await ctx.db
     .query("chatThreads")
     .withIndex("by_org_last", (q) => q.eq("orgId", orgId).gte("lastAt", since))
-    .take(2000);
-  const reqs = (
-    await ctx.db
-      .query("reviewRequests")
-      .withIndex("by_org_created", (q) =>
-        q.eq("orgId", orgId).gte("createdAt", since),
-      )
-      .take(1000)
-  ).filter((r) => r.status === "sent");
+    .take(MAX_CHAT_THREADS + 1);
+  if (threads.length > MAX_CHAT_THREADS) unavailableMetrics.push("chat_lead");
+  const reviewRequests = await ctx.db
+    .query("reviewRequests")
+    .withIndex("by_org_created", (q) =>
+      q.eq("orgId", orgId).gte("createdAt", since),
+    )
+    .take(MAX_REVIEW_REQUESTS + 1);
+  if (reviewRequests.length > MAX_REVIEW_REQUESTS)
+    unavailableMetrics.push("review_click");
+  const reqs = reviewRequests.filter((r) => r.status === "sent");
   const bioPage = await ctx.db
     .query("bioPages")
     .withIndex("by_org", (q) => q.eq("orgId", orgId))
     .first();
   // Bio views are an all-time counter, so sign-ups are counted all-time too.
-  const bioSignups = bioPage
-    ? (
-        await ctx.db
-          .query("communityMessages")
-          .withIndex("by_org_received", (q) => q.eq("orgId", orgId))
-          .take(5000)
-      ).filter((m) => m.channel === "link_in_bio").length
-    : 0;
+  const bioMessages = bioPage
+    ? await ctx.db
+        .query("communityMessages")
+        .withIndex("by_org_received", (q) => q.eq("orgId", orgId))
+        .take(MAX_BIO_MESSAGES + 1)
+    : [];
+  if (bioMessages.length > MAX_BIO_MESSAGES) unavailableMetrics.push("bio_signup");
+  const bioSignups = bioMessages.filter((m) => m.channel === "link_in_bio").length;
   return {
+    unavailableMetrics,
     outreach,
     bookingOutcomes: bookings
       .filter((b) => b.status === "confirmed" && b.outcome)

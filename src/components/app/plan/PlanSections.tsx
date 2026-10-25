@@ -1188,7 +1188,7 @@ export function Sources({ sources, web = [], researchEvidence = [], websiteUrl, 
       {researchEvidence.length ? (
         <details className="border-t border-line pt-3">
           <summary className="cursor-pointer text-sm font-medium text-ink">Research notes and assessment</summary>
-          <p className="mt-2 text-xs text-ink-3">These notes were written by AI from the listed sources. Source relevance and reliability are model assessments, not independent verification. Check important claims; dates or methods are shown only when the research recorded them.</p>
+          <p className="mt-2 text-xs text-ink-3">These notes were written by AI from the listed sources. The links are for this research run; they are not connected to each sentence, and source relevance and reliability are not independently verified. Open the source and check important claims, dates, and methods before relying on them.</p>
           <ul className="mt-2 flex flex-col divide-y divide-line">
             {researchEvidence.map((entry) => (
               <li key={entry.agentId} className="flex flex-col gap-2 py-3 first:pt-1 last:pb-0">

@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(70);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(73);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -125,6 +125,49 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://global.toyota/en/company/plant-tours/production-system/", sourceRole: "company_primary" }),
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Explore a service reliability strategy", query)).toContain("CP-070");
+  });
+
+  it("retrieves surplus-food offers with capacity, margin, and waste limits", () => {
+    const query = "For a local bakery with daily unsold food, test a preordered surprise bag at a fixed pickup window without producing extra stock; measure waste, regular sales, contribution, and staff time";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-071");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("Pool variable end-of-day leftovers into a bounded, prepaid pickup offer");
+    expect(match?.precedent.causalLimit).toContain("underlying working paper's full design");
+    expect(match?.precedent.transferRisk).toContain("increase total waste");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.mcgill.ca/bensadoun-school/article/new-mcgill-research-finds-too-good-go-partnership-reduced-fresh-food-waste-11-circle-k-us-stores", publicationDate: "2026-10-06" }),
+      expect.objectContaining({ url: "https://pubsonline.informs.org/doi/10.1287/mnsc.2023.03001", sourceRole: "independent_secondary" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Explore a surplus inventory offer", query)).toContain("CP-071");
+  });
+
+  it("retrieves integrated branded resale without assuming incremental demand", () => {
+    const query = "Bring inspected used durable goods into the same search and checkout as new products after building trade-in, repair, reverse-logistics, and customer-service operations";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-072");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("Connect the post-purchase loop back to the primary buying journey");
+    expect(match?.precedent.outcome).toContain("not evidence that the same-cart integration caused additional sales");
+    expect(match?.precedent.transferRisk).toContain("cannibalize new-product sales");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.patagoniaworks.com/press/2026/10/14/a-new-milestone-for-patagonias-resale-business", publicationDate: "2026-10-14", sourceRole: "company_primary" }),
+      expect.objectContaining({ url: "https://www.jstage.jst.go.jp/article/marketing/43/3/43_2024.008/_article/-char/en", publicationDate: "2024-01-10" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Explore a branded resale strategy", query)).toContain("CP-072");
+  });
+
+  it("retrieves on-demand logistics while retaining cost, safety, and geography limits", () => {
+    const query = "A remote service has urgent, unpredictable requests and expired local stock; compare a centrally ready inventory hub and on-demand delivery partner with the existing road-replenishment route";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-073");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("Move the response point closer to a centralized, ready stock pool");
+    expect(match?.precedent.outcome).toContain("79 to 98 minutes faster");
+    expect(match?.precedent.causalLimit).toContain("estimated driving times, not a randomized concurrent road-delivery control");
+    expect(match?.precedent.transferRisk).toContain("restricted by regulation");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.minict.gov.rw/news-detail/rwanda-signs-agreement-with-zipline-to-use-drones-for-delivery-of-essential-medical-products", sourceRole: "organization_primary" }),
+      expect.objectContaining({ url: "https://www.sciencedirect.com/science/article/pii/S2214109X22000481", sourceRole: "independent_secondary" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Explore an unusual logistics partnership", query)).toContain("CP-073");
   });
 
   it("retrieves open innovation while separating proxy scores, implementation value, and data privacy", () => {
@@ -533,7 +576,7 @@ describe("creative strategy precedent retrieval", () => {
   });
 
   it("retrieves circular resale from the product lifecycle and operations mechanism", () => {
-    expect(retrieveCreativePrecedents("Test a buyback and resale route for durable products with inspection and reverse logistics")[0]?.precedent.id).toBe("CP-012");
+    expect(retrieveCreativePrecedents("A furniture retailer offers store-credit buyback for used household furnishings then inspects and resells them locally")[0]?.precedent.id).toBe("CP-012");
   });
 
   it("retrieves a licensed audience partnership that changes the product experience", () => {
