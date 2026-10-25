@@ -8,11 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, toast } from "@/components/ui";
 import { APP_TOOLS, PRIMARY_NAV, appHref } from "./navigation";
-
-/** Draft handoffs are scoped to both the signed-in person and business. */
-export function askDraftKey(slug: string, userId: string) {
-  return `climbos:ask:v2:${userId}:${slug}`;
-}
+import { askDraftKey } from "./draftKeys";
 
 export function CommandPalette({ slug }: { slug: string }) {
   const router = useRouter();

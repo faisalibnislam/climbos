@@ -28,7 +28,7 @@ import { errorMessage } from "@/components/app/errors";
 import { relativeTime } from "@/components/app/money";
 import { CHANNEL_LABELS } from "@/components/app/roles";
 import { RoleAvatar, RoleStack } from "@/components/app/RoleAvatar";
-import { askDraftKey } from "@/components/app/CommandPalette";
+import { askDraftKey } from "@/components/app/draftKeys";
 import { WordHelp } from "@/components/ui/word-help";
 import { PageHeader } from "@/components/app/results/QueryBoundary";
 import { WishComposer, wishSuggestions, type WishComposerHandle } from "@/components/app/wish/WishComposer";
@@ -177,12 +177,14 @@ export default function TodayPage() {
       )}
 
       <WishComposer
-        key={slug}
+        key={`${slug}:${me?.userId ?? "identity-pending"}`}
         ref={composer}
         slug={slug}
+        userId={me?.userId}
+        identityReady={me !== undefined && Boolean(me?.userId)}
         suggestions={wishSuggestions(data.business?.type)}
-        disabled={!data.canRunAi}
-        disabledReason={!data.canRunAi ? (data.accessMessage ?? null) : null}
+        disabled={!data.canRunAi || !me?.userId}
+        disabledReason={!me?.userId ? "Checking your account before opening saved requests…" : !data.canRunAi ? (data.accessMessage ?? null) : null}
       />
       <WishFeed slug={slug} chat={data.chat} />
 

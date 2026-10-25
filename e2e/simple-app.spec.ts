@@ -25,6 +25,11 @@ test("plain-language Home, suggestions, tools, and review links @mobile", async 
   await expect(page.getByLabel("Message Climb AI", { exact: true })).toHaveValue("Keep this question.\nWhat needs my attention today?");
   await page.getByRole("button", { name: "Close Climb AI", exact: true }).click();
   await expect(history).toHaveText(before, { useInnerText: true });
+
+  await page.goto(`/app/${slug}/content`);
+  await page.goto(`/app/${slug}/today`);
+  await expect(request).toHaveValue("Keep this draft.\nPrepare posts for next week\nHelp me understand my sales");
+
   await expectAccessible(page, "simple Home");
   await expectNoHorizontalScroll(page);
   await page.screenshot({ path: test.info().outputPath("home-request.png"), fullPage: false });
