@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(21);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(24);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -46,6 +46,18 @@ describe("creative strategy precedent retrieval", () => {
 
   it("retrieves a capacity-led invitation rollout without endorsing artificial scarcity", () => {
     expect(retrieveCreativePrecedents("Run a capacity-limited beta with an invitation loop and transparent onboarding").some(({ precedent }) => precedent.id === "CP-021")).toBe(true);
+  });
+
+  it("retrieves creator-centered participation without promising viral reach", () => {
+    expect(retrieveCreativePrecedents("Recognize an authentic customer-created social moment and ask permission to collaborate with the creator").some(({ precedent }) => precedent.id === "CP-022")).toBe(true);
+  });
+
+  it("retrieves personalization as a product participation mechanism", () => {
+    expect(retrieveCreativePrecedents("Personalize product packaging so customers can share a meaningful gift with friends").some(({ precedent }) => precedent.id === "CP-023")).toBe(true);
+  });
+
+  it("retrieves accountable service recovery without generalizing brand humor", () => {
+    expect(retrieveCreativePrecedents("Respond to a real service failure with an accountable apology, clear remedy, and recovery plan").some(({ precedent }) => precedent.id === "CP-024")).toBe(true);
   });
 
   it("retrieves opt-in personalization and sharing as a separate customer mechanism", () => {
