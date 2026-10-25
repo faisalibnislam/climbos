@@ -16,6 +16,10 @@ test("plain-language Home, suggestions, tools, and review links @mobile", async 
 
   await page.getByRole("button", { name: /Ask for help or find a tool/ }).click();
   await page.getByRole("combobox", { name: "Find a tool or prepare a request" }).fill("Help me understand my sales");
+  const paletteUrl = page.url();
+  await page.getByRole("combobox", { name: "Find a tool or prepare a request" }).dispatchEvent("keydown", { key: "Enter", keyCode: 229, isComposing: false });
+  await expect(page).toHaveURL(paletteUrl);
+  await expect(page.getByRole("dialog", { name: "Find a tool or ask for help" })).toBeVisible();
   await page.getByRole("button", { name: /Ask for help with this/ }).click();
   await expect(request).toHaveValue("Keep this draft.\nPrepare posts for next week\nHelp me understand my sales");
   await expect(history).toHaveText(before, { useInnerText: true });
@@ -67,6 +71,7 @@ test("shared composer protects drafts and treats IME input as composition @mobil
   await page.getByRole("button", { name: "Help me choose what to do next", exact: true }).click();
   await expect(input).toHaveValue("My first line\nHelp me choose what to do next");
   await input.dispatchEvent("keydown", { key: "Enter", isComposing: true });
+  await input.dispatchEvent("keydown", { key: "Enter", keyCode: 229, isComposing: false });
   await expect(page.getByText(/^Example received:/)).toHaveCount(0);
   await input.press("Shift+Enter");
   await input.press("End");

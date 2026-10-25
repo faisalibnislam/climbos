@@ -46,7 +46,9 @@ export function RequestComposer({
             input.style.height = `${Math.min(input.scrollHeight, 240)}px`;
           }}
           onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && window.matchMedia("(pointer: fine)").matches) {
+            // Safari can report the IME confirmation key as keyCode 229 even
+            // when isComposing is already false on the final keydown event.
+            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229 && window.matchMedia("(pointer: fine)").matches) {
               event.preventDefault();
               submit();
             }

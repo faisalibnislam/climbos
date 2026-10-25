@@ -70,7 +70,9 @@ export function CommandPalette({ slug }: { slug: string }) {
         <div className="flex items-center gap-2 border-b border-line pb-3">
           <Search className="size-4 shrink-0 text-ink-3" aria-hidden />
           <input ref={inputRef} value={q} onChange={(event) => { setQ(event.target.value); setActive(0); }} onKeyDown={(event) => {
-            if (event.nativeEvent.isComposing) return;
+            // Do not activate a result on the IME confirmation Enter key.
+            // Safari may expose that final keydown as legacy keyCode 229.
+            if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
             if (event.key === "ArrowDown") { event.preventDefault(); setActive((value) => Math.min(value + 1, commands.length - 1)); }
             if (event.key === "ArrowUp") { event.preventDefault(); setActive((value) => Math.max(value - 1, 0)); }
             if (event.key === "Enter") { event.preventDefault(); commands[clamp]?.run(); }
