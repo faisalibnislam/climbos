@@ -99,7 +99,7 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
     setSyncingPerformance(true);
     try {
       await syncPerformance({ slug, campaignId: c.id });
-      toast({ tone: "success", title: "Google Ads results refreshed." });
+      toast({ tone: "success", title: `${platformName(c.channel)} results refreshed.` });
     } catch (e) {
       setPerformanceError(e);
     } finally {
@@ -165,10 +165,10 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
           </ul>
         </div>
       ) : null}
-      {c.channel === "google_search_ad" && c.externalId && ["active", "paused", "ended"].includes(c.status) ? (
+      {(c.channel === "google_search_ad" || c.channel === "meta_ad") && c.externalId && ["active", "paused", "ended"].includes(c.status) ? (
         <section aria-label="Campaign performance" className="flex flex-col gap-2 rounded-lg border border-line bg-surface-2 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h4 className="text-sm font-semibold text-ink">Google Ads results</h4>
+            <h4 className="text-sm font-semibold text-ink">{c.channel === "google_search_ad" ? "Google Ads results" : "Meta Ads results"}</h4>
             <Button type="button" variant="secondary" size="sm" onClick={refreshPerformance} disabled={syncingPerformance}>
               <RefreshCw aria-hidden="true" className={syncingPerformance ? "animate-spin" : ""} />
               {syncingPerformance ? "Refreshing…" : "Refresh results"}
@@ -177,10 +177,19 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
           {performance ? (
             <>
               <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
-                <div><dt className="text-xs text-ink-3">Reported spend</dt><dd className="font-medium text-ink">{minorToDisplay(performance.spendMinor ?? 0, performance.currency)}</dd></div>
-                <div><dt className="text-xs text-ink-3">Reported conversions</dt><dd className="font-medium text-ink">{performance.conversions ?? 0}</dd></div>
-                <div><dt className="text-xs text-ink-3">Clicks / impressions</dt><dd className="font-medium text-ink">{(performance.clicks ?? 0).toLocaleString()} / {(performance.impressions ?? 0).toLocaleString()}</dd></div>
+                <div><dt className="text-xs text-ink-3">Reported spend</dt><dd className="font-medium text-ink">{performance.spendMinor === undefined ? "Not reported" : minorToDisplay(performance.spendMinor, performance.currency)}</dd></div>
+                {performance.conversions !== undefined ? <div><dt className="text-xs text-ink-3">Reported conversions</dt><dd className="font-medium text-ink">{performance.conversions.toLocaleString()}</dd></div> : null}
+                <div><dt className="text-xs text-ink-3">Clicks / impressions</dt><dd className="font-medium text-ink">{performance.clicks === undefined ? "Unknown" : performance.clicks.toLocaleString()} / {performance.impressions === undefined ? "unknown" : performance.impressions.toLocaleString()}</dd></div>
                 <div><dt className="text-xs text-ink-3">Report window</dt><dd className="font-medium text-ink">{performance.startDate} to {performance.endDate}</dd></div>
+                {performance.reportedActions?.length ? (
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs text-ink-3">Actions reported by Meta (types shown separately)</dt>
+                    <dd className="mt-1 flex flex-wrap gap-x-4 gap-y-1 font-medium text-ink">
+                      {performance.reportedActions.slice(0, 6).map((action) => <span key={action.actionType}>{action.actionType}: {action.value.toLocaleString()}</span>)}
+                      {performance.reportedActions.length > 6 ? <span>and {performance.reportedActions.length - 6} more</span> : null}
+                    </dd>
+                  </div>
+                ) : null}
                 {performance.conversions && performance.conversions > 0 ? (
                   <div><dt className="text-xs text-ink-3">Reported cost / conversion</dt><dd className="font-medium text-ink">{minorToDisplay(Math.round((performance.spendMinor ?? 0) / performance.conversions), performance.currency)}</dd></div>
                 ) : null}
@@ -190,19 +199,21 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
                   {review.message}
                 </Callout>
               ) : null}
+              {performance.source === "meta_ads" ? (
+                <Callout tone="info" title="Action types need a clear match">
+                  Meta reports several kinds of actions. ClimbOS keeps them separate and does not treat them as conversions or calculate cost per conversion without a confirmed match to this campaign’s goal.
+                </Callout>
+              ) : null}
               <p className="text-xs text-ink-3">
-                Source: Google Ads, synced {new Date(performance.syncedAt).toLocaleString()}. Platform reports can change and reflect its conversion settings; they do not establish incremental customers or profit. This recommendation never pauses or edits the campaign.
+                Source: {performance.source === "google_ads" ? "Google Ads" : "Meta Ads"}, synced {new Date(performance.syncedAt).toLocaleString()}. Platform reports can change and reflect its reporting settings; they do not establish incremental customers or profit. This recommendation never pauses or edits the campaign.
               </p>
+              {performance.source === "meta_ads" ? <p className="text-xs text-ink-3">The report window ends using your workspace timezone; Meta’s daily reporting dates may follow the ad account timezone.</p> : null}
             </>
           ) : (
-            <p className="text-sm text-ink-2">Refresh to read daily results from the connected account. ClimbOS compares results only with a cost target you set.</p>
+            <p className="text-sm text-ink-2">Refresh to read daily results from the connected account. Google campaign advice uses only the conversion count reported by Google and your cost target. Meta action types remain separate until the campaign goal can be matched.</p>
           )}
           {performanceError ? <ErrorCallout error={performanceError} /> : null}
         </section>
-      ) : c.channel === "meta_ad" && c.externalId ? (
-        <Callout tone="info" title="Performance review requires owner input">
-          Meta results are not currently synced into this view. Use Meta Ads Manager to review them; ClimbOS will not infer a pause recommendation without verified campaign data.
-        </Callout>
       ) : null}
       {error ? <ErrorCallout error={error} /> : null}
       {!c.accountConnected && (c.status === "needs_approval" || c.status === "created_paused" || c.status === "paused") ? (

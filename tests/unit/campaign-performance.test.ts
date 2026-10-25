@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { reviewCampaignPerformance } from "../../shared/acquisition/campaignPerformance";
+import { aggregateMetaCampaignInsights } from "../../shared/acquisition/metaCampaignInsights";
+import type { MetaInsightRow } from "../../shared/integrations/metaAds";
 
 const base = {
   campaignStartDate: "2026-10-01",
@@ -38,5 +40,31 @@ describe("reviewCampaignPerformance", () => {
 
   it("rejects invalid inputs rather than silently making a recommendation", () => {
     expect(() => reviewCampaignPerformance({ ...base, conversions: -1 })).toThrow("inputs are invalid");
+  });
+});
+
+describe("aggregateMetaCampaignInsights", () => {
+  const rows: MetaInsightRow[] = [
+    { date: "2026-10-01", campaignId: "42", campaignName: "Campaign", spend: 1.25, impressions: 100, clicks: 4, currency: "USD", actions: [{ actionType: "link_click", value: 4 }, { actionType: "lead", value: 1 }] },
+    { date: "2026-10-02", campaignId: "42", campaignName: "Campaign", spend: 2, impressions: 200, clicks: 5, currency: "USD", actions: [{ actionType: "link_click", value: 5 }] },
+    { date: "2026-10-02", campaignId: "99", campaignName: "Other", spend: 100, impressions: 1000, clicks: 80, currency: "USD", actions: [] },
+  ];
+
+  it("sums only the selected campaign and keeps unlike Meta actions separate", () => {
+    expect(aggregateMetaCampaignInsights({ rows, campaignId: "42", startDate: "2026-10-01", endDate: "2026-10-02", currency: "USD" })).toEqual({
+      spendMinor: 325,
+      impressions: 300,
+      clicks: 9,
+      reportedActions: [{ actionType: "lead", value: 1 }, { actionType: "link_click", value: 9 }],
+    });
+  });
+
+  it("does not accept missing, conflicting, or unmatched currency data", () => {
+    expect(() => aggregateMetaCampaignInsights({ rows, campaignId: "42", startDate: "2026-10-01", endDate: "2026-10-02", currency: "EUR" })).toThrow(/currency/i);
+    expect(() => aggregateMetaCampaignInsights({ rows: rows.map((r) => ({ ...r, currency: undefined })), campaignId: "42", startDate: "2026-10-01", endDate: "2026-10-02", currency: "USD" })).toThrow(/currency/i);
+  });
+
+  it("keeps an empty report unknown instead of treating it as zero activity", () => {
+    expect(() => aggregateMetaCampaignInsights({ rows, campaignId: "42", startDate: "2026-10-03", endDate: "2026-10-04", currency: "USD" })).toThrow(/no daily rows/i);
   });
 });

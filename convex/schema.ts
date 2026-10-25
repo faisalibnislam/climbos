@@ -3488,7 +3488,7 @@ export default defineSchema({
     orgId: v.id("organizations"),
     campaignId: v.id("campaigns"),
     connectionId: v.id("connections"),
-    source: v.literal("google_ads"),
+    source: v.union(v.literal("google_ads"), v.literal("meta_ads")),
     status: v.union(v.literal("ready"), v.literal("error")),
     startDate: v.string(),
     endDate: v.string(),
@@ -3498,6 +3498,8 @@ export default defineSchema({
     clicks: v.optional(v.number()),
     conversions: v.optional(v.number()),
     conversionValueMinor: v.optional(v.number()),
+    /** Meta action types are kept distinct; they are not interchangeable conversions. */
+    reportedActions: v.optional(v.array(v.object({ actionType: v.string(), value: v.number() }))),
     syncedAt: v.number(),
     error: v.optional(v.string()),
   }).index("by_org_campaign", ["orgId", "campaignId"]),

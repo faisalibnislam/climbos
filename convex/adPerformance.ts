@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { getCampaignMetrics, getCustomerSettings, GOOGLE_ADS_SCOPE } from "../shared/integrations/googleAds";
 import { microsToMinor } from "../shared/integrations/currency";
+import { getInsights } from "../shared/integrations/metaAds";
+import { aggregateMetaCampaignInsights } from "../shared/acquisition/metaCampaignInsights";
 import { internal } from "./_generated/api";
 import { action } from "./_generated/server";
 import { appError } from "./lib/tenancy";
@@ -22,7 +24,41 @@ export const syncPerformance = action({
   handler: async (ctx, { slug, campaignId }): Promise<{ ok: true; startDate: string; endDate: string; rows: number }> => {
     const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "view" });
     if (access.kind === "demo") throw appError("UNAVAILABLE", "Demo workspaces do not contain live campaign results.");
-    const { campaign, connection } = await ctx.runQuery(internal.ads.performanceSyncContext, { orgId: access.orgId, campaignId });
+    const { campaign, connection, timeZone: workspaceTimeZone } = await ctx.runQuery(internal.ads.performanceSyncContext, { orgId: access.orgId, campaignId });
+
+    if (campaign.channel === "meta_ad") {
+      if (!connection.scopes.includes("ads_read")) throw appError("FORBIDDEN", "This connection does not have the Meta Ads reporting permission.");
+      if (!campaign.externalId || !connection.externalAccountId) throw appError("INVALID", "The campaign or connected Meta ad account is missing its platform ID.");
+      if (connection.expiresAt && connection.expiresAt < Date.now() + 5 * 60_000) {
+        const refreshed = await ctx.runAction(internal.connectionActions.refreshAccessToken, { connectionId: connection._id });
+        if (!refreshed.ok) throw appError("UNAVAILABLE", refreshed.message ?? "Reconnect Meta Ads to read results.");
+      }
+      const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId: connection._id });
+      if (!secret) throw appError("UNAVAILABLE", "The Meta Ads connection needs to be reconnected.");
+      const stored = JSON.parse(secret.value) as { accessToken?: unknown };
+      if (typeof stored.accessToken !== "string") throw appError("UNAVAILABLE", "The Meta Ads connection needs to be reconnected.");
+
+      const activationDay = campaign.activatedAt ? dateInZone(campaign.activatedAt, workspaceTimeZone) : campaign.startDate!;
+      const yesterday = shiftIsoDay(dateInZone(Date.now(), workspaceTimeZone), -1);
+      const endDate = campaign.endDate && campaign.endDate < yesterday ? campaign.endDate : yesterday;
+      if (endDate < activationDay) throw appError("INVALID", "No completed campaign days are available to report yet.");
+      const startDate = activationDay < shiftIsoDay(endDate, -89) ? shiftIsoDay(endDate, -89) : activationDay;
+      const report = await getInsights({ accessToken: stored.accessToken, adAccountId: connection.externalAccountId, since: startDate, until: endDate, level: "campaign", maxPages: 5 });
+      if (!report.ok) throw appError("UNAVAILABLE", `Meta Ads results could not be read: ${report.providerMessage}`);
+      let totals;
+      try {
+        totals = aggregateMetaCampaignInsights({ rows: report.data.items, campaignId: campaign.externalId, startDate, endDate, currency: campaign.currency });
+      } catch (error) {
+        throw appError("INVALID", `Meta Ads results could not be compared safely: ${error instanceof Error ? error.message : "invalid report data"}`);
+      }
+      await ctx.runMutation(internal.ads.recordPerformanceSnapshot, {
+        slug, campaignId, connectionId: connection._id, source: "meta_ads", status: "ready", startDate, endDate,
+        currency: campaign.currency, spendMinor: totals.spendMinor, impressions: totals.impressions, clicks: totals.clicks,
+        reportedActions: totals.reportedActions,
+      });
+      return { ok: true as const, startDate, endDate, rows: report.data.items.filter((row) => row.campaignId === campaign.externalId && row.date >= startDate && row.date <= endDate).length };
+    }
+
     if (!connection.scopes.includes(GOOGLE_ADS_SCOPE)) throw appError("FORBIDDEN", "This connection does not have the Google Ads reporting permission.");
     if (!process.env.GOOGLE_ADS_DEVELOPER_TOKEN) throw appError("UNAVAILABLE", "Google Ads reporting is not configured on ClimbOS yet (developer token pending).");
 
@@ -64,6 +100,7 @@ export const syncPerformance = action({
       slug,
       campaignId,
       connectionId: connection._id,
+      source: "google_ads",
       status: "ready",
       startDate,
       endDate,

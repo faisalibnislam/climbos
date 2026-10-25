@@ -48,6 +48,50 @@ describe("campaign performance access", () => {
     expect(slugB).not.toBe(slugA);
   });
 
+  it("keeps Meta results tenant-scoped to the linked ad account", async () => {
+    const t = setup();
+    const ownerA = await asNewUser(t, "meta-ads-a@example.com");
+    const ownerB = await asNewUser(t, "meta-ads-b@example.com");
+    const { slug: slugA } = await ownerA.client.mutation(api.orgs.createWorkspace, { businessName: "Workspace A" });
+    const { slug: slugB } = await ownerB.client.mutation(api.orgs.createWorkspace, { businessName: "Workspace B" });
+    const orgB = await t.run(async (ctx) => (await ctx.db.query("organizations").withIndex("by_slug", (q) => q.eq("slug", slugB)).unique())!);
+    const campaignId = await t.run(async (ctx) => {
+      const now = Date.now();
+      const connectionId = await ctx.db.insert("connections", {
+        orgId: orgB._id,
+        provider: "meta_ads",
+        status: "connected",
+        externalAccountId: "1234567890",
+        scopes: ["ads_read"],
+        isFixture: false,
+        createdBy: ownerB.userId,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return ctx.db.insert("campaigns", {
+        orgId: orgB._id,
+        channel: "meta_ad",
+        name: "Private Meta campaign",
+        status: "active",
+        budgetEnvelopeMinor: 10000,
+        dailyBudgetMinor: 1000,
+        currency: "USD",
+        startDate: "2026-10-01",
+        endDate: "2026-10-30",
+        reviewAfterDays: 7,
+        stopRules: [],
+        externalId: "987654321",
+        connectionId,
+        activatedAt: now - 10 * 86_400_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    await expect(ownerA.client.action(api.adPerformance.syncPerformance, { slug: slugA, campaignId }))
+      .rejects.toThrow(/couldn't find that campaign/i);
+  });
+
   it("does not treat demo fixtures as live campaign data", async () => {
     const t = setup();
     const anonymous = await asNewUser(t, "demo-ads@example.com", { anonymous: true });

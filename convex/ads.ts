@@ -11,7 +11,7 @@ import { approvalHash, canonicalJson, checkApprovalForExecution, sha256Hex } fro
 import { maxRolling31DaySpend, validCampaignDateRange } from "../shared/policy/campaignBudget";
 import { campaignApprovalScope } from "../shared/policy/campaignScope";
 import { internal } from "./_generated/api";
-import type { Doc, Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { activePolicyVersion } from "./jobWrites";
 import { audit } from "./lib/audit";
@@ -86,15 +86,17 @@ export const performanceSyncContext = internalQuery({
   args: { orgId: v.id("organizations"), campaignId: v.id("campaigns") },
   handler: async (ctx, { orgId, campaignId }) => {
     const campaign = assertSameOrg(await ctx.db.get(campaignId), orgId, "campaign");
+    const org = await ctx.db.get(orgId);
     const connection = campaign.connectionId ? await ctx.db.get(campaign.connectionId) : null;
-    if (campaign.channel !== "google_search_ad") throw appError("UNAVAILABLE", "Live campaign results are currently supported for Google Search campaigns only.");
-    if (!connection || connection.orgId !== orgId || connection.provider !== "google_ads" || connection.status !== "connected" || connection.isFixture) {
-      throw appError("UNAVAILABLE", "Connect a live Google Ads account before reading campaign results.");
+    const expectedProvider = campaign.channel === "google_search_ad" ? "google_ads" : campaign.channel === "meta_ad" ? "meta_ads" : null;
+    if (!expectedProvider) throw appError("UNAVAILABLE", "Live campaign results are not available for this campaign type.");
+    if (!connection || connection.orgId !== orgId || connection.provider !== expectedProvider || connection.status !== "connected" || connection.isFixture) {
+      throw appError("UNAVAILABLE", `Connect a live ${expectedProvider === "google_ads" ? "Google Ads" : "Meta Ads"} account before reading campaign results.`);
     }
     if (!campaign.externalId || (!campaign.activatedAt && !campaign.startDate) || !["active", "paused", "ended"].includes(campaign.status)) {
       throw appError("INVALID", "Start this campaign before reading its performance.");
     }
-    return { campaign, connection };
+    return { campaign, connection, timeZone: org?.timezone ?? "UTC" };
   },
 });
 
@@ -103,6 +105,7 @@ export const recordPerformanceSnapshot = internalMutation({
     slug: v.string(),
     campaignId: v.id("campaigns"),
     connectionId: v.id("connections"),
+    source: v.union(v.literal("google_ads"), v.literal("meta_ads")),
     status: v.union(v.literal("ready"), v.literal("error")),
     startDate: v.string(),
     endDate: v.string(),
@@ -112,14 +115,17 @@ export const recordPerformanceSnapshot = internalMutation({
     clicks: v.optional(v.number()),
     conversions: v.optional(v.number()),
     conversionValueMinor: v.optional(v.number()),
+    reportedActions: v.optional(v.array(v.object({ actionType: v.string(), value: v.number() }))),
     error: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "view");
     const campaign = assertSameOrg(await ctx.db.get(args.campaignId), org._id, "campaign");
-    if (campaign.connectionId !== args.connectionId || campaign.channel !== "google_search_ad") throw appError("FORBIDDEN", "This account is no longer connected to the campaign.");
+    const expectedChannel = args.source === "google_ads" ? "google_search_ad" : "meta_ad";
+    const expectedProvider = args.source;
+    if (campaign.connectionId !== args.connectionId || campaign.channel !== expectedChannel) throw appError("FORBIDDEN", "This account is no longer connected to the campaign.");
     const connection = await ctx.db.get(args.connectionId);
-    if (!connection || connection.orgId !== org._id || connection.provider !== "google_ads") throw appError("FORBIDDEN", "The connected account changed before this result could be saved.");
+    if (!connection || connection.orgId !== org._id || connection.provider !== expectedProvider || connection.status !== "connected" || connection.isFixture) throw appError("FORBIDDEN", "The connected account changed before this result could be saved.");
     const old = await ctx.db.query("campaignPerformance")
       .withIndex("by_org_campaign", (q) => q.eq("orgId", org._id).eq("campaignId", campaign._id))
       .first();
@@ -129,7 +135,7 @@ export const recordPerformanceSnapshot = internalMutation({
       orgId: org._id,
       campaignId: campaign._id,
       connectionId: connection._id,
-      source: "google_ads",
+      source: args.source,
       status: args.status,
       startDate: args.startDate,
       endDate: args.endDate,
@@ -139,6 +145,7 @@ export const recordPerformanceSnapshot = internalMutation({
       clicks: args.clicks,
       conversions: args.conversions,
       conversionValueMinor: args.conversionValueMinor,
+      reportedActions: args.reportedActions,
       syncedAt,
       error: args.error?.slice(0, 300),
     });
@@ -150,8 +157,8 @@ export const recordPerformanceSnapshot = internalMutation({
       subjectType: "campaign",
       subjectId: campaign._id,
       summary: args.status === "ready"
-        ? `Read Google Ads campaign metrics for ${args.startDate} through ${args.endDate}; no live settings were changed.`
-        : `Google Ads metric read did not complete: ${(args.error ?? "unknown error").slice(0, 180)}`,
+        ? `Read ${args.source === "google_ads" ? "Google Ads" : "Meta Ads"} campaign metrics for ${args.startDate} through ${args.endDate}; no live settings were changed.`
+        : `${args.source === "google_ads" ? "Google Ads" : "Meta Ads"} metric read did not complete: ${(args.error ?? "unknown error").slice(0, 180)}`,
     });
     return syncedAt;
   },

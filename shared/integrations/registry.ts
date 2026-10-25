@@ -47,7 +47,7 @@ export interface VerifiedFact {
   value: string;
   docsUrl: string;
   verified: boolean;
-  verifiedAt: typeof VERIFIED_AT;
+  verifiedAt: string;
   note?: string;
 }
 
@@ -68,7 +68,7 @@ export interface ProviderMetadata {
   connection: "oauth_google" | "oauth_meta" | "oauth_instagram" | "oauth_linkedin" | "oauth_x" | "api_key" | "file_upload" | "none";
   apiVersion: string;
   verified: boolean;
-  verifiedAt: typeof VERIFIED_AT;
+  verifiedAt: string;
   capabilities: CapabilityDefinition[];
   /** Platform-level env vars that must be set by the ClimbOS operator. */
   requiredEnv: string[];
@@ -77,7 +77,7 @@ export interface ProviderMetadata {
   docs: VerifiedFact[];
 }
 
-const fact = (f: Omit<VerifiedFact, "verifiedAt">): VerifiedFact => ({ ...f, verifiedAt: VERIFIED_AT });
+const fact = (f: Omit<VerifiedFact, "verifiedAt"> & { verifiedAt?: string }): VerifiedFact => ({ ...f, verifiedAt: f.verifiedAt ?? VERIFIED_AT });
 
 export const PROVIDERS: Record<ProviderId, ProviderMetadata> = {
   ga4: {
@@ -168,7 +168,7 @@ export const PROVIDERS: Record<ProviderId, ProviderMetadata> = {
       fact({ fact: "Graph/Marketing API version", value: "v26.0 (introduced 2026-07-29)", docsUrl: "https://developers.facebook.com/docs/graph-api/changelog", verified: true }),
       fact({ fact: "Create campaign", value: "POST /act_{id}/campaigns: special_ad_categories required; objective OUTCOME_*; status ACTIVE|PAUSED; spend_cap in currency subunits (min ≈ $100)", docsUrl: "https://developers.facebook.com/docs/marketing-api/reference/ad-account/campaigns/", verified: true }),
       fact({ fact: "Rate-limit headers", value: "X-App-Usage, X-Business-Use-Case-Usage (estimated_time_to_regain_access in minutes), X-Ad-Account-Usage", docsUrl: "https://developers.facebook.com/docs/graph-api/overview/rate-limiting", verified: true }),
-      fact({ fact: "Insights fields", value: "GET /act_{id}/insights fields=spend,impressions,clicks,actions time_increment=1", docsUrl: "https://developers.facebook.com/docs/marketing-api/insights", verified: false, note: "Insights page not re-fetched." }),
+      fact({ fact: "Insights fields", value: "Meta's official Marketing API collection shows ad-account and campaign Insights requests with spend, impressions, clicks, actions, date ranges, and daily time_increment=1; the app requires an access token and the access tier depends on whose ad accounts it manages.", docsUrl: "https://www.postman.com/meta/facebook-marketing-api/request/5wdl62t/attributionsetting", verified: true, verifiedAt: "2026-10-25", note: "Meta developer documentation returned HTTP 429 on this check; verified against Meta's official Postman API collection." }),
     ],
   },
   facebook_pages: {
