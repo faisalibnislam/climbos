@@ -1,6 +1,6 @@
 /**
  * Small, source-checked creative-strategy precedent set. This is deliberately
- * not padded to 100: the source corpus currently supports sixteen reviewed cases.
+ * not padded to 100: the source corpus currently supports seventeen reviewed cases.
  * Additions require claim-level source verification and editorial review.
  */
 export interface CreativePrecedent {
@@ -378,6 +378,27 @@ export const CREATIVE_PRECEDENTS: readonly CreativePrecedent[] = [
     sources: [
       { title: "Domino's Pizza, Inc. 2010 Form 10-K", url: "https://ir.dominos.com/static-files/c2ce0038-e69b-4662-9f10-9f11f67d5365", publisher: "Domino's Pizza, Inc. / U.S. Securities and Exchange Commission filing", publicationDate: "2011", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action_and_outcome", supports: "The filing describes the 2009 improved core recipe, the Oh Yes We Did campaign, website recipe explanations and customer feedback, media attention, positive same-store sales during the broader initiatives, franchisee marketing contributions, and operating context." },
       { title: "Domino's Pizza, Inc. 2018 Form 10-K", url: "https://ir.dominos.com/static-files/32b760c2-4719-4b19-8d6b-9d788dcde100", publisher: "Domino's Pizza, Inc. / U.S. Securities and Exchange Commission filing", publicationDate: "2019", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action_and_outcome", supports: "The filing says company leaders were inspired by harsh criticism, changed the recipe rather than relying on advertising alone, and communicated that they had heard customer feedback; it also reports the company's view that the recipe contributed to later reorder, traffic, and sales growth." },
+    ],
+  },
+  {
+    id: "CP-017", title: "IKEA integrated flat-pack design with customer assembly", organization: "IKEA", sector: "Furniture retail and home furnishing", geography: "Sweden, later multi-market", approximateScale: "Growing mail-order furniture retailer in the 1950s; scale at adoption not independently quantified", businessModel: "Designed and sold furniture through mail order and retail, with customers taking home and assembling products", period: "1950s onward",
+    families: ["constraint_transformation", "product_service_design", "customer_participation", "distribution_redesign", "compact_packaging", "customer_assembly", "bulky_delivery"],
+    transferProfile: { audiences: ["price-conscious households", "customers willing to assemble", "self-service buyers"], goals: ["reduce delivery friction", "lower product cost", "faster fulfillment", "operating efficiency"], constraints: ["bulky delivery", "shipping damage", "storage space", "customer effort", "clear instructions"], scale: ["small retailer", "growing mail-order business", "multi-location retailer"], geographies: ["Sweden", "Europe", "global"], businessModels: ["furniture retail", "mail order", "physical product", "self-service retail"] },
+    convention: "Furniture should be fully assembled before it is shipped to the customer; the seller must absorb the whole delivery and assembly burden.",
+    choice: "IKEA combined flat packaging, product design, self-service distribution, and customer assembly. Company history says it adopted flat-packing in the 1950s to address costly and damage-prone furniture transport; the IKEA Museum describes customer assembly as part of the resulting business model.",
+    mechanism: "The product, packaging, delivery path, and division of work were designed together. Customers invested assembly time in exchange for a more compact product and a lower-cost, faster take-home route. The idea was not inventing flat-pack furniture; the strategic move was integrating it into how products were designed, distributed, and sold.",
+    distinctiveness: "A packaging and fulfillment constraint became a product-system choice that shifted part of delivery work to customers while making the trade-off legible and repeatable across a retail model.",
+    outcome: "IKEA's corporate history says flat-pack furniture helped solve costly transport problems, and its museum describes it as central to a business model built around customer assembly. These are company-reported historical interpretations; no controlled estimate of incremental savings, demand, or profit is established here.",
+    evidenceClass: "Company histories describe the adoption, operational problem, and business-model mechanism; reported benefit is not independently quantified or causally isolated.",
+    causalLimit: "Packaging, product design, supplier relationships, retail operations, customer willingness, pricing, and market expansion changed together. This record does not quantify the independent effect of flat-packing or show that transferring work to customers always improves value.",
+    conditions: ["A product that can be safely disassembled and reassembled", "Customers who accept the assembly trade-off", "Instructions and parts that reduce failure and support burden", "A real transport, storage, damage, or fulfillment constraint"],
+    transferRisk: "Self-service can feel like uncompensated labor, increase returns or support cost, or create safety and quality problems. Do not move work to customers unless the resulting price, speed, access, or customization benefit is real and clear.",
+    smallBusinessAdaptation: "For one suitable product or service, redesign the package or workflow so customers can complete a low-risk final step themselves in return for a concrete benefit such as faster pickup, lower delivery cost, or more choice.",
+    reversibleTest: "Pilot a compact, customer-assembled version with a few existing buyers. Compare transport damage, delivery or storage cost, setup time, completion failures, support contacts, returns, and repeat purchase with the current path; stop if customers do not value the trade-off or quality declines.",
+    editorialStatus: "verified_primary", researchConfidence: "medium", accessedAt: "2026-10-25",
+    sources: [
+      { title: "From humble origins to global brand – a brief history of IKEA", url: "https://www.ikea.com/us/en/this-is-ikea/about-us/from-humble-origins-to-global-brand-a-brief-history-of-ikea-pubad29a981/", publisher: "IKEA", publicationDate: "Undated; current company history page", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action_and_outcome", supports: "IKEA says high furniture transport costs and damage rates were a problem, that it adopted flat-packing in 1953, and that self-assembly products helped solve those transport problems." },
+      { title: "How IKEA took flatpacks to a whole new level", url: "https://ikeamuseum.com/en/explore/the-story-of-ikea/flatpacks/", publisher: "IKEA Museum", publicationDate: "Undated; current museum history page", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action_and_outcome", supports: "The museum says IKEA did not invent flat-packing, but integrated it into a business model in which customers assembled furniture themselves." },
     ],
   },
 ];
