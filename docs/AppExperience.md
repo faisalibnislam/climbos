@@ -13,7 +13,7 @@ The application uses task-based navigation and plain-language explanations. Exis
 
 The content calendar has day, week, and month views in the workspace timezone. It includes scheduled posts, Autopilot slots, and items waiting for review; selecting a date opens that day's agenda on both touch and desktop layouts. Opening an item leads to its post or Autopilot workspace. A calendar recommendation never schedules or publishes by itself.
 
-Home and request results label action-card progress in plain language: Suggested, In progress, Completed, Ready for review, Needs setup, Couldn’t finish, or Skipped. A completed card that would affect something outside ClimbOS is labeled Ready for review and says that nothing has gone live; opening its result does not grant approval or publish it. A suggested external-effect action says “Prepare it.”
+Home and request results label action-card progress in plain language: Suggested, In progress, Completed, Ready for review, Needs setup, Couldn’t finish, or Skipped. Request summaries distinguish work that still needs a next step, drafts ready for owner review, completed work, and actions the owner skipped. A completed card that would affect something outside ClimbOS is labeled Ready for review and says that nothing has gone live; opening its result does not grant approval or publish it. A suggested external-effect action says “Prepare it.”
 
 `src/components/app/navigation.ts` owns the navigation labels, tool explanations, aliases, and legacy-route grouping. Tool directories link to the real existing editors and records. Connections and review remain directly accessible; technical settings are grouped under Advanced tools without changing permission checks.
 

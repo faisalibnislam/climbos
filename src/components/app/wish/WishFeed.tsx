@@ -17,6 +17,7 @@ import { climbTarget } from "@/components/climb/context";
 import { wishesFrom } from "./pairing";
 import { Prose } from "@/components/ds/content";
 import { ActionCardStatus, actionCardStatusExplanation } from "@/components/app/ActionCardStatus";
+import { wishProgressKind, WISH_PROGRESS_LABELS } from "./progress";
 
 type Today = NonNullable<ReturnType<typeof useQuery<typeof api.workspace.today>>>;
 type ChatMessage = Today["chat"][number];
@@ -58,12 +59,13 @@ function WishCard({ slug, wish }: { slug: string; wish: Wish }) {
   const thinking = ask.status === "thinking" && !answer;
   const failed = ask.status === "failed" && !answer?.cards.length;
   const cards = answer?.cards ?? [];
-  const allDone = cards.length > 0 && cards.every((c) => ["done", "rejected"].includes(c.status) || c.kind === "note");
+  const progress = wishProgressKind(cards, thinking, failed);
+  const positiveResolution = progress === "completed" || progress === "ready_for_review";
   return (
     <article {...climbTarget("wish", ask.id, ask.text)} className="overflow-hidden rounded-xl border border-line bg-surface">
       <header className="flex items-start gap-3 border-b border-line bg-surface-2/60 px-4 py-3">
-        <span aria-hidden className={cn("mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg", thinking ? "bg-sun-soft text-sun-strong" : allDone ? "bg-brand-100 text-brand-800" : "bg-surface-3 text-ink-2")}>
-          {thinking ? <Sparkles className="size-4 animate-soft-pulse" /> : allDone ? <CircleCheck className="size-4" /> : <Zap className="size-4" />}
+        <span aria-hidden className={cn("mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg", thinking ? "bg-sun-soft text-sun-strong" : positiveResolution ? "bg-brand-100 text-brand-800" : "bg-surface-3 text-ink-2")}>
+          {thinking ? <Sparkles className="size-4 animate-soft-pulse" /> : positiveResolution ? <CircleCheck className="size-4" /> : <Zap className="size-4" />}
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-ink">
@@ -71,7 +73,7 @@ function WishCard({ slug, wish }: { slug: string; wish: Wish }) {
           </p>
           <p className="mt-0.5 text-xs text-ink-3">
             {relativeTime(ask.createdAt)}
-            {thinking ? " · Reading…" : allDone ? " · Done" : cards.some((c) => c.status === "running") ? " · Working" : ""}
+            {progress ? ` · ${WISH_PROGRESS_LABELS[progress]}` : ""}
           </p>
         </div>
       </header>
