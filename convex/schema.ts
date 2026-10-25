@@ -3590,6 +3590,10 @@ export default defineSchema({
     endDate: v.optional(v.string()),
     /** Owner-entered efficiency limit used only for review advice, never auto-pausing. */
     targetCostPerConversionMinor: v.optional(v.number()),
+    /** Meta only: the reported action type the owner confirmed as this campaign's conversion (must be one Meta reported). */
+    conversionActionType: v.optional(v.string()),
+    conversionActionSetBy: v.optional(v.id("users")),
+    conversionActionSetAt: v.optional(v.number()),
     /** Owner-confirmed elapsed-day point for first performance review. */
     reviewAfterDays: v.optional(v.number()),
     activatedAt: v.optional(v.number()),

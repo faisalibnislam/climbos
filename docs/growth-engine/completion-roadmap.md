@@ -20,8 +20,8 @@ Status: **Done**, **Next**, or **Planned**. Size: S (one module + tests), M (bac
 | 7 | Design and conversion finding decisions carried across audit runs, with a deduplicated queue | 71–80; handoff 4 | M–L | Done (see ledger) |
 | 8 | Saved forecasts scored against actuals (error, bias, interval coverage) | 314, 315, 327, 408 | S–M | Done (see ledger) |
 | 9 | Possible tracking breaks and unusual swings in connected metrics | 292, 293, 295, 407 | S–M | Done (see ledger) |
-| 10 | Owner-chosen Meta conversion action so cost-per-conversion advice works | 46 | M | Next |
-| 11 | Excerpt checks extended to audience needs, decision observations and other prose references | 24; handoff 3 | S–M | Planned |
+| 10 | Owner-chosen Meta conversion action so cost-per-conversion advice works | 46 | M | Done (see ledger) |
+| 11 | Excerpt checks extended to audience needs, decision observations and other prose references | 24; handoff 3 | S–M | Next |
 | 12 | Lead fit and timing scores checked against outreach outcomes | 278, 290, 400 | S | Planned |
 | 13 | Owner-recorded AI-answer accuracy (incorrect claim vs correct fact) | 372, 374, 397 | M | Planned |
 | 14 | LocalBusiness structured data and `sameAs` links with owner attestation | 365–367 | S–M | Planned |

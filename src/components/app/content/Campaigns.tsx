@@ -6,11 +6,12 @@ import type { FunctionReturnType } from "convex/server";
 import { CircleAlert, CircleCheck, CircleQuestionMark, Clock, Hourglass, Megaphone, Pause, Play, RefreshCw, type LucideIcon } from "@/components/icons"
 import Link from "next/link";
 import { useState } from "react";
-import { Badge, Button, Callout, ConfirmDialog, EmptyState, Skeleton, Tooltip, toast, type Tone } from "@/components/ui";
+import { Badge, Button, Callout, ConfirmDialog, EmptyState, Select, Skeleton, Tooltip, toast, type Tone } from "@/components/ui";
+import { errorMessage } from "@/components/app/errors";
 import { minorToDisplay } from "../money";
 import { KeyTakeaways, StatBlocks } from "@/components/ds/content";
 import { ChannelTag, ErrorCallout, FactList, PERMISSION_WHO, useWorkspaceMember } from "./shared";
-import { reviewCampaignPerformance } from "../../../../shared/acquisition/campaignPerformance";
+import { reviewCampaignPerformance, metaConversions } from "../../../../shared/acquisition/campaignPerformance";
 
 export type AdsList = FunctionReturnType<typeof api.ads.list>;
 export type Campaign = AdsList["campaigns"][number];
@@ -59,6 +60,27 @@ export function CampaignStatusPill({ status }: { status: string }) {
   );
 }
 
+/** Meta: the owner picks which reported action type is this campaign's conversion; until then no cost per conversion is shown. */
+export function MetaConversionChoice({ slug, campaignId, actions, chosen, canEdit }: { slug: string; campaignId: Campaign["id"]; actions: { actionType: string; value: number }[]; chosen: string | null; canEdit: boolean }) {
+  const setAction = useMutation(api.ads.setConversionAction);
+  if (!actions.length) return <Callout tone="info" title="No action types reported yet">Meta hasn’t reported any actions for this campaign, so there’s no conversion count to compare with your target.</Callout>;
+  return (
+    <Callout tone="info" title={chosen ? `Counting “${chosen}” as the conversion` : "Choose which Meta action is the conversion"}>
+      <p>Meta reports several kinds of actions. ClimbOS counts only the one you confirm matches this campaign’s goal, using Meta’s own attribution settings. Other action types stay separate.</p>
+      {canEdit ? (
+        <div className="mt-2 max-w-sm">
+          <Select
+            aria-label="Conversion action for this campaign"
+            options={[{ value: "", label: "Not chosen" }, ...actions.map((a) => ({ value: a.actionType, label: `${a.actionType} (${a.value.toLocaleString()})` }))]}
+            value={chosen ?? ""}
+            onValueChange={(value) => setAction({ slug, campaignId, actionType: value || null }).then(() => toast({ tone: "success", title: value ? "Conversion action saved" : "Conversion action cleared" }), (e) => toast({ tone: "danger", title: errorMessage(e) }))}
+          />
+        </div>
+      ) : null}
+    </Callout>
+  );
+}
+
 /** One campaign with its facts and the next approval step (reviewer roles only). */
 export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo }: { slug: string; campaign: Campaign; headingLevel?: "h2" | "h3" | "h4"; isDemo?: boolean }) {
   const member = useWorkspaceMember(slug);
@@ -73,10 +95,12 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
   const total = minorToDisplay(c.budgetEnvelopeMinor, c.currency);
   const platform = platformName(c.channel);
   const performance = c.performance?.status === "ready" ? c.performance : null;
-  const review = performance && performance.spendMinor !== undefined && performance.conversions !== undefined && performance.endDate
+  // Google reports conversions; Meta's count comes only from the action type the owner confirmed.
+  const conversions = performance ? performance.conversions ?? (performance.source === "meta_ads" ? metaConversions(performance.reportedActions, c.conversionActionType) : undefined) : undefined;
+  const review = performance && performance.spendMinor !== undefined && conversions !== undefined && performance.endDate
     ? reviewCampaignPerformance({
         spendMinor: performance.spendMinor,
-        conversions: performance.conversions,
+        conversions,
         observedThrough: performance.endDate,
         campaignStartDate: performance.startDate,
         reviewAfterDays: c.reviewAfterDays ?? 7,
@@ -190,8 +214,8 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
                     </dd>
                   </div>
                 ) : null}
-                {performance.conversions && performance.conversions > 0 ? (
-                  <div><dt className="text-xs text-ink-3">Reported cost / conversion</dt><dd className="font-medium text-ink">{minorToDisplay(Math.round((performance.spendMinor ?? 0) / performance.conversions), performance.currency)}</dd></div>
+                {conversions && conversions > 0 ? (
+                  <div><dt className="text-xs text-ink-3">Reported cost / conversion</dt><dd className="font-medium text-ink">{minorToDisplay(Math.round((performance.spendMinor ?? 0) / conversions), performance.currency)}</dd></div>
                 ) : null}
               </dl>
               {review ? (
@@ -199,11 +223,7 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
                   {review.message}
                 </Callout>
               ) : null}
-              {performance.source === "meta_ads" ? (
-                <Callout tone="info" title="Action types need a clear match">
-                  Meta reports several kinds of actions. ClimbOS keeps them separate and does not treat them as conversions or calculate cost per conversion without a confirmed match to this campaign’s goal.
-                </Callout>
-              ) : null}
+              {performance.source === "meta_ads" ? <MetaConversionChoice slug={slug} campaignId={c.id} actions={performance.reportedActions ?? []} chosen={c.conversionActionType} canEdit={Boolean(member?.role && ["owner", "admin", "editor"].includes(member.role))} /> : null}
               <p className="text-xs text-ink-3">
                 Source: {performance.source === "google_ads" ? "Google Ads" : "Meta Ads"}, synced {new Date(performance.syncedAt).toLocaleString()}. Platform reports can change and reflect its reporting settings; they do not establish incremental customers or profit. This recommendation never pauses or edits the campaign.
               </p>
