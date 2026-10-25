@@ -734,6 +734,137 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
   };
 }
 
+/** Owner-reported cash-timing inputs, in the business currency. Neither is a bank balance or a payment-terms record. */
+export interface GrowthCashInputs {
+  /** Cash set aside to carry growth costs until new customers' payments arrive. */
+  reserveUsd?: number;
+  /** Typical days from winning a new customer to receiving their first payment (0 = paid up front). */
+  paymentLagDays?: number;
+}
+
+export interface GrowthCashScenario {
+  /** Modeled new customers in the period under this scenario. */
+  customers: number;
+  /** Lowest running balance of growth cash out minus customer contribution in (≤ 0). */
+  lowestBalanceUsd: number;
+  /** Week the lowest balance is reached; 0 when the running balance never drops below zero. */
+  lowestWeek: number;
+  /** Running balance at the end of the period. */
+  endBalanceUsd: number;
+  /** First week after the low point when the running balance is back to zero or above; null when not within the period. */
+  recoveredWeek: number | null;
+  /** Whether the owner's reserve covers the lowest balance; null when the reserve is unknown. */
+  reserveCovers: boolean | null;
+  /** How much more the lowest balance needs than the reserve; null when the reserve is unknown or covers it. */
+  shortfallUsd: number | null;
+}
+
+export interface GrowthCashTiming {
+  horizonWeeks: number;
+  /** Recurring media and other cash costs of the selected plays, per week (excludes owner time). */
+  weeklyCashOutUsd: number;
+  cashOutOverPeriodUsd: number;
+  reserveUsd: number | null;
+  paymentLagDays: number | null;
+  /** At the most-likely rates; null when customer cash in can't be timed (see `missing`). */
+  mostLikely: GrowthCashScenario | null;
+  /** At the low end of the modeled customer range (P10); null like `mostLikely`. */
+  lowCase: GrowthCashScenario | null;
+  /** Inputs that are unknown and keep part of this view from being calculated. */
+  missing: ("payment_lag" | "customer_value" | "churn" | "reserve")[];
+  /** Revenue, margin or churn inputs that the owner hasn't confirmed. */
+  unconfirmedEconomics: ("revenue" | "margin" | "churn")[];
+}
+
+const WEEKS_PER_MONTH = 52 / 12;
+
+/**
+ * Week-by-week growth cash for the selected plays (REQ-MATH: deterministic, no invented inputs).
+ * Cash out is each play's recurring media and other cash cost, spread evenly from the first week.
+ * Cash in is each new customer's monthly contribution (revenue × margin), spread evenly over weeks,
+ * starting the owner's payment lag after the customer is won and shrinking with churn. Customers
+ * arrive on each play's modeled ramp and sales lag, scaled by the same play-overlap rule as the
+ * portfolio. An unknown lag, price, margin or churn leaves cash in untimed rather than assumed.
+ */
+export function growthCashTiming(out: { economics: Economics; plays: PlayLike[] }, selected: string[], opts: { horizonDays?: number } & GrowthCashInputs): GrowthCashTiming | null {
+  const h = opts.horizonDays || 90;
+  const ps = out.plays.filter((p) => p.model?.steps?.length && selected.includes(p.name)).slice(0, 10).map((p) => ({ ...p, horizonDays: h }));
+  if (!ps.length) return null;
+  const hw = h / 7;
+  const W = Math.ceil(hw);
+  const weight = (w: number) => Math.min(1, hw - (w - 1));
+  const monthlyCash = ps.reduce((s, p) => s + Math.max(0, p.model.monthlySpendUsd) + Math.max(0, p.model.otherMonthlyUsd ?? 0), 0);
+  const weeklyCashOut = monthlyCash / WEEKS_PER_MONTH;
+  const reserve = opts.reserveUsd !== undefined && Number.isFinite(opts.reserveUsd) && opts.reserveUsd >= 0 ? opts.reserveUsd : null;
+  const lag = opts.paymentLagDays !== undefined && Number.isFinite(opts.paymentLagDays) && opts.paymentLagDays >= 0 ? opts.paymentLagDays : null;
+  const contribution = monthlyContribution(out.economics);
+  const churn = churnOf(out.economics);
+  const src = economicsSources(out.economics);
+  const unconfirmedEconomics = (["revenue", "margin", "churn"] as const).filter((k) => src[k].source !== "owner");
+  const missing: GrowthCashTiming["missing"] = [
+    ...(lag === null ? ["payment_lag" as const] : []),
+    ...(contribution === null ? ["customer_value" as const] : []),
+    ...(churn === null ? ["churn" as const] : []),
+    ...(reserve === null ? ["reserve" as const] : []),
+  ];
+  const base = {
+    horizonWeeks: W,
+    weeklyCashOutUsd: weeklyCashOut,
+    cashOutOverPeriodUsd: weeklyCashOut * hw,
+    reserveUsd: reserve,
+    paymentLagDays: lag,
+    missing,
+    unconfirmedEconomics,
+  };
+  if (lag === null || contribution === null || churn === null) return { ...base, mostLikely: null, lowCase: null };
+  const ms = ps.map((p) => playMaths(p, out.economics));
+  const stages = ps.map(stageOfPlay);
+  const weeklyContribution = contribution / WEEKS_PER_MONTH;
+  const survival = Math.pow(1 - churn, 1 / WEEKS_PER_MONTH);
+  const firstPayWeek = Math.ceil(lag / 7);
+  const scenario = (perPlay: number[]): GrowthCashScenario => {
+    const sum = perPlay.reduce((s, n) => s + n, 0);
+    const total = sum > 0 ? combinePlays(perPlay, stages) : 0;
+    const overlap = sum > 0 ? total / sum : 0;
+    // Customers won in each week: each play's total, shaped by its ramp and sales lag (effectiveCustomerWeeks).
+    const won = Array.from({ length: W + 1 }, () => 0);
+    ps.forEach((p, i) => {
+      const full = effectiveCustomerWeeks(p.model, hw);
+      if (!(full > 0) || !(perPlay[i] > 0)) return;
+      for (let w = 1; w <= W; w++) won[w] += (perPlay[i] * overlap * (effectiveCustomerWeeks(p.model, Math.min(w, hw)) - effectiveCustomerWeeks(p.model, w - 1))) / full;
+    });
+    let balance = 0;
+    let lowest = 0;
+    let lowestWeek = 0;
+    let recoveredWeek: number | null = null;
+    for (let w = 1; w <= W; w++) {
+      let paying = 0;
+      for (let a = 1; a + firstPayWeek <= w; a++) paying += won[a] * Math.pow(survival, w - a);
+      balance += (paying * weeklyContribution - weeklyCashOut) * weight(w);
+      if (balance < lowest - 1e-9) {
+        lowest = balance;
+        lowestWeek = w;
+        recoveredWeek = null;
+      } else if (lowest < 0 && recoveredWeek === null && balance >= 0) recoveredWeek = w;
+    }
+    const need = -lowest;
+    return {
+      customers: total,
+      lowestBalanceUsd: lowest,
+      lowestWeek,
+      endBalanceUsd: balance,
+      recoveredWeek,
+      reserveCovers: reserve === null ? null : reserve + 1e-6 >= need,
+      shortfallUsd: reserve === null || reserve + 1e-6 >= need ? null : need - reserve,
+    };
+  };
+  return {
+    ...base,
+    mostLikely: scenario(ms.map((m) => m.headline.p50)),
+    lowCase: scenario(ms.map((m) => m.headline.p10)),
+  };
+}
+
 /** Every customer count the calculations produce: portfolio and each play's P10/P50/P90, at the goal's horizon and each play's own. */
 export function forecastCustomers(out: { economics: Economics; plays: PlayLike[] }, horizonDays?: number): number[] {
   const nums: number[] = [];

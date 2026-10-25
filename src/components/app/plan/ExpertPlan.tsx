@@ -10,6 +10,7 @@ import { CREATIVE_PRECEDENTS } from "../../../../shared/knowledge/creativePreced
 import { PlayResults } from "./PlayResults";
 import { EvidenceReferences } from "./EvidenceReferences";
 import { DecisionFocus } from "./DecisionFocus";
+import { GrowthCashTimingPanel, type GrowthCashTimingView } from "./GrowthCashTiming";
 import {
   ArrowRight,
   Ban,
@@ -165,6 +166,8 @@ export interface ExpertView {
     baselinePlayCount: number;
     playAttributed: PortfolioChoice | null;
     modeledIncremental: PortfolioChoice | null;
+    /** The selected set's growth cash timing (null when no set is selected). */
+    cashTiming?: GrowthCashTimingView | null;
   };
 }
 
@@ -1512,6 +1515,7 @@ export function GrowthPlays({ plays, slug, economics, portfolioComparisons, stra
       {strategyExploration ? <StrategyExplorationPanel options={strategyExploration} slug={slug} strategyId={planId} canEdit={canEdit} /> : null}
       {economics ? <EconomicsLine economics={economics} /> : null}
       {portfolioComparisons ? <PortfolioComparisons data={portfolioComparisons} economics={economics} /> : null}
+      {portfolioComparisons?.cashTiming ? <GrowthCashTimingPanel data={portfolioComparisons.cashTiming} slug={slug} canEdit={canEdit} /> : null}
       {sorted.length > 1 ? <PlaysChart plays={sorted} economics={economics} /> : null}
       <div className={cn("grid gap-3", sorted.length > 2 ? "lg:grid-cols-2 xl:grid-cols-3" : "lg:grid-cols-2")}>
         {sorted.map((p) => (

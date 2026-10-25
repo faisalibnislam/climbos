@@ -760,3 +760,34 @@ The backend already accepted weekly repeat-customer counts, retained revenue, an
 ## Resumption note (2026-10-25, SEO original-contribution evidence status)
 
 SEO content generation previously asked for an original contribution and owner evidence but did not structurally distinguish substantiated inputs from a hypothesis. `SeoBriefSchema` now requires an `originalContributionEvidence` status plus fact indexes and exact source URLs. SEO lint checks fact indexes against this run's supplied facts, URLs against pages read in this run, and requires a specific owner-evidence request when the contribution remains a hypothesis. The generation prompt requests evidence linkage but explicitly says linkage does not prove uniqueness or semantic support. The saved draft labels the status and carries exact source links and fact references. `ENGINE_VERSION` is `v3.66-seo-contribution-evidence`. This makes evidence inspectable; it does not independently assess semantic support, compare against competitor content, or establish originality. Focused checks passed: `pnpm exec vitest run tests/unit/search-intent.test.ts tests/unit/seo-artifacts.test.ts` (6 tests), `pnpm typecheck`, targeted ESLint, and `git diff --check`. No live model call or publishing action was performed.
+
+## Resumption note (2026-10-25, portfolio cash-feasibility scope disclosure)
+
+The plan's portfolio objective cards checked modeled monthly growth costs against the owner's monthly growth-cash limit, but did not say what that check excluded. The card now says that it does not forecast bank balance or the timing of customer payments, refunds, taxes, or existing bills. `tests/unit/portfolio-cash-scope.test.tsx` covers the copy (1 test). This is a disclosure; it does not change selection arithmetic.
+
+## Resumption note (2026-10-25, growth cash timing for the selected play set)
+
+Audit rows 122 and 319 were confirmed against code: `selectPortfolio` compared only recurring monthly cash cost with the owner's monthly limit. Nothing modeled when growth cash goes out versus when customer contribution comes back, and nothing compared a peak need with cash set aside. `growthCashTiming` in `shared/agents/economics.ts` now simulates the selected set week by week over the goal period. Cash out is each play's media plus other recurring cash cost, spread evenly from week 1. Customers arrive on each play's modeled ramp and sales lag (`effectiveCustomerWeeks`), scaled by the existing play-overlap rule, so totals match the portfolio's most-likely customers. Each customer contributes revenue × margin per month, starting after an owner-reported payment delay and decaying with churn. Outputs are the lowest running balance, its week, recovery within the period, the end balance, and a reserve comparison, at both most-likely and P10 customer rates. An unknown payment delay, price/margin, or churn returns no timed scenario, and an unknown reserve stays unknown; nothing is defaulted. Revenue, margin, or churn not confirmed by the owner is listed.
+
+Owner inputs are stored in a separate `businesses.growthCashTiming` record (reserve in minor units with its currency, payment delay in whole days, `owner_reported`, user, and time). `workspace.setGrowthCashTiming` requires edit access, validates ranges, keeps omitted fields, clears on `null`, writes an audit entry, and drops (does not relabel) a reserve kept from another currency. The plan query adds `portfolioComparisons.cashTiming` for the current combined selected set. A reserve saved in a different currency is withheld and flagged rather than converted. The inputs are read live and are deliberately not a plan-generation input, so they do not mark the plan stale. `GrowthCashTimingPanel` shows the inputs as reported or "Unknown · not assumed", both scenarios, a reserve gap, a forecast boundary statement, and an editor-only form.
+
+Verified commands:
+
+```text
+pnpm exec vitest run tests/unit/growth-cash-timing.test.ts tests/unit/growth-cash-timing-panel.test.tsx tests/convex/growth-cash-timing.test.ts
+  3 files passed; 12 tests passed (hand-computed balances, lag, P10, unknown inputs, selected-set scope, ramp; viewer/cross-tenant denial, validation, keep/clear, currency non-conversion, no plan staleness)
+
+pnpm exec vitest run <13 files referencing selectPortfolio, workspace.plan, ExpertPlan, setUnitEconomics, play economics, and growth cash>
+  13 files passed; 128 tests passed
+
+pnpm typecheck
+  app and Convex TypeScript checks passed
+
+pnpm exec eslint shared/agents/economics.ts convex/workspace.ts convex/schema.ts src/components/app/plan/GrowthCashTiming.tsx src/components/app/plan/ExpertPlan.tsx tests/unit/growth-cash-timing.test.ts tests/unit/growth-cash-timing-panel.test.tsx tests/convex/growth-cash-timing.test.ts
+  passed
+
+git diff --check
+  passed
+```
+
+Limitations: this is not a bank-balance or whole-business cash-flow forecast. It excludes one-time setup costs (the play model has no such field), refunds, taxes, failed or partial payments, invoicing cycles beyond a single delay, existing bills, seasonality, and payments after the period. Monthly payments are spread evenly across weeks. The view is uncalibrated against actual payment data and is not used by plan generation or approval. No browser preview was run: the local web app targets a remote Convex deployment that does not have these backend changes, and no backend was deployed.

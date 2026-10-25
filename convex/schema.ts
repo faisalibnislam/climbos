@@ -901,6 +901,20 @@ export default defineSchema({
     /** The public review destination shared consistently with every invited customer. */
     reviewUrl: v.optional(v.string()),
     /** Self-improvement loop 1: last weekly read of the business's own site (normalised text, for the diff). */
+    /**
+     * Owner-reported growth cash timing for the plan's cash view (shared/agents/economics.ts growthCashTiming).
+     * Read live, not a plan-generation input; neither value is a bank balance or verified payment terms.
+     */
+    growthCashTiming: v.optional(v.object({
+      /** Cash set aside to carry growth costs until customer payments arrive, in minor units of `currency`. */
+      reserveMinor: v.optional(v.number()),
+      currency: v.string(),
+      /** Typical days from winning a customer to receiving their first payment. */
+      paymentLagDays: v.optional(v.number()),
+      provenance: v.literal("owner_reported"),
+      updatedBy: v.id("users"),
+      updatedAt: v.number(),
+    })),
     /** Unit economics the owner confirmed; they replace the planner's assumptions. */
     unitEconomics: v.optional(
       v.object({

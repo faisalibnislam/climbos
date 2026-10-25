@@ -1,6 +1,6 @@
 import { isServiceBusiness } from "../shared/acquisition/library";
 import { legacyPlanHash, planContentHash } from "./lib/planHash";
-import { minorToMajor } from "../shared/economics/currency";
+import { majorToMinor, minorToMajor } from "../shared/economics/currency";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -20,7 +20,7 @@ import { currentPeriod } from "./lib/periods";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { redactFeedback } from "../shared/lab/redact";
 import { canDriveWork, type QualityState } from "../shared/agents/quality";
-import { applyOwnerEconomics, decisionQuestions, playMaths, playsGoalGap, selectPortfolio, withForecasts, type Economics, type OwnerEconomics, type PlayLike } from "../shared/agents/economics";
+import { applyOwnerEconomics, decisionQuestions, growthCashTiming, playMaths, playsGoalGap, selectPortfolio, withForecasts, type Economics, type OwnerEconomics, type PlayLike } from "../shared/agents/economics";
 import { projectGrowthOpportunities, type OpportunityPlayInput } from "../shared/agents/opportunities";
 import { AGENT_ARCHETYPE_BY_ID } from "../shared/agents/registry";
 import { expertPlaysOf, readExpertPlan } from "../shared/agents/planCompatibility";
@@ -830,6 +830,18 @@ export const plan = query({
       baselinePlayCount: currentPlays.plays.filter((play) => play.model?.steps?.some((step) => step.baselineRate !== undefined)).length,
       playAttributed: selectPortfolio(currentPlays, { ...portfolioLimits, objective: "play_attributed" }),
       modeledIncremental: selectPortfolio(currentPlays, { ...portfolioLimits, objective: "modeled_incremental" }),
+      cashTiming: currentPortfolio?.selected.length ? (() => {
+        // A reserve saved in another currency is not converted: it stays unknown until re-entered.
+        const saved = business?.growthCashTiming;
+        const planCurrency = (currentEconomics as Economics).currency ?? "USD";
+        const reserveCurrencyMismatch = saved?.reserveMinor !== undefined && saved.currency !== planCurrency;
+        const timing = growthCashTiming(currentPlays, currentPortfolio.selected, {
+          horizonDays: goal?.horizonDays,
+          ...(saved?.reserveMinor !== undefined && !reserveCurrencyMismatch ? { reserveUsd: minorToMajor(saved.reserveMinor, saved.currency) } : {}),
+          ...(saved?.paymentLagDays !== undefined ? { paymentLagDays: saved.paymentLagDays } : {}),
+        });
+        return timing ? { ...timing, selected: currentPortfolio.selected, currency: planCurrency, reserveCurrencyMismatch, ownerInputsUpdatedAt: saved?.updatedAt ?? null } : null;
+      })() : null,
     } : null;
     return {
       role,
@@ -964,6 +976,36 @@ export const setUnitEconomics = mutation({
     };
     await ctx.db.patch(business._id, { unitEconomics: next });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "business.unit_economics", subjectType: "business", subjectId: business._id, summary: "Unit economics updated." });
+  },
+});
+
+/** Owner-reported growth cash timing: read live by the plan's cash view; not a plan-generation input. `null` clears a value. */
+export const setGrowthCashTiming = mutation({
+  args: { slug: v.string(), reserve: v.optional(v.union(v.number(), v.null())), paymentLagDays: v.optional(v.union(v.number(), v.null())) },
+  handler: async (ctx, { slug, reserve, paymentLagDays }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    if (!business) throw appError("NOT_FOUND", "Add your business first.");
+    if (reserve === undefined && paymentLagDays === undefined) throw appError("INVALID", "Enter a reserve or a payment delay.");
+    if (reserve !== undefined && reserve !== null && !(Number.isFinite(reserve) && reserve >= 0 && reserve <= 1_000_000_000)) throw appError("INVALID", "Growth cash reserve looks wrong.");
+    if (paymentLagDays !== undefined && paymentLagDays !== null && !(Number.isInteger(paymentLagDays) && paymentLagDays >= 0 && paymentLagDays <= 365)) throw appError("INVALID", "Payment delay must be a whole number of days from 0 to 365.");
+    const currency = business.currency ?? org.currency;
+    const prev = business.growthCashTiming;
+    // A reserve kept from another currency is dropped rather than relabelled.
+    const keptReserve = prev?.reserveMinor !== undefined && prev.currency === currency ? prev.reserveMinor : undefined;
+    const reserveMinor = reserve === null ? undefined : reserve === undefined ? keptReserve : majorToMinor(reserve, currency);
+    const lag = paymentLagDays === null ? undefined : paymentLagDays ?? prev?.paymentLagDays;
+    await ctx.db.patch(business._id, {
+      growthCashTiming: reserveMinor === undefined && lag === undefined ? undefined : {
+        ...(reserveMinor !== undefined ? { reserveMinor } : {}),
+        currency,
+        ...(lag !== undefined ? { paymentLagDays: lag } : {}),
+        provenance: "owner_reported" as const,
+        updatedBy: user._id,
+        updatedAt: Date.now(),
+      },
+    });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "business.growth_cash_timing", subjectType: "business", subjectId: business._id, summary: "Growth cash timing updated." });
   },
 });
 
