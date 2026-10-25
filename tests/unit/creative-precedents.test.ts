@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(47);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(48);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -44,6 +44,19 @@ describe("creative strategy precedent retrieval", () => {
     expect(retrieveCreativePrecedents(query).some(({ precedent }) => precedent.id === "CP-047")).toBe(true);
     expect(creativePrecedentsForAgent("growth_plays", "Build a launch strategy", query)).toContain("CP-047");
     expect(formatCreativePrecedents(query)).toContain("Attendance and training completions do not establish qualified demand or revenue");
+  });
+
+  it("retrieves owned content as customer research while retaining conversion limits", () => {
+    const query = "A beauty publication community can learn unmet reader needs and shape cleanser product development through reader conversations";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-048");
+    expect(match).toBeDefined();
+    expect(match?.precedent.distinctiveness).toContain("did not automatically become shoppers");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.glossier.com/en-cg/pages/about", sourceRole: "company_primary" }),
+      expect.objectContaining({ url: "https://digiday.com/marketing/glossier-uses-data-make-content-commerce-work/", publicationDate: "2017-06-13" }),
+      expect.objectContaining({ url: "https://hbr.org/podcast/2020/08/glossier-built-a-cult-brand-and-a-digital-community-but-whats-next" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Build a product plan", query)).toContain("CP-048");
   });
 
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {

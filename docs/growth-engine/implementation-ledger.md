@@ -521,3 +521,8 @@ Added Patreon as CP-046 after verifying the creator-origin mechanism against Pat
 ## Resumption note (2026-10-25, education-first launch precedent)
 
 Added Canva World Tour 2025 as CP-047 to the structured source library used by production growth-strategy retrieval. Canva's own recap and The Drum's 2026 award case support the campaign sequence and participation claims; the two sources report different reach measures, and the reported lead comparison lacks enough detail to establish causality. The record limits transfer to businesses that can teach a useful task, reach a relevant audience, and measure qualified next steps within capacity. A focused regression verifies retrieval and strategy-task injection. Current reviewed corpus is 47 of the 100-case research target; 53 remain unverified.
+
+
+## Resumption note (2026-10-25, owned content research precedent)
+
+Added Glossier / Into the Gloss as CP-048 to the source library used by the production growth-strategy workflow. The entry links Glossier's first-party origin account with HBR case-author discussion and reporting from Digiday and TIME. It retains the counterevidence that readers did not automatically become shoppers and does not treat feedback or content audience as purchase demand. A focused regression verifies retrieval and strategy-task injection. Current verified corpus is 48 of the 100-case research target; 52 remain unverified.
