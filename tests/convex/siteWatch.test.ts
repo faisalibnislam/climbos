@@ -107,6 +107,27 @@ describe("site watch (keeps researching the business)", () => {
     ]);
   });
 
+  it("surfaces conservative semantic overlap suggestions without combining facts", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "similar-facts@example.com");
+    const { slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Site Co", website: "https://site.example" });
+    const firstId = await owner.client.mutation(api.orgs.addFact, { slug, category: "product", statement: "Pro plan includes team reporting and analytics." });
+    const secondId = await owner.client.mutation(api.orgs.addFact, { slug, category: "product", statement: "The Pro plan offers team reports plus analytics." });
+    const otherEntityId = await owner.client.mutation(api.orgs.addFact, { slug, category: "product", statement: "The Starter plan offers team reports plus analytics." });
+    const otherOwner = await asNewUser(t, "similar-facts-other@example.com");
+    const otherWorkspace = await otherOwner.client.mutation(api.orgs.createWorkspace, { businessName: "Other Co", website: "https://other.example" });
+    const otherFactId = await otherOwner.client.mutation(api.orgs.addFact, { slug: otherWorkspace.slug, category: "product", statement: "Pro plan includes team reporting and analytics." });
+    const facts = await owner.client.query(api.siteWatch.facts, { slug });
+
+    expect(facts?.possibleDuplicateFacts).toEqual([{ first: { id: firstId, statement: "Pro plan includes team reporting and analytics." }, second: { id: secondId, statement: "The Pro plan offers team reports plus analytics." } }]);
+    expect(facts?.facts.map((fact) => fact.id)).toEqual(expect.arrayContaining([firstId, secondId, otherEntityId]));
+    expect(JSON.stringify(facts)).not.toContain(String(otherFactId));
+    expect(await t.run(async (ctx) => [await ctx.db.get(firstId), await ctx.db.get(secondId)])).toEqual([
+      expect.objectContaining({ reviewState: "confirmed" }),
+      expect.objectContaining({ reviewState: "confirmed" }),
+    ]);
+  });
+
   it("queues a permission-checked, bounded homepage readiness scan", async () => {
     const t = setup();
     const owner = await asNewUser(t, "readiness@example.com");

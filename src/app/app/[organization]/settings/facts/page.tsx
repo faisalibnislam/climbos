@@ -139,12 +139,29 @@ export default function FactsPage() {
           </CardContent>
         </Card>
       ) : null}
+      {data.possibleDuplicateFacts.length ? (
+        <Card>
+          <CardContent className="flex flex-col gap-2">
+            <h2 className="heading-card">Facts that may overlap</h2>
+            <p className="text-sm text-ink-3">These statements use similar wording. They may still describe different things, so ClimbOS keeps them separate until your team reviews them.</p>
+            <ul className="flex flex-col gap-2">
+              {data.possibleDuplicateFacts.map((candidate) => (
+                <li key={`${candidate.first.id}-${candidate.second.id}`} className="border-t border-line pt-2 first:border-0 first:pt-0">
+                  <a href={`#business-fact-${candidate.first.id}`} className="text-sm text-link underline underline-offset-2">{candidate.first.statement}</a>
+                  <span className="mx-1 text-xs text-ink-3">may overlap with</span>
+                  <a href={`#business-fact-${candidate.second.id}`} className="text-sm text-link underline underline-offset-2">{candidate.second.statement}</a>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
       {pending.length ? (
         <Card>
           <CardContent className="flex flex-col gap-2">
             <h2 className="heading-card">To confirm ({pending.length})</h2>
             {pending.map((f) => (
-              <div key={f.id} className="flex flex-wrap items-start justify-between gap-2 border-t border-line pt-2 first:border-0 first:pt-0">
+              <div key={f.id} id={`business-fact-${f.id}`} className="flex flex-wrap items-start justify-between gap-2 border-t border-line pt-2 first:border-0 first:pt-0 scroll-mt-6">
                 <div className="min-w-0 flex-1">
                   {f.replaces ? (
                     // An update: old and new side by side.

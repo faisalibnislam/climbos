@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupExactDuplicateFacts } from "../../shared/agents/factDuplicates";
+import { findPossibleDuplicateFacts, groupExactDuplicateFacts } from "../../shared/agents/factDuplicates";
 
 describe("exact duplicate business facts", () => {
   it("groups only same-category facts with equivalent case, spacing, and ending punctuation", () => {
@@ -58,5 +58,29 @@ describe("exact duplicate business facts", () => {
 
     expect(groups).toHaveLength(4);
     expect(groups.find((group) => group.primary.id === "plan")?.duplicates.map((fact) => fact.id)).toEqual(["tier"]);
+  });
+
+  it("suggests near-duplicate facts without merging them", () => {
+    const facts = [
+      { id: "first", category: "product", statement: "Pro plan includes team reporting and analytics." },
+      { id: "second", category: "product", statement: "The Pro plan offers team reports plus analytics." },
+      { id: "starter", category: "product", statement: "The Starter plan offers team reports plus analytics." },
+      { id: "state", category: "product", statement: "The Pro plan offers team reports plus analytics.", state: "needs_review" },
+    ];
+    const candidates = findPossibleDuplicateFacts(facts);
+
+    expect(candidates.map(({ first, second }) => [first.id, second.id])).toEqual([["first", "second"]]);
+    expect(facts).toHaveLength(4);
+  });
+
+  it("does not suggest facts with different values, currencies, entities, or polarity", () => {
+    const candidates = findPossibleDuplicateFacts([
+      { id: "first", category: "pricing", statement: "Pro plan is $20 per month." },
+      { id: "amount", category: "pricing", statement: "Pro plan is $30 per month." },
+      { id: "currency", category: "pricing", statement: "Pro plan is €20 per month." },
+      { id: "entity", category: "pricing", statement: "Starter plan is $20 per month." },
+      { id: "polarity", category: "pricing", statement: "Pro plan is not $20 per month." },
+    ]);
+    expect(candidates).toEqual([]);
   });
 });

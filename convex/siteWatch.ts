@@ -8,7 +8,7 @@ import { audit } from "./lib/audit";
 import { notifyOwners } from "./lib/notify";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { findConflicts } from "../shared/agents/conflicts";
-import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
+import { findPossibleDuplicateFacts, groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 import { extractSiteInventory } from "../shared/seo/inventory";
 
 /**
@@ -47,6 +47,14 @@ export const facts = query({
       id: String(fact._id),
       state: fact.reviewState,
     })));
+    const possibleDuplicateFacts = findPossibleDuplicateFacts(groupedFacts.map(({ primary }) => ({
+      ...primary,
+      id: String(primary._id),
+      state: primary.reviewState,
+    }))).map(({ first, second }) => ({
+      first: { id: first._id, statement: first.statement },
+      second: { id: second._id, statement: second.statement },
+    }));
     const sourceIds = [...new Set(groupedFacts.flatMap(({ primary, duplicates }) => [primary, ...duplicates].flatMap((fact) => fact.sourceIds.map(String))))];
     const sourceIdSet = new Set(sourceIds);
     const sourceMap = new Map<string, { kind: string; url?: string; title?: string; excerpt?: string; fetchedAt: number; status: string }>();
@@ -80,6 +88,7 @@ export const facts = query({
           sources: mergedSourceIds.map((id) => sourceMap.get(id)).filter((source): source is NonNullable<typeof source> => source !== undefined),
         };
       }),
+      possibleDuplicateFacts,
       conflicts: conflicts.map((conflict) => ({
         ...conflict,
         facts: conflict.factIds.map((id) => {
