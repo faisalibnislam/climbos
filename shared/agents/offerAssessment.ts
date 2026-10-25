@@ -78,6 +78,7 @@ export interface ApprovedOfferCopyTerms {
   currency: string;
   allowedPrices: number[];
   urgencyClaim: string | null;
+  eligibleAudience: string | null;
 }
 
 /** Rejects monetary amounts in publishable copy that conflict with the approved plan's offer prices. */
@@ -173,16 +174,23 @@ export interface OfferAssessmentContext {
 const REQUIRED_ALTERNATIVES = ["positioning", "conversion_path", "retention", "capacity", "no_change"] as const;
 const PROMOTION_WORDS = /\b(?:discount|%\s*off|save\s+\$|sale price|coupon|promo code|limited[- ]time|bonus|bundle|free trial|payment terms|pay later|guarantee|referral reward|incentive|special offer|offer change|change the offer|non[- ]price offer|free (?:setup|shipping|delivery|consultation|onboarding))\b/i;
 const URGENCY_WORDS = /\b(?:limited[- ]time|ends? (?:today|tomorrow|this week|on|in)|last chance|only \d+|limited (?:spots?|seats?|stock|inventory)|while supplies last|deadline|scarcity|expires? (?:today|tomorrow|on|in))\b/i;
+const RESTRICTED_AUDIENCE = /\b(?:first[- ]time|new (?:customers?|clients?|buyers?|users?)|existing (?:customers?|clients?|buyers?|users?)|qualified|invited|waitlist|members? only|for (?:returning|current) (?:customers?|clients?|buyers?|users?))\b/i;
+const UNIVERSAL_AUDIENCE = /\b(?:available to everyone|open to everyone|for everyone|all customers|all users|any customer|any user|anyone can|no restrictions)\b/i;
 
 /** Adds approved-plan deadline/scarcity checks to deterministic price consistency. */
 export function lintApprovedOfferCopy(text: string, offers: ApprovedOfferCopyTerms[] | undefined, path: string): LintIssue[] {
   const issues = lintApprovedOfferPrices(text, offers, path);
-  if (!offers?.length || !URGENCY_WORDS.test(text)) return issues;
-  const supportedClaims = offers.map((offer) => offer.urgencyClaim?.trim()).filter((claim): claim is string => Boolean(claim));
-  const normalizedText = text.normalize("NFKC").replace(/\s+/gu, " ").toLocaleLowerCase("en-US");
-  const exactSupportedClaim = supportedClaims.some((claim) => normalizedText.includes(claim.normalize("NFKC").replace(/\s+/gu, " ").toLocaleLowerCase("en-US")));
-  if (!exactSupportedClaim) {
-    issues.push({ severity: "error", rule: "approved_offer_urgency", message: "This copy adds a deadline, scarcity, or limited-availability claim that is not present in the approved offer evidence. Remove it or use the exact supported claim from the plan.", path });
+  if (!offers?.length) return issues;
+  if (URGENCY_WORDS.test(text)) {
+    const supportedClaims = offers.map((offer) => offer.urgencyClaim?.trim()).filter((claim): claim is string => Boolean(claim));
+    const normalizedText = text.normalize("NFKC").replace(/\s+/gu, " ").toLocaleLowerCase("en-US");
+    const exactSupportedClaim = supportedClaims.some((claim) => normalizedText.includes(claim.normalize("NFKC").replace(/\s+/gu, " ").toLocaleLowerCase("en-US")));
+    if (!exactSupportedClaim) {
+      issues.push({ severity: "error", rule: "approved_offer_urgency", message: "This copy adds a deadline, scarcity, or limited-availability claim that is not present in the approved offer evidence. Remove it or use the exact supported claim from the plan.", path });
+    }
+  }
+  if (PROMOTION_WORDS.test(text) && offers.some((offer) => offer.eligibleAudience && RESTRICTED_AUDIENCE.test(offer.eligibleAudience)) && UNIVERSAL_AUDIENCE.test(text)) {
+    issues.push({ severity: "error", rule: "approved_offer_eligibility", message: "This copy presents a restricted offer as open to everyone. Preserve the audience qualifiers from the approved plan or remove the broader claim.", path });
   }
   return issues;
 }

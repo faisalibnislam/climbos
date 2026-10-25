@@ -133,13 +133,15 @@ describe("offer and promotion recommendations", () => {
 
     const termContext = { status: "approved", version: 2, expert: { version: 7, plays: [{ name: "Test offer", offerAssessment: assessment() }] } };
     const terms = approvedPlanOfferTerms(termContext);
-    expect(terms).toEqual([{ playName: "Test offer", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [100, 95], urgencyClaim: null }]);
+    expect(terms).toEqual([{ playName: "Test offer", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [100, 95], urgencyClaim: null, eligibleAudience: "First-time quote requesters who cite price; exclude existing full-price bookings." }]);
     expect(lintApprovedOfferCopy("Try it for $95 USD.", terms, "email.body")).toEqual([]);
     expect(lintApprovedOfferCopy("Try it for $89 USD.", terms, "email.body")).toMatchObject([{ rule: "approved_offer_price", severity: "error" }]);
-    expect(lintApprovedOfferCopy("The first offer is $95 USD and the second is $200 USD.", [...terms, { playName: "Annual service", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [200], urgencyClaim: null }], "email.body")).toEqual([]);
+    expect(lintApprovedOfferCopy("The first offer is $95 USD and the second is $200 USD.", [...terms, { playName: "Annual service", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [200], urgencyClaim: null, eligibleAudience: null }], "email.body")).toEqual([]);
     expect(lintApprovedOfferCopy("Limited-time offer ends tomorrow.", terms, "email.body").some((issue) => issue.rule === "approved_offer_urgency")).toBe(true);
     const supportedUrgency = [{ ...terms[0], urgencyClaim: "Limited-time offer ends November 30, 2026." }];
     expect(lintApprovedOfferCopy("Limited-time offer ends November 30, 2026.", supportedUrgency, "email.body").some((issue) => issue.rule === "approved_offer_urgency")).toBe(false);
+    expect(lintApprovedOfferCopy("Special offer available to everyone.", terms, "email.body").some((issue) => issue.rule === "approved_offer_eligibility")).toBe(true);
+    expect(lintApprovedOfferCopy("Special offer for first-time quote requesters only.", terms, "email.body").some((issue) => issue.rule === "approved_offer_eligibility")).toBe(false);
     expect(approvedPlanOfferTerms({ ...termContext, status: "needs_approval" })).toEqual([]);
 
     const copyBrief = { reader: "new buyer", situation: "reviewing the service", awarenessStage: "unknown" as const, relationshipStage: "unknown" as const, objective: "explain the offer", offerFactIndexes: [], problemJob: "choose a service", trigger: "need", centralIdea: "clear terms", objection: "price", proofFactIndexes: [], prohibitedClaims: [], channel: "email", format: "plain text", deliveryContext: "draft only", brandVoice: "clear", approvedExamples: [], cta: "learn more", afterAction: "measure qualified replies", trackingMetric: "qualified replies", trackingMethod: "count replies", supportingFactIndexes: [], supportingSourceUrls: [], unknowns: [] };

@@ -48,6 +48,7 @@ export interface ApprovedOfferTermConstraint {
   currency: string;
   allowedPrices: number[];
   urgencyClaim: string | null;
+  eligibleAudience: string | null;
 }
 
 const clean = (value: unknown, max = 500): string => typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -65,7 +66,8 @@ export function approvedPlanOfferTerms(plan: ApprovedPlanContextInput, opts: { p
     const allowedPrices = new Set<number>();
     if (typeof current === "number" && Number.isFinite(current)) allowedPrices.add(current);
     if ((recommendation === "recommend_promotion" || recommendation === "validate_first") && typeof proposed === "number" && Number.isFinite(proposed)) allowedPrices.add(proposed);
-    return [{ playName: clean(play.name, 120), recommendation, currency: clean(offer.currency, 3).toUpperCase(), allowedPrices: [...allowedPrices], urgencyClaim: clean(offer.urgencyClaim, 160) || null }];
+    const eligibleAudience = recommendation === "recommend_promotion" || recommendation === "validate_first" ? clean(offer.test?.eligibleAudience, 240) || null : null;
+    return [{ playName: clean(play.name, 120), recommendation, currency: clean(offer.currency, 3).toUpperCase(), allowedPrices: [...allowedPrices], urgencyClaim: clean(offer.urgencyClaim, 160) || null, eligibleAudience }];
   });
 }
 
@@ -90,7 +92,7 @@ export function approvedPlanContext(plan: ApprovedPlanContextInput, opts: { pinn
       const price = (amount: number | null | undefined) => amount === null || amount === undefined ? "unknown" : `${amount} ${clean(offer?.currency, 3)}`;
       const isProposal = offer?.recommendation === "recommend_promotion" || offer?.recommendation === "validate_first";
       const offerSummary = offer ? isProposal
-        ? ` Offer decision: ${clean(offer.recommendation, 60)}; mechanism ${clean(offer.mechanism, 60)} for ${clean(offer.segment, 160)}; obstacle ${clean(offer.needOrObstacle, 180)}; objective ${clean(offer.objective, 160)}; offer draft: ${clean(play.mechanic, 240) || clean(play.hook, 180)}; current net price ${price(offer.current?.netPrice?.amount)}; proposed net price ${price(offer.proposed?.netPrice?.amount)}; eligibility ${clean(offer.test?.eligibleAudience, 200) || "not specified"}; comparison horizon ${offer.horizonDays ?? "unknown"} days; evidence ${clean(offer.evidenceNote, 240)}; unknown terms ${offer.unknowns?.slice(0, 4).map((x) => clean(x, 100)).join("; ") || "none listed"}; supported urgency ${clean(offer.urgencyClaim, 120) || "none"}. Use these stated terms consistently in drafts; do not invent prices, eligibility, deadlines, availability, or conditions. A validate_first decision is an internal test proposal, not an offer currently available to customers. Drafting remains advisory and does not authorize a price or billing change, sending, scheduling, publishing, or spend.`
+        ? ` Offer decision: ${clean(offer.recommendation, 60)}; mechanism ${clean(offer.mechanism, 60)} for ${clean(offer.segment, 160)}; obstacle ${clean(offer.needOrObstacle, 180)}; objective ${clean(offer.objective, 160)}; offer draft: ${clean(play.mechanic, 240) || clean(play.hook, 180)}; current net price ${price(offer.current?.netPrice?.amount)}; proposed net price ${price(offer.proposed?.netPrice?.amount)}; eligibility ${clean(offer.test?.eligibleAudience, 200) || "not specified"}; comparison horizon ${offer.horizonDays ?? "unknown"} days; evidence ${clean(offer.evidenceNote, 240)}; unknown terms ${offer.unknowns?.slice(0, 4).map((x) => clean(x, 100)).join("; ") || "none listed"}; supported urgency ${clean(offer.urgencyClaim, 120) || "none"}. Use these stated terms consistently in drafts; preserve eligibility qualifiers and do not broaden the intended audience. Do not invent prices, eligibility, deadlines, availability, or conditions. A validate_first decision is an internal test proposal, not an offer currently available to customers. Drafting remains advisory and does not authorize a price or billing change, sending, scheduling, publishing, or spend.`
         : ` Offer decision: ${clean(offer.recommendation, 60)}; no offer change is recommended. Keep customer-facing copy on the current offer; do not use hypothetical proposed terms. Current net price ${price(offer.current?.netPrice?.amount)}; evidence ${clean(offer.evidenceNote, 240)}. Drafting remains advisory and does not authorize sending, scheduling, publishing, or spend.`
         : "";
       return `Play: ${clean(play.name, 120)}. ${clean(play.oneLiner, 280)} ${clean(play.actionContract?.intendedEffect, 220)}${measurement}${offerSummary}`.trim();

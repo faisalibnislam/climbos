@@ -98,7 +98,7 @@ export interface AgentInput {
   /** Deterministic timing context assembled by the application for date validation. */
   timingContext?: { today: string; timezone: string; geography?: string };
   /** Exact approved offer prices allowed in copy for this tenant's active plan. */
-  approvedOfferTerms?: { playName: string; recommendation: string; currency: string; allowedPrices: number[]; urgencyClaim: string | null }[];
+  approvedOfferTerms?: { playName: string; recommendation: string; currency: string; allowedPrices: number[]; urgencyClaim: string | null; eligibleAudience: string | null }[];
   /** Exact pages read by the application for this run; internal input for source-reference validation. */
   availableSourceUrls?: string[];
   /** Exact first-party page titles/headings observed by this run; lints only, not extra prompt evidence. */
