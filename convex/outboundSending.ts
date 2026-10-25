@@ -37,6 +37,33 @@ async function isSuppressed(ctx: QueryCtx | MutationCtx, orgId: Id<"organization
   return Boolean(await ctx.db.query("suppressions").withIndex("by_org_email", (q) => q.eq("orgId", orgId).eq("emailHash", hash)).first());
 }
 
+const ACTIVE_RECIPIENT_SENDS: Doc<"outboundSends">["status"][] = ["queued", "sending", "uncertain"];
+
+/** True only while a workspace already has an unresolved sequence for this address. */
+async function hasActiveRecipientSequence(
+  ctx: QueryCtx | MutationCtx,
+  orgId: Id<"organizations">,
+  email: string,
+  excludingSendId?: Id<"outboundSends">,
+): Promise<boolean> {
+  const normalized = email.trim().toLowerCase();
+  const hash = await sha256Hex(normalized);
+  const indexed = await Promise.all(ACTIVE_RECIPIENT_SENDS.map((status) =>
+    ctx.db.query("outboundSends").withIndex("by_org_recipient_status", (q) => q.eq("orgId", orgId).eq("recipientHash", hash).eq("status", status)).take(2),
+  ));
+  if (indexed.some((rows) => rows.some((row) => row._id !== excludingSendId))) return true;
+
+  // Older sends predate recipientHash. Match their original prospect address exactly;
+  // new sends and same-batch duplicates use the normalized hash above.
+  const legacyProspects = await ctx.db.query("prospects").withIndex("by_org_email", (q) => q.eq("orgId", orgId).eq("publicEmail", email)).take(301);
+  if (legacyProspects.length > 300) return true;
+  for (const prospect of legacyProspects) {
+    const sends = await ctx.db.query("outboundSends").withIndex("by_prospect", (q) => q.eq("prospectId", prospect._id).eq("step", 0)).take(21);
+    if (sends.length > 20 || sends.some((send) => send._id !== excludingSendId && ACTIVE_RECIPIENT_SENDS.includes(send.status))) return true;
+  }
+  return false;
+}
+
 export async function suppress(ctx: MutationCtx, orgId: Id<"organizations">, email: string, reason: "unsubscribe" | "bounce", source: string) {
   if (await isSuppressed(ctx, orgId, email)) return;
   await ctx.db.insert("suppressions", { orgId, emailHash: await sha256Hex(email.trim().toLowerCase()), reason, source, createdAt: Date.now() });
@@ -86,24 +113,34 @@ export async function mailboxDay(ctx: QueryCtx | MutationCtx, org: Doc<"organiza
 /** Approved prospects with a published email who aren't queued yet (and not unsubscribed). */
 async function unqueuedApproved(ctx: QueryCtx | MutationCtx, c: Doc<"outboundCampaigns">) {
   const out: Doc<"prospects">[] = [];
+  const recipientHashes = new Set<string>();
+  let skippedDuplicateRecipients = 0;
   for (const p of await ctx.db.query("prospects").withIndex("by_campaign", (q) => q.eq("campaignId", c._id)).take(300)) {
     if (p.stage !== "approved" || !p.publicEmail) continue;
     if (await ctx.db.query("outboundSends").withIndex("by_prospect", (q) => q.eq("prospectId", p._id)).first()) continue;
     if (await isSuppressed(ctx, c.orgId, p.publicEmail)) continue;
+    const recipientHash = await sha256Hex(p.publicEmail.trim().toLowerCase());
+    if (recipientHashes.has(recipientHash) || await hasActiveRecipientSequence(ctx, c.orgId, p.publicEmail)) {
+      skippedDuplicateRecipients++;
+      continue;
+    }
+    recipientHashes.add(recipientHash);
     out.push(p);
   }
-  return out.slice(0, 200);
+  return { prospects: out.slice(0, 200), skippedDuplicateRecipients };
 }
 
-async function queueApproved(ctx: MutationCtx, org: Doc<"organizations">, c: Doc<"outboundCampaigns">): Promise<number> {
+async function queueApproved(ctx: MutationCtx, org: Doc<"organizations">, c: Doc<"outboundCampaigns">): Promise<{ queued: number; skippedDuplicateRecipients: number }> {
   let at = nextSendWindow(Date.now() + 60_000, org.timezone);
   let queued = 0;
-  for (const p of await unqueuedApproved(ctx, c)) {
-    await ctx.db.insert("outboundSends", { orgId: org._id, campaignId: c._id, prospectId: p._id, step: 0, to: p.publicEmail!, scheduledFor: at, status: "queued", attempts: 0, createdAt: Date.now() });
+  const ready = await unqueuedApproved(ctx, c);
+  for (const p of ready.prospects) {
+    const recipientHash = await sha256Hex(p.publicEmail!.trim().toLowerCase());
+    await ctx.db.insert("outboundSends", { orgId: org._id, campaignId: c._id, prospectId: p._id, step: 0, to: p.publicEmail!, recipientHash, scheduledFor: at, status: "queued", attempts: 0, createdAt: Date.now() });
     at = nextSendWindow(at + SPACING_MINUTES * 60_000, org.timezone);
     queued++;
   }
-  return queued;
+  return { queued, skippedDuplicateRecipients: ready.skippedDuplicateRecipients };
 }
 
 /* ---------------- owner controls ---------------- */
@@ -120,6 +157,7 @@ export const status = query({
     const now = Date.now();
     const day = await mailboxDay(ctx, org, now);
     const others = (await ctx.db.query("outboundCampaigns").withIndex("by_org_created", (q) => q.eq("orgId", org._id)).order("desc").take(50)).filter((x) => x._id !== c._id && (x.sending?.status === "on" || x.sending?.status === "paused"));
+    const pendingApproved = c.sending ? await unqueuedApproved(ctx, c) : { prospects: [], skippedDuplicateRecipients: 0 };
     return {
       mailbox: mailbox && mailbox.status === "connected" ? { label: mailbox.accountLabel ?? "Your mailbox" } : null,
       sending: c.sending ?? null,
@@ -134,7 +172,8 @@ export const status = query({
       }),
       next: sends.filter((s) => s.status === "queued").sort((a, b) => a.scheduledFor - b.scheduledFor)[0]?.scheduledFor ?? null,
       recent: sends.filter((s) => s.status !== "queued").slice(0, 20).map((s) => ({ id: s._id, to: s.to, step: s.step, status: s.status, at: s.sentAt ?? s.scheduledFor, error: s.error ?? null })),
-      newlyApproved: c.sending ? (await unqueuedApproved(ctx, c)).length : 0,
+      newlyApproved: pendingApproved.prospects.length,
+      duplicateRecipientsWaiting: pendingApproved.skippedDuplicateRecipients,
       others: others.map((x) => ({ id: x._id, title: x.title, status: x.sending!.status, pausedReason: x.sending!.pausedReason ?? null })),
       can: { approve: can(role, "approve"), pause: can(role, "pause"), connect: can(role, "manage_connections") },
     };
@@ -159,15 +198,15 @@ export const start = mutation({
     if (mailbox?.status !== "connected") throw appError("INVALID", "Connect your mailbox first (Connections → Your mailbox).");
     if (a.address.trim().length < 8) throw appError("INVALID", "Add your business's postal address. The law requires it in cold emails.");
     if (!a.senderName.trim() || !a.company.trim()) throw appError("INVALID", "Add your name and company.");
-    const queued = await queueApproved(ctx, org, c);
-    if (!queued) throw appError("INVALID", "No approved prospects with a published email to send to.");
+    const { queued, skippedDuplicateRecipients } = await queueApproved(ctx, org, c);
+    if (!queued) throw appError("INVALID", skippedDuplicateRecipients ? "No messages were queued because those email addresses already have an active sequence." : "No approved possible customers with a published email to send to.");
     const sender = { senderName: a.senderName.trim().slice(0, 80), company: a.company.trim().slice(0, 80), address: a.address.trim().slice(0, 200), bookingUrl: a.bookingUrl?.trim().slice(0, 300) || undefined };
     await ctx.db.patch(c._id, {
       sending: { status: "on", startedAt: c.sending?.startedAt ?? Date.now(), startedBy: user._id, firstSentAt: c.sending?.firstSentAt, lastSentAt: c.sending?.lastSentAt, ...sender, contentHash: await sendingHash(c, sender) },
       updatedAt: Date.now(),
     });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "outbound.sending_started", subjectType: "campaign", subjectId: c._id, summary: `Started sending to ${queued} prospect${queued === 1 ? "" : "s"} from your mailbox (warm-up limits apply).` });
-    return { queued };
+    return { queued, skippedDuplicateRecipients };
   },
 });
 
@@ -182,11 +221,11 @@ export const addApproved = mutation({
     if (!c.sending) throw appError("INVALID", "Start sending first.");
     if (c.sending.contentHash && c.sending.contentHash !== (await sendingHash(c, c.sending))) throw appError("INVALID", "The emails changed. Resume sending to approve them first.");
     if ((await mailboxOf(ctx, org._id))?.status !== "connected") throw appError("INVALID", "Connect your mailbox first (Connections → Your mailbox).");
-    const queued = await queueApproved(ctx, org, c);
-    if (!queued) throw appError("INVALID", "Nobody new to send to.");
+    const { queued, skippedDuplicateRecipients } = await queueApproved(ctx, org, c);
+    if (!queued && !skippedDuplicateRecipients) throw appError("INVALID", "Nobody new to send to.");
     if (c.sending.status === "done") await ctx.db.patch(c._id, { sending: { ...c.sending, status: "on" }, updatedAt: Date.now() });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "outbound.sending_added", subjectType: "campaign", subjectId: c._id, summary: `Added ${queued} newly approved prospect${queued === 1 ? "" : "s"} to sending.` });
-    return { queued, paused: c.sending.status === "paused" };
+    return { queued, skippedDuplicateRecipients, paused: c.sending.status === "paused" };
   },
 });
 
@@ -387,6 +426,11 @@ export const claimSend = internalMutation({
         await recordSendEvent(ctx, s, "not_sent", "The address was suppressed before the email was sent.");
         return false;
       }
+    if (await hasActiveRecipientSequence(ctx, s.orgId, s.to, s._id)) {
+      await ctx.db.patch(s._id, { status: "canceled", error: "Another active email sequence uses this address.", ...RELEASE });
+      await recordSendEvent(ctx, s, "duplicate_blocked", "A duplicate sequence was stopped because another email to this address is queued, in progress, or unresolved.");
+      return false;
+    }
     }
     if (s.opKey && (await keyTaken(ctx, s.opKey, s._id))) {
       await ctx.db.patch(s._id, { status: "canceled", error: "Duplicate of an email already sent or on its way.", ...RELEASE });
@@ -441,7 +485,7 @@ async function markSent(
   if (!c || !next || !org) return;
   if (await ctx.db.query("outboundSends").withIndex("by_prospect", (q) => q.eq("prospectId", s.prospectId).eq("step", s.step + 1)).first()) return;
   const gap = next.day - (c.sequence[s.step]?.day ?? 0);
-  await ctx.db.insert("outboundSends", { orgId: s.orgId, campaignId: s.campaignId, prospectId: s.prospectId, step: s.step + 1, to: s.to, scheduledFor: followUpAt(now, gap, org.timezone), status: "queued", attempts: 0, createdAt: now });
+  await ctx.db.insert("outboundSends", { orgId: s.orgId, campaignId: s.campaignId, prospectId: s.prospectId, step: s.step + 1, to: s.to, recipientHash: s.recipientHash ?? await sha256Hex(s.to.trim().toLowerCase()), scheduledFor: followUpAt(now, gap, org.timezone), status: "queued", attempts: 0, createdAt: now });
 }
 
 /**

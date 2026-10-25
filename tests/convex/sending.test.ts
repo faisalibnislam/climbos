@@ -52,7 +52,7 @@ describe("mailbox sending", () => {
     await expect(w.owner.client.mutation(api.outboundSending.start, args)).rejects.toThrow(/Connect your mailbox/);
     await expect(w.owner.client.action(api.mailbox.connect, { slug: w.slug, preset: "gmail", email: "sam@seller.example", password: "abcd efgh ijkl mnop" })).resolves.toMatchObject({ ok: true });
     await expect(w.owner.client.mutation(api.outboundSending.start, { ...args, address: "x" })).rejects.toThrow(/postal address/);
-    expect(await w.owner.client.mutation(api.outboundSending.start, args)).toEqual({ queued: 1 });
+    expect(await w.owner.client.mutation(api.outboundSending.start, args)).toEqual({ queued: 1, skippedDuplicateRecipients: 0 });
     vi.setSystemTime(new Date("2026-10-20T09:05:00Z"));
     expect(await t.mutation(internal.outboundSending.dispatch, {})).toBe(1);
     await t.finishAllScheduledFunctions(vi.runAllTimers);

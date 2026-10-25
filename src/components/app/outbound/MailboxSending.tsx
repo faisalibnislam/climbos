@@ -163,6 +163,11 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
               ...(s.counts.bounced ? [{ label: "Bounced", value: s.counts.bounced, tone: "bad" as const }] : []),
             ]}
           />
+          {s.duplicateRecipientsWaiting > 0 ? (
+            <Callout tone="warning">
+              {s.duplicateRecipientsWaiting} possible {s.duplicateRecipientsWaiting === 1 ? "customer was" : "customers were"} left out because the address already has an active sequence or could not be checked safely.
+            </Callout>
+          ) : null}
           {s.review.length ? (
             <Callout tone="warning">
               <p className="font-medium">May have sent. Check your Sent folder.</p>
@@ -205,7 +210,13 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
                 onClick={() =>
                   run("add", async () => {
                     const r = await addApproved({ slug, campaignId });
-                    toast({ tone: "success", title: `Added ${r.queued} ${r.queued === 1 ? "person" : "people"}`, description: r.paused ? "Sends when you resume." : undefined });
+                    toast({
+                      tone: "success",
+                      title: r.queued ? `Added ${r.queued} possible ${r.queued === 1 ? "customer" : "customers"}` : "No new emails queued",
+                      description: r.skippedDuplicateRecipients
+                        ? `${r.skippedDuplicateRecipients} address${r.skippedDuplicateRecipients === 1 ? " already has an active sequence or needs" : "es already have active sequences or need"} a duplicate check.`
+                        : r.paused ? "Sends when you resume." : undefined,
+                    });
                   })
                 }
               >
@@ -266,7 +277,13 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
             onClick={() =>
               run("start", async () => {
                 const r = await start({ slug, campaignId, senderName, company, address, bookingUrl });
-                toast({ tone: "success", title: `Sending to ${r.queued} ${r.queued === 1 ? "person" : "people"}` });
+                toast({
+                  tone: "success",
+                  title: `${r.queued} possible ${r.queued === 1 ? "customer is" : "customers are"} in the queue`,
+                  description: r.skippedDuplicateRecipients
+                    ? `${r.skippedDuplicateRecipients} address${r.skippedDuplicateRecipients === 1 ? " already has an active sequence or needs" : "es already have active sequences or need"} a duplicate check.`
+                    : undefined,
+                });
               })
             }
           >

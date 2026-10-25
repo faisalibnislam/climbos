@@ -1698,6 +1698,8 @@ export default defineSchema({
     abTestId: v.optional(v.id("abTests")),
     step: v.number(),
     to: v.string(),
+    /** Tenant-scoped lookup key used to prevent overlapping sequences across duplicate prospect records. */
+    recipientHash: v.optional(v.string()),
     scheduledFor: v.number(),
     /** uncertain = it may have gone out; never resent until the Sent folder or the owner says. */
     status: v.union(
@@ -1737,6 +1739,7 @@ export default defineSchema({
     .index("by_op_key", ["opKey"])
     .index("by_campaign", ["campaignId", "createdAt"])
     .index("by_prospect", ["prospectId", "step"])
+    .index("by_org_recipient_status", ["orgId", "recipientHash", "status"])
     .index("by_org_sent", ["orgId", "sentAt"]),
 
   /** Append-only mailbox execution history; contains no recipient address or email body. */

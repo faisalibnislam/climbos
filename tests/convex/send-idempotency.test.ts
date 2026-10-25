@@ -82,10 +82,105 @@ describe("cold email: one send per key", () => {
     expect(fakeMailbox().sent[0].messageId).toBe(sendMessageId(handed.opKey!, "sam@seller.example"));
     const after = await rows(t, w.campaignId);
     expect(after.map((r) => `${r.step}:${r.status}`).sort()).toEqual(["0:canceled", "0:sent", "1:queued"]);
-    expect(after.find((r) => r.status === "canceled")?.error).toMatch(/Duplicate/);
+    expect(after.find((r) => r.status === "canceled")?.error).toMatch(/duplicate|active email/i);
     const events = await t.run(async (ctx) => ctx.db.query("outboundSendEvents").withIndex("by_campaign", (q) => q.eq("campaignId", w.campaignId)).collect());
     expect(events.map((event) => event.event)).toEqual(expect.arrayContaining(["claimed", "provider_accepted", "duplicate_blocked"]));
     expect(events.every((event) => !("to" in event) && !("body" in event))).toBe(true);
+  });
+
+  it("does not queue a second active sequence for the same normalized address under another prospect record", async () => {
+    const t = setup();
+    const w = await ready(t);
+    const duplicateId = await t.run(async (ctx) => {
+      const p = (await ctx.db.get(w.people[0]))!;
+      const { _id, _creationTime, ...copy } = p;
+      void _id;
+      void _creationTime;
+      return ctx.db.insert("prospects", {
+        ...copy,
+        company: "Duplicate record",
+        domain: "duplicate-agency.example",
+        website: "https://duplicate-agency.example",
+        publicEmail: p.publicEmail!.toUpperCase(),
+        stage: "approved",
+      });
+    });
+
+    const result = await w.owner.client.mutation(api.outboundSending.addApproved, { slug: w.slug, campaignId: w.campaignId });
+    expect(result).toEqual({ queued: 0, skippedDuplicateRecipients: 1, paused: false });
+    const status = await w.owner.client.query(api.outboundSending.status, { slug: w.slug, campaignId: w.campaignId });
+    expect(status).toMatchObject({ newlyApproved: 0, duplicateRecipientsWaiting: 1 });
+    expect((await rows(t, w.campaignId)).filter((row) => row.status === "queued")).toHaveLength(1);
+    expect(await t.run(async (ctx) => (await ctx.db.get(duplicateId))?.stage)).toBe("approved");
+  });
+
+  it("allows a later owner-approved sequence after the earlier sequence is complete", async () => {
+    const t = setup();
+    const w = await ready(t, { oneStep: true });
+    at("09:05");
+    expect(await dispatch(t)).toBe(1);
+    await runAll(t);
+    expect((await rows(t, w.campaignId)).map((row) => row.status)).toEqual(["sent"]);
+
+    await t.run(async (ctx) => {
+      const p = (await ctx.db.get(w.people[0]))!;
+      const { _id, _creationTime, ...copy } = p;
+      void _id;
+      void _creationTime;
+      await ctx.db.insert("prospects", {
+        ...copy,
+        company: "Later owner-approved sequence",
+        domain: "later-agency.example",
+        website: "https://later-agency.example",
+        stage: "approved",
+      });
+    });
+
+    const result = await w.owner.client.mutation(api.outboundSending.addApproved, { slug: w.slug, campaignId: w.campaignId });
+    expect(result).toEqual({ queued: 1, skippedDuplicateRecipients: 0, paused: false });
+  });
+
+  it("rechecks legacy duplicate queue rows immediately before mailbox handoff", async () => {
+    const t = setup();
+    const w = await ready(t, { oneStep: true });
+    const [first] = await rows(t, w.campaignId);
+    await t.run(async (ctx) => {
+      const p = (await ctx.db.get(w.people[0]))!;
+      const { _id: prospectId, _creationTime: prospectCreation, ...prospect } = p;
+      void prospectId;
+      void prospectCreation;
+      const duplicateProspectId = await ctx.db.insert("prospects", {
+        ...prospect,
+        company: "Legacy duplicate record",
+        domain: "legacy-duplicate.example",
+        website: "https://legacy-duplicate.example",
+        stage: "approved",
+      });
+      const { _id, _creationTime, recipientHash, ...legacySend } = first;
+      void _id;
+      void _creationTime;
+      void recipientHash;
+      await ctx.db.insert("outboundSends", {
+        ...legacySend,
+        prospectId: duplicateProspectId,
+        createdAt: legacySend.createdAt + 1,
+      });
+    });
+
+    at("09:05");
+    expect(await dispatch(t)).toBe(1);
+    const handed = (await rows(t, w.campaignId)).find((row) => row.status === "sending")!;
+    const job = await t.query(internal.outboundSending.prepareSend, { sendId: handed._id });
+    if (!job || job.hold) throw new Error("Expected the legacy duplicate row to reach the pre-send check.");
+    expect(await t.mutation(internal.outboundSending.claimSend, {
+      sendId: handed._id,
+      lease: handed.lease,
+      payloadHash: job.payloadHash,
+      ...(job.abTestId ? { abTestId: job.abTestId } : {}),
+    })).toBe(false);
+    expect((await rows(t, w.campaignId)).find((row) => row._id === handed._id)).toMatchObject({ status: "canceled", error: expect.stringContaining("active email sequence") });
+    const events = await t.run(async (ctx) => ctx.db.query("outboundSendEvents").withIndex("by_campaign", (q) => q.eq("campaignId", w.campaignId)).collect());
+    expect(events.map((event) => event.event)).toContain("duplicate_blocked");
   });
 
   it("stops an unsent first touch when the owner marks the person contacted", async () => {

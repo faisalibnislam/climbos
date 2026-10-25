@@ -181,7 +181,7 @@ describe("outbound sending safety", () => {
     await w.owner.client.mutation(api.outbound.setStage, { slug: w.slug, prospectIds: [w.others[0]], stage: "approved" });
     let status = await w.owner.client.query(api.outboundSending.status, { slug: w.slug, campaignId: w.campaignId });
     expect(status.newlyApproved).toBe(1);
-    expect(await w.owner.client.mutation(api.outboundSending.addApproved, { slug: w.slug, campaignId: w.campaignId })).toEqual({ queued: 1, paused: false });
+    expect(await w.owner.client.mutation(api.outboundSending.addApproved, { slug: w.slug, campaignId: w.campaignId })).toEqual({ queued: 1, skippedDuplicateRecipients: 0, paused: false });
     status = await w.owner.client.query(api.outboundSending.status, { slug: w.slug, campaignId: w.campaignId });
     expect(status.newlyApproved).toBe(0);
     await expect(w.owner.client.mutation(api.outboundSending.addApproved, { slug: w.slug, campaignId: w.campaignId })).rejects.toThrow(/Nobody new/);
