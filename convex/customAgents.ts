@@ -83,6 +83,9 @@ export const list = query({
         const activity = await ctx.db.query("workflowRuns").withIndex("by_org_custom_agent", (q) => q.eq("orgId", org._id).eq("customAgentId", _id)).order("desc").take(8);
         const feedbackRows = await ctx.db.query("customAgentFeedback").withIndex("by_agent_updated", (q) => q.eq("orgId", org._id).eq("customAgentId", _id).gte("updatedAt", feedbackSince)).order("desc").take(101);
         const feedbackSample = feedbackRows.slice(0, 100);
+        const recentOutcomes = feedbackSample.filter((feedback) => feedback.outcome).slice(0, 3).map((feedback) => ({
+          ...feedback.outcome!, reportedAt: feedback.updatedAt,
+        }));
         const minutesByRun = new Map<string, number[]>();
         for (const feedback of feedbackSample) {
           if (feedback.minutesSaved === undefined) continue;
@@ -98,12 +101,12 @@ export const list = query({
           : null;
         const recentRuns = await Promise.all(activity.map(async (run) => {
           const feedback = await ctx.db.query("customAgentFeedback").withIndex("by_run_user", (q) => q.eq("workflowRunId", run._id).eq("userId", user._id)).unique();
-          return { id: run._id, title: run.title, status: run.status, estimateCredits: microsToCredits(run.estimateMicros), actualCredits: microsToCredits(run.actualMicros), createdAt: run.createdAt, rating: feedback?.rating ?? null, feedbackNote: feedback?.note ?? null, minutesSaved: feedback?.minutesSaved ?? null };
+          return { id: run._id, title: run.title, status: run.status, estimateCredits: microsToCredits(run.estimateMicros), actualCredits: microsToCredits(run.actualMicros), createdAt: run.createdAt, rating: feedback?.rating ?? null, feedbackNote: feedback?.note ?? null, minutesSaved: feedback?.minutesSaved ?? null, outcome: feedback?.outcome ?? null };
         }));
         return {
           id: _id, archetypeId, name, objective, instructions, allowedActions, knowledge, permission,
           maxRunCredits, monthlyBudgetCredits: monthlyCap, monthlyCreditsUsed: usedMicros === null ? null : microsToCredits(usedMicros), maxActionsPerRun, successMetric, trigger, nextTriggerAt: nextTriggerAt ?? null, modelRouting, status, updatedAt, recentRuns,
-          workspaceReportedFeedback: { source: "workspace_member_report", windowDays: 90, sampleSize: feedbackSample.length, helpful: feedbackSample.filter((entry) => entry.rating === "helpful").length, needsWork: feedbackSample.filter((entry) => entry.rating === "needs_work").length, timeSavedRunCount: perRunMinutes.length, medianMinutesSavedPerRun, capped: feedbackRows.length > 100 },
+          workspaceReportedFeedback: { source: "workspace_member_report", windowDays: 90, sampleSize: feedbackSample.length, helpful: feedbackSample.filter((entry) => entry.rating === "helpful").length, needsWork: feedbackSample.filter((entry) => entry.rating === "needs_work").length, timeSavedRunCount: perRunMinutes.length, medianMinutesSavedPerRun, outcomeCount: feedbackSample.filter((entry) => entry.outcome).length, recentOutcomes, capped: feedbackRows.length > 100 },
         };
       })),
     };

@@ -120,7 +120,7 @@ describe("custom specialist profiles", () => {
     expect(await t.query(internal.customAgents.dueAgentIds, { now })).toEqual([id]);
   });
 
-  it("records bounded member-reported time saved separately from measured outcomes", async () => {
+  it("records member-reported usefulness, time saved, and dated business outcomes without implying causation", async () => {
     const t = setup();
     const owner = await asNewUser(t, "specialist-time-report@example.com");
     const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Time Report Co" });
@@ -145,8 +145,11 @@ describe("custom specialist profiles", () => {
       createdAt: now,
       updatedAt: now,
     }));
-    await owner.client.mutation(api.workspace.rateCustomAgentRun, { slug, runId, rating: "helpful", minutesSaved: 31 });
+    const outcome = { metric: "New qualified sign-ups", measureType: "count" as const, value: 7, unit: "sign-ups", cohort: "First-time trial accounts", periodStart: now - 7 * 86_400_000, periodEnd: now };
+    await owner.client.mutation(api.workspace.rateCustomAgentRun, { slug, runId, rating: "helpful", minutesSaved: 31, outcome });
     await expect(owner.client.mutation(api.workspace.rateCustomAgentRun, { slug, runId, rating: "helpful", minutesSaved: 1441 })).rejects.toThrow(/whole number of minutes/);
+    await expect(owner.client.mutation(api.workspace.rateCustomAgentRun, { slug, runId, rating: "helpful", outcome: { ...outcome, measureType: "rate", value: 0.5 } })).rejects.toThrow(/denominator/);
+    await expect(owner.client.mutation(api.workspace.rateCustomAgentRun, { slug, runId, rating: "helpful", outcome: { ...outcome, periodEnd: now + 86_400_000 } })).rejects.toThrow(/cannot end in the future/);
 
     const teammate = await asNewUser(t, "specialist-time-report-teammate@example.com");
     await t.run((ctx) => ctx.db.insert("memberships", { orgId, userId: teammate.userId, role: "editor", status: "active", createdAt: now }));
@@ -156,12 +159,12 @@ describe("custom specialist profiles", () => {
     await expect(viewer.client.mutation(api.workspace.rateCustomAgentRun, { slug, runId, rating: "helpful", minutesSaved: 5 })).rejects.toThrow(/role \(viewer\) can't/);
 
     const saved = await owner.client.query(api.customAgents.list, { slug });
-    expect(saved.agents[0]?.recentRuns).toContainEqual(expect.objectContaining({ id: runId, rating: "helpful", minutesSaved: 31 }));
-    expect(saved.agents[0]?.workspaceReportedFeedback).toMatchObject({ source: "workspace_member_report", sampleSize: 2, helpful: 1, needsWork: 1, timeSavedRunCount: 1, medianMinutesSavedPerRun: 38 });
+    expect(saved.agents[0]?.recentRuns).toContainEqual(expect.objectContaining({ id: runId, rating: "helpful", minutesSaved: 31, outcome }));
+    expect(saved.agents[0]?.workspaceReportedFeedback).toMatchObject({ source: "workspace_member_report", sampleSize: 2, helpful: 1, needsWork: 1, timeSavedRunCount: 1, medianMinutesSavedPerRun: 38, outcomeCount: 1, recentOutcomes: [expect.objectContaining({ ...outcome, reportedAt: expect.any(Number) })] });
 
     await owner.client.mutation(api.workspace.rateCustomAgentRun, { slug, runId, rating: "helpful" });
     const clearedTimeEstimate = await owner.client.query(api.customAgents.list, { slug });
-    expect(clearedTimeEstimate.agents[0]?.recentRuns[0]).toMatchObject({ id: runId, rating: "helpful", minutesSaved: null });
+    expect(clearedTimeEstimate.agents[0]?.recentRuns[0]).toMatchObject({ id: runId, rating: "helpful", minutesSaved: null, outcome });
     expect(clearedTimeEstimate.agents[0]?.workspaceReportedFeedback).toMatchObject({ timeSavedRunCount: 1, medianMinutesSavedPerRun: 45 });
 
   });

@@ -188,7 +188,14 @@ function SpecialistsSettings() {
                   ) : (
                     <p className="text-sm text-ink-3">No time-saved reports yet. Leaving time unknown is fine.</p>
                   )}
+                  {agent.workspaceReportedFeedback.outcomeCount ? (
+                    <div className="text-sm text-ink-2">
+                      <p>{agent.workspaceReportedFeedback.outcomeCount} member-reported business result{agent.workspaceReportedFeedback.outcomeCount === 1 ? "" : "s"} in the recent feedback sample.</p>
+                      <ul className="mt-1 list-disc pl-5">{agent.workspaceReportedFeedback.recentOutcomes.map((outcome, index) => <li key={`${outcome.metric}-${outcome.periodEnd}-${index}`}>{outcome.metric}: {outcome.value}{outcome.unit ? ` ${outcome.unit}` : ""}{outcome.measureType === "rate" && outcome.denominator ? ` (${outcome.denominator} measured)` : ""} · {outcome.cohort} · {new Date(outcome.periodStart).toISOString().slice(0, 10)} to {new Date(outcome.periodEnd).toISOString().slice(0, 10)}</li>)}</ul>
+                    </div>
+                  ) : <p className="text-sm text-ink-3">No business results have been recorded for this specialist yet.</p>}
                   <p className="text-xs text-ink-3">Time saved and usefulness are member reports, not measured business results or proof that a run caused an outcome.</p>
+                  <p className="text-xs text-ink-3">Reported business results are observations for their stated cohort and dates; they are not independently verified and do not show that this specialist caused them.</p>
                   <p className="text-xs text-ink-3">ClimbOS credits measure product usage. This screen does not convert reported time into cash value or calculate return on investment.</p>
                 </div>
                 {agent.recentRuns.length ? (
@@ -206,7 +213,7 @@ function SpecialistsSettings() {
                           </p>
                           {run.rating ? <p className="text-xs text-ink-2">Your rating: {run.rating === "helpful" ? "Helpful" : "Needs work"}{run.minutesSaved !== null ? ` · You reported ${run.minutesSaved} minutes saved` : " · Time saved unknown"}{run.feedbackNote ? ` · ${run.feedbackNote}` : ""}</p> : null}
                           {data.canManage && ["verified", "failed", "uncertain", "canceled"].includes(run.status) ? (
-                            <SpecialistRunFeedback slug={slug} runId={run.id as Id<"workflowRuns">} rating={run.rating} minutesSaved={run.minutesSaved} />
+                            <SpecialistRunFeedback slug={slug} runId={run.id as Id<"workflowRuns">} rating={run.rating} minutesSaved={run.minutesSaved} outcome={run.outcome} successMetric={agent.successMetric} />
                           ) : null}
                         </li>
                       ))}
@@ -233,15 +240,27 @@ function SpecialistRunFeedback({
   runId,
   rating: initialRating,
   minutesSaved: initialMinutesSaved,
+  outcome: initialOutcome,
+  successMetric,
 }: {
   slug: string;
   runId: Id<"workflowRuns">;
   rating: "helpful" | "needs_work" | null;
   minutesSaved: number | null;
+  outcome: { metric: string; measureType: "count" | "rate" | "currency" | "duration"; value: number; unit: string; denominator?: number; comparisonValue?: number; comparisonLabel?: string; cohort: string; periodStart: number; periodEnd: number } | null;
+  successMetric: string;
 }) {
   const saveFeedback = useMutation(api.workspace.rateCustomAgentRun);
   const [rating, setRating] = useState<"helpful" | "needs_work" | null>(initialRating);
   const [minutesSaved, setMinutesSaved] = useState(initialMinutesSaved === null ? "" : String(initialMinutesSaved));
+  const [metric, setMetric] = useState(initialOutcome?.metric ?? "");
+  const [measureType, setMeasureType] = useState<"count" | "rate" | "currency" | "duration">(initialOutcome?.measureType ?? "count");
+  const [value, setValue] = useState(initialOutcome ? String(initialOutcome.value) : "");
+  const [unit, setUnit] = useState(initialOutcome?.unit ?? "");
+  const [denominator, setDenominator] = useState(initialOutcome?.denominator === undefined ? "" : String(initialOutcome.denominator));
+  const [cohort, setCohort] = useState(initialOutcome?.cohort ?? "");
+  const [periodStart, setPeriodStart] = useState(initialOutcome ? new Date(initialOutcome.periodStart).toISOString().slice(0, 10) : "");
+  const [periodEnd, setPeriodEnd] = useState(initialOutcome ? new Date(initialOutcome.periodEnd).toISOString().slice(0, 10) : "");
   const [busy, setBusy] = useState(false);
 
   async function save() {
@@ -251,10 +270,27 @@ function SpecialistRunFeedback({
       toast({ tone: "danger", title: "Enter whole minutes from 0 to 1,440, or leave the answer blank." });
       return;
     }
+    const hasOutcomeInput = [metric, value, unit, denominator, cohort, periodStart, periodEnd].some((item) => item.trim());
+    let outcome: { metric: string; measureType: "count" | "rate" | "currency" | "duration"; value: number; unit: string; denominator?: number; cohort: string; periodStart: number; periodEnd: number } | null = null;
+    if (hasOutcomeInput) {
+      const numericValue = Number(value);
+      const numericDenominator = denominator.trim() ? Number(denominator) : undefined;
+      const startAt = periodStart ? Date.parse(`${periodStart}T00:00:00.000Z`) : NaN;
+      const endAt = periodEnd ? Date.parse(`${periodEnd}T00:00:00.000Z`) : NaN;
+      if (!metric.trim() || !value.trim() || !Number.isFinite(numericValue) || numericValue < 0 || !unit.trim() || !cohort.trim() || !Number.isFinite(startAt) || !Number.isFinite(endAt) || startAt > endAt) {
+        toast({ tone: "danger", title: "Add the metric, result, unit, cohort, and date range—or leave the optional result blank." });
+        return;
+      }
+      if (measureType === "rate" && (!Number.isSafeInteger(numericDenominator) || (numericDenominator ?? 0) < 1)) {
+        toast({ tone: "danger", title: "For a rate, enter the number of people or items measured." });
+        return;
+      }
+      outcome = { metric: metric.trim(), measureType, value: numericValue, unit: unit.trim(), cohort: cohort.trim(), periodStart: startAt, periodEnd: endAt, ...(numericDenominator !== undefined ? { denominator: numericDenominator } : {}) };
+    }
     setBusy(true);
     try {
-      await saveFeedback({ slug, runId, rating, ...(parsedMinutes !== undefined ? { minutesSaved: parsedMinutes } : {}) });
-      toast({ tone: "success", title: "Feedback saved", description: "Your time estimate is recorded as a member report." });
+      await saveFeedback({ slug, runId, rating, ...(parsedMinutes !== undefined ? { minutesSaved: parsedMinutes } : {}), outcome });
+      toast({ tone: "success", title: "Feedback saved", description: outcome ? "Your feedback and business result are recorded as member reports." : "Your usefulness and time estimates are recorded as member reports." });
     } catch (error) {
       toast({ tone: "danger", title: errorMessage(error) });
     } finally {
@@ -272,6 +308,20 @@ function SpecialistRunFeedback({
       <Field label="Time you estimate it saved" optional hint="For this run, in minutes. Leave blank if unknown; this is your report, not a measured result.">
         <Input type="number" min={0} max={1440} step={1} value={minutesSaved} onChange={(event) => setMinutesSaved(event.target.value)} />
       </Field>
+      <details className="rounded-md border border-line bg-surface p-2.5" open={Boolean(initialOutcome)}>
+        <summary className="cursor-pointer text-sm font-medium text-ink-2">Record a business result (optional)</summary>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <Field label="What did you measure?" hint={`For example: ${successMetric}`}><Input value={metric} onChange={(event) => setMetric(event.target.value)} maxLength={120} /></Field>
+          <Field label="Result value"><Input type="number" min={0} step="any" value={value} onChange={(event) => setValue(event.target.value)} /></Field>
+          <Field label="Value type"><Select value={measureType} onValueChange={(next) => setMeasureType(next as typeof measureType)} options={[{ value: "count", label: "Count" }, { value: "rate", label: "Rate" }, { value: "currency", label: "Money" }, { value: "duration", label: "Time" }]} /></Field>
+          <Field label="Unit" hint="For example: customers, sign-ups, USD, or hours."><Input value={unit} onChange={(event) => setUnit(event.target.value)} maxLength={30} /></Field>
+          {measureType === "rate" ? <Field label="Number measured"><Input type="number" min={1} step={1} value={denominator} onChange={(event) => setDenominator(event.target.value)} /></Field> : null}
+          <Field label="Who or what did this cover?" hint="Name the group or period cohort, such as first-time buyers."><Input value={cohort} onChange={(event) => setCohort(event.target.value)} maxLength={160} /></Field>
+          <Field label="Period start"><Input type="date" value={periodStart} onChange={(event) => setPeriodStart(event.target.value)} /></Field>
+          <Field label="Period end"><Input type="date" value={periodEnd} onChange={(event) => setPeriodEnd(event.target.value)} /></Field>
+        </div>
+        <p className="mt-2 text-xs text-ink-3">This is your report about what happened, not proof this specialist caused it. Leave the fields blank if the result is unknown.</p>
+      </details>
       <div><Button size="sm" loading={busy} disabled={!rating} onClick={() => void save()}>{initialRating ? "Update feedback" : "Save feedback"}</Button></div>
     </div>
   );

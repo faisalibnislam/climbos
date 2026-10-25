@@ -3828,6 +3828,19 @@ export default defineSchema({
     rating: v.union(v.literal("helpful"), v.literal("needs_work")),
     /** Optional member estimate of minutes saved for this run; absent means unknown. */
     minutesSaved: v.optional(v.number()),
+    /** Optional member-reported business observation; never proof the run caused the outcome. */
+    outcome: v.optional(v.object({
+      metric: v.string(),
+      measureType: v.union(v.literal("count"), v.literal("rate"), v.literal("currency"), v.literal("duration")),
+      value: v.number(),
+      unit: v.string(),
+      denominator: v.optional(v.number()),
+      comparisonValue: v.optional(v.number()),
+      comparisonLabel: v.optional(v.string()),
+      cohort: v.string(),
+      periodStart: v.number(),
+      periodEnd: v.number(),
+    })),
     note: v.optional(v.string()),
     evidenceKind: v.literal("member_reported"),
     createdAt: v.number(),

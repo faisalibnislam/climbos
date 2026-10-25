@@ -253,19 +253,38 @@ export const runScheduledCustomAgent = internalMutation({
 
 /** Record a workspace member's report of usefulness after a custom specialist run finishes. */
 export const rateCustomAgentRun = mutation({
-  args: { slug: v.string(), runId: v.id("workflowRuns"), rating: v.union(v.literal("helpful"), v.literal("needs_work")), note: v.optional(v.string()), minutesSaved: v.optional(v.number()) },
-  handler: async (ctx, { slug, runId, rating, note, minutesSaved }) => {
+  args: {
+    slug: v.string(), runId: v.id("workflowRuns"), rating: v.union(v.literal("helpful"), v.literal("needs_work")), note: v.optional(v.string()), minutesSaved: v.optional(v.number()),
+    outcome: v.optional(v.union(v.null(), v.object({
+      metric: v.string(), measureType: v.union(v.literal("count"), v.literal("rate"), v.literal("currency"), v.literal("duration")), value: v.number(), unit: v.string(),
+      denominator: v.optional(v.number()), comparisonValue: v.optional(v.number()), comparisonLabel: v.optional(v.string()), cohort: v.string(), periodStart: v.number(), periodEnd: v.number(),
+    }))),
+  },
+  handler: async (ctx, { slug, runId, rating, note, minutesSaved, outcome }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
     const run = assertSameOrg(await ctx.db.get(runId), org._id, "specialist run");
     if (!run.customAgentId || !["verified", "failed", "uncertain", "canceled"].includes(run.status)) throw appError("INVALID", "Rate a finished specialist run.");
     assertSameOrg(await ctx.db.get(run.customAgentId), org._id, "specialist");
     if (minutesSaved !== undefined && (!Number.isInteger(minutesSaved) || minutesSaved < 0 || minutesSaved > 1440)) throw appError("INVALID", "Time saved must be a whole number of minutes from 0 to 1,440, or left unknown.");
+    let cleanOutcome: typeof outcome extends infer T ? Exclude<T, undefined | null> | undefined : never;
+    if (outcome && outcome !== null) {
+      if (!outcome.metric.trim() || outcome.metric.length > 120 || !outcome.unit.trim() || outcome.unit.length > 30 || !outcome.cohort.trim() || outcome.cohort.length > 160) throw appError("INVALID", "Add a metric, unit, and audience or cohort for the reported result.");
+      if (!Number.isFinite(outcome.value) || outcome.value < 0 || outcome.value > 1_000_000_000_000) throw appError("INVALID", "Reported outcome value must be a finite nonnegative number.");
+      if (outcome.measureType === "count" && !Number.isSafeInteger(outcome.value)) throw appError("INVALID", "Count outcomes must be whole numbers.");
+      if (outcome.measureType === "rate" && (outcome.value > 1 || !Number.isSafeInteger(outcome.denominator) || (outcome.denominator ?? 0) < 1)) throw appError("INVALID", "Rate outcomes must be between 0 and 1 and include a whole-number denominator.");
+      if (outcome.denominator !== undefined && (!Number.isSafeInteger(outcome.denominator) || outcome.denominator < 1)) throw appError("INVALID", "An outcome denominator must be a positive whole number.");
+      if (outcome.comparisonValue !== undefined && (!Number.isFinite(outcome.comparisonValue) || outcome.comparisonValue < 0 || outcome.comparisonValue > 1_000_000_000_000)) throw appError("INVALID", "Comparison value must be a finite nonnegative number.");
+      if ((outcome.comparisonValue === undefined) !== (outcome.comparisonLabel === undefined) || (outcome.comparisonLabel !== undefined && (!outcome.comparisonLabel.trim() || outcome.comparisonLabel.length > 80))) throw appError("INVALID", "Give a comparison value and its label together, or leave both blank.");
+      if (!Number.isSafeInteger(outcome.periodStart) || !Number.isSafeInteger(outcome.periodEnd) || outcome.periodStart > outcome.periodEnd || outcome.periodEnd > Date.now()) throw appError("INVALID", "Outcome dates must be valid, in order, and cannot end in the future.");
+      cleanOutcome = { ...outcome, metric: outcome.metric.trim().slice(0, 120), unit: outcome.unit.trim().slice(0, 30), cohort: outcome.cohort.trim().slice(0, 160), comparisonLabel: outcome.comparisonLabel?.trim().slice(0, 80) };
+    }
     const prior = await ctx.db.query("customAgentFeedback").withIndex("by_run_user", (q) => q.eq("workflowRunId", run._id).eq("userId", user._id)).unique();
     const cleanNote = note?.trim().slice(0, 800) || undefined;
     const now = Date.now();
-    if (prior) await ctx.db.patch(prior._id, { rating, note: cleanNote, minutesSaved, updatedAt: now });
-    else await ctx.db.insert("customAgentFeedback", { orgId: org._id, customAgentId: run.customAgentId, workflowRunId: run._id, userId: user._id, rating, note: cleanNote, minutesSaved, evidenceKind: "member_reported", createdAt: now, updatedAt: now });
-    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "custom_agent.outcome_rated", subjectType: "workflowRun", subjectId: run._id, summary: `Recorded ${rating === "helpful" ? "helpful" : "needs work"} feedback for a specialist run${minutesSaved === undefined ? "; time saved left unknown." : `; member reported ${minutesSaved} minutes saved.`}` });
+    const outcomePatch = outcome === undefined ? {} : outcome === null ? { outcome: undefined } : { outcome: cleanOutcome };
+    if (prior) await ctx.db.patch(prior._id, { rating, note: cleanNote, minutesSaved, ...outcomePatch, updatedAt: now });
+    else await ctx.db.insert("customAgentFeedback", { orgId: org._id, customAgentId: run.customAgentId, workflowRunId: run._id, userId: user._id, rating, note: cleanNote, minutesSaved, ...(cleanOutcome ? { outcome: cleanOutcome } : {}), evidenceKind: "member_reported", createdAt: now, updatedAt: now });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "custom_agent.outcome_rated", subjectType: "workflowRun", subjectId: run._id, summary: `Recorded ${rating === "helpful" ? "helpful" : "needs work"} feedback for a specialist run${minutesSaved === undefined ? "; time saved left unknown." : `; member reported ${minutesSaved} minutes saved.`}${cleanOutcome ? ` A member-reported ${cleanOutcome.metric} result was recorded for its stated cohort and period.` : ""}` });
   },
 });
 
