@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(14);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(16);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -36,6 +36,8 @@ describe("creative strategy precedent retrieval", () => {
 
   it("retrieves a location-triggered offer as a distinct distribution mechanism", () => {
     expect(retrieveCreativePrecedents("Use a geofence near competitor locations to trigger a one-time offer in the mobile app")[0]?.precedent.id).toBe("CP-014");
+    expect(retrieveCreativePrecedents("Create a useful travel guide that helps customers use our product category")[0]?.precedent.id).toBe("CP-015");
+    expect(retrieveCreativePrecedents("Respond to customer criticism with a core recipe change, franchisee support, and candid advertising")[0]?.precedent.id).toBe("CP-016");
   });
 
   it("retrieves fan co-creation through its mechanism, without requiring the target to be a toy company", () => {
