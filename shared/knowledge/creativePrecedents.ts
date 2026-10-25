@@ -1,6 +1,6 @@
 /**
  * Small, source-checked creative-strategy precedent set. This is deliberately
- * not padded to 100: the source corpus currently supports twenty-four reviewed cases.
+ * not padded to 100: the source corpus currently supports twenty-eight reviewed cases.
  * Additions require claim-level source verification and editorial review.
  */
 export interface CreativePrecedent {
@@ -549,10 +549,95 @@ export const CREATIVE_PRECEDENTS: readonly CreativePrecedent[] = [
       { title: "KFC's UK marketing boss on that 'FCK' ad and finding its brand voice", url: "https://www.marketingweek.com/kfcs-fck-ad/", publisher: "Marketing Week", publicationDate: "2018-07-02", accessedAt: "2026-10-25", sourceRole: "independent_secondary", claimRole: "outcome", supports: "Reports YouGov BrandIndex impression recovering from -10.6 during the crisis to -5.3, compared with a cited pre-crisis high of -2.7; it also quotes KFC's UK marketing leader on the campaign and brand voice." },
     ],
   },
+  {
+    id: "CP-025", title: "Aravind paired high-volume eye care with subsidized access", organization: "Aravind Eye Care System", sector: "Eye care and healthcare services", geography: "South India", approximateScale: "Started as an 11-bed hospital with four medical officers; now a multi-facility system", businessModel: "Mission-led eye-care network with paid, free, and subsidized services", period: "1976 onward",
+    families: ["business_model_innovation", "cross_subsidy", "capacity_reallocation", "service_operations"],
+    transferProfile: { audiences: ["patients with different ability to pay", "underserved communities", "healthcare providers"], goals: ["access", "service capacity", "financial sustainability", "quality at scale"], constraints: ["high fixed costs", "trained staff", "standardized repeatable work", "quality safeguards", "mixed ability to pay"], scale: ["resource constrained start", "mission led organization", "service network"], geographies: ["India", "South Asia"], businessModels: ["healthcare", "nonprofit", "social enterprise", "service network"] },
+    convention: "High-quality specialist service and affordability for low-income customers must be provided through separate operating systems or sacrificed against each other.",
+    choice: "Aravind developed high-volume eye-care operations and offers the same stated quality of care to patients who pay, receive subsidized care, or receive care free of charge; its current organization reports that about half of patients fall into the free or steeply subsidized groups.",
+    mechanism: "A repeatable service system can spread fixed capability across more cases and support a cross-subsidy between customers with different ability to pay. The mechanism depends on standardized work, trained teams, patient safety, consistent quality, and an ethically designed pricing model; throughput alone is not the transferable lesson.",
+    distinctiveness: "The organization combined a volume-oriented operating model with an explicit equity promise, rather than treating low-cost service as a lower-quality tier.",
+    outcome: "Aravind reports that approximately 50% of its patients receive free or steeply subsidized services while the system remains financially self-sustainable; it reports more than 720,000 eye surgeries or procedures annually. These are organization-reported figures and have not been independently re-estimated here.",
+    evidenceClass: "Organization-reported service and operating metrics; no independent causal estimate of the model's contribution to financial sustainability or patient outcomes.",
+    causalLimit: "Aravind's results reflect decades of clinical expertise, process design, institutional mission, training, and regional context. The published figures do not isolate the effect of any single operating practice and should not be transferred as a growth forecast.",
+    conditions: ["A repeatable service where standardization does not compromise individual quality or safety", "Enough qualified staff and reliable quality controls", "Transparent ability-to-pay policies and sustainable full-cost economics", "A measurable unmet need and appropriate local regulatory oversight"],
+    transferRisk: "Copying an assembly-line analogy into a context-sensitive service can harm quality or dignity; a cross-subsidy fails if the paying segment, capacity, or true service costs are misjudged.",
+    smallBusinessAdaptation: "Map a service into safe repeatable steps, remove avoidable waiting or rework, and test one transparent lower-cost access option only after checking unit costs and service quality.",
+    reversibleTest: "Run a small, time-bounded operational pilot with a defined service cohort. Compare completion time, rework, customer-reported quality, safety incidents, contribution margin, and access by customer group; stop or redesign if quality or equity worsens.",
+    editorialStatus: "verified_primary", researchConfidence: "medium", accessedAt: "2026-10-25",
+    sources: [
+      { title: "Our Story and Aravind Model", url: "https://aravind.org/our-story/", publisher: "Aravind Eye Care System", publicationDate: "Undated; current organization profile", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action_and_outcome", supports: "Aravind describes its 1976 founding, an 11-bed and four-medical-officer beginning, its high-volume approach, same-quality-care commitment, roughly 50% free or steeply subsidized patients, and current organization-reported procedure volumes." },
+    ],
+  },
+  {
+    id: "CP-026", title: "M-PESA built distribution from Safaricom's airtime dealers", organization: "Safaricom / M-PESA", sector: "Mobile financial services", geography: "Kenya", approximateScale: "National mobile network operator; M-PESA launched in 2007", businessModel: "Mobile-money service distributed through contracted retail agents", period: "2007–2010 network evolution",
+    families: ["distribution_partnership", "existing_asset_recombination", "network_effects", "customer_experience_operations"],
+    transferProfile: { audiences: ["customers with limited branch access", "local merchants", "mobile subscribers"], goals: ["distribution", "customer access", "trust", "network growth"], constraints: ["limited owned locations", "cash and liquidity operations", "service consistency", "agent incentives", "training and oversight"], scale: ["new service launch", "regional rollout", "network business"], geographies: ["Kenya", "East Africa"], businessModels: ["mobile financial services", "telecommunications", "retail network", "marketplace"] },
+    convention: "A new financial service must build its own physical distribution footprint before it can reach customers beyond major centers.",
+    choice: "Safaricom initially recruited established airtime distributors as M-PESA agents, then expanded to smaller dealers and evolved an aggregator structure as the network grew. The World Bank's retrospective records 400 large distributors selected at launch, 1,200 agents by December 2007, and later efforts to formalize oversight, commission limits, training, and liquidity support.",
+    mechanism: "A trusted network already used for a related customer task can reduce the cost and time of reaching new locations. As participation scales, the network needs clear economics, training, liquidity, service standards, and accountable intermediaries; distribution reach without operating control can degrade trust.",
+    distinctiveness: "The service used existing airtime distribution relationships as a physical access layer, then adapted the network structure when smaller merchants and intermediary relationships emerged.",
+    outcome: "The World Bank case records expansion from 400 selected airtime distributors to 1,200 agents by December 2007, and more than 10,000 agent points during a later phase. The report also documents quality, liquidity, and commission problems that prompted stronger controls. These are historical, source-reported network counts, not evidence that the agent strategy alone caused customer adoption.",
+    evidenceClass: "World Bank case-study synthesis based on historical provider material; reported network counts and operating issues, not a causal evaluation.",
+    causalLimit: "Mobile access, customer need, pricing, product utility, regulation, marketing, and Safaricom's existing network all mattered. Agent counts do not measure active usage, profitability, inclusion, or incremental growth.",
+    conditions: ["An existing partner network whose customers and locations fit the new service", "A concrete partner benefit and viable commission economics", "Training, quality checks, customer support, and fair intermediary terms", "A safe and lawful way to handle money, data, products, or regulated services"],
+    transferRisk: "A partner channel can expose customers to inconsistent service, hidden fees, brand misuse, or unfair subcontracting; an existing audience does not guarantee demand for the new offer.",
+    smallBusinessAdaptation: "Ask whether trusted businesses already serving the same customers could host, demonstrate, or refer one complementary service; begin with one opt-in partner and define training, attribution, compensation, and service boundaries.",
+    reversibleTest: "Pilot one partner location or referral relationship for a fixed period. Track qualified referrals, completed purchases, contribution after partner costs, customer complaints, fulfillment reliability, and staff time; stop if the partner economics or customer experience fail.",
+    editorialStatus: "verified_primary_and_secondary", researchConfidence: "medium", accessedAt: "2026-10-25",
+    sources: [
+      { title: "Agent Management Toolkit: M-PESA's Changing Structure over Time", url: "https://documents1.worldbank.org/curated/en/898731468340143196/pdf/633350WP0Agent00Box0361513B0PUBLIC0.pdf", publisher: "World Bank / CGAP", publicationDate: "2011", accessedAt: "2026-10-25", sourceRole: "independent_secondary", claimRole: "action_and_outcome", supports: "The case explains that M-PESA selected 400 large airtime distributors at launch, had 1,200 agents by December 2007, later expanded through smaller dealers and subagents, and strengthened controls after liquidity, training, service-consistency, and commission issues. Counts describe network points, not causal customer or revenue outcomes." },
+      { title: "The M-PESA Wonder: How It All Begun", url: "https://newsroom.safaricom.co.ke/innovation/the-m-pesa-wonder-how-it-all-begun/", publisher: "Safaricom Newsroom", publicationDate: "2017", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action", supports: "Safaricom's retrospective describes recruiting airtime dealers for the early M-PESA agent network and the service's 2007 launch." },
+    ],
+  },
+  {
+    id: "CP-027", title: "OXO redesigned an everyday tool around a neglected grip problem", organization: "OXO International / Smart Design", sector: "Household and kitchen products", geography: "United States", approximateScale: "New product line launched in 1990 by an established kitchenware entrepreneur", businessModel: "Consumer products designed and sold through retail", period: "1988–1990 onward",
+    families: ["accessible_design", "customer_research", "product_service_design", "distinctive_identity"],
+    transferProfile: { audiences: ["people with limited grip strength", "older adults", "home cooks", "customers overlooked by category defaults"], goals: ["usability", "product differentiation", "broader audience fit", "trust"], constraints: ["existing product conventions", "physical usability", "materials and manufacturing", "research and prototyping"], scale: ["small product team", "new product line", "established retailer"], geographies: ["United States", "global retail"], businessModels: ["consumer products", "kitchenware", "physical product", "retail"] },
+    convention: "A mature household-tool category can keep optimizing its familiar form for the assumed average user, leaving customers with different abilities to adapt themselves to the product.",
+    choice: "After observing his wife's difficulty using a peeler because of arthritis, Sam Farber worked with Smart Design to research users including members of an arthritis group, evaluate where existing tools failed, and develop a broader line of easy-to-grip kitchen tools.",
+    mechanism: "A specific usability barrier can reveal a larger audience and a category-level design opportunity. OXO translated observed user difficulty into research, prototypes, material choices, product design, packaging, and brand decisions rather than treating accessibility as a single styling change.",
+    distinctiveness: "The design challenge began with a customer who was poorly served by the category's default assumptions, then produced tools intended to work for people across different ages and abilities.",
+    outcome: "The Cooper Hewitt Smithsonian Design Museum documents the research, prototyping, and launch of Good Grips in 1990, and its later expansion into other household categories. This is historical product documentation; no independent sales or causal effect is asserted.",
+    evidenceClass: "Museum-curated historical and design account; product choices and line expansion documented, commercial impact not measured here.",
+    causalLimit: "Product success may also reflect manufacturing, distribution, price, brand execution, and retail access. The story does not show that every accessibility-led redesign creates a viable market or that user research can replace commercial testing.",
+    conditions: ["A real and repeated task failure that the business can observe", "Research with affected users rather than assumptions about them", "A design and production process able to address the barrier", "Testing that considers dignity, usability, affordability, and safety"],
+    transferRisk: "Design teams can stereotype disabled users, mistake one person's experience for a whole segment, or market a feature as accessible without testing it with the people it is meant to serve.",
+    smallBusinessAdaptation: "Observe one customer struggling with a common step, invite a few people with varied needs to describe the problem, and test a low-cost service or interface adjustment before turning it into a broad brand claim.",
+    reversibleTest: "Prototype one change with consenting users who experience the barrier. Measure task completion, error rate, comfort, independence, and willingness to use or pay; ask users what the test missed and do not publish accessibility claims from a small test alone.",
+    editorialStatus: "verified_secondary", researchConfidence: "medium", accessedAt: "2026-10-25",
+    sources: [
+      { title: "Getting a Grip on User-Inspired Design", url: "https://www.cooperhewitt.org/2018/02/12/getting-a-grip-on-user-inspired-design-2/", publisher: "Cooper Hewitt, Smithsonian Design Museum", publicationDate: "2018-02-12", accessedAt: "2026-10-25", sourceRole: "independent_secondary", claimRole: "action_and_outcome", supports: "The museum's design-history account describes Farber observing his wife's arthritis-related difficulty, research with consumers, chefs, and an arthritis group, evaluation of existing product failures, the Good Grips line, and the integrated research-to-prototyping-to-production process." },
+    ],
+  },
+  {
+    id: "CP-028", title: "Sanergy shifted Fresh Life toilets from pay-per-use to fee-for-service", organization: "Fresh Life / The Sanergy Collaborative", sector: "Sanitation and environmental services", geography: "Kenya", approximateScale: "Social enterprise serving non-sewered settlements; reported launch of 120 landlord toilets in the model pilot", businessModel: "Sanitation infrastructure with servicing, waste collection, treatment, and reuse", period: "Fee-for-service model adopted after pilot",
+    families: ["business_model_innovation", "pricing_experiment", "service_operations", "constraint_transformation"],
+    transferProfile: { audiences: ["property owners", "tenants", "local service operators", "underserved communities"], goals: ["access", "predictable revenue", "adoption", "service reliability"], constraints: ["upfront customer cost", "recurring maintenance", "infrastructure access", "service delivery capacity", "local partnership"], scale: ["social enterprise", "local service network", "resource constrained market"], geographies: ["Kenya", "East Africa"], businessModels: ["subscription", "service contract", "franchise", "social enterprise", "infrastructure"] },
+    convention: "A shared service should charge each end user at the moment of use, even when the upfront asset cost or per-transaction friction prevents adoption.",
+    choice: "Fresh Life developed a fee-for-service option in which landlords paid a monthly fee for a serviced toilet instead of making the larger upfront investment associated with the earlier model. TRANSFORM reports that a pilot helped launch 120 toilets with landlords who had not previously provided sanitation, and that the model was later adopted across the business in place of pay-per-use.",
+    mechanism: "Changing who pays and when can remove an adoption barrier when one party controls the asset and another receives the service. Recurring payment can support ongoing maintenance, but only if the payer sees value, usage and service obligations are clear, and delivery costs fit the contract.",
+    distinctiveness: "The business changed both its payment unit and buyer: from a user paying per visit to a landlord paying monthly for an installed and serviced facility.",
+    outcome: "TRANSFORM reports that the pilot led to 120 landlord toilets and says fee-for-service was adopted across the business, replacing pay-per-use. These are partner-reported implementation outcomes; the public case does not provide comparative profitability, retention, or causal impact data.",
+    evidenceClass: "Company and implementation-partner account of model change and rollout; commercial and customer outcomes not independently established.",
+    causalLimit: "The case does not report a controlled comparison, full costs, customer retention, or the conditions under which landlords found the contract viable. The change also depended on local infrastructure and the provider's regular collection and treatment operations.",
+    conditions: ["A buyer other than the end user can capture enough value to pay", "The recurring service can be delivered reliably at a known cost", "Contract scope, maintenance, usage, and service levels are clear", "The payer's incentives align with the people who use the service"],
+    transferRisk: "Moving to a subscription can shift cost to a party that does not value the service, hide overuse or maintenance costs, or reduce access for end users if the contract is cancelled.",
+    smallBusinessAdaptation: "When a customer faces an upfront barrier, test whether a landlord, employer, association, or other value-capturing buyer would fund a recurring service for a defined group; do not assume a third-party payer exists.",
+    reversibleTest: "Offer a clearly scoped monthly service to a small number of qualified buyers with a simple cancellation path. Track signed and renewed contracts, actual service cost, usage, downtime, end-user access, support time, and contribution margin before expanding.",
+    editorialStatus: "verified_secondary", researchConfidence: "medium", accessedAt: "2026-10-25",
+    sources: [
+      { title: "Fresh Life by The Sanergy Collaborative", url: "https://transform.global/enterprise-projects/fresh-life-by-the-sanergy-collaborative/", publisher: "TRANSFORM", publicationDate: "Undated; current project profile", accessedAt: "2026-10-25", sourceRole: "independent_secondary", claimRole: "action_and_outcome", supports: "The implementation partner describes Fresh Life's serviced sanitation value chain, the fee-for-service pilot in which landlords paid monthly instead of making a high upfront investment, 120 toilets launched with new landlord customers, and adoption of the model across the business." },
+      { title: "Sanergy", url: "https://www.gsma.com/solutions-and-impact/connectivity-for-good/mobile-for-development/digital-grantees-portfolio/sanergy/", publisher: "GSMA Mobile for Development", publicationDate: "Undated; case profile", accessedAt: "2026-10-25", sourceRole: "independent_secondary", claimRole: "context", supports: "GSMA describes the Fresh Life operator franchise, ongoing marketing, business and maintenance support, and the collection, transport, and treatment service required to operate the sanitation system." },
+    ],
+  },
 
 ];
 
 const STOP = new Set(["and", "the", "for", "with", "from", "into", "that", "this", "business", "company", "customer", "strategy", "strategic", "growth", "marketing"]);
+// Category and geography words may help explain transfer fit, but cannot by
+// themselves establish that a case has the same creative/business mechanism.
+const MECHANISM_STOP = new Set([...STOP, "care", "product", "service", "provider", "providers", "retail", "health", "businesses", "company", "companies", "industry", "sector", "market", "markets", "audience", "local", "global", "south", "north", "east", "west", "india", "kenya", "united", "states", "compare"]);
 const words = (s: string) => new Set((s.toLocaleLowerCase("en-US").normalize("NFKC").match(/[a-z0-9]{3,}/g) ?? []).map((term) => STOP.has(term) || term.length <= 4 || term.endsWith("ss") ? term : term.endsWith("s") ? term.slice(0, -1) : term));
 const SCALE_ALIASES: Record<string, string[]> = { small: ["startup", "early", "resource", "limited"], startup: ["early", "small"], micro: ["small", "limited"] };
 
@@ -590,10 +675,10 @@ function contextFor(value: string | CreativePrecedentContext): { core: Set<strin
   };
 }
 
-function overlap(context: Set<string>, sourceText: string, weight: number, max = 1.5): { score: number; matched: string[] } {
+function overlap(context: Set<string>, sourceText: string, weight: number, max = 1.5, excluded: ReadonlySet<string> = STOP): { score: number; matched: string[] } {
   if (!context.size) return { score: 0, matched: [] };
   const source = words(sourceText);
-  const matched = [...context].filter((term) => !STOP.has(term) && source.has(term));
+  const matched = [...context].filter((term) => !excluded.has(term) && source.has(term));
   return { score: Math.min(max, matched.length * weight), matched: matched.slice(0, 4) };
 }
 
@@ -603,7 +688,7 @@ export function retrieveCreativePrecedents(query: string | CreativePrecedentCont
   const queryTerms = [...context.core].filter((term) => !STOP.has(term));
   if (!queryTerms.length) return [];
   return CREATIVE_PRECEDENTS.map((precedent) => {
-    const mechanisms = overlap(context.core, `${precedent.families.join(" ")} ${precedent.convention} ${precedent.choice} ${precedent.mechanism} ${precedent.transferProfile.goals.join(" ")} ${precedent.transferProfile.constraints.join(" ")}`, 0.75, 3);
+    const mechanisms = overlap(context.core, `${precedent.families.join(" ")} ${precedent.convention} ${precedent.choice} ${precedent.mechanism} ${precedent.transferProfile.goals.join(" ")} ${precedent.transferProfile.constraints.join(" ")}`, 0.75, 3, MECHANISM_STOP);
     // Require a mechanism match so geography, company names, or sector alone cannot create a false analogy.
     const audience = overlap(context.audience, `${precedent.transferProfile.audiences.join(" ")} ${precedent.sector} ${precedent.conditions.join(" ")} ${precedent.smallBusinessAdaptation}`, 0.2);
     const goals = overlap(context.goals, `${precedent.transferProfile.goals.join(" ")} ${precedent.mechanism} ${precedent.outcome} ${precedent.reversibleTest}`, 0.2);

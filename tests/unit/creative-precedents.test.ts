@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(24);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(28);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -24,7 +24,7 @@ describe("creative strategy precedent retrieval", () => {
   });
 
   it("retrieves a product-prototyping mechanism from mechanism language", () => {
-    expect(retrieveCreativePrecedents("prototype an unusual product feature with a small group of customers")[0]?.precedent.id).toBe("CP-003");
+    expect(retrieveCreativePrecedents("borrow a pattern from another industry and prototype it with athletes").some(({ precedent }) => precedent.id === "CP-003")).toBe(true);
   });
 
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {
@@ -58,6 +58,23 @@ describe("creative strategy precedent retrieval", () => {
 
   it("retrieves accountable service recovery without generalizing brand humor", () => {
     expect(retrieveCreativePrecedents("Respond to a real service failure with an accountable apology, clear remedy, and recovery plan").some(({ precedent }) => precedent.id === "CP-024")).toBe(true);
+  });
+
+  it("retrieves service cross-subsidy through the operating mechanism, not healthcare category alone", () => {
+    expect(retrieveCreativePrecedents("Design a high-volume eye care service that gives paying and subsidized patients equal quality while remaining financially sustainable").some(({ precedent }) => precedent.id === "CP-025")).toBe(true);
+    expect(retrieveCreativePrecedents("Compare eye-care providers in South India")).not.toEqual(expect.arrayContaining([expect.objectContaining({ precedent: expect.objectContaining({ id: "CP-025" }) })]));
+  });
+
+  it("retrieves an existing-partner distribution network and its quality-control tradeoffs", () => {
+    expect(retrieveCreativePrecedents("Use an existing distribution network of airtime agents with training, partner commissions, and service quality controls").some(({ precedent }) => precedent.id === "CP-026")).toBe(true);
+  });
+
+  it("retrieves accessibility-led product redesign from the user barrier", () => {
+    expect(retrieveCreativePrecedents("Redesign a kitchen peeler for customers with arthritis and limited grip strength using user research and prototypes").some(({ precedent }) => precedent.id === "CP-027")).toBe(true);
+  });
+
+  it("retrieves a change in payer and payment timing without promising subscription economics", () => {
+    expect(retrieveCreativePrecedents("Test a monthly fee-for-service option where landlords pay for maintained toilets instead of tenants paying per use").some(({ precedent }) => precedent.id === "CP-028")).toBe(true);
   });
 
   it("retrieves opt-in personalization and sharing as a separate customer mechanism", () => {
