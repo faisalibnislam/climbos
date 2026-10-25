@@ -33,4 +33,21 @@ describe("Conversion audit design direction choices", () => {
     expect(html).toContain("Prepare editable brief");
     expect(html).toContain("Selected");
   });
+
+  it("requires saving the exact direction before opening its editable brief", () => {
+    hooks.useQuery.mockImplementation((_query, args) => args?.runId
+      ? { canEdit: true, rows: [] }
+      : null);
+
+    const html = renderToStaticMarkup(createElement(ConversionAuditView, {
+      slug: "design-co",
+      runId: "audit_run" as never,
+      value: { designCritic: { coverage: "visual_sampled", findings: [{ region: "Hero", directions: [{ id: "hero-proof", name: "Show proof earlier", change: "Move confirmed proof above the call to action.", previewBrief: "Move proof." }] }] } },
+    }));
+
+    expect(html).toContain("Choose this direction");
+    expect(html).toContain("Prepare editable brief</button>");
+    expect(html).toContain("Choose and save this direction first.");
+    expect(html).not.toContain("pages?brief=");
+  });
 });

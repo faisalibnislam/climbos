@@ -156,7 +156,13 @@ export function ConversionAuditView({ value, slug, runId }: { value: unknown; sl
                   } catch (error) { toast({ tone: "danger", title: errorMessage(error) }); }
                   finally { setSelectDirectionBusy(null); }
                 }}>{selected ? "Selected" : "Choose this direction"}</Button> : null}
-                {direction.previewBrief ? <Link href={`/app/${encodeURIComponent(slug)}/pages?brief=${encodeURIComponent(designBrief(finding, direction, approvedBrand, creativeRanges[i] ?? "distinctive", essentialElements[i] ?? ""))}`} className="inline-flex items-center gap-1 text-xs font-medium text-link">Prepare editable brief <ArrowRight aria-hidden className="size-3" /></Link> : null}
+                {direction.previewBrief ? selected
+                  ? <Link href={`/app/${encodeURIComponent(slug)}/pages?brief=${encodeURIComponent(designBrief(finding, direction, approvedBrand, creativeRanges[i] ?? "distinctive", essentialElements[i] ?? ""))}`} className="inline-flex items-center gap-1 text-xs font-medium text-link">Prepare editable brief <ArrowRight aria-hidden className="size-3" /></Link>
+                  : <span className="flex flex-col items-start gap-1">
+                    <Button size="sm" variant="secondary" disabled>Prepare editable brief</Button>
+                    <span className="text-xs text-ink-3">Choose and save this direction first.</span>
+                  </span>
+                  : null}
               </div>
               {selected ? <p className="mt-2 text-xs text-ink-3">Saved against this audit finding. It does not change or publish the audited website.</p> : null}
             </div>; })}
