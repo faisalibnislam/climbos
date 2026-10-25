@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { RequestComposer } from "@/components/ui/request-composer";
+import { onboardingDraftKey, parseOnboardingDraft, type OnboardingDraft } from "@/components/app/draftKeys";
 import { WordHelp } from "@/components/ui/word-help";
 import { Logo } from "@/components/brand/Logo";
 import {
@@ -119,7 +120,8 @@ export function OnboardingFlow() {
   if (!slug) {
     return (
       <BusinessStep
-        key={`${me.userId}:${wantNew ? "new" : "first"}:${preview?.website ?? "blank"}`}
+        key={`${me.userId}:${wantNew ? "new" : "first"}:${preview?.website ?? "blank"}:${preview?.goal ?? "blank"}`}
+        userId={me.userId}
         additional={wantNew}
         prefillWebsite={preview?.website ?? ""}
         prefillGoal={preview?.goal ?? ""}
@@ -198,18 +200,21 @@ function Shell({ step, children, slug }: { step: Step; children: ReactNode; slug
 /* ------------------------------------------------------------------ */
 
 function BusinessStep({
+  userId,
   additional,
   prefillWebsite,
   prefillGoal,
   previewToken,
   onCreated,
 }: {
+  userId: string;
   additional: boolean;
   prefillWebsite: string;
   prefillGoal: string;
   previewToken: string | null;
   onCreated: (slug: string) => void;
 }) {
+  const draftKey = onboardingDraftKey(userId, additional);
   const [mode, setMode] = useState<"chat" | "form">("chat");
   const [chat, setChat] = useState([prefillWebsite, prefillGoal].filter(Boolean).join(". "));
   const [name, setName] = useState("");
@@ -218,6 +223,7 @@ function BusinessStep({
   const [website, setWebsite] = useState(prefillWebsite);
   const [noWebsite, setNoWebsite] = useState(false);
   const [description, setDescription] = useState("");
+  const [loadedDraftKey, setLoadedDraftKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const create = useMutation(api.orgs.createWorkspace);
@@ -232,6 +238,38 @@ function BusinessStep({
   const researchCost = researchEstimate === undefined
     ? "Research uses credits; the estimate will appear when it is ready."
     : `Research uses up to ${microsToCreditsLabel(researchEstimate)}. We charge only for the work completed; unused reserved credits are returned.`;
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      let stored: OnboardingDraft | null = null;
+      try { stored = parseOnboardingDraft(window.sessionStorage.getItem(draftKey)); } catch { /* Storage may be unavailable. */ }
+      if (stored && stored.additional === additional && stored.prefillWebsite === prefillWebsite && stored.prefillGoal === prefillGoal) {
+        setMode(stored.mode);
+        setChat(stored.chat);
+        setName(stored.name);
+        setNameOverride(stored.nameOverride);
+        setWebsite(stored.website);
+        setNoWebsite(stored.noWebsite);
+        setDescription(stored.description);
+      } else {
+        setMode("chat");
+        setChat([prefillWebsite, prefillGoal].filter(Boolean).join(". "));
+        setName("");
+        setNameOverride(null);
+        setWebsite(prefillWebsite);
+        setNoWebsite(false);
+        setDescription("");
+      }
+      setLoadedDraftKey(draftKey);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [additional, draftKey, prefillGoal, prefillWebsite]);
+
+  useEffect(() => {
+    if (loadedDraftKey !== draftKey) return;
+    const draft: OnboardingDraft = { version: 1, additional, prefillWebsite, prefillGoal, mode, chat, name, nameOverride, website, noWebsite, description };
+    try { window.sessionStorage.setItem(draftKey, JSON.stringify(draft)); } catch { /* The form remains usable without storage. */ }
+  }, [additional, chat, description, draftKey, loadedDraftKey, mode, name, nameOverride, noWebsite, prefillGoal, prefillWebsite, website]);
 
   const parsed: ParsedIntro = useMemo(() => parseIntro(chat), [chat]);
 
@@ -251,6 +289,7 @@ function BusinessStep({
     try {
       const referralCode = /(?:^|;\s*)climbos_ref=([a-z0-9]+)/.exec(document.cookie)?.[1];
       const { slug, orgId } = await create({ businessName: fields.name, website: fields.website, timezone: TIMEZONE, referralCode });
+      try { sessionStorage.removeItem(draftKey); } catch { /* The new workspace can still continue. */ }
       if (fields.parsed) {
         try {
           sessionStorage.setItem(`climbos:intro:${slug}`, JSON.stringify(fields.parsed));
@@ -277,6 +316,10 @@ function BusinessStep({
     }
   }
 
+  if (loadedDraftKey !== draftKey) {
+    return <Shell step="business"><Skeleton className="h-64 w-full" /></Shell>;
+  }
+
   return (
     <Shell step="business">
       <h1 className="heading-page">{additional ? "Tell us about your next business" : "Tell us about your business"}</h1>
@@ -298,6 +341,7 @@ function BusinessStep({
             helper={`Creates your business space and starts research. ${researchCost} You check the details before choosing your next steps.`}
             suggestions={["I want help finding customers.", "I want to sell more.", "I am not sure where to start.", "I do not have a website yet."]}
           />
+          <p className="text-xs text-ink-3">Your draft stays in this browser tab and is separate for your first or next business.</p>
             {chat.trim().length > 8 && (
               <div className="rounded-xl border border-line bg-surface p-4 text-ui" aria-live="polite">
                 <p className="heading-card flex flex-wrap items-center gap-2">

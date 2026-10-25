@@ -13,7 +13,7 @@ The application uses task-based navigation and plain-language explanations. Exis
 
 `src/components/app/navigation.ts` owns the navigation labels, tool explanations, aliases, and legacy-route grouping. Tool directories link to the real existing editors and records. Connections and review remain directly accessible; technical settings are grouped under Advanced tools without changing permission checks.
 
-Home and first/additional business onboarding share `RequestComposer`. A suggestion only adds editable text; it never starts work. Existing input is preserved when another suggestion is selected. Home request drafts survive navigation and page reloads in the current browser tab and are scoped to both the signed-in person and business. They are not synced to another device. The contextual Climb panel follows the same suggestion behavior and labels its separate page-help conversation.
+Home and first/additional business onboarding share `RequestComposer`. A suggestion only adds editable text; it never starts work. Existing input is preserved when another suggestion is selected. Home request drafts survive navigation and page reloads in the current browser tab and are scoped to both the signed-in person and business. New-business setup drafts also survive in the current tab and are separated by signed-in person and first-versus-next business setup. Drafts are not synced to another device. The contextual Climb panel follows the same suggestion behavior and labels its separate page-help conversation.
 
 Content review shows the draft's intended reader, objective, core idea, and exact growth-plan item when the copy is tied to one. Planned Autopilot slots show the same plan item before drafting, so owners can see which approved offer the post will use.
 
