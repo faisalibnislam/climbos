@@ -1618,10 +1618,10 @@ function lintSocial(out: SocialPostsV2, input: AgentInput, requestedChannels: st
     const lim = CHANNEL_LIMITS[p.channel] ?? CHANNEL_LIMITS.instagram;
     const path = `posts[${i}]`;
     issues.push(
-      ...lintCopy({ angle: p.angle, body: p.body, slides: p.slides, script: p.videoScript, firstComment: p.firstComment }, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), emojiPer150: lim.emojiPer150, publishable: true }).map((l) => ({ ...l, path: `${path}.${l.path ?? ""}` })),
+      ...lintCopy({ title: p.title, hook: p.hook, angle: p.angle, body: p.body, slides: p.slides, script: p.videoScript, firstComment: p.firstComment, altText: p.altText }, { evidence: evidenceOf(input), claimEvidence: verifiedCapabilityEvidence(input), emojiPer150: lim.emojiPer150, publishable: true }).map((l) => ({ ...l, path: `${path}.${l.path ?? ""}` })),
       ...lintFactIndexes(p.factIndexes, input.facts.length, `${path}.factIndexes`),
-      // Briefs and alt text are complete too: no owner questions hidden in them.
-      ...lintCopy({ title: p.title, hook: p.hook, visualBrief: p.visualBrief, altText: p.altText, imageIdea: p.imageIdea }, { publishable: true }).filter((l) => l.rule === "placeholder").map((l) => ({ ...l, path: `${path}.${l.path ?? ""}` })),
+      // Internal creative notes are not publishable claims, but cannot contain owner questions.
+      ...lintCopy({ visualBrief: p.visualBrief, imageIdea: p.imageIdea }, { publishable: true }).filter((l) => l.rule === "placeholder").map((l) => ({ ...l, path: `${path}.${l.path ?? ""}` })),
       ...maxLength(p.body, lim.body, `${path}.body`, "Post"),
       ...maxItems(p.hashtags, lim.hashtags, `${path}.hashtags`, "hashtags"),
       ...(lim.fold ? hookBeforeFold(p.body, lim.fold, `${path}.body`) : []),

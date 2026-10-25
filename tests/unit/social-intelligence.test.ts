@@ -130,6 +130,31 @@ describe("social intelligence routing", () => {
     expect((spec.lint?.(mismatchedOutput as never, citedInput) ?? []).some((issue) => issue.rule === "citation")).toBe(true);
   });
 
+  it("checks titles, hooks, and image alt text against confirmed claim evidence", () => {
+    const spec = socialSpec(["instagram"]);
+    const input: AgentInput = { task: "Write an Instagram post", brief: "A business", facts: [], constraints: { factKinds: [] } };
+    const copyBrief = {
+      reader: "customers", situation: "choosing a provider", awarenessStage: "unknown", relationshipStage: "unknown", objective: "teach",
+      offerFactIndexes: [], problemJob: "understand a choice", trigger: "planning", centralIdea: "A useful guide", objection: "none known",
+      proofFactIndexes: [], prohibitedClaims: [], channel: "social", format: "image", deliveryContext: "organic", brandVoice: "clear",
+      approvedExamples: [], cta: "Save this guide", afterAction: "none", trackingMetric: "unknown", trackingMethod: "unknown",
+      supportingFactIndexes: [], supportingSourceUrls: [], unknowns: [],
+    };
+    const output = {
+      copyBrief,
+      posts: [{
+        channel: "instagram", title: "The #1 platform for local shops", hook: "Support 24/7 by chat", body: "A useful guide for comparing services and asking better questions.",
+        hashtags: [], altText: "Award-winning customer support poster", imageIdea: "A simple comparison card", factIndexes: [], suggestedDay: 1,
+        angle: "Compare before choosing", format: "image", slides: [], videoScript: "", visualBrief: "A clear, readable comparison card", firstComment: "",
+      }],
+    };
+
+    const claims = (spec.lint?.(output as never, input) ?? []).filter((issue) => issue.rule === "unsupported_claim");
+    expect(claims.map((issue) => issue.path)).toEqual(expect.arrayContaining([
+      "posts[0].title", "posts[0].hook", "posts[0].altText",
+    ]));
+  });
+
   it("warns on a mismatched channel when single-channel publishing binds the final artifact to the selected channel", () => {
     const spec = socialSpec(["facebook"]);
     const input: AgentInput = { task: "Write one Facebook post", brief: "A business", facts: [] };
