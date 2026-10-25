@@ -27,8 +27,8 @@ describe("search opportunity priority", () => {
     const opportunities = prioritizeAiVisibilityGaps({
       website: "https://example.com",
       observations: [
-        { provider: "chatgpt", query: "Best accounting help for freelancers?", location: "Dhaka", checkedAt: 100, answerStatus: "answered", brandMention: "no", citedUrls: ["https://other.example/review"] },
-        { provider: "chatgpt", query: "Best accounting help for freelancers?", location: "Dhaka", checkedAt: 200, answerStatus: "answered", brandMention: "no", citedUrls: ["https://other.example/review"] },
+        { provider: "chatgpt", query: "Best accounting help for freelancers?", location: "Dhaka", checkedAt: 1_000, answerStatus: "answered", brandMention: "no", citedUrls: ["https://other.example/review"] },
+        { provider: "chatgpt", query: "Best accounting help for freelancers?", location: "Dhaka", checkedAt: 1_000 + 24 * 60 * 60 * 1_000, answerStatus: "answered", brandMention: "no", citedUrls: ["https://other.example/review"] },
         { provider: "perplexity", query: "Tax help for new businesses", checkedAt: 300, answerStatus: "answered", brandMention: "no", citedUrls: [] },
         { provider: "chatgpt", query: "Bookkeeping tips", checkedAt: 400, answerStatus: "answered", brandMention: "no", citedUrls: [] },
       ],
@@ -43,6 +43,19 @@ describe("search opportunity priority", () => {
     expect(opportunities[1]?.priority).toBe("recheck_single_gap");
     expect(opportunities[2]?.priority).toBe("recheck_single_gap");
     expect(opportunities[2]?.exactSearchConsoleMatch).toBeNull();
+  });
+
+  it("does not call same-day repeat checks a repeated gap", () => {
+    const opportunities = prioritizeAiVisibilityGaps({
+      website: "https://example.com",
+      observations: [
+        { provider: "chatgpt", query: "Best repair service near me", location: "Dhaka", checkedAt: 10_000, answerStatus: "answered", brandMention: "no", citedUrls: ["https://directory.example/list"] },
+        { provider: "chatgpt", query: "Best repair service near me", location: "Dhaka", checkedAt: 10_000 + 3 * 60 * 60 * 1_000, answerStatus: "answered", brandMention: "no", citedUrls: ["https://directory.example/list"] },
+      ],
+    });
+
+    expect(opportunities).toHaveLength(1);
+    expect(opportunities[0]).toMatchObject({ priority: "recheck_single_gap", answerSamples: 2, observedNoMention: 2, observedNoOwnCitation: 2 });
   });
 
   it("does not treat failed, unanswered, unknown, or unrecorded citation results as negative visibility evidence", () => {

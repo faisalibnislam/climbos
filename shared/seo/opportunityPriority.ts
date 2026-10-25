@@ -43,6 +43,13 @@ export type AiVisibilityOpportunity = {
 };
 
 const normalizeQuery = (value: string) => value.trim().toLocaleLowerCase("en-US").replace(/\s+/gu, " ");
+const MIN_REPEAT_INTERVAL_MS = 24 * 60 * 60 * 1_000;
+
+function repeatedAcrossDays(samples: AiAnswerSample[]): boolean {
+  if (samples.length < 2) return false;
+  const times = samples.map((sample) => sample.checkedAt);
+  return Math.max(...times) - Math.min(...times) >= MIN_REPEAT_INTERVAL_MS;
+}
 
 function isFirstPartyCitation(citedUrls: string[], website: string): boolean {
   let businessHost: string;
@@ -82,13 +89,18 @@ export function prioritizeAiVisibilityGaps(input: {
   for (const samples of grouped.values()) {
     const latest = samples.reduce((a, b) => a.checkedAt > b.checkedAt ? a : b);
     const mentionSamples = samples.filter((sample) => sample.brandMention === "yes" || sample.brandMention === "no");
-    const noMention = mentionSamples.filter((sample) => sample.brandMention === "no").length;
+    const noMentionSamples = mentionSamples.filter((sample) => sample.brandMention === "no");
+    const noMention = noMentionSamples.length;
     const citationSamples = input.website ? samples.filter((sample) => sample.citedUrls.length > 0) : [];
-    const noOwnCitation = input.website
-      ? citationSamples.filter((sample) => !isFirstPartyCitation(sample.citedUrls, input.website!)).length
-      : 0;
+    const noOwnCitationSamples = input.website
+      ? citationSamples.filter((sample) => !isFirstPartyCitation(sample.citedUrls, input.website!))
+      : [];
+    const noOwnCitation = noOwnCitationSamples.length;
     if (!noMention && !noOwnCitation) continue;
-    const repeated = noMention >= 2 || noOwnCitation >= 2;
+    // Multiple checks in one sitting can be near-duplicates, not durable evidence.
+    // Keep their counts visible, but call a gap repeated only when the negative
+    // observation is reproduced at least 24 hours later.
+    const repeated = repeatedAcrossDays(noMentionSamples) || repeatedAcrossDays(noOwnCitationSamples);
     const exactSearchConsoleMatch = queryMap.get(normalizeQuery(latest.query)) ?? null;
     opportunities.push({
       provider: latest.provider,
