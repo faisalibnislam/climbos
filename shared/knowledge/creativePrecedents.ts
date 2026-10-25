@@ -1,6 +1,6 @@
 /**
  * Small, source-checked creative-strategy precedent set. This is deliberately
- * not padded to 100: the source corpus currently supports seventeen reviewed cases.
+ * not padded to 100: the source corpus currently supports eighteen reviewed cases.
  * Additions require claim-level source verification and editorial review.
  */
 export interface CreativePrecedent {
@@ -334,8 +334,8 @@ export const CREATIVE_PRECEDENTS: readonly CreativePrecedent[] = [
     reversibleTest: "First test the trigger without sensitive location tracking: ask one complementary venue or event partner to share a trackable, useful offer with an eligible audience. Measure qualified visits, completed purchases, contribution after discount and operating time; compare with the ordinary path and stop if margin, privacy, partner fit, or service capacity fails its preset guardrail.",
     editorialStatus: "verified_primary_and_secondary", researchConfidence: "medium", accessedAt: "2026-10-25",
     sources: [
-      { title: "Burger King: The Whopper Detour", url: "https://www.oneclub.org/awards/theoneshow/-award/34109/the-whopper-detour/", publisher: "The One Club for Creativity (campaign case submitted by the credited agency team)", publicationDate: "2019", accessedAt: "2026-10-25", sourceRole: "creator_primary", claimRole: "action_and_outcome", supports: "Campaign mechanics, 14,000 McDonald's locations, the approximately 600-foot trigger, 1.5 million app downloads, and app-store rankings; results are campaign-submitter reported." },
-      { title: "Restaurant Brands International Inc. Q4 2018 Earnings Conference Call Transcript", url: "https://finance.yahoo.com/news/restaurant-brands-international-inc-qsr-183056130.html", publisher: "Yahoo Finance (earnings call transcript)", publicationDate: "2019-02-11", accessedAt: "2026-10-25", sourceRole: "independent_secondary", claimRole: "outcome", supports: "Restaurant Brands International's CEO says Whopper Detour generated over 1.5 million downloads and made the app the most downloaded in the Apple Store for several days; the statement does not quantify incremental customer or profit effects." },
+      { title: "The Whopper Detour", url: "https://www.oneclub.org/awards/theoneshow/-award/33593/the-whopper-detour/", publisher: "The One Club for Creativity (campaign case submitted by the credited agency team)", publicationDate: "2019", accessedAt: "2026-10-25", sourceRole: "creator_primary", claimRole: "action_and_outcome", supports: "The credited agency case describes the app relaunch, geofencing around 14,000 McDonald's locations, one-cent offer, navigation to Burger King pickup, and its reported 1.5 million downloads in nine days." },
+      { title: "Burger King's 'Whopper Detour' generated 1.5M app downloads", url: "https://www.restaurantdive.com/news/burger-kings-whopper-detour-generated-15m-app-downloads/548249/", publisher: "Restaurant Dive", publicationDate: "2019-02-12", accessedAt: "2026-10-25", sourceRole: "independent_secondary", claimRole: "outcome", supports: "Reports that RBI CEO José Cil attributed more than 1.5 million app downloads to the initiative and describes the campaign period and offer mechanics; the figure is company-reported and does not establish incremental customers or profit." },
     ],
   },
   {
@@ -421,6 +421,7 @@ export const CREATIVE_PRECEDENTS: readonly CreativePrecedent[] = [
       { title: "Dropbox, Inc. Form S-1/A", url: "https://www.sec.gov/Archives/edgar/data/1467623/000119312518089786/d553522ds1a.htm", publisher: "Dropbox, Inc. / U.S. Securities and Exchange Commission", publicationDate: "2018-03-21", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action_and_outcome", supports: "The filing's 'Viral, bottom-up adoption' and sales-and-marketing sections say users shared content and collaborated, introduced and invited users, individuals signed up for work, bottom-up adoption was important, and over 90% of revenue came from self-serve channels; it also reports 500 million registered users and 11 million paying users." },
     ],
   },
+
 ];
 
 const STOP = new Set(["and", "the", "for", "with", "from", "into", "that", "this", "business", "company", "customer", "strategy", "strategic", "growth", "marketing"]);

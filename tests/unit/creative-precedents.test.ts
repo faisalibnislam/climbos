@@ -10,6 +10,11 @@ describe("creative strategy precedent retrieval", () => {
       expect(precedent.causalLimit.length).toBeGreaterThan(30);
       expect(precedent.reversibleTest.length).toBeGreaterThan(20);
     }
+    const whopperDetour = CREATIVE_PRECEDENTS.find((precedent) => precedent.id === "CP-014");
+    expect(whopperDetour?.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.oneclub.org/awards/theoneshow/-award/33593/the-whopper-detour/", sourceRole: "creator_primary" }),
+      expect.objectContaining({ url: "https://www.restaurantdive.com/news/burger-kings-whopper-detour-generated-15m-app-downloads/548249/", sourceRole: "independent_secondary" }),
+    ]));
   });
 
   it("retrieves a character-design mechanism across industries instead of matching industry names", () => {
