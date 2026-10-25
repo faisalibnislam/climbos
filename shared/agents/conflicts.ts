@@ -20,9 +20,12 @@ const TIER_RE = new RegExp(`\\b(${TIERS.join("|")})\\b`, "i");
 const RATE_UNIT = "user|seat|member|account";
 const PRICE_RE = new RegExp(`([$£€₹৳¥]|\\b(?:USD|EUR|GBP|INR|BDT|CAD|AUD)\\s?)(\\d[\\d,]*(?:\\.\\d+)?)\\s*(?:\\/|per|a|an|each)\\s*(?:(${RATE_UNIT})s?\\s*(?:\\/|per)\\s*)?(month|mo|year|yr|annum)\\b(?:\\s*(?:\\/|per)\\s*(${RATE_UNIT})s?\\b)?`, "gi");
 const TRIAL_RE = /\b(\d{1,3})[-\s]?day\s+(?:free\s+)?trial\b/i;
-const CAPABILITY_YES = /^(.{2,100}?)\s+(includes?|supports?|offers?|provides?)\s+(.{2,100}?)[.!?]*$/i;
-const CAPABILITY_NO = /^(.{2,100}?)\s+(?:does not|doesn't)\s+(include|support|offer|provide)\s+(.{2,100}?)[.!?]*$/i;
+const CAPABILITY_YES = /^(.{2,100}?)\s+(includes?|supports?|offers?|provides?|has|comes with|features?)\s+(.{2,100}?)[.!?]*$/i;
+const CAPABILITY_NO = /^(.{2,100}?)\s+(?:does not|doesn't)\s+(include|support|offer|provide|have|feature)\s+(.{2,100}?)[.!?]*$/i;
+const CAPABILITY_LACKS = /^(.{2,100}?)\s+lacks\s+(.{2,100}?)[.!?]*$/i;
+const CAPABILITY_HAS_NO = /^(.{2,100}?)\s+(?:has|have)\s+no\s+(.{2,100}?)[.!?]*$/i;
 const CAPABILITY_PASSIVE = /^(.{2,100}?)\s+is\s+(not\s+)?(included|supported|offered|provided|available)\s+(?:in|on|with|for)\s+(.{2,100}?)[.!?]*$/i;
+const CAPABILITY_IS_FEATURE_OF = /^(.{2,100}?)\s+is\s+(not\s+)?(?:a\s+)?feature\s+of\s+(.{2,100}?)[.!?]*$/i;
 
 const sym = (s: string) => s.trim().toUpperCase().replace("USD", "$").replace("EUR", "€").replace("GBP", "£");
 
@@ -53,13 +56,20 @@ export function findConflicts(facts: { id: string; statement: string; category?:
     if (t) add("Free trial length (days)", Number(t[1]), `${t[1]} days`, f.id);
     const passive = CAPABILITY_PASSIVE.exec(f.statement);
     const negative = CAPABILITY_NO.exec(f.statement);
-    const positive = negative || passive ? null : CAPABILITY_YES.exec(f.statement);
-    const capability = positive ?? negative ?? passive;
+    const lacks = CAPABILITY_LACKS.exec(f.statement);
+    const hasNo = CAPABILITY_HAS_NO.exec(f.statement);
+    const featureOf = CAPABILITY_IS_FEATURE_OF.exec(f.statement);
+    const positive = negative || lacks || hasNo || passive || featureOf ? null : CAPABILITY_YES.exec(f.statement);
+    const capability = positive ?? negative ?? lacks ?? hasNo ?? passive ?? featureOf;
     if (capability) {
       const passiveForm = capability === passive;
-      const subject = (passiveForm ? capability[4] : capability[1]).trim().toLocaleLowerCase("en-US").replace(/^(?:the|a|an)\s+/u, "").replace(/\s+/gu, " ");
-      const isAvailable = passiveForm ? !capability[2] : Boolean(positive);
-      const shownFeature = (passiveForm ? capability[1] : capability[3]).trim().replace(/[.!?]+$/u, "").replace(/\s+/gu, " ");
+      const reverseFeatureForm = capability === featureOf;
+      const unavailableForm = capability === negative || capability === lacks || capability === hasNo || (passiveForm && Boolean(capability[2])) || (reverseFeatureForm && Boolean(capability[2]));
+      const subjectRaw = passiveForm ? capability[4] : reverseFeatureForm ? capability[3] : capability[1];
+      const featureRaw = passiveForm ? capability[1] : reverseFeatureForm ? capability[1] : lacks || hasNo ? capability[2] : capability[3];
+      const subject = subjectRaw.trim().toLocaleLowerCase("en-US").replace(/^(?:the|a|an)\s+/u, "").replace(/\s+(?:plan|tier)$/u, "").replace(/\s+/gu, " ");
+      const isAvailable = !unavailableForm;
+      const shownFeature = featureRaw.trim().replace(/[.!?]+$/u, "").replace(/\s+/gu, " ");
       const feature = shownFeature.toLocaleLowerCase("en-US");
       const key = `${subject}\u0000${feature}`;
       const list = capabilities.get(key) ?? [];

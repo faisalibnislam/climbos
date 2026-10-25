@@ -65,6 +65,26 @@ describe("conflicting facts", () => {
       factIds: ["a", "b"],
     });
   });
+  it("recognizes common feature wording across plan, missing-feature, and feature-of forms", () => {
+    expect(findConflicts([
+      { id: "a", category: "product", statement: "The Pro plan has single sign-on." },
+      { id: "b", category: "product", statement: "Single sign-on is not a feature of the Pro tier." },
+      { id: "c", category: "product", statement: "Pro lacks API access." },
+      { id: "d", category: "product", statement: "API access is available on Pro." },
+      { id: "e", category: "product", statement: "Enterprise includes audit logs." },
+    ])).toEqual([
+      expect.objectContaining({
+        subject: "Feature availability · pro / single sign-on",
+        values: ["Available: single sign-on", "Not available: Single sign-on"],
+        factIds: ["a", "b"],
+      }),
+      expect.objectContaining({
+        subject: "Feature availability · pro / api access",
+        values: ["Not available: API access", "Available: API access"],
+        factIds: ["c", "d"],
+      }),
+    ]);
+  });
   it("does not compare flat and per-seat prices as if their units matched", () => {
     expect(findConflicts([
       { id: "a", category: "pricing", statement: "Pro costs $19 per seat per month." },
