@@ -162,6 +162,7 @@ function PlanScreen({ slug }: { slug: string }) {
   }
 
   const s = plan.strategy;
+  const savedBusinessWebsite = (s?.expert as { snapshot?: { businessProfile?: { website?: string | null } } } | null)?.snapshot?.businessProfile?.website ?? undefined;
   const status = s ? (STRATEGY_STATUS[s.status] ?? { label: s.status, tone: "neutral" as Tone }) : null;
   const other = plan.otherVersion;
   const building = Boolean(plan.strategyRun && !RUN_FINISHED.has(plan.strategyRun.status));
@@ -358,7 +359,7 @@ function PlanScreen({ slug }: { slug: string }) {
       )}
 
       <BusinessInsights insights={plan.insights} />
-      {s ? <Sources sources={plan.sources} web={(s.expert as { webSources?: { url: string; title?: string }[] } | null)?.webSources ?? []} knowledge={(s.expert as { snapshot?: { knowledgeReferences?: KnowledgeReferenceSet } } | null)?.snapshot?.knowledgeReferences} /> : null}
+      {s ? <Sources sources={plan.sources} web={(s.expert as { webSources?: { url: string; title?: string }[] } | null)?.webSources ?? []} websiteUrl={savedBusinessWebsite} knowledge={(s.expert as { snapshot?: { knowledgeReferences?: KnowledgeReferenceSet } } | null)?.snapshot?.knowledgeReferences} /> : null}
       {s ? <Discussion slug={slug} subjectType="strategy" subjectId={s.id} title={`Growth plan v${s.version}`} href={`/app/${slug}/plan`} /> : null}
         </TabsContent>
       </Tabs>

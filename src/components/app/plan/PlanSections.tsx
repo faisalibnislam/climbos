@@ -1128,7 +1128,8 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
 
 /* ---------------- Sources ---------------- */
 
-export function Sources({ sources, web = [], knowledge }: { sources: PlanView["sources"]; web?: { url: string; title?: string }[]; knowledge?: KnowledgeReferenceSet }) {
+export function Sources({ sources, web = [], websiteUrl, knowledge }: { sources: PlanView["sources"]; web?: { url: string; title?: string }[]; websiteUrl?: string; knowledge?: KnowledgeReferenceSet }) {
+  const businessHost = websiteUrl ? hostOf(websiteUrl) : null;
   return (
     <PlanSection
       id="sources-heading"
@@ -1158,10 +1159,16 @@ export function Sources({ sources, web = [], knowledge }: { sources: PlanView["s
       {web.length ? (
         <div className="flex flex-col gap-2 border-t border-line pt-3">
           <FieldLabel icon={Globe}>Pages read</FieldLabel>
+          <p className="text-xs text-ink-3">A page on your website shows what your business publishes. Other pages are references; a different website does not by itself make a source independent or prove its claims.</p>
           <ul className="flex flex-wrap gap-1.5">
             {web.map((w) => (
-              <li key={w.url} className="min-w-0 max-w-full">
+              <li key={w.url} className="flex min-w-0 max-w-full flex-col items-start gap-1">
                 <LinkChip url={w.url} label={w.title ? `${w.title} · ${hostOf(w.url)}` : undefined} />
+                <Badge tone={businessHost && hostOf(w.url) === businessHost ? "amber" : "neutral"}>
+                  {businessHost
+                    ? hostOf(w.url) === businessHost ? "Your website · published claim" : "Other website · independence unverified"
+                    : "Site relationship unknown · independence unverified"}
+                </Badge>
               </li>
             ))}
           </ul>
