@@ -580,3 +580,7 @@ The first take already ran alongside initial business research, but its early-pr
 ## Resumption note (2026-10-25, website evidence in onboarding first take)
 
 The initial first take can now cite facts extracted from pages that were successfully read in that onboarding run. Those claims are persisted as `source_reported`, carry the exact page URL, and render as “The website says · check this”; they remain distinct from owner-confirmed inputs and unsupported hypotheses. The linker rejects profile-fact indexes whose source URL was not among the successfully read pages. The strategy quick take continues using its existing confirmed-fact path. Focused regressions cover valid and disallowed URLs, mixed evidence, and the owner-facing page link. This is source attribution for extracted page text, not independent verification that the claim is true.
+
+## Resumption note (2026-10-25, mobile date selection in the content calendar)
+
+The existing content calendar already provides day, week, and month views in workspace time, combining scheduled posts, Autopilot slots, and items awaiting review. In month and week views, date selection was desktop-only; on narrow screens scheduled dates are now full-date, touch-sized controls that open the daily agenda. The compact desktop date-number control remains. A focused rendered-markup regression protects the mobile label and target size; broader responsive visual behavior is not browser-verified in this increment.

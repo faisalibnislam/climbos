@@ -7,6 +7,8 @@ The application uses task-based navigation and plain-language explanations. Exis
 | Home | Describe what you need, follow requests, and choose a next step. |
 | Your plan | Understand what to focus on and why. |
 | Your work | Open the existing post/email/ad editor and calendar, regular posting, pages, images, video tools, or design editor. |
+
+The content calendar has day, week, and month views in the workspace timezone. It includes scheduled posts, Autopilot slots, and items waiting for review; selecting a date opens that day's agenda on both touch and desktop layouts. Opening an item leads to its post or Autopilot workspace. A calendar recommendation never schedules or publishes by itself.
 | Customers | Open customer research, customer progress, messages, reviews, and visitor-chat setup. |
 | Results | Read available business measurements with source and uncertainty labels. |
 | All tools | Find existing tools through everyday or specialist search terms. |

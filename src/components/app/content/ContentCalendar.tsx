@@ -100,6 +100,22 @@ export function ContentCalendar({ slug }: { slug: string }) {
   return <CalendarInner slug={slug} now={now} timeZone={timeZone} />;
 }
 
+/** A scheduled date can open its daily agenda from both touch and desktop views. */
+export function CalendarDaySelect({ day, onSelect }: { day: Date; onSelect: (day: Date) => void }) {
+  const fullDate = formatDate(day, { weekday: "long", month: "long", day: "numeric" });
+  return (
+    <button
+      type="button"
+      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-ink hover:text-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700 md:min-h-8 md:min-w-8"
+      aria-label={`View ${fullDate}`}
+      onClick={() => onSelect(day)}
+    >
+      <span className="md:hidden">{fullDate}</span>
+      <span className="hidden md:inline" aria-hidden="true">{day.getUTCDate()}</span>
+    </button>
+  );
+}
+
 function CalendarInner({ slug, now, timeZone }: { slug: string; now: number; timeZone: string }) {
   const [view, setView] = useState<View>("week");
   const [anchor, setAnchor] = useState(() => calendarDate(now, timeZone));
@@ -223,16 +239,9 @@ function CalendarGrid({
               aria-current={isToday ? "date" : undefined}
             >
               <h3 className="heading-card flex flex-wrap items-center gap-2">
-                {view === "day" ? <span>{fullDate}</span> : <span className="md:hidden">{fullDate}</span>}
+                {view === "day" ? <span>{fullDate}</span> : null}
                 {view !== "day" ? (
-                  <button
-                    type="button"
-                    className={cn("hidden rounded-sm md:inline hover:text-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700", outside ? "text-ink-3" : "text-ink")}
-                    aria-label={`View ${fullDate}`}
-                    onClick={() => onSelectDay(d)}
-                  >
-                    <span aria-hidden="true">{d.getUTCDate()}</span>
-                  </button>
+                  <CalendarDaySelect day={d} onSelect={onSelectDay} />
                 ) : null}
                 {isToday ? <Badge tone="green">Today</Badge> : null}
               </h3>
