@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(60);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(61);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -234,6 +234,25 @@ describe("creative strategy precedent retrieval", () => {
     const formatted = creativePrecedentsForAgent("growth_plays", "Explore an entertaining way to communicate a safety message", query);
     expect(formatted).toContain("CP-060");
     expect(formatted).toContain("Views, shares, chart position, pledges");
+  });
+
+  it("retrieves a revisable platform portfolio while preserving the owned-channel and commercial limits", () => {
+    const query = "Review a channel portfolio, platform dependency risk, owned newsletter and app, and whether a changed alternative platform now fits the audience";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-061");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("conditional part of a channel portfolio");
+    expect(match?.precedent.outcome).toContain("could not determine the sales impact");
+    expect(match?.precedent.causalLimit).toContain("no controlled comparison isolates the effect of leaving");
+    expect(match?.precedent.transferRisk).toContain("A well-known retailer with millions of direct subscribers can absorb a loss of platform reach");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://weare.lush.com/press-releases/lush-is-becoming-anti-social/", publicationDate: "2021-11-22", sourceRole: "company_primary" }),
+      expect.objectContaining({ url: "https://www.marketingbrew.com/stories/2025/02/24/lush-anti-social-media-strategy", publicationDate: "2025-02-24 (updated 2025-02-26)" }),
+      expect.objectContaining({ url: "https://cosmeticsbusiness.com/lush-returns-to-social-media-following-2021-departure", publicationDate: "2026-06-26" }),
+      expect.objectContaining({ url: "https://bsky.app/profile/lush.com", sourceRole: "organization_primary" }),
+    ]));
+    const formatted = creativePrecedentsForAgent("growth_plays", "Evaluate a channel portfolio for the business", query);
+    expect(formatted).toContain("CP-061");
+    expect(formatted).toContain("the owner-selected business measures do not materially worsen");
   });
 
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {
