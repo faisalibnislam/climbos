@@ -68,7 +68,7 @@ export function RequestComposer({
         </div>
       </form>
       {suggestions.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-2" aria-label="Suggestions to help you start">
+        <div role="group" className="mt-3 flex flex-wrap gap-2" aria-label="Suggestions to help you start">
           {suggestions.slice(0, 4).map((suggestion) => (
             <button key={suggestion} type="button" disabled={locked} onClick={() => {
               onChange(value.trim() ? `${value.trimEnd()}\n${suggestion}` : suggestion);
