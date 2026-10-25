@@ -589,6 +589,7 @@ function constraintsOf(job: JobCtx, extra: Partial<PlanConstraints> = {}): PlanC
     ...(job.goal ? { monthlyAdBudgetUsd: minorToMajor(job.goal.monthlyAdBudgetMinor, job.goal.currency) } : {}),
     currency: workspaceCurrency(job),
     ...(job.business?.unitEconomics?.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: job.business.unitEconomics.ownerHoursPerWeek } : {}),
+    ...(job.business?.unitEconomics?.monthlyGrowthCashUsd !== undefined ? { monthlyGrowthCashUsd: job.business.unitEconomics.monthlyGrowthCashUsd } : {}),
     ...(job.audience ? { emailAudience: job.audience.consented } : {}),
     ...(job.business?.unitEconomics?.newCustomersPerMonth !== undefined ? { newCustomersPerMonth: job.business.unitEconomics.newCustomersPerMonth } : {}),
     factKinds: job.facts.map((f) => f.evidenceKind),
@@ -597,9 +598,10 @@ function constraintsOf(job: JobCtx, extra: Partial<PlanConstraints> = {}): PlanC
 }
 
 /** Inputs the plan worked without, shown to the owner (the plan is bounded instead of assuming them). */
-function planUnknowns(job: JobCtx): string[] {
+function planUnknowns(job: JobCtx, plays: { model?: { monthlySpendUsd?: number; otherMonthlyUsd?: number } }[] = []): string[] {
   return [
     job.business?.unitEconomics?.ownerHoursPerWeek === undefined ? "Hours you can give growth work each week" : "",
+    job.business?.unitEconomics?.monthlyGrowthCashUsd === undefined && plays.some((play) => (play.model?.monthlySpendUsd ?? 0) > 0 || (play.model?.otherMonthlyUsd ?? 0) > 0) ? "Monthly cash available for growth work" : "",
     job.audience && job.audience.consented === 0 ? "Who you can email (no consented contacts in ClimbOS)" : "",
     isServiceBusiness((job.business as { acquisition?: { types?: string[] } } | null)?.acquisition?.types, job.business?.businessType) && job.business?.unitEconomics?.newCustomersPerMonth === undefined ? "How many additional new customers you can serve each month after your current workload" : "",
   ].filter(Boolean);
@@ -935,6 +937,7 @@ function ownerEconomicsLine(u: OwnerEconomics | undefined, currency?: string): s
     u.ownerHourUsd ? `owner's time ${formatMoney(u.ownerHourUsd, currency)}/hour` : "",
     u.ownerHoursPerWeek !== undefined ? `owner can give ${u.ownerHoursPerWeek} hours a week (all plays together must fit)` : "",
     u.newCustomersPerMonth !== undefined ? `the owner has room for at most ${u.newCustomersPerMonth} additional new customers a month with current staffing, workload, inventory and support (keep forecast incremental demand within this remaining capacity)` : "",
+    u.monthlyGrowthCashUsd !== undefined ? `the owner can safely commit up to ${formatMoney(u.monthlyGrowthCashUsd, currency)} per month to growth cash costs (media and other cash costs; excludes owner time)` : "",
   ].filter(Boolean);
   return parts.length ? `UNIT ECONOMICS (confirmed by the owner; use exactly these): ${parts.join(", ")}.` : "";
 }
@@ -1382,7 +1385,7 @@ export const buildStrategy = internalAction({
       // 2. The 90-day plan, built around those plays.
       // The owner's joint limits: the locked numbers name the best feasible set and the strongest alternative (selectPortfolio).
       const lim = constraintsOf(job);
-      const ownerLimits = { ...(lim.monthlyAdBudgetUsd !== undefined ? { monthlyBudgetUsd: lim.monthlyAdBudgetUsd } : {}), ...(lim.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: lim.ownerHoursPerWeek } : {}), ...(lim.newCustomersPerMonth !== undefined ? { newCustomersPerMonth: lim.newCustomersPerMonth } : {}) };
+      const ownerLimits = { ...(lim.monthlyAdBudgetUsd !== undefined ? { monthlyBudgetUsd: lim.monthlyAdBudgetUsd } : {}), ...(job.business?.unitEconomics?.monthlyGrowthCashUsd !== undefined ? { monthlyGrowthCashUsd: job.business.unitEconomics.monthlyGrowthCashUsd } : {}), ...(lim.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: lim.ownerHoursPerWeek } : {}), ...(lim.newCustomersPerMonth !== undefined ? { newCustomersPerMonth: lim.newCustomersPerMonth } : {}) };
       const portfolio = plays ? selectPortfolio(plays, { ...ownerLimits, horizonDays: job.goal?.horizonDays }) : null;
       const locked = plays ? lockedNumbers(plays, job.goal ? { statement: job.goal.statement, target: job.goal.target ?? null, horizonDays: job.goal.horizonDays } : null, ownerLimits) : "";
       let strategy = await runAgentTask<StrategyOutput>(
@@ -1418,7 +1421,7 @@ export const buildStrategy = internalAction({
             // The plan agent's hard checks are re-run on the final plan below (after the consistency pass may have fixed them).
             [playsMeta.quality, planMeta.quality && withoutHard(planMeta.quality)].filter((q): q is AgentQuality => Boolean(q)),
             (strategySpec().lint?.(strategy as never, planLintInput!) ?? []).filter((l) => HARD_RULES.has(l.rule)),
-            { economicsMissing: !(plays.economics.revenuePerCustomerMonthUsd > 0) || churnOf(plays.economics) === null, unknowns: planUnknowns(job), conflicts: conflictLines(conflictsForJob(job)) },
+            { economicsMissing: !(plays.economics.revenuePerCustomerMonthUsd > 0) || churnOf(plays.economics) === null, unknowns: planUnknowns(job, plays.plays), conflicts: conflictLines(conflictsForJob(job)) },
           )
         : null;
       await firstTake;
@@ -1426,7 +1429,7 @@ export const buildStrategy = internalAction({
         runId,
         strategy: JSON.stringify(plays ? { ...strategy, strategyExploration: { ...plays.strategyExploration, requestedRange: creativeRangeOf(job), retrievedPrecedentIds, promptVersion: CREATIVE_STRATEGY_PROMPT_VERSION, ...(creativePromptHash ? { promptHash: creativePromptHash } : {}), ...(creativeInputHash ? { inputHash: creativeInputHash } : {}) }, plays: plays.plays, economics: plays.economics, ...(plays.decision ? { decision: plays.decision } : {}), webSources: uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]), snapshot: await planSnapshot(job, insightsBrief, uniqueSources([...(playsMeta.sources ?? []), ...(planMeta.sources ?? [])]).map((source) => source.url), mergeKnowledgeReferences(playsMeta.knowledgeReferences, planMeta.knowledgeReferences)), quality, goalGap: playsGoalGap(plays, job.goal), constraintDiagnosis: diagnosis, ...(portfolio ? { portfolio } : {}), playbooks: { eligible: playbookChoice.eligible.map(({ pb, unknown, soft, status }) => ({ id: pb.id, name: pb.name, unknown, ...(soft?.length ? { soft } : {}), ...(status ? { status } : {}) })), ineligible: playbookChoice.ineligible.map(({ pb, reasons }) => ({ id: pb.id, name: pb.name, reasons })) } } : strategy),
         factIds: job.facts.map((f) => f.id),
-        acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary, ...(limits ? { limits: { ownerHoursPerWeek: limits.ownerHoursPerWeek ?? null, newCustomersPerMonth: limits.newCustomersPerMonth ?? null, ownerGrossMargin: limits.ownerGrossMargin ?? null } } : {}) }),
+        acquisition: JSON.stringify({ libraryVersion: LIBRARY_VERSION, profile, adjustments, summary: channelSummary, ...(limits ? { limits: { ownerHoursPerWeek: limits.ownerHoursPerWeek ?? null, newCustomersPerMonth: limits.newCustomersPerMonth ?? null, ownerGrossMargin: limits.ownerGrossMargin ?? null, monthlyGrowthCashUsd: job.business?.unitEconomics?.monthlyGrowthCashUsd ?? null } } : {}) }),
         evidence: JSON.stringify(
           buildPlanEvidence({
             skillIds: [...(playsMeta.skills ?? []), ...(planMeta.skills ?? [])],

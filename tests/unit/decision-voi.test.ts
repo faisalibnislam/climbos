@@ -70,6 +70,21 @@ describe("value of perfect information", () => {
 });
 
 describe("portfolio and gates", () => {
+  it("constrains monthly cash outlay without counting owner time and asks when the limit is unknown", () => {
+    const cashCostPlay = play({ monthlySpendUsd: 100, otherMonthlyUsd: 50, ownerHoursPerWeek: 0 }, "Paid test");
+    const out = { economics: econ, plays: [cashCostPlay] };
+    const unbounded = selectPortfolio(out, {})!;
+    expect(unbounded.selected).toEqual(["Paid test"]);
+    expect(unbounded.cashSpendUsdMonth).toBe(150);
+    const bounded = selectPortfolio(out, { monthlyGrowthCashUsd: 120 })!;
+    expect(bounded.selected).toEqual([]);
+    expect(bounded.left[0]?.why).toMatch(/exceeds the owner's monthly growth-cash limit/);
+    const qs = decisionQuestions(out, null);
+    expect(qs[0]).toMatchObject({ key: "monthlyGrowthCashUsd", unit: "usd_month", why: expect.stringContaining("excludes the value of your time") });
+    expect(qs[0]?.assumed).toBeUndefined();
+    expect(selectPortfolio(out, { monthlyGrowthCashUsd: 0 })!.selected).toEqual([]);
+  });
+
   it("doing nothing new beats a set whose expected contribution is below its cost", () => {
     const skewedLoser = play({ steps: [{ name: "reply", rate: 0.03, low: 0.0, high: 0.031 }, { name: "paid", rate: 0.2 }], ownerHoursPerWeek: 13 }, "Knife edge");
     expect(playMaths(skewedLoser, econ).profitable).toBe(true);

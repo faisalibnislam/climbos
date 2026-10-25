@@ -112,6 +112,7 @@ describe("Plan version history", () => {
       revenuePerCustomerMonthUsd: 250,
       grossMargin: 0.7,
       monthlyChurn: 0.04,
+      monthlyGrowthCashUsd: 100,
     });
 
     await expect(w.client.mutation(api.workspace.decidePlan, {
@@ -131,7 +132,7 @@ describe("Plan version history", () => {
     expect(refreshed.planImpact?.plays.some((play) => play.before.p50 !== null && play.after.p50 !== null && play.economicsBefore && play.economicsAfter)).toBe(true);
     expect(refreshed.planImpact?.plays.some((play) => play.economicsBefore && play.economicsAfter && (play.economicsBefore.cacUsd !== play.economicsAfter.cacUsd || play.economicsBefore.paybackMonths !== play.economicsAfter.paybackMonths || play.economicsBefore.profitable !== play.economicsAfter.profitable))).toBe(true);
     expect(refreshed.planImpact?.portfolio.before).toBeTruthy();
-    expect(refreshed.planImpact?.portfolio.after).toBeTruthy();
+    expect(refreshed.planImpact?.portfolio.after).toMatchObject({ cashSpendUsdMonth: expect.any(Number) });
     const playId = (expertPlaysOf(saved?.expert) as { id?: string }[]).find((play) => play.id)?.id;
     expect(playId).toBeTruthy();
     await expect(w.client.mutation(api.workspace.startPlay, {

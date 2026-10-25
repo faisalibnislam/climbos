@@ -93,6 +93,8 @@ export interface OwnerEconomics {
   ownerHoursPerWeek?: number;
   /** Additional new customers (clients, bookings, projects) the owner can accept each month with current capacity. */
   newCustomersPerMonth?: number;
+  /** Owner-confirmed monthly cash available for growth work (media plus other cash costs; excludes owner time). */
+  monthlyGrowthCashUsd?: number;
   /** When the owner last confirmed these numbers. */
   updatedAt?: number;
   ranges?: OwnerRanges;
@@ -607,6 +609,8 @@ export interface PortfolioChoice {
   outcomeBasis: PortfolioOutcomeBasis;
   customers: number;
   spendUsdMonth: number;
+  /** Estimated recurring cash outlay; excludes the value of owner time. */
+  cashSpendUsdMonth: number;
   ownerHoursWeek: number;
   /** Mean customers over the joint draws (ranking basis); `customers` is the most-likely total shown in the plan. */
   expectedCustomers: number;
@@ -629,7 +633,7 @@ export type PortfolioObjective = "combined_current" | "play_attributed" | "model
  * their most-likely rates never enter, at any budget. A bigger budget only adds feasible sets,
  * so a set that fit before still fits.
  */
-export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }, limits: { monthlyBudgetUsd?: number; ownerHoursPerWeek?: number; newCustomersPerMonth?: number; horizonDays?: number; objective?: PortfolioObjective }): PortfolioChoice | null {
+export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }, limits: { monthlyBudgetUsd?: number; monthlyGrowthCashUsd?: number; ownerHoursPerWeek?: number; newCustomersPerMonth?: number; horizonDays?: number; objective?: PortfolioObjective }): PortfolioChoice | null {
   const h = limits.horizonDays || 90;
   const objective = limits.objective ?? "combined_current";
   let ps = out.plays.filter((p) => p.model?.steps?.length);
@@ -653,26 +657,28 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
     if (!cols) return combinePlays(idx.map((i) => ms[i].headline.p50), idx.map((i) => stages[i]));
     return expectedCombinedDraws(cols, idx, stages);
   };
-  type Opt = { idx: number[]; customers: number; expectedCustomers: number; spend: number; hours: number; net: number | null; cost: number };
+  type Opt = { idx: number[]; customers: number; expectedCustomers: number; spend: number; cashSpend: number; hours: number; net: number | null; cost: number };
   const opts: Opt[] = [];
   for (let mask = 1; mask < 1 << ps.length; mask++) {
     const idx = ps.map((_, i) => i).filter((i) => mask & (1 << i));
     if (idx.some((i) => losers.has(i))) continue;
     const spend = idx.reduce((s, i) => s + Math.max(0, ps[i].model.monthlySpendUsd), 0);
+    const cashSpend = idx.reduce((s, i) => s + Math.max(0, ps[i].model.monthlySpendUsd) + Math.max(0, ps[i].model.otherMonthlyUsd ?? 0), 0);
     const hours = idx.reduce((s, i) => s + Math.max(0, ps[i].model.ownerHoursPerWeek), 0);
     const customers = combinePlays(idx.map((i) => ms[i].headline.p50), idx.map((i) => stages[i]));
     const cost = idx.reduce((s, i) => s + ms[i].costUsd, 0);
     if (limits.monthlyBudgetUsd !== undefined && spend > limits.monthlyBudgetUsd * 1.001) continue;
+    if (limits.monthlyGrowthCashUsd !== undefined && cashSpend > limits.monthlyGrowthCashUsd * 1.001) continue;
     if (limits.ownerHoursPerWeek !== undefined && hours > limits.ownerHoursPerWeek + 0.01) continue;
     if (capLimit !== undefined && customers > capLimit * 1.001) continue;
     const expectedCustomers = expected(idx);
-    opts.push({ idx, customers, expectedCustomers, spend, hours, cost, net: value === null ? null : expectedCustomers * value - cost });
+    opts.push({ idx, customers, expectedCustomers, spend, cashSpend, hours, cost, net: value === null ? null : expectedCustomers * value - cost });
   }
   const score = (o: Opt) => (o.net ?? o.expectedCustomers);
   opts.sort((a, b) => score(b) - score(a) || a.cost - b.cost || a.idx.length - b.idx.length);
   // Doing nothing new is always an option: a set whose expected contribution is below its cost loses to it (Hubbard Ch 14; Kochenderfer Ch 6).
   const best = opts[0] && (opts[0].net === null || opts[0].net >= 0) ? opts[0] : undefined;
-  const leftWhy = (i: number) => (losers.has(i) ? ms[i].financialEvidence.status === "checked_inputs" ? "loses money at its most-likely rates" : "does not pay back under its current scenario inputs" : "doesn't fit with the others under the budget, hours or capacity");
+  const leftWhy = (i: number) => (losers.has(i) ? ms[i].financialEvidence.status === "checked_inputs" ? "loses money at its most-likely rates" : "does not pay back under its current scenario inputs" : limits.monthlyGrowthCashUsd !== undefined && Math.max(0, ps[i].model.monthlySpendUsd) + Math.max(0, ps[i].model.otherMonthlyUsd ?? 0) > limits.monthlyGrowthCashUsd * 1.001 ? "exceeds the owner's monthly growth-cash limit" : "doesn't fit with the others under one or more cash, ad budget, owner time or service capacity limits");
   const all = ps.map((_, i) => i);
   if (!best)
     return {
@@ -681,6 +687,7 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
       outcomeBasis,
       customers: 0,
       spendUsdMonth: 0,
+      cashSpendUsdMonth: 0,
       expectedCustomers: 0,
       ownerHoursWeek: 0,
       netUsd: null,
@@ -698,6 +705,7 @@ export function selectPortfolio(out: { economics: Economics; plays: PlayLike[] }
     outcomeBasis: portfolioOutcomeBasis(best.idx.map((i) => ps[i])),
     customers: best.customers,
     spendUsdMonth: best.spend,
+    cashSpendUsdMonth: best.cashSpend,
     ownerHoursWeek: best.hours,
     netUsd: best.net,
     allFit: best.idx.length === ps.length,
@@ -732,7 +740,7 @@ export function playsGoalGap(out: { economics: Economics; plays: PlayLike[] }, g
 }
 
 /** The numbers the plan must use, computed here so it can't contradict them. */
-export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }, goal?: { statement?: string; target?: GoalTarget | null; horizonDays?: number } | null, limits?: { monthlyBudgetUsd?: number; ownerHoursPerWeek?: number; newCustomersPerMonth?: number }): string {
+export function lockedNumbers(out: { economics: Economics; plays: PlayLike[] }, goal?: { statement?: string; target?: GoalTarget | null; horizonDays?: number } | null, limits?: { monthlyBudgetUsd?: number; monthlyGrowthCashUsd?: number; ownerHoursPerWeek?: number; newCustomersPerMonth?: number }): string {
   const rows = out.plays.map((p) => ({ p, m: playMaths(p, out.economics) }));
   // The total uses the goal's horizon for every play, so it never mixes periods.
   const own = [...new Set(out.plays.map((p) => p.horizonDays).filter((d) => d > 0))];
@@ -774,9 +782,9 @@ function portfolioLine(out: { economics: Economics; plays: PlayLike[] }, limits:
   return choices.map(({ objective, label }) => {
     const c = selectPortfolio(out, { ...limits, objective });
     if (!c) return objective === "modeled_incremental" ? "- PORTFOLIO CHECK · MODELED BASELINE DELTA: not estimated; none of the plays includes a baseline rate." : "";
-    if (c.allFit && !c.left.length) return `- PORTFOLIO CHECK · ${label}: all eligible plays fit the stated limits (≈${roundCount(c.customers)} outcomes, ${usd(c.spendUsdMonth)}/month, ${Math.round(c.ownerHoursWeek * 10) / 10} h/week${c.netUsd !== null ? `, net ${usd(c.netUsd)}` : ""}). ${c.basis}`;
+    if (c.allFit && !c.left.length) return `- PORTFOLIO CHECK · ${label}: all eligible plays fit the stated limits (≈${roundCount(c.customers)} outcomes, ${usd(c.spendUsdMonth)}/month media, ${usd(c.cashSpendUsdMonth)}/month cash costs, ${Math.round(c.ownerHoursWeek * 10) / 10} h/week${c.netUsd !== null ? `, net ${usd(c.netUsd)}` : ""}). ${c.basis}`;
     const alt = c.runnerUp ? ` Strongest alternative: ${c.runnerUp.selected.join(" + ")} (≈${roundCount(c.runnerUp.customers)} outcomes${c.runnerUp.netUsd !== null ? `, net ${usd(c.runnerUp.netUsd)}` : ""}).` : "";
-    return `- PORTFOLIO CHECK · ${label}: best feasible set is ${c.selected.join(" + ") || "none"} (≈${roundCount(c.customers)} outcomes, ${usd(c.spendUsdMonth)}/month, ${Math.round(c.ownerHoursWeek * 10) / 10} h/week${c.netUsd !== null ? `, net ${usd(c.netUsd)}` : ""}). Left out: ${c.left.map((l) => `${l.name} (${l.why})`).join("; ")}.${alt} ${c.basis}`;
+    return `- PORTFOLIO CHECK · ${label}: best feasible set is ${c.selected.join(" + ") || "none"} (≈${roundCount(c.customers)} outcomes, ${usd(c.spendUsdMonth)}/month media, ${usd(c.cashSpendUsdMonth)}/month cash costs, ${Math.round(c.ownerHoursWeek * 10) / 10} h/week${c.netUsd !== null ? `, net ${usd(c.netUsd)}` : ""}). Left out: ${c.left.map((l) => `${l.name} (${l.why})`).join("; ")}.${alt} ${c.basis}`;
   }).filter(Boolean);
 }
 
@@ -838,12 +846,13 @@ export function applyOwnerEconomics(e: Economics, owner: OwnerEconomics | null |
   return out;
 }
 
-export type QuestionKey = "revenuePerCustomerMonthUsd" | "grossMargin" | "monthlyChurn" | "ownerHourUsd" | "ownerHoursPerWeek" | "newCustomersPerMonth";
+export type QuestionKey = "revenuePerCustomerMonthUsd" | "grossMargin" | "monthlyChurn" | "ownerHourUsd" | "ownerHoursPerWeek" | "newCustomersPerMonth" | "monthlyGrowthCashUsd";
 export interface OwnerQuestion {
   key: QuestionKey;
   question: string;
+  ownerReported?: boolean;
   /** The value the plan assumed, for the input's placeholder. */
-  assumed: number;
+  assumed?: number;
   unit: "usd_month" | "share" | "share_month" | "usd_hour" | "hours_week" | "count_month";
   /** Why it matters: which plays' verdicts flip across a plausible range, with the value where they flip. */
   why: string;
@@ -860,6 +869,7 @@ const QUESTION: Record<QuestionKey, { q: string; unit: OwnerQuestion["unit"] }> 
   ownerHourUsd: { q: "What is an hour of your time worth?", unit: "usd_hour" },
   ownerHoursPerWeek: { q: "How many hours a week can you give growth work?", unit: "hours_week" },
   newCustomersPerMonth: { q: "With your current staffing, workload, inventory and support, how many additional new customers could you accept each month?", unit: "count_month" },
+  monthlyGrowthCashUsd: { q: "How much cash can you safely commit to growth work each month, including ads and other paid costs?", unit: "usd_month" },
 };
 
 /**
@@ -909,7 +919,12 @@ export function decisionQuestions(out: { economics: Economics; plays: PlayLike[]
   const perMonth = portfolioP50(out, opts.horizonDays || 90) / months;
   const delivery: OwnerQuestion[] =
     opts.serviceBusiness && owner?.newCustomersPerMonth === undefined && perMonth >= 1 ? [{ key: "newCustomersPerMonth", question: QUESTION.newCustomersPerMonth.q, assumed: Math.round(perMonth), unit: "count_month", why: `The plays forecast about ${Math.round(perMonth)} additional customers a month; compare that with what you can accept after current workload.` }] : [];
+  const unconstrainedPortfolio = selectPortfolio(out, { horizonDays: opts.horizonDays || 90 });
+  const cashQuestion: OwnerQuestion[] = (unconstrainedPortfolio?.cashSpendUsdMonth ?? 0) > 0
+    ? [{ key: "monthlyGrowthCashUsd", question: QUESTION.monthlyGrowthCashUsd.q, ...(owner?.monthlyGrowthCashUsd !== undefined ? { assumed: owner.monthlyGrowthCashUsd, ownerReported: true } : {}), unit: "usd_month", why: `${owner?.monthlyGrowthCashUsd !== undefined ? `Your saved owner-reported limit is ${formatMoney(owner.monthlyGrowthCashUsd, e.currency)} a month. ` : ""}The current best modeled set needs about ${formatMoney(unconstrainedPortfolio!.cashSpendUsdMonth, e.currency)} a month for media and other cash costs. This limit excludes the value of your time.` }]
+    : [];
   return [
+    ...cashQuestion,
     ...delivery,
     ...capacity,
     ...scored

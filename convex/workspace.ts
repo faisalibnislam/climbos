@@ -658,6 +658,7 @@ export const plan = query({
     // Owner edits immediately refresh every deterministic derived number in the returned plan view.
     const portfolioLimits = {
       ...(goal ? { monthlyBudgetUsd: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency) } : {}),
+      ...(business?.unitEconomics?.monthlyGrowthCashUsd !== undefined ? { monthlyGrowthCashUsd: business.unitEconomics.monthlyGrowthCashUsd } : {}),
       ...(business?.unitEconomics?.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: business.unitEconomics.ownerHoursPerWeek } : {}),
       ...(business?.unitEconomics?.newCustomersPerMonth !== undefined ? { newCustomersPerMonth: business.unitEconomics.newCustomersPerMonth } : {}),
       horizonDays: goal?.horizonDays,
@@ -687,8 +688,9 @@ export const plan = query({
             before: expert?.portfolio && typeof expert.portfolio === "object" ? {
               selected: Array.isArray((expert.portfolio as Record<string, unknown>).selected) ? (expert.portfolio as { selected: string[] }).selected : [],
               customers: typeof (expert.portfolio as Record<string, unknown>).customers === "number" ? (expert.portfolio as { customers: number }).customers : null,
+              cashSpendUsdMonth: typeof (expert.portfolio as Record<string, unknown>).cashSpendUsdMonth === "number" ? (expert.portfolio as { cashSpendUsdMonth: number }).cashSpendUsdMonth : null,
             } : null,
-            after: currentPortfolio ? { selected: currentPortfolio.selected, customers: currentPortfolio.customers } : null,
+            after: currentPortfolio ? { selected: currentPortfolio.selected, customers: currentPortfolio.customers, cashSpendUsdMonth: currentPortfolio.cashSpendUsdMonth } : null,
           },
         }
       : null;
@@ -761,6 +763,7 @@ export const setUnitEconomics = mutation({
     ownerHourUsd: v.optional(v.number()),
     ownerHoursPerWeek: v.optional(v.number()),
     newCustomersPerMonth: v.optional(v.number()),
+    monthlyGrowthCashUsd: v.optional(v.number()),
     ranges: v.optional(v.object({ revenue: v.optional(v.object({ low: v.number(), high: v.number() })), margin: v.optional(v.object({ low: v.number(), high: v.number() })), churn: v.optional(v.object({ low: v.number(), high: v.number() })) })),
   },
   handler: async (ctx, { slug, ranges, ...vals }) => {
@@ -776,6 +779,7 @@ export const setUnitEconomics = mutation({
     check(vals.ownerHourUsd, 1, 5_000, "Hourly value");
     check(vals.ownerHoursPerWeek, 0, 80, "Hours a week");
     check(vals.newCustomersPerMonth, 0, 100_000, "New customers a month");
+    check(vals.monthlyGrowthCashUsd, 0, 100_000_000, "Monthly growth cash");
     // A range must be low < high and pass the same checks; its value is the midpoint (set by the client, re-checked here).
     const pairs = { revenue: ["revenuePerCustomerMonthUsd", 0.01, 1_000_000, "Revenue range"], margin: ["grossMargin", 0.01, 1, "Margin range"], churn: ["monthlyChurn", 0.001, 0.95, "Churn range"] } as const;
     for (const [k, [field, lo, hi, what]] of Object.entries(pairs)) {
@@ -794,6 +798,7 @@ export const setUnitEconomics = mutation({
       ownerHourUsd: vals.ownerHourUsd ?? prev?.ownerHourUsd,
       ownerHoursPerWeek: vals.ownerHoursPerWeek ?? prev?.ownerHoursPerWeek,
       newCustomersPerMonth: vals.newCustomersPerMonth ?? prev?.newCustomersPerMonth,
+      monthlyGrowthCashUsd: vals.monthlyGrowthCashUsd ?? prev?.monthlyGrowthCashUsd,
       // A new single number replaces its old range; a new range replaces the old one.
       ...(() => {
         const keep = { ...(prev?.ranges ?? {}) } as Record<string, { low: number; high: number }>;
@@ -927,7 +932,7 @@ function hasNewerOwnerEconomics(
   if (!owner) return false;
   const snapshot = strategy.expert?.snapshot as { ownerEconomics?: OwnerEconomics } | undefined;
   if (snapshot?.ownerEconomics) {
-    const keys = ["revenuePerCustomerMonthUsd", "grossMargin", "monthlyChurn", "ownerHourUsd", "ownerHoursPerWeek", "newCustomersPerMonth", "ranges"] as const;
+    const keys = ["revenuePerCustomerMonthUsd", "grossMargin", "monthlyChurn", "ownerHourUsd", "ownerHoursPerWeek", "newCustomersPerMonth", "monthlyGrowthCashUsd", "ranges"] as const;
     return keys.some((key) => JSON.stringify(snapshot.ownerEconomics?.[key]) !== JSON.stringify(owner[key]));
   }
   return owner.updatedAt > strategy.createdAt;

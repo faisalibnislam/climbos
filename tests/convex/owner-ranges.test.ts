@@ -16,5 +16,8 @@ describe("owner ranges for unit economics", () => {
     await owner.client.mutation(api.workspace.setUnitEconomics, { slug, monthlyChurn: 0.04 });
     expect((await read())?.ranges?.churn).toBeUndefined();
     expect((await read())?.monthlyChurn).toBe(0.04);
+    await owner.client.mutation(api.workspace.setUnitEconomics, { slug, monthlyGrowthCashUsd: 0 });
+    expect((await read())?.monthlyGrowthCashUsd).toBe(0);
+    await expect(owner.client.mutation(api.workspace.setUnitEconomics, { slug, monthlyGrowthCashUsd: -1 })).rejects.toThrow(/Monthly growth cash looks wrong/);
   });
 });

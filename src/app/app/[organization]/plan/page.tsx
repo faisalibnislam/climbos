@@ -92,6 +92,7 @@ function PlanImpactSummary({ impact }: { impact: NonNullable<PlanView["planImpac
   const portfolioChanged = impact.portfolio.before && impact.portfolio.after
     ? impact.portfolio.before.selected.join("\u0000") !== impact.portfolio.after.selected.join("\u0000")
       || impact.portfolio.before.customers !== impact.portfolio.after.customers
+      || impact.portfolio.before.cashSpendUsdMonth !== impact.portfolio.after.cashSpendUsdMonth
     : false;
   return (
     <Card>
@@ -126,8 +127,8 @@ function PlanImpactSummary({ impact }: { impact: NonNullable<PlanView["planImpac
             <p className="font-medium">Portfolio choice</p>
             <p className="mt-1 text-ink-2">
               {impact.portfolio.before
-                ? <>{portfolioChanged ? "Saved choice" : "Choice unchanged"}: {impact.portfolio.before.selected.join(" + ") || "No selected plays"} ({impact.portfolio.before.customers === null ? "customers unavailable" : `${formatter.format(impact.portfolio.before.customers)} modeled customers`}) <span aria-hidden="true">→</span> {impact.portfolio.after.selected.join(" + ") || "No selected plays"} ({formatter.format(impact.portfolio.after.customers)} modeled customers).</>
-                : <>Saved portfolio comparison unavailable; current choice: {impact.portfolio.after.selected.join(" + ") || "No selected plays"} ({formatter.format(impact.portfolio.after.customers)} modeled customers).</>}
+                ? <>{portfolioChanged ? "Saved choice" : "Choice unchanged"}: {impact.portfolio.before.selected.join(" + ") || "No selected plays"} ({impact.portfolio.before.customers === null ? "customers unavailable" : `${formatter.format(impact.portfolio.before.customers)} modeled customers`}; {impact.portfolio.before.cashSpendUsdMonth === null ? "cash outlay unknown" : `${formatMoney(impact.portfolio.before.cashSpendUsdMonth, impact.currency)}/mo cash outlay`}) <span aria-hidden="true">→</span> {impact.portfolio.after.selected.join(" + ") || "No selected plays"} ({formatter.format(impact.portfolio.after.customers)} modeled customers; {formatMoney(impact.portfolio.after.cashSpendUsdMonth, impact.currency)}/mo cash outlay).</>
+                : <>Saved portfolio comparison unavailable; current choice: {impact.portfolio.after.selected.join(" + ") || "No selected plays"} ({formatter.format(impact.portfolio.after.customers)} modeled customers; {formatMoney(impact.portfolio.after.cashSpendUsdMonth, impact.currency)}/mo cash outlay).</>}
             </p>
           </div>
         ) : null}
@@ -342,7 +343,7 @@ function PlanScreen({ slug }: { slug: string }) {
           ) : null}
           <ShortVersion strategy={s} />
           {s.expert ? <NorthStar expert={s.expert as ExpertView} slug={slug} /> : null}
-          {s.expert?.plays?.length ? <SharpenPlan slug={slug} questions={plan.questions} canEdit={plan.canEdit} answersNewer={plan.answersNewerThanPlan} /> : null}
+          {s.expert?.plays?.length ? <SharpenPlan slug={slug} questions={plan.questions} canEdit={plan.canEdit} answersNewer={plan.answersNewerThanPlan} currency={plan.goal?.currency ?? "USD"} /> : null}
           {s.expert?.plays?.length ? <FunnelNumbers slug={slug} funnel={plan.funnel} canEdit={plan.canEdit} /> : null}
           {s.expert && (s.expert.plays?.length || (s.expert as ExpertView).strategyExploration) ? <GrowthPlays plays={(s.expert.plays ?? []) as PlayView[]} slug={slug} economics={(s.expert as { economics?: Economics }).economics} portfolioComparisons={(s.expert as ExpertView).portfolioComparisons} strategyExploration={(s.expert as ExpertView).strategyExploration} diagnosis={(s.expert as { constraintDiagnosis?: Diagnosis }).constraintDiagnosis ?? null} strategyId={s.status === "approved" ? s.id : undefined} planId={s.id} canEdit={plan.canEdit} focused={Boolean((s.expert as ExpertView).decision)} /> : null}
           {s.expert ? <ExecutionPlan expert={s.expert as ExpertView} /> : null}

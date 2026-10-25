@@ -1356,9 +1356,9 @@ function PortfolioObjectiveCard({ label, explanation, choice, noChoice, economic
           </div>
           <dl className="grid grid-cols-2 gap-2 text-sm">
             <div><dt className="text-xs text-ink-3">Modeled customers</dt><dd className="font-semibold tabular-nums text-ink">{fmtN(choice.customers)} at stated rates · {fmtN(choice.expectedCustomers)} average across modeled scenarios</dd></div>
-            <div><dt className="text-xs text-ink-3">Spend and time</dt><dd className="font-semibold tabular-nums text-ink">{usd(choice.spendUsdMonth, economics?.currency)}/mo · {fmtN(choice.ownerHoursWeek)} h/wk</dd></div>
+            <div><dt className="text-xs text-ink-3">Cash costs and time</dt><dd className="font-semibold tabular-nums text-ink">{usd(choice.spendUsdMonth, economics?.currency)}/mo media · {usd(choice.cashSpendUsdMonth, economics?.currency)}/mo total cash · {fmtN(choice.ownerHoursWeek)} h/wk</dd></div>
             {choice.netUsd !== null ? <div><dt className="text-xs text-ink-3">Modeled net contribution over this period</dt><dd className="font-semibold tabular-nums text-ink">{usd(choice.netUsd, economics?.currency)}</dd></div> : null}
-            <div><dt className="text-xs text-ink-3">Limits</dt><dd className="font-medium text-ink">{choice.allFit ? "Fits supplied budget and capacity" : "Some drafted plays do not fit"}</dd></div>
+            <div><dt className="text-xs text-ink-3">Limits</dt><dd className="font-medium text-ink">{choice.allFit ? "Fits supplied cash, ad budget and capacity limits" : "Some drafted plays do not fit supplied cash, ad budget or capacity limits"}</dd></div>
           </dl>
           {choice.runnerUp ? <p className="text-xs text-ink-3">Closest alternative: {choice.runnerUp.selected.join(" + ") || "No play"} · {fmtN(choice.runnerUp.customers)} customers at stated rates.</p> : null}
           {choice.left.length ? <details className="text-xs text-ink-3"><summary className="cursor-pointer font-medium text-ink-2">Why other plays were left out ({choice.left.length})</summary><ul className="mt-1 list-disc pl-5">{choice.left.map((item, i) => <li key={`${item.name}-${i}`}>{item.name}: {item.why}</li>)}</ul></details> : null}

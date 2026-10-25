@@ -151,6 +151,15 @@ describe("owner numbers and decision questions", () => {
 });
 
 describe("plan fits budget, time and the computed total", () => {
+  it("checks the owner-set growth-cash limit against media and other cash costs, excluding owner time", async () => {
+    const { lintFeasibility } = await import("../../shared/agents/specs");
+    const issues = lintFeasibility([
+      { name: "Test", kind: "bankable", model: { monthlySpendUsd: 50, otherMonthlyUsd: 75, ownerHoursPerWeek: 8 } },
+    ], { monthlyGrowthCashUsd: 100, ownerHoursPerWeek: 10, currency: "USD" });
+    expect(issues.map((issue) => issue.rule)).toEqual(["growth_cash"]);
+    expect(issues[0]?.message).toContain("$125/month in media and other cash costs");
+  });
+
   it("flags overspend, too many owner hours and a North Star that ignores the plays", async () => {
     const { lintFeasibility, lintPlanFit } = await import("../../shared/agents/specs");
     const plays = [{ name: "a", kind: "bankable", model: { monthlySpendUsd: 400, ownerHoursPerWeek: 4 } }, { name: "b", kind: "creative", model: { monthlySpendUsd: 300, ownerHoursPerWeek: 3 } }];

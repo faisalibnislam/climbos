@@ -1189,20 +1189,23 @@ export function lintReferralDrivers(plays: LensPlay[]): LintIssue[] {
 }
 
 /** Spec §13: the portfolio must fit the owner's cash and time. */
-export function lintFeasibility(plays: { name: string; kind: string; model?: { monthlySpendUsd: number; ownerHoursPerWeek: number } }[], c: PlanConstraints | undefined, economics?: Economics): LintIssue[] {
+export function lintFeasibility(plays: { name: string; kind: string; model?: { monthlySpendUsd: number; otherMonthlyUsd?: number; ownerHoursPerWeek: number } }[], c: PlanConstraints | undefined, economics?: Economics): LintIssue[] {
   if (!c) return [];
   const issues: LintIssue[] = [];
   const m = (n: number) => formatMoney(n, c.currency);
   // The fix is computed, not left to the model: the best set of these plays that fits all limits together (decision books, Kochenderfer App. E).
   const fixHint = () => {
     if (!economics) return "";
-    const pick = selectPortfolio({ economics, plays: plays as never }, { monthlyBudgetUsd: c.monthlyAdBudgetUsd, ownerHoursPerWeek: c.ownerHoursPerWeek, newCustomersPerMonth: c.newCustomersPerMonth, horizonDays: c.horizonDays });
+    const pick = selectPortfolio({ economics, plays: plays as never }, { monthlyBudgetUsd: c.monthlyAdBudgetUsd, monthlyGrowthCashUsd: c.monthlyGrowthCashUsd, ownerHoursPerWeek: c.ownerHoursPerWeek, newCustomersPerMonth: c.newCustomersPerMonth, horizonDays: c.horizonDays });
     return pick?.selected.length ? ` Best set that fits (computed): ${pick.selected.join(" + ")}; drop or shrink ${pick.left.map((l) => l.name).join(", ")}.` : "";
   };
   const spend = plays.reduce((s, p) => s + Math.max(0, p.model?.monthlySpendUsd ?? 0), 0);
+  const cashSpend = plays.reduce((s, p) => s + Math.max(0, p.model?.monthlySpendUsd ?? 0) + Math.max(0, p.model?.otherMonthlyUsd ?? 0), 0);
   const hours = plays.reduce((s, p) => s + Math.max(0, p.model?.ownerHoursPerWeek ?? 0), 0);
   if (c.monthlyAdBudgetUsd !== undefined && spend > c.monthlyAdBudgetUsd * 1.001)
     issues.push({ severity: "error", rule: "budget", message: c.monthlyAdBudgetUsd === 0 ? `The owner has no ad budget, but the plays spend ${m(spend)}/month. Use plays that cost time or ClimbOS credits instead.` : `The plays spend ${m(spend)}/month; the budget is ${m(c.monthlyAdBudgetUsd)}. Cut or drop a play.${fixHint()}`, path: "plays" });
+  if (c.monthlyGrowthCashUsd !== undefined && cashSpend > c.monthlyGrowthCashUsd * 1.001)
+    issues.push({ severity: "error", rule: "growth_cash", message: `The plays require ${m(cashSpend)}/month in media and other cash costs; the owner-set monthly growth-cash limit is ${m(c.monthlyGrowthCashUsd)}. Reduce or defer the cash outlay.${fixHint()}`, path: "plays" });
   if (c.ownerHoursPerWeek !== undefined && hours > c.ownerHoursPerWeek + 0.01)
     issues.push({ severity: "error", rule: "capacity", message: `The plays need ${Math.round(hours * 10) / 10} owner hours a week; the owner has ${c.ownerHoursPerWeek}. Move work to ClimbOS or drop a play.${fixHint()}`, path: "plays" });
   else if (c.ownerHoursPerWeek === undefined && hours > 10)
@@ -2207,7 +2210,7 @@ export function lintDecisionOptionChoice(
   const selectedName = chosen.name;
   const alternativeName = better.name;
   const reason = chosen.feasible === false && better.feasible === true
-    ? `The chosen option "${selectedName}" exceeds a confirmed budget, time or delivery limit, while "${alternativeName}" fits.`
+    ? `The chosen option "${selectedName}" exceeds a confirmed cash, budget, time or delivery limit, while "${alternativeName}" fits.`
     : chosen.netContribution === null
       ? `The chosen option "${selectedName}" supports fewer modeled customers than "${alternativeName}" under the same confirmed limits.`
       : `The chosen option "${selectedName}" has lower modeled net contribution than "${alternativeName}" under the same confirmed limits.`;
@@ -2226,7 +2229,7 @@ export function analyzeDecisionOptions(
   const horizonDays = constraints?.horizonDays ?? Math.max(1, ...plays.map((play) => play.horizonDays || 90));
   const valuePerCustomer = customerValue(economics);
   const names = new Map(plays.map((play) => [play.name.trim().toLowerCase(), play]));
-  const feasibilityEvaluated = constraints?.monthlyAdBudgetUsd !== undefined || constraints?.ownerHoursPerWeek !== undefined || constraints?.newCustomersPerMonth !== undefined;
+  const feasibilityEvaluated = constraints?.monthlyAdBudgetUsd !== undefined || constraints?.monthlyGrowthCashUsd !== undefined || constraints?.ownerHoursPerWeek !== undefined || constraints?.newCustomersPerMonth !== undefined;
   const options = decision.options.map((option) => {
     const selected = option.plays.map((name) => names.get(name.trim().toLowerCase()));
     const optionPlays = selected as PlayLike[];
@@ -2252,6 +2255,7 @@ export function analyzeDecisionOptions(
       netContribution: null,
     };
     const spend = optionPlays.reduce((sum, play) => sum + Math.max(0, play.model.monthlySpendUsd), 0);
+    const cashSpend = optionPlays.reduce((sum, play) => sum + Math.max(0, play.model.monthlySpendUsd) + Math.max(0, play.model.otherMonthlyUsd ?? 0), 0);
     const ownerHours = optionPlays.reduce((sum, play) => sum + Math.max(0, play.model.ownerHoursPerWeek), 0);
     const portfolio = { economics, plays: optionPlays };
     const range = portfolioRange(portfolio, horizonDays);
@@ -2259,6 +2263,7 @@ export function analyzeDecisionOptions(
     const cost = optionPlays.reduce((sum, play) => sum + playMaths({ ...play, horizonDays }, economics).costUsd, 0);
     const feasible = feasibilityEvaluated
       ? (constraints?.monthlyAdBudgetUsd === undefined || spend <= constraints.monthlyAdBudgetUsd)
+        && (constraints?.monthlyGrowthCashUsd === undefined || cashSpend <= constraints.monthlyGrowthCashUsd)
         && (constraints?.ownerHoursPerWeek === undefined || ownerHours <= constraints.ownerHoursPerWeek)
         && (constraints?.newCustomersPerMonth === undefined || range.p90 <= constraints.newCustomersPerMonth * (horizonDays / 30))
       : null;
@@ -2285,6 +2290,7 @@ export function analyzeDecisionOptions(
     scoreBasis: valuePerCustomer === null ? "expected_customers" as const : "net_contribution" as const,
     constraints: {
       monthlyAdBudgetUsd: constraints?.monthlyAdBudgetUsd ?? null,
+      monthlyGrowthCashUsd: constraints?.monthlyGrowthCashUsd ?? null,
       ownerHoursPerWeek: constraints?.ownerHoursPerWeek ?? null,
       newCustomersPerMonth: constraints?.newCustomersPerMonth ?? null,
     },

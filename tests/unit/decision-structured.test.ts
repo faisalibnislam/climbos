@@ -145,7 +145,21 @@ describe("deterministic comparison of decision options", () => {
   it("flags a chosen option that breaches a confirmed monthly budget when another fits", () => {
     const issues = lintDecisionOptionChoice(decision({ options }), optionPlays, economics, { monthlyAdBudgetUsd: 1_000 });
     expect(issues).toHaveLength(1);
-    expect(issues[0].message).toContain("exceeds a confirmed budget");
+    expect(issues[0].message).toContain("exceeds a confirmed cash, budget");
+  });
+
+  it("flags an option that exceeds the owner-set monthly growth-cash limit", () => {
+    const cashHeavy = measurablePlay("Cash heavy", 100, 0.2, 0);
+    cashHeavy.model = { ...cashHeavy.model!, otherMonthlyUsd: 120 };
+    const lean = measurablePlay("Lean", 50, 0.2, 0);
+    const options = [
+      { name: "Cash-heavy growth", kind: "acquisition" as const, plays: ["Cash heavy"], chosen: true, whyNot: "" },
+      { name: "Lean test", kind: "acquisition" as const, plays: ["Lean"], chosen: false, whyNot: "Smaller reach." },
+    ];
+    const issues = lintDecisionOptionChoice(decision({ options }), [cashHeavy, lean], economics, { monthlyGrowthCashUsd: 100 });
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain("exceeds a confirmed cash, budget, time or delivery limit");
+    expect(analyzeDecisionOptions(decision({ options }), [cashHeavy, lean], economics, { monthlyGrowthCashUsd: 100 })?.constraints.monthlyGrowthCashUsd).toBe(100);
   });
 
   it("does not score options whose alternatives have no measurable play mapping", () => {
@@ -174,7 +188,7 @@ describe("deterministic comparison of decision options", () => {
     expect(portfolioRange({ economics, plays: [ranged] }, 30).p90).toBeGreaterThan(30);
     const issues = lintDecisionOptionChoice(decision({ options: rangedOptions }), [ranged, steady], economics, { newCustomersPerMonth: 30 });
     expect(issues).toHaveLength(1);
-    expect(issues[0].message).toContain("exceeds a confirmed budget, time or delivery limit");
+    expect(issues[0].message).toContain("exceeds a confirmed cash, budget, time or delivery limit");
   });
 
   it("fails when the structured decision contradicts a supported owner diagnosis", () => {

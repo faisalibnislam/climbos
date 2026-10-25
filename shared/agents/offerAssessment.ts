@@ -202,6 +202,17 @@ function resolveEvidence(reference: string | null, context: OfferAssessmentConte
   return context.sourceUrls.includes(reference) ? context.researchNotes : undefined;
 }
 
+function claimSupportsAmount(claim: string, amount: number, isRate = false): boolean {
+  const numbers = [...claim.matchAll(/(?<![\w])\d+(?:,\d{3})*(?:\.\d+)?\s*%?/g)]
+    .map(([raw]) => {
+      const percent = raw.trim().endsWith("%");
+      const value = Number.parseFloat(raw.replace(/[,\s%]/g, ""));
+      return percent && isRate ? value / 100 : value;
+    })
+    .filter(Number.isFinite);
+  return numbers.some((value) => Math.abs(value - amount) < 0.000001);
+}
+
 /** Validates recommendation evidence and checks offer economics against stated guardrails. */
 export function lintOfferAssessment(
   assessment: OfferAssessment | undefined,
@@ -238,11 +249,12 @@ export function lintOfferAssessment(
   assessment.evidenceRefs.forEach((ref, index) => { if (!supportingEvidence[index]) error(`Evidence reference ${ref} was not supplied or retrieved.`, "evidenceRefs"); });
   if (assessment.recommendation === "recommend_promotion" && !supportingEvidence.some((source) => source?.includes(assessment.evidenceNote))) error("A promotion recommendation needs a verbatim owner or measured evidence claim that supports the stated customer obstacle.", "evidenceNote");
 
-  const checkValue = (value: OfferAssessment["current"]["netPrice"], field: string) => {
+  const checkValue = (value: OfferAssessment["current"]["netPrice"], field: string, isRate = false) => {
     if (value.amount === null) return;
     const supporting = resolveEvidence(value.reference, context);
     if (["owner_reported", "measured", "source_reported"].includes(value.basis) && !supporting) error("This numeric offer input needs an exact supplied fact or retrieved-source reference.", field);
     if (supporting && value.claim && !supporting.includes(value.claim)) error("The numeric input claim must appear verbatim in its cited fact or source notes.", `${field}.claim`);
+    if (supporting && value.claim && !claimSupportsAmount(value.claim, value.amount, isRate)) error("The stated numeric input does not match the amount in its cited claim; preserve the value as unknown until the source is reconciled.", `${field}.amount`);
     if (["assumed", "inferred"].includes(value.basis) && assessment.recommendation === "recommend_promotion") error("A promotion cannot be recommended with assumed or inferred unit-economic inputs.", field);
   };
   checkValue(assessment.current.netPrice, "current.netPrice");
@@ -250,7 +262,7 @@ export function lintOfferAssessment(
   assessment.current.variableCosts.forEach((cost, index) => checkValue(cost.value, `current.variableCosts[${index}].value`));
   assessment.proposed.variableCosts.forEach((cost, index) => checkValue(cost.value, `proposed.variableCosts[${index}].value`));
   if (assessment.minimumContribution) checkValue(assessment.minimumContribution, "minimumContribution");
-  if (assessment.minimumMarginRate) checkValue(assessment.minimumMarginRate, "minimumMarginRate");
+  if (assessment.minimumMarginRate) checkValue(assessment.minimumMarginRate, "minimumMarginRate", true);
   if (assessment.minimumMarginRate && assessment.minimumMarginRate.amount !== null && assessment.minimumMarginRate.amount > 1) error("The minimum contribution margin must be a rate from 0 to 1.", "minimumMarginRate.amount");
   if (assessment.capacity.status === "available" || assessment.capacity.status === "constrained") {
     const supporting = resolveEvidence(assessment.capacity.evidenceRef, context);

@@ -122,6 +122,8 @@ export interface AgentInput {
 export interface PlanConstraints {
   /** Cash the owner will pay ad platforms each month, in `currency` (the name predates currencies). */
   monthlyAdBudgetUsd?: number;
+  /** Owner-confirmed monthly cash available for growth work, including media and other cash costs (excludes owner time). */
+  monthlyGrowthCashUsd?: number;
   /** Workspace currency (ISO code) for every amount here; absent means USD. */
   currency?: string;
   /** Hours a week the owner can give growth work (when they said). */

@@ -892,6 +892,8 @@ export default defineSchema({
         ownerHoursPerWeek: v.optional(v.number()),
         /** Additional new customers (clients, bookings, projects) the owner can accept each month with current operations. */
         newCustomersPerMonth: v.optional(v.number()),
+        /** Monthly cash the owner can safely commit to growth work; excludes non-cash owner time. */
+        monthlyGrowthCashUsd: v.optional(v.number()),
         /** Owner-stated ranges (their judgement, low–high); the value above is the midpoint (shared/agents/voi.ts). */
         ranges: v.optional(
           v.object({
@@ -3093,6 +3095,7 @@ export default defineSchema({
             ),
             constraints: v.object({
               monthlyAdBudgetUsd: v.union(v.number(), v.null()),
+              monthlyGrowthCashUsd: v.optional(v.union(v.number(), v.null())),
               ownerHoursPerWeek: v.union(v.number(), v.null()),
               newCustomersPerMonth: v.union(v.number(), v.null()),
             }),
@@ -3140,6 +3143,7 @@ export default defineSchema({
         limits: v.optional(
           v.object({
           ownerHoursPerWeek: v.union(v.number(), v.null()),
+          monthlyGrowthCashUsd: v.optional(v.union(v.number(), v.null())),
           newCustomersPerMonth: v.optional(v.union(v.number(), v.null())),
             ownerGrossMargin: v.optional(v.union(v.number(), v.null())),
           }),

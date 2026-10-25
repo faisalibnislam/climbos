@@ -97,6 +97,13 @@ describe("offer and promotion recommendations", () => {
     expect(lintOfferAssessment(missing, play(), context, "plays[0].offerAssessment").some((issue) => /cannot be recommended while unit costs or price are unknown/u.test(issue.message))).toBe(true);
   });
 
+  it("rejects numeric offer inputs that conflict with their cited owner claim", () => {
+    const conflicting = assessment({ current: { ...assessment().current, netPrice: value(1_000, "Current offer is $100 per service") } });
+    const issues = lintOfferAssessment(conflicting, play(), context, "plays[0].offerAssessment");
+    expect(issues.some((issue) => issue.path?.endsWith("current.netPrice.amount") && /does not match the amount in its cited claim/u.test(issue.message))).toBe(true);
+    expect(lintOfferAssessment(assessment(), play(), context, "plays[0].offerAssessment")).toEqual([]);
+  });
+
   it("blocks an irrelevant discount when the supported diagnosis is retention", () => {
     const irrelevant = assessment({ recommendation: "recommend_promotion", diagnosis: "Measured retention loss after onboarding", evidenceNote: "The measured issue is retention, not a first-purchase price obstacle." });
     const issues = lintOfferAssessment(irrelevant, play({ actionContract: { diagnosis: "Measured retention loss after onboarding" } }), { ...context, diagnosedConstraint: "retention", diagnosisMeasured: true }, "plays[0].offerAssessment");

@@ -32,10 +32,11 @@ const SHORT: Record<string, string> = {
   ownerHourUsd: "Your hour is worth",
   ownerHoursPerWeek: "Your hours / week",
   newCustomersPerMonth: "New customers you can take",
+  monthlyGrowthCashUsd: "Cash available for growth each month",
 };
 
 /** Up to 3 questions whose answers would change the plan's verdicts; answers update every number at once. */
-export function SharpenPlan({ slug, questions, canEdit, answersNewer }: { slug: string; questions: OwnerQuestion[]; canEdit: boolean; answersNewer: boolean }) {
+export function SharpenPlan({ slug, questions, canEdit, answersNewer, currency = "USD" }: { slug: string; questions: OwnerQuestion[]; canEdit: boolean; answersNewer: boolean; currency?: string }) {
   const save = useMutation(api.workspace.setUnitEconomics);
   const [vals, setVals] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -63,7 +64,7 @@ export function SharpenPlan({ slug, questions, canEdit, answersNewer }: { slug: 
         continue;
       }
       const n = UNIT[q.unit].fromInput(vals[q.key]);
-      if (!Number.isFinite(n) || n <= 0) return toast({ tone: "danger", title: `Check: ${q.question}` });
+      if (!Number.isFinite(n) || (q.key === "monthlyGrowthCashUsd" ? n < 0 : n <= 0)) return toast({ tone: "danger", title: `Check: ${q.question}` });
       args[q.key] = n;
     }
     setBusy(true);
@@ -83,7 +84,7 @@ export function SharpenPlan({ slug, questions, canEdit, answersNewer }: { slug: 
         <div className="flex items-center gap-2">
           <Target className="size-4 shrink-0 text-brand-700" aria-hidden />
           <h2 className="heading-card">Sharpen this plan</h2>
-          <span className="text-xs text-ink-3">Assumed numbers</span>
+          <span className="text-xs text-ink-3">Plan inputs</span>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           {questions.map((q) => {
@@ -103,11 +104,11 @@ export function SharpenPlan({ slug, questions, canEdit, answersNewer }: { slug: 
                   </Tooltip>
                 </div>
                 <div className="relative">
-                  <Input id={id} inputMode="decimal" disabled={!canEdit || busy} placeholder={unit.toInput(q.assumed)} value={vals[q.key] ?? ""} onChange={(e) => setVals((v) => ({ ...v, [q.key]: e.target.value }))} className="pr-24" />
-                  <span aria-hidden className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-ink-3">{unit.suffix}</span>
+                  <Input id={id} inputMode="decimal" disabled={!canEdit || busy} placeholder={q.assumed === undefined ? "Unknown" : unit.toInput(q.assumed)} value={vals[q.key] ?? ""} onChange={(e) => setVals((v) => ({ ...v, [q.key]: e.target.value }))} className="pr-24" />
+                  <span aria-hidden className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-ink-3">{q.key === "monthlyGrowthCashUsd" ? `${currency} / month` : unit.suffix}</span>
                 </div>
                 <p className="text-xs text-ink-3">
-                  {q.switchValue !== undefined ? `Matters if it's ${q.switchDirection === "le" ? "above" : "below"} ${hint(q.unit, unit.toInput(q.switchValue))}` : `Assumed ${unit.toInput(q.assumed)}`}
+                  {q.switchValue !== undefined ? `Matters if it's ${q.switchDirection === "le" ? "above" : "below"} ${hint(q.unit, unit.toInput(q.switchValue))}` : q.ownerReported && q.assumed !== undefined ? `Saved owner input ${unit.toInput(q.assumed)} · update if it changed` : q.assumed === undefined ? "Owner input needed · not assumed" : `Assumed ${unit.toInput(q.assumed)}`}
                   {RANGE_KEY[q.key] ? " · a range like 3–6 is fine" : ""}
                 </p>
               </div>
