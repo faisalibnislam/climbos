@@ -24,10 +24,30 @@ describe("shortfall diagnosis", () => {
     expect(s.moreSpendJustified).toBe(false);
     expect(shortfallLine("Ads test", s)).toMatch(/Don't raise its spend/);
   });
-  it("reach only: conversion holds, so more reach (or spend within the cap) is justified", () => {
-    const s = diagnoseShortfall(a([week(1, 60, [7, 2]), week(2, 50, [6, 1]), week(3, 60, [6, 1]), week(4, 50, [5, 1])]));
-    expect(s.verdict).toBe("reach_only");
-    expect(s.moreSpendJustified).toBe(true);
+  it("reach only: more spend is justified only when logged cost per customer is affordable", () => {
+    // 4 weeks × 25 spent = 100 for 5 customers: 20 per customer.
+    const actuals = a([week(1, 60, [7, 2]), week(2, 50, [6, 1]), week(3, 60, [6, 1]), week(4, 50, [5, 1])]);
+    const within = diagnoseShortfall(actuals, {}, { affordableCacUsd: 50, currency: "USD" });
+    expect(within.verdict).toBe("reach_only");
+    expect(within.moreSpendJustified).toBe(true);
+    expect(within.checks.find((c) => c.check === "cost")).toMatchObject({ status: "pass", detail: expect.stringContaining("$20") });
+
+    const above = diagnoseShortfall(actuals, {}, { affordableCacUsd: 10, currency: "USD" });
+    expect(above).toMatchObject({ verdict: "reach_only", moreSpendJustified: false });
+    expect(above.next).toMatch(/above what a customer is worth/);
+    expect(above.checks.find((c) => c.check === "cost")?.status).toBe("fail");
+
+    // Unknown customer value: don't assume spend is justified.
+    const unknown = diagnoseShortfall(actuals);
+    expect(unknown.moreSpendJustified).toBe(false);
+    expect(unknown.next).toMatch(/confirm price, margin and churn/);
+    expect(shortfallLine("Referral test", unknown)).toMatch(/Don't raise its spend/);
+  });
+  it("reach only with no logged spend doesn't recommend starting paid spend", () => {
+    const free = playActuals(model, [1, 2, 3, 4].map((i) => ({ ...week(i, i % 2 ? 60 : 50, [6, 1]), spendUsd: 0 })), forecast, 13);
+    const s = diagnoseShortfall(free, {}, { affordableCacUsd: 50 });
+    expect(s).toMatchObject({ verdict: "reach_only", moreSpendJustified: false });
+    expect(s.next).toMatch(/don't start or raise paid spend/);
   });
   it("too few: keep running to the planned end", () => {
     expect(diagnoseShortfall(a([week(1, 150, [10, 1]), week(2, 140, [9, 1])])).verdict).toBe("too_few");

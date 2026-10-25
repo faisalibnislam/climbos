@@ -53,7 +53,7 @@ import { cn } from "@/lib/utils";
 import { formatMoney } from "../../../../shared/economics/currency";
 import { playConfidence, type EvidenceLevel, type PlayConfidence } from "../../../../shared/agents/confidence";
 import type { Diagnosis } from "../../../../shared/agents/diagnosis";
-import { churnOf, ownerHourOf, playMaths, type Economics, type ForecastUncertainty, type PlayModel, type PlaySensitivity, type PortfolioChoice } from "../../../../shared/agents/economics";
+import { churnOf, customerValue, ownerHourOf, playMaths, type Economics, type ForecastUncertainty, type PlayModel, type PlaySensitivity, type PortfolioChoice } from "../../../../shared/agents/economics";
 import { fmtInput as fmtSwitch, switchPoints } from "../../../../shared/agents/voi";
 import { ACCESS_LABEL, BASIS_LABEL, CHECK_LABEL, COST_BASIS_LABEL, economicsSources, forecastBasis, playInputs, SOURCE_LABEL, type ActionEvidenceSupport, type InputRow } from "../../../../shared/agents/provenance";
 import { Clamp, DetailsToggle, ExpandAll, FieldLabel, PlanSection, splitLinks, LinkChip } from "./PlanSections";
@@ -1129,7 +1129,7 @@ function PlayCard({ play, slug, economics, results, planId, targets, canEdit = f
         <Forecast f={play} economics={economics} open={open} diagnosis={diagnosis} />
         {play.model && economics ? <PlayEconomics play={play} economics={economics} /> : null}
         {targets && planId && play.id ? <PlayTargetsBlock t={targets} slug={slug} strategyId={planId} playId={play.id} canEdit={canEdit} /> : null}
-        {play.model?.steps?.length && results ? <PlayResults slug={slug} strategyId={results.strategyId} playName={play.name} model={play.model} actuals={results.byPlay[play.name]} retention={results.byPlay[play.name]?.retention} currency={results.currency} canEdit={results.canEdit} /> : null}
+        {play.model?.steps?.length && results ? <PlayResults slug={slug} strategyId={results.strategyId} playName={play.name} model={play.model} actuals={results.byPlay[play.name]} retention={results.byPlay[play.name]?.retention} currency={results.currency} canEdit={results.canEdit}  affordableCacUsd={economics ? customerValue(economics) : null}/> : null}
 
         {open ? <PlayDetails play={play} economics={economics} id={panel} /> : null}
 

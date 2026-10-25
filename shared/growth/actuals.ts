@@ -107,6 +107,25 @@ export interface PlayActuals {
   ignoredBeforeStart: number;
 }
 
+export type CostCheckStatus = "within" | "above" | "no_spend" | "no_customers" | "value_unknown";
+export interface CostCheck {
+  /** Logged cash spend ÷ logged new customers (owner time excluded); null with no customers or no spend. */
+  cashCostPerCustomerUsd: number | null;
+  /** What one customer contributes within the payback horizon (economics customerValue); null when unknown. */
+  affordableUsd: number | null;
+  status: CostCheckStatus;
+}
+
+/** Logged cash cost per customer against the affordable cost per customer; unknown stays unknown, never assumed. */
+export function costCheck(a: Pick<PlayActuals, "spendUsd" | "customers">, affordableUsd: number | null | undefined): CostCheck {
+  const affordable = typeof affordableUsd === "number" && Number.isFinite(affordableUsd) ? affordableUsd : null;
+  if (!(a.spendUsd > 0)) return { cashCostPerCustomerUsd: null, affordableUsd: affordable, status: "no_spend" };
+  if (!(a.customers > 0)) return { cashCostPerCustomerUsd: null, affordableUsd: affordable, status: "no_customers" };
+  const cost = a.spendUsd / a.customers;
+  if (affordable === null) return { cashCostPerCustomerUsd: cost, affordableUsd: null, status: "value_unknown" };
+  return { cashCostPerCustomerUsd: cost, affordableUsd: affordable, status: cost <= affordable + 1e-9 ? "within" : "above" };
+}
+
 /** How many observations the planned rate is worth. */
 export const PRIOR_WEIGHT = 20;
 

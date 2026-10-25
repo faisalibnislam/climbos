@@ -6,9 +6,9 @@ import { audit } from "./lib/audit";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { forecastCalibration, playActuals, resultsLine, retentionActuals, type PlayActuals, type RetentionActuals } from "../shared/growth/actuals";
 import { inferenceOf, isRedefined, outcomeLine, outcomeProblems, sameDefinition } from "../shared/growth/experimentOutcome";
-import type { PlayModel } from "../shared/agents/economics";
+import { applyOwnerEconomics, customerValue, type Economics, type PlayModel } from "../shared/agents/economics";
 import { formatMoney, minorToMajor } from "../shared/economics/currency";
-import { expertPlaysOf } from "../shared/agents/planCompatibility";
+import { expertPlaysOf, readExpertPlan } from "../shared/agents/planCompatibility";
 
 /**
  * Learning from outcomes (spec §28): the owner logs what each play did each
@@ -166,9 +166,16 @@ async function outcomeLines(ctx: QueryCtx, plans: Doc<"strategies">[]): Promise<
   return { tested: tested.slice(0, 6), notRun: notRun.slice(0, 4) };
 }
 
+/** What one customer is worth within the payback horizon for this plan, with the owner's confirmed numbers applied; null when unknown. */
+function affordableCacOf(s: Doc<"strategies">, owner: Doc<"businesses">["unitEconomics"] | undefined): number | null {
+  const economics = s.expert ? (readExpertPlan(s.expert as Record<string, unknown>) as { economics?: Economics }).economics : undefined;
+  return economics ? customerValue(applyOwnerEconomics(economics, owner)) : null;
+}
+
 /** First-party results from the last plans, as facts for the next plan's brief. */
 export async function resultsBrief(ctx: QueryCtx, orgId: Id<"organizations">): Promise<string> {
   const plans = await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", orgId)).order("desc").take(4);
+  const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first();
   const lines: string[] = [];
   const matured: { customers: number; p10: number; p90: number }[] = [];
   for (const s of plans)
@@ -179,7 +186,7 @@ export async function resultsBrief(ctx: QueryCtx, orgId: Id<"organizations">): P
         lines.push(`- ${resultsLine(r.name, r.actuals)}`);
         if (r.retention.weeksReported) lines.push(`  OWNER-REPORTED REPEAT-CUSTOMER OUTCOMES (association with this play is not attribution or causation): ${r.retention.repeatCustomerWeeks} customer-week(s); net revenue ${r.retention.revenueByCurrency.map((x) => `${formatMoney(minorToMajor(x.netRevenueMinor, x.currency), x.currency)} over ${x.weeksReported} week(s)`).join(", ") || "not reported"}; retained contribution ${r.retention.contributionByCurrency.map((x) => `${formatMoney(minorToMajor(x.contributionMinor, x.currency), x.currency)} over ${x.weeksReported} week(s)`).join(", ") || "not reported"}. These values are separate from new-customer forecasts and may omit unreported weeks.`);
         // A play that's behind gets a diagnosis, not more budget (cycle 2).
-        if (r.actuals.status === "behind") lines.push(`  ${shortfallLine(r.name, diagnoseShortfall(r.actuals, { killIf: r.killIf }))}`);
+        if (r.actuals.status === "behind") lines.push(`  ${shortfallLine(r.name, diagnoseShortfall(r.actuals, { killIf: r.killIf }, { affordableCacUsd: affordableCacOf(s, business?.unitEconomics), currency: business?.currency }))}`);
       }
     }
   const wonDealLines = await wonDealsByPlay(ctx, orgId, plans);
