@@ -1847,6 +1847,20 @@ export function lintAvailableSourceUrls(refs: { url: string; path: string }[], i
   });
 }
 
+function competitorHost(raw: string): string | null {
+  const normalized = normalizeSourceUrl(raw);
+  if (!normalized) return null;
+  try {
+    return new URL(normalized).hostname.toLowerCase().replace(/^www\./, "").replace(/\.$/, "");
+  } catch {
+    return null;
+  }
+}
+
+function sameCompetitorHost(a: string, b: string): boolean {
+  return a === b || a.endsWith(`.${b}`) || b.endsWith(`.${a}`);
+}
+
 /** Validate the shared campaign context against only the facts and pages available to this run. */
 export function lintCopyBrief(brief: CopyBrief | undefined, input: AgentInput): LintIssue[] {
   // The Zod output schemas require this field in live generation; tolerate
@@ -1875,8 +1889,14 @@ export function lintCopyBrief(brief: CopyBrief | undefined, input: AgentInput): 
 
 export function lintInsightSources(out: Pick<InsightsV2, "audiences" | "competitors" | "alternatives" | "vocPhrases" | "objections" | "gaps" | "swot" | "swotEvidence" | "swotMoves" | "siteAssessment" | "commercialAssessment">, input: AgentInput): LintIssue[] {
   const refs: { url: string; path: string }[] = [];
+  const competitorEvidenceIssues: LintIssue[] = [];
   out.competitors.forEach((competitor, i) => {
     refs.push({ url: competitor.sourceUrl, path: `competitors[${i}].sourceUrl` });
+    const candidateHost = competitorHost(competitor.url);
+    const sourceHost = competitorHost(competitor.sourceUrl);
+    if (!candidateHost || !sourceHost || !sameCompetitorHost(candidateHost, sourceHost)) {
+      competitorEvidenceIssues.push({ severity: "error", rule: "competitor_candidate_source", message: "A competitor suggestion must cite a page read on that candidate's own canonical website; a valid but unrelated source is not evidence for this watch destination.", path: `competitors[${i}].sourceUrl` });
+    }
     competitor.comparison?.forEach((finding, j) => refs.push({ url: finding.sourceUrl, path: `competitors[${i}].comparison[${j}].sourceUrl` }));
   });
   const groups: [string, { sourceUrl: string }[]][] = [
@@ -2028,7 +2048,7 @@ export function lintInsightSources(out: Pick<InsightsV2, "audiences" | "competit
       swotIssues.push({ severity: "error", rule: "swot_move", message: "Each strategy needs a concrete move, a first test, and a measure.", path });
     }
   });
-  return [...lintAvailableSourceUrls(refs, input), ...siteQuoteIssues, ...commercialEvidenceIssues, ...swotIssues];
+  return [...lintAvailableSourceUrls(refs, input), ...competitorEvidenceIssues, ...siteQuoteIssues, ...commercialEvidenceIssues, ...swotIssues];
 }
 
 /** Lint for things that get published or sent as written (emails, pages): no placeholders. */
@@ -3027,7 +3047,7 @@ Only report what you actually found, with URLs.`,
         maxFetches: 8,
         cacheTtlMs: 6 * 60 * 60_000,
         brief: `For ${ctx.businessName}${site}.${market} First identify the served market and customer geography from pages read in this run or supplied owner facts. Match competitors, customer reviews, communities, directories and market developments to that geography and language when supported. Never infer a city or country from currency, timezone, domain suffix or search ranking; if the location is unknown, say so and leave geography-dependent findings unanswered.
-1. Competitive set: identify 3-5 direct competitors that solve the same customer job for a similar buyer, and classify each sourced company as direct or adjacent (nearby job/segment, not a direct substitute). Use the competitor's own canonical homepage as url and the exact page read as sourceUrl. Put DIY, hiring, marketplaces and doing nothing in alternatives with their matching kind; do not list directories or review sites as vendors. For each competitor, add up to 8 comparison observations across target customer, positioning, offer, pricing, proof, distribution, and customer experience when the supplied pages support them. Each observation must include the exact sourceUrl read, what that page shows, and a separate cautious implication for this business. Omit dimensions with no evidence; unknown is not a weakness, and do not claim superiority or that an observed difference causes customer choice.
+1. Competitor discovery: search independently from the business website using its evidenced customer job, buyer, product category and served market; when useful, search category + job + supported geography and the alternatives buyers use. Do not infer location from currency, timezone, domain suffix or search ranking. Use direct company pages to verify a candidate's identity and canonical homepage. Identify up to 3-5 direct competitors solving the same job for a similar buyer; classify nearby jobs or segments as adjacent only. A company may become a watch suggestion only when its canonical homepage and sourceUrl are on the same company-owned site and that exact page was read in this run. Do not turn directory, review, marketplace or comparison-list pages into competitor vendors; those may be contextual sources for discovery only. Put DIY, hiring, marketplaces and doing nothing in alternatives with their matching kind. For each competitor, add up to 8 comparison observations across target customer, positioning, offer, pricing, proof, distribution, and customer experience when the supplied pages support them. Each observation must include the exact sourceUrl read, what that page shows, and a separate cautious implication for this business. Omit dimensions with no evidence; unknown is not a weakness, and do not claim superiority or that an observed difference causes customer choice. If research cannot identify enough verified direct companies, return fewer candidates rather than filling the list with weak matches.
 2. Voice of customer: find reviews and forum threads (G2/Capterra/Trustpilot/Google reviews/Reddit/app stores, whichever fit this business type) about this business and its top competitors. Collect 15-30 short verbatim phrases with URLs: why people switch, what almost stopped them, outcomes they describe, words they use for the problem.
 3. Gaps: values customers mention that no competitor leads with; offers nobody makes (guarantee, fixed price, fast start); channels competitors are absent from. Note evidence for each.`,
       };

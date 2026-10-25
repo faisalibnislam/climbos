@@ -276,8 +276,21 @@ describe("research source assessment", () => {
       commercialAssessment: { status: "insufficient_business_specific_evidence" as const, evidence: [], unknowns: [], nextTest: { question: "What remains unknown?", smallestTest: "Ask a small set of prospective buyers.", successSignal: "A measured buyer commitment.", decisionRule: "Continue only if the predeclared signal appears." } },
     };
     expect(lintInsightSources(base, input)).toEqual([]);
+    const unrelatedCandidateSource = lintInsightSources({ ...base, competitors: [{ ...base.competitors[0], sourceUrl: "https://research.example/mentions-rival" }] }, {
+      ...input,
+      precomputedResearch: { notes: "A search result mentioned Rival.", sources: [{ url: "https://rival.example/pricing" }, { url: "https://research.example/mentions-rival" }] },
+    });
+    expect(unrelatedCandidateSource).toMatchObject([{ severity: "error", rule: "competitor_candidate_source", path: "competitors[0].sourceUrl" }]);
     const issues = lintInsightSources({ ...base, competitors: [{ ...base.competitors[0], comparison: [{ ...base.competitors[0].comparison[0], sourceUrl: "https://unread.example/pricing" }] }] }, input);
     expect(issues).toMatchObject([{ severity: "error", rule: "citation", path: "competitors[0].comparison[0].sourceUrl" }]);
+  });
+
+  it("guides business insight research to discover candidates independently and verify their own sites", () => {
+    const research = researchFor("business_insights", { businessName: "Example Co", website: "https://example.com", country: "Bangladesh" });
+    expect(research?.maxSearches).toBe(8);
+    expect(research?.brief).toContain("search independently from the business website");
+    expect(research?.brief).toContain("candidate's identity and canonical homepage");
+    expect(research?.brief).toContain("return fewer candidates rather than filling the list with weak matches");
   });
 
   it("requires SWOT claims to match their dimension and carry decision-useful evidence", () => {

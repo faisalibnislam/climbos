@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(73);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(74);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -168,6 +168,22 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://www.sciencedirect.com/science/article/pii/S2214109X22000481", sourceRole: "independent_secondary" }),
     ]));
     expect(creativePrecedentsForAgent("growth_plays", "Explore an unusual logistics partnership", query)).toContain("CP-073");
+  });
+
+  it("retrieves flexible customer cadence while retaining the economics and evidence limits", () => {
+    const query = "Reduce fixed subscription commitment for customers with variable seasonal usage by offering weekly, alternate-week, monthly, or pay-as-you-go ordering";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-074");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("multiple commitment and cadence paths");
+    expect(match?.precedent.outcome).toContain("survey received 536 responses from current and former subscribers");
+    expect(match?.precedent.causalLimit).toContain("did not randomize offer assignment");
+    expect(match?.precedent.transferRisk).toContain("reduce predictable cash flow");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://library.ucsc.edu/reg-hist/juan-pablo-jp-perez-jp-organics", sourceRole: "creator_primary" }),
+      expect.objectContaining({ url: "https://doi.org/10.1080/19320248.2015.1045671", publicationDate: "2016 (11(1), 122–145)", sourceRole: "independent_secondary" }),
+      expect.objectContaining({ url: "https://www.ncat.org/publication/community-supported-agriculture/", sourceRole: "independent_secondary" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Explore a lower-commitment recurring offer", query)).toContain("CP-074");
   });
 
   it("retrieves open innovation while separating proxy scores, implementation value, and data privacy", () => {

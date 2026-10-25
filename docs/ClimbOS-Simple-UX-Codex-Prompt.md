@@ -4,7 +4,7 @@ Use this prompt as the UX contract for the ClimbOS task I give you. The current 
 
 ## 1. Understand the current implementation first
 
-Work in `/Users/faisalislam/Documents/GitHub/Airly Studio/climbos`.
+Work in the ClimbOS repository.
 
 Read `AGENTS.md`, `docs/AppExperience.md`, `docs/DesignSystem.md`, `docs/ContentDesign.md`, and relevant parts of `docs/Capabilities.md`. Route growth-related questions through `docs/growth-intelligence/MASTER_INDEX.md` and read only relevant chapters. Inspect the actual routes, components, backend functions, permissions, and tests before changing behavior. Documentation describes intent; verify implementation in source.
 

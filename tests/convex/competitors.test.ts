@@ -210,7 +210,7 @@ describe("competitor watch", () => {
     await t.run((ctx) => ctx.db.patch(business._id, {
       insights: {
         audiences: [],
-        competitors: [{ name: "Rival", url: "https://rival.example", sourceUrl: "https://research.example/rival", note: "Sourced candidate", kind: "direct" }],
+        competitors: [{ name: "Rival", url: "https://rival.example", sourceUrl: "https://rival.example/about", note: "Sourced candidate", kind: "direct" }],
         positioning: "", pricingNotes: "", swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, journey: [], opportunities: [], generatedAt: Date.now(),
       },
     }));
@@ -220,7 +220,7 @@ describe("competitor watch", () => {
     let overview = await owner.client.query(api.competitors.overview, { slug });
     expect(overview.suggested).toEqual([]);
     expect(overview.watches).toEqual([]);
-    expect(overview.dismissedSuggestions).toMatchObject([{ name: "Rival", sourceUrl: "https://research.example/rival" }]);
+    expect(overview.dismissedSuggestions).toMatchObject([{ name: "Rival", sourceUrl: "https://rival.example/about" }]);
     expect(await t.run((ctx) => ctx.db.query("workflowRuns").withIndex("by_org_kind_created", (q) => q.eq("orgId", orgId).eq("kind", "competitor_watch")).collect())).toEqual([]);
 
     await owner.client.mutation(api.competitors.add, { slug, name: "Rival", url: "https://rival.example" });
@@ -245,9 +245,9 @@ describe("competitor watch", () => {
       insights: {
         audiences: [],
         competitors: [
-          { name: "Rival", url: "https://unrelated.example", sourceUrl: "https://research.example/rival", note: "Direct competitor", kind: "direct" },
-          { name: "Adjacent", url: "https://adjacent.example", sourceUrl: "https://research.example/adjacent", note: "Related tool", kind: "adjacent" },
-          { name: "Other", url: "https://elsewhere.example", sourceUrl: "https://research.example/other", note: "Another competitor", kind: "direct" },
+          { name: "Rival", url: "https://rival.example", sourceUrl: "https://rival.example/about", note: "Direct competitor", kind: "direct" },
+          { name: "Adjacent", url: "https://adjacent.example", sourceUrl: "https://adjacent.example/about", note: "Related tool", kind: "adjacent" },
+          { name: "Other", url: "https://elsewhere.example", sourceUrl: "https://elsewhere.example/about", note: "Another competitor", kind: "direct" },
         ],
         positioning: "",
         pricingNotes: "",
@@ -262,7 +262,7 @@ describe("competitor watch", () => {
     const overview = await owner.client.query(api.competitors.overview, { slug });
     expect(overview.watches).toEqual([]);
     expect(overview.suggested.map((candidate) => candidate.name)).toEqual(["Rival", "Other"]);
-    expect(overview.suggested[0]).toMatchObject({ sourceUrl: "https://research.example/rival", kind: "direct" });
+    expect(overview.suggested[0]).toMatchObject({ sourceUrl: "https://rival.example/about", kind: "direct" });
     expect(await t.run((ctx) => ctx.db.query("workflowRuns").withIndex("by_org_kind_created", (q) => q.eq("orgId", orgId).eq("kind", "competitor_watch")).collect())).toEqual([]);
 
     const restoredId = await owner.client.mutation(api.competitors.add, { slug, name: "Rival", url: "https://www.unrelated.example/pricing" });

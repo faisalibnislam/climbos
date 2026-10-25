@@ -4,7 +4,7 @@ Last reviewed: 25 October 2026. This is a curated retrieval set for strategy exp
 
 ## Verified coverage
 
-The current runtime library contains **73 editorially reviewed cases** (`CP-001`–`CP-073`). The requested target is 100 useful cases, leaving **27 cases unverified and not yet included**. The general growth case collection is separate and is not counted as creative-strategy coverage.
+The current runtime library contains **74 editorially reviewed cases** (`CP-001`–`CP-074`). The requested target is 100 useful cases, leaving **26 cases unverified and not yet included**. The general growth case collection is separate and is not counted as creative-strategy coverage.
 
 Each case records its reported choice and mechanism, evidence class, causal limits, transfer conditions and risks, a small-business adaptation, editorial audience/goal/constraint/scale/geography/business-model tags, and a reversible test. Runtime retrieval requires a mechanism match, then ranks with available audience, goal, constraint, scale, geography, and business-model context. The model receives short match explanations with each case rather than an opaque relevance score. Retrieval returns at most two cases to the production growth-plan task and never treats a precedent as evidence about the target business; when those context dimensions are absent, they do not contribute a match.
 
@@ -43,6 +43,10 @@ Low-fit retrieval returns no precedent, and original bold ideas remain required 
 ## Resumption note (2026-10-25, surplus, circular journey, and urgent logistics)
 
 Added three runtime-retrieved cases after source review: Too Good To Go's variable-surplus offer (CP-071), Patagonia's integrated used/new shopping journey (CP-072), and Rwanda/Zipline's on-demand medical replenishment network (CP-073). Their documented outcomes remain specific to the cited studies and operating contexts; the records preserve economic, capacity, customer-waste, substitution, safety, regulatory, and cost-effectiveness limitations. Focused regressions verify mechanism retrieval and production strategy injection. The current reviewed corpus is 73 of 100; 27 cases remain unverified.
+
+## Resumption note (2026-10-25, flexible customer cadence CP-074)
+
+Added J&P Organics' variable-frequency, pay-as-you-go CSA ordering as a distinct offer-architecture case. A UC Santa Cruz oral-history profile documents the operator's historical ordering options; a peer-reviewed survey of 536 current and former subscribers reports a qualified, non-causal indication that flexibility could help some lower-frequency subscribers. An agricultural extension guide corroborates the model and highlights seasonal cost planning. The case does not establish incremental orders, retention, or profit, and warns that flexibility can harm predictability and fulfillment economics. The production retrieval regression checks the mechanism and evidence limits. The reviewed corpus is 74 of 100; 26 remain unverified.
 
 
 ## Resumption note (2026-10-25, value-chain and community mechanisms)

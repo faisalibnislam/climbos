@@ -25,13 +25,14 @@ describe("competitor watch candidates", () => {
         { name: "Adjacent tool", url: "https://adjacent.example/", sourceUrl: "https://adjacent.example/", kind: "adjacent" },
         { name: "Duplicate", url: "http://rival.example/", sourceUrl: "https://rival.example/" },
         { name: "No source", url: "https://other.example/" },
-        { name: "Other", url: "https://other.example/", sourceUrl: "https://research.example/other" },
+        { name: "Other", url: "https://other.example/", sourceUrl: "https://other.example/about" },
+        { name: "Wrong source", url: "https://different.example/", sourceUrl: "https://research.example/mentions-rival" },
       ],
       "https://owner.example",
     );
     expect(candidates).toEqual([
       { name: "Rival", url: "https://rival.example", sourceUrl: "https://rival.example/pricing" },
-      { name: "Other", url: "https://other.example", sourceUrl: "https://research.example/other" },
+      { name: "Other", url: "https://other.example", sourceUrl: "https://other.example/about" },
     ]);
   });
 
