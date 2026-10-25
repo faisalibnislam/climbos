@@ -31,3 +31,23 @@ describe("lost-deal reasons", () => {
     expect(row).toMatchObject({ stage: "talking", lostReason: null, lostReasonNote: null, lostAt: null });
   });
 });
+
+describe("pipeline attention on Today", () => {
+  it("counts overdue next steps and stalled deals for the workspace only", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "attention-owner@example.com");
+    const other = await asNewUser(t, "attention-other@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Attention Co" });
+    const { orgId: otherOrg } = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other Co" });
+    const DAY = 86_400_000;
+    const now = Date.now();
+    await t.run(async (ctx) => {
+      const base = { stage: "talking" as const, source: "manual" as const, currency: "USD", notes: [], createdAt: now - 40 * DAY, updatedAt: now };
+      await ctx.db.insert("deals", { ...base, orgId: orgId as Id<"organizations">, name: "Overdue", nextStep: "Send quote", nextStepAt: now - 3 * DAY, stageChangedAt: now - 2 * DAY });
+      await ctx.db.insert("deals", { ...base, orgId: orgId as Id<"organizations">, name: "Stalled", stageChangedAt: now - 20 * DAY });
+      await ctx.db.insert("deals", { ...base, orgId: orgId as Id<"organizations">, name: "Legacy" });
+      await ctx.db.insert("deals", { ...base, orgId: otherOrg as Id<"organizations">, name: "Elsewhere", nextStepAt: now - 3 * DAY, stageChangedAt: now - 30 * DAY });
+    });
+    expect(await owner.client.query(api.inbox.attention, { slug })).toMatchObject({ openDeals: 3, overdueDeals: 1, stalledDeals: 1 });
+  });
+});

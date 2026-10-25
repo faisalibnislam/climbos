@@ -583,6 +583,11 @@ function AttentionStrip({ slug }: { slug: string }) {
           {a.openDeals} open deal{a.openDeals === 1 ? "" : "s"}{a.pipelineValue ? ` · ${money(a.pipelineValue)} in play` : ""}
         </Link>
       ) : null}
+      {a.overdueDeals || a.stalledDeals ? (
+        <Link href={`/app/${slug}/pipeline`} className="font-medium text-amber-800 underline-offset-2 hover:underline">
+          {[a.overdueDeals ? `${a.overdueDeals} overdue next step${a.overdueDeals === 1 ? "" : "s"}` : "", a.stalledDeals ? `${a.stalledDeals} deal${a.stalledDeals === 1 ? "" : "s"} with no recent movement` : ""].filter(Boolean).join(" · ")}
+        </Link>
+      ) : null}
     </section>
   );
 }

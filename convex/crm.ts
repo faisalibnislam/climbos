@@ -79,7 +79,7 @@ export const create = mutation({
     const count = (await ctx.db.query("deals").withIndex("by_org_updated", (q) => q.eq("orgId", org._id)).take(5001)).length;
     if (count >= 5000) throw appError("LIMIT_REACHED", "The pipeline holds up to 5,000 people. Archive some lost ones first.");
     const now = Date.now();
-    const id = await ctx.db.insert("deals", { orgId: org._id, name, company: a.company?.trim().slice(0, 120) || undefined, email, stage: a.stage ?? "lead", source: "manual", valueMinor: a.value !== undefined ? Math.max(0, Math.round(a.value * 100)) : undefined, currency: await currencyOf(ctx, org._id), notes: [], createdAt: now, updatedAt: now });
+    const id = await ctx.db.insert("deals", { orgId: org._id, stageChangedAt: Date.now(), name, company: a.company?.trim().slice(0, 120) || undefined, email, stage: a.stage ?? "lead", source: "manual", valueMinor: a.value !== undefined ? Math.max(0, Math.round(a.value * 100)) : undefined, currency: await currencyOf(ctx, org._id), notes: [], createdAt: now, updatedAt: now });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "crm.created", subjectType: "deal", subjectId: id, summary: `Added ${name} to the pipeline.` });
     await emitEvent(ctx, org._id, "lead.created", { name, company: a.company ?? null, email: email ?? null, source: "manual" });
     return id;

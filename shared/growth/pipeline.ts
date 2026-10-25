@@ -89,3 +89,29 @@ export function pipelineOutcomesBrief(p: PipelineOutcomes): string {
     "Use recorded loss reasons as owner-reported evidence about offer, price, fit or follow-up problems; an unrecorded reason is unknown, not any particular reason. These records are not verified sales data and do not show what caused a win or loss.",
   ].join(" ");
 }
+
+/** Review prompts, not judgments: open deals with no stage change for this many days are surfaced to the owner. */
+export const STALLED_AFTER_DAYS = { lead: 21, talking: 14, booked: 14 } as const;
+
+export interface DealAttention {
+  /** The next step's date has fully passed. */
+  overdue: boolean;
+  /** Days since the last stage change when it passed the review threshold; null when not stalled or unknown. */
+  stalledDays: number | null;
+  /** Older deals have no stage-change time, so their stage age is unknown (never assumed stalled). */
+  stageAgeKnown: boolean;
+}
+
+export function dealAttention(d: { stage: PipelineDeal["stage"]; nextStepAt?: number | null; stageChangedAt?: number | null }, nowMs: number): DealAttention {
+  if (d.stage === "won" || d.stage === "lost") return { overdue: false, stalledDays: null, stageAgeKnown: true };
+  const overdue = typeof d.nextStepAt === "number" && d.nextStepAt + DAY < nowMs;
+  if (typeof d.stageChangedAt !== "number") return { overdue, stalledDays: null, stageAgeKnown: false };
+  const days = Math.floor((nowMs - d.stageChangedAt) / DAY);
+  return { overdue, stalledDays: days >= STALLED_AFTER_DAYS[d.stage] ? days : null, stageAgeKnown: true };
+}
+
+export function pipelineAttention(deals: readonly { stage: PipelineDeal["stage"]; nextStepAt?: number | null; stageChangedAt?: number | null }[], nowMs: number): { overdue: number; stalled: number; stageAgeUnknown: number } {
+  const rows = deals.map((d) => dealAttention(d, nowMs));
+  const open = deals.map((d, i) => ({ d, a: rows[i] })).filter(({ d }) => d.stage !== "won" && d.stage !== "lost");
+  return { overdue: open.filter(({ a }) => a.overdue).length, stalled: open.filter(({ a }) => a.stalledDays !== null).length, stageAgeUnknown: open.filter(({ a }) => !a.stageAgeKnown).length };
+}

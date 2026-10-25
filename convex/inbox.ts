@@ -15,6 +15,7 @@ import { sha256Hex, TERMINAL_STATUSES } from "../shared/policy";
 import { bookingLinkFor } from "../shared/outbound/sending";
 import { bookingLive } from "./outbound";
 import { ratingOnlyReviewReply } from "../shared/reviews/safety";
+import { pipelineAttention } from "../shared/growth/pipeline";
 
 /**
  * Unified inbox: email replies to outreach, new bookings and (soon) website
@@ -266,6 +267,7 @@ export const attention = query({
       inboxUnread: open.filter((m) => !m.readAt).length,
       nextCall: next ? { name: next.company ? `${next.name} (${next.company})` : next.name, startAt: next.startAt } : null,
       openDeals: openDeals.length,
+      ...(() => { const a = pipelineAttention(openDeals, now); return { overdueDeals: a.overdue, stalledDeals: a.stalled }; })(),
       pipelineValue: openDeals.reduce((s, d) => s + (d.valueMinor ?? 0), 0),
       currency: deals[0]?.currency ?? "USD",
     };
