@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(39);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(42);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -154,6 +154,37 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://www.jollibeegroup.com/history-milestones/", sourceRole: "company_primary" }),
       expect.objectContaining({ url: "https://www.marketing-interactive.com/team-sport-global-cmo-david-beal-jollibee-interview", publicationDate: "2024-10-28" }),
       expect.objectContaining({ url: "https://time.com/6258979/jollibee-interview-ceo-ernesto-tanmantiong/", publicationDate: "2023-02-28" }),
+    ]));
+  });
+
+  it("retrieves producer control of a value chain and surplus processing", () => {
+    const match = retrieveCreativePrecedents("Help small producers reduce dependence on middlemen by sharing collection, processing, and marketing capacity for seasonal surplus", 3).find(({ precedent }) => precedent.id === "CP-040");
+    expect(match).toBeDefined();
+    expect(match?.precedent.transferRisk).toContain("fixed costs");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.amuldairy.com/history.php", sourceRole: "company_primary" }),
+      expect.objectContaining({ url: expect.stringContaining("documents1.worldbank.org/curated/en/748851468771700148"), publicationDate: "2004-05" }),
+    ]));
+  });
+
+  it("retrieves shared access through a local operator while preserving financing and infrastructure risks", () => {
+    const match = retrieveCreativePrecedents("Let a local entrepreneur provide shared access to an expensive product using a network service and clear maintenance responsibilities", 3).find(({ precedent }) => precedent.id === "CP-041");
+    expect(match).toBeDefined();
+    expect(match?.precedent.causalLimit).toContain("do not show net income");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.grameentelecom.net.bd/our-work/village-phone", sourceRole: "company_primary" }),
+      expect.objectContaining({ url: "https://www.adb.org/results/bangladesh-mobile-revolution", claimRole: "outcome" }),
+    ]));
+  });
+
+  it("retrieves customer idea intake with explicit review governance and limits", () => {
+    const match = retrieveCreativePrecedents("Create a customer idea pipeline with transparent review criteria and follow up on what the company accepts or declines", 3).find(({ precedent }) => precedent.id === "CP-042");
+    expect(match).toBeDefined();
+    expect(match?.precedent.outcome).toContain("about 400");
+    expect(match?.precedent.outcome).toContain("do not establish sales or retention impact");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: expect.stringContaining("i.dell.com/sites/csdocuments"), sourceRole: "company_primary" }),
+      expect.objectContaining({ url: "https://pubsonline.informs.org/doi/10.1287/mnsc.1120.1599", publicationDate: "2013-01" }),
     ]));
   });
 
