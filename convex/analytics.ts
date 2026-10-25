@@ -3,7 +3,7 @@ import { featureAllowed } from "./lib/access";
 import { getLiveConfig } from "./lib/config";
 import { attribute, computeCohorts, OVERLAP_WARNING, summarizePlatformClaims } from "../shared/attribution";
 import type { RevenueEvent, Touch } from "../shared/attribution/types";
-import { addDays, fillMissingDays, runForecast, type DailyPoint } from "../shared/forecasting";
+import { addDays, fillMissingDays, runForecast, type DailyPoint, scoreForecast } from "../shared/forecasting";
 import { majorToMinor } from "../shared/economics/currency";
 import { summarizeAiReferralRows } from "../shared/integrations/ga4";
 import type { Id } from "./_generated/dataModel";
@@ -575,8 +575,12 @@ export const getForecast = query({
       .first();
     const today = dayKey(Date.now(), org.timezone);
     const hist = await series(ctx, org._id, f.metricKey, addDays(today, -120), addDays(today, -1));
+    const saved = JSON.parse(f.result) as { points: { date: string; value: number; lo80?: number; hi80?: number; lo95?: number; hi95?: number }[] };
+    // Forward check: forecast days that have since been observed (history covers the last 120 days).
+    const forwardScore = scoreForecast(saved.points, hist.points, f.horizonDays);
     return {
       id: f._id,
+      forwardScore,
       metricKey: f.metricKey,
       metric: METRICS[f.metricKey as MetricKey],
       method: f.method,

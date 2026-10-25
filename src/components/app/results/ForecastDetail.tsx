@@ -3,7 +3,7 @@
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import type { BacktestResult, HorizonSummary } from "@shared/forecasting";
+import type { BacktestResult, ForwardScore, HorizonSummary } from "@shared/forecasting";
 import { ArrowLeft, ChartLine, ClipboardList, History, ShieldCheck } from "@/components/icons"
 import Link from "next/link";
 import { Callout, DataTable, LineChart, Stat, StatGroup, buttonClasses, type DataTableColumn } from "@/components/ui";
@@ -18,6 +18,26 @@ const HISTORY_DAYS_SHOWN = 60;
 
 /** Items as list lines, so Scannable keeps one bullet per item. */
 const asList = (items: string[]) => (items.length === 1 ? items[0] : items.map((a) => `- ${a.replace(/\s*\n+\s*/g, " ")}`).join("\n"));
+
+/** How the saved forecast is doing against days observed since it was made (computed; partial periods labelled). */
+export function ForwardScoreSection({ score: s, format }: { score: ForwardScore; format: (n: number) => string }) {
+  if (s.state === "not_started") return <p className="text-ui text-ink-3">No forecast day has been observed yet, so this forecast can&apos;t be checked against actuals.</p>;
+  const pct = (n: number) => `${n >= 0 ? "+" : ""}${Math.round(n * 100)}%`;
+  return (
+    <section aria-label="How this forecast is doing" className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4">
+      <h2 className="heading-section">How it&apos;s doing so far</h2>
+      <p className="text-ui text-ink-2">
+        {s.state === "complete" ? "All" : `${s.scoredDays} of ${s.horizonDays}`} forecast days observed{s.state === "partial" ? " · partial check, the rest of the period may differ" : ""}.
+      </p>
+      <dl className="grid gap-2 text-sm sm:grid-cols-3">
+        <div><dt className="text-xs text-ink-3">Actual vs forecast (observed days)</dt><dd className="font-semibold tabular-nums text-ink">{format(s.actualTotal ?? 0)} vs {format(s.forecastTotal ?? 0)}{s.totalError !== null ? ` (${pct(s.totalError)})` : ""}</dd></div>
+        <div><dt className="text-xs text-ink-3">Typical daily miss</dt><dd className="font-semibold tabular-nums text-ink">{format(s.meanAbsoluteError ?? 0)}{s.bias !== null && s.bias !== 0 ? ` · forecast ran ${s.bias > 0 ? "low" : "high"}` : ""}</dd></div>
+        {s.inside80 ? <div><dt className="text-xs text-ink-3">Inside the 80% range</dt><dd className="font-semibold tabular-nums text-ink">{s.inside80.inside} of {s.inside80.of} days (about {Math.round(s.inside80.of * 0.8)} expected)</dd></div> : null}
+      </dl>
+      {s.scoredDays < 7 ? <p className="text-xs text-ink-3">Fewer than seven days observed: too few to judge accuracy.</p> : null}
+    </section>
+  );
+}
 
 export function ForecastDetail({ slug, forecastId }: { slug: string; forecastId: string }) {
   const f = useQuery(api.analytics.getForecast, { slug, forecastId: forecastId as Id<"forecastRuns"> });
@@ -108,6 +128,8 @@ export function ForecastDetail({ slug, forecastId }: { slug: string; forecastId:
           {cal.reason ?? "Too little history to test accuracy."} More data will help.
         </Callout>
       )}
+
+      <ForwardScoreSection score={f.forwardScore} format={fmt} />
 
       <section aria-labelledby="chart-heading" className="flex flex-col gap-3">
         <h2 id="chart-heading" className="heading-section flex items-center gap-2">
