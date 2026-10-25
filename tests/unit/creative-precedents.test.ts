@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(58);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(59);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -202,6 +202,22 @@ describe("creative strategy precedent retrieval", () => {
     expect(formatted).toContain("Sales or customer acquisition effect is not established");
   });
 
+  it("retrieves co-designed product adaptations while preserving accessibility and outcome limits", () => {
+    const query = "Co-design downloadable 3D-printed add-ons with disability organizations to adapt mainstream furniture to customers' use needs";
+    const match = retrieveCreativePrecedents(query, 3).find(({ precedent }) => precedent.id === "CP-059");
+    expect(match).toBeDefined();
+    expect(match?.precedent.mechanism).toContain("3D printing itself is optional");
+    expect(match?.precedent.evidenceClass).toContain("12 versus 13");
+    expect(match?.precedent.causalLimit).toContain("not controlled use testing, sales, retention, or cost effects");
+    expect(match?.precedent.transferRisk).toContain("Do not imply that an add-on, downloadable file, or marketing campaign makes the full product or service accessible");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.washingtonpost.com/business/2019/03/15/ikea-is-making-furniture-better-people-with-disabilities-with-help-d-printers/?noredirect=on", publicationDate: "2019-03-15" }),
+      expect.objectContaining({ url: "https://www.creativereview.co.uk/ikeas-thisables-campaign-focuses-on-making-its-furniture-more-accessible/", publicationDate: "2019-03-15" }),
+      expect.objectContaining({ url: "https://beta.designmuseum.org/exhibitions/beazley-designs-of-the-year/product-2019/thisables", publicationDate: "2019-09-11" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "Explore an accessibility-led product adaptation", query)).toContain("CP-059");
+  });
+
   it("retrieves a distribution redesign that pairs compact packaging with customer assembly", () => {
     expect(retrieveCreativePrecedents("Test compact packaging and customer assembly for bulky furniture to reduce shipping damage")[0]?.precedent.id).toBe("CP-017");
   });
@@ -212,7 +228,7 @@ describe("creative strategy precedent retrieval", () => {
   });
 
   it("retrieves audience expansion through accessible shared product design", () => {
-    expect(retrieveCreativePrecedents("Make an accessible product experience that helps non-users and families participate together").some(({ precedent }) => precedent.id === "CP-019")).toBe(true);
+    expect(retrieveCreativePrecedents("Use shared motion-controlled play to help non-gamers and families join a game together").some(({ precedent }) => precedent.id === "CP-019")).toBe(true);
   });
 
   it("retrieves a product-integrated partnership across adjacent brands", () => {

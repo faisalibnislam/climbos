@@ -620,3 +620,7 @@ Added Oreo's 2013 Super Bowl blackout response to the production creative-strate
 ## Resumption note (2026-10-25, bold exploration regression)
 
 Added a schema regression for a high-novelty, low-evidence, low-fit, low-feasibility, high-risk bold option with no matching precedent. It confirms the structured strategy exploration contract accepts uncertainty and does not require retrieval to display a genuinely original idea; no generation behavior or execution permission changed. Focused decision, offer, and timing tests pass (49); app/Convex typecheck, targeted ESLint, and `git diff --check` pass.
+
+## Resumption note (2026-10-25, co-designed product adaptation precedent CP-059)
+
+Added IKEA Israel's ThisAbles project to the production creative-strategy library, based on The Washington Post, Creative Review, and Design Museum reporting. The sources disagree on whether the collection contained 12 or 13 add-ons; the case makes no sales, uptake, cost-effectiveness, or measured accessibility claim. Transfer requires affected-user input and qualified safety/compatibility review. Regression coverage verifies production retrieval, source dates, and preserved limits. The reviewed corpus now contains 59 cases; 41 of 100 remain unverified.
