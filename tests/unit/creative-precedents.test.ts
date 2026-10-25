@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(43);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(44);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -197,6 +197,21 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://www.cemexmexico.com/sostenibilidad/vivienda/patrimonio-hoy", sourceRole: "company_primary" }),
       expect.objectContaining({ url: expect.stringContaining("documents1.worldbank.org/curated/en/426791468030548664"), sourceRole: "independent_secondary" }),
     ]));
+  });
+
+  it("retrieves brand-fit self-deprecating social voice with audience and conversion limits", () => {
+    const query = "Build a self-deprecating voice from existing customer jokes about low-cost trade-offs";
+    const match = retrieveCreativePrecedents(query).find(({ precedent }) => precedent.id === "CP-044");
+    expect(match).toBeDefined();
+    expect(match?.precedent.causalLimit).toContain("cannot be generalized");
+    expect(match?.precedent.transferRisk).toContain("prosocial or antisocial");
+    expect(match?.precedent.outcome).toContain("not bookings or causal business impact");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://sproutsocial.com/insights/podcasts/socialcreatures/ryanair-social-media-marketing/", publicationDate: "2023-07-11", sourceRole: "company_primary", claimRole: "action" }),
+      expect.objectContaining({ url: "https://visualreview.net/revVISUAL/article/view/5832", sourceRole: "independent_secondary", claimRole: "outcome" }),
+      expect.objectContaining({ url: "https://academic.oup.com/jcr/article/52/1/70/7743243", sourceRole: "independent_secondary", claimRole: "context" }),
+    ]));
+    expect(creativePrecedentsForAgent("growth_plays", "STRATEGY EXPLORATION", query)).toContain("CP-044");
   });
 
   it("retrieves opt-in personalization and sharing as a separate customer mechanism", () => {

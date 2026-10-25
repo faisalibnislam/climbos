@@ -485,6 +485,10 @@ Approved-plan offer-copy validation now treats installment and split-payment lan
 
 The offer economics disclosure now shows the evidence type, supporting claim, and linked source for each current/proposed price and variable cost. Inputs without a source remain visibly labeled inferred or assumed rather than inheriting the assessment's overall evidence label. A rendered-markup regression covers all five evidence classes and source links.
 
+## Resumption note (2026-10-25, creative precedent retrieval)
+
+Added Ryanair's self-aware social voice as CP-044. The record connects the social lead's 2023 interview about existing customer jokes and the airline's low-cost identity to a 2026 independent study of 50 Ryanair Spain TikTok posts and a non-probability survey of 282 Spanish Gen Z users, plus peer-reviewed research on prosocial versus antisocial teasing. It distinguishes brand/audience/platform fit from transferable mechanism and says attention, engagement, and stated intent do not establish bookings. Production retrieval (the two-case default) has a regression for this mechanism. The runtime corpus contains 44 reviewed cases; 56 of the 100-case research target remain unverified. `pnpm exec vitest run tests/unit/creative-precedents.test.ts` passes (40 tests), `pnpm typecheck`, changed-file ESLint, and `git diff --check` pass. No live-model or customer-outcome evaluation was performed.
+
 ## Resumption note (2026-10-25, bounded Home approval counts)
 
 Home now reads one draft beyond its 20-item cap. Counts display `20+` when the returned set is capped, and the assistant's workspace-overview tool carries an explicit lower-bound flag so it does not treat the capped value as an exact total. The six-row review preview remains bounded. Focused Convex tests cover more than 20 drafts and an exact count below the cap; tenant access continues through the existing `today` query authorization.
