@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
-import { diffLines, meaningful, normaliseForDiff } from "../../shared/competitors";
+import { diffLines, isObservedChangeQuote, meaningful, normaliseForDiff } from "../../shared/competitors";
 import { asNewUser, makePaid, setup } from "./helpers";
 
 describe("competitor watch", () => {
@@ -27,6 +27,43 @@ describe("competitor watch", () => {
     const after = normaliseForDiff("Menu\nPricing\nLogin\nhttps://rival.example/pricing?utm_source=search&utm_campaign=november\nPlans from $10/mo");
     expect(diffLines(before, after)).toEqual({ added: [], removed: [] });
     expect(meaningful(diffLines(before, after))).toBe(false);
+  });
+
+  it("requires an exact retained page-change line for a suggested test", () => {
+    const evidence = { added: ["New: free onboarding with each annual plan"], removed: ["Plans from $10/mo"] };
+    expect(isObservedChangeQuote("New: free onboarding with each annual plan", evidence)).toBe(true);
+    expect(isObservedChangeQuote("The owner should offer a discount", evidence)).toBe(false);
+    expect(isObservedChangeQuote(undefined, evidence)).toBe(false);
+    expect(isObservedChangeQuote("New: free onboarding with each annual plan", undefined)).toBe(false);
+    expect(isObservedChangeQuote("x".repeat(301), { added: ["x".repeat(301)], removed: [] })).toBe(false);
+  });
+
+  it("drops a stored test idea when its evidence quote is not in the exact page diff", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "watch-evidence@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Evidence Co" });
+    const watchId = await owner.client.mutation(api.competitors.add, { slug, name: "Rival", url: "rival.example" });
+    const evidenceQuote = "New: free onboarding with each annual plan";
+    const suggestion = {
+      action: "Check interest in the new onboarding offer",
+      firstStep: "Ask recent prospects about the onboarding support they need.",
+      successMetric: "Qualified inquiries about onboarding support",
+      reviewAfterDays: 14,
+      caveat: "A competitor page does not prove that customers want this offer.",
+      evidenceQuote,
+    };
+    const evidence = { removed: ["Plans from $10/mo"], added: [evidenceQuote] };
+    await t.mutation(internal.competitors.recordChange, {
+      orgId, watchId, name: "Rival", summary: "Evidence-bound test", bullets: [], suggestedAction: suggestion, evidence,
+    });
+    await t.mutation(internal.competitors.recordChange, {
+      orgId, watchId, name: "Rival", summary: "Unsupported test", bullets: [],
+      suggestedAction: { ...suggestion, evidenceQuote: "The owner should offer a discount." }, evidence,
+    });
+
+    const overview = await owner.client.query(api.competitors.overview, { slug });
+    expect(overview.changes.find((change) => change.summary === "Evidence-bound test")?.suggestedAction?.evidenceQuote).toBe(evidenceQuote);
+    expect(overview.changes.find((change) => change.summary === "Unsupported test")?.suggestedAction).toBeNull();
   });
 
   it("first read is a free baseline; a later change is summarised and lands in the report", async () => {
@@ -57,6 +94,7 @@ describe("competitor watch", () => {
       successMetric: expect.stringContaining("Qualified inquiries"),
       reviewAfterDays: 14,
       caveat: expect.stringContaining("does not show"),
+      evidenceQuote: "New: free migration for every new customer this autumn",
     });
     const evidence = o.changes[0].evidence;
     expect(evidence).not.toBeNull();

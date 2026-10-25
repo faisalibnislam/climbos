@@ -27,6 +27,16 @@ export interface PageDiff {
   removed: string[];
 }
 
+/** True only when a proposed test points to one exact line retained in the page diff. */
+export function isObservedChangeQuote(
+  quote: string | null | undefined,
+  evidence: PageDiff | undefined,
+): boolean {
+  const normalizedQuote = quote?.trim() ?? "";
+  if (!normalizedQuote || normalizedQuote.length > 300 || !evidence) return false;
+  return [...evidence.added, ...evidence.removed].some((line) => line.slice(0, 300) === normalizedQuote);
+}
+
 export function diffLines(before: string[], after: string[]): PageDiff {
   const b = new Set(before);
   const a = new Set(after);

@@ -136,6 +136,7 @@ export default function CompetitorsPage() {
                   {c.suggestedAction ? (
                     <Callout tone="warning" title="Possible test idea · review before acting">
                       <p className="font-medium">{c.suggestedAction.action}</p>
+                      {c.suggestedAction.evidenceQuote ? <blockquote className="mt-2 break-words border-l-2 border-line pl-3 text-xs text-ink-2"><span className="font-medium">Page change behind this idea:</span> “{c.suggestedAction.evidenceQuote}”</blockquote> : null}
                       <p className="mt-1">First step: {c.suggestedAction.firstStep}</p>
                       <p className="mt-1">Success signal: {c.suggestedAction.successMetric} · review after {c.suggestedAction.reviewAfterDays} days</p>
                       <p className="mt-1 text-xs">Caveat: {c.suggestedAction.caveat}</p>

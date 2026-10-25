@@ -85,6 +85,11 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
     output = sample(z.toJSONSchema(req.schema) as JsonSchema, marker);
     if (lastUser.includes("COMPETITOR:") && output && typeof output === "object" && "suggestedAction" in output) {
       const proposal = output as { changed?: boolean; summary?: string; bullets?: string[]; soWhat?: string; suggestedAction?: unknown };
+      const changedLines = (section: string) => lastUser.split(`${section}:`)[1]?.split("\n\n</untrusted_content>")[0]?.trim().split("\n").filter(Boolean) ?? [];
+      const exactChangeLine = changedLines("ADDED LINES").find((line) => /migration/i.test(line))
+        ?? changedLines("ADDED LINES")[0]
+        ?? changedLines("REMOVED LINES")[0]
+        ?? "Observed page change";
       proposal.changed = true;
       proposal.summary = "The competitor added a free migration offer.";
       proposal.bullets = ["Added a free migration offer for new customers."];
@@ -95,6 +100,7 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         successMetric: "Qualified inquiries that mention migration support",
         reviewAfterDays: 14,
         caveat: "One competitor page change does not show that your customers want this offer.",
+        evidenceQuote: exactChangeLine,
       };
     }
     // The fake has no source bundle to support SWOT claims. Return an honest

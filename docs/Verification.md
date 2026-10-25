@@ -1,6 +1,15 @@
 # Verification
 
-Last run: **18 Oct 2026** on macOS, Node 24.21, pnpm 10.34, Next 16.4.2, Convex 1.47.
+Last full-repository verification: **18 Oct 2026** on macOS, Node 24.21, pnpm 10.34, Next 16.4.2, Convex 1.47.
+
+## Latest focused verification — 25 Oct 2026
+
+- Competitor watcher regression: `pnpm exec vitest run tests/convex/competitors.test.ts` — **12 passed**. Covers exact changed-line binding for suggested tests, dropping unsupported suggestions, retained evidence, and tenant isolation.
+- Offer and campaign timing regressions: `pnpm exec vitest run tests/unit/offer-assessment.test.ts tests/unit/campaign-timing.test.ts tests/unit/decision-contract.test.ts tests/convex/plan-history.test.ts tests/convex/publish-flow.test.ts` — **72 passed**.
+- Type checks: `pnpm typecheck` — clean for app/shared and Convex.
+- Focused lint: `pnpm exec eslint convex/competitorActions.ts convex/competitors.ts convex/schema.ts shared/competitors/index.ts shared/agents/fake.ts src/app/app/'[organization]'/competitors/page.tsx tests/convex/competitors.test.ts` — clean.
+- `git diff --check` — clean.
+- No browser verification of the competitor page was run for this change; the quote is rendered as escaped text in the existing page card.
 
 ## Automated checks
 

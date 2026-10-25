@@ -7,6 +7,7 @@ import { createRunWithReservation } from "./engine";
 import { isPaid } from "./lib/access";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { selectWatchCandidates, sameCompetitorSite } from "../shared/competitors/candidates";
+import { isObservedChangeQuote } from "../shared/competitors";
 
 /**
  * Competitor watch: each week we read competitors' homepage and pricing page
@@ -200,26 +201,31 @@ export const startSummaryRun = internalMutation({
 export const recordChange = internalMutation({
   args: {
     orgId: v.id("organizations"), watchId: v.id("competitorWatches"), name: v.string(), summary: v.string(), bullets: v.array(v.string()), soWhat: v.optional(v.string()),
-    suggestedAction: v.optional(v.object({ action: v.string(), firstStep: v.string(), successMetric: v.string(), reviewAfterDays: v.number(), caveat: v.string() })),
+    suggestedAction: v.optional(v.object({ action: v.string(), firstStep: v.string(), successMetric: v.string(), reviewAfterDays: v.number(), caveat: v.string(), evidenceQuote: v.string() })),
     sourceUrls: v.optional(v.array(v.string())), evidence: v.optional(v.object({ removed: v.array(v.string()), added: v.array(v.string()) })),
   },
   handler: async (ctx, a) => {
     const watch = await ctx.db.get(a.watchId);
     if (!watch || watch.orgId !== a.orgId) throw appError("NOT_FOUND", "Competitor watch not found.");
     const now = Date.now();
+    const evidence = a.evidence ? { removed: a.evidence.removed.slice(0, 5).map((x) => x.slice(0, 300)), added: a.evidence.added.slice(0, 5).map((x) => x.slice(0, 300)) } : undefined;
+    const suggestedAction = a.suggestedAction && isObservedChangeQuote(a.suggestedAction.evidenceQuote, evidence)
+      ? a.suggestedAction
+      : undefined;
     await ctx.db.insert("competitorChanges", {
       ...a,
       sourceUrls: a.sourceUrls?.slice(0, 5),
-      evidence: a.evidence ? { removed: a.evidence.removed.slice(0, 5).map((x) => x.slice(0, 300)), added: a.evidence.added.slice(0, 5).map((x) => x.slice(0, 300)) } : undefined,
+      evidence,
       summary: a.summary.slice(0, 300),
       bullets: a.bullets.slice(0, 4).map((b) => b.slice(0, 300)),
       soWhat: a.soWhat?.slice(0, 300),
-      suggestedAction: a.suggestedAction ? {
-        action: a.suggestedAction.action.slice(0, 120),
-        firstStep: a.suggestedAction.firstStep.slice(0, 240),
-        successMetric: a.suggestedAction.successMetric.slice(0, 160),
-        reviewAfterDays: Math.max(7, Math.min(90, Math.floor(a.suggestedAction.reviewAfterDays))),
-        caveat: a.suggestedAction.caveat.slice(0, 240),
+      suggestedAction: suggestedAction ? {
+        action: suggestedAction.action.slice(0, 120),
+        firstStep: suggestedAction.firstStep.slice(0, 240),
+        successMetric: suggestedAction.successMetric.slice(0, 160),
+        reviewAfterDays: Math.max(7, Math.min(90, Math.floor(suggestedAction.reviewAfterDays))),
+        caveat: suggestedAction.caveat.slice(0, 240),
+        evidenceQuote: suggestedAction.evidenceQuote.trim(),
       } : undefined,
       at: now,
     });

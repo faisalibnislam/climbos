@@ -2466,6 +2466,7 @@ export default defineSchema({
         successMetric: v.string(),
         reviewAfterDays: v.number(),
         caveat: v.string(),
+        evidenceQuote: v.optional(v.string()),
       }),
     ),
     /** Pages fetched for the comparison; the model summary is an interpretation of these sources. */
