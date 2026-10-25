@@ -87,7 +87,8 @@ function AutomationsSettings() {
               <Detail label="Permission boundary" value={automation.permission} />
               <Detail label="Limits" value={automation.limits} />
               <Detail label="Pause and stop conditions" value={automation.stop} />
-              <Detail label="Receipt" value={automation.lastReceipt ? `${new Date(automation.lastReceipt.at).toLocaleString()} · ${automation.lastReceipt.summary}` : `No recent receipt. ${automation.receipt}`} />
+              <Detail label="Latest activity" value={automation.lastReceipt ? `${new Date(automation.lastReceipt.at).toLocaleString()} · ${automation.lastReceipt.summary}` : `No recent receipt. ${automation.receipt}`} />
+              {automation.lastReceipt?.href ? <Link className="w-fit text-sm font-medium text-accent underline-offset-4 hover:underline" href={`/app/${slug}/${automation.lastReceipt.href}`}>Review latest activity</Link> : null}
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 <Button asChild size="sm" variant="secondary"><Link href={`/app/${slug}/${automation.href}`}>Manage workflow <ExternalLink aria-hidden /></Link></Button>
                 {automation.id === "website_change_watch" && data.canManage && automation.state !== "not_configured" ? (

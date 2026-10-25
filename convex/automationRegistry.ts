@@ -6,7 +6,7 @@ import { appError, requireOrgAccess } from "./lib/tenancy";
 
 type RegistryState = "active" | "paused" | "not_configured" | "manual_only";
 
-function entry<TExtra extends Record<string, unknown>>(definition: (typeof AUTOMATION_REGISTRY)[number], state: RegistryState, summary: string, lastReceipt: { at: number; summary: string } | null, activeCount: number, extra: TExtra) {
+function entry<TExtra extends Record<string, unknown>>(definition: (typeof AUTOMATION_REGISTRY)[number], state: RegistryState, summary: string, lastReceipt: { at: number; summary: string; href?: string } | null, activeCount: number, extra: TExtra) {
   return { ...definition, state, summary, activeCount, lastReceipt, ...extra };
 }
 
@@ -46,12 +46,12 @@ export const get = query({
       switch (definition.id) {
         case "social_autopilot": {
           const state: RegistryState = !autopilot ? "not_configured" : emergencyStopped || !autopilot.enabled ? "paused" : "active";
-          return entry(definition, state, !autopilot ? "Set up social Autopilot to create a weekly calendar." : emergencyStopped ? "Workspace emergency stop is active." : autopilot.enabled ? `${autopilot.channels.length} selected channels · ${autopilot.mode.replaceAll("_", " ")}` : "Autopilot is turned off.", lastAutopilotRun?.finishedAt ? { at: lastAutopilotRun.finishedAt, summary: `${lastAutopilotRun.title} · ${lastAutopilotRun.status}` } : null, autopilot?.enabled ? 1 : 0, { weeklyPostLimit: 21, perChannelWeeklyLimit: 6 });
+          return entry(definition, state, !autopilot ? "Set up social Autopilot to create a weekly calendar." : emergencyStopped ? "Workspace emergency stop is active." : autopilot.enabled ? `${autopilot.channels.length} selected channels · ${autopilot.mode.replaceAll("_", " ")}` : "Autopilot is turned off.", lastAutopilotRun?.finishedAt ? { at: lastAutopilotRun.finishedAt, summary: `${lastAutopilotRun.title} · ${lastAutopilotRun.status}`, href: `work/${lastAutopilotRun._id}` } : null, autopilot?.enabled ? 1 : 0, { weeklyPostLimit: 21, perChannelWeeklyLimit: 6 });
         }
         case "scheduled_specialists": {
           const configuredScheduledCount = scheduledAgents.length;
           const state: RegistryState = configuredScheduledCount ? emergencyStopped || !scheduledSpecialistsEnabled ? "paused" : "active" : activeAgents.length ? "manual_only" : "not_configured";
-          const lastReceipt = latestSpecialistRun ? { at: latestSpecialistRun.finishedAt ?? latestSpecialistRun.updatedAt, summary: `${latestSpecialistRun.title} · ${latestSpecialistRun.status}` } : null;
+          const lastReceipt = latestSpecialistRun ? { at: latestSpecialistRun.finishedAt ?? latestSpecialistRun.updatedAt, summary: `${latestSpecialistRun.title} · ${latestSpecialistRun.status}`, href: `work/${latestSpecialistRun._id}` } : null;
           const summary = !configuredScheduledCount
             ? `${activeAgents.length} active profile${activeAgents.length === 1 ? "" : "s"} · none scheduled`
             : !scheduledSpecialistsEnabled
@@ -63,7 +63,7 @@ export const get = query({
           const latestChecked = activeWatches.reduce<number | null>((latest, watch) => watch.lastCheckedAt !== undefined && (latest === null || watch.lastCheckedAt > latest) ? watch.lastCheckedAt : latest, null);
           const savedActiveCount = watches.filter((watch) => watch.active).length;
           const state: RegistryState = !savedActiveCount ? "not_configured" : competitorWatchEnabled && activeWatches.length ? "active" : "paused";
-          const lastReceipt = latestChecked !== null ? { at: latestChecked, summary: changes[0] ? `${changes[0].name}: ${changes[0].summary}` : "Latest active-watch check" } : null;
+          const lastReceipt = latestChecked !== null ? { at: latestChecked, summary: changes[0] ? `${changes[0].name}: ${changes[0].summary}` : "Latest active-watch check", href: "competitors" } : null;
           const summary = !competitorWatchEnabled
             ? `${savedActiveCount} saved site${savedActiveCount === 1 ? "" : "s"} · weekly checks paused; manual checks remain available`
             : confirmationWatches.length
@@ -73,17 +73,17 @@ export const get = query({
         }
         case "competitor_research_refresh": {
           const state: RegistryState = !business?.insights ? "not_configured" : researchCadence === 0 ? "paused" : "active";
-          const lastReceipt = business?.competitorResearchCompletedAt ? { at: business.competitorResearchCompletedAt, summary: `Research refresh · ${business.competitorResearchLastStatus ?? "completed"}` } : null;
+          const lastReceipt = business?.competitorResearchCompletedAt ? { at: business.competitorResearchCompletedAt, summary: `Research refresh · ${business.competitorResearchLastStatus ?? "completed"}`, href: "competitors" } : null;
           return entry(definition, state, !business?.insights ? "Run business research to start a refresh schedule." : researchCadence === 0 ? "Scheduled research refresh is disabled." : `${researchCadence}-day cadence · ${business.competitorResearchLastStatus ?? "waiting for next due date"}`, lastReceipt, state === "active" ? 1 : 0, { nextDueAt: business?.competitorResearchNextAt ?? null, cadenceDays: researchCadence });
         }
         case "website_change_watch": {
           const state: RegistryState = !business?.website ? "not_configured" : siteEnabled ? "active" : "paused";
-          const lastReceipt = business?.siteCheckedAt ? { at: business.siteCheckedAt, summary: "Scheduled website snapshot" } : null;
+          const lastReceipt = business?.siteCheckedAt ? { at: business.siteCheckedAt, summary: "Website snapshot", href: "visibility" } : null;
           return entry(definition, state, !business?.website ? "Add a public website to use this monitor." : siteEnabled ? "Checks the recorded website for material changes; proposed fact updates need owner confirmation." : "Scheduled website monitoring is paused. Manual checks remain available.", lastReceipt, state === "active" ? 1 : 0, { canManage, siteWatchEnabled: siteEnabled });
         }
         case "approved_outbound_sending": {
           const state: RegistryState = !campaigns.length ? "not_configured" : sendingCampaigns.length ? emergencyStopped ? "paused" : "active" : "paused";
-          const lastReceipt = latestSentAt !== null ? { at: latestSentAt, summary: "Most recent message in an owner-started campaign" } : null;
+          const lastReceipt = latestSentAt !== null ? { at: latestSentAt, summary: "Most recent message in an owner-started campaign", href: "outbound" } : null;
           return entry(definition, state, `${sendingCampaigns.length} sending · ${campaigns.length} saved campaign${campaigns.length === 1 ? "" : "s"}`, lastReceipt, sendingCampaigns.length, { campaignsTruncated: campaigns.length === 200 });
         }
       }
