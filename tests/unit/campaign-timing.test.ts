@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { lintCampaignTiming, type CampaignTiming } from "../../shared/agents/campaignTiming";
 import { playsTask } from "../../shared/agents/planTasks";
+import { CampaignTimingSummary } from "../../src/components/app/plan/CampaignTimingSummary";
+import { formatTimingWindow, timingCapacityLabel, timingDecisionLabel, timingDurationLabel } from "../../src/components/app/plan/timingPresentation";
 
 const url = "https://official.example/holidays/2026";
 const claim = "The local Thanksgiving Friday shopping event is November 27, 2026.";
@@ -34,6 +38,32 @@ function context(overrides: Partial<Parameters<typeof lintCampaignTiming>[1]> = 
 }
 
 describe("campaign timing recommendations", () => {
+  it("presents timing decisions and date windows in plain owner-facing language", () => {
+    expect(timingDecisionLabel("proceed")).toBe("Recommended window");
+    expect(timingDecisionLabel("not_enough_evidence")).toBe("Timing is not clear yet");
+    expect(timingCapacityLabel("unknown")).toBe("Ability to take on the work is not confirmed");
+    expect(timingDurationLabel(1, "Preparation")).toBe("Preparation: 1 day");
+    expect(timingDurationLabel(null, "Delivery")).toBe("Delivery: not confirmed");
+    expect(formatTimingWindow({ startDate: "2026-11-20", endDate: "2026-11-27" })).toBe("Nov 20–27, 2026");
+    expect(formatTimingWindow({ startDate: "2026-12-31", endDate: "2027-01-02" })).toBe("Dec 31, 2026 – Jan 2, 2027");
+    expect(formatTimingWindow(null)).toBeNull();
+  });
+
+  it("shows the reason and uncertainty first, with evidence available in a disclosure", () => {
+    const timing = { ...base, unknowns: ["Owner confirmation of the service area", "Staff availability"], researchRetrievedAt: "2026-10-20T12:00:00.000Z" };
+    const markup = renderToStaticMarkup(createElement(CampaignTimingSummary, { timing }));
+    expect(markup).toContain("Recommended window");
+    expect(markup).toContain("Nov 20–27, 2026");
+    expect(markup).toContain("Why this date may matter");
+    expect(markup).toContain("Still to confirm");
+    expect(markup).toContain("This is a suggestion only. Nothing is scheduled.");
+    expect(markup).toContain("<details");
+    expect(markup).toContain("Timing details and sources");
+    expect(markup).toContain("Published 2026-01-10");
+    expect(markup).toContain("Checked 2026-10-20");
+    expect(markup).toContain("Open source");
+  });
+
   it("allows a locally relevant holiday with supported dates, enough preparation time, and capacity", () => {
     expect(lintCampaignTiming(base, context())).toEqual([]);
   });

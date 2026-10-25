@@ -61,6 +61,7 @@ import { climbTarget } from "@/components/climb/context";
 import type { StrategyExploration } from "../../../../shared/agents/specs";
 import type { CampaignTiming } from "../../../../shared/agents/campaignTiming";
 import { evaluateOfferUnitEconomics, type OfferAssessment } from "../../../../shared/agents/offerAssessment";
+import { CampaignTimingSummary } from "./CampaignTimingSummary";
 
 /** Mirrors shared/agents/specs PlaySchema (stored loosely in Convex). */
 export interface PlayView {
@@ -1120,19 +1121,7 @@ function PlayCard({ play, slug, economics, results, planId, targets, canEdit = f
             <Lead text={play.trigger} open={open} />
           </Row>
           {play.timingAssessment && play.timingAssessment.decision !== "not_relevant" ? (
-            <div className="rounded-[var(--radius-control)] border border-line bg-surface-2 px-3 py-2" aria-label="Campaign timing assessment">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-ink-2">Timing · {play.timingAssessment.decision.replaceAll("_", " ")}</span>
-                {play.timingAssessment.proposedWindow ? <Badge>{play.timingAssessment.proposedWindow.startDate}–{play.timingAssessment.proposedWindow.endDate}</Badge> : null}
-              </div>
-              <p className="mt-1 text-xs text-ink-2">{play.timingAssessment.rationale}</p>
-              <p className="mt-1 text-xs text-ink-3">Calendar basis: {play.timingAssessment.timezone ?? "timezone unknown"} · {play.timingAssessment.timezoneBasis} · {play.timingAssessment.geographyBasis}</p>
-              {play.timingAssessment.geographyEvidenceRef?.startsWith("https://") ? <a href={play.timingAssessment.geographyEvidenceRef} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs text-brand-800 underline">Geography evidence<ExternalLink aria-hidden className="size-3" /></a> : null}
-              {play.timingAssessment.moment.name ? <p className="mt-1 text-xs text-ink-2">{play.timingAssessment.moment.name}: {play.timingAssessment.moment.businessReason}</p> : null}
-              <p className="mt-1 text-xs text-ink-3">Prep: {play.timingAssessment.preparation.leadTimeDays === null ? "unknown" : `${play.timingAssessment.preparation.leadTimeDays}d`} · delivery: {play.timingAssessment.preparation.deliveryLeadTimeDays === null ? "unknown" : `${play.timingAssessment.preparation.deliveryLeadTimeDays}d`} · lead-time feasibility: {play.timingAssessment.preparation.feasible === null ? "unknown" : play.timingAssessment.preparation.feasible ? "feasible" : "not feasible"} · capacity: {play.timingAssessment.capacity.status.replaceAll("_", " ")}</p>
-              {play.timingAssessment.unknowns.length ? <p className="mt-1 text-xs text-amber-800">Unknown: {play.timingAssessment.unknowns.join(" · ")}</p> : null}
-              {play.timingAssessment.moment.evidence.map((evidence) => evidence.sourceUrl ? <a key={evidence.sourceUrl} href={evidence.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs text-brand-800 underline">Timing evidence · {evidence.publishedDate ? `published ${evidence.publishedDate} · ` : ""}{play.timingAssessment?.researchRetrievedAt ? `retrieved ${play.timingAssessment.researchRetrievedAt.slice(0, 10)}` : "retrieval date unknown"}<ExternalLink aria-hidden className="size-3" /></a> : null)}
-            </div>
+            <CampaignTimingSummary timing={play.timingAssessment} />
           ) : null}
           {edge ? (
             <Row icon={Zap} label="Edge">
