@@ -175,7 +175,8 @@ describe("before/after examples from the reading", () => {
     const a = playActuals(m, rows, { p10: 6.5, p50: 13, p90: 19.5 }, 13, { startWeek: 0 });
     expect(a.ignoredBeforeStart).toBe(1);
     expect(a.weeksSinceStart).toBe(4);
-    expect(a.status).not.toBe("ahead");
+    expect(a.status).toBe("incomplete_log");
+    expect(a.unloggedWeeks).toBe(2);
   });
 
   it("portfolio: adding a play never lowers the total; same-step plays count once", () => {

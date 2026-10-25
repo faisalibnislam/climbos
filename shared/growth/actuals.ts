@@ -92,12 +92,14 @@ export interface PlayActuals {
   ownerHours: number;
   /** Customers the plan expected by now (P10/P50/P90 scaled to the weeks logged). */
   expectedByNow: { p10: number; p50: number; p90: number };
-  status: "ahead" | "on_track" | "behind" | "too_early";
+  status: "ahead" | "on_track" | "behind" | "too_early" | "incomplete_log";
   steps: StepActual[];
   /** Weekly reach actually achieved vs planned. */
   reachVsPlan: number | null;
   /** Weeks from the first week to the latest logged one; more than `weeks` means some weeks weren't logged. */
   weeksSinceStart: number;
+  /** Elapsed plan weeks without a logged result; missing weeks are unknown, not zero. */
+  unloggedWeeks: number;
   /** Logged weeks before the play's start (ignored). */
   ignoredBeforeStart: number;
 }
@@ -128,9 +130,9 @@ export function playActuals(model: PlayModel, all: ResultEntry[], forecast: { p1
   const avg = (fn: (l: number) => number) => (lams.length ? lams.reduce((s, l) => s + fn(l), 0) / lams.length : 1);
   const surprisinglyLow = lams.length > 0 && avg((l) => poissonCdf(customers, l)) <= 0.05;
   const surprisinglyHigh = lams.length ? avg((l) => 1 - poissonCdf(customers - 1, l)) <= 0.05 : customers > 0;
-  const gaps = weeksSinceStart > weeks;
+  const unloggedWeeks = Math.max(0, weeksSinceStart - weeks);
   const status: PlayActuals["status"] =
-    weeks < 2 ? "too_early" : customers > expectedByNow.p90 && surprisinglyHigh && !gaps ? "ahead" : customers < expectedByNow.p10 && (leading(steps) === "short" || (surprisinglyLow && leading(steps) === "thin")) ? "behind" : "on_track";
+    unloggedWeeks > 0 ? "incomplete_log" : weeks < 2 ? "too_early" : customers > expectedByNow.p90 && surprisinglyHigh ? "ahead" : customers < expectedByNow.p10 && (leading(steps) === "short" || (surprisinglyLow && leading(steps) === "thin")) ? "behind" : "on_track";
   return {
     weeks,
     reach,
@@ -142,6 +144,7 @@ export function playActuals(model: PlayModel, all: ResultEntry[], forecast: { p1
     steps,
     reachVsPlan: weeks > 0 && model.weeklyReach > 0 ? reach / weeks / model.weeklyReach : null,
     weeksSinceStart,
+    unloggedWeeks,
     ignoredBeforeStart: all.length - entries.length,
   };
 }
@@ -184,5 +187,6 @@ export function resultsLine(name: string, a: PlayActuals): string {
     .filter((s) => s.trials > 0)
     .map((s) => `${s.name} ${s.successes}/${s.trials} (${Math.round((s.successes / s.trials) * 1000) / 10}%, planned ${Math.round(s.planned * 1000) / 10}%)`)
     .join("; ");
-  return `${name}: ${a.weeks} week${a.weeks === 1 ? "" : "s"}, reached ${a.reach}, ${a.customers} new customers, spent $${Math.round(a.spendUsd)}, ${Math.round(a.ownerHours)} owner hours. ${rates}.`;
+  const coverage = a.unloggedWeeks > 0 ? ` ${a.unloggedWeeks} elapsed week${a.unloggedWeeks === 1 ? " is" : "s are"} unlogged; missing weeks are unknown, not zero, so do not read this as a complete-period result.` : "";
+  return `${name}: ${a.weeks} week${a.weeks === 1 ? "" : "s"}, reached ${a.reach}, ${a.customers} new customers, spent $${Math.round(a.spendUsd)}, ${Math.round(a.ownerHours)} owner hours.${coverage} ${rates}.`;
 }

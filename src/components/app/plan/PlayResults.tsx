@@ -17,6 +17,7 @@ const STATUS: Record<PlayActuals["status"], { label: string; tone: Tone; icon: L
   on_track: { label: "On track", tone: "blue", icon: CircleCheck },
   behind: { label: "Behind: check stop rule", tone: "red", icon: CircleAlert },
   too_early: { label: "Too early to tell", tone: "neutral", icon: Clock },
+  incomplete_log: { label: "Weekly log incomplete", tone: "neutral", icon: Clock },
 };
 
 const pct = (x: number) => `${Math.round(x * 1000) / 10}%`;
@@ -67,7 +68,7 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, canEdi
             <p className="flex items-baseline gap-1.5">
               <span className="text-xl font-semibold tabular-nums text-ink">{actuals.customers}</span>
               <span className="text-ui text-ink-2">
-                customer{actuals.customers === 1 ? "" : "s"} · week {actuals.weeks}
+                customer{actuals.customers === 1 ? "" : "s"} · {actuals.unloggedWeeks > 0 ? `${actuals.weeks} of ${actuals.weeksSinceStart} weeks logged` : `week ${actuals.weeks}`}
               </span>
               <span className="text-xs tabular-nums text-ink-3">plan ≈{r1(actuals.expectedByNow.p50)}</span>
             </p>
@@ -77,6 +78,7 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, canEdi
               </Badge>
             ) : null}
           </div>
+          {actuals.unloggedWeeks > 0 ? <p className="text-xs text-ink-2">Only logged weeks are included. Missing weeks are unknown, not zero; fill them in before judging the full period.</p> : null}
           {actuals.status === "behind" ? <ShortfallNote s={diagnoseShortfall(actuals)} /> : null}
           <ul className="flex flex-col gap-1.5 text-xs">
             {actuals.steps
