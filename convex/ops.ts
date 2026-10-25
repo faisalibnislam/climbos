@@ -16,6 +16,7 @@ import { internal } from "./_generated/api";
 import { action, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { currentPeriod } from "./lib/periods";
+import { summarizePreviewLearning } from "../shared/preview/metrics";
 import { settleCredits } from "./lib/credits";
 import { ensureFleet } from "./circuits";
 import { audit } from "./lib/audit";
@@ -142,6 +143,7 @@ export const dashboard = query({
       .query("previews")
       .withIndex("by_created", (q) => q.gt("createdAt", now - DAY))
       .take(1000);
+    const previewLearning = summarizePreviewLearning(previews);
     const orgs = await ctx.db
       .query("organizations")
       .withIndex("by_kind_created", (q) => q.eq("kind", "customer"))
@@ -224,6 +226,8 @@ export const dashboard = query({
           : null,
         previews24h: previews.length,
         previewSpend24hMicros: previews.reduce((s, p) => s + p.costMicros, 0),
+        previewLearning,
+        previewLearningCoverageCapped: previews.length === 1000,
       },
       margin: {
         ok: guard.ok,

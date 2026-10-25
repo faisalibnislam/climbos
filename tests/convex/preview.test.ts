@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { api } from "../../convex/_generated/api";
+import { api, internal } from "../../convex/_generated/api";
 import { asNewUser, setup } from "./helpers";
 
-async function completedPreview(t: ReturnType<typeof setup>, token: string, website: string, expiresAt = Date.now() + 86_400_000) {
+async function completedPreview(t: ReturnType<typeof setup>, token: string, website: string, expiresAt = Date.now() + 86_400_000, status: "done" | "planning" = "done") {
   await t.run((ctx) => ctx.db.insert("previews", {
     token,
     ipHash: "test-ip-hash",
     website,
     goal: "Get more customers",
-    status: "done",
+    status,
     steps: [
       { key: "reading", label: "Reading your website", status: "done" },
       { key: "understanding", label: "Understanding your business", status: "done" },
@@ -27,6 +27,60 @@ async function completedPreview(t: ReturnType<typeof setup>, token: string, webs
 }
 
 describe("public website preview claiming", () => {
+  it("records the first homepage snapshot once and records the final completion time", async () => {
+    const t = setup();
+    const createdAt = Date.now() - 15_000;
+    await t.run((ctx) => ctx.db.insert("previews", {
+      token: "timing-preview-token",
+      ipHash: "test-ip-hash",
+      website: "https://example.com/",
+      goal: "Get more customers",
+      status: "understanding",
+      steps: [
+        { key: "reading", label: "Reading your website", status: "done" },
+        { key: "understanding", label: "Understanding your business", status: "running" },
+        { key: "planning", label: "Drafting first growth ideas", status: "pending" },
+      ],
+      facts: [],
+      ideas: [],
+      costMicros: 0,
+      createdAt,
+      expiresAt: Date.now() + 86_400_000,
+    }));
+
+    await t.mutation(internal.preview.update, { token: "timing-preview-token", patch: {
+      status: "planning",
+      stepKey: "understanding",
+      stepStatus: "done",
+      business: { name: "Example", summary: "A page summary", audience: "Page visitors", category: "services" },
+      firstValueReady: true,
+    } });
+    const first = await t.query(api.preview.get, { token: "timing-preview-token" });
+    expect(first?.firstValueMs).toBeGreaterThanOrEqual(15_000);
+    expect(first?.completedMs).toBeNull();
+
+    await t.mutation(internal.preview.update, { token: "timing-preview-token", patch: {
+      status: "done",
+      stepKey: "planning",
+      stepStatus: "done",
+      ideas: [],
+      firstValueReady: true,
+    } });
+    const complete = await t.query(api.preview.get, { token: "timing-preview-token" });
+    expect(complete?.firstValueMs).toEqual(first?.firstValueMs);
+    expect(complete?.completedMs).toBeGreaterThanOrEqual(complete?.firstValueMs ?? 0);
+  });
+
+  it("accepts one optional usefulness response only after the snapshot is complete", async () => {
+    const t = setup();
+    await completedPreview(t, "useful-preview-token", "https://example.com/");
+    await completedPreview(t, "unfinished-preview-token", "https://example.com/", Date.now() + 86_400_000, "planning");
+    await expect(t.mutation(api.preview.recordUsefulness, { token: "unfinished-preview-token", usefulness: "useful" })).resolves.toEqual({ recorded: false });
+    await expect(t.mutation(api.preview.recordUsefulness, { token: "useful-preview-token", usefulness: "useful" })).resolves.toEqual({ recorded: true });
+    await expect(t.mutation(api.preview.recordUsefulness, { token: "useful-preview-token", usefulness: "not_yet" })).resolves.toEqual({ recorded: false });
+    await expect(t.query(api.preview.get, { token: "useful-preview-token" })).resolves.toMatchObject({ usefulness: "useful" });
+  });
+
   it("imports same-site facts as sourced items awaiting owner review, once", async () => {
     const t = setup();
     const owner = await asNewUser(t, "preview-owner@example.com");

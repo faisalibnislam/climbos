@@ -104,7 +104,8 @@ export default function PrivacyPage() {
       <p>
         We keep your account information while your account is open. Detailed technical records are kept for up to {r.rawPayloads}{" "}
         days, detailed activity for up to {r.detailedActivity} days, and summary numbers for up to {r.aggregates} days. Free website
-        previews expire after 7 days. When you delete your workspace, we delete its data, except where we must keep something for
+        previews expire from public access after 7 days and are deleted within 30 days. A preview may include processing timestamps
+        and, if you choose, one optional usefulness response stored with that preview. When you delete your workspace, we delete its data, except where we must keep something for
         legal or billing reasons.
       </p>
 

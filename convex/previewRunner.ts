@@ -81,6 +81,7 @@ export const run = internalAction({
         addCostMicros: profileRes.costMicros,
         business: { name: profile.name.slice(0, 80), summary: profile.oneLineSummary.slice(0, 240), audience: profile.audience.slice(0, 200), category: profile.category.slice(0, 80) },
         facts: profile.facts.slice(0, 6).map((f) => ({ statement: f.statement.slice(0, 220), sourceUrl: page.url, confidence: f.confidence, category: f.category })),
+        firstValueReady: true,
       },
     });
     await ctx.runMutation(internal.preview.update, { token, patch: { stepKey: "planning", stepStatus: "running" } });

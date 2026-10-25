@@ -72,7 +72,9 @@ export default function SecurityPage() {
       <h2>The free website preview</h2>
       <p>
         The preview on our homepage reads only your public homepage. We don&apos;t store visitors&apos; IP addresses — only a one-way
-        hash used to prevent abuse. Previews expire after 7 days and are deleted soon after.
+        hash used to prevent abuse. We record when the first snapshot and completed ideas are ready. You may optionally send one
+        usefulness response for a completed preview; it is stored with that preview and shown only in aggregate. Previews expire from
+        public access after 7 days and are deleted within 30 days.
       </p>
 
       <h2>Service providers</h2>

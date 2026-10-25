@@ -680,7 +680,7 @@ export function SourcesPanel() {
         </>
       }
     >
-      <div className="relative mt-4 overflow-x-auto">
+      <div role="region" aria-label="Sources by play and channel. Scroll horizontally to view all metrics." tabIndex={0} className="relative mt-4 overflow-x-auto">
         <table className="w-full min-w-[720px] text-sm">
           <thead className="border-b border-line">
             <tr>
@@ -817,7 +817,7 @@ export function ActivityPanel() {
         </>
       }
     >
-      <div className="relative mt-4 overflow-x-auto">
+      <div role="region" aria-label="Recent lead activity. Scroll horizontally to view all columns." tabIndex={0} className="relative mt-4 overflow-x-auto">
         <table className="w-full min-w-[720px] text-sm">
           <thead className="border-b border-line">
             <tr>

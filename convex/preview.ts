@@ -120,8 +120,26 @@ export const get = query({
       facts: p.facts,
       ideas: p.ideas,
       error: p.error ?? null,
+      firstValueMs: p.firstValueAt == null ? null : Math.max(0, p.firstValueAt - p.createdAt),
+      completedMs: p.completedAt == null ? null : Math.max(0, p.completedAt - p.createdAt),
+      usefulness: p.usefulness ?? null,
       claimed: Boolean(p.claimedByOrgId),
     };
+  },
+});
+
+/** One optional, token-scoped usefulness signal for the completed homepage snapshot. */
+export const recordUsefulness = mutation({
+  args: { token: v.string(), usefulness: v.union(v.literal("useful"), v.literal("not_yet")) },
+  handler: async (ctx, { token, usefulness }) => {
+    const p = await ctx.db
+      .query("previews")
+      .withIndex("by_token", (q) => q.eq("token", token))
+      .unique();
+    if (!p || p.expiresAt < Date.now() || p.status !== "done") return { recorded: false as const };
+    if (p.usefulness) return { recorded: false as const };
+    await ctx.db.patch(p._id, { usefulness, usefulnessAt: Date.now() });
+    return { recorded: true as const };
   },
 });
 
@@ -165,6 +183,7 @@ export const update = internalMutation({
       ),
       error: v.optional(v.string()),
       addCostMicros: v.optional(v.number()),
+      firstValueReady: v.optional(v.boolean()),
     }),
   },
   handler: async (ctx, { token, patch }) => {
@@ -183,6 +202,8 @@ export const update = internalMutation({
       ...(patch.facts ? { facts: patch.facts.slice(0, 8) } : {}),
       ...(patch.ideas ? { ideas: patch.ideas.slice(0, 3) } : {}),
       ...(patch.error ? { error: patch.error } : {}),
+      ...(!p.firstValueAt && patch.firstValueReady ? { firstValueAt: Date.now() } : {}),
+      ...(!p.completedAt && patch.status === "done" ? { completedAt: Date.now() } : {}),
       costMicros: p.costMicros + (patch.addCostMicros ?? 0),
     });
   },

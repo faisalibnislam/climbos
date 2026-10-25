@@ -41,6 +41,11 @@ function OkBadge({ ok, okText, badText }: { ok: boolean; okText: string; badText
 }
 
 const shortId = (id: string) => `…${id.slice(-6)}`;
+const durationLabel = (milliseconds: number | null) => milliseconds == null
+  ? "Need at least 5 samples"
+  : milliseconds < 1_000
+    ? `${milliseconds} ms`
+    : `${(milliseconds / 1_000).toFixed(1)} s`;
 
 export function OpsConsole() {
   const d = useQuery(api.ops.dashboard, {});
@@ -324,6 +329,9 @@ export function OpsConsole() {
             change={`${formatNumber(d.costs.overEstimateRuns)} runs over estimate`}
           />
           <Stat label="Previews, 24h" value={formatNumber(d.costs.previews24h)} sublabel={`Spend ${microsToUsd(d.costs.previewSpend24hMicros)}`} />
+          <Stat label="Homepage snapshot ready, P50" value={durationLabel(d.costs.previewLearning.firstValueP50Ms)} sublabel={`${formatNumber(d.costs.previewLearning.firstValueSamples)} timed previews${d.costs.previewLearningCoverageCapped ? "; sample capped" : ""}`} />
+          <Stat label="Full preview complete, P50" value={durationLabel(d.costs.previewLearning.completedP50Ms)} sublabel={`${formatNumber(d.costs.previewLearning.completedSamples)} completed previews${d.costs.previewLearningCoverageCapped ? "; sample capped" : ""}`} />
+          <Stat label="Snapshot marked useful" value={d.costs.previewLearning.usefulnessRate == null ? "Not enough responses" : `${Math.round(d.costs.previewLearning.usefulnessRate * 100)}%`} sublabel={`${formatNumber(d.costs.previewLearning.usefulnessResponses)} optional, user-reported responses${d.costs.previewLearningCoverageCapped ? "; sample capped" : ""}`} />
           <Stat label="Research cache hits, 24h" value={formatNumber(d.costs.researchCache24h.hits)} sublabel={d.costs.researchCache24h.coverageCapped ? "At least this many; view is capped" : "Reused tenant-scoped research results; not a dollar-savings estimate"} />
           <Stat label="Preview daily budget" value={microsToUsd(d.fleet.previewDailyBudgetMicros)} sublabel="Change in Fleet controls" />
         </StatGroup>

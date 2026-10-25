@@ -432,7 +432,7 @@ The 410 numbered requests are not 410 independent defects. The first 350 are dia
 
 ## Priority work that remains
 
-1. **First value and progressive analysis:** the Today Growth Home, run previews, quick takes, and anonymous website preview already exist. Validate time-to-first-useful-finding and make analysis depth explicit where it can map to distinct existing jobs; do not imply a full audit is finished when only a snapshot is available.
+1. **First value and progressive analysis:** the homepage preview now records when its first business snapshot and completed ideas become available, invites one optional visitor usefulness rating, and reports median timings/usefulness only after at least five observations. Its UI identifies the result as an unverified one-page snapshot and points to the deeper plan workflow. Remaining: collect enough real observations to assess first-look usefulness and latency, and validate distinct analysis-depth choices across signed-in jobs; timestamps and self-selected visitor ratings are process/feedback signals, not evidence of business impact.
 2. **Voice-of-customer depth:** expand from phrase grouping and inbox/CRM notes only when authorized data ingestion, consent, retention, and evaluation are specified. Call transcripts are not currently integrated.
 3. **AI-search visibility:** keep manual sample dates, platform, prompt, location, answer, mention, and citations explicit. Add provider automation only after current official API and policy review.
 4. **Evidence-calibrated recommendation quality:** extend cross-business evaluation fixtures and compare decision quality, hard failures, cost, latency, and owner editing effort before adding model stages.
