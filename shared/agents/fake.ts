@@ -27,6 +27,9 @@ function sample(s: JsonSchema, marker: string, key = ""): unknown {
         // A test double cannot infer which approved offer a draft represents.
         // Omit this optional reference rather than inventing a play name.
         if (k === "approvedOfferPlayName") continue;
+        // The fixture has no dated trend source bundle. Keep optional trend
+        // evidence absent instead of filling its dates and claims with markers.
+        if (k === "trendEvidence") continue;
         out[k] = sample(v, marker, k);
       }
       return out;

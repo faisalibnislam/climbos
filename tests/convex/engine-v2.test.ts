@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { checkInvariants } from "../../shared/economics/ledger";
-import { api } from "../../convex/_generated/api";
+import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { ledgerOf } from "../../convex/lib/periods";
 import { readExpertPlan } from "../../shared/agents/planCompatibility";
@@ -258,6 +258,27 @@ describe("Engine v2 wiring", () => {
     const artifacts = await t.run(async (ctx) => ctx.db.query("artifacts").withIndex("by_run", (q) => q.eq("runId", runId)).collect());
     expect(artifacts.length).toBe(1);
     expect(artifacts[0].status).toBe("in_review");
+
+    const sourceUrl = "https://example.com/current-format";
+    const trendEvidence = { sourceUrl, observationDate: "2026-10-20", observation: "A dated source reports this short video format." };
+    const [trendArtifactId] = await t.mutation(internal.jobWrites.saveArtifacts, {
+      runId,
+      factIds: [],
+      items: [{
+        kind: "social_post", channel: "instagram", title: "A sourced format", body: "A useful evergreen example.", hashtags: [], factIndexes: [], role: "social_media_manager",
+        copyBrief: {
+          reader: "possible customers", situation: "choosing a service", awarenessStage: "unknown", relationshipStage: "unknown", objective: "explain an option",
+          offerFactIndexes: [], problemJob: "compare options", trigger: "researching", centralIdea: "make the choice easier", objection: "uncertainty", proofFactIndexes: [], prohibitedClaims: [],
+          channel: "instagram", format: "reel", deliveryContext: "organic post", brandVoice: "clear", approvedExamples: [], cta: "learn more", afterAction: "review replies", trackingMetric: "qualified questions", trackingMethod: "owner record",
+          supportingFactIndexes: [], supportingSourceUrls: [sourceUrl], trendEvidence, unknowns: [],
+        },
+      }],
+    });
+    const savedTrendEvidence = await t.run(async (ctx) => {
+      const artifact = await ctx.db.get(trendArtifactId!);
+      return artifact?.currentVersionId ? (await ctx.db.get(artifact.currentVersionId))?.copyBrief?.trendEvidence : undefined;
+    });
+    expect(savedTrendEvidence).toEqual(trendEvidence);
   });
 
   it("demo workspaces never use the paid engine", async () => {
