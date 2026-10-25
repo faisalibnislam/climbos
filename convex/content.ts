@@ -207,7 +207,14 @@ export const calendar = query({
         autopilotStatus: slot.status,
       });
     }
-    return [...events.values()].sort((a, b) => a.scheduledFor - b.scheduledFor);
+    return {
+      items: [...events.values()].sort((a, b) => a.scheduledFor - b.scheduledFor),
+      // Reaching a source cap means the range may contain more rows than we return.
+      limitsReached: {
+        scheduledPosts: rows.length === 300,
+        autopilotSlots: slots.length === 300,
+      },
+    };
   },
 });
 

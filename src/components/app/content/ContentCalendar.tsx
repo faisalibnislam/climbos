@@ -192,7 +192,8 @@ function CalendarGrid({
   timeZone: string;
   onSelectDay: (day: Date) => void;
 }) {
-  const items = useQuery(api.content.calendar, { slug, from, to });
+  const result = useQuery(api.content.calendar, { slug, from, to });
+  const items = result?.items;
   const byDay = new Map<string, NonNullable<typeof items>>();
   for (const it of items ?? []) {
     const k = dateKeyAt(it.scheduledFor, timeZone);
@@ -208,6 +209,9 @@ function CalendarGrid({
       <p className="sr-only" role="status">
         {items === undefined ? "Loading calendar…" : `${total} item${total === 1 ? "" : "s"} in this ${view}.`}
       </p>
+      {result?.limitsReached && (result.limitsReached.scheduledPosts || result.limitsReached.autopilotSlots) ? (
+        <CalendarLimitNotice limitsReached={result.limitsReached} />
+      ) : null}
       {items !== undefined && total === 0 ? (
         <Callout tone="info" className="mb-4">Nothing scheduled this {view}.</Callout>
       ) : null}
@@ -278,6 +282,19 @@ function CalendarGrid({
         })}
       </ol>
     </div>
+  );
+}
+
+export function CalendarLimitNotice({ limitsReached }: { limitsReached: { scheduledPosts: boolean; autopilotSlots: boolean } }) {
+  const sources = [
+    limitsReached.scheduledPosts ? "scheduled posts" : null,
+    limitsReached.autopilotSlots ? "Autopilot slots" : null,
+  ].filter(Boolean);
+  if (sources.length === 0) return null;
+  return (
+    <Callout tone="warning" role="status">
+      This date range reached the 300-item limit for {sources.join(" and ")}. It may be incomplete; narrow the date range to check the remaining items.
+    </Callout>
   );
 }
 

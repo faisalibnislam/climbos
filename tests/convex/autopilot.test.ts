@@ -95,9 +95,10 @@ describe("social autopilot", () => {
     const [slot] = await slots(t, w.orgId);
     expect(slot.status).toBe("needs_approval");
     const initial = await w.client.query(api.content.calendar, { slug: w.slug, from: slot.slotAt - 1, to: slot.slotAt + 1 });
-    expect(initial).toEqual(expect.arrayContaining([
+    expect(initial.items).toEqual(expect.arrayContaining([
       expect.objectContaining({ artifactId: slot.artifactId, status: "in_review", autopilot: true, autopilotStatus: "needs_approval" }),
     ]));
+    expect(initial.limitsReached).toEqual({ scheduledPosts: false, autopilotSlots: false });
 
     await w.client.mutation(api.content.decide, { slug: w.slug, artifactId: slot.artifactId!, decision: "approve" });
     const movedTo = slot.slotAt + 3 * 86_400_000;
@@ -105,9 +106,60 @@ describe("social autopilot", () => {
     const moved = await slots(t, w.orgId);
     expect(moved[0].slotAt).toBe(movedTo);
     const calendar = await w.client.query(api.content.calendar, { slug: w.slug, from: movedTo - 1, to: movedTo + 1 });
-    expect(calendar).toEqual(expect.arrayContaining([
+    expect(calendar.items).toEqual(expect.arrayContaining([
       expect.objectContaining({ artifactId: slot.artifactId, status: "scheduled", scheduledFor: movedTo, autopilot: true }),
     ]));
+  });
+
+  it("reports when scheduled posts and Autopilot slots each reach their 300-item display cap", async () => {
+    const t = setup();
+    const w = await workspace(t, "ap-calendar-cap@example.com");
+    const rangeFrom = Date.now();
+    const scheduledFor = rangeFrom + 60_000;
+    await t.run(async (ctx) => {
+      const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).first();
+      if (!business) throw new Error("Expected workspace business");
+      const ids = [];
+      for (let i = 0; i < 300; i++) {
+        ids.push(await ctx.db.insert("artifacts", {
+          orgId: w.orgId,
+          businessId: business._id,
+          kind: "social_post",
+          channel: "facebook",
+          title: `Scheduled ${i}`,
+          status: "scheduled",
+          currentVersion: 1,
+          scheduledFor,
+          createdAt: rangeFrom,
+          updatedAt: rangeFrom,
+        }));
+      }
+      for (let i = 0; i < ids.length; i++) {
+        await ctx.db.insert("calendarSlots", {
+          orgId: w.orgId,
+          weekOf: "2026-10-19",
+          channel: "facebook",
+          day: 1,
+          slotAt: scheduledFor,
+          pillar: "Test",
+          purpose: "education",
+          format: "text",
+          idea: `Scheduled ${i}`,
+          angle: "Test angle",
+          hookDraft: "Test hook",
+          callToAction: "Read more",
+          needsOwner: false,
+          status: "scheduled",
+          artifactId: ids[i],
+          createdAt: rangeFrom,
+          updatedAt: rangeFrom,
+        });
+      }
+    });
+
+    const result = await w.client.query(api.content.calendar, { slug: w.slug, from: rangeFrom, to: rangeFrom + 86_400_000 });
+    expect(result.items).toHaveLength(300);
+    expect(result.limitsReached).toEqual({ scheduledPosts: true, autopilotSlots: true });
   });
 
   it("fully auto posts a clean draft on its own under an autopilot approval", async () => {

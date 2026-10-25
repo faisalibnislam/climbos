@@ -31,6 +31,16 @@ describe("homepage search readiness", () => {
     expect(JSON.stringify(findings)).not.toMatch(/will rank|will be cited|citation rate/i);
   });
 
+  it("limits an empty structured-data finding to JSON-LD, the format this check parses", () => {
+    const finding = assessSearchReadiness(page({ title: "Guide", metaDescription: "A guide", text: "Useful page text. ".repeat(20) }))
+      .find((item) => item.id === "no-structured-data");
+    expect(finding).toMatchObject({
+      title: "No JSON-LD structured data was detected",
+      evidence: expect.stringContaining("does not inspect Microdata or RDFa"),
+      nextStep: expect.stringContaining("check whether the page already uses another structured-data format"),
+    });
+  });
+
   it("flags heading hierarchy gaps and multiple H1 headings", () => {
     const findings = assessSearchReadiness(page({
       title: "Gym", metaDescription: "Climb", text: "text ".repeat(80),
