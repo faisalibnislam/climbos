@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(36);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(37);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -119,6 +119,18 @@ describe("creative strategy precedent retrieval", () => {
     expect(match?.precedent.outcome).toContain("do not isolate the effect");
     expect(match?.precedent.causalLimit).toContain("MetroPCS acquisition and network investment");
     expect(match?.precedent.sources.some((source) => source.url.includes("sec.gov/Archives/edgar/data/1283699"))).toBe(true);
+  });
+
+  it("retrieves shared permission infrastructure without implying that licensing guarantees growth", () => {
+    const match = retrieveCreativePrecedents("Reduce permission friction by making creator reuse terms clear and discoverable across platforms").find(({ precedent }) => precedent.id === "CP-037");
+    expect(match).toBeDefined();
+    expect(match?.precedent.outcome).toContain("not an exact census");
+    expect(match?.precedent.causalLimit).toContain("do not establish unique active creators");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://creativecommons.org/history/", claimRole: "action" }),
+      expect.objectContaining({ url: "https://creativecommons.org/state-of-the-commons-2022/", claimRole: "outcome" }),
+      expect.objectContaining({ url: expect.stringContaining("unesdoc.unesco.org"), sourceRole: "independent_secondary" }),
+    ]));
   });
 
   it("retrieves opt-in personalization and sharing as a separate customer mechanism", () => {
