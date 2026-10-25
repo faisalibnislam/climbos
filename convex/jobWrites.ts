@@ -14,7 +14,7 @@ import { sha256Hex } from "../shared/policy";
 import { v } from "convex/values";
 import { resultsBrief } from "./playResults";
 import { customerConcentration } from "../shared/attribution/concentration";
-import { computeCohorts, subscriptionCohortBrief } from "../shared/attribution/cohorts";
+import { computeCohorts, repeatPurchaseBrief, repeatPurchaseSummary, subscriptionCohortBrief } from "../shared/attribution/cohorts";
 import { refundExposure } from "../shared/attribution/refundExposure";
 import { platformConcentration } from "../shared/attribution/platformConcentration";
 import { summarizeAiReferralRows, type AiReferralMetricRow } from "../shared/integrations/ga4";
@@ -197,6 +197,9 @@ export const jobContext = internalQuery({
           truncated: concentrationIsPartial,
         })
       : "";
+    const repeatPurchaseText = run.kind === "strategy" && concentrationCurrency
+      ? repeatPurchaseBrief(repeatPurchaseSummary(concentrationEvents, { currency: concentrationCurrency, nowMs: concentrationToMs }), { truncated: concentrationIsPartial })
+      : "";
     const concentration = concentrationCurrency
       ? customerConcentration(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
       : null;
@@ -261,6 +264,7 @@ export const jobContext = internalQuery({
       creatorOutcomeText,
       refundExposure: refundExposureSignal,
       subscriptionCohortText,
+      repeatPurchaseText,
       stripeReceivables,
       audience: { contacts, consented },
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },

@@ -716,6 +716,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     refundExposureLine(job.refundExposure),
     job.run.kind === "strategy" ? stripeReceivablesLine(job.stripeReceivables) : "",
     job.subscriptionCohortText,
+    job.repeatPurchaseText,
     job.resultsText ?? "",
   ];
   return formatBusinessKnowledgeLayers(truth, performance);

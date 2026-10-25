@@ -11,8 +11,8 @@ Status: **Done**, **Next**, or **Planned**. Size: S (one module + tests), M (bac
 | 0a | Growth cash timing view, plan input, reserve and monthly-limit hard checks | 122, 319 | M | Done (`48176a7`, `2fd5207`, `00d1b6d`, `590d9a9`) |
 | 0b | Verbatim excerpt checks for play action evidence | 24; handoff 3 | M | Done (`9faf0d7`) |
 | 1 | Logged cost per customer compared with the plan's affordable cost per customer; spend advice withheld when it isn't justified | 296–298, 324, 403 | S–M | Done (see ledger) |
-| 2 | Repeat-purchase rate and time to second order for order-based businesses (unknown without customer IDs) | 30, 37, 121–130; handoff 2 | S–M | Next |
-| 3 | "Still accurate" reconfirmation for facts due for review | 22–29, 136 | S | Planned |
+| 2 | Repeat-purchase rate and time to second order for order-based businesses (unknown without customer IDs) | 30, 37, 121–130; handoff 2 | S–M | Done (see ledger) |
+| 3 | "Still accurate" reconfirmation for facts due for review | 22–29, 136 | S | Next |
 | 4 | Lost-deal reasons and objections captured in the CRM and given to the diagnosis | 3, 81–90, 111–120, 232, 238, 248, 249, 399 | M | Planned |
 | 5 | Stalled deals and overdue next steps detected (stage-change time) | 234, 239, 245, 246 | S–M | Planned |
 | 6 | One-time setup costs in plays, timed by the cash view and reserve check | 122, 319; handoff 12 | M | Planned |

@@ -146,3 +146,87 @@ export function computeCohorts(
       return { cohort: `${y}-${String(m).padStart(2, "0")}`, size: c.members.size, activeCustomers, retention, revenueMinor };
     });
 }
+
+export interface RepeatPurchaseWindow {
+  days: number;
+  /** Customers whose first loaded order is at least `days` old, so the whole window has been observed. */
+  eligible: number;
+  /** Of those, customers with a second distinct order within `days` of the first. */
+  repeated: number;
+  rate: number | null;
+}
+
+export interface RepeatPurchaseSummary {
+  currency: string;
+  /** Distinct customers with at least one positive same-currency order and a customer ID. */
+  customers: number;
+  /** Positive same-currency orders without a customer ID (can't be linked to a person). */
+  ordersWithoutCustomer: number;
+  windows: RepeatPurchaseWindow[];
+  /** Median days from first to second order, among customers who reordered within the loaded history. */
+  medianDaysToSecond: number | null;
+  reorderedCustomers: number;
+  /** Earliest loaded order; "first order" means first within the loaded history. */
+  historyFrom: number | null;
+}
+
+const DAY_MS = 86_400_000;
+
+/**
+ * Repeat purchases for one-off orders (not subscriptions): per customer (provider namespace + customer ID), the
+ * first loaded order and the next distinct order. Windows only count customers old enough to have been observed
+ * for the whole window, so recent customers never look like non-repeaters. Fully refunded orders don't count.
+ */
+export function repeatPurchaseSummary(payments: readonly CohortPayment[], options: { currency: string; nowMs: number; windowsDays?: number[] }): RepeatPurchaseSummary {
+  const windowsDays = options.windowsDays ?? [30, 60, 90];
+  const orders = payments.filter((p) => p.kind === "order" && p.currency === options.currency && p.amountMinor - p.refundedMinor > 0);
+  const byCustomer = new Map<string, { at: number; order: string }[]>();
+  let ordersWithoutCustomer = 0;
+  for (const p of orders) {
+    if (!p.customerRef) {
+      ordersWithoutCustomer++;
+      continue;
+    }
+    const key = `${p.source ?? ""}\u0000${p.customerRef}`;
+    const list = byCustomer.get(key) ?? [];
+    list.push({ at: p.occurredAt, order: p.orderRef ?? `@${p.occurredAt}` });
+    byCustomer.set(key, list);
+  }
+  const firstTwo = [...byCustomer.values()].map((list) => {
+    const sorted = list.sort((a, b) => a.at - b.at);
+    const first = sorted[0];
+    // Rows of the same order (e.g. partial captures) are one order.
+    const second = sorted.find((x) => x.order !== first.order && x.at >= first.at);
+    return { first: first.at, second: second?.at ?? null };
+  });
+  const windows = windowsDays.map((days) => {
+    const eligible = firstTwo.filter((c) => c.first <= options.nowMs - days * DAY_MS);
+    const repeated = eligible.filter((c) => c.second !== null && c.second - c.first <= days * DAY_MS).length;
+    return { days, eligible: eligible.length, repeated, rate: eligible.length ? repeated / eligible.length : null };
+  });
+  const gaps = firstTwo.flatMap((c) => (c.second === null ? [] : [(c.second - c.first) / DAY_MS])).sort((a, b) => a - b);
+  const mid = Math.floor(gaps.length / 2);
+  return {
+    currency: options.currency,
+    customers: byCustomer.size,
+    ordersWithoutCustomer,
+    windows,
+    medianDaysToSecond: gaps.length ? (gaps.length % 2 ? gaps[mid] : (gaps[mid - 1] + gaps[mid]) / 2) : null,
+    reorderedCustomers: gaps.length,
+    historyFrom: orders.length ? Math.min(...orders.map((p) => p.occurredAt)) : null,
+  };
+}
+
+/** Evidence-labeled repeat-purchase context for planning; unknown when orders carry no customer IDs. */
+export function repeatPurchaseBrief(s: RepeatPurchaseSummary, options: { truncated: boolean }): string {
+  const currency = s.currency.toUpperCase();
+  if (!s.customers && !s.ordersWithoutCustomer) return "";
+  if (!s.customers) return `OBSERVED REPEAT PURCHASES: unavailable for ${currency}; loaded one-off orders do not include customer IDs. Do not infer repeat-purchase rates or time to reorder from order totals.`;
+  const from = s.historyFrom ? new Date(s.historyFrom).toISOString().slice(0, 10) : "unknown";
+  const windows = s.windows.map((w) => w.eligible ? `within ${w.days} days ${w.repeated}/${w.eligible} (${((w.rate ?? 0) * 100).toFixed(1)}%${w.eligible < 20 ? ", small sample" : ""})` : `within ${w.days} days not yet observable`).join("; ");
+  const median = s.medianDaysToSecond === null ? "no customer has reordered in the loaded history" : `median ${Math.round(s.medianDaysToSecond)} days to a second order among the ${s.reorderedCustomers} customers who reordered (customers who haven't reordered yet are excluded, so this understates the typical wait)`;
+  return [
+    `OBSERVED REPEAT PURCHASES (one-off orders, ${currency}; ${s.customers} identified customers; order history loaded from ${from}${options.truncated ? ", truncated to the latest 10,000 events" : ""}${s.ordersWithoutCustomer ? `; ${s.ordersWithoutCustomer} orders without a customer ID excluded` : ""}): customers who ordered again after their first loaded order: ${windows}; ${median}.`,
+    "Only customers whose whole window has passed are counted. First order means first in the loaded history, not necessarily the customer's first ever. Fully refunded orders are excluded. This is observed repeat behavior, not a retention forecast or evidence of what caused it.",
+  ].join(" ");
+}
