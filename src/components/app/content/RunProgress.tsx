@@ -9,7 +9,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Badge, Button, Callout, Progress, Skeleton, type StepItem, type StepStatus } from "@/components/ui";
 import { errorMessage } from "../errors";
 import { cn } from "@/lib/utils";
-import { formatDuration, formatEta, phaseOf, progressOfRun } from "../../../../shared/progress";
+import { formatDuration, formatEta, phaseOf, progressOfRun, runStatusPresentation } from "../../../../shared/progress";
 import { microsToCreditsLabel } from "../money";
 import { roleTitle } from "../roles";
 import { Highlight } from "@/components/ds/content";
@@ -24,35 +24,7 @@ export function RunPreviewSummary({ preview, researchComplete = true }: { previe
   return <EarlyPreview preview={preview} finished researchComplete={researchComplete} />;
 }
 
-export const RUN_STATUS_LABEL: Record<string, string> = {
-  proposed: "Queued",
-  cost_reserved: "Getting ready",
-  preparing: "Working on it",
-  needs_approval: "Waiting for approval",
-  approved: "Approved",
-  scheduled: "Scheduled",
-  executing: "Working on it",
-  verified: "Done",
-  failed: "Didn't finish",
-  uncertain: "Outcome uncertain",
-  paused: "Paused",
-  canceled: "Canceled",
-};
-
-export const RUN_STATUS_TONE: Record<string, "neutral" | "green" | "amber" | "red" | "blue" | "violet"> = {
-  proposed: "neutral",
-  cost_reserved: "blue",
-  preparing: "blue",
-  needs_approval: "amber",
-  approved: "green",
-  scheduled: "blue",
-  executing: "blue",
-  verified: "green",
-  failed: "red",
-  uncertain: "amber",
-  paused: "amber",
-  canceled: "neutral",
-};
+export { RUN_STATUS_LABEL, RUN_STATUS_TONE } from "../../../../shared/progress";
 
 /** Statuses after which a run won't change on its own. */
 export const RUN_FINISHED = new Set(["verified", "failed", "canceled", "uncertain", "needs_approval"]);
@@ -182,7 +154,7 @@ export function RunProgress({
       </div>
     );
   }
-  const label = RUN_STATUS_LABEL[run.status] ?? run.status;
+  const { label } = runStatusPresentation(run.status);
   const finished = RUN_FINISHED.has(run.status);
   const groups = groupSteps(run);
   const running = groups.flatMap((g) => g.phases).find((p) => p.status === "running");
@@ -198,7 +170,7 @@ export function RunProgress({
         <H className="heading-card">{run.title}</H>
         <span className="flex flex-wrap gap-2">
           {run.isFixture ? <Badge tone="violet">Demo: simulated</Badge> : null}
-          <Badge tone={RUN_STATUS_TONE[run.status] ?? "neutral"}>{label}</Badge>
+          <Badge tone={runStatusPresentation(run.status).tone}>{label}</Badge>
         </span>
       </div>
       <p className="sr-only" role="status" aria-live="polite">
@@ -331,7 +303,7 @@ export function RunProgressCompact({ slug, runId, className }: { slug: string; r
       {progress ? <Progress value={progress.percent} label={`${run.title} progress`} /> : <Skeleton className="h-2 w-full" />}
       <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-xs">
         <span className="min-w-0 truncate font-medium text-brand-800">
-          {finished ? (RUN_STATUS_LABEL[run.status] ?? run.status) : current ? `${current.title}${phase && current.phases.length > 1 ? ` · ${phase.name}` : ""}` : "Starting…"}
+          {finished ? runStatusPresentation(run.status).label : current ? `${current.title}${phase && current.phases.length > 1 ? ` · ${phase.name}` : ""}` : "Starting…"}
         </span>
         {progress && !finished ? <span className="shrink-0 tabular-nums text-ink-3">{progress.percent}% · {formatEta(progress.etaSeconds).replace("About ", "~")}</span> : null}
       </p>

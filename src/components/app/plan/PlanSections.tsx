@@ -44,7 +44,7 @@ import { cn } from "@/lib/utils";
 import { microsToCreditsLabel, minorToDisplay, relativeTime } from "../money";
 import { microsToCredits } from "../../../../shared/economics/credits";
 import type { KnowledgeReferenceSet } from "../../../../shared/knowledge/retrieve";
-import { RUN_STATUS_LABEL, RUN_STATUS_TONE } from "../content/RunProgress";
+import { runStatusPresentation } from "../../../../shared/progress";
 import { ErrorCallout, PERMISSION_WHO, RoleName, useNow } from "../content/shared";
 import { ROLE_META } from "../roles";
 import { approvedToast } from "./PlanActions";
@@ -1228,13 +1228,14 @@ export function RecentWork({ slug }: { slug: string }) {
         <ul className="flex flex-col divide-y divide-line">
           {runs.slice(0, 12).map((r) => {
             const finished = ["verified", "failed", "canceled", "uncertain"].includes(r.status);
+            const runStatus = runStatusPresentation(r.status);
             return (
               <li key={r.id} className="flex min-w-0 flex-col gap-1 py-2.5 first:pt-0 last:pb-0">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="min-w-0 truncate text-ui font-medium text-ink">{r.title}</span>
                   <span className="flex flex-wrap gap-1.5">
                     {r.isFixture ? <Badge tone="violet">Demo</Badge> : null}
-                    <Badge tone={RUN_STATUS_TONE[r.status] ?? "neutral"}>{RUN_STATUS_LABEL[r.status] ?? r.status}</Badge>
+                    <Badge tone={runStatus.tone}>{runStatus.label}</Badge>
                   </span>
                 </div>
                 <span className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-3">

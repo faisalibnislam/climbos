@@ -13,6 +13,41 @@ export interface RunStep {
 
 export type Phase = "read" | "profile" | "research" | "draft" | "review" | "revise" | "other";
 
+/** Owner-facing run states shared by Home, work receipts, and progress details. */
+export const RUN_STATUS_LABEL: Record<string, string> = {
+  proposed: "Queued",
+  cost_reserved: "Getting ready",
+  preparing: "Working on it",
+  needs_approval: "Waiting for approval",
+  approved: "Approved",
+  scheduled: "Scheduled",
+  executing: "Working on it",
+  verified: "Done",
+  failed: "Didn't finish",
+  uncertain: "Outcome uncertain",
+  paused: "Paused",
+  canceled: "Canceled",
+};
+
+export const RUN_STATUS_TONE: Record<string, "neutral" | "green" | "amber" | "red" | "blue" | "violet"> = {
+  proposed: "neutral",
+  cost_reserved: "blue",
+  preparing: "blue",
+  needs_approval: "amber",
+  approved: "green",
+  scheduled: "blue",
+  executing: "blue",
+  verified: "green",
+  failed: "red",
+  uncertain: "amber",
+  paused: "amber",
+  canceled: "neutral",
+};
+
+export function runStatusPresentation(status: string): { label: string; tone: "neutral" | "green" | "amber" | "red" | "blue" | "violet" } {
+  return { label: RUN_STATUS_LABEL[status] ?? "Status update", tone: RUN_STATUS_TONE[status] ?? "neutral" };
+}
+
 /** Typical seconds per phase (median-ish, live routes). */
 export const EXPECTED_SECONDS: Record<Phase, number> = { read: 20, profile: 25, research: 150, draft: 200, review: 80, revise: 200, other: 30 };
 

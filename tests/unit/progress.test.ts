@@ -1,10 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { formatEta, phaseOf, progressOf, type Phase } from "../../shared/progress";
+import { formatEta, phaseOf, progressOf, runStatusPresentation, type Phase } from "../../shared/progress";
 
 const planned: Phase[] = ["read", "profile", "research", "draft", "review"];
 const T = 1_000_000;
 
 describe("job progress", () => {
+  it("uses a clear shared label and tone for every saved run status", () => {
+    expect(["proposed", "cost_reserved", "preparing", "needs_approval", "approved", "scheduled", "executing", "verified", "failed", "uncertain", "paused", "canceled"].map(runStatusPresentation)).toEqual([
+      { label: "Queued", tone: "neutral" },
+      { label: "Getting ready", tone: "blue" },
+      { label: "Working on it", tone: "blue" },
+      { label: "Waiting for approval", tone: "amber" },
+      { label: "Approved", tone: "green" },
+      { label: "Scheduled", tone: "blue" },
+      { label: "Working on it", tone: "blue" },
+      { label: "Done", tone: "green" },
+      { label: "Didn't finish", tone: "red" },
+      { label: "Outcome uncertain", tone: "amber" },
+      { label: "Paused", tone: "amber" },
+      { label: "Canceled", tone: "neutral" },
+    ]);
+    expect(runStatusPresentation("future_internal_status")).toEqual({ label: "Status update", tone: "neutral" });
+  });
+
   it("maps engine step labels to phases", () => {
     expect(phaseOf("Read your website")).toBe("read");
     expect(phaseOf("Business insights: research")).toBe("research");

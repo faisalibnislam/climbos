@@ -11,8 +11,8 @@ test("plain-language Home, suggestions, tools, and review links @mobile", async 
   const before = await history.innerText();
   await page.screenshot({ path: test.info().outputPath("home.png"), fullPage: false });
   await request.fill("Keep this draft.");
-  await page.getByRole("button", { name: "Prepare posts for next week", exact: true }).click();
-  await expect(request).toHaveValue("Keep this draft.\nPrepare posts for next week");
+  await page.getByRole("button", { name: "Help new customers reach their first useful result", exact: true }).click();
+  await expect(request).toHaveValue("Keep this draft.\nHelp new customers reach their first useful result");
   await expect(history).toHaveText(before, { useInnerText: true });
 
   await page.getByRole("button", { name: /Ask for help or find a tool/ }).click();
@@ -22,7 +22,7 @@ test("plain-language Home, suggestions, tools, and review links @mobile", async 
   await expect(page).toHaveURL(paletteUrl);
   await expect(page.getByRole("dialog", { name: "Find a tool or ask for help" })).toBeVisible();
   await page.getByRole("button", { name: /Ask for help with this/ }).click();
-  await expect(request).toHaveValue("Keep this draft.\nPrepare posts for next week\nHelp me understand my sales");
+  await expect(request).toHaveValue("Keep this draft.\nHelp new customers reach their first useful result\nHelp me understand my sales");
   await expect(history).toHaveText(before, { useInnerText: true });
   await page.getByRole("button", { name: "Ask Climb about this page", exact: true }).click();
   await page.getByLabel("Message Climb AI", { exact: true }).fill("Keep this question.");
@@ -33,7 +33,7 @@ test("plain-language Home, suggestions, tools, and review links @mobile", async 
 
   await page.goto(`/app/${slug}/content`);
   await page.goto(`/app/${slug}/today`);
-  await expect(request).toHaveValue("Keep this draft.\nPrepare posts for next week\nHelp me understand my sales");
+  await expect(request).toHaveValue("Keep this draft.\nHelp new customers reach their first useful result\nHelp me understand my sales");
 
   await expectAccessible(page, "simple Home");
   await expectNoHorizontalScroll(page);

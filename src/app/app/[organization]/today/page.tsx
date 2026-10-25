@@ -38,6 +38,7 @@ import { IdeaDeck } from "@/components/app/today/IdeaDeck";
 import { TodayTargetPreviewCard } from "@/components/app/today/TodayTargetPreview";
 import { Prose } from "@/components/ds/content";
 import { climbTarget } from "@/components/climb/context";
+import { runStatusPresentation } from "../../../../../shared/progress";
 
 const NEXT_VISUAL: Record<string, { icon: LucideIcon; tone: Tone }> = {
   plan: { icon: Compass, tone: "violet" },
@@ -63,17 +64,6 @@ function StatCard({ icon: Icon, tone, label, value }: { icon: LucideIcon; tone: 
 type Today = NonNullable<ReturnType<typeof useQuery<typeof api.workspace.today>>>;
 type CardView = Today["cards"][number];
 type GrowthOpportunity = NonNullable<Today["strategy"]>["opportunities"][number];
-
-const RUN_STATUS: Record<string, { label: string; tone: "neutral" | "green" | "amber" | "red" | "blue" }> = {
-  cost_reserved: { label: "Starting", tone: "blue" },
-  preparing: { label: "Working", tone: "blue" },
-  executing: { label: "Working", tone: "blue" },
-  verified: { label: "Done", tone: "green" },
-  failed: { label: "Didn't finish", tone: "red" },
-  uncertain: { label: "Outcome uncertain", tone: "amber" },
-  canceled: { label: "Canceled", tone: "neutral" },
-  needs_approval: { label: "Needs approval", tone: "amber" },
-};
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -535,7 +525,7 @@ function RecentWork({ slug, data }: { slug: string; data: Today }) {
           <CardContent className="p-0">
             <ul>
               {data.recent.map((r) => {
-                const s = RUN_STATUS[r.status] ?? { label: r.status, tone: "neutral" as const };
+                const s = runStatusPresentation(r.status);
                 return (
                   <li key={r.id} className="relative flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-2">
                     <RoleStack roles={r.roles} size="sm" />
