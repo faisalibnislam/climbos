@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(37);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(38);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -130,6 +130,17 @@ describe("creative strategy precedent retrieval", () => {
       expect.objectContaining({ url: "https://creativecommons.org/history/", claimRole: "action" }),
       expect.objectContaining({ url: "https://creativecommons.org/state-of-the-commons-2022/", claimRole: "outcome" }),
       expect.objectContaining({ url: expect.stringContaining("unesdoc.unesco.org"), sourceRole: "independent_secondary" }),
+    ]));
+  });
+
+  it("retrieves a customer-fit product launch while preserving the limits of the shade-count proxy", () => {
+    const match = retrieveCreativePrecedents("Redesign the core product for customer groups poorly served by category defaults, then test fit before expanding inventory").find(({ precedent }) => precedent.id === "CP-038");
+    expect(match).toBeDefined();
+    expect(match?.precedent.outcome).toContain("not independent audited causal estimates");
+    expect(match?.precedent.causalLimit).toContain("A 40-shade target is not a universal inclusion standard");
+    expect(match?.precedent.sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ url: "https://www.prnewswire.com/news-releases/rihanna-launches-fenty-beauty-a-global-makeup-brand-in-17-countries-643185393.html", claimRole: "action" }),
+      expect.objectContaining({ url: "https://www.elle.com/beauty/makeup-skin-care/a20967710/makeup-companies-40-foundation-shades-fenty-beauty-influence/", sourceRole: "independent_secondary" }),
     ]));
   });
 
