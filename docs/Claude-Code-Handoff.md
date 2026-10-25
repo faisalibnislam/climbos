@@ -86,6 +86,13 @@ Files changed in the latest pushed batch:
 
 The J&P Organics record uses a 2009 university oral-history profile, a 2016 peer-reviewed survey of 536 current/former subscribers, and an agricultural extension guide. The survey is non-randomized and does not establish incremental orders, retention, or profit. The case is a transfer hypothesis, not a forecast for a ClimbOS customer.
 
+### Follow-up work after the first handoff push
+
+- Corrected the 73-versus-74 case-count mismatch in `docs/Capabilities.md`; the runtime library and two capability summaries now agree at 74 reviewed / 26 unverified.
+- Fixed a shared alternative-draft prompt that had asked every two-draft agent to use audiences in the thousands and weekly volumes that add up to a goal. It now encourages a bolder/original angle while grounding numbers in owner facts, calculations, or cited research, preserving unknowns, and keeping grounded/adjacent/bold strategy options. The critic no longer penalizes an unsupported target being unknown; it asks for the smallest useful measurement instead. `ENGINE_VERSION` is `v3.65-evidence-bounded-alt-draft`.
+- Updated audit rows 25, 26, and 31 to cite this prompt-level correction and retain its limitation: prompt guidance is not a semantic guarantee or live-model quality evidence.
+- Corrected a stale `tests/convex/engine-v2.test.ts` assertion from snapshot version 20 to 21 after verifying `convex/jobs.ts` writes version 21 and the schema supports it.
+
 ## What remains and should guide the next work
 
 These are known open gaps, not a complete substitute for checking the requirement audit and ledger before choosing work:
@@ -132,6 +139,24 @@ git diff --check
 ```
 
 This was a focused check of the latest batch, not a full repository test suite or a live-model/provider test. The preceding batch `c154357` also passed its documented focused tests (52 across five files), app/Convex typecheck, changed-file ESLint, and diff check. See the ledger for earlier batches and their own exact scopes.
+
+The follow-up prompt correction also passed:
+
+```text
+pnpm exec vitest run tests/unit/agent-runtime.test.ts tests/convex/engine-v2.test.ts
+  2 files passed; 8 tests passed
+
+pnpm typecheck
+  app and Convex TypeScript checks passed
+
+pnpm exec eslint shared/agents/runtime.ts shared/agents/specs.ts tests/unit/agent-runtime.test.ts tests/convex/engine-v2.test.ts
+  passed
+
+git diff --check
+  passed
+```
+
+One initial test attempt failed only because the existing snapshot-version assertion still expected 20; after confirming the current writer and schema use 21, the assertion was updated and the rerun passed. No live model call or provider was used.
 
 ## Suggested first Claude Code session
 

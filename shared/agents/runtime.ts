@@ -132,13 +132,16 @@ How to review:
 - Consistency: numbers, targets, budgets, channels and rules must agree across every field. Any contradiction is a craft failure; name both places in the fix.
 - Recommendation challenge: for each consequential strategic or financial recommendation, identify the single assumption most likely to change the decision, one concrete plausible way the recommendation could fail for this business, and the strongest relevant alternative (including no change when credible). Compare alternatives against the same goal, audience, horizon, evidence and confirmed resource limits. Label unmeasured failure modes as hypotheses; never invent evidence to make a challenge sound stronger. If a challenge exposes a material evidence, economic, capacity or policy problem, fail the relevant gate or score and put the specific correction in fixes so the revision loop addresses it. If no material challenge survives review, say so plainly rather than inventing one.
 - Cross-analysis disagreements: when the supplied context contains findings from earlier analyses or specialist roles, compare any material differences in diagnosis, audience, channel, budget or direction against the work under review. Attribute each position only when its source is identified in the supplied context, compare the evidence and limitations on both sides, and do not average or silently erase a material disagreement. If the evidence cannot resolve it, keep the uncertainty visible and make the smallest owner decision or test that would resolve it; do not imply a panel or consensus that did not run.
-- Hedging is a weakness: a plan that only "validates" or postpones decisions until data exists, with no committed volume or target, scores low on strategy and usefulness.
+- Hedging is a weakness when the evidence supports a decision: a plan that only postpones action without a business-specific next step scores low on strategy and usefulness. Do not penalize a plan for leaving an unsupported volume or target unknown. When a number is missing, define the smallest useful measurement and ask the owner for a decision threshold only when that threshold would change what to do.
 - Fix instructions must make the work better by adding specificity, insight, proof or craft. Never ask to delete substance just to be safe; if a claim is unsupported, say how to rephrase it truthfully.
 - Set escalation.reason to none unless a stronger revision model is likely to materially improve a specific complex tradeoff, conflicting evidence, or quality failure that remains unresolved. Cite concrete evidence from this review in escalation.evidence; do not escalate for routine improvements, formatting, deterministic arithmetic or permission checks.
 - For each criterion give a one-line note and a concrete fix instruction (what exactly to change). If it's already excellent, the fix is "none".
 - "fixes" = the 3-6 changes that would most improve the work, most important first, written as instructions.
 - "strengths" = what must be kept in a revision.
 - Use the gate and criterion ids exactly as given. Respond only with JSON matching the schema.`;
+
+/** Adds a more original second draft without nudging the model to fabricate scale. */
+export const ALTERNATIVE_DRAFT_ANGLE = `ANGLE FOR THIS VERSION: take a more original, higher-upside angle than a cautious first pass. Be concrete about the mechanism, audience condition, owner-sized first test, and what evidence would change the decision. When strategic exploration is requested, preserve distinct grounded, adjacent, and bold options; do not suppress a bold idea because it is novel, uncertain, or lacks a matching precedent. Do not invent audience sizes, weekly volumes, conversion rates, budgets, forecasts, deadlines, capacity, or outcomes. Use numbers only when they come from supplied owner facts, deterministic calculations from supplied inputs, or cited research; otherwise leave them unknown or label them as assumptions to test, and explain how to measure them. If the goal cannot be shown to be reachable from available evidence and resources, state the gap instead of fabricating scale.`;
 
 /** Shared source assessment rules for every specialist research pass (Issue 24). */
 export const RESEARCH_EVIDENCE_RULES = `For evidence that could materially affect a recommendation, assess and label:
@@ -425,7 +428,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
       const result = await deps.turn({
         modelKey: spec.models.draft,
         system,
-        messages: [{ role: "user", content: `${baseUser}\n\nANGLE FOR THIS VERSION: be bolder and more concrete than a cautious first pass. Size every idea to move the goal materially within the horizon (named audiences in the thousands, specific volumes per week, numbers that add up to the goal), while staying truthful and within budget.` }],
+        messages: [{ role: "user", content: `${baseUser}\n\n${ALTERNATIVE_DRAFT_ANGLE}` }],
         schema: spec.schema,
         maxTokens: spec.maxTokens.draft,
         effort: spec.effort.draft,
