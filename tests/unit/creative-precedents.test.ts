@@ -3,7 +3,7 @@ import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePreceden
 
 describe("creative strategy precedent retrieval", () => {
   it("keeps the verified corpus honest and each case source-backed", () => {
-    expect(CREATIVE_PRECEDENTS).toHaveLength(33);
+    expect(CREATIVE_PRECEDENTS).toHaveLength(35);
     for (const precedent of CREATIVE_PRECEDENTS) {
       expect(precedent.sources.length).toBeGreaterThan(0);
       expect(precedent.sources.every((source) => /^https:\/\//.test(source.url) && source.supports.length > 10 && source.accessedAt && source.sourceRole && source.claimRole)).toBe(true);
@@ -95,6 +95,22 @@ describe("creative strategy precedent retrieval", () => {
 
   it("retrieves a transparent finite inventory offer without endorsing fake scarcity", () => {
     expect(retrieveCreativePrecedents("Pre-sell a finite set of real advertising or sponsorship spaces using a simple unit and clear capacity").some(({ precedent }) => precedent.id === "CP-033")).toBe(true);
+  });
+
+  it("retrieves visual listing improvement while preserving the observational limits", () => {
+    const match = retrieveCreativePrecedents("Improve truthful booking-listing photos and reduce up-front production cost for a small hospitality host").find(({ precedent }) => precedent.id === "CP-034");
+    expect(match).toBeDefined();
+    expect(match?.precedent.researchConfidence).toBe("low");
+    expect(match?.precedent.outcome).toContain("not randomized causal effects");
+    expect(match?.precedent.sources[0]?.url).toBe("https://www.airbnb.com/e/pro-photography");
+  });
+
+  it("retrieves product-linked referrals while keeping the reported growth claim qualified", () => {
+    const match = retrieveCreativePrecedents("Build an opt-in two-sided referral loop into a useful product action and reduce signup friction").find(({ precedent }) => precedent.id === "CP-035");
+    expect(match).toBeDefined();
+    expect(match?.precedent.outcome).toContain("not independently audited data");
+    expect(match?.precedent.causalLimit).toContain("does not isolate either effect");
+    expect(match?.precedent.sources[0]?.url).toBe("https://sequoiacap.com/podcast/crucible-moments-dropbox");
   });
 
   it("retrieves opt-in personalization and sharing as a separate customer mechanism", () => {
