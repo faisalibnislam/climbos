@@ -783,6 +783,8 @@ export default defineSchema({
     kind: v.union(v.literal("customer"), v.literal("demo")),
     /** Engine rollout flags for this workspace (REQ-ENG-01), set by ClimbOS staff only, e.g. "decision_contract". */
     engineFlags: v.optional(v.array(v.string())),
+    /** Spec §12: this workspace's results join cross-business learning pools only after an owner opts in. */
+    learningPooling: v.optional(v.object({ optedIn: v.boolean(), by: v.id("users"), at: v.number() })),
     /** Owner-set minimum days between ClimbOS emails to the same person (marketing broadcasts, outreach); unset = no limit. */
     contactFrequencyDays: v.optional(v.number()),
     createdBy: v.id("users"),
@@ -3506,6 +3508,13 @@ export default defineSchema({
       v.literal("concluded"),
     ),
     resultNote: v.optional(v.string()),
+    /** Spec §12 pre-registration additions; fixed once the test starts running. */
+    variants: v.optional(v.array(v.object({ key: v.string(), description: v.string() }))),
+    decisionOwner: v.optional(v.string()),
+    plannedCost: v.optional(v.object({ cashMinor: v.number(), currency: v.string(), ownerHours: v.number(), basis: v.string() })),
+    preregisteredAt: v.optional(v.number()),
+    /** Append-only record of changes from the pre-registered plan while the test ran. */
+    deviations: v.optional(v.array(v.object({ at: v.number(), by: v.id("users"), note: v.string() }))),
     /**
      * Structured outcomes (Book 14 §14). The hypothesis, metric and stopping
      * rule above stay as written; an analysis on a changed definition is

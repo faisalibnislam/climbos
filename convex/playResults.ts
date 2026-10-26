@@ -94,6 +94,54 @@ export const log = mutation({
   },
 });
 
+/**
+ * Complete a proposed test's pre-registration (spec §12): what is compared, who decides, and what it costs.
+ * It is locked once the test runs; later changes go to the deviations log instead.
+ */
+export const preregisterExperiment = mutation({
+  args: {
+    slug: v.string(),
+    experimentId: v.id("experiments"),
+    variants: v.array(v.object({ key: v.string(), description: v.string() })),
+    decisionOwner: v.string(),
+    plannedCost: v.object({ cashMinor: v.number(), currency: v.string(), ownerHours: v.number(), basis: v.string() }),
+  },
+  handler: async (ctx, { slug, experimentId, variants, decisionOwner, plannedCost }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const e = assertSameOrg(await ctx.db.get(experimentId), org._id, "experiment");
+    if (e.status !== "proposed") throw appError("INVALID", "This test has started. Record changes as deviations instead.");
+    const clean = variants.map((x) => ({ key: x.key.trim().slice(0, 20), description: x.description.trim().slice(0, 240) })).filter((x) => x.key && x.description);
+    if (clean.length < 2 || clean.length > 4) throw appError("INVALID", "Describe 2 to 4 versions to compare, including the current one.");
+    if (new Set(clean.map((x) => x.key.toLowerCase())).size !== clean.length) throw appError("INVALID", "Give each version its own label.");
+    const owner = decisionOwner.trim().slice(0, 120);
+    if (!owner) throw appError("INVALID", "Name who decides when the test ends.");
+    if (!Number.isSafeInteger(plannedCost.cashMinor) || plannedCost.cashMinor < 0 || !Number.isFinite(plannedCost.ownerHours) || plannedCost.ownerHours < 0 || plannedCost.ownerHours > 400) throw appError("INVALID", "Enter the test's cash cost and owner hours as zero or more.");
+    if (!/^[A-Z]{3}$/.test(plannedCost.currency)) throw appError("INVALID", "Use a three-letter currency code.");
+    const basis = plannedCost.basis.trim().slice(0, 240);
+    if (!basis) throw appError("INVALID", "Say where the cost estimate comes from.");
+    await ctx.db.patch(e._id, { variants: clean, decisionOwner: owner, plannedCost: { ...plannedCost, basis }, preregisteredAt: Date.now() });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "experiment.preregistered", subjectType: "experiment", subjectId: e._id, summary: `Pre-registered "${e.name.slice(0, 80)}": ${clean.length} versions, decided by ${owner}.` });
+    return { preregisteredAt: Date.now() };
+  },
+});
+
+/** Append a change from the pre-registered plan (new dates, audience, or version), never overwriting it. */
+export const logExperimentDeviation = mutation({
+  args: { slug: v.string(), experimentId: v.id("experiments"), note: v.string() },
+  handler: async (ctx, { slug, experimentId, note }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const e = assertSameOrg(await ctx.db.get(experimentId), org._id, "experiment");
+    if (e.status === "proposed") throw appError("INVALID", "The test hasn't started; edit its pre-registration instead.");
+    const text = note.trim().slice(0, 500);
+    if (text.length < 4) throw appError("INVALID", "Describe what changed from the plan.");
+    const deviations = e.deviations ?? [];
+    if (deviations.length >= 50) throw appError("INVALID", "This test has too many recorded deviations.");
+    await ctx.db.patch(e._id, { deviations: [...deviations, { at: Date.now(), by: user._id, note: text }] });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "experiment.deviation_logged", subjectType: "experiment", subjectId: e._id, summary: `Recorded a deviation on "${e.name.slice(0, 80)}".` });
+    return { count: deviations.length + 1 };
+  },
+});
+
 type Analysis = NonNullable<Doc<"experiments">["analyses"]>[number];
 const MAX_ANALYSES = 12;
 

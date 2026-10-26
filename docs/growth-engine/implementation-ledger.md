@@ -1053,3 +1053,7 @@ Gap 13 was already covered: email and ad approvals bind audience and spend. Prec
 ## Resumption note (2026-10-26, spec gap 11)
 
 `lintSeoEvidence` adds `faq_grounding`. An unreferenced FAQ answer may not contain numbers missing from the evidence, or claims that `lintClaims` flags. The SEO prompt already says to leave general FAQs unreferenced rather than invent citations. `aiSearchVisibility.report` adds per-URL `citations[].ownSite` and `brandSiteCited`.
+
+## Resumption note (2026-10-26, spec gaps 8 and 14)
+
+Experiments gained pre-registration fields (variants, decision owner, planned cost) that lock when a test starts, plus an append-only deviations log. Cross-business learning now pools only opted-in workspaces: `countsForOrg` returns `pooling`, and `processPage` skips pooled scopes otherwise. Existing workspaces start opted out, so pooled rates appear only after owners opt in. The two pooled-learning tests now opt their seeded workspaces in. Gap 14 items are covered by existing behavior or deferred with reasons in spec-coverage.md.
