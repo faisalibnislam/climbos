@@ -41,12 +41,13 @@ describe("credits", () => {
     // Month nearly empty; a top-up lot holds the rest.
     await t.run(async (ctx) => {
       const p = (await ctx.db.query("usagePeriods").withIndex("by_account_period", (q) => q.eq("accountId", w.accountId).eq("periodKey", "onboarding")).first())!;
-      await ctx.db.patch(p._id, { walletCapMicros: Math.floor(est.maxCostMicros / 2), walletSpentMicros: 0 });
+      await ctx.db.patch(p._id, { walletCapMicros: Math.floor(est.reserveMicros / 2), walletSpentMicros: 0 });
       await ctx.db.insert("creditPurchases", { orgId: w.orgId, accountId: w.accountId, polarOrderId: "ord_t", topupKey: "credits_10", deliveryCostMicros: 7_000_000, creditsMicros: 7_000_000, remainingMicros: 7_000_000, expiresAt: Date.now() + 300 * 86_400_000, status: "active", createdAt: Date.now() });
     });
     const { runId } = await w.client.mutation(api.content.generate, { slug: w.slug, job: "content_email" });
     const held = await t.run(async (ctx) => ctx.db.get((await ctx.db.get(runId))!.reservationId!));
-    expect(held).toMatchObject({ walletMicros: 0, topupMicros: est.maxCostMicros });
+    expect(held).toMatchObject({ walletMicros: 0, topupMicros: est.reserveMicros });
+    expect(est.maxCostMicros).toBeGreaterThanOrEqual(est.reserveMicros);
     await t.finishAllScheduledFunctions(() => undefined);
     const run = await t.run(async (ctx) => ctx.db.get(runId));
     const lot = await t.run(async (ctx) => (await ctx.db.query("creditPurchases").collect())[0]);

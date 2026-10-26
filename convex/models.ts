@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { currentRateVersion } from "../shared/economics";
 import { BUILT_IN_ROUTE, modelOptions, userRoute } from "../shared/ai/modelChoice";
 import { query } from "./_generated/server";
-import { estimateJobMicros, planJob } from "./lib/jobPlans";
+import { planJob, maxJobMicros } from "./lib/jobPlans";
 import { canChooseModel, defaultModelRoute } from "./lib/modelRoute";
 import { optionalUser } from "./lib/tenancy";
 
@@ -23,12 +23,12 @@ export const myModelChoice = query({
     const plan = kind ? planJob(kind, kind === "onboarding_research" ? { pages: 3 } : {}, { mode: aiMode ?? "basic" }) : null;
     const options = modelOptions(currentRateVersion())
       .filter((o) => o.available)
-      .map((o) => ({ ...o, estimateMicros: plan ? estimateJobMicros(plan, { route: userRoute(o.key) }) : null }));
+      .map((o) => ({ ...o, estimateMicros: plan ? maxJobMicros(plan, { route: userRoute(o.key) }) : null }));
     return {
       canChoose: true as const,
       options,
       defaultModel: route.standard,
-      defaultEstimateMicros: plan ? estimateJobMicros(plan, { route }) : null,
+      defaultEstimateMicros: plan ? maxJobMicros(plan, { route }) : null,
       builtInDefault: BUILT_IN_ROUTE.standard,
     };
   },

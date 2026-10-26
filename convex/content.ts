@@ -35,7 +35,7 @@ import { createRunWithReservation, MAX_RETRIES } from "./engine";
 import { audit } from "./lib/audit";
 import { approvalProblem, DIRECT_PUBLISH, extendApprovalUntil, invalidateApprovals, publishTarget, recordArtifactDecision, refuseInCopilot, autonomyMode, SCHEDULE_GRACE_MS } from "./lib/approvals";
 import { onOwnerDecision, onPublishOutcome } from "./lib/autopilot";
-import { estimateJobMicros, planJob } from "./lib/jobPlans";
+import { estimateJobMicros, maxJobMicros, planJob } from "./lib/jobPlans";
 import { imageUrlFor } from "./lib/media";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { resolveModelRoute } from "./lib/modelRoute";
@@ -707,7 +707,7 @@ export const estimate = query({
     const plan = planJob(args.job, { quantity: args.quantity, images: args.images, channel: args.channel }, { fixture: org.kind === "demo", mode });
     const fixture = org.kind === "demo";
     const route = await resolveModelRoute(ctx, user._id, args.model);
-    return { title: plan.title, roles: plan.roles, maxCostMicros: estimateJobMicros(plan, { fixture, route }), meters: plan.meters, aiMode: mode, expertUnlocked: view.expertUnlocked, expertApplies: EXPERT_KINDS.has(args.job) };
+    return { title: plan.title, roles: plan.roles, maxCostMicros: maxJobMicros(plan, { fixture, route }), reserveMicros: estimateJobMicros(plan, { fixture, route }), meters: plan.meters, aiMode: mode, expertUnlocked: view.expertUnlocked, expertApplies: EXPERT_KINDS.has(args.job) };
   },
 });
 

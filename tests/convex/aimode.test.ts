@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { estimateJobMicros, planJob } from "../../convex/lib/jobPlans";
+import { estimateJobMicros, maxJobMicros, planJob, RUN_COST_CAP_MULTIPLE } from "../../convex/lib/jobPlans";
+import { MAX_RUN_COST_MULTIPLE } from "../../convex/engine";
 import { asNewUser, setup, type T } from "./helpers";
 
 /** Climb AI Basic is available to all; Expert (paid) allows measured Sol escalation on eligible work. */
@@ -78,8 +79,11 @@ describe("Climb AI Basic / Expert", () => {
     expect(available.expertUnlocked).toBe(true);
     expect(available.estimates.onboarding_research.basic).toBeGreaterThan(0);
     expect(available.estimates.onboarding_research.expert).toBeGreaterThan(0);
-    expect(available.estimates.onboarding_research.basic).toBe(estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "basic" })));
-    expect(available.estimates.onboarding_research.expert).toBe(estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "expert" })));
+    expect(available.estimates.onboarding_research.basic).toBe(maxJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "basic" })));
+    expect(available.estimates.onboarding_research.expert).toBe(maxJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "expert" })));
+    expect(RUN_COST_CAP_MULTIPLE).toBe(MAX_RUN_COST_MULTIPLE);
+    // Expert may revise on Sol, so its most-possible cost is higher than Basic's.
+    expect(available.estimates.onboarding_research.expert).toBeGreaterThan(available.estimates.onboarding_research.basic);
 
     await w.client.mutation(api.orgs.startResearch, {
       slug: w.slug,

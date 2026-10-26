@@ -49,6 +49,7 @@ export function AiModeChoice({
   value,
   onChange,
   label = "Depth",
+  hideLabel = false,
   upgradeHref,
 }: {
   unlocked: boolean;
@@ -56,12 +57,14 @@ export function AiModeChoice({
   value: AiMode;
   onChange: (m: AiMode) => void;
   label?: string;
+  /** Keep the label for screen readers only. */
+  hideLabel?: boolean;
   upgradeHref?: string;
 }) {
   const cost = (m: AiMode) => (costs ? ` Up to ${microsToCreditsLabel(costs[m])}.` : "");
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="mb-2 text-sm font-medium text-ink">{label}</legend>
+      <legend className={hideLabel ? "sr-only" : "mb-2 text-sm font-medium text-ink"}>{label}</legend>
       <RadioCards
         value={unlocked ? value : "basic"}
         onValueChange={(v) => onChange(v as AiMode)}

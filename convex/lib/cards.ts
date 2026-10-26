@@ -4,7 +4,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { assertNoActiveRun, createRunWithReservation } from "../engine";
 import { audit } from "./audit";
-import { estimateJobMicros, planJob, type JobKind } from "./jobPlans";
+import { planJob, type JobKind, maxJobMicros } from "./jobPlans";
 import { appError } from "./tenancy";
 import { startCampaign } from "../outbound";
 
@@ -72,7 +72,7 @@ export async function startPlanWork(
         kind: "generate_content",
         roles: plan.roles,
         payload: JSON.stringify({ job, channel, quantity: shape.quantity, brief, strategyId: s._id, planChannel: c.key }),
-        costEstimateMicros: estimateJobMicros(plan, { fixture: p.org.kind === "demo" }),
+        costEstimateMicros: maxJobMicros(plan, { fixture: p.org.kind === "demo" }),
         externalEffect: false,
         status: "proposed",
         priority: c.priority,

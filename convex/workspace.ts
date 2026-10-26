@@ -15,7 +15,7 @@ import { autoStartPlanTargets, todayTargetPreview } from "./targets";
 import { notifyOwners } from "./lib/notify";
 import { chargeableAccess, isPaid } from "./lib/access";
 import { creditBalance } from "./lib/credits";
-import { estimateJobMicros, planJob } from "./lib/jobPlans";
+import { estimateJobMicros, planJob, maxJobMicros } from "./lib/jobPlans";
 import { aiModeView } from "./lib/aiMode";
 import { currentPeriod } from "./lib/periods";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
@@ -886,7 +886,7 @@ export const plan = query({
       latestVersionAt: latest?.createdAt ?? null,
       /** The other version worth seeing: a newer one waiting or sent back, or the approved one while viewing it. */
       otherVersion: other ? { id: other._id, version: other.version, status: other.status, createdAt: other.createdAt } : null,
-      planEstimateMicros: estimateJobMicros(planJob("strategy", {}, { fixture: org.kind === "demo" }), { fixture: org.kind === "demo", route: await defaultModelRoute(ctx) }),
+      planEstimateMicros: maxJobMicros(planJob("strategy", {}, { fixture: org.kind === "demo" }), { fixture: org.kind === "demo", route: await defaultModelRoute(ctx) }),
       experiments: experiments.map((e) => ({ id: e._id, name: e.name, hypothesis: e.hypothesis, population: e.population, method: e.method, assignmentUnit: e.assignmentUnit, assignmentMethod: e.assignmentMethod, primaryMetric: e.primaryMetric, primaryMetricType: e.primaryMetricType, denominator: e.denominator, baselineRate: e.baselineRate, baselineProvenance: e.baselineProvenance, baselineEvidenceRefs: e.baselineEvidenceRefs, baselineBasis: e.baselineBasis, minimumMeaningfulEffect: e.minimumMeaningfulEffect, plannedSamplePerArm: e.plannedSamplePerArm, plannedSampleBasis: e.plannedSampleBasis, guardrails: e.guardrails, durationDays: e.durationDays, stoppingRule: e.stoppingRule, status: e.status, analyses: (e.analyses ?? []).map(({ reviewedBy: _by, ...x }) => x) })),
       insights: business?.insights ?? null,
       sources: factViews,
@@ -1504,8 +1504,8 @@ export const aiMode = query({
     const fixture = org.kind === "demo";
     const route = await defaultModelRoute(ctx);
     const estimates = (kind: "onboarding_research" | "strategy" | "content_ads" | "social_calendar") => ({
-      basic: estimateJobMicros(planJob(kind, {}, { fixture, mode: "basic" }), { fixture, route }),
-      expert: estimateJobMicros(planJob(kind, {}, { fixture, mode: "expert" }), { fixture, route }),
+      basic: maxJobMicros(planJob(kind, {}, { fixture, mode: "basic" }), { fixture, route }),
+      expert: maxJobMicros(planJob(kind, {}, { fixture, mode: "expert" }), { fixture, route }),
     });
     return {
       ...view,

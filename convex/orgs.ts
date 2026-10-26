@@ -14,7 +14,7 @@ import type { Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import { assertNoActiveRun, createRunWithReservation, latestRunOfKind } from "./engine";
 import { audit } from "./lib/audit";
-import { estimateJobMicros, planJob } from "./lib/jobPlans";
+import { planJob, maxJobMicros } from "./lib/jobPlans";
 import { createOnboardingPeriod } from "./lib/periods";
 import { appError, isOperator, optionalUser, requireOrgAccess, requireUser } from "./lib/tenancy";
 import { chargeableAccess, isPaid } from "./lib/access";
@@ -89,8 +89,8 @@ export const newWorkspaceAiMode = query({
 
 function onboardingResearchEstimates(route: ModelRoute) {
   return {
-    basic: estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "basic" }), { route }),
-    expert: estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "expert" }), { route }),
+    basic: maxJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "basic" }), { route }),
+    expert: maxJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "expert" }), { route }),
   };
 }
 

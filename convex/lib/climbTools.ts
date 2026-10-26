@@ -3,7 +3,7 @@ import type { FunctionReference } from "convex/server";
 import { api } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { microsToCredits } from "../../shared/economics";
-import { estimateJobMicros, planJob } from "./jobPlans";
+import { planJob, maxJobMicros } from "./jobPlans";
 import { CalcToolInput, calculate } from "../../shared/analysis/decisions";
 
 /**
@@ -653,7 +653,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     doing: "Asking the strategist for a new plan",
     input: z.object({}),
     output: RunIdOutputSchema,
-    summarize: () => `Draft a new version of your growth plan. Uses up to ${microsToCredits(estimateJobMicros(planJob("strategy"))).toLocaleString("en-US")} credits; unused credits are returned.`,
+    summarize: () => `Draft a new version of your growth plan. Uses up to ${microsToCredits(maxJobMicros(planJob("strategy"))).toLocaleString("en-US")} credits; unused credits are returned.`,
     run: async (c, slug) => c.mutation(api.orgs.generatePlan, { slug }),
   }),
   tool({

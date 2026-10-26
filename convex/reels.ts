@@ -7,7 +7,7 @@ import { contentHash } from "../shared/policy";
 import { featureAllowed, requirePaid } from "./lib/access";
 import { invalidateApprovals } from "./lib/approvals";
 import { audit } from "./lib/audit";
-import { estimateJobMicros, planJob } from "./lib/jobPlans";
+import { planJob, maxJobMicros } from "./lib/jobPlans";
 import { r2SignedUrl } from "./lib/r2";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
@@ -171,8 +171,8 @@ export const estimate = query({
     const { org } = await requireOrgAccess(ctx, { slug }, "view");
     const fixture = org.kind === "demo";
     return {
-      maxCostMicros: estimateJobMicros(planJob("reel", { images: 2 }, { fixture }), { fixture }),
-      withClipsMicros: estimateJobMicros(planJob("reel", { images: 2, clips: 1 }, { fixture }), { fixture }),
+      maxCostMicros: maxJobMicros(planJob("reel", { images: 2 }, { fixture }), { fixture }),
+      withClipsMicros: maxJobMicros(planJob("reel", { images: 2, clips: 1 }, { fixture }), { fixture }),
       clipsUnlocked: await featureAllowed(ctx, org, "expert"),
     };
   },
