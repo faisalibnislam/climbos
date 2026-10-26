@@ -110,7 +110,6 @@ function envSnapshot(): Record<string, string | undefined> {
   const keys = [
     "GOOGLE_OAUTH_CLIENT_ID",
     "GOOGLE_OAUTH_CLIENT_SECRET",
-    "GOOGLE_ADS_DEVELOPER_TOKEN",
     "GOOGLE_ADS_ACCESS_LEVEL",
     "META_APP_ID",
     "META_APP_SECRET",

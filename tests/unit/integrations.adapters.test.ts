@@ -91,6 +91,23 @@ describe("googleAds", () => {
     expect(calls[0]?.headers["developer-token"]).toBe("dev-token");
   });
 
+  it("works without a developer token (sunset 2026-09-09) and omits the header", async () => {
+    expect(googleAds.googleAdsHeaders({ accessToken: "at" })).toEqual({ Authorization: "Bearer at" });
+    expect(googleAds.googleAdsHeaders({ accessToken: "at", developerToken: "" })).toEqual({ Authorization: "Bearer at" });
+    expect(googleAds.googleAdsHeaders({ accessToken: "at", developerToken: "dev-token", loginCustomerId: "111-222-3333" })).toEqual({ Authorization: "Bearer at", "developer-token": "dev-token", "login-customer-id": "1112223333" });
+    const { fetchImpl, calls } = scripted([
+      { match: "customers:listAccessibleCustomers", method: "GET", respond: json(200, { resourceNames: ["customers/1234567890"] }) },
+      { match: "googleAds:search", respond: json(200, { results: [] }) },
+    ]);
+    expect(await googleAds.listAccessibleCustomers({ accessToken: "at", fetchImpl })).toEqual({ ok: true, data: ["1234567890"] });
+    const res = await googleAds.getCampaignMetrics({ accessToken: "at", customerId: "123-456-7890", fetchImpl, startDate: "2026-10-01", endDate: "2026-10-02" });
+    expect(res.ok).toBe(true);
+    for (const call of calls) {
+      expect(call.headers.Authorization).toBe("Bearer at");
+      expect(call.headers).not.toHaveProperty("developer-token");
+    }
+  });
+
   it("reads metrics with pagination and sends developer-token + login-customer-id", async () => {
     const { fetchImpl, calls } = scripted([
       { match: "googleAds:search", respond: json(200, { results: [{ campaign: { id: "1", name: "A" }, segments: { date: "2026-10-01" }, metrics: { costMicros: "1230000", clicks: "4", impressions: "100", conversions: 1.5, conversionsValue: 99.5 } }], nextPageToken: "p2" }) },

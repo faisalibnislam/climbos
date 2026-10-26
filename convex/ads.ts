@@ -433,11 +433,7 @@ export const executeCampaignWrite = internalAction({
     const approvedAt = approval.decidedAt ?? approval.createdAt;
     const approvedBy = String(approval.decidedBy ?? "owner");
     if (c.channel === "google_search_ad") {
-      const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
-      if (!developerToken) {
-        await ctx.runMutation(internal.ads.recordCampaignResult, { campaignId, action, status: "failed", summary: "Google Ads isn't set up on ClimbOS yet (developer token pending).", approvalId });
-        return;
-      }
+      const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN || undefined;
       const auth = { accessToken: creds.accessToken, developerToken, customerId: creds.accountId };
       if (action === "create_paused") {
         const res = await createPausedSearchCampaign({
@@ -491,9 +487,7 @@ export const pauseCampaignForStop = internalAction({
     const now = Date.now();
     const res =
       c.channel === "google_search_ad"
-        ? process.env.GOOGLE_ADS_DEVELOPER_TOKEN
-          ? await setGoogleStatus({ accessToken: creds.accessToken, developerToken: process.env.GOOGLE_ADS_DEVELOPER_TOKEN, customerId: creds.accountId, campaignId: c.externalId, status: "PAUSED", approval: { kind: GOOGLE_SET_STATUS, targetId: c.externalId, value: "PAUSED", approvedBy: "pause-all-rule", approvedAt: now } })
-          : { status: "uncertain" as const, providerMessage: "Google Ads access is not configured; pause it in Google Ads directly." }
+        ? await setGoogleStatus({ accessToken: creds.accessToken, developerToken: process.env.GOOGLE_ADS_DEVELOPER_TOKEN || undefined, customerId: creds.accountId, campaignId: c.externalId, status: "PAUSED", approval: { kind: GOOGLE_SET_STATUS, targetId: c.externalId, value: "PAUSED", approvedBy: "pause-all-rule", approvedAt: now } })
         : await setMetaStatus({ accessToken: creds.accessToken, campaignId: c.externalId, status: "PAUSED", approval: { kind: SET_META_CAMPAIGN_STATUS_ACTION, targetId: c.externalId, value: "PAUSED", approvedBy: "pause-all-rule", approvedAt: now } });
     await ctx.runMutation(internal.ads.recordCampaignResult, {
       campaignId,

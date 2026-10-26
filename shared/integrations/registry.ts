@@ -136,17 +136,18 @@ export const PROVIDERS: Record<ProviderId, ProviderMetadata> = {
       { id: "google_ads.create_paused_campaign", kind: "write", label: "Create paused Search campaigns", description: "Creates a budget and a Search campaign that stays paused until you approve turning it on." },
       { id: "google_ads.set_campaign_status", kind: "write", label: "Turn campaigns on or off", description: "Switches a campaign between running and paused after your explicit approval." },
     ],
-    requiredEnv: ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET", "GOOGLE_ADS_DEVELOPER_TOKEN", "GOOGLE_ADS_ACCESS_LEVEL"],
+    requiredEnv: ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET", "GOOGLE_ADS_ACCESS_LEVEL"],
     requiredReviewSteps: [
-      "Apply for Basic or Standard developer token access (Test access cannot touch real ad accounts)",
+      "Apply for Basic or Standard API access for the Google Cloud project that owns the OAuth client (Test access cannot touch real ad accounts)",
       "Google OAuth consent screen verification for the adwords scope",
     ],
     docs: [
       fact({ fact: "API version", value: "v26 (released 2026-10-14)", docsUrl: "https://developers.google.com/google-ads/api/docs/release-notes", verified: true }),
       fact({ fact: "search / searchStream", value: "POST https://googleads.googleapis.com/v26/customers/{id}/googleAds:search | :searchStream (10,000 rows/page, pageToken)", docsUrl: "https://developers.google.com/google-ads/api/rest/common/search", verified: true }),
       fact({ fact: "Campaign create fields", value: "advertisingChannelType SEARCH, status PAUSED, campaignBudget, manualCpc, networkSettings, startDateTime/endDateTime 'yyyy-MM-dd HH:mm:ss', containsEuPoliticalAdvertising (required)", docsUrl: "https://developers.google.com/google-ads/api/docs/campaigns/create-campaigns", verified: true }),
-      fact({ fact: "Developer token access levels", value: "test (test accounts only), explorer, basic, standard", docsUrl: "https://developers.google.com/google-ads/api/docs/api-policy/access-levels", verified: true }),
-      fact({ fact: "developer-token / login-customer-id headers", value: "developer-token, login-customer-id (manager id, digits only)", docsUrl: "https://developers.google.com/google-ads/api/rest/auth", verified: false, note: "Header page not re-fetched; values are long-standing." }),
+      fact({ fact: "Developer token sunset", value: "Developer tokens were sunset on 2026-09-09. Access levels belong to the Google Cloud project that owns the OAuth client; the developer-token header is optional and ignored, and a future API version will reject it.", docsUrl: "https://developers.google.com/google-ads/api/docs/get-started/dev-token", verified: true, note: "Checked 2026-10-26." }),
+      fact({ fact: "API access levels", value: "test (test accounts only), explorer, basic, standard (per Google Cloud project)", docsUrl: "https://developers.google.com/google-ads/api/docs/api-policy/access-levels", verified: true }),
+      fact({ fact: "login-customer-id header", value: "login-customer-id (manager id, digits only)", docsUrl: "https://developers.google.com/google-ads/api/rest/auth", verified: false, note: "Header page not re-fetched; value is long-standing." }),
     ],
   },
   meta_ads: {

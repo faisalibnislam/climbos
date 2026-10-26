@@ -60,7 +60,6 @@ export const syncPerformance = action({
     }
 
     if (!connection.scopes.includes(GOOGLE_ADS_SCOPE)) throw appError("FORBIDDEN", "This connection does not have the Google Ads reporting permission.");
-    if (!process.env.GOOGLE_ADS_DEVELOPER_TOKEN) throw appError("UNAVAILABLE", "Google Ads reporting is not configured on ClimbOS yet (developer token pending).");
 
     if (connection.expiresAt && connection.expiresAt < Date.now() + 5 * 60_000) {
       const refreshed = await ctx.runAction(internal.connectionActions.refreshAccessToken, { connectionId: connection._id });
@@ -72,7 +71,7 @@ export const syncPerformance = action({
     if (typeof stored.accessToken !== "string") throw appError("UNAVAILABLE", "The Google Ads connection needs to be reconnected.");
     const auth = {
       accessToken: stored.accessToken,
-      developerToken: process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
+      developerToken: process.env.GOOGLE_ADS_DEVELOPER_TOKEN || undefined,
       customerId: connection.externalAccountId ?? "",
     };
     const settings = await getCustomerSettings(auth);

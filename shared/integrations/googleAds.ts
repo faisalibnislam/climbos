@@ -2,8 +2,11 @@
  * Google Ads API (REST, v26): GAQL reads, paused Search campaign creation and
  * approved status changes, each verified by a read-back.
  *
- * Headers: Authorization (OAuth adwords scope), developer-token, and
- * login-customer-id when operating through a manager (MCC) account.
+ * Headers: Authorization (OAuth adwords scope) and login-customer-id when
+ * operating through a manager (MCC) account. Google sunset developer tokens on
+ * 2026-09-09: access levels now belong to the Cloud project that owns the OAuth
+ * client, and the developer-token header is optional and ignored. It is sent
+ * only when one is still configured.
  */
 
 import { currencyExponent, microsToMinor, minorToMicros } from "./currency";
@@ -17,7 +20,8 @@ const DAY_MS = 86_400_000;
 
 export interface GoogleAdsAuth extends AdapterOptions {
   accessToken: string;
-  developerToken: string;
+  /** Legacy, optional: Google ignores it since the 2026-09-09 sunset. */
+  developerToken?: string;
   /** Manager account id when accessing a client through an MCC (digits or 123-456-7890). */
   loginCustomerId?: string;
   /** The advertiser account being read/changed. */
@@ -31,11 +35,8 @@ export function normalizeCustomerId(id: string): string {
 }
 
 export function googleAdsHeaders(auth: Pick<GoogleAdsAuth, "accessToken" | "developerToken" | "loginCustomerId">): Record<string, string> {
-  if (!auth.developerToken) throw new Error("Google Ads developer token is required");
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${auth.accessToken}`,
-    "developer-token": auth.developerToken,
-  };
+  const headers: Record<string, string> = { Authorization: `Bearer ${auth.accessToken}` };
+  if (auth.developerToken) headers["developer-token"] = auth.developerToken;
   if (auth.loginCustomerId) headers["login-customer-id"] = normalizeCustomerId(auth.loginCustomerId);
   return headers;
 }

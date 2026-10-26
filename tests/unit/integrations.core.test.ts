@@ -21,7 +21,7 @@ import { PROVIDERS, VERIFIED_AT } from "../../shared/integrations/registry";
 import { CAPABILITY_STATES, type ProviderId } from "../../shared/integrations/types";
 
 const NOW = Date.UTC(2026, 9, 17, 12, 0, 0);
-const GOOGLE_ENV = { GOOGLE_OAUTH_CLIENT_ID: "id", GOOGLE_OAUTH_CLIENT_SECRET: "secret", GOOGLE_ADS_DEVELOPER_TOKEN: "dev", GOOGLE_ADS_ACCESS_LEVEL: "basic" };
+const GOOGLE_ENV = { GOOGLE_OAUTH_CLIENT_ID: "id", GOOGLE_OAUTH_CLIENT_SECRET: "secret", GOOGLE_ADS_ACCESS_LEVEL: "basic" };
 const IG_ENV = { INSTAGRAM_APP_ID: "a", INSTAGRAM_APP_SECRET: "b" };
 
 function ctx(partial: Partial<CapabilityContext>): CapabilityContext {
@@ -45,7 +45,15 @@ describe("evaluateCapabilities", () => {
   it("missing env → setup_needed", () => {
     const evals = evaluateCapabilities("google_ads", ctx({ env: {} }));
     expect(evals.every((e) => e.state === "setup_needed")).toBe(true);
-    expect(evals[0]?.fix).toContain("GOOGLE_ADS_DEVELOPER_TOKEN");
+    expect(evals[0]?.fix).toContain("GOOGLE_OAUTH_CLIENT_ID");
+    expect(evals[0]?.fix).not.toContain("GOOGLE_ADS_DEVELOPER_TOKEN");
+  });
+
+  it("Google Ads no longer needs a developer token env var", () => {
+    const scopes = ["https://www.googleapis.com/auth/adwords"];
+    expect(PROVIDERS.google_ads.requiredEnv).not.toContain("GOOGLE_ADS_DEVELOPER_TOKEN");
+    expect(PROVIDERS.google_ads.requiredEnv).toContain("GOOGLE_ADS_ACCESS_LEVEL");
+    expect(evaluateCapability("google_ads", "google_ads.read_metrics", ctx({ env: GOOGLE_ENV, grantedScopes: scopes })).state).toBe("ready");
   });
 
   it("not connected → setup_needed", () => {

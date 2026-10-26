@@ -40,7 +40,7 @@ export interface CapabilityContext {
   tokenExpiresAt?: number;
   /** True when we hold a refresh token (or Meta/IG long-lived token still refreshable). */
   canRefreshToken?: boolean;
-  /** Google Ads developer token access level (falls back to env GOOGLE_ADS_ACCESS_LEVEL). */
+  /** Google Ads API access level of the OAuth client's Cloud project (falls back to env GOOGLE_ADS_ACCESS_LEVEL). */
   googleAdsAccessLevel?: GoogleAdsAccessLevel;
   /** True when the connected Google Ads customer is a test account. */
   googleAdsAccountIsTest?: boolean;
