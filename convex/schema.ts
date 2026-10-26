@@ -505,6 +505,7 @@ export const providerValidator = v.union(
 
 export const capabilityStateValidator = v.union(
   v.literal("ready"),
+  v.literal("testing_access"),
   v.literal("approval_needed"),
   v.literal("provider_review_pending"),
   v.literal("unsupported_account_type"),

@@ -284,6 +284,7 @@ export const list = query({
           accountType: conn?.accountType,
           lastSyncAt: conn?.lastSyncAt,
           lastSyncError: conn?.lastSyncError,
+          testingAccess: operator,
           now,
         };
         let capabilities = evaluateCapabilities(adapterId, capCtx).map((c) => ({

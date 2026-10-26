@@ -62,6 +62,12 @@ export interface CapabilityContext {
   lastSyncError?: string;
   /** Known provider outage. */
   providerStatus?: "operational" | "degraded" | "down";
+  /**
+   * The viewer is ClimbOS staff testing the integration. Platforms let their own app's testers use
+   * permissions before approval (Meta development mode, Google test users), so unfinished approvals
+   * show as "testing_access" for them instead of blocking. Never set for customers.
+   */
+  testingAccess?: boolean;
   now?: number;
 }
 
@@ -252,6 +258,14 @@ function evaluateOne(provider: ProviderId, cap: CapabilityDefinition, ctx: Capab
   for (const scope of required) {
     const status = ctx.appReview?.[scope];
     const approval = ctx.approvalLabels?.[scope];
+    if (ctx.testingAccess && (status === "pending" || status === "not_submitted" || status === "rejected")) {
+      const label = approval ?? `${name} approval`;
+      return {
+        state: "testing_access",
+        reason: `Working in testing mode: ${label} isn't finished, so only accounts listed as testers on ClimbOS's ${name} app can use this. Businesses still see "Needs approval".`,
+        fix: `Nothing to do while testing. Before launch, complete ${label} in the Console.`,
+      };
+    }
     if (status === "pending") {
       return {
         state: "provider_review_pending",

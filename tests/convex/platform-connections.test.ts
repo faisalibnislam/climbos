@@ -286,4 +286,21 @@ describe("platform connections", () => {
     const serialized = JSON.stringify(guide);
     for (const value of ["meta-app-secret-value", "li-member-secret", "li-pages-secret", "x-secret"]) expect(serialized).not.toContain(value);
   });
+
+  it("ClimbOS staff see 'Testing mode' before Meta App Review; customers stay gated", async () => {
+    const t = setup();
+    stubProviders(META_ROUTES);
+    for (const [email, name, expected] of [
+      ["ops@example.com", "Staff Test Co", "testing_access"],
+      ["customer@example.com", "Customer Co", "approval_needed"],
+    ] as const) {
+      const { owner, slug } = await workspace(t, email, name);
+      await connectViaOAuth(owner, slug, "facebook_pages");
+      await owner.client.action(api.connectionActions.chooseAccount, { slug, provider: "facebook_pages", accountId: "111" });
+      const item = (await owner.client.query(api.connections.list, { slug })).items.find((i) => i.provider === "facebook_pages")!;
+      const publish = item.capabilities.find((c) => c.capability === "facebook_pages.publish_post")!;
+      expect(publish.state).toBe(expected);
+      if (expected === "testing_access") expect(publish.reason).toContain("testing mode");
+    }
+  });
 });

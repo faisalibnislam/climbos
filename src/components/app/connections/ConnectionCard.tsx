@@ -173,7 +173,7 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
         <h4 className="flex items-baseline gap-2 text-ui font-semibold text-ink-2">
           Can do{" "}
           <span className="text-xs font-normal tabular-nums text-ink-3">
-            {item.capabilities.filter((c) => c.state === "ready").length}/{item.capabilities.length} ready
+            {item.capabilities.filter((c) => c.state === "ready" || c.state === "testing_access").length}/{item.capabilities.length} ready
           </span>
         </h4>
         <ul className="mt-2 flex flex-col divide-y divide-line rounded-xl border border-line">

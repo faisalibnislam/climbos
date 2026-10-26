@@ -1,9 +1,10 @@
-import { Ban, CircleAlert, CircleCheck, CircleMinus, Clock, Hourglass, Settings2, TriangleAlert } from "@/components/icons"
+import { Ban, CircleAlert, CircleCheck, CircleMinus, Clock, FlaskConical, Hourglass, Settings2, TriangleAlert } from "@/components/icons"
 import type { ReactNode } from "react";
 import type { Tone } from "@/components/ui";
 
 export type CapabilityState =
   | "ready"
+  | "testing_access"
   | "approval_needed"
   | "provider_review_pending"
   | "unsupported_account_type"
@@ -15,6 +16,7 @@ export type CapabilityState =
 /** Plain labels per capability state. Icon + text always; color is supportive only. */
 export const CAPABILITY_STATE: Record<CapabilityState, { label: string; tone: Tone; icon: ReactNode }> = {
   ready: { label: "Ready", tone: "green", icon: <CircleCheck /> },
+  testing_access: { label: "Testing mode", tone: "blue", icon: <FlaskConical /> },
   approval_needed: { label: "Needs approval", tone: "amber", icon: <Hourglass /> },
   provider_review_pending: { label: "Provider review pending", tone: "blue", icon: <Clock /> },
   unsupported_account_type: { label: "Unsupported account", tone: "amber", icon: <Ban /> },

@@ -222,7 +222,7 @@ export function platformsNeedingManualExport(evaluations: Partial<Record<Provide
   for (const [provider, platform] of Object.entries(PROVIDER_TO_PLATFORM) as Array<[ProviderId, DraftPlatform]>) {
     const evals = evaluations[provider];
     const publish = evals?.find((e) => e.kind === "write");
-    if (!publish || publish.state !== "ready") out.push(platform);
+    if (!publish || (publish.state !== "ready" && publish.state !== "testing_access")) out.push(platform);
   }
   return out;
 }

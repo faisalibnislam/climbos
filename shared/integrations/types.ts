@@ -29,6 +29,8 @@ export type ProviderId =
 /** Exact capability state strings shown in the product. */
 export type CapabilityState =
   | "ready"
+  /** Works for ClimbOS testers while a platform approval is unfinished; other businesses see approval_needed. */
+  | "testing_access"
   | "approval_needed"
   | "provider_review_pending"
   | "unsupported_account_type"
@@ -39,6 +41,7 @@ export type CapabilityState =
 
 export const CAPABILITY_STATES: readonly CapabilityState[] = [
   "ready",
+  "testing_access",
   "approval_needed",
   "provider_review_pending",
   "unsupported_account_type",
