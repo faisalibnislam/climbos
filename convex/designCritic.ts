@@ -1,5 +1,6 @@
 import { priorDesignDecisions } from "./jobWrites";
 import { findingFingerprint } from "../shared/agents/designDecisions";
+import { sha256Hex } from "../shared/policy";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
@@ -21,6 +22,40 @@ async function recordFindingEvent(ctx: MutationCtx, e: { orgId: Id<"organization
   const pages = await ctx.db.query("landingPages").withIndex("by_org", (q) => q.eq("orgId", e.orgId)).order("desc").take(100);
   const page = pages.find((p) => p.designCriticSource?.runId === e.runId && p.designCriticSource.findingIndex === e.findingIndex);
   await ctx.db.insert("designFindingReviewEvents", { ...e, ...(page ? { landingPageId: page._id, landingVersion: page.version ?? 0 } : {}) });
+}
+
+/** The audit's read text for one page, from the run's checkpointed "Read key pages" step. */
+async function auditedPageText(ctx: MutationCtx, runId: Id<"workflowRuns">, pageUrl: string): Promise<string> {
+  const step = await ctx.db.query("workflowSteps").withIndex("by_run", (q) => q.eq("runId", runId).eq("index", 0)).first();
+  if (!step?.output) return "";
+  let text = "";
+  try {
+    const parsed = JSON.parse(step.output) as { text?: unknown };
+    text = typeof parsed.text === "string" ? parsed.text : "";
+  } catch {
+    return "";
+  }
+  const key = pageUrl.replace(/["<>]/g, "");
+  for (const block of text.split("</untrusted_content>")) {
+    const start = block.indexOf(`<untrusted_content source="${key}">`);
+    if (start >= 0) return block.slice(start + `<untrusted_content source="${key}">`.length).trim();
+  }
+  return "";
+}
+
+/**
+ * Spec §8: once the owner chooses a direction, keep the original page they are changing (read text,
+ * its hash, and the audit screenshots) so it stays recoverable after the 30-day screenshot purge.
+ */
+async function retainOriginalPage(ctx: MutationCtx, orgId: Id<"organizations">, runId: Id<"workflowRuns">, pageUrl: string | undefined, userId: Id<"users">) {
+  if (!pageUrl) return;
+  const existing = await ctx.db.query("designOriginalPages").withIndex("by_org_run", (q) => q.eq("orgId", orgId).eq("runId", runId)).take(20);
+  if (existing.some((row) => row.pageUrl === pageUrl)) return;
+  const text = (await auditedPageText(ctx, runId, pageUrl)).slice(0, 60_000);
+  const shots = (await ctx.db.query("websiteAuditScreenshots").withIndex("by_org_run_view", (q) => q.eq("orgId", orgId).eq("runId", runId)).take(2)).filter((shot) => shot.pageUrl === pageUrl && shot.expiresAt > Date.now());
+  // The screenshot rows keep their storage; lifting their expiry keeps the purge from deleting it.
+  for (const shot of shots) await ctx.db.patch(shot._id, { expiresAt: Number.MAX_SAFE_INTEGER });
+  await ctx.db.insert("designOriginalPages", { orgId, runId, pageUrl, text, textHash: await sha256Hex(text), screenshots: shots.map((shot) => ({ view: shot.view, storageId: shot.storageId, width: shot.width, height: shot.height, capturedAt: shot.capturedAt })), retainedBy: userId, retainedAt: Date.now() });
 }
 
 function screenshotTimeFromRun(run: { output?: string }): number | undefined {
@@ -48,7 +83,7 @@ export const feedback = query({
       const finding = findings[row.findingIndex] as { directions?: { id?: string; name?: string }[] };
       const selectedDirection = finding.directions?.find((direction) => direction.id === row.selectedDirectionId);
       return { findingIndex: row.findingIndex, status: row.status, note: row.note ?? "", sourceUrl: row.sourceUrl ?? "", evidenceRef: row.evidenceRef ?? `${runId}:${row.findingIndex}`, viewport: row.viewport ?? null, screenshotCapturedAt: row.screenshotCapturedAt ?? null, selectedDirectionId: selectedDirection?.id ?? null, selectedDirectionName: selectedDirection?.name ?? null, selectedDirectionAt: row.selectedDirectionAt ?? null, updatedAt: row.updatedAt };
-    }), history: events.map((e) => {
+    }), originals: (await ctx.db.query("designOriginalPages").withIndex("by_org_run", (q) => q.eq("orgId", org._id).eq("runId", runId)).take(20)).map((o) => ({ pageUrl: o.pageUrl, textHash: o.textHash, textChars: o.text.length, views: o.screenshots.map((shot) => shot.view), retainedAt: o.retainedAt })), history: events.map((e) => {
       const finding = findings[e.findingIndex] as { directions?: { id?: string; name?: string }[] };
       return { findingIndex: e.findingIndex, kind: e.kind, status: e.status ?? null, directionName: e.directionId ? finding.directions?.find((d) => d.id === e.directionId)?.name ?? e.directionId : null, note: e.note ?? "", landingVersion: e.landingVersion ?? null, screenshotCapturedAt: e.screenshotCapturedAt ?? null, at: e.at };
     }), screenshots: await Promise.all(screenshots.filter((shot) => shot.expiresAt > Date.now()).map(async (shot) => ({
@@ -101,7 +136,10 @@ export const saveScreenshot = internalMutation({
       throw appError("INVALID", "Screenshot metadata is invalid.");
     }
     const existing = await ctx.db.query("websiteAuditScreenshots").withIndex("by_org_run_view", (q) => q.eq("orgId", args.orgId).eq("runId", args.runId).eq("view", args.view)).first();
-    if (existing) {
+    if (existing && existing.expiresAt === Number.MAX_SAFE_INTEGER) {
+      // Retained as the original page for a chosen design direction: keep it, drop the new capture.
+      await ctx.storage.delete(args.storageId).catch(() => undefined);
+    } else if (existing) {
       await ctx.storage.delete(existing.storageId).catch(() => undefined);
       await ctx.db.patch(existing._id, { pageUrl: args.pageUrl, storageId: args.storageId, width: args.width, height: args.height, capturedAt: args.capturedAt, expiresAt: args.capturedAt + 30 * 86_400_000 });
     } else {
@@ -131,6 +169,7 @@ export const selectDirection = mutation({
       const sourceUrl = typeof (finding as { sourceUrl?: unknown }).sourceUrl === "string" ? (finding as { sourceUrl: string }).sourceUrl.slice(0, 500) : undefined;
       await ctx.db.insert("designFindingReviews", { orgId: org._id, runId: args.runId, findingIndex: args.findingIndex, evidenceRef: `${args.runId}:${args.findingIndex}`, ...(sourceUrl ? { sourceUrl } : {}), ...(viewport ? { viewport } : {}), screenshotCapturedAt: screenshotTimeFromRun(run), ...decision });
     }
+    await retainOriginalPage(ctx, org._id, args.runId, typeof (finding as { sourceUrl?: unknown }).sourceUrl === "string" ? (finding as { sourceUrl: string }).sourceUrl.slice(0, 500) : undefined, user._id);
     await recordFindingEvent(ctx, { orgId: org._id, runId: args.runId, findingIndex: args.findingIndex, kind: "direction", directionId: direction.id, actorId: user._id, at: now });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "design_finding.direction_selected", subjectType: "workflowRun", subjectId: args.runId, summary: `Selected design direction "${direction.name.slice(0, 80)}" for finding ${args.findingIndex + 1} in website audit ${args.runId}.` });
     return { selectedDirectionId: direction.id, selectedDirectionName: direction.name, selectedAt: now };

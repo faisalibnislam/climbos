@@ -10,6 +10,7 @@ import { AbTestPanel } from "@/components/app/AbTestPanel";
 import { BioEditor } from "@/components/app/BioEditor";
 import { RunProgressCompact } from "@/components/app/content/RunProgress";
 import { errorMessage } from "@/components/app/errors";
+import { DraftRenders } from "@/components/app/landing/DraftRenders";
 import { LandingDraftPreview } from "@/components/app/landing/LandingDraftPreview";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { Badge, Button, Card, CardContent, ColorPicker, ConfirmDialog, EmptyState, Field, Input, Select, Switch, Textarea, toast } from "@/components/ui";
@@ -248,6 +249,7 @@ function Editor({ slug, page, content, businessName, website, badge, canEdit, ca
           </div>
         </fieldset>
         <LandingDraftPreview name={businessName} color={page.color} content={c} website={website} badge={badge} />
+        <DraftRenders slug={slug} pageId={page.id} version={page.version} canEdit={canEdit} disabledReason={hasUnsavedChanges ? "Save your edits first; captures use the saved version." : undefined} />
         {page.designCriticSource ? <section className="rounded-[var(--radius-card)] border border-line bg-surface-2/60 p-4">
           <h3 className="heading-card">Measure this design change</h3>
           <p className="mt-1 text-sm text-ink-2">Choose what result to watch and how you will check it before publishing. ClimbOS can report this page&apos;s own views and leads, but those counts do not prove what caused a change.</p>

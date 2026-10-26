@@ -2521,6 +2521,36 @@ export default defineSchema({
     .index("by_page_version", ["pageId", "version"])
     .index("by_org_created", ["orgId", "createdAt"]),
 
+  /** Desktop and mobile captures of one exact ClimbOS-hosted landing draft version (convex/landingRenders.ts). */
+  landingDraftRenders: defineTable({
+    orgId: v.id("organizations"),
+    pageId: v.id("landingPages"),
+    version: v.number(),
+    status: v.union(v.literal("pending"), v.literal("captured"), v.literal("unavailable")),
+    /** Single-use, short-lived token for the draft route; cleared when the capture finishes. */
+    token: v.optional(v.string()),
+    expiresAt: v.number(),
+    requestedBy: v.id("users"),
+    requestedAt: v.number(),
+    capturedAt: v.optional(v.number()),
+    shots: v.array(v.object({ view: v.union(v.literal("desktop"), v.literal("mobile")), storageId: v.id("_storage"), width: v.number(), height: v.number() })),
+  })
+    .index("by_page_requested", ["pageId", "requestedAt"])
+    .index("by_token", ["token"]),
+
+  /** The customer's original audited page, kept once the owner chooses a design direction (no 30-day expiry). */
+  designOriginalPages: defineTable({
+    orgId: v.id("organizations"),
+    runId: v.id("workflowRuns"),
+    pageUrl: v.string(),
+    /** Text as read during the audit (capped), with its SHA-256 for comparison. */
+    text: v.string(),
+    textHash: v.string(),
+    screenshots: v.array(v.object({ view: v.union(v.literal("desktop"), v.literal("mobile")), storageId: v.id("_storage"), width: v.number(), height: v.number(), capturedAt: v.number() })),
+    retainedBy: v.id("users"),
+    retainedAt: v.number(),
+  }).index("by_org_run", ["orgId", "runId"]),
+
   /** Website chat widget (one per workspace) and its conversations. */
   chatWidgets: defineTable({
     orgId: v.id("organizations"),
