@@ -107,7 +107,7 @@ function groupSteps(run: RunStatusView): Group[] {
 }
 
 /** Re-render every second with the current time (null during the server render). */
-function useTicker(ms = 1000): number | null {
+export function useTicker(ms = 1000): number | null {
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
     const tick = () => setNow(Date.now());
