@@ -103,6 +103,28 @@ export function BusinessModelCheckView({ check, createdAt, isFixture, tests, can
         </section>
       ) : null}
 
+      {check.segmentFit?.length ? (
+        <section aria-label="Segment fit" className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4">
+          <h2 className="heading-card">Who it fits</h2>
+          <ul className="flex flex-col gap-3">
+            {check.segmentFit.map((seg, i) => (
+              <li key={i} className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-ink">{seg.segment}</span>
+                <dl className="grid gap-1 sm:grid-cols-2">
+                  {seg.dimensions.map((d) => (
+                    <div key={d.dimension} className="flex flex-col">
+                      <dt className="text-xs text-ink-3">{label(d.dimension)}: <span className="font-medium text-ink-2">{d.level}</span> · {BASIS[d.basis]}</dt>
+                      <dd className="text-xs text-ink-2">{d.note}</dd>
+                      <EvidenceReferences references={d.evidenceRefs} />
+                    </div>
+                  ))}
+                </dl>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section aria-label="Alternative business models" className="flex flex-col gap-3">
         <h2 className="heading-card">Other ways to make money</h2>
         <div className="grid gap-3 lg:grid-cols-3">

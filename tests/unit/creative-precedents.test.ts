@@ -711,3 +711,24 @@ describe("creative strategy precedent retrieval", () => {
     expect(creativePrecedentsForAgent("social_posts", "Draft social captions", "small business mascot")).toBe("");
   });
 });
+
+import { CREATIVE_PRECEDENTS as ALL_PRECEDENTS, outcomeEvidenceTier, retrieveCreativePrecedents as retrieve } from "../../shared/knowledge/creativePrecedents";
+
+describe("precedent evidence tiers and confidence", () => {
+  it("derives a typed outcome tier for every record from its source roles", () => {
+    const tiers = new Set(ALL_PRECEDENTS.map(outcomeEvidenceTier));
+    for (const tier of tiers) expect(["independently_corroborated", "self_reported", "no_outcome_source"]).toContain(tier);
+    for (const p of ALL_PRECEDENTS.filter((x) => outcomeEvidenceTier(x) === "independently_corroborated")) {
+      expect(p.sources.some((s) => s.sourceRole === "independent_secondary" && (s.claimRole === "outcome" || s.claimRole === "action_and_outcome"))).toBe(true);
+    }
+  });
+
+  it("ranks a low-confidence record below a medium-confidence one unless it is clearly more relevant", () => {
+    const results = retrieve("Improve truthful booking-listing photos and reduce up-front production cost for a small hospitality host", 3);
+    for (let i = 1; i < results.length; i++) {
+      const rank = (r: (typeof results)[number]) => r.score * (r.precedent.researchConfidence === "low" ? 0.75 : 1);
+      expect(rank(results[i - 1])).toBeGreaterThanOrEqual(rank(results[i]));
+    }
+    expect(formatCreativePrecedents("Improve truthful booking-listing photos and reduce up-front production cost for a small hospitality host", 3)).toContain("low research confidence");
+  });
+});

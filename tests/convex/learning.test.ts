@@ -370,9 +370,10 @@ describe("learning from results", () => {
     const orgs: Id<"organizations">[] = [];
     for (let i = 0; i < 10; i++) {
       const u = await asNewUser(t, `learn${i}@example.com`);
-      const { orgId } = await u.client.mutation(api.orgs.createWorkspace, {
+      const { orgId, slug } = await u.client.mutation(api.orgs.createWorkspace, {
         businessName: `Learn ${i}`,
       });
+      await u.client.mutation(api.settings.setLearningPooling, { slug, optedIn: true });
       orgs.push(orgId as Id<"organizations">);
       await t.run(async (ctx) => {
         const now = Date.now();
@@ -464,9 +465,10 @@ describe("learning from results", () => {
     const orgs: Id<"organizations">[] = [];
     for (let i = 0; i < 20; i++) {
       const u = await asNewUser(t, `learn-segment${i}@example.com`);
-      const { orgId } = await u.client.mutation(api.orgs.createWorkspace, {
+      const { orgId, slug } = await u.client.mutation(api.orgs.createWorkspace, {
         businessName: `Segment Learn ${i}`,
       });
+      await u.client.mutation(api.settings.setLearningPooling, { slug, optedIn: true });
       orgs.push(orgId as Id<"organizations">);
       await t.run(async (ctx) => {
         const now = Date.now();

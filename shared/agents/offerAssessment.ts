@@ -88,6 +88,13 @@ export const OfferAssessmentSchema = z.object({
   urgencyClaim: z.string().nullable(),
   urgencyEvidenceRef: z.string().nullable(),
   persuasion: z.array(PersuasionMechanismSchema).max(4).optional(),
+  /** Payment processor terms behind the payment-fee cost lines; when given, code recomputes both sides' fee. */
+  paymentFeeTerms: z.object({
+    percent: z.number().finite().min(0).max(30),
+    fixedAmount: z.number().finite().min(0),
+    basis: z.enum(["owner_reported", "measured", "source_reported", "inferred", "assumed"]),
+    reference: z.string().nullable(),
+  }).optional(),
   unknowns: z.array(z.string().min(1).max(180)).max(8),
   authorizationNote: z.string().min(1).max(180),
 });
@@ -425,6 +432,7 @@ export function lintOfferAssessment(
     }
     if (["bonus", "bundle", "referral_incentive"].includes(assessment.mechanism) && !assessment.proposed.variableCosts.some((cost) => /bonus|promo|referral|reward|bundle/i.test(cost.category))) error("Include the proposed bonus or incentive cost as a variable cost before recommending this mechanism.", "proposed.variableCosts");
   }
+  issues.push(...lintPaymentFees(assessment, path));
   if (assessment.recommendation === "recommend_promotion" && ["unknown", "constrained"].includes(assessment.capacity.status)) error("Do not recommend a promotion while delivery capacity is unknown or constrained; resolve the bottleneck or run a capacity-safe validation first.", "capacity.status");
   if (assessment.recommendation === "recommend_promotion" && economics.known && (economics.proposedContribution === null || economics.proposedContribution <= 0)) error("The proposed offer has no positive unit contribution under its stated cost boundary.", "proposed");
   if (assessment.recommendation === "recommend_promotion" && assessment.mechanism === "discount" && economics.known && (economics.priceChangeFromCurrent ?? 0) >= 0) error("A discount mechanism must reduce the proposed net price from the current offer.", "proposed.netPrice");
@@ -462,6 +470,27 @@ export function lintPersuasion(assessment: OfferAssessment, path: string): LintI
   const required = MECHANISM_PERSUASION[assessment.mechanism];
   if (required && assessment.recommendation === "recommend_promotion" && !list.some((p) => p.mechanism === required)) {
     issues.push({ severity: "error", rule: "persuasion", message: `This ${assessment.mechanism.replace(/_/g, " ")} offer needs a persuasion entry for ${required.replace(/_/g, " ")} with its disclosure and a lower-risk alternative.`, path: `${path}.persuasion` });
+  }
+  return issues;
+}
+
+/** Expected payment fee for a net price under percent-plus-fixed terms, rounded to cents. */
+export function paymentFeeFor(netPrice: number, terms: { percent: number; fixedAmount: number }): number {
+  return Math.round((netPrice * terms.percent / 100 + terms.fixedAmount) * 100) / 100;
+}
+
+/** Spec §9: a stated fee must match the stated processor terms on both sides of the offer, so a discount's lower fee isn't guessed. */
+export function lintPaymentFees(assessment: OfferAssessment, path: string): LintIssue[] {
+  const terms = assessment.paymentFeeTerms;
+  if (!terms) return [];
+  const issues: LintIssue[] = [];
+  for (const [sideName, side] of [["current", assessment.current], ["proposed", assessment.proposed]] as const) {
+    const fee = side.variableCosts.find((cost) => /payment|processing fee|transaction fee/i.test(cost.category));
+    if (!fee || fee.value.amount === null || side.netPrice.amount === null) continue;
+    const expected = paymentFeeFor(side.netPrice.amount, terms);
+    if (Math.abs(fee.value.amount - expected) > Math.max(0.01, expected * 0.01)) {
+      issues.push({ severity: "error", rule: "payment_fee", message: `The ${sideName} payment fee should be ${expected.toFixed(2)} (${terms.percent}% of ${side.netPrice.amount.toFixed(2)} plus ${terms.fixedAmount.toFixed(2)}), not ${fee.value.amount.toFixed(2)}.`, path: `${path}.${sideName}.variableCosts` });
+    }
   }
   return issues;
 }

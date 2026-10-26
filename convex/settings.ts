@@ -202,6 +202,24 @@ export const policies = query({
 });
 
 /** Owner-set minimum days between ClimbOS emails to the same person; `null` removes the limit. */
+/** Owner choice: let this workspace's anonymised results join cross-business learning pools (k-anonymous, never shown per business). */
+export const setLearningPooling = mutation({
+  args: { slug: v.string(), optedIn: v.boolean() },
+  handler: async (ctx, { slug, optedIn }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "manage_policies");
+    await ctx.db.patch(org._id, { learningPooling: { optedIn, by: user._id, at: Date.now() } });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: optedIn ? "privacy.learning_pooling_on" : "privacy.learning_pooling_off", subjectType: "organization", subjectId: org._id, summary: optedIn ? "Allowed anonymised results to join cross-business learning." : "Kept results out of cross-business learning." });
+  },
+});
+
+export const learningPooling = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
+    return { optedIn: org.learningPooling?.optedIn === true, at: org.learningPooling?.at ?? null, canChange: role === "owner" || role === "admin" };
+  },
+});
+
 export const setContactFrequency = mutation({
   args: { slug: v.string(), days: v.union(v.number(), v.null()) },
   handler: async (ctx, { slug, days }) => {

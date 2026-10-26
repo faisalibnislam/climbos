@@ -66,6 +66,7 @@ import type * as knowledge from "../knowledge.js";
 import type * as knowledgeActions from "../knowledgeActions.js";
 import type * as knowledgeRefreshCron from "../knowledgeRefreshCron.js";
 import type * as landing from "../landing.js";
+import type * as landingRenders from "../landingRenders.js";
 import type * as learning from "../learning.js";
 import type * as lib_access from "../lib/access.js";
 import type * as lib_accounts from "../lib/accounts.js";
@@ -201,6 +202,7 @@ declare const fullApi: ApiFromModules<{
   knowledgeActions: typeof knowledgeActions;
   knowledgeRefreshCron: typeof knowledgeRefreshCron;
   landing: typeof landing;
+  landingRenders: typeof landingRenders;
   learning: typeof learning;
   "lib/access": typeof lib_access;
   "lib/accounts": typeof lib_accounts;

@@ -40,7 +40,7 @@ import { lintEligibilityIds } from "../playbooks/contracts";
 import { OfferAssessmentSchema, lintApprovedOfferCopy, lintOfferAssessment, type OfferAssessmentContext } from "./offerAssessment";
 import { lintPlatformEligibility } from "../acquisition/platformRules";
 import { validateResearchUrl } from "../integrations/website";
-import { hookBeforeFold, lintClaims, lintCopy, maxItems, maxLength, minItems, stringFields } from "./lint";
+import { hookBeforeFold, lintClaims, lintCopy, maxItems, maxLength, minItems, stringFields, untracedNumbers } from "./lint";
 import type { AgentInput, AgentSpec, LintIssue, PhaseModels, ResearchSpec, Rubric } from "./types";
 import { CampaignTimingSchema, lintCampaignTiming } from "./campaignTiming";
 
@@ -1159,6 +1159,22 @@ export function lintDemandGate(plays: { name: string; model?: { monthlySpendUsd:
   return issues;
 }
 
+/** Spec §8: when a finding offers more than one direction, they must be distinct response levels with stated effort and risk. */
+export function lintDesignDirections(directions: { id: string; name: string; responseLevel?: string; effort?: string; assumptions?: string[]; risks?: string[] }[] | undefined, path: string): LintIssue[] {
+  if (!directions || directions.length < 2) return [];
+  const issues: LintIssue[] = [];
+  const levels = directions.map((d) => d.responseLevel);
+  if (levels.some((l) => !l)) issues.push({ severity: "error", rule: "design_directions", message: "Label each direction quick_fix, considered_redesign or bold_alternative when giving more than one.", path });
+  else if (new Set(levels).size !== levels.length) issues.push({ severity: "error", rule: "design_directions", message: "Directions for one finding must be different response levels; merge or relabel the duplicates.", path });
+  if (new Set(directions.map((d) => d.id)).size !== directions.length) issues.push({ severity: "error", rule: "design_directions", message: "Each direction needs its own id.", path });
+  directions.forEach((d, k) => {
+    if (!d.effort) issues.push({ severity: "warn", rule: "design_directions", message: `State the effort for "${d.name}".`, path: `${path}[${k}].effort` });
+    if (!d.risks?.length) issues.push({ severity: d.responseLevel === "bold_alternative" ? "error" : "warn", rule: "design_directions", message: `Name at least one risk for "${d.name}".`, path: `${path}[${k}].risks` });
+    if (d.responseLevel === "bold_alternative" && !d.assumptions?.length) issues.push({ severity: "error", rule: "design_directions", message: `State what the bold alternative "${d.name}" assumes.`, path: `${path}[${k}].assumptions` });
+  });
+  return issues;
+}
+
 export function lintAnyPaidPlan(items: { text: string; path: string }[]): LintIssue[] {
   return items
     .filter((x) => ONE_TIER.test(x.text) && !ANY_PAID.test(x.text))
@@ -2186,13 +2202,22 @@ export function lintSeoEvidence(out: z.infer<typeof SeoBriefV2Schema>, input: Ag
     message: "A citable claim needs at least one confirmed fact index or source page read in this run.",
     path: `citableClaims[${i}]`,
   }]);
+  // Spec §7: a general FAQ may go unreferenced, but then it can't state business-specific numbers or claims.
+  const faqIssues = out.faqs.flatMap((faq, i): LintIssue[] => {
+    if (faq.factIndexes.length || faq.sourceUrls.length) return [];
+    const numbers = untracedNumbers(faq.answer, evidenceOf(input));
+    return [
+      ...(numbers.length ? [{ severity: "error" as const, rule: "faq_grounding", message: `This FAQ has no fact or page reference but states ${numbers.join(", ")}. Cite where it comes from or answer without the number.`, path: `faqs[${i}].answer` }] : []),
+      ...lintClaims([{ path: `faqs[${i}].answer`, text: faq.answer }], "").map((issue) => ({ ...issue, rule: "faq_grounding", message: `This FAQ has no fact or page reference. ${issue.message}` })),
+    ];
+  });
   const hasContributionEvidence = contribution.factIndexes.length > 0 || contribution.sourceUrls.length > 0;
   const contributionIssues: LintIssue[] = contribution.status === "evidence_linked" && !hasContributionEvidence
     ? [{ severity: "error", rule: "seo_original_contribution", message: "Link the proposed contribution to a supplied business fact or a page read in this run, or label it as a hypothesis that needs owner evidence.", path: "originalContributionEvidence" }]
     : contribution.status === "hypothesis_pending_owner_evidence" && !out.ownerEvidenceNeeded.some((item) => item.trim())
       ? [{ severity: "error", rule: "seo_original_contribution", message: "A proposed contribution without linked evidence must name the specific owner evidence needed before it can be presented as first-hand or distinctive expertise.", path: "ownerEvidenceNeeded" }]
       : [];
-  return [...factIndexes, ...citationIssues, ...internalLinkHostIssues, ...claimIssues, ...contributionIssues];
+  return [...factIndexes, ...citationIssues, ...internalLinkHostIssues, ...claimIssues, ...faqIssues, ...contributionIssues];
 }
 
 export function lintSeoRecommendation(out: z.infer<typeof SeoBriefV2Schema>, input: AgentInput): LintIssue[] {
@@ -2253,6 +2278,7 @@ export function lintConversionAuditSources(out: z.infer<typeof ConversionAuditV2
     if (finding.visualEvidence) checkVisual(finding.sourceUrl, { ...finding.visualEvidence, sourceUrl: finding.sourceUrl }, `designCritic.findings[${i}].visualEvidence`);
     if (finding.classification === "measured_performance" && finding.automatedCheckIds.length === 0) visualIssues.push({ severity: "error", rule: "design_measured_evidence", message: "A performance finding must cite an actual supplied measurement or automated check ID; otherwise classify it as a heuristic or inference.", path: `designCritic.findings[${i}].automatedCheckIds` });
     if (finding.classification === "automated_check" && finding.automatedCheckIds.length === 0) visualIssues.push({ severity: "error", rule: "design_automated_evidence", message: "Automated accessibility or technical findings must name the checks actually run.", path: `designCritic.findings[${i}].automatedCheckIds` });
+    visualIssues.push(...lintDesignDirections(finding.directions, `designCritic.findings[${i}].directions`));
   });
   const socialBlock = /<untrusted_content source="conversion_audit_social_posts">\s*([\s\S]*?)\s*<\/untrusted_content>/i.exec(input.untrustedContext ?? "");
   const suppliedPosts = new Map<string, string>();

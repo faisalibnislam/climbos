@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { compareAiSearchObservationPeriods, summarizeAiSearchPanel, summarizeAiSearchVisibility, type AiSearchObservation, answerAccuracySummary } from "../shared/aiSearch/visibility";
+import { compareAiSearchObservationPeriods, summarizeAiSearchPanel, summarizeAiSearchVisibility, type AiSearchObservation, answerAccuracySummary, brandSiteCitations } from "../shared/aiSearch/visibility";
 import { mutation, query } from "./_generated/server";
 import { audit } from "./lib/audit";
 import { appError, requireOrgAccess } from "./lib/tenancy";
@@ -297,6 +297,7 @@ export const report = query({
   args: { slug: v.string(), days: v.optional(v.number()), panelId: v.optional(v.id("aiSearchPanels")), compareToPreviousWindow: v.optional(v.boolean()) },
   handler: async (ctx, { slug, days, panelId, compareToPreviousWindow }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     const requestedDays = days !== undefined && Number.isFinite(days) ? days : 90;
     const windowDays = Math.max(1, Math.min(365, Math.floor(requestedDays)));
     const now = Date.now();
@@ -329,7 +330,6 @@ export const report = query({
     const truncated = currentTruncated || baselineTruncated || fetched.length > MAX_OBSERVATIONS * (compareToPreviousWindow ? 2 : 1);
     const observations = currentFetched.slice(0, MAX_OBSERVATIONS);
     const baselineObservations = compareToPreviousWindow ? baselineFetched.slice(0, MAX_OBSERVATIONS) : [];
-    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     const summary = summarizeAiSearchVisibility(observations as AiSearchObservation[], business?.website);
     const panelSummary = summarizeAiSearchPanel(observations as AiSearchObservation[], business?.website);
     const accuracy = answerAccuracySummary(observations);
@@ -389,6 +389,9 @@ export const report = query({
         brandMention,
         sentiment,
         citedUrls,
+        /** Per URL: did the answer cite this business's own site (unknown when no website is saved)? */
+        citations: brandSiteCitations(citedUrls, business?.website),
+        brandSiteCited: business?.website ? brandSiteCitations(citedUrls, business.website).some((c) => c.ownSite) : null,
         competitorMentions,
         answerExcerpt: answerExcerpt ?? null,
         enteredAt,

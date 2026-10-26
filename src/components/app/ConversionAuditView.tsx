@@ -173,6 +173,10 @@ export function ConversionAuditView({ value, slug, runId }: { value: unknown; sl
           {priorByIndex.get(i) ? <PriorDecisionNote prior={priorByIndex.get(i)!} /> : null}
           <DesignFindingReview key={`${runId}:${i}:${reviewsByIndex.get(i)?.updatedAt ?? "open"}`} slug={slug} runId={runId} findingIndex={i} current={reviewsByIndex.get(i)} canEdit={findingReview?.canEdit === true} />
           <FindingHistory events={(findingReview?.history ?? []).filter((e) => e.findingIndex === i)} />
+          {(() => {
+            const original = findingReview?.originals?.find((o) => o.pageUrl === (finding as { sourceUrl?: string }).sourceUrl);
+            return original ? <p className="mt-1 text-xs text-ink-3">Original page saved {formatDateTime(original.retainedAt)}: {original.textChars.toLocaleString()} characters of read text (fingerprint {original.textHash.slice(0, 12)}){original.views.length ? ` and the ${original.views.join(" and ")} screenshot${original.views.length > 1 ? "s" : ""}, kept past the 30-day limit` : ""}.</p> : null;
+          })()}
         </li>)}</ul> : <p className="mt-3 text-sm text-ink-2">No design findings were returned for this sample.</p>}
         {list<string>(designCritic.limitations).length ? <ul className="mt-3 list-disc pl-5 text-xs text-ink-3">{list<string>(designCritic.limitations).map((item, i) => <li key={i}>{item}</li>)}</ul> : null}
       </section> : null}

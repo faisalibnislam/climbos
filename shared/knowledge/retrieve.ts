@@ -174,8 +174,9 @@ export function retrieveGrowthKnowledge(query: string, options: { limit?: number
   if (!queryTerms.length) return [];
   const limit = Math.max(1, Math.min(8, Math.floor(options.limit ?? 3)));
   let budget = Math.max(400, Math.min(12_000, Math.floor(options.maxChars ?? 6_000)));
-  const scenarioTypes = limit >= 3 && budget >= 1_800 ? matchingScenarioTypes(query) : new Set<string>();
   const matchedBusiness = limit >= 3 && budget >= 1_800 ? matchingIndustryBusiness(query, options.businessTypeId) : undefined;
+  // The owner-chosen industry business type also selects its problem scenarios, not only words in the prompt.
+  const scenarioTypes = limit >= 3 && budget >= 1_800 ? matchingScenarioTypes(matchedBusiness ? `${query}\n${matchedBusiness.name} ${matchedBusiness.industry}` : query) : new Set<string>();
   const industryRecords = matchedBusiness ? industryPlaybookRecords(query, matchedBusiness) : [];
   const genericLimit = Math.max(0, limit - (scenarioTypes.size > 0 ? 1 : 0) - (industryRecords.length ? 1 : 0));
   const rankedGeneric = docs

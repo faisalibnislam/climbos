@@ -46,3 +46,27 @@ describe("persuasion mechanisms on offers", () => {
     expect(rules({ ...base, mechanism: "discount", persuasion: [entry({ mechanism: "decoy", legalStatus: "unknown" })] })).toEqual(["warn:plays[0].offerAssessment.persuasion[0].legalStatus"]);
   });
 });
+
+import { lintPaymentFees, paymentFeeFor } from "../../shared/agents/offerAssessment";
+
+describe("payment fee recalculation", () => {
+  const side = (price: number, fee: number) => ({ netPrice: { amount: price, basis: "owner_reported", reference: null, claim: "" }, variableCosts: [{ category: "payment processing fee", value: { amount: fee, basis: "calculated", reference: null, claim: "" } }], unknownCosts: [] });
+  const withTerms = (current: number, proposed: number) => ({ paymentFeeTerms: { percent: 2.9, fixedAmount: 0.3, basis: "source_reported", reference: null }, current: side(100, current), proposed: side(80, proposed) }) as unknown as OfferAssessment;
+
+  it("computes percent plus fixed per payment", () => {
+    expect(paymentFeeFor(100, { percent: 2.9, fixedAmount: 0.3 })).toBe(3.2);
+    expect(paymentFeeFor(80, { percent: 2.9, fixedAmount: 0.3 })).toBe(2.62);
+  });
+
+  it("flags a side whose fee doesn't follow the stated terms, e.g. a discount that keeps the full-price fee", () => {
+    expect(lintPaymentFees(withTerms(3.2, 2.62), "o")).toEqual([]);
+    const issues = lintPaymentFees(withTerms(3.2, 3.2), "o");
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ rule: "payment_fee", path: "o.proposed.variableCosts" });
+    expect(issues[0].message).toContain("2.62");
+  });
+
+  it("does nothing without stated terms", () => {
+    expect(lintPaymentFees({ ...withTerms(9, 9), paymentFeeTerms: undefined }, "o")).toEqual([]);
+  });
+});
