@@ -68,10 +68,8 @@ describe("OAuth: LinkedIn and X", () => {
     expect(ex.headers.Authorization).toBeUndefined();
     expect(new URLSearchParams(ex.body).get("client_secret")).toBe("li-secret");
 
-    const rv = buildRevocationRequest({ provider: OAUTH_PROVIDERS.linkedin, token: "t", clientId: "li-id", clientSecret: "li-secret" });
-    expect(rv?.url).toBe("https://www.linkedin.com/oauth/v2/revoke");
-    expect(new URLSearchParams(rv?.body).get("token")).toBe("t");
-    expect(buildRevocationRequest({ provider: OAUTH_PROVIDERS.linkedin, token: "t" })).toBeNull();
+    // LinkedIn documents no revoke endpoint (only introspectToken), so none is sent.
+    expect(buildRevocationRequest({ provider: OAUTH_PROVIDERS.linkedin, token: "t", clientId: "li-id", clientSecret: "li-secret" })).toBeNull();
   });
 
   it("X: PKCE required; token, refresh and revoke use HTTP Basic, never the secret in the body", () => {

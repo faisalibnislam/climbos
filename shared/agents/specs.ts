@@ -324,7 +324,7 @@ export const StrategyV2Schema = StrategySchema.extend({
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; portfolio?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null; strategyExploration?: StrategyExploration };
 export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number; leads?: number; qualifiedLeads?: number; qualificationDefinition?: string; activated?: number; newCustomers?: number; activationKind?: "value" | "habit" | "setup" | "unknown"; signupKind?: "free_plan" | "trial_no_card" | "trial_card" | "unknown"; updatedAt: number }
 export interface GoalInputSnapshot { id: string; kind: "more_sales" | "more_customers" | "more_reach" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
-export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
+export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
 export const ENGINE_VERSION = "v3.72-spec-coverage-guards";
 
@@ -598,6 +598,9 @@ export const SocialPostsV2Schema = z.object({
       hook: z.string(),
       slides: z.array(z.object({ heading: z.string(), body: z.string() })),
       videoScript: z.string(),
+      /** What to film for a short video, shot by shot (empty for still formats). */
+      shotList: z.array(z.object({ timing: z.string().max(24), show: z.string().max(280) })).max(12),
+      /** Every post's suggested visual, including text posts: what to show, image type, on-image words. */
       visualBrief: z.string(),
       firstComment: z.string(),
     }),
@@ -1803,6 +1806,7 @@ function lintSocial(out: SocialPostsV2, input: AgentInput, requestedChannels: st
       ...lintFactIndexes(p.factIndexes, input.facts.length, `${path}.factIndexes`),
       // Internal creative notes are not publishable claims, but cannot contain owner questions.
       ...lintCopy({ visualBrief: p.visualBrief, imageIdea: p.imageIdea }, { publishable: true }).filter((l) => l.rule === "placeholder").map((l) => ({ ...l, path: `${path}.${l.path ?? ""}` })),
+      ...lintPostVisual(p, input, path),
       ...maxLength(p.body, lim.body, `${path}.body`, "Post"),
       ...maxItems(p.hashtags, lim.hashtags, `${path}.hashtags`, "hashtags"),
       ...(lim.fold ? hookBeforeFold(p.body, lim.fold, `${path}.body`) : []),
@@ -1821,6 +1825,40 @@ function lintSocial(out: SocialPostsV2, input: AgentInput, requestedChannels: st
       issues.push({ severity: "error", rule: "promise", message: `The post promises ${promised} items but has ${p.slides.length} slides (with the cover). Deliver every item or change the number.`, path: `${path}.slides` });
     }
   });
+  return issues;
+}
+
+/** Formats a LinkedIn post may suggest: text, one image, a document (PDF carousel) or a short native video. */
+const LINKEDIN_FORMATS = new Set(["text", "single_image", "document", "reel"]);
+/** Frame sizes, ratios and timings are production specs, not claims: "1080x1350", "4:5", "0-3s". */
+const PRODUCTION_SPEC = /\b\d+\s*[x×:]\s*\d+\b|\b\d+(?:\s*[-–]\s*\d+)?\s*(?:s|sec|secs|seconds?|px)\b/gi;
+
+/**
+ * Every social draft carries a visual the owner can act on (owner decision, Oct 2026): a brief for text posts too,
+ * a shot list for video, and no number or claim on the visual that the facts don't support.
+ */
+export function lintPostVisual(
+  p: { channel: string; format: string; visualBrief: string; shotList?: { timing: string; show: string }[] },
+  input: AgentInput,
+  path: string,
+): LintIssue[] {
+  const issues: LintIssue[] = [];
+  const brief = p.visualBrief.trim();
+  if (brief.split(/\s+/).filter(Boolean).length < 8) {
+    issues.push({ severity: "error", rule: "visual", message: p.format === "text" ? "Text posts still need a visual suggestion: describe the one photo, card or document page that would carry this idea, and why text leads." : "Brief the visual: what it shows, real photo or graphic, and any words on it.", path: `${path}.visualBrief` });
+  }
+  if (p.channel === "linkedin" && !LINKEDIN_FORMATS.has(p.format)) {
+    issues.push({ severity: "error", rule: "visual_format", message: `LinkedIn posts here use text, single_image, document (PDF carousel) or reel (short video), not "${p.format}".`, path: `${path}.format` });
+  }
+  const shots = p.shotList ?? [];
+  if (p.format === "reel" && shots.length < 3) {
+    issues.push({ severity: "error", rule: "missing", message: "A short video needs a shot list of at least 3 shots the owner can film on a phone.", path: `${path}.shotList` });
+  }
+  const evidence = evidenceOf(input);
+  const visualText = [brief, ...shots.map((shot) => shot.show)].join("\n");
+  const untraced = untracedNumbers(visualText.replace(PRODUCTION_SPEC, " "), evidence);
+  if (untraced.length) issues.push({ severity: "error", rule: "invented_fact", message: `The visual shows numbers not found in the facts or research: ${untraced.join(", ")}. Show only confirmed numbers, or leave them off the visual.`, path: `${path}.visualBrief` });
+  issues.push(...lintClaims([{ path: `${path}.visualBrief`, text: visualText }], verifiedCapabilityEvidence(input)));
   return issues;
 }
 
@@ -2844,6 +2882,8 @@ function lintChannelFit(out: ChannelFit, input: AgentInput, candidateIds: string
     if (!allowed) issues.push({ severity: "error", rule: "dimension", message: `Unknown dimension "${d.key}".`, path: `dimensions[${i}]` });
     else if (!allowed.includes(d.value)) issues.push({ severity: "error", rule: "dimension", message: `${d.key} must be one of: ${allowed.join(", ")}.`, path: `dimensions[${i}].value` });
   });
+  const missingDims = Object.keys(dims).filter((k) => !out.dimensions.some((d) => d.key === k));
+  if (missingDims.length) issues.push({ severity: "warn", rule: "dimension", message: `Give a best guess (low confidence is fine) for: ${missingDims.join(", ")}. The owner approves each guess.`, path: "dimensions" });
   if (out.channels.length < 8) issues.push({ severity: "error", rule: "count", message: "Review at least 8 candidate channels.", path: "channels" });
   out.channels.forEach((c, i) => {
     const path = `channels[${i}]`;

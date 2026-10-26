@@ -31,6 +31,7 @@ import {
   type TaskType,
   untrusted,
 } from "../shared/ai/tasks";
+import { hasNoCustomersYet } from "../shared/agents/lifecycle";
 import { internal } from "./_generated/api";
 import { claudeUsageRecords } from "./lib/usage";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -97,7 +98,7 @@ import {
 import { fixtureCalendar } from "../shared/autopilot/fixture";
 import { fixtureOutbound } from "../shared/outbound";
 import { BUSINESS_TYPES, budgetBand, isServiceBusiness, LIBRARY_VERSION, typesFromLegacy } from "../shared/acquisition/library";
-import { adjustmentsFrom, candidatesFor, CYCLE_DAYS, DIMENSIONS, entryPriceUsdMonth, FACTORS, mergeFit, priceFitText, profileFrom, scoreChannels, scorecardText, type AcquisitionProfile, type Adjustment, type SavedAcquisition } from "../shared/acquisition/scoring";
+import { adjustmentsFrom, candidatesFor, CYCLE_DAYS, DIMENSIONS, entryPriceUsdMonth, FACTORS, mergeFit, priceFitText, profileFrom, scoreChannels, scorecardText, type AcquisitionProfile, type Adjustment, type SavedAcquisition, MULTI_DIMENSIONS } from "../shared/acquisition/scoring";
 import type { AgentInput, AgentSpec, PlanConstraints } from "../shared/agents/types";
 import { fakeTurn } from "../shared/agents/fake";
 import { agentRevisionSteps } from "./lib/jobPlans";
@@ -617,6 +618,7 @@ function demandValidationConstraint(job: JobCtx): Pick<PlanConstraints, "demandV
     commercial === "insufficient_business_specific_evidence" ? "The business research found too little business-specific evidence of demand." : "",
     job.businessModelVerdict === "at_risk" ? "The latest business model check judged the current model at risk." : "",
     job.businessModelVerdict === "insufficient_evidence" ? "The latest business model check found too little evidence to judge the model." : "",
+    hasNoCustomersYet(job.business) ? "The owner reports no customers yet." : "",
   ].filter(Boolean);
   return reasons.length ? { demandValidation: { reasons } } : {};
 }
@@ -717,6 +719,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     job.org.contentLanguage && job.org.contentLanguage !== "English" ? `LANGUAGE: write every customer-facing word (posts, emails, ads, pages) in ${job.org.contentLanguage}. Notes to the owner stay in English.` : "",
     job.run.kind === "strategy" && b?.unitEconomics?.ownerHoursPerWeek === undefined ? "OWNER TIME: unknown (the owner hasn't said). Keep owner work small, prefer work ClimbOS can do, and state the hours each play needs so the owner can check." : "",
     ownerEconomicsLine(b?.unitEconomics, workspaceCurrency(job)),
+    customerDataLine(b?.customerData, hasNoCustomersYet(b), workspaceCurrency(job)),
     job.run.kind === "strategy" ? growthCashTimingContext(growthCashTimingInput(b?.growthCashTiming), workspaceCurrency(job)) : "",
     job.run.kind === "strategy" && b?.unitEconomics?.segmentEconomics?.length
       ? `SEGMENT ECONOMICS INPUT:\n${untrusted("owner-reported segment economics", segmentEconomicsBrief(b.unitEconomics.segmentEconomics, b.currency ?? workspaceCurrency(job)), 3_000)}`
@@ -990,6 +993,15 @@ function audienceLine(a: { contacts: number; consented: number } | undefined): s
   const n = (x: number) => (x >= 1000 ? "1,000+" : x.toLocaleString("en-US"));
   if (!a.contacts) return "EMAIL AUDIENCE: none in ClimbOS (no imported contacts or consented subscribers). Don't plan sends to a list the owner hasn't shown; building one is fine.";
   return `EMAIL AUDIENCE: ${n(a.contacts)} contacts in ClimbOS, ${n(a.consented)} with marketing-email consent.${a.consented ? "" : " Only consented contacts may get marketing email."}`;
+}
+
+/** No customers yet (or no numbers yet): figures are labelled assumptions; a planned price is the owner's intent, not revenue. */
+function customerDataLine(c: Doc<"businesses">["customerData"] | undefined, noCustomers: boolean, currency?: string): string {
+  if (noCustomers) {
+    const price = c?.plannedPriceMonth ? ` The owner plans to charge about ${formatMoney(c.plannedPriceMonth, currency)} a month (a planned price, not observed revenue).` : c?.priceUndecided ? " The owner hasn't decided a price yet." : "";
+    return `NO CUSTOMERS YET: the business has just launched or not launched, so it has no customer revenue, margin or churn data.${price} Use clearly labelled assumptions (basis "assumption") for every customer figure, never present them as observed, and focus the plan on getting the first customers and validating demand and price.`;
+  }
+  return c?.status === "no_data_yet" ? "NO CUSTOMER NUMBERS YET: the business has customers but the owner has no revenue, margin or churn figures. Use clearly labelled assumptions for these and suggest connecting billing or analytics to measure them." : "";
 }
 
 function ownerEconomicsLine(u: OwnerEconomics | undefined, currency?: string): string {
@@ -1408,7 +1420,7 @@ export const buildStrategy = internalAction({
             [
               "Classify this business and score its candidate acquisition channels for the goal and budget, so the plan uses the channels most likely to bring profitable customers.",
               `1. types: 1-3 of these library keys, most specific first: ${BUSINESS_TYPES.map((t) => `${t.key} (${t.label})`).join("; ")}.`,
-              `2. dimensions: infer each you can from the website and research, with confidence and evidence. Allowed values: ${Object.entries(DIMENSIONS).map(([k, d]) => `${k}=${d.values.join("|")}`).join("; ")}. Owner-confirmed business types and dimensions (below) are fixed.`,
+              `2. dimensions: give a best guess for EVERY dimension from the website and research, with confidence (low when it's only a guess) and evidence; the owner reviews each guess. For ${[...MULTI_DIMENSIONS].join(", ")} give one entry per value that applies (several entries with the same key). customerSize is the size of the businesses this business sells to; scale is this business's own size. Allowed values: ${Object.entries(DIMENSIONS).map(([k, d]) => `${k}=${d.values.join("|")}`).join("; ")}. Owner-confirmed business types and dimensions (below) are fixed.`,
               `3. channels: review every candidate below. Each has rule-based factor priors (audience, intent, budget, time, feasibility, competition, scalability, measurement). Give deltas (−30…+30, 0 = keep) only where evidence for THIS business says the prior is wrong. For platform-specific channels, positive audience/intent changes require evidenceBasis (measured, owner_reported, source_reported), evidenceConfidence (high/medium/low), an exact YYYY-MM-DD evidenceDate, sourceUrl if source-reported, a specific purpose/job, and a measurementPlan based on qualified outcomes (never impressions, votes, or comments alone). For Reddit, forums, groups and communities, name the exact target and provide the current rules URL and the date checked; otherwise leave audience and intent unchanged. Do not infer customer use from business category alone. Name the platform, tactic and audience for each.`,
               "Use matching Search Console rows as historical evidence that this website has received search impressions and clicks for the shown queries. This can inform SEO channel fit, but it does not measure total market demand, predict future traffic or show that SEO caused growth; do not assign a positive channel delta from impressions alone.",
               `4. summary: two short bullets on what wins and why.`,
@@ -1515,7 +1527,7 @@ export const buildStrategy = internalAction({
             // The plan agent's hard checks are re-run on the final plan below (after the consistency pass may have fixed them).
             [playsMeta.quality, planMeta.quality && withoutHard(planMeta.quality)].filter((q): q is AgentQuality => Boolean(q)),
             (strategySpec().lint?.(strategy as never, planLintInput!) ?? []).filter((l) => HARD_RULES.has(l.rule)),
-            { economicsMissing: !(plays.economics.revenuePerCustomerMonthUsd > 0) || churnOf(plays.economics) === null, unknowns: planUnknowns(job, plays.plays), conflicts: conflictLines(conflictsForJob(job)) },
+            { economicsMissing: !hasNoCustomersYet(job.business) && job.business?.customerData?.status !== "no_data_yet" && !(plays.economics.revenuePerCustomerMonthUsd > 0) || !hasNoCustomersYet(job.business) && job.business?.customerData?.status !== "no_data_yet" && churnOf(plays.economics) === null, unknowns: planUnknowns(job, plays.plays), conflicts: conflictLines(conflictsForJob(job)) },
           )
         : null;
       await firstTake;

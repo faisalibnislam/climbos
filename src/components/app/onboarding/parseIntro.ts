@@ -14,6 +14,8 @@ export interface ParsedIntro {
   monthlyAdBudget?: number;
   horizonDays?: number;
   reviewDay?: string;
+  /** Where the business is today, when the owner says so ("just launched", "no customers yet", "pre-launch"). */
+  businessStage?: "idea" | "launching_soon" | "just_launched" | "has_customers";
 }
 
 const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
@@ -63,6 +65,11 @@ export function parseIntro(text: string): ParsedIntro {
 
   const goalSentence = t.split(/(?<=[.!?])\s+/).find((s) => /(help|want|goal|grow|get|need)/i.test(s));
   if (goalSentence) out.goalStatement = goalSentence.trim().slice(0, 300);
+
+  if (/\b(?:just (?:an )?idea|idea stage|still an idea|validating (?:an|my|the|this) idea)\b/i.test(t)) out.businessStage = "idea";
+  else if (/\b(?:pre-?launch|launching (?:soon|next)|not (?:yet )?launched|haven'?t launched|about to launch|coming soon)\b/i.test(t)) out.businessStage = "launching_soon";
+  else if (/\b(?:just (?:launched|started|opened|went live)|newly launched|recently launched|no (?:customers|users|clients|sales|buyers) yet|(?:don'?t|do not) have any (?:customers|users|clients)|zero (?:customers|users|clients))\b/i.test(t)) out.businessStage = "just_launched";
+  else if (/\b(?:\d[\d,]*\+?\s+(?:paying )?(?:customers|clients|users|subscribers)|our (?:existing |current )?customers|existing customers)\b/i.test(t)) out.businessStage = "has_customers";
 
   const day = DAYS.find((d) => new RegExp(`\\b${d}s?\\b`, "i").test(t));
   if (day) out.reviewDay = day.charAt(0).toUpperCase() + day.slice(1);

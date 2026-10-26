@@ -48,6 +48,8 @@ export interface CapabilityContext {
   metaAdsAccessTier?: MetaAdsAccessTier;
   /** App review status per permission/scope name. Missing entries are treated as approved. */
   appReview?: Readonly<Record<string, ReviewStatus>>;
+  /** Owner-facing name of the approval behind each reviewed scope (e.g. "Meta App Review"). */
+  approvalLabels?: Readonly<Record<string, string>>;
   /** Provider-reported account type (e.g. Instagram "Business" | "Media_Creator" | "Personal"). */
   accountType?: string;
   /** Resend API key permission. */
@@ -175,25 +177,7 @@ function evaluateOne(provider: ProviderId, cap: CapabilityDefinition, ctx: Capab
     }
   }
 
-  // App review per permission.
   const required = scopesForCapability(cap.id);
-  for (const scope of required) {
-    const status = ctx.appReview?.[scope];
-    if (status === "pending") {
-      return {
-        state: "provider_review_pending",
-        reason: `${name} is still reviewing ClimbOS's request for this feature.`,
-        fix: "No action needed. We'll switch this on automatically once approved.",
-      };
-    }
-    if (status === "not_submitted" || status === "rejected") {
-      return {
-        state: "approval_needed",
-        reason: `${name} hasn't approved ClimbOS for this feature${status === "rejected" ? " (the last request was declined)" : ""}.`,
-        fix: `Your ClimbOS administrator needs to submit the "${scope}" permission for ${name} review.`,
-      };
-    }
-  }
 
   // Token.
   if (ctx.tokenExpiresAt !== undefined && ctx.tokenExpiresAt <= now && ctx.canRefreshToken !== true) {
@@ -261,6 +245,33 @@ function evaluateOne(provider: ProviderId, cap: CapabilityDefinition, ctx: Capab
       reason: `${name} is responding slowly, so data may arrive late.`,
       fix: "No action needed; ClimbOS will catch up automatically.",
     };
+  }
+
+  // Provider approvals ClimbOS still needs come last: problems with this business's own
+  // account (expired sign-in, missing permission, failed sync) are more useful to show first.
+  for (const scope of required) {
+    const status = ctx.appReview?.[scope];
+    const approval = ctx.approvalLabels?.[scope];
+    if (status === "pending") {
+      return {
+        state: "provider_review_pending",
+        reason: approval
+          ? `${cap.label} needs ${approval}, which is still in progress for ClimbOS.`
+          : `${name} is still reviewing ClimbOS's request for this feature.`,
+        fix: "No action needed. We'll switch this on automatically once approved.",
+      };
+    }
+    if (status === "not_submitted" || status === "rejected") {
+      return {
+        state: "approval_needed",
+        reason: approval
+          ? `${cap.label} needs ${approval}, which ClimbOS doesn't have yet${status === "rejected" ? " (the last request was declined)" : ""}.`
+          : `${name} hasn't approved ClimbOS for this feature${status === "rejected" ? " (the last request was declined)" : ""}.`,
+        fix: approval
+          ? `No action needed from you. ClimbOS staff are completing ${approval}; until then, use drafts and export.`
+          : `Your ClimbOS administrator needs to submit the "${scope}" permission for ${name} review.`,
+      };
+    }
   }
 
   return { state: "ready", reason: `${cap.label} is working.`, fix: "Nothing to do." };

@@ -78,7 +78,7 @@ When something is missing:
 
 9. **Format for LinkedIn:** no headers, no bold or Unicode "fancy" fonts (screen readers skip or garble them), at most one list and only if the content really is a list. Hashtags: 0–3 at the end, specific to the topic (#OfficeCatering, not #business), written in CamelCase so screen readers can read them.
 
-10. **Brief the visual.** Decide: text only (strong story posts often do best plain), one real photo, a document post, or short native video with captions. Write a brief (subject, why this image, text on image if any) and alt text that describes what someone needs to understand the post. Never brief a fake screenshot, invented dashboard or stock person presented as a customer or employee.
+10. **Brief the visual, every time.** Pick the format (`format`): `single_image` (one real photo or a typographic card), `document` (PDF carousel, with every page in `slides`), `reel` (short native video under 60 seconds with captions: the words in `videoScript` and a phone-filmable `shotList` of at least 3 shots), or `text` when a strong story reads best plain. Every post, text posts included, gets a concrete `visualBrief` the owner can act on today: what it shows, real photo or graphic, the exact words on it if any, and for a text post the one photo or card that would carry the idea and why text leads. Write alt text that describes what someone needs to understand the post. Only confirmed facts and numbers appear on a visual. Never brief a fake screenshot, invented dashboard or stock person presented as a customer or employee.
 
 11. **Write the first comment** if there is a link or resource: one line on what it is and who it's for.
 
@@ -132,6 +132,6 @@ Asset first: a confirmed stat, a customer story with permission, a short how-to,
 - [ ] Product mentioned at most once in a founder post.
 - [ ] Under 3,000 characters; founder post 150–300 words.
 - [ ] 0–3 specific CamelCase hashtags; no link in the body; at most one exclamation mark; emoji rule met.
-- [ ] Visual brief (or a deliberate text-only choice) with alt text; no fake screenshots or stock people posing as real.
+- [ ] A visual brief on every post (a text post names the optional photo or card), alt text, and a shot list for video; no fake screenshots, stock people posing as real, or unconfirmed numbers on the visual.
 - [ ] First comment written if there is a link or resource.
 - [ ] No banned phrases from copy-fundamentals.

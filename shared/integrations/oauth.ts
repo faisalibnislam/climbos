@@ -10,7 +10,7 @@ import { asNumber, asString, isRecord } from "./http";
 import { GRAPH_API_VERSION } from "./registry";
 
 export interface OAuthProviderConfig {
-  id: "google" | "meta" | "instagram" | "linkedin" | "x";
+  id: "google" | "meta" | "instagram" | "linkedin" | "linkedin_pages" | "x";
   authorizationEndpoint: string;
   tokenEndpoint: string;
   revocationEndpoint?: string;
@@ -55,7 +55,16 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderConfig["id"], OAuthProviderCon
     id: "linkedin",
     authorizationEndpoint: "https://www.linkedin.com/oauth/v2/authorization",
     tokenEndpoint: "https://www.linkedin.com/oauth/v2/accessToken",
-    revocationEndpoint: "https://www.linkedin.com/oauth/v2/revoke",
+    // No revocation endpoint is documented (checked 2026-10-26; only introspectToken is).
+    supportsPkce: false,
+    scopeSeparator: " ",
+  },
+  // LinkedIn requires the Community Management API to be the only product on its app,
+  // so posting as a company Page signs in through a second LinkedIn app.
+  linkedin_pages: {
+    id: "linkedin_pages",
+    authorizationEndpoint: "https://www.linkedin.com/oauth/v2/authorization",
+    tokenEndpoint: "https://www.linkedin.com/oauth/v2/accessToken",
     supportsPkce: false,
     scopeSeparator: " ",
   },
@@ -80,10 +89,12 @@ export const CAPABILITY_SCOPES = {
   "google_ads.read_metrics": ["https://www.googleapis.com/auth/adwords"],
   "google_ads.create_paused_campaign": ["https://www.googleapis.com/auth/adwords"],
   "google_ads.set_campaign_status": ["https://www.googleapis.com/auth/adwords"],
+  "google_business_profile.list_locations": ["https://www.googleapis.com/auth/business.manage"],
   "meta_ads.read_insights": ["ads_read"],
   "meta_ads.create_paused_campaign": ["ads_management"],
   "meta_ads.set_campaign_status": ["ads_management"],
-  "facebook_pages.list_pages": ["pages_show_list"],
+  // business_management: Pages owned through a business portfolio (the Page use case always includes it).
+  "facebook_pages.list_pages": ["pages_show_list", "business_management"],
   "facebook_pages.publish_post": ["pages_show_list", "pages_manage_posts", "pages_read_engagement"],
   "facebook_pages.read_posts": ["pages_show_list", "pages_read_engagement"],
   "facebook_pages.read_insights": ["pages_show_list", "read_insights", "pages_read_engagement"],
@@ -93,6 +104,9 @@ export const CAPABILITY_SCOPES = {
   "instagram.publish_media": ["instagram_business_basic", "instagram_business_content_publish"],
   "linkedin.read_profile": ["openid", "profile"],
   "linkedin.publish_post": ["w_member_social"],
+  // Community Management API product (LinkedIn vetting required).
+  "linkedin.list_organizations": ["rw_organization_admin"],
+  "linkedin.publish_org_post": ["rw_organization_admin", "w_organization_social"],
   "x.read_profile": ["users.read", "tweet.read"],
   // offline.access → refresh token (X access tokens are short-lived).
   "x.publish_post": ["tweet.read", "tweet.write", "users.read", "offline.access"],
@@ -294,8 +308,8 @@ export function buildInstagramLongLivedExchangeRequest(input: { clientSecret: st
 }
 
 /**
- * Revocation where the provider offers it. Instagram has no documented revoke
- * endpoint. LinkedIn and X authenticate the client, so they need its credentials.
+ * Revocation where the provider offers it. Instagram and LinkedIn have no
+ * documented revoke endpoint. X authenticates the client, so it needs its credentials.
  */
 export function buildRevocationRequest(input: { provider: OAuthProviderConfig; token: string; clientId?: string; clientSecret?: string }): TokenHttpRequest | null {
   const endpoint = input.provider.revocationEndpoint;
@@ -305,11 +319,11 @@ export function buildRevocationRequest(input: { provider: OAuthProviderConfig; t
     url.searchParams.set("access_token", input.token);
     return { url: url.toString(), method: "DELETE", headers: { Accept: "application/json" } };
   }
-  if (input.provider.id === "linkedin" || input.provider.id === "x") {
+  if (input.provider.id === "x") {
     if (!input.clientId || !input.clientSecret) return null;
     const auth = clientCredentials(input.provider, input.clientId, input.clientSecret);
     const body = new URLSearchParams({ ...auth.fields, token: input.token });
-    if (input.provider.id === "x") body.set("token_type_hint", "access_token");
+    body.set("token_type_hint", "access_token");
     return { url: endpoint, method: "POST", headers: auth.headers, body: body.toString() };
   }
   return {

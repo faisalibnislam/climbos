@@ -4,7 +4,7 @@ import { Discussion } from "@/components/app/Discussion";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Compass, Target } from "@/components/icons"
+import { Compass, Megaphone, Target } from "@/components/icons"
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useRef, useState } from "react";
@@ -180,6 +180,8 @@ function PlanScreen({ slug }: { slug: string }) {
       unknowns={planQ?.unknowns ?? []}
       needed={needed}
       refresh={s ? { nextVersion: s.version + 1, estimateMicros: plan.planEstimateMicros, onStarted: setStartedRunId, building } : null}
+      noCustomersYet={plan.noCustomersYet}
+      customerData={plan.customerData}
     />
   );
   const reviewHelp = needsNumbers || planQ?.unknowns?.length ? helpPanel(needsNumbers) : undefined;
@@ -321,9 +323,13 @@ function PlanScreen({ slug }: { slug: string }) {
       ) : null}
 
       <Tabs defaultValue="plan" className={compare ? "hidden" : undefined}>
-        <TabsList>
-          <TabsTrigger value="plan">Plan</TabsTrigger>
-          <TabsTrigger value="channels">Channels</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 p-1">
+          <TabsTrigger value="plan" className="h-12 gap-2 text-lg [font-family:var(--font-display-serif)] [&_svg]:size-5">
+            <Compass aria-hidden /> Plan
+          </TabsTrigger>
+          <TabsTrigger value="channels" className="h-12 gap-2 text-lg [font-family:var(--font-display-serif)] [&_svg]:size-5">
+            <Megaphone aria-hidden /> Channels
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="channels" className="mt-5">
           <ChannelScorecard slug={slug} />
@@ -364,6 +370,11 @@ function PlanScreen({ slug }: { slug: string }) {
             </Callout>
           ) : null}
           <ShortVersion strategy={s} />
+          {plan.noCustomersYet || plan.customerData?.status === "no_data_yet" ? (
+            <Callout tone="info" title={plan.noCustomersYet ? "Estimates: no customer data yet" : "Estimates: no customer numbers yet"}>
+              Money figures in this plan are labelled estimates, not your results. They update as real customer numbers come in.
+            </Callout>
+          ) : null}
           {s.expert ? <NorthStar expert={s.expert as ExpertView} slug={slug} /> : null}
           {s.expert?.plays?.length ? <SharpenPlan slug={slug} questions={plan.questions} canEdit={plan.canEdit} answersNewer={plan.answersNewerThanPlan} currency={plan.businessCurrency} segmentEconomics={plan.unitEconomics?.segmentEconomics} /> : null}
           {s.expert?.plays?.length && !(s.status === "needs_approval" && !olderView && reviewHelp) ? helpPanel(false) : null}

@@ -63,6 +63,10 @@ Confirm exact pixel dimensions against each platform's current help page; specs 
 
 Define the template once, then brief each slide with: number, job (hook, stakes, point, summary, CTA), headline (exact words), support line, visual, and alt text. Slide 1 must work as a standalone post. One point per slide. Keep a consistent visual rhythm (same headline position on every slide) so a change signals something important. The summary slide is designed to be screenshotted: high contrast, everything readable at a glance.
 
+### Every post gets a visual
+
+Each social post carries a visual suggestion the owner can act on, even a text-first post: name the one photo, card or document page that would carry its idea, so the owner can choose to add it. Video suggestions are a timed script plus a shot list the owner films on a phone (ClimbOS does not generate video). ClimbOS may turn a still brief into an AI illustration when the owner asks, so write the brief so it also works as an image prompt: the subject and scene first, then style; keep facts, prices and numbers in the caption, not in the picture.
+
 ## Quality bar
 
 - One message per visual, statable in under 10 words, matching the copy's idea.

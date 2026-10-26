@@ -131,3 +131,46 @@ export function channelJob(channelId: string): ChannelJob | null {
   if (!channel) return null;
   return JOB_OVERRIDE[channelId] ?? (recommendationGuidance(channelId)?.group === "review_comparison" ? "comparison" : FAMILY_JOB[channel.family]);
 }
+
+/** General notes per channel family, shown when ClimbOS hasn't reviewed a channel for this business. Not evidence. */
+const FAMILY_HOW: Record<Family, string> = {
+  organic_search: "Publish pages that answer what buyers search for, then improve the ones that get found.",
+  paid_search: "Bid on a small set of high-intent searches with a capped daily budget.",
+  local: "Keep your local listings accurate and ask every customer the same neutral way for a review.",
+  organic_social: "Post useful, specific content on a steady schedule and reply to comments.",
+  communities: "Take part where your buyers already talk, following each community's rules.",
+  events: "Show up where buyers gather, with one clear follow-up offer.",
+  content: "Publish practical guides that help buyers decide, and link them to a next step.",
+  video_audio: "Record short, useful episodes or videos around buyer questions.",
+  pr: "Pitch a specific, newsworthy angle to a short list of relevant writers.",
+  creators: "Work with a few relevant creators on a clear brief, with disclosure.",
+  referral: "Make it easy for happy customers to introduce others, with a fair thank-you.",
+  partnerships: "Find a few businesses that serve the same buyers and agree a simple joint offer.",
+  marketplaces: "List where buyers compare options, with accurate details and real reviews.",
+  email: "Send useful emails to people who opted in, with one action per email.",
+  outreach: "Contact a small, well-chosen list one by one, following outreach rules.",
+  retargeting: "Remind recent visitors with a relevant, capped follow-up.",
+  paid_social: "Run a small, capped test with one audience and one message.",
+  traditional: "Test one placement in a medium your buyers actually use.",
+  distribution: "Sign up resellers or distributors who already reach your buyers.",
+  product_led: "Build sharing and invitations into the product so use brings new users.",
+};
+
+const JOB_MEASURE: Record<ChannelJob, string> = {
+  research: "Visits to these pages and how many readers take the next step.",
+  community: "Replies, profile visits and sign-ups traced to the community.",
+  search: "Search impressions, clicks and sign-ups from search.",
+  referral: "Introductions made and how many become paying customers.",
+  launch: "Sign-ups and feedback from the launch, not votes.",
+  comparison: "Visits from comparison pages and how many choose you.",
+  authority: "Mentions, referral visits and sign-ups from them.",
+  direct: "Replies or clicks, then sign-ups and first paying customers.",
+};
+
+/** General guidance for a channel: what it is for, a typical way to do it, and how to measure it. */
+export function generalChannelGuidance(channelId: string): { how: string; job: string; measure: string } | null {
+  const channel = BY_ID.get(channelId);
+  const job = channelJob(channelId);
+  if (!channel || !job) return null;
+  return { how: FAMILY_HOW[channel.family], job: CHANNEL_JOB_LABEL[job], measure: JOB_MEASURE[job] };
+}

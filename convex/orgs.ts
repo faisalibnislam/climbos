@@ -328,6 +328,7 @@ export const onboardingState = query({
             timezone: business.timezone,
             hasInsights: Boolean(business.insights),
             onboardingIntro: business.onboardingIntro ?? null,
+            customerData: business.customerData ?? null,
             insightsAt: business.insights?.generatedAt ?? null,
           }
         : null,
@@ -576,9 +577,11 @@ export const saveOnboardingIntro = mutation({
       horizonDays: v.optional(v.number()),
       reviewDay: v.optional(v.string()),
     }),
+    /** Where the business is today, from the setup step (chosen, or detected from the owner's words and shown to them). */
+    businessStage: v.optional(v.union(v.literal("idea"), v.literal("launching_soon"), v.literal("just_launched"), v.literal("has_customers"))),
   },
-  handler: async (ctx, { slug, intro }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "edit");
+  handler: async (ctx, { slug, intro, businessStage }) => {
+    const { org, role } = await requireOrgAccess(ctx, { slug }, "edit");
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     if (!business) throw appError("NOT_FOUND", "Business not found.");
     const budget = intro.monthlyAdBudget;
@@ -593,6 +596,38 @@ export const saveOnboardingIntro = mutation({
         savedAt: Date.now(),
       },
     });
+    if (businessStage) {
+      const now = Date.now();
+      // The stage is owner-reported; only an owner or admin sets it (the person creating the business is its owner).
+      const canSetStage = role === "owner" || role === "admin";
+      const stage = businessStage === "idea" ? "idea_validation" : businessStage === "launching_soon" ? "pre_launch" : null;
+      await ctx.db.patch(business._id, {
+        ...(stage && canSetStage ? { lifecycleStage: { stage, provenance: "owner_reported" as const, updatedAt: now } } : {}),
+        customerData: businessStage === "just_launched" ? { status: "no_customers_yet" as const, updatedAt: now } : businessStage === "has_customers" ? undefined : business.customerData,
+      });
+    }
+  },
+});
+
+/** Change only the monthly ad budget on the active goal (raising it above the spending cap needs an owner or admin). */
+export const setAdBudget = mutation({
+  args: { slug: v.string(), monthlyAdBudget: v.number() },
+  handler: async (ctx, { slug, monthlyAdBudget }) => {
+    const { org, user, role } = await requireOrgAccess(ctx, { slug }, "edit");
+    if (!Number.isFinite(monthlyAdBudget) || monthlyAdBudget < 0 || monthlyAdBudget > 1_000_000) throw appError("INVALID", "Enter a monthly ad budget between 0 and 1,000,000 (0 means no ads).");
+    const goal = await ctx.db.query("goals").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active")).first();
+    if (!goal) throw appError("NOT_FOUND", "Set a goal first.");
+    const budgetMinor = majorToMinor(monthlyAdBudget, goal.currency);
+    const policy = await ctx.db.query("autonomyPolicies").withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true)).first();
+    if (policy && budgetMinor > policy.maxMonthlyAdSpendMinor && !can(role, "manage_policies")) throw appError("FORBIDDEN", "Only an owner or admin can raise the ad budget.");
+    await ctx.db.patch(goal._id, { monthlyAdBudgetMinor: budgetMinor });
+    // The ad envelope in the active policy follows the goal (same as setGoal).
+    if (policy && policy.maxMonthlyAdSpendMinor !== budgetMinor) {
+      await ctx.db.patch(policy._id, { active: false });
+      const { _id: _omit, _creationTime: _ct, ...rest } = policy;
+      await ctx.db.insert("autonomyPolicies", { ...rest, version: policy.version + 1, maxMonthlyAdSpendMinor: budgetMinor, createdBy: user._id, createdAt: Date.now(), active: true });
+    }
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "goal.budget_changed", subjectType: "goal", subjectId: String(goal._id), summary: `Monthly ad budget set to ${monthlyAdBudget} ${goal.currency}.` });
   },
 });
 

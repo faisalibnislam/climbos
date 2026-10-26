@@ -46,6 +46,8 @@ function sample(s: JsonSchema, marker: string, key = ""): unknown {
     default:
       // A real channel keeps autopilot routing testable (it ignores unknown channels).
       if (key === "channel") return "facebook";
+      // Social posts need a visual brief the owner can act on (at least 8 words).
+      if (key === "visualBrief") return `${marker} phone photo of the work in progress, natural light, no text on the image`.trim();
       return /url/i.test(key) ? "https://example.com" : `${marker} ${key}`.trim();
   }
 }

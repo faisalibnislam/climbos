@@ -17,6 +17,12 @@ export const LINKEDIN_ALT_TEXT_MAX_CHARS = 4086;
 export const LINKEDIN_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 export const PUBLISH_LINKEDIN_ACTION = "linkedin.publish_post";
 const PERSON_URN_RE = /^urn:li:person:[A-Za-z0-9_-]+$/;
+const ORGANIZATION_URN_RE = /^urn:li:organization:\d+$/;
+
+/** A post author: the member themself, or a LinkedIn Page (organization) they administer. */
+export function isLinkedInAuthorUrn(urn: string): boolean {
+  return PERSON_URN_RE.test(urn) || ORGANIZATION_URN_RE.test(urn);
+}
 const POST_URN_RE = /^urn:li:(share|ugcPost):\d+$/;
 
 export interface LinkedInCall extends AdapterOptions {
@@ -54,6 +60,48 @@ export async function getMember(call: LinkedInCall): Promise<ReadResult<LinkedIn
   return { ok: true, data: { id: sub, personUrn: `urn:li:person:${sub}`, name: name || "LinkedIn member" } };
 }
 
+export interface LinkedInOrganization {
+  id: string;
+  urn: string;
+  name: string;
+  vanityName?: string;
+}
+
+/**
+ * LinkedIn Pages the member administers: organizationAcls (approved ADMINISTRATOR
+ * roles), then one organization lookup each for the Page name. Needs
+ * rw_organization_admin (Community Management API product).
+ */
+export async function listAdministeredOrganizations(call: LinkedInCall & { max?: number }): Promise<ReadResult<{ items: LinkedInOrganization[]; truncated: boolean }>> {
+  const max = Math.max(1, Math.min(call.max ?? 25, 50));
+  const url = `${LINKEDIN_REST_BASE}/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED&count=${max}`;
+  const out = await requestJson({ url, headers: linkedInHeaders(call), fetchImpl: call.fetchImpl, timeoutMs: call.timeoutMs });
+  if (out.kind !== "ok") return readFailure(out);
+  const d = isRecord(out.data) ? out.data : {};
+  const ids: string[] = [];
+  for (const el of asArray(d.elements)) {
+    if (!isRecord(el)) continue;
+    const id = (asString(el.organization) ?? asString(el.organizationTarget))?.match(/^urn:li:organization:(\d+)$/)?.[1];
+    if (id && !ids.includes(id)) ids.push(id);
+  }
+  const items = await Promise.all(
+    ids.slice(0, max).map(async (id): Promise<LinkedInOrganization> => {
+      const org: LinkedInOrganization = { id, urn: `urn:li:organization:${id}`, name: `LinkedIn Page ${id}` };
+      const res = await requestJson({ url: `${LINKEDIN_REST_BASE}/organizations/${id}`, headers: linkedInHeaders(call), fetchImpl: call.fetchImpl, timeoutMs: call.timeoutMs });
+      if (res.kind === "ok" && isRecord(res.data)) {
+        const name = asString(res.data.localizedName);
+        if (name) org.name = name;
+        const vanity = asString(res.data.vanityName);
+        if (vanity) org.vanityName = vanity;
+      }
+      return org;
+    }),
+  );
+  const paging = isRecord(d.paging) ? d.paging : {};
+  const total = typeof paging.total === "number" ? paging.total : ids.length;
+  return { ok: true, data: { items, truncated: total > items.length } };
+}
+
 const RESERVED = /[\\|{}@[\]()<>#*_~]/g;
 
 /**
@@ -82,7 +130,7 @@ export interface LinkedInPostInput {
 
 export function validateLinkedInPost(p: LinkedInPostInput): string[] {
   const errors: string[] = [];
-  if (!PERSON_URN_RE.test(p.authorUrn)) errors.push("Invalid LinkedIn member id. Reconnect LinkedIn.");
+  if (!isLinkedInAuthorUrn(p.authorUrn)) errors.push("Invalid LinkedIn profile or Page id. Reconnect LinkedIn.");
   if (!p.text.trim() && !p.imageUrl) errors.push("A post needs text or an image.");
   if ([...p.text].length > LINKEDIN_POST_MAX_CHARS) errors.push(`LinkedIn posts can be at most ${LINKEDIN_POST_MAX_CHARS} characters.`);
   if (p.altText !== undefined && [...p.altText].length > LINKEDIN_ALT_TEXT_MAX_CHARS) errors.push(`Alt text is longer than ${LINKEDIN_ALT_TEXT_MAX_CHARS} characters.`);

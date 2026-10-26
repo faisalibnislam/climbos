@@ -47,6 +47,7 @@ import { AUTO_RUN_KINDS, CHANNEL_JOBS, jobForAction, startCardRun, WISH_AUTO_BUD
 import { estimateJobMicros, planJob } from "./lib/jobPlans";
 import { notifyOwners } from "./lib/notify";
 import { appError } from "./lib/tenancy";
+import { postVisualValidator, type PostVisual } from "./lib/postVisual";
 
 const DAY = 86_400_000;
 
@@ -784,6 +785,7 @@ export type ArtifactInput = {
   imageStorageId?: Id<"_storage">;
   imageR2Key?: string;
   imageLabel?: string;
+  visual?: PostVisual;
   factIndexes: number[];
   scheduledFor?: number;
   role: NonNullable<Doc<"artifacts">["createdByRole"]>;
@@ -905,6 +907,7 @@ export async function insertArtifact(
     imageR2Key: item.imageR2Key,
     imagePrompt: item.imagePrompt,
     imageLabel: item.imageStorageId || item.imageR2Key ? (item.imageLabel ?? "AI-generated illustration") : undefined,
+    visual: item.visual,
     claimFactIds: valid.map((i) => params.factIds[i]),
     unsupportedClaims: unsupported,
     contentHash: ch,
@@ -941,6 +944,7 @@ const artifactInputValidator = v.object({
   imageR2Key: v.optional(v.string()),
   /** How the image is labelled to the owner (real screenshot, product photo, AI illustration). */
   imageLabel: v.optional(v.string()),
+  visual: v.optional(postVisualValidator),
   factIndexes: v.array(v.number()),
   scheduledFor: v.optional(v.number()),
   role: v.string(),
@@ -985,7 +989,25 @@ export const saveArtifacts = internalMutation({
 });
 
 /** Convert task outputs into artifact inputs (pure helpers used by jobs). */
-export function socialToArtifacts(out: Omit<SocialPostsOutput, "posts"> & { copyBrief?: CopyBrief; posts: (SocialPostsOutput["posts"][number] & { angle?: string; trendSourceUrl?: string; trendEvidence?: NonNullable<CopyBrief["trendEvidence"]>; approvedOfferPlayName?: string })[] }, now: number): Omit<ArtifactInput, "imageStorageId">[] {
+type SocialPostVisualFields = { format?: PostVisual["format"]; visualBrief?: string; slides?: { heading: string; body: string }[]; videoScript?: string; shotList?: { timing: string; show: string }[] };
+
+/** The post's suggested visual. Older (v1) outputs only carry an image idea, which is a single image brief. */
+export function postVisualOf(p: SocialPostVisualFields & { imageIdea?: string }): PostVisual | undefined {
+  const brief = (p.visualBrief?.trim() || p.imageIdea?.trim() || "").slice(0, 2000);
+  if (!brief) return undefined;
+  const format = p.format ?? "single_image";
+  const slides = format === "carousel" || format === "document" ? p.slides?.slice(0, 20).map((slide) => ({ heading: slide.heading.slice(0, 200), body: slide.body.slice(0, 600) })) : undefined;
+  const isVideo = format === "reel" || format === "story";
+  return {
+    format,
+    brief,
+    ...(slides?.length ? { slides } : {}),
+    ...(isVideo && p.videoScript?.trim() ? { videoScript: p.videoScript.trim().slice(0, 4000) } : {}),
+    ...(isVideo && p.shotList?.length ? { shotList: p.shotList.slice(0, 12).map((shot) => ({ timing: shot.timing.slice(0, 24), show: shot.show.slice(0, 280) })) } : {}),
+  };
+}
+
+export function socialToArtifacts(out: Omit<SocialPostsOutput, "posts"> & { copyBrief?: CopyBrief; posts: (SocialPostsOutput["posts"][number] & SocialPostVisualFields & { angle?: string; trendSourceUrl?: string; trendEvidence?: NonNullable<CopyBrief["trendEvidence"]>; approvedOfferPlayName?: string })[] }, now: number): Omit<ArtifactInput, "imageStorageId">[] {
   return out.posts.map((p, i) => ({
     kind: "social_post" as const,
     channel: p.channel,
@@ -1001,6 +1023,7 @@ export function socialToArtifacts(out: Omit<SocialPostsOutput, "posts"> & { copy
     hashtags: p.hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)),
     altText: p.altText,
     imagePrompt: p.imageIdea,
+    visual: postVisualOf(p),
     factIndexes: p.factIndexes,
     scheduledFor: now + (Math.max(1, Math.round(p.suggestedDay)) + i) * DAY,
     role: "social_media_manager" as const,

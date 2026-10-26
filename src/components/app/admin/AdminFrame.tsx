@@ -15,6 +15,7 @@ const TABS = [
   { href: "/ops/plans", label: "Plans & locks", power: "read" },
   { href: "/ops/staff", label: "Staff", power: "read" },
   { href: "/ops/models", label: "AI models", power: "read" },
+  { href: "/ops/platforms", label: "Platform setup", power: "read" },
   { href: "/ops/engine", label: "Engine lab", power: "read" },
   { href: "/ops/knowledge", label: "Knowledge sources", power: "read" },
   { href: "/ops/system", label: "System", power: "operate" },

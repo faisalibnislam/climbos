@@ -22,6 +22,7 @@ import {
   Field,
   Input,
   CheckCards,
+  ChoiceChips,
   RadioCards,
   Select,
   Skeleton,
@@ -308,6 +309,9 @@ function BusinessStep({
   }, [additional, chat, description, draftKey, loadedDraftKey, mode, name, nameOverride, noWebsite, prefillGoal, prefillWebsite, website, saveDraft, savedDraftId]);
 
   const parsed: ParsedIntro = useMemo(() => parseIntro(chat), [chat]);
+  const [stageChoice, setStageChoice] = useState<NonNullable<ParsedIntro["businessStage"]> | null>(null);
+  const detectedStage = mode === "chat" ? parsed.businessStage : undefined;
+  const businessStage = stageChoice ?? detectedStage ?? null;
 
   async function submit(fields: { name: string; website?: string; ownerText?: string; parsed?: ParsedIntro }) {
     if (creating.current) return;
@@ -339,7 +343,7 @@ function BusinessStep({
         } catch {}
       }
       // Keep these answers on the business too, so the goal step has them in any tab or on any device.
-      const intro = fields.parsed ?? (prefillGoal ? { goalStatement: prefillGoal } : null);
+      const intro = fields.parsed ?? (prefillGoal ? { goalStatement: prefillGoal } : businessStage ? {} : null);
       if (intro) {
         await saveIntro({
           slug,
@@ -350,6 +354,7 @@ function BusinessStep({
             ...(fields.parsed?.horizonDays !== undefined ? { horizonDays: fields.parsed.horizonDays } : {}),
             ...(fields.parsed?.reviewDay ? { reviewDay: fields.parsed.reviewDay } : {}),
           },
+          ...(businessStage ? { businessStage } : {}),
         }).catch(() => undefined);
       }
       if (previewToken) await claim({ token: previewToken, orgId: orgId as Id<"organizations"> }).catch(() => undefined);
@@ -439,6 +444,23 @@ function BusinessStep({
           </CardContent>
         </Card>
       )}
+      <fieldset className="mt-6 flex flex-col gap-2">
+        <legend className="mb-2 text-ui font-medium text-ink">
+          Where is your business today?{" "}
+          {detectedStage && !stageChoice ? <span className="text-xs font-normal text-ink-3">(from what you wrote; change it if it&apos;s wrong)</span> : <span className="text-xs font-normal text-ink-3">(optional)</span>}
+        </legend>
+        <ChoiceChips
+          aria-label="Where is your business today?"
+          value={businessStage ?? ""}
+          onValueChange={(v) => setStageChoice(v as NonNullable<ParsedIntro["businessStage"]>)}
+          options={[
+            { value: "idea", label: "Still an idea" },
+            { value: "launching_soon", label: "Launching soon" },
+            { value: "just_launched", label: "Just launched, no customers yet" },
+            { value: "has_customers", label: "Has customers" },
+          ]}
+        />
+      </fieldset>
       <Button type="button" variant="link" className="mt-4" onClick={() => {
         if (mode === "chat") {
           setName(nameOverride ?? parsed.businessName ?? name);

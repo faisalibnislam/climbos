@@ -1,6 +1,7 @@
 import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { postVisualValidator } from "./lib/postVisual";
 
 const growthProvenanceValidator = v.union(
   v.literal("owner"),
@@ -484,6 +485,7 @@ export const providerValidator = v.union(
   v.literal("ga4"),
   v.literal("search_console"),
   v.literal("google_ads"),
+  v.literal("google_business_profile"),
   v.literal("meta_ads"),
   v.literal("facebook_pages"),
   v.literal("instagram"),
@@ -956,6 +958,17 @@ export default defineSchema({
       updatedAt: v.number(),
       }),
     ),
+    /**
+     * Owner-reported: no customers yet (just launched or not launched), or customers but no numbers yet.
+     * Plans then use labelled assumptions instead of asking for, or blocking on, customer figures.
+     * `plannedPriceMonth` is what the owner intends to charge, never an observed revenue figure.
+     */
+    customerData: v.optional(v.object({
+      status: v.union(v.literal("no_customers_yet"), v.literal("no_data_yet")),
+      plannedPriceMonth: v.optional(v.number()),
+      priceUndecided: v.optional(v.boolean()),
+      updatedAt: v.number(),
+    })),
     summary: v.optional(v.string()),
     /** The public review destination shared consistently with every invited customer. */
     reviewUrl: v.optional(v.string()),
@@ -1400,7 +1413,7 @@ export default defineSchema({
           v.array(
             v.object({
               channelId: v.string(),
-              preference: v.union(v.literal("prefer"), v.literal("avoid"), v.literal("dismissed"), v.literal("irrelevant")),
+              preference: v.union(v.literal("prefer"), v.literal("avoid"), v.literal("dismissed"), v.literal("irrelevant"), v.literal("already_using")),
               rationale: v.string(),
               sourceUrl: v.optional(v.string()),
               evidenceDate: v.optional(v.string()),
@@ -1663,6 +1676,8 @@ export default defineSchema({
     provider: providerValidator,
     stateHash: v.string(),
     codeVerifier: v.optional(v.string()),
+    /** Which provider app signs in: LinkedIn company Pages use a separate Community Management app. */
+    variant: v.optional(v.literal("linkedin_pages")),
     expiresAt: v.number(),
   }).index("by_state", ["stateHash"]),
 
@@ -3124,7 +3139,7 @@ export default defineSchema({
               v.array(
                 v.object({
                   channelId: v.string(),
-                  preference: v.union(v.literal("prefer"), v.literal("avoid"), v.literal("dismissed"), v.literal("irrelevant")),
+                  preference: v.union(v.literal("prefer"), v.literal("avoid"), v.literal("dismissed"), v.literal("irrelevant"), v.literal("already_using")),
                   rationale: v.string(),
                   sourceUrl: v.optional(v.string()),
                   evidenceDate: v.optional(v.string()),
@@ -3882,6 +3897,8 @@ export default defineSchema({
     imageR2Key: v.optional(v.string()),
     imagePrompt: v.optional(v.string()),
     imageLabel: v.optional(v.string()),
+    /** Suggested visual for a social draft (format, brief, slides or video shot list). */
+    visual: v.optional(postVisualValidator),
     claimFactIds: v.array(v.id("businessFacts")),
     unsupportedClaims: v.array(v.string()),
     contentHash: v.string(),
