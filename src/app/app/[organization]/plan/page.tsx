@@ -1,16 +1,17 @@
 "use client";
 
 import { Discussion } from "@/components/app/Discussion";
-import { useQuery } from "convex/react";
+import { useQueries, useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { Compass, Megaphone, Target } from "@/components/icons"
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Badge, Button, Callout, Card, CardContent, EmptyState, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, buttonClasses, type Tone } from "@/components/ui";
 import { ChannelScorecard } from "@/components/app/plan/ChannelScorecard";
-import { GeneratePlanButton, PlanReviewCard, StrategyRunWatcher } from "@/components/app/plan/PlanActions";
+import { GeneratePlanButton, PlanReviewCard, StrategyRunWatcher, useStrategyRunState } from "@/components/app/plan/PlanActions";
 import { PlanToConnectedApps } from "@/components/app/connections/ConnectedProducts";
 import type { Economics } from "../../../../../shared/agents/economics";
 import { formatMoney } from "../../../../../shared/economics/currency";
@@ -138,15 +139,59 @@ function PlanImpactSummary({ impact }: { impact: NonNullable<PlanView["planImpac
   );
 }
 
+type PlanData = FunctionReturnType<typeof api.workspace.plan>;
+
 function PlanScreen({ slug }: { slug: string }) {
   // Which version is on screen: the approved one by default, or a newer one being reviewed.
   const [viewId, setViewId] = useState<Id<"strategies"> | null>(null);
-  const plan = useQuery(api.workspace.plan, viewId ? { slug, strategyId: viewId } : { slug });
+  // Versions kept subscribed once listed or opened, so switching between them is instant.
+  const [warm, setWarm] = useState<Id<"strategies">[]>([]);
+  const defaultPlan = useQuery(api.workspace.plan, { slug });
+  const warmPlans = useQueries(useMemo(() => Object.fromEntries(warm.map((id) => [id, { query: api.workspace.plan, args: { slug, strategyId: id } }])), [warm, slug])) as Record<string, PlanData | Error | undefined>;
+  const picked = viewId ? warmPlans[viewId] : defaultPlan;
+  if (picked instanceof Error) throw picked;
+  // A version still loading keeps the previous one on screen instead of a blank skeleton.
+  const [lastShown, setLastShown] = useState<PlanData | undefined>(undefined);
+  if (picked && picked !== lastShown) setLastShown(picked);
+  const plan = picked ?? lastShown;
+  const switching = !picked && Boolean(lastShown);
   const versions = usePlanVersions(slug);
   const [compare, setCompare] = useState<{ left: Id<"strategies">; right: Id<"strategies"> } | null>(null);
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [startedRunId, setStartedRunId] = useState<Id<"workflowRuns"> | null>(null);
+  // The version being written: shown in the picker, and as a full progress view when chosen.
+  const [viewBuilding, setViewBuilding] = useState(false);
+  const [buildBase, setBuildBase] = useState<number | null>(null);
   const root = useRef<HTMLDivElement>(null);
+  const warmUp = (ids: Id<"strategies">[]) => setWarm((w) => (ids.every((id) => w.includes(id)) ? w : [...w, ...ids.filter((id) => !w.includes(id))]));
+  const showVersion = (id: Id<"strategies"> | null) => {
+    if (id) warmUp([id]);
+    setViewBuilding(false);
+    setViewId(id);
+  };
+  const activeRunId = plan?.strategyRun && !RUN_FINISHED.has(plan.strategyRun.status) ? plan.strategyRun.id : null;
+  const buildRunId = startedRunId ?? activeRunId;
+  const buildState = useStrategyRunState(slug, buildRunId);
+  const latestVersion = versions?.[0]?.version ?? null;
+  // Remember which version the build starts from, so its number stays put and its result can be found.
+  if (activeRunId && buildBase === null && latestVersion !== null) setBuildBase(latestVersion);
+  // The build wrote its version: move from the progress view to it.
+  if (viewBuilding && buildBase !== null && versions?.[0] && versions[0].version > buildBase) {
+    setViewBuilding(false);
+    setBuildBase(null);
+    setViewId(versions[0].id);
+    if (!warm.includes(versions[0].id)) setWarm([...warm, versions[0].id]);
+  }
+  if (!activeRunId && !viewBuilding && buildBase !== null) setBuildBase(null);
+  const onStarted = (runId: Id<"workflowRuns">) => {
+    setStartedRunId(runId);
+    if (latestVersion !== null) {
+      setBuildBase(latestVersion);
+      setViewBuilding(true);
+      setCompare(null);
+    }
+  };
+  const buildingEntry = buildRunId && buildBase !== null && (activeRunId || viewBuilding) ? { version: buildBase + 1, progress: buildState?.label ?? "Starting" } : null;
 
   if (plan === undefined) {
     return (
@@ -179,7 +224,7 @@ function PlanScreen({ slug }: { slug: string }) {
       funnel={plan.funnel}
       unknowns={planQ?.unknowns ?? []}
       needed={needed}
-      refresh={s ? { nextVersion: s.version + 1, estimateMicros: plan.planEstimateMicros, onStarted: setStartedRunId, building } : null}
+      refresh={s ? { nextVersion: s.version + 1, estimateMicros: plan.planEstimateMicros, onStarted, building } : null}
       noCustomersYet={plan.noCustomersYet}
       customerData={plan.customerData}
     />
@@ -212,7 +257,7 @@ function PlanScreen({ slug }: { slug: string }) {
   };
   const onRestored = (id: Id<"strategies">) => {
     setCompare(null);
-    setViewId(id);
+    showVersion(id);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -225,12 +270,34 @@ function PlanScreen({ slug }: { slug: string }) {
           s && status ? (
             <span className="flex flex-wrap items-center gap-2">
               {versions && versions.length ? (
-                <VersionPicker versions={versions} viewingId={s.id} onView={(id) => { setCompare(null); setViewId(id); }} onCompare={openCompare} slug={slug} canEdit={plan.canEdit} />
+                <VersionPicker
+                  versions={versions}
+                  viewingId={s.id}
+                  onView={(id) => {
+                    setCompare(null);
+                    showVersion(id);
+                  }}
+                  onCompare={openCompare}
+                  slug={slug}
+                  canEdit={plan.canEdit}
+                  building={buildingEntry}
+                  viewingBuilding={viewBuilding}
+                  onViewBuilding={() => {
+                    setCompare(null);
+                    setViewBuilding(true);
+                  }}
+                  onOpen={() => warmUp(versions.slice(0, 8).map((v) => v.id))}
+                />
               ) : (
                 <span className="text-ink-2">Version {s.version}</span>
               )}
               {/* With several versions the picker carries the status. */}
-              {(s.status === "needs_approval" || s.status === "draft") && (versions?.length ?? 0) <= 1 ? <Badge tone={status.tone}>{status.label}</Badge> : null}
+              {(s.status === "needs_approval" || s.status === "draft") && (versions?.length ?? 0) <= 1 && !buildingEntry ? <Badge tone={status.tone}>{status.label}</Badge> : null}
+              {switching ? (
+                <span className="text-xs text-ink-3" role="status">
+                  Loading version…
+                </span>
+              ) : null}
             </span>
           ) : null
         }
@@ -238,7 +305,7 @@ function PlanScreen({ slug }: { slug: string }) {
           s && plan.canEdit ? (
             <div className="flex flex-wrap items-start gap-2">
               <PlanToConnectedApps slug={slug} />
-              <GeneratePlanButton slug={slug} mode="refresh" nextVersion={s.version + 1} estimateMicros={plan.planEstimateMicros} onStarted={setStartedRunId} building={building} />
+              <GeneratePlanButton slug={slug} mode="refresh" nextVersion={s.version + 1} estimateMicros={plan.planEstimateMicros} onStarted={onStarted} building={building} />
             </div>
           ) : null
         }
@@ -246,11 +313,23 @@ function PlanScreen({ slug }: { slug: string }) {
 
       <GoalCard goal={plan.goal} slug={slug} />
 
+      {viewBuilding && buildRunId ? (
+        <>
+          <StrategyRunWatcher slug={slug} startedRunId={null} activeRunId={buildRunId} onDismiss={() => setViewBuilding(false)} />
+          {s ? (
+            <Button variant="secondary" className="self-start" onClick={() => setViewBuilding(false)}>
+              Back to version {s.version}
+            </Button>
+          ) : null}
+        </>
+      ) : (
+        <>
+
       {s && plan.staleInputs.requiresRefresh && !olderView ? (
         <Callout
           tone="warning"
           title="This plan uses older business inputs"
-          action={plan.canEdit ? <GeneratePlanButton slug={slug} mode="refresh" nextVersion={s.version + 1} estimateMicros={plan.planEstimateMicros} onStarted={setStartedRunId} building={building} /> : null}
+          action={plan.canEdit ? <GeneratePlanButton slug={slug} mode="refresh" nextVersion={s.version + 1} estimateMicros={plan.planEstimateMicros} onStarted={onStarted} building={building} /> : null}
         >
           These inputs changed or are due for review: {staleInputLabels.join(", ") || "important business inputs"}. The figures shown here recalculate from current numbers, while the written recommendations still reflect the saved plan. Refresh before approving or starting work.
         </Callout>
@@ -261,7 +340,7 @@ function PlanScreen({ slug }: { slug: string }) {
         <StrategyRunWatcher
           slug={slug}
           startedRunId={startedRunId}
-          activeRunId={plan.strategyRun && !RUN_FINISHED.has(plan.strategyRun.status) ? plan.strategyRun.id : null}
+          activeRunId={activeRunId}
           onDismiss={() => setStartedRunId(null)}
         />
       </SectionBoundary>
@@ -283,7 +362,7 @@ function PlanScreen({ slug }: { slug: string }) {
       ) : null}
 
       {olderView && viewingV && latestV ? (
-        <OlderVersionBar version={viewingV} latest={latestV} canEdit={plan.canEdit} onBack={() => setViewId(null)} onCompare={openCompare} onRestore={() => setRestoreOpen(true)} />
+        <OlderVersionBar version={viewingV} latest={latestV} canEdit={plan.canEdit} onBack={() => showVersion(null)} onCompare={openCompare} onRestore={() => setRestoreOpen(true)} />
       ) : s && other && !compare ? (
         <Callout
           tone={other.status === "needs_approval" || s.status === "needs_approval" ? "warning" : "info"}
@@ -296,7 +375,7 @@ function PlanScreen({ slug }: { slug: string }) {
           }
           action={
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="secondary" onClick={() => setViewId(s.status === "approved" ? other.id : null)}>
+              <Button size="sm" variant="secondary" onClick={() => showVersion(s.status === "approved" ? other.id : null)}>
                 See v{other.version}
               </Button>
               {versions && versions.length > 1 ? <Button size="sm" variant="secondary" onClick={openCompare}>Compare changes</Button> : null}
@@ -351,7 +430,7 @@ function PlanScreen({ slug }: { slug: string }) {
             action={
               plan.canEdit ? (
                 plan.goal ? (
-                  <GeneratePlanButton slug={slug} mode="build" estimateMicros={plan.planEstimateMicros} onStarted={setStartedRunId} building={building} />
+                  <GeneratePlanButton slug={slug} mode="build" estimateMicros={plan.planEstimateMicros} onStarted={onStarted} building={building} />
                 ) : (
                   <p className="text-sm text-ink-2">Set a goal first, then build your plan.</p>
                 )
@@ -363,7 +442,7 @@ function PlanScreen({ slug }: { slug: string }) {
         </>
       ) : (
         <>
-          {s.status === "needs_approval" && !olderView ? <PlanReviewCard slug={slug} strategyId={s.id} version={s.version} canApprove={plan.canApprove} onDecided={() => setViewId(null)} staleReason={plan.staleInputs.requiresRefresh ? staleInputLabels.join(", ") || "important business inputs changed" : undefined} quality={planQ} help={reviewHelp} /> : null}
+          {s.status === "needs_approval" && !olderView ? <PlanReviewCard slug={slug} strategyId={s.id} version={s.version} canApprove={plan.canApprove} onDecided={() => showVersion(null)} staleReason={plan.staleInputs.requiresRefresh ? staleInputLabels.join(", ") || "important business inputs changed" : undefined} quality={planQ} help={reviewHelp} /> : null}
           {s.status === "draft" ? (
             <Callout tone="warning" title="Sent back">
               {plan.canEdit ? "Refresh for a new version." : `Ask ${PERMISSION_WHO.edit} to refresh.`}
@@ -392,6 +471,9 @@ function PlanScreen({ slug }: { slug: string }) {
       {s ? <Discussion slug={slug} subjectType="strategy" subjectId={s.id} title={`Growth plan v${s.version}`} href={`/app/${slug}/plan`} /> : null}
         </TabsContent>
       </Tabs>
+
+        </>
+      )}
 
       <SectionBoundary label="recent work">
         <RecentWork slug={slug} />

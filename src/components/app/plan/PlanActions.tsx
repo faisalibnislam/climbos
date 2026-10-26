@@ -9,7 +9,8 @@ import type { Id } from "@convex/_generated/dataModel";
 import { ClipboardList, Magic, RefreshCw } from "@/components/icons";
 import { useState, type ReactNode } from "react";
 import { Button, Callout, Card, CardContent, ConfirmDialog, Field, IconTile, Select, Textarea, toast } from "@/components/ui";
-import { RUN_FINISHED, RunProgress } from "../content/RunProgress";
+import { RUN_FINISHED, RunProgress, useTicker } from "../content/RunProgress";
+import { progressOfRun, runStatusPresentation } from "../../../../shared/progress";
 import { ErrorCallout, PERMISSION_WHO } from "../content/shared";
 import { useCostDisplay } from "../useCostDisplay";
 import { AiModePicker, useAiMode } from "../AiModePicker";
@@ -84,6 +85,17 @@ export function GeneratePlanButton({
       {error ? <ErrorCallout error={error} /> : null}
     </div>
   );
+}
+
+/** Short live state of a plan job for the version picker: "34%" while running, then its outcome. */
+export function useStrategyRunState(slug: string, runId: Id<"workflowRuns"> | null): { label: string; finished: boolean; succeeded: boolean } | null {
+  const run = useQuery(api.content.runStatus, runId ? { slug, runId } : "skip");
+  const now = useTicker(2000);
+  if (!run) return null;
+  if (RUN_FINISHED.has(run.status)) return { label: runStatusPresentation(run.status).label, finished: true, succeeded: run.status === "verified" || run.status === "needs_approval" };
+  if (!now) return { label: "Starting", finished: false, succeeded: false };
+  const progress = progressOfRun(run.steps.filter((x) => x.kind !== "compute"), run.planned, now, false);
+  return { label: `${progress.percent}%`, finished: false, succeeded: false };
 }
 
 /** Live progress of the plan job started here, or one already running (from the plan query). */

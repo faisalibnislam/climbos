@@ -9,7 +9,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, ArrowUpDown, Check, ChevronDown, History, RotateCcw, X } from "@/components/icons";
+import { ArrowLeft, ArrowRight, ArrowUpDown, Check, ChevronDown, History, RefreshCw, RotateCcw, X } from "@/components/icons";
 import { Badge, Button, Checkbox, Dialog, DialogContent, DialogFooter, Input, Popover, PopoverContent, PopoverTrigger, Select, Skeleton, Switch, Tooltip, toast } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import { formatDateTime } from "@/components/app/money";
@@ -52,36 +52,105 @@ export function usePlanVersions(slug: string) {
   return useQuery(api.planHistory.versions, { slug });
 }
 
+/** A plan version still being written: listed first, opens its live progress. */
+export type BuildingVersion = { version: number; progress: string };
+
 /** "Version 4 · Latest ▾": opens every version with date, status, why it changed and who approved it. */
-export function VersionPicker({ versions, viewingId, onView, onCompare, slug, canEdit = false }: { versions: Version[]; viewingId: string | null; onView: (id: Id<"strategies">) => void; onCompare: () => void; slug?: string; canEdit?: boolean }) {
+export function VersionPicker({
+  versions,
+  viewingId,
+  onView,
+  onCompare,
+  slug,
+  canEdit = false,
+  building = null,
+  viewingBuilding = false,
+  onViewBuilding,
+  onOpen,
+}: {
+  versions: Version[];
+  viewingId: string | null;
+  onView: (id: Id<"strategies">) => void;
+  onCompare: () => void;
+  slug?: string;
+  canEdit?: boolean;
+  building?: BuildingVersion | null;
+  viewingBuilding?: boolean;
+  onViewBuilding?: () => void;
+  /** The list opened: a chance to load the listed versions so switching is instant. */
+  onOpen?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const current = versions.find((v) => v.id === viewingId) ?? versions[0];
   if (!current) return null;
-  const many = versions.length > 1;
+  const onBuilding = Boolean(building && viewingBuilding);
+  const many = versions.length + (building ? 1 : 0) > 1;
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) onOpen?.();
+      }}
+    >
       <PopoverTrigger asChild>
         <button
           type="button"
           className="inline-flex h-[var(--h-sm)] items-center gap-2 rounded-[var(--radius-control)] border border-[var(--btn-2-border)] bg-[var(--btn-2-bg)] px-2.5 text-ui font-medium text-ink shadow-[var(--btn-2-shadow)] hover:bg-surface-2"
-          aria-label={`Version ${current.version}${current.name ? `, ${current.name}` : ""}. Open version history`}
+          aria-label={onBuilding && building ? `Version ${building.version}, building. Open version history` : `Version ${current.version}${current.name ? `, ${current.name}` : ""}. Open version history`}
         >
           <History aria-hidden className="size-4 text-ink-3" />
-          Version {current.version}
-          {current.name ? <span className="max-w-48 truncate text-ink-2">· {current.name}</span> : null}
-          {/* One version: no tags (owner, 2026-10-19). */}
-          {many ? <VersionTags v={current} /> : null}
+          {onBuilding && building ? (
+            <>
+              Version {building.version}
+              <Badge tone="blue" icon={<RefreshCw className="animate-spin" />}>
+                Building · {building.progress}
+              </Badge>
+            </>
+          ) : (
+            <>
+              Version {current.version}
+              {current.name ? <span className="max-w-48 truncate text-ink-2">· {current.name}</span> : null}
+              {/* One version: no tags (owner, 2026-10-19). */}
+              {many ? <VersionTags v={current} /> : null}
+            </>
+          )}
           <ChevronDown aria-hidden className="size-3.5 text-ink-3" />
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[min(26rem,calc(100vw-2rem))] p-0">
         <div className="flex items-center justify-between border-b border-line px-3 py-2">
           <p className="text-overline">Version history</p>
-          <span className="text-xs tabular-nums text-ink-3">{versions.length}</span>
+          <span className="text-xs tabular-nums text-ink-3">{versions.length + (building ? 1 : 0)}</span>
         </div>
         <ol className="max-h-[60vh] overflow-y-auto p-1" aria-label="Plan versions">
+          {building ? (
+            <li>
+              <button
+                type="button"
+                aria-current={onBuilding ? "true" : undefined}
+                onClick={() => {
+                  onViewBuilding?.();
+                  setOpen(false);
+                }}
+                className={cn("flex w-full items-start gap-3 rounded-[var(--radius-control)] px-2.5 py-2 text-left transition-colors hover:bg-surface-2", onBuilding && "bg-surface-2")}
+              >
+                <span className="mt-0.5 grid h-6 min-w-8 place-items-center rounded-[var(--radius-badge)] bg-blue-100 px-1 text-xs font-semibold tabular-nums text-blue-800">v{building.version}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="text-ui font-medium text-ink">Building now</span>
+                    <Badge tone="blue" icon={<RefreshCw className="animate-spin" />}>
+                      {building.progress}
+                    </Badge>
+                  </span>
+                  <span className="mt-0.5 block text-ui text-ink-2">See each step as it happens.</span>
+                </span>
+                {onBuilding ? <Check aria-hidden className="mt-1 size-4 text-ink" /> : null}
+              </button>
+            </li>
+          ) : null}
           {versions.map((v) => {
-            const selected = v.id === current.id;
+            const selected = !onBuilding && v.id === current.id;
             return (
               <li key={v.id}>
                 <button
