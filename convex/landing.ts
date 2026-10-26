@@ -17,6 +17,7 @@ import { notifyOwners } from "./lib/notify";
 import { emitEvent } from "./webhooks";
 import { claudeUsageRecords } from "./lib/usage";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+import { runModel } from "../shared/ai/modelChoice";
 
 /**
  * Landing pages: Climb AI writes a focused offer page from the business's
@@ -167,6 +168,8 @@ export const write = internalAction({
     const c = await ctx.runQuery(internal.landing.writeContext, { pageId });
     if (!c?.run) return;
     const rates = getRateVersion(c.run.rateVersionId);
+    // The run's model route: operator defaults or a permitted user's choice.
+    const model = runModel(c.run, MODEL);
     const call = process.env.CLIMBOS_FAKE_LLM ? fakeTurn : modelTurn;
     const step = await ctx.runMutation(internal.engine.beginStep, { runId, index: 0, kind: "model", label: "Write the page", role: "cmo" });
     if (!step.proceed && step.reason !== "checkpoint") {
@@ -176,8 +179,8 @@ export const write = internalAction({
     }
     try {
       const content = [`BUSINESS: ${c.business.name}`, c.language !== "English" ? `LANGUAGE: write the whole page in ${c.language}.` : "", c.business.summary ? `ABOUT: ${c.business.summary.slice(0, 800)}` : "", c.voice ? `VOICE: ${c.voice.slice(0, 600)}` : "", `<untrusted_content source="facts">\n${c.facts || "none"}\n</untrusted_content>`, `<untrusted_content source="brief">\n${c.page.brief}\n</untrusted_content>`].filter(Boolean).join("\n");
-      const r = await call({ modelKey: MODEL, cacheKey: "climbos:landing_page", system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: LandingContent, maxTokens: 2_500, effort: "low", thinkingOff: true }, rates);
-      if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(MODEL, r, rates) });
+      const r = await call({ modelKey: model, cacheKey: "climbos:landing_page", system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: LandingContent, maxTokens: 2_500, effort: "low", thinkingOff: true }, rates);
+      if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(model, r, rates) });
       if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });
       const parsed = r.ok ? LandingContent.safeParse(r.output) : null;
       if (!parsed?.success) {
@@ -232,7 +235,7 @@ const designBaselineV = v.union(
 
 /** Saves an owner-reviewed measurement plan as a version-bound page revision. */
 export const saveDesignMeasurementPlan = mutation({
-  args: { slug: v.string(), id: v.id("landingPages"), expectedVersion: v.number(), metric: v.string(), method: v.string(), baseline: designBaselineV },
+  args: { slug: v.string(), id: v.id("landingPages"), expectedVersion: v.number(), metric: v.string(), method: v.string(), baseline: designBaselineV, audience: v.string(), guardrail: v.string(), observationDays: v.number(), decisionRule: v.string() },
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
     const page = assertSameOrg(await ctx.db.get(args.id), org._id, "page");
@@ -243,6 +246,13 @@ export const saveDesignMeasurementPlan = mutation({
     const metric = args.metric.trim().slice(0, 160);
     const method = args.method.trim().slice(0, 600);
     if (!metric || !method) throw appError("INVALID", "Add the result you want to measure and how you will measure it.");
+    const audience = args.audience.trim().slice(0, 240);
+    const guardrail = args.guardrail.trim().slice(0, 240);
+    const decisionRule = args.decisionRule.trim().slice(0, 300);
+    if (!audience) throw appError("INVALID", "Say who the change is measured on, for example visitors from your Google profile.");
+    if (!guardrail) throw appError("INVALID", "Add a guardrail: a result that must not get worse, such as refund requests or call volume.");
+    if (!Number.isInteger(args.observationDays) || args.observationDays < 1 || args.observationDays > 365) throw appError("INVALID", "The observation period must be 1 to 365 whole days.");
+    if (!decisionRule) throw appError("INVALID", "Say what you will do with the result: keep, change or roll back the page, and when.");
     let baseline: typeof args.baseline;
     if (args.baseline.state === "recorded") {
       const value = args.baseline.value.trim().slice(0, 240);
@@ -256,7 +266,7 @@ export const saveDesignMeasurementPlan = mutation({
       baseline = { state: "unknown", reason, collectionPlan };
     }
     const appliesToVersion = version + 1;
-    const designMeasurementPlan = { metric, method, baseline, appliesToVersion, confirmedBy: user._id, confirmedAt: Date.now() };
+    const designMeasurementPlan = { metric, method, baseline, audience, guardrail, observationDays: args.observationDays, decisionRule, appliesToVersion, confirmedBy: user._id, confirmedAt: Date.now() };
     const next = { title: page.title, color: page.color, content: page.content, designMeasurementPlan };
     await recordLandingVersion(ctx, page, next, "measurement", user._id);
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "landing.measurement_plan_saved", subjectType: "landingPage", subjectId: page._id, summary: `Saved an owner-reviewed measurement plan for landing page version ${appliesToVersion}.` });

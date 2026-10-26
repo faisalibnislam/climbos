@@ -493,7 +493,7 @@ function SlotCard({ slug, slot, tz, canAct }: { slug: string; slot: Slot; tz: st
   const time = new Date(slot.slotAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: tz });
   const reasons = slot.routing?.reasons ?? [];
   return (
-    <article {...climbTarget("slot", slot.id, `${networkName(slot.channel)} post ${time}: ${slot.artifact?.title ?? slot.idea}`)} className="group flex flex-col gap-1.5 rounded-lg border border-line bg-surface p-2 transition-colors hover:border-line-strong">
+    <article id={`slot-${slot.id}`} {...climbTarget("slot", slot.id, `${networkName(slot.channel)} post ${time}: ${slot.artifact?.title ?? slot.idea}`)} className="group scroll-mt-24 target:ring-2 target:ring-brand-700 flex flex-col gap-1.5 rounded-lg border border-line bg-surface p-2 transition-colors hover:border-line-strong">
       <div className="flex items-center gap-1.5">
         <SocialIcon network={slot.channel} size="sm" labelled />
         <span className="text-xs tabular-nums text-ink-3">{time}</span>

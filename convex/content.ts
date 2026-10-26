@@ -3,6 +3,7 @@ import { featureAllowed, requirePaid } from "./lib/access";
 import { aiModeView, resolveAiMode } from "./lib/aiMode";
 import { EXPERT_KINDS } from "../shared/agents/routes";
 import { lintApprovedOfferCopy } from "../shared/agents/offerAssessment";
+import { unsupportedClaimIssue } from "./lib/claimCheck";
 import { v } from "convex/values";
 
 /** A running job's early output, filled in as it arrives (first take, channels that fit, chosen plays). */
@@ -37,6 +38,7 @@ import { onOwnerDecision, onPublishOutcome } from "./lib/autopilot";
 import { estimateJobMicros, planJob } from "./lib/jobPlans";
 import { imageUrlFor } from "./lib/media";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+import { resolveModelRoute } from "./lib/modelRoute";
 
 /** Read-only source set for the conversion/social audit; restricted to one tenant and confirmed published posts. */
 export const auditPublishedSocial = internalQuery({
@@ -167,6 +169,8 @@ export const calendar = query({
       scheduledFor: number;
       autopilot: boolean;
       autopilotStatus: string | null;
+      /** Waiting for owner review with no posting time yet; placed on the day it was drafted. */
+      unscheduled?: boolean;
     };
     const events = new Map<string, CalendarItem>(rows.map((a) => [String(a._id), {
       id: String(a._id),
@@ -210,12 +214,21 @@ export const calendar = query({
         autopilotStatus: slot.status,
       });
     }
+    // Drafts waiting for review have no posting time; show them on the day they were drafted so nothing awaiting the owner is hidden.
+    const awaiting = await ctx.db.query("artifacts").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "in_review")).order("desc").take(300);
+    for (const a of awaiting) {
+      if (a.scheduledFor !== undefined || events.has(String(a._id))) continue;
+      const draftedAt = a._creationTime;
+      if (draftedAt < from || draftedAt >= to) continue;
+      events.set(String(a._id), { id: String(a._id), artifactId: a._id, slotId: null, title: a.title, channel: a.channel, status: a.status, scheduledFor: draftedAt, autopilot: false, autopilotStatus: null, unscheduled: true });
+    }
     return {
       items: [...events.values()].sort((a, b) => a.scheduledFor - b.scheduledFor),
       // Reaching a source cap means the range may contain more rows than we return.
       limitsReached: {
         scheduledPosts: rows.length === 300,
         autopilotSlots: slots.length === 300,
+        awaitingReview: awaiting.length === 300,
       },
     };
   },
@@ -488,6 +501,10 @@ export const decide = mutation({
       const blockingOfferIssue = offerIssues.find((issue) => issue.severity === "error");
       if (blockingOfferIssue) throw appError("INVALID", `This copy doesn't match the offer terms approved with its plan. ${blockingOfferIssue.message}`);
     }
+    if (args.decision === "approve") {
+      const claimIssue = await unsupportedClaimIssue(ctx, a.businessId, [a.title, ver.headline, ver.body, ver.callToAction, ...ver.hashtags, ver.altText]);
+      if (claimIssue) throw appError("INVALID", `This copy makes a claim ClimbOS can't verify yet. ${claimIssue}`);
+    }
     const { connection } = await publishTarget(ctx, org._id, a.channel);
     if (a.status === "approved" && !approvalProblem(a.approvalId ? await ctx.db.get(a.approvalId) : null, ver, connection, a.scheduledFor)) {
       throw appError("INVALID", "This version is already approved.");
@@ -641,10 +658,12 @@ export const generate = mutation({
     images: v.optional(v.number()),
     brief: v.optional(v.string()),
     aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
+    model: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
     const aiMode = await resolveAiMode(ctx, org, args.job, args.aiMode);
+    const modelRoute = await resolveModelRoute(ctx, user._id, args.model);
     const plan = planJob(args.job, { quantity: args.quantity, images: args.images, channel: args.channel }, { fixture: org.kind === "demo", mode: aiMode });
     const runId = await createRunWithReservation(ctx, {
       org,
@@ -657,6 +676,7 @@ export const generate = mutation({
       createdBy: user._id,
       isFixture: org.kind === "demo",
       aiMode,
+      modelRoute,
     });
     await ctx.scheduler.runAfter(0, internal.jobs.createContent, {
       runId,
@@ -678,14 +698,16 @@ export const estimate = query({
     images: v.optional(v.number()),
     channel: v.optional(channelValidator),
     aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
+    model: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { org } = await requireOrgAccess(ctx, { slug: args.slug }, "view");
+    const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "view");
     const view = await aiModeView(ctx, org);
     const mode = EXPERT_KINDS.has(args.job) && view.expertUnlocked ? (args.aiMode ?? view.mode) : "basic";
     const plan = planJob(args.job, { quantity: args.quantity, images: args.images, channel: args.channel }, { fixture: org.kind === "demo", mode });
     const fixture = org.kind === "demo";
-    return { title: plan.title, roles: plan.roles, maxCostMicros: estimateJobMicros(plan, { fixture }), meters: plan.meters, aiMode: mode, expertUnlocked: view.expertUnlocked, expertApplies: EXPERT_KINDS.has(args.job) };
+    const route = await resolveModelRoute(ctx, user._id, args.model);
+    return { title: plan.title, roles: plan.roles, maxCostMicros: estimateJobMicros(plan, { fixture, route }), meters: plan.meters, aiMode: mode, expertUnlocked: view.expertUnlocked, expertApplies: EXPERT_KINDS.has(args.job) };
   },
 });
 

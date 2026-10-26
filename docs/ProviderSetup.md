@@ -13,7 +13,8 @@ Run `pnpm setup:check` (or `pnpm setup:check --prod`) at any time. It lists what
 | Variable | Notes |
 |---|---|
 | `OPENAI_API_KEY` | Required in the Convex deployment for real text-agent work. Both Basic and Expert runs start on `gpt-6-luna`. In an explicitly selected Expert run, only eligible agents can use `gpt-6.1-sol` for a revision after the critic reports an eligible issue with evidence. This is a bounded revision route, not a workspace-wide model switch. There is no silent provider fallback. |
-| `GEMINI_API_KEY` | Optional in setup checks; used for configured image and video generation routes. Image model IDs and per-attempt planning allowances are in `shared/ai/models.ts`; video generation is separately metered. Missing Gemini configuration does not disable OpenAI text work. |
+| `GEMINI_API_KEY` | Optional in setup checks; used for configured image and video generation routes, and makes Gemini text models (3.1 and 3.5 Flash-Lite, 3.6 and 3.8 Flash, 3.1 Pro, 4 Argon) available for model choice. Image model IDs and per-attempt planning allowances are in `shared/ai/models.ts`; video generation is separately metered. Missing Gemini configuration does not disable OpenAI text work. |
+| `ANTHROPIC_API_KEY` | Optional. Makes Claude models (Haiku 5.5, Sonnet 5 and 5.5, Opus 5 and 5.5, Fable 5 and 5.1) available as operator defaults and in the picker for users allowed to choose (`/ops/models`). Without it, those models show as unavailable; nothing fails at run time. |
 
 Without `OPENAI_API_KEY`, real text-agent work is unavailable; the demo still works on fixtures. Without `GEMINI_API_KEY`, the configured image/video generation routes are unavailable while text work can continue.
 

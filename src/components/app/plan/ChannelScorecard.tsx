@@ -8,7 +8,7 @@ import { Badge, Button, Callout, ChoiceChips, EmptyState, IconTile, Select, Skel
 import { errorMessage } from "@/components/app/errors";
 import { climbTarget } from "@/components/climb/context";
 import { cn } from "@/lib/utils";
-import { recommendationGuidance } from "@shared/acquisition/recommendationGroups";
+import { CHANNEL_JOB_LABEL, channelJob, recommendationGuidance } from "@shared/acquisition/recommendationGroups";
 
 type View = NonNullable<ReturnType<typeof useQuery<typeof api.acquisition.view>>>;
 type Row = View["channels"][number];
@@ -282,6 +282,7 @@ function ChannelRow({ r, rank, labels, slug, canEdit }: { r: Row; rank: number; 
   const savePreference = useMutation(api.acquisition.setChannelPreference);
   const Exec = EXEC_ICON[r.exec as keyof typeof EXEC_ICON] ?? Hand;
   const recommendation = recommendationGuidance(r.id);
+  const job = channelJob(r.id);
   return (
     <li {...climbTarget("channel", r.id, `${r.name}: priority ${rank}, ${r.statusLabel}`)}>
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2">
@@ -291,6 +292,7 @@ function ChannelRow({ r, rank, labels, slug, canEdit }: { r: Row; rank: number; 
             <span className="font-medium text-ink">{r.name}</span>
             <span className="text-xs text-ink-3">{r.family}</span>
             {recommendation ? <Badge tone="blue">{recommendation.label}</Badge> : null}
+            {job ? <span className="text-xs text-ink-3">Job: {CHANNEL_JOB_LABEL[job]}</span> : null}
             {r.status === "primary" ? <Badge tone="brand">Primary</Badge> : null}
           </span>
           {r.why ? <span className={cn("mt-0.5 block text-ui text-ink-2", !open && "line-clamp-1")}>{r.why}</span> : null}

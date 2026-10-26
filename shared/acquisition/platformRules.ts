@@ -139,3 +139,17 @@ export function lintPlatformEligibility(fields: { path: string; text: string }[]
     .slice(0, 2)
     .map((f) => ({ severity: "error" as const, rule: "platform_eligibility", message: "App Store product page optimization is documented for iOS/iPadOS, not Mac apps (RULE-02). Test the message on your own site or with a before/after instead.", path: f.path }));
 }
+
+/** Review sites that ask businesses not to solicit reviews; the invitation workflow must not point at them. */
+const NO_SOLICIT_REVIEW_HOSTS: { host: RegExp; platform: string }[] = [{ host: /(^|\.)yelp\.[a-z.]+$/i, platform: "Yelp" }];
+
+export function reviewDestinationProblem(url: string): string | null {
+  let host: string;
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    return null;
+  }
+  const match = NO_SOLICIT_REVIEW_HOSTS.find((h) => h.host.test(host));
+  return match ? `${match.platform} asks businesses not to request reviews, so ClimbOS won't send review invitations there. Use another review page, such as your Google Business Profile review link.` : null;
+}

@@ -1,11 +1,11 @@
 import type { TurnResult } from "../../shared/ai/types";
-import { MODEL_SPECS } from "../../shared/ai/models";
+import { MODEL_SPECS, searchCallUsd } from "../../shared/ai/models";
 import { usdToMicrosCeil } from "../../shared/economics/money";
 import type { ModelKey, RateVersion } from "../../shared/economics/rates";
 
 /** Usage-event records for one metered Claude turn (tokens, plus web searches separately). */
 export function claudeUsageRecords(modelKey: ModelKey, r: TurnResult, rates: RateVersion) {
-  const searchMicros = usdToMicrosCeil(r.usage.webSearches * rates.services.searchCall);
+  const searchMicros = usdToMicrosCeil(r.usage.webSearches * searchCallUsd(modelKey, rates));
   const records = [
     {
       type: "model_call" as const,

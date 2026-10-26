@@ -127,6 +127,8 @@ const offerAssessmentValidator = v.object({
   test: v.object({ eligibleAudience: v.string(), baselineOrComparison: v.string(), primaryOutcome: v.string(), observationWindowDays: v.number(), continueCriteria: v.string(), stopCriteria: v.string(), thresholdEvidenceRef: v.union(v.string(), v.null()), ownerInputs: v.array(v.string()) }),
   urgencyClaim: v.union(v.string(), v.null()),
   urgencyEvidenceRef: v.union(v.string(), v.null()),
+  persuasion: v.optional(v.array(v.object({ mechanism: v.string(), use: v.string(), legalStatus: v.string(), evidenceNeeded: v.string(), lowerRiskAlternative: v.string() }))),
+  paymentFeeTerms: v.optional(v.object({ percent: v.number(), fixedAmount: v.number(), basis: v.string(), reference: v.union(v.string(), v.null()) })),
   unknowns: v.array(v.string()),
   authorizationNote: v.string(),
 });
@@ -741,6 +743,25 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
 
+  /** Operator default model per tier (one row, key "global"). Absent = built-in OpenAI route. */
+  aiModelSettings: defineTable({
+    key: v.literal("global"),
+    standard: v.string(),
+    advanced: v.string(),
+    updatedBy: v.id("users"),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
+  /** Users an operator allowed to pick their own model (off for everyone by default). */
+  aiModelGrants: defineTable({
+    userId: v.id("users"),
+    enabled: v.boolean(),
+    grantedBy: v.id("users"),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_enabled", ["enabled", "updatedAt"]),
+
   /**
    * Billing account: one owner, one package and one credit balance shared by
    * all of its workspaces (agencies get one bill). Seats are per account.
@@ -781,6 +802,8 @@ export default defineSchema({
     kind: v.union(v.literal("customer"), v.literal("demo")),
     /** Engine rollout flags for this workspace (REQ-ENG-01), set by ClimbOS staff only, e.g. "decision_contract". */
     engineFlags: v.optional(v.array(v.string())),
+    /** Spec §12: this workspace's results join cross-business learning pools only after an owner opts in. */
+    learningPooling: v.optional(v.object({ optedIn: v.boolean(), by: v.id("users"), at: v.number() })),
     /** Owner-set minimum days between ClimbOS emails to the same person (marketing broadcasts, outreach); unset = no limit. */
     contactFrequencyDays: v.optional(v.number()),
     createdBy: v.id("users"),
@@ -1375,6 +1398,16 @@ export default defineSchema({
   })
     .index("by_org", ["orgId"])
     .index("by_competitor_research_due", ["competitorResearchNextAt"]),
+
+  /** Step-one business setup saved to the owner's account before the workspace exists, so it can be resumed anywhere. */
+  onboardingDrafts: defineTable({
+    userId: v.id("users"),
+    /** OnboardingDraft JSON (src/components/app/draftKeys.ts), capped in size. */
+    payload: v.string(),
+    label: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user_updated", ["userId", "updatedAt"]),
 
   businessFacts: defineTable({
     orgId: v.id("organizations"),
@@ -2462,6 +2495,11 @@ export default defineSchema({
         v.object({ state: v.literal("recorded"), value: v.string(), source: v.string() }),
         v.object({ state: v.literal("unknown"), reason: v.string(), collectionPlan: v.string() }),
       ),
+      /** Required for plans saved after 2026-10-26; older plans predate these fields. */
+      audience: v.optional(v.string()),
+      guardrail: v.optional(v.string()),
+      observationDays: v.optional(v.number()),
+      decisionRule: v.optional(v.string()),
       appliesToVersion: v.number(),
       confirmedBy: v.id("users"),
       confirmedAt: v.number(),
@@ -2490,6 +2528,11 @@ export default defineSchema({
         v.object({ state: v.literal("recorded"), value: v.string(), source: v.string() }),
         v.object({ state: v.literal("unknown"), reason: v.string(), collectionPlan: v.string() }),
       ),
+      /** Required for plans saved after 2026-10-26; older plans predate these fields. */
+      audience: v.optional(v.string()),
+      guardrail: v.optional(v.string()),
+      observationDays: v.optional(v.number()),
+      decisionRule: v.optional(v.string()),
       appliesToVersion: v.number(),
       confirmedBy: v.id("users"),
       confirmedAt: v.number(),
@@ -2499,6 +2542,36 @@ export default defineSchema({
   })
     .index("by_page_version", ["pageId", "version"])
     .index("by_org_created", ["orgId", "createdAt"]),
+
+  /** Desktop and mobile captures of one exact ClimbOS-hosted landing draft version (convex/landingRenders.ts). */
+  landingDraftRenders: defineTable({
+    orgId: v.id("organizations"),
+    pageId: v.id("landingPages"),
+    version: v.number(),
+    status: v.union(v.literal("pending"), v.literal("captured"), v.literal("unavailable")),
+    /** Single-use, short-lived token for the draft route; cleared when the capture finishes. */
+    token: v.optional(v.string()),
+    expiresAt: v.number(),
+    requestedBy: v.id("users"),
+    requestedAt: v.number(),
+    capturedAt: v.optional(v.number()),
+    shots: v.array(v.object({ view: v.union(v.literal("desktop"), v.literal("mobile")), storageId: v.id("_storage"), width: v.number(), height: v.number() })),
+  })
+    .index("by_page_requested", ["pageId", "requestedAt"])
+    .index("by_token", ["token"]),
+
+  /** The customer's original audited page, kept once the owner chooses a design direction (no 30-day expiry). */
+  designOriginalPages: defineTable({
+    orgId: v.id("organizations"),
+    runId: v.id("workflowRuns"),
+    pageUrl: v.string(),
+    /** Text as read during the audit (capped), with its SHA-256 for comparison. */
+    text: v.string(),
+    textHash: v.string(),
+    screenshots: v.array(v.object({ view: v.union(v.literal("desktop"), v.literal("mobile")), storageId: v.id("_storage"), width: v.number(), height: v.number(), capturedAt: v.number() })),
+    retainedBy: v.id("users"),
+    retainedAt: v.number(),
+  }).index("by_org_run", ["orgId", "runId"]),
 
   /** Website chat widget (one per workspace) and its conversations. */
   chatWidgets: defineTable({
@@ -2674,6 +2747,23 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_org_run", ["orgId", "runId"]).index("by_org_run_finding", ["orgId", "runId", "findingIndex"]),
 
+  /** Append-only history of owner decisions on one finding, with the page version each decision saw. */
+  designFindingReviewEvents: defineTable({
+    orgId: v.id("organizations"),
+    runId: v.id("workflowRuns"),
+    findingIndex: v.number(),
+    kind: v.union(v.literal("status"), v.literal("direction")),
+    status: v.optional(v.string()),
+    directionId: v.optional(v.string()),
+    note: v.optional(v.string()),
+    /** The landing draft built from this finding, and its version when the decision was made. */
+    landingPageId: v.optional(v.id("landingPages")),
+    landingVersion: v.optional(v.number()),
+    screenshotCapturedAt: v.optional(v.number()),
+    actorId: v.id("users"),
+    at: v.number(),
+  }).index("by_org_run_finding", ["orgId", "runId", "findingIndex"]),
+
   /** Private, short-lived viewport captures attached to one immutable website audit run. */
   websiteAuditScreenshots: defineTable({
     orgId: v.id("organizations"),
@@ -2819,6 +2909,8 @@ export default defineSchema({
     businessId: v.id("businesses"),
     goalId: v.id("goals"),
     version: v.number(),
+    /** Owner's own label shown beside "Version N". Display only: not part of the plan hash or approval. */
+    versionName: v.optional(v.string()),
     status: v.union(
       v.literal("draft"),
       v.literal("needs_approval"),
@@ -3437,6 +3529,13 @@ export default defineSchema({
       v.literal("concluded"),
     ),
     resultNote: v.optional(v.string()),
+    /** Spec §12 pre-registration additions; fixed once the test starts running. */
+    variants: v.optional(v.array(v.object({ key: v.string(), description: v.string() }))),
+    decisionOwner: v.optional(v.string()),
+    plannedCost: v.optional(v.object({ cashMinor: v.number(), currency: v.string(), ownerHours: v.number(), basis: v.string() })),
+    preregisteredAt: v.optional(v.number()),
+    /** Append-only record of changes from the pre-registered plan while the test ran. */
+    deviations: v.optional(v.array(v.object({ at: v.number(), by: v.id("users"), note: v.string() }))),
     /**
      * Structured outcomes (Book 14 §14). The hypothesis, metric and stopping
      * rule above stay as written; an analysis on a changed definition is
@@ -4632,6 +4731,8 @@ export default defineSchema({
     firstActionAt: v.optional(v.number()),
     /** Climb AI Basic or paid Expert (eligible, measured Sol escalation); absent = basic. */
     aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
+    /** Models this run uses per tier (operator defaults or a permitted user's choice); absent = built-in OpenAI route. */
+    modelRoute: v.optional(v.object({ standard: v.string(), advanced: v.string(), source: v.union(v.literal("default"), v.literal("user")) })),
     /** A quick first take shown while the full job works (JSON: { headline, points[] }). */
     preview: v.optional(v.string()),
     /** The job action and args that continue this run from its checkpoints. */
@@ -4831,6 +4932,8 @@ export default defineSchema({
     stepIndex: v.optional(v.number()),
     routingVersionId: v.optional(v.string()),
     aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
+    /** Whose model choice served this call: operator defaults or a permitted user. Provider and model are below. */
+    modelSource: v.optional(v.union(v.literal("default"), v.literal("user"))),
     type: v.union(
       v.literal("model_call"),
       v.literal("image_attempt"),

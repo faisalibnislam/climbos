@@ -1,6 +1,7 @@
 "use client";
 
 import { AiModePicker, useAiMode, type AiMode } from "../AiModePicker";
+import { ModelPicker, useModelChoice } from "../ModelPicker";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -88,6 +89,7 @@ function CreateContentForm({ slug, onClose }: { slug: string; onClose: () => voi
   const [error, setError] = useState<unknown>(null);
   const [runId, setRunId] = useState<Id<"workflowRuns"> | null>(null);
   const ai = useAiMode(slug);
+  const modelChoice = useModelChoice();
   const isAds = job === "content_ads";
 
   const isSocial = job === "content_social";
@@ -128,6 +130,7 @@ function CreateContentForm({ slug, onClose }: { slug: string; onClose: () => voi
         images: isSocial ? effectiveImages : undefined,
         brief: brief.trim() ? brief.trim() : undefined,
         aiMode: isAds ? ai.mode : undefined,
+        model: modelChoice.model,
       });
       setRunId(res.runId);
     } catch (e) {
@@ -208,9 +211,10 @@ function CreateContentForm({ slug, onClose }: { slug: string; onClose: () => voi
       </p>
 
       {isAds ? <AiModePicker slug={slug} kind="content_ads" value={ai.mode} onChange={ai.setMode} /> : null}
+      <ModelPicker kind={job} aiMode={isAds ? ai.mode : undefined} value={modelChoice.model} onChange={modelChoice.setModel} />
 
       <SectionBoundary label="the cost estimate">
-        <EstimatePanel slug={slug} job={job} quantity={isSocial ? quantity : undefined} images={isSocial ? effectiveImages : undefined} aiMode={isAds ? ai.mode : undefined} />
+        <EstimatePanel slug={slug} job={job} quantity={isSocial ? quantity : undefined} images={isSocial ? effectiveImages : undefined} aiMode={isAds ? ai.mode : undefined} model={modelChoice.model} />
       </SectionBoundary>
 
       {error ? <ErrorCallout error={error} /> : null}
@@ -253,8 +257,8 @@ function NewDrafts({ slug, runId, onOpen }: { slug: string; runId: Id<"workflowR
   );
 }
 
-function EstimatePanel({ slug, job, quantity, images, aiMode }: { slug: string; job: Job; quantity?: number; images?: number; aiMode?: AiMode }) {
-  const est = useQuery(api.content.estimate, { slug, job, quantity, images, aiMode });
+function EstimatePanel({ slug, job, quantity, images, aiMode, model }: { slug: string; job: Job; quantity?: number; images?: number; aiMode?: AiMode; model?: string }) {
+  const est = useQuery(api.content.estimate, { slug, job, quantity, images, aiMode, model });
   return (
     <section aria-labelledby="estimate-heading" className="rounded-lg border border-line bg-surface-2 p-4" aria-live="polite" aria-busy={est === undefined}>
       <h3 id="estimate-heading" className="heading-card">

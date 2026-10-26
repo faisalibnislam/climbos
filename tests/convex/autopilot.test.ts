@@ -98,7 +98,7 @@ describe("social autopilot", () => {
     expect(initial.items).toEqual(expect.arrayContaining([
       expect.objectContaining({ artifactId: slot.artifactId, status: "in_review", autopilot: true, autopilotStatus: "needs_approval" }),
     ]));
-    expect(initial.limitsReached).toEqual({ scheduledPosts: false, autopilotSlots: false });
+    expect(initial.limitsReached).toEqual({ scheduledPosts: false, autopilotSlots: false, awaitingReview: false });
 
     await w.client.mutation(api.content.decide, { slug: w.slug, artifactId: slot.artifactId!, decision: "approve" });
     const movedTo = slot.slotAt + 3 * 86_400_000;
@@ -159,7 +159,7 @@ describe("social autopilot", () => {
 
     const result = await w.client.query(api.content.calendar, { slug: w.slug, from: rangeFrom, to: rangeFrom + 86_400_000 });
     expect(result.items).toHaveLength(300);
-    expect(result.limitsReached).toEqual({ scheduledPosts: true, autopilotSlots: true });
+    expect(result.limitsReached).toMatchObject({ scheduledPosts: true, autopilotSlots: true });
   });
 
   it("fully auto posts a clean draft on its own under an autopilot approval", async () => {

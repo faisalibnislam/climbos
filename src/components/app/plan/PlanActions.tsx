@@ -13,6 +13,7 @@ import { RUN_FINISHED, RunProgress } from "../content/RunProgress";
 import { ErrorCallout, PERMISSION_WHO } from "../content/shared";
 import { microsToCreditsLabel } from "../money";
 import { AiModePicker, useAiMode } from "../AiModePicker";
+import { ModelPicker, useChosenModelEstimate, useModelChoice } from "../ModelPicker";
 
 /** "Build my plan" / "Refresh plan": confirm with the capacity note, then start the strategy job. */
 export function GeneratePlanButton({
@@ -36,8 +37,10 @@ export function GeneratePlanButton({
   const [error, setError] = useState<unknown>(null);
   const [creativeRange, setCreativeRange] = useState<"balanced" | "conventional" | "surprising" | "ambitious">("balanced");
   const ai = useAiMode(slug);
+  const modelChoice = useModelChoice();
+  const chosenMax = useChosenModelEstimate("strategy", ai.mode, modelChoice.model);
   const build = mode === "build";
-  const max = ai.data?.estimates.strategy[ai.mode] ?? estimateMicros;
+  const max = chosenMax ?? ai.data?.estimates.strategy[ai.mode] ?? estimateMicros;
   const cost = `Up to ${microsToCreditsLabel(max)}; unused credits return.`;
   if (building) {
     return (
@@ -65,7 +68,7 @@ export function GeneratePlanButton({
         onConfirm={async () => {
           setError(null);
           try {
-            const res = await generate({ slug, aiMode: ai.mode, creativeRange });
+            const res = await generate({ slug, aiMode: ai.mode, creativeRange, model: modelChoice.model });
             onStarted(res.runId);
           } catch (e) {
             setError(e);
@@ -73,6 +76,7 @@ export function GeneratePlanButton({
         }}
       >
         <AiModePicker slug={slug} kind="strategy" value={ai.mode} onChange={ai.setMode} />
+        <ModelPicker kind="strategy" aiMode={ai.mode} value={modelChoice.model} onChange={modelChoice.setModel} />
         <Field label="Creative strategy range"><Select value={creativeRange} onValueChange={(value) => setCreativeRange(value as typeof creativeRange)} options={[{ value: "balanced", label: "Balanced" }, { value: "conventional", label: "More conventional" }, { value: "surprising", label: "More surprising" }, { value: "ambitious", label: "More ambitious" }]} /></Field>
       </ConfirmDialog>
       <p className="text-xs tabular-nums text-ink-3">≤ {microsToCreditsLabel(max)}</p>

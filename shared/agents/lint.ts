@@ -49,7 +49,16 @@ const CLAIMS: { kind: string; re: RegExp; key: (m: RegExpMatchArray) => RegExp }
   { kind: "a user count", re: /\b(?:trusted|used|loved|chosen)\s+by\s+(thousands|millions|hundreds|\d[\d,.]*\s*(?:k|\+)?)/i, key: (m) => new RegExp(m[1].replace(/[.+]/g, "\\$&"), "i") },
   { kind: "an award or certification", re: /\baward[- ]winning\b|\b(?:soc ?2|iso ?27001|hipaa|gdpr)[- ]?(?:compliant|certified)\b|\bcertified\b/i, key: (m) => new RegExp(m[0].split(/[\s-]/)[0], "i") },
   { kind: "full automation", re: /\bfully[- ]automat\w+\b|\bhands[- ]free\b|\bno human\b/i, key: () => /fully[- ]automat|hands[- ]free|no human|automat/i },
+  // Spec §9: reference prices, ratings and fee or cancellation promises are buyer-relied claims.
+  { kind: "a reference or former price", re: /\b(?:was|regularly|normally|usually|originally|compare at|valued at|worth|retail(?:s)? (?:at|for))\s+[$£€]\s?(\d[\d,.]*)/i, key: (m) => new RegExp(`[$£€]\\s?${m[1].replace(/[.,]/g, "[.,]?")}`, "i") },
+  { kind: "a star rating", re: /\b(\d(?:\.\d)?)\s?(?:\/\s?5\s?)?(?:stars?|-star)\s+(?:rating|rated|average|on google|reviews?)\b|\brated\s+(\d(?:\.\d)?)\s?(?:\/\s?5|stars?|out of 5)/i, key: (m) => new RegExp(`\\b${(m[1] ?? m[2]).replace(".", "\\.")}\\b`) },
+  { kind: "a no-hidden-fees promise", re: /\bno hidden (?:fees|charges|costs)\b|\bno (?:extra|surprise|additional) (?:fees|charges)\b/i, key: () => /hidden|all[- ]in|total price|no (?:extra|surprise|additional) (?:fees|charges)|fees? included/i },
+  { kind: "a cancel-anytime promise", re: /\bcancel (?:any ?time|whenever)\b|\bno (?:contract|commitment|lock-?in)\b/i, key: () => /cancel|contract|commitment|lock-?in/i },
 ];
+
+/** A free trial must say what happens when it ends (spec §9 disclosure). */
+const TRIAL_OFFER = /\bfree trial\b|\btry (?:it |us )?(?:for )?free for\b|\b\d+[- ]day trial\b/i;
+const TRIAL_TERMS = /\b(?:then|after (?:the|your) (?:\d+[- ]day )?trial|auto-?renew\w*|renews?|cancel (?:any ?time|before|during)|billed|charged|no (?:credit )?card|ends automatically|won't be charged)\b/i;
 
 /** Availability and deadline claims must be grounded in a confirmed current offer. */
 const SCARCITY_CLAIM = /\b(?:only\s+\d[\d,.]*\s+(?:spots?|seats?|places?|tickets?|items?|rooms?|appointments?|openings?)\s+(?:left|remain(?:ing)?|available)|last\s+(?:few|\d+[\d,.]*|remaining)\s+(?:spots?|seats?|places?|tickets?|items?|rooms?|appointments?|openings?)|limited[- ](?:time|availability|quantity|stock|seats?|spots?|places?|tickets?)|while\s+(?:supplies|stocks?)\s+last|almost\s+sold\s+out|last\s+chance)\b/i;
@@ -62,21 +71,44 @@ const NAMED_INTEGRATION = /\b(?:[Ii]ntegrat\w*\s+with|[Cc]onnects?\s+(?:directly
 const INTEGRATION_EVIDENCE = /\b(?:integrat\w*|connect\w*|sync\w*)\b/i;
 const NON_AFFIRMATIVE_EVIDENCE = /\b(?:no|not|isn't|aren't|doesn't|does not|never|no longer|without|lack(?:s|ing)?|unavailable|not yet|request(?:ed|ing)?|ask(?:ed|ing)? for|want(?:s|ed)?|would|could|might|may|plan(?:s|ned)? to|hope to)\b/i;
 
+/** Sentence boundaries; a period inside a number ("4.9") does not end a sentence. */
+const SENTENCE_BREAK = /[\n!?;]+|\.(?=\s|$)/;
+
 function supportedByAffirmativeEvidence(pattern: RegExp, evidence: string): boolean {
-  return evidence.split(/[\n.!?;]+/).some((sentence) => pattern.test(sentence) && !NON_AFFIRMATIVE_EVIDENCE.test(sentence));
+  return evidence.split(SENTENCE_BREAK).some((sentence) => pattern.test(sentence) && !NON_AFFIRMATIVE_EVIDENCE.test(sentence));
 }
 
 function hasIntegrationEvidence(service: string, evidence: string): boolean {
-  return evidence.split(/[\n.!?;]+/).some((sentence) => sentence.toLocaleLowerCase("en-US").includes(service.toLocaleLowerCase("en-US")) && INTEGRATION_EVIDENCE.test(sentence) && !NON_AFFIRMATIVE_EVIDENCE.test(sentence));
+  return evidence.split(SENTENCE_BREAK).some((sentence) => sentence.toLocaleLowerCase("en-US").includes(service.toLocaleLowerCase("en-US")) && INTEGRATION_EVIDENCE.test(sentence) && !NON_AFFIRMATIVE_EVIDENCE.test(sentence));
 }
 
 function supportsUrgencyClaim(claim: string, evidence: string, kind: "scarcity" | "deadline"): boolean {
   const numbers = (value: string) => (value.match(/\b\d[\d,.]*\b/g) ?? []).map((item) => item.replace(/[,.]/g, ""));
   const number = numbers(claim)[0];
   const claimEvidence = kind === "scarcity" ? SCARCITY_EVIDENCE : DEADLINE_EVIDENCE;
-  return evidence.split(/[\n.!?;]+/).some((sentence) => {
+  return evidence.split(SENTENCE_BREAK).some((sentence) => {
     return claimEvidence.test(sentence) && !NON_AFFIRMATIVE_EVIDENCE.test(sentence) && (!number || numbers(sentence).includes(number));
   });
+}
+
+/**
+ * Platform-manipulation patterns no evidence can make acceptable: asking for
+ * votes, paying or rewarding reviews, inviting only satisfied customers to
+ * review, and promising virality (spec section 11 platform rules).
+ */
+const MANIPULATION: { rule: string; re: RegExp; message: string }[] = [
+  { rule: "vote_request", re: /\b(?:up-?vote|vote for us|vote us up|give us (?:an? )?(?:upvote|vote)|support us (?:on|with a vote on) product hunt|help us (?:reach|hit|get to) #?1 on product hunt)\b/i, message: "Asks people for votes. Launch and community platforms treat vote requests as manipulation; ask for honest feedback instead." },
+  { rule: "review_incentive", re: /\b(?:(?:leave|write|post)\s+(?:us\s+)?an?\s+(?:\d-star\s+|five-star\s+|5-star\s+|positive\s+|good\s+|great\s+)?review\b[^.!?\n]{0,60}\b(?:get|receive|earn|win|for)\s+(?:an?\s+|\d+%?\s+)?(?:free|discount|gift|voucher|coupon|credit|entry|off|reward|\$)|(?:free|discount|gift|voucher|coupon|reward)\w*(?:\s+\w+){0,3}\s+(?:for|in exchange for)\s+(?:an?\s+|your\s+)?(?:\d-star\s+|five-star\s+|5-star\s+|positive\s+)?reviews?)/i, message: "Offers something in return for a review. Incentivised reviews break most review platforms' rules; ask every customer the same neutral way." },
+  { rule: "review_gating", re: /\b(?:if you (?:loved|enjoyed|liked|had a (?:great|good|positive|wonderful) (?:experience|time))[^.!?\n]{0,40}\breview|(?:happy|satisfied) customers?[^.!?\n]{0,30}\b(?:leave|write|post) (?:us )?an? review|only (?:happy|satisfied) customers|(?:5|five)-star reviews? (?:only|please)|leave (?:us )?an? (?:5|five)-star review)/i, message: "Invites only satisfied customers or a set rating. Review platforms ban this gating; invite every customer with the same neutral wording." },
+  { rule: "virality_promise", re: /\b(?:guaranteed? (?:to )?(?:go )?viral|will go viral|go viral guaranteed|guaranteed (?:views|followers|likes))\b/i, message: "Promises virality or guaranteed reach. No one controls platform distribution; describe the content, not the outcome." },
+];
+
+export function lintManipulation(fields: { path: string; text: string }[]): LintIssue[] {
+  const issues: LintIssue[] = [];
+  for (const { path, text } of fields) {
+    for (const m of MANIPULATION) if (m.re.test(text)) issues.push({ severity: "error", rule: m.rule, message: m.message, path });
+  }
+  return issues;
 }
 
 /** Unsupported capability, scale or leadership claims in customer-facing text. */
@@ -105,7 +137,10 @@ export function lintClaims(fields: { path: string; text: string }[], evidence: s
       issues.push({ severity: "error", rule: "unsupported_deadline", message: "A deadline or expiring offer needs a current confirmed end date or time. Remove the deadline or confirm the real terms first.", path });
     }
   }
-  return issues;
+  for (const { path, text } of fields) {
+    if (TRIAL_OFFER.test(text) && !TRIAL_TERMS.test(text)) issues.push({ severity: "error", rule: "trial_terms", message: "A free trial needs to say what happens when it ends (the price it renews at, or that it ends without a charge) in the same copy.", path });
+  }
+  return [...issues, ...lintManipulation(fields)];
 }
 const EMOJI = /\p{Extended_Pictographic}/gu;
 

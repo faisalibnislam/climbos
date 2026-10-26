@@ -1,5 +1,7 @@
+import { CHANNELS, type Family } from "./library";
+
 /** Owner-facing purpose labels keep unlike discovery channels from sharing one success definition. */
-export type RecommendationGroup = "review_comparison" | "launch_feedback" | "content_community";
+export type RecommendationGroup = "review_comparison" | "launch_feedback" | "content_community" | "app_store";
 
 export interface RecommendationGuidance {
   group: RecommendationGroup;
@@ -29,7 +31,17 @@ const CONTENT_COMMUNITY: RecommendationGuidance = {
   measurement: "Track qualified visits, signups, activation, retention, customer questions answered, and owner time where available. Impressions, votes, and comments are not customer or revenue outcomes.",
 };
 
+const APP_STORE: RecommendationGuidance = {
+  group: "app_store",
+  label: "App stores",
+  purpose: "Help people who already search an app store find, judge and install this app.",
+  measurement: "Track store listing visits, installs, activation and retained users where the store reports them. Rankings and star averages alone are not customer or revenue outcomes.",
+};
+
 const RECOMMENDATION_GUIDANCE: Record<string, RecommendationGuidance> = {
+  M06: APP_STORE, // Apple App Store.
+  M07: APP_STORE, // Google Play.
+  S18: APP_STORE, // App store optimization.
   S04: REVIEW_COMPARISON, // Google Business Profile: eligible local discovery and reputation.
   S09: REVIEW_COMPARISON,
   S10: REVIEW_COMPARISON,
@@ -75,4 +87,47 @@ const RECOMMENDATION_GUIDANCE: Record<string, RecommendationGuidance> = {
 
 export function recommendationGuidance(channelId: string): RecommendationGuidance | null {
   return RECOMMENDATION_GUIDANCE[channelId] ?? null;
+}
+
+/** Spec §6: the job a channel is meant to do, so unlike channels are judged by different outcomes. */
+export type ChannelJob = "research" | "community" | "search" | "referral" | "launch" | "comparison" | "authority" | "direct";
+export const CHANNEL_JOB_LABEL: Record<ChannelJob, string> = {
+  research: "Help buyers research",
+  community: "Join where buyers talk",
+  search: "Be found when buyers search",
+  referral: "Turn customers and partners into referrals",
+  launch: "Launch and gather feedback",
+  comparison: "Be compared and chosen",
+  authority: "Build credibility",
+  direct: "Reach buyers directly",
+};
+const FAMILY_JOB: Record<Family, ChannelJob> = {
+  organic_search: "search",
+  paid_search: "search",
+  local: "search",
+  organic_social: "community",
+  communities: "community",
+  events: "community",
+  content: "research",
+  video_audio: "research",
+  pr: "authority",
+  creators: "authority",
+  referral: "referral",
+  partnerships: "referral",
+  marketplaces: "comparison",
+  email: "direct",
+  outreach: "direct",
+  retargeting: "direct",
+  paid_social: "direct",
+  traditional: "direct",
+  distribution: "direct",
+  product_led: "referral",
+};
+const JOB_OVERRIDE: Record<string, ChannelJob> = { S09: "comparison", S10: "comparison", M10: "launch", M06: "search", M07: "search", S18: "search" };
+const BY_ID = new Map(CHANNELS.map((c) => [c.id, c]));
+
+export function channelJob(channelId: string): ChannelJob | null {
+  const channel = BY_ID.get(channelId);
+  if (!channel) return null;
+  return JOB_OVERRIDE[channelId] ?? (recommendationGuidance(channelId)?.group === "review_comparison" ? "comparison" : FAMILY_JOB[channel.family]);
 }

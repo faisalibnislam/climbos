@@ -28,6 +28,27 @@ describe("Plan version history", () => {
     delete process.env.CLIMBOS_FAKE_LLM;
   });
 
+  it("names a version without touching the plan, its approval or another workspace", async () => {
+    const t = setup();
+    const w = await workspace(t, "rename-owner@example.com");
+    const other = await workspace(t, "rename-other@example.com");
+    await makePaid(t, w.orgId);
+    await buildPlan(t, w);
+    const [before] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    const hashBefore = await t.run(async (ctx) => (await ctx.db.get(before.id))!);
+    await w.client.mutation(api.planHistory.renameVersion, { slug: w.slug, strategyId: before.id, name: "  Spring   launch  " });
+    const [after] = await w.client.query(api.planHistory.versions, { slug: w.slug });
+    expect(after).toMatchObject({ id: before.id, version: before.version, name: "Spring launch", status: before.status });
+    const row = await t.run(async (ctx) => (await ctx.db.get(before.id))!);
+    expect({ ...row, versionName: undefined }).toEqual({ ...hashBefore, versionName: undefined });
+
+    await expect(other.client.mutation(api.planHistory.renameVersion, { slug: other.slug, strategyId: before.id, name: "Hijack" })).rejects.toThrow();
+    await w.client.mutation(api.planHistory.renameVersion, { slug: w.slug, strategyId: before.id, name: "" });
+    expect((await w.client.query(api.planHistory.versions, { slug: w.slug }))[0].name).toBeNull();
+    const log = await t.run(async (ctx) => (await ctx.db.query("auditEvents").collect()).filter((e) => e.action === "plan.version_renamed"));
+    expect(log).toHaveLength(2);
+  });
+
   it("shows each linked fact's provenance and only source records from the same business", async () => {
     const t = setup();
     const w = await workspace(t, "source-owner@example.com");

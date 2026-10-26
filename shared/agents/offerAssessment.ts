@@ -25,6 +25,16 @@ const OfferComparisonSchema = z.object({
   reason: z.string().min(1).max(240),
 });
 
+export const PERSUASION_MECHANISMS = ["social_proof", "anchoring", "scarcity", "urgency", "decoy", "loss_aversion", "reciprocity", "foot_in_the_door", "curiosity_gap", "endowment", "free_trial", "bundling", "referral", "personalization", "three_choice"] as const;
+/** How the mechanism is used in this offer, with its legal posture and a lower-risk alternative (spec §9). */
+export const PersuasionMechanismSchema = z.object({
+  mechanism: z.enum(PERSUASION_MECHANISMS),
+  use: z.string().min(4).max(240),
+  legalStatus: z.enum(["generally_permitted", "needs_disclosure", "only_if_true_and_current", "jurisdiction_dependent", "unknown"]),
+  evidenceNeeded: z.string().max(240),
+  lowerRiskAlternative: z.string().min(4).max(240),
+});
+
 export const OfferAssessmentSchema = z.object({
   recommendation: z.enum(["recommend_promotion", "validate_first", "improve_other_constraint", "no_change"]),
   mechanism: z.enum(["discount", "bundle", "bonus", "trial", "payment_terms", "guarantee", "referral_incentive", "non_price_change", "none"]),
@@ -77,6 +87,14 @@ export const OfferAssessmentSchema = z.object({
   }),
   urgencyClaim: z.string().nullable(),
   urgencyEvidenceRef: z.string().nullable(),
+  persuasion: z.array(PersuasionMechanismSchema).max(4).optional(),
+  /** Payment processor terms behind the payment-fee cost lines; when given, code recomputes both sides' fee. */
+  paymentFeeTerms: z.object({
+    percent: z.number().finite().min(0).max(30),
+    fixedAmount: z.number().finite().min(0),
+    basis: z.enum(["owner_reported", "measured", "source_reported", "inferred", "assumed"]),
+    reference: z.string().nullable(),
+  }).optional(),
   unknowns: z.array(z.string().min(1).max(180)).max(8),
   authorizationNote: z.string().min(1).max(180),
 });
@@ -414,6 +432,7 @@ export function lintOfferAssessment(
     }
     if (["bonus", "bundle", "referral_incentive"].includes(assessment.mechanism) && !assessment.proposed.variableCosts.some((cost) => /bonus|promo|referral|reward|bundle/i.test(cost.category))) error("Include the proposed bonus or incentive cost as a variable cost before recommending this mechanism.", "proposed.variableCosts");
   }
+  issues.push(...lintPaymentFees(assessment, path));
   if (assessment.recommendation === "recommend_promotion" && ["unknown", "constrained"].includes(assessment.capacity.status)) error("Do not recommend a promotion while delivery capacity is unknown or constrained; resolve the bottleneck or run a capacity-safe validation first.", "capacity.status");
   if (assessment.recommendation === "recommend_promotion" && economics.known && (economics.proposedContribution === null || economics.proposedContribution <= 0)) error("The proposed offer has no positive unit contribution under its stated cost boundary.", "proposed");
   if (assessment.recommendation === "recommend_promotion" && assessment.mechanism === "discount" && economics.known && (economics.priceChangeFromCurrent ?? 0) >= 0) error("A discount mechanism must reduce the proposed net price from the current offer.", "proposed.netPrice");
@@ -427,7 +446,51 @@ export function lintOfferAssessment(
     const supporting = resolveEvidence(assessment.urgencyEvidenceRef, context);
     if (!supporting || !supporting.includes(assessment.urgencyClaim)) error("Deadline or scarcity claims must be present in the cited supplied fact or retrieved source.", "urgencyEvidenceRef");
   }
+  issues.push(...lintPersuasion(assessment, path));
   if (assessment.authorizationNote && /approved|authorized|ready to publish|will send|will apply/i.test(assessment.authorizationNote)) error("An offer recommendation is advisory and cannot itself authorize a price, billing, message, or publishing change.", "authorizationNote");
   if (!context.evidenceText.trim() && assessment.recommendation === "recommend_promotion") error("There is no business-specific evidence to support a promotion recommendation.", "recommendation");
+  return issues;
+}
+
+/** Claims that are only lawful when true need evidence; disclosures and unknown legal posture are surfaced, never assumed fine. */
+const NEEDS_TRUTH = new Set<string>(["social_proof", "anchoring", "scarcity", "urgency"]);
+const NEEDS_DISCLOSURE = new Set<string>(["free_trial", "bundling", "referral"]);
+const MECHANISM_PERSUASION: Partial<Record<OfferAssessment["mechanism"], string>> = { trial: "free_trial", bundle: "bundling", referral_incentive: "referral" };
+
+export function lintPersuasion(assessment: OfferAssessment, path: string): LintIssue[] {
+  const issues: LintIssue[] = [];
+  const list = assessment.persuasion ?? [];
+  list.forEach((p, i) => {
+    const at = `${path}.persuasion[${i}]`;
+    if (NEEDS_TRUTH.has(p.mechanism) && p.legalStatus === "generally_permitted") issues.push({ severity: "error", rule: "persuasion", message: `${p.mechanism.replace(/_/g, " ")} is only lawful when true and current; label it only_if_true_and_current.`, path: `${at}.legalStatus` });
+    if (NEEDS_TRUTH.has(p.mechanism) && !p.evidenceNeeded.trim()) issues.push({ severity: "error", rule: "persuasion", message: `Say what evidence makes this ${p.mechanism.replace(/_/g, " ")} true (a real count, a real former price, a real deadline).`, path: `${at}.evidenceNeeded` });
+    if (NEEDS_DISCLOSURE.has(p.mechanism) && p.legalStatus === "generally_permitted") issues.push({ severity: "error", rule: "persuasion", message: `A ${p.mechanism.replace(/_/g, " ")} needs clear terms shown with the offer; label it needs_disclosure.`, path: `${at}.legalStatus` });
+    if (p.legalStatus === "unknown" || p.legalStatus === "jurisdiction_dependent") issues.push({ severity: "warn", rule: "persuasion", message: `Check the rules for ${p.mechanism.replace(/_/g, " ")} where you sell before using it, or use the lower-risk alternative.`, path: `${at}.legalStatus` });
+  });
+  const required = MECHANISM_PERSUASION[assessment.mechanism];
+  if (required && assessment.recommendation === "recommend_promotion" && !list.some((p) => p.mechanism === required)) {
+    issues.push({ severity: "error", rule: "persuasion", message: `This ${assessment.mechanism.replace(/_/g, " ")} offer needs a persuasion entry for ${required.replace(/_/g, " ")} with its disclosure and a lower-risk alternative.`, path: `${path}.persuasion` });
+  }
+  return issues;
+}
+
+/** Expected payment fee for a net price under percent-plus-fixed terms, rounded to cents. */
+export function paymentFeeFor(netPrice: number, terms: { percent: number; fixedAmount: number }): number {
+  return Math.round((netPrice * terms.percent / 100 + terms.fixedAmount) * 100) / 100;
+}
+
+/** Spec §9: a stated fee must match the stated processor terms on both sides of the offer, so a discount's lower fee isn't guessed. */
+export function lintPaymentFees(assessment: OfferAssessment, path: string): LintIssue[] {
+  const terms = assessment.paymentFeeTerms;
+  if (!terms) return [];
+  const issues: LintIssue[] = [];
+  for (const [sideName, side] of [["current", assessment.current], ["proposed", assessment.proposed]] as const) {
+    const fee = side.variableCosts.find((cost) => /payment|processing fee|transaction fee/i.test(cost.category));
+    if (!fee || fee.value.amount === null || side.netPrice.amount === null) continue;
+    const expected = paymentFeeFor(side.netPrice.amount, terms);
+    if (Math.abs(fee.value.amount - expected) > Math.max(0.01, expected * 0.01)) {
+      issues.push({ severity: "error", rule: "payment_fee", message: `The ${sideName} payment fee should be ${expected.toFixed(2)} (${terms.percent}% of ${side.netPrice.amount.toFixed(2)} plus ${terms.fixedAmount.toFixed(2)}), not ${fee.value.amount.toFixed(2)}.`, path: `${path}.${sideName}.variableCosts` });
+    }
+  }
   return issues;
 }

@@ -1011,3 +1011,61 @@ Three tests had been failing since before this session (confirmed at `517d049`).
 ## Resumption note (2026-10-26, production deploy blocked by a legacy plan snapshot)
 
 The first `convex deploy -y` to production (`kindly-quail-695`) was rejected by Convex schema validation before any change took effect. A production `strategies` document from engine `v3.1-trust-checks` has a small `expert.snapshot` (aiMode, currency, engine, facts, goal, horizonDays, insightsChars, monthlyAdBudget), missing fields the schema later made required. Production had not been deployed since before those requirements, so the existing `main` schema would also have failed. The stored-data validator for `expert.snapshot` now makes every top-level field optional. New snapshots are still written with the strict `PlanSnapshot` type, and every reader of `snapshotId`, `capabilities`, and similar fields already guards for absence (legacy plans are treated as version 0). Verified: typecheck exit 0; 24 snapshot and plan-history files (270 tests); ESLint and diff check exit 0.
+
+## Resumption note (2026-10-26, spec cross-check and first guard fixes)
+
+Four read-only audits compared `docs/ClimbOS-Complete-Product-Specification.md` sections 3–14 and 19 with runtime code. The results are in `docs/growth-engine/spec-coverage.md`. The high-impact claims were spot-checked by hand.
+
+Fixed in this increment (engine `v3.72-spec-coverage-guards`):
+- Approval now re-runs the claim lint against current confirmed facts in all three approval paths: app, email and autopilot (`convex/lib/claimCheck.ts`).
+- A deterministic manipulation lint covers vote requests, review incentives, review gating and virality promises.
+- Yelp is refused as a review-invitation destination, and setting the review link is audited.
+- A privacy guard checks public review reply drafts.
+- Undated research market signals are rejected in the business model check.
+- Exploration evidence references are checked.
+
+The 17 remaining buildable gaps are ranked in the coverage doc. Full suite: 274 files and 1,892 tests pass, with typecheck and ESLint clean. Nothing was deployed.
+
+## Resumption note (2026-10-26, spec gap 4)
+
+Design measurement plans now also require audience, guardrail, observation period and decision rule. These fields are optional in storage so older plans still validate. Finding decisions are appended to `designFindingReviewEvents` with the linked landing draft version, and the audit view lists them as review history.
+
+## Resumption note (2026-10-26, spec gap 5)
+
+`content.calendar` now also returns in-review drafts with no posting time, placed on the day they were drafted (`unscheduled: true`, with a separate `awaitingReview` cap flag). Calendar links to Autopilot slots carry a `#slot-<id>` anchor, and the slot card highlights as the anchor target.
+
+## Resumption note (2026-10-26, spec gap 6)
+
+The structured decision can now name acquisition, price, trust, repeat purchase, referral or cash as the binding constraint. `playWorksOnConstraint` matches these by their own wording, so existing `playStage` results, and the lints built on them, are unchanged.
+
+## Resumption note (2026-10-26, spec gap 3)
+
+`convex/landingRenders.ts` adds owner-requested desktop and mobile captures of one exact saved landing draft version. The render worker loads `/render/landing-draft/<token>`, a noindex route with a single-use token that expires in 10 minutes and is cleared when the capture finishes. With no `CLIMBOS_SERVER_SECRET`, a capture is recorded as unavailable. `designCritic.selectDirection` now keeps the original audited page: text extracted from the run's read-pages step, plus its hash and the audit screenshots, whose expiry is lifted so the purge keeps them. A later re-capture in the same run doesn't overwrite a retained screenshot. Not verified in a browser against a live render worker.
+
+## Resumption note (2026-10-26, spec gaps 9 and 12)
+
+`lintDesignDirections` checks multi-direction Design Critic findings, and `lintPaymentFees` recomputes payment fees from `paymentFeeTerms`. Also fixed: ConversionAuditView crashed when the feedback query had no `originals` field (older payloads and test mocks), introduced in ee93623. Full suite: 281 files and 1,919 tests pass.
+
+## Resumption note (2026-10-26, spec gaps 13 and 15)
+
+Gap 13 was already covered: email and ad approvals bind audience and spend. Precedent retrieval now labels each case with a typed outcome-evidence tier taken from its source roles, and down-ranks low-confidence cases by 25% instead of excluding them. Excluding them would have dropped CP-034, the best match for its own query, in favour of weak 2.25-score matches.
+
+## Resumption note (2026-10-26, spec gap 11)
+
+`lintSeoEvidence` adds `faq_grounding`. An unreferenced FAQ answer may not contain numbers missing from the evidence, or claims that `lintClaims` flags. The SEO prompt already says to leave general FAQs unreferenced rather than invent citations. `aiSearchVisibility.report` adds per-URL `citations[].ownSite` and `brandSiteCited`.
+
+## Resumption note (2026-10-26, spec gaps 8 and 14)
+
+Experiments gained pre-registration fields (variants, decision owner, planned cost) that lock when a test starts, plus an append-only deviations log. Cross-business learning now pools only opted-in workspaces: `countsForOrg` returns `pooling`, and `processPage` skips pooled scopes otherwise. Existing workspaces start opted out, so pooled rates appear only after owners opt in. The two pooled-learning tests now opt their seeded workspaces in. Gap 14 items are covered by existing behavior or deferred with reasons in spec-coverage.md.
+
+## Resumption note (2026-10-26, spec gap 10)
+
+`BusinessModelCheckSchema.segmentFit` (optional, for older saved checks) and its lint were added, and the view shows them as "Who it fits". The prompt asks for segment ratings with references.
+
+## Resumption note (2026-10-26, spec gap 7)
+
+`shared/acquisition/recommendationGroups.ts` adds `ChannelJob`, `CHANNEL_JOB_LABEL` and `channelJob`, plus an app-store guidance group. ChannelScorecard shows the job on each row.
+
+## Resumption note (2026-10-26, spec gaps 16 and 17)
+
+`retrieveGrowthKnowledge` matches scenario aliases against the chosen industry business type as well as the prompt. `tests/unit/product-brand-copy.test.ts` now also scans all of `src/` and `shared/` for the former studio name outside internal identifiers. The module and table rename is deferred; the reason is in spec-coverage.md.

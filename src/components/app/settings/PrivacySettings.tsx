@@ -6,7 +6,7 @@ import { Download } from "@/components/icons"
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Badge, Button, Callout, ConfirmDialog, DataTable, Field, Input, Progress, buttonClasses, toast } from "@/components/ui";
-import { errorInfo } from "../errors";
+import { errorInfo, errorMessage } from "../errors";
 import { formatDateTime, relativeTime } from "../money";
 import { LoadingBlock, QueryBoundary } from "../results/QueryBoundary";
 import { SettingsHeader } from "./SettingsNav";
@@ -40,9 +40,35 @@ export function PrivacySettings({ slug }: { slug: string }) {
       <QueryBoundary headingLevel="h2">
         <ExportSection slug={slug} />
       </QueryBoundary>
+      <LearningPoolingSection slug={slug} />
       <DeleteContactSection slug={slug} />
       <DeleteWorkspaceSection slug={slug} />
     </div>
+  );
+}
+
+function LearningPoolingSection({ slug }: { slug: string }) {
+  const state = useQuery(api.settings.learningPooling, { slug });
+  const set = useMutation(api.settings.setLearningPooling);
+  const [busy, setBusy] = useState(false);
+  if (!state) return null;
+  return (
+    <section aria-labelledby="pooling-heading" className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
+      <h2 id="pooling-heading" className="heading-section">Learning from other businesses</h2>
+      <p className="text-ui text-ink-2">Your own results always shape your plans. If you opt in, your play results are also counted, anonymously, in shared rates for similar businesses. A shared rate appears only when enough businesses contribute that no single one can be identified.</p>
+      <p className="text-sm text-ink-3">{state.optedIn ? `Opted in${state.at ? ` on ${new Date(state.at).toLocaleDateString()}` : ""}.` : "Not shared. Your results stay in your workspace only."}</p>
+      {state.canChange ? <Button size="sm" variant="secondary" className="self-start" loading={busy} onClick={async () => {
+        setBusy(true);
+        try {
+          await set({ slug, optedIn: !state.optedIn });
+          toast({ tone: "success", title: state.optedIn ? "Results kept private" : "Anonymised results will be shared" });
+        } catch (e) {
+          toast({ tone: "danger", title: errorMessage(e) });
+        } finally {
+          setBusy(false);
+        }
+      }}>{state.optedIn ? "Stop sharing" : "Share anonymised results"}</Button> : <p className="text-xs text-ink-3">Only an owner or admin can change this.</p>}
+    </section>
   );
 }
 
@@ -198,7 +224,7 @@ function DeleteContactSection({ slug }: { slug: string }) {
   );
 }
 
-function DeleteWorkspaceSection({ slug }: { slug: string }) {
+export function DeleteWorkspaceSection({ slug }: { slug: string }) {
   const me = useQuery(api.orgs.me);
   const del = useMutation(api.settings.deleteWorkspace);
   const router = useRouter();
@@ -212,9 +238,9 @@ function DeleteWorkspaceSection({ slug }: { slug: string }) {
   const matches = org ? typed.trim() === org.name : false;
 
   return (
-    <section aria-labelledby="delete-ws-heading" className="flex flex-col gap-3 rounded-xl border border-red-500/25 bg-surface p-5">
+    <section id="remove-business" aria-labelledby="delete-ws-heading" className="flex scroll-mt-24 flex-col gap-3 rounded-xl border border-red-500/25 bg-surface p-5">
       <h2 id="delete-ws-heading" className="heading-section text-red-800!">
-        Delete this workspace
+        Remove this business{org ? `: ${org.name}` : ""}
       </h2>
       <Covers
         items={[
@@ -240,7 +266,7 @@ function DeleteWorkspaceSection({ slug }: { slug: string }) {
             <Input autoComplete="off" value={typed} onChange={(e) => setTyped(e.target.value)} />
           </Field>
           <Button type="submit" variant="danger" disabled={!matches}>
-            Delete workspace
+            Remove business
           </Button>
         </form>
       )}
@@ -249,9 +275,9 @@ function DeleteWorkspaceSection({ slug }: { slug: string }) {
           open={confirm}
           onOpenChange={setConfirm}
           tone="danger"
-          title={`Delete ${org.name}?`}
+          title={`Remove ${org.name}?`}
           description={`Stops everything and permanently deletes content. Can't be undone.${billingNote}`}
-          confirmLabel={`Delete ${org.name}`}
+          confirmLabel={`Remove ${org.name}`}
           onConfirm={async () => {
             try {
               await del({ slug, confirmName: typed });

@@ -15,6 +15,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction } from "./_generated/server";
 import { claudeUsageRecords } from "./lib/usage";
+import { runModel } from "../shared/ai/modelChoice";
 
 const MODEL = CALL_ROUTES.chat_intent;
 const resolveHost = async (h: string) => (await lookup(h, { all: true, verbatim: true })).map((r) => r.address);
@@ -119,6 +120,8 @@ export const check = internalAction({
     if (!runId) return;
     const run = await ctx.runQuery(internal.engine.getRun, { runId });
     const rates = getRateVersion(run?.run.rateVersionId ?? "");
+    // The run's model route: operator defaults or a permitted user's choice.
+    const model = runModel(run?.run ?? {}, MODEL);
     const call = process.env.CLIMBOS_FAKE_LLM ? fakeTurn : modelTurn;
     let ok = 0;
     for (const [i, c] of changed.slice(0, 5).entries()) {
@@ -126,8 +129,8 @@ export const check = internalAction({
       if (!step.proceed && step.reason !== "checkpoint") break;
       const d = diffLines(c.before, c.after);
       const content = `COMPETITOR: ${c.name}\n<untrusted_content source="competitor_site">\nREMOVED LINES:\n${d.removed.join("\n").slice(0, 3000)}\n\nADDED LINES:\n${d.added.join("\n").slice(0, 3000)}\n</untrusted_content>`;
-      const r = await call({ modelKey: MODEL, cacheKey: "climbos:competitor_watch", verbosity: "low", system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: Summary, maxTokens: 1_000, effort: "low", thinkingOff: true }, rates);
-      if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(MODEL, r, rates) });
+      const r = await call({ modelKey: model, cacheKey: "climbos:competitor_watch", verbosity: "low", system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: Summary, maxTokens: 1_000, effort: "low", thinkingOff: true }, rates);
+      if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(model, r, rates) });
       if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });
       if (!r.ok) continue;
       const parsed = Summary.safeParse(r.output);

@@ -4,6 +4,7 @@ import type { RoleKey } from "../../shared/economics/roles";
 import { MODEL_SPECS, runtimeModel, VIDEO_ROUTE } from "../../shared/ai/models";
 import { TASKS, type TaskType } from "../../shared/ai/tasks";
 import { estimateRun, type PlannedStep } from "./estimate";
+import { isModelKey, routeModelKey, type ModelRoute } from "../../shared/ai/modelChoice";
 import type { AgentSpec } from "../../shared/agents/types";
 import { CALL_ROUTES, draftsFor, routeModels, type AiMode } from "../../shared/agents/routes";
 import {
@@ -281,7 +282,9 @@ function v1Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
 }
 
 /** Worst-case cost estimate shown on action cards before anything runs. */
-export function estimateJobMicros(plan: JobPlan, { fixture = false }: { fixture?: boolean } = {}): number {
+/** Worst-case cost of a job at the models it will run on (`route`: defaults or a permitted user's pick). */
+export function estimateJobMicros(plan: JobPlan, { fixture = false, route }: { fixture?: boolean; route?: ModelRoute } = {}): number {
   const usesV2 = !fixture && (engineV2() || plan.kind === "social_calendar" || plan.kind === "outbound");
-  return estimateRun(plan.steps, currentRateVersion().id, { repair: !usesV2 }).costMicros;
+  const steps = route ? plan.steps.map((s) => (s.kind === "model" && s.modelKey && isModelKey(s.modelKey) ? { ...s, modelKey: routeModelKey(route, s.modelKey) } : s)) : plan.steps;
+  return estimateRun(steps, currentRateVersion().id, { repair: !usesV2 }).costMicros;
 }

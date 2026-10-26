@@ -169,6 +169,12 @@ const COMPETING: Record<BindingConstraint | "unknown", string> = {
   retention: "Customers may leave for budget or seasonality reasons rather than weak recurring value; some loss is normal at any size.",
   delivery: "Demand may exceed capacity only at peak times; scheduling or pricing could free room.",
   economics: "Costs may be misallocated rather than the model being unprofitable.",
+  acquisition: "The channel may be fine but the message or audience wrong; or demand itself may be small rather than the channel failing.",
+  price: "Buyers may not see the value (communication or offer) rather than the price being too high or too low.",
+  trust: "Buyers may doubt fit or timing rather than the business's credibility.",
+  repeat_purchase: "The product may be a natural one-time purchase, or buyers may forget rather than be dissatisfied.",
+  referral: "Customers may refer informally without being counted, or the product may not be something people talk about.",
+  cash: "Timing of payments may be the issue rather than the total return; terms or deposits could close the gap.",
   unknown: "Without the owner's funnel numbers any constraint is a guess.",
 };
 
@@ -179,6 +185,12 @@ const DISCRIMINATE: Partial<Record<BindingConstraint, string>> = {
   demand: "Compare qualified lead and paid-customer rates by source for a full buying cycle; more reach only helps if the added people are a fit.",
   retention: "List the last 10–20 cancellations by reason and month (failed payment, early, near renewal).",
   delivery: "Count turned-away or delayed jobs for two weeks.",
+  acquisition: "Compare cost per qualified lead and per paying customer by channel over the same period.",
+  price: "Record lost-deal reasons for a month and note how often price is named versus fit, timing or trust.",
+  trust: "Ask recent non-buyers what they needed to see first, and count how many mention proof, reviews or guarantees.",
+  repeat_purchase: "Count first-time buyers from 3–6 months ago who bought again, and ask a few who didn't why not.",
+  referral: "Ask the last 20 new customers how they heard about you and record referrals separately.",
+  cash: "List each month's growth spend against when the customers it brought actually paid.",
 };
 
 /** Read the funnel. Capacity and retention override; otherwise competing links are compared on posteriors. */
@@ -507,7 +519,19 @@ export function playStage(text: string): BindingConstraint {
 }
 
 /** Demand is the fallback stage, so require explicit acquisition language before counting a play as demand work. */
+/** Constraints added for spec §3.1; matched by their own wording rather than by playStage. */
+const NEW_CONSTRAINT_WORDS: Partial<Record<BindingConstraint, RegExp>> = {
+  acquisition: /\b(ads?|paid acquisition|acquisition|channel|outbound|prospect\w*|lead generation|seo|search|affiliate|partnership|distribution|cost per (?:lead|customer)|cac)\b/i,
+  price: /\b(pric\w*|reprice|repricing|price increase|price test|tier|package|discount)\b/i,
+  trust: /\b(trust|reviews?|testimonial\w*|case stud\w*|proof|guarantee|credential\w*|certif\w*|reference customers?)\b/i,
+  repeat_purchase: /\b(repeat (?:purchase|order|buyer)s?|reorder\w*|replenish\w*|second (?:order|purchase|visit)|come back|subscription|win-?back|loyalty)\b/i,
+  referral: /\b(referr\w*|refer[- ]a[- ]friend|refer\b|word of mouth|ambassador|invite)\b/i,
+  cash: /\b(cash|deposit\w*|upfront|prepa\w*|payment terms|invoice\w*|financing|payback)\b/i,
+};
+
 export function playWorksOnConstraint(text: string, constraint: BindingConstraint): boolean {
+  const words = NEW_CONSTRAINT_WORDS[constraint];
+  if (words) return words.test(text);
   if (constraint === "economics") return /\b(unit economics|economics|gross margin|contribution margin|cac|cost per customer|acquisition cost|payback|profitability|price increase|raise (?:the |our )?prices?|increase (?:the |our )?prices?|reprice|repricing)\b/i.test(text);
   if (playStage(text) !== constraint) return false;
   if (constraint !== "demand") return true;

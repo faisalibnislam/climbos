@@ -5,6 +5,7 @@ import type { MutationCtx } from "../_generated/server";
 import { featureAllowed } from "./access";
 import { autonomyMode, extendApprovalUntil, publishTarget, recordArtifactDecision, SCHEDULE_GRACE_MS } from "./approvals";
 import { audit } from "./audit";
+import { unsupportedClaimIssue } from "./claimCheck";
 import { scheduleHeadsUp } from "../emailActions";
 
 /**
@@ -128,6 +129,13 @@ export async function routeSlotDraft(
   if (route.decision === "auto" && slot.slotAt < Date.now() + MIN_LEAD_MS) {
     route.decision = "ask";
     route.reasons = ["Its planned time has passed. Open the post and pick a new time."];
+  }
+  if (route.decision === "auto") {
+    const claimIssue = await unsupportedClaimIssue(ctx, artifact.businessId, [artifact.title, version.headline, version.body, version.callToAction, ...version.hashtags, version.altText]);
+    if (claimIssue) {
+      route.decision = "ask";
+      route.reasons = [`It makes a claim ClimbOS can't verify yet. ${claimIssue}`];
+    }
   }
   if (org.emergencyStop?.active) {
     route.decision = "ask";

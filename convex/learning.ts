@@ -254,10 +254,12 @@ export const countsForOrg = internalQuery({
             | undefined,
         })
       : null;
+    const org = await ctx.db.get(orgId);
     return {
       type,
       stage,
       segment,
+      pooling: org?.learningPooling?.optedIn === true,
       counts: await orgCounts(ctx, orgId, Date.now() - WINDOW),
     };
   },
@@ -515,7 +517,7 @@ export const processPage = internalAction({
         ),
       );
       for (let index = 0; index < results.length; index++) {
-        const { type, stage, segment, counts } = results[index];
+        const { type, stage, segment, pooling, counts } = results[index];
         const add = (
           scope: string,
           metric: string,
@@ -537,7 +539,8 @@ export const processPage = internalAction({
         };
         for (const [metric, x] of Object.entries(counts)) {
           add(`org:${orgIds[index]}`, metric, x);
-          if (x.trials < METRICS[metric].minTrials) continue;
+          // A workspace's own results always inform its own plans; pooled rates use only opted-in workspaces.
+          if (!pooling || x.trials < METRICS[metric].minTrials) continue;
           const contribution = boundedPoolContribution(x.trials, x.successes);
           for (const scope of [
             `type:${type}`,

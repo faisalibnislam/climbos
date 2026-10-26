@@ -40,7 +40,7 @@ import { lintEligibilityIds } from "../playbooks/contracts";
 import { OfferAssessmentSchema, lintApprovedOfferCopy, lintOfferAssessment, type OfferAssessmentContext } from "./offerAssessment";
 import { lintPlatformEligibility } from "../acquisition/platformRules";
 import { validateResearchUrl } from "../integrations/website";
-import { hookBeforeFold, lintClaims, lintCopy, maxItems, maxLength, minItems, stringFields } from "./lint";
+import { hookBeforeFold, lintClaims, lintCopy, maxItems, maxLength, minItems, stringFields, untracedNumbers } from "./lint";
 import type { AgentInput, AgentSpec, LintIssue, PhaseModels, ResearchSpec, Rubric } from "./types";
 import { CampaignTimingSchema, lintCampaignTiming } from "./campaignTiming";
 
@@ -326,7 +326,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { id: string; kind: "more_sales" | "more_customers" | "more_reach" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.71-competitor-battlecards";
+export const ENGINE_VERSION = "v3.72-spec-coverage-guards";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -393,8 +393,26 @@ function lintStrategyExploration(exploration: StrategyExploration | undefined, i
     ...(input.constraints ? { constraints: input.constraints } : {}),
   }, 2).map(({ precedent }) => precedent.id));
   const issues: LintIssue[] = [];
+  const readUrls = input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [];
+  const readKeys = new Set(readUrls.map(citeKey));
   for (const mode of ["grounded", "adjacent", "bold"] as const) {
-    for (const id of exploration[mode].precedentIds) {
+    const option = exploration[mode];
+    const path = `strategyExploration.${mode}.evidenceRefs`;
+    for (const ref of option.evidenceRefs) {
+      const trimmed = ref.trim();
+      const fact = /^fact:(\d+)$/i.exec(trimmed);
+      if (fact) {
+        if (Number(fact[1]) >= input.facts.length) issues.push({ severity: "error", rule: "exploration_evidence", message: `${mode} cites ${trimmed}, which is outside this run's confirmed fact list.`, path });
+      } else if (/^https?:\/\//i.test(trimmed)) {
+        if (!readKeys.has(citeKey(trimmed))) issues.push({ severity: "error", rule: "exploration_evidence", message: `${mode} cites a page that wasn't read in this run: ${trimmed.slice(0, 120)}.`, path });
+      } else if (!retrievedIds.has(trimmed)) {
+        issues.push({ severity: "error", rule: "exploration_evidence", message: `${mode} evidence reference "${trimmed.slice(0, 80)}" must be fact:N, a page read in this run, or a retrieved precedent ID.`, path });
+      }
+    }
+    if (option.evidenceBasis !== "speculative_hypothesis" && option.evidenceRefs.length === 0 && option.precedentIds.length === 0) {
+      issues.push({ severity: "warn", rule: "exploration_evidence", message: `${mode} is labelled ${option.evidenceBasis.replace(/_/g, " ")} but cites nothing. Add a reference or label it a speculative hypothesis; the option stays either way.`, path });
+    }
+    for (const id of option.precedentIds) {
       if (!retrievedIds.has(id)) issues.push({ severity: "error", rule: "creative_precedent", message: `${mode} cites ${id}, which was not retrieved for this business context. Use only retrieved case IDs or remove the analogy.`, path: `strategyExploration.${mode}.precedentIds` });
     }
   }
@@ -1124,6 +1142,39 @@ const ANY_PAID = /\b(?:any|all|every)\s+paid\b|\bpaid (?:customers?|accounts?|si
  * Bench Run 7 (Folevi): success was narrowed to one paid tier (Pro); B0 counted conversion to any paid plan with a
  * conservative revenue proxy and won. Plays and the North Star count new customers on any paid plan.
  */
+/**
+ * Spec §3.1: when demand isn't validated, don't buy traffic first. The primary play can't carry ad
+ * spend; a supporting play may run a small paid test, flagged so the owner sees it is a test.
+ */
+export function lintDemandGate(plays: { name: string; model?: { monthlySpendUsd: number } }[], c: PlanConstraints | undefined): LintIssue[] {
+  if (!c?.demandValidation?.reasons.length || !plays.length) return [];
+  const why = c.demandValidation.reasons.join(" ");
+  const issues: LintIssue[] = [];
+  if ((plays[0].model?.monthlySpendUsd ?? 0) > 0) {
+    issues.push({ severity: "error", rule: "demand_gate", message: `${why} Lead with a play that tests demand without ad spend (owner outreach, existing customers, an offer test, a landing-page test). Paid traffic can come later as a capped test in a supporting play.`, path: "plays[0].model.monthlySpendUsd" });
+  }
+  plays.slice(1).forEach((p, i) => {
+    if ((p.model?.monthlySpendUsd ?? 0) > 0) issues.push({ severity: "warn", rule: "demand_gate", message: `"${p.name}" buys traffic before demand is validated. Keep it a small, time-boxed test with a stop condition.`, path: `plays[${i + 1}].model.monthlySpendUsd` });
+  });
+  return issues;
+}
+
+/** Spec §8: when a finding offers more than one direction, they must be distinct response levels with stated effort and risk. */
+export function lintDesignDirections(directions: { id: string; name: string; responseLevel?: string; effort?: string; assumptions?: string[]; risks?: string[] }[] | undefined, path: string): LintIssue[] {
+  if (!directions || directions.length < 2) return [];
+  const issues: LintIssue[] = [];
+  const levels = directions.map((d) => d.responseLevel);
+  if (levels.some((l) => !l)) issues.push({ severity: "error", rule: "design_directions", message: "Label each direction quick_fix, considered_redesign or bold_alternative when giving more than one.", path });
+  else if (new Set(levels).size !== levels.length) issues.push({ severity: "error", rule: "design_directions", message: "Directions for one finding must be different response levels; merge or relabel the duplicates.", path });
+  if (new Set(directions.map((d) => d.id)).size !== directions.length) issues.push({ severity: "error", rule: "design_directions", message: "Each direction needs its own id.", path });
+  directions.forEach((d, k) => {
+    if (!d.effort) issues.push({ severity: "warn", rule: "design_directions", message: `State the effort for "${d.name}".`, path: `${path}[${k}].effort` });
+    if (!d.risks?.length) issues.push({ severity: d.responseLevel === "bold_alternative" ? "error" : "warn", rule: "design_directions", message: `Name at least one risk for "${d.name}".`, path: `${path}[${k}].risks` });
+    if (d.responseLevel === "bold_alternative" && !d.assumptions?.length) issues.push({ severity: "error", rule: "design_directions", message: `State what the bold alternative "${d.name}" assumes.`, path: `${path}[${k}].assumptions` });
+  });
+  return issues;
+}
+
 export function lintAnyPaidPlan(items: { text: string; path: string }[]): LintIssue[] {
   return items
     .filter((x) => ONE_TIER.test(x.text) && !ANY_PAID.test(x.text))
@@ -2151,13 +2202,22 @@ export function lintSeoEvidence(out: z.infer<typeof SeoBriefV2Schema>, input: Ag
     message: "A citable claim needs at least one confirmed fact index or source page read in this run.",
     path: `citableClaims[${i}]`,
   }]);
+  // Spec §7: a general FAQ may go unreferenced, but then it can't state business-specific numbers or claims.
+  const faqIssues = out.faqs.flatMap((faq, i): LintIssue[] => {
+    if (faq.factIndexes.length || faq.sourceUrls.length) return [];
+    const numbers = untracedNumbers(faq.answer, evidenceOf(input));
+    return [
+      ...(numbers.length ? [{ severity: "error" as const, rule: "faq_grounding", message: `This FAQ has no fact or page reference but states ${numbers.join(", ")}. Cite where it comes from or answer without the number.`, path: `faqs[${i}].answer` }] : []),
+      ...lintClaims([{ path: `faqs[${i}].answer`, text: faq.answer }], "").map((issue) => ({ ...issue, rule: "faq_grounding", message: `This FAQ has no fact or page reference. ${issue.message}` })),
+    ];
+  });
   const hasContributionEvidence = contribution.factIndexes.length > 0 || contribution.sourceUrls.length > 0;
   const contributionIssues: LintIssue[] = contribution.status === "evidence_linked" && !hasContributionEvidence
     ? [{ severity: "error", rule: "seo_original_contribution", message: "Link the proposed contribution to a supplied business fact or a page read in this run, or label it as a hypothesis that needs owner evidence.", path: "originalContributionEvidence" }]
     : contribution.status === "hypothesis_pending_owner_evidence" && !out.ownerEvidenceNeeded.some((item) => item.trim())
       ? [{ severity: "error", rule: "seo_original_contribution", message: "A proposed contribution without linked evidence must name the specific owner evidence needed before it can be presented as first-hand or distinctive expertise.", path: "ownerEvidenceNeeded" }]
       : [];
-  return [...factIndexes, ...citationIssues, ...internalLinkHostIssues, ...claimIssues, ...contributionIssues];
+  return [...factIndexes, ...citationIssues, ...internalLinkHostIssues, ...claimIssues, ...faqIssues, ...contributionIssues];
 }
 
 export function lintSeoRecommendation(out: z.infer<typeof SeoBriefV2Schema>, input: AgentInput): LintIssue[] {
@@ -2218,6 +2278,7 @@ export function lintConversionAuditSources(out: z.infer<typeof ConversionAuditV2
     if (finding.visualEvidence) checkVisual(finding.sourceUrl, { ...finding.visualEvidence, sourceUrl: finding.sourceUrl }, `designCritic.findings[${i}].visualEvidence`);
     if (finding.classification === "measured_performance" && finding.automatedCheckIds.length === 0) visualIssues.push({ severity: "error", rule: "design_measured_evidence", message: "A performance finding must cite an actual supplied measurement or automated check ID; otherwise classify it as a heuristic or inference.", path: `designCritic.findings[${i}].automatedCheckIds` });
     if (finding.classification === "automated_check" && finding.automatedCheckIds.length === 0) visualIssues.push({ severity: "error", rule: "design_automated_evidence", message: "Automated accessibility or technical findings must name the checks actually run.", path: `designCritic.findings[${i}].automatedCheckIds` });
+    visualIssues.push(...lintDesignDirections(finding.directions, `designCritic.findings[${i}].directions`));
   });
   const socialBlock = /<untrusted_content source="conversion_audit_social_posts">\s*([\s\S]*?)\s*<\/untrusted_content>/i.exec(input.untrustedContext ?? "");
   const suppliedPosts = new Map<string, string>();
@@ -2485,7 +2546,7 @@ export function growthPlaysSpec(o: SpecOptions = {}, catalogs: string[] = playCa
       rubric: rubricOf("growth-plays"),
       criticSkills: ["positioning", "experiment-design"],
       maxTokens: { research: 24_000, draft: 40_000, critic: 16_000 },
-      lint: (out, input) => [...lintPlanning(out, input), ...lintStrategyExploration(out.strategyExploration, input), ...out.plays.flatMap((play, index) => lintCampaignTiming(play.timingAssessment, { today: input.timingContext?.today ?? "1970-01-01", ...(input.timingContext?.timezone ? { timezone: input.timingContext.timezone } : {}), facts: input.facts, researchNotes: input.precomputedResearch?.notes ?? input.untrustedContext ?? "", sourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [], researchRetrievedAt: input.precomputedResearch?.retrievedAt }, `plays[${index}].timingAssessment`)), ...lintActionContracts(out.plays, input.facts.length, evidenceOf(input), input.constraints?.horizonDays, input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url), input.facts), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, { ...out.economics, currency: input.constraints?.currency }, evidenceOf(input)), ...lintSelfServeFunnel(out.plays, out.economics), ...lintComparisonPositioning(out.plays), ...lintOfferClaims(out.plays, evidenceOf(input), { facts: input.facts, researchNotes: input.precomputedResearch?.notes ?? input.untrustedContext ?? "", sourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [], evidenceText: evidenceOf(input), diagnosedConstraint: input.constraints?.diagnosis?.status === "supported" && input.constraints.diagnosis.basis === "measured" ? input.constraints.diagnosis.constraint : out.decision?.constraint, diagnosisMeasured: input.constraints?.diagnosis?.status === "supported" && input.constraints.diagnosis.basis === "measured" }), ...lintReferralDrivers(out.plays), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints, out.economics), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays, { factCount: input.facts.length, availableSourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [] }), ...lintDecisionConstraintFit(out.decision, out.plays, input.constraints?.diagnosis), ...lintDecisionOptionChoice(out.decision, out.plays, out.economics, input.constraints), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintNoAudience(out.plays, input.constraints, input.facts.join("\n")), ...lintBorrowedUplift(out.plays), ...lintDiagnosisFit(out.plays, o.decisionContract && out.decision ? undefined : input.constraints?.diagnosis), ...lintEligibilityIds(out.plays, input.constraints?.ineligiblePlaybooks), ...lintPlatformEligibility(out.plays.map((p, i) => ({ path: `plays[${i}]`, text: JSON.stringify(p) })), input.constraints?.businessTypes ?? []), ...(input.constraints?.factKinds ? lintEvidenceStrength(out.plays.flatMap((p, i) => [{ path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }, { path: `plays[${i}].mechanic`, text: (p as { mechanic?: string }).mechanic ?? "" }]), input.constraints.factKinds) : []), ...lintClaims(out.plays.flatMap((p, i) => [{ path: `plays[${i}].hook`, text: (p as { hook?: string }).hook ?? "" }, { path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }]), verifiedCapabilityEvidence(input)), ...lintDeliveryCapacity(portfolioP50(out, input.constraints?.horizonDays), input.constraints), ...lintServiceArea(out.plays.map((p, i) => ({ path: `plays[${i}]`, spend: p.model?.monthlySpendUsd ?? 0, text: JSON.stringify(p) })), input.constraints), ...lintEconomics({ ...out, economics: { ...out.economics, currency: input.constraints?.currency } })],
+      lint: (out, input) => [...lintPlanning(out, input), ...lintStrategyExploration(out.strategyExploration, input), ...out.plays.flatMap((play, index) => lintCampaignTiming(play.timingAssessment, { today: input.timingContext?.today ?? "1970-01-01", ...(input.timingContext?.timezone ? { timezone: input.timingContext.timezone } : {}), facts: input.facts, researchNotes: input.precomputedResearch?.notes ?? input.untrustedContext ?? "", sourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [], researchRetrievedAt: input.precomputedResearch?.retrievedAt }, `plays[${index}].timingAssessment`)), ...lintActionContracts(out.plays, input.facts.length, evidenceOf(input), input.constraints?.horizonDays, input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url), input.facts), ...lintCitations(out.plays, evidenceOf(input)), ...lintProvenance(out, evidenceOf(input)), ...lintAssets(out.plays, evidenceOf(input)), ...lintAssetsFirst(out.plays, evidenceOf(input)), ...lintExistingTest(out.plays, evidenceOf(input), input.constraints?.horizonDays), ...lintDistribution(out.plays), ...lintLowPriceFirst(out.plays, { ...out.economics, currency: input.constraints?.currency }, evidenceOf(input)), ...lintSelfServeFunnel(out.plays, out.economics), ...lintComparisonPositioning(out.plays), ...lintOfferClaims(out.plays, evidenceOf(input), { facts: input.facts, researchNotes: input.precomputedResearch?.notes ?? input.untrustedContext ?? "", sourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [], evidenceText: evidenceOf(input), diagnosedConstraint: input.constraints?.diagnosis?.status === "supported" && input.constraints.diagnosis.basis === "measured" ? input.constraints.diagnosis.constraint : out.decision?.constraint, diagnosisMeasured: input.constraints?.diagnosis?.status === "supported" && input.constraints.diagnosis.basis === "measured" }), ...lintReferralDrivers(out.plays), ...lintAnyPaidPlan(out.plays.map((p, i) => ({ text: p.unit ?? "", path: `plays[${i}].unit` }))), ...lintFeasibility(out.plays, input.constraints, out.economics), ...lintDemandGate(out.plays, input.constraints), ...lintPlays(out.plays, out.economics, { decisionContract: o.decisionContract }), ...(o.decisionContract ? [...lintDecision(out.decision, out.plays, { factCount: input.facts.length, availableSourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [] }), ...lintDecisionConstraintFit(out.decision, out.plays, input.constraints?.diagnosis), ...lintDecisionOptionChoice(out.decision, out.plays, out.economics, input.constraints), ...lintWordCaps(out, DECISION_CAPS)] : []), ...lintWordCaps(out, PLAYS_CAPS), ...lintNoAudience(out.plays, input.constraints, input.facts.join("\n")), ...lintBorrowedUplift(out.plays), ...lintDiagnosisFit(out.plays, o.decisionContract && out.decision ? undefined : input.constraints?.diagnosis), ...lintEligibilityIds(out.plays, input.constraints?.ineligiblePlaybooks), ...lintPlatformEligibility(out.plays.map((p, i) => ({ path: `plays[${i}]`, text: JSON.stringify(p) })), input.constraints?.businessTypes ?? []), ...(input.constraints?.factKinds ? lintEvidenceStrength(out.plays.flatMap((p, i) => [{ path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }, { path: `plays[${i}].mechanic`, text: (p as { mechanic?: string }).mechanic ?? "" }]), input.constraints.factKinds) : []), ...lintClaims(out.plays.flatMap((p, i) => [{ path: `plays[${i}].hook`, text: (p as { hook?: string }).hook ?? "" }, { path: `plays[${i}].oneLiner`, text: (p as { oneLiner?: string }).oneLiner ?? "" }]), verifiedCapabilityEvidence(input)), ...lintDeliveryCapacity(portfolioP50(out, input.constraints?.horizonDays), input.constraints), ...lintServiceArea(out.plays.map((p, i) => ({ path: `plays[${i}]`, spend: p.model?.monthlySpendUsd ?? 0, text: JSON.stringify(p) })), input.constraints), ...lintEconomics({ ...out, economics: { ...out.economics, currency: input.constraints?.currency } })],
     },
     o,
     "expert",

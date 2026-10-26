@@ -461,6 +461,12 @@ const DIAGNOSIS_STAGES: Partial<Record<BindingConstraint, readonly Stage[]>> = {
   retention: ["existing", "returning"],
   delivery: ["existing", "returning"],
   economics: ["product", "high_intent"],
+  acquisition: ["unaware", "problem", "solution"],
+  price: ["product", "high_intent"],
+  trust: ["solution", "product", "high_intent"],
+  repeat_purchase: ["existing", "returning"],
+  referral: ["existing", "returning"],
+  cash: ["existing", "high_intent"],
 };
 
 export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] = [], weights = DEFAULT_WEIGHTS, limits?: ChannelLimits, focus?: BindingConstraint, asOfDate = new Date().toISOString().slice(0, 10)): ScoredChannel[] {

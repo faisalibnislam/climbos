@@ -47,6 +47,25 @@ describe("business model check output", () => {
     ]));
   });
 
+  it("checks segment fit: all four dimensions, cited non-inference ratings, and no inferred high willingness to pay", () => {
+    const dim = (dimension: "problem_severity" | "willingness_to_pay" | "reachability" | "serviceability", o: Record<string, unknown> = {}) => ({ dimension, level: "medium" as const, basis: "inference" as const, evidenceRefs: [], note: "Judged from the service description.", ...o });
+    const ok = { segment: "Homeowners with older boilers", dimensions: [dim("problem_severity", { basis: "owner_report", evidenceRefs: ["fact:0"] }), dim("willingness_to_pay"), dim("reachability"), dim("serviceability")] };
+    const lint = (segmentFit: BusinessModelCheck["segmentFit"]) => lintBusinessModelCheck(check({ segmentFit }), { factCount: 1, readUrls: ["https://rival.example/plans"] }).filter((i) => i.rule === "segment_fit" || i.rule === "citation").map((i) => i.path);
+    expect(BusinessModelCheckSchema.safeParse(check({ segmentFit: [ok] })).success).toBe(true);
+    expect(lint([ok])).toEqual([]);
+    expect(lint([{ ...ok, dimensions: [ok.dimensions[0], ok.dimensions[0], ok.dimensions[2], ok.dimensions[3]] }])).toContain("segmentFit[0].dimensions");
+    expect(lint([{ ...ok, dimensions: [dim("problem_severity", { basis: "measured" }), dim("willingness_to_pay", { level: "high" }), ok.dimensions[2], ok.dimensions[3]] }])).toEqual(["segmentFit[0].dimensions[0].evidenceRefs", "segmentFit[0].dimensions[1].level"]);
+    expect(lint(undefined)).toEqual([]);
+  });
+
+  it("requires a date on research signals unless the limitation says the source is undated", () => {
+    const base = check().marketSignals[0];
+    const lint = (signal: BusinessModelCheck["marketSignals"][number]) => lintBusinessModelCheck(check({ marketSignals: [signal] }), { factCount: 1, readUrls: ["https://rival.example/plans"] }).filter((i) => i.rule === "market_signal_date");
+    expect(lint({ ...base, observedAt: undefined })).toHaveLength(1);
+    expect(lint({ ...base, observedAt: undefined, limitation: "The rival page is undated." })).toEqual([]);
+    expect(lint({ ...base, observedAt: undefined, basis: "inference", evidenceRefs: [] })).toEqual([]);
+  });
+
   it("keeps a bold alternative without precedent and doesn't gate the verdict", () => {
     const issues = lintBusinessModelCheck(check({ verdict: { status: "at_risk", confidence: "low", reasoning: "Judgment call on thin evidence.", whatWouldChangeIt: "Any first-party trend." } }), { factCount: 1, readUrls: ["https://rival.example/plans"] });
     expect(issues.filter((i) => i.severity === "error")).toEqual([]);

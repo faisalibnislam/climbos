@@ -76,11 +76,22 @@ export const BusinessModelCheckSchema = z.object({
     decidingTest: z.string().min(8).max(400),
     recommendedAlternative: z.enum(["grounded", "adjacent", "bold"]).optional(),
   }),
+  /** Spec §4.1: fit of up to three customer segments, each dimension with its own basis. Optional for checks saved before 2026-10-26. */
+  segmentFit: z.array(z.object({
+    segment: z.string().min(2).max(160),
+    dimensions: z.array(z.object({
+      dimension: z.enum(["problem_severity", "willingness_to_pay", "reachability", "serviceability"]),
+      level: z.enum(["low", "medium", "high", "unknown"]),
+      basis: BASIS,
+      evidenceRefs: z.array(z.string()).max(4),
+      note: z.string().min(4).max(240),
+    })).length(4),
+  })).max(3).optional(),
   unknowns: z.array(z.string().min(1).max(240)).max(8),
 });
 export type BusinessModelCheck = z.infer<typeof BusinessModelCheckSchema>;
 
-export const BUSINESS_MODEL_TASK = `BUSINESS MODEL CHECK: Describe how this business currently makes money (who pays, for what, pricing structure, sales motion, delivery) using only supplied facts and pages read in this run. Then judge whether that model is holding up against how its market is moving: list market signals (demand, pricing pressure, substitutes, customer behavior, distribution, cost structure, platform or regulatory change, technology), each with direction, basis, references, the date the evidence describes when stated, and its limitation. Use the FIRST-PARTY MODEL SIGNALS block as computed facts; never contradict or recompute them. Give a verdict (holding, watch, at risk, or insufficient evidence) with your confidence, reasoning, and what would change it; it is shown to the owner as your judgment. A website, competitor activity, or a trend article alone does not prove a model is outdated, and an absence of data is not decline. Propose exactly three alternative business models: one grounded (established practice), one adjacent (an evidence-supported stretch), one bold (may lack any precedent; do not drop it for being novel, low-evidence, or not yet executable). For each: the model change, mechanism, existing assets it reuses, who pays and how, the convention it challenges, assumptions, risks, unit-economics inputs (state each as owner-reported, measured, research, assumption, or unknown; never invent a figure), what stays the same, and the smallest reversible test with success signal, stop condition, and maximum cost or time. Keep novelty, evidence strength, fit, feasibility, and risk separate. Finish with persist, adjust, test a pivot, or insufficient evidence, the single test that would decide it, and the recommended alternative when testing a pivot. Nothing here authorizes changing prices, offers, or operations.`;
+export const BUSINESS_MODEL_TASK = `BUSINESS MODEL CHECK: Describe how this business currently makes money (who pays, for what, pricing structure, sales motion, delivery) using only supplied facts and pages read in this run. Then judge whether that model is holding up against how its market is moving: list market signals (demand, pricing pressure, substitutes, customer behavior, distribution, cost structure, platform or regulatory change, technology), each with direction, basis, references, the date the evidence describes (observedAt, YYYY-MM-DD), and its limitation. A research signal with no stated date must say "undated" in its limitation. Rate up to three customer segments in segmentFit, each once on problem severity, willingness to pay, reachability and serviceability, with level (low, medium, high or unknown), basis and references; high willingness to pay needs payment or pricing evidence. Use the FIRST-PARTY MODEL SIGNALS block as computed facts; never contradict or recompute them. Give a verdict (holding, watch, at risk, or insufficient evidence) with your confidence, reasoning, and what would change it; it is shown to the owner as your judgment. A website, competitor activity, or a trend article alone does not prove a model is outdated, and an absence of data is not decline. Propose exactly three alternative business models: one grounded (established practice), one adjacent (an evidence-supported stretch), one bold (may lack any precedent; do not drop it for being novel, low-evidence, or not yet executable). For each: the model change, mechanism, existing assets it reuses, who pays and how, the convention it challenges, assumptions, risks, unit-economics inputs (state each as owner-reported, measured, research, assumption, or unknown; never invent a figure), what stays the same, and the smallest reversible test with success signal, stop condition, and maximum cost or time. Keep novelty, evidence strength, fit, feasibility, and risk separate. Finish with persist, adjust, test a pivot, or insufficient evidence, the single test that would decide it, and the recommended alternative when testing a pivot. Nothing here authorizes changing prices, offers, or operations.`;
 
 const REF = /^fact:(\d+)$/i;
 const citeKey = (url: string) => url.trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, "").replace(/\/+$/, "");
@@ -100,7 +111,18 @@ export function lintBusinessModelCheck(out: BusinessModelCheck, ctx: { factCount
   out.marketSignals.forEach((s, i) => {
     checkRefs(s.evidenceRefs, `marketSignals[${i}].evidenceRefs`);
     if ((s.basis === "research" || s.basis === "site_claim" || s.basis === "measured") && !s.evidenceRefs.length) issues.push({ severity: "error", rule: "citation", message: `A ${s.basis.replace("_", " ")} signal needs a fact or page reference, or label it inference.`, path: `marketSignals[${i}].evidenceRefs` });
+    if (s.basis === "research" && !s.observedAt && !/\b(?:undated|no (?:stated |publication )?date|not dated|date (?:is )?unknown)\b/i.test(s.limitation)) issues.push({ severity: "error", rule: "market_signal_date", message: "A research signal needs the date its evidence describes, or a limitation that says it is undated.", path: `marketSignals[${i}].observedAt` });
     if (s.observedAt && !/^\d{4}-\d{2}-\d{2}$/.test(s.observedAt)) issues.push({ severity: "error", rule: "business_model", message: "Use YYYY-MM-DD for the evidence date, or leave it out.", path: `marketSignals[${i}].observedAt` });
+  });
+  (out.segmentFit ?? []).forEach((seg, i) => {
+    const dims = seg.dimensions.map((d) => d.dimension).sort().join(",");
+    if (dims !== "problem_severity,reachability,serviceability,willingness_to_pay") issues.push({ severity: "error", rule: "segment_fit", message: `Rate "${seg.segment}" once each on problem severity, willingness to pay, reachability and serviceability.`, path: `segmentFit[${i}].dimensions` });
+    seg.dimensions.forEach((d, j) => {
+      const path = `segmentFit[${i}].dimensions[${j}]`;
+      checkRefs(d.evidenceRefs, `${path}.evidenceRefs`);
+      if (d.basis !== "inference" && !d.evidenceRefs.length) issues.push({ severity: "error", rule: "segment_fit", message: `A ${d.basis.replace("_", " ")} rating needs a fact or page reference, or label it inference.`, path: `${path}.evidenceRefs` });
+      if (d.dimension === "willingness_to_pay" && d.level === "high" && d.basis === "inference") issues.push({ severity: "error", rule: "segment_fit", message: "High willingness to pay needs evidence of payment or pricing, not inference. Use unknown or a lower level.", path: `${path}.level` });
+    });
   });
   const modes = out.alternatives.map((a) => a.mode).sort().join(",");
   if (modes !== "adjacent,bold,grounded") issues.push({ severity: "error", rule: "business_model", message: "Give exactly one grounded, one adjacent and one bold alternative.", path: "alternatives" });

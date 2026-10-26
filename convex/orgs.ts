@@ -22,6 +22,8 @@ import { can } from "../shared/policy";
 import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 import { BUSINESS_LIFECYCLE_STAGES } from "../shared/agents/lifecycle";
 import type { RunPreview } from "./content";
+import { defaultModelRoute, resolveModelRoute } from "./lib/modelRoute";
+import type { ModelRoute } from "../shared/ai/modelChoice";
 
 function slugify(name: string): string {
   const base = name
@@ -74,21 +76,21 @@ export const newWorkspaceAiMode = query({
   args: {},
   handler: async (ctx) => {
     const user = await optionalUser(ctx);
-    if (!user) return { expertUnlocked: false, estimates: { onboarding_research: onboardingResearchEstimates() } };
+    if (!user) return { expertUnlocked: false, estimates: { onboarding_research: onboardingResearchEstimates(await defaultModelRoute(ctx)) } };
     const account = await ctx.db.query("accounts").withIndex("by_owner", (q) => q.eq("ownerUserId", user._id)).first();
-    if (!account || account.suspendedAt) return { expertUnlocked: false, estimates: { onboarding_research: onboardingResearchEstimates() } };
+    if (!account || account.suspendedAt) return { expertUnlocked: false, estimates: { onboarding_research: onboardingResearchEstimates(await defaultModelRoute(ctx)) } };
     const first = (await accountWorkspaces(ctx, account._id))[0];
     return {
       expertUnlocked: first ? await isPaid(ctx, { _id: first._id, accountId: account._id }) : false,
-      estimates: { onboarding_research: onboardingResearchEstimates() },
+      estimates: { onboarding_research: onboardingResearchEstimates(await defaultModelRoute(ctx)) },
     };
   },
 });
 
-function onboardingResearchEstimates() {
+function onboardingResearchEstimates(route: ModelRoute) {
   return {
-    basic: estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "basic" })),
-    expert: estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "expert" })),
+    basic: estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "basic" }), { route }),
+    expert: estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "expert" }), { route }),
   };
 }
 
@@ -204,7 +206,7 @@ export const createWorkspace = mutation({
 
 /** Start (or restart) business research. Owner-pasted text works when the site can't be read. */
 export const startResearch = mutation({
-  args: { slug: v.string(), website: v.optional(v.string()), ownerText: v.optional(v.string()), aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))) },
+  args: { slug: v.string(), website: v.optional(v.string()), ownerText: v.optional(v.string()), aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))), model: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
     const business = await ctx.db
@@ -239,6 +241,7 @@ export const startResearch = mutation({
       void sourceId;
     }
     const aiMode = await resolveAiMode(ctx, org, "onboarding_research", args.aiMode);
+    const modelRoute = await resolveModelRoute(ctx, user._id, args.model);
     const plan = planJob("onboarding_research", { pages: website ? 3 : 0 }, { fixture: org.kind === "demo", mode: aiMode });
     const runId = await createRunWithReservation(ctx, {
       org,
@@ -251,6 +254,7 @@ export const startResearch = mutation({
       createdBy: user._id,
       isFixture: org.kind === "demo",
       aiMode,
+      modelRoute,
     });
     // A research refresh after setup doesn't send the owner back into onboarding.
     if (org.onboardingStep !== "done") await ctx.db.patch(org._id, { onboardingStep: "research" });
@@ -653,8 +657,8 @@ export const setAutonomy = mutation({
 });
 
 export const generatePlan = mutation({
-  args: { slug: v.string(), aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))), creativeRange: v.optional(v.union(v.literal("balanced"), v.literal("conventional"), v.literal("surprising"), v.literal("ambitious"))) },
-  handler: async (ctx, { slug, aiMode: requested, creativeRange }) => {
+  args: { slug: v.string(), aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))), creativeRange: v.optional(v.union(v.literal("balanced"), v.literal("conventional"), v.literal("surprising"), v.literal("ambitious"))), model: v.optional(v.string()) },
+  handler: async (ctx, { slug, aiMode: requested, creativeRange, model }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const goal = await ctx.db
       .query("goals")
@@ -663,6 +667,7 @@ export const generatePlan = mutation({
     if (!goal) throw appError("INVALID", "Set a goal first.");
     await assertNoActiveRun(ctx, org._id, "strategy", "Your plan is already being built. It'll be ready soon.");
     const aiMode = await resolveAiMode(ctx, org, "strategy", requested);
+    const modelRoute = await resolveModelRoute(ctx, user._id, model);
     const plan = planJob("strategy", {}, { fixture: org.kind === "demo", mode: aiMode });
     const runId = await createRunWithReservation(ctx, {
       org,
@@ -675,6 +680,7 @@ export const generatePlan = mutation({
       createdBy: user._id,
       isFixture: org.kind === "demo",
       aiMode,
+      modelRoute,
     });
     if (org.onboardingStep !== "done") await ctx.db.patch(org._id, { onboardingStep: "plan" });
     await ctx.scheduler.runAfter(0, internal.jobs.buildStrategy, { runId });

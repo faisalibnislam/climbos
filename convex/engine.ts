@@ -4,6 +4,8 @@ import { CURRENT_ENTITLEMENTS, CURRENT_ROUTING, creditsToMicros, currentRateVers
 import type { PartialMeters } from "../shared/economics/ledger";
 import { assertTransition, type RunStatus } from "../shared/policy";
 import { estimateRun, type PlannedStep } from "./lib/estimate";
+import { defaultModelRoute } from "./lib/modelRoute";
+import { isModelKey, routeModelKey, type ModelRoute } from "../shared/ai/modelChoice";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
@@ -104,6 +106,8 @@ export async function createRunWithReservation(
     enforceCreditApprovalLimit?: boolean;
     /** Climb AI mode (resolve with resolveAiMode). Absent = basic. */
     aiMode?: "basic" | "expert";
+    /** Models for this run (resolve a user's choice with resolveModelRoute). Absent = operator defaults. */
+    modelRoute?: ModelRoute;
     customAgentId?: Id<"customAgents">;
     customAgentParentRunId?: Id<"workflowRuns">;
     agentArchetypeId?: string;
@@ -140,7 +144,10 @@ export async function createRunWithReservation(
   const rateVersion = currentRateVersion();
   // Agent-only jobs (no single-call version) always run on Engine v2 outside demos.
   const v2 = (process.env.CLIMBOS_ENGINE === "v2" && !params.isFixture) || (!params.isFixture && AGENT_ONLY_KINDS.has(params.kind));
-  const estimate = estimateRun(params.steps, rateVersion.id, { repair: !v2 });
+  // Estimate and reserve at the models this run will actually call.
+  const modelRoute = params.modelRoute ?? (await defaultModelRoute(ctx));
+  const routedSteps = params.steps.map((s) => (s.kind === "model" && s.modelKey && isModelKey(s.modelKey) ? { ...s, modelKey: routeModelKey(modelRoute, s.modelKey) } : s));
+  const estimate = estimateRun(routedSteps, rateVersion.id, { repair: !v2 });
   if (params.customAgentParentRunId && !params.customAgentId) {
     throw appError("INVALID", "Specialist action runs must identify their specialist profile.");
   }
@@ -298,6 +305,7 @@ export async function createRunWithReservation(
     kind: params.kind,
     ...(v2 ? { engine: "v2" as const } : {}),
     ...(params.aiMode === "expert" ? { aiMode: "expert" as const } : {}),
+    modelRoute,
     title: params.title,
     status: "cost_reserved",
     input: JSON.stringify(params.input),
@@ -518,6 +526,7 @@ export const recordUsage = internalMutation({
         stepIndex: step.index,
         routingVersionId: run.routingVersionId,
         aiMode: run.aiMode ?? "basic",
+        modelSource: run.modelRoute?.source ?? "default",
         role: step.role,
         createdAt: Date.now(),
       });

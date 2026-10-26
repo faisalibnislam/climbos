@@ -42,6 +42,24 @@ describe("Design Critic finding review", () => {
     expect(await t.run(async (ctx) => (await ctx.db.query("auditEvents").withIndex("by_org_created", (q) => q.eq("orgId", orgId as never)).collect()).filter((event) => event.action.startsWith("design_finding.")))).toHaveLength(3);
   });
 
+  it("keeps every review decision in an append-only history, newest first, even though the review row is overwritten", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "design-history-owner@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Design Co" });
+    const runId = await addAudit(t, orgId);
+    await owner.client.mutation(api.designCritic.setFeedback, { slug, runId, findingIndex: 0, status: "deferred", note: "Revisit after the spring menu." });
+    await owner.client.mutation(api.designCritic.selectDirection, { slug, runId, findingIndex: 0, directionId: "hero-proof" });
+    await owner.client.mutation(api.designCritic.setFeedback, { slug, runId, findingIndex: 0, status: "resolved" });
+    const { history, rows } = await owner.client.query(api.designCritic.feedback, { slug, runId });
+    expect(rows).toHaveLength(1);
+    expect(history.map((e) => e.kind === "direction" ? `direction:${e.directionName}` : `status:${e.status}`)).toEqual(["status:resolved", "direction:Show proof earlier", "status:deferred"]);
+    expect(history[2]).toMatchObject({ note: "Revisit after the spring menu.", screenshotCapturedAt: expect.any(Number) });
+
+    const other = await asNewUser(t, "design-history-other@example.com");
+    const { slug: otherSlug } = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other Co" });
+    await expect(other.client.query(api.designCritic.feedback, { slug: otherSlug, runId })).rejects.toThrow();
+  });
+
   it("saves an owner's chosen direction against the exact finding without marking the finding resolved or publishing it", async () => {
     const t = setup();
     const owner = await asNewUser(t, "design-direction-owner@example.com");
@@ -77,12 +95,15 @@ describe("Design Critic finding review", () => {
     await t.run(async (ctx) => ctx.db.patch(pageId, { status: "draft", content: JSON.stringify(content), version: 1, updatedAt: Date.now() }));
     await expect(owner.client.mutation(api.landing.setLive, { slug, id: pageId, live: true, expectedVersion: 1 })).rejects.toThrow(/measurement plan for this exact page version/i);
 
-    const plan = { metric: "Qualified enquiries per page visit", method: "Compare the current page period with the same-length period after launch using the website analytics and the business's qualification records.", baseline: { state: "unknown" as const, reason: "The existing site has no saved qualified-enquiry baseline.", collectionPlan: "Record page visits and qualified enquiries weekly before comparing; keep the first post-launch result unknown until a full period is available." } };
+    const plan = { metric: "Qualified enquiries per page visit", method: "Compare the current page period with the same-length period after launch using the website analytics and the business's qualification records.", baseline: { state: "unknown" as const, reason: "The existing site has no saved qualified-enquiry baseline.", collectionPlan: "Record page visits and qualified enquiries weekly before comparing; keep the first post-launch result unknown until a full period is available." } , audience: "Visitors arriving from the Google profile", guardrail: "Unqualified enquiries must not rise", observationDays: 28, decisionRule: "Keep the page if qualified enquiries hold or rise after 28 days; otherwise restore the prior version." };
     await expect(viewer.client.mutation(api.landing.saveDesignMeasurementPlan, { slug, id: pageId, expectedVersion: 1, ...plan })).rejects.toThrow(/can't/i);
     await expect(owner.client.mutation(api.landing.saveDesignMeasurementPlan, { slug, id: pageId, expectedVersion: 1, ...plan, baseline: { state: "unknown", reason: "", collectionPlan: "" } })).rejects.toThrow(/explain why and how/i);
+    await expect(owner.client.mutation(api.landing.saveDesignMeasurementPlan, { slug, id: pageId, expectedVersion: 1, ...plan, guardrail: " " })).rejects.toThrow(/guardrail/i);
+    await expect(owner.client.mutation(api.landing.saveDesignMeasurementPlan, { slug, id: pageId, expectedVersion: 1, ...plan, observationDays: 0 })).rejects.toThrow(/observation period/i);
+    await expect(owner.client.mutation(api.landing.saveDesignMeasurementPlan, { slug, id: pageId, expectedVersion: 1, ...plan, decisionRule: "" })).rejects.toThrow(/what you will do/i);
     await expect(owner.client.mutation(api.landing.saveDesignMeasurementPlan, { slug, id: pageId, expectedVersion: 1, ...plan })).resolves.toMatchObject({ version: 2, appliesToVersion: 2 });
     const measuredPage = (await owner.client.query(api.landing.list, { slug })).pages.find((item) => item.id === pageId)!;
-    expect(measuredPage.designMeasurementPlan).toMatchObject({ metric: plan.metric, baseline: { state: "unknown" }, appliesToVersion: 2, confirmedAt: expect.any(Number) });
+    expect(measuredPage.designMeasurementPlan).toMatchObject({ metric: plan.metric, audience: plan.audience, guardrail: plan.guardrail, observationDays: 28, decisionRule: plan.decisionRule, baseline: { state: "unknown" }, appliesToVersion: 2, confirmedAt: expect.any(Number) });
     await owner.client.mutation(api.landing.setLive, { slug, id: pageId, live: true, expectedVersion: 2 });
 
     await owner.client.mutation(api.landing.update, { slug, id: pageId, content: { ...content, headline: "A revised clear offer" } });

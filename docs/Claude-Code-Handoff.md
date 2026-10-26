@@ -162,9 +162,24 @@ At the owner's request (25 October 2026), ClimbOS has an on-demand business mode
 - Corrected a stale `tests/convex/engine-v2.test.ts` assertion from snapshot version 20 to 21 after verifying `convex/jobs.ts` writes version 21 and the schema supports it.
 - Added CP-075, TOMS' purpose-linked offer evolution, with company reports and a World Bank randomized evaluation of one context-specific donation program. The case distinguishes beneficiary-impact evidence from sales or profitability and does not claim the evaluation caused the company's strategy change. Current coverage is 75 reviewed / 25 unverified.
 
+### Admin-controlled AI model choice (branch `claude/model-selection`, 26 Oct 2026)
+
+The owner asked for Anthropic and Gemini alongside OpenAI, governed by operator defaults and per-user permission. Built:
+
+- `shared/ai/anthropic.ts` (official `@anthropic-ai/sdk`, streaming, structured outputs, web search, `fetch_page` loop, `pause_turn`) and `shared/ai/gemini.ts` (REST, structured outputs, Google Search grounding, thought signatures kept as opaque history items) behind `modelTurn` in `shared/ai/turn.ts`. The v1 single-call path in `convex/ai/providers.ts` dispatches Claude too.
+- `shared/economics/rates.ts`: every callable model priced; new versions `model-choice-2026-10-26`, `gemini-argon-reprice-2026-12-01`, and the 2027 Flash reprice now covers 3.6 Flash and keeps Argon's December price. Prices were retrieved on 26 Oct 2026 from the official Anthropic, Google and OpenAI pricing pages; model IDs and limits from their model pages. Gemini grounding is priced per query (`groundingSearchCall`).
+- `shared/ai/modelChoice.ts`: two tiers (standard = steps written against Luna, advanced = Sol escalation), the cheapest-first catalog and provider env names. `convex/lib/modelRoute.ts`: operator defaults (fall back to the built-in model when a key is missing), per-user grants (`aiModelGrants`, chosen over workspace or account because the owner described enabling a user), and the server-side gate.
+- `createRunWithReservation` stamps `modelRoute` on every run and estimates/reserves at the routed models; `runModel` maps every execution site (`convex/jobs.ts` agents, escalation, consistency check, v1 tasks, and the single-call actions). Usage events carry `modelSource`; provider and model come from the routed model.
+- Admin: `/ops/models` (`AdminModels.tsx`), `admin.modelSettings`, `admin.setDefaultModel`, `admin.setUserModelChoice` (audited as `admin.model_default` and `admin.model_choice_enabled`/`_disabled`). User: `models.myModelChoice` and `ModelPicker` in onboarding research (both forms), plan build/refresh and content creation; `orgs.startResearch`, `orgs.generatePlan`, `content.generate` and `content.estimate` take an optional `model`.
+- Tests: `tests/convex/model-choice.test.ts` (built-in fallback, operator default with audit, key-removal fallback, permission refusal on all three mutations, staff-only admin changes, cheapest-first options, user choice recorded on every usage record, Gemini research on the fake LLM) and `tests/unit/model-choice.test.ts` (per-model cost estimates, version dates, grounding price, routing, sort order, missing-key adapters).
+
+Not verified: no live Anthropic or Gemini call has been made; the admin page wasn't opened in a browser because the dev test account isn't staff (the onboarding page was checked for a user without permission). Owner action: add `ANTHROPIC_API_KEY` and/or confirm `GEMINI_API_KEY` in the Convex dashboard, then pick defaults in `/ops/models`.
+
 ## What remains and should guide the next work
 
 These are known open gaps, not a complete substitute for checking the requirement audit and ledger before choosing work:
+
+0. **Spec coverage:** `docs/growth-engine/spec-coverage.md` maps the complete product specification to code and ranks the 17 remaining buildable gaps. Start there.
 
 1. **Live quality and outcomes:** Most changed paths are fixture/regression tested. No broad held-out real-model evaluation demonstrates expert-level strategy quality across diverse businesses. Business outcomes, causality, channel fit, and forecast calibration remain limited or unmeasured.
 2. **Retention evidence:** Owners can now enter weekly repeat-customer, revenue, and contribution aggregates from the plan card. There is no customer-level cohort history, repeat-purchase timing, churn reason/satisfaction workflow, or verified retention attribution; do not infer unique retained customers from customer-week totals.
