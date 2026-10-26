@@ -6,6 +6,7 @@ import { SocialIcon } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { channelLabel } from "../shared";
 import { hostOf, type VersionView } from "./model";
+import { visualFormatLabel, visualOf } from "./SuggestedVisual";
 
 const AI_IMAGE_LABEL = "AI-generated illustration";
 
@@ -30,6 +31,20 @@ function ImageBlock({ version, square }: { version: VersionView; square?: boolea
         </figcaption>
       ) : null}
     </figure>
+  );
+}
+
+/** Where the suggested visual goes until there is an image; the brief is under "Suggested visual". */
+function VisualPlaceholder({ version }: { version: VersionView }) {
+  const visual = visualOf(version);
+  if (!visual) return null;
+  return (
+    <div className="mx-3 mb-3 flex items-center gap-2 rounded-lg border border-dashed border-line bg-surface-2 px-3 py-4 text-ink-3">
+      <ImageIcon aria-hidden="true" className="size-5 shrink-0" />
+      <span className="text-xs">
+        {visual.format === "text" ? "Optional visual" : `Suggested ${visualFormatLabel(visual.format).toLowerCase()}`}: see the brief below.
+      </span>
+    </div>
   );
 }
 
@@ -144,7 +159,11 @@ export function ChannelPreview({ channel, version, accountLabel }: { channel: st
         {body}
         <Hashtags tags={version.hashtags} />
       </div>
-      {version.imageUrl || channel === "pinterest" || channel === "youtube" || channel === "tiktok" ? <ImageBlock version={version} square={channel === "pinterest"} /> : null}
+      {version.imageUrl || channel === "pinterest" || channel === "youtube" || channel === "tiktok" ? (
+        <ImageBlock version={version} square={channel === "pinterest"} />
+      ) : !isAd && visualOf(version) ? (
+        <VisualPlaceholder version={version} />
+      ) : null}
       {isAd ? (
         <div className="flex items-center justify-between gap-3 border-t border-line bg-surface-2 px-3 py-2">
           <span className="min-w-0">

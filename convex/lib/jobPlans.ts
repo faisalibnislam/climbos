@@ -161,7 +161,8 @@ export type JobKind =
   | "business_model_check"
   | "social_calendar"
   | "outbound"
-  | "reel";
+  | "reel"
+  | "post_image";
 
 export interface JobPlan {
   kind: JobKind;
@@ -285,6 +286,9 @@ function v1Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
         meters: { imageAttempts: images * 2 },
       };
     }
+    case "post_image":
+      // One image for an existing draft from its visual brief (two tries, like content_social's images).
+      return { kind, title: "Create a post image", roles: ["creative_director"], tasks: [], steps: [{ kind: "image", role: "creative_director", imageAttempts: 2 }], meters: { imageAttempts: 2, deliveredImages: 1 } };
     case "outbound":
       // Demo: deterministic example prospects (no model call).
       return { kind, title: "Find customers and write the emails", roles: ["cso"], tasks: [], steps: [], meters: {} };

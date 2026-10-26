@@ -105,7 +105,7 @@ describe("social intelligence routing", () => {
       copyBrief,
       posts: ["linkedin", "instagram"].map((channel) => ({
         channel, title: "A current trend for teams", body: sharedDraft, hashtags: [], altText: "", imageIdea: "", factIndexes: [], suggestedDay: 1,
-        angle: "Compare options before commitment", format: "text", hook: "A useful checklist for the decision", slides: [], videoScript: "", visualBrief: "", firstComment: "",
+        angle: "Compare options before commitment", format: "text", hook: "A useful checklist for the decision", slides: [], videoScript: "", shotList: [], visualBrief: "", firstComment: "",
       })),
     };
     const issues = spec.lint?.(output as never, input) ?? [];
@@ -181,7 +181,7 @@ describe("social intelligence routing", () => {
     const post = {
       channel: "instagram", title: "A current trend worth trying", body: "A practical way to show the progress before the reveal.",
       hashtags: [], altText: "", imageIdea: "", factIndexes: [], suggestedDay: 1, angle: "Show the work behind a result", format: "text",
-      hook: "A current trend can clarify the steps", slides: [], videoScript: "", visualBrief: "", firstComment: "", trendSourceUrl: sourceUrl,
+      hook: "A current trend can clarify the steps", slides: [], videoScript: "", shotList: [], visualBrief: "", firstComment: "", trendSourceUrl: sourceUrl,
       trendEvidence: { sourceUrl, observationDate: "2026-10-20", observation: "Creators are using a short progress-reveal format." },
     };
     const good = spec.lint?.({ copyBrief, posts: [post] } as never, input) ?? [];
@@ -217,7 +217,7 @@ describe("social intelligence routing", () => {
       posts: [{
         channel: "instagram", title: "The #1 platform for local shops", hook: "Support 24/7 by chat", body: "A useful guide for comparing services and asking better questions.",
         hashtags: [], altText: "Award-winning customer support poster", imageIdea: "A simple comparison card", factIndexes: [], suggestedDay: 1,
-        angle: "Compare before choosing", format: "image", slides: [], videoScript: "", visualBrief: "A clear, readable comparison card", firstComment: "",
+        angle: "Compare before choosing", format: "image", slides: [], videoScript: "", shotList: [], visualBrief: "A clear, readable comparison card", firstComment: "",
       }],
     };
 
@@ -239,7 +239,7 @@ describe("social intelligence routing", () => {
     };
     const output = {
       copyBrief,
-      posts: [{ channel: "instagram", title: "A useful idea", body: "A short useful idea for the audience.", hashtags: [], altText: "", imageIdea: "", factIndexes: [], suggestedDay: 1, angle: "Make the next step clearer", format: "text", hook: "A useful idea", slides: [], videoScript: "", visualBrief: "", firstComment: "" }],
+      posts: [{ channel: "instagram", title: "A useful idea", body: "A short useful idea for the audience.", hashtags: [], altText: "", imageIdea: "", factIndexes: [], suggestedDay: 1, angle: "Make the next step clearer", format: "text", hook: "A useful idea", slides: [], videoScript: "", shotList: [], visualBrief: "", firstComment: "" }],
     };
     const issue = (spec.lint?.(output as never, input) ?? []).find((entry) => entry.rule === "unexpected_channel");
     expect(issue?.severity).toBe("warn");
