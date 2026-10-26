@@ -3796,9 +3796,13 @@ export default defineSchema({
     ),
     /** Reel posts: the video this post carries. */
     reelId: v.optional(v.id("reels")),
+    /** Written by an outside agent over MCP (no ClimbOS model ran): the token it used and that token's name at the time. */
+    agentTokenId: v.optional(v.id("agentTokens")),
+    agentName: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
+    .index("by_agent_token", ["agentTokenId", "createdAt"])
     .index("by_org_updated", ["orgId", "updatedAt"])
     .index("by_org_status", ["orgId", "status"])
     .index("by_org_status_channel", ["orgId", "status", "channel"])
