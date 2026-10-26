@@ -1065,3 +1065,7 @@ Experiments gained pre-registration fields (variants, decision owner, planned co
 ## Resumption note (2026-10-26, spec gap 7)
 
 `shared/acquisition/recommendationGroups.ts` adds `ChannelJob`, `CHANNEL_JOB_LABEL` and `channelJob`, plus an app-store guidance group. ChannelScorecard shows the job on each row.
+
+## Resumption note (2026-10-26, spec gaps 16 and 17)
+
+`retrieveGrowthKnowledge` matches scenario aliases against the chosen industry business type as well as the prompt. `tests/unit/product-brand-copy.test.ts` now also scans all of `src/` and `shared/` for the former studio name outside internal identifiers. The module and table rename is deferred; the reason is in spec-coverage.md.
