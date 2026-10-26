@@ -39,6 +39,7 @@ import { estimateJobMicros, maxJobMicros, planJob } from "./lib/jobPlans";
 import { imageUrlFor } from "./lib/media";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { resolveModelRoute } from "./lib/modelRoute";
+import { runProviderMicros, showsApiCost } from "./lib/costDisplay";
 
 /** Read-only source set for the conversion/social audit; restricted to one tenant and confirmed published posts. */
 export const auditPublishedSocial = internalQuery({
@@ -68,7 +69,7 @@ export const auditPublishedSocial = internalQuery({
 });
 
 /** The honest label shown with a library image on a post. */
-function assetPostLabel(a: Doc<"assets">): string {
+export function assetPostLabel(a: Doc<"assets">): string {
   if (a.kind === "ai_image") return "AI-generated illustration";
   if (a.illustrative) return "Your product with sample data";
   if (a.kind === "screenshot") return "Screenshot of your website";
@@ -321,6 +322,8 @@ export const get = query({
       autopilotSlot: slot && slot.status !== "skipped" ? { slotAt: slot.slotAt, status: slot.status } : null,
       reel: reel ? { id: reel._id, status: reel.status, videoUrl: reel.videoStorageId ? await ctx.storage.getUrl(reel.videoStorageId) : null, seconds: reel.seconds ?? null } : null,
       createdByRole: a.createdByRole ?? null,
+      /** Set when an outside agent wrote this draft itself over MCP. */
+      agentName: a.agentName ?? null,
       createdAt: a.createdAt,
       updatedAt: a.updatedAt,
       current: versions[0] ? await versionView(ctx as never, versions[0]) : null,
@@ -714,8 +717,9 @@ export const estimate = query({
 export const runStatus = query({
   args: { slug: v.string(), runId: v.id("workflowRuns") },
   handler: async (ctx, { slug, runId }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "view");
     const run = assertSameOrg(await ctx.db.get(runId), org._id, "job");
+    const apiCost = await showsApiCost(ctx, user._id);
     const steps = await ctx.db
       .query("workflowSteps")
       .withIndex("by_run", (q) => q.eq("runId", run._id))
@@ -738,6 +742,7 @@ export const runStatus = query({
       userMessage: run.userMessage ?? null,
       estimateMicros: run.estimateMicros,
       actualMicros: run.actualMicros,
+      ...(apiCost ? { providerMicros: runProviderMicros(run) } : {}),
       isFixture: run.isFixture,
       createdAt: run.createdAt,
       finishedAt: run.finishedAt ?? null,

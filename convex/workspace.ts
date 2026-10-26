@@ -29,6 +29,7 @@ import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 import { savedPlanDecisionSummary } from "../shared/agents/planDecisionSummary";
 import { factFreshness } from "../shared/agents/factFreshness";
 import { defaultModelRoute } from "./lib/modelRoute";
+import { runProviderMicros, showsApiCost } from "./lib/costDisplay";
 
 /** Everything the Today screen needs, in one bounded query. */
 export const today = query({
@@ -908,10 +909,12 @@ export const setUnitEconomics = mutation({
     ownerHoursPerWeek: v.optional(v.number()),
     newCustomersPerMonth: v.optional(v.number()),
     monthlyGrowthCashUsd: v.optional(v.number()),
+    /** Numbers the owner isn't sure of; a value given for one of these takes it off the list. */
+    unsure: v.optional(v.array(v.union(v.literal("revenue"), v.literal("margin"), v.literal("churn")))),
     segmentEconomics: v.optional(v.array(v.object({ segment: v.string(), currency: v.string(), periodDays: v.number(), customers: v.number(), netRevenue: v.number(), variableCosts: v.number(), costBoundary: v.string(), unknownCosts: v.optional(v.array(v.string())), strategicValueNote: v.optional(v.string()) }))),
     ranges: v.optional(v.object({ revenue: v.optional(v.object({ low: v.number(), high: v.number() })), margin: v.optional(v.object({ low: v.number(), high: v.number() })), churn: v.optional(v.object({ low: v.number(), high: v.number() })) })),
   },
-  handler: async (ctx, { slug, ranges, ...vals }) => {
+  handler: async (ctx, { slug, ranges, unsure: unsureArg, ...vals }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     if (!business) throw appError("NOT_FOUND", "Add your business first.");
@@ -962,6 +965,13 @@ export const setUnitEconomics = mutation({
       newCustomersPerMonth: vals.newCustomersPerMonth ?? prev?.newCustomersPerMonth,
       monthlyGrowthCashUsd: vals.monthlyGrowthCashUsd ?? prev?.monthlyGrowthCashUsd,
       segmentEconomics: vals.segmentEconomics ?? prev?.segmentEconomics,
+      // "Not sure" clears that number (it must not stay as an owner figure); a new number clears "not sure".
+      ...(() => {
+        const given = { revenue: vals.revenuePerCustomerMonthUsd, margin: vals.grossMargin, churn: vals.monthlyChurn };
+        const merged = new Set([...(prev?.unsure ?? []), ...(unsureArg ?? [])]);
+        for (const [k, val] of Object.entries(given)) if (val !== undefined) merged.delete(k as "revenue");
+        return merged.size ? { unsure: [...merged] } : {};
+      })(),
       // A new single number replaces its old range; a new range replaces the old one.
       ...(() => {
         const keep = { ...(prev?.ranges ?? {}) } as Record<string, { low: number; high: number }>;
@@ -973,6 +983,10 @@ export const setUnitEconomics = mutation({
       })(),
       updatedAt: Date.now(),
     };
+    const unsureNow = new Set(next.unsure ?? []);
+    if (unsureNow.has("revenue")) next.revenuePerCustomerMonthUsd = undefined;
+    if (unsureNow.has("margin")) next.grossMargin = undefined;
+    if (unsureNow.has("churn")) next.monthlyChurn = undefined;
     await ctx.db.patch(business._id, { unitEconomics: next });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "business.unit_economics", subjectType: "business", subjectId: business._id, summary: "Unit economics updated." });
   },
@@ -1141,7 +1155,7 @@ function planStaleInputs(
   connectedCapabilities: string[] = [],
   marketChangeVersions: { id: string; at: number }[] = [],
 ): { ownerEconomics: boolean; lifecycleStage: boolean; funnel: boolean; goal: boolean; businessProfile: boolean; businessFacts: boolean; brandGuidance: boolean; capabilities: boolean; businessResearch: boolean; marketChanges: boolean; cashTiming: boolean } {
-  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid"; rationale: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; capabilities?: string[]; growthCashTiming?: unknown } | undefined;
+  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; kinds?: string[]; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid"; rationale: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; capabilities?: string[]; growthCashTiming?: unknown } | undefined;
   const savedStage = snapshot?.businessLifecycleStage?.stage ?? null;
   const currentStage = business?.lifecycleStage?.stage ?? null;
   const savedFunnel = funnelDecisionValues(snapshot?.businessFunnel);
@@ -1243,9 +1257,10 @@ async function currentBusinessFactVersions(ctx: QueryCtx | MutationCtx, business
   })).sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function goalDecisionValues(goal: { _id?: unknown; id?: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target?: unknown } | null | undefined): unknown {
+function goalDecisionValues(goal: { _id?: unknown; id?: string; kind: string; kinds?: string[]; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target?: unknown } | null | undefined): unknown {
   if (!goal) return null;
-  return [goal.id ?? String(goal._id), goal.kind, goal.statement, goal.horizonDays, goal.monthlyAdBudgetMinor, goal.currency, goal.target ?? null];
+  // Several goal types are planning inputs; a single type is already `kind` (kept so older plans don't turn stale).
+  return [goal.id ?? String(goal._id), goal.kind, goal.statement, goal.horizonDays, goal.monthlyAdBudgetMinor, goal.currency, goal.target ?? null, ...(goal.kinds && goal.kinds.length > 1 ? [goal.kinds] : [])];
 }
 
 function funnelDecisionValues(funnel: Doc<"businesses">["funnel"] | null | undefined): unknown {
@@ -1313,13 +1328,14 @@ export const setChannelStatus = mutation({
 export const runs = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "view");
     const rows = await ctx.db
       .query("workflowRuns")
       .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
       .order("desc")
       .take(50);
-    return rows.map((r) => ({ id: r._id, title: r.title, kind: r.kind, status: r.status, roles: r.roles, estimateMicros: r.estimateMicros, actualMicros: r.actualMicros, userMessage: r.userMessage ?? null, createdAt: r.createdAt, isFixture: r.isFixture }));
+    const apiCost = await showsApiCost(ctx, user._id);
+    return rows.map((r) => ({ id: r._id, title: r.title, kind: r.kind, status: r.status, roles: r.roles, estimateMicros: r.estimateMicros, actualMicros: r.actualMicros, ...(apiCost ? { providerMicros: runProviderMicros(r) } : {}), userMessage: r.userMessage ?? null, createdAt: r.createdAt, isFixture: r.isFixture }));
   },
 });
 
@@ -1418,8 +1434,9 @@ export const activeWork = query({
 export const runDetail = query({
   args: { slug: v.string(), runId: v.id("workflowRuns") },
   handler: async (ctx, { slug, runId }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "view");
     const run = assertSameOrg(await ctx.db.get(runId), org._id, "job");
+    const apiCost = await showsApiCost(ctx, user._id);
     const steps = await ctx.db
       .query("workflowSteps")
       .withIndex("by_run", (q) => q.eq("runId", run._id))
@@ -1452,6 +1469,7 @@ export const runDetail = query({
       updatedAt: run.updatedAt,
       estimateMicros: run.estimateMicros,
       actualMicros: run.actualMicros,
+      ...(apiCost ? { providerMicros: runProviderMicros(run) } : {}),
       userMessage: run.userMessage ?? null,
       isFixture: run.isFixture,
       engine: run.engine ?? null,

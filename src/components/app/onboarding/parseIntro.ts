@@ -8,6 +8,8 @@ export interface ParsedIntro {
   businessName?: string;
   website?: string;
   goalKind?: "more_sales" | "more_customers" | "more_reach" | "custom";
+  /** Every goal type the text mentions, in the order they are checked (all equal priority). */
+  goalKinds?: ("more_sales" | "more_customers" | "more_reach")[];
   goalStatement?: string;
   monthlyAdBudget?: number;
   horizonDays?: number;
@@ -50,9 +52,14 @@ export function parseIntro(text: string): ParsedIntro {
     if (days >= 14 && days <= 365) out.horizonDays = days;
   }
 
-  if (/paying customers|more customers|new customers|sign[- ]?ups|clients/i.test(t)) out.goalKind = "more_customers";
-  else if (/sales|revenue|orders|sell more/i.test(t)) out.goalKind = "more_sales";
-  else if (/reach|awareness|followers|audience|brand/i.test(t)) out.goalKind = "more_reach";
+  const kinds: NonNullable<ParsedIntro["goalKinds"]> = [];
+  if (/paying customers|more customers|new customers|sign[- ]?ups|clients/i.test(t)) kinds.push("more_customers");
+  if (/sales|revenue|orders|sell more/i.test(t)) kinds.push("more_sales");
+  if (/reach|awareness|followers|audience|brand/i.test(t)) kinds.push("more_reach");
+  if (kinds.length) {
+    out.goalKind = kinds[0];
+    out.goalKinds = kinds;
+  }
 
   const goalSentence = t.split(/(?<=[.!?])\s+/).find((s) => /(help|want|goal|grow|get|need)/i.test(s));
   if (goalSentence) out.goalStatement = goalSentence.trim().slice(0, 300);

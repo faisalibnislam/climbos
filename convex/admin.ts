@@ -674,6 +674,39 @@ export const setDefaultModel = mutation({
   },
 });
 
+/** Users who see real API cost in dollars instead of credits (credits for everyone by default). */
+export const costDisplayGrants = query({
+  args: {},
+  handler: async (ctx) => {
+    const { role } = await requireStaff(ctx, "read");
+    const grants = await ctx.db.query("costDisplayGrants").withIndex("by_enabled", (q) => q.eq("enabled", true)).order("desc").take(200);
+    const users = await Promise.all(grants.map((g) => ctx.db.get(g.userId)));
+    return { grants: grants.map((g, i) => ({ userId: g.userId, email: users[i]?.email ?? null, name: users[i]?.name ?? null, updatedAt: g.updatedAt })), canEdit: role !== "support" };
+  },
+});
+
+/** Show one user real API cost in dollars instead of credits (or switch them back). Billing stays in credits. */
+export const setUserCostDisplay = mutation({
+  args: { email: v.optional(v.string()), userId: v.optional(v.id("users")), enabled: v.boolean() },
+  handler: async (ctx, { email, userId, enabled }) => {
+    const { user } = await requireStaff(ctx, "features");
+    let target: Doc<"users"> | null = null;
+    if (userId) target = await ctx.db.get(userId);
+    else if (email) {
+      const clean = email.trim().toLowerCase();
+      target = await ctx.db.query("users").withIndex("email", (q) => q.eq("email", clean)).first();
+    }
+    if (!target) throw appError("NOT_FOUND", "No ClimbOS user has that email address.");
+    const row = await ctx.db.query("costDisplayGrants").withIndex("by_user", (q) => q.eq("userId", target._id)).unique();
+    if ((row?.enabled ?? false) === enabled) return;
+    const now = Date.now();
+    if (row) await ctx.db.patch(row._id, { enabled, grantedBy: user._id, updatedAt: now });
+    else await ctx.db.insert("costDisplayGrants", { userId: target._id, enabled, grantedBy: user._id, updatedAt: now });
+    const who = target.email ?? target._id;
+    await audit(ctx, { actorType: "operator", actorId: user._id, action: enabled ? "admin.api_cost_enabled" : "admin.api_cost_disabled", subjectType: "user", subjectId: target._id, summary: enabled ? `${who} now sees real API cost instead of credits.` : `${who} sees credits again.` });
+  },
+});
+
 /** Let one user pick their own model on onboarding research, plan builds and content jobs (or turn it off again). */
 export const setUserModelChoice = mutation({
   args: { email: v.optional(v.string()), userId: v.optional(v.id("users")), enabled: v.boolean() },

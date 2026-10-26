@@ -14,7 +14,7 @@ import { Check, CircleDashed, Lightbulb, Magic, ShieldCheck, X } from "@/compone
 import { Badge, Button, toast } from "@/components/ui";
 import { Scannable } from "@/components/ds/content";
 import { errorMessage } from "@/components/app/errors";
-import { microsToCreditsLabel } from "@/components/app/money";
+import { useCostDisplay } from "@/components/app/useCostDisplay";
 import { RoleAvatar } from "@/components/app/RoleAvatar";
 import { roleTitle } from "@/components/app/roles";
 import { cn } from "@/lib/utils";
@@ -40,6 +40,7 @@ function prefersReduced() {
 }
 
 function CardFace({ card }: { card: IdeaCard }) {
+  const fmt = useCostDisplay();
   const role = card.roles[0] ?? "coo";
   const note = card.kind === "note";
   const blocked = card.status === "blocked";
@@ -58,7 +59,7 @@ function CardFace({ card }: { card: IdeaCard }) {
           </Badge>
         ) : (
           <Badge tone="brand" icon={<Magic />}>
-            {card.costEstimateMicros > 0 ? `Up to ${microsToCreditsLabel(card.costEstimateMicros)}` : "Free"}
+            {card.costEstimateMicros > 0 ? `Up to ${fmt.upTo(card.costEstimateMicros)}` : "Free"}
           </Badge>
         )}
       </div>

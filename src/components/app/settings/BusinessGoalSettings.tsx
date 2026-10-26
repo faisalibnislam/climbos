@@ -5,13 +5,14 @@ import { api } from "@convex/_generated/api";
 import { RefreshCw } from "@/components/icons"
 import Link from "next/link";
 import { useState } from "react";
-import { Badge, Button, Callout, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, ConfirmDialog, Field, Input, Select, Textarea, buttonClasses, toast } from "@/components/ui";
+import { Badge, Button, Callout, Card, CardContent, CardDescription, CardHeader, CardTitle, CheckCards, Checkbox, ConfirmDialog, Field, Input, Select, Textarea, buttonClasses, toast } from "@/components/ui";
 import { can } from "@shared/policy";
 import { AiModePicker, useAiMode } from "../AiModePicker";
 import { RetryRunIfPossible, RUN_FINISHED, RunProgress } from "../content/RunProgress";
 import { PERMISSION_WHO, majorToDisplay, type MemberRole } from "../content/shared";
 import { errorMessage } from "../errors";
-import { microsToCreditsLabel, relativeTime } from "../money";
+import { relativeTime } from "../money";
+import { useCostDisplay } from "../useCostDisplay";
 import { BUSINESS_TYPE_OPTIONS, CURRENCY_OPTIONS, GOAL_KIND_OPTIONS, HORIZON_OPTIONS, REVIEW_DAY_OPTIONS, defaultEvents, goalDefaults, type BusinessType, type GoalKind } from "../onboarding/options";
 import { INDUSTRY_BUSINESS_TYPES } from "@shared/knowledge/industryCatalog";
 import { LoadingBlock } from "../results/QueryBoundary";
@@ -47,7 +48,8 @@ function GoalForm({ slug, state, canEdit, canRaise }: { slug: string; state: Sta
   const setGoal = useMutation(api.orgs.setGoal);
   const name = state.business?.name ?? "your business";
   const defaults = goalDefaults(name);
-  const [kind, setKind] = useState<GoalKind>(state.goal?.kind ?? "more_customers");
+  const [kinds, setKinds] = useState<GoalKind[]>(state.goal?.kinds?.length ? state.goal.kinds : [state.goal?.kind ?? "more_customers"]);
+  const kind = kinds[0] ?? "more_customers";
   const [statement, setStatement] = useState(state.goal?.statement ?? defaults.more_customers);
   const [horizon, setHorizon] = useState(String(state.goal?.horizonDays ?? 90));
   const [budget, setBudget] = useState(String(state.goal?.monthlyAdBudget ?? 0));
@@ -67,17 +69,21 @@ function GoalForm({ slug, state, canEdit, canRaise }: { slug: string; state: Sta
         <CardTitle>Your goal</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-5 sm:grid-cols-2">
-        <Field label="Kind of goal">
-          <Select
-            value={kind}
-            disabled={!canEdit}
+        <fieldset className="flex flex-col gap-2 sm:col-span-2" disabled={!canEdit}>
+          <legend className="mb-2 text-ui font-medium text-ink">Goals (all count equally)</legend>
+          <CheckCards
+            aria-label="Goals"
+            columns={2}
+            value={kinds}
             onValueChange={(v) => {
-              setKind(v as GoalKind);
-              if (!statement || Object.values(defaults).includes(statement)) setStatement(defaults[v as GoalKind]);
+              if (!canEdit) return;
+              setKinds(v as GoalKind[]);
+              const first = v[0] as GoalKind | undefined;
+              if (first && (!statement || Object.values(defaults).includes(statement))) setStatement(defaults[first]);
             }}
-            options={GOAL_KIND_OPTIONS.map((o) => ({ value: o.value, label: o.title }))}
+            options={GOAL_KIND_OPTIONS.map((o) => ({ ...o, disabled: !canEdit }))}
           />
-        </Field>
+        </fieldset>
         <Field label="Time frame">
           <Select value={horizon} disabled={!canEdit} onValueChange={setHorizon} options={HORIZON_OPTIONS} />
         </Field>
@@ -116,7 +122,7 @@ function GoalForm({ slug, state, canEdit, canRaise }: { slug: string; state: Sta
               onClick={async () => {
                 setBusy(true);
                 try {
-                  await setGoal({ slug, kind, statement: statement.trim() || defaults[kind] || "Grow the business", target: { metric, mode, baseline: mode === "total" ? numOrNull(baseline) : null, desired: numOrNull(desired) }, horizonDays: Number(horizon), monthlyAdBudget: Number(budget || 0), reviewDay });
+                  await setGoal({ slug, kind, kinds: kinds.length ? kinds : [kind], statement: statement.trim() || defaults[kind] || "Grow the business", target: { metric, mode, baseline: mode === "total" ? numOrNull(baseline) : null, desired: numOrNull(desired) }, horizonDays: Number(horizon), monthlyAdBudget: Number(budget || 0), reviewDay });
                   toast({ tone: "success", title: "Goal saved.", description: state.strategy ? "Refresh your plan to use it." : undefined });
                 } catch (e) {
                   toast({ tone: "danger", title: errorMessage(e) });
@@ -244,6 +250,7 @@ const RESEARCH_LABEL: Record<string, { label: string; tone: "green" | "amber" | 
 };
 
 function ResearchCard({ slug, state, canEdit }: { slug: string; state: State; canEdit: boolean }) {
+  const fmt = useCostDisplay();
   const startResearch = useMutation(api.orgs.startResearch);
   const ai = useAiMode(slug);
   const research = state.research;
@@ -281,7 +288,7 @@ function ResearchCard({ slug, state, canEdit }: { slug: string; state: State; ca
                 </Button>
               }
               title="Refresh research?"
-              description={`Re-reads ${state.business?.website ?? "your website"}.${max ? ` Up to ${microsToCreditsLabel(max)}; unused credits returned.` : ""}`}
+              description={`Re-reads ${state.business?.website ?? "your website"}.${max ? ` Up to ${fmt.upTo(max)}; unused credits returned.` : ""}`}
               confirmLabel="Refresh research"
               onConfirm={async () => {
                 try {
@@ -293,7 +300,7 @@ function ResearchCard({ slug, state, canEdit }: { slug: string; state: State; ca
             >
               <AiModePicker slug={slug} kind="onboarding_research" value={ai.mode} onChange={ai.setMode} />
             </ConfirmDialog>
-            {!state.business?.website ? <span className="text-xs text-ink-3">Add a website first.</span> : max ? <span className="text-xs text-ink-3">Up to {microsToCreditsLabel(max)}</span> : null}
+            {!state.business?.website ? <span className="text-xs text-ink-3">Add a website first.</span> : max ? <span className="text-xs text-ink-3">Up to {fmt.upTo(max)}</span> : null}
             {!state.canRunAi && state.accessMessage ? <span className="text-xs text-ink-3">{state.accessMessage}</span> : null}
           </div>
         ) : null}

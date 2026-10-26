@@ -21,6 +21,7 @@ import {
   Checkbox,
   Field,
   Input,
+  CheckCards,
   RadioCards,
   Select,
   Skeleton,
@@ -37,7 +38,7 @@ import { RetryRunIfPossible, RunPreviewSummary, RunProgress, RunProgressCompact 
 import { AiModeChoice, AiModePicker, useAiMode } from "../AiModePicker";
 import { ModelPicker, useModelChoice } from "../ModelPicker";
 import { microsToCreditsLabel } from "../money";
-import { BUSINESS_TYPE_OPTIONS, CURRENCY_OPTIONS, GOAL_KIND_OPTIONS, HORIZON_OPTIONS, REVIEW_DAY_OPTIONS, defaultEvents, goalDefaults } from "./options";
+import { BUSINESS_TYPE_OPTIONS, CURRENCY_OPTIONS, GOAL_KIND_OPTIONS, HORIZON_OPTIONS, REVIEW_DAY_OPTIONS, defaultEvents, goalDefaults, goalSuggestions, toggleGoalSentence } from "./options";
 
 
 type Step = "business" | "research" | "facts" | "goal" | "preferences" | "plan" | "done";
@@ -70,7 +71,7 @@ const STEP_HELP: Record<Step, { title: string; roles: string[]; points: string[]
     roles: ["data_analyst"],
     points: ["Only confirmed facts are used", "Fix, remove or add"],
   },
-  goal: { title: "Your goal", roles: ["ceo"], points: ["One goal keeps focus", "Change it any time"] },
+  goal: { title: "Your goal", roles: ["ceo"], points: ["Pick every goal that fits", "Change them any time"] },
   preferences: { title: "You stay in control", roles: ["coo"], points: ["Pause all in one click", "Budgets are hard limits"] },
   plan: { title: "Your plan covers", roles: ["ceo", "cmo"], points: ["Who to reach, what to say", "Where to start and what it may cost", "How we measure progress"] },
   done: { title: "All set", roles: ["ceo"], points: [] },
@@ -242,6 +243,7 @@ function BusinessStep({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const create = useMutation(api.orgs.createWorkspace);
+  const saveIntro = useMutation(api.orgs.saveOnboardingIntro);
   const startResearch = useMutation(api.orgs.startResearch);
   const claim = useMutation(api.preview.claim);
   const aiView = useQuery(api.orgs.newWorkspaceAiMode, {});
@@ -335,6 +337,20 @@ function BusinessStep({
         try {
           sessionStorage.setItem(`climbos:intro:${slug}`, JSON.stringify({ goalStatement: prefillGoal }));
         } catch {}
+      }
+      // Keep these answers on the business too, so the goal step has them in any tab or on any device.
+      const intro = fields.parsed ?? (prefillGoal ? { goalStatement: prefillGoal } : null);
+      if (intro) {
+        await saveIntro({
+          slug,
+          intro: {
+            ...(fields.parsed?.goalKinds?.length ? { goalKinds: fields.parsed.goalKinds } : {}),
+            ...(intro.goalStatement ? { goalStatement: intro.goalStatement } : {}),
+            ...(fields.parsed?.monthlyAdBudget !== undefined ? { monthlyAdBudget: fields.parsed.monthlyAdBudget } : {}),
+            ...(fields.parsed?.horizonDays !== undefined ? { horizonDays: fields.parsed.horizonDays } : {}),
+            ...(fields.parsed?.reviewDay ? { reviewDay: fields.parsed.reviewDay } : {}),
+          },
+        }).catch(() => undefined);
       }
       if (previewToken) await claim({ token: previewToken, orgId: orgId as Id<"organizations"> }).catch(() => undefined);
       try {
@@ -832,44 +848,81 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
   );
 }
 
+type GoalKindValue = "more_sales" | "more_customers" | "more_reach" | "custom";
+const isGoalKind = (k: string): k is GoalKindValue => ["more_sales", "more_customers", "more_reach", "custom"].includes(k);
+
 function GoalStep({ slug, state }: { slug: string; state: State }) {
   const setGoal = useMutation(api.orgs.setGoal);
+  // A saved goal wins; then what the owner said on step one (saved on the business, else this tab's copy).
   const intro = useMemo<ParsedIntro>(() => {
+    const saved = state.business?.onboardingIntro;
+    let tab: ParsedIntro = {};
     try {
-      return JSON.parse(sessionStorage.getItem(`climbos:intro:${slug}`) ?? "{}") as ParsedIntro;
+      tab = JSON.parse(sessionStorage.getItem(`climbos:intro:${slug}`) ?? "{}") as ParsedIntro;
     } catch {
-      return {};
+      tab = {};
     }
-  }, [slug]);
-  const [kind, setKind] = useState<"more_sales" | "more_customers" | "more_reach" | "custom">(state.goal?.kind ?? intro.goalKind ?? "more_customers");
+    return {
+      ...tab,
+      ...(saved?.goalKinds?.length ? { goalKinds: saved.goalKinds.filter(isGoalKind) as ParsedIntro["goalKinds"] } : {}),
+      ...(saved?.goalStatement ? { goalStatement: saved.goalStatement } : {}),
+      ...(saved?.monthlyAdBudget !== undefined ? { monthlyAdBudget: saved.monthlyAdBudget } : {}),
+      ...(saved?.horizonDays !== undefined ? { horizonDays: saved.horizonDays } : {}),
+      ...(saved?.reviewDay ? { reviewDay: saved.reviewDay } : {}),
+    };
+  }, [slug, state.business?.onboardingIntro]);
+  const [kinds, setKinds] = useState<GoalKindValue[]>(
+    state.goal?.kinds?.length ? state.goal.kinds : intro.goalKinds?.length ? intro.goalKinds : intro.goalKind ? [intro.goalKind] : ["more_customers"],
+  );
+  const name = state.business?.name ?? "your business";
+  const defaults: Record<string, string> = goalDefaults(name);
   const [statement, setStatement] = useState(state.goal?.statement ?? intro.goalStatement ?? "");
   const [horizon, setHorizon] = useState(String(state.goal?.horizonDays ?? intro.horizonDays ?? 90));
   const [budget, setBudget] = useState(String(state.goal?.monthlyAdBudget ?? intro.monthlyAdBudget ?? 0));
   const [reviewDay, setReviewDay] = useState(state.goal?.reviewDay ?? intro.reviewDay ?? "Friday");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const name = state.business?.name ?? "your business";
-  const defaults: Record<string, string> = goalDefaults(name);
+  const suggestions = goalSuggestions({ businessType: state.business?.businessType, kinds, local: state.business?.businessType === "services" });
+  const fallback = kinds.map((k) => defaults[k]).filter(Boolean).join(" ");
   return (
     <div>
       <h1 className="heading-page">What would you like help with first?</h1>
-      <p className="mt-2 text-sm text-ink-3">Choose the closest option. You can describe a different goal in your own words and change it later.</p>
+      <p className="mt-2 text-sm text-ink-3">Choose every goal that fits. They count equally. You can describe them in your own words and change them later.</p>
       {error && <Callout tone="danger" className="mt-4">{error}</Callout>}
-      <RadioCards
+      <CheckCards
         className="mt-6"
-        aria-label="Goal"
-        value={kind}
-        onValueChange={(v) => {
-          setKind(v as typeof kind);
-          if (!statement || Object.values(defaults).includes(statement)) setStatement(defaults[v] ?? "");
-        }}
+        aria-label="Goals"
+        value={kinds}
+        onValueChange={(v) => setKinds(v.filter(isGoalKind))}
         options={GOAL_KIND_OPTIONS}
       />
       <Card className="mt-6">
         <CardContent className="grid gap-5 sm:grid-cols-2">
-          <Field label="Goal" className="sm:col-span-2">
-            <Textarea value={statement} onChange={(e) => setStatement(e.target.value)} rows={2} autosize placeholder={defaults[kind]} />
-          </Field>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <Field label="Goal">
+              <Textarea value={statement} onChange={(e) => setStatement(e.target.value)} rows={2} autosize placeholder={fallback || "Describe what you want help with."} />
+            </Field>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Goal suggestions">
+              {suggestions.map((sentence) => {
+                const on = statement.includes(sentence);
+                return (
+                  <button
+                    key={sentence}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setStatement((s) => toggleGoalSentence(s, sentence))}
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-xs transition-colors",
+                      on ? "border-brand-800 bg-brand-50 text-ink" : "border-line-strong bg-surface text-ink-2 hover:border-ink-3",
+                    )}
+                  >
+                    {on ? "✓ " : "+ "}
+                    {sentence}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <Field label="When would you like to review progress?">
             <Select value={horizon} onValueChange={setHorizon} options={HORIZON_OPTIONS} />
           </Field>
@@ -887,9 +940,13 @@ function GoalStep({ slug, state }: { slug: string; state: State }) {
         loading={busy}
         onClick={async () => {
           setError(null);
+          if (!kinds.length) {
+            setError("Choose at least one goal.");
+            return;
+          }
           setBusy(true);
           try {
-            await setGoal({ slug, kind, statement: statement || defaults[kind] || "Grow the business", horizonDays: Number(horizon), monthlyAdBudget: Number(budget || 0), reviewDay });
+            await setGoal({ slug, kind: kinds[0], kinds, statement: statement.trim() || fallback || "Grow the business", horizonDays: Number(horizon), monthlyAdBudget: Number(budget || 0), reviewDay });
           } catch (e) {
             setError(errorMessage(e));
           } finally {

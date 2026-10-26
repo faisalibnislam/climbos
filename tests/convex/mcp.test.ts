@@ -35,6 +35,12 @@ describe("ClimbOS MCP server", () => {
     expect(names).not.toContain("create_posts"); // needs the draft scope
     expect(names).not.toContain("approve_draft"); // needs request_approval
     expect(names).not.toContain("go_to"); // screen tools are in-app only
+    expect(names).toContain("get_brand_context");
+    expect(names).not.toContain("save_draft"); // needs the draft scope
+    const drafting = await withToken(t, ["draft"]);
+    const draftList = await (await rpc(t, drafting.token, { jsonrpc: "2.0", id: 5, method: "tools/list" })).json();
+    const saveDraft = draftList.result.tools.find((x: { name: string }) => x.name === "save_draft");
+    expect(saveDraft.description).toMatch(/No ClimbOS credits/);
     const tool = list.result.tools.find((x: { name: string }) => x.name === "get_overview");
     expect(tool.annotations.readOnlyHint).toBe(true);
     const denied = await (await rpc(t, w.token, { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "create_posts", arguments: {} } })).json();

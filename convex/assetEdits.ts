@@ -35,7 +35,7 @@ export const run = internalAction({
       attempted = true;
       await ctx.runMutation(internal.engine.recordUsage, {
         stepId: step.stepId!,
-        records: [{ type: "image_attempt", provider: "google", model: "gemini-3.1-flash-lite-image", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: out.costMicros, estimated: true }],
+        records: [{ type: "image_attempt", provider: "google", model: "gemini-3.1-flash-lite-image", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: out.costMicros, providerMicros: out.providerMicros, estimated: true }],
       });
       if (!out.ok) {
         await ctx.runMutation(internal.engine.failStep, { stepId: step.stepId!, error: out.message });

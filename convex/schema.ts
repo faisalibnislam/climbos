@@ -762,6 +762,16 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_enabled", ["enabled", "updatedAt"]),
 
+  /** Users an operator allowed to see real API cost in dollars instead of credits (credits for everyone by default). */
+  costDisplayGrants: defineTable({
+    userId: v.id("users"),
+    enabled: v.boolean(),
+    grantedBy: v.id("users"),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_enabled", ["enabled", "updatedAt"]),
+
   /**
    * Billing account: one owner, one package and one credit balance shared by
    * all of its workspaces (agencies get one bill). Seats are per account.
@@ -909,6 +919,15 @@ export default defineSchema({
 
   /* ---------------- Business intelligence ---------------- */
   businesses: defineTable({
+    /** What the owner told ClimbOS on the first setup step, parsed in code, so later steps start from it on any device. */
+    onboardingIntro: v.optional(v.object({
+      goalKinds: v.optional(v.array(v.string())),
+      goalStatement: v.optional(v.string()),
+      monthlyAdBudget: v.optional(v.number()),
+      horizonDays: v.optional(v.number()),
+      reviewDay: v.optional(v.string()),
+      savedAt: v.number(),
+    })),
     orgId: v.id("organizations"),
     name: v.string(),
     website: v.optional(v.string()),
@@ -967,6 +986,8 @@ export default defineSchema({
         newCustomersPerMonth: v.optional(v.number()),
         /** Monthly cash the owner can safely commit to growth work; excludes non-cash owner time. */
         monthlyGrowthCashUsd: v.optional(v.number()),
+        /** Numbers the owner said they're not sure of: plans use a labelled assumption for these, never an owner figure. */
+        unsure: v.optional(v.array(v.union(v.literal("revenue"), v.literal("margin"), v.literal("churn")))),
         /** Owner-reported segment totals; no customer-level identity or cross-tenant data is inferred. */
         segmentEconomics: v.optional(v.array(v.object({
           segment: v.string(),
@@ -1494,6 +1515,8 @@ export default defineSchema({
       v.literal("custom"),
     ),
     statement: v.string(),
+    /** Every goal type the owner chose, all equal priority; `kind` is the first, kept for older readers. */
+    kinds: v.optional(v.array(v.union(v.literal("more_sales"), v.literal("more_customers"), v.literal("more_reach"), v.literal("custom")))),
     /** Structured target (spec §8.1): kept as the owner stated it, never rewritten to match a forecast. */
     target: v.optional(
       v.object({
@@ -3175,6 +3198,7 @@ export default defineSchema({
                     v.literal("more_reach"),
                     v.literal("custom"),
                   ),
+                  kinds: v.optional(v.array(v.string())),
                   statement: v.string(),
                   horizonDays: v.number(),
                   monthlyAdBudgetMinor: v.number(),
@@ -3784,9 +3808,13 @@ export default defineSchema({
     ),
     /** Reel posts: the video this post carries. */
     reelId: v.optional(v.id("reels")),
+    /** Written by an outside agent over MCP (no ClimbOS model ran): the token it used and that token's name at the time. */
+    agentTokenId: v.optional(v.id("agentTokens")),
+    agentName: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
+    .index("by_agent_token", ["agentTokenId", "createdAt"])
     .index("by_org_updated", ["orgId", "updatedAt"])
     .index("by_org_status", ["orgId", "status"])
     .index("by_org_status_channel", ["orgId", "status", "channel"])
@@ -4709,6 +4737,12 @@ export default defineSchema({
     roles: v.array(agentRoleValidator),
     estimateMicros: v.number(),
     actualMicros: v.number(),
+    /**
+     * What providers actually billed for this run (sum of its usage events'
+     * providerMicros). Lower than actualMicros where credits charge a flat
+     * allowance (images, built-in page reads). Absent on runs from before it was tracked.
+     */
+    providerMicros: v.optional(v.number()),
     /** Hard 1.5x ceiling and provider-call reservations; optional on legacy runs. */
     costCapMicros: v.optional(v.number()),
     inFlightMicros: v.optional(v.number()),
@@ -4962,7 +4996,10 @@ export default defineSchema({
     cacheReadTokens: v.number(),
     cacheWriteTokens: v.number(),
     quantity: v.number(),
+    /** What credits charge for this event. */
     costMicros: v.number(),
+    /** What the provider actually billed, when it differs from costMicros (absent = the same). */
+    providerMicros: v.optional(v.number()),
     estimated: v.boolean(),
     createdAt: v.number(),
   })

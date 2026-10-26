@@ -11,14 +11,18 @@ const price = (n: number) => `$${n < 1 ? n.toFixed(2) : n.toLocaleString()}`;
 
 /**
  * AI models: the default model per tier (every user gets it), every model
- * cheapest first with whether its provider key is set, and the users allowed
- * to choose their own model. Every change is audited.
+ * cheapest first with whether its provider key is set, the users allowed
+ * to choose their own model, and the users who see real API cost in dollars
+ * instead of credits. Every change is audited.
  */
 export function AdminModels({ me }: { me: AdminMe }) {
   const data = useQuery(api.admin.modelSettings, {});
   const setDefault = useMutation(api.admin.setDefaultModel);
   const setChoice = useMutation(api.admin.setUserModelChoice);
+  const costGrants = useQuery(api.admin.costDisplayGrants, {});
+  const setCostDisplay = useMutation(api.admin.setUserCostDisplay);
   const [email, setEmail] = useState("");
+  const [costEmail, setCostEmail] = useState("");
   const canEdit = (me.powers as readonly string[]).includes("features");
   const run = async (fn: () => Promise<unknown>) => {
     try {
@@ -99,6 +103,43 @@ export function AdminModels({ me }: { me: AdminMe }) {
             />
           ) : (
             <p className="text-sm text-ink-2">No users can choose a model yet.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle as="h2">Users who see real API cost</CardTitle>
+          <CardDescription>
+            Credits for everyone by default. An enabled user sees what AI and data providers actually billed, in US dollars to the cent, instead of credits: estimates, job results, usage and their balance. They&apos;re still charged in credits. Images are priced from Gemini&apos;s reported usage and built-in page reads cost $0, so a job&apos;s API cost can be lower than its credits. Video clips use an unverified rate.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {canEdit ? (
+            <div className="flex flex-wrap items-end gap-3">
+              <Field label="User email" className="w-full flex-1 sm:min-w-64">
+                <Input type="email" value={costEmail} onChange={(e) => setCostEmail(e.target.value)} />
+              </Field>
+              <Button onClick={async () => (await run(() => setCostDisplay({ email: costEmail, enabled: true }))) && setCostEmail("")} disabled={!costEmail.trim()}>
+                Show API cost
+              </Button>
+            </div>
+          ) : null}
+          {costGrants === undefined ? (
+            <Skeleton className="h-16 w-full" />
+          ) : costGrants.grants.length ? (
+            <DataTable
+              caption="Users who see real API cost"
+              rows={costGrants.grants}
+              rowKey={(r) => r.userId}
+              columns={[
+                { key: "email", header: "User", rowHeader: true, cell: (r) => r.email ?? r.name ?? r.userId },
+                { key: "since", header: "Since", cell: (r) => new Date(r.updatedAt).toLocaleDateString() },
+                { key: "actions", header: "", cell: (r) => (canEdit ? <Button size="sm" variant="ghost" onClick={() => run(() => setCostDisplay({ userId: r.userId, enabled: false }))}>Back to credits</Button> : null) },
+              ]}
+            />
+          ) : (
+            <p className="text-sm text-ink-2">Everyone sees credits.</p>
           )}
         </CardContent>
       </Card>

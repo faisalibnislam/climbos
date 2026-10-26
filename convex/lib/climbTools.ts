@@ -41,6 +41,8 @@ export interface ClimbTool<I extends z.ZodType = z.ZodType> {
   run?: (c: Caller, slug: string, input: z.infer<I>) => Promise<unknown>;
   /** Pure tools (no workspace data): the same function runs here, in MCP and in the evaluation harness. */
   local?: (input: z.infer<I>) => unknown;
+  /** Only for outside agents over MCP (e.g. saving text the agent wrote itself); never offered to Climb AI in the app. */
+  mcpOnly?: boolean;
 }
 
 const artifactId = z.string().describe("Draft id (from list_drafts or the screen selection)");
@@ -191,6 +193,14 @@ const WeeklyReportOutputSchema = z.object({ weekStart: z.number(), weekEnd: z.nu
 const RunIdOutputSchema = z.object({ runId: z.string() });
 const CampaignStartOutputSchema = z.object({ campaignId: z.string(), pausedSending: z.boolean() });
 const SavedDraftOutputSchema = z.object({ saved: z.literal(true), note: z.string() });
+const AgentDraftOutputSchema = z.object({ saved: z.literal(true), draftId: z.string(), link: z.string(), claimsToCheck: z.array(z.string()), note: z.string() });
+const BrandContextOutputSchema = z.object({
+  business: z.object({ name: z.string(), website: z.string().nullable(), summary: z.string().nullable() }).nullable(),
+  voice: z.object({ description: z.string(), toneWords: z.array(z.string()), doNots: z.array(z.string()), learnedRules: z.array(z.string()), approvedExamples: z.array(z.string()), humor: z.string() }).nullable(),
+  facts: z.array(z.object({ category: z.string(), statement: z.string() })),
+  factsTruncated: z.boolean(),
+  note: z.string(),
+});
 const OkOutputSchema = z.object({ ok: z.boolean() });
 const DraftDecisionOutputSchema = z.object({ approvalId: z.string(), slot: z.enum(["scheduled", "ready_to_post", "needs_time", "needs_approval", "not_autopilot"]) });
 const PauseOutputSchema = z.object({ canceledRuns: z.number().int().nonnegative(), unscheduled: z.number().int().nonnegative(), campaignsPausing: z.number().int().nonnegative() });
@@ -318,6 +328,19 @@ export const CLIMB_TOOLS: ClimbTool[] = [
         paused: Boolean(t.emergencyStop),
       };
     },
+  }),
+  tool({
+    name: "get_brand_context",
+    title: "Brand voice and facts",
+    description: "The business's voice, tone words, things never to say, owner-approved example posts and owner-confirmed facts. Read this before writing anything for save_draft. Only state facts listed here.",
+    risk: "read",
+    doing: "Reading your voice and facts",
+    input: z.object({}),
+    output: BrandContextOutputSchema,
+    run: async (c, slug) => ({
+      ...(await c.query(api.agentDrafts.context, { slug })),
+      note: "Facts are the owner-confirmed ones only. Do not invent prices, results, guarantees or customer numbers.",
+    }),
   }),
   tool({
     name: "list_drafts",
@@ -568,7 +591,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
   tool({
     name: "create_posts",
     title: "Draft social posts",
-    description: "Write social posts for one channel. Use `brief` for the owner's specifics (topic, offer, dates, tone). Optionally build them around real images by id (from list_images). Nothing is published.",
+    description: "ClimbOS writes social posts for one channel (uses the workspace's ClimbOS credits; if you wrote the posts yourself, use save_draft instead). Use `brief` for the owner's specifics (topic, offer, dates, tone). Optionally build them around real images by id (from list_images). Nothing is published.",
     risk: "draft",
     doing: "Drafting posts",
     input: z.object({ channel: z.enum(CHANNELS), quantity: z.number().min(1).max(6), brief: z.string(), imageIds: z.array(z.string()).optional() }),
@@ -581,7 +604,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
   tool({
     name: "create_content",
     title: "Draft ads, emails or a web page",
-    description: "Draft ads (google_search_ad / meta_ad, created paused), an email sequence (email) or an SEO page (blog). Nothing is published or sent.",
+    description: "ClimbOS drafts ads (google_search_ad / meta_ad, created paused), an email sequence (email) or an SEO page (blog). Uses the workspace's ClimbOS credits; if you wrote it yourself, use save_draft instead. Nothing is published or sent.",
     risk: "draft",
     doing: "Drafting",
     input: z.object({ kind: z.enum(["ads", "email", "seo_page"]), brief: z.string() }),
@@ -591,7 +614,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
   tool({
     name: "edit_draft",
     title: "Edit a draft",
-    description: "Change a draft's text. This saves a new version; any earlier approval no longer applies, so the owner reviews the edit. Pass only the fields to change.",
+    description: "Change a draft's text (no credits used). This saves a new version; any earlier approval no longer applies, so the owner reviews the edit. Pass only the fields to change.",
     risk: "draft",
     doing: "Editing the draft",
     input: z.object({ artifactId, title: z.string().optional(), headline: z.string().optional(), body: z.string().optional(), callToAction: z.string().optional(), hashtags: z.array(z.string()).optional() }),
@@ -611,6 +634,37 @@ export const CLIMB_TOOLS: ClimbTool[] = [
         altText: v?.altText ?? undefined,
       });
       return { saved: true, note: "Saved as a new version; it needs the owner's approval again." };
+    },
+  }),
+  tool({
+    name: "save_draft",
+    title: "Save a draft you wrote",
+    description: "Save text you wrote yourself as a new ClimbOS draft. No ClimbOS credits are used: ClimbOS only checks it (claims, links, platform length) and puts it in the owner's review queue. Call get_brand_context first to match the business's voice and facts. kind/channel: social_post → instagram, facebook, linkedin, x, tiktok, pinterest, youtube; ad → google_search_ad, meta_ad, linkedin_ad; email → email; blog_post → blog, website. Nothing is published or sent.",
+    risk: "draft",
+    mcpOnly: true,
+    doing: "Saving your draft",
+    input: z.object({
+      kind: z.enum(["social_post", "ad", "email", "blog_post"]),
+      channel: z.enum([...CHANNELS, "google_search_ad", "meta_ad", "linkedin_ad", "email", "blog", "website"]),
+      title: z.string().min(1).max(140).describe("Short internal title, e.g. \"Spring sale launch post\""),
+      body: z.string().min(1).max(20_000).describe("The publishable text. For an email sequence, separate emails clearly."),
+      headline: z.string().max(500).optional(),
+      callToAction: z.string().max(120).optional(),
+      destinationUrl: z.string().max(2_000).optional().describe("https:// link the post points to"),
+      hashtags: z.array(z.string().max(60)).max(30).optional(),
+      altText: z.string().max(1_000).optional(),
+      imageId: z.string().optional().describe("An image id from list_images"),
+    }),
+    output: AgentDraftOutputSchema,
+    run: async (c, slug, i) => {
+      const { artifactId, unsupportedClaims } = await c.mutation(api.agentDrafts.save, { slug, kind: i.kind, channel: i.channel, title: i.title, headline: i.headline, body: i.body, callToAction: i.callToAction, destinationUrl: i.destinationUrl, hashtags: i.hashtags, altText: i.altText, imageAssetId: i.imageId });
+      return {
+        saved: true as const,
+        draftId: artifactId,
+        link: `${process.env.SITE_URL ?? "https://climbos.app"}/app/${slug}/content/${artifactId}`,
+        claimsToCheck: unsupportedClaims,
+        note: "Saved for review. No ClimbOS credits used. The owner approves it in ClimbOS before anything is published.",
+      };
     },
   }),
   tool({
@@ -767,7 +821,7 @@ export function toolByName(name: string) {
 
 /** Client tool definitions for the model (optionally without UI tools, e.g. for MCP). */
 export function climbToolDefs(opts: { ui: boolean }) {
-  return CLIMB_TOOLS.filter((t) => opts.ui || t.risk !== "ui").map((t) => {
+  return CLIMB_TOOLS.filter((t) => !t.mcpOnly && (opts.ui || t.risk !== "ui")).map((t) => {
     const schema = z.toJSONSchema(t.input) as Record<string, unknown>;
     delete schema.$schema;
     return {

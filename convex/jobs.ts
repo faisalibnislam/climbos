@@ -139,6 +139,8 @@ class JobStop extends Error {
   }
 }
 
+
+const GOAL_KIND_LABEL: Record<string, string> = { more_customers: "more customers", more_sales: "more sales or orders", more_reach: "help more people find the business", custom: "the owner's own goal in the GOAL statement" };
 type JobCtx = NonNullable<Awaited<ReturnType<typeof loadContext>>>;
 
 async function loadContext(ctx: ActionCtx, runId: Id<"workflowRuns">) {
@@ -707,6 +709,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     `TYPE: ${b?.businessType ?? "unknown"} · CURRENCY: ${b?.currency ?? job.org.currency} · TIMEZONE: ${b?.timezone ?? job.org.timezone}`,
     businessLifecycleContext(b?.lifecycleStage?.stage, b?.lifecycleStage?.updatedAt),
     job.goal ? `GOAL: ${job.goal.statement} (horizon ${job.goal.horizonDays} days, ad budget ${minorToMajor(job.goal.monthlyAdBudgetMinor, job.goal.currency).toFixed(0)} ${job.goal.currency}/month, paid directly to ad platforms)` : "",
+    job.goal?.kinds && job.goal.kinds.length > 1 ? `GOAL TYPES (all equal priority; weigh plays against each, without ranking one above the others): ${job.goal.kinds.map((k) => GOAL_KIND_LABEL[k] ?? k).join("; ")}.` : "",
     job.brand ? `BRAND VOICE: ${job.brand.voice}${job.brand.toneWords.length ? ` (${job.brand.toneWords.join(", ")})` : ""}. Avoid: ${job.brand.doNots.join("; ")}` : "",
     job.brand ? `SOCIAL STYLE PREFERENCES (retain platform, audience, category-safety, and current-policy checks): humor=${job.brand.socialHumor ?? "restrained (safe default; not owner-confirmed)"}; trend use=${job.brand.socialTrendPolicy ?? "selective (safe default; not owner-confirmed)"}. Treat these as guidance for social posts/calendars, not permission to make unsupported claims or reuse assets.` : "",
     job.brand?.approvedExamples?.length ? `OWNER-APPROVED COPY EXAMPLES (style reference only; not proof about customer outcomes):\n${untrusted("owner-approved copy examples", JSON.stringify(job.brand.approvedExamples), 3_500)}` : "",
@@ -925,7 +928,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
     capabilities,
     ...(job.business?.lifecycleStage ? { businessLifecycleStage: job.business.lifecycleStage } : { businessLifecycleStage: null }),
     ...(job.business?.funnel ? { businessFunnel: job.business.funnel } : { businessFunnel: null }),
-    goalInput: job.goal ? { id: String(job.goal._id), kind: job.goal.kind, statement: job.goal.statement, horizonDays: job.goal.horizonDays, monthlyAdBudgetMinor: job.goal.monthlyAdBudgetMinor, currency: job.goal.currency, target: job.goal.target ?? null } : null,
+    goalInput: job.goal ? { id: String(job.goal._id), kind: job.goal.kind, ...(job.goal.kinds && job.goal.kinds.length > 1 ? { kinds: job.goal.kinds } : {}), statement: job.goal.statement, horizonDays: job.goal.horizonDays, monthlyAdBudgetMinor: job.goal.monthlyAdBudgetMinor, currency: job.goal.currency, target: job.goal.target ?? null } : null,
     knowledgeReferences,
     ...(ownerEconomics ? { ownerEconomics } : {}),
     growthCashTiming: growthCashTimingInput(job.business?.growthCashTiming),
@@ -1000,7 +1003,9 @@ function ownerEconomicsLine(u: OwnerEconomics | undefined, currency?: string): s
     u.newCustomersPerMonth !== undefined ? `the owner has room for at most ${u.newCustomersPerMonth} additional new customers a month with current staffing, workload, inventory and support (keep forecast incremental demand within this remaining capacity)` : "",
     u.monthlyGrowthCashUsd !== undefined ? `the owner can safely commit up to ${formatMoney(u.monthlyGrowthCashUsd, currency)} per month to growth cash costs (media and other cash costs; excludes owner time)` : "",
   ].filter(Boolean);
-  return parts.length ? `UNIT ECONOMICS (confirmed by the owner; use exactly these): ${parts.join(", ")}.` : "";
+  const unsure = (u.unsure ?? []).map((k) => ({ revenue: "revenue per customer", margin: "contribution margin", churn: "monthly churn" })[k]);
+  const unsureLine = unsure.length ? ` The owner said they are not sure of: ${unsure.join(", ")}. For each, use a cautious, clearly labelled assumption (basis "assumption") and say the owner can replace it; never present it as the owner's figure.` : "";
+  return parts.length ? `UNIT ECONOMICS (confirmed by the owner; use exactly these): ${parts.join(", ")}.${unsureLine}` : unsureLine.trim();
 }
 
 async function finish(
@@ -1230,7 +1235,7 @@ export const onboardingResearch = internalAction({
           pages = res.pages.map((p) => ({ url: p.url, title: p.title, excerpt: p.text.slice(0, 600), status: p.status, text: `${p.text}\n${p.prices.join("\n")}` }));
           await ctx.runMutation(internal.engine.recordUsage, {
             stepId: step.stepId!,
-            records: [{ type: "scrape_credit", provider: process.env.FIRECRAWL_API_KEY ? "firecrawl" : "builtin", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: pagesFetched, costMicros: pagesFetched * 5_000, estimated: !process.env.FIRECRAWL_API_KEY }],
+            records: [{ type: "scrape_credit", provider: process.env.FIRECRAWL_API_KEY ? "firecrawl" : "builtin", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: pagesFetched, costMicros: pagesFetched * 5_000, providerMicros: process.env.FIRECRAWL_API_KEY ? pagesFetched * 5_000 : 0, estimated: !process.env.FIRECRAWL_API_KEY }],
           });
         }
         // An unreadable site isn't a checkpoint: a retry reads it again.
@@ -1707,7 +1712,7 @@ export const createContent = internalAction({
             const img = await generateImage(prompt, rates);
             await ctx.runMutation(internal.engine.recordUsage, {
               stepId: s.stepId!,
-              records: [{ type: "image_attempt", provider: "google", model: "gemini-3.1-flash-lite-image", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: img.costMicros, estimated: true }],
+              records: [{ type: "image_attempt", provider: "google", model: "gemini-3.1-flash-lite-image", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: img.costMicros, providerMicros: img.providerMicros, estimated: true }],
             });
             if (img.ok) {
               if (r2Configured()) {
@@ -2152,7 +2157,7 @@ export const conversionAudit = internalAction({
           text = res.pages.filter((p) => p.status === "ok").map((p) => untrusted(p.url, `TITLE: ${p.title ?? ""}\nDESCRIPTION: ${p.description ?? ""}\nHEADINGS: ${(p.headings ?? []).join(" | ")}\nPAGE TEXT:\n${p.text}`, 4_200)).join("\n\n");
           await ctx.runMutation(internal.engine.recordUsage, {
             stepId: step.stepId!,
-            records: [{ type: "scrape_credit", provider: process.env.FIRECRAWL_API_KEY ? "firecrawl" : "builtin", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: res.pagesFetched, costMicros: res.pagesFetched * 5_000, estimated: !process.env.FIRECRAWL_API_KEY }],
+            records: [{ type: "scrape_credit", provider: process.env.FIRECRAWL_API_KEY ? "firecrawl" : "builtin", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: res.pagesFetched, costMicros: res.pagesFetched * 5_000, providerMicros: process.env.FIRECRAWL_API_KEY ? res.pagesFetched * 5_000 : 0, estimated: !process.env.FIRECRAWL_API_KEY }],
           });
         }
         await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify({ text, pages, pagesFetched, discoveredCandidates, seoReadiness }) });
@@ -2485,7 +2490,7 @@ export const makeReel = internalAction({
           for (let a = 0; a < 2 && !imageId; a++) {
             attempts++;
             const img = await generateImage(`Vertical 9:16 photo for ${job.business?.name ?? "a small business"}: ${scenes[i].imagePrompt}. Natural light, modern, no text, no logos, no real people's faces.`, rates);
-            await ctx.runMutation(internal.engine.recordUsage, { stepId: st.stepId!, records: [{ type: "image_attempt", provider: "google", model: "gemini-3.1-flash-lite-image", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: img.costMicros, estimated: true }] });
+            await ctx.runMutation(internal.engine.recordUsage, { stepId: st.stepId!, records: [{ type: "image_attempt", provider: "google", model: "gemini-3.1-flash-lite-image", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: img.costMicros, providerMicros: img.providerMicros, estimated: true }] });
             if (img.ok) imageId = await ctx.storage.store(new Blob([img.bytes as BlobPart], { type: img.mimeType }));
             else if (img.kind === "provider_unavailable") break;
           }

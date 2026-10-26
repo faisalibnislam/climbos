@@ -7,11 +7,11 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { ClipboardList, Magic, RefreshCw } from "@/components/icons";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button, Callout, Card, CardContent, ConfirmDialog, Field, IconTile, Select, Textarea, toast } from "@/components/ui";
 import { RUN_FINISHED, RunProgress } from "../content/RunProgress";
 import { ErrorCallout, PERMISSION_WHO } from "../content/shared";
-import { microsToCreditsLabel } from "../money";
+import { useCostDisplay } from "../useCostDisplay";
 import { AiModePicker, useAiMode } from "../AiModePicker";
 import { ModelPicker, useChosenModelEstimate, useModelChoice } from "../ModelPicker";
 
@@ -34,6 +34,7 @@ export function GeneratePlanButton({
   building?: boolean;
 }) {
   const generate = useMutation(api.orgs.generatePlan);
+  const fmt = useCostDisplay();
   const [error, setError] = useState<unknown>(null);
   const [creativeRange, setCreativeRange] = useState<"balanced" | "conventional" | "surprising" | "ambitious">("balanced");
   const ai = useAiMode(slug);
@@ -41,7 +42,7 @@ export function GeneratePlanButton({
   const chosenMax = useChosenModelEstimate("strategy", ai.mode, modelChoice.model);
   const build = mode === "build";
   const max = chosenMax ?? ai.data?.estimates.strategy[ai.mode] ?? estimateMicros;
-  const cost = `Up to ${microsToCreditsLabel(max)}; unused credits return.`;
+  const cost = `Up to ${fmt.upTo(max)}; unused credits return.`;
   if (building) {
     return (
       <Button variant={build ? "primary" : "secondary"} size={build ? "lg" : "md"} disabled>
@@ -79,7 +80,7 @@ export function GeneratePlanButton({
         <ModelPicker kind="strategy" aiMode={ai.mode} value={modelChoice.model} onChange={modelChoice.setModel} />
         <Field label="Creative strategy range"><Select value={creativeRange} onValueChange={(value) => setCreativeRange(value as typeof creativeRange)} options={[{ value: "balanced", label: "Balanced" }, { value: "conventional", label: "More conventional" }, { value: "surprising", label: "More surprising" }, { value: "ambitious", label: "More ambitious" }]} /></Field>
       </ConfirmDialog>
-      <p className="text-xs tabular-nums text-ink-3">≤ {microsToCreditsLabel(max)}</p>
+      <p className="text-xs tabular-nums text-ink-3">≤ {fmt.upTo(max)}</p>
       {error ? <ErrorCallout error={error} /> : null}
     </div>
   );
@@ -130,7 +131,7 @@ export function approvedToast(work: PlanWork): { tone: "success" | "info"; title
 }
 
 /** Prominent review card for a plan waiting for approval. */
-export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecided, staleReason, quality }: { slug: string; strategyId: Id<"strategies">; version: number; canApprove: boolean; onDecided?: () => void; staleReason?: string; quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[]; conflicts?: string[] } | null }) {
+export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecided, staleReason, quality, help }: { slug: string; strategyId: Id<"strategies">; version: number; canApprove: boolean; onDecided?: () => void; staleReason?: string; quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[]; conflicts?: string[] } | null; /** Inline "Help ClimbOS" panel shown when missing numbers block or weaken the plan. */ help?: ReactNode }) {
   const blocked = quality?.state === "failed" || Boolean(staleReason);
   const decide = useMutation(api.workspace.decidePlan);
   const [note, setNote] = useState("");
@@ -175,8 +176,8 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecide
             </ul>
           ) : null}
           {blocked && quality?.fixes?.length ? (
-            <div className="mt-2">
-              <p className="text-xs font-semibold text-red-800">What to fix</p>
+            <details className="mt-2">
+              <summary className="cursor-pointer text-xs font-semibold text-red-800">Technical details</summary>
               <ul className="mt-1 flex flex-col gap-1 text-sm">
                 {quality.fixes.map((f) => (
                   <li key={`${f.rule}|${f.path ?? ""}|${f.message}`} className="min-w-0">
@@ -184,12 +185,12 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecide
                   </li>
                 ))}
               </ul>
-            </div>
+            </details>
           ) : null}
           {blocked ? (
             staleReason ? <p className="mt-1.5 font-medium text-red-800">Refresh the plan before approving it. The current version remains available for review.</p> : (
               <p className="mt-1.5 font-medium text-red-800">
-                Can&apos;t start work. Add a missing number in <Link href={`/app/${slug}/settings/facts`} className="underline">Business facts</Link>, then refresh the plan. Or send it back.
+                {help ? "Answer the questions below, then refresh the plan. Or send it back." : "Refresh the plan for a new version, or send it back."}
               </p>
             )
           ) : null}
@@ -204,11 +205,11 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecide
           .
         </p>
       ) : null}
-      {quality?.unknowns?.length ? (
+      {help ?? (quality?.unknowns?.length ? (
         <p className="text-sm text-amber-800">
           <span className="font-semibold">Unknown:</span> {quality.unknowns.join(" · ")}. The plan stays within what&apos;s known.
         </p>
-      ) : null}
+      ) : null)}
       {canApprove ? (
         <div className="flex flex-col gap-2 sm:flex-row">
           <ConfirmDialog

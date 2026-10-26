@@ -101,7 +101,7 @@ function AgentsSettings() {
             <fieldset className="flex flex-col gap-1">
               <legend className="text-ui font-medium text-ink">What it may do</legend>
               <Checkbox label="Read this workspace" checked disabled />
-              <Checkbox label="Prepare work" description="Drafts only. Nothing published." checked={draft} onCheckedChange={(v) => setDraft(Boolean(v))} />
+              <Checkbox label="Prepare work" description="Drafts only. Nothing published. Drafts your agent writes itself use no credits." checked={draft} onCheckedChange={(v) => setDraft(Boolean(v))} />
               <Checkbox label="Request approvals" description="You confirm each one." checked={approvals} onCheckedChange={(v) => setApprovals(Boolean(v))} />
             </fieldset>
             <fieldset className="flex flex-col gap-1.5">

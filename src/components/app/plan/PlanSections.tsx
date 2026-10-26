@@ -41,7 +41,8 @@ import { Badge, Callout, Card, CardContent, DataTable, EmptyState, IconTile, Ske
 import { ExperimentOutcome } from "./ExperimentOutcome";
 import { HorizontalBarChart } from "@/components/ds/charts";
 import { cn } from "@/lib/utils";
-import { microsToCreditsLabel, minorToDisplay, relativeTime } from "../money";
+import { minorToDisplay, relativeTime } from "../money";
+import { useCostDisplay } from "../useCostDisplay";
 import { microsToCredits } from "../../../../shared/economics/credits";
 import type { KnowledgeReferenceSet } from "../../../../shared/knowledge/retrieve";
 import { runStatusPresentation } from "../../../../shared/progress";
@@ -457,6 +458,7 @@ function ChannelToggle({ slug, strategyId, channelKey, status, name, approved }:
 
 function ChannelCard({ c, rank, slug, strategy, canEdit, editable, currency, facts }: { c: Strategy["channels"][number]; rank: number; slug: string; strategy: Strategy; canEdit: boolean; editable: boolean; currency: string; facts: FactLite[] }) {
   const [open, setOpen] = useState(false);
+  const fmt = useCostDisplay();
   const st = CHANNEL_STATUS[c.status] ?? { label: c.status, tone: "neutral" as Tone, icon: Info };
   const panel = useId();
   return (
@@ -479,7 +481,7 @@ function ChannelCard({ c, rank, slug, strategy, canEdit, editable, currency, fac
         <dl className="flex w-full shrink-0 gap-4 pl-11 sm:w-auto sm:pl-0 sm:text-right">
           <div>
             <dt className="text-xs text-ink-3">AI / month</dt>
-            <dd className="text-sm font-semibold tabular-nums text-ink">≤ {microsToCreditsLabel(c.monthlyCostMicros)}</dd>
+            <dd className="text-sm font-semibold tabular-nums text-ink">≤ {fmt.upTo(c.monthlyCostMicros)}</dd>
           </div>
           <div>
             <dt className="text-xs text-ink-3">Ads / month</dt>
@@ -538,6 +540,7 @@ function ChannelCard({ c, rank, slug, strategy, canEdit, editable, currency, fac
 export function Channels({ slug, strategy, canEdit, currency, facts = [] }: { slug: string; strategy: Strategy; canEdit: boolean; currency: string; facts?: FactLite[] }) {
   const channels = [...strategy.channels].sort((a, b) => a.priority - b.priority);
   const editable = canEdit && strategy.status !== "superseded";
+  const fmt = useCostDisplay();
   const credits = channels.reduce((t, c) => t + microsToCredits(c.monthlyCostMicros), 0);
   const ads = channels.reduce((t, c) => t + c.adSpendMinor, 0);
   return (
@@ -550,7 +553,7 @@ export function Channels({ slug, strategy, canEdit, currency, facts = [] }: { sl
       meta={
         channels.length ? (
           <>
-            <Badge icon={<Wallet />}>{`≤ ${credits.toLocaleString("en-US")} credits/mo`}</Badge>
+            <Badge icon={<Wallet />}>{fmt.usd ? `≤ ${fmt.upTo(channels.reduce((t, c) => t + c.monthlyCostMicros, 0))} AI/mo` : `≤ ${credits.toLocaleString("en-US")} credits/mo`}</Badge>
             <Badge>{ads > 0 ? `~${minorToDisplay(ads, currency)} ads/mo` : "No ad spend"}</Badge>
           </>
         ) : null
@@ -570,10 +573,11 @@ export function Channels({ slug, strategy, canEdit, currency, facts = [] }: { sl
                 <p className="text-overline">AI cost per month, by priority</p>
                 <HorizontalBarChart
                   label="AI cost per month for each channel, in priority order"
-                  valueLabel="Credits a month (max)"
+                  valueLabel={fmt.usd ? "API cost a month (max)" : "Credits a month (max)"}
                   sort={false}
-                  format={(n) => n.toLocaleString("en-US")}
-                  unit=" cr"
+                  // Dollars are whole cents rounded up, so they match the credits (1 credit = 1¢).
+                  format={(n) => (fmt.usd ? `$${(n / 100).toFixed(2)}` : n.toLocaleString("en-US"))}
+                  unit={fmt.usd ? "" : " cr"}
                   items={channels.map((c, i) => ({
                     label: `${i + 1}. ${c.name}`,
                     value: microsToCredits(c.monthlyCostMicros),
@@ -1327,6 +1331,7 @@ export function Sources({ sources, web = [], researchEvidence = [], websiteUrl, 
 export function RecentWork({ slug }: { slug: string }) {
   const runs = useQuery(api.workspace.runs, { slug });
   const now = useNow();
+  const fmt = useCostDisplay();
   return (
     <PlanSection id="recent-heading" title="Recent work" icon={History}>
       {runs === undefined ? (
@@ -1356,7 +1361,7 @@ export function RecentWork({ slug }: { slug: string }) {
                       <RoleName key={role} role={role} className={ROLE_META[role] ? "" : "capitalize"} />
                     ))}
                   </span>
-                  <span className="tabular-nums">{finished ? `${microsToCreditsLabel(r.actualMicros)} of ≤ ${microsToCreditsLabel(r.estimateMicros)}` : `≤ ${microsToCreditsLabel(r.estimateMicros)} reserved`}</span>
+                  <span className="tabular-nums">{finished ? `${fmt.spent(r.actualMicros, r.providerMicros)} of ≤ ${fmt.upTo(r.estimateMicros)}` : `≤ ${fmt.upTo(r.estimateMicros)} reserved`}</span>
                   {now ? <span>{relativeTime(r.createdAt, now)}</span> : null}
                 </span>
                 {r.userMessage ? (

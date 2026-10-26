@@ -8,7 +8,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button, Skeleton, SocialIcon, Tooltip, networkOf, toast } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
-import { microsToCreditsLabel, relativeTime } from "@/components/app/money";
+import { relativeTime } from "@/components/app/money";
+import { useCostDisplay } from "@/components/app/useCostDisplay";
 import { RoleAvatar } from "@/components/app/RoleAvatar";
 import { roleTitle } from "@/components/app/roles";
 import { cn } from "@/lib/utils";
@@ -149,6 +150,7 @@ function resultHref(slug: string, card: CardView): string | null {
 }
 
 function StepRow({ slug, card }: { slug: string; card: CardView }) {
+  const fmt = useCostDisplay();
   const run = useMutation(api.workspace.runCard);
   const dismiss = useMutation(api.workspace.dismissCard);
   const [busy, setBusy] = useState(false);
@@ -209,7 +211,7 @@ function StepRow({ slug, card }: { slug: string; card: CardView }) {
           </Button>
         ) : card.status === "proposed" ? (
           <>
-            {card.costEstimateMicros > 0 ? <span className="text-xs tabular-nums text-ink-3">up to {microsToCreditsLabel(card.costEstimateMicros)}</span> : null}
+            {card.costEstimateMicros > 0 ? <span className="text-xs tabular-nums text-ink-3">up to {fmt.upTo(card.costEstimateMicros)}</span> : null}
             <Button
               size="sm"
               loading={busy}
