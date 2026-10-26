@@ -7,8 +7,9 @@ import { CreditMeter } from "./CreditMeter";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { BarChart3, CalendarDays, ChevronDown, Compass, Home, Inbox, LogOut, Magic, Menu, PanelLeftClose, PanelLeftOpen, PanelsTopLeft, PauseCircle, PlayCircle, Plug, Settings, Sparkles, Users, type LucideIcon } from "@/components/icons";
+import { BarChart3, CalendarDays, ChevronDown, Compass, Home, Inbox, LogOut, Magic, Menu, PanelLeftClose, PanelLeftOpen, PanelsTopLeft, PauseCircle, PlayCircle, Plug, Search, Settings, Users, type LucideIcon } from "@/components/icons";
 import { CommandPalette } from "./CommandPalette";
+import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 import { TeamActivity } from "./TeamActivity";
 import { ClimbProvider, useClimb } from "@/components/climb/context";
 import { ClimbPanel } from "@/components/climb/ClimbPanel";
@@ -27,13 +28,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
   Kbd,
   Tooltip,
   Sheet,
   SheetClose,
-  Skeleton,
   Toaster,
   toast,
 } from "@/components/ui";
@@ -145,8 +144,8 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
               onClick={() => window.dispatchEvent(new Event("climbos:command"))}
               className="mx-auto flex h-8 w-full min-w-0 max-w-md items-center gap-2 rounded-lg border border-line-strong bg-surface px-2.5 text-left text-ui text-ink-3 transition-colors hover:border-ink-3"
             >
-              <Magic className="size-4 shrink-0 text-sun-strong" aria-hidden="true" />
-              <span className="flex-1 truncate">Ask for help or find a tool…</span>
+              <Search className="size-4 shrink-0 text-ink-3" aria-hidden="true" />
+              <span className="flex-1 truncate">Search</span>
               <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
             </button>
             <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
@@ -283,41 +282,6 @@ function NavLink({ href, active, icon, children, compact = false, badge }: { hre
     </Tooltip>
   ) : (
     link
-  );
-}
-
-function WorkspaceSwitcher({ slug }: { slug: string }) {
-  const me = useQuery(api.orgs.me);
-  const router = useRouter();
-  if (!me) return <Skeleton className="h-10 w-full" />;
-  const current = me.orgs.find((o) => o.slug === slug);
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button type="button" className="flex h-10 w-full items-center justify-between gap-2 rounded-[var(--radius-control)] px-2 text-left hover:bg-surface/60">
-          <span aria-hidden="true" className="inline-flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-lime text-xs font-semibold text-ink">
-            {(current?.name ?? "?").slice(0, 1).toUpperCase()}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-ui font-medium text-ink">{current?.name ?? "…"}</span>
-          </span>
-          <ChevronDown className="size-4 shrink-0 text-ink-3" aria-hidden />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-60">
-        <DropdownMenuLabel>Your businesses</DropdownMenuLabel>
-        {me.orgs.map((o) => (
-          <DropdownMenuItem key={o.slug} onSelect={() => router.push(`/app/${o.slug}/today`)}>
-            <span className="truncate">{o.name}</span>
-            {o.kind === "demo" && <Badge tone="violet" className="ml-auto">Demo</Badge>}
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => router.push("/onboarding?new=1")}>
-          <Sparkles className="size-4" aria-hidden /> Add company or workspace
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }
 

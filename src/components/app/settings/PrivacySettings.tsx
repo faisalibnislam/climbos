@@ -198,7 +198,7 @@ function DeleteContactSection({ slug }: { slug: string }) {
   );
 }
 
-function DeleteWorkspaceSection({ slug }: { slug: string }) {
+export function DeleteWorkspaceSection({ slug }: { slug: string }) {
   const me = useQuery(api.orgs.me);
   const del = useMutation(api.settings.deleteWorkspace);
   const router = useRouter();
@@ -212,9 +212,9 @@ function DeleteWorkspaceSection({ slug }: { slug: string }) {
   const matches = org ? typed.trim() === org.name : false;
 
   return (
-    <section aria-labelledby="delete-ws-heading" className="flex flex-col gap-3 rounded-xl border border-red-500/25 bg-surface p-5">
+    <section id="remove-business" aria-labelledby="delete-ws-heading" className="flex scroll-mt-24 flex-col gap-3 rounded-xl border border-red-500/25 bg-surface p-5">
       <h2 id="delete-ws-heading" className="heading-section text-red-800!">
-        Delete this workspace
+        Remove this business{org ? `: ${org.name}` : ""}
       </h2>
       <Covers
         items={[
@@ -240,7 +240,7 @@ function DeleteWorkspaceSection({ slug }: { slug: string }) {
             <Input autoComplete="off" value={typed} onChange={(e) => setTyped(e.target.value)} />
           </Field>
           <Button type="submit" variant="danger" disabled={!matches}>
-            Delete workspace
+            Remove business
           </Button>
         </form>
       )}
@@ -249,9 +249,9 @@ function DeleteWorkspaceSection({ slug }: { slug: string }) {
           open={confirm}
           onOpenChange={setConfirm}
           tone="danger"
-          title={`Delete ${org.name}?`}
+          title={`Remove ${org.name}?`}
           description={`Stops everything and permanently deletes content. Can't be undone.${billingNote}`}
-          confirmLabel={`Delete ${org.name}`}
+          confirmLabel={`Remove ${org.name}`}
           onConfirm={async () => {
             try {
               await del({ slug, confirmName: typed });

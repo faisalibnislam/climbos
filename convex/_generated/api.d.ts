@@ -100,6 +100,7 @@ import type * as marketing from "../marketing.js";
 import type * as mcp from "../mcp.js";
 import type * as migrations from "../migrations.js";
 import type * as notifications from "../notifications.js";
+import type * as onboardingDrafts from "../onboardingDrafts.js";
 import type * as ops from "../ops.js";
 import type * as orgs from "../orgs.js";
 import type * as outbound from "../outbound.js";
@@ -232,6 +233,7 @@ declare const fullApi: ApiFromModules<{
   mcp: typeof mcp;
   migrations: typeof migrations;
   notifications: typeof notifications;
+  onboardingDrafts: typeof onboardingDrafts;
   ops: typeof ops;
   orgs: typeof orgs;
   outbound: typeof outbound;

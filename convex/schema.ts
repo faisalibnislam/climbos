@@ -1377,6 +1377,16 @@ export default defineSchema({
     .index("by_org", ["orgId"])
     .index("by_competitor_research_due", ["competitorResearchNextAt"]),
 
+  /** Step-one business setup saved to the owner's account before the workspace exists, so it can be resumed anywhere. */
+  onboardingDrafts: defineTable({
+    userId: v.id("users"),
+    /** OnboardingDraft JSON (src/components/app/draftKeys.ts), capped in size. */
+    payload: v.string(),
+    label: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user_updated", ["userId", "updatedAt"]),
+
   businessFacts: defineTable({
     orgId: v.id("organizations"),
     businessId: v.id("businesses"),

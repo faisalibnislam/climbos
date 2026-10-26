@@ -13,6 +13,7 @@ import { formatNumber } from "@/lib/utils";
 import { errorMessage } from "../errors";
 import { LoadingBlock } from "../results/QueryBoundary";
 import { SettingsHeader } from "./SettingsNav";
+import { DeleteWorkspaceSection } from "./PrivacySettings";
 
 /** Agency view: every workspace on the account, its credit use this month and optional cap, and everyone's access. */
 export function WorkspacesSettings({ slug }: { slug: string }) {
@@ -43,6 +44,7 @@ export function WorkspacesSettings({ slug }: { slug: string }) {
               { key: "people", header: "People", align: "right", cell: (w) => formatNumber(w.members) },
               { key: "used", header: "Credits this month", align: "right", cell: (w) => formatNumber(w.usedCredits), sortValue: (w) => w.usedCredits },
               { key: "cap", header: "Monthly cap", cell: (w) => (data.isAccountOwner ? <CapEditor slug={slug} orgId={w.id} cap={w.cap} /> : w.cap === null ? "None" : formatNumber(w.cap)) },
+              ...(data.isAccountOwner ? [{ key: "remove", header: <span className="sr-only">Remove</span>, cell: (w: (typeof data.workspaces)[number]) => <Link href={`/app/${w.slug}/settings/workspaces#remove-business`} className="text-sm text-red-800 underline">Remove</Link> }] : []),
             ]}
           />
           <section aria-labelledby="people-heading" className="flex flex-col gap-3">
@@ -75,6 +77,7 @@ export function WorkspacesSettings({ slug }: { slug: string }) {
           </section>
         </>
       )}
+      <DeleteWorkspaceSection slug={slug} />
     </div>
   );
 }

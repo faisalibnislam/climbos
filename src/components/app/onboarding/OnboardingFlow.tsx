@@ -11,6 +11,7 @@ import { RequestComposer } from "@/components/ui/request-composer";
 import { onboardingDraftKey, parseOnboardingDraft, type OnboardingDraft } from "@/components/app/draftKeys";
 import { WordHelp } from "@/components/ui/word-help";
 import { Logo } from "@/components/brand/Logo";
+import { WorkspaceSwitcher } from "../WorkspaceSwitcher";
 import {
   Badge,
   Button,
@@ -84,6 +85,7 @@ export function OnboardingFlow() {
   const preview = useQuery(api.preview.get, previewToken ? { token: previewToken } : "skip");
   const workspaceParam = params.get("workspace");
   const wantNew = params.get("new") === "1";
+  const draftParam = params.get("draft");
 
   const slug = useMemo(() => {
     if (!me) return null;
@@ -120,9 +122,10 @@ export function OnboardingFlow() {
   if (!slug) {
     return (
       <BusinessStep
-        key={`${me.userId}:${wantNew ? "new" : "first"}:${preview?.website ?? "blank"}:${preview?.goal ?? "blank"}`}
+        key={`${me.userId}:${wantNew ? "new" : "first"}:${draftParam ?? "nodraft"}:${preview?.website ?? "blank"}:${preview?.goal ?? "blank"}`}
         userId={me.userId}
         additional={wantNew}
+        openDraftId={draftParam}
         prefillWebsite={preview?.website ?? ""}
         prefillGoal={preview?.goal ?? ""}
         previewToken={preview?.status === "done" ? previewToken : null}
@@ -133,7 +136,7 @@ export function OnboardingFlow() {
   return <WorkspaceOnboarding slug={slug} />;
 }
 
-function Shell({ step, children, slug }: { step: Step; children: ReactNode; slug?: string }) {
+function Shell({ step, children, slug, draftId }: { step: Step; children: ReactNode; slug?: string; draftId?: string | null }) {
   const idx = Math.max(0, STEP_ORDER.indexOf(step));
   const help = STEP_HELP[step];
   return (
@@ -142,11 +145,14 @@ function Shell({ step, children, slug }: { step: Step; children: ReactNode; slug
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           <Logo />
-          {slug ? (
-            <Link href={`/app/${slug}/today`} className={buttonClasses({ variant: "ghost", size: "sm", className: "text-ink-2" })}>
-              Finish later
-            </Link>
-          ) : null}
+          <div className="flex min-w-0 items-center gap-2">
+            {slug ? (
+              <Link href={`/app/${slug}/today`} className={buttonClasses({ variant: "ghost", size: "sm", className: "text-ink-2" })}>
+                Finish later
+              </Link>
+            ) : null}
+            <WorkspaceSwitcher slug={slug} draftId={draftId} variant="header" />
+          </div>
         </div>
         <ol className="mx-auto flex max-w-6xl gap-2 px-4 pb-4" aria-label="Setup progress">
           {STEP_ORDER.map((s, i) => (
@@ -206,15 +212,23 @@ function BusinessStep({
   prefillGoal,
   previewToken,
   onCreated,
+  openDraftId,
 }: {
   userId: string;
   additional: boolean;
+  /** A step-one draft saved to the account, opened from the business switcher. */
+  openDraftId: string | null;
   prefillWebsite: string;
   prefillGoal: string;
   previewToken: string | null;
   onCreated: (slug: string) => void;
 }) {
   const draftKey = onboardingDraftKey(userId, additional);
+  const serverDraft = useQuery(api.onboardingDrafts.get, openDraftId ? { draftId: openDraftId as Id<"onboardingDrafts"> } : "skip");
+  const saveDraft = useMutation(api.onboardingDrafts.save);
+  const discardDraft = useMutation(api.onboardingDrafts.discard);
+  const [savedDraftId, setSavedDraftId] = useState<string | null>(openDraftId);
+  const lastSavedPayload = useRef<string | null>(null);
   const [mode, setMode] = useState<"chat" | "form">("chat");
   const [chat, setChat] = useState([prefillWebsite, prefillGoal].filter(Boolean).join(". "));
   const [name, setName] = useState("");
@@ -240,10 +254,18 @@ function BusinessStep({
     : `Research uses up to ${microsToCreditsLabel(researchEstimate)}. We charge only for the work completed; unused reserved credits are returned.`;
 
   useEffect(() => {
+    // Wait for an opened account draft; an unavailable one falls back to this tab's draft.
+    if (openDraftId && serverDraft === undefined) return;
     const frame = window.requestAnimationFrame(() => {
       let stored: OnboardingDraft | null = null;
-      try { stored = parseOnboardingDraft(window.sessionStorage.getItem(draftKey)); } catch { /* Storage may be unavailable. */ }
-      if (stored && stored.additional === additional && stored.prefillWebsite === prefillWebsite && stored.prefillGoal === prefillGoal) {
+      const fromAccount = serverDraft ? parseOnboardingDraft(serverDraft.payload) : null;
+      if (fromAccount) {
+        stored = fromAccount;
+        lastSavedPayload.current = serverDraft?.payload ?? null;
+      } else {
+        try { stored = parseOnboardingDraft(window.sessionStorage.getItem(draftKey)); } catch { /* Storage may be unavailable. */ }
+      }
+      if (stored && (fromAccount || (stored.additional === additional && stored.prefillWebsite === prefillWebsite && stored.prefillGoal === prefillGoal))) {
         setMode(stored.mode);
         setChat(stored.chat);
         setName(stored.name);
@@ -263,13 +285,23 @@ function BusinessStep({
       setLoadedDraftKey(draftKey);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [additional, draftKey, prefillGoal, prefillWebsite]);
+  }, [additional, draftKey, prefillGoal, prefillWebsite, openDraftId, serverDraft]);
 
   useEffect(() => {
     if (loadedDraftKey !== draftKey) return;
     const draft: OnboardingDraft = { version: 1, additional, prefillWebsite, prefillGoal, mode, chat, name, nameOverride, website, noWebsite, description };
     try { window.sessionStorage.setItem(draftKey, JSON.stringify(draft)); } catch { /* The form remains usable without storage. */ }
-  }, [additional, chat, description, draftKey, loadedDraftKey, mode, name, nameOverride, noWebsite, prefillGoal, prefillWebsite, website]);
+    // Also keep it on the account, so the unfinished business shows in the switcher and can be finished later.
+    const payload = JSON.stringify(draft);
+    if (payload === lastSavedPayload.current || creating.current) return;
+    const timer = setTimeout(() => {
+      lastSavedPayload.current = payload;
+      saveDraft({ ...(savedDraftId ? { draftId: savedDraftId as Id<"onboardingDrafts"> } : {}), payload })
+        .then((id) => setSavedDraftId(id))
+        .catch(() => { lastSavedPayload.current = null; });
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [additional, chat, description, draftKey, loadedDraftKey, mode, name, nameOverride, noWebsite, prefillGoal, prefillWebsite, website, saveDraft, savedDraftId]);
 
   const parsed: ParsedIntro = useMemo(() => parseIntro(chat), [chat]);
 
@@ -290,6 +322,7 @@ function BusinessStep({
       const referralCode = /(?:^|;\s*)climbos_ref=([a-z0-9]+)/.exec(document.cookie)?.[1];
       const { slug, orgId } = await create({ businessName: fields.name, website: fields.website, timezone: TIMEZONE, referralCode });
       try { sessionStorage.removeItem(draftKey); } catch { /* The new workspace can still continue. */ }
+      if (savedDraftId) await discardDraft({ draftId: savedDraftId as Id<"onboardingDrafts"> }).catch(() => undefined);
       if (fields.parsed) {
         try {
           sessionStorage.setItem(`climbos:intro:${slug}`, JSON.stringify(fields.parsed));
@@ -317,11 +350,11 @@ function BusinessStep({
   }
 
   if (loadedDraftKey !== draftKey) {
-    return <Shell step="business"><Skeleton className="h-64 w-full" /></Shell>;
+    return <Shell step="business" draftId={savedDraftId}><Skeleton className="h-64 w-full" /></Shell>;
   }
 
   return (
-    <Shell step="business">
+    <Shell step="business" draftId={savedDraftId}>
       <h1 className="heading-page">{additional ? "Tell us about your next business" : "Tell us about your business"}</h1>
       <p className="mt-2 max-w-2xl text-sm text-ink-3">Describe what you do and what you need help with. A website is helpful, but you do not need one. We’ll guide you from there.</p>
       {additional ? <p className="mt-2 text-sm text-ink-3">This creates a separate space for this business. Your other businesses keep their own details and accounts.</p> : null}
@@ -341,7 +374,7 @@ function BusinessStep({
             helper={`Creates your business space and starts research. ${researchCost} You check the details before choosing your next steps.`}
             suggestions={["I want help finding customers.", "I want to sell more.", "I am not sure where to start.", "I do not have a website yet."]}
           />
-          <p className="text-xs text-ink-3">Your draft stays in this browser tab and is separate for your first or next business.</p>
+          <p className="text-xs text-ink-3">Your draft is saved to your account as you type. Find it under your businesses in the switcher to finish it later.</p>
             {chat.trim().length > 8 && (
               <div className="rounded-xl border border-line bg-surface p-4 text-ui" aria-live="polite">
                 <p className="heading-card flex flex-wrap items-center gap-2">
