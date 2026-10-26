@@ -4797,6 +4797,8 @@ export default defineSchema({
     preview: v.optional(v.string()),
     /** The job action and args that continue this run from its checkpoints. */
     resumeWith: v.optional(v.object({ fn: v.string(), args: v.string() })),
+    /** The owner hid this stopped run from Recent work (still listed in the full work history). */
+    dismissedAt: v.optional(v.number()),
     /** Automatic resumes after an interrupted action (reset by an owner retry). */
     resumes: v.optional(v.number()),
     /** Owner retries of a failed run. */

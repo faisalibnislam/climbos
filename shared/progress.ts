@@ -13,6 +13,27 @@ export interface RunStep {
 
 export type Phase = "read" | "profile" | "research" | "draft" | "review" | "revise" | "other";
 
+/** Why a job stopped, in plain words with what to do next. Written on the run as its userMessage. */
+export const RUN_FAILURE_COPY = {
+  providerUnavailable: "Our AI provider isn't available right now. Your progress is saved: try again in a few minutes to continue.",
+  refused: "The AI declined this request. Try again, or rephrase what you asked for.",
+  invalidOutput: "The result didn't meet ClimbOS's quality bar, so it wasn't saved. Unused credits were returned. Trying again usually fixes it.",
+  serviceProblem: "The AI service had a problem, so nothing was saved. Unused credits were returned. Try again in a moment.",
+} as const;
+
+/** Wording older runs stored, shown with the current copy. */
+const LEGACY_RUN_MESSAGES: Record<string, string> = {
+  "The AI's answer didn't pass our quality checks. Nothing was saved.": RUN_FAILURE_COPY.invalidOutput,
+  "The AI service had a problem. Nothing was saved; please try again.": RUN_FAILURE_COPY.serviceProblem,
+  "The AI declined this request. Try rephrasing it.": RUN_FAILURE_COPY.refused,
+  "Our AI provider isn't available right now. Your progress is saved: retry in a few minutes to continue.": RUN_FAILURE_COPY.providerUnavailable,
+};
+
+export function runMessage(text: string | null | undefined): string | null {
+  if (!text) return null;
+  return LEGACY_RUN_MESSAGES[text] ?? text;
+}
+
 /** Owner-facing run states shared by Home, work receipts, and progress details. */
 export const RUN_STATUS_LABEL: Record<string, string> = {
   proposed: "Queued",

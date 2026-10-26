@@ -1,4 +1,5 @@
 "use node";
+import { RUN_FAILURE_COPY } from "../shared/progress";
 
 import { BUSINESS_MODEL_TASK, type BusinessModelCheck } from "../shared/agents/businessModel";
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -299,12 +300,12 @@ async function runModelTask<T>(
     await ctx.runMutation(internal.engine.failStep, { stepId, error: `${res.kind}: ${res.message}` });
     const message =
       res.kind === "provider_unavailable" || res.kind === "spend_limit"
-        ? "Our AI provider isn't available right now. Your progress is saved: retry in a few minutes to continue."
+        ? RUN_FAILURE_COPY.providerUnavailable
         : res.kind === "refused"
-          ? "The AI declined this request. Try rephrasing it."
+          ? RUN_FAILURE_COPY.refused
           : res.kind === "invalid_output"
-            ? "The AI's answer didn't pass our quality checks. Nothing was saved."
-            : "The AI service had a problem. Nothing was saved; please try again.";
+            ? RUN_FAILURE_COPY.invalidOutput
+            : RUN_FAILURE_COPY.serviceProblem;
     throw new JobStop(res.kind, message);
   }
   const output = stripFactMarkers(res.output);
@@ -325,10 +326,10 @@ function softLimitMs(): number {
 }
 
 const AGENT_FAILURES: Record<string, string> = {
-  provider_unavailable: "Our AI provider isn't available right now. Your progress is saved: retry in a few minutes to continue.",
-  spend_limit: "Our AI provider isn't available right now. Your progress is saved: retry in a few minutes to continue.",
-  refused: "The AI declined this request. Try rephrasing it.",
-  invalid_output: "The AI's answer didn't pass our quality checks. Nothing was saved.",
+  provider_unavailable: RUN_FAILURE_COPY.providerUnavailable,
+  spend_limit: RUN_FAILURE_COPY.providerUnavailable,
+  refused: RUN_FAILURE_COPY.refused,
+  invalid_output: RUN_FAILURE_COPY.invalidOutput,
 };
 
 
@@ -530,7 +531,7 @@ async function runAgentTask<T>(
     return result.output as T;
   } catch (e) {
     if (e instanceof AgentYield) throw e;
-    if (e instanceof AgentFailure) throw new JobStop(e.kind, AGENT_FAILURES[e.kind] ?? "The AI service had a problem. Nothing was saved; please try again.");
+    if (e instanceof AgentFailure) throw new JobStop(e.kind, AGENT_FAILURES[e.kind] ?? RUN_FAILURE_COPY.serviceProblem);
     throw e;
   }
 }

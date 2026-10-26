@@ -1,5 +1,7 @@
 "use client";
 
+import { RunRowBadge, StoppedRunNotice } from "@/components/app/content/StoppedRun";
+import { runMessage } from "../../../../../shared/progress";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -40,7 +42,6 @@ import { OwnerGoalTarget } from "@/components/app/today/OwnerGoalTarget";
 import { TodayTargetPreviewCard } from "@/components/app/today/TodayTargetPreview";
 import { Prose } from "@/components/ds/content";
 import { climbTarget } from "@/components/climb/context";
-import { runStatusPresentation } from "../../../../../shared/progress";
 
 const NEXT_VISUAL: Record<string, { icon: LucideIcon; tone: Tone }> = {
   plan: { icon: Compass, tone: "violet" },
@@ -535,7 +536,6 @@ function RecentWork({ slug, data }: { slug: string; data: Today }) {
           <CardContent className="p-0">
             <ul>
               {data.recent.map((r) => {
-                const s = runStatusPresentation(r.status);
                 return (
                   <li key={r.id} className="relative flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-2">
                     <RoleStack roles={r.roles} size="sm" />
@@ -547,9 +547,13 @@ function RecentWork({ slug, data }: { slug: string; data: Today }) {
                         {relativeTime(r.createdAt)}
                         {r.isFixture ? " · demo" : ""}
                       </span>
-                      {r.userMessage && r.status !== "verified" ? <Prose text={r.userMessage} max={1} tone="muted" className="relative z-10 mt-1 text-ui" /> : null}
+                      {r.status === "failed" && !r.replaced ? (
+                        <StoppedRunNotice slug={slug} run={r} className="relative z-10 mt-2 py-2" />
+                      ) : r.userMessage && r.status !== "verified" && r.status !== "failed" ? (
+                        <Prose text={runMessage(r.userMessage) ?? ""} max={1} tone="muted" className="relative z-10 mt-1 text-ui" />
+                      ) : null}
                     </div>
-                    <Badge tone={s.tone}>{s.label}</Badge>
+                    <RunRowBadge run={r} />
                   </li>
                 );
               })}
