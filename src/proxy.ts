@@ -15,6 +15,7 @@ import { NextResponse } from "next/server";
  */
 const isProtected = createRouteMatcher(["/app(.*)", "/onboarding(.*)", "/ops(.*)", "/studio(.*)"]);
 const isSignIn = createRouteMatcher(["/sign-in"]);
+const isConnectionCallback = createRouteMatcher(["/api/oauth/callback"]);
 
 function contentSecurityPolicy(nonce: string, embeddable = false, anyImages = false): string {
   const isDev = process.env.NODE_ENV === "development";
@@ -64,7 +65,12 @@ export const proxy = convexAuthNextjsMiddleware(
     response.headers.set("Content-Security-Policy", csp);
     return response;
   },
-  { cookieConfig: { maxAge: 60 * 60 * 24 * 30 } },
+  {
+    cookieConfig: { maxAge: 60 * 60 * 24 * 30 },
+    // Google and Meta send their own ?code= to the connection callback; Convex Auth must not
+    // consume it as a sign-in code (that drops the code and signs the owner out).
+    shouldHandleCode: (request) => !isConnectionCallback(request),
+  },
 );
 
 export const config = {
