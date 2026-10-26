@@ -163,6 +163,11 @@ function Editor({ slug, page, content, businessName, website, badge, canEdit, ca
   const [baselineSource, setBaselineSource] = useState(page.designMeasurementPlan?.baseline.state === "recorded" ? page.designMeasurementPlan.baseline.source : "");
   const [baselineReason, setBaselineReason] = useState(page.designMeasurementPlan?.baseline.state === "unknown" ? page.designMeasurementPlan.baseline.reason : "");
   const [baselineCollectionPlan, setBaselineCollectionPlan] = useState(page.designMeasurementPlan?.baseline.state === "unknown" ? page.designMeasurementPlan.baseline.collectionPlan : "");
+  const [measurementAudience, setMeasurementAudience] = useState(page.designMeasurementPlan?.audience ?? "");
+  const [measurementGuardrail, setMeasurementGuardrail] = useState(page.designMeasurementPlan?.guardrail ?? "");
+  const [observationDays, setObservationDays] = useState(page.designMeasurementPlan?.observationDays ? String(page.designMeasurementPlan.observationDays) : "");
+  const [decisionRule, setDecisionRule] = useState(page.designMeasurementPlan?.decisionRule ?? "");
+  const observationDaysValid = /^\d+$/.test(observationDays.trim()) && Number(observationDays) >= 1 && Number(observationDays) <= 365;
   async function run(key: string, fn: () => Promise<unknown>, ok?: string) {
     setBusy(key);
     try {
@@ -181,6 +186,10 @@ function Editor({ slug, page, content, businessName, website, badge, canEdit, ca
   const hasUnsavedMeasurementChanges = Boolean(savedMeasurementPlan && (
     measurementMetric.trim() !== savedMeasurementPlan.metric ||
     measurementMethod.trim() !== savedMeasurementPlan.method ||
+    measurementAudience.trim() !== (savedMeasurementPlan.audience ?? "") ||
+    measurementGuardrail.trim() !== (savedMeasurementPlan.guardrail ?? "") ||
+    observationDays.trim() !== (savedMeasurementPlan.observationDays ? String(savedMeasurementPlan.observationDays) : "") ||
+    decisionRule.trim() !== (savedMeasurementPlan.decisionRule ?? "") ||
     baselineState !== savedMeasurementPlan.baseline.state ||
     (baselineState === "recorded" && savedMeasurementPlan.baseline.state === "recorded" && (baselineValue.trim() !== savedMeasurementPlan.baseline.value || baselineSource.trim() !== savedMeasurementPlan.baseline.source)) ||
     (baselineState === "unknown" && savedMeasurementPlan.baseline.state === "unknown" && (baselineReason.trim() !== savedMeasurementPlan.baseline.reason || baselineCollectionPlan.trim() !== savedMeasurementPlan.baseline.collectionPlan))
@@ -250,6 +259,12 @@ function Editor({ slug, page, content, businessName, website, badge, canEdit, ca
             <Field label="How will you measure it?" hint="Name the data source, comparison, and observation window where known.">
               <Textarea value={measurementMethod} onChange={(event) => setMeasurementMethod(event.target.value.slice(0, 600))} rows={3} autosize maxLength={600} />
             </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Who is it measured on?" hint="For example, visitors arriving from your Google profile."><Input value={measurementAudience} onChange={(event) => setMeasurementAudience(event.target.value.slice(0, 240))} maxLength={240} /></Field>
+              <Field label="What must not get worse?" hint="A guardrail, such as refund requests or support calls."><Input value={measurementGuardrail} onChange={(event) => setMeasurementGuardrail(event.target.value.slice(0, 240))} maxLength={240} /></Field>
+              <Field label="How many days will you watch it?" hint="1 to 365 days."><Input inputMode="numeric" value={observationDays} onChange={(event) => setObservationDays(event.target.value.replace(/\D/g, "").slice(0, 3))} /></Field>
+              <Field label="What will you do with the result?" hint="When you will keep, change or roll back the page."><Input value={decisionRule} onChange={(event) => setDecisionRule(event.target.value.slice(0, 300))} maxLength={300} /></Field>
+            </div>
             <Field label="Do you have a current baseline?" hint="A baseline is the current result before a change goes live.">
               <Select value={baselineState} onValueChange={(value) => setBaselineState(value as "recorded" | "unknown")} options={[{ value: "recorded", label: "Yes, I have a current result" }, { value: "unknown", label: "Not yet; keep it unknown" }]} />
             </Field>
@@ -261,7 +276,7 @@ function Editor({ slug, page, content, businessName, website, badge, canEdit, ca
               <Field label="How will you collect it?" hint="If no baseline is available, say what you will record and when."><Input value={baselineCollectionPlan} onChange={(event) => setBaselineCollectionPlan(event.target.value.slice(0, 300))} maxLength={300} /></Field>
             </div>}
             <div className="flex flex-wrap items-center gap-3">
-              {canEdit ? <Button size="sm" variant="secondary" disabled={busy === "measurement" || !measurementMetric.trim() || !measurementMethod.trim() || (baselineState === "recorded" ? !baselineValue.trim() || !baselineSource.trim() : !baselineReason.trim() || !baselineCollectionPlan.trim())} loading={busy === "measurement"} onClick={() => run("measurement", () => saveMeasurementPlan({ slug, id: page.id, expectedVersion: page.version, metric: measurementMetric, method: measurementMethod, baseline: baselineState === "recorded" ? { state: "recorded", value: baselineValue, source: baselineSource } : { state: "unknown", reason: baselineReason, collectionPlan: baselineCollectionPlan } }), "Measurement plan saved for this page version")}>Save measurement plan</Button> : null}
+              {canEdit ? <Button size="sm" variant="secondary" disabled={busy === "measurement" || !measurementMetric.trim() || !measurementMethod.trim() || !measurementAudience.trim() || !measurementGuardrail.trim() || !observationDaysValid || !decisionRule.trim() || (baselineState === "recorded" ? !baselineValue.trim() || !baselineSource.trim() : !baselineReason.trim() || !baselineCollectionPlan.trim())} loading={busy === "measurement"} onClick={() => run("measurement", () => saveMeasurementPlan({ slug, id: page.id, expectedVersion: page.version, metric: measurementMetric, method: measurementMethod, audience: measurementAudience, guardrail: measurementGuardrail, observationDays: Number(observationDays), decisionRule, baseline: baselineState === "recorded" ? { state: "recorded", value: baselineValue, source: baselineSource } : { state: "unknown", reason: baselineReason, collectionPlan: baselineCollectionPlan } }), "Measurement plan saved for this page version")}>Save measurement plan</Button> : null}
               {measurementPlanCurrent ? <Badge tone="green">Saved for version {page.version}</Badge> : <Badge tone="amber">Needs saving for version {page.version}</Badge>}
             </div>
             {page.designCriticSource && !measurementPlanCurrent ? <p className="text-xs text-amber-900">Publishing is blocked until a measurement plan is saved for this exact page version.{!canEdit ? " Ask an owner, admin, or editor to save it." : ""}</p> : null}

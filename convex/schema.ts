@@ -2463,6 +2463,11 @@ export default defineSchema({
         v.object({ state: v.literal("recorded"), value: v.string(), source: v.string() }),
         v.object({ state: v.literal("unknown"), reason: v.string(), collectionPlan: v.string() }),
       ),
+      /** Required for plans saved after 2026-10-26; older plans predate these fields. */
+      audience: v.optional(v.string()),
+      guardrail: v.optional(v.string()),
+      observationDays: v.optional(v.number()),
+      decisionRule: v.optional(v.string()),
       appliesToVersion: v.number(),
       confirmedBy: v.id("users"),
       confirmedAt: v.number(),
@@ -2491,6 +2496,11 @@ export default defineSchema({
         v.object({ state: v.literal("recorded"), value: v.string(), source: v.string() }),
         v.object({ state: v.literal("unknown"), reason: v.string(), collectionPlan: v.string() }),
       ),
+      /** Required for plans saved after 2026-10-26; older plans predate these fields. */
+      audience: v.optional(v.string()),
+      guardrail: v.optional(v.string()),
+      observationDays: v.optional(v.number()),
+      decisionRule: v.optional(v.string()),
       appliesToVersion: v.number(),
       confirmedBy: v.id("users"),
       confirmedAt: v.number(),
@@ -2674,6 +2684,23 @@ export default defineSchema({
     updatedBy: v.id("users"),
     updatedAt: v.number(),
   }).index("by_org_run", ["orgId", "runId"]).index("by_org_run_finding", ["orgId", "runId", "findingIndex"]),
+
+  /** Append-only history of owner decisions on one finding, with the page version each decision saw. */
+  designFindingReviewEvents: defineTable({
+    orgId: v.id("organizations"),
+    runId: v.id("workflowRuns"),
+    findingIndex: v.number(),
+    kind: v.union(v.literal("status"), v.literal("direction")),
+    status: v.optional(v.string()),
+    directionId: v.optional(v.string()),
+    note: v.optional(v.string()),
+    /** The landing draft built from this finding, and its version when the decision was made. */
+    landingPageId: v.optional(v.id("landingPages")),
+    landingVersion: v.optional(v.number()),
+    screenshotCapturedAt: v.optional(v.number()),
+    actorId: v.id("users"),
+    at: v.number(),
+  }).index("by_org_run_finding", ["orgId", "runId", "findingIndex"]),
 
   /** Private, short-lived viewport captures attached to one immutable website audit run. */
   websiteAuditScreenshots: defineTable({

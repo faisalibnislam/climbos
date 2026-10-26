@@ -1025,3 +1025,7 @@ Fixed in this increment (engine `v3.72-spec-coverage-guards`):
 - Exploration evidence references are checked.
 
 The 17 remaining buildable gaps are ranked in the coverage doc. Full suite: 274 files and 1,892 tests pass, with typecheck and ESLint clean. Nothing was deployed.
+
+## Resumption note (2026-10-26, spec gap 4)
+
+Design measurement plans now also require audience, guardrail, observation period and decision rule. These fields are optional in storage so older plans still validate. Finding decisions are appended to `designFindingReviewEvents` with the linked landing draft version, and the audit view lists them as review history.

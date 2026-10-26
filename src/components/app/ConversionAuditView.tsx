@@ -172,6 +172,7 @@ export function ConversionAuditView({ value, slug, runId }: { value: unknown; sl
           {finding.sourceUrl ? <a href={finding.sourceUrl} target="_blank" rel="noreferrer noopener" className="mt-2 inline-flex break-all text-xs text-link">Open evidence page <ExternalLink aria-hidden className="ml-1 size-3" /></a> : null}
           {priorByIndex.get(i) ? <PriorDecisionNote prior={priorByIndex.get(i)!} /> : null}
           <DesignFindingReview key={`${runId}:${i}:${reviewsByIndex.get(i)?.updatedAt ?? "open"}`} slug={slug} runId={runId} findingIndex={i} current={reviewsByIndex.get(i)} canEdit={findingReview?.canEdit === true} />
+          <FindingHistory events={(findingReview?.history ?? []).filter((e) => e.findingIndex === i)} />
         </li>)}</ul> : <p className="mt-3 text-sm text-ink-2">No design findings were returned for this sample.</p>}
         {list<string>(designCritic.limitations).length ? <ul className="mt-3 list-disc pl-5 text-xs text-ink-3">{list<string>(designCritic.limitations).map((item, i) => <li key={i}>{item}</li>)}</ul> : null}
       </section> : null}
@@ -238,6 +239,24 @@ export function PriorDecisionNote({ prior }: { prior: { status: string; decidedA
       In an earlier audit you {PRIOR_LABEL[prior.status] ?? prior.status} a finding in the same place ({formatDateTime(prior.decidedAt)}){prior.note ? `: “${prior.note}”` : "."} Matched by page, region and lens; check it&apos;s the same issue.
     </p>
   );
+}
+
+type FindingEvent = { kind: "status" | "direction"; status: string | null; directionName: string | null; note: string; landingVersion: number | null; screenshotCapturedAt: number | null; at: number };
+
+/** Every owner decision on this finding, newest first, with the page version it was made against. */
+function FindingHistory({ events }: { events: FindingEvent[] }) {
+  if (events.length < 2) return null;
+  return <details className="mt-2 text-xs text-ink-3">
+    <summary className="cursor-pointer">Review history ({events.length})</summary>
+    <ol className="mt-1 flex flex-col gap-1">
+      {events.map((e, i) => <li key={`${e.at}:${i}`}>
+        {formatDateTime(e.at)} · {e.kind === "direction" ? `Chose “${e.directionName ?? "a direction"}”` : `Marked ${(e.status ?? "").replaceAll("_", " ")}`}
+        {e.landingVersion !== null ? ` · page draft v${e.landingVersion}` : ""}
+        {e.screenshotCapturedAt !== null ? ` · screenshot ${formatDateTime(e.screenshotCapturedAt)}` : ""}
+        {e.note ? <span className="block text-ink-2">{e.note}</span> : null}
+      </li>)}
+    </ol>
+  </details>;
 }
 
 function DesignFindingReview({ slug, runId, findingIndex, current, canEdit }: { slug: string; runId: Id<"workflowRuns">; findingIndex: number; current?: FindingReview; canEdit: boolean }) {
