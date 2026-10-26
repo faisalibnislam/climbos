@@ -328,6 +328,7 @@ export const onboardingState = query({
             timezone: business.timezone,
             hasInsights: Boolean(business.insights),
             onboardingIntro: business.onboardingIntro ?? null,
+            customerData: business.customerData ?? null,
             insightsAt: business.insights?.generatedAt ?? null,
           }
         : null,
@@ -576,9 +577,11 @@ export const saveOnboardingIntro = mutation({
       horizonDays: v.optional(v.number()),
       reviewDay: v.optional(v.string()),
     }),
+    /** Where the business is today, from the setup step (chosen, or detected from the owner's words and shown to them). */
+    businessStage: v.optional(v.union(v.literal("idea"), v.literal("launching_soon"), v.literal("just_launched"), v.literal("has_customers"))),
   },
-  handler: async (ctx, { slug, intro }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "edit");
+  handler: async (ctx, { slug, intro, businessStage }) => {
+    const { org, role } = await requireOrgAccess(ctx, { slug }, "edit");
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     if (!business) throw appError("NOT_FOUND", "Business not found.");
     const budget = intro.monthlyAdBudget;
@@ -593,6 +596,16 @@ export const saveOnboardingIntro = mutation({
         savedAt: Date.now(),
       },
     });
+    if (businessStage) {
+      const now = Date.now();
+      // The stage is owner-reported; only an owner or admin sets it (the person creating the business is its owner).
+      const canSetStage = role === "owner" || role === "admin";
+      const stage = businessStage === "idea" ? "idea_validation" : businessStage === "launching_soon" ? "pre_launch" : null;
+      await ctx.db.patch(business._id, {
+        ...(stage && canSetStage ? { lifecycleStage: { stage, provenance: "owner_reported" as const, updatedAt: now } } : {}),
+        customerData: businessStage === "just_launched" ? { status: "no_customers_yet" as const, updatedAt: now } : businessStage === "has_customers" ? undefined : business.customerData,
+      });
+    }
   },
 });
 

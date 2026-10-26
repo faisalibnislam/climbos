@@ -1,3 +1,4 @@
+import { hasNoCustomersYet } from "../shared/agents/lifecycle";
 import { SPECIALIST_EVENT_LABEL, type SpecialistEvent } from "../shared/agents/specialistEvents";
 import { isServiceBusiness } from "../shared/acquisition/library";
 import { legacyPlanHash, planContentHash } from "./lib/planHash";
@@ -878,6 +879,8 @@ export const plan = query({
       questions: Array.isArray(expert?.plays) && expert.plays.length && expert.economics ? decisionQuestions({ economics: expert.economics as Economics, plays: expert.plays as PlayLike[] }, business?.unitEconomics, 3, { serviceBusiness: isServiceBusiness(business?.acquisition?.types, business?.businessType), horizonDays: goal?.horizonDays }) : [],
       unitEconomics: business?.unitEconomics ?? null,
       funnel: business?.funnel ?? null,
+      customerData: business?.customerData ?? null,
+      noCustomersYet: hasNoCustomersYet(business),
       /** The owner answered after this plan was written: numbers are current, the text may not be. */
       answersNewerThanPlan: staleInputs.ownerEconomics,
       /** Material owner inputs that differ from the plan snapshot; signal refresh before execution. */
@@ -989,6 +992,34 @@ export const setUnitEconomics = mutation({
     if (unsureNow.has("churn")) next.monthlyChurn = undefined;
     await ctx.db.patch(business._id, { unitEconomics: next });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "business.unit_economics", subjectType: "business", subjectId: business._id, summary: "Unit economics updated." });
+  },
+});
+
+/** The owner says: no customers yet, or no numbers yet, optionally with a planned price. `status: null` clears it. */
+export const setCustomerData = mutation({
+  args: {
+    slug: v.string(),
+    status: v.union(v.literal("no_customers_yet"), v.literal("no_data_yet"), v.null()),
+    plannedPriceMonth: v.optional(v.union(v.number(), v.null())),
+    priceUndecided: v.optional(v.boolean()),
+  },
+  handler: async (ctx, { slug, status, plannedPriceMonth, priceUndecided }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    if (!business) throw appError("NOT_FOUND", "Add your business first.");
+    if (plannedPriceMonth !== undefined && plannedPriceMonth !== null && !(Number.isFinite(plannedPriceMonth) && plannedPriceMonth > 0 && plannedPriceMonth <= 1_000_000)) throw appError("INVALID", "The planned price looks wrong.");
+    const prev = business.customerData;
+    const price = plannedPriceMonth === null ? undefined : plannedPriceMonth ?? prev?.plannedPriceMonth;
+    const undecided = price !== undefined ? undefined : priceUndecided ?? prev?.priceUndecided;
+    await ctx.db.patch(business._id, {
+      customerData: status === null ? undefined : { status, ...(price !== undefined ? { plannedPriceMonth: price } : {}), ...(undecided ? { priceUndecided: true } : {}), updatedAt: Date.now() },
+    });
+    // "No numbers yet" for an existing business: every customer figure becomes unknown (never kept as an owner figure).
+    if (status === "no_data_yet") {
+      const u = business.unitEconomics;
+      await ctx.db.patch(business._id, { unitEconomics: { ...(u ?? {}), revenuePerCustomerMonthUsd: undefined, grossMargin: undefined, monthlyChurn: undefined, unsure: ["revenue", "margin", "churn"], updatedAt: Date.now() } });
+    }
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "business.customer_data", subjectType: "business", subjectId: business._id, summary: status === "no_customers_yet" ? "Marked the business as having no customers yet." : status === "no_data_yet" ? "Marked customer numbers as not available yet." : "Cleared the no-customers / no-data status." });
   },
 });
 

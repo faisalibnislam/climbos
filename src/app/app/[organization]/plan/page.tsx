@@ -180,6 +180,8 @@ function PlanScreen({ slug }: { slug: string }) {
       unknowns={planQ?.unknowns ?? []}
       needed={needed}
       refresh={s ? { nextVersion: s.version + 1, estimateMicros: plan.planEstimateMicros, onStarted: setStartedRunId, building } : null}
+      noCustomersYet={plan.noCustomersYet}
+      customerData={plan.customerData}
     />
   );
   const reviewHelp = needsNumbers || planQ?.unknowns?.length ? helpPanel(needsNumbers) : undefined;
@@ -364,6 +366,11 @@ function PlanScreen({ slug }: { slug: string }) {
             </Callout>
           ) : null}
           <ShortVersion strategy={s} />
+          {plan.noCustomersYet || plan.customerData?.status === "no_data_yet" ? (
+            <Callout tone="info" title={plan.noCustomersYet ? "Estimates: no customer data yet" : "Estimates: no customer numbers yet"}>
+              Money figures in this plan are labelled estimates, not your results. They update as real customer numbers come in.
+            </Callout>
+          ) : null}
           {s.expert ? <NorthStar expert={s.expert as ExpertView} slug={slug} /> : null}
           {s.expert?.plays?.length ? <SharpenPlan slug={slug} questions={plan.questions} canEdit={plan.canEdit} answersNewer={plan.answersNewerThanPlan} currency={plan.businessCurrency} segmentEconomics={plan.unitEconomics?.segmentEconomics} /> : null}
           {s.expert?.plays?.length && !(s.status === "needs_approval" && !olderView && reviewHelp) ? helpPanel(false) : null}

@@ -37,3 +37,7 @@ export function businessLifecycleContext(stage?: BusinessLifecycleStage | null, 
   return `BUSINESS DEVELOPMENT STAGE: ${label} (owner-reported${updated}). Use this only as a planning lens, not proof of demand, customer fit, growth, or decline. ${GUIDANCE[stage]}`;
 }
 
+/** True when the owner says there are no customers yet, or the stage is before launch: no customer figures exist to ask for. */
+export function hasNoCustomersYet(business: { customerData?: { status: string } | null; lifecycleStage?: { stage: string } | null } | null | undefined): boolean {
+  return business?.customerData?.status === "no_customers_yet" || business?.lifecycleStage?.stage === "idea_validation" || business?.lifecycleStage?.stage === "pre_launch";
+}

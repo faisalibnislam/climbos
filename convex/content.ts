@@ -826,18 +826,46 @@ export const unarchive = mutation({
   },
 });
 
-/** First win (after the first plan): 3 social posts on the best-fit channel + 1 welcome email, if credits allow. */
+const SOCIAL_FIRST_WIN = ["instagram", "facebook", "linkedin", "x", "tiktok", "pinterest"] as const;
+type SocialChannel = (typeof SOCIAL_FIRST_WIN)[number];
+const SOCIAL_NAME: Record<SocialChannel, RegExp> = {
+  instagram: /instagram|\binsta\b/i,
+  facebook: /facebook|\bfb\b|meta (?:page|organic)/i,
+  linkedin: /linked\s?in/i,
+  x: /\btwitter\b|\bx\.com\b|\bon x\b|^x$/i,
+  tiktok: /tik\s?tok/i,
+  pinterest: /pinterest/i,
+};
+
+/**
+ * The first three posts follow the plan: one post on each of up to three social channels it chose, in priority
+ * order (three on the only one, if it chose one). Without a social channel in the plan, the old fit guess is used.
+ */
+export function firstWinChannels(planChannels: { key: string; name: string; priority: number }[], businessType: string | undefined): SocialChannel[] {
+  const picked: SocialChannel[] = [];
+  for (const c of [...planChannels].sort((a, b) => a.priority - b.priority)) {
+    const hit = SOCIAL_FIRST_WIN.find((s) => c.key === s || SOCIAL_NAME[s].test(`${c.key} ${c.name}`));
+    if (hit && !picked.includes(hit)) picked.push(hit);
+    if (picked.length === 3) break;
+  }
+  if (!picked.length) picked.push(/saas|b2b|agency|services|consult|software/i.test(businessType ?? "") ? "linkedin" : "instagram");
+  return Array.from({ length: 3 }, (_, i) => picked[i % picked.length]);
+}
+
+/** First win (after the first plan): 3 social posts on the plan's social channels + 1 welcome email, if credits allow. */
 export const startFirstWin = internalMutation({
   args: { orgId: v.id("organizations"), userId: v.id("users") },
   handler: async (ctx, { orgId, userId }) => {
     const org = await ctx.db.get(orgId);
     if (!org || org.kind === "demo" || org.firstWinRunIds?.length) return;
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first();
-    const b2b = /saas|b2b|agency|services|consult|software/i.test(business?.businessType ?? "");
-    const channel = b2b ? "linkedin" : "instagram";
+    const strategy = await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", orgId)).order("desc").first();
+    const perChannel = new Map<SocialChannel, number>();
+    for (const c of firstWinChannels(strategy?.channels ?? [], business?.businessType)) perChannel.set(c, (perChannel.get(c) ?? 0) + 1);
     const runIds: Id<"workflowRuns">[] = [];
-    const jobs: { job: "content_social" | "content_email"; quantity?: number; channel?: "linkedin" | "instagram" | "email"; brief: string }[] = [
-      { job: "content_social", quantity: 3, channel, brief: "First posts from the new growth plan: introduce what makes the business different, one customer problem it solves, and one clear next step." },
+    const firstPostsBrief = "First posts from the new growth plan: introduce what makes the business different, one customer problem it solves, and one clear next step.";
+    const jobs: { job: "content_social" | "content_email"; quantity?: number; channel?: SocialChannel | "email"; brief: string }[] = [
+      ...[...perChannel].map(([channel, quantity]) => ({ job: "content_social" as const, quantity, channel, brief: firstPostsBrief })),
       { job: "content_email", channel: "email", brief: "A short welcome email for new subscribers or customers based on the growth plan." },
     ];
     for (const j of jobs) {
@@ -845,7 +873,7 @@ export const startFirstWin = internalMutation({
         // Instagram can't post without an image, so its first posts come with one.
         const images = j.channel === "instagram" ? 1 : 0;
         const plan = planJob(j.job, { quantity: j.quantity, images, channel: j.channel });
-        const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: j.job === "content_social" ? "Your first 3 posts" : "Your welcome email", roles: plan.roles, input: { firstWin: true, channel: j.channel }, steps: plan.steps, meters: plan.meters, createdBy: userId, isFixture: false });
+        const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: j.job === "content_social" ? (perChannel.size > 1 ? `Your first ${j.channel === "x" ? "X" : (j.channel ?? "").replace(/^./, (c) => c.toUpperCase())} post${(j.quantity ?? 1) > 1 ? "s" : ""}` : "Your first 3 posts") : "Your welcome email", roles: plan.roles, input: { firstWin: true, channel: j.channel }, steps: plan.steps, meters: plan.meters, createdBy: userId, isFixture: false });
         await ctx.scheduler.runAfter(0, internal.jobs.createContent, { runId, job: j.job, channel: j.channel, quantity: j.quantity, images, brief: j.brief });
         runIds.push(runId);
       } catch {

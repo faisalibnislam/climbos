@@ -956,6 +956,17 @@ export default defineSchema({
       updatedAt: v.number(),
       }),
     ),
+    /**
+     * Owner-reported: no customers yet (just launched or not launched), or customers but no numbers yet.
+     * Plans then use labelled assumptions instead of asking for, or blocking on, customer figures.
+     * `plannedPriceMonth` is what the owner intends to charge, never an observed revenue figure.
+     */
+    customerData: v.optional(v.object({
+      status: v.union(v.literal("no_customers_yet"), v.literal("no_data_yet")),
+      plannedPriceMonth: v.optional(v.number()),
+      priceUndecided: v.optional(v.boolean()),
+      updatedAt: v.number(),
+    })),
     summary: v.optional(v.string()),
     /** The public review destination shared consistently with every invited customer. */
     reviewUrl: v.optional(v.string()),
