@@ -17,6 +17,7 @@ import { bookingLive } from "./outbound";
 import { ratingOnlyReviewReply } from "../shared/reviews/safety";
 import { publicReplyPrivacyIssue } from "../shared/reviews/replyPrivacy";
 import { pipelineAttention } from "../shared/growth/pipeline";
+import { runModel } from "../shared/ai/modelChoice";
 
 /**
  * Unified inbox: email replies to outreach, new bookings and (soon) website
@@ -197,6 +198,8 @@ export const writeReply = internalAction({
       return;
     }
     const rates = getRateVersion(c.run.rateVersionId);
+    // The run's model route: operator defaults or a permitted user's choice.
+    const model = runModel(c.run, MODEL);
     const call = process.env.CLIMBOS_FAKE_LLM ? fakeTurn : modelTurn;
     const step = await ctx.runMutation(internal.engine.beginStep, { runId, index: 0, kind: "model", label: "Draft the reply", role: "customer_success_manager" });
     if (!step.proceed && step.reason !== "checkpoint") {
@@ -215,8 +218,8 @@ export const writeReply = internalAction({
     ]
       .filter(Boolean)
       .join("\n");
-    const r = await call({ modelKey: MODEL, cacheKey: "climbos:inbox_reply", system: [{ text: RULES, cache: true }], messages: [{ role: "user", content: context }], maxTokens: 1_000, effort: "low", thinkingOff: true }, rates);
-    if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(MODEL, r, rates) });
+    const r = await call({ modelKey: model, cacheKey: "climbos:inbox_reply", system: [{ text: RULES, cache: true }], messages: [{ role: "user", content: context }], maxTokens: 1_000, effort: "low", thinkingOff: true }, rates);
+    if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(model, r, rates) });
     if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });
     if (!r.ok || !r.text.trim()) {
       await ctx.runMutation(internal.engine.finishRun, { runId, status: "failed", userMessage: "Couldn't draft a reply. Try again." });

@@ -13,6 +13,7 @@ import { climbToolDefs, encodeToolOutput, localTime, safeAppPath, toolByName, ty
 import { CLIMB_CONFIG } from "./lib/climbConfig";
 import type { MessageParam, ToolDef, ToolResultBlock } from "../shared/ai/types";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+import { runModel } from "../shared/ai/modelChoice";
 
 /**
  * Climb AI: the side-panel agent. It sees the owner's screen (structured
@@ -217,7 +218,7 @@ export const respond = action({
     const caller = callerFor(ctx);
     const rates = getRateVersion(run.rateVersionId);
     const call = process.env.CLIMBOS_FAKE_LLM ? fakeTurn : modelTurn;
-    const active: ModelKey = MODEL;
+    const active: ModelKey = runModel(run, MODEL);
     const turn: typeof modelTurn = (req, r8) => call({ ...req, modelKey: active }, r8);
 
     // Screen context: where they are, what's on screen (entity ids for tools), what they pointed at.

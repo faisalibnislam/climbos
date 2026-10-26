@@ -15,6 +15,7 @@ import { assessSearchReadiness, SEARCH_CRAWLERS, AI_DATA_USE_CONTROLS, type Craw
 import { isPathAllowed, safeFetchPage } from "../shared/integrations/website";
 import { lookup } from "node:dns/promises";
 import { claudeUsageRecords } from "./lib/usage";
+import { runModel } from "../shared/ai/modelChoice";
 
 const MODEL = CALL_ROUTES.chat_intent;
 const Out = z.object({ facts: z.array(z.object({ category: z.string(), statement: z.string(), replaces: z.string() })) });
@@ -88,12 +89,14 @@ export const check = internalAction({
     if (!runId) return;
     const run = await ctx.runQuery(internal.engine.getRun, { runId });
     const rates = getRateVersion(run?.run.rateVersionId ?? "");
+    // The run's model route: operator defaults or a permitted user's choice.
+    const model = runModel(run?.run ?? {}, MODEL);
     const call = process.env.CLIMBOS_FAKE_LLM ? fakeTurn : modelTurn;
     const step = await ctx.runMutation(internal.engine.beginStep, { runId, index: 0, kind: "model", label: "What changed on your site", role: "data_analyst" });
     if (!step.proceed && step.reason !== "checkpoint") return;
     const content = `CURRENT FACTS (id · statement):\n${s.facts.map((f) => `${f.id} · ${f.statement}`).join("\n").slice(0, 5000)}\n\n<untrusted_content source="own_website">\nREMOVED:\n${d.removed.join("\n").slice(0, 3000)}\n\nADDED:\n${d.added.join("\n").slice(0, 3000)}\n</untrusted_content>`;
-    const r = await call({ modelKey: MODEL, cacheKey: "climbos:site_watch", verbosity: "low", system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: Out, maxTokens: 1_500, effort: "low", thinkingOff: true }, rates);
-    if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(MODEL, r, rates) });
+    const r = await call({ modelKey: model, cacheKey: "climbos:site_watch", verbosity: "low", system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: Out, maxTokens: 1_500, effort: "low", thinkingOff: true }, rates);
+    if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(model, r, rates) });
     if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });
     const parsed = r.ok ? Out.safeParse(r.output) : null;
     const facts = parsed?.success ? parsed.data.facts.filter((f) => f.statement.trim()).map((f) => ({ category: f.category, statement: f.statement.trim(), replaces: f.replaces || undefined })) : [];

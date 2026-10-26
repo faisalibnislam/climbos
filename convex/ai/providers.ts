@@ -2,10 +2,13 @@
 
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
-import { type ModelKey, type RateVersion } from "../../shared/economics/rates";
-import { actualStepMicros, IMAGE_ROUTES, MODEL_SPECS } from "../../shared/ai/models";
+import { type ModelKey, type Provider, type RateVersion } from "../../shared/economics/rates";
+import { actualStepMicros, IMAGE_ROUTES, MODEL_SPECS, searchCallUsd } from "../../shared/ai/models";
 import { usdToMicrosCeil } from "../../shared/economics/money";
+import { anthropicTurn } from "../../shared/ai/anthropic";
+import { providerKeyConfigured } from "../../shared/ai/modelChoice";
 import { openaiTurn } from "../../shared/ai/openai";
+import type { TurnRequest, TurnResult } from "../../shared/ai/types";
 
 /**
  * Server-only provider adapters behind one typed interface. Secrets are read
@@ -37,7 +40,7 @@ export interface ModelUsage {
 export type ModelResult =
   | {
       ok: true;
-      provider: "google" | "openai";
+      provider: Provider;
       actualModelId: string;
       output: unknown;
       rawText: string;
@@ -79,15 +82,15 @@ export function parseJsonText(text: string): unknown {
 }
 
 
-export function providerConfigured(provider: "openai" | "google"): boolean {
-  return provider === "openai" ? Boolean(process.env.OPENAI_API_KEY) : Boolean(process.env.GEMINI_API_KEY);
+export function providerConfigured(provider: Provider): boolean {
+  return providerKeyConfigured(provider);
 }
 
 /** Match readiness to the provider that will actually serve a selected model. */
 export function modelProviderConfigured(modelKey: ModelKey): boolean {
   const spec = MODEL_SPECS[modelKey];
   if (!spec || spec.availability !== "enabled") return false;
-  return providerConfigured(spec.provider === "openai" ? "openai" : "google");
+  return providerConfigured(spec.provider);
 }
 
 
@@ -164,12 +167,13 @@ export async function callModel(req: ModelRequest, rates: RateVersion): Promise<
   if (!spec || spec.availability !== "enabled") {
     return { ok: false, kind: "provider_unavailable", message: `${req.modelKey} is not enabled.`, costMicros: 0, usage: ZERO_USAGE };
   }
-  return spec.provider === "openai" ? callOpenAI(req, rates) : callGemini(req, rates);
+  if (spec.provider === "google") return callGemini(req, rates);
+  return callViaTurn(spec.provider === "anthropic" ? anthropicTurn : openaiTurn, spec.provider, req, rates);
 }
 
-/** Single-call tasks on OpenAI (Responses API), in this module's result shape. */
-async function callOpenAI(req: ModelRequest, rates: RateVersion): Promise<ModelResult> {
-  const r = await openaiTurn(
+/** Single-call tasks on OpenAI (Responses API) or Claude (Messages API), in this module's result shape. */
+async function callViaTurn(turn: (req: TurnRequest, rates: RateVersion) => Promise<TurnResult>, provider: Provider, req: ModelRequest, rates: RateVersion): Promise<ModelResult> {
+  const r = await turn(
     {
       modelKey: req.modelKey,
       system: [{ text: req.system }],
@@ -183,12 +187,12 @@ async function callOpenAI(req: ModelRequest, rates: RateVersion): Promise<ModelR
     rates,
   );
   const usage: ModelUsage = { inputTokens: r.usage.inputTokens, outputTokens: r.usage.outputTokens, reasoningTokens: r.usage.thinkingTokens, cacheReadTokens: r.usage.cacheReadTokens, cacheWriteTokens: 0, webSearches: r.usage.webSearches };
-  const searchCostMicros = usdToMicrosCeil(r.usage.webSearches * rates.services.searchCall);
+  const searchCostMicros = usdToMicrosCeil(r.usage.webSearches * searchCallUsd(req.modelKey, rates));
   if (!r.ok) {
     const kind = r.kind === "spend_limit" ? "provider_unavailable" : r.kind;
     return { ok: false, kind, message: r.message, usage, costMicros: Math.max(0, r.costMicros - searchCostMicros), searchCostMicros, rawText: r.text } as ModelResult;
   }
-  return { ok: true, provider: "openai", actualModelId: r.actualModelId, output: r.output, rawText: r.text, usage, costMicros: Math.max(0, r.costMicros - searchCostMicros), searchCostMicros, finishReason: r.stopReason, sourceUrls: r.sources.map((x) => x.url).slice(0, 20) };
+  return { ok: true, provider, actualModelId: r.actualModelId, output: r.output, rawText: r.text, usage, costMicros: Math.max(0, r.costMicros - searchCostMicros), searchCostMicros, finishReason: r.stopReason, sourceUrls: r.sources.map((x) => x.url).slice(0, 20) };
 }
 
 export type ImageResult =

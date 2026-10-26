@@ -52,7 +52,9 @@ describe("rate registry", () => {
 
   it("selects the effective version by date", () => {
     expect(rateVersionForDate("2026-10-17").id).toBe(VERIFIED_2026_10_17.id);
-    expect(rateVersionForDate("2026-12-31").id).toBe(VERIFIED_2026_10_17.id);
+    expect(rateVersionForDate("2026-10-25").id).toBe(VERIFIED_2026_10_17.id);
+    expect(rateVersionForDate("2026-10-26").id).toBe("model-choice-2026-10-26");
+    expect(rateVersionForDate("2026-12-31").id).toBe("gemini-argon-reprice-2026-12-01");
     expect(rateVersionForDate("2027-01-01").id).toBe(GEMINI_FLASH_REPRICE_2027_01_01.id);
     expect(() => rateVersionForDate("2025-01-01")).toThrow();
     expect(() => rateVersionForDate("17/10/2026")).toThrow(RangeError);

@@ -15,7 +15,7 @@ import { v } from "convex/values";
 import { z } from "zod";
 import { CURRENT_ROUTING, getRateVersion } from "../shared/economics";
 import type { ModelKey } from "../shared/economics/rates";
-import { estimateTokens, MODEL_SPECS, runtimeModel, VIDEO_ROUTE, worstCaseStepMicros } from "../shared/ai/models";
+import { estimateTokens, MODEL_SPECS, runtimeModel, searchCallUsd, VIDEO_ROUTE, worstCaseStepMicros } from "../shared/ai/models";
 import {
   type BusinessInsights,
   type BusinessProfile,
@@ -114,6 +114,7 @@ import type { BindingConstraint } from "../shared/agents/decision";
 import { strategyQuickTakeTask } from "../shared/agents/quickTake";
 import { searchConsoleSeoContext, searchConsoleStrategyContext } from "../shared/agents/searchConsoleEvidence";
 import { searchConsolePropertyMatchesWebsite } from "../shared/integrations/searchConsole";
+import { runModel } from "../shared/ai/modelChoice";
 
 const DAY = 86_400_000;
 
@@ -235,10 +236,10 @@ async function runModelTask<T>(
 
   const rates = getRateVersion(run.rateVersionId);
   const roleRoute = CURRENT_ROUTING.routes[task.role];
-  const route = { primary: (task.type === "chat_intent" ? CALL_ROUTES.chat_intent : task.primaryModel) ?? runtimeModel(roleRoute.primary) };
+  const route = { primary: runModel(run, (task.type === "chat_intent" ? CALL_ROUTES.chat_intent : task.primaryModel) ?? runtimeModel(roleRoute.primary)) };
   const system = systemPrompt(task.role);
   const user = `${taskText}\n\n${clipToBudget(system, taskText, untrustedContext, task.inputBudget)}`;
-  const searches = (m: ModelKey) => (task.allowWebSearch && MODEL_SPECS[m].provider === "openai" ? 2 : 0);
+  const searches = (m: ModelKey) => (task.allowWebSearch && MODEL_SPECS[m].provider !== "google" ? 2 : 0);
 
   const attempt = async (modelKey: ModelKey, extra = "", usageStepId: Id<"workflowSteps"> = stepId): Promise<ModelResult> => {
     const circuit = await ctx.runQuery(internal.circuits.circuitState, { provider: MODEL_SPECS[modelKey].provider });
@@ -356,6 +357,9 @@ async function runAgentTask<T>(
   if (job.run.aiMode === "expert") spec = { ...spec, models: routeModels(spec.id, "expert") };
   // Climb AI Basic: best of two drafts for the strategy agents (unless the spec fixed its own count).
   else if (draftsFor(spec.id, "basic") > 1 && spec.drafts === undefined) spec = { ...spec, drafts: draftsFor(spec.id, "basic") };
+  // Model choice: every phase runs on the run's route (operator defaults or a permitted user's pick). Mapped once.
+  spec = { ...spec, models: { research: runModel(job.run, spec.models.research), draft: runModel(job.run, spec.models.draft), critic: runModel(job.run, spec.models.critic), ...(spec.models.revise ? { revise: runModel(job.run, spec.models.revise) } : {}) } };
+  const escalation = expertEscalationModel(spec.id, job.run.aiMode ?? "basic");
   // Speed flags (off by default; benchmark before turning on).
   if (hasFlag(job, "fast_review")) spec = { ...spec, skipFinalReview: true };
   const rates = getRateVersion(job.run.rateVersionId);
@@ -374,7 +378,7 @@ async function runAgentTask<T>(
         },
       },
     }),
-    escalationModel: expertEscalationModel(spec.id, job.run.aiMode ?? "basic"),
+    escalationModel: escalation ? runModel(job.run, escalation) : undefined,
     beforeRevision: async (round, modelKey) => {
       // Idempotent per round: a compute step marks that this round's cost was reserved.
       const mark = await begin(ctx, job.run._id, baseIndex + 60 + round, "compute", `${spec.label}: reserve revision ${round}`, spec.role);
@@ -393,10 +397,10 @@ async function runAgentTask<T>(
         if (circuit === "open") {
           return { ok: false, kind: "provider_unavailable", message: "Provider temporarily disabled after repeated failures.", usage: { inputTokens: 0, outputTokens: 0, thinkingTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, webSearches: 0, webFetches: 0, calls: 0 }, costMicros: 0, appended: [] } as TurnResult;
         }
-        // Long OpenAI turns (Sol revisions, big outputs) run in background mode: if this action's time runs out,
+        // Long OpenAI turns (Sol or Astra turns, big outputs) run in background mode: if this action's time runs out,
         // the job yields and the next action keeps polling the same answer (no rerun, no double charge).
         const stepId = stepScope.getStore() ?? null;
-        const background = provider === "openai" && !process.env.CLIMBOS_FAKE_LLM && (modelKey === "gpt-6.1-sol" || req.maxTokens >= 24_000);
+        const background = provider === "openai" && !process.env.CLIMBOS_FAKE_LLM && (modelKey !== "gpt-6-luna" || req.maxTokens >= 24_000);
         const ref = background && stepId ? await ctx.runQuery(internal.engine.stepProviderRef, { stepId }) : null;
         let providerCallHeld = false;
         if (stepId) {
@@ -405,7 +409,7 @@ async function runAgentTask<T>(
           const inputBudget = Math.min(MODEL_SPECS[modelKey].contextWindow, Math.max(40_000, estimateTokens(inputText) + 2_000 + imageCount * 2_048));
           const outputBudget = Math.min(req.maxTokens, MODEL_SPECS[modelKey].maxOutputTokens);
           const modelMicros = worstCaseStepMicros(modelKey, inputBudget, outputBudget, rates);
-          const searchMicros = Math.ceil((req.webSearch?.maxUses ?? 0) * rates.services.searchCall * 1_000_000);
+          const searchMicros = Math.ceil((req.webSearch?.maxUses ?? 0) * searchCallUsd(modelKey, rates) * 1_000_000);
           const claim = await ctx.runMutation(internal.engine.claimProviderCall, {
             runId: job.run._id,
             stepId,
@@ -453,7 +457,7 @@ async function runAgentTask<T>(
               const imageCount = countModelImages(req.messages);
               const inputBudget = Math.min(MODEL_SPECS[modelKey].contextWindow, Math.max(40_000, estimateTokens(inputText) + 2_000 + imageCount * 2_048));
               const outputBudget = Math.min(req.maxTokens, MODEL_SPECS[modelKey].maxOutputTokens);
-              const retryCost = 2 * (worstCaseStepMicros(modelKey, inputBudget, outputBudget, rates) + Math.ceil((req.webSearch?.maxUses ?? 0) * rates.services.searchCall * 1_000_000));
+              const retryCost = 2 * (worstCaseStepMicros(modelKey, inputBudget, outputBudget, rates) + Math.ceil((req.webSearch?.maxUses ?? 0) * searchCallUsd(modelKey, rates) * 1_000_000));
               const retryClaim = await ctx.runMutation(internal.engine.claimProviderCall, { runId: job.run._id, stepId, costMicros: retryCost });
               if (!retryClaim.ok) throw new JobStop("cost_cap", retryClaim.message || COST_CAP_MESSAGE);
             }
@@ -1083,8 +1087,9 @@ async function consistencyStep(ctx: ActionCtx, job: JobCtx, index: number, plan:
   try {
     const out = await reconcile({
       turn: async (req) => {
-        const r = await call(req, rates);
-        if (r.usage.calls > 0) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId!, records: claudeUsageRecords(req.modelKey, r, rates) });
+        const modelKey = runModel(job.run, req.modelKey);
+        const r = await call({ ...req, modelKey }, rates);
+        if (r.usage.calls > 0) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId!, records: claudeUsageRecords(modelKey, r, rates) });
         return r;
       },
       plan,
@@ -1165,7 +1170,7 @@ async function quickTake(
     const rates = getRateVersion(job.run.rateVersionId);
     const r = await modelTurn(
       {
-        modelKey: CALL_ROUTES.chat_intent,
+        modelKey: runModel(job.run, CALL_ROUTES.chat_intent),
         system: [{ text: "You are a senior growth advisor writing a fast first take for a small-business owner. Be specific to this business, plain and brief. Do not invent facts, numbers, effort estimates or evidence. If a cause or opportunity is not supported by a confirmed fact, say it is a hypothesis in why and leave factIndexes empty." }],
         messages: [{ role: "user", content: `${businessBrief(job)}\n\n${websiteEvidence ? `WEBSITE PROFILE FACTS (source-reported claims, not owner-confirmed or independently verified):\n${websiteEvidence.facts.map((fact, i) => `${i}. ${fact.statement} [page: ${fact.sourceUrl}; extraction confidence: ${fact.confidence ?? "unknown"}]`).join("\n") || "(none)"}\nAllowed page URLs read in this run: ${websiteEvidence.allowedSourceUrls.join(", ") || "(none)"}\n\n` : ""}${task}\n\nReturn JSON: headline (one sentence) and up to 3 opportunities. Each opportunity has title, why, nextStep, and factIndexes. Use only the numbered CONFIRMED FACTS above for factIndexes. For a direct observation supported by a numbered website profile fact, use profileFactIndexes for that separate source-reported claim; the cited fact must link to one of the exact allowed page URLs. Do not cite inferred customer, market, or performance claims as website evidence. Use [] for unsupported indexes and leave profileFactIndexes empty when the finding is only a hypothesis.` }],
         schema: QuickTakeSchema,
@@ -1176,7 +1181,7 @@ async function quickTake(
       },
       rates,
     );
-    if (r.usage.calls > 0) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId!, records: claudeUsageRecords(CALL_ROUTES.chat_intent, r, rates) });
+    if (r.usage.calls > 0) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId!, records: claudeUsageRecords(runModel(job.run, CALL_ROUTES.chat_intent), r, rates) });
     if (r.ok) {
       const out = r.output as z.infer<typeof QuickTakeSchema>;
       const preview = linkQuickTakeEvidence(
@@ -2429,7 +2434,7 @@ export const makeReel = internalAction({
         } else {
           const r = await modelTurn(
             {
-              modelKey: CALL_ROUTES.chat_intent,
+              modelKey: runModel(job.run, CALL_ROUTES.chat_intent),
               system: [{ text: "You write scroll-stopping 10-15 second vertical videos (Reels, TikTok, Shorts) for small businesses. Hook in the first scene, one idea per scene, captions of 3-8 words people can read in 2 seconds, plain words, no hashtags in captions, no invented claims, prices or reviews." }],
               messages: [
                 {
@@ -2444,7 +2449,7 @@ export const makeReel = internalAction({
             },
             rates,
           );
-          if (r.usage.calls > 0) await ctx.runMutation(internal.engine.recordUsage, { stepId: s1.stepId!, records: claudeUsageRecords(CALL_ROUTES.chat_intent, r, rates) });
+          if (r.usage.calls > 0) await ctx.runMutation(internal.engine.recordUsage, { stepId: s1.stepId!, records: claudeUsageRecords(runModel(job.run, CALL_ROUTES.chat_intent), r, rates) });
           if (!r.ok) {
             await ctx.runMutation(internal.engine.failStep, { stepId: s1.stepId!, error: r.message.slice(0, 300) });
             throw new JobStop(r.kind, "The AI couldn't write this reel. Try again.");

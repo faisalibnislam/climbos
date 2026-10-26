@@ -11,6 +11,7 @@ import { audit } from "./lib/audit";
 import { createRunWithReservation } from "./engine";
 import { claudeUsageRecords } from "./lib/usage";
 import { appError, requireOrgAccess } from "./lib/tenancy";
+import { runModel } from "../shared/ai/modelChoice";
 
 /**
  * Brand kit + voice learning. Every time the owner rewrites an AI draft we
@@ -182,6 +183,8 @@ export const learn = internalAction({
       return;
     }
     const rates = getRateVersion(c.run.rateVersionId);
+    // The run's model route: operator defaults or a permitted user's choice.
+    const model = runModel(c.run, MODEL);
     const call = process.env.CLIMBOS_FAKE_LLM ? fakeTurn : modelTurn;
     const step = await ctx.runMutation(internal.engine.beginStep, { runId, index: 0, kind: "model", label: "Learn from your edits", role: "creative_director" });
     if (!step.proceed && step.reason !== "checkpoint") {
@@ -194,8 +197,8 @@ export const learn = internalAction({
       ...c.samples.map((s, i) => `EDIT ${i + 1} (${s.channel})\nAI DRAFT:\n${s.before}\nOWNER'S VERSION:\n${s.after}`),
       `</untrusted_content>`,
     ].join("\n\n");
-    const r = await call({ modelKey: MODEL, cacheKey: "climbos:voice_learning", verbosity: "low", system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: Rules, maxTokens: 800, effort: "low", thinkingOff: true }, rates);
-    if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(MODEL, r, rates) });
+    const r = await call({ modelKey: model, cacheKey: "climbos:voice_learning", verbosity: "low", system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: Rules, maxTokens: 800, effort: "low", thinkingOff: true }, rates);
+    if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(model, r, rates) });
     if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });
     const parsed = r.ok ? Rules.safeParse(r.output) : null;
     if (!parsed?.success) {

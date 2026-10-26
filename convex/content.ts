@@ -38,6 +38,7 @@ import { onOwnerDecision, onPublishOutcome } from "./lib/autopilot";
 import { estimateJobMicros, planJob } from "./lib/jobPlans";
 import { imageUrlFor } from "./lib/media";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+import { resolveModelRoute } from "./lib/modelRoute";
 
 /** Read-only source set for the conversion/social audit; restricted to one tenant and confirmed published posts. */
 export const auditPublishedSocial = internalQuery({
@@ -657,10 +658,12 @@ export const generate = mutation({
     images: v.optional(v.number()),
     brief: v.optional(v.string()),
     aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
+    model: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
     const aiMode = await resolveAiMode(ctx, org, args.job, args.aiMode);
+    const modelRoute = await resolveModelRoute(ctx, user._id, args.model);
     const plan = planJob(args.job, { quantity: args.quantity, images: args.images, channel: args.channel }, { fixture: org.kind === "demo", mode: aiMode });
     const runId = await createRunWithReservation(ctx, {
       org,
@@ -673,6 +676,7 @@ export const generate = mutation({
       createdBy: user._id,
       isFixture: org.kind === "demo",
       aiMode,
+      modelRoute,
     });
     await ctx.scheduler.runAfter(0, internal.jobs.createContent, {
       runId,
@@ -694,14 +698,16 @@ export const estimate = query({
     images: v.optional(v.number()),
     channel: v.optional(channelValidator),
     aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
+    model: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { org } = await requireOrgAccess(ctx, { slug: args.slug }, "view");
+    const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "view");
     const view = await aiModeView(ctx, org);
     const mode = EXPERT_KINDS.has(args.job) && view.expertUnlocked ? (args.aiMode ?? view.mode) : "basic";
     const plan = planJob(args.job, { quantity: args.quantity, images: args.images, channel: args.channel }, { fixture: org.kind === "demo", mode });
     const fixture = org.kind === "demo";
-    return { title: plan.title, roles: plan.roles, maxCostMicros: estimateJobMicros(plan, { fixture }), meters: plan.meters, aiMode: mode, expertUnlocked: view.expertUnlocked, expertApplies: EXPERT_KINDS.has(args.job) };
+    const route = await resolveModelRoute(ctx, user._id, args.model);
+    return { title: plan.title, roles: plan.roles, maxCostMicros: estimateJobMicros(plan, { fixture, route }), meters: plan.meters, aiMode: mode, expertUnlocked: view.expertUnlocked, expertApplies: EXPERT_KINDS.has(args.job) };
   },
 });
 
