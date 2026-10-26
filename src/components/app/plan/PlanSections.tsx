@@ -1,5 +1,6 @@
 "use client";
 
+import { RunRowBadge, StoppedRunNotice } from "../content/StoppedRun";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -45,7 +46,6 @@ import { minorToDisplay, relativeTime } from "../money";
 import { useCostDisplay } from "../useCostDisplay";
 import { microsToCredits } from "../../../../shared/economics/credits";
 import type { KnowledgeReferenceSet } from "../../../../shared/knowledge/retrieve";
-import { runStatusPresentation } from "../../../../shared/progress";
 import { ErrorCallout, PERMISSION_WHO, RoleName, useNow } from "../content/shared";
 import { ROLE_META } from "../roles";
 import { approvedToast } from "./PlanActions";
@@ -1345,14 +1345,13 @@ export function RecentWork({ slug }: { slug: string }) {
         <ul className="flex flex-col divide-y divide-line">
           {runs.slice(0, 12).map((r) => {
             const finished = ["verified", "failed", "canceled", "uncertain"].includes(r.status);
-            const runStatus = runStatusPresentation(r.status);
             return (
               <li key={r.id} className="flex min-w-0 flex-col gap-1 py-2.5 first:pt-0 last:pb-0">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="min-w-0 truncate text-ui font-medium text-ink">{r.title}</span>
                   <span className="flex flex-wrap gap-1.5">
                     {r.isFixture ? <Badge tone="violet">Demo</Badge> : null}
-                    <Badge tone={runStatus.tone}>{runStatus.label}</Badge>
+                    <RunRowBadge run={r} />
                   </span>
                 </div>
                 <span className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-3">
@@ -1364,11 +1363,7 @@ export function RecentWork({ slug }: { slug: string }) {
                   <span className="tabular-nums">{finished ? `${fmt.spent(r.actualMicros, r.providerMicros)} of ≤ ${fmt.upTo(r.estimateMicros)}` : `≤ ${fmt.upTo(r.estimateMicros)} reserved`}</span>
                   {now ? <span>{relativeTime(r.createdAt, now)}</span> : null}
                 </span>
-                {r.userMessage ? (
-                  <Callout tone={r.status === "failed" ? "danger" : "info"} live="none" className="mt-1 py-2">
-                    {r.userMessage}
-                  </Callout>
-                ) : null}
+                <StoppedRunNotice slug={slug} run={r} className="mt-1 py-2" />
               </li>
             );
           })}

@@ -233,6 +233,30 @@ export const makeItHappenPreview = query({
 });
 
 /** Draft the first work for a channel (into Review work) and add to-dos for the steps only the owner can do. */
+/** The latest "Make it happen" job per channel, so each channel shows its progress and result in place. */
+export const makeItHappenRuns = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const runs = await ctx.db
+      .query("workflowRuns")
+      .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
+      .order("desc")
+      .take(60);
+    const out: Record<string, { id: Id<"workflowRuns">; status: string; title: string; createdAt: number }> = {};
+    for (const r of runs) {
+      let channelId: unknown;
+      try {
+        channelId = (JSON.parse(r.input) as { makeItHappen?: unknown }).makeItHappen;
+      } catch {
+        continue;
+      }
+      if (typeof channelId === "string" && !out[channelId] && !r.dismissedAt) out[channelId] = { id: r._id, status: r.status, title: r.title, createdAt: r.createdAt };
+    }
+    return out;
+  },
+});
+
 export const makeItHappen = mutation({
   args: { slug: v.string(), channelId: v.string() },
   handler: async (ctx, { slug, channelId }) => {

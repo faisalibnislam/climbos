@@ -771,6 +771,16 @@ export const MAX_AUTO_RESUMES = 2;
 /** Owner retries of one run. */
 export const MAX_RETRIES = 3;
 
+/** Whether the owner can continue a stopped run from its last finished step. */
+export function canRetryRun(run: Pick<Doc<"workflowRuns">, "status" | "resumeWith" | "retries">, steps: Pick<Doc<"workflowSteps">, "status">[]): boolean {
+  return run.status === "failed" && Boolean(run.resumeWith && RESUMABLE.has(run.resumeWith.fn)) && (run.retries ?? 0) < MAX_RETRIES && !steps.some((s) => s.status === "uncertain");
+}
+
+/** Credits a retry reserves: the rest of the estimate, at least a third of it (the unfinished step runs again). */
+export function retryReserveMicros(run: Pick<Doc<"workflowRuns">, "estimateMicros" | "actualMicros">): number {
+  return Math.max(run.estimateMicros - run.actualMicros, Math.ceil(run.estimateMicros / 3));
+}
+
 export async function scheduleResume(ctx: MutationCtx, run: Doc<"workflowRuns">): Promise<boolean> {
   const r = run.resumeWith;
   if (!r || !RESUMABLE.has(r.fn)) return false;
@@ -813,7 +823,7 @@ export async function reopenFailedRun(ctx: MutationCtx, run: Doc<"workflowRuns">
   if (active >= MAX_ACTIVE_RUNS) throw appError("RATE_LIMITED", "Your team is busy with several jobs. Retry as soon as one finishes.");
 
   // Reserve the rest of the estimate (at least a third of it: the unfinished step runs again).
-  const remaining = Math.max(run.estimateMicros - run.actualMicros, Math.ceil(run.estimateMicros / 3));
+  const remaining = retryReserveMicros(run);
   const budgetError = await customAgentBudgetError(ctx, run, remaining, true);
   if (budgetError) throw appError("LIMIT_REACHED", budgetError, { reason: "custom_agent_budget" });
   const old = run.reservationId ? await ctx.db.get(run.reservationId) : null;

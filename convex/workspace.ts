@@ -7,7 +7,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
-import { ACTIVE_RUN_STATUSES, createRunWithReservation, finishRunImpl, latestRunOfKind, reopenFailedRun } from "./engine";
+import { ACTIVE_RUN_STATUSES, canRetryRun, createRunWithReservation, finishRunImpl, latestRunOfKind, reopenFailedRun, retryReserveMicros } from "./engine";
 import { activePolicyVersion } from "./jobWrites";
 import { audit } from "./lib/audit";
 import { approvalHash, can, canonicalJson, sha256Hex } from "../shared/policy";
@@ -74,8 +74,9 @@ export const today = query({
         .order("desc")
         .take(30)
     )
-      .filter((r) => r.kind !== "climb_chat" && r.kind !== "chat_intent")
+      .filter((r) => r.kind !== "climb_chat" && r.kind !== "chat_intent" && !r.dismissedAt)
       .slice(0, 6);
+    const stopped = await stoppedRunDetails(ctx, runs);
     // Real counts for the glance cards (not just the six recent runs shown).
     const isJob = (r: Doc<"workflowRuns">) => r.kind !== "climb_chat" && r.kind !== "chat_intent";
     let workingNow = 0;
@@ -166,7 +167,7 @@ export const today = query({
         .slice(0, 6)
         .map(cardView),
       counts: { workingNow, doneThisWeek },
-      recent: runs.map((r) => ({ id: r._id, kind: r.kind, title: r.title, status: r.status, roles: r.roles, createdAt: r.createdAt, userMessage: r.userMessage ?? null, isFixture: r.isFixture })),
+      recent: runs.map((r) => ({ id: r._id, kind: r.kind, title: r.title, status: r.status, roles: r.roles, createdAt: r.createdAt, userMessage: r.userMessage ?? null, isFixture: r.isFixture, estimateMicros: r.estimateMicros, ...stopped(r) })),
       chat: messages
         .reverse()
         .map((m) => ({ id: m._id, author: m.author, text: m.text, understood: m.understood ?? null, status: m.status, runId: m.runId ?? null, replyTo: m.replyTo ?? null, createdAt: m.createdAt, cards: m.actionCardIds.map((id) => chatCards.find((c) => c._id === id)).filter((c): c is Doc<"actionCards"> => Boolean(c)).map(cardView) })),
@@ -1365,8 +1366,10 @@ export const runs = query({
       .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
       .order("desc")
       .take(50);
+    const visible = rows.filter((r) => !r.dismissedAt);
     const apiCost = await showsApiCost(ctx, user._id);
-    return rows.map((r) => ({ id: r._id, title: r.title, kind: r.kind, status: r.status, roles: r.roles, estimateMicros: r.estimateMicros, actualMicros: r.actualMicros, ...(apiCost ? { providerMicros: runProviderMicros(r) } : {}), userMessage: r.userMessage ?? null, createdAt: r.createdAt, isFixture: r.isFixture }));
+    const stopped = await stoppedRunDetails(ctx, rows);
+    return visible.map((r) => ({ id: r._id, title: r.title, kind: r.kind, status: r.status, roles: r.roles, estimateMicros: r.estimateMicros, actualMicros: r.actualMicros, ...(apiCost ? { providerMicros: runProviderMicros(r) } : {}), userMessage: r.userMessage ?? null, createdAt: r.createdAt, isFixture: r.isFixture, ...stopped(r) }));
   },
 });
 
@@ -1457,7 +1460,11 @@ export const activeWork = query({
       .filter((r) => r.status === "verified" && r.updatedAt > now - 15 * 60_000)
       .slice(0, 5)
       .map((r) => ({ id: r._id, title: r.title, kind: r.kind, finishedAt: r.updatedAt }));
-    return { active: views, justFinished };
+    const justStopped = runs
+      .filter((r) => r.status === "failed" && r.updatedAt > now - 15 * 60_000 && !r.dismissedAt)
+      .slice(0, 5)
+      .map((r) => ({ id: r._id, title: r.title, kind: r.kind, finishedAt: r.updatedAt }));
+    return { active: views, justFinished, justStopped };
   },
 });
 
@@ -1515,6 +1522,35 @@ export const runDetail = query({
  * Retry a stopped job from where it stopped: finished steps are reused, only
  * the unfinished ones run again (and only those are charged).
  */
+/**
+ * For runs that stopped: whether newer work of the same kind already finished (the failure no
+ * longer matters), whether it can continue, and what continuing reserves. Other runs get nothing.
+ */
+async function stoppedRunDetails(ctx: QueryCtx, rows: Doc<"workflowRuns">[]) {
+  const details = new Map<Id<"workflowRuns">, { replaced: boolean; canRetry: boolean; retryMicros: number }>();
+  for (const r of rows) {
+    if (r.status !== "failed") continue;
+    const replaced = rows.some((o) => o.kind === r.kind && o.createdAt > r.createdAt && o.status === "verified");
+    const steps = replaced ? [] : await ctx.db.query("workflowSteps").withIndex("by_run", (q) => q.eq("runId", r._id)).take(60);
+    details.set(r._id, { replaced, canRetry: !replaced && canRetryRun(r, steps), retryMicros: retryReserveMicros(r) });
+  }
+  return (r: Doc<"workflowRuns">) => details.get(r._id) ?? { replaced: false, canRetry: false, retryMicros: 0 };
+}
+
+/** Hide a stopped run from Recent work and Home. It stays in the full work history. */
+export const dismissRun = mutation({
+  args: { slug: v.string(), runId: v.id("workflowRuns") },
+  handler: async (ctx, { slug, runId }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const run = assertSameOrg(await ctx.db.get(runId), org._id, "job");
+    if (!["failed", "canceled", "uncertain"].includes(run.status)) throw appError("INVALID", "Only a job that stopped can be dismissed.");
+    if (run.dismissedAt) return { ok: true };
+    await ctx.db.patch(run._id, { dismissedAt: Date.now() });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "run.dismissed", subjectType: "workflowRun", subjectId: run._id, summary: `Dismissed stopped job: ${run.title}` });
+    return { ok: true };
+  },
+});
+
 export const retryRun = mutation({
   args: { slug: v.string(), runId: v.id("workflowRuns") },
   handler: async (ctx, { slug, runId }) => {

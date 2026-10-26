@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSyncExternalStore, type ReactNode } from "react";
 import { CircleAlert, CircleCheck, Info, X } from "@/components/icons"
 import { cn } from "@/lib/utils";
@@ -13,6 +14,8 @@ export interface ToastItem {
   tone: ToastTone;
   /** ms before auto-dismiss; 0 keeps it until closed. */
   duration: number;
+  /** One link to follow up, e.g. "Watch progress". */
+  action?: { label: string; href: string };
 }
 
 let items: ToastItem[] = [];
@@ -31,10 +34,10 @@ export function dismissToast(id: number) {
  * layout. Keep toasts for confirmations; never put the only copy of important
  * information in a toast.
  */
-export function toast(input: { title: ReactNode; description?: ReactNode; tone?: ToastTone; duration?: number }): number {
+export function toast(input: { title: ReactNode; description?: ReactNode; tone?: ToastTone; duration?: number; action?: { label: string; href: string } }): number {
   const id = nextId++;
-  const duration = input.duration ?? 6000;
-  items = [...items.slice(-3), { id, title: input.title, description: input.description, tone: input.tone ?? "info", duration }];
+  const duration = input.duration ?? (input.action ? 10000 : 6000);
+  items = [...items.slice(-3), { id, title: input.title, description: input.description, tone: input.tone ?? "info", duration, ...(input.action ? { action: input.action } : {}) }];
   emit();
   if (duration > 0 && typeof window !== "undefined") window.setTimeout(() => dismissToast(id), duration);
   return id;
@@ -72,6 +75,11 @@ export function Toaster() {
             <div className="min-w-0 flex-1">
               <p className="heading-card">{t.title}</p>
               {t.description ? <p className="mt-0.5 text-ui text-ink-3">{t.description}</p> : null}
+              {t.action ? (
+                <Link href={t.action.href} onClick={() => dismissToast(t.id)} className="mt-1.5 inline-block text-ui font-medium text-brand-800 underline-offset-2 hover:underline">
+                  {t.action.label} →
+                </Link>
+              ) : null}
             </div>
             <button
               type="button"

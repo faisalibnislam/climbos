@@ -10,7 +10,7 @@ import { api } from "@convex/_generated/api";
 import { BarChart3, CalendarDays, ChevronDown, Compass, Home, Inbox, LogOut, Magic, Menu, PanelLeftClose, PanelLeftOpen, PanelsTopLeft, PauseCircle, PlayCircle, Plug, Search, Settings, Users, type LucideIcon } from "@/components/icons";
 import { CommandPalette } from "./CommandPalette";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
-import { TeamActivity } from "./TeamActivity";
+import { JobToasts, TeamActivity } from "./TeamActivity";
 import { ClimbProvider, useClimb } from "@/components/climb/context";
 import { ClimbPanel } from "@/components/climb/ClimbPanel";
 import { PointOverlay } from "@/components/climb/PointOverlay";
@@ -150,6 +150,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
             </button>
             <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
               <TeamActivity slug={slug} />
+              <JobToasts slug={slug} />
               <Button
                 size="sm"
                 variant="secondary"

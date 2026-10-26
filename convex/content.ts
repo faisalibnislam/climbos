@@ -31,7 +31,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import { artifactStatusValidator, channelValidator } from "./schema";
-import { createRunWithReservation, MAX_RETRIES } from "./engine";
+import { canRetryRun, createRunWithReservation } from "./engine";
 import { audit } from "./lib/audit";
 import { approvalProblem, DIRECT_PUBLISH, extendApprovalUntil, invalidateApprovals, publishTarget, recordArtifactDecision, refuseInCopilot, autonomyMode, SCHEDULE_GRACE_MS } from "./lib/approvals";
 import { onOwnerDecision, onPublishOutcome } from "./lib/autopilot";
@@ -757,7 +757,7 @@ export const runStatus = query({
         }
       })(),
       /** A stopped run can continue from its last finished step. */
-      canRetry: run.status === "failed" && Boolean(run.resumeWith) && (run.retries ?? 0) < MAX_RETRIES && !steps.some((s) => s.status === "uncertain"),
+      canRetry: canRetryRun(run, steps),
       planned: plannedSteps(run.kind, run.engine, { website: steps.length === 0 || steps.some((s) => s.label === "Read your website") }),
       steps: steps.map((s) => ({
         label: s.label,
