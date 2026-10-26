@@ -326,7 +326,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { id: string; kind: "more_sales" | "more_customers" | "more_reach" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.71-competitor-battlecards";
+export const ENGINE_VERSION = "v3.72-spec-coverage-guards";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -393,8 +393,26 @@ function lintStrategyExploration(exploration: StrategyExploration | undefined, i
     ...(input.constraints ? { constraints: input.constraints } : {}),
   }, 2).map(({ precedent }) => precedent.id));
   const issues: LintIssue[] = [];
+  const readUrls = input.availableSourceUrls ?? input.precomputedResearch?.sources.map((source) => source.url) ?? [];
+  const readKeys = new Set(readUrls.map(citeKey));
   for (const mode of ["grounded", "adjacent", "bold"] as const) {
-    for (const id of exploration[mode].precedentIds) {
+    const option = exploration[mode];
+    const path = `strategyExploration.${mode}.evidenceRefs`;
+    for (const ref of option.evidenceRefs) {
+      const trimmed = ref.trim();
+      const fact = /^fact:(\d+)$/i.exec(trimmed);
+      if (fact) {
+        if (Number(fact[1]) >= input.facts.length) issues.push({ severity: "error", rule: "exploration_evidence", message: `${mode} cites ${trimmed}, which is outside this run's confirmed fact list.`, path });
+      } else if (/^https?:\/\//i.test(trimmed)) {
+        if (!readKeys.has(citeKey(trimmed))) issues.push({ severity: "error", rule: "exploration_evidence", message: `${mode} cites a page that wasn't read in this run: ${trimmed.slice(0, 120)}.`, path });
+      } else if (!retrievedIds.has(trimmed)) {
+        issues.push({ severity: "error", rule: "exploration_evidence", message: `${mode} evidence reference "${trimmed.slice(0, 80)}" must be fact:N, a page read in this run, or a retrieved precedent ID.`, path });
+      }
+    }
+    if (option.evidenceBasis !== "speculative_hypothesis" && option.evidenceRefs.length === 0 && option.precedentIds.length === 0) {
+      issues.push({ severity: "warn", rule: "exploration_evidence", message: `${mode} is labelled ${option.evidenceBasis.replace(/_/g, " ")} but cites nothing. Add a reference or label it a speculative hypothesis; the option stays either way.`, path });
+    }
+    for (const id of option.precedentIds) {
       if (!retrievedIds.has(id)) issues.push({ severity: "error", rule: "creative_precedent", message: `${mode} cites ${id}, which was not retrieved for this business context. Use only retrieved case IDs or remove the analogy.`, path: `strategyExploration.${mode}.precedentIds` });
     }
   }

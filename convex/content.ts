@@ -3,6 +3,7 @@ import { featureAllowed, requirePaid } from "./lib/access";
 import { aiModeView, resolveAiMode } from "./lib/aiMode";
 import { EXPERT_KINDS } from "../shared/agents/routes";
 import { lintApprovedOfferCopy } from "../shared/agents/offerAssessment";
+import { unsupportedClaimIssue } from "./lib/claimCheck";
 import { v } from "convex/values";
 
 /** A running job's early output, filled in as it arrives (first take, channels that fit, chosen plays). */
@@ -487,6 +488,10 @@ export const decide = mutation({
       );
       const blockingOfferIssue = offerIssues.find((issue) => issue.severity === "error");
       if (blockingOfferIssue) throw appError("INVALID", `This copy doesn't match the offer terms approved with its plan. ${blockingOfferIssue.message}`);
+    }
+    if (args.decision === "approve") {
+      const claimIssue = await unsupportedClaimIssue(ctx, a.businessId, [a.title, ver.headline, ver.body, ver.callToAction, ...ver.hashtags, ver.altText]);
+      if (claimIssue) throw appError("INVALID", `This copy makes a claim ClimbOS can't verify yet. ${claimIssue}`);
     }
     const { connection } = await publishTarget(ctx, org._id, a.channel);
     if (a.status === "approved" && !approvalProblem(a.approvalId ? await ctx.db.get(a.approvalId) : null, ver, connection, a.scheduledFor)) {

@@ -7,6 +7,7 @@ import { internalAction, internalMutation, internalQuery, mutation, query } from
 import { audit } from "./lib/audit";
 import { applyTrustEvent, onOwnerDecision, settingsFor } from "./lib/autopilot";
 import { invalidateApprovals, recordArtifactDecision } from "./lib/approvals";
+import { unsupportedClaimIssue } from "./lib/claimCheck";
 import { approvalsEmail, headsUpEmail } from "./lib/emailTemplates";
 
 /**
@@ -220,6 +221,9 @@ export const consume = mutation({
     if (a.status !== "in_review") return { ok: false as const, message: "This one has already been handled." };
     const ver = a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null;
     if (!ver) return { ok: false as const, message: "Nothing to approve yet." };
+    if (await unsupportedClaimIssue(ctx, a.businessId, [a.title, ver.headline, ver.body, ver.callToAction, ...ver.hashtags, ver.altText])) {
+      return { ok: false as const, message: "This post makes a claim ClimbOS can't verify yet. Open it in ClimbOS to fix it before approving." };
+    }
     await recordArtifactDecision(ctx, { org, artifact: a, version: ver, decision: "approve", decidedBy: t.userId, note: "Approved from email" });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: t.userId, action: "content.approved", subjectType: "artifact", subjectId: a._id, summary: `Approved "${a.title}" from email (v${ver.version}).` });
     await onOwnerDecision(ctx, { org, artifactId: a._id, decision: "approve", edited: ver.version > 1 && Boolean(ver.editedByUser), userId: t.userId });

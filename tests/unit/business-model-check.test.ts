@@ -47,6 +47,14 @@ describe("business model check output", () => {
     ]));
   });
 
+  it("requires a date on research signals unless the limitation says the source is undated", () => {
+    const base = check().marketSignals[0];
+    const lint = (signal: BusinessModelCheck["marketSignals"][number]) => lintBusinessModelCheck(check({ marketSignals: [signal] }), { factCount: 1, readUrls: ["https://rival.example/plans"] }).filter((i) => i.rule === "market_signal_date");
+    expect(lint({ ...base, observedAt: undefined })).toHaveLength(1);
+    expect(lint({ ...base, observedAt: undefined, limitation: "The rival page is undated." })).toEqual([]);
+    expect(lint({ ...base, observedAt: undefined, basis: "inference", evidenceRefs: [] })).toEqual([]);
+  });
+
   it("keeps a bold alternative without precedent and doesn't gate the verdict", () => {
     const issues = lintBusinessModelCheck(check({ verdict: { status: "at_risk", confidence: "low", reasoning: "Judgment call on thin evidence.", whatWouldChangeIt: "Any first-party trend." } }), { factCount: 1, readUrls: ["https://rival.example/plans"] });
     expect(issues.filter((i) => i.severity === "error")).toEqual([]);

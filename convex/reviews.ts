@@ -11,6 +11,7 @@ import { unsubscribeToken } from "../shared/outbound/sending";
 import { hasActiveOutboundSequence } from "./lib/contactPressure";
 import { serverSecret } from "./lib/crypto";
 import { reviewSafetySignals } from "../shared/reviews/safety";
+import { reviewDestinationProblem } from "../shared/acquisition/platformRules";
 import { groupVoiceThemes, VOICE_THEME_LABELS, type VoiceThemeKey } from "../shared/reviews/voiceThemes";
 
 /**
@@ -130,12 +131,15 @@ export const setVoiceThemeFeedback = mutation({
 export const setReviewUrl = mutation({
   args: { slug: v.string(), url: v.string() },
   handler: async (ctx, { slug, url }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "edit");
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const clean = url.trim();
     if (clean && !/^https:\/\/[^\s]+$/i.test(clean)) throw appError("INVALID", "Paste the full https:// link to your review page.");
+    const destinationProblem = clean ? reviewDestinationProblem(clean) : null;
+    if (destinationProblem) throw appError("INVALID", destinationProblem);
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     if (!business) throw appError("NOT_FOUND", "Finish setting up your business first.");
     await ctx.db.patch(business._id, { reviewUrl: clean.slice(0, 1000) || undefined });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "reviews.review_url_set", subjectType: "business", subjectId: String(business._id), summary: clean ? "Set the review invitation link" : "Removed the review invitation link" });
   },
 });
 
@@ -155,6 +159,8 @@ export const prepareBatch = mutation({
     await requirePaid(ctx, org, "sending");
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     if (!business?.reviewUrl) throw appError("INVALID", "Add your review link first (for example your Google review link).");
+    const destinationProblem = reviewDestinationProblem(business.reviewUrl);
+    if (destinationProblem) throw appError("INVALID", destinationProblem);
     const mailbox = await ctx.db.query("connections").withIndex("by_org_provider", (q) => q.eq("orgId", org._id).eq("provider", "email_mailbox")).first();
     if (mailbox?.status !== "connected") throw appError("INVALID", "Connect your mailbox in Connections first.");
     const today = await ctx.db.query("reviewRequests").withIndex("by_org_created", (q) => q.eq("orgId", org._id).gte("createdAt", Date.now() - 86_400_000)).take(DAILY_LIMIT + 1);

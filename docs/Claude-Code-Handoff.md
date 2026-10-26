@@ -166,6 +166,8 @@ At the owner's request (25 October 2026), ClimbOS has an on-demand business mode
 
 These are known open gaps, not a complete substitute for checking the requirement audit and ledger before choosing work:
 
+0. **Spec coverage:** `docs/growth-engine/spec-coverage.md` maps the complete product specification to code and ranks the 17 remaining buildable gaps. Start there.
+
 1. **Live quality and outcomes:** Most changed paths are fixture/regression tested. No broad held-out real-model evaluation demonstrates expert-level strategy quality across diverse businesses. Business outcomes, causality, channel fit, and forecast calibration remain limited or unmeasured.
 2. **Retention evidence:** Owners can now enter weekly repeat-customer, revenue, and contribution aggregates from the plan card. There is no customer-level cohort history, repeat-purchase timing, churn reason/satisfaction workflow, or verified retention attribution; do not infer unique retained customers from customer-week totals.
 3. **Traceability and evidence:** (Partly addressed: play action references now carry verbatim excerpts that code checks against the cited fact or loaded page; audience needs, decision observations, and other prose still use membership-only references.) Research sources are often linked to a run or object rather than every claim/sentence. A URL's presence does not prove the cited page supports the exact claim. Expand claim-level linkage where material, and test support matching and provenance preservation.

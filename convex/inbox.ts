@@ -15,6 +15,7 @@ import { sha256Hex, TERMINAL_STATUSES } from "../shared/policy";
 import { bookingLinkFor } from "../shared/outbound/sending";
 import { bookingLive } from "./outbound";
 import { ratingOnlyReviewReply } from "../shared/reviews/safety";
+import { publicReplyPrivacyIssue } from "../shared/reviews/replyPrivacy";
 import { pipelineAttention } from "../shared/growth/pipeline";
 
 /**
@@ -151,10 +152,20 @@ export const replyContext = internalQuery({
 
 export const saveDraft = internalMutation({
   args: { messageId: v.id("communityMessages"), text: v.string() },
-  handler: async (ctx, { messageId, text }) => {
+  handler: async (ctx, { messageId, text }): Promise<{ saved: boolean; problem?: string }> => {
     const m = await ctx.db.get(messageId);
-    if (!m) return;
+    if (!m) return { saved: false };
+    if (m.kind === "review" && m.channel !== "feedback") {
+      const recent = await ctx.db.query("communityMessages").withIndex("by_org_received", (q) => q.eq("orgId", m.orgId)).order("desc").take(300);
+      const privateFeedback = recent.filter((x) => x.channel === "feedback" && x.authorName === m.authorName).map((x) => x.text);
+      const problem = publicReplyPrivacyIssue(text, privateFeedback);
+      if (problem) {
+        await ctx.db.patch(messageId, { draftRunId: undefined, updatedAt: Date.now() });
+        return { saved: false, problem };
+      }
+    }
     await ctx.db.patch(messageId, { suggestedReply: text.slice(0, 4000), status: m.status === "new" ? "suggested" : m.status, draftRunId: undefined, updatedAt: Date.now() });
+    return { saved: true };
   },
 });
 
@@ -212,7 +223,11 @@ export const writeReply = internalAction({
       await ctx.runMutation(internal.inbox.clearDraft, { messageId, runId });
       return;
     }
-    await ctx.runMutation(internal.inbox.saveDraft, { messageId, text: r.text.trim() });
+    const saved = await ctx.runMutation(internal.inbox.saveDraft, { messageId, text: r.text.trim() });
+    if (!saved.saved) {
+      await ctx.runMutation(internal.engine.finishRun, { runId, status: "failed", userMessage: saved.problem ? `The draft was held back. ${saved.problem} Try again or write it yourself.` : "Couldn't draft a reply. Try again." });
+      return;
+    }
     await ctx.runMutation(internal.engine.finishRun, { runId, status: "verified" });
   },
 });

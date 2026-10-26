@@ -443,3 +443,7 @@ The 410 numbered requests are not 410 independent defects. The first 350 are dia
 The current changes are being validated with focused regression tests for review-invitation neutrality, tenant/scope/content binding, recipient eligibility attestation, customer voice grouping, evidence-based channel recommendations, original strategy classifications, and approval-gated plan/outcome behavior. The exact command results belong in the implementation handoff/commit notes; this audit does not substitute for those test runs.
 
 Read `docs/Capabilities.md`, `docs/growth-engine/master-spec-v1-2026-10-18.md`, and `docs/Claude-Code-Handoff.md` alongside this matrix.
+
+## Spec cross-check (2026-10-26)
+
+See `docs/growth-engine/spec-coverage.md` for the requirement-by-requirement status against the complete product specification. That doc lists what was fixed in this pass and the 17 remaining buildable gaps, ranked by owner impact.

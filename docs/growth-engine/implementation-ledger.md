@@ -1011,3 +1011,17 @@ Three tests had been failing since before this session (confirmed at `517d049`).
 ## Resumption note (2026-10-26, production deploy blocked by a legacy plan snapshot)
 
 The first `convex deploy -y` to production (`kindly-quail-695`) was rejected by Convex schema validation before any change took effect. A production `strategies` document from engine `v3.1-trust-checks` has a small `expert.snapshot` (aiMode, currency, engine, facts, goal, horizonDays, insightsChars, monthlyAdBudget), missing fields the schema later made required. Production had not been deployed since before those requirements, so the existing `main` schema would also have failed. The stored-data validator for `expert.snapshot` now makes every top-level field optional. New snapshots are still written with the strict `PlanSnapshot` type, and every reader of `snapshotId`, `capabilities`, and similar fields already guards for absence (legacy plans are treated as version 0). Verified: typecheck exit 0; 24 snapshot and plan-history files (270 tests); ESLint and diff check exit 0.
+
+## Resumption note (2026-10-26, spec cross-check and first guard fixes)
+
+Four read-only audits compared `docs/ClimbOS-Complete-Product-Specification.md` sections 3–14 and 19 with runtime code. The results are in `docs/growth-engine/spec-coverage.md`. The high-impact claims were spot-checked by hand.
+
+Fixed in this increment (engine `v3.72-spec-coverage-guards`):
+- Approval now re-runs the claim lint against current confirmed facts in all three approval paths: app, email and autopilot (`convex/lib/claimCheck.ts`).
+- A deterministic manipulation lint covers vote requests, review incentives, review gating and virality promises.
+- Yelp is refused as a review-invitation destination, and setting the review link is audited.
+- A privacy guard checks public review reply drafts.
+- Undated research market signals are rejected in the business model check.
+- Exploration evidence references are checked.
+
+The 17 remaining buildable gaps are ranked in the coverage doc. Full suite: 274 files and 1,892 tests pass, with typecheck and ESLint clean. Nothing was deployed.

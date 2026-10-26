@@ -216,7 +216,7 @@ export const PLAYBOOKS: Playbook[] = [
   {
     id: "PB-referrals",
     name: "Referral moment",
-    decision: "Whether happy customers bring similar customers",
+    decision: "Whether existing customers bring similar customers",
     worksOn: ["demand"],
     appliesWhen: "There are active, satisfied customers and a natural moment to share.",
     avoidWhen: "Few customers, or activation and retention are weak (referrals feed a leak).",

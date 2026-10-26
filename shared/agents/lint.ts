@@ -79,6 +79,26 @@ function supportsUrgencyClaim(claim: string, evidence: string, kind: "scarcity" 
   });
 }
 
+/**
+ * Platform-manipulation patterns no evidence can make acceptable: asking for
+ * votes, paying or rewarding reviews, inviting only satisfied customers to
+ * review, and promising virality (spec section 11 platform rules).
+ */
+const MANIPULATION: { rule: string; re: RegExp; message: string }[] = [
+  { rule: "vote_request", re: /\b(?:up-?vote|vote for us|vote us up|give us (?:an? )?(?:upvote|vote)|support us (?:on|with a vote on) product hunt|help us (?:reach|hit|get to) #?1 on product hunt)\b/i, message: "Asks people for votes. Launch and community platforms treat vote requests as manipulation; ask for honest feedback instead." },
+  { rule: "review_incentive", re: /\b(?:(?:leave|write|post)\s+(?:us\s+)?an?\s+(?:\d-star\s+|five-star\s+|5-star\s+|positive\s+|good\s+|great\s+)?review\b[^.!?\n]{0,60}\b(?:get|receive|earn|win|for)\s+(?:an?\s+|\d+%?\s+)?(?:free|discount|gift|voucher|coupon|credit|entry|off|reward|\$)|(?:free|discount|gift|voucher|coupon|reward)\w*(?:\s+\w+){0,3}\s+(?:for|in exchange for)\s+(?:an?\s+|your\s+)?(?:\d-star\s+|five-star\s+|5-star\s+|positive\s+)?reviews?)/i, message: "Offers something in return for a review. Incentivised reviews break most review platforms' rules; ask every customer the same neutral way." },
+  { rule: "review_gating", re: /\b(?:if you (?:loved|enjoyed|liked|had a (?:great|good|positive|wonderful) (?:experience|time))[^.!?\n]{0,40}\breview|(?:happy|satisfied) customers?[^.!?\n]{0,30}\b(?:leave|write|post) (?:us )?an? review|only (?:happy|satisfied) customers|(?:5|five)-star reviews? (?:only|please)|leave (?:us )?an? (?:5|five)-star review)/i, message: "Invites only satisfied customers or a set rating. Review platforms ban this gating; invite every customer with the same neutral wording." },
+  { rule: "virality_promise", re: /\b(?:guaranteed? (?:to )?(?:go )?viral|will go viral|go viral guaranteed|guaranteed (?:views|followers|likes))\b/i, message: "Promises virality or guaranteed reach. No one controls platform distribution; describe the content, not the outcome." },
+];
+
+export function lintManipulation(fields: { path: string; text: string }[]): LintIssue[] {
+  const issues: LintIssue[] = [];
+  for (const { path, text } of fields) {
+    for (const m of MANIPULATION) if (m.re.test(text)) issues.push({ severity: "error", rule: m.rule, message: m.message, path });
+  }
+  return issues;
+}
+
 /** Unsupported capability, scale or leadership claims in customer-facing text. */
 export function lintClaims(fields: { path: string; text: string }[], evidence: string): LintIssue[] {
   const issues: LintIssue[] = [];
@@ -105,7 +125,7 @@ export function lintClaims(fields: { path: string; text: string }[], evidence: s
       issues.push({ severity: "error", rule: "unsupported_deadline", message: "A deadline or expiring offer needs a current confirmed end date or time. Remove the deadline or confirm the real terms first.", path });
     }
   }
-  return issues;
+  return [...issues, ...lintManipulation(fields)];
 }
 const EMOJI = /\p{Extended_Pictographic}/gu;
 

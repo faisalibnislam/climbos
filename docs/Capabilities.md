@@ -62,6 +62,9 @@ This table describes implemented paths, not current production status for any pa
 
 ## Boundaries
 
+- Approval re-checks copy for unverifiable claims and for manipulation (vote requests, review incentives, review gating, virality promises), whether approval happens in the app, by email or through autopilot.
+- Review invitations won't go to Yelp, which asks businesses not to request reviews. AI drafts of public review replies are held back if they contain contact details, order references or wording from the customer's private feedback.
+
 - ClimbOS does not invent customers, testimonials, statistics, results, contacts, or business facts.
 - Drafting a recommendation does not authorize sending, publishing, changing a live campaign, or spending money.
 - No tactic guarantees growth, conversion lift, search ranking, or answer-engine citation.

@@ -255,6 +255,16 @@ describe("flag wiring", () => {
     expect(off.safeParse(base).success).toBe(true);
   });
 
+  it("checks exploration evidence references without dropping uncited options", () => {
+    const option = { title: "Test an existing customer question", challengedConvention: "A business should only announce finished ideas.", whyConventionPersists: "This feels easier to control.", costOfBreaking: "Early feedback can expose an unfinished idea.", businessMechanism: "Invite a few customers to react to a low-cost concept.", businessAction: "Share one private mockup with a few eligible customers.", whyItCouldMatter: "The business may learn what buyers actually understand.", customerBehavior: "A buyer explains a use case or objection.", audienceOrCondition: "Only with customer permission.", evidenceBasis: "speculative_hypothesis", evidenceNote: "No business-specific outcome is known yet.", evidenceRefs: [], precedentIds: [], transferLogic: "No precedent is needed for this small direct test.", keyDifferences: "This is a small private customer test.", assumptions: [], uncertainties: ["Buyer interest is unknown."], risks: ["The concept may create an expectation."], costAndCapacity: "One hour, no spend.", novelty: "medium", evidenceStrength: "low", businessFit: "medium", feasibility: "high", risk: "low", reversibleTest: { method: "Show a mockup to two eligible customers.", metric: "Useful buyer feedback", duration: "One week", resourceLimit: "One hour", continueIf: "A buyer names a useful next step.", changeIf: "The idea is understood but not relevant.", stopIf: "No buyer finds it useful." } };
+    const lintWith = (grounded: Record<string, unknown>) => growthPlaysSpec().lint?.({ portfolioNote: "", strategyExploration: { grounded, adjacent: option, bold: option }, economics: { revenuePerCustomerMonthUsd: 40, grossMargin: 0.6, monthlyChurn: 0.1, basis: "" }, plays: [] } as never, { task: "", brief: "", facts: ["Owners ask for evening slots"], availableSourceUrls: ["https://example.com/pricing"] } as never).filter((i) => i.rule === "exploration_evidence") ?? [];
+    expect(lintWith({ ...option, evidenceBasis: "evidence_supported_inference", evidenceRefs: ["fact:0", "https://example.com/pricing/"] })).toEqual([]);
+    const bad = lintWith({ ...option, evidenceBasis: "evidence_supported_inference", evidenceRefs: ["fact:3", "https://invented.example/case", "a blog I remember"] });
+    expect(bad.filter((i) => i.severity === "error")).toHaveLength(3);
+    expect(lintWith({ ...option, evidenceBasis: "established_practice", evidenceRefs: [], precedentIds: [] }).map((i) => i.severity)).toEqual(["warn"]);
+    expect(lintWith({ ...option, evidenceBasis: "speculative_hypothesis", evidenceRefs: [], precedentIds: [] })).toEqual([]);
+  });
+
   it("on: the task asks for the decision fields; off: it doesn't", () => {
     expect(playsTask({ scorecard: "", insights: "", decisionContract: true })).toContain(DECISION_FIELDS);
     const defaultTask = playsTask({ scorecard: "", insights: "" });
