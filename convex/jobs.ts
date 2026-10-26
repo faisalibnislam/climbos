@@ -1003,7 +1003,9 @@ function ownerEconomicsLine(u: OwnerEconomics | undefined, currency?: string): s
     u.newCustomersPerMonth !== undefined ? `the owner has room for at most ${u.newCustomersPerMonth} additional new customers a month with current staffing, workload, inventory and support (keep forecast incremental demand within this remaining capacity)` : "",
     u.monthlyGrowthCashUsd !== undefined ? `the owner can safely commit up to ${formatMoney(u.monthlyGrowthCashUsd, currency)} per month to growth cash costs (media and other cash costs; excludes owner time)` : "",
   ].filter(Boolean);
-  return parts.length ? `UNIT ECONOMICS (confirmed by the owner; use exactly these): ${parts.join(", ")}.` : "";
+  const unsure = (u.unsure ?? []).map((k) => ({ revenue: "revenue per customer", margin: "contribution margin", churn: "monthly churn" })[k]);
+  const unsureLine = unsure.length ? ` The owner said they are not sure of: ${unsure.join(", ")}. For each, use a cautious, clearly labelled assumption (basis "assumption") and say the owner can replace it; never present it as the owner's figure.` : "";
+  return parts.length ? `UNIT ECONOMICS (confirmed by the owner; use exactly these): ${parts.join(", ")}.${unsureLine}` : unsureLine.trim();
 }
 
 async function finish(

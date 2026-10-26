@@ -908,10 +908,12 @@ export const setUnitEconomics = mutation({
     ownerHoursPerWeek: v.optional(v.number()),
     newCustomersPerMonth: v.optional(v.number()),
     monthlyGrowthCashUsd: v.optional(v.number()),
+    /** Numbers the owner isn't sure of; a value given for one of these takes it off the list. */
+    unsure: v.optional(v.array(v.union(v.literal("revenue"), v.literal("margin"), v.literal("churn")))),
     segmentEconomics: v.optional(v.array(v.object({ segment: v.string(), currency: v.string(), periodDays: v.number(), customers: v.number(), netRevenue: v.number(), variableCosts: v.number(), costBoundary: v.string(), unknownCosts: v.optional(v.array(v.string())), strategicValueNote: v.optional(v.string()) }))),
     ranges: v.optional(v.object({ revenue: v.optional(v.object({ low: v.number(), high: v.number() })), margin: v.optional(v.object({ low: v.number(), high: v.number() })), churn: v.optional(v.object({ low: v.number(), high: v.number() })) })),
   },
-  handler: async (ctx, { slug, ranges, ...vals }) => {
+  handler: async (ctx, { slug, ranges, unsure: unsureArg, ...vals }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     if (!business) throw appError("NOT_FOUND", "Add your business first.");
@@ -962,6 +964,13 @@ export const setUnitEconomics = mutation({
       newCustomersPerMonth: vals.newCustomersPerMonth ?? prev?.newCustomersPerMonth,
       monthlyGrowthCashUsd: vals.monthlyGrowthCashUsd ?? prev?.monthlyGrowthCashUsd,
       segmentEconomics: vals.segmentEconomics ?? prev?.segmentEconomics,
+      // "Not sure" clears that number (it must not stay as an owner figure); a new number clears "not sure".
+      ...(() => {
+        const given = { revenue: vals.revenuePerCustomerMonthUsd, margin: vals.grossMargin, churn: vals.monthlyChurn };
+        const merged = new Set([...(prev?.unsure ?? []), ...(unsureArg ?? [])]);
+        for (const [k, val] of Object.entries(given)) if (val !== undefined) merged.delete(k as "revenue");
+        return merged.size ? { unsure: [...merged] } : {};
+      })(),
       // A new single number replaces its old range; a new range replaces the old one.
       ...(() => {
         const keep = { ...(prev?.ranges ?? {}) } as Record<string, { low: number; high: number }>;
@@ -973,6 +982,10 @@ export const setUnitEconomics = mutation({
       })(),
       updatedAt: Date.now(),
     };
+    const unsureNow = new Set(next.unsure ?? []);
+    if (unsureNow.has("revenue")) next.revenuePerCustomerMonthUsd = undefined;
+    if (unsureNow.has("margin")) next.grossMargin = undefined;
+    if (unsureNow.has("churn")) next.monthlyChurn = undefined;
     await ctx.db.patch(business._id, { unitEconomics: next });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "business.unit_economics", subjectType: "business", subjectId: business._id, summary: "Unit economics updated." });
   },

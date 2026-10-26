@@ -976,6 +976,8 @@ export default defineSchema({
         newCustomersPerMonth: v.optional(v.number()),
         /** Monthly cash the owner can safely commit to growth work; excludes non-cash owner time. */
         monthlyGrowthCashUsd: v.optional(v.number()),
+        /** Numbers the owner said they're not sure of: plans use a labelled assumption for these, never an owner figure. */
+        unsure: v.optional(v.array(v.union(v.literal("revenue"), v.literal("margin"), v.literal("churn")))),
         /** Owner-reported segment totals; no customer-level identity or cross-tenant data is inferred. */
         segmentEconomics: v.optional(v.array(v.object({
           segment: v.string(),

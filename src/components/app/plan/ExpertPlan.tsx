@@ -232,11 +232,11 @@ const GRADE: Record<string, string> = {
 };
 
 /** Score out of 100 from the growth-plays weights. */
-function score(sc: number[]) {
-  const c = (i: number) => Math.max(1, Math.min(5, sc[i] ?? 1));
+function score(sc: number[] | undefined) {
+  const c = (i: number) => Math.max(1, Math.min(5, sc?.[i] ?? 1));
   return Math.round(20 * (0.25 * c(0) + 0.2 * c(1) + 0.15 * c(2) + 0.1 * c(3) + 0.1 * c(4) + 0.1 * c(5) + 0.1 * c(6)));
 }
-const distinct = (sc: number[]) => Math.max(1, Math.min(5, sc[7] ?? 1));
+const distinct = (sc: number[] | undefined) => Math.max(1, Math.min(5, sc?.[7] ?? 1));
 
 const isShort = (s: string) => s.length <= 24;
 /** Whole amounts in the plan's currency (economics.currency; older plans are USD). */
@@ -1093,12 +1093,14 @@ function PlayCard({ play, slug, economics, results, planId, targets, canEdit = f
         {play.offerAssessment ? <p className="text-xs text-ink-3">Offer decision: {play.offerAssessment.recommendation.replaceAll("_", " ")} · {play.offerAssessment.mechanism.replaceAll("_", " ")} · owner approval required</p> : null}
       </header>
       <div className="flex flex-1 flex-col gap-4 p-4">
-        <figure className={cn("rounded-r-[var(--radius-control)] border-l-2 bg-surface-2 px-3 py-2", k.quote)}>
-          <figcaption className="text-overline mb-0.5">Hook</figcaption>
-          <blockquote className="font-display text-sm italic leading-snug text-ink">
-            “<Lead text={play.hook.replace(/^[“"]|[”"]$/g, "")} open={open} />”
-          </blockquote>
-        </figure>
+        {play.hook ? (
+          <figure className={cn("rounded-r-[var(--radius-control)] border-l-2 bg-surface-2 px-3 py-2", k.quote)}>
+            <figcaption className="text-overline mb-0.5">Hook</figcaption>
+            <blockquote className="font-display text-sm italic leading-snug text-ink">
+              “<Lead text={play.hook.replace(/^[“"]|[”"]$/g, "")} open={open} />”
+            </blockquote>
+          </figure>
+        ) : null}
         <dl className="flex flex-col gap-2">
           <Row icon={UsersRound} label="Who">
             <Lead text={play.audience} open={open} />

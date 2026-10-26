@@ -15,7 +15,8 @@ import { PlanToConnectedApps } from "@/components/app/connections/ConnectedProdu
 import type { Economics } from "../../../../../shared/agents/economics";
 import { formatMoney } from "../../../../../shared/economics/currency";
 import type { KnowledgeReferenceSet } from "../../../../../shared/knowledge/retrieve";
-import { FunnelNumbers, SharpenPlan } from "@/components/app/plan/SharpenPlan";
+import { SharpenPlan } from "@/components/app/plan/SharpenPlan";
+import { HelpClimbOS } from "@/components/app/plan/HelpClimbOS";
 import type { QualityFix, QualityState } from "../../../../../shared/agents/quality";
 import type { Diagnosis } from "../../../../../shared/agents/diagnosis";
 import { ExecutionPlan, GrowthPlays, NorthStar, type ExpertView, type PlayView } from "@/components/app/plan/ExpertPlan";
@@ -166,6 +167,22 @@ function PlanScreen({ slug }: { slug: string }) {
   const status = s ? (STRATEGY_STATUS[s.status] ?? { label: s.status, tone: "neutral" as Tone }) : null;
   const other = plan.otherVersion;
   const building = Boolean(plan.strategyRun && !RUN_FINISHED.has(plan.strategyRun.status));
+  const planQ = (s?.expert as { quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[]; conflicts?: string[] } } | null | undefined)?.quality ?? null;
+  // Missing customer numbers (or a play model the numbers would fix) are answered inline, not on another page.
+  const needsNumbers = Boolean(planQ && (planQ.state === "needs_input" || (planQ.state === "failed" && (planQ.fixes ?? []).some((f) => /^(economics|plays)/.test(f.path ?? "") || /revenue|margin|churn|customer is worth/i.test(f.message)))));
+  const helpPanel = (needed: boolean) => (
+    <HelpClimbOS
+      slug={slug}
+      canEdit={plan.canEdit}
+      currency={plan.businessCurrency}
+      unitEconomics={plan.unitEconomics}
+      funnel={plan.funnel}
+      unknowns={planQ?.unknowns ?? []}
+      needed={needed}
+      refresh={s ? { nextVersion: s.version + 1, estimateMicros: plan.planEstimateMicros, onStarted: setStartedRunId, building } : null}
+    />
+  );
+  const reviewHelp = needsNumbers || planQ?.unknowns?.length ? helpPanel(needsNumbers) : undefined;
   // A refresh that stopped after the newest version was written (otherwise it vanishes after a reload).
   const run = plan.strategyRun;
   const refreshStopped = Boolean(s && run && ["failed", "canceled", "uncertain"].includes(run.status) && run.createdAt > (plan.latestVersionAt ?? 0) && run.id !== startedRunId);
@@ -340,7 +357,7 @@ function PlanScreen({ slug }: { slug: string }) {
         </>
       ) : (
         <>
-          {s.status === "needs_approval" && !olderView ? <PlanReviewCard slug={slug} strategyId={s.id} version={s.version} canApprove={plan.canApprove} onDecided={() => setViewId(null)} staleReason={plan.staleInputs.requiresRefresh ? staleInputLabels.join(", ") || "important business inputs changed" : undefined} quality={(s.expert as { quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[]; conflicts?: string[] } } | null)?.quality ?? null} /> : null}
+          {s.status === "needs_approval" && !olderView ? <PlanReviewCard slug={slug} strategyId={s.id} version={s.version} canApprove={plan.canApprove} onDecided={() => setViewId(null)} staleReason={plan.staleInputs.requiresRefresh ? staleInputLabels.join(", ") || "important business inputs changed" : undefined} quality={planQ} help={reviewHelp} /> : null}
           {s.status === "draft" ? (
             <Callout tone="warning" title="Sent back">
               {plan.canEdit ? "Refresh for a new version." : `Ask ${PERMISSION_WHO.edit} to refresh.`}
@@ -349,7 +366,7 @@ function PlanScreen({ slug }: { slug: string }) {
           <ShortVersion strategy={s} />
           {s.expert ? <NorthStar expert={s.expert as ExpertView} slug={slug} /> : null}
           {s.expert?.plays?.length ? <SharpenPlan slug={slug} questions={plan.questions} canEdit={plan.canEdit} answersNewer={plan.answersNewerThanPlan} currency={plan.businessCurrency} segmentEconomics={plan.unitEconomics?.segmentEconomics} /> : null}
-          {s.expert?.plays?.length ? <FunnelNumbers slug={slug} funnel={plan.funnel} canEdit={plan.canEdit} /> : null}
+          {s.expert?.plays?.length && !(s.status === "needs_approval" && !olderView && reviewHelp) ? helpPanel(false) : null}
           {s.expert && (s.expert.plays?.length || (s.expert as ExpertView).strategyExploration) ? <GrowthPlays plays={(s.expert.plays ?? []) as PlayView[]} slug={slug} economics={(s.expert as { economics?: Economics }).economics} portfolioComparisons={(s.expert as ExpertView).portfolioComparisons} strategyExploration={(s.expert as ExpertView).strategyExploration} diagnosis={(s.expert as { constraintDiagnosis?: Diagnosis }).constraintDiagnosis ?? null} strategyId={s.status === "approved" ? s.id : undefined} planId={s.id} canEdit={plan.canEdit} focused={Boolean((s.expert as ExpertView).decision)} /> : null}
           {s.expert ? <ExecutionPlan expert={s.expert as ExpertView} /> : null}
           <Audiences strategy={s} facts={plan.sources} />
