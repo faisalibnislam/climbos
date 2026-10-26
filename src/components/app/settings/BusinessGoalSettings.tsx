@@ -11,7 +11,8 @@ import { AiModePicker, useAiMode } from "../AiModePicker";
 import { RetryRunIfPossible, RUN_FINISHED, RunProgress } from "../content/RunProgress";
 import { PERMISSION_WHO, majorToDisplay, type MemberRole } from "../content/shared";
 import { errorMessage } from "../errors";
-import { microsToCreditsLabel, relativeTime } from "../money";
+import { relativeTime } from "../money";
+import { useCostDisplay } from "../useCostDisplay";
 import { BUSINESS_TYPE_OPTIONS, CURRENCY_OPTIONS, GOAL_KIND_OPTIONS, HORIZON_OPTIONS, REVIEW_DAY_OPTIONS, defaultEvents, goalDefaults, type BusinessType, type GoalKind } from "../onboarding/options";
 import { INDUSTRY_BUSINESS_TYPES } from "@shared/knowledge/industryCatalog";
 import { LoadingBlock } from "../results/QueryBoundary";
@@ -249,6 +250,7 @@ const RESEARCH_LABEL: Record<string, { label: string; tone: "green" | "amber" | 
 };
 
 function ResearchCard({ slug, state, canEdit }: { slug: string; state: State; canEdit: boolean }) {
+  const fmt = useCostDisplay();
   const startResearch = useMutation(api.orgs.startResearch);
   const ai = useAiMode(slug);
   const research = state.research;
@@ -286,7 +288,7 @@ function ResearchCard({ slug, state, canEdit }: { slug: string; state: State; ca
                 </Button>
               }
               title="Refresh research?"
-              description={`Re-reads ${state.business?.website ?? "your website"}.${max ? ` Up to ${microsToCreditsLabel(max)}; unused credits returned.` : ""}`}
+              description={`Re-reads ${state.business?.website ?? "your website"}.${max ? ` Up to ${fmt.upTo(max)}; unused credits returned.` : ""}`}
               confirmLabel="Refresh research"
               onConfirm={async () => {
                 try {
@@ -298,7 +300,7 @@ function ResearchCard({ slug, state, canEdit }: { slug: string; state: State; ca
             >
               <AiModePicker slug={slug} kind="onboarding_research" value={ai.mode} onChange={ai.setMode} />
             </ConfirmDialog>
-            {!state.business?.website ? <span className="text-xs text-ink-3">Add a website first.</span> : max ? <span className="text-xs text-ink-3">Up to {microsToCreditsLabel(max)}</span> : null}
+            {!state.business?.website ? <span className="text-xs text-ink-3">Add a website first.</span> : max ? <span className="text-xs text-ink-3">Up to {fmt.upTo(max)}</span> : null}
             {!state.canRunAi && state.accessMessage ? <span className="text-xs text-ink-3">{state.accessMessage}</span> : null}
           </div>
         ) : null}

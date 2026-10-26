@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useState } from "react";
 import { Field, Select } from "@/components/ui";
-import { microsToCreditsLabel } from "./money";
+import { useCostDisplay } from "./useCostDisplay";
 
 type ChoiceKind = "onboarding_research" | "strategy" | "content_social" | "content_ads" | "content_email" | "content_seo";
 const DEFAULT = "__default";
@@ -21,9 +21,10 @@ export function useModelChoice() {
  * first with this job's maximum cost; the server enforces the same rules.
  */
 export function ModelPicker({ kind, aiMode, value, onChange }: { kind: ChoiceKind; aiMode?: "basic" | "expert"; value: string | undefined; onChange: (model: string | undefined) => void }) {
+  const fmt = useCostDisplay();
   const data = useQuery(api.models.myModelChoice, { kind, aiMode });
   if (!data?.canChoose) return null;
-  const cost = (micros: number | null | undefined) => (micros == null ? "" : ` · up to ${microsToCreditsLabel(micros)}`);
+  const cost = (micros: number | null | undefined) => (micros == null ? "" : ` · up to ${fmt.upTo(micros)}`);
   const defaultLabel = data.options.find((o) => o.key === data.defaultModel)?.label ?? "ClimbOS default";
   const options = [
     { value: DEFAULT, label: `Default (${defaultLabel})${cost(data.defaultEstimateMicros)}` },

@@ -7,7 +7,7 @@ import { toast } from "@/components/ui";
 import { RequestComposer } from "@/components/ui/request-composer";
 import { errorInfo } from "@/components/app/errors";
 import { wishDraftKey } from "@/components/app/draftKeys";
-import { microsToCreditsLabel } from "@/components/app/money";
+import { useCostDisplay } from "@/components/app/useCostDisplay";
 
 export interface WishComposerHandle {
   fill: (text: string) => void;
@@ -58,6 +58,7 @@ export function wishSuggestions(type?: string | null): string[] {
 export const WishComposer = forwardRef<WishComposerHandle, { slug: string; userId?: string; identityReady: boolean; suggestions: string[]; disabled?: boolean; disabledReason?: string | null; requestCostEstimateMicros: number; autoDraftBudgetMicros: number; isDemo: boolean }>(function WishComposer(
   { slug, userId, identityReady, suggestions, disabled, disabledReason, requestCostEstimateMicros, autoDraftBudgetMicros, isDemo }, ref,
 ) {
+  const fmt = useCostDisplay();
   const send = useMutation(api.workspace.sendChat);
   const scope = identityReady && userId ? wishDraftKey(slug, userId) : null;
   const [draft, setDraft] = useState<{ scope: string | null; text: string }>({ scope: null, text: "" });
@@ -130,7 +131,7 @@ export const WishComposer = forwardRef<WishComposerHandle, { slug: string; userI
         disabled={disabled || !scope}
         helper={!identityReady ? "Checking your account…" : isDemo
           ? "Your draft stays in this browser tab and this business. Demo requests use no paid AI credits and do not contact customers or publish anything."
-          : `Your draft stays in this browser tab and this business. Sending sets aside up to ${microsToCreditsLabel(requestCostEstimateMicros)} to understand your request. ClimbOS may also reserve up to ${microsToCreditsLabel(autoDraftBudgetMicros)} for safe draft or analysis work that starts automatically, when workspace rules allow. Each job has its own cost guard; unused reserved credits return. External messages, publishing, and ad spend still need your approval.`}
+          : `Your draft stays in this browser tab and this business. Sending sets aside up to ${fmt.upTo(requestCostEstimateMicros)} to understand your request. ClimbOS may also reserve up to ${fmt.upTo(autoDraftBudgetMicros)} for safe draft or analysis work that starts automatically, when workspace rules allow. Each job has its own cost guard; unused reserved credits return. External messages, publishing, and ad spend still need your approval.`}
       />
       {(disabled || !scope) && disabledReason ? <p role="status" className="text-sm text-ink-3">{disabledReason}</p> : null}
     </section>

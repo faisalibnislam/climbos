@@ -6,7 +6,7 @@ import { Lock } from "@/components/icons"
 import Link from "next/link";
 import { useState } from "react";
 import { RadioCards, Skeleton } from "@/components/ui";
-import { microsToCreditsLabel } from "./money";
+import { useCostDisplay } from "./useCostDisplay";
 
 export type AiMode = "basic" | "expert";
 type ModeKind = "onboarding_research" | "strategy" | "content_ads" | "social_calendar";
@@ -61,7 +61,8 @@ export function AiModeChoice({
   hideLabel?: boolean;
   upgradeHref?: string;
 }) {
-  const cost = (m: AiMode) => (costs ? ` Up to ${microsToCreditsLabel(costs[m])}.` : "");
+  const fmt = useCostDisplay();
+  const cost = (m: AiMode) => (costs ? ` Up to ${fmt.upTo(costs[m])}.` : "");
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className={hideLabel ? "sr-only" : "mb-2 text-sm font-medium text-ink"}>{label}</legend>

@@ -3,7 +3,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 import { type ModelKey, type Provider, type RateVersion } from "../../shared/economics/rates";
-import { actualStepMicros, IMAGE_ROUTES, MODEL_SPECS, searchCallUsd } from "../../shared/ai/models";
+import { actualStepMicros, IMAGE_ROUTES, imageProviderMicros, MODEL_SPECS, searchCallUsd } from "../../shared/ai/models";
 import { usdToMicrosCeil } from "../../shared/economics/money";
 import { anthropicTurn } from "../../shared/ai/anthropic";
 import { providerKeyConfigured } from "../../shared/ai/modelChoice";
@@ -195,15 +195,16 @@ async function callViaTurn(turn: (req: TurnRequest, rates: RateVersion) => Promi
   return { ok: true, provider, actualModelId: r.actualModelId, output: r.output, rawText: r.text, usage, costMicros: Math.max(0, r.costMicros - searchCostMicros), searchCostMicros, finishReason: r.stopReason, sourceUrls: r.sources.map((x) => x.url).slice(0, 20) };
 }
 
+/** costMicros is the flat credit allowance per attempt; providerMicros is what Google billed (from its reported usage). */
 export type ImageResult =
-  | { ok: true; bytes: Uint8Array; mimeType: string; costMicros: number; actualModelId: string }
-  | { ok: false; kind: "provider_unavailable" | "refused" | "provider_error" | "rate_limited"; message: string; costMicros: number };
+  | { ok: true; bytes: Uint8Array; mimeType: string; costMicros: number; providerMicros: number; actualModelId: string }
+  | { ok: false; kind: "provider_unavailable" | "refused" | "provider_error" | "rate_limited"; message: string; costMicros: number; providerMicros: number };
 
 /** One image attempt on the standard (included) route. Each attempt is metered. */
 export async function generateImage(prompt: string, rates: RateVersion): Promise<ImageResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   const route = IMAGE_ROUTES.standard;
-  if (!apiKey) return { ok: false, kind: "provider_unavailable", message: "Image generation isn't configured on this server.", costMicros: 0 };
+  if (!apiKey) return { ok: false, kind: "provider_unavailable", message: "Image generation isn't configured on this server.", costMicros: 0, providerMicros: 0 };
   const ai = new GoogleGenAI({ apiKey });
   const attemptCost = usdToMicrosCeil(rates.services.imageAttempt);
   try {
@@ -215,19 +216,20 @@ export async function generateImage(prompt: string, rates: RateVersion): Promise
     const parts = res.candidates?.[0]?.content?.parts ?? [];
     const img = parts.find((p) => p.inlineData?.data);
     if (!img?.inlineData?.data) {
-      return { ok: false, kind: "refused", message: "No image was produced for this prompt.", costMicros: attemptCost };
+      return { ok: false, kind: "refused", message: "No image was produced for this prompt.", costMicros: attemptCost, providerMicros: imageProviderMicros(route, res.usageMetadata, false) };
     }
     return {
       ok: true,
       bytes: Uint8Array.from(Buffer.from(img.inlineData.data, "base64")),
       mimeType: img.inlineData.mimeType ?? "image/png",
       costMicros: attemptCost,
+      providerMicros: imageProviderMicros(route, res.usageMetadata, true),
       actualModelId: res.modelVersion ?? route.apiModelId,
     };
   } catch (e) {
     const msg = (e as Error).message ?? "";
-    if (/429|RESOURCE_EXHAUSTED/.test(msg)) return { ok: false, kind: "rate_limited", message: "Image service is busy.", costMicros: 0 };
-    return { ok: false, kind: "provider_error", message: "Image service could not be reached.", costMicros: 0 };
+    if (/429|RESOURCE_EXHAUSTED/.test(msg)) return { ok: false, kind: "rate_limited", message: "Image service is busy.", costMicros: 0, providerMicros: 0 };
+    return { ok: false, kind: "provider_error", message: "Image service could not be reached.", costMicros: 0, providerMicros: 0 };
   }
 }
 
@@ -235,7 +237,7 @@ export async function generateImage(prompt: string, rates: RateVersion): Promise
 export async function editImage(prompt: string, image: { bytes: Uint8Array; mimeType: string }, rates: RateVersion): Promise<ImageResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   const route = IMAGE_ROUTES.standard;
-  if (!apiKey) return { ok: false, kind: "provider_unavailable", message: "Image editing isn't configured on this server.", costMicros: 0 };
+  if (!apiKey) return { ok: false, kind: "provider_unavailable", message: "Image editing isn't configured on this server.", costMicros: 0, providerMicros: 0 };
   const ai = new GoogleGenAI({ apiKey });
   const attemptCost = usdToMicrosCeil(rates.services.imageAttempt);
   try {
@@ -246,11 +248,11 @@ export async function editImage(prompt: string, image: { bytes: Uint8Array; mime
     });
     const parts = res.candidates?.[0]?.content?.parts ?? [];
     const img = parts.find((p) => p.inlineData?.data);
-    if (!img?.inlineData?.data) return { ok: false, kind: "refused", message: "The image service didn't return an edit for this image.", costMicros: attemptCost };
-    return { ok: true, bytes: Uint8Array.from(Buffer.from(img.inlineData.data, "base64")), mimeType: img.inlineData.mimeType ?? "image/png", costMicros: attemptCost, actualModelId: res.modelVersion ?? route.apiModelId };
+    if (!img?.inlineData?.data) return { ok: false, kind: "refused", message: "The image service didn't return an edit for this image.", costMicros: attemptCost, providerMicros: imageProviderMicros(route, res.usageMetadata, false) };
+    return { ok: true, bytes: Uint8Array.from(Buffer.from(img.inlineData.data, "base64")), mimeType: img.inlineData.mimeType ?? "image/png", costMicros: attemptCost, providerMicros: imageProviderMicros(route, res.usageMetadata, true), actualModelId: res.modelVersion ?? route.apiModelId };
   } catch (e) {
     const msg = (e as Error).message ?? "";
-    if (/429|RESOURCE_EXHAUSTED/.test(msg)) return { ok: false, kind: "rate_limited", message: "Image service is busy.", costMicros: 0 };
-    return { ok: false, kind: "provider_error", message: "Image service could not be reached.", costMicros: 0 };
+    if (/429|RESOURCE_EXHAUSTED/.test(msg)) return { ok: false, kind: "rate_limited", message: "Image service is busy.", costMicros: 0, providerMicros: 0 };
+    return { ok: false, kind: "provider_error", message: "Image service could not be reached.", costMicros: 0, providerMicros: 0 };
   }
 }

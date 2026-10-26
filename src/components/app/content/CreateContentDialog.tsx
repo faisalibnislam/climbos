@@ -23,7 +23,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { StatBlocks } from "@/components/ds/content";
-import { microsToCreditsLabel } from "../money";
+import { useCostDisplay } from "../useCostDisplay";
 import { ErrorCallout, SectionBoundary, artifactStatusMeta, channelLabel, describeMeters, useWorkspaceMember } from "./shared";
 import { RunProgress } from "./RunProgress";
 
@@ -258,6 +258,7 @@ function NewDrafts({ slug, runId, onOpen }: { slug: string; runId: Id<"workflowR
 }
 
 function EstimatePanel({ slug, job, quantity, images, aiMode, model }: { slug: string; job: Job; quantity?: number; images?: number; aiMode?: AiMode; model?: string }) {
+  const fmt = useCostDisplay();
   const est = useQuery(api.content.estimate, { slug, job, quantity, images, aiMode, model });
   return (
     <section aria-labelledby="estimate-heading" className="rounded-lg border border-line bg-surface-2 p-4" aria-live="polite" aria-busy={est === undefined}>
@@ -271,7 +272,7 @@ function EstimatePanel({ slug, job, quantity, images, aiMode, model }: { slug: s
         </div>
       ) : (
         <div className="mt-3 grid gap-3 text-sm text-ink-2 sm:grid-cols-2">
-          <StatBlocks className="grid-cols-1" stats={[{ label: est.title, value: `Up to ${microsToCreditsLabel(est.maxCostMicros)}`, hint: "Unused credits return" }]} />
+          <StatBlocks className="grid-cols-1" stats={[{ label: est.title, value: `Up to ${fmt.upTo(est.maxCostMicros)}`, hint: "Unused credits return" }]} />
           <div>
             <p className="font-medium text-ink">Counts against</p>
             <ul className="mt-1 list-disc pl-5">

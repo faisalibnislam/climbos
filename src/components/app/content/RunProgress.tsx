@@ -10,7 +10,7 @@ import { Badge, Button, Callout, Progress, Skeleton, type StepItem, type StepSta
 import { errorMessage } from "../errors";
 import { cn } from "@/lib/utils";
 import { formatDuration, formatEta, phaseOf, progressOfRun, runStatusPresentation } from "../../../../shared/progress";
-import { microsToCreditsLabel } from "../money";
+import { useCostDisplay } from "../useCostDisplay";
 import { roleTitle } from "../roles";
 import { Highlight } from "@/components/ds/content";
 import { MessageText, useWorkspaceMember } from "./shared";
@@ -142,6 +142,7 @@ export function RunProgress({
 }) {
   const run = useQuery(api.content.runStatus, { slug, runId });
   const now = useTicker();
+  const fmt = useCostDisplay();
   if (run === undefined) {
     return (
       <div className="flex flex-col gap-3" aria-busy="true">
@@ -221,8 +222,10 @@ export function RunProgress({
       )}
       <p className="text-sm text-ink-3">
         {finished
-          ? `Used ${microsToCreditsLabel(run.actualMicros)} of ${microsToCreditsLabel(run.estimateMicros)} reserved. Rest returned.`
-          : `Up to ${microsToCreditsLabel(run.estimateMicros)} reserved; unused returned.`}
+          ? fmt.usd
+            ? `API cost ${fmt.spent(run.actualMicros, run.providerMicros)} (up to ${fmt.upTo(run.estimateMicros)} was reserved).`
+            : `Used ${fmt.spent(run.actualMicros)} of ${fmt.upTo(run.estimateMicros)} reserved. Rest returned.`
+          : `Up to ${fmt.upTo(run.estimateMicros)} reserved; unused returned.`}
       </p>
       {run.status === "verified" || run.status === "needs_approval" ? done : null}
       {run.status === "failed" || run.status === "canceled" || run.status === "uncertain" ? (

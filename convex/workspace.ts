@@ -29,6 +29,7 @@ import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 import { savedPlanDecisionSummary } from "../shared/agents/planDecisionSummary";
 import { factFreshness } from "../shared/agents/factFreshness";
 import { defaultModelRoute } from "./lib/modelRoute";
+import { runProviderMicros, showsApiCost } from "./lib/costDisplay";
 
 /** Everything the Today screen needs, in one bounded query. */
 export const today = query({
@@ -1327,13 +1328,14 @@ export const setChannelStatus = mutation({
 export const runs = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "view");
     const rows = await ctx.db
       .query("workflowRuns")
       .withIndex("by_org_created", (q) => q.eq("orgId", org._id))
       .order("desc")
       .take(50);
-    return rows.map((r) => ({ id: r._id, title: r.title, kind: r.kind, status: r.status, roles: r.roles, estimateMicros: r.estimateMicros, actualMicros: r.actualMicros, userMessage: r.userMessage ?? null, createdAt: r.createdAt, isFixture: r.isFixture }));
+    const apiCost = await showsApiCost(ctx, user._id);
+    return rows.map((r) => ({ id: r._id, title: r.title, kind: r.kind, status: r.status, roles: r.roles, estimateMicros: r.estimateMicros, actualMicros: r.actualMicros, ...(apiCost ? { providerMicros: runProviderMicros(r) } : {}), userMessage: r.userMessage ?? null, createdAt: r.createdAt, isFixture: r.isFixture }));
   },
 });
 
@@ -1432,8 +1434,9 @@ export const activeWork = query({
 export const runDetail = query({
   args: { slug: v.string(), runId: v.id("workflowRuns") },
   handler: async (ctx, { slug, runId }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "view");
     const run = assertSameOrg(await ctx.db.get(runId), org._id, "job");
+    const apiCost = await showsApiCost(ctx, user._id);
     const steps = await ctx.db
       .query("workflowSteps")
       .withIndex("by_run", (q) => q.eq("runId", run._id))
@@ -1466,6 +1469,7 @@ export const runDetail = query({
       updatedAt: run.updatedAt,
       estimateMicros: run.estimateMicros,
       actualMicros: run.actualMicros,
+      ...(apiCost ? { providerMicros: runProviderMicros(run) } : {}),
       userMessage: run.userMessage ?? null,
       isFixture: run.isFixture,
       engine: run.engine ?? null,

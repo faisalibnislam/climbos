@@ -229,8 +229,10 @@ export interface ImageRoute {
   key: string;
   provider: "google";
   apiModelId: string;
-  /** Planning allowance per attempt (output + prompt input), USD. */
+  /** Planning allowance per attempt (output + prompt input), USD. Credits charge this flat amount. */
   planningCostPerAttemptUsd: number;
+  /** Provider token prices (USD per 1M) and image size, for the cost actually billed. */
+  tokenPrices: { inputPerM: number; textOutputPerM: number; imageOutputPerM: number; tokensPerImage: number };
   resolution: "1K" | "2K";
   includedInPlan: boolean;
   note: string;
@@ -242,6 +244,8 @@ export const IMAGE_ROUTES: Record<"standard" | "premium", ImageRoute> = {
     provider: "google",
     apiModelId: "gemini-3.1-flash-lite-image",
     planningCostPerAttemptUsd: 0.045,
+    // ai.google.dev/gemini-api/docs/pricing, retrieved 26 Oct 2026: a 1K image is 1,120 tokens (~$0.0336).
+    tokenPrices: { inputPerM: 0.25, textOutputPerM: 1.5, imageOutputPerM: 30, tokensPerImage: 1_120 },
     resolution: "1K",
     includedInPlan: true,
     note: "~$0.0336 per 1K image plus prompt input; budgeted at $0.045 per attempt.",
@@ -251,16 +255,45 @@ export const IMAGE_ROUTES: Record<"standard" | "premium", ImageRoute> = {
     provider: "google",
     apiModelId: "gemini-3.1-flash-image",
     planningCostPerAttemptUsd: 0.11,
+    // Same page and date: 2K image is 1,680 tokens (~$0.101).
+    tokenPrices: { inputPerM: 0.5, textOutputPerM: 3, imageOutputPerM: 60, tokensPerImage: 1_680 },
     resolution: "2K",
     includedInPlan: false,
     note: "2K output ~$0.101 per image. Separately quoted and approved; never included in plan allowance.",
   },
 };
 
+/** Gemini's reported usage for one image call (fields as the API names them). */
+export interface ImageUsage {
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+  thoughtsTokenCount?: number;
+  candidatesTokensDetails?: { modality?: string; tokenCount?: number }[];
+}
+
+/**
+ * What Google actually bills for one image call, from its reported usage:
+ * prompt at the input rate, image tokens at the image rate, any text and
+ * thinking at the text rate. Without usage (or for a call that returned no
+ * image but still billed the prompt) it assumes one image when `produced`.
+ */
+export function imageProviderMicros(route: ImageRoute, usage: ImageUsage | undefined, produced: boolean): number {
+  const p = route.tokenPrices;
+  const n = (x: number | undefined) => (Number.isFinite(x) && (x as number) > 0 ? (x as number) : 0);
+  const details = usage?.candidatesTokensDetails ?? [];
+  const reportedImage = details.filter((d) => d.modality === "IMAGE").reduce((s, d) => s + n(d.tokenCount), 0);
+  const candidates = n(usage?.candidatesTokenCount);
+  const imageTokens = details.length ? reportedImage : produced ? Math.max(candidates, p.tokensPerImage) : 0;
+  const textTokens = Math.max(0, candidates - imageTokens) + n(usage?.thoughtsTokenCount);
+  return usdToMicrosCeil((n(usage?.promptTokenCount) * p.inputPerM + imageTokens * p.imageOutputPerM + textTokens * p.textOutputPerM) / 1_000_000);
+}
+
 /**
  * AI video clips for reels (paid accounts): Google Veo 3.1 Lite via the Gemini
  * API, 9:16, 720p, audio muted in the reel. Price per second from published
  * third-party rate cards (Oct 2026), to re-check against Google's pricing page.
+ * Not listed on ai.google.dev/gemini-api/docs/pricing when checked on 26 Oct
+ * 2026, so the cost shown in dollars for clips is this unverified rate.
  */
 export const VIDEO_ROUTE = { apiModelId: "veo-3.1-lite-generate-preview", perSecondUsd: 0.05, resolution: "720p", aspectRatio: "9:16", clipSeconds: 4 } as const;
 

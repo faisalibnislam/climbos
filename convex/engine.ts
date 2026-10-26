@@ -312,6 +312,7 @@ export async function createRunWithReservation(
     roles: params.roles,
     estimateMicros: estimate.costMicros,
     actualMicros: 0,
+    providerMicros: 0,
     costCapMicros: Math.ceil(estimate.costMicros * MAX_RUN_COST_MULTIPLE),
     inFlightMicros: 0,
     rateVersionId: rateVersion.id,
@@ -500,6 +501,8 @@ const usageRecordValidator = v.object({
   cacheWriteTokens: v.number(),
   quantity: v.number(),
   costMicros: v.number(),
+  /** What the provider actually billed, when credits charge something else (a flat allowance). */
+  providerMicros: v.optional(v.number()),
   estimated: v.boolean(),
 });
 
@@ -513,8 +516,10 @@ export const recordUsage = internalMutation({
     if (!run) return;
     const reservation = run.reservationId ? await ctx.db.get(run.reservationId) : null;
     let total = 0;
+    let providerTotal = 0;
     for (const r of records) {
       total += r.costMicros;
+      providerTotal += r.providerMicros ?? r.costMicros;
       await ctx.db.insert("usageEvents", {
         ...r,
         orgId: run.orgId,
@@ -538,7 +543,8 @@ export const recordUsage = internalMutation({
       model: records[0]?.model,
       ...(heldCall > 0 ? { providerCallMicros: undefined, providerCallAttempt: undefined } : {}),
     });
-    await ctx.db.patch(run._id, { actualMicros: run.actualMicros + total, inFlightMicros: Math.max(0, (run.inFlightMicros ?? 0) - heldCall), updatedAt: Date.now() });
+    // Runs from before provider cost was tracked count their earlier charges as provider cost.
+    await ctx.db.patch(run._id, { actualMicros: run.actualMicros + total, providerMicros: (run.providerMicros ?? run.actualMicros) + providerTotal, inFlightMicros: Math.max(0, (run.inFlightMicros ?? 0) - heldCall), updatedAt: Date.now() });
   },
 });
 
