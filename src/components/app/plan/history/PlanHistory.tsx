@@ -10,7 +10,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, ArrowUpDown, Check, ChevronDown, History, RotateCcw, X } from "@/components/icons";
-import { Badge, Button, Checkbox, Dialog, DialogContent, DialogFooter, Popover, PopoverContent, PopoverTrigger, Select, Skeleton, Switch, Tooltip, toast } from "@/components/ui";
+import { Badge, Button, Checkbox, Dialog, DialogContent, DialogFooter, Input, Popover, PopoverContent, PopoverTrigger, Select, Skeleton, Switch, Tooltip, toast } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import { formatDateTime } from "@/components/app/money";
 import { cn } from "@/lib/utils";
@@ -53,7 +53,7 @@ export function usePlanVersions(slug: string) {
 }
 
 /** "Version 4 · Latest ▾": opens every version with date, status, why it changed and who approved it. */
-export function VersionPicker({ versions, viewingId, onView, onCompare }: { versions: Version[]; viewingId: string | null; onView: (id: Id<"strategies">) => void; onCompare: () => void }) {
+export function VersionPicker({ versions, viewingId, onView, onCompare, slug, canEdit = false }: { versions: Version[]; viewingId: string | null; onView: (id: Id<"strategies">) => void; onCompare: () => void; slug?: string; canEdit?: boolean }) {
   const [open, setOpen] = useState(false);
   const current = versions.find((v) => v.id === viewingId) ?? versions[0];
   if (!current) return null;
@@ -64,10 +64,11 @@ export function VersionPicker({ versions, viewingId, onView, onCompare }: { vers
         <button
           type="button"
           className="inline-flex h-[var(--h-sm)] items-center gap-2 rounded-[var(--radius-control)] border border-[var(--btn-2-border)] bg-[var(--btn-2-bg)] px-2.5 text-ui font-medium text-ink shadow-[var(--btn-2-shadow)] hover:bg-surface-2"
-          aria-label={`Version ${current.version}. Open version history`}
+          aria-label={`Version ${current.version}${current.name ? `, ${current.name}` : ""}. Open version history`}
         >
           <History aria-hidden className="size-4 text-ink-3" />
           Version {current.version}
+          {current.name ? <span className="max-w-48 truncate text-ink-2">· {current.name}</span> : null}
           {/* One version: no tags (owner, 2026-10-19). */}
           {many ? <VersionTags v={current} /> : null}
           <ChevronDown aria-hidden className="size-3.5 text-ink-3" />
@@ -95,6 +96,7 @@ export function VersionPicker({ versions, viewingId, onView, onCompare }: { vers
                   <span className={cn("mt-0.5 grid h-6 min-w-8 place-items-center rounded-[var(--radius-badge)] px-1 text-xs font-semibold tabular-nums", v.inUse ? "bg-brand-800 text-white" : v.isLatest ? "bg-lime text-ink" : "bg-surface-3 text-ink-2")}>v{v.version}</span>
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      {v.name ? <span className="max-w-full truncate text-ui font-medium text-ink">{v.name}</span> : null}
                       <span className="text-ui text-ink-2">{formatDateTime(v.createdAt)}</span>
                       {many ? <VersionTags v={v} /> : null}
                     </span>
@@ -115,6 +117,7 @@ export function VersionPicker({ versions, viewingId, onView, onCompare }: { vers
             );
           })}
         </ol>
+        {canEdit && slug ? <VersionNameForm key={`${current.id}:${current.name ?? ""}`} slug={slug} version={current} /> : null}
         {many ? (
           <div className="border-t border-line p-2">
             <Button
@@ -132,6 +135,40 @@ export function VersionPicker({ versions, viewingId, onView, onCompare }: { vers
         ) : null}
       </PopoverContent>
     </Popover>
+  );
+}
+
+/** Name the version on screen, e.g. "Spring launch". A label only: the plan and its approval don't change. */
+function VersionNameForm({ slug, version }: { slug: string; version: Version }) {
+  const rename = useMutation(api.planHistory.renameVersion);
+  const [name, setName] = useState(version.name ?? "");
+  const [busy, setBusy] = useState(false);
+  const changed = name.trim() !== (version.name ?? "");
+  return (
+    <form
+      className="flex items-end gap-2 border-t border-line p-2"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (!changed) return;
+        setBusy(true);
+        try {
+          await rename({ slug, strategyId: version.id, name });
+          toast({ tone: "success", title: name.trim() ? `Version ${version.version} named` : "Name removed" });
+        } catch (err) {
+          toast({ tone: "danger", title: errorMessage(err) });
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium text-ink-2">
+        Name for version {version.version}
+        <Input value={name} maxLength={60} placeholder="For example: Spring launch" onChange={(e) => setName(e.target.value)} disabled={busy} className="h-8" />
+      </label>
+      <Button type="submit" size="sm" variant="secondary" disabled={busy || !changed}>
+        {busy ? "Saving…" : "Save"}
+      </Button>
+    </form>
   );
 }
 
@@ -357,8 +394,8 @@ export function PlanCompare({ slug, versions, initialLeft, initialRight, canEdit
     setSelected(new Set());
     onRestored(id);
   });
-  const options = versions.map((v) => ({ value: v.id, label: `v${v.version} · ${shortDate(v.createdAt)}${v.isLatest ? " · Latest" : ""}${v.inUse ? " · In use" : ""}` }));
-  const label = (v?: Version) => (v ? `v${v.version}${v.isLatest ? " (latest)" : ""}` : "");
+  const options = versions.map((v) => ({ value: v.id, label: `v${v.version}${v.name ? ` ${v.name}` : ""} · ${shortDate(v.createdAt)}${v.isLatest ? " · Latest" : ""}${v.inUse ? " · In use" : ""}` }));
+  const label = (v?: Version) => (v ? `v${v.version}${v.name ? ` (${v.name})` : ""}${v.isLatest ? " (latest)" : ""}` : "");
   return (
     <section aria-labelledby="compare-heading" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius-card)] border border-line bg-surface px-4 py-3 shadow-[var(--card-shadow)]">

@@ -75,6 +75,7 @@ export const versions = query({
       out.push({
         id: s._id,
         version: s.version,
+        name: s.versionName ?? null,
         status: s.status,
         createdAt: s.createdAt,
         isLatest: s.version === latestVersion,
@@ -90,6 +91,22 @@ export const versions = query({
     return out.reverse();
   },
 });
+
+/** Name a plan version (or clear the name). A label only: it doesn't change the plan or its approval. */
+export const renameVersion = mutation({
+  args: { slug: v.string(), strategyId: v.id("strategies"), name: v.string() },
+  handler: async (ctx, { slug, strategyId, name }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const s = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan version");
+    const clean = name.replace(/\s+/g, " ").trim().slice(0, MAX_VERSION_NAME);
+    if ((s.versionName ?? "") === clean) return { changed: false };
+    await ctx.db.patch(s._id, { versionName: clean || undefined });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "plan.version_renamed", subjectType: "strategy", subjectId: String(s._id), summary: clean ? `Named plan version ${s.version} "${clean}"` : `Removed the name from plan version ${s.version}` });
+    return { changed: true };
+  },
+});
+
+export const MAX_VERSION_NAME = 60;
 
 type Strategy = Doc<"strategies">;
 type Expert = NonNullable<Strategy["expert"]>;

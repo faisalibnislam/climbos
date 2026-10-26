@@ -206,7 +206,7 @@ function PlanScreen({ slug }: { slug: string }) {
           s && status ? (
             <span className="flex flex-wrap items-center gap-2">
               {versions && versions.length ? (
-                <VersionPicker versions={versions} viewingId={s.id} onView={(id) => { setCompare(null); setViewId(id); }} onCompare={openCompare} />
+                <VersionPicker versions={versions} viewingId={s.id} onView={(id) => { setCompare(null); setViewId(id); }} onCompare={openCompare} slug={slug} canEdit={plan.canEdit} />
               ) : (
                 <span className="text-ink-2">Version {s.version}</span>
               )}

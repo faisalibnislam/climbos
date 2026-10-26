@@ -2890,6 +2890,8 @@ export default defineSchema({
     businessId: v.id("businesses"),
     goalId: v.id("goals"),
     version: v.number(),
+    /** Owner's own label shown beside "Version N". Display only: not part of the plan hash or approval. */
+    versionName: v.optional(v.string()),
     status: v.union(
       v.literal("draft"),
       v.literal("needs_approval"),
