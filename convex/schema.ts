@@ -829,6 +829,13 @@ export default defineSchema({
       }),
     ),
     deletedAt: v.optional(v.number()),
+    /** Removed by its owner: restorable until this time, then purged automatically. Absent on legacy deletions. */
+    purgeAfter: v.optional(v.number()),
+    removedBy: v.optional(v.id("users")),
+    /** The pause state before removal, put back on restore. */
+    stopBeforeRemoval: v.optional(v.object({ active: v.boolean(), at: v.number(), by: v.id("users"), reason: v.optional(v.string()) })),
+    /** Permanent deletion started (by the owner, ClimbOS staff, or the expired restore window). */
+    purgeStartedAt: v.optional(v.number()),
     /** Billing account (shared credits). Absent only on demo workspaces. */
     accountId: v.optional(v.id("accounts")),
     /** Optional monthly credit cap for this workspace, drawn from the account's shared balance. */
@@ -868,7 +875,8 @@ export default defineSchema({
   })
     .index("by_slug", ["slug"])
     .index("by_kind_created", ["kind", "createdAt"])
-    .index("by_account", ["accountId"]),
+    .index("by_account", ["accountId"])
+    .index("by_purge_after", ["purgeAfter"]),
 
   memberships: defineTable({
     orgId: v.id("organizations"),

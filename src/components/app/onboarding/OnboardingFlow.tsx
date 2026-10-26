@@ -442,7 +442,7 @@ function BusinessStep({
       {/* Expert unlocks when the owner's account has a paid (or comped) package; new workspaces join that account. */}
       <details className="mt-6 rounded-[var(--radius-card)] border border-line bg-surface p-4">
         <summary className="cursor-pointer text-sm font-medium text-ink">More options: how much detail to use</summary>
-        <div className="mt-4"><AiModeChoice unlocked={expertUnlocked} costs={aiView?.estimates?.onboarding_research} value={aiMode} onChange={setAiMode} label="Analysis detail" /></div>
+        <div className="mt-4"><AiModeChoice unlocked={expertUnlocked} costs={aiView?.estimates?.onboarding_research} value={aiMode} onChange={setAiMode} label="Analysis detail" hideLabel /></div>
         <div className="mt-4"><ModelPicker kind="onboarding_research" aiMode={aiMode} value={modelChoice.model} onChange={modelChoice.setModel} /></div>
       </details>
       <div className="mt-6"><WordHelp /></div>

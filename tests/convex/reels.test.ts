@@ -32,12 +32,12 @@ describe("reels", () => {
     await t.finishAllScheduledFunctions(() => undefined);
     const [r] = await owner.client.query(api.reels.list, { slug });
     expect(r).toMatchObject({ id: reelId, status: "ready", badge: true });
-    // AI clips are for packages; a clip adds ~20 credits to the reservation.
+    // AI clips are for packages; a clip adds ~20 credits to the reservation (the shown maximum adds the 1.5x run cap).
     await expect(owner.client.mutation(api.reels.create, { slug, brief: "With a clip", clips: 1 })).rejects.toThrow(/comes with a package/);
     await makePaid(t, orgId);
     const est = await owner.client.query(api.reels.estimate, { slug });
     expect(est.clipsUnlocked).toBe(true);
-    expect(est.withClipsMicros - est.maxCostMicros).toBe(200_000);
+    expect(est.withClipsMicros - est.maxCostMicros).toBe(300_000);
     await owner.client.mutation(api.reels.create, { slug, brief: "Second reel" });
     await t.finishAllScheduledFunctions(() => undefined);
     expect((await owner.client.query(api.reels.list, { slug }))[0].badge).toBe(false);

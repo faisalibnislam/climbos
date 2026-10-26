@@ -176,7 +176,10 @@ describe("workspace deletion", () => {
       await ctx.db.insert("airlyLinks", { orgId: o.orgId, app: "formkit", tokenCiphertext: "x", tokenIv: "x", tokenKeyId: "k1", status: "connected", imported: 0, createdBy: o.userId, createdAt: Date.now() });
     });
     expect((await o.client.query(api.settings.deletionImpact, { slug: o.slug })).packageEnds).toBe(true);
-    const res = await o.client.mutation(api.settings.deleteWorkspace, { slug: o.slug, confirmName: "Delete Me" });
+    await o.client.mutation(api.settings.removeWorkspace, { slug: o.slug, confirmName: "Delete Me" });
+    // Removal alone keeps everything (and billing) so it can be restored.
+    expect(await t.run(async (ctx) => (await ctx.db.query("webhookEndpoints").withIndex("by_org", (q) => q.eq("orgId", o.orgId)).collect()).length)).toBe(1);
+    const res = await o.client.mutation(api.settings.deleteWorkspaceForever, { orgId: o.orgId, confirmName: "Delete Me" });
     expect(res.billing).toBe("canceling");
     await t.finishAllScheduledFunctions(vi.runAllTimers);
     const left = await t.run(async (ctx) => ({
@@ -187,6 +190,55 @@ describe("workspace deletion", () => {
       request: (await ctx.db.query("privacyRequests").withIndex("by_org", (q) => q.eq("orgId", o.orgId)).collect())[0]?.status,
     }));
     expect(left).toEqual({ airly: 0, hooks: 0, tokens: 0, deals: 0, request: "done" });
+  });
+
+  it("removing hides and pauses a business, frees its slot, and restores it exactly as it was", async () => {
+    const t = setup();
+    const o = await owned(t, "remove@example.com", "Remove Me");
+    await o.client.mutation(api.workspace.pauseAll, { slug: o.slug });
+    await expect(o.client.mutation(api.settings.removeWorkspace, { slug: o.slug, confirmName: "Wrong" })).rejects.toThrow(/exactly/);
+    await o.client.mutation(api.settings.removeWorkspace, { slug: o.slug, confirmName: "Remove Me" });
+    expect((await o.client.query(api.orgs.me, {}))!.orgs.map((x) => x.slug)).not.toContain(o.slug);
+    await expect(o.client.query(api.settings.deletionImpact, { slug: o.slug })).rejects.toThrow();
+    expect(await o.client.query(api.settings.removedWorkspaces, {})).toEqual([expect.objectContaining({ id: o.orgId, name: "Remove Me" })]);
+    const row = (await t.run(async (ctx) => ctx.db.get(o.orgId)))!;
+    expect(row.emergencyStop?.active).toBe(true);
+    expect(row.purgeAfter! - row.deletedAt!).toBe(30 * 86_400_000);
+
+    // The free plan's single slot is free again, so a new business fits; restoring then needs a slot.
+    const second = await o.client.mutation(api.orgs.createWorkspace, { businessName: "Second" });
+    await expect(o.client.mutation(api.settings.restoreWorkspace, { orgId: o.orgId })).rejects.toThrow(/all in use/);
+    await o.client.mutation(api.settings.removeWorkspace, { slug: second.slug, confirmName: "Second" });
+
+    const other = await asNewUser(t, "not-owner@example.com");
+    await expect(other.client.mutation(api.settings.restoreWorkspace, { orgId: o.orgId })).rejects.toThrow(/couldn't find/);
+    expect(await other.client.query(api.settings.removedWorkspaces, {})).toEqual([]);
+
+    const { slug } = await o.client.mutation(api.settings.restoreWorkspace, { orgId: o.orgId });
+    expect(slug).toBe(o.slug);
+    const back = (await t.run(async (ctx) => ctx.db.get(o.orgId)))!;
+    expect(back.deletedAt).toBeUndefined();
+    expect(back.emergencyStop?.reason).not.toBe("Business removed");
+    expect(back.emergencyStop?.active).toBe(true); // it was paused before removal, so it stays paused
+    expect((await o.client.query(api.orgs.me, {}))!.orgs.map((x) => x.slug)).toContain(o.slug);
+    const actions = await t.run(async (ctx) => (await ctx.db.query("auditEvents").collect()).filter((e) => e.orgId === o.orgId).map((e) => e.action));
+    expect(actions).toEqual(expect.arrayContaining(["workspace.removed", "workspace.restored"]));
+  });
+
+  it("deletes a removed business forever after 30 days, and then it can't be restored", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const t = setup();
+    const o = await owned(t, "expire@example.com", "Expire Me");
+    await o.client.mutation(api.crm.create, { slug: o.slug, name: "Ana", email: "ana@x.example" });
+    await o.client.mutation(api.settings.removeWorkspace, { slug: o.slug, confirmName: "Expire Me" });
+    expect((await t.mutation(internal.settings.purgeExpiredRemovals, {})).started).toBe(0);
+    vi.setSystemTime(Date.now() + 30 * 86_400_000 + 1);
+    expect((await t.mutation(internal.settings.purgeExpiredRemovals, {})).started).toBe(1);
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    expect(await t.run(async (ctx) => (await ctx.db.query("deals").withIndex("by_org_updated", (q) => q.eq("orgId", o.orgId)).collect()).length)).toBe(0);
+    expect(await o.client.query(api.settings.removedWorkspaces, {})).toEqual([]);
+    await expect(o.client.mutation(api.settings.restoreWorkspace, { orgId: o.orgId })).rejects.toThrow();
+    await expect(o.client.mutation(api.settings.deleteWorkspaceForever, { orgId: o.orgId, confirmName: "Expire Me" })).rejects.toThrow();
   });
 
   it("staff deletion stops work and purges too", async () => {

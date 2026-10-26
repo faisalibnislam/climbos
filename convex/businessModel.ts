@@ -3,7 +3,7 @@ import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { ACTIVE_RUN_STATUSES, assertNoActiveRun, createRunWithReservation, latestRunsOfKind } from "./engine";
 import { audit } from "./lib/audit";
-import { estimateJobMicros, planJob } from "./lib/jobPlans";
+import { planJob, maxJobMicros } from "./lib/jobPlans";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { can } from "../shared/policy";
 import { BusinessModelCheckSchema } from "../shared/agents/businessModel";
@@ -23,7 +23,7 @@ export const estimate = query({
     const { org } = await requireOrgAccess(ctx, { slug }, "view");
     const fixture = org.kind === "demo";
     const plan = planJob(KIND, {}, { fixture, mode: "basic" });
-    return { title: plan.title, maxCostMicros: estimateJobMicros(plan, { fixture }) };
+    return { title: plan.title, maxCostMicros: maxJobMicros(plan, { fixture }) };
   },
 });
 

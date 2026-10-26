@@ -61,7 +61,7 @@ describe("cost reservations under concurrency", () => {
     const est = await owner.client.query(api.content.estimate, { slug, job: "content_social", quantity: 2, images: 0 });
     await t.run(async (ctx) => {
       const p = await ctx.db.query("usagePeriods").withIndex("by_org_period", (q) => q.eq("orgId", orgId).eq("periodKey", "onboarding")).unique();
-      await ctx.db.patch(p!._id, { walletCapMicros: est.maxCostMicros * 3 });
+      await ctx.db.patch(p!._id, { walletCapMicros: est.reserveMicros * 3 });
     });
     const results = await Promise.allSettled(
       Array.from({ length: 10 }, () => owner.client.mutation(api.content.generate, { slug, job: "content_social", quantity: 2, images: 0 })),
@@ -72,7 +72,7 @@ describe("cost reservations under concurrency", () => {
     expect(rejected.every((r) => /credits|busy/i.test(String(r.reason)))).toBe(true);
     const period = await t.run(async (ctx) => ctx.db.query("usagePeriods").withIndex("by_org_period", (q) => q.eq("orgId", orgId).eq("periodKey", "onboarding")).unique());
     expect(checkInvariants(ledgerOf(period!))).toEqual([]);
-    expect(period!.walletReservedMicros).toBe(est.maxCostMicros * 3);
+    expect(period!.walletReservedMicros).toBe(est.reserveMicros * 3);
   });
 
   it("failed jobs release meters, keep real costs, and can't retry for free", async () => {

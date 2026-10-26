@@ -127,3 +127,25 @@ describe("provider adapters without keys", () => {
     }
   });
 });
+
+import { estimateJobMicros as reserveOf, maxJobMicros as maxOf, planJob as planOf, RUN_COST_CAP_MULTIPLE } from "../../convex/lib/jobPlans";
+
+describe("most a job can cost", () => {
+  it("adds every possible revision round and the run's spending cap to the upfront reservation", () => {
+    const prev = process.env.CLIMBOS_ENGINE;
+    process.env.CLIMBOS_ENGINE = "v2";
+    try {
+      for (const mode of ["basic", "expert"] as const) {
+        const plan = planOf("onboarding_research", { pages: 3 }, { mode });
+        expect(plan.revisionSteps?.length).toBeGreaterThan(0);
+        expect(maxOf(plan)).toBeGreaterThanOrEqual(Math.ceil(reserveOf(plan) * RUN_COST_CAP_MULTIPLE));
+      }
+      expect(maxOf(planOf("onboarding_research", { pages: 3 }, { mode: "expert" }))).toBeGreaterThan(maxOf(planOf("onboarding_research", { pages: 3 }, { mode: "basic" })));
+      const fixture = planOf("onboarding_research", { pages: 3 }, { mode: "basic", fixture: true });
+      expect(maxOf(fixture, { fixture: true })).toBe(Math.ceil(reserveOf(fixture, { fixture: true }) * RUN_COST_CAP_MULTIPLE));
+    } finally {
+      if (prev === undefined) delete process.env.CLIMBOS_ENGINE;
+      else process.env.CLIMBOS_ENGINE = prev;
+    }
+  });
+});

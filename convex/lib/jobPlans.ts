@@ -6,7 +6,7 @@ import { TASKS, type TaskType } from "../../shared/ai/tasks";
 import { estimateRun, type PlannedStep } from "./estimate";
 import { isModelKey, routeModelKey, type ModelRoute } from "../../shared/ai/modelChoice";
 import type { AgentSpec } from "../../shared/agents/types";
-import { CALL_ROUTES, draftsFor, routeModels, type AiMode } from "../../shared/agents/routes";
+import { CALL_ROUTES, draftsFor, expertEscalationModel, routeModels, type AiMode } from "../../shared/agents/routes";
 import {
   adsSpec,
   channelFitSpec,
@@ -65,9 +65,14 @@ const QUICK_TAKE: PlannedStep = { kind: "model", role: "ceo", modelKey: CALL_ROU
 
 function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string }, mode: AiMode): JobPlan | null {
   // Priced at Luna baseline; an eligible Expert revision reserves its selected model before running.
+  const revisionSteps: PlannedStep[] = [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const any = (s: AgentSpec<any>) => (mode === "expert" ? { ...s, models: routeModels(s.id, "expert") } : { ...s, drafts: draftsFor(s.id, "basic") }) as AgentSpec<unknown>;
-  const plan = (title: string, roles: RoleKey[], tasks: TaskType[], steps: PlannedStep[], meters: PartialMeters): JobPlan => ({ kind, title, roles, tasks, steps, meters, aiMode: mode });
+  const any = (s: AgentSpec<any>) => {
+    const spec = (mode === "expert" ? { ...s, models: routeModels(s.id, "expert") } : { ...s, drafts: draftsFor(s.id, "basic") }) as AgentSpec<unknown>;
+    for (let round = 0; round < Math.max(0, spec.maxRevisions); round++) revisionSteps.push(...agentRevisionSteps(spec, expertEscalationModel(spec.id, mode)));
+    return spec;
+  };
+  const plan = (title: string, roles: RoleKey[], tasks: TaskType[], steps: PlannedStep[], meters: PartialMeters): JobPlan => ({ kind, title, roles, tasks, steps, meters, aiMode: mode, revisionSteps });
   const searches = (t: Parameters<typeof researchFor>[0]) => researchFor(t, { businessName: "", website: "" })?.maxSearches ?? 0;
   switch (kind) {
     case "onboarding_research": {
@@ -167,6 +172,11 @@ export interface JobPlan {
   meters: PartialMeters;
   /** Climb AI mode the plan was priced for. */
   aiMode: AiMode;
+  /**
+   * Revision rounds the agents may add while running. Each reserves its own cost first (Expert may revise on
+   * Sol), so they are not in the upfront reservation but do count toward the most a job can cost.
+   */
+  revisionSteps?: PlannedStep[];
 }
 
 function modelStep(task: TaskType, webSearches = 0): PlannedStep {
@@ -283,8 +293,25 @@ function v1Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
 
 /** Worst-case cost estimate shown on action cards before anything runs. */
 /** Worst-case cost of a job at the models it will run on (`route`: defaults or a permitted user's pick). */
+/** What a job sets aside when it starts (its first reservation). */
 export function estimateJobMicros(plan: JobPlan, { fixture = false, route }: { fixture?: boolean; route?: ModelRoute } = {}): number {
+  return estimateSteps(plan, plan.steps, { fixture, route });
+}
+
+/** Spend may exceed a run's reservation by this multiple before it stops (mirrors MAX_RUN_COST_MULTIPLE in engine.ts). */
+export const RUN_COST_CAP_MULTIPLE = 1.5;
+
+/**
+ * The most a job can be charged: its reservation plus every revision round it may reserve while running,
+ * times the run's spending cap. Shown wherever the app says "up to"; a run can never cost more.
+ */
+export function maxJobMicros(plan: JobPlan, { fixture = false, route }: { fixture?: boolean; route?: ModelRoute } = {}): number {
+  const revisions = fixture ? [] : (plan.revisionSteps ?? []);
+  return Math.ceil(estimateSteps(plan, [...plan.steps, ...revisions], { fixture, route }) * RUN_COST_CAP_MULTIPLE);
+}
+
+function estimateSteps(plan: JobPlan, planned: PlannedStep[], { fixture, route }: { fixture: boolean; route?: ModelRoute }): number {
   const usesV2 = !fixture && (engineV2() || plan.kind === "social_calendar" || plan.kind === "outbound");
-  const steps = route ? plan.steps.map((s) => (s.kind === "model" && s.modelKey && isModelKey(s.modelKey) ? { ...s, modelKey: routeModelKey(route, s.modelKey) } : s)) : plan.steps;
+  const steps = route ? planned.map((s) => (s.kind === "model" && s.modelKey && isModelKey(s.modelKey) ? { ...s, modelKey: routeModelKey(route, s.modelKey) } : s)) : planned;
   return estimateRun(steps, currentRateVersion().id, { repair: !usesV2 }).costMicros;
 }
