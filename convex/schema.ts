@@ -743,6 +743,25 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
 
+  /** Operator default model per tier (one row, key "global"). Absent = built-in OpenAI route. */
+  aiModelSettings: defineTable({
+    key: v.literal("global"),
+    standard: v.string(),
+    advanced: v.string(),
+    updatedBy: v.id("users"),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
+  /** Users an operator allowed to pick their own model (off for everyone by default). */
+  aiModelGrants: defineTable({
+    userId: v.id("users"),
+    enabled: v.boolean(),
+    grantedBy: v.id("users"),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_enabled", ["enabled", "updatedAt"]),
+
   /**
    * Billing account: one owner, one package and one credit balance shared by
    * all of its workspaces (agencies get one bill). Seats are per account.
@@ -4712,6 +4731,8 @@ export default defineSchema({
     firstActionAt: v.optional(v.number()),
     /** Climb AI Basic or paid Expert (eligible, measured Sol escalation); absent = basic. */
     aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
+    /** Models this run uses per tier (operator defaults or a permitted user's choice); absent = built-in OpenAI route. */
+    modelRoute: v.optional(v.object({ standard: v.string(), advanced: v.string(), source: v.union(v.literal("default"), v.literal("user")) })),
     /** A quick first take shown while the full job works (JSON: { headline, points[] }). */
     preview: v.optional(v.string()),
     /** The job action and args that continue this run from its checkpoints. */
@@ -4911,6 +4932,8 @@ export default defineSchema({
     stepIndex: v.optional(v.number()),
     routingVersionId: v.optional(v.string()),
     aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
+    /** Whose model choice served this call: operator defaults or a permitted user. Provider and model are below. */
+    modelSource: v.optional(v.union(v.literal("default"), v.literal("user"))),
     type: v.union(
       v.literal("model_call"),
       v.literal("image_attempt"),

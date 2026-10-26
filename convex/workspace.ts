@@ -28,6 +28,7 @@ import { expertPlaysOf, readExpertPlan } from "../shared/agents/planCompatibilit
 import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 import { savedPlanDecisionSummary } from "../shared/agents/planDecisionSummary";
 import { factFreshness } from "../shared/agents/factFreshness";
+import { defaultModelRoute } from "./lib/modelRoute";
 
 /** Everything the Today screen needs, in one bounded query. */
 export const today = query({
@@ -137,7 +138,7 @@ export const today = query({
 
     return {
       org: { slug: org.slug, name: org.name, kind: org.kind, onboardingStep: org.onboardingStep, currency: org.currency, timezone: org.timezone },
-      requestCostEstimateMicros: org.kind === "demo" ? 0 : estimateJobMicros(planJob("chat_intent")),
+      requestCostEstimateMicros: org.kind === "demo" ? 0 : estimateJobMicros(planJob("chat_intent"), { route: await defaultModelRoute(ctx) }),
       autoDraftBudgetMicros: org.kind === "demo" ? 0 : WISH_AUTO_BUDGET_MICROS,
       role,
       userName: user.name ?? user.email ?? null,
@@ -885,7 +886,7 @@ export const plan = query({
       latestVersionAt: latest?.createdAt ?? null,
       /** The other version worth seeing: a newer one waiting or sent back, or the approved one while viewing it. */
       otherVersion: other ? { id: other._id, version: other.version, status: other.status, createdAt: other.createdAt } : null,
-      planEstimateMicros: estimateJobMicros(planJob("strategy", {}, { fixture: org.kind === "demo" }), { fixture: org.kind === "demo" }),
+      planEstimateMicros: estimateJobMicros(planJob("strategy", {}, { fixture: org.kind === "demo" }), { fixture: org.kind === "demo", route: await defaultModelRoute(ctx) }),
       experiments: experiments.map((e) => ({ id: e._id, name: e.name, hypothesis: e.hypothesis, population: e.population, method: e.method, assignmentUnit: e.assignmentUnit, assignmentMethod: e.assignmentMethod, primaryMetric: e.primaryMetric, primaryMetricType: e.primaryMetricType, denominator: e.denominator, baselineRate: e.baselineRate, baselineProvenance: e.baselineProvenance, baselineEvidenceRefs: e.baselineEvidenceRefs, baselineBasis: e.baselineBasis, minimumMeaningfulEffect: e.minimumMeaningfulEffect, plannedSamplePerArm: e.plannedSamplePerArm, plannedSampleBasis: e.plannedSampleBasis, guardrails: e.guardrails, durationDays: e.durationDays, stoppingRule: e.stoppingRule, status: e.status, analyses: (e.analyses ?? []).map(({ reviewedBy: _by, ...x }) => x) })),
       insights: business?.insights ?? null,
       sources: factViews,
@@ -1501,9 +1502,10 @@ export const aiMode = query({
     const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
     const view = await aiModeView(ctx, org);
     const fixture = org.kind === "demo";
+    const route = await defaultModelRoute(ctx);
     const estimates = (kind: "onboarding_research" | "strategy" | "content_ads" | "social_calendar") => ({
-      basic: estimateJobMicros(planJob(kind, {}, { fixture, mode: "basic" }), { fixture }),
-      expert: estimateJobMicros(planJob(kind, {}, { fixture, mode: "expert" }), { fixture }),
+      basic: estimateJobMicros(planJob(kind, {}, { fixture, mode: "basic" }), { fixture, route }),
+      expert: estimateJobMicros(planJob(kind, {}, { fixture, mode: "expert" }), { fixture, route }),
     });
     return {
       ...view,

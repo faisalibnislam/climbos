@@ -35,6 +35,7 @@ import { errorInfo, errorMessage } from "../errors";
 import { parseIntro, type ParsedIntro } from "./parseIntro";
 import { RetryRunIfPossible, RunPreviewSummary, RunProgress, RunProgressCompact } from "../content/RunProgress";
 import { AiModeChoice, AiModePicker, useAiMode } from "../AiModePicker";
+import { ModelPicker, useModelChoice } from "../ModelPicker";
 import { microsToCreditsLabel } from "../money";
 import { BUSINESS_TYPE_OPTIONS, CURRENCY_OPTIONS, GOAL_KIND_OPTIONS, HORIZON_OPTIONS, REVIEW_DAY_OPTIONS, defaultEvents, goalDefaults } from "./options";
 
@@ -248,6 +249,7 @@ function BusinessStep({
   const [picked, setAiMode] = useState<"basic" | "expert" | null>(null);
   // Paid accounts default to Expert, like the workspace picker; free ones stay on Basic.
   const aiMode: "basic" | "expert" = expertUnlocked ? (picked ?? "expert") : "basic";
+  const modelChoice = useModelChoice();
   const researchEstimate = aiView?.estimates?.onboarding_research?.[aiMode];
   const researchCost = researchEstimate === undefined
     ? "Research uses credits; the estimate will appear when it is ready."
@@ -336,7 +338,7 @@ function BusinessStep({
       }
       if (previewToken) await claim({ token: previewToken, orgId: orgId as Id<"organizations"> }).catch(() => undefined);
       try {
-        await startResearch({ slug, website: fields.website, ownerText: fields.ownerText, aiMode });
+        await startResearch({ slug, website: fields.website, ownerText: fields.ownerText, aiMode, model: modelChoice.model });
       } catch (e) {
         // The workspace exists: carry on to it, where research can be started again.
         toast({ tone: "danger", title: errorMessage(e) });
@@ -441,6 +443,7 @@ function BusinessStep({
       <details className="mt-6 rounded-[var(--radius-card)] border border-line bg-surface p-4">
         <summary className="cursor-pointer text-sm font-medium text-ink">More options: how much detail to use</summary>
         <div className="mt-4"><AiModeChoice unlocked={expertUnlocked} costs={aiView?.estimates?.onboarding_research} value={aiMode} onChange={setAiMode} label="Analysis detail" /></div>
+        <div className="mt-4"><ModelPicker kind="onboarding_research" aiMode={aiMode} value={modelChoice.model} onChange={modelChoice.setModel} /></div>
       </details>
       <div className="mt-6"><WordHelp /></div>
       <p className="mt-6 text-sm text-ink-3">
@@ -502,6 +505,7 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
   const [ownerText, setOwnerText] = useState("");
   const [website, setWebsite] = useState(state.business?.website ?? "");
   const [busy, setBusy] = useState(false);
+  const modelChoice = useModelChoice();
   const research = state.research;
   const failed = research ? ["failed", "canceled", "uncertain"].includes(research.status) : false;
   const v2 = research?.engine === "v2";
@@ -510,7 +514,7 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
     const start = async () => {
       setBusy(true);
       try {
-        await startResearch({ slug, website: website.trim() || undefined, ownerText: ownerText.trim() || undefined });
+        await startResearch({ slug, website: website.trim() || undefined, ownerText: ownerText.trim() || undefined, model: modelChoice.model });
       } catch (e) {
         toast({ tone: "danger", title: errorMessage(e) });
       } finally {
@@ -529,6 +533,7 @@ function ResearchStep({ slug, state }: { slug: string; state: State }) {
             <Field label="Or describe your business" optional>
               <Textarea value={ownerText} onChange={(e) => setOwnerText(e.target.value)} rows={4} autosize />
             </Field>
+            <ModelPicker kind="onboarding_research" value={modelChoice.model} onChange={modelChoice.setModel} />
             <div className="flex flex-wrap gap-3">
               <Button loading={busy} loadingText="Starting…" disabled={!website.trim() && !ownerText.trim()} onClick={start}>
                 Start
@@ -966,11 +971,12 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
   const canEdit = state.role === "owner" || state.role === "admin" || state.role === "editor";
 
   const ai = useAiMode(slug);
+  const modelChoice = useModelChoice();
   const start = async () => {
     setBusy(true);
     setError(null);
     try {
-      await generate({ slug, aiMode: ai.mode });
+      await generate({ slug, aiMode: ai.mode, model: modelChoice.model });
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -1010,6 +1016,7 @@ function PlanStep({ slug, state }: { slug: string; state: State }) {
             {canEdit ? (
               <>
                 <AiModePicker slug={slug} kind="strategy" value={ai.mode} onChange={ai.setMode} />
+                <ModelPicker kind="strategy" aiMode={ai.mode} value={modelChoice.model} onChange={modelChoice.setModel} />
                 <Button size="lg" className="self-start" disabled={!state.canRunAi} onClick={start}>
                   <Magic aria-hidden /> Build my plan
                 </Button>

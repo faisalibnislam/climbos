@@ -10,11 +10,32 @@
  * Rates are USD. Token rates are per 1M tokens.
  */
 
-/** Models ClimbOS can call: OpenAI (text) and Google (text fallback for old routes, images). Anthropic was dropped on 18 Oct 2026. */
-export type ModelKey = "gpt-6-luna" | "gpt-6.1-sol" | "gemini-3.8-flash" | "gemini-3.1-flash-lite";
+/**
+ * Models ClimbOS can call. OpenAI is the default engine; Anthropic and Google
+ * models are callable when an operator selects them (owner decision, 26 Oct 2026)
+ * and their provider key is configured.
+ */
+export type ModelKey =
+  | "gpt-6-luna"
+  | "gpt-6-sol"
+  | "gpt-6.1-sol"
+  | "gpt-6-astra"
+  | "claude-haiku-5.5"
+  | "claude-sonnet-5"
+  | "claude-sonnet-5.5"
+  | "claude-opus-5"
+  | "claude-opus-5.5"
+  | "claude-fable-5"
+  | "claude-fable-5.1"
+  | "gemini-3.1-flash-lite"
+  | "gemini-3.5-flash-lite"
+  | "gemini-3.6-flash"
+  | "gemini-3.8-flash"
+  | "gemini-3.1-pro"
+  | "gemini-4-argon";
 
-/** Every priced model, including retired Claude models kept only in frozen rate and routing fixtures. */
-export type RateModelKey = ModelKey | "claude-fable-5.1" | "claude-opus-5.5" | "claude-sonnet-5.5" | "claude-haiku-5.5";
+/** Every priced model. Since 26 Oct 2026 every priced model is callable again. */
+export type RateModelKey = ModelKey;
 
 export type Provider = "anthropic" | "google" | "openai";
 
@@ -35,6 +56,8 @@ export interface ServiceRates {
   /** Planning allowance per image attempt (Gemini 2.5 Flash Image $0.039 output + input allowance). */
   imageAttempt: number;
   searchCall: number;
+  /** Gemini Google Search grounding, per search query (absent on versions before model choice: searchCall applies). */
+  groundingSearchCall?: number;
   scrapeCredit: number;
   transactionalEmail: number;
   vercelCpuHour: number;
@@ -178,6 +201,108 @@ const RESEARCH_MODELS: Record<RateModelKey, ModelRate> = {
     basis: "Standard, short context",
     source: GEMINI_PRICING,
   },
+  // Added for model choice (26 Oct 2026, retrieved from the providers' pricing
+  // pages that day). No workbook row routes to these, so the fixture's
+  // calculations are unchanged.
+  "gpt-6-sol": {
+    key: "gpt-6-sol",
+    displayName: "GPT-6 Sol",
+    provider: "openai",
+    inputPerM: 2,
+    outputPerM: 10,
+    cacheReadPerM: 0.2,
+    cacheWritePerM: 2.5,
+    basis: "Standard, short context (long context above 272k is $4 / $15; ClimbOS clips below it)",
+    source: OPENAI_PRICING,
+  },
+  "claude-sonnet-5": {
+    key: "claude-sonnet-5",
+    displayName: "Claude Sonnet 5",
+    provider: "anthropic",
+    inputPerM: 2,
+    outputPerM: 10,
+    cacheReadPerM: 0.2,
+    cacheWritePerM: 2.5,
+    basis: "Standard (introductory $2 / $10 made permanent)",
+    source: CLAUDE_PRICING,
+  },
+  "claude-opus-5": {
+    key: "claude-opus-5",
+    displayName: "Claude Opus 5",
+    provider: "anthropic",
+    inputPerM: 5,
+    outputPerM: 25,
+    cacheReadPerM: 0.5,
+    cacheWritePerM: 6.25,
+    basis: "Standard; thinking billed as output",
+    source: CLAUDE_PRICING,
+  },
+  "claude-fable-5": {
+    key: "claude-fable-5",
+    displayName: "Claude Fable 5",
+    provider: "anthropic",
+    inputPerM: 10,
+    outputPerM: 50,
+    cacheReadPerM: 1,
+    cacheWritePerM: 12.5,
+    basis: "Standard; always thinks (thinking billed as output)",
+    source: CLAUDE_PRICING,
+  },
+  "gemini-3.5-flash-lite": {
+    key: "gemini-3.5-flash-lite",
+    displayName: "Gemini 3.5 Flash-Lite",
+    provider: "google",
+    inputPerM: 0.3,
+    outputPerM: 2.5,
+    cacheReadPerM: 0.03,
+    cacheWritePerM: 0.3,
+    basis: "Standard",
+    source: GEMINI_PRICING,
+  },
+  "gemini-3.6-flash": {
+    key: "gemini-3.6-flash",
+    displayName: "Gemini 3.6 Flash",
+    provider: "google",
+    inputPerM: 0.75,
+    outputPerM: 3.75,
+    cacheReadPerM: 0.075,
+    cacheWritePerM: 0.75,
+    basis: "Standard (doubles on 1 Jan 2027, like 3.8 Flash)",
+    source: GEMINI_PRICING,
+  },
+  "gpt-6-astra": {
+    key: "gpt-6-astra",
+    displayName: "GPT-6 Astra",
+    provider: "openai",
+    inputPerM: 10,
+    outputPerM: 50,
+    cacheReadPerM: 1,
+    cacheWritePerM: 12.5,
+    basis: "Standard, short context (long context above 272k is $20 / $75; ClimbOS clips below it)",
+    source: OPENAI_PRICING,
+  },
+  "gemini-3.1-pro": {
+    key: "gemini-3.1-pro",
+    displayName: "Gemini 3.1 Pro",
+    provider: "google",
+    inputPerM: 2,
+    outputPerM: 12,
+    cacheReadPerM: 0.2,
+    cacheWritePerM: 2,
+    basis: "Standard, prompts up to 200k (above is $4 / $18; ClimbOS clips below it)",
+    source: GEMINI_PRICING,
+  },
+  "gemini-4-argon": {
+    key: "gemini-4-argon",
+    displayName: "Gemini 4 Argon",
+    provider: "google",
+    inputPerM: 2,
+    outputPerM: 10,
+    cacheReadPerM: 0.1,
+    cacheWritePerM: 2,
+    basis: "Standard (price rises to $4 / $20 on 1 Dec 2026)",
+    source: GEMINI_PRICING,
+  },
 };
 
 const RESEARCH_SERVICES: ServiceRates = {
@@ -230,6 +355,48 @@ export const RESEARCH_2026_10_17: RateVersion = Object.freeze({
 });
 
 /**
+ * Model choice (26 Oct 2026): Anthropic and Gemini Pro models become
+ * selectable. Retrieved from the official pricing pages on 26 Oct 2026:
+ * Claude rates match the research snapshot; GPT-6 Astra, Gemini 3.1 Pro and
+ * Gemini 4 Argon are new rows. Claude Haiku 5.5 is billed at long-context
+ * rates above 100k tokens and Gemini 3.1 Pro above 200k: ClimbOS clips both
+ * below the break (shared/ai/models.ts context windows).
+ */
+export const MODEL_CHOICE_2026_10_26: RateVersion = Object.freeze({
+  ...RESEARCH_2026_10_17,
+  id: "model-choice-2026-10-26",
+  label: "Model choice: Anthropic, Gemini Pro and GPT-6 Astra (26 Oct 2026)",
+  effectiveFrom: "2026-10-26",
+  researchedAt: "2026-10-26",
+  // Gemini 3+ grounding: $14 / 1k search queries after a 5,000 monthly free allowance (not assumed).
+  services: { ...RESEARCH_SERVICES, groundingSearchCall: 0.014 },
+  notes: [
+    ...RESEARCH_2026_10_17.notes,
+    "Retrieved 26 Oct 2026 from platform.claude.com/docs/en/about-claude/pricing, ai.google.dev/gemini-api/docs/pricing and developers.openai.com/api/docs/pricing.",
+    "Claude web search: $10 / 1k searches. Gemini Google Search grounding: $14 / 1k queries (free allowance not assumed).",
+  ],
+});
+
+const ARGON_DECEMBER: ModelRate = {
+  ...RESEARCH_MODELS["gemini-4-argon"],
+  inputPerM: 4,
+  outputPerM: 20,
+  cacheReadPerM: 0.2,
+  cacheWritePerM: 4,
+  basis: "Standard (from 1 Dec 2026)",
+};
+
+/** Gemini 4 Argon input/output double on 1 Dec 2026 (pricing page, retrieved 26 Oct 2026). */
+export const GEMINI_ARGON_REPRICE_2026_12_01: RateVersion = Object.freeze({
+  ...MODEL_CHOICE_2026_10_26,
+  id: "gemini-argon-reprice-2026-12-01",
+  label: "Gemini 4 Argon price rise (1 Dec 2026)",
+  effectiveFrom: "2026-12-01",
+  models: { ...RESEARCH_MODELS, "gemini-4-argon": ARGON_DECEMBER },
+  notes: [...MODEL_CHOICE_2026_10_26.notes, "Gemini 4 Argon input/output doubled."],
+});
+
+/**
  * Gemini 3.8 Flash promotional input/output rates double on 1 Jan 2027.
  * Everything else carries forward from the research snapshot.
  */
@@ -238,8 +405,18 @@ export const GEMINI_FLASH_REPRICE_2027_01_01: RateVersion = Object.freeze({
   id: "gemini-flash-reprice-2027-01-01",
   label: "Gemini 3.8 Flash promotional pricing ends (1 Jan 2027)",
   effectiveFrom: "2027-01-01",
+  services: MODEL_CHOICE_2026_10_26.services,
   models: {
     ...RESEARCH_MODELS,
+    "gemini-4-argon": ARGON_DECEMBER,
+    "gemini-3.6-flash": {
+      ...RESEARCH_MODELS["gemini-3.6-flash"],
+      inputPerM: 1.5,
+      outputPerM: 7.5,
+      cacheReadPerM: 0.15,
+      cacheWritePerM: 1.5,
+      basis: "Standard (from 1 Jan 2027)",
+    },
     "gemini-3.8-flash": {
       ...RESEARCH_MODELS["gemini-3.8-flash"],
       inputPerM: 1.5,
@@ -252,6 +429,7 @@ export const GEMINI_FLASH_REPRICE_2027_01_01: RateVersion = Object.freeze({
   notes: [
     ...RESEARCH_2026_10_17.notes,
     "Gemini 3.8 Flash input/output doubled from the promotional rate.",
+    "Gemini 3.6 Flash doubled with it.",
   ],
 });
 
@@ -284,6 +462,8 @@ export const VERIFIED_2026_10_17: RateVersion = Object.freeze({
 export const RATE_VERSIONS: readonly RateVersion[] = Object.freeze([
   RESEARCH_2026_10_17,
   VERIFIED_2026_10_17,
+  MODEL_CHOICE_2026_10_26,
+  GEMINI_ARGON_REPRICE_2026_12_01,
   GEMINI_FLASH_REPRICE_2027_01_01,
 ]);
 

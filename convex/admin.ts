@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { CURRENT_ENTITLEMENTS, creditsToMicros, microsToCredits, packageOf, TOPUP_VALID_DAYS } from "../shared/economics";
+import { CURRENT_ENTITLEMENTS, creditsToMicros, currentRateVersion, microsToCredits, packageOf, TOPUP_VALID_DAYS } from "../shared/economics";
 import { mergeLiveConfig, type LiveConfig } from "../shared/economics/liveConfig";
 import { subscriptionAccess } from "../shared/billing";
 import type { PlanKey } from "../shared/economics/assumptions";
@@ -16,6 +16,9 @@ import { creditBalance, topupPool } from "./lib/credits";
 import { currentPeriod, grantSubscriptionPeriod } from "./lib/periods";
 import { requireStaff, staffPowers, staffRoleOf, SUPPORT_GRANT_LIMIT, type StaffRole } from "./lib/staff";
 import { appError, operatorEmails, optionalUser } from "./lib/tenancy";
+import { assertTier, defaultModelRoute, savedModelDefaults } from "./lib/modelRoute";
+import { BUILT_IN_ROUTE, isModelKey, modelAvailable, modelOptions, MODEL_TIERS, PROVIDER_ENV, PROVIDER_LABELS, providerKeyConfigured, TIER_LABELS } from "../shared/ai/modelChoice";
+import { MODEL_SPECS } from "../shared/ai/models";
 
 /**
  * ClimbOS admin panel (owner decision 18 Oct 2026): staff search accounts and
@@ -628,5 +631,67 @@ export const packages = query({
     await requireStaff(ctx, "read");
     const config = await getLiveConfig(ctx);
     return (["starter", "pro"] as const).map((k) => ({ key: k, name: CURRENT_ENTITLEMENTS.plans[k].name, credits: config.packageCredits[packageOf(k)] }));
+  },
+});
+
+/* ---------------- AI model choice ---------------- */
+
+/** Default model per tier, every model cheapest first with whether its provider key is set, and the users allowed to choose. */
+export const modelSettings = query({
+  args: {},
+  handler: async (ctx) => {
+    const { role } = await requireStaff(ctx, "read");
+    const saved = await savedModelDefaults(ctx);
+    const effective = await defaultModelRoute(ctx);
+    const grants = await ctx.db.query("aiModelGrants").withIndex("by_enabled", (q) => q.eq("enabled", true)).order("desc").take(200);
+    const users = await Promise.all(grants.map((g) => ctx.db.get(g.userId)));
+    return {
+      tiers: MODEL_TIERS.map((tier) => ({ tier, ...TIER_LABELS[tier], saved: saved?.[tier] ?? null, effective: effective[tier], builtIn: BUILT_IN_ROUTE[tier] })),
+      options: modelOptions(currentRateVersion()),
+      providers: (Object.keys(PROVIDER_ENV) as (keyof typeof PROVIDER_ENV)[]).map((p) => ({ provider: p, label: PROVIDER_LABELS[p], envVar: PROVIDER_ENV[p], configured: providerKeyConfigured(p) })),
+      grants: grants.map((g, i) => ({ userId: g.userId, email: users[i]?.email ?? null, name: users[i]?.name ?? null, updatedAt: g.updatedAt })),
+      updatedAt: saved?.updatedAt ?? null,
+      canEdit: role !== "support",
+    };
+  },
+});
+
+/** Set the default model for one tier. Only models whose provider key is configured can be chosen. */
+export const setDefaultModel = mutation({
+  args: { tier: v.string(), model: v.string() },
+  handler: async (ctx, { tier, model }) => {
+    const { user } = await requireStaff(ctx, "features");
+    assertTier(tier);
+    if (!isModelKey(model)) throw appError("INVALID", "That model isn't available.");
+    if (!modelAvailable(model)) throw appError("INVALID", `${PROVIDER_LABELS[MODEL_SPECS[model].provider]} isn't connected yet. Add ${PROVIDER_ENV[MODEL_SPECS[model].provider]} in the Convex dashboard first.`);
+    const saved = await savedModelDefaults(ctx);
+    const before = saved?.[tier] ?? BUILT_IN_ROUTE[tier];
+    if (before === model && saved) return;
+    const now = Date.now();
+    if (saved) await ctx.db.patch(saved._id, { [tier]: model, updatedBy: user._id, updatedAt: now });
+    else await ctx.db.insert("aiModelSettings", { key: "global", standard: BUILT_IN_ROUTE.standard, advanced: BUILT_IN_ROUTE.advanced, [tier]: model, updatedBy: user._id, updatedAt: now });
+    await audit(ctx, { actorType: "operator", actorId: user._id, action: "admin.model_default", subjectType: "model_tier", subjectId: tier, summary: `Default ${TIER_LABELS[tier].label.toLowerCase()} model changed from ${before} to ${model}.` });
+  },
+});
+
+/** Let one user pick their own model on onboarding research, plan builds and content jobs (or turn it off again). */
+export const setUserModelChoice = mutation({
+  args: { email: v.optional(v.string()), userId: v.optional(v.id("users")), enabled: v.boolean() },
+  handler: async (ctx, { email, userId, enabled }) => {
+    const { user } = await requireStaff(ctx, "features");
+    let target: Doc<"users"> | null = null;
+    if (userId) target = await ctx.db.get(userId);
+    else if (email) {
+      const clean = email.trim().toLowerCase();
+      target = await ctx.db.query("users").withIndex("email", (q) => q.eq("email", clean)).first();
+    }
+    if (!target) throw appError("NOT_FOUND", "No ClimbOS user has that email address.");
+    const row = await ctx.db.query("aiModelGrants").withIndex("by_user", (q) => q.eq("userId", target._id)).unique();
+    if ((row?.enabled ?? false) === enabled) return;
+    const now = Date.now();
+    if (row) await ctx.db.patch(row._id, { enabled, grantedBy: user._id, updatedAt: now });
+    else await ctx.db.insert("aiModelGrants", { userId: target._id, enabled, grantedBy: user._id, updatedAt: now });
+    const who = target.email ?? target._id;
+    await audit(ctx, { actorType: "operator", actorId: user._id, action: enabled ? "admin.model_choice_enabled" : "admin.model_choice_disabled", subjectType: "user", subjectId: target._id, summary: enabled ? `${who} can now choose their AI model.` : `${who} can no longer choose their AI model.` });
   },
 });

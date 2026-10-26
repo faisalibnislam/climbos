@@ -1,5 +1,5 @@
 import { getRateVersion, stressedDeliveryCostMicros, usdToMicrosCeil } from "../../shared/economics";
-import { VIDEO_ROUTE, worstCaseStepMicros } from "../../shared/ai/models";
+import { searchCallUsd, VIDEO_ROUTE, worstCaseStepMicros } from "../../shared/ai/models";
 import type { Doc } from "../_generated/dataModel";
 
 /* Pure cost estimate for a planned run (no Convex runtime imports), so tool
@@ -37,7 +37,7 @@ export function estimateRun(steps: PlannedStep[], rateVersionId: string, opts: {
       maxModelStep = Math.max(maxModelStep, c);
       modelSteps++;
     }
-    if (s.webSearches) research += usdToMicrosCeil(s.webSearches * rates.services.searchCall);
+    if (s.webSearches) research += usdToMicrosCeil(s.webSearches * (s.modelKey ? searchCallUsd(s.modelKey as Parameters<typeof searchCallUsd>[0], rates) : rates.services.searchCall));
     if (s.scrapeCredits) research += usdToMicrosCeil(s.scrapeCredits * rates.services.scrapeCredit);
     if (s.imageAttempts) image += usdToMicrosCeil(s.imageAttempts * rates.services.imageAttempt);
     if (s.videoSeconds) image += usdToMicrosCeil(s.videoSeconds * VIDEO_ROUTE.perSecondUsd);

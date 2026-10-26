@@ -1,12 +1,13 @@
 import { z } from "zod";
 import { usdToMicrosCeil } from "../economics/money";
 import type { ModelKey, RateVersion } from "../economics/rates";
-import { actualStepMicros } from "./models";
+import { actualStepMicros, searchCallUsd } from "./models";
 
 /**
  * Provider-neutral model turn for the Engine v2 agent loop and Climb AI:
  * append-only messages, explicit effort, web search, client tools and exact
- * metering. The OpenAI adapter (openai.ts) implements it.
+ * metering. The OpenAI (openai.ts), Anthropic (anthropic.ts) and Gemini
+ * (gemini.ts) adapters implement it.
  */
 
 export type Effort = "low" | "medium" | "high" | "xhigh" | "max";
@@ -42,7 +43,7 @@ export interface ToolResultBlock {
 /** Opaque provider continuation item; kept private to agent history, never rendered as user-facing text. */
 export interface ProviderItemBlock {
   type: "provider_item";
-  provider: "openai";
+  provider: "openai" | "anthropic" | "google";
   item: Record<string, unknown>;
 }
 export type ContentBlock = TextBlock | ImageBlock | ToolUseBlock | ToolResultBlock | ProviderItemBlock;
@@ -184,6 +185,6 @@ export function parseJsonText(text: string): unknown {
 export function turnCostMicros(modelKey: ModelKey, usage: TurnUsage, rates: RateVersion): number {
   return (
     actualStepMicros(modelKey, { inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, cacheReadTokens: usage.cacheReadTokens, cacheWriteTokens: usage.cacheWriteTokens }, rates) +
-    usdToMicrosCeil(usage.webSearches * rates.services.searchCall)
+    usdToMicrosCeil(usage.webSearches * searchCallUsd(modelKey, rates))
   );
 }
