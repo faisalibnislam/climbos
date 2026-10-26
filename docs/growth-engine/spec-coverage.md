@@ -42,7 +42,7 @@ Tests: `tests/convex/approval-claims.test.ts`, `tests/unit/manipulation-lint.tes
 
 | # | Spec | Gap | Size |
 |---|---|---|---|
-| 1 | §3.1 | Weak demand doesn't block buying traffic in code. Add a plays lint: when commercial evidence is insufficient or the business model verdict is at risk, the primary play can't be unbounded paid acquisition. | M |
+| 1 | §3.1 | **Done (2026-10-26).** `lintDemandGate`: when insights find insufficient business-specific evidence, or the latest business model verdict is at risk or insufficient evidence, the primary play can't carry ad spend, and supporting paid plays are flagged as tests. | M |
 | 2 | §9 | No structured persuasion-mechanism field with legal status and a lower-risk alternative. Disclosure checks for trials, subscriptions, bundles, hidden fees and auto-renew are prompt-only. Testimonial and reference-price evidence aren't checked. | M |
 | 3 | §8 | The selected draft isn't re-rendered on desktop and mobile after a change. The original customer page isn't kept: screenshots expire after 30 days and no HTML snapshot is stored. | M |
 | 4 | §8 | The design measurement plan lacks audience, guardrails, observation period and decision rule. Finding history overwrites rows, with no event log tied to a version. | S |

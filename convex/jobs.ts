@@ -598,9 +598,21 @@ function constraintsOf(job: JobCtx, extra: Partial<PlanConstraints> = {}): PlanC
     ...(job.audience ? { emailAudience: job.audience.consented } : {}),
     ...(job.business?.unitEconomics?.newCustomersPerMonth !== undefined ? { newCustomersPerMonth: job.business.unitEconomics.newCustomersPerMonth } : {}),
     ...growthCashConstraint(job),
+    ...demandValidationConstraint(job),
     factKinds: job.facts.map((f) => f.evidenceKind),
     ...extra,
   };
+}
+
+/** Weak demand evidence (insights or the latest business model check) keeps paid acquisition from leading the plan. */
+function demandValidationConstraint(job: JobCtx): Pick<PlanConstraints, "demandValidation"> {
+  const commercial = (job.business?.insights as { commercialAssessment?: { status?: string } } | undefined)?.commercialAssessment?.status;
+  const reasons = [
+    commercial === "insufficient_business_specific_evidence" ? "The business research found too little business-specific evidence of demand." : "",
+    job.businessModelVerdict === "at_risk" ? "The latest business model check judged the current model at risk." : "",
+    job.businessModelVerdict === "insufficient_evidence" ? "The latest business model check found too little evidence to judge the model." : "",
+  ].filter(Boolean);
+  return reasons.length ? { demandValidation: { reasons } } : {};
 }
 
 /** The reserve check runs only when the owner reported both a reserve (in this currency) and a payment delay. */
@@ -720,6 +732,10 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     job.repeatPurchaseText,
     job.pipelineOutcomesText,
     job.businessModelContext ? untrusted("latest saved business model check (AI judgment)", job.businessModelContext, 1_500) : "",
+    (() => {
+      const gate = demandValidationConstraint(job).demandValidation;
+      return gate && job.run.kind === "strategy" ? `DEMAND NOT YET VALIDATED: ${gate.reasons.join(" ")} The primary play must test demand without ad spend; any paid traffic belongs in a supporting play as a small, capped test.` : "";
+    })(),
     job.businessModelTestsText,
     job.businessModelTestNotes.length ? `OWNER NOTES ON BUSINESS MODEL TESTS:\n${untrusted("owner business model test notes", job.businessModelTestNotes.join("\n"), 1_200)}` : "",
     job.pipelineLossNotes.length ? `OWNER NOTES ON RECENTLY LOST DEALS (untrusted, owner-entered; may be partial or wrong):\n${untrusted("owner lost-deal notes", job.pipelineLossNotes.join("\n"), 1_500)}` : "",

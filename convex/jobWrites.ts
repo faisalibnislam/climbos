@@ -221,15 +221,17 @@ export const jobContext = internalQuery({
     const modelTests = businessModelTestsBrief(latestModelCheck ? (await ctx.db.query("businessModelTests").withIndex("by_run_target", (q) => q.eq("runId", latestModelCheck._id)).collect()).sort((a, b) => b.createdAt - a.createdAt || b._creationTime - a._creationTime).slice(0, 200).filter((t) => t.orgId === org._id) : []);
     const businessModelTestsText = modelTests.summary;
     const businessModelTestNotes = modelTests.notes;
-    const businessModelContext = (() => {
-      if (run.kind !== "strategy" || !latestModelCheck?.output) return "";
+    const latestModel = (() => {
+      if (run.kind !== "strategy" || !latestModelCheck?.output) return null;
       try {
         const parsed = BusinessModelCheckSchema.safeParse(JSON.parse(latestModelCheck.output));
-        return parsed.success ? businessModelPlanContext(parsed.data, latestModelCheck.createdAt) : "";
+        return parsed.success ? parsed.data : null;
       } catch {
-        return "";
+        return null;
       }
     })();
+    const businessModelContext = latestModel && latestModelCheck ? businessModelPlanContext(latestModel, latestModelCheck.createdAt) : "";
+    const businessModelVerdict = latestModel?.verdict.status ?? null;
     const concentration = concentrationCurrency
       ? customerConcentration(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
       : null;
@@ -299,6 +301,7 @@ export const jobContext = internalQuery({
       pipelineLossNotes,
       businessModelSignalsText,
       businessModelContext,
+      businessModelVerdict,
       businessModelTestsText,
       businessModelTestNotes,
       priorDesignDecisionsText: priorDesign.summary,

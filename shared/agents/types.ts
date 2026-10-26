@@ -132,6 +132,12 @@ export interface PlanConstraints {
    * known and usable in `currency`. Owner unit economics replace the draft's assumptions in that check.
    */
   growthCashTiming?: { reserveUsd: number; paymentLagDays: number; horizonDays: number; ownerEconomics?: Pick<OwnerEconomics, "revenuePerCustomerMonthUsd" | "grossMargin" | "monthlyChurn"> };
+  /**
+   * Set when the business's demand isn't validated yet: the insights' commercial assessment found insufficient
+   * business-specific evidence, or the latest business model check judged the model at risk or unproven.
+   * Paid acquisition then can't lead the plan (lintDemandGate).
+   */
+  demandValidation?: { reasons: string[] };
   /** Workspace currency (ISO code) for every amount here; absent means USD. */
   currency?: string;
   /** Hours a week the owner can give growth work (when they said). */
