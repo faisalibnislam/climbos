@@ -1460,7 +1460,11 @@ export const activeWork = query({
       .filter((r) => r.status === "verified" && r.updatedAt > now - 15 * 60_000)
       .slice(0, 5)
       .map((r) => ({ id: r._id, title: r.title, kind: r.kind, finishedAt: r.updatedAt }));
-    return { active: views, justFinished };
+    const justStopped = runs
+      .filter((r) => r.status === "failed" && r.updatedAt > now - 15 * 60_000 && !r.dismissedAt)
+      .slice(0, 5)
+      .map((r) => ({ id: r._id, title: r.title, kind: r.kind, finishedAt: r.updatedAt }));
+    return { active: views, justFinished, justStopped };
   },
 });
 

@@ -23,8 +23,18 @@ describe("make it happen", () => {
     const cards = await t.run(async (ctx) => ctx.db.query("actionCards").withIndex("by_org_status", (q) => q.eq("orgId", orgId as never).eq("status", "proposed")).collect());
     expect(cards.some((c) => /Connect your LinkedIn company page account/.test(c.title))).toBe(true);
 
+    // The channel shows its own job, and the top-bar watcher sees it working.
+    const runs = await owner.client.query(api.acquisition.makeItHappenRuns, { slug });
+    expect(runs[li.id]).toMatchObject({ id: r.runId });
+    expect(Object.keys(runs)).toEqual([li.id]);
+    const work = await owner.client.query(api.workspace.activeWork, { slug });
+    expect(work.active.some((a) => a.id === r.runId)).toBe(true);
+    await t.run(async (ctx) => ctx.db.patch(r.runId!, { status: "failed", updatedAt: Date.now() }));
+    expect((await owner.client.query(api.workspace.activeWork, { slug })).justStopped.map((x) => x.id)).toEqual([r.runId]);
+
     const other = await asNewUser(t, "mih-other@example.com");
     await expect(other.client.mutation(api.acquisition.makeItHappen, { slug, channelId: li.id })).rejects.toThrow();
+    await expect(other.client.query(api.acquisition.makeItHappenRuns, { slug })).rejects.toThrow();
     await expect(owner.client.mutation(api.acquisition.makeItHappen, { slug, channelId: "NOPE" })).rejects.toThrow(/channel list/);
   });
 });

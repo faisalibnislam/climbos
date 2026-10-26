@@ -3,7 +3,10 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Ban, Bot, ChevronDown, CircleCheck, Clock, Hand, Hourglass, ShieldAlert, Sparkles, Store, UserRound, Wallet, type LucideIcon } from "@/components/icons"
+import Link from "next/link";
 import { useState } from "react";
+import { RUN_FINISHED, RunProgressCompact } from "@/components/app/content/RunProgress";
+import { markRunAnnounced } from "@/components/app/TeamActivity";
 import { Badge, Button, Callout, ChoiceChips, EmptyState, IconTile, Input, Skeleton, toast } from "@/components/ui";
 import { formatMoney } from "../../../../shared/economics/currency";
 import { errorMessage } from "@/components/app/errors";
@@ -572,12 +575,43 @@ function MakeItHappen({ slug, channelId }: { slug: string; channelId: string }) 
   const [open, setOpen] = useState(false);
   const preview = useQuery(api.acquisition.makeItHappenPreview, open ? { slug, channelId } : "skip");
   const start = useMutation(api.acquisition.makeItHappen);
+  const runs = useQuery(api.acquisition.makeItHappenRuns, { slug });
   const [busy, setBusy] = useState(false);
+  const last = runs?.[channelId];
+  // The job this button started: live progress while it works, then its result, right here.
+  const progress = last ? (
+    <div className="flex w-full flex-col gap-2 rounded-[var(--radius-control)] border border-line bg-surface p-3">
+      {RUN_FINISHED.has(last.status) ? (
+        last.status === "verified" || last.status === "needs_approval" ? (
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-ui">
+            <span className="inline-flex items-center gap-1.5 font-medium text-ink">
+              <CircleCheck aria-hidden className="size-4 text-brand-800" /> First drafts ready
+            </span>
+            <Link href={`/app/${slug}/work/${last.id}`} className="font-medium text-brand-800 underline-offset-2 hover:underline">
+              Review them →
+            </Link>
+          </p>
+        ) : (
+          <RunProgressCompact slug={slug} runId={last.id} />
+        )
+      ) : (
+        <>
+          <p className="text-ui font-medium text-ink">{last.title}</p>
+          <RunProgressCompact slug={slug} runId={last.id} />
+        </>
+      )}
+    </div>
+  ) : null;
   if (!open) {
     return (
-      <Button size="sm" onClick={() => setOpen(true)}>
-        <Sparkles aria-hidden /> Make it happen
-      </Button>
+      <div className="flex w-full flex-col gap-2">
+        {progress}
+        {last && !RUN_FINISHED.has(last.status) ? null : (
+          <Button size="sm" className="self-start" variant={last ? "secondary" : "primary"} onClick={() => setOpen(true)}>
+            <Sparkles aria-hidden /> {last ? "Make more" : "Make it happen"}
+          </Button>
+        )}
+      </div>
     );
   }
   return (
@@ -606,7 +640,8 @@ function MakeItHappen({ slug, channelId }: { slug: string; channelId: string }) 
                 setBusy(true);
                 try {
                   const r = await start({ slug, channelId });
-                  toast({ tone: "success", title: r.runId ? "Started: first drafts are on the way" : "Added to your to-dos", description: r.todos ? `${r.todos} to-do${r.todos === 1 ? "" : "s"} added for you.` : undefined });
+                  if (r.runId) markRunAnnounced(r.runId);
+                  toast({ tone: "success", title: r.runId ? "Started: first drafts are on the way" : "Added to your to-dos", description: r.todos ? `${r.todos} to-do${r.todos === 1 ? "" : "s"} added for you. Progress shows on this channel.` : "Progress shows on this channel.", ...(r.runId ? { action: { label: "Watch progress", href: `/app/${slug}/work/${r.runId}` } } : {}) });
                   setOpen(false);
                 } catch (e) {
                   toast({ tone: "danger", title: errorMessage(e) });
