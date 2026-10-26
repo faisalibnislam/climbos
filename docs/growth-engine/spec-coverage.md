@@ -47,7 +47,7 @@ Tests: `tests/convex/approval-claims.test.ts`, `tests/unit/manipulation-lint.tes
 | 3 | §8 | The selected draft isn't re-rendered on desktop and mobile after a change. The original customer page isn't kept: screenshots expire after 30 days and no HTML snapshot is stored. | M |
 | 4 | §8 | **Done (2026-10-26).** Design measurement plans now require audience, guardrail, observation days (1–365) and decision rule (older plans stay valid). `designFindingReviewEvents` keeps an append-only history of each finding decision, with the linked page-draft version and screenshot time, shown as Review history in the audit view. | S |
 | 5 | §6 | **Done (2026-10-26).** The calendar adds unscheduled in-review drafts on the day they were drafted, labelled "Not scheduled yet", with their own 300-item cap warning. Autopilot slots deep-link to `#slot-<id>` on the Autopilot page. | M |
-| 6 | §3.1 | Constraint list lacks price, trust, acquisition, repeat purchase, referral and cash. | M |
+| 6 | §3.1 | **Done (2026-10-26).** `CONSTRAINTS` adds acquisition, price, trust, repeat purchase, referral and cash, each with an owner-facing label, a rival explanation, a discriminating check, buyer-journey stages and its own play-matching wording. The measured funnel diagnosis still uses the original stages. | M |
 | 7 | §6 | No typed list of eight intended jobs per channel. App stores, directories and some others have no guidance group. Recommendations have no unknowns, setup steps or smallest-check fields. | M |
 | 8 | §12 | Experiment pre-registration lacks variants, decision owner, a deviations log and costs. Cross-tenant learning has no opt-in. | M |
 | 9 | §9 | Payment fee is only checked for presence: no percentage-plus-fixed recalculation and no horizon break-even. | S |

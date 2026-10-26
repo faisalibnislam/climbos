@@ -1033,3 +1033,7 @@ Design measurement plans now also require audience, guardrail, observation perio
 ## Resumption note (2026-10-26, spec gap 5)
 
 `content.calendar` now also returns in-review drafts with no posting time, placed on the day they were drafted (`unscheduled: true`, with a separate `awaitingReview` cap flag). Calendar links to Autopilot slots carry a `#slot-<id>` anchor, and the slot card highlights as the anchor target.
+
+## Resumption note (2026-10-26, spec gap 6)
+
+The structured decision can now name acquisition, price, trust, repeat purchase, referral or cash as the binding constraint. `playWorksOnConstraint` matches these by their own wording, so existing `playStage` results, and the lints built on them, are unchanged.

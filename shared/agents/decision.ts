@@ -10,7 +10,7 @@ import { capsHint, type WordCaps } from "./wordCaps";
  */
 
 /** What limits growth most right now. Lack of traffic is one answer among several. */
-export const CONSTRAINTS = ["demand", "activation", "conversion", "offer", "positioning", "retention", "delivery", "economics"] as const;
+export const CONSTRAINTS = ["demand", "acquisition", "activation", "conversion", "offer", "price", "trust", "positioning", "retention", "repeat_purchase", "referral", "delivery", "economics", "cash"] as const;
 export type BindingConstraint = (typeof CONSTRAINTS)[number];
 export const CONSTRAINT_LABEL: Record<BindingConstraint, string> = {
   demand: "Not enough of the right people see it",
@@ -21,6 +21,12 @@ export const CONSTRAINT_LABEL: Record<BindingConstraint, string> = {
   retention: "Customers don't stay",
   delivery: "Can't serve more customers well",
   economics: "Customers cost more than they're worth",
+  acquisition: "The channels that reach buyers don't work or cost too much",
+  price: "The price doesn't fit the buyer or the margin",
+  trust: "Buyers don't trust it enough to buy",
+  repeat_purchase: "Customers buy once and don't come back",
+  referral: "Customers don't bring others",
+  cash: "Cash runs out before growth pays back",
 };
 
 export const OPTION_KINDS = ["acquisition", "conversion", "offer", "retention", "capacity", "defer"] as const;
