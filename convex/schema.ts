@@ -1,6 +1,7 @@
 import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { postVisualValidator } from "./lib/postVisual";
 
 const growthProvenanceValidator = v.union(
   v.literal("owner"),
@@ -3882,6 +3883,8 @@ export default defineSchema({
     imageR2Key: v.optional(v.string()),
     imagePrompt: v.optional(v.string()),
     imageLabel: v.optional(v.string()),
+    /** Suggested visual for a social draft (format, brief, slides or video shot list). */
+    visual: v.optional(postVisualValidator),
     claimFactIds: v.array(v.id("businessFacts")),
     unsupportedClaims: v.array(v.string()),
     contentHash: v.string(),

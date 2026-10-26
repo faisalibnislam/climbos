@@ -33,7 +33,8 @@ import { FactsList, FlaggedClaims, ReceiptsTimeline, VersionHistory } from "@/co
 import { EmailSendPanel, isEmailKind } from "@/components/app/content/detail/EmailSendPanel";
 import { PublishPanel } from "@/components/app/content/detail/PublishPanel";
 import { UncertainPanel } from "@/components/app/content/detail/UncertainPanel";
-import { isCampaignAd, type ArtifactView } from "@/components/app/content/detail/model";
+import { isCampaignAd, isSocial, type ArtifactView } from "@/components/app/content/detail/model";
+import { SuggestedVisual } from "@/components/app/content/detail/SuggestedVisual";
 import { ArtifactStatus, ChannelTag, ErrorCallout, NoteList, SectionBoundary, useNow, useWorkspaceMember } from "@/components/app/content/shared";
 
 export default function ContentDetailPage() {
@@ -151,6 +152,12 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
             {cur ? <ChannelPreview channel={artifact.channel} version={cur} accountLabel={artifact.publishTarget?.accountLabel} /> : <p className="text-sm text-ink-3">No text yet.</p>}
             {locked ? <p className="text-sm text-ink-3">{artifact.status === "uncertain" ? "Check if it posted before editing." : "Published content can't be edited."}</p> : null}
           </Section>
+
+          {cur && isSocial(artifact.channel) && !artifact.reel ? (
+            <Section id="visual-heading" title="Suggested visual">
+              <SuggestedVisual slug={slug} artifact={artifact} version={cur} canCreate={canEditNow} />
+            </Section>
+          ) : null}
 
           {cur?.copyBrief || cur?.contentAngle ? (
             <Section id="intent-heading" title="Why this draft">
