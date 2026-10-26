@@ -1727,6 +1727,9 @@ function overlap(context: Set<string>, sourceText: string, weight: number, max =
 }
 
 /** Retrieval by mechanism and transferable constraints, never industry match alone. */
+const LOW_CONFIDENCE_RANK = 0.75;
+const rankScore = (m: { score: number; precedent: CreativePrecedent }) => m.score * (m.precedent.researchConfidence === "low" ? LOW_CONFIDENCE_RANK : 1);
+
 export function retrieveCreativePrecedents(query: string | CreativePrecedentContext, limit = 2): { precedent: CreativePrecedent; score: number; matchReasons: string[] }[] {
   const context = contextFor(query);
   const queryTerms = [...context.core].filter((term) => !STOP.has(term));
@@ -1756,10 +1759,27 @@ export function retrieveCreativePrecedents(query: string | CreativePrecedentCont
     ];
     return { precedent, score, matchReasons, mechanismScore: mechanisms.score };
   }).filter(({ score, mechanismScore }) => mechanismScore >= 1.5 && score >= 1.5)
-    .sort((a, b) => b.score - a.score || a.precedent.id.localeCompare(b.precedent.id))
+    // Low-confidence records are ranked with a 25% penalty (and labelled), so a comparable medium-confidence case comes first.
+    .sort((a, b) => rankScore(b) - rankScore(a) || Number(a.precedent.researchConfidence === "low") - Number(b.precedent.researchConfidence === "low") || a.precedent.id.localeCompare(b.precedent.id))
     .slice(0, Math.max(1, Math.min(3, limit)))
     .map(({ precedent, score, matchReasons }) => ({ precedent, score, matchReasons }));
 }
+
+/**
+ * Typed outcome-evidence tier, derived from the recorded source roles (spec §5.3), never from prose:
+ * an outcome is independently corroborated only when an independent secondary source supports it.
+ */
+export type OutcomeEvidenceTier = "independently_corroborated" | "self_reported" | "no_outcome_source";
+export function outcomeEvidenceTier(p: CreativePrecedent): OutcomeEvidenceTier {
+  const outcomeSources = p.sources.filter((s) => s.claimRole === "outcome" || s.claimRole === "action_and_outcome");
+  if (!outcomeSources.length) return "no_outcome_source";
+  return outcomeSources.some((s) => s.sourceRole === "independent_secondary") ? "independently_corroborated" : "self_reported";
+}
+const TIER_LABEL: Record<OutcomeEvidenceTier, string> = {
+  independently_corroborated: "outcome corroborated by an independent source (still not causal proof)",
+  self_reported: "outcome reported by the organization itself",
+  no_outcome_source: "no source supports an outcome; treat as an action precedent only",
+};
 
 export function formatCreativePrecedents(query: string | CreativePrecedentContext, limit = 2): string {
   const matches = retrieveCreativePrecedents(query, limit);
@@ -1770,7 +1790,7 @@ export function formatCreativePrecedents(query: string | CreativePrecedentContex
     `Category convention: ${p.convention}`,
     `Choice and mechanism: ${p.choice} ${p.mechanism}`,
     `Documented outcome: ${p.outcome}`,
-    `Evidence class and causal limit: ${p.evidenceClass} ${p.causalLimit}`,
+    `Evidence class and causal limit: ${TIER_LABEL[outcomeEvidenceTier(p)]}${p.researchConfidence === "low" ? "; low research confidence" : ""}. ${p.evidenceClass} ${p.causalLimit}`,
     `Transfer conditions: ${p.conditions.join("; ")}`,
     `Transfer risk: ${p.transferRisk}`,
     `Small-business adaptation: ${p.smallBusinessAdaptation}`,
