@@ -43,7 +43,7 @@ Tests: `tests/convex/approval-claims.test.ts`, `tests/unit/manipulation-lint.tes
 | # | Spec | Gap | Size |
 |---|---|---|---|
 | 1 | §3.1 | **Done (2026-10-26).** `lintDemandGate`: when insights find insufficient business-specific evidence, or the latest business model verdict is at risk or insufficient evidence, the primary play can't carry ad spend, and supporting paid plays are flagged as tests. | M |
-| 2 | §9 | No structured persuasion-mechanism field with legal status and a lower-risk alternative. Disclosure checks for trials, subscriptions, bundles, hidden fees and auto-renew are prompt-only. Testimonial and reference-price evidence aren't checked. | M |
+| 2 | §9 | **Done (2026-10-26).** Offer assessments carry `persuasion[]` (mechanism, use, legal status, evidence needed, lower-risk alternative), checked by `lintPersuasion`. Copy now needs evidence for reference prices, star ratings, no-hidden-fees and cancel-anytime promises, and a free trial must state its end terms. A review-gating guard already exists via `lintManipulation`. | M |
 | 3 | §8 | The selected draft isn't re-rendered on desktop and mobile after a change. The original customer page isn't kept: screenshots expire after 30 days and no HTML snapshot is stored. | M |
 | 4 | §8 | The design measurement plan lacks audience, guardrails, observation period and decision rule. Finding history overwrites rows, with no event log tied to a version. | S |
 | 5 | §6 | Items awaiting review aren't on the calendar, and autopilot slots don't deep-link to the slot. | M |

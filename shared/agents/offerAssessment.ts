@@ -25,6 +25,16 @@ const OfferComparisonSchema = z.object({
   reason: z.string().min(1).max(240),
 });
 
+export const PERSUASION_MECHANISMS = ["social_proof", "anchoring", "scarcity", "urgency", "decoy", "loss_aversion", "reciprocity", "foot_in_the_door", "curiosity_gap", "endowment", "free_trial", "bundling", "referral", "personalization", "three_choice"] as const;
+/** How the mechanism is used in this offer, with its legal posture and a lower-risk alternative (spec §9). */
+export const PersuasionMechanismSchema = z.object({
+  mechanism: z.enum(PERSUASION_MECHANISMS),
+  use: z.string().min(4).max(240),
+  legalStatus: z.enum(["generally_permitted", "needs_disclosure", "only_if_true_and_current", "jurisdiction_dependent", "unknown"]),
+  evidenceNeeded: z.string().max(240),
+  lowerRiskAlternative: z.string().min(4).max(240),
+});
+
 export const OfferAssessmentSchema = z.object({
   recommendation: z.enum(["recommend_promotion", "validate_first", "improve_other_constraint", "no_change"]),
   mechanism: z.enum(["discount", "bundle", "bonus", "trial", "payment_terms", "guarantee", "referral_incentive", "non_price_change", "none"]),
@@ -77,6 +87,7 @@ export const OfferAssessmentSchema = z.object({
   }),
   urgencyClaim: z.string().nullable(),
   urgencyEvidenceRef: z.string().nullable(),
+  persuasion: z.array(PersuasionMechanismSchema).max(4).optional(),
   unknowns: z.array(z.string().min(1).max(180)).max(8),
   authorizationNote: z.string().min(1).max(180),
 });
@@ -427,7 +438,30 @@ export function lintOfferAssessment(
     const supporting = resolveEvidence(assessment.urgencyEvidenceRef, context);
     if (!supporting || !supporting.includes(assessment.urgencyClaim)) error("Deadline or scarcity claims must be present in the cited supplied fact or retrieved source.", "urgencyEvidenceRef");
   }
+  issues.push(...lintPersuasion(assessment, path));
   if (assessment.authorizationNote && /approved|authorized|ready to publish|will send|will apply/i.test(assessment.authorizationNote)) error("An offer recommendation is advisory and cannot itself authorize a price, billing, message, or publishing change.", "authorizationNote");
   if (!context.evidenceText.trim() && assessment.recommendation === "recommend_promotion") error("There is no business-specific evidence to support a promotion recommendation.", "recommendation");
+  return issues;
+}
+
+/** Claims that are only lawful when true need evidence; disclosures and unknown legal posture are surfaced, never assumed fine. */
+const NEEDS_TRUTH = new Set<string>(["social_proof", "anchoring", "scarcity", "urgency"]);
+const NEEDS_DISCLOSURE = new Set<string>(["free_trial", "bundling", "referral"]);
+const MECHANISM_PERSUASION: Partial<Record<OfferAssessment["mechanism"], string>> = { trial: "free_trial", bundle: "bundling", referral_incentive: "referral" };
+
+export function lintPersuasion(assessment: OfferAssessment, path: string): LintIssue[] {
+  const issues: LintIssue[] = [];
+  const list = assessment.persuasion ?? [];
+  list.forEach((p, i) => {
+    const at = `${path}.persuasion[${i}]`;
+    if (NEEDS_TRUTH.has(p.mechanism) && p.legalStatus === "generally_permitted") issues.push({ severity: "error", rule: "persuasion", message: `${p.mechanism.replace(/_/g, " ")} is only lawful when true and current; label it only_if_true_and_current.`, path: `${at}.legalStatus` });
+    if (NEEDS_TRUTH.has(p.mechanism) && !p.evidenceNeeded.trim()) issues.push({ severity: "error", rule: "persuasion", message: `Say what evidence makes this ${p.mechanism.replace(/_/g, " ")} true (a real count, a real former price, a real deadline).`, path: `${at}.evidenceNeeded` });
+    if (NEEDS_DISCLOSURE.has(p.mechanism) && p.legalStatus === "generally_permitted") issues.push({ severity: "error", rule: "persuasion", message: `A ${p.mechanism.replace(/_/g, " ")} needs clear terms shown with the offer; label it needs_disclosure.`, path: `${at}.legalStatus` });
+    if (p.legalStatus === "unknown" || p.legalStatus === "jurisdiction_dependent") issues.push({ severity: "warn", rule: "persuasion", message: `Check the rules for ${p.mechanism.replace(/_/g, " ")} where you sell before using it, or use the lower-risk alternative.`, path: `${at}.legalStatus` });
+  });
+  const required = MECHANISM_PERSUASION[assessment.mechanism];
+  if (required && assessment.recommendation === "recommend_promotion" && !list.some((p) => p.mechanism === required)) {
+    issues.push({ severity: "error", rule: "persuasion", message: `This ${assessment.mechanism.replace(/_/g, " ")} offer needs a persuasion entry for ${required.replace(/_/g, " ")} with its disclosure and a lower-risk alternative.`, path: `${path}.persuasion` });
+  }
   return issues;
 }
