@@ -59,10 +59,9 @@ function SplitStrip({ counts }: { counts: Record<(typeof GROUPS)[number]["key"],
  * Acquisition Intelligence: which channels fit this business, ranked with the
  * reasons. Confirming a detail re-ranks instantly (no AI run).
  */
-type SortKey = "recommended" | "priority" | "easiest" | "hardest";
+type SortKey = "recommended" | "easiest" | "hardest";
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "recommended", label: "Recommended" },
-  { value: "priority", label: "Priority" },
   { value: "easiest", label: "Easiest (ClimbOS does most)" },
   { value: "hardest", label: "Hardest (most hands-on)" },
 ];
@@ -73,7 +72,7 @@ const LEARN_SPEED: Record<string, number> = { days: 0, weeks: 1, months: 2 };
 function sortRows(rows: Row[], sort: SortKey): Row[] {
   if (sort === "recommended") return rows;
   const effort = (r: Row) => (EFFORT[r.exec] ?? 1) * 10 + (LEARN_SPEED[r.learn] ?? 1);
-  return [...rows].sort((a, b) => sort === "priority" ? b.score - a.score : sort === "easiest" ? effort(a) - effort(b) || b.score - a.score : effort(b) - effort(a) || b.score - a.score);
+  return [...rows].sort((a, b) => (sort === "easiest" ? effort(a) - effort(b) : effort(b) - effort(a)) || b.score - a.score);
 }
 
 export function ChannelScorecard({ slug }: { slug: string }) {
