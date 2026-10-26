@@ -1411,7 +1411,7 @@ export default defineSchema({
           v.array(
             v.object({
               channelId: v.string(),
-              preference: v.union(v.literal("prefer"), v.literal("avoid"), v.literal("dismissed"), v.literal("irrelevant")),
+              preference: v.union(v.literal("prefer"), v.literal("avoid"), v.literal("dismissed"), v.literal("irrelevant"), v.literal("already_using")),
               rationale: v.string(),
               sourceUrl: v.optional(v.string()),
               evidenceDate: v.optional(v.string()),
@@ -3135,7 +3135,7 @@ export default defineSchema({
               v.array(
                 v.object({
                   channelId: v.string(),
-                  preference: v.union(v.literal("prefer"), v.literal("avoid"), v.literal("dismissed"), v.literal("irrelevant")),
+                  preference: v.union(v.literal("prefer"), v.literal("avoid"), v.literal("dismissed"), v.literal("irrelevant"), v.literal("already_using")),
                   rationale: v.string(),
                   sourceUrl: v.optional(v.string()),
                   evidenceDate: v.optional(v.string()),

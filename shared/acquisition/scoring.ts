@@ -13,7 +13,8 @@ import type { BindingConstraint } from "../agents/decision";
 
 export const DIMENSIONS = {
   customerType: { label: "Who buys", values: ["b2b", "b2c", "b2g", "b2b2c"] },
-  scale: { label: "Business size", values: ["solo", "startup", "smb", "mid_market", "enterprise"] },
+  customerSize: { label: "Size of the businesses you sell to", values: ["solo", "startup", "smb", "mid_market", "enterprise"] },
+  scale: { label: "Your business size", values: ["solo", "startup", "smb", "mid_market", "enterprise"] },
   salesMotion: { label: "How people buy", values: ["self_service", "sales_assisted", "sales_led"] },
   revenueModel: { label: "Revenue model", values: ["subscription", "transactional", "one_time", "services", "licensing"] },
   aov: { label: "Typical order or contract", values: ["low", "medium", "high"] },
@@ -30,6 +31,19 @@ export const DIMENSIONS = {
   tracking: { label: "Tracking in place", values: ["none", "basic", "full"] },
 } as const;
 export type DimensionKey = keyof typeof DIMENSIONS;
+
+/** Details where several answers can be true at once (owner picks any number). */
+export const MULTI_DIMENSIONS: ReadonlySet<DimensionKey> = new Set<DimensionKey>(["customerType", "customerSize", "salesMotion", "revenueModel", "geography"]);
+
+/** Plain labels where a shared word would be confusing ("Medium" order vs "Medium" time to buy). */
+export const DIMENSION_VALUE_LABEL: Partial<Record<DimensionKey, Record<string, string>>> = {
+  aov: { low: "Small (like an app subscription or a small order)", medium: "Mid-sized (like a course or a few hours of work)", high: "Large (like a contract or a project)" },
+  salesCycle: { immediate: "Same day", short: "Within a week or two", medium: "A few weeks to two months", long: "Several months or more" },
+};
+
+export function dimensionValueLabel(k: DimensionKey, value: string): string {
+  return DIMENSION_VALUE_LABEL[k]?.[value] ?? VALUE_LABEL[value] ?? value;
+}
 
 export const VALUE_LABEL: Record<string, string> = {
   b2b: "Businesses",
@@ -78,6 +92,8 @@ export const VALUE_LABEL: Record<string, string> = {
 export type Confidence = "high" | "medium" | "low";
 export interface DimensionValue {
   value: string;
+  /** Every selected answer for a multiple-choice detail; `value` is the first, kept for older readers. */
+  values?: string[];
   confidence: Confidence;
   source: "inferred" | "owner";
   evidence?: string;
@@ -85,7 +101,8 @@ export interface DimensionValue {
 
 export interface OwnerChannelPreference {
   channelId: string;
-  preference: "prefer" | "avoid" | "dismissed" | "irrelevant";
+  /** already_using: the owner has this channel today; it is ranked as an existing asset to build on. */
+  preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using";
   rationale: string;
   sourceUrl?: string;
   evidenceDate?: string;
@@ -119,6 +136,15 @@ const dim = (p: AcquisitionProfile, k: DimensionKey) => {
   const value = p.dims[k];
   return value?.source === "inferred" && value.confidence === "low" ? undefined : value?.value;
 };
+/** All selected answers for a detail (one for single-choice details), with the same low-confidence rule. */
+const dimAll = (p: AcquisitionProfile, k: DimensionKey): string[] => {
+  const value = p.dims[k];
+  if (!value || (value.source === "inferred" && value.confidence === "low")) return [];
+  return value.values?.length ? value.values : [value.value];
+};
+const dimHas = (p: AcquisitionProfile, k: DimensionKey, v: string) => dimAll(p, k).includes(v);
+/** Only this answer is selected (a multi-choice detail with several answers isn't "only b2c"). */
+const dimOnly = (p: AcquisitionProfile, k: DimensionKey, v: string) => { const all = dimAll(p, k); return all.length === 1 && all[0] === v; };
 
 /* ---------------- price fit ---------------- */
 
@@ -127,7 +153,7 @@ export const LOW_TICKET_USD_MONTH = 25;
 
 /** Low-ticket, not sales-led: the listed price when known, else the inferred order size. */
 export function lowTicket(p: AcquisitionProfile): boolean {
-  if (dim(p, "salesMotion") === "sales_led") return false;
+  if (dimHas(p, "salesMotion", "sales_led")) return false;
   return p.priceUsdMonth !== undefined && p.priceUsdMonth > 0 ? p.priceUsdMonth < LOW_TICKET_USD_MONTH : dim(p, "aov") === "low";
 }
 
@@ -184,18 +210,22 @@ export function traitsOf(p: AcquisitionProfile): Set<Requirement> {
   if (p.typesSource !== "inferred") for (const k of p.types) for (const r of TYPE_BY_KEY[k]?.traits ?? []) t.add(r);
   // Only an owner-confirmed dimension can unlock or exclude hard channel eligibility.
   // Inferred classifications may inform soft scores, but must not silently rule out a route.
-  const c = p.dims.customerType?.source === "owner" ? p.dims.customerType.value : undefined;
-  if (c === "b2b" || c === "b2b2c") t.add("b2b");
-  if (c === "b2c" || c === "b2b2c") t.add("b2c");
-  if (c === "b2g") {
-    t.add("gov");
-    t.add("b2b");
+  const ct = p.dims.customerType;
+  const cs = ct?.source === "owner" ? (ct.values?.length ? ct.values : [ct.value]) : [];
+  for (const c of cs) {
+    if (c === "b2b" || c === "b2b2c") t.add("b2b");
+    if (c === "b2c" || c === "b2b2c") t.add("b2c");
+    if (c === "b2g") {
+      t.add("gov");
+      t.add("b2b");
+    }
   }
-  if (!c && !t.has("b2b") && !t.has("b2c")) {
+  if (!cs.length && !t.has("b2b") && !t.has("b2c")) {
     t.add("b2b");
     t.add("b2c");
   }
-  if (p.dims.geography?.source === "owner" && p.dims.geography.value === "local") t.add("location");
+  const geo = p.dims.geography;
+  if (geo?.source === "owner" && (geo.values?.length ? geo.values : [geo.value]).includes("local")) t.add("location");
   return t;
 }
 
@@ -247,16 +277,19 @@ const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 export function priors(c: Channel, p: AcquisitionProfile): Record<Factor, number> {
   const types = p.types.map((k) => TYPE_BY_KEY[k]).filter(Boolean);
   let audience = types.length ? Math.max(...types.map((t) => (t.starters.includes(c.id) ? 85 : t.channels.includes(c.id) ? 70 : 40))) : 55;
-  const geo = dim(p, "geography");
-  if ((c.family === "local" || (c.requires ?? []).includes("location")) && (geo === "global" || geo === "national")) audience -= 30;
+  // Local channels lose fit only when no local customers were selected.
+  const geos = dimAll(p, "geography");
+  if ((c.family === "local" || (c.requires ?? []).includes("location")) && geos.length && !geos.includes("local") && !geos.includes("regional")) audience -= 30;
   const enterpriseOnly = ["D05", "D06", "E01", "D11", "E02", "E03"].includes(c.id);
-  if (enterpriseOnly && (dim(p, "aov") === "low" || dim(p, "scale") === "solo" || dim(p, "scale") === "startup")) audience -= 25;
-  if (["O01", "P09", "D03", "O17", "N03", "N05", "N07"].includes(c.id) && dim(p, "customerType") === "b2c") audience -= 30;
+  const customerSizes = dimAll(p, "customerSize");
+  const noLargeCustomers = customerSizes.length > 0 && !customerSizes.includes("enterprise") && !customerSizes.includes("mid_market");
+  if (enterpriseOnly && (dim(p, "aov") === "low" || dim(p, "scale") === "solo" || dim(p, "scale") === "startup" || noLargeCustomers)) audience -= 25;
+  if (["O01", "P09", "D03", "O17", "N03", "N05", "N07"].includes(c.id) && dimOnly(p, "customerType", "b2c")) audience -= 30;
   // Business model (Part 6): low-ticket B2B is self-serve; high-ticket B2B is sales-led.
-  if (dim(p, "aov") === "low" && dim(p, "customerType") === "b2b" && ["organic_search", "content", "product_led"].includes(c.family)) audience += 8;
-  if (dim(p, "salesMotion") === "sales_led" && c.family === "outreach") audience += 10;
+  if (dim(p, "aov") === "low" && dimOnly(p, "customerType", "b2b") && ["organic_search", "content", "product_led"].includes(c.family)) audience += 8;
+  if (dimHas(p, "salesMotion", "sales_led") && c.family === "outreach") audience += 10;
   // One-to-one selling rarely pays back on a low-ticket, self-serve product.
-  if ((dim(p, "aov") === "low" || dim(p, "salesMotion") === "self_service") && (c.family === "outreach" || c.family === "events") && dim(p, "salesMotion") !== "sales_led") audience -= 20;
+  if ((dim(p, "aov") === "low" || dimOnly(p, "salesMotion", "self_service")) && (c.family === "outreach" || c.family === "events") && !dimHas(p, "salesMotion", "sales_led")) audience -= 20;
   // Price fit: at a low price, labour per customer or per partner can't pay back; self-serve channels lead.
   const cheap = lowTicket(p);
   if (cheap && perCustomer(c)) audience -= 25;
@@ -481,7 +514,7 @@ export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] =
     const priceFit = el.ok ? priceFitReason(c, p) : undefined;
     const factors = Object.fromEntries(FACTORS.map((f) => [f, clamp(base[f] + Math.max(-30, Math.min(30, a?.deltas[f] ?? 0)))])) as Record<Factor, number>;
     const baseScore = FACTORS.reduce((s, f) => s + factors[f] * weights[f], 0);
-    const score = clamp(baseScore + (ownerPreference ? (ownerPreference.preference === "prefer" ? 12 : -12) : 0));
+    const score = clamp(baseScore + (ownerPreference ? (ownerPreference.preference === "prefer" ? 12 : ownerPreference.preference === "already_using" ? 15 : -12) : 0));
     return {
       id: c.id,
       name: c.name,
@@ -518,7 +551,7 @@ export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] =
     const preference = ownerPreferences.get(row.id);
     const evidence = adj.get(row.id);
     if (row.status !== "ineligible" && PLATFORM_EVIDENCE_CHANNELS.has(row.id)) {
-      const ownerEvidence = preference?.preference === "prefer" && Boolean(preference.rationale.trim()) && isEvidenceDateOnOrBefore(preference.evidenceDate, asOfDate);
+      const ownerEvidence = (preference?.preference === "prefer" || preference?.preference === "already_using") && Boolean(preference.rationale.trim()) && isEvidenceDateOnOrBefore(preference.evidenceDate, asOfDate);
       const verifiedEvidence = Boolean(evidence?.evidence?.trim())
         && ["measured", "owner_reported", "source_reported"].includes(evidence?.evidenceBasis ?? "")
         && Boolean(evidence?.evidenceConfidence)
@@ -534,6 +567,7 @@ export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] =
           : "Customer use and buyer fit for this specific platform are unknown. Confirm with customer evidence or an owner-reported source before recommending it.";
       }
     }
+    if (preference?.preference === "already_using" && row.status !== "ineligible") row.why = "You already use this, so ClimbOS builds on it instead of starting from zero.";
     if (preference?.preference === "dismissed" || preference?.preference === "irrelevant") {
       evidenceBlocked.add(row.id);
       row.why = preference.preference === "irrelevant" ? "Your team marked this channel irrelevant; that feedback is saved for future rankings." : "Your team dismissed this channel; that feedback is saved for future rankings.";
@@ -620,14 +654,25 @@ export function profileFrom(p: { saved?: SavedAcquisition | null; legacyType?: s
   };
 }
 
+const CONF_RANK: Record<Confidence, number> = { low: 0, medium: 1, high: 2 };
+
 /** Merge the agent's classification; values the owner confirmed are never overwritten. */
 export function mergeFit(profile: AcquisitionProfile, fit: { types: string[]; dimensions: { key: string; value: string; confidence: Confidence; evidence: string }[] }, validTypes: Set<string>): AcquisitionProfile {
   const dims = { ...profile.dims };
+  const fresh = new Set<DimensionKey>();
   for (const d of fit.dimensions) {
     const key = d.key as DimensionKey;
     if (!(key in DIMENSIONS) || !(DIMENSIONS[key].values as readonly string[]).includes(d.value)) continue;
     if (dims[key]?.source === "owner") continue;
-    dims[key] = { value: d.value, confidence: d.confidence, source: "inferred", evidence: d.evidence.slice(0, 240) };
+    const prev = dims[key];
+    // A multiple-choice detail may come back as several entries for the same key; keep each answer.
+    if (MULTI_DIMENSIONS.has(key) && fresh.has(key) && prev) {
+      const values = [...new Set([...(prev.values ?? [prev.value]), d.value])];
+      dims[key] = { ...prev, values, confidence: CONF_RANK[d.confidence] < CONF_RANK[prev.confidence] ? d.confidence : prev.confidence };
+    } else {
+      dims[key] = { value: d.value, ...(MULTI_DIMENSIONS.has(key) ? { values: [d.value] } : {}), confidence: d.confidence, source: "inferred", evidence: d.evidence.slice(0, 240) };
+    }
+    fresh.add(key);
   }
   const types = fit.types.filter((t) => validTypes.has(t)).slice(0, 3);
   return { ...profile, types: profile.typesSource === "owner" ? profile.types : types.length ? types : profile.types, typesSource: profile.typesSource === "owner" ? "owner" : "inferred", dims };

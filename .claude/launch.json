@@ -25,20 +25,6 @@
         "3001"
       ],
       "port": 3001
-    },
-    {
-      "name": "climbos-web-visuals",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "--dir",
-        "/Users/faisalislam/Documents/GitHub/Airly Studio/climbos/.claude/worktrees/social-visuals",
-        "exec",
-        "next",
-        "dev",
-        "-p",
-        "3007"
-      ],
-      "port": 3007
     }
   ]
 }

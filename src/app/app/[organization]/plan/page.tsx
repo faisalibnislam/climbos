@@ -4,7 +4,7 @@ import { Discussion } from "@/components/app/Discussion";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Compass, Target } from "@/components/icons"
+import { Compass, Megaphone, Target } from "@/components/icons"
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useRef, useState } from "react";
@@ -323,9 +323,13 @@ function PlanScreen({ slug }: { slug: string }) {
       ) : null}
 
       <Tabs defaultValue="plan" className={compare ? "hidden" : undefined}>
-        <TabsList>
-          <TabsTrigger value="plan">Plan</TabsTrigger>
-          <TabsTrigger value="channels">Channels</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 p-1">
+          <TabsTrigger value="plan" className="h-12 gap-2 text-lg [font-family:var(--font-display-serif)] [&_svg]:size-5">
+            <Compass aria-hidden /> Plan
+          </TabsTrigger>
+          <TabsTrigger value="channels" className="h-12 gap-2 text-lg [font-family:var(--font-display-serif)] [&_svg]:size-5">
+            <Megaphone aria-hidden /> Channels
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="channels" className="mt-5">
           <ChannelScorecard slug={slug} />

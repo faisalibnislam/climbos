@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { minorToMajor } from "../shared/economics/currency";
 import { budgetBand, BUSINESS_TYPES, CHANNEL_BY_ID, EXECUTION_LABEL, FAMILIES, typesFromLegacy, TYPE_BY_KEY } from "../shared/acquisition/library";
 import {
   DIMENSIONS,
@@ -8,7 +9,9 @@ import {
   profileFrom,
   scoreChannels,
   STATUS_LABEL,
-  VALUE_LABEL,
+
+  MULTI_DIMENSIONS,
+  dimensionValueLabel,
   type Adjustment,
   type DimensionKey,
   type OwnerChannelPreference,
@@ -61,7 +64,8 @@ export const view = query({
       canEdit: role !== "viewer",
       scored: Boolean(planned),
       summary: planned?.summary ?? [],
-      budget: { usd: profile.budgetUsd, band: band.label, approach: band.approach },
+      budget: { usd: profile.budgetUsd, band: band.label, approach: band.approach, amount: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency), currency: goal.currency },
+      canSetBudget: role !== "viewer",
       types: profile.types.map((k) => ({ key: k, label: TYPE_BY_KEY[k]?.label ?? k, regulated: TYPE_BY_KEY[k]?.regulated ?? null })),
       typesSource: profile.typesSource ?? "inferred",
       availableTypes: BUSINESS_TYPES.map(({ key, label, category, customer, regulated }) => ({ key, label, category, customer, regulated: regulated ?? null })),
@@ -69,10 +73,12 @@ export const view = query({
         key: k,
         label: DIMENSIONS[k].label,
         value: profile.dims[k]?.value ?? null,
-        valueLabel: profile.dims[k] ? (VALUE_LABEL[profile.dims[k]!.value] ?? profile.dims[k]!.value) : null,
+        values: profile.dims[k] ? (profile.dims[k]!.values?.length ? profile.dims[k]!.values! : [profile.dims[k]!.value]) : [],
+        multi: MULTI_DIMENSIONS.has(k),
+        valueLabel: profile.dims[k] ? (profile.dims[k]!.values?.length ? profile.dims[k]!.values! : [profile.dims[k]!.value]).map((x) => dimensionValueLabel(k, x)).join(", ") : null,
         confidence: profile.dims[k]?.confidence ?? null,
         source: profile.dims[k]?.source ?? null,
-        options: DIMENSIONS[k].values.map((value) => ({ value, label: VALUE_LABEL[value] ?? value })),
+        options: DIMENSIONS[k].values.map((value) => ({ value, label: dimensionValueLabel(k, value) })),
       })),
       toConfirm: dimensionsToConfirm(profile),
       factorLabels: FACTORS.map((f) => ({ key: f, label: FACTOR_LABEL[f] })),
@@ -128,20 +134,46 @@ export const setTypes = mutation({
 
 /** The owner confirms or corrects one business detail; channels re-rank on the next read. */
 export const setDimension = mutation({
-  args: { slug: v.string(), key: v.string(), value: v.string() },
-  handler: async (ctx, { slug, key, value }) => {
+  args: { slug: v.string(), key: v.string(), value: v.string(), values: v.optional(v.array(v.string())) },
+  handler: async (ctx, { slug, key, value, values }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const k = key as DimensionKey;
-    if (!(k in DIMENSIONS) || !(DIMENSIONS[k].values as readonly string[]).includes(value)) throw appError("INVALID", "That isn't one of the options.");
+    const allowed = k in DIMENSIONS ? (DIMENSIONS[k].values as readonly string[]) : [];
+    const picked = MULTI_DIMENSIONS.has(k) && values?.length ? [...new Set(values)] : [value];
+    if (!allowed.length || picked.some((x) => !allowed.includes(x))) throw appError("INVALID", "That isn't one of the options.");
+    if (!MULTI_DIMENSIONS.has(k) && values && values.length > 1) throw appError("INVALID", "Pick one answer for this detail.");
+    value = picked[0];
     const business = await ctx.db
       .query("businesses")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
       .first();
     if (!business) throw appError("NOT_FOUND", "Set up your business first.");
     const prior = business.acquisition ?? { types: typesFromLegacy(business.businessType), dims: {}, updatedAt: 0 };
-    const dims = { ...(prior.dims as Record<string, unknown>), [k]: { value, confidence: "high", source: "owner" } };
+    const dims = { ...(prior.dims as Record<string, unknown>), [k]: { value, ...(MULTI_DIMENSIONS.has(k) ? { values: picked } : {}), confidence: "high", source: "owner" } };
     await ctx.db.patch(business._id, { acquisition: { types: prior.types, typesSource: prior.typesSource ?? "inferred", dims, channelPreferences: prior.channelPreferences ?? [], updatedAt: Date.now() } });
-    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "acquisition.dimension", subjectType: "business", subjectId: business._id, summary: `${DIMENSIONS[k].label}: ${VALUE_LABEL[value] ?? value}` });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "acquisition.dimension", subjectType: "business", subjectId: business._id, summary: `${DIMENSIONS[k].label}: ${picked.map((x) => dimensionValueLabel(k, x)).join(", ") || value}` });
+  },
+});
+
+/** The owner approves ClimbOS's guesses as they stand (all of them, or the listed details); approved guesses count like answers. */
+export const approveGuesses = mutation({
+  args: { slug: v.string(), keys: v.optional(v.array(v.string())) },
+  handler: async (ctx, { slug, keys }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    if (!business?.acquisition) throw appError("NOT_FOUND", "There are no guesses to approve yet.");
+    const prior = business.acquisition;
+    const dims = { ...(prior.dims as Record<string, { value: string; values?: string[]; source: string; confidence: string; evidence?: string }>) };
+    const approved: string[] = [];
+    for (const [k, d] of Object.entries(dims)) {
+      if (!(k in DIMENSIONS) || d?.source !== "inferred" || (keys && !keys.includes(k))) continue;
+      dims[k] = { ...d, source: "owner", confidence: "high" };
+      approved.push(DIMENSIONS[k as DimensionKey].label);
+    }
+    if (!approved.length) return { approved: 0 };
+    await ctx.db.patch(business._id, { acquisition: { ...prior, dims, updatedAt: Date.now() } });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "acquisition.guesses_approved", subjectType: "business", subjectId: business._id, summary: `Approved ClimbOS's guesses for ${approved.join(", ")}.` });
+    return { approved: approved.length };
   },
 });
 
@@ -149,7 +181,7 @@ const MAX_CHANNEL_PREFERENCES = 20;
 
 /** Save an owner-reported channel preference as a bounded soft ranking signal. */
 export const setChannelPreference = mutation({
-  args: { slug: v.string(), channelId: v.string(), preference: v.union(v.literal("prefer"), v.literal("avoid"), v.literal("dismissed"), v.literal("irrelevant"), v.literal("clear")), rationale: v.optional(v.string()), sourceUrl: v.optional(v.string()) },
+  args: { slug: v.string(), channelId: v.string(), preference: v.union(v.literal("prefer"), v.literal("avoid"), v.literal("dismissed"), v.literal("irrelevant"), v.literal("already_using"), v.literal("clear")), rationale: v.optional(v.string()), sourceUrl: v.optional(v.string()) },
   handler: async (ctx, { slug, channelId, preference, rationale, sourceUrl }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     if (!CHANNEL_BY_ID[channelId]) throw appError("INVALID", "Choose a channel from the ClimbOS channel list.");

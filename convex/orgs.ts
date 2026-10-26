@@ -609,6 +609,28 @@ export const saveOnboardingIntro = mutation({
   },
 });
 
+/** Change only the monthly ad budget on the active goal (raising it above the spending cap needs an owner or admin). */
+export const setAdBudget = mutation({
+  args: { slug: v.string(), monthlyAdBudget: v.number() },
+  handler: async (ctx, { slug, monthlyAdBudget }) => {
+    const { org, user, role } = await requireOrgAccess(ctx, { slug }, "edit");
+    if (!Number.isFinite(monthlyAdBudget) || monthlyAdBudget < 0 || monthlyAdBudget > 1_000_000) throw appError("INVALID", "Enter a monthly ad budget between 0 and 1,000,000 (0 means no ads).");
+    const goal = await ctx.db.query("goals").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active")).first();
+    if (!goal) throw appError("NOT_FOUND", "Set a goal first.");
+    const budgetMinor = majorToMinor(monthlyAdBudget, goal.currency);
+    const policy = await ctx.db.query("autonomyPolicies").withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true)).first();
+    if (policy && budgetMinor > policy.maxMonthlyAdSpendMinor && !can(role, "manage_policies")) throw appError("FORBIDDEN", "Only an owner or admin can raise the ad budget.");
+    await ctx.db.patch(goal._id, { monthlyAdBudgetMinor: budgetMinor });
+    // The ad envelope in the active policy follows the goal (same as setGoal).
+    if (policy && policy.maxMonthlyAdSpendMinor !== budgetMinor) {
+      await ctx.db.patch(policy._id, { active: false });
+      const { _id: _omit, _creationTime: _ct, ...rest } = policy;
+      await ctx.db.insert("autonomyPolicies", { ...rest, version: policy.version + 1, maxMonthlyAdSpendMinor: budgetMinor, createdBy: user._id, createdAt: Date.now(), active: true });
+    }
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "goal.budget_changed", subjectType: "goal", subjectId: String(goal._id), summary: `Monthly ad budget set to ${monthlyAdBudget} ${goal.currency}.` });
+  },
+});
+
 export const setGoal = mutation({
   args: {
     slug: v.string(),
