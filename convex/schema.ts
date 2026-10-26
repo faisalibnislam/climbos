@@ -485,6 +485,7 @@ export const providerValidator = v.union(
   v.literal("ga4"),
   v.literal("search_console"),
   v.literal("google_ads"),
+  v.literal("google_business_profile"),
   v.literal("meta_ads"),
   v.literal("facebook_pages"),
   v.literal("instagram"),
@@ -1675,6 +1676,8 @@ export default defineSchema({
     provider: providerValidator,
     stateHash: v.string(),
     codeVerifier: v.optional(v.string()),
+    /** Which provider app signs in: LinkedIn company Pages use a separate Community Management app. */
+    variant: v.optional(v.literal("linkedin_pages")),
     expiresAt: v.number(),
   }).index("by_state", ["stateHash"]),
 

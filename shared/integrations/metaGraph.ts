@@ -3,6 +3,7 @@
  */
 
 import { asArray, asString, collectPages, isRecord, readFailure, requestJson, writeFailure, type HttpOutcome } from "./http";
+import { GRAPH_BASE } from "./registry";
 import type { AdapterOptions, PaginationResult, ReadResult, WriteResult } from "./types";
 
 /** Platform + BUC throttling codes: the request was rejected, not applied. */
@@ -120,4 +121,18 @@ export async function computeAppSecretProof(accessToken: string, appSecret: stri
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey("raw", enc.encode(appSecret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   return toHex(await crypto.subtle.sign("HMAC", key, enc.encode(accessToken)));
+}
+
+/** Permissions the user actually granted (GET /me/permissions, status "granted"). Meta's token response doesn't list them. */
+export async function listGrantedPermissions(call: GraphCall): Promise<ReadResult<string[]>> {
+  const out = await graphGet(call, new URL(`${GRAPH_BASE}/me/permissions`));
+  if (out.kind !== "ok") return metaReadFailure(out);
+  const data = isRecord(out.data) ? out.data : {};
+  const granted: string[] = [];
+  for (const raw of asArray(data.data)) {
+    if (!isRecord(raw)) continue;
+    const permission = asString(raw.permission);
+    if (permission && raw.status === "granted" && !granted.includes(permission)) granted.push(permission);
+  }
+  return { ok: true, data: granted };
 }

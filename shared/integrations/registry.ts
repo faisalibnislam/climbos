@@ -38,6 +38,8 @@ export const SEARCH_CONSOLE_BASE = `https://www.googleapis.com/${SEARCH_CONSOLE_
 export const RESEND_BASE = "https://api.resend.com";
 export const STRIPE_BASE = "https://api.stripe.com/v1";
 export const FIRECRAWL_SCRAPE_URL = `https://api.firecrawl.dev/${FIRECRAWL_API_VERSION}/scrape`;
+export const GBP_ACCOUNT_BASE = "https://mybusinessaccountmanagement.googleapis.com/v1";
+export const GBP_INFO_BASE = "https://mybusinessbusinessinformation.googleapis.com/v1";
 export const LINKEDIN_REST_BASE = "https://api.linkedin.com/rest";
 export const LINKEDIN_USERINFO_URL = "https://api.linkedin.com/v2/userinfo";
 export const X_API_BASE = "https://api.x.com/2";
@@ -149,6 +151,25 @@ export const PROVIDERS: Record<ProviderId, ProviderMetadata> = {
       fact({ fact: "developer-token / login-customer-id headers", value: "developer-token, login-customer-id (manager id, digits only)", docsUrl: "https://developers.google.com/google-ads/api/rest/auth", verified: false, note: "Header page not re-fetched; values are long-standing." }),
     ],
   },
+  google_business_profile: {
+    id: "google_business_profile",
+    displayName: "Google Business Profile",
+    description: "Confirms which Business Profile (your Google Maps and Search listing) belongs to this business. Read-only.",
+    connection: "oauth_google",
+    apiVersion: "v1",
+    verified: true,
+    verifiedAt: VERIFIED_AT,
+    capabilities: [
+      { id: "google_business_profile.list_locations", kind: "read", label: "See your Business Profile locations", description: "Lists the locations you manage so you can pick the one for this business." },
+    ],
+    requiredEnv: ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
+    requiredReviewSteps: ["Google Business Profile API access request (quota stays at 0 until Google approves)", "Google OAuth consent screen verification for business.manage"],
+    docs: [
+      fact({ fact: "accounts.list", value: "GET https://mybusinessaccountmanagement.googleapis.com/v1/accounts (pageSize, pageToken)", docsUrl: "https://developers.google.com/my-business/reference/accountmanagement/rest/v1/accounts/list", verified: true, verifiedAt: "2026-10-26" }),
+      fact({ fact: "locations.list", value: "GET https://mybusinessbusinessinformation.googleapis.com/v1/{parent=accounts/*}/locations (readMask required, pageSize ≤ 100)", docsUrl: "https://developers.google.com/my-business/reference/businessinformation/rest/v1/accounts.locations/list", verified: true, verifiedAt: "2026-10-26" }),
+      fact({ fact: "OAuth scope", value: "https://www.googleapis.com/auth/business.manage", docsUrl: "https://developers.google.com/my-business/content/basic-setup", verified: true, verifiedAt: "2026-10-26" }),
+    ],
+  },
   meta_ads: {
     id: "meta_ads",
     displayName: "Meta Ads (Facebook & Instagram ads)",
@@ -220,17 +241,19 @@ export const PROVIDERS: Record<ProviderId, ProviderMetadata> = {
   linkedin: {
     id: "linkedin",
     displayName: "LinkedIn",
-    description: "Publishes approved posts, with an optional image, to your personal LinkedIn profile.",
+    description: "Publishes approved posts, with an optional image, to your personal profile or to a LinkedIn Page you administer.",
     connection: "oauth_linkedin",
     apiVersion: LINKEDIN_API_VERSION,
     verified: true,
     verifiedAt: VERIFIED_AT,
     capabilities: [
       { id: "linkedin.read_profile", kind: "read", label: "Check your LinkedIn profile", description: "Reads your name and member id so posts go to the right profile." },
-      { id: "linkedin.publish_post", kind: "write", label: "Publish LinkedIn posts", description: "Publishes approved text and image posts to your profile." },
+      { id: "linkedin.publish_post", kind: "write", label: "Publish to your profile", description: "Publishes approved text and image posts to your personal profile." },
+      { id: "linkedin.list_organizations", kind: "read", label: "See the LinkedIn Pages you administer", description: "Lists Pages where you are an administrator so you can pick one." },
+      { id: "linkedin.publish_org_post", kind: "write", label: "Publish to your LinkedIn Page", description: "Publishes approved posts as your company Page." },
     ],
     requiredEnv: ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"],
-    requiredReviewSteps: ['Add the "Sign In with LinkedIn using OpenID Connect" and "Share on LinkedIn" products to the LinkedIn app'],
+    requiredReviewSteps: ['Add the "Sign In with LinkedIn using OpenID Connect" and "Share on LinkedIn" products to the LinkedIn app', "Community Management API access (LinkedIn vetting) to post as a company Page"],
     docs: [
       fact({ fact: "Create post", value: "POST https://api.linkedin.com/rest/posts (author, commentary, visibility, distribution, lifecycleState PUBLISHED) → 201, id in x-restli-id; headers LinkedIn-Version YYYYMM + X-Restli-Protocol-Version 2.0.0", docsUrl: "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api", verified: true, note: "Checked 2026-10-18." }),
       fact({ fact: "Read post", value: "GET /rest/posts/{encoded urn}; reading member posts needs r_member_social, which LinkedIn restricts to approved apps", docsUrl: "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api", verified: true, note: "Without r_member_social, read-back is refused and publishes stay uncertain." }),

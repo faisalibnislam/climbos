@@ -14,6 +14,7 @@ const PROVIDER_NETWORK: Record<string, string> = {
   ga4: "google",
   search_console: "google",
   google_ads: "google",
+  google_business_profile: "google",
   meta_ads: "facebook",
   facebook_pages: "facebook",
   instagram: "instagram",
@@ -39,6 +40,7 @@ function ProviderMark({ provider }: { provider: string }) {
 }
 import { errorInfo } from "../errors";
 import { formatDateTime, relativeTime } from "../money";
+import { AccountChooser, ACCOUNT_KIND } from "./AccountChooser";
 import { ApiKeyDialog } from "./ApiKeyDialog";
 import { AudienceSummary, ContactsCsvDialog } from "./ContactsCsvDialog";
 import { CAPABILITY_STATE, CONNECTION_STATUS, isPast, SYNCABLE, type CapabilityState } from "./labels";
@@ -69,11 +71,11 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
   const syncError = conn && "lastSyncError" in conn ? conn.lastSyncError : null;
   const readOnlyReason = isDemo ? "Demo: no real accounts." : !canManage ? "Owners and admins only." : null;
 
-  async function onConnect() {
+  async function onConnect(variant?: "linkedin_pages") {
     setBusy("connect");
     setProblem(null);
     try {
-      const { url } = await startOAuth({ slug, provider: item.provider as Provider });
+      const { url } = await startOAuth({ slug, provider: item.provider as Provider, ...(variant ? { variant } : {}) });
       window.location.href = url;
     } catch (err) {
       const info = errorInfo(err);
@@ -129,9 +131,18 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
         </div>
       </div>
 
+      {connected && item.choice ? (
+        <ConnectedAccount
+          slug={slug}
+          item={item}
+          disabled={Boolean(readOnlyReason)}
+          onSignIn={(variant) => void onConnect(variant)}
+        />
+      ) : null}
+
       {conn ? (
         <dl className="grid gap-x-6 gap-y-1 text-ui sm:grid-cols-2">
-          {conn.accountLabel ? (
+          {conn.accountLabel && !(connected && item.choice) ? (
             <div className="flex gap-1.5">
               <dt className="text-ink-3">Account:</dt>
               <dd className="text-ink">{conn.accountLabel}</dd>
@@ -236,8 +247,12 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
         onSync={onSync}
         onDisconnect={async () => {
           try {
-            await disconnect({ slug, provider: item.provider as Provider });
-            toast({ tone: "success", title: `${item.name} disconnected` });
+            const res = await disconnect({ slug, provider: item.provider as Provider });
+            toast({
+              tone: "success",
+              title: `${item.name} disconnected`,
+              description: res?.manualStep ?? (res?.revokedAtProvider ? `ClimbOS asked ${item.name} to revoke its access and is deleting the stored key.` : "The stored key was deleted."),
+            });
           } catch (err) {
             setProblem({ tone: "danger", title: "Couldn't disconnect", body: errorInfo(err).message });
           }
@@ -262,7 +277,7 @@ function Actions({
   connected: boolean;
   readOnlyReason: string | null;
   busy: "connect" | "sync" | null;
-  onConnect: () => void;
+  onConnect: (variant?: "linkedin_pages") => void;
   onSync: () => void;
   onDisconnect: () => Promise<void>;
 }) {
@@ -272,10 +287,17 @@ function Actions({
 
   if (isOAuth(item.connectMethod)) {
     buttons.push(
-      <Button key="connect" variant="secondary" onClick={onConnect} loading={busy === "connect"} loadingText="Opening…" disabled={disabled} aria-label={`${connected ? "Reconnect" : "Connect"} ${item.name}`}>
-        {connected ? "Reconnect" : "Connect"}
+      <Button key="connect" variant="secondary" onClick={() => onConnect()} loading={busy === "connect"} loadingText="Opening…" disabled={disabled} aria-label={`${connected ? "Reconnect" : "Connect"} ${item.name}${p === "linkedin" && !connected ? " profile" : ""}`}>
+        {connected ? "Reconnect" : p === "linkedin" && item.pagesSignIn ? "Connect profile" : "Connect"}
       </Button>,
     );
+    if (p === "linkedin" && !connected && item.pagesSignIn) {
+      buttons.push(
+        <Button key="connect-page" variant="secondary" onClick={() => onConnect("linkedin_pages")} disabled={disabled || busy === "connect"} aria-label="Connect a LinkedIn Page">
+          Connect a Page
+        </Button>,
+      );
+    }
   } else if (item.connectMethod === "api_key" && (p === "email_resend" || p === "stripe_revenue")) {
     buttons.push(
       <ApiKeyDialog
@@ -369,6 +391,31 @@ function Actions({
     <div className="flex flex-col gap-2 border-t border-line pt-4">
       <div className="flex flex-wrap gap-2">{buttons}</div>
       {readOnlyReason && !isManualExport ? <p className="text-xs text-ink-3">{readOnlyReason}</p> : null}
+    </div>
+  );
+}
+
+/** "Connected: <Page name>" with what it is, and Change (pick another Page, profile or location). */
+function ConnectedAccount({ slug, item, disabled, onSignIn }: { slug: string; item: ConnectionItem; disabled: boolean; onSignIn: (variant?: "linkedin_pages") => void }) {
+  const conn = item.connection!;
+  const needed = Boolean(item.choice?.needed);
+  const kind = conn.accountType ? ACCOUNT_KIND[conn.accountType] : undefined;
+  return (
+    <div className="flex flex-col gap-3">
+      {needed ? (
+        <Callout tone="warning" title={`Choose your ${item.choice!.noun}`}>
+          {conn.accountLabel ? `${conn.accountLabel}. ` : ""}ClimbOS won&apos;t publish or read anything until you pick one.
+        </Callout>
+      ) : (
+        <p className="flex flex-wrap items-baseline gap-x-2 text-ui">
+          <span className="text-ink-3">Connected:</span>
+          <span className="font-semibold text-ink">{conn.accountLabel ?? item.name}</span>
+          {kind ? <span className="text-ink-3">· {kind}</span> : null}
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <AccountChooser key={`${conn.externalAccountId ?? "none"}-${needed}`} slug={slug} item={item} disabled={disabled} autoOpen={needed} onSignIn={onSignIn} />
+      </div>
     </div>
   );
 }

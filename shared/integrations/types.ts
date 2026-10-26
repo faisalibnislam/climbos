@@ -14,6 +14,7 @@ export type ProviderId =
   | "ga4"
   | "search_console"
   | "google_ads"
+  | "google_business_profile"
   | "meta_ads"
   | "facebook_pages"
   | "instagram"
