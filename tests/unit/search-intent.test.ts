@@ -78,6 +78,9 @@ describe("search intent stage", () => {
     const valid = SeoBriefV2Schema.parse({ ...out, citableClaims: [{ ...out.citableClaims[0], factIndexes: [0], sourceUrls: ["https://example.com/pricing"] }] });
     expect(lintSeoEvidence(valid, input)).toEqual([]);
     expect(lintSeoRecommendation(valid, input)).toEqual([]);
+    const generalFaq = { question: "How do plans work?", factIndexes: [], sourceUrls: [] };
+    expect(lintSeoEvidence(SeoBriefV2Schema.parse({ ...valid, faqs: [{ ...generalFaq, answer: "Plans start at $49 a month and are trusted by thousands of clinics." }] }), input).map((i) => `${i.rule}@${i.path}`)).toEqual(["faq_grounding@faqs[0].answer", "faq_grounding@faqs[0].answer"]);
+    expect(lintSeoEvidence(SeoBriefV2Schema.parse({ ...valid, faqs: [{ ...generalFaq, answer: "Check the plan details and ask us what fits your team." }] }), input)).toEqual([]);
     const overlap = SeoBriefV2Schema.parse({ ...valid, recommendedAction: "create_new_page", targetPageUrl: "" });
     expect(lintSeoRecommendation(overlap, { ...input, observedSitePages: [{ url: "https://example.com/pricing", title: "Appointment scheduling pricing" }] })).toMatchObject([
       { severity: "warn", rule: "seo_topic_overlap", path: "recommendedAction" },
@@ -118,5 +121,19 @@ describe("search intent stage", () => {
     expect(lintSeoEvidence(SeoBriefV2Schema.parse({ ...hypothesis, ownerEvidenceNeeded: [] }), input)).toMatchObject([
       { rule: "seo_original_contribution", path: "ownerEvidenceNeeded" },
     ]);
+  });
+});
+
+import { brandSiteCitations } from "../../shared/aiSearch/visibility";
+
+describe("AI answer citations of the business's own site", () => {
+  it("marks each cited URL as the business's own site or not", () => {
+    expect(brandSiteCitations(["https://www.example.com/pricing", "https://blog.example.com/a", "https://notexample.com/", "https://rival.io/"], "https://example.com")).toEqual([
+      { url: "https://www.example.com/pricing", ownSite: true },
+      { url: "https://blog.example.com/a", ownSite: true },
+      { url: "https://notexample.com/", ownSite: false },
+      { url: "https://rival.io/", ownSite: false },
+    ]);
+    expect(brandSiteCitations(["https://example.com/"], null)).toEqual([{ url: "https://example.com/", ownSite: false }]);
   });
 });

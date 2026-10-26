@@ -1049,3 +1049,7 @@ The structured decision can now name acquisition, price, trust, repeat purchase,
 ## Resumption note (2026-10-26, spec gaps 13 and 15)
 
 Gap 13 was already covered: email and ad approvals bind audience and spend. Precedent retrieval now labels each case with a typed outcome-evidence tier taken from its source roles, and down-ranks low-confidence cases by 25% instead of excluding them. Excluding them would have dropped CP-034, the best match for its own query, in favour of weak 2.25-score matches.
+
+## Resumption note (2026-10-26, spec gap 11)
+
+`lintSeoEvidence` adds `faq_grounding`. An unreferenced FAQ answer may not contain numbers missing from the evidence, or claims that `lintClaims` flags. The SEO prompt already says to leave general FAQs unreferenced rather than invent citations. `aiSearchVisibility.report` adds per-URL `citations[].ownSite` and `brandSiteCited`.

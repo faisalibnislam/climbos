@@ -40,7 +40,7 @@ import { lintEligibilityIds } from "../playbooks/contracts";
 import { OfferAssessmentSchema, lintApprovedOfferCopy, lintOfferAssessment, type OfferAssessmentContext } from "./offerAssessment";
 import { lintPlatformEligibility } from "../acquisition/platformRules";
 import { validateResearchUrl } from "../integrations/website";
-import { hookBeforeFold, lintClaims, lintCopy, maxItems, maxLength, minItems, stringFields } from "./lint";
+import { hookBeforeFold, lintClaims, lintCopy, maxItems, maxLength, minItems, stringFields, untracedNumbers } from "./lint";
 import type { AgentInput, AgentSpec, LintIssue, PhaseModels, ResearchSpec, Rubric } from "./types";
 import { CampaignTimingSchema, lintCampaignTiming } from "./campaignTiming";
 
@@ -2202,13 +2202,22 @@ export function lintSeoEvidence(out: z.infer<typeof SeoBriefV2Schema>, input: Ag
     message: "A citable claim needs at least one confirmed fact index or source page read in this run.",
     path: `citableClaims[${i}]`,
   }]);
+  // Spec §7: a general FAQ may go unreferenced, but then it can't state business-specific numbers or claims.
+  const faqIssues = out.faqs.flatMap((faq, i): LintIssue[] => {
+    if (faq.factIndexes.length || faq.sourceUrls.length) return [];
+    const numbers = untracedNumbers(faq.answer, evidenceOf(input));
+    return [
+      ...(numbers.length ? [{ severity: "error" as const, rule: "faq_grounding", message: `This FAQ has no fact or page reference but states ${numbers.join(", ")}. Cite where it comes from or answer without the number.`, path: `faqs[${i}].answer` }] : []),
+      ...lintClaims([{ path: `faqs[${i}].answer`, text: faq.answer }], "").map((issue) => ({ ...issue, rule: "faq_grounding", message: `This FAQ has no fact or page reference. ${issue.message}` })),
+    ];
+  });
   const hasContributionEvidence = contribution.factIndexes.length > 0 || contribution.sourceUrls.length > 0;
   const contributionIssues: LintIssue[] = contribution.status === "evidence_linked" && !hasContributionEvidence
     ? [{ severity: "error", rule: "seo_original_contribution", message: "Link the proposed contribution to a supplied business fact or a page read in this run, or label it as a hypothesis that needs owner evidence.", path: "originalContributionEvidence" }]
     : contribution.status === "hypothesis_pending_owner_evidence" && !out.ownerEvidenceNeeded.some((item) => item.trim())
       ? [{ severity: "error", rule: "seo_original_contribution", message: "A proposed contribution without linked evidence must name the specific owner evidence needed before it can be presented as first-hand or distinctive expertise.", path: "ownerEvidenceNeeded" }]
       : [];
-  return [...factIndexes, ...citationIssues, ...internalLinkHostIssues, ...claimIssues, ...contributionIssues];
+  return [...factIndexes, ...citationIssues, ...internalLinkHostIssues, ...claimIssues, ...faqIssues, ...contributionIssues];
 }
 
 export function lintSeoRecommendation(out: z.infer<typeof SeoBriefV2Schema>, input: AgentInput): LintIssue[] {

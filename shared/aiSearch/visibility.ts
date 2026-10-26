@@ -278,3 +278,22 @@ export function answerAccuracySummary(observations: readonly { provider: AiSearc
       .map((o) => ({ provider: o.provider, query: o.query, checkedAt: o.checkedAt, incorrectClaim: o.incorrectClaim!, correctFact: o.correctFact! })),
   };
 }
+
+/** Whether an answer cited the business's own site (a citation), as distinct from naming the brand (a mention). */
+export function brandSiteCitations(citedUrls: string[], businessWebsite: string | null | undefined): { url: string; ownSite: boolean }[] {
+  let ownHost: string | null = null;
+  try {
+    ownHost = businessWebsite ? new URL(businessWebsite).hostname.replace(/^www\./i, "").toLowerCase() : null;
+  } catch {
+    ownHost = null;
+  }
+  return citedUrls.map((url) => {
+    let host = "";
+    try {
+      host = new URL(url).hostname.replace(/^www\./i, "").toLowerCase();
+    } catch {
+      host = "";
+    }
+    return { url, ownSite: Boolean(ownHost && host && (host === ownHost || host.endsWith(`.${ownHost}`))) };
+  });
+}
