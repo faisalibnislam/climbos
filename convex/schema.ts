@@ -128,6 +128,7 @@ const offerAssessmentValidator = v.object({
   urgencyClaim: v.union(v.string(), v.null()),
   urgencyEvidenceRef: v.union(v.string(), v.null()),
   persuasion: v.optional(v.array(v.object({ mechanism: v.string(), use: v.string(), legalStatus: v.string(), evidenceNeeded: v.string(), lowerRiskAlternative: v.string() }))),
+  paymentFeeTerms: v.optional(v.object({ percent: v.number(), fixedAmount: v.number(), basis: v.string(), reference: v.union(v.string(), v.null()) })),
   unknowns: v.array(v.string()),
   authorizationNote: v.string(),
 });

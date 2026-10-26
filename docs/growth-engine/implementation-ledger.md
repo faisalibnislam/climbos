@@ -1041,3 +1041,7 @@ The structured decision can now name acquisition, price, trust, repeat purchase,
 ## Resumption note (2026-10-26, spec gap 3)
 
 `convex/landingRenders.ts` adds owner-requested desktop and mobile captures of one exact saved landing draft version. The render worker loads `/render/landing-draft/<token>`, a noindex route with a single-use token that expires in 10 minutes and is cleared when the capture finishes. With no `CLIMBOS_SERVER_SECRET`, a capture is recorded as unavailable. `designCritic.selectDirection` now keeps the original audited page: text extracted from the run's read-pages step, plus its hash and the audit screenshots, whose expiry is lifted so the purge keeps them. A later re-capture in the same run doesn't overwrite a retained screenshot. Not verified in a browser against a live render worker.
+
+## Resumption note (2026-10-26, spec gaps 9 and 12)
+
+`lintDesignDirections` checks multi-direction Design Critic findings, and `lintPaymentFees` recomputes payment fees from `paymentFeeTerms`. Also fixed: ConversionAuditView crashed when the feedback query had no `originals` field (older payloads and test mocks), introduced in ee93623. Full suite: 281 files and 1,919 tests pass.

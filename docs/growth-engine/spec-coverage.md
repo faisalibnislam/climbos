@@ -50,10 +50,10 @@ Tests: `tests/convex/approval-claims.test.ts`, `tests/unit/manipulation-lint.tes
 | 6 | §3.1 | **Done (2026-10-26).** `CONSTRAINTS` adds acquisition, price, trust, repeat purchase, referral and cash, each with an owner-facing label, a rival explanation, a discriminating check, buyer-journey stages and its own play-matching wording. The measured funnel diagnosis still uses the original stages. | M |
 | 7 | §6 | No typed list of eight intended jobs per channel. App stores, directories and some others have no guidance group. Recommendations have no unknowns, setup steps or smallest-check fields. | M |
 | 8 | §12 | Experiment pre-registration lacks variants, decision owner, a deviations log and costs. Cross-tenant learning has no opt-in. | M |
-| 9 | §9 | Payment fee is only checked for presence: no percentage-plus-fixed recalculation and no horizon break-even. | S |
+| 9 | §9 | **Done (2026-10-26), partly.** Offer assessments can state `paymentFeeTerms` (percent plus fixed per payment), and `lintPaymentFees` recomputes each side's fee from them. Horizon break-even is not built: it needs a baseline sales volume over the horizon that ClimbOS doesn't collect, and the existing per-unit `contributionBreakEvenUnits` stays the computed comparison. | S |
 | 10 | §4 | No structured segment fit (severity, willingness to pay, reachability, serviceability). Precedents aren't retrieved for the business model check. | M |
 | 11 | §7 | FAQs aren't required to cite. Readiness reads only the homepage, with no viewport, internal-link finding or schema-vs-page check. AI-search observations have no explicit "brand cited" flag per URL. | M |
-| 12 | §8 | Design directions aren't linted for distinct levels, effort or risk. Page results don't link back to the finding. | S |
+| 12 | §8 | **Done (2026-10-26), partly.** `lintDesignDirections`: two or more directions must be distinct response levels with unique ids. Missing effort or risk is warned; a bold alternative without risks or assumptions is an error. Linking page results back to the finding is not built (see gap 3's capture flow for the visual check). | S |
 | 13 | §13 | Approval scope binds no audience or budget. | S–M |
 | 14 | §6 | No Product Hunt launch-prep artifact, no Medium human-edit gate before export, no thin or duplicate blog-batch lint, and no GBP owner-control check. | M |
 | 15 | §5.3 | Precedent `evidenceClass` is free text. The low-confidence record is retrieved like any other. The 25 unverified cases have no tracked backlog. | S |

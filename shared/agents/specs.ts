@@ -1159,6 +1159,22 @@ export function lintDemandGate(plays: { name: string; model?: { monthlySpendUsd:
   return issues;
 }
 
+/** Spec §8: when a finding offers more than one direction, they must be distinct response levels with stated effort and risk. */
+export function lintDesignDirections(directions: { id: string; name: string; responseLevel?: string; effort?: string; assumptions?: string[]; risks?: string[] }[] | undefined, path: string): LintIssue[] {
+  if (!directions || directions.length < 2) return [];
+  const issues: LintIssue[] = [];
+  const levels = directions.map((d) => d.responseLevel);
+  if (levels.some((l) => !l)) issues.push({ severity: "error", rule: "design_directions", message: "Label each direction quick_fix, considered_redesign or bold_alternative when giving more than one.", path });
+  else if (new Set(levels).size !== levels.length) issues.push({ severity: "error", rule: "design_directions", message: "Directions for one finding must be different response levels; merge or relabel the duplicates.", path });
+  if (new Set(directions.map((d) => d.id)).size !== directions.length) issues.push({ severity: "error", rule: "design_directions", message: "Each direction needs its own id.", path });
+  directions.forEach((d, k) => {
+    if (!d.effort) issues.push({ severity: "warn", rule: "design_directions", message: `State the effort for "${d.name}".`, path: `${path}[${k}].effort` });
+    if (!d.risks?.length) issues.push({ severity: d.responseLevel === "bold_alternative" ? "error" : "warn", rule: "design_directions", message: `Name at least one risk for "${d.name}".`, path: `${path}[${k}].risks` });
+    if (d.responseLevel === "bold_alternative" && !d.assumptions?.length) issues.push({ severity: "error", rule: "design_directions", message: `State what the bold alternative "${d.name}" assumes.`, path: `${path}[${k}].assumptions` });
+  });
+  return issues;
+}
+
 export function lintAnyPaidPlan(items: { text: string; path: string }[]): LintIssue[] {
   return items
     .filter((x) => ONE_TIER.test(x.text) && !ANY_PAID.test(x.text))
@@ -2253,6 +2269,7 @@ export function lintConversionAuditSources(out: z.infer<typeof ConversionAuditV2
     if (finding.visualEvidence) checkVisual(finding.sourceUrl, { ...finding.visualEvidence, sourceUrl: finding.sourceUrl }, `designCritic.findings[${i}].visualEvidence`);
     if (finding.classification === "measured_performance" && finding.automatedCheckIds.length === 0) visualIssues.push({ severity: "error", rule: "design_measured_evidence", message: "A performance finding must cite an actual supplied measurement or automated check ID; otherwise classify it as a heuristic or inference.", path: `designCritic.findings[${i}].automatedCheckIds` });
     if (finding.classification === "automated_check" && finding.automatedCheckIds.length === 0) visualIssues.push({ severity: "error", rule: "design_automated_evidence", message: "Automated accessibility or technical findings must name the checks actually run.", path: `designCritic.findings[${i}].automatedCheckIds` });
+    visualIssues.push(...lintDesignDirections(finding.directions, `designCritic.findings[${i}].directions`));
   });
   const socialBlock = /<untrusted_content source="conversion_audit_social_posts">\s*([\s\S]*?)\s*<\/untrusted_content>/i.exec(input.untrustedContext ?? "");
   const suppliedPosts = new Map<string, string>();
