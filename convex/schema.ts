@@ -909,6 +909,15 @@ export default defineSchema({
 
   /* ---------------- Business intelligence ---------------- */
   businesses: defineTable({
+    /** What the owner told ClimbOS on the first setup step, parsed in code, so later steps start from it on any device. */
+    onboardingIntro: v.optional(v.object({
+      goalKinds: v.optional(v.array(v.string())),
+      goalStatement: v.optional(v.string()),
+      monthlyAdBudget: v.optional(v.number()),
+      horizonDays: v.optional(v.number()),
+      reviewDay: v.optional(v.string()),
+      savedAt: v.number(),
+    })),
     orgId: v.id("organizations"),
     name: v.string(),
     website: v.optional(v.string()),
@@ -1494,6 +1503,8 @@ export default defineSchema({
       v.literal("custom"),
     ),
     statement: v.string(),
+    /** Every goal type the owner chose, all equal priority; `kind` is the first, kept for older readers. */
+    kinds: v.optional(v.array(v.union(v.literal("more_sales"), v.literal("more_customers"), v.literal("more_reach"), v.literal("custom")))),
     /** Structured target (spec §8.1): kept as the owner stated it, never rewritten to match a forecast. */
     target: v.optional(
       v.object({
@@ -3175,6 +3186,7 @@ export default defineSchema({
                     v.literal("more_reach"),
                     v.literal("custom"),
                   ),
+                  kinds: v.optional(v.array(v.string())),
                   statement: v.string(),
                   horizonDays: v.number(),
                   monthlyAdBudgetMinor: v.number(),

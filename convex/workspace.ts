@@ -1141,7 +1141,7 @@ function planStaleInputs(
   connectedCapabilities: string[] = [],
   marketChangeVersions: { id: string; at: number }[] = [],
 ): { ownerEconomics: boolean; lifecycleStage: boolean; funnel: boolean; goal: boolean; businessProfile: boolean; businessFacts: boolean; brandGuidance: boolean; capabilities: boolean; businessResearch: boolean; marketChanges: boolean; cashTiming: boolean } {
-  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid"; rationale: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; capabilities?: string[]; growthCashTiming?: unknown } | undefined;
+  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; kinds?: string[]; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid"; rationale: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; capabilities?: string[]; growthCashTiming?: unknown } | undefined;
   const savedStage = snapshot?.businessLifecycleStage?.stage ?? null;
   const currentStage = business?.lifecycleStage?.stage ?? null;
   const savedFunnel = funnelDecisionValues(snapshot?.businessFunnel);
@@ -1243,9 +1243,10 @@ async function currentBusinessFactVersions(ctx: QueryCtx | MutationCtx, business
   })).sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function goalDecisionValues(goal: { _id?: unknown; id?: string; kind: string; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target?: unknown } | null | undefined): unknown {
+function goalDecisionValues(goal: { _id?: unknown; id?: string; kind: string; kinds?: string[]; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target?: unknown } | null | undefined): unknown {
   if (!goal) return null;
-  return [goal.id ?? String(goal._id), goal.kind, goal.statement, goal.horizonDays, goal.monthlyAdBudgetMinor, goal.currency, goal.target ?? null];
+  // Several goal types are planning inputs; a single type is already `kind` (kept so older plans don't turn stale).
+  return [goal.id ?? String(goal._id), goal.kind, goal.statement, goal.horizonDays, goal.monthlyAdBudgetMinor, goal.currency, goal.target ?? null, ...(goal.kinds && goal.kinds.length > 1 ? [goal.kinds] : [])];
 }
 
 function funnelDecisionValues(funnel: Doc<"businesses">["funnel"] | null | undefined): unknown {

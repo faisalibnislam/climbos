@@ -5,7 +5,7 @@ import { api } from "@convex/_generated/api";
 import { RefreshCw } from "@/components/icons"
 import Link from "next/link";
 import { useState } from "react";
-import { Badge, Button, Callout, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, ConfirmDialog, Field, Input, Select, Textarea, buttonClasses, toast } from "@/components/ui";
+import { Badge, Button, Callout, Card, CardContent, CardDescription, CardHeader, CardTitle, CheckCards, Checkbox, ConfirmDialog, Field, Input, Select, Textarea, buttonClasses, toast } from "@/components/ui";
 import { can } from "@shared/policy";
 import { AiModePicker, useAiMode } from "../AiModePicker";
 import { RetryRunIfPossible, RUN_FINISHED, RunProgress } from "../content/RunProgress";
@@ -47,7 +47,8 @@ function GoalForm({ slug, state, canEdit, canRaise }: { slug: string; state: Sta
   const setGoal = useMutation(api.orgs.setGoal);
   const name = state.business?.name ?? "your business";
   const defaults = goalDefaults(name);
-  const [kind, setKind] = useState<GoalKind>(state.goal?.kind ?? "more_customers");
+  const [kinds, setKinds] = useState<GoalKind[]>(state.goal?.kinds?.length ? state.goal.kinds : [state.goal?.kind ?? "more_customers"]);
+  const kind = kinds[0] ?? "more_customers";
   const [statement, setStatement] = useState(state.goal?.statement ?? defaults.more_customers);
   const [horizon, setHorizon] = useState(String(state.goal?.horizonDays ?? 90));
   const [budget, setBudget] = useState(String(state.goal?.monthlyAdBudget ?? 0));
@@ -67,17 +68,21 @@ function GoalForm({ slug, state, canEdit, canRaise }: { slug: string; state: Sta
         <CardTitle>Your goal</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-5 sm:grid-cols-2">
-        <Field label="Kind of goal">
-          <Select
-            value={kind}
-            disabled={!canEdit}
+        <fieldset className="flex flex-col gap-2 sm:col-span-2" disabled={!canEdit}>
+          <legend className="mb-2 text-ui font-medium text-ink">Goals (all count equally)</legend>
+          <CheckCards
+            aria-label="Goals"
+            columns={2}
+            value={kinds}
             onValueChange={(v) => {
-              setKind(v as GoalKind);
-              if (!statement || Object.values(defaults).includes(statement)) setStatement(defaults[v as GoalKind]);
+              if (!canEdit) return;
+              setKinds(v as GoalKind[]);
+              const first = v[0] as GoalKind | undefined;
+              if (first && (!statement || Object.values(defaults).includes(statement))) setStatement(defaults[first]);
             }}
-            options={GOAL_KIND_OPTIONS.map((o) => ({ value: o.value, label: o.title }))}
+            options={GOAL_KIND_OPTIONS.map((o) => ({ ...o, disabled: !canEdit }))}
           />
-        </Field>
+        </fieldset>
         <Field label="Time frame">
           <Select value={horizon} disabled={!canEdit} onValueChange={setHorizon} options={HORIZON_OPTIONS} />
         </Field>
@@ -116,7 +121,7 @@ function GoalForm({ slug, state, canEdit, canRaise }: { slug: string; state: Sta
               onClick={async () => {
                 setBusy(true);
                 try {
-                  await setGoal({ slug, kind, statement: statement.trim() || defaults[kind] || "Grow the business", target: { metric, mode, baseline: mode === "total" ? numOrNull(baseline) : null, desired: numOrNull(desired) }, horizonDays: Number(horizon), monthlyAdBudget: Number(budget || 0), reviewDay });
+                  await setGoal({ slug, kind, kinds: kinds.length ? kinds : [kind], statement: statement.trim() || defaults[kind] || "Grow the business", target: { metric, mode, baseline: mode === "total" ? numOrNull(baseline) : null, desired: numOrNull(desired) }, horizonDays: Number(horizon), monthlyAdBudget: Number(budget || 0), reviewDay });
                   toast({ tone: "success", title: "Goal saved.", description: state.strategy ? "Refresh your plan to use it." : undefined });
                 } catch (e) {
                   toast({ tone: "danger", title: errorMessage(e) });

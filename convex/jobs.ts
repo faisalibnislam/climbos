@@ -139,6 +139,8 @@ class JobStop extends Error {
   }
 }
 
+
+const GOAL_KIND_LABEL: Record<string, string> = { more_customers: "more customers", more_sales: "more sales or orders", more_reach: "help more people find the business", custom: "the owner's own goal in the GOAL statement" };
 type JobCtx = NonNullable<Awaited<ReturnType<typeof loadContext>>>;
 
 async function loadContext(ctx: ActionCtx, runId: Id<"workflowRuns">) {
@@ -707,6 +709,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     `TYPE: ${b?.businessType ?? "unknown"} · CURRENCY: ${b?.currency ?? job.org.currency} · TIMEZONE: ${b?.timezone ?? job.org.timezone}`,
     businessLifecycleContext(b?.lifecycleStage?.stage, b?.lifecycleStage?.updatedAt),
     job.goal ? `GOAL: ${job.goal.statement} (horizon ${job.goal.horizonDays} days, ad budget ${minorToMajor(job.goal.monthlyAdBudgetMinor, job.goal.currency).toFixed(0)} ${job.goal.currency}/month, paid directly to ad platforms)` : "",
+    job.goal?.kinds && job.goal.kinds.length > 1 ? `GOAL TYPES (all equal priority; weigh plays against each, without ranking one above the others): ${job.goal.kinds.map((k) => GOAL_KIND_LABEL[k] ?? k).join("; ")}.` : "",
     job.brand ? `BRAND VOICE: ${job.brand.voice}${job.brand.toneWords.length ? ` (${job.brand.toneWords.join(", ")})` : ""}. Avoid: ${job.brand.doNots.join("; ")}` : "",
     job.brand ? `SOCIAL STYLE PREFERENCES (retain platform, audience, category-safety, and current-policy checks): humor=${job.brand.socialHumor ?? "restrained (safe default; not owner-confirmed)"}; trend use=${job.brand.socialTrendPolicy ?? "selective (safe default; not owner-confirmed)"}. Treat these as guidance for social posts/calendars, not permission to make unsupported claims or reuse assets.` : "",
     job.brand?.approvedExamples?.length ? `OWNER-APPROVED COPY EXAMPLES (style reference only; not proof about customer outcomes):\n${untrusted("owner-approved copy examples", JSON.stringify(job.brand.approvedExamples), 3_500)}` : "",
@@ -925,7 +928,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
     capabilities,
     ...(job.business?.lifecycleStage ? { businessLifecycleStage: job.business.lifecycleStage } : { businessLifecycleStage: null }),
     ...(job.business?.funnel ? { businessFunnel: job.business.funnel } : { businessFunnel: null }),
-    goalInput: job.goal ? { id: String(job.goal._id), kind: job.goal.kind, statement: job.goal.statement, horizonDays: job.goal.horizonDays, monthlyAdBudgetMinor: job.goal.monthlyAdBudgetMinor, currency: job.goal.currency, target: job.goal.target ?? null } : null,
+    goalInput: job.goal ? { id: String(job.goal._id), kind: job.goal.kind, ...(job.goal.kinds && job.goal.kinds.length > 1 ? { kinds: job.goal.kinds } : {}), statement: job.goal.statement, horizonDays: job.goal.horizonDays, monthlyAdBudgetMinor: job.goal.monthlyAdBudgetMinor, currency: job.goal.currency, target: job.goal.target ?? null } : null,
     knowledgeReferences,
     ...(ownerEconomics ? { ownerEconomics } : {}),
     growthCashTiming: growthCashTimingInput(job.business?.growthCashTiming),

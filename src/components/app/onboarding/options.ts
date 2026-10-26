@@ -40,6 +40,39 @@ export function goalDefaults(name: string): Record<GoalKind, string> {
   };
 }
 
+/** Goal sentences tuned to the kind of business, shown as tap-to-add suggestions (no AI call). */
+const TYPE_SUGGESTIONS: Record<string, string[]> = {
+  saas: ["Get more free trials to become paying customers.", "Help new users reach their first useful result.", "Keep more customers from cancelling.", "Get more demo bookings from the right companies."],
+  ecommerce: ["Get more repeat orders from past customers.", "Turn more store visitors into buyers.", "Raise the average order value.", "Bring back people who left items in their cart."],
+  services: ["Get more booked appointments each week.", "Fill quiet days and slow weeks.", "Get more referrals from happy clients.", "Win more local customers nearby."],
+  physical_products: ["Get more stores to stock my products.", "Sell more online as well as in person.", "Get more repeat buyers.", "Launch a new product to existing customers."],
+  other: ["Get more enquiries from the right people.", "Win back past customers.", "Build a steady flow of new customers."],
+};
+
+const KIND_SUGGESTIONS: Record<GoalKind, string[]> = {
+  more_customers: ["Win more first-time customers."],
+  more_sales: ["Sell more to the customers I already have."],
+  more_reach: ["Get found more often on Google and AI answers.", "Grow a following that turns into customers."],
+  custom: [],
+};
+
+/** Up to eight suggestions for this business: its type first, then the chosen goal types, then local reach for local businesses. */
+export function goalSuggestions({ businessType, kinds, local }: { businessType?: string | null; kinds: GoalKind[]; local?: boolean }): string[] {
+  const out = [
+    ...(TYPE_SUGGESTIONS[businessType ?? "other"] ?? TYPE_SUGGESTIONS.other),
+    ...kinds.flatMap((k) => KIND_SUGGESTIONS[k] ?? []),
+    ...(local ? ["Become the first choice nearby."] : []),
+  ];
+  return [...new Set(out)].slice(0, 8);
+}
+
+/** Add or remove one suggestion sentence in the owner's goal text, leaving the rest of their words as written. */
+export function toggleGoalSentence(text: string, sentence: string): string {
+  const current = text.trim();
+  if (current.includes(sentence)) return current.replace(sentence, "").replace(/\s{2,}/g, " ").trim();
+  return current ? `${current}${/[.!?]$/.test(current) ? "" : "."} ${sentence}` : sentence;
+}
+
 /** Sensible starting success events per business type (owner confirms before use). */
 export function defaultEvents(type: string) {
   const ev = (key: string, label: string, definition: string) => ({ key, label, definition, confirmed: true });

@@ -327,6 +327,7 @@ export const onboardingState = query({
             currency: business.currency,
             timezone: business.timezone,
             hasInsights: Boolean(business.insights),
+            onboardingIntro: business.onboardingIntro ?? null,
             insightsAt: business.insights?.generatedAt ?? null,
           }
         : null,
@@ -364,7 +365,7 @@ export const onboardingState = query({
       strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null, createdAt: strategyRun.createdAt } : null,
       firstWinRunIds: org.firstWinRunIds ?? [],
       goal: goal
-        ? { kind: goal.kind, statement: goal.statement, target: goal.target ?? null, horizonDays: goal.horizonDays, monthlyAdBudget: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency), currency: goal.currency, reviewDay: goal.reviewDay ?? null }
+        ? { kind: goal.kind, kinds: goal.kinds ?? [goal.kind], statement: goal.statement, target: goal.target ?? null, horizonDays: goal.horizonDays, monthlyAdBudget: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency), currency: goal.currency, reviewDay: goal.reviewDay ?? null }
         : null,
       autonomy: policy?.mode ?? "review",
       /** The ad budget editors may set without an owner or admin (raising it needs one). */
@@ -562,10 +563,45 @@ function cleanTarget(t: GoalTarget): GoalTarget | undefined {
   return out.desired === null && out.baseline === null ? undefined : out;
 }
 
+const GOAL_KINDS = new Set(["more_sales", "more_customers", "more_reach", "custom"]);
+
+/** Keep the first setup step's parsed answers on the business, so the goal step starts from them in any tab or device. */
+export const saveOnboardingIntro = mutation({
+  args: {
+    slug: v.string(),
+    intro: v.object({
+      goalKinds: v.optional(v.array(v.string())),
+      goalStatement: v.optional(v.string()),
+      monthlyAdBudget: v.optional(v.number()),
+      horizonDays: v.optional(v.number()),
+      reviewDay: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, { slug, intro }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "edit");
+    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
+    if (!business) throw appError("NOT_FOUND", "Business not found.");
+    const budget = intro.monthlyAdBudget;
+    const horizon = intro.horizonDays;
+    await ctx.db.patch(business._id, {
+      onboardingIntro: {
+        ...(intro.goalKinds?.length ? { goalKinds: intro.goalKinds.filter((k) => GOAL_KINDS.has(k)).slice(0, 4) } : {}),
+        ...(intro.goalStatement?.trim() ? { goalStatement: intro.goalStatement.trim().slice(0, 300) } : {}),
+        ...(budget !== undefined && Number.isFinite(budget) && budget >= 0 && budget <= 1_000_000 ? { monthlyAdBudget: budget } : {}),
+        ...(horizon !== undefined && Number.isFinite(horizon) && horizon >= 14 && horizon <= 365 ? { horizonDays: Math.round(horizon) } : {}),
+        ...(intro.reviewDay ? { reviewDay: intro.reviewDay.slice(0, 12) } : {}),
+        savedAt: Date.now(),
+      },
+    });
+  },
+});
+
 export const setGoal = mutation({
   args: {
     slug: v.string(),
     kind: v.union(v.literal("more_sales"), v.literal("more_customers"), v.literal("more_reach"), v.literal("custom")),
+    /** All chosen goal types, equal priority. When given, its first entry replaces `kind`. */
+    kinds: v.optional(v.array(v.union(v.literal("more_sales"), v.literal("more_customers"), v.literal("more_reach"), v.literal("custom")))),
     statement: v.string(),
     target: v.optional(v.object({ metric: v.union(v.literal("customers"), v.literal("revenue_month"), v.literal("other")), baseline: v.union(v.number(), v.null()), desired: v.union(v.number(), v.null()), mode: v.union(v.literal("total"), v.literal("incremental")) })),
     horizonDays: v.number(),
@@ -600,10 +636,12 @@ export const setGoal = mutation({
       .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
       .take(5);
     for (const g of active) await ctx.db.patch(g._id, { status: "archived" });
+    const kinds = [...new Set(args.kinds?.length ? args.kinds : [args.kind])];
     await ctx.db.insert("goals", {
       orgId: org._id,
       businessId: business._id,
-      kind: args.kind,
+      kind: kinds[0],
+      ...(kinds.length > 1 ? { kinds } : {}),
       statement,
       ...(target ? { target } : {}),
       horizonDays,

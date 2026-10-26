@@ -23,7 +23,7 @@ export {
 } from "./field";
 export { Select, type SelectOption, type SelectProps } from "./select";
 export { Checkbox, Switch, type CheckboxProps, type SwitchProps } from "./toggles";
-export { RadioCards, type RadioCardOption, type RadioCardsProps } from "./radio-cards";
+export { CheckCards, RadioCards, type CheckCardsProps, type RadioCardOption, type RadioCardsProps } from "./radio-cards";
 export { ChoiceChips, FilterChip, type ChoiceChip, type ChoiceChipsProps } from "./choice-chips";
 export { Segmented, type SegmentedOption } from "./segmented";
 export { Popover, PopoverTrigger, PopoverContent, PopoverClose } from "./popover";

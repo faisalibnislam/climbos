@@ -1,7 +1,7 @@
 "use client";
 
 import { RadioGroup } from "radix-ui";
-import { CircleCheck } from "@/components/icons"
+import { Check, CircleCheck } from "@/components/icons"
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -62,5 +62,59 @@ export function RadioCards({ options, columns = 2, className, ...props }: RadioC
         </RadioGroup.Item>
       ))}
     </RadioGroup.Root>
+  );
+}
+
+export interface CheckCardsProps {
+  options: RadioCardOption[];
+  value: string[];
+  onValueChange: (value: string[]) => void;
+  /** Accessible group name; use when no visible legend labels the group. */
+  "aria-label"?: string;
+  columns?: 1 | 2 | 3 | 4;
+  className?: string;
+}
+
+/** Large selectable cards (several choices). Same look as RadioCards, with a square check to show more than one can be picked. */
+export function CheckCards({ options, value, onValueChange, columns = 2, className, ...props }: CheckCardsProps) {
+  const toggle = (v: string) => onValueChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
+  return (
+    <div role="group" aria-label={props["aria-label"]} className={cn("grid grid-cols-1 gap-3", colClasses[columns], className)}>
+      {options.map((o) => {
+        const checked = value.includes(o.value);
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="checkbox"
+            aria-checked={checked}
+            disabled={o.disabled}
+            data-state={checked ? "checked" : "unchecked"}
+            onClick={() => toggle(o.value)}
+            className={cn(
+              "group relative flex min-h-16 w-full items-start gap-3 rounded-xl border border-control bg-surface p-4 text-left transition-colors",
+              "hover:border-brand-700 data-[state=checked]:border-brand-800 data-[state=checked]:bg-brand-50",
+              "data-[state=checked]:ring-1 data-[state=checked]:ring-brand-800 disabled:cursor-not-allowed disabled:opacity-50",
+            )}
+          >
+            {o.icon ? (
+              <span aria-hidden="true" className="mt-0.5 text-xl leading-none">
+                {o.icon}
+              </span>
+            ) : null}
+            <span className="flex min-w-0 flex-1 flex-col gap-1 pr-6">
+              <span className="heading-card">{o.title}</span>
+              {o.description ? <span className="text-ui text-ink-3">{o.description}</span> : null}
+            </span>
+            <span
+              aria-hidden="true"
+              className="absolute right-3.5 top-3.5 grid size-5 place-items-center rounded-[4px] border-[1.5px] border-control group-data-[state=checked]:border-brand-800 group-data-[state=checked]:bg-brand-800"
+            >
+              {checked ? <Check className="size-3.5 text-white" /> : null}
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
