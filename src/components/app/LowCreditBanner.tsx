@@ -5,10 +5,12 @@ import { api } from "@convex/_generated/api";
 import { X } from "@/components/icons"
 import Link from "next/link";
 import { useState } from "react";
+import { useCostDisplay } from "./useCostDisplay";
 
 /** Thin banner when credits run low: top up (packages) or upgrade (free). Dismissed for the session. */
 export function LowCreditBanner({ slug }: { slug: string }) {
   const c = useQuery(api.workspace.credits, { slug });
+  const fmt = useCostDisplay();
   // Credits load on the client only, so reading storage here can't mismatch the server render.
   const [hidden, setHidden] = useState(() => {
     try {
@@ -24,7 +26,7 @@ export function LowCreditBanner({ slug }: { slug: string }) {
   return (
     <div role="status" className="flex items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 sm:px-6">
       <span>
-        {out ? "Out of credits." : `${c.available} credits left.`}{" "}
+        {out ? "Out of credits." : fmt.usd ? `${fmt.left(c.available)} of credit left.` : `${c.available} credits left.`}{" "}
         <Link href={`/app/${slug}/settings/billing`} className="font-semibold underline underline-offset-2">
           {c.paid ? "Top up" : "Upgrade"}
         </Link>

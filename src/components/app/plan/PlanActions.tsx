@@ -11,7 +11,7 @@ import { useState } from "react";
 import { Button, Callout, Card, CardContent, ConfirmDialog, Field, IconTile, Select, Textarea, toast } from "@/components/ui";
 import { RUN_FINISHED, RunProgress } from "../content/RunProgress";
 import { ErrorCallout, PERMISSION_WHO } from "../content/shared";
-import { microsToCreditsLabel } from "../money";
+import { useCostDisplay } from "../useCostDisplay";
 import { AiModePicker, useAiMode } from "../AiModePicker";
 import { ModelPicker, useChosenModelEstimate, useModelChoice } from "../ModelPicker";
 
@@ -34,6 +34,7 @@ export function GeneratePlanButton({
   building?: boolean;
 }) {
   const generate = useMutation(api.orgs.generatePlan);
+  const fmt = useCostDisplay();
   const [error, setError] = useState<unknown>(null);
   const [creativeRange, setCreativeRange] = useState<"balanced" | "conventional" | "surprising" | "ambitious">("balanced");
   const ai = useAiMode(slug);
@@ -41,7 +42,7 @@ export function GeneratePlanButton({
   const chosenMax = useChosenModelEstimate("strategy", ai.mode, modelChoice.model);
   const build = mode === "build";
   const max = chosenMax ?? ai.data?.estimates.strategy[ai.mode] ?? estimateMicros;
-  const cost = `Up to ${microsToCreditsLabel(max)}; unused credits return.`;
+  const cost = `Up to ${fmt.upTo(max)}; unused credits return.`;
   if (building) {
     return (
       <Button variant={build ? "primary" : "secondary"} size={build ? "lg" : "md"} disabled>
@@ -79,7 +80,7 @@ export function GeneratePlanButton({
         <ModelPicker kind="strategy" aiMode={ai.mode} value={modelChoice.model} onChange={modelChoice.setModel} />
         <Field label="Creative strategy range"><Select value={creativeRange} onValueChange={(value) => setCreativeRange(value as typeof creativeRange)} options={[{ value: "balanced", label: "Balanced" }, { value: "conventional", label: "More conventional" }, { value: "surprising", label: "More surprising" }, { value: "ambitious", label: "More ambitious" }]} /></Field>
       </ConfirmDialog>
-      <p className="text-xs tabular-nums text-ink-3">≤ {microsToCreditsLabel(max)}</p>
+      <p className="text-xs tabular-nums text-ink-3">≤ {fmt.upTo(max)}</p>
       {error ? <ErrorCallout error={error} /> : null}
     </div>
   );

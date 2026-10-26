@@ -7,13 +7,21 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Callout, DataTable, Stat, StatGroup } from "@/components/ui";
 import { formatNumber } from "@/lib/utils";
-import { microsToCreditsLabel } from "../money";
+import { microsToCreditsLabel, microsToUsdCost } from "../money";
+import { useCostDisplay } from "../useCostDisplay";
 import { LoadingBlock } from "../results/QueryBoundary";
 import { roleTitle } from "../roles";
 import { SettingsHeader } from "./SettingsNav";
 
+type Usage = FunctionReturnType<typeof api.settings.usage>;
+type CostRow = { costMicros: number; providerMicros?: number };
+
+/** Provider cost is in the payload only when an operator enabled it for this user. */
+const apiCost = (d: Usage) => d.totalProviderMicros !== undefined;
+
 export function UsageSettings({ slug }: { slug: string }) {
   const load = useAction(api.settings.usage);
+  const fmt = useCostDisplay();
   const [data, setData] = useState<FunctionReturnType<typeof api.settings.usage> | null | undefined>(undefined);
   // Summed on the server across every event of the last 31 days (read in pages).
   useEffect(() => {
@@ -26,6 +34,10 @@ export function UsageSettings({ slug }: { slug: string }) {
       live = false;
     };
   }, [slug, load]);
+  const usd = fmt.usd && data ? apiCost(data) : false;
+  const costColumn = usd
+    ? { key: "cost", header: "API cost", align: "right" as const, cell: (r: CostRow) => microsToUsdCost(r.providerMicros ?? 0), sortValue: (r: CostRow) => r.providerMicros ?? 0 }
+    : { key: "cost", header: "Credits", align: "right" as const, cell: (r: CostRow) => microsToCreditsLabel(r.costMicros), sortValue: (r: CostRow) => r.costMicros };
   return (
     <div className="flex flex-col gap-6">
       <SettingsHeader
@@ -33,7 +45,7 @@ export function UsageSettings({ slug }: { slug: string }) {
         intro="Last 31 days"
       />
       <Callout tone="info">
-        Our provider costs, not extra charges. Credits left: <Link href={`/app/${slug}/settings/billing`}>Billing</Link>.
+        {usd ? "What AI and data providers billed for this work. You're still charged in credits. " : "Our provider costs, not extra charges. "}Credits left: <Link href={`/app/${slug}/settings/billing`}>Billing</Link>.
       </Callout>
       {data === undefined ? (
         <LoadingBlock label="Loading usage…" />
@@ -42,7 +54,7 @@ export function UsageSettings({ slug }: { slug: string }) {
       ) : (
         <>
           <StatGroup className="lg:grid-cols-3">
-            <Stat label="Credits used" value={microsToCreditsLabel(data.totalCostMicros)} />
+            {usd ? <Stat label="API cost" value={microsToUsdCost(data.totalProviderMicros ?? 0)} /> : <Stat label="Credits used" value={microsToCreditsLabel(data.totalCostMicros)} />}
             <Stat label="Events" value={formatNumber(data.events)} />
             <Stat label="AI roles used" value={formatNumber(data.byRole.length)} />
           </StatGroup>
@@ -61,7 +73,7 @@ export function UsageSettings({ slug }: { slug: string }) {
                 { key: "calls", header: "Model calls", align: "right", cell: (r) => formatNumber(r.calls), sortValue: (r) => r.calls },
                 { key: "in", header: "Input tokens", align: "right", cell: (r) => formatNumber(r.inputTokens), sortValue: (r) => r.inputTokens },
                 { key: "out", header: "Output tokens", align: "right", cell: (r) => formatNumber(r.outputTokens), sortValue: (r) => r.outputTokens },
-                { key: "cost", header: "Credits", align: "right", cell: (r) => microsToCreditsLabel(r.costMicros), sortValue: (r) => r.costMicros },
+                costColumn,
               ]}
             />
           </section>
@@ -78,7 +90,7 @@ export function UsageSettings({ slug }: { slug: string }) {
               columns={[
                 { key: "model", header: "Model or service", rowHeader: true, cell: (r) => <span className="font-mono text-ui">{r.model}</span>, sortValue: (r) => r.model },
                 { key: "calls", header: "Events", align: "right", cell: (r) => formatNumber(r.calls), sortValue: (r) => r.calls },
-                { key: "cost", header: "Credits", align: "right", cell: (r) => microsToCreditsLabel(r.costMicros), sortValue: (r) => r.costMicros },
+                costColumn,
               ]}
             />
           </section>

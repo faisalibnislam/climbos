@@ -5,13 +5,14 @@ import { api } from "@convex/_generated/api";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { errorMessage } from "@/components/app/errors";
-import { microsToCreditsLabel } from "@/components/app/money";
+import { useCostDisplay } from "@/components/app/useCostDisplay";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { BusinessModelCheckView } from "@/components/app/plan/BusinessModelCheckView";
 import { Button, Callout, EmptyState, toast } from "@/components/ui";
 
 /** Business model check: is the way this business makes money holding up, and which alternatives are worth a small test? */
 export default function BusinessModelPage() {
+  const fmt = useCostDisplay();
   const { organization: slug } = useParams<{ organization: string }>();
   const data = useQuery(api.businessModel.latest, { slug });
   const estimate = useQuery(api.businessModel.estimate, { slug });
@@ -32,7 +33,7 @@ export default function BusinessModelPage() {
   const action = data?.canEdit ? (
     <div className="flex flex-col items-end gap-1">
       <Button size="sm" onClick={run} disabled={busy || Boolean(data.running)}>{data.running ? "Checking…" : data.result ? "Check again" : "Check my business model"}</Button>
-      {estimate ? <span className="text-xs text-ink-3">Up to {microsToCreditsLabel(estimate.maxCostMicros)}</span> : null}
+      {estimate ? <span className="text-xs text-ink-3">Up to {fmt.upTo(estimate.maxCostMicros)}</span> : null}
     </div>
   ) : null;
   return (

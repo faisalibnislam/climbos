@@ -12,7 +12,8 @@ import { ClampText } from "@/components/app/results/ClampText";
 import { RunProgressCompact } from "@/components/app/content/RunProgress";
 import { MessageText } from "@/components/app/content/shared";
 import { errorMessage } from "@/components/app/errors";
-import { microsToCreditsLabel, relativeTime } from "@/components/app/money";
+import { relativeTime } from "@/components/app/money";
+import { useCostDisplay } from "@/components/app/useCostDisplay";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { Badge, Button, Callout, Card, CardContent, ConfirmDialog, EmptyState, Field, Switch, Textarea, toast } from "@/components/ui";
 
@@ -36,6 +37,7 @@ async function downloadVideo(url: string, name: string) {
 
 /** Reels: short vertical videos from your own screenshots and photos, rendered by ClimbOS. */
 export default function ReelsPage() {
+  const fmt = useCostDisplay();
   const { organization: slug } = useParams<{ organization: string }>();
   const reels = useQuery(api.reels.list, { slug });
   const est = useQuery(api.reels.estimate, { slug });
@@ -88,7 +90,7 @@ export default function ReelsPage() {
             >
               <Clapperboard aria-hidden /> Make reel
             </Button>
-            {est ? <span className="text-xs text-ink-3">Up to {microsToCreditsLabel(clip && est.clipsUnlocked ? est.withClipsMicros : est.maxCostMicros)}. Rendering free.</span> : null}
+            {est ? <span className="text-xs text-ink-3">Up to {fmt.upTo(clip && est.clipsUnlocked ? est.withClipsMicros : est.maxCostMicros)}. Rendering free.</span> : null}
           </div>
         </CardContent>
       </Card>

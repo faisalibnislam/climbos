@@ -39,6 +39,7 @@ import { estimateJobMicros, maxJobMicros, planJob } from "./lib/jobPlans";
 import { imageUrlFor } from "./lib/media";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { resolveModelRoute } from "./lib/modelRoute";
+import { runProviderMicros, showsApiCost } from "./lib/costDisplay";
 
 /** Read-only source set for the conversion/social audit; restricted to one tenant and confirmed published posts. */
 export const auditPublishedSocial = internalQuery({
@@ -714,8 +715,9 @@ export const estimate = query({
 export const runStatus = query({
   args: { slug: v.string(), runId: v.id("workflowRuns") },
   handler: async (ctx, { slug, runId }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "view");
     const run = assertSameOrg(await ctx.db.get(runId), org._id, "job");
+    const apiCost = await showsApiCost(ctx, user._id);
     const steps = await ctx.db
       .query("workflowSteps")
       .withIndex("by_run", (q) => q.eq("runId", run._id))
@@ -738,6 +740,7 @@ export const runStatus = query({
       userMessage: run.userMessage ?? null,
       estimateMicros: run.estimateMicros,
       actualMicros: run.actualMicros,
+      ...(apiCost ? { providerMicros: runProviderMicros(run) } : {}),
       isFixture: run.isFixture,
       createdAt: run.createdAt,
       finishedAt: run.finishedAt ?? null,

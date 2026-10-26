@@ -7,6 +7,28 @@ export function microsToCreditsLabel(micros: number): string {
   return formatCredits(microsToCredits(micros));
 }
 
+const usd = (cents: number) => `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/**
+ * Real API cost in dollars, for users an operator enabled (everyone else sees
+ * credits). To the cent; a real but sub-cent cost reads "under $0.01".
+ */
+export function microsToUsdCost(micros: number): string {
+  if (micros <= 0) return "$0.00";
+  const cents = Math.round(micros / 10_000);
+  return cents === 0 ? "under $0.01" : usd(cents);
+}
+
+/** A worst case in dollars, rounded up to the cent (never understates "up to"). */
+export function microsToUsdUpTo(micros: number): string {
+  return usd(micros <= 0 ? 0 : Math.ceil(micros / 10_000));
+}
+
+/** Dollars left to spend, rounded down to the cent (never promises more than there is). */
+export function microsToUsdLeft(micros: number): string {
+  return usd(micros <= 0 ? 0 : Math.floor(micros / 10_000));
+}
+
 /** Staff-only (ops console): provider cost in dollars. */
 export function microsToUsd(micros: number): string {
   const usd = micros / 1_000_000;

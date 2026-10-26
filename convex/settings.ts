@@ -14,6 +14,7 @@ import { subscriptionAccess } from "../shared/billing";
 import { acceptInviteLink } from "./team";
 import { r2Configured, r2Delete, r2Key, r2Put, r2SignedUrl } from "./lib/r2";
 import { appError, assertSameOrg, optionalUser, requireOrgAccess, requireUser } from "./lib/tenancy";
+import { eventProviderMicros, showsApiCost } from "./lib/costDisplay";
 import { activePackage } from "./lib/access";
 import { getLiveConfig } from "./lib/config";
 import { packageOf } from "../shared/economics";
@@ -308,9 +309,11 @@ export const activity = query({
 });
 
 type UsageTotals = {
-  byRole: { role: string; calls: number; inputTokens: number; outputTokens: number; costMicros: number }[];
-  byModel: { model: string; calls: number; costMicros: number }[];
+  byRole: { role: string; calls: number; inputTokens: number; outputTokens: number; costMicros: number; providerMicros: number }[];
+  byModel: { model: string; calls: number; costMicros: number; providerMicros: number }[];
   totalCostMicros: number;
+  /** What providers billed; returned to the client only for users an operator enabled. */
+  totalProviderMicros: number;
   events: number;
 };
 
@@ -327,56 +330,89 @@ export const usagePage = internalQuery({
   },
 });
 
-function sumUsage(events: { role?: string; type: string; inputTokens: number; outputTokens: number; costMicros: number; model?: string; provider: string }[]): UsageTotals {
-  const byRole = new Map<string, { calls: number; inputTokens: number; outputTokens: number; costMicros: number }>();
-  const byModel = new Map<string, { calls: number; costMicros: number }>();
+function sumUsage(events: { role?: string; type: string; inputTokens: number; outputTokens: number; costMicros: number; providerMicros?: number; model?: string; provider: string }[]): UsageTotals {
+  const byRole = new Map<string, { calls: number; inputTokens: number; outputTokens: number; costMicros: number; providerMicros: number }>();
+  const byModel = new Map<string, { calls: number; costMicros: number; providerMicros: number }>();
   for (const e of events) {
-    const r = byRole.get(e.role ?? "system") ?? { calls: 0, inputTokens: 0, outputTokens: 0, costMicros: 0 };
+    const billed = eventProviderMicros(e);
+    const r = byRole.get(e.role ?? "system") ?? { calls: 0, inputTokens: 0, outputTokens: 0, costMicros: 0, providerMicros: 0 };
     r.calls += e.type === "model_call" ? 1 : 0;
     r.inputTokens += e.inputTokens;
     r.outputTokens += e.outputTokens;
     r.costMicros += e.costMicros;
+    r.providerMicros += billed;
     byRole.set(e.role ?? "system", r);
-    const m = byModel.get(e.model ?? e.provider) ?? { calls: 0, costMicros: 0 };
+    const m = byModel.get(e.model ?? e.provider) ?? { calls: 0, costMicros: 0, providerMicros: 0 };
     m.calls += 1;
     m.costMicros += e.costMicros;
+    m.providerMicros += billed;
     byModel.set(e.model ?? e.provider, m);
   }
   return {
     byRole: [...byRole.entries()].map(([role, x]) => ({ role, ...x })),
     byModel: [...byModel.entries()].map(([model, x]) => ({ model, ...x })),
     totalCostMicros: events.reduce((s, e) => s + e.costMicros, 0),
+    totalProviderMicros: events.reduce((s, e) => s + eventProviderMicros(e), 0),
     events: events.length,
   };
 }
 
+/** Usage as the client receives it: provider-billed cost only for users an operator enabled. */
+type UsageView = {
+  byRole: (Omit<UsageTotals["byRole"][number], "providerMicros"> & { providerMicros?: number })[];
+  byModel: (Omit<UsageTotals["byModel"][number], "providerMicros"> & { providerMicros?: number })[];
+  totalCostMicros: number;
+  totalProviderMicros?: number;
+  events: number;
+};
+
+/** Usage totals without provider-billed cost, for everyone an operator hasn't enabled. */
+function withoutProviderCost(t: UsageTotals): UsageView {
+  return {
+    byRole: t.byRole.map(({ providerMicros: _p, ...r }) => r),
+    byModel: t.byModel.map(({ providerMicros: _p, ...m }) => m),
+    totalCostMicros: t.totalCostMicros,
+    events: t.events,
+  };
+}
+
+/** Whether a user sees real API cost (for actions, which can't read the database). */
+export const showsApiCostFor = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => showsApiCost(ctx, userId),
+});
+
 /** The last 31 days of usage, summed across every event (read in pages, no cap). */
 export const usage = action({
   args: { slug: v.string() },
-  handler: async (ctx, { slug }): Promise<UsageTotals> => {
+  handler: async (ctx, { slug }): Promise<UsageView> => {
     const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "view" });
+    const apiCost: boolean = await ctx.runQuery(internal.settings.showsApiCostFor, { userId: access.userId });
     const since = Date.now() - 31 * 86_400_000;
     const role = new Map<string, UsageTotals["byRole"][number]>();
     const model = new Map<string, UsageTotals["byModel"][number]>();
     let total = 0;
+    let providerTotal = 0;
     let count = 0;
     let cursor: string | null = null;
     for (let i = 0; i < 250; i++) {
       const page: UsageTotals & { cursor: string | null } = await ctx.runQuery(internal.settings.usagePage, { orgId: access.orgId, since, cursor });
       for (const r of page.byRole) {
-        const x = role.get(r.role) ?? { role: r.role, calls: 0, inputTokens: 0, outputTokens: 0, costMicros: 0 };
-        role.set(r.role, { role: r.role, calls: x.calls + r.calls, inputTokens: x.inputTokens + r.inputTokens, outputTokens: x.outputTokens + r.outputTokens, costMicros: x.costMicros + r.costMicros });
+        const x = role.get(r.role) ?? { role: r.role, calls: 0, inputTokens: 0, outputTokens: 0, costMicros: 0, providerMicros: 0 };
+        role.set(r.role, { role: r.role, calls: x.calls + r.calls, inputTokens: x.inputTokens + r.inputTokens, outputTokens: x.outputTokens + r.outputTokens, costMicros: x.costMicros + r.costMicros, providerMicros: x.providerMicros + r.providerMicros });
       }
       for (const m of page.byModel) {
-        const x = model.get(m.model) ?? { model: m.model, calls: 0, costMicros: 0 };
-        model.set(m.model, { model: m.model, calls: x.calls + m.calls, costMicros: x.costMicros + m.costMicros });
+        const x = model.get(m.model) ?? { model: m.model, calls: 0, costMicros: 0, providerMicros: 0 };
+        model.set(m.model, { model: m.model, calls: x.calls + m.calls, costMicros: x.costMicros + m.costMicros, providerMicros: x.providerMicros + m.providerMicros });
       }
       total += page.totalCostMicros;
+      providerTotal += page.totalProviderMicros;
       count += page.events;
       cursor = page.cursor;
       if (!cursor) break;
     }
-    return { byRole: [...role.values()], byModel: [...model.values()], totalCostMicros: total, events: count };
+    const totals: UsageTotals = { byRole: [...role.values()], byModel: [...model.values()], totalCostMicros: total, totalProviderMicros: providerTotal, events: count };
+    return apiCost ? totals : withoutProviderCost(totals);
   },
 });
 

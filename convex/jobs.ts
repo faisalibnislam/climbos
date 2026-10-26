@@ -1230,7 +1230,7 @@ export const onboardingResearch = internalAction({
           pages = res.pages.map((p) => ({ url: p.url, title: p.title, excerpt: p.text.slice(0, 600), status: p.status, text: `${p.text}\n${p.prices.join("\n")}` }));
           await ctx.runMutation(internal.engine.recordUsage, {
             stepId: step.stepId!,
-            records: [{ type: "scrape_credit", provider: process.env.FIRECRAWL_API_KEY ? "firecrawl" : "builtin", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: pagesFetched, costMicros: pagesFetched * 5_000, estimated: !process.env.FIRECRAWL_API_KEY }],
+            records: [{ type: "scrape_credit", provider: process.env.FIRECRAWL_API_KEY ? "firecrawl" : "builtin", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: pagesFetched, costMicros: pagesFetched * 5_000, providerMicros: process.env.FIRECRAWL_API_KEY ? pagesFetched * 5_000 : 0, estimated: !process.env.FIRECRAWL_API_KEY }],
           });
         }
         // An unreadable site isn't a checkpoint: a retry reads it again.
@@ -1707,7 +1707,7 @@ export const createContent = internalAction({
             const img = await generateImage(prompt, rates);
             await ctx.runMutation(internal.engine.recordUsage, {
               stepId: s.stepId!,
-              records: [{ type: "image_attempt", provider: "google", model: "gemini-3.1-flash-lite-image", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: img.costMicros, estimated: true }],
+              records: [{ type: "image_attempt", provider: "google", model: "gemini-3.1-flash-lite-image", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: img.costMicros, providerMicros: img.providerMicros, estimated: true }],
             });
             if (img.ok) {
               if (r2Configured()) {
@@ -2152,7 +2152,7 @@ export const conversionAudit = internalAction({
           text = res.pages.filter((p) => p.status === "ok").map((p) => untrusted(p.url, `TITLE: ${p.title ?? ""}\nDESCRIPTION: ${p.description ?? ""}\nHEADINGS: ${(p.headings ?? []).join(" | ")}\nPAGE TEXT:\n${p.text}`, 4_200)).join("\n\n");
           await ctx.runMutation(internal.engine.recordUsage, {
             stepId: step.stepId!,
-            records: [{ type: "scrape_credit", provider: process.env.FIRECRAWL_API_KEY ? "firecrawl" : "builtin", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: res.pagesFetched, costMicros: res.pagesFetched * 5_000, estimated: !process.env.FIRECRAWL_API_KEY }],
+            records: [{ type: "scrape_credit", provider: process.env.FIRECRAWL_API_KEY ? "firecrawl" : "builtin", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: res.pagesFetched, costMicros: res.pagesFetched * 5_000, providerMicros: process.env.FIRECRAWL_API_KEY ? res.pagesFetched * 5_000 : 0, estimated: !process.env.FIRECRAWL_API_KEY }],
           });
         }
         await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId!, output: JSON.stringify({ text, pages, pagesFetched, discoveredCandidates, seoReadiness }) });
@@ -2485,7 +2485,7 @@ export const makeReel = internalAction({
           for (let a = 0; a < 2 && !imageId; a++) {
             attempts++;
             const img = await generateImage(`Vertical 9:16 photo for ${job.business?.name ?? "a small business"}: ${scenes[i].imagePrompt}. Natural light, modern, no text, no logos, no real people's faces.`, rates);
-            await ctx.runMutation(internal.engine.recordUsage, { stepId: st.stepId!, records: [{ type: "image_attempt", provider: "google", model: "gemini-3.1-flash-lite-image", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: img.costMicros, estimated: true }] });
+            await ctx.runMutation(internal.engine.recordUsage, { stepId: st.stepId!, records: [{ type: "image_attempt", provider: "google", model: "gemini-3.1-flash-lite-image", inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: img.costMicros, providerMicros: img.providerMicros, estimated: true }] });
             if (img.ok) imageId = await ctx.storage.store(new Blob([img.bytes as BlobPart], { type: img.mimeType }));
             else if (img.kind === "provider_unavailable") break;
           }
