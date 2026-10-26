@@ -62,6 +62,11 @@ This table describes implemented paths, not current production status for any pa
 
 ## Boundaries
 
+- Landing drafts linked to a website audit can be captured on desktop and mobile, showing the exact saved version. Captures are labelled as the ClimbOS-hosted draft and never published. Choosing a design direction keeps the original page's text and screenshots past the 30-day screenshot limit.
+- Design measurement plans need audience, guardrail, observation period and decision rule before publishing. Each finding keeps a review history.
+- The content calendar shows drafts waiting for review, and Autopilot slots link to their exact slot.
+- Cross-business learning is opt-in from Privacy settings. A workspace's own results always inform its own plans.
+
 - Approval re-checks copy for unverifiable claims and for manipulation (vote requests, review incentives, review gating, virality promises), whether approval happens in the app, by email or through autopilot.
 - Review invitations won't go to Yelp, which asks businesses not to request reviews. AI drafts of public review replies are held back if they contain contact details, order references or wording from the customer's private feedback.
 
