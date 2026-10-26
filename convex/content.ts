@@ -168,6 +168,8 @@ export const calendar = query({
       scheduledFor: number;
       autopilot: boolean;
       autopilotStatus: string | null;
+      /** Waiting for owner review with no posting time yet; placed on the day it was drafted. */
+      unscheduled?: boolean;
     };
     const events = new Map<string, CalendarItem>(rows.map((a) => [String(a._id), {
       id: String(a._id),
@@ -211,12 +213,21 @@ export const calendar = query({
         autopilotStatus: slot.status,
       });
     }
+    // Drafts waiting for review have no posting time; show them on the day they were drafted so nothing awaiting the owner is hidden.
+    const awaiting = await ctx.db.query("artifacts").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "in_review")).order("desc").take(300);
+    for (const a of awaiting) {
+      if (a.scheduledFor !== undefined || events.has(String(a._id))) continue;
+      const draftedAt = a._creationTime;
+      if (draftedAt < from || draftedAt >= to) continue;
+      events.set(String(a._id), { id: String(a._id), artifactId: a._id, slotId: null, title: a.title, channel: a.channel, status: a.status, scheduledFor: draftedAt, autopilot: false, autopilotStatus: null, unscheduled: true });
+    }
     return {
       items: [...events.values()].sort((a, b) => a.scheduledFor - b.scheduledFor),
       // Reaching a source cap means the range may contain more rows than we return.
       limitsReached: {
         scheduledPosts: rows.length === 300,
         autopilotSlots: slots.length === 300,
+        awaitingReview: awaiting.length === 300,
       },
     };
   },

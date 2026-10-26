@@ -209,7 +209,7 @@ function CalendarGrid({
       <p className="sr-only" role="status">
         {items === undefined ? "Loading calendar…" : `${total} item${total === 1 ? "" : "s"} in this ${view}.`}
       </p>
-      {result?.limitsReached && (result.limitsReached.scheduledPosts || result.limitsReached.autopilotSlots) ? (
+      {result?.limitsReached && (result.limitsReached.scheduledPosts || result.limitsReached.autopilotSlots || result.limitsReached.awaitingReview) ? (
         <CalendarLimitNotice limitsReached={result.limitsReached} />
       ) : null}
       {items !== undefined && total === 0 ? (
@@ -256,17 +256,17 @@ function CalendarGrid({
               ) : (
                 <ul className="flex flex-col gap-1.5">
                   {list.map((it) => {
-                    const href = it.artifactId ? `/app/${slug}/content/${it.artifactId}` : `/app/${slug}/autopilot`;
+                    const href = it.artifactId ? `/app/${slug}/content/${it.artifactId}` : `/app/${slug}/autopilot${it.slotId ? `#slot-${it.slotId}` : ""}`;
                     return (
                       <li key={`${it.id}`}>
                         <Link
                           href={href}
-                          aria-label={`${it.title}, ${channelLabel(it.channel)}, ${new Date(it.scheduledFor).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone })}, ${it.status}${it.autopilot ? ", Autopilot" : ""}`}
+                          aria-label={`${it.title}, ${channelLabel(it.channel)}, ${it.unscheduled ? "awaiting review, not scheduled yet" : new Date(it.scheduledFor).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone })}, ${it.status}${it.autopilot ? ", Autopilot" : ""}`}
                           className="flex flex-col gap-1 rounded-lg border border-line bg-surface-2 p-2 text-ui transition-colors hover:border-brand-700"
                         >
                           <span className="flex items-center gap-1.5 text-xs text-ink-3">
                             <SocialIcon network={it.channel} size="xs" />
-                            <span>{new Date(it.scheduledFor).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone })} · {channelLabel(it.channel)}</span>
+                            <span>{it.unscheduled ? "Not scheduled yet" : new Date(it.scheduledFor).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone })} · {channelLabel(it.channel)}</span>
                             {it.autopilot ? <span className="ml-auto">Auto</span> : null}
                           </span>
                           <span className="line-clamp-2 font-medium text-ink">{it.title}</span>
@@ -285,10 +285,11 @@ function CalendarGrid({
   );
 }
 
-export function CalendarLimitNotice({ limitsReached }: { limitsReached: { scheduledPosts: boolean; autopilotSlots: boolean } }) {
+export function CalendarLimitNotice({ limitsReached }: { limitsReached: { scheduledPosts: boolean; autopilotSlots: boolean; awaitingReview?: boolean } }) {
   const sources = [
     limitsReached.scheduledPosts ? "scheduled posts" : null,
     limitsReached.autopilotSlots ? "Autopilot slots" : null,
+    limitsReached.awaitingReview ? "posts awaiting review" : null,
   ].filter(Boolean);
   if (sources.length === 0) return null;
   return (
