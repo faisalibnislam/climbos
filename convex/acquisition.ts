@@ -17,7 +17,14 @@ import {
   type OwnerChannelPreference,
   type SavedAcquisition,
 } from "../shared/acquisition/scoring";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, type QueryCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
+import { channelWork } from "../shared/acquisition/makeItHappen";
+import { createRunWithReservation } from "./engine";
+import { maxJobMicros, planJob } from "./lib/jobPlans";
+import { resolveAiMode } from "./lib/aiMode";
+import { resolveModelRoute } from "./lib/modelRoute";
 import { audit } from "./lib/audit";
 import { appError, requireOrgAccess } from "./lib/tenancy";
 
@@ -199,5 +206,82 @@ export const setChannelPreference = mutation({
     }
     await ctx.db.patch(business._id, { acquisition: { types: prior.types, typesSource: prior.typesSource ?? "inferred", dims: prior.dims, channelPreferences, updatedAt: Date.now() } });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "acquisition.channel_preference", subjectType: "business", subjectId: business._id, summary: preference === "clear" ? `Cleared owner preference for ${CHANNEL_BY_ID[channelId]!.name}.` : `Marked ${CHANNEL_BY_ID[channelId]!.name} as ${preference}; owner-reported rationale saved.` });
+  },
+});
+
+async function connectedProviders(ctx: QueryCtx, orgId: Id<"organizations">): Promise<string[]> {
+  return (await ctx.db.query("connections").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(50)).filter((c) => c.status === "connected").map((c) => c.provider);
+}
+
+/** What "Make it happen" will do for a channel and the most it can cost, shown before the owner confirms. */
+export const makeItHappenPreview = query({
+  args: { slug: v.string(), channelId: v.string() },
+  handler: async (ctx, { slug, channelId }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "view");
+    const channel = CHANNEL_BY_ID[channelId];
+    if (!channel) throw appError("INVALID", "Choose a channel from the ClimbOS channel list.");
+    const work = channelWork(channel, await connectedProviders(ctx, org._id));
+    let maxCostMicros = 0;
+    let title: string | null = null;
+    if (work.draft) {
+      const plan = planJob(work.draft.job, { quantity: "quantity" in work.draft ? work.draft.quantity : undefined, channel: "channel" in work.draft ? work.draft.channel : undefined }, { fixture: org.kind === "demo", mode: await resolveAiMode(ctx, org, work.draft.job) });
+      maxCostMicros = maxJobMicros(plan, { fixture: org.kind === "demo", route: await resolveModelRoute(ctx, user._id, undefined) });
+      title = plan.title;
+    }
+    return { channel: channel.name, draftTitle: title, maxCostMicros, todos: work.todos };
+  },
+});
+
+/** Draft the first work for a channel (into Review work) and add to-dos for the steps only the owner can do. */
+export const makeItHappen = mutation({
+  args: { slug: v.string(), channelId: v.string() },
+  handler: async (ctx, { slug, channelId }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const channel = CHANNEL_BY_ID[channelId];
+    if (!channel) throw appError("INVALID", "Choose a channel from the ClimbOS channel list.");
+    const work = channelWork(channel, await connectedProviders(ctx, org._id));
+    let runId: Id<"workflowRuns"> | null = null;
+    if (work.draft) {
+      const d = work.draft;
+      const quantity = "quantity" in d ? d.quantity : undefined;
+      const draftChannel = "channel" in d ? d.channel : undefined;
+      const aiMode = await resolveAiMode(ctx, org, d.job);
+      const plan = planJob(d.job, { quantity, channel: draftChannel }, { fixture: org.kind === "demo", mode: aiMode });
+      runId = await createRunWithReservation(ctx, {
+        org,
+        kind: plan.kind,
+        title: `${channel.name}: ${plan.title}`,
+        roles: plan.roles,
+        input: { channel: draftChannel, quantity, makeItHappen: channelId },
+        steps: plan.steps,
+        meters: plan.meters,
+        createdBy: user._id,
+        isFixture: org.kind === "demo",
+        aiMode,
+        modelRoute: await resolveModelRoute(ctx, user._id, undefined),
+      });
+      await ctx.scheduler.runAfter(0, internal.jobs.createContent, { runId, job: d.job, ...(draftChannel ? { channel: draftChannel } : {}), ...(quantity ? { quantity } : {}), brief: d.brief });
+    }
+    const now = Date.now();
+    let priority = 1;
+    for (const todo of work.todos) {
+      await ctx.db.insert("actionCards", {
+        orgId: org._id,
+        title: todo.title,
+        description: todo.description,
+        proposedEffect: "A step only you can take. ClimbOS continues once it's done.",
+        kind: todo.kind,
+        roles: ["coo"],
+        payload: JSON.stringify({ channelId }),
+        costEstimateMicros: 0,
+        externalEffect: false,
+        status: "proposed",
+        priority: priority++,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "acquisition.make_it_happen", subjectType: "channel", subjectId: channelId, summary: `Make it happen: ${channel.name}${runId ? " (first drafts started)" : ""}${work.todos.length ? `, ${work.todos.length} to-do${work.todos.length === 1 ? "" : "s"} added` : ""}.` });
+    return { runId, todos: work.todos.length };
   },
 });

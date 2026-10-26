@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Badge, Button, Callout, ChoiceChips, EmptyState, IconTile, Input, Skeleton, toast } from "@/components/ui";
 import { formatMoney } from "../../../../shared/economics/currency";
 import { errorMessage } from "@/components/app/errors";
+import { microsToCreditsLabel } from "@/components/app/money";
 import { climbTarget } from "@/components/climb/context";
 import { cn } from "@/lib/utils";
 import { CHANNEL_JOB_LABEL, channelJob, generalChannelGuidance, recommendationGuidance } from "@shared/acquisition/recommendationGroups";
@@ -332,7 +333,7 @@ function Group({ title, icon, hint, rows, labels, rankOf, highlight, slug, canEd
         </div>
       ) : null}
       <ol className={cn("divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border bg-surface shadow-[var(--card-shadow)]", highlight ? "border-brand-300" : "border-line")}>
-        {rows.map((r, i) => (
+        {rows.map((r) => (
           <ChannelRow key={r.id} r={r} rank={rankOf.get(r.id) ?? 0} labels={labels} slug={slug} canEdit={canEdit} />
         ))}
       </ol>
@@ -431,6 +432,7 @@ function ChannelRow({ r, rank, labels, slug, canEdit }: { r: Row; rank: number; 
             ))}
             {canEdit ? (
               <div className="mt-1 flex flex-wrap gap-2 border-t border-line pt-3">
+                <MakeItHappen slug={slug} channelId={r.id} />
                 <Button size="sm" variant={r.ownerPreference?.preference === "already_using" ? "primary" : "secondary"} aria-pressed={r.ownerPreference?.preference === "already_using"} onClick={async () => {
                   try {
                     const on = r.ownerPreference?.preference === "already_using";
@@ -523,7 +525,7 @@ function Detail({ label, children }: { label: string; children: React.ReactNode 
 }
 
 /** Channel families where an owner commonly already has an account or list (asked up front, not discovered later). */
-const EXISTING_FAMILIES = new Set(["Organic social", "Email", "Video & audio", "Local & location-based", "Marketplaces & directories", "Content", "Communities"]);
+const EXISTING_FAMILIES = new Set(["Organic social", "Video & audio", "Local & location-based", "Marketplaces & directories"]);
 
 /** "Which of these do you already use?": ticked channels rank as existing assets to build on. */
 function AlreadyUsing({ slug, channels }: { slug: string; channels: View["channels"] }) {
@@ -561,6 +563,64 @@ function AlreadyUsing({ slug, channels }: { slug: string; channels: View["channe
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/** "Make it happen": shows what ClimbOS will draft and the most it can cost, then starts on one click. */
+function MakeItHappen({ slug, channelId }: { slug: string; channelId: string }) {
+  const [open, setOpen] = useState(false);
+  const preview = useQuery(api.acquisition.makeItHappenPreview, open ? { slug, channelId } : "skip");
+  const start = useMutation(api.acquisition.makeItHappen);
+  const [busy, setBusy] = useState(false);
+  if (!open) {
+    return (
+      <Button size="sm" onClick={() => setOpen(true)}>
+        <Sparkles aria-hidden /> Make it happen
+      </Button>
+    );
+  }
+  return (
+    <div className="flex w-full flex-col gap-2 rounded-[var(--radius-control)] border border-brand-300 bg-brand-50 p-3">
+      {preview === undefined ? (
+        <Skeleton className="h-10" />
+      ) : (
+        <>
+          <p className="text-ui font-medium text-ink">
+            {preview.draftTitle ? `ClimbOS will ${preview.draftTitle.charAt(0).toLowerCase()}${preview.draftTitle.slice(1)} for ${preview.channel}. Drafts go to Review work; nothing is posted or sent without your approval.` : `${preview.channel} starts with a step only you can take.`}
+          </p>
+          {preview.todos.length ? (
+            <ul className="flex flex-col gap-1 text-xs text-ink-2">
+              {preview.todos.map((t) => (
+                <li key={t.title}>
+                  <span className="font-medium text-ink">To-do for you:</span> {t.title}. {t.description}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  const r = await start({ slug, channelId });
+                  toast({ tone: "success", title: r.runId ? "Started: first drafts are on the way" : "Added to your to-dos", description: r.todos ? `${r.todos} to-do${r.todos === 1 ? "" : "s"} added for you.` : undefined });
+                  setOpen(false);
+                } catch (e) {
+                  toast({ tone: "danger", title: errorMessage(e) });
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {busy ? "Starting…" : preview.draftTitle ? `Start · up to ${microsToCreditsLabel(preview.maxCostMicros)}` : "Add to my to-dos"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
