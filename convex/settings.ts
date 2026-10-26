@@ -4,7 +4,7 @@ import { v } from "convex/values";
 import { CURRENT_ENTITLEMENTS } from "../shared/economics";
 import { ROLE_DESCRIPTIONS, sha256Hex } from "../shared/policy";
 import { internal } from "./_generated/api";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { action, internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import { roleValidator } from "./schema";
 import { audit } from "./lib/audit";
@@ -13,7 +13,10 @@ import { accountWorkspaces, seatState } from "./lib/accounts";
 import { subscriptionAccess } from "../shared/billing";
 import { acceptInviteLink } from "./team";
 import { r2Configured, r2Delete, r2Key, r2Put, r2SignedUrl } from "./lib/r2";
-import { appError, assertSameOrg, requireOrgAccess, requireUser } from "./lib/tenancy";
+import { appError, assertSameOrg, optionalUser, requireOrgAccess, requireUser } from "./lib/tenancy";
+import { activePackage } from "./lib/access";
+import { getLiveConfig } from "./lib/config";
+import { packageOf } from "../shared/economics";
 
 /* ---------------- Team ---------------- */
 
@@ -542,22 +545,119 @@ export const deleteContact = mutation({
   },
 });
 
+/** How long a removed business can be restored before it is permanently deleted. */
+export const RESTORE_WINDOW_MS = 30 * 86_400_000;
+
 /**
- * Delete a workspace: content, facts, metrics, connections and secrets are
- * removed in batches. Financial records (orders, subscriptions) and the audit
- * trail are retained as required for accounting, with personal fields minimized.
+ * Remove a business: it is hidden, all work stops, and its plan slot is freed, but nothing is deleted.
+ * The owner can restore it for 30 days or delete it forever sooner; after that it is purged automatically.
+ * Billing is unchanged until permanent deletion.
  */
-export const deleteWorkspace = mutation({
+export const removeWorkspace = mutation({
   args: { slug: v.string(), confirmName: v.string() },
   handler: async (ctx, { slug, confirmName }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "delete_workspace");
-    if (confirmName.trim() !== org.name) throw appError("INVALID", "Type the workspace name exactly to confirm.");
-    await ctx.db.patch(org._id, { deletedAt: Date.now(), emergencyStop: { active: true, at: Date.now(), by: user._id, reason: "Workspace deleted" } });
-    await ctx.db.insert("privacyRequests", { orgId: org._id, kind: "delete_workspace", status: "running", requestedBy: user._id, createdAt: Date.now() });
-    await ctx.scheduler.runAfter(0, internal.settings.purgeWorkspaceBatch, { orgId: org._id });
-    const billing = await endBillingIfLastWorkspace(ctx, org);
-    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "workspace.deleted", summary: `Workspace deletion started.${billing === "canceling" ? " The package was set to end at the end of this billing period." : ""}` });
+    if (confirmName.trim() !== org.name) throw appError("INVALID", "Type the business name exactly to confirm.");
+    const now = Date.now();
+    await ctx.db.patch(org._id, {
+      deletedAt: now,
+      purgeAfter: now + RESTORE_WINDOW_MS,
+      removedBy: user._id,
+      stopBeforeRemoval: org.emergencyStop,
+      emergencyStop: { active: true, at: now, by: user._id, reason: "Business removed" },
+    });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "workspace.removed", summary: `Removed "${org.name}". It can be restored until ${new Date(now + RESTORE_WINDOW_MS).toISOString().slice(0, 10)}.` });
+    return { purgeAfter: now + RESTORE_WINDOW_MS };
+  },
+});
+
+/** A removed business the caller owns that can still be restored or deleted forever. */
+async function removedOrgForOwner(ctx: MutationCtx, orgId: Id<"organizations">, userId: Id<"users">): Promise<Doc<"organizations">> {
+  const org = await ctx.db.get(orgId);
+  const membership = org ? await ctx.db.query("memberships").withIndex("by_user", (q) => q.eq("userId", userId)).filter((q) => q.eq(q.field("orgId"), orgId)).first() : null;
+  if (!org || membership?.role !== "owner" || membership.status !== "active") throw appError("NOT_FOUND", "We couldn't find that removed business.");
+  if (!org.deletedAt || !org.purgeAfter || org.purgeStartedAt) throw appError("INVALID", "This business can't be restored or deleted from here.");
+  return org;
+}
+
+/** Removed businesses the signed-in owner can restore or delete forever. */
+export const removedWorkspaces = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await optionalUser(ctx);
+    if (!user) return [];
+    const memberships = await ctx.db.query("memberships").withIndex("by_user", (q) => q.eq("userId", user._id)).take(100);
+    const out = [];
+    for (const m of memberships) {
+      if (m.role !== "owner" || m.status !== "active") continue;
+      const org = await ctx.db.get(m.orgId);
+      if (!org?.deletedAt || !org.purgeAfter || org.purgeStartedAt) continue;
+      out.push({ id: org._id, name: org.name, removedAt: org.deletedAt, purgeAfter: org.purgeAfter });
+    }
+    return out.sort((a, b) => b.removedAt - a.removedAt);
+  },
+});
+
+/** Put a removed business back exactly as it was, if the plan has a free workspace slot. */
+export const restoreWorkspace = mutation({
+  args: { orgId: v.id("organizations") },
+  handler: async (ctx, { orgId }) => {
+    const user = await requireUser(ctx);
+    const org = await removedOrgForOwner(ctx, orgId, user._id);
+    if (org.purgeAfter! <= Date.now()) throw appError("INVALID", "The 30-day restore window has ended.");
+    if (org.accountId && org.kind !== "demo") {
+      const owned = (await accountWorkspaces(ctx, org.accountId)).filter((w) => w.kind !== "demo");
+      const sub = await activePackage(ctx, { _id: owned[0]?._id ?? org._id, accountId: org.accountId });
+      const config = await getLiveConfig(ctx);
+      const allowed = sub ? config.workspaces[packageOf(sub.planKey)] : config.workspaces.free;
+      if (!isUnlimited(allowed) && owned.length >= allowed) {
+        throw appError(sub ? "LIMIT_REACHED" : "PAYMENT_REQUIRED", `Your plan includes ${allowed} ${allowed === 1 ? "business" : "businesses"} and they're all in use. Remove another business or upgrade, then restore this one.`);
+      }
+    }
+    await ctx.db.patch(org._id, { deletedAt: undefined, purgeAfter: undefined, removedBy: undefined, stopBeforeRemoval: undefined, emergencyStop: org.stopBeforeRemoval });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "workspace.restored", summary: `Restored "${org.name}".${org.stopBeforeRemoval?.active ? " It stays paused, as it was before removal." : ""}` });
+    return { slug: org.slug };
+  },
+});
+
+/** Start permanent deletion: content, facts, metrics, connections and secrets are purged in batches. */
+async function startPurge(ctx: MutationCtx, org: Doc<"organizations">, requestedBy: Id<"users">) {
+  const now = Date.now();
+  await ctx.db.patch(org._id, { purgeStartedAt: now, deletedAt: org.deletedAt ?? now });
+  await ctx.db.insert("privacyRequests", { orgId: org._id, kind: "delete_workspace", status: "running", requestedBy, createdAt: now });
+  await ctx.scheduler.runAfter(0, internal.settings.purgeWorkspaceBatch, { orgId: org._id });
+  return await endBillingIfLastWorkspace(ctx, org);
+}
+
+/**
+ * Delete a removed business forever. Financial records (orders, subscriptions) and the audit
+ * trail are retained as required for accounting, with personal fields minimized.
+ */
+export const deleteWorkspaceForever = mutation({
+  args: { orgId: v.id("organizations"), confirmName: v.string() },
+  handler: async (ctx, { orgId, confirmName }) => {
+    const user = await requireUser(ctx);
+    const org = await removedOrgForOwner(ctx, orgId, user._id);
+    if (confirmName.trim() !== org.name) throw appError("INVALID", "Type the business name exactly to confirm.");
+    const billing = await startPurge(ctx, org, user._id);
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "workspace.deleted", summary: `Permanent deletion of "${org.name}" started.${billing === "canceling" ? " The package was set to end at the end of this billing period." : ""}` });
     return { billing };
+  },
+});
+
+/** Daily: permanently delete businesses whose 30-day restore window has ended. */
+export const purgeExpiredRemovals = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const due = await ctx.db.query("organizations").withIndex("by_purge_after", (q) => q.gt("purgeAfter", 0).lte("purgeAfter", Date.now())).take(25);
+    let started = 0;
+    for (const org of due) {
+      if (!org.deletedAt || org.purgeStartedAt) continue;
+      await startPurge(ctx, org, org.removedBy ?? org.createdBy);
+      await audit(ctx, { orgId: org._id, actorType: "system", action: "workspace.deleted", summary: `"${org.name}" was permanently deleted after its 30-day restore window.` });
+      started++;
+    }
+    return { started };
   },
 });
 

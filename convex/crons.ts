@@ -9,6 +9,7 @@ crons.interval("recover stuck runs", { minutes: 5 }, internal.engine.recoverStuc
 crons.interval("retry failed webhooks", { minutes: 15 }, internal.billing.retryFailedWebhooks, {});
 // Authoritative subscription reconciliation with Polar.
 crons.daily("reconcile billing", { hourUTC: 4, minuteUTC: 10 }, internal.billing.reconcileAll, {});
+crons.daily("delete businesses past their restore window", { hourUTC: 4, minuteUTC: 40 }, internal.settings.purgeExpiredRemovals, {});
 crons.daily("team cleanup", { hourUTC: 4, minuteUTC: 40 }, internal.team.cleanup, {});
 // Hourly, renewing a little before each month ends, so a comp never has a gap without credits.
 crons.interval("renew complimentary packages", { minutes: 60 }, internal.admin.renewComps, {});

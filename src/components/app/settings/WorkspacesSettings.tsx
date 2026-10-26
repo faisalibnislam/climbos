@@ -13,7 +13,7 @@ import { formatNumber } from "@/lib/utils";
 import { errorMessage } from "../errors";
 import { LoadingBlock } from "../results/QueryBoundary";
 import { SettingsHeader } from "./SettingsNav";
-import { DeleteWorkspaceSection } from "./PrivacySettings";
+import { DeleteWorkspaceSection, RemovedWorkspacesSection } from "./PrivacySettings";
 
 /** Agency view: every workspace on the account, its credit use this month and optional cap, and everyone's access. */
 export function WorkspacesSettings({ slug }: { slug: string }) {
@@ -77,6 +77,7 @@ export function WorkspacesSettings({ slug }: { slug: string }) {
           </section>
         </>
       )}
+      <RemovedWorkspacesSection />
       <DeleteWorkspaceSection slug={slug} />
     </div>
   );

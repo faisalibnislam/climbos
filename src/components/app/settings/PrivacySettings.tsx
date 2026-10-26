@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { Download } from "@/components/icons"
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
@@ -226,15 +227,13 @@ function DeleteContactSection({ slug }: { slug: string }) {
 
 export function DeleteWorkspaceSection({ slug }: { slug: string }) {
   const me = useQuery(api.orgs.me);
-  const del = useMutation(api.settings.deleteWorkspace);
+  const remove = useMutation(api.settings.removeWorkspace);
   const router = useRouter();
   const [typed, setTyped] = useState("");
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const org = me?.orgs.find((o) => o.slug === slug);
   const canDelete = org?.role === "owner";
-  const impact = useQuery(api.settings.deletionImpact, canDelete ? { slug } : "skip");
-  const billingNote = impact?.packageEnds ? " Your package ends this billing period." : impact?.sharedPackage ? " Your package stays for other workspaces." : "";
   const matches = org ? typed.trim() === org.name : false;
 
   return (
@@ -244,10 +243,12 @@ export function DeleteWorkspaceSection({ slug }: { slug: string }) {
       </h2>
       <Covers
         items={[
-          { term: "Permanently deleted", detail: "Content, contacts and keys", tone: "gone" },
-          { term: "Kept for accounting", detail: "Billing and logs" },
+          { term: "Right away", detail: "Hidden from everyone, all work stops, plan slot freed" },
+          { term: "For 30 days", detail: "Restore it from Settings → Workspaces", tone: "keep" },
+          { term: "After 30 days", detail: "Deleted forever: content, contacts and keys", tone: "gone" },
         ]}
       />
+      <p className="text-xs text-ink-3">Billing doesn&apos;t change until it&apos;s deleted forever. Billing records and logs are kept for accounting.</p>
       {me === undefined ? (
         <LoadingBlock label="Loading workspace…" lines={1} />
       ) : !org ? null : !canDelete ? (
@@ -276,12 +277,12 @@ export function DeleteWorkspaceSection({ slug }: { slug: string }) {
           onOpenChange={setConfirm}
           tone="danger"
           title={`Remove ${org.name}?`}
-          description={`Stops everything and permanently deletes content. Can't be undone.${billingNote}`}
+          description="It disappears for everyone and all scheduled posts, emails and AI work stop now. You can restore it from Settings → Workspaces for 30 days. After that it is deleted forever."
           confirmLabel={`Remove ${org.name}`}
           onConfirm={async () => {
             try {
-              await del({ slug, confirmName: typed });
-              toast({ tone: "success", title: "Workspace deletion started", description: "Content is being removed." });
+              await remove({ slug, confirmName: typed });
+              toast({ tone: "success", title: `${org.name} removed`, description: "You can restore it for 30 days from Settings → Workspaces." });
               router.push("/app");
             } catch (err) {
               setError(errorInfo(err).message);
@@ -290,5 +291,98 @@ export function DeleteWorkspaceSection({ slug }: { slug: string }) {
         />
       ) : null}
     </section>
+  );
+}
+
+/** Removed businesses the owner can restore, or delete forever before the 30-day window ends. */
+export function RemovedWorkspacesSection() {
+  const removed = useQuery(api.settings.removedWorkspaces, {});
+  if (!removed?.length) return null;
+  return (
+    <section aria-labelledby="removed-heading" className="flex flex-col gap-3">
+      <h2 id="removed-heading" className="heading-section">Removed businesses</h2>
+      <p className="text-sm text-ink-3">Paused and hidden. Restore one to put it back as it was, or delete it forever now.</p>
+      <ul className="flex flex-col divide-y divide-line rounded-xl border border-line bg-surface">
+        {removed.map((w) => <RemovedWorkspaceRow key={w.id} w={w} />)}
+      </ul>
+    </section>
+  );
+}
+
+function RemovedWorkspaceRow({ w }: { w: { id: Id<"organizations">; name: string; removedAt: number; purgeAfter: number } }) {
+  const restore = useMutation(api.settings.restoreWorkspace);
+  const forever = useMutation(api.settings.deleteWorkspaceForever);
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [confirmForever, setConfirmForever] = useState(false);
+  const [openedAt] = useState(() => Date.now());
+  const daysLeft = Math.max(0, Math.ceil((w.purgeAfter - openedAt) / 86_400_000));
+  return (
+    <li className="flex flex-col gap-3 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate font-medium text-ink">{w.name}</p>
+          <p className="text-xs text-ink-3">Removed {formatDateTime(w.removedAt)} · deleted forever in {daysLeft} {daysLeft === 1 ? "day" : "days"} unless restored</p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const { slug } = await restore({ orgId: w.id });
+                toast({ tone: "success", title: `${w.name} restored` });
+                router.push(`/app/${slug}/today`);
+              } catch (err) {
+                toast({ tone: "danger", title: errorMessage(err) });
+                setBusy(false);
+              }
+            }}
+          >
+            Restore
+          </Button>
+          <Button size="sm" variant="ghost" className="text-red-800" disabled={busy} onClick={() => setDeleting((d) => !d)} aria-expanded={deleting}>
+            Delete forever
+          </Button>
+        </div>
+      </div>
+      {deleting ? (
+        <form
+          className="grid gap-3 rounded-lg border border-red-500/25 p-3 sm:grid-cols-[1fr_auto] sm:items-end"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (typed.trim() === w.name) setConfirmForever(true);
+          }}
+        >
+          <Field label={`Type ${w.name} to delete it forever`}>
+            <Input autoComplete="off" value={typed} onChange={(e) => setTyped(e.target.value)} />
+          </Field>
+          <Button type="submit" variant="danger" disabled={busy || typed.trim() !== w.name}>
+            Delete forever
+          </Button>
+        </form>
+      ) : null}
+      <ConfirmDialog
+        open={confirmForever}
+        onOpenChange={setConfirmForever}
+        tone="danger"
+        title={`Delete ${w.name} forever?`}
+        description="Content, contacts and keys are erased and can't be restored. Billing records and logs are kept for accounting. If this is your last business, your package ends at the end of this billing period."
+        confirmLabel="Delete forever"
+        onConfirm={async () => {
+          setBusy(true);
+          try {
+            await forever({ orgId: w.id, confirmName: typed });
+            toast({ tone: "success", title: `${w.name} is being deleted forever` });
+          } catch (err) {
+            toast({ tone: "danger", title: errorMessage(err) });
+            setBusy(false);
+          }
+        }}
+      />
+    </li>
   );
 }
