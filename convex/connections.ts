@@ -8,14 +8,16 @@ import {
   scopesFor,
   type ScopedCapability,
 } from "../shared/integrations/oauth";
+import { reviewStateFor } from "../shared/integrations/platformApprovals";
 import { PROVIDERS } from "../shared/integrations/registry";
 import type { ProviderId } from "../shared/integrations/types";
 import { sha256Hex } from "../shared/policy";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import { providerValidator } from "./schema";
 import { audit } from "./lib/audit";
+import { getPlatformApprovals } from "./lib/platformApprovals";
 import { decryptSecret, encryptSecret, secretAad } from "./lib/crypto";
 import { appError, isOperator, requireOrgAccess } from "./lib/tenancy";
 
@@ -27,6 +29,7 @@ export const ADAPTER_ID: Partial<Record<OurProvider, ProviderId>> = {
   ga4: "ga4",
   search_console: "search_console",
   google_ads: "google_ads",
+  google_business_profile: "google_business_profile",
   meta_ads: "meta_ads",
   facebook_pages: "facebook_pages",
   instagram: "instagram",
@@ -41,6 +44,7 @@ const OAUTH_GROUP: Partial<Record<OurProvider, keyof typeof OAUTH_PROVIDERS>> = 
   ga4: "google",
   search_console: "google",
   google_ads: "google",
+  google_business_profile: "google",
   meta_ads: "meta",
   facebook_pages: "meta",
   instagram: "instagram",
@@ -52,25 +56,59 @@ const OAUTH_CAPABILITIES: Partial<Record<OurProvider, ScopedCapability[]>> = {
   ga4: ["ga4.read_reports"],
   search_console: ["search_console.read_performance"],
   google_ads: ["google_ads.read_metrics", "google_ads.create_paused_campaign", "google_ads.set_campaign_status"],
+  google_business_profile: ["google_business_profile.list_locations"],
   meta_ads: ["meta_ads.read_insights", "meta_ads.create_paused_campaign", "meta_ads.set_campaign_status"],
-  facebook_pages: ["facebook_pages.publish_post", "facebook_pages.read_posts", "facebook_pages.read_insights"],
+  facebook_pages: ["facebook_pages.list_pages", "facebook_pages.publish_post", "facebook_pages.read_posts", "facebook_pages.read_insights"],
   instagram: ["instagram.publish_media", "instagram.read_posts", "instagram.read_insights"],
   linkedin: ["linkedin.read_profile", "linkedin.publish_post"],
   x: ["x.read_profile", "x.publish_post"],
 };
 
-const CLIENT_ENV: Record<keyof typeof OAUTH_PROVIDERS, [string, string]> = {
+export const CLIENT_ENV: Record<keyof typeof OAUTH_PROVIDERS, [string, string]> = {
   google: ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
   meta: ["META_APP_ID", "META_APP_SECRET"],
   instagram: ["INSTAGRAM_APP_ID", "INSTAGRAM_APP_SECRET"],
   linkedin: ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"],
+  linkedin_pages: ["LINKEDIN_PAGES_CLIENT_ID", "LINKEDIN_PAGES_CLIENT_SECRET"],
   x: ["X_CLIENT_ID", "X_CLIENT_SECRET"],
 };
+
+export type OAuthVariant = "linkedin_pages";
+
+/** The OAuth app and capabilities for a sign-in (LinkedIn Pages sign in through their own app). */
+export function oauthPlanFor(provider: OurProvider, variant?: OAuthVariant): { group: keyof typeof OAUTH_PROVIDERS; caps: ScopedCapability[] } | null {
+  if (variant === "linkedin_pages") return provider === "linkedin" ? { group: "linkedin_pages", caps: ["linkedin.list_organizations", "linkedin.publish_org_post"] } : null;
+  const group = OAUTH_GROUP[provider];
+  const caps = OAUTH_CAPABILITIES[provider];
+  return group && caps ? { group, caps } : null;
+}
+
+/**
+ * Providers where the owner picks one account, Page, organization or location
+ * per business. `kind` drives the chooser wording; X and Instagram sign in as
+ * exactly one account, so "Change" means signing in again.
+ */
+export const ACCOUNT_CHOICE: Partial<Record<OurProvider, { kind: "page" | "profile_or_page" | "location" | "property" | "account"; noun: string; selectable: boolean }>> = {
+  facebook_pages: { kind: "page", noun: "Facebook Page", selectable: true },
+  instagram: { kind: "account", noun: "Instagram professional account", selectable: false },
+  linkedin: { kind: "profile_or_page", noun: "LinkedIn profile or Page", selectable: true },
+  x: { kind: "account", noun: "X account", selectable: false },
+  ga4: { kind: "property", noun: "Analytics property", selectable: true },
+  google_business_profile: { kind: "location", noun: "Business Profile location", selectable: true },
+};
+
+/** accountType marker set at sign-in when the owner still has to choose. */
+export const SELECTION_REQUIRED = "selection_required";
+
+export function needsAccountChoice(conn: Pick<Doc<"connections">, "accountType" | "externalAccountId"> | null | undefined): boolean {
+  return Boolean(conn && (conn.accountType === SELECTION_REQUIRED || !conn.externalAccountId));
+}
 
 /** True when ClimbOS has the OAuth app keys for this provider. */
 function oauthConfigured(provider: OurProvider): boolean {
   const group = OAUTH_GROUP[provider];
   if (!group) return false;
+  if (provider === "linkedin" && process.env.LINKEDIN_PAGES_CLIENT_ID && process.env.LINKEDIN_PAGES_CLIENT_SECRET) return true;
   const [idEnv, secretEnv] = CLIENT_ENV[group];
   return Boolean(process.env[idEnv] && process.env[secretEnv]);
 }
@@ -89,6 +127,7 @@ export const CATALOG: { provider: OurProvider; group: "measure" | "publish" | "a
   { provider: "website", group: "measure" },
   { provider: "ga4", group: "measure" },
   { provider: "search_console", group: "measure" },
+  { provider: "google_business_profile", group: "measure" },
   { provider: "instagram", group: "publish" },
   { provider: "facebook_pages", group: "publish" },
   { provider: "linkedin", group: "publish" },
@@ -119,6 +158,8 @@ function envSnapshot(): Record<string, string | undefined> {
     "INSTAGRAM_APP_SECRET",
     "LINKEDIN_CLIENT_ID",
     "LINKEDIN_CLIENT_SECRET",
+    "LINKEDIN_PAGES_CLIENT_ID",
+    "LINKEDIN_PAGES_CLIENT_SECRET",
     "X_CLIENT_ID",
     "X_CLIENT_SECRET",
     "FIRECRAWL_API_KEY",
@@ -142,6 +183,7 @@ export const list = query({
     const env = envSnapshot();
     const now = Date.now();
     const operator = await isOperator(ctx);
+    const approvals = await getPlatformApprovals(ctx);
     return {
       canManage: ["owner", "admin"].includes(role),
       isDemo: org.kind === "demo",
@@ -230,7 +272,10 @@ export const list = query({
         }
         const adapterId = ADAPTER_ID[provider]!;
         const meta = PROVIDERS[adapterId];
+        const review = reviewStateFor(adapterId, approvals);
         const capCtx: CapabilityContext = {
+          appReview: review.appReview,
+          approvalLabels: review.approvalLabels,
           env,
           connected: conn?.status === "connected" || (provider === "website" && Boolean(business?.website)),
           grantedScopes: conn?.scopes,
@@ -262,6 +307,37 @@ export const list = query({
             reason: `Demo connection with synthetic data. ${c.state === "setup_needed" ? "In a real workspace this needs setup first." : c.reason}`,
           }));
         }
+        const choice = ACCOUNT_CHOICE[provider];
+        const choiceNeeded = Boolean(choice && conn?.status === "connected" && !conn.isFixture && needsAccountChoice(conn));
+        if (choice && choiceNeeded) {
+          capabilities = capabilities.map((c) => ({
+            ...c,
+            state: c.state === "ready" ? ("action_required" as const) : c.state,
+            reason: c.state === "ready" ? `Signed in, but no ${choice.noun} is chosen for this business yet.` : c.reason,
+            fix: c.state === "ready" ? `Choose the ${choice.noun} below.` : c.fix,
+          }));
+        }
+        if (provider === "linkedin" && !(env.LINKEDIN_PAGES_CLIENT_ID && env.LINKEDIN_PAGES_CLIENT_SECRET)) {
+          capabilities = capabilities.map((c) =>
+            c.capability === "linkedin.list_organizations" || c.capability === "linkedin.publish_org_post"
+              ? {
+                  ...c,
+                  state: "setup_needed" as const,
+                  reason: operator ? "Company Page posting signs in through a second LinkedIn app (Community Management API), which isn't set up." : "ClimbOS is still finishing LinkedIn Page posting on our side. Nothing for you to do yet.",
+                  fix: operator ? "Add LINKEDIN_PAGES_CLIENT_ID and LINKEDIN_PAGES_CLIENT_SECRET (Console → Platform setup → LinkedIn)." : "Meanwhile you can post to your personal profile, or use drafts and export.",
+                }
+              : c,
+          );
+        }
+        if (provider === "linkedin" && conn?.status === "connected" && !conn.isFixture && !choiceNeeded) {
+          // Only the capability that matches the chosen author applies.
+          const asPage = conn.accountType === "linkedin_organization";
+          capabilities = capabilities.map((c) =>
+            c.state !== "setup_needed" && (asPage ? c.capability === "linkedin.publish_post" || c.capability === "linkedin.read_profile" : c.capability === "linkedin.publish_org_post" || c.capability === "linkedin.list_organizations")
+              ? { ...c, state: "unavailable" as const, reason: asPage ? "Posts go to your LinkedIn Page, not your personal profile." : "Posts go to your personal profile. Choose a Page to post as your company.", fix: asPage ? "To post as yourself instead, use Change and sign in with your profile." : "To post as your company, use Change and sign in with a LinkedIn Page." }
+              : c,
+          );
+        }
         if (provider === "google_ads" && conn?.status === "connected" && !conn.isFixture && !conn.externalAccountId) {
           capabilities = capabilities.map((c) => ({
             ...c,
@@ -288,6 +364,9 @@ export const list = query({
               }
             : null,
           connectMethod: meta.connection,
+          choice: choice ? { ...choice, needed: choiceNeeded } : null,
+          /** LinkedIn company Pages sign in through a second LinkedIn app (Community Management API). */
+          pagesSignIn: provider === "linkedin" ? Boolean(env.LINKEDIN_PAGES_CLIENT_ID && env.LINKEDIN_PAGES_CLIENT_SECRET) : undefined,
           capabilities,
         };
       }),
@@ -296,13 +375,13 @@ export const list = query({
 });
 
 export const startOAuth = mutation({
-  args: { slug: v.string(), provider: providerValidator },
-  handler: async (ctx, { slug, provider }) => {
+  args: { slug: v.string(), provider: providerValidator, variant: v.optional(v.literal("linkedin_pages")) },
+  handler: async (ctx, { slug, provider, variant }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "manage_connections");
     if (org.kind === "demo") throw appError("FORBIDDEN", "Demo workspaces can't connect real accounts. Create your own workspace to connect.");
-    const group = OAUTH_GROUP[provider];
-    const caps = OAUTH_CAPABILITIES[provider];
-    if (!group || !caps) throw appError("INVALID", "This connection doesn't use sign-in.");
+    const plan = oauthPlanFor(provider, variant);
+    if (!plan) throw appError("INVALID", "This connection doesn't use sign-in.");
+    const { group, caps } = plan;
     const [idEnv, secretEnv] = CLIENT_ENV[group];
     const clientId = process.env[idEnv];
     if (!clientId || !process.env[secretEnv]) {
@@ -319,6 +398,7 @@ export const startOAuth = mutation({
       provider,
       stateHash,
       codeVerifier: enc ? JSON.stringify(enc) : undefined,
+      variant,
       expiresAt: Date.now() + 10 * 60_000,
     });
     const redirectUri = `${process.env.SITE_URL ?? "http://localhost:3000"}/api/oauth/callback`;
@@ -330,7 +410,7 @@ export const startOAuth = mutation({
       state,
       codeChallenge: pkce?.codeChallenge,
     });
-    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "connection.oauth_started", subjectType: "connection", subjectId: provider, summary: `Started connecting ${provider}.` });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "connection.oauth_started", subjectType: "connection", subjectId: provider, summary: `Started connecting ${provider}${variant === "linkedin_pages" ? " (company Page)" : ""}.` });
     return { url };
   },
 });
@@ -349,9 +429,30 @@ export const consumeOAuthState = internalMutation({
     if (row.expiresAt < Date.now()) return null;
     const org = await ctx.db.get(row.orgId);
     const verifier = row.codeVerifier ? await decryptSecret(JSON.parse(row.codeVerifier), `oauth:${stateHash}`) : undefined;
-    return { orgId: row.orgId, slug: org?.slug ?? "", userId: row.userId, provider: row.provider, verifier };
+    return { orgId: row.orgId, slug: org?.slug ?? "", userId: row.userId, provider: row.provider, variant: row.variant, verifier };
   },
 });
+
+/**
+ * Approvals are bound to a connection, not to the Page or profile behind it, so
+ * when the destination changes (or the account is disconnected) every pending or
+ * approved publish through that connection must be re-approved.
+ */
+async function invalidateConnectionApprovals(ctx: MutationCtx, orgId: Id<"organizations">, connectionId: Id<"connections">, reason: string): Promise<number> {
+  let count = 0;
+  for (const status of ["pending", "approved"] as const) {
+    const rows = await ctx.db
+      .query("approvals")
+      .withIndex("by_org_status", (q) => q.eq("orgId", orgId).eq("status", status))
+      .take(500);
+    for (const ap of rows) {
+      if (ap.scope.connectionId !== connectionId) continue;
+      await ctx.db.patch(ap._id, { status: "invalidated", invalidatedReason: reason });
+      count++;
+    }
+  }
+  return count;
+}
 
 /** Store or replace a connection with an encrypted secret. Never returns the secret. */
 export const storeConnection = internalMutation({
@@ -376,6 +477,9 @@ export const storeConnection = internalMutation({
     let connectionId: Id<"connections">;
     if (existing) {
       connectionId = existing._id;
+      if (existing.externalAccountId && existing.externalAccountId !== args.externalAccountId) {
+        await invalidateConnectionApprovals(ctx, args.orgId, existing._id, "The connected account changed. Approve the post again for the new destination.");
+      }
       await ctx.db.patch(existing._id, {
         status: "connected",
         scopes: args.scopes,
@@ -477,6 +581,65 @@ export const selectGoogleAdsAccount = internalMutation({
   },
 });
 
+/**
+ * Bind one account (Facebook Page, LinkedIn profile or Page, Analytics property,
+ * Business Profile location) to this business. The caller (an action) has already
+ * verified `externalAccountId` against the provider's live list for the stored token.
+ * Optionally replaces the stored secret (a Facebook Page access token).
+ */
+export const chooseAccount = internalMutation({
+  args: {
+    orgId: v.id("organizations"),
+    userId: v.id("users"),
+    connectionId: v.id("connections"),
+    provider: providerValidator,
+    externalAccountId: v.string(),
+    accountLabel: v.string(),
+    accountType: v.string(),
+    secret: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const connection = await ctx.db
+      .query("connections")
+      .withIndex("by_org_provider", (q) => q.eq("orgId", args.orgId).eq("provider", args.provider))
+      .first();
+    // Tenant binding: the connection must be this workspace's live connection for this provider.
+    if (!connection || connection._id !== args.connectionId || connection.status !== "connected" || connection.isFixture) return false;
+    const changed = connection.externalAccountId !== args.externalAccountId;
+    const now = Date.now();
+    if (args.secret !== undefined) {
+      const old = await ctx.db
+        .query("connectionSecrets")
+        .withIndex("by_connection", (q) => q.eq("connectionId", connection._id))
+        .take(5);
+      for (const s of old) await ctx.db.delete(s._id);
+      const enc = await encryptSecret(args.secret, secretAad(args.orgId, connection._id));
+      await ctx.db.insert("connectionSecrets", { orgId: args.orgId, connectionId: connection._id, kind: "oauth", keyId: enc.keyId, iv: enc.iv, ciphertext: enc.ciphertext, createdAt: now });
+    }
+    await ctx.db.patch(connection._id, {
+      externalAccountId: args.externalAccountId,
+      accountLabel: args.accountLabel.slice(0, 200),
+      accountType: args.accountType,
+      lastSyncError: undefined,
+      ...(changed ? { lastSyncAt: undefined } : {}),
+      updatedAt: now,
+    });
+    const invalidated = changed && connection.externalAccountId
+      ? await invalidateConnectionApprovals(ctx, args.orgId, connection._id, "The connected account changed. Approve the post again for the new destination.")
+      : 0;
+    await audit(ctx, {
+      orgId: args.orgId,
+      actorType: "user",
+      actorId: args.userId,
+      action: "connection.account_selected",
+      subjectType: "connection",
+      subjectId: connection._id,
+      summary: `Chose ${args.accountLabel.slice(0, 120)} for ${args.provider}${invalidated ? `; ${invalidated} approval${invalidated === 1 ? "" : "s"} need re-approval` : ""}.`,
+    });
+    return true;
+  },
+});
+
 /** Internal only: decrypt a connection's secret for an action. Verifies tenant binding via AAD. */
 export const getSecret = internalQuery({
   /** forRevocation: disconnect marks the row revoked before the revoke action runs. */
@@ -507,39 +670,83 @@ export const connectionFor = internalQuery({
       .first(),
 });
 
+/** Providers with a documented token-revocation endpoint (Instagram has none). */
+const REVOCABLE = new Set<OurProvider>(["ga4", "search_console", "google_ads", "google_business_profile", "meta_ads", "facebook_pages", "x"]);
+
+/** Where the owner removes ClimbOS when the provider gives apps no revoke call. */
+const MANUAL_REVOKE: Partial<Record<OurProvider, string>> = {
+  instagram: "Instagram has no way for apps to revoke access. To remove ClimbOS fully, open Instagram → Settings → Website permissions → Apps and websites.",
+  linkedin: "LinkedIn has no way for apps to revoke access. To remove ClimbOS fully, open LinkedIn → Settings → Data privacy → Permitted services.",
+};
+
 export const disconnect = mutation({
   args: { slug: v.string(), provider: providerValidator },
-  handler: async (ctx, { slug, provider }) => {
+  handler: async (ctx, { slug, provider }): Promise<{ revokedAtProvider: boolean; manualStep: string | null }> => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "manage_connections");
     const conn = await ctx.db
       .query("connections")
       .withIndex("by_org_provider", (q) => q.eq("orgId", org._id).eq("provider", provider))
       .first();
-    if (!conn) return;
+    if (!conn || conn.status === "revoked") return { revokedAtProvider: false, manualStep: null };
     const secrets = await ctx.db
       .query("connectionSecrets")
       .withIndex("by_connection", (q) => q.eq("connectionId", conn._id))
       .take(5);
+    const revocable = REVOCABLE.has(provider) && !conn.isFixture && secrets.length > 0;
     // Best-effort provider-side revocation happens before the secret is deleted. Bound to these secret
     // rows, so a quick reconnect's new token is never the one revoked.
-    if (secrets.length && !conn.isFixture) {
+    if (revocable) {
       await ctx.scheduler.runAfter(0, internal.connectionActions.revokeProviderToken, { connectionId: conn._id, secretIds: secrets.map((s) => s._id) });
     } else {
       for (const s of secrets) await ctx.db.delete(s._id);
     }
-    await ctx.db.patch(conn._id, { status: "revoked", updatedAt: Date.now() });
-    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "connection.revoked", subjectType: "connection", subjectId: conn._id, summary: `Disconnected ${provider}.` });
+    const label = conn.accountLabel;
+    await ctx.db.patch(conn._id, { status: "revoked", accountLabel: undefined, externalAccountId: undefined, accountType: undefined, expiresAt: undefined, lastSyncError: undefined, updatedAt: Date.now() });
+    const invalidated = await invalidateConnectionApprovals(ctx, org._id, conn._id, "The account was disconnected. Reconnect it and approve the post again.");
+    await audit(ctx, {
+      orgId: org._id,
+      actorType: "user",
+      actorId: user._id,
+      action: "connection.revoked",
+      subjectType: "connection",
+      subjectId: conn._id,
+      summary: `Disconnected ${provider}${label ? ` (${label.slice(0, 120)})` : ""}${invalidated ? `; ${invalidated} approval${invalidated === 1 ? "" : "s"} withdrawn` : ""}.`,
+    });
+    const manualStep = !conn.isFixture ? (MANUAL_REVOKE[provider] ?? null) : null;
+    return { revokedAtProvider: revocable, manualStep };
   },
 });
 
 export const deleteSecrets = internalMutation({
-  args: { connectionId: v.id("connections"), secretIds: v.optional(v.array(v.id("connectionSecrets"))) },
-  handler: async (ctx, { connectionId, secretIds }) => {
+  args: {
+    connectionId: v.id("connections"),
+    secretIds: v.optional(v.array(v.id("connectionSecrets"))),
+    /** Revocation outcome to audit (omitted by older scheduled jobs). */
+    revocation: v.optional(v.union(v.literal("revoked"), v.literal("failed"), v.literal("unsupported"))),
+  },
+  handler: async (ctx, { connectionId, secretIds, revocation }) => {
     const secrets = await ctx.db
       .query("connectionSecrets")
       .withIndex("by_connection", (q) => q.eq("connectionId", connectionId))
       .take(5);
-    for (const s of secrets) if (!secretIds || secretIds.includes(s._id)) await ctx.db.delete(s._id);
+    let deleted = 0;
+    for (const s of secrets) {
+      if (!secretIds || secretIds.includes(s._id)) {
+        await ctx.db.delete(s._id);
+        deleted++;
+      }
+    }
+    const conn = await ctx.db.get(connectionId);
+    if (conn && revocation) {
+      await audit(ctx, {
+        orgId: conn.orgId,
+        actorType: "system",
+        action: "connection.token_revoked",
+        subjectType: "connection",
+        subjectId: connectionId,
+        summary: `${conn.provider}: ${revocation === "revoked" ? "provider revoked the access token" : revocation === "failed" ? "provider revocation failed; token deleted locally" : "provider has no revocation endpoint; token deleted locally"} (${deleted} stored secret${deleted === 1 ? "" : "s"} deleted).`,
+      });
+    }
   },
 });
 

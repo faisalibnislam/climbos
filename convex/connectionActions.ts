@@ -8,7 +8,18 @@ import { v } from "convex/values";
 import { aiReferralAttribution, runDailyReport, listAccessibleProperties } from "../shared/integrations/ga4";
 import { getAccount as getInstagramAccount } from "../shared/integrations/instagram";
 import { listManagedPages } from "../shared/integrations/facebookPages";
-import { getMember as getLinkedInMember } from "../shared/integrations/linkedin";
+import { listGrantedPermissions } from "../shared/integrations/metaGraph";
+import { getMember as getLinkedInMember, listAdministeredOrganizations } from "../shared/integrations/linkedin";
+import { listAllLocations as listBusinessProfileLocations } from "../shared/integrations/googleBusinessProfile";
+import {
+  businessProfileOptions,
+  choicePendingLabel,
+  facebookPageOptions,
+  ga4PropertyOptions,
+  linkedInOptions,
+  soleChoice,
+  type AccountOption,
+} from "../shared/integrations/accountChoice";
 import { getMe as getXUser } from "../shared/integrations/x";
 import { getCustomerSettings, listAccessibleCustomers, GOOGLE_ADS_SCOPE } from "../shared/integrations/googleAds";
 import {
@@ -26,7 +37,7 @@ import { listSegments } from "../shared/integrations/resendMarketing";
 import { inspectSearchUrl, listSites as listSearchConsoleSites, querySearchAnalytics, searchConsolePropertyMatchesWebsite, type SearchUrlInspection } from "../shared/integrations/searchConsole";
 import { probeWordPressCredentials } from "../shared/integrations/wordpress";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { action, internalAction, type ActionCtx } from "./_generated/server";
 import { providerValidator } from "./schema";
 import { appError } from "./lib/tenancy";
@@ -42,6 +53,7 @@ const GROUP_FOR: Record<string, keyof typeof OAUTH_PROVIDERS> = {
   ga4: "google",
   search_console: "google",
   google_ads: "google",
+  google_business_profile: "google",
   meta_ads: "meta",
   facebook_pages: "meta",
   instagram: "instagram",
@@ -54,11 +66,36 @@ const CLIENT_ENV = {
   meta: ["META_APP_ID", "META_APP_SECRET"],
   instagram: ["INSTAGRAM_APP_ID", "INSTAGRAM_APP_SECRET"],
   linkedin: ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"],
+  linkedin_pages: ["LINKEDIN_PAGES_CLIENT_ID", "LINKEDIN_PAGES_CLIENT_SECRET"],
   x: ["X_CLIENT_ID", "X_CLIENT_SECRET"],
 } as const;
 
+/** Stored OAuth secret. `app` marks tokens from the LinkedIn Pages app; `userAccessToken` is Meta's user token behind a Page token. */
+interface StoredOAuth {
+  accessToken: string;
+  refreshToken?: string;
+  userAccessToken?: string;
+  app?: "linkedin_pages";
+}
+
+function parseStored(value: string): StoredOAuth | null {
+  try {
+    const v = JSON.parse(value) as Partial<StoredOAuth>;
+    return typeof v.accessToken === "string" ? (v as StoredOAuth) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The OAuth app a stored token belongs to. */
+function groupForSecret(provider: string, stored: StoredOAuth | null): keyof typeof OAUTH_PROVIDERS | undefined {
+  return stored?.app === "linkedin_pages" ? "linkedin_pages" : GROUP_FOR[provider];
+}
+
+const SELECTION_REQUIRED = "selection_required";
+
 /** Providers whose access tokens we refresh with a stored refresh token before use (Google's last about an hour). */
-export const REFRESHABLE = new Set(["linkedin", "x", "ga4", "search_console", "google_ads"]);
+export const REFRESHABLE = new Set(["linkedin", "x", "ga4", "search_console", "google_ads", "google_business_profile"]);
 const REFRESH_MARGIN_MS = 5 * 60_000;
 const SEARCH_CONSOLE_ROW_LIMIT = 1_000;
 const SEARCH_CONSOLE_MAX_PAGES = 3;
@@ -111,6 +148,7 @@ function wordpressPinnedFetch(url: string, init: RequestInit | undefined, addres
 /** Scopes we ask for, used when the token response doesn't echo them back. */
 const REQUESTED_SCOPES: Record<string, string[]> = {
   linkedin: scopesFor(["linkedin.read_profile", "linkedin.publish_post"]),
+  linkedin_pages: scopesFor(["linkedin.list_organizations", "linkedin.publish_org_post"]),
   x: scopesFor(["x.read_profile", "x.publish_post"]),
 };
 
@@ -148,10 +186,11 @@ export const completeOAuth = action({
     // Bound to the browser that started it: the signed-in caller must be the user who started the flow.
     const callerId = await getAuthUserId(ctx);
     if (!callerId || callerId !== st.userId) return { ok: false, slug: "", provider: st.provider, message: "Start connecting again from ClimbOS while signed in." };
-    const group = GROUP_FOR[st.provider];
+    const group = st.variant === "linkedin_pages" ? "linkedin_pages" : GROUP_FOR[st.provider];
     const [idEnv, secretEnv] = CLIENT_ENV[group];
-    const clientId = process.env[idEnv]!;
-    const clientSecret = process.env[secretEnv]!;
+    const clientId = process.env[idEnv];
+    const clientSecret = process.env[secretEnv];
+    if (!clientId || !clientSecret) return { ok: false, slug: st.slug, provider: st.provider, message: "This connection isn't set up on ClimbOS yet." };
     const redirectUri = `${process.env.SITE_URL ?? "http://localhost:3000"}/api/oauth/callback`;
     const req = buildCodeExchangeRequest({ provider: OAUTH_PROVIDERS[group], clientId, clientSecret, code: args.code, redirectUri, codeVerifier: st.verifier });
     const res = await fetch(req.url, { method: req.method, headers: req.headers, body: req.body });
@@ -162,6 +201,20 @@ export const completeOAuth = action({
     let accountLabel: string | undefined;
     let externalAccountId: string | undefined;
     let accountType: string | undefined;
+    const extra: Partial<StoredOAuth> = group === "linkedin_pages" ? { app: "linkedin_pages" } : {};
+    /** Bind the only usable option straight away; otherwise the owner chooses on the Connections page. */
+    const choose = (options: AccountOption[], noun: string, plural: string): AccountOption | undefined => {
+      const sole = soleChoice(options);
+      if (sole) {
+        accountLabel = sole.label;
+        externalAccountId = sole.id;
+        accountType = sole.accountType;
+      } else {
+        accountLabel = choicePendingLabel(options.length, noun, plural);
+        accountType = SELECTION_REQUIRED;
+      }
+      return sole;
+    };
     if (group === "instagram") {
       const ll = buildInstagramLongLivedExchangeRequest({ clientSecret, shortLivedToken: token.accessToken });
       const llRes = await fetch(ll.url, { method: ll.method, headers: ll.headers, body: ll.body });
@@ -173,14 +226,22 @@ export const completeOAuth = action({
         externalAccountId = acct.data.userId;
         accountType = acct.data.accountType;
       }
-    } else if (group === "meta" && st.provider === "facebook_pages") {
-      const pages = await listManagedPages({ accessToken: token.accessToken, maxPages: 2 });
-      if (pages.ok && pages.data.items[0]) {
-        const page = pages.data.items[0];
-        accountLabel = page.name;
-        externalAccountId = page.id;
+    } else if (group === "meta") {
+      // Swap the short-lived user token for a long-lived (~60 day) one; Page tokens made from it don't expire.
+      const ll = buildRefreshRequest({ provider: OAUTH_PROVIDERS.meta, clientId, clientSecret, refreshToken: token.accessToken });
+      const llParsed = parseTokenResponse(await (await fetch(ll.url, { method: ll.method, headers: ll.headers })).json().catch(() => null));
+      if (llParsed.ok) token = { ...llParsed.token, scopes: token.scopes };
+      // Meta's token response doesn't list what was granted: ask, so missing permissions show honestly.
+      const granted = await listGrantedPermissions({ accessToken: token.accessToken });
+      if (granted.ok) token = { ...token, scopes: granted.data };
+      if (st.provider === "facebook_pages") {
+        extra.userAccessToken = token.accessToken;
+        const pages = await listManagedPages({ accessToken: token.accessToken, maxPages: 5 });
+        const sole = choose(pages.ok ? facebookPageOptions(pages.data.items) : [], "Facebook Page", "Facebook Pages");
+        const page = sole && pages.ok ? pages.data.items.find((p) => p.id === sole.id) : undefined;
         // Publishing uses the Page access token, not the user token.
-        if (page.pageAccessToken) token = { ...token, accessToken: page.pageAccessToken };
+        if (page?.pageAccessToken) token = { ...token, accessToken: page.pageAccessToken, expiresAt: undefined };
+        if (!pages.ok) accountLabel = "Facebook Pages couldn't be loaded · try Choose again";
       }
     } else if (st.provider === "google_ads") {
       accountType = "google_ads_account_selection_required";
@@ -205,27 +266,32 @@ export const completeOAuth = action({
         accountType = "google_ads_setup_needed";
         accountLabel = "Google Ads connected · ClimbOS setup needed";
       }
-    } else if (group === "linkedin" || group === "x") {
+    } else if (group === "linkedin" || group === "linkedin_pages" || group === "x") {
       // Posts need the author id, so a failed profile probe means no connection.
       if (token.scopes.length === 0) token = { ...token, scopes: REQUESTED_SCOPES[group] ?? [] };
-      const name = group === "linkedin" ? "LinkedIn" : "X";
       if (group === "linkedin") {
         const me = await getLinkedInMember({ accessToken: token.accessToken });
-        if (!me.ok) return { ok: false, slug: st.slug, provider: st.provider, message: `We couldn't read your ${name} profile. Please try again.` };
-        accountLabel = me.data.name;
-        externalAccountId = me.data.personUrn;
+        if (!me.ok) return { ok: false, slug: st.slug, provider: st.provider, message: "We couldn't read your LinkedIn profile. Please try again." };
+        choose(linkedInOptions(me.data, []), "LinkedIn profile", "LinkedIn profiles");
+      } else if (group === "linkedin_pages") {
+        const orgs = await listAdministeredOrganizations({ accessToken: token.accessToken });
+        if (!orgs.ok) return { ok: false, slug: st.slug, provider: st.provider, message: "We couldn't read the LinkedIn Pages you administer. Please try again." };
+        choose(linkedInOptions(null, orgs.data.items), "LinkedIn Page", "LinkedIn Pages");
       } else {
         const me = await getXUser({ accessToken: token.accessToken });
-        if (!me.ok) return { ok: false, slug: st.slug, provider: st.provider, message: `We couldn't read your ${name} account. Please try again.` };
+        if (!me.ok) return { ok: false, slug: st.slug, provider: st.provider, message: "We couldn't read your X account. Please try again." };
         accountLabel = me.data.username ? `@${me.data.username}` : me.data.name;
         externalAccountId = me.data.id;
+        accountType = me.data.verifiedType === "business" ? "x_business" : "x_account";
       }
     } else if (st.provider === "ga4") {
       const props = await listAccessibleProperties({ accessToken: token.accessToken, maxPages: 2 });
-      if (props.ok && props.data.items[0]) {
-        accountLabel = props.data.items[0].displayName;
-        externalAccountId = props.data.items[0].property;
-      }
+      choose(props.ok ? ga4PropertyOptions(props.data.items) : [], "Analytics property", "Analytics properties");
+      if (!props.ok) accountLabel = "Analytics properties couldn't be loaded · try Choose again";
+    } else if (st.provider === "google_business_profile") {
+      const locations = await listBusinessProfileLocations({ accessToken: token.accessToken });
+      choose(locations.ok ? businessProfileOptions(locations.data.items) : [], "Business Profile location", "Business Profile locations");
+      if (!locations.ok) accountLabel = "Locations couldn't be loaded · Google may not have approved API access yet";
     } else if (st.provider === "search_console") {
       const properties = await listSearchConsoleSites({ accessToken: token.accessToken });
       if (properties.ok && properties.data.length === 1) {
@@ -245,7 +311,7 @@ export const completeOAuth = action({
       orgId: st.orgId as Id<"organizations">,
       userId: st.userId as Id<"users">,
       provider: st.provider,
-      secret: JSON.stringify({ accessToken: token.accessToken, refreshToken: token.refreshToken }),
+      secret: JSON.stringify({ accessToken: token.accessToken, refreshToken: token.refreshToken, ...extra }),
       secretKind: "oauth",
       scopes: token.scopes,
       expiresAt: token.expiresAt,
@@ -340,23 +406,125 @@ export const revokeProviderToken = internalAction({
     const secrets = secretIds
       ? await ctx.runQuery(internal.connections.secretsForRevocation, { connectionId, secretIds }).catch(() => [])
       : [await ctx.runQuery(internal.connections.getSecret, { connectionId, forRevocation: true }).catch(() => null)].filter((s) => s !== null);
+    let attempted = false;
+    let failed = false;
     for (const secret of secrets) {
-      const group = GROUP_FOR[secret.provider];
-      if (group) {
+      const stored = parseStored(secret.value);
+      const group = groupForSecret(secret.provider, stored);
+      if (!group || !stored) continue;
+      // Meta revokes with the user token (DELETE /me/permissions); a Page token can't deauthorize the app.
+      // X keeps refresh tokens alive separately, so revoke both.
+      const tokens = group === "meta" ? [stored.userAccessToken ?? stored.accessToken] : group === "x" && stored.refreshToken ? [stored.accessToken, stored.refreshToken] : [stored.accessToken];
+      for (const token of tokens) {
+        const req = buildRevocationRequest({ provider: OAUTH_PROVIDERS[group], token, ...clientCreds(group) });
+        if (!req) continue;
+        attempted = true;
         try {
-          const { accessToken, refreshToken } = JSON.parse(secret.value) as { accessToken: string; refreshToken?: string };
-          // X keeps refresh tokens alive separately, so revoke both.
-          const tokens = group === "x" && refreshToken ? [accessToken, refreshToken] : [accessToken];
-          for (const token of tokens) {
-            const req = buildRevocationRequest({ provider: OAUTH_PROVIDERS[group], token, ...clientCreds(group) });
-            if (req) await fetch(req.url, { method: req.method, headers: req.headers, body: req.body });
-          }
+          const res = await fetch(req.url, { method: req.method, headers: req.headers, body: req.body });
+          if (!res.ok) failed = true;
         } catch {
           // Revocation is best effort; the local secret is deleted regardless.
+          failed = true;
         }
       }
     }
-    await ctx.runMutation(internal.connections.deleteSecrets, { connectionId, secretIds });
+    await ctx.runMutation(internal.connections.deleteSecrets, { connectionId, secretIds, revocation: !attempted ? "unsupported" : failed ? "failed" : "revoked" });
+  },
+});
+
+type LiveOptions = { ok: true; options: AccountOption[]; truncated: boolean; pageTokens: Map<string, string>; userAccessToken?: string; stored: StoredOAuth } | { ok: false; message: string };
+
+const CHOOSABLE = new Set(["facebook_pages", "linkedin", "ga4", "google_business_profile"]);
+
+/** Re-read the provider's live list with this workspace's stored token. Tokens stay server-side. */
+async function liveAccountOptions(ctx: ActionCtx, connection: Doc<"connections">): Promise<LiveOptions> {
+  const google = GROUP_FOR[connection.provider] === "google";
+  if (google) {
+    const accessToken = await googleAccessToken(ctx, connection._id, connection.expiresAt);
+    if (!accessToken) return { ok: false, message: "Google access expired. Reconnect the account." };
+    if (connection.provider === "ga4") {
+      const props = await listAccessibleProperties({ accessToken, maxPages: 2 });
+      return props.ok ? { ok: true, options: ga4PropertyOptions(props.data.items), truncated: props.data.truncated, pageTokens: new Map(), stored: { accessToken } } : { ok: false, message: "Couldn't load your Analytics properties. Try again or reconnect." };
+    }
+    const locations = await listBusinessProfileLocations({ accessToken });
+    return locations.ok
+      ? { ok: true, options: businessProfileOptions(locations.data.items), truncated: locations.data.truncated, pageTokens: new Map(), stored: { accessToken } }
+      : { ok: false, message: "Couldn't load your Business Profile locations. If ClimbOS's Google Business Profile API access is still pending, Google returns no data yet." };
+  }
+  const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId: connection._id });
+  const stored = secret ? parseStored(secret.value) : null;
+  if (!stored) return { ok: false, message: "This connection's access was removed. Reconnect the account." };
+  if (connection.provider === "facebook_pages") {
+    const userAccessToken = stored.userAccessToken ?? stored.accessToken;
+    const pages = await listManagedPages({ accessToken: userAccessToken, maxPages: 5 });
+    if (!pages.ok) return { ok: false, message: "Couldn't load your Facebook Pages. Reconnect Facebook and allow Page access." };
+    const pageTokens = new Map(pages.data.items.filter((p) => p.pageAccessToken).map((p) => [p.id, p.pageAccessToken!]));
+    return { ok: true, options: facebookPageOptions(pages.data.items), truncated: pages.data.truncated, pageTokens, userAccessToken, stored };
+  }
+  if (stored.app === "linkedin_pages") {
+    const orgs = await listAdministeredOrganizations({ accessToken: stored.accessToken });
+    return orgs.ok ? { ok: true, options: linkedInOptions(null, orgs.data.items), truncated: orgs.data.truncated, pageTokens: new Map(), stored } : { ok: false, message: "Couldn't load the LinkedIn Pages you administer. Try again or reconnect." };
+  }
+  const me = await getLinkedInMember({ accessToken: stored.accessToken });
+  return me.ok ? { ok: true, options: linkedInOptions(me.data, []), truncated: false, pageTokens: new Map(), stored } : { ok: false, message: "Couldn't read your LinkedIn profile. Reconnect LinkedIn." };
+}
+
+/** List the Pages, profiles, properties or locations an owner/admin can choose for this business. */
+export const availableAccounts = action({
+  args: { slug: v.string(), provider: providerValidator },
+  handler: async (ctx, { slug, provider }): Promise<{ ok: boolean; options: AccountOption[]; truncated: boolean; selected: string | null; message: string }> => {
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_connections" });
+    if (!access) throw appError("NOT_FOUND", "We couldn't find that workspace.");
+    if (access.kind === "demo") return { ok: false, options: [], truncated: false, selected: null, message: "Demo workspaces don't connect real accounts." };
+    if (!CHOOSABLE.has(provider)) return { ok: false, options: [], truncated: false, selected: null, message: "This platform signs in as one account. To change it, connect again with the other account." };
+    const connection = await ctx.runQuery(internal.connections.connectionFor, { orgId: access.orgId, provider });
+    if (!connection || connection.status !== "connected" || connection.isFixture) return { ok: false, options: [], truncated: false, selected: null, message: "Connect the account first." };
+    const live = await liveAccountOptions(ctx, connection);
+    if (!live.ok) return { ok: false, options: [], truncated: false, selected: connection.externalAccountId ?? null, message: live.message };
+    return {
+      ok: true,
+      options: live.options,
+      truncated: live.truncated,
+      selected: connection.externalAccountId ?? null,
+      message: live.options.length ? "Choose the one for this business." : "Nothing to choose: this sign-in has no accounts of this kind.",
+    };
+  },
+});
+
+/** Bind one option to this business after re-checking it against the provider's live list. */
+export const chooseAccount = action({
+  args: { slug: v.string(), provider: providerValidator, accountId: v.string() },
+  handler: async (ctx, { slug, provider, accountId }): Promise<{ ok: true; accountLabel: string }> => {
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "manage_connections" });
+    if (!access) throw appError("NOT_FOUND", "We couldn't find that workspace.");
+    if (access.kind === "demo") throw appError("FORBIDDEN", "Demo workspaces can't connect real accounts.");
+    if (!CHOOSABLE.has(provider)) throw appError("INVALID", "This platform signs in as one account. Connect again to change it.");
+    const connection = await ctx.runQuery(internal.connections.connectionFor, { orgId: access.orgId, provider });
+    if (!connection || connection.status !== "connected" || connection.isFixture) throw appError("INVALID", "Connect the account first.");
+    const live = await liveAccountOptions(ctx, connection);
+    if (!live.ok) throw appError("UNAVAILABLE", live.message);
+    const option = live.options.find((o) => o.id === accountId);
+    if (!option) throw appError("FORBIDDEN", "Choose one of the accounts returned by your connected sign-in.");
+    if (!option.canPublish && option.warning) throw appError("INVALID", option.warning);
+    let secret: string | undefined;
+    if (provider === "facebook_pages") {
+      const pageToken = live.pageTokens.get(option.id);
+      if (!pageToken) throw appError("INVALID", "Facebook didn't return access for this Page. Reconnect Facebook and allow it.");
+      secret = JSON.stringify({ accessToken: pageToken, userAccessToken: live.userAccessToken });
+    }
+    const saved = await ctx.runMutation(internal.connections.chooseAccount, {
+      orgId: access.orgId,
+      userId: access.userId,
+      connectionId: connection._id,
+      provider,
+      externalAccountId: option.id,
+      accountLabel: option.label,
+      accountType: option.accountType,
+      secret,
+    });
+    if (!saved) throw appError("INVALID", "Reconnect the account and choose again.");
+    if (provider === "ga4") await ctx.scheduler.runAfter(0, internal.connectionActions.syncGa4, { orgId: access.orgId });
+    return { ok: true, accountLabel: option.label };
   },
 });
 
@@ -369,9 +537,10 @@ export const refreshAccessToken = internalAction({
   handler: async (ctx, { connectionId }): Promise<{ ok: boolean; message?: string }> => {
     const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId });
     if (!secret || !REFRESHABLE.has(secret.provider)) return { ok: false, message: "Nothing to refresh." };
-    const group = GROUP_FOR[secret.provider];
+    const stored = parseStored(secret.value);
+    const group = groupForSecret(secret.provider, stored);
+    if (!stored || !group) return { ok: false, message: "Nothing to refresh." };
     const { clientId, clientSecret } = clientCreds(group);
-    const stored = JSON.parse(secret.value) as { accessToken: string; refreshToken?: string };
     if (!stored.refreshToken) return { ok: false, message: "No refresh token; reconnect the account." };
     if (!clientId || !clientSecret) return { ok: false, message: "Integration keys aren't set." };
     const req = buildRefreshRequest({ provider: OAUTH_PROVIDERS[group], clientId, clientSecret, refreshToken: stored.refreshToken });
@@ -390,7 +559,7 @@ export const refreshAccessToken = internalAction({
     const t = parsed.token;
     await ctx.runMutation(internal.connections.rotateSecret, {
       connectionId,
-      secret: JSON.stringify({ accessToken: t.accessToken, refreshToken: t.refreshToken ?? stored.refreshToken }),
+      secret: JSON.stringify({ ...stored, accessToken: t.accessToken, refreshToken: t.refreshToken ?? stored.refreshToken }),
       expiresAt: t.expiresAt,
     });
     return { ok: true };

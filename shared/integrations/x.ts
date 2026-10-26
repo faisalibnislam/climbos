@@ -65,15 +65,20 @@ export interface XUser {
   id: string;
   username: string;
   name: string;
+  /** X's verification type: blue, business, government or none. */
+  verifiedType?: string;
 }
 
 export async function getMe(call: XCall): Promise<ReadResult<XUser>> {
-  const out = await requestJson({ url: `${X_API_BASE}/users/me`, headers: headers(call), fetchImpl: call.fetchImpl, timeoutMs: call.timeoutMs });
+  const out = await requestJson({ url: `${X_API_BASE}/users/me?user.fields=verified_type`, headers: headers(call), fetchImpl: call.fetchImpl, timeoutMs: call.timeoutMs });
   if (out.kind !== "ok") return xReadFailure(out);
   const d = isRecord(out.data) && isRecord(out.data.data) ? out.data.data : {};
   const id = asString(d.id);
   if (!id) return { ok: false, providerMessage: "X returned no user id", retryable: false };
-  return { ok: true, data: { id, username: asString(d.username) ?? "", name: asString(d.name) ?? "" } };
+  const user: XUser = { id, username: asString(d.username) ?? "", name: asString(d.name) ?? "" };
+  const verifiedType = asString(d.verified_type);
+  if (verifiedType) user.verifiedType = verifiedType;
+  return { ok: true, data: user };
 }
 
 /** X weighted length (URLs = 23, CJK/emoji = 2), after NFC like X does. */
