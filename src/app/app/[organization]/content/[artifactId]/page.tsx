@@ -120,6 +120,7 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
         {now ? (
           <p className="text-xs text-ink-3">
             <time dateTime={new Date(artifact.createdAt).toISOString()}>{formatDateTime(artifact.createdAt)}</time>
+            {artifact.agentName ? ` · written by your agent: ${artifact.agentName}` : null}
             {" · updated "}
             {relativeTime(artifact.updatedAt, now)}
           </p>

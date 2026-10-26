@@ -68,7 +68,7 @@ export const auditPublishedSocial = internalQuery({
 });
 
 /** The honest label shown with a library image on a post. */
-function assetPostLabel(a: Doc<"assets">): string {
+export function assetPostLabel(a: Doc<"assets">): string {
   if (a.kind === "ai_image") return "AI-generated illustration";
   if (a.illustrative) return "Your product with sample data";
   if (a.kind === "screenshot") return "Screenshot of your website";
@@ -321,6 +321,8 @@ export const get = query({
       autopilotSlot: slot && slot.status !== "skipped" ? { slotAt: slot.slotAt, status: slot.status } : null,
       reel: reel ? { id: reel._id, status: reel.status, videoUrl: reel.videoStorageId ? await ctx.storage.getUrl(reel.videoStorageId) : null, seconds: reel.seconds ?? null } : null,
       createdByRole: a.createdByRole ?? null,
+      /** Set when an outside agent wrote this draft itself over MCP. */
+      agentName: a.agentName ?? null,
       createdAt: a.createdAt,
       updatedAt: a.updatedAt,
       current: versions[0] ? await versionView(ctx as never, versions[0]) : null,
