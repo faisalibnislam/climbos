@@ -878,6 +878,7 @@ export const syncNow = action({
     if (provider === "ga4") await ctx.runAction(internal.connectionActions.syncGa4, { orgId: access.orgId });
     if (provider === "search_console") await ctx.runAction(internal.connectionActions.syncSearchConsole, { orgId: access.orgId });
     if (provider === "stripe_revenue") await ctx.runAction(internal.connectionActions.syncStripe, { orgId: access.orgId });
+    if (provider === "instagram" || provider === "facebook_pages") await ctx.runAction(internal.followers.syncOrg, { orgId: access.orgId });
     return { ok: true };
   },
 });

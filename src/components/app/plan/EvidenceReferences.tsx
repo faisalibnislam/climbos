@@ -2,12 +2,12 @@ import { ExternalLink } from "@/components/icons";
 import type { ActionEvidenceStatus, ActionEvidenceSupport } from "../../../../shared/agents/provenance";
 
 const SUPPORT_LABEL: Record<ActionEvidenceStatus, string> = {
-  found_on_page: "Excerpt found on the page ClimbOS loaded",
-  found_in_fact: "Excerpt found in the confirmed fact",
-  not_found: "Excerpt not found in this source · treat the claim as unconfirmed",
-  page_unavailable: "Page couldn't be loaded to check the excerpt",
-  not_loaded: "Excerpt not checked · page wasn't loaded",
-  no_excerpt: "No supporting excerpt given",
+  found_on_page: "Found on the page",
+  found_in_fact: "Found in the confirmed fact",
+  not_found: "Not found in this source · treat as unconfirmed",
+  page_unavailable: "Page couldn't be loaded to check",
+  not_loaded: "Not checked · page not loaded",
+  no_excerpt: "No excerpt given",
 };
 
 /** Show the references already attached to a recommendation in a usable form, with any code-checked excerpt support. */
@@ -65,7 +65,7 @@ export function EvidenceReferences({ references, excerpts = [], support }: { ref
           return <li key={`${reference}-${index}`}>{reference}{detail(reference)}</li>;
         })}
       </ul>
-      {support?.some((item) => item.status === "found_on_page" || item.status === "found_in_fact") ? <p className="mt-1 text-xs text-ink-3">A found excerpt shows these words are in the source, not that they prove the claim.</p> : null}
+      {support?.some((item) => item.status === "found_on_page" || item.status === "found_in_fact") ? <p className="mt-1 text-xs text-ink-3">Found means the words are in the source, not that they prove the claim.</p> : null}
     </>
   );
 }

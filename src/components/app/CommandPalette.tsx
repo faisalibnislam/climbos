@@ -41,10 +41,10 @@ export function CommandPalette({ slug }: { slug: string }) {
   const base = [
     ...PRIMARY_NAV.map((item) => ({ id: item.key as string, label: item.label, hint: item.description, search: "" })),
     ...APP_TOOLS.map((item) => ({ id: item.key, label: item.label, hint: item.description, search: item.search })),
-    { id: "review", label: "Review work", hint: "Check what needs your approval.", search: "approve" },
-    { id: "settings/business", label: "Your business & goal", hint: "Change business details and what you want to achieve.", search: "budget" },
-    { id: "settings/billing", label: "Plan & payments", hint: "Check your subscription and credits.", search: "billing" },
-    { id: "settings/team", label: "Settings", hint: "Manage your team and business settings.", search: "" },
+    { id: "review", label: "Review work", hint: "What needs your approval.", search: "approve" },
+    { id: "settings/business", label: "Your business & goal", hint: "Business details and your goal.", search: "budget" },
+    { id: "settings/billing", label: "Plan & payments", hint: "Subscription and credits.", search: "billing" },
+    { id: "settings/team", label: "Settings", hint: "Team and business settings.", search: "" },
   ];
   const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const matches = base.filter((item) => words.every((word) => `${item.label} ${item.hint} ${item.search}`.toLowerCase().includes(word)));
@@ -59,14 +59,14 @@ export function CommandPalette({ slug }: { slug: string }) {
         window.dispatchEvent(new CustomEvent("climbos:compose", { detail: { slug, userId: me.userId } }));
         go("today");
       } catch {
-        toast({ tone: "danger", title: "We could not keep this request. Copy it, then open Home." });
+        toast({ tone: "danger", title: "Couldn't save this request. Copy it, then open Home." });
       }
     },
   });
   const clamp = Math.min(active, Math.max(0, commands.length - 1));
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent title="Find a tool or ask for help" description="Opening a page is free. Requests are prepared for you to check before sending." onOpenAutoFocus={(event) => { event.preventDefault(); inputRef.current?.focus(); }}>
+      <DialogContent title="Find a tool or ask for help" description="Opening pages is free. You check requests before anything starts." onOpenAutoFocus={(event) => { event.preventDefault(); inputRef.current?.focus(); }}>
         <div className="flex items-center gap-2 border-b border-line pb-3">
           <Search className="size-4 shrink-0 text-ink-3" aria-hidden />
           <input ref={inputRef} value={q} onChange={(event) => { setQ(event.target.value); setActive(0); }} onKeyDown={(event) => {

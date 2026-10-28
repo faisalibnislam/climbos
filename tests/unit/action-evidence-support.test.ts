@@ -74,8 +74,8 @@ describe("action evidence claim support", () => {
       support: [{ ref: "fact:0", status: "found_in_fact" }, { ref: "https://real.example/pricing", status: "not_found" }],
     }));
     expect(html).toContain("Repeat customers placed 42 orders");
-    expect(html).toContain("Excerpt found in the confirmed fact");
-    expect(html).toContain("treat the claim as unconfirmed");
+    expect(html).toContain("Found in the confirmed fact");
+    expect(html).toContain("treat as unconfirmed");
     expect(html).toContain("not that they prove the claim");
     // Legacy references without excerpts render as before.
     expect(renderToStaticMarkup(createElement(EvidenceReferences, { references: ["https://real.example/pricing"] }))).not.toContain("Excerpt");

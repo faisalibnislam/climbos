@@ -38,10 +38,10 @@ export default function BusinessModelPage() {
   ) : null;
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
-      <PageHeader section="business-model" title="Business model check" intro="See whether the way you make money is holding up against your market, and three other models worth a small test." actions={action} />
+      <PageHeader section="business-model" title="Business model check" intro="Plus three other models worth a small test." actions={action} />
       {data === undefined ? <LoadingBlock label="Loading business model check…" lines={4} /> : null}
-      {data?.running ? <Callout tone="info" title="Check in progress">Reading your records and current market evidence. This page updates when it finishes.</Callout> : null}
-      {data && !data.result && !data.running ? <EmptyState title="No business model check yet" body="Run a check to see how your model is holding up and three alternatives with small tests. Later plans use the latest result." /> : null}
+      {data?.running ? <Callout tone="info" title="Check in progress">Reading your records and the market. This page updates when done.</Callout> : null}
+      {data && !data.result && !data.running ? <EmptyState title="No business model check yet" body="Run one to see how your model holds up, with three alternatives." /> : null}
       {data?.result ? (
         <BusinessModelCheckView
           check={data.result.check}

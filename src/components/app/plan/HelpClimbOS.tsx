@@ -15,9 +15,9 @@ type Unsure = "revenue" | "margin" | "churn";
 type Funnel = { periodDays: number; visitors?: number; leads?: number; activated?: number; newCustomers?: number };
 
 const MONEY: { key: Unsure; field: "revenuePerCustomerMonthUsd" | "grossMargin" | "monthlyChurn"; question: string; help: string; suffix: (currency: string) => string; toInput: (v: number) => string; fromInput: (s: string) => number; ok: (n: number) => boolean }[] = [
-  { key: "revenue", field: "revenuePerCustomerMonthUsd", question: "How much does one customer pay you in a typical month?", help: "If people buy once, use a typical order.", suffix: (c) => `${c} / month`, toInput: (v) => String(Math.round(v * 100) / 100), fromInput: Number, ok: (n) => n > 0 && n <= 1_000_000 },
-  { key: "margin", field: "grossMargin", question: "Of that, roughly what share do you keep after the cost of delivering it?", help: "Your profit share before rent and salaries.", suffix: () => "%", toInput: (v) => String(Math.round(v * 100)), fromInput: (s) => Number(s) / 100, ok: (n) => n > 0 && n <= 1 },
-  { key: "churn", field: "monthlyChurn", question: "Out of 100 customers, about how many stop buying each month?", help: "Enter 0 to 95.", suffix: () => "of 100", toInput: (v) => String(Math.round(v * 1000) / 10), fromInput: (s) => Number(s) / 100, ok: (n) => n >= 0.001 && n <= 0.95 },
+  { key: "revenue", field: "revenuePerCustomerMonthUsd", question: "What does one customer pay you in a typical month?", help: "If people buy once, use a typical order.", suffix: (c) => `${c} / month`, toInput: (v) => String(Math.round(v * 100) / 100), fromInput: Number, ok: (n) => n > 0 && n <= 1_000_000 },
+  { key: "margin", field: "grossMargin", question: "What share do you keep after delivery costs?", help: "Before rent and salaries.", suffix: () => "%", toInput: (v) => String(Math.round(v * 100)), fromInput: (s) => Number(s) / 100, ok: (n) => n > 0 && n <= 1 },
+  { key: "churn", field: "monthlyChurn", question: "Of 100 customers, how many stop buying each month?", help: "Enter 0 to 95.", suffix: () => "of 100", toInput: (v) => String(Math.round(v * 1000) / 10), fromInput: (s) => Number(s) / 100, ok: (n) => n >= 0.001 && n <= 0.95 },
 ];
 
 const FUNNEL: { key: "visitors" | "leads" | "activated" | "newCustomers"; label: string }[] = [
@@ -94,15 +94,15 @@ function NewBusinessNumbers({ slug, canEdit, currency, customerData, refresh, ne
   return (
     <section aria-labelledby="help-climbos-heading" className="flex flex-col gap-4 rounded-[var(--radius-card)] border border-line bg-surface p-[var(--card-p)]">
       <div>
-        <h3 id="help-climbos-heading" className="heading-card">No customers yet, so ClimbOS only needs your planned price</h3>
+        <h3 id="help-climbos-heading" className="heading-card">No customers yet? Just add your planned price</h3>
         <p className="mt-1 text-sm text-ink-3">
-          A new business has no customer revenue, margin or churn to report, so ClimbOS won&apos;t ask for them. It uses clearly labelled estimates and focuses the plan on getting your first customers.{needed ? " Save, then refresh the plan." : ""}
+          The plan uses labelled estimates and focuses on your first customers.{needed ? " Save, then refresh." : ""}
         </p>
       </div>
       <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
         <label className="flex flex-col gap-1">
           <span className="text-ui font-medium text-ink">What do you plan to charge each customer per month?</span>
-          <span className="text-xs text-ink-3">If people will buy once, use a typical order. You can change it later.</span>
+          <span className="text-xs text-ink-3">One-off sales? Use a typical order.</span>
           <span className="flex items-center gap-2">
             <Input inputMode="decimal" className="max-w-40" value={price} disabled={undecided || !canEdit || busy} onChange={(e) => setPrice(e.target.value)} />
             <span className="text-xs text-ink-3">{currency} / month</span>
@@ -218,11 +218,11 @@ function CustomerNumbers({
   return (
     <section aria-labelledby="help-climbos-heading" className="flex flex-col gap-4 rounded-[var(--radius-card)] border border-line bg-surface p-[var(--card-p)]">
       <div>
-        <h3 id="help-climbos-heading" className="heading-card">{needed ? "ClimbOS needs 3 numbers to check this plan" : "Help ClimbOS with a few numbers"}</h3>
+        <h3 id="help-climbos-heading" className="heading-card">{needed ? "3 numbers needed to check this plan" : "Add a few numbers"}</h3>
         <p className="mt-1 text-sm text-ink-3">
           {needed
-            ? "Without them it can't tell whether a play makes or loses money. Rough answers are fine. Not sure? Tap it and ClimbOS uses a cautious estimate it labels as an estimate."
-            : "All optional. Each one makes the plan's numbers more accurate. Not sure? Tap it and ClimbOS labels its estimate."}
+            ? "These show whether a play makes money. Rough is fine; tap Not sure for a labelled estimate."
+            : "Optional. Each makes the numbers more accurate."}
         </p>
       </div>
 
@@ -257,7 +257,7 @@ function CustomerNumbers({
                 setUnsure(new Set(["revenue", "margin", "churn"]));
                 setMoney({ revenue: "", margin: "", churn: "" });
                 setSaved(true);
-                toast({ tone: "success", title: "Saved: ClimbOS will use labelled estimates" });
+                toast({ tone: "success", title: "Saved. Using labelled estimates." });
               } catch (e) {
                 toast({ tone: "danger", title: errorMessage(e) });
               } finally {
@@ -270,7 +270,7 @@ function CustomerNumbers({
         </div>
       ) : null}
       {customerData?.status === "no_data_yet" ? (
-        <p className="text-xs text-ink-3">You said you don&apos;t have these numbers yet, so the plan uses labelled estimates. Connecting your billing (for example Stripe) or analytics later lets ClimbOS measure them for you.</p>
+        <p className="text-xs text-ink-3">Using labelled estimates for now. Connect billing (like Stripe) later to measure them.</p>
       ) : null}
 
       <fieldset className="flex flex-col gap-3" disabled={!canEdit || busy}>
@@ -304,7 +304,7 @@ function CustomerNumbers({
       {askHours ? (
         <label className="flex flex-col gap-1">
           <span className="text-ui font-medium text-ink">How many hours a week can you give to growth work?</span>
-          <span className="text-xs text-ink-3">Keeps the plan to work you actually have time for.</span>
+          <span className="text-xs text-ink-3">Keeps the plan realistic.</span>
           <span className="flex items-center gap-2">
             <Input inputMode="decimal" className="max-w-40" value={hours} disabled={!canEdit || busy} onChange={(e) => setHours(e.target.value)} />
             <span className="text-xs text-ink-3">hours / week</span>
@@ -314,7 +314,7 @@ function CustomerNumbers({
 
       <details className="rounded-[var(--radius-control)] border border-line px-3 py-2" open={!needed && Boolean(funnel)}>
         <summary className="cursor-pointer text-ui font-medium text-ink">Optional: your last 30 days</summary>
-        <p className="mt-2 text-xs text-ink-3">Counts from the last month. ClimbOS compares each step with the one before to find where most people drop off, and aims the plan at that step.</p>
+        <p className="mt-2 text-xs text-ink-3">Shows where most people drop off, so the plan can fix that step.</p>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {FUNNEL.map((f) => (
             <label key={f.key} className="flex flex-col gap-1">
@@ -325,7 +325,7 @@ function CustomerNumbers({
         </div>
       </details>
 
-      {noEmailList ? <p className="text-xs text-ink-3">No email list in ClimbOS yet, so the plan won&apos;t rely on email. Add contacts under Customers whenever you&apos;re ready.</p> : null}
+      {noEmailList ? <p className="text-xs text-ink-3">No email list yet, so the plan skips email. Add contacts under Customers.</p> : null}
 
       {canEdit ? (
         saved && refresh ? <RefreshOffer slug={slug} refresh={refresh} /> : (

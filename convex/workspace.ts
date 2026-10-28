@@ -158,6 +158,7 @@ export const today = query({
             status: strategy.status,
             version: strategy.version,
             summary: strategy.summary,
+            channels: [...strategy.channels].sort((a, b) => a.priority - b.priority).slice(0, 3).map((c) => c.name),
             opportunities: projectGrowthOpportunities(expertPlaysOf(strategy.expert) as OpportunityPlayInput[]),
           }
         : null,
@@ -849,7 +850,7 @@ export const plan = query({
       role,
       canApprove: ["owner", "admin", "reviewer"].includes(role),
       canEdit: ["owner", "admin", "editor"].includes(role),
-      goal: goal ? { statement: goal.statement, horizonDays: goal.horizonDays, monthlyAdBudget: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency), currency: goal.currency } : null,
+      goal: goal ? { statement: goal.statement, horizonDays: goal.horizonDays, monthlyAdBudget: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency), currency: goal.currency, followers: goal.kind === "more_followers" || Boolean(goal.kinds?.includes("more_followers")) } : null,
       strategy: strategy
         ? {
             id: strategy._id,

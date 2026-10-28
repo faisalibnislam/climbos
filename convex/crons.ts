@@ -54,5 +54,7 @@ crons.weekly("competitor watch", { dayOfWeek: "monday", hourUTC: 7, minuteUTC: 0
 crons.daily("refresh due competitor research", { hourUTC: 8, minuteUTC: 15 }, internal.competitorDiscovery.refreshDue, {});
 // Recheck only previously fetched sources due under the registry cadence; changes remain staff-review proposals.
 crons.daily("refresh due growth knowledge sources", { hourUTC: 8, minuteUTC: 30 }, internal.knowledgeRefreshCron.refreshDue, {});
+// Follower counts for connected Instagram accounts and Facebook Pages, once a day.
+crons.daily("follower counts", { hourUTC: 6, minuteUTC: 30 }, internal.followers.syncAll, {});
 
 export default crons;

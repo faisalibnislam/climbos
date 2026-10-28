@@ -41,3 +41,13 @@ describe("review invitation destination", () => {
     expect(reviewDestinationProblem("https://notyelp.com/review")).toBeNull();
   });
 });
+
+describe("follower growth stays real", () => {
+  it("flags bought followers and engagement tricks, not normal follower language", () => {
+    expect(rules("Buy 5,000 followers to look established")).toContain("fake_followers");
+    expect(rules("Join an engagement pod for faster reach")).toContain("fake_followers");
+    expect(rules("Do follow for follow with similar accounts")).toContain("fake_followers");
+    expect(rules("Grow to 5,000 followers with Reels and creator collaborations")).not.toContain("fake_followers");
+    expect(rules("Run a capped follower ad campaign for $50 a month")).not.toContain("fake_followers");
+  });
+});

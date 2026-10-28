@@ -7,7 +7,7 @@ export type ValueKindKey = "observed" | "attributed" | "projected" | "platform_r
 
 const KIND: Record<ValueKindKey, { label: string; tone: "green" | "blue" | "neutral" | "violet"; icon: ReactNode; help: string }> = {
   observed: { label: "Recorded", tone: "green", icon: <CircleCheck />, help: "Counted directly by the source system." },
-  attributed: { label: "Linked to a source", tone: "blue", icon: <Link2 />, help: "Linked to a source using a rule. This does not prove that source caused the result." },
+  attributed: { label: "Linked to a source", tone: "blue", icon: <Link2 />, help: "Linked by a rule. Not proof it caused the result." },
   projected: { label: "Estimated", tone: "neutral", icon: <TrendingUp />, help: "An estimate of the future, not a measurement." },
   platform_reported: { label: "Reported by the platform", tone: "neutral", icon: <Megaphone />, help: "The platform's own count. Can overlap." },
   assumption: { label: "Based on your inputs", tone: "neutral", icon: <Calculator />, help: "Math on numbers you typed. Not a forecast." },

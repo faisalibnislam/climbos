@@ -15,7 +15,7 @@ export function ReadinessComparisonTable({ data }: { data: Comparison }) {
     <section aria-label="Search readiness compared with competitors" className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4">
       <h2 className="heading-card">Search readiness beside similar businesses</h2>
       {data.youBehind.length ? <p className="text-sm text-ink-2">Others pass checks you don&apos;t: {data.youBehind.join(", ")}.</p> : null}
-      {data.ownCheckedAt === null ? <p className="text-sm text-ink-3">Your own site hasn&apos;t had a completed readiness check yet; run a site check to fill your column.</p> : null}
+      {data.ownCheckedAt === null ? <p className="text-sm text-ink-3">Your site hasn&apos;t been checked yet. Run a site check to fill your column.</p> : null}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[480px] text-left text-xs">
           <thead><tr className="text-ink-3"><th scope="col" className="py-1 pr-3 font-medium">Homepage check</th><th scope="col" className="py-1 pr-3 font-medium">You</th>{names.map((n) => <th key={n} scope="col" className="py-1 pr-3 font-medium">{n}</th>)}</tr></thead>
@@ -30,7 +30,7 @@ export function ReadinessComparisonTable({ data }: { data: Comparison }) {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-ink-3">Read from each homepage&apos;s HTML on its latest check. These are observable page signals, not search rankings, traffic, or AI citations.</p>
+      <p className="text-xs text-ink-3">Homepage signals from the latest check, not rankings, traffic or AI citations.</p>
     </section>
   );
 }

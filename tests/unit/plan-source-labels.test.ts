@@ -40,7 +40,7 @@ describe("plan source relationship labels", () => {
     expect(html).toContain("Research notes and assessment");
     expect(html).toContain("Retrieved 2026-10-25");
     expect(html).toContain("written by AI from the listed sources");
-    expect(html).toContain("source relevance and reliability are not independently verified");
+    expect(html).toContain("are not independently verified");
     expect(html).toContain("https://example.com/news");
     expect(html).toContain("Page-reported published: 2025-02-03");
     expect(html).toContain("page metadata, not independently verified");

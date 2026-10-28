@@ -251,7 +251,7 @@ export function ConnectionCard({ slug, item, canManage, isDemo }: { slug: string
             toast({
               tone: "success",
               title: `${item.name} disconnected`,
-              description: res?.manualStep ?? (res?.revokedAtProvider ? `ClimbOS asked ${item.name} to revoke its access and is deleting the stored key.` : "The stored key was deleted."),
+              description: res?.manualStep ?? (res?.revokedAtProvider ? `Asked ${item.name} to revoke access. Deleting the stored key.` : "Stored key deleted."),
             });
           } catch (err) {
             setProblem({ tone: "danger", title: "Couldn't disconnect", body: errorInfo(err).message });
@@ -404,7 +404,7 @@ function ConnectedAccount({ slug, item, disabled, onSignIn }: { slug: string; it
     <div className="flex flex-col gap-3">
       {needed ? (
         <Callout tone="warning" title={`Choose your ${item.choice!.noun}`}>
-          {conn.accountLabel ? `${conn.accountLabel}. ` : ""}ClimbOS won&apos;t publish or read anything until you pick one.
+          {conn.accountLabel ? `${conn.accountLabel}. ` : ""}Nothing is published or read until you pick one.
         </Callout>
       ) : (
         <p className="flex flex-wrap items-baseline gap-x-2 text-ui">

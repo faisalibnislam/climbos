@@ -24,7 +24,7 @@ describe("search readiness comparison", () => {
     expect(result.checks.every((c) => c.you === "unknown")).toBe(true);
     expect(result.youBehind).toEqual([]);
     const html = renderToStaticMarkup(createElement(ReadinessComparisonTable, { data: { ...result, ownCheckedAt: null } }));
-    expect(html).toContain("Your own site hasn&#x27;t had a completed readiness check yet");
-    expect(html).toContain("not search rankings, traffic, or AI citations");
+    expect(html).toContain("Your site hasn&#x27;t been checked yet");
+    expect(html).toContain("not rankings, traffic or AI citations");
   });
 });

@@ -90,10 +90,10 @@ export function ChannelScorecard({ slug }: { slug: string }) {
       <Profile slug={slug} data={data} />
       {!data.scored ? (
         <Callout tone="info" title="Rough ranking">
-          From business type and budget only. Refresh the plan for research-backed scores.
+          Based on business type and budget. Refresh the plan for better scores.
         </Callout>
       ) : null}
-      <p className="text-xs text-ink-3">Order is a relative fit guide based on audience, buying intent, budget, time, team capacity, competition, scalability, and measurement. These rule-guided signals are not probabilities of success.</p>
+      <p className="text-xs text-ink-3">Ranked by fit for your business. Not a chance of success.</p>
       <SplitStrip counts={{ plan: plan.length, later: later.length, notNow: notNow.length, ineligible: ineligible.length }} />
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-ui font-medium text-ink-2">Sort by</span>
@@ -159,7 +159,7 @@ function Profile({ slug, data }: { slug: string; data: View }) {
               ))}
             </div>
             <p className="mt-1 text-xs text-ink-3">
-              {data.typesSource === "owner" ? "Confirmed by your team" : "Suggested classification · confirm to affect channel eligibility"}
+              {data.typesSource === "owner" ? "Confirmed by your team" : "Suggested · confirm to apply"}
             </p>
           </div>
         </div>
@@ -223,7 +223,7 @@ function Profile({ slug, data }: { slug: string; data: View }) {
             <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-surface-2 p-3">
               <div>
                 <p className="text-ui font-medium text-ink">Which kinds of business describe you?</p>
-                <p className="mt-1 text-xs text-ink-3">Choose 1–3. These choices can affect which channels ClimbOS marks eligible; inferred suggestions do not unlock restricted channels until confirmed.</p>
+                <p className="mt-1 text-xs text-ink-3">Pick 1–3. Restricted channels unlock only after you confirm.</p>
               </div>
               {TYPE_GROUPS.map((group) => (
                 <fieldset key={group.key}>
@@ -258,7 +258,7 @@ function Profile({ slug, data }: { slug: string; data: View }) {
                     try {
                       await setTypes({ slug, types: selectedTypes });
                       setEditTypes(false);
-                      toast({ tone: "success", title: "Business types confirmed.", description: "Channel eligibility has been recalculated using your choices." });
+                      toast({ tone: "success", title: "Business types confirmed.", description: "Channels re-ranked." });
                     } catch (e) {
                       toast({ tone: "danger", title: errorMessage(e) });
                     } finally {
@@ -274,7 +274,7 @@ function Profile({ slug, data }: { slug: string; data: View }) {
                 <span className="text-xs text-ink-3">{selectedTypes.length}/3 selected</span>
               </div>
               {selectedTypes.some((key) => data.availableTypes.find((type) => type.key === key)?.regulated) ? (
-                <Callout tone="warning" title="Additional review may apply">Some advertising, claims, referral, or privacy rules depend on your industry and jurisdiction. A category selection is not a compliance review.</Callout>
+                <Callout tone="warning" title="Additional review may apply">Ad, claims, referral, and privacy rules vary by industry and location. This isn&apos;t a compliance review.</Callout>
               ) : null}
             </div>
           )}
@@ -285,8 +285,8 @@ function Profile({ slug, data }: { slug: string; data: View }) {
         <div className="mt-4 flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface-2 p-3">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <p className="text-ui font-medium text-ink">Check ClimbOS&apos;s guesses</p>
-              <p className="text-xs text-ink-3">Guessed from your website and research. Change any that are wrong, then approve. Approved answers sharpen the channel ranking.</p>
+              <p className="text-ui font-medium text-ink">Check our guesses</p>
+              <p className="text-xs text-ink-3">From your website and research. Fix any that are wrong, then approve.</p>
             </div>
             <Button
               size="sm"
@@ -306,7 +306,7 @@ function Profile({ slug, data }: { slug: string; data: View }) {
         </div>
       ) : null}
       {data.canEdit && unknown.length ? (
-        <p className="mt-3 text-xs text-ink-3">ClimbOS couldn&apos;t guess {unknown.map((d) => d.label.toLowerCase()).join(", ")} yet. Open All details to answer, or refresh the plan for new guesses.</p>
+        <p className="mt-3 text-xs text-ink-3">Couldn&apos;t guess {unknown.map((d) => d.label.toLowerCase()).join(", ")} yet. Answer in All details.</p>
       ) : null}
       <button type="button" className="mt-3 inline-flex min-h-6 items-center gap-1 text-xs font-medium text-brand-800 hover:underline" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         <ChevronDown aria-hidden className={cn("size-3.5 transition-transform", open && "rotate-180")} /> All details
@@ -403,7 +403,7 @@ function ChannelRow({ r, rank, labels, slug, canEdit }: { r: Row; rank: number; 
                 </dl>
                 <div className="rounded-[var(--radius-control)] border border-dashed border-line px-3 py-2">
                   <span className="text-2xs font-semibold uppercase tracking-wide text-ink-3">Evidence</span>
-                  <p className="mt-1 leading-relaxed text-ink-2">Not reviewed for your business yet. ClimbOS reviews a channel in depth when it becomes a candidate for your plan; the notes above are general, not evidence.</p>
+                  <p className="mt-1 leading-relaxed text-ink-2">Not reviewed for you yet. The notes above are general, not evidence.</p>
                 </div>
               </div>
             ) : null}
@@ -446,7 +446,7 @@ function ChannelRow({ r, rank, labels, slug, canEdit }: { r: Row; rank: number; 
                   <Button key={preference} size="sm" variant={r.ownerPreference?.preference === preference ? "secondary" : "ghost"} onClick={async () => {
                     try {
                       await savePreference({ slug, channelId: r.id, preference, rationale: preference === "irrelevant" ? "Marked irrelevant by workspace owner" : "Dismissed by workspace owner" });
-                      toast({ tone: "success", title: preference === "irrelevant" ? "Marked irrelevant" : "Recommendation dismissed", description: "This feedback is saved for future channel rankings." });
+                      toast({ tone: "success", title: preference === "irrelevant" ? "Marked irrelevant" : "Recommendation dismissed", description: "Future rankings will use this." });
                     } catch (error) { toast({ tone: "danger", title: errorMessage(error) }); }
                   }}>{preference === "irrelevant" ? "Mark irrelevant" : "Dismiss recommendation"}</Button>
                 ))}
@@ -538,8 +538,7 @@ function AlreadyUsing({ slug, channels }: { slug: string; channels: View["channe
   return (
     <div className="mt-4 flex flex-col gap-2">
       <p className="text-ui font-medium text-ink">Which of these do you already use? <span className="text-xs font-normal text-ink-3">(pick all that apply)</span></p>
-      <p className="text-xs text-ink-3">ClimbOS builds on channels you already have instead of suggesting them as new.</p>
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Channels you already use">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Channels you already use">
         {options.map((c) => {
           const on = c.ownerPreference?.preference === "already_using";
           return (
@@ -620,7 +619,7 @@ function MakeItHappen({ slug, channelId }: { slug: string; channelId: string }) 
       ) : (
         <>
           <p className="text-ui font-medium text-ink">
-            {preview.draftTitle ? `ClimbOS will ${preview.draftTitle.charAt(0).toLowerCase()}${preview.draftTitle.slice(1)} for ${preview.channel}. Drafts go to Review work; nothing is posted or sent without your approval.` : `${preview.channel} starts with a step only you can take.`}
+            {preview.draftTitle ? `We'll ${preview.draftTitle.charAt(0).toLowerCase()}${preview.draftTitle.slice(1)} for ${preview.channel}. Nothing is posted or sent without your approval.` : `${preview.channel} starts with a step only you can take.`}
           </p>
           {preview.todos.length ? (
             <ul className="flex flex-col gap-1 text-xs text-ink-2">
@@ -640,7 +639,7 @@ function MakeItHappen({ slug, channelId }: { slug: string; channelId: string }) 
                 try {
                   const r = await start({ slug, channelId });
                   if (r.runId) markRunAnnounced(r.runId);
-                  toast({ tone: "success", title: r.runId ? "Started: first drafts are on the way" : "Added to your to-dos", description: r.todos ? `${r.todos} to-do${r.todos === 1 ? "" : "s"} added for you. Progress shows on this channel.` : "Progress shows on this channel.", ...(r.runId ? { action: { label: "Watch progress", href: `/app/${slug}/work/${r.runId}` } } : {}) });
+                  toast({ tone: "success", title: r.runId ? "Started: first drafts are on the way" : "Added to your to-dos", description: r.todos ? `${r.todos} to-do${r.todos === 1 ? "" : "s"} added. Progress shows here.` : "Progress shows here.", ...(r.runId ? { action: { label: "Watch progress", href: `/app/${slug}/work/${r.runId}` } } : {}) });
                   setOpen(false);
                 } catch (e) {
                   toast({ tone: "danger", title: errorMessage(e) });

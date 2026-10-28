@@ -47,7 +47,7 @@ export function HomeBusinessSnapshot({ slug, snapshot }: { slug: string; snapsho
       {!hasAnyData ? (
         <div className="mt-4 rounded-lg border border-dashed border-line-strong px-4 py-3">
           <p className="text-sm font-medium text-ink">No website activity data recorded yet</p>
-          <p className="mt-1 text-sm text-ink-3">Connect Google Analytics 4 to see visits and sign-ups here. No data is different from zero.</p>
+          <p className="mt-1 text-sm text-ink-3">Connect Google Analytics 4 to see visits here. No data isn&apos;t zero.</p>
           <Link href={`/app/${slug}/connections`} className={`${buttonClasses({ variant: "link" })} mt-2`}>Connect analytics <ArrowRight aria-hidden="true" /></Link>
         </div>
       ) : (
@@ -74,7 +74,7 @@ export function HomeBusinessSnapshot({ slug, snapshot }: { slug: string; snapsho
           ))}
         </div>
       )}
-      {hasAnyData ? <p className="mt-3 text-xs text-ink-3">Visits and sign-ups are recorded activity, not proof that a campaign caused a change or produced revenue.</p> : null}
+      {hasAnyData ? <p className="mt-3 text-xs text-ink-3">Recorded activity, not proof that a campaign caused a change or produced revenue.</p> : null}
     </section>
   );
 }

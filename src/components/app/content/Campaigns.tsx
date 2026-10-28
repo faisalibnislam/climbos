@@ -63,10 +63,10 @@ export function CampaignStatusPill({ status }: { status: string }) {
 /** Meta: the owner picks which reported action type is this campaign's conversion; until then no cost per conversion is shown. */
 export function MetaConversionChoice({ slug, campaignId, actions, chosen, canEdit }: { slug: string; campaignId: Campaign["id"]; actions: { actionType: string; value: number }[]; chosen: string | null; canEdit: boolean }) {
   const setAction = useMutation(api.ads.setConversionAction);
-  if (!actions.length) return <Callout tone="info" title="No action types reported yet">Meta hasn’t reported any actions for this campaign, so there’s no conversion count to compare with your target.</Callout>;
+  if (!actions.length) return <Callout tone="info" title="No action types reported yet">Meta hasn’t reported any actions yet, so there’s nothing to compare with your target.</Callout>;
   return (
     <Callout tone="info" title={chosen ? `Counting “${chosen}” as the conversion` : "Choose which Meta action is the conversion"}>
-      <p>Meta reports several kinds of actions. ClimbOS counts only the one you confirm matches this campaign’s goal, using Meta’s own attribution settings. Other action types stay separate.</p>
+      <p>ClimbOS counts only the one you confirm matches this campaign’s goal. Others stay separate.</p>
       {canEdit ? (
         <div className="mt-2 max-w-sm">
           <Select
@@ -219,18 +219,18 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
                 ) : null}
               </dl>
               {review ? (
-                <Callout tone={review.status === "review" ? "warning" : review.status === "within_target" ? "success" : "info"} title={review.status === "review" ? "Review this campaign" : review.status === "within_target" ? "Within the owner-set target" : review.status === "target_needed" ? "Set a success target" : "Continue the agreed review window"}>
+                <Callout tone={review.status === "review" ? "warning" : review.status === "within_target" ? "success" : "info"} title={review.status === "review" ? "Review this campaign" : review.status === "within_target" ? "Within the owner-set target" : review.status === "target_needed" ? "Set a success target" : "Keep to the review window"}>
                   {review.message}
                 </Callout>
               ) : null}
               {performance.source === "meta_ads" ? <MetaConversionChoice slug={slug} campaignId={c.id} actions={performance.reportedActions ?? []} chosen={c.conversionActionType} canEdit={Boolean(member?.role && ["owner", "admin", "editor"].includes(member.role))} /> : null}
               <p className="text-xs text-ink-3">
-                Source: {performance.source === "google_ads" ? "Google Ads" : "Meta Ads"}, synced {new Date(performance.syncedAt).toLocaleString()}. Platform reports can change and reflect its reporting settings; they do not establish incremental customers or profit. This recommendation never pauses or edits the campaign.
+                Source: {performance.source === "google_ads" ? "Google Ads" : "Meta Ads"}, synced {new Date(performance.syncedAt).toLocaleString()}. Platform numbers can change and don’t prove new customers or profit. This advice never pauses or edits the campaign.
               </p>
-              {performance.source === "meta_ads" ? <p className="text-xs text-ink-3">The report window ends using your workspace timezone; Meta’s daily reporting dates may follow the ad account timezone.</p> : null}
+              {performance.source === "meta_ads" ? <p className="text-xs text-ink-3">Dates use your workspace timezone; Meta may use the ad account’s.</p> : null}
             </>
           ) : (
-            <p className="text-sm text-ink-2">Refresh to read daily results from the connected account. Google campaign advice uses only the conversion count reported by Google and your cost target. Meta action types remain separate until the campaign goal can be matched.</p>
+            <p className="text-sm text-ink-2">Refresh to pull daily results. Advice uses only reported conversions and your cost target.</p>
           )}
           {performanceError ? <ErrorCallout error={performanceError} /> : null}
         </section>

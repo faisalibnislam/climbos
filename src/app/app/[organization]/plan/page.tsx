@@ -5,12 +5,11 @@ import { useQueries, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Compass, Megaphone, Target } from "@/components/icons"
+import { Compass, Target } from "@/components/icons"
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
-import { Badge, Button, Callout, Card, CardContent, EmptyState, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, buttonClasses, type Tone } from "@/components/ui";
-import { ChannelScorecard } from "@/components/app/plan/ChannelScorecard";
+import { Badge, Button, Callout, Card, CardContent, EmptyState, Skeleton, buttonClasses, type Tone } from "@/components/ui";
 import { GeneratePlanButton, PlanReviewCard, StrategyRunWatcher, useStrategyRunState } from "@/components/app/plan/PlanActions";
 import { PlanToConnectedApps } from "@/components/app/connections/ConnectedProducts";
 import type { Economics } from "../../../../../shared/agents/economics";
@@ -26,6 +25,7 @@ import { RetryRunIfPossible, RUN_FINISHED } from "@/components/app/content/RunPr
 import { PageHeader } from "@/components/app/results/QueryBoundary";
 import { PERMISSION_WHO, SectionBoundary, majorToDisplay } from "@/components/app/content/shared";
 import { PlanJumpNav } from "@/components/app/plan/PlanJumpNav";
+import { FollowerGrowth } from "@/components/app/followers/FollowerGrowth";
 import { OlderVersionBar, PlanCompare, RestoreDialog, VersionPicker, usePlanVersions } from "@/components/app/plan/history/PlanHistory";
 
 const STRATEGY_STATUS: Record<string, { label: string; tone: Tone }> = {
@@ -58,7 +58,7 @@ function GoalCard({ goal, slug }: { goal: PlanView["goal"]; slug: string }) {
           </Link>
         }
       >
-        Your plan is built around one clear goal, like “20 more bookings a month”.
+        Your plan aims at one goal, like “20 more bookings a month”.
       </Callout>
     );
   }
@@ -77,7 +77,7 @@ function GoalCard({ goal, slug }: { goal: PlanView["goal"]; slug: string }) {
           <p className="heading-section">{goal.statement}</p>
           <p className="text-sm text-ink-2">
             Over the next {goal.horizonDays} days ·{" "}
-            {goal.monthlyAdBudget > 0 ? `Up to ${majorToDisplay(goal.monthlyAdBudget, goal.currency)} a month for ads, paid directly to the ad platforms` : "No ad budget"}
+            {goal.monthlyAdBudget > 0 ? `Up to ${majorToDisplay(goal.monthlyAdBudget, goal.currency)}/month for ads, paid to the ad platforms` : "No ad budget"}
           </p>
         </CardContent>
       </Card>
@@ -100,8 +100,8 @@ function PlanImpactSummary({ impact }: { impact: NonNullable<PlanView["planImpac
     <Card>
       <CardContent className="flex flex-col gap-3">
         <div>
-          <h2 className="heading-section">What changed in the modeled outlook</h2>
-          <p className="mt-1 text-sm text-ink-2">The saved play models stay fixed while current unit economics and portfolio limits are recalculated. Changes to your funnel, research, business facts, brand, or tools need a full plan refresh and are not represented here. These are scenarios, not actual results or a refreshed recommendation.</p>
+          <h2 className="heading-section">What changed in the forecast</h2>
+          <p className="mt-1 text-sm text-ink-2">Recalculated from your current numbers. Other changes need a full refresh. Scenarios, not results.</p>
         </div>
         {changed.length ? (
           <div className="flex flex-col gap-2">
@@ -123,7 +123,7 @@ function PlanImpactSummary({ impact }: { impact: NonNullable<PlanView["planImpac
               </div>
             ))}
           </div>
-        ) : <p className="text-sm text-ink-2">No play forecast changed in the fields this view can recalculate. Other changed inputs may affect the written recommendation after the plan is refreshed.</p>}
+        ) : <p className="text-sm text-ink-2">No forecast changed. A refresh may still change the advice.</p>}
         {impact.portfolio.after ? (
           <div className="rounded-[var(--radius-control)] bg-surface-2 p-3 text-sm">
             <p className="font-medium">Portfolio choice</p>
@@ -312,6 +312,7 @@ function PlanScreen({ slug }: { slug: string }) {
       />
 
       <GoalCard goal={plan.goal} slug={slug} />
+      {!viewBuilding ? <FollowerGrowth slug={slug} always={Boolean(plan.goal?.followers)} /> : null}
 
       {viewBuilding && buildRunId ? (
         <>
@@ -331,7 +332,7 @@ function PlanScreen({ slug }: { slug: string }) {
           title="This plan uses older business inputs"
           action={plan.canEdit ? <GeneratePlanButton slug={slug} mode="refresh" nextVersion={s.version + 1} estimateMicros={plan.planEstimateMicros} onStarted={onStarted} building={building} /> : null}
         >
-          These inputs changed or are due for review: {staleInputLabels.join(", ") || "important business inputs"}. The figures shown here recalculate from current numbers, while the written recommendations still reflect the saved plan. Refresh before approving or starting work.
+          Changed or due for review: {staleInputLabels.join(", ") || "important business inputs"}. Numbers are current; the advice isn&apos;t. Refresh before approving.
         </Callout>
       ) : null}
       {s && plan.planImpact && !olderView ? <PlanImpactSummary impact={plan.planImpact} /> : null}
@@ -401,19 +402,7 @@ function PlanScreen({ slug }: { slug: string }) {
         />
       ) : null}
 
-      <Tabs defaultValue="plan" className={compare ? "hidden" : undefined}>
-        <TabsList className="grid w-full grid-cols-2 p-1">
-          <TabsTrigger value="plan" className="h-12 gap-2 text-lg [font-family:var(--font-display-serif)] [&_svg]:size-5">
-            <Compass aria-hidden /> Plan
-          </TabsTrigger>
-          <TabsTrigger value="channels" className="h-12 gap-2 text-lg [font-family:var(--font-display-serif)] [&_svg]:size-5">
-            <Megaphone aria-hidden /> Channels
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="channels" className="mt-5">
-          <ChannelScorecard slug={slug} />
-        </TabsContent>
-        <TabsContent value="plan" className="mt-5 flex flex-col gap-6">
+      <div className={compare ? "hidden" : "flex flex-col gap-6"}>
       {!s ? (
         <>
           {plan.strategyRun?.status === "failed" && plan.strategyRun.userMessage ? (
@@ -426,13 +415,13 @@ function PlanScreen({ slug }: { slug: string }) {
             icon={<Compass />}
             headingLevel="h2"
             title="You don't have a plan yet"
-            body="Your team drafts a plan from your goal and what it learned about your business. You review it before any work starts."
+            body="Your team drafts one from your goal. You review it before any work starts."
             action={
               plan.canEdit ? (
                 plan.goal ? (
                   <GeneratePlanButton slug={slug} mode="build" estimateMicros={plan.planEstimateMicros} onStarted={onStarted} building={building} />
                 ) : (
-                  <p className="text-sm text-ink-2">Set a goal first, then build your plan.</p>
+                  <p className="text-sm text-ink-2">Set a goal first.</p>
                 )
               ) : (
                 <p className="text-sm text-ink-2">Building a plan needs {PERMISSION_WHO.edit}.</p>
@@ -451,7 +440,7 @@ function PlanScreen({ slug }: { slug: string }) {
           <ShortVersion strategy={s} />
           {plan.noCustomersYet || plan.customerData?.status === "no_data_yet" ? (
             <Callout tone="info" title={plan.noCustomersYet ? "Estimates: no customer data yet" : "Estimates: no customer numbers yet"}>
-              Money figures in this plan are labelled estimates, not your results. They update as real customer numbers come in.
+              Money figures are estimates, not your results. They update as real numbers come in.
             </Callout>
           ) : null}
           {s.expert ? <NorthStar expert={s.expert as ExpertView} slug={slug} /> : null}
@@ -469,8 +458,7 @@ function PlanScreen({ slug }: { slug: string }) {
       <BusinessInsights insights={plan.insights} />
       {s ? <Sources sources={plan.sources} web={(s.expert as { webSources?: { url: string; title?: string }[] } | null)?.webSources ?? []} researchEvidence={plan.researchEvidence} websiteUrl={savedBusinessWebsite} knowledge={(s.expert as { snapshot?: { knowledgeReferences?: KnowledgeReferenceSet } } | null)?.snapshot?.knowledgeReferences} /> : null}
       {s ? <Discussion slug={slug} subjectType="strategy" subjectId={s.id} title={`Growth plan v${s.version}`} href={`/app/${slug}/plan`} /> : null}
-        </TabsContent>
-      </Tabs>
+      </div>
 
         </>
       )}

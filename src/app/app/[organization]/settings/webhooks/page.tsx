@@ -37,8 +37,8 @@ function Webhooks() {
   return (
     <div className="flex flex-col gap-6">
       <SettingsHeader title="Webhooks" intro="To Zapier, Make or your server" />
-      <Callout tone="info" title="Content approval events are export handoffs">
-        An approved blog draft event includes its exact approved version and content hash for a workflow you configure. It does not publish the article or authorize your endpoint to publish it. Drafts longer than the event limit are marked incomplete; use the export pack for the full text.
+      <Callout tone="info" title="Approval events don't publish">
+        An approved draft event sends the exact approved version. It doesn&apos;t publish or authorize publishing. Long drafts are marked incomplete; use the export pack for full text.
       </Callout>
       {secret ? (
         <Callout tone="info" title="Copy signing secret now">

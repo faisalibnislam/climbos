@@ -43,7 +43,7 @@ describe("business setup starts with understandable, isolated intake", () => {
     expect(html).toContain("I do not have a website yet.");
     expect(html).toContain("Your business and what you need");
     expect(html).toContain("Research uses up to 19 credits.");
-    expect(html).toContain("unused reserved credits are returned.");
+    expect(html).toContain("Unused credits are returned.");
     expect(html).not.toContain("bristolcrumb.co.uk");
     expect(html).not.toContain("AI CEO");
   });

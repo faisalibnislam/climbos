@@ -51,7 +51,7 @@ export function OwnerGoalTarget({
       <p className="mt-1 text-xs text-ink-3">
         {target.baseline !== null && Number.isFinite(target.baseline)
           ? `Starting point in your goal: ${baselineAmount(target, target.baseline, currency)}.`
-          : "Starting point not entered."} This is your goal target, not a measured result.
+          : "Starting point not entered."} Your target, not a measured result.
       </p>
     </div>
   );

@@ -1,7 +1,7 @@
 /** Choices shared by onboarding and Settings → Business & goal. */
 
 export type BusinessType = "saas" | "ecommerce" | "services" | "physical_products" | "other";
-export type GoalKind = "more_sales" | "more_customers" | "more_reach" | "custom";
+export type GoalKind = "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom";
 
 export const BUSINESS_TYPE_OPTIONS: { value: BusinessType; label: string }[] = [
   { value: "saas", label: "Software or an app" },
@@ -27,6 +27,7 @@ export const GOAL_KIND_OPTIONS: { value: GoalKind; title: string; description: s
   { value: "more_customers", title: "More customers", description: "Help more people become customers", icon: "🙋" },
   { value: "more_sales", title: "More sales", description: "Get more purchases or orders", icon: "💰" },
   { value: "more_reach", title: "Help people find me", description: "Introduce your business to more people", icon: "📣" },
+  { value: "more_followers", title: "More followers", description: "Grow your social media following", icon: "📈" },
   { value: "custom", title: "Something else", description: "Your own words", icon: "✏️" },
 ];
 
@@ -36,6 +37,7 @@ export function goalDefaults(name: string): Record<GoalKind, string> {
     more_customers: `Help ${name} get more paying customers.`,
     more_sales: `Help ${name} sell more to the right people.`,
     more_reach: `Help more of the right people discover ${name}.`,
+    more_followers: `Grow ${name}'s followers on social media.`,
     custom: "",
   };
 }
@@ -52,7 +54,8 @@ const TYPE_SUGGESTIONS: Record<string, string[]> = {
 const KIND_SUGGESTIONS: Record<GoalKind, string[]> = {
   more_customers: ["Win more first-time customers."],
   more_sales: ["Sell more to the customers I already have."],
-  more_reach: ["Get found more often on Google and AI answers.", "Grow a following that turns into customers."],
+  more_reach: ["Get found more often on Google and AI answers."],
+  more_followers: ["Double my Instagram followers in 3 months.", "Grow a following that turns into customers."],
   custom: [],
 };
 

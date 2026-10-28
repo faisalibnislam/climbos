@@ -59,7 +59,7 @@ export function compareSavedDecisions(a: ComparablePlan, b: ComparablePlan): Dec
   if (!left?.plays || !right?.plays || !left.portfolio || !right.portfolio) return null;
   const changes: DecisionChange[] = [];
   if (left.diagnosis !== right.diagnosis && (left.diagnosis || right.diagnosis)) {
-    changes.push({ key: "diagnosis", label: "What ClimbOS thinks is holding growth back", before: left.diagnosis ?? "Not recorded", after: right.diagnosis ?? "Not recorded" });
+    changes.push({ key: "diagnosis", label: "What's holding growth back", before: left.diagnosis ?? "Not recorded", after: right.diagnosis ?? "Not recorded" });
   }
   if (left.plays && right.plays) {
     const oldById = new Map(left.plays.map((play) => [play.id, play]));
@@ -84,7 +84,7 @@ export function compareSavedDecisions(a: ComparablePlan, b: ComparablePlan): Dec
   )) {
     changes.push({
       key: "chosen-set",
-      label: "Chosen set and modeled result",
+      label: "Chosen plays and forecast",
       before: describePortfolio(left.portfolio),
       after: describePortfolio(right.portfolio),
     });
@@ -92,7 +92,7 @@ export function compareSavedDecisions(a: ComparablePlan, b: ComparablePlan): Dec
   const channels = (plan: ComparablePlan) => [...plan.channels].sort((x, y) => x.priority - y.priority).map((channel) => `${channel.priority}. ${channel.name} (${channel.status})`);
   const oldChannels = channels(a);
   const newChannels = channels(b);
-  if (!same(oldChannels, newChannels)) changes.push({ key: "channels", label: "Recommended places to reach customers", before: oldChannels.join("; ") || "None recorded", after: newChannels.join("; ") || "None recorded" });
+  if (!same(oldChannels, newChannels)) changes.push({ key: "channels", label: "Channels", before: oldChannels.join("; ") || "None recorded", after: newChannels.join("; ") || "None recorded" });
   const audienceNames = (plan: ComparablePlan) => plan.audiences.map((audience) => audience.name);
   const oldAudiences = audienceNames(a);
   const newAudiences = audienceNames(b);

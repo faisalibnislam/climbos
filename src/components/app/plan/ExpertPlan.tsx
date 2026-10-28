@@ -141,7 +141,7 @@ const CAPABILITY_LABEL: Record<NonNullable<PlayView["actionContract"]>["executio
   climbos: "ClimbOS can prepare this",
   existing_integration: "Needs a connected tool",
   external_setup: "Needs setup outside ClimbOS",
-  unknown: "Who will carry this out is not yet confirmed",
+  unknown: "Who does this? Not confirmed",
 };
 
 export interface ExpertView {
@@ -182,7 +182,7 @@ const KIND: Record<
   bankable: {
     label: "Practical · established practice",
     icon: ShieldCheck,
-    hint: "A practical move grounded in an established approach; fit and results still need business-specific evidence.",
+    hint: "A proven approach. Fit for you still needs checking.",
     band: "bg-chart-1/10",
     rail: "bg-chart-1",
     soft: "bg-chart-1/30",
@@ -194,7 +194,7 @@ const KIND: Record<
   creative: {
     label: "A related approach · needs checking",
     icon: Gem,
-    hint: "A useful idea carried into a less familiar context; the evidence supports the inference, not a guaranteed result.",
+    hint: "A proven idea in a new setting. Not a guaranteed result.",
     band: "bg-chart-3/10",
     rail: "bg-chart-3",
     soft: "bg-chart-3/30",
@@ -206,7 +206,7 @@ const KIND: Record<
   moonshot: {
     label: "A bold idea · not proven",
     icon: Rocket,
-    hint: "A speculative high-upside hypothesis, not an established result. Use a small reversible test with a hard stop and name what would disprove it.",
+    hint: "A high-upside guess, not proven. Test small, with a hard stop.",
     band: "bg-chart-4/10",
     rail: "bg-chart-4",
     soft: "bg-chart-4/30",
@@ -601,11 +601,11 @@ function Forecast({ f, economics, open = false, diagnosis }: { f: PlayView; econ
         <dl className="grid gap-2 rounded-md bg-surface-2 px-3 py-2 text-xs text-ink-3 sm:grid-cols-2">
           <div>
             <dt className="font-semibold text-ink-2">Scenario range</dt>
-            <dd>{f.forecastUncertainty.rangeMethod === "input_scenario" ? `Lower and upper values vary ${f.forecastUncertainty.variedDrivers.join(", ") || "the stated inputs"}.` : "No input ranges were supplied; all three values use the same stated inputs."}</dd>
+            <dd>{f.forecastUncertainty.rangeMethod === "input_scenario" ? `Lower and upper values vary ${f.forecastUncertainty.variedDrivers.join(", ") || "the stated inputs"}.` : "No ranges given; all three use the same inputs."}</dd>
           </div>
           <div>
             <dt className="font-semibold text-ink-2">Statistical confidence</dt>
-            <dd>Not estimated. This range is not a statistical confidence interval or calibrated probability.</dd>
+            <dd>Not estimated. This range isn&apos;t a probability.</dd>
           </div>
           <div>
             <dt className="font-semibold text-ink-2">Real-world factors not modeled</dt>
@@ -616,7 +616,7 @@ function Forecast({ f, economics, open = false, diagnosis }: { f: PlayView; econ
             <dd>Reach ramp: {f.forecastUncertainty.timing.reachRamp === "modeled" ? "modeled" : "assumed immediate"}; paid conversion lag: {f.forecastUncertainty.timing.paidConversionLag === "modeled" ? "modeled" : "none assumed"}.</dd>
           </div>
         </dl>
-      ) : <p className="text-xs text-ink-3">This saved plan does not record how its range was built.</p>}
+      ) : <p className="text-xs text-ink-3">Range method not recorded.</p>}
     </div>
   );
 }
@@ -654,14 +654,14 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
         <Badge tone={m.robustness === "robust" ? "green" : m.robustness === "fragile" ? "amber" : m.robustness === "loses" ? "red" : "neutral"}>
           {m.robustness === "robust" ? "Holds at low scenario" : m.robustness === "fragile" ? "Middle case only" : m.robustness === "loses" ? "Does not break even in middle case" : "Break-even unknown"}
         </Badge>
-        <span className="text-xs text-ink-3">Conditional on the listed inputs; not a guaranteed result.</span>
+        <span className="text-xs text-ink-3">Based on the inputs; not guaranteed.</span>
       </div>
       <details className="rounded-[var(--radius-control)] border border-line px-3 py-2">
         <summary className="cursor-pointer text-xs font-medium text-ink-2">What these money estimates mean</summary>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-ink-3">
-          <li>Cost to win one customer divides this play&apos;s estimated cash costs and the value of your time by its modeled new paying customers.</li>
-          <li>Modeled money left in 12 months applies the supplied share of revenue left after variable costs to each month the customer is expected to remain active. Monthly cancellations reduce the estimate. It is before fixed overhead, taxes, and any costs not included in those inputs.</li>
-          <li>Months to recover the cost estimates how long that customer&apos;s money left after variable costs takes to cover the cost to win them, allowing for cancellations. It is a model, not a promised result.</li>
+          <li>Cost to win one customer: cash costs plus your time, divided by new customers.</li>
+          <li>Money left in 12 months: what a customer pays after delivery costs, minus cancellations. Before overhead and taxes.</li>
+          <li>Months to recover: how long that takes to cover the cost to win them. An estimate, not a promise.</li>
         </ul>
       </details>
       <dl className="grid gap-2 rounded-[var(--radius-control)] bg-surface-2 p-3 text-sm sm:grid-cols-3">
@@ -671,7 +671,7 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
       </dl>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <Badge tone={cost.kind === "assumption_scenario" ? "amber" : "neutral"}>{`Cost basis: ${COST_BASIS_LABEL[cost.kind]}`}</Badge>
-        <span className="text-xs text-ink-3">Calculated at the stated point rates, outside the input-scenario range</span>
+        <span className="text-xs text-ink-3">At the stated rates, not the range</span>
       </div>
       {top && top.switchValue !== null ? (
         <p className="text-xs text-ink-2">
@@ -682,7 +682,7 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
       {m.sensitivity.length ? (
         <details className="rounded-[var(--radius-control)] border border-line px-3 py-2">
           <summary className="cursor-pointer text-sm font-medium text-ink">What moves this scenario?</summary>
-          <p className="mt-2 text-xs text-ink-3">One input changes at a time; this is a sensitivity check, not a combined forecast. Low and high refer to the input range.</p>
+          <p className="mt-2 text-xs text-ink-3">One input changes at a time. Not a combined forecast.</p>
           <div className="mt-2 overflow-x-auto">
             <table className="w-full min-w-[28rem] text-sm">
               <thead className="text-left text-xs text-ink-3">
@@ -696,7 +696,7 @@ function PlayEconomics({ play, economics }: { play: PlayView; economics: Economi
               </tbody>
             </table>
           </div>
-          <p className="mt-2 text-xs text-ink-3">Outcome shown: {m.sensitivity[0]?.metric === "customers" ? "customers" : "modeled 12-month net contribution"}. Calculated from this play&apos;s saved inputs.</p>
+          <p className="mt-2 text-xs text-ink-3">Outcome shown: {m.sensitivity[0]?.metric === "customers" ? "customers" : "modeled 12-month net contribution"}.</p>
         </details>
       ) : null}
     </div>
@@ -780,7 +780,7 @@ function PlayDetails({ play, economics, id }: { play: PlayView; economics?: Econ
             <div><dt className="text-xs text-ink-3">Why the mechanism may transfer</dt><dd className="text-ui text-ink">{creative.transferLogic}</dd></div>
             <div><dt className="text-xs text-ink-3">Important differences</dt><dd className="text-ui text-ink">{creative.keyDifferences}</dd></div>
             <div><dt className="text-xs text-ink-3">Behavior it hopes to change</dt><dd className="text-ui text-ink">{creative.hopedCustomerBehavior}</dd></div>
-            <div><dt className="text-xs text-ink-3">Assumptions</dt><dd className="text-ui text-ink">{creative.assumptions.length ? creative.assumptions.join(" · ") : "No additional assumptions listed."}</dd></div>
+            <div><dt className="text-xs text-ink-3">Assumptions</dt><dd className="text-ui text-ink">{creative.assumptions.length ? creative.assumptions.join(" · ") : "None listed."}</dd></div>
           </dl>
           <div>
             <p className="text-xs font-medium text-ink-2">Separate dimensions · low / medium / high</p>
@@ -790,8 +790,8 @@ function PlayDetails({ play, economics, id }: { play: PlayView; economics?: Econ
           </div>
           {creative.precedentIds.length ? <div className="flex flex-col gap-2"><p className="text-xs font-medium text-ink-2">Retrieved precedent mechanisms</p>{creative.precedentIds.map((id) => {
             const precedent = precedentById.get(id);
-            return precedent ? <article key={id} className="rounded-[var(--radius-control)] border border-line bg-surface p-2.5"><h4 className="text-ui font-semibold text-ink">{precedent.title} · {precedent.organization} <span className="font-normal text-ink-3">({id})</span></h4><p className="mt-1 text-ui text-ink-2">{precedent.mechanism} {precedent.causalLimit}</p><ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">{precedent.sources.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer" className="text-brand-800 underline">{source.publisher}: {source.title}</a> · {source.publicationDate}</li>)}</ul></article> : <p key={id} className="text-ui text-amber-800">Precedent reference {id} could not be resolved; treat the analogy as unverified.</p>;
-          })}</div> : <p className="text-ui text-ink-2">No sufficiently relevant precedent was retrieved. This is presented as an original hypothesis and should be judged by its reversible test.</p>}
+            return precedent ? <article key={id} className="rounded-[var(--radius-control)] border border-line bg-surface p-2.5"><h4 className="text-ui font-semibold text-ink">{precedent.title} · {precedent.organization} <span className="font-normal text-ink-3">({id})</span></h4><p className="mt-1 text-ui text-ink-2">{precedent.mechanism} {precedent.causalLimit}</p><ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">{precedent.sources.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer" className="text-brand-800 underline">{source.publisher}: {source.title}</a> · {source.publicationDate}</li>)}</ul></article> : <p key={id} className="text-ui text-amber-800">Precedent {id} not found; treat as unverified.</p>;
+          })}</div> : <p className="text-ui text-ink-2">No close precedent found. Judge it by its small test.</p>}
           <dl className="grid gap-3 sm:grid-cols-2"><div><dt className="text-xs text-ink-3">Cheapest reversible test</dt><dd className="text-ui text-ink">{creative.reversibleTest}</dd></div><div><dt className="text-xs text-ink-3">Success signal</dt><dd className="text-ui text-ink">{creative.successSignal}</dd></div><div><dt className="text-xs text-ink-3">Guardrail</dt><dd className="text-ui text-ink">{creative.guardrail}</dd></div><div><dt className="text-xs text-ink-3">Stop condition</dt><dd className="text-ui text-ink">{creative.stopCondition}</dd></div><div className="sm:col-span-2"><dt className="text-xs text-ink-3">Evidence that would change the recommendation</dt><dd className="text-ui text-ink">{creative.revisionEvidence}</dd></div></dl>
         </section>
       ) : null}
@@ -823,9 +823,9 @@ function PlayDetails({ play, economics, id }: { play: PlayView; economics?: Econ
               </ul>
             </div>
           ) : null}
-          <p className="text-xs text-ink-3">This is the plan’s stated logic and measurement setup. It does not prove the action will cause the intended result.</p>
+          <p className="text-xs text-ink-3">The plan&apos;s logic. It doesn&apos;t prove the action will work.</p>
         </section>
-      ) : <Callout tone="info" title="Action details not recorded">This plan predates the structured action checklist. Refreshing the plan can add its evidence basis, dependencies, and success measure.</Callout>}
+      ) : <Callout tone="info" title="Action details not recorded">Older plan. Refresh to add the checklist.</Callout>}
       {play.model?.steps?.length ? <PlayInputs play={play} economics={economics ?? NO_ECONOMICS} /> : null}
       <div className="flex flex-col gap-1.5">
         <FieldLabel icon={Crosshair}>How we estimate it</FieldLabel>
@@ -1037,7 +1037,7 @@ function PlayTargetsBlock({ t, slug, strategyId, playId, canEdit }: { t: PlayTar
                 setBusy(true);
                 try {
                   const r = await start({ slug, strategyId, playId });
-                  toast({ tone: "success", title: `Finding ${what} for this play`, description: r.pausedSending ? "Sending on your previous campaign is paused. Resume it from Find customers." : undefined });
+                  toast({ tone: "success", title: `Finding ${what} for this play`, description: r.pausedSending ? "Your previous campaign is paused. Resume it in Find customers." : undefined });
                 } catch (e) {
                   toast({ tone: "danger", title: errorMessage(e) });
                 } finally {
@@ -1349,12 +1349,12 @@ export function PortfolioObjectiveCard({ label, explanation, choice, noChoice, e
             <ul className="mt-1 list-disc pl-5 text-ui font-medium text-ink">{choice.selected.map((name) => <li key={name}>{name}</li>)}</ul>
           </div>
           <dl className="grid grid-cols-2 gap-2 text-sm">
-            <div><dt className="text-xs text-ink-3">Modeled customers</dt><dd className="font-semibold tabular-nums text-ink">{fmtN(choice.customers)} at stated rates · {fmtN(choice.expectedCustomers)} average across modeled scenarios</dd></div>
+            <div><dt className="text-xs text-ink-3">Modeled customers</dt><dd className="font-semibold tabular-nums text-ink">{fmtN(choice.customers)} at stated rates · {fmtN(choice.expectedCustomers)} on average</dd></div>
             <div><dt className="text-xs text-ink-3">Cash costs and time</dt><dd className="font-semibold tabular-nums text-ink">{usd(choice.spendUsdMonth, economics?.currency)}/mo media · {usd(choice.cashSpendUsdMonth, economics?.currency)}/mo total cash · {fmtN(choice.ownerHoursWeek)} h/wk</dd></div>
-            {choice.netUsd !== null ? <div><dt className="text-xs text-ink-3">Modeled net contribution over this period</dt><dd className="font-semibold tabular-nums text-ink">{usd(choice.netUsd, economics?.currency)}</dd></div> : null}
-            <div><dt className="text-xs text-ink-3">Limits</dt><dd className="font-medium text-ink">{choice.allFit ? "Fits supplied cash, ad budget and capacity limits" : "Some drafted plays do not fit supplied cash, ad budget or capacity limits"}</dd></div>
+            {choice.netUsd !== null ? <div><dt className="text-xs text-ink-3">Estimated net over this period</dt><dd className="font-semibold tabular-nums text-ink">{usd(choice.netUsd, economics?.currency)}</dd></div> : null}
+            <div><dt className="text-xs text-ink-3">Limits</dt><dd className="font-medium text-ink">{choice.allFit ? "Fits your cash, ad budget and capacity" : "Some plays don't fit your cash, ad budget or capacity"}</dd></div>
           </dl>
-          <p className="text-xs text-ink-3">Cash feasibility here checks modeled monthly growth costs against your monthly limit. It does not forecast your bank balance or the timing of customer payments, refunds, taxes, or existing bills.</p>
+          <p className="text-xs text-ink-3">Checks monthly growth costs against your limit. It does not forecast your bank balance or the timing of customer payments, refunds, taxes, or existing bills.</p>
           {choice.runnerUp ? <p className="text-xs text-ink-3">Closest alternative: {choice.runnerUp.selected.join(" + ") || "No play"} · {fmtN(choice.runnerUp.customers)} customers at stated rates.</p> : null}
           {choice.left.length ? <details className="text-xs text-ink-3"><summary className="cursor-pointer font-medium text-ink-2">Why other plays were left out ({choice.left.length})</summary><ul className="mt-1 list-disc pl-5">{choice.left.map((item, i) => <li key={`${item.name}-${i}`}>{item.name}: {item.why}</li>)}</ul></details> : null}
         </>
@@ -1368,27 +1368,27 @@ function PortfolioComparisons({ data, economics }: { data: NonNullable<ExpertVie
     <section aria-label="Compare growth plans under two outcome definitions" className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface-2 p-3">
       <div>
         <h3 className="text-sm font-semibold text-ink">Which set fits the goal?</h3>
-        <p className="mt-1 text-xs text-ink-3">Both comparisons use the supplied budget, team time, delivery capacity, and {data.horizonDays}-day goal period. These are modeled scenarios, not guaranteed outcomes.</p>
+        <p className="mt-1 text-xs text-ink-3">Uses your budget, time, and capacity over {data.horizonDays} days. Scenarios, not guarantees.</p>
       </div>
       <div className="grid gap-2 lg:grid-cols-2">
         <PortfolioObjectiveCard
           label="Play-attributed customers"
-          explanation="Counts customers modeled through each play’s funnel. It does not subtract what might happen without the play."
+          explanation="Customers from each play, without subtracting what would happen anyway."
           choice={data.playAttributed}
-          noChoice="No feasible play set fits the current modeled limits."
+          noChoice="No set of plays fits your limits."
           economics={economics}
           days={data.horizonDays}
         />
         <PortfolioObjectiveCard
           label="Modeled improvement over baseline"
-          explanation="Subtracts the supplied baseline rates to estimate change. This is not experimentally proven lift."
+          explanation="Subtracts your baseline to estimate the change. Not proven by a test."
           choice={data.modeledIncremental}
-          noChoice={data.baselinePlayCount ? "No feasible set uses the available baseline-based play inputs." : "Not estimated: none of the modeled plays includes a baseline rate."}
+          noChoice={data.baselinePlayCount ? "No set fits using baseline inputs." : "Not estimated: no play has a baseline rate."}
           economics={economics}
           days={data.horizonDays}
         />
       </div>
-      {data.baselinePlayCount > 0 && data.baselinePlayCount < data.modeledPlayCount ? <p className="text-xs text-ink-3">Baseline comparison covers {data.baselinePlayCount} of {data.modeledPlayCount} modeled plays; the rest cannot be included in that objective.</p> : null}
+      {data.baselinePlayCount > 0 && data.baselinePlayCount < data.modeledPlayCount ? <p className="text-xs text-ink-3">Covers {data.baselinePlayCount} of {data.modeledPlayCount} plays; the rest have no baseline.</p> : null}
     </section>
   );
 }
@@ -1434,15 +1434,15 @@ function StrategyExplorationPanel({ options, slug, strategyId, canEdit }: { opti
   };
   const previous = saved?.feedback as Partial<Record<ExplorationMode, { decision: string; ownerEdit: string; testState: string; outcomeNote: string; outcomeEvidence: string }>> | undefined;
   const entries = [
-    { key: "grounded" as const, mode: "Grounded", description: "The strongest available evidence and practical constraints.", value: options.grounded },
-    { key: "adjacent" as const, mode: "Adjacent", description: "A transfer or combination from a less familiar mechanism.", value: options.adjacent },
-    { key: "bold" as const, mode: "Bold", description: "An original, higher-uncertainty hypothesis; no direct precedent is required.", value: options.bold },
+    { key: "grounded" as const, mode: "Grounded", description: "Best evidence, most practical.", value: options.grounded },
+    { key: "adjacent" as const, mode: "Adjacent", description: "An idea borrowed from elsewhere.", value: options.adjacent },
+    { key: "bold" as const, mode: "Bold", description: "Original and less certain.", value: options.bold },
   ];
   return (
     <section aria-label="Grounded, adjacent and bold strategy options" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-chart-3/30 bg-chart-3/5 p-3">
       <div>
         <div className="flex flex-wrap items-center gap-2"><FieldLabel icon={Sparkles}>Three strategy options</FieldLabel><Badge>Exploration · not an execution ranking</Badge></div>
-        <p className="mt-1 text-sm text-ink-2">Evidence, novelty, business fit, feasibility and risk stay separate. A bold option remains visible even when evidence or immediate feasibility is low. Requested range: {(options.requestedRange ?? "balanced").replaceAll("_", " ")}.</p>
+        <p className="mt-1 text-sm text-ink-2">Each is scored separately. Bold ideas stay visible even with little evidence. Range: {(options.requestedRange ?? "balanced").replaceAll("_", " ")}.</p>
       </div>
       <div className="grid gap-3 lg:grid-cols-3">
         {entries.map(({ key, mode, description, value }) => (
@@ -1480,10 +1480,10 @@ function StrategyExplorationPanel({ options, slug, strategyId, canEdit }: { opti
             {previous?.[key] ? <p className="rounded bg-surface-2 p-2 text-xs text-ink-2">Last owner record: {previous[key]!.decision}; test {previous[key]!.testState}; outcome evidence {previous[key]!.outcomeEvidence}{previous[key]!.ownerEdit ? `. Owner edit: ${previous[key]!.ownerEdit}` : ""}{previous[key]!.outcomeNote ? `. Outcome: ${previous[key]!.outcomeNote}` : previous[key]!.testState === "unknown" ? ". Outcome unknown." : ""}</p> : null}
             {canEdit && strategyId ? <div className="flex flex-col gap-2 border-t border-line pt-2">
               <Field label="Your decision"><Select value={drafts[key].decision} onValueChange={(choice) => update(key, { decision: choice as ExplorationDecision })} options={[{ value: "considering", label: "Still considering" }, { value: "selected", label: "Select this option" }, { value: "rejected", label: "Reject this option" }, { value: "edited", label: "I changed it" }]} /></Field>
-              <Field label="Your edit or reason" hint={drafts[key].decision === "edited" ? "Required to preserve the changed version separately." : "Optional owner note."}><Textarea value={drafts[key].ownerEdit} onChange={(event) => update(key, { ownerEdit: event.target.value.slice(0, 2_000) })} maxLength={2_000} rows={2} /></Field>
+              <Field label="Your edit or reason" hint={drafts[key].decision === "edited" ? "Required when you change it." : "Optional."}><Textarea value={drafts[key].ownerEdit} onChange={(event) => update(key, { ownerEdit: event.target.value.slice(0, 2_000) })} maxLength={2_000} rows={2} /></Field>
               <Field label="Test progress"><Select value={drafts[key].testState} onValueChange={(choice) => update(key, { testState: choice as ExplorationTestState, ...(choice === "unknown" ? { outcomeEvidence: "unknown" as const } : {}) })} options={[{ value: "not_started", label: "Not started" }, { value: "designed", label: "Test designed" }, { value: "executed", label: "Test run" }, { value: "observed", label: "Outcome recorded" }, { value: "unknown", label: "Outcome unknown" }]} /></Field>
-              {drafts[key].testState === "observed" ? <><Field label="Outcome evidence"><Select value={drafts[key].outcomeEvidence} onValueChange={(evidence) => update(key, { outcomeEvidence: evidence as ExplorationEvidence })} options={[{ value: "measured", label: "Measured" }, { value: "owner_reported", label: "Owner reported" }, { value: "source_reported", label: "Source reported" }, { value: "inferred", label: "Inferred" }, { value: "unknown", label: "Unknown" }]} /></Field><Field label="Observed outcome" hint="State the measure and period when known; leave causality unclaimed."><Textarea value={drafts[key].outcomeNote} onChange={(event) => update(key, { outcomeNote: event.target.value.slice(0, 1_500) })} maxLength={1_500} rows={2} /></Field></> : null}
-              <Button size="sm" variant="secondary" disabled={saving !== null || (drafts[key].decision === "edited" && !drafts[key].ownerEdit.trim()) || (drafts[key].testState === "observed" && !drafts[key].outcomeNote.trim())} onClick={() => void submit(key)}>{saving === key ? "Saving…" : "Save owner feedback"}</Button>
+              {drafts[key].testState === "observed" ? <><Field label="Outcome evidence"><Select value={drafts[key].outcomeEvidence} onValueChange={(evidence) => update(key, { outcomeEvidence: evidence as ExplorationEvidence })} options={[{ value: "measured", label: "Measured" }, { value: "owner_reported", label: "Owner reported" }, { value: "source_reported", label: "Source reported" }, { value: "inferred", label: "Inferred" }, { value: "unknown", label: "Unknown" }]} /></Field><Field label="Observed outcome" hint="What you measured and when. Don't claim it caused the result."><Textarea value={drafts[key].outcomeNote} onChange={(event) => update(key, { outcomeNote: event.target.value.slice(0, 1_500) })} maxLength={1_500} rows={2} /></Field></> : null}
+              <Button size="sm" variant="secondary" disabled={saving !== null || (drafts[key].decision === "edited" && !drafts[key].ownerEdit.trim()) || (drafts[key].testState === "observed" && !drafts[key].outcomeNote.trim())} onClick={() => void submit(key)}>{saving === key ? "Saving…" : "Save feedback"}</Button>
             </div> : null}
           </article>
         ))}

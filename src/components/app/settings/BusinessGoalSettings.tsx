@@ -101,12 +101,12 @@ function GoalForm({ slug, state, canEdit, canRaise }: { slug: string; state: Sta
             <Input inputMode="decimal" disabled={!canEdit} value={baseline} onChange={(e) => setBaseline(e.target.value.replace(/[^\d.]/g, ""))} placeholder="e.g. 20" />
           </Field>
         ) : null}
-        <Field label={mode === "total" ? "Goal" : "How many more"} hint="ClimbOS keeps this as you set it and shows the gap.">
+        <Field label={mode === "total" ? "Goal" : "How many more"} hint="We show the gap to reach it.">
           <Input inputMode="decimal" disabled={!canEdit} value={desired} onChange={(e) => setDesired(e.target.value.replace(/[^\d.]/g, ""))} placeholder="e.g. 50" />
         </Field>
         <Field
           label={`Monthly ad budget (${currency})`}
-          hint={canRaise ? "Paid to Google/Meta, not us. 0 = no ads." : `Up to ${majorToDisplay(state.adCap, currency)}. Raising needs ${PERMISSION_WHO.manage_team}.`}
+          hint={canRaise ? "Paid to Google or Meta, not us. 0 = no ads." : `Up to ${majorToDisplay(state.adCap, currency)}. Raising needs ${PERMISSION_WHO.manage_team}.`}
           error={over ? `Only ${PERMISSION_WHO.manage_team} can raise it above ${majorToDisplay(state.adCap, currency)}.` : undefined}
         >
           <Input inputMode="decimal" disabled={!canEdit} value={budget} onChange={(e) => setBudget(e.target.value.replace(/[^\d.]/g, ""))} />
@@ -170,7 +170,7 @@ function BusinessForm({ slug, state, canEdit, canSetStage }: { slug: string; sta
         <Field label="Type of business">
           <Select value={businessType} disabled={!canEdit} onValueChange={(v) => setBusinessType(v as BusinessType)} options={BUSINESS_TYPE_OPTIONS} />
         </Field>
-        <Field label="Industry playbook type (optional)" hint="Choose the closest exact business type. ClimbOS uses its scenarios as hypotheses, then checks them against your facts. Leave blank if none fit.">
+        <Field label="Closest industry (optional)" hint="Leave blank if none fit.">
           <Select
             value={industryBusinessTypeId || "none"}
             disabled={!canEdit}
@@ -178,7 +178,7 @@ function BusinessForm({ slug, state, canEdit, canSetStage }: { slug: string; sta
             options={[{ value: "none", label: "Not selected" }, ...INDUSTRY_BUSINESS_TYPES.map((item) => ({ value: item.id, label: `${item.name} · ${item.industry}` }))]}
           />
         </Field>
-        <Field label="Business stage" hint="Owner-reported planning context. ClimbOS won't infer this from your website.">
+        <Field label="Business stage" hint="Only you set this. We never guess it.">
           <Select
             value={lifecycleStage}
             disabled={!canSetStage}
@@ -223,7 +223,7 @@ function BusinessForm({ slug, state, canEdit, canSetStage }: { slug: string; sta
                   const industryTypeChanged = industryBusinessTypeId !== (state.business?.industryBusinessTypeId ?? "");
                   const stageChanged = lifecycleStage !== (state.business?.lifecycleStage?.stage ?? "unknown");
                   await save({ slug, website, businessType, industryBusinessTypeId: industryBusinessTypeId || null, currency, successEvents: events, ...(canSetStage ? { lifecycleStage: lifecycleStage === "unknown" ? null : lifecycleStage as "idea_validation" | "pre_launch" | "early_traction" | "growth" | "maturity" | "decline" } : {}) });
-                  toast({ tone: "success", title: "Business details saved.", description: (industryTypeChanged || stageChanged) && state.strategy ? "Your current plan needs a refresh because business planning context changed." : undefined });
+                  toast({ tone: "success", title: "Business details saved.", description: (industryTypeChanged || stageChanged) && state.strategy ? "Refresh your plan to use it." : undefined });
                 } catch (e) {
                   toast({ tone: "danger", title: errorMessage(e) });
                 } finally {

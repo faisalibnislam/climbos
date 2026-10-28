@@ -107,21 +107,21 @@ export function LoadingBlock({ label, lines = 3, className }: { label: string; l
 
 /** Explain the task before asking someone to interpret business terminology. */
 const PAGE_GUIDANCE: Record<string, string> = {
-  plan: "What to focus on, why it may help, and the next steps you can choose.",
-  content: "Prepare posts, emails, and ads. Check each draft before publishing or sending.",
-  pipeline: "Keep track of people who may buy from you, from first contact to a recorded sale.",
-  outbound: "Find relevant businesses, check the sources, and review messages before sending.",
-  visibility: "See what search tools can read from your website and check the data you have connected.",
-  "business-model": "Check whether the way you make money is holding up, and test alternatives.",
-  competitors: "Look at similar businesses to understand their offers and how yours differs.",
-  reviews: "Read customer feedback and prepare replies. Imported reviews do not automatically sync with public sites.",
-  results: "See recorded visits, inquiries, and sales. Missing data is not the same as no results.",
-  connections: "Connect an account when a task needs it. Each account shows what ClimbOS can actually do.",
-  pages: "Create a page for an offer and collect inquiries. These pages are hosted by ClimbOS.",
-  images: "Create or reuse pictures for your work. Check the details before sharing them.",
-  reels: "Prepare short-video material for your business with the available tools.",
-  inbox: "Read available messages and prepare helpful replies.",
-  chat: "Set up the chat for visitors to your website. This is separate from your own Climb assistant.",
+  plan: "What to focus on next.",
+  content: "Draft posts, emails and ads. You check each one first.",
+  pipeline: "Track people from first contact to sale.",
+  outbound: "Find businesses to contact. You review every message.",
+  visibility: "What search tools can read on your site.",
+  "business-model": "Is the way you make money still working?",
+  competitors: "See what similar businesses offer.",
+  reviews: "Read feedback and draft replies. Imported reviews don't sync to public sites.",
+  results: "Recorded visits, inquiries and sales. Missing data isn't zero.",
+  connections: "Connect accounts and see what each can do.",
+  pages: "ClimbOS-hosted pages that collect inquiries.",
+  images: "Make and reuse pictures. Check them before sharing.",
+  reels: "Prepare short videos.",
+  inbox: "Read messages and draft replies.",
+  chat: "Chat for your website visitors (not your Climb assistant).",
 };
 
 /** Page title block: one h1 per page, optional intro and right-side actions. */

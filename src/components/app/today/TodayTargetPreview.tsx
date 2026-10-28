@@ -4,9 +4,9 @@ import { Badge, buttonClasses } from "@/components/ui";
 import type { TodayTargetPreview } from "@convex/targets";
 
 const STATUS: Record<TodayTargetPreview["status"], { label: string; tone: "blue" | "green" | "red"; summary: string }> = {
-  researching: { label: "In progress", tone: "blue", summary: "ClimbOS is looking for possible matches for this plan step." },
-  review: { label: "Ready to review", tone: "green", summary: "The search is complete. Open your plan to review the full results and their evidence." },
-  failed: { label: "Search stopped", tone: "red", summary: "The search did not finish. You can check it and try again from your plan." },
+  researching: { label: "In progress", tone: "blue", summary: "Now looking for possible matches." },
+  review: { label: "Ready to review", tone: "green", summary: "Open your plan to see results and evidence." },
+  failed: { label: "Search stopped", tone: "red", summary: "Didn't finish. Retry from your plan." },
 };
 
 /** Compact, read-only Home glimpse; the plan remains the full evidence and review surface. */
@@ -17,8 +17,8 @@ export function TodayTargetPreviewCard({ slug, preview }: { slug: string; previe
   const kind = isCreatorSearch ? "creator profiles" : "businesses";
   const title = isCreatorSearch ? "Possible creator partners" : "Possible customers";
   const evidenceNote = isCreatorSearch
-    ? "These are creator suggestions from public research, not confirmed partners. Check their fit and evidence before deciding whether to contact them. Nothing is sent from Home."
-    : "These are business suggestions from public research, not confirmed customers. Check their fit and evidence before deciding whether to contact them. Nothing is sent from Home.";
+    ? "From public research, not confirmed partners. Check fit before contacting. Nothing is sent from Home."
+    : "From public research, not confirmed customers. Check fit before contacting. Nothing is sent from Home.";
 
   return (
     <section aria-labelledby="today-targets-heading" className="rounded-xl border border-line bg-surface p-4 shadow-[var(--card-shadow)]">

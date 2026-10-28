@@ -680,7 +680,7 @@ export function Experiments({ experiments, slug, canEdit }: { experiments: PlanV
     <PlanSection id="experiments-heading" title="Experiments" icon={FlaskConical} intro="Each has a control and stop rule." bare>
       {experiments.length === 0 ? (
         <Card>
-          <EmptyState icon={<FlaskConical />} title="No experiments yet" body="Tests show up here with a comparison group, one number to watch and a stop rule." />
+          <EmptyState icon={<FlaskConical />} title="No experiments yet" body="Tests appear here with one number to watch and a stop rule." />
         </Card>
       ) : (
         <ul className="grid gap-3 md:grid-cols-2">
@@ -860,10 +860,10 @@ export function Battlecard({ card }: { card: { winsWith: string; theyAreStronger
         <div><dt className="text-ink-3">Who they win with</dt><dd className="text-ink">{card.winsWith}</dd></div>
         <div><dt className="text-ink-3">Where they&apos;re stronger</dt><dd className="text-ink">{card.theyAreStrongerAt}</dd></div>
         <div><dt className="text-ink-3">Where you&apos;re stronger</dt><dd className="text-ink">{card.weAreStrongerAt}</dd></div>
-        <div><dt className="text-ink-3">A fair question for buyers to ask</dt><dd className="text-ink">{card.landmineQuestion}</dd></div>
+        <div><dt className="text-ink-3">A fair question for buyers</dt><dd className="text-ink">{card.landmineQuestion}</dd></div>
       </dl>
       <div className="mt-2 flex flex-wrap gap-1.5">{card.sourceUrls.map((url) => <LinkChip key={url} url={url} label="Source" />)}</div>
-      <p className="mt-1 text-xs text-ink-3">Drawn from the cited pages. Check each point before using it with customers; it doesn&apos;t show why buyers choose either business.</p>
+      <p className="mt-1 text-xs text-ink-3">From the cited pages. Check before using; it doesn&apos;t show why buyers choose either business.</p>
     </details>
   );
 }
@@ -900,7 +900,7 @@ export function AudienceEvidence({ audience }: { audience: { needs?: EvidenceRow
             </ul>
           </div>
         ))}
-        <p>A found excerpt shows the words are in the source, not that they prove the claim.</p>
+        <p>Found means the words are in the source, not that they prove the claim.</p>
       </div>
     </details>
   );
@@ -951,8 +951,8 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
             <SubHead icon={ShieldAlert} meta={<Badge tone={insights.commercialAssessment.status === "evidence_supports_testing" ? "green" : insights.commercialAssessment.status === "mixed_evidence" ? "amber" : "neutral"}>{COMMERCIAL_STATUS_LABEL[insights.commercialAssessment.status]}</Badge>}>
               What we know about sales and what to check next
             </SubHead>
-            <Callout tone="info" title="A validation guide, not a viability verdict">
-              These findings separate business-specific evidence from owner reports, public research, website claims, and hypotheses. A small or selected sample does not establish a whole market.
+            <Callout tone="info" title="A guide to test, not a verdict">
+              A small sample doesn&apos;t prove a whole market.
             </Callout>
             <div className="mt-3 grid gap-3 lg:grid-cols-2">
               <Card>
@@ -968,13 +968,13 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
                         </li>
                       ))}
                     </ul>
-                  ) : <p className="text-ui text-ink-3">No business-specific commercial evidence was supplied. The gaps below are hypotheses to validate.</p>}
+                  ) : <p className="text-ui text-ink-3">No sales evidence yet. The gaps below are guesses to test.</p>}
                   {insights.commercialAssessment.unknowns.length ? <div><p className="text-sm font-semibold text-ink-2">Still unknown</p><ul className="mt-1 list-inside list-disc text-sm text-ink-2">{insights.commercialAssessment.unknowns.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul></div> : null}
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="flex flex-col gap-3 p-4">
-                  <h4 className="text-ui font-semibold text-ink">Smallest useful validation test</h4>
+                  <h4 className="text-ui font-semibold text-ink">Smallest useful test</h4>
                   <p className="text-ui text-ink-2"><span className="font-semibold text-ink">Question: </span>{insights.commercialAssessment.nextTest.question}</p>
                   <p className="text-ui text-ink-2"><span className="font-semibold text-ink">Try: </span>{insights.commercialAssessment.nextTest.smallestTest}</p>
                   <p className="text-ui text-ink-2"><span className="font-semibold text-ink">Look for: </span>{insights.commercialAssessment.nextTest.successSignal}</p>
@@ -1022,7 +1022,7 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
                             </div>
                           </div>
                         ))}
-                        <p className="text-xs text-ink-3">A competitor&apos;s page reports its own claims. These differences do not show why customers choose them.</p>
+                        <p className="text-xs text-ink-3">Their own claims. These differences do not show why customers choose them.</p>
                       </div>
                     </details>
                   ) : null}
@@ -1045,7 +1045,7 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
 
         <div>
           <SubHead icon={Compass}>What helps, what gets in the way, and what to watch</SubHead>
-          <p className="mb-3 max-w-[70ch] text-sm text-ink-3">A quick view of what is working inside the business and what may change outside it. Items without direct support are labeled as ideas to check.</p>
+          <p className="mb-3 max-w-[70ch] text-sm text-ink-3">Unsupported items are ideas to check.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {SWOT.map((s) => (
               <div key={s.key} className={cn("flex min-w-0 flex-col gap-2 rounded-[var(--radius-card)] p-3", s.box)}>
@@ -1075,7 +1075,7 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
                                     <Badge tone={CONFIDENCE_TONE[evidence.confidence] ?? "neutral"}>{`${evidence.confidence} confidence`}</Badge>
                                   </div>
                                   <p><span className="font-semibold">Why it may matter: </span>{evidence.strategicImplication}</p>
-                                  {evidence.evidenceRefs.length ? <div className="flex flex-wrap gap-1.5">{evidence.evidenceRefs.map(swotReference)}</div> : <p className="text-ink-3">No direct source is linked, so check this before relying on it.</p>}
+                                  {evidence.evidenceRefs.length ? <div className="flex flex-wrap gap-1.5">{evidence.evidenceRefs.map(swotReference)}</div> : <p className="text-ink-3">No source linked. Check before relying on it.</p>}
                                 </div>
                               );
                             })()}
@@ -1095,7 +1095,7 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
             <summary className="min-h-8 cursor-pointer text-ui font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-800">
               Possible next steps ({insights.swotMoves.length})
             </summary>
-            <p className="mb-3 text-sm text-ink-3">These suggestions connect findings above. They are not proven advantages; check the small test before acting.</p>
+            <p className="mb-3 text-sm text-ink-3">Not proven. Run the small test first.</p>
             <ol className="flex flex-col gap-3">
               {insights.swotMoves.map((move, index) => {
                 const pair = swotMovePair(insights, move);
@@ -1233,14 +1233,14 @@ export function Sources({ sources, web = [], researchEvidence = [], websiteUrl, 
                           </div>
                           {source.url ? <p className="mt-1.5"><LinkChip url={source.url} label={source.title ? `${source.title} · ${hostOf(source.url)}` : undefined} /></p> : source.title ? <p className="mt-1.5 text-ink-2">{source.title}</p> : null}
                           {source.excerpt ? <p className="mt-1.5 whitespace-pre-wrap break-words leading-relaxed text-ink-2">Saved excerpt: {source.excerpt}</p> : null}
-                          {source.excerptExpired ? <p className="mt-1.5 text-ink-3">The saved page excerpt is no longer retained. The link opens the current page, which may have changed.</p> : null}
+                          {source.excerptExpired ? <p className="mt-1.5 text-ink-3">The saved page excerpt is no longer retained. The page may have changed.</p> : null}
                         </li>
                       ))}
                       {s.sourceDetailsUnavailableCount ? <li className="text-ink-3">Some linked source details are unavailable.</li> : null}
                       {s.additionalSourceCount ? <li className="text-ink-3">{s.additionalSourceCount} more source(s) are not shown here.</li> : null}
                     </ul>
                   </details>
-                ) : <p className="text-xs text-ink-3">No supporting page or file was saved with this fact.</p>}
+                ) : <p className="text-xs text-ink-3">No page or file saved.</p>}
               </div>
             </li>
           ))}
@@ -1249,7 +1249,7 @@ export function Sources({ sources, web = [], researchEvidence = [], websiteUrl, 
       {researchEvidence.length ? (
         <details className="border-t border-line pt-3">
           <summary className="cursor-pointer text-sm font-medium text-ink">Research notes and assessment</summary>
-          <p className="mt-2 text-xs text-ink-3">These notes were written by AI from the listed sources. The links are for this research run; they are not connected to each sentence, and source relevance and reliability are not independently verified. Open the source and check important claims, dates, and methods before relying on them.</p>
+          <p className="mt-2 text-xs text-ink-3">Notes written by AI from the listed sources. The links are for this research run; they are not connected to each sentence, and are not independently verified. Open the source and check important claims.</p>
           <ul className="mt-2 flex flex-col divide-y divide-line">
             {researchEvidence.map((entry) => (
               <li key={entry.agentId} className="flex flex-col gap-2 py-3 first:pt-1 last:pb-0">
@@ -1268,7 +1268,7 @@ export function Sources({ sources, web = [], researchEvidence = [], websiteUrl, 
       {web.length ? (
         <div className="flex flex-col gap-2 border-t border-line pt-3">
           <FieldLabel icon={Globe}>Pages read</FieldLabel>
-          <p className="text-xs text-ink-3">A page on your website shows what your business publishes. Other pages are references; a different website does not by itself make a source independent or prove its claims.</p>
+          <p className="text-xs text-ink-3">Your site shows your own claims; a different website does not by itself make a source independent or prove its claims.</p>
           <ul className="flex flex-wrap gap-1.5">
             {web.map((w) => (
               <li key={w.url} className="flex min-w-0 max-w-full flex-col items-start gap-1">
@@ -1288,7 +1288,7 @@ export function Sources({ sources, web = [], researchEvidence = [], websiteUrl, 
           <div>
             <FieldLabel icon={BookOpenCheck}>Reference guidance used</FieldLabel>
             <p className="mt-1 text-xs text-ink-3">
-              These curated references helped shape the plan. They are not evidence about your business, and proposed scenarios are unvalidated hypotheses.
+              Guides that shaped the plan. Not evidence about your business; scenarios are untested.
             </p>
             <p className="mt-1 text-xs text-ink-3">{knowledge.edition} · research cutoff {knowledge.researchCutoff}</p>
           </div>
@@ -1316,7 +1316,7 @@ export function Sources({ sources, web = [], researchEvidence = [], websiteUrl, 
                       </li>
                     ))}
                   </ul>
-                ) : <p className="text-xs text-ink-3">Curated library reference; no external source was attached.</p>}
+                ) : <p className="text-xs text-ink-3">Library reference; no external source.</p>}
               </li>
             ))}
           </ul>

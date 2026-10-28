@@ -60,6 +60,7 @@ import type * as engineFlags from "../engineFlags.js";
 import type * as engineLab from "../engineLab.js";
 import type * as engineLabActions from "../engineLabActions.js";
 import type * as feedback from "../feedback.js";
+import type * as followers from "../followers.js";
 import type * as http from "../http.js";
 import type * as inbox from "../inbox.js";
 import type * as jobWrites from "../jobWrites.js";
@@ -204,6 +205,7 @@ declare const fullApi: ApiFromModules<{
   engineLab: typeof engineLab;
   engineLabActions: typeof engineLabActions;
   feedback: typeof feedback;
+  followers: typeof followers;
   http: typeof http;
   inbox: typeof inbox;
   jobWrites: typeof jobWrites;

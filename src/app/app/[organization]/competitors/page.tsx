@@ -59,7 +59,7 @@ export default function CompetitorsPage() {
           <div className="grid gap-2 border-b border-line pb-3 sm:grid-cols-[minmax(0,1fr)_14rem] sm:items-center">
             <div>
               <p className="text-sm font-medium text-ink">Change alerts</p>
-              <p className="text-xs leading-5 text-ink-3">Weekly checks stay on their schedule. This controls in-app notices; summaries remain on this page when alerts are off.</p>
+              <p className="text-xs leading-5 text-ink-3">Only changes in-app notices. Weekly checks still run.</p>
             </div>
             {data.canManageDigestCadence ? (
               <Select
@@ -83,7 +83,7 @@ export default function CompetitorsPage() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-ink">{w.name}</p>
                     <p className="truncate text-xs text-ink-3">{w.url.replace(/^https?:\/\//, "")}</p>
-                    <p className={w.needsConfirmation ? "text-xs text-ink-3" : w.lastError ? "text-xs text-red-800" : "text-xs text-ink-3"}>{w.needsConfirmation ? "Paused until an owner or admin confirms recurring monitoring." : w.lastError ? `Couldn't read: ${w.lastError}` : w.lastCheckedAt ? `Checked ${relativeTime(w.lastCheckedAt)}` : "Reading…"}</p>
+                    <p className={w.needsConfirmation ? "text-xs text-ink-3" : w.lastError ? "text-xs text-red-800" : "text-xs text-ink-3"}>{w.needsConfirmation ? "Paused until an owner or admin confirms." : w.lastError ? `Couldn't read: ${w.lastError}` : w.lastCheckedAt ? `Checked ${relativeTime(w.lastCheckedAt)}` : "Reading…"}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     {w.needsConfirmation && data.canConfirmLegacyWatch ? (
@@ -102,14 +102,14 @@ export default function CompetitorsPage() {
           ) : null}
           {data.suggested.length ? (
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-medium text-ink-2">Competitor suggestions from business research</p>
-              {full ? <p className="text-xs text-ink-3">Your watch list is full. You can still mark a suggestion as not relevant, or stop watching a site before adding another.</p> : null}
+              <p className="text-xs font-medium text-ink-2">Suggested from research</p>
+              {full ? <p className="text-xs text-ink-3">List full. Stop watching one to add another.</p> : null}
               {data.suggested.map((s) => (
                 <div key={s.url} className="rounded-lg border border-line bg-surface-2 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-ink">{s.name}</p>
-                      <p className="text-xs text-ink-3">{s.kind === "direct" ? "Research classifies this as a direct competitor. Customer-segment and geography fit have not been verified." : "Research has not verified competitor type, customer-segment fit, or geography fit. Review the source before adding it."}</p>
+                      <p className="text-xs text-ink-3">{s.kind === "direct" ? "Likely direct competitor. Customer and area fit not checked." : "Not verified as a competitor. Check the source first."}</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Button size="sm" variant="ghost" loading={busy === `dismiss:${s.url}`} aria-label={`Mark ${s.name} as not relevant`} onClick={() => run(`dismiss:${s.url}`, () => dismissSuggestion({ slug, url: s.url }), `${s.name} won't appear in future suggestions`)}>
@@ -134,10 +134,10 @@ export default function CompetitorsPage() {
                             </div>
                           </div>
                         ))}
-                        <p className="text-xs text-ink-3">These page claims do not prove that customers choose this business or that the comparison fits your market.</p>
+                        <p className="text-xs text-ink-3">Their own claims; not proof customers prefer them.</p>
                       </div>
                     </details>
-                  ) : <p className="mt-2 text-xs text-ink-3">No comparison detail was recorded. <a className="font-medium text-brand underline underline-offset-2" href={s.sourceUrl} target="_blank" rel="noopener noreferrer">Review the research source</a> before adding it.</p>}
+                  ) : <p className="mt-2 text-xs text-ink-3">No detail saved. <a className="font-medium text-brand underline underline-offset-2" href={s.sourceUrl} target="_blank" rel="noopener noreferrer">Check the source</a> first.</p>}
                 </div>
               ))}
             </div>
@@ -146,7 +146,7 @@ export default function CompetitorsPage() {
             <details className="rounded-lg border border-line px-3 py-2">
               <summary className="min-h-8 cursor-pointer py-1 text-xs font-medium text-ink-2">Suggestions marked not relevant ({data.dismissedSuggestions.length})</summary>
               <div className="mt-2 flex flex-col gap-2">
-                <p className="text-xs text-ink-3">These are kept out of future suggestions for this workspace. To watch one later, enter its website below.</p>
+                <p className="text-xs text-ink-3">Hidden from future suggestions. To watch one, add its website below.</p>
                 <ul className="flex flex-col gap-1">
                   {data.dismissedSuggestions.slice(0, 10).map((item) => (
                     <li key={item.url} className="flex flex-wrap items-center justify-between gap-2 text-xs">
@@ -198,7 +198,7 @@ export default function CompetitorsPage() {
                   ) : null}
                   {c.soWhat ? <Callout tone="info">{c.soWhat}</Callout> : null}
                   <div className="rounded-lg border border-line bg-surface-2 p-3">
-                    <p className="text-xs font-semibold text-ink">AI interpretation of observed page changes</p>
+                    <p className="text-xs font-semibold text-ink">AI summary of page changes</p>
                     {c.sourceUrls.length ? (
                       <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                         {c.sourceUrls.filter((url) => /^https?:\/\//i.test(url)).map((url) => (
@@ -218,15 +218,15 @@ export default function CompetitorsPage() {
                     ) : null}
                   </div>
                   {c.suggestedAction ? (
-                    <Callout tone="warning" title="Possible test idea · review before acting">
+                    <Callout tone="warning" title="Idea to test · review first">
                       <p className="font-medium">{c.suggestedAction.action}</p>
-                      {c.suggestedAction.evidenceQuote ? <blockquote className="mt-2 break-words border-l-2 border-line pl-3 text-xs text-ink-2"><span className="font-medium">Page change behind this idea:</span> “{c.suggestedAction.evidenceQuote}”</blockquote> : null}
+                      {c.suggestedAction.evidenceQuote ? <blockquote className="mt-2 break-words border-l-2 border-line pl-3 text-xs text-ink-2"><span className="font-medium">Based on:</span> “{c.suggestedAction.evidenceQuote}”</blockquote> : null}
                       <p className="mt-1">First step: {c.suggestedAction.firstStep}</p>
                       <p className="mt-1">Success signal: {c.suggestedAction.successMetric} · review after {c.suggestedAction.reviewAfterDays} days</p>
                       <p className="mt-1 text-xs">Caveat: {c.suggestedAction.caveat}</p>
                     </Callout>
                   ) : null}
-                  <p className="text-xs text-ink-3">A changed competitor page is a market signal. It does not show why customers choose that competitor or prove a test will work for your business.</p>
+                  <p className="text-xs text-ink-3">A signal, not proof this will work for you.</p>
                 </CardContent>
               </Card>
             </li>

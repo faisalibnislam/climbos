@@ -40,7 +40,7 @@ export default function PagesPage({ searchParams }: { searchParams: Promise<{ br
       {data.canEdit ? (
         <Card>
           <CardContent className="flex flex-col gap-3">
-            {typeof requestedRunId === "string" && typeof requestedFindingIndex === "string" && typeof requestedDirectionId === "string" ? <p className="rounded-md bg-surface-2/70 p-3 text-sm text-ink-2">This new page draft will keep a link to the saved Design Critic finding and direction. It will not change the reviewed website.</p> : null}
+            {typeof requestedRunId === "string" && typeof requestedFindingIndex === "string" && typeof requestedDirectionId === "string" ? <p className="rounded-md bg-surface-2/70 p-3 text-sm text-ink-2">Linked to your saved Design Critic direction. Your website isn’t changed.</p> : null}
             <Field label="What's the page for?">
               <Textarea value={brief} onChange={(e) => setBrief(e.target.value.slice(0, 2400))} rows={4} autosize placeholder="e.g. Free SEO audit for dentists" />
             </Field>
@@ -249,39 +249,39 @@ function Editor({ slug, page, content, businessName, website, badge, canEdit, ca
           </div>
         </fieldset>
         <LandingDraftPreview name={businessName} color={page.color} content={c} website={website} badge={badge} />
-        <DraftRenders slug={slug} pageId={page.id} version={page.version} canEdit={canEdit} disabledReason={hasUnsavedChanges ? "Save your edits first; captures use the saved version." : undefined} />
+        <DraftRenders slug={slug} pageId={page.id} version={page.version} canEdit={canEdit} disabledReason={hasUnsavedChanges ? "Save first; captures use the saved version." : undefined} />
         {page.designCriticSource ? <section className="rounded-[var(--radius-card)] border border-line bg-surface-2/60 p-4">
           <h3 className="heading-card">Measure this design change</h3>
-          <p className="mt-1 text-sm text-ink-2">Choose what result to watch and how you will check it before publishing. ClimbOS can report this page&apos;s own views and leads, but those counts do not prove what caused a change.</p>
-          {page.designCriticSource.suggestedMeasurementPlan ? <p className="mt-3 rounded-md bg-surface p-3 text-sm text-ink-2"><span className="font-medium text-ink">Design Critic suggestion; review before using: </span>{page.designCriticSource.suggestedMeasurementPlan}</p> : null}
+          <p className="mt-1 text-sm text-ink-2">Set this before publishing. Views and leads don&apos;t prove what caused a change.</p>
+          {page.designCriticSource.suggestedMeasurementPlan ? <p className="mt-3 rounded-md bg-surface p-3 text-sm text-ink-2"><span className="font-medium text-ink">Suggested (review first): </span>{page.designCriticSource.suggestedMeasurementPlan}</p> : null}
           <fieldset disabled={!canEdit} className="mt-3 grid gap-3">
-            <Field label="What result will you track?" hint="For example, qualified enquiries or completed bookings.">
+            <Field label="What result will you track?" hint="e.g. enquiries or bookings">
               <Input value={measurementMetric} onChange={(event) => setMeasurementMetric(event.target.value.slice(0, 160))} maxLength={160} />
             </Field>
-            <Field label="How will you measure it?" hint="Name the data source, comparison, and observation window where known.">
+            <Field label="How will you measure it?" hint="Data source, comparison and time window">
               <Textarea value={measurementMethod} onChange={(event) => setMeasurementMethod(event.target.value.slice(0, 600))} rows={3} autosize maxLength={600} />
             </Field>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Who is it measured on?" hint="For example, visitors arriving from your Google profile."><Input value={measurementAudience} onChange={(event) => setMeasurementAudience(event.target.value.slice(0, 240))} maxLength={240} /></Field>
-              <Field label="What must not get worse?" hint="A guardrail, such as refund requests or support calls."><Input value={measurementGuardrail} onChange={(event) => setMeasurementGuardrail(event.target.value.slice(0, 240))} maxLength={240} /></Field>
-              <Field label="How many days will you watch it?" hint="1 to 365 days."><Input inputMode="numeric" value={observationDays} onChange={(event) => setObservationDays(event.target.value.replace(/\D/g, "").slice(0, 3))} /></Field>
-              <Field label="What will you do with the result?" hint="When you will keep, change or roll back the page."><Input value={decisionRule} onChange={(event) => setDecisionRule(event.target.value.slice(0, 300))} maxLength={300} /></Field>
+              <Field label="Who is it measured on?" hint="e.g. visitors from your Google profile"><Input value={measurementAudience} onChange={(event) => setMeasurementAudience(event.target.value.slice(0, 240))} maxLength={240} /></Field>
+              <Field label="What must not get worse?" hint="e.g. refunds or support calls"><Input value={measurementGuardrail} onChange={(event) => setMeasurementGuardrail(event.target.value.slice(0, 240))} maxLength={240} /></Field>
+              <Field label="How many days will you watch it?" hint="1–365"><Input inputMode="numeric" value={observationDays} onChange={(event) => setObservationDays(event.target.value.replace(/\D/g, "").slice(0, 3))} /></Field>
+              <Field label="What will you do with the result?" hint="When you’ll keep, change or roll back"><Input value={decisionRule} onChange={(event) => setDecisionRule(event.target.value.slice(0, 300))} maxLength={300} /></Field>
             </div>
-            <Field label="Do you have a current baseline?" hint="A baseline is the current result before a change goes live.">
+            <Field label="Do you have a current baseline?" hint="Your result before the change">
               <Select value={baselineState} onValueChange={(value) => setBaselineState(value as "recorded" | "unknown")} options={[{ value: "recorded", label: "Yes, I have a current result" }, { value: "unknown", label: "Not yet; keep it unknown" }]} />
             </Field>
             {baselineState === "recorded" ? <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Current result" hint="Include its unit and the period it covers."><Input value={baselineValue} onChange={(event) => setBaselineValue(event.target.value.slice(0, 240))} maxLength={240} /></Field>
-              <Field label="Where did it come from?" hint="For example, an analytics report and date."><Input value={baselineSource} onChange={(event) => setBaselineSource(event.target.value.slice(0, 240))} maxLength={240} /></Field>
+              <Field label="Current result" hint="With unit and period"><Input value={baselineValue} onChange={(event) => setBaselineValue(event.target.value.slice(0, 240))} maxLength={240} /></Field>
+              <Field label="Where did it come from?" hint="e.g. analytics report and date"><Input value={baselineSource} onChange={(event) => setBaselineSource(event.target.value.slice(0, 240))} maxLength={240} /></Field>
             </div> : <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Why is it unknown?"><Input value={baselineReason} onChange={(event) => setBaselineReason(event.target.value.slice(0, 240))} maxLength={240} /></Field>
-              <Field label="How will you collect it?" hint="If no baseline is available, say what you will record and when."><Input value={baselineCollectionPlan} onChange={(event) => setBaselineCollectionPlan(event.target.value.slice(0, 300))} maxLength={300} /></Field>
+              <Field label="How will you collect it?" hint="What you’ll record, and when"><Input value={baselineCollectionPlan} onChange={(event) => setBaselineCollectionPlan(event.target.value.slice(0, 300))} maxLength={300} /></Field>
             </div>}
             <div className="flex flex-wrap items-center gap-3">
-              {canEdit ? <Button size="sm" variant="secondary" disabled={busy === "measurement" || !measurementMetric.trim() || !measurementMethod.trim() || !measurementAudience.trim() || !measurementGuardrail.trim() || !observationDaysValid || !decisionRule.trim() || (baselineState === "recorded" ? !baselineValue.trim() || !baselineSource.trim() : !baselineReason.trim() || !baselineCollectionPlan.trim())} loading={busy === "measurement"} onClick={() => run("measurement", () => saveMeasurementPlan({ slug, id: page.id, expectedVersion: page.version, metric: measurementMetric, method: measurementMethod, audience: measurementAudience, guardrail: measurementGuardrail, observationDays: Number(observationDays), decisionRule, baseline: baselineState === "recorded" ? { state: "recorded", value: baselineValue, source: baselineSource } : { state: "unknown", reason: baselineReason, collectionPlan: baselineCollectionPlan } }), "Measurement plan saved for this page version")}>Save measurement plan</Button> : null}
+              {canEdit ? <Button size="sm" variant="secondary" disabled={busy === "measurement" || !measurementMetric.trim() || !measurementMethod.trim() || !measurementAudience.trim() || !measurementGuardrail.trim() || !observationDaysValid || !decisionRule.trim() || (baselineState === "recorded" ? !baselineValue.trim() || !baselineSource.trim() : !baselineReason.trim() || !baselineCollectionPlan.trim())} loading={busy === "measurement"} onClick={() => run("measurement", () => saveMeasurementPlan({ slug, id: page.id, expectedVersion: page.version, metric: measurementMetric, method: measurementMethod, audience: measurementAudience, guardrail: measurementGuardrail, observationDays: Number(observationDays), decisionRule, baseline: baselineState === "recorded" ? { state: "recorded", value: baselineValue, source: baselineSource } : { state: "unknown", reason: baselineReason, collectionPlan: baselineCollectionPlan } }), "Measurement plan saved")}>Save measurement plan</Button> : null}
               {measurementPlanCurrent ? <Badge tone="green">Saved for version {page.version}</Badge> : <Badge tone="amber">Needs saving for version {page.version}</Badge>}
             </div>
-            {page.designCriticSource && !measurementPlanCurrent ? <p className="text-xs text-amber-900">Publishing is blocked until a measurement plan is saved for this exact page version.{!canEdit ? " Ask an owner, admin, or editor to save it." : ""}</p> : null}
+            {page.designCriticSource && !measurementPlanCurrent ? <p className="text-xs text-amber-900">Save a measurement plan for this version to publish.{!canEdit ? " Ask an owner, admin or editor." : ""}</p> : null}
           </fieldset>
         </section> : null}
         {history?.length ? (
@@ -300,7 +300,7 @@ function Editor({ slug, page, content, businessName, website, badge, canEdit, ca
                   {canEdit && revision.version !== page.version ? (
                     <Button size="sm" variant="secondary" disabled={busy === "restore"} onClick={() => run("restore", async () => {
                       await restoreVersion({ slug, id: page.id, version: revision.version });
-                    }, `Restored as a new draft version`)}>
+                    }, "Restored as a new draft")}>
                       Restore as draft
                     </Button>
                   ) : null}
@@ -311,8 +311,8 @@ function Editor({ slug, page, content, businessName, website, badge, canEdit, ca
         ) : null}
         {page.status === "live" ? <AbTestPanel slug={slug} kind="landing" targetId={page.id} current={content.headline} canApprove={canPublish && !page.hasUnpublishedChanges} /> : null}
         <div className="flex flex-wrap items-center gap-3">
-          {hasUnsavedChanges && canPublish ? <p className="w-full text-xs text-amber-900">Save your edits before reviewing or publishing them. The publish action applies only to the saved version.</p> : null}
-          {hasUnsavedMeasurementChanges && canPublish ? <p className="w-full text-xs text-amber-900">Save your measurement-plan edits before reviewing or publishing them.</p> : null}
+          {hasUnsavedChanges && canPublish ? <p className="w-full text-xs text-amber-900">Save your edits first. Only the saved version publishes.</p> : null}
+          {hasUnsavedMeasurementChanges && canPublish ? <p className="w-full text-xs text-amber-900">Save your measurement plan edits first.</p> : null}
           {canEdit ? (
             <Button loading={busy === "save"} onClick={() => run("save", () => update({ slug, id: page.id, content: { ...c, steps: c.steps.filter((s) => s.trim()) } }), "Saved")}>
               Save
@@ -322,7 +322,7 @@ function Editor({ slug, page, content, businessName, website, badge, canEdit, ca
             <ConfirmDialog
               trigger={<Button variant="secondary" disabled={busy === "live" || !page.content || !canPublishCurrentVersion}>Publish version {page.version}</Button>}
               title={`Publish landing page version ${page.version}?`}
-              description={`This approval applies to the exact saved version shown above${page.designCriticSource ? ` and its measurement plan for “${page.designMeasurementPlan?.metric}” (baseline ${page.designMeasurementPlan?.baseline.state ?? "not recorded"})` : ""}. Later edits remain drafts until reviewed and published separately.`}
+              description={`Publishes the saved version above${page.designCriticSource ? `, measuring “${page.designMeasurementPlan?.metric}” (baseline ${page.designMeasurementPlan?.baseline.state ?? "not recorded"})` : ""}. Later edits stay drafts until you publish them.`}
               confirmLabel={`Publish version ${page.version}`}
               onConfirm={() => run("live", () => setLive({ slug, id: page.id, live: true, expectedVersion: page.version }), `Version ${page.version} is live`)}
             />
@@ -331,7 +331,7 @@ function Editor({ slug, page, content, businessName, website, badge, canEdit, ca
             <ConfirmDialog
               trigger={<Button variant="secondary" disabled={busy === "live" || !canPublishCurrentVersion}>Publish draft version {page.version}</Button>}
               title={`Publish landing page version ${page.version}?`}
-              description={`This replaces public version ${page.publishedVersion} with the exact saved draft version ${page.version}.`}
+              description={`Replaces live version ${page.publishedVersion} with saved version ${page.version}.`}
               confirmLabel={`Publish version ${page.version}`}
               onConfirm={() => run("live", () => setLive({ slug, id: page.id, live: true, expectedVersion: page.version }), `Version ${page.version} is live`)}
             />

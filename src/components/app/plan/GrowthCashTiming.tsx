@@ -25,12 +25,12 @@ function Scenario({ title, s, currency, hasReserve }: { title: string; s: Growth
       <h4 className="text-xs font-medium text-ink-3">{title}</h4>
       <p className="text-ui font-semibold tabular-nums text-ink">{s.lowestWeek === 0 ? "Never below zero" : `Lowest point ${money(s.lowestBalanceUsd, currency)} in week ${s.lowestWeek}`}</p>
       <p className="text-xs text-ink-3">
-        {s.lowestWeek === 0 ? "Modeled customer contribution keeps up with growth costs." : s.recoveredWeek !== null ? `Back to zero by week ${s.recoveredWeek}.` : "Not back to zero within this period."}
-        {` Balance at the end: ${money(s.endBalanceUsd, currency)}.`}
+        {s.lowestWeek === 0 ? "Customer income keeps up with costs." : s.recoveredWeek !== null ? `Back to zero by week ${s.recoveredWeek}.` : "Not back to zero within this period."}
+        {` Ends at ${money(s.endBalanceUsd, currency)}.`}
       </p>
       {s.lowestWeek !== 0 ? (
         <p className="text-xs font-medium text-ink-2">
-          {!hasReserve ? "Compare with your growth reserve: add it below." : s.reserveCovers ? "Your growth reserve covers the lowest point." : `Your growth reserve is short by ${money(s.shortfallUsd ?? 0, currency)}.`}
+          {!hasReserve ? "Add your growth reserve below to compare." : s.reserveCovers ? "Your reserve covers this." : `Your reserve is short by ${money(s.shortfallUsd ?? 0, currency)}.`}
         </p>
       ) : null}
     </div>
@@ -79,11 +79,11 @@ export function GrowthCashTimingPanel({ data, slug, canEdit }: { data: GrowthCas
       <div>
         <h3 className="text-sm font-semibold text-ink">When growth cash goes out and comes back</h3>
         <p className="mt-1 text-xs text-ink-3">
-          For {data.selected.join(" + ")} over {data.horizonWeeks} weeks. Recurring growth costs are paid evenly from week 1 and one-time setup costs in week 1. Each new customer&apos;s monthly contribution (revenue × margin) starts after your payment delay and falls with churn. Customers arrive on each play&apos;s modeled ramp. Payments after this period are not counted.
+          For {data.selected.join(" + ")} over {data.horizonWeeks} weeks. Costs start in week 1; customer income (revenue × margin) starts after your payment delay.
         </p>
       </div>
       <dl className="grid gap-2 text-sm sm:grid-cols-3">
-        <div><dt className="text-xs text-ink-3">Growth cash out</dt><dd className="font-semibold tabular-nums text-ink">{money(data.weeklyCashOutUsd, c)}/week{data.setupCashUsd > 0 ? ` + ${money(data.setupCashUsd, c)} one-time setup in week 1` : ""} · {money(data.cashOutOverPeriodUsd, c)} over the period</dd></div>
+        <div><dt className="text-xs text-ink-3">Growth cash out</dt><dd className="font-semibold tabular-nums text-ink">{money(data.weeklyCashOutUsd, c)}/week{data.setupCashUsd > 0 ? ` + ${money(data.setupCashUsd, c)} setup` : ""} · {money(data.cashOutOverPeriodUsd, c)} total</dd></div>
         <div><dt className="text-xs text-ink-3">Growth reserve</dt><dd className="font-semibold tabular-nums text-ink">{data.reserveUsd === null ? "Unknown · not assumed" : `${money(data.reserveUsd, c)} · you reported`}</dd></div>
         <div><dt className="text-xs text-ink-3">Days until a new customer pays</dt><dd className="font-semibold tabular-nums text-ink">{data.paymentLagDays === null ? "Unknown · not assumed" : `${data.paymentLagDays} days · you reported`}</dd></div>
       </dl>
@@ -95,11 +95,11 @@ export function GrowthCashTimingPanel({ data, slug, canEdit }: { data: GrowthCas
         </div>
       ) : (
         <Callout tone="info" title="Customer payments aren't timed yet">
-          Needs {untimed.map((m) => MISSING_LABEL[m]).join(", ")}. Before any customer pays, these growth costs total {money(data.cashOutOverPeriodUsd, c)} over the period.
+          Needs {untimed.map((m) => MISSING_LABEL[m]).join(", ")}. Costs before anyone pays: {money(data.cashOutOverPeriodUsd, c)}.
         </Callout>
       )}
-      {data.unconfirmedEconomics.length && data.mostLikely ? <p className="text-xs text-ink-3">Uses {data.unconfirmedEconomics.join(", ")} you haven&apos;t confirmed. Confirm them under Sharpen this plan.</p> : null}
-      <p className="text-xs text-ink-3">A modeled view of growth costs and customer contribution only. It is not a bank balance or cash-flow forecast, and it leaves out refunds, taxes, failed payments, and your existing bills.</p>
+      {data.unconfirmedEconomics.length && data.mostLikely ? <p className="text-xs text-ink-3">Uses {data.unconfirmedEconomics.join(", ")} you haven&apos;t confirmed. Confirm under Sharpen this plan.</p> : null}
+      <p className="text-xs text-ink-3">An estimate of growth costs only — not a bank balance or cash-flow forecast. Leaves out refunds, taxes, and existing bills.</p>
       {canEdit ? (
         <div className="flex flex-wrap items-end gap-2">
           <label className="flex flex-col gap-1 text-xs font-medium text-ink" htmlFor={`${id}-reserve`}>
