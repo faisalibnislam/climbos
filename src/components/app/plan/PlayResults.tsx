@@ -44,7 +44,7 @@ export function CostPerCustomerLine({ check: c, currency }: { check: CostCheck; 
   const versus = c.affordableUsd === null ? "what a customer is worth is unknown until price, margin and churn are known" : `a customer is worth ${m(c.affordableUsd)} within the payback window`;
   return (
     <p className={cn("text-xs", c.status === "above" || c.status === "no_customers" ? "font-medium text-red-800" : "text-ink-2")}>
-      Cash cost per customer: {cost} · {versus}. Logged spend ÷ new customers; your time isn&apos;t included.
+      Cash cost per customer: {cost} · {versus}; your time isn&apos;t included.
     </p>
   );
 }
@@ -61,7 +61,7 @@ export function RetentionResultsSummary({ retention }: { retention?: RetentionAc
       <p className="mt-1">Repeat customers: {retention.repeatCustomerWeeksReported ? `${retention.repeatCustomerWeeks} customer-weeks across ${retention.repeatCustomerWeeksReported} reported week${retention.repeatCustomerWeeksReported === 1 ? "" : "s"}` : "Not reported"}</p>
       <p>Net retained revenue: {moneyRows(retention.revenueByCurrency, "netRevenueMinor")}</p>
       <p>Retained contribution: {moneyRows(retention.contributionByCurrency, "contributionMinor")}</p>
-      <p className="mt-1 text-ink-3">Customer-weeks can count the same person again in a later week. These results are associated with this play; they do not prove it caused the change. Only reported weeks are included.</p>
+      <p className="mt-1 text-ink-3">Linked to this play, but they do not prove it caused the change. Only reported weeks count.</p>
     </div>
   );
 }
@@ -120,7 +120,7 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, retent
               </Badge>
             ) : null}
           </div>
-          {actuals.unloggedWeeks > 0 ? <p className="text-xs text-ink-2">Only logged weeks are included. Missing weeks are unknown, not zero; fill them in before judging the full period.</p> : null}
+          {actuals.unloggedWeeks > 0 ? <p className="text-xs text-ink-2">Missing weeks are unknown, not zero. Fill them in before judging.</p> : null}
           <CostPerCustomerLine check={costCheck(actuals, affordableCacUsd)} currency={currency ?? undefined} />
           {actuals.status === "behind" ? <ShortfallNote s={diagnoseShortfall(actuals, {}, { affordableCacUsd, currency: currency ?? undefined })} /> : null}
           <ul className="flex flex-col gap-1.5 text-xs">
@@ -169,20 +169,20 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, retent
             ))}
           </div>
           <fieldset className="flex flex-col gap-2 rounded-[var(--radius-control)] border border-line p-2.5">
-            <legend className="px-1 text-xs font-semibold text-ink">Optional results from existing customers</legend>
-            <p className="text-xs text-ink-3">Leave a value blank when you did not track it. Repeat customers are a weekly count, not unique people across the plan.</p>
+            <legend className="px-1 text-xs font-semibold text-ink">Existing customers (optional)</legend>
+            <p className="text-xs text-ink-3">Leave blank if you didn&apos;t track it.</p>
             <div className="grid grid-cols-2 gap-2">
               <Field label="Repeat customers this week">
                 <Input inputMode="numeric" value={vals.repeatCustomers ?? ""} onChange={(e) => setVals((v) => ({ ...v, repeatCustomers: e.target.value }))} disabled={busy} />
               </Field>
-              <Field label={`Net retained revenue${currency ? ` (${currency})` : ""}`} hint={currency ? "Net receipts from existing customers this week." : "Set the business currency in settings to report money."}>
+              <Field label={`Net retained revenue${currency ? ` (${currency})` : ""}`} hint={currency ? "From existing customers this week." : "Set your currency in settings first."}>
                 <Input inputMode="decimal" value={vals.retainedRevenue ?? ""} onChange={(e) => setVals((v) => ({ ...v, retainedRevenue: e.target.value }))} disabled={busy || !currency} />
               </Field>
-              <Field label={`Retained contribution${currency ? ` (${currency})` : ""}`} hint="After variable delivery costs; negative amounts are allowed.">
+              <Field label={`Retained contribution${currency ? ` (${currency})` : ""}`} hint="After delivery costs. Can be negative.">
                 <Input inputMode="decimal" value={vals.retainedContribution ?? ""} onChange={(e) => setVals((v) => ({ ...v, retainedContribution: e.target.value }))} disabled={busy || !currency} />
               </Field>
             </div>
-            <p className="text-xs text-ink-3">When correcting this week, blank optional fields clear earlier values for that week.</p>
+            <p className="text-xs text-ink-3">Re-saving this week clears any blank optional fields.</p>
           </fieldset>
           <div className="flex gap-2">
             <Button size="sm" onClick={submit} disabled={busy || !vals.reach}>

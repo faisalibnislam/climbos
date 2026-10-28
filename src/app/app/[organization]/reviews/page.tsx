@@ -92,7 +92,7 @@ export default function ReviewsPage() {
         <CardContent className="flex flex-col gap-3">
           <div>
             <h2 className="heading-card">Possible customer themes</h2>
-            <p className="text-sm text-ink-3">Phrase matching across recent reviews, supported inbox records, and owner-entered CRM notes from the latest {voice?.windowDays ?? 180} days. These are signals to review, not findings about every customer; examples retain source and date.</p>
+            <p className="text-sm text-ink-3">Repeated phrases from the last {voice?.windowDays ?? 180} days of reviews, messages and your notes. Signals, not facts about every customer.</p>
           </div>
           {voice === undefined ? <p className="text-sm text-ink-3">Loading message themes…</p> : voice.themes.length ? (
             <ul className="flex flex-col divide-y divide-line">
@@ -105,7 +105,7 @@ export default function ReviewsPage() {
                     <Badge>{theme.count} matching messages</Badge>
                     {theme.status === "dismissed" ? <Badge>Dismissed</Badge> : null}
                   </div>
-                  <p className="text-xs text-ink-3">{theme.channels.join(", ")} · {new Date(theme.firstSeenAt).toLocaleDateString()}–{new Date(theme.lastSeenAt).toLocaleDateString()}. Heuristic phrase grouping; the example count is not the total customer population.</p>
+                  <p className="text-xs text-ink-3">{theme.channels.join(", ")} · {new Date(theme.firstSeenAt).toLocaleDateString()}–{new Date(theme.lastSeenAt).toLocaleDateString()}. Rough grouping; not a count of all customers.</p>
                   <ul className="flex flex-col gap-2">
                     {theme.examples.map((example) => <li key={example.id} className="rounded-md bg-surface-2 p-2 text-sm"><span className="text-xs text-ink-3">{example.source} · {new Date(example.date).toLocaleDateString()}{example.sourceUrl ? <> · <a href={example.sourceUrl} target="_blank" rel="noreferrer" className="text-brand-800 underline">source</a></> : null}</span><p className="mt-1">“{example.excerpt}”</p></li>)}
                   </ul>
@@ -126,9 +126,9 @@ export default function ReviewsPage() {
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-ink-3">No repeated phrase groups found in {voice.sourceCount} recent records. That does not mean customers have no concerns or questions.</p>
+            <p className="text-sm text-ink-3">No repeated themes in {voice.sourceCount} recent records. That doesn’t mean there are no concerns.</p>
           )}
-          {voice ? <p className="text-xs text-ink-3">Coverage: at most {voice.sampleLimit} inbox and owner-entered CRM records from {voice.windowDays} days; at least {voice.minimumRepeatedSources} matching sources are required. Private message text is only shown to workspace members with inbox access.</p> : null}
+          {voice ? <details className="text-xs text-ink-3"><summary className="cursor-pointer">How this works</summary><p className="mt-1">Up to {voice.sampleLimit} records from {voice.windowDays} days; a theme needs {voice.minimumRepeatedSources}+ matches. Private messages show only to members with inbox access.</p></details> : null}
         </CardContent>
       </Card>
 
@@ -138,7 +138,7 @@ export default function ReviewsPage() {
             <IconTile icon={Send} tone="brand" size="sm" />
             <div>
               <h2 className="heading-card">Invite customers to review</h2>
-              <p className="text-sm text-ink-3">Everyone receives the same public review destination, regardless of feedback or sentiment. Review the exact recipients and message before sending.</p>
+              <p className="text-sm text-ink-3">Everyone gets the same review link, whatever their feedback. Check recipients and message before sending.</p>
             </div>
           </div>
           {data.candidates.length ? (
@@ -190,7 +190,7 @@ export default function ReviewsPage() {
         open={Boolean(preview)}
         onOpenChange={(open) => { if (!open) { setPreview(null); setConfirmEligibleRecipients(false); } }}
         title={`Send to ${preview?.count ?? 0} customers?`}
-        description="This will send the reviewed invitation from your connected mailbox. The recipients, message version, mailbox and review destination are bound to this approval."
+        description="Sends from your mailbox. Approval covers only these recipients, this message and this review link."
         confirmLabel={`Approve and send ${preview?.count ?? 0}`}
         confirmDisabled={!confirmEligibleRecipients}
         onConfirm={async () => {
@@ -203,13 +203,13 @@ export default function ReviewsPage() {
           toast({
             tone: "success",
             title: `Queued ${result.queued} ${result.queued === 1 ? "review invitation" : "review invitations"}`,
-            description: result.activeOutreach ? `${result.activeOutreach} address${result.activeOutreach === 1 ? " already has" : "es already have"} an active email sequence and was left out.` : undefined,
+            description: result.activeOutreach ? `${result.activeOutreach} address${result.activeOutreach === 1 ? " already has" : "es already have"} an active email sequence and was skipped.` : undefined,
           });
         }}
       >
         {preview ? (
           <div className="flex max-h-72 flex-col gap-3 overflow-y-auto rounded-lg bg-surface-2 p-3 text-sm">
-            <p><span className="font-medium">Public review destination:</span> <span className="break-all">{preview.destination}</span></p>
+            <p><span className="font-medium">Review link:</span> <span className="break-all">{preview.destination}</span></p>
             {preview.activeOutreach > 0 ? (
               <Callout tone="warning">{preview.activeOutreach} address{preview.activeOutreach === 1 ? " already has" : "es already have"} an active ClimbOS email sequence and {preview.activeOutreach === 1 ? "was" : "were"} left out of this invitation.</Callout>
             ) : null}
@@ -217,7 +217,7 @@ export default function ReviewsPage() {
             <pre className="whitespace-pre-wrap font-sans text-ink-2">{preview.preview}</pre>
             <p className="font-medium">Recipients ({preview.count})</p>
             <ul className="list-disc pl-5 text-ink-2">{preview.recipients.map((person, i) => <li key={`${person.email}-${i}`}>{person.name} · {person.email}</li>)}</ul>
-            <Checkbox label="I confirm every recipient is an eligible customer who may receive this review invitation. I have not selected them based on expected satisfaction or review rating." checked={confirmEligibleRecipients} onCheckedChange={(checked) => setConfirmEligibleRecipients(checked === true)} />
+            <Checkbox label="Every recipient is a real customer who may get this. I didn’t pick them by how happy they are." checked={confirmEligibleRecipients} onCheckedChange={(checked) => setConfirmEligibleRecipients(checked === true)} />
           </div>
         ) : null}
       </ConfirmDialog>
@@ -234,7 +234,7 @@ export default function ReviewsPage() {
           <Input value={review.author} placeholder="Reviewer's name" aria-label="Reviewer's name" onChange={(e) => setReview({ ...review, author: e.target.value })} />
           <Input type="url" value={review.sourceUrl} onChange={(e) => setReview({ ...review, sourceUrl: e.target.value })} aria-label="Public review URL" placeholder="Public review link (optional)" />
           <Input type="number" min={1} max={5} step={1} value={review.rating} onChange={(e) => setReview({ ...review, rating: e.target.value })} aria-label="Review rating from 1 to 5" placeholder="Rating (1–5), if shown" />
-          <Textarea value={review.text} onChange={(e) => setReview({ ...review, text: e.target.value })} rows={3} autosize aria-label="Review text. Include its displayed rating from 1 to 5, if available." placeholder="Paste the review text. Include its displayed rating (1–5), if available." />
+          <Textarea value={review.text} onChange={(e) => setReview({ ...review, text: e.target.value })} rows={3} autosize aria-label="Review text. Include its displayed rating from 1 to 5, if available." placeholder="Paste the review text." />
           <Button className="self-start" variant="secondary" loading={busy === "review"} disabled={!review.text.trim() && !(Number.isInteger(Number(review.rating)) && Number(review.rating) >= 1 && Number(review.rating) <= 5)} onClick={() => run("review", async () => { await addReview({ slug, author: review.author, text: review.text, rating: review.rating ? Number(review.rating) : undefined, source: "google", sourceUrl: review.sourceUrl || undefined }); setReview({ author: "", text: "", rating: "", sourceUrl: "" }); }, "Added to your Inbox")}>
             <Star aria-hidden /> Add to Inbox
           </Button>

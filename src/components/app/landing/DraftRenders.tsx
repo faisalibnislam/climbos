@@ -19,7 +19,7 @@ export function DraftRenders({ slug, pageId, version, canEdit, disabledReason }:
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="heading-card">Check the changed page</h3>
-          <p className="mt-1 text-sm text-ink-2">Capture this saved draft on desktop (1440 px) and mobile (390 px). These show the ClimbOS-hosted draft, not your current website, and nothing is published.</p>
+          <p className="mt-1 text-sm text-ink-2">Screenshots of the saved draft on desktop and mobile. Nothing is published.</p>
         </div>
         {canEdit ? <Button size="sm" variant="secondary" loading={busy} disabled={busy || Boolean(disabledReason) || latest?.status === "pending"} onClick={async () => {
           setBusy(true);
@@ -39,7 +39,7 @@ export function DraftRenders({ slug, pageId, version, canEdit, disabledReason }:
           <div className="flex flex-wrap items-center gap-2 text-xs text-ink-3">
             <Badge tone={latest.status === "captured" ? "green" : latest.status === "pending" ? "blue" : "amber"}>{latest.status === "captured" ? "Captured" : latest.status === "pending" ? "Capturing…" : "Capture didn't finish"}</Badge>
             <span>Draft version {latest.version}{latest.capturedAt ? ` · ${formatDateTime(latest.capturedAt)}` : ""}</span>
-            {latest.version !== version ? <Badge tone="amber">Older than the current version {version}</Badge> : null}
+            {latest.version !== version ? <Badge tone="amber">Older than version {version}</Badge> : null}
           </div>
           {latest.shots.length ? (
             <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
@@ -52,7 +52,7 @@ export function DraftRenders({ slug, pageId, version, canEdit, disabledReason }:
               ) : null)}
             </div>
           ) : null}
-          <p className="text-xs text-ink-3">A capture shows the layout only. Check readability, tap targets and the form yourself before approving.</p>
+          <p className="text-xs text-ink-3">Layout only. Check text, buttons and the form yourself before approving.</p>
         </div>
       ) : null}
     </section>

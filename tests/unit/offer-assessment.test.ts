@@ -84,15 +84,15 @@ describe("offer and promotion recommendations", () => {
   it("shows the decision-critical offer details first and places the full comparison behind a disclosure", () => {
     const markup = renderToStaticMarkup(createElement(OfferAssessmentPanel, { offer: assessment() }));
     expect(markup).toContain("Advice only · changes need your approval");
-    expect(markup).toContain("Who it is for and why");
+    expect(markup).toContain("Who and why");
     expect(markup).toContain("Money left per sale after listed costs");
-    expect(markup).toContain("Ability to take on more work");
-    expect(markup).toContain("Next step: Review the test and confirm the details before deciding.");
+    expect(markup).toContain("Room for more work");
+    expect(markup).toContain("Next step: Review the test, then decide.");
     expect(markup).toContain("Still to confirm:");
-    expect(markup).toContain("See the test plan, other options, and full risks");
+    expect(markup).toContain("See test plan, options, and risks");
     expect(markup).not.toMatch(/<details[^>]*open/);
-    expect(markup.indexOf("Money left per sale") ).toBeLessThan(markup.indexOf("See the test plan"));
-    expect(markup.indexOf("See the test plan")).toBeLessThan(markup.indexOf("Other options considered"));
+    expect(markup.indexOf("Money left per sale") ).toBeLessThan(markup.indexOf("See test plan"));
+    expect(markup.indexOf("See test plan")).toBeLessThan(markup.indexOf("Other options"));
   });
 
   it("shows the provenance and supporting evidence for each price and cost input", () => {
@@ -112,19 +112,19 @@ describe("offer and promotion recommendations", () => {
     expect(markup).toContain("Calculated from the listed inputs.");
     expect(markup).toContain("Measured in this business");
     expect(markup).toContain("Open source");
-    expect(markup).toContain("Reasoned from the available information");
+    expect(markup).toContain("Educated guess");
     expect(markup).toContain("Reported by a source");
     expect(markup).toContain("Assumption to check");
     expect(markup).toContain("Labor cost inferred from the owner&#x27;s estimate.");
   });
 
   it("uses owner-facing labels without exposing internal decision values or fact IDs", () => {
-    expect(offerRecommendationLabel("improve_other_constraint")).toBe("Improve another part of the business first");
+    expect(offerRecommendationLabel("improve_other_constraint")).toBe("Fix something else first");
     expect(offerMechanismLabel("referral_incentive")).toBe("Referral reward");
     expect(offerEvidenceLabel("owner_reported")).toBe("Reported by your team");
-    expect(offerCapacityLabel("unknown")).toBe("Ability to take on more work is not confirmed");
+    expect(offerCapacityLabel("unknown")).toBe("Capacity not confirmed");
     expect(offerAlternativeLabel("conversion_path")).toBe("Make it easier to buy or book");
-    expect(offerRiskLabel("pull_forward")).toBe("Purchases may happen earlier, not increase");
+    expect(offerRiskLabel("pull_forward")).toBe("Sales may come earlier, not grow");
     expect(offerEvidenceStatusLabel("hypothesis")).toBe("possible risk to test");
     expect(offerReferenceLabel("fact:3")).toBe("Your business information");
     expect(offerReferenceLabel("https://example.com/offer")).toBe("https://example.com/offer");

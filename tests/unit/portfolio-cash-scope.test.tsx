@@ -29,7 +29,7 @@ describe("growth portfolio cash-feasibility boundary", () => {
       days: 90,
     }));
 
-    expect(html).toContain("checks modeled monthly growth costs against your monthly limit");
+    expect(html).toContain("Checks monthly growth costs against your limit");
     expect(html).toContain("does not forecast your bank balance");
     expect(html).toContain("timing of customer payments, refunds, taxes, or existing bills");
   });

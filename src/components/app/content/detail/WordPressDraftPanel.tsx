@@ -34,17 +34,17 @@ export function WordPressDraftPanel({ slug, artifact, canCreate }: { slug: strin
     <section className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4">
       <div>
         <h3 className="text-sm font-semibold text-ink">WordPress draft</h3>
-        <p className="mt-1 text-sm text-ink-2">Create a private draft from this approved article. ClimbOS does not publish it.</p>
+        <p className="mt-1 text-sm text-ink-2">A private draft of this approved article. Never published by ClimbOS.</p>
       </div>
 
       {!connected ? (
         <Callout tone="info" title="Connect WordPress first">
-          <Link className="underline" href={`/app/${slug}/connections`}>Open Connections</Link> to connect a WordPress account.
+          <Link className="underline" href={`/app/${slug}/connections`}>Open Connections</Link> to connect it.
         </Callout>
       ) : null}
 
       {latest?.status === "pending" ? (
-        <p role="status" className="inline-flex items-center gap-2 text-sm text-ink-2"><Spinner /> Sending the approved version to WordPress and checking the saved draft…</p>
+        <p role="status" className="inline-flex items-center gap-2 text-sm text-ink-2"><Spinner /> Sending to WordPress and checking the draft…</p>
       ) : null}
       {latest?.status === "verified" ? (
         <Callout tone="success" title="Draft saved and checked">
@@ -55,7 +55,7 @@ export function WordPressDraftPanel({ slug, artifact, canCreate }: { slug: strin
       {latest?.status === "failed" ? <Callout tone="warning" title="WordPress did not create the draft">{latest.summary}</Callout> : null}
       {latest?.status === "uncertain" ? (
         <Callout tone="warning" title="WordPress may have created a draft">
-          <p>{latest.summary} Do not retry until you check WordPress.</p>
+          <p>{latest.summary} Check WordPress before retrying.</p>
           {latest.editUrl ? <Link className="mt-2 inline-block underline" href={latest.editUrl} target="_blank" rel="noreferrer">Check this draft in WordPress</Link> : null}
         </Callout>
       ) : null}
@@ -64,14 +64,14 @@ export function WordPressDraftPanel({ slug, artifact, canCreate }: { slug: strin
         <ConfirmDialog
           trigger={<Button variant="primary" disabled={busy} loading={busy} loadingText="Requesting draft…">{latest?.status === "failed" ? "Try again" : "Create WordPress draft"}</Button>}
           title="Create a private WordPress draft?"
-          description={`ClimbOS will send the exact approved version (${artifact.current?.version ? `v${artifact.current.version}` : "current version"}) to ${artifact.wordpressConnection?.accountLabel ?? "your connected site"} as a draft. It will not be published.`}
+          description={`Sends ${artifact.current?.version ? `v${artifact.current.version}` : "the approved version"} to ${artifact.wordpressConnection?.accountLabel ?? "your site"} as a draft. Not published.`}
           confirmLabel="Create private draft"
           onConfirm={submit}
         >
           {artifact.current?.headline ? <p className="text-sm text-ink-2">Article: {artifact.current.headline}</p> : null}
         </ConfirmDialog>
       ) : null}
-      {connected && !canCreate && !latest ? <p className="text-sm text-ink-3">Approve the current article version to enable this action.</p> : null}
+      {connected && !canCreate && !latest ? <p className="text-sm text-ink-3">Approve the current version first.</p> : null}
       {error ? <ErrorCallout error={error} /> : null}
     </section>
   );

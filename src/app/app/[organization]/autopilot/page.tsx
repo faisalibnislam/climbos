@@ -81,7 +81,7 @@ export default function AutopilotPage() {
       <PageHeader
         eyebrow="Social media"
         title="Regular posting"
-        intro="Prepare repeated posts within rules you choose. Check the approval and account requirements before enabling it."
+        intro="Plans and drafts posts within rules you set."
         actions={on ? <HeaderActions slug={slug} onEdit={() => setEditing((v) => !v)} editing={editing} canManage={data.canApprove} /> : undefined}
       />
       {data.activeRuns?.length ? (
@@ -272,7 +272,7 @@ function SetupCard({ slug, data, onDone }: { slug: string; data: Data; onDone: (
           </fieldset>
         </div>
 
-        <Field label="Always ask me about" optional hint="Comma-separated. Applies in every mode.">
+        <Field label="Always ask me about" optional hint="Comma-separated. Every mode.">
           <Textarea value={topics} onChange={(e) => setTopics(e.target.value)} rows={2} placeholder="prices, new hires, health claims" />
         </Field>
 
@@ -555,9 +555,9 @@ function SlotCard({ slug, slot, tz, canAct }: { slug: string; slot: Slot; tz: st
       </Tooltip>
       {slot.ownerNote ? (
         <details className="mt-1 rounded-md bg-surface-2 px-2 py-1.5">
-          <summary className="cursor-pointer text-xs font-medium text-ink-2">Idea notes and sources</summary>
+          <summary className="cursor-pointer text-xs font-medium text-ink-2">Notes and sources</summary>
           <p className="mt-1 whitespace-pre-wrap break-words text-xs text-ink-3">{noteWithLinks(slot.ownerNote)}</p>
-          <p className="mt-1 text-xs text-ink-3">Check the cited page and its date before treating a trend as current.</p>
+          <p className="mt-1 text-xs text-ink-3">Check the source and date before trusting a trend.</p>
         </details>
       ) : null}
     </article>

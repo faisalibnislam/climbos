@@ -294,7 +294,7 @@ export function CalendarLimitNotice({ limitsReached }: { limitsReached: { schedu
   if (sources.length === 0) return null;
   return (
     <Callout tone="warning" role="status">
-      This date range reached the 300-item limit for {sources.join(" and ")}. It may be incomplete; narrow the date range to check the remaining items.
+      Hit the 300-item limit for {sources.join(" and ")}, so this view may be incomplete. Pick a shorter range.
     </Callout>
   );
 }

@@ -18,8 +18,8 @@ export function OfferDestinationNotice({ check, prices, currency }: { check: Che
   return (
     <Callout tone="warning" title={check.status === "unavailable" ? "Couldn't read the linked page" : "Approved price not found on the linked page"}>
       {check.status === "unavailable"
-        ? `ClimbOS couldn't read ${check.url} to compare it with the approved offer (checked ${when}).`
-        : `${check.url} didn't show ${prices.map(money).join(" or ")} when checked ${when}. The offer may have changed, or the price may load in a way ClimbOS can't read. Check the page before people click through.`}
+        ? `Couldn't read ${check.url} (checked ${when}).`
+        : `${check.url} didn't show ${prices.map(money).join(" or ")} (checked ${when}). The offer may have changed, or the price may load in a way ClimbOS can't read. Check the page.`}
     </Callout>
   );
 }

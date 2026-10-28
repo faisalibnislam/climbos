@@ -13,7 +13,7 @@ export function LandingDraftPreview({ name, color, content, website, badge }: { 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold text-ink">Draft preview</h3>
-          <p className="text-xs text-ink-3">Current editor content · form submissions and analytics are off</p>
+          <p className="text-xs text-ink-3">Unsaved edits shown · form and analytics off</p>
         </div>
         <div className="flex gap-1" role="group" aria-label="Preview viewport">
           <Button size="sm" variant={viewport === "desktop" ? "secondary" : "ghost"} aria-pressed={viewport === "desktop"} onClick={() => setViewport("desktop")}>Desktop</Button>
@@ -42,7 +42,7 @@ export function LandingDraftPreview({ name, color, content, website, badge }: { 
           />
         </div>
       </div>
-      <p className="mt-2 text-xs text-ink-3">This is the ClimbOS hosted page layout, not an edit of the website reviewed by Design Critic. Check its published version and interactions after approval.</p>
+      <p className="mt-2 text-xs text-ink-3">This is your ClimbOS page, not your website. Check it again after publishing.</p>
     </section>
   );
 }

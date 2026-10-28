@@ -119,9 +119,9 @@ export function StoppedRunNotice({ slug, run, className }: { slug: string; run: 
               </Button>
             ) : null}
           </div>
-          {canEdit && run.canRetry && run.retryMicros ? <span className="text-xs text-ink-3">Try again reserves up to {fmt.upTo(run.retryMicros)}, keeps finished steps and returns what&apos;s unused.</span> : null}
+          {canEdit && run.canRetry && run.retryMicros ? <span className="text-xs text-ink-3">Reserves up to {fmt.upTo(run.retryMicros)}; finished steps kept, unused credits return.</span> : null}
           {canEdit && restartable ? <span className="text-xs text-ink-3">Starts over with your saved details{run.estimateMicros ? `, up to ${fmt.upTo(run.estimateMicros)}` : ""}. Unused credits return.</span> : null}
-          {canEdit && !run.canRetry && !restartable && run.status === "failed" ? <span className="text-xs text-ink-3">This job can&apos;t continue from where it stopped. Start it again from the page where you first ran it.</span> : null}
+          {canEdit && !run.canRetry && !restartable && run.status === "failed" ? <span className="text-xs text-ink-3">Can&apos;t resume. Start it again from its original page.</span> : null}
         </div>
       }
     >

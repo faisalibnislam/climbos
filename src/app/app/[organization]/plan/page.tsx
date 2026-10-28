@@ -58,7 +58,7 @@ function GoalCard({ goal, slug }: { goal: PlanView["goal"]; slug: string }) {
           </Link>
         }
       >
-        Your plan is built around one clear goal, like “20 more bookings a month”.
+        Your plan aims at one goal, like “20 more bookings a month”.
       </Callout>
     );
   }
@@ -77,7 +77,7 @@ function GoalCard({ goal, slug }: { goal: PlanView["goal"]; slug: string }) {
           <p className="heading-section">{goal.statement}</p>
           <p className="text-sm text-ink-2">
             Over the next {goal.horizonDays} days ·{" "}
-            {goal.monthlyAdBudget > 0 ? `Up to ${majorToDisplay(goal.monthlyAdBudget, goal.currency)} a month for ads, paid directly to the ad platforms` : "No ad budget"}
+            {goal.monthlyAdBudget > 0 ? `Up to ${majorToDisplay(goal.monthlyAdBudget, goal.currency)}/month for ads, paid to the ad platforms` : "No ad budget"}
           </p>
         </CardContent>
       </Card>
@@ -100,8 +100,8 @@ function PlanImpactSummary({ impact }: { impact: NonNullable<PlanView["planImpac
     <Card>
       <CardContent className="flex flex-col gap-3">
         <div>
-          <h2 className="heading-section">What changed in the modeled outlook</h2>
-          <p className="mt-1 text-sm text-ink-2">The saved play models stay fixed while current unit economics and portfolio limits are recalculated. Changes to your funnel, research, business facts, brand, or tools need a full plan refresh and are not represented here. These are scenarios, not actual results or a refreshed recommendation.</p>
+          <h2 className="heading-section">What changed in the forecast</h2>
+          <p className="mt-1 text-sm text-ink-2">Recalculated from your current numbers. Other changes need a full refresh. Scenarios, not results.</p>
         </div>
         {changed.length ? (
           <div className="flex flex-col gap-2">
@@ -123,7 +123,7 @@ function PlanImpactSummary({ impact }: { impact: NonNullable<PlanView["planImpac
               </div>
             ))}
           </div>
-        ) : <p className="text-sm text-ink-2">No play forecast changed in the fields this view can recalculate. Other changed inputs may affect the written recommendation after the plan is refreshed.</p>}
+        ) : <p className="text-sm text-ink-2">No forecast changed. A refresh may still change the advice.</p>}
         {impact.portfolio.after ? (
           <div className="rounded-[var(--radius-control)] bg-surface-2 p-3 text-sm">
             <p className="font-medium">Portfolio choice</p>
@@ -332,7 +332,7 @@ function PlanScreen({ slug }: { slug: string }) {
           title="This plan uses older business inputs"
           action={plan.canEdit ? <GeneratePlanButton slug={slug} mode="refresh" nextVersion={s.version + 1} estimateMicros={plan.planEstimateMicros} onStarted={onStarted} building={building} /> : null}
         >
-          These inputs changed or are due for review: {staleInputLabels.join(", ") || "important business inputs"}. The figures shown here recalculate from current numbers, while the written recommendations still reflect the saved plan. Refresh before approving or starting work.
+          Changed or due for review: {staleInputLabels.join(", ") || "important business inputs"}. Numbers are current; the advice isn&apos;t. Refresh before approving.
         </Callout>
       ) : null}
       {s && plan.planImpact && !olderView ? <PlanImpactSummary impact={plan.planImpact} /> : null}
@@ -415,13 +415,13 @@ function PlanScreen({ slug }: { slug: string }) {
             icon={<Compass />}
             headingLevel="h2"
             title="You don't have a plan yet"
-            body="Your team drafts a plan from your goal and what it learned about your business. You review it before any work starts."
+            body="Your team drafts one from your goal. You review it before any work starts."
             action={
               plan.canEdit ? (
                 plan.goal ? (
                   <GeneratePlanButton slug={slug} mode="build" estimateMicros={plan.planEstimateMicros} onStarted={onStarted} building={building} />
                 ) : (
-                  <p className="text-sm text-ink-2">Set a goal first, then build your plan.</p>
+                  <p className="text-sm text-ink-2">Set a goal first.</p>
                 )
               ) : (
                 <p className="text-sm text-ink-2">Building a plan needs {PERMISSION_WHO.edit}.</p>
@@ -440,7 +440,7 @@ function PlanScreen({ slug }: { slug: string }) {
           <ShortVersion strategy={s} />
           {plan.noCustomersYet || plan.customerData?.status === "no_data_yet" ? (
             <Callout tone="info" title={plan.noCustomersYet ? "Estimates: no customer data yet" : "Estimates: no customer numbers yet"}>
-              Money figures in this plan are labelled estimates, not your results. They update as real customer numbers come in.
+              Money figures are estimates, not your results. They update as real numbers come in.
             </Callout>
           ) : null}
           {s.expert ? <NorthStar expert={s.expert as ExpertView} slug={slug} /> : null}

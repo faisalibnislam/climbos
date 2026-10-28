@@ -89,7 +89,7 @@ export function RunOutcomeReport({ slug, runId }: { slug: string; runId: Id<"wor
         periodStart: localMidnight(periodStart),
         periodEnd: dateAfter(periodEnd),
       });
-      toast({ tone: "success", title: "Outcome report saved", description: "Saved as your report for this specialist run." });
+      toast({ tone: "success", title: "Outcome saved" });
       setValue("");
       setDenominator("");
       setComparisonValue("");
@@ -106,7 +106,7 @@ export function RunOutcomeReport({ slug, runId }: { slug: string; runId: Id<"wor
     <Card>
       <CardHeader>
         <CardTitle as="h2">What happened after this work?</CardTitle>
-        <CardDescription>Optionally record a result you observed. This is your report; it does not prove this work caused the result.</CardDescription>
+        <CardDescription>Optional. Your report doesn’t prove this work caused the result.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {reports.length ? (
@@ -119,32 +119,32 @@ export function RunOutcomeReport({ slug, runId }: { slug: string; runId: Id<"wor
               </li>
             ))}
           </ul>
-        ) : <p className="text-sm text-ink-2">No outcome has been reported for this run. It is fine to leave this blank when the result is unknown or was not measured.</p>}
+        ) : <p className="text-sm text-ink-2">Nothing reported yet. Leave blank if you didn’t measure it.</p>}
 
         {canReport ? (
           <details className="group">
             <summary className="cursor-pointer text-sm font-medium text-brand-800 underline underline-offset-4">{reports.length ? "Add or update an outcome" : "Report an outcome"}</summary>
             <div className="mt-4 flex flex-col gap-3">
-              <p className="text-sm text-ink-2">Use the same outcome name again to update your report for this run. Leave the comparison blank if you do not have one.</p>
+              <p className="text-sm text-ink-2">Reuse a name to update it. Comparison is optional.</p>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="What did you measure?" hint="For example, qualified enquiries or completed bookings."><Input value={metric} onChange={(event) => setMetric(event.target.value)} maxLength={100} /></Field>
+                <Field label="What did you measure?" hint="e.g. enquiries or bookings"><Input value={metric} onChange={(event) => setMetric(event.target.value)} maxLength={100} /></Field>
                 <Field label="Type of result"><Select value={measureType} onValueChange={(next) => setMeasureType(next as MeasureType)} options={[{ value: "count", label: "Number" }, { value: "rate", label: "Percentage" }, { value: "currency", label: "Money" }, { value: "duration", label: "Time" }]} /></Field>
-                <Field label={measureType === "rate" ? "Percentage" : "Observed value"} hint={measureType === "rate" ? "Enter 0–100. ClimbOS stores this as a percentage." : undefined}>
+                <Field label={measureType === "rate" ? "Percentage" : "Observed value"} hint={measureType === "rate" ? "0–100" : undefined}>
                   <Input type="number" min={measureType === "currency" ? undefined : 0} max={measureType === "rate" ? 100 : undefined} step={measureType === "count" ? 1 : "any"} value={value} onChange={(event) => setValue(event.target.value)} />
                 </Field>
-                {measureType === "rate" ? <Field label="Number included" hint="How many people or items were counted."><Input type="number" min={1} step={1} value={denominator} onChange={(event) => setDenominator(event.target.value)} /></Field> : <Field label="Unit" hint="For example, leads, USD, BDT, or hours."><Input value={unit} onChange={(event) => setUnit(event.target.value)} maxLength={30} /></Field>}
-                <Field label="Which group or work?" hint="Name the group this result came from."><Input value={cohort} onChange={(event) => setCohort(event.target.value)} maxLength={120} /></Field>
-                <Field label="Compared with" optional hint="For example, the previous 2 weeks."><Input value={comparisonLabel} onChange={(event) => setComparisonLabel(event.target.value)} maxLength={80} /></Field>
+                {measureType === "rate" ? <Field label="Number included" hint="How many were counted"><Input type="number" min={1} step={1} value={denominator} onChange={(event) => setDenominator(event.target.value)} /></Field> : <Field label="Unit" hint="e.g. leads, USD, hours"><Input value={unit} onChange={(event) => setUnit(event.target.value)} maxLength={30} /></Field>}
+                <Field label="Which group or work?" hint="Where this result came from"><Input value={cohort} onChange={(event) => setCohort(event.target.value)} maxLength={120} /></Field>
+                <Field label="Compared with" optional hint="e.g. previous 2 weeks"><Input value={comparisonLabel} onChange={(event) => setComparisonLabel(event.target.value)} maxLength={80} /></Field>
                 <Field label="Comparison result" optional><Input type="number" min={measureType === "currency" ? undefined : 0} max={measureType === "rate" ? 100 : undefined} step={measureType === "count" ? 1 : "any"} value={comparisonValue} onChange={(event) => setComparisonValue(event.target.value)} /></Field>
-                {measureType === "rate" && hasComparison ? <Field label="Number in comparison" hint="How many people or items were counted in the comparison."><Input type="number" min={1} step={1} value={comparisonDenominator} onChange={(event) => setComparisonDenominator(event.target.value)} /></Field> : null}
+                {measureType === "rate" && hasComparison ? <Field label="Number in comparison" hint="How many were counted"><Input type="number" min={1} step={1} value={comparisonDenominator} onChange={(event) => setComparisonDenominator(event.target.value)} /></Field> : null}
                 <Field label="Period started"><DatePicker value={periodStart} max={latestCompletedDate} onChange={setPeriodStart} /></Field>
-                <Field label="Period ended" hint="Choose a completed period."><DatePicker value={periodEnd} min={periodStart || undefined} max={latestCompletedDate} onChange={setPeriodEnd} /></Field>
+                <Field label="Period ended" hint="Must be in the past"><DatePicker value={periodEnd} min={periodStart || undefined} max={latestCompletedDate} onChange={setPeriodEnd} /></Field>
               </div>
-              {!periodValid && periodStart && periodEnd ? <p className="text-sm text-danger-800" role="alert">Choose a completed period no longer than one year, with the start before the end.</p> : null}
-              <div><Button size="sm" loading={busy} disabled={!canSave} onClick={() => void save()}>Save reported result</Button></div>
+              {!periodValid && periodStart && periodEnd ? <p className="text-sm text-danger-800" role="alert">Pick a past period under a year, start before end.</p> : null}
+              <div><Button size="sm" loading={busy} disabled={!canSave} onClick={() => void save()}>Save result</Button></div>
             </div>
           </details>
-        ) : <p className="text-sm text-ink-3">Only workspace editors can add an outcome report.</p>}
+        ) : <p className="text-sm text-ink-3">Only editors can report an outcome.</p>}
       </CardContent>
     </Card>
   );

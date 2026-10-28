@@ -65,7 +65,7 @@ function BrandForm({ slug, data }: { slug: string; data: Brand }) {
     <div className="flex flex-col gap-6">
       <SettingsHeader title="Brand kit" />
       <Callout tone={data.ownerConfirmed ? "success" : "warning"} live="none">
-        {data.ownerConfirmed ? "An owner or admin reviewed these brand settings. Editing them clears confirmation until they review and save again." : "These brand settings may include research-derived suggestions. An owner or admin must review and save them before ClimbOS treats them as approved design requirements."}
+        {data.ownerConfirmed ? "Confirmed by an owner or admin. Editing needs a fresh review and save." : "May include suggestions from research. An owner or admin must review and save to approve them."}
       </Callout>
       <Card>
         <CardContent className="flex flex-col gap-4">
@@ -84,7 +84,7 @@ function BrandForm({ slug, data }: { slug: string; data: Brand }) {
               <h3 id="social-style-heading" className="text-sm font-semibold text-ink">Social post style</h3>
               <p className="mt-1 text-sm text-ink-3">These preferences guide drafts by business type and platform. Safety, audience fit, and current platform rules still apply.</p>
             </div>
-            <Field label="Humor" hint="Cheeky humor may be unsuitable for some topics or platforms; ClimbOS will adapt or avoid it when needed.">
+            <Field label="Humor" hint="We tone it down where it doesn't fit.">
               <Select value={socialHumor} onValueChange={(value) => setSocialHumor(value as typeof socialHumor)} options={[
                 { value: "restrained", label: "Restrained" },
                 { value: "light", label: "Light wit" },
@@ -92,7 +92,7 @@ function BrandForm({ slug, data }: { slug: string; data: Brand }) {
                 { value: "cheeky", label: "Cheeky, when suitable" },
               ]} />
             </Field>
-            <Field label="Trends and meme-inspired ideas" hint="Trend-aware drafts still need a current source and an original, useful take.">
+            <Field label="Trends and meme-inspired ideas" hint="Trend drafts still need a current source and an original take.">
               <Select value={socialTrendPolicy} onValueChange={(value) => setSocialTrendPolicy(value as typeof socialTrendPolicy)} options={[
                 { value: "evergreen_first", label: "Prefer evergreen ideas" },
                 { value: "selective", label: "Use trends selectively" },
@@ -152,15 +152,15 @@ function BrandForm({ slug, data }: { slug: string; data: Brand }) {
             checked={voiceLearningEnabled}
             disabled={!data.canManageVoiceLearning}
             onCheckedChange={(checked) => setVoiceLearningEnabled(checked === true)}
-            label="Allow ClimbOS to learn from my draft edits"
-            description="When on, ClimbOS stores before-and-after versions of your edits and may use them to draft voice rules for this workspace. This does not train a shared model."
+            label="Learn from my draft edits"
+            description="Stores your before-and-after edits to draft voice rules for this workspace. Never trains a shared model."
           />
           {voiceLearningEnabled !== data.voiceLearningEnabled ? (
             <Callout tone={voiceLearningEnabled ? "info" : "warning"}>
-              {voiceLearningEnabled ? "Save to turn on learning for future edits." : "Save to turn off learning and delete stored edit samples and learned voice rules for this workspace."}
+              {voiceLearningEnabled ? "Save to turn on learning for future edits." : "Save to turn off learning and delete stored edits and learned rules."}
             </Callout>
           ) : null}
-          {!data.canManageVoiceLearning ? <p className="text-xs text-ink-3">Only a workspace owner or admin can change this consent.</p> : null}
+          {!data.canManageVoiceLearning ? <p className="text-xs text-ink-3">Owners and admins only.</p> : null}
           {data.learnedRules.length ? (
             <ul className="flex flex-col gap-1.5">
               {data.learnedRules.map((r, i) => (

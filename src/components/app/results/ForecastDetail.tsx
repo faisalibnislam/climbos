@@ -21,7 +21,7 @@ const asList = (items: string[]) => (items.length === 1 ? items[0] : items.map((
 
 /** How the saved forecast is doing against days observed since it was made (computed; partial periods labelled). */
 export function ForwardScoreSection({ score: s, format }: { score: ForwardScore; format: (n: number) => string }) {
-  if (s.state === "not_started") return <p className="text-ui text-ink-3">No forecast day has been observed yet, so this forecast can&apos;t be checked against actuals.</p>;
+  if (s.state === "not_started") return <p className="text-ui text-ink-3">No forecast days have passed yet, so it can&apos;t be checked.</p>;
   const pct = (n: number) => `${n >= 0 ? "+" : ""}${Math.round(n * 100)}%`;
   return (
     <section aria-label="How this forecast is doing" className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4">

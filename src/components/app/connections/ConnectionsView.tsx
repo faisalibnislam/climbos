@@ -110,7 +110,7 @@ function OAuthReturnNotice({ data }: { data: ConnectionsData | undefined }) {
   if (connected) {
     return (
       <Callout tone="success" live="none" title={`${name} is connected`} action={dismiss}>
-        Some features may still need setup. See its card.
+        Some features may need setup. See its card.
       </Callout>
     );
   }

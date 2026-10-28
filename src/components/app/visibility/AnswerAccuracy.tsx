@@ -22,7 +22,7 @@ export function AnswerAccuracyCard({ accuracy }: { accuracy: { byProvider: { pro
           ))}
         </ul>
       ) : null}
-      <p className="text-xs text-ink-3">Your own checks of sampled answers. Fixing the facts on your site and listings may help, but ClimbOS can&apos;t make an AI tool change its answer.</p>
+      <p className="text-xs text-ink-3">From your own checks. Fixing facts on your site may help, but ClimbOS can&apos;t make an AI tool change its answer.</p>
     </section>
   );
 }

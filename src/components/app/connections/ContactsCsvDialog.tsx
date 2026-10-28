@@ -79,7 +79,7 @@ export function ContactsCsvDialog({ slug, trigger }: { slug: string; trigger: Re
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent
         title="Upload contacts"
-        description="People you already know. Re-uploads update, not duplicate."
+        description="People you already know. Re-uploads update, never duplicate."
         className="max-w-2xl"
       >
         <form onSubmit={onSubmit} className="flex flex-col gap-4">

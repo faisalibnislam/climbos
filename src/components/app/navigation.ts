@@ -11,22 +11,22 @@ export const PRIMARY_NAV = [
 ] as const;
 
 export const APP_TOOLS: { key: string; label: string; description: string; area: AppArea; search: string }[] = [
-  { key: "content", label: "Posts, emails & ads", description: "Create drafts, check them, and see your posting calendar.", area: "work", search: "content social calendar campaigns marketing" },
-  { key: "autopilot", label: "Regular posting", description: "Set up repeated work with clear rules and approval limits.", area: "work", search: "autopilot automation schedule" },
-  { key: "pages", label: "Pages for your offers", description: "Make a ClimbOS-hosted page where people can learn more or get in touch.", area: "work", search: "landing website conversion" },
-  { key: "images", label: "Images", description: "Create and reuse pictures for your posts and offers.", area: "work", search: "creative assets graphics" },
-  { key: "reels", label: "Short videos", description: "Prepare short-video material using the available video tools.", area: "work", search: "reels scripts video" },
-  { key: "studio", label: "Design editor", description: "Edit supported graphics and layouts.", area: "work", search: "studio carousel creative" },
-  { key: "outbound", label: "Find possible customers", description: "Research relevant businesses and prepare messages with sources you can check.", area: "customers", search: "outbound prospect leads sales outreach" },
-  { key: "pipeline", label: "Customer progress", description: "Keep track of people from first contact to a recorded sale or booking.", area: "customers", search: "pipeline crm deals sales" },
-  { key: "inbox", label: "Messages", description: "Read available messages and prepare replies.", area: "customers", search: "inbox inquiries conversations" },
-  { key: "reviews", label: "Customer reviews", description: "Review imported feedback and prepare responses or eligible invitations.", area: "customers", search: "reputation feedback" },
-  { key: "chat", label: "Chat on your website", description: "Set up the visitor chat that answers questions and collects inquiries.", area: "customers", search: "widget chatbot customer support" },
-  { key: "visibility", label: "Help people find you", description: "Check website search readiness and the search data you provide.", area: "plan", search: "seo aeo geo ai visibility search console" },
-  { key: "business-model", label: "Business model check", description: "See whether the way you make money is holding up, with three alternatives to test.", area: "plan", search: "business model pivot viability outdated pricing subscription strategy" },
-  { key: "competitors", label: "Similar businesses", description: "Research other businesses and compare what they offer.", area: "plan", search: "competitors competitive research" },
-  { key: "links", label: "Links & clicks", description: "Manage links and inspect the clicks recorded for them.", area: "results", search: "tracking attribution bio" },
-  { key: "connections", label: "Connected accounts", description: "Connect the accounts needed for a task and check what each can do.", area: "tools", search: "integrations setup oauth" },
+  { key: "content", label: "Posts, emails & ads", description: "Drafts and your posting calendar.", area: "work", search: "content social calendar campaigns marketing" },
+  { key: "autopilot", label: "Regular posting", description: "Repeat work with rules and approval limits.", area: "work", search: "autopilot automation schedule" },
+  { key: "pages", label: "Pages for your offers", description: "Hosted pages where people get in touch.", area: "work", search: "landing website conversion" },
+  { key: "images", label: "Images", description: "Pictures for posts and offers.", area: "work", search: "creative assets graphics" },
+  { key: "reels", label: "Short videos", description: "Prepare short videos.", area: "work", search: "reels scripts video" },
+  { key: "studio", label: "Design editor", description: "Edit graphics and layouts.", area: "work", search: "studio carousel creative" },
+  { key: "outbound", label: "Find possible customers", description: "Find businesses and draft messages, with sources.", area: "customers", search: "outbound prospect leads sales outreach" },
+  { key: "pipeline", label: "Customer progress", description: "Track people from first contact to sale.", area: "customers", search: "pipeline crm deals sales" },
+  { key: "inbox", label: "Messages", description: "Read messages and draft replies.", area: "customers", search: "inbox inquiries conversations" },
+  { key: "reviews", label: "Customer reviews", description: "Read feedback, draft replies, ask for reviews.", area: "customers", search: "reputation feedback" },
+  { key: "chat", label: "Chat on your website", description: "Answer visitor questions and collect inquiries.", area: "customers", search: "widget chatbot customer support" },
+  { key: "visibility", label: "Help people find you", description: "Check how search tools see your site.", area: "plan", search: "seo aeo geo ai visibility search console" },
+  { key: "business-model", label: "Business model check", description: "Is the way you make money still working?", area: "plan", search: "business model pivot viability outdated pricing subscription strategy" },
+  { key: "competitors", label: "Similar businesses", description: "Compare what others offer.", area: "plan", search: "competitors competitive research" },
+  { key: "links", label: "Links & clicks", description: "Your links and their clicks.", area: "results", search: "tracking attribution bio" },
+  { key: "connections", label: "Connected accounts", description: "Connect accounts and see what each can do.", area: "tools", search: "integrations setup oauth" },
 ];
 
 export function appHref(slug: string, key: string) {

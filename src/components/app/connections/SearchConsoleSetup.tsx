@@ -56,7 +56,7 @@ export function SearchConsoleSetup({ slug, connected, canManage, isDemo, selecte
       if (!result.ok) throw new Error(result.message);
       setSites(result.sites);
       if (!siteUrl && result.sites.length === 1) setSiteUrl(result.sites[0]!.siteUrl);
-      if (result.sites.length === 0) setProblem("No Search Console properties are available to this Google account.");
+      if (result.sites.length === 0) setProblem("This Google account has no Search Console properties.");
     } catch (error) {
       setProblem(errorMessage(error));
     } finally {
@@ -71,7 +71,7 @@ export function SearchConsoleSetup({ slug, connected, canManage, isDemo, selecte
     try {
       await selectSite({ slug, siteUrl });
       setSites(null);
-      toast({ tone: "success", title: "Search Console property selected", description: "The first 90-day snapshot is syncing." });
+      toast({ tone: "success", title: "Search Console property selected", description: "Syncing the last 90 days." });
     } catch (error) {
       setProblem(errorMessage(error));
     } finally {
@@ -103,14 +103,14 @@ export function SearchConsoleSetup({ slug, connected, canManage, isDemo, selecte
           <h4 id="search-console-data-heading" className="text-ui font-semibold text-ink">Search performance</h4>
       {observations ? <Badge tone="blue">Read only</Badge> : null}
         </div>
-        <p className="mt-1 text-sm text-ink-3">Select the exact property ClimbOS should read. It requests search queries and pages only; it cannot edit your Google Search Console account.</p>
+        <p className="mt-1 text-sm text-ink-3">Pick the property to read. Read-only: queries and pages, no edits.</p>
       </div>
 
-      {isDemo ? <Callout tone="info">Demo data is synthetic. Connect Search Console in a real workspace to load a live property.</Callout> : null}
+      {isDemo ? <Callout tone="info">Demo data. Connect in a real workspace for live data.</Callout> : null}
       {!isDemo && canManage ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex-1">
-            <Field label="Google Search Console property" hint={selectedProperty ? `Current property: ${selectedProperty}` : "Choose from properties returned by your connected Google account."}>
+            <Field label="Search Console property" hint={selectedProperty ? `Current: ${selectedProperty}` : "From your connected Google account."}>
               <Select
                 value={siteUrl}
                 disabled={!sites || busy !== null}
@@ -126,22 +126,22 @@ export function SearchConsoleSetup({ slug, connected, canManage, isDemo, selecte
           </div>
         </div>
       ) : null}
-      {!canManage && !isDemo ? <p className="text-sm text-ink-3">Only workspace owners and admins can select a property.</p> : null}
+      {!canManage && !isDemo ? <p className="text-sm text-ink-3">Only owners and admins can choose this.</p> : null}
       {problem ? <Callout tone="warning" title="Search Console setup">{problem}</Callout> : null}
 
       {selectedProperty ? (
         <div className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-3" aria-labelledby="google-ai-search-report-heading">
           <div>
             <h5 id="google-ai-search-report-heading" className="text-sm font-semibold text-ink">Google AI search visibility</h5>
-            <p className="mt-1 text-xs text-ink-3">Google Search Console has a dedicated report for impressions in AI Overviews and AI Mode, with page, country, device, and date views.</p>
+            <p className="mt-1 text-xs text-ink-3">Google&apos;s own report on AI Overviews and AI Mode impressions.</p>
           </div>
           <a className="w-fit text-sm font-medium text-brand-800 underline-offset-2 hover:underline" href="https://search.google.com/search-console/performance/search-analytics/ai" target="_blank" rel="noopener noreferrer">Open Google’s AI performance report ↗</a>
-          <p className="text-xs text-ink-3">ClimbOS does not import this dedicated report yet. Its Search Console snapshots show standard query/page data and do not separate AI feature impressions. If Google does not show a report, that may reflect its reporting threshold; it does not prove your site has zero AI visibility.</p>
+          <p className="text-xs text-ink-3">Not imported yet; our snapshots don&apos;t split out AI impressions. No report from Google doesn&apos;t mean zero AI visibility.</p>
         </div>
       ) : null}
 
       {currentHistory.length > 1 ? (
-        <Field label="Saved snapshots" hint="Up to three completed rolling 90-day snapshots are kept. Windows overlap, so changes are descriptive rather than causal.">
+        <Field label="Saved snapshots" hint="Last three 90-day snapshots. They overlap, so changes don't show cause.">
           <Select
             value={activeSnapshotId ?? currentHistory[0]!.id}
             onValueChange={(value) => setSnapshotId(value as Id<"searchConsoleSnapshots">)}
@@ -153,11 +153,11 @@ export function SearchConsoleSetup({ slug, connected, canManage, isDemo, selecte
         <div className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-3" aria-labelledby="url-inspection-heading">
           <div>
             <h5 id="url-inspection-heading" className="text-sm font-semibold text-ink">Google index status</h5>
-            <p className="mt-1 text-xs text-ink-3">Check one page against Google’s last indexed snapshot. This does not test the live page or guarantee that Google will index it.</p>
+            <p className="mt-1 text-xs text-ink-3">Checks Google’s last indexed copy of one page. Doesn’t test the live page or guarantee indexing.</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
             <div className="min-w-0 flex-1">
-              <Field label="Page URL" hint={`Must be within ${selectedProperty}. One page is checked when you click the button.`}>
+              <Field label="Page URL" hint={`Must be within ${selectedProperty}.`}>
                 <Input type="url" inputMode="url" autoComplete="url" value={pageToInspect} onChange={(event) => setPageToInspect(event.target.value)} placeholder="https://example.com/important-page" maxLength={2048} />
               </Field>
             </div>
@@ -179,7 +179,7 @@ export function SearchConsoleSetup({ slug, connected, canManage, isDemo, selecte
                 {inspection.userCanonical ? <div><dt className="text-ink-3">Declared canonical</dt><dd className="break-all">{inspection.userCanonical}</dd></div> : null}
               </dl>
               {inspection.inspectionResultLink ? <a className="w-fit text-xs text-brand-800 underline-offset-2 hover:underline" href={inspection.inspectionResultLink} target="_blank" rel="noopener noreferrer">Open this result in Search Console</a> : null}
-              <p className="text-xs text-ink-3">Google reports the version in its index. An indexed result is only an eligibility signal; it does not predict ranking, traffic, or AI citations. Use Search Console URL Inspection to verify the current live page before changing it.</p>
+              <p className="text-xs text-ink-3">Indexed means eligible, not ranked. It doesn&apos;t predict traffic or AI citations. Check the live page in Search Console before changing it.</p>
             </div>
           ) : null}
         </div>
@@ -191,12 +191,12 @@ export function SearchConsoleSetup({ slug, connected, canManage, isDemo, selecte
             {" · "}{observations.rowCount.toLocaleString()} query/page rows
             {" · "}synced {relativeTime(observations.fetchedAt)}
           </p>
-          {observations.truncated ? <Callout tone="warning">Google returned a capped result set. These top rows do not represent every query or page.</Callout> : null}
+          {observations.truncated ? <Callout tone="warning">Google capped the results. Not every query or page is shown.</Callout> : null}
           {queryOverlaps.length ? (
             <div className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-3">
               <div>
                 <h5 className="text-sm font-semibold text-ink">Queries shown for multiple pages</h5>
-                <p className="mt-1 text-xs text-ink-3">These exact query observations include impressions for more than one page URL in this property and date window. That can be normal and does not prove the pages compete or hurt rankings; compare each page&apos;s intent and purpose before consolidating anything.</p>
+                <p className="mt-1 text-xs text-ink-3">Often normal, and doesn&apos;t prove the pages compete. Compare each page&apos;s purpose before merging any.</p>
               </div>
               <ul className="flex flex-col gap-3">
                 {queryOverlaps.map((overlap) => (
@@ -235,10 +235,10 @@ export function SearchConsoleSetup({ slug, connected, canManage, isDemo, selecte
                 </tbody>
               </table>
             </div>
-          ) : <p className="text-sm text-ink-3">No query/page rows were returned for this finalized window yet.</p>}
-          <p className="text-xs text-ink-3">Google may omit low-volume queries. These are property and date-window observations, not total market demand or proof that search caused a business result.</p>
+          ) : <p className="text-sm text-ink-3">No rows for this window yet.</p>}
+          <p className="text-xs text-ink-3">Google may hide low-volume queries. This isn&apos;t total demand or proof search drove results.</p>
         </div>
-      ) : selectedProperty ? <p className="text-sm text-ink-3">The first snapshot is syncing or no finalized snapshot has completed yet.</p> : <p className="text-sm text-ink-3">Choose a property to start a bounded 90-day read-only sync.</p>}
+      ) : selectedProperty ? <p className="text-sm text-ink-3">First snapshot is still syncing.</p> : <p className="text-sm text-ink-3">Choose a property to sync the last 90 days, read-only.</p>}
     </section>
   );
 }

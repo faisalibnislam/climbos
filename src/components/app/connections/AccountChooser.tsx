@@ -112,8 +112,8 @@ export function AccountChooser({
         <h4 className="text-ui font-semibold text-ink">Choose the {choice.noun} for this business</h4>
         <p className="mt-1 text-sm text-ink-3">
           {choice.selectable
-            ? `The list comes from the account you signed in with.${item.group === "publish" ? " Changing it means approved posts must be approved again for the new destination." : ""}`
-            : `${item.name} signs in as one account. To use another one, sign in again with it.`}
+            ? `From the account you signed in with.${item.group === "publish" ? " Changing it means re-approving approved posts." : ""}`
+            : `${item.name} uses one account. Sign in again to switch.`}
         </p>
       </div>
 
@@ -141,7 +141,7 @@ export function AccountChooser({
         />
       ) : null}
       {data?.ok && data.options.length === 0 ? <Callout tone="warning">{data.message}</Callout> : null}
-      {data?.truncated ? <p className="text-xs text-ink-3">Showing the first {data.options.length}. If yours is missing, ask us to raise the limit.</p> : null}
+      {data?.truncated ? <p className="text-xs text-ink-3">Showing the first {data.options.length}. Missing yours? Ask us to raise the limit.</p> : null}
       {problem ? <Callout tone="danger" live="status">{problem}</Callout> : null}
 
       <div className="flex flex-wrap gap-2">

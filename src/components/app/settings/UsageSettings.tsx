@@ -45,7 +45,7 @@ export function UsageSettings({ slug }: { slug: string }) {
         intro="Last 31 days"
       />
       <Callout tone="info">
-        {usd ? "What AI and data providers billed for this work. You're still charged in credits. " : "Our provider costs, not extra charges. "}Credits left: <Link href={`/app/${slug}/settings/billing`}>Billing</Link>.
+        {usd ? "What providers billed us. You pay in credits. " : "Our provider costs, not extra charges. "}Credits left: <Link href={`/app/${slug}/settings/billing`}>Billing</Link>.
       </Callout>
       {data === undefined ? (
         <LoadingBlock label="Loading usage…" />

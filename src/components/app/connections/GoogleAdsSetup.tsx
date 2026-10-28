@@ -31,7 +31,7 @@ export function GoogleAdsSetup({ slug, connected, canManage, isDemo, selectedAcc
       setAccounts({ ids: result.customerIds, truncated: result.truncated });
       if (selectedAccount && result.customerIds.includes(selectedAccount)) setCustomerId(selectedAccount);
       else if (!customerId && result.customerIds.length === 1) setCustomerId(result.customerIds[0]!);
-      if (result.customerIds.length === 0) setProblem("No directly accessible Google Ads accounts were returned for this sign-in.");
+      if (result.customerIds.length === 0) setProblem("This sign-in has no Google Ads accounts with direct access.");
     } catch (error) {
       setProblem(errorMessage(error));
     } finally {
@@ -46,7 +46,7 @@ export function GoogleAdsSetup({ slug, connected, canManage, isDemo, selectedAcc
     try {
       const result = await selectAccount({ slug, customerId });
       setAccounts(null);
-      toast({ tone: "success", title: "Google Ads account selected", description: `${result.accountLabel} is bound to this workspace.` });
+      toast({ tone: "success", title: "Google Ads account selected", description: `${result.accountLabel} is linked to this workspace.` });
     } catch (error) {
       setProblem(errorMessage(error));
     } finally {
@@ -60,18 +60,18 @@ export function GoogleAdsSetup({ slug, connected, canManage, isDemo, selectedAcc
         <h4 id="google-ads-account-heading" className="text-ui font-semibold text-ink">Google Ads account</h4>
         <Badge tone="blue">Read and campaign access</Badge>
       </div>
-      <p className="text-sm text-ink-3">Select the directly accessible advertiser account for this workspace. ClimbOS validates the account against the connected Google sign-in. Manager accounts and their client-account selection are not supported in this flow.</p>
-      {selectedAccount ? <p className="text-sm text-ink-2">Selected advertiser ID: <strong className="font-semibold text-ink">{selectedAccount}</strong></p> : null}
-      {isDemo ? <Callout tone="info">Demo account settings are synthetic. No Google Ads data is read.</Callout> : null}
+      <p className="text-sm text-ink-3">Pick the ad account for this workspace. Manager accounts aren&apos;t supported.</p>
+      {selectedAccount ? <p className="text-sm text-ink-2">Selected account ID: <strong className="font-semibold text-ink">{selectedAccount}</strong></p> : null}
+      {isDemo ? <Callout tone="info">Demo only. No Google Ads data is read.</Callout> : null}
       {!isDemo && canManage ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="min-w-0 flex-1">
-            <Field label="Advertiser customer ID" hint="IDs are returned by Google for this signed-in account. Selecting one binds it to this workspace.">
+            <Field label="Ad account ID" hint="From your Google sign-in.">
               <Select
                 value={customerId}
                 disabled={!accounts || busy !== null}
                 onValueChange={setCustomerId}
-                placeholder={accounts ? "Choose an advertiser account" : "Load accessible accounts first"}
+                placeholder={accounts ? "Choose an account" : "Load accounts first"}
                 options={(accounts?.ids ?? []).map((id) => ({ value: id, label: id }))}
               />
             </Field>
@@ -82,8 +82,8 @@ export function GoogleAdsSetup({ slug, connected, canManage, isDemo, selectedAcc
           </div>
         </div>
       ) : null}
-      {accounts?.truncated ? <p className="text-xs text-ink-3">Showing the first 100 directly accessible account IDs. If the intended account is missing, ask the account owner to grant direct access or reduce the number of linked accounts.</p> : null}
-      {!canManage && !isDemo ? <p className="text-sm text-ink-3">Only workspace owners and admins can select the advertiser account.</p> : null}
+      {accounts?.truncated ? <p className="text-xs text-ink-3">Showing the first 100. Missing yours? Ask its owner for direct access.</p> : null}
+      {!canManage && !isDemo ? <p className="text-sm text-ink-3">Only owners and admins can choose this.</p> : null}
       {problem ? <Callout tone="warning" title="Google Ads setup">{problem}</Callout> : null}
     </section>
   );

@@ -255,8 +255,8 @@ function BusinessStep({
   const modelChoice = useModelChoice();
   const researchEstimate = aiView?.estimates?.onboarding_research?.[aiMode];
   const researchCost = researchEstimate === undefined
-    ? "Research uses credits; the estimate will appear when it is ready."
-    : `Research uses up to ${microsToCreditsLabel(researchEstimate)}. We charge only for the work completed; unused reserved credits are returned.`;
+    ? "Research uses credits. Estimate loading."
+    : `Research uses up to ${microsToCreditsLabel(researchEstimate)}. Unused credits are returned.`;
 
   useEffect(() => {
     // Wait for an opened account draft; an unavailable one falls back to this tab's draft.
@@ -379,8 +379,8 @@ function BusinessStep({
   return (
     <Shell step="business" draftId={savedDraftId}>
       <h1 className="heading-page">{additional ? "Tell us about your next business" : "Tell us about your business"}</h1>
-      <p className="mt-2 max-w-2xl text-sm text-ink-3">Describe what you do and what you need help with. A website is helpful, but you do not need one. We’ll guide you from there.</p>
-      {additional ? <p className="mt-2 text-sm text-ink-3">This creates a separate space for this business. Your other businesses keep their own details and accounts.</p> : null}
+      <p className="mt-2 max-w-2xl text-sm text-ink-3">What you do and what you need help with. No website needed.</p>
+      {additional ? <p className="mt-2 text-sm text-ink-3">Your other businesses keep their own details and accounts.</p> : null}
 
       {error && <Callout tone="danger" className="mt-6">{error}</Callout>}
 
@@ -394,10 +394,10 @@ function BusinessStep({
             placeholder="My business is called Northstar Bakery. I sell bread and cakes, and I want more local orders."
             submitLabel="Create business & continue"
             busy={busy}
-            helper={`Creates your business space and starts research. ${researchCost} You check the details before choosing your next steps.`}
+            helper={`${researchCost} You check every detail next.`}
             suggestions={["I want help finding customers.", "I want to sell more.", "I am not sure where to start.", "I do not have a website yet."]}
           />
-          <p className="text-xs text-ink-3">Your draft is saved to your account as you type. Find it under your businesses in the switcher to finish it later.</p>
+          <p className="text-xs text-ink-3">Saved as you type. Finish later from the business switcher.</p>
             {chat.trim().length > 8 && (
               <div className="rounded-xl border border-line bg-surface p-4 text-ui" aria-live="polite">
                 <p className="heading-card flex flex-wrap items-center gap-2">
@@ -408,10 +408,10 @@ function BusinessStep({
                   <Understood icon={Globe} label="Website" value={parsed.website} />
                   <Understood icon={Target} label="Goal" value={parsed.goalStatement} wide />
                   <Understood icon={Coins} label="Ad budget" value={parsed.monthlyAdBudget !== undefined ? `$${parsed.monthlyAdBudget.toLocaleString()} / month` : undefined} />
-                  <Understood icon={Clock} label="When would you like to review progress?" value={parsed.horizonDays ? `${parsed.horizonDays} days` : undefined} />
-                  <Understood icon={CalendarDays} label="Which day should we review your progress?" value={parsed.reviewDay} />
+                  <Understood icon={Clock} label="Time frame" value={parsed.horizonDays ? `${parsed.horizonDays} days` : undefined} />
+                  <Understood icon={CalendarDays} label="Review day" value={parsed.reviewDay} />
                 </dl>
-                <Field label="Name to use for this business" hint="Check this name. You can change it before continuing." className="mt-3">
+                <Field label="Business name" hint="Fix it if it’s wrong." className="mt-3">
                   <Input value={nameOverride ?? parsed.businessName ?? name} onChange={(event) => setNameOverride(event.target.value)} placeholder="What is your business called?" autoComplete="organization" />
                 </Field>
               </div>
@@ -447,7 +447,7 @@ function BusinessStep({
       <fieldset className="mt-6 flex flex-col gap-2">
         <legend className="mb-2 text-ui font-medium text-ink">
           Where is your business today?{" "}
-          {detectedStage && !stageChoice ? <span className="text-xs font-normal text-ink-3">(from what you wrote; change it if it&apos;s wrong)</span> : <span className="text-xs font-normal text-ink-3">(optional)</span>}
+          {detectedStage && !stageChoice ? <span className="text-xs font-normal text-ink-3">(guessed from what you wrote)</span> : <span className="text-xs font-normal text-ink-3">(optional)</span>}
         </legend>
         <ChoiceChips
           aria-label="Where is your business today?"
@@ -479,7 +479,7 @@ function BusinessStep({
       {additional ? <Link href="/app" className="ml-3 text-sm text-ink-3 underline">Back to my businesses</Link> : null}
       {/* Expert unlocks when the owner's account has a paid (or comped) package; new workspaces join that account. */}
       <details className="mt-6 rounded-[var(--radius-card)] border border-line bg-surface p-4">
-        <summary className="cursor-pointer text-sm font-medium text-ink">More options: how much detail to use</summary>
+        <summary className="cursor-pointer text-sm font-medium text-ink">More options</summary>
         <div className="mt-4"><AiModeChoice unlocked={expertUnlocked} costs={aiView?.estimates?.onboarding_research} value={aiMode} onChange={setAiMode} label="Analysis detail" hideLabel /></div>
         <div className="mt-4"><ModelPicker kind="onboarding_research" aiMode={aiMode} value={modelChoice.model} onChange={modelChoice.setModel} /></div>
       </details>
@@ -704,7 +704,7 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
       {state.facts.length === 0 || state.facts.every((f) => f.provenance === "owner_supplied") ? (
         <>
           <h1 className="heading-page">{state.facts.length === 0 ? "Tell us the key facts" : "Your key facts"}</h1>
-          <p className="mt-1 text-sm text-ink-3">Tell us what you sell, who it is for, and anything customers should know.</p>
+          <p className="mt-1 text-sm text-ink-3">What you sell, who it’s for, and what customers should know.</p>
         </>
       ) : (
         <>
@@ -864,7 +864,7 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
         >
           Confirm details & continue
         </Button>
-        <span className="text-xs text-ink-3">Continuing confirms all remaining details above. Correct or remove anything that is wrong first.</span>
+        <span className="text-xs text-ink-3">This confirms everything above. Fix anything wrong first.</span>
       </div>
     </div>
   );
@@ -909,7 +909,7 @@ function GoalStep({ slug, state }: { slug: string; state: State }) {
   return (
     <div>
       <h1 className="heading-page">What would you like help with first?</h1>
-      <p className="mt-2 text-sm text-ink-3">Choose every goal that fits. They count equally. You can describe them in your own words and change them later.</p>
+      <p className="mt-2 text-sm text-ink-3">Pick all that fit. Change them any time.</p>
       {error && <Callout tone="danger" className="mt-4">{error}</Callout>}
       <CheckCards
         className="mt-6"
@@ -945,13 +945,13 @@ function GoalStep({ slug, state }: { slug: string; state: State }) {
               })}
             </div>
           </div>
-          <Field label="When would you like to review progress?">
+          <Field label="Time frame">
             <Select value={horizon} onValueChange={setHorizon} options={HORIZON_OPTIONS} />
           </Field>
-          <Field label={`Most you want to spend on ads each month (${state.business?.currency ?? "USD"})`} hint="Advertising is optional. Enter 0 for no paid ads. This money goes to Google or Meta, separate from ClimbOS.">
+          <Field label={`Monthly ad budget (${state.business?.currency ?? "USD"})`} hint="Optional. 0 = no ads. Paid to Google or Meta, not us.">
             <Input inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value.replace(/[^\d.]/g, ""))} />
           </Field>
-          <Field label="Which day should we review your progress?">
+          <Field label="Review day">
             <Select value={reviewDay} onValueChange={setReviewDay} options={REVIEW_DAY_OPTIONS} />
           </Field>
         </CardContent>
@@ -989,7 +989,7 @@ function PreferencesStep({ slug, current }: { slug: string; current: string }) {
   return (
     <div>
       <h1 className="heading-page">Who should publish or send the work?</h1>
-      <p className="mt-2 text-sm text-ink-3">ClimbOS prepares the work. Choose how you want to check it before it goes ahead.</p>
+      <p className="mt-2 text-sm text-ink-3">We prepare it. You choose how to check it.</p>
       <RadioCards
         className="mt-6"
         columns={1}
@@ -998,8 +998,8 @@ function PreferencesStep({ slug, current }: { slug: string; current: string }) {
         onValueChange={setMode}
         options={[
           { value: "review", title: "Review first (recommended)", description: "You approve each post, email and ad.", icon: "✅" },
-          { value: "copilot", title: "Draft only", description: "We prepare the work. You publish and send it yourself.", icon: "🧭" },
-          { value: "bounded_autopilot", title: "Approved recurring work", description: "Repeat eligible work only within rules you approve. Needs a paid plan and an owner or admin.", icon: "🛟" },
+          { value: "copilot", title: "Draft only", description: "We draft. You publish and send.", icon: "🧭" },
+          { value: "bounded_autopilot", title: "Approved recurring work", description: "Repeats work within rules you approve. Paid plan; owner or admin only.", icon: "🛟" },
         ]}
       />
       <Callout tone="info" className="mt-6" title="Always needs you">

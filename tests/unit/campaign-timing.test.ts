@@ -40,8 +40,8 @@ function context(overrides: Partial<Parameters<typeof lintCampaignTiming>[1]> = 
 describe("campaign timing recommendations", () => {
   it("presents timing decisions and date windows in plain owner-facing language", () => {
     expect(timingDecisionLabel("proceed")).toBe("Recommended window");
-    expect(timingDecisionLabel("not_enough_evidence")).toBe("Timing is not clear yet");
-    expect(timingCapacityLabel("unknown")).toBe("Ability to take on the work is not confirmed");
+    expect(timingDecisionLabel("not_enough_evidence")).toBe("Timing unclear");
+    expect(timingCapacityLabel("unknown")).toBe("Capacity not confirmed");
     expect(timingDurationLabel(1, "Preparation")).toBe("Preparation: 1 day");
     expect(timingDurationLabel(null, "Delivery")).toBe("Delivery: not confirmed");
     expect(formatTimingWindow({ startDate: "2026-11-20", endDate: "2026-11-27" })).toBe("Nov 20–27, 2026");
@@ -55,9 +55,9 @@ describe("campaign timing recommendations", () => {
     expect(markup).toContain("Recommended window");
     expect(markup).toContain("Nov 20–27, 2026");
     expect(markup).toContain("Timing to consider:</span> Thanksgiving shopping period");
-    expect(markup).toContain("Why it may matter to this business");
+    expect(markup).toContain("Why it matters:");
     expect(markup).toContain("Still to confirm");
-    expect(markup).toContain("This is a suggestion only. Nothing is scheduled.");
+    expect(markup).toContain("Suggestion only. Nothing is scheduled.");
     expect(markup).toContain("<details");
     expect(markup).toContain("Timing details and sources");
     expect(markup).toContain("Published 2026-01-10");

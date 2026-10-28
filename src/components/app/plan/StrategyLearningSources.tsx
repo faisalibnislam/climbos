@@ -34,7 +34,7 @@ export function StrategyLearningList({ data, onFeedback, onPlanNote }: { data: L
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-xs text-ink-3">These are your preferences, not proof of results. Items older than {data.maxAgeDays} days stop guiding plans automatically.</p>
+      <p className="mt-2 text-xs text-ink-3">Your preferences, not proof of results. Items older than {data.maxAgeDays} days stop guiding plans automatically.</p>
     </details>
   );
 }

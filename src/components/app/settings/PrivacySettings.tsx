@@ -56,8 +56,8 @@ function LearningPoolingSection({ slug }: { slug: string }) {
   return (
     <section aria-labelledby="pooling-heading" className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
       <h2 id="pooling-heading" className="heading-section">Learning from other businesses</h2>
-      <p className="text-ui text-ink-2">Your own results always shape your plans. If you opt in, your play results are also counted, anonymously, in shared rates for similar businesses. A shared rate appears only when enough businesses contribute that no single one can be identified.</p>
-      <p className="text-sm text-ink-3">{state.optedIn ? `Opted in${state.at ? ` on ${new Date(state.at).toLocaleDateString()}` : ""}.` : "Not shared. Your results stay in your workspace only."}</p>
+      <p className="text-ui text-ink-2">Opt in to add your results, anonymously, to shared rates for similar businesses. Rates only show once no single business can be identified.</p>
+      <p className="text-sm text-ink-3">{state.optedIn ? `Opted in${state.at ? ` on ${new Date(state.at).toLocaleDateString()}` : ""}.` : "Not shared. Your results stay in your workspace."}</p>
       {state.canChange ? <Button size="sm" variant="secondary" className="self-start" loading={busy} onClick={async () => {
         setBusy(true);
         try {
@@ -248,7 +248,7 @@ export function DeleteWorkspaceSection({ slug }: { slug: string }) {
           { term: "After 30 days", detail: "Deleted forever: content, contacts and keys", tone: "gone" },
         ]}
       />
-      <p className="text-xs text-ink-3">Billing doesn&apos;t change until it&apos;s deleted forever. Billing records and logs are kept for accounting.</p>
+      <p className="text-xs text-ink-3">Billing continues until it&apos;s deleted forever. Billing records and logs are kept.</p>
       {me === undefined ? (
         <LoadingBlock label="Loading workspace…" lines={1} />
       ) : !org ? null : !canDelete ? (
@@ -277,7 +277,7 @@ export function DeleteWorkspaceSection({ slug }: { slug: string }) {
           onOpenChange={setConfirm}
           tone="danger"
           title={`Remove ${org.name}?`}
-          description="It disappears for everyone and all scheduled posts, emails and AI work stop now. You can restore it from Settings → Workspaces for 30 days. After that it is deleted forever."
+          description="Hidden for everyone; scheduled posts, emails and AI work stop now. Restore it from Settings → Workspaces within 30 days, then it's deleted forever."
           confirmLabel={`Remove ${org.name}`}
           onConfirm={async () => {
             try {
@@ -301,7 +301,7 @@ export function RemovedWorkspacesSection() {
   return (
     <section aria-labelledby="removed-heading" className="flex flex-col gap-3">
       <h2 id="removed-heading" className="heading-section">Removed businesses</h2>
-      <p className="text-sm text-ink-3">Paused and hidden. Restore one to put it back as it was, or delete it forever now.</p>
+      <p className="text-sm text-ink-3">Restore one as it was, or delete it forever now.</p>
       <ul className="flex flex-col divide-y divide-line rounded-xl border border-line bg-surface">
         {removed.map((w) => <RemovedWorkspaceRow key={w.id} w={w} />)}
       </ul>
@@ -370,7 +370,7 @@ function RemovedWorkspaceRow({ w }: { w: { id: Id<"organizations">; name: string
         onOpenChange={setConfirmForever}
         tone="danger"
         title={`Delete ${w.name} forever?`}
-        description="Content, contacts and keys are erased and can't be restored. Billing records and logs are kept for accounting. If this is your last business, your package ends at the end of this billing period."
+        description="Content, contacts and keys are erased for good. Billing records and logs are kept. If it's your last business, your package ends this billing period."
         confirmLabel="Delete forever"
         onConfirm={async () => {
           setBusy(true);

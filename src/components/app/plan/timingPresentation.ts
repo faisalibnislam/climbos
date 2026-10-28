@@ -4,20 +4,20 @@ import type { CampaignTiming } from "../../../../shared/agents/campaignTiming";
 export function timingDecisionLabel(decision: CampaignTiming["decision"]): string {
   switch (decision) {
     case "proceed": return "Recommended window";
-    case "prepare_first": return "Get ready before choosing dates";
-    case "defer": return "Wait until a better time";
-    case "skip": return "Use a non-seasonal plan";
-    case "not_enough_evidence": return "Timing is not clear yet";
-    case "not_relevant": return "Dates do not affect this plan";
+    case "prepare_first": return "Prepare before picking dates";
+    case "defer": return "Wait for a better time";
+    case "skip": return "Skip seasonal timing";
+    case "not_enough_evidence": return "Timing unclear";
+    case "not_relevant": return "Dates don't matter here";
   }
 }
 
 export function timingCapacityLabel(status: CampaignTiming["capacity"]["status"]): string {
   switch (status) {
-    case "available": return "Enough room to take on the work";
-    case "constrained": return "Available time or stock is limited";
-    case "unknown": return "Ability to take on the work is not confirmed";
-    case "not_applicable": return "No added service or delivery is needed";
+    case "available": return "Room for the work";
+    case "constrained": return "Time or stock is limited";
+    case "unknown": return "Capacity not confirmed";
+    case "not_applicable": return "No extra work needed";
   }
 }
 

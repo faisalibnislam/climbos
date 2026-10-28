@@ -130,7 +130,7 @@ export function FactsList({ facts }: { facts: ArtifactView["facts"] }) {
                   ))}
                 </ul>
               ) : f.provenance === "researched" ? (
-                <span className="text-xs text-amber-800">No source record is attached to this fact.</span>
+                <span className="text-xs text-amber-800">No source attached.</span>
               ) : null}
             </li>
           );

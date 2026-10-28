@@ -23,7 +23,7 @@ export function WordPressConnectDialog({ slug, trigger }: { slug: string; trigge
     try {
       const result = await connect({ slug, siteUrl, username, applicationPassword });
       if (!result.ok) { setError(result.message); return; }
-      toast({ tone: "success", title: "WordPress access verified", description: "The Application Password is stored encrypted." });
+      toast({ tone: "success", title: "WordPress access verified", description: "Application Password stored encrypted." });
       setSiteUrl(""); setUsername(""); setApplicationPassword(""); setOpen(false);
     } catch (err) {
       setError(errorMessage(err));
@@ -43,19 +43,19 @@ export function WordPressConnectDialog({ slug, trigger }: { slug: string; trigge
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <Scannable text={[
             "In WordPress, open Users → Profile → Application Passwords.",
-            "Create a new password named ClimbOS and copy it once.",
-            "Paste the HTTPS site address, your WordPress username, and that Application Password below.",
+            "Create one named ClimbOS and copy it.",
+            "Paste your site address, username and that password below.",
           ].map((step, index) => `${index + 1}. ${step}`).join("\n")} shape="steps" max={3} tone="muted" />
-          <Field label="WordPress site" hint="Public HTTPS address, such as https://example.com" error={error ?? undefined}>
+          <Field label="WordPress site" hint="Public HTTPS address" error={error ?? undefined}>
             <Input type="url" autoComplete="url" placeholder="https://example.com" value={siteUrl} onChange={(e) => setSiteUrl(e.target.value)} required />
           </Field>
           <Field label="WordPress username">
             <Input autoComplete="username" autoCapitalize="off" spellCheck={false} value={username} onChange={(e) => setUsername(e.target.value)} required />
           </Field>
-          <Field label="Application Password" hint="Do not enter your regular WordPress password.">
+          <Field label="Application Password" hint="Not your regular WordPress password.">
             <Input type="password" autoComplete="new-password" autoCapitalize="off" spellCheck={false} value={applicationPassword} onChange={(e) => setApplicationPassword(e.target.value)} required />
           </Field>
-          <Callout tone="info">ClimbOS checks access over HTTPS and confirms this user can edit posts. The credential is encrypted, never shown again, and can be revoked in WordPress. ClimbOS can create a private draft from an approved blog article after you confirm. It never publishes that article to your site.</Callout>
+          <Callout tone="info">Stored encrypted, never shown again; revoke it any time in WordPress. We only create private drafts from approved articles, after you confirm. We never publish to your site.</Callout>
           <p aria-live="assertive" className="sr-only">{error ?? ""}</p>
           <DialogFooter className="mt-2">
             <DialogClose asChild><Button variant="secondary" disabled={busy}>Cancel</Button></DialogClose>

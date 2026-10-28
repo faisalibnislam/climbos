@@ -103,15 +103,15 @@ function SpecialistsSettings() {
 
   return (
     <div className="flex flex-col gap-6">
-      <SettingsHeader title="Specialists" intro="Build a small, focused team from ClimbOS capabilities." />
-      <Callout tone="info" title="Profiles use the existing ClimbOS engine">
-        Specialist roles share metered model routes, business facts, and the approval workflow. Runs start when you ask, on a schedule, or after an event you choose. Every run only prepares drafts; external publishing, messages, and spend still need your approval.
+      <SettingsHeader title="Specialists" intro="A small, focused AI team." />
+      <Callout tone="info" title="Drafts only">
+        Runs when you ask, on a schedule, or after an event. Publishing, messages and spend still need your approval.
       </Callout>
 
       <Card>
         <CardHeader>
           <CardTitle as="h2">{editing ? "Edit specialist" : "Create a specialist"}</CardTitle>
-          <CardDescription>Choose a role, define its objective, and limit the actions it can request.</CardDescription>
+          <CardDescription>Pick a role, a goal and what it may do.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <Field label="Specialist role">
@@ -121,7 +121,7 @@ function SpecialistsSettings() {
             <Field label="Name"><Input value={name} onChange={(event) => setName(event.target.value)} maxLength={60} /></Field>
             <Field label="Objective"><Input value={objective} onChange={(event) => setObjective(event.target.value)} maxLength={500} /></Field>
           </div>
-          <Field label="Instructions" hint="Optional rules for this profile. ClimbOS safety and approval rules always take priority.">
+          <Field label="Instructions" hint="Optional. Safety and approval rules always win.">
             <Textarea value={instructions} onChange={(event) => setInstructions(event.target.value)} maxLength={1500} rows={4} placeholder="For example: prioritize low-cost tests and label uncertain conclusions." />
           </Field>
           <fieldset className="flex flex-col gap-2">
@@ -133,18 +133,18 @@ function SpecialistsSettings() {
             </div>
           </fieldset>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Permission level" hint="Drafts stay in ClimbOS. Anything external waits for your approval.">
+            <Field label="Permission level" hint="Anything external waits for your approval.">
               <Segmented label="Permission level" value={permission} onChange={(value) => { setPermission(value); if (value === "read_only") setAllowedActions((items) => items.filter((item) => ["research", "analyze_results", "note"].includes(item))); if (value === "draft") setAllowedActions((items) => items.filter((item) => !["ad_change", "email_send", "schedule_content"].includes(item))); }} options={PERMISSION_OPTIONS} />
             </Field>
-            <Field label="AI model routing" hint="ClimbOS selects from its configured and metered routes."><Input value="Automatic" disabled /></Field>
-            <Field label="Maximum run budget" hint="Covers the chat request and action estimates for one run.">
+            <Field label="AI model routing" hint="Chosen for you."><Input value="Automatic" disabled /></Field>
+            <Field label="Maximum run budget" hint="Per run, including its actions.">
               <Segmented label="Maximum run budget" value={maxRunCredits} onChange={setMaxRunCredits} options={[{ value: 5, label: "5 credits" }, { value: 10, label: "10 credits" }, { value: 25, label: "25 credits" }, { value: 50, label: "50 credits" }]} />
             </Field>
             <Field label="Maximum actions per request"><Segmented label="Maximum actions per request" value={maxActionsPerRun} onChange={setMaxActionsPerRun} options={[{ value: 1, label: "1" }, { value: 2, label: "2" }, { value: 3, label: "3" }, { value: 4, label: "4" }]} /></Field>
           </div>
           <Field label="Success measure"><Input value={successMetric} onChange={(event) => setSuccessMetric(event.target.value)} maxLength={300} /></Field>
           <SpecialistTriggerFields trigger={trigger} onTrigger={setTrigger} events={triggerEvents} onEvents={setTriggerEvents} cooldown={cooldown} onCooldown={setCooldown} />
-          <p className="text-xs text-ink-3">Knowledge: verified business facts and the versioned Growth Intelligence library.</p>
+          <p className="text-xs text-ink-3">Uses your verified facts and our growth library.</p>
           <div className="flex flex-wrap gap-2">
             <Button loading={busy} disabled={!allowedActions.length || !objective.trim() || !successMetric.trim()} onClick={() => void save()}>{editing ? <Check aria-hidden /> : <Plus aria-hidden />}{editing ? "Save specialist" : "Create specialist"}</Button>
             {editing ? <Button variant="secondary" onClick={resetForm}>Cancel</Button> : null}
@@ -154,7 +154,7 @@ function SpecialistsSettings() {
 
       <section className="flex flex-col gap-3" aria-labelledby="specialist-list-heading">
         <h2 id="specialist-list-heading" className="heading-section">Your specialists</h2>
-        {!data.agents.length ? <EmptyState icon={<Bot />} title="No custom specialists yet" body="Create a profile above, then ask it to prepare focused work." /> : data.agents.map((agent) => (
+        {!data.agents.length ? <EmptyState icon={<Bot />} title="No custom specialists yet" body="Create one above, then give it a task." /> : data.agents.map((agent) => (
           <Card key={agent.id}>
             <CardHeader>
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -167,18 +167,18 @@ function SpecialistsSettings() {
               <section aria-label={`${agent.name} cost and usefulness`} className="flex flex-col gap-3 rounded-lg border border-line bg-surface-2 p-3">
                 <h4 className="text-ui font-semibold text-ink">Cost and usefulness</h4>
                 {agent.monthlyCreditsUsed === null ? (
-                  <p className="text-sm text-ink-2">Monthly usage is unavailable from the records shown; no total is estimated.</p>
+                  <p className="text-sm text-ink-2">Monthly usage unavailable.</p>
                 ) : agent.monthlyBudgetCredits !== null ? (
                   <Meter
-                    label="ClimbOS credits used or set aside this month"
+                    label="Credits used or reserved this month"
                     used={agent.monthlyCreditsUsed}
                     max={agent.monthlyBudgetCredits}
                     unit="credits"
-                    fullText="Monthly limit reached. This specialist will wait until the budget resets or an owner changes its limit."
-                    footnote="Work that is still running or waiting for review may include estimates. Credits are not customer sales or business profit."
+                    fullText="Monthly limit reached. Waits for reset or a higher limit."
+                    footnote="In-progress work may be estimated."
                   />
                 ) : (
-                  <p className="text-sm text-ink-2">{creditsText(agent.monthlyCreditsUsed)} ClimbOS credits used or set aside this month. No monthly credit limit is recorded for this specialist; in-progress work may include estimates.</p>
+                  <p className="text-sm text-ink-2">{creditsText(agent.monthlyCreditsUsed)} credits used or reserved this month. No monthly limit set; in-progress work may be estimated.</p>
                 )}
                 <div className="flex flex-col gap-1.5">
                   <h5 className="text-ui font-medium text-ink-2">Team feedback · last 90 days</h5>
@@ -188,22 +188,20 @@ function SpecialistsSettings() {
                       {agent.workspaceReportedFeedback.capped ? " Showing up to 100 recent ratings." : ""}
                     </p>
                   ) : (
-                    <p className="text-sm text-ink-3">No team ratings recorded in the last 90 days.</p>
+                    <p className="text-sm text-ink-3">No ratings yet.</p>
                   )}
                   {agent.workspaceReportedFeedback.timeSavedRunCount ? (
-                    <p className="text-sm text-ink-2">Median team-reported time saved: {creditsText(agent.workspaceReportedFeedback.medianMinutesSavedPerRun ?? 0)} minutes per run across {agent.workspaceReportedFeedback.timeSavedRunCount} runs. Reports from the same run are averaged first.</p>
+                    <p className="text-sm text-ink-2">Median team-reported time saved: {creditsText(agent.workspaceReportedFeedback.medianMinutesSavedPerRun ?? 0)} minutes per run across {agent.workspaceReportedFeedback.timeSavedRunCount} runs.</p>
                   ) : (
-                    <p className="text-sm text-ink-3">No time-saved reports yet. Leaving time unknown is fine.</p>
+                    <p className="text-sm text-ink-3">No time-saved reports yet.</p>
                   )}
                   {agent.workspaceReportedFeedback.outcomeCount ? (
                     <div className="text-sm text-ink-2">
                       <p>{agent.workspaceReportedFeedback.outcomeCount} member-reported business result{agent.workspaceReportedFeedback.outcomeCount === 1 ? "" : "s"} in the recent feedback sample.</p>
                       <ul className="mt-1 list-disc pl-5">{agent.workspaceReportedFeedback.recentOutcomes.map((outcome, index) => <li key={`${outcome.metric}-${outcome.periodEnd}-${index}`}>{outcome.metric}: {outcome.value}{outcome.unit ? ` ${outcome.unit}` : ""}{outcome.measureType === "rate" && outcome.denominator ? ` (${outcome.denominator} measured)` : ""} · {outcome.cohort} · {new Date(outcome.periodStart).toISOString().slice(0, 10)} to {new Date(outcome.periodEnd).toISOString().slice(0, 10)}</li>)}</ul>
                     </div>
-                  ) : <p className="text-sm text-ink-3">No business results have been recorded for this specialist yet.</p>}
-                  <p className="text-xs text-ink-3">Time saved and usefulness are member reports, not measured business results or proof that a run caused an outcome.</p>
-                  <p className="text-xs text-ink-3">Reported business results are observations for their stated cohort and dates; they are not independently verified and do not show that this specialist caused them.</p>
-                  <p className="text-xs text-ink-3">ClimbOS credits measure product usage. This screen does not convert reported time into cash value or calculate return on investment.</p>
+                  ) : <p className="text-sm text-ink-3">No business results recorded yet.</p>}
+                  <p className="text-xs text-ink-3">All feedback and results are team reports, not verified, and don&apos;t prove this specialist caused them.</p>
                 </div>
                 {agent.recentRuns.length ? (
                   <div className="flex flex-col gap-2 border-t border-line pt-3">
@@ -231,7 +229,7 @@ function SpecialistsSettings() {
               </section>
               <Field label={`Ask ${agent.name}`}><Textarea rows={2} value={request[agent.id] ?? ""} onChange={(event) => setRequest((current) => ({ ...current, [agent.id]: event.target.value }))} maxLength={1500} placeholder="What should this specialist help with?" disabled={agent.status !== "active"} /></Field>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" disabled={agent.status !== "active" || !(request[agent.id] ?? "").trim()} onClick={async () => { try { await run({ slug, agentId: agent.id as Id<"customAgents">, request: request[agent.id] }); setRequest((current) => ({ ...current, [agent.id]: "" })); toast({ tone: "success", title: "Specialist started", description: "Follow its progress in Today and review any proposed actions." }); } catch (error) { toast({ tone: "danger", title: errorMessage(error) }); } }}><Play aria-hidden /> Run specialist</Button>
+                <Button size="sm" disabled={agent.status !== "active" || !(request[agent.id] ?? "").trim()} onClick={async () => { try { await run({ slug, agentId: agent.id as Id<"customAgents">, request: request[agent.id] }); setRequest((current) => ({ ...current, [agent.id]: "" })); toast({ tone: "success", title: "Specialist started", description: "Follow it in Today." }); } catch (error) { toast({ tone: "danger", title: errorMessage(error) }); } }}><Play aria-hidden /> Run specialist</Button>
                 {data.canManage && agent.status === "active" ? <Button size="sm" variant="secondary" onClick={() => { setEditing(agent.id as Id<"customAgents">); setArchetypeId(agent.archetypeId); setName(agent.name); setObjective(agent.objective); setInstructions(agent.instructions); setAllowedActions([...agent.allowedActions]); setPermission(agent.permission as Permission); setMaxRunCredits(agent.maxRunCredits); setMaxActionsPerRun(agent.maxActionsPerRun); setSuccessMetric(agent.successMetric); setTrigger(agent.trigger); setTriggerEvents([...agent.triggerEvents]); setCooldown(agent.eventCooldownHours ?? 24); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit</Button> : null}
                 {data.canManage ? <Button size="sm" variant="ghost" onClick={() => void archive({ slug, agentId: agent.id as Id<"customAgents"> }).catch((error) => toast({ tone: "danger", title: errorMessage(error) }))}>{agent.status === "active" ? "Archive" : "Restore"}</Button> : null}
               </div>
@@ -298,7 +296,7 @@ function SpecialistRunFeedback({
     setBusy(true);
     try {
       await saveFeedback({ slug, runId, rating, ...(parsedMinutes !== undefined ? { minutesSaved: parsedMinutes } : {}), outcome });
-      toast({ tone: "success", title: "Feedback saved", description: outcome ? "Your feedback and business result are recorded as member reports." : "Your usefulness and time estimates are recorded as member reports." });
+      toast({ tone: "success", title: "Feedback saved", description: "Saved as your report." });
     } catch (error) {
       toast({ tone: "danger", title: errorMessage(error) });
     } finally {
@@ -313,7 +311,7 @@ function SpecialistRunFeedback({
         <Button type="button" size="sm" variant={rating === "helpful" ? "primary" : "secondary"} aria-pressed={rating === "helpful"} onClick={() => setRating("helpful")}>Helpful</Button>
         <Button type="button" size="sm" variant={rating === "needs_work" ? "primary" : "secondary"} aria-pressed={rating === "needs_work"} onClick={() => setRating("needs_work")}>Needs work</Button>
       </div>
-      <Field label="Time you estimate it saved" optional hint="For this run, in minutes. Leave blank if unknown; this is your report, not a measured result.">
+      <Field label="Time you estimate it saved" optional hint="Minutes. Leave blank if unsure.">
         <Input type="number" min={0} max={1440} step={1} value={minutesSaved} onChange={(event) => setMinutesSaved(event.target.value)} />
       </Field>
       <details className="rounded-md border border-line bg-surface p-2.5" open={Boolean(initialOutcome)}>
@@ -322,13 +320,13 @@ function SpecialistRunFeedback({
           <Field label="What did you measure?" hint={`For example: ${successMetric}`}><Input value={metric} onChange={(event) => setMetric(event.target.value)} maxLength={120} /></Field>
           <Field label="Result value"><Input type="number" min={0} step="any" value={value} onChange={(event) => setValue(event.target.value)} /></Field>
           <Field label="Value type"><Select value={measureType} onValueChange={(next) => setMeasureType(next as typeof measureType)} options={[{ value: "count", label: "Count" }, { value: "rate", label: "Rate" }, { value: "currency", label: "Money" }, { value: "duration", label: "Time" }]} /></Field>
-          <Field label="Unit" hint="For example: customers, sign-ups, USD, or hours."><Input value={unit} onChange={(event) => setUnit(event.target.value)} maxLength={30} /></Field>
+          <Field label="Unit" hint="e.g. customers, USD, hours"><Input value={unit} onChange={(event) => setUnit(event.target.value)} maxLength={30} /></Field>
           {measureType === "rate" ? <Field label="Number measured"><Input type="number" min={1} step={1} value={denominator} onChange={(event) => setDenominator(event.target.value)} /></Field> : null}
-          <Field label="Who or what did this cover?" hint="Name the group or period cohort, such as first-time buyers."><Input value={cohort} onChange={(event) => setCohort(event.target.value)} maxLength={160} /></Field>
+          <Field label="Who or what did this cover?" hint="e.g. first-time buyers"><Input value={cohort} onChange={(event) => setCohort(event.target.value)} maxLength={160} /></Field>
           <Field label="Period start"><DatePicker value={periodStart} onChange={setPeriodStart} /></Field>
           <Field label="Period end"><DatePicker value={periodEnd} onChange={setPeriodEnd} min={periodStart || undefined} /></Field>
         </div>
-        <p className="mt-2 text-xs text-ink-3">This is your report about what happened, not proof this specialist caused it. Leave the fields blank if the result is unknown.</p>
+        <p className="mt-2 text-xs text-ink-3">Your report, not proof this specialist caused it. Leave blank if unknown.</p>
       </details>
       <div><Button size="sm" loading={busy} disabled={!rating} onClick={() => void save()}>{initialRating ? "Update feedback" : "Save feedback"}</Button></div>
     </div>

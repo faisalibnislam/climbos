@@ -43,7 +43,7 @@ export function PoliciesSettings({ slug }: { slug: string }) {
         <>
           {data.emergencyStop ? (
             <Callout tone="warning" title="Pause all is on">
-              Since {relativeTime(data.emergencyStop.at)}. Nothing runs until an owner or admin resumes.
+              Since {relativeTime(data.emergencyStop.at)}. Nothing runs until an owner or admin resumes it.
             </Callout>
           ) : null}
           {!data.canManage ? (
@@ -206,7 +206,7 @@ function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; p
         open={confirm}
         onOpenChange={setConfirm}
         title="Save new rules?"
-        description="This cancels all existing approvals. Anything not yet live needs approving again."
+        description="Cancels all current approvals. Anything not yet live needs approving again."
         confirmLabel="Save and cancel approvals"
         onConfirm={save}
       />

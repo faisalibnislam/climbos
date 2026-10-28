@@ -12,7 +12,7 @@ export function LeadScoreCheckCard({ comparisons }: { comparisons: ScoreComparis
     <section aria-label="Prospect score check" className="flex flex-col gap-1.5 rounded-[var(--radius-card)] border border-line bg-surface p-4 text-sm">
       <h2 className="heading-card">Are the prospect scores working?</h2>
       <ul className="list-disc pl-5 text-ink-2">{lines.map((line) => <li key={line}>{line}</li>)}</ul>
-      <p className="text-xs text-ink-3">Compares prospects scored 70 or more with the rest, using first contacts old enough to have an outcome. A difference is only called when the ranges don&apos;t overlap. This shows association, not cause.</p>
+      <p className="text-xs text-ink-3">Prospects scored 70+ vs the rest, on contacts old enough to have an outcome. A difference counts only if ranges don&apos;t overlap. Shows association, not cause.</p>
     </section>
   );
 }

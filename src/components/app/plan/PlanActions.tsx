@@ -64,7 +64,7 @@ export function GeneratePlanButton({
         description={
           build
             ? `Drafted from your goal and facts. ${cost} Nothing is posted or spent until you approve.`
-            : `Drafts version ${nextVersion ?? "next"} from your latest goal and facts. ${cost} The current plan guides the team until you approve it.`
+            : `Drafts version ${nextVersion ?? "next"}. ${cost} The current plan stays in use until you approve.`
         }
         confirmLabel={build ? "Build my plan" : "Draft a new version"}
         onConfirm={async () => {
@@ -79,7 +79,7 @@ export function GeneratePlanButton({
       >
         <AiModePicker slug={slug} kind="strategy" value={ai.mode} onChange={ai.setMode} />
         <ModelPicker kind="strategy" aiMode={ai.mode} value={modelChoice.model} onChange={modelChoice.setModel} />
-        <Field label="Creative strategy range"><Select value={creativeRange} onValueChange={(value) => setCreativeRange(value as typeof creativeRange)} options={[{ value: "balanced", label: "Balanced" }, { value: "conventional", label: "More conventional" }, { value: "surprising", label: "More surprising" }, { value: "ambitious", label: "More ambitious" }]} /></Field>
+        <Field label="Creativity"><Select value={creativeRange} onValueChange={(value) => setCreativeRange(value as typeof creativeRange)} options={[{ value: "balanced", label: "Balanced" }, { value: "conventional", label: "More conventional" }, { value: "surprising", label: "More surprising" }, { value: "ambitious", label: "More ambitious" }]} /></Field>
       </ConfirmDialog>
       <p className="text-xs tabular-nums text-ink-3">≤ {fmt.upTo(max)}</p>
       {error ? <ErrorCallout error={error} /> : null}
@@ -176,7 +176,7 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecide
       </div>
       {(quality && quality.state !== "passed") || staleReason ? (
         <Callout tone={blocked ? "danger" : "warning"} live="none" title={staleReason ? "Refresh this plan before approval" : QUALITY_LABEL[quality!.state]} className={cn(!blocked && "bg-surface")}>
-          {staleReason ? <p>The following changed after this version was prepared: {staleReason}. Draft a fresh version before approving or starting work.</p> : null}
+          {staleReason ? <p>Changed since this version: {staleReason}.</p> : null}
           {quality?.reasons.length ? (
             <ul className="flex flex-col gap-1">
               {quality.reasons.map((r) => (
@@ -200,9 +200,9 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecide
             </details>
           ) : null}
           {blocked ? (
-            staleReason ? <p className="mt-1.5 font-medium text-red-800">Refresh the plan before approving it. The current version remains available for review.</p> : (
+            staleReason ? <p className="mt-1.5 font-medium text-red-800">Refresh before approving. You can still read this version.</p> : (
               <p className="mt-1.5 font-medium text-red-800">
-                {help ? "Answer the questions below, then refresh the plan. Or send it back." : "Refresh the plan for a new version, or send it back."}
+                {help ? "Answer below, then refresh. Or send it back." : "Refresh, or send it back."}
               </p>
             )
           ) : null}
@@ -219,7 +219,7 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecide
       ) : null}
       {help ?? (quality?.unknowns?.length ? (
         <p className="text-sm text-amber-800">
-          <span className="font-semibold">Unknown:</span> {quality.unknowns.join(" · ")}. The plan stays within what&apos;s known.
+          <span className="font-semibold">Unknown:</span> {quality.unknowns.join(" · ")}. The plan sticks to what&apos;s known.
         </p>
       ) : null)}
       {canApprove ? (
@@ -227,14 +227,14 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecide
           <ConfirmDialog
             trigger={<Button disabled={blocked}>Approve plan</Button>}
             title={`Approve plan version ${version}?`}
-            description="Proposed channels go active and drafts start. Any earlier plan is superseded. Nothing is posted, sent or spent without its own approval."
+            description="Channels go active and drafts start. Nothing is posted, sent or spent without its own approval."
             confirmLabel="Approve plan"
             onConfirm={() => run("approve")}
           />
           <ConfirmDialog
             trigger={<Button variant="secondary">Send back</Button>}
             title="Send this plan back?"
-            description="It goes back to draft; no work starts. Refresh the plan for a new version."
+            description="No work starts. Refresh for a new version."
             confirmLabel="Send plan back"
             onConfirm={() => run("reject")}
           >

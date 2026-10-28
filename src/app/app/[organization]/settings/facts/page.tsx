@@ -115,12 +115,12 @@ export default function FactsPage() {
           ) : null
         }
       />
-      {data.siteWatchLastError ? <Callout tone="warning" title="The latest website check could not finish">{data.siteWatchLastError}{data.siteWatchLastAttemptAt ? ` · Tried ${relativeTime(data.siteWatchLastAttemptAt)}.` : ""} Your last successful snapshot and confirmed facts are unchanged.</Callout> : data.siteCheckedAt ? <p className="-mt-4 text-xs text-ink-3">Site checked {relativeTime(data.siteCheckedAt)}.</p> : null}
+      {data.siteWatchLastError ? <Callout tone="warning" title="Latest site check didn't finish">{data.siteWatchLastError}{data.siteWatchLastAttemptAt ? ` · Tried ${relativeTime(data.siteWatchLastAttemptAt)}.` : ""} Your facts are unchanged.</Callout> : data.siteCheckedAt ? <p className="-mt-4 text-xs text-ink-3">Site checked {relativeTime(data.siteCheckedAt)}.</p> : null}
       {data.conflicts.length ? (
         <Card className="border-amber-300 bg-amber-50">
           <CardContent className="flex flex-col gap-2">
             <h2 className="heading-card text-amber-950">Some confirmed facts disagree</h2>
-            <p className="text-sm text-amber-950">Please check which information is current before using it to make a growth decision.</p>
+            <p className="text-sm text-amber-950">Check which is current before relying on them.</p>
             <ul className="flex flex-col gap-3">
               {data.conflicts.map((conflict) => (
                 <li key={`${conflict.subject}-${conflict.factIds.join("-")}`} className="border-t border-amber-300 pt-2 first:border-0 first:pt-0">
@@ -148,7 +148,7 @@ export default function FactsPage() {
         <Card>
           <CardContent className="flex flex-col gap-2">
             <h2 className="heading-card">Facts that may overlap</h2>
-            <p className="text-sm text-ink-3">These statements use similar wording. They may still describe different things, so ClimbOS keeps them separate until your team reviews them.</p>
+            <p className="text-sm text-ink-3">Similar wording. Kept separate until you review them.</p>
             <ul className="flex flex-col gap-2">
               {data.possibleDuplicateFacts.map((candidate) => (
                 <li key={`${candidate.first.id}-${candidate.second.id}`} className="border-t border-line pt-2 first:border-0 first:pt-0">
@@ -200,7 +200,7 @@ export default function FactsPage() {
       <Card>
         <CardContent className="flex flex-col gap-2">
           <h2 className="heading-card">Known facts ({known.length}{repeatedCount ? ` · ${repeatedCount} repeated records` : ""})</h2>
-          <p className="text-xs text-ink-3">Older pricing, offers, and other details are marked for review. Age alone does not mean a fact is incorrect.</p>
+          <p className="text-xs text-ink-3">Older details are marked for review. Old doesn&apos;t mean wrong.</p>
           {CATEGORIES.map((cat) => [cat, known.filter((fact) => ((CATEGORIES as readonly string[]).includes(fact.category) ? fact.category : "other") === cat)] as const)
             .filter(([, list]) => list.length)
             .map(([cat, list]) => (

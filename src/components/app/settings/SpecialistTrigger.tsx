@@ -15,7 +15,7 @@ export function triggerSummary(agent: { trigger: Trigger; triggerEvents?: string
 export function SpecialistTriggerFields({ trigger, onTrigger, events, onEvents, cooldown, onCooldown }: { trigger: Trigger; onTrigger: (t: Trigger) => void; events: string[]; onEvents: (e: string[]) => void; cooldown: number; onCooldown: (h: number) => void }) {
   return (
     <div className="flex flex-col gap-3">
-      <Field label="When it runs" hint="Scheduled and event runs use the same budget caps and only prepare drafts. Pause them any time in Automations.">
+      <Field label="When it runs" hint="Drafts only, within your budget caps. Pause any time in Automations.">
         <Segmented label="When it runs" value={trigger} onChange={onTrigger} options={[{ value: "manual", label: "When I ask" }, { value: "daily", label: "Daily" }, { value: "weekly", label: "Weekly" }, { value: "event", label: "After an event" }]} />
       </Field>
       {trigger === "event" ? (

@@ -15,11 +15,11 @@ type Visual = NonNullable<VersionView["visual"]>;
 const FORMAT: Record<Visual["format"], { label: string; icon: typeof ImageIcon; hint: string }> = {
   single_image: { label: "Single image", icon: ImageIcon, hint: "One photo or graphic above the post." },
   carousel: { label: "Carousel", icon: Images, hint: "A swipeable set of slides." },
-  document: { label: "Document carousel", icon: FileText, hint: "A PDF of slides people page through in the feed." },
-  reel: { label: "Short video", icon: Clapperboard, hint: "Film it on your phone from the shot list. ClimbOS doesn't generate video." },
+  document: { label: "Document carousel", icon: FileText, hint: "A PDF of slides in the feed." },
+  reel: { label: "Short video", icon: Clapperboard, hint: "Film it on your phone. ClimbOS doesn't make video." },
   story: { label: "Story", icon: ImageIcon, hint: "A vertical full-screen image or clip." },
-  thread: { label: "Thread", icon: Type, hint: "A series of short posts. An image on the first one helps it stand out." },
-  text: { label: "Text first", icon: Type, hint: "The words lead. Add this visual if you want the post to stand out more." },
+  thread: { label: "Thread", icon: Type, hint: "A series of short posts. Add an image to the first." },
+  text: { label: "Text first", icon: Type, hint: "Words lead. A visual is optional." },
 };
 
 /** The visual a version suggests: older drafts only stored an image idea, which is a single image brief. */
@@ -35,7 +35,7 @@ export function visualFormatLabel(format: Visual["format"]): string {
 /** What to show with a social draft, and (for still formats) a metered way to make the image. */
 export function SuggestedVisual({ slug, artifact, version, canCreate }: { slug: string; artifact: ArtifactView; version: VersionView; canCreate: boolean }) {
   const visual = visualOf(version);
-  if (!visual) return <p className="text-sm text-ink-3">This draft was written before visual suggestions. Add your own image in the editor.</p>;
+  if (!visual) return <p className="text-sm text-ink-3">No visual suggestion. Add your own image in the editor.</p>;
   const meta = FORMAT[visual.format];
   const Icon = meta.icon;
   return (
@@ -93,7 +93,7 @@ export function SuggestedVisual({ slug, artifact, version, canCreate }: { slug: 
         </div>
       ) : null}
       {canCreate && visual.format !== "reel" && !artifact.isDemo ? <CreateImage slug={slug} artifactId={artifact.id} hasImage={Boolean(version.imageUrl)} cover={visual.format === "carousel" || visual.format === "document"} /> : null}
-      {artifact.isDemo && visual.format !== "reel" ? <p className="text-xs text-ink-3">Demo: image creation is available in your own workspace.</p> : null}
+      {artifact.isDemo && visual.format !== "reel" ? <p className="text-xs text-ink-3">Demo: create images in your own workspace.</p> : null}
     </div>
   );
 }
@@ -108,7 +108,7 @@ function CreateImage({ slug, artifactId, hasImage, cover }: { slug: string; arti
   const status = run?.status;
   const userMessage = run?.userMessage ?? null;
   useEffect(() => {
-    if (status === "verified") toast({ tone: "success", title: userMessage ?? "Image added. Review it before approving the post." });
+    if (status === "verified") toast({ tone: "success", title: userMessage ?? "Image added. Review it before approving." });
     else if (status === "failed" || status === "canceled") toast({ tone: "danger", title: userMessage ?? "The image didn't finish. Try again." });
   }, [status, userMessage]);
   const what = cover ? "cover image" : "image";
@@ -124,7 +124,7 @@ function CreateImage({ slug, artifactId, hasImage, cover }: { slug: string; arti
         title={`Create the ${what}?`}
         description={
           <>
-            ClimbOS makes an AI illustration from this brief and adds it to the draft as a new version. It is labelled as AI-generated and the post needs your approval again before it goes out. If the brief calls for a real photo of your product, place or people, take that photo yourself instead.
+            Adds an AI illustration as a new version, labelled AI-generated. You approve again before it posts. Need a real photo of your product or people? Take it yourself.
             {upTo ? <span className="mt-2 block font-medium text-ink">Uses up to {upTo}. Unused credits return.</span> : null}
           </>
         }

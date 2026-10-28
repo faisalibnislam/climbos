@@ -62,8 +62,8 @@ export function AbTestPanel({ slug, kind, targetId, current, canApprove }: { slu
           <p className="text-xs text-ink-3">
             {active.note}{" "}
             {active.status === "maturing"
-              ? `The outcome window is open until ${active.maturesAt ? new Date(active.maturesAt).toLocaleString() : "the scheduled close"}.`
-              : `After ${active.outcomeWindowDays} outcome-window day${active.outcomeWindowDays === 1 ? "" : "s"} at the sample cap, ClimbOS will report a result for review. It will not change the live page or campaign.`}
+              ? `Collecting results until ${active.maturesAt ? new Date(active.maturesAt).toLocaleString() : "it closes"}.`
+              : `Result ready ${active.outcomeWindowDays} day${active.outcomeWindowDays === 1 ? "" : "s"} after the sample fills. Nothing live changes on its own.`}
           </p>
           {canApprove ? (
             <div className="flex gap-2">
@@ -83,7 +83,7 @@ export function AbTestPanel({ slug, kind, targetId, current, canApprove }: { slu
               {last.note}
             </p>
           ) : (
-            <p className="text-xs text-ink-3">50/50 split by {metric}. Results are descriptive signals, not guaranteed causal improvements.</p>
+            <p className="text-xs text-ink-3">50/50 split by {metric}. Results are signals, not proof.</p>
           )}
           {canApprove && last?.winner === "B" && last.status === "done" && !last.appliedAt ? <Button size="sm" loading={busy} onClick={() => run(() => applyWinner({ slug, id: last.id }))}>Review and apply exact version B</Button> : null}
           {canApprove ? (
@@ -93,7 +93,7 @@ export function AbTestPanel({ slug, kind, targetId, current, canApprove }: { slu
                 Outcome window (days)
                 <Input type="number" min={0} max={30} step={1} value={outcomeWindowDays} aria-label="Outcome window in days" onChange={(e) => setOutcomeWindowDays(Number(e.target.value))} />
               </label>
-              <p className="text-xs text-ink-3">Defaults: 1 day for leads, 7 for replies. Adjust to your observed delay; these defaults aren&apos;t calibrated to your business.</p>
+              <p className="text-xs text-ink-3">Default: 1 day for leads, 7 for replies. Adjust to how long yours take.</p>
               <Button
                 size="sm"
                 loading={busy}

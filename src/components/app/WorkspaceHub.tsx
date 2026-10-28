@@ -25,10 +25,10 @@ export function WorkspaceHub({ area }: { area: "work" | "customers" | "tools" })
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader section={area} title={item.label} intro={item.description} />
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4 text-sm">
-        <p className="text-ink-2">Not sure where to start? Describe what you need on Home.</p>
+        <p className="text-ink-2">Not sure? Describe what you need on Home.</p>
         <Link href={appHref(slug, "today")} className="text-link">Ask for help</Link>
       </div>
-      <Field label={area === "tools" ? "Find a tool" : "Find something to do"} hint="Use your own words, such as posts, bookings, or website.">
+      <Field label={area === "tools" ? "Find a tool" : "Find something to do"} hint="Try words like posts, bookings or website.">
         <Input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="What would you like to do?" />
       </Field>
       {tools.length === 0 ? <EmptyState title="No matching tools" body="Try a shorter word, or ask Climb for help on Home." /> : groups.map((group) => {

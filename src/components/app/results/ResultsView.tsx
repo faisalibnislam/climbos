@@ -104,7 +104,7 @@ function AiReferralsSection({ data }: { data: Overview }) {
         <h2 id="ai-referrals-heading" className="heading-section">AI assistant referrals</h2>
         <ValueKind kind="observed" />
       </div>
-      <p className="text-sm text-ink-2">Visits GA4 attributes to recognized AI assistant websites, with the key events configured in your GA4 property.</p>
+      <p className="text-sm text-ink-2">Visits GA4 credits to AI assistant websites, with your GA4 key events.</p>
       {referrals.providers.length ? (
         <>
           <dl className="grid gap-3 sm:grid-cols-2">
@@ -117,7 +117,7 @@ function AiReferralsSection({ data }: { data: Overview }) {
             </table>
           </div>
         </>
-      ) : <p className="rounded-lg bg-surface-2 p-3 text-sm text-ink-2">No sessions from recognized AI assistant source websites were recorded in this period. That does not rule out visits that GA4 labels under another source.</p>}
+      ) : <p className="rounded-lg bg-surface-2 p-3 text-sm text-ink-2">None recorded this period. GA4 may file some under another source.</p>}
       <p className="text-xs text-ink-3">{referrals.note}</p>
     </section>
   );
@@ -131,7 +131,7 @@ export function HealthAlertsSection({ alerts }: { alerts: { metric: string; kind
       <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-amber-950">
         {alerts.map((a) => <li key={`${a.metric}-${a.kind}-${a.date}`}>{a.message}</li>)}
       </ul>
-      <p className="text-xs text-amber-900">Found by comparing each metric with its own recent history. These flags don&apos;t say what caused a change.</p>
+      <p className="text-xs text-amber-900">Compared with each metric&apos;s recent history. These flags don&apos;t say what caused a change.</p>
     </section>
   );
 }

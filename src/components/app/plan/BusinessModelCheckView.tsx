@@ -63,7 +63,7 @@ export function BusinessModelCheckView({ check, createdAt, isFixture, tests, can
   const v = VERDICT[check.verdict.status];
   return (
     <div className="flex flex-col gap-4">
-      {isFixture ? <Callout tone="info" title="Demo example">This check uses labelled demo data, not an analysis of a real business.</Callout> : null}
+      {isFixture ? <Callout tone="info" title="Demo example">Demo data, not a real business.</Callout> : null}
       <section aria-label="Current business model" className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4">
         <h2 className="heading-card">How the business makes money today</h2>
         <p className="text-ui text-ink">{check.currentModel.summary}</p>
@@ -84,7 +84,7 @@ export function BusinessModelCheckView({ check, createdAt, isFixture, tests, can
         </div>
         <p className="text-ui text-ink">{check.verdict.reasoning}</p>
         <p className="text-xs text-ink-3">What would change this: {check.verdict.whatWouldChangeIt}</p>
-        <p className="text-xs text-ink-3">This is the assistant&apos;s judgment from the evidence below, for you to review. It isn&apos;t a verified finding and doesn&apos;t change anything in your business.</p>
+        <p className="text-xs text-ink-3">AI judgment for you to review. It isn&apos;t a verified finding and changes nothing.</p>
       </section>
 
       {check.marketSignals.length ? (
@@ -161,7 +161,7 @@ export function BusinessModelCheckView({ check, createdAt, isFixture, tests, can
         <p className="text-sm text-ink-2">Deciding test: {check.recommendation.decidingTest}{check.recommendation.recommendedAlternative ? ` (start with the ${check.recommendation.recommendedAlternative} option)` : ""}</p>
         <TestRecorder target="deciding" saved={tests.deciding} canEdit={canEdit} onRecord={onRecord} />
         {check.unknowns.length ? <p className="text-xs text-ink-3">Still unknown: {check.unknowns.join("; ")}</p> : null}
-        <p className="text-xs text-ink-3">Nothing here changes your prices, offers or operations. Any change is your decision.</p>
+        <p className="text-xs text-ink-3">Nothing here changes your prices, offers or operations. You decide.</p>
       </section>
     </div>
   );

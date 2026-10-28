@@ -33,7 +33,7 @@ export function approveConsequence(artifact: ArtifactView, now: number | null): 
     const when = formatDateTime(slot.slotAt);
     return now === null || slot.slotAt > now + 120_000
       ? `Autopilot posts v${v} to ${ch} at ${when}. Edits cancel approval.${demo}`
-      : `Planned time (${when}) passed. Then pick a new time or publish now.${demo}`;
+      : `Planned time (${when}) passed. Pick a new time or publish now.${demo}`;
   }
   if (isCampaignAd(artifact.channel)) {
     const platform = artifact.channel === "google_search_ad" ? "Google Ads" : "Meta";

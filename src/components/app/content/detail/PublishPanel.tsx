@@ -171,8 +171,8 @@ export function PublishPanel({ slug, artifact, now }: { slug: string; artifact: 
       ? "Ready. Schedule or publish."
       : artifact.kind === "blog_post" && artifact.channel === "blog"
         ? artifact.wordpressConnection
-          ? "Approved. Create a private WordPress draft or export the article."
-          : "Approved. Export the article or connect WordPress to create a private draft."
+          ? "Approved. Make a private WordPress draft or export it."
+          : "Approved. Export it, or connect WordPress for a private draft."
         : "Ready to post yourself."
     : (artifact.approvalProblem ?? "Approval expired. Re-approve.");
   else if (s === "scheduled") statusLine = `Scheduled for ${artifact.scheduledFor && now ? formatDateTime(artifact.scheduledFor) : "…"}. Not on ${ch} until it accepts.`;

@@ -32,7 +32,7 @@ function AutomationsSettings() {
     setBusy(true);
     try {
       await setWebsiteMonitor({ slug, enabled });
-      toast({ tone: "success", title: enabled ? "Website monitoring resumed" : "Website monitoring paused", description: "Manual checks remain available." });
+      toast({ tone: "success", title: enabled ? "Website monitoring resumed" : "Website monitoring paused", description: "Manual checks still work." });
     } catch (error) {
       toast({ tone: "danger", title: errorMessage(error) });
     } finally {
@@ -44,7 +44,7 @@ function AutomationsSettings() {
     setBusy(true);
     try {
       await setCompetitorMonitoring({ slug, enabled });
-      toast({ tone: "success", title: enabled ? "Weekly competitor checks resumed" : "Weekly competitor checks paused", description: "You can still check a site manually." });
+      toast({ tone: "success", title: enabled ? "Weekly competitor checks resumed" : "Weekly competitor checks paused", description: "Manual checks still work." });
     } catch (error) {
       toast({ tone: "danger", title: errorMessage(error) });
     } finally {
@@ -56,7 +56,7 @@ function AutomationsSettings() {
     setBusy(true);
     try {
       await setScheduledSpecialists({ slug, enabled });
-      toast({ tone: "success", title: enabled ? "Scheduled specialist runs enabled" : "Scheduled specialist runs paused", description: enabled ? emergencyStopped ? "The workspace emergency stop still prevents scheduled runs. Manual runs remain available." : "Due profiles may run on the next scheduler check. Manual runs remain available." : "Manual runs remain available." });
+      toast({ tone: "success", title: enabled ? "Scheduled specialist runs enabled" : "Scheduled specialist runs paused", description: enabled ? emergencyStopped ? "Pause all still blocks scheduled runs. Manual runs still work." : "Due runs start soon. Manual runs still work." : "Manual runs still work." });
     } catch (error) {
       toast({ tone: "danger", title: errorMessage(error) });
     } finally {
@@ -66,8 +66,8 @@ function AutomationsSettings() {
 
   return (
     <div className="flex flex-col gap-6">
-      <SettingsHeader title="Automations" intro="See what runs on a schedule, what it can access, and where to pause it." />
-      {data.emergencyStopped ? <Callout tone="warning" title="Workspace emergency stop is active">Eligible automations are held until the workspace stop is cleared.</Callout> : null}
+      <SettingsHeader title="Automations" intro="What runs on a schedule, and how to pause it." />
+      {data.emergencyStopped ? <Callout tone="warning" title="Pause all is on">Automations wait until it&apos;s cleared.</Callout> : null}
       <div className="grid gap-3 md:grid-cols-2">
         {data.entries.map((automation) => {
           const siteMonitorEnabled = "siteWatchEnabled" in automation && automation.siteWatchEnabled === true;
@@ -112,7 +112,7 @@ function AutomationsSettings() {
           );
         })}
       </div>
-      <p className="text-xs text-ink-3">This inventory reflects configured workflows and their domain-owned status records. Receipts may be limited to the most recent retained activity.</p>
+      <p className="text-xs text-ink-3">Shows only the most recent activity we keep.</p>
     </div>
   );
 }

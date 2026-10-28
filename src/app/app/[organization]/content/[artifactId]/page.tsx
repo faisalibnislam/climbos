@@ -174,7 +174,7 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
                       </dl>
                       {cur.copyBrief.supportingSourceUrls.some((url) => /^https?:\/\//i.test(url)) ? (
                         <div>
-                          <p className="text-xs font-medium text-ink-2">Sources attached to this draft</p>
+                          <p className="text-xs font-medium text-ink-2">Sources</p>
                           <ul className="mt-1 flex flex-col gap-1">
                             {cur.copyBrief.supportingSourceUrls.filter((url) => /^https?:\/\//i.test(url)).map((url) => (
                               <li key={url}>
@@ -185,7 +185,7 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
                               </li>
                             ))}
                           </ul>
-                          <p className="mt-1 text-xs text-ink-3">These are the source URLs the draft records. Check the page and date before treating a trend as current.</p>
+                          <p className="mt-1 text-xs text-ink-3">Check each page and date before trusting a trend.</p>
                         </div>
                       ) : null}
                       {cur.copyBrief.trendEvidence ? <TrendEvidenceNote evidence={cur.copyBrief.trendEvidence} /> : null}
@@ -195,7 +195,7 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
                           <ul className="mt-1 list-disc pl-5 text-sm text-amber-900">{cur.copyBrief.unknowns.map((item, i) => <li key={`${item}-${i}`}>{item}</li>)}</ul>
                         </div>
                       ) : null}
-                      <p className="text-xs text-ink-3">This explains how the draft was framed. It does not establish that a trend fits, that a claim is true, or that the post will perform.</p>
+                      <p className="text-xs text-ink-3">How the draft was framed. Not proof that a claim is true or the post will perform.</p>
                     </>
                   ) : null}
                 </CardContent>

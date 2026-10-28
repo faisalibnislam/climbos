@@ -86,7 +86,6 @@ export function SharpenPlan({ slug, questions, canEdit, answersNewer, currency =
         <div className="flex items-center gap-2">
           <Target className="size-4 shrink-0 text-brand-700" aria-hidden />
           <h2 className="heading-card">Sharpen this plan</h2>
-          <span className="text-xs text-ink-3">Plan inputs</span>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           {questions.map((q) => {
@@ -110,8 +109,8 @@ export function SharpenPlan({ slug, questions, canEdit, answersNewer, currency =
                   <span aria-hidden className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-ink-3">{q.key === "monthlyGrowthCashUsd" ? `${currency} / month` : unit.suffix}</span>
                 </div>
                 <p className="text-xs text-ink-3">
-                  {q.switchValue !== undefined ? `Matters if it's ${q.switchDirection === "le" ? "above" : "below"} ${hint(q.unit, unit.toInput(q.switchValue))}` : q.ownerReported && q.assumed !== undefined ? `Saved owner input ${unit.toInput(q.assumed)} · update if it changed` : q.assumed === undefined ? "Owner input needed · not assumed" : `Assumed ${unit.toInput(q.assumed)}`}
-                  {RANGE_KEY[q.key] ? " · a range like 3–6 is fine" : ""}
+                  {q.switchValue !== undefined ? `Matters if it's ${q.switchDirection === "le" ? "above" : "below"} ${hint(q.unit, unit.toInput(q.switchValue))}` : q.ownerReported && q.assumed !== undefined ? `You said ${unit.toInput(q.assumed)}` : q.assumed === undefined ? "Needed · not assumed" : `Assumed ${unit.toInput(q.assumed)}`}
+                  {RANGE_KEY[q.key] ? " · ranges like 3–6 OK" : ""}
                 </p>
               </div>
             );
@@ -155,7 +154,7 @@ function SegmentEconomicsEditor({ slug, canEdit, currency, saved = [] }: { slug:
         unknownCosts: row.unknownCosts.split(",").map((value) => value.trim()).filter(Boolean),
         ...(row.strategicValueNote.trim() ? { strategicValueNote: row.strategicValueNote.trim() } : {}),
       };
-      if (!item.segment || !Number.isFinite(item.periodDays) || !Number.isFinite(item.customers) || !Number.isFinite(item.netRevenue) || !Number.isFinite(item.variableCosts) || !item.costBoundary) return toast({ tone: "danger", title: "Complete each segment’s name, period, customer count, revenue, costs, and cost boundary." });
+      if (!item.segment || !Number.isFinite(item.periodDays) || !Number.isFinite(item.customers) || !Number.isFinite(item.netRevenue) || !Number.isFinite(item.variableCosts) || !item.costBoundary) return toast({ tone: "danger", title: "Fill in every field for each group." });
       parsed.push(item);
     }
     setBusy(true);
@@ -173,7 +172,7 @@ function SegmentEconomicsEditor({ slug, canEdit, currency, saved = [] }: { slug:
       <CardContent className="flex flex-col gap-3">
         <div>
           <h2 className="heading-card">Compare customer groups</h2>
-          <p className="mt-1 text-xs text-ink-3">Optional owner-reported totals. Enter net revenue after discounts and refunds, plus variable costs for the same period. ClimbOS does not match billing records to customer groups. Name costs you could not include.</p>
+          <p className="mt-1 text-xs text-ink-3">Optional. Enter revenue after discounts and refunds, and costs for the same period.</p>
         </div>
         {rows.map((row, index) => {
           const customers = Number(row.customers);
@@ -185,13 +184,13 @@ function SegmentEconomicsEditor({ slug, canEdit, currency, saved = [] }: { slug:
           return (
             <div key={index} className="grid gap-2 rounded-[var(--radius-card)] border border-line p-3 sm:grid-cols-2 lg:grid-cols-4">
               {([["segment", "Customer group"], ["currency", "Currency (ISO code)"], ["periodDays", "Period (days)"], ["customers", "Customers in group"], ["netRevenue", `Net revenue (${row.currency || currency})`], ["variableCosts", `Variable costs (${row.currency || currency})`], ["costBoundary", "Costs included"], ["unknownCosts", "Unknown costs (comma-separated)"], ["strategicValueNote", "Strategic value to consider"]] as const).map(([key, label]) => <label key={key} className="flex flex-col gap-1 text-xs text-ink-2">{label}<Input disabled={!canEdit || busy} value={row[key]} placeholder={key === "segment" ? "e.g. Solo customers" : key === "currency" ? currency : key === "costBoundary" ? "e.g. materials, payment fees, service time" : key === "unknownCosts" ? "Leave blank if none known" : undefined} inputMode={key === "costBoundary" || key === "unknownCosts" || key === "strategicValueNote" || key === "segment" || key === "currency" ? "text" : "decimal"} onChange={(event) => update(index, key, event.target.value)} /></label>)}
-              {p ? <p className="text-xs text-ink-2 sm:col-span-2 lg:col-span-4">Owner-reported comparison: {formatMoney(p.contributionAfterListedCosts, p.currency)} contribution after listed costs · {formatMoney(p.contributionPerCustomer, p.currency)} per customer{p.contributionMargin === null ? " · margin unavailable" : ` · ${Math.round(p.contributionMargin * 1000) / 10}% of net revenue`}{p.completeCostCoverage ? " · stated cost coverage complete" : ` · incomplete costs: ${p.unknownCosts.join(", ")}`}. This is not net profit.</p> : null}
+              {p ? <p className="text-xs text-ink-2 sm:col-span-2 lg:col-span-4">{formatMoney(p.contributionAfterListedCosts, p.currency)} contribution after listed costs · {formatMoney(p.contributionPerCustomer, p.currency)} per customer{p.contributionMargin === null ? " · margin unavailable" : ` · ${Math.round(p.contributionMargin * 1000) / 10}% of net revenue`}{p.completeCostCoverage ? " · all costs listed" : ` · incomplete costs: ${p.unknownCosts.join(", ")}`}. This is not net profit.</p> : null}
               {canEdit ? <div className="sm:col-span-2 lg:col-span-4"><Button size="sm" onClick={() => setRows((current) => current.filter((_, i) => i !== index))} disabled={busy}>Remove group</Button></div> : null}
             </div>
           );
         })}
-        <p className="text-xs text-ink-3">A lower contribution group is a signal to investigate—not an automatic reason to stop serving it. The comparison does not measure retention, acquisition cost, or long-term strategic value.</p>
-        {canEdit ? <div className="flex gap-2"><Button size="sm" onClick={() => setRows((current) => current.length < 8 ? [...current, emptySegment(currency)] : current)} disabled={busy || rows.length >= 8}>Add group</Button><Button size="sm" onClick={saveRows} disabled={busy}>{busy ? "Saving…" : "Save segment comparison"}</Button></div> : null}
+        <p className="text-xs text-ink-3">A lower-earning group is worth a look, not a reason to drop it. This ignores retention and long-term value.</p>
+        {canEdit ? <div className="flex gap-2"><Button size="sm" onClick={() => setRows((current) => current.length < 8 ? [...current, emptySegment(currency)] : current)} disabled={busy || rows.length >= 8}>Add group</Button><Button size="sm" onClick={saveRows} disabled={busy}>{busy ? "Saving…" : "Save groups"}</Button></div> : null}
       </CardContent>
     </Card>
   );
@@ -251,7 +250,6 @@ export function FunnelNumbers({ slug, funnel, canEdit }: { slug: string; funnel:
         <div className="flex items-center gap-2">
           <Target className="size-4 shrink-0 text-brand-700" aria-hidden />
           <h2 className="heading-card">Your last 30 days</h2>
-          <span className="text-xs text-ink-3">Finds your weakest link</span>
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {FUNNEL_FIELDS.map((f) => (

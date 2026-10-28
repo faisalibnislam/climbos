@@ -634,7 +634,7 @@ function CreatorCollaborationPanel({ slug, prospectId, campaignId, currency, can
         ...(publishedUrl.trim() ? { publishedUrl: publishedUrl.trim() } : {}), ...(metric ? { metric } : {}), ...(note.trim() ? { note: note.trim() } : {}),
       });
       setNote("");
-      toast({ tone: "success", title: "Collaboration report added", description: "Saved as owner-reported history; it does not verify performance." });
+      toast({ tone: "success", title: "Collaboration report added", description: "Saved as your report; not verified." });
     } catch (e) {
       toast({ tone: "danger", title: errorMessage(e) });
     } finally {
@@ -654,7 +654,7 @@ function CreatorCollaborationPanel({ slug, prospectId, campaignId, currency, can
           <Field label="Collaboration format"><Select value={format} onValueChange={setFormat} options={[{ value: "not_recorded", label: "Not recorded" }, ...CREATOR_FORMATS.map(([value, label]) => ({ value, label }))]} /></Field>
           {currency ? <div className="grid gap-3 sm:grid-cols-2"><Field label={`Agreed value (${currency})`}><Input inputMode="decimal" value={agreed} onChange={(e) => setAgreed(e.target.value.replace(/[^\d.]/g, ""))} placeholder="Optional" /></Field><Field label={`Actual cost (${currency})`}><Input inputMode="decimal" value={actualCost} onChange={(e) => setActualCost(e.target.value.replace(/[^\d.]/g, ""))} placeholder="Optional" /></Field></div> : <Callout tone="info">Set your business currency to record collaboration value or cost.</Callout>}
           <Field label="Published content URL"><Input inputMode="url" value={publishedUrl} onChange={(e) => setPublishedUrl(e.target.value)} placeholder="https://…" /></Field>
-          <Checkbox checked={hasMetric} onCheckedChange={(v) => setHasMetric(v === true)} label="Add an outcome metric" description="Record what you observed, its period, and denominator when relevant." />
+          <Checkbox checked={hasMetric} onCheckedChange={(v) => setHasMetric(v === true)} label="Add an outcome metric" description="What you saw, the period, and out of how many." />
           {hasMetric ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Metric name"><Input value={metricName} onChange={(e) => setMetricName(e.target.value)} placeholder="e.g. link clicks" maxLength={100} /></Field>

@@ -117,8 +117,8 @@ function Detail({ slug, m }: { slug: string; m: Item }) {
           <Callout tone="danger" title="Owner review needed">
             {m.reviewSafety.categories.length
               ? <>This review may involve a {m.reviewSafety.categories.map((category) => REVIEW_SAFETY_LABELS[category] ?? "sensitive concern").join(" or ")}.</>
-              : <>This is a low rating without a written reason, so ClimbOS cannot safely guess what happened.</>}
-            {" "}This is a routing signal, not a verified finding. ClimbOS has paused AI drafting; an owner should review the issue and reply directly on the review platform.
+              : <>Low rating with no reason given.</>}
+            {" "}A flag, not a finding. AI drafting is paused; reply yourself on the review site.
           </Callout>
         ) : null}
         {m.finalReply && m.status === "replied" ? (

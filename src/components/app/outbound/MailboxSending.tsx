@@ -252,7 +252,7 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
                   </li>
                 ))}
               </ul>
-              <p className="mt-1 text-xs text-ink-3">Attempt history records mailbox outcomes. It does not include email contents.</p>
+              <p className="mt-1 text-xs text-ink-3">Mailbox outcomes only, not email contents.</p>
             </div>
           ) : null}
         </>

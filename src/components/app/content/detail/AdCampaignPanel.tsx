@@ -53,10 +53,10 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
   const validate = () => {
     const e: Record<string, string> = {};
     if (!(dailyNum > 0)) e.daily = "Enter a daily budget greater than 0.";
-    if (targetCostNum !== undefined && (!(targetCostNum > 0) || !Number.isFinite(targetCostNum))) e.targetCostPerConversion = "Enter a positive target, or leave this blank to skip efficiency recommendations.";
+    if (targetCostNum !== undefined && (!(targetCostNum > 0) || !Number.isFinite(targetCostNum))) e.targetCostPerConversion = "Enter a positive number, or leave blank.";
     if (!Number.isInteger(reviewDaysNum) || reviewDaysNum < 1 || reviewDaysNum > 90) e.reviewAfterDays = "Choose between 1 and 90 days.";
     if (!start) e.start = "Pick a start date.";
-    if (!end || end < start) e.end = "Pick an end date on or after the start date.";
+    if (!end || end < start) e.end = "End date must be on or after the start.";
     if (start && start < isoDay(Date.now())) e.start = "The start date can't be in the past.";
     setFieldErrors(e);
     return Object.keys(e).length === 0;
@@ -94,14 +94,14 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
               <Input type="number" inputMode="decimal" min={1} step="0.01" value={daily} onChange={(e) => setDaily(e.target.value)} />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label={`Maximum cost per reported conversion (${currency}, optional)`} error={fieldErrors.targetCostPerConversion}>
+              <Field label={`Target cost per conversion (${currency}, optional)`} error={fieldErrors.targetCostPerConversion}>
                 <Input type="number" inputMode="decimal" min={0} step="0.01" value={targetCostPerConversion} onChange={(e) => setTargetCostPerConversion(e.target.value)} placeholder="Set your target" />
               </Field>
               <Field label="First review after (days)" error={fieldErrors.reviewAfterDays}>
                 <Input type="number" inputMode="numeric" min={1} max={90} step={1} value={reviewAfterDays} onChange={(e) => setReviewAfterDays(e.target.value)} />
               </Field>
             </div>
-            <p className="text-xs text-ink-3">ClimbOS compares reported Google Ads cost per conversion only when you set a target. The first review is advice for you; it never pauses ads automatically.</p>
+            <p className="text-xs text-ink-3">The review is advice only. It never pauses ads.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Start date" error={fieldErrors.start}>
                 <DatePicker value={start} min={isoDay(now)} onChange={setStart} />
@@ -157,7 +157,7 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
                   { term: "Dates", detail: `${start} to ${end}` },
                   { term: "Max spend", detail: majorToDisplay(total, currency) },
                   { term: "First review", detail: `${reviewDaysNum} days after it starts` },
-                  { term: "Cost target", detail: targetCostNum ? `${majorToDisplay(targetCostNum, currency)} per reported conversion` : "Not set; no efficiency recommendation" },
+                  { term: "Cost target", detail: targetCostNum ? `${majorToDisplay(targetCostNum, currency)} per reported conversion` : "Not set" },
                 ]}
               />
             </ConfirmDialog>

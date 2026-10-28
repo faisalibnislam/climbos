@@ -5,9 +5,9 @@ export function DecisionChangesSummary({ changes, beforeLabel, afterLabel }: { c
   return (
     <section aria-labelledby="decision-changes-heading" className="rounded-[var(--radius-card)] border border-line bg-surface p-4">
       <h3 id="decision-changes-heading" className="heading-card">What changed in the recommendation?</h3>
-      <p className="mt-1 text-xs text-ink-3">This compares the choices saved in each version. Modeled customer ranges are scenarios, not actual results.</p>
+      <p className="mt-1 text-xs text-ink-3">Customer ranges are scenarios, not actual results.</p>
       {changes === null ? (
-        <p className="mt-3 text-sm text-ink-2">Saved decision details are unavailable for one of these versions. The full plan comparison is still below.</p>
+        <p className="mt-3 text-sm text-ink-2">No saved details for one version. See the full comparison below.</p>
       ) : changes.length ? (
         <ul className="mt-3 flex flex-col divide-y divide-line">
           {changes.map((change) => (
@@ -19,7 +19,7 @@ export function DecisionChangesSummary({ changes, beforeLabel, afterLabel }: { c
           ))}
         </ul>
       ) : (
-        <p className="mt-3 text-sm text-ink-2">No differences are recorded in the diagnosis, recommended plays, chosen set, channels, or customer groups. The written plan may still differ below.</p>
+        <p className="mt-3 text-sm text-ink-2">No changes to plays, channels, or customer groups. The text may still differ below.</p>
       )}
     </section>
   );
