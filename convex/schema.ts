@@ -1526,11 +1526,12 @@ export default defineSchema({
       v.literal("more_sales"),
       v.literal("more_customers"),
       v.literal("more_reach"),
+      v.literal("more_followers"),
       v.literal("custom"),
     ),
     statement: v.string(),
     /** Every goal type the owner chose, all equal priority; `kind` is the first, kept for older readers. */
-    kinds: v.optional(v.array(v.union(v.literal("more_sales"), v.literal("more_customers"), v.literal("more_reach"), v.literal("custom")))),
+    kinds: v.optional(v.array(v.union(v.literal("more_sales"), v.literal("more_customers"), v.literal("more_reach"), v.literal("more_followers"), v.literal("custom")))),
     /** Structured target (spec §8.1): kept as the owner stated it, never rewritten to match a forecast. */
     target: v.optional(
       v.object({
@@ -1657,6 +1658,16 @@ export default defineSchema({
     createdAt: v.number(),
     rotatedAt: v.optional(v.number()),
   }).index("by_connection", ["connectionId"]),
+
+  /** One follower count per connected social account per day (UTC), read from the platform. */
+  followerSnapshots: defineTable({
+    orgId: v.id("organizations"),
+    provider: v.union(v.literal("instagram"), v.literal("facebook_pages")),
+    accountId: v.string(),
+    day: v.string(),
+    count: v.number(),
+    recordedAt: v.number(),
+  }).index("by_org_provider_day", ["orgId", "provider", "day"]),
 
   connectionCapabilities: defineTable({
     orgId: v.id("organizations"),
@@ -3212,6 +3223,7 @@ export default defineSchema({
                     v.literal("more_sales"),
                     v.literal("more_customers"),
                     v.literal("more_reach"),
+                    v.literal("more_followers"),
                     v.literal("custom"),
                   ),
                   kinds: v.optional(v.array(v.string())),

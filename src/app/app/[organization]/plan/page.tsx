@@ -25,6 +25,7 @@ import { RetryRunIfPossible, RUN_FINISHED } from "@/components/app/content/RunPr
 import { PageHeader } from "@/components/app/results/QueryBoundary";
 import { PERMISSION_WHO, SectionBoundary, majorToDisplay } from "@/components/app/content/shared";
 import { PlanJumpNav } from "@/components/app/plan/PlanJumpNav";
+import { FollowerGrowth } from "@/components/app/followers/FollowerGrowth";
 import { OlderVersionBar, PlanCompare, RestoreDialog, VersionPicker, usePlanVersions } from "@/components/app/plan/history/PlanHistory";
 
 const STRATEGY_STATUS: Record<string, { label: string; tone: Tone }> = {
@@ -311,6 +312,7 @@ function PlanScreen({ slug }: { slug: string }) {
       />
 
       <GoalCard goal={plan.goal} slug={slug} />
+      {!viewBuilding ? <FollowerGrowth slug={slug} always={Boolean(plan.goal?.followers)} /> : null}
 
       {viewBuilding && buildRunId ? (
         <>

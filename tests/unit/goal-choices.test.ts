@@ -5,7 +5,7 @@ import { goalSuggestions, toggleGoalSentence } from "../../src/components/app/on
 describe("several goals and goal suggestions", () => {
   it("reads every goal type the owner mentions, all equal", () => {
     const p = parseIntro("We're Northstar Bakery. I want more customers and more online orders, and more followers.");
-    expect(p.goalKinds).toEqual(["more_customers", "more_sales", "more_reach"]);
+    expect(p.goalKinds).toEqual(["more_customers", "more_sales", "more_followers"]);
     expect(p.goalKind).toBe("more_customers");
   });
 

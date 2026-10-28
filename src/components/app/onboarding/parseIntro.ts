@@ -7,9 +7,9 @@
 export interface ParsedIntro {
   businessName?: string;
   website?: string;
-  goalKind?: "more_sales" | "more_customers" | "more_reach" | "custom";
+  goalKind?: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom";
   /** Every goal type the text mentions, in the order they are checked (all equal priority). */
-  goalKinds?: ("more_sales" | "more_customers" | "more_reach")[];
+  goalKinds?: ("more_sales" | "more_customers" | "more_reach" | "more_followers")[];
   goalStatement?: string;
   monthlyAdBudget?: number;
   horizonDays?: number;
@@ -57,7 +57,8 @@ export function parseIntro(text: string): ParsedIntro {
   const kinds: NonNullable<ParsedIntro["goalKinds"]> = [];
   if (/paying customers|more customers|new customers|sign[- ]?ups|clients/i.test(t)) kinds.push("more_customers");
   if (/sales|revenue|orders|sell more/i.test(t)) kinds.push("more_sales");
-  if (/reach|awareness|followers|audience|brand/i.test(t)) kinds.push("more_reach");
+  if (/followers|following|subscribers/i.test(t)) kinds.push("more_followers");
+  if (/reach|awareness|audience|brand/i.test(t)) kinds.push("more_reach");
   if (kinds.length) {
     out.goalKind = kinds[0];
     out.goalKinds = kinds;

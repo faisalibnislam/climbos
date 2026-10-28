@@ -564,7 +564,7 @@ function cleanTarget(t: GoalTarget): GoalTarget | undefined {
   return out.desired === null && out.baseline === null ? undefined : out;
 }
 
-const GOAL_KINDS = new Set(["more_sales", "more_customers", "more_reach", "custom"]);
+const GOAL_KINDS = new Set(["more_sales", "more_customers", "more_reach", "more_followers", "custom"]);
 
 /** Keep the first setup step's parsed answers on the business, so the goal step starts from them in any tab or device. */
 export const saveOnboardingIntro = mutation({
@@ -634,9 +634,9 @@ export const setAdBudget = mutation({
 export const setGoal = mutation({
   args: {
     slug: v.string(),
-    kind: v.union(v.literal("more_sales"), v.literal("more_customers"), v.literal("more_reach"), v.literal("custom")),
+    kind: v.union(v.literal("more_sales"), v.literal("more_customers"), v.literal("more_reach"), v.literal("more_followers"), v.literal("custom")),
     /** All chosen goal types, equal priority. When given, its first entry replaces `kind`. */
-    kinds: v.optional(v.array(v.union(v.literal("more_sales"), v.literal("more_customers"), v.literal("more_reach"), v.literal("custom")))),
+    kinds: v.optional(v.array(v.union(v.literal("more_sales"), v.literal("more_customers"), v.literal("more_reach"), v.literal("more_followers"), v.literal("custom")))),
     statement: v.string(),
     target: v.optional(v.object({ metric: v.union(v.literal("customers"), v.literal("revenue_month"), v.literal("other")), baseline: v.union(v.number(), v.null()), desired: v.union(v.number(), v.null()), mode: v.union(v.literal("total"), v.literal("incremental")) })),
     horizonDays: v.number(),

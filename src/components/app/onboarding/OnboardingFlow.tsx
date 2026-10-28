@@ -870,8 +870,8 @@ function FactsStep({ slug, state }: { slug: string; state: State }) {
   );
 }
 
-type GoalKindValue = "more_sales" | "more_customers" | "more_reach" | "custom";
-const isGoalKind = (k: string): k is GoalKindValue => ["more_sales", "more_customers", "more_reach", "custom"].includes(k);
+type GoalKindValue = "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom";
+const isGoalKind = (k: string): k is GoalKindValue => ["more_sales", "more_customers", "more_reach", "more_followers", "custom"].includes(k);
 
 function GoalStep({ slug, state }: { slug: string; state: State }) {
   const setGoal = useMutation(api.orgs.setGoal);

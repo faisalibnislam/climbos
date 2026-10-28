@@ -736,6 +736,7 @@ const PURGE_BY_ORG: { table: string; index: string }[] = [
   { table: "platformClaims", index: "by_org_platform_date" },
   { table: "forecastRuns", index: "by_org_created" },
   { table: "connectionCapabilities", index: "by_org" },
+  { table: "followerSnapshots", index: "by_org_provider_day" },
   { table: "connections", index: "by_org" },
   { table: "contacts", index: "by_org" },
   { table: "experiments", index: "by_org" },

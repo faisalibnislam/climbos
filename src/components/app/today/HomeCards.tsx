@@ -80,7 +80,11 @@ export function PlanCard({ slug, data }: { slug: string; data: Today }) {
 /** Recorded numbers for the last 30 days plus what the team is doing now. Unknown shows as a dash, never zero. */
 export function ThisWeekCard({ slug, data, snapshot }: { slug: string; data: Today; snapshot: Snapshot | null | undefined }) {
   const metrics = snapshot?.metrics ?? [];
+  const followers = useQuery(api.followers.summary, { slug });
   const numbers = [
+    ...(followers?.total !== null && followers?.total !== undefined
+      ? [{ label: followers.weekChange ? `Followers (${followers.weekChange > 0 ? "+" : ""}${new Intl.NumberFormat("en-US").format(followers.weekChange)} this week)` : "Followers", value: new Intl.NumberFormat("en-US").format(followers.total) }]
+      : []),
     ...metrics.slice(0, 2).map((m) => ({ label: m.label, value: m.hasData ? new Intl.NumberFormat("en-US").format(m.total) : "—" })),
     { label: "Done this week", value: String(data.counts.doneThisWeek) },
   ];

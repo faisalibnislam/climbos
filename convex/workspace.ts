@@ -850,7 +850,7 @@ export const plan = query({
       role,
       canApprove: ["owner", "admin", "reviewer"].includes(role),
       canEdit: ["owner", "admin", "editor"].includes(role),
-      goal: goal ? { statement: goal.statement, horizonDays: goal.horizonDays, monthlyAdBudget: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency), currency: goal.currency } : null,
+      goal: goal ? { statement: goal.statement, horizonDays: goal.horizonDays, monthlyAdBudget: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency), currency: goal.currency, followers: goal.kind === "more_followers" || Boolean(goal.kinds?.includes("more_followers")) } : null,
       strategy: strategy
         ? {
             id: strategy._id,

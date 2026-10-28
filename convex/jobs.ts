@@ -142,7 +142,17 @@ class JobStop extends Error {
 }
 
 
-const GOAL_KIND_LABEL: Record<string, string> = { more_customers: "more customers", more_sales: "more sales or orders", more_reach: "help more people find the business", custom: "the owner's own goal in the GOAL statement" };
+/** What a follower goal means for the plan: real followers, organic first, paid only within the approved budget. */
+const FOLLOWER_GOAL_GUIDANCE = [
+  "FOLLOWER GOAL: the owner wants more social media followers. Plan for real people who may become customers:",
+  "- Pick 1–3 platforms where this business's buyers already are; give each a follower target and a weekly posting rhythm.",
+  "- Organic methods first: consistent short video and posts, profile and bio clean-up, collaborations with relevant creators or nearby businesses (paid or gifted collaborations disclosed), giveaways only if they follow that platform's promotion rules and local law, and cross-promotion from the website, email and receipts.",
+  "- Paid: a follower or reach campaign only within the monthly ad budget above, with a cap, drafted paused until the owner approves the budget. With no budget, use no paid methods.",
+  "- Never: buying followers, bots, follow/unfollow loops, engagement pods, fake reviews or comments, or anything that breaks a platform's rules.",
+  "- Measure weekly follower change per platform, and how many followers become enquiries or customers, so growth isn't vanity alone.",
+].join("\n");
+
+const GOAL_KIND_LABEL: Record<string, string> = { more_customers: "more customers", more_sales: "more sales or orders", more_reach: "help more people find the business", more_followers: "grow social media followers (real people who may buy, never bought or fake followers)", custom: "the owner's own goal in the GOAL statement" };
 type JobCtx = NonNullable<Awaited<ReturnType<typeof loadContext>>>;
 
 async function loadContext(ctx: ActionCtx, runId: Id<"workflowRuns">) {
@@ -713,6 +723,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     businessLifecycleContext(b?.lifecycleStage?.stage, b?.lifecycleStage?.updatedAt),
     job.goal ? `GOAL: ${job.goal.statement} (horizon ${job.goal.horizonDays} days, ad budget ${minorToMajor(job.goal.monthlyAdBudgetMinor, job.goal.currency).toFixed(0)} ${job.goal.currency}/month, paid directly to ad platforms)` : "",
     job.goal?.kinds && job.goal.kinds.length > 1 ? `GOAL TYPES (all equal priority; weigh plays against each, without ranking one above the others): ${job.goal.kinds.map((k) => GOAL_KIND_LABEL[k] ?? k).join("; ")}.` : "",
+    job.goal && (job.goal.kind === "more_followers" || job.goal.kinds?.includes("more_followers")) ? FOLLOWER_GOAL_GUIDANCE : "",
     job.brand ? `BRAND VOICE: ${job.brand.voice}${job.brand.toneWords.length ? ` (${job.brand.toneWords.join(", ")})` : ""}. Avoid: ${job.brand.doNots.join("; ")}` : "",
     job.brand ? `SOCIAL STYLE PREFERENCES (retain platform, audience, category-safety, and current-policy checks): humor=${job.brand.socialHumor ?? "restrained (safe default; not owner-confirmed)"}; trend use=${job.brand.socialTrendPolicy ?? "selective (safe default; not owner-confirmed)"}. Treat these as guidance for social posts/calendars, not permission to make unsupported claims or reuse assets.` : "",
     job.brand?.approvedExamples?.length ? `OWNER-APPROVED COPY EXAMPLES (style reference only; not proof about customer outcomes):\n${untrusted("owner-approved copy examples", JSON.stringify(job.brand.approvedExamples), 3_500)}` : "",
