@@ -15,6 +15,10 @@ export interface WishComposerHandle {
 
 /** Everyday, business-type-aware request starters; choosing one only fills the draft. */
 export function wishSuggestions(type?: string | null): string[] {
+  return ["New business: plan my launch", "Get more customers", "Grow my followers on social media", typeSuggestions(type)[0]];
+}
+
+function typeSuggestions(type?: string | null): string[] {
   switch (type) {
     case "saas":
       return [
@@ -116,22 +120,20 @@ export const WishComposer = forwardRef<WishComposerHandle, { slug: string; userI
   };
 
   return (
-    <section aria-labelledby="request-heading" className="space-y-3">
-      <h2 id="request-heading" className="heading-section">What would you like help with?</h2>
-      <p className="text-sm text-ink-3">Use your own words. You do not need to know marketing or business terms.</p>
+    <section aria-label="Ask ClimbOS" className="space-y-3">
       <RequestComposer
-        label="Your request"
+        label="Describe a problem or a goal"
         inputRef={area}
         value={text}
         onChange={(next) => setDraft({ scope, text: next })}
         onSubmit={() => void submit()}
-        placeholder="For example: I want more people to book my services. Where should I start?"
+        placeholder="For example: we just opened and nobody knows about us yet"
         suggestions={suggestions}
         busy={busy}
         disabled={disabled || !scope}
         helper={!identityReady ? "Checking your account…" : isDemo
-          ? "Your draft stays in this browser tab and this business. Demo requests use no paid AI credits and do not contact customers or publish anything."
-          : `Your draft stays in this browser tab and this business. Sending sets aside up to ${fmt.upTo(requestCostEstimateMicros)} to understand your request. ClimbOS may also reserve up to ${fmt.upTo(autoDraftBudgetMicros)} for safe draft or analysis work that starts automatically, when workspace rules allow. Each job has its own cost guard; unused reserved credits return. External messages, publishing, and ad spend still need your approval.`}
+          ? "Demo: no credits used, nothing sent or posted."
+          : `Up to ${fmt.upTo(requestCostEstimateMicros + autoDraftBudgetMicros)}; unused credits return. Nothing is posted or spent without you.`}
       />
       {(disabled || !scope) && disabledReason ? <p role="status" className="text-sm text-ink-3">{disabledReason}</p> : null}
     </section>

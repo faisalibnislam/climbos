@@ -7,7 +7,7 @@ import { CreditMeter } from "./CreditMeter";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { BarChart3, CalendarDays, ChevronDown, Compass, Home, Inbox, LogOut, Magic, Menu, PanelLeftClose, PanelLeftOpen, PanelsTopLeft, PauseCircle, PlayCircle, Plug, Search, Settings, Users, type LucideIcon } from "@/components/icons";
+import { BarChart3, CalendarDays, ChevronDown, Compass, Home, Inbox, LogOut, Magic, Megaphone, Menu, PanelLeftClose, PanelLeftOpen, PanelsTopLeft, PauseCircle, PlayCircle, Plug, Search, Settings, Users, type LucideIcon } from "@/components/icons";
 import { CommandPalette } from "./CommandPalette";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 import { JobToasts, TeamActivity } from "./TeamActivity";
@@ -41,7 +41,7 @@ import { errorMessage } from "./errors";
 import { PRIMARY_NAV, appArea, appHref } from "./navigation";
 import { SkipLink } from "@shared/a11y/SkipLink";
 
-const NAV_ICONS: Record<string, LucideIcon> = { today: Home, plan: Compass, work: CalendarDays, customers: Users, results: BarChart3, tools: PanelsTopLeft };
+const NAV_ICONS: Record<string, LucideIcon> = { today: Home, plan: Compass, channels: Megaphone, work: CalendarDays, customers: Users, results: BarChart3, tools: PanelsTopLeft };
 const NAV: { key: string; label: string; icon: LucideIcon; group: string }[] = PRIMARY_NAV.map((item) => ({ ...item, icon: NAV_ICONS[item.key], group: "" }));
 const NAV_GROUPS = [""];
 const MOBILE_PRIMARY = ["today", "work", "customers", "results"];

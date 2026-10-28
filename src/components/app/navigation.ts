@@ -1,12 +1,13 @@
 /** Customer language and route ownership in one place; legacy URLs stay valid. */
-export type AppArea = "today" | "plan" | "work" | "customers" | "results" | "tools";
+export type AppArea = "today" | "plan" | "channels" | "work" | "customers" | "results" | "tools";
 export const PRIMARY_NAV = [
-  { key: "today", label: "Home", description: "Ask for help and see your next step." },
-  { key: "plan", label: "Your plan", description: "Decide what to focus on and why." },
-  { key: "work", label: "Your work", description: "Make posts, emails, ads, images, and pages." },
-  { key: "customers", label: "Customers", description: "Find people to reach and manage conversations." },
-  { key: "results", label: "Results", description: "See what happened and what is still unknown." },
-  { key: "tools", label: "All tools", description: "Find any tool, with a short explanation." },
+  { key: "today", label: "Home", description: "Ask for help and see what needs you." },
+  { key: "plan", label: "Plan", description: "Your goal and what to focus on." },
+  { key: "channels", label: "Channels", description: "Where to find customers and followers." },
+  { key: "work", label: "Work", description: "Posts, emails, ads, images and pages." },
+  { key: "customers", label: "Customers", description: "People, messages and reviews." },
+  { key: "results", label: "Results", description: "What happened, in numbers." },
+  { key: "tools", label: "More", description: "Every other tool." },
 ] as const;
 
 export const APP_TOOLS: { key: string; label: string; description: string; area: AppArea; search: string }[] = [

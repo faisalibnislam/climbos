@@ -158,6 +158,7 @@ export const today = query({
             status: strategy.status,
             version: strategy.version,
             summary: strategy.summary,
+            channels: [...strategy.channels].sort((a, b) => a.priority - b.priority).slice(0, 3).map((c) => c.name),
             opportunities: projectGrowthOpportunities(expertPlaysOf(strategy.expert) as OpportunityPlayInput[]),
           }
         : null,

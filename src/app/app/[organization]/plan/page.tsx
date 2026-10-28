@@ -5,12 +5,11 @@ import { useQueries, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Compass, Megaphone, Target } from "@/components/icons"
+import { Compass, Target } from "@/components/icons"
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
-import { Badge, Button, Callout, Card, CardContent, EmptyState, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, buttonClasses, type Tone } from "@/components/ui";
-import { ChannelScorecard } from "@/components/app/plan/ChannelScorecard";
+import { Badge, Button, Callout, Card, CardContent, EmptyState, Skeleton, buttonClasses, type Tone } from "@/components/ui";
 import { GeneratePlanButton, PlanReviewCard, StrategyRunWatcher, useStrategyRunState } from "@/components/app/plan/PlanActions";
 import { PlanToConnectedApps } from "@/components/app/connections/ConnectedProducts";
 import type { Economics } from "../../../../../shared/agents/economics";
@@ -401,19 +400,7 @@ function PlanScreen({ slug }: { slug: string }) {
         />
       ) : null}
 
-      <Tabs defaultValue="plan" className={compare ? "hidden" : undefined}>
-        <TabsList className="grid w-full grid-cols-2 p-1">
-          <TabsTrigger value="plan" className="h-12 gap-2 text-lg [font-family:var(--font-display-serif)] [&_svg]:size-5">
-            <Compass aria-hidden /> Plan
-          </TabsTrigger>
-          <TabsTrigger value="channels" className="h-12 gap-2 text-lg [font-family:var(--font-display-serif)] [&_svg]:size-5">
-            <Megaphone aria-hidden /> Channels
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="channels" className="mt-5">
-          <ChannelScorecard slug={slug} />
-        </TabsContent>
-        <TabsContent value="plan" className="mt-5 flex flex-col gap-6">
+      <div className={compare ? "hidden" : "flex flex-col gap-6"}>
       {!s ? (
         <>
           {plan.strategyRun?.status === "failed" && plan.strategyRun.userMessage ? (
@@ -469,8 +456,7 @@ function PlanScreen({ slug }: { slug: string }) {
       <BusinessInsights insights={plan.insights} />
       {s ? <Sources sources={plan.sources} web={(s.expert as { webSources?: { url: string; title?: string }[] } | null)?.webSources ?? []} researchEvidence={plan.researchEvidence} websiteUrl={savedBusinessWebsite} knowledge={(s.expert as { snapshot?: { knowledgeReferences?: KnowledgeReferenceSet } } | null)?.snapshot?.knowledgeReferences} /> : null}
       {s ? <Discussion slug={slug} subjectType="strategy" subjectId={s.id} title={`Growth plan v${s.version}`} href={`/app/${slug}/plan`} /> : null}
-        </TabsContent>
-      </Tabs>
+      </div>
 
         </>
       )}
