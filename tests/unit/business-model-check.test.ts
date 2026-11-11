@@ -92,6 +92,12 @@ describe("first-party model signals", () => {
     expect(ownerModelSignalsBrief(s)).toContain("thresholds are stated, not business facts");
   });
 
+  it("limits analogy citations to the small retrieved set", () => {
+    const output = check({ alternatives: [alternative("grounded", { precedentIds: ["CP-076"] }), alternative("adjacent"), alternative("bold")] });
+    expect(lintBusinessModelCheck(output, { factCount: 0, readUrls: [] }).some((x) => x.rule === "citation")).toBe(true);
+    expect(lintBusinessModelCheck(output, { factCount: 0, readUrls: [], precedentIds: ["CP-076"] }).filter((x) => x.path?.endsWith("precedentIds"))).toEqual([]);
+  });
+
   it("gives later plans the latest check as labelled judgment", () => {
     const text = businessModelPlanContext(check(), now);
     expect(text).toContain("AI judgment for owner review, not a verified finding");

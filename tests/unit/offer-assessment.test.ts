@@ -130,6 +130,11 @@ describe("offer and promotion recommendations", () => {
     expect(offerReferenceLabel("https://example.com/offer")).toBe("https://example.com/offer");
   });
 
+  it("does not treat an explicit no-trial statement as a proposed commercial offer", () => {
+    expect(lintOfferAssessment(undefined, { hook: "There is no free trial. Keep the current $2 membership." }, context, "offerAssessment")).toEqual([]);
+    expect(lintOfferAssessment(undefined, { hook: "Start a free trial today." }, context, "offerAssessment")).toContainEqual(expect.objectContaining({ rule: "offer_assessment" }));
+  });
+
   it("computes positive unit contribution and the deterministic volume needed to match current contribution", () => {
     const offer = assessment();
     expect(evaluateOfferUnitEconomics(offer)).toMatchObject({ currentContribution: 50, proposedContribution: 40, priceChangeFromCurrent: -5, currentMarginRate: 0.5, proposedMarginRate: 40 / 95, proposedUnitsPerCurrentUnitToMatchContribution: 50 / 40, contributionBreakEvenUnits: 2, known: true });

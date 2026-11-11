@@ -14,11 +14,9 @@ export const BUSINESS_TYPE_OPTIONS: { value: BusinessType; label: string }[] = [
 export const CURRENCY_OPTIONS = ["USD", "EUR", "GBP", "CAD", "AUD", "INR", "SGD", "AED"].map((c) => ({ value: c, label: c }));
 
 export const HORIZON_OPTIONS = [
+  { value: "14", label: "14 days — start small" },
   { value: "30", label: "30 days" },
-  { value: "60", label: "60 days" },
   { value: "90", label: "90 days" },
-  { value: "180", label: "6 months" },
-  { value: "365", label: "1 year" },
 ];
 
 export const REVIEW_DAY_OPTIONS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((d) => ({ value: d, label: d }));

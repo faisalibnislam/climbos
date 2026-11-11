@@ -1,3 +1,4 @@
+import { ROUTE_VERSION, STANDARD_SLOT, ADVANCED_SLOT } from "../agents/routes";
 import type { ModelKey, Provider, RateVersion } from "../economics/rates";
 import { MODEL_SPECS } from "./models";
 
@@ -5,8 +6,8 @@ import { MODEL_SPECS } from "./models";
  * Admin-controlled model choice (owner decision, 26 Oct 2026).
  *
  * Every route in shared/agents/routes.ts is written against two tiers:
- * - standard: research, drafts, reviews and single-call tasks (built-in default GPT-6 Luna);
- * - advanced: the Expert escalation after a measured review failure (built-in default GPT-6.1 Sol).
+ * - standard: research, drafts, reviews and single-call tasks (built-in default Claude Haiku);
+ * - advanced: strategy, creative work and quality review (built-in default Claude Sonnet).
  * The operator sets a default model per tier in /ops. A user the operator has
  * enabled may pick one model for a run, which then serves both tiers.
  * A run stores its resolved route, so estimates, reservations, execution and
@@ -21,13 +22,15 @@ export interface ModelRoute {
   advanced: ModelKey;
   /** "default" = operator defaults (or built-in); "user" = a permitted user's choice for this run. */
   source: "default" | "user";
+  /** Missing on historical runs: retain their original OpenAI phase policy. */
+  policy?: string;
 }
 
-export const BUILT_IN_ROUTE: ModelRoute = { standard: "gpt-6-luna", advanced: "gpt-6.1-sol", source: "default" };
+export const BUILT_IN_ROUTE: ModelRoute = { standard: "claude-haiku-5.5", advanced: "claude-sonnet-5.5", source: "default", policy: ROUTE_VERSION };
 
 export const TIER_LABELS: Record<ModelTier, { label: string; detail: string }> = {
-  standard: { label: "Standard", detail: "Research, drafts, reviews and quick tasks." },
-  advanced: { label: "Advanced", detail: "Climb AI Expert revisions after a failed review." },
+  standard: { label: "Standard", detail: "Haiku: extraction, research notes and routine tasks." },
+  advanced: { label: "Advanced", detail: "Sonnet: strategy, creative drafts and quality review." },
 };
 
 export const PROVIDER_LABELS: Record<Provider, string> = { openai: "OpenAI", anthropic: "Anthropic", google: "Google Gemini" };
@@ -52,14 +55,14 @@ export function modelAvailable(key: ModelKey, env: Record<string, string | undef
 /** The model a route serves for a step written against `key` (other models, e.g. image or legacy routes, pass through). */
 export function routeModelKey(route: ModelRoute | undefined, key: ModelKey): ModelKey {
   if (!route) return key;
-  if (key === BUILT_IN_ROUTE.standard) return route.standard;
-  if (key === BUILT_IN_ROUTE.advanced) return route.advanced;
+  if (key === STANDARD_SLOT) return route.standard;
+  if (key === ADVANCED_SLOT) return route.advanced;
   return key;
 }
 
 /** A user's single choice serves both tiers. */
 export function userRoute(key: ModelKey): ModelRoute {
-  return { standard: key, advanced: key, source: "user" };
+  return { standard: key, advanced: key, source: "user", policy: ROUTE_VERSION };
 }
 
 export interface ModelOption {
@@ -88,8 +91,8 @@ export function modelOptions(rates: RateVersion, env: Record<string, string | un
 }
 
 /** The model a stored run uses for a step written against `key` (runs saved before model choice use the built-in route). */
-export function runModel(run: { modelRoute?: { standard: string; advanced: string; source: "default" | "user" } }, key: ModelKey): ModelKey {
+export function runModel(run: { modelRoute?: { standard: string; advanced: string; source: "default" | "user"; policy?: string } }, key: ModelKey): ModelKey {
   const r = run.modelRoute;
   if (!r || !isModelKey(r.standard) || !isModelKey(r.advanced)) return key;
-  return routeModelKey({ standard: r.standard, advanced: r.advanced, source: r.source }, key);
+  return routeModelKey({ standard: r.standard, advanced: r.advanced, source: r.source, policy: r.policy }, key);
 }

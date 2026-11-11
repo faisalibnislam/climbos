@@ -85,14 +85,58 @@ export function creditMargin(priceUsd: number, credits: number, opts: { overhead
 
 /** Starting estimates for common actions in credits; additional review or Expert escalation is reserved when needed. */
 export const CREDIT_EXAMPLES: readonly { kind: string; label: string; basic: number; expert?: number }[] = [
-  { kind: "onboarding_research", label: "Research your business", basic: 19, expert: 16 },
-  { kind: "strategy", label: "90-day growth plan", basic: 26, expert: 19 },
-  { kind: "content_social", label: "3 social posts", basic: 9 },
-  { kind: "content_ads", label: "Ad set", basic: 9, expert: 9 },
-  { kind: "content_email", label: "Email sequence", basic: 4 },
-  { kind: "content_seo", label: "SEO page", basic: 11 },
-  { kind: "conversion_audit", label: "Website & social review", basic: 10 },
-  { kind: "social_calendar", label: "Weekly autopilot plan", basic: 8, expert: 8 },
-  { kind: "outbound", label: "Find customers + emails", basic: 20 },
-  { kind: "image", label: "One image", basic: 5 },
+  {
+    "kind": "onboarding_research",
+    "label": "Research your business",
+    "basic": 58,
+    "expert": 58
+  },
+  {
+    "kind": "strategy",
+    "label": "Growth plan",
+    "basic": 122,
+    "expert": 122
+  },
+  {
+    "kind": "content_social",
+    "label": "3 social posts",
+    "basic": 41
+  },
+  {
+    "kind": "content_ads",
+    "label": "Ad set",
+    "basic": 39,
+    "expert": 39
+  },
+  {
+    "kind": "content_email",
+    "label": "Email sequence",
+    "basic": 34
+  },
+  {
+    "kind": "content_seo",
+    "label": "SEO page",
+    "basic": 53
+  },
+  {
+    "kind": "conversion_audit",
+    "label": "Website & social review",
+    "basic": 44
+  },
+  {
+    "kind": "social_calendar",
+    "label": "Weekly autopilot plan",
+    "basic": 39,
+    "expert": 39
+  },
+  {
+    "kind": "outbound",
+    "label": "Find customers + emails",
+    "basic": 49
+  },
+  {
+    "kind": "image",
+    "label": "One image",
+    "basic": 5
+  }
 ];

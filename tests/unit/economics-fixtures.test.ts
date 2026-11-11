@@ -200,6 +200,13 @@ describe("edge cases", () => {
     expect(lintEconomics({ economics: ref, plays: [none] }).some((l) => l.path === "plays[0].model")).toBe(true);
   });
 
+  it("keeps missing business inputs null without invented contribution or payback", () => {
+    const e = { ...ref, revenuePerCustomerMonthUsd: null, grossMargin: null, monthlyChurn: null };
+    expect(monthlyContribution(e)).toBeNull();
+    expect(playMaths(refPlay(), e)).toMatchObject({ valueUsd: null, profitable: null, robustness: "unknown" });
+    expect(lintEconomics({ economics: e, plays: [refPlay()] }).some((l) => l.path === "economics" && l.severity === "error")).toBe(false);
+  });
+
   it("missing price: contribution unknown", () => {
     const e = { ...ref, revenuePerCustomerMonthUsd: Number.NaN };
     expect(monthlyContribution(e)).toBeNull();

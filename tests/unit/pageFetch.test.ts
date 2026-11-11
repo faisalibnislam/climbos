@@ -83,6 +83,19 @@ describe("fetch_page (OpenAI adapter page reads)", () => {
     expect(r.appended.map((m) => m.role)).toEqual(["assistant", "user", "assistant"]);
   });
 
+  it("preserves explicit product-pitch refusals through a fetch and resumable metadata", async () => {
+    const web = webMock({ "https://creator.example/contact": () => new Response('<html><head><title>Contact</title></head><body>We do not accept free products for review or marketing partnerships.</body></html>', { status: 200, headers: { "content-type": "text/html" } }) });
+    const fetcher = new PageFetcher({ maxUses: 1, resolveHost: dns(), fetchImpl: web });
+    await fetcher.run({ call_id: "contact", arguments: JSON.stringify({ url: "https://creator.example/contact" }) });
+    expect(fetcher.fetched[0]?.productPitchPolicy?.status).toBe("refused");
+    // A long quote must not silently remove a refusal at the metadata size bound.
+    fetcher.fetched[0].productPitchPolicy!.evidence = "x".repeat(400);
+    const restored = new PageFetcher({ maxUses: 1, resolveHost: dns(), fetchImpl: web });
+    restored.restore(fetcher.metadata());
+    expect(restored.fetched[0]?.productPitchPolicy?.status).toBe("refused");
+    expect(Object.values(fetcher.metadata()).every(value => value.length <= 512)).toBe(true);
+  });
+
   it("keeps page-reported dates on directly fetched sources without treating them as independently verified", async () => {
     process.env.OPENAI_API_KEY = "test";
     const web = webMock({ "https://rival.example/story": () => new Response('<html><head><title>Story</title><meta property="article:published_time" content="2024-03-04"><script type="application/ld+json">{"@type":"Article","dateModified":"2025-01-02"}</script></head><body>News</body></html>', { status: 200, headers: { "content-type": "text/html" } }) });

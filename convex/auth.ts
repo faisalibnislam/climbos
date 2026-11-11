@@ -4,6 +4,7 @@ import { Email } from "@convex-dev/auth/providers/Email";
 import { Password } from "@convex-dev/auth/providers/Password";
 import { convexAuth } from "@convex-dev/auth/server";
 import { signInCodeEmail } from "./lib/emailTemplates";
+import { localDevLoginEnabled } from "../shared/policy/localDevelopment";
 
 /** 8-digit numeric sign-in code from a CSPRNG (rejection sampling, no modulo bias). */
 function generateCode(): string {
@@ -48,10 +49,10 @@ const ResendOTP = Email({
 /**
  * Development-only password sign-in for local end-to-end testing without an
  * email provider. Double-gated: the flag must be set AND the deployment's
- * SITE_URL must be localhost, so it can never be enabled on production.
+ * SITE_URL must be an exact HTTP loopback origin, alongside the explicit flag.
  */
 export const devLoginEnabled =
-  process.env.CLIMBOS_ENABLE_DEV_LOGIN === "true" && (process.env.SITE_URL ?? "").startsWith("http://localhost");
+  localDevLoginEnabled(process.env.CLIMBOS_ENABLE_DEV_LOGIN, process.env.SITE_URL);
 
 const providers = [
   ResendOTP,

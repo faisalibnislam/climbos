@@ -2,6 +2,14 @@
 
 Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs as written there. Baseline: `404c466`. Branch: `growth-engine-v2`.
 
+## Local update — 9 November 2026
+
+The [local audit](../Local-Audit-2026-11-09.md) maps current defects, repairs and limitations. Implemented: shared research before channel scoring; context-bound scorecard caching; preservation of owner channel preferences; earned creator coverage distinct from sponsorship; required direction for new plans; required 3–5-channel decision shortlist for new scoring (with a brief broad comparison); exact duplicate mechanism/action quality gate; explicit seven-platform social routing; recommendation-first Home/Plan/channels; creator intake; observed search-page review drafts; draft restoration repair; exact-loopback development auth and reproducible fixture backend startup. `ENGINE_VERSION` is `v3.75-direction-and-channel-shortlist`; existing hosted engine selection is unchanged. New schema contracts retain older stored-plan compatibility.
+
+These are fixture-verified implementation changes, not real-model strategy or business-outcome validation. The offline eight-industry review pack makes the latter evaluation reproducible without calling a model. Current automated results are in [Verification](../Verification.md). No deployment, push or paid model run occurred. Earlier deployment/branch descriptions below are dated historical statements, not a current production audit.
+
+The previously backend-only experiment setup now has an owner form and a read-back path in the plan. Owners supply versions, decision owner, planned cash/currency, total hours and estimate basis. Blank amounts do not become zero. Saving keeps status proposed; after starting, the form is replaced by append-only change notes. Existing mutation role and tenant checks remain authoritative; query responses omit change-author IDs. Regression coverage checks persistence, locking, read-back and cross-tenant denial; desktop/mobile tests cover setup and change recording.
+
 ## Status key
 
 | Status | Meaning |

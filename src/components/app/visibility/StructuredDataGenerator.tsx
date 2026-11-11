@@ -3,8 +3,10 @@
 import { useMemo, useState } from "react";
 import { Button, Callout, Card, CardContent, Input } from "@/components/ui";
 import { createOrganizationWebsiteDraft } from "@shared/seo/structuredData";
+import { structuredDataParity } from "@shared/seo/structuredDataParity";
+import type { ReadinessPageSample } from "@shared/seo/pageSample";
 
-export function StructuredDataGenerator({ businessName, website }: { businessName: string; website: string }) {
+export function StructuredDataGenerator({ businessName, website, pageSamples = [] }: { businessName: string; website: string; pageSamples?: ReadinessPageSample[] }) {
   const [name, setName] = useState(businessName);
   const [url, setUrl] = useState(website);
   const [visibleNameConfirmed, setVisibleNameConfirmed] = useState(false);
@@ -25,6 +27,7 @@ export function StructuredDataGenerator({ businessName, website }: { businessNam
   const field = (key: keyof typeof address, label: string, max: number) => (
     <label key={key} className="flex flex-col gap-1.5 text-sm font-medium text-ink">{label}<Input value={address[key]} maxLength={max} onChange={(event) => setAddress((a) => ({ ...a, [key]: event.target.value }))} /></label>
   );
+  const parity = draft ? structuredDataParity(draft, pageSamples) : null;
 
   const copy = async () => {
     if (!draft) return;
@@ -66,6 +69,7 @@ export function StructuredDataGenerator({ businessName, website }: { businessNam
         {profiles.trim() ? <label className="flex items-start gap-2 text-sm text-ink-2"><input type="checkbox" checked={profilesConfirmed} onChange={(event) => setProfilesConfirmed(event.target.checked)} className="mt-1" /><span>These profiles belong to this business.</span></label> : null}
         {draft ? <>
           <ul className="grid gap-1 text-xs text-ink-3 sm:grid-cols-3">{draft.checks.map((check) => <li key={check.id}>✓ {check.message}</li>)}</ul>
+          {parity ? <div className="space-y-2 rounded-lg border border-line p-3 text-xs text-ink-2"><p className="font-medium">Check against the page we read</p>{parity.pageUrl ? <p className="break-all">{parity.pageUrl} · checked {new Date(parity.checkedAt!).toISOString().slice(0, 10)}</p> : null}<ul className="space-y-1">{parity.checks.map((check, index) => <li key={index}>{check.field}: {check.state === "matched" ? "Text or link found" : check.state === "not_found" ? "Not found in this sample — verify before adding" : "Not checked"} · {check.value}</li>)}</ul><p>{parity.limitation}</p></div> : null}
           <pre className="max-h-80 overflow-auto rounded-lg bg-surface-2 p-3 text-xs text-ink"><code>{draft.scriptTag}</code></pre>
           <div className="flex flex-wrap items-center gap-3"><Button onClick={copy}>{copied ? "Copied JSON-LD" : "Copy JSON-LD"}</Button><span className="text-xs text-ink-3">Test it in Google’s Rich Results Test before and after adding it.</span></div>
         </> : <p className="text-sm text-ink-3">Enter a public URL and confirm the name is visible to create the draft.</p>}

@@ -20,6 +20,7 @@ import type { AiSearchProvider } from "@shared/aiSearch/visibility";
 import { AI_DATA_USE_CONTROLS } from "@shared/seo/readiness";
 import { parseGoogleAiReportCsv } from "@shared/aiSearch/googleReportCsv";
 import { StructuredDataGenerator } from "@/components/app/visibility/StructuredDataGenerator";
+import { SearchNextSteps } from "@/components/app/visibility/SearchNextSteps";
 import { prioritizeAiVisibilityGaps, prioritizeSearchOpportunities, type AiVisibilityOpportunity } from "@shared/seo/opportunityPriority";
 
 export default function SearchReadinessPage() {
@@ -55,8 +56,9 @@ export default function SearchReadinessPage() {
         intro="What search and AI tools can read on your homepage."
         actions={data.website && canEdit ? <Button size="sm" variant="secondary" loading={current?.status === "queued"} disabled={current?.status === "queued"} onClick={run}><RefreshCw aria-hidden /> Check homepage</Button> : null}
       />
+      <SearchNextSteps slug={slug} website={data.website} />
       <Callout tone="info">These checks read your homepage and robots.txt only. They can’t confirm indexing, rankings or AI citations, and no markup guarantees them.</Callout>
-      {data.website ? <StructuredDataGenerator businessName={data.businessName} website={data.website} /> : null}
+      {data.website ? <StructuredDataGenerator businessName={data.businessName} website={data.website} pageSamples={data.scan?.pageSamples} /> : null}
       {!data.website ? (
         <EmptyState icon={<Search />} title="Add your website first" body={<span>Add it in <a className="underline underline-offset-2" href={`/app/${slug}/settings/facts`}>Business facts</a>, then run a check.</span>} />
       ) : !current ? (
@@ -87,6 +89,7 @@ export default function SearchReadinessPage() {
           </section>
         </>
       )}
+      {current?.pageSamples?.length ? <section aria-label="Sampled website pages" className="space-y-3"><h2 className="heading-card">The pages we checked</h2><p className="text-sm text-ink-3">Up to three same-site HTML pages. No JavaScript rendering or viewport was measured in this check. This is a sample, not a full crawl.</p>{current.pageSamples.map((page) => <details key={page.url} className="rounded-lg border border-line bg-surface p-3"><summary className="min-h-9 cursor-pointer break-all text-sm font-medium">{page.url} · {page.status === "read" ? `${page.findings.length} review points` : page.status === "blocked_by_robots" ? "Not read: access rules" : "Could not read"}</summary><ul className="mt-2 space-y-3 text-sm text-ink-2">{page.findings.map((finding) => <li key={finding.id}><p className="font-medium">{finding.title}</p><p>{finding.evidence}</p><p>{finding.nextStep}</p></li>)}</ul></details>)}</section> : null}
       <section className="flex flex-col gap-3">
         <div><h2 className="heading-card">Pages reviewed</h2><p className="mt-1 text-sm text-ink-3">From recent site reviews. Most serious first; not a ranking prediction.</p></div>
         {data.inventory?.length ? data.inventory.map((audit) => (

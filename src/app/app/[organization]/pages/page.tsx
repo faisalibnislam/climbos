@@ -18,7 +18,7 @@ import { KeyValueList } from "@/components/ds/data/display";
 import type { LandingContent } from "../../../../../shared/landing";
 
 /** Landing pages: Climb AI writes the page, you edit and publish. Leads go to Pipeline and Inbox. */
-export default function PagesPage({ searchParams }: { searchParams: Promise<{ brief?: string | string[]; designRunId?: string | string[]; designFindingIndex?: string | string[]; designDirectionId?: string | string[] }> }) {
+export default function PagesPage({ searchParams }: { searchParams: Promise<{ id?: string | string[]; brief?: string | string[]; designRunId?: string | string[]; designFindingIndex?: string | string[]; designDirectionId?: string | string[] }> }) {
   const { organization: slug } = useParams<{ organization: string }>();
   const params = use(searchParams);
   const requestedBrief = params.brief;
@@ -31,7 +31,7 @@ export default function PagesPage({ searchParams }: { searchParams: Promise<{ br
   const remove = useMutation(api.landing.remove);
   const [brief, setBrief] = useState(() => typeof requestedBrief === "string" ? requestedBrief.slice(0, 2400) : "");
   const [busy, setBusy] = useState(false);
-  const [openId, setOpenId] = useState<Id<"landingPages"> | null>(null);
+  const [openId, setOpenId] = useState<Id<"landingPages"> | null>(() => typeof params.id === "string" ? params.id as Id<"landingPages"> : null);
   if (data === undefined) return <LoadingBlock label="Loading pages…" lines={3} />;
   const open = data.pages.find((p) => p.id === openId) ?? null;
   return (

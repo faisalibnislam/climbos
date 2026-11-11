@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { z } from "zod";
 import type { RateVersion } from "../economics/rates";
 import { MODEL_SPECS } from "./models";
-import { dropNulls, normalizeNulls, strictSchema } from "./openai";
+import { claudeSchema, claudeCanConstrain } from "./anthropicSchema";
 import { FETCH_PAGE_TOOL, fetchPageToolDef, pageFetcherFor } from "./pageFetch";
 import { jsonSchemaFor, parseJsonText, turnCostMicros, ZERO_USAGE, type ContentBlock, type MessageParam, type Source, type ToolUseBlock, type TurnRequest, type TurnResult, type TurnUsage } from "./types";
 
@@ -83,7 +83,7 @@ function blocksOf(content: Anthropic.ContentBlock[]): ContentBlock[] {
   for (const c of content) {
     if (c.type === "text") {
       if (c.text) blocks.push({ type: "text", text: c.text });
-    } else if (c.type === "tool_use") blocks.push({ type: "tool_use", id: c.id, name: c.name, input: dropNulls(c.input) });
+    } else if (c.type === "tool_use") blocks.push({ type: "tool_use", id: c.id, name: c.name, input: c.input });
     else blocks.push({ type: "provider_item", provider: "anthropic", item: c as unknown as Raw });
   }
   return blocks;
@@ -105,9 +105,10 @@ function sourcesOf(content: Anthropic.ContentBlock[], into: Map<string, Source>)
 function failure(e: unknown): TurnResult {
   const usage = { ...ZERO_USAGE };
   const fail = (kind: Extract<TurnResult, { ok: false }>["kind"], message: string, retryAfterMs?: number): TurnResult => ({ ok: false, kind, message, usage, costMicros: 0, appended: [], ...(retryAfterMs ? { retryAfterMs } : {}) });
-  if (e instanceof Anthropic.APIConnectionTimeoutError) return fail("timeout", "Claude took too long to respond.");
-  if (e instanceof Anthropic.APIUserAbortError) return fail("timeout", "Claude took too long to respond.");
-  if (e instanceof Anthropic.APIConnectionError) return fail("provider_error", "Claude could not be reached.");
+  const uncertain = (result: TurnResult): TurnResult => ({ ...result, billingUncertain: true } as TurnResult);
+  if (e instanceof Anthropic.APIConnectionTimeoutError) return uncertain(fail("timeout", "Claude took too long to respond."));
+  if (e instanceof Anthropic.APIUserAbortError) return uncertain(fail("timeout", "Claude took too long to respond."));
+  if (e instanceof Anthropic.APIConnectionError) return uncertain(fail("provider_error", "Claude could not be reached."));
   if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) return fail("provider_unavailable", "Anthropic rejected the server credentials.");
   if (e instanceof Anthropic.RateLimitError) {
     const ra = Number(e.headers?.get("retry-after"));
@@ -115,9 +116,9 @@ function failure(e: unknown): TurnResult {
   }
   if (e instanceof Anthropic.BadRequestError && /credit balance|billing/i.test(e.message)) return fail("spend_limit", "The Anthropic account is out of credit.");
   if (e instanceof Anthropic.NotFoundError) return fail("provider_unavailable", "This Claude model isn't available to the server's Anthropic account.");
-  if (e instanceof Anthropic.InternalServerError || (e instanceof Anthropic.APIError && (e.status ?? 0) >= 500)) return fail("rate_limited", "Claude is busy right now.");
+  if (e instanceof Anthropic.InternalServerError || (e instanceof Anthropic.APIError && (e.status ?? 0) >= 500)) return uncertain(fail("provider_error", "Claude stopped before the billing outcome could be confirmed."));
   if (e instanceof Anthropic.APIError) return fail("provider_error", `Anthropic error (${e.status ?? "?"}): ${e.message.slice(0, 200)}`);
-  return fail("provider_error", "Claude could not be reached.");
+  return uncertain(fail("provider_error", "Claude could not be reached."));
 }
 
 /**
@@ -146,22 +147,39 @@ export async function anthropicTurn(req: TurnRequest, rates: RateVersion): Promi
     tools.push(DYNAMIC_SEARCH.has(spec.apiModelId) ? { type: "web_search_20260209", ...common } : { type: "web_search_20250305", ...common });
   }
   const fnTools = [...(req.customTools ?? []), ...(fetcher ? [fetchPageToolDef(req.webFetch!.maxUses)] : [])];
-  for (const t of fnTools) tools.push({ name: t.name, description: t.description ?? "", input_schema: strictSchema(t.input_schema) as Anthropic.Tool.InputSchema, strict: true });
+  const outputSchema = req.schema ? claudeSchema(jsonSchemaFor(req.schema)) : undefined;
+  const strictSchemas: unknown[] = [];
+  let strictCount = 0;
+  for (const t of fnTools) {
+    const wire = claudeSchema(t.input_schema);
+    const strict = claudeCanConstrain([...strictSchemas, wire], strictCount + 1);
+    if (strict) { strictSchemas.push(wire); strictCount++; }
+    tools.push({ name: t.name, description: t.description ?? "", input_schema: wire as Anthropic.Tool.InputSchema, ...(strict ? { strict: true } : {}) });
+  }
+  const constrainedOutput = outputSchema && claudeCanConstrain([...strictSchemas, outputSchema], strictCount) ? outputSchema : undefined;
 
-  const system: Anthropic.TextBlockParam[] = req.system.map((b) => ({ type: "text", text: b.text, ...(b.cache ? { cache_control: { type: "ephemeral" as const } } : {}) }));
+  const system: Anthropic.TextBlockParam[] = req.system.map((b) => ({ type: "text", text: b.text }));
+  if (req.schema && !constrainedOutput) system.push({ type: "text", text: `Return only a complete JSON value matching this application schema. No Markdown or prose outside the JSON. Optional fields may be omitted; preserve required nulls for unknown values. The application validates every field, enum and bound before accepting the result. Schema:\n${JSON.stringify(jsonSchemaFor(req.schema))}`, cache_control: { type: "ephemeral" } });
+  const cacheIndex = req.schema && !constrainedOutput ? system.length - 1 : req.system.map((b) => b.cache).lastIndexOf(true);
+  if (cacheIndex >= 0) system[cacheIndex].cache_control = { type: "ephemeral" };
   const effort = req.thinkingOff ? "low" : req.effort;
+  const thinking: Anthropic.ThinkingConfigParam | undefined = req.thinkingOff
+    ? { type: spec.apiModelId === "claude-sonnet-5-5" ? "between_tools" : "disabled" }
+    : ["claude-haiku-5-5", "claude-sonnet-5-5"].includes(spec.apiModelId) ? { type: "adaptive" } : undefined;
   const base = {
     model: spec.apiModelId,
     max_tokens: Math.min(req.maxTokens, spec.maxOutputTokens),
     system,
+    ...(thinking ? { thinking } : {}),
     ...(tools.length ? { tools } : {}),
-    ...(effort || req.schema ? { output_config: { ...(effort ? { effort } : {}), ...(req.schema ? { format: { type: "json_schema" as const, schema: strictSchema(jsonSchemaFor(req.schema)) as Raw } } : {}) } } : {}),
+    ...(effort || constrainedOutput ? { output_config: { ...(effort ? { effort } : {}), ...(constrainedOutput ? { format: { type: "json_schema" as const, schema: constrainedOutput as Raw } } : {}) } } : {}),
   };
 
-  const deadline = Date.now() + (req.timeoutMs ?? 240_000);
+  const deadline = Date.now() + (req.timeoutMs ?? 360_000);
   const maxRounds = (fetcher ? req.webFetch!.maxUses + 2 : 0) + 3;
   let messages = toClaudeMessages(req.messages);
   let total: TurnUsage = { ...ZERO_USAGE };
+  let totalCostMicros = 0;
   const sources = new Map<string, Source>();
   const appended: MessageParam[] = [];
   let mixed = false;
@@ -176,9 +194,11 @@ export async function anthropicTurn(req: TurnRequest, rates: RateVersion): Promi
       const r = failure(e);
       // Calls already made in this turn are still billed.
       const usage = addUsage(r.usage, { ...total, webFetches: fetcher?.used ?? 0 });
-      return { ...r, usage, costMicros: turnCostMicros(req.modelKey, usage, rates), appended: [] } as TurnResult;
+      return { ...r, usage, costMicros: totalCostMicros, appended: [] } as TurnResult;
     }
-    total = addUsage(total, claudeUsage(res.usage));
+    const callUsage = claudeUsage(res.usage);
+    total = addUsage(total, callUsage);
+    totalCostMicros += turnCostMicros(req.modelKey, callUsage, rates);
     sourcesOf(res.content, sources);
     if (res.stop_reason === "pause_turn" && round + 1 < maxRounds) {
       // Long server-tool work: send the partial turn back and let Claude continue it.
@@ -200,7 +220,7 @@ export async function anthropicTurn(req: TurnRequest, rates: RateVersion): Promi
   }
 
   const usage: TurnUsage = { ...total, webFetches: fetcher?.used ?? 0 };
-  const costMicros = turnCostMicros(req.modelKey, usage, rates);
+  const costMicros = totalCostMicros;
   const text = res.content.filter((c): c is Anthropic.TextBlock => c.type === "text").map((c) => c.text).join("");
   const allSources = [...(fetcher?.fetched ?? []), ...[...sources.values()].filter((s) => !fetcher?.fetched.some((f) => f.url === s.url))].slice(0, 60);
   const blocks = blocksOf(res.content);
@@ -218,7 +238,7 @@ export async function anthropicTurn(req: TurnRequest, rates: RateVersion): Promi
   let parsed: unknown = text;
   if (req.schema) {
     try {
-      parsed = (req.schema as z.ZodType).parse(normalizeNulls(parseJsonText(text), jsonSchemaFor(req.schema)));
+      parsed = (req.schema as z.ZodType).parse(parseJsonText(text));
     } catch (e) {
       return { ok: false, kind: "invalid_output", message: (e as Error).message.slice(0, 400), ...base2, text };
     }

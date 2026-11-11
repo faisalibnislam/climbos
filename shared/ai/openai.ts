@@ -19,7 +19,11 @@ export function strictSchema(node: unknown): unknown {
   if (Array.isArray(node)) return node.map(strictSchema);
   if (!node || typeof node !== "object") return node;
   const s = { ...(node as Json) };
-  for (const k of ["$schema", "default", "examples", "minLength", "maxLength", "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "pattern", "format", "minItems", "maxItems", "uniqueItems", "propertyNames"]) delete s[k];
+  for (const k of ["$schema", "default", "examples", "uniqueItems", "propertyNames"]) delete s[k];
+  // Base models support string, numeric and array bounds. Discarding them made
+  // API-valid responses fail the application's schema after the paid call.
+  // The provider supports only this subset of JSON Schema string formats.
+  if (s.format && !["date-time", "time", "date", "duration", "email", "hostname", "ipv4", "ipv6", "uuid"].includes(String(s.format))) delete s.format;
   if (s.type === "object" || s.properties) {
     const props = (s.properties ?? {}) as Json;
     const required = new Set((s.required as string[] | undefined) ?? []);

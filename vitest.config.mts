@@ -13,6 +13,9 @@ export default defineConfig({
     },
   },
   test: {
+    // Hundreds of Convex suites import the full job engine. Unbounded workers
+    // contend on module loading and make otherwise-fast permission tests time out.
+    maxWorkers: 2,
     projects: [
       {
         extends: true,
@@ -26,6 +29,8 @@ export default defineConfig({
         extends: true,
         test: {
           name: "convex",
+          // Full job/permission suites exercise many checkpointed actions and module loads.
+          testTimeout: 20_000,
           include: ["tests/convex/**/*.test.ts"],
           environment: "edge-runtime",
           server: { deps: { inline: ["convex-test"] } },

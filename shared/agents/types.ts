@@ -70,6 +70,12 @@ export interface AgentSpec<T> {
   maxTokens: { research: number; draft: number; critic: number };
   /** Revise rounds after the first critique (0 disables critique-driven revision). */
   maxRevisions: number;
+  /** Task-scoped output mode; only enabled after a matching quality evaluation. */
+  thinkingOff?: Partial<Record<"draft" | "critic", boolean>>;
+  /** Optional correction must reuse the original quoted run ceiling. */
+  revisionWithinInitialCap?: boolean;
+  /** Conservative token-estimate floor for supplied-context tasks; actual prompt estimates may raise it. Hard run caps still apply. */
+  inputBudgetFloor?: number;
   /** Write this many first drafts (different angles) and keep the one the reviewer rates higher. Default 1. */
   drafts?: number;
   /**
@@ -146,6 +152,9 @@ export interface PlanConstraints {
   lockedCustomers?: number;
   /** The goal's horizon in days (the period lockedCustomers covers). */
   horizonDays?: number;
+  /** Delivery timing is judged by the goal; horizonDays remains a separate financial scenario where needed. */
+  adaptiveTiming?: boolean;
+  goalDeadline?: string;
   /** Every customer count the calculations produced (portfolio and per-play P10/P50/P90); plan prose may only use these, the goal or a fact. */
   forecastCustomers?: number[];
   /** The owner's goal numbers (baseline and desired), which prose may restate. */
@@ -199,6 +208,7 @@ export interface AgentRunResult<T> {
 }
 
 export interface RunQuality {
+  revisionFailure?: { kind: string; message: string };
   /** Characters of each prompt block the writer saw. */
   contextChars: { brief: number; facts: number; task: number; research: number };
   /** Lint errors by rule on the first draft and on the shipped version. */

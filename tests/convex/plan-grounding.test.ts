@@ -4,7 +4,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { planContentHash } from "../../convex/lib/planHash";
 import type { PlanEvidence } from "../../shared/agents/evidence";
 import { sha256Hex } from "../../shared/policy";
-import { asNewUser, setup, type T } from "./helpers";
+import { asNewUser, makePaid, setup, type T } from "./helpers";
 
 /** P0 grounding slice: each plan version keeps what it knew, and approval binds to its content. */
 
@@ -12,6 +12,8 @@ async function workspace(t: T, email: string) {
   const owner = await asNewUser(t, email);
   const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Grounded Co" });
   await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "More paying customers", horizonDays: 90, monthlyAdBudget: 300 });
+  // Workflow coverage needs enough credits for Sonnet; free-wallet guards are tested separately.
+  await makePaid(t, orgId);
   return { ...owner, slug, orgId: orgId as Id<"organizations"> };
 }
 

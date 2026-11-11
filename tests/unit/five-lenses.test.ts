@@ -4,10 +4,14 @@ import { lintComparisonPositioning, lintOfferClaims, lintReferralDrivers, lintSe
 /** Five lenses from marketing books (skills/growth-plays "Five lenses"), as deterministic checks. */
 const cheap = { revenuePerCustomerMonthUsd: 9 };
 
+it("does not confuse a before/after homepage test with competitor comparison content", () => {
+  expect(lintComparisonPositioning([{ name: "Agency homepage message test", assetUsed: "https://example.com/", mechanic: "Stage one hero variant and compare with its current message after attribution works." }])).toEqual([]);
+});
+
 describe("lens 1: self-serve funnel", () => {
-  it("asks a low-price product for a play on its own funnel", () => {
+  it("suggests reviewing a low-price product’s first-value path without forcing another channel", () => {
     const outreach = [{ name: "Creator pitches", mechanic: "Pitch 20 YouTubers", firstActionToday: "List creators" }];
-    expect(lintSelfServeFunnel(outreach, cheap).map((i) => i.rule)).toEqual(["self_serve_funnel"]);
+    expect(lintSelfServeFunnel(outreach, cheap)).toEqual([expect.objectContaining({ rule: "self_serve_funnel", severity: "warn" })]);
     expect(lintSelfServeFunnel([...outreach, { name: "Faster first value", mechanic: "Onboarding checklist to the first invoice in 5 minutes" }], cheap)).toEqual([]);
     expect(lintSelfServeFunnel(outreach, { revenuePerCustomerMonthUsd: 120 })).toEqual([]);
   });

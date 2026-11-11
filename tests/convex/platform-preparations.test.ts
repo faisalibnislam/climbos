@@ -1,0 +1,33 @@
+import { describe, expect, it } from "vitest";
+import { api, internal } from "../../convex/_generated/api";
+import { asNewUser, setup } from "./helpers";
+const draft = JSON.stringify({ audience: "Mac app creators and relevant early adopters", evidence: "Unknown; inspect comparable launches before deciding", destination: "https://example.com/", accountControl: "unknown", eligibility: "unknown", name: "Example utility", description: "Prepares a local project handoff; capability reported by the owner.", makerComment: "We want feedback on the project handoff workflow.", measurement: "Observe useful feedback and activation over one week; owner time limit remains to confirm." });
+describe("manual platform preparation", () => {
+  it("keeps versioned research tenant-scoped and refuses stale saves without starting work", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "platform-owner@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Launch Co" });
+    const other = await asNewUser(t, "platform-other@example.com");
+    const before = await t.run(async (ctx) => ({ runs: (await ctx.db.query("workflowRuns").collect()).length, experiments: (await ctx.db.query("experiments").collect()).length }));
+    await owner.client.mutation(api.platformPreparations.save, { slug, kind: "product_hunt", expectedVersion: 0, draft });
+    await expect(owner.client.mutation(api.platformPreparations.save, { slug, kind: "product_hunt", expectedVersion: 0, draft })).rejects.toThrow(/changed in another window/i);
+    await expect(other.client.query(api.platformPreparations.latest, { slug, kind: "product_hunt" })).rejects.toThrow();
+    await owner.client.mutation(api.platformPreparations.save, { slug, kind: "product_hunt", expectedVersion: 1, draft });
+    const saved = await owner.client.query(api.platformPreparations.latest, { slug, kind: "product_hunt" });
+    expect(saved).toMatchObject({ version: 2, draft: { eligibility: "unknown", accountControl: "unknown" } });
+    expect(saved.history).toHaveLength(2);
+    expect((await owner.client.query(api.platformPreparations.latest, { slug, kind: "g2" })).version).toBe(0);
+    const after = await t.run(async (ctx) => ({ runs: (await ctx.db.query("workflowRuns").collect()).length, experiments: (await ctx.db.query("experiments").collect()).length }));
+    expect(after).toEqual(before);
+    const rows = await t.run(async (ctx) => ctx.db.query("platformPreparations").collect());
+    expect(rows.every((r) => r.orgId === orgId)).toBe(true);
+    const exported = JSON.parse(await t.query(internal.settings.exportData, { orgId }));
+    expect(exported.platformPreparations).toHaveLength(2);
+    const unrelated = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other launch" });
+    await other.client.mutation(api.platformPreparations.save, { slug: unrelated.slug, kind: "g2", expectedVersion: 0, draft });
+    await t.mutation(internal.settings.purgeWorkspaceBatch, { orgId });
+    const retained = await t.run(async (ctx) => ctx.db.query("platformPreparations").collect());
+    expect(retained).toHaveLength(1);
+    expect(retained[0].orgId).toBe(unrelated.orgId);
+  });
+});

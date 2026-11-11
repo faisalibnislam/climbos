@@ -13,7 +13,7 @@ import { PERMISSION_WHO, majorToDisplay, type MemberRole } from "../content/shar
 import { errorMessage } from "../errors";
 import { relativeTime } from "../money";
 import { useCostDisplay } from "../useCostDisplay";
-import { BUSINESS_TYPE_OPTIONS, CURRENCY_OPTIONS, GOAL_KIND_OPTIONS, HORIZON_OPTIONS, REVIEW_DAY_OPTIONS, defaultEvents, goalDefaults, type BusinessType, type GoalKind } from "../onboarding/options";
+import { BUSINESS_TYPE_OPTIONS, CURRENCY_OPTIONS, GOAL_KIND_OPTIONS, REVIEW_DAY_OPTIONS, defaultEvents, goalDefaults, type BusinessType, type GoalKind } from "../onboarding/options";
 import { INDUSTRY_BUSINESS_TYPES } from "@shared/knowledge/industryCatalog";
 import { LoadingBlock } from "../results/QueryBoundary";
 import { SettingsHeader } from "./SettingsNav";
@@ -51,7 +51,7 @@ function GoalForm({ slug, state, canEdit, canRaise }: { slug: string; state: Sta
   const [kinds, setKinds] = useState<GoalKind[]>(state.goal?.kinds?.length ? state.goal.kinds : [state.goal?.kind ?? "more_customers"]);
   const kind = kinds[0] ?? "more_customers";
   const [statement, setStatement] = useState(state.goal?.statement ?? defaults.more_customers);
-  const [horizon, setHorizon] = useState(String(state.goal?.horizonDays ?? 90));
+  const horizon = String(state.goal?.horizonDays ?? 90);
   const [budget, setBudget] = useState(String(state.goal?.monthlyAdBudget ?? 0));
   const [reviewDay, setReviewDay] = useState(state.goal?.reviewDay ?? "Friday");
   const t = state.goal?.target;
@@ -84,9 +84,7 @@ function GoalForm({ slug, state, canEdit, canRaise }: { slug: string; state: Sta
             options={GOAL_KIND_OPTIONS.map((o) => ({ ...o, disabled: !canEdit }))}
           />
         </fieldset>
-        <Field label="Time frame">
-          <Select value={horizon} disabled={!canEdit} onValueChange={setHorizon} options={HORIZON_OPTIONS} />
-        </Field>
+        <p className="text-sm text-ink-2 sm:col-span-2">AI chooses timing to fit your goal. A financial target does not set a delivery deadline.</p>
         <Field label="Goal" className="sm:col-span-2">
           <Textarea value={statement} disabled={!canEdit} onChange={(e) => setStatement(e.target.value)} rows={2} autosize placeholder={defaults[kind]} />
         </Field>

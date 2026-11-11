@@ -86,7 +86,7 @@ const plan = (o: Record<string, unknown> = {}) => ({
   notDoing: [],
   northStar: { metric: "New paying members", baseline: "unknown", target: `${Math.round(plays.plays[0].p50)} new paying members by day 60 (estimate)` },
   leadingIndicators: [],
-  phases: [{ name: "Invite", days: "0–60", focus: "Members invite friends to the Saturday class." }],
+  phases: ["1–14", "15–30", "31–60"].map((days) => ({ name: "Invite and review", days, focus: "Members invite friends to the Saturday class.", firstAction: "Draft a member invitation", howToCheck: "Count joins from the form", decisionRule: "Review whether to continue" })),
   weekOneChecklist: ["Build the Saturday sign-up form"],
   risks: [],
   ...o,

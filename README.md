@@ -4,7 +4,7 @@
 
 - Web: Next.js 16 (App Router) on Vercel · `climbos.app`
 - Backend: Convex (state, auth, durable jobs, crons, webhooks)
-- AI: OpenAI for text models and Google Gemini for image/video generation (direct, no gateway)
+- AI: Anthropic Haiku/Sonnet for new text workflows; optional explicit legacy/provider overrides; Google Gemini for image/video generation (direct, no gateway)
 - Billing: Polar (merchant of record) · Platform email: Resend · Research: built-in fetcher or Firecrawl
 
 ```
@@ -13,7 +13,15 @@ User → "Help Formkit get more paying customers in 90 days, $600/mo ads"
      → drafts (social, ads, email, SEO, landing pages) → approval → publish / export → results & forecasts
 ```
 
-## Quick start (local)
+## Isolated local review
+
+For a local database, synthetic data and no paid provider credentials, use the [isolated demo workflow](docs/Local-Audit-2026-11-09.md#run-the-isolated-demo). Run `pnpm local:demo` for commands. The launcher uses a cached Convex local backend and does not change `.env.local` or configure a hosted deployment.
+
+The latest local work implements the tracked buildable specification gaps, preserves unknown financial inputs, and adds bounded search/design checks and manual launch/profile preparation. The owner experience now uses four main destinations and Focused tabs, with 14/30/90-day cycles, continuing reviews, AI preparation and choice-based questions. See the [implementation record](docs/Specification-Completion-2026-11-09.md) and [AI acceptance results](bench/strategy-quality/RESULTS-2026-11-09.md). The live quality tests did not establish expert-level recommendations; this remains local, unreleased work.
+
+## Start with your configured Convex deployment
+
+The following workflow can link to a hosted development deployment. It is separate from the isolated local review above.
 
 ```bash
 pnpm install
@@ -44,6 +52,8 @@ pnpm dev                       # http://localhost:3000
 | Command | What it does |
 |---|---|
 | `pnpm dev` | Next.js dev server (Convex functions are pushed by `npx convex dev`) |
+| `pnpm local:demo` | Instructions for a separate fixture backend and frontend; no hosted configuration or paid provider keys |
+| `pnpm strategy:review prepare` | Export eight offline industry review packs; no model calls |
 | `pnpm build` | Production build |
 | `pnpm test` | Unit (economics, forecasting, attribution, integrations, billing/policy) plus Convex integration tests |
 | `pnpm test:e2e` | Playwright end-to-end and accessibility tests (start the app first) |
@@ -67,4 +77,9 @@ pnpm dev                       # http://localhost:3000
 
 ## Status
 
-The application, data model, job engine, economics, billing logic, approvals, demo and all screens are built and tested locally. Live provider behaviour requires the owner's credentials and, for ads and social publishing, provider approvals. See [Provider setup](docs/ProviderSetup.md) and the *Adapter verification* table in [Verification](docs/Verification.md). Nothing in this repository claims a provider approval that hasn't been granted.
+The repository contains implemented planning, drafting, approval, demo and integration paths. Automated fixture tests verify specific behavior; they do not establish expert strategy quality, complete specification coverage or business results. The latest [local audit](docs/Local-Audit-2026-11-09.md) records changes, verification and remaining work. Live provider behavior requires credentials and, where applicable, provider approvals. Older live-verification records in [Verification](docs/Verification.md) are dated historical evidence.
+
+
+The historical OpenAI quality runner remains available separately: `pnpm strategy:quality --confirm-paid --cases livoform`. It requires an existing `OPENAI_API_KEY` environment variable, sends public/synthetic briefs to OpenAI, and uses a persistent cumulative $2 reservation ledger. It makes paid calls; `pnpm strategy:review` remains offline. Read [the evaluation instructions](bench/strategy-quality/README.md) before using it. A local app does not make an OpenAI API call local inference.
+
+Current local real-business evaluation: `pnpm strategy:anthropic --stage plans --variant improved --confirm-paid`. This makes paid Anthropic calls under the owner-authorized cumulative $100 ledger; do not delete/reset the ledger. `pnpm local:real` uses a separate empty local Convex database for real outputs. See [Anthropic routing, cost controls and the simpler experience](docs/Anthropic-and-Simple-Experience-2026-11-09.md).

@@ -140,7 +140,8 @@ describe("most a job can cost", () => {
         expect(plan.revisionSteps?.length).toBeGreaterThan(0);
         expect(maxOf(plan)).toBeGreaterThanOrEqual(Math.ceil(reserveOf(plan) * RUN_COST_CAP_MULTIPLE));
       }
-      expect(maxOf(planOf("onboarding_research", { pages: 3 }, { mode: "expert" }))).toBeGreaterThan(maxOf(planOf("onboarding_research", { pages: 3 }, { mode: "basic" })));
+      // Both modes use Sonnet; Expert changes effort within the same output caps.
+      expect(maxOf(planOf("onboarding_research", { pages: 3 }, { mode: "expert" }))).toBe(maxOf(planOf("onboarding_research", { pages: 3 }, { mode: "basic" })));
       const fixture = planOf("onboarding_research", { pages: 3 }, { mode: "basic", fixture: true });
       expect(maxOf(fixture, { fixture: true })).toBe(Math.ceil(reserveOf(fixture, { fixture: true }) * RUN_COST_CAP_MULTIPLE));
     } finally {

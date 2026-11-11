@@ -1,9 +1,37 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { estimateJobMicros, planJob } from "../../convex/lib/jobPlans";
 import { BUILT_IN_ROUTE, userRoute } from "../../shared/ai/modelChoice";
 import { asNewUser, makePaid, setup, type T } from "./helpers";
+
+// The routing test exercises real reservations, jobs and usage writes, while
+// supplying deterministic website and single-call profile responses. The v2
+// fake alone does not replace these two onboarding dependencies.
+vi.mock("../../convex/ai/research", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../convex/ai/research")>(),
+  researchWebsite: vi.fn(async (url: string) => ({
+    pagesFetched: 1,
+    pages: [{ url, title: "Model Co", text: "Model Co builds online forms for small teams.", status: "ok", prices: [] }],
+  })),
+}));
+vi.mock("../../convex/ai/providers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../convex/ai/providers")>();
+  const { fixtureOutput } = await import("../../convex/ai/fixtures");
+  const { MODEL_SPECS } = await import("../../shared/ai/models");
+  return { ...actual, callModel: vi.fn(async (req: import("../../convex/ai/providers").ModelRequest) => ({
+    ok: true,
+    provider: MODEL_SPECS[req.modelKey].provider,
+    actualModelId: MODEL_SPECS[req.modelKey].apiModelId,
+    output: req.schema.parse(fixtureOutput("business_profile", { businessName: "Model Co", website: "https://example.com/", facts: [] })),
+    rawText: "",
+    usage: { inputTokens: 100, outputTokens: 100, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, webSearches: 0 },
+    costMicros: 100,
+    searchCostMicros: 0,
+    finishReason: "STOP",
+    sourceUrls: [],
+  })) };
+});
 
 /** Admin-controlled model choice: operator defaults per tier, per-user permission, routed estimates and usage. */
 
@@ -36,7 +64,7 @@ describe("AI model choice", () => {
     delete process.env.GEMINI_API_KEY;
   });
 
-  it("runs on the built-in OpenAI route when no default is set, and model choice is off for everyone", async () => {
+  it("runs on the built-in Haiku/Sonnet route when no default is set, and model choice is off for everyone", async () => {
     const t = setup();
     const w = await workspace(t, "default-route@example.com");
     expect(await w.client.query(api.models.myModelChoice, { kind: "strategy" })).toEqual({ canChoose: false, options: [], defaultModel: null });
@@ -46,10 +74,10 @@ describe("AI model choice", () => {
     expect(run.modelRoute).toEqual(BUILT_IN_ROUTE);
     const usage = await usageOf(t, run._id);
     expect(usage.length).toBeGreaterThan(0);
-    expect(usage.every((e) => e.provider === "openai" && e.model === "gpt-6-luna" && e.modelSource === "default")).toBe(true);
+    expect(usage.every((e) => e.provider === "anthropic" && ["claude-haiku-5-5", "claude-sonnet-5-5"].includes(e.model!) && e.modelSource === "default")).toBe(true);
   });
 
-  it("applies the operator default, audits it, and falls back to OpenAI when that provider's key is removed", async () => {
+  it("applies the operator default, audits it, and returns to the built-in Anthropic route when that provider's key is removed", async () => {
     const t = setup();
     const ops = await asNewUser(t, "ops@example.com");
     const w = await workspace(t, "admin-default@example.com");
@@ -62,14 +90,14 @@ describe("AI model choice", () => {
     process.env.ANTHROPIC_API_KEY = "test-placeholder";
     await ops.client.mutation(api.admin.setDefaultModel, { tier: "standard", model: "claude-sonnet-5.5" });
     const audit = await t.run(async (ctx) => ctx.db.query("auditEvents").collect());
-    expect(audit.find((a) => a.action === "admin.model_default")?.summary).toContain("gpt-6-luna to claude-sonnet-5.5");
+    expect(audit.find((a) => a.action === "admin.model_default")?.summary).toContain("claude-haiku-5.5 to claude-sonnet-5.5");
 
     await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
     await t.finishAllScheduledFunctions(() => undefined);
     const run = await lastRun(t, w.orgId, "strategy");
-    expect(run.modelRoute).toEqual({ standard: "claude-sonnet-5.5", advanced: "gpt-6.1-sol", source: "default" });
+    expect(run.modelRoute).toEqual({ ...BUILT_IN_ROUTE, standard: "claude-sonnet-5.5" });
     // Reserved at Sonnet's rates, not Luna's.
-    const route = { standard: "claude-sonnet-5.5" as const, advanced: "gpt-6.1-sol" as const, source: "default" as const };
+    const route = { ...BUILT_IN_ROUTE, standard: "claude-sonnet-5.5" as const };
     expect(run.estimateMicros).toBe(estimateJobMicros(planJob("strategy", {}, { mode: run.aiMode ?? "basic" }), { route }));
     expect(run.estimateMicros).toBeGreaterThan(estimateJobMicros(planJob("strategy", {}, { mode: run.aiMode ?? "basic" })));
     const usage = await usageOf(t, run._id);
@@ -78,7 +106,7 @@ describe("AI model choice", () => {
 
     // Key removed later: new runs fall back to the built-in model instead of failing.
     delete process.env.ANTHROPIC_API_KEY;
-    expect((await ops.client.query(api.admin.modelSettings, {})).tiers.find((x) => x.tier === "standard")).toMatchObject({ saved: "claude-sonnet-5.5", effective: "gpt-6-luna" });
+    expect((await ops.client.query(api.admin.modelSettings, {})).tiers.find((x) => x.tier === "standard")).toMatchObject({ saved: "claude-sonnet-5.5", effective: "claude-haiku-5.5" });
     await t.run(async (ctx) => {
       for (const r of await ctx.db.query("workflowRuns").collect()) await ctx.db.patch(r._id, { status: "verified" });
     });

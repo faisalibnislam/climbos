@@ -1,0 +1,31 @@
+import { describe, expect, it } from "vitest";
+import { api, internal } from "../../convex/_generated/api";
+import { asNewUser, setup } from "./helpers";
+describe("planning cycles preserve scoped history", () => {
+  it("keeps budget and target, rejects stale writes and carries a classified review forward", async () => {
+    const t = setup(); const owner = await asNewUser(t, "cycle-owner@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Cycle Co" });
+    await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "Get better qualified inquiries", horizonDays: 90, monthlyAdBudget: 12 });
+    const first = (await owner.client.query(api.planningCycles.view, { slug })).goal!;
+    const old = await t.run((ctx) => ctx.db.get(first.id));
+    const second = await owner.client.mutation(api.planningCycles.changeLength, { slug, expectedGoalId: first.id, lengthDays: 14 });
+    const current = await t.run((ctx) => ctx.db.get(second));
+    expect(current).toMatchObject({ monthlyAdBudgetMinor: old!.monthlyAdBudgetMinor, horizonDays: 14, previousGoalId: first.id, cycleStartedAt: first.startedAt });
+    await expect(owner.client.mutation(api.planningCycles.changeLength, { slug, expectedGoalId: first.id, lengthDays: 30 })).rejects.toThrow(/changed/i);
+    const stranger = await asNewUser(t, "cycle-stranger@example.com");
+    await expect(stranger.client.mutation(api.planningCycles.changeLength, { slug, expectedGoalId: second, lengthDays: 30 })).rejects.toThrow();
+    await t.run((ctx) => ctx.db.insert("memberships", { orgId, userId: stranger.userId, role: "viewer", status: "active", createdAt: Date.now() }));
+    expect((await stranger.client.query(api.planningCycles.view, { slug })).canEdit).toBe(false);
+    await expect(stranger.client.mutation(api.planningCycles.changeLength, { slug, expectedGoalId: second, lengthDays: 30 })).rejects.toThrow();
+    const next = await owner.client.mutation(api.planningCycles.continueCycle, { slug, expectedGoalId: second, lengthDays: 30, summary: "Results not measured yet", carryForward: "Check evidence before increasing scope", evidenceBasis: "unknown", evidenceNote: "No measurements were supplied." });
+    expect(await t.run((ctx) => ctx.db.get(next))).toMatchObject({ horizonDays: 30, priorCycleReview: { goalId: second, evidenceBasis: "unknown" } });
+    const history = await owner.client.query(api.planningCycles.history, { slug, paginationOpts: { numItems: 12, cursor: null } });
+    expect(history.page).toHaveLength(2);
+    const exported = JSON.parse(await t.query(internal.settings.exportData, { orgId }));
+    expect(exported.planningCycles).toHaveLength(3);
+    expect(exported.planningCycleHistoryLimited).toBe(false);
+    expect(history.page.find((item) => item.id === first.id)?.closure).toBe("length_changed");
+    expect(history.page.find((item) => item.id === second)?.review?.evidenceBasis).toBe("unknown");
+    expect(await t.run((ctx) => ctx.db.query("workflowRuns").withIndex("by_org_created", (q) => q.eq("orgId", orgId)).collect())).toEqual([]);
+  });
+});

@@ -229,7 +229,9 @@ describe("plan targets (flagged)", () => {
   it("Make it happen uses the stored play by ID (REQ-UX-03)", async () => {
     const t = setup();
     const w = await workspace(t, "start@example.com", []);
-    const { messageId } = await w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: w.strategyId, playId: "pl_creators1" });
+    const result = await w.client.mutation(api.workspace.startPlay, { slug: w.slug, strategyId: w.strategyId, playId: "pl_creators1" });
+    if (!("messageId" in result)) throw new Error("Expected the legacy play conversation");
+    const { messageId } = result;
     const msg = await t.run((ctx) => ctx.db.get(messageId));
     expect(msg?.text).toContain('Start the "Studio creator demos" play (plan v1, play pl_creators1)');
     expect(msg?.text).toContain("Creator finder drafts pitches");

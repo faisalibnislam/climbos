@@ -1,3 +1,9 @@
+import { GoalTimingSchema } from "../shared/agents/goalTiming";
+import { runGoal, goalPlans } from "./lib/goals";
+import { FocusedMoveSchema } from "../shared/agents/focusedPlan";
+import { PreparedWorkSchema } from "../shared/agents/preparedWork";
+import { planRepairGuidance } from "../shared/agents/quality";
+import {focusedRefreshContext} from "../shared/agents/focusedPlan";
 import { latestDecisions, priorDecisionsBrief, type PriorDecision } from "../shared/agents/designDecisions";
 import { BusinessModelCheckSchema, businessModelPlanContext, businessModelTestsBrief, ownerModelSignals, ownerModelSignalsBrief } from "../shared/agents/businessModel";
 import { feedbackBrief } from "./feedback";
@@ -50,6 +56,9 @@ import { appError } from "./lib/tenancy";
 import { postVisualValidator, type PostVisual } from "./lib/postVisual";
 
 const DAY = 86_400_000;
+function sameWebsiteHost(source: string, website: string | undefined): boolean {
+  try { return new URL(source).hostname.replace(/^www\./, "") === new URL(website ?? "").hostname.replace(/^www\./, ""); } catch { return false; }
+}
 
 /** Everything a job needs, loaded in one bounded query. Facts are confirmed-only unless noted. */
 export const jobContext = internalQuery({
@@ -81,10 +90,7 @@ export const jobContext = internalQuery({
     const freshnessOf = (fact: (typeof usable)[number]) => factFreshness(fact.category, fact.updatedAt, factNow, fact.verifiedAt ?? fact.updatedAt);
     const currentFacts = usable.filter((f) => !freshnessOf(f).reviewSuggested);
     const staleFacts = usable.filter((f) => freshnessOf(f).reviewSuggested);
-    const goal = await ctx.db
-      .query("goals")
-      .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
-      .first();
+    const goal = await runGoal(ctx, run);
     const brand = business
       ? await ctx.db
           .query("brandProfiles")
@@ -92,11 +98,7 @@ export const jobContext = internalQuery({
           .first()
       : null;
     // The approved plan guides the work; a newer version waiting for approval doesn't yet.
-    const recentPlans = await ctx.db
-      .query("strategies")
-      .withIndex("by_org", (q) => q.eq("orgId", org._id))
-      .order("desc")
-      .take(10);
+    const recentPlans = await goalPlans(ctx, org._id, goal?._id);
     let requestedStrategyId: string | undefined;
     try {
       const input = JSON.parse(run.input) as { strategyId?: unknown };
@@ -290,7 +292,43 @@ export const jobContext = internalQuery({
     const refundExposureSignal = concentrationCurrency
       ? refundExposure(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
       : null;
+    let intakeBrief: string | null = null;
+    let intakeSources: { url: string; title?: string; excerpt?: string }[] = [];
+    try {
+      const snapshot = JSON.parse(run.input).intakeSnapshot ?? business?.discoveryBrief;
+      if (typeof snapshot === "string" && snapshot.length <= 60000) {
+        const parsed = JSON.parse(snapshot);
+        if (parsed && parsed.fields && Array.isArray(parsed.sources)) {
+          intakeBrief = snapshot;
+          intakeSources = parsed.sources.filter((s: { url?: unknown }) => typeof s?.url === "string" && /^https?:\/\//i.test(s.url as string)).slice(0, 4);
+        }
+      }
+    } catch { /* Older jobs have no conversational intake snapshot. */ }
+    let focusedResearch: { notes: string; sources: { url: string; title?: string }[]; retrievedAt?: number } | null = null;
+    if (run.kind === "strategy" && (run.input.includes('"planStyle":"focused"') || run.input.includes('"planStyle":"starter"'))) {
+      const starter = run.input.includes('"planStyle":"starter"');
+      const cached = await ctx.db.query("researchCache").withIndex("by_org_created", (q) => q.eq("orgId", org._id)).order("desc").take(4);
+      const fresh = cached.filter((row) => row.expiresAt > Date.now() && row.businessWebsite === business?.website && Boolean(row.businessWebsite) && ["business_insights", "growth_plays", "growth_strategy", ...(starter ? ["business_profile"] : [])].includes(row.agentId)).slice(0, 2);
+      const pages = business ? (await ctx.db.query("factSources").withIndex("by_business", (q) => q.eq("businessId", business._id)).order("desc").take(20)).filter((page) => page.kind === "website" && page.status === "ok" && page.expiresAt > Date.now() && page.url && sameWebsiteHost(page.url, business.website)) : [];
+      const sources = [...new Map([...pages.map((page) => ({ url: page.url!, title: page.title })), ...fresh.flatMap((row) => row.sources)].map((source) => [source.url, source])).values()].slice(0, 50);
+      if (sources.length && (starter || fresh.length)) focusedResearch = { notes: ["Previously collected public-source evidence and AI research notes. Preserve source claims, inferences and uncertainty; this is not independent product testing or measured demand.", ...fresh.map((row) => row.notes), ...(fresh.length ? [] : pages.map((page) => `${page.url}\n${page.excerpt ?? "Published page read; use only the supplied facts for detailed claims."}`))].join("\n\n").slice(0, 30000), sources, retrievedAt: fresh[0]?.retrievedAt ?? pages[0]?.fetchedAt };
+    }
+    if (intakeBrief && intakeSources.length) focusedResearch = { notes: `${focusedResearch?.notes ?? ""}\n\nDISCOVERY WEBSITE READS (public-source claims; private owner answers are separately labeled in the business brief):\n${intakeSources.map(source => `${source.url}\n${source.excerpt ?? ""}`).join("\n\n")}`.slice(0, 30000), sources: [...new Map([...(focusedResearch?.sources ?? []), ...intakeSources.map(({ url, title }) => ({ url, title }))].map(s => [s.url, s])).values()], retrievedAt: focusedResearch?.retrievedAt ?? run.createdAt };
+    let preparedStepWork = "";
+    try {
+      const captured = JSON.parse(JSON.parse(run.input).preparationSnapshot ?? "null");
+      if (captured && Array.isArray(captured.sources) && Array.isArray(captured.drafts)) {
+        const sources = captured.sources.filter((source: { url?: unknown; status?: string; text?: unknown; fetchedAt?: number }) => typeof source.url === "string" && source.status === "ok" && typeof source.text === "string" && typeof source.fetchedAt === "number" && source.fetchedAt > run.createdAt - 86_400_000).slice(0, 8) as { url: string; title?: string; text: string }[];
+        if (sources.length) focusedResearch = { notes: `SAVED STEP SOURCE READS, captured before this job (published claims, not tested behavior or permission):\n${sources.map(source => `${source.url}\n${source.text}`).join("\n\n").slice(0, 18000)}\n\n${(focusedResearch?.notes ?? "").slice(0, 11000)}`, sources: [...new Map([...sources.map(({ url, title }) => ({ url, title })), ...(focusedResearch?.sources ?? [])].map(source => [source.url, source])).values()], retrievedAt: captured.capturedAt };
+        preparedStepWork = JSON.stringify(captured.drafts).slice(0, 10000);
+      }
+    } catch { /* Older runs have no captured preparation. */ }
     return {
+      intakeBrief,
+      focusedResearch,
+      preparedStepWork,
+      strategyRepairGuidance: run.kind === "strategy" && recentPlans[0]?.goalId === goal?._id ? planRepairGuidance((recentPlans[0]?.expert as { quality?: unknown } | undefined)?.quality) : "",
+      strategyRevisionDraft: run.kind === "strategy" && recentPlans[0]?.goalId === goal?._id && recentPlans[0]?.expert ? focusedRefreshContext({...recentPlans[0].expert,summary:recentPlans[0].summary}) : "",
       customerConcentration: concentration,
       platformSourceConcentration,
       aiReferralSignals,
@@ -354,13 +392,15 @@ export const saveResearch = internalMutation({
       }),
     ),
     profile: v.optional(v.string()),
+    ownerText: v.optional(v.string()),
   },
-  handler: async (ctx, { runId, businessId, pages, profile }) => {
+  handler: async (ctx, { runId, businessId, pages, profile, ownerText }) => {
     const run = await ensureRunOrg(ctx, runId);
     const business = await ctx.db.get(businessId);
     if (!business || business.orgId !== run.orgId) throw new Error("Business mismatch");
     const now = Date.now();
     const sourceIds = new Map<string, Id<"factSources">>();
+    if (ownerText?.trim()) sourceIds.set("owner:description",await ctx.db.insert("factSources",{orgId:run.orgId,businessId,kind:"owner_text",title:"Owner's business description",excerpt:ownerText.trim().slice(0,1000),fetchedAt:now,status:"ok",expiresAt:now+30*DAY}));
     for (const p of pages) {
       const id = await ctx.db.insert("factSources", {
         orgId: run.orgId,
@@ -373,7 +413,7 @@ export const saveResearch = internalMutation({
         status: p.status,
         expiresAt: now + 30 * DAY, // raw scrape retention
       });
-      sourceIds.set(p.url, id);
+      if (p.status === "ok") sourceIds.set(p.url, id);
     }
     if (!profile) {
       await ctx.db.patch(businessId, { researchStatus: pages.some((p) => p.status === "ok") ? "partial" : "failed", updatedAt: now });
@@ -381,10 +421,13 @@ export const saveResearch = internalMutation({
     }
     const parsed = JSON.parse(profile) as BusinessProfile;
     const fallbackSource = [...sourceIds.values()][0];
+    let factsSaved = 0;
     for (const f of parsed.facts.slice(0, 15)) {
       const statement = f.statement.trim().slice(0, 400);
       if (!statement) continue;
-      const src = sourceIds.get(f.sourceUrl) ?? fallbackSource;
+      const src = sourceIds.get(f.sourceUrl) ?? (run.isFixture ? fallbackSource : undefined);
+      // An invented/unmatched citation must not silently inherit the homepage.
+      if (!src && !run.isFixture) continue;
       await ctx.db.insert("businessFacts", {
         orgId: run.orgId,
         businessId,
@@ -393,11 +436,12 @@ export const saveResearch = internalMutation({
         // Researched facts always start as needs-review; low confidence is surfaced.
         confidence: f.confidence,
         reviewState: "needs_review",
-        provenance: run.isFixture ? "demo_fixture" : "researched",
+        provenance: run.isFixture ? "demo_fixture" : f.sourceUrl === "owner:description" ? "owner_supplied" : "researched",
         sourceIds: src ? [src] : [],
         createdAt: now,
         updatedAt: now,
       });
+      factsSaved++;
     }
     await ctx.db.patch(businessId, {
       name: business.name || parsed.name.slice(0, 120),
@@ -425,6 +469,7 @@ export const saveResearch = internalMutation({
         updatedAt: now,
       });
     }
+    return {factsSaved};
   },
 });
 
@@ -567,24 +612,17 @@ export const saveStrategy = internalMutation({
       .query("businesses")
       .withIndex("by_org", (q) => q.eq("orgId", run.orgId))
       .first();
-    const goal = await ctx.db
-      .query("goals")
-      .withIndex("by_org_status", (q) => q.eq("orgId", run.orgId).eq("status", "active"))
-      .first();
+    const goal = await runGoal(ctx, run);
     if (!business || !goal) throw new Error("Business and goal required");
-    const prior = await ctx.db
-      .query("strategies")
-      .withIndex("by_org", (q) => q.eq("orgId", run.orgId))
-      .order("desc")
-      .take(5);
+    const prior = await goalPlans(ctx, run.orgId, goal._id, 20);
     for (const p of prior) if (p.status === "draft" || p.status === "needs_approval") await ctx.db.patch(p._id, { status: "superseded" });
     const version = (prior[0]?.version ?? 0) + 1;
     const now = Date.now();
     const contentPlans = CHANNEL_JOBS;
-    const acq = acquisition ? (JSON.parse(acquisition) as { libraryVersion: string; profile: { types: string[]; dims: unknown }; adjustments: unknown; summary: string[]; limits?: { ownerHoursPerWeek: number | null; ownerGrossMargin?: number | null } }) : null;
+    const acq = acquisition ? (JSON.parse(acquisition) as { libraryVersion: string; inputHash?: string; profile: { types: string[]; dims: unknown }; adjustments: unknown; summary: string[]; limits?: { ownerHoursPerWeek: number | null; ownerGrossMargin?: number | null } }) : null;
     if (acq) {
       const priorTypesSource = business.acquisition?.typesSource;
-      await ctx.db.patch(business._id, { acquisition: { types: priorTypesSource === "owner" ? business.acquisition!.types : acq.profile.types, typesSource: priorTypesSource === "owner" ? "owner" : "inferred", dims: { ...((acq.profile.dims as Record<string, unknown> | undefined) ?? {}), ...((business.acquisition?.dims as Record<string, unknown> | undefined) ?? {}) }, updatedAt: now } });
+      await ctx.db.patch(business._id, { acquisition: { ...business.acquisition, types: priorTypesSource === "owner" ? business.acquisition!.types : acq.profile.types, typesSource: priorTypesSource === "owner" ? "owner" : "inferred", dims: { ...((acq.profile.dims as Record<string, unknown> | undefined) ?? {}), ...((business.acquisition?.dims as Record<string, unknown> | undefined) ?? {}) }, updatedAt: now } });
     }
     // Pages the run read, so cited URLs keep their titles.
     const webSources = ((s as { webSources?: { url: string; title?: string }[] }).webSources ?? []).slice(0, 40);
@@ -592,7 +630,7 @@ export const saveStrategy = internalMutation({
       orgId: run.orgId,
       businessId: business._id,
       goalId: goal._id,
-      ...(acq ? { acquisition: { libraryVersion: acq.libraryVersion, profile: acq.profile, adjustments: acq.adjustments, summary: acq.summary, ...(acq.limits ? { limits: acq.limits } : {}) } } : {}),
+      ...(acq ? { acquisition: { libraryVersion: acq.libraryVersion, ...(acq.inputHash ? { inputHash: acq.inputHash } : {}), profile: acq.profile, adjustments: acq.adjustments, summary: acq.summary, ...(acq.limits ? { limits: acq.limits } : {}) } } : {}),
       version,
       status: "needs_approval",
       summary: s.summary,
@@ -660,6 +698,10 @@ export const saveStrategy = internalMutation({
                 risks: x.risks.slice(0, 6),
                 ...(growthPlanV9 ? { growthPlanV9 } : { plays: expertPlays, economics: x.economics }),
                 ...("strategyExploration" in x && x.strategyExploration ? { strategyExploration: x.strategyExploration } : {}),
+                ...(x.strategicDirection ? { strategicDirection: x.strategicDirection } : {}),
+                ...(x.timing ? { timing: GoalTimingSchema.parse(x.timing) } : {}),
+                ...(x.focusedMove ? { focusedMove: FocusedMoveSchema.parse(x.focusedMove) } : {}),
+                ...(x.preparedWork?.length ? { preparedWork: PreparedWorkSchema.array().min(1).max(3).parse(x.preparedWork) } : {}),
                 ...(x.decision ? { decision: x.decision } : {}),
                 ...(decisionAnalysis ? { decisionAnalysis: { snapshotId: x.snapshot?.snapshotId ?? null, ...decisionAnalysis } } : {}),
                 ...(x.snapshot ? { snapshot: x.snapshot } : {}),
@@ -673,7 +715,7 @@ export const saveStrategy = internalMutation({
             })(),
           }
         : {}),
-      reviewDate: new Date(now + 14 * DAY).toISOString().slice(0, 10),
+      reviewDate: new Date(now + ((s as StrategyV2).timing?.firstReview.maxDays ?? goal.horizonDays) * DAY).toISOString().slice(0, 10),
       sourceFactIds: factIds.slice(0, 40),
       // What the run had spent when the plan was written (usage still settling after this is small: the final checks).
       generationCostMicros: run.actualMicros,
@@ -1094,12 +1136,13 @@ export function seoToArtifacts(out: SeoBriefOutput): Omit<ArtifactInput, "imageS
   const outline = out.outline.map((o) => `## ${o.heading}\n${o.points.map((p) => `- ${p}`).join("\n")}`).join("\n\n");
   const internalLinks = out.internalLinks.length ? `## Suggested internal links\n\n${out.internalLinks.map((url) => `- [${url}](${url})`).join("\n")}` : "";
   const faqs = out.faqs.length ? `## Frequently asked questions\n\n${out.faqs.map((faq) => `### ${faq.question}\n\n${linked(faq.answer, faq.sourceUrls)}`).join("\n\n")}` : "";
-  const citableClaims = out.citableClaims.length ? `## Verified facts\n\n${out.citableClaims.map((claim) => `- ${linked(claim.statement, claim.sourceUrls)}`).join("\n")}` : "";
+  const citableClaims = out.citableClaims.length ? `## Statements and sources\n\n${out.citableClaims.map((claim) => `- ${linked(claim.statement, claim.sourceUrls)}`).join("\n")}` : "";
   const contributionBasis = out.originalContributionEvidence.status === "evidence_linked"
     ? "Evidence linked below. This linkage does not prove that the contribution is unique or that each source semantically supports every part of the statement."
     : "HYPOTHESIS — owner evidence is needed before presenting this as first-hand or distinctive business expertise.";
   const originalContribution = `## Original contribution\n\n${out.originalContribution}\n\n**Evidence status:** ${contributionBasis}${out.originalContributionEvidence.sourceUrls.length ? `\n\n${out.originalContributionEvidence.sourceUrls.map((url) => `[Evidence](${url})`).join(" ")}` : ""}`;
   const factIndexes = [...new Set([...out.factIndexes, ...out.originalContributionEvidence.factIndexes, ...out.faqs.flatMap((faq) => faq.factIndexes), ...out.citableClaims.flatMap((claim) => claim.factIndexes)])];
+  const publishing = out.publishingDetails ? `## Proposed page setup\n\nPath: ${out.publishingDetails.suggestedPath}\n\nProposed byline: ${out.publishingDetails.proposedByline}\n\nReview status: draft — awaiting owner review. No reviewed date has been claimed.\n\nStructured data to consider: ${out.publishingDetails.schemaTypes.join(", ")}. ${out.publishingDetails.schemaNote}${out.publishingDetails.inboundLinks.length ? `\n\nSuggested links into this page (not yet implemented):\n${out.publishingDetails.inboundLinks.map(link=>`- [${link.anchor}](${link.fromUrl})`).join("\n")}` : ""}` : "";
   const recommendation = out.recommendedAction === "refresh_existing_page"
     ? `## Recommended action: refresh existing page\n\nTarget page: ${out.targetPageUrl ?? ""}\n\nWhy: ${out.recommendationReason ?? ""}`
     : out.recommendedAction === "create_new_page"
@@ -1111,7 +1154,7 @@ export function seoToArtifacts(out: SeoBriefOutput): Omit<ArtifactInput, "imageS
       channel: "blog",
       title: out.title,
       headline: out.metaDescription,
-      body: [recommendation, `## Quick answer\n\n${out.answerFirst}`, originalContribution, out.ownerEvidenceNeeded.length ? `## Owner evidence needed before publication\n\n${out.ownerEvidenceNeeded.map((item) => `- ${item}`).join("\n")}` : "", outline, internalLinks, "---", out.draft, faqs, citableClaims, `## Measurement plan\n\n${out.measurementPlan}`].filter(Boolean).join("\n\n"),
+      body: [recommendation, publishing, `## Quick answer\n\n${out.answerFirst}`, originalContribution, out.ownerEvidenceNeeded.length ? `## Owner evidence needed before publication\n\n${out.ownerEvidenceNeeded.map((item) => `- ${item}`).join("\n")}` : "", outline, internalLinks, "---", out.draft, faqs, citableClaims, `## Measurement plan\n\n${out.measurementPlan}`].filter(Boolean).join("\n\n"),
       destinationUrl: out.recommendedAction === "refresh_existing_page" && out.targetPageUrl ? out.targetPageUrl : undefined,
       hashtags: [out.primaryKeyword, ...out.secondaryKeywords].slice(0, 8),
       factIndexes,
@@ -1186,7 +1229,7 @@ export const saveChatResult = internalMutation({
               : "A note for your team. No cost.",
         kind: a.kind,
         roles: plan?.roles ?? ["coo"],
-        payload: JSON.stringify({ job, channel: a.channel, quantity: a.quantity, brief: a.brief?.slice(0, 1500) ?? "", ...(customAgentId ? { customAgentId, customAgentParentRunId: run._id } : {}), ...(builtinAgent ? { agentArchetypeId: builtinAgent.id } : {}) }),
+        payload: JSON.stringify({ job, goalId: (await runGoal(ctx, run))?._id, channel: a.channel, quantity: a.quantity, brief: a.brief?.slice(0, 1500) ?? "", ...(customAgentId ? { customAgentId, customAgentParentRunId: run._id } : {}), ...(builtinAgent ? { agentArchetypeId: builtinAgent.id } : {}) }),
         costEstimateMicros: cost,
         externalEffect: external,
         status: cardStatus,

@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { fakeTurn } from "../shared/agents/fake";
-import { CALL_ROUTES } from "../shared/agents/routes";
+import { CALL_ROUTES, ADVANCED_SLOT, ROUTE_VERSION } from "../shared/agents/routes";
 import { modelTurn } from "../shared/ai/turn";
 import { getRateVersion } from "../shared/economics";
 import { cleanLanding, LandingContent, landingSlug } from "../shared/landing";
@@ -21,7 +21,7 @@ import { runModel } from "../shared/ai/modelChoice";
 
 /**
  * Landing pages: Climb AI writes a focused offer page from the business's
- * facts (Luna, a few credits); the owner edits any line and publishes it at
+ * facts (Sonnet, with a quoted credit limit); the owner edits any line and publishes it at
  * climbos.app/p/SLUG. The form sends leads to the Pipeline and Inbox.
  */
 
@@ -79,7 +79,7 @@ export const history = query({
 });
 
 async function startWriting(ctx: MutationCtx, org: Doc<"organizations">, userId: Doc<"users">["_id"], text: string) {
-  return createRunWithReservation(ctx, { org, kind: "landing_page", title: `Landing page: ${text.slice(0, 50)}`, roles: ["cmo"], input: { brief: text }, steps: [{ kind: "model", role: "cmo", modelKey: MODEL, inputBudget: 10_000, outputBudget: 2_500 }], meters: {}, createdBy: userId, isFixture: org.kind === "demo" });
+  return createRunWithReservation(ctx, { org, kind: "landing_page", title: `Landing page: ${text.slice(0, 50)}`, roles: ["cmo"], input: { brief: text }, steps: [{ kind: "model", role: "cmo", modelKey: ADVANCED_SLOT, inputBudget: 10_000, outputBudget: 2_500 }], meters: {}, createdBy: userId, isFixture: org.kind === "demo" });
 }
 
 export const create = mutation({
@@ -169,8 +169,8 @@ export const write = internalAction({
     if (!c?.run) return;
     const rates = getRateVersion(c.run.rateVersionId);
     // The run's model route: operator defaults or a permitted user's choice.
-    const model = runModel(c.run, MODEL);
-    const call = process.env.CLIMBOS_FAKE_LLM ? fakeTurn : modelTurn;
+    const model = runModel(c.run, c.run.modelRoute?.policy === ROUTE_VERSION ? ADVANCED_SLOT : MODEL);
+    const call = c.run.isFixture || process.env.CLIMBOS_FAKE_LLM ? fakeTurn : modelTurn;
     const step = await ctx.runMutation(internal.engine.beginStep, { runId, index: 0, kind: "model", label: "Write the page", role: "cmo" });
     if (!step.proceed && step.reason !== "checkpoint") {
       await ctx.runMutation(internal.landing.saveWritten, { pageId });

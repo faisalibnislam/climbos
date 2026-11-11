@@ -14,6 +14,7 @@ describe("first posts follow the plan's channels", () => {
     ];
     expect(firstWinChannels(ch, "saas")).toEqual(["linkedin", "instagram", "facebook"]);
     expect(firstWinChannels([{ key: "tiktok", name: "TikTok", priority: 0 }], "ecommerce")).toEqual(["tiktok", "tiktok", "tiktok"]);
+    expect(firstWinChannels([{ key: "social_organic", name: "YouTube demonstrations", priority: 0 }], "saas")).toEqual(["youtube", "youtube", "youtube"]);
   });
 
   it("falls back to the business-type guess when the plan has no social channel", () => {

@@ -10,6 +10,7 @@ import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { findConflicts } from "../shared/agents/conflicts";
 import { findPossibleDuplicateFacts, groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 import { extractSiteInventory } from "../shared/seo/inventory";
+import { pageSampleV } from "./lib/pageSamples";
 
 /**
  * Self-improvement loop 1 — keep researching each business. Weekly, ClimbOS
@@ -193,13 +194,14 @@ export const scanSearchReadiness = mutation({
 export const saveSearchReadiness = internalMutation({
   args: {
     businessId: v.id("businesses"),
+    pageSamples: v.optional(v.array(pageSampleV)),
     startedAt: v.number(),
     result: v.object({ status: v.union(v.literal("complete"), v.literal("failed")), checkedAt: v.number(), pageUrl: v.optional(v.string()), pageTitle: v.optional(v.string()), description: v.optional(v.string()), canonicalUrl: v.optional(v.string()), httpStatus: v.optional(v.number()), robotsFileStatus: v.optional(v.union(v.literal("available"), v.literal("not_found"), v.literal("unavailable"))), crawlerChecks: v.optional(v.array(v.object({ crawler: v.union(v.literal("Googlebot"), v.literal("Bingbot"), v.literal("OAI-SearchBot"), v.literal("PerplexityBot"), v.literal("Claude-SearchBot"), v.literal("GPTBot"), v.literal("ClaudeBot"), v.literal("Google-Extended")), allowed: v.boolean() }))), headingCount: v.optional(v.number()), structuredDataTypes: v.optional(v.array(v.string())), findings: v.optional(v.array(v.object({ id: v.string(), level: v.union(v.literal("check"), v.literal("attention")), title: v.string(), evidence: v.string(), nextStep: v.string() }))), error: v.optional(v.string()) }),
   },
-  handler: async (ctx, { businessId, startedAt, result }) => {
+  handler: async (ctx, { businessId, startedAt, result, pageSamples }) => {
     const business = await ctx.db.get(businessId);
     if (!business || business.siteReadiness?.startedAt !== startedAt) return;
-    await ctx.db.patch(businessId, { siteReadiness: { ...result, startedAt } });
+    await ctx.db.patch(businessId, { siteReadiness: { ...result, startedAt, ...(pageSamples ? { pageSamples: pageSamples.slice(0, 3) } : {}) } });
   },
 });
 

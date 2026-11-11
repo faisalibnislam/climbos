@@ -14,16 +14,16 @@ import { progressOfRun, runStatusPresentation } from "../../../../shared/progres
 import { ErrorCallout, PERMISSION_WHO } from "../content/shared";
 import { useCostDisplay } from "../useCostDisplay";
 import { AiModePicker, useAiMode } from "../AiModePicker";
-import { ModelPicker, useChosenModelEstimate, useModelChoice } from "../ModelPicker";
+import { ModelPicker, useModelChoice } from "../ModelPicker";
 
-/** "Build my plan" / "Refresh plan": confirm with the capacity note, then start the strategy job. */
+/** "Build my plan" / "Update my plan": confirm with the capacity note, then start the strategy job. */
 export function GeneratePlanButton({
   slug,
   mode,
-  nextVersion,
   estimateMicros,
   onStarted,
   building = false,
+  repair = false,
 }: {
   slug: string;
   mode: "build" | "refresh";
@@ -33,16 +33,20 @@ export function GeneratePlanButton({
   onStarted: (runId: Id<"workflowRuns">) => void;
   /** A plan job is already running: one at a time. */
   building?: boolean;
+  /** Reuse the latest failed AI review; no owner diagnosis is required. */
+  repair?: boolean;
 }) {
   const generate = useMutation(api.orgs.generatePlan);
   const fmt = useCostDisplay();
   const [error, setError] = useState<unknown>(null);
   const [creativeRange, setCreativeRange] = useState<"balanced" | "conventional" | "surprising" | "ambitious">("balanced");
+  const [planStyle, setPlanStyle] = useState<"focused" | "detailed">("focused");
   const ai = useAiMode(slug);
   const modelChoice = useModelChoice();
-  const chosenMax = useChosenModelEstimate("strategy", ai.mode, modelChoice.model);
+  const effectiveStyle = planStyle === "focused" && ai.data && !ai.data.expertUnlocked ? "starter" as const : planStyle;
+  const quote = useQuery(api.workspace.planQuote, ai.data ? { slug, planStyle: effectiveStyle, aiMode: ai.mode, model: modelChoice.model } : "skip");
   const build = mode === "build";
-  const max = chosenMax ?? ai.data?.estimates.strategy[ai.mode] ?? estimateMicros;
+  const max = quote?.maxCostMicros ?? estimateMicros;
   const cost = `Up to ${fmt.upTo(max)}; unused credits return.`;
   if (building) {
     return (
@@ -57,31 +61,36 @@ export function GeneratePlanButton({
         trigger={
           <Button variant={build ? "primary" : "secondary"} size={build ? "lg" : "md"}>
             {build ? <Magic aria-hidden="true" /> : <RefreshCw aria-hidden="true" />}
-            {build ? "Build my plan" : "Refresh plan"}
+            {repair ? "Let AI fix this plan" : build ? "Build my plan" : "Update my plan"}
           </Button>
         }
-        title={build ? "Build your growth plan?" : "Refresh your growth plan?"}
+        title={repair ? "Let AI fix this plan?" : build ? "Build your growth plan?" : "Update your plan?"}
         description={
-          build
+          repair ? `AI uses its review and the latest evidence to fix the draft. ${cost} You can review the new draft before using it.` : build
             ? `Drafted from your goal and facts. ${cost} Nothing is posted or spent until you approve.`
-            : `Drafts version ${nextVersion ?? "next"}. ${cost} The current plan stays in use until you approve.`
+            : `Uses the latest information to update your plan. ${cost} Your current plan stays in use until you accept the update.`
         }
-        confirmLabel={build ? "Build my plan" : "Draft a new version"}
+        confirmLabel={quote ? repair ? "Fix my plan" : build ? "Build my plan" : "Update my plan" : "Checking cost…"}
+        confirmDisabled={!quote}
         onConfirm={async () => {
           setError(null);
           try {
-            const res = await generate({ slug, aiMode: ai.mode, creativeRange, model: modelChoice.model });
+            if (!quote) return;
+            const res = await generate({ slug, aiMode: ai.mode, creativeRange, model: modelChoice.model, planStyle: effectiveStyle });
             onStarted(res.runId);
           } catch (e) {
             setError(e);
           }
         }}
       >
-        <AiModePicker slug={slug} kind="strategy" value={ai.mode} onChange={ai.setMode} />
-        <ModelPicker kind="strategy" aiMode={ai.mode} value={modelChoice.model} onChange={modelChoice.setModel} />
+        <details className="rounded-lg border border-line p-3"><summary className="min-h-11 cursor-pointer text-sm font-medium">AI settings (optional)</summary><div className="mt-3 space-y-3">
+        <Field label="Plan detail"><Select value={planStyle} onValueChange={(value) => setPlanStyle(value as typeof planStyle)} options={[{ value: "focused", label: "Simple next step and prepared drafts" }, { value: "detailed", label: "Detailed plan and forecasts" }]} /></Field>
+        <AiModePicker slug={slug} kind={planStyle === "detailed" ? "strategy" : undefined} value={ai.mode} onChange={ai.setMode} />
+        <ModelPicker kind="strategy" planStyle={effectiveStyle} aiMode={ai.mode} value={modelChoice.model} onChange={modelChoice.setModel} />
         <Field label="Creativity"><Select value={creativeRange} onValueChange={(value) => setCreativeRange(value as typeof creativeRange)} options={[{ value: "balanced", label: "Balanced" }, { value: "conventional", label: "More conventional" }, { value: "surprising", label: "More surprising" }, { value: "ambitious", label: "More ambitious" }]} /></Field>
+        </div></details>
       </ConfirmDialog>
-      <p className="text-xs tabular-nums text-ink-3">≤ {fmt.upTo(max)}</p>
+      <p className="text-xs tabular-nums text-ink-3">{quote ? `≤ ${fmt.upTo(max)}` : "Checking cost…"}</p>
       {error ? <ErrorCallout error={error} /> : null}
     </div>
   );
@@ -110,14 +119,14 @@ export function StrategyRunWatcher({
   activeRunId: Id<"workflowRuns"> | null;
   onDismiss: () => void;
 }) {
-  const runId = startedRunId ?? activeRunId;
+  const runId = activeRunId ?? startedRunId;
   const run = useQuery(api.content.runStatus, runId ? { slug, runId } : "skip");
   if (!runId) return null;
   const finished = run ? RUN_FINISHED.has(run.status) : false;
   return (
     <Card className="border-brand-200">
       <CardContent className="flex flex-col gap-4">
-        <RunProgress slug={slug} runId={runId} headingLevel="h2" done={<p className="text-sm text-ink-2">New plan below. Review, then approve.</p>} />
+        <RunProgress slug={slug} runId={runId} headingLevel="h2" done={<p className="text-sm text-ink-2">Your updated plan is below.</p>} />
         {finished && startedRunId ? (
           <Button variant="ghost" className="self-start" onClick={onDismiss}>
             Hide progress
@@ -133,7 +142,7 @@ type PlanWork = { started: string[]; waiting: { title: string; reason: string }[
 /** What approving started, in a line or two. */
 export function approvedToast(work: PlanWork): { tone: "success" | "info"; title: string; description?: string } {
   if (!work || (!work.started.length && !work.waiting.length)) {
-    return { tone: "success", title: "Plan approved.", description: work?.covered.length ? "Your first drafts are already on the way." : undefined };
+    return { tone: "success", title: "Plan approved.", description: work?.covered.length ? "Your starter drafts are ready in the plan." : undefined };
   }
   const lines = [
     work.started.length ? `Started: ${work.started.join("; ")}.` : "",
@@ -143,7 +152,7 @@ export function approvedToast(work: PlanWork): { tone: "success" | "info"; title
 }
 
 /** Prominent review card for a plan waiting for approval. */
-export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecided, staleReason, quality, help }: { slug: string; strategyId: Id<"strategies">; version: number; canApprove: boolean; onDecided?: () => void; staleReason?: string; quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[]; conflicts?: string[] } | null; /** Inline "Help ClimbOS" panel shown when missing numbers block or weaken the plan. */ help?: ReactNode }) {
+export function PlanReviewCard({ slug, strategyId, canApprove, onDecided, staleReason, quality, help, prepared = false }: { prepared?: boolean; slug: string; strategyId: Id<"strategies">; version: number; canApprove: boolean; onDecided?: () => void; staleReason?: string; quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[]; conflicts?: string[] } | null; /** Inline "Help ClimbOS" panel shown when missing numbers block or weaken the plan. */ help?: ReactNode }) {
   const blocked = quality?.state === "failed" || Boolean(staleReason);
   const decide = useMutation(api.workspace.decidePlan);
   const [note, setNote] = useState("");
@@ -165,12 +174,12 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecide
         <IconTile icon={ClipboardList} tone="amber" size="sm" className="bg-surface" />
         <div className="min-w-0 flex-1">
           <h2 id="review-heading" className="heading-section">
-            Review plan v{version}
+            {quality?.state === "failed" ? "AI needs to fix this draft" : prepared ? "Ready to use this plan?" : "Ready to prepare the work?"}
           </h2>
           <ul className="mt-1.5 flex flex-wrap gap-1.5 text-xs text-amber-800">
-            <li className="rounded-[var(--radius-badge)] bg-surface px-2 py-0.5">Starts drafts for active channels</li>
-            <li className="rounded-[var(--radius-badge)] bg-surface px-2 py-0.5">Each post, email, ad still needs approval</li>
-            <li className="rounded-[var(--radius-badge)] bg-surface px-2 py-0.5">Spends no money</li>
+            <li className="rounded-[var(--radius-badge)] bg-surface px-2 py-0.5">{prepared ? "Starter drafts are already prepared" : "AI prepares the agreed drafts"}</li>
+            <li className="rounded-[var(--radius-badge)] bg-surface px-2 py-0.5">You review before anything is shared</li>
+            <li className="rounded-[var(--radius-badge)] bg-surface px-2 py-0.5">{prepared ? "No extra AI charge to use these drafts" : "Drafting uses your available AI credits"}</li>
           </ul>
         </div>
       </div>
@@ -202,7 +211,7 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecide
           {blocked ? (
             staleReason ? <p className="mt-1.5 font-medium text-red-800">Refresh before approving. You can still read this version.</p> : (
               <p className="mt-1.5 font-medium text-red-800">
-                {help ? "Answer below, then refresh. Or send it back." : "Refresh, or send it back."}
+                {"AI needs to fix this plan before it can guide work. Update the plan or send it back with what should change."}
               </p>
             )
           ) : null}
@@ -225,16 +234,16 @@ export function PlanReviewCard({ slug, strategyId, version, canApprove, onDecide
       {canApprove ? (
         <div className="flex flex-col gap-2 sm:flex-row">
           <ConfirmDialog
-            trigger={<Button disabled={blocked}>Approve plan</Button>}
-            title={`Approve plan version ${version}?`}
-            description="Channels go active and drafts start. Nothing is posted, sent or spent without its own approval."
-            confirmLabel="Approve plan"
+            trigger={<Button disabled={blocked}>{prepared ? "Use this plan" : "Use this plan & prepare drafts"}</Button>}
+            title={prepared ? "Use this plan?" : "Use this plan and prepare the work?"}
+            description={prepared ? "Your starter drafts are already in the plan. Using them adds no AI charge. Review each draft before sharing it; this does not publish, send or spend on ads." : "AI prepares drafts for the selected channels using available credits. Work that cannot fit your credits waits. Nothing is published, sent or spent on ads by this action."}
+            confirmLabel={prepared ? "Use this plan" : "Use plan & prepare drafts"}
             onConfirm={() => run("approve")}
           />
           <ConfirmDialog
             trigger={<Button variant="secondary">Send back</Button>}
             title="Send this plan back?"
-            description="No work starts. Refresh for a new version."
+            description="No work starts. Update the plan with what should change."
             confirmLabel="Send plan back"
             onConfirm={() => run("reject")}
           >

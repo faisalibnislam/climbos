@@ -53,6 +53,12 @@ describe("job progress", () => {
 });
 
 describe("findings", () => {
+  it("plans the actual short AI workflow instead of showing the detailed strategy phases", async () => {
+    const { plannedSteps } = await import("../../shared/progress");
+    expect(plannedSteps("strategy", "v2", { planStyle: "starter" })).toEqual(["Your first growth step: draft", "Your first growth step: review 1"]);
+    expect(plannedSteps("strategy", "v2", { planStyle: "focused" })).toEqual(["Your next growth step: research", "Your next growth step: draft", "Your next growth step: review 1"]);
+    expect(plannedSteps("strategy", "v2")).toContain("Growth plays: research");
+  });
   it("summarises research, reviews and plans in plain text", async () => {
     const { findingsFor } = await import("../../shared/progress");
     expect(findingsFor("Growth plays: research", { notes: "## Notes\n- **Plausible** already has a [free trial](https://x.com) for 30 days, no card", sources: [{ url: "https://www.g2.com/a" }, { url: "https://reddit.com/b" }] })).toEqual([

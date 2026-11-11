@@ -1,3 +1,4 @@
+import { focusedGoal, goalPlans } from "./lib/goals";
 import { planContentHash } from "./lib/planHash";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -43,11 +44,8 @@ export const versions = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "view");
-    const rows = await ctx.db
-      .query("strategies")
-      .withIndex("by_org", (q) => q.eq("orgId", org._id))
-      .order("desc")
-      .take(MAX_VERSIONS);
+    const goal = await focusedGoal(ctx, org);
+    const rows = await goalPlans(ctx, org._id, goal?._id, MAX_VERSIONS);
     const asc = [...rows].sort((a, b) => a.version - b.version);
     const approvals = new Map<string, Doc<"approvals"> | null>();
     for (const s of asc) approvals.set(s._id, s.approvalId ? await ctx.db.get(s.approvalId) : null);
@@ -123,11 +121,9 @@ export const restore = mutation({
     const from = assertSameOrg(await ctx.db.get(fromId), org._id, "plan");
     const keys = PLAN_PART_KEYS.filter((k) => parts.includes(k));
     if (!keys.length) throw appError("INVALID", "Pick at least one part to restore.");
-    const recent = await ctx.db
-      .query("strategies")
-      .withIndex("by_org", (q) => q.eq("orgId", org._id))
-      .order("desc")
-      .take(MAX_VERSIONS);
+    const selected = await focusedGoal(ctx, org);
+    const recent = await goalPlans(ctx, org._id, selected?._id, MAX_VERSIONS);
+    if (!recent.some(plan => plan._id === from._id)) throw appError("INVALID", "Choose a saved version from the current goal.");
     const base = recent[0];
     if (!base) throw appError("INVALID", "There's no plan to restore into.");
     if (base._id === from._id) throw appError("INVALID", "This is already the latest version.");
@@ -155,7 +151,7 @@ export const restore = mutation({
     });
 
     // Versions still waiting are replaced by this one, as with a refresh.
-    for (const p of recent) if (p.status === "draft" || p.status === "needs_approval") await ctx.db.patch(p._id, { status: "superseded" });
+    for (const p of recent) if (p.goalId === from.goalId && (p.status === "draft" || p.status === "needs_approval")) await ctx.db.patch(p._id, { status: "superseded" });
 
     const now = Date.now();
     const version = base.version + 1;

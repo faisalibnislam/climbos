@@ -24,6 +24,7 @@ export interface ModelRequest {
   schema: z.ZodType;
   inputBudget: number;
   outputBudget: number;
+  thinkingOff?: boolean;
   webSearches?: number;
   deadlineMs?: number;
 }
@@ -55,6 +56,7 @@ export type ModelResult =
       kind: "provider_unavailable" | "rate_limited" | "timeout" | "invalid_output" | "provider_error" | "refused" | "spend_limit";
       message: string;
       retryAfterMs?: number;
+      billingUncertain?: boolean;
       usage?: ModelUsage;
       costMicros: number;
       rawText?: string;
@@ -176,21 +178,22 @@ async function callViaTurn(turn: (req: TurnRequest, rates: RateVersion) => Promi
   const r = await turn(
     {
       modelKey: req.modelKey,
-      system: [{ text: req.system }],
+      system: [{ text: req.system, cache: true }],
       messages: [{ role: "user", content: req.user }],
       schema: req.schema,
       maxTokens: req.outputBudget,
       effort: "low",
+      ...(req.thinkingOff ? { thinkingOff: true } : {}),
       webSearch: req.webSearches ? { maxUses: req.webSearches } : undefined,
       timeoutMs: req.deadlineMs ?? 90_000,
     },
     rates,
   );
-  const usage: ModelUsage = { inputTokens: r.usage.inputTokens, outputTokens: r.usage.outputTokens, reasoningTokens: r.usage.thinkingTokens, cacheReadTokens: r.usage.cacheReadTokens, cacheWriteTokens: 0, webSearches: r.usage.webSearches };
+  const usage: ModelUsage = { inputTokens: r.usage.inputTokens, outputTokens: r.usage.outputTokens, reasoningTokens: r.usage.thinkingTokens, cacheReadTokens: r.usage.cacheReadTokens, cacheWriteTokens: r.usage.cacheWriteTokens, webSearches: r.usage.webSearches };
   const searchCostMicros = usdToMicrosCeil(r.usage.webSearches * searchCallUsd(req.modelKey, rates));
   if (!r.ok) {
     const kind = r.kind === "spend_limit" ? "provider_unavailable" : r.kind;
-    return { ok: false, kind, message: r.message, usage, costMicros: Math.max(0, r.costMicros - searchCostMicros), searchCostMicros, rawText: r.text } as ModelResult;
+    return { ok: false, kind, message: r.message, usage, costMicros: Math.max(0, r.costMicros - searchCostMicros), searchCostMicros, rawText: r.text, ...(r.billingUncertain ? { billingUncertain: true } : {}) } as ModelResult;
   }
   return { ok: true, provider, actualModelId: r.actualModelId, output: r.output, rawText: r.text, usage, costMicros: Math.max(0, r.costMicros - searchCostMicros), searchCostMicros, finishReason: r.stopReason, sourceUrls: r.sources.map((x) => x.url).slice(0, 20) };
 }

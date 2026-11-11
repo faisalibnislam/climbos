@@ -17,7 +17,7 @@ import { ConversionAuditView } from "../../src/components/app/ConversionAuditVie
 
 describe("Conversion audit design direction choices", () => {
   beforeEach(() => {
-    hooks.useQuery.mockImplementation((query, args) => getFunctionName(query) === "designCritic:priorDecisions" ? [] : args?.runId
+    hooks.useQuery.mockImplementation((query, args) => getFunctionName(query) === "designCritic:results" ? { canEdit: true, pages: [], tests: [], truncated: false } : getFunctionName(query) === "designCritic:priorDecisions" ? [] : args?.runId
       ? { canEdit: true, rows: [{ findingIndex: 0, status: undefined, note: "", selectedDirectionId: "hero-proof", selectedDirectionName: "Show proof earlier", selectedDirectionAt: 100, updatedAt: 100 }] }
       : null);
   });
@@ -39,7 +39,7 @@ describe("Conversion audit design direction choices", () => {
   });
 
   it("requires saving the exact direction before opening its editable brief", () => {
-    hooks.useQuery.mockImplementation((query, args) => getFunctionName(query) === "designCritic:priorDecisions" ? [] : args?.runId
+    hooks.useQuery.mockImplementation((query, args) => getFunctionName(query) === "designCritic:results" ? { canEdit: true, pages: [], tests: [], truncated: false } : getFunctionName(query) === "designCritic:priorDecisions" ? [] : args?.runId
       ? { canEdit: true, rows: [] }
       : null);
 

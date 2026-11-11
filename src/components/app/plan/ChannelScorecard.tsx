@@ -1,4 +1,6 @@
 "use client";
+import { PlatformPreparation } from "./PlatformPreparation";
+import { platformForChannel } from "@shared/acquisition/platformPreparation";
 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -22,7 +24,7 @@ const EXEC_ICON = { auto: Bot, partial: Hand, human: UserRound } as const;
 const LEARN = { days: "Learns in days", weeks: "Learns in weeks", months: "Learns in months" } as const;
 
 const GROUPS = [
-  { key: "plan", label: "In the plan", bar: "bg-chart-1" },
+  { key: "plan", label: "Candidates", bar: "bg-chart-1" },
   { key: "later", label: "Later", bar: "bg-chart-3" },
   { key: "notNow", label: "Not now", bar: "bg-chart-5" },
   { key: "ineligible", label: "Not a fit", bar: "bg-chart-6" },
@@ -87,6 +89,16 @@ export function ChannelScorecard({ slug }: { slug: string }) {
   const rankOf = new Map([...plan, ...later, ...notNow].map((c, i) => [c.id, i + 1]));
   return (
     <div className="flex flex-col gap-6">
+      {data.recommendation ? <section aria-labelledby="chosen-channels-heading" className="rounded-[var(--radius-card)] border border-brand-200 bg-brand-50 p-5">
+        <div className="flex flex-wrap items-center gap-2"><h2 id="chosen-channels-heading" className="heading-section">The choices in your plan</h2><Badge>{data.recommendation.status === "approved" ? "Approved plan" : "For review"}</Badge></div>
+        <p className="mt-2 text-ui text-ink">{data.recommendation.summary}</p>
+        <ul className="mt-4 grid gap-3 sm:grid-cols-3">{data.recommendation.channels.map((channel) => <li key={channel.name} className="rounded-[var(--radius-control)] bg-surface p-3"><h3 className="font-medium text-ink">{channel.name}</h3><p className="mt-1 text-sm text-ink-2">{channel.why}</p>{channel.firstStep ? <p className="mt-2 text-sm text-ink"><span className="font-medium">First: </span>{channel.firstStep}</p> : null}</li>)}</ul>
+        <Link href={`/app/${encodeURIComponent(slug)}/plan`} className="mt-4 inline-flex min-h-9 items-center text-sm font-medium text-brand-900 underline underline-offset-4">Review the plan and next steps</Link>
+      </section> : null}
+      <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm"><Link href={`/app/${encodeURIComponent(slug)}/outbound?kind=creators`} className="min-h-9 text-link underline underline-offset-4">Find creators and reviewers</Link><Link href={`/app/${encodeURIComponent(slug)}/visibility`} className="min-h-9 text-link underline underline-offset-4">Find search opportunities</Link></div>
+      <details open={!data.recommendation}>
+        <summary className="min-h-9 cursor-pointer font-medium">Explore other ways to reach customers</summary>
+        <div className="mt-4 flex flex-col gap-6">
       <Profile slug={slug} data={data} />
       {!data.scored ? (
         <Callout tone="info" title="Rough ranking">
@@ -99,8 +111,10 @@ export function ChannelScorecard({ slug }: { slug: string }) {
         <span className="text-ui font-medium text-ink-2">Sort by</span>
         <ChoiceChips aria-label="Sort channels by" value={sort} onValueChange={(v) => setSort(v as SortKey)} options={SORT_OPTIONS} />
       </div>
-      <Group title="In the plan" icon={CircleCheck} rows={sortRows(plan, sort)} rankOf={rankOf} labels={data.factorLabels} highlight slug={slug} canEdit={data.canEdit} />
-      <Group title="Later" icon={Hourglass} hint="Add once the first ones work." rows={sortRows(later, sort)} rankOf={rankOf} labels={data.factorLabels} slug={slug} canEdit={data.canEdit} />
+      <Group title="Candidates to consider" icon={CircleCheck} rows={sortRows(plan, sort)} rankOf={rankOf} labels={data.factorLabels} highlight slug={slug} canEdit={data.canEdit} />
+      <Collapsible title={`Other possibilities (${later.length})`}>
+        <Group icon={Hourglass} hint="Investigate only if there is a reason to change direction." rows={sortRows(later, sort)} rankOf={rankOf} labels={data.factorLabels} slug={slug} canEdit={data.canEdit} />
+      </Collapsible>
       <Collapsible title={`Not now (${notNow.length})`}>
         <Group rows={sortRows(notNow, sort)} rankOf={rankOf} labels={data.factorLabels} slug={slug} canEdit={data.canEdit} />
       </Collapsible>
@@ -116,6 +130,8 @@ export function ChannelScorecard({ slug }: { slug: string }) {
           ))}
         </ul>
       </Collapsible>
+        </div>
+      </details>
     </div>
   );
 }
@@ -418,6 +434,15 @@ function ChannelRow({ r, rank, labels, slug, canEdit }: { r: Row; rank: number; 
                 <p className="mt-1 leading-relaxed text-ink-2">{r.evidence}</p>
               </div>
             ) : null}
+            {r.decisionBrief ? <div className="space-y-3 rounded-[var(--radius-control)] border border-line p-3">
+              <p><span className="font-medium">Start here: </span>{r.decisionBrief.firstStep}</p>
+              <p><span className="font-medium">The smallest useful check: </span>{r.decisionBrief.smallestCheck}</p>
+              <p><span className="font-medium">Compare with: </span>{r.decisionBrief.alternative}</p>
+              <p><span className="font-medium">Change direction if: </span>{r.decisionBrief.changeCourseIf}</p>
+              <p className="text-ink-3">{r.decisionBrief.ownerHoursPerWeek === null ? "Your weekly time commitment is still unknown." : `${r.decisionBrief.ownerHoursPerWeek} hours a week · ${r.decisionBrief.effortBasis === "owner_reported" ? "reported by you" : "proposed allocation to review"}`}</p>
+              <div><p className="font-medium">Still to check</p><ul className="mt-1 list-disc pl-5">{r.decisionBrief.unknowns.map((item, i) => <li key={i}>{item}</li>)}</ul></div>
+              {r.decisionBrief.setupSteps.length ? <div><p className="font-medium">Before starting</p><ul className="mt-1 list-disc pl-5">{r.decisionBrief.setupSteps.map((item, i) => <li key={i}>{item}</li>)}</ul></div> : null}
+            </div> : null}
             {r.sourceUrl ? <p><span className="text-ink-3">Source: </span><a href={r.sourceUrl} target="_blank" rel="noreferrer" className="break-all text-brand-800 underline">{r.sourceUrl}</a></p> : null}
             {r.communityRulesUrl ? <p><span className="text-ink-3">Community rules checked {r.communityRulesCheckedAt ?? "date unknown"}: </span><a href={r.communityRulesUrl} target="_blank" rel="noreferrer" className="break-all text-brand-800 underline">{r.communityRulesUrl}</a></p> : null}
             {r.caution ? (
@@ -576,6 +601,9 @@ function MakeItHappen({ slug, channelId }: { slug: string; channelId: string }) 
   const runs = useQuery(api.acquisition.makeItHappenRuns, { slug });
   const [busy, setBusy] = useState(false);
   const last = runs?.[channelId];
+  const platform = platformForChannel(channelId);
+  if (platform) return <PlatformPreparation slug={slug} kind={platform} />;
+  if (channelId === "R21") return <div className="flex flex-col gap-2"><p className="text-xs text-ink-3">Start with a few creators whose actual coverage fits your buyers.</p><Button asChild size="sm" className="self-start"><Link href={`/app/${encodeURIComponent(slug)}/outbound?kind=creators`}>Research creators and reviewers</Link></Button></div>;
   // The job this button started: live progress while it works, then its result, right here.
   const progress = last ? (
     <div className="flex w-full flex-col gap-2 rounded-[var(--radius-control)] border border-line bg-surface p-3">

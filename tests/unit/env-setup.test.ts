@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("Convex environment setup", () => {
-  it("syncs the active OpenAI, Gemini, connector, and encryption keys", () => {
+  it("syncs the active Anthropic, optional OpenAI, Gemini, connector, and encryption keys", () => {
     const directory = mkdtempSync(join(tmpdir(), "climbos-env-sync-"));
     const bin = join(directory, "bin");
     const capture = join(directory, "commands.txt");
@@ -21,7 +21,7 @@ describe("Convex environment setup", () => {
       "CLIMBOS_ENCRYPTION_KEY_ID=test-key-id",
       "LINKEDIN_CLIENT_ID=test-linkedin-id",
       "X_CLIENT_SECRET=test-x-secret",
-      "ANTHROPIC_API_KEY=retired-test-key",
+      "ANTHROPIC_API_KEY=test-anthropic-key",
     ].join("\n"));
 
     try {
@@ -31,12 +31,14 @@ describe("Convex environment setup", () => {
         stdio: "pipe",
       });
       const commands = readFileSync(capture, "utf8");
-      expect(commands).toContain("convex env set OPENAI_API_KEY -- test-openai-key");
-      expect(commands).toContain("convex env set GEMINI_API_KEY -- test-gemini-key");
-      expect(commands).toContain("convex env set CLIMBOS_ENCRYPTION_KEY -- test-encryption-key");
-      expect(commands).toContain("convex env set LINKEDIN_CLIENT_ID -- test-linkedin-id");
-      expect(commands).toContain("convex env set X_CLIENT_SECRET -- test-x-secret");
-      expect(commands).not.toContain("ANTHROPIC_API_KEY");
+      expect(commands).toContain("convex env set OPENAI_API_KEY");
+      expect(commands).toContain("convex env set GEMINI_API_KEY");
+      expect(commands).toContain("convex env set CLIMBOS_ENCRYPTION_KEY");
+      expect(commands).toContain("convex env set LINKEDIN_CLIENT_ID");
+      expect(commands).toContain("convex env set X_CLIENT_SECRET");
+      expect(commands).toContain("convex env set ANTHROPIC_API_KEY");
+      expect(commands).not.toContain("test-anthropic-key");
+      expect(commands).not.toContain("test-openai-key");
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
@@ -46,6 +48,7 @@ describe("Convex environment setup", () => {
     expect(setupCheck).toContain('keys: ["OPENAI_API_KEY"]');
     expect(setupCheck).toContain('keys: ["GEMINI_API_KEY"]');
     expect(envTemplate).toContain("OPENAI_API_KEY=");
-    expect(envTemplate).not.toContain("ANTHROPIC_API_KEY=");
+    expect(envTemplate).toContain("ANTHROPIC_API_KEY=");
+    expect(setupCheck).toContain('keys: ["ANTHROPIC_API_KEY"]');
   });
 });

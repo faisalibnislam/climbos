@@ -38,22 +38,33 @@ import {
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { errorMessage } from "./errors";
-import { PRIMARY_NAV, appArea, appHref } from "./navigation";
+import { PRIMARY_NAV, SECONDARY_NAV, appArea, appHref } from "./navigation";
 import { SkipLink } from "@shared/a11y/SkipLink";
 
 const NAV_ICONS: Record<string, LucideIcon> = { today: Home, plan: Compass, channels: Megaphone, work: CalendarDays, customers: Users, results: BarChart3, tools: PanelsTopLeft };
 const NAV: { key: string; label: string; icon: LucideIcon; group: string }[] = PRIMARY_NAV.map((item) => ({ ...item, icon: NAV_ICONS[item.key], group: "" }));
+const EXTRA_NAV = SECONDARY_NAV.map((item) => ({ ...item, icon: NAV_ICONS[item.key], group: "" }));
 const NAV_GROUPS = [""];
-const MOBILE_PRIMARY = ["today", "work", "customers", "results"];
+const MOBILE_PRIMARY = ["today", "plan", "work"];
 
 /**
- * Authenticated app frame: six primary destinations, Settings, a workspace
+ * Authenticated app frame: four primary destinations, Settings, a workspace
  * switcher, a persistent "Demo data" indicator and a Pause all control that
  * works on mobile. Permission and existence checks happen in Convex; this
  * component only renders what the backend returns.
  */
 export function AppShell({ slug, children, workspace = false }: { slug: string; children: ReactNode; workspace?: boolean }) {
   const identity = useQuery(api.orgs.me);
+  const membershipKnown = identity?.orgs.some(org => org.slug === slug);
+  const access = useQuery(api.orgs.accessibleWorkspace, identity && !membershipKnown ? { slug } : "skip");
+  // The identity key intentionally resets workspace-local state on account
+  // changes. Do not mount editable controls under a temporary "loading" key:
+  // the first identity result would remount them and discard early input or
+  // close a confirmation the owner had just opened.
+  if (identity === undefined) return <><SkipLink /><main id="main" aria-busy="true" className="min-h-dvh bg-bg p-6"><p role="status" className="text-sm text-ink-2">Opening your workspace…</p></main></>;
+  if (identity === null) return <><SkipLink /><main id="main" className="mx-auto max-w-xl p-6"><h1 className="heading-page">Sign in to open your business</h1><Button asChild className="mt-5"><Link href={`/sign-in?next=${encodeURIComponent(`/app/${slug}/today`)}`}>Sign in</Link></Button></main></>;
+  if (!membershipKnown && access === undefined) return <><SkipLink /><main id="main" aria-busy="true" className="min-h-dvh bg-bg p-6"><p role="status" className="text-sm text-ink-2">Opening your workspace…</p></main></>;
+  if (!membershipKnown && access === null) return <><SkipLink /><main id="main" className="mx-auto max-w-xl p-6"><h1 className="heading-page">This business isn’t available</h1><p className="mt-3 text-sm text-ink-2">It may have been removed, or this account may not have access.</p><Button asChild className="mt-5"><Link href="/app">Open my businesses</Link></Button></main></>;
   return (
     <ClimbProvider key={`${slug}:${identity?.userId ?? "loading"}`}>
       <Shell slug={slug} workspace={workspace}>
@@ -80,7 +91,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
   const [rail, setRail] = useState(workspace);
 
   return (
-    <div className={cn("bg-bg", workspace ? "flex h-dvh flex-col" : "min-h-dvh")}>
+    <div className={cn("climb-app bg-bg", workspace ? "flex h-dvh flex-col" : "min-h-dvh")}>
       <SkipLink />
       <Toaster />
       <CommandPalette slug={slug} />
@@ -92,9 +103,9 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
         {/* Desktop sidebar (an icon rail when collapsed) */}
         <aside
           className={cn(
-            "sticky top-0 hidden shrink-0 flex-col overflow-y-auto border-r border-line bg-surface pb-3 pt-3 lg:flex",
+            "app-sidebar sticky top-0 hidden shrink-0 flex-col overflow-y-auto border-r border-line bg-surface pb-4 pt-6 lg:flex",
             workspace ? "h-full" : "h-dvh",
-            rail ? "w-14 items-center px-1.5" : "w-60 px-2",
+            rail ? "w-14 items-center px-1.5" : "w-56 px-4",
           )}
           aria-label="Main"
         >
@@ -122,12 +133,16 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
               </NavGroup>
             ))}
           </nav>
+          <details className="mt-3" open={EXTRA_NAV.some((item) => item.key === section) || undefined}>
+            <summary className="min-h-10 cursor-pointer px-3 py-2 text-ui text-ink-2">More</summary>
+            {EXTRA_NAV.map((item) => <NavLink key={item.key} compact={rail} href={appHref(slug, item.key)} active={section === item.key} icon={<item.icon className="size-4" aria-hidden />} badge={item.key === "customers" ? inboxUnread : undefined}>{item.label}</NavLink>)}
+          </details>
           <div className={cn("mt-auto flex flex-col gap-1 pt-4", rail && "items-center")}>
             <NavLink compact={rail} href={`/app/${slug}/today#review`} active={false} icon={<Inbox className="size-4" aria-hidden />}>Review work</NavLink>
             <NavLink compact={rail} href={`/app/${slug}/connections`} active={pathname.endsWith("/connections")} icon={<Plug className="size-4" aria-hidden />}>Connected accounts</NavLink>
             <CreditMeter slug={slug} rail={rail} />
             <NavLink compact={rail} href={`/app/${slug}/settings/team`} active={section === "settings" && !pathname.endsWith("/connections")} icon={<Settings className="size-4" aria-hidden />}>
-              Settings
+              Business & settings
             </NavLink>
             {rail ? null : <PauseAllButton slug={slug} paused={Boolean(pause?.paused)} variant="sidebar" />}
           </div>
@@ -135,14 +150,14 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
 
         <div className={cn("flex min-w-0 flex-1 flex-col transition-[margin] duration-200", climb.open && "sm:mr-[400px]", workspace && "min-h-0")}>
           {/* Top bar: make a wish or search (⌘K), team activity, pause, account */}
-          <header className="sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-line bg-surface/95 px-3 backdrop-blur sm:px-4">
+          <header className="app-topbar sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-surface/95 px-3 backdrop-blur sm:px-4">
             <Link href={`/app/${slug}/today`} aria-label="ClimbOS home" className="lg:hidden">
               <Logo markClassName="size-6" className="[&>span:last-child]:hidden sm:[&>span:last-child]:inline [&>span:last-child]:text-base" />
             </Link>
             <button
               type="button"
               onClick={() => window.dispatchEvent(new Event("climbos:command"))}
-              className="mx-auto flex h-8 w-full min-w-0 max-w-md items-center gap-2 rounded-lg border border-line-strong bg-surface px-2.5 text-left text-ui text-ink-3 transition-colors hover:border-ink-3"
+              className="ml-auto flex h-9 w-full min-w-0 max-w-56 items-center gap-2 rounded-lg border border-line-strong bg-surface px-2.5 text-left text-ui text-ink-3 transition-colors hover:border-ink-3"
             >
               <Search className="size-4 shrink-0 text-ink-3" aria-hidden="true" />
               <span className="flex-1 truncate">Search</span>
@@ -168,7 +183,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
             </div>
           </header>
           <LowCreditBanner slug={slug} />
-          <main id="main" tabIndex={-1} className={workspace ? "min-h-0 flex-1 overflow-auto" : "flex-1 px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12"}>
+          <main id="main" tabIndex={-1} className={workspace ? "min-h-0 flex-1 overflow-auto" : "app-main flex-1 px-4 pb-28 pt-8 sm:px-6 lg:px-9 lg:pb-12"}>
             {children}
           </main>
         </div>
@@ -176,7 +191,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
 
       {/* Mobile bottom navigation: four destinations and More */}
       <nav hidden={workspace} className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="Primary">
-        <ul className="grid grid-cols-5">
+        <ul className="grid grid-cols-4">
           {NAV.filter((n) => MOBILE_PRIMARY.includes(n.key)).map((item) => {
             const active = section === item.key;
             return (
@@ -187,7 +202,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
                   className={cn("flex min-h-14 flex-col items-center justify-center gap-0.5 text-2xs font-medium", active ? "text-ink" : "text-ink-3 hover:text-ink")}
                 >
                   <item.icon className="size-5" aria-hidden />
-                  {item.key === "plan" ? "Plan" : item.label}
+                  {item.label}
                 </Link>
               </li>
             );
@@ -201,7 +216,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
                   type="button"
                   className={cn(
                     "flex min-h-14 w-full flex-col items-center justify-center gap-0.5 text-2xs font-medium",
-                    NAV.some((n) => !MOBILE_PRIMARY.includes(n.key) && n.key === section) || section === "settings" ? "text-brand-800" : "text-ink-3 hover:text-ink",
+                    EXTRA_NAV.some((n) => n.key === section) || section === "settings" ? "text-brand-800" : "text-ink-3 hover:text-ink",
                   )}
                 >
                   <Menu className="size-5" aria-hidden />
@@ -210,7 +225,7 @@ function Shell({ slug, children, workspace }: { slug: string; children: ReactNod
               }
             >
               <ul className="grid grid-cols-3 gap-2 pb-[env(safe-area-inset-bottom)]">
-                {[...NAV.filter((n) => !MOBILE_PRIMARY.includes(n.key)), { key: "review", label: "Review work", icon: Inbox, group: "" }, { key: "connections", label: "Connected accounts", icon: Plug, group: "" }, { key: "settings", label: "Settings", icon: Settings, group: "" }].map((item) => (
+                {[...EXTRA_NAV, { key: "review", label: "Review work", icon: Inbox, group: "" }, { key: "connections", label: "Connected accounts", icon: Plug, group: "" }, { key: "settings", label: "Settings", icon: Settings, group: "" }].map((item) => (
                   <li key={item.key}>
                     <SheetClose asChild>
                       <Link
@@ -263,7 +278,7 @@ function NavLink({ href, active, icon, children, compact = false, badge }: { hre
       aria-current={active ? "page" : undefined}
       aria-label={compact && typeof children === "string" ? children : undefined}
       className={cn(
-        "relative flex h-[var(--h-sm)] items-center gap-2.5 rounded-[var(--radius-control)] text-ui transition-colors",
+        "app-nav-link relative flex h-[var(--h-sm)] items-center gap-2.5 rounded-[var(--radius-control)] text-ui transition-colors",
         compact ? "w-9 justify-center px-0" : "px-2",
         active ? "bg-surface font-medium text-ink shadow-[var(--card-shadow)]" : "text-ink-2 hover:bg-surface/60 hover:text-ink",
       )}
@@ -291,11 +306,13 @@ function AccountMenu() {
   const { signOut } = useAuthActions();
   const router = useRouter();
   if (!me) return null;
+  const accountName = me.isAnonymous ? "Guest (demo)" : (me.email ?? me.name ?? "Account");
+  const initials = (me.isAnonymous ? "G" : (me.name ?? me.email ?? "A")).slice(0, 2).toUpperCase();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className="grid size-8 place-items-center rounded-full bg-surface-3 text-xs font-semibold text-ink-2 hover:ring-2 hover:ring-line-strong" aria-label={`Account: ${me.isAnonymous ? "Guest (demo)" : (me.email ?? me.name ?? "Account")}`}>
-          {(me.isAnonymous ? "G" : (me.name ?? me.email ?? "A")).slice(0, 2).toUpperCase()}
+        <button type="button" className="grid size-8 place-items-center rounded-full bg-surface-3 text-xs font-semibold text-ink-2 hover:ring-2 hover:ring-line-strong" aria-label={`Account ${initials}: ${accountName}`}>
+          <span aria-hidden="true">{initials}</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-60">

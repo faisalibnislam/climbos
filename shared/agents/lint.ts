@@ -1,4 +1,5 @@
 import type { LintIssue } from "./types";
+import { withoutNegatedTrials } from "./offerLanguage";
 
 /**
  * Deterministic copy checks that run before the LLM critic (research:
@@ -62,7 +63,7 @@ const TRIAL_TERMS = /\b(?:then|after (?:the|your) (?:\d+[- ]day )?trial|auto-?re
 
 /** Availability and deadline claims must be grounded in a confirmed current offer. */
 const SCARCITY_CLAIM = /\b(?:only\s+\d[\d,.]*\s+(?:spots?|seats?|places?|tickets?|items?|rooms?|appointments?|openings?)\s+(?:left|remain(?:ing)?|available)|last\s+(?:few|\d+[\d,.]*|remaining)\s+(?:spots?|seats?|places?|tickets?|items?|rooms?|appointments?|openings?)|limited[- ](?:time|availability|quantity|stock|seats?|spots?|places?|tickets?)|while\s+(?:supplies|stocks?)\s+last|almost\s+sold\s+out|last\s+chance)\b/i;
-const DEADLINE_CLAIM = /\b(?:offer|sale|discount|price|registration|enrollment|booking|application)\s+(?:ends?|expires?|closes?)\s+(?:today|tonight|tomorrow|on\s+[\p{L}\d, -]{3,30}|in\s+\d+\s+(?:hours?|days?|weeks?)|at\s+midnight|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|\b(?:ends?|expires?|closes?)\s+(?:today|tonight|tomorrow|on\s+[\p{L}\d, -]{3,30}|in\s+\d+\s+(?:hours?|days?|weeks?)|at\s+midnight|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/iu;
+const DEADLINE_CLAIM = /\b(?:offer|sale|discount|price|registration|enrollment|booking|application)\s+(?:ends?|expires?|closes?)\s+(?:today|tonight|tomorrow|on\s+[\p{L}\d, -]{3,30}|in\s+\d+\s+(?:hours?|days?|weeks?)|at\s+midnight|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|\b(?:ends?|expires?|closes?)\s+(?:today|tonight|tomorrow|on\s+(?=(?:\d|(?:mon|tue|wed|thu|fri|sat|sun|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[\p{L}]*)\b)[\p{L}\d, -]{3,30}|in\s+\d+\s+(?:hours?|days?|weeks?)|at\s+midnight|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/iu;
 const SCARCITY_EVIDENCE = /\b(?:limited|only\s+\d|\d[\d,.]*\s+(?:spots?|seats?|places?|tickets?|items?|rooms?|appointments?|openings?)\s+(?:left|remain(?:ing)?|available)|last\s+(?:few|\d+|remaining)|while\s+(?:supplies|stocks?)\s+last|almost\s+sold\s+out|last\s+chance)\b/i;
 const DEADLINE_EVIDENCE = /\b(?:ends?|expires?|closes?|deadline|through|until|by\s+(?:today|tonight|tomorrow|\w+\s+\d{1,2}|\d{1,2}\s+\w+)|today|tonight|tomorrow|midnight)\b/i;
 
@@ -139,7 +140,7 @@ export function lintClaims(fields: { path: string; text: string }[], evidence: s
     }
   }
   for (const { path, text } of fields) {
-    if (TRIAL_OFFER.test(text) && !TRIAL_TERMS.test(text)) issues.push({ severity: "error", rule: "trial_terms", message: "A free trial needs to say what happens when it ends (the price it renews at, or that it ends without a charge) in the same copy.", path });
+    if (TRIAL_OFFER.test(withoutNegatedTrials(text)) && !TRIAL_TERMS.test(text)) issues.push({ severity: "error", rule: "trial_terms", message: "A free trial needs to say what happens when it ends (the price it renews at, or that it ends without a charge) in the same copy.", path });
   }
   return [...issues, ...lintManipulation(fields)];
 }
@@ -190,6 +191,8 @@ const LABELLED = /\b(assum\w*|estimat\w*|targets?|goals?|aim\w*|forecast\w*|proj
 
 /** Numbers in the output that don't appear anywhere in the evidence. */
 export function untracedNumbers(text: string, evidence: string, opts: { labelled?: boolean } = {}): string[] {
+  // Stable corpus identifiers are references, not business quantities. Citation membership is checked separately.
+  text = text.replace(/\bCP-\d{3}\b/g, "");
   const normalize = (s: string) => s.replace(/[,\s]/g, "");
   const ev = normalize(evidence);
   const found: string[] = [];

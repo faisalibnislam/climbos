@@ -104,6 +104,19 @@ describe("Design Critic finding review", () => {
     await expect(owner.client.mutation(api.landing.saveDesignMeasurementPlan, { slug, id: pageId, expectedVersion: 1, ...plan })).resolves.toMatchObject({ version: 2, appliesToVersion: 2 });
     const measuredPage = (await owner.client.query(api.landing.list, { slug })).pages.find((item) => item.id === pageId)!;
     expect(measuredPage.designMeasurementPlan).toMatchObject({ metric: plan.metric, audience: plan.audience, guardrail: plan.guardrail, observationDays: 28, decisionRule: plan.decisionRule, baseline: { state: "unknown" }, appliesToVersion: 2, confirmedAt: expect.any(Number) });
+    // A finding becomes a proposed observational test, bound to the exact page version.
+    await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "More qualified customers", horizonDays: 90, monthlyAdBudget: 0 });
+    await t.run(async (ctx) => {
+      const business = (await ctx.db.query("businesses").filter((q) => q.eq(q.field("orgId"), orgId)).first())!;
+      const goal = (await ctx.db.query("goals").filter((q) => q.eq(q.field("orgId"), orgId)).first())!;
+      await ctx.db.insert("strategies", { orgId: business.orgId, businessId: business._id, goalId: goal._id, version: 1, status: "approved", summary: "s", audiences: [], positioning: "p", channels: [], constraints: [], measurementPlan: "m", reviewDate: "2026-11-09", sourceFactIds: [], generationCostMicros: 0, createdAt: Date.now() });
+    });
+    await expect(viewer.client.mutation(api.designCritic.createResultTest, { slug, pageId, expectedVersion: 2 })).rejects.toThrow();
+    await expect(other.client.mutation(api.designCritic.createResultTest, { slug: otherSlug, pageId, expectedVersion: 2 })).rejects.toThrow();
+    await expect(owner.client.mutation(api.designCritic.createResultTest, { slug, pageId, expectedVersion: 1 })).rejects.toThrow(/page changed/i);
+    const testId = await owner.client.mutation(api.designCritic.createResultTest, { slug, pageId, expectedVersion: 2 });
+    expect(await owner.client.mutation(api.designCritic.createResultTest, { slug, pageId, expectedVersion: 2 })).toBe(testId);
+    expect(await owner.client.query(api.designCritic.results, { slug, runId, findingIndex: 0 })).toMatchObject({ tests: [{ id: testId, pageVersion: 2, method: "pre_post_observational", status: "proposed", analyses: [] }] });
     await owner.client.mutation(api.landing.setLive, { slug, id: pageId, live: true, expectedVersion: 2 });
 
     await owner.client.mutation(api.landing.update, { slug, id: pageId, content: { ...content, headline: "A revised clear offer" } });

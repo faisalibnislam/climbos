@@ -14,7 +14,7 @@ self.addEventListener("push", (event) => {
         try {
           const res = await fetch(PULL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint: sub.endpoint }) });
           if (res.ok) items = (await res.json()).items || [];
-        } catch (e) {
+        } catch {
           items = [];
         }
       }

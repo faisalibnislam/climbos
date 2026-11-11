@@ -758,7 +758,7 @@ export const runStatus = query({
       })(),
       /** A stopped run can continue from its last finished step. */
       canRetry: canRetryRun(run, steps),
-      planned: plannedSteps(run.kind, run.engine, { website: steps.length === 0 || steps.some((s) => s.label === "Read your website") }),
+      planned: plannedSteps(run.kind, run.engine, { website: steps.length === 0 || steps.some((s) => s.label === "Read your website"), planStyle: (() => { const input = parse(run.input) as { planStyle?: unknown } | null; return typeof input?.planStyle === "string" ? input.planStyle : undefined; })() }),
       steps: steps.map((s) => ({
         label: s.label,
         status: s.status,
@@ -828,7 +828,7 @@ export const unarchive = mutation({
   },
 });
 
-const SOCIAL_FIRST_WIN = ["instagram", "facebook", "linkedin", "x", "tiktok", "pinterest"] as const;
+const SOCIAL_FIRST_WIN = ["instagram", "facebook", "linkedin", "x", "tiktok", "pinterest", "youtube"] as const;
 type SocialChannel = (typeof SOCIAL_FIRST_WIN)[number];
 const SOCIAL_NAME: Record<SocialChannel, RegExp> = {
   instagram: /instagram|\binsta\b/i,
@@ -837,6 +837,7 @@ const SOCIAL_NAME: Record<SocialChannel, RegExp> = {
   x: /\btwitter\b|\bx\.com\b|\bon x\b|^x$/i,
   tiktok: /tik\s?tok/i,
   pinterest: /pinterest/i,
+  youtube: /youtube/i,
 };
 
 /**
@@ -862,6 +863,7 @@ export const startFirstWin = internalMutation({
     if (!org || org.kind === "demo" || org.firstWinRunIds?.length) return;
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first();
     const strategy = await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", orgId)).order("desc").first();
+    if (strategy?.expert?.focusedMove) return; // Starter work is already in this plan.
     const perChannel = new Map<SocialChannel, number>();
     for (const c of firstWinChannels(strategy?.channels ?? [], business?.businessType)) perChannel.set(c, (perChannel.get(c) ?? 0) + 1);
     const runIds: Id<"workflowRuns">[] = [];

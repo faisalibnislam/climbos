@@ -83,6 +83,9 @@ describe("the plan sends people to the pages it edits (bench Run 6, Meetrao)", (
     expect(lintPlanDistribution(fixed, 90)).toEqual([]);
     const phased = { ...MEETRAO_PLAN, phases: [...MEETRAO_PLAN.phases, { name: "Route", days: "Days 1–21", focus: "Post the coach page in two coach Facebook groups." }] };
     expect(lintPlanDistribution(phased, 90)).toEqual([]);
+    const milestone = { ...MEETRAO_PLAN, phases: [{ name: "Try the page", days: "1–14", focus: "Update the existing comparison page", firstAction: "Pitch a relevant creator the page as an editorial suggestion" }] };
+    expect(lintPlanDistribution(milestone, 14)).toEqual([]);
+    expect(lintPlanDistribution({ ...milestone, phases: milestone.phases.map((phase) => ({ ...phase, days: "15–30" })) }, 14)).toHaveLength(1);
   });
   it("an undated or late route doesn't count; a plan that edits no pages isn't checked", () => {
     const late = { ...MEETRAO_PLAN, phases: [...MEETRAO_PLAN.phases, { name: "Later", days: "Days 91–120", focus: "Pitch creators the page." }] };

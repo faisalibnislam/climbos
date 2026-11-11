@@ -1,0 +1,18 @@
+import type { Rubric } from "./types";
+
+/** Same safety gates and acceptance bar; judge a short learning plan on its actual purpose. */
+export function focusedRubric(detailed: Rubric): Rubric {
+  return {
+    id: "focused-growth-strategy", title: "A useful next growth decision and prepared work",
+    gates: detailed.gates.map((gate) => ({ ...gate })),
+    shipRule: { ...detailed.shipRule },
+    criteria: [
+      { id: "F1", name: "Business judgment", anchors: { 1: "Generic marketing checklist.", 3: "A relevant tactic, but weak reasoning or little consideration of alternatives.", 5: "One business-specific customer situation and distribution mechanism, grounded in current evidence; explains why it beats the strongest alternative and what could change the choice." } },
+      { id: "F2", name: "Economics and uncertainty", anchors: { 1: "Invents paid value, resources, forecasts or conversion assumptions.", 3: "Labels missing inputs but does not explain what depends on them.", 5: "Separates known prices and offer promises from unknown customer value, margin and demand. Uses deterministic supplied calculations where available; otherwise says what cannot be judged, avoids unsupported spending, and still prepares useful low-risk work." } },
+      { id: "F3", name: "Useful work now", anchors: { 1: "Only says AI will draft something later.", 3: "Some actual draft text, but generic or poorly matched to the target.", 5: "One to three complete, business-specific drafts or scripts for the chosen test, exact target and credible source support, with practical checks before use. No invented relationships, features, performance or permissions." } },
+      { id: "F4", name: "Simplicity and focus", anchors: { 1: "Dense jargon and parallel tasks.", 3: "Understandable but asks the owner to coordinate too much.", 5: "An owner with no marketing knowledge can understand the recommendation and one next step immediately. AI has done the preparation; asks only decision-changing questions and does not postpone safe work for private analytics." } },
+      { id: "F5", name: "Learning and sequencing", anchors: { 1: "No way to learn, or arbitrary success quotas.", 3: "A relevant signal with vague continue/change/stop rules.", 5: "Concrete milestones in the requested time windows, a small observable signal and useful decision rules. Sparse data is inconclusive; statistical tests need real volume. No forced day-45 checkpoint, weekly target or numeric forecast when unsupported." } },
+      { id: "F6", name: "Longer-term direction", anchors: { 1: "Unconnected tactics or promised market leadership.", 3: "An ambition loosely connected to this test.", 5: "Shows how this small test could build a repeatable advantage through 30 and 90 days and future years; makes deliberate sacrifices, preserves uncertainty, and explains when to change course." } },
+    ],
+  };
+}

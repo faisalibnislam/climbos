@@ -5,6 +5,8 @@ import { internalAction, internalMutation, internalQuery, mutation, query } from
 import { audit } from "./lib/audit";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import type { LandingContent } from "../shared/landing";
+import { renderChecksV } from "./lib/renderChecks";
+import { RenderChecksSchema, type RenderChecks } from "../shared/site/renderChecks";
 
 /**
  * Spec §8: after a design change, capture the ClimbOS-hosted draft on desktop and mobile so
@@ -68,7 +70,7 @@ export const pending = internalQuery({
 export const finish = internalMutation({
   args: {
     renderId: v.id("landingDraftRenders"),
-    shots: v.array(v.object({ view: v.union(v.literal("desktop"), v.literal("mobile")), storageId: v.id("_storage"), width: v.number(), height: v.number() })),
+    shots: v.array(v.object({ view: v.union(v.literal("desktop"), v.literal("mobile")), storageId: v.id("_storage"), width: v.number(), height: v.number(), checks: v.optional(renderChecksV) })),
     capturedAt: v.number(),
   },
   handler: async (ctx, { renderId, shots, capturedAt }) => {
@@ -90,7 +92,7 @@ export const capture = internalAction({
     const secret = process.env.CLIMBOS_SERVER_SECRET;
     const site = (process.env.SITE_URL ?? "https://climbos.app").replace(/\/$/, "");
     const worker = (process.env.RENDER_WORKER_URL ?? site).replace(/\/$/, "");
-    const shots: { view: "desktop" | "mobile"; storageId: Id<"_storage">; width: number; height: number }[] = [];
+    const shots: { view: "desktop" | "mobile"; storageId: Id<"_storage">; width: number; height: number; checks?: RenderChecks }[] = [];
     if (secret) {
       try {
         const response = await fetch(`${worker}/api/render/capture`, {
@@ -100,7 +102,7 @@ export const capture = internalAction({
           signal: AbortSignal.timeout(85_000),
         });
         const raw = response.ok ? await response.text() : "";
-        const result = raw && raw.length < 12_000_000 ? (JSON.parse(raw) as { shots?: { kind?: string; width?: number; height?: number; png?: string }[] }) : {};
+        const result = raw && raw.length < 12_000_000 ? (JSON.parse(raw) as { shots?: { kind?: string; width?: number; height?: number; png?: string; checks?: unknown }[] }) : {};
         for (const shot of result.shots ?? []) {
           if ((shot.kind !== "desktop" && shot.kind !== "mobile") || typeof shot.png !== "string" || shot.png.length < 100 || shot.png.length > MAX_SHOT_B64 || !/^[A-Za-z0-9+/=]+$/.test(shot.png)) continue;
           const binary = atob(shot.png);
@@ -109,7 +111,8 @@ export const capture = internalAction({
           const storageId = await ctx.storage.store(new Blob([bytes], { type: "image/png" }));
           const width = Number.isSafeInteger(shot.width) && (shot.width ?? 0) > 0 ? shot.width! : shot.kind === "desktop" ? 1440 : 390;
           const height = Number.isSafeInteger(shot.height) && (shot.height ?? 0) > 0 ? shot.height! : shot.kind === "desktop" ? 900 : 844;
-          shots.push({ view: shot.kind, storageId, width, height });
+          const checks = RenderChecksSchema.safeParse(shot.checks);
+          shots.push({ view: shot.kind, storageId, width, height, ...(checks.success && checks.data.viewport.width === width && checks.data.viewport.height === height ? { checks: checks.data } : {}) });
         }
       } catch {
         // Recorded as unavailable below; the owner can try again.
@@ -132,7 +135,7 @@ export const list = query({
       status: r.status === "pending" && r.expiresAt < Date.now() ? ("unavailable" as const) : r.status,
       requestedAt: r.requestedAt,
       capturedAt: r.capturedAt ?? null,
-      shots: await Promise.all(r.shots.map(async (s) => ({ view: s.view, width: s.width, height: s.height, url: await ctx.storage.getUrl(s.storageId) }))),
+      shots: await Promise.all(r.shots.map(async (s) => ({ view: s.view, width: s.width, height: s.height, url: await ctx.storage.getUrl(s.storageId), checks: s.checks ?? null }))),
     })));
   },
 });

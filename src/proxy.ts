@@ -22,7 +22,7 @@ function contentSecurityPolicy(nonce: string, embeddable = false, anyImages = fa
   const convex = [process.env.NEXT_PUBLIC_CONVEX_URL, process.env.NEXT_PUBLIC_CONVEX_SITE_URL]
     .filter(Boolean)
     .map((u) => new URL(u!).origin);
-  const convexWs = convex.filter((o) => o.endsWith(".convex.cloud")).map((o) => o.replace("https://", "wss://"));
+  const convexWs = convex.map((origin) => origin.replace(/^https:/, "wss:").replace(/^http:/, "ws:"));
   const posthog = process.env.NEXT_PUBLIC_POSTHOG_KEY
     ? [process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com", "https://us-assets.i.posthog.com", "https://eu-assets.i.posthog.com"]
     : [];

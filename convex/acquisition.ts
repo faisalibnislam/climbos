@@ -1,3 +1,4 @@
+import { focusedGoal, goalPlans } from "./lib/goals";
 import { v } from "convex/values";
 import { minorToMajor } from "../shared/economics/currency";
 import { budgetBand, BUSINESS_TYPES, CHANNEL_BY_ID, EXECUTION_LABEL, FAMILIES, typesFromLegacy, TYPE_BY_KEY } from "../shared/acquisition/library";
@@ -27,6 +28,7 @@ import { resolveAiMode } from "./lib/aiMode";
 import { resolveModelRoute } from "./lib/modelRoute";
 import { audit } from "./lib/audit";
 import { appError, requireOrgAccess } from "./lib/tenancy";
+import { diagnose } from "../shared/agents/diagnosis";
 
 /**
  * Acquisition Intelligence for owners: which channels fit this business, why,
@@ -43,34 +45,35 @@ export const view = query({
       .query("businesses")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
       .first();
-    const goal = await ctx.db
-      .query("goals")
-      .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
-      .first();
+    const goal = await focusedGoal(ctx, org);
     if (!business || !goal) return null;
-    const strategies = await ctx.db
-      .query("strategies")
-      .withIndex("by_org", (q) => q.eq("orgId", org._id))
-      .order("desc")
-      .take(5);
+    const strategies = await goalPlans(ctx, org._id, goal._id, 5);
     const strategy = strategies.find((s) => s.status === "approved") ?? strategies[0] ?? null;
     const planned = strategy?.acquisition ?? null;
     // The business's saved classification (owner confirmations) wins over the plan's snapshot.
     const saved: SavedAcquisition | null = business.acquisition ? { types: business.acquisition.types, typesSource: business.acquisition.typesSource ?? "inferred", dims: business.acquisition.dims, channelPreferences: business.acquisition.channelPreferences } : planned ? { types: planned.profile.types, typesSource: planned.profile.typesSource ?? "inferred", dims: planned.profile.dims } : null;
     const profile = profileFrom({ saved, legacyType: business.businessType, currency: goal.currency ?? business.currency, budgetMinor: goal.monthlyAdBudgetMinor, horizonDays: goal.horizonDays, legacyTypes: typesFromLegacy, priceUsdMonth: business.unitEconomics?.revenuePerCustomerMonthUsd ?? (planned?.profile as { priceUsdMonth?: number } | undefined)?.priceUsdMonth });
     // Apply saved owner limits consistently on the Channels view; connections stay live.
-    const connected = planned?.limits ? (await ctx.db.query("connections").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(50)).filter((c) => c.status === "connected").map((c) => c.provider) : null;
-    const limits = planned?.limits ? {
-      ownerHoursPerWeek: planned.limits.ownerHoursPerWeek ?? undefined,
+    const connected = (await ctx.db.query("connections").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(50)).filter((c) => c.status === "connected").map((c) => c.provider);
+    const limits = {
+      ownerHoursPerWeek: business.unitEconomics?.ownerHoursPerWeek ?? planned?.limits?.ownerHoursPerWeek ?? undefined,
       newCustomersPerMonth: business.unitEconomics?.newCustomersPerMonth,
+      ownerGrossMargin: business.unitEconomics?.grossMargin,
       connected,
-    } : undefined;
-    const rows = scoreChannels(profile, (planned?.adjustments as Adjustment[] | undefined) ?? [], undefined, limits);
+    };
+    const diagnosis = diagnose({ funnel: business.funnel, monthlyChurn: business.unitEconomics?.monthlyChurn, newCustomersPerMonth: business.unitEconomics?.newCustomersPerMonth, types: profile.types });
+    const rows = scoreChannels(profile, (planned?.adjustments as Adjustment[] | undefined) ?? [], undefined, limits, diagnosis.status === "supported" && diagnosis.constraint !== "unknown" ? diagnosis.constraint : undefined);
     const band = budgetBand(profile.budgetUsd);
     return {
       canEdit: role !== "viewer",
       scored: Boolean(planned),
       summary: planned?.summary ?? [],
+      recommendation: strategy ? {
+        version: strategy.version,
+        status: strategy.status,
+        summary: strategy.expert?.strategicDirection?.winningApproach ?? strategy.summary,
+        channels: [...strategy.channels].sort((a, b) => a.priority - b.priority).slice(0, 3).map((channel) => ({ name: channel.name, why: channel.why, firstStep: channel.deliverables[0] ?? null, measurement: channel.measurement })),
+      } : null,
       budget: { usd: profile.budgetUsd, band: band.label, approach: band.approach, amount: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency), currency: goal.currency },
       canSetBudget: role !== "viewer",
       types: profile.types.map((k) => ({ key: k, label: TYPE_BY_KEY[k]?.label ?? k, regulated: TYPE_BY_KEY[k]?.regulated ?? null })),
@@ -101,7 +104,7 @@ export const view = query({
         score: r.score,
         factors: FACTORS.map((f) => r.factors[f]),
         status: r.status,
-        statusLabel: STATUS_LABEL[r.status],
+        statusLabel: r.status === "primary" ? "Consider first" : r.status === "in_plan" ? "Consider" : STATUS_LABEL[r.status],
         why: r.why,
         evidence: r.evidence ?? null,
         evidenceBasis: r.evidenceBasis ?? null,
@@ -118,6 +121,7 @@ export const view = query({
         caution: r.caution ?? null,
         limits: r.limits ?? [],
         ownerPreference: r.ownerPreference ?? null,
+        decisionBrief: r.decisionBrief ?? null,
       })),
     };
   },

@@ -1,6 +1,7 @@
 import { formatMoney, fromUsd, minorToMajor, thresholdIn, toUsd } from "../economics/currency";
 import { budgetBand, CHANNELS, SERVICE_TYPES, TYPE_BY_KEY, type Channel, type Execution, type Requirement, type Stage } from "./library";
 import type { BindingConstraint } from "../agents/decision";
+import { channelDecisionFrom, type ChannelDecision } from "./channelDecision";
 
 /**
  * Acquisition Intelligence: hard eligibility checks, rule-based priors for the
@@ -148,7 +149,7 @@ const dimOnly = (p: AcquisitionProfile, k: DimensionKey, v: string) => { const a
 
 /* ---------------- price fit ---------------- */
 
-/** Below this monthly price, human effort per customer can't pay back (bench Run 4: creator recruitment for a $6/month product). */
+/** Editorial caution threshold, not a measured payback limit; retention, margin and effort still matter. */
 export const LOW_TICKET_USD_MONTH = 25;
 
 /** Low-ticket, not sales-led: the listed price when known, else the inferred order size. */
@@ -160,7 +161,7 @@ export function lowTicket(p: AcquisitionProfile): boolean {
 /** Selling one customer at a time: cold or social outreach, demos, events, introductions. */
 const perCustomer = (c: Channel) => c.family === "outreach" || c.family === "events" || c.id.startsWith("D");
 /** Recruiting creators, partners or resellers one by one (user-generated content is self-serve). */
-const perPartner = (c: Channel) => (c.family === "creators" && c.id !== "V20") || c.family === "partnerships" || c.family === "distribution";
+const perPartner = (c: Channel) => (c.family === "creators" && c.id !== "V20" && c.id !== "R21") || c.family === "partnerships" || c.family === "distribution";
 /** Channels that sell without a person per customer: comparison and SEO pages, onboarding and activation, in-product virality. */
 const selfServe = (c: Channel) => !perCustomer(c) && ["organic_search", "content", "product_led", "email", "referral", "marketplaces"].includes(c.family);
 
@@ -187,14 +188,14 @@ export function entryPriceUsdMonth(facts: { statement: string; category?: string
 export function priceFitReason(c: Channel, p: AcquisitionProfile): string | undefined {
   if (!lowTicket(p) || !(perCustomer(c) || perPartner(c))) return undefined;
   const price = p.priceUsdMonth ? `about ${shown(p, p.priceUsdMonth)}/month` : "a low price";
-  return perCustomer(c) ? `Selling one customer at a time doesn't pay back at ${price}; self-serve channels first.` : `Recruiting partners one by one rarely pays back at ${price}; self-serve channels first.`;
+  return perCustomer(c) ? `At ${price}, check whether one-to-one selling can repay the time and cost; this is a planning caution, not measured payback.` : `At ${price}, cap partner recruitment effort and evaluate one-to-many reach separately from selling to one customer. Payback is unknown.`;
 }
 
 /** One line for the plays agent: what the price allows. Empty when the price isn't low. */
 export function priceFitText(p: AcquisitionProfile): string {
   if (!lowTicket(p)) return "";
   const price = p.priceUsdMonth ? `about ${shown(p, p.priceUsdMonth)} per customer per month` : "a low price per customer";
-  return `PRICE FIT: ${price}, self-serve. A play that needs a person per customer or per partner (cold or social outreach, demos, creator or partner recruitment) can't pay back; build the bankable play on self-serve channels: comparison and SEO pages, onboarding and activation, in-product virality and referral. Use a labour-heavy play only as a capped test, with owner hours priced in. The first play improves an existing high-intent page (comparison, alternative, pricing or signup) and reaches people for free (creators, communities, existing users, a partner's newsletter); paid traffic starts only after that test reads out.`;
+  return `PRICE FIT: ${price}, self-serve. Selling individually to every customer can be expensive. Evaluate cost per activated or paying customer, including owner time; do not assume low price makes all partnerships unviable. Earned coverage by a well-fit creator can reach many buyers from one relationship and has no assumed sponsorship fee or guaranteed placement. Distinguish it from paid sponsorship and cap the research/pitch effort. Compare product activation, useful search pages, embedded distribution, referrals and earned coverage against this business's evidence before selecting a primary move. Paid acquisition needs a bounded test justified by the supplied economics.`;
 }
 
 /** Dimensions worth asking the owner about: unknown or low confidence and decision-relevant. */
@@ -369,7 +370,7 @@ const ownBase = (c: Channel) => c.stages.every((st) => st === "existing" || st =
 export function limitChecks(c: Channel, p: AcquisitionProfile, l: ChannelLimits = {}, focus?: BindingConstraint): LimitCheck[] {
   const out: LimitCheck[] = [];
   const paid = PAID_FAMILIES.has(c.family) || c.minMonthly > 0;
-  if (c.minMonthly > p.budgetUsd) out.push({ kind: "cash", verdict: "blocked", reason: `Needs at least ${shownThreshold(p, c.minMonthly)}/month to learn anything; the budget is ${shown(p, p.budgetUsd)}.` });
+  if (c.minMonthly > p.budgetUsd) out.push({ kind: "cash", verdict: "blocked", reason: `The planning allowance for this channel is ${shownThreshold(p, c.minMonthly)}/month; the approved budget is ${shown(p, p.budgetUsd)}. This allowance is a planning prior, not a measured minimum.` });
   else if (p.budgetUsd === 0 && c.cash >= 2) out.push({ kind: "cash", verdict: "blocked", reason: "Needs upfront cash and there's no budget." });
   const need = MIN_OWNER_HOURS[c.exec];
   if (l.ownerHoursPerWeek !== undefined && need > l.ownerHoursPerWeek) out.push({ kind: "owner_time", verdict: "blocked", reason: `Needs about ${need} of your hours a week; you have ${l.ownerHoursPerWeek}.` });
@@ -409,6 +410,7 @@ export function limitChecks(c: Channel, p: AcquisitionProfile, l: ChannelLimits 
 /* ---------------- AI adjustments and final scores ---------------- */
 
 export interface Adjustment {
+  decisionBrief?: ChannelDecision;
   channelId: string;
   /** Bounded changes (−30…+30) to factor priors, each grounded in evidence. */
   deltas: Partial<Record<Factor, number>>;
@@ -428,6 +430,7 @@ export interface Adjustment {
 }
 
 export const PLATFORM_EVIDENCE_CHANNELS = new Set([
+  "R21",
   "S04", "S05", "S18", "C01", "C18", "C26", "M02", "M03", "M04", "M05", "M06", "M07", "M08", "M09", "M10", "M11", "M12", "M13", "M14", "M15", "M18", "M20", "M21", "M22", "M23", "M24", "M25", "M26", "M27", "M28", "M29",
   ...Array.from({ length: 15 }, (_, i) => `N${String(i + 1).padStart(2, "0")}`),
   "O04", ...Array.from({ length: 7 }, (_, i) => `O${String(i + 14).padStart(2, "0")}`),
@@ -449,6 +452,7 @@ export type ChannelStatus = "primary" | "in_plan" | "later" | "not_now" | "ineli
 export const STATUS_LABEL: Record<ChannelStatus, string> = { primary: "Primary", in_plan: "In the plan", later: "Later", not_now: "Not now", ineligible: "Not a fit" };
 
 export interface ScoredChannel {
+  decisionBrief?: ChannelDecision;
   id: string;
   name: string;
   family: Channel["family"];
@@ -536,6 +540,7 @@ export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] =
       communityRulesCheckedAt: a?.communityRulesCheckedAt,
       purpose: a?.purpose,
       measurementPlan: a?.measurementPlan,
+      decisionBrief: channelDecisionFrom(a?.decisionBrief),
       platform: a?.platform,
       tactic: a?.tactic,
       audienceName: a?.audienceName,
@@ -611,7 +616,7 @@ function select(rows: ScoredChannel[], p: AcquisitionProfile, focus?: BindingCon
       r.status = "later";
       if (!r.why) r.why = !affordable ? `Needs about ${shownThreshold(p, r.minMonthly)}/month on top of the plan.` : "Good fit; add once the first channels show results.";
     } else if (!r.why) {
-      r.why = r.minMonthly > p.budgetUsd ? `Needs at least ${shownThreshold(p, r.minMonthly)}/month to learn anything.` : "Weaker fit for this business right now.";
+      r.why = r.minMonthly > p.budgetUsd ? `Planning allowance: ${shownThreshold(p, r.minMonthly)}/month, above the approved budget. This is a planning prior, not a measured minimum.` : "Weaker fit for this business right now.";
     }
   }
   const ineligible = rows.filter((r) => r.status === "ineligible");
@@ -679,8 +684,14 @@ export function mergeFit(profile: AcquisitionProfile, fit: { types: string[]; di
 }
 
 /** The agent's channel rows as scoring adjustments. */
-export function adjustmentsFrom(fit: { channels: { id: string; deltas: number[]; reason: string; evidence: string; platform: string; tactic: string; audience: string; evidenceBasis?: Adjustment["evidenceBasis"]; evidenceConfidence?: Adjustment["evidenceConfidence"]; sourceUrl?: string; evidenceDate?: string; communityRulesUrl?: string; communityRulesCheckedAt?: string; purpose?: string; measurementPlan?: string }[] }): Adjustment[] {
-  return fit.channels.map((c) => ({
+export function adjustmentsFrom(fit: { channels: { id: string; deltas: number[]; reason: string; evidence: string; platform: string; tactic: string; audience: string; evidenceBasis?: Adjustment["evidenceBasis"]; evidenceConfidence?: Adjustment["evidenceConfidence"]; sourceUrl?: string; evidenceDate?: string; communityRulesUrl?: string; communityRulesCheckedAt?: string; purpose?: string; measurementPlan?: string; decisionBrief?: ChannelDecision }[]; decisions?: { id: string; decisionBrief: ChannelDecision }[] }, evidence?: { sourceUrls: readonly string[] }): Adjustment[] {
+  const read = evidence ? new Set(evidence.sourceUrls.map((url) => url.replace(/\/$/, ""))) : null;
+  const decisions = new Map((fit.decisions ?? []).map((decision) => [decision.id, decision.decisionBrief]));
+  // The single-pass scorer's lint is advisory. Do not let an invented URL
+  // establish platform fit simply because the model returned valid JSON.
+  return fit.channels.filter((c) => !read || [c.sourceUrl, c.communityRulesUrl].every((url) => !url || read.has(url.replace(/\/$/, "")))).map((c) => {
+    const decisionBrief = channelDecisionFrom(decisions.get(c.id) ?? c.decisionBrief);
+    return {
     channelId: c.id,
     deltas: Object.fromEntries(FACTORS.map((f, i) => [f, Math.max(-30, Math.min(30, Math.round(c.deltas[i] ?? 0)))])) as Partial<Record<Factor, number>>,
     reason: c.reason.slice(0, 280),
@@ -696,7 +707,9 @@ export function adjustmentsFrom(fit: { channels: { id: string; deltas: number[];
     communityRulesCheckedAt: c.communityRulesCheckedAt,
     purpose: c.purpose?.slice(0, 160) || undefined,
     measurementPlan: c.measurementPlan?.slice(0, 240) || undefined,
-  }));
+    ...(decisionBrief ? { decisionBrief } : {}),
+    };
+  });
 }
 
 /** Channels that publish a page or article and wait for visitors (search and content), as opposed to ones that send people. */
@@ -719,7 +732,7 @@ export function scorecardText(rows: ScoredChannel[], n = 14, currency?: string):
   return rows
     .filter((r) => r.status !== "ineligible")
     .slice(0, n)
-    .map((r) => `- ${r.id} ${r.name}: ${r.score}/100 · ${STATUS_LABEL[r.status]}${r.diagnosisFit ? " · fits measured bottleneck" : ""}${r.ownerPreference ? ` · owner-reported ${r.ownerPreference.preference}: ${r.ownerPreference.rationale}` : ""}${r.paid ? ` · min ${formatMoney(thresholdIn(r.minMonthly, currency), currency)}/mo` : ""}${r.tactic ? ` · tactic: ${r.tactic}` : ""}${r.why ? ` · ${r.why}` : ""}${r.priceFit && r.priceFit !== r.why ? ` · price: ${r.priceFit}` : ""}${(r.limits ?? []).filter((x) => x.reason !== r.why).map((x) => ` · ${x.verdict === "setup" ? "setup" : x.kind.replace("_", " ")}: ${x.reason}`).join("")}`)
+    .map((r) => `- ${r.id} ${r.name}: ${r.score}/100 · ${STATUS_LABEL[r.status]}${r.diagnosisFit ? " · fits measured bottleneck" : ""}${r.ownerPreference ? ` · owner-reported ${r.ownerPreference.preference}: ${r.ownerPreference.rationale}` : ""}${r.paid ? ` · min ${formatMoney(thresholdIn(r.minMonthly, currency), currency)}/mo` : ""}${r.tactic ? ` · tactic: ${r.tactic}` : ""}${r.why ? ` · ${r.why}` : ""}${r.priceFit && r.priceFit !== r.why ? ` · price: ${r.priceFit}` : ""}${(r.limits ?? []).filter((x) => x.reason !== r.why).map((x) => ` · ${x.verdict === "setup" ? "setup" : x.kind.replace("_", " ")}: ${x.reason}`).join("")}${r.decisionBrief ? ` · proposed first step: ${r.decisionBrief.firstStep.slice(0, 200)} · smallest check: ${r.decisionBrief.smallestCheck.slice(0, 160)} · alternative: ${r.decisionBrief.alternative.slice(0, 180)} · unknowns: ${r.decisionBrief.unknowns.slice(0, 2).map((item) => item.slice(0, 100)).join("; ")} · weekly owner hours: ${r.decisionBrief.ownerHoursPerWeek ?? "unknown"} (${r.decisionBrief.effortBasis})` : ""}`)
     .join("\n")
     .concat(pair ? `\nThe picked channels are pages that wait for visitors: pair them with a route that sends qualified people, e.g. ${pair.id} ${pair.name} (${pair.score}/100), and give each page play its route.` : "");
 }

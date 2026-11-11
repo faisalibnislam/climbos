@@ -4,7 +4,7 @@
  * taxonomy with stable IDs, and the attributes the scoring rules use.
  */
 
-export const LIBRARY_VERSION = "acq-2026-10-18";
+export const LIBRARY_VERSION = "acq-2026-11-09-earned-creators";
 
 /* ---------------- intent stages and families ---------------- */
 
@@ -230,6 +230,9 @@ export const CHANNELS: Channel[] = [
   ch("R18", "Influencer partnerships", { family: "creators", learn: "weeks", exec: "partial", cash: 2, minMonthly: 300, stages: ["unaware", "problem", "product"] }),
   ch("R19", "Community partnerships", { measure: 45 }),
   ch("R20", "Embedded distribution", { family: "distribution", requires: ["software"], learn: "months" }),
+  // Earned editorial coverage differs from buying a sponsored placement. It
+  // still needs creator-fit research, owner time, permission and a useful story.
+  ch("R21", "Earned creator coverage", { family: "creators", learn: "weeks", exec: "partial", cash: 0, minMonthly: 0, stages: ["problem", "solution", "product"] }),
   // G. Marketplaces & directories
   ch("M01", "Amazon", { requires: ["products"], measure: 85 }),
   ch("M02", "Etsy", { requires: ["products"], measure: 85 }),
@@ -354,19 +357,19 @@ export interface BusinessType {
 }
 
 export const BUSINESS_TYPES: BusinessType[] = [
-  { key: "b2b_saas", label: "B2B SaaS", category: "software", customer: "b2b", traits: ["software", "b2b"], starters: ["S09", "S10", "P01", "R07", "M21", "O02", "V01", "V02", "D01"], channels: ["S01", "S06", "S08", "S14", "C01", "C08", "C09", "C15", "O01", "N01", "O15", "M10", "M11", "M12", "M14", "R01", "R02", "R05", "R06", "P02", "P09", "P24", "P25", "D03", "D07", "C13", "V05", "V07", "V10", "V11", "X01"] },
+  { key: "b2b_saas", label: "B2B SaaS", category: "software", customer: "b2b", traits: ["software", "b2b"], starters: ["S09", "S10", "P01", "R07", "M21", "O02", "V01", "V02", "D01"], channels: ["R21", "S01", "S06", "S08", "S14", "C01", "C08", "C09", "C15", "O01", "N01", "O15", "M10", "M11", "M12", "M14", "R01", "R02", "R05", "R06", "P02", "P09", "P24", "P25", "D03", "D07", "C13", "V05", "V07", "V10", "V11", "X01"] },
   { key: "b2c_saas", label: "B2C SaaS", category: "software", customer: "b2c", traits: ["software", "b2c"], starters: ["S01", "O08", "O06", "R18", "R02", "V02"], channels: ["S13", "O09", "O10", "O13", "O14", "P07", "P10", "P01", "M10", "R01", "V01", "V09", "V20", "P24", "P23", "X01", "P25", "X04"] },
   { key: "enterprise_software", label: "Enterprise software", category: "software", customer: "b2b", traits: ["software", "b2b"], starters: ["D05", "D06", "R10", "E01", "C05"], channels: ["D03", "D01", "D02", "D11", "E02", "C04", "C13", "C03", "P09", "P01", "S01", "R09", "R03", "M22", "D10", "X08", "D17"] },
   { key: "developer_tools", label: "Developer tools & APIs", category: "software", customer: "b2b", traits: ["software", "developer", "b2b"], starters: ["C19", "V15", "N08", "V18", "S01"], channels: ["C15", "O09", "O14", "M10", "R07", "M22", "C13", "P24", "E01", "V16", "N02", "O16", "R06", "M21"] },
-  { key: "mobile_app", label: "Mobile app", category: "software", customer: "b2c", traits: ["software", "app", "b2c"], starters: ["S18", "P15", "O08", "O10", "X04", "R02"], channels: ["P16", "P10", "P07", "R18", "M10", "O14", "O06", "V09", "M06", "M07", "S01", "X05", "R01"] },
-  { key: "desktop_app", label: "Desktop app", category: "software", customer: "both", traits: ["software", "desktop"], starters: ["S01", "M08", "M14", "R18", "O14", "R08"], channels: ["S02", "S14", "M09", "M10", "O09", "P24", "R01", "V02", "V01", "S09", "S10", "C15", "N01", "P01"] },
-  { key: "ai_product", label: "AI product or agent", category: "software", customer: "both", traits: ["software", "ai"], starters: ["C15", "S01", "M24", "R07", "V06", "V09"], channels: ["M10", "S14", "O09", "O08", "O02", "O11", "O14", "M21", "M23", "P24", "R01", "R18", "V04", "V05", "C13", "P01"] },
+  { key: "mobile_app", label: "Mobile app", category: "software", customer: "b2c", traits: ["software", "app", "b2c"], starters: ["S18", "P15", "O08", "O10", "X04", "R02"], channels: ["R21", "P16", "P10", "P07", "R18", "M10", "O14", "O06", "V09", "M06", "M07", "S01", "X05", "R01"] },
+  { key: "desktop_app", label: "Desktop app", category: "software", customer: "both", traits: ["software", "desktop"], starters: ["S01", "M08", "M14", "R21", "R18", "O14", "R08"], channels: ["S02", "S14", "M09", "M10", "O09", "P24", "R01", "V02", "V01", "S09", "S10", "C15", "N01", "P01"] },
+  { key: "ai_product", label: "AI product or agent", category: "software", customer: "both", traits: ["software", "ai"], starters: ["C15", "S01", "M24", "R07", "V06", "V09"], channels: ["R21", "M10", "S14", "O09", "O08", "O02", "O11", "O14", "M21", "M23", "P24", "R01", "R18", "V04", "V05", "C13", "P01"] },
   { key: "marketplace", label: "Two-sided marketplace", category: "software", customer: "both", traits: ["software"], starters: ["D01", "S06", "P01", "R02", "V09"], channels: ["D03", "O04", "R15", "S01", "P07", "P10", "R18", "R01", "C01", "X05", "P25", "X01", "V11"] },
   { key: "gaming", label: "Gaming", category: "software", customer: "b2c", traits: ["software", "b2c"], starters: ["M06", "M07", "R18", "O16", "O14"], channels: ["O08", "O09", "X05", "P10", "P07", "P06", "P16", "E03", "V09", "R02", "N02"] },
   { key: "digital_products", label: "Digital products", category: "software", customer: "both", traits: ["digital_goods"], starters: ["M25", "S01", "C08", "R18", "N01"], channels: ["O13", "O05", "O08", "C15", "P24", "R01", "M10", "M02", "C18", "P07", "P01"] },
-  { key: "dtc_ecommerce", label: "DTC e-commerce", category: "commerce", customer: "b2c", traits: ["products", "b2c"], starters: ["P03", "P07", "P08", "V20", "S11", "R02"], channels: ["P01", "P04", "S01", "O05", "O06", "O08", "P10", "P11", "R18", "R01", "N11", "X01", "X02", "P25", "X04", "X07", "P24", "M01", "E20"] },
+  { key: "dtc_ecommerce", label: "DTC e-commerce", category: "commerce", customer: "b2c", traits: ["products", "b2c"], starters: ["P03", "P07", "P08", "V20", "S11", "R02"], channels: ["R21", "P01", "P04", "S01", "O05", "O06", "O08", "P10", "P11", "R18", "R01", "N11", "X01", "X02", "P25", "X04", "X07", "P24", "M01", "E20"] },
   { key: "marketplace_seller", label: "Marketplace seller", category: "commerce", customer: "b2c", traits: ["products", "b2c"], starters: ["S17", "P17", "X04", "M01"], channels: ["M02", "M03", "P03", "O13", "O08", "R18", "S01", "P18"] },
-  { key: "physical_retail", label: "Physical retail", category: "commerce", customer: "b2c", traits: ["products", "location", "b2c"], starters: ["S04", "S03", "P07", "E19", "R02"], channels: ["S05", "P01", "O05", "O08", "R18", "E16", "D10", "E10", "N09", "X04", "D19", "X05", "E12"] },
+  { key: "physical_retail", label: "Physical retail", category: "commerce", customer: "b2c", traits: ["products", "location", "b2c"], starters: ["S04", "S03", "P07", "E19", "R02"], channels: ["R21", "S05", "P01", "O05", "O08", "R18", "E16", "D10", "E10", "N09", "X04", "D19", "X05", "E12"] },
   { key: "wholesale", label: "Wholesale & distribution", category: "commerce", customer: "b2b", traits: ["products", "b2b"], starters: ["D01", "M05", "E02", "R11"], channels: ["D02", "D03", "M04", "M20", "S01", "P01", "R15", "D13", "E20", "R12"] },
   { key: "manufacturing", label: "Manufacturing", category: "commerce", customer: "b2b", traits: ["products", "b2b"], starters: ["S01", "P01", "D14", "E02", "D01"], channels: ["D03", "M04", "M20", "R15", "R13", "R11", "C19", "C15", "X08", "E01"] },
   { key: "subscription_commerce", label: "Subscription commerce", category: "commerce", customer: "b2c", traits: ["products", "b2c"], starters: ["R18", "P07", "R02", "X07"], channels: ["P10", "P01", "R01", "O08", "O09", "S01", "O13", "X01", "X03", "P24", "P23", "P25", "E20"] },
@@ -376,13 +379,13 @@ export const BUSINESS_TYPES: BusinessType[] = [
   { key: "consulting", label: "Consulting", category: "services", customer: "b2b", traits: ["b2b"], starters: ["D12", "D11", "O02", "D01"], channels: ["E01", "C13", "C04", "C05", "X06", "S01", "P01", "D05", "N05", "N06", "C18", "C03"] },
   { key: "professional_services", label: "Professional services", category: "services", customer: "both", traits: ["location"], starters: ["S01", "S04", "P01", "D12", "X04"], channels: ["S03", "M20", "N05", "O02", "C13", "C02", "O09", "N09", "D10", "X06"], regulated: "Legal, accounting and financial advice can have rules on advertising, testimonials and referral fees." },
   { key: "local_services", label: "Local services", category: "services", customer: "b2c", traits: ["location", "b2c", "booking"], starters: ["S04", "P01", "X04", "R02"], channels: ["S03", "S05", "O04", "P07", "O05", "M20", "E16", "D10", "E18", "E10", "N09", "D19", "C02"] },
-  { key: "healthcare", label: "Healthcare services", category: "services", customer: "b2c", traits: ["location", "b2c", "booking"], starters: ["S04", "S03", "M18", "D12", "X04"], channels: ["P01", "M20", "C02", "O09", "O05", "E10", "R17", "N09"], regulated: "Patient privacy and health-advertising rules apply; no testimonials or outcome claims without review." },
-  { key: "education", label: "Education & training", category: "services", customer: "both", traits: [], starters: ["O09", "S01", "C13", "R02", "R16"], channels: ["P01", "P07", "P10", "C14", "C21", "C18", "R01", "R18", "O14", "O16", "X06", "E06", "M20"] },
+  { key: "healthcare", label: "Healthcare services", category: "services", customer: "b2c", traits: ["location", "b2c", "booking"], starters: ["S04", "S03", "M18", "D12", "X04"], channels: ["R21", "P01", "M20", "C02", "O09", "O05", "E10", "R17", "N09"], regulated: "Patient privacy and health-advertising rules apply; no testimonials or outcome claims without review." },
+  { key: "education", label: "Education & training", category: "services", customer: "both", traits: [], starters: ["O09", "S01", "C13", "R02", "R16"], channels: ["R21", "P01", "P07", "P10", "C14", "C21", "C18", "R01", "R18", "O14", "O16", "X06", "E06", "M20"] },
   { key: "real_estate", label: "Real estate", category: "services", customer: "b2c", traits: ["location", "property", "b2c"], starters: ["M19", "D12", "S03", "O06", "O08"], channels: ["S01", "P01", "P07", "O09", "R17", "E08", "D10", "C18", "O19", "E12"] },
   { key: "hospitality", label: "Hospitality & travel", category: "services", customer: "b2c", traits: ["location", "booking", "b2c"], starters: ["S04", "M18", "X04", "O05", "R18"], channels: ["S01", "S03", "P01", "P07", "O08", "O06", "R08", "C18", "R02", "P25", "X05"] },
   { key: "events", label: "Events & entertainment", category: "services", customer: "both", traits: ["events"], starters: ["X10", "P07", "R19", "C18"], channels: ["P01", "P10", "O05", "O08", "R18", "R17", "X05", "P25", "R02", "E11"] },
   { key: "financial_services", label: "Financial services", category: "services", customer: "both", traits: [], starters: ["P01", "M20", "D12", "R10"], channels: ["S01", "R01", "C02", "O09", "C18", "X06", "O02", "S18", "R17", "C13", "X05"], regulated: "Financial promotions may need licensing, disclosures and platform approval." },
-  { key: "media_creator", label: "Media & creator business", category: "services", customer: "b2c", traits: ["b2c"], starters: ["O09", "O10", "R08", "S01", "R02"], channels: ["O08", "O06", "O02", "O11", "O14", "S15", "S16", "X06", "P24", "C18", "N02", "R18"] },
+  { key: "media_creator", label: "Media & creator business", category: "services", customer: "b2c", traits: ["b2c"], starters: ["O09", "O10", "R08", "S01", "R02"], channels: ["R21", "O08", "O06", "O02", "O11", "O14", "S15", "S16", "X06", "P24", "C18", "N02", "R18"] },
   { key: "nonprofit", label: "Nonprofit or membership", category: "services", customer: "both", traits: ["nonprofit"], starters: ["R19", "R02", "C18", "E10"], channels: ["S01", "X09", "O03", "O05", "O02", "R17", "X05", "D10", "N05", "E11"] },
 ];
 

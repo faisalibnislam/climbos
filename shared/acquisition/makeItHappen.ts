@@ -1,10 +1,11 @@
+import { PLATFORM_PREPARATION, platformForChannel } from "./platformPreparation";
 import type { Channel, Family } from "./library";
 
 /**
  * "Make it happen" on a channel: the first concrete work ClimbOS can draft for it, plus to-dos for the steps only the
  * owner can do. Drafts land in Review work; nothing is posted, sent or spent without its own approval.
  */
-export type SocialChannel = "linkedin" | "instagram" | "facebook" | "x" | "tiktok" | "pinterest";
+export type SocialChannel = "linkedin" | "instagram" | "facebook" | "x" | "tiktok" | "pinterest" | "youtube";
 export type DraftJob =
   | { job: "content_social"; channel: SocialChannel; quantity: number; brief: string }
   | { job: "content_email"; channel: "email"; brief: string }
@@ -29,6 +30,7 @@ const SOCIAL_BY_NAME: [RegExp, SocialChannel][] = [
   [/\bx\b|twitter/i, "x"],
   [/tik\s?tok/i, "tiktok"],
   [/pinterest/i, "pinterest"],
+  [/youtube/i, "youtube"],
 ];
 
 /** Connection providers that let ClimbOS publish to a social channel directly. */
@@ -58,12 +60,15 @@ const MANUAL_STEPS: Partial<Record<Family, string>> = {
 export function channelWork(channel: Pick<Channel, "id" | "family"> & { name: string }, connectedProviders: string[] = []): ChannelWork {
   const label = channel.name;
   const todos: ChannelTodo[] = [];
+  const platform = platformForChannel(channel.id);
+  if (platform) return { draft: null, todos: [{ title: `Prepare ${PLATFORM_PREPARATION[platform].name}`, description: `${PLATFORM_PREPARATION[platform].purpose} ${PLATFORM_PREPARATION[platform].boundary}`, kind: "note" }] };
+  if (channel.id === "R21") return { draft: null, todos: [{ title: "Research relevant creators and reviewers", description: "Open Find creators & reviewers. Check their actual coverage and audience fit before drafting a specific pitch. No sponsorship fee, placement or permission to contact them is assumed.", kind: "note" }] };
   const social = SOCIAL_BY_NAME.find(([re]) => re.test(label))?.[1];
   if (channel.family === "organic_social" || (social && channel.family !== "paid_social")) {
     const target = social ?? "linkedin";
     const provider = PUBLISH_PROVIDER[target];
     if (!provider || !connectedProviders.includes(provider)) todos.push({ title: `Connect your ${label} account`, description: provider ? "Connect it in Connected accounts so approved posts can go out from ClimbOS, or copy approved drafts and post them yourself." : "Post approved drafts yourself; ClimbOS can't publish here directly yet.", kind: "connect_account" });
-    return { draft: { job: "content_social", channel: target, quantity: 3, brief: `First posts for ${label}: what makes the business different, one customer problem it solves, and one clear next step.` }, todos };
+    return { draft: { job: "content_social", channel: target, quantity: 3, brief: `Develop three distinct ${label}-native concepts from the approved plan and this business's buyer, buying situation and demonstrated product/service. Choose a specific angle and reason a buyer would care for each; do not repeat a feature checklist or copy the same post across channels. For video, include an opening scene, demonstration, script and next step; for other formats, use the platform's native reading or viewing behavior. Do not invent customer stories, proof, metrics or current trends.` }, todos };
   }
   if (channel.family === "organic_search" || channel.family === "content") {
     return { draft: { job: "content_seo", brief: `The first page for ${label}: answer one specific buyer question with facts the business can stand behind, and link to a clear next step.` }, todos };

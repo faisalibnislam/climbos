@@ -1,3 +1,5 @@
+import { OwnerQuestionSchema, ownerAnswer, ownerAnswerLabel } from "../shared/climb/ownerQuestion";
+import { ownerQuestionV } from "./lib/ownerQuestion";
 import { v } from "convex/values";
 import { modelTurn, providerOf } from "../shared/ai/turn";
 import { getRateVersion } from "../shared/economics";
@@ -46,7 +48,6 @@ export function summarizeToolResult(out: unknown): string {
 
 
 
-type ScreenEntity = { type: string; id: string; label: string };
 
 /* ---------------- Queries and mutations ---------------- */
 
@@ -64,6 +65,7 @@ export const thread = query({
       role: m.role,
       text: m.text,
       selection: m.selection ?? [],
+      question: m.question ?? null,
       action: m.action ? { tool: m.action.tool, title: m.action.title, summary: m.action.summary, status: m.action.status, result: m.action.result ?? null } : null,
       ui: m.ui ?? [],
       links: m.links ?? [],
@@ -80,10 +82,17 @@ const entityArg = v.object({ type: v.string(), id: v.string(), label: v.string()
 
 /** Store the owner's message and reserve the AI capacity for answering it. */
 export const send = mutation({
-  args: { slug: v.string(), text: v.string(), screen: screenArg, selection: v.optional(v.array(entityArg)) },
-  handler: async (ctx, { slug, text, screen, selection }) => {
+  args: { slug: v.string(), text: v.string(), screen: screenArg, selection: v.optional(v.array(entityArg)), questionResponse: v.optional(v.object({ messageId: v.id("climbMessages"), optionIds: v.array(v.string()), notSure: v.boolean(), other: v.optional(v.string()) })) },
+  handler: async (ctx, { slug, text, screen, selection, questionResponse }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
-    const clean = text.trim().slice(0, 4000);
+    let clean = text.trim().slice(0, 4000);
+    let questionMessage = null;
+    if (questionResponse) {
+      questionMessage = assertSameOrg(await ctx.db.get(questionResponse.messageId), org._id, "question");
+      if (questionMessage.userId !== user._id || !questionMessage.question || questionMessage.question.status !== "pending") throw appError("INVALID", "That question has already been answered or belongs to another conversation.");
+      try { clean = ownerAnswer(OwnerQuestionSchema.parse(questionMessage.question), questionResponse); }
+      catch { throw appError("INVALID", "Choose an answer from the current question, or select I’m not sure."); }
+    }
     if (!clean) throw appError("INVALID", "Type a message first.");
     const recent = await ctx.db
       .query("climbMessages")
@@ -105,6 +114,7 @@ export const send = mutation({
       runId,
       createdAt: Date.now(),
     });
+    if (questionMessage?.question) await ctx.db.patch(questionMessage._id, { question: { ...questionMessage.question, status: "answered", answerText: ownerAnswerLabel(OwnerQuestionSchema.parse(questionMessage.question), questionResponse!) } });
     return { messageId, runId };
   },
 });
@@ -152,7 +162,7 @@ export const context = internalQuery({
       history: history
         .reverse()
         .filter((h) => h.role === "user" || h.role === "assistant" || (h.role === "action" && h.action))
-        .map((h) => ({ role: h.role, text: h.role === "action" ? `[${h.action!.title}: ${h.action!.status}${h.action!.result ? `, ${h.action!.result}` : ""}]` : h.text })),
+        .map((h) => ({ role: h.role, text: h.role === "action" ? `[${h.action!.title}: ${h.action!.status}${h.action!.result ? `, ${h.action!.result}` : ""}]` : h.question ? `${h.text}\nOptions: ${h.question.options.map((option) => option.label).join("; ")}\n${h.question.answerText ?? "Awaiting owner answer"}` : h.text })),
     };
   },
 });
@@ -165,6 +175,7 @@ export const write = internalMutation({
     text: v.string(),
     status: v.union(v.literal("done"), v.literal("working"), v.literal("failed")),
     runId: v.optional(v.id("workflowRuns")),
+    question: v.optional(ownerQuestionV),
     action: v.optional(v.object({ tool: v.string(), input: v.string(), title: v.string(), summary: v.string(), status: v.literal("pending") })),
     ui: v.optional(v.array(v.object({ kind: v.union(v.literal("go_to"), v.literal("highlight")), value: v.string(), note: v.optional(v.string()) }))),
     links: v.optional(v.array(v.object({ label: v.string(), href: v.string() }))),
@@ -217,7 +228,7 @@ export const respond = action({
     const { message: m, run } = c;
     const caller = callerFor(ctx);
     const rates = getRateVersion(run.rateVersionId);
-    const call = process.env.CLIMBOS_FAKE_LLM ? fakeTurn : modelTurn;
+    const call = c.run.isFixture || process.env.CLIMBOS_FAKE_LLM ? fakeTurn : modelTurn;
     const active: ModelKey = runModel(run, MODEL);
     const turn: typeof modelTurn = (req, r8) => call({ ...req, modelKey: active }, r8);
 
@@ -288,6 +299,7 @@ export const respond = action({
         break;
       }
       const results: ToolResultBlock[] = [];
+      let waitingForOwner = false;
       for (const tu of r.toolUses) {
         const tool = toolByName(tu.name);
         const parsed = tool?.input.safeParse(tu.input ?? {});
@@ -296,6 +308,13 @@ export const respond = action({
           continue;
         }
         const input = parsed.data as Record<string, unknown>;
+        if (tool.name === "ask_owner") {
+          const question = OwnerQuestionSchema.parse(input);
+          await ctx.runMutation(internal.climb.write, { orgId: m.orgId, userId: m.userId, role: "assistant", text: question.title, status: "done", runId, question: { ...question, status: "pending" } });
+          waitingForOwner = true;
+          finalText = "Choose what fits. If you’re unsure, I’ll keep it as unknown.";
+          break;
+        }
         if (tool.risk === "ui") {
           if (tool.name === "go_to") {
             const path = safeAppPath(String(input.path ?? ""));
@@ -333,6 +352,7 @@ export const respond = action({
           results.push({ type: "tool_result", tool_use_id: tu.id, is_error: true, content: msg });
         }
       }
+      if (waitingForOwner) break;
       messages.push({ role: "user", content: results });
     }
 

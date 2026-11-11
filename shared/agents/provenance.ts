@@ -300,12 +300,12 @@ export function verifyTags<O extends PlaysLike>(out: O, ctx: VerifyContext): O {
   const e = out.economics;
   const s = e.sources ?? {};
   const econ: EconomicsSources = { ...s };
-  const pairs: [EconomicsKey, number | undefined, Unit, string[]][] = [
+  const pairs: [EconomicsKey, number | null | undefined, Unit, string[]][] = [
     ["revenue", e.revenuePerCustomerMonthUsd, "usd_month", ["price", "plan", "month", "revenue", "costs"]],
     ["margin", e.grossMargin, "share", ["margin", "gross"]],
     ["churn", e.monthlyChurn, "share", ["churn", "cancel", "retention", "retain"]],
   ];
-  for (const [k, v, unit, words] of pairs) if (s[k] && v !== undefined) econ[k] = verifyTag(s[k], { values: [v, undefined, undefined], unit, metricWords: words, kind: "input", econ: k }, ctx);
+  for (const [k, v, unit, words] of pairs) if (s[k] && v !== undefined && v !== null) econ[k] = verifyTag(s[k], { values: [v, undefined, undefined], unit, metricWords: words, kind: "input", econ: k }, ctx);
   const plays = out.plays.map((p) => {
     const m = p.model;
     if (!m?.steps?.length) return p;
@@ -353,8 +353,8 @@ export function playInputs(p: PlayLike, e: Economics): InputRow[] {
     ...m.steps.map((s, i): InputRow => ({ key: `step${i}`, label: s.name, value: s.rate, low: s.low, high: s.high, unit: "share", tag: read(s.source ? { source: s.source, ref: s.ref ?? "", population: s.population, denominator: s.denominator, period: s.period, check: s.check, checkedBy: s.checkedBy } : undefined), drives: "customers" })),
     { key: "spend", label: "Monthly spend", value: m.monthlySpendUsd, unit: "usd_month", tag: read(m.spendSource), drives: "cost" },
     { key: "hours", label: "Your hours a week", value: m.ownerHoursPerWeek, unit: "hours_week", tag: read(m.hoursSource), drives: "cost" },
-    { key: "revenue", label: "Revenue per customer", value: e.revenuePerCustomerMonthUsd, unit: "usd_month", tag: econ.revenue, drives: "cost" },
-    { key: "margin", label: "Margin", value: e.grossMargin, unit: "share", tag: econ.margin, drives: "cost" },
+    ...(e.revenuePerCustomerMonthUsd !== null ? [{ key: "revenue", label: "Revenue per customer", value: e.revenuePerCustomerMonthUsd, unit: "usd_month", tag: econ.revenue, drives: "cost" } as InputRow] : []),
+    ...(e.grossMargin !== null ? [{ key: "margin", label: "Margin", value: e.grossMargin, unit: "share", tag: econ.margin, drives: "cost" } as InputRow] : []),
   ];
   if (typeof e.monthlyChurn === "number") rows.push({ key: "churn", label: "Monthly churn", value: e.monthlyChurn, unit: "share_month", tag: econ.churn, drives: "cost" });
   if ((m.otherMonthlyUsd ?? 0) > 0) rows.push({ key: "other", label: "Tools and freelancers", value: m.otherMonthlyUsd!, unit: "usd_month", tag: read(m.otherSource), drives: "cost" });

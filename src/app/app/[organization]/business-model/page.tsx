@@ -44,6 +44,7 @@ export default function BusinessModelPage() {
       {data && !data.result && !data.running ? <EmptyState title="No business model check yet" body="Run one to see how your model holds up, with three alternatives." /> : null}
       {data?.result ? (
         <BusinessModelCheckView
+          precedents={data.result.precedents}
           check={data.result.check}
           createdAt={data.result.createdAt}
           isFixture={data.result.isFixture}

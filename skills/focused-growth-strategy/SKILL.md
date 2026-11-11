@@ -1,0 +1,34 @@
+---
+name: focused-growth-strategy
+description: Expert business judgment behind a simple owner recommendation. Choose a distinctive customer situation, compare mechanisms, prepare reusable work and learn without fabricated economics or a marketing checklist.
+---
+
+## Think broadly; show a clear decision
+
+Simple presentation must preserve strategic substance. Compare plausible mechanisms before choosing. A channel is a delivery route, not the idea. “Pitch creators,” “post on LinkedIn” and “improve SEO” do not explain why a buyer or partner would care. Start with the useful thing being demonstrated, offered or learned and the specific situation in which someone needs it.
+
+Identify who uses, chooses and pays. Use an actual source-backed product or offer, the customer's alternative, the moment of need and the smallest credible reason to switch. Published claims are not verified product behavior or demand. Do not invent a paid advantage beyond a free product, a lack of free trials, an owner's willingness to give products away, or a capacity, price or margin assumption. Missing economics limit spending decisions; they need not delay safe preparation.
+
+Consider a few genuinely different mechanisms internally: capture existing buying intent; give a trusted intermediary something useful to show; remove a demonstrated obstacle; offer a complementary workflow; build a reusable example that gets more useful with each customer. Compare the strongest alternative explicitly. Pick the mechanism that best fits this business's evidence and current constraints, rather than the one ClimbOS can automate most easily. A clever unverified hypothesis may be worth testing, but label what is untested and explain why it could matter.
+
+A working product page does not automatically need a rewrite. A low price does not automatically need a free plan, bundle or upsell. An unknown baseline does not automatically make analytics setup the first recommendation. Existing assets may be sufficient for a small distribution test. Avoid turning every business into a SaaS funnel or every strategy into creator email.
+
+## Prepare a coherent starter package
+
+Do useful work in the same answer. The prepared drafts should give the chosen idea substance, not simply repeat a pitch template three times. Where useful, one demonstration script, a short buyer-task page block and an editorial pitch can reuse the same example; these are supporting pieces of one test, not three concurrent campaigns. Choose the pieces that help this business. A retailer, healthcare service, educator or technical company may need a different package. Never prescribe the same package universally.
+
+A public demo script must distinguish a proposed recording from a product flow that has been tested. Show the actual task, the relevant steps and a modest next action. A search recommendation needs a specific buyer question and existing destination; search volume and rankings remain unknown without data. A social recommendation needs an audience reason and native format, not a list of networks. Directories, G2 and Product Hunt need a clear buying or feedback role and eligibility; presence alone is no strategy.
+
+Inspect the precise destination before proposing work: a comparison index is not its child comparison page, and a template catalogue is not a tested template workflow. Improve an existing relevant page before duplicating it. Compare like with like: a hosted handle is not a custom domain, a free integration is not a paid advantage, and prices in different currencies or billing periods do not establish savings. An honest comparison should say who should keep the alternative. Pair a page improvement with a credible route for its first readers; search traffic is unknown until observed.
+
+Choose an original, concrete example for sparse briefs and label it a proposal, rather than inventing an existing offer or filling the draft with placeholders. A school workshop may need an approver's explanation; a laboratory may need a technical specification handoff; a shop may need a staff demonstration; an artist may need a small teaching sample. These are possible mechanisms, never mandatory industry templates. Do not infer qualified patient lists, stock, student access or buyer permission. Keep optional data collection out of the first test when it adds avoidable work.
+
+For named creators or partners, establish subject fit and separately inspect current first-party contact or collaboration rules. A refusal of product pitches or partnerships is a reason to exclude outreach, including requests disguised as general topic suggestions. A search snippet, old video or published contact address does not establish availability, consent or current terms. If access is unknown, keep the lead labelled unverified; prepare an owned example or another eligible route in parallel. Do not promise compensation, access, gifts or exclusive benefits without owner authority. A list of famous names is weaker than a small, credible match with a concrete demonstration angle.
+
+Prefer an exact relevant tutorial, buyer situation and dated example over broad topic overlap or a convenient contact address. An educator who already recommends the alternative needs a meaningful new lesson, not a feature announcement. If no eligible external route is established, keep the lead for research and prepare a useful owned example; do not make the owner wait on one creator. For a social draft select one named platform and its native format, rather than targeting “LinkedIn or X” with interchangeable text.
+
+## Keep the owner experience small
+
+Lead with one recommendation and one easy next action. Review of an already prepared draft is often enough. Do not ask the owner to collect public information AI can research. Ask only a question whose answer changes the decision; use safe wording and continue independent preparation while it is unknown. Put technical measurement and verification details behind the short explanation. Keep editorial pitches short and natural; do not make them read like compliance documents.
+
+Choose timing from the specific goal, starting point, work, dependencies, known capacity and any actual deadline. Do not offer fixed plan lengths. Explain preparation time separately from time needed to observe useful evidence; state unknown capacity as an assumption and choose a review trigger with a time fallback. Observe a useful signal, explain what would justify continuing or changing, and treat silence or sparse traffic as inconclusive. Statistical tests need real volume and defensible inputs. Do not invent customer forecasts, arbitrary quotas or conversion benchmarks to fill a schema. Explain how a useful asset, relationship or learning could accumulate into a repeatable advantage over future cycles and years, without forecasting success. Preserve owner-reported learning and recheck what actually worked before repeating it.

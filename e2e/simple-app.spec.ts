@@ -6,23 +6,24 @@ test("plain-language Home, suggestions, tools, and review links @mobile", async 
   const slug = await openDemo(page);
   const request = page.getByLabel("Your request", { exact: true });
   await expect(request).toBeVisible();
-  await expect(page.getByText(/Demo requests use no paid AI credits/u)).toBeVisible();
+  await expect(page.getByText("Demo: no credits used, nothing sent or posted.", { exact: true })).toBeVisible();
+  await page.getByText("Your conversations", { exact: true }).click();
   const history = page.getByRole("region", { name: "Your requests", exact: true });
   const before = await history.innerText();
   await page.screenshot({ path: test.info().outputPath("home.png"), fullPage: false });
   await request.fill("Keep this draft.");
-  await page.getByRole("button", { name: "Help new customers reach their first useful result", exact: true }).click();
-  await expect(request).toHaveValue("Keep this draft.\nHelp new customers reach their first useful result");
+  await page.getByRole("button", { name: "Get more paying customers", exact: true }).click();
+  await expect(request).toHaveValue("Keep this draft.\nGet more paying customers");
   await expect(history).toHaveText(before, { useInnerText: true });
 
-  await page.getByRole("button", { name: /Ask for help or find a tool/ }).click();
+  await page.getByRole("button", { name: /^Search/ }).click();
   await page.getByRole("combobox", { name: "Find a tool or prepare a request" }).fill("Help me understand my sales");
   const paletteUrl = page.url();
   await page.getByRole("combobox", { name: "Find a tool or prepare a request" }).dispatchEvent("keydown", { key: "Enter", keyCode: 229, isComposing: false });
   await expect(page).toHaveURL(paletteUrl);
   await expect(page.getByRole("dialog", { name: "Find a tool or ask for help" })).toBeVisible();
   await page.getByRole("button", { name: /Ask for help with this/ }).click();
-  await expect(request).toHaveValue("Keep this draft.\nHelp new customers reach their first useful result\nHelp me understand my sales");
+  await expect(request).toHaveValue("Keep this draft.\nGet more paying customers\nHelp me understand my sales");
   await expect(history).toHaveText(before, { useInnerText: true });
   await page.getByRole("button", { name: "Ask Climb about this page", exact: true }).click();
   await page.getByLabel("Message Climb AI", { exact: true }).fill("Keep this question.");
@@ -33,7 +34,7 @@ test("plain-language Home, suggestions, tools, and review links @mobile", async 
 
   await page.goto(`/app/${slug}/content`);
   await page.goto(`/app/${slug}/today`);
-  await expect(request).toHaveValue("Keep this draft.\nHelp new customers reach their first useful result\nHelp me understand my sales");
+  await expect(request).toHaveValue("Keep this draft.\nGet more paying customers\nHelp me understand my sales");
 
   await expectAccessible(page, "simple Home");
   await expectNoHorizontalScroll(page);
@@ -41,15 +42,19 @@ test("plain-language Home, suggestions, tools, and review links @mobile", async 
 
   await page.getByRole("link", { name: "Your work", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Your work", exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Tools", exact: true }).click();
   await page.getByRole("link", { name: /Posts, emails & ads/ }).click();
   await expect(page).toHaveURL(new RegExp(`/app/${slug}/content`));
   await expect(page.getByRole("heading", { name: "Posts, emails & ads", exact: true })).toBeVisible();
 
   await page.goto(`/app/${slug}/customers`);
+  await page.getByRole("tab", { name: "Tools", exact: true }).click();
   await page.getByRole("link", { name: /Customer progress/ }).click();
   await expect(page.getByRole("heading", { name: "Customer progress", exact: true })).toBeVisible();
   await page.goto(`/app/${slug}/tools`);
+  await page.getByRole("tab", { name: "Tools", exact: true }).click();
   await page.getByLabel("Find a tool", { exact: true }).fill("SEO");
+  await expect(page.getByLabel("Find a tool", { exact: true })).toHaveValue("SEO");
   await expect(page.getByRole("link", { name: /Help people find you/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Design editor/ })).toHaveCount(0);
   await page.getByLabel("Find a tool", { exact: true }).fill("xyz-not-a-tool");

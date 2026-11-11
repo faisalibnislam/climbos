@@ -6,7 +6,7 @@ import { api } from "@convex/_generated/api";
 import { ArrowRight, CircleAlert, CircleDollarSign, Filter, PlugZap } from "@/components/icons"
 import Link from "next/link";
 import { useState } from "react";
-import { Button, Callout, LineChart, buttonClasses } from "@/components/ui";
+import { Button, Callout, LineChart, Tabs, TabsList, TabsTrigger, TabsContent, buttonClasses } from "@/components/ui";
 import { formatNumber } from "@/lib/utils";
 import { minorToDisplay } from "../money";
 import { AttributionSection, PlatformClaimsSection } from "./AttributionSection";
@@ -41,7 +41,7 @@ export function ResultsView({ slug }: { slug: string }) {
   const data = useQuery(api.analytics.overview, { slug, days });
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
+    <Tabs defaultValue="overview" asChild><div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
       <div>
         <PageHeader
           section="results"
@@ -62,6 +62,7 @@ export function ResultsView({ slug }: { slug: string }) {
         ) : null}
       </div>
 
+      {data !== undefined ? <TabsList aria-label="Results sections" className="self-start"><TabsTrigger value="overview">What happened</TabsTrigger><TabsTrigger value="sources">Where it came from</TabsTrigger><TabsTrigger value="next">Look ahead</TabsTrigger></TabsList> : null}
       {data === undefined ? (
         <LoadingBlock label="Loading your results…" lines={4} />
       ) : (
@@ -78,21 +79,27 @@ export function ResultsView({ slug }: { slug: string }) {
             </Callout>
           ) : null}
 
+          <TabsContent value="overview" className="mt-0 space-y-5">
           {data.healthAlerts.length > 0 ? <HealthAlertsSection alerts={data.healthAlerts} /> : null}
           {data.gaps.length > 0 ? <GapsSection slug={slug} gaps={data.gaps} /> : null}
 
           <OutcomeSection slug={slug} data={data} />
           <FunnelSection slug={slug} data={data} />
+          <CohortsSection slug={slug} />
+          </TabsContent>
+          <TabsContent value="sources" className="mt-0 space-y-5">
           <AttributionSection slug={slug} data={data} />
           <AiReferralsSection data={data} />
-          <CohortsSection slug={slug} />
           <PlatformClaimsSection slug={slug} data={data} />
+          </TabsContent>
+          <TabsContent value="next" className="mt-0 space-y-5">
           <ForecastsSection slug={slug} data={data} />
           <ScenarioCalculator currency={data.currency} />
           <WordHelp />
+          </TabsContent>
         </>
       )}
-    </div>
+    </div></Tabs>
   );
 }
 

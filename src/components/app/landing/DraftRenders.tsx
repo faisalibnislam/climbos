@@ -52,7 +52,8 @@ export function DraftRenders({ slug, pageId, version, canEdit, disabledReason }:
               ) : null)}
             </div>
           ) : null}
-          <p className="text-xs text-ink-3">Layout only. Check text, buttons and the form yourself before approving.</p>
+          {latest.shots.map((shot) => shot.checks ? <details key={`${shot.view}-checks`} className="text-sm"><summary className="min-h-9 cursor-pointer font-medium">{shot.view === "mobile" ? "Mobile" : "Desktop"} page checks · {shot.checks.checks.filter((check) => check.state === "review").length} to review</summary><ul className="mt-2 space-y-2 text-xs text-ink-2">{shot.checks.checks.map((check) => <li key={check.id}>{check.state === "pass" ? "Checked" : "Review"}: {check.evidence}</li>)}</ul><p className="mt-2 text-xs text-ink-3">{shot.checks.sampledElements} elements sampled at {shot.width}×{shot.height}. DOM checks do not prove WCAG conformance, contrast, keyboard behavior or successful form submission.</p></details> : null)}
+          <p className="text-xs text-ink-3">Check readability, keyboard access, buttons and form submission yourself before approving. Older captures have no automated observations.</p>
         </div>
       ) : null}
     </section>

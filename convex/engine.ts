@@ -143,7 +143,8 @@ export async function createRunWithReservation(
 
   const rateVersion = currentRateVersion();
   // Agent-only jobs (no single-call version) always run on Engine v2 outside demos.
-  const v2 = (process.env.CLIMBOS_ENGINE === "v2" && !params.isFixture) || (!params.isFixture && AGENT_ONLY_KINDS.has(params.kind));
+  const focusedStrategy = params.kind === "strategy" && params.input !== null && typeof params.input === "object" && "planStyle" in params.input && ["starter", "focused"].includes(String(params.input.planStyle));
+  const v2 = !params.isFixture && (process.env.CLIMBOS_ENGINE === "v2" || params.kind === "plan_step_prepare" || AGENT_ONLY_KINDS.has(params.kind) || focusedStrategy || (params.kind === "onboarding_research" && params.input !== null && typeof params.input === "object" && "researchDepth" in params.input && params.input.researchDepth === "starter"));
   // Estimate and reserve at the models this run will actually call.
   const modelRoute = params.modelRoute ?? (await defaultModelRoute(ctx));
   const routedSteps = params.steps.map((s) => (s.kind === "model" && s.modelKey && isModelKey(s.modelKey) ? { ...s, modelKey: routeModelKey(modelRoute, s.modelKey) } : s));
@@ -370,11 +371,12 @@ export const getResearchCache = internalQuery({
 export const putResearchCache = internalMutation({
   args: {
     orgId: v.id("organizations"),
+    businessWebsite: v.optional(v.string()),
     cacheKey: v.string(),
     agentId: v.string(),
     modelKey: v.string(),
     notes: v.string(),
-    sources: v.array(v.object({ url: v.string(), title: v.optional(v.string()), pageReportedDates: v.optional(v.array(v.object({ kind: v.union(v.literal("published"), v.literal("updated")), date: v.string(), source: v.union(v.literal("json_ld"), v.literal("meta")) }))) })),
+    sources: v.array(v.object({ productPitchPolicy: v.optional(v.object({ status: v.literal("refused"), evidence: v.string() })), url: v.string(), title: v.optional(v.string()), pageReportedDates: v.optional(v.array(v.object({ kind: v.union(v.literal("published"), v.literal("updated")), date: v.string(), source: v.union(v.literal("json_ld"), v.literal("meta")) }))) })),
     retrievedAt: v.optional(v.number()),
     expiresAt: v.number(),
   },
@@ -382,7 +384,7 @@ export const putResearchCache = internalMutation({
     if (!/^[a-f0-9]{64}$/.test(args.cacheKey) || args.notes.length > 40_000 || args.sources.length > 50 || args.expiresAt <= Date.now() || !(await ctx.db.get(args.orgId))) return null;
     const existing = await ctx.db.query("researchCache").withIndex("by_org_key", (q) => q.eq("orgId", args.orgId).eq("cacheKey", args.cacheKey)).first();
     const createdAt = Date.now();
-    const data = { agentId: args.agentId.slice(0, 80), modelKey: args.modelKey.slice(0, 80), notes: args.notes, sources: args.sources, createdAt, retrievedAt: args.retrievedAt ?? createdAt, expiresAt: args.expiresAt };
+    const data = { businessWebsite: args.businessWebsite, agentId: args.agentId.slice(0, 80), modelKey: args.modelKey.slice(0, 80), notes: args.notes, sources: args.sources, createdAt, retrievedAt: args.retrievedAt ?? createdAt, expiresAt: args.expiresAt };
     if (existing) await ctx.db.patch(existing._id, data);
     else await ctx.db.insert("researchCache", { orgId: args.orgId, cacheKey: args.cacheKey, ...data });
     return true;
@@ -585,6 +587,7 @@ export const completeStep = internalMutation({
   handler: async (ctx, { stepId, output, cacheHit }) => {
     await ctx.db.patch(stepId, {
       status: "succeeded",
+      error: undefined,
       output: output && output.length < 400_000 ? output : undefined,
       cacheHit: cacheHit === true ? true : undefined,
       finishedAt: Date.now(),
@@ -651,6 +654,30 @@ async function customAgentBudgetError(
 }
 
 /** Reserve more before a fallback route. Fails closed when capacity is gone. */
+/** Reuse unused credits for one starter correction; never enlarge its quoted ceiling. */
+export const reserveWithinCap = internalMutation({
+  args:{runId:v.id("workflowRuns"),costMicros:v.number()},
+  handler:async(ctx,{runId,costMicros})=>{
+    const run=await ctx.db.get(runId);
+    if(!run?.reservationId||run.kind!=="strategy"||!run.input.includes('"planStyle":"starter"')||["verified","failed","uncertain","canceled","needs_approval"].includes(run.status))return {ok:false as const,message:"No active starter reservation."};
+    if(!Number.isSafeInteger(costMicros)||costMicros<=0)return {ok:false as const,message:"Invalid correction cost."};
+    const cap=run.costCapMicros??Math.ceil(run.estimateMicros*MAX_RUN_COST_MULTIPLE);
+    const target=run.actualMicros+(run.inFlightMicros??0)+costMicros;
+    if(target>cap)return {ok:false as const,message:"The correction does not fit the original quote."};
+    const reservation=await ctx.db.get(run.reservationId),org=await ctx.db.get(run.orgId);
+    const period=reservation?await ctx.db.get(reservation.periodId):null;
+    if(!reservation||reservation.status!=="held"||!period||!org)return {ok:false as const,message:"Reservation is not active."};
+    const extra=Math.max(0,target-reservation.walletMicros-reservation.topupMicros);
+    if(!extra)return {ok:true as const};
+    const budgetError=await customAgentBudgetError(ctx,run,extra);if(budgetError)return {ok:false as const,message:budgetError};
+    const decision=await tryReserveCredits(ctx,{org,period,costMicros:extra,meters:{}});
+    if(!decision.ok)return {ok:false as const,message:decision.message};
+    await ctx.db.patch(reservation._id,{walletMicros:reservation.walletMicros+decision.walletMicros,topupMicros:reservation.topupMicros+decision.topupMicros});
+    await ctx.db.patch(runId,{estimateMicros:Math.max(run.estimateMicros,target),costCapMicros:cap,updatedAt:Date.now()});
+    return {ok:true as const};
+  },
+});
+
 export const reserveAdditional = internalMutation({
   args: { runId: v.id("workflowRuns"), costMicros: v.number() },
   handler: async (ctx, { runId, costMicros }) => {

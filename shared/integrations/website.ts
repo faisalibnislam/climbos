@@ -496,6 +496,60 @@ function parseAttributes(tag: string): Record<string, string> {
   return attrs;
 }
 
+/** Choose a semantic reading region without changing full-page SEO observations. */
+function readingRegion(html: string): { html: string; scope: "active_dialog" | "main" | "article" | "body" } {
+  const tagPattern = /<\/?([a-z][a-z0-9:-]*)\b(?:[^"'<>]|"[^"]*"|'[^']*')*>/gi;
+  type Scope = "active_dialog" | "main" | "article";
+  const regions: { start: number; end: number; scope: Scope }[] = [];
+  const hiddenRanges: { start: number; end: number }[] = [];
+  const elements: { tag: string; start: number; scope: Scope | null; hidden: boolean; hiddenRoot: boolean }[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = tagPattern.exec(html))) {
+    const tag = match[1].toLowerCase(), closing = /^<\//.test(match[0]);
+    if (closing) {
+      const index = elements.map((element) => element.tag).lastIndexOf(tag);
+      if (index < 0) continue;
+      for (const element of elements.splice(index)) {
+        if (element.hiddenRoot) hiddenRanges.push({ start: element.start, end: tagPattern.lastIndex });
+        if (element.scope && !element.hidden) regions.push({ start: element.start, end: tagPattern.lastIndex, scope: element.scope });
+      }
+      continue;
+    }
+    const selfClosing = /\/\s*>$/.test(match[0]) || /^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/.test(tag);
+    if (selfClosing) continue;
+    const attrs = parseAttributes(match[0]);
+    const parentHidden = elements[elements.length - 1]?.hidden ?? false;
+    // Public tab panels often ship in HTML with `hidden` until their tab is
+    // selected. Their published details belong to this page's reading context.
+    // A hidden ancestor still excludes the panel (e.g. a closed stale dialog).
+    const publicTabPanel = attrs.role === "tabpanel" && Boolean(attrs["aria-labelledby"]);
+    const ownHidden = (!publicTabPanel && ("hidden" in attrs || attrs["aria-hidden"] === "true" || attrs["data-state"] === "closed" || /(?:display\s*:\s*none|visibility\s*:\s*hidden)/i.test(attrs.style ?? ""))) || (tag === "dialog" && !("open" in attrs));
+    const hidden = parentHidden || ownHidden;
+    const dialog = ((attrs.role === "dialog" && attrs["aria-modal"] === "true") || (tag === "dialog" && "open" in attrs));
+    const scope = dialog ? "active_dialog" : tag === "main" ? "main" : tag === "article" ? "article" : null;
+    elements.push({ tag, start: match.index, scope, hidden, hiddenRoot: ownHidden && !parentHidden });
+  }
+  for (const element of elements) if (element.hiddenRoot) hiddenRanges.push({ start: element.start, end: html.length });
+  let selected: { start: number; end: number; scope: Scope | "body" } = { start: 0, end: html.length, scope: "body" };
+  for (const scope of ["active_dialog", "main", "article"] as const) {
+    const matches = regions.filter((region) => region.scope === scope);
+    if (matches.length === 1) { selected = matches[0]; break; }
+  }
+  const pieces: string[] = []; let cursor = selected.start;
+  for (const range of hiddenRanges.sort((a, b) => a.start - b.start)) {
+    if (range.end <= cursor || range.start >= selected.end) continue;
+    if (range.start > cursor) pieces.push(html.slice(cursor, range.start));
+    cursor = Math.min(selected.end, Math.max(cursor, range.end));
+  }
+  pieces.push(html.slice(cursor, selected.end));
+  return { html: pieces.join(" "), scope: selected.scope };
+}
+
+function readingText(html: string): string {
+  return decodeEntities(html.replace(/<(br|hr)\b[^>]*>/gi, "\n").replace(/<\/(p|div|li|h[1-6]|tr|section|article|header|footer|blockquote|pre|table|ul|ol)\s*>/gi, "\n").replace(/<[^>]*>/g, " "))
+    .replace(/[ \t\f\v ]+/g, " ").replace(/ *\n */g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 export interface JsonLdPrice {
   name?: string;
   price: string;
@@ -526,6 +580,10 @@ export interface ExtractedPage {
   /** JSON parse failures among the first 50 application/ld+json script blocks inspected. */
   jsonLdScriptParseErrors?: number;
   text: string;
+  /** Focused reading text; full text/headings/links above remain available for technical checks. */
+  contentText?: string;
+  contentScope?: "active_dialog" | "main" | "article" | "body";
+  contentTruncated?: boolean;
   truncated: boolean;
 }
 
@@ -592,7 +650,7 @@ function collectJsonLdPrices(node: unknown, out: JsonLdPrice[], parentName: stri
 export function extractPageContent(
   html: string,
   pageUrl: string,
-  options: { maxTextChars?: number; maxLinks?: number; maxHtmlChars?: number } = {},
+  options: { maxTextChars?: number; maxLinks?: number; maxHtmlChars?: number; includeExternalLinks?: boolean } = {},
 ): ExtractedPage {
   const maxText = options.maxTextChars ?? 40_000;
   const maxLinks = options.maxLinks ?? 50;
@@ -701,7 +759,7 @@ export function extractPageContent(
     } catch {
       continue;
     }
-    if (abs.origin !== origin || (abs.protocol !== "http:" && abs.protocol !== "https:")) continue;
+    if ((!options.includeExternalLinks && abs.origin !== origin) || abs.username || abs.password || (abs.protocol !== "http:" && abs.protocol !== "https:")) continue;
     abs.hash = "";
     const key = abs.toString();
     if (seen.has(key)) continue;
@@ -710,14 +768,10 @@ export function extractPageContent(
   }
 
   const bodyMatch = /<body\b[^>]*>([\s\S]*)<\/body\s*>/i.exec(src);
-  const bodySrc = (bodyMatch ? bodyMatch[1] ?? "" : src.replace(/<head\b[\s\S]*?<\/head\s*>/i, " "))
-    .replace(/<(br|hr)\b[^>]*>/gi, "\n")
-    .replace(/<\/(p|div|li|h[1-6]|tr|section|article|header|footer|blockquote|pre|table|ul|ol)\s*>/gi, "\n");
-  let text = decodeEntities(bodySrc.replace(/<[^>]*>/g, " "))
-    .replace(/[ \t\f\v ]+/g, " ")
-    .replace(/ *\n */g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  const bodyHtml = bodyMatch ? bodyMatch[1] ?? "" : src.replace(/<head\b[\s\S]*?<\/head\s*>/i, " ");
+  const region = readingRegion(bodyHtml);
+  const focusedText = region.scope === "body" && region.html === bodyHtml ? "" : readingText(region.html);
+  let text = readingText(bodyHtml);
   let truncated = false;
   if (text.length > maxText) {
     text = text.slice(0, maxText);
@@ -725,6 +779,7 @@ export function extractPageContent(
   }
 
   const page: ExtractedPage = { og, headings, links, jsonLdPrices, jsonLdTypes: [...jsonLdTypes].slice(0, 50), pageReportedDates: pageReportedDates.slice(0, 20), text, truncated, viewportPresent, imageCount: imageTags.length, imagesWithAltAttribute };
+  if (focusedText) { page.contentText = focusedText.slice(0, maxText); page.contentScope = region.scope; page.contentTruncated = focusedText.length > maxText; }
   if (jsonLdScriptParseErrors) page.jsonLdScriptParseErrors = jsonLdScriptParseErrors;
   if (title) page.title = title;
   if (metaDescription) page.metaDescription = metaDescription;

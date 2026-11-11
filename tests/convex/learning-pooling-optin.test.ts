@@ -49,14 +49,20 @@ describe("experiment pre-registration", () => {
     await expect(owner.client.mutation(api.playResults.preregisterExperiment, { ...plan, variants: [plan.variants[0]] })).rejects.toThrow(/2 to 4 versions/);
     await expect(owner.client.mutation(api.playResults.logExperimentDeviation, { slug, experimentId, note: "Moved start date" })).rejects.toThrow(/hasn't started/);
     await owner.client.mutation(api.playResults.preregisterExperiment, plan);
+    const savedSetup = (await owner.client.query(api.workspace.plan, { slug })).experiments.find((experiment) => experiment.id === experimentId);
+    expect(savedSetup).toMatchObject({ status: "proposed", decisionOwner: "Sam (owner)", variants: plan.variants, plannedCost: plan.plannedCost });
     await t.run(async (ctx) => ctx.db.patch(experimentId, { status: "running" }));
     await expect(owner.client.mutation(api.playResults.preregisterExperiment, plan)).rejects.toThrow(/has started/);
     await owner.client.mutation(api.playResults.logExperimentDeviation, { slug, experimentId, note: "Started a week late because of a holiday." });
     const row = (await t.run(async (ctx) => ctx.db.get(experimentId)))!;
     expect(row).toMatchObject({ decisionOwner: "Sam (owner)", variants: plan.variants, plannedCost: { ownerHours: 3 }, deviations: [{ note: "Started a week late because of a holiday." }] });
+    const visibleChanges = (await owner.client.query(api.workspace.plan, { slug })).experiments.find((experiment) => experiment.id === experimentId)?.deviations;
+    expect(visibleChanges?.[0]).toMatchObject({ note: "Started a week late because of a holiday." });
+    expect(visibleChanges?.[0]).not.toHaveProperty("by");
 
     const other = await asNewUser(t, "prereg-other@example.com");
     const { slug: otherSlug } = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other Co" });
+    await expect(other.client.mutation(api.playResults.preregisterExperiment, { ...plan, slug: otherSlug })).rejects.toThrow();
     await expect(other.client.mutation(api.playResults.logExperimentDeviation, { slug: otherSlug, experimentId, note: "Not mine to change" })).rejects.toThrow();
   });
 });

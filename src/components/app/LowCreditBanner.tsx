@@ -26,10 +26,10 @@ export function LowCreditBanner({ slug }: { slug: string }) {
   return (
     <div role="status" className="flex items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 sm:px-6">
       <span>
-        {out ? "Out of credits." : fmt.usd ? `${fmt.left(c.available)} of credit left.` : `${c.available} credits left.`}{" "}
-        <Link href={`/app/${slug}/settings/billing`} className="font-semibold underline underline-offset-2">
+        {c.isLocalEvaluation ? out ? "Local AI test allowance used up." : `${c.available} local test credits left.` : out ? "Out of credits." : fmt.usd ? `${fmt.left(c.available)} of credit left.` : `${c.available} credits left.`}{" "}
+        {!c.isLocalEvaluation ? <Link href={`/app/${slug}/settings/billing`} className="font-semibold underline underline-offset-2">
           {c.paid ? "Top up" : "Upgrade"}
-        </Link>
+        </Link> : null}
         {c.paid && c.resetsAt ? ` or wait for ${new Date(c.resetsAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}.` : null}
       </span>
       <button

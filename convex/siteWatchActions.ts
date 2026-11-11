@@ -16,6 +16,7 @@ import { isPathAllowed, safeFetchPage } from "../shared/integrations/website";
 import { lookup } from "node:dns/promises";
 import { claudeUsageRecords } from "./lib/usage";
 import { runModel } from "../shared/ai/modelChoice";
+import { addSampleLinkFindings, type ReadinessPageSample } from "../shared/seo/pageSample";
 
 const MODEL = CALL_ROUTES.chat_intent;
 const Out = z.object({ facts: z.array(z.object({ category: z.string(), statement: z.string(), replaces: z.string() })) });
@@ -25,9 +26,24 @@ const resolveHost = async (host: string) => (await lookup(host, { all: true, ver
 export const scanReadiness = internalAction({
   args: { businessId: v.id("businesses"), website: v.string(), startedAt: v.number() },
   handler: async (ctx, { businessId, website, startedAt }): Promise<void> => {
+    let robotsFileStatus: "available" | "not_found" | "unavailable" = "unavailable";
+    let robotsText = "";
+    let origin = "";
+    try {
+      origin = new URL(website).origin;
+      const robots = await safeFetchPage({ url: `${origin}/robots.txt`, resolveHost, maxBytes: 200_000, timeoutMs: 8_000, allowRedirect: (_from, to) => new URL(to).origin === origin });
+      if (robots.status === 404) robotsFileStatus = "not_found";
+      else if (robots.ok && robots.status >= 200 && robots.status < 300) { robotsFileStatus = "available"; robotsText = robots.body; }
+    } catch { /* Unknown access stays unknown. */ }
+    const allowed = (url: string) => robotsFileStatus === "not_found" || (robotsFileStatus === "available" && isPathAllowed(robotsText, "ClimbOSBot", new URL(url).pathname + new URL(url).search));
+    if (!allowed(website)) {
+      await ctx.runMutation(internal.siteWatch.saveSearchReadiness, { businessId, startedAt, pageSamples: [{ url: website, status: robotsFileStatus === "unavailable" ? "failed" : "blocked_by_robots", checkedAt: Date.now(), visibleText: "", internalLinks: [], findings: [] }], result: { status: "failed", checkedAt: Date.now(), robotsFileStatus, error: robotsFileStatus === "unavailable" ? "Could not verify robots.txt. No pages were read." : "The site's robots.txt disallows this reader. No pages were read." } });
+      return;
+    }
+    const read = (url: string) => readSitePage(url, { includeExternalLinks: true, allowRedirect: (_from, to) => new URL(to).origin === origin && allowed(to) });
     let site: Awaited<ReturnType<typeof readSitePage>>;
     try {
-      site = await readSitePage(website);
+      site = await read(website);
     } catch (error) {
       console.warn("Search readiness scan failed.", error);
       await ctx.runMutation(internal.siteWatch.saveSearchReadiness, { businessId, startedAt, result: { status: "failed", checkedAt: Date.now(), error: "An unexpected error interrupted the check. Try again later." } });
@@ -38,19 +54,21 @@ export const scanReadiness = internalAction({
       return;
     }
     const p = site.page;
-    let robotsFileStatus: "available" | "not_found" | "unavailable" = "unavailable";
-    let robotsText = "";
-    try {
-      const origin = new URL(site.finalUrl).origin;
-      const robots = await safeFetchPage({ url: `${origin}/robots.txt`, resolveHost, maxBytes: 200_000, timeoutMs: 8_000 });
-      if (robots.status === 404) robotsFileStatus = "not_found";
-      else if (robots.ok && robots.status >= 200 && robots.status < 300) { robotsFileStatus = "available"; robotsText = robots.body; }
-    } catch { /* retain unavailable; network failures are not treated as allow */ }
     const crawlerChecks: CrawlerCheck[] = ([...SEARCH_CRAWLERS, ...AI_DATA_USE_CONTROLS] as const).map((crawler) => ({ crawler, allowed: robotsFileStatus === "not_found" || (robotsFileStatus === "available" && isPathAllowed(robotsText, crawler, new URL(site.finalUrl).pathname || "/")) }));
     const technical = { httpStatus: site.status, canonicalUrl: p.canonicalUrl, pageUrl: site.finalUrl, robotsDirectives: p.robotsDirectives, xRobotsTag: site.xRobotsTag, robotsFileStatus, crawlerChecks };
+    const links = (page: typeof p) => [...new Set(page.links.map((link) => { try { const u = new URL(link.url); u.hash = ""; return u.origin === origin && !u.search ? u.toString() : ""; } catch { return ""; } }).filter(Boolean))].slice(0, 30);
+    const pages: ReadinessPageSample[] = [{ url: site.finalUrl, status: "read", checkedAt: Date.now(), visibleText: p.text.slice(0, 20_000), internalLinks: links(p), observedLinks: p.links.map((link) => link.url).slice(0, 100), findings: assessSearchReadiness(p, technical) }];
+    const candidates = links(p).filter((url) => url.replace(/\/$/, "") !== site.finalUrl.replace(/\/$/, "") && !/\.(?:pdf|png|jpg|svg|zip)$/i.test(new URL(url).pathname)).sort((a, b) => Number(/pricing|service|product|about|faq|template/i.test(b)) - Number(/pricing|service|product|about|faq|template/i.test(a))).slice(0, 2);
+    for (const url of candidates) {
+      if (!allowed(url)) { pages.push({ url, status: "blocked_by_robots", checkedAt: Date.now(), visibleText: "", internalLinks: [], findings: [] }); continue; }
+      const extra = await read(url).catch(() => ({ error: "Could not read this page." }));
+      if ("error" in extra || new URL(extra.finalUrl).origin !== origin) pages.push({ url, status: "failed", checkedAt: Date.now(), visibleText: "", internalLinks: [], findings: [] });
+      else pages.push({ url: extra.finalUrl, status: "read", checkedAt: Date.now(), visibleText: extra.page.text.slice(0, 20_000), internalLinks: links(extra.page), observedLinks: extra.page.links.map((link) => link.url).slice(0, 100), findings: assessSearchReadiness(extra.page, { pageUrl: extra.finalUrl, httpStatus: extra.status, canonicalUrl: extra.page.canonicalUrl, robotsDirectives: extra.page.robotsDirectives, xRobotsTag: extra.xRobotsTag, robotsFileStatus, crawlerChecks: ([...SEARCH_CRAWLERS, ...AI_DATA_USE_CONTROLS] as const).map((crawler) => ({ crawler, allowed: robotsFileStatus === "not_found" || isPathAllowed(robotsText, crawler, new URL(extra.finalUrl).pathname) })) }) });
+    }
     await ctx.runMutation(internal.siteWatch.saveSearchReadiness, {
       businessId,
       startedAt,
+      pageSamples: addSampleLinkFindings(pages),
       result: {
         status: "complete", checkedAt: Date.now(), pageUrl: site.finalUrl,
         pageTitle: p.title?.slice(0, 500), description: p.metaDescription?.slice(0, 500),

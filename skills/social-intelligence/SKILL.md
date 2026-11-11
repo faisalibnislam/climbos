@@ -15,6 +15,24 @@ Choose the voice deliberately: plain, warm, expert, playful, cheeky, dry, absurd
 
 For health, finance, legal, alcohol, gambling, children's products, and other sensitive or regulated categories, keep claims accurate and use a restrained tone unless the owner has explicitly approved a specific style. Never use humor to obscure a safety limitation, product term, health claim, or customer risk. For sexual-health or adult products, keep content non-graphic and for adults; do not target minors or infer that a product is available, effective, or permitted in a market without supporting facts. Avoid sexual pressure, stigma, body-shaming, coercion, or misinformation. LinkedIn is a professional context: do not use overt sexual innuendo or sexually suggestive meme jokes there; recast the idea as a factual, professional observation or choose another angle. Recheck current platform and market rules for sensitive material; this playbook is not a compliance determination.
 
+## Build an editorial idea before writing posts
+
+Start from a specific customer situation, objection, useful demonstration or surprising observation. Develop an original recurring idea that only this business can credibly deliver. A weekly list of features, generic inspiration or unrelated engagement questions is not an editorial strategy. Each post needs its own central idea, a reason the reader would care now, a truthful proof or demonstration, and one appropriate next step. Without actual proof, use a clearly hypothetical explanation; never invent customer stories or results.
+
+Choose platforms for audience and purpose, not because they exist. Rewrite for the selected platform:
+
+- **LinkedIn:** a practitioner decision, useful explanation, process breakdown or defensible point of view, with specific consequences for the reader's work.
+- **Instagram:** a visually legible demonstration, short story or useful carousel where the visual carries information instead of decorating a feature list.
+- **Facebook:** a useful local or interest-based situation that suits the actual audience; no assumption that every business has a local community.
+- **X:** a concise observation, example or conversation that makes sense without a promotional thread; use a thread only when a sequence adds value.
+- **TikTok:** show the problem, demonstrate the change and make the first scene concrete. Do not invent trending audio or pretend to be a customer.
+- **YouTube:** an outcome-led tutorial or demonstration with a clear opening, useful sequence and payoff. Distinguish a short-form clip from a longer walkthrough; do not substitute a caption for a script.
+- **Pinterest:** a searchable visual answer, reference or project idea linked to a useful destination; no assumption that a B2B or service audience uses it.
+
+Use the business's actual industry context: who uses, chooses and pays; what they need to trust; how often the need occurs; and what evidence changes their mind. Education, healthcare, scientific/technical services, retail, ecommerce, software and creator businesses should not receive interchangeable stories. Do not assume demographic, clinical, learner or customer outcome evidence.
+
+Planning, drafting, exporting and direct publishing have different availability. A platform can be useful even when the owner must publish the approved work manually. Do not promise an integration or publish as a side effect of suggesting a post.
+
 ## Trend and meme decision
 
 For each social brief or weekly calendar, consider whether a timely angle would help. Use a trend or meme-inspired format only when all four checks pass:

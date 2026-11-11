@@ -240,6 +240,15 @@ export const SeoBriefSchema = z.object({
   recommendedAction: z.enum(["refresh_existing_page", "create_new_page"]).optional(),
   targetPageUrl: z.string().optional(),
   recommendationReason: z.string().optional(),
+  /** Proposed setup only: the model cannot stamp a page as owner-reviewed. */
+  publishingDetails: z.object({
+    suggestedPath: z.string().max(200),
+    proposedByline: z.string().max(160),
+    reviewStatus: z.literal("draft_unreviewed"),
+    schemaTypes: z.array(z.enum(["none", "WebPage", "Article", "FAQPage", "SoftwareApplication", "Product", "Service"])).max(3),
+    schemaNote: z.string().max(500),
+    inboundLinks: z.array(z.object({fromUrl:z.string(),anchor:z.string().max(120)})).max(3),
+  }).optional(),
 });
 export type SeoBriefOutput = z.infer<typeof SeoBriefSchema>;
 

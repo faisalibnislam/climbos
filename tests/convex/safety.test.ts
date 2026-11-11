@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { checkInvariants } from "../../shared/economics/ledger";
 import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -251,6 +251,11 @@ describe("approvals and execution safety", () => {
   });
 
   it("ad campaigns respect the owner's monthly envelope", async () => {
+    // Keep the full November flight ahead of the planning date. Otherwise this
+    // assertion quietly changes meaning as past days leave the rolling window.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-24T12:00:00Z"));
+    try {
     const t = setup();
     const d = await demo(t);
     // The synthetic demo seeds an existing campaign. Remove it here so this
@@ -274,6 +279,9 @@ describe("approvals and execution safety", () => {
     // The shared limit is over overlapping 31-day windows, so a later flight can still fit.
     const later = await d.client.mutation(api.ads.prepareCampaign, { slug: d.slug, artifactId: ad._id, dailyBudget: 15, startDate: "2026-12-01", endDate: "2026-12-30", reviewAfterDays: 7 });
     expect(later).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

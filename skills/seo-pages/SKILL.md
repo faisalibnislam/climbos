@@ -5,7 +5,7 @@ description: Writes SEO page briefs and page drafts for small businesses in the 
 
 ## Purpose
 
-A great SEO page wins a high-intent query for a small business and is the source AI answers cite. It is the format the results page rewards, executed better. It answers each question in its first sentence, contains something no competitor page has (real prices, photos, data, process, experience), shows clearly who wrote it and why they know, links into a tight cluster, and leads the reader to one sensible next step. It would be worth publishing even if search engines didn't exist. Mass-produced pages are the opposite and can sink the whole site.
+A useful SEO page answers a specific buyer question with clear, trustworthy information. Ranking, traffic and inclusion in AI answers are uncertain outcomes, not promises. It answers each question in its first sentence, contains something no competitor page has (real prices, photos, data, process, experience), shows clearly who wrote it and why they know, links into a tight cluster, and leads the reader to one sensible next step. It would be worth publishing even if search engines didn't exist. Mass-produced pages are the opposite and can sink the whole site.
 
 ## Inputs you will get
 
@@ -16,7 +16,7 @@ A great SEO page wins a high-intent query for a small business and is the source
 - **Existing site pages**, for internal links and to avoid two pages competing for one query.
 
 When something is missing:
-- No first-hand material → write the brief, not the page, and list exactly what to gather: photos, prices, a worked example, the owner's answers to 3–5 questions.
+- No first-hand material → still prepare useful copy supported by the observed offer or a clearly labelled proposed example. Keep claims of tested experience out of it. Ask for owner evidence only where the claim depends on it; do not replace safe drafting with a homework list.
 - No sourced market data → state only the business's own numbers. Any market figure needs a cited source, or leave it out.
 - No author → byline "The <Business> team". Never invent a person.
 
@@ -24,7 +24,7 @@ When something is missing:
 
 1. **Read the intent from the SERP.** Classify the query as informational, commercial investigation, transactional or local. Note which page types rank (service pages, lists, comparisons, tools, videos), whether an AI Overview appears and whom it cites, whether a map pack shows, and what every ranking page fails to answer.
 
-2. **Decide whether the page should exist.** It needs real demand, a fit with what the business sells, something unique to say, and no existing page already targeting the query (if one exists, improve it instead). ClimbOS flags an exact target-phrase match in an observed title or heading as a review warning; that lexical match is a clue, not proof of search cannibalization. Prefer high-intent pages over informational blog posts. AI summaries now absorb informational clicks: Pew found users clicked a traditional result on about 8% of visits with an AI summary versus 15% without. Cited pages still earn more clicks than uncited ones, and commercial and local pages hold up better.
+2. **Decide whether the page should exist.** It needs real demand, a fit with what the business sells, something unique to say, and no existing page already targeting the query (if one exists, improve it instead). ClimbOS flags an exact target-phrase match in an observed title or heading as a review warning; that lexical match is a clue, not proof of search cannibalization. Prefer high-intent pages over informational blog posts. Do not transfer a general search study into this business's click forecast. Prefer observed buyer tasks and dated property data when available; otherwise label demand unknown. Google's current guidance does not require special AI markup and does not guarantee inclusion (https://developers.google.com/search/docs/appearance/ai-features, checked 2026-11-10).
 
 3. **Choose the page type and follow its rules.**
 
@@ -120,7 +120,7 @@ When something is missing:
 - [ ] Intro answers the query in 1–2 sentences; every H2 answered in its first sentence.
 - [ ] Information gain is present and early.
 - [ ] Every number and claim traces to confirmed facts or a cited source; the page is complete as written.
-- [ ] Named author, "last reviewed" date, original photos specified.
-- [ ] Title ~50–60 chars, meta ~150–160 chars, short slug.
+- [ ] Proposed business or supported author byline; draft/review status and source dates labelled honestly. No invented reviewed date or credentials. Useful screenshots or photos proposed only where relevant.
+- [ ] Title at most 60 chars, meta at most 155 chars, and an exact existing or proposed path.
 - [ ] Internal links up, across, down and inbound listed with anchors; schema limited to visible content.
 - [ ] No banned phrases, no stuffing, no scaled or doorway pattern.

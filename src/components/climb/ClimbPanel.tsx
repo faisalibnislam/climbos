@@ -1,4 +1,5 @@
 "use client";
+import { OwnerQuestionCard, type QuestionAnswer } from "./OwnerQuestion";
 
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -17,7 +18,7 @@ type Msg = NonNullable<ReturnType<typeof useQuery<typeof api.climb.thread>>>[num
 
 /** Suggestions that fit the screen the owner is on. */
 function suggestionsFor(path: string): string[] {
-  if (path.includes("/plan")) return ["Which play should I start with this week?", "Explain the first play in plain words", "What would make this plan more ambitious?"];
+  if (path.includes("/plan")) return ["What should we do first?", "Explain this recommendation simply", "What other approach could work better?"];
   if (path.includes("/content")) return ["What's waiting for my approval?", "Make the newest draft shorter and punchier", "Draft 3 LinkedIn posts about our best feature"];
   if (path.includes("/autopilot")) return ["Why is this post waiting for me?", "Set autopilot to post on Instagram 3 times a week", "Plan next week now"];
   if (path.includes("/images")) return ["Capture my website", "Make 2 Instagram posts from my best screenshots", "Which images work best for ads?"];
@@ -79,7 +80,7 @@ export function ClimbPanel({ slug }: { slug: string }) {
     }
   }, [thread, router, climb]);
 
-  const submit = async (value?: string) => {
+  const submit = async (value?: string, questionResponse?: QuestionAnswer & { messageId: Id<"climbMessages"> }) => {
     const message = (value ?? text).trim();
     if (!message || pending.current) return;
     pending.current = true;
@@ -88,11 +89,11 @@ export function ClimbPanel({ slug }: { slug: string }) {
     const selection = climb.selection;
     climb.clearSelection();
     try {
-      const { messageId, runId } = await send({ slug, text: message, screen: { path: pathname, title: screenTitle() }, selection });
+      const { messageId, runId } = await send({ slug, text: message, screen: { path: pathname, title: screenTitle() }, selection, ...(questionResponse ? { questionResponse } : {}) });
       await respond({ slug, messageId, runId, screenSummary: screenSummary(), entities: screenEntities() });
     } catch (e) {
       toast({ tone: "danger", title: errorInfo(e).message });
-      setText(message);
+      if (!questionResponse) setText(message);
     } finally {
       pending.current = false;
       setBusy(false);
@@ -158,7 +159,7 @@ export function ClimbPanel({ slug }: { slug: string }) {
               </li>
             ) : (
               <li key={item.m.id}>
-                <Message m={item.m} onConfirm={async () => {
+                <Message m={item.m} disabled={busy} onAnswer={(answer) => submit("Answering your question", { ...answer, messageId: item.m.id as Id<"climbMessages"> })} onConfirm={async () => {
                   const r = await confirm({ slug, messageId: item.m.id as Id<"climbMessages"> });
                   if (!r.ok) toast({ tone: "danger", title: r.message });
                 }} onCancel={() => cancel({ slug, messageId: item.m.id as Id<"climbMessages"> })} />
@@ -483,8 +484,9 @@ function Rich({ text }: { text: string }) {
   );
 }
 
-function Message({ m, onConfirm, onCancel }: { m: Msg; onConfirm: () => Promise<void>; onCancel: () => void }) {
+function Message({ m, onConfirm, onCancel, onAnswer, disabled }: { m: Msg; onConfirm: () => Promise<void>; onCancel: () => void; onAnswer: (answer: QuestionAnswer) => Promise<void>; disabled: boolean }) {
   const [busy, setBusy] = useState(false);
+  if (m.question) return <OwnerQuestionCard key={m.id} question={m.question} disabled={disabled} onAnswer={onAnswer} />;
   if (m.role === "user") {
     return (
       <div className="flex flex-col items-end gap-1">

@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "convex/react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
 import { ArrowRight } from "@/components/icons";
-import { Badge, buttonClasses } from "@/components/ui";
+import { errorMessage } from "../errors";
+import { Badge, Button, toast, buttonClasses } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { OwnerGoalTarget } from "./OwnerGoalTarget";
 
@@ -14,11 +17,55 @@ type Snapshot = FunctionReturnType<typeof api.analytics.homeSnapshot>;
 
 const card = "flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-surface p-5";
 
+/** Returning owners see one actual item to pick up, rather than a dashboard of competing priorities. */
+export function HomeNextAction({ slug, data }: { slug: string; data: Today }) {
+  const stepWork = useQuery(api.stepWork.home, { slug });
+  const strategy = data.strategy;
+  const ready = Boolean(strategy?.preparedTitles?.length);
+  const draft = data.approvals[0];
+  const failed = data.recent.find(r => r.status === "failed" && !r.replaced);
+  if (stepWork) return <section aria-labelledby="pick-up-heading" className={cn(card, "home-next-action")}><p className="text-overline">{stepWork.needsAnswer ? "AI has work ready · one answer needed" : "AI has prepared this for you"}</p><h2 id="pick-up-heading" className="heading-section">{stepWork.title}</h2><p className="text-sm text-ink-2">{stepWork.summary}</p><div className="flex flex-wrap items-center gap-3"><Link href={`/app/${slug}/plan#prepared-work`} className={buttonClasses({ variant: "primary", className: "step-primary-action" })}>Review prepared work<ArrowRight aria-hidden /></Link><span className="text-xs text-ink-3">From: {stepWork.stepTitle}</span></div></section>;
+  if (!strategy && !draft && !failed) return null;
+  const title = draft ? draft.title : ready ? strategy!.preparedTitles[0] : failed ? failed.title : strategy?.focusedMove?.title ?? strategy?.summary;
+  const href = draft ? `/app/${slug}/content/${draft.id}` : ready ? `/app/${slug}/plan#prepared-work` : failed ? `/app/${slug}/work/${failed.id}` : `/app/${slug}/plan`;
+  return <section aria-labelledby="pick-up-heading" className={cn(card, "home-next-action")}>
+    <p className="text-overline">{failed && !draft && !ready ? "Needs a look" : ready || draft ? "Ready for you" : "Your next useful step"}</p>
+    <h2 id="pick-up-heading" className="heading-section">{title}</h2>
+    <p className="text-sm text-ink-2">{ready || draft ? "AI has prepared this for you. Take a look and make it yours." : failed ? "This work didn’t finish. What was saved and how to continue are available below." : "Your next step is ready. Open your plan to put AI to work."}</p>
+    <div className="flex flex-wrap gap-2"><Link href={href} className={buttonClasses({ variant: "primary" })}>{ready || draft ? "Review the draft" : failed ? "See what happened" : "See the recommendation"}<ArrowRight aria-hidden /></Link>{ready || draft ? <Link href={`/app/${slug}/plan`} className={buttonClasses({ variant: "link" })}>See your plan</Link> : null}</div>
+    {data.counts.workingNow ? <p className="text-xs text-ink-3">{data.counts.workingNow} task{data.counts.workingNow === 1 ? " is" : "s are"} running. You can leave and find the work under Your work.</p> : null}
+  </section>;
+}
+
+/** Lead with saved advice; the explicit preparation button uses the existing scoped request flow. */
+export function RecommendationCard({ slug, data }: { slug: string; data: Today }) {
+  const start = useMutation(api.workspace.startPlay);
+  const [busy, setBusy] = useState(false);
+  const router = useRouter();
+  const plan = data.strategy;
+  if (!plan) return <PlanCard slug={slug} data={data} />;
+  return (
+    <section aria-labelledby="recommendation-heading" className={cn(card, "border-brand-200 bg-brand-50")}>
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 id="recommendation-heading" className="text-overline">Your next step</h2>
+        {plan.status === "needs_approval" ? <Badge tone="amber">For you to review</Badge> : <Badge>Your plan</Badge>}
+      </div>
+      <p className="heading-section">{plan.focusedMove?.title ?? plan.direction?.winningApproach ?? plan.summary}</p>
+      {plan.focusedMove ? <p className="text-ui text-ink-2">{plan.focusedMove.why}</p> : plan.direction ? <p className="text-ui text-ink-2"><span className="font-medium text-ink">Start here: </span>{plan.direction.currentBet}</p> : null}
+      <div className="flex flex-wrap gap-2">{plan.status === "approved" && (plan.focusedMove || plan.opportunities[0]?.id) && ["owner", "admin", "editor"].includes(data.role) ? <Button size="sm" disabled={!data.canRunAi} loading={busy} onClick={async () => { setBusy(true); try { await start({ slug, strategyId: plan.id, playId: plan.focusedMove ? "focused" : plan.opportunities[0].id! }); router.push(plan.focusedMove ? `/app/${encodeURIComponent(slug)}/plan#prepared-work` : `/app/${encodeURIComponent(slug)}/work`); } catch (error) { toast({ tone: "danger", title: errorMessage(error) }); } finally { setBusy(false); } }}>{plan.focusedMove ? "Review prepared drafts" : "Make it happen"}</Button> : null}
+      <Link href={`/app/${encodeURIComponent(slug)}/plan`} className={cn(buttonClasses({ variant: "primary", size: "sm" }), "self-start")}>
+        {plan.status === "needs_approval" ? "See your plan" : "See the plan and next steps"}<ArrowRight aria-hidden />
+      </Link></div>
+      <p className="text-xs text-ink-3">AI prepares the next step. It brings important choices and approvals back to you.</p>
+    </section>
+  );
+}
+
 /** Everything waiting on the owner, one row and one button each: plans, drafts, stopped jobs, replies, to-dos. */
 export function NeedsYouCard({ slug, data }: { slug: string; data: Today }) {
   const attention = useQuery(api.inbox.attention, { slug });
   const items: { key: string; title: string; href: string; action: string }[] = [];
-  if (data.strategy?.status === "needs_approval") items.push({ key: "plan", title: `Approve plan v${data.strategy.version}`, href: `/app/${slug}/plan`, action: "Review" });
+  if (data.strategy?.status === "needs_approval") items.push({ key: "plan", title: "Review your new plan", href: `/app/${slug}/plan`, action: "Review" });
   if (attention?.inboxOpen) items.push({ key: "inbox", title: `${attention.inboxOpen} message${attention.inboxOpen === 1 ? "" : "s"} to answer`, href: `/app/${slug}/inbox`, action: "Reply" });
   for (const r of data.recent) if (r.status === "failed" && !r.replaced) items.push({ key: `run-${r.id}`, title: `Didn't finish: ${r.title}`, href: `/app/${slug}/work/${r.id}`, action: "Fix" });
   for (const n of data.next) if (n.kind !== "plan" || data.strategy?.status !== "needs_approval") items.push({ key: `next-${n.href}-${n.title}`, title: n.title, href: n.href, action: n.kind === "approvals" ? "Review" : "Open" });
