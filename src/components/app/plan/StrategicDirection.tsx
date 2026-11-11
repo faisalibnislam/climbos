@@ -27,10 +27,10 @@ function Direction({ direction: d }: { direction: StrategicDirection }) {
           <details className="border-t border-brand-200 pt-3">
             <summary className="min-h-9 cursor-pointer text-sm font-medium text-brand-900">What we are assuming and when to change course</summary>
             <dl className="mt-3 grid gap-4 text-ui sm:grid-cols-2">
-              
-              
-              
-              
+
+
+
+
               <div><dt className="font-medium">What can wait</dt><dd><ul className="mt-1 list-disc pl-5 text-ink-2">{d.notNow.map((item, i) => <li key={i}>{item}</li>)}</ul></dd></div>
               <div><dt className="font-medium">Assumptions to check</dt><dd><ul className="mt-1 list-disc pl-5 text-ink-2">{d.assumptions.map((item, i) => <li key={i}>{item}</li>)}</ul></dd></div>
               <div className="sm:col-span-2"><dt className="font-medium">When to change direction</dt><dd className="mt-1 text-ink-2">{d.changeCourseIf}</dd></div>
