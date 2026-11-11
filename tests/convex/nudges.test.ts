@@ -7,7 +7,7 @@ describe("Low-credit nudges", () => {
   it("notifies owners once when credits run low, and stays quiet while top-ups cover work", async () => {
     const t = setup();
     const owner = await asNewUser(t, "nudge@example.com");
-    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Nudge Co" });
+    const { orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Nudge Co" });
     await makePaid(t, orgId, 11_000_000);
     const periodId = await t.run(async (ctx) => {
       const p = (await ctx.db.query("usagePeriods").collect()).find((x) => x.source === "subscription")!;

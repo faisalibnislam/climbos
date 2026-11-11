@@ -145,6 +145,9 @@ const CAPABILITY_LABEL: Record<NonNullable<PlayView["actionContract"]>["executio
 };
 
 export interface ExpertView {
+  focusedMove?: import("../../../../shared/agents/focusedPlan").FocusedMove;
+  timing?: import("@shared/agents/goalTiming").GoalTiming;
+  preparedWork?: import("@shared/agents/preparedWork").PreparedWork[];
   diagnosis: string;
   /** Deterministic owner-data diagnosis retained separately from the model's explanation. */
   constraintDiagnosis?: Diagnosis | null;
@@ -152,12 +155,13 @@ export interface ExpertView {
   notDoing: { channel: string; why: string }[];
   northStar: { metric: string; baseline: string; target: string };
   leadingIndicators: { metric: string; weeklyTarget: string; source: string }[];
-  phases: { name: string; days: string; focus: string }[];
+  phases: { name: string; days: string; focus: string; firstAction?: string; tasks?: string[]; howToCheck?: string; decisionRule?: string }[];
   weekOneChecklist: string[];
   risks: { risk: string; mitigation: string }[];
   plays?: PlayView[];
   /** Exploratory alternatives are not part of the ranked execution portfolio. */
   strategyExploration?: StrategyExploration;
+  strategicDirection?: import("../../../../shared/agents/strategicDirection").StrategicDirection;
   /** Owner goal vs what the plays support (computed in code). */
   goalGap?: GoalGap | null;
   snapshot?: { goal?: string };
@@ -1326,8 +1330,8 @@ function EconomicsLine({ economics: e }: { economics: Economics }) {
     <div className="flex flex-wrap items-center gap-1.5">
       <span className="text-xs font-medium text-ink-3">Costed on</span>
       <ul className="flex flex-wrap gap-1.5">
-        {part("Revenue", `${formatMoney(Math.round(e.revenuePerCustomerMonthUsd * 100) / 100, e.currency)}/mo`, "revenue")}
-        {part("Margin", `${Math.round(e.grossMargin > 1 ? e.grossMargin : e.grossMargin * 100)}%`, "margin")}
+        {part("Revenue", e.revenuePerCustomerMonthUsd === null ? "Unknown" : `${formatMoney(Math.round(e.revenuePerCustomerMonthUsd * 100) / 100, e.currency)}/mo`, "revenue")}
+        {part("Margin", e.grossMargin === null ? "Unknown" : `${Math.round(e.grossMargin > 1 ? e.grossMargin : e.grossMargin * 100)}%`, "margin")}
         {churn !== null ? part("Churn", `${Math.round(churn * 1000) / 10}%/mo`, "churn") : null}
         {part("Your time", `${usd(ownerHourOf(e), e.currency)}/h`, "ownerHour")}
       </ul>
@@ -1442,7 +1446,7 @@ function StrategyExplorationPanel({ options, slug, strategyId, canEdit }: { opti
     <section aria-label="Grounded, adjacent and bold strategy options" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-chart-3/30 bg-chart-3/5 p-3">
       <div>
         <div className="flex flex-wrap items-center gap-2"><FieldLabel icon={Sparkles}>Three strategy options</FieldLabel><Badge>Exploration · not an execution ranking</Badge></div>
-        <p className="mt-1 text-sm text-ink-2">Each is scored separately. Bold ideas stay visible even with little evidence. Range: {(options.requestedRange ?? "balanced").replaceAll("_", " ")}.</p>
+        <p className="mt-1 text-sm text-ink-2">Different ways forward, with their assumptions kept visible. Bold ideas can be worth testing even with little evidence. Range: {(options.requestedRange ?? "balanced").replaceAll("_", " ")}.</p>
       </div>
       <div className="grid gap-3 lg:grid-cols-3">
         {entries.map(({ key, mode, description, value }) => (
@@ -1450,6 +1454,10 @@ function StrategyExplorationPanel({ options, slug, strategyId, canEdit }: { opti
             <div className="flex flex-wrap items-center gap-2"><Badge>{mode}</Badge><span className="text-xs text-ink-3">{value.evidenceBasis.replaceAll("_", " ")}</span></div>
             <h3 className="heading-card">{value.title}</h3>
             <p className="text-xs text-ink-3">{description}</p>
+            <p className="text-ui text-ink">{value.businessMechanism}</p>
+            <p className="text-xs text-ink-3">{value.whyItCouldMatter}</p>
+            <details className="mt-1">
+              <summary className="min-h-9 cursor-pointer text-sm font-medium text-brand-900">Explore the idea and its test</summary>
             <dl className="grid gap-2 text-ui">
               <div><dt className="text-xs text-ink-3">What it challenges</dt><dd className="text-ink">{value.challengedConvention}</dd></div>
               <div><dt className="text-xs text-ink-3">Why it is the default · cost of breaking it</dt><dd className="text-ink">{value.whyConventionPersists} {value.costOfBreaking}</dd></div>
@@ -1485,6 +1493,7 @@ function StrategyExplorationPanel({ options, slug, strategyId, canEdit }: { opti
               {drafts[key].testState === "observed" ? <><Field label="Outcome evidence"><Select value={drafts[key].outcomeEvidence} onValueChange={(evidence) => update(key, { outcomeEvidence: evidence as ExplorationEvidence })} options={[{ value: "measured", label: "Measured" }, { value: "owner_reported", label: "Owner reported" }, { value: "source_reported", label: "Source reported" }, { value: "inferred", label: "Inferred" }, { value: "unknown", label: "Unknown" }]} /></Field><Field label="Observed outcome" hint="What you measured and when. Don't claim it caused the result."><Textarea value={drafts[key].outcomeNote} onChange={(event) => update(key, { outcomeNote: event.target.value.slice(0, 1_500) })} maxLength={1_500} rows={2} /></Field></> : null}
               <Button size="sm" variant="secondary" disabled={saving !== null || (drafts[key].decision === "edited" && !drafts[key].ownerEdit.trim()) || (drafts[key].testState === "observed" && !drafts[key].outcomeNote.trim())} onClick={() => void submit(key)}>{saving === key ? "Saving…" : "Save feedback"}</Button>
             </div> : null}
+            </details>
           </article>
         ))}
       </div>

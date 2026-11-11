@@ -28,10 +28,7 @@ export function assertCurrentExpertGrowthPayload(plays: unknown, economics: unkn
     const issue = economicsResult.error.issues[0];
     throw new Error(`Invalid current growth-plan economics at ${issue?.path.join(".") || "economics"}: ${issue?.message ?? "invalid value"}`);
   }
-  const parsedEconomics = economicsResult.data;
-  if (parsedEconomics.revenuePerCustomerMonthUsd < 0 || parsedEconomics.grossMargin < 0 || parsedEconomics.grossMargin > 1 || parsedEconomics.monthlyChurn < 0 || parsedEconomics.monthlyChurn > 1) {
-    throw new Error("Invalid current growth-plan economics: revenue must be nonnegative and margin and churn must be between 0 and 1.");
-  }
+
 
   const playCandidates = Array.isArray(plays) ? structuredClone(plays) as Record<string, unknown>[] : plays;
   if (Array.isArray(playCandidates)) {

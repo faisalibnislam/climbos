@@ -49,6 +49,8 @@ export interface ModelRate {
   /** Claude: 5-minute write. Gemini: regular input rate (explicit cache storage billed separately). */
   cacheWritePerM: number;
   basis: string;
+  /** Total input includes uncached, cache reads and cache writes. */
+  longContext?: { aboveTokens: number; inputPerM: number; outputPerM: number; cacheReadPerM: number; cacheWritePerM: number };
   source: string;
 }
 
@@ -458,13 +460,26 @@ export const VERIFIED_2026_10_17: RateVersion = Object.freeze({
   ],
 });
 
+/** Verified Anthropic route pricing. Historical workbook/run snapshots stay unchanged. */
+export const ANTHROPIC_2026_11_09: RateVersion = Object.freeze({
+  ...MODEL_CHOICE_2026_10_26,
+  id: "anthropic-2026-11-09", label: "Haiku and Sonnet, verified 9 Nov 2026",
+  effectiveFrom: "2026-11-09", researchedAt: "2026-11-09",
+  models: { ...MODEL_CHOICE_2026_10_26.models,
+    "claude-haiku-5.5": { ...MODEL_CHOICE_2026_10_26.models["claude-haiku-5.5"], basis: "Standard up to 100k input; all token classes use the higher tier above 100k", longContext: { aboveTokens: 100_000, inputPerM: 0.5, outputPerM: 2.5, cacheReadPerM: 0.05, cacheWritePerM: 0.625 } },
+    "claude-sonnet-5.5": { ...MODEL_CHOICE_2026_10_26.models["claude-sonnet-5.5"], basis: "Standard 1M context; 5-minute cache writes" },
+  },
+  notes: [...MODEL_CHOICE_2026_10_26.notes, "Haiku/Sonnet API IDs, caching and long-context rates verified against official Anthropic model/pricing docs on 9 Nov 2026. Historical snapshots are not rewritten."],
+});
+
 /** All known versions, oldest first. */
 export const RATE_VERSIONS: readonly RateVersion[] = Object.freeze([
   RESEARCH_2026_10_17,
   VERIFIED_2026_10_17,
   MODEL_CHOICE_2026_10_26,
-  GEMINI_ARGON_REPRICE_2026_12_01,
-  GEMINI_FLASH_REPRICE_2027_01_01,
+  ANTHROPIC_2026_11_09,
+  { ...GEMINI_ARGON_REPRICE_2026_12_01, models: { ...GEMINI_ARGON_REPRICE_2026_12_01.models, "claude-haiku-5.5": ANTHROPIC_2026_11_09.models["claude-haiku-5.5"] } },
+  { ...GEMINI_FLASH_REPRICE_2027_01_01, models: { ...GEMINI_FLASH_REPRICE_2027_01_01.models, "claude-haiku-5.5": ANTHROPIC_2026_11_09.models["claude-haiku-5.5"] } },
 ]);
 
 /** Rate version used for new subscriptions and jobs right now. */
@@ -507,11 +522,12 @@ export function modelCallCostUsd(
   ] as const) {
     if (!Number.isFinite(v) || v < 0) throw new RangeError(`${label} must be a non-negative number`);
   }
+  const price = rate.longContext && inputTokens + cacheRead + cacheWrite > rate.longContext.aboveTokens ? rate.longContext : rate;
   return (
-    (inputTokens * rate.inputPerM +
-      outputTokens * rate.outputPerM +
-      cacheRead * rate.cacheReadPerM +
-      cacheWrite * rate.cacheWritePerM) /
+    (inputTokens * price.inputPerM +
+      outputTokens * price.outputPerM +
+      cacheRead * price.cacheReadPerM +
+      cacheWrite * price.cacheWritePerM) /
     1_000_000
   );
 }

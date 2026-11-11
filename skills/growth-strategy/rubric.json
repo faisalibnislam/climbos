@@ -2,10 +2,22 @@
   "id": "growth-strategy",
   "title": "90-day growth strategy for a small business",
   "gates": [
-    { "id": "G1", "text": "Truth: no claim, number, customer, quote or result that isn't in confirmed facts or cited research; every number is sourced, from the owner's data, or labelled 'assumption' with a validation date." },
-    { "id": "G2", "text": "Budget fit: planned spend and owner hours add up to no more than what was stated." },
-    { "id": "G3", "text": "Prioritisation: a ranked plan with no more than 3 active acquisition channels (1 primary, 1 secondary, at most 1 hygiene item) for a business under ~$50k/month revenue." },
-    { "id": "G4", "text": "Safe and compliant: no fake or incentivised reviews, review gating, bought followers, scraping in breach of terms, misleading claims, or advice that ignores regulated-industry rules." }
+    {
+      "id": "G1",
+      "text": "Truth: no claim, number, customer, quote or result that isn't in confirmed facts or cited research; every number is sourced, from the owner's data, or labelled 'assumption' with a validation date."
+    },
+    {
+      "id": "G2",
+      "text": "Budget fit: planned spend and owner hours add up to no more than what was stated."
+    },
+    {
+      "id": "G3",
+      "text": "Prioritisation: a ranked plan with no more than 3 active acquisition channels (1 primary, 1 secondary, at most 1 hygiene item) for a business under ~$50k/month revenue."
+    },
+    {
+      "id": "G4",
+      "text": "Safe and compliant: no fake or incentivised reviews, review gating, bought followers, scraping in breach of terms, misleading claims, or advice that ignores regulated-industry rules."
+    }
   ],
   "criteria": [
     {
@@ -97,7 +109,19 @@
         "3": "Risks listed without mitigations or dates.",
         "5": "Foundation, test and commit phases with dependencies; risks and assumptions each with a mitigation and a validation date."
       }
+    },
+    {
+      "id": "S_DIRECTION",
+      "name": "Direction and business judgment",
+      "anchors": {
+        "1": "Interchangeable checklist of platforms and marketing tasks.",
+        "3": "Some tailored tactics, but no coherent longer-term choice or reason to prefer the chosen path.",
+        "5": "A business-specific ambition connected to the current move, buyer behavior, differentiated offer or distribution, compounding advantage, explicit sacrifices and evidence that would change the decision. Channel recommendations name specific assets, targets and learning goals; unknowns are not filled with invented numbers."
+      }
     }
   ],
-  "shipRule": { "minEach": 3, "minAverage": 4 }
+  "shipRule": {
+    "minEach": 3,
+    "minAverage": 4
+  }
 }

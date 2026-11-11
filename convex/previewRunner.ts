@@ -1,6 +1,7 @@
 "use node";
 
 import { v } from "convex/values";
+import { BUILT_IN_ROUTE } from "../shared/ai/modelChoice";
 import { currentRateVersion } from "../shared/economics";
 import { PreviewSnapshotSchema, PreviewIdeasSchema, systemPrompt, untrusted, type PreviewSnapshot } from "../shared/ai/tasks";
 import { isVerbatimPageQuote } from "../shared/preview/evidence";
@@ -34,7 +35,7 @@ export const run = internalAction({
     const fail = async (message: string) => {
       await ctx.runMutation(internal.preview.update, { token, patch: { status: "failed", error: message } });
     };
-    if (!modelProviderConfigured("gpt-6-luna")) {
+    if (!modelProviderConfigured(BUILT_IN_ROUTE.standard)) {
       await fail("OpenAI isn't configured for live previews yet. Explore the full demo in the meantime.");
       return;
     }
@@ -57,7 +58,7 @@ export const run = internalAction({
     const content = untrusted(page.url, page.text, 10_000);
     const profileRes = await callModel(
       {
-        modelKey: "gpt-6-luna",
+        modelKey: BUILT_IN_ROUTE.standard,
         system: systemPrompt("data_analyst"),
         user: `TASK: From this single public web page, write a short factual profile: name, one-line summary, audience, category and up to 6 facts with sourceUrl set to "${page.url}". Only use what the page says. Also return initialFinding: either null, or one cautious, useful website observation with an exact verbatim evidenceQuote copied from this page, whyItMayMatter, and one low-risk firstStep. Choose null if no clear, important issue or opportunity is directly supported by the page. The observation may interpret the quote, so it is a hypothesis to check, not a verified business problem. Do not infer customer behavior, conversion rates, demand, performance, or missing content that this page text cannot establish.\n\n${content}`,
         schema: PreviewSnapshotSchema,
@@ -93,7 +94,7 @@ export const run = internalAction({
 
     const ideasRes = await callModel(
       {
-        modelKey: "gpt-6-luna",
+        modelKey: BUILT_IN_ROUTE.standard,
         system: systemPrompt("cmo"),
         user: `TASK: Suggest exactly 3 concrete, low-risk growth ideas for this business and goal. Each idea names the channel, why it fits (grounded in the facts), a first step, and which role would own it. No made-up numbers or promises.\n\nGOAL: ${p.goal}\nBUSINESS: ${JSON.stringify({ name: profile.name, summary: profile.oneLineSummary, audience: profile.audience, facts: profile.facts.map((f) => f.statement) }).slice(0, 3000)}`,
         schema: PreviewIdeasSchema,

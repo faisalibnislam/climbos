@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 /** Shared, deliberately simple request input. Suggestions only edit the draft. */
 export function RequestComposer({
   label, value, onChange, onSubmit, placeholder, suggestions = [], helper,
-  submitLabel = "Send request", busy = false, disabled = false, className, inputRef,
+  submitLabel = "Send request", busy = false, disabled = false, className, inputRef, maxLength = 4000, editableWhileBusy = false,
 }: {
   label: string;
   value: string;
@@ -22,6 +22,8 @@ export function RequestComposer({
   disabled?: boolean;
   className?: string;
   inputRef?: RefObject<HTMLTextAreaElement | null>;
+  maxLength?: number;
+  editableWhileBusy?: boolean;
 }) {
   const id = useId();
   const localRef = useRef<HTMLTextAreaElement>(null);
@@ -32,7 +34,7 @@ export function RequestComposer({
     if (value.trim() && !locked) onSubmit();
   };
   return (
-    <div className={className}>
+    <div className={cn("request-composer", className)}>
       <form onSubmit={submit} aria-busy={busy} className="rounded-[var(--radius-card)] border border-control bg-surface p-4 shadow-[var(--card-shadow)] focus-within:ring-2 focus-within:ring-brand-800 sm:p-5">
         <label htmlFor={id} className="text-ui font-medium text-ink">{label}</label>
         <textarea
@@ -53,12 +55,12 @@ export function RequestComposer({
               submit();
             }
           }}
-          rows={3}
-          maxLength={4000}
-          disabled={locked}
+          rows={2}
+          maxLength={maxLength}
+          disabled={disabled || (busy && !editableWhileBusy)}
           placeholder={placeholder}
           aria-describedby={helper ? `${id}-help` : undefined}
-          className="mt-2 block min-h-24 w-full resize-y bg-transparent py-2 text-base text-ink outline-none placeholder:text-ink-3 disabled:cursor-wait"
+          className="mt-2 block min-h-16 w-full resize-y bg-transparent py-2 text-base text-ink outline-none placeholder:text-ink-3 disabled:cursor-wait"
         />
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
           {helper ? <p id={`${id}-help`} className="max-w-md text-xs text-ink-3">{helper}</p> : <span />}
@@ -73,7 +75,7 @@ export function RequestComposer({
             <button key={suggestion} type="button" disabled={locked} onClick={() => {
               onChange(value.trim() ? `${value.trimEnd()}\n${suggestion}` : suggestion);
               requestAnimationFrame(() => area.current?.focus());
-            }} className={cn("min-h-10 rounded-[var(--radius-control)] border border-line bg-surface px-3 py-2 text-left text-ui text-ink-2 hover:border-brand-800 hover:text-ink", locked && "cursor-not-allowed opacity-60")}>
+            }} className={cn("request-suggestion min-h-10 rounded-[var(--radius-control)] border border-line bg-surface px-3 py-2 text-left text-ui text-ink-2 hover:border-brand-800 hover:text-ink", locked && "cursor-not-allowed opacity-60")}>
               {suggestion}
             </button>
           ))}

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { LintIssue } from "./types";
+import { withoutNegatedTrials } from "./offerLanguage";
 
 export const OfferEvidenceValueSchema = z.object({
   amount: z.number().finite().nonnegative().nullable(),
@@ -283,10 +284,10 @@ export function lintApprovedOfferCopy(text: string, offers: ApprovedOfferCopyTer
     issues.push({ severity: "error", rule: "approved_offer_play", message: "This draft uses offer terms but does not identify which approved plan play it belongs to. Add the exact play name to the campaign brief or calendar slot so its price, audience, and conditions can be checked together.", path });
     applicableOffers = [];
   }
-  if (applicableOffers.some((offer) => offer.recommendation === "validate_first") && PROMOTION_WORDS.test(text)) {
+  if (applicableOffers.some((offer) => offer.recommendation === "validate_first") && PROMOTION_WORDS.test(withoutNegatedTrials(text))) {
     issues.push({ severity: "error", rule: "offer_validation_only", message: "This promotion is only a test proposal, not an offer available to customers. Remove customer-facing promotion terms until the test is validated and the offer is approved.", path });
   }
-  if (applicableOffers.some((offer) => offer.recommendation !== "recommend_promotion" && offer.recommendation !== "validate_first") && PROMOTION_WORDS.test(text)) {
+  if (applicableOffers.some((offer) => offer.recommendation !== "recommend_promotion" && offer.recommendation !== "validate_first") && PROMOTION_WORDS.test(withoutNegatedTrials(text))) {
     issues.push({ severity: "error", rule: "offer_not_recommended", message: "The selected plan play does not recommend changing the offer. Remove customer-facing promotion terms or review the plan with its owner first.", path });
   }
   const priceIssues = lintApprovedOfferPrices(text, applicableOffers, path);
@@ -318,7 +319,7 @@ export function lintApprovedOfferCopy(text: string, offers: ApprovedOfferCopyTer
     ? [...new Set(restrictedAudiences.flatMap((audience) => AUDIENCE_QUALIFIERS.filter((qualifier) => qualifier.test(audience)).map((qualifier) => qualifier.source)))]
     : [];
   const hasUnrestrictedPromotion = promotionOffers.some((offer) => !offer.eligibleAudience || !RESTRICTED_AUDIENCE.test(offer.eligibleAudience));
-  if (PROMOTION_WORDS.test(text) && restrictedAudiences.length && !hasUnrestrictedPromotion) {
+  if (PROMOTION_WORDS.test(withoutNegatedTrials(text)) && restrictedAudiences.length && !hasUnrestrictedPromotion) {
     if (UNIVERSAL_AUDIENCE.test(text)) {
       issues.push({ severity: "error", rule: "approved_offer_eligibility", message: "This copy presents a restricted offer as open to everyone. Preserve the audience qualifiers from the approved plan or remove the broader claim.", path });
     } else if (requiredQualifiers.length && !requiredQualifiers.every((source) => new RegExp(source, "i").test(text))) {
@@ -356,7 +357,7 @@ export function lintOfferAssessment(
   const issues: LintIssue[] = [];
   const error = (message: string, suffix = "") => issues.push({ severity: "error", rule: "offer_assessment", message, path: suffix ? `${path}.${suffix}` : path });
   const text = [play.name, play.oneLiner, play.hook, play.mechanic, play.test, play.killIf, play.scaleIf].filter(Boolean).join(" ");
-  const containsPromotion = PROMOTION_WORDS.test(text);
+  const containsPromotion = PROMOTION_WORDS.test(withoutNegatedTrials(text));
   if (!assessment) {
     if (containsPromotion) error("A play that proposes an offer change needs a structured evidence, alternatives, economics, risk, and test assessment.");
     return issues;
@@ -371,7 +372,7 @@ export function lintOfferAssessment(
   if (assessment.recommendation !== "recommend_promotion" && assessment.mechanism !== "none" && assessment.recommendation !== "validate_first") error("Do not describe an offer mechanism as recommended when the chosen action is to improve another constraint or make no change.", "mechanism");
   if (assessment.recommendation === "recommend_promotion" && !containsPromotion) error("The play must describe the recommended offer mechanism clearly.");
   if (assessment.recommendation === "recommend_promotion" && context.diagnosedConstraint && !["offer", "conversion"].includes(context.diagnosedConstraint)) error(`The ${context.diagnosisMeasured ? "measured" : "selected"} constraint is ${context.diagnosedConstraint}; this promotion does not address that constraint.`, "recommendation");
-  if (["improve_other_constraint", "no_change"].includes(assessment.recommendation) && PROMOTION_WORDS.test([play.oneLiner, play.hook, play.mechanic].filter(Boolean).join(" "))) error("The selected recommendation is not to change the offer; remove promotion copy from the play or choose validate_first.", "mechanism");
+  if (["improve_other_constraint", "no_change"].includes(assessment.recommendation) && PROMOTION_WORDS.test(withoutNegatedTrials([play.oneLiner, play.hook, play.mechanic].filter(Boolean).join(" ")))) error("The selected recommendation is not to change the offer; remove promotion copy from the play or choose validate_first.", "mechanism");
   if (assessment.evidenceBasis === "assumed" || assessment.evidenceBasis === "inferred" || assessment.evidenceBasis === "source_reported") {
     if (assessment.recommendation === "recommend_promotion") error("Assumed, inferred, or general source-reported demand supports a validation test, not a business-specific promotion recommendation.", "recommendation");
   }

@@ -115,6 +115,8 @@ describe("structured action contracts", () => {
     expect(lintActionContracts([clicks], 0, "").map((issue) => issue.path)).toContain("plays[0].actionContract.measurement.metric");
     expect(lintActionContracts([qualifiedLeads], 0, "").some((issue) => /does not match this play's forecast outcome/.test(issue.message))).toBe(true);
     expect(lintActionContracts([valid], 0, "")).toEqual([]);
+    const memberships = play({ unit: "New paid memberships", actionContract: { ...play().actionContract, measurement: { ...play().actionContract.measurement, metric: "New paid memberships from tagged visits" } } });
+    expect(lintActionContracts([memberships], 0, "")).toEqual([]);
   });
 
   it("makes the plays agent populate the trace and leaves readiness to code", () => {
@@ -169,10 +171,11 @@ describe("plan checks from the regression run", () => {
     expect(issue(lintPlays([a, b], econ, { decisionContract: true }), /repeats/)).toBe(true);
   });
 
-  it("the default plays task keeps the ambition that won the first check, with distinct moves and an honest gap", () => {
+  it("the default plays task keeps strategic ambition without forcing unsupported volume", () => {
     const t = playsTask({ scorecard: "", insights: "" });
-    expect(t).toMatch(/Be ambitious/);
-    expect(t).toMatch(/distinct move/);
+    expect(t).toMatch(/Be strategically ambitious/);
+    expect(t).toMatch(/do not add agency outreach, arbitrary weekly volumes or extra plays/);
+    expect(t).toMatch(/move must be distinct/);
     expect(t).toMatch(/ClimbOS shows the owner the gap/);
   });
 });

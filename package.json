@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "dev:convex": "convex dev",
+    "local:demo": "node scripts/local-demo.mjs",
+    "strategy:review": "node --import tsx bench/strategy-quality/offline.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -19,7 +21,10 @@
     "skills:build": "node scripts/skills-build.mjs",
     "growth-intelligence:build": "python3 scripts/growth-industry-build.py && node scripts/growth-intelligence-build.mjs",
     "bench": "TMPDIR=/private/tmp/claude-501 tsx bench/run.ts",
-    "auth:keys": "node scripts/generate-auth-keys.mjs"
+    "auth:keys": "node scripts/generate-auth-keys.mjs",
+    "strategy:quality": "node --import tsx bench/strategy-quality/live.ts",
+    "local:real": "node scripts/local-real.mjs",
+    "strategy:anthropic": "node --import tsx bench/strategy-quality/anthropicLive.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",

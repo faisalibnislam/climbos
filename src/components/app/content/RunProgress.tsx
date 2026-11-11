@@ -64,7 +64,7 @@ const AGENT_WHO: Record<string, string> = {
   "Business insights": "Customers and competitors",
   "Channel scoring": "Ranking channels",
   "Growth plays": "Choosing growth plays",
-  "Growth plan": "The 90-day plan",
+  "Growth plan": "Preparing your plan",
   "Find customers": "Finding companies",
   "Find creators": "Finding creators",
   "First take": "Quick first take",

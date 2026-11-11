@@ -473,6 +473,9 @@ export const exportData = internalQuery({
     const audits = await ctx.db.query("auditEvents").withIndex("by_org_created", (q) => q.eq("orgId", orgId)).order("desc").take(2000);
     const metrics = await ctx.db.query("metricDaily").withIndex("by_org_date", (q) => q.eq("orgId", orgId)).take(10_000);
     const connections = await ctx.db.query("connections").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(100);
+    const goals = await ctx.db.query("goals").withIndex("by_org_status", (q) => q.eq("orgId", orgId)).take(1001);
+    const platformPreparations = await ctx.db.query("platformPreparations").withIndex("by_org_kind", (q) => q.eq("orgId", orgId)).take(1000);
+    const experiments = await ctx.db.query("experiments").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(1000);
     const strip = <T extends Record<string, unknown>>(rows: T[]) => rows.map(({ _creationTime: _c, ...r }) => r);
     return JSON.stringify(
       {
@@ -482,6 +485,15 @@ export const exportData = internalQuery({
         business: strip(business),
         facts: strip(facts),
         strategies: strip(strategies),
+        planningCycles: strip(goals.slice(0, 1000)),
+        privatePlanDrafts: strip(await ctx.db.query("planDrafts").withIndex("by_org_updated", q => q.eq("orgId", orgId)).take(1000)),
+        planTaskProgress: strip(await ctx.db.query("planTaskProgress").withIndex("by_org", q => q.eq("orgId", orgId)).take(1000)),
+        preparedStepWork: strip(await ctx.db.query("planStepWork").withIndex("by_org", q => q.eq("orgId", orgId)).take(1000)),
+        discoveryConversations: strip(await ctx.db.query("intakeConversations").withIndex("by_org_user", q => q.eq("orgId", orgId)).take(100)),
+        discoveryMessages: strip(await ctx.db.query("intakeMessages").withIndex("by_org", q => q.eq("orgId", orgId)).take(2000)),
+        planningCycleHistoryLimited: goals.length > 1000,
+        platformPreparations: strip(platformPreparations),
+        experiments: strip(experiments),
         artifacts: strip(artifacts),
         artifactVersions: strip(versions),
         metrics: strip(metrics),
@@ -725,6 +737,14 @@ export async function endBillingIfLastWorkspace(ctx: MutationCtx, org: Doc<"orga
 
 /** Tables purged by an index whose first field is orgId (children are removed with their parents). */
 const PURGE_BY_ORG: { table: string; index: string }[] = [
+  { table: "intakeMessages", index: "by_org" },
+  { table: "intakeConversations", index: "by_org_user" },
+  { table: "platformPreparations", index: "by_org_kind" },
+  { table: "landingDraftRenders", index: "by_org" },
+  { table: "designOriginalPages", index: "by_org_run" },
+  { table: "designFindingReviews", index: "by_org_run" },
+  { table: "designFindingReviewEvents", index: "by_org_run_finding" },
+  { table: "websiteAuditScreenshots", index: "by_org_run_view" },
   { table: "artifacts", index: "by_org_updated" },
   { table: "wordpressDraftOperations", index: "by_org_created" },
   { table: "approvals", index: "by_org_status" },
@@ -741,6 +761,9 @@ const PURGE_BY_ORG: { table: string; index: string }[] = [
   { table: "contacts", index: "by_org" },
   { table: "experiments", index: "by_org" },
   { table: "campaigns", index: "by_org" },
+  { table: "planDrafts", index: "by_org_updated" },
+  { table: "planTaskProgress", index: "by_org" },
+  { table: "planStepWork", index: "by_org" },
   { table: "strategies", index: "by_org" },
   { table: "goals", index: "by_org_status" },
   { table: "businesses", index: "by_org" },
@@ -796,6 +819,9 @@ export const purgeWorkspaceBatch = internalMutation({
       const rows: any[] = await (ctx.db.query(table as never) as any).withIndex(index, (q: any) => q.eq("orgId", orgId)).take(BATCH - removed);
       for (const r of rows) {
         if (removed >= BATCH * 4) break;
+        if (table === "landingDraftRenders") for (const shot of r.shots ?? []) await ctx.storage.delete(shot.storageId).catch(() => undefined);
+        if (table === "designOriginalPages") for (const shot of r.screenshots ?? []) await ctx.storage.delete(shot.storageId).catch(() => undefined);
+        if (table === "websiteAuditScreenshots") await ctx.storage.delete(r.storageId).catch(() => undefined);
         if (table === "artifacts") {
           const versions = await ctx.db.query("artifactVersions").withIndex("by_artifact", (q) => q.eq("artifactId", r._id)).take(100);
           for (const ver of versions) {

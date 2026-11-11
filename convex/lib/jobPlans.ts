@@ -4,9 +4,9 @@ import type { RoleKey } from "../../shared/economics/roles";
 import { MODEL_SPECS, runtimeModel, VIDEO_ROUTE } from "../../shared/ai/models";
 import { TASKS, type TaskType } from "../../shared/ai/tasks";
 import { estimateRun, type PlannedStep } from "./estimate";
-import { isModelKey, routeModelKey, type ModelRoute } from "../../shared/ai/modelChoice";
+import { BUILT_IN_ROUTE, isModelKey, routeModelKey, type ModelRoute } from "../../shared/ai/modelChoice";
 import type { AgentSpec } from "../../shared/agents/types";
-import { CALL_ROUTES, draftsFor, expertEscalationModel, routeModels, type AiMode } from "../../shared/agents/routes";
+import { CALL_ROUTES, draftsFor, expertEscalationModel, routeModels, taskModelSlot, type AiMode } from "../../shared/agents/routes";
 import {
   adsSpec,
   channelFitSpec,
@@ -22,7 +22,7 @@ import {
   seoSpec,
   socialCalendarSpec,
   socialSpec,
-  strategySpec,
+  strategySpec, focusedStrategySpec, starterStrategySpec,
 } from "../../shared/agents/specs";
 
 /** Engine v2 (agent loop + skills) is switched on per deployment once the benchmark shows it wins. */
@@ -53,8 +53,8 @@ export function agentSteps(spec: AgentSpec<unknown>, research?: { maxSearches: n
 /** The two steps (revised draft + review) one extra revision round needs. */
 export function agentRevisionSteps(spec: AgentSpec<unknown>, revisionModel?: AgentSpec<unknown>["models"]["draft"]): PlannedStep[] {
   return [
-    { kind: "model", role: spec.role, modelKey: revisionModel ?? spec.models.revise ?? spec.models.draft, inputBudget: 40_000, outputBudget: spec.maxTokens.draft },
-    { kind: "model", role: spec.role, modelKey: spec.models.critic, inputBudget: 40_000, outputBudget: spec.maxTokens.critic },
+    { kind: "model", role: spec.role, modelKey: revisionModel ?? spec.models.revise ?? spec.models.draft, inputBudget: spec.inputBudgetFloor ?? 40_000, outputBudget: spec.maxTokens.draft },
+    { kind: "model", role: spec.role, modelKey: spec.models.critic, inputBudget: spec.inputBudgetFloor ?? 40_000, outputBudget: spec.maxTokens.critic },
   ];
 }
 
@@ -63,19 +63,23 @@ export function agentRevisionSteps(spec: AgentSpec<unknown>, revisionModel?: Age
 const CONSISTENCY: PlannedStep = { kind: "model", role: "ceo", modelKey: CALL_ROUTES.chat_intent, inputBudget: 30_000, outputBudget: 16_000 };
 const QUICK_TAKE: PlannedStep = { kind: "model", role: "ceo", modelKey: CALL_ROUTES.chat_intent, inputBudget: 8_000, outputBudget: 3_000 };
 
-function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string }, mode: AiMode): JobPlan | null {
+function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string; researchDepth?: "starter" | "full"; planStyle?: "starter" | "focused" | "detailed" }, mode: AiMode): JobPlan | null {
   // Priced at Luna baseline; an eligible Expert revision reserves its selected model before running.
   const revisionSteps: PlannedStep[] = [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const any = (s: AgentSpec<any>) => {
     const spec = (mode === "expert" ? { ...s, models: routeModels(s.id, "expert") } : { ...s, drafts: draftsFor(s.id, "basic") }) as AgentSpec<unknown>;
-    for (let round = 0; round < Math.max(0, spec.maxRevisions); round++) revisionSteps.push(...agentRevisionSteps(spec, expertEscalationModel(spec.id, mode)));
+    for (let round = 0; round < (spec.revisionWithinInitialCap ? 0 : Math.max(0, spec.maxRevisions)); round++) revisionSteps.push(...agentRevisionSteps(spec, expertEscalationModel(spec.id, mode)));
     return spec;
   };
   const plan = (title: string, roles: RoleKey[], tasks: TaskType[], steps: PlannedStep[], meters: PartialMeters): JobPlan => ({ kind, title, roles, tasks, steps, meters, aiMode: mode, revisionSteps });
   const searches = (t: Parameters<typeof researchFor>[0]) => researchFor(t, { businessName: "", website: "" })?.maxSearches ?? 0;
   switch (kind) {
     case "onboarding_research": {
+      if (params.researchDepth === "starter") {
+        const pages = Math.min(params.pages ?? 2, 2);
+        return { ...plan("Read your business basics", ["data_analyst"], ["business_profile"], [{ kind: "research", scrapeCredits: pages }, modelStep("business_profile"), modelStep("business_profile")], { scrapeCredits: pages }), researchDepth: "starter" };
+      }
       const pages = Math.min(params.pages ?? 3, 3);
       const r = { maxSearches: searches("business_insights") };
       return plan("Understand your business", ["data_analyst", "cmo"], ["business_profile", "business_insights"], [{ kind: "research", scrapeCredits: pages }, modelStep("business_profile"), QUICK_TAKE, ...agentSteps(any(insightsSpec()), r)], {
@@ -84,6 +88,11 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
       });
     }
     case "strategy": {
+      if (params.planStyle === "starter") return { ...plan("Prepare your first growth step", ["cmo"], ["growth_strategy"], agentSteps(any(starterStrategySpec())), {}), planStyle: "starter" };
+      if (params.planStyle === "focused") {
+        const r = { maxSearches: searches("growth_strategy") };
+        return { ...plan("Prepare your next growth step", ["cmo"], ["growth_strategy"], agentSteps(any(focusedStrategySpec()), r), { searchCalls: r.maxSearches }), planStyle: "focused" };
+      }
       const r = { maxSearches: searches("growth_strategy") };
       const fit = channelFitSpec({ candidateIds: [], typeKeys: [], dims: {} });
       return plan("Build your growth plan", ["ceo", "cmo"], ["growth_strategy"], [QUICK_TAKE, ...agentSteps(any(fit)), ...agentSteps(any(growthPlaysSpec()), r), ...agentSteps(any(strategySpec())), CONSISTENCY], { searchCalls: r.maxSearches });
@@ -92,7 +101,7 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
       const qty = Math.max(1, Math.min(params.quantity ?? 3, 6));
       const images = Math.max(0, Math.min(params.images ?? 0, qty, 2));
       const r = { maxSearches: searches("social_posts") };
-      const spec = any(socialSpec([params.channel ?? "instagram"]));
+      const spec = any(socialSpec([params.channel ?? "instagram"], { outputItems: qty }));
       return plan(
         `Draft ${qty} social post${qty === 1 ? "" : "s"}`,
         images ? ["social_media_manager", "creative_director"] : ["social_media_manager"],
@@ -177,12 +186,13 @@ export interface JobPlan {
    * Revision rounds the agents may add while running. Each reserves its own cost first (Expert may revise on
    * Sol), so they are not in the upfront reservation but do count toward the most a job can cost.
    */
+  researchDepth?: "starter" | "full"; planStyle?: "starter" | "focused" | "detailed";
   revisionSteps?: PlannedStep[];
 }
 
 function modelStep(task: TaskType, webSearches = 0): PlannedStep {
   const contract = TASKS[task];
-  const modelKey = (task === "chat_intent" ? CALL_ROUTES.chat_intent : contract.primaryModel) ?? runtimeModel(CURRENT_ROUTING.routes[contract.role].primary);
+  const modelKey = taskModelSlot(task) ?? (task === "chat_intent" ? CALL_ROUTES.chat_intent : contract.primaryModel) ?? runtimeModel(CURRENT_ROUTING.routes[contract.role].primary);
   const searches = MODEL_SPECS[modelKey].provider === "openai" ? webSearches : 0;
   return {
     kind: "model",
@@ -194,16 +204,16 @@ function modelStep(task: TaskType, webSearches = 0): PlannedStep {
   };
 }
 
-export function planJob(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string; clips?: number } = {}, opts: { fixture?: boolean; mode?: AiMode } = {}): JobPlan {
+export function planJob(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string; clips?: number; researchDepth?: "starter" | "full"; planStyle?: "starter" | "focused" | "detailed" } = {}, opts: { fixture?: boolean; mode?: AiMode } = {}): JobPlan {
   // The weekly planner exists only as an agent: real workspaces always get it.
-  if ((engineV2() || kind === "social_calendar" || kind === "outbound") && !opts.fixture) {
+  if ((engineV2() || kind === "social_calendar" || kind === "outbound" || (kind === "strategy" && ["starter", "focused"].includes(params.planStyle ?? "")) || (kind === "onboarding_research" && params.researchDepth === "starter")) && !opts.fixture) {
     const v2 = v2Plan(kind, params, opts.mode ?? "basic");
     if (v2) return v2;
   }
   return { ...v1Plan(kind, params), aiMode: "basic" };
 }
 
-function v1Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string; clips?: number }): Omit<JobPlan, "aiMode"> {
+function v1Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string; clips?: number; researchDepth?: "starter" | "full"; planStyle?: "starter" | "focused" | "detailed" }): Omit<JobPlan, "aiMode"> {
   switch (kind) {
     case "onboarding_research": {
       const pages = Math.min(params.pages ?? 3, 3);
@@ -315,7 +325,8 @@ export function maxJobMicros(plan: JobPlan, { fixture = false, route }: { fixtur
 }
 
 function estimateSteps(plan: JobPlan, planned: PlannedStep[], { fixture, route }: { fixture: boolean; route?: ModelRoute }): number {
-  const usesV2 = !fixture && (engineV2() || plan.kind === "social_calendar" || plan.kind === "outbound");
+  const usesV2 = !fixture && (engineV2() || plan.kind === "social_calendar" || plan.kind === "outbound" || ["starter", "focused"].includes(plan.planStyle ?? "") || plan.researchDepth === "starter");
+  route ??= BUILT_IN_ROUTE;
   const steps = route ? planned.map((s) => (s.kind === "model" && s.modelKey && isModelKey(s.modelKey) ? { ...s, modelKey: routeModelKey(route, s.modelKey) } : s)) : planned;
   return estimateRun(steps, currentRateVersion().id, { repair: !usesV2 }).costMicros;
 }

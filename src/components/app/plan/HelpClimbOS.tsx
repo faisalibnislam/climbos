@@ -28,8 +28,8 @@ const FUNNEL: { key: "visitors" | "leads" | "activated" | "newCustomers"; label:
 ];
 
 /**
- * Every number ClimbOS can use to sharpen a plan, asked in plain words in one place. "Not sure" never invents
- * a figure: the plan uses a clearly labelled assumption instead. Saving offers a refresh; it never starts one.
+ * Every number ClimbOS can use to sharpen a plan, asked in plain words in one place. "I don’t know" keeps
+ * the business input unknown; it never invents a financial figure. Saving offers a refresh; it never starts one.
  */
 export function HelpClimbOS({
   slug,
@@ -96,7 +96,7 @@ function NewBusinessNumbers({ slug, canEdit, currency, customerData, refresh, ne
       <div>
         <h3 id="help-climbos-heading" className="heading-card">No customers yet? Just add your planned price</h3>
         <p className="mt-1 text-sm text-ink-3">
-          The plan uses labelled estimates and focuses on your first customers.{needed ? " Save, then refresh." : ""}
+          Unknown numbers stay unknown. AI can still prepare a small first step.{needed ? " Save, then refresh." : ""}
         </p>
       </div>
       <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
@@ -218,10 +218,10 @@ function CustomerNumbers({
   return (
     <section aria-labelledby="help-climbos-heading" className="flex flex-col gap-4 rounded-[var(--radius-card)] border border-line bg-surface p-[var(--card-p)]">
       <div>
-        <h3 id="help-climbos-heading" className="heading-card">{needed ? "3 numbers needed to check this plan" : "Add a few numbers"}</h3>
+        <h3 id="help-climbos-heading" className="heading-card">{needed ? "Add the numbers you know" : "Add a few numbers"}</h3>
         <p className="mt-1 text-sm text-ink-3">
           {needed
-            ? "These show whether a play makes money. Rough is fine; tap Not sure for a labelled estimate."
+            ? "These help decide what you can afford to spend. Leave anything you do not know unknown."
             : "Optional. Each makes the numbers more accurate."}
         </p>
       </div>
@@ -257,7 +257,7 @@ function CustomerNumbers({
                 setUnsure(new Set(["revenue", "margin", "churn"]));
                 setMoney({ revenue: "", margin: "", churn: "" });
                 setSaved(true);
-                toast({ tone: "success", title: "Saved. Using labelled estimates." });
+                toast({ tone: "success", title: "Saved. These numbers stay unknown." });
               } catch (e) {
                 toast({ tone: "danger", title: errorMessage(e) });
               } finally {
@@ -270,7 +270,7 @@ function CustomerNumbers({
         </div>
       ) : null}
       {customerData?.status === "no_data_yet" ? (
-        <p className="text-xs text-ink-3">Using labelled estimates for now. Connect billing (like Stripe) later to measure them.</p>
+        <p className="text-xs text-ink-3">These numbers are unknown. You can connect billing later to add real results.</p>
       ) : null}
 
       <fieldset className="flex flex-col gap-3" disabled={!canEdit || busy}>
@@ -283,7 +283,7 @@ function CustomerNumbers({
                 <span className="text-ui font-medium text-ink">{m.question}</span>
                 <span className="text-xs text-ink-3">{m.help}</span>
                 <span className="flex items-center gap-2">
-                  <Input inputMode="decimal" className="max-w-40" value={money[m.key] ?? ""} placeholder={isUnsure ? "Estimate" : ""} disabled={isUnsure || !canEdit || busy} onChange={(e) => setMoney((v) => ({ ...v, [m.key]: e.target.value }))} />
+                  <Input inputMode="decimal" className="max-w-40" value={money[m.key] ?? ""} placeholder={isUnsure ? "Unknown" : ""} disabled={isUnsure || !canEdit || busy} onChange={(e) => setMoney((v) => ({ ...v, [m.key]: e.target.value }))} />
                   <span className="text-xs text-ink-3">{m.suffix(currency)}</span>
                 </span>
               </label>
@@ -294,7 +294,7 @@ function CustomerNumbers({
                 className={cn("inline-flex h-8 items-center gap-1 rounded-full border px-3 text-xs transition-colors", isUnsure ? "border-brand-800 bg-brand-50 text-ink" : "border-line-strong text-ink-2 hover:border-ink-3")}
               >
                 {isUnsure ? <Check className="size-3.5" aria-hidden /> : null}
-                Not sure, estimate it
+                I don’t know
               </button>
             </div>
           );

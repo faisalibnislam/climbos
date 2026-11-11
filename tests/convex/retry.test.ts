@@ -3,7 +3,7 @@ import { checkInvariants } from "../../shared/economics/ledger";
 import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { ledgerOf } from "../../convex/lib/periods";
-import { asNewUser, setup, type T } from "./helpers";
+import { asNewUser, makePaid, setup, type T } from "./helpers";
 
 /** Stopped jobs continue from their last finished step: owner Retry and automatic resume after an interruption. */
 
@@ -11,6 +11,8 @@ async function workspace(t: T, email: string) {
   const owner = await asNewUser(t, email);
   const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Retry Co" });
   await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "More paying customers", horizonDays: 90, monthlyAdBudget: 300 });
+  // Workflow coverage needs enough credits for Sonnet; free-wallet guards are tested separately.
+  await makePaid(t, orgId);
   return { ...owner, slug, orgId: orgId as Id<"organizations"> };
 }
 

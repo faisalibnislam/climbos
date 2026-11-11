@@ -1,0 +1,2 @@
+import { v } from "convex/values";
+export const pageSampleV = v.object({ url: v.string(), status: v.union(v.literal("read"), v.literal("blocked_by_robots"), v.literal("failed")), checkedAt: v.number(), visibleText: v.string(), internalLinks: v.array(v.string()), observedLinks: v.optional(v.array(v.string())), findings: v.array(v.object({ id: v.string(), level: v.union(v.literal("check"), v.literal("attention")), title: v.string(), evidence: v.string(), nextStep: v.string() })) });

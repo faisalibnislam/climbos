@@ -2,6 +2,8 @@
 
 **Audit date:** 25 October 2026. **Source:** `~/Downloads/Prompt for improving.md` and the related user instructions in this task. This is a repository-state audit, not a claim that every user-facing outcome has been validated in production.
 
+**Focused local update — 9 November 2026:** the [current audit](../Local-Audit-2026-11-09.md) records runtime repairs to researched channel scoring, owner feedback retention, direction and creative alternatives, practical channel decisions, creator research, social routing, search advice and owner UX. Its fixture and browser evidence does not validate expert reasoning across all 410 requirements. The row statuses below remain the dated inventory and must not be presented as full specification completion.
+
 ## How to read this audit
 
 - **Partially Implemented** means a real code path exists, but the full described capability or its live validation is not present.

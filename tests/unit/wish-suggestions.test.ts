@@ -3,7 +3,7 @@ import { wishSuggestions } from "../../src/components/app/wish/WishComposer";
 
 describe("home request suggestions", () => {
   it("leads with the three universal asks, then one tailored to the business type", () => {
-    expect(wishSuggestions("saas").slice(0, 3)).toEqual(["New business: plan my launch", "Get more customers", "Grow my followers on social media"]);
+    expect(wishSuggestions("saas").slice(0, 3)).toEqual(["Get more paying customers", "Help me launch a product", "Help me build an audience"]);
     expect(wishSuggestions("saas")[3]).toBe("Help me choose the next step for my software business");
     expect(wishSuggestions("ecommerce")[3]).toBe("Help me choose the next step for my online store");
     expect(wishSuggestions("services")[3]).toBe("Help me choose the next step for my service business");

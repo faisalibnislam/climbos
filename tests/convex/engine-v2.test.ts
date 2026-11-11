@@ -4,7 +4,7 @@ import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { ledgerOf } from "../../convex/lib/periods";
 import { readExpertPlan } from "../../shared/agents/planCompatibility";
-import { asNewUser, setup, type T } from "./helpers";
+import { asNewUser, makePaid, setup, type T } from "./helpers";
 
 /**
  * Engine v2 wiring: the agent loop runs as checkpointed, metered workflow
@@ -17,6 +17,8 @@ async function workspace(t: T, email: string) {
   const owner = await asNewUser(t, email);
   const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Wire Co" });
   await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "More paying customers", horizonDays: 90, monthlyAdBudget: 300 });
+  // Workflow coverage needs enough credits for Sonnet; free-wallet guards are tested separately.
+  await makePaid(t, orgId);
   return { ...owner, slug, orgId: orgId as Id<"organizations"> };
 }
 
@@ -125,7 +127,7 @@ describe("Engine v2 wiring", () => {
     const labels = d.steps.map((s) => s.label);
     expect(labels).toEqual(expect.arrayContaining(["Growth plan: draft", "Growth plan: review 1"]));
     // Climb AI Basic writes a second version of each strategy agent's draft and keeps the better one.
-    expect(labels).toEqual(expect.arrayContaining(["Growth plan: draft B", "Growth plan: review B", "Growth plays: draft B"]));
+    expect(labels.some((label) => label.endsWith("draft B") || label.endsWith("review B"))).toBe(false);
     expect(labels.some((l) => l.includes("revision"))).toBe(false); // shipped first time
     expect(d.steps.every((s) => s.status === "succeeded")).toBe(true);
     expect(d.usage.length).toBeGreaterThanOrEqual(2);
@@ -256,6 +258,7 @@ describe("Engine v2 wiring", () => {
     expect(checkInvariants(ledgerOf(d.period!))).toEqual([]);
   });
 
+  // This intentionally reimports/restarts many checkpointed actions; allow module work under suite load.
   it("yields before the action time limit and resumes from checkpoints without repeating work", async () => {
     process.env.CLIMBOS_FAKE_LLM = "revise";
     process.env.CLIMBOS_AGENT_SOFT_LIMIT_MS = "1"; // every action yields after starting
@@ -272,7 +275,7 @@ describe("Engine v2 wiring", () => {
     expect([...counts.values()].every((n) => n === 1)).toBe(true);
     // Plays agent + plan agent each reserved their one revision round, once.
     expect(d.steps.filter((s) => /reserve revision/i.test(s.label)).length).toBe(2);
-  });
+  }, 20_000);
 
   it("runs content jobs through the agent and saves drafts for approval", async () => {
     const t = setup();

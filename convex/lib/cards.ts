@@ -7,6 +7,8 @@ import { audit } from "./audit";
 import { planJob, type JobKind, maxJobMicros } from "./jobPlans";
 import { appError } from "./tenancy";
 import { startCampaign } from "../outbound";
+import { canDriveWork } from "../../shared/agents/quality";
+import { PreparedWorkSchema } from "../../shared/agents/preparedWork";
 
 /** A plan channel → the job that drafts its first work once the plan is approved. */
 export const CHANNEL_JOBS: Record<string, JobKind> = {
@@ -44,6 +46,15 @@ export async function startPlanWork(
   const out: PlanWorkResult = { started: [], waiting: [], covered: [], busy: false };
   const s = await ctx.db.get(p.strategyId);
   if (!s || s.orgId !== p.org._id || s.status !== "approved") return out;
+  // A focused plan already contains the actual starter drafts. Reusing those
+  // drafts is deterministic and must not start another set of paid AI jobs.
+  if (s.expert?.focusedMove) {
+    if (!canDriveWork(s.expert.quality)) throw appError("INVALID", "This plan needs AI fixes before its work can start.");
+    const prepared = PreparedWorkSchema.array().min(1).max(3).safeParse(s.expert.preparedWork);
+    if (!prepared.success) throw appError("INVALID", "This plan is missing its prepared drafts. Update it before starting work.");
+    out.covered = prepared.data.map((work) => work.title);
+    return out;
+  }
   const now = Date.now();
   const channels = s.channels.map((c) => ({ ...c }));
   // Plan v1 already drafted the first posts and a welcome email ("first win").
@@ -173,8 +184,9 @@ export async function startCardRun(
   }
   const images = job === "content_social" ? 1 : 0;
   const aiMode = await resolveAiMode(ctx, org, job);
-  const plan = planJob(job, { quantity: payload.quantity, images, channel: payload.channel }, { fixture: org.kind === "demo", mode: aiMode });
-  const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: card.title || plan.title, roles: plan.roles, input: payload, steps: plan.steps, meters: plan.meters, createdBy: p.userId, isFixture: org.kind === "demo", aiMode, customAgentId: payload.customAgentId as Id<"customAgents"> | undefined, customAgentParentRunId: payload.customAgentParentRunId as Id<"workflowRuns"> | undefined, agentArchetypeId: payload.agentArchetypeId });
+  const runInput = job === "strategy" ? { ...payload, planStyle: "focused" as const } : payload;
+  const plan = planJob(job, { quantity: payload.quantity, images, channel: payload.channel, ...(job === "strategy" ? { planStyle: "focused" } : {}) }, { fixture: org.kind === "demo", mode: aiMode });
+  const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: card.title || plan.title, roles: plan.roles, input: runInput, steps: plan.steps, meters: plan.meters, createdBy: p.userId, isFixture: org.kind === "demo", aiMode, customAgentId: payload.customAgentId as Id<"customAgents"> | undefined, customAgentParentRunId: payload.customAgentParentRunId as Id<"workflowRuns"> | undefined, agentArchetypeId: payload.agentArchetypeId });
   await ctx.db.patch(card._id, { status: "running", runId, updatedAt: Date.now() });
   const brief = payload.brief?.slice(0, 1500) || undefined;
   if (job === "content_social" || job === "content_ads" || job === "content_email" || job === "content_seo") {

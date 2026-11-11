@@ -227,7 +227,7 @@ describe("social intelligence routing", () => {
     ]));
   });
 
-  it("warns on a mismatched channel when single-channel publishing binds the final artifact to the selected channel", () => {
+  it("rejects a mismatched channel even for a single-platform request", () => {
     const spec = socialSpec(["facebook"]);
     const input: AgentInput = { task: "Write one Facebook post", brief: "A business", facts: [] };
     const copyBrief = {
@@ -242,6 +242,6 @@ describe("social intelligence routing", () => {
       posts: [{ channel: "instagram", title: "A useful idea", body: "A short useful idea for the audience.", hashtags: [], altText: "", imageIdea: "", factIndexes: [], suggestedDay: 1, angle: "Make the next step clearer", format: "text", hook: "A useful idea", slides: [], videoScript: "", shotList: [], visualBrief: "", firstComment: "" }],
     };
     const issue = (spec.lint?.(output as never, input) ?? []).find((entry) => entry.rule === "unexpected_channel");
-    expect(issue?.severity).toBe("warn");
+    expect(issue?.severity).toBe("error");
   });
 });

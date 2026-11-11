@@ -11,6 +11,7 @@ import { Badge, Button, Field, Input, Select, Textarea, toast } from "@/componen
 import { Prose } from "@/components/ds/content";
 import { errorMessage } from "@/components/app/errors";
 import { formatDateTime } from "./money";
+import { DesignResults } from "./plan/DesignResults";
 
 type VisualEvidence = { view?: string; sourceUrl?: string; observation?: string };
 type Finding = { area?: string; observation?: string; recommendation?: string; impact?: string; sourceUrl?: string; evidenceQuote?: string; evidenceKind?: string; visualEvidence?: VisualEvidence };
@@ -173,6 +174,7 @@ export function ConversionAuditView({ value, slug, runId }: { value: unknown; sl
           {priorByIndex.get(i) ? <PriorDecisionNote prior={priorByIndex.get(i)!} /> : null}
           <DesignFindingReview key={`${runId}:${i}:${reviewsByIndex.get(i)?.updatedAt ?? "open"}`} slug={slug} runId={runId} findingIndex={i} current={reviewsByIndex.get(i)} canEdit={findingReview?.canEdit === true} />
           <FindingHistory events={(findingReview?.history ?? []).filter((e) => e.findingIndex === i)} />
+          <DesignResults slug={slug} runId={runId} findingIndex={i} />
           {(() => {
             const original = findingReview?.originals?.find((o) => o.pageUrl === (finding as { sourceUrl?: string }).sourceUrl);
             return original ? <p className="mt-1 text-xs text-ink-3">Original page saved {formatDateTime(original.retainedAt)}: {original.textChars.toLocaleString()} characters of read text (fingerprint {original.textHash.slice(0, 12)}){original.views.length ? ` and the ${original.views.join(" and ")} screenshot${original.views.length > 1 ? "s" : ""}, kept past the 30-day limit` : ""}.</p> : null;

@@ -17,9 +17,9 @@ export function NotificationBell({ slug }: { slug: string }) {
   const unread = data?.unread ?? 0;
   return (
     <Popover onOpenChange={(open) => (open && unread ? void markRead({}) : undefined)}>
-      <PopoverTrigger aria-label={unread ? `Notifications, ${unread} new` : "Notifications"} className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-ink-2 hover:bg-surface-2">
+      <PopoverTrigger aria-label={unread ? `Notifications, ${unread > 9 ? "9+" : unread} new` : "Notifications"} aria-description={unread > 9 ? `${unread} unread notifications` : undefined} className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-ink-2 hover:bg-surface-2">
         <Bell className="size-4" aria-hidden />
-        {unread ? <span className="absolute right-1 top-1 grid min-w-4 place-items-center rounded-full bg-orange-600 px-1 text-xs font-semibold leading-4 text-white">{unread > 9 ? "9+" : unread}</span> : null}
+        {unread ? <span aria-hidden="true" className="absolute right-1 top-1 grid min-w-4 place-items-center rounded-full bg-orange-800 px-1 text-xs font-semibold leading-4 text-white">{unread > 9 ? "9+" : unread}</span> : null}
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] p-0">
         <p className="border-b border-line px-4 py-2.5 text-ui font-medium text-ink">Notifications</p>

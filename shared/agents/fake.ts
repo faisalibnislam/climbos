@@ -1,3 +1,4 @@
+import { milestoneWindows } from "./planningCycles";
 import { demoBusinessModelCheck } from "./businessModel";
 import { z } from "zod";
 import { turnCostMicros, ZERO_USAGE, type TurnRequest, type TurnResult } from "../ai/types";
@@ -15,9 +16,10 @@ import type { RateVersion } from "../economics/rates";
  * - "fail":   every call fails with a provider error.
  */
 
-type JsonSchema = { type?: string | string[]; properties?: Record<string, JsonSchema>; items?: JsonSchema; enum?: unknown[]; anyOf?: JsonSchema[]; required?: string[] };
+type JsonSchema = { type?: string | string[]; const?:unknown; properties?: Record<string, JsonSchema>; items?: JsonSchema; enum?: unknown[]; anyOf?: JsonSchema[]; required?: string[] };
 
 function sample(s: JsonSchema, marker: string, key = ""): unknown {
+  if(Object.prototype.hasOwnProperty.call(s,"const"))return s.const;
   if (s.enum?.length) return s.enum[0];
   if (s.anyOf?.length) return sample(s.anyOf[0], marker, key);
   const type = Array.isArray(s.type) ? s.type[0] : s.type;
@@ -31,6 +33,9 @@ function sample(s: JsonSchema, marker: string, key = ""): unknown {
         // The fixture has no dated trend source bundle. Keep optional trend
         // evidence absent instead of filling its dates and claims with markers.
         if (k === "trendEvidence") continue;
+        if (k === "publishingDetails") continue; // No observed destination or author in this generic fixture.
+        if (k === "focusedMove") { out[k] = { version: 1, title: "Synthetic focused test move", why: "Synthetic reasoning for the workflow test, not evidence about a real business.", firstAction: "Review the synthetic draft.", aiCanDo: "A synthetic draft has been prepared for the automated workflow check.", evidenceRefs: [] }; continue; }
+        if (k === "preparedWork") { out[k] = [{ title: "Synthetic fixture draft", kind: "page_copy", target: "To build: fixture page", draft: "Synthetic fixture draft for automated workflow checks only. No real business claims or outcomes are supplied.", evidenceRefs: [], checksBeforeUse: ["Fixture only; do not publish."], status: "draft" }]; continue; }
         out[k] = sample(v, marker, k);
       }
       return out;
@@ -86,6 +91,22 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
   } else {
     const marker = lastUser.includes("A senior reviewer assessed your draft") ? "fake-v2" : "fake-v1";
     output = sample(z.toJSONSchema(req.schema) as JsonSchema, marker);
+    const social = output as { posts?: { channel?: string; body?: string; format?: string; videoScript?: string; shotList?: { timing: string; show: string }[] }[] };
+    const requestedChannel = lastUser.match(/Write\s+(?:\d+|one|two|three)\s+social\s+posts?\s+for\s+(instagram|facebook|linkedin|x|tiktok|pinterest|youtube)\b/i)?.[1]?.toLowerCase();
+    if (requestedChannel && Array.isArray(social?.posts)) for (const post of social.posts) {
+      post.channel = requestedChannel;
+      if (["facebook", "linkedin"].includes(requestedChannel)) post.body = `${marker} This is a synthetic draft for testing the review workflow. Start with the task you want to explain. Show the actual materials and the next useful step. Check every detail against the business information before sharing it. Keep the explanation clear and give readers a practical way to decide whether they want to learn more.`;
+
+      if (["tiktok", "youtube"].includes(requestedChannel)) {
+        post.format = "reel";
+        post.videoScript = "A synthetic demonstration script. Record the real task without claiming a customer result.";
+        post.shotList = ["Show the task", "Show the real product", "Show the next step"].map((show, index) => ({ timing: `${index * 4}–${index * 4 + 4}s`, show }));
+      }
+    }
+    const cycle = lastUser.match(/EXECUTION CYCLE: (\d+) days/);
+    if (cycle && output && typeof output === "object" && "phases" in output) {
+      (output as { phases: unknown[] }).phases = milestoneWindows(Number(cycle[1])).map((window, index, windows) => ({ name: index === windows.length - 1 ? "Review and choose what comes next" : "Prepare and test the next step", days: `${window.start}–${window.end}`, focus: "Draft an improvement to the existing page and prepare a focused creator distribution test for owner review.", firstAction: "Draft the page change using confirmed facts.", howToCheck: "Record qualified visits and inquiries; baseline unknown until measured.", decisionRule: "Stop for harm; carry insufficient evidence forward; review before changing scope." }));
+    }
     if (lastUser.includes("COMPETITOR:") && output && typeof output === "object" && "suggestedAction" in output) {
       const proposal = output as { changed?: boolean; summary?: string; bullets?: string[]; soWhat?: string; suggestedAction?: unknown };
       const changedLines = (section: string) => lastUser.split(`${section}:`)[1]?.split("\n\n</untrusted_content>")[0]?.trim().split("\n").filter(Boolean) ?? [];
@@ -217,8 +238,8 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         challengedConvention: "A small studio must rely only on referrals to grow.",
         whyConventionPersists: "Referrals are familiar, low-cost and can arrive from customers who already trust the studio.",
         costOfBreaking: "A new public format could consume delivery time or make the studio's offer harder to understand.",
-        businessMechanism: "Use a customer-approved portfolio review as a useful public learning resource, without claiming it proves demand.",
-        businessAction: "Create one anonymized process card with customer permission, then share it privately with a few qualified buyers.",
+        businessMechanism: `${title}: develop this distinct synthetic mechanism without claiming it proves demand.`,
+        businessAction: `${title}: prepare one private example for the owner to review before any customer contact.`,
         whyItCouldMatter: "It could make the studio's working method easier for a well-fit buyer to understand before booking.",
         customerBehavior: "A qualified prospect asks a specific question or books a conversation about the process.",
         audienceOrCondition: "Only if past customers consent to share the work and the studio has capacity for a few new projects.",
@@ -275,13 +296,15 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
     if (plan && typeof plan === "object" && "diagnosis" in plan) for (const x of [...(plan.channels ?? []), ...(plan.audiences ?? [])]) if (x && typeof x === "object") x.cites = [];
     if (plan && typeof plan === "object" && Array.isArray(plan.weekOneChecklist) && "diagnosis" in plan) plan.weekOneChecklist = ["Update the comparison page with the referral offer.", "Pitch the comparison page to 10 partner newsletters."];
     // Channel scoring: valid library types and the candidates named in the prompt.
-    const cf = output as { types?: unknown; dimensions?: unknown; channels?: unknown; summary?: unknown };
+    const cf = output as { types?: unknown; dimensions?: unknown; channels?: unknown; summary?: unknown; decisions?: unknown };
     if (cf && typeof cf === "object" && Array.isArray(cf.types) && Array.isArray(cf.dimensions) && Array.isArray(cf.channels)) {
       const ids = [...lastUser.matchAll(/^([A-Z]\d{2}) · /gm)].map((m) => m[1]).slice(0, 10);
       cf.types = ["b2b_saas"];
       // Neutral text: these reasons flow into later prompts, where a draft marker would confuse the fake reviewer.
       cf.dimensions = [{ key: "customerType", value: "b2b", confidence: "medium", evidence: "scoring evidence" }];
-      cf.channels = ids.map((id, i) => ({ id, deltas: [i === 0 ? 10 : 0, 0, 0, 0, 0, 0, 0, 0], reason: "scoring reason", evidence: "scoring evidence", platform: "Google", tactic: "scoring tactic", audience: "scoring audience" }));
+      const reviewed = ids.map((id, i) => ({ id, deltas: [i === 0 ? 10 : 0, 0, 0, 0, 0, 0, 0, 0], reason: "scoring reason", evidence: "scoring evidence", platform: "Google", tactic: "scoring tactic", audience: "scoring audience", decisionBrief: { firstStep: "Review the proposed audience and destination before starting.", unknowns: ["This is fixture data; business-specific channel fit is unknown."], setupSteps: [], ownerHoursPerWeek: null, effortBasis: "unknown", smallestCheck: "Review one relevant customer situation and record whether this route fits.", changeCourseIf: "The customer does not use this route when choosing a solution.", alternative: "Compare a direct customer conversation before committing to a new channel." } }));
+      cf.channels = reviewed.map(({ decisionBrief: _brief, ...row }) => row);
+      cf.decisions = reviewed.slice(0, 3).map(({ id, decisionBrief }) => ({ id, decisionBrief }));
       cf.summary = ["scoring summary"];
     }
     // Outbound: three distinct, evidenced prospects and a mergeable sequence.

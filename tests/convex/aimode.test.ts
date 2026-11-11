@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { estimateJobMicros, maxJobMicros, planJob, RUN_COST_CAP_MULTIPLE } from "../../convex/lib/jobPlans";
+import { BUILT_IN_ROUTE } from "../../shared/ai/modelChoice";
 import { MAX_RUN_COST_MULTIPLE } from "../../convex/engine";
 import { asNewUser, setup, type T } from "./helpers";
 
@@ -37,20 +38,18 @@ describe("Climb AI Basic / Expert", () => {
     delete process.env.CLIMBOS_FAKE_LLM;
   });
 
-  it("free workspaces run Basic on Luna and can't choose Expert", async () => {
+  it("free workspaces keep Basic available, enforce the quoted wallet limit and cannot choose Expert", async () => {
     const t = setup();
     const w = await workspace(t, "mode-free@example.com");
     expect(await w.client.query(api.workspace.aiMode, { slug: w.slug })).toMatchObject({ mode: "basic", expertUnlocked: false });
     await expect(w.client.mutation(api.orgs.generatePlan, { slug: w.slug, aiMode: "expert" })).rejects.toThrow(/paid plan/);
-    await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
-    await t.finishAllScheduledFunctions(() => undefined);
-    const run = await lastRun(t, w.orgId, "strategy");
-    expect(run.aiMode).toBeUndefined();
-    const steps = await t.run(async (ctx) => ctx.db.query("workflowSteps").withIndex("by_run", (q) => q.eq("runId", run._id)).collect());
-    expect(steps.filter((s) => s.model).every((s) => s.model === "gpt-6-luna")).toBe(true);
+    await expect(w.client.mutation(api.orgs.generatePlan, { slug: w.slug })).rejects.toThrow(/credits/);
+    const runs = await t.run(async (ctx) => ctx.db.query("workflowRuns").withIndex("by_org_created", (q) => q.eq("orgId", w.orgId)).collect());
+    expect(runs).toHaveLength(0);
+
   });
 
-  it("paid workspaces default to Expert with Luna baseline and keep Basic available", async () => {
+  it("paid workspaces default to Expert with Sonnet strategy and keep Basic available", async () => {
     const t = setup();
     const w = await workspace(t, "mode-paid@example.com");
     await makePaid(t, w.orgId);
@@ -59,12 +58,12 @@ describe("Climb AI Basic / Expert", () => {
     await t.finishAllScheduledFunctions(() => undefined);
     const run = await lastRun(t, w.orgId, "strategy");
     expect(run.aiMode).toBe("expert");
-    expect(run.estimateMicros).toBe(estimateJobMicros(planJob("strategy", {}, { mode: "expert" })));
+    expect(run.estimateMicros).toBe(estimateJobMicros(planJob("strategy", {}, { mode: "expert" }), { route: BUILT_IN_ROUTE }));
     const steps = await t.run(async (ctx) => ctx.db.query("workflowSteps").withIndex("by_run", (q) => q.eq("runId", run._id)).collect());
     const modelOf = (label: string) => steps.find((s) => s.label === label)?.model;
-    expect(modelOf("Growth plan: draft")).toBe("gpt-6-luna");
-    expect(modelOf("Growth plan: review 1")).toBe("gpt-6-luna");
-    expect(modelOf("Growth plays: research")).toBe("gpt-6-luna");
+    expect(modelOf("Growth plan: draft")).toBe("claude-sonnet-5-5");
+    expect(modelOf("Growth plan: review 1")).toBe("claude-sonnet-5-5");
+    expect(modelOf("Growth plays: research")).toBe("claude-haiku-5-5");
     // The owner can save Basic as the default.
     await w.client.mutation(api.workspace.setAiMode, { slug: w.slug, mode: "basic" });
     expect(await w.client.query(api.workspace.aiMode, { slug: w.slug })).toMatchObject({ mode: "basic", expertUnlocked: true });
@@ -79,11 +78,11 @@ describe("Climb AI Basic / Expert", () => {
     expect(available.expertUnlocked).toBe(true);
     expect(available.estimates.onboarding_research.basic).toBeGreaterThan(0);
     expect(available.estimates.onboarding_research.expert).toBeGreaterThan(0);
-    expect(available.estimates.onboarding_research.basic).toBe(maxJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "basic" })));
-    expect(available.estimates.onboarding_research.expert).toBe(maxJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "expert" })));
+    expect(available.estimates.onboarding_research.basic).toBe(maxJobMicros(planJob("onboarding_research", { pages: 2, researchDepth: "starter" }, { mode: "basic" }), { route: BUILT_IN_ROUTE }));
+    expect(available.estimates.onboarding_research.expert).toBe(maxJobMicros(planJob("onboarding_research", { pages: 2, researchDepth: "starter" }, { mode: "expert" }), { route: BUILT_IN_ROUTE }));
     expect(RUN_COST_CAP_MULTIPLE).toBe(MAX_RUN_COST_MULTIPLE);
-    // Expert may revise on Sol, so its most-possible cost is higher than Basic's.
-    expect(available.estimates.onboarding_research.expert).toBeGreaterThan(available.estimates.onboarding_research.basic);
+    // Expert asks Sonnet for deeper reasoning within the same reserved token limits.
+    expect(available.estimates.onboarding_research.expert).toBe(available.estimates.onboarding_research.basic);
 
     await w.client.mutation(api.orgs.startResearch, {
       slug: w.slug,
@@ -92,8 +91,8 @@ describe("Climb AI Basic / Expert", () => {
       aiMode: "basic",
     });
     const run = await lastRun(t, w.orgId, "onboarding_research");
-    expect(run.estimateMicros).toBe(estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "basic" })));
-    expect(run.estimateMicros).not.toBe(estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "expert" })));
+    expect(run.estimateMicros).toBe(estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "basic" }), { route: BUILT_IN_ROUTE }));
+    expect(run.estimateMicros).toBe(estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "expert" }), { route: BUILT_IN_ROUTE }));
   });
 
   it("matches the legacy-engine reservation estimate when Engine v2 is disabled", async () => {
@@ -107,6 +106,6 @@ describe("Climb AI Basic / Expert", () => {
       aiMode: "basic",
     });
     const run = await lastRun(t, w.orgId, "onboarding_research");
-    expect(run.estimateMicros).toBe(estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "basic" })));
+    expect(run.estimateMicros).toBe(estimateJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "basic" }), { route: BUILT_IN_ROUTE }));
   });
 });

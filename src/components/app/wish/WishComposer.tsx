@@ -6,7 +6,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { toast } from "@/components/ui";
 import { RequestComposer } from "@/components/ui/request-composer";
 import { errorInfo } from "@/components/app/errors";
-import { wishDraftKey } from "@/components/app/draftKeys";
+import { askDraftKey, wishDraftKey } from "@/components/app/draftKeys";
 import { useCostDisplay } from "@/components/app/useCostDisplay";
 
 export interface WishComposerHandle {
@@ -15,7 +15,7 @@ export interface WishComposerHandle {
 
 /** Everyday, business-type-aware request starters; choosing one only fills the draft. */
 export function wishSuggestions(type?: string | null): string[] {
-  return ["New business: plan my launch", "Get more customers", "Grow my followers on social media", typeSuggestions(type)[0]];
+  return ["Get more paying customers", "Help me launch a product", "Help me build an audience", typeSuggestions(type)[0]];
 }
 
 function typeSuggestions(type?: string | null): string[] {
@@ -59,8 +59,8 @@ function typeSuggestions(type?: string | null): string[] {
 }
 
 /** Uses the existing costed work flow; inserting a suggestion never starts it. */
-export const WishComposer = forwardRef<WishComposerHandle, { slug: string; userId?: string; identityReady: boolean; suggestions: string[]; disabled?: boolean; disabledReason?: string | null; requestCostEstimateMicros: number; autoDraftBudgetMicros: number; isDemo: boolean }>(function WishComposer(
-  { slug, userId, identityReady, suggestions, disabled, disabledReason, requestCostEstimateMicros, autoDraftBudgetMicros, isDemo }, ref,
+export const WishComposer = forwardRef<WishComposerHandle, { slug: string; userId?: string; identityReady: boolean; suggestions: string[]; disabled?: boolean; disabledReason?: string | null; requestCostEstimateMicros: number; autoDraftBudgetMicros: number; isDemo: boolean; onSubmitted?: () => void }>(function WishComposer(
+  { slug, userId, identityReady, suggestions, disabled, disabledReason, requestCostEstimateMicros, autoDraftBudgetMicros, isDemo, onSubmitted }, ref,
 ) {
   const fmt = useCostDisplay();
   const send = useMutation(api.workspace.sendChat);
@@ -79,10 +79,45 @@ export const WishComposer = forwardRef<WishComposerHandle, { slug: string; userI
       return;
     }
     let saved = "";
-    try { saved = window.sessionStorage.getItem(scope) ?? ""; } catch { /* Storage may be unavailable. */ }
+    try {
+      saved = window.sessionStorage.getItem(scope) ?? "";
+      const handoffKey = askDraftKey(slug, userId!);
+      const handoff = window.sessionStorage.getItem(handoffKey);
+      if (handoff) {
+        saved = saved.trim() ? `${saved.trimEnd()}\n${handoff}` : handoff;
+        // Persist before consuming: Strict Mode can run this restoration twice
+        // before the state-persistence effect runs. Both passes must read the
+        // merged draft, rather than the second pass restoring the older text.
+        window.sessionStorage.setItem(scope, saved);
+        window.sessionStorage.removeItem(handoffKey);
+      }
+    } catch { /* Storage may be unavailable. */ }
     setDraft({ scope, text: saved });
     setLoadedScope(scope);
-  }, [scope]);
+  }, [scope, slug, userId]);
+
+  // Consume handoffs only after this identity's saved draft is restored. A
+  // parent effect could otherwise consume the request before restoration and
+  // then lose it when the stored draft overwrote the new text.
+  useEffect(() => {
+    if (!scope || !userId || loadedScope !== scope) return;
+    const load = () => {
+      try {
+        const key = askDraftKey(slug, userId);
+        const handoff = window.sessionStorage.getItem(key);
+        if (!handoff) return;
+        setDraft((current) => {
+          const text = current.scope === scope ? current.text : "";
+          return { scope, text: text.trim() ? `${text.trimEnd()}\n${handoff}` : handoff };
+        });
+        window.sessionStorage.removeItem(key);
+        requestAnimationFrame(() => area.current?.focus());
+      } catch { /* Keep any stored handoff for a later attempt. */ }
+    };
+    load();
+    window.addEventListener("climbos:compose", load);
+    return () => window.removeEventListener("climbos:compose", load);
+  }, [scope, slug, userId, loadedScope]);
 
   useEffect(() => {
     if (!scope || loadedScope !== scope || draft.scope !== scope) return;
@@ -111,6 +146,7 @@ export const WishComposer = forwardRef<WishComposerHandle, { slug: string; userI
     try {
       await send({ slug, text: request });
       setDraft({ scope, text: "" });
+      onSubmitted?.();
     } catch (error) {
       toast({ tone: "danger", title: errorInfo(error).message });
     } finally {
@@ -122,7 +158,8 @@ export const WishComposer = forwardRef<WishComposerHandle, { slug: string; userI
   return (
     <section aria-label="Ask ClimbOS" className="space-y-3">
       <RequestComposer
-        label="Describe a problem or a goal"
+        label="Your request"
+        submitLabel="Let’s get started"
         inputRef={area}
         value={text}
         onChange={(next) => setDraft({ scope, text: next })}

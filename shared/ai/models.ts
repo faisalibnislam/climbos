@@ -157,12 +157,12 @@ export const MODEL_SPECS: Record<ModelKey, ModelSpec> = {
     provider: "anthropic",
     apiModelId: "claude-haiku-5-5",
     availability: "enabled",
-    // 1M on the API; prompts above 100k are billed at long-context rates, so ClimbOS clips below it.
-    contextWindow: 100_000,
+    // Full API window; the effective-dated rate table meters the >100k price tier.
+    contextWindow: 1_000_000,
     maxOutputTokens: 128_000,
     longContextThreshold: 100_000,
     structuredOutput: "json_schema",
-    verifiedAt: "2026-10-26",
+    verifiedAt: "2026-11-09",
     docs: "https://platform.claude.com/docs/en/about-claude/models/overview",
   },
   "claude-sonnet-5.5": {
@@ -173,7 +173,7 @@ export const MODEL_SPECS: Record<ModelKey, ModelSpec> = {
     contextWindow: 1_000_000,
     maxOutputTokens: 128_000,
     structuredOutput: "json_schema",
-    verifiedAt: "2026-10-26",
+    verifiedAt: "2026-11-09",
     docs: "https://platform.claude.com/docs/en/about-claude/models/overview",
   },
   "claude-opus-5.5": {

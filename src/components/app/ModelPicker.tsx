@@ -20,14 +20,14 @@ export function useModelChoice() {
  * else gets nothing and runs on the default). Lists connected models cheapest
  * first with this job's maximum cost; the server enforces the same rules.
  */
-export function ModelPicker({ kind, aiMode, value, onChange }: { kind: ChoiceKind; aiMode?: "basic" | "expert"; value: string | undefined; onChange: (model: string | undefined) => void }) {
+export function ModelPicker({ kind, aiMode, value, onChange, planStyle, researchDepth }: { researchDepth?: "starter" | "full"; planStyle?: "starter" | "focused" | "detailed"; kind: ChoiceKind; aiMode?: "basic" | "expert"; value: string | undefined; onChange: (model: string | undefined) => void }) {
   const fmt = useCostDisplay();
-  const data = useQuery(api.models.myModelChoice, { kind, aiMode });
+  const data = useQuery(api.models.myModelChoice, { kind, aiMode, planStyle, researchDepth });
   if (!data?.canChoose) return null;
   const cost = (micros: number | null | undefined) => (micros == null ? "" : ` · up to ${fmt.upTo(micros)}`);
   const defaultLabel = data.options.find((o) => o.key === data.defaultModel)?.label ?? "ClimbOS default";
   const options = [
-    { value: DEFAULT, label: `Default (${defaultLabel})${cost(data.defaultEstimateMicros)}` },
+    { value: DEFAULT, label: `${kind === "strategy" ? "ClimbOS chooses models for research and writing" : `Default (${defaultLabel})`}${cost(data.defaultEstimateMicros)}` },
     ...data.options.map((o) => ({ value: o.key, label: `${o.label} · ${o.providerLabel}${cost(o.estimateMicros)}` })),
   ];
   return (

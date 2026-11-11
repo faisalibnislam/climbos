@@ -50,6 +50,8 @@ export const BusinessModelCheckSchema = z.object({
     conventionChallenged: z.string().min(4).max(300),
     evidenceBasis: z.enum(["established_practice", "evidence_supported_inference", "speculative_hypothesis"]),
     evidenceRefs: z.array(z.string()).max(4),
+    /** Analogy only; never evidence about the target business. */
+    precedentIds: z.array(z.string().regex(/^CP-\d{3}$/)).max(2).optional(),
     assumptions: z.array(z.string().min(1).max(220)).max(6),
     risks: z.array(z.string().min(1).max(220)).max(6),
     unitEconomicsInputs: z.array(z.object({
@@ -97,7 +99,7 @@ const REF = /^fact:(\d+)$/i;
 const citeKey = (url: string) => url.trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, "").replace(/\/+$/, "");
 
 /** Structural and evidence integrity; the verdict itself is the model's labelled judgment and is not gated. */
-export function lintBusinessModelCheck(out: BusinessModelCheck, ctx: { factCount: number; readUrls: string[] }): LintIssue[] {
+export function lintBusinessModelCheck(out: BusinessModelCheck, ctx: { factCount: number; readUrls: string[]; precedentIds?: string[] }): LintIssue[] {
   const issues: LintIssue[] = [];
   const read = new Set(ctx.readUrls.map(citeKey));
   const checkRefs = (refs: string[], path: string) => {
@@ -127,6 +129,7 @@ export function lintBusinessModelCheck(out: BusinessModelCheck, ctx: { factCount
   const modes = out.alternatives.map((a) => a.mode).sort().join(",");
   if (modes !== "adjacent,bold,grounded") issues.push({ severity: "error", rule: "business_model", message: "Give exactly one grounded, one adjacent and one bold alternative.", path: "alternatives" });
   out.alternatives.forEach((a, i) => {
+    for (const id of a.precedentIds ?? []) if (!ctx.precedentIds?.includes(id)) issues.push({ severity: "error", rule: "citation", message: `Precedent ${id} was not retrieved for this check. Remove it or use a supplied case as an analogy only.`, path: `alternatives[${i}].precedentIds` });
     checkRefs(a.evidenceRefs, `alternatives[${i}].evidenceRefs`);
     if (a.evidenceBasis !== "speculative_hypothesis" && a.mode !== "bold" && !a.evidenceRefs.length) issues.push({ severity: "warn", rule: "business_model", message: `"${a.name}" claims ${a.evidenceBasis.replace(/_/g, " ")} without a reference.`, path: `alternatives[${i}].evidenceRefs` });
     a.unitEconomicsInputs.forEach((u, j) => {

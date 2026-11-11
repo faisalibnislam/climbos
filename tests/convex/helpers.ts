@@ -20,6 +20,7 @@ export function setup() {
   process.env.POLAR_PRODUCT_CREDITS_25 = "prod_c25";
   process.env.POLAR_PRODUCT_CREDITS_50 = "prod_c50";
   delete process.env.POLAR_ACCESS_TOKEN;
+  delete process.env.OPENAI_API_KEY;
   delete process.env.ANTHROPIC_API_KEY;
   delete process.env.GEMINI_API_KEY;
   return convexTest(schema, modules);

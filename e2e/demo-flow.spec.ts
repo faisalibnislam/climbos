@@ -23,11 +23,11 @@ test.describe.serial("Formkit demo end-to-end", () => {
 
   test("today: goal, next actions, chat becomes action cards, cards run", async () => {
     await page.goto(`/app/${slug}/today`);
-    await expect(page.getByText(/Help Formkit acquire more paying customers/i)).toBeVisible();
-    await expect(page.getByRole("heading", { name: /do these next/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Let’s keep things moving.", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Your next step", exact: true })).toBeVisible();
     // Make a wish: safe work starts on its own; anything else waits for "Do it".
     await page.getByLabel("Your request", { exact: true }).fill("Write a welcome email sequence for new sign-ups");
-    await page.getByRole("button", { name: "Send request" }).click();
+    await page.getByRole("button", { name: "Let’s get started" }).click();
     const step = page.locator("li", { hasText: /email/i }).filter({ has: page.getByRole("button").or(page.getByText(/Working|Done|See result/)) }).first();
     await expect(step).toBeVisible({ timeout: 30_000 });
     const doIt = step.getByRole("button", { name: /^do it$/i });
@@ -56,21 +56,26 @@ test.describe.serial("Formkit demo end-to-end", () => {
 
   test("plan: approved plan with channels, experiments and insights", async () => {
     await page.goto(`/app/${slug}/plan`);
+    await page.getByRole("tab", { name: "Why this plan", exact: true }).click();
+    await page.getByText("Other ideas, numbers and questions", { exact: true }).click();
+    await page.getByText("Who to reach and how", { exact: true }).click();
+    await page.getByText("What we found", { exact: true }).click();
     await expect(page.getByText(/Use-case pages|use-case/i).first()).toBeVisible();
     await expect(page.getByText(/experiment/i).first()).toBeVisible();
     await expect(page.getByText(/SWOT|strengths/i).first()).toBeVisible();
     await expectAccessible(page, "plan");
-    await page.getByRole("tab", { name: "Channels" }).click();
-    await expect(page.getByRole("heading", { name: "Your business" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "In the plan" })).toBeVisible();
+    await page.goto(`/app/${slug}/channels`);
+    await expect(page.getByRole("heading", { name: "The choices in your plan" })).toBeVisible();
     await expectAccessible(page, "channels");
   });
 
   test("results: observed vs attributed vs projected, reconciliation and forecast detail", async () => {
     await page.goto(`/app/${slug}/results`);
-    await expect(page.getByText(/unattributed/i).first()).toBeVisible();
-    await expect(page.getByText(/platform.reported/i).first()).toBeVisible();
+    await page.getByRole("tab", { name: "Where it came from", exact: true }).click();
+    await expect(page.getByRole("rowheader", { name: /Unattributed/ }).first()).toBeVisible();
+    await expect(page.getByText("Reported by the platform", { exact: true }).first()).toBeVisible();
     await expectAccessible(page, "results");
+    await page.getByRole("tab", { name: "Look ahead", exact: true }).click();
     const forecastLink = page.locator("a[href*='/results/forecasts/']").first();
     await forecastLink.click();
     await expect(page.getByText(/backtest|baseline/i).first()).toBeVisible();
@@ -86,7 +91,8 @@ test.describe.serial("Formkit demo end-to-end", () => {
 
   test("settings: billing usage meters and policies", async () => {
     await page.goto(`/app/${slug}/settings/billing`);
-    await expect(page.getByText(/social posts/i).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Credits", exact: true })).toBeVisible();
+    await expect(page.getByRole("meter", { name: "Free credits", exact: true })).toBeVisible();
     await expectAccessible(page, "billing");
     await page.goto(`/app/${slug}/settings/policies`);
     await expect(page.getByText(/bounded autopilot/i).first()).toBeVisible();

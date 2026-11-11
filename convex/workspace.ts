@@ -1,3 +1,5 @@
+import { localWorkspaceTestingEnabled } from "../shared/policy/localDevelopment";
+import { focusedGoal, goalPlans } from "./lib/goals";
 import { hasNoCustomersYet } from "../shared/agents/lifecycle";
 import { SPECIALIST_EVENT_LABEL, type SpecialistEvent } from "../shared/agents/specialistEvents";
 import { isServiceBusiness } from "../shared/acquisition/library";
@@ -7,7 +9,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
-import { ACTIVE_RUN_STATUSES, canRetryRun, createRunWithReservation, finishRunImpl, latestRunOfKind, reopenFailedRun, retryReserveMicros } from "./engine";
+import { ACTIVE_RUN_STATUSES, canRetryRun, createRunWithReservation, finishRunImpl, latestRunsOfKind, reopenFailedRun, retryReserveMicros } from "./engine";
 import { activePolicyVersion } from "./jobWrites";
 import { audit } from "./lib/audit";
 import { approvalHash, can, canonicalJson, sha256Hex } from "../shared/policy";
@@ -29,7 +31,7 @@ import { expertPlaysOf, readExpertPlan } from "../shared/agents/planCompatibilit
 import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 import { savedPlanDecisionSummary } from "../shared/agents/planDecisionSummary";
 import { factFreshness } from "../shared/agents/factFreshness";
-import { defaultModelRoute } from "./lib/modelRoute";
+import { defaultModelRoute, resolveModelRoute } from "./lib/modelRoute";
 import { runProviderMicros, showsApiCost } from "./lib/costDisplay";
 
 /** Everything the Today screen needs, in one bounded query. */
@@ -37,10 +39,7 @@ export const today = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
     const { org, role, user } = await requireOrgAccess(ctx, { slug }, "view");
-    const goal = await ctx.db
-      .query("goals")
-      .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
-      .first();
+    const goal = await focusedGoal(ctx, org);
     const business = await ctx.db
       .query("businesses")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
@@ -51,11 +50,7 @@ export const today = query({
       .order("desc")
       // Read one past the display cap so owners are told when this is a lower bound.
       .take(21);
-    const strategy = await ctx.db
-      .query("strategies")
-      .withIndex("by_org", (q) => q.eq("orgId", org._id))
-      .order("desc")
-      .first();
+    const strategy = (await goalPlans(ctx, org._id, goal?._id, 1))[0] ?? null;
     const targetPreview = await todayTargetPreview(ctx, org, strategy);
     const cards = await ctx.db
       .query("actionCards")
@@ -158,6 +153,9 @@ export const today = query({
             status: strategy.status,
             version: strategy.version,
             summary: strategy.summary,
+            direction: strategy.expert?.strategicDirection ?? null,
+            focusedMove: strategy.expert?.focusedMove ?? null,
+            preparedTitles: (strategy.expert?.preparedWork ?? []).map(w => w.title),
             channels: [...strategy.channels].sort((a, b) => a.priority - b.priority).slice(0, 3).map((c) => c.name),
             opportunities: projectGrowthOpportunities(expertPlaysOf(strategy.expert) as OpportunityPlayInput[]),
           }
@@ -432,7 +430,7 @@ export const startPlay = mutation({
     const { org, user } = await requireOrgAccess(ctx, { slug }, "chat");
     const s = assertSameOrg(await ctx.db.get(strategyId), org._id, "plan");
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
-    const goal = await ctx.db.query("goals").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active")).first();
+    const goal = await focusedGoal(ctx, org);
     const businessFactVersions = business ? await currentBusinessFactVersions(ctx, business._id) : [];
     const brand = business ? await ctx.db.query("brandProfiles").withIndex("by_business", (q) => q.eq("businessId", business._id)).first() : null;
     const connectedCapabilities = await currentConnectedCapabilities(ctx, org._id);
@@ -449,6 +447,11 @@ export const startPlay = mutation({
     if (staleInputs.businessResearch) throw appError("INVALID", "Your business and audience research changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.marketChanges) throw appError("INVALID", "A monitored competitor page changed after this plan was created. Refresh the plan before starting this play.");
     if (staleInputs.cashTiming) throw appError("INVALID", "Your growth cash reserve or customer payment delay changed after this plan was created. Refresh the plan before starting this play.");
+    if (playId === "focused" && s.expert?.focusedMove) {
+      if (s.status !== "approved" || !canDriveWork(s.expert.quality)) throw appError("INVALID", "Review and approve this plan before starting its work.");
+      await startPlanWork(ctx, { org, strategyId: s._id, userId: user._id });
+      return { prepared: true as const, strategyId: s._id };
+    }
     const play = (expertPlaysOf(s.expert) as { id?: string; name: string; oneLiner: string; audience: string; hook: string; climbosCanDo: string }[]).find((p) => p.id === playId);
     if (!play) throw appError("NOT_FOUND", "That play isn't in this plan.");
     return postChat(ctx, org, user._id, `Start the "${play.name}" play (plan v${s.version}, play ${playId}): ${play.oneLiner} Audience: ${play.audience}. Hook: ${play.hook}. Prepare everything your team can do for it now: ${play.climbosCanDo}`);
@@ -497,7 +500,7 @@ async function postChat(ctx: MutationCtx, org: Doc<"organizations">, userId: Id<
   const plan = planJob("chat_intent");
   let runId;
   try {
-    runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: plan.title, roles: plan.roles, input: { messageId, customAgentId }, steps: plan.steps, meters: plan.meters, createdBy: userId, isFixture: org.kind === "demo", customAgentId });
+    runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: plan.title, roles: plan.roles, input: { messageId, customAgentId, goalId: (await focusedGoal(ctx, org))?._id }, steps: plan.steps, meters: plan.meters, createdBy: userId, isFixture: org.kind === "demo", customAgentId });
   } catch (e) {
     await ctx.db.patch(messageId, { status: "failed" });
     throw e;
@@ -664,11 +667,8 @@ export const plan = query({
   args: { slug: v.string(), strategyId: v.optional(v.id("strategies")) },
   handler: async (ctx, { slug, strategyId }) => {
     const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
-    const versions = await ctx.db
-      .query("strategies")
-      .withIndex("by_org", (q) => q.eq("orgId", org._id))
-      .order("desc")
-      .take(10);
+    const goal = await focusedGoal(ctx, org);
+    const versions = await goalPlans(ctx, org._id, goal?._id);
     const latest = versions[0] ?? null;
     const approved = versions.find((s) => s.status === "approved") ?? null;
     // The approved plan guides the team, so it shows first; a newer version waiting or sent back gets a banner.
@@ -681,10 +681,7 @@ export const plan = query({
       .query("businesses")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
       .first();
-    const goal = await ctx.db
-      .query("goals")
-      .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
-      .first();
+
     const businessFactVersions = business ? await currentBusinessFactVersions(ctx, business._id) : [];
     const brand = business ? await ctx.db.query("brandProfiles").withIndex("by_business", (q) => q.eq("businessId", business._id)).first() : null;
     const connectedCapabilities = strategy ? await currentConnectedCapabilities(ctx, org._id) : [];
@@ -746,7 +743,10 @@ export const plan = query({
         additionalSourceCount: Math.max(0, fact.sourceCount - fact.sourceIds.length),
       };
     });
-    const strategyRun = await latestRunOfKind(ctx, org._id, "strategy");
+    const recentStrategyRuns = await latestRunsOfKind(ctx, org._id, "strategy", 20);
+    const strategyRun = recentStrategyRuns.find(run => {
+      try { const input = JSON.parse(run.input); return input?.goalId === goal?._id || input?.strategyId === strategy?._id; } catch { return false; }
+    }) ?? (strategy?.runId ? await ctx.db.get(strategy.runId) : null);
     const evidenceRecord = strategy
       ? await ctx.db.query("planEvidence").withIndex("by_strategy", (q) => q.eq("strategyId", strategy._id)).first()
       : null;
@@ -850,7 +850,7 @@ export const plan = query({
       role,
       canApprove: ["owner", "admin", "reviewer"].includes(role),
       canEdit: ["owner", "admin", "editor"].includes(role),
-      goal: goal ? { statement: goal.statement, horizonDays: goal.horizonDays, monthlyAdBudget: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency), currency: goal.currency, followers: goal.kind === "more_followers" || Boolean(goal.kinds?.includes("more_followers")) } : null,
+      goal: goal ? { id: goal._id, statement: goal.statement, horizonDays: goal.horizonDays, monthlyAdBudget: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency), currency: goal.currency, followers: goal.kind === "more_followers" || Boolean(goal.kinds?.includes("more_followers")) } : null,
       strategy: strategy
         ? {
             id: strategy._id,
@@ -893,7 +893,7 @@ export const plan = query({
       /** The other version worth seeing: a newer one waiting or sent back, or the approved one while viewing it. */
       otherVersion: other ? { id: other._id, version: other.version, status: other.status, createdAt: other.createdAt } : null,
       planEstimateMicros: maxJobMicros(planJob("strategy", {}, { fixture: org.kind === "demo" }), { fixture: org.kind === "demo", route: await defaultModelRoute(ctx) }),
-      experiments: experiments.map((e) => ({ id: e._id, name: e.name, hypothesis: e.hypothesis, population: e.population, method: e.method, assignmentUnit: e.assignmentUnit, assignmentMethod: e.assignmentMethod, primaryMetric: e.primaryMetric, primaryMetricType: e.primaryMetricType, denominator: e.denominator, baselineRate: e.baselineRate, baselineProvenance: e.baselineProvenance, baselineEvidenceRefs: e.baselineEvidenceRefs, baselineBasis: e.baselineBasis, minimumMeaningfulEffect: e.minimumMeaningfulEffect, plannedSamplePerArm: e.plannedSamplePerArm, plannedSampleBasis: e.plannedSampleBasis, guardrails: e.guardrails, durationDays: e.durationDays, stoppingRule: e.stoppingRule, status: e.status, analyses: (e.analyses ?? []).map(({ reviewedBy: _by, ...x }) => x) })),
+      experiments: experiments.map((e) => ({ id: e._id, name: e.name, hypothesis: e.hypothesis, population: e.population, method: e.method, assignmentUnit: e.assignmentUnit, assignmentMethod: e.assignmentMethod, primaryMetric: e.primaryMetric, primaryMetricType: e.primaryMetricType, denominator: e.denominator, baselineRate: e.baselineRate, baselineProvenance: e.baselineProvenance, baselineEvidenceRefs: e.baselineEvidenceRefs, baselineBasis: e.baselineBasis, minimumMeaningfulEffect: e.minimumMeaningfulEffect, plannedSamplePerArm: e.plannedSamplePerArm, plannedSampleBasis: e.plannedSampleBasis, guardrails: e.guardrails, durationDays: e.durationDays, stoppingRule: e.stoppingRule, status: e.status, variants: e.variants ?? null, decisionOwner: e.decisionOwner ?? null, plannedCost: e.plannedCost ?? null, preregisteredAt: e.preregisteredAt ?? null, currency: business?.currency ?? goal?.currency ?? null, deviations: (e.deviations ?? []).map(({ by: _by, ...change }) => change), analyses: (e.analyses ?? []).map(({ reviewedBy: _by, ...x }) => x) })),
       insights: business?.insights ?? null,
       sources: factViews,
       researchEvidence,
@@ -1088,7 +1088,7 @@ export const decidePlan = mutation({
     if (s.status !== "needs_approval") throw appError("INVALID", "This plan isn't waiting for approval.");
     if (decision === "approve") {
       const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
-      const goal = await ctx.db.query("goals").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active")).first();
+      const goal = await focusedGoal(ctx, org);
       const businessFactVersions = business ? await currentBusinessFactVersions(ctx, business._id) : [];
       const brand = business ? await ctx.db.query("brandProfiles").withIndex("by_business", (q) => q.eq("businessId", business._id)).first() : null;
       const connectedCapabilities = await currentConnectedCapabilities(ctx, org._id);
@@ -1121,10 +1121,7 @@ export const decidePlan = mutation({
     if (s.approvalId && decision === "approve") await refreshPlanApproval(ctx, s, user._id);
     let work: PlanWorkResult | null = null;
     if (decision === "approve") {
-      const prior = await ctx.db
-        .query("strategies")
-        .withIndex("by_org", (q) => q.eq("orgId", org._id))
-        .take(20);
+      const prior = await goalPlans(ctx, org._id, s.goalId, 50);
       for (const p of prior) {
         if (p._id === s._id || p.status !== "approved") continue;
         await ctx.db.patch(p._id, { status: "superseded" });
@@ -1290,10 +1287,10 @@ async function currentBusinessFactVersions(ctx: QueryCtx | MutationCtx, business
   })).sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function goalDecisionValues(goal: { _id?: unknown; id?: string; kind: string; kinds?: string[]; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target?: unknown } | null | undefined): unknown {
+function goalDecisionValues(goal: { _id?: unknown; id?: string; kind: string; kinds?: string[]; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target?: unknown; timingMode?: string; deadline?: string } | null | undefined): unknown {
   if (!goal) return null;
   // Several goal types are planning inputs; a single type is already `kind` (kept so older plans don't turn stale).
-  return [goal.id ?? String(goal._id), goal.kind, goal.statement, goal.horizonDays, goal.monthlyAdBudgetMinor, goal.currency, goal.target ?? null, ...(goal.kinds && goal.kinds.length > 1 ? [goal.kinds] : [])];
+  return [goal.id ?? String(goal._id), goal.kind, goal.statement, goal.horizonDays, goal.monthlyAdBudgetMinor, goal.currency, goal.target ?? null, ...(goal.kinds && goal.kinds.length > 1 ? [goal.kinds] : []), goal.timingMode ?? null, goal.deadline ?? null];
 }
 
 function funnelDecisionValues(funnel: Doc<"businesses">["funnel"] | null | undefined): unknown {
@@ -1582,6 +1579,20 @@ export const retryRun = mutation({
 });
 
 /** The Basic/Expert picker: default mode, whether Expert is unlocked, and what each mode costs at most for the key jobs. */
+/** Exact scoped quote for the selected simple/detailed plan contract. */
+export const planQuote = query({
+  args: { slug: v.string(), planStyle: v.union(v.literal("starter"), v.literal("focused"), v.literal("detailed")), aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))), model: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "view");
+    const view = await aiModeView(ctx, org);
+    const mode = view.expertUnlocked ? args.aiMode ?? view.mode : "basic";
+    const fixture = org.kind === "demo";
+    const plan = planJob("strategy", { planStyle: args.planStyle }, { fixture, mode });
+    const route = await resolveModelRoute(ctx, user._id, args.model);
+    return { maxCostMicros: maxJobMicros(plan, { fixture, route }), reserveMicros: estimateJobMicros(plan, { fixture, route }), planStyle: args.planStyle };
+  },
+});
+
 export const aiMode = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
@@ -1620,6 +1631,7 @@ export const credits = query({
     const { org } = await requireOrgAccess(ctx, { slug }, "view");
     const period = await currentPeriod(ctx, org);
     const [balance, paid] = await Promise.all([creditBalance(ctx, org, period), isPaid(ctx, org)]);
-    return { ...balance, paid, isDemo: org.kind === "demo" };
+    const account = org.accountId ? await ctx.db.get(org.accountId) : null;
+    return { ...balance, paid, isDemo: org.kind === "demo", isLocalEvaluation: localWorkspaceTestingEnabled(account?.localWorkspaceTesting, process.env) || process.env.CLIMBOS_LOCAL_REAL_RESEARCH === "true" && process.env.SITE_URL === "http://127.0.0.1:3430" && ["real-macloving", "real-livoform", "real-folevi"].includes(org.slug) };
   },
 });

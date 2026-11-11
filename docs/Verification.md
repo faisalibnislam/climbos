@@ -1,8 +1,98 @@
+## 11 November: Macloving plan passed after source-backed repairs
+
+The actual saved plan in `macloving-3a1n4` is **passed, 4.0/5**, with required gates passed, no hard failures or automatic errors, ten supplied research sources, and a completed independent second review. Strategy `js7v3wqp75pw24wb9g459n5jds8j147j` remains `needs_approval`; its quality status is not publication approval or proof of demand. Thresholds and rubric gates were not lowered. This supersedes the earlier 3.71/5 snapshot below.
+
+Five real plan revisions cost **$1.882196**, including two failed optional revisions caused by field-size limits. Receipts: `n97wpsx3261q9td45hw1w7ja3d8j06ey` $0.324661; `n97gk7y4gm9ne41fj7t04qnm018j178x` $0.331224; `n97w7wckx3hs49kw4ajf196m9h8j0akc` $0.414505; `n97ndtpywygdst8zpew6mc84898j0fzp` $0.393766; `n97pnkk5tx4bscvkqbcc5a82498j0acm` $0.418040. Failed attempts and source corrections remain in history. An earlier 4.0 draft still contained an outdated Preview comparison, so it was not treated as final: current Apple documentation corrected batch resizing and menu instructions, and the model rewrote and re-reviewed the plan. The latest guide keeps built-in Preview as a valid alternative, describes Diet Image from its published page, and does not claim native-app testing.
+
+The revised plan contains a complete how-to page with proposed title/description, a complete LinkedIn post pointing to the inspected existing app page, and a proposed demo shot list explicitly marked unrecorded. Its three ordered steps have two tasks each. Preparation and first-review timing follow the work; month/quarter/year progression is conditional, not a fixed-duration plan menu or forecast. Private business economics, demand and owner capacity remain unknown.
+
+Repairs capture tenant/goal/website-bound prepared work at enqueue, preserve owner edits and prior-version preparation, and retain next-horizon and compounding reasoning. Page draft capacity is 6000 characters, non-page drafts retain a 2400-character limit, and the collapsed next-horizon field is bounded at 1000 characters. Plan evidence also reaches Make it happen without turning source summaries into verbatim page reads. Missing keyword-tool data is a limitation, not owner research homework.
+
+Regression suite: **2,227 tests passed in 351 files**, 83.61 seconds. Final keyword-homework and step-work regressions: **14 passed in two files**, including the newly added case. App/shared and Convex types, full ESLint plus final changed-file lint, and the dedicated local Webpack production build passed. Browser testing exercised provisional repair, price quote, live review/revision, passing output, current-run progress, and Make it happen on the passing version. All backend updates targeted loopback only. The owner-authorized local allowance extension preserves all usage and uncertain holds; cumulative committed/allocated funds are $52.321238 of $100. Nothing was published, sent, deployed or marked complete.
+
+Final Make it happen checks on the passing version produced a source-backed guide with a chosen title and description, plus a search-wording decision and native-app test log. No owner question was asked. Owner tasks were reduced to testing actual app behavior on copies and checking the local macOS requirement; keyword-tool research is no longer delegated. The local reader could not load Apple's page during preparation, so it retained that limitation and did not claim a new successful first-party fetch. The guide preserves the corrected batch workflow and does not claim a live guide URL. Three preparation receipts were $0.112483 (`n97gde83xv30pwm152bfav35dx8j1m9z`), $0.124772 (`n97tkwdqg9y0dt4ytsz4hhk9t58j1rdq`) and $0.203173 (`n97ys6naj90r3m8es3e47qpscd8j1kk9`). Total this round: **$2.322624** across eight jobs, including failures and retries. Final wallet: **$8.182278 spent, $0.004900 held, $12 ceiling**, all inside the $20 local allocation. Exact saved quality, private drafts, limitations and receipts are in `real-business-plans/2026-11-11/macloving-quality-check.json`.
+
+## 11 November: Macloving chat → plan → Make it happen
+
+**2,222 tests passed in 349 files** (91.37 seconds), with app/shared and Convex type checks, ESLint and the dedicated-local Webpack production build passing. All backend changes were synced only to 127.0.0.1:3330. The app remains at 127.0.0.1:3430. The fresh real Macloving test workspace is `macloving-3a1n4`; the owner's earlier Macloving conversation and plan were preserved. No demo business or invented private business figures were introduced.
+
+The initial real chat exposed two defects: repeated filler and website knowledge that was read but not stored as offer/businessModel fields. Source-matched memory repair now runs automatically; core public knowledge permits planning without a mandatory stage/time interview. Missing private resources remain unknown. The repaired live reply was 15 words and asked no further question. The three paid chat turns in this test cost $0.005252 total; older messages remain visible as historical output rather than being rewritten.
+
+The first real plan failed its truth gate on free-app/collection claims and invented first-person wording. The correction route's former 40k-token estimate prevented a full revision fitting its quote despite cheaper actual requests. A supplied-context token floor plus actual prompt estimates now lets a bounded correction and independent review run inside the unchanged cap. Live repair performed both rounds. Its required gates passed; the plan remains **provisional, 3.71/5**, below the broader expert-quality bar, not market-validated or automatically approved. No rating or original plan text was manually changed to make it pass.
+
+The first preparation still delegated public app-page and community checks and included GUIDE-ADDRESS. Fixes make the reader follow the relevant observed product URL and check the named community's rules itself, and reject unfinished destinations. The final live preparation read `https://macloving.app/apps/dietimage` and produced substantive SEO guide copy plus an independent owned-channel post using that real destination. App details were checked against the first-party page; this is evidence of published product claims, not a native-app execution test. No owner question was needed during either preparation job. Reddit blocked the rules read through robots; that placement remains held, while independent prepared work stays usable. The actual guide has not been published, and no traffic or sales result is claimed.
+
+Browser checks exercised wish submission, URL research, saved business memory, planning, the quoted cheaper repair, automatic correction/review, opening the plan, Make it happen, source-linked deliverables, separate internal notes, saving a small grammar edit, exact copied-text comparison and edit persistence after reload. A task mark survived reload and was undone; all task marks were left undone. Publishing was never marked complete. Home and its prepared-work link were checked against the actual saved result. Viewing, editing, copying and navigation started no extra model job. The model-generated source record remains immutable; the small copy edit is stored separately.
+
+Recorded Macloving API usage was **$0.762544**: chat $0.005252, first plan $0.166054, bounded plan correction $0.326906, first preparation $0.083319, improved preparation $0.181013. Run receipts: `n97h2arx5kzdbpektjzmnbw2r58j0fcv`, `n97w461vzrpww4eh6wy41vjznd8j01cn`, `n97zt71z46c63x7cy61qsj2f5d8j1vjh`, `n97g88vh3t5mfbc9ayh07ny4m58j0r3r`, `n97p2zmspty9mwdwjkwa6gsha18j03nm`, `n97hry569aymkt0jwra3q1sxks8j11ek`, `n97g8ebbt82a8yp98bszfbd5sx8j0702`. Final wallet snapshot: $5.859654 spent plus $0.004900 previously held against the unchanged $6 local cap, inside the already reserved allocation under the $100 project authorization. No refill, new subscription, remote deployment, external publishing or prospect message occurred.
+
+## 11 November: AI step preparation and simpler workspace
+
+Latest local regression suite: **2,214 tests passed in 349 files**, 109.36 seconds. App/shared and Convex type checks, ESLint and a dedicated-loopback Webpack production build passed. The first concurrent build/typecheck attempt hit generated `.next/types` churn; the subsequent sequential typecheck passed. These results supersede the older counts below. Final small presentation/hash-navigation changes were also checked with types/lint and the local browser.
+
+The retained sage/lime palette now frames a quieter app shell, focused Home tabs, a compact conversation composer, and an ordered plan rail with one active work panel. Routine replies target 15–30 words and are capped at 45; long deliverables remain possible. The server ends intake when core context is adequate, including older conversations that were stuck on optional model questions.
+
+Real Livoform preparation used the configured Haiku/Sonnet route, public web searches and bounded source/contact-page reads. Four measured jobs cost **$0.443382 total** ($0.051192, $0.123248, $0.139573, $0.129369). The first output asked an unnecessary future permission question; a later output delegated public research; the third failed source checks and hid useful work. Prompt/validation changes reject those delegations, automatically follow observed contact links, retain private validation diagnostics, preserve earlier work through retries, and keep independently usable parts of a partially failed result with visible limitations.
+
+The final live job saved three private drafts: a named candidate/permission research log, a held outreach draft and a LinkedIn post. Contact permission remains unknown for the candidates; a source quote or saved pitch is not consent, proven fit or proven effectiveness. The final repaired output still tried to delegate one public check, so that owner task was held back and the partial-result notice was displayed. This is operational evidence of research/preparation, not a claim that the wider distribution strategy passed expert quality review or that marketing execution is complete. No outreach, publishing or customer-growth measurement occurred.
+
+Browser verification exercised the real result, a saved copy edit and reload persistence, history traversal through a failed attempt to an earlier successful result, the Home prepared-work link, focused plan/Home tabs, and the Review work shortcut. A same-page Next Link hash bug was fixed and re-exercised: Review work selects Needs you, leaving that tab clears the hash, and the shortcut selects it again. At a 390px viewport, document width stayed 390px; the temporary override was reset. Task progress remained zero after preparation and draft editing. Source limitations are collapsed behind a compact warning, not hidden.
+
+The loopback-only wallet was **$5.097110 spent plus $0.004900 held against its unchanged $6 cap** after these jobs. Later owner activity may change that snapshot. It is within the pre-reserved local allocation under the cumulative $100 authorization; no wallet refill, remote deployment or demo seeding occurred. Synthetic regression tests remain isolated from real businesses and do not make model API calls.
+
+## 11 November: local plan timeline
+
+The earlier timeline wireframe is now implemented on the local plan page. The default Next steps tab shows the saved phases in order, one expanded current step, task counts and progress. Prepared work, Why this plan and Research are separate focused tabs. Existing plans retain their saved timing; no fixed-duration picker or invented tasks was added. New plan generation supports a variable number of tasks in each phase.
+
+Full suite: **2,200 tests passed in 346 files**. App/Convex type checks, lint, local Webpack production build and patch whitespace checks passed. The final legacy-checklist adjustment also passed its seven focused progress/unit regressions. Only loopback Convex was updated; no hosted deployment was performed.
+
+Live Livoform browser checks exercised task completion, reload persistence, undo, opening a real saved private draft and returning to unchanged progress. The temporary completion mark was undone. The AI-help button opened an editable, unsent step-specific message; its test draft and selection were cleared. A read-only database check confirmed the browser's saved progress. The local evaluation wallet remained at the same 6,000,000-microdollar ceiling and 4,450,901-microdollar recorded spend as the preceding discovery-chat check. No paid AI call or external marketing action was triggered by this layout work.
+
+Progress is team-reported completion of the exact saved task, not evidence of publishing, plan approval or a business outcome. Tests cover tenant isolation, viewer write rejection, changed task text, conflicting revisions, repeat submissions, undo, export and separate progress for revised plans. The public-page research and strategy-quality limitations in the dated records below are unchanged.
+
+## 10 November: conversational onboarding
+
+Conversational onboarding uses a genuine budgeted AI interview, durable source-labeled business memory and an immutable handoff to planning. **2,196 tests passed in 345 files**; app/Convex types, lint and the local production build passed. Changes were applied only to loopback Convex. Earlier [implementation, measured costs and quality limits](Local-Gaps-Completion-2026-11-10.md) and dated records below remain historical evidence.
+
+Live browser verification used the existing owner-created `macloving-2n255` business without creating demo businesses. The AI asked for the website, read the real homepage, pricing and productivity pages, accepted an audience correction and moved to missing marketing/time context. Read-only local database checks confirmed persisted website, goal, offer, audience and business model with owner/public-source distinctions. A reload retained the conversation. The test did not invent private customer counts, stage or resources, and did not start a new paid plan before those answers. The “Finish later” action and six-stage UI are absent from the new entry.
+
+Focused regressions cover website retention when AI extraction omits it, preservation of valid memory through an AI repair, inaccessible/unsafe or competitor sites, no paid scraper, premature-plan refusal, tenant/member boundaries, duplicate requests, captured plan context, owner time/ad limits, explicit failed-plan retries, and data export/deletion. Automated cases use isolated test databases and mocked inference; they are not additional live provider evidence. The AI evaluation wallet ceiling was not raised or reset.
+
+The ordered plan timeline is an interactive **wireframe proposal**, exercised for step expansion, task completion/progress and prepared-work preview. It has not replaced the current production plan page. Preparing a draft and completing a task are separate states; timing follows the actual goal rather than fixed 14/30/90-day buckets.
+
 # Verification
 
-Last full-repository verification: **18 Oct 2026** on macOS, Node 24.21, pnpm 10.34, Next 16.4.2, Convex 1.47.
+Latest local verification: **10 Nov 2026** on macOS, Node 24.22.2, pnpm 10.34.5, Next 16.4.2 and Convex 1.47.0. Code and data remain local. The separate real-business profile uses Convex at 127.0.0.1:3330 and the app at 127.0.0.1:3430. Its three workspaces contain public-source research and actual model outputs, with no demo seeding. Synthetic automated tests use their own ephemeral databases. No hosted deployment, external publishing, prospect messaging or advertising was exercised.
 
-## Latest focused verification — 25 Oct 2026
+The owner selected Anthropic Haiku/Sonnet and authorized a cumulative $100 AI evaluation. These later instructions supersede the earlier $2 OpenAI-only authorization. Remote inference is explicitly authorized; the app and database stay local. Historical receipts and uncertain holds remain intact. See [costs, quality and limitations](Cost-and-Quality-2026-11-10.md).
+
+## Current results
+
+| Check | Result |
+|---|---|
+| Full unit and Convex integration suite | **2,137 passed in 331 files**, 74.33 seconds |
+| TypeScript, app/shared and Convex | Clean |
+| ESLint | Clean |
+| Production build with dedicated local configuration | Passed; no hosted build or deployment |
+| Real-workspace browser checks | **19 passed**: all three businesses’ Home/Plan/AI activity/Results; focused quoting; direct existing-draft review; desktop/mobile overflow; exercised accessibility; no AI or external write triggered |
+| Earlier isolated fixture browser suite | **44 passed** before the final real-business follow-up; not a fresh app-wide result for this final revision |
+| Local backend paid workflow | Real research plus detailed Macloving workflow tested; new focused jobs completed for all three businesses; checkpoints, actual models and costs retained |
+| Final real recommendations | Corrected public-source focused drafts imported idempotently from already-paid outputs; no duplicated generation charge |
+| Patch whitespace | Clean |
+
+Focused regressions cover quote/reservation/worker agreement, 14/30/90-day milestones, actual horizon and creativity context, tenant/website research reuse, critical review failures, source refusals through fetch/cache/checkpoints, refusal enforcement despite AI critic approval, approval/staleness/tenant guards, zero-generation reuse of prepared drafts, source-correction idempotence, and preservation of original draft text and paid receipts. Local imports create no subscription or fabricated business performance.
+
+Real browser testing exposed and repaired notification-badge contrast and a mismatch between the visible capped count and accessible name. Direct draft review opens an existing draft before plan approval; optional AI settings select the focused contract by default. The quote is inspected and canceled without starting a job. The standalone comparison report also passed business selection, prepared-draft and historical source-correction checks with all network requests blocked. Final desktop and mobile screenshots are retained in the ignored evaluation cache.
+
+## Quality boundary
+
+The focused 14-day workflow cost about $0.39–$0.41 per business in the public-source harness, versus $1.43–$1.60 for the earlier recommendation-plus-plan workflow. This compares different workflow scopes and improved evidence, not isolated model equivalence. A blinded common-dimension AI comparison preferred the corrected focused Macloving and Folevi recommendations, while preferring Livoform’s earlier SEO/distribution detail. The current simple Livoform draft remains provisional. No review has established commercial outcomes or expert quality across all requested industries.
+
+MacMost’s first-party contact policy invalidated earlier suggested product outreach. Newly retrieved explicit refusals are retained in source metadata and deterministic checks block matching pitches. Unknown policies remain unknown. This detector handles explicit patterns, not all natural-language contact rules. Human source entailment, representative-owner usability, broad industry acceptance and live provider execution remain unverified. Full research’s worst-case quote also exceeds the unchanged 50-credit free allowance; commercial free-onboarding affordability needs a measured product/pricing review.
+
+Current plans, earlier alternatives, native seven-channel social drafts, SEO page drafts, AI judgments and costs are inspectable in the [local real-business report](real-business-plans/2026-11-09/index.html). Social/SEO alternatives did not pass publication readiness and remain drafts. The [spec inventory](growth-engine/spec-coverage.md) retains unsupported provider capabilities and unverified requirements rather than relabeling them complete.
+
+## Historical focused verification — 25 Oct 2026
 
 - Competitor watcher and research presentation regressions: `pnpm exec vitest run tests/convex/competitors.test.ts tests/unit/swot-presentation.test.ts tests/unit/research-quality.test.ts` — **34 passed**. Covers exact changed-line binding for suggested tests, dropping unsupported suggestions, retained evidence, sourced comparison details, retained not-relevant feedback, no watch/credit side effect on dismissal, manual re-add, and tenant isolation. The competitor file alone has **13 passed**.
 - Offer and campaign timing regressions: `pnpm exec vitest run tests/unit/offer-assessment.test.ts tests/unit/campaign-timing.test.ts tests/unit/decision-contract.test.ts tests/convex/plan-history.test.ts tests/convex/publish-flow.test.ts` — **72 passed**.
@@ -11,7 +101,7 @@ Last full-repository verification: **18 Oct 2026** on macOS, Node 24.21, pnpm 10
 - `git diff --check` — clean.
 - No browser verification of the competitor page was run for these latest changes.
 
-## Automated checks
+## Historical automated checks — 18 Oct 2026
 
 | Check | Command | Result |
 |---|---|---|
@@ -76,7 +166,7 @@ Last full-repository verification: **18 Oct 2026** on macOS, Node 24.21, pnpm 10
    - **Pause all** then resume. Mobile layout at Pixel 7 size. Keyboard skip link.
 9. **Accessibility and layout.** axe-core WCAG 2.0/2.1/2.2 A/AA scans with zero serious or critical violations on landing, pricing, sign-in, Today, content list and detail, Plan, Results, forecast detail, Connections, Billing and Policies. No horizontal scroll at 375px on public pages and the five app sections. One `h1` and one `main#main` per page. Skip link works.
 
-## Manual and visual inspection
+## Historical manual and visual inspection
 
 - Checked in the browser on the dev deployment and on **production (climbos.app)**: landing hero with live preview, `/demo` → Today (desktop 1366×900 and mobile 375×812), the chat-to-card-to-job loop, Plan, Content list, and content detail with the simulated-publish copy.
 - **Bugs found and fixed during inspection:**
@@ -90,7 +180,7 @@ Last full-repository verification: **18 Oct 2026** on macOS, Node 24.21, pnpm 10
   - "[n]" fact markers appeared in text owners read.
   - After the fixes, a fresh onboarding finished first time: research $0.07, plan $0.04.
 
-## Adapter verification status
+## Historical adapter verification status
 
 | Adapter | Status |
 |---|---|

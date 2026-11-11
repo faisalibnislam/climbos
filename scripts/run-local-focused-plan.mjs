@@ -1,0 +1,22 @@
+/** One owner-authorized paid plan on the exact local real-data backend; never reads provider keys. */
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { ConvexHttpClient } from 'convex/browser';
+const business=process.argv[2];
+if(!['macloving','livoform','folevi'].includes(business)||!process.argv.includes('--confirm-paid-local')) throw Error('Choose a real business and explicitly confirm the local paid evaluation.');
+const state=join(tmpdir(),'climbos-local-real'), config=JSON.parse(readFileSync(join(state,'web.json'),'utf8'));
+if(config.NEXT_PUBLIC_CONVEX_URL!=='http://127.0.0.1:3330'||config.NEXT_PUBLIC_SITE_URL!=='http://127.0.0.1:3430')throw Error('Only the dedicated real-data loopback profile is allowed.');
+const ledger=JSON.parse(readFileSync(resolve('bench/cache/anthropic-real-2026-11-09/budget.json'),'utf8'));
+if(ledger.capMicros!==100000000||!ledger.receipts.some(r=>r.label==='local-convex-budget'&&r.chargedMicros===10000000))throw Error('The fixed local allowance must already be reserved inside the $100 budget.');
+const output=resolve(`bench/cache/anthropic-real-2026-11-09/local-real-${business}-focused-run.json`);
+if(existsSync(output))throw Error('This evaluation has already been started. Read its saved run status instead of creating a duplicate.');
+const owner=JSON.parse(readFileSync(join(state,'owner-login.json'),'utf8'));
+const client=new ConvexHttpClient(config.NEXT_PUBLIC_CONVEX_URL);
+const signIn=await client.action('auth:signIn',{provider:'dev-password',params:{email:owner.email,password:owner.password,flow:'signIn'}});
+if(!signIn.tokens?.token)throw Error('Local owner sign-in failed.');client.setAuth(signIn.tokens.token);
+const slug=`real-${business}`,quote=await client.query('workspace:planQuote',{slug,planStyle:'focused'});
+if(quote.maxCostMicros>1500000)throw Error('The focused test exceeds its $1.50 per-job ceiling.');
+const result=await client.mutation('orgs:generatePlan',{slug,planStyle:'focused'});
+writeFileSync(output,JSON.stringify({...result,slug,planStyle:'focused',quote,startedAt:new Date().toISOString()},null,2));
+console.log(JSON.stringify({runId:result.runId,slug,upToDollars:quote.maxCostMicros/1e6,initialReservationDollars:quote.reserveMicros/1e6}));

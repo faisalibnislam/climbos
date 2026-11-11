@@ -4,14 +4,15 @@
  * Static for now; S5 (REQ-ENG-11) generates it from each workspace's live
  * capabilities and connections.
  */
-export const CLIMBOS_ENGINES = `WHAT YOUR TEAM (CLIMBOS) RUNS FOR THE OWNER — use them for production volume; they cost credits and still need the owner's time for approvals, replies and calls (count it):
-- Find customers + outreach: researches companies that fit, finds only published business emails, writes a personal first line each, sends from the owner's own mailbox (warm-up 10 → 50 emails/day per mailbox ≈ 600–1,000/month), follow-ups, stops on reply, booking page included. Cold email benchmarks (grade B, not this business's results): 1–3% reply, 20–40% of replies booking.
-- Creator finder: finds relevant creators/influencers with contact routes and drafts collab pitches (benchmark, grade C: 10–20% replies).
-- Social autopilot: plans each week and drafts posts, reels and images in the owner's voice; publishes directly to Instagram, Facebook, LinkedIn and X once connected (others via export), following the workspace's approval mode.
-- Landing pages with lead forms, website chat that answers from the business facts and captures emails, A/B tests on headlines and subject lines, tracked short links, review requests to past customers, a Pipeline (CRM) and Inbox for replies.
-- Ad drafts for Google and Meta within the owner's budget (the owner launches them).
-Rules: name which engine runs each play and its weekly volume; owner hours go to calls and closing, not production.
-Match the engine to the price: one-to-one outreach pays only when a customer is worth roughly $300+ in 12-month gross profit (or when targeting partners/agencies who bring many accounts). Low-price products lean on self-serve loops: comparison/SEO pages, integrations and marketplaces, referrals, creators and communities.`;
+export const CAPACITY_EVIDENCE_POLICY = `Capabilities describe what software can prepare, not buyer demand, deliverability, audience size, consent or the owner's available time. Do not turn technical capacity into an outreach quota, assume a mailbox/list is connected, or quote a reply/conversion benchmark from this block. A proposed small scope is planned, never measured. Derive acquisition affordability from this business's confirmed contribution, retention, delivery costs and owner time; there is no universal customer-value cutoff. A low-price product can benefit from one-to-many earned distribution. A small manual recruitment test can answer a learning question without being a scalable acquisition channel. Never multiply an agency's clients into paid licenses unless the supplied billing terms and evidence support it. Missing economics stay unknown.`;
+
+export const CLIMBOS_ENGINES = `WHAT CLIMBOS CAN PREPARE — actual sending/publishing requires the workspace's connection and permission checks. Production still needs the owner's time for reviews, replies and calls:
+- Research fitting businesses and public business contact routes; prepare individual outreach drafts. An available, permitted audience and connected owner mailbox are not assumed.
+- Find relevant creators and verify their coverage; prepare unsent editorial, collaboration or affiliate proposals with the arrangement clearly distinguished.
+- Prepare channel-native posts, scripts and visual briefs. Direct publishing depends on connected supported accounts and exact approval scope; other channels use export packs.
+- Draft landing pages, lead forms, website answers, tracked links, honest review invitations and measurement setups. Live destinations and an eligible consented audience are not assumed.
+- Prepare Google/Meta ad drafts within a confirmed budget. Nothing launches from a plan.
+${CAPACITY_EVIDENCE_POLICY}`;
 
 /** What this workspace can actually do right now (REQ-ENG-11), from its connections and approval mode. */
 export interface WorkspaceCapabilities {
@@ -38,7 +39,7 @@ export function capabilityContext(c: WorkspaceCapabilities): string {
   const lines = [
     "WHAT CLIMBOS CAN RUN FOR THIS OWNER RIGHT NOW (from their connections; never promise more). Engines save production time but still need the owner's time for approvals, replies and calls (count it):",
     has("email_mailbox")
-      ? "- Find customers + outreach: READY. Researches fitting companies, keeps only published business emails, writes a first line each, sends from the owner's mailbox (warm-up 10 → 50 emails/day per mailbox), follow-ups, stops on reply."
+      ? "- Find customers + outreach: READY. Researches fitting companies, keeps only published business emails, writes a first line each, prepares sends through the owner's connected mailbox within its actual limits and approved scope, follow-ups, stops on reply."
       : "- Find customers + outreach: finding and drafting are ready; SENDING NEEDS SETUP (connect the owner's mailbox under Connections). A play that relies on it must make that its first action.",
     "- Creator finder: READY. Finds relevant creators with public contact routes and drafts pitches (sent from the owner's mailbox once connected).",
     social.length
@@ -47,12 +48,11 @@ export function capabilityContext(c: WorkspaceCapabilities): string {
     has("google_ads") || has("meta_ads")
       ? `- Ads: drafts within budget; ${[has("google_ads") ? "Google" : "", has("meta_ads") ? "Meta" : ""].filter(Boolean).join(" and ")} connected, so campaigns are created paused and go live only on the owner's approval.`
       : "- Ads: drafts within budget only; no ad account is connected, so the owner launches them.",
-    "- Landing pages with lead forms, website chat, A/B tests on headlines, tracked short links, review requests, Pipeline (CRM) and Inbox: READY.",
-    has("search_console") ? "- Search Console connected (data isn't used in plans yet)." : "",
+    "- Landing pages, lead forms, website answers, tracked links and measurement setups: drafting is ready. Live publication, experiments and review invitations require a verified destination, eligible audience and permission.",
+    has("search_console") ? "- Search Console connected; use the actual query/page observations supplied with this run, not invented rankings." : "",
     MODE_LINE[c.autonomy],
-    "Benchmarks (not this business's results): cold email 1–3% reply and 20–40% of replies booking (grade B); creator pitches 10–20% replies (grade C).",
-    "Rules: name which engine runs each play and its weekly volume; owner hours go to calls and closing, not production.",
-    "Match the engine to the price: one-to-one outreach pays only when a customer is worth roughly $300+ in 12-month gross profit (or when targeting partners/agencies who bring many accounts). Low-price products lean on self-serve loops: comparison/SEO pages, integrations and marketplaces, referrals, creators and communities.",
+    CAPACITY_EVIDENCE_POLICY,
+    "Name the concrete draft or research ClimbOS can prepare now, and keep any action requiring unresolved setup or private facts separate. Only a proposed bounded test scope may be supplied when owner capacity is unknown.",
   ];
   return lines.filter(Boolean).join("\n");
 }

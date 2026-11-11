@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agentQuality, canDriveWork, fixWhere, planQuality, withoutHard } from "../../shared/agents/quality";
+import { agentQuality, canDriveWork, fixWhere, planQuality, planRepairGuidance, withoutHard } from "../../shared/agents/quality";
 import type { Assessment, LintIssue } from "../../shared/agents/types";
 
 /** Frozen S1 regression cases: a completed workflow is not the same as a plan that passed. */
@@ -15,16 +15,35 @@ const assessment = (o: Partial<Assessment> & { lint?: LintIssue[] } = {}): Asses
 const err = (rule: string): LintIssue => ({ severity: "error", rule, message: rule });
 
 describe("plan quality", () => {
+  it("carries bounded failed-review corrections forward without treating a passing or absent review as a repair request", () => {
+    expect(planRepairGuidance(undefined)).toBe(""); expect(planRepairGuidance({ state: "passed", reasons: ["Not a failure"] })).toBe("");
+    const text = planRepairGuidance({ state: "failed", reasons: Array(100).fill("Unsupported claim"), fixes: Array(100).fill({ rule: "invented_fact", path: "summary", message: "Remove the unsupported conversion benchmark".repeat(50) }), agents: [{ criticalGateFailures: [{ id: "P1", note: "The price claim has no supporting source" }] }] });
+    const data = JSON.parse(text); expect(data.fixes).toHaveLength(6); expect(data.reasons).toHaveLength(3);
+    expect(data.gates[0].id).toBe("P1"); expect(text.length).toBeLessThan(6000);
+    expect(data).not.toHaveProperty("businessFacts"); expect(data).not.toHaveProperty("permission");
+  });
+  it("retains useful soft-review feedback for a provisional update, without treating it as evidence",()=>{
+    const a=assessment();a.critique.fixes=["Use the existing exact comparison page before creating a duplicate."];
+    const quality=agentQuality("growth_strategy",a,1,2);
+    const guidance=JSON.parse(planRepairGuidance({state:"provisional",agents:[quality],reasons:["Review below the bar"]}));
+    expect(guidance.suggestions).toEqual(a.critique.fixes);expect(guidance).not.toHaveProperty("facts");
+  });
   it("passes only when every agent shipped with no flagged checks", () => {
     const q = planQuality([agentQuality("growth_plays", assessment(), 1, 6), agentQuality("growth_strategy", assessment(), 1, null)]);
     expect(q.state).toBe("passed");
     expect(canDriveWork(q)).toBe(true);
   });
 
-  it("gate exhaustion: the review never signed off → provisional, still inspectable", () => {
+  it("missing critical review checks fail closed and remain inspectable", () => {
     const q = planQuality([agentQuality("growth_plays", assessment({ gatesPassed: false, ship: false, average: 3.1 }), 3, 6)]);
+    expect(q.state).toBe("failed");
+    expect(q.reasons.join(" ")).toMatch(/truth, budget or permission/);
+    expect(canDriveWork(q)).toBe(false);
+  });
+
+  it("an editorial review failure remains provisional when truth, budget and permission checks passed", () => {
+    const q = planQuality([agentQuality("growth_strategy", assessment({ gatesPassed: false, ship: false, average: 3.1, critique: { gates: [{ id: "G1", pass: true, note: "Truth checked" }, { id: "G2", pass: true, note: "Budget checked" }, { id: "G4", pass: true, note: "Permissions checked" }, { id: "G3", pass: false, note: "Too many competing priorities" }], scores: [], strengths: [], fixes: [] } }), 2, 6)]);
     expect(q.state).toBe("provisional");
-    expect(q.reasons[0]).toMatch(/review didn't sign off/);
     expect(canDriveWork(q)).toBe(true);
   });
 
@@ -40,6 +59,13 @@ describe("plan quality", () => {
     const q = planQuality([agentQuality("growth_plays", assessment({ lint: [err("generic_action")] }), 2, 6)]);
     expect(q.state).toBe("failed");
     expect(q.hard).toEqual(["growth_plays: generic_action ×1"]);
+    expect(canDriveWork(q)).toBe(false);
+  });
+
+  it("relabeling the same idea as three options cannot drive work", () => {
+    const q = planQuality([agentQuality("growth_plays", assessment({ lint: [err("creative_diversity")] }), 2, 6)]);
+    expect(q.state).toBe("failed");
+    expect(q.reasons[0]).toContain("repeat the same mechanism");
     expect(canDriveWork(q)).toBe(false);
   });
 

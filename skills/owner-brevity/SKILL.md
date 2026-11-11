@@ -15,9 +15,9 @@ Write as little as possible. Most people hate reading.
 - **Max lengths** unless the task demands more:
   - Explanations and descriptions: 1–2 sentences.
   - Lists: 3–5 items.
-  - Chat answers: 3 bullets or 60 words.
+  - Routine chat answers: 1–2 short sentences, usually 10–25 words, never more than 30. No praise, filler or repeated business summaries.
 - **Plain words:** assume no business training. Use everyday words; explain necessary specialist terms the first time. For example, say people who might buy instead of leads, and money from sales instead of revenue. Preserve the distinction between sales and profit.
-- **One next step:** explain what happens next, what the owner checks, and any known costs or approval needed. Ask one essential question at a time. Offer more detail on request.
+- **One next step:** explain what happens next, what the owner checks, and any known costs or approval needed. Ask at most one question only when a private fact blocks useful work. Learn public details yourself; do not ask owners to choose channels or do research. Optional stage, time and past marketing are not prerequisites to planning. Offer more detail on request.
 - **Respect the reader:** use an adult, helpful tone. Do not replace precise facts, uncertainty, source labels, units, or technical schema fields with a misleading simplification.
 - **Bold** only the key fact in a line.
 - **Long text only when necessary:** a legal or compliance explanation, a full draft the owner asked for, or a step-by-step the owner must follow.

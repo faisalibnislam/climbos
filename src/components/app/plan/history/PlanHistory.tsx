@@ -29,8 +29,10 @@ const STATUS: Record<string, { label: string; tone: "amber" | "neutral" | "red" 
 };
 
 function shortDate(ms: number) {
-  return new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
+
+function planLabel(v: Pick<Version, "name" | "createdAt">) { return v.name || `Plan from ${formatDateTime(v.createdAt)}`; }
 
 /** Tags shown on a version wherever it appears. */
 export function VersionTags({ v, withStatus = true }: { v: Pick<Version, "isLatest" | "inUse" | "status">; withStatus?: boolean }) {
@@ -97,33 +99,33 @@ export function VersionPicker({
         <button
           type="button"
           className="inline-flex h-[var(--h-sm)] items-center gap-2 rounded-[var(--radius-control)] border border-[var(--btn-2-border)] bg-[var(--btn-2-bg)] px-2.5 text-ui font-medium text-ink shadow-[var(--btn-2-shadow)] hover:bg-surface-2"
-          aria-label={onBuilding && building ? `Version ${building.version}, building. Open version history` : `Version ${current.version}${current.name ? `, ${current.name}` : ""}. Open version history`}
         >
           <History aria-hidden className="size-4 text-ink-3" />
           {onBuilding && building ? (
             <>
-              Version {building.version}
+              New plan
               <Badge tone="blue" icon={<RefreshCw className="animate-spin" />}>
                 Building · {building.progress}
               </Badge>
             </>
           ) : (
             <>
-              Version {current.version}
-              {current.name ? <span className="max-w-48 truncate text-ink-2">· {current.name}</span> : null}
+              {planLabel(current)}
+
               {/* One version: no tags (owner, 2026-10-19). */}
               {many ? <VersionTags v={current} /> : null}
             </>
           )}
+          <span className="sr-only">. Open saved plans</span>
           <ChevronDown aria-hidden className="size-3.5 text-ink-3" />
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[min(26rem,calc(100vw-2rem))] p-0">
         <div className="flex items-center justify-between border-b border-line px-3 py-2">
-          <p className="text-overline">Version history</p>
+          <p className="text-overline">Saved plans</p>
           <span className="text-xs tabular-nums text-ink-3">{versions.length + (building ? 1 : 0)}</span>
         </div>
-        <ol className="max-h-[60vh] overflow-y-auto p-1" aria-label="Plan versions">
+        <ol className="max-h-[60vh] overflow-y-auto p-1" aria-label="Saved plans">
           {building ? (
             <li>
               <button
@@ -135,7 +137,7 @@ export function VersionPicker({
                 }}
                 className={cn("flex w-full items-start gap-3 rounded-[var(--radius-control)] px-2.5 py-2 text-left transition-colors hover:bg-surface-2", onBuilding && "bg-surface-2")}
               >
-                <span className="mt-0.5 grid h-6 min-w-8 place-items-center rounded-[var(--radius-badge)] bg-blue-100 px-1 text-xs font-semibold tabular-nums text-blue-800">v{building.version}</span>
+                <span className="mt-0.5 grid h-6 min-w-8 place-items-center rounded-[var(--radius-badge)] bg-blue-100 px-1 text-xs font-semibold tabular-nums text-blue-800"><RefreshCw aria-hidden className="size-3" /></span>
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="text-ui font-medium text-ink">Building now</span>
@@ -162,7 +164,7 @@ export function VersionPicker({
                   }}
                   className={cn("flex w-full items-start gap-3 rounded-[var(--radius-control)] px-2.5 py-2 text-left transition-colors hover:bg-surface-2", selected && "bg-surface-2")}
                 >
-                  <span className={cn("mt-0.5 grid h-6 min-w-8 place-items-center rounded-[var(--radius-badge)] px-1 text-xs font-semibold tabular-nums", v.inUse ? "bg-brand-800 text-white" : v.isLatest ? "bg-lime text-ink" : "bg-surface-3 text-ink-2")}>v{v.version}</span>
+                  <span className={cn("mt-0.5 grid h-6 min-w-8 place-items-center rounded-[var(--radius-badge)] px-1 text-xs font-semibold tabular-nums", v.inUse ? "bg-brand-800 text-white" : v.isLatest ? "bg-lime text-ink" : "bg-surface-3 text-ink-2")}><History aria-hidden className="size-3" /></span>
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       {v.name ? <span className="max-w-full truncate text-ui font-medium text-ink">{v.name}</span> : null}
@@ -222,7 +224,7 @@ function VersionNameForm({ slug, version }: { slug: string; version: Version }) 
         setBusy(true);
         try {
           await rename({ slug, strategyId: version.id, name });
-          toast({ tone: "success", title: name.trim() ? `Version ${version.version} named` : "Name removed" });
+          toast({ tone: "success", title: name.trim() ? "Plan named" : "Name removed" });
         } catch (err) {
           toast({ tone: "danger", title: errorMessage(err) });
         } finally {
@@ -242,18 +244,18 @@ function VersionNameForm({ slug, version }: { slug: string; version: Version }) 
 }
 
 /** Shown while an older version is on screen: read-only, with compare, restore and a way back. */
-export function OlderVersionBar({ version, latest, canEdit, onBack, onCompare, onRestore }: { version: Version; latest: Version; canEdit: boolean; onBack: () => void; onCompare: () => void; onRestore: () => void }) {
+export function OlderVersionBar({ version, latest: _latest, canEdit, onBack, onCompare, onRestore }: { version: Version; latest: Version; canEdit: boolean; onBack: () => void; onCompare: () => void; onRestore: () => void }) {
   return (
     <div role="region" aria-label="Viewing an older version" className="sticky top-14 z-20 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[var(--radius-card)] border border-line bg-cream px-4 py-2.5 shadow-[var(--card-shadow)]">
       <History aria-hidden className="size-4 text-ink-2" />
       <p className="flex flex-wrap items-center gap-2 text-ui text-ink">
-        <span className="font-medium">Viewing v{version.version}</span>
+        <span className="font-medium">Viewing an earlier plan</span>
         <span className="text-ink-2">{shortDate(version.createdAt)} · read-only</span>
         <VersionTags v={version} />
       </p>
       <div className="ml-auto flex flex-wrap gap-2">
         <Button size="sm" variant="secondary" onClick={onCompare}>
-          <ArrowUpDown aria-hidden /> Compare with v{latest.version}
+          <ArrowUpDown aria-hidden /> Compare with the latest plan
         </Button>
         {canEdit ? (
           <Button size="sm" variant="secondary" onClick={onRestore}>
@@ -282,9 +284,9 @@ function useRestore(slug: string, onDone: (id: Id<"strategies">) => void) {
   const run = async (fromId: Id<"strategies">, parts: PlanPartKey[]) => {
     setBusy(true);
     try {
-      const r = await restore({ slug, fromId, parts });
-      toast({ tone: "success", title: `Version ${r.version} created`, description: "Waiting for your approval." });
-      onDone(r.strategyId);
+      const restored = await restore({ slug, fromId, parts });
+      toast({ tone: "success", title: "Updated plan created", description: "Waiting for your approval." });
+      onDone(restored.strategyId);
       return true;
     } catch (e) {
       toast({ tone: "danger", title: errorMessage(e) });
@@ -317,7 +319,7 @@ export function RestoreDialog({ slug, from, latest, open, onOpenChange, onRestor
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title={`Restore from v${from.version}`} className="max-w-md">
+      <DialogContent title={`Restore ${planLabel(from)}`} className="max-w-md">
         {!parts ? (
           <div className="flex flex-col gap-2" aria-busy="true">
             {PLAN_PARTS.slice(0, 5).map((p) => (
@@ -327,7 +329,7 @@ export function RestoreDialog({ slug, from, latest, open, onOpenChange, onRestor
         ) : (
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <p className="text-ui text-ink-2">{parts.filter((p) => p.changed).length} parts differ from v{latest.version}</p>
+              <p className="text-ui text-ink-2">{parts.filter((p) => p.changed).length} parts differ from the latest plan</p>
               <Button size="sm" variant="ghost" onClick={() => setPicked(all ? new Set() : new Set(PLAN_PARTS.map((p) => p.key)))}>
                 {all ? "Clear" : "Whole plan"}
               </Button>
@@ -340,7 +342,7 @@ export function RestoreDialog({ slug, from, latest, open, onOpenChange, onRestor
                 </li>
               ))}
             </ul>
-            <p className="text-trust text-sm">Creates v{latest.version + 1} for your approval. Nothing changes until you approve.</p>
+            <p className="text-trust text-sm">Creates an updated plan for your approval. Nothing changes until you approve.</p>
           </div>
         )}
         <DialogFooter>
@@ -463,8 +465,8 @@ export function PlanCompare({ slug, versions, initialLeft, initialRight, canEdit
     setSelected(new Set());
     onRestored(id);
   });
-  const options = versions.map((v) => ({ value: v.id, label: `v${v.version}${v.name ? ` ${v.name}` : ""} · ${shortDate(v.createdAt)}${v.isLatest ? " · Latest" : ""}${v.inUse ? " · In use" : ""}` }));
-  const label = (v?: Version) => (v ? `v${v.version}${v.name ? ` (${v.name})` : ""}${v.isLatest ? " (latest)" : ""}` : "");
+  const options = versions.map((v) => ({ value: v.id, label: `${planLabel(v)}${v.isLatest ? " · Latest" : ""}${v.inUse ? " · In use" : ""}` }));
+  const label = (v?: Version) => (v ? `${planLabel(v)}${v.isLatest ? " (latest)" : ""}` : "");
   return (
     <section aria-labelledby="compare-heading" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius-card)] border border-line bg-surface px-4 py-3 shadow-[var(--card-shadow)]">
@@ -544,8 +546,8 @@ export function PlanCompare({ slug, versions, initialLeft, initialRight, canEdit
         <div className="sticky bottom-4 z-20 flex flex-wrap items-center gap-3 rounded-[var(--radius-card)] bg-ink px-4 py-3 text-white shadow-lg" role="region" aria-label="Restore selected parts">
           <RotateCcw aria-hidden className="size-4" />
           <p className="text-ui">
-            Restore <span className="font-semibold">{describeParts([...selected])}</span> from v{L.version}
-            <span className="text-white/70"> → new v{latest.version + 1}, needs approval</span>
+            Restore <span className="font-semibold">{describeParts([...selected])}</span> from {planLabel(L)}
+            <span className="text-white/70"> → updated plan, needs approval</span>
           </p>
           <div className="ml-auto flex gap-2">
             <Button size="sm" variant="ghost" className="text-white hover:bg-white/10" onClick={() => setSelected(new Set())}>

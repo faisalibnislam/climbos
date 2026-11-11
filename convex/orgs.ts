@@ -1,6 +1,10 @@
+import { parseIntro } from "../shared/onboarding/intro";
+import { focusedGoal, goalPlans } from "./lib/goals";
+import { capturePlanPreparation } from "./lib/preparationContext";
+import { localWorkspaceTestingEnabled } from "../shared/policy/localDevelopment";
 import { majorToMinor, minorToMajor } from "../shared/economics/currency";
 import { isUnlimited } from "../shared/economics/credits";
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { isIndustryBusinessTypeId } from "../shared/knowledge/industryCatalog";
 import type { GoalTarget } from "../shared/agents/goal";
 import { accountWorkspaces, ensureAccountForOwner } from "./lib/accounts";
@@ -89,8 +93,8 @@ export const newWorkspaceAiMode = query({
 
 function onboardingResearchEstimates(route: ModelRoute) {
   return {
-    basic: maxJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "basic" }), { route }),
-    expert: maxJobMicros(planJob("onboarding_research", { pages: 3 }, { mode: "expert" }), { route }),
+    basic: maxJobMicros(planJob("onboarding_research", { pages: 2, researchDepth: "starter" }, { mode: "basic" }), { route }),
+    expert: maxJobMicros(planJob("onboarding_research", { pages: 2, researchDepth: "starter" }, { mode: "expert" }), { route }),
   };
 }
 
@@ -121,16 +125,22 @@ export const me = query({
   },
 });
 
-export const createWorkspace = mutation({
-  args: {
-    businessName: v.string(),
-    website: v.optional(v.string()),
-    timezone: v.optional(v.string()),
-    currency: v.optional(v.string()),
-    /** Referral code from a share link (stored by /r/CODE). */
-    referralCode: v.optional(v.string()),
+/** Safe shell gate, including staff view-as access; absent and forbidden workspaces look identical. */
+export const accessibleWorkspace = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    if (!await optionalUser(ctx)) return null;
+    try {
+      const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
+      return { slug: org.slug, role };
+    } catch (error) {
+      if (error instanceof ConvexError && typeof error.data === "object" && error.data !== null && "code" in error.data && ["NOT_FOUND", "UNAUTHENTICATED"].includes(String(error.data.code))) return null;
+      throw error;
+    }
   },
-  handler: async (ctx, args) => {
+});
+
+export async function createWorkspaceForOwner(ctx: MutationCtx, args: { businessName: string; website?: string; timezone?: string; currency?: string; referralCode?: string }) {
     const user = await requireUser(ctx);
     if (user.isAnonymous) throw appError("FORBIDDEN", "Create a free account to save your own workspace.");
     const name = args.businessName.trim().slice(0, 80);
@@ -146,7 +156,9 @@ export const createWorkspace = mutation({
     const sub = await activePackage(ctx, { _id: owned[0]?._id ?? (accountId as unknown as Id<"organizations">), accountId });
     const config = await getLiveConfig(ctx);
     const allowed = sub ? config.workspaces[packageOf(sub.planKey)] : config.workspaces.free;
-    if (!isUnlimited(allowed) && owned.length >= allowed) {
+    const account = await ctx.db.get(accountId);
+    const localTesting = localWorkspaceTestingEnabled(account?.localWorkspaceTesting, process.env);
+    if (!localTesting && !isUnlimited(allowed) && owned.length >= allowed) {
       throw appError(sub ? "LIMIT_REACHED" : "PAYMENT_REQUIRED", sub ? `Your package includes ${allowed} workspaces. Upgrade to add more.` : "Free accounts have one workspace. Choose a package to add more.");
     }
     const now = Date.now();
@@ -201,12 +213,23 @@ export const createWorkspace = mutation({
     if (owned.length === 0) await recordReferral(ctx, accountId, args.referralCode);
     await audit(ctx, { orgId, actorType: "user", actorId: user._id, action: "workspace.created", summary: `Workspace "${name}" created.` });
     return { slug, orgId };
+}
+
+export const createWorkspace = mutation({
+  args: {
+    businessName: v.string(),
+    website: v.optional(v.string()),
+    timezone: v.optional(v.string()),
+    currency: v.optional(v.string()),
+    /** Referral code from a share link (stored by /r/CODE). */
+    referralCode: v.optional(v.string()),
   },
+  handler: createWorkspaceForOwner,
 });
 
 /** Start (or restart) business research. Owner-pasted text works when the site can't be read. */
 export const startResearch = mutation({
-  args: { slug: v.string(), website: v.optional(v.string()), ownerText: v.optional(v.string()), aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))), model: v.optional(v.string()) },
+  args: { researchDepth: v.optional(v.union(v.literal("starter"), v.literal("full"))), slug: v.string(), website: v.optional(v.string()), ownerText: v.optional(v.string()), aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))), model: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
     const business = await ctx.db
@@ -242,15 +265,15 @@ export const startResearch = mutation({
     }
     const aiMode = await resolveAiMode(ctx, org, "onboarding_research", args.aiMode);
     const modelRoute = await resolveModelRoute(ctx, user._id, args.model);
-    const plan = planJob("onboarding_research", { pages: website ? 3 : 0 }, { fixture: org.kind === "demo", mode: aiMode });
+    const plan = planJob("onboarding_research", { researchDepth: args.researchDepth, pages: website ? args.researchDepth === "starter" ? 2 : 3 : 0 }, { fixture: org.kind === "demo", mode: aiMode });
     const runId = await createRunWithReservation(ctx, {
       org,
       kind: plan.kind,
       title: plan.title,
       roles: plan.roles,
-      input: { website, hasOwnerText: Boolean(ownerText) },
+      input: { researchDepth: args.researchDepth ?? "full", website, hasOwnerText: Boolean(ownerText) },
       steps: website ? plan.steps : plan.steps.filter((s) => s.kind !== "research"),
-      meters: website ? plan.meters : { searchCalls: 2 },
+      meters: website ? plan.meters : { searchCalls: args.researchDepth === "starter" ? 0 : 2 },
       createdBy: user._id,
       isFixture: org.kind === "demo",
       aiMode,
@@ -296,19 +319,12 @@ export const onboardingState = query({
     if (researchRun?.preview) {
       try { researchPreview = JSON.parse(researchRun.preview) as RunPreview; } catch { /* A malformed preview must not block fact review. */ }
     }
-    const goal = await ctx.db
-      .query("goals")
-      .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
-      .first();
+    const goal = await focusedGoal(ctx, org);
     const policy = await ctx.db
       .query("autonomyPolicies")
       .withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true))
       .first();
-    const strategy = await ctx.db
-      .query("strategies")
-      .withIndex("by_org", (q) => q.eq("orgId", org._id))
-      .order("desc")
-      .first();
+    const strategy = (await goalPlans(ctx, org._id, goal?._id, 1))[0] ?? null;
     const access = await chargeableAccess(ctx, org);
     return {
       org: { slug: org.slug, name: org.name, kind: org.kind, onboardingStep: org.onboardingStep, currency: org.currency, timezone: org.timezone },
@@ -327,6 +343,7 @@ export const onboardingState = query({
             currency: business.currency,
             timezone: business.timezone,
             hasInsights: Boolean(business.insights),
+            researchFocus: business.insights?.opportunities[0] ?? null,
             onboardingIntro: business.onboardingIntro ?? null,
             customerData: business.customerData ?? null,
             insightsAt: business.insights?.generatedAt ?? null,
@@ -357,6 +374,7 @@ export const onboardingState = query({
                   ? ("site_unreadable" as const)
                   : ("other" as const),
             engine: researchRun.engine ?? null,
+            depth: researchRun.input.includes('"researchDepth":"starter"') ? "starter" as const : "full" as const,
             preview: researchPreview,
             createdAt: researchRun.createdAt,
             finishedAt: researchRun.finishedAt ?? null,
@@ -366,7 +384,7 @@ export const onboardingState = query({
       strategyRun: strategyRun ? { id: strategyRun._id, status: strategyRun.status, userMessage: strategyRun.userMessage ?? null, createdAt: strategyRun.createdAt } : null,
       firstWinRunIds: org.firstWinRunIds ?? [],
       goal: goal
-        ? { kind: goal.kind, kinds: goal.kinds ?? [goal.kind], statement: goal.statement, target: goal.target ?? null, horizonDays: goal.horizonDays, monthlyAdBudget: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency), currency: goal.currency, reviewDay: goal.reviewDay ?? null }
+        ? { id: goal._id, kind: goal.kind, kinds: goal.kinds ?? [goal.kind], statement: goal.statement, target: goal.target ?? null, horizonDays: goal.horizonDays, monthlyAdBudget: minorToMajor(goal.monthlyAdBudgetMinor, goal.currency), currency: goal.currency, reviewDay: goal.reviewDay ?? null }
         : null,
       autonomy: policy?.mode ?? "review",
       /** The ad budget editors may set without an owner or admin (raising it needs one). */
@@ -385,15 +403,9 @@ async function requireFactInOrg(ctx: MutationCtx, slug: string, factId: Id<"busi
   return { ...access, fact };
 }
 
-export const reviewFact = mutation({
-  args: {
-    slug: v.string(),
-    factId: v.id("businessFacts"),
-    action: v.union(v.literal("confirm"), v.literal("reject"), v.literal("edit")),
-    statement: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
+async function applyFactReview(ctx: MutationCtx, args: { slug: string; factId: Id<"businessFacts">; action: "confirm" | "reject" | "edit"; statement?: string; expectedStatement?: string }) {
     const { fact, user, org } = await requireFactInOrg(ctx, args.slug, args.factId);
+    if (args.expectedStatement !== undefined && args.expectedStatement !== fact.statement) throw appError("INVALID", "This detail changed. Please check the latest wording before answering.");
     const businessFacts = await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", fact.businessId)).take(300);
     const group = groupExactDuplicateFacts(businessFacts.map((row) => ({ ...row, id: String(row._id), state: row.reviewState })))
       .find(({ primary, duplicates }) => [primary, ...duplicates].some((row) => row.id === String(fact._id)));
@@ -411,6 +423,37 @@ export const reviewFact = mutation({
       if (business?.orgId === org._id) await ctx.db.patch(business._id, { competitorResearchNextAt: Date.now(), competitorResearchStaleAt: Date.now(), updatedAt: Date.now() });
     }
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: `fact.${args.action}`, subjectType: "fact", subjectId: fact._id, summary: `Fact ${args.action}ed${reviewTargets.length > 1 ? ` with ${reviewTargets.length - 1} duplicate${reviewTargets.length === 2 ? "" : "s"}` : ""}.` });
+}
+
+export const reviewFact = mutation({
+  args: {
+    slug: v.string(),
+    factId: v.id("businessFacts"),
+    action: v.union(v.literal("confirm"), v.literal("reject"), v.literal("edit")),
+    statement: v.optional(v.string()),
+  },
+  handler: applyFactReview,
+});
+
+/** One displayed chat question; confirms only the exact statements the owner saw. */
+export const answerOnboardingCheck = mutation({
+  args: { slug: v.string(), facts: v.array(v.object({ id: v.id("businessFacts"), statement: v.string() })), answer: v.union(v.literal("confirm"), v.literal("reject"), v.literal("edit")), replacement: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    if (!args.facts.length || args.facts.length > 3 || new Set(args.facts.map(f => f.id)).size !== args.facts.length) throw appError("INVALID", "Please answer one question at a time.");
+    if (args.answer === "edit" && (args.facts.length !== 1 || !args.replacement?.trim() || args.replacement.trim().length > 400)) throw appError("INVALID", "Please correct one detail in 400 characters or fewer.");
+    for (const fact of args.facts) await applyFactReview(ctx, { slug: args.slug, factId: fact.id, expectedStatement: fact.statement, action: args.answer, statement: args.replacement });
+  },
+});
+
+/** Skipped details stay unconfirmed. Continuing must never confirm unseen research. */
+export const finishFactConversation = mutation({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    if (["business", "research", "facts"].includes(org.onboardingStep)) {
+      await ctx.db.patch(org._id, { onboardingStep: "goal" });
+      await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "onboarding.conversation_completed", summary: "Continued setup without confirming skipped or unseen details." });
+    }
   },
 });
 
@@ -564,6 +607,10 @@ function cleanTarget(t: GoalTarget): GoalTarget | undefined {
   return out.desired === null && out.baseline === null ? undefined : out;
 }
 
+type GoalKind = "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom";
+type SetGoalInput = { slug: string; kind: GoalKind; kinds?: GoalKind[]; statement: string; target?: GoalTarget; horizonDays: number; monthlyAdBudget: number; reviewDay?: string };
+type SetAutonomyInput = { slug: string; mode: "copilot" | "review" | "bounded_autopilot" };
+
 const GOAL_KINDS = new Set(["more_sales", "more_customers", "more_reach", "more_followers", "custom"]);
 
 /** Keep the first setup step's parsed answers on the business, so the goal step starts from them in any tab or device. */
@@ -615,7 +662,7 @@ export const setAdBudget = mutation({
   handler: async (ctx, { slug, monthlyAdBudget }) => {
     const { org, user, role } = await requireOrgAccess(ctx, { slug }, "edit");
     if (!Number.isFinite(monthlyAdBudget) || monthlyAdBudget < 0 || monthlyAdBudget > 1_000_000) throw appError("INVALID", "Enter a monthly ad budget between 0 and 1,000,000 (0 means no ads).");
-    const goal = await ctx.db.query("goals").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active")).first();
+    const goal = await focusedGoal(ctx, org);
     if (!goal) throw appError("NOT_FOUND", "Set a goal first.");
     const budgetMinor = majorToMinor(monthlyAdBudget, goal.currency);
     const policy = await ctx.db.query("autonomyPolicies").withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true)).first();
@@ -631,19 +678,7 @@ export const setAdBudget = mutation({
   },
 });
 
-export const setGoal = mutation({
-  args: {
-    slug: v.string(),
-    kind: v.union(v.literal("more_sales"), v.literal("more_customers"), v.literal("more_reach"), v.literal("more_followers"), v.literal("custom")),
-    /** All chosen goal types, equal priority. When given, its first entry replaces `kind`. */
-    kinds: v.optional(v.array(v.union(v.literal("more_sales"), v.literal("more_customers"), v.literal("more_reach"), v.literal("more_followers"), v.literal("custom")))),
-    statement: v.string(),
-    target: v.optional(v.object({ metric: v.union(v.literal("customers"), v.literal("revenue_month"), v.literal("other")), baseline: v.union(v.number(), v.null()), desired: v.union(v.number(), v.null()), mode: v.union(v.literal("total"), v.literal("incremental")) })),
-    horizonDays: v.number(),
-    monthlyAdBudget: v.number(),
-    reviewDay: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
+export async function applySetGoal(ctx: MutationCtx, args: SetGoalInput) {
     const { org, user, role } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
     const business = await ctx.db
       .query("businesses")
@@ -666,16 +701,15 @@ export const setGoal = mutation({
     if (policy && budgetMinor > policy.maxMonthlyAdSpendMinor && !can(role, "manage_policies")) {
       throw appError("FORBIDDEN", "Only an owner or admin can raise the ad budget.");
     }
-    const active = await ctx.db
-      .query("goals")
-      .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
-      .take(5);
-    for (const g of active) await ctx.db.patch(g._id, { status: "archived" });
+    const active = await focusedGoal(ctx, org);
+    if (active) await ctx.db.patch(active._id, { status: "archived" });
     const kinds = [...new Set(args.kinds?.length ? args.kinds : [args.kind])];
-    await ctx.db.insert("goals", {
+    const goalId = await ctx.db.insert("goals", {
       orgId: org._id,
       businessId: business._id,
       kind: kinds[0],
+      timingMode: "ai",
+      ...(active ? { previousGoalId: active._id } : {}),
       ...(kinds.length > 1 ? { kinds } : {}),
       statement,
       ...(target ? { target } : {}),
@@ -687,6 +721,7 @@ export const setGoal = mutation({
       createdBy: user._id,
       createdAt: Date.now(),
     });
+    await ctx.db.patch(org._id, { focusedGoalId: goalId });
     // The ad envelope in the active policy follows the goal.
     if (policy && policy.maxMonthlyAdSpendMinor !== budgetMinor) {
       await ctx.db.patch(policy._id, { active: false });
@@ -695,12 +730,24 @@ export const setGoal = mutation({
     }
     if (org.onboardingStep !== "done") await ctx.db.patch(org._id, { onboardingStep: "preferences" });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "goal.set", summary: `Goal set: ${statement}` });
+}
+
+export const setGoal = mutation({
+  args: {
+    slug: v.string(),
+    kind: v.union(v.literal("more_sales"), v.literal("more_customers"), v.literal("more_reach"), v.literal("more_followers"), v.literal("custom")),
+    /** All chosen goal types, equal priority. When given, its first entry replaces `kind`. */
+    kinds: v.optional(v.array(v.union(v.literal("more_sales"), v.literal("more_customers"), v.literal("more_reach"), v.literal("more_followers"), v.literal("custom")))),
+    statement: v.string(),
+    target: v.optional(v.object({ metric: v.union(v.literal("customers"), v.literal("revenue_month"), v.literal("other")), baseline: v.union(v.number(), v.null()), desired: v.union(v.number(), v.null()), mode: v.union(v.literal("total"), v.literal("incremental")) })),
+    horizonDays: v.number(),
+    monthlyAdBudget: v.number(),
+    reviewDay: v.optional(v.string()),
   },
+  handler: applySetGoal,
 });
 
-export const setAutonomy = mutation({
-  args: { slug: v.string(), mode: v.union(v.literal("copilot"), v.literal("review"), v.literal("bounded_autopilot")) },
-  handler: async (ctx, { slug, mode }) => {
+async function applySetAutonomy(ctx: MutationCtx, { slug, mode }: SetAutonomyInput) {
     const { org, user, role } = await requireOrgAccess(ctx, { slug }, "edit");
     const policy = await ctx.db
       .query("autonomyPolicies")
@@ -726,28 +773,64 @@ export const setAutonomy = mutation({
       }
     }
     if (org.onboardingStep === "preferences") await ctx.db.patch(org._id, { onboardingStep: "plan" });
+}
+
+export const setAutonomy = mutation({
+  args: { slug: v.string(), mode: v.union(v.literal("copilot"), v.literal("review"), v.literal("bounded_autopilot")) },
+  handler: applySetAutonomy,
+});
+
+/** Free, idempotent setup: reuse the owner's wish and existing approval rules. No AI job or external permission is created. */
+export const prepareOnboardingConversation = mutation({
+  args: { slug: v.string(), expectedGoalId: v.union(v.id("goals"), v.null()), statement: v.optional(v.string()) },
+  handler: async (ctx, { slug, expectedGoalId, statement }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "edit");
+    const goal = await focusedGoal(ctx, org);
+    if (org.onboardingStep === "done" || (org.onboardingStep === "plan" && !statement?.trim())) return { needsGoal: false };
+    if ((goal?._id ?? null) !== expectedGoalId) throw appError("INVALID", "Your goal changed in another window. Please check the latest conversation.");
+    if (!["goal", "preferences", "plan"].includes(org.onboardingStep)) throw appError("INVALID", "Finish the business conversation first.");
+    if (statement?.trim()) await assertNoActiveRun(ctx, org._id, "strategy", "Your plan is being built. You can discuss changes when it is ready.");
+    const business = await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", org._id)).first();
+    if (!business) throw appError("NOT_FOUND", "Business not found.");
+    const intro = business.onboardingIntro;
+    const text = statement?.trim() || goal?.statement || intro?.goalStatement?.trim();
+    if (!text) return { needsGoal: true };
+    if (text.length > 300) throw appError("INVALID", "Please describe your goal in 300 characters or fewer.");
+    if (!goal || (statement?.trim() && statement.trim() !== goal.statement)) {
+      const parsed = parseIntro(text);
+      const kinds = parsed.goalKinds?.length ? parsed.goalKinds : !statement && intro?.goalKinds?.length ? intro.goalKinds.filter((k): k is GoalKind => GOAL_KINDS.has(k)) : ["custom" as const];
+      await applySetGoal(ctx, { slug, kind: kinds[0] ?? "custom", kinds, statement: parsed.goalStatement ?? text,
+        ...(goal?.target ? { target: goal.target } : {}),
+        horizonDays: goal?.horizonDays ?? intro?.horizonDays ?? 90,
+        monthlyAdBudget: statement && parsed.monthlyAdBudget !== undefined && (!parsed.adBudgetCurrency || parsed.adBudgetCurrency === business.currency) ? parsed.monthlyAdBudget : goal ? minorToMajor(goal.monthlyAdBudgetMinor, goal.currency) : intro?.monthlyAdBudget ?? 0,
+        reviewDay: goal?.reviewDay ?? intro?.reviewDay,
+      });
+    } else if (org.onboardingStep === "goal") {
+      await ctx.db.patch(org._id, { onboardingStep: "preferences" });
+    }
+    const policy = await ctx.db.query("autonomyPolicies").withIndex("by_org_active", q => q.eq("orgId", org._id).eq("active", true)).first();
+    if (!policy) throw appError("NOT_FOUND", "Approval settings not found.");
+    // Reuse exactly the existing mode. A website cannot authorize a budget or publishing change.
+    await applySetAutonomy(ctx, { slug, mode: policy.mode });
+    return { needsGoal: false };
   },
 });
 
-export const generatePlan = mutation({
-  args: { slug: v.string(), aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))), creativeRange: v.optional(v.union(v.literal("balanced"), v.literal("conventional"), v.literal("surprising"), v.literal("ambitious"))), model: v.optional(v.string()) },
-  handler: async (ctx, { slug, aiMode: requested, creativeRange, model }) => {
+export async function generatePlanForOwner(ctx: MutationCtx, { slug, aiMode: requested, creativeRange, model, planStyle = "detailed", intakeSnapshot }: { slug: string; aiMode?: "basic" | "expert"; creativeRange?: "balanced" | "conventional" | "surprising" | "ambitious"; model?: string; planStyle?: "starter" | "focused" | "detailed"; intakeSnapshot?: string }) {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
-    const goal = await ctx.db
-      .query("goals")
-      .withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "active"))
-      .first();
+    const goal = await focusedGoal(ctx, org);
     if (!goal) throw appError("INVALID", "Set a goal first.");
     await assertNoActiveRun(ctx, org._id, "strategy", "Your plan is already being built. It'll be ready soon.");
     const aiMode = await resolveAiMode(ctx, org, "strategy", requested);
     const modelRoute = await resolveModelRoute(ctx, user._id, model);
-    const plan = planJob("strategy", {}, { fixture: org.kind === "demo", mode: aiMode });
+    const plan = planJob("strategy", { planStyle }, { fixture: org.kind === "demo", mode: aiMode });
+    const preparationSnapshot = ["starter", "focused"].includes(planStyle) ? await capturePlanPreparation(ctx, org._id, goal._id) : null;
     const runId = await createRunWithReservation(ctx, {
       org,
       kind: plan.kind,
       title: plan.title,
       roles: plan.roles,
-      input: { goalId: goal._id, creativeRange: creativeRange ?? "balanced" },
+      input: { goalId: goal._id, planStyle, creativeRange: creativeRange ?? "balanced", ...(intakeSnapshot ? { intakeSnapshot } : {}), ...(preparationSnapshot ? { preparationSnapshot } : {}) },
       steps: plan.steps,
       meters: plan.meters,
       createdBy: user._id,
@@ -758,7 +841,11 @@ export const generatePlan = mutation({
     if (org.onboardingStep !== "done") await ctx.db.patch(org._id, { onboardingStep: "plan" });
     await ctx.scheduler.runAfter(0, internal.jobs.buildStrategy, { runId });
     return { runId };
-  },
+}
+
+export const generatePlan = mutation({
+  args: { slug: v.string(), planStyle: v.optional(v.union(v.literal("starter"), v.literal("focused"), v.literal("detailed"))), aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))), creativeRange: v.optional(v.union(v.literal("balanced"), v.literal("conventional"), v.literal("surprising"), v.literal("ambitious"))), model: v.optional(v.string()) },
+  handler: generatePlanForOwner,
 });
 
 /** Continue without automatic research (e.g. during an AI outage): the owner adds facts by hand. */

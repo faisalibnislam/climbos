@@ -15,12 +15,12 @@ const choiceKind = v.union(v.literal("onboarding_research"), v.literal("strategy
  * provider key is configured are listed, each with this job's worst-case cost.
  */
 export const myModelChoice = query({
-  args: { kind: v.optional(choiceKind), aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))) },
-  handler: async (ctx, { kind, aiMode }) => {
+  args: { researchDepth: v.optional(v.union(v.literal("starter"), v.literal("full"))), planStyle: v.optional(v.union(v.literal("starter"), v.literal("focused"), v.literal("detailed"))), kind: v.optional(choiceKind), aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))) },
+  handler: async (ctx, { kind, aiMode, planStyle, researchDepth }) => {
     const user = await optionalUser(ctx);
     if (!user || !(await canChooseModel(ctx, user._id))) return { canChoose: false as const, options: [], defaultModel: null };
     const route = await defaultModelRoute(ctx);
-    const plan = kind ? planJob(kind, kind === "onboarding_research" ? { pages: 3 } : {}, { mode: aiMode ?? "basic" }) : null;
+    const plan = kind ? planJob(kind, kind === "onboarding_research" ? { pages: researchDepth === "starter" ? 2 : 3, researchDepth } : kind === "strategy" ? { planStyle } : {}, { mode: aiMode ?? "basic" }) : null;
     const options = modelOptions(currentRateVersion())
       .filter((o) => o.available)
       .map((o) => ({ ...o, estimateMicros: plan ? maxJobMicros(plan, { route: userRoute(o.key) }) : null }));

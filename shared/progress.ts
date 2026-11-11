@@ -17,7 +17,7 @@ export type Phase = "read" | "profile" | "research" | "draft" | "review" | "revi
 export const RUN_FAILURE_COPY = {
   providerUnavailable: "Our AI provider isn't available right now. Your progress is saved: try again in a few minutes to continue.",
   refused: "The AI declined this request. Try again, or rephrase what you asked for.",
-  invalidOutput: "The result didn't meet ClimbOS's quality bar, so it wasn't saved. Unused credits were returned. Trying again usually fixes it.",
+  invalidOutput: "AI couldn't finish a usable answer. Completed steps are saved, and unused credits were returned.",
   serviceProblem: "The AI service had a problem, so nothing was saved. Unused credits were returned. Try again in a moment.",
 } as const;
 
@@ -164,13 +164,15 @@ export function formatEta(seconds: number | null): string {
 /* ---------------- planned steps per job (for "what's next" and ETA) ---------------- */
 
 /** The step labels a job is expected to run (engine v2 agent phases), before any revision. */
-export function plannedSteps(kind: string, engine: string | null | undefined, opts: { website?: boolean } = {}): string[] {
+export function plannedSteps(kind: string, engine: string | null | undefined, opts: { website?: boolean; planStyle?: string } = {}): string[] {
   if (engine !== "v2") return [];
   const agent = (name: string, research: boolean, review = true) => [...(research ? [`${name}: research`] : []), `${name}: draft`, ...(review ? [`${name}: review 1`] : [])];
   switch (kind) {
     case "onboarding_research":
       return [...(opts.website !== false ? ["Read your website"] : []), "Understand the business", ...agent("Business insights", true)];
     case "strategy":
+      if (opts.planStyle === "starter") return agent("Your first growth step", false);
+      if (opts.planStyle === "focused") return agent("Your next growth step", true);
       return [...agent("Channel scoring", false, false), ...agent("Growth plays", true), ...agent("Growth plan", false)];
     case "outbound":
       return [...agent("Find customers", true), ...agent("Write the emails", false)];

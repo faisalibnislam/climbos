@@ -43,6 +43,9 @@ describe("assessment", () => {
   it("ships only when gates pass, lint is clean and scores clear the bar", () => {
     const good = { gates: [{ id: "G1", pass: true, note: "" }], scores: [{ id: "C1", score: 4, note: "", fix: "" }, { id: "C2", score: 5, note: "", fix: "" }, { id: "XV", score: 4, note: "", fix: "" }], strengths: [], fixes: [] };
     expect(assess(good, [], rubric).ship).toBe(true);
+    expect(assess({ ...good, gates: [{ id: "unrelated", pass: true, note: "" }] }, [], rubric).gatesPassed).toBe(false);
+    expect(assess(good, [], { ...rubric, gates: [...rubric.gates, { id: "G2", text: "permission" }] }).ship).toBe(false);
+    expect(assess({ ...good, gates: [...good.gates, ...good.gates] }, [], rubric).ship).toBe(false);
     expect(assess(good, [{ severity: "error", rule: "length", message: "" }], rubric).ship).toBe(false);
     expect(assess({ ...good, gates: [{ id: "G1", pass: false, note: "" }] }, [], rubric).ship).toBe(false);
     expect(assess({ ...good, scores: [{ id: "C1", score: 5, note: "", fix: "" }, { id: "C2", score: 2, note: "", fix: "" }, { id: "XV", score: 5, note: "", fix: "" }] }, [], rubric).ship).toBe(false);

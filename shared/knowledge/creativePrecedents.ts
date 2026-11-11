@@ -1,3 +1,4 @@
+import { CREATIVE_PRECEDENT_EXPANSION } from "./creativePrecedentExpansion";
 /**
  * Small, source-checked creative-strategy precedent set. This is deliberately
  * not padded to 100: every case must pass claim-level source verification and editorial review.
@@ -1676,6 +1677,7 @@ export const CREATIVE_PRECEDENTS: readonly CreativePrecedent[] = [
       { title: "TOMS Reveals Its Giving Evolution: Inspiring, Creating and Innovating Social Change", url: "https://www.prnewswire.com/news-releases/toms-reveals-its-giving-evolution-inspiring-creating-and-innovating-social-change-300800268.html", publisher: "PR Newswire, release supplied by TOMS EMEA B.V.", publicationDate: "2019-02-22", accessedAt: "2026-10-25", sourceRole: "company_primary", claimRole: "action", supports: "TOMS announced a progressive expansion toward project-based investments with local nonprofit partners while saying existing One for One programs would continue; this documents the announced strategy at that time, not later commercial results." },
     ],
   },
+  ...CREATIVE_PRECEDENT_EXPANSION,
 ];
 
 const STOP = new Set(["and", "the", "for", "with", "from", "into", "that", "this", "business", "company", "customer", "strategy", "strategic", "growth", "marketing"]);
@@ -1795,12 +1797,12 @@ export function formatCreativePrecedents(query: string | CreativePrecedentContex
     `Transfer risk: ${p.transferRisk}`,
     `Small-business adaptation: ${p.smallBusinessAdaptation}`,
     `Reversible test: ${p.reversibleTest}`,
-    `Sources (accessed 2026-10-25; cite only for this precedent, never as evidence about the target business): ${p.sources.map((s) => `${s.title} — ${s.publisher}, ${s.publicationDate}: ${s.supports} ${s.url}`).join(" | ")}`,
+    `Sources (accessed ${p.accessedAt}; cite only for this precedent, never as evidence about the target business): ${p.sources.map((s) => `${s.title} — ${s.publisher}, ${s.publicationDate}: ${s.supports} ${s.url}`).join(" | ")}`,
   ].join("\n")).join("\n\n");
 }
 
 /** Runtime entry point: every growth-plays generation receives a bounded context, even if its task label changes. */
 export function creativePrecedentsForAgent(agentId: string, task: string, businessContext: string | CreativePrecedentContext): string {
-  if (agentId !== "growth_plays" && !/STRATEGY EXPLORATION|CREATIVE STRATEGY EXPLORATION/i.test(task)) return "";
+  if (agentId !== "growth_plays" && agentId !== "business_model_check" && !/STRATEGY EXPLORATION|CREATIVE STRATEGY EXPLORATION/i.test(task)) return "";
   return formatCreativePrecedents(businessContext, 2);
 }

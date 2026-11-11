@@ -22,6 +22,11 @@ describe("offer disclosure and buyer-relied claims", () => {
     expect(rules("Start a 14-day free trial, then $29 a month. Cancel before it ends and you won't be charged.", "Members can cancel at any time.")).not.toContain("trial_terms");
     expect(rules("Try it free for 7 days. No card needed.")).not.toContain("trial_terms");
   });
+  it("does not turn a negated trial into an offered promotion, while still checking affirmative offers", () => {
+    expect(rules("There is no free trial. Membership costs $2 a month.")).not.toContain("trial_terms");
+    expect(rules("We don't offer a free trial.")).not.toContain("trial_terms");
+    expect(rules("There is no free trial on Basic. Start your free trial on Pro today.")).toContain("trial_terms");
+  });
 });
 
 import { lintPersuasion, type OfferAssessment } from "../../shared/agents/offerAssessment";

@@ -86,8 +86,8 @@ function searchReadinessFor(page: ReturnType<typeof extractPageContent>, url: st
   });
 }
 
-async function fetchOne(url: string, robots?: RobotsRead): Promise<ResearchedPage> {
-  const key = process.env.FIRECRAWL_API_KEY;
+async function fetchOne(url: string, robots?: RobotsRead, allowPaidFetch = true): Promise<ResearchedPage> {
+  const key = allowPaidFetch ? process.env.FIRECRAWL_API_KEY : undefined;
   if (key) {
     try {
       const req = firecrawlScrapeRequest({ apiKey: key, url, timeoutMs: 30_000 });
@@ -122,7 +122,7 @@ async function fetchOne(url: string, robots?: RobotsRead): Promise<ResearchedPag
           ...(meta ? {
             headings: meta.headings.slice(0, 12).map((heading) => heading.text),
             headingCounts: { h1: meta.headings.filter((heading) => heading.level === 1).length, h2: meta.headings.filter((heading) => heading.level === 2).length, h3: meta.headings.filter((heading) => heading.level === 3).length },
-            internalLinks: meta.links.slice(0, 30).map((link) => link.url),
+            internalLinks: meta.links.slice(0, 50).map((link) => link.url),
             htmlLang: meta.htmlLang,
             viewportPresent: meta.viewportPresent,
             imageCount: meta.imageCount,
@@ -156,10 +156,10 @@ async function fetchOne(url: string, robots?: RobotsRead): Promise<ResearchedPag
     ...(page.crawlerRobotsDirectives ? { crawlerRobotsDirectives: page.crawlerRobotsDirectives } : {}),
     ...(htmlMetadataRead ? { headingCounts: { h1: page.headings.filter((heading) => heading.level === 1).length, h2: page.headings.filter((heading) => heading.level === 2).length, h3: page.headings.filter((heading) => heading.level === 3).length } } : {}),
     headings: page.headings.slice(0, 12).map((heading) => heading.text),
-    internalLinks: page.links.slice(0, 30).map((link) => link.url),
+    internalLinks: page.links.slice(0, 50).map((link) => link.url),
     ...(page.htmlLang ? { htmlLang: page.htmlLang } : {}),
     ...(htmlMetadataRead ? { viewportPresent: page.viewportPresent, imageCount: page.imageCount, imagesWithAltAttribute: page.imagesWithAltAttribute, structuredDataTypes: page.jsonLdTypes, htmlMetadataRead: true, searchReadiness: searchReadinessFor(page, res.finalUrl, res.status, res.xRobotsTag, robots?.body, robots?.status ?? "unavailable") } : { htmlMetadataRead: false }),
-    text: [page.title, page.metaDescription, ...page.headings.map((h) => h.text), page.text].filter(Boolean).join("\n"),
+    text: [page.title, page.metaDescription, ...(page.contentText ? [] : page.headings.map((h) => h.text)), page.contentText ?? page.text].filter(Boolean).join("\n"),
     status: "ok",
     prices: page.jsonLdPrices.map((p) => `${p.name ?? "Offer"}: ${p.price} ${p.currency ?? ""}`.trim()),
     // links returned separately below
@@ -231,7 +231,7 @@ async function sitemapPages(origin: string, robots: string | null): Promise<stri
   return pages;
 }
 
-export async function researchWebsite(website: string, extraPages: number): Promise<{ pages: ResearchedPage[]; pagesFetched: number; discoveredCandidates: number }> {
+export async function researchWebsite(website: string, extraPages: number, opts: { preferredUrls?: string[]; allowPaidFetch?: boolean } = {}): Promise<{ pages: ResearchedPage[]; pagesFetched: number; discoveredCandidates: number }> {
   const url = normalizeWebsite(website);
   if (!url) return { pages: [{ url: website, text: "", status: "failed", error: "That doesn't look like a public website address.", prices: [] }], pagesFetched: 0, discoveredCandidates: 0 };
   const origin = new URL(url).origin;
@@ -244,7 +244,7 @@ export async function researchWebsite(website: string, extraPages: number): Prom
   if (!allowed(url)) {
     return { pages: [{ url, text: "", status: "blocked_by_robots", prices: [] }], pagesFetched: 0, discoveredCandidates: 1 };
   }
-  const home = await fetchOne(url, robotsRead);
+  const home = await fetchOne(url, robotsRead, opts.allowPaidFetch !== false);
   fetched++;
   pages.push(home);
   if (home.status !== "ok" || extraPages <= 0) return { pages, pagesFetched: fetched, discoveredCandidates: 1 };
@@ -277,14 +277,21 @@ export async function researchWebsite(website: string, extraPages: number): Prom
   const discoveredCandidates = ranked.length + 1;
   // One page of each kind before a second page of any kind.
   const firsts = ranked.filter((c, i, all) => all.findIndex((x) => x.rank === c.rank) === i);
-  const candidates = [...firsts, ...ranked.filter((c) => !firsts.includes(c))].slice(0, extraPages).map((c) => c.u);
+  // A requested public child page takes precedence over a catalogue index,
+  // without increasing the page budget or widening the allowed site.
+  const preferred = (opts.preferredUrls ?? []).slice(0, 8).flatMap(raw => {
+    const checked = validateResearchUrl(raw); if (!checked.ok) return [];
+    const parsed = new URL(checked.url); parsed.hash = "";
+    return sameSite(parsed.hostname, siteHost) && !parsed.search && !seen.has(parsed.toString().replace(/\/$/, "")) ? [parsed.toString()] : [];
+  });
+  const candidates = [...new Set([...preferred, ...firsts.map(c => c.u), ...ranked.filter(c => !firsts.includes(c)).map(c => c.u)])].slice(0, extraPages);
   for (const c of candidates) {
     seen.add(c.replace(/\/$/, ""));
     if (!allowed(c)) {
       pages.push({ url: c, text: "", status: "blocked_by_robots", prices: [] });
       continue;
     }
-    pages.push(await fetchOne(c, robotsRead));
+    pages.push(await fetchOne(c, robotsRead, opts.allowPaidFetch !== false));
     fetched++;
   }
   return { pages, pagesFetched: fetched, discoveredCandidates };

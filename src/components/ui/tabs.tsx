@@ -20,13 +20,13 @@ export function TabsList({ className, ...props }: ComponentProps<typeof RTabs.Li
   );
 }
 
-/** A single tab (28px inside a 32px track). The selected tab sits on a white surface. */
+/** A readable tab with a generous touch target. Arrow keys move within the track. */
 export function TabsTrigger({ className, ...props }: ComponentProps<typeof RTabs.Trigger>) {
   return (
     <RTabs.Trigger
       className={cn(
-        "inline-flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-[var(--radius-control)] px-2.5 text-ui font-medium text-ink-3 transition-colors [&_svg]:size-4",
-        "hover:text-ink data-[state=active]:bg-[var(--tab-active)] data-[state=active]:text-[var(--tab-active-ink)] data-[state=active]:shadow-sm",
+        "inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-[var(--radius-control)] px-2.5 text-ui font-medium text-ink-2 [&_svg]:size-4",
+        "data-[state=inactive]:hover:text-ink data-[state=active]:bg-[var(--tab-active)] data-[state=active]:text-[var(--tab-active-ink)] data-[state=active]:shadow-sm",
         className,
       )}
       {...props}

@@ -65,11 +65,11 @@ export interface PlayModel {
   hoursSource?: SourceTag;
 }
 export interface Economics {
-  revenuePerCustomerMonthUsd: number;
+  revenuePerCustomerMonthUsd: number | null;
   /** Contribution margin before acquisition (0–1). */
-  grossMargin: number;
+  grossMargin: number | null;
   /** Share of customers lost each month (0–1). Older plans give monthsRetained instead. */
-  monthlyChurn?: number;
+  monthlyChurn?: number | null;
   monthsRetained?: number;
   basis: string;
   /** Which of revenue / margin / churn are assumptions rather than facts (derived from `sources` on newer plans). */
@@ -91,7 +91,7 @@ export type OwnerRanges = Partial<Record<"revenue" | "margin" | "churn", { low: 
 export interface OwnerEconomics {
   revenuePerCustomerMonthUsd?: number;
   grossMargin?: number;
-  monthlyChurn?: number;
+  monthlyChurn?: number | null;
   ownerHourUsd?: number;
   /** Hours a week the owner can give growth work (a constraint, not a price). */
   ownerHoursPerWeek?: number;
@@ -221,7 +221,7 @@ const DAYS_PER_MONTH = 365.25 / 12;
 function customerRevenue12m(e: Economics): number | null {
   const churn = churnOf(e);
   const monthlyRevenue = e.revenuePerCustomerMonthUsd;
-  if (churn === null || !Number.isFinite(monthlyRevenue) || monthlyRevenue < 0) return null;
+  if (churn === null || monthlyRevenue === null || !Number.isFinite(monthlyRevenue) || monthlyRevenue < 0) return null;
   return churn === 0 ? monthlyRevenue * PAYBACK_HORIZON_MONTHS : monthlyRevenue * (1 - (1 - churn) ** PAYBACK_HORIZON_MONTHS) / churn;
 }
 
@@ -267,7 +267,7 @@ export function churnOf(e: Economics): number | null {
 /** Contribution per customer per month; null when price or margin is unknown or invalid. */
 export function monthlyContribution(e: Economics): number | null {
   const margin = rateOf(e.grossMargin);
-  if (!(e.revenuePerCustomerMonthUsd >= 0) || Number.isNaN(margin)) return null;
+  if (e.revenuePerCustomerMonthUsd === null || !(e.revenuePerCustomerMonthUsd >= 0) || Number.isNaN(margin)) return null;
   return contributionMonth(e.revenuePerCustomerMonthUsd, margin);
 }
 
@@ -496,8 +496,9 @@ export function lintEconomics(out: { economics: Economics; plays: PlayLike[] }):
   const issues: LintIssue[] = [];
   const e = out.economics;
   const usd = (n: number | null) => formatMoney(n, e.currency);
-  if (!(e.revenuePerCustomerMonthUsd > 0) || churnOf(e) === null) issues.push({ severity: "error", rule: "economics", message: "Give what one customer is worth: revenue per month, contribution margin and monthly churn (facts first, else tagged as assumptions).", path: "economics" });
-  if (!(e.grossMargin > 0 && e.grossMargin <= 1)) issues.push({ severity: "error", rule: "economics", message: "grossMargin is a share between 0 and 1 (e.g. 0.8).", path: "economics.grossMargin" });
+  if (e.revenuePerCustomerMonthUsd === null || e.grossMargin === null || churnOf(e) === null) issues.push({ severity: "warn", rule: "economics", message: "Customer contribution or retention is unknown. Payback stays unknown; request the deciding owner inputs before scaling.", path: "economics" });
+  if (e.revenuePerCustomerMonthUsd !== null && !(e.revenuePerCustomerMonthUsd > 0)) issues.push({ severity: "error", rule: "economics", message: "Known monthly revenue must be positive; leave missing revenue null.", path: "economics" });
+  if (e.grossMargin !== null && !(e.grossMargin > 0 && e.grossMargin <= 1)) issues.push({ severity: "error", rule: "economics", message: "grossMargin is a share between 0 and 1 (e.g. 0.8).", path: "economics.grossMargin" });
   out.plays.forEach((p, i) => {
     const path = `plays[${i}]`;
     if (!p.model?.steps?.length || !(p.model.weeklyReach > 0)) {
@@ -946,7 +947,7 @@ export function portfolioP50(out: { economics: Economics; plays: PlayLike[] }, h
 export function playsGoalGap(out: { economics: Economics; plays: PlayLike[] }, goal: { target?: GoalTarget | null; horizonDays?: number } | null | undefined): GoalGap {
   const h = goal?.horizonDays || 90;
   const rev = out.economics.revenuePerCustomerMonthUsd;
-  return goalGap(goal?.target, h, out.plays.some((p) => p.model?.steps?.length) ? portfolioRange(out, h) : null, { churn: churnOf(out.economics), revenuePerCustomerMonth: rev >= 0 ? rev : null });
+  return goalGap(goal?.target, h, out.plays.some((p) => p.model?.steps?.length) ? portfolioRange(out, h) : null, { churn: churnOf(out.economics), revenuePerCustomerMonth: rev !== null && rev >= 0 ? rev : null });
 }
 
 /** The numbers the plan must use, computed here so it can't contradict them. */
@@ -1096,8 +1097,8 @@ export function decisionQuestions(out: { economics: Economics; plays: PlayLike[]
   const main = Math.max(0, plays.findIndex((p) => p.kind === "bankable"));
   const assumed = new Set(e.assumed ?? ["revenue", "margin", "churn"]);
   const candidates: { key: QuestionKey; value: number; low: number; high: number }[] = [];
-  if (assumed.has("revenue")) candidates.push({ key: "revenuePerCustomerMonthUsd", value: e.revenuePerCustomerMonthUsd, low: e.revenuePerCustomerMonthUsd * 0.5, high: e.revenuePerCustomerMonthUsd * 1.5 });
-  if (assumed.has("margin")) candidates.push({ key: "grossMargin", value: e.grossMargin, low: Math.max(0.05, e.grossMargin * 0.6), high: Math.min(1, e.grossMargin * 1.25) });
+  if (assumed.has("revenue") && e.revenuePerCustomerMonthUsd !== null) candidates.push({ key: "revenuePerCustomerMonthUsd", value: e.revenuePerCustomerMonthUsd, low: e.revenuePerCustomerMonthUsd * 0.5, high: e.revenuePerCustomerMonthUsd * 1.5 });
+  if (assumed.has("margin") && e.grossMargin !== null) candidates.push({ key: "grossMargin", value: e.grossMargin, low: Math.max(0.05, e.grossMargin * 0.6), high: Math.min(1, e.grossMargin * 1.25) });
   const churn = churnOf(e);
   if (assumed.has("churn") && churn !== null) candidates.push({ key: "monthlyChurn", value: churn, low: churn * 0.5, high: Math.min(0.9, churn * 2) });
   if (!(owner?.ownerHourUsd && owner.ownerHourUsd > 0) && plays.some((p) => p.model.ownerHoursPerWeek > 0)) candidates.push({ key: "ownerHourUsd", value: ownerHourOf(e), low: thresholdIn(20, e.currency), high: thresholdIn(150, e.currency) });
@@ -1139,7 +1140,12 @@ export function decisionQuestions(out: { economics: Economics; plays: PlayLike[]
   const cashQuestion: OwnerQuestion[] = (unconstrainedPortfolio?.cashSpendUsdMonth ?? 0) > 0
     ? [{ key: "monthlyGrowthCashUsd", question: QUESTION.monthlyGrowthCashUsd.q, ...(owner?.monthlyGrowthCashUsd !== undefined ? { assumed: owner.monthlyGrowthCashUsd, ownerReported: true } : {}), unit: "usd_month", why: `${owner?.monthlyGrowthCashUsd !== undefined ? `Your saved owner-reported limit is ${formatMoney(owner.monthlyGrowthCashUsd, e.currency)} a month. ` : ""}The current best modeled set needs about ${formatMoney(unconstrainedPortfolio!.cashSpendUsdMonth, e.currency)} a month for media and other cash costs. This limit excludes the value of your time.` }]
     : [];
+  const missingEconomics: OwnerQuestion[] = [
+    ...(e.revenuePerCustomerMonthUsd === null ? [{ key: "revenuePerCustomerMonthUsd" as const, question: QUESTION.revenuePerCustomerMonthUsd.q, unit: "usd_month" as const, why: "Average customer revenue is unknown. An entry-tier price is not evidence of the average customer value." }] : []),
+    ...(e.grossMargin === null ? [{ key: "grossMargin" as const, question: QUESTION.grossMargin.q, unit: "share" as const, why: "Contribution is unknown until delivery and service costs are accounted for. A default margin would invent profit." }] : []),
+  ];
   return [
+    ...missingEconomics,
     ...unknownChurn,
     ...cashQuestion,
     ...delivery,

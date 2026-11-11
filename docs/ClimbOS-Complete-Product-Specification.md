@@ -2,6 +2,8 @@
 
 **Purpose:** one owner-facing reference for the product direction, requirements, capability boundaries, supplied libraries, engineering rules, and current implementation evidence. Use it to cross-check ClimbOS before continuing development in Claude Code.
 
+**Newer owner requirements — 9 November 2026:** lead with a clear recommendation in simple language; prioritize usability over appearance. Plans should contain a longer-term business direction and distinct creative mechanisms, with specific industry judgment across education, healthcare, technology, science, retail, ecommerce and creators. A Mac app may warrant research into niche YouTube reviewers with relevant coverage. Search, social, G2 and Product Hunt advice must explain the business-specific opportunity and first useful test, rather than provide a generic checklist. Keep recommendations conditional on actual evidence and distinguish unknowns. Implementation and validation remain local, using synthetic data; no paid model API testing, push or deployment is authorized in this work. See [the local implementation audit](Local-Audit-2026-11-09.md) for changes and remaining gaps. The snapshot below remains historical.
+
 **Snapshot date:** 25 October 2026
 
 **Repository branch at preparation:** `growth-engine-v2`
@@ -111,7 +113,7 @@ Each option should identify its thesis, challenged convention, customer tension 
 
 ### 5.3 Source-backed precedent library
 
-The creative library’s target is 100 distinct, source-backed real precedents. Do not fabricate, pad, or lower the evidence bar. Repository documentation at the recent snapshot reports **75 reviewed/source-checked cases and 25 unverified cases excluded from retrieval**. Claude must re-check the runtime count before relying on it.
+The creative library’s target is 100 distinct, source-backed real precedents. Do not fabricate, pad, or lower the evidence bar. The 9 November local implementation contains **100 distinct source-backed cases**. The 25 additions are primary-source action precedents, explicitly low-confidence for transfer, without established commercial outcomes. Re-check the runtime count and claim-level evidence before relying on it.
 
 Each record should distinguish the organization’s action from outcome evidence and causal evidence; capture source title, publisher, URL, publication/access dates, claim supported, period, scale, sector/geography/model, convention challenged, mechanism, outcome and evidence class, context/transfer conditions, likely failure conditions, small-business adaptation, reversible test, editorial status, and confidence. Company-reported, independently corroborated, measured, inferred, and causal evidence are not interchangeable.
 
@@ -418,7 +420,7 @@ The owner authorized verified branch pushes to origin/growth-engine-v2. Keep ver
 
 - [ ] Read the entire 410-row audit and reconcile every high-impact status with current runtime code.
 - [ ] Check current git state; preserve all working-tree changes and identify which are complete versus in progress.
-- [ ] Validate the current 75/100 source-checked precedent count and 25k playbook ingestion/retrieval state against the live runtime code and focused tests.
+- [ ] Validate the current 100 source-backed precedent count and 25k playbook ingestion/retrieval state against the live runtime code and focused tests.
 - [ ] Trace one full recommendation from owner inputs through evidence, diagnosis, choices, deterministic economics, persistence/UI, approval, action receipt, actual outcome, and future learning.
 - [ ] Check that website/social/content recommendations reflect verified business/audience/geography/capacity, not generic channel assumptions.
 - [ ] Recheck all platform/API, legal, fee, OAuth, privacy, and data-retention claims from current official primary sources before integrations.

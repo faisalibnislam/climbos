@@ -92,6 +92,7 @@ export const observations = query({
     const result = await latestSnapshot(ctx, org._id);
     if (!result) return null;
     return {
+      isFixture: org.kind === "demo",
       property: result.snapshot.property,
       startDate: result.snapshot.startDate,
       endDate: result.snapshot.endDate,

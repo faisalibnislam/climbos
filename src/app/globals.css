@@ -688,3 +688,177 @@ body {
   font-weight: 500;
   letter-spacing: -0.025em;
 }
+
+/* Customer workspace: same palette, quieter navigation and one active workspace. */
+.climb-app,
+.discovery-shell {
+  --radius-card: 18px;
+  --radius-control: 10px;
+  --r-xl: 14px;
+  --r-2xl: 18px;
+  --font-section: var(--font-body);
+  --font-card: var(--font-body);
+  --font-empty: var(--font-body);
+  --fw-section: 600;
+  --fw-card: 600;
+}
+.climb-app .heading-page,
+.discovery-shell .heading-page {
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  font-size: clamp(28px, 3vw, 38px);
+  line-height: 1.18;
+}
+.climb-app .app-topbar {
+  background: var(--bg);
+  border-color: var(--line);
+  padding-inline: 24px;
+}
+.climb-app .app-sidebar { border-color: var(--line); }
+.climb-app .app-nav-link {
+  min-height: 44px;
+  height: auto;
+  padding: 11px 12px;
+  border-radius: 10px;
+  gap: 12px;
+}
+.climb-app .app-nav-link[aria-current="page"] {
+  color: var(--brand-800);
+  background: var(--brand-50);
+  box-shadow: none;
+  font-weight: 600;
+}
+.climb-app .app-credit-meter {
+  background: var(--surface-2);
+  border-color: transparent;
+  border-radius: 12px;
+}
+.plan-workspace [role="tablist"] {
+  background: transparent;
+  border: 0;
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--line-strong);
+  border-radius: 0;
+  width: 100%;
+  gap: 6px;
+}
+.plan-workspace [role="tab"] {
+  min-height: 42px;
+  padding-inline: 16px;
+  border-radius: 9px;
+}
+.plan-workspace [role="tab"][data-state="active"] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 2px 5px color-mix(in srgb, var(--ink) 5%, transparent);
+}
+.plan-journey { display: grid; gap: 24px; align-items: start; }
+.plan-step-nav { min-width: 0; padding-top: 12px; }
+.plan-step-list { display: grid; gap: 8px; }
+.plan-step-link {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+  padding: 14px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink-2);
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.plan-step-link:hover { background: var(--surface-2); }
+.plan-step-link[aria-current="step"] {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--ink) 3%, transparent);
+}
+.plan-step-number {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+.plan-step-link[aria-current="step"] .plan-step-number { background: var(--sun); color: var(--pine); }
+.plan-work-surface {
+  min-width: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px color-mix(in srgb, var(--ink) 3%, transparent);
+}
+.plan-work-heading { padding: 28px 28px 24px; border-bottom: 1px solid var(--line); }
+.plan-work-body { padding: 24px 28px 28px; }
+.step-support { border-top: 1px solid var(--line); padding-top: 8px; }
+.ai-step-work > details:has(textarea) {
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.ai-step-work > [role="status"] {
+  border-radius: 12px;
+  background: var(--brand-50);
+  color: var(--brand-800);
+  padding: 18px;
+}
+.step-primary-action,
+.climb-app .request-composer button[type="submit"],
+.discovery-shell .request-composer button[type="submit"] {
+  background: var(--sun);
+  color: var(--pine);
+  border-color: transparent;
+  box-shadow: none;
+  min-height: 44px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.step-primary-action:hover:not(:disabled),
+.request-composer button[type="submit"]:hover:not(:disabled) { filter: brightness(0.97); }
+.request-composer form {
+  border-color: var(--line-strong);
+  border-radius: 18px;
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--ink) 3%, transparent);
+}
+.request-composer .request-suggestion {
+  border-radius: 999px;
+  border-color: var(--line-strong);
+  background: transparent;
+  font-size: 12px;
+}
+.discovery-shell > header { background: transparent; border-color: var(--line); }
+.discovery-shell > header > div { height: 72px; max-width: 1120px; }
+.discovery-shell .heading-page { font-size: clamp(32px, 5vw, 46px); }
+.home-next-action { padding: 28px; border-radius: 20px; box-shadow: 0 6px 24px color-mix(in srgb, var(--ink) 3%, transparent); }
+.home-next-action > .text-overline { color: var(--brand-800); }
+.home-next-action .heading-section { font-size: 23px; line-height: 1.35; font-weight: 600; letter-spacing: -0.025em; }
+.home-next-action a:first-child:not(.text-link) { min-height: 44px; }
+@media (min-width: 1100px) {
+  .plan-journey { grid-template-columns: 210px minmax(0, 1fr); gap: 28px; }
+  .plan-step-nav { position: sticky; top: 92px; }
+}
+@media (min-width: 640px) and (max-width: 1099px) {
+  .plan-step-list { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+}
+@media (max-width: 639px) {
+  .climb-app .app-topbar { padding-inline: 12px; gap: 8px; }
+  .plan-step-list { gap: 4px; }
+  .plan-step-link { padding-block: 10px; }
+  .plan-work-heading { padding: 22px 18px 20px; }
+  .plan-work-body { padding: 20px 18px; }
+  .plan-work-surface { border-radius: 16px; }
+  .plan-workspace [role="tab"] { padding-inline: 12px; }
+  .home-next-action { padding: 22px; }
+}
+
+.app-sidebar .app-nav-link[aria-label] { padding-inline: 0; }

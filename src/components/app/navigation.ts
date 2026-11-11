@@ -2,12 +2,15 @@
 export type AppArea = "today" | "plan" | "channels" | "work" | "customers" | "results" | "tools";
 export const PRIMARY_NAV = [
   { key: "today", label: "Home", description: "Ask for help and see what needs you." },
-  { key: "plan", label: "Plan", description: "Your goal and what to focus on." },
-  { key: "channels", label: "Channels", description: "Where to find customers and followers." },
-  { key: "work", label: "Work", description: "Posts, emails, ads, images and pages." },
+  { key: "plan", label: "Your goals", description: "What you want to achieve and the next useful step." },
+  { key: "work", label: "Your work", description: "Find your drafts, follow AI work, and review what is ready." },
+] as const;
+
+export const SECONDARY_NAV = [
+  { key: "results", label: "Results", description: "What happened, with the evidence behind it." },
+  { key: "channels", label: "Find customers", description: "Recommended places to reach the right people." },
   { key: "customers", label: "Customers", description: "People, messages and reviews." },
-  { key: "results", label: "Results", description: "What happened, in numbers." },
-  { key: "tools", label: "More", description: "Every other tool." },
+  { key: "tools", label: "All tools", description: "Find a tool when you need it." },
 ] as const;
 
 export const APP_TOOLS: { key: string; label: string; description: string; area: AppArea; search: string }[] = [
@@ -18,6 +21,7 @@ export const APP_TOOLS: { key: string; label: string; description: string; area:
   { key: "reels", label: "Short videos", description: "Prepare short videos.", area: "work", search: "reels scripts video" },
   { key: "studio", label: "Design editor", description: "Edit graphics and layouts.", area: "work", search: "studio carousel creative" },
   { key: "outbound", label: "Find possible customers", description: "Find businesses and draft messages, with sources.", area: "customers", search: "outbound prospect leads sales outreach" },
+  { key: "creators", label: "Find creators & reviewers", description: "Research people whose audience may need your product.", area: "customers", search: "influencers youtube podcasts niche mac reviewers partnerships sponsorship earned coverage" },
   { key: "pipeline", label: "Customer progress", description: "Track people from first contact to sale.", area: "customers", search: "pipeline crm deals sales" },
   { key: "inbox", label: "Messages", description: "Read messages and draft replies.", area: "customers", search: "inbox inquiries conversations" },
   { key: "reviews", label: "Customer reviews", description: "Read feedback, draft replies, ask for reviews.", area: "customers", search: "reputation feedback" },
@@ -30,13 +34,14 @@ export const APP_TOOLS: { key: string; label: string; description: string; area:
 ];
 
 export function appHref(slug: string, key: string) {
+  if (key === "creators") return `/app/${encodeURIComponent(slug)}/outbound?kind=creators`;
   if (key === "review") return `/app/${encodeURIComponent(slug)}/today#review`;
   return key === "studio" ? `/studio/${encodeURIComponent(slug)}` : `/app/${encodeURIComponent(slug)}/${key}`;
 }
 
 export function appArea(section: string): AppArea | "settings" {
   if (section === "settings" || section === "connections") return "settings";
-  if (PRIMARY_NAV.some((item) => item.key === section)) return section as AppArea;
+  if ([...PRIMARY_NAV, ...SECONDARY_NAV].some((item) => item.key === section)) return section as AppArea;
   return APP_TOOLS.find((tool) => tool.key === section)?.area ?? "today";
 }
 

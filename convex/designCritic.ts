@@ -1,3 +1,4 @@
+import { focusedGoal } from "./lib/goals";
 import { priorDesignDecisions } from "./jobWrites";
 import { findingFingerprint } from "../shared/agents/designDecisions";
 import { sha256Hex } from "../shared/policy";
@@ -16,6 +17,47 @@ function findingsFromRun(run: { kind?: string; output?: string }): unknown[] {
     return [];
   }
 }
+
+/** A finding's page versions and linked outcome records, without implying causal lift. */
+export const results = query({
+  args: { slug: v.string(), runId: v.id("workflowRuns"), findingIndex: v.number() },
+  handler: async (ctx, { slug, runId, findingIndex }) => {
+    const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
+    const run = assertSameOrg(await ctx.db.get(runId), org._id, "audit");
+    if (!Number.isInteger(findingIndex) || !findingsFromRun(run)[findingIndex]) throw appError("INVALID", "Choose a finding in this audit.");
+    const pages = (await ctx.db.query("landingPages").withIndex("by_org", (q) => q.eq("orgId", org._id)).order("desc").take(100)).filter((page) => page.designCriticSource?.runId === runId && page.designCriticSource.findingIndex === findingIndex);
+    const tests = await ctx.db.query("experiments").withIndex("by_design_source", (q) => q.eq("orgId", org._id).eq("designSource.runId", runId).eq("designSource.findingIndex", findingIndex)).order("desc").take(21);
+    return { truncated: tests.length > 20, canEdit: role !== "viewer", pages: pages.map((page) => ({ id: page._id, title: page.title, version: page.version ?? 0, measurementReady: page.designMeasurementPlan?.appliesToVersion === (page.version ?? 0) })), tests: tests.slice(0, 20).map((test) => ({ id: test._id, name: test.name, method: test.method, primaryMetric: test.primaryMetric, stoppingRule: test.stoppingRule, pageVersion: test.designSource!.pageVersion, pageId: test.designSource!.pageId, status: test.status, analyses: (test.analyses ?? []).map(({ reviewedBy: _reviewedBy, ...analysis }) => analysis) })) };
+  },
+});
+
+/** Define a test for the exact chosen draft and measurement plan. Starts no execution. */
+export const createResultTest = mutation({
+  args: { slug: v.string(), pageId: v.id("landingPages"), expectedVersion: v.number() },
+  handler: async (ctx, { slug, pageId, expectedVersion }) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
+    const page = assertSameOrg(await ctx.db.get(pageId), org._id, "page");
+    const source = page.designCriticSource;
+    if (!source) throw appError("INVALID", "Choose a draft prepared from a saved audit direction.");
+    const run = assertSameOrg(await ctx.db.get(source.runId), org._id, "audit");
+    if (!findingsFromRun(run)[source.findingIndex]) throw appError("INVALID", "The original finding is unavailable.");
+    if ((page.version ?? 0) !== expectedVersion) throw appError("INVALID", "The page changed. Review the current version first.");
+    const plan = page.designMeasurementPlan;
+    if (!plan || plan.appliesToVersion !== expectedVersion || !plan.audience || !plan.guardrail || !plan.observationDays || !plan.decisionRule) throw appError("INVALID", "Save the audience, metric, baseline or collection plan, guardrail, review window and decision rule for this exact draft version first.");
+    const previous = await ctx.db.query("experiments").withIndex("by_design_source", (q) => q.eq("orgId", org._id).eq("designSource.runId", source.runId).eq("designSource.findingIndex", source.findingIndex)).take(100);
+    const same = previous.find((test) => test.designSource?.pageId === pageId && test.designSource.pageVersion === expectedVersion);
+    if (same) return same._id;
+    if (previous.length >= 100) throw appError("INVALID", "This finding has reached its test-history limit.");
+    const strategies = await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", org._id)).order("desc").take(20);
+    const activeGoal = await focusedGoal(ctx, org);
+    const candidates = activeGoal ? strategies.filter((item) => item.goalId === activeGoal._id) : strategies;
+    const strategy = candidates.find((item) => item.status === "approved") ?? candidates[0];
+    if (!strategy) throw appError("INVALID", "Create a growth plan before adding its page test.");
+    const id = await ctx.db.insert("experiments", { orgId: org._id, strategyId: strategy._id, designSource: { runId: source.runId, findingIndex: source.findingIndex, pageId, pageVersion: expectedVersion }, name: `Page change: ${page.title}`.slice(0, 160), hypothesis: `Test whether this chosen page change affects ${plan.metric}. This is a hypothesis, not promised lift.`, population: plan.audience, method: "pre_post_observational", primaryMetric: plan.metric, guardrails: [plan.guardrail], durationDays: plan.observationDays, stoppingRule: plan.decisionRule, status: "proposed", variants: [{ key: "before", description: `Original audited page: ${source.sourceUrl ?? "see the retained audit"}`.slice(0, 240) }, { key: "after", description: `ClimbOS-hosted page draft version ${expectedVersion}` }], createdAt: Date.now() });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "design.result_test_created", subjectType: "experiment", subjectId: id, summary: `Defined a proposed result test for page draft v${expectedVersion}. Nothing was launched.` });
+    return id;
+  },
+});
 
 /** Append one owner decision to the finding's history (the review row keeps only the latest state). */
 async function recordFindingEvent(ctx: MutationCtx, e: { orgId: Id<"organizations">; runId: Id<"workflowRuns">; findingIndex: number; kind: "status" | "direction"; status?: string; directionId?: string; note?: string; screenshotCapturedAt?: number; actorId: Id<"users">; at: number }) {

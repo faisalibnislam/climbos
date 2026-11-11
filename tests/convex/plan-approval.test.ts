@@ -112,7 +112,8 @@ describe("Plan approval starts the work", () => {
     expect(planBoundContext?.strategyPinned).toBe(true);
     await t.finishAllScheduledFunctions(() => undefined);
     const done = await t.run(async (ctx) => Promise.all(runnable.map((c) => ctx.db.get(c.cardId!))));
-    expect(done.every((c) => c!.status === "done")).toBe(true);
+    const diagnostics = await t.run(async ctx=>Promise.all(done.filter(card=>card?.status!=="done"&&card?.runId).map(async card=>{const run=await ctx.db.get(card!.runId!);return {status:card!.status,error:run?.error};})));
+    expect(done.every((c) => c!.status === "done"),JSON.stringify(diagnostics)).toBe(true);
     if (runnable.length) expect((await notices(t, w.userId)).some((n) => /new drafts? ready/.test(n.text))).toBe(true);
 
     // Turning a channel off and on again doesn't start its work twice.
@@ -231,6 +232,7 @@ describe("Plan approval starts the work", () => {
     process.env.CLIMBOS_FAKE_LLM = "fail";
     const t = setup();
     const w = await workspace(t, "fail-notice@example.com");
+    await makePaid(t, w.orgId);
     await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
     await t.finishAllScheduledFunctions(() => undefined);
     const failedRun = await t.run(async (ctx) => (await ctx.db.query("workflowRuns").withIndex("by_org_created", (q) => q.eq("orgId", w.orgId)).collect()).find((r) => r.kind === "strategy")!);

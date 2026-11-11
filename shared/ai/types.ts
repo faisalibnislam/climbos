@@ -117,6 +117,8 @@ export interface TurnUsage {
 }
 
 export interface Source {
+  /** Explicit first-party refusal observed in a page read; no field means unknown. */
+  productPitchPolicy?: { status: "refused"; evidence: string };
   url: string;
   title?: string;
   /** Dates explicitly present in HTML metadata on a page ClimbOS fetched. Not independently verified. */
@@ -148,6 +150,8 @@ export type TurnResult =
       usage: TurnUsage;
       costMicros: number;
       retryAfterMs?: number;
+      /** The request may have been billed; retain its reservation and do not retry automatically. */
+      billingUncertain?: boolean;
       text?: string;
       appended: MessageParam[];
     };

@@ -49,8 +49,10 @@ describe("price fit: channel scoring", () => {
     const cheap = saas(6);
     expect(row(cheap, "D01").priceFit).toMatch(/\$6\/month/);
     expect(row(cheap, "S09").priceFit).toBeUndefined();
-    expect(scorecardText(scoreChannels(cheap), 40)).toMatch(/D01 Cold email: \d+\/100 · Later · Selling one customer at a time doesn't pay back at about \$6\/month/);
-    expect(priceFitText(cheap)).toMatch(/PRICE FIT: about \$6 per customer per month.*comparison and SEO pages, onboarding and activation, in-product virality/);
+    expect(scorecardText(scoreChannels(cheap), 40)).toMatch(/D01 Cold email: \d+\/100 · Later · At about \$6\/month, check whether one-to-one selling/);
+    expect(priceFitText(cheap)).toMatch(/PRICE FIT: about \$6 per customer per month/);
+    expect(priceFitText(cheap)).toContain("do not assume low price makes all partnerships unviable");
+    expect(priceFitText(cheap)).toContain("no assumed sponsorship fee or guaranteed placement");
   });
   it("high price, sales-led motion or unknown price change nothing", () => {
     expect(lowTicket(saas(599))).toBe(false);

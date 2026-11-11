@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { CLEAN_PAGE_CSS, launchBrowser, safePublicUrl } from "@/lib/render/browser";
+import { inspectRenderedPage, type RenderChecks } from "@shared/site/renderChecks";
+import { localDraftCaptureUrl, captureResourceAllowed } from "@shared/site/capturePolicy";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -10,6 +12,7 @@ interface Shot {
   width: number;
   height: number;
   png: string; // base64
+  checks?: RenderChecks;
 }
 
 /**
@@ -21,7 +24,13 @@ export async function POST(req: Request) {
   const secret = process.env.CLIMBOS_SERVER_SECRET;
   if (!secret || req.headers.get("x-climbos-secret") !== secret) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const body = (await req.json().catch(() => ({}))) as { url?: string; sections?: number };
-  const url = safePublicUrl(body.url ?? "");
+  // A private draft may be captured on the local review server only at its
+  // exact origin and one-time token path. Other private destinations stay blocked.
+  // Next may normalize the request hostname to localhost in development. Bind
+  // private captures to the configured app origin, never an arbitrary Host header.
+  const origin = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? req.url).origin;
+  const localDraft = localDraftCaptureUrl(body.url ?? "", origin);
+  const url = safePublicUrl(body.url ?? "") ?? localDraft;
   if (!url) return NextResponse.json({ error: "Only public http(s) pages can be captured." }, { status: 400 });
   const maxSections = Math.max(0, Math.min(6, body.sections ?? 4));
 
@@ -37,14 +46,15 @@ export async function POST(req: Request) {
     const desktop = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36 ClimbOS-Capture/1.0" });
     const page = await desktop.newPage();
     // Never follow the page to private hosts (redirect-based SSRF).
-    await page.route("**/*", (route) => (safePublicUrl(route.request().url()) ? route.continue() : route.abort()));
+    const allowed = (raw: string) => captureResourceAllowed(raw, localDraft);
+    await page.route("**/*", (route) => (allowed(route.request().url()) ? route.continue() : route.abort()));
     await page.goto(url.toString(), { waitUntil: "domcontentloaded", timeout: 25_000 });
     mark("desktop loaded");
     await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => undefined);
     await page.addStyleTag({ content: CLEAN_PAGE_CSS });
     await page.waitForTimeout(600);
     title = await page.title();
-    shots.push({ kind: "desktop", label: title || url.hostname, width: 1440, height: 900, png: (await page.screenshot({ type: "png" })).toString("base64") });
+    shots.push({ kind: "desktop", label: title || url.hostname, width: 1440, height: 900, png: (await page.screenshot({ type: "png" })).toString("base64"), checks: await page.evaluate(inspectRenderedPage) });
 
     // Sticky headers and floating bars would sit on top of every crop: hide them now.
     await page.evaluate(() => {
@@ -56,6 +66,7 @@ export async function POST(req: Request) {
     // Feature sections: large blocks with a heading, cropped one by one.
     const sections = await page.evaluate((max) => {
       const out: { y: number; h: number; label: string }[] = [];
+      if (max === 0) return out;
       const blocks = Array.from(document.querySelectorAll("section, main > div, [class*='feature' i]")) as HTMLElement[];
       for (const el of blocks) {
         const r = el.getBoundingClientRect();
@@ -84,19 +95,19 @@ export async function POST(req: Request) {
       const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1 ClimbOS-Capture/1.0" });
       try {
         const m = await mobile.newPage();
-        await m.route("**/*", (route) => (safePublicUrl(route.request().url()) ? route.continue() : route.abort()));
+        await m.route("**/*", (route) => (allowed(route.request().url()) ? route.continue() : route.abort()));
         await m.goto(url.toString(), { waitUntil: "domcontentloaded", timeout: 12_000 });
         mark("mobile loaded");
         await m.waitForLoadState("networkidle", { timeout: 4_000 }).catch(() => undefined);
         await m.addStyleTag({ content: CLEAN_PAGE_CSS });
         await m.waitForTimeout(300);
-        return (await m.screenshot({ type: "png", timeout: 8_000 })).toString("base64");
+        return { png: (await m.screenshot({ type: "png", timeout: 8_000 })).toString("base64"), checks: await m.evaluate(inspectRenderedPage) };
       } finally {
         void mobile.close().catch(() => undefined);
       }
     };
     const mobilePng = await Promise.race([mobileShot().catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), 20_000))]);
-    if (mobilePng) shots.push({ kind: "mobile", label: `${title || url.hostname} (mobile)`, width: 390, height: 844, png: mobilePng });
+    if (mobilePng) shots.push({ kind: "mobile", label: `${title || url.hostname} (mobile)`, width: 390, height: 844, png: mobilePng.png, checks: mobilePng.checks });
     mark("mobile done");
   } catch (e) {
     if (!shots.length) return NextResponse.json({ error: `Couldn't capture this page: ${(e as Error).message.slice(0, 200)}` }, { status: 502 });

@@ -24,13 +24,16 @@ describe("SEO answer-first artifact export", () => {
       recommendedAction: "refresh_existing_page",
       targetPageUrl: "https://example.com/intake-guide",
       recommendationReason: "The observed page already serves this customer task.",
+      publishingDetails:{suggestedPath:"/intake-guide",proposedByline:"The Example team",reviewStatus:"draft_unreviewed",schemaTypes:["none"],schemaNote:"No new schema proposed without supported visible content.",inboundLinks:[{fromUrl:"https://example.com/templates",anchor:"How to prepare an intake form"}]},
     };
     const [artifact] = seoToArtifacts(output);
     expect(artifact.body.indexOf("## Quick answer")).toBeLessThan(artifact.body.indexOf("## Start with the next step"));
     expect(artifact.body).toContain("## Frequently asked questions");
     expect(artifact.body).toContain("[Source](https://example.com/intake-guide)");
-    expect(artifact.body).toContain("## Verified facts");
+    expect(artifact.body).toContain("## Statements and sources");
     expect(artifact.body).toContain("## Original contribution");
+    expect(artifact.body).toContain("Proposed byline: The Example team");
+    expect(artifact.body).toContain("No reviewed date has been claimed");
     expect(artifact.body).toContain("This linkage does not prove that the contribution is unique");
     expect(artifact.body).toContain("[Evidence](https://example.com/intake-guide)");
     expect(artifact.body).toContain("## Suggested internal links");

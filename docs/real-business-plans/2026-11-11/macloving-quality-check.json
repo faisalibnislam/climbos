@@ -1,0 +1,509 @@
+{
+  "date": "2026-11-11",
+  "workspace": "macloving-3a1n4",
+  "localPlanUrl": "http://127.0.0.1:3430/app/macloving-3a1n4/plan",
+  "plan": {
+    "id": "js7v3wqp75pw24wb9g459n5jds8j147j",
+    "status": "needs_approval",
+    "summary": "Test one thing: a how-to guide for shrinking Mac images that ends at the Diet Image app page. AI has drafted the guide and one LinkedIn post. You test the app, check them, then publish. Total owner time is assumed at about 3 to 4 hours. No ad spend.",
+    "expert": {
+      "affordableCac": "Cannot be judged: membership revenue per visitor, retention and costs are all unknown. Work stays on free routes until those inputs exist.",
+      "diagnosis": "The site offers 24 apps for $2 a month but visitors have no obvious task-based way in. A guide aimed at one specific job is a cheap way to find out whether visitors can be reached without ads. The one assumption that would flip this choice: that enough people search for this task. ClimbOS can check search wording and suggested queries before you publish.",
+      "focusedMove": {
+        "aiCanDo": "AI has drafted the full guide, a LinkedIn post, a planned demo shot list and the tracked-link method. It can check search wording and adjust copy after you test the app and read the first results.",
+        "evidenceRefs": [
+          "https://macloving.app/apps/dietimage",
+          "https://macloving.app/pricing"
+        ],
+        "firstAction": "Try Diet Image on a folder of images, then read the prepared guide beside its app page.",
+        "title": "Publish a Diet Image how-to guide",
+        "version": 1,
+        "why": "One task guide tests whether a free route can bring visitors to a real app page without ad money. It is an untested bet in a crowded topic."
+      },
+      "leadingIndicators": [
+        {
+          "metric": "Guide indexed and receiving visits (discovery)",
+          "source": "Search Console or site analytics",
+          "weeklyTarget": "Any recorded arrival, then compare equal windows"
+        },
+        {
+          "metric": "Clicks from the guide to the Diet Image page (interest)",
+          "source": "Tracked link",
+          "weeklyTarget": "Compare against guide visits, keep the denominator"
+        }
+      ],
+      "northStar": {
+        "baseline": "Unknown (no analytics supplied)",
+        "metric": "Visits to the Diet Image page that come from the guide or post",
+        "target": "Not set; no baseline exists"
+      },
+      "notDoing": [
+        {
+          "channel": "Creator and educator pitches",
+          "why": "This is the strongest alternative: one creator can reach many people at once. It comes second because no recipient, contact route or current terms are verified, and the guide gives any later pitch something concrete to point to. Reverse the order if a verified, relevant creator who covers Mac image tasks is found, or if the search-demand check shows almost no one searches for this task."
+        },
+        {
+          "channel": "Paid ads",
+          "why": "No budget is authorized and cost per customer cannot be judged yet."
+        },
+        {
+          "channel": "Guides for the other 23 apps",
+          "why": "Wait for evidence that this one is found and clicked."
+        }
+      ],
+      "phases": [
+        {
+          "days": "1-5",
+          "decisionRule": "If the search check shows almost no interest in this task, pause and choose a different task. If Diet Image behaves differently from its page, rewrite that section; if the core promise fails, stop.",
+          "firstAction": "Run Diet Image on a sample folder of mixed images.",
+          "focus": "Confirm people look for this task, and make every claim in the drafts true to the real app.",
+          "howToCheck": "Every step in the guide matches what you saw on screen, and the title uses wording people actually search.",
+          "name": "Check demand and verify",
+          "tasks": [
+            "Check search wording for this task and adjust the guide title if a clearer phrase exists",
+            "Try each preset and originals option on a copy folder, and follow the Preview steps on your macOS version; edit the guide where behaviour differs"
+          ]
+        },
+        {
+          "days": "6-10",
+          "decisionRule": "If tracking or publishing fails, fix that before waiting for results.",
+          "firstAction": "Publish the approved guide on macloving.app with the tracked link in place.",
+          "focus": "Put the guide live and give it a first audience.",
+          "howToCheck": "Guide loads, the link reaches the Diet Image page, and visits are recorded.",
+          "name": "Publish and share",
+          "tasks": [
+            "Publish the guide page and ask for indexing if Search Console is connected",
+            "Post the LinkedIn draft from Macloving's page with the tracked link"
+          ]
+        },
+        {
+          "days": "11-28",
+          "decisionRule": "No impressions: check indexing and the page's visibility first, before rewriting copy. Found but not read: change title and wording. Read but not clicked: change the link and wording. Clicked: plan the next guide. Too sparse to judge: extend the window.",
+          "firstAction": "Record guide visits and link clicks for the first window.",
+          "focus": "Read the first signals in equal windows.",
+          "howToCheck": "Visits and clicks side by side, with the visit count as denominator.",
+          "name": "Observe and decide",
+          "tasks": [
+            "Check indexing and search impressions",
+            "Compare guide visits with clicks to the app page in two equal windows"
+          ]
+        }
+      ],
+      "plays": [],
+      "preparedWork": [
+        {
+          "checksBeforeUse": [
+            "Try the Preview steps on your macOS version",
+            "Test Diet Image's presets, originals and photo-detail choices on a sample folder",
+            "Confirm the macOS requirement and recovery defaults still match the app page"
+          ],
+          "draft": "Title tag (proposed): How to make images smaller on a Mac | Macloving\nMeta description (proposed): Shrink Mac images for sharing or the web, and choose what happens to your originals and photo details. Built-in Preview steps, plus Diet Image.\n\nHow to make images smaller on your Mac\n\nLarge image files fill your disk and are slow to email or upload. Before you shrink anything, decide two things: what happens to your originals, and what photo details (such as location) travel with each image.\n\nOption 1: Preview (built in)\nApple documents resizing several images together in Preview. Work on copies so originals stay untouched.\n1. Open the images in one Preview window.\n2. Select them in the sidebar.\n3. Choose Tools, then Adjust Size.\n4. To reduce file size, select Resample image and lower the resolution. The estimated size appears below.\n5. To lower quality instead, choose File, then Export, pick JPEG and move the Quality slider. Save under a new name.\n\nOption 2: Diet Image\nDiet Image is a Macloving app in the Photo & Video category. Its page describes it as an image optimizer. It tries several optimizers on each image and keeps a new version only when it is valid and actually smaller.\n1. Check you are on macOS 26.0 or later.\n2. Choose what happens to originals: replace with recovery, save beside the original, or export to a folder. By default the recovery store keeps originals for 7 days, up to 2 GB in total; both limits can be changed in Settings.\n3. Choose which photo details to keep or remove: location, camera details, comments and copyright are set separately.\n4. Pick a preset. Lossless leaves pixels alone, Balanced trims gently, and Smallest compresses hard.\n5. Drop images or whole folders on the window or the Dock icon.\n6. Review the results. Every output is decoded and checked before it is accepted, and the inspector offers split, before, after and difference views.\n\nWhich should you use?\nIf Preview does what you need, keep using it. Diet Image is worth a look if you want to fit a size limit in KB or MB, work across several formats (JPEG, PNG, GIF, SVG, WebP, AVIF, HEIC, TIFF, JPEG XL), or control originals and photo details in one place.\n\nGood to know\nBalanced is lossy, so pixels do change, though results must pass a strict similarity check. Smallest allows more loss. Lossless skips AVIF and HEIC. Diet Image asks for no special permissions, optimizes images on your Mac without uploading them, and only contacts macloving.app to check for updates, which you can turn off in Settings.\n\nAbout Macloving\nEvery Macloving app is included in one membership for $2 a month or $20 a year, with no free trial, and some apps are free for everyone.\n\nSee the Diet Image app page: https://macloving.app/apps/dietimage",
+          "evidenceRefs": [
+            "https://macloving.app/apps/dietimage",
+            "https://macloving.app/pricing"
+          ],
+          "kind": "page_copy",
+          "status": "draft",
+          "target": "New page on macloving.app, address chosen when published; ends by linking to https://macloving.app/apps/dietimage",
+          "title": "Guide page: make images smaller on a Mac"
+        },
+        {
+          "checksBeforeUse": [
+            "Test each described choice in the app before posting",
+            "Once the guide is live, switch the link to the guide with tracking tags",
+            "Confirm the wording matches what the app does when tested"
+          ],
+          "draft": "Photos carry more than pixels: location, camera details, comments.\n\nBefore you send a batch of images, decide what travels with them. According to its app page, Diet Image lets you keep or remove location, camera details, comments and copyright separately, and choose what happens to your originals: replace with recovery, save beside the original, or export to a folder.\n\nIt requires macOS 26.0 or later. Diet Image app page: https://macloving.app/apps/dietimage",
+          "evidenceRefs": [
+            "https://macloving.app/apps/dietimage"
+          ],
+          "kind": "social_post",
+          "status": "draft",
+          "target": "Proposed destination: Macloving's LinkedIn page. No account is connected; the owner posts manually after approving.",
+          "title": "LinkedIn post for Macloving's page"
+        },
+        {
+          "checksBeforeUse": [
+            "Run the whole flow once before recording",
+            "Remove any claim the recording does not show",
+            "Check on-screen files contain nothing private"
+          ],
+          "draft": "Planned shots, to be verified against real app behaviour before recording:\n1. Finder folder of mixed images, with sizes visible (use your own sample files).\n2. Open Diet Image; show the originals choice and the photo-details choice.\n3. Pick a preset and drop the folder onto the window.\n4. Open the inspector's split view on one result.\n5. Show the output location chosen in step 2.\nSay only what you see on screen. Do not state size savings unless the recorded files show them. Add a closing frame with https://macloving.app/apps/dietimage.",
+          "evidenceRefs": [
+            "https://macloving.app/apps/dietimage"
+          ],
+          "kind": "test_brief",
+          "status": "draft",
+          "target": "Proposed 60 to 90 second screen recording for the guide page or social use; planned, not yet recorded.",
+          "title": "Planned demo shot list (not yet recorded)"
+        }
+      ],
+      "quality": {
+        "agents": [
+          {
+            "agentId": "growth_strategy",
+            "average": 4,
+            "errors": {},
+            "gatesPassed": true,
+            "researchSources": 10,
+            "reviewSuggestions": [
+              "Move the originals-and-photo-details differentiator into the guide's title tag and first paragraph, and cut repeated 'Good to know' detail.",
+              "Make ClimbOS do the search-wording check and deliver one chosen title, instead of leaving it as an owner task; trim phase 1 owner work.",
+              "Address the macOS 26.0 requirement head-on: add a way to gauge how many target readers can run it, or lead with Preview steps so the guide is useful regardless.",
+              "Add why this guide should beat Apple's own Preview documentation for the same query, or accept it as a primary risk with a stated check.",
+              "Add one line on how this test's findings choose the next app guide and what result would end the guide approach."
+            ],
+            "rounds": 2,
+            "shipped": true
+          }
+        ],
+        "hard": [],
+        "reasons": [],
+        "state": "passed",
+        "unknowns": [
+          "Hours you can give growth work each week",
+          "Who you can email (no consented contacts in ClimbOS)"
+        ],
+        "version": 1
+      },
+      "risks": [
+        {
+          "mitigation": "Lead with the originals and photo details angle, check search wording before publishing, and rely on the post for first readers.",
+          "risk": "The topic is crowded, so the guide may rarely appear in search."
+        },
+        {
+          "mitigation": "State the requirement near the top and keep the Preview steps useful on their own.",
+          "risk": "Diet Image requires macOS 26.0 or later, which many readers may not have."
+        },
+        {
+          "mitigation": "Test before publishing; remove anything not seen working.",
+          "risk": "Drafts may not match actual app behaviour."
+        }
+      ],
+      "snapshot": {
+        "aiMode": "basic",
+        "brandProfile": null,
+        "businessFactVersions": [],
+        "businessFunnel": null,
+        "businessLifecycleStage": null,
+        "businessProfile": {
+          "businessType": "other",
+          "currency": "USD",
+          "industryBusinessTypeId": null,
+          "name": "Macloving",
+          "socialUrls": [],
+          "summary": "Useful Mac apps for everyday work and creativity, included in one membership, with some apps free for everyone.\nMac users wanting useful everyday work and creative apps (productivity, design, photo/video, developers); inferred from the catalog, to be confirmed",
+          "website": "https://www.macloving.app/"
+        },
+        "businessResearchAt": null,
+        "capabilities": [],
+        "capturedAt": 1794379609018,
+        "contradictions": [],
+        "currency": "USD",
+        "engine": "v3.83-grounded-capacity-and-lean-playbooks",
+        "factVersions": [],
+        "facts": 0,
+        "goal": "Get more visitors to their website",
+        "goalInput": {
+          "currency": "USD",
+          "horizonDays": 90,
+          "id": "vs7be6x7wjjmrqk00y0raf3ndd8j1mkh",
+          "kind": "custom",
+          "monthlyAdBudgetMinor": 0,
+          "statement": "Get more visitors to their website",
+          "target": null,
+          "timingMode": "ai"
+        },
+        "growthCashTiming": null,
+        "horizonDays": 90,
+        "insightsChars": 0,
+        "insightsHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "knowledgeReferences": {
+          "edition": "October 2026",
+          "records": [
+            {
+              "bookId": "04",
+              "heading": "9. Prepare assets around one coherent story",
+              "id": "04:9:4d31c9c66ace",
+              "kind": "chapter",
+              "path": "books/04_gtm_launches.md",
+              "sha256": "4d31c9c66ace7c1f0816325c27386e340496b57ad9c7ed5f7821ed7b224e07f8",
+              "sources": []
+            },
+            {
+              "bookId": "05",
+              "heading": "15. A ninety-day channel operating plan",
+              "id": "05:15:923134ca5c18",
+              "kind": "chapter",
+              "path": "books/05_channel_strategy.md",
+              "sha256": "923134ca5c18334e4e8778c10a683a90f2c9cd8fc68a35320ac1e31c0b162313",
+              "sources": []
+            }
+          ],
+          "researchCutoff": "2026-10-19"
+        },
+        "marketChangeVersions": [],
+        "monthlyAdBudget": 0,
+        "ownerAcquisitionDimensions": {},
+        "ownerAcquisitionTypes": null,
+        "ownerChannelPreferences": [],
+        "snapshotId": "6c77f75f5de86be4507f371257573ec2aac2a1f12b06dd4fb0df1beab395b995",
+        "snapshotVersion": 22,
+        "sourceUrls": [
+          "http://www.blackcatsystems.com/software/diet.html",
+          "https://en.wikipedia.org/wiki/FX_Photo_Studio_(Mac)",
+          "https://macloving.app/",
+          "https://macloving.app/apps/dietimage",
+          "https://macloving.app/categories/productivity",
+          "https://macloving.app/pricing",
+          "https://perfectdiettracker.com/mac-osx-diet/",
+          "https://support.apple.com/en-ae/guide/preview/prvw2015/mac",
+          "https://support.apple.com/guide/preview/convert-image-file-types-prvw1012/mac",
+          "https://www.howtogeek.com/725930/how-to-resize-or-reduce-photo-size-on-mac/"
+        ],
+        "staleFactIds": []
+      },
+      "strategicDirection": {
+        "ambition": "Become a place Mac users go to find small, useful apps for specific everyday jobs.",
+        "assumptions": [
+          "People search for this task (the one that would flip the choice)",
+          "Diet Image behaves as its page says",
+          "Owner can publish a page",
+          "Visits can be measured",
+          "The macOS 26 requirement does not exclude most readers"
+        ],
+        "changeCourseIf": "The guide, once findable, brings almost no visits across two equal windows even after a title and wording change, or readers click through but nobody downloads.",
+        "compoundingAdvantage": "Over years, each guide that keeps attracting readers stays findable and adds to a record of which tasks interest people, so later guides start from evidence and the site becomes a library people return to.",
+        "currentBet": "One image-shrinking guide plus one LinkedIn post.",
+        "customer": "Mac users who need to finish one specific task, such as shrinking images.",
+        "evidenceRefs": [
+          "https://macloving.app/apps/dietimage",
+          "https://macloving.app/pricing"
+        ],
+        "horizon": "Evidence-led; reviewed when signals arrive",
+        "nextHorizon": "Around 30 days, if the guide is found and clicked, write a guide for another app's task; if found but not clicked, fix the guide first. Around 90 days, if several guides draw readers, test a creator pitch linking to the best one. Change approach if two equal windows bring almost no visits.",
+        "notNow": [
+          "Paid ads (no budget authorized)",
+          "Creator outreach (no verified recipients yet)",
+          "Guides for the other 23 apps (until this one shows signal)",
+          "Comparison pages (competitor facts unverified)"
+        ],
+        "unmetNeed": "People who need one job done may not know a focused app exists, or whether the built-in tool is enough.",
+        "whyThisBusiness": "The catalog is made of single-task apps, so each app can anchor a task-specific guide, and the guides lead into one $2 membership.",
+        "winningApproach": "One honest guide per everyday task. Each says when the built-in tool is enough and points to the app that does more, with one membership covering the wider catalog."
+      },
+      "timing": {
+        "assumptions": [
+          "Owner can give about 3 to 4 hours in total, mostly in the first week (assumed, not stated)",
+          "The owner can publish a page and add tracked links",
+          "Site visits are measurable",
+          "Diet Image works as its page describes"
+        ],
+        "firstReview": {
+          "maxDays": 28,
+          "minDays": 21
+        },
+        "outcomeLag": "Search indexing and clicks can take weeks. Paid uptake of the membership may lag further and cannot be seen without billing data tied to the source.",
+        "preparation": {
+          "maxDays": 7,
+          "minDays": 3
+        },
+        "reason": "Preparation is mostly the owner testing the app and approving drafts. Search discovery of a new page is slow and uncertain, so the first read comes weeks after publishing, not days.",
+        "reviewTrigger": "Review once the guide has been live for two equal windows and either shows search impressions or has had none; if neither is clear, review at day 28 anyway."
+      },
+      "version": 7,
+      "webSources": [
+        {
+          "title": "Diet Image for Mac \u00b7 Macloving",
+          "url": "https://macloving.app/apps/dietimage"
+        },
+        {
+          "title": "Pricing \u00b7 Macloving",
+          "url": "https://macloving.app/pricing"
+        },
+        {
+          "title": "How to Resize or Reduce Photo Size on Mac",
+          "url": "https://www.howtogeek.com/725930/how-to-resize-or-reduce-photo-size-on-mac/"
+        },
+        {
+          "title": "Macloving: Mac apps you'll love using",
+          "url": "https://macloving.app/"
+        },
+        {
+          "title": "Productivity apps for Mac \u00b7 Macloving",
+          "url": "https://macloving.app/categories/productivity"
+        },
+        {
+          "title": "Mac Diet Software Program for the Macintosh and Windows",
+          "url": "http://www.blackcatsystems.com/software/diet.html"
+        },
+        {
+          "title": "Perfect Diet Tracker for Apple Mac \u2013 Perfect Diet Tracker",
+          "url": "https://perfectdiettracker.com/mac-osx-diet/"
+        },
+        {
+          "title": "FX Photo Studio (Mac) - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/FX_Photo_Studio_(Mac)"
+        },
+        {
+          "title": "Apple: Crop, resize, or rotate an image in Preview on Mac",
+          "url": "https://support.apple.com/en-ae/guide/preview/prvw2015/mac"
+        },
+        {
+          "title": "Apple: Convert image file types using Preview on Mac",
+          "url": "https://support.apple.com/guide/preview/convert-image-file-types-prvw1012/mac"
+        }
+      ],
+      "weekOneChecklist": [
+        "Test Diet Image and the Preview steps",
+        "Review and edit the guide draft",
+        "Approve the LinkedIn post"
+      ]
+    }
+  },
+  "preparedStepWork": {
+    "id": "p57q4v3zmsb9nv94d7zp6ht3fh8j0hq9",
+    "status": "ready",
+    "result": {
+      "summary": "Chose the final title from public result wording and wrote complete title, description and page copy. Search volume stays unknown; it is not a drafting blocker.",
+      "drafts": [
+        {
+          "title": "Draft: Guide copy for Diet Image (title chosen)",
+          "kind": "seo",
+          "body": "Title tag (chosen): How to Reduce Image File Size on Mac (Preview and Diet Image) | Macloving\nMeta description (chosen): Make Mac images smaller for sharing or uploading. Use built-in Preview for one-off jobs, or Diet Image to batch and control originals and photo details.\n\nH1: How to reduce image file size on a Mac\n\nLarge images are slow to send and fill your disk. There are two main levers: reduce the pixel dimensions, or compress the file more. Before you start, decide what happens to your originals.\n\nOption 1: Preview (built in)\nResizing changes the file, so work on a copy if you still need the original.\n1. In Finder, select the image, right-click and choose Open With, then Preview.\n2. Choose Tools, then Adjust Size.\n3. Tick Resample image and lower the Resolution or dimensions. The new size is shown in the dialog.\n4. Save the result under a new name.\nFor several images at once, open them in the same Preview window, select them in the sidebar, then use Tools, Adjust Size.\nTo lower quality instead of size, choose File, then Export, pick JPEG and move the Quality slider. Menu names can differ between macOS versions.\nA note on formats: PNG files are usually larger than JPEG, so converting a photo from PNG to JPEG can shrink it a lot.\n\nOption 2: Diet Image\nDiet Image is a Macloving image optimizer for Mac. Drop images or whole folders on its window or Dock icon. It tries several optimizers on each image and keeps a new version only when it is valid and actually smaller.\n1. Check you are on macOS 26.0 or later.\n2. Choose what happens to originals: replace with recovery, save beside the original, or export to a folder. By default, originals kept for recovery are held for 7 days, up to 2 GB in total; you can change both limits in Settings.\n3. Choose which photo details to keep or remove. Location, camera details, comments and copyright are set separately.\n4. Pick a preset: Lossless leaves pixels alone, Balanced trims gently, Smallest compresses hard.\n5. Optionally fit a limit in KB or MB, or convert to JPG, PNG, WebP or JPEG XL.\n6. Compare results in the inspector's split, before, after and difference views.\n\nWhich should you use?\nFor a single picture, Preview is usually enough. Diet Image is worth a look for batches, size limits, nine formats (JPEG, PNG, GIF, SVG, WebP, AVIF, HEIC, TIFF and JPEG XL, with animated GIF and WebP staying animated), or control over originals and photo details.\n\nGood to know\nBalanced is lossy, so pixels do change, though results must pass a strict similarity check. Smallest allows more loss and visible changes are possible. Lossless skips AVIF and HEIC. Your images are optimized on your Mac and never uploaded; the app only checks macloving.app for updates, which you can turn off in Settings.\n\nAbout Macloving\nEvery Macloving app is included in one membership for $2 a month or $20 a year, with no free trial, and some apps are free for everyone.\n\nSee the Diet Image app page: https://macloving.app/apps/dietimage",
+          "notes": "Do not publish until the test log is done. Preview steps rest on third-party pages (Trend Micro, Watermarkly, iDownloadBlog) because Apple's page failed to load; delete any line your Mac contradicts. Search volume is unknown."
+        },
+        {
+          "title": "Draft: Search wording decision and test log",
+          "kind": "analysis",
+          "body": "TITLE DECISION\nChosen: 'How to Reduce Image File Size on Mac'. Reasons from public results read: Trend Micro's page is titled 'How to Resize or Reduce Image Size on Mac', Setapp's 'How to reduce image file size on Mac, iPhone & iPad easily', and iDownloadBlog's and Watermarkly's use 'compress images on Mac'. 'Reduce file size' matches the real goal (smaller files, not just smaller dimensions) and appears in the top titles. 'Compress an image on Mac' is a close variant and is covered in the meta description. Treat the query as a hypothesis: search volume and competition are unknown, and no private Search Console data exists yet. The title does not depend on measuring them.\nCompetition note: the pages read do not mention Diet Image or Macloving, so the guide's edge is the Diet Image comparison and the originals/photo-details controls.\n\nTEST LOG (work on a COPY of a mixed folder: PNG screenshot, JPEG with location data, HEIC, animated GIF, WebP, large TIFF; note file sizes in Finder first)\nA. Diet Image\n1. Welcome guide lets you choose originals handling and photo details?\n2. Replace with recovery: output replaces source, original recoverable; Settings default 7 days and 2 GB?\n3. Save beside the original: new file next to source, source untouched?\n4. Export to a folder: output lands in the chosen folder?\n5. Lossless, Balanced, Smallest on the same copy; record size per preset; Lossless skips AVIF and HEIC?\n6. Toggle location, camera, comments, copyright separately; inspect one output's metadata.\n7. Drop a folder; drop on the Dock icon.\n8. Inspector shows split, before, after, difference?\n9. Animated GIF and WebP stay animated?\n10. KB or MB limit: result fits, or app says it cannot?\n11. Any macOS permission prompt? (Page says none.)\n12. Settings switch to turn off update checks?\nB. Preview, on your macOS\n1. Open With, Preview; Tools, Adjust Size; note exact labels (Resample image, Resolution, estimated size).\n2. Resize a copy and compare file size; confirm the steps actually shrink it.\n3. File, Export: Quality slider for JPEG present and effective?\n4. Several images in one window: Adjust Size applies to all selected?\nC. Decision rules\n- A step that differs from the page: rewrite that guide line to what you saw.\n- Core promise fails (output not smaller, or originals choice not honoured): stop.",
+          "notes": "Owner runs the tests; AI cannot operate the app or measure files."
+        }
+      ],
+      "evidence": [
+        {
+          "url": "https://macloving.app/apps/dietimage",
+          "quote": "Lossless leaves pixels alone, Balanced trims gently, and Smallest compresses hard.",
+          "claim": "Diet Image page claims three presets with these behaviours (published claim, untested)."
+        },
+        {
+          "url": "https://macloving.app/apps/dietimage",
+          "quote": "Replace with recovery, save beside the original, or export to a folder.",
+          "claim": "The page lists three originals options."
+        },
+        {
+          "url": "https://cleanerone.trendmicro.com/blog/resize-or-compress-image-on-mac/",
+          "quote": "How to Resize or Reduce Image Size on Mac",
+          "claim": "A competing guide uses 'resize or reduce image size' wording."
+        },
+        {
+          "url": "https://watermarkly.com/blog/how-to-compress-an-image-on-mac/",
+          "quote": "Remember, a PNG image is typically larger than a JPEG because it uses lossless compression",
+          "claim": "A third-party guide says PNG is usually larger than JPEG, so format conversion can shrink files."
+        },
+        {
+          "url": "https://www.idownloadblog.com/2022/01/04/how-to-compress-image-mac/",
+          "quote": "7 free ways to compress images on Mac",
+          "claim": "A competing guide uses 'compress images on Mac' wording."
+        },
+        {
+          "url": "https://macloving.app/pricing",
+          "quote": "There is no free trial.",
+          "claim": "Membership has no free trial."
+        }
+      ],
+      "ownerQuestion": null,
+      "ownerTasks": [
+        "Run the test log on a copy folder with Diet Image and Preview, then rewrite any guide line that differs from what you saw",
+        "Confirm your Mac runs macOS 26.0 or later"
+      ],
+      "limitations": [
+        "Apple's Preview support page failed to load, so Preview steps rest on third-party pages and need testing on your macOS version.",
+        "Search volume and competition are unmeasured; the title is a hypothesis from public result wording.",
+        "No Diet Image behaviour was tested; all app details are published page claims."
+      ]
+    },
+    "validationNotes": []
+  },
+  "receipts": [
+    {
+      "id": "n97ys6naj90r3m8es3e47qpscd8j1kk9",
+      "kind": "plan_step_prepare",
+      "status": "verified",
+      "actualMicros": 203173,
+      "estimateMicros": 274000,
+      "createdAt": 1794380059314
+    },
+    {
+      "id": "n97tkwdqg9y0dt4ytsz4hhk9t58j1rdq",
+      "kind": "plan_step_prepare",
+      "status": "verified",
+      "actualMicros": 124772,
+      "estimateMicros": 274000,
+      "createdAt": 1794379938431
+    },
+    {
+      "id": "n97gde83xv30pwm152bfav35dx8j1m9z",
+      "kind": "plan_step_prepare",
+      "status": "verified",
+      "actualMicros": 112483,
+      "estimateMicros": 274000,
+      "createdAt": 1794379755412
+    },
+    {
+      "id": "n97pnkk5tx4bscvkqbcc5a82498j0acm",
+      "kind": "strategy",
+      "status": "verified",
+      "actualMicros": 418040,
+      "estimateMicros": 431369,
+      "createdAt": 1794379513336
+    },
+    {
+      "id": "n97ndtpywygdst8zpew6mc84898j0fzp",
+      "kind": "strategy",
+      "status": "verified",
+      "actualMicros": 393766,
+      "estimateMicros": 421909,
+      "createdAt": 1794379308132
+    },
+    {
+      "id": "n97w7wckx3hs49kw4ajf196m9h8j0akc",
+      "kind": "strategy",
+      "status": "verified",
+      "actualMicros": 414505,
+      "estimateMicros": 442010,
+      "createdAt": 1794379118526
+    },
+    {
+      "id": "n97gk7y4gm9ne41fj7t04qnm018j178x",
+      "kind": "strategy",
+      "status": "verified",
+      "actualMicros": 331224,
+      "estimateMicros": 441078,
+      "createdAt": 1794378884002
+    },
+    {
+      "id": "n97wpsx3261q9td45hw1w7ja3d8j06ey",
+      "kind": "strategy",
+      "status": "verified",
+      "actualMicros": 324661,
+      "estimateMicros": 441087,
+      "createdAt": 1794378639239
+    }
+  ],
+  "thisRoundMicros": 2322624,
+  "localWallet": [
+    {
+      "cap": 12000000,
+      "spent": 8182278,
+      "reserved": 4900
+    }
+  ],
+  "cumulativeCommittedMicros": 52321238,
+  "projectBudgetMicros": 100000000,
+  "limitations": [
+    "AI review passing is not proof of demand, business results or tested native-app behavior.",
+    "The preparation reader could not read the Apple support page; the corrected plan also received a separately inspected primary-source correction.",
+    "No publishing, prospect messaging, external account changes, task completion or deployment was performed."
+  ]
+}

@@ -59,7 +59,7 @@ function TestRecorder({ target, saved, canEdit, onRecord }: { target: Target; sa
 }
 
 /** The latest business model check: current model, market signals, labelled verdict, three alternatives, and the deciding test. */
-export function BusinessModelCheckView({ check, createdAt, isFixture, tests, canEdit, onRecord }: { check: BusinessModelCheck; createdAt: number; isFixture?: boolean; tests: Partial<Record<Target, BusinessModelTestView>>; canEdit: boolean; onRecord?: (draft: TestDraft) => Promise<unknown> }) {
+export function BusinessModelCheckView({ check, createdAt, isFixture, tests, canEdit, onRecord, precedents = [] }: { check: BusinessModelCheck; precedents?: { id: string; title: string; mechanism: string; causalLimit: string; accessedAt: string; sources: { title: string; url: string }[] }[]; createdAt: number; isFixture?: boolean; tests: Partial<Record<Target, BusinessModelTestView>>; canEdit: boolean; onRecord?: (draft: TestDraft) => Promise<unknown> }) {
   const v = VERDICT[check.verdict.status];
   return (
     <div className="flex flex-col gap-4">
@@ -145,6 +145,7 @@ export function BusinessModelCheckView({ check, createdAt, isFixture, tests, can
               </dl>
               <p className="text-xs text-ink-3">Novelty {a.novelty} · evidence {a.evidenceStrength} · fit {a.businessFit} · feasibility {a.feasibility} · risk {a.risk} · {label(a.evidenceBasis)}</p>
               <EvidenceReferences references={a.evidenceRefs} />
+              {precedents.filter((p) => a.precedentIds?.includes(p.id)).map((p) => <details key={p.id} className="text-xs text-ink-2"><summary className="min-h-9 cursor-pointer">Analogy: {p.title}</summary><p>{p.mechanism}</p><p className="mt-1">Limit: {p.causalLimit}</p><p>Source reviewed {p.accessedAt}</p>{p.sources.map((s) => <a key={s.url} href={s.url} target="_blank" rel="noreferrer noopener" className="mt-1 block text-link underline">{s.title}</a>)}</details>)}
               <div className="rounded-[var(--radius-control)] border border-line p-2.5 text-xs">
                 <p className="font-medium text-ink">Smallest test: {a.smallestTest.test}</p>
                 <p className="text-ink-2">Success: {a.smallestTest.successSignal} · Stop if: {a.smallestTest.stopCondition} · Limit: {a.smallestTest.maxCostOrTime}</p>

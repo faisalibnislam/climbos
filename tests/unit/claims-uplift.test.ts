@@ -32,6 +32,11 @@ describe("claim ledger", () => {
       { rule: "unsupported_scarcity", path: "social.body" },
     ]);
   });
+  it("distinguishes filming instructions from real calendar deadlines", () => {
+    expect(lintClaims([{ path: "visual", text: "End on the hinge beside the real fitting guide. The video closes on the guide." }], "")).toEqual([]);
+    expect(lintClaims([{ path: "body", text: "Ends on October 20." }], "").some((issue) => issue.rule === "unsupported_deadline")).toBe(true);
+    expect(lintClaims([{ path: "body", text: "Offer ends on the last day of this month." }], "").some((issue) => issue.rule === "unsupported_deadline")).toBe(true);
+  });
   it("applies to all publishable copy", () => {
     expect(lintCopy({ body: "The #1 platform for florists" }, { evidence: "", publishable: true }).some((i) => i.rule === "unsupported_claim")).toBe(true);
     expect(lintCopy({ body: "The #1 platform for florists" }, { evidence: "" }).some((i) => i.rule === "unsupported_claim")).toBe(false);

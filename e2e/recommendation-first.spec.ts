@@ -1,0 +1,125 @@
+import { expect, test } from "@playwright/test";
+import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
+
+test("Home leads with a recommendation and keeps requests editable @mobile", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  const slug = await openDemo(page);
+  await expect(page.getByRole("heading", { level: 1, name: "Your next move" })).toBeVisible();
+  const recommendation = page.getByRole("region", { name: "Your next step" });
+  const composer = page.getByRole("region", { name: "Ask ClimbOS", exact: true });
+  await expect(recommendation).toBeVisible();
+  expect((await recommendation.boundingBox())!.y).toBeLessThan((await composer.boundingBox())!.y);
+  const input = page.getByLabel("Describe a problem or a goal", { exact: true });
+  await input.fill("Keep my draft.");
+  await page.getByRole("button", { name: "Get more customers", exact: true }).click();
+  await expect(input).toHaveValue("Keep my draft.\nGet more customers");
+  await recommendation.getByRole("link").click();
+  await expect(page).toHaveURL(new RegExp(`/app/${slug}/plan`));
+  await page.goto(`/app/${slug}/today`);
+  await expect(input).toHaveValue("Keep my draft.\nGet more customers");
+  await expectAccessible(page, "recommendation-first Home");
+  await expectNoHorizontalScroll(page);
+  expect(errors).toEqual([]);
+  await page.screenshot({ path: test.info().outputPath("recommendation-home.png"), fullPage: true });
+});
+
+test("Plan presents the choice before optional research and controls @mobile", async ({ page }) => {
+  const slug = await openDemo(page);
+  await page.goto(`/app/${slug}/plan`);
+  await expect(page.getByRole("tab", { name: "Next steps", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("heading", { name: "Where your business could go", exact: true })).toHaveCount(0);
+  await page.getByRole("tab", { name: "Why this plan", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Where your business could go", exact: true })).toBeVisible();
+  await expect(page.getByText("A proposed direction to test.", { exact: false })).toBeVisible();
+  const fullPlan = page.locator("details").filter({ has: page.locator("summary", { hasText: "Who to reach and how" }) }).first();
+  await expect(fullPlan).not.toHaveAttribute("open");
+  await fullPlan.locator(":scope > summary").click();
+  await expect(fullPlan).toHaveAttribute("open", "");
+  const research = page.locator("details").filter({ has: page.locator("summary", { hasText: "What we found" }) }).first();
+  await expect(research).not.toHaveAttribute("open");
+  await research.locator(":scope > summary").click();
+  await expect(research).toHaveAttribute("open", "");
+  await expectAccessible(page, "plain-language plan with details open");
+  await expectNoHorizontalScroll(page);
+  await page.screenshot({ path: test.info().outputPath("recommendation-plan.png"), fullPage: true });
+});
+
+test("Channels show the plan before the library and open a creator intake without starting work @mobile", async ({ page }) => {
+  const slug = await openDemo(page);
+  await page.goto(`/app/${slug}/channels`);
+  await expect(page.getByRole("heading", { name: "The choices in your plan" })).toBeVisible();
+  const options = page.locator("details").filter({ has: page.locator("summary", { hasText: "Explore other ways to reach customers" }) }).first();
+  await expect(options).not.toHaveAttribute("open");
+  await page.getByRole("link", { name: "Find creators and reviewers", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Find creators and reviewers" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Find creators", exact: true })).toBeVisible();
+  await expect(page.getByText("Whose audience needs what you make?", { exact: true })).toBeVisible();
+  await expectAccessible(page, "creator research intake");
+  await expectNoHorizontalScroll(page);
+});
+
+test("Search suggests an observed page review and only prepares an editable request @mobile", async ({ page }) => {
+  const slug = await openDemo(page);
+  const input = page.getByLabel("Describe a problem or a goal", { exact: true });
+  await input.fill("Keep this existing request.");
+  const history = await page.getByRole("region", { name: "Your requests", exact: true }).innerText();
+  await page.goto(`/app/${slug}/visibility`);
+  await expect(page.getByText("Demo data · simulated search observations", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Prepare a page-review request", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/app/${slug}/today`));
+  await expect(input).toHaveValue(/Keep this existing request\.\nHelp me decide whether to improve this existing page/);
+  await expect(input).toHaveValue(/https:\/\/formkit.app\/templates\/client-intake/);
+  await expect(page.getByRole("region", { name: "Your requests", exact: true })).toHaveText(history, { useInnerText: true });
+});
+
+test("Owners can define a test before starting and preserve later changes @mobile", async ({ page }) => {
+  const slug = await openDemo(page);
+  await page.goto(`/app/${slug}/plan`);
+  await page.getByRole("tab", { name: "Why this plan", exact: true }).click();
+  await page.getByText("Who to reach and how", { exact: true }).click();
+  const setup = page.locator("details").filter({ has: page.locator(":scope > summary", { hasText: "Set up this test" }) }).first();
+  await setup.locator(":scope > summary").click();
+  await setup.getByLabel("Version 1", { exact: true }).fill("Current page with the existing explanation.");
+  await setup.getByLabel("Version 2", { exact: true }).fill("A revised explanation showing a real example of the workflow.");
+  await setup.getByLabel("Who decides what to do next?", { exact: true }).fill("The owner");
+  await setup.getByLabel("Cash limit", { exact: true }).fill("0");
+  await setup.getByLabel("Currency", { exact: true }).fill("USD");
+  await setup.getByLabel("Your total hours", { exact: true }).fill("2");
+  await setup.getByLabel("Where does this estimate come from?", { exact: true }).fill("Owner's proposed two-hour limit, with no cash spend.");
+  await setup.getByRole("button", { name: "Save test setup", exact: true }).click();
+  await expect(setup.getByText("Decision owner: The owner", { exact: true })).toBeVisible();
+  await expect(setup.locator("xpath=..").getByText("Proposed", { exact: true })).toBeVisible();
+  await expectAccessible(page, "test setup form");
+  await expectNoHorizontalScroll(page);
+  const running = page.locator("details").filter({ has: page.locator(":scope > summary", { hasText: "Original setup and changes" }) }).first();
+  await running.locator(":scope > summary").click();
+  await expect(running.getByRole("button", { name: "Save test setup" })).toHaveCount(0);
+  await running.getByLabel("What changed from the plan?", { exact: true }).fill("We delayed the review because the page was not ready.");
+  await running.getByRole("button", { name: "Record this change", exact: true }).click();
+  await expect(running.getByText("We delayed the review because the page was not ready.", { exact: true })).toBeVisible();
+});
+
+test("A chosen platform has a saved preparation with no launch side effect @mobile", async ({ page }) => {
+  const slug = await openDemo(page);
+  await page.goto(`/app/${slug}/channels`);
+  const panel = page.locator("details").filter({ has: page.locator(":scope > summary", { hasText: "Prepare a platform you have chosen" }) });
+  await panel.locator(":scope > summary").click();
+  await panel.getByText("Prepare Product Hunt launch", { exact: true }).click();
+  await panel.getByLabel("Who should this reach?").fill("Mac app developers with a project handoff problem");
+  await panel.getByLabel("Why would these people use this platform?").fill("Unknown; inspect comparable launches and customer conversations before choosing it.");
+  await panel.getByLabel("Product URL", { exact: true }).fill("https://example.com/");
+  await panel.getByLabel("Product name and short tagline").fill("Example utility — prepare a local project handoff");
+  await panel.getByLabel("What should a customer understand?").fill("This synthetic utility helps a video editor prepare project folders for a collaborator.");
+  await panel.getByLabel("Maker comment", { exact: true }).fill("We want feedback on the project handoff workflow.");
+  await panel.getByLabel("What would make this worthwhile?").fill("Record useful feedback and activation over one week with an owner-agreed time cap.");
+  await panel.getByRole("button", { name: "Save preparation", exact: true }).click();
+  await expect(panel.getByText("Preparation only · saved v1.", { exact: false })).toBeVisible();
+  await page.reload();
+  await panel.locator(":scope > summary").click();
+  await panel.getByText("Prepare Product Hunt launch", { exact: true }).click();
+  await expect(panel.getByLabel("Product URL", { exact: true })).toHaveValue("https://example.com/");
+  await expect(panel.getByText("Keep this as research until eligibility and authorized account control are confirmed.")).toBeVisible();
+  await expectAccessible(page, "manual platform preparation");
+  await expectNoHorizontalScroll(page);
+});

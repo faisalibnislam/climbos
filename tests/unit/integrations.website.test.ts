@@ -298,3 +298,31 @@ describe("firecrawl", () => {
     expect(parseFirecrawlScrapeResponse({ success: false, error: "nope" })).toEqual({ ok: false, error: "nope" });
   });
 });
+
+describe("focused reading preserves full-page technical evidence", () => {
+  it("reads the active product panel even when the background home page fills the text budget", () => {
+    const html = `<html><head><title>A real product detail</title></head><body><nav>Global navigation</nav><main><h1>Background homepage</h1><p>${"Background words ".repeat(100)}</p></main><div role="dialog" aria-modal="true" aria-label="Product"><div><h1>Image optimizer</h1><p>Free app. No account required. Requires macOS 26.</p></div></div></body></html>`;
+    const page = extractPageContent(html, "https://example.com/apps/optimizer", { maxTextChars: 160 });
+    expect(page.text).toContain("Global navigation"); expect(page.truncated).toBe(true);
+    expect(page.headings.map((h) => h.text)).toContain("Background homepage");
+    expect(page.contentScope).toBe("active_dialog");
+    expect(page.contentText).toContain("No account required");
+    expect(page.contentText).not.toContain("Background words");
+    expect(page.contentTruncated).toBe(false);
+  });
+  it("does not select a closed dialog and keeps the main page as reading context", () => {
+    const page = extractPageContent('<main><h1>Actual page</h1><p>Published terms.</p></main><dialog><p>Closed overlay.</p></dialog><div role="dialog" aria-modal="true" hidden><p>Hidden overlay.</p></div>', "https://example.com/");
+    expect(page.contentScope).toBe("main"); expect(page.contentText).toContain("Published terms"); expect(page.contentText).not.toContain("overlay");
+  });
+  it("includes published inactive tab details but excludes panels inside a hidden ancestor", () => {
+    const page = extractPageContent('<main><button role="tab" id="details">Details</button><div role="tabpanel" aria-labelledby="details" hidden><p>Free, no account needed. macOS 26 required.</p></div><div hidden><div role="tabpanel" aria-labelledby="details">Stale private-looking content</div></div></main>', 'https://example.com/app');
+    expect(page.contentText).toContain('Free, no account needed');
+    expect(page.contentText).not.toContain('Stale private-looking content');
+  });
+});
+
+it("does not treat a dialog inside hidden background content as the active page", () => {
+  const page = extractPageContent('<main><h1>Visible public page</h1><div hidden><div role="dialog" aria-modal="true"><p>Hidden stale offer</p></div></div><p>Current public terms</p></main>', "https://example.com/");
+  expect(page.contentScope).toBe("main"); expect(page.contentText).toContain("Current public terms");
+  expect(page.contentText).not.toContain("Hidden stale offer"); expect(page.text).toContain("Hidden stale offer");
+});

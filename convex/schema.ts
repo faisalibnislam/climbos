@@ -1,7 +1,13 @@
+import { ownerQuestionV } from "./lib/ownerQuestion";
 import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
+import { renderChecksV } from "./lib/renderChecks";
+import { pageSampleV } from "./lib/pageSamples";
 import { v } from "convex/values";
 import { postVisualValidator } from "./lib/postVisual";
+
+const cycleReviewV = v.object({ summary: v.string(), carryForward: v.string(), evidenceBasis: v.union(v.literal("measured"), v.literal("owner_reported"), v.literal("unknown")), evidenceNote: v.string(), createdAt: v.number(), createdBy: v.id("users") });
+const priorCycleReviewV = v.object({ goalId: v.id("goals"), summary: v.string(), carryForward: v.string(), evidenceBasis: v.union(v.literal("measured"), v.literal("owner_reported"), v.literal("unknown")), evidenceNote: v.string(), createdAt: v.number(), createdBy: v.id("users") });
 
 const growthProvenanceValidator = v.union(
   v.literal("owner"),
@@ -354,9 +360,9 @@ const growthPlayValidator = v.object({
 const growthPlanV9Validator = v.object({
   plays: v.array(growthPlayValidator),
   economics: v.object({
-    revenuePerCustomerMonthUsd: v.number(),
-    grossMargin: v.number(),
-    monthlyChurn: v.number(),
+    revenuePerCustomerMonthUsd: v.union(v.number(), v.null()),
+    grossMargin: v.union(v.number(), v.null()),
+    monthlyChurn: v.union(v.number(), v.null()),
     basis: v.string(),
     currency: v.optional(v.string()),
     assumed: v.optional(v.array(v.string())),
@@ -570,6 +576,7 @@ const usageMeters = v.object({
 });
 
 export default defineSchema({
+  platformPreparations: defineTable({ orgId: v.id("organizations"), kind: v.union(v.literal("product_hunt"), v.literal("google_business"), v.literal("g2")), version: v.number(), draft: v.string(), createdAt: v.number(), createdBy: v.id("users") }).index("by_org_kind", ["orgId", "kind"]),
   ...authTables,
 
   /* ---------------- Tenancy ---------------- */
@@ -746,7 +753,7 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
 
-  /** Operator default model per tier (one row, key "global"). Absent = built-in OpenAI route. */
+  /** Operator default model per tier (one row, key "global"). Absent = built-in Haiku/Sonnet route. */
   aiModelSettings: defineTable({
     key: v.literal("global"),
     standard: v.string(),
@@ -782,6 +789,8 @@ export default defineSchema({
   accounts: defineTable({
     ownerUserId: v.id("users"),
     name: v.string(),
+    /** Applies only on the explicitly enabled loopback development backend; changes no AI budget or package. */
+    localWorkspaceTesting: v.optional(v.boolean()),
     /** The one-time free credits were granted (once per account). */
     freeCreditsGrantedAt: v.optional(v.number()),
     /** Share link code (climbos.app/r/CODE). */
@@ -812,6 +821,7 @@ export default defineSchema({
   organizations: defineTable({
     name: v.string(),
     slug: v.string(),
+    focusedGoalId: v.optional(v.id("goals")),
     kind: v.union(v.literal("customer"), v.literal("demo")),
     /** Engine rollout flags for this workspace (REQ-ENG-01), set by ClimbOS staff only, e.g. "decision_contract". */
     engineFlags: v.optional(v.array(v.string())),
@@ -922,6 +932,8 @@ export default defineSchema({
 
   /* ---------------- Business intelligence ---------------- */
   businesses: defineTable({
+    /** Validated discovery brief, committed when the owner requests a plan; preserves provenance for later AI work. */
+    discoveryBrief: v.optional(v.string()),
     /** What the owner told ClimbOS on the first setup step, parsed in code, so later steps start from it on any device. */
     onboardingIntro: v.optional(v.object({
       goalKinds: v.optional(v.array(v.string())),
@@ -1068,6 +1080,7 @@ export default defineSchema({
     siteWatchEnabled: v.optional(v.boolean()),
     siteReadiness: v.optional(
       v.object({
+        pageSamples: v.optional(v.array(pageSampleV)),
         status: v.union(
           v.literal("queued"),
           v.literal("complete"),
@@ -1442,6 +1455,23 @@ export default defineSchema({
     .index("by_org", ["orgId"])
     .index("by_competitor_research_due", ["competitorResearchNextAt"]),
 
+  /** Private, durable discovery chat. This is the intake source of truth, not a staged form. */
+  intakeConversations: defineTable({
+    orgId: v.id("organizations"), userId: v.id("users"), startKey: v.string(),
+    profile: v.string(), revision: v.number(), ready: v.boolean(),
+    activeRunId: v.optional(v.id("workflowRuns")), claimedRunId: v.optional(v.id("workflowRuns")), planRunId: v.optional(v.id("workflowRuns")),
+    planRevision: v.optional(v.number()), planRequestKey: v.optional(v.string()), phase: v.optional(v.string()),
+    sources: v.array(v.object({ url: v.string(), title: v.optional(v.string()), text: v.string(), status: v.union(v.literal("ok"), v.literal("failed"), v.literal("blocked_by_robots")), fetchedAt: v.number() })),
+    createdAt: v.number(), updatedAt: v.number(),
+  }).index("by_org_user", ["orgId", "userId"]).index("by_user_start", ["userId", "startKey"]),
+  intakeMessages: defineTable({
+    orgId: v.id("organizations"), userId: v.id("users"), conversationId: v.id("intakeConversations"),
+    role: v.union(v.literal("user"), v.literal("assistant")), text: v.string(),
+    status: v.union(v.literal("working"), v.literal("done"), v.literal("failed")),
+    choices: v.optional(v.array(v.string())), requestKey: v.optional(v.string()), runId: v.optional(v.id("workflowRuns")),
+    createdAt: v.number(),
+  }).index("by_conversation_created", ["conversationId", "createdAt"]).index("by_conversation_request", ["conversationId", "requestKey"]).index("by_org", ["orgId"]),
+
   /** Step-one business setup saved to the owner's account before the workspace exists, so it can be resumed anywhere. */
   onboardingDrafts: defineTable({
     userId: v.id("users"),
@@ -1545,9 +1575,18 @@ export default defineSchema({
         mode: v.union(v.literal("total"), v.literal("incremental")),
       }),
     ),
+    previousGoalId: v.optional(v.id("goals")),
+    cycleStartedAt: v.optional(v.number()),
+    cycleClosedAt: v.optional(v.number()),
+    cycleClosure: v.optional(v.union(v.literal("length_changed"), v.literal("reviewed"))),
+    cycleReview: v.optional(cycleReviewV),
+    priorCycleReview: v.optional(priorCycleReviewV),
     horizonDays: v.number(),
     monthlyAdBudgetMinor: v.number(),
     currency: v.string(),
+    /** The AI estimates delivery timing separately from the legacy financial modeling window. */
+    timingMode: v.optional(v.union(v.literal("ai"), v.literal("owner"))),
+    deadline: v.optional(v.string()),
     reviewDay: v.optional(v.string()),
     status: v.union(v.literal("active"), v.literal("archived")),
     createdBy: v.id("users"),
@@ -2613,8 +2652,9 @@ export default defineSchema({
     requestedBy: v.id("users"),
     requestedAt: v.number(),
     capturedAt: v.optional(v.number()),
-    shots: v.array(v.object({ view: v.union(v.literal("desktop"), v.literal("mobile")), storageId: v.id("_storage"), width: v.number(), height: v.number() })),
+    shots: v.array(v.object({ view: v.union(v.literal("desktop"), v.literal("mobile")), storageId: v.id("_storage"), width: v.number(), height: v.number(), checks: v.optional(renderChecksV) })),
   })
+    .index("by_org", ["orgId"])
     .index("by_page_requested", ["pageId", "requestedAt"])
     .index("by_token", ["token"]),
 
@@ -3054,7 +3094,7 @@ export default defineSchema({
           }),
         ),
         phases: v.array(
-          v.object({ name: v.string(), days: v.string(), focus: v.string() }),
+          v.object({ name: v.string(), days: v.string(), focus: v.string(), firstAction: v.optional(v.string()), tasks: v.optional(v.array(v.string())), howToCheck: v.optional(v.string()), decisionRule: v.optional(v.string()) }),
         ),
         weekOneChecklist: v.array(v.string()),
         risks: v.array(v.object({ risk: v.string(), mitigation: v.string() })),
@@ -3062,6 +3102,17 @@ export default defineSchema({
         plays: v.optional(v.array(v.any())),
         /** Grounded, adjacent, and bold exploration; validated before this persisted envelope is written. */
         strategyExploration: v.optional(strategyExplorationValidator),
+        timing: v.optional(v.object({ preparation: v.object({ minDays: v.number(), maxDays: v.number() }), firstReview: v.object({ minDays: v.number(), maxDays: v.number() }), reason: v.string(), assumptions: v.array(v.string()), reviewTrigger: v.string(), outcomeLag: v.string() })),
+        focusedMove: v.optional(v.object({ version: v.literal(1), title: v.string(), why: v.string(), firstAction: v.string(), aiCanDo: v.string(), evidenceRefs: v.array(v.string()) })),
+        preparedWork: v.optional(v.array(v.object({ title: v.string(), kind: v.union(v.literal("page_copy"), v.literal("creator_pitch"), v.literal("social_post"), v.literal("test_brief")), target: v.string(), draft: v.string(), evidenceRefs: v.array(v.string()), checksBeforeUse: v.array(v.string()), status: v.literal("draft") }))),
+        strategicDirection: v.optional(v.object({
+          ambition: v.string(), customer: v.string(), unmetNeed: v.string(),
+          winningApproach: v.string(), whyThisBusiness: v.string(),
+          compoundingAdvantage: v.string(), horizon: v.string(),
+          currentBet: v.string(), nextHorizon: v.string(),
+          notNow: v.array(v.string()), assumptions: v.array(v.string()),
+          changeCourseIf: v.string(), evidenceRefs: v.array(v.string()),
+        })),
         /** What one customer is worth (from the plays agent); the UI computes each play's cost per customer from it. */
         economics: v.optional(v.any()),
         /** Previous v8 JSON envelope; accepted for historical compatibility. */
@@ -3228,6 +3279,8 @@ export default defineSchema({
                   ),
                   kinds: v.optional(v.array(v.string())),
                   statement: v.string(),
+                  timingMode: v.optional(v.union(v.literal("ai"), v.literal("owner"))),
+                  deadline: v.optional(v.string()),
                   horizonDays: v.number(),
                   monthlyAdBudgetMinor: v.number(),
                   currency: v.string(),
@@ -3479,6 +3532,7 @@ export default defineSchema({
     acquisition: v.optional(
       v.object({
         libraryVersion: v.string(),
+        inputHash: v.optional(v.string()),
         profile: v.any(),
         adjustments: v.any(),
         summary: v.array(v.string()),
@@ -3505,7 +3559,7 @@ export default defineSchema({
     /** The owner stopped this plan's send-back note from guiding future plans. */
     rejectionNoteRetiredAt: v.optional(v.number()),
     createdAt: v.number(),
-  }).index("by_org", ["orgId"]),
+  }).index("by_org", ["orgId"]).index("by_org_goal", ["orgId", "goalId"]),
 
   /**
    * What a plan version knew when it was written (Book 14 §4–5): the facts,
@@ -3526,6 +3580,7 @@ export default defineSchema({
 
   experiments: defineTable({
     orgId: v.id("organizations"),
+    designSource: v.optional(v.object({ runId: v.id("workflowRuns"), findingIndex: v.number(), pageId: v.id("landingPages"), pageVersion: v.number() })),
     strategyId: v.id("strategies"),
     name: v.string(),
     hypothesis: v.string(),
@@ -3660,7 +3715,8 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_org", ["orgId"])
-    .index("by_strategy", ["strategyId"]),
+    .index("by_strategy", ["strategyId"])
+    .index("by_design_source", ["orgId", "designSource.runId", "designSource.findingIndex"]),
 
   /** Sampled AI-search answers, entered from observations; separate from content-readiness heuristics and business outcomes. */
   aiSearchPanels: defineTable({
@@ -3815,6 +3871,33 @@ export default defineSchema({
   }).index("by_org_campaign", ["orgId", "campaignId"]),
 
   /* ---------------- Content ---------------- */
+  /** Private edits to AI-prepared plan drafts. Never a publishing approval or a live artifact. */
+  planStepWork: defineTable({
+    orgId: v.id("organizations"), strategyId: v.id("strategies"), goalId: v.id("goals"), createdBy: v.id("users"),
+    stepKey: v.string(), stepTitle: v.string(), stepFingerprint: v.string(), baseHash: v.string(), context: v.string(),
+    website: v.optional(v.string()), cachedSources: v.string(), previousWork: v.optional(v.string()), answers: v.array(v.string()), requestKey: v.string(),
+    status: v.union(v.literal("working"), v.literal("ready"), v.literal("needs_input"), v.literal("failed")),
+    runId: v.id("workflowRuns"), claimed: v.boolean(), phase: v.optional(v.string()), result: v.optional(v.string()), sources: v.optional(v.string()), error: v.optional(v.string()), candidate: v.optional(v.string()), validationNotes: v.optional(v.array(v.string())),
+    edits: v.array(v.object({ index: v.number(), body: v.string() })), draftRevision: v.number(), createdAt: v.number(), updatedAt: v.number(),
+  }).index("by_strategy_step", ["strategyId", "stepKey"]).index("by_org_request", ["orgId", "requestKey"]).index("by_org", ["orgId"]),
+
+  planTaskProgress: defineTable({
+    orgId: v.id("organizations"), strategyId: v.id("strategies"), goalId: v.id("goals"),
+    taskKey: v.string(), taskText: v.string(), completed: v.boolean(), revision: v.number(),
+    updatedBy: v.id("users"), updatedAt: v.number(),
+  }).index("by_strategy_task", ["strategyId", "taskKey"]).index("by_org", ["orgId"]),
+
+  planDrafts: defineTable({
+    orgId: v.id("organizations"),
+    strategyId: v.id("strategies"),
+    goalId: v.id("goals"),
+    workIndex: v.number(),
+    body: v.string(),
+    revision: v.number(),
+    updatedBy: v.id("users"),
+    updatedAt: v.number(),
+  }).index("by_strategy_index", ["strategyId", "workIndex"]).index("by_org_updated", ["orgId", "updatedAt"]),
+
   artifacts: defineTable({
     orgId: v.id("organizations"),
     businessId: v.id("businesses"),
@@ -4016,6 +4099,7 @@ export default defineSchema({
       v.literal("action"),
     ),
     text: v.string(),
+    question: v.optional(ownerQuestionV),
     /** Screen and pointed-at elements the owner sent with a message. */
     screen: v.optional(v.object({ path: v.string(), title: v.string() })),
     selection: v.optional(
@@ -4804,7 +4888,7 @@ export default defineSchema({
     /** Climb AI Basic or paid Expert (eligible, measured Sol escalation); absent = basic. */
     aiMode: v.optional(v.union(v.literal("basic"), v.literal("expert"))),
     /** Models this run uses per tier (operator defaults or a permitted user's choice); absent = built-in OpenAI route. */
-    modelRoute: v.optional(v.object({ standard: v.string(), advanced: v.string(), source: v.union(v.literal("default"), v.literal("user")) })),
+    modelRoute: v.optional(v.object({ standard: v.string(), advanced: v.string(), policy: v.optional(v.string()), source: v.union(v.literal("default"), v.literal("user")) })),
     /** A quick first take shown while the full job works (JSON: { headline, points[] }). */
     preview: v.optional(v.string()),
     /** The job action and args that continue this run from its checkpoints. */
@@ -4886,16 +4970,18 @@ export default defineSchema({
   /** Tenant-scoped reuse of exact-request research notes; cache keys contain no prompt text. */
   researchCache: defineTable({
     orgId: v.id("organizations"),
+    businessWebsite: v.optional(v.string()),
     cacheKey: v.string(),
     agentId: v.string(),
     modelKey: v.string(),
     notes: v.string(),
-    sources: v.array(v.object({ url: v.string(), title: v.optional(v.string()), pageReportedDates: v.optional(v.array(v.object({ kind: v.union(v.literal("published"), v.literal("updated")), date: v.string(), source: v.union(v.literal("json_ld"), v.literal("meta")) }))) })),
+    sources: v.array(v.object({ productPitchPolicy: v.optional(v.object({ status: v.literal("refused"), evidence: v.string() })), url: v.string(), title: v.optional(v.string()), pageReportedDates: v.optional(v.array(v.object({ kind: v.union(v.literal("published"), v.literal("updated")), date: v.string(), source: v.union(v.literal("json_ld"), v.literal("meta")) }))) })),
     createdAt: v.number(),
     retrievedAt: v.optional(v.number()),
     expiresAt: v.number(),
   })
     .index("by_org_key", ["orgId", "cacheKey"])
+    .index("by_org_created", ["orgId", "createdAt"])
     .index("by_expires", ["expiresAt"]),
 
   actionReceipts: defineTable({

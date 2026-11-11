@@ -72,17 +72,20 @@ const WHO_IDEAS: Record<string, string[]> = {
 export default function OutboundPage() {
   const { organization: slug } = useParams<{ organization: string }>();
   // A play's target list links here with ?campaign= (S6).
-  const campaignId = useSearchParams().get("campaign") as Id<"outboundCampaigns"> | null;
+  const searchParams = useSearchParams();
+  const requestedKind = searchParams.get("kind") === "creators" ? "creators" : "customers";
+  const campaignId = searchParams.get("campaign") as Id<"outboundCampaigns"> | null;
   const data = useQuery(api.outbound.get, campaignId ? { slug, campaignId } : { slug });
   const [startOpen, setStartOpen] = useState(false);
 
   if (data === undefined) return <LoadingBlock label="Loading your prospects" />;
   const c = data.campaign;
+  const creatorIntake = requestedKind === "creators" && c?.kind !== "creators";
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         section="outbound"
-        title="Find customers"
+        title={requestedKind === "creators" ? "Find creators and reviewers" : "Find customers"}
         actions={
           c && c.status !== "researching" && data.canEdit ? (
             <Button variant="secondary" onClick={() => setStartOpen(true)}>
@@ -91,9 +94,9 @@ export default function OutboundPage() {
           ) : null
         }
       />
-      {c ? <LeadScoreCheck slug={slug} /> : null}
-      {!c ? (
-        <StartPanel slug={slug} businessType={data.businessType} canEdit={data.canEdit} />
+      {c && !creatorIntake ? <LeadScoreCheck slug={slug} /> : null}
+      {!c || creatorIntake ? (
+        <StartPanel key={requestedKind} slug={slug} businessType={data.businessType} canEdit={data.canEdit} initialKind={requestedKind} />
       ) : c.status === "researching" ? (
         c.run ? (
           <section className="rounded-xl border border-line bg-surface p-5">
@@ -114,8 +117,8 @@ export default function OutboundPage() {
         <Campaign slug={slug} data={data} />
       )}
       <Dialog open={startOpen} onOpenChange={setStartOpen}>
-        <DialogContent title="Find more customers" description="Skips companies already listed.">
-          <StartForm slug={slug} businessType={data.businessType} onDone={() => setStartOpen(false)} />
+        <DialogContent title={requestedKind === "creators" ? "Find more creators" : "Find more customers"} description="Skips companies already listed.">
+          <StartForm key={requestedKind} initialKind={requestedKind} slug={slug} businessType={data.businessType} onDone={() => setStartOpen(false)} />
         </DialogContent>
       </Dialog>
     </div>
@@ -124,18 +127,18 @@ export default function OutboundPage() {
 
 /* ---------------- Start ---------------- */
 
-function StartPanel({ slug, businessType, canEdit }: { slug: string; businessType: string | null; canEdit: boolean }) {
+function StartPanel({ slug, businessType, canEdit, initialKind = "customers" }: { slug: string; businessType: string | null; canEdit: boolean; initialKind?: "customers" | "creators" }) {
   return (
     <section className="grid grid-cols-1 gap-6 rounded-xl border border-line bg-surface p-5 sm:p-6 lg:grid-cols-[1.2fr_1fr]">
       <div>
-        <h2 className="heading-section">Who should we find?</h2>
-        <div className="mt-4">{canEdit ? <StartForm slug={slug} businessType={businessType} /> : <p className="text-sm text-ink-3">Ask an admin to start.</p>}</div>
+        <h2 className="heading-section">{initialKind === "creators" ? "Whose audience needs what you make?" : "Who should we find?"}</h2>
+        <div className="mt-4">{canEdit ? <StartForm initialKind={initialKind} slug={slug} businessType={businessType} /> : <p className="text-sm text-ink-3">Ask an admin to start.</p>}</div>
       </div>
       <ol className="flex flex-col gap-3" aria-label="How it works">
         {[
-          { icon: Search, title: "Find", body: "Real, sourced companies" },
-          { icon: Mail, title: "Write", body: "Personal emails" },
-          { icon: CalendarCheck, title: "Book", body: "Calls in your calendar" },
+          { icon: Search, title: "Find", body: initialKind === "creators" ? "Relevant profiles and examples of their work" : "Real, sourced companies" },
+          { icon: Mail, title: "Write", body: initialKind === "creators" ? "A useful pitch for your review" : "Personal emails" },
+          { icon: CalendarCheck, title: initialKind === "creators" ? "Decide" : "Book", body: initialKind === "creators" ? "You choose whether and how to approach them" : "Calls in your calendar" },
         ].map((s, i) => (
           <li key={s.title} className="flex items-start gap-3 rounded-lg border border-line bg-surface-2 p-3">
             <IconTile icon={s.icon} tone={i === 2 ? "green" : "brand"} size="sm" />
@@ -152,9 +155,9 @@ function StartPanel({ slug, businessType, canEdit }: { slug: string; businessTyp
   );
 }
 
-function StartForm({ slug, businessType, onDone }: { slug: string; businessType: string | null; onDone?: () => void }) {
+function StartForm({ slug, businessType, onDone, initialKind = "customers" }: { slug: string; businessType: string | null; onDone?: () => void; initialKind?: "customers" | "creators" }) {
   const start = useMutation(api.outbound.start);
-  const [kind, setKind] = useState<"customers" | "creators">("customers");
+  const [kind, setKind] = useState<"customers" | "creators">(initialKind);
   const [whoMode, setWhoMode] = useState<"auto" | "pick">("auto");
   const [whereMode, setWhereMode] = useState<"auto" | "pick">("auto");
   const [who, setWho] = useState("");
@@ -244,7 +247,7 @@ function StartForm({ slug, businessType, onDone }: { slug: string; businessType:
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" loading={busy} disabled={missing}>
-          <Magic aria-hidden /> Find customers
+          <Magic aria-hidden /> {kind === "creators" ? "Find creators" : "Find customers"}
         </Button>
         <span className="text-xs text-ink-3">Uses AI allowance · Nothing sent</span>
       </div>

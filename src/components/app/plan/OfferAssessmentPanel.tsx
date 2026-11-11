@@ -1,4 +1,5 @@
 import { ExternalLink } from "@/components/icons";
+import { OfferHorizon } from "./OfferHorizon";
 import { Badge } from "@/components/ui";
 import { evaluateOfferUnitEconomics, type OfferAssessment, type OfferEvidenceValue } from "../../../../shared/agents/offerAssessment";
 import { formatMoney } from "../../../../shared/economics/currency";
@@ -47,6 +48,7 @@ export function OfferAssessmentPanel({ offer }: { offer: OfferAssessment }) {
           <p className="text-xs text-ink-3">{offer.authorizationNote}</p>
         </div>
       </details>
+      <OfferHorizon offer={offer} />
     </section>
   );
 }

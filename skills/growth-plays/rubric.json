@@ -31,16 +31,16 @@
       "anchors": {
         "1": "The swap test passes: any competitor could run this plan unchanged; mostly social and email.",
         "3": "One play is a transplant or non-obvious channel; the rest are standard.",
-        "5": "Several plays rely on non-obvious audiences, partnerships, platforms, timing or assets unique to this business, each with a proven mechanic behind it."
+        "5": "Distinct mechanisms grounded in this business’s assets or explicit hypotheses, with a concrete buyer benefit and reversible test. Originality does not require an existing precedent."
       }
     },
     {
       "id": "Q3",
-      "name": "Predictability of results",
+      "name": "Trustworthy outcomes and uncertainty",
       "anchors": {
-        "1": "No forecast or single-point promises.",
-        "3": "Forecasts exist but skip funnel steps or lack sources and grades.",
-        "5": "Each play has a funnel with low, likely and high rates, sources and grades, a P10/P50/P90 outcome in business units, and a confidence level with its biggest unknown."
+        "1": "Invents forecasts, promises results, hides uncertainty, or omits the next useful measurement.",
+        "3": "Outcomes are conditional or honestly unknown, but the measurement chain, evidence or decision consequence is incomplete.",
+        "5": "Supplied inputs support a transparent funnel and conditional scenarios; missing inputs remain unknown with a concrete collection plan and decision rule. No forecast is required when evidence cannot support it. Evidence strength and largest uncertainty are explicit."
       }
     },
     {
@@ -49,7 +49,7 @@
       "anchors": {
         "1": "No test design.",
         "3": "Tests named but sizes, budgets or kill rules missing.",
-        "5": "Every play has a sample size from the base rate, a capped budget, a duration, a leading metric and explicit kill and scale rules."
+        "5": "Every play has a bounded test, feasible duration, time and cash cap, useful observation and stop/change/continue rules. Statistical sample sizes are justified only when base rates and design permit; otherwise a clearly limited observational or qualitative test is appropriate."
       }
     },
     {
@@ -58,7 +58,7 @@
       "anchors": {
         "1": "Ignores budget, owner hours or unit economics.",
         "3": "Fits the budget but not checked against margin or capacity.",
-        "5": "Fits budget and hours; cost per acquired customer checked against 12-month gross profit; at least one compounding play."
+        "5": "Fits confirmed cash and time constraints; planned effort is nonzero for manual work and gated when availability is unknown. Uses deterministic economics when supported; otherwise states missing value, margin or retention and prevents unjustified scaling. Names how success could compound."
       }
     },
     {
@@ -72,11 +72,11 @@
     },
     {
       "id": "Q7",
-      "name": "Ambition and volume",
+      "name": "Strategic ambition and credible path",
       "anchors": {
-        "1": "A validation framework: tiny tests, combined P50 under one customer, budget held back until economics are 'known'.",
-        "3": "Some volume, but the main bet can't move the goal in 90 days or has no weekly number.",
-        "5": "At least one play has a real volume engine (who runs it, weekly reach) and the portfolio's P50 credibly moves the goal in 90 days; tests say how they scale at day 21."
+        "1": "A list of channels or arbitrary volume targets without a distinctive business direction.",
+        "3": "A direction and a bounded test, but the compounding mechanism or path to the next horizon is weak.",
+        "5": "A precise buyer and business ambition, a distinctive mechanism and compounding advantage, deliberate trade-offs, a credible current bet and next horizon. Unknown scale remains unknown; a validation-first move is strong when it resolves the binding uncertainty. Speculative bold choices remain visible without fabricated forecasts."
       }
     },
     {

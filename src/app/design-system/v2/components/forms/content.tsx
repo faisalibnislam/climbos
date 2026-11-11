@@ -1,5 +1,7 @@
 "use client";
 
+import { OwnerQuestionCard } from "@/components/climb/OwnerQuestion";
+import { ownerAnswer, type OwnerQuestion } from "@shared/climb/ownerQuestion";
 import { RequestComposer } from "@/components/ui/request-composer";
 import { useId, useState } from "react";
 import { AtSign, Building2, Globe, Mail, Megaphone, Sparkles, Store, Tag, Users } from "@/components/icons";
@@ -46,6 +48,7 @@ export function FormsContent() {
   return (
     <DocPage eyebrow="Components" title="Forms" intro="Every field has a visible label, says what it wants in plain words, and explains errors next to the field.">
       <RequestComposerSpecimen />
+      <OwnerQuestionSpecimen />
       <TextInputSpecimen />
       <TextareaSpecimen />
       <NumberSpecimen />
@@ -844,4 +847,11 @@ function RequestComposerSpecimen() {
       {sent ? <p role="status" className="text-sm text-ink-2">Example received: {sent}</p> : null}
     </section>
   );
+}
+
+function OwnerQuestionSpecimen() {
+  const [answer, setAnswer] = useState("");
+  const [kind, setKind] = useState<"single" | "multiple">("single");
+  const question: OwnerQuestion = { title: "How would you like people to contact you?", reason: "This helps choose the next draft. This example saves nothing.", kind, options: [{ id: "email", label: "Email" }, { id: "booking", label: "Book a call" }, { id: "website", label: "Visit my website" }], allowOther: true };
+  return <section id="owner-question-example" aria-labelledby="owner-question-specimen" className="max-w-lg space-y-3"><h2 id="owner-question-specimen" className="heading-section">Choice-based question</h2><Button variant="secondary" size="sm" onClick={() => { setKind(kind === "single" ? "multiple" : "single"); setAnswer(""); }}>{kind === "single" ? "Try multiple choices" : "Try single choice"}</Button><OwnerQuestionCard key={kind} question={{ ...question, status: "pending" }} onAnswer={async (value) => { setAnswer(ownerAnswer(question, value)); }} />{answer ? <p role="status" className="text-sm">{answer}</p> : null}</section>;
 }

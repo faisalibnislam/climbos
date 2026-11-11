@@ -84,6 +84,18 @@ describe("never data-only: plays (bench Run 5, Folevi)", () => {
     const fix = play({ assetUsed: "Existing comparison page: https://folevi.com/compare", test: "Rewrite the hero and free-trial CTA; 300 visits over 30 days.", firstActionToday: "Update the compare page hero with the offline-editing proof." });
     expect(lintExistingTest([...folevi, fix], FOLEVI_EVIDENCE, 90)).toEqual([]);
   });
+  it("accepts a bounded creator test of the existing product without forcing a website rewrite", () => {
+    const draft = play({ assetUsed: "Existing product: https://folevi.com/compare", test: "14-day editorial pitch test, with tagged visits and first-use actions observed", firstActionToday: "Draft a tailored creator pitch and tutorial outline for approval." });
+    expect(lintExistingTest([draft], FOLEVI_EVIDENCE, 14, "https://folevi.com/")).toEqual([]);
+    expect(lintExistingTest([{ ...draft, firstActionToday: "Pull analytics and wait for a baseline." }], FOLEVI_EVIDENCE, 14, "https://folevi.com/")).toHaveLength(1);
+    expect(lintExistingTest([{ ...draft, test: "90-day pitch test" }], FOLEVI_EVIDENCE, 14, "https://folevi.com/")).toHaveLength(1);
+  });
+  it("does not mistake a creator source for an owned asset, and permits a revised draft before approval", () => {
+    const draft = play({ assetUsed: "https://folevi.com/", test: "Test the approved version over 14 days.", firstActionToday: "Draft a revised homepage variant for owner approval." });
+    expect(lintExistingTest([draft], "Source: https://folevi.com/", 14, "https://folevi.com")).toEqual([]);
+    expect(lintExistingTest([play({ assetUsed: "To build: product page", firstActionToday: "Draft the first product page." })], "Creator: https://macmost.com/", 14, null)).toEqual([]);
+    expect(lintExistingTest([play({ assetUsed: "https://macmost.com/", firstActionToday: "Update existing page.", test: "14 days" })], "https://macmost.com/ https://folevi.com/", 14, "https://folevi.com/")).toHaveLength(1);
+  });
   it("the test must run inside the horizon, name a duration, and not be data collection", () => {
     const base = { assetUsed: "https://folevi.com/compare", firstActionToday: "Update the compare page hero." };
     expect(lintExistingTest([play({ ...base, test: "Run for 120 days." })], FOLEVI_EVIDENCE, 90)).toHaveLength(1);
@@ -152,7 +164,7 @@ describe("never data-only: plan (bench Run 5, Folevi)", () => {
 describe("wired into the specs and tasks", () => {
   it("growth-plays lint runs both play checks", () => {
     const out = { portfolioNote: "", economics: { revenuePerCustomerMonthUsd: 6, grossMargin: 0.8, monthlyChurn: 0.05, basis: "", sources: {} }, plays: [{ ...meetrao, name: "x", oneLiner: "", kind: "bankable", audience: "a", trigger: "", hook: "h", killIf: "k", scaleIf: "s", unit: "customers", horizonDays: 90, confidence: "low", biggestUnknown: "", scores: [3, 4, 3, 3, 3, 3, 3, 3], climbosCanDo: "", model: { weeklyReach: 10, weeklyReachLow: 5, weeklyReachHigh: 20, reachSource: { source: "assumption", ref: "", quote: "" }, steps: [], monthlySpendUsd: 0, spendSource: { source: "planned", ref: "", quote: "" }, ownerHoursPerWeek: 1, hoursSource: { source: "planned", ref: "", quote: "" } } }] };
-    const rules = growthPlaysSpec().lint!(out as never, { task: "", brief: "", facts: [], untrustedContext: MEETRAO_EVIDENCE } as never).map((i) => i.rule);
+    const rules = growthPlaysSpec().lint!(out as never, { task: "", brief: "", facts: [], businessWebsite: "https://meetrao.com", untrustedContext: MEETRAO_EVIDENCE } as never).map((i) => i.rule);
     expect(rules).toContain("assets_first");
     expect(rules).toContain("existing_test");
   });
@@ -162,7 +174,7 @@ describe("wired into the specs and tasks", () => {
     expect(rules.filter((r) => r === "data_only")).toHaveLength(3);
   });
   it("the plays and plan tasks state both rules", () => {
-    expect(playsTask({ scorecard: "", insights: "" })).toMatch(/Existing assets first:.*gated on its result.*At least one play must be a concrete test on an existing asset/);
+    expect(playsTask({ scorecard: "", insights: "" })).toMatch(/Existing assets first:.*gated on its result.*at least one play must prepare a concrete reversible test on that confirmed asset/);
     expect(planTask({ locked: "", plays: null, scorecard: "", insights: "" })).toMatch(/Never a data-only plan/);
   });
 });

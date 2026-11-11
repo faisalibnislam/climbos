@@ -82,6 +82,7 @@ const RECOMMENDATION_GUIDANCE: Record<string, RecommendationGuidance> = {
   O20: CONTENT_COMMUNITY,
   R15: CONTENT_COMMUNITY, // Industry associations; recommend only with evidence of customer relevance.
   R18: CONTENT_COMMUNITY, // Creator partnerships; evidence, budget and capacity still determine fit.
+  R21: CONTENT_COMMUNITY, // Earned creator coverage; no assumed sponsorship fee or placement.
   X04: REVIEW_COMPARISON,
 };
 

@@ -32,4 +32,18 @@ describe("onboarding chat parser", () => {
     expect(p.website).toBeUndefined();
     expect(p.goalKind).toBe("more_reach");
   });
+
+  it("carries ordinary website-traffic wishes forward without repeating company details", () => {
+    const p = parseIntro("My business is Macloving.app, I want to increase site visitor.");
+    expect(p.goalKind).toBe("more_reach");
+    expect(p.goalStatement).toBe("I want to increase site visitor.");
+  });
+
+  it("never treats product pricing, revenue targets, or the AI budget as an ad budget", () => {
+    expect(parseIntro("Our plan costs $29 per month. I want more customers.").monthlyAdBudget).toBeUndefined();
+    expect(parseIntro("I want $5000 monthly revenue.").monthlyAdBudget).toBeUndefined();
+    expect(parseIntro("I can spend $100 on AI.").monthlyAdBudget).toBeUndefined();
+    expect(parseIntro("Our plan costs $29/month. I can spend $600 a month on ads.").monthlyAdBudget).toBe(600);
+    expect(parseIntro("Our advertising budget is £250 a month.")).toMatchObject({ monthlyAdBudget: 250, adBudgetCurrency: "GBP" });
+  });
 });

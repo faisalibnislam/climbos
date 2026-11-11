@@ -23,7 +23,7 @@ const SHORT: [RegExp, string][] = [
   [/^(execution|how it runs|phases)/i, "Execution"],
   [/^who to reach|^audiences/i, "Audiences"],
   [/^how we'?ll measure/i, "Measure"],
-  [/^next review/i, "Next review"],
+  [/^(next review|check progress)/i, "Check progress"],
   [/^what we (know|learned)|insights/i, "Insights"],
   [/^sources/i, "Sources"],
   [/^discussion|comments/i, "Comments"],
@@ -77,7 +77,7 @@ export function PlanJumpNav({ rootRef, className }: { rootRef: RefObject<HTMLEle
     };
     refresh();
     const mo = new MutationObserver(refresh);
-    mo.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "hidden"] });
+    mo.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "hidden", "open"] });
     return () => {
       cancelAnimationFrame(frame);
       mo.disconnect();
@@ -116,14 +116,13 @@ export function PlanJumpNav({ rootRef, className }: { rootRef: RefObject<HTMLEle
     el?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
   }, [active]);
 
-  if (items.length < 3) return null;
+  if (items.length < 3 || !shown) return null;
   const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   return (
     <nav
       aria-label="Jump to section"
       className={cn(
-        "pointer-events-none sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 flex justify-center transition-[opacity,transform] duration-200 motion-reduce:transition-none lg:bottom-4",
-        shown ? "opacity-100" : "pointer-events-none translate-y-2 opacity-0",
+        "sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 flex justify-center lg:bottom-4",
         className,
       )}
     >
@@ -143,7 +142,7 @@ export function PlanJumpNav({ rootRef, className }: { rootRef: RefObject<HTMLEle
               setActive(i.id);
             }}
             className={cn(
-              "flex h-[var(--h-sm)] shrink-0 items-center whitespace-nowrap rounded-[var(--radius-control)] px-3 text-ui font-medium transition-colors",
+              "flex h-[var(--h-sm)] shrink-0 items-center whitespace-nowrap rounded-[var(--radius-control)] px-3 text-ui font-medium",
               active === i.id ? "bg-white text-ink" : "text-white/75 hover:bg-white/10 hover:text-white",
             )}
           >

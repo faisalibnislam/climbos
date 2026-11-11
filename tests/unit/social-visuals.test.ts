@@ -23,6 +23,12 @@ describe("social post visuals", () => {
     expect(rules({ channel: "instagram", format: "carousel", visualBrief: brief })).toEqual([]);
   });
 
+  it("does not mistake palette values for outcome claims and enforces native video formats", () => {
+    expect(rules({ channel: "pinterest", format: "single_image", visualBrief: "Use a simple hinge illustration with colour #222222 on a #31573a background and no outcome text." })).not.toContain("invented_fact");
+    expect(rules({ channel: "pinterest", format: "single_image", visualBrief: "Show a large headline claiming 222222 customers with a hinge illustration on the card." })).toContain("invented_fact");
+    expect(rules({ channel: "youtube", format: "text", visualBrief: brief })).toContain("visual_format");
+    expect(rules({ channel: "tiktok", format: "thread", visualBrief: brief })).toContain("visual_format");
+  });
   it("asks for a phone-filmable shot list on short video", () => {
     expect(rules({ channel: "linkedin", format: "reel", visualBrief: brief, shotList: [] })).toContain("missing");
     const shots = [

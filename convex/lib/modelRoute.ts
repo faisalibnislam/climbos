@@ -20,7 +20,7 @@ export async function savedModelDefaults(ctx: Ctx): Promise<Doc<"aiModelSettings
 /**
  * The route every run uses unless a permitted user chose a model. A saved
  * default whose provider key has since been removed falls back to the
- * built-in OpenAI model for that tier, so a missing key never fails a run.
+ * built-in Anthropic model for that tier, without switching to another provider. Missing Anthropic credentials remain an explicit unavailable result.
  */
 export async function defaultModelRoute(ctx: Ctx): Promise<ModelRoute> {
   const row = await savedModelDefaults(ctx);
@@ -28,7 +28,7 @@ export async function defaultModelRoute(ctx: Ctx): Promise<ModelRoute> {
     const saved = row?.[tier];
     return saved && isModelKey(saved) && modelAvailable(saved) ? saved : BUILT_IN_ROUTE[tier];
   };
-  return { standard: pick("standard"), advanced: pick("advanced"), source: "default" };
+  return { standard: pick("standard"), advanced: pick("advanced"), source: "default", policy: BUILT_IN_ROUTE.policy };
 }
 
 export async function canChooseModel(ctx: Ctx, userId: Id<"users"> | null | undefined): Promise<boolean> {

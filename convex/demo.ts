@@ -32,6 +32,7 @@ const FACTS: { category: Doc<"businessFacts">["category"]; statement: string; co
 export const createDemoWorkspace = mutation({
   args: {},
   handler: async (ctx) => {
+    if (process.env.CLIMBOS_LOCAL_REAL_RESEARCH === "true") throw appError("INVALID", "Demo data is disabled in the dedicated real-business workspace.");
     const user = await requireUser(ctx);
     const memberships = await ctx.db
       .query("memberships")
@@ -147,6 +148,21 @@ async function seedDemo(ctx: MutationCtx, userId: Id<"users">): Promise<string> 
       phases: [],
       weekOneChecklist: [],
       risks: [],
+      strategicDirection: {
+        ambition: "Make client intake easier for a small agency, from the first question to a ready-to-start project.",
+        customer: "In this fictional example, an agency owner scoping a new client project.",
+        unmetNeed: "A submitted form can still leave the owner chasing information before work can begin.",
+        winningApproach: "Test one reusable client-intake workflow, rather than promote every form-building feature to everyone.",
+        whyThisBusiness: "The demo illustrates forms with logic and response workflows; real capabilities still need checking for a real business.",
+        compoundingAdvantage: "Useful, owner-approved workflow examples could make future agency onboarding easier.",
+        horizon: "Illustrative longer-term direction",
+        currentBet: "Review one intake example and identify the missing information needed before a project can start.",
+        nextHorizon: "If a small pilot helps, test whether another similar agency needs the same workflow.",
+        notNow: ["A launch on every platform or a broad paid campaign."],
+        assumptions: ["This is synthetic demo reasoning, not measured customer demand or a live recommendation."],
+        changeCourseIf: "The workflow does not make the agency's scoping decision easier.",
+        evidenceRefs: [],
+      },
       plays: [{
         id: "demo_opportunity",
         name: "Demo opportunity",
@@ -185,6 +201,18 @@ async function seedDemo(ctx: MutationCtx, userId: Id<"users">): Promise<string> 
   const posts = (fixtureOutput("social_posts", { ...fx, quantity: 6 }) as SocialPostsOutput).posts;
   const states: Doc<"artifacts">["status"][] = ["in_review", "in_review", "approved", "scheduled", "published", "uncertain"];
   const conns = await seedConnections(ctx, orgId, userId, now);
+  // Explicitly synthetic search observations make the page-review handoff
+  // demonstrable without connecting or querying a live Google property.
+  const searchSnapshotId = await ctx.db.insert("searchConsoleSnapshots", {
+    orgId, connectionId: conns.searchConsole, property: "sc-domain:formkit.app",
+    startDate: new Date(now - 31 * DAY).toISOString().slice(0, 10),
+    endDate: new Date(now - 3 * DAY).toISOString().slice(0, 10),
+    dataState: "final", status: "complete", rowCount: 2, truncated: false, fetchedAt: now,
+  });
+  for (const row of [
+    { query: "client intake form for an agency", page: "https://formkit.app/templates/client-intake", clicks: 12, impressions: 240, ctr: 0.05, position: 8 },
+    { query: "agency client questionnaire", page: "https://formkit.app/templates/client-intake", clicks: 8, impressions: 160, ctr: 0.05, position: 10 },
+  ]) await ctx.db.insert("searchConsoleRows", { orgId, snapshotId: searchSnapshotId, ...row });
   for (const [i, p] of posts.entries()) {
     const status = states[i] ?? "draft";
     const scheduledFor = status === "scheduled" ? now + 2 * DAY : status === "published" || status === "uncertain" ? now - (i + 1) * DAY : now + (i + 3) * DAY;
@@ -290,11 +318,11 @@ async function seedConnections(ctx: MutationCtx, orgId: Id<"organizations">, use
   const add = (provider: Doc<"connections">["provider"], label: string, accountType?: string) =>
     ctx.db.insert("connections", { orgId, provider, status: "connected", accountLabel: `${label} (demo)`, accountType, externalAccountId: `demo_${provider}`, scopes: [], isFixture: true, lastSyncAt: now - 3 * 3_600_000, createdBy: userId, createdAt: now - 20 * DAY, updatedAt: now });
   await add("ga4", "Formkit GA4 property");
-  await add("search_console", "formkit.app");
+  const searchConsole = await add("search_console", "formkit.app");
   const instagram = await add("instagram", "@formkit_demo", "Business");
   const googleAds = await add("google_ads", "Formkit Ads account");
   await add("stripe_revenue", "Stripe (synthetic)");
-  return { instagram, googleAds };
+  return { instagram, googleAds, searchConsole };
 }
 
 /** Synthetic daily metrics, revenue events and touches (scheduled to stay within transaction limits). */

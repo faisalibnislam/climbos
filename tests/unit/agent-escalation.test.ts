@@ -124,3 +124,43 @@ describe("measured Expert model escalation", () => {
     expect(lintInputs[0]?.precomputedResearch?.retrievedAt).toEqual(expect.any(Number));
   });
 });
+
+it("gives the writer and critic the stored source index and structured planning limits", async () => {
+  const seen: string[] = [];
+  await runAgent({ ...spec, maxRevisions: 0 }, { ...input, constraints: { currency: "USD", monthlyAdBudgetUsd: 0, horizonDays: 90 }, precomputedResearch: { notes: "A source-reported homepage describes a project handoff utility. Inner comparison pages were not inspected.", sources: [{ url: "https://example.com/", title: "Homepage" }] } }, {
+    phase: async (_key, _label, fn) => (await fn()).value,
+    turn: async (req) => {
+      seen.push(JSON.stringify(req.messages));
+      const output = req.schema === CritiqueSchema ? { gates: [{ id: "truth", pass: true, note: "Source labels retained." }], scores: [{ id: "clarity", score: 4, note: "Clear", fix: "" }, { id: "XV", score: 4, note: "Ready", fix: "" }], strengths: [], fixes: [], escalation: { reason: "none", evidence: "" } } : { answer: "A bounded recommendation." };
+      return { ok: true, output, text: JSON.stringify(output), appended: [], usage: { ...ZERO_USAGE, calls: 1 }, costMicros: 0, sources: [], actualModelId: req.modelKey, stopReason: "stop" } satisfies TurnResult;
+    },
+  });
+  expect(seen).toHaveLength(2);
+  for (const prompt of seen) {
+    expect(prompt).toContain("https://example.com/");
+    expect(prompt).toContain("RESEARCH SOURCE INDEX");
+    expect(prompt).toContain("monthlyAdBudgetUsd");
+    expect(prompt).toContain("NUMBERED BUSINESS FACT STATEMENTS");
+    expect(prompt).toContain("0. [source kind unspecified — use business-context labels] Source A says price");
+    expect(prompt).toContain("1. [source kind unspecified — use business-context labels] Source B says setup time");
+    expect(prompt).toContain("uninspected");
+  }
+});
+
+describe("optional revision failure preserves reviewed work", () => {
+  it("keeps the reviewed draft when a paid revision is truncated, without marking it ready", async () => {
+    let calls = 0;
+    const result = await runAgent(spec, input, {
+      turn: async (req): Promise<TurnResult> => {
+        calls++;
+        if (calls === 3) return { ok: false, kind: "invalid_output", message: "The answer was cut off at the length limit.", appended: [], usage: { ...ZERO_USAGE, calls: 1 }, costMicros: 12 };
+        const output = req.schema === CritiqueSchema ? { gates: [{ id: "truth", pass: false, note: "Needs correction" }], scores: [{ id: "clarity", score: 2, note: "Weak", fix: "Improve" }, { id: "XV", score: 2, note: "Weak", fix: "Improve" }], strengths: ["A real draft"], fixes: ["Correct the evidence"], escalation: { reason: "none", evidence: "" } } : { answer: "The original reviewed draft." };
+        return { ok: true, output, text: JSON.stringify(output), appended: [], usage: { ...ZERO_USAGE, calls: 1 }, costMicros: 1, sources: [], actualModelId: req.modelKey, stopReason: "end_turn" };
+      },
+      phase: async (_key, _label, fn) => (await fn()).value,
+    });
+    expect(calls).toBe(3); expect(result.output.answer).toBe("The original reviewed draft.");
+    expect(result.assessment?.ship).toBe(false);
+    expect(result.quality?.revisionFailure?.kind).toBe("invalid_output");
+  });
+});

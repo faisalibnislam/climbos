@@ -13,11 +13,12 @@
  * - passed: every gate, lint check and rubric bar cleared.
  */
 import type { Assessment, LintIssue } from "./types";
+import {fitJson} from "./context";
 
 export type QualityState = "passed" | "provisional" | "needs_input" | "failed";
 
 /** Lint rules whose failure means the plan must not drive work (REQ-EVAL hard failures). */
-export const HARD_RULES = new Set(["economics", "budget", "capacity", "citation", "provenance", "consistency", "no_plays", "invented_fact", "generic_action", "unsupported_scarcity", "unsupported_deadline", "growth_cash", "growth_cash_reserve"]);
+export const HARD_RULES = new Set(["contact_policy", "economics", "budget", "capacity", "citation", "provenance", "consistency", "no_plays", "invented_fact", "generic_action", "creative_diversity", "unsupported_scarcity", "unsupported_deadline", "growth_cash", "growth_cash_reserve"]);
 
 /** One hard finding the owner can act on: what failed and where. */
 export interface QualityFix {
@@ -40,6 +41,10 @@ export interface AgentQuality {
   researchSources: number | null;
   /** Hard lint errors on the kept version, with their messages (capped). */
   fixes?: QualityFix[];
+  /** Explicit failed or missing truth/budget/permission checks on a newly reviewed plan. */
+  criticalGateFailures?: { id: string; note: string }[];
+  /** AI editorial feedback, never business evidence or permission. */
+  reviewSuggestions?: string[];
 }
 
 export interface PlanQuality {
@@ -60,6 +65,17 @@ export interface PlanQuality {
 
 const MAX_FIXES = 12;
 
+/** Bounded feedback for another draft; never business evidence or permission. */
+export function planRepairGuidance(value: unknown): string {
+  if (!value || typeof value !== "object" || !["failed", "provisional"].includes(String((value as { state?: unknown }).state))) return "";
+  const q = value as Partial<PlanQuality>;
+  const reasons = Array.isArray(q.reasons) ? q.reasons.filter((reason) => typeof reason === "string").slice(0, 3).map((reason) => reason.slice(0, 300)) : [];
+  const fixes = Array.isArray(q.fixes) ? q.fixes.filter((fix) => fix && typeof fix.message === "string").slice(0, 6).map((fix) => ({ rule: String(fix.rule).slice(0, 60), path: String(fix.path ?? "").slice(0, 80), message: fix.message.slice(0, 300) })) : [];
+  const gates = Array.isArray(q.agents) ? q.agents.flatMap((agent) => agent?.criticalGateFailures ?? []).filter((gate) => gate && typeof gate.note === "string").slice(0, 4).map((gate) => ({ id: String(gate.id).slice(0, 20), note: gate.note.slice(0, 300) })) : [];
+  const suggestions = Array.isArray(q.agents) ? q.agents.flatMap(agent=>agent?.reviewSuggestions??[]).filter(item=>typeof item==="string").slice(0,5).map(item=>item.slice(0,300)) : [];
+  return fitJson({ reasons, fixes, gates, suggestions },5500).text;
+}
+
 export function agentQuality(agentId: string, assessment: Assessment | null, rounds: number, researchSources: number | null): AgentQuality {
   const errors: Record<string, number> = {};
   const fixes: QualityFix[] = [];
@@ -68,7 +84,13 @@ export function agentQuality(agentId: string, assessment: Assessment | null, rou
     errors[l.rule] = (errors[l.rule] ?? 0) + 1;
     if (HARD_RULES.has(l.rule) && fixes.length < MAX_FIXES) fixes.push({ rule: l.rule, ...(l.path ? { path: l.path } : {}), message: l.message.slice(0, 300) });
   }
-  return { agentId, shipped: Boolean(assessment?.ship), gatesPassed: Boolean(assessment?.gatesPassed), average: assessment?.average ?? null, rounds, errors, researchSources, ...(fixes.length ? { fixes } : {}) };
+  const criticalIds = agentId === "growth_plays" ? ["P1", "P2", "P3"] : agentId === "growth_strategy" ? ["G1", "G2", "G4"] : [];
+  const criticalGateFailures = assessment && !assessment.gatesPassed ? criticalIds.flatMap((id) => {
+    const entries = assessment.critique.gates.filter((gate) => gate.id === id);
+    return entries.length === 1 && entries[0].pass ? [] : [{ id, note: entries.length === 1 ? entries[0].note : "The reviewer did not validate this required check exactly once." }];
+  }) : [];
+  const reviewSuggestions = (assessment?.critique.fixes ?? []).filter(item=>typeof item==="string").slice(0,5).map(item=>item.slice(0,300));
+  return { ...(reviewSuggestions.length ? {reviewSuggestions} : {}), ...(criticalGateFailures.length ? { criticalGateFailures } : {}), agentId, shipped: Boolean(assessment?.ship), gatesPassed: Boolean(assessment?.gatesPassed), average: assessment?.average ?? null, rounds, errors, researchSources, ...(fixes.length ? { fixes } : {}) };
 }
 
 /** The same agent result with its hard findings removed (when those checks are re-run on a later version). */
@@ -82,10 +104,13 @@ const LABEL: Record<string, string> = {
   budget: "the plan spends more than your ad budget",
   capacity: "the plan needs more of your time than you have",
   citation: "a play cites a source the research didn't read",
+  contact_policy: "A proposed outreach target explicitly refuses this kind of contact",
+  review_gate: "AI has not cleared a required truth, budget or permission check",
   provenance: "a number is credited to a source without naming or quoting it",
   consistency: "a customer number doesn't match what the plays add up to",
   invented_fact: "a number has no source and isn't labelled as an estimate or target",
   no_plays: "the plan has no plays to run",
+  creative_diversity: "the strategy options repeat the same mechanism and action instead of offering different choices",
   unsupported_scarcity: "a scarcity or inventory claim has no current confirmed evidence",
   unsupported_deadline: "an offer deadline has no current confirmed evidence",
   growth_cash: "the plays' monthly cash costs are more than the monthly growth cash you said you can commit",
@@ -105,6 +130,11 @@ export function planQuality(agents: AgentQuality[], finalLint: LintIssue[] = [],
     seen.add(k);
   };
   for (const a of agents) {
+    for (const gate of a.criticalGateFailures ?? []) {
+      hardRules.add("review_gate");
+      hard.push(`${a.agentId}: required review ${gate.id}`);
+      addFix({ rule: "review_gate", message: gate.note.slice(0, 300) });
+    }
     for (const [rule, n] of Object.entries(a.errors)) if (HARD_RULES.has(rule) && n > 0) {
       hardRules.add(rule);
       hard.push(`${a.agentId}: ${rule} ×${n}`);

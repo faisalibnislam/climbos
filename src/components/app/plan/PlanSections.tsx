@@ -40,6 +40,7 @@ import {
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Badge, Callout, Card, CardContent, DataTable, EmptyState, IconTile, Skeleton, Switch, toast, type Tone } from "@/components/ui";
 import { ExperimentOutcome } from "./ExperimentOutcome";
+import { ExperimentSetup } from "./ExperimentSetup";
 import { HorizontalBarChart } from "@/components/ds/charts";
 import { cn } from "@/lib/utils";
 import { minorToDisplay, relativeTime } from "../money";
@@ -670,6 +671,7 @@ function ExperimentCard({ e, slug, canEdit }: { e: PlanView["experiments"][numbe
           </div>
         </dl>
       ) : null}
+      <ExperimentSetup slug={slug} e={e} canEdit={canEdit} />
       {canEdit || e.analyses.length ? <ExperimentOutcome slug={slug} e={e} canEdit={canEdit} /> : null}
     </li>
   );
@@ -764,7 +766,7 @@ export function PlanBasics({ strategy }: { strategy: Strategy }) {
             <p className="text-ui text-ink-3">Not set yet.</p>
           )}
         </PlanSection>
-        <PlanSection id="review-date-heading" title="Next review" icon={CalendarCheck}>
+        <PlanSection id="review-date-heading" title="Check progress" icon={CalendarCheck}>
           <div className="flex items-center gap-4">
             <time dateTime={strategy.reviewDate} className="flex w-16 shrink-0 flex-col overflow-hidden rounded-[var(--radius-card)] border border-line text-center">
               <span className="bg-sage-ink py-0.5 text-2xs font-semibold uppercase text-white">{date ? date.toLocaleDateString("en-US", { month: "short" }) : "Date"}</span>

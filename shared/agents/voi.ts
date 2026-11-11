@@ -119,8 +119,8 @@ export function switchPoints(p: PlayLike, e: Economics): SwitchPoint[] {
   m.steps.forEach((s, i) => add(`step:${i}`, `${s.name} rate`, s.rate, 0, 1, "share", s.source ?? "unlabelled", { low: s.low, high: s.high }));
   const src = e.sources ?? {};
   // Owner ranges (their own 90% range) are the only economics ranges value of information uses.
-  add("revenue", "revenue per customer a month", e.revenuePerCustomerMonthUsd, 0, Math.max(1, e.revenuePerCustomerMonthUsd) * 50, "money_month", src.revenue?.source ?? "unlabelled", e.ranges?.revenue);
-  add("margin", "contribution margin", e.grossMargin, 0, 1, "share", src.margin?.source ?? "unlabelled", e.ranges?.margin);
+  if (e.revenuePerCustomerMonthUsd !== null) add("revenue", "revenue per customer a month", e.revenuePerCustomerMonthUsd, 0, Math.max(1, e.revenuePerCustomerMonthUsd) * 50, "money_month", src.revenue?.source ?? "unlabelled", e.ranges?.revenue);
+  if (e.grossMargin !== null) add("margin", "contribution margin", e.grossMargin, 0, 1, "share", src.margin?.source ?? "unlabelled", e.ranges?.margin);
   if (typeof e.monthlyChurn === "number" || e.monthsRetained) add("churn", "monthly churn", e.monthlyChurn ?? 1 / (e.monthsRetained as number), 0, 0.99, "share", src.churn?.source ?? "unlabelled", e.ranges?.churn);
   if (m.ownerHoursPerWeek > 0) add("ownerHour", "value of an owner hour", e.ownerHourUsd ?? 50, 0, Math.max(50, e.ownerHourUsd ?? 50) * 50, "money_month", e.ownerHourUsd ? "owner" : "assumption");
   return out.sort((a, b) => (b.evpiUsd ?? -1) - (a.evpiUsd ?? -1) || (a.margin ?? Infinity) - (b.margin ?? Infinity));

@@ -115,7 +115,7 @@ describe("hard limits before ranking", () => {
 
   it("the planner's scorecard names the limit", () => {
     const text = scorecardText(scoreChannels({ ...saas, budgetUsd: 0 }, [], undefined, { connected: [] }), 400);
-    expect(text).toMatch(/P01 Google Search Ads: .*Not now · .*Needs at least \$300\/month to learn anything; the budget is \$0/);
+    expect(text).toMatch(/P01 Google Search Ads: .*Not now · .*The planning allowance for this channel is \$300\/month; the approved budget is \$0/);
     expect(text).toMatch(/D01 Cold email: .*setup: Connect the owner's mailbox/);
   });
 

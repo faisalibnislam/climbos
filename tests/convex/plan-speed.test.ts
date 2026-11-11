@@ -14,6 +14,27 @@ describe("Plan speed", () => {
     delete process.env.CLIMBOS_FAKE_LLM;
   });
 
+  it("learns from the latest failed draft while the approved plan continues to guide other work", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "repair-owner@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Repair Co" });
+    await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "More paying customers", horizonDays: 14, monthlyAdBudget: 0 });
+    await makePaid(t, orgId);
+    await owner.client.mutation(api.orgs.generatePlan, { slug }); await t.finishAllScheduledFunctions(() => undefined);
+    const approvedId = await t.run(async (ctx) => {
+      const saved = (await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", orgId as Id<"organizations">)).order("desc").first())!;
+      await ctx.db.patch(saved._id, { status: "approved" });
+      const { _id: _id, _creationTime: _time, ...copy } = saved;
+      await ctx.db.insert("strategies", { ...copy, version: saved.version + 1, status: "needs_approval", expert: { ...saved.expert!, quality: { version: 1, state: "failed", hard: ["invented_fact"], agents: [], reasons: ["A claimed result has no source"], fixes: [{ rule: "invented_fact", path: "summary", message: "Use the public product claim without inventing a customer result" }] } }, createdAt: saved.createdAt + 1 });
+      return saved._id;
+    });
+    const { runId } = await owner.client.mutation(api.orgs.generatePlan, { slug });
+    const context = await t.query(internal.jobWrites.jobContext, { runId });
+    expect(context?.strategy?._id).toBe(approvedId);
+    expect(context?.strategyRepairGuidance).toContain("without inventing a customer result");
+    await t.finishAllScheduledFunctions(() => undefined);
+  });
+
   it("researches once, in parallel, and previews channels and plays before the plan is saved", async () => {
     const t = setup();
     const owner = await asNewUser(t, "speed-owner@example.com");

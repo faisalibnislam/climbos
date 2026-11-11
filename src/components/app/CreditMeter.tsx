@@ -27,21 +27,21 @@ export function CreditMeter({ slug, rail }: { slug: string; rail?: boolean }) {
   }
   const monthlyPct = c.monthly.total > 0 ? (c.monthly.left / c.monthly.total) * 100 : 0;
   return (
-    <Link href={`/app/${slug}/settings/billing`} className="mb-1 flex flex-col gap-1.5 rounded-xl border border-line bg-surface p-3 transition-colors hover:border-brand-700">
+    <Link href={`/app/${slug}/settings/billing`} className="app-credit-meter mb-1 flex flex-col gap-1.5 rounded-xl border border-line bg-surface p-3 transition-colors hover:border-brand-700">
       <span className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-xs font-medium text-ink-2">
           <Coins aria-hidden className="size-3.5 text-brand-800" /> {fmt.usd ? "Credit left" : "Credits"}
         </span>
         <span className={cn("text-sm font-semibold tabular-nums", low ? "text-red-800" : "text-ink")}>{fmt.left(c.available)}</span>
       </span>
-      <Progress value={monthlyPct} label={c.paid ? "Monthly credits left" : "Free credits left"} />
+      <Progress value={monthlyPct} label={c.isLocalEvaluation ? "Local AI test allowance left" : c.paid ? "Monthly credits left" : "Free credits left"} />
       <span className="flex justify-between text-xs text-ink-3">
         <span>
-          {c.paid ? "This month" : "Free"} {fmt.left(c.monthly.left)}
+          {c.isLocalEvaluation ? "Local test allowance" : c.paid ? "This month" : "Free"} {fmt.left(c.monthly.left)}
         </span>
         {c.topup.left > 0 ? <span>Top-ups {fmt.left(c.topup.left)}</span> : null}
       </span>
-      {!c.paid && !c.isDemo ? <span className="text-xs font-medium text-brand-800">Get credits →</span> : low ? <span className="text-xs font-medium text-red-800">Low · add credits →</span> : null}
+      {c.isLocalEvaluation ? <span className="text-xs text-ink-3">Local testing only</span> : !c.paid && !c.isDemo ? <span className="text-xs font-medium text-brand-800">Get credits →</span> : low ? <span className="text-xs font-medium text-red-800">Low · add credits →</span> : null}
     </Link>
   );
 }

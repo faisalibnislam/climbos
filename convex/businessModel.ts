@@ -6,6 +6,7 @@ import { audit } from "./lib/audit";
 import { planJob, maxJobMicros } from "./lib/jobPlans";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { can } from "../shared/policy";
+import { CREATIVE_PRECEDENTS } from "../shared/knowledge/creativePrecedents";
 import { BusinessModelCheckSchema } from "../shared/agents/businessModel";
 
 /**
@@ -70,6 +71,7 @@ export const latest = query({
         createdAt: done.createdAt,
         isFixture: Boolean(done.isFixture),
         check,
+        precedents: CREATIVE_PRECEDENTS.filter((p) => check.alternatives.some((a) => a.precedentIds?.includes(p.id))).map((p) => ({ id: p.id, title: p.title, mechanism: p.mechanism, causalLimit: p.causalLimit, accessedAt: p.accessedAt, sources: p.sources.map((s) => ({ title: s.title, url: s.url })) })),
         tests: Object.fromEntries((["deciding", "grounded", "adjacent", "bold"] as const).flatMap((target) => {
           const t = latestTest(target);
           return t ? [[target, { testState: t.testState, outcomeNote: t.outcomeNote ?? null, outcomeEvidence: t.outcomeEvidence, ownerDecision: t.ownerDecision, createdAt: t.createdAt }]] : [];

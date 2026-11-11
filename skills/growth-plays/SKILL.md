@@ -13,7 +13,7 @@ The owner wants useful grounded plans and genuinely original options. Predictabi
 
 ## Procedure
 
-1. **Facts in.** Use the business profile, unit economics (price, gross margin, capacity), constraints (budget, owner hours per week), the goal, positioning, voice-of-customer, competitors and research notes. If unit economics are missing, state the assumption you use.
+1. **Facts in.** Use the business profile, unit economics (price, gross margin, capacity), constraints (budget, owner hours per week), the goal, positioning, voice-of-customer, competitors and research notes. If unit economics are missing, keep them unknown and prepare a useful small test; do not invent margin, churn, owner time value or willingness to pay.
 2. **Explore broadly without quotas** across multiple lenses where they fit:
    - **Bullseye:** consider all 19 traction channels (viral, PR, unconventional PR, SEM, social ads, offline ads, SEO, content, email, engineering as marketing, targeting blogs, business development, sales, affiliates, existing platforms, trade shows, offline events, speaking, community).
    - **Where customers already gather:** relevant communities, newsletters, podcasts, creators, directories, marketplaces, events, and local institutions. Name and source a destination only when verified; never invent audience size.
@@ -48,22 +48,16 @@ Use the segment catalogs as hypothesis references, not proof or a menu to copy. 
 - **Confidence** = the lowest grade in the funnel, adjusted for fit (high = all A/B; medium = any C; low = any D).
 - **Where there is no benchmark** (partnership acceptance, marketplace share, event attendance), label the rate "assumption, grade D", give a wide range, and make the first test measure it.
 
-Say it like this: "Expected: 3–9 booked tune-ups and 1–4 maintenance plans from 500 postcards in 3 weeks (most likely about 5 and 2). Why: new-mover mail draws 1.8–4.5% when the list is fresh [source, grade C]; we plan on 2%. Confidence: medium; the biggest unknown is response in your ZIPs. We'll know by day 21." Never a single-point promise, never "guaranteed".
+## Test design
 
-## Test design (so results become predictable fast)
-
-- **Leading indicator:** the earliest event that predicts revenue (reply, call, booking, signup).
-- **Size:** enough units to expect about 10 positive events: n ≈ 10 ÷ base rate.
-  - Cold email at 3.4% → ~300 contacts.
-  - Podcast pitches at 17.5% → ~60.
-  - Postcards at 2% → ~500.
-  - Creator outreach at 20% → ~50.
-- **Budget:** n × unit cost, capped at 10–20% of the monthly budget per test. Count owner hours as cost (at $50/hour if unknown).
-- **Break-even rate** r* = cost per unit ÷ value per positive event (downstream conversion × 12-month gross profit).
-  - Kill if below max(r*, 0.4 × base rate).
-  - Scale when clearly above max(2 × r*, 0.8 × base rate) and at least one sale or booking is observed.
-- **Rule of three:** zero successes in n tries means the true rate is below 3/n.
-- **Time box:** leading signal by day 14–21, lagging check by day 30–45. At most three iterations, changing one variable at a time (audience → hook → offer → channel).
+- Choose one observable decision-changing outcome for the named customer and business goal. Customer visits, replies and signups can explain a funnel, but they are not automatically paid customers.
+- Size a test from the actual eligible audience, measured baseline, meaningful effect, confirmed resources and selected horizon. With those unknown, prepare one useful asset and a bounded distribution hypothesis; do not manufacture a sample size, weekly outreach quota or significance claim.
+- Any quantity proposed for drafting or a small trial is planned scope, not a customer fact or a predicted result. Owner capacity stays unconfirmed until supplied.
+- Derive a break-even threshold only from confirmed cost and contribution inputs. Leave it unknown otherwise. Never assume an hourly wage or impose a universal customer-value cutoff.
+- Record a before/after or assisted-pilot observation honestly when traffic is too low or unknown for a controlled test. Do not infer causality from a simple before/after comparison.
+- Define what would justify continuing, changing or stopping without arbitrary unsupported numeric thresholds. Financial scaling waits for reliable economics. Observable harm can stop a test early; apparent significance is not an early stopping rule.
+- Fit current work and check-in dates to the selected 14, 30 or 90 days. Separate later-maturing outcomes from actions inside the current plan.
+- Historical reference tables are research leads only. Do not repeat their rates as current evidence or attribute them to this business. Read and assess the exact current source, including population, denominator and period, before using a rate as research; an unsupported scenario remains assumption grade D.
 
 ## Strategic exploration is protected from execution scoring
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import type { TurnResult } from "../../shared/ai/types";
+import type { TurnResult, Source } from "../../shared/ai/types";
 import {
   runResearch,
   researchCacheKey,
@@ -46,7 +46,7 @@ const input: AgentInput = {
 
 function result(
   output: string,
-  sources = [{ url: "https://example.com/source", title: "Source" }],
+  sources: Source[] = [{ url: "https://example.com/source", title: "Source" }],
 ): TurnResult {
   return {
     ok: true,
@@ -85,6 +85,19 @@ function deps(overrides: Partial<AgentDeps> = {}) {
 }
 
 describe("tenant research cache behavior", () => {
+  it("retains first-party contact restrictions in reusable research", async () => {
+    const source: Source = { url: "https://creator.example/contact", productPitchPolicy: { status: "refused", evidence: "No marketing partnerships." } };
+    const cache = deps({ turn: async () => result("A creator explicitly refuses this contact.", [source]) });
+    const research = await runResearch(spec, input, cache.base);
+    expect(research?.sources[0].productPitchPolicy).toEqual(source.productPitchPolicy);
+  });
+  it("uses low-latency Haiku evidence gathering while retaining the requested tool and output bounds", async () => {
+    let request: import("../../shared/ai/types").TurnRequest | undefined;
+    await runResearch({ ...spec, models: { ...spec.models, research: "claude-haiku-5.5" } }, input, deps({ turn: async (req) => { request = req; return result("Source-labelled evidence"); } }).base);
+    expect(request?.thinkingOff).toBe(true); expect(request?.effort).toBe("low");
+    expect(request?.webSearch?.maxUses).toBe(2); expect(request?.webFetch?.maxUses).toBe(1);
+    expect(request?.maxTokens).toBe(spec.maxTokens.research);
+  });
   it("tells the researcher that fetched content is evidence, never an instruction source", async () => {
     let system = "";
     const scoped = deps({

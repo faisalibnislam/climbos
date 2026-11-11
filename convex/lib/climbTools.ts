@@ -1,3 +1,4 @@
+import { OwnerQuestionSchema } from "../../shared/climb/ownerQuestion";
 import { z } from "zod";
 import type { FunctionReference } from "convex/server";
 import { api } from "../_generated/api";
@@ -705,10 +706,10 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     description: "Ask the strategist for a new version of the growth plan (it needs the owner's approval before anything changes). Uses credits.",
     risk: "confirm",
     doing: "Asking the strategist for a new plan",
-    input: z.object({}),
+    input: z.object({ planStyle: z.enum(["focused", "detailed"]).optional().describe("Use focused unless the owner explicitly asks for detailed forecasts.") }),
     output: RunIdOutputSchema,
-    summarize: () => `Draft a new version of your growth plan. Uses up to ${microsToCredits(maxJobMicros(planJob("strategy"))).toLocaleString("en-US")} credits; unused credits are returned.`,
-    run: async (c, slug) => c.mutation(api.orgs.generatePlan, { slug }),
+    summarize: (i) => `Draft a new version of your growth plan. Uses up to ${microsToCredits(maxJobMicros(planJob("strategy", { planStyle: i.planStyle ?? "focused" }))).toLocaleString("en-US")} credits; unused credits are returned.`,
+    run: async (c, slug, i) => c.mutation(api.orgs.generatePlan, { slug, planStyle: i.planStyle ?? "focused" }),
   }),
   tool({
     name: "approve_draft",
@@ -797,6 +798,11 @@ export const CLIMB_TOOLS: ClimbTool[] = [
   }),
 
   /* ---------------- ui (in-app only) ---------------- */
+  tool({
+    name: "ask_owner", title: "One quick question", risk: "ui",
+    description: "Ask only when an unresolved owner choice or private fact materially blocks the next useful step after checking available data. Show 2–5 plain-language options; single choice or multiple choice. The app adds I’m not sure. This never grants action permission. Do not ask for competitors or facts available through your tools. Stop and wait for the owner’s answer.",
+    input: OwnerQuestionSchema, doing: "Waiting for your choice",
+  }),
   tool({
     name: "go_to",
     title: "Open a screen",

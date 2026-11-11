@@ -35,7 +35,7 @@ import { planTask, playsTask } from "../shared/agents/planTasks";
 import { citedUrls, urlKey, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
 import { reconcile } from "../shared/agents/consistency";
 import { forecastCustomers, lockedNumbers, portfolioP50, withForecasts } from "../shared/agents/economics";
-import { capsHint, PLAN_CAPS, PLAYS_CAPS } from "../shared/agents/wordCaps";
+import { capsHint, PLAN_CAPS } from "../shared/agents/wordCaps";
 import { adsSpec, channelFitSpec, conversionAuditSpec, emailSpec, growthPlaysSpec, insightsSpec, outreachSpec, playCatalogsFor, PlaysOutputSchema, type PlaysOutput, prospectingSpec, researchFor, seoSpec, socialSpec, strategySpec, type ChannelFit, type ProspectsOutput } from "../shared/agents/specs";
 import { BUSINESS_TYPES, budgetBand } from "../shared/acquisition/library";
 import { adjustmentsFrom, candidatesFor, DIMENSIONS, entryPriceUsdMonth, FACTORS, mergeFit, priceFitText, profileFrom, scoreChannels, scorecardText } from "../shared/acquisition/scoring";

@@ -42,7 +42,7 @@ export function WorkspaceSwitcher({ slug, draftId, variant = "sidebar" }: { slug
           )}
         >
           <span aria-hidden="true" className="inline-flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-lime text-xs font-semibold text-ink">
-            {label.slice(0, 1).toUpperCase()}
+            <span className="size-2 rounded-sm bg-ink/70" />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-ui font-medium text-ink">{label}</span>

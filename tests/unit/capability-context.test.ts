@@ -25,3 +25,13 @@ describe("capability context", () => {
     expect(capabilityContext({ connected: [], autonomy: "bounded_autopilot" })).toMatch(/still need the owner's time/);
   });
 });
+
+it("does not turn software capacity or historical rates into business evidence", () => {
+  const text = capabilityContext({ connected: ["email_mailbox"], autonomy: "review" });
+  expect(text).not.toContain("$300");
+  expect(text).not.toContain("1–3%");
+  expect(text).not.toContain("10–20%");
+  expect(text).not.toContain("50 emails/day");
+  expect(text).toContain("there is no universal customer-value cutoff");
+  expect(text).toContain("Never multiply an agency's clients into paid licenses");
+});

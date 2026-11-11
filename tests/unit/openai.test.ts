@@ -19,7 +19,7 @@ describe("OpenAI adapter", () => {
     expect(s.additionalProperties).toBe(false);
     expect(s.required).toEqual(["a", "b", "c"]);
     expect(s.properties.b.anyOf[1]).toEqual({ type: "null" });
-    expect(s.properties.a.minLength).toBeUndefined();
+    expect(s.properties.a.minLength).toBe(2);
     expect(s.properties.c.items.additionalProperties).toBe(false);
     expect(dropNulls({ a: "x", b: null, c: [{ d: "y", e: null }] })).toEqual({ a: "x", c: [{ d: "y" }] });
   });
@@ -155,14 +155,14 @@ describe("OpenAI adapter", () => {
     delete process.env.OPENAI_API_KEY;
   });
 
-  it("uses Luna by default and permits Sol escalation only for eligible Expert agents", () => {
+  it("preserves the legacy Luna/Sol policy for already-stored runs", () => {
     const luna = { research: "gpt-6-luna", draft: "gpt-6-luna", critic: "gpt-6-luna", revise: "gpt-6-luna" };
-    for (const id of ["business_insights", "growth_strategy", "social_posts", "ad_drafts", "prospecting"]) expect(routeModels(id)).toEqual(luna);
+    for (const id of ["business_insights", "growth_strategy", "social_posts", "ad_drafts", "prospecting"]) expect(routeModels(id, "basic", "legacy-openai")).toEqual(luna);
     for (const id of ["business_insights", "growth_plays", "growth_strategy", "ad_drafts", "social_calendar"])
-      expect(routeModels(id, "expert")).toEqual(luna);
-    for (const id of ["social_posts", "email_sequence", "seo_brief", "prospecting", "cold_outreach", "conversion_audit"]) expect(routeModels(id, "expert")).toEqual(luna);
-    expect(expertEscalationModel("growth_strategy", "expert")).toBe("gpt-6.1-sol");
-    expect(expertEscalationModel("growth_strategy", "basic")).toBeUndefined();
-    expect(expertEscalationModel("social_posts", "expert")).toBeUndefined();
+      expect(routeModels(id, "expert", "legacy-openai")).toEqual(luna);
+    for (const id of ["social_posts", "email_sequence", "seo_brief", "prospecting", "cold_outreach", "conversion_audit"]) expect(routeModels(id, "expert", "legacy-openai")).toEqual(luna);
+    expect(expertEscalationModel("growth_strategy", "expert", "legacy-openai")).toBe("gpt-6.1-sol");
+    expect(expertEscalationModel("growth_strategy", "basic", "legacy-openai")).toBeUndefined();
+    expect(expertEscalationModel("social_posts", "expert", "legacy-openai")).toBeUndefined();
   });
 });

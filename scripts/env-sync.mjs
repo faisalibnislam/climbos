@@ -4,7 +4,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 
 const SERVER_VARS = [
-  "OPS_EMAILS", "OPENAI_API_KEY", "GEMINI_API_KEY", "AUTH_RESEND_KEY", "RESEND_FROM", "RESEND_WEBHOOK_SECRET",
+  "OPS_EMAILS", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "AUTH_RESEND_KEY", "RESEND_FROM", "RESEND_WEBHOOK_SECRET",
   "AUTH_GOOGLE_ID", "AUTH_GOOGLE_SECRET", "POLAR_SERVER", "POLAR_ACCESS_TOKEN", "POLAR_WEBHOOK_SECRET",
   "POLAR_PRODUCT_BASIC", "POLAR_PRODUCT_STARTER", "POLAR_PRODUCT_GROWTH", "POLAR_PRODUCT_PRO", "POLAR_PRODUCT_BUSINESS",
   "POLAR_PRODUCT_BOOST_29", "FIRECRAWL_API_KEY", "GOOGLE_PAGESPEED_API_KEY", "GOOGLE_CRUX_API_KEY", "R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET",
@@ -33,7 +33,7 @@ let set = 0;
 for (const name of SERVER_VARS) {
   const value = env[name];
   if (!value) continue;
-  execFileSync("npx", ["convex", "env", "set", ...(prod ? ["--prod"] : []), name, "--", value], { stdio: ["ignore", "ignore", "inherit"] });
+  execFileSync("npx", ["convex", "env", "set", ...(prod ? ["--prod"] : []), name], { input: value, stdio: ["pipe", "ignore", "inherit"] });
   console.log(`✔ ${name}`);
   set++;
 }
