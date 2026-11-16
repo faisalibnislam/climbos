@@ -10,13 +10,14 @@ import { LoadingBlock } from "@/components/app/results/QueryBoundary";
 import { SettingsHeader } from "@/components/app/settings/SettingsNav";
 import { Button, Callout, Card, CardContent, Checkbox, ColorPicker, Field, Input, Progress, Select, Textarea, toast } from "@/components/ui";
 import { CONTENT_LANGUAGES } from "../../../../../../shared/languages";
+import { BrandConsistencyPanel } from "@/components/app/settings/BrandConsistencyPanel";
 
 /** Brand kit: voice, tone, colours, never-say list, and rules learned from your edits. */
 export default function BrandSettingsPage() {
   const { organization: slug } = useParams<{ organization: string }>();
   const data = useQuery(api.brand.get, { slug });
   if (data === undefined) return <LoadingBlock label="Loading brand kit" lines={4} />;
-  return <BrandForm key={JSON.stringify([data.voice, data.toneWords, data.colors, data.doNots, data.approvedExamples, data.socialHumor, data.socialTrendPolicy, data.voiceLearningEnabled, data.ownerConfirmedAt])} slug={slug} data={data} />;
+  return <><BrandForm key={JSON.stringify([data.voice, data.toneWords, data.colors, data.doNots, data.approvedExamples, data.socialHumor, data.socialTrendPolicy, data.voiceLearningEnabled, data.ownerConfirmedAt])} slug={slug} data={data} /><BrandConsistencyPanel key={slug} slug={slug} /></>;
 }
 
 type Brand = NonNullable<ReturnType<typeof useQuery<typeof api.brand.get>>>;

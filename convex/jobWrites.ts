@@ -8,6 +8,7 @@ import { latestDecisions, priorDecisionsBrief, type PriorDecision } from "../sha
 import { BusinessModelCheckSchema, businessModelPlanContext, businessModelTestsBrief, ownerModelSignals, ownerModelSignalsBrief } from "../shared/agents/businessModel";
 import { feedbackBrief } from "./feedback";
 import { designLearningBrief } from "./lib/designLearning";
+import { brandConsistencyBrief } from "./lib/brandConsistency";
 import { EVIDENCE_KIND_LABEL, evidenceKind } from "../shared/agents/evidenceKind";
 import { groupExactDuplicateFacts } from "../shared/agents/factDuplicates";
 import { factFreshness } from "../shared/agents/factFreshness";
@@ -347,6 +348,7 @@ export const jobContext = internalQuery({
       priorDesignDecisionsText: priorDesign.summary,
       priorDesignDecisionNotes: priorDesign.notes,
       designLearningText: run.kind === "strategy" || run.kind === "conversion_audit" ? await designLearningBrief(ctx, org._id) : "",
+      brandConsistencyText: run.kind === "strategy" || run.kind === "conversion_audit" ? await brandConsistencyBrief(ctx, org._id) : "",
       stripeReceivables,
       audience: { contacts, consented },
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },

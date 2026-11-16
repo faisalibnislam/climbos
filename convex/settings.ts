@@ -476,6 +476,7 @@ export const exportData = internalQuery({
     const goals = await ctx.db.query("goals").withIndex("by_org_status", (q) => q.eq("orgId", orgId)).take(1001);
     const platformPreparations = await ctx.db.query("platformPreparations").withIndex("by_org_kind", (q) => q.eq("orgId", orgId)).take(1000);
     const experiments = await ctx.db.query("experiments").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(1000);
+    const brandPatterns = await ctx.db.query("brandPatternDecisions").withIndex("by_org_key_at", q => q.eq("orgId", orgId)).take(101);
     const strip = <T extends Record<string, unknown>>(rows: T[]) => rows.map(({ _creationTime: _c, ...r }) => r);
     return JSON.stringify(
       {
@@ -494,6 +495,8 @@ export const exportData = internalQuery({
         planningCycleHistoryLimited: goals.length > 1000,
         platformPreparations: strip(platformPreparations),
         experiments: strip(experiments),
+        brandPatternDecisions: strip(brandPatterns.slice(0, 100)),
+        brandPatternHistoryLimited: brandPatterns.length > 100,
         artifacts: strip(artifacts),
         artifactVersions: strip(versions),
         metrics: strip(metrics),
@@ -737,6 +740,7 @@ export async function endBillingIfLastWorkspace(ctx: MutationCtx, org: Doc<"orga
 
 /** Tables purged by an index whose first field is orgId (children are removed with their parents). */
 const PURGE_BY_ORG: { table: string; index: string }[] = [
+  { table: "brandPatternDecisions", index: "by_org_key_at" },
   { table: "intakeMessages", index: "by_org" },
   { table: "intakeConversations", index: "by_org_user" },
   { table: "platformPreparations", index: "by_org_kind" },

@@ -2,6 +2,10 @@
 
 Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs as written there. Baseline: `404c466`. Branch: `growth-engine-v2`.
 
+## Local update — 16 November 2026: brand consistency map and exceptions
+
+Settings → Brand kit now compares approved rules with saved page/design values, distinguishes possible variation from confirmed intentional exceptions, and supports owner/admin corrections, confirmations, dismissals and reopening. Decisions retain the exact reviewed source/rule snapshot and become stale when those inputs change. The latest scoped decisions feed both strategy and conversion-audit context without editing assets or granting execution permission. Tenant export/deletion handles the new append-only records. The map is a bounded saved-token inspection, not external-site or raster analysis. Verification: 24 focused tests and two desktop/mobile browser checks passed; source-link touch targets were corrected after the first accessibility scan. See [Verification](../Verification.md) for commands, coverage, source limits and release boundaries.
+
 ## Local update — 16 November 2026: cross-page design opportunity queue
 
 Your work now has a Design opportunities tab that pages through saved website audits, groups related lenses/regions, collapses repeat automated observations without increasing confidence, and preserves the exact audit/finding link and earlier observations. Evidence, customer relevance, effort, assumptions, risks, viewport and dated capture limits stay visible. Existing review controls and permission/audit behavior are reused. Browser verification found that both original finding-review forms used non-submitting buttons; explicit submit types now make initial and updated reviews save correctly. Brand consistency maps and intentional-exception tracking remain separate work. See [Verification](../Verification.md) for focused tests and local desktop/mobile evidence.

@@ -1632,6 +1632,13 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_business", ["businessId"]),
 
+  /** Append-only, exact-snapshot decisions about observed brand patterns; never publishing approval. */
+  brandPatternDecisions: defineTable({
+    orgId: v.id("organizations"), key: v.string(), fingerprint: v.string(),
+    state: v.union(v.literal("confirmed"), v.literal("corrected"), v.literal("dismissed"), v.literal("intentional_exception"), v.literal("reopened")),
+    note: v.string(), snapshot: v.string(), actorId: v.id("users"), at: v.number(),
+  }).index("by_org_key_at", ["orgId", "key", "at"]),
+
   /** Before/after pairs from the owner's edits to AI drafts (input to voice learning). */
   voiceSamples: defineTable({
     orgId: v.id("organizations"),

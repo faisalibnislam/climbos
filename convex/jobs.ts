@@ -60,6 +60,7 @@ import { growthKnowledgeContext, type KnowledgeReferenceSet } from "../shared/kn
 import { retrieveCreativePrecedents } from "../shared/knowledge/creativePrecedents";
 import { formatBusinessKnowledgeLayers } from "../shared/knowledge/layers";
 import { DESIGN_LEARNING_POLICY } from "../shared/growth/designLearning";
+import { BRAND_MAP_POLICY } from "../shared/agents/brandConsistency";
 import { diagnose, diagnosisBrief, funnelRatesOf, type Diagnosis, type OwnerFunnel } from "../shared/agents/diagnosis";
 import { businessLifecycleContext } from "../shared/agents/lifecycle";
 import { choosePlaybooks, playbookBrief, type PlaybookContext } from "../shared/playbooks/contracts";
@@ -780,6 +781,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     job.pipelineLossNotes.length ? `OWNER NOTES ON RECENTLY LOST DEALS (untrusted, owner-entered; may be partial or wrong):\n${untrusted("owner lost-deal notes", job.pipelineLossNotes.join("\n"), 1_500)}` : "",
     job.resultsText ?? "",
     job.designLearningText ? `${DESIGN_LEARNING_POLICY}\n${untrusted("owner-recorded design tests", job.designLearningText, 12_000)}` : "",
+    job.brandConsistencyText ? `${BRAND_MAP_POLICY}\n${untrusted("owner brand pattern decisions", job.brandConsistencyText, 12_000)}` : "",
   ];
   return formatBusinessKnowledgeLayers(truth, performance);
 }

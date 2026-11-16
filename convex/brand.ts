@@ -12,6 +12,36 @@ import { createRunWithReservation } from "./engine";
 import { claudeUsageRecords } from "./lib/usage";
 import { appError, requireOrgAccess } from "./lib/tenancy";
 import { runModel } from "../shared/ai/modelChoice";
+import { brandConsistencyMap } from "./lib/brandConsistency";
+import { BRAND_PATTERN_KEYS } from "../shared/agents/brandConsistency";
+
+export const consistency = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
+    return { ...await brandConsistencyMap(ctx, org._id), canReview: role === "owner" || role === "admin" };
+  },
+});
+
+export const reviewPattern = mutation({
+  args: { slug: v.string(), key: v.string(), fingerprint: v.string(), expectedDecisionId: v.optional(v.id("brandPatternDecisions")), state: v.union(v.literal("confirmed"), v.literal("corrected"), v.literal("dismissed"), v.literal("intentional_exception"), v.literal("reopened")), note: v.string() },
+  handler: async (ctx, args) => {
+    const { org, role, user } = await requireOrgAccess(ctx, { slug: args.slug }, "edit");
+    if (role !== "owner" && role !== "admin") throw appError("FORBIDDEN", "Only an owner or admin can confirm brand patterns or exceptions.");
+    if (!BRAND_PATTERN_KEYS.some(key => key === args.key)) throw appError("INVALID", "Choose a pattern from the brand map.");
+    const note = args.note.trim();
+    if (note.length > 500 || ((args.state === "corrected" || args.state === "intentional_exception") && !note)) throw appError("INVALID", "Explain the correction or exception in up to 500 characters.");
+    const map = await brandConsistencyMap(ctx, org._id);
+    const pattern = map.patterns.find(p => p.key === args.key);
+    if (!pattern || pattern.fingerprint !== args.fingerprint) throw appError("INVALID", "The source versions or brand rules changed. Review the current map first.");
+    const latest = map.decisions.find(d => d.key === args.key);
+    if (latest?.id !== args.expectedDecisionId) throw appError("INVALID", "Another review was saved. Reload the latest decision first.");
+    if (args.state === "reopened" && !latest) throw appError("INVALID", "There is no earlier decision to reopen.");
+    const id = await ctx.db.insert("brandPatternDecisions", { orgId: org._id, key: args.key, fingerprint: args.fingerprint, state: args.state, note, snapshot: JSON.stringify({ rules: map.rules, pattern, scope: map.scope, limited: map.limited }), actorId: user._id, at: Date.now() });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: `brand.pattern_${args.state}`, subjectType: "brandPatternDecision", subjectId: id, summary: `Reviewed ${pattern.label} for its exact source and brand snapshot. No brand rule or external asset was changed.` });
+    return id;
+  },
+});
 
 /**
  * Brand kit + voice learning. Every time the owner rewrites an AI draft we
