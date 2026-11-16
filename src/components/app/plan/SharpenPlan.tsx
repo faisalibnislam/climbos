@@ -54,18 +54,18 @@ export function SharpenPlan({ slug, questions, canEdit, answersNewer, currency =
     const ranges: Record<string, { low: number; high: number }> = {};
     for (const q of filled) {
       // "3–6" is a range (Hubbard: a range you're 90% sure of beats a guessed point); its midpoint is the value.
-      const m = vals[q.key].trim().match(/^([\d.,]+)\s*(?:-|–|to)\s*([\d.,]+)$/i);
+      const m = vals[q.key].trim().match(/^([+-]?[\d.,]+)\s*(?:-|–|to)\s*([+-]?[\d.,]+)$/i);
       const rk = RANGE_KEY[q.key];
       if (m && rk) {
         const lo = UNIT[q.unit].fromInput(m[1].replace(/,/g, ""));
         const hi = UNIT[q.unit].fromInput(m[2].replace(/,/g, ""));
-        if (!(Number.isFinite(lo) && Number.isFinite(hi) && lo > 0 && hi > lo)) return toast({ tone: "danger", title: `Check the range: ${q.question}` });
+        if (!(Number.isFinite(lo) && Number.isFinite(hi) && (q.key === "grossMargin" || (q.key === "monthlyChurn" ? lo >= 0 : lo > 0)) && hi > lo)) return toast({ tone: "danger", title: `Check the range: ${q.question}` });
         ranges[rk] = { low: lo, high: hi };
         args[q.key] = (lo + hi) / 2;
         continue;
       }
       const n = UNIT[q.unit].fromInput(vals[q.key]);
-      if (!Number.isFinite(n) || (q.key === "monthlyGrowthCashUsd" ? n < 0 : n <= 0)) return toast({ tone: "danger", title: `Check: ${q.question}` });
+      if (!Number.isFinite(n) || (q.key === "grossMargin" ? n > 1 : ["monthlyGrowthCashUsd", "monthlyChurn", "ownerHoursPerWeek", "newCustomersPerMonth"].includes(q.key) ? n < 0 : n <= 0)) return toast({ tone: "danger", title: `Check: ${q.question}` });
       args[q.key] = n;
     }
     setBusy(true);
@@ -110,7 +110,7 @@ export function SharpenPlan({ slug, questions, canEdit, answersNewer, currency =
                 </div>
                 <p className="text-xs text-ink-3">
                   {q.switchValue !== undefined ? `Matters if it's ${q.switchDirection === "le" ? "above" : "below"} ${hint(q.unit, unit.toInput(q.switchValue))}` : q.ownerReported && q.assumed !== undefined ? `You said ${unit.toInput(q.assumed)}` : q.assumed === undefined ? "Needed · not assumed" : `Assumed ${unit.toInput(q.assumed)}`}
-                  {RANGE_KEY[q.key] ? " · ranges like 3–6 OK" : ""}
+                  {q.key === "grossMargin" ? " · 0 or negative margins allowed; ranges like -25–0 OK" : RANGE_KEY[q.key] ? " · ranges like 3–6 OK" : ""}
                 </p>
               </div>
             );

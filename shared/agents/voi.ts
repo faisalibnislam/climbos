@@ -105,7 +105,7 @@ export function switchPoints(p: PlayLike, e: Economics): SwitchPoint[] {
       return net(w.p, w.e);
     };
     const s = solve(f, lo, hi);
-    const up = f(Math.min(hi, assumed * 1.01 + 1e-9));
+    const up = f(Math.min(hi, assumed + Math.max(Math.abs(assumed) * 0.01, 1e-9)));
     const direction: "ge" | "le" = up !== null && up >= base ? "ge" : "le";
     const sp: SwitchPoint = { key, label, assumed, switchValue: s, direction, margin: s === null || !(assumed > 0) ? null : Math.abs(s - assumed) / assumed, source, unit };
     if (range && SOURCED.has(source) && range.low !== undefined && range.high !== undefined && range.high > range.low) {

@@ -79,7 +79,7 @@ export function GrowthCashTimingPanel({ data, slug, canEdit }: { data: GrowthCas
       <div>
         <h3 className="text-sm font-semibold text-ink">When growth cash goes out and comes back</h3>
         <p className="mt-1 text-xs text-ink-3">
-          For {data.selected.join(" + ")} over {data.horizonWeeks} weeks. Costs start in week 1; customer income (revenue × margin) starts after your payment delay.
+          For {data.selected.join(" + ")} over {data.horizonWeeks} weeks. Costs start in week 1; customer contribution (revenue × margin; negative when delivery loses money) starts after your payment delay.
         </p>
       </div>
       <dl className="grid gap-2 text-sm sm:grid-cols-3">
@@ -91,7 +91,7 @@ export function GrowthCashTimingPanel({ data, slug, canEdit }: { data: GrowthCas
       {data.mostLikely && data.lowCase ? (
         <div className="grid gap-2 sm:grid-cols-2">
           <Scenario title="At the most-likely rates" s={data.mostLikely} currency={c} hasReserve={data.reserveUsd !== null} />
-          <Scenario title="If customers come in at the low end (P10)" s={data.lowCase} currency={c} hasReserve={data.reserveUsd !== null} />
+          <Scenario title={data.adverseCustomerQuantile === "p90" ? "More customers, more losses (P90)" : "If customers come in at the low end (P10)"} s={data.lowCase} currency={c} hasReserve={data.reserveUsd !== null} />
         </div>
       ) : (
         <Callout tone="info" title="Customer payments aren't timed yet">

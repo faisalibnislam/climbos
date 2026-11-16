@@ -1,3 +1,24 @@
+## 16 November 2026 — zero and negative owner margins
+
+The existing paid-channel guard recognized non-positive owner margins, but the real owner path could not supply them: both forms and the mutation rejected them, the override ignored them, zero disappeared from generation context, and the calculator treated losses as invalid. Eight focused failures reproduced this mismatch before repair. The existing path now retains signed contribution margins (including below -100%) and zero churn, labels them as owner inputs, validates finite values and coherent ranges, and supplies them to focused/starter generation. No new agent, provider, dependency or campaign-timing prompt change.
+
+Deterministic contribution preserves negative values; acquisition allowances and break-even acquisition prices are unavailable for negative customer value. Payback with 100% monthly churn uses only first-month contribution. The growth-cash adverse scenario uses P90 customers when customer contribution is negative, because more customers deepen losses; nonnegative contribution retains P10. The owner UI and strategy cash line identify that distinction. Source concentration retains signed modeled contribution and withholds unrepresentable totals without discarding recorded source observations. These are cost-boundary-dependent calculations, not net profit or a bank-balance forecast.
+
+Verification: **117 focused tests across 11 files passed** (1.93 seconds), including real saved owner input → paid-channel blocking, signed ranges, invalid/nonfinite input rejection, tenant/viewer restrictions, no new action/approval/workflow records, loss arithmetic, cash scenarios, output labels and the actual focused/starter generation boundary. Generation tests stop at a mocked model boundary; they are not real-model quality evidence. **Two desktop/mobile browser tests passed** (22.9 seconds): both forms save negative/ranged/zero margins, zero churn survives reload, replacing a range with a point removes the old range, and saving starts no workflow or external action. Checks found no horizontal overflow or serious/critical automated accessibility violations in that tested state; this is not full accessibility conformance. The mobile input capture was inspected. App and Convex typechecks, scoped ESLint and `git diff --check` passed.
+
+Commands:
+
+```sh
+pnpm exec vitest run tests/unit/play-economics.test.ts tests/convex/unsure-economics.test.ts tests/unit/growth-calc.test.ts tests/unit/decision-voi.test.ts tests/unit/growth-cash-timing.test.ts tests/unit/growth-cash-timing-panel.test.tsx tests/unit/channel-limits.test.ts tests/unit/attribution.test.ts tests/convex/research-context.test.ts tests/convex/tenancy.test.ts tests/convex/growth-cash-timing.test.ts
+pnpm typecheck
+pnpm exec eslint convex/jobs.ts convex/workspace.ts shared/agents/economics.ts shared/agents/specs.ts shared/agents/voi.ts shared/attribution/platformConcentration.ts shared/growth/calc.ts src/components/app/plan/GrowthCashTiming.tsx src/components/app/plan/HelpClimbOS.tsx src/components/app/plan/SharpenPlan.tsx tests/convex/unsure-economics.test.ts tests/convex/research-context.test.ts tests/unit/play-economics.test.ts tests/unit/growth-calc.test.ts tests/unit/growth-cash-timing-panel.test.tsx tests/unit/attribution.test.ts tests/unit/decision-voi.test.ts e2e/owner-margin.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/owner-margin.spec.ts
+git diff --check
+```
+
+Remaining limits: owner figures and included cost boundaries are not independently verified; observed zero churn is not evidence of zero future churn. Unknown retention still prevents a full customer-value/payback estimate even when non-positive margin already blocks paid acquisition. Existing saved plans are not rewritten and the owner must explicitly refresh to generate a new plan. No live account, paid model call or production deployment was exercised. Engine `v3.100-nonpositive-owner-margin`; the full 410-requirement and later-addition audit remains open.
+
 ## 16 November 2026 — customer-group cost evidence
 
 Nine failing regression cases reproduced inferred complete cost coverage, non-finite arithmetic with missing/invalid inputs, two-decimal rounding of KWD and silent missing/invalid currency use. The owner form additionally coerced blank revenue and costs to zero. This affected the existing path from Plan details → `workspace.setUnitEconomics` → saved business economics → `segmentEconomicsBrief` → strategy generation. Focused plans without detailed plays also hid this editor.

@@ -929,11 +929,11 @@ export const setUnitEconomics = mutation({
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     if (!business) throw appError("NOT_FOUND", "Add your business first.");
     const check = (x: number | undefined, lo: number, hi: number, what: string) => {
-      if (x !== undefined && !(x >= lo && x <= hi)) throw appError("INVALID", `${what} looks wrong.`);
+      if (x !== undefined && !(Number.isFinite(x) && x >= lo && x <= hi)) throw appError("INVALID", `${what} looks wrong.`);
     };
     check(vals.revenuePerCustomerMonthUsd, 0.01, 1_000_000, "Revenue per customer");
-    check(vals.grossMargin, 0.01, 1, "Margin");
-    check(vals.monthlyChurn, 0.001, 0.95, "Monthly churn");
+    check(vals.grossMargin, -Number.MAX_VALUE, 1, "Margin");
+    check(vals.monthlyChurn, 0, 1, "Monthly churn");
     check(vals.ownerHourUsd, 1, 5_000, "Hourly value");
     check(vals.ownerHoursPerWeek, 0, 80, "Hours a week");
     check(vals.newCustomersPerMonth, 0, 100_000, "New customers a month");
@@ -949,8 +949,8 @@ export const setUnitEconomics = mutation({
         if (issues.length) throw appError("INVALID", issues[0]);
       }
     }
-    // A range must be low < high and pass the same checks; its value is the midpoint (set by the client, re-checked here).
-    const pairs = { revenue: ["revenuePerCustomerMonthUsd", 0.01, 1_000_000, "Revenue range"], margin: ["grossMargin", 0.01, 1, "Margin range"], churn: ["monthlyChurn", 0.001, 0.95, "Churn range"] } as const;
+    // A range must be low < high, pass the same checks, and contain its supplied point value.
+    const pairs = { revenue: ["revenuePerCustomerMonthUsd", 0.01, 1_000_000, "Revenue range"], margin: ["grossMargin", -Number.MAX_VALUE, 1, "Margin range"], churn: ["monthlyChurn", 0, 1, "Churn range"] } as const;
     for (const [k, [field, lo, hi, what]] of Object.entries(pairs)) {
       const r = ranges?.[k as keyof typeof pairs];
       if (!r) continue;
@@ -958,6 +958,7 @@ export const setUnitEconomics = mutation({
       check(r.high, lo, hi, what);
       if (!(r.low < r.high)) throw appError("INVALID", `${what}: low must be below high.`);
       if (vals[field] === undefined) throw appError("INVALID", `${what}: give the value too.`);
+      if (vals[field] < r.low || vals[field] > r.high) throw appError("INVALID", `${what}: the value must lie within the range.`);
     }
     const prev = business.unitEconomics;
     const next = {

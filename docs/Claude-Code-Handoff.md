@@ -266,6 +266,10 @@ Publishing receipts now retain original version/account/approval identity and th
 
 The optional segment comparison now preserves missing totals, requires explicit cost-coverage declarations, validates currency precision and legacy inputs, and computes contribution in the recorded currency. The focused-plan details expose the same editor even when no detailed plays exist. Actual starter/focused generation inputs retain unknown costs and no-execution limits; bounded briefing no longer cuts a record mid-caveat. Old missing coverage is unknown; historical zero totals are not guessed or migrated. See Verification for tests, browser coverage and limits. Segment membership, observation dates, cost completeness and business effectiveness still need evidence.
 
+## Latest non-positive owner-margin follow-up
+
+Engine `v3.100-nonpositive-owner-margin` carries owner-reported zero/negative contribution margins from both plan forms through `workspace.setUnitEconomics`, owner overrides, the model output contract, strategy context, paid-channel limits and deterministic economics. Zero churn is preserved; 100% churn retains only the first period's contribution. Negative contribution is a loss, not a negative acquisition budget. The adverse growth-cash case uses P90 customers when contribution is negative and labels why; nonnegative contribution retains P10. Signed owner ranges must contain their point value. Missing inputs remain unknown. Permission and no-action checks, focused/starter generation-boundary tests and desktop/mobile owner-form tests are recorded in Verification. This does not independently verify owner figures, complete cost boundaries, future retention or business impact, and makes no live provider call.
+
 ## What remains and should guide the next work
 
 These are known open gaps, not a complete substitute for checking the requirement audit and ledger before choosing work:

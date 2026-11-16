@@ -84,8 +84,8 @@ export function platformConcentration(
   input: readonly RevenueEvent[],
   options: { currency: string; fromMs: number; toMs: number; partial?: boolean; reportedSpend?: readonly ReportedAdSpend[]; spendPartial?: boolean; grossMargin?: number },
 ): PlatformConcentration | null {
-  if (options.grossMargin !== undefined && (!Number.isFinite(options.grossMargin) || options.grossMargin < 0 || options.grossMargin > 1)) {
-    throw new RangeError("Gross margin must be a share between 0 and 1");
+  if (options.grossMargin !== undefined && (!Number.isFinite(options.grossMargin) || options.grossMargin > 1)) {
+    throw new RangeError("Gross margin must be a finite share at or below 1");
   }
   const { events, duplicates } = dedupeRevenueEvents(input.filter(
     (event) => event.currency === options.currency && event.occurredAt >= options.fromMs && event.occurredAt <= options.toMs,
@@ -206,6 +206,7 @@ export function platformConcentration(
         const mediaSpend = spend.spendByCurrency.get(options.currency.toUpperCase());
         if (spend.currencies.size !== 1 || mediaSpend === undefined) return { source, paymentEvents: outcome.paymentEvents, identifiedCustomers: outcome.customers.size, firstRecordedCustomers: outcome.firstRecordedCustomers, netRevenueMinor: outcome.netRevenueMinor, refundMinor: outcome.refundMinor, mediaSpendStatus: "currency_mismatch" as const };
         if (!Number.isSafeInteger(mediaSpend)) throw new RangeError("Reported ad spend total exceeds safe integer minor units");
+        const modeledContribution = options.grossMargin === undefined ? undefined : Math.round(outcome.netRevenueMinor * options.grossMargin) - mediaSpend;
         return {
           source,
           paymentEvents: outcome.paymentEvents,
@@ -217,7 +218,7 @@ export function platformConcentration(
           mediaSpendOrigin: spend.origins.size === 1 ? [...spend.origins][0] as "owner_reported" | "platform_reported" | "unknown" : "mixed" as const,
           adSpendMinor: mediaSpend,
           mediaRoas: mediaSpend > 0 ? outcome.netRevenueMinor / mediaSpend : null,
-          ...(options.grossMargin !== undefined ? { modeledContributionAfterMediaSpendMinor: Math.round(outcome.netRevenueMinor * options.grossMargin) - mediaSpend } : {}),
+          ...(Number.isSafeInteger(modeledContribution) ? { modeledContributionAfterMediaSpendMinor: modeledContribution } : {}),
         };
       })
       .sort((a, b) => b.netRevenueMinor - a.netRevenueMinor || a.source.localeCompare(b.source)),

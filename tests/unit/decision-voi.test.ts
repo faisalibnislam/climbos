@@ -19,6 +19,13 @@ const net = (p: PlayLike) => {
 };
 
 describe("switch values (no probabilities)", () => {
+  it("requires margin to rise when the current contribution is negative", () => {
+    const margin = switchPoints(play(), { ...econ, grossMargin: -0.25 }).find(point => point.key === "margin")!;
+    expect(margin.assumed).toBe(-0.25);
+    expect(margin.direction).toBe("ge");
+    expect(margin.switchValue).toBeGreaterThan(0);
+    expect(margin.margin).toBeNull(); // No relative-distance percentage from a nonpositive base.
+  });
   it("find the break-even of each input; linear inputs match the closed form", () => {
     const p = play();
     const m = playMaths(p, econ);

@@ -1,6 +1,6 @@
 /**
  * Growth formula catalog (spec §15–16), pure and null-safe: any missing
- * input gives `null`, never a default. Rates are shares in [0, 1]; money is
+ * input gives `null`, never a default. Funnel/churn rates are shares in [0, 1]; contribution margin may be negative. Money is
  * in the business's major currency unit; periods are billing months.
  */
 
@@ -11,6 +11,8 @@ function nums(...xs: N[]): number[] | null {
   return xs.every((x) => typeof x === "number" && Number.isFinite(x)) ? (xs as number[]) : null;
 }
 const share = (x: number) => x >= 0 && x <= 1;
+/** Delivery costs can exceed revenue, so contribution margin has no zero lower bound. */
+export const validContributionMargin = (x: N): x is number => typeof x === "number" && Number.isFinite(x) && x <= 1;
 
 /** One cohort through a funnel: reach × Π step rates. */
 export function funnelCustomers(reach: N, rates: N[]): number | null {
@@ -42,7 +44,8 @@ export function cacFull(spend: N, hours: N, hourlyCost: N, other: N, customers: 
 /** Monthly contribution per customer: revenue × contribution margin. */
 export function contributionMonth(revenueMonth: N, margin: N): number | null {
   const v = nums(revenueMonth, margin);
-  return v && v[0] >= 0 && share(v[1]) ? v[0] * v[1] : null;
+  const result = v && v[0] >= 0 && validContributionMargin(v[1]) ? v[0] * v[1] : null;
+  return result !== null && Number.isFinite(result) ? result : null;
 }
 
 /** Contribution over n periods with churn c between periods: cm × (1 − (1−c)^n) / c (cm × n when c = 0). */
@@ -50,7 +53,8 @@ export function contributionOver(cmMonth: N, churn: N, periods: N): number | nul
   const v = nums(cmMonth, churn, periods);
   if (!v || !share(v[1]) || v[2] < 0) return null;
   const [cm, c, n] = v;
-  return c === 0 ? cm * n : (cm * (1 - (1 - c) ** n)) / c;
+  const result = c === 0 ? cm * n : (cm * (1 - (1 - c) ** n)) / c;
+  return Number.isFinite(result) ? result : null;
 }
 
 /** Simple (no-churn) payback in periods: CAC / cm. */
@@ -64,27 +68,31 @@ export function paybackWithChurn(cac: N, cmMonth: N, churn: N): number | null {
   const v = nums(cac, cmMonth, churn);
   if (!v || v[1] <= 0 || !share(v[2]) || v[0] < 0) return null;
   const [k, cm, c] = v;
+  if (k === 0) return 0;
   if (c === 0) return k / cm;
+  // With no customers retained into month two, only month one's contribution exists.
+  if (c === 1) return k <= cm ? 1 : null;
   const x = 1 - (k * c) / cm;
-  if (x <= 0 || c >= 1) return null;
+  if (x <= 0) return null;
   return Math.log(x) / Math.log(1 - c);
 }
 
 /** Allowable CAC for a payback horizon: the contribution one customer earns within it. */
 export function allowableCac(cmMonth: N, churn: N, horizonPeriods: N): number | null {
-  return contributionOver(cmMonth, churn, horizonPeriods);
+  const value = contributionOver(cmMonth, churn, horizonPeriods);
+  return value !== null && value >= 0 ? value : null;
 }
 
 /** Break-even CPC: allowable CAC × click→signup × signup→paid. */
 export function breakevenCpc(allowable: N, clickToSignup: N, signupToPaid: N): number | null {
   const v = nums(allowable, clickToSignup, signupToPaid);
-  return v && share(v[1]) && share(v[2]) ? v[0] * v[1] * v[2] : null;
+  return v && v[0] >= 0 && share(v[1]) && share(v[2]) ? v[0] * v[1] * v[2] : null;
 }
 
 /** Break-even cost per person reached: allowable CAC × Π funnel rates. */
 export function breakevenPerReach(allowable: N, rates: N[]): number | null {
   const v = nums(allowable, funnelCustomers(1, rates));
-  return v ? v[0] * v[1] : null;
+  return v && v[0] >= 0 ? v[0] * v[1] : null;
 }
 
 /** Next month's MRR: MRR × (1 − churn) + new customers × price. */

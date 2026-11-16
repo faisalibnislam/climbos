@@ -3,7 +3,7 @@ import type { LintIssue } from "./types";
 import { CHECK_STAMP, economicsSources, financialEvidence, forecastBasis, type EconomicsSources, type FinancialEvidence, type Provenance, type SourceTag, type TagCheck } from "./provenance";
 import { createRng } from "../forecasting/prng";
 import { goalGap, goalLines, type GoalGap, type GoalTarget } from "./goal";
-import { allowableCac, breakevenPerReach, cacFull, churnFromLifetime, contributionMonth, contributionOver, funnelCustomers, paybackWithChurn, portfolioCustomers } from "../growth/calc";
+import { validContributionMargin, breakevenPerReach, cacFull, churnFromLifetime, contributionMonth, contributionOver, funnelCustomers, paybackWithChurn, portfolioCustomers } from "../growth/calc";
 import { playStage } from "./diagnosis";
 import { decidesLine, switchPoints } from "./voi";
 
@@ -66,7 +66,7 @@ export interface PlayModel {
 }
 export interface Economics {
   revenuePerCustomerMonthUsd: number | null;
-  /** Contribution margin before acquisition (0–1). */
+  /** Contribution margin before acquisition; at most 1, negative when delivery costs exceed revenue. */
   grossMargin: number | null;
   /** Share of customers lost each month (0–1). Older plans give monthsRetained instead. */
   monthlyChurn?: number | null;
@@ -165,7 +165,7 @@ export interface PlayMaths {
   breakevenPerReachUsd: number | null;
   /** Pays back within the horizon; null when it can't be known (unknown economics or no customers). */
   profitable: boolean | null;
-  /** A rate or margin outside 0–1 (rejected, never reinterpreted as a percent). */
+  /** Invalid funnel rates or contribution margins (never reinterpreted as percentages). */
   invalidInputs: string[];
   /** Counted only the extra customers over each step's baseline rate. */
   incremental: boolean;
@@ -267,14 +267,13 @@ export function churnOf(e: Economics): number | null {
 
 /** Contribution per customer per month; null when price or margin is unknown or invalid. */
 export function monthlyContribution(e: Economics): number | null {
-  const margin = rateOf(e.grossMargin);
-  if (e.revenuePerCustomerMonthUsd === null || !(e.revenuePerCustomerMonthUsd >= 0) || Number.isNaN(margin)) return null;
-  return contributionMonth(e.revenuePerCustomerMonthUsd, margin);
+  if (!validContributionMargin(e.grossMargin)) return null;
+  return contributionMonth(e.revenuePerCustomerMonthUsd, e.grossMargin);
 }
 
 /** Contribution one customer earns within the payback horizon; null when any input is unknown. */
 export function customerValue(e: Economics): number | null {
-  return allowableCac(monthlyContribution(e), churnOf(e), PAYBACK_HORIZON_MONTHS);
+  return contributionOver(monthlyContribution(e), churnOf(e), PAYBACK_HORIZON_MONTHS);
 }
 
 function seedOf(s: string): number {
@@ -392,7 +391,7 @@ export function playMaths(p: PlayLike, e: Economics, opts: { pointOnly?: boolean
   // The actual horizon: 3 days is 3/7 of a week of reach, not a full week (REQ-MATH-04).
   const days = p.horizonDays > 0 ? p.horizonDays : 90;
   const weeks = days / 7;
-  const invalidInputs = [...p.model.steps.filter((s) => Number.isNaN(rateOf(s.rate))).map((s) => s.name), ...(Number.isNaN(rateOf(e.grossMargin)) ? ["margin"] : [])];
+  const invalidInputs = [...p.model.steps.filter((s) => Number.isNaN(rateOf(s.rate))).map((s) => s.name), ...(!validContributionMargin(e.grossMargin) ? ["margin"] : [])];
   const rates = p.model.steps.map((s) => rateOf(s.rate));
   const incremental = p.model.steps.some((s) => s.baselineRate !== undefined);
   const customerWeeks = effectiveCustomerWeeks(p.model, weeks);
@@ -499,7 +498,7 @@ export function lintEconomics(out: { economics: Economics; plays: PlayLike[] }):
   const usd = (n: number | null) => formatMoney(n, e.currency);
   if (e.revenuePerCustomerMonthUsd === null || e.grossMargin === null || churnOf(e) === null) issues.push({ severity: "warn", rule: "economics", message: "Customer contribution or retention is unknown. Payback stays unknown; request the deciding owner inputs before scaling.", path: "economics" });
   if (e.revenuePerCustomerMonthUsd !== null && !(e.revenuePerCustomerMonthUsd > 0)) issues.push({ severity: "error", rule: "economics", message: "Known monthly revenue must be positive; leave missing revenue null.", path: "economics" });
-  if (e.grossMargin !== null && !(e.grossMargin > 0 && e.grossMargin <= 1)) issues.push({ severity: "error", rule: "economics", message: "grossMargin is a share between 0 and 1 (e.g. 0.8).", path: "economics.grossMargin" });
+  if (e.grossMargin !== null && !validContributionMargin(e.grossMargin)) issues.push({ severity: "error", rule: "economics", message: "grossMargin must be a finite share at or below 1; 0 is break-even and negative means delivery costs exceed revenue.", path: "economics.grossMargin" });
   out.plays.forEach((p, i) => {
     const path = `plays[${i}]`;
     if (!p.model?.steps?.length || !(p.model.weeklyReach > 0)) {
@@ -780,7 +779,8 @@ export interface GrowthCashTiming {
   paymentLagDays: number | null;
   /** At the most-likely rates; null when customer cash in can't be timed (see `missing`). */
   mostLikely: GrowthCashScenario | null;
-  /** At the low end of the modeled customer range (P10); null like `mostLikely`. */
+  /** Adverse customer-count scenario: P10 for nonnegative contribution, P90 for losses. */
+  adverseCustomerQuantile?: "p10" | "p90";
   lowCase: GrowthCashScenario | null;
   /** Inputs that are unknown and keep part of this view from being calculated. */
   missing: ("payment_lag" | "customer_value" | "churn" | "reserve")[];
@@ -875,7 +875,8 @@ export function growthCashTiming(out: { economics: Economics; plays: PlayLike[] 
   return {
     ...base,
     mostLikely: scenario(ms.map((m) => m.headline.p50)),
-    lowCase: scenario(ms.map((m) => m.headline.p10)),
+    adverseCustomerQuantile: contribution < 0 ? "p90" : "p10",
+    lowCase: scenario(ms.map((m) => contribution < 0 ? m.headline.p90 : m.headline.p10)),
   };
 }
 
@@ -923,7 +924,7 @@ export function growthCashTimingLine(t: GrowthCashTiming | null, currency?: stri
   const inputs = `owner-reported reserve ${t.reserveUsd === null ? "unknown" : m(t.reserveUsd)}, payment delay ${t.paymentLagDays === null ? "unknown" : `${t.paymentLagDays} days`}`;
   const scen = (label: string, s: GrowthCashScenario) => `${label}: ${s.lowestWeek === 0 ? "never below zero" : `lowest ${m(s.lowestBalanceUsd)} in week ${s.lowestWeek}, ${s.recoveredWeek === null ? "not back to zero in the period" : `back to zero by week ${s.recoveredWeek}`}`}${s.reserveCovers === false ? `, reserve short by ${m(s.shortfallUsd ?? 0)}` : s.reserveCovers ? ", within the reserve" : ""}`;
   const body = t.mostLikely && t.lowCase
-    ? `${scen("most-likely", t.mostLikely)}; ${scen("low-end P10 customers", t.lowCase)}`
+    ? `${scen("most-likely", t.mostLikely)}; ${scen(t.adverseCustomerQuantile === "p90" ? "high-end P90 customers (more customers increase losses)" : "low-end P10 customers", t.lowCase)}`
     : `customer payments not timed (missing ${t.missing.filter((x) => x !== "reserve").join(", ")}); growth costs total ${m(t.cashOutOverPeriodUsd)} before any customer pays`;
   return `- GROWTH CASH TIMING · selected set (${inputs}; ${m(t.weeklyCashOutUsd)}/week growth cash out${t.setupCashUsd > 0 ? ` plus ${m(t.setupCashUsd)} one-time setup in week 1` : ""}): ${body}. Computed by ClimbOS from play costs, ramps and economics; quote it, don't recompute it. Not a bank-balance or cash-flow forecast. If the reserve is short, sequence or cap cash-heavy plays and say so; if inputs are unknown, don't assume them.`;
 }
@@ -1038,7 +1039,7 @@ export function applyOwnerEconomics(e: Economics, owner: OwnerEconomics | null |
   const confirmed: string[] = [];
   for (const k of ["revenuePerCustomerMonthUsd", "grossMargin", "monthlyChurn"] as const) {
     const v = owner[k];
-    if (typeof v === "number" && (v > 0 || (k === "monthlyChurn" && v === 0))) {
+    if (typeof v === "number" && Number.isFinite(v) && (k === "grossMargin" ? validContributionMargin(v) : k === "monthlyChurn" ? v >= 0 && v <= 1 : v > 0)) {
       const prior = e.sources?.[KEY_OF[k]];
       const was = e[k];
       out[k] = v;
@@ -1099,7 +1100,7 @@ export function decisionQuestions(out: { economics: Economics; plays: PlayLike[]
   const assumed = new Set(e.assumed ?? ["revenue", "margin", "churn"]);
   const candidates: { key: QuestionKey; value: number; low: number; high: number }[] = [];
   if (assumed.has("revenue") && e.revenuePerCustomerMonthUsd !== null) candidates.push({ key: "revenuePerCustomerMonthUsd", value: e.revenuePerCustomerMonthUsd, low: e.revenuePerCustomerMonthUsd * 0.5, high: e.revenuePerCustomerMonthUsd * 1.5 });
-  if (assumed.has("margin") && e.grossMargin !== null) candidates.push({ key: "grossMargin", value: e.grossMargin, low: Math.max(0.05, e.grossMargin * 0.6), high: Math.min(1, e.grossMargin * 1.25) });
+  if (assumed.has("margin") && e.grossMargin !== null) candidates.push({ key: "grossMargin", value: e.grossMargin, low: Math.min(e.grossMargin * 0.6, e.grossMargin * 1.25), high: Math.min(1, Math.max(e.grossMargin * 0.6, e.grossMargin * 1.25)) });
   const churn = churnOf(e);
   if (assumed.has("churn") && churn !== null) candidates.push({ key: "monthlyChurn", value: churn, low: churn * 0.5, high: Math.min(0.9, churn * 2) });
   if (!(owner?.ownerHourUsd && owner.ownerHourUsd > 0) && plays.some((p) => p.model.ownerHoursPerWeek > 0)) candidates.push({ key: "ownerHourUsd", value: ownerHourOf(e), low: thresholdIn(20, e.currency), high: thresholdIn(150, e.currency) });

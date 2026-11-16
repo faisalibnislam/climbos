@@ -25,6 +25,11 @@ const base: GrowthCashTimingView = {
 const render = (data: GrowthCashTimingView, canEdit = true) => renderToStaticMarkup(createElement(GrowthCashTimingPanel, { data, slug: "acme", canEdit }));
 
 describe("growth cash timing panel", () => {
+  it("labels the high-customer adverse case when each customer loses money", () => {
+    const html = render({ ...base, adverseCustomerQuantile: "p90" });
+    expect(html).toContain("More customers, more losses (P90)");
+    expect(html).not.toContain("low end (P10)");
+  });
   it("labels owner inputs, both scenarios, the reserve gap, and the forecast boundary", () => {
     const html = render(base);
     expect(html).toContain("$100 · you reported");

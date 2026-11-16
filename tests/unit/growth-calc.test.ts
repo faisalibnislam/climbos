@@ -29,6 +29,26 @@ describe("spec §18 fixture", () => {
 });
 
 describe("missing and invalid inputs", () => {
+  it("preserves delivery losses without presenting a negative acquisition allowance", () => {
+    expect(c.contributionMonth(20, -0.25)).toBe(-5);
+    expect(c.contributionMonth(20, -2)).toBe(-40);
+    expect(c.contributionOver(-5, 0, 12)).toBe(-60);
+    expect(c.allowableCac(-5, 0, 12)).toBeNull();
+    expect(c.breakevenCpc(-60, 0.1, 0.2)).toBeNull();
+    expect(c.breakevenPerReach(-60, [0.1])).toBeNull();
+    expect(c.paybackWithChurn(10, -5, 0)).toBeNull();
+    expect(c.contributionMonth(20, 0)).toBe(0);
+    expect(c.contributionMonth(20, -Number.MAX_VALUE)).toBeNull();
+    expect(c.contributionOver(-Number.MAX_VALUE, 0, 12)).toBeNull();
+  });
+
+  it("uses only the first month when all customers leave before the second", () => {
+    expect(c.contributionOver(20, 1, 12)).toBe(20);
+    expect(c.paybackWithChurn(10, 20, 1)).toBe(1);
+    expect(c.paybackWithChurn(20, 20, 1)).toBe(1);
+    expect(c.paybackWithChurn(21, 20, 1)).toBeNull();
+    expect(c.paybackWithChurn(0, 20, 1)).toBe(0);
+  });
   it("returns null instead of guessing", () => {
     expect(c.funnelCustomers(null, [0.1])).toBeNull();
     expect(c.funnelCustomers(100, [0.1, undefined])).toBeNull();

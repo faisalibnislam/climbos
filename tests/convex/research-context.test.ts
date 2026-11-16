@@ -97,7 +97,7 @@ describe("persisted research in generation context", () => {
     if (kind === "strategy") {
       await t.run(async ctx => {
         const business = (await ctx.db.get(businessId))!;
-        await ctx.db.patch(businessId, { unitEconomics: { ...business.unitEconomics, updatedAt: Date.now(), segmentEconomics: [{ segment: "Segment with missing delivery costs", currency: "KWD", periodDays: 90, customers: 10, netRevenue: 10.123, costCoverage: "unknown", costBoundary: "Delivery costs not yet collected" }] } });
+        await ctx.db.patch(businessId, { unitEconomics: { ...business.unitEconomics, grossMargin: planStyle === "focused" ? 0 : -0.25, monthlyChurn: 0, updatedAt: Date.now(), segmentEconomics: [{ segment: "Segment with missing delivery costs", currency: "KWD", periodDays: 90, customers: 10, netRevenue: 10.123, costCoverage: "unknown", costBoundary: "Delivery costs not yet collected" }] } });
       });
       await t.action(internal.jobs.buildStrategy, { runId });
     }
@@ -117,6 +117,8 @@ describe("persisted research in generation context", () => {
     expect(text).not.toContain("Invented customer praise");
     expect(text).not.toContain("Search-only unsupported words");
     if (kind === "strategy") {
+      expect(text).toContain(`contribution margin ${planStyle === "focused" ? "0" : "-25"}%`);
+      expect(text).toContain("monthly churn 0%");
       expect(text).toContain("Segment with missing delivery costs");
       expect(text).toContain("net revenue 10.123 KWD");
       expect(text).toContain("listed variable costs unknown");

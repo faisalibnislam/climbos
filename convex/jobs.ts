@@ -1051,8 +1051,8 @@ function ownerEconomicsLine(u: OwnerEconomics | undefined, currency?: string): s
   if (!u) return "";
   const parts = [
     u.revenuePerCustomerMonthUsd ? `revenue per customer ${formatMoney(u.revenuePerCustomerMonthUsd, currency)}/month` : "",
-    u.grossMargin ? `contribution margin ${Math.round(u.grossMargin * 100)}%` : "",
-    u.monthlyChurn ? `monthly churn ${Math.round(u.monthlyChurn * 1000) / 10}%` : "",
+    u.grossMargin !== undefined ? `contribution margin ${Math.round(u.grossMargin * 100)}%` : "",
+    u.monthlyChurn !== undefined && u.monthlyChurn !== null ? `monthly churn ${Math.round(u.monthlyChurn * 1000) / 10}%` : "",
     u.ownerHourUsd ? `owner's time ${formatMoney(u.ownerHourUsd, currency)}/hour` : "",
     u.ownerHoursPerWeek !== undefined ? `owner can give ${u.ownerHoursPerWeek} hours a week (all plays together must fit)` : "",
     u.newCustomersPerMonth !== undefined ? `the owner has room for at most ${u.newCustomersPerMonth} additional new customers a month with current staffing, workload, inventory and support (keep forecast incremental demand within this remaining capacity)` : "",

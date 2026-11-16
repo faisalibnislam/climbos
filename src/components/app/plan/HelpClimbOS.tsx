@@ -16,8 +16,8 @@ type Funnel = { periodDays: number; visitors?: number; leads?: number; activated
 
 const MONEY: { key: Unsure; field: "revenuePerCustomerMonthUsd" | "grossMargin" | "monthlyChurn"; question: string; help: string; suffix: (currency: string) => string; toInput: (v: number) => string; fromInput: (s: string) => number; ok: (n: number) => boolean }[] = [
   { key: "revenue", field: "revenuePerCustomerMonthUsd", question: "What does one customer pay you in a typical month?", help: "If people buy once, use a typical order.", suffix: (c) => `${c} / month`, toInput: (v) => String(Math.round(v * 100) / 100), fromInput: Number, ok: (n) => n > 0 && n <= 1_000_000 },
-  { key: "margin", field: "grossMargin", question: "What share do you keep after delivery costs?", help: "Before rent and salaries.", suffix: () => "%", toInput: (v) => String(Math.round(v * 100)), fromInput: (s) => Number(s) / 100, ok: (n) => n > 0 && n <= 1 },
-  { key: "churn", field: "monthlyChurn", question: "Of 100 customers, how many stop buying each month?", help: "Enter 0 to 95.", suffix: () => "of 100", toInput: (v) => String(Math.round(v * 1000) / 10), fromInput: (s) => Number(s) / 100, ok: (n) => n >= 0.001 && n <= 0.95 },
+  { key: "margin", field: "grossMargin", question: "What share do you keep after delivery costs?", help: "After the delivery costs you include, before other fixed costs. Use 0 for break-even or a negative percentage when delivery costs exceed revenue.", suffix: () => "%", toInput: (v) => String(Math.round(v * 100)), fromInput: (s) => Number(s) / 100, ok: (n) => n <= 1 },
+  { key: "churn", field: "monthlyChurn", question: "Of 100 customers, how many stop buying each month?", help: "Enter 0 to 100; zero means you observed no losses in that month.", suffix: () => "of 100", toInput: (v) => String(Math.round(v * 1000) / 10), fromInput: (s) => Number(s) / 100, ok: (n) => n >= 0 && n <= 1 },
 ];
 
 const FUNNEL: { key: "visitors" | "leads" | "activated" | "newCustomers"; label: string }[] = [

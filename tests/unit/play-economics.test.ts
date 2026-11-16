@@ -187,3 +187,28 @@ describe("plan fits budget, time and the computed total", () => {
     expect(lintPlanFit(plan("17 customers"), { monthlyAdBudgetUsd: 100, lockedCustomers: 17 })[0].rule).toBe("budget");
   });
 });
+
+describe("non-positive owner contribution", () => {
+  it.each([0, -0.25, -2])("preserves the owner's margin %s instead of retaining a positive assumption", async grossMargin => {
+    const { applyOwnerEconomics } = await import("../../shared/agents/economics");
+    const e = applyOwnerEconomics(econ, { grossMargin });
+    expect(e.grossMargin).toBe(grossMargin);
+    expect(e.assumed).not.toContain("margin");
+    expect(e.sources?.margin?.source).toBe("owner");
+  });
+  it("models a loss instead of unknown contribution and never offers a negative acquisition allowance", () => {
+    const m = playMaths(play(), { ...econ, grossMargin: -0.25, monthlyChurn: 0 });
+    expect(m.valueUsd).toBe(-57);
+    expect(m.profitable).toBe(false);
+    expect(m.paybackMonths).toBeNull();
+    expect(m.breakevenPerReachUsd).toBeNull();
+  });
+  it("uses more customers as the adverse cash case when each customer loses money", async () => {
+    const { growthCashTiming } = await import("../../shared/agents/economics");
+    const p = play({ model: { ...play().model, weeklyReachLow: 100, weeklyReachHigh: 400 } });
+    const cash = growthCashTiming({ economics: { ...econ, grossMargin: -0.25, monthlyChurn: 0 }, plays: [p] }, [p.name], { reserveUsd: 100, paymentLagDays: 0, horizonDays: 91 });
+    expect(cash?.mostLikely).not.toBeNull();
+    expect(cash?.lowCase?.lowestBalanceUsd).toBeLessThan(cash!.mostLikely!.lowestBalanceUsd);
+    expect(cash?.adverseCustomerQuantile).toBe("p90");
+  });
+});

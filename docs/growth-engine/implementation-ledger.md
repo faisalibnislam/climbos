@@ -1,3 +1,7 @@
+## Local update — 16 November 2026: zero and negative owner contribution
+
+Closed the confirmed mismatch between the paid-acquisition guard and owner input: forms/API rejected non-positive margins, owner overrides ignored them, generation context omitted zero, and contribution calculations treated losses as invalid. Extended existing contracts and calculators; no new subsystem. Signed ranges, missing values, owner provenance, nonfinite checks and action boundaries remain explicit. Negative-value acquisition allowances are withheld; adverse cash scenarios now increase customer count when each customer loses money. See Verification for backend, generation, permission and browser evidence. Engine `v3.100-nonpositive-owner-margin`; broad requirement completion remains open.
+
 ## Local update — 16 November 2026: segment economics without invented costs
 
 Reproduced nine calculation/evidence failures and traced blank-to-zero form coercion into future strategy context. Extended the existing segment schema, deterministic calculator, validation, owner editor and focused-plan access; explicit cost coverage remains separate from listed unknown costs. Unsupported currency precision and conflicting inputs are withheld, negative net revenue is retained, and whole-record briefing keeps caveats visible. Existing permission/audit controls remain; no external action. See Verification for focused backend/browser results and limits. Engine `v3.99-segment-cost-evidence`; full requirement completion remains open.

@@ -236,6 +236,24 @@ describe("platform concentration", () => {
     expect(() => platformConcentration([event], { currency: "USD", fromMs: T0, toMs: T0 + DAY, grossMargin: 1.1 })).toThrow(/Gross margin/);
   });
 
+  it.each([0, -0.25, -2])("retains modeled delivery losses at margin %s", grossMargin => {
+    const event = ev({ id: "negative-margin", occurredAt: T0, utmSource: "google", utmMedium: "cpc", amountMinor: 10_000 });
+    const result = platformConcentration([event], {
+      currency: "USD", fromMs: T0, toMs: T0 + DAY, grossMargin,
+      reportedSpend: [{ platform: "google_ads", date: "2025-01-10", currency: "USD", spendMinor: 6_000 }],
+    })!;
+    expect(result.sources[0].modeledContributionAfterMediaSpendMinor).toBe(10_000 * grossMargin - 6_000);
+  });
+
+  it("withholds unrepresentable modeled contribution without losing the source observations", () => {
+    const result = platformConcentration([ev({ id: "overflow", occurredAt: T0, utmSource: "google", utmMedium: "cpc", amountMinor: 10_000 })], {
+      currency: "USD", fromMs: T0, toMs: T0 + DAY, grossMargin: -Number.MAX_VALUE,
+      reportedSpend: [{ platform: "google_ads", date: "2025-01-10", currency: "USD", spendMinor: 6_000 }],
+    })!;
+    expect(result.sources[0]).toMatchObject({ netRevenueMinor: 10_000, adSpendMinor: 6_000 });
+    expect(result.sources[0]).not.toHaveProperty("modeledContributionAfterMediaSpendMinor");
+  });
+
   it("does not count a repeat payment as a first recorded payer for its tagged source", () => {
     const previous = ev({ id: "first", occurredAt: T0 - 10 * DAY, customerRef: "repeat-customer", utmSource: "google", utmMedium: "cpc" });
     const renewal = ev({ id: "renewal", occurredAt: T0, customerRef: "repeat-customer", kind: "subscription_payment", utmSource: undefined, utmMedium: undefined });
