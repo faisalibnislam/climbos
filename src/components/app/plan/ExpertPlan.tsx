@@ -1419,7 +1419,7 @@ const EMPTY_EXPLORATION_FEEDBACK: Record<ExplorationMode, ExplorationFeedbackDra
   bold: { decision: "considering", ownerEdit: "", testState: "not_started", outcomeNote: "", outcomeEvidence: "unknown" },
 };
 
-export function StrategyExplorationPanel({ options, slug, strategyId, canEdit }: { options: StrategyExploration; slug: string; strategyId?: Id<"strategies">; canEdit: boolean }) {
+export function StrategyExplorationPanel({ options, slug, strategyId, canEdit, onAsk }: { options: StrategyExploration; slug: string; strategyId?: Id<"strategies">; canEdit: boolean; onAsk?: (message: string) => void }) {
   const saved = useQuery(api.creativeStrategy.feedbackForStrategy, strategyId ? { slug, strategyId } : "skip");
   const recordFeedback = useMutation(api.creativeStrategy.recordFeedback);
   const [drafts, setDrafts] = useState<Record<ExplorationMode, ExplorationFeedbackDraft>>(() => structuredClone(EMPTY_EXPLORATION_FEEDBACK));
@@ -1467,6 +1467,7 @@ export function StrategyExplorationPanel({ options, slug, strategyId, canEdit }:
             <p className="text-xs text-ink-3">{description}</p>
             <p className="text-ui text-ink">{value.businessMechanism}</p>
             <p className="text-xs text-ink-3">{value.whyItCouldMatter}</p>
+            {onAsk ? <Button size="sm" variant="secondary" onClick={() => onAsk(`Explore the ${key} option “${value.title}” in this saved plan. Read its idea, evidence, test conditions, and owner feedback before discussing it. Keep its originality and uncertainty visible. Suggest a small reversible next step; do not select, approve, publish, send, or spend anything.`)}>Discuss this option</Button> : null}
             <details className="mt-1">
               <summary className="min-h-9 cursor-pointer text-sm font-medium text-brand-900">Explore the idea and its test</summary>
             <dl className="grid gap-2 text-ui">

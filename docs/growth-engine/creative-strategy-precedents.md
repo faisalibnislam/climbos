@@ -1,10 +1,10 @@
 # Creative strategy precedents
 
-Last reviewed: 25 October 2026. This is a curated retrieval set for strategy exploration, not a forecast database or universal playbook.
+Runtime inventory reconciled: 17 November 2026. Source review dates remain recorded per case; this is not a fresh source review. This is a curated retrieval set for strategy exploration, not a forecast database or universal playbook.
 
 ## Verified coverage
 
-The current runtime library contains **75 editorially reviewed cases** (`CP-001`–`CP-075`). The requested target is 100 useful cases, leaving **25 cases unverified and not yet included**. The general growth case collection is separate and is not counted as creative-strategy coverage.
+The current runtime library contains **100 distinct source-backed records** (`CP-001`–`CP-100`): the original 75 editorially reviewed cases and 25 action-only primary-source records added on 9 November. All 25 additions mark research confidence as low and retain transfer hypotheses with no established commercial effect. A runtime count verified 100 distinct IDs and 25 expansion records; it does not reverify sources or prove transfer quality. The general growth case collection is separate and is not counted as creative-strategy coverage. Dated case-addition notes below preserve their historical counts.
 
 Each case records its reported choice and mechanism, evidence class, causal limits, transfer conditions and risks, a small-business adaptation, editorial audience/goal/constraint/scale/geography/business-model tags, and a reversible test. Runtime retrieval requires a mechanism match, then ranks with available audience, goal, constraint, scale, geography, and business-model context. The model receives short match explanations with each case rather than an opaque relevance score. Retrieval returns at most two cases to the production growth-plan task and never treats a precedent as evidence about the target business; when those context dimensions are absent, they do not contribute a match.
 

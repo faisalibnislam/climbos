@@ -34,6 +34,7 @@ export const feedbackForStrategy = query({
         outcomeNote: row.outcomeNote ?? "",
         outcomeEvidence: row.outcomeEvidence,
         createdAt: row.createdAt,
+        retiredAt: row.retiredAt ?? null,
       };
     }
     return { canEdit: role === "owner" || role === "admin" || role === "editor", feedback: results };

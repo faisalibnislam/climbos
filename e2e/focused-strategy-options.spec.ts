@@ -107,6 +107,15 @@ test("focused plan exposes all three options and selecting bold grants no action
   await expect(page.getByRole("status").filter({ hasText: "Saved for this workspace" })).toHaveCount(0, { timeout: 10_000 });
   await expectAccessible(page, "Focused strategy options");
   await bold.screenshot({ path: testInfo.outputPath("bold-option.png") });
+  const feedbackBeforeDiscussion = (await rows("strategyExplorationFeedback")).filter(row => row.orgId === org._id);
+  await bold.getByRole("button", { name: "Discuss this option", exact: true }).click();
+  const optionDiscussion = page.getByRole("textbox", { name: "Message Climb AI", exact: true });
+  await expect(optionDiscussion).toHaveValue(/Explore the bold option/);
+  await expect(optionDiscussion).toHaveValue(new RegExp(fixture.strategyExploration.bold.title));
+  await optionDiscussion.fill("");
+  await page.getByRole("button", { name: "Close Climb AI", exact: true }).click();
+  expect((await rows("strategyExplorationFeedback")).filter(row => row.orgId === org._id)).toEqual(feedbackBeforeDiscussion);
+  expect(await snapshot()).toEqual(before);
   await page.getByRole("tab", { name: "Research", exact: true }).click();
   await page.getByRole("button", { name: "Open research and plan details", exact: true }).click();
   await page.getByText("Where you stand and what the numbers mean", { exact: true }).click();

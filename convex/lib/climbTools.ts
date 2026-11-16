@@ -9,6 +9,7 @@ import type { DealValueSummary } from "../../shared/growth/pipeline";
 import { planJob, maxJobMicros } from "./jobPlans";
 import { CalcToolInput, calculate } from "../../shared/analysis/decisions";
 import { PlanLearningOutputSchema, planLearningView } from "../../shared/climb/planLearning";
+import { OPTION_MODES, OPTION_SECTIONS, StrategyOptionsOutputSchema, strategyOptionsView } from "../../shared/climb/strategyOptions";
 
 /**
  * Climb AI's tools: one registry for the in-app side panel and the MCP server.
@@ -99,7 +100,7 @@ const PlanOutputSchema = z.object({
   plan: z.null().optional(),
   status: z.string().optional(),
   strategyId: z.string().optional(), version: z.number().optional(),
-  goalContext: z.string().optional(), learning: z.string().optional(),
+  goalContext: z.string().optional(), learning: z.string().optional(), strategyOptions: z.string().optional(),
   summary: z.string().optional(),
   diagnosis: z.string().optional(),
   northStar: z.object({ metric: z.string(), baseline: z.string(), target: z.string() }).optional(),
@@ -386,17 +387,23 @@ export const CLIMB_TOOLS: ClimbTool[] = [
   tool({
     name: "get_plan",
     title: "Growth plan",
-    description: "Read the current growth plan or an exact selected strategyId. Overview includes experiment IDs and whether reports exist. For what happened or continue/change/stop advice, use view=learning to read saved test conditions, latest reported values, unknowns and changed definitions. Pass experimentId to inspect one report when details were omitted. Neither view authorizes action.",
+    description: "Read the current growth plan or exact selected strategyId. view=learning returns experiment conditions and reported outcomes; experimentId reads one test. view=options lists grounded, adjacent and bold options; mode plus section (idea, evidence, test, feedback) reads the saved alternative and owner feedback. Inspect those sections before comparing creative options. No view ranks down uncertainty or authorizes action.",
     risk: "read",
     doing: "Reading your growth plan",
-    input: z.object({ strategyId: z.string().min(1).max(80).optional(), view: z.enum(["overview", "learning"]).optional(), experimentId: z.string().min(1).max(80).optional() }),
-    output: z.union([PlanOutputSchema, PlanLearningOutputSchema]),
+    input: z.object({ strategyId: z.string().min(1).max(80).optional(), view: z.enum(["overview", "learning", "options"]).optional(), experimentId: z.string().min(1).max(80).optional(), mode: z.enum(OPTION_MODES).optional(), section: z.enum(OPTION_SECTIONS).optional() }),
+    output: z.union([PlanOutputSchema, PlanLearningOutputSchema, StrategyOptionsOutputSchema]),
     run: async (c, slug, i) => {
       const p = await c.query(api.workspace.plan, { slug, ...(i.strategyId ? { strategyId: i.strategyId as Id<"strategies"> } : {}) });
       const s = p.strategy;
+      if ((i.view === "options" || i.mode || i.section) && (i.experimentId || i.view === "learning")) throw new Error("Read strategy options and experiment outcomes separately; choose one view.");
       if (i.strategyId && s?.id !== i.strategyId) throw new Error("That saved plan is unavailable in this workspace. No other plan was substituted.");
       if (i.experimentId && !p.experiments.some(e => e.id === i.experimentId)) throw new Error("That test is not available in this selected plan. Open its original plan before reviewing it.");
       if (!s) return { plan: null, goal: p.goal };
+      if (i.view === "options" || i.mode || i.section) {
+        if (i.section && !i.mode) throw new Error("Choose grounded, adjacent or bold before reading an option section.");
+        const feedback = i.mode && i.section === "feedback" ? await c.query(api.creativeStrategy.feedbackForStrategy, { slug, strategyId: s.id }) : null;
+        return strategyOptionsView({ id: s.id, version: s.version, options: s.expert?.strategyExploration }, i.mode, i.section, i.mode ? feedback?.feedback[i.mode] : undefined);
+      }
       if (i.view === "learning" || i.experimentId) return planLearningView({ id: s.id, version: s.version, primaryTitle: s.expert?.focusedMove?.title }, i.experimentId ? p.experiments.filter(e => e.id === i.experimentId) : p.experiments);
       const x = s.expert as { diagnosis?: string; northStar?: unknown; plays?: { name: string; kind: string; oneLiner: string; forecast?: { p10: number; p50: number; p90: number; unit: string } }[]; weekOneChecklist?: string[] } | null;
       return {
@@ -405,6 +412,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
         goalContext: i.strategyId ? "Saved plan selected explicitly; its original goal details are not included in this overview." : "Currently focused goal.",
         strategyId: s.id, version: s.version,
         learning: "Use get_plan with this strategyId and view=learning before discussing test results or whether to continue, change, or stop. Status is not an outcome.",
+        strategyOptions: s.expert?.strategyExploration ? "Saved grounded, adjacent and bold alternatives are available through view=options. These are exploration, not the ranked execution plays." : "No strategy exploration saved in this plan. Do not invent earlier options.",
         status: s.status,
         summary: short(s.summary, 600),
         diagnosis: x?.diagnosis,

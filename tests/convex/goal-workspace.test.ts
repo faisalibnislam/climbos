@@ -20,6 +20,40 @@ async function fixture() {
 }
 
 describe("goal workspace and private drafts", () => {
+  it("lets the assistant inspect a speculative bold option without selecting or executing it", async () => {
+    const { t, owner, slug, orgId, strategyId, plan } = await fixture();
+    await t.run(async ctx => {
+      const saved = (await ctx.db.get(strategyId))!;
+      await ctx.db.patch(strategyId, { expert: { ...saved.expert!, strategyExploration: plan.strategyExploration } });
+    });
+    const caller = { query: owner.client.query, mutation: owner.client.mutation } as unknown as Caller;
+    const tool = toolByName("get_plan")!;
+    const output = JSON.parse(encodeToolOutput(await tool.run!(caller, slug, tool.input.parse({ strategyId, view: "options", mode: "bold", section: "test" })), 7_800, tool.output));
+    expect(output.view).toBe("options");
+    expect(output.option.mode).toBe("bold");
+    expect(output.option.evidenceBasis).toBe("speculative_hypothesis");
+    expect(output.details.reversibleTest).toEqual(plan.strategyExploration.bold.reversibleTest);
+    expect(output.details.uncertainties).toEqual(plan.strategyExploration.bold.uncertainties);
+    for (const table of ["strategyExplorationFeedback", "approvals", "actionReceipts", "workflowRuns"] as const) expect(await t.run(ctx => ctx.db.query(table).filter(q => q.eq(q.field("orgId"), orgId)).collect())).toEqual([]);
+    const readFeedback = async () => JSON.parse(encodeToolOutput(await tool.run!(caller, slug, { strategyId, view: "options", mode: "bold", section: "feedback" }), 7_800, tool.output));
+    expect((await readFeedback()).details).toBeNull();
+    await owner.client.mutation(api.creativeStrategy.recordFeedback, { slug, strategyId, mode: "bold", decision: "selected", testState: "not_started", outcomeEvidence: "unknown" });
+    expect((await readFeedback()).details).toMatchObject({ decision: "selected", sourceClass: "owner_reported", testState: "not_started", retiredAt: null });
+    const feedback = await t.run(ctx => ctx.db.query("strategyExplorationFeedback").first());
+    await owner.client.mutation(api.creativeStrategy.setFeedbackRetired, { slug, feedbackId: feedback!._id, retired: true });
+    expect((await readFeedback()).details.retiredAt).toBeTypeOf("number");
+    await t.run(async ctx => {
+      const saved = (await ctx.db.get(strategyId))!;
+      await ctx.db.patch(strategyId, { expert: { ...saved.expert!, strategyExploration: { ...plan.strategyExploration, bold: { ...plan.strategyExploration.bold, title: "A different later idea" } } } });
+    });
+    expect((await readFeedback()).details).toBeNull();
+    const other = await asNewUser(t, "options-outsider@example.com");
+    const outsider = { query: other.client.query, mutation: other.client.mutation } as unknown as Caller;
+    await expect(tool.run!(outsider, slug, { strategyId, view: "options" })).rejects.toThrow();
+    await expect(tool.run!(caller, slug, { strategyId, view: "options", experimentId: "test" })).rejects.toThrow(/separately/);
+    await expect(tool.run!(caller, slug, { strategyId, view: "options", section: "test" })).rejects.toThrow(/Choose grounded/);
+    for (const table of ["approvals", "actionReceipts", "workflowRuns"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
+  });
   it("gives the assistant the selected plan's reported measurement without new action authority", async () => {
     const { t, owner, slug, orgId, strategyId, plan } = await fixture();
     const experimentId = await t.run(ctx => ctx.db.insert("experiments", { ...plan.experiments[0], orgId, strategyId, status: "proposed", createdAt: Date.now() }));
