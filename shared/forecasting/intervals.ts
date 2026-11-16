@@ -15,6 +15,8 @@
 
 import type { ResidualRecord } from "./backtest";
 
+export const HELD_OUT_METHOD = "origin_after_calibration_v1" as const;
+
 export interface IntervalCalibrationOptions {
   /** Out-of-sample residuals from {@link rollingOriginBacktest}. */
   residualRecords: readonly ResidualRecord[];
@@ -31,8 +33,9 @@ export interface IntervalCalibrationOptions {
   /** Minimum days of history (default 56). */
   minHistoryDays?: number;
   /**
-   * Trailing days reserved for the held-out coverage check (by residual
-   * target date). Default max(28, round(0.2 · historyDays)). 0 disables.
+   * Trailing days reserved for the held-out coverage check. Calibration targets
+   * precede the cutoff; evaluated forecast origins must start on/after it.
+   * Default max(28, round(0.2 · historyDays)). 0 disables.
    */
   heldOutDays?: number;
   /** Minimum held-out residuals to report coverage (default 20). */
@@ -42,7 +45,7 @@ export interface IntervalCalibrationOptions {
 }
 
 export interface HeldOutCoverage {
-  /** First target date in the held-out segment, or null when no hold-out was possible. */
+  /** Earliest allowed forecast origin, or null when no hold-out was possible. */
   startDate: string | null;
   count: number;
   coverage80: number | null;
@@ -112,8 +115,9 @@ function noHeldOut(reason: string): HeldOutCoverage {
  * history is shorter than `minHistoryDays` or any bucket has fewer than
  * `minResidualsPerBucket` residuals. When enough data exists, residuals whose
  * target date falls in the trailing held-out segment are excluded from
- * calibration and used to measure empirical coverage of the resulting
- * intervals; the published intervals are exactly the ones evaluated.
+ * calibration. Coverage uses only forecast origins on/after that cutoff, so
+ * every calibration outcome was already available when the evaluated forecast
+ * began. The published interval widths are exactly the ones evaluated.
  */
 export function calibrateIntervals(options: IntervalCalibrationOptions): IntervalCalibration {
   const bucketSize = options.bucketSize ?? 7;
@@ -201,7 +205,9 @@ export function calibrateIntervals(options: IntervalCalibrationOptions): Interva
     heldOut = noHeldOut(heldOutReason ?? "No held-out segment.");
   } else {
     const start = heldOutStart;
-    const held = relevant.filter((r) => r.targetDate >= start);
+    // A later target alone is insufficient: a long-horizon forecast may have
+    // started before the calibration outcomes existed (look-ahead leakage).
+    const held = relevant.filter((r) => r.originDate >= start && r.targetDate >= start);
     if (held.length < minHeldOut) {
       heldOut = { ...noHeldOut(`Only ${held.length} held-out residuals; need ${minHeldOut}.`), startDate: start, count: held.length };
     } else {

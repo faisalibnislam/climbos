@@ -5,7 +5,7 @@
 
 import { rollingOriginBacktest, type BacktestResult } from "./backtest";
 import { getForecaster, minHistoryFor } from "./baselines";
-import { applyIntervals, calibrateIntervals } from "./intervals";
+import { applyIntervals, calibrateIntervals, HELD_OUT_METHOD } from "./intervals";
 import { addDays, assertContiguous, assertValidSeries, type DailyPoint } from "./series";
 
 export type RunForecastMethod = "seasonal_naive" | "drift" | "moving_average";
@@ -46,6 +46,7 @@ export interface ForecastResult {
   points: ForecastPoint[];
   backtest: BacktestResult | null;
   calibration: {
+    heldOutMethod: typeof HELD_OUT_METHOD;
     residualCounts: number[];
     bucketSize: number;
     heldOutCoverage80: number | null;
@@ -149,6 +150,7 @@ export function runForecast(input: RunForecastInput): ForecastResult {
       points: [],
       backtest: null,
       calibration: {
+        heldOutMethod: HELD_OUT_METHOD,
         residualCounts: [],
         bucketSize: 7,
         heldOutCoverage80: null,
@@ -199,7 +201,7 @@ export function runForecast(input: RunForecastInput): ForecastResult {
       warnings.push(`Interval coverage not verified on held-out data: ${calibration.heldOut.reason ?? "unknown reason"}`);
     } else {
       assumptions.push(
-        `Held-out coverage (targets from ${calibration.heldOut.startDate}, n=${calibration.heldOut.count}): 80% interval ${(calibration.heldOut.coverage80 * 100).toFixed(1)}%, 95% interval ${((calibration.heldOut.coverage95 ?? 0) * 100).toFixed(1)}%.`,
+        `Held-out coverage (forecast origins from ${calibration.heldOut.startDate}, n=${calibration.heldOut.count}): 80% interval ${(calibration.heldOut.coverage80 * 100).toFixed(1)}%, 95% interval ${((calibration.heldOut.coverage95 ?? 0) * 100).toFixed(1)}%. These are pooled, overlapping forecast-step errors, not independent observations or a separate coverage guarantee for each horizon.`,
       );
     }
   }
@@ -217,6 +219,7 @@ export function runForecast(input: RunForecastInput): ForecastResult {
     points,
     backtest,
     calibration: {
+      heldOutMethod: HELD_OUT_METHOD,
       residualCounts: calibration.residualCounts,
       bucketSize: calibration.bucketSize,
       heldOutCoverage80: calibration.heldOut.coverage80,

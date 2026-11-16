@@ -22,6 +22,28 @@ describe("forecast evidence contract", () => {
   beforeEach(() => { vi.spyOn(Date, "now").mockReturnValue(now); });
   afterEach(() => vi.restoreAllMocks());
 
+  it.each([undefined, "unknown_method"])("does not present %s historical coverage as chronologically verified", async marker => {
+    const t = setup(); const w = await workspace(t);
+    await daily(t, w.orgId, history(180));
+    const id = await w.client.mutation(api.analytics.createForecast, { slug: w.slug, metricKey: "visits", horizonDays: 30 });
+    const fresh = await w.client.query(api.analytics.getForecast, { slug: w.slug, forecastId: id });
+    expect(fresh.calibration).toMatchObject({ heldOutMethod: "origin_after_calibration_v1", heldOutCount: 645, heldOutCoverage80: 1, heldOutCoverage95: 1 });
+    const stored = (await t.run(ctx => ctx.db.get(id)))!;
+    const legacy = JSON.parse(stored.result);
+    legacy.calibration.heldOutMethod = marker;
+    legacy.assumptions.push("Held-out coverage (targets from a historical cutoff): 80% interval 100%.");
+    const historical = JSON.stringify(legacy);
+    await t.run(ctx => ctx.db.patch(id, { result: historical }));
+    const viewed = await w.client.query(api.analytics.getForecast, { slug: w.slug, forecastId: id });
+    expect(viewed.points).toEqual(fresh.points);
+    expect(viewed.history).toEqual(fresh.history);
+    expect(viewed.calibration).toMatchObject({ heldOutCoverage80: null, heldOutCoverage95: null, heldOutCount: 0 });
+    expect(viewed.warnings.join(" ")).toMatch(/historical.*coverage.*cutoff/i);
+    expect(viewed.assumptions.some(line => line.startsWith("Held-out coverage"))).toBe(false);
+    expect((await t.run(ctx => ctx.db.get(id)))!.result).toBe(historical);
+    for (const table of ["workflowRuns", "approvals", "actionReceipts"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
+  });
+
   it("uses contiguous observed history, preserves explicit zero and freezes the original training values", async () => {
     const t = setup(); const w = await workspace(t);
     const input = history().filter(p => p.date !== addDays(today, -15)).map(p => p.date === addDays(today, -2) ? { ...p, value: 0 } : p);

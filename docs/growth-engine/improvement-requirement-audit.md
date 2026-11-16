@@ -1,3 +1,7 @@
+## 17 November 2026 — forecasts, economics and learning
+
+Rows 26–30 have a current [scoped reconciliation](forecast-learning-completion-audit.md). The confirmed chronological leakage in range-coverage evaluation is repaired: eligible held-out forecasts must begin after calibration outcomes were available. Historical percentages without that method record are withheld, with original forecasts preserved. Deterministic arithmetic, incomplete-data handling and recorded learning already exist; full accounting, causal inference, representative model quality and production forecast accuracy remain unproven. All five broad rows remain partial.
+
 ## 17 November 2026 — research source-label fidelity
 
 Row 24 follow-up: commercial, SWOT and audience/channel finding labels now agree with every cited reference's recorded source class. Owner reports mentioning analytics cannot be upgraded to measured evidence; unknown provenance cannot be guessed. This runs in drafting lint and the new final acceptance boundary. Actual job/tenant regressions and unit checks pass. [Research evidence audit](research-evidence-completion-audit.md) retains semantic truth, historical and broad acceptance limits.

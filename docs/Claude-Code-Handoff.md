@@ -336,6 +336,10 @@ Real v2 onboarding now validates retained insights against its existing schema/s
 
 The insights linter now compares commercial, SWOT and audience/channel labels with every referenced source's recorded provenance using the existing `referenceEvidenceBasis`. Twelve red unit cases exposed relabeling; actual onboarding tests preserve accepted owner reports and reject measured/source-class mismatches before replacing insights. Inference remains allowed. Engine v3.119-insights-source-basis; 105 tests/10 files, typecheck and lint passed. No measured connector or historical migration is implied. See Verification and the updated research audit; remaining work includes semantic claim support and rows 26–30, not another provenance prompt.
 
+## Forecast coverage follow-up — 17 November 2026
+
+Range calibration previously excluded later targets but evaluated forecasts originating before its cutoff. Regressions demonstrated that interval coverage could use later information relative to forecast issuance. Held-out evaluation now requires origin and target on/after the calibration cutoff and records `origin_after_calibration_v1`. Historical results without a recognized marker retain stored JSON, points/ranges/history, but their coverage claims are withheld with a warning. 59 tests/six files, typecheck and lint pass. See [the rows 26–30 audit](growth-engine/forecast-learning-completion-audit.md) and Verification. No point-forecast formula, agent, provider or external action changed; predictive quality, causal learning and complete requirement acceptance remain unproven. Continue the remaining requirement reconciliation beyond row 30 while retaining these acceptance gaps.
+
 ## What remains and should guide the next work
 
 These are known open gaps, not a complete substitute for checking the requirement audit and ledger before choosing work:

@@ -5,7 +5,7 @@ import { attribute, computeCohorts, OVERLAP_WARNING, summarizePlatformClaims } f
 import { zonedTime } from "../shared/autopilot";
 import type { RevenueEvent, Touch } from "../shared/attribution/types";
 import { isPaymentRecord, PAYMENT_BASIS, SALES_PAYMENT_NOTE, LEGACY_BILLING_NOTE, needsPaymentRefresh } from "../shared/attribution/paymentEvidence";
-import { addDays, recentForecastHistory, metricHealth, runForecast, type DailyPoint, type MetricHealthAlert, scoreForecast, isValidDateString, daysBetween } from "../shared/forecasting";
+import { addDays, recentForecastHistory, metricHealth, runForecast, type DailyPoint, type MetricHealthAlert, scoreForecast, isValidDateString, daysBetween, HELD_OUT_METHOD } from "../shared/forecasting";
 import { formatMoney, majorToMinor, minorToMajor } from "../shared/economics/currency";
 import { summarizeAiReferralRows } from "../shared/integrations/ga4";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -684,8 +684,13 @@ export const getForecast = query({
       .first();
     const saved = JSON.parse(f.result) as {
       points: { date: string; value: number; lo80?: number; hi80?: number; lo95?: number; hi95?: number }[];
+      calibration: { residualCounts: number[]; heldOutMethod?: string; heldOutCoverage80: number | null; heldOutCoverage95: number | null; heldOutCount: number; heldOutStartDate?: string | null; reason: string | null };
+      assumptions: string[];
+      warnings: string[];
       evidence?: { version: number; currency: string; timezone: string; metric: typeof METRICS[MetricKey]; sources: string[]; history: DailyPoint[] };
     };
+    const unverifiedCoverage = saved.calibration.heldOutMethod !== HELD_OUT_METHOD && (saved.calibration.heldOutCount > 0 || saved.calibration.heldOutCoverage80 != null || saved.calibration.heldOutCoverage95 != null);
+    const coverageIssue = "Historical interval coverage has no verified forecast-origin cutoff. Its percentages are withheld; the original forecast and ranges remain saved. Create a new forecast for a chronological coverage check.";
     const evidence = saved.evidence?.version === 1 ? saved.evidence : null;
     const today = dayKey(Date.now(), evidence?.timezone ?? org.timezone);
     const dates = saved.points.map(p => p.date).filter(isValidDateString).sort();
@@ -719,12 +724,10 @@ export const getForecast = query({
       currency: evidence?.currency ?? null,
       timezone: evidence?.timezone ?? null,
       history: evidence?.history ?? [],
-      ...(JSON.parse(f.result) as {
-        points: { date: string; value: number; lo80?: number; hi80?: number; lo95?: number; hi95?: number }[];
-        calibration: { residualCounts: number[]; heldOutCoverage80: number | null; heldOutCoverage95: number | null; heldOutCount: number; reason: string | null };
-        assumptions: string[];
-        warnings: string[];
-      }),
+      ...saved,
+      calibration: unverifiedCoverage ? { ...saved.calibration, heldOutCoverage80: null, heldOutCoverage95: null, heldOutCount: 0, heldOutStartDate: null, reason: coverageIssue } : saved.calibration,
+      assumptions: unverifiedCoverage ? saved.assumptions.filter(line => !line.startsWith("Held-out coverage")) : saved.assumptions,
+      warnings: unverifiedCoverage ? [...saved.warnings, coverageIssue] : saved.warnings,
       backtest: backtest ? JSON.parse(backtest.result) : null,
     };
   },

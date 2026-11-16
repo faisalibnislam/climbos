@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: chronological forecast coverage
+
+Audited forecasts, contribution economics and result-learning paths for rows 26–30. Repaired a confirmed interval-evaluation cutoff gap: held-out targets could belong to forecasts issued before calibration outcomes were known. Evaluation now filters by forecast origin too and records its method. Missing/unrecognized historical markers withhold coverage claims at read time while preserving saved points/ranges/history. Four new regressions failed before the repairs; 59 tests/six files, typecheck and scoped lint pass. No agent/provider/model/database-schema/UI change, deployment or external action. See the new scoped audit and Verification; full predictive quality and broad requirement acceptance remain open.
+
 ## Local update — 17 November 2026: research source-label fidelity
 
 Twelve red unit cases exposed owner/researched/unknown provenance being relabeled in commercial, SWOT and audience/channel evidence. Reused the existing source-class resolver in the insights linter, checking every reference while preserving explicit inference. Actual onboarding tests verify recorded provenance and final rejection/preservation, plus owner failure visibility and tenant isolation. 105 tests/10 files, root/Convex typecheck and scoped lint passed. Engine v3.119-insights-source-basis. No new schema, UI, prompt, provider or external authority; claim truth and historical data remain outside this repair.

@@ -61,6 +61,7 @@ export {
   calibrateIntervals,
   conformalQuantile,
   cumulativeMax,
+  HELD_OUT_METHOD,
   type HeldOutCoverage,
   type IntervalBounds,
   type IntervalCalibration,
