@@ -431,10 +431,31 @@ export function untrusted(source: string, text: string, maxChars = 24_000): stri
 /** Research inputs for downstream content agents. Competitor findings are context, not proof or publishing claims. */
 export function businessResearchContext(insights?: Record<string, unknown>): string {
   if (!insights) return "";
-  const fields = ["positioningStatement", "positioning", "commercialAssessment", "siteAssessment", "vocPhrases", "objections", "audiences", "competitors"];
-  const context = Object.fromEntries(fields.filter((key) => insights[key] !== undefined && insights[key] !== null).map((key) => [key, insights[key]]));
+  // Fresh model output is flat; saveInsights persists these fields under expert.
+  const expert = insights.expert && typeof insights.expert === "object" && !Array.isArray(insights.expert)
+    ? insights.expert as Record<string, unknown> : {};
+  const fields = ["confidenceNotes", "positioningStatement", "positioning", "commercialAssessment", "siteAssessment", "vocPhrases", "objections", "audiences", "competitors"];
+  const context: Record<string, unknown> = {};
+  for (const key of fields) {
+    const value = insights[key] ?? expert[key];
+    if (value !== undefined && value !== null) context[key] = Array.isArray(value) ? value.slice() : value;
+  }
   if (!Object.keys(context).length) return "";
-  return `\n\nPOSITIONING, COMMERCIAL VALIDATION, WEBSITE, CUSTOMER LANGUAGE AND COMPETITOR RESEARCH:\nThe commercialAssessment is an evidence map and proposal for a bounded validation test, never a binary judgment that the business is viable or nonviable. Preserve evidence basis and limitations. Owner reports are not independent verification; a research source about a market is not proof of this business's own demand; website claims are not proof of customer demand, product quality, conversion performance, or willingness to pay. Treat competitor-site findings as published claims, not independent proof of effectiveness or customer preference. Use them to understand category expectations and possible differentiation; do not copy their wording, name a competitor, claim superiority, or present their pricing/features as current unless the owner explicitly asks and the current source is included.\n${untrusted("business research", JSON.stringify(context), 8_000)}`;
+  context.generatedAt = typeof insights.generatedAt === "number" && Number.isFinite(insights.generatedAt) && insights.generatedAt > 0 ? insights.generatedAt : null;
+  // Keep complete records: cutting a string can detach a phrase from its source
+  // or turn a qualified observation into an apparently unqualified claim.
+  let omitted = 0;
+  while (JSON.stringify(context).length > 8_000) {
+    const lists = Object.entries(context).filter((entry): entry is [string, unknown[]] => Array.isArray(entry[1]) && entry[1].length > 0)
+      .sort((a, b) => JSON.stringify(b[1]).length - JSON.stringify(a[1]).length);
+    if (lists.length) lists[0][1].pop();
+    else {
+      const largest = Object.keys(context).sort((a, b) => JSON.stringify(context[b]).length - JSON.stringify(context[a]).length)[0];
+      delete context[largest];
+    }
+    omitted++;
+  }
+  return `\n\nPOSITIONING, COMMERCIAL VALIDATION, WEBSITE, CUSTOMER LANGUAGE AND COMPETITOR RESEARCH:\nThe commercialAssessment is an evidence map and proposal for a bounded validation test, never a binary judgment that the business is viable or nonviable. Preserve evidence basis and limitations. Owner reports are not independent verification; a research source about a market is not proof of this business's own demand; website claims are not proof of customer demand, product quality, conversion performance, or willingness to pay. Treat competitor-site findings as published claims, not independent proof of effectiveness or customer preference. Use them to understand category expectations and possible differentiation; do not copy their wording, name a competitor, claim superiority, or present their pricing/features as current unless the owner explicitly asks and the current source is included.\nSaved positioning and objection counters are research proposals, not approved offer terms. Customer-language phrases are research-reported candidates, not verified testimonials: exact wording, customer identity, own versus competitor customers, authenticity, publication permission and prevalence remain unverified unless separately evidenced. Use their themes to propose original copy; do not publish them as customer quotations or imply customer endorsement from this context alone. generatedAt is the research-generation timestamp, not a source retrieval or verification date; null means unknown. Earlier research is not automatically current and grants no permission to send, publish or spend.${omitted ? `\nCONTEXT LIMIT: ${omitted} complete records or fields omitted to fit the research budget. Empty or missing fields in this excerpt are unknown, not evidence of absence. Recheck omitted material when it could change the decision.` : ""}\n${untrusted("business research", JSON.stringify(context), 8_000)}`;
 }
 
 /** `kind` (when given) is the fact's strength as evidence (shared/agents/evidenceKind.ts), e.g. "stated opinion" vs "measured". */

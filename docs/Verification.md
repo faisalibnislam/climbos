@@ -1,3 +1,27 @@
+## 16 November 2026 — persisted research in drafting and focused strategy
+
+Traced `saveInsights` → stored `business.insights.expert` → `jobContext` → `businessResearchContext` / `planContext` → actual social, ad, email and focused/starter strategy generation inputs. Four initial regression cases failed because the saved positioning and associated research never reached generation. Starter uses the same affected branch and is included in the final five-case integration matrix. Detailed strategy already included the saved insight object; it was not replaced.
+
+Implemented in the existing context path:
+
+- Read selected research fields from flat model output or nested persisted expert records, keeping explicit flat values (including cleared arrays) authoritative. Include confidence notes and a valid saved generation timestamp; absent/invalid generation time stays unknown.
+- Supply saved research to starter/focused strategy generation, matching the research already included in its saved snapshot/evidence. Restore nested research to downstream drafting through the existing shared helper.
+- Keep approved plan terms distinct from research proposals. Describe language records as research-reported candidates, not verified testimonials; a source link alone does not prove wording, customer identity, authenticity, publication permission or prevalence. Generation time is not retrieval/verification time.
+- Bound context at 8,000 JSON characters by omitting complete records/fields with an explicit limitation. Retained quotations/source links remain complete, the original object stays unchanged, and omitted evidence is not treated as absence.
+
+Verification:
+
+```sh
+pnpm exec vitest run tests/unit/business-research-context.test.ts tests/unit/research-quality.test.ts tests/convex/research-context.test.ts tests/convex/approval-claims.test.ts tests/convex/plan-approval.test.ts tests/convex/tenancy.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+pnpm exec eslint shared/ai/tasks.ts shared/agents/specs.ts convex/jobs.ts tests/convex/research-context.test.ts tests/convex/plan-approval.test.ts tests/unit/business-research-context.test.ts
+git diff --check
+```
+
+Focused regression/authorization result: **64 tests passed across seven files**. Application and Convex typecheck, scoped ESLint and diff checks passed. `CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync` successfully bundled/synced functions to the already-running isolated backend at `127.0.0.1:3320`; it was not a hosted deployment. The integration test writes through the real persistence mutation and invokes the real job actions, intercepting and stopping at the model boundary. It verifies source context, cross-tenant save rejection, foreign-context exclusion, and absence of artifacts, approvals and action receipts. It does not exercise a live model or provider publication. The first wider run also found an older weekly-report test creating verified jobs without recorded completion times; its fixture now supplies distinct completion times, matching the existing reporting contract. No reporting runtime change was needed.
+
+Remaining limits: source URL membership still does not establish exact quote support or semantic truth; the saved language records lack independently verified customer identity, permission and source freshness. Context selection is bounded, not exhaustive. No live quality benchmark, provider write, browser check or production deployment was performed for this backend/context-only increment. The original 410-requirement acceptance audit remains incomplete.
+
 ## 16 November 2026 — weekly scenario position and next-decision review
 
 Traced saved weekly reports through `actualsFor` → `playActuals` → `diagnoseShortfall` → `PlayResults` / `ExpertPlan` and `resultsBrief` → strategy job context. The initial focused regressions reproduced a large volume shortfall labeled On track and zero reported reach treated as proof the work never ran. Inspection also confirmed that the spend branch accepted any informative funnel step while a later step could remain thin; the final regression explicitly exercises an uncertain downstream conversion step.

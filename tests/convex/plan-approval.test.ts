@@ -337,10 +337,11 @@ describe("Weekly report", () => {
         isFixture: false,
         updatedAt: now,
       };
-      // One finished job earlier in the same stretch of last week, one later in last week (not comparable yet).
-      await ctx.db.insert("workflowRuns", { ...rest, kind: "content_social", status: "verified", createdAt: w.prevStart + Math.floor(elapsed / 2) });
-      await ctx.db.insert("workflowRuns", { ...rest, kind: "content_social", status: "verified", createdAt: w.prevStart + elapsed + 60_000 });
-      await ctx.db.insert("workflowRuns", { ...rest, kind: "content_social", status: "verified", createdAt: now - 1 });
+      // Recorded completion time determines the report period, not creation.
+      // One finish is in last week's comparable stretch; the later one is not.
+      await ctx.db.insert("workflowRuns", { ...rest, kind: "content_social", status: "verified", createdAt: w.prevStart - 1000, finishedAt: w.prevStart + Math.floor(elapsed / 2) });
+      await ctx.db.insert("workflowRuns", { ...rest, kind: "content_social", status: "verified", createdAt: w.prevStart - 1000, finishedAt: w.prevStart + elapsed + 60_000 });
+      await ctx.db.insert("workflowRuns", { ...rest, kind: "content_social", status: "verified", createdAt: w.prevStart - 1000, finishedAt: now - 1 });
     });
     const r = await u.client.query(api.reports.weekly, { slug });
     const jobs = r.lines.find((l) => l.key === "jobsDone");

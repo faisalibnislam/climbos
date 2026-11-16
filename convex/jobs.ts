@@ -563,7 +563,7 @@ async function runAgentTask<T>(
   }
 }
 
-/** The approved positioning and customer language, so content carries the plan. */
+/** Keep approved plan terms separate from unapproved research and language candidates. */
 function planContext(job: JobCtx): string {
   const insights = job.business?.insights as (Record<string, unknown> & { positioning?: string }) | undefined;
   const pinnedSuperseded = job.strategyPinned && job.strategy?.status === "superseded";
@@ -1393,7 +1393,7 @@ export const buildStrategy = internalAction({
         if (job.preparedStepWork) task += `\nACTUAL PREPARATION ALREADY DONE FOR THIS GOAL: reuse and improve these private drafts rather than asking the owner to research or write them again. The corresponding source reads are supplied separately. These texts and owner edits are proposals, not independently verified facts, publication or approval. Prefer this newer work over older draft placeholders: ${untrusted("saved step preparation", job.preparedStepWork, 10000)}`;
         const meta: AgentMeta = {};
         const learned = await ctx.runQuery(internal.learning.contextFor, { orgId: job.org._id });
-        task += `\n\n${learned ? `Prior learning (preserve observed vs reported vs inferred): ${learned}` : "No prior measured outcomes supplied."}${marketChangeContext(job)}`;
+        task += `${businessResearchContext(job.business?.insights as Record<string, unknown> | undefined)}\n\n${learned ? `Prior learning (preserve observed vs reported vs inferred): ${learned}` : "No prior measured outcomes supplied."}${marketChangeContext(job)}`;
         const supplied = job.focusedResearch;
         const profile = profileFrom({ saved: (job.business as { acquisition?: SavedAcquisition } | null)?.acquisition ?? null, legacyType: job.business?.businessType, legacyTypes: typesFromLegacy, budgetMinor: job.goal?.monthlyAdBudgetMinor ?? 0, horizonDays: job.goal?.horizonDays ?? 14, currency: workspaceCurrency(job) });
         const geography = profile.dims.geography?.value;
