@@ -6,7 +6,7 @@ import { approvalHash, contentHash } from "../shared/policy";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, mutation, type MutationCtx } from "./_generated/server";
-import { upsertDailyImpl } from "./analytics";
+import { METRICS, upsertDailyImpl } from "./analytics";
 import { uniqueSlug } from "./orgs";
 import { createDemoPeriod } from "./lib/periods";
 import { appError, requireUser } from "./lib/tenancy";
@@ -331,7 +331,7 @@ export const seedMetrics = internalMutation({
   handler: async (ctx, { orgId, startDays }) => {
     const org = await ctx.db.get(orgId);
     if (!org) return;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: org.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
     const start = addDays(today, -startDays);
     const visits = generateSyntheticDailySeries({ days: startDays, startDate: start, base: 300, trendPerDay: 0.35, noiseSd: 22, seed: 11, integer: true });
     const rng = createRng(29);
@@ -391,7 +391,7 @@ export const seedMetrics = internalMutation({
         method: result.method,
         horizonDays: 30,
         status: result.status,
-        result: JSON.stringify({ points: result.points, calibration: result.calibration, assumptions: result.assumptions, warnings: ["Demo data is synthetic.", ...result.warnings] }),
+        result: JSON.stringify({ points: result.points, calibration: result.calibration, assumptions: result.assumptions, warnings: ["Demo data is synthetic.", ...result.warnings], evidence: { version: 1, currency: org.currency, timezone: org.timezone, metric: METRICS[metricKey], sources: metricKey === "paid_conversions" ? ["billing-first-recorded-v1"] : ["demo synthetic"], history: series } }),
         dataThrough: series[series.length - 1]?.date,
         historyDays: series.length,
         isFixture: true,

@@ -3,7 +3,7 @@ import { featureAllowed } from "./lib/access";
 import { getLiveConfig } from "./lib/config";
 import { attribute, computeCohorts, OVERLAP_WARNING, summarizePlatformClaims } from "../shared/attribution";
 import type { RevenueEvent, Touch } from "../shared/attribution/types";
-import { addDays, fillMissingDays, metricHealth, runForecast, type DailyPoint, scoreForecast } from "../shared/forecasting";
+import { addDays, recentForecastHistory, metricHealth, runForecast, type DailyPoint, scoreForecast, isValidDateString, daysBetween } from "../shared/forecasting";
 import { formatMoney, majorToMinor, minorToMajor } from "../shared/economics/currency";
 import { summarizeAiReferralRows } from "../shared/integrations/ga4";
 import type { Id } from "./_generated/dataModel";
@@ -39,14 +39,17 @@ export async function upsertDailyImpl(
   isFixture = false,
 ) {
   const now = Date.now();
+  const org = await ctx.db.get(orgId);
+  if (!org) throw appError("NOT_FOUND", "Workspace not found.");
+  const basis = { workspaceTimezone: org.timezone, workspaceCurrency: org.currency };
   for (const r of rows) {
     const existing = await ctx.db
       .query("metricDaily")
       .withIndex("by_org_metric_date", (q) => q.eq("orgId", orgId).eq("metricKey", r.metricKey).eq("date", r.date))
       .take(20);
     const same = existing.find((e) => e.source === source && e.kind === kind && e.channel === r.channel);
-    if (same) await ctx.db.patch(same._id, { value: r.value, ingestedAt: now });
-    else await ctx.db.insert("metricDaily", { orgId, metricKey: r.metricKey, date: r.date, value: r.value, source, kind, channel: r.channel, isFixture, ingestedAt: now });
+    if (same) await ctx.db.patch(same._id, { value: r.value, ingestedAt: now, ...basis });
+    else await ctx.db.insert("metricDaily", { orgId, metricKey: r.metricKey, date: r.date, value: r.value, source, kind, channel: r.channel, isFixture, ingestedAt: now, ...basis });
   }
 }
 
@@ -145,7 +148,7 @@ async function firstRecordedPayerDays(
   from: string,
   to: string,
   timezone: string,
-): Promise<{ counts: Map<string, number>; hasIdentifiedCustomers: boolean; isFixture: boolean; partial: boolean; freshness: number }> {
+): Promise<{ counts: Map<string, number>; observedDates: string[]; hasIdentifiedCustomers: boolean; isFixture: boolean; partial: boolean; freshness: number }> {
   // Include a UTC day on either side; `from`/`to` are business-local dates.
   const fromMs = Date.parse(`${from}T00:00:00Z`) - DAY;
   const toMs = Date.parse(`${to}T23:59:59.999Z`) + DAY;
@@ -180,6 +183,7 @@ async function firstRecordedPayerDays(
   }
   return {
     counts,
+    observedDates: [...new Set(inRange.filter(r => r.customerRef && r.kind !== "refund").map(r => dayKey(r.occurredAt, timezone)))].sort(),
     hasIdentifiedCustomers: customerKeys.length > 0,
     isFixture: inRange.some((r) => r.isFixture),
     partial: rows.length >= 10_000 || customerKeys.length > 2_000 || historyPartial,
@@ -268,6 +272,25 @@ async function series(ctx: { db: QueryCtx["db"] }, orgId: Id<"organizations">, m
   }
   const points: DailyPoint[] = [...byDate.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([date, value]) => ({ date, value }));
   return { points, freshness, source: sources.size === 1 ? [...sources][0] : sources.size > 1 ? "Multiple sources" : "", isFixture };
+}
+
+/** Forecasts need comparable, non-duplicated daily observations; never add competing source totals. */
+async function forecastSeries(ctx: { db: QueryCtx["db"] }, org: { _id: Id<"organizations">; timezone: string; currency: string }, metricKey: string, from: string, to: string, purpose: "fit" | "score" = "fit") {
+  if (metricKey === "paid_conversions") {
+    const payers = await firstRecordedPayerDays(ctx, org._id, from, to, org.timezone);
+    return { points: payers.observedDates.map(date => ({ date, value: payers.counts.get(date) ?? 0 })), sources: ["billing-first-recorded-v1"], excludedContextRows: 0, isFixture: payers.isFixture, issue: payers.partial ? "The billing read reached its limit. A complete comparable customer history is needed before forecasting or scoring." : null };
+  }
+  const rows = await ctx.db.query("metricDaily").withIndex("by_org_metric_date", q => q.eq("orgId", org._id).eq("metricKey", metricKey).gte("date", from).lte("date", to)).take(2001);
+  const eligible = rows.filter(r => r.kind === "observed" && !r.channel);
+  const observed = eligible.filter(r => r.workspaceTimezone === org.timezone && (metricKey !== "revenue" || r.workspaceCurrency === org.currency));
+  const excludedContextRows = eligible.length - observed.length;
+  const sources = [...new Set(observed.map(r => r.source))].sort();
+  let issue: string | null = rows.length > 2000 ? "The daily-data read reached its limit. Narrow or repair the source history before forecasting or scoring." : null;
+  if (metricKey !== "revenue" && observed.some(r => r.value < 0)) issue = "Daily counts cannot be negative. Correct the source observations before forecasting or scoring.";
+  if (sources.length > 1) issue = "More than one source reports this metric. Their totals may overlap; reconcile the sources before forecasting or scoring.";
+  if (new Set(observed.map(r => r.date)).size !== observed.length) issue = "Duplicate daily observations need reconciliation before forecasting or scoring.";
+  if (excludedContextRows && (purpose === "score" || !observed.length)) issue = "The daily records have different or unknown workspace currency/timezone settings. Refresh comparable source data before forecasting or scoring.";
+  return { points: observed.map(r => ({ date: r.date, value: r.value })).sort((a,b) => a.date.localeCompare(b.date)), sources, excludedContextRows, isFixture: observed.some(r => r.isFixture), issue };
 }
 
 /** Small, read-only Home snapshot. Keep this cheaper than the full Results overview. */
@@ -533,28 +556,29 @@ export const createForecast = mutation({
   },
   handler: async (ctx, { slug, metricKey, horizonDays }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
-    const horizon = [7, 30, 90].includes(horizonDays) ? horizonDays : 30;
+    if (![7, 30, 90].includes(horizonDays)) throw appError("INVALID", "Choose a 7-, 30- or 90-day horizon.");
+    const horizon = horizonDays;
+    try { new Intl.DateTimeFormat("en-US", { timeZone: org.timezone }); } catch { throw appError("INVALID", "Confirm your workspace timezone before forecasting."); }
     const today = dayKey(Date.now(), org.timezone);
-    const hist = await series(ctx, org._id, metricKey, addDays(today, -1100), addDays(today, -1));
-    if (hist.points.length === 0) {
-      throw appError("INVALID", `No ${METRICS[metricKey].label.toLowerCase()} data yet. Connect a data source first.`);
-    }
-    // Missing days for count/revenue metrics from a connected source are true zeros only when the source reported the day;
-    // gaps are reported, not invented.
-    const filled = fillMissingDays(hist.points, "zero_fill_known_count");
-    const result = runForecast({ series: filled.series, horizonDays: horizon, method: "seasonal_naive", nonNegative: true, seed: 7 });
-    if (filled.missingDates.length > 0) {
-      result.warnings.push(`${filled.missingDates.length} day(s) had no data and were treated as zero.`);
-    }
+    const hist = await forecastSeries(ctx, org, metricKey, addDays(today, -1100), addDays(today, -1));
+    if (hist.issue) throw appError("INVALID", hist.issue);
+    let prepared;
+    try { prepared = recentForecastHistory(hist.points, addDays(today, -1)); }
+    catch (error) { throw appError("INVALID", (error as Error).message); }
+    const result = runForecast({ series: prepared.history, horizonDays: horizon, method: "seasonal_naive", nonNegative: metricKey !== "revenue", seed: 7 });
+    if (hist.excludedContextRows) result.warnings.push(`${hist.excludedContextRows} historical row(s) had different or unknown aggregation settings and were excluded. Only comparable consecutive history is used.`);
+    if (prepared.excludedDays) result.warnings.push(`Used the latest ${prepared.history.length} consecutive observed days. ${prepared.missingDays} missing day(s) remain unknown; ${prepared.excludedDays} earlier observed days were excluded from fitting.`);
+    result.assumptions.push("These are imported observations, not proof of complete business coverage. Workspace aggregation settings do not independently verify a provider's reporting timezone.");
+    const evidence = { version: 1, currency: org.currency, timezone: org.timezone, metric: METRICS[metricKey], sources: hist.sources, history: prepared.history };
     const forecastId = await ctx.db.insert("forecastRuns", {
       orgId: org._id,
       metricKey,
       method: result.method,
       horizonDays: horizon,
       status: result.status,
-      result: JSON.stringify({ points: result.points, calibration: result.calibration, assumptions: result.assumptions, warnings: result.warnings }),
-      dataThrough: filled.series[filled.series.length - 1]?.date,
-      historyDays: filled.series.length,
+      result: JSON.stringify({ points: result.points, calibration: result.calibration, assumptions: result.assumptions, warnings: result.warnings, evidence }),
+      dataThrough: prepared.history.at(-1)?.date,
+      historyDays: prepared.history.length,
       isFixture: hist.isFixture,
       createdAt: Date.now(),
     });
@@ -576,16 +600,33 @@ export const getForecast = query({
       .query("backtestRuns")
       .withIndex("by_forecast", (q) => q.eq("forecastRunId", f._id))
       .first();
-    const today = dayKey(Date.now(), org.timezone);
-    const hist = await series(ctx, org._id, f.metricKey, addDays(today, -120), addDays(today, -1));
-    const saved = JSON.parse(f.result) as { points: { date: string; value: number; lo80?: number; hi80?: number; lo95?: number; hi95?: number }[] };
-    // Forward check: forecast days that have since been observed (history covers the last 120 days).
-    const forwardScore = scoreForecast(saved.points, hist.points, f.horizonDays);
+    const saved = JSON.parse(f.result) as {
+      points: { date: string; value: number; lo80?: number; hi80?: number; lo95?: number; hi95?: number }[];
+      evidence?: { version: number; currency: string; timezone: string; metric: typeof METRICS[MetricKey]; sources: string[]; history: DailyPoint[] };
+    };
+    const evidence = saved.evidence?.version === 1 ? saved.evidence : null;
+    const today = dayKey(Date.now(), evidence?.timezone ?? org.timezone);
+    const dates = saved.points.map(p => p.date).filter(isValidDateString).sort();
+    const from = dates[0];
+    const to = dates.at(-1);
+    let comparisonIssue: string | null = !evidence ? "This older forecast has no saved source, currency, timezone or training-history record. Its original projection remains visible, but a comparable forward check cannot be verified." : null;
+    if (evidence && (evidence.timezone !== org.timezone || (f.metricKey === "revenue" && evidence.currency !== org.currency))) comparisonIssue = "Workspace currency or timezone changed after this forecast. Its original values are preserved; current data is not compared under different settings.";
+    if (evidence && JSON.stringify(evidence.metric) !== JSON.stringify(METRICS[f.metricKey as MetricKey])) comparisonIssue = "The metric definition changed after this forecast. Its old definition is retained; current observations are not comparable.";
+    if (!from || !to || daysBetween(from, to) >= 90 || from < dayKey(f.createdAt, evidence?.timezone ?? org.timezone)) comparisonIssue = "The saved forecast window is missing, invalid or begins before it was issued. It cannot be scored as a forward prediction.";
+    let actuals: DailyPoint[] = [];
+    if (!comparisonIssue && evidence && from && to && from < today) {
+      const actual = await forecastSeries(ctx, org, f.metricKey, from, to < today ? to : addDays(today, -1), "score");
+      comparisonIssue = actual.issue;
+      if (!comparisonIssue && actual.points.length && JSON.stringify(actual.sources) !== JSON.stringify(evidence.sources)) comparisonIssue = "The metric source changed after this forecast; reconcile its definition and coverage before comparing outcomes.";
+      if (!comparisonIssue) actuals = actual.points;
+    }
+    const forwardScore = scoreForecast(saved.points, actuals, f.horizonDays);
+    if (comparisonIssue) forwardScore.unavailableReason = comparisonIssue;
     return {
       id: f._id,
       forwardScore,
       metricKey: f.metricKey,
-      metric: METRICS[f.metricKey as MetricKey],
+      metric: evidence?.metric ?? { ...METRICS[f.metricKey as MetricKey], ...(f.metricKey === "paid_conversions" ? { label: "Paid conversions (legacy)" } : {}), definition: "The original metric definition was not saved. Current catalog definitions cannot establish what this historical forecast counted." },
       method: f.method,
       horizonDays: f.horizonDays,
       status: f.status,
@@ -593,8 +634,9 @@ export const getForecast = query({
       historyDays: f.historyDays,
       isFixture: f.isFixture,
       createdAt: f.createdAt,
-      currency: org.currency,
-      history: hist.points,
+      currency: evidence?.currency ?? null,
+      timezone: evidence?.timezone ?? null,
+      history: evidence?.history ?? [],
       ...(JSON.parse(f.result) as {
         points: { date: string; value: number; lo80?: number; hi80?: number; lo95?: number; hi95?: number }[];
         calibration: { residualCounts: number[]; heldOutCoverage80: number | null; heldOutCoverage95: number | null; heldOutCount: number; reason: string | null };

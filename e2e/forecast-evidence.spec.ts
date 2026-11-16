@@ -1,0 +1,57 @@
+import { expect, test } from "@playwright/test";
+import { addDays } from "../shared/forecasting/series";
+import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
+import { localDemoFixtures } from "./local-demo-fixtures";
+
+const envFile = process.env.CLIMBOS_DESIGN_E2E_ENV_FILE;
+const { rows, append } = localDemoFixtures(envFile);
+
+test("forecast creation and historical outcome checks retain comparable evidence @mobile", async ({ page, baseURL }, testInfo) => {
+  test.skip(!envFile, "Requires the isolated local fixture backend");
+  test.setTimeout(180_000);
+  expect(baseURL).toBe("http://127.0.0.1:3420");
+  const slug = await openDemo(page);
+  const org = (await rows("organizations")).find(r => r.slug === slug);
+  if (!org || org.kind !== "demo") throw new Error("Synthetic forecast checks require a demo workspace");
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto(`/app/${slug}/results`);
+  await page.getByRole("tab", { name: "Look ahead", exact: true }).click();
+  await page.getByRole("combobox", { name: "Metric", exact: true }).click();
+  await page.getByRole("option", { name: "Website visits", exact: true }).click();
+  await page.getByRole("button", { name: "Forecast", exact: true }).click();
+  await page.waitForURL(/\/results\/forecasts\//);
+  await expect(page.getByRole("heading", { name: "Website visits: 30-day forecast", exact: true })).toBeVisible();
+  await expect(page.getByText(/No comparable observations are available yet/)).toBeVisible();
+  await expect(page.getByText("America/New_York", { exact: true })).toBeVisible();
+  const id = page.url().split("/").at(-1);
+  const created = (await rows("forecastRuns")).find(r => r._id === id && r.orgId === org._id);
+  if (!created) throw new Error("Owner-created forecast missing");
+  const saved = JSON.parse(String(created.result));
+  expect(saved.evidence.history.length).toBeGreaterThan(7);
+  await expectAccessible(page, "new forecast evidence");
+  await expectNoHorizontalScroll(page);
+
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: String(org.timezone), year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const first = addDays(today, -200);
+  const result = { ...saved, points: Array.from({ length: 7 }, (_, i) => ({ date: addDays(first, i), value: 10 })), evidence: { ...saved.evidence, history: Array.from({ length: 7 }, (_, i) => ({ date: addDays(first, i - 7), value: 10 })) } };
+  const issued = Date.parse(`${first}T12:00:00Z`);
+  await append("forecastRuns", [{ orgId: org._id, metricKey: "visits", method: "seasonal_naive", horizonDays: 7, status: "insufficient_evidence", result: JSON.stringify(result), dataThrough: addDays(first, -1), historyDays: 7, isFixture: true, createdAt: issued }]);
+  const historic = (await rows("forecastRuns")).find(r => r.orgId === org._id && r.createdAt === issued);
+  if (!historic) throw new Error("Synthetic historical forecast missing");
+  const observed = (i: number, value: number) => ({ orgId: org._id, metricKey: "visits", date: addDays(first, i), value, source: saved.evidence.sources[0], kind: "observed", isFixture: true, ingestedAt: Date.now(), workspaceTimezone: org.timezone, workspaceCurrency: org.currency });
+  await append("metricDaily", Array.from({ length: 6 }, (_, i) => observed(i, 12)));
+  const effects = async () => Promise.all(["approvals", "actionReceipts", "workflowRuns", "forecastRuns"].map(async table => (await rows(table)).filter(r => r.orgId === org._id)));
+  const before = await effects();
+  await page.goto(`/app/${slug}/results/forecasts/${historic._id}`);
+  await expect(page.getByText(/6 of 7 forecast days observed/)).toBeVisible();
+  await expect(page.getByText("72 vs 60 (+20%)", { exact: true })).toBeVisible();
+  await append("metricDaily", [observed(6, 0)]);
+  await expect(page.getByText("All forecast days observed.", { exact: true })).toBeVisible();
+  await expect(page.getByText("72 vs 70 (+3%)", { exact: true })).toBeVisible();
+  await expectAccessible(page, "historical forecast comparison");
+  await expectNoHorizontalScroll(page);
+  await page.screenshot({ path: testInfo.outputPath("forecast-evidence.png"), fullPage: false });
+  expect(await effects()).toEqual(before);
+  expect(errors).toEqual([]);
+});

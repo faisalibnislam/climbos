@@ -21,7 +21,8 @@ const asList = (items: string[]) => (items.length === 1 ? items[0] : items.map((
 
 /** How the saved forecast is doing against days observed since it was made (computed; partial periods labelled). */
 export function ForwardScoreSection({ score: s, format }: { score: ForwardScore; format: (n: number) => string }) {
-  if (s.state === "not_started") return <p className="text-ui text-ink-3">No forecast days have passed yet, so it can&apos;t be checked.</p>;
+  if (s.unavailableReason) return <Callout tone="warning" title="Accuracy check unavailable">{s.unavailableReason}</Callout>;
+  if (s.state === "not_started") return <p className="text-ui text-ink-3">No comparable observations are available yet, so this forecast can&apos;t be checked. Missing outcomes are unknown, not zero.</p>;
   const pct = (n: number) => `${n >= 0 ? "+" : ""}${Math.round(n * 100)}%`;
   return (
     <section aria-label="How this forecast is doing" className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4">
@@ -59,7 +60,7 @@ export function ForecastDetail({ slug, forecastId }: { slug: string; forecastId:
   }
 
   const calibrated = f.status === "calibrated";
-  const fmt = (n: number) => formatMetric(n, f.metric.unit, f.currency);
+  const fmt = (n: number) => f.metric.unit === "currency_minor" && !f.currency ? `${formatNumber(n)} minor units (currency unknown)` : formatMetric(n, f.metric.unit, f.currency);
   const history = f.history.slice(-HISTORY_DAYS_SHOWN);
   const points = [
     ...history.map((p) => ({ x: shortDate(p.date), y: p.value })),
@@ -85,14 +86,14 @@ export function ForecastDetail({ slug, forecastId }: { slug: string; forecastId:
       : []),
   ];
 
-  const unitNote = f.metric.unit === "currency_minor" ? ` · ${f.currency}` : "";
+  const unitNote = f.metric.unit === "currency_minor" ? ` · ${f.currency ?? "original currency unknown"}` : "";
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
       <div className="flex flex-col gap-3">
         {back}
         <h1 className="heading-page">
-          {f.metric.label}: next {f.horizonDays} days
+          {f.metric.label}: {f.horizonDays}-day forecast
         </h1>
         <div className="flex flex-wrap items-center gap-2">
           <ForecastStatusBadge status={f.status} />
@@ -105,8 +106,16 @@ export function ForecastDetail({ slug, forecastId }: { slug: string; forecastId:
             <dd>{FORECAST_METHOD_LABELS[f.method] ?? f.method}</dd>
           </div>
           <div className="flex gap-1.5">
+            <dt className="text-ink-3">Forecast window:</dt>
+            <dd>{f.points.length ? `${longDate(f.points[0].date)} – ${longDate(f.points.at(-1)!.date)}` : "No projection available"}</dd>
+          </div>
+          <div className="flex gap-1.5">
             <dt className="text-ink-3">Data through:</dt>
             <dd>{f.dataThrough ? longDate(f.dataThrough) : "—"}</dd>
+          </div>
+          <div className="flex gap-1.5">
+            <dt className="text-ink-3">Reporting timezone:</dt>
+            <dd>{f.timezone ?? "Not saved with this forecast"}</dd>
           </div>
           <div className="flex gap-1.5">
             <dt className="text-ink-3">History:</dt>
@@ -121,7 +130,7 @@ export function ForecastDetail({ slug, forecastId }: { slug: string; forecastId:
 
       {calibrated ? (
         <Callout tone="success" title="Calibrated forecast">
-          In tests, {cal.heldOutCoverage80 !== null ? formatPercent(cal.heldOutCoverage80, 0) : "about 80%"} landed in the shaded 80% range.
+          {cal.heldOutCoverage80 !== null ? `In held-out checks, ${formatPercent(cal.heldOutCoverage80, 0)} of predictions landed in the shaded range.` : "Ranges were estimated from past errors, but coverage has not been verified on held-out data."} This does not guarantee future coverage.
         </Callout>
       ) : (
         <Callout tone="warning" title="Not enough evidence for a range">
@@ -133,11 +142,11 @@ export function ForecastDetail({ slug, forecastId }: { slug: string; forecastId:
 
       <section aria-labelledby="chart-heading" className="flex flex-col gap-3">
         <h2 id="chart-heading" className="heading-section flex items-center gap-2">
-          <ChartLine aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> History and projection
+          <ChartLine aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> Saved history and projection
         </h2>
         <LineChart
           title={`${f.metric.label} per day`}
-          description={`Solid: observed · dashed: projected${calibrated ? " · shaded: 80% range" : ""}`}
+          description={`Solid: observations saved when issued · dashed: projected${calibrated ? " · shaded: 80% range" : ""}`}
           source={`${f.metric.source}${unitNote}`}
           points={points}
           valueLabel={f.metric.label}
@@ -154,7 +163,7 @@ export function ForecastDetail({ slug, forecastId }: { slug: string; forecastId:
       <Definition summary="How to read this">
         <ul className="list-disc space-y-1 pl-5">
           <li>Projection, not a promise.</li>
-          {calibrated ? <li>80% range: ~8 in 10 days land inside. 95%: ~19 in 20.</li> : <li>No range: treat the line as a rough guide.</li>}
+          {calibrated ? <li>80% and 95% are target coverage levels. Future outcomes may fall outside these ranges.</li> : <li>No range: treat the line as a rough guide.</li>}
           <li>{f.metric.definition}</li>
           <li>Uses past numbers only: no upcoming campaigns, holidays or price changes.</li>
         </ul>

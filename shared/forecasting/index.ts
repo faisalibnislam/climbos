@@ -89,3 +89,5 @@ export { generateSyntheticDailySeries, type SyntheticSeriesOptions } from "./syn
 
 export { scoreForecast, type ForwardScore } from "./forwardScore";
 export { metricHealth, type MetricHealthAlert } from "./health";
+
+export { recentForecastHistory } from "./history";

@@ -5341,6 +5341,9 @@ export default defineSchema({
     channel: v.optional(v.string()),
     isFixture: v.boolean(),
     ingestedAt: v.number(),
+    /** Workspace aggregation settings at ingestion, not proof of the provider's reporting timezone. */
+    workspaceTimezone: v.optional(v.string()),
+    workspaceCurrency: v.optional(v.string()),
   })
     .index("by_org_metric_date", ["orgId", "metricKey", "date"])
     .index("by_org_date", ["orgId", "date"]),

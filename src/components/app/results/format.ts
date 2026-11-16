@@ -60,7 +60,7 @@ export function longDate(date: string): string {
 export const METRIC_LABELS: Record<string, string> = {
   visits: "Website visits",
   signups: "Sign-ups",
-  paid_conversions: "New paying customers",
+  paid_conversions: "First recorded paying customers",
   revenue: "Revenue (net of refunds)",
 };
 
