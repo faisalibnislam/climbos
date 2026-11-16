@@ -41,6 +41,7 @@ test("post observations preserve zero, unknowns and corrections without actions 
   const saved = (await rows("postMetrics")).filter(row => row.artifactId === post._id);
   expect(saved.map(row => row.qualifiedVisits).sort()).toEqual([12,9]);
   expect(saved.every(row => row.source === "fixture" && row.payingCustomers === 0 && row.signups === undefined)).toBe(true);
+  await expect(page.getByText(/Weekly planning considers recent reports, including older and manually prepared posts/)).toBeVisible();
   await expectNoHorizontalScroll(page); await expectAccessible(page, "Post result reporting");
   await page.screenshot({ path: testInfo.outputPath("post-results.png"), fullPage: true });
   expect(await effects()).toEqual(before);

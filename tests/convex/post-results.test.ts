@@ -47,15 +47,75 @@ describe("version-bound social post observations", () => {
     for (const table of ["approvals", "actionReceipts"] as const) expect(await f.t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
     expect((await f.t.run(ctx => ctx.db.query("auditEvents").collect())).some(row => row.action === "post.results_recorded")).toBe(true);
   });
-  it("supplies observed results to the actual calendar generation job", async () => {
+  it("supplies a manual post report to the actual calendar generation job", async () => {
     const f = await seed(); vi.stubEnv("CLIMBOS_FAKE_LLM", "");
+    await f.t.run(ctx => ctx.db.delete(f.slotId));
     await f.owner.client.mutation(api.postResults.record, { ...f.args, qualifiedVisits: 17 });
     await f.t.action(internal.jobs.planSocialWeek, { runId: f.runId, weekOf: "2026-11-16", fromDay: 1 });
     expect(captured.inputs).toHaveLength(1);
     expect(captured.inputs[0].task).toContain("Qualified visits: 17; Signups: unknown");
     expect(captured.inputs[0].task).toContain(f.args.measurementNote);
+    expect(captured.inputs[0].task).toContain("Useful customer answer");
     expect(captured.inputs[0].task).toContain("not instructions");
     expect(await f.t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+  });
+  it.each(["manual", "older_slot"] as const)("learns a recent report for a %s post and includes its exact text once", async kind => {
+    const f = await seed();
+    await f.t.run(ctx => kind === "manual" ? ctx.db.delete(f.slotId) : ctx.db.patch(f.slotId, { slotAt: now - 40*day }));
+    await f.owner.client.mutation(api.postResults.record, { ...f.args, qualifiedVisits: 19, payingCustomers: 0 });
+    const pc = await f.t.query(internal.autopilot.planningContext, { runId: f.runId, weekOf: "2026-11-16", fromDay: 1 });
+    expect(pc?.history).toContain("Qualified visits: 19");
+    expect(pc?.history).toContain("Useful customer answer");
+    expect(pc?.history?.match(/Qualified visits: 19/g)).toHaveLength(1);
+  });
+  it("counts corrected reports once and discloses the report-row read cap", async () => {
+    const f = await seed();
+    const latest = await f.owner.client.mutation(api.postResults.record, { ...f.args, qualifiedVisits: 23 });
+    await f.t.run(async ctx => {
+      const { _id, _creationTime, ...report } = (await ctx.db.get(latest.id))!; void _id; void _creationTime;
+      for (let i=0; i<122; i++) await ctx.db.insert("postMetrics", { ...report, capturedAt: now - 2000 + i, qualifiedVisits: 98 });
+    });
+    const pc = await f.t.query(internal.autopilot.planningContext, { runId: f.runId, weekOf: "2026-11-16", fromDay: 1 });
+    expect(pc?.history).toContain("newest 120 report rows");
+    expect(pc?.history?.match(/Qualified visits: 23/g)).toHaveLength(1);
+    expect(pc?.history).not.toContain("Qualified visits: 98");
+  });
+  it.each([-29 * day, day])("excludes reports outside the recent nonfuture window: %s", async offset => {
+    const f = await seed();
+    const report = await f.owner.client.mutation(api.postResults.record, { ...f.args, qualifiedVisits: 27 });
+    await f.t.run(async ctx => { await ctx.db.delete(f.slotId); await ctx.db.patch(report.id, { capturedAt: now + offset }); });
+    const pc = await f.t.query(internal.autopilot.planningContext, { runId: f.runId, weekOf: "2026-11-16", fromDay: 1 });
+    expect(pc?.history).toBe("");
+  });
+  it("never follows a report reference into another workspace's post", async () => {
+    const f = await seed();
+    const secondOwner = await asNewUser(f.t, "separate-post-owner@example.com");
+    const other = await secondOwner.client.mutation(api.orgs.createWorkspace, { businessName: "Separate private workspace" });
+    await f.t.run(ctx => ctx.db.insert("memberships", { orgId: other.orgId, userId: f.owner.userId, role: "editor", status: "active", createdAt: now }));
+    const foreignId = await f.t.run(async ctx => {
+      await ctx.db.delete(f.slotId);
+      const business = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", other.orgId)).first())!;
+      const artifactId = await ctx.db.insert("artifacts", { orgId: other.orgId, businessId: business._id, kind: "social_post", channel: "linkedin", title: "FOREIGN PRIVATE TITLE", status: "published", currentVersion: 1, createdAt: now-day, updatedAt: now });
+      await ctx.db.insert("postMetrics", { orgId: f.orgId, artifactId, source: "owner", channel: "linkedin", capturedAt: now, measurementNote: "FOREIGN PRIVATE METHOD", qualifiedVisits: 987 });
+      return artifactId;
+    });
+    const pc = await f.t.query(internal.autopilot.planningContext, { runId: f.runId, weekOf: "2026-11-16", fromDay: 1 });
+    expect(pc?.history).toContain("1 report references were unavailable");
+    expect(pc?.history).not.toMatch(/FOREIGN PRIVATE|987/);
+    await expect(f.owner.client.query(api.postResults.view, { slug: f.slug, artifactId: foreignId })).rejects.toThrow();
+  });
+  it("prioritizes a newly reported manual post before a full calendar history", async () => {
+    const f = await seed();
+    await f.owner.client.mutation(api.postResults.record, { ...f.args, qualifiedVisits: 29 });
+    await f.t.run(async ctx => {
+      const { _id, _creationTime, artifactId, ...slot } = (await ctx.db.get(f.slotId))!; void _id; void _creationTime; void artifactId;
+      await ctx.db.delete(f.slotId);
+      for (let i=0; i<122; i++) await ctx.db.insert("calendarSlots", { ...slot, slotAt: now-i*1000, idea: `Unreported slot ${i}` });
+    });
+    const pc = await f.t.query(internal.autopilot.planningContext, { runId: f.runId, weekOf: "2026-11-16", fromDay: 1 });
+    expect(pc?.history).toContain("Qualified visits: 29");
+    expect(pc?.history).toContain("records omitted");
+    expect(pc?.history).toContain("Original calendar intent and audience are unknown");
   });
   it.each(["legacy", "fixture", "future", "foreign", "channel"] as const)("withholds %s evidence from planning without falling back", async kind => {
     const f = await seed();

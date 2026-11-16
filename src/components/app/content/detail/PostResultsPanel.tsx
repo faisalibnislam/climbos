@@ -21,7 +21,7 @@ export function PostResultsPanel(props: Props) {
     {data.canReport && !editing ? <Button variant="secondary" onClick={() => setEditing(true)}>{data.report ? "Add or correct results" : "Record results"}</Button> : null}
     {editing && data.canReport && data.versionId && data.contentHash ? <ResultsForm key={data.versionId} {...props} versionId={data.versionId} contentHash={data.contentHash} latestId={data.report?._id ?? null} initial={data.issue ? null : data.report} timeZone={data.timeZone} onDone={() => setEditing(false)} /> : null}
     <details><summary className="cursor-pointer text-sm font-medium">Report history</summary><ReportHistory {...props} /></details>
-    <p className="text-xs text-ink-3">{data.demo ? "Synthetic demo observations." : "Member-entered observations are not independently verified."} Reports describe one window and are not added together. Weekly planning considers recent calendar-linked posts. Saving does not publish, send, spend or change the plan.</p>
+    <p className="text-xs text-ink-3">{data.demo ? "Synthetic demo observations." : "Member-entered observations are not independently verified."} Reports describe one window and are not added together. Weekly planning considers recent reports, including older and manually prepared posts, within its history limits. Saving does not publish, send, spend or change the plan.</p>
   </CardContent></Card>;
 }
 

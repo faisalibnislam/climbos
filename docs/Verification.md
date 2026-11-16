@@ -1,3 +1,25 @@
+## 17 November 2026 — recent social reports independent of calendar slots
+
+The prior post-results increment created a working report path but selected planning history only through recent calendar slots. Two new regressions failed: a manually prepared post and a post whose slot was more than 28 days old both produced empty planning history after a fresh report. This contradicted the intended outcome-learning path even though the report itself was saved correctly.
+
+Extended `autopilot.planningContext` using the existing `postMetrics.by_org_captured` index. It reads up to 121 recent nonfuture report rows and slots to detect overflow, considers at most 120 of each, and gives report candidates first use of the existing 12,000-character whole-record budget. Each post is resolved once through `latestPostResult`; invalid newer evidence still cannot revive a prior observation. Missing/foreign artifact references are withheld. Latest exact-version body text is supplied with a 1,200-character labeled excerpt limit, while media and historical audience exposure remain unassessed. A matching recent slot supplies its original intent; otherwise intent/audience remain unknown. Each record uses the existing untrusted-data wrapper. Review rejections distinguish matching from earlier/unmatched versions and remain preferences, not performance evidence. Owner UI wording now describes this expanded but bounded selection.
+
+Commands and results:
+
+```sh
+pnpm exec vitest run tests/convex/post-results.test.ts tests/convex/autopilot.test.ts tests/convex/calendar-trend-evidence.test.ts tests/convex/research-context.test.ts tests/convex/tenancy.test.ts tests/convex/publish-flow.test.ts tests/unit/post-results.test.ts
+pnpm exec vitest run tests/convex/post-results.test.ts tests/convex/autopilot.test.ts
+pnpm typecheck
+pnpm exec eslint convex/autopilot.ts shared/agents/specs.ts src/components/app/content/detail/PostResultsPanel.tsx tests/convex/post-results.test.ts e2e/post-results.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/post-results.spec.ts
+git diff --check
+```
+
+**123 tests passed across seven files.** The two directly affected suites were rerun after the final reviewer-label clarification and passed. Added coverage includes manual/older posts, exact body context, corrections and duplicate slot references, report-row limits, exclusion of foreign post references and old/future report candidates, and prioritization over a full unreported calendar history. The actual `jobs.planSocialWeek` generation-boundary test now verifies an unlinked manual report reaches its input without an action receipt. Typecheck and targeted lint passed. **Two desktop/mobile browser checks passed in 13.1 seconds**, exercising the updated explanation and the existing record/correct/reload/history workflow, zero/unknown distinctions, action-table immutability, no horizontal overflow and no serious/critical automated accessibility findings. No full accessibility conformance or real model quality is claimed.
+
+Limits: the independent candidate window follows report capture time, not publication time; historical measurement dates stay attached. Corrections can fill the 120-row read budget, and 12,000 characters can omit complete records; both limits are disclosed. Current exact-version validation, member-report provenance and no-causal-inference caveats remain. This is not complete all-time learning, provider metric syncing, automatic platform history ingestion, media analysis or continuous social listening. Existing calendar drafting and approval controls remain unchanged. No new provider, agent, dependency or live external action. Engine `v3.104-reported-social-learning`; full project completion remains unproven.
+
 ## 16 November 2026 — reuse channel scoring without treating proposals as observations
 
 The preceding increment reproduced a pre-existing failure in the unchanged-input replan test on both current code and an archive of `da261294`. Traced `orgs.generatePlan` → `jobWrites.jobContext` → `playResults.resultsBrief` → `jobs.businessBrief` → channel input hash/scorer → saved acquisition profile. Diagnostic capture showed the second plan's new history consisted only of unreported proposals, including fresh plan/play identities and creation dates. Those changed the business brief despite no new outcome or owner input.
