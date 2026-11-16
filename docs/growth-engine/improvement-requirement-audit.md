@@ -1,3 +1,7 @@
+## 17 November 2026 — research source-label fidelity
+
+Row 24 follow-up: commercial, SWOT and audience/channel finding labels now agree with every cited reference's recorded source class. Owner reports mentioning analytics cannot be upgraded to measured evidence; unknown provenance cannot be guessed. This runs in drafting lint and the new final acceptance boundary. Actual job/tenant regressions and unit checks pass. [Research evidence audit](research-evidence-completion-audit.md) retains semantic truth, historical and broad acceptance limits.
+
 ## 17 November 2026 — research evidence acceptance
 
 Rows 21–25 have a [current scoped audit](research-evidence-completion-audit.md). Confirmed final-acceptance gaps allowed unsupported retained research to replace saved insights. Real v2 onboarding now enforces its existing schema/source/quote/fact-reference checks before saving, preserves earlier insights on rejection, and exposes the failed-run reason. Valid research and labeled hypotheses remain available. Source truth, general label fidelity, broad semantic contradiction detection and full requirement acceptance remain unproven; this does not close rows 26–30.

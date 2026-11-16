@@ -78,7 +78,7 @@ describe("research source assessment", () => {
   });
 
   it("keeps commercial evidence bounded and rejects website claims as proof of demand or payment", () => {
-    const input = { task: "Assess commercial evidence", brief: "Example Co", facts: ["Owner-reported: 3 customers paid for a pilot"], availableSourceUrls: ["https://example.com/"], untrustedContext: '<untrusted_content source="https://example.com/">Our product is in high demand.</untrusted_content>' };
+    const input = { task: "Assess commercial evidence", brief: "Example Co", facts: ["Owner-reported: 3 customers paid for a pilot"], constraints: { factEvidenceBases: ["owner_reported" as const] }, availableSourceUrls: ["https://example.com/"], untrustedContext: '<untrusted_content source="https://example.com/">Our product is in high demand.</untrusted_content>' };
     const base: Parameters<typeof lintInsightSources>[0] = {
       audiences: [], competitors: [], alternatives: [], vocPhrases: [], objections: [], gaps: [],
       swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, swotEvidence: [], swotMoves: [], siteAssessment: [],
@@ -298,6 +298,7 @@ describe("research source assessment", () => {
       task: "Build a sourced SWOT",
       brief: "Business facts",
       facts: ["Owner-confirmed: serves 40 active customers"],
+      constraints: { factEvidenceBases: ["owner_reported" as const] },
       precomputedResearch: { notes: "Market and competitor page", sources: [{ url: "https://market.example/report" }] },
     };
     const base = {
@@ -322,7 +323,7 @@ describe("research source assessment", () => {
   });
 
   it("keeps audience needs, objections, buying motivations and channel preferences traceable", () => {
-    const input = { task: "Profile the audiences", brief: "Business facts", facts: ["Owner-confirmed: most buyers are independent accountants."], precomputedResearch: { notes: "Industry discussion", sources: [{ url: "https://community.example/accountants" }] } };
+    const input = { task: "Profile the audiences", brief: "Business facts", facts: ["Owner-confirmed: most buyers are independent accountants."], constraints: { factEvidenceBases: ["owner_reported" as const] }, precomputedResearch: { notes: "Industry discussion", sources: [{ url: "https://community.example/accountants" }] } };
     const base: Parameters<typeof lintInsightSources>[0] = {
       audiences: [{
         name: "Independent accountants", description: "Small practices handling monthly bookkeeping.", confidence: "medium",

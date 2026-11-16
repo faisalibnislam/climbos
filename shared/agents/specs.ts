@@ -41,7 +41,7 @@ import {
   type TaskType,
 } from "../ai/tasks";
 import { skillRubric } from "../skills";
-import { lintEvidenceStrength } from "./evidenceKind";
+import { lintEvidenceStrength, referenceEvidenceBasis, type FactEvidenceBasis } from "./evidenceKind";
 import { CREATIVE_PRECEDENTS, retrieveCreativePrecedents } from "../knowledge/creativePrecedents";
 import { inferSearchIntentStage } from "./searchIntent";
 import { lintFactIndexes } from "./factIndexes";
@@ -336,7 +336,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.118-insights-acceptance";
+export const ENGINE_VERSION = "v3.119-insights-source-basis";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -2100,6 +2100,21 @@ export function lintCopyBrief(brief: CopyBrief | undefined, input: AgentInput): 
 
 export function lintInsightSources(out: Pick<InsightsV2, "audiences" | "competitors" | "alternatives" | "vocPhrases" | "objections" | "gaps" | "swot" | "swotEvidence" | "swotMoves" | "siteAssessment" | "commercialAssessment">, input: AgentInput): LintIssue[] {
   const refs: { url: string; path: string }[] = [];
+  const basisIssues: LintIssue[] = [];
+  const sourceUrls = [...(input.availableSourceUrls ?? []), ...(input.precomputedResearch?.sources ?? []).map(source => source.url)]
+    .map(normalizeSourceUrl).filter((url): url is string => url !== null);
+  const checkBasis = (basis: string, evidenceRefs: string[], path: string) => {
+    if (basis === "inference") return;
+    const expected: FactEvidenceBasis = basis === "owner_report" ? "owner_reported" : basis === "measured" ? "measured" : "source_reported";
+    // One correctly labelled reference cannot launder other sources in the same finding.
+    // Source class comes from recorded provenance, never words such as "analytics".
+    const mismatch = evidenceRefs.some(ref => {
+      const fact = /^fact:(\d+)$/i.exec(ref.trim());
+      const reference = fact ? `fact:${fact[1]}` : normalizeSourceUrl(ref);
+      return referenceEvidenceBasis(reference, input.constraints?.factEvidenceBases, sourceUrls) !== expected;
+    });
+    if (mismatch) basisIssues.push({ severity: "error", rule: "evidence_basis", message: "Match the finding's evidence label to every cited source. Owner reports and published claims are not independently measured evidence; missing provenance stays unknown. Separate differently sourced findings or label an interpretation as inference.", path: `${path}.basis` });
+  };
   const competitorEvidenceIssues: LintIssue[] = [];
   out.competitors.forEach((competitor, i) => {
     refs.push({ url: competitor.sourceUrl, path: `competitors[${i}].sourceUrl` });
@@ -2122,6 +2137,7 @@ export function lintInsightSources(out: Pick<InsightsV2, "audiences" | "competit
   const commercialEvidenceIssues: LintIssue[] = [];
   out.commercialAssessment.evidence.forEach((item, index) => {
     const path = `commercialAssessment.evidence[${index}]`;
+    checkBasis(item.basis, item.evidenceRefs, path);
     if (item.basis !== "inference" && item.evidenceRefs.length === 0) {
       commercialEvidenceIssues.push({ severity: "error", rule: "commercial_evidence", message: "Label this as an inference or cite a supplied fact or a page read in this run.", path: `${path}.evidenceRefs` });
     }
@@ -2162,6 +2178,7 @@ export function lintInsightSources(out: Pick<InsightsV2, "audiences" | "competit
   const swotIssues: LintIssue[] = [];
   const audienceEvidence = (items: { statement: string; basis: string; evidenceRefs: string[] }[], path: string) => items.forEach((item, index) => {
     const itemPath = `${path}[${index}]`;
+    checkBasis(item.basis, item.evidenceRefs, itemPath);
     if (item.basis !== "inference" && item.evidenceRefs.length === 0) {
       swotIssues.push({ severity: "error", rule: "audience_evidence", message: "Label an unsupported audience hypothesis as inference, or cite a supplied fact or page read in this run.", path: `${itemPath}.evidenceRefs` });
     }
@@ -2200,6 +2217,7 @@ export function lintInsightSources(out: Pick<InsightsV2, "audiences" | "competit
   const represented = new Set<string>();
   out.swotEvidence.forEach((finding, index) => {
     const path = `swotEvidence[${index}]`;
+    checkBasis(finding.basis, finding.evidenceRefs, path);
     const dimensionRows = dimensions[finding.dimension].statements;
     if (!dimensionRows.includes(finding.finding)) {
       swotIssues.push({ severity: "error", rule: "swot_evidence", message: "Each evidence record must match a statement in its SWOT section exactly.", path: `${path}.finding` });
@@ -2260,7 +2278,7 @@ export function lintInsightSources(out: Pick<InsightsV2, "audiences" | "competit
       swotIssues.push({ severity: "error", rule: "swot_move", message: "Each strategy needs a concrete move, a first test, and a measure.", path });
     }
   });
-  return [...lintAvailableSourceUrls(refs, input), ...competitorEvidenceIssues, ...siteQuoteIssues, ...commercialEvidenceIssues, ...swotIssues];
+  return [...lintAvailableSourceUrls(refs, input), ...basisIssues, ...competitorEvidenceIssues, ...siteQuoteIssues, ...commercialEvidenceIssues, ...swotIssues];
 }
 
 /** Lint for things that get published or sent as written (emails, pages): no placeholders. */

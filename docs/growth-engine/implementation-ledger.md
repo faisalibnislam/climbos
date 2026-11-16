@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: research source-label fidelity
+
+Twelve red unit cases exposed owner/researched/unknown provenance being relabeled in commercial, SWOT and audience/channel evidence. Reused the existing source-class resolver in the insights linter, checking every reference while preserving explicit inference. Actual onboarding tests verify recorded provenance and final rejection/preservation, plus owner failure visibility and tenant isolation. 105 tests/10 files, root/Convex typecheck and scoped lint passed. Engine v3.119-insights-source-basis. No new schema, UI, prompt, provider or external authority; claim truth and historical data remain outside this repair.
+
 ## Local update — 17 November 2026: final research acceptance
 
 Six red onboarding-job regressions showed retained invalid research becoming verified and replacing saved insights despite existing drafting lint. Real v2 onboarding now parses and reruns the existing insights spec against the original input and actual research metadata before persistence. Prior insights remain intact on rejection; labeled hypotheses stay possible, and the existing work-history message explains the failure. Added the rows 21–25 scoped audit without claiming full acceptance. 86 focused tests/11 files, a final 15-case visibility/tenant rerun, typecheck and lint passed. Engine v3.118-insights-acceptance; no provider, agent, schema, UI, external authority or model switch added.

@@ -332,6 +332,10 @@ Main failed-plan checks now show the saved reason and expandable fixes; Explain 
 
 Real v2 onboarding now validates retained insights against its existing schema/spec and original input plus actual research metadata before saving. Six regressions reproduced unsupported outputs being accepted despite existing drafting checks. Failure preserves saved insights and remains visible in work history; valid page evidence and labeled speculation survive. Profile extraction is separately saved, and legacy/fixture results are unchanged. Engine v3.118-insights-acceptance. See [the rows 21–25 audit](growth-engine/research-evidence-completion-audit.md) and Verification for 86 tests, the final 15-case read-permission rerun, typecheck/lint and semantic/historical limitations. Continue with evidence-label fidelity and remaining missing-input/forecast acceptance; no full specification completion is claimed.
 
+## Research source-class follow-up — 17 November 2026
+
+The insights linter now compares commercial, SWOT and audience/channel labels with every referenced source's recorded provenance using the existing `referenceEvidenceBasis`. Twelve red unit cases exposed relabeling; actual onboarding tests preserve accepted owner reports and reject measured/source-class mismatches before replacing insights. Inference remains allowed. Engine v3.119-insights-source-basis; 105 tests/10 files, typecheck and lint passed. No measured connector or historical migration is implied. See Verification and the updated research audit; remaining work includes semantic claim support and rows 26–30, not another provenance prompt.
+
 ## What remains and should guide the next work
 
 These are known open gaps, not a complete substitute for checking the requirement audit and ledger before choosing work:

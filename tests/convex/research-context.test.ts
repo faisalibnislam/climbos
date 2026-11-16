@@ -31,7 +31,7 @@ const research = {
 describe("persisted research in generation context", () => {
   afterEach(() => { captured.inputs.length = 0; captured.reply = null; vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
-  it.each(["valid", "unknown_source", "missing_research", "invented_quote", "site_claim_demand", "unknown_fact", "malformed", "inference"] as const)("validates %s research before replacing saved insights", async kind => {
+  it.each(["valid", "unknown_source", "missing_research", "invented_quote", "site_claim_demand", "unknown_fact", "malformed", "inference", "owner_basis", "owner_as_measured", "published_as_owner"] as const)("validates %s research before replacing saved insights", async kind => {
     const t = setup();
     vi.stubEnv("CLIMBOS_FAKE_LLM", "");
     const network = vi.fn(() => { throw new Error("Unexpected network call"); });
@@ -39,6 +39,10 @@ describe("persisted research in generation context", () => {
     const owner = await asNewUser(t, "insights-page-evidence@example.com");
     const { orgId, slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Research context", website: "https://business.example/" });
     const now = Date.now();
+    if (["owner_basis", "owner_as_measured", "published_as_owner"].includes(kind)) await t.run(async ctx => {
+      const business = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", orgId)).first())!;
+      await ctx.db.insert("businessFacts", { orgId, businessId: business._id, category: "proof", statement: "Our analytics show returning customers.", confidence: "high", reviewState: "confirmed", provenance: kind === "published_as_owner" ? "researched" : "owner_supplied", sourceIds: [], verifiedAt: now, createdAt: now, updatedAt: now });
+    });
     const runId = await t.run(async ctx => {
       const runId = await ctx.db.insert("workflowRuns", { orgId, kind: "onboarding_research", title: "Source evidence", status: "executing", input: "{}", engine: "v2", roles: [], estimateMicros: 0, actualMicros: 0, rateVersionId: RATE_VERSIONS[0].id, entitlementVersionId: "test", routingVersionId: "test", budget: { modelSteps: 10, researchTools: 5, repairs: 0 }, used: { modelSteps: 0, researchTools: 0, repairs: 0 }, isFixture: false, createdAt: now, updatedAt: now });
       const profile = { name: "Research context", oneLineSummary: "Client brief tool", businessType: "saas", audience: "Small studios", category: "Intake tools", facts: [], brandVoice: "Clear", suggestedSuccessEvents: [] };
@@ -54,14 +58,16 @@ describe("persisted research in generation context", () => {
     if (kind === "site_claim_demand") output.commercialAssessment.evidence = [{ dimension: "demand", finding: "The site claims demand.", basis: "site_claim", evidenceRefs: ["https://business.example/"], limitation: "Website claim only." }];
     if (kind === "unknown_fact") output.commercialAssessment.evidence = [{ dimension: "demand", finding: "An owner reports demand.", basis: "owner_report", evidenceRefs: ["fact:999"], limitation: "Owner report only." }];
     if (kind === "inference") output.commercialAssessment.evidence = [{ dimension: "problem", finding: "Studios may need clearer briefs.", basis: "inference", evidenceRefs: [], limitation: "Untested hypothesis; customer behavior unknown." }];
+    if (["owner_basis", "owner_as_measured", "published_as_owner"].includes(kind)) output.commercialAssessment.evidence = [{ dimension: "demand", finding: "Our analytics show returning customers.", basis: kind === "owner_as_measured" ? "measured" : "owner_report", evidenceRefs: ["fact:0"], limitation: "Reported claim; independently verified results unknown." }];
     const business = (await t.run(ctx => ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", orgId)).first()))!;
     await t.mutation(internal.jobWrites.saveInsights, { runId, businessId: business._id, insights: JSON.stringify(research) });
     const prior = (await t.run(ctx => ctx.db.get(business._id)))!.insights;
     captured.reply = { output: kind === "malformed" ? { ...output, commercialAssessment: undefined } : output, assessment: { ship: true, gatesPassed: true, average: 5, minimum: 5, lint: [], critique: { gates: [], criteria: [], fixes: [], strengths: [] } }, rounds: 1, history: [], research: kind === "missing_research" ? null : { notes: "Synthetic research note", sources: [{ url: research.vocPhrases[0].sourceUrl }], retrievedAt: now, pageReads: [{ url: research.vocPhrases[0].sourceUrl, text: research.vocPhrases[0].phrase, retrievedAt: readAt }] } };
     await t.action(internal.jobs.onboardingResearch, { runId });
-    const good = kind === "valid" || kind === "inference";
+    const good = kind === "valid" || kind === "inference" || kind === "owner_basis";
     const run = (await t.run(ctx => ctx.db.get(runId)))!;
     expect(run.status).toBe(good ? "verified" : "failed");
+    if (["owner_basis", "owner_as_measured", "published_as_owner"].includes(kind)) expect(captured.inputs[0].constraints?.factEvidenceBases).toEqual([kind === "published_as_owner" ? "source_reported" : "owner_reported"]);
     const saved = await t.run(ctx => ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", orgId)).first());
     if (good) {
       expect(saved?.insights?.expert?.vocPhrases).toEqual([{ ...research.vocPhrases[0], evidenceStatus: "text_matched", sourceReadAt: readAt }]);
