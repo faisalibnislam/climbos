@@ -8,6 +8,14 @@ const attribution = { model: "last_touch", reconciled: true, byCurrency: [{ curr
 const data = { currency: "USD", attribution: { lastTouch: attribution, firstTouch: attribution, issues: [], note: "Recorded paths, not cause." }, platformClaims: { platforms: [], adSpendMinor: 1000, adSpendByCurrency: { USD: 1000 }, warning: "Can overlap" }, platformClaimsNote: "The reporting scope has not been reconciled." } as unknown as Overview;
 
 describe("attribution presentation", () => {
+  it.each([["JPY", 1200, "¥1,200"], ["KWD", 12345, "KWD 12.345"], ["USD", 100001, "$1,000.01"]])("preserves %s amounts in the attribution and ad-spend tables", (currency, amount, expected) => {
+    const attr = { ...attribution, byCurrency: [{ ...attribution.byCurrency[0], currency, totalNetBillingMinor: amount, channels: [{ channel: "search", netRevenueMinor: amount, conversions: 1 }] }] };
+    const values = { ...data, currency, attribution: { ...data.attribution, lastTouch: attr, firstTouch: attr }, platformClaims: { ...data.platformClaims!, adSpendMinor: amount, adSpendByCurrency: { [currency]: amount } } } as Overview;
+    for (const Component of [AttributionSection, PlatformClaimsSection]) {
+      const html = renderToStaticMarkup(createElement(Component, { slug: "test", data: values })).replaceAll("\u00a0", " ");
+      expect(html).toContain(expected);
+    }
+  });
   it("labels orders and renewals as payment events, not unique customers or verified billing", () => {
     const html = renderToStaticMarkup(createElement(AttributionSection, { slug: "test", data }));
     expect(html).toContain("Payment events");

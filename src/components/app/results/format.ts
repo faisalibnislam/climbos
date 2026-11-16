@@ -5,7 +5,7 @@ export type MetricUnit = "count" | "currency_minor";
 
 /** Format a metric value in its own unit. Counts are rounded to whole numbers. */
 export function formatMetric(value: number, unit: MetricUnit | string, currency: string | null | undefined): string {
-  if (unit === "currency_minor") return minorToDisplay(Math.round(value), currency ?? "USD");
+  if (unit === "currency_minor") return minorToDisplay(Math.round(value), currency);
   return formatNumber(Math.round(value));
 }
 

@@ -1,4 +1,5 @@
 import { formatCredits, microsToCredits } from "../../../shared/economics/credits";
+import { formatMinorMoney } from "../../../shared/economics/currency";
 
 /** Display helpers. Money from the backend is integer µUSD (costs) or minor units (revenue). */
 
@@ -38,12 +39,8 @@ export function microsToUsd(micros: number): string {
   return `$${usd.toFixed(2)}`;
 }
 
-export function minorToDisplay(minor: number, currency = "USD"): string {
-  try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: Math.abs(minor) >= 100_000 ? 0 : 2 }).format(minor / 100);
-  } catch {
-    return `${(minor / 100).toFixed(2)} ${currency}`;
-  }
+export function minorToDisplay(minor: number, currency?: string | null): string {
+  return formatMinorMoney(minor, currency);
 }
 
 export function relativeTime(ms: number, now = Date.now()): string {

@@ -16,6 +16,8 @@ Customer progress preserves each deal’s currency precision and shows separate 
 
 Owner-recorded sales now stay separate from imported payments across Results, attribution, payer forecasts, repeat-payment cohorts and strategy calculations. This avoids counting a CRM sale again when its billing payment is imported. Older real billing aggregates require a source refresh before use; repeated imports can rebuild the affected day without duplicating the payment. Sales remain available in Customer progress and owner-reported strategy context. Imported records still do not independently verify cash, profit, complete coverage or cross-provider deduplication. See [Verification](Verification.md).
 
+Shared minor-unit displays now preserve currency precision in Results, attribution, forecasts, campaign cards and other existing consumers, including zero-decimal yen and three-decimal dinars. Larger totals retain their cents; missing currency stays unknown. This is a display correction, not a migration of old values. Separate ad-budget and policy input paths still need currency-unit reconciliation before affected non-two-decimal live budgets can be treated as verified. See [Verification](Verification.md).
+
 ## Availability labels
 
 - **Built:** implemented in the application. Test evidence is reported separately in [Verification](Verification.md); this label alone does not mean every current check has passed.

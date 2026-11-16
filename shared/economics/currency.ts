@@ -72,6 +72,33 @@ export function majorToMinor(major: number, currency: string | null | undefined)
   return Math.round(major * 10 ** fractionDigits(currency));
 }
 
+// Intl's enumeration omits these accounting units already supported by the
+// revenue-import currency exponent table. NumberFormat still knows their scale.
+const displayCurrencies = new Set([...Intl.supportedValuesOf("currency"), "CLF", "UYW", "UYI"]);
+
+/** Exact stored-money display. Never assume USD, round away minor units, or
+ * reinterpret an invalid amount. This validates representation, not provenance.
+ */
+export function formatMinorMoney(minor: number, currency: string | null | undefined, empty = "Unknown"): string {
+  const code = currency?.trim().toUpperCase();
+  if (!Number.isSafeInteger(minor) || !code || !displayCurrencies.has(code)) return empty;
+  try {
+    const digits = fractionDigits(code);
+    const scale = 10n ** BigInt(digits);
+    const amount = BigInt(minor);
+    const whole = amount / scale;
+    const remainder = amount < 0n ? -(amount % scale) : amount % scale;
+    const fraction = remainder.toString().padStart(digits, "0");
+    // Formatting the integer part independently preserves the final minor unit
+    // even near MAX_SAFE_INTEGER, where floating-point division loses precision.
+    const parts = new Intl.NumberFormat("en-US", { style: "currency", currency: code, minimumFractionDigits: digits, maximumFractionDigits: digits })
+      .formatToParts(whole === 0n && minor < 0 ? -0 : whole);
+    return parts.map(part => part.type === "fraction" ? fraction : part.value).join("");
+  } catch {
+    return empty;
+  }
+}
+
 /** Whether a USD threshold can be scaled into this currency (false = USD thresholds used as-is). */
 export function hasReferenceRate(currency: string | null | undefined): boolean {
   return norm(currency) in PER_USD;

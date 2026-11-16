@@ -1,3 +1,22 @@
+## 16 November 2026 — exact currency display across shared money views
+
+Traced stored minor-unit amounts → `src/components/app/money.ts::minorToDisplay` → Results metrics/charts, attribution and ad-spend tables, forecast details, campaign approval cards, plan ad-allocation summaries, creator reports and billing/admin order amounts. The old helper divided every currency by 100 and rounded larger totals to whole units. Direct runtime checks showed 1,200 JPY minor units as ¥12 and 12,345 KWD minor units as KWD 123.45. Twenty of the initial 23 focused cases failed before the repair.
+
+The shared helper now delegates to `shared/economics/currency.ts::formatMinorMoney`, retaining each recognized currency's decimal scale and all stored minor units. Integer/fraction formatting uses BigInt to preserve the final minor unit near the safe-integer boundary; negative subunit amounts, zero, refunds and larger totals retain their exact representation. Missing/unsupported currency or invalid/unsafe/fractional stored amounts display Unknown. Results and creator-report callers no longer substitute USD for missing currency. Current-runtime currency enumeration is supplemented by the three accounting units already represented in the import exponent table (CLF, UYW, UYI); the initial enumeration-only change was caught by the four-decimal CLF test and corrected. This does not add foreign-exchange conversion or rewrite any saved money, forecast, approval or billing record. USD provider-cost and credit formatting remains separate.
+
+Verification:
+
+```text
+pnpm exec vitest run tests/unit/money-display.test.ts tests/unit/attribution-presentation.test.tsx tests/unit/forecast-forward-score.test.tsx tests/unit/campaign-money-display.test.tsx tests/unit/results-coverage.test.tsx tests/unit/pipeline-money.test.ts tests/convex/tenancy.test.ts tests/convex/safety.test.ts tests/convex/ad-performance.test.ts
+67 passed across 9 files
+pnpm typecheck
+passed: application and Convex
+```
+
+Changed-file ESLint and diff checks passed. Browser command: `E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/money-display.spec.ts` — two passed in 11.8 seconds, desktop Chromium and Pixel 7 emulation. Isolated fixture Results show a KWD 12.345 subtotal and separate attribution tables displaying ¥1,200, KWD 12.345 and $1,000.01. Stored ledger/daily records, campaigns, approvals, action receipts, forecasts and webhook deliveries remain unchanged by reading. No page errors, horizontal page overflow or serious/critical axe findings; screenshots inspected. Component regressions verify forecast and campaign-card money, unknown currency and no execution requests from rendering. The React review found no new hooks, effects, subscriptions or component structures. No external provider calls, live spending or hosted deployment.
+
+Confirmed next gap: `convex/ads.ts::prepareCampaign` still computes a daily budget with `Math.round(args.dailyBudget * 100)` and some audit/stop-rule text uses `/100`; `convex/settings.ts::updatePolicy` uses `*100` and its policy read uses `/100`, while goal setters already use currency-dependent helpers. Correct display does not repair those writers or establish the original intent of old non-two-decimal budgets. Audit preparation → policy → approval scope → provider adapter before enabling affected live campaigns; preserve original records and require exact renewed approval for corrected consequential amounts. Provider-specific monetary conventions, budget-input precision and old-value reconciliation remain unverified. Separate Results-explanation coverage and the full 410-item behavioral audit also remain open.
+
 ## 16 November 2026 — owner-recorded sales versus payment evidence
 
 Traced owner `crm.create/update` → CRM sale mirrors in `revenueEvents` → billing-day materialization, Results/Home, attribution, first-payer forecasts, repeat-payment cohorts, strategy/model-check context and Results explanation. Six new regression cases failed before the fix: a won deal counted as a payer, a recorded sale plus imported payment doubled revenue, a legacy JPY sale appeared as payment evidence, old daily aggregates remained usable, repeated imports did not repair those aggregates, and CRM-only history could produce a paying-customer forecast.

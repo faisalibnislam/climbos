@@ -71,4 +71,15 @@ describe("forward forecast score", () => {
     expect(html).not.toContain("USD");
   });
 
+  it.each([["JPY", 1200, "¥1,200"], ["KWD", 12345, "KWD 12.345"]])("renders the saved %s projection in its original units", (currency, value, expected) => {
+    const moneyPoints = points.map(p => ({ ...p, value }));
+    vi.mocked(useQuery).mockReturnValue({
+      status: "calibrated", metric: { label: "Revenue", unit: "currency_minor", source: "Billing", definition: "Recorded payments" }, currency,
+      history: [], points: moneyPoints, method: "seasonal_naive", horizonDays: 4, dataThrough: "2026-09-30", historyDays: 100, isFixture: false,
+      calibration: { heldOutCoverage80: null, heldOutCoverage95: null, heldOutCount: 0, reason: null, residualCounts: [] }, backtest: null, assumptions: [], warnings: [], forwardScore: scoreForecast(moneyPoints, [], 4),
+    } as never);
+    const html = renderToStaticMarkup(createElement(ForecastDetail, { slug: "example", forecastId: "fixture" })).replaceAll("\u00a0", " ");
+    expect(html).toContain(expected);
+  });
+
 });

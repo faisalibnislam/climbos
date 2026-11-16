@@ -1,5 +1,10 @@
 # Growth engine implementation ledger
 
+## Local update — 16 November 2026: exact currency display
+
+Replaced the shared UI /100 formatter with exact currency-specific minor-unit formatting. Results and creator reports keep unknown currency unknown; large totals retain fractional units. Actual attribution, forecast and campaign-card consumers are covered; rendering does not execute actions or mutate amounts. Verification: 67 focused regression/permission tests, typecheck/lint and two desktop/mobile checks with stored-record invariance. The caller audit found separate fixed-*100 ad/policy writers and /100 audit text; these remain the next end-to-end monetary task, not silently migrated by this display change. See [Verification](../Verification.md).
+
+
 ## Local update — 16 November 2026: separate CRM sales from payments
 
 The downstream CRM audit reproduced six evidence defects and repaired payment readers across daily aggregates, Results/Home, attribution, first-payer forecasts, cohorts, strategy/model checks and Results explanations. Owner sales remain in pipeline context; CRM ledger mirrors are excluded from payment calculations. Legacy real billing aggregates require refreshed payment-only evidence; repeated imports rebuild affected days without duplicating events. Forecast v3 and business-model hash versioning preserve the definition change. Verification: 136 focused regression/permission tests, typecheck/lint and two desktop/mobile checks. The original sale values and forecast history remain unchanged. Cross-provider deduplication, complete source coverage, high-volume aggregation and the full 410-item audit remain open. The Results explanation's wider coverage contract and the shared display helper's fixed /100 currency divisor are next audit leads. See [Verification](../Verification.md).

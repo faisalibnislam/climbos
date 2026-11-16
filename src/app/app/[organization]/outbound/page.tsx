@@ -644,7 +644,7 @@ function CreatorCollaborationPanel({ slug, prospectId, campaignId, currency, can
       setBusy(false);
     }
   };
-  const amount = (minor: number | null) => minor === null ? null : minorToDisplay(minor, currency ?? "USD");
+  const amount = (minor: number | null) => minor === null ? null : minorToDisplay(minor, currency);
   return (
     <section className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-3" aria-label="Creator collaboration reports">
       <div className="flex items-center justify-between gap-2">
