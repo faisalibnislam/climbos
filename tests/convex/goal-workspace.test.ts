@@ -4,6 +4,7 @@ import { asNewUser, setup } from "./helpers";
 import { focusedPlanFixture } from "../fixtures/focusedPlan";
 import { runGoal } from "../../convex/lib/goals";
 import { planTimeline } from "../../shared/agents/planTimeline";
+import { encodeToolOutput, toolByName, type Caller } from "../../convex/lib/climbTools";
 
 async function fixture() {
   const t = setup(); const owner = await asNewUser(t, "goal-owner@example.com");
@@ -19,6 +20,38 @@ async function fixture() {
 }
 
 describe("goal workspace and private drafts", () => {
+  it("gives the assistant the selected plan's reported measurement without new action authority", async () => {
+    const { t, owner, slug, orgId, strategyId, plan } = await fixture();
+    const experimentId = await t.run(ctx => ctx.db.insert("experiments", { ...plan.experiments[0], orgId, strategyId, status: "proposed", createdAt: Date.now() }));
+    await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId, expectedRevision: 0, executed: true, source: "owner_report", design: "before_after", result: "missed", stopRuleHit: true, note: "No payment was made. Reconsider the proposed question.", measurement: { type: "count", value: 0, comparisonValue: null, unit: "scoping decisions", basis: "One private brief review", comparisonBasis: "Earlier count unknown" } });
+    const caller = { query: owner.client.query, mutation: owner.client.mutation } as unknown as Caller;
+    const tool = toolByName("get_plan")!;
+    const args = tool.input.parse({ strategyId, view: "learning", experimentId });
+    const output = JSON.parse(encodeToolOutput(await tool.run!(caller, slug, args), 7_800, tool.output));
+    expect(output.strategyId).toBe(strategyId);
+    expect(output.experiments).toHaveLength(1);
+    expect(output.experiments[0].details.report).toMatchObject({ executed: true, result: "missed", stopRuleHit: true, note: "No payment was made. Reconsider the proposed question." });
+    expect(output.experiments[0].details.report.reading).toContain("Recorded value: 0 scoping decisions");
+    expect(output.experiments[0].details.report.reading).toContain("Comparison value: Unknown");
+    expect(output.experiments[0].details.population).toBe(plan.experiments[0].population);
+    expect(output.coverage).toContain("or execution authority");
+    expect(tool.risk).toBe("read");
+    const other = await asNewUser(t, "learning-tool-outsider@example.com");
+    const foreign = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Foreign reports" });
+    const foreignPlanId = await t.run(async ctx => {
+      const { _id: _id, _creationTime: _time, ...row } = (await ctx.db.get(strategyId))!;
+      return ctx.db.insert("strategies", { ...row, orgId: foreign.orgId });
+    });
+    await expect(tool.run!(caller, slug, { strategyId: foreignPlanId, view: "learning" })).rejects.toThrow(/unavailable/);
+    await expect(tool.run!(caller, slug, { strategyId, experimentId: "unrelated-test", view: "learning" })).rejects.toThrow(/not available/);
+    const outsider = { query: other.client.query, mutation: other.client.mutation } as unknown as Caller;
+    await expect(tool.run!(outsider, slug, args)).rejects.toThrow();
+    const overview = JSON.parse(encodeToolOutput(await tool.run!(caller, slug, { strategyId }), 7_800, tool.output));
+    expect(overview.strategyId).toBe(strategyId);
+    expect(overview.goal).toBeNull(); // Current selected goal belongs to another plan.
+    expect(overview.experiments[0]).toMatchObject({ id: experimentId, hasReport: true });
+    for (const table of ["approvals", "actionReceipts", "workflowRuns"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
+  });
   it("keeps the selected plan's tests visible after newer plans and excludes foreign rows", async () => {
     const { t, owner, slug, orgId, strategyId, plan } = await fixture();
     const other = await asNewUser(t, "learning-outsider@example.com");

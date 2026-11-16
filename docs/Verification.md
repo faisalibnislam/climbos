@@ -1,3 +1,28 @@
+## 17 November 2026 — discuss saved results with the assistant
+
+Audit: GoalWorkspace selections attach an exact strategy ID to the shared composer, but get_plan accepted no ID and returned only experiment name/status. A failing actual-query/tool regression reproduced the gap: a report on one saved goal was unavailable while another goal was selected. Generic get_results reads aggregate business analytics, not that experiment's report. The planning engine already consumes outcome briefs; this repair addresses the assistant read boundary and owner discussion entry point.
+
+The existing get_plan tool now accepts strategyId, view=learning and optional experimentId. It rejects unavailable or foreign identities rather than allowing workspace.plan's fallback to substitute another plan. An explicitly selected historical overview omits the unrelated current goal, with an explanation. Overview lists experiment IDs and report availability. Learning returns original hypothesis/population/metric/comparison/method/window/stop conditions, the latest reported outcome and source/design, the existing deterministic outcome reading, owner note, and changed-definition/original-result context. Missing and not-run reports remain distinct. Invalid/future latest review dates are withheld without resurrecting earlier success. Whole records/details are omitted with explicit counts and limitations when necessary to fit below the tool encoder's 7,800-character boundary; requesting one test can retrieve its detail separately. No reviewer identity is exposed. Existing tool encoding validates the output and escapes untrusted text.
+
+The primary learning card's Discuss next step button fills the existing editable assistant draft and attaches the selected plan. It does not submit the message or start a model call. Assistant instructions now direct result discussions to the learning view and distinguish observations from a proposed continue/change/stop decision. This prompt is not proof that a model always follows the instruction or reasons well.
+
+Verification commands:
+
+```sh
+pnpm exec vitest run tests/unit/plan-learning-view.test.ts tests/unit/climb-tool-output.test.ts tests/unit/focused-learning-ui.test.tsx tests/unit/experiment-outcome.test.ts tests/unit/experiment-measurement.test.ts tests/convex/goal-workspace.test.ts tests/convex/climb.test.ts tests/convex/experiment-outcomes.test.ts tests/convex/plan-approval.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts tests/convex/publish-flow.test.ts
+pnpm typecheck
+pnpm exec eslint shared/climb/planLearning.ts convex/lib/climbTools.ts convex/lib/climbConfig.ts src/components/app/plan/FocusedLearning.tsx tests/unit/plan-learning-view.test.ts tests/unit/focused-learning-ui.test.tsx tests/convex/goal-workspace.test.ts e2e/focused-strategy-options.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/focused-strategy-options.spec.ts
+git diff --check
+```
+
+Results: **167 tests across 12 files passed (6.14s)**; app/Convex typecheck, scoped ESLint, diff check and isolated local sync passed. **Two desktop/mobile browser checks passed (1.5m)**. The existing synthetic workflow still records/corrects outcomes and verifies matching Research display; it now clicks Discuss next step, verifies the intended editable text, edits it, and checks that no new chat messages, workflow runs, approvals, artifacts or action receipts were created. Stable-view automated accessibility/overflow checks also passed. Tool tests use the actual tenant query and outcome mutation, with no live-model call. The first new regression failed because the old tool omitted exact plan identity and report data; a subsequent assertion was corrected to match the actual no-authority wording.
+
+Changed: convex/lib/climbTools.ts and climbConfig.ts; shared/climb/planLearning.ts; src/components/app/plan/FocusedLearning.tsx; three unit/Convex test files; the focused browser test; capability, handoff, ledger, requirement-audit and verification notes. No schema, generated files, model route, new agent/provider, execution adapter or authorization contract changed. Unrelated .gitignore work is preserved.
+
+Limits: this exposes evidence to an existing read tool; it does not validate model retrieval choices, recommendation quality, reported population/exposure, source authenticity, causal outcomes or profitable continuation. The existing plan query remains bounded to 20 experiments. Large individual records can remain unavailable in tool context and need inspection in the saved plan. Full revision history, offer/timing assessments and every business constraint are not included in this learning view. Reported sources are member entries, including connected-tool/platform labels. No paid evaluation, live send/publish/spend, deployment, merge or model-tier switch occurred. Full project/410-row acceptance remains unproven.
+
 ## 17 November 2026 — report primary learning from Next steps
 
 Audit: GoalWorkspace's default Next steps rendered only PlanTimeline. The existing primary experiment/outcome control required Research → Open research and plan details → Who to reach and how. The workspace query also read only the newest 20 experiments across the organization before selecting this strategy. A new failing regression inserted 25 newer tests for another plan and demonstrated that the selected plan's primary test disappeared.

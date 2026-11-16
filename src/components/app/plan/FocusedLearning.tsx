@@ -36,6 +36,7 @@ export function FocusedLearning({ title, experiments, slug, canEdit, onAsk }: {
         </dl>
       </details>
       <ExperimentOutcome key={test.id} slug={slug} e={test} canEdit={canEdit} />
+      {test.analyses.length ? <Button size="sm" variant="secondary" onClick={() => onAsk(`Review the saved outcome for this recommendation: ${title}. Read its original test and latest report before advising whether to continue, change, or stop. Explain what remains unknown and the smallest useful next step. Do not start, approve, send, publish, or spend anything.`)}>Discuss next step</Button> : null}
       {!canEdit && !test.analyses.length ? <p className="text-sm text-ink-2">No outcome recorded yet. A workspace editor can add one.</p> : null}
       <p className="text-xs text-ink-3">An observation alone does not prove cause. Saving a report records learning; it does not approve or start outside work.</p>
     </> : <>

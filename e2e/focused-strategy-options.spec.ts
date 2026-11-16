@@ -37,7 +37,7 @@ test("focused plan exposes all three options and selecting bold grants no action
   await append("strategies", [{ ...copyRow(plan), orgId: org._id, businessId: savedBusiness._id, goalId: savedGoal._id, runId: undefined, approvalId: undefined, summary: fixture.summary, expert: { ...(plan.expert as Record<string, unknown>), constraintDiagnosis: diagnose({ funnel: { periodDays: 90, leads: 100, activated: 12, newCustomers: 3, activationKind: "value" }, salesCycleDays: 45, salesCycleEstimate: { category: "A few weeks to two months", source: "owner" } }), focusedMove: { ...fixture.focusedMove, timingAssessment: { ...fixture.focusedMove.timingAssessment, researchRetrievedAt: new Date().toISOString() } }, strategicDirection: fixture.strategicDirection, strategyExploration: fixture.strategyExploration, preparedWork: fixture.preparedWork, timing: fixture.timing, phases: fixture.phases, weekOneChecklist: fixture.weekOneChecklist, plays: [] } }]);
   const savedPlan = (await rows("strategies")).find(row => row.orgId === org._id)!;
   await append("experiments", [{ ...fixture.experiments[0], orgId: org._id, strategyId: savedPlan._id, status: "proposed", createdAt: Date.now() }]);
-  const snapshot = async () => Promise.all(["artifacts", "approvals", "actionReceipts", "workflowRuns"].map(async table => (await rows(table)).filter(row => row.orgId === org._id)));
+  const snapshot = async () => Promise.all(["artifacts", "approvals", "actionReceipts", "workflowRuns", "climbMessages"].map(async table => (await rows(table)).filter(row => row.orgId === org._id)));
   const before = await snapshot();
   await page.goto(`/app/${slug}/plan`);
   const planViews = page.getByRole("tablist", { name: "Plan views", exact: true });
@@ -194,5 +194,12 @@ test("focused plan exposes all three options and selecting bold grants no action
   await expect(detailedTests).toContainText("1.234");
   await expect(detailedTests).toContainText("KWD");
   await expect(detailedTests).toContainText("Changed definition");
+  await planViews.getByRole("tab", { name: "Next steps", exact: true }).click();
+  await primaryLearning.getByRole("button", { name: "Discuss next step", exact: true }).click();
+  const message = page.getByRole("textbox", { name: "Message Climb AI", exact: true });
+  await expect(message).toHaveValue(/Read its original test and latest report/);
+  await expect(message).toHaveValue(new RegExp(fixture.focusedMove.title));
+  await message.fill("Review this saved result with me before choosing what to do next.");
+  await expect(message).toHaveValue("Review this saved result with me before choosing what to do next.");
   expect(await snapshot()).toEqual(before);
 });

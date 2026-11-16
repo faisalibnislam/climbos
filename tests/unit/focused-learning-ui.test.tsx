@@ -38,6 +38,7 @@ it("lets viewers inspect reported outcomes without exposing write controls", () 
   const html = render({ canEdit: false, experiments: [{ ...experiment, analyses: [{ n: 1, executed: false, source: "owner_report", design: "none", metric: experiment.primaryMetric, successRule: experiment.stoppingRule, result: "unclear", stopRuleHit: false, inference: "not_run", redefined: false, reviewedAt: 1 }] }] });
   expect(html).toContain("Not run");
   expect(html).toContain("Outcome history");
+  expect(html).toContain("Discuss next step");
   expect(html).not.toContain("Record outcome");
   expect(html).not.toContain("Update outcome");
   expect(render({ canEdit: false, experiments: [] })).not.toContain("Discuss the test");

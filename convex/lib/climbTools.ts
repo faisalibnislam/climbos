@@ -8,6 +8,7 @@ import { minorToMajor } from "../../shared/economics/currency";
 import type { DealValueSummary } from "../../shared/growth/pipeline";
 import { planJob, maxJobMicros } from "./jobPlans";
 import { CalcToolInput, calculate } from "../../shared/analysis/decisions";
+import { PlanLearningOutputSchema, planLearningView } from "../../shared/climb/planLearning";
 
 /**
  * Climb AI's tools: one registry for the in-app side panel and the MCP server.
@@ -97,13 +98,15 @@ const PlanOutputSchema = z.object({
   goal: z.object({ statement: z.string(), horizonDays: z.number(), monthlyAdBudget: z.number(), currency: z.string() }).nullable(),
   plan: z.null().optional(),
   status: z.string().optional(),
+  strategyId: z.string().optional(), version: z.number().optional(),
+  goalContext: z.string().optional(), learning: z.string().optional(),
   summary: z.string().optional(),
   diagnosis: z.string().optional(),
   northStar: z.object({ metric: z.string(), baseline: z.string(), target: z.string() }).optional(),
   plays: z.array(z.object({ name: z.string(), kind: z.string(), oneLiner: z.string(), forecast: z.string().nullable() })).optional(),
   weekOne: z.array(z.string()).optional(),
   channels: z.array(z.object({ name: z.string(), priority: z.number(), status: z.string() })).optional(),
-  experiments: z.array(z.object({ name: z.string(), status: z.string() })).optional(),
+  experiments: z.array(z.object({ id: z.string(), name: z.string(), status: z.string(), hasReport: z.boolean() })).optional(),
 });
 const AutopilotOutputSchema = z.object({
   settings: z.object({
@@ -383,18 +386,25 @@ export const CLIMB_TOOLS: ClimbTool[] = [
   tool({
     name: "get_plan",
     title: "Growth plan",
-    description: "The current growth plan: summary, diagnosis, North Star, growth plays with forecasts and tests, channels, experiments, this week's checklist.",
+    description: "Read the current growth plan or an exact selected strategyId. Overview includes experiment IDs and whether reports exist. For what happened or continue/change/stop advice, use view=learning to read saved test conditions, latest reported values, unknowns and changed definitions. Pass experimentId to inspect one report when details were omitted. Neither view authorizes action.",
     risk: "read",
     doing: "Reading your growth plan",
-    input: z.object({}),
-    output: PlanOutputSchema,
-    run: async (c, slug) => {
-      const p = await c.query(api.workspace.plan, { slug });
+    input: z.object({ strategyId: z.string().min(1).max(80).optional(), view: z.enum(["overview", "learning"]).optional(), experimentId: z.string().min(1).max(80).optional() }),
+    output: z.union([PlanOutputSchema, PlanLearningOutputSchema]),
+    run: async (c, slug, i) => {
+      const p = await c.query(api.workspace.plan, { slug, ...(i.strategyId ? { strategyId: i.strategyId as Id<"strategies"> } : {}) });
       const s = p.strategy;
+      if (i.strategyId && s?.id !== i.strategyId) throw new Error("That saved plan is unavailable in this workspace. No other plan was substituted.");
+      if (i.experimentId && !p.experiments.some(e => e.id === i.experimentId)) throw new Error("That test is not available in this selected plan. Open its original plan before reviewing it.");
       if (!s) return { plan: null, goal: p.goal };
+      if (i.view === "learning" || i.experimentId) return planLearningView({ id: s.id, version: s.version, primaryTitle: s.expert?.focusedMove?.title }, i.experimentId ? p.experiments.filter(e => e.id === i.experimentId) : p.experiments);
       const x = s.expert as { diagnosis?: string; northStar?: unknown; plays?: { name: string; kind: string; oneLiner: string; forecast?: { p10: number; p50: number; p90: number; unit: string } }[]; weekOneChecklist?: string[] } | null;
       return {
-        goal: p.goal,
+        // workspace.plan's goal follows current focus even when a historical plan is requested.
+        goal: i.strategyId ? null : p.goal,
+        goalContext: i.strategyId ? "Saved plan selected explicitly; its original goal details are not included in this overview." : "Currently focused goal.",
+        strategyId: s.id, version: s.version,
+        learning: "Use get_plan with this strategyId and view=learning before discussing test results or whether to continue, change, or stop. Status is not an outcome.",
         status: s.status,
         summary: short(s.summary, 600),
         diagnosis: x?.diagnosis,
@@ -402,7 +412,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
         plays: x?.plays?.map((pl) => ({ name: pl.name, kind: pl.kind, oneLiner: pl.oneLiner, forecast: pl.forecast ? `${pl.forecast.p10}–${pl.forecast.p90} ${pl.forecast.unit} (likely ${pl.forecast.p50})` : null })),
         weekOne: x?.weekOneChecklist,
         channels: s.channels.map((ch) => ({ name: ch.name, priority: ch.priority, status: ch.status })),
-        experiments: p.experiments.map((e) => ({ name: e.name, status: e.status })),
+        experiments: p.experiments.map((e) => ({ id: e.id, name: e.name, status: e.status, hasReport: e.analyses.length > 0 })),
       };
     },
   }),
