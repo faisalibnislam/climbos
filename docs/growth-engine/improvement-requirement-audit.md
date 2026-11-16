@@ -1,3 +1,7 @@
+## 17 November 2026 — main-plan diagnosis and prioritization
+
+Rows 1–10 now have a current scoped [reconciliation](growth-plan-completion-audit.md). Existing diagnosis, audience/competitor research, offer economics, lifecycle and capacity paths were inspected. The confirmed missing default-plan demand gate and non-blocking quality classification were repaired. Broad acceptance remains partial: local checks do not establish general causal diagnosis, real-market fit, pricing optimality or business outcomes. The other 400 rows and later owner requirements remain in scope.
+
 ## 17 November 2026 — viability and pivot acceptance audit
 
 Requirements 2 and 9, plus the business-model portion of 10, were traced through the current runtime. The result-saving validation gap, weak source normalization and impossible-date acceptance were repaired; owner failure visibility was added. These rows remain partial because expert judgment, broader coverage and real-world effectiveness are not proven. See [the detailed audit](business-model-completion-audit.md) and Verification for exact tests and limits.

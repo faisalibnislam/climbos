@@ -320,6 +320,10 @@ Engine `v3.101-calendar-trend-evidence` closes the weaker weekly-calendar contra
 
 The existing viability/pivot workflow was traced through owner start, evidence snapshot, model research/review, persistence, UI and future learning. New real v2 outputs now pass the existing schema and final spec lint before verified persistence, using retained research. Source identity and actual calendar-date validation were tightened. Latest failure feedback preserves earlier valid results. Engine v3.116-business-model-validation. See `docs/growth-engine/business-model-completion-audit.md` and the newest Verification entry. No historical migration, paid model evaluation or production action was performed; full requirement reconciliation remains open.
 
+## Default-plan demand validation — 17 November 2026
+
+The current audit of rows 1–10 is in `docs/growth-engine/growth-plan-completion-audit.md`. Starter/focused channels now reuse the existing demand-validation gate by priority (ties all primary). `demand_gate` is a hard quality rule, closing the gap where a failing deterministic demand check could still produce an approvable plan. Supporting paid tests and bold exploration remain. Engine v3.117-focused-demand-validation; see Verification. This does not migrate historical quality states, prove semantic diagnosis alignment, or establish real-market recommendation quality.
+
 ## What remains and should guide the next work
 
 These are known open gaps, not a complete substitute for checking the requirement audit and ledger before choosing work:

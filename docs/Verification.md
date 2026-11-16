@@ -1,3 +1,22 @@
+## 17 November 2026 — enforce demand validation in starter/focused plans
+
+Audit of the default growth-plan path confirmed that owner funnel diagnosis, capacity, lifecycle and demand concerns already reach generation. Two gaps remained: starter/focused specs did not run the detailed planner's demand gate, and `demand_gate` was absent from hard quality rules. Three new unit regressions failed before implementation: focused/starter produced no demand error, and final quality returned passed for a demand-gate error.
+
+The focused spec now maps its channels into the existing demand policy. Ascending channel priority determines the primary recommendation, matching persistence; tied priorities are all primary. Explicit positive primary ad spend with supplied demand concerns is an error; supporting spend retains the existing warning. `demand_gate` is now a hard quality rule with an owner-readable reason. Both default plan styles retain strategic alternatives, save the failed draft for review, and refuse approval/start through the existing controls. No new schema, provider, agent, UI component or campaign-timing prompt was introduced. Engine v3.117-focused-demand-validation.
+
+Commands run:
+
+```sh
+pnpm exec vitest run tests/unit/demand-gate.test.ts tests/unit/plan-quality.test.ts tests/unit/focused-plan.test.ts tests/unit/diagnosis-playbooks.test.ts tests/unit/business-lifecycle.test.ts tests/unit/capacity-service-area.test.ts tests/unit/focused-offer-assessment.test.ts tests/unit/offer-assessment.test.ts tests/unit/focused-campaign-timing.test.ts tests/convex/focused-plan.test.ts tests/convex/engine-v2.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts tests/convex/research-context.test.ts
+pnpm typecheck
+pnpm exec eslint shared/agents/specs.ts shared/agents/quality.ts tests/unit/demand-gate.test.ts tests/unit/plan-quality.test.ts tests/convex/focused-plan.test.ts
+git diff --check
+```
+
+Results: **188 tests across 14 files passed (9.52s)**; app/Convex typechecks, scoped lint and whitespace checks passed. New workflow cases use the real agent loop with synthetic model turns and an owner-reported pre-launch business. Proposed primary spend is inside the supplied ad budget, isolating demand failure from budget failure. Starter and focused plans retain their bold option, have failed quality, cannot be approved or started, and create no execution receipts. A supporting paid test remains saved at the correct minor-unit amount, its warning reaches review, and it does not become a hard failure. Unit cases cover tied/unsorted priorities and absence of supplied demand concerns. Initial integration setup failures were missing/incorrect fixture provenance and an assertion against the pre-persistence field name; these were corrected to the actual schema and storage units.
+
+Limits: no paid model evaluation, browser verification, deployment or external spend. Historical saved quality states were not migrated. The guard uses explicit proposed ad spend and supplied demand concerns; it cannot identify every paid tactic expressed only in prose, and absence of a concern is not proof of validated demand. Wider diagnosis-to-action semantic alignment and real-business recommendation quality remain open. See `docs/growth-engine/growth-plan-completion-audit.md` for the scoped reconciliation of requirements 1–10; the complete 410-item and later owner scope is not marked complete.
+
 ## 17 November 2026 — validate business-model results before acceptance
 
 Audit traced owner inputs and metered start through evidence hashes, deterministic first-party signals, market research, agent review, saved verdict, owner tests and future strategy context. The shared runner intentionally retains its best draft when revision is exhausted; the business-model job had no final acceptance check. Seven new failing boundary cases reproduced invalid output becoming verified despite a passing model assessment. Source normalization also conflated distinct URLs, and evidence-date validation accepted impossible dates.

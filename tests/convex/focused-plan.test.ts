@@ -7,13 +7,18 @@ import { offerAssessmentFixture, offerFact } from "../fixtures/offerAssessment";
 import { approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
 import type { TurnRequest } from "../../shared/ai/types";
 import type { RateVersion } from "../../shared/economics/rates";
-const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "" }));
+const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "" }));
 vi.mock("../../shared/ai/turn", async original => ({
   ...await original<typeof import("../../shared/ai/turn")>(),
   modelTurn: async (req: TurnRequest, rates: RateVersion) => {
     state.requests.push(req);
     const days = Number(JSON.stringify(req.messages).match(/EXECUTION CYCLE: (14|30|90) days/)?.[1] ?? 14);
     const plan = focusedPlanFixture(days);
+    if (state.demandMode) {
+      const channel = plan.channels[0];
+      plan.channels = [{ ...channel, key: "search_ads", name: "Search ads test", priority: 1, suggestedMonthlyAdSpend: 150 }];
+      if (state.demandMode === "supporting") plan.channels.push({ ...channel, name: "Private demand validation", priority: 0, suggestedMonthlyAdSpend: 0 });
+    }
     if (state.timingMode) {
       const timing = futureCampaignTimingFixture();
       if (state.timingMode === "too_close") timing.proposedWindow!.startDate = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
@@ -52,7 +57,7 @@ vi.mock("../../shared/ai/turn", async original => ({
     return result;
   },
 }));
-afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; });
+afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; });
 
 async function workspace() {
   const t = setup(); delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE;
@@ -68,6 +73,43 @@ async function workspace() {
   await t.mutation(internal.engine.putResearchCache, { orgId, businessWebsite: "https://business.example/", cacheKey: "a".repeat(64), agentId: "business_insights", modelKey: "claude-haiku-5.5", notes: "Synthetic public-source notes for a workflow integration test. No measured demand.", sources: [{ url: "https://business.example/" }], expiresAt: Date.now() + 86400000 });
   return { t, owner, slug, orgId };
 }
+
+it.each(["focused", "starter"] as const)("blocks primary paid acquisition in a %s plan when owner evidence calls for demand validation", async planStyle => {
+  const { t, owner, slug, orgId } = await workspace();
+  state.demandMode = "primary";
+  await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "Find a repeatable way to earn paying customers", horizonDays: 14, monthlyAdBudget: 200 });
+  await t.run(async ctx => {
+    const business = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", orgId)).first())!;
+    await ctx.db.patch(business._id, { lifecycleStage: { stage: "pre_launch", provenance: "owner_reported", updatedAt: Date.now() } });
+  });
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(plan.expert?.quality).toMatchObject({ state: "failed", fixes: expect.arrayContaining([expect.objectContaining({ rule: "demand_gate", path: "channels[0].suggestedMonthlyAdSpend" })]) });
+  expect(plan.expert?.strategyExploration?.bold).toMatchObject({ precedentIds: [], feasibility: "low" });
+  expect(JSON.stringify(state.requests)).toContain("demandValidation");
+  await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
+  await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: plan._id, playId: "focused" })).rejects.toThrow();
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+  expect((await t.run(ctx => ctx.db.query("approvals").collect())).every(a => a.status === "pending")).toBe(true);
+});
+
+it("keeps a supporting paid test visible after an unpaid primary demand test", async () => {
+  const { t, owner, slug, orgId } = await workspace();
+  state.demandMode = "supporting";
+  await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "Find a repeatable way to earn paying customers", horizonDays: 14, monthlyAdBudget: 200 });
+  await t.run(async ctx => {
+    const business = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", orgId)).first())!;
+    await ctx.db.patch(business._id, { lifecycleStage: { stage: "pre_launch", provenance: "owner_reported", updatedAt: Date.now() } });
+  });
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(plan.expert?.quality?.state).not.toBe("failed");
+  expect(plan.channels).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Search ads test", adSpendMinor: 15000 })]));
+  expect(JSON.stringify(state.requests)).toContain("buys traffic before demand is validated");
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
 
 it.each(["focused", "starter"] as const)("carries deterministic diagnosis into the %s writer, review and saved plan", async planStyle => {
   const { t, owner, slug, orgId } = await workspace();

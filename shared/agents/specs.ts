@@ -336,7 +336,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.116-business-model-validation";
+export const ENGINE_VERSION = "v3.117-focused-demand-validation";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -1195,6 +1195,17 @@ export function lintDemandGate(plays: { name: string; model?: { monthlySpendUsd:
     if ((p.model?.monthlySpendUsd ?? 0) > 0) issues.push({ severity: "warn", rule: "demand_gate", message: `"${p.name}" buys traffic before demand is validated. Keep it a small, time-boxed test with a stop condition.`, path: `plays[${i + 1}].model.monthlySpendUsd` });
   });
   return issues;
+}
+
+/** Focused plans have channels rather than forecast plays. Lowest priority is first; ties are all primary. */
+function lintFocusedDemandGate(channels: { name: string; priority: number; suggestedMonthlyAdSpend: number }[], c: PlanConstraints | undefined): LintIssue[] {
+  if (!c?.demandValidation?.reasons.length || !channels.length) return [];
+  const primaryPriority = Math.min(...channels.map(channel => channel.priority));
+  return channels.flatMap((channel, index) => {
+    const play = { name: channel.name, model: { monthlySpendUsd: channel.suggestedMonthlyAdSpend } };
+    const plays = channel.priority === primaryPriority ? [play] : [{ name: "Primary demand-validation work" }, play];
+    return lintDemandGate(plays, c).map(issue => ({ ...issue, path: `channels[${index}].suggestedMonthlyAdSpend` }));
+  });
 }
 
 /** Spec §8: when a finding offers more than one direction, they must be distinct response levels with stated effort and risk. */
@@ -2737,6 +2748,7 @@ export function focusedStrategySpec(o: SpecOptions = {}): AgentSpec<z.infer<type
     schema: FocusedStrategySchema, rubric: focusedRubric(rubricOf("growth-strategy")), criticSkills: ["owner-brevity"],
     lint: (out, input) => [
       ...lintStrategyExploration(out.strategyExploration, input),
+      ...lintFocusedDemandGate(out.channels, input.constraints),
       ...lintFocusedOffer(out, input),
       ...lintFocusedLearning(out, input),
       ...lintCampaignTiming(out.focusedMove.timingAssessment, { today: input.timingContext?.today ?? "", now: input.timingContext?.now, timezone: input.timingContext?.timezone, facts: input.facts, factEvidenceBases: input.constraints?.factEvidenceBases, researchNotes: input.precomputedResearch?.notes ?? input.untrustedContext ?? "", sourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map(source => source.url) ?? [], researchRetrievedAt: input.precomputedResearch?.retrievedAt }, "focusedMove.timingAssessment"),
