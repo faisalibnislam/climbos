@@ -13,6 +13,18 @@
  */
 export type EvidenceKind = "published" | "stated" | "behavior" | "commitment" | "measured" | "owner";
 
+/** Source provenance, separate from heuristic wording-based demand signals. */
+export type FactEvidenceBasis = "owner_reported" | "source_reported" | "measured" | "unknown";
+export function factEvidenceBasis(provenance?: string): FactEvidenceBasis {
+  return provenance === "owner_supplied" ? "owner_reported" : provenance === "researched" ? "source_reported" : "unknown";
+}
+
+/** Only trusted input metadata can establish a measured source; URL presence cannot. */
+export function referenceEvidenceBasis(reference: string | null, factBases: readonly FactEvidenceBasis[] | undefined, sourceUrls: readonly string[]): FactEvidenceBasis {
+  const index = reference ? /^fact:(\d+)$/.exec(reference)?.[1] : undefined;
+  return index !== undefined ? factBases?.[Number(index)] ?? "unknown" : reference && sourceUrls.includes(reference) ? "source_reported" : "unknown";
+}
+
 const COMMITMENT = /\b(paid|pays|paying customers?|purchased|bought|deposit|pre-?ordered|pre-?sold|signed (?:a |the )?(?:contract|letter|loi)|letter of intent|invoice[sd]?|subscribed for|renewed)\b/i;
 const MEASURED = /\b(analytics|stripe|billing|crm|search console|dashboard|cohort|conversion rate|retention|churn(?:ed)? rate|\d+(?:\.\d+)?\s?% (?:of|convert|churn|retain|open|click))\b/i;
 const BEHAVIOR = /\b(signed up|sign-?ups?|booked|used|uses|logged in|completed|cancel(?:l)?ed|churned|returned|asked for|requested|complained|referred|downloaded|installed)\b/i;

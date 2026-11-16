@@ -183,7 +183,7 @@ const offerAssessmentValidator = v.object({
   evidenceRefs: v.array(v.string()),
   evidenceNote: v.string(),
   promotionHistory: v.optional(v.object({
-    status: v.union(v.literal("measured"), v.literal("owner_reported"), v.literal("unknown")),
+    status: v.union(v.literal("measured"), v.literal("owner_reported"), v.literal("source_reported"), v.literal("unknown")),
     reference: v.union(v.string(), v.null()),
     claim: v.string(),
     period: v.union(v.string(), v.null()),
@@ -200,7 +200,7 @@ const offerAssessmentValidator = v.object({
   proposed: v.object({ netPrice: offerEvidenceValueValidator, variableCosts: v.array(v.object({ category: v.string(), value: offerEvidenceValueValidator })), unknownCosts: v.array(v.string()) }),
   minimumContribution: v.union(offerEvidenceValueValidator, v.null()),
   minimumMarginRate: v.union(offerEvidenceValueValidator, v.null()),
-  risks: v.array(v.object({ kind: v.union(v.literal("margin"), v.literal("wait_for_sale"), v.literal("pull_forward"), v.literal("cannibalization"), v.literal("capacity"), v.literal("support_burden"), v.literal("poor_fit")), status: v.union(v.literal("measured"), v.literal("calculated"), v.literal("hypothesis"), v.literal("unknown"), v.literal("not_applicable")), note: v.string(), evidenceRef: v.union(v.string(), v.null()), evidenceClaim: v.string() })),
+  risks: v.array(v.object({ kind: v.union(v.literal("margin"), v.literal("wait_for_sale"), v.literal("pull_forward"), v.literal("cannibalization"), v.literal("capacity"), v.literal("support_burden"), v.literal("poor_fit")), status: v.union(v.literal("measured"), v.literal("owner_reported"), v.literal("source_reported"), v.literal("calculated"), v.literal("hypothesis"), v.literal("unknown"), v.literal("not_applicable")), note: v.string(), evidenceRef: v.union(v.string(), v.null()), evidenceClaim: v.string() })),
   capacity: v.object({ status: v.union(v.literal("available"), v.literal("constrained"), v.literal("unknown"), v.literal("not_applicable")), evidenceRef: v.union(v.string(), v.null()), claim: v.string() }),
   test: v.object({ eligibleAudience: v.string(), baselineOrComparison: v.string(), primaryOutcome: v.string(), observationWindowDays: v.number(), continueCriteria: v.string(), stopCriteria: v.string(), thresholdEvidenceRef: v.union(v.string(), v.null()), ownerInputs: v.array(v.string()) }),
   urgencyClaim: v.union(v.string(), v.null()),

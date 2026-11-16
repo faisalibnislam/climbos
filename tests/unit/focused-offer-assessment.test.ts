@@ -10,7 +10,7 @@ import { focusedPlanFixture } from "../fixtures/focusedPlan";
 import { offerAssessmentFixture, offerFact } from "../fixtures/offerAssessment";
 import type { AgentInput } from "../../shared/agents/types";
 
-const input: AgentInput = { task: "Assess the proposed offer", brief: offerFact, facts: [offerFact], constraints: { horizonDays: 30, currency: "USD", monthlyAdBudgetUsd: 0 } };
+const input: AgentInput = { task: "Assess the proposed offer", brief: offerFact, facts: [offerFact], constraints: { factEvidenceBases: ["owner_reported"], horizonDays: 30, currency: "USD", monthlyAdBudgetUsd: 0 } };
 const plan = (offer = offerAssessmentFixture()) => {
   const base = focusedPlanFixture(30);
   return { ...base, diagnosis: offer.diagnosis, focusedMove: { ...base.focusedMove, title: "Test the proposed introductory discount", why: "The owner reports a price obstacle for qualified quote requests.", firstAction: "Review the prepared offer test.", aiCanDo: "Prepare a private discount test brief for owner review.", offerAssessment: offer } };

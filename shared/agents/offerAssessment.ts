@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { LintIssue } from "./types";
 import { withoutNegatedTrials } from "./offerLanguage";
+import { referenceEvidenceBasis, type FactEvidenceBasis } from "./evidenceKind";
 
 export const OfferEvidenceValueSchema = z.object({
   amount: z.number().finite().nonnegative().nullable(),
@@ -47,7 +48,7 @@ export const OfferAssessmentSchema = z.object({
   evidenceRefs: z.array(z.string()).max(8),
   evidenceNote: z.string().min(1).max(500),
   promotionHistory: z.object({
-    status: z.enum(["measured", "owner_reported", "unknown"]),
+    status: z.enum(["measured", "owner_reported", "source_reported", "unknown"]),
     reference: z.string().nullable(),
     claim: z.string().max(500),
     period: z.string().nullable(),
@@ -66,7 +67,7 @@ export const OfferAssessmentSchema = z.object({
   minimumMarginRate: OfferEvidenceValueSchema.nullable(),
   risks: z.array(z.object({
     kind: z.enum(["margin", "wait_for_sale", "pull_forward", "cannibalization", "capacity", "support_burden", "poor_fit"]),
-    status: z.enum(["measured", "calculated", "hypothesis", "unknown", "not_applicable"]),
+    status: z.enum(["measured", "owner_reported", "source_reported", "calculated", "hypothesis", "unknown", "not_applicable"]),
     note: z.string().min(1).max(240),
     evidenceRef: z.string().nullable(),
     evidenceClaim: z.string().max(500),
@@ -251,6 +252,7 @@ export function evaluateOfferUnitEconomics(assessment: OfferAssessment): OfferUn
 
 export interface OfferAssessmentContext {
   facts: string[];
+  factEvidenceBases?: readonly FactEvidenceBasis[];
   researchNotes: string;
   sourceUrls: string[];
   evidenceText: string;
@@ -393,6 +395,10 @@ export function lintOfferAssessment(
 ): LintIssue[] {
   const issues: LintIssue[] = [];
   const error = (message: string, suffix = "") => issues.push({ severity: "error", rule: "offer_assessment", message, path: suffix ? `${path}.${suffix}` : path });
+  const basisError = (message: string, suffix: string) => issues.push({ severity: "error", rule: "evidence_basis", message, path: `${path}.${suffix}` });
+  const checkBasis = (basis: string, ref: string | null, suffix: string) => {
+    if (["owner_reported", "source_reported", "measured"].includes(basis) && referenceEvidenceBasis(ref, context.factEvidenceBases, context.sourceUrls) !== basis) basisError("The evidence basis must match the recorded source class. Owner reports and web claims are not independently measured facts; missing source metadata stays unknown.", suffix);
+  };
   const text = [play.name, play.oneLiner, play.hook, play.mechanic, play.test, play.killIf, play.scaleIf].filter(Boolean).join(" ");
   const containsPromotion = PROMOTION_WORDS.test(withoutNegatedTrials(text));
   if (!assessment) {
@@ -417,6 +423,7 @@ export function lintOfferAssessment(
     if (!assessment.evidenceRefs.length) error("Owner-reported or measured promotion evidence needs an exact fact or source reference.", "evidenceRefs");
   }
   const supportingEvidence = assessment.evidenceRefs.map((ref) => resolveEvidence(ref, context));
+  if (["owner_reported", "source_reported", "measured"].includes(assessment.evidenceBasis) && !assessment.evidenceRefs.some((ref, index) => supportingEvidence[index]?.includes(assessment.evidenceNote) && referenceEvidenceBasis(ref, context.factEvidenceBases, context.sourceUrls) === assessment.evidenceBasis)) basisError("The decision evidence basis must match a cited source containing its exact claim; an unrelated reference cannot change a claim's source class.", "evidenceBasis");
   assessment.evidenceRefs.forEach((ref, index) => { if (!supportingEvidence[index]) error(`Evidence reference ${ref} was not supplied or retrieved.`, "evidenceRefs"); });
   if (assessment.recommendation === "recommend_promotion" && !supportingEvidence.some((source) => source?.includes(assessment.evidenceNote))) error("A promotion recommendation needs a verbatim owner or measured evidence claim that supports the stated customer obstacle.", "evidenceNote");
 
@@ -427,6 +434,7 @@ export function lintOfferAssessment(
     if (!assessment.unknowns.some((item) => /promotion|discount|repeat purchase|full.price/i.test(item))) error("When promotion history is unavailable, name the missing history as an unknown.", "unknowns");
   } else {
     const historyEvidence = resolveEvidence(assessment.promotionHistory.reference, context);
+    checkBasis(assessment.promotionHistory.status, assessment.promotionHistory.reference, "promotionHistory.status");
     if (!historyEvidence || !assessment.promotionHistory.claim || !historyEvidence.includes(assessment.promotionHistory.claim)) error("Measured or owner-reported promotion history must quote a supplied fact or retrieved source.", "promotionHistory.reference");
     if (!assessment.promotionHistory.period?.trim()) error("State the observed period for promotion and repeat-purchase history, or leave the history unknown.", "promotionHistory.period");
     if (assessment.promotionHistory.status === "measured" && !/^fact:\d+$/.test(assessment.promotionHistory.reference ?? "") && !context.sourceUrls.includes(assessment.promotionHistory.reference ?? "")) error("Measured promotion history must point to a measured fact or exact retrieved source.", "promotionHistory.reference");
@@ -435,6 +443,7 @@ export function lintOfferAssessment(
   const checkValue = (value: OfferAssessment["current"]["netPrice"], field: string, isRate = false) => {
     if (value.amount === null) return;
     const supporting = resolveEvidence(value.reference, context);
+    checkBasis(value.basis, value.reference, `${field}.basis`);
     if (["owner_reported", "measured", "source_reported"].includes(value.basis) && !supporting) error("This numeric offer input needs an exact supplied fact or retrieved-source reference.", field);
     if (supporting && value.claim && !supporting.includes(value.claim)) error("The numeric input claim must appear verbatim in its cited fact or source notes.", `${field}.claim`);
     if (supporting && value.claim && !claimSupportsAmount(value.claim, value.amount, isRate)) error("The stated numeric input does not match the amount in its cited claim; preserve the value as unknown until the source is reconciled.", `${field}.amount`);
@@ -456,9 +465,10 @@ export function lintOfferAssessment(
 
   const economics = evaluateOfferUnitEconomics(assessment);
   assessment.risks.forEach((risk, index) => {
-    if (risk.status === "measured") {
+    if (["measured", "owner_reported", "source_reported"].includes(risk.status)) {
+      checkBasis(risk.status, risk.evidenceRef, `risks[${index}].status`);
       const supporting = resolveEvidence(risk.evidenceRef, context);
-      if (!supporting || !risk.evidenceClaim || !supporting.includes(risk.evidenceClaim)) error("A measured risk statement needs an exact evidence claim and source reference; otherwise label it hypothesis or unknown.", `risks[${index}]`);
+      if (!supporting || !risk.evidenceClaim || !supporting.includes(risk.evidenceClaim)) error("A reported or measured risk statement needs an exact evidence claim and source reference; otherwise label it hypothesis or unknown.", `risks[${index}]`);
     }
     if (risk.status === "calculated" && !economics.known) error("A calculated offer risk requires complete unit-economic inputs.", `risks[${index}]`);
   });
@@ -470,6 +480,7 @@ export function lintOfferAssessment(
     }
     if (["bonus", "bundle", "referral_incentive"].includes(assessment.mechanism) && !assessment.proposed.variableCosts.some((cost) => /bonus|promo|referral|reward|bundle/i.test(cost.category))) error("Include the proposed bonus or incentive cost as a variable cost before recommending this mechanism.", "proposed.variableCosts");
   }
+  if (assessment.paymentFeeTerms) checkBasis(assessment.paymentFeeTerms.basis, assessment.paymentFeeTerms.reference, "paymentFeeTerms.basis");
   issues.push(...lintPaymentFees(assessment, path));
   if (assessment.recommendation === "recommend_promotion" && ["unknown", "constrained"].includes(assessment.capacity.status)) error("Do not recommend a promotion while delivery capacity is unknown or constrained; resolve the bottleneck or run a capacity-safe validation first.", "capacity.status");
   if (assessment.recommendation === "recommend_promotion" && economics.known && (economics.proposedContribution === null || economics.proposedContribution <= 0)) error("The proposed offer has no positive unit contribution under its stated cost boundary.", "proposed");

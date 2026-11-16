@@ -1,7 +1,7 @@
 import type { OfferAssessment } from "../../shared/agents/offerAssessment";
 
 export const offerFact = "Owner reports that qualified quote requests do not book because of stated price objections. Current offer is $100 per service. Proposed offer is $95 per service. Variable labor is $40 per service, payment fee is $3 per sale, fulfillment costs $7 per service, and the proposed bonus costs $5 per service. Owner minimum contribution is $35 per sale and minimum contribution margin is 30%. The team has capacity for 20 additional jobs per month.";
-export const offerContext = { facts: [offerFact], researchNotes: "", sourceUrls: [], evidenceText: offerFact };
+export const offerContext = { facts: [offerFact], factEvidenceBases: ["owner_reported" as const], researchNotes: "", sourceUrls: [], evidenceText: offerFact };
 export const offerValue = (amount: number | null, claim: string, reference: string | null = "fact:0") => ({ amount, basis: "owner_reported" as const, reference, claim });
 export const costs = (bonus = false) => [
   { category: "variable labor", value: offerValue(40, "Variable labor is $40 per service") },
@@ -39,7 +39,7 @@ export const offerAssessmentFixture = (overrides: Partial<OfferAssessment> = {})
     { kind: "wait_for_sale", status: "hypothesis", note: "Repeated discounts may teach eligible customers to wait.", evidenceRef: null, evidenceClaim: "" },
     { kind: "pull_forward", status: "unknown", note: "The test cannot yet distinguish incremental jobs from earlier purchases.", evidenceRef: null, evidenceClaim: "" },
     { kind: "cannibalization", status: "hypothesis", note: "Some full-price buyers may use the promotion.", evidenceRef: null, evidenceClaim: "" },
-    { kind: "capacity", status: "measured", note: "Owner reports 20 additional jobs monthly.", evidenceRef: "fact:0", evidenceClaim: "The team has capacity for 20 additional jobs per month." },
+    { kind: "capacity", status: "owner_reported", note: "Owner reports 20 additional jobs monthly.", evidenceRef: "fact:0", evidenceClaim: "The team has capacity for 20 additional jobs per month." },
     { kind: "support_burden", status: "unknown", note: "Incremental support time has not been measured.", evidenceRef: null, evidenceClaim: "" },
     { kind: "poor_fit", status: "hypothesis", note: "Price-led acquisition may attract lower-fit customers.", evidenceRef: null, evidenceClaim: "" },
   ],

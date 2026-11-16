@@ -66,6 +66,8 @@ export function offerRiskLabel(value: OfferAssessment["risks"][number]["kind"]):
 
 export function offerEvidenceStatusLabel(value: OfferAssessment["risks"][number]["status"]): string {
   switch (value) {
+    case "owner_reported": return "reported by your team";
+    case "source_reported": return "reported by a source";
     case "measured": return "measured";
     case "calculated": return "calculated";
     case "hypothesis": return "possible risk to test";

@@ -18,6 +18,7 @@ vi.mock("../../shared/ai/turn", async original => ({
       const timing = futureCampaignTimingFixture();
       if (state.timingMode === "too_close") timing.proposedWindow!.startDate = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
       if (state.timingMode === "capacity") timing.capacity.status = "constrained";
+      if (state.timingMode === "measured") timing.moment.evidence[0] = { ...timing.moment.evidence[0], basis: "measured", reference: "fact:0", sourceUrl: null };
       plan.focusedMove.timingAssessment = state.timingMode === "unknown"
         ? { ...evergreenTimingFixture(), decision: "not_enough_evidence", geographyBasis: "Served geography unknown.", unknowns: ["Served geography", "Timezone", "Capacity and lead time"], rationale: "Prepare a geography-neutral draft until readiness is known." }
         : timing;
@@ -25,6 +26,7 @@ vi.mock("../../shared/ai/turn", async original => ({
     }
     if (state.offerMode) {
       const offer = offerAssessmentFixture();
+      if (state.offerMode === "measured") { offer.evidenceBasis = "measured"; offer.current.netPrice.basis = "measured"; offer.risks[4].status = "measured"; }
       if (state.offerMode === "missing_cost") offer.proposed.unknownCosts = ["Incremental delivery cost"];
       if (state.offerMode === "validate_first") {
         offer.recommendation = "validate_first"; offer.proposed.unknownCosts = ["Incremental delivery cost"];
@@ -229,6 +231,24 @@ it.each(["missing_assessment", "missing_cost", "validate_first"])("keeps %s prom
     await owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: saved._id, decision: "approve" });
     expect(approvedPlanOfferTerms((await t.run(ctx => ctx.db.get(saved._id)))!)).toMatchObject([{ recommendation: "validate_first", allowedPrices: [100], allowedMechanisms: [] }]);
   } else await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: saved._id, decision: "approve" })).rejects.toThrow(/checks/);
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
+
+it.each(["offer", "timing"] as const)("blocks %s evidence upgraded from an owner report to measured data", async kind => {
+  const { t, owner, slug, orgId } = await workspace();
+  if (kind === "offer") state.offerMode = "measured"; else state.timingMode = "measured";
+  await setTimingEvidence(t, orgId, Date.now() - 60000);
+  await t.run(async ctx => {
+    const business = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", orgId)).first())!;
+    const fact = (await ctx.db.query("businessFacts").withIndex("by_business", q => q.eq("businessId", business._id)).first())!;
+    await ctx.db.patch(fact._id, { statement: `${fact.statement} ${offerFact} ${futureCampaignTimingFixture().moment.evidence[0].claim} Owner analytics dashboard notes are self-reported.` });
+  });
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const saved = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(saved.expert?.quality?.state).toBe("failed");
+  await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: saved._id, decision: "approve" })).rejects.toThrow(/checks/);
+  for (const request of state.requests) expect(JSON.stringify(request.messages)).toContain("source: owner_reported; wording signal: measured");
   expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
 });
 

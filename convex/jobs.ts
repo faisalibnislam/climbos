@@ -55,7 +55,7 @@ import { CALL_ROUTES, draftsFor, expertEscalationModel, routeModels, taskModelSl
 import { reconcile } from "../shared/agents/consistency";
 import { formatMoney, minorToMajor } from "../shared/economics/currency";
 import { buildPlanEvidence } from "../shared/agents/evidence";
-import { trustPostureContext } from "../shared/agents/evidenceKind";
+import { factEvidenceBasis, trustPostureContext } from "../shared/agents/evidenceKind";
 import { conflictLines, findConflicts } from "../shared/agents/conflicts";
 import { platformNotes } from "../shared/acquisition/platformRules";
 import { growthKnowledgeContext, type KnowledgeReferenceSet } from "../shared/knowledge/retrieve";
@@ -637,6 +637,7 @@ function constraintsOf(job: JobCtx, extra: Partial<PlanConstraints> = {}): PlanC
     ...growthCashConstraint(job),
     ...demandValidationConstraint(job),
     factKinds: job.facts.map((f) => f.evidenceKind),
+    factEvidenceBases: job.facts.map((f) => factEvidenceBasis(f.provenance)),
     ...extra,
   };
 }

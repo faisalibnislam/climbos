@@ -1,5 +1,5 @@
 import type { Diagnosis } from "./diagnosis";
-import type { EvidenceKind } from "./evidenceKind";
+import type { EvidenceKind, FactEvidenceBasis } from "./evidenceKind";
 import type { z } from "zod";
 import type { Effort, Source, PageReadEvidence } from "../ai/types";
 import type { ModelKey } from "../economics/rates";
@@ -168,6 +168,8 @@ export interface PlanConstraints {
   serviceArea?: string;
   /** Each confirmed fact's strength as evidence (shared/agents/evidenceKind.ts); proof-of-demand language needs more than opinions. */
   factKinds?: EvidenceKind[];
+  /** Recorded source class, never inferred from words such as analytics or measured. */
+  factEvidenceBases?: FactEvidenceBasis[];
   /** Acquisition library business types (e.g. desktop_app), for platform rules. */
   businessTypes?: string[];
   /** The weakest link computed from the owner's numbers; the plays must work on it. */

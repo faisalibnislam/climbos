@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { LintIssue } from "./types";
+import { referenceEvidenceBasis, type FactEvidenceBasis } from "./evidenceKind";
 
 const DateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
@@ -44,6 +45,7 @@ export interface CampaignTimingContext {
   now?: number;
   timezone?: string;
   facts: string[];
+  factEvidenceBases?: readonly FactEvidenceBasis[];
   researchNotes: string;
   sourceUrls: string[];
   researchRetrievedAt?: number;
@@ -125,6 +127,7 @@ export function lintCampaignTiming(timing: CampaignTiming | undefined, context: 
 
   for (const [index, item] of moment.evidence.entries()) {
     const epath = `moment.evidence[${index}]`;
+    if (referenceEvidenceBasis(item.reference, context.factEvidenceBases, context.sourceUrls) !== item.basis) error("Timing evidence basis must match its recorded source class; owner reports and web claims cannot be relabeled as measured evidence.", `${epath}.basis`);
     if (item.basis === "source_reported") {
       if (!item.sourceUrl || !context.sourceUrls.some((url) => url === item.sourceUrl)) error("Cite an exact URL actually retrieved for this plan.", `${epath}.sourceUrl`);
       if (item.reference !== item.sourceUrl) error("The source evidence reference must match its exact source URL.", `${epath}.reference`);

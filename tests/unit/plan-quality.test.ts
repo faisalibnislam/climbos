@@ -15,7 +15,7 @@ const assessment = (o: Partial<Assessment> & { lint?: LintIssue[] } = {}): Asses
 const err = (rule: string): LintIssue => ({ severity: "error", rule, message: rule });
 
 describe("plan quality", () => {
-  it.each(["campaign_timing", "unsupported_refund_promise", "approved_offer_price", "approved_offer_discount", "approved_offer_eligibility", "approved_offer_mechanism", "approved_offer_play", "approved_offer_urgency", "offer_validation_only", "offer_not_recommended"])("blocks %s even with a passing AI review", rule => {
+  it.each(["evidence_basis", "campaign_timing", "unsupported_refund_promise", "approved_offer_price", "approved_offer_discount", "approved_offer_eligibility", "approved_offer_mechanism", "approved_offer_play", "approved_offer_urgency", "offer_validation_only", "offer_not_recommended"])("blocks %s even with a passing AI review", rule => {
     const quality = planQuality([agentQuality("growth_strategy", assessment({ lint: [err(rule)] }), 1, null)]);
     expect(quality.state).toBe("failed");
     expect(canDriveWork(quality)).toBe(false);

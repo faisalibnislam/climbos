@@ -60,6 +60,7 @@ test("focused plan exposes all three options and selecting bold grants no action
   await expect(offer).toContainText("Incremental completed first-time jobs");
   await expect(offer).toContainText("21 days");
   await expect(offer).toContainText("Sales may come earlier, not grow");
+  await expect(offer).toContainText("reported by your team");
   await expectNoHorizontalScroll(page);
   await expectAccessible(page, "Focused offer economics");
   await offer.screenshot({ path: testInfo.outputPath("offer-economics.png") });

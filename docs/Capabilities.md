@@ -144,6 +144,8 @@ This table describes implemented paths, not current production status for any pa
 
 ## Boundaries
 
+- New offer and campaign-timing recommendations check evidence labels against recorded source types. Owner reports stay owner-reported even when they mention analytics; a web claim remains source-reported. Mismatched labels prevent approval. Reported risks are shown as reported by your team or a source. These checks do not independently verify the claim, and older saved plans are not reclassified.
+
 - Landing drafts linked to a website audit can be captured on desktop and mobile, showing the exact saved version. Captures are labelled as the ClimbOS-hosted draft and never published. Choosing a design direction keeps the original page's text and screenshots past the 30-day screenshot limit.
 - Design measurement plans need audience, guardrail, observation period and decision rule before publishing. Each finding keeps a review history.
 - The daily, weekly, and monthly calendar shows review drafts, scheduled posts, and Autopilot slots. Each source loads in pages with an explicit Load more control and partial-count wording. Review drafts are date-filtered before pagination; newer work outside the range cannot hide older drafts. Unlinked slots open their exact slot; linked posts open the content review. The compatibility snapshot endpoint remains capped at 300 rows per source for older clients; the current calendar uses the paginated endpoint.
