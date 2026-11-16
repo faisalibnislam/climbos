@@ -476,6 +476,7 @@ export const exportData = internalQuery({
     const goals = await ctx.db.query("goals").withIndex("by_org_status", (q) => q.eq("orgId", orgId)).take(1001);
     const platformPreparations = await ctx.db.query("platformPreparations").withIndex("by_org_kind", (q) => q.eq("orgId", orgId)).take(1000);
     const experiments = await ctx.db.query("experiments").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(1000);
+    const outcomeRevisions = await ctx.db.query("experimentOutcomeRevisions").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
     const brandPatterns = await ctx.db.query("brandPatternDecisions").withIndex("by_org_key_at", q => q.eq("orgId", orgId)).take(101);
     const strip = <T extends Record<string, unknown>>(rows: T[]) => rows.map(({ _creationTime: _c, ...r }) => r);
     return JSON.stringify(
@@ -495,6 +496,8 @@ export const exportData = internalQuery({
         planningCycleHistoryLimited: goals.length > 1000,
         platformPreparations: strip(platformPreparations),
         experiments: strip(experiments),
+        experimentOutcomeRevisions: strip(outcomeRevisions.slice(0, 1000)),
+        experimentOutcomeHistoryLimited: outcomeRevisions.length > 1000,
         brandPatternDecisions: strip(brandPatterns.slice(0, 100)),
         brandPatternHistoryLimited: brandPatterns.length > 100,
         artifacts: strip(artifacts),
@@ -763,6 +766,7 @@ const PURGE_BY_ORG: { table: string; index: string }[] = [
   { table: "followerSnapshots", index: "by_org_provider_day" },
   { table: "connections", index: "by_org" },
   { table: "contacts", index: "by_org" },
+  { table: "experimentOutcomeRevisions", index: "by_org" },
   { table: "experiments", index: "by_org" },
   { table: "campaigns", index: "by_org" },
   { table: "planDrafts", index: "by_org_updated" },

@@ -1,3 +1,4 @@
+import { paginationOptsValidator } from "convex/server";
 import { diagnoseShortfall, shortfallLine } from "../shared/growth/diagnostics";
 import { v } from "convex/values";
 import { internalQuery, mutation, query, type QueryCtx } from "./_generated/server";
@@ -154,6 +155,7 @@ export const recordExperimentOutcome = mutation({
   args: {
     slug: v.string(),
     experimentId: v.id("experiments"),
+    expectedRevision: v.number(),
     executed: v.boolean(),
     source: v.union(v.literal("owner_report"), v.literal("integration"), v.literal("platform_report")),
     design: v.union(v.literal("none"), v.literal("before_after"), v.literal("holdout"), v.literal("randomized")),
@@ -172,9 +174,12 @@ export const recordExperimentOutcome = mutation({
     stopRuleHit: v.boolean(),
     note: v.optional(v.string()),
   },
-  handler: async (ctx, { slug, experimentId, ...a }) => {
+  handler: async (ctx, { slug, experimentId, expectedRevision, ...a }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const e = assertSameOrg(await ctx.db.get(experimentId), org._id, "experiment");
+    if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0 || expectedRevision !== (e.outcomeRevision ?? 0)) {
+      throw appError("INVALID", "Another outcome was saved or this form is outdated. Close and reopen it to review the latest report before saving.");
+    }
     const input = { ...a, metric: (a.metric ?? e.primaryMetric).trim(), successRule: (a.successRule ?? e.stoppingRule).trim(), note: a.note?.trim() || undefined };
     const problems = outcomeProblems(input, new Date().toISOString().slice(0, 10));
     if (problems.length) throw appError("INVALID", problems[0]);
@@ -191,9 +196,37 @@ export const recordExperimentOutcome = mutation({
       reviewedAt: Date.now(),
     };
     const analyses = correction ? [...prior.slice(0, -1), row] : [...prior, row];
-    await ctx.db.patch(e._id, { analyses, status: a.executed ? "concluded" : "stopped" });
-    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "experiment.outcome_recorded", subjectType: "experiment", subjectId: e._id, summary: `Recorded “${e.name}” (analysis ${row.n}, ${row.inference}).` });
-    return { n: row.n, inference: row.inference, newAnalysis: !correction };
+    // Preserve every legacy analysis still available before the first revisioned write.
+    // Earlier overwritten corrections cannot be reconstructed.
+    let revision = e.outcomeRevision ?? 0;
+    const savedAt = row.reviewedAt;
+    if (e.outcomeRevision === undefined) {
+      for (const analysis of prior) {
+        await ctx.db.insert("experimentOutcomeRevisions", { orgId: org._id, experimentId, revision: ++revision, kind: "legacy_snapshot", analysis, savedAt, changedFields: [] });
+      }
+    }
+    const fields = ["executed", "source", "design", "eligible", "exposed", "conversions", "controlSize", "controlConversions", "plannedSharePct", "assignment", "windowStart", "windowEnd", "metric", "successRule", "result", "stopRuleHit", "note"] as const;
+    const changedFields = last ? fields.filter(key => last[key] !== row[key]) : [];
+    await ctx.db.insert("experimentOutcomeRevisions", { orgId: org._id, experimentId, revision: ++revision, kind: !last ? "recorded" : correction ? "correction" : "reanalysis", analysis: row, savedAt, changedFields });
+    await ctx.db.patch(e._id, { analyses, outcomeRevision: revision, status: a.executed ? "concluded" : "stopped" });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "experiment.outcome_recorded", subjectType: "experiment", subjectId: e._id, summary: `Recorded “${e.name}” (revision ${revision}, analysis ${row.n}, ${row.inference}).` });
+    return { n: row.n, inference: row.inference, newAnalysis: !correction, revision };
+  },
+});
+
+/** Read-only, tenant-bound history. Current learning still uses experiments.analyses. */
+export const outcomeHistoryPage = query({
+  args: { slug: v.string(), experimentId: v.id("experiments"), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { slug, experimentId, paginationOpts }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const e = assertSameOrg(await ctx.db.get(experimentId), org._id, "experiment");
+    const page = await ctx.db.query("experimentOutcomeRevisions")
+      .withIndex("by_org_experiment_revision", q => q.eq("orgId", org._id).eq("experimentId", experimentId))
+      .order("desc").paginate({ ...paginationOpts, numItems: Math.max(1, Math.min(25, paginationOpts.numItems)) });
+    return { ...page, page: page.page.map(({ analysis: { reviewedBy: _reviewedBy, ...analysis }, ...row }) => ({
+      id: row._id, revision: row.revision, kind: row.kind, savedAt: row.savedAt,
+      changedFields: row.changedFields, analysis, current: row.revision === e.outcomeRevision,
+    })) };
   },
 });
 

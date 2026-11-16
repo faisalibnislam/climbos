@@ -1,11 +1,12 @@
 "use client";
 
-import { useMutation } from "convex/react";
+import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { CircleAlert, CircleCheck, CircleDashed, ClipboardPen, Scale, type LucideIcon } from "@/components/icons";
 import { useState } from "react";
 import { Badge, Button, Checkbox, DatePicker, Field, Input, Segmented, Select, toast, type Tone } from "@/components/ui";
+import { formatDateTime } from "@/components/app/money";
 import { errorMessage } from "@/components/app/errors";
 import { inferenceOf, isRedefined, readingOf, readingText, OUTCOME_SOURCE_LABEL, OUTCOME_REPORT_LIMIT, type Inference, type OutcomeAssignment, type OutcomeDesign, type OutcomeInput, type OutcomeResult, type OutcomeSource } from "../../../../shared/growth/experimentOutcome";
 
@@ -45,7 +46,7 @@ const ASSIGNMENTS: { value: OutcomeAssignment | "unknown"; label: string }[] = [
 ];
 const DESIGN_OF_METHOD: Record<string, OutcomeDesign> = { holdout: "holdout", ab_split: "randomized", pre_post_observational: "before_after", export_instructions: "none" };
 
-type Exp = { id: Id<"experiments">; method: string; primaryMetric: string; stoppingRule: string; analyses: Analysis[] };
+type Exp = { id: Id<"experiments">; method: string; primaryMetric: string; stoppingRule: string; analyses: Analysis[]; outcomeRevision?: number };
 
 const num = (s: string) => (s.trim() === "" ? undefined : Number(s));
 const str = (n?: number) => (n === undefined ? "" : String(n));
@@ -55,6 +56,8 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
   const record = useMutation(api.playResults.recordExperimentOutcome);
   const latest = e.analyses.at(-1);
   const [open, setOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [editRevision, setEditRevision] = useState(e.outcomeRevision ?? 0);
   const [busy, setBusy] = useState(false);
   const init = () => ({
     executed: latest?.executed ?? true,
@@ -96,6 +99,7 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
       const r = await record({
         slug,
         experimentId: e.id,
+        expectedRevision: editRevision,
         executed: f.executed,
         source: f.source,
         design: f.design,
@@ -134,6 +138,10 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
           {latest.executed ? <OutcomeNumbers a={latest} /> : null}
         </div>
       ) : null}
+      {latest ? <details onToggle={event => setHistoryOpen(event.currentTarget.open)}>
+        <summary className="cursor-pointer text-xs text-ink-2">Outcome history</summary>
+        {historyOpen ? <OutcomeHistory key={`${slug}:${e.id}`} slug={slug} e={e} /> : null}
+      </details> : null}
       {canEdit && !open ? (
         <Button
           size="sm"
@@ -141,6 +149,7 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
           className="self-start"
           onClick={() => {
             setF(init());
+            setEditRevision(e.outcomeRevision ?? 0);
             setOpen(true);
           }}
         >
@@ -260,4 +269,57 @@ function OutcomeNumbers({ a }: { a: Analysis }) {
       <p className="text-xs text-ink-3">{OUTCOME_SOURCE_LABEL[a.source]}. {OUTCOME_REPORT_LIMIT}</p>
     </div>
   );
+}
+
+const HISTORY_FIELDS: Record<keyof OutcomeInput, string> = {
+  executed: "Test run", source: "Reported source", design: "Reported design", eligible: "Eligible people",
+  exposed: "Exposed people", conversions: "Conversions", controlSize: "Comparison group size",
+  controlConversions: "Comparison conversions", plannedSharePct: "Planned allocation (%)", assignment: "Reported assignment",
+  windowStart: "Window start", windowEnd: "Window end", metric: "Metric", successRule: "Success rule",
+  result: "Reported result", stopRuleHit: "Stop rule hit", note: "Note",
+};
+const HISTORY_KIND = { recorded: "First report", correction: "Correction", reanalysis: "Changed definition", legacy_snapshot: "Earlier saved analysis" };
+
+function OutcomeHistory({ slug, e }: { slug: string; e: Exp }) {
+  const { results, status, loadMore } = usePaginatedQuery(api.playResults.outcomeHistoryPage, { slug, experimentId: e.id }, { initialNumItems: 10 });
+  return <div className="mt-2 flex flex-col gap-3 text-xs text-ink-2">
+    <p>Reports are entered by workspace members. Earlier versions are retained for review; future plans use the current report for each analysis.</p>
+    {status === "LoadingFirstPage" ? <p role="status">Loading outcome history…</p> : null}
+    {results.map(row => <OutcomeHistoryEntry key={row.id} a={row.analysis} title={`Revision ${row.revision} · ${HISTORY_KIND[row.kind]}${row.current ? " · Current" : ""}`} changedFields={row.changedFields} legacy={row.kind === "legacy_snapshot"} />)}
+    {status !== "LoadingFirstPage" && !e.outcomeRevision ? <>
+      <p>These are the earlier analyses still available. Corrections overwritten before history tracking cannot be recovered.</p>
+      {[...e.analyses].reverse().map(a => <OutcomeHistoryEntry key={a.n} a={a} title={`Earlier saved analysis ${a.n}`} changedFields={[]} legacy />)}
+    </> : null}
+    {status === "CanLoadMore" || status === "LoadingMore" ? <Button size="sm" variant="ghost" disabled={status === "LoadingMore"} onClick={() => loadMore(10)}>Load older reports</Button> : null}
+    {results.length ? <p>{results.length} saved reports shown{status === "Exhausted" ? "." : "; more may be available."}</p> : null}
+  </div>;
+}
+
+function historyValue(a: Analysis, key: keyof OutcomeInput): string {
+  const value = a[key];
+  if (value === undefined || value === "") return "Not recorded";
+  if (key === "source") return OUTCOME_SOURCE_LABEL[a.source];
+  if (key === "design") return DESIGNS.find(item => item.value === a.design)?.label ?? "Unknown";
+  if (key === "assignment") return ASSIGNMENTS.find(item => item.value === a.assignment)?.label ?? "Unknown";
+  if (key === "result") return a.executed ? RESULT[a.result].label : "Not applicable — test not run";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  return String(value);
+}
+
+export function OutcomeHistoryEntry({ a, title, changedFields, legacy = false }: { a: Analysis; title: string; changedFields: string[]; legacy?: boolean }) {
+  return <div className="flex flex-col gap-1 border-t border-line pt-2">
+    <p className="font-medium">{title}</p>
+    <p>Analysis {a.n} · Reported {formatDateTime(a.reviewedAt)} · {a.executed ? RESULT[a.result].label : "Not run"}</p>
+    {legacy ? <p>Preserved from an earlier saved analysis. Earlier overwritten corrections are unavailable.</p> : null}
+    {changedFields.length ? <p>Changed: {changedFields.map(key => HISTORY_FIELDS[key as keyof OutcomeInput] ?? key).join(", ")}.</p> : null}
+    <details><summary className="cursor-pointer">Review this report</summary>
+      <dl className="mt-2 flex flex-col gap-1">
+        {(Object.keys(HISTORY_FIELDS) as (keyof OutcomeInput)[]).map(key => <div key={key}>
+          <dt className="font-medium">{HISTORY_FIELDS[key]}</dt>
+          <dd className="whitespace-pre-wrap break-words">{historyValue(a, key)}</dd>
+        </div>)}
+      </dl>
+      <p className="mt-2">{OUTCOME_REPORT_LIMIT}</p>
+    </details>
+  </div>;
 }

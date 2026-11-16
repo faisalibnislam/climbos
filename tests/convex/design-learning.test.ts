@@ -26,7 +26,8 @@ async function fixture(t: T) {
 
 async function record(t: T, f: Awaited<ReturnType<typeof fixture>>, result: "met" | "missed" | "unclear" = "met", executed = true) {
   vi.setSystemTime(Date.UTC(2026, 9, 20));
-  await f.client.mutation(api.playResults.recordExperimentOutcome, { slug: f.slug, experimentId: f.experimentId, executed, source: "owner_report", design: "before_after", ...(executed ? { exposed: 100, conversions: 8 } : {}), windowStart: "2026-10-02", windowEnd: "2026-10-15", result, stopRuleHit: false });
+  const expectedRevision = (await t.run(ctx => ctx.db.get(f.experimentId)))?.outcomeRevision ?? 0;
+  await f.client.mutation(api.playResults.recordExperimentOutcome, { expectedRevision, slug: f.slug, experimentId: f.experimentId, executed, source: "owner_report", design: "before_after", ...(executed ? { exposed: 100, conversions: 8 } : {}), windowStart: "2026-10-02", windowEnd: "2026-10-15", result, stopRuleHit: false });
   return t.run(async ctx => designLearningRecord(ctx, f.orgId, (await ctx.db.get(f.experimentId))!));
 }
 

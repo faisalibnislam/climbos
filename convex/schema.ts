@@ -6,6 +6,58 @@ import { pageSampleV } from "./lib/pageSamples";
 import { v } from "convex/values";
 import { postVisualValidator } from "./lib/postVisual";
 
+const experimentAnalysisV = v.object({
+  n: v.number(),
+  executed: v.boolean(),
+  source: v.union(
+    v.literal("owner_report"),
+    v.literal("integration"),
+    v.literal("platform_report"),
+  ),
+  design: v.union(
+    v.literal("none"),
+    v.literal("before_after"),
+    v.literal("holdout"),
+    v.literal("randomized"),
+  ),
+  eligible: v.optional(v.number()),
+  exposed: v.optional(v.number()),
+  conversions: v.optional(v.number()),
+  controlSize: v.optional(v.number()),
+  controlConversions: v.optional(v.number()),
+  /** Planned % in the changed version, so the split can be checked. */
+  plannedSharePct: v.optional(v.number()),
+  /** Reported assignment for either comparison design; missing on legacy rows means unknown. */
+  assignment: v.optional(
+    v.union(
+      v.literal("random"),
+      v.literal("rule"),
+      v.literal("owner_choice"),
+    ),
+  ),
+  windowStart: v.optional(v.string()),
+  windowEnd: v.optional(v.string()),
+  metric: v.string(),
+  successRule: v.string(),
+  result: v.union(
+    v.literal("met"),
+    v.literal("missed"),
+    v.literal("unclear"),
+  ),
+  stopRuleHit: v.boolean(),
+  note: v.optional(v.string()),
+  inference: v.union(
+    v.literal("observed"),
+    v.literal("attributed"),
+    v.literal("incremental"),
+    v.literal("not_run"),
+  ),
+  /** Judged on a metric or rule other than the experiment's original. */
+  redefined: v.boolean(),
+  reviewedBy: v.id("users"),
+  reviewedAt: v.number(),
+});
+
 const cycleReviewV = v.object({ summary: v.string(), carryForward: v.string(), evidenceBasis: v.union(v.literal("measured"), v.literal("owner_reported"), v.literal("unknown")), evidenceNote: v.string(), createdAt: v.number(), createdBy: v.id("users") });
 const priorCycleReviewV = v.object({ goalId: v.id("goals"), summary: v.string(), carryForward: v.string(), evidenceBasis: v.union(v.literal("measured"), v.literal("owner_reported"), v.literal("unknown")), evidenceNote: v.string(), createdAt: v.number(), createdBy: v.id("users") });
 
@@ -3667,66 +3719,25 @@ export default defineSchema({
      * (shared/growth/experimentOutcome.ts), never entered. The legacy "incremental"
      * value classifies a reported random comparison, not independently verified causal impact.
      */
-    analyses: v.optional(
-      v.array(
-        v.object({
-          n: v.number(),
-          executed: v.boolean(),
-          source: v.union(
-            v.literal("owner_report"),
-            v.literal("integration"),
-            v.literal("platform_report"),
-          ),
-          design: v.union(
-            v.literal("none"),
-            v.literal("before_after"),
-            v.literal("holdout"),
-            v.literal("randomized"),
-          ),
-          eligible: v.optional(v.number()),
-          exposed: v.optional(v.number()),
-          conversions: v.optional(v.number()),
-          controlSize: v.optional(v.number()),
-          controlConversions: v.optional(v.number()),
-          /** Planned % in the changed version, so the split can be checked. */
-          plannedSharePct: v.optional(v.number()),
-          /** Reported assignment for either comparison design; missing on legacy rows means unknown. */
-          assignment: v.optional(
-            v.union(
-              v.literal("random"),
-              v.literal("rule"),
-              v.literal("owner_choice"),
-            ),
-          ),
-          windowStart: v.optional(v.string()),
-          windowEnd: v.optional(v.string()),
-          metric: v.string(),
-          successRule: v.string(),
-          result: v.union(
-            v.literal("met"),
-            v.literal("missed"),
-            v.literal("unclear"),
-          ),
-          stopRuleHit: v.boolean(),
-          note: v.optional(v.string()),
-          inference: v.union(
-            v.literal("observed"),
-            v.literal("attributed"),
-            v.literal("incremental"),
-            v.literal("not_run"),
-          ),
-          /** Judged on a metric or rule other than the experiment's original. */
-          redefined: v.boolean(),
-          reviewedBy: v.id("users"),
-          reviewedAt: v.number(),
-        }),
-      ),
-    ),
+    outcomeRevision: v.optional(v.number()),
+    analyses: v.optional(v.array(experimentAnalysisV)),
     createdAt: v.number(),
   })
     .index("by_org", ["orgId"])
     .index("by_strategy", ["strategyId"])
     .index("by_design_source", ["orgId", "designSource.runId", "designSource.findingIndex"]),
+
+  /** Append-only outcome reports; analyses on experiments remain the current learning projection. */
+  experimentOutcomeRevisions: defineTable({
+    orgId: v.id("organizations"),
+    experimentId: v.id("experiments"),
+    revision: v.number(),
+    kind: v.union(v.literal("recorded"), v.literal("correction"), v.literal("reanalysis"), v.literal("legacy_snapshot")),
+    analysis: experimentAnalysisV,
+    savedAt: v.number(),
+    changedFields: v.array(v.string()),
+  }).index("by_org_experiment_revision", ["orgId", "experimentId", "revision"])
+    .index("by_org", ["orgId"]),
 
   /** Sampled AI-search answers, entered from observations; separate from content-readiness heuristics and business outcomes. */
   aiSearchPanels: defineTable({

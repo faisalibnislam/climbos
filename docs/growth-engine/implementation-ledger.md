@@ -2,6 +2,10 @@
 
 Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs as written there. Baseline: `404c466`. Branch: `growth-engine-v2`.
 
+## Local update — 16 November 2026: recoverable experiment reports
+
+Closed the previously confirmed correction-history gap. Typed append-only outcome revisions now preserve original reports, corrections, changed definitions and available legacy snapshots. Revision-bound saves reject stale editors; the existing current-analysis projection remains the only report input to future learning. Owner history exposes dated versions and changed fields through tenant-scoped pagination. Export/deletion includes history. Verification: 62 focused regression/permission tests, four desktop/mobile browser checks (including two simultaneous editor forms), typecheck, changed-file ESLint and diff checks passed. Earlier overwritten corrections cannot be recovered, and historical reports remain member-entered rather than independently verified outcomes. See [Verification](../Verification.md).
+
 ## Local update — 16 November 2026: reported experiment integrity
 
 Removed invented 50/50/random defaults from manual outcome entry, distinguished member-reported tool sources and random comparisons from verified causal effects in both the UI and later-plan context, preserved signed harm intervals, rejected rolled-over/future observation dates and invalid count comparisons, and reassessed legacy labels for not-run grouping. Existing deterministic comparison code, experiment storage and permissions are reused; no new agent/provider or execution path. Downstream design comparisons now require explicit reported random assignment as well as their existing evidence gates. Verification: 59 focused tests and four desktop/mobile browser tests passed, plus typecheck, changed-file ESLint and diff checks. The remaining outcome-history gap is that same-definition corrections replace the latest analysis; preserving all revisions needs a separate complete implementation. See [Verification](../Verification.md).

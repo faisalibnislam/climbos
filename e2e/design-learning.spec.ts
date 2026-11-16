@@ -54,10 +54,20 @@ test("design outcomes retain their exact version and qualified learning through 
   await section.scrollIntoViewIfNeeded();
   await page.screenshot({ path: testInfo.outputPath("design-learning.png"), fullPage: false });
 
+  // A second editor holds the old revision while the first saves a correction.
+  const stalePage = await page.context().newPage();
+  await stalePage.goto(`/app/${slug}/work/${f.runId}`);
+  const staleSection = stalePage.locator("details").filter({ has: stalePage.locator("summary", { hasText: "Did this page change help?" }) });
+  await staleSection.locator("summary").first().click();
+  await staleSection.getByRole("button", { name: "Update outcome", exact: true }).click();
   await section.getByRole("button", { name: "Update outcome", exact: true }).click();
   await section.getByRole("button", { name: "Unclear", exact: true }).click();
   await section.getByRole("button", { name: "Save", exact: true }).click();
   await expect(section.getByText("Inconclusive for choosing a future design; use it to improve the next test.")).toBeVisible();
+  await staleSection.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(stalePage.getByText("Another outcome was saved or this form is outdated. Close and reopen it to review the latest report before saving.", { exact: true })).toBeVisible();
+  await expect(staleSection.getByRole("button", { name: "Save", exact: true })).toBeVisible();
+  await stalePage.close();
   await section.getByRole("button", { name: "Update outcome", exact: true }).click();
   await section.getByRole("button", { name: "Didn't run", exact: true }).click();
   await section.getByRole("button", { name: "Save", exact: true }).click();
@@ -66,6 +76,18 @@ test("design outcomes retain their exact version and qualified learning through 
   await section.locator("summary").first().click();
   await expect(section.getByText("Not run. This says nothing about whether the design works.")).toBeVisible();
   await expectNoHorizontalScroll(page);
+  await section.getByText("Outcome history", { exact: true }).click();
+  await expect(section.getByText("Revision 3 · Correction · Current", { exact: true })).toBeVisible();
+  await expect(section.getByText("Revision 2 · Correction", { exact: true })).toBeVisible();
+  await expect(section.getByText("Revision 1 · Earlier saved analysis", { exact: true })).toBeVisible();
+  await expect(section.getByText("3 saved reports shown.", { exact: true })).toBeVisible();
+  const reports = section.locator("details").filter({ has: page.locator("summary", { hasText: "Review this report" }) });
+  await reports.last().locator("summary").click();
+  await expect(reports.last().getByText("Reported: met", { exact: true })).toBeVisible();
+  await expectAccessible(page, "outcome revision history");
+  await expectNoHorizontalScroll(page);
+  await section.getByText("Outcome history", { exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: testInfo.outputPath("outcome-history.png"), fullPage: false });
   expect(await actionSnapshot()).toEqual(before);
   expect(errors).toEqual([]);
 });

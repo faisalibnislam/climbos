@@ -26,13 +26,13 @@ describe("experiment outcomes", () => {
   it("saves an outcome with a computed label, and re-analysis never overwrites", async () => {
     const t = setup();
     const { owner, slug, referral } = await planWithTests(t, "outcome@example.com");
-    const r1 = await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId: referral, executed: true, source: "owner_report", design: "before_after", eligible: 300, exposed: 120, conversions: 1, windowStart: "2026-09-01", windowEnd: "2026-09-14", result: "missed", stopRuleHit: true });
-    expect(r1).toEqual({ n: 1, inference: "observed", newAnalysis: true });
+    const r1 = await owner.client.mutation(api.playResults.recordExperimentOutcome, { expectedRevision: 0, slug, experimentId: referral, executed: true, source: "owner_report", design: "before_after", eligible: 300, exposed: 120, conversions: 1, windowStart: "2026-09-01", windowEnd: "2026-09-14", result: "missed", stopRuleHit: true });
+    expect(r1).toEqual({ n: 1, inference: "observed", newAnalysis: true, revision: 1 });
     // Same definition: a correction to analysis 1.
-    const r2 = await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId: referral, executed: true, source: "owner_report", design: "before_after", eligible: 300, exposed: 120, conversions: 2, result: "missed", stopRuleHit: true });
+    const r2 = await owner.client.mutation(api.playResults.recordExperimentOutcome, { expectedRevision: 1, slug, experimentId: referral, executed: true, source: "owner_report", design: "before_after", eligible: 300, exposed: 120, conversions: 2, result: "missed", stopRuleHit: true });
     expect(r2).toMatchObject({ n: 1, newAnalysis: false });
     // Changed definition after results: a new analysis; the first stays.
-    const r3 = await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId: referral, executed: true, source: "owner_report", design: "before_after", exposed: 120, conversions: 14, metric: "replies", result: "met", stopRuleHit: false });
+    const r3 = await owner.client.mutation(api.playResults.recordExperimentOutcome, { expectedRevision: 2, slug, experimentId: referral, executed: true, source: "owner_report", design: "before_after", exposed: 120, conversions: 14, metric: "replies", result: "met", stopRuleHit: false });
     expect(r3).toMatchObject({ n: 2, newAnalysis: true });
     const e = await t.run(async (ctx) => ctx.db.get(referral));
     expect(e!.primaryMetric).toBe("booked calls");
@@ -48,19 +48,19 @@ describe("experiment outcomes", () => {
   it("rejects bad counts, other workspaces and a comparison claim with no group", async () => {
     const t = setup();
     const { owner, slug, holdout } = await planWithTests(t, "bad@example.com");
-    await expect(owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId: holdout, executed: true, source: "owner_report", design: "holdout", exposed: 10, conversions: 11, controlSize: 5, result: "met", stopRuleHit: false })).rejects.toThrow(/more than exposed/);
-    await expect(owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId: holdout, executed: true, source: "owner_report", design: "holdout", exposed: 10, conversions: 1, result: "met", stopRuleHit: false })).rejects.toThrow(/comparison group size/);
+    await expect(owner.client.mutation(api.playResults.recordExperimentOutcome, { expectedRevision: 0, slug, experimentId: holdout, executed: true, source: "owner_report", design: "holdout", exposed: 10, conversions: 11, controlSize: 5, result: "met", stopRuleHit: false })).rejects.toThrow(/more than exposed/);
+    await expect(owner.client.mutation(api.playResults.recordExperimentOutcome, { expectedRevision: 0, slug, experimentId: holdout, executed: true, source: "owner_report", design: "holdout", exposed: 10, conversions: 1, result: "met", stopRuleHit: false })).rejects.toThrow(/comparison group size/);
     const other = await planWithTests(t, "other@example.com");
-    await expect(other.owner.client.mutation(api.playResults.recordExperimentOutcome, { slug: other.slug, experimentId: holdout, executed: false, source: "owner_report", design: "none", result: "unclear", stopRuleHit: false })).rejects.toThrow(/couldn't find/);
+    await expect(other.owner.client.mutation(api.playResults.recordExperimentOutcome, { expectedRevision: 0, slug: other.slug, experimentId: holdout, executed: false, source: "owner_report", design: "none", result: "unclear", stopRuleHit: false })).rejects.toThrow(/couldn't find/);
   });
 
   it("feeds reported outcomes into later plans without upgrading reports to verified causal effects", async () => {
     const t = setup();
     const { owner, slug, orgId, referral, holdout, cold } = await planWithTests(t, "brief@example.com");
     expect(await t.query(internal.playResults.briefFor, { orgId })).toBe("");
-    await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId: referral, executed: true, source: "owner_report", design: "before_after", eligible: 300, exposed: 120, conversions: 6, result: "met", stopRuleHit: false });
-    await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId: holdout, executed: true, source: "integration", design: "holdout", assignment: "random", eligible: 300, exposed: 200, conversions: 20, controlSize: 100, controlConversions: 5, plannedSharePct: 200 / 3, result: "met", stopRuleHit: false });
-    await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId: cold, executed: false, source: "owner_report", design: "none", result: "unclear", stopRuleHit: false, note: "No time" });
+    await owner.client.mutation(api.playResults.recordExperimentOutcome, { expectedRevision: 0, slug, experimentId: referral, executed: true, source: "owner_report", design: "before_after", eligible: 300, exposed: 120, conversions: 6, result: "met", stopRuleHit: false });
+    await owner.client.mutation(api.playResults.recordExperimentOutcome, { expectedRevision: 0, slug, experimentId: holdout, executed: true, source: "integration", design: "holdout", assignment: "random", eligible: 300, exposed: 200, conversions: 20, controlSize: 100, controlConversions: 5, plannedSharePct: 200 / 3, result: "met", stopRuleHit: false });
+    await owner.client.mutation(api.playResults.recordExperimentOutcome, { expectedRevision: 0, slug, experimentId: cold, executed: false, source: "owner_report", design: "none", result: "unclear", stopRuleHit: false, note: "No time" });
     const brief = await t.query(internal.playResults.briefFor, { orgId });
     const line = (name: string) => brief.split("\n").find((l) => l.startsWith(`- ${name}`))!;
     expect(line("Referral ask")).toContain("OBSERVED: 6 conversions from 120 exposed of 300 eligible; no validated comparison, so not proof of cause.");
@@ -77,7 +77,7 @@ describe("experiment outcomes", () => {
   it("preserves unknown assignment, rejects invalid dates, and cannot grant actions or let viewers record outcomes", async () => {
     const t = setup();
     const f = await planWithTests(t, "integrity@example.com");
-    const args = { slug: f.slug, experimentId: f.holdout, executed: true, source: "integration" as const, design: "randomized" as const, exposed: 300, conversions: 15, controlSize: 300, controlConversions: 60, result: "missed" as const, stopRuleHit: false };
+    const args = { expectedRevision: 0, slug: f.slug, experimentId: f.holdout, executed: true, source: "integration" as const, design: "randomized" as const, exposed: 300, conversions: 15, controlSize: 300, controlConversions: 60, result: "missed" as const, stopRuleHit: false };
     const before = await t.run(ctx => ctx.db.get(f.holdout));
     await expect(f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...args, windowStart: "2026-02-30" })).rejects.toThrow(/YYYY-MM-DD/);
     expect(await t.run(ctx => ctx.db.get(f.holdout))).toEqual(before);
@@ -92,7 +92,7 @@ describe("experiment outcomes", () => {
     expect(brief).toContain("RANDOMIZATION UNVERIFIED");
     expect(brief).toContain("Member-entered; reported source: connected tool");
     expect(brief).not.toContain("INCREMENTAL");
-    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...args, assignment: "random", plannedSharePct: 50 });
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...args, expectedRevision: 1, assignment: "random", plannedSharePct: 50 });
     brief = await t.query(internal.playResults.briefFor, { orgId: f.orgId });
     expect(brief).toMatch(/difference of -45 conversions.*95% interval -\d+ to -\d+/);
     expect(brief).toContain("not proof of causal impact");
@@ -105,5 +105,62 @@ describe("experiment outcomes", () => {
     expect(lessons).not.toContain("Win-back email");
     expect(notRun).toContain("Win-back email: NOT RUN");
     for (const table of ["approvals", "actionReceipts", "workflowRuns"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toHaveLength(0);
+  });
+});
+
+
+describe("recoverable outcome history", () => {
+  it("retains corrections and changed definitions without feeding superseded counts to future plans", async () => {
+    const t = setup();
+    const f = await planWithTests(t, "history@example.com");
+    const args = { slug: f.slug, experimentId: f.referral, executed: true, source: "owner_report" as const, design: "before_after" as const, exposed: 100, conversions: 1, result: "missed" as const, stopRuleHit: false };
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...args, expectedRevision: 0 });
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...args, expectedRevision: 1, conversions: 4, result: "met" });
+    const brief = await t.query(internal.playResults.briefFor, { orgId: f.orgId });
+    expect(brief).toContain("4 conversions from 100");
+    expect(brief).not.toContain("1 conversions from 100");
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...args, expectedRevision: 2, metric: "qualified inquiries", result: "unclear" });
+    const page = await f.owner.client.query(api.playResults.outcomeHistoryPage, { slug: f.slug, experimentId: f.referral, paginationOpts: { cursor: null, numItems: 10 } });
+    expect(page.page.map(r => [r.revision, r.kind, r.analysis.n, r.analysis.conversions, r.current])).toEqual([[3, "reanalysis", 2, 1, true], [2, "correction", 1, 4, false], [1, "recorded", 1, 1, false]]);
+    expect(page.page[1].changedFields).toEqual(["conversions", "result"]);
+    expect(page.page[0].analysis).not.toHaveProperty("reviewedBy");
+    expect((await t.run(ctx => ctx.db.get(f.referral)))!.analyses).toHaveLength(2);
+    const prior = await t.run(ctx => ctx.db.query("experimentOutcomeRevisions").collect());
+    await expect(f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...args, expectedRevision: 2 })).rejects.toThrow(/Close and reopen/);
+    expect(await t.run(ctx => ctx.db.query("experimentOutcomeRevisions").collect())).toEqual(prior);
+    for (const table of ["approvals", "actionReceipts", "workflowRuns"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toHaveLength(0);
+  });
+
+  it("preserves available legacy analyses, pages reports, restricts tenants and includes history in export and deletion", async () => {
+    const t = setup();
+    const f = await planWithTests(t, "legacy-history@example.com");
+    const other = await planWithTests(t, "other-history@example.com");
+    const analysis = { n: 1, executed: true, source: "owner_report" as const, design: "before_after" as const, exposed: 10, conversions: 1, metric: "booked calls", successRule: "stop if < 2 calls in 14 days", result: "missed" as const, stopRuleHit: false, inference: "observed" as const, redefined: false, reviewedBy: f.owner.userId, reviewedAt: 1234 };
+    await t.run(ctx => ctx.db.patch(f.referral, { analyses: [analysis] }));
+    const args = { slug: f.slug, experimentId: f.referral, executed: false, source: "owner_report" as const, design: "none" as const, result: "unclear" as const, stopRuleHit: false };
+    let r = await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...args, expectedRevision: 0 });
+    expect(r.revision).toBe(2);
+    for (let i = 0; i < 10; i++) r = await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...args, expectedRevision: r.revision, note: `Correction ${i}` });
+    const query = { slug: f.slug, experimentId: f.referral, paginationOpts: { cursor: null as string | null, numItems: 10 } };
+    const first = await f.owner.client.query(api.playResults.outcomeHistoryPage, query);
+    expect(first.page).toHaveLength(10);
+    expect(first.isDone).toBe(false);
+    const second = await f.owner.client.query(api.playResults.outcomeHistoryPage, { ...query, paginationOpts: { cursor: first.continueCursor, numItems: 10 } });
+    expect(second.isDone).toBe(true);
+    expect(second.page.map(r => r.revision)).toEqual([2, 1]);
+    expect(second.page[1]).toMatchObject({ kind: "legacy_snapshot", analysis: { conversions: 1, reviewedAt: 1234 } });
+    await expect(other.owner.client.query(api.playResults.outcomeHistoryPage, { ...query, slug: other.slug })).rejects.toThrow(/couldn't find/);
+    const viewer = await asNewUser(t, "history-viewer@example.com");
+    await t.run(ctx => ctx.db.insert("memberships", { orgId: f.orgId, userId: viewer.userId, role: "viewer", status: "active", createdAt: Date.now() }));
+    expect((await viewer.client.query(api.playResults.outcomeHistoryPage, query)).page).toHaveLength(10);
+    await expect(viewer.client.mutation(api.playResults.recordExperimentOutcome, { ...args, expectedRevision: r.revision })).rejects.toThrow();
+    const data = JSON.parse(await t.query(internal.settings.exportData, { orgId: f.orgId }));
+    expect(data.experimentOutcomeRevisions).toHaveLength(12);
+    expect(data.experimentOutcomeHistoryLimited).toBe(false);
+    const otherData = JSON.parse(await t.query(internal.settings.exportData, { orgId: other.orgId }));
+    expect(otherData.experimentOutcomeRevisions).toEqual([]);
+    await t.mutation(internal.settings.purgeWorkspaceBatch, { orgId: f.orgId });
+    expect(await t.run(ctx => ctx.db.query("experimentOutcomeRevisions").withIndex("by_org", q => q.eq("orgId", f.orgId)).collect())).toEqual([]);
+    expect(await t.run(ctx => ctx.db.get(other.referral))).not.toBeNull();
   });
 });
