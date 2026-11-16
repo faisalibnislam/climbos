@@ -4,13 +4,14 @@ import { asNewUser, makePaid, setup } from "./helpers";
 import { focusedPlanFixture } from "../fixtures/focusedPlan";
 import type { TurnRequest } from "../../shared/ai/types";
 import type { RateVersion } from "../../shared/economics/rates";
-const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false }));
+const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false, unsupportedGuarantee: false }));
 vi.mock("../../shared/ai/turn", async original => ({
   ...await original<typeof import("../../shared/ai/turn")>(),
   modelTurn: async (req: TurnRequest, rates: RateVersion) => {
     state.requests.push(req);
     const days = Number(JSON.stringify(req.messages).match(/EXECUTION CYCLE: (14|30|90) days/)?.[1] ?? 14);
     const plan = focusedPlanFixture(days);
+    if (state.unsupportedGuarantee) plan.preparedWork[0] = { ...plan.preparedWork[0], kind: "social_post", draft: "Review our service for your next project. We guarantee your money back." };
     if (state.refusedTarget) plan.preparedWork[0] = { ...plan.preparedWork[0], kind: "creator_pitch", target: "Creator.example — suggest our product" };
     if (req.schema?.safeParse(plan).success) {
       const text = JSON.stringify(plan);
@@ -24,7 +25,7 @@ vi.mock("../../shared/ai/turn", async original => ({
     return result;
   },
 }));
-afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; });
+afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; });
 
 async function workspace() {
   const t = setup(); delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE;
@@ -120,6 +121,16 @@ it("keeps critical review failures blocked even when a short draft passes schema
   const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
   expect(plan.expert?.quality?.state).toBe("failed");
   await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
+});
+
+it("withholds unsupported refund copy even when the AI review approves it", async () => {
+  const { t, owner, slug, orgId } = await workspace(); state.unsupportedGuarantee = true;
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(plan.expert?.quality?.state).toBe("failed");
+  await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
 });
 it("does not reuse another website's or another tenant's cached evidence", async () => {
   const { t, owner, slug } = await workspace();

@@ -336,7 +336,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.105-focused-diagnosis";
+export const ENGINE_VERSION = "v3.106-prepared-offer-terms";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -2244,13 +2244,14 @@ function lintPublishable(out: unknown, input: AgentInput): LintIssue[] {
 }
 
 /** Internal test instructions may contain labelled planned quantities; public copy may not invent results. */
-export function lintPreparedDrafts(work: { kind: string; draft: string }[] | undefined, input: AgentInput): LintIssue[] {
+export function lintPreparedDrafts(work: { kind: string; draft: string; approvedOfferPlayName?: string }[] | undefined, input: AgentInput): LintIssue[] {
   return (work ?? []).flatMap((item, i) => {
     // A labelled proposed recording may use timecodes as production cues.
     // Mask only line-leading timecodes; factual dashboard counts still face lint.
     const proposedScript = item.kind === "test_brief" && /\bproposed\b[\s\S]{0,60}\b(?:demo|video|script|recording)\b|\b(?:demo|video|script|recording)\b[\s\S]{0,60}\bproposed\b/i.test(item.draft);
     const text = proposedScript ? item.draft.replace(/^\s*\d{1,2}:[0-5]\d\b/gm, "Proposed cue") : item.draft;
     const issues = item.kind === "test_brief" ? lintPlanning({ draft: text }, input) : lintPublishable({ draft: text }, input);
+    if (item.kind !== "test_brief") issues.push(...lintApprovedOfferCopy(text, input.approvedOfferTerms, "draft", item.approvedOfferPlayName));
     if (item.kind !== "test_brief" && hasUnfinishedDestination(item.draft)) issues.push({severity:"error",rule:"generic_action",message:"Finish the draft with a supplied destination or write around the missing detail. A link/name placeholder is not usable copy.",path:"draft"});
     return issues.map(issue=>({...issue,path:`preparedWork[${i}].${issue.path??"draft"}`}));
   });

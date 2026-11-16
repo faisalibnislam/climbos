@@ -18,7 +18,7 @@ import {fitJson} from "./context";
 export type QualityState = "passed" | "provisional" | "needs_input" | "failed";
 
 /** Lint rules whose failure means the plan must not drive work (REQ-EVAL hard failures). */
-export const HARD_RULES = new Set(["contact_policy", "economics", "budget", "capacity", "citation", "provenance", "consistency", "no_plays", "invented_fact", "generic_action", "creative_diversity", "unsupported_scarcity", "unsupported_deadline", "growth_cash", "growth_cash_reserve"]);
+export const HARD_RULES = new Set(["contact_policy", "economics", "budget", "capacity", "citation", "provenance", "consistency", "no_plays", "invented_fact", "generic_action", "creative_diversity", "unsupported_scarcity", "unsupported_deadline", "unsupported_refund_promise", "approved_offer_price", "approved_offer_discount", "approved_offer_eligibility", "approved_offer_mechanism", "approved_offer_play", "approved_offer_urgency", "offer_validation_only", "offer_not_recommended", "growth_cash", "growth_cash_reserve"]);
 
 /** One hard finding the owner can act on: what failed and where. */
 export interface QualityFix {
@@ -113,6 +113,15 @@ const LABEL: Record<string, string> = {
   creative_diversity: "the strategy options repeat the same mechanism and action instead of offering different choices",
   unsupported_scarcity: "a scarcity or inventory claim has no current confirmed evidence",
   unsupported_deadline: "an offer deadline has no current confirmed evidence",
+  unsupported_refund_promise: "a refund guarantee has no affirmative current evidence",
+  approved_offer_price: "copy changes the selected approved offer's price",
+  approved_offer_discount: "copy changes the selected approved offer's discount",
+  approved_offer_eligibility: "copy changes who can use the selected approved offer",
+  approved_offer_mechanism: "copy adds an offer mechanism that was not approved",
+  approved_offer_play: "copy is not bound to one exact available approved offer",
+  approved_offer_urgency: "copy adds urgency outside the selected approved offer's terms",
+  offer_validation_only: "copy presents an unvalidated test proposal as an available customer offer",
+  offer_not_recommended: "copy promotes an offer that the selected plan does not recommend",
   growth_cash: "the plays' monthly cash costs are more than the monthly growth cash you said you can commit",
   growth_cash_reserve: "the selected plays' modeled growth costs run past the cash you set aside before customer payments catch up",
 };

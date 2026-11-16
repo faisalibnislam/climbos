@@ -1,5 +1,9 @@
 ## Local update — 17 November 2026: social reports survive calendar gaps
 
+## Local update — 17 November 2026: prepared offer consistency and refund claims
+
+Four red prepared-copy tests showed missing selected-offer checks and an unsupported refund promise. Reused existing approved-copy validation and added a bounded refund-promise claim check, preserving direct denials and internal test proposals. A workflow regression then exposed provisional quality despite the error; specific refund and approved-term rules now block plan authority even with a passing AI review. Engine v3.106-prepared-offer-terms; 170 focused tests, typecheck/lint pass. No new provider/agent or live action. Full structured offer/economics parity for focused plans remains open; do not describe this as complete promotion intelligence.
+
 ## Local update — 17 November 2026: default strategy diagnosis integration
 
 Requirement 3/8/10 revalidation found starter/focused plans bypassing deterministic diagnosis despite receiving raw owner counts. Two red workflow tests confirmed missing saved diagnosis. Extracted the existing detailed calculation into a shared jobs helper, supplied its explanation and typed constraints to default writer/reviewer, persisted its result and exposed the owner evidence in existing review details. The reviewer criterion now assesses alignment with the supported diagnosis or a better-supported alternative; speculative exploration stays protected. Engine v3.105-focused-diagnosis. Verification: 97 focused tests, two desktop/mobile checks, app/Convex typecheck and scoped lint. No new agent, schema, provider or action authority; no live model-quality claim.

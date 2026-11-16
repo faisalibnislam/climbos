@@ -13,6 +13,8 @@ This handoff records what has been built, what was checked, what remains unverif
 
 ## Current status — 17 November 2026
 
+- Prepared-offer follow-up: public preparedWork now applies existing exact approved-offer checks, with an optional approvedOfferPlayName binding. Unsupported recognized refund promises and approved-term mismatches are hard quality failures; a passing AI review cannot authorize their plan. Five new prepared-copy cases and workflow/permission coverage pass in a 170-test focused run. Engine v3.106-prepared-offer-terms. This does not yet give focused recommendations the detailed path’s full structured promotion/economics assessment. See Verification.
+
 - Default-path diagnosis repair: starter/focused generation now reuses the detailed path’s deterministic owner-data calculation, supplies it to writer/reviewer and persists constraintDiagnosis. Owner review has a compact expandable evidence reading. Five new workflow cases cover both styles, unknown evidence, zero capacity and conflicting counts while retaining bold options and no external actions. Verified with 97 focused tests and two desktop/mobile checks; real-model decision quality remains unverified. Engine v3.105-focused-diagnosis. See Verification.
 
 - Funnel input repair: the active Add a few numbers form no longer rewrites a saved period to 30 days or drops qualification/activation/signup definitions when saving economics. The owner can edit the existing funnel contract in place. A browser regression reproduced the loss before repair; two desktop/mobile checks and 73 focused tests passed, followed by seven generation tests with an explicit 90-day calculation assertion. This does not add measurement imports, stale-editor protection or historical recovery. See Verification.

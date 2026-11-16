@@ -1,3 +1,25 @@
+## 17 November 2026 — prepared public copy follows approved offer terms
+
+Audit confirmed that prepared drafts already ran deadline/scarcity checks, but bypassed `lintApprovedOfferCopy`. A price from an unrelated fact could therefore pass general numerical evidence checks while contradicting the selected approved offer. Generic offer changes and validation-only offers likewise escaped this contract. A recognized money-back promise had no claim rule. Four of five new tests failed before repair.
+
+PreparedWorkSchema now carries an optional exact approvedOfferPlayName, retained by existing persistence. Public prepared drafts reuse the existing price, discount, mechanism, audience, urgency and offer-selection validator; test_brief remains internal planning. The planning instructions describe that distinction. The shared claim checker recognizes money-back/refund-guarantee phrasing, requires affirmative eligible evidence and masks directly negated promises without masking a separate affirmative promise. The consequential refund check runs before softer unsupported-claim checks so another phrase cannot hide it. These are bounded English patterns, not complete interpretation of refund terms or guarantees.
+
+A new actual focused workflow test revealed a second defect: the claim error stopped shipping but saved quality as provisional. Added the specific unsupported_refund_promise and approved-offer mismatch rules to hard plan quality, with plain-language explanations. The same test now saves failed quality and the existing approval mutation rejects the plan despite a perfect mocked AI review. No recommendation applies a price or discount, sends, publishes or spends. Engine v3.106-prepared-offer-terms.
+
+Commands/results:
+
+```sh
+pnpm exec vitest run tests/unit/prepared-offer-terms.test.ts
+pnpm exec vitest run tests/unit/prepared-offer-terms.test.ts tests/unit/offer-disclosure-lint.test.ts tests/unit/offer-assessment.test.ts tests/unit/focused-plan.test.ts tests/convex/focused-plan.test.ts tests/convex/publish-flow.test.ts tests/convex/tenancy.test.ts tests/convex/plan-grounding.test.ts tests/unit/plan-quality.test.ts tests/convex/approval-claims.test.ts tests/unit/claims-uplift.test.ts tests/unit/approved-plan-context.test.ts
+pnpm typecheck
+pnpm exec eslint shared/agents/preparedWork.ts shared/agents/specs.ts shared/agents/offerLanguage.ts shared/agents/lint.ts shared/agents/focusedPlan.ts shared/agents/quality.ts tests/unit/prepared-offer-terms.test.ts tests/unit/offer-disclosure-lint.test.ts tests/convex/focused-plan.test.ts tests/unit/plan-quality.test.ts
+git diff --check
+```
+
+Initial new-test run: **4 failed, 1 passed**. Intermediate workflow run: **1 failed, 121 passed**, exposing provisional quality. Final: **170 tests across 12 files passed**, including nine hard-quality rules, negative/future refund evidence, explicit denials, mixed denied/affirmative copy, unrelated prices, multiple offers, exact binding, internal proposals, generation/approval rejection and existing tenant/publication boundaries. App/Convex typechecks, lint and diff checks passed. No UI changed, so no browser run was needed. No paid model or hosted provider call occurred. A diagnostic tsx CLI command initially hit its sandbox IPC restriction; the same read-only probe ran successfully through node --import tsx without escalation.
+
+Remaining limits: approved-term matching applies when terms are supplied; it does not manufacture a missing offer contract. Focused plans still lack the detailed path’s full structured promotion/economics assessment. Existing English term matching does not establish semantic equivalence, legal validity, actual refunds or commercial outcomes. Test briefs remain private proposals and convey no action authority. Historical plans were not migrated or re-reviewed. This is not whole-product acceptance. The owner’s pre-existing .gitignore edits remain untouched.
+
 ## 17 November 2026 — deterministic diagnosis reaches the default strategy workflow
 
 Traced owner business facts/funnel → `jobContext`/`businessBrief` → `buildStrategy` style branch → agent input/review → `saveStrategy` → Plan review. Confirmed the detailed branch calculated and persisted a diagnosis, but starter/focused branches received only raw counts and did not save constraintDiagnosis. Two new actual-workflow tests failed with an undefined saved diagnosis before repair.

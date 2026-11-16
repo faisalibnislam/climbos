@@ -1,5 +1,5 @@
 import type { LintIssue } from "./types";
-import { withoutNegatedTrials } from "./offerLanguage";
+import { withoutNegatedTrials, withoutNegatedRefundPromises } from "./offerLanguage";
 
 /**
  * Deterministic copy checks that run before the LLM critic (research:
@@ -43,7 +43,9 @@ const SUPERLATIVES = /\b(best|#1|number one|leading|top-rated|fastest|cheapest|m
  * leadership claims a buyer would rely on. Each needs matching, permitted
  * evidence; otherwise it's unsupported. `key` finds the claim in the evidence.
  */
-const CLAIMS: { kind: string; re: RegExp; key: (m: RegExpMatchArray) => RegExp }[] = [
+const CLAIMS: { kind: string; re: RegExp; key: (m: RegExpMatchArray) => RegExp; rule?: string }[] = [
+  // Check the consequential promise first so a softer claim cannot hide it.
+  { kind: "a money-back or refund guarantee", re: /\bmoney[- ]back\b|\brefund guarantees?\b/i, key: () => /\bmoney[- ]back\b|\brefund guarantees?\b/i, rule: "unsupported_refund_promise" },
   { kind: "a speed or cost multiplier", re: /\b(\d+(?:\.\d+)?)\s?[x×]\s+(?:faster|quicker|cheaper|more|better|easier|less)\b/i, key: (m) => new RegExp(`\\b${m[1].replace(".", "\\.")}\\s?[x×]`, "i") },
   { kind: "round-the-clock availability", re: /\b24\/7\b|\bround[- ]the[- ]clock\b|\baround the clock\b/i, key: () => /\b24\/7\b|round[- ]the[- ]clock|around the clock/i },
   { kind: "market leadership", re: /\b(?:the )?(leading|#1|number one|no\.?\s?1|top-rated|best|most trusted|market[- ]leading)\s+(?:\w+\s+){0,2}(?:platform|tool|app|software|solution|service|agency|provider|company|choice|option)\b/i, key: (m) => new RegExp(`\\b${m[1].replace(/[#.]/g, "\\$&")}\\b`, "i") },
@@ -124,9 +126,9 @@ export function lintClaims(fields: { path: string; text: string }[], evidence: s
       }
     }
     for (const c of CLAIMS) {
-      const m = text.match(c.re);
+      const m = withoutNegatedRefundPromises(text).match(c.re);
       if (m && !supportedByAffirmativeEvidence(c.key(m), evidence)) {
-        issues.push({ severity: "error", rule: "unsupported_claim", message: `"${m[0]}" is ${c.kind} no verified capability evidence supports. Say what the product verifiably does, or drop it.`, path });
+        issues.push({ severity: "error", rule: c.rule ?? "unsupported_claim", message: `"${m[0]}" is ${c.kind} no verified capability evidence supports. Say what the product verifiably does, or drop it.`, path });
         break;
       }
     }

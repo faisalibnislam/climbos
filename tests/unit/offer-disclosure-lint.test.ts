@@ -4,6 +4,17 @@ import { lintClaims } from "../../shared/agents/lint";
 const rules = (text: string, evidence = "") => lintClaims([{ path: "body", text }], evidence).map((i) => i.rule);
 
 describe("offer disclosure and buyer-relied claims", () => {
+  it("requires affirmative refund evidence and distinguishes a denial from a promise", () => {
+    expect(rules("Our service has a money-back guarantee.")).toContain("unsupported_refund_promise");
+    expect(rules("Our 24/7 service has a money-back guarantee.")).toContain("unsupported_refund_promise");
+    expect(rules("Our service has a money-back guarantee.", "We do not offer a money-back guarantee.")).toContain("unsupported_refund_promise");
+    expect(rules("Our service has a money-back guarantee.", "We plan to offer a money-back guarantee.")).toContain("unsupported_refund_promise");
+    expect(rules("Our service has a money-back guarantee.", "Our service includes a money-back guarantee.")).toEqual([]);
+    expect(rules("We do not offer a money-back guarantee.")).toEqual([]);
+    expect(rules("There is no money-back guarantee.")).toEqual([]);
+    expect(rules("We don't guarantee your money back.")).toEqual([]);
+    expect(rules("Basic has no money-back guarantee. Pro has a money-back guarantee.")).toContain("unsupported_refund_promise");
+  });
   it("needs evidence for a reference price, star rating, no-hidden-fees or cancel-anytime promise", () => {
     expect(rules("Was $120, now $90 this week.")).toContain("unsupported_claim");
     expect(rules("Rated 4.9 stars by local families.")).toContain("unsupported_claim");
