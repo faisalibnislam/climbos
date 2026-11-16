@@ -184,6 +184,7 @@ describe("landing A/B test", () => {
     expect((await owner.client.query(api.landing.list, { slug })).pages[0].content?.headline).toBe(page.content!.headline);
     expect((await t.query(api.landing.publicPage, { slug: page.slug }))?.test).toBeNull();
     await owner.client.mutation(api.abtests.applyWinner, { slug, id: test.id });
+    expect((await owner.client.query(api.landing.history, { slug, id })).find(revision => revision.isPublished)?.publicationApprovedAt).toBe(Date.now());
     expect((await owner.client.query(api.landing.list, { slug })).pages[0].content?.headline).toBe("Double your leads in 30 days");
     expect((await owner.client.query(api.abtests.forTarget, { slug, targetId: id }))[0].appliedAt).toBeTypeOf("number");
   }, 15_000);

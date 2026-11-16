@@ -2614,6 +2614,8 @@ export default defineSchema({
     orgId: v.id("organizations"),
     pageId: v.id("landingPages"),
     version: v.number(),
+    /** First exact-version publication approval recorded here; never inferred for historical versions. */
+    publicationApprovedAt: v.optional(v.number()),
     title: v.string(),
     color: v.string(),
     content: v.string(),

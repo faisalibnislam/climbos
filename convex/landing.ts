@@ -73,6 +73,7 @@ export const history = query({
       kind: version.kind,
       designMeasurementPlan: version.designMeasurementPlan ?? null,
       createdAt: version.createdAt,
+      publicationApprovedAt: version.publicationApprovedAt ?? null,
       isPublished: version.version === (page.publishedVersion ?? (page.status === "live" && page.publishedContent === undefined ? (page.version ?? 0) : null)),
     }));
   },
@@ -301,7 +302,12 @@ export const setLive = mutation({
       const liveNow = (await ctx.db.query("landingPages").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(60)).filter((x) => x.status === "live" && x._id !== id).length;
       if (liveNow >= limit) throw appError(limit === LIVE_LIMIT.free ? "PAYMENT_REQUIRED" : "LIMIT_REACHED", limit === LIVE_LIMIT.free ? "Free accounts have 1 live page. Packages have 20." : `You have ${limit} live pages.`);
       const existingRevision = await ctx.db.query("landingPageVersions").withIndex("by_page_version", (q) => q.eq("pageId", p._id).eq("version", version)).first();
-      if (!existingRevision) await ctx.db.insert("landingPageVersions", { orgId: org._id, pageId: p._id, version, title: p.title, color: p.color, content: p.content, kind: "legacy", actorId: user._id, createdAt: p.updatedAt });
+      if (!existingRevision) await ctx.db.insert("landingPageVersions", { orgId: org._id, pageId: p._id, version, title: p.title, color: p.color, content: p.content, kind: "legacy", actorId: user._id, createdAt: p.updatedAt, publicationApprovedAt: Date.now(), ...(p.designMeasurementPlan ? { designMeasurementPlan: p.designMeasurementPlan } : {}) });
+      else {
+        assertSameOrg(existingRevision, org._id, "page version");
+        if (existingRevision.content !== p.content || existingRevision.color !== p.color || existingRevision.title !== p.title) throw appError("INVALID", "The saved page version does not match this draft. Save and review a new version before publishing.");
+        if (existingRevision.publicationApprovedAt === undefined) await ctx.db.patch(existingRevision._id, { publicationApprovedAt: Date.now() });
+      }
       await ctx.db.patch(id, { status: "live", publishedContent: p.content, publishedColor: p.color, publishedTitle: p.title, publishedVersion: version, updatedAt: Date.now() });
       await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "landing.published", subjectType: "landingPage", subjectId: p._id, summary: `Published landing page version ${version}; approved content hash ${await sha256Hex(p.content)}.` });
       return { publishedVersion: version };

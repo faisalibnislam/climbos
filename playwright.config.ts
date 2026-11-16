@@ -10,6 +10,8 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
+  // The dedicated local fixture backend allows one snapshot import at a time.
+  workers: process.env.CLIMBOS_CALENDAR_E2E_ENV_FILE || process.env.CLIMBOS_DESIGN_E2E_ENV_FILE ? 1 : undefined,
   retries: 0,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {

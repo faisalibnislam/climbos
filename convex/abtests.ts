@@ -107,7 +107,12 @@ async function applyB(ctx: MutationCtx, test: Doc<"abTests">) {
     if (!page?.content || await sha256Hex(page.content) !== test.baselineHash) throw appError("INVALID", "The landing page changed after this test began. Review the current page and create a fresh test.");
     const content = JSON.stringify(cleanLanding({ ...(JSON.parse(page.content) as LandingContent), ...(JSON.parse(b) as Partial<LandingContent>) }));
     const version = await recordLandingVersion(ctx, page, { title: page.title, color: page.color, content }, "experiment");
-    if (page.status === "live") await ctx.db.patch(page._id, { publishedContent: content, publishedColor: page.color, publishedTitle: page.title, publishedVersion: version, status: "live", updatedAt: Date.now() });
+    if (page.status === "live") {
+      const revision = await ctx.db.query("landingPageVersions").withIndex("by_page_version", q => q.eq("pageId", page._id).eq("version", version)).unique();
+      if (!revision || revision.orgId !== test.orgId) throw appError("INVALID", "The approved page revision is unavailable.");
+      await ctx.db.patch(revision._id, { publicationApprovedAt: Date.now() });
+      await ctx.db.patch(page._id, { publishedContent: content, publishedColor: page.color, publishedTitle: page.title, publishedVersion: version, status: "live", updatedAt: Date.now() });
+    }
   } else {
     const id = ctx.db.normalizeId("outboundCampaigns", test.targetId);
     const c = id ? await ctx.db.get(id) : null;

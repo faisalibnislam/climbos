@@ -2,6 +2,10 @@
 
 Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs as written there. Baseline: `404c466`. Branch: `growth-engine-v2`.
 
+## Local update — 16 November 2026: version-bound design learning
+
+Design finding → selected direction → saved page version → measurement plan → recorded outcome now feeds later conversion audits and growth plans through a tenant-validated, source-labeled context. Exact-version publication approvals are retained on saved revisions; missing historical dates remain unknown. Deterministic checks keep insufficient evidence, changed definitions, unrun tests and unsuitable comparisons from becoming winning-design claims. The existing result UI exposes the assessment and its limits. This is a bounded owner-report learning loop, not automatic performance attribution or a universal style rule. See [Verification](../Verification.md) for 58 focused regression/permission tests, four desktop/mobile browser checks (design outcomes and calendar), and remaining limitations.
+
 ## Local update — 16 November 2026: complete calendar pagination
 
 Confirmed and repaired: calendar sources stopped at 300 rows; review drafts were capped before applying the selected date range. `content.calendarPage` now pages one tenant-scoped source at a time using existing indexes, including the implicit creation-time suffix for review drafts. The shared merge keeps one entry per linked artifact and preserves Autopilot state independent of source arrival order. The current calendar loads 100 rows per source initially and offers more pages, including after empty filtered pages; changing workspace, timezone or range remounts the grid. The older snapshot query remains available, uses the corrected review range and retains its cap warning. No schema migration, provider call or approval/action change.

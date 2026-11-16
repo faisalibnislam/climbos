@@ -203,6 +203,9 @@ async function outcomeLines(ctx: QueryCtx, plans: Doc<"strategies">[]): Promise<
   const notRun: string[] = [];
   for (const s of plans) {
     for (const e of await ctx.db.query("experiments").withIndex("by_strategy", (q) => q.eq("strategyId", s._id)).take(10)) {
+      // Design results use exact-version/publication/measurement checks in the
+      // separate design learning context, not this generic channel outcome line.
+      if (e.designSource) continue;
       const latest = e.analyses?.at(-1);
       if (!latest?.reviewedAt) continue;
       const original = e.analyses!.find((x) => !x.redefined && x.inference !== "not_run")?.result;

@@ -1,4 +1,5 @@
 import { focusedGoal } from "./lib/goals";
+import { designLearningRecord } from "./lib/designLearning";
 import { priorDesignDecisions } from "./jobWrites";
 import { findingFingerprint } from "../shared/agents/designDecisions";
 import { sha256Hex } from "../shared/policy";
@@ -27,7 +28,7 @@ export const results = query({
     if (!Number.isInteger(findingIndex) || !findingsFromRun(run)[findingIndex]) throw appError("INVALID", "Choose a finding in this audit.");
     const pages = (await ctx.db.query("landingPages").withIndex("by_org", (q) => q.eq("orgId", org._id)).order("desc").take(100)).filter((page) => page.designCriticSource?.runId === runId && page.designCriticSource.findingIndex === findingIndex);
     const tests = await ctx.db.query("experiments").withIndex("by_design_source", (q) => q.eq("orgId", org._id).eq("designSource.runId", runId).eq("designSource.findingIndex", findingIndex)).order("desc").take(21);
-    return { truncated: tests.length > 20, canEdit: role !== "viewer", pages: pages.map((page) => ({ id: page._id, title: page.title, version: page.version ?? 0, measurementReady: page.designMeasurementPlan?.appliesToVersion === (page.version ?? 0) })), tests: tests.slice(0, 20).map((test) => ({ id: test._id, name: test.name, method: test.method, primaryMetric: test.primaryMetric, stoppingRule: test.stoppingRule, pageVersion: test.designSource!.pageVersion, pageId: test.designSource!.pageId, status: test.status, analyses: (test.analyses ?? []).map(({ reviewedBy: _reviewedBy, ...analysis }) => analysis) })) };
+    return { truncated: tests.length > 20, canEdit: role !== "viewer", pages: pages.map((page) => ({ id: page._id, title: page.title, version: page.version ?? 0, measurementReady: page.designMeasurementPlan?.appliesToVersion === (page.version ?? 0) })), tests: await Promise.all(tests.slice(0, 20).map(async (test) => ({ id: test._id, name: test.name, method: test.method, primaryMetric: test.primaryMetric, stoppingRule: test.stoppingRule, pageVersion: test.designSource!.pageVersion, pageId: test.designSource!.pageId, status: test.status, analyses: (test.analyses ?? []).map(({ reviewedBy: _reviewedBy, ...analysis }) => analysis), learning: await designLearningRecord(ctx, org._id, test) }))) };
   },
 });
 

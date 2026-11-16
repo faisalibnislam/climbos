@@ -1,39 +1,11 @@
-import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { promisify } from "node:util";
+import { localDemoFixtures } from "./local-demo-fixtures";
 import { expect, test, type Locator } from "@playwright/test";
 import { localDate, zonedTime } from "../shared/autopilot";
 import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
 
-const execute = promisify(execFile);
 const envFile = process.env.CLIMBOS_CALENDAR_E2E_ENV_FILE;
 
-/** Test-only imports must target the credential-free local demo, never a hosted or real-business database. */
-async function fixtureCli(args: string[]) {
-  if (!envFile) throw new Error("Provide the isolated local demo backend.env file");
-  const lines = (await readFile(envFile, "utf8")).trim().split(/\r?\n/);
-  if (lines.length !== 2 || lines[0] !== "CONVEX_SELF_HOSTED_URL=http://127.0.0.1:3320" || !/^CONVEX_SELF_HOSTED_ADMIN_KEY=\S+$/.test(lines[1])) throw new Error("Calendar fixtures require the dedicated loopback demo backend");
-  const { stdout } = await execute(process.execPath, [resolve("node_modules/convex/bin/main.js"), ...args, "--env-file", envFile], {
-    env: {
-      NODE_ENV: "test",
-      PATH: process.env.PATH, HOME: process.env.HOME, TMPDIR: process.env.TMPDIR,
-      CONVEX_DEPLOYMENT: "", CONVEX_DEPLOY_KEY: "",
-      CONVEX_SELF_HOSTED_URL: "http://127.0.0.1:3320",
-      CONVEX_SELF_HOSTED_ADMIN_KEY: lines[1].slice("CONVEX_SELF_HOSTED_ADMIN_KEY=".length),
-    },
-    maxBuffer: 8 * 1024 * 1024,
-    encoding: "utf8",
-  });
-  return stdout;
-}
-
-async function rows(table: string): Promise<Record<string, unknown>[]> {
-  const output = await fixtureCli(["data", table, "--limit", "5000", "--format", "json"]);
-  // The CLI writes an empty-table notice to stderr and no JSON to stdout.
-  return output.trim() ? JSON.parse(output) : [];
-}
+const { rows, append } = localDemoFixtures(envFile);
 
 async function seedCalendar(slug: string) {
   const org = (await rows("organizations")).find(row => row.slug === slug);
@@ -43,30 +15,22 @@ async function seedCalendar(slug: string) {
   const now = Date.now();
   const local = localDate(now, org.timezone);
   const scheduledFor = zonedTime(local.year, local.month0, local.day, 12, 0, org.timezone);
-  const temp = await mkdtemp(join(tmpdir(), "climbos-calendar-e2e-"));
-  try {
-    const path = join(temp, "rows.json");
-    const artifacts = Array.from({ length: 351 }, (_, i) => ({
-      orgId: org._id, businessId: business._id, kind: "social_post", channel: "facebook",
-      title: `Calendar regression post ${String(i).padStart(3, "0")}`, status: "in_review",
-      currentVersion: 1, scheduledFor, createdAt: now, updatedAt: now,
-    }));
-    await writeFile(path, JSON.stringify(artifacts));
-    await fixtureCli(["import", "--append", "--table", "artifacts", path]);
-    const saved = (await rows("artifacts")).filter(row => row.orgId === org._id && String(row.title).startsWith("Calendar regression post "));
-    if (saved.length !== 351) throw new Error("Expected exactly 351 isolated calendar fixtures");
-    await writeFile(path, JSON.stringify(saved.map(row => ({
-      orgId: org._id, weekOf: `${local.year}-${String(local.month0 + 1).padStart(2, "0")}-${String(local.day).padStart(2, "0")}`,
-      channel: "facebook", day: local.weekday, slotAt: scheduledFor,
-      pillar: "Fixture", purpose: "education", format: "text", idea: row.title,
-      angle: "Browser regression", hookDraft: "Fixture only", callToAction: "Review",
-      needsOwner: true, status: "needs_approval", artifactId: row._id,
-      createdAt: now, updatedAt: now,
-    }))));
-    await fixtureCli(["import", "--append", "--table", "calendarSlots", path]);
-  } finally {
-    await rm(temp, { recursive: true, force: true });
-  }
+  const artifacts = Array.from({ length: 351 }, (_, i) => ({
+    orgId: org._id, businessId: business._id, kind: "social_post", channel: "facebook",
+    title: `Calendar regression post ${String(i).padStart(3, "0")}`, status: "in_review",
+    currentVersion: 1, scheduledFor, createdAt: now, updatedAt: now,
+  }));
+  await append("artifacts", artifacts);
+  const saved = (await rows("artifacts")).filter(row => row.orgId === org._id && String(row.title).startsWith("Calendar regression post "));
+  if (saved.length !== 351) throw new Error("Expected exactly 351 isolated calendar fixtures");
+  await append("calendarSlots", saved.map(row => ({
+    orgId: org._id, weekOf: `${local.year}-${String(local.month0 + 1).padStart(2, "0")}-${String(local.day).padStart(2, "0")}`,
+    channel: "facebook", day: local.weekday, slotAt: scheduledFor,
+    pillar: "Fixture", purpose: "education", format: "text", idea: row.title,
+    angle: "Browser regression", hookDraft: "Fixture only", callToAction: "Review",
+    needsOwner: true, status: "needs_approval", artifactId: row._id,
+    createdAt: now, updatedAt: now,
+  })));
   return { orgId: org._id, timeZone: org.timezone };
 }
 
