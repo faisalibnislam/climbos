@@ -1,4 +1,5 @@
 "use node";
+import { CUSTOMER_VOICE_POLICY } from "../shared/reviews/voiceThemes";
 import { focusedPlanTask } from "../shared/agents/focusedPlan";
 import { COPY_BRIEF_INSTRUCTION, socialPostsTask, seoPageTask } from "../shared/agents/contentTasks";
 import { RUN_FAILURE_COPY } from "../shared/progress";
@@ -783,6 +784,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     job.businessModelTestNotes.length ? `ORIGINAL BUSINESS MODEL TESTS AND OWNER REPORTS (historical, bounded excerpts, not independently verified; compare each result only with its own original test; missing or truncated details are unknown):\n${job.businessModelTestNotes.map((note, i) => untrusted(`owner business model test report ${i + 1}`, note, 2_000)).join("\n")}` : "",
     job.pipelineLossNotes.length ? `OWNER NOTES ON RECENTLY LOST DEALS (untrusted, owner-entered; may be partial or wrong):\n${untrusted("owner lost-deal notes", job.pipelineLossNotes.join("\n"), 1_500)}` : "",
     job.resultsText ?? "",
+    job.customerVoiceText ? `${CUSTOMER_VOICE_POLICY}\n${untrusted("customer message groups and owner interpretation", job.customerVoiceText, 12_000)}` : "",
     job.designLearningText ? `${DESIGN_LEARNING_POLICY}\n${untrusted("owner-recorded design tests", job.designLearningText, 12_000)}` : "",
     job.brandConsistencyText ? `${BRAND_MAP_POLICY}\n${untrusted("owner brand pattern decisions", job.brandConsistencyText, 12_000)}` : "",
   ];

@@ -101,15 +101,17 @@ export default function ReviewsPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <strong>{theme.label}</strong>
                     <Badge tone={theme.confidence === "medium" ? "blue" : "amber"}>{theme.confidence} heuristic confidence</Badge>
-                    <Badge>{theme.evidenceBasis === "owner_reported" ? "Owner-entered notes" : theme.evidenceBasis === "mixed" ? "Messages + owner notes" : "Customer messages"}</Badge>
-                    <Badge>{theme.count} matching messages</Badge>
+                    <Badge>{theme.evidenceBasis === "owner_reported" ? "Owner-entered records" : theme.evidenceBasis === "mixed" ? "Messages + owner records" : "Customer messages"}</Badge>
+                    <Badge>{theme.count} matching records</Badge>
                     {theme.status === "dismissed" ? <Badge>Dismissed</Badge> : null}
+                    {theme.status === "corrected" ? <Badge>Owner correction</Badge> : null}
                   </div>
                   <p className="text-xs text-ink-3">{theme.channels.join(", ")} · {new Date(theme.firstSeenAt).toLocaleDateString()}–{new Date(theme.lastSeenAt).toLocaleDateString()}. Rough grouping; not a count of all customers.</p>
                   <ul className="flex flex-col gap-2">
                     {theme.examples.map((example) => <li key={example.id} className="rounded-md bg-surface-2 p-2 text-sm"><span className="text-xs text-ink-3">{example.source} · {new Date(example.date).toLocaleDateString()}{example.sourceUrl ? <> · <a href={example.sourceUrl} target="_blank" rel="noreferrer" className="text-brand-800 underline">source</a></> : null}</span><p className="mt-1">“{example.excerpt}”</p></li>)}
                   </ul>
                   {theme.ownerNote ? <p className="text-xs text-ink-3">Owner note: {theme.ownerNote}</p> : null}
+                  {theme.reviewedAt ? <p className="text-xs text-ink-3">Reviewed {new Date(theme.reviewedAt).toLocaleDateString()}. Owner interpretation, not independent verification.</p> : null}
                   <div className="flex flex-wrap items-center gap-2">
                     {theme.status === "dismissed" ? (
                       <Button size="sm" variant="ghost" onClick={() => run(`theme-${theme.key}`, () => setVoiceThemeFeedback({ slug, themeKey: theme.key, status: "clear" }), "Theme restored")}>Restore</Button>
@@ -128,7 +130,7 @@ export default function ReviewsPage() {
           ) : (
             <p className="text-sm text-ink-3">No repeated themes in {voice.sourceCount} recent records. That doesn’t mean there are no concerns.</p>
           )}
-          {voice ? <details className="text-xs text-ink-3"><summary className="cursor-pointer">How this works</summary><p className="mt-1">Up to {voice.sampleLimit} records from {voice.windowDays} days; a theme needs {voice.minimumRepeatedSources}+ matches. Private messages show only to members with inbox access.</p></details> : null}
+          {voice ? <details className="text-xs text-ink-3"><summary className="cursor-pointer">How this works</summary><p className="mt-1">{voice.scope} {voice.limited ? "This sample reached a limit; other records may be missing. " : ""}A theme needs {voice.minimumRepeatedSources}+ matches. Future growth plans use these tentative findings and your corrections; dismissed themes are excluded. Corrections apply to the group until cleared, so review them when new examples arrive. Private excerpts are for analysis, not public testimonials.</p></details> : null}
         </CardContent>
       </Card>
 

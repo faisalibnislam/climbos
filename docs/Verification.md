@@ -1,3 +1,28 @@
+## 16 November 2026 — customer-message feedback into strategy
+
+Confirmed gap: `reviews.voiceThemes` displayed saved corrections and dismissals, but strategy generation never consumed that feedback. Added failing generation-boundary assertions for focused/starter plans, then connected the existing sample through `customerVoice` → `jobWrites.jobContext` → `jobs.businessBrief` → agent input. The existing Reviews query now reuses the same reader.
+
+Behavior and boundaries:
+
+- Use only the same tenant's last 180 days of non-demo messages and recent CRM notes. Exclude future-dated messages/notes. Select up to 500 messages and 250 recently updated deals, then at most 500 combined records; disclose caps. Fixture messages no longer displace real messages before the returned-row limit. The message query filters fixture records before taking results; this is a bounded returned sample, not a claim of a fixed number of database records scanned.
+- Preserve stored receipt/note dates, channels and source links; these dates are not independently verified publication dates. Distinguish owner-pasted reviews/CRM notes from other message reports. Deduplicate repeated stable source IDs and give same-timestamp CRM notes distinct IDs. Counts are records, not distinct customers; repeated text across different records is not declared independent evidence.
+- Preserve corrected versus suggested labels, owner notes and review dates. Exclude dismissed groups and their private notes/examples from the new strategy context; clearing restores the suggested grouping. Existing owner feedback is group-level until cleared, not a version-specific classification of each subsequent message. The UI and model context disclose that limitation.
+- Redact known author/contact names from excerpts and email/phone patterns from excerpts and model-bound correction notes. This is not comprehensive PII detection. Keep complete theme/source records within a 10,000-character budget; disclose omissions instead of breaking citation associations. Only strategy jobs collect this additional context.
+- Explain that English phrase groups can combine positive, negative and negated statements. They do not establish sentiment, representative demand, customer authenticity or causal outcomes. Private excerpts are for analysis, not approved testimonials. No action authorization is created.
+
+Verification:
+
+```sh
+pnpm exec vitest run tests/convex/customer-voice.test.ts tests/convex/research-context.test.ts tests/convex/reviews.test.ts tests/unit/voice-themes.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+pnpm exec eslint convex/lib/customerVoice.ts convex/reviews.ts convex/jobWrites.ts convex/jobs.ts shared/reviews/voiceThemes.ts shared/agents/specs.ts 'src/app/app/[organization]/reviews/page.tsx' tests/convex/customer-voice.test.ts tests/convex/research-context.test.ts tests/convex/reviews.test.ts tests/unit/voice-themes.test.ts e2e/customer-voice-learning.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/customer-voice-learning.spec.ts
+git diff --check
+```
+
+Results: 37 focused unit/Convex tests passed, app and Convex typechecks passed, scoped lint passed, and isolated local sync passed. Two desktop/mobile browser checks passed (16.3 seconds): source/interpretation/limit copy, correction → dismissal → restore, three audit events, no new approvals/artifacts/actions/runs, no horizontal overflow and no serious/critical automated accessibility findings. The first browser attempt used the wrong audit table name; corrected the test to the existing `auditEvents` table and reran successfully. Mobile capture was inspected; the saved-state toast temporarily overlays part of the element screenshot. This is local fixture/model-boundary evidence, not a paid model evaluation, production-provider test or full accessibility assessment.
+
 ## 16 November 2026 — customer-language source-text evidence
 
 The existing phrase-bank lint checked source URL membership but did not prove that quoted words appeared in text ClimbOS read. Traced `PageFetcher` → OpenAI/Anthropic turn result → business-insights research/checkpoint/cache → onboarding `AgentMeta` → `saveInsights` → saved expert research → downstream drafting/strategy and owner research UI.

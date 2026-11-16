@@ -1,3 +1,5 @@
+import { customerVoice } from "./lib/customerVoice";
+import { customerVoiceBrief } from "../shared/reviews/voiceThemes";
 import { boundedPageReads, checkedCustomerLanguage } from "../shared/agents/provenance";
 import { businessModelEvidenceHashes } from "./lib/businessModelEvidence";
 import { businessModelFreshness, readBusinessModelEvidence } from "../shared/agents/businessModelFreshness";
@@ -366,6 +368,7 @@ export const jobContext = internalQuery({
       businessModelTestNotes,
       priorDesignDecisionsText: priorDesign.summary,
       priorDesignDecisionNotes: priorDesign.notes,
+      customerVoiceText: run.kind === "strategy" ? customerVoiceBrief(await customerVoice(ctx, org._id)) : "",
       designLearningText: run.kind === "strategy" || run.kind === "conversion_audit" ? await designLearningBrief(ctx, org._id) : "",
       brandConsistencyText: run.kind === "strategy" || run.kind === "conversion_audit" ? await brandConsistencyBrief(ctx, org._id) : "",
       stripeReceivables,

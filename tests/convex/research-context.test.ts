@@ -62,7 +62,15 @@ describe("persisted research in generation context", () => {
     const t = setup();
     vi.stubEnv("CLIMBOS_FAKE_LLM", "");
     const owner = await asNewUser(t, `research-${kind}@example.com`);
-    const { orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Research context", website: "https://business.example/" });
+    const { orgId, slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Research context", website: "https://business.example/" });
+    if (kind === "strategy") {
+      for (const author of ["Private Alice", "Private Bob"]) {
+        await owner.client.mutation(api.reviews.addReview, { slug, author, text: `${author}: setup is confusing; private@example.com`, source: "google" });
+        await owner.client.mutation(api.reviews.addReview, { slug, author, text: "Friendly service DISMISSED EXAMPLE", source: "google" });
+      }
+      await owner.client.mutation(api.reviews.setVoiceThemeFeedback, { slug, themeKey: "onboarding", status: "corrected", correctedLabel: "Reliability", note: "Owner interpretation: investigate recurring errors first." });
+      await owner.client.mutation(api.reviews.setVoiceThemeFeedback, { slug, themeKey: "service", status: "dismissed", note: "DISMISSED PRIVATE NOTE" });
+    }
     const { businessId, runId } = await t.run(async ctx => {
       const business = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", orgId)).first())!;
       const runId = await ctx.db.insert("workflowRuns", { orgId, kind, title: "Research context check", status: "proposed", input: JSON.stringify({ planStyle }), engine: "v2", roles: [], estimateMicros: 0, actualMicros: 0, rateVersionId: RATE_VERSIONS[0].id, entitlementVersionId: "test", routingVersionId: "test", budget: { modelSteps: 20, researchTools: 5, repairs: 0 }, used: { modelSteps: 0, researchTools: 0, repairs: 0 }, isFixture: false, createdAt: Date.now(), updatedAt: Date.now() });
@@ -102,6 +110,15 @@ describe("persisted research in generation context", () => {
     expect(text).not.toContain("OTHER TENANT PRIVATE RESEARCH");
     expect(text).not.toContain("Invented customer praise");
     expect(text).not.toContain("Search-only unsupported words");
+    if (kind === "strategy") {
+      expect(text).toContain("Owner interpretation: investigate recurring errors first.");
+      expect(text).toContain('"label":"Reliability"');
+      expect(text).toContain("not unique customers");
+      expect(text).not.toContain("DISMISSED EXAMPLE");
+      expect(text).not.toContain("DISMISSED PRIVATE NOTE");
+      expect(text).not.toContain("Private Alice");
+      expect(text).not.toContain("private@example.com");
+    }
     expect((await t.run(ctx => ctx.db.get(otherBusiness)))?.insights).toBeUndefined();
     for (const table of ["approvals", "actionReceipts", "artifacts"] as const) {
       expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);

@@ -88,7 +88,7 @@ describe("reviews engine", () => {
     await owner.client.mutation(api.reviews.addReview, { slug, author: "Lee", text: "Getting started was confusing", source: "trustpilot", sourceUrl: "https://reviews.example/2" });
     let result = await owner.client.query(api.reviews.voiceThemes, { slug });
     expect(result.themes[0]).toMatchObject({ key: "onboarding", count: 2, channels: ["google", "trustpilot"], confidence: "low" });
-    expect(result.themes[0]!.examples[0]).toMatchObject({ source: "review · trustpilot" });
+    expect(result.themes[0]!.examples).toContainEqual(expect.objectContaining({ source: "owner-pasted review · trustpilot" }));
     expect(result.themes[0]!.examples.some((row) => row.excerpt.includes("pat@example.com"))).toBe(false);
 
     await owner.client.mutation(api.reviews.setVoiceThemeFeedback, { slug, themeKey: "onboarding", status: "corrected", correctedLabel: "Reliability", note: "These comments refer to recurring app errors, not onboarding." });

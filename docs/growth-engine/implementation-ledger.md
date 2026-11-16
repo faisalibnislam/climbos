@@ -1,3 +1,9 @@
+## Local update — 16 November 2026: customer-message feedback reaches strategy
+
+Traced review/message/CRM records → phrase grouping → owner correction/dismissal → strategy job context → generation input. The final handoff was missing. The existing Reviews query and strategy context now use one read-only tenant sample. Dismissals are excluded from generation; corrections retain the suggested label, owner interpretation and date. Whole-record context limits retain source/excerpt associations and report omissions. Counts remain matching records, not customers; English keyword groups are not sentiment or verified constraints. Reviews explains these boundaries and shows correction provenance. Engine version: `v3.95-customer-voice-learning`.
+
+No new table, agent, provider or action path. The Convex local sync regenerated the normal module type registration for the new helper. Focused generation, tenant/viewer permissions, neutral review invitations, action boundaries and desktop/mobile feedback controls are covered in [Verification](../Verification.md). Real-model interpretation and business impact remain unverified.
+
 ## Local update — 16 November 2026: source-text checks for customer language
 
 Audited the URL-only VoC check, provider page-reader results, research cache, onboarding metadata, persisted phrase bank and owner research UI. The existing reader now carries at most eight 8,000-character page excerpts with their actual retrieval timestamps. Business-insights cache reuse retains those dates; search notes and URL-only background metadata do not become page evidence. The persistence mutation replaces model-reported proof with deterministic exact-page/word checks and withholds unsupported, unchecked and business-site candidates, while recording their counts. Owner research shows retained source links/read dates and preserves explicit unknowns for legacy entries. Engine version: `v3.94-customer-language-evidence`.

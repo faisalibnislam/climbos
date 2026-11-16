@@ -1,3 +1,4 @@
+import { customerVoice } from "./lib/customerVoice";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -12,7 +13,7 @@ import { hasActiveOutboundSequence } from "./lib/contactPressure";
 import { serverSecret } from "./lib/crypto";
 import { reviewSafetySignals } from "../shared/reviews/safety";
 import { reviewDestinationProblem } from "../shared/acquisition/platformRules";
-import { groupVoiceThemes, VOICE_THEME_LABELS, type VoiceThemeKey } from "../shared/reviews/voiceThemes";
+import { VOICE_THEME_LABELS, type VoiceThemeKey } from "../shared/reviews/voiceThemes";
 
 /**
  * Reviews engine. Every invited customer gets the same public review destination,
@@ -65,27 +66,7 @@ export const voiceThemes = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "view");
-    const cutoff = Date.now() - 180 * 86_400_000;
-    const messages = (await ctx.db.query("communityMessages").withIndex("by_org_received", (q) => q.eq("orgId", org._id).gte("receivedAt", cutoff)).order("desc").take(500))
-      .filter((message) => !message.isFixture);
-    const deals = await ctx.db.query("deals").withIndex("by_org_updated", (q) => q.eq("orgId", org._id)).order("desc").take(250);
-    const crmNotes = deals.flatMap((deal) => deal.notes.filter((note) => note.at >= cutoff).map((note) => ({ id: `deal:${deal._id}:${note.at}`, kind: "owner-entered CRM note", channel: "CRM", text: note.text, receivedAt: note.at, redact: [deal.name, deal.email ?? ""] })));
-    const feedback = await ctx.db.query("voiceThemeFeedback").withIndex("by_org_theme", (q) => q.eq("orgId", org._id)).collect();
-    const byKey = new Map(feedback.map((row) => [row.themeKey, row]));
-    const sources = [...messages.map((message) => ({ id: String(message._id), kind: message.kind, channel: message.channel, text: message.text, receivedAt: message.receivedAt, redact: [message.authorName, message.fromEmail ?? ""], ...(message.reviewSourceUrl ? { sourceUrl: message.reviewSourceUrl } : {}) })), ...crmNotes]
-      .sort((a, b) => b.receivedAt - a.receivedAt).slice(0, 500);
-    const themes = groupVoiceThemes(sources)
-      .map((theme) => {
-        const saved = byKey.get(theme.key);
-        return {
-          ...theme,
-          status: saved?.status ?? "suggested" as const,
-          label: saved?.status === "corrected" ? saved.correctedLabel ?? theme.label : theme.label,
-          ownerNote: saved?.note ?? null,
-        };
-      })
-      ;
-    return { themes, sourceCount: sources.length, windowDays: 180, sampleLimit: 500, minimumRepeatedSources: 2 };
+    return customerVoice(ctx, org._id);
   },
 });
 
