@@ -5,7 +5,7 @@
  * order and the first failing one decides the next step; more spend is only
  * suggested when reach is the sole shortfall and conversion holds.
  */
-import { formatMoney } from "../economics/currency";
+import { formatMinorMoney, majorToMinor } from "../economics/currency";
 import { costCheck, stepClearlyShort, stepTooThin, type PlayActuals } from "./actuals";
 
 export type ShortfallVerdict = "not_run" | "tracking" | "reach" | "conversion" | "reach_only" | "too_few" | "fine";
@@ -25,7 +25,7 @@ export interface Shortfall {
   moreSpendJustified: boolean;
 }
 
-const money = (n: number, currency?: string) => formatMoney(Math.round(n * 100) / 100, currency);
+const money = (n: number, currency?: string) => formatMinorMoney(majorToMinor(n, currency), currency);
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 
@@ -65,18 +65,19 @@ export function diagnoseShortfall(a: PlayActuals, play: { killIf?: string } = {}
       within: `Logged cash cost per customer ${m(c.cashCostPerCustomerUsd ?? 0)} is within the ${m(c.affordableUsd ?? 0)} a customer is worth in the payback window.`,
       above: `Logged cash cost per customer ${m(c.cashCostPerCustomerUsd ?? 0)} is above the ${m(c.affordableUsd ?? 0)} a customer is worth in the payback window.`,
       no_spend: "No spend logged, so there's no cost per customer to judge more spend by.",
-      no_customers: `${m(a.spendUsd)} spent with no customers logged yet.`,
+      no_customers: `${m(a.spendUsd ?? 0)} spent with no customers logged yet.`,
+      spend_unknown: a.spendIssue ?? "Spending is unknown or uses incompatible currencies; no cost comparison is available.",
       value_unknown: `Logged cash cost per customer is ${m(c.cashCostPerCustomerUsd ?? 0)}, but what a customer is worth is unknown (price, margin or churn).`,
     }[c.status];
     checks.push({ check: "cost", status: c.status === "within" ? "pass" : c.status === "above" || c.status === "no_customers" ? "fail" : "unknown", detail });
     if (c.status === "within") return { verdict: "reach_only", checks, next: `Conversion holds and cost per customer is affordable; only reach is short. Fix the route to the page, or raise spend within the cap.${stop}`, moreSpendJustified: true };
-    const why = { above: "cost per customer is above what a customer is worth, so lower it before adding spend", no_customers: "no customers yet, so more spend isn't justified", no_spend: "there's no logged cost per customer, so don't start or raise paid spend from this result", value_unknown: "confirm price, margin and churn before adding spend" }[c.status];
+    const why = { above: "cost per customer is above what a customer is worth, so lower it before adding spend", no_customers: "no customers yet, so more spend isn't justified", no_spend: "there's no logged cost per customer, so don't start or raise paid spend from this result", value_unknown: "confirm price, margin and churn before adding spend", spend_unknown: "confirm the original spending and currency before judging affordability or adding spend" }[c.status];
     return { verdict: "reach_only", checks, next: `Conversion holds; only reach is short. Fix the route to the page; ${why}.${stop}`, moreSpendJustified: false };
   }
   if (reachShort) return { verdict: "reach", checks, next: `Reach is short and there are too few people to judge conversion. Fix the route first; don't add spend yet.${stop}`, moreSpendJustified: false };
   // 5. Enough to judge every step?
   if (thinAny) {
-    checks.push({ check: "sample", status: "unknown", detail: `${a.customers} customers so far vs about ${Math.round(a.expectedByNow.p50)} expected.` });
+    checks.push({ check: "sample", status: "unknown", detail: `${a.customers} customers so far${a.expectedByNow ? ` vs about ${Math.round(a.expectedByNow.p50)} expected` : "; the original forecast is unavailable"}.` });
     return { verdict: "too_few", checks, next: `Too few people to read yet. Keep running to the planned end before changing anything.${stop}`, moreSpendJustified: false };
   }
   return { verdict: "fine", checks, next: "No single step is failing; results are within the noise. Keep going to the planned end.", moreSpendJustified: false };

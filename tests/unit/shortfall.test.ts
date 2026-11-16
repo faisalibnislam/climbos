@@ -5,7 +5,7 @@ import { diagnoseShortfall, shortfallLine } from "../../shared/growth/diagnostic
 /** Cycle 2: a play that's behind is diagnosed in order before anyone adds spend. */
 const model = { weeklyReach: 200, steps: [{ name: "click", rate: 0.1 }, { name: "pay", rate: 0.2 }], monthlySpendUsd: 100, ownerHoursPerWeek: 1 };
 const forecast = { p10: 20, p50: 40, p90: 60 };
-const week = (i: number, reach: number, steps: number[]): ResultEntry => ({ weekStart: i * 7 * 86_400_000, reach, steps, spendUsd: 25, ownerHours: 1 });
+const week = (i: number, reach: number, steps: number[]): ResultEntry => ({ weekStart: i * 7 * 86_400_000, reach, steps, spendUsd: 25, spendCurrency: "USD", ownerHours: 1 });
 const a = (entries: ResultEntry[]) => playActuals(model, entries, forecast, 13);
 
 describe("shortfall diagnosis", () => {
@@ -48,6 +48,13 @@ describe("shortfall diagnosis", () => {
     const s = diagnoseShortfall(free, {}, { affordableCacUsd: 50 });
     expect(s).toMatchObject({ verdict: "reach_only", moreSpendJustified: false });
     expect(s.next).toMatch(/don't start or raise paid spend/);
+  });
+  it("does not justify more spend from unknown historical spending units", () => {
+    const actuals = a([1, 2, 3, 4].map(i => ({ ...week(i, 60, [7, 2]), spendCurrency: undefined })));
+    const result = diagnoseShortfall(actuals, {}, { affordableCacUsd: 50, currency: "USD" });
+    expect(result).toMatchObject({ verdict: "reach_only", moreSpendJustified: false });
+    expect(result.checks.find(c => c.check === "cost")?.status).toBe("unknown");
+    expect(result.next).toContain("confirm the original spending and currency");
   });
   it("too few: keep running to the planned end", () => {
     expect(diagnoseShortfall(a([week(1, 150, [10, 1]), week(2, 140, [9, 1])])).verdict).toBe("too_few");

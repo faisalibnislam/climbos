@@ -2268,6 +2268,8 @@ export default defineSchema({
     /** People passing each funnel step of the play's model, in order. */
     steps: v.array(v.number()),
     spendUsd: v.number(),
+    /** Whole-unit weekly spend uses this owner-confirmed currency; missing legacy currency is unknown. */
+    spendCurrency: v.optional(v.string()),
     ownerHours: v.number(),
     /** Optional weekly, owner-reported repeat-customer outcomes; money uses the business currency's minor unit. */
     repeatCustomers: v.optional(v.number()),

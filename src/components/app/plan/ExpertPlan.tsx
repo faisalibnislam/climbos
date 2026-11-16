@@ -1,4 +1,5 @@
 "use client";
+import { knownPlayForecast } from "../../../../shared/growth/actuals";
 
 import { GAP_LABEL, type GoalGap } from "../../../../shared/agents/goal";
 import { CONSTRAINT_LABEL, type BindingConstraint, type Decision } from "../../../../shared/agents/decision";
@@ -547,6 +548,7 @@ function ConfidenceChips({ c }: { c: PlayConfidence }) {
 
 /** The forecast as a KPI: point estimate at stated inputs, scenario range, and evidence. */
 function Forecast({ f, economics, open = false, diagnosis }: { f: PlayView; economics?: Economics; open?: boolean; diagnosis?: Diagnosis | null }) {
+  if (!knownPlayForecast(f)) return <p className="rounded-[var(--radius-card)] border border-line p-3 text-xs text-ink-2">Original forecast unavailable. Record the missing inputs before comparing results with a plan.</p>;
   const k = kindOf(f.kind);
   const max = Math.max(f.p90, 1) * 1.1;
   const pos = (n: number) => Math.min(100, Math.max(0, (n / max) * 100));
@@ -1137,7 +1139,7 @@ function PlayCard({ play, slug, economics, results, planId, targets, canEdit = f
         <Forecast f={play} economics={economics} open={open} diagnosis={diagnosis} />
         {play.model && economics ? <PlayEconomics play={play} economics={economics} /> : null}
         {targets && planId && play.id ? <PlayTargetsBlock t={targets} slug={slug} strategyId={planId} playId={play.id} canEdit={canEdit} /> : null}
-        {play.model?.steps?.length && results ? <PlayResults slug={slug} strategyId={results.strategyId} playName={play.name} model={play.model} actuals={results.byPlay[play.name]} retention={results.byPlay[play.name]?.retention} currency={results.currency} canEdit={results.canEdit}  affordableCacUsd={economics ? customerValue(economics) : null}/> : null}
+        {play.model?.steps?.length && results ? <PlayResults key={`${results.strategyId}:${play.id ?? play.name}`} slug={slug} strategyId={results.strategyId} playName={play.name} model={play.model} actuals={results.byPlay[play.name]} retention={results.byPlay[play.name]?.retention} currency={results.currency} canEdit={results.canEdit}  affordableCacUsd={economics ? customerValue(economics) : null}/> : null}
 
         {open ? <PlayDetails play={play} economics={economics} id={panel} /> : null}
 
@@ -1532,7 +1534,7 @@ export function GrowthPlays({ plays, slug, economics, portfolioComparisons, stra
       {economics ? <EconomicsLine economics={economics} /> : null}
       {portfolioComparisons ? <PortfolioComparisons data={portfolioComparisons} economics={economics} /> : null}
       {portfolioComparisons?.cashTiming ? <GrowthCashTimingPanel data={portfolioComparisons.cashTiming} slug={slug} canEdit={canEdit} /> : null}
-      {sorted.length > 1 ? <PlaysChart plays={sorted} economics={economics} /> : null}
+      {sorted.filter(knownPlayForecast).length > 1 ? <PlaysChart plays={sorted.filter(knownPlayForecast)} economics={economics} /> : null}
       <div className={cn("grid gap-3", sorted.length > 2 ? "lg:grid-cols-2 xl:grid-cols-3" : "lg:grid-cols-2")}>
         {sorted.map((p) => (
           <PlayCard key={p.name} play={p} slug={slug} economics={economics} results={results} planId={planId} targets={p.id ? targets?.[p.id] : undefined} canEdit={canEdit} diagnosis={diagnosis} />

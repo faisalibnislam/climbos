@@ -6,6 +6,8 @@
  */
 import type { PlayModel } from "../agents/economics";
 import { betaPosterior, binomialCdf, poissonCdf, probBelow } from "../analysis/bayes";
+import { formatMinorMoney, isKnownCurrency, majorToMinor, minorToMajor } from "../economics/currency";
+import { decimalToMinor } from "../integrations/currency";
 
 /*
  * Decision books (2026-10-20):
@@ -23,6 +25,8 @@ export interface ResultEntry {
   /** People passing each model step, in order (last = new customers). */
   steps: number[];
   spendUsd: number;
+  /** Historical field name is not an assertion of USD; absent on ambiguous legacy reports. */
+  spendCurrency?: string;
   ownerHours: number;
   /** Existing customers who repeated or renewed during this week; a customer may appear in multiple weeks. */
   repeatCustomers?: number;
@@ -91,11 +95,14 @@ export interface PlayActuals {
   weeks: number;
   reach: number;
   customers: number;
-  spendUsd: number;
+  /** Whole units of spendCurrency, not an FX conversion. Unknown/incompatible money stays null. */
+  spendUsd: number | null;
+  spendCurrency: string | null;
+  spendIssue: string | null;
   ownerHours: number;
   /** Customers the plan expected by now (P10/P50/P90 scaled to the weeks logged). */
-  expectedByNow: { p10: number; p50: number; p90: number };
-  status: "ahead" | "on_track" | "behind" | "too_early" | "incomplete_log";
+  expectedByNow: { p10: number; p50: number; p90: number } | null;
+  status: "ahead" | "on_track" | "behind" | "too_early" | "incomplete_log" | "forecast_unknown";
   steps: StepActual[];
   /** Weekly reach actually achieved vs planned. */
   reachVsPlan: number | null;
@@ -107,7 +114,7 @@ export interface PlayActuals {
   ignoredBeforeStart: number;
 }
 
-export type CostCheckStatus = "within" | "above" | "no_spend" | "no_customers" | "value_unknown";
+export type CostCheckStatus = "within" | "above" | "no_spend" | "no_customers" | "value_unknown" | "spend_unknown";
 export interface CostCheck {
   /** Logged cash spend ÷ logged new customers (owner time excluded); null with no customers or no spend. */
   cashCostPerCustomerUsd: number | null;
@@ -119,6 +126,7 @@ export interface CostCheck {
 /** Logged cash cost per customer against the affordable cost per customer; unknown stays unknown, never assumed. */
 export function costCheck(a: Pick<PlayActuals, "spendUsd" | "customers">, affordableUsd: number | null | undefined): CostCheck {
   const affordable = typeof affordableUsd === "number" && Number.isFinite(affordableUsd) ? affordableUsd : null;
+  if (a.spendUsd === null || !Number.isFinite(a.spendUsd) || a.spendUsd < 0) return { cashCostPerCustomerUsd: null, affordableUsd: affordable, status: "spend_unknown" };
   if (!(a.spendUsd > 0)) return { cashCostPerCustomerUsd: null, affordableUsd: affordable, status: "no_spend" };
   if (!(a.customers > 0)) return { cashCostPerCustomerUsd: null, affordableUsd: affordable, status: "no_customers" };
   const cost = a.spendUsd / a.customers;
@@ -129,7 +137,34 @@ export function costCheck(a: Pick<PlayActuals, "spendUsd" | "customers">, afford
 /** How many observations the planned rate is worth. */
 export const PRIOR_WEIGHT = 20;
 
-export function playActuals(model: PlayModel, all: ResultEntry[], forecast: { p10: number; p50: number; p90: number }, horizonWeeks = 13, opts: { startWeek?: number } = {}): PlayActuals {
+/** Exact minor-unit sum; legacy names, today's settings and FX guesses cannot establish old units. */
+function reportedSpend(entries: ResultEntry[], expectedCurrency?: string | null): Pick<PlayActuals, "spendUsd" | "spendCurrency" | "spendIssue"> {
+  const unavailable = (spendIssue: string) => ({ spendUsd: null, spendCurrency: null, spendIssue });
+  let totalMinor = 0;
+  const currencies = new Set<string>();
+  for (const entry of entries) {
+    if (!Number.isFinite(entry.spendUsd) || entry.spendUsd < 0) return unavailable("Recorded spend is invalid; check the original weekly amounts.");
+    if (entry.spendUsd === 0) continue;
+    const currency = entry.spendCurrency?.trim().toUpperCase();
+    if (!currency || !isKnownCurrency(currency)) return unavailable("Some recorded spending has no confirmed currency. Review the original amounts before comparing costs.");
+    currencies.add(currency);
+    if (currencies.size > 1) return unavailable("Recorded spending uses different currencies. No combined spend or cost comparison is available.");
+    const parsed = decimalToMinor(String(entry.spendUsd), currency);
+    if (!parsed.ok || !Number.isSafeInteger(totalMinor + parsed.minor)) return unavailable("Recorded spending has unsupported precision or an unsafe total; check the original amounts.");
+    totalMinor += parsed.minor;
+  }
+  const currency = [...currencies][0] ?? (expectedCurrency && isKnownCurrency(expectedCurrency) ? expectedCurrency : null);
+  if (totalMinor && expectedCurrency !== undefined && (!expectedCurrency || currency !== expectedCurrency)) return unavailable(`Recorded spending is in ${currency}; it cannot be compared with ${expectedCurrency || "an unknown workspace currency"}.`);
+  return { spendUsd: totalMinor && currency ? minorToMajor(totalMinor, currency) : 0, spendCurrency: currency, spendIssue: null };
+}
+
+type SavedForecast = { p10?: number | null; p50?: number | null; p90?: number | null };
+export function knownPlayForecast(f: SavedForecast): f is { p10: number; p50: number; p90: number } {
+  return [f.p10, f.p50, f.p90].every(n => typeof n === "number" && Number.isFinite(n) && n >= 0)
+    && f.p10! <= f.p50! && f.p50! <= f.p90!;
+}
+
+export function playActuals(model: PlayModel, all: ResultEntry[], forecast: SavedForecast, horizonWeeks = 13, opts: { startWeek?: number; currency?: string | null } = {}): PlayActuals {
   const entries = opts.startWeek !== undefined ? all.filter((e) => e.weekStart >= opts.startWeek!) : all;
   const starts = [...new Set(entries.map((e) => e.weekStart))].sort((a, b) => a - b);
   const weeks = starts.length;
@@ -145,21 +180,21 @@ export function playActuals(model: PlayModel, all: ResultEntry[], forecast: { p1
   });
   const customers = stepSums[stepSums.length - 1] ?? 0;
   const f = Math.min(1, weeks / Math.max(1, horizonWeeks));
-  const expectedByNow = { p10: forecast.p10 * f, p50: forecast.p50 * f, p90: forecast.p90 * f };
+  const expectedByNow = knownPlayForecast(forecast) && Number.isFinite(horizonWeeks) && horizonWeeks > 0 ? { p10: forecast.p10 * f, p50: forecast.p50 * f, p90: forecast.p90 * f } : null;
   // Behind only when the count is unlikely under the plan (not just below P10), and the leading step agrees.
   // The plan's own rate is uncertain too (Kochenderfer Ex 4.1): average the Poisson tail over its P10/P50/P90.
-  const lams = [expectedByNow.p10, expectedByNow.p50, expectedByNow.p90].filter((l) => l > 0);
+  const lams = expectedByNow ? [expectedByNow.p10, expectedByNow.p50, expectedByNow.p90].filter((l) => l > 0) : [];
   const avg = (fn: (l: number) => number) => (lams.length ? lams.reduce((s, l) => s + fn(l), 0) / lams.length : 1);
   const surprisinglyLow = lams.length > 0 && avg((l) => poissonCdf(customers, l)) <= 0.05;
   const surprisinglyHigh = lams.length ? avg((l) => 1 - poissonCdf(customers - 1, l)) <= 0.05 : customers > 0;
   const unloggedWeeks = Math.max(0, weeksSinceStart - weeks);
   const status: PlayActuals["status"] =
-    unloggedWeeks > 0 ? "incomplete_log" : weeks < 2 ? "too_early" : customers > expectedByNow.p90 && surprisinglyHigh ? "ahead" : customers < expectedByNow.p10 && (leading(steps) === "short" || (surprisinglyLow && leading(steps) === "thin")) ? "behind" : "on_track";
+    unloggedWeeks > 0 ? "incomplete_log" : !expectedByNow ? "forecast_unknown" : weeks < 2 ? "too_early" : customers > expectedByNow.p90 && surprisinglyHigh ? "ahead" : customers < expectedByNow.p10 && (leading(steps) === "short" || (surprisinglyLow && leading(steps) === "thin")) ? "behind" : "on_track";
   return {
     weeks,
     reach,
     customers,
-    spendUsd: entries.reduce((s, e) => s + Math.max(0, e.spendUsd), 0),
+    ...reportedSpend(entries, opts.currency),
     ownerHours: entries.reduce((s, e) => s + Math.max(0, e.ownerHours), 0),
     expectedByNow,
     status,
@@ -210,5 +245,6 @@ export function resultsLine(name: string, a: PlayActuals): string {
     .map((s) => `${s.name} ${s.successes}/${s.trials} (${Math.round((s.successes / s.trials) * 1000) / 10}%, planned ${Math.round(s.planned * 1000) / 10}%)`)
     .join("; ");
   const coverage = a.unloggedWeeks > 0 ? ` ${a.unloggedWeeks} elapsed week${a.unloggedWeeks === 1 ? " is" : "s are"} unlogged; missing weeks are unknown, not zero, so do not read this as a complete-period result.` : "";
-  return `${name}: ${a.weeks} week${a.weeks === 1 ? "" : "s"}, reached ${a.reach}, ${a.customers} new customers, spent $${Math.round(a.spendUsd)}, ${Math.round(a.ownerHours)} owner hours.${coverage} ${rates}.`;
+  const spend = a.spendUsd === null ? `spend unavailable (${a.spendIssue})` : a.spendUsd === 0 ? "explicitly reported no spend" : `spent ${formatMinorMoney(majorToMinor(a.spendUsd, a.spendCurrency), a.spendCurrency)} ${a.spendCurrency}`;
+  return `${name}: ${a.weeks} week${a.weeks === 1 ? "" : "s"}, reached ${a.reach}, ${a.customers} new customers, ${spend}, ${Math.round(a.ownerHours)} owner hours.${coverage}${a.expectedByNow ? "" : " Original forecast unavailable; do not classify performance against an invented zero forecast."} ${rates}.`;
 }

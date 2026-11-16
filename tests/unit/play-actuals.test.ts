@@ -1,11 +1,43 @@
 import { describe, expect, it } from "vitest";
-import { playActuals, PRIOR_WEIGHT, resultsLine } from "../../shared/growth/actuals";
+import { costCheck, playActuals, PRIOR_WEIGHT, resultsLine } from "../../shared/growth/actuals";
 
 const model = { weeklyReach: 250, steps: [{ name: "reply", rate: 0.02 }, { name: "trial", rate: 0.5 }, { name: "paid", rate: 0.3 }], monthlySpendUsd: 0, ownerHoursPerWeek: 1 };
 const forecast = { p10: 4, p50: 9.75, p90: 18 };
 const week = (i: number, reach: number, steps: number[]) => ({ weekStart: Date.UTC(2026, 9, 19) + i * 7 * 86_400_000, reach, steps, spendUsd: 0, ownerHours: 1 });
 
 describe("play results vs plan", () => {
+  it.each([{}, { p10: null, p50: 10, p90: 20 }, { p10: 5, p50: 4, p90: 20 }, { p10: 0, p50: NaN, p90: 20 }])("keeps missing or invalid original forecasts unknown: %j", forecast => {
+    const actual = playActuals(model, [week(0, 100, [10, 5, 2]), week(1, 100, [10, 5, 2])], forecast);
+    expect(actual).toMatchObject({ expectedByNow: null, status: "forecast_unknown" });
+    expect(resultsLine("Original", actual)).toContain("Original forecast unavailable");
+  });
+  it("does not relabel unknown or mixed historical spending as current-currency acquisition cost", () => {
+    const legacy = playActuals(model, [{ ...week(0, 250, [6, 3, 1]), spendUsd: 100 }], forecast);
+    expect(legacy.spendUsd).toBeNull();
+    expect(costCheck(legacy, 200).status).toBe("spend_unknown");
+    expect(resultsLine("Legacy", legacy)).toContain("spend unavailable");
+    const mixed = playActuals(model, [
+      { ...week(0, 250, [6, 3, 1]), spendUsd: 100, spendCurrency: "USD" },
+      { ...week(1, 250, [6, 3, 1]), spendUsd: 100, spendCurrency: "BDT" },
+    ], forecast);
+    expect(mixed.spendUsd).toBeNull();
+    expect(mixed.spendIssue).toContain("different currencies");
+  });
+
+  it("uses exact currency precision and refuses to compare a different workspace currency", () => {
+    const rows = [{ ...week(0, 250, [6, 3, 1]), spendUsd: 12.345, spendCurrency: "KWD" }];
+    const known = playActuals(model, rows, forecast);
+    expect(known).toMatchObject({ spendUsd: 12.345, spendCurrency: "KWD", spendIssue: null });
+    expect(resultsLine("Known", known)).toContain("12.345");
+    expect(resultsLine("Known", known)).not.toContain("$12");
+    const changed = playActuals(model, rows, forecast, 13, { currency: "USD" });
+    expect(changed.spendUsd).toBeNull();
+    expect(costCheck(changed, 100).status).toBe("spend_unknown");
+    const invalid = playActuals(model, [{ ...rows[0], spendUsd: -1 }], forecast);
+    expect(invalid.spendUsd).toBeNull();
+    const excessPrecision = playActuals(model, [{ ...rows[0], spendUsd: 12.3456 }], forecast);
+    expect(excessPrecision.spendUsd).toBeNull();
+  });
   it("computes observed rates and blends them with the plan", () => {
     const a = playActuals(model, [week(0, 250, [6, 3, 1]), week(1, 250, [4, 2, 1])], forecast);
     expect(a.weeks).toBe(2);

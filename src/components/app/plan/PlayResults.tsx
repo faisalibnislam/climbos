@@ -9,7 +9,8 @@ import { Badge, Button, Field, Input, toast, type Tone } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import type { PlayModel } from "../../../../shared/agents/economics";
 import { costCheck, type CostCheck, type PlayActuals, type RetentionActuals } from "../../../../shared/growth/actuals";
-import { formatMoney, majorToMinor, minorToMajor } from "../../../../shared/economics/currency";
+import { formatMinorMoney, majorToMinor } from "../../../../shared/economics/currency";
+import { decimalToMinor } from "../../../../shared/integrations/currency";
 import { diagnoseShortfall, type Shortfall } from "../../../../shared/growth/diagnostics";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,7 @@ const STATUS: Record<PlayActuals["status"], { label: string; tone: Tone; icon: L
   behind: { label: "Behind: check stop rule", tone: "red", icon: CircleAlert },
   too_early: { label: "Too early to tell", tone: "neutral", icon: Clock },
   incomplete_log: { label: "Weekly log incomplete", tone: "neutral", icon: Clock },
+  forecast_unknown: { label: "Plan comparison unavailable", tone: "neutral", icon: Clock },
 };
 
 const pct = (x: number) => `${Math.round(x * 1000) / 10}%`;
@@ -38,8 +40,9 @@ const r1 = (x: number) => (x >= 10 ? Math.round(x) : Math.round(x * 10) / 10);
 
 /** Logged cash cost per customer against what a customer is worth (computed; owner time excluded). */
 export function CostPerCustomerLine({ check: c, currency }: { check: CostCheck; currency?: string }) {
-  const m = (n: number) => formatMoney(Math.round(n * 100) / 100, currency);
+  const m = (n: number) => formatMinorMoney(majorToMinor(n, currency), currency);
   if (c.status === "no_spend") return null;
+  if (c.status === "spend_unknown") return <p className="text-xs text-ink-2">Cash cost per customer is unavailable until the original spending and currency are confirmed.</p>;
   const cost = c.cashCostPerCustomerUsd === null ? "no customers logged yet" : m(c.cashCostPerCustomerUsd);
   const versus = c.affordableUsd === null ? "what a customer is worth is unknown until price, margin and churn are known" : `a customer is worth ${m(c.affordableUsd)} within the payback window`;
   return (
@@ -53,7 +56,7 @@ export function CostPerCustomerLine({ check: c, currency }: { check: CostCheck; 
 export function RetentionResultsSummary({ retention }: { retention?: RetentionActuals }) {
   if (!retention?.weeksReported) return <p className="text-xs text-ink-3">No repeat-customer outcomes recorded yet.</p>;
   const moneyRows = (rows: { currency: string; weeksReported: number; netRevenueMinor?: number; contributionMinor?: number }[], amount: "netRevenueMinor" | "contributionMinor") => rows
-    .map((row) => `${formatMoney(minorToMajor(row[amount]!, row.currency), row.currency)} · ${row.weeksReported} week${row.weeksReported === 1 ? "" : "s"}`)
+    .map((row) => `${formatMinorMoney(row[amount]!, row.currency)} · ${row.weeksReported} week${row.weeksReported === 1 ? "" : "s"}`)
     .join("; ") || "Not reported";
   return (
     <div className="rounded-[var(--radius-control)] bg-surface-2 px-2.5 py-2 text-xs text-ink-2">
@@ -72,24 +75,32 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, retent
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [vals, setVals] = useState<Record<string, string>>({});
-  const fields = [{ key: "reach", label: "Reached" }, ...model.steps.map((s, i) => ({ key: `s${i}`, label: s.name })), { key: "spend", label: `Spent${currency ? ` (${currency})` : ""}` }, { key: "hours", label: "Your hours" }];
+  const [formCurrency, setFormCurrency] = useState<string | null>(currency ?? null);
+  const currencyChanged = formCurrency !== (currency ?? null);
+  const fields = [{ key: "reach", label: "Reached" }, ...model.steps.map((s, i) => ({ key: `s${i}`, label: s.name })), { key: "spend", label: `Spent${formCurrency ? ` (${formCurrency})` : ""}` }, { key: "hours", label: "Your hours" }];
   const st = actuals ? STATUS[actuals.status] : null;
   const submit = async () => {
-    const n = (k: string) => Number(vals[k] || 0);
+    const n = (k: string) => {
+      if (!vals[k]?.trim()) throw new Error("Enter every reported count, spending amount and hours. Use 0 only when you recorded zero.");
+      const value = Number(vals[k]);
+      if (!Number.isFinite(value)) throw new Error("Enter valid numbers for the weekly report.");
+      return value;
+    };
     const optionalCount = vals.repeatCustomers?.trim() ? Number(vals.repeatCustomers) : undefined;
     const optionalMoney = (key: "retainedRevenue" | "retainedContribution") => {
       const value = vals[key]?.trim();
       if (!value) return undefined;
-      if (!currency) throw new Error("Set the business currency before entering retention amounts.");
-      const amount = Number(value);
-      if (!Number.isFinite(amount)) throw new Error("Enter a valid retention amount or leave it blank.");
-      return majorToMinor(amount, currency);
+      if (!formCurrency) throw new Error("Set the business currency before entering retention amounts.");
+      const parsed = decimalToMinor(value, formCurrency);
+      if (!parsed.ok) throw new Error(parsed.error);
+      return parsed.minor;
     };
     setBusy(true);
     try {
+      if (currencyChanged) throw new Error("The business currency changed. Reopen the form and re-enter the original amounts.");
       const retainedRevenueMinor = optionalMoney("retainedRevenue");
       const retainedContributionMinor = optionalMoney("retainedContribution");
-      await log({ slug, strategyId, playName, reach: n("reach"), steps: model.steps.map((_, i) => n(`s${i}`)), spendUsd: n("spend"), ownerHours: n("hours"), ...(optionalCount !== undefined ? { repeatCustomers: optionalCount } : {}), ...(retainedRevenueMinor !== undefined ? { retainedRevenueMinor } : {}), ...(retainedContributionMinor !== undefined ? { retainedContributionMinor } : {}) });
+      await log({ slug, strategyId, playName, reach: n("reach"), steps: model.steps.map((_, i) => n(`s${i}`)), spendUsd: n("spend"), ...(formCurrency ? { currency: formCurrency } : {}), ownerHours: n("hours"), ...(optionalCount !== undefined ? { repeatCustomers: optionalCount } : {}), ...(retainedRevenueMinor !== undefined ? { retainedRevenueMinor } : {}), ...(retainedContributionMinor !== undefined ? { retainedContributionMinor } : {}) });
       setVals({});
       setOpen(false);
       toast({ tone: "success", title: "Results saved" });
@@ -112,7 +123,7 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, retent
               <span className="text-ui text-ink-2">
                 customer{actuals.customers === 1 ? "" : "s"} · {actuals.unloggedWeeks > 0 ? `${actuals.weeks} of ${actuals.weeksSinceStart} weeks logged` : `week ${actuals.weeks}`}
               </span>
-              <span className="text-xs tabular-nums text-ink-3">plan ≈{r1(actuals.expectedByNow.p50)}</span>
+              {actuals.expectedByNow ? <span className="text-xs tabular-nums text-ink-3">plan ≈{r1(actuals.expectedByNow.p50)}</span> : null}
             </p>
             {st ? (
               <Badge tone={st.tone} icon={<st.icon />}>
@@ -122,6 +133,7 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, retent
           </div>
           {actuals.unloggedWeeks > 0 ? <p className="text-xs text-ink-2">Missing weeks are unknown, not zero. Fill them in before judging.</p> : null}
           <CostPerCustomerLine check={costCheck(actuals, affordableCacUsd)} currency={currency ?? undefined} />
+          {actuals.spendIssue ? <p className="text-xs text-ink-2">{actuals.spendIssue}</p> : null}
           {actuals.status === "behind" ? <ShortfallNote s={diagnoseShortfall(actuals, {}, { affordableCacUsd, currency: currency ?? undefined })} /> : null}
           <ul className="flex flex-col gap-1.5 text-xs">
             {actuals.steps
@@ -155,12 +167,14 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, retent
       )}
       <RetentionResultsSummary retention={retention} />
       {canEdit && !open ? (
-        <Button size="sm" variant="ghost" className="self-start" onClick={() => setOpen(true)}>
+        <Button size="sm" variant="ghost" className="self-start" onClick={() => { setVals({}); setFormCurrency(currency ?? null); setOpen(true); }}>
           <ClipboardPen aria-hidden /> Log this week
         </Button>
       ) : null}
       {open ? (
         <div className="flex flex-col gap-2">
+          <p className="text-xs text-ink-3">Enter each reported value. Use 0 only when you recorded zero; leave an unknown week unreported. Weeks start Monday at 00:00 UTC.</p>
+          {currencyChanged ? <p role="alert" className="text-xs text-red-800">The business currency changed. Cancel and reopen this form, then re-enter the original amounts.</p> : null}
           <div className="grid grid-cols-2 gap-2">
             {fields.map((f) => (
               <Field key={f.key} label={f.label}>
@@ -175,17 +189,17 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, retent
               <Field label="Repeat customers this week">
                 <Input inputMode="numeric" value={vals.repeatCustomers ?? ""} onChange={(e) => setVals((v) => ({ ...v, repeatCustomers: e.target.value }))} disabled={busy} />
               </Field>
-              <Field label={`Net retained revenue${currency ? ` (${currency})` : ""}`} hint={currency ? "From existing customers this week." : "Set your currency in settings first."}>
-                <Input inputMode="decimal" value={vals.retainedRevenue ?? ""} onChange={(e) => setVals((v) => ({ ...v, retainedRevenue: e.target.value }))} disabled={busy || !currency} />
+              <Field label={`Net retained revenue${formCurrency ? ` (${formCurrency})` : ""}`} hint={formCurrency ? "From existing customers this week." : "Set your currency in settings first."}>
+                <Input inputMode="decimal" value={vals.retainedRevenue ?? ""} onChange={(e) => setVals((v) => ({ ...v, retainedRevenue: e.target.value }))} disabled={busy || !formCurrency} />
               </Field>
-              <Field label={`Retained contribution${currency ? ` (${currency})` : ""}`} hint="After delivery costs. Can be negative.">
-                <Input inputMode="decimal" value={vals.retainedContribution ?? ""} onChange={(e) => setVals((v) => ({ ...v, retainedContribution: e.target.value }))} disabled={busy || !currency} />
+              <Field label={`Retained contribution${formCurrency ? ` (${formCurrency})` : ""}`} hint="After delivery costs. Can be negative.">
+                <Input inputMode="decimal" value={vals.retainedContribution ?? ""} onChange={(e) => setVals((v) => ({ ...v, retainedContribution: e.target.value }))} disabled={busy || !formCurrency} />
               </Field>
             </div>
             <p className="text-xs text-ink-3">Re-saving this week clears any blank optional fields.</p>
           </fieldset>
           <div className="flex gap-2">
-            <Button size="sm" onClick={submit} disabled={busy || !vals.reach}>
+            <Button size="sm" onClick={submit} disabled={busy || currencyChanged || fields.some(f => !vals[f.key]?.trim())}>
               {busy ? "Saving…" : "Save"}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={busy}>

@@ -35,7 +35,8 @@ describe("owner-entered retention results presentation", () => {
     const html = renderToStaticMarkup(createElement(RetentionResultsSummary, { retention }));
 
     expect(html).toContain("Repeat customers: Not reported");
-    expect(html).toContain("৳125");
+    expect(html).toContain("BDT");
+    expect(html).toContain("125.00");
     expect(html).toContain("Retained contribution: Not reported");
   });
 

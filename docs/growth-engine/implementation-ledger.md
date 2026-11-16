@@ -1,3 +1,9 @@
+## Local update — 16 November 2026: explicit weekly money and unknown forecasts
+
+Traced weekly owner entry through `playResults.log`, persistence, `playActuals`, cost/shortfall assessment, `resultsBrief` and the existing plan review. Reproduced ambiguous legacy currency and loss of three-decimal precision. New reports retain currency; exact minor-unit validation/sums reject incompatible units or precision instead of guessing. Blank core inputs cannot save as zero, and stale currency forms cannot reinterpret amounts. Browser inspection also exposed a missing original range rendered as NaN and compared as zero; missing, invalid and unordered ranges now withhold forecast comparison/calibration while retaining the idea and observed counts. Engine version: `v3.88-weekly-report-money`.
+
+Verification: 93 tests in 11 focused files, two desktop/mobile browser tests, app/Convex typecheck, scoped ESLint and isolated local sync passed. No provider actions were performed. See [Verification](../Verification.md) for exact commands and limitations. Weekly correction history, historical-week form entry, capped retrieval and the complete 410-requirement audit remain open.
+
 ## Local update — 16 November 2026: preserve experiment context across plans
 
 Verification: 60 focused tests, four desktop/mobile reporting checks, app/Convex typecheck, scoped lint and isolated local schema sync passed.

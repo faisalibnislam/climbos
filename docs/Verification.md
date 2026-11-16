@@ -1,3 +1,29 @@
+## 16 November 2026 — weekly reports preserve money units and missing forecasts
+
+Path inspected: `PlayResults` owner form → `playResults.log` → `playResults` rows → `actualsFor` / `playActuals` → cash-cost and shortfall checks → plan review and `resultsBrief` → future strategy context. Existing code already checked numeric bounds, funnel consistency, edit permission, tenant identity and reporting weeks. It did not store spending currency, required only reach in the form, and substituted zero for absent forecast ranges.
+
+Confirmed fixes:
+
+- New reports store optional `spendCurrency` alongside the historical whole-unit `spendUsd` field. Positive spend and any supplied retention-money amount require an explicit recognized currency matching current business settings. Zero without money inputs can remain currency-unknown. Exact decimal parsing rejects unsupported precision; totals sum integer minor units. Invalid, mixed, legacy-unknown or current-currency-incompatible spending cannot produce an affordability recommendation. There is no FX conversion or automatic migration of legacy money.
+- The form requires explicit reach, every funnel count, spending and hours. Blank values are not zero. It captures currency on opening and rejects a changed currency until the owner reopens/re-enters the form. Optional retention money rejects excess precision rather than rounding. A new plan/play remounts the form. Retention display/context preserve saved currency and decimal units. Reports still require all core fields; partial-field reporting is not introduced.
+- Missing, nonfinite, negative or unordered original P10/P50/P90 ranges remain unavailable. They cannot become zero forecasts, performance classifications or calibration observations. The idea stays visible; invalid ranges are omitted only from numerical comparison charts. The plan card and weekly review explain the unavailable comparison. Browser screenshot inspection first reproduced NaN and an invented zero; final desktop/mobile checks assert both are absent.
+- Invalid reporting dates are rejected. Existing viewer/foreign-tenant restrictions remain enforced; tests confirm reporting does not create approvals, action receipts or workflow runs. Engine version: `v3.88-weekly-report-money`.
+
+Verification actually run:
+
+```sh
+pnpm exec vitest run tests/convex/play-result-money.test.ts tests/convex/play-results.test.ts tests/convex/experiment-outcomes.test.ts tests/convex/tenancy.test.ts tests/convex/safety.test.ts tests/unit/play-actuals.test.ts tests/unit/shortfall.test.ts tests/unit/play-cost-per-customer.test.tsx tests/unit/play-results-retention.test.tsx tests/unit/retention-actuals.test.ts tests/unit/decision-books.test.ts
+pnpm typecheck
+pnpm exec eslint convex/playResults.ts convex/schema.ts shared/agents/specs.ts shared/growth/actuals.ts shared/growth/diagnostics.ts src/components/app/plan/PlayResults.tsx src/components/app/plan/ExpertPlan.tsx tests/convex/play-result-money.test.ts tests/convex/play-results.test.ts tests/unit/play-actuals.test.ts tests/unit/shortfall.test.ts tests/unit/play-cost-per-customer.test.tsx tests/unit/play-results-retention.test.tsx e2e/play-result-money.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/play-result-money.spec.ts
+git diff --check
+```
+
+Results: **93 tests passed in 11 files**; app/Convex typecheck, scoped lint, local schema sync and diff check passed. **Two browser tests passed in 15.1 seconds**, covering explicit values, KWD precision, currency change during editing, unavailable forecast/cost, unchanged action records, no horizontal overflow and automated serious/critical accessibility checks. The final mobile screenshot was inspected. Initial money unit regressions failed before implementation; intermediate expectation failures were corrected to assert preserved currency precision instead of whole-unit rounding.
+
+Remaining: weekly queries still read at most 400 strategy rows and 60 rows per play; corrections use a bounded lookup and overwrite the current weekly row without dedicated revision history or stale-value protection. The form still exposes only the current UTC week. Missing older weeks, partial input availability, missing trailing weeks and complete high-volume history need a separate completion pass. Old positive spending without currency remains unavailable until owner-confirmed; no currency was inferred from today's settings. Owner reports, selected source labels and scenario ranges do not independently verify payments, attribution, causal results or calibrated forecast quality. No production deployment, migration, provider action, send or spend occurred. The full requirement audit and product goal remain incomplete.
+
 ## 16 November 2026 — experiment learning survives new plans and preserves original context
 
 Path inspected: owner outcome form → `playResults.recordExperimentOutcome` → current analyses plus append-only revisions → `resultsBrief` → `jobWrites.jobContext` → strategy business brief. Existing behavior already validates counts/dates, preserves unknown allocation, separates observed/reported comparisons from causal proof, binds editor access to the workspace, rejects stale form revisions and retains correction history. The separate design-learning path checks exact page versions.
