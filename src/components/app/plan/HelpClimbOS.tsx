@@ -5,14 +5,15 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { useState } from "react";
 import { Check } from "@/components/icons";
-import { Button, Input, toast } from "@/components/ui";
+import { Button, Field, Input, Select, toast } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { errorMessage } from "@/components/app/errors";
 import type { OwnerEconomics } from "../../../../shared/agents/economics";
+import type { OwnerFunnel } from "../../../../shared/agents/diagnosis";
 import { GeneratePlanButton } from "./PlanActions";
 
 type Unsure = "revenue" | "margin" | "churn";
-type Funnel = { periodDays: number; visitors?: number; leads?: number; activated?: number; newCustomers?: number };
+type Funnel = OwnerFunnel & { periodDays: number };
 
 const MONEY: { key: Unsure; field: "revenuePerCustomerMonthUsd" | "grossMargin" | "monthlyChurn"; question: string; help: string; suffix: (currency: string) => string; toInput: (v: number) => string; fromInput: (s: string) => number; ok: (n: number) => boolean }[] = [
   { key: "revenue", field: "revenuePerCustomerMonthUsd", question: "What does one customer pay you in a typical month?", help: "If people buy once, use a typical order.", suffix: (c) => `${c} / month`, toInput: (v) => String(Math.round(v * 100) / 100), fromInput: Number, ok: (n) => n > 0 && n <= 1_000_000 },
@@ -20,10 +21,11 @@ const MONEY: { key: Unsure; field: "revenuePerCustomerMonthUsd" | "grossMargin" 
   { key: "churn", field: "monthlyChurn", question: "Of 100 customers, how many stop buying each month?", help: "Enter 0 to 100; zero means you observed no losses in that month.", suffix: () => "of 100", toInput: (v) => String(Math.round(v * 1000) / 10), fromInput: (s) => Number(s) / 100, ok: (n) => n >= 0 && n <= 1 },
 ];
 
-const FUNNEL: { key: "visitors" | "leads" | "activated" | "newCustomers"; label: string }[] = [
+const FUNNEL: { key: "visitors" | "leads" | "qualifiedLeads" | "activated" | "newCustomers"; label: string }[] = [
   { key: "visitors", label: "People who visited" },
   { key: "leads", label: "Signed up or asked" },
-  { key: "activated", label: "Tried it or got first value" },
+  { key: "qualifiedLeads", label: "Qualified leads (optional)" },
+  { key: "activated", label: "Reached the activation step" },
   { key: "newCustomers", label: "Became paying customers" },
 ];
 
@@ -161,6 +163,11 @@ function CustomerNumbers({
   const [unsure, setUnsure] = useState<Set<Unsure>>(() => new Set(unitEconomics?.unsure ?? []));
   const [hours, setHours] = useState(unitEconomics?.ownerHoursPerWeek !== undefined ? String(unitEconomics.ownerHoursPerWeek) : "");
   const [counts, setCounts] = useState<Record<string, string>>(() => Object.fromEntries(FUNNEL.map((f) => [f.key, funnel?.[f.key] !== undefined ? String(funnel[f.key]) : ""])));
+  const [period, setPeriod] = useState(String(funnel?.periodDays ?? 30));
+  const [qualification, setQualification] = useState(funnel?.qualificationDefinition ?? "");
+  const [activation, setActivation] = useState<NonNullable<OwnerFunnel["activationKind"]>>(funnel?.activationKind ?? "unknown");
+  const [signup, setSignup] = useState<NonNullable<OwnerFunnel["signupKind"]>>(funnel?.signupKind ?? "unknown");
+  const [funnelDirty, setFunnelDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const askHours = unknowns.some((u) => /hours/i.test(u)) || unitEconomics?.ownerHoursPerWeek !== undefined;
@@ -201,11 +208,19 @@ function CustomerNumbers({
       funnelArgs[f.key] = n;
     }
     const unsureList = [...unsure];
-    if (!Object.keys(econ).length && !unsureList.length && !Object.keys(funnelArgs).length) return toast({ tone: "info", title: "Nothing to save yet." });
+    const periodDays = Number(period);
+    if (funnelDirty && (!period.trim() || !Number.isFinite(periodDays) || periodDays < 7 || periodDays > 365)) return toast({ tone: "danger", title: "Enter a measurement period between 7 and 365 days." });
+    if (funnelDirty && funnelArgs.qualifiedLeads !== undefined && (funnelArgs.leads === undefined || qualification.trim().length < 5 || qualification.trim().length > 160 || /[\r\n]/.test(qualification))) return toast({ tone: "danger", title: "Add total leads and a short qualification rule (5–160 characters)." });
+    if (!Object.keys(econ).length && !unsureList.length && !funnelDirty) return toast({ tone: "info", title: "Nothing to save yet." });
     setBusy(true);
     try {
       if (Object.keys(econ).length || unsureList.length) await saveEconomics({ slug, ...econ, ...(unsureList.length ? { unsure: unsureList } : {}) });
-      if (Object.keys(funnelArgs).length) await saveFunnel({ slug, periodDays: 30, ...funnelArgs });
+      if (funnelDirty) await saveFunnel({ slug, periodDays, ...funnelArgs,
+        ...(funnelArgs.qualifiedLeads !== undefined ? { qualificationDefinition: qualification.trim() } : {}),
+        ...(funnelArgs.activated !== undefined ? { activationKind: activation } : {}),
+        ...(funnelArgs.leads !== undefined ? { signupKind: signup } : {}),
+      });
+      setFunnelDirty(false);
       setSaved(true);
       toast({ tone: "success", title: "Saved" });
     } catch (e) {
@@ -313,16 +328,24 @@ function CustomerNumbers({
       ) : null}
 
       <details className="rounded-[var(--radius-control)] border border-line px-3 py-2" open={!needed && Boolean(funnel)}>
-        <summary className="cursor-pointer text-ui font-medium text-ink">Optional: your last 30 days</summary>
-        <p className="mt-2 text-xs text-ink-3">Shows where most people drop off, so the plan can fix that step.</p>
+        <summary className="cursor-pointer text-ui font-medium text-ink">Optional: your customer journey numbers</summary>
+        <p className="mt-2 text-xs text-ink-3">Use counts for the same people and measurement period. These can suggest where people drop off; they do not prove the cause. Leave untracked counts blank.</p>
+        <Field label="Measurement period (days)" hint="7–365 days. Changing this period requires matching counts for every step."><Input inputMode="decimal" value={period} disabled={!canEdit || busy} onChange={e => { setPeriod(e.target.value); setFunnelDirty(true); }} /></Field>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {FUNNEL.map((f) => (
             <label key={f.key} className="flex flex-col gap-1">
               <span className="text-xs font-medium text-ink">{f.label}</span>
-              <Input inputMode="numeric" value={counts[f.key] ?? ""} placeholder="Unknown" disabled={!canEdit || busy} onChange={(e) => setCounts((c) => ({ ...c, [f.key]: e.target.value }))} />
+              <Input inputMode="numeric" value={counts[f.key] ?? ""} placeholder="Unknown" disabled={!canEdit || busy} onChange={(e) => { setCounts((c) => ({ ...c, [f.key]: e.target.value })); setFunnelDirty(true); }} />
             </label>
           ))}
         </div>
+        {counts.qualifiedLeads?.trim() ? <Field label="What makes a lead qualified?" hint="Your rule for this count; for example, a current project and confirmed budget."><Input value={qualification} maxLength={160} disabled={!canEdit || busy} onChange={e => { setQualification(e.target.value); setFunnelDirty(true); }} /></Field> : null}
+        {counts.activated?.trim() ? <Field label="What does the activation count mean?" hint={counts.qualifiedLeads?.trim() ? "Count this step among qualified leads only." : "Count this step among the leads above."}><Select value={activation} disabled={!canEdit || busy} onValueChange={value => { setActivation(value as NonNullable<OwnerFunnel["activationKind"]>); setFunnelDirty(true); }} options={[
+          { value: "value", label: "Received first value" }, { value: "habit", label: "Repeated the useful behavior" }, { value: "setup", label: "Finished setup only" }, { value: "unknown", label: "Not sure" },
+        ]} /></Field> : null}
+        {counts.leads?.trim() ? <Field label="What kind of signup or lead?" hint="Software trial types use different comparison ranges."><Select value={signup} disabled={!canEdit || busy} onValueChange={value => { setSignup(value as NonNullable<OwnerFunnel["signupKind"]>); setFunnelDirty(true); }} options={[
+          { value: "free_plan", label: "Free plan" }, { value: "trial_no_card", label: "Trial without a card" }, { value: "trial_card", label: "Trial with a card" }, { value: "unknown", label: "Not software / not sure" },
+        ]} /></Field> : null}
       </details>
 
       {noEmailList ? <p className="text-xs text-ink-3">No email list yet, so the plan skips email. Add contacts under Customers.</p> : null}

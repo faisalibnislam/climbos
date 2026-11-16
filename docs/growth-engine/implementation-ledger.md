@@ -1,5 +1,9 @@
 ## Local update — 17 November 2026: social reports survive calendar gaps
 
+## Local update — 17 November 2026: preserve funnel meaning through owner edits
+
+Requirement 3/10 revalidation traced current owner inputs through setFunnel, job context, deterministic diagnosis and persisted plans. The active HelpClimbOS form silently replaced non-30-day windows and omitted qualification/activation/signup metadata. Reproduced in the browser before repair, then retained the full existing input contract, exposed editable definitions and skipped untouched funnel writes. No schema, provider, prompt or execution changes. Two desktop/mobile checks and 73 focused tests passed; seven generation tests were rerun with an explicit 90-day leverage assertion. Full diagnosis quality, concurrent-edit handling and all 410 requirements remain unproven. See Verification.
+
 ## Local update — 17 November 2026: full regression reconciliation
 
 Traced six full-suite failures to outdated contract expectations/payment fixtures and two form controls outside the design system. Reused shared Select/DatePicker while preserving cost unknowns, UTC weeks and edit controls. Updated tests to exercise current payment ingestion, separately approved spend monitoring, stale-fact provenance and signed contribution margins. No model, schema, calculation or authorization change. Final verification: 3,011 tests/403 files, four desktop/mobile checks, typecheck and scoped lint pass. See Verification; full requirement-level acceptance remains outstanding.

@@ -6,6 +6,10 @@
 
 **16 November focused update:** saved structured trend evidence is now rechecked at approval, schedule changes, Autopilot routing and publishing against the intended posting date. Expired evidence returns to review without a provider call. See `Verification.md` for the 138-test scope and the legacy-draft and semantic-evidence limits. This does not complete the broad social-intelligence requirements.
 
+## Current revalidation — 17 November 2026
+
+Requirements 3 and 10 input-integrity follow-up: a browser regression reproduced the active Add a few numbers form changing a saved 90-day funnel to 30 days and dropping its qualified-lead count/rule, activation meaning and signup type when only economics were edited. The active form now leaves untouched funnel records alone and exposes the existing definitions with the editable counts. A generation-boundary test confirms the 90-day period reaches deterministic monthly leverage in the saved diagnosis. These remain owner-entered numbers; cohort comparability, independent validity, concurrent edits, historical recovery and causal/expert diagnosis are not established. See Verification for the red/green browser evidence, 73 focused tests and seven final generation tests. Rows remain partial.
+
 ## Current revalidation — 16 November 2026
 
 Requirements 21–25 evidence-path revalidation: future/invalid fact confirmation timestamps no longer qualify as fresh; model context preserves unknown age and the owner can reconfirm. Planning, facts review and artifact claim checks now use indexed active-state reads so rejected history cannot hide recent facts. The approval/publishing checker withholds recognized conflicted evidence and refuses incomplete active-fact coverage; social publishing rechecks after approval and at send-intent creation. Narrow English pattern detection, sample limits, other readers/executors and real-world fact validity remain partial. See the newest Verification entry for the reproduced failures and 126-test/two-browser-check scope.

@@ -1,3 +1,25 @@
+## 17 November 2026 — preserve the meaning of owner funnel counts
+
+Audited requirement 3/10 through `PlanDetails` → `HelpClimbOS` → `workspace.setFunnel` → business record/job context → `jobs.diagnoseFor` → deterministic diagnosis and persisted plan. Backend schema/validation already supported custom periods, qualified-lead definitions, activation meaning and signup types. The active form omitted these and always resaved periodDays=30. An isolated desktop regression failed before the fix: an economics-only save changed 90 to 30 and removed qualifiedLeads, qualificationDefinition, activationKind and signupKind.
+
+Extended the existing form using the OwnerFunnel type and shared labeled controls. It displays the actual measurement period, optional qualified leads/rule and activation/signup choices; unknown is explicit. It submits funnel data only after a funnel edit, so economics-only changes preserve even the original funnel timestamp. Clearing a qualified count intentionally removes its paired definition. Blank/invalid periods and missing qualification rules are checked before mutation; existing server count/order/permission rules remain. No new schema, model, prompt, provider or action path. Engine version is unchanged.
+
+Verification:
+
+```sh
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/owner-margin.spec.ts --project=desktop
+pnpm exec vitest run tests/convex/plan-grounding.test.ts tests/convex/plan-history.test.ts tests/convex/tenancy.test.ts tests/unit/diagnosis-playbooks.test.ts tests/unit/design-guard.test.ts tests/convex/focused-plan.test.ts
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/owner-margin.spec.ts
+pnpm typecheck
+pnpm exec vitest run tests/convex/plan-grounding.test.ts
+pnpm exec eslint src/components/app/plan/HelpClimbOS.tsx e2e/owner-margin.spec.ts tests/convex/plan-grounding.test.ts
+git diff --check
+```
+
+The initial desktop run failed on the exact metadata loss. After repair: **73 focused tests across 6 files passed**; **2 desktop/mobile browser tests passed** (27.9 seconds), covering unchanged funnel on economics saves, retained 90-day definitions on count edits, blank-period rejection, explicit 60-day changes, intentional qualification removal, activation selection, reload persistence, accessibility, overflow and unchanged external-action records. Inspected the mobile screenshot. App/Convex typechecks and scoped lint passed. The generation test was then strengthened to require a saved monthly purchase leverage of 0.04 from 12 activated people over 90 days; all **7 tests** in that file passed again. The preceding full-suite baseline (3,011 tests) predates this UI increment; it was not rerun for this bounded change.
+
+Limits: these counts and definitions remain owner reports, not independently validated cohorts. This does not recover definitions already overwritten, add optimistic concurrency to the funnel mutation, make economics/funnel saves one atomic operation, or change the unused legacy FunnelNumbers export. No real model calls, hosted deployment, external publication, sends or campaign actions occurred. The owner’s pre-existing .gitignore changes remain untouched.
+
 ## 17 November 2026 — full regression reconciliation and shared form controls
 
 A full `pnpm exec vitest run` found 6 failing tests across 5 files (3,002 passed). Inspection separated stale assertions from two design-system violations. Campaign display tests still asserted that no spend monitoring existed despite the separately approved monitor; the stale-fact test expected earlier wording; the persistence test rejected a negative contribution margin that the current owner-economics contract intentionally permits. The metric-health fixture bypassed payment ingestion and therefore lacked the current payment-only billing provenance. These tests now check the current contracts without relaxing runtime validation or approval controls. Persistence coverage also explicitly accepts zero and negative margins while rejecting a margin above 100%. The revenue test now ingests dated refund events through the actual deterministic daily-materialization path.

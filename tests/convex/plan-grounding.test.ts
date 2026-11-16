@@ -136,13 +136,16 @@ describe("Plan grounding (Books 13/14, P0)", () => {
     const w = await workspace(t, "grounded-funnel@example.com");
     await expect(w.client.mutation(api.workspace.setFunnel, { slug: w.slug, periodDays: 30, leads: 10, activated: 50 })).rejects.toThrow(/smaller than the one before/);
     await expect(w.client.mutation(api.workspace.setFunnel, { slug: w.slug, periodDays: 30, leads: 100, qualifiedLeads: 20, activated: 10 })).rejects.toThrow(/clear rule for what counts as qualified/);
-    await w.client.mutation(api.workspace.setFunnel, { slug: w.slug, periodDays: 30, visitors: 2000, leads: 100, qualifiedLeads: 20, qualificationDefinition: "Has a current project and budget", activated: 12, newCustomers: 3 });
+    await w.client.mutation(api.workspace.setFunnel, { slug: w.slug, periodDays: 90, visitors: 2000, leads: 100, qualifiedLeads: 20, qualificationDefinition: "Has a current project and budget", activated: 12, newCustomers: 3 });
     await w.client.mutation(api.orgs.generatePlan, { slug: w.slug });
     await t.finishAllScheduledFunctions(() => undefined);
     const s = await latestStrategy(t, w.orgId);
     const x = s.expert as { constraintDiagnosis?: { constraint: string; basis: string; readings: { stage: string; rate: number | null; definition?: string }[] }; playbooks?: { eligible: { id: string }[]; ineligible: { id: string; reasons: string[] }[] }; diagnosis?: string };
     expect(x.constraintDiagnosis).toMatchObject({ basis: "measured" });
     expect(x.constraintDiagnosis?.readings.find((reading) => reading.stage === "qualification")).toMatchObject({ rate: 0.2, definition: "Has a current project and budget" });
+    // 12 activated people / 90 days * 30 days * one percentage point.
+    // The original reporting window must reach the persisted diagnosis unchanged.
+    expect(x.constraintDiagnosis).toMatchObject({ leverage: expect.arrayContaining([{ stage: "purchase", perPoint: 0.04 }]) });
     expect(typeof x.diagnosis).toBe("string");
     expect(x.playbooks?.eligible.length).toBeGreaterThan(0);
     // No consented contacts: lifecycle email isn't eligible.
