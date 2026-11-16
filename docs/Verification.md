@@ -1,3 +1,21 @@
+## 17 November 2026 — full regression reconciliation and shared form controls
+
+A full `pnpm exec vitest run` found 6 failing tests across 5 files (3,002 passed). Inspection separated stale assertions from two design-system violations. Campaign display tests still asserted that no spend monitoring existed despite the separately approved monitor; the stale-fact test expected earlier wording; the persistence test rejected a negative contribution margin that the current owner-economics contract intentionally permits. The metric-health fixture bypassed payment ingestion and therefore lacked the current payment-only billing provenance. These tests now check the current contracts without relaxing runtime validation or approval controls. Persistence coverage also explicitly accepts zero and negative margins while rejecting a margin above 100%. The revenue test now ingests dated refund events through the actual deterministic daily-materialization path.
+
+Replaced the native cost-coverage select in `SharpenPlan` and the native reporting-date input in `WeeklyReportEditor` with the existing labeled Select and DatePicker. Preserved unknown costs, currency precision, UTC reporting weeks, date bounds, disabled states and stale-edit protection. Browser tests now select the actual shared controls rather than filling native inputs. No schema, calculation, prompt, provider, model route or execution permission changed; engine version remains v3.104.
+
+Verification:
+
+- `pnpm exec vitest run tests/convex/metric-health.test.ts tests/unit/design-guard.test.ts tests/unit/campaign-money-display.test.tsx tests/unit/evidence-kind-platform.test.ts tests/unit/agents/growth-plan-persistence.test.ts tests/convex/crm-payment-evidence.test.ts tests/convex/tenancy.test.ts tests/convex/play-result-history.test.ts tests/convex/segment-economics.test.ts` — **62 passed across 9 files**.
+- `pnpm exec vitest run` — **3,011 passed across 403 files**, 99.76 seconds. This includes existing permission and authorization suites. Log: `/private/tmp/climbos-regression-fixed-20261117.log` (local, not a portable repository artifact).
+- `pnpm typecheck` — app and Convex passed.
+- `pnpm exec eslint src/components/app/plan/SharpenPlan.tsx src/components/app/plan/WeeklyReportEditor.tsx tests/convex/metric-health.test.ts tests/unit/agents/growth-plan-persistence.test.ts tests/unit/campaign-money-display.test.tsx tests/unit/evidence-kind-platform.test.ts e2e/play-result-money.spec.ts e2e/segment-economics.spec.ts` — passed.
+- `CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync` — isolated loopback backend only.
+- `E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/play-result-money.spec.ts e2e/segment-economics.spec.ts` — **4 passed**, desktop and mobile, 51.0 seconds. Checks cover historical reporting/corrections, money precision, unknown costs, saved cost coverage, accessibility and horizontal overflow, plus unchanged external-action records. Inspected the mobile customer-group screenshot.
+- `git diff --check` — passed.
+
+Limits: these results establish the current automated baseline and the two inspected form workflows, not completion of all 410 requirements, broad expert-level recommendation quality, production performance or live-provider readiness. No paid model calls, hosted deployment, customer messages, publications or campaign actions occurred. The owner's pre-existing `.gitignore` changes remain untouched.
+
 ## 17 November 2026 — recent social reports independent of calendar slots
 
 The prior post-results increment created a working report path but selected planning history only through recent calendar slots. Two new regressions failed: a manually prepared post and a post whose slot was more than 28 days old both produced empty planning history after a fresh report. This contradicted the intended outcome-learning path even though the report itself was saved correctly.

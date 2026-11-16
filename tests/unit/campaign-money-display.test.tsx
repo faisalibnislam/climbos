@@ -14,7 +14,8 @@ describe("campaign amount presentation before approval", () => {
     expect(html).toContain(expected);
     expect(html).toContain("Needs approval");
     expect(html).toContain("Pause conditions to review");
-    expect(html).toContain("does not automatically monitor spend or tracking loss");
+    expect(html).toContain("Automatic spend pauses need separate campaign approval");
+    expect(html).toContain("Other conditions, including tracking loss, need manual review");
     expect(html).not.toContain("Auto-pauses if:");
     expect(mutation).not.toHaveBeenCalled();
     expect(action).not.toHaveBeenCalled();

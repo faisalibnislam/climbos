@@ -1,5 +1,9 @@
 ## Local update — 17 November 2026: social reports survive calendar gaps
 
+## Local update — 17 November 2026: full regression reconciliation
+
+Traced six full-suite failures to outdated contract expectations/payment fixtures and two form controls outside the design system. Reused shared Select/DatePicker while preserving cost unknowns, UTC weeks and edit controls. Updated tests to exercise current payment ingestion, separately approved spend monitoring, stale-fact provenance and signed contribution margins. No model, schema, calculation or authorization change. Final verification: 3,011 tests/403 files, four desktop/mobile checks, typecheck and scoped lint pass. See Verification; full requirement-level acceptance remains outstanding.
+
 Two failing regressions showed manual posts and older calendar posts dropping out of weekly learning despite newly recorded results. The existing planner now reads dated report candidates independently of slots, considers reported posts first and resolves the latest report/version through the shared evidence assessment. Report corrections and slot references count once. The matching saved body is supplied with a labeled excerpt limit; media, historical audience exposure and missing calendar intent remain unknown. Existing reviewer feedback distinguishes matching content from earlier/unmatched versions and is not outcome evidence. Read/context limits and unavailable references are explicit. No new table, provider, agent, model call or execution authority. Engine `v3.104-reported-social-learning`; see Verification for 123 focused tests and desktop/mobile checks.
 
 ## Local update — 16 November 2026: channel reuse depends on observations

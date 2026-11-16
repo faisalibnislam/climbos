@@ -80,7 +80,9 @@ test("weekly reports require explicit values and preserve currency across settin
   // Historical report entry and stale editor protection use the existing UI.
   await card.getByRole("button", { name: "Log this week", exact: true }).click();
   const historicalDate = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-  await card.getByLabel("Week containing (UTC)").fill(historicalDate);
+  await card.getByRole("button", { name: "Week containing (UTC)", exact: true }).click();
+  if (!(await page.locator(`[data-iso="${historicalDate}"]`).count())) await page.getByRole("button", { name: "Previous month", exact: true }).click();
+  await page.locator(`[data-iso="${historicalDate}"]`).click();
   await expect(card.getByLabel("Reached", { exact: true })).toHaveValue("");
   await card.getByLabel("Reached", { exact: true }).fill("80");
   await card.getByLabel("Paying customers", { exact: true }).fill("8");
@@ -91,7 +93,9 @@ test("weekly reports require explicit values and preserve currency across settin
   const historical = (await rows("playResults")).filter(r => r.orgId === org._id).find(r => r._id !== saved[0]._id)!;
   expect(historical).toMatchObject({ reach: 80, spendUsd: 5.25, spendCurrency: "USD", revision: 1 });
   await card.getByRole("button", { name: "Log this week", exact: true }).click();
-  await card.getByLabel("Week containing (UTC)").fill(historicalDate);
+  await card.getByRole("button", { name: "Week containing (UTC)", exact: true }).click();
+  if (!(await page.locator(`[data-iso="${historicalDate}"]`).count())) await page.getByRole("button", { name: "Previous month", exact: true }).click();
+  await page.locator(`[data-iso="${historicalDate}"]`).click();
   await expect(card.getByLabel("Reached", { exact: true })).toHaveValue("80");
   await card.getByLabel("Reached", { exact: true }).fill("90");
   await cli(["run", "playResults:log", JSON.stringify({ slug, strategyId: savedPlan._id, playName: "Weekly reporting fixture", weekStart: historical.weekStart, expectedResultId: historical._id, expectedRevision: 1, expectedWorkspaceCurrency: "USD", reach: 85, steps: [8], spendUsd: 5.25, currency: "USD", ownerHours: 2 }), "--identity", identity]);
@@ -104,7 +108,9 @@ test("weekly reports require explicit values and preserve currency across settin
   await card.getByRole("button", { name: "Save", exact: true }).click();
   await expect(card.getByRole("button", { name: "Log this week", exact: true })).toBeVisible();
   await card.getByRole("button", { name: "Log this week", exact: true }).click();
-  await card.getByLabel("Week containing (UTC)").fill(historicalDate);
+  await card.getByRole("button", { name: "Week containing (UTC)", exact: true }).click();
+  if (!(await page.locator(`[data-iso="${historicalDate}"]`).count())) await page.getByRole("button", { name: "Previous month", exact: true }).click();
+  await page.locator(`[data-iso="${historicalDate}"]`).click();
   await expect(card.getByLabel("Reached", { exact: true })).toHaveValue("95");
   await card.locator("summary").filter({ hasText: "Weekly report history" }).click();
   await expect(card.getByText("Revision 3 · Current · correction", { exact: true })).toBeVisible();

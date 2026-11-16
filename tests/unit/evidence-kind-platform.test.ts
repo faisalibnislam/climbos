@@ -26,7 +26,7 @@ describe("evidence kind", () => {
     expect(stale).toContain("present accuracy is unknown");
     expect(stale).toMatch(/do not cite them as current facts/i);
     expect(stale).toContain("<untrusted_content source=\"stale business facts\">");
-    expect(stale).toContain("provenance owner_supplied; stored confidence high; last verified 2026-01-02; 61 days ago");
+    expect(stale).toContain("provenance owner_supplied; stored confidence high; last verified 2026-01-02; 61 days since last verification");
     expect(factsBlock([])).not.toContain("$20");
   });
   it("blocks proof-of-demand language when only opinions and site claims exist", () => {

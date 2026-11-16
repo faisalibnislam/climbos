@@ -57,7 +57,8 @@ test("focused plans preserve unknown segment costs and explicit currency precisi
   await card.getByLabel("Variable costs (KWD)").fill("3.001");
   await expect(card).toContainText("7.122");
   await expect(card).toContainText("Cost coverage unknown");
-  await card.getByRole("combobox", { name: "Cost coverage", exact: true }).selectOption("complete");
+  await card.getByRole("combobox", { name: "Cost coverage", exact: true }).click();
+  await page.getByRole("option", { name: "All costs in this boundary are included", exact: true }).click();
   await card.getByRole("button", { name: "Save groups" }).click();
   await expect.poll(economics).toMatchObject({ segmentEconomics: [{ netRevenue: 10.123, variableCosts: 3.001, costCoverage: "complete" }] });
   await expect(card).toContainText("You report complete costs for this boundary");
@@ -65,7 +66,8 @@ test("focused plans preserve unknown segment costs and explicit currency precisi
   await expect(card).toContainText("Complete cost coverage requires");
   await card.getByRole("button", { name: "Save groups" }).click();
   expect((await economics()).segmentEconomics[0]).toMatchObject({ costCoverage: "complete", unknownCosts: [] });
-  await card.getByRole("combobox", { name: "Cost coverage", exact: true }).selectOption("incomplete");
+  await card.getByRole("combobox", { name: "Cost coverage", exact: true }).click();
+  await page.getByRole("option", { name: "Some costs are missing", exact: true }).click();
   await card.getByRole("button", { name: "Save groups" }).click();
   await expect.poll(economics).toMatchObject({ segmentEconomics: [{ costCoverage: "incomplete", unknownCosts: ["Support time"] }] });
   await expect(card).toContainText("Costs incomplete: Support time");

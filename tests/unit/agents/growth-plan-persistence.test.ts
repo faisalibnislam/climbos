@@ -15,7 +15,11 @@ describe("current expert growth-plan persistence", () => {
   };
 
   it("rejects malformed economics carrying current source provenance", () => {
-    expect(() => assertCurrentExpertGrowthPayload([], { ...economics, grossMargin: -0.1 })).toThrow(/economics/u);
+    expect(() => assertCurrentExpertGrowthPayload([], { ...economics, grossMargin: 1.1 })).toThrow(/economics/u);
+  });
+
+  it.each([0, -0.1, -2])("preserves an owner-confirmed contribution margin of %s", grossMargin => {
+    expect(() => assertCurrentExpertGrowthPayload([], { ...economics, grossMargin })).not.toThrow();
   });
 
   it("rejects malformed plays when saving a current sourced plan", () => {

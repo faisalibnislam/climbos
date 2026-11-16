@@ -4,7 +4,7 @@ import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { CircleHelp, Target } from "@/components/icons"
 import { useState } from "react";
-import { Button, Callout, Card, CardContent, ChoiceChips, Input, Tooltip, toast } from "@/components/ui";
+import { Button, Callout, Card, CardContent, ChoiceChips, Field, Input, Select, Tooltip, toast } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import type { OwnerEconomics, OwnerQuestion } from "../../../../shared/agents/economics";
 import { calculateSegmentEconomics, segmentEconomicsInputIssues } from "../../../../shared/agents/segmentEconomics";
@@ -178,9 +178,9 @@ function SegmentEconomicsEditor({ slug, canEdit, currency, saved = [] }: { slug:
           return (
             <div key={index} className="grid gap-2 rounded-[var(--radius-card)] border border-line p-3 sm:grid-cols-2 lg:grid-cols-4">
               {([["segment", "Customer group"], ["currency", "Currency (ISO code)"], ["periodDays", "Period (days)"], ["customers", "Customers in group"], ["netRevenue", `Net revenue (${row.currency || "unknown currency"})`], ["variableCosts", `Variable costs (${row.currency || "unknown currency"})`], ["costBoundary", "Costs included"], ["unknownCosts", "Unknown costs (comma-separated)"], ["strategicValueNote", "Strategic value to consider"]] as const).map(([key, label]) => <label key={key} className="flex flex-col gap-1 text-xs text-ink-2">{label}<Input disabled={!canEdit || busy} value={row[key]} placeholder={key === "segment" ? "e.g. Solo customers" : key === "currency" ? currency : key === "costBoundary" ? "e.g. materials, payment fees, service time" : key === "unknownCosts" ? "List missing cost categories, if known" : key === "netRevenue" || key === "variableCosts" ? "Unknown" : undefined} inputMode={key === "costBoundary" || key === "unknownCosts" || key === "strategicValueNote" || key === "segment" || key === "currency" ? "text" : "decimal"} onChange={event => update(index, key, event.target.value)} /></label>)}
-              <label className="flex flex-col gap-1 text-xs text-ink-2">Cost coverage<select className="min-h-10 rounded-lg border border-line bg-surface px-2" disabled={!canEdit || busy} value={row.costCoverage} onChange={event => update(index, "costCoverage", event.target.value)}>
-                <option value="unknown">Not sure</option><option value="incomplete">Some costs are missing</option><option value="complete">All costs in this boundary are included</option>
-              </select></label>
+              <Field label="Cost coverage"><Select disabled={!canEdit || busy} value={row.costCoverage} onValueChange={value => update(index, "costCoverage", value)} options={[
+                { value: "unknown", label: "Not sure" }, { value: "incomplete", label: "Some costs are missing" }, { value: "complete", label: "All costs in this boundary are included" },
+              ]} /></Field>
               {p.issues.length ? <p className="text-xs text-ink-3 sm:col-span-2 lg:col-span-4">Calculation unavailable: {p.issues[0]}</p> : <p className="text-xs text-ink-2 sm:col-span-2 lg:col-span-4">{p.contributionAfterListedCosts === null ? "Contribution unknown: add the missing revenue or cost total." : `${money(p.contributionAfterListedCosts)} contribution after listed costs · ${money(p.contributionPerCustomer)} per customer${p.contributionMargin === null ? " · margin unavailable" : ` · ${Math.round(p.contributionMargin * 1000) / 10}% of net revenue`}.`} {p.completeCostCoverage ? "You report complete costs for this boundary." : p.costCoverage === "incomplete" ? `Costs incomplete: ${p.unknownCosts.join(", ") || "missing categories not listed"}.` : "Cost coverage unknown."} Owner-reported totals; not net profit. Per-customer averages are rounded to the currency&apos;s minor unit.</p>}
               {canEdit ? <div className="sm:col-span-2 lg:col-span-4"><Button size="sm" onClick={() => setRows(current => current.filter((_, i) => i !== index))} disabled={busy}>Remove group</Button></div> : null}
             </div>

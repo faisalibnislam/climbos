@@ -5,7 +5,7 @@ import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Button, Field, Input, toast } from "@/components/ui";
+import { Button, DatePicker, Field, Input, toast } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import type { PlayModel } from "../../../../shared/agents/economics";
 import { decimalToMinor } from "../../../../shared/integrations/currency";
@@ -26,7 +26,7 @@ export function WeeklyReportEditor(props: Props) {
   const data = useQuery(api.playResults.weekForPlay, week === null ? "skip" : { slug: props.slug, strategyId: props.strategyId, playName: props.playName, weekStart: week });
   return <div className="flex flex-col gap-3">
     <Field label="Week containing (UTC)" hint="Choose a date in the week you want to report or review. Weeks start Monday at 00:00 UTC.">
-      <Input type="date" value={date} min={data ? isoDate(data.minWeek) : undefined} max={isoDate(openedAt)} disabled={saving} onChange={e => setDate(e.target.value)} />
+      <DatePicker value={date} min={data ? isoDate(data.minWeek) : undefined} max={isoDate(openedAt)} disabled={saving} onChange={setDate} />
     </Field>
     {week === null ? <p role="alert">Choose a valid reporting date.</p> : <p className="text-xs text-ink-2">Week beginning {isoDate(week)} · UTC</p>}
     {week !== null && !data ? <p role="status">Loading saved report…</p> : null}

@@ -92,7 +92,12 @@ describe("Results metric-health evidence", () => {
   it("warns on revenue currency changes but permits negative net revenue", async () => {
     const t = setup(); const w = await workspace(t, "health-currency@example.com");
     await t.run(ctx => ctx.db.patch(w.orgId, { currency: "USD" }));
-    await t.mutation(internal.analytics.upsertDaily, { orgId: w.orgId, source: "billing", kind: "observed", rows: activity().map(p => ({ ...p, value: -100, metricKey: "revenue" })) });
+    // Exercise the payment ingestion path: anonymous daily billing totals lack
+    // the current payment-only provenance and correctly require a refresh.
+    await t.mutation(internal.analytics.ingestRevenue, { orgId: w.orgId, events: activity().map(p => ({
+      source: "stripe", sourceEventId: `refund-${p.date}`, occurredAt: Date.parse(`${p.date}T12:00:00Z`),
+      currency: "USD", amountMinor: -100, refundedMinor: 0, kind: "refund" as const,
+    })) });
     const initial = await w.client.query(api.analytics.overview, { slug: w.slug });
     expect(initial.healthAlerts.every(a => a.kind === "incomplete")).toBe(true);
     await t.run(ctx => ctx.db.patch(w.orgId, { currency: "EUR" }));
