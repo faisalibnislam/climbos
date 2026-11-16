@@ -4121,6 +4121,14 @@ export default defineSchema({
     /** Campaign writes claim approval atomically before calling a provider; never replay a claimed attempt. */
     executionStartedAt: v.optional(v.number()),
     executionFinishedAt: v.optional(v.number()),
+    /** Frozen request identity and result for read-only campaign recovery; never a retry permission. */
+    campaignProviderName: v.optional(v.string()),
+    campaignWriteProvider: v.optional(v.union(v.literal("google_ads"), v.literal("meta_ads"))),
+    executionExternalId: v.optional(v.string()),
+    executionOutcome: v.optional(v.union(v.literal("verified"), v.literal("failed"), v.literal("uncertain"), v.literal("fixture_verified"))),
+    executionReconciledAt: v.optional(v.number()),
+    recoveryCheckedAt: v.optional(v.number()),
+    recoveryMessage: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_org_status", ["orgId", "status"])

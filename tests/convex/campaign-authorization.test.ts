@@ -224,7 +224,7 @@ describe("campaign write authorization", () => {
     await f.t.mutation(internal.ads.claimCampaignWrite, args);
     await f.t.mutation(internal.ads.recordCampaignResult, { ...args, action: "create_paused", status: "uncertain", newStatus: "uncertain", summary: "Request sent; provider result unknown." });
     await f.t.action(internal.ads.executeCampaignWrite, args);
-    await expect(f.approve()).rejects.toThrow(/isn't waiting/i);
+    await expect(f.approve()).rejects.toThrow(/already started/i);
     expect(await f.receipts()).toMatchObject([{ status: "uncertain" }]);
     expect(await f.t.run(ctx => ctx.db.get(approval._id))).toMatchObject({ status: "invalidated", executionFinishedAt: Date.now() });
   });

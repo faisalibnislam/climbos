@@ -119,9 +119,12 @@ export async function reconcileCampaignByName(call: GraphCall & { adAccountId: s
   url.searchParams.set("fields", "id,name,status,effective_status,objective,spend_cap");
   url.searchParams.set("filtering", JSON.stringify([{ field: "name", operator: "EQUAL", value: call.name }]));
   url.searchParams.set("limit", "50");
-  const res = await graphCollect(call, url, parseCampaign, 3);
+  const res = await graphCollect(call, url, parseCampaign, 3, true);
   if (!res.ok) return { outcome: "unknown", providerMessage: res.providerMessage };
-  const match = res.data.items.find((c) => c.name === call.name);
+  if (res.data.truncated) return { outcome: "unknown", providerMessage: "Campaign lookup was incomplete." };
+  const matches = res.data.items.filter(c => c.name === call.name);
+  if (matches.length > 1 || res.data.items.some(c => !/^\d+$/.test(c.id))) return { outcome: "unknown", providerMessage: "Campaign identity was ambiguous or invalid." };
+  const match = matches[0];
   return match ? { outcome: "found", externalId: match.id, data: match } : { outcome: "not_found" };
 }
 

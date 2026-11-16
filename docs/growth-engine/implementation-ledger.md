@@ -1,5 +1,11 @@
 # Growth engine implementation ledger
 
+## Local update — 16 November 2026: read-only recovery of interrupted campaign writes
+
+Closed the missing owner recovery path without adding an agent or replay queue. New create requests freeze a provider-specific request name before execution. Existing Google/Meta adapters now reject incomplete or ambiguous name lookups; exact-ID reads also check identity. The owner can request a read after five minutes. Current permission, exact tenant/account/terms and saved approval hash are checked before and after retrieval; expired execution authority does not prohibit a status read. Only the expected positive state resolves the request. Original uncertain receipts survive as history, recovered results resist late callbacks, and unknown reads never unlock retries. Normal write-result persistence is now idempotent and downgrades responses received after changed scope to uncertainty.
+
+Verification: 237 focused regression/permission/adapter tests across ten files, plus desktop/mobile approval and recovery-control checks on the isolated demo. Provider calls are stubbed in tests; the demo refuses live recovery reads. The full original requirements remain incomplete. Source-backed status observation is not proof of delivery, full settings, billing, the original activation time or successful business outcomes. See [Verification](../Verification.md).
+
 ## Local update — 16 November 2026: explicitly approved spend-limit pauses
 
 Closed the confirmed missing monitor path using existing campaigns, approvals, provider adapters and policy controls. Each running campaign needs new exact-scope consent. A bounded cron dispatches due account-local checks; deterministic spend comparisons claim one pause attempt and preserve unknown reads. Changed terms/permissions/expiry invalidate authority, cross-tenant references cannot expose account details or invalidate foreign approvals, and provider read-back must identify the exact campaign. An unresolved attempt blocks reapproval; owner-requested reconciliation only reads PAUSED status and rechecks permission at recording. Added owner review/stop/result controls and updated the old policy-preference wording.

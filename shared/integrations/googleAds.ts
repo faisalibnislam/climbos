@@ -201,11 +201,12 @@ export async function getCampaignState(auth: GoogleAdsAuth & { campaignId: strin
     maxPages: 1,
   });
   if (!res.ok) return res;
+  if (res.data.truncated || res.data.items.length > 1) return { ok: false, retryable: false, providerMessage: "Campaign lookup was incomplete or ambiguous." };
   const first = res.data.items[0];
   return { ok: true, data: first ? parseCampaignState(first) : null };
 }
 
-/** Reconcile an uncertain create: campaign names are unique per account. */
+/** Require one exact match in a complete result. Callers must provide an operation-specific name. */
 export async function reconcileCampaignByName(auth: GoogleAdsAuth & { name: string }): Promise<ReconcileResult<CampaignState>> {
   const res = await searchGaql({
     ...auth,
@@ -213,9 +214,11 @@ export async function reconcileCampaignByName(auth: GoogleAdsAuth & { name: stri
     maxPages: 1,
   });
   if (!res.ok) return { outcome: "unknown", providerMessage: res.providerMessage };
+  if (res.data.truncated || res.data.items.length > 1) return { outcome: "unknown", providerMessage: "Campaign lookup was incomplete or ambiguous." };
   const first = res.data.items[0];
   if (!first) return { outcome: "not_found" };
   const state = parseCampaignState(first);
+  if (state.name !== auth.name || !/^\d+$/.test(state.campaignId)) return { outcome: "unknown", providerMessage: "Campaign identity did not match the request." };
   return { outcome: "found", externalId: state.campaignId, data: state };
 }
 

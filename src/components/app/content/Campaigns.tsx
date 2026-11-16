@@ -87,9 +87,11 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
   const member = useWorkspaceMember(slug);
   const decide = useMutation(api.ads.decide);
   const syncPerformance = useAction(api.adPerformance.syncPerformance);
+  const checkProviderResult = useAction(api.ads.checkProviderResult);
   const [error, setError] = useState<unknown>(null);
   const [performanceError, setPerformanceError] = useState<unknown>(null);
   const [syncingPerformance, setSyncingPerformance] = useState(false);
+  const [checkingResult, setCheckingResult] = useState(false);
   const canApprove = member?.role ? ["owner", "admin", "reviewer"].includes(member.role) : false;
   const days = daysBetween(c.startDate, c.endDate);
   const daily = c.budgetReviewReason ? "Needs review" : minorToDisplay(c.dailyBudgetMinor, c.currency);
@@ -156,10 +158,20 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
           {c.writeState === "queued"
             ? "Your approved request is queued. You can cancel it before the provider write starts."
             : c.writeState === "started"
-              ? "ClimbOS has started processing the approved request, but its result is not recorded yet. Do not submit another request. If it stays here, check the ad account and ask support to reconcile the result. Cancellation cannot recall a request already sent."
+              ? "The approved request has an unresolved result. After five minutes, check the provider result below. This only reads status; it never sends another create or start request. Cancellation cannot recall a request already sent."
               : "This campaign’s approval history needs review before another write."}
         </Callout>
       ) : null}
+      {c.recoveryApprovalId ? <div className="space-y-2">
+        {canApprove ? <Button variant="secondary" size="sm" disabled={checkingResult} onClick={async () => {
+          setCheckingResult(true); setError(null);
+          try {
+            const result = await checkProviderResult({ slug, campaignId: c.id, approvalId: c.recoveryApprovalId! });
+            toast({ tone: result.confirmed ? "success" : "info", title: result.confirmed ? "Provider status confirmed" : "Provider result still unresolved", description: result.message });
+          } catch (e) { setError(e); } finally { setCheckingResult(false); }
+        }}>{checkingResult ? "Checking provider…" : "Check provider result"}</Button> : <p className="text-sm text-ink-2">An owner, admin or reviewer can check the provider result.</p>}
+        {c.recoveryMessage ? <p className="text-sm text-ink-2">{c.recoveryMessage}{c.recoveryCheckedAt ? ` Checked ${new Date(c.recoveryCheckedAt).toLocaleString()} (your browser time).` : ""}</p> : null}
+      </div> : null}
       <H className="heading-card break-words">{c.name}</H>
       {c.budgetReviewReason ? <Callout tone="warning" title="Review the saved budget">{c.budgetReviewReason} {c.externalId ? "For an existing ad, check its current amounts in the ad account; ClimbOS has not changed them." : "Use Don't create to cancel this preparation, then enter the intended amounts in a new campaign."}</Callout> : null}
       <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
@@ -270,6 +282,7 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
                   {facts}
                   <p className="mt-3 text-sm text-ink-3">
                     Spend is billed by {platform}, not ClimbOS.
+                    {" A request reference is added to the provider campaign name so interrupted requests can be checked safely."}
                     {isDemo ? " Demo: simulated." : ""}
                   </p>
                 </ConfirmDialog>

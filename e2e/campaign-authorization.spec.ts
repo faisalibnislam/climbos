@@ -38,7 +38,7 @@ test("campaign approval, cancellation and interrupted-write states @mobile", asy
     const scope = campaignApprovalScope(c as unknown as Parameters<typeof campaignApprovalScope>[0], "demo_account");
     const contentHash = await sha256Hex(canonicalJson({ name: String(c.name), channel: "meta_ad", action, stopRules: [] }));
     const binding = { orgId: String(org._id), subjectType: "campaign_activation", subjectId: String(c._id), actionKind: action, contentHash, scope, policyVersion: 1, expiresAt: now + 86_400_000 };
-    await append("approvals", [{ ...binding, title: String(c.name), costEstimateMicros: 0, approvalHash: await approvalHash(binding), status: "approved", decidedBy: member.userId, decidedAt: now, createdAt: now, ...(c.name === "Interrupted fixture" ? { executionStartedAt: now } : {}) }]);
+    await append("approvals", [{ ...binding, title: String(c.name), costEstimateMicros: 0, approvalHash: await approvalHash(binding), status: "approved", decidedBy: member.userId, decidedAt: now, createdAt: now, ...(c.name === "Interrupted fixture" ? { executionStartedAt: now - 6 * 60_000 } : {}) }]);
   }
   const errors: string[] = [];
   page.on("pageerror", e => errors.push(e.message));
@@ -60,10 +60,15 @@ test("campaign approval, cancellation and interrupted-write states @mobile", asy
     expect(a.status).toBe("invalidated");
     await cli(["run", "ads:executeCampaignWrite", JSON.stringify({ campaignId: c._id, approvalId: a._id })]);
   }
-  await expect(card("Interrupted fixture").getByText(/result is not recorded yet/)).toBeVisible();
+  await expect(card("Interrupted fixture").getByText(/only reads status/)).toBeVisible();
   await expect(card("Interrupted fixture").getByText("Result pending", { exact: true })).toBeVisible();
   await expect(card("Interrupted fixture").getByRole("button", { name: "Create paused", exact: true })).toBeDisabled();
   await expect(card("Interrupted fixture").getByRole("button", { name: "Don't create", exact: true })).toBeDisabled();
+  await card("Interrupted fixture").getByRole("button", { name: "Check provider result", exact: true }).click();
+  await expect(card("Interrupted fixture").getByText(/Demo campaigns have no live provider result/)).toBeVisible();
+  const interrupted = campaigns.find(r => r.name === "Interrupted fixture")!;
+  expect((await rows("actionReceipts")).filter(r => r.campaignId === interrupted._id)).toHaveLength(0);
+  expect((await rows("approvals")).find(r => r.subjectId === interrupted._id)?.executionFinishedAt).toBeUndefined();
   await card("Ready fixture").getByRole("button", { name: "Create paused", exact: true }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Create paused", exact: true }).click();
   await expect(card("Ready fixture").getByRole("button", { name: "Start", exact: true })).toBeEnabled();

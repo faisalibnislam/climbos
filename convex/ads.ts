@@ -1,10 +1,12 @@
 import { v } from "convex/values";
 import { requirePaid } from "./lib/access";
-import { createPausedSearchCampaign, setCampaignStatus as setGoogleStatus } from "../shared/integrations/googleAds";
+import { createPausedSearchCampaign, getCampaignState, reconcileCampaignByName as findGoogleCampaign, setCampaignStatus as setGoogleStatus } from "../shared/integrations/googleAds";
 import { formatMinorMoney } from "../shared/economics/currency";
 import {
   createPausedCampaign as createMetaPaused,
   getAccountSpendCapUsage,
+  getCampaign as getMetaCampaign,
+  reconcileCampaignByName as findMetaCampaign,
   SET_META_CAMPAIGN_STATUS_ACTION,
   setCampaignStatus as setMetaStatus,
 } from "../shared/integrations/metaAds";
@@ -15,7 +17,7 @@ import { campaignApprovalScope } from "../shared/policy/campaignScope";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { action, internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { activePolicyVersion } from "./jobWrites";
 import { audit } from "./lib/audit";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
@@ -29,6 +31,17 @@ import { refuseInCopilot } from "./lib/approvals";
  */
 
 const GOOGLE_SET_STATUS = "google_ads.set_campaign_status";
+const CAMPAIGN_RECOVERY_WAIT_MS = 5 * 60_000;
+
+function providerCampaignName(name: string, approvalId: Id<"approvals">): string {
+  const reference = ` [ClimbOS ${approvalId}]`;
+  return name.trim().slice(0, 255 - reference.length) + reference;
+}
+
+function unresolvedWrites(rows: Doc<"approvals">[], c: Doc<"campaigns">) {
+  return rows.filter(a => a.orgId === c.orgId && a.executionStartedAt !== undefined && a.executionReconciledAt === undefined
+    && (a.executionFinishedAt === undefined || a.executionOutcome === "uncertain" || (c.status === "uncertain" && a.executionOutcome === undefined && a.status === "invalidated")));
+}
 
 function campaignActionProblem(c: Doc<"campaigns">, action: string): string | null {
   if (c.channel !== "google_search_ad" && c.channel !== "meta_ad") return "This campaign type cannot use paid-ad publishing.";
@@ -101,8 +114,9 @@ export const list = query({
       }
       const approvals = await ctx.db.query("approvals").withIndex("by_subject", q => q.eq("subjectType", "campaign_activation").eq("subjectId", c._id)).take(1001);
       const writeState = approvals.length > 1000 ? "review_required" as const
-        : approvals.some(a => a.orgId === org._id && a.executionStartedAt !== undefined && a.executionFinishedAt === undefined) ? "started" as const
+        : unresolvedWrites(approvals, c).length > 0 ? "started" as const
         : approvals.some(a => a.orgId === org._id && a.status === "approved" && a.expiresAt > Date.now()) ? "queued" as const : null;
+      const recovery = unresolvedWrites(approvals, c);
       return {
         id: c._id,
         artifactId: c.artifactId ?? null,
@@ -111,6 +125,9 @@ export const list = query({
         channel: c.channel,
         status: c.status,
         writeState,
+        recoveryApprovalId: approvals.length <= 1000 && recovery.length === 1 ? recovery[0]._id : null,
+        recoveryMessage: recovery.length === 1 ? recovery[0].recoveryMessage ?? null : null,
+        recoveryCheckedAt: recovery.length === 1 ? recovery[0].recoveryCheckedAt ?? null : null,
         monitorConfigured: Boolean(c.monitorApprovalId),
         budgetReviewReason: campaignBudgetProblem(c),
         dailyBudgetMinor: c.dailyBudgetMinor ?? 0,
@@ -365,7 +382,7 @@ export const decide = mutation({
     if (action !== "reject") await refuseInCopilot(ctx, org._id, "launch ads");
     if (org.emergencyStop?.active && action !== "reject") throw appError("PAUSED", "All activity is paused. Resume activity first.");
     const previous = await campaignApprovals(ctx, c._id);
-    if (previous.some(a => a.orgId === org._id && a.executionStartedAt !== undefined && a.executionFinishedAt === undefined)) {
+    if (unresolvedWrites(previous, c).length > 0) {
       throw appError("UNAVAILABLE", "A campaign write has already started. Check its result before trying again; rejecting cannot cancel a request already sent to the provider.");
     }
     if (action === "reject") {
@@ -455,7 +472,7 @@ export const claimCampaignWrite = internalMutation({
     if (a.executionStartedAt !== undefined) return null; // A crash or lost response never authorizes replay.
     const denied = (error: string) => ({ context: cx, error });
     const previous = await campaignApprovals(ctx, c._id);
-    if (previous.some(other => other.orgId === c.orgId && other.executionStartedAt !== undefined && other.executionFinishedAt === undefined)) return denied("Another campaign write has started. Check its result before trying again.");
+    if (unresolvedWrites(previous, c).length > 0) return denied("Another campaign write has started. Check its result before trying again.");
     const problem = campaignActionProblem(c, a.actionKind);
     if (problem) return denied(problem);
     const budgetProblem = await currentBudgetProblem(ctx, c);
@@ -477,8 +494,9 @@ export const claimCampaignWrite = internalMutation({
       capabilityReady: Boolean(connection && connection.orgId === c.orgId && connection.provider === provider && connection.status === "connected" && (connection.isFixture || connection.externalAccountId)),
     });
     if (!check.ok) return denied(check.message);
-    await ctx.db.patch(a._id, { executionStartedAt: Date.now() });
-    return { context: cx, error: null };
+    const execution = { executionStartedAt: Date.now(), campaignWriteProvider: provider, ...(a.actionKind === "create_paused" ? { campaignProviderName: providerCampaignName(c.name, a._id) } : {}) } as const;
+    await ctx.db.patch(a._id, execution);
+    return { context: { ...cx, approval: { ...a, ...execution } }, error: null };
   },
 });
 
@@ -497,39 +515,57 @@ export const recordCampaignResult = internalMutation({
     if (!c) return;
     const approval = args.approvalId ? await ctx.db.get(args.approvalId) : null;
     if (args.approvalId && (!approval || approval.orgId !== c.orgId || approval.subjectType !== "campaign_activation" || approval.subjectId !== c._id || approval.actionKind !== args.action)) return;
+    if (approval?.executionReconciledAt !== undefined) return; // A late worker cannot overwrite a recovered observation.
+    const receiptKey = `${c.orgId}:campaign:${c._id}:${args.action}:${args.approvalId ?? Date.now()}`;
+    if (args.approvalId && await ctx.db.query("actionReceipts").withIndex("by_idempotency", q => q.eq("idempotencyKey", receiptKey)).first()) return;
+    let scopeChanged = false;
+    if (approval?.executionStartedAt !== undefined) {
+      const connection = c.connectionId ? await ctx.db.get(c.connectionId) : null;
+      const provider = c.channel === "google_search_ad" ? "google_ads" : "meta_ads";
+      const currentScope = campaignApprovalScope({ ...c, externalId: args.action === "create_paused" ? undefined : c.externalId }, connection?.externalAccountId);
+      scopeChanged = !connection || connection.orgId !== c.orgId || connection.provider !== provider
+        || (approval.campaignWriteProvider !== undefined && approval.campaignWriteProvider !== provider)
+        || (args.action === "create_paused" && c.externalId !== undefined && c.externalId !== args.externalId)
+        || canonicalJson(currentScope) !== canonicalJson(approval.scope) || await campaignContentHash(c, args.action) !== approval.contentHash;
+    }
+    const status = scopeChanged ? "uncertain" as const : args.status;
+    const summary = scopeChanged ? `The campaign or account changed while the request was in flight. Check the originally approved account. Its returned result was ${args.status}; it was not applied to the changed campaign.` : args.summary;
+    const newStatus = scopeChanged ? "uncertain" as const : args.newStatus;
     const now = Date.now();
     await ctx.db.insert("actionReceipts", {
       orgId: c.orgId,
       campaignId: c._id,
-      provider: c.channel === "google_search_ad" ? "google_ads" : "meta_ads",
+      provider: approval?.campaignWriteProvider ?? (scopeChanged ? "unknown" : c.channel === "google_search_ad" ? "google_ads" : "meta_ads"),
       action: args.action,
-      idempotencyKey: `${c.orgId}:campaign:${c._id}:${args.action}:${args.approvalId ?? now}`,
-      status: args.status,
+      idempotencyKey: receiptKey,
+      status,
       externalId: args.externalId,
-      summary: args.summary.slice(0, 400),
+      summary: summary.slice(0, 400),
       createdAt: now,
-      verifiedAt: args.status === "verified" || args.status === "fixture_verified" ? now : undefined,
+      verifiedAt: status === "verified" || status === "fixture_verified" ? now : undefined,
     });
-    if (args.newStatus) await ctx.db.patch(c._id, {
-      status: args.newStatus,
-      ...(args.externalId && !c.externalId ? { externalId: args.externalId } : {}),
-      ...(args.newStatus === "active" && !c.activatedAt ? { activatedAt: now } : {}),
+    if (newStatus) await ctx.db.patch(c._id, {
+      status: newStatus,
+      ...(!scopeChanged && args.externalId && !c.externalId ? { externalId: args.externalId } : {}),
+      ...(newStatus === "active" && !c.activatedAt ? { activatedAt: now } : {}),
       updatedAt: now,
     });
     if (approval?.status === "approved") await ctx.db.patch(approval._id,
-      args.status === "verified" || args.status === "fixture_verified"
+      status === "verified" || status === "fixture_verified"
         ? { status: "consumed" }
-        : { status: "invalidated", invalidatedReason: args.status === "uncertain" ? "Provider outcome unknown; reconcile before trying again" : args.summary.slice(0, 400) });
-    if (approval?.executionStartedAt !== undefined) await ctx.db.patch(approval._id, { executionFinishedAt: now });
-    await audit(ctx, { orgId: c.orgId, actorType: "system", action: `campaign.${args.action}.${args.status}`, subjectType: "campaign", subjectId: c._id, summary: `${c.name}: ${args.summary}` });
+        : { status: "invalidated", invalidatedReason: status === "uncertain" ? "Provider outcome unknown; reconcile before trying again" : summary.slice(0, 400) });
+    if (approval?.executionStartedAt !== undefined) await ctx.db.patch(approval._id, { executionFinishedAt: now, executionOutcome: status, ...(args.externalId ? { executionExternalId: args.externalId } : {}) });
+    await audit(ctx, { orgId: c.orgId, actorType: "system", action: `campaign.${args.action}.${status}`, subjectType: "campaign", subjectId: c._id, summary: `${c.name}: ${summary}` });
   },
 });
 
 async function adCredentials(ctx: { runQuery: (q: typeof internal.connections.getSecret, a: { connectionId: Id<"connections"> }) => Promise<{ value: string; externalAccountId: string | null } | null> }, connectionId: Id<"connections">) {
   const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId });
   if (!secret) return null;
-  const { accessToken } = JSON.parse(secret.value) as { accessToken: string };
-  return { accessToken, accountId: secret.externalAccountId ?? "" };
+  try {
+    const accessToken: unknown = JSON.parse(secret.value).accessToken;
+    return typeof accessToken === "string" && accessToken.trim() ? { accessToken, accountId: secret.externalAccountId ?? "" } : null;
+  } catch { return null; }
 }
 
 export const executeCampaignWrite = internalAction({
@@ -580,7 +616,7 @@ export const executeCampaignWrite = internalAction({
           ...auth,
           today: new Date().toISOString().slice(0, 10),
           draft: {
-            name: c.name,
+            name: approval.campaignProviderName!,
             currency: c.currency,
             dailyBudgetMinor: c.dailyBudgetMinor ?? 0,
             maxDailyBudgetMinor: c.dailyBudgetMinor ?? 0,
@@ -602,13 +638,111 @@ export const executeCampaignWrite = internalAction({
         return;
       }
       if (action === "create_paused") {
-        const res = await createMetaPaused({ ...call, adAccountId: creds.accountId, draft: { name: c.name, objective: "OUTCOME_TRAFFIC", specialAdCategories: [], spendCapMinor: c.budgetEnvelopeMinor, maxSpendCapMinor: c.budgetEnvelopeMinor } });
+        const res = await createMetaPaused({ ...call, adAccountId: creds.accountId, draft: { name: approval.campaignProviderName!, objective: "OUTCOME_TRAFFIC", specialAdCategories: [], spendCapMinor: c.budgetEnvelopeMinor, maxSpendCapMinor: c.budgetEnvelopeMinor } });
         await ctx.runMutation(internal.ads.recordCampaignResult, { campaignId, action, status: res.status, newStatus: res.status === "verified" ? "created_paused" : res.status === "uncertain" ? "uncertain" : undefined, externalId: res.externalId, summary: res.status === "verified" ? "Created in Meta, paused, with a lifetime spend cap." : (res.providerMessage ?? "Meta didn't accept the campaign."), approvalId });
       } else {
         const res = await setMetaStatus({ ...call, campaignId: c.externalId ?? "", status: "ACTIVE", approval: { kind: SET_META_CAMPAIGN_STATUS_ACTION, targetId: c.externalId ?? "", value: "ACTIVE", approvedBy, approvedAt } });
         await ctx.runMutation(internal.ads.recordCampaignResult, { campaignId, action, status: res.status, newStatus: res.status === "verified" ? "active" : res.status === "uncertain" ? "uncertain" : undefined, summary: res.status === "verified" ? "Started in Meta and confirmed." : (res.providerMessage ?? "Meta didn't start the campaign."), approvalId });
       }
     }
+  },
+});
+
+type RecoveryContext = { campaign: Doc<"campaigns">; approval: Doc<"approvals">; connection: Doc<"connections">; isDemo: boolean; externalId?: string; providerName?: string; fingerprint: string };
+type RecoveryArgs = { slug: string; campaignId: Id<"campaigns">; approvalId: Id<"approvals"> };
+
+async function readRecoveryContext(ctx: QueryCtx | MutationCtx, args: RecoveryArgs): Promise<RecoveryContext> {
+  const { org } = await requireOrgAccess(ctx, { slug: args.slug }, "approve");
+  const c = assertSameOrg(await ctx.db.get(args.campaignId), org._id, "campaign");
+  const a = assertSameOrg(await ctx.db.get(args.approvalId), org._id, "campaign request");
+  const pending = unresolvedWrites(await campaignApprovals(ctx, c._id), c);
+  if (pending.length !== 1 || pending[0]._id !== a._id || a.subjectType !== "campaign_activation" || a.subjectId !== c._id || !["create_paused", "activate"].includes(a.actionKind)) throw appError("INVALID", "This request is no longer the single unresolved campaign action. Refresh its status.");
+  if (Date.now() - a.executionStartedAt! < CAMPAIGN_RECOVERY_WAIT_MS) throw appError("INVALID", "Wait five minutes after the request starts before checking its provider result.");
+  const connection = assertSameOrg(c.connectionId ? await ctx.db.get(c.connectionId) : null, org._id, "approved ad account");
+  const provider = c.channel === "google_search_ad" ? "google_ads" : c.channel === "meta_ad" ? "meta_ads" : null;
+  if (!provider || connection.provider !== provider || connection.status !== "connected" || !connection.externalAccountId || a.scope.connectionId !== connection._id || a.scope.externalAccountId !== connection.externalAccountId) throw appError("INVALID", "The approved ad account changed. Check the original account in the ad platform.");
+  if (a.campaignWriteProvider && a.campaignWriteProvider !== provider) throw appError("INVALID", "The provider changed. Check the original approved account.");
+  const currentScope = campaignApprovalScope({ ...c, externalId: a.actionKind === "create_paused" ? undefined : c.externalId }, connection.externalAccountId);
+  if (canonicalJson(currentScope) !== canonicalJson(a.scope) || await campaignContentHash(c, a.actionKind) !== a.contentHash) throw appError("INVALID", "Campaign terms changed. Check the original approved request in the ad platform.");
+  const binding = { orgId: a.orgId, subjectType: a.subjectType, subjectId: a.subjectId, actionKind: a.actionKind, contentHash: a.contentHash, scope: a.scope, policyVersion: a.policyVersion, expiresAt: a.expiresAt };
+  if (await approvalHash(binding) !== a.approvalHash) throw appError("INVALID", "The saved campaign request needs review before recovery.");
+  // Expired approval, a policy stop or a lapsed subscription does not prohibit a read-only status check.
+  if (!(org.kind === "demo" && connection.isFixture) && (connection.isFixture || !connection.scopes.includes(provider === "google_ads" ? "https://www.googleapis.com/auth/adwords" : "ads_read"))) throw appError("UNAVAILABLE", "Reconnect this account with reporting access to check its result.");
+  const receipts = await ctx.db.query("actionReceipts").withIndex("by_idempotency", q => q.eq("idempotencyKey", `${c.orgId}:campaign:${c._id}:${a.actionKind}:${a._id}`)).take(2);
+  const original = receipts.length === 1 && receipts[0].orgId === org._id && receipts[0].campaignId === c._id && receipts[0].provider === provider && receipts[0].action === a.actionKind ? receipts[0] : null;
+  if (a.executionFinishedAt !== undefined && a.executionOutcome === undefined && original?.status !== "uncertain") throw appError("INVALID", "The older request has no reliable unresolved-result record. Check the ad platform.");
+  const externalId = a.actionKind === "activate" ? a.scope.externalCampaignId : a.executionExternalId ?? original?.externalId;
+  if (externalId && !/^\d+$/.test(externalId)) throw appError("INVALID", "The saved provider campaign identity is invalid.");
+  if (c.externalId && c.externalId !== externalId) throw appError("INVALID", "The campaign identity changed. Check the original request in the ad platform.");
+  const providerName = a.campaignProviderName;
+  if (providerName && providerName !== providerCampaignName(c.name, a._id)) throw appError("INVALID", "The request reference changed. Check the original campaign.");
+  return { campaign: c, approval: a, connection, isDemo: org.kind === "demo", externalId, providerName, fingerprint: await sha256Hex(canonicalJson({ approvalHash: a.approvalHash, startedAt: a.executionStartedAt, externalId, providerName })) };
+}
+
+export const recoveryContext = internalQuery({ args: { slug: v.string(), campaignId: v.id("campaigns"), approvalId: v.id("approvals") }, handler: readRecoveryContext });
+
+export const recordRecovery = internalMutation({
+  args: { slug: v.string(), campaignId: v.id("campaigns"), approvalId: v.id("approvals"), fingerprint: v.string(), requestedAt: v.number(), externalId: v.optional(v.string()), providerStatus: v.optional(v.string()) },
+  handler: async (ctx, args): Promise<{ confirmed: boolean; message: string }> => {
+    const cx = await readRecoveryContext(ctx, args);
+    if (cx.fingerprint !== args.fingerprint || args.requestedAt > Date.now() || Date.now() - args.requestedAt > CAMPAIGN_RECOVERY_WAIT_MS) throw appError("INVALID", "The status check became stale. Read the provider result again.");
+    if (cx.isDemo || cx.connection.isFixture) throw appError("UNAVAILABLE", "Demo campaigns have no live provider result to recover.");
+    const { campaign: c, approval: a } = cx;
+    const identityMatches = Boolean(args.externalId && /^\d+$/.test(args.externalId) && (cx.externalId ? args.externalId === cx.externalId : cx.providerName));
+    const expected = a.actionKind === "create_paused" ? "PAUSED" : c.channel === "google_search_ad" ? "ENABLED" : "ACTIVE";
+    const confirmed = identityMatches && args.providerStatus === expected;
+    const message = confirmed
+      ? `Provider check confirmed campaign ${args.externalId} is ${a.actionKind === "create_paused" ? "paused" : "enabled"}. No create or start request was resent. This confirms current status, not delivery, spend or every campaign setting.`
+      : !cx.externalId && !cx.providerName
+        ? "This older request has no unique provider reference. Check the ad account manually; matching a campaign title alone is not enough to link it."
+        : identityMatches
+          ? `The provider reports campaign ${args.externalId} as ${args.providerStatus ?? "unknown"}, not ${expected}. The original request remains unresolved. No action was retried.`
+          : "The exact provider result could not be confirmed. An absent, ambiguous or incomplete read does not prove the request failed. Check the ad platform; no action was retried.";
+    const now = Date.now();
+    await ctx.db.patch(a._id, { recoveryCheckedAt: now, recoveryMessage: message, ...(confirmed ? { executionReconciledAt: now, executionFinishedAt: a.executionFinishedAt ?? now, status: "consumed" as const, invalidatedReason: undefined, executionExternalId: args.externalId } : {}) });
+    if (confirmed) await ctx.db.patch(c._id, { externalId: args.externalId, status: a.actionKind === "create_paused" ? "created_paused" : "active", updatedAt: now });
+    // The original receipt remains unchanged; this is a separately dated provider observation.
+    await ctx.db.insert("actionReceipts", { orgId: c.orgId, campaignId: c._id, provider: cx.connection.provider, action: `reconcile_${a.actionKind}`, idempotencyKey: `${a._id}:reconcile:${args.requestedAt}`, status: confirmed ? "verified" : "uncertain", externalId: args.externalId, summary: message.slice(0, 400), createdAt: now, ...(confirmed ? { verifiedAt: now } : {}) });
+    const { user } = await requireOrgAccess(ctx, { orgId: c.orgId }, "approve");
+    await audit(ctx, { orgId: c.orgId, actorType: "user", actorId: user._id, action: `campaign.recovery.${confirmed ? "confirmed" : "unresolved"}`, subjectType: "campaign", subjectId: c._id, summary: message });
+    return { confirmed, message };
+  },
+});
+
+/** Only reads the original operation's identity. Absence never authorizes replay. */
+export const checkProviderResult = action({
+  args: { slug: v.string(), campaignId: v.id("campaigns"), approvalId: v.id("approvals") },
+  handler: async (ctx, args): Promise<{ confirmed: boolean; message: string }> => {
+    const cx: RecoveryContext = await ctx.runQuery(internal.ads.recoveryContext, args);
+    if (cx.isDemo || cx.connection.isFixture) throw appError("UNAVAILABLE", "Demo campaigns have no live provider result to recover.");
+    const requestedAt = Date.now();
+    let externalId: string | undefined;
+    let providerStatus: string | undefined;
+    if (cx.externalId || cx.providerName) {
+      const creds = await adCredentials(ctx, cx.connection._id);
+      if (!creds || creds.accountId !== cx.connection.externalAccountId) throw appError("UNAVAILABLE", "Reconnect the originally approved ad account before checking its result.");
+      if (cx.campaign.channel === "google_search_ad") {
+        const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+        if (!developerToken) throw appError("UNAVAILABLE", "Google Ads access is not configured on ClimbOS.");
+        const auth = { accessToken: creds.accessToken, developerToken, customerId: creds.accountId };
+        if (cx.externalId) {
+          const result = await getCampaignState({ ...auth, campaignId: cx.externalId });
+          if (result.ok && result.data?.campaignId === cx.externalId) { externalId = result.data.campaignId; providerStatus = result.data.status; }
+        } else {
+          const result = await findGoogleCampaign({ ...auth, name: cx.providerName! });
+          if (result.outcome === "found" && result.data) { externalId = result.externalId; providerStatus = result.data.status; }
+        }
+      } else {
+        if (cx.externalId) {
+          const result = await getMetaCampaign({ accessToken: creds.accessToken, campaignId: cx.externalId });
+          if (result.ok && result.data.id === cx.externalId) { externalId = result.data.id; providerStatus = result.data.status; }
+        } else {
+          const result = await findMetaCampaign({ accessToken: creds.accessToken, adAccountId: creds.accountId, name: cx.providerName! });
+          if (result.outcome === "found" && result.data) { externalId = result.externalId; providerStatus = result.data.status; }
+        }
+      }
+    }
+    return ctx.runMutation(internal.ads.recordRecovery, { ...args, fingerprint: cx.fingerprint, requestedAt, externalId, providerStatus });
   },
 });
 

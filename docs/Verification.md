@@ -1,3 +1,32 @@
+## 16 November 2026 — read-only interrupted campaign recovery
+
+Confirmed gap: `ads.decide` → queued `executeCampaignWrite` → `claimCampaignWrite` correctly refused replay, but a lost response could leave a campaign permanently unresolved in the owner UI. Provider name-lookup helpers existed without an application recovery path; Google took the first row and Meta the first name match, without proving uniqueness or complete pagination. Original result persistence also accepted duplicate callbacks and could apply a late success after the account/terms had changed.
+
+Implemented in the existing campaign workflow:
+
+- New create claims persist an operation-specific provider name (human-readable title plus approval reference) and provider identity before the external call; both Google and Meta actually receive that saved name. Names remain within the existing Google 255-character limit. Approval, budget, creation-paused and subsequent start controls remain in place.
+- Current approvers can use **Check provider result** after five minutes. Recovery uses the approved activation ID, the create result's saved ID (including a valid older receipt), or a complete, unambiguous match to the unique create reference. It does not link legacy requests by a reusable title. It performs only provider reads; Google uses its read-only search endpoint, and Meta uses GET. Missing, truncated, duplicate, malformed, wrong-ID and unexpected-status evidence cannot resolve the request or permit replay.
+- The query and recording mutation both enforce current membership, approval permission, exact tenant, account/provider, campaign scope/content hash and intact original approval binding. A read that takes more than five minutes cannot update state. The original authorization may have expired or the workspace may be stopped: reading a result is not new spending permission. Read recovery does not require a paid subscription. Demo campaigns refuse live reads.
+- Positive recovery records an independent receipt and audit entry, consumes the old request, preserves the original receipt, and updates the observed local state. It does not invent the original activation time, verify delivery or imply full settings verification. Unknown observations remain dated and visible beside the recovery control. A late original callback cannot overwrite recovered state. Duplicate original result callbacks are ignored; a response for changed account/terms is retained as uncertain without attaching the old external identity to the changed local campaign.
+
+Verification:
+
+```text
+pnpm exec vitest run tests/convex/campaign-recovery.test.ts tests/convex/campaign-authorization.test.ts tests/convex/ad-monitoring.test.ts tests/convex/ad-budget-currency.test.ts tests/convex/ad-report-integrity.test.ts tests/convex/tenancy.test.ts tests/convex/safety.test.ts tests/unit/integrations.adapters.test.ts tests/unit/integrations.core.test.ts tests/unit/spend-monitor.test.ts
+237 passed across 10 files
+
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/campaign-authorization.spec.ts
+Desktop Chromium and Pixel 7 emulation passed
+```
+
+`pnpm typecheck` passed for the application and Convex; changed-file ESLint and `git diff --check` passed. The local demo sync was isolated to loopback. No generated file needed a manual edit.
+
+Tests cover both real adapter paths with stubbed fetch: unique-name creation, known-ID and name-based recovery, original receipt preservation, no replay, empty/duplicate/truncated reports, wrong identity/status, legacy limitations, current permissions, in-flight account/term/member changes, stale reads, expired approvals, emergency stop, demo isolation, duplicate callbacks and late responses for changed scope. The existing approval regression now expects the earlier unresolved-write guard. Browser fixtures cover the recovery control, its read-only explanation, demo refusal with no receipt/state change, existing cancel/start workflows, accessibility scan and overflow. They do not simulate live-provider recovery success; that path is verified by the stubbed action tests.
+
+Primary-source check, retrieved 16 November 2026 (publication dates not recorded): [Google campaign fields](https://developers.google.com/google-ads/api/fields/v26/campaign) documents selectable/filterable campaign identity, name and status; [Meta campaign reference](https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/ad-campaign-group) documents campaign reads and status. The Meta account-campaign listing reference returned HTTP 429, so its current filter semantics and live account access are not claimed newly verified. Existing adapters are reused; no new API entitlement is promised.
+
+Limits: no automatic recovery or external retry; no proof of failure from absence or PAUSED after an uncertain activation. Legacy attempts without a unique reference or recorded provider ID, changed identities/terms, multiple unresolved attempts and unexpected current statuses still need manual provider review. Status may change after observation. Full current budget/settings reconciliation before activation, real-account eligibility and provider behavior remain separate acceptance work. No hosted deployment or real campaign action was performed.
+
 ## 16 November 2026 — explicitly approved campaign spend-limit pauses
 
 Inspected path: campaign preparation and existing budget scope → policy permission → owner review in Ads → `adMonitoring.configure` → indexed cron dispatch and `claimCheck` → existing Google/Meta account/report adapters → deterministic spend assessment → `observe` authorization and single pause claim → existing status-write/read-back adapters → receipt, campaign state, audit and owner notification → read-only reconciliation. Manual performance advice remains separate. The prior policy default and recommendation text did not implement or authorize a monitor.
