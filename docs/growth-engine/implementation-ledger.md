@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: paid acquisition eligibility
+
+Focused/starter plans could bypass the existing channel scorer's economics/diagnosis blocks. Reused that policy in shared plan validation and carried recorded owner margin into constraints. Hard quality findings prevent approval/start; low-evidence bold exploration and unpaid preparation remain available. 122 tests/eight files, typecheck and scoped lint passed. See [scoped audit](paid-acquisition-completion-audit.md) and Verification. Explicit allocations are covered; historical plans and general recommendation judgment remain outside this repair.
+
 ## Local update — 17 November 2026: chronological forecast coverage
 
 Audited forecasts, contribution economics and result-learning paths for rows 26–30. Repaired a confirmed interval-evaluation cutoff gap: held-out targets could belong to forecasts issued before calibration outcomes were known. Evaluation now filters by forecast origin too and records its method. Missing/unrecognized historical markers withhold coverage claims at read time while preserving saved points/ranges/history. Four new regressions failed before the repairs; 59 tests/six files, typecheck and scoped lint pass. No agent/provider/model/database-schema/UI change, deployment or external action. See the new scoped audit and Verification; full predictive quality and broad requirement acceptance remain open.

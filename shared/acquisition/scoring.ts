@@ -375,6 +375,18 @@ const NEEDS: Partial<Record<Channel["family"], { any: string[]; label: string }>
 /** Channels that work on existing customers don't wait on a new buyer's sales cycle. */
 const ownBase = (c: Channel) => c.stages.every((st) => st === "existing" || st === "returning");
 
+/** Shared business-fit policy for paid ranking and explicit plan allocations. */
+export function paidAcquisitionBlocks(ownerGrossMargin?: number, focus?: BindingConstraint): LimitCheck[] {
+  const out: LimitCheck[] = [];
+  if (ownerGrossMargin !== undefined && Number.isFinite(ownerGrossMargin) && ownerGrossMargin <= 0) {
+    out.push({ kind: "economics", verdict: "blocked", reason: "Your confirmed contribution margin is at or below zero. Fix pricing or delivery costs before paying to acquire more customers." });
+  }
+  if (focus && ["activation", "conversion", "retention", "delivery", "economics"].includes(focus)) {
+    out.push({ kind: "diagnosis", verdict: "blocked", reason: `The current supported diagnosis is ${focus}; improve that part of the customer or delivery system before paying to bring in more prospects.` });
+  }
+  return out;
+}
+
 /** Cash, owner time, sales cycle and capability, checked before ranking. Pure and deterministic. */
 export function limitChecks(c: Channel, p: AcquisitionProfile, l: ChannelLimits = {}, focus?: BindingConstraint): LimitCheck[] {
   const out: LimitCheck[] = [];
@@ -395,12 +407,7 @@ export function limitChecks(c: Channel, p: AcquisitionProfile, l: ChannelLimits 
     && p.types.some((type) => SERVICE_TYPES.has(type))) {
     out.push({ kind: "capacity", verdict: "setup", reason: "Remaining delivery capacity is unknown. Confirm how many additional customers you can serve each month before scaling net-new demand." });
   }
-  if (paid && l.ownerGrossMargin !== undefined && l.ownerGrossMargin <= 0) {
-    out.push({ kind: "economics", verdict: "blocked", reason: "Your confirmed contribution margin is at or below zero. Fix pricing or delivery costs before paying to acquire more customers." });
-  }
-  if (paid && focus && ["activation", "conversion", "retention", "delivery", "economics"].includes(focus)) {
-    out.push({ kind: "diagnosis", verdict: "blocked", reason: `The current supported diagnosis is ${focus}; improve that part of the customer or delivery system before paying to bring in more prospects.` });
-  }
+  if (paid) out.push(...paidAcquisitionBlocks(l.ownerGrossMargin, focus));
   // Paid media without conversion tracking cannot be evaluated for customer economics.
   // This gate is only supplied for an owner-confirmed "none" value; inferred or unknown tracking stays a question.
   if (p.dims.tracking?.source === "owner" && p.dims.tracking.value === "none" && ["paid_search", "paid_social", "retargeting"].includes(c.family)) {

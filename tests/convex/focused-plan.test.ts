@@ -74,6 +74,26 @@ async function workspace() {
   return { t, owner, slug, orgId };
 }
 
+it.each([
+  ["focused", 0], ["focused", -0.25], ["focused", "capacity"],
+  ["starter", 0], ["starter", -0.25], ["starter", "capacity"],
+] as const)("blocks a %s paid recommendation for the owner-supplied constraint %s", async (planStyle, constraint) => {
+  const { t, owner, slug, orgId } = await workspace();
+  state.demandMode = "primary";
+  await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "Find a repeatable way to earn paying customers", horizonDays: 14, monthlyAdBudget: 200 });
+  await owner.client.mutation(api.workspace.setUnitEconomics, { slug, ...(constraint === "capacity" ? { newCustomersPerMonth: 0 } : { grossMargin: constraint }) });
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(plan.expert?.quality).toMatchObject({ state: "failed", fixes: expect.arrayContaining([expect.objectContaining({ rule: "paid_acquisition_fit", path: "channels[0].suggestedMonthlyAdSpend" })]) });
+  expect(plan.expert?.strategyExploration?.bold).toMatchObject({ precedentIds: [], feasibility: "low" });
+  expect(JSON.stringify(state.requests)).toContain(constraint === "capacity" ? "delivery" : "ownerGrossMargin");
+  await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
+  await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: plan._id, playId: "focused" })).rejects.toThrow();
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+  expect((await t.run(ctx => ctx.db.query("approvals").collect())).every(a => a.status === "pending")).toBe(true);
+});
+
 it.each(["focused", "starter"] as const)("blocks primary paid acquisition in a %s plan when owner evidence calls for demand validation", async planStyle => {
   const { t, owner, slug, orgId } = await workspace();
   state.demandMode = "primary";

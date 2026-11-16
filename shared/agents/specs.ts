@@ -21,7 +21,7 @@ import type { RefundExposure } from "../attribution/refundExposure";
 import type { PlatformConcentration } from "../attribution/platformConcentration";
 import type { KnowledgeReferenceSet } from "../knowledge/retrieve";
 import type { PlanConstraints } from "./types";
-import { COMMUNITY_CHANNELS, isEvidenceDateOnOrBefore, LOW_TICKET_USD_MONTH, PLATFORM_EVIDENCE_CHANNELS } from "../acquisition/scoring";
+import { COMMUNITY_CHANNELS, isEvidenceDateOnOrBefore, LOW_TICKET_USD_MONTH, PLATFORM_EVIDENCE_CHANNELS, paidAcquisitionBlocks } from "../acquisition/scoring";
 import { formatMoney, toUsd } from "../economics/currency";
 import { sampleSize } from "../analysis/decisions";
 import { citedCreatorCompetitorCollaborations, citedCreatorFact } from "../growth/targets";
@@ -336,7 +336,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.119-insights-source-basis";
+export const ENGINE_VERSION = "v3.120-paid-acquisition-fit";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -1379,6 +1379,11 @@ export function lintGrowthCashReserve(plays: { name: string; kind: string; model
 export function lintPlanFit(out: { channels: { name: string; suggestedMonthlyAdSpend: number }[]; northStar?: { target: string } }, c: PlanConstraints | undefined): LintIssue[] {
   if (!c) return [];
   const issues: LintIssue[] = [];
+  const focus = c.diagnosis?.status === "supported" && c.diagnosis.constraint !== "unknown" ? c.diagnosis.constraint : undefined;
+  const blocked = paidAcquisitionBlocks(c.ownerGrossMargin, focus);
+  out.channels.forEach((channel, index) => {
+    if (channel.suggestedMonthlyAdSpend > 0) for (const limit of blocked) issues.push({ severity: "error", rule: "paid_acquisition_fit", message: limit.reason, path: `channels[${index}].suggestedMonthlyAdSpend` });
+  });
   const spend = out.channels.reduce((s, ch) => s + Math.max(0, ch.suggestedMonthlyAdSpend || 0), 0);
   if (c.monthlyAdBudgetUsd !== undefined && spend > c.monthlyAdBudgetUsd * 1.001) issues.push({ severity: "error", rule: "budget", message: `Channels suggest ${formatMoney(spend, c.currency)}/month in ads; the budget is ${formatMoney(c.monthlyAdBudgetUsd, c.currency)}.`, path: "channels" });
   if (c.lockedCustomers !== undefined && c.lockedCustomers > 0 && out.northStar?.target) {

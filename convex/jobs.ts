@@ -632,6 +632,7 @@ function constraintsOf(job: JobCtx, extra: Partial<PlanConstraints> = {}): PlanC
   return {
     ...(job.goal ? { monthlyAdBudgetUsd: minorToMajor(job.goal.monthlyAdBudgetMinor, job.goal.currency) } : {}),
     currency: workspaceCurrency(job),
+    ...(job.business?.unitEconomics?.grossMargin !== undefined ? { ownerGrossMargin: job.business.unitEconomics.grossMargin } : {}),
     ...(job.business?.unitEconomics?.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: job.business.unitEconomics.ownerHoursPerWeek } : {}),
     ...(job.business?.unitEconomics?.monthlyGrowthCashUsd !== undefined ? { monthlyGrowthCashUsd: job.business.unitEconomics.monthlyGrowthCashUsd } : {}),
     ...(job.audience ? { emailAudience: job.audience.consented } : {}),

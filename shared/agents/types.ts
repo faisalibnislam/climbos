@@ -132,6 +132,8 @@ export interface AgentInput {
 export interface PlanConstraints {
   /** Cash the owner will pay ad platforms each month, in `currency` (the name predates currencies). */
   monthlyAdBudgetUsd?: number;
+  /** Owner-reported contribution margin before acquisition; absent when unknown. */
+  ownerGrossMargin?: number;
   /** Owner-confirmed monthly cash available for growth work, including media and other cash costs (excludes owner time). */
   monthlyGrowthCashUsd?: number;
   /**

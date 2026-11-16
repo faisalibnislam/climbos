@@ -1,3 +1,13 @@
+## 17 November 2026 — paid acquisition fit in default plans
+
+Closed a confirmed bypass between scored channel recommendations and focused/starter plans. Both now reuse the same deterministic eligibility policy for explicit paid allocations, with recorded owner margin and only a supported diagnosis. The hard finding reaches saved quality and existing approval/start checks. Unknown margin, uncertain diagnosis, unpaid preparation and bold exploration remain distinct. See [the scoped audit](growth-engine/paid-acquisition-completion-audit.md).
+
+- `pnpm exec vitest run tests/unit/focused-paid-fit.test.ts tests/unit/channel-limits.test.ts tests/unit/demand-gate.test.ts tests/convex/focused-plan.test.ts tests/unit/plan-quality.test.ts tests/convex/unsure-economics.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — 122 passed in eight files, 7.17 seconds.
+- `pnpm typecheck` — root and Convex TypeScript passed (existing run completed successfully).
+- `pnpm exec eslint shared/acquisition/scoring.ts shared/agents/types.ts shared/agents/specs.ts shared/agents/quality.ts convex/jobs.ts tests/unit/focused-paid-fit.test.ts tests/convex/focused-plan.test.ts` — passed.
+
+The six added job cases use actual owner mutations, mocked model output, persistence and approval/start boundaries. No action receipts or granted approvals are created. No browser, live-provider or paid-model evaluation, deployment or model switch. Old plans and unstructured semantic intent are not retrospectively validated; broad strategy quality remains unproven.
+
 ## 17 November 2026 — chronological forecast-range coverage
 
 Two red numerical regressions exposed interval evaluation using forecasts issued before all calibration outcomes were available. Calibration still uses targets strictly before its cutoff, but held-out evaluation now requires forecast origins and targets on/after that cutoff. The held-out minimum applies to the eligible errors; sparse coverage stays unknown. Output records `heldOutMethod: origin_after_calibration_v1` and explains overlapping, pooled errors. Point prediction and range-width formulas are unchanged. See [the rows 26–30 audit](growth-engine/forecast-learning-completion-audit.md) for the inspected paths, primary methodological source and limits.

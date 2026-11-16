@@ -1,3 +1,7 @@
+## 17 November 2026 — default-plan paid acquisition fit
+
+Requirement 33 follow-up: focused/starter validation now reuses the channel scorer's existing blocks for supplied non-positive margin and supported activation/conversion/retention/delivery/economics constraints. Recorded margin reaches the validation contract; a hard finding prevents approval/start. Unknown inputs do not become negative facts, and bold alternatives remain available. See [scoped evidence and remaining work](paid-acquisition-completion-audit.md). 122 focused/permission tests pass. Requirement 33 and the broader strategy scope remain partial.
+
 ## 17 November 2026 — forecasts, economics and learning
 
 Rows 26–30 have a current [scoped reconciliation](forecast-learning-completion-audit.md). The confirmed chronological leakage in range-coverage evaluation is repaired: eligible held-out forecasts must begin after calibration outcomes were available. Historical percentages without that method record are withheld, with original forecasts preserved. Deterministic arithmetic, incomplete-data handling and recorded learning already exist; full accounting, causal inference, representative model quality and production forecast accuracy remain unproven. All five broad rows remain partial.
