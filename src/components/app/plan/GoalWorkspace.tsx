@@ -18,6 +18,7 @@ import { PlanTimeline } from "./PlanTimeline";
 import { StepWorkLibrary } from "./StepWork";
 import type { ExpertView } from "./ExpertPlan";
 import { StrategyLearningSources } from "./StrategyLearningSources";
+import { CampaignTimingSummary } from "./CampaignTimingSummary";
 import { OfferAssessmentPanel } from "./OfferAssessmentPanel";
 import { StrategicDirectionPanel } from "./StrategicDirection";
 
@@ -85,6 +86,7 @@ function GoalPlan({ slug, selectedId, details }: { slug: string; selectedId: Id<
         <div className="flex flex-wrap items-center gap-2">{prepared ? <Button onClick={() => { setReview(true); setTab("work"); }}>Open prepared work</Button> : generate}<Button variant="secondary" onClick={() => ask("Talk me through this recommendation in simple words. Explain why it fits my goal, and the important assumptions. Do not start any work yet.")}>Talk it through</Button><Button variant="link" onClick={() => ask("Suggest a meaningfully different approach to this goal. Compare it with the current recommendation and explain what would make it a better choice. Keep useful existing drafts. Do not start or publish anything.")}>Try another idea</Button></div>
         <p className="text-xs text-ink-3">{prepared ? "Opens your prepared drafts. No extra AI charge. " : "AI prepares private work. "}You review anything that will be shared or published.</p>
       </section>
+      {focus?.timingAssessment && focus.timingAssessment.decision !== "not_relevant" ? <CampaignTimingSummary timing={focus.timingAssessment} /> : null}
       {focus?.offerAssessment ? <OfferAssessmentPanel offer={focus.offerAssessment} /> : null}
       <details className="rounded-xl border border-line bg-surface p-4"><summary className="min-h-11 cursor-pointer font-medium">Where this could lead</summary><div className="mt-3 space-y-5">
         {timing.success ? <><p className="text-sm text-ink-2">{timing.data.reason}</p><p className="text-sm"><strong>Preparation:</strong> {dayRange(timing.data.preparation)}. <strong>First useful review:</strong> {dayRange(timing.data.firstReview)}.</p></> : <p className="text-sm text-ink-2">These dates come from an older saved plan. Its steps are preserved in Next steps. The next AI update will choose and explain timing for this goal.</p>}

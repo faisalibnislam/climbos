@@ -2,17 +2,27 @@ import { afterEach, expect, it, vi } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import { asNewUser, makePaid, setup } from "./helpers";
 import { focusedPlanFixture } from "../fixtures/focusedPlan";
+import { futureCampaignTimingFixture, evergreenTimingFixture, timingFacts, timingUrl } from "../fixtures/campaignTiming";
 import { offerAssessmentFixture, offerFact } from "../fixtures/offerAssessment";
 import { approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
 import type { TurnRequest } from "../../shared/ai/types";
 import type { RateVersion } from "../../shared/economics/rates";
-const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false, unsupportedGuarantee: false, offerMode: "" }));
+const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false, unsupportedGuarantee: false, offerMode: "", timingMode: "" }));
 vi.mock("../../shared/ai/turn", async original => ({
   ...await original<typeof import("../../shared/ai/turn")>(),
   modelTurn: async (req: TurnRequest, rates: RateVersion) => {
     state.requests.push(req);
     const days = Number(JSON.stringify(req.messages).match(/EXECUTION CYCLE: (14|30|90) days/)?.[1] ?? 14);
     const plan = focusedPlanFixture(days);
+    if (state.timingMode) {
+      const timing = futureCampaignTimingFixture();
+      if (state.timingMode === "too_close") timing.proposedWindow!.startDate = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+      if (state.timingMode === "capacity") timing.capacity.status = "constrained";
+      plan.focusedMove.timingAssessment = state.timingMode === "unknown"
+        ? { ...evergreenTimingFixture(), decision: "not_enough_evidence", geographyBasis: "Served geography unknown.", unknowns: ["Served geography", "Timezone", "Capacity and lead time"], rationale: "Prepare a geography-neutral draft until readiness is known." }
+        : timing;
+      Object.assign(plan.focusedMove.timingAssessment, { researchRetrievedAt: "2099-01-01T00:00:00.000Z" });
+    }
     if (state.offerMode) {
       const offer = offerAssessmentFixture();
       if (state.offerMode === "missing_cost") offer.proposed.unknownCosts = ["Incremental delivery cost"];
@@ -38,7 +48,7 @@ vi.mock("../../shared/ai/turn", async original => ({
     return result;
   },
 }));
-afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.offerMode = ""; });
+afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.offerMode = ""; state.timingMode = ""; });
 
 async function workspace() {
   const t = setup(); delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE;
@@ -219,5 +229,45 @@ it.each(["missing_assessment", "missing_cost", "validate_first"])("keeps %s prom
     await owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: saved._id, decision: "approve" });
     expect(approvedPlanOfferTerms((await t.run(ctx => ctx.db.get(saved._id)))!)).toMatchObject([{ recommendation: "validate_first", allowedPrices: [100], allowedMechanisms: [] }]);
   } else await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: saved._id, decision: "approve" })).rejects.toThrow(/checks/);
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
+
+
+it.each(["focused", "starter"] as const)("carries a sourced campaign window through %s generation, review and approval without scheduling", async planStyle => {
+  const { t, owner, slug, orgId } = await workspace(); state.timingMode = "valid";
+  const retrievedAt = Date.now() - 60000;
+  await setTimingEvidence(t, orgId, retrievedAt);
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const saved = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(saved.expert?.quality?.state).toBe("passed");
+  expect(saved.expert?.focusedMove?.timingAssessment).toMatchObject({ decision: "proceed", proposedWindow: futureCampaignTimingFixture().proposedWindow, researchRetrievedAt: new Date(retrievedAt).toISOString() });
+  expect(JSON.stringify(state.requests[0].messages)).toContain("FOCUSED TIMING CONTRACT");
+  const changed = structuredClone(saved.expert!); changed.focusedMove!.timingAssessment!.proposedWindow!.startDate = "2099-01-01";
+  await t.run(ctx => ctx.db.patch(saved._id, { expert: changed }));
+  await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: saved._id, decision: "approve" })).rejects.toThrow(/changed after it was sent for review/);
+  await t.run(ctx => ctx.db.patch(saved._id, { expert: saved.expert }));
+  await owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: saved._id, decision: "approve" });
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+  expect(await t.run(ctx => ctx.db.query("campaigns").collect())).toEqual([]);
+});
+
+async function setTimingEvidence(t: ReturnType<typeof setup>, orgId: import("../../convex/_generated/dataModel").Id<"organizations">, retrievedAt: number) {
+  await t.run(async ctx => {
+    const business = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", orgId)).first())!;
+    await ctx.db.insert("businessFacts", { orgId, businessId: business._id, category: "product", statement: `${timingFacts.join(" ")} Campaign timezone is America/New_York.`, confidence: "high", reviewState: "confirmed", provenance: "owner_supplied", sourceIds: [], createdAt: Date.now(), updatedAt: Date.now() });
+  });
+  await t.mutation(internal.engine.putResearchCache, { orgId, businessWebsite: "https://business.example/", cacheKey: "b".repeat(64), agentId: "business_insights", modelKey: "claude-haiku-5.5", notes: futureCampaignTimingFixture().moment.evidence[0].claim, sources: [{ url: timingUrl }], retrievedAt, expiresAt: Date.now() + 86400000 });
+}
+
+it.each(["too_close", "capacity", "stale", "unknown"])("keeps %s timing from silently authorizing a dated campaign", async condition => {
+  const { t, owner, slug, orgId } = await workspace(); state.timingMode = condition;
+  await setTimingEvidence(t, orgId, Date.now() - (condition === "stale" ? 48 * 3600000 : 60000));
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const saved = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(saved.expert?.quality?.state).toBe(condition === "unknown" ? "passed" : "failed");
+  if (condition !== "unknown") await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: saved._id, decision: "approve" })).rejects.toThrow(/checks/);
+  else expect(saved.expert?.focusedMove?.timingAssessment).toMatchObject({ decision: "not_enough_evidence", proposedWindow: null });
   expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
 });

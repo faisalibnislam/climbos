@@ -18,7 +18,7 @@ import {fitJson} from "./context";
 export type QualityState = "passed" | "provisional" | "needs_input" | "failed";
 
 /** Lint rules whose failure means the plan must not drive work (REQ-EVAL hard failures). */
-export const HARD_RULES = new Set(["focused_offer_assessment", "contact_policy", "economics", "budget", "capacity", "citation", "provenance", "consistency", "no_plays", "invented_fact", "generic_action", "creative_diversity", "unsupported_scarcity", "unsupported_deadline", "unsupported_refund_promise", "approved_offer_price", "approved_offer_discount", "approved_offer_eligibility", "approved_offer_mechanism", "approved_offer_play", "approved_offer_urgency", "offer_validation_only", "offer_not_recommended", "growth_cash", "growth_cash_reserve"]);
+export const HARD_RULES = new Set(["campaign_timing", "focused_offer_assessment", "contact_policy", "economics", "budget", "capacity", "citation", "provenance", "consistency", "no_plays", "invented_fact", "generic_action", "creative_diversity", "unsupported_scarcity", "unsupported_deadline", "unsupported_refund_promise", "approved_offer_price", "approved_offer_discount", "approved_offer_eligibility", "approved_offer_mechanism", "approved_offer_play", "approved_offer_urgency", "offer_validation_only", "offer_not_recommended", "growth_cash", "growth_cash_reserve"]);
 
 /** One hard finding the owner can act on: what failed and where. */
 export interface QualityFix {
@@ -100,6 +100,7 @@ export function withoutHard(a: AgentQuality): AgentQuality {
 }
 
 const LABEL: Record<string, string> = {
+  campaign_timing: "the campaign window needs supported dates, enough preparation time and capacity",
   focused_offer_assessment: "the proposed offer needs supported evidence, consistent terms and viable economics",
   economics: "the numbers behind a play don't add up or it loses money",
   budget: "the plan spends more than your ad budget",

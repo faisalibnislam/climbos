@@ -2,6 +2,7 @@ import { z } from "zod";
 import { cycleMilestoneInstruction } from "./planningCycles";
 import {fitJson, reportDropped} from "./context";
 import { GOAL_TIMING_INSTRUCTION } from "./goalTiming";
+import { CampaignTimingSchema } from "./campaignTiming";
 import { OfferAssessmentSchema } from "./offerAssessment";
 import { OFFER_DECISION_POLICY } from "./planTasks";
 
@@ -14,6 +15,7 @@ export const FocusedMoveSchema = z.object({
   aiCanDo: z.string().min(20).max(500),
   evidenceRefs: z.array(z.string()).max(8),
   offerAssessment: OfferAssessmentSchema.optional(),
+  timingAssessment: CampaignTimingSchema.extend({ researchRetrievedAt: z.string().datetime().nullable().optional() }).optional(),
 });
 export type FocusedMove = z.infer<typeof FocusedMoveSchema>;
 export type PlanStyle = "starter" | "focused" | "detailed";

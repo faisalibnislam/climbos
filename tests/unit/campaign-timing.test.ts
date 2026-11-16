@@ -1,41 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { lintCampaignTiming, type CampaignTiming } from "../../shared/agents/campaignTiming";
+import { lintCampaignTiming } from "../../shared/agents/campaignTiming";
 import { playsTask } from "../../shared/agents/planTasks";
 import { CampaignTimingSummary } from "../../src/components/app/plan/CampaignTimingSummary";
 import { formatTimingWindow, timingCapacityLabel, timingDecisionLabel, timingDurationLabel } from "../../src/components/app/plan/timingPresentation";
 
-const url = "https://official.example/holidays/2026";
-const claim = "The local Thanksgiving Friday shopping event is November 27, 2026.";
-const facts = ["We need 14 days to prepare the campaign, 2 days to fulfill additional bookings, and can serve ten additional bookings.", "Owner confirms the business serves the New York metro area."];
-const base: CampaignTiming = {
-  decision: "proceed",
-  proposedWindow: { startDate: "2026-11-20", endDate: "2026-11-27" },
-  timezone: "America/New_York",
-  timezoneBasis: "Use the workspace timezone for campaign planning; the event source and served area are New York local.",
-  timezoneEvidenceRef: null,
-  geographyBasis: "Owner confirms the business serves the New York metro area.",
-  geographyEvidenceRef: "fact:1",
-  moment: { name: "Thanksgiving shopping period", businessReason: "Local buyers may be preparing for seasonal home projects, which fits this service's booking objective.", evidence: [{ basis: "source_reported", reference: url, sourceUrl: url, publishedDate: "2026-01-10", eventDate: "2026-11-27", claim }] },
-  preparation: { leadTimeDays: 14, deliveryLeadTimeDays: 2, feasible: true, basis: "We need 14 days to prepare the campaign", evidenceRef: "fact:0", deliveryBasis: "2 days to fulfill additional bookings", deliveryEvidenceRef: "fact:0" },
-  capacity: { status: "available", basis: "can serve ten additional bookings", evidenceRef: "fact:0" },
-  assumptions: [],
-  unknowns: [],
-  rationale: "The date aligns with a locally relevant buying period, and preparation plus service capacity are confirmed.",
-};
-
-function context(overrides: Partial<Parameters<typeof lintCampaignTiming>[1]> = {}) {
-  return {
-    today: "2026-10-20",
-    timezone: "America/New_York",
-    facts,
-    researchNotes: `Official calendar: ${claim}\n${url}`,
-    sourceUrls: [url],
-    researchRetrievedAt: Date.now(),
-    ...overrides,
-  };
-}
+import { timingUrl as url, timingClaim as claim, campaignTimingFixture as base, timingContextFixture as context } from "../fixtures/campaignTiming";
 
 describe("campaign timing recommendations", () => {
   it("presents timing decisions and date windows in plain owner-facing language", () => {

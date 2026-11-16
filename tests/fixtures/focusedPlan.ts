@@ -1,3 +1,4 @@
+import { evergreenTimingFixture } from "./campaignTiming";
 import { FocusedStrategySchema } from "../../shared/agents/specs";
 import { milestoneWindows } from "../../shared/agents/planningCycles";
 export function focusedPlanFixture(days = 14) {
@@ -25,7 +26,7 @@ export function focusedPlanFixture(days = 14) {
     diagnosis: "The buying situation is a hypothesis to check.", affordableCac: "Unknown without contribution and retained customer value.", notDoing: [{ channel: "Paid ads", why: "Economics are unknown." }], northStar: { metric: "Useful agency handoffs", baseline: "Unknown", target: "Unknown until tested" }, leadingIndicators: [],
     phases: milestoneWindows(days).map(w => ({ name: "Prepare, test and learn", days: `${w.start}–${w.end}`, focus: "Draft and review the proposed agency intake example.", firstAction: "Draft the example using confirmed capabilities.", howToCheck: "Record actual feedback and what remains untested.", decisionRule: "Change confusing steps, stop for harm, carry inconclusive evidence forward." })),
     weekOneChecklist: ["Review the draft intake example."], risks: [{ risk: "The handoff might not solve a meaningful problem.", mitigation: "Test the actual workflow before claiming it works." }],
-    focusedMove: { version: 1, title: "Test one clearer agency intake handoff", why: "A concrete example lets an agency owner judge whether the handoff helps their real workflow.", firstAction: "Review the prepared intake example.", aiCanDo: "The initial example is prepared below for checking against the actual product.", evidenceRefs: [] },
+    focusedMove: { version: 1, title: "Test one clearer agency intake handoff", why: "A concrete example lets an agency owner judge whether the handoff helps their real workflow.", firstAction: "Review the prepared intake example.", aiCanDo: "The initial example is prepared below for checking against the actual product.", evidenceRefs: [], timingAssessment: evergreenTimingFixture() },
     strategicDirection: direction,
     strategyExploration: {
       grounded: option("Review one past handoff", "Compare a real past request with the proposed intake questions to expose missing decisions.", "Prepare an intake example for private owner review."),

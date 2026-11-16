@@ -104,7 +104,7 @@ export interface AgentInput {
   /** Research already done for this job (e.g. in parallel with an earlier step): used instead of a research phase. */
   precomputedResearch?: { notes: string; sources: Source[]; retrievedAt?: number; pageReads?: PageReadEvidence[] };
   /** Deterministic timing context assembled by the application for date validation. */
-  timingContext?: { today: string; timezone: string; geography?: string };
+  timingContext?: { today: string; timezone: string; geography?: string; now?: number };
   /** Exact approved offer prices allowed in copy for this tenant's active plan. */
   approvedOfferTerms?: { playName: string; recommendation: string; currency: string; allowedPrices: number[]; allowedDiscountPercentages?: number[]; allowedMechanisms?: string[]; urgencyClaim: string | null; eligibleAudience: string | null }[];
   /** Exact play selected when a campaign is launched from a growth plan. */

@@ -40,6 +40,8 @@ export function localToday(timezone: string, now = Date.now()): string {
 
 export interface CampaignTimingContext {
   today: string;
+  /** Trusted evaluation instant; allows a separately evidenced business timezone to cross a date boundary. */
+  now?: number;
   timezone?: string;
   facts: string[];
   researchNotes: string;
@@ -81,9 +83,13 @@ export function lintCampaignTiming(timing: CampaignTiming | undefined, context: 
   const issues: LintIssue[] = [];
   const error = (message: string, suffix = "") => issues.push({ severity: "error", rule: "campaign_timing", message, path: suffix ? `${path}.${suffix}` : path });
   const { proposedWindow: window, moment } = timing;
-  if (!validDate(context.today)) error("The application timing context must contain a valid local current date.");
+  const now = context.now ?? Date.now();
+  const today = context.now !== undefined && Number.isFinite(context.now) && timing.timezone && validTimezone(timing.timezone)
+    ? localToday(timing.timezone, context.now) : context.today;
+  if (timing.decision !== "not_relevant" && (!validDate(today) || !Number.isFinite(now))) error("The application timing context must contain a valid local current date and evaluation time.");
   if (timing.decision !== "not_relevant" && timing.timezone && !validTimezone(timing.timezone)) error("Use a valid IANA timezone or leave it unknown.", "timezone");
-  if (timing.decision !== "not_relevant" && context.timezone && timing.timezone !== context.timezone) {
+  if (timing.decision !== "not_relevant" && timing.timezone && !context.timezone && !timing.timezoneEvidenceRef) error("A timezone without a workspace planning basis needs an exact owner or source reference; otherwise leave it unknown.", "timezoneEvidenceRef");
+  if (timing.decision !== "not_relevant" && timing.timezone && context.timezone && timing.timezone !== context.timezone) {
     const ref = timing.timezoneEvidenceRef;
     const factIndex = ref ? /^fact:(\d+)$/.exec(ref)?.[1] : undefined;
     const fact = factIndex === undefined ? undefined : context.facts[Number(factIndex)];
@@ -115,7 +121,7 @@ export function lintCampaignTiming(timing: CampaignTiming | undefined, context: 
     return issues;
   }
   if (timing.decision === "proceed" && !window) error("Proceed requires an evidence-supported proposed window.", "proposedWindow");
-  if (window && timing.decision === "proceed" && window.startDate < context.today) error("A proceed window cannot start before the current local date.", "proposedWindow.startDate");
+  if (window && timing.decision === "proceed" && window.startDate < today) error("A proceed window cannot start before the current local date.", "proposedWindow.startDate");
 
   for (const [index, item] of moment.evidence.entries()) {
     const epath = `moment.evidence[${index}]`;
@@ -123,7 +129,7 @@ export function lintCampaignTiming(timing: CampaignTiming | undefined, context: 
       if (!item.sourceUrl || !context.sourceUrls.some((url) => url === item.sourceUrl)) error("Cite an exact URL actually retrieved for this plan.", `${epath}.sourceUrl`);
       if (item.reference !== item.sourceUrl) error("The source evidence reference must match its exact source URL.", `${epath}.reference`);
       if (!context.researchNotes.includes(item.claim)) error("The supporting claim must appear verbatim in this run's research notes.", `${epath}.claim`);
-      const stale = !context.researchRetrievedAt || context.researchRetrievedAt > Date.now() || Date.now() - context.researchRetrievedAt > 24 * 60 * 60_000;
+      const stale = !context.researchRetrievedAt || context.researchRetrievedAt > now || now - context.researchRetrievedAt > 24 * 60 * 60_000;
       if (stale && timing.decision === "proceed") error("Date evidence is missing a fresh retrieval timestamp; do not recommend a dated campaign from stale or undated research.", epath);
       if (stale && window) error("Stale or undated research cannot support a proposed campaign window.", "proposedWindow");
       if (item.publishedDate && !validDate(item.publishedDate)) error("Use a valid publication date or leave it unknown.", `${epath}.publishedDate`);
@@ -145,7 +151,7 @@ export function lintCampaignTiming(timing: CampaignTiming | undefined, context: 
   }
 
   let availableDays: number | null = null;
-  if (window && validDate(context.today) && validDate(window.startDate)) availableDays = daysBetween(context.today, window.startDate);
+  if (window && validDate(today) && validDate(window.startDate)) availableDays = daysBetween(today, window.startDate);
   const lead = timing.preparation.leadTimeDays;
   const deliveryLead = timing.preparation.deliveryLeadTimeDays;
   const validateLeadEvidence = (days: number | null, ref: string | null, basis: string, suffix: string, needPreparationTerm: boolean) => {
@@ -155,7 +161,9 @@ export function lintCampaignTiming(timing: CampaignTiming | undefined, context: 
     const source = ref && context.sourceUrls.includes(ref) ? context.researchNotes : undefined;
     const evidenceText = fact ?? source;
     if (!ref || !evidenceText) error("Lead times must cite an owner fact or a source actually retrieved for this plan.", `${suffix}.evidenceRef`);
-    if (evidenceText && (!evidenceText.includes(basis) || !evidenceText.includes(String(days)) || (needPreparationTerm && !/prepare|preparation|lead time|ready|readiness/i.test(basis)))) error("The lead time and its basis must be supported by the cited evidence.", `${suffix}.leadTimeDays`);
+    const statedDays = new RegExp(`\\b${days}[ -]+(?:calendar[ -]+)?days?\\b`, "i").test(basis);
+    const noDelivery = days === 0 && !needPreparationTerm && /not applicable|no (?:physical )?delivery/i.test(basis);
+    if (evidenceText && (!evidenceText.includes(basis) || (!statedDays && !noDelivery) || (needPreparationTerm && !/prepare|preparation|lead time|ready|readiness/i.test(basis)))) error("The lead time in calendar days must appear in the exact cited basis, not another number elsewhere in its source. Working-day spans need an evidenced calendar-day equivalent.", `${suffix}.leadTimeDays`);
   };
   validateLeadEvidence(lead, timing.preparation.evidenceRef, timing.preparation.basis, "preparation", true);
   validateLeadEvidence(deliveryLead, timing.preparation.deliveryEvidenceRef, timing.preparation.deliveryBasis, "preparation.delivery", false);
@@ -186,7 +194,7 @@ export function lintCampaignTiming(timing: CampaignTiming | undefined, context: 
     if (timing.capacity.status === "constrained" && !saysUnavailable && !/only \d+|limited|few remaining|nearly full/i.test(timing.capacity.basis)) error("Capacity is labeled constrained, but its cited basis does not describe a limit.", "capacity.status");
   }
   if (timing.capacity.status === "unknown" && !timing.unknowns.length) error("Unknown capacity must be stated as an uncertainty.", "unknowns");
-  if (moment.evidence.some((item) => item.basis === "source_reported" && (!context.researchRetrievedAt || Date.now() - context.researchRetrievedAt > 24 * 60 * 60_000)) && timing.decision === "proceed") error("A dated campaign cannot proceed on stale or undated evidence.", "decision");
+  if (moment.evidence.some((item) => item.basis === "source_reported" && (!context.researchRetrievedAt || now - context.researchRetrievedAt > 24 * 60 * 60_000)) && timing.decision === "proceed") error("A dated campaign cannot proceed on stale or undated evidence.", "decision");
   return issues;
 }
 

@@ -4,6 +4,24 @@ import { z } from "zod";
 import { turnCostMicros, ZERO_USAGE, type TurnRequest, type TurnResult } from "../ai/types";
 import type { RateVersion } from "../economics/rates";
 
+function syntheticCampaignTiming() {
+  return {
+    decision: "not_relevant",
+    proposedWindow: null,
+    timezone: null,
+    timezoneBasis: "No calendar timing applies.",
+    timezoneEvidenceRef: null,
+    geographyBasis: "No timing-sensitive geography or event is needed for this synthetic example.",
+    geographyEvidenceRef: null,
+    moment: { name: null, businessReason: "This play is an evergreen referral and comparison-page test.", evidence: [] },
+    preparation: { leadTimeDays: null, deliveryLeadTimeDays: null, feasible: null, basis: "No event preparation window applies.", evidenceRef: null, deliveryBasis: "Not applicable to this evergreen test.", deliveryEvidenceRef: null },
+    capacity: { status: "unknown", basis: "No service-capacity data was supplied.", evidenceRef: null },
+    assumptions: [],
+    unknowns: [],
+    rationale: "The proposed comparison-page change is evergreen and does not depend on a calendar date.",
+  } as const;
+}
+
 /**
  * Deterministic stand-in for Claude, used only by automated tests of the
  * Engine v2 wiring (never in production: it is enabled solely by the
@@ -34,7 +52,7 @@ function sample(s: JsonSchema, marker: string, key = ""): unknown {
         // evidence absent instead of filling its dates and claims with markers.
         if (k === "trendEvidence" || k === "trendSourceUrl") continue;
         if (k === "publishingDetails") continue; // No observed destination or author in this generic fixture.
-        if (k === "focusedMove") { out[k] = { version: 1, title: "Synthetic focused test move", why: "Synthetic reasoning for the workflow test, not evidence about a real business.", firstAction: "Review the synthetic draft.", aiCanDo: "A synthetic draft has been prepared for the automated workflow check.", evidenceRefs: [] }; continue; }
+        if (k === "focusedMove") { out[k] = { version: 1, title: "Synthetic focused test move", why: "Synthetic reasoning for the workflow test, not evidence about a real business.", firstAction: "Review the synthetic draft.", aiCanDo: "A synthetic draft has been prepared for the automated workflow check.", evidenceRefs: [], timingAssessment: syntheticCampaignTiming() }; continue; }
         if (k === "preparedWork") { out[k] = [{ title: "Synthetic fixture draft", kind: "page_copy", target: "To build: fixture page", draft: "Synthetic fixture draft for automated workflow checks only. No real business claims or outcomes are supplied.", evidenceRefs: [], checksBeforeUse: ["Fixture only; do not publish."], status: "draft" }]; continue; }
         out[k] = sample(v, marker, k);
       }
@@ -208,21 +226,7 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         // A concrete test on an existing, researched asset (plays lint: existing assets first, never data-only).
         assetUsed: "Existing comparison page: https://example.com/compare",
         firstActionToday: "Update the comparison page with the referral offer.",
-        timingAssessment: {
-          decision: "not_relevant",
-          proposedWindow: null,
-          timezone: null,
-          timezoneBasis: "No calendar timing applies.",
-          timezoneEvidenceRef: null,
-          geographyBasis: "No timing-sensitive geography or event is needed for this synthetic example.",
-          geographyEvidenceRef: null,
-          moment: { name: null, businessReason: "This play is an evergreen referral and comparison-page test.", evidence: [] },
-          preparation: { leadTimeDays: null, deliveryLeadTimeDays: null, feasible: null, basis: "No event preparation window applies.", evidenceRef: null, deliveryBasis: "Not applicable to this evergreen test.", deliveryEvidenceRef: null },
-          capacity: { status: "unknown", basis: "No service-capacity data was supplied.", evidenceRef: null },
-          assumptions: [],
-          unknowns: [],
-          rationale: "The proposed comparison-page change is evergreen and does not depend on a calendar date.",
-        },
+        timingAssessment: syntheticCampaignTiming(),
         // This synthetic play is not an offer experiment; do not fabricate the new commercial inputs.
         offerAssessment: undefined,
         // How visitors reach the page (plays lint: distribution route).
