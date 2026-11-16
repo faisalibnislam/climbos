@@ -1,3 +1,31 @@
+## 16 November 2026 — current business evidence at approval and publishing
+
+Revalidated requirements 21–25 along the business-fact → job-context → drafting/review → approval → publishing path. Failing regressions demonstrated that future/non-finite confirmation timestamps were treated as fresh, and a positive capability fact could support approval despite a contradictory confirmed fact. Reads capped before filtering also let retired history hide newer facts. These are confirmed gaps; the broad semantic-evidence requirements remain partial.
+
+Implemented:
+
+- Invalid/future confirmation dates now yield an unknown age and require review. They are excluded from current job/approval evidence and remain explicitly unknown in model-facing text. The existing owner reconfirmation action supplies a new actual timestamp. Valid legacy records still use `updatedAt` when `verifiedAt` is absent; no historical verification is invented.
+- Added `businessFacts.by_business_state_updated` and one shared tenant-checked active-fact reader. Planning reads up to 200 recent records in each active review state, then retains the existing 40 current/40 review-needed context limits with a coverage warning. The facts page reads up to 300 per state and discloses a capped view. Rejected history no longer consumes these slots. Source/history records remain intact. Other fact readers and duplicate-review operations have their existing bounds; this is not a whole-repository full-history migration.
+- Artifact claim checks require complete coverage within 200 confirmed and 200 edited records; exceeding either bound requires owner review/removal of outdated or duplicate records before approval. The existing narrow price/trial/feature conflict detector runs without its six-item display cap at this boundary. Conflicted facts cannot independently support known capability/urgency claims. Recognized current copy terms are compared sentence by sentence against saved facts. Separately evidenced former-price wording is left to the existing reference-price check. Unrelated plain copy and separate monthly/yearly terms are preserved.
+- App approval, approval email links and Autopilot reuse that checker. The social publishing executor now checks it after approval and again in the transaction that creates the send-intent receipt, before a provider write. A changed version/approval binding or unavailable version blocks that intent too. Previously attempted receipts retain their idempotent/reconciliation behavior. This does not authorize any new action or replace the existing approval/policy checks.
+
+Engine version: `v3.98-current-fact-evidence`. The local Convex sync regenerated only the normal API module registration for `convex/lib/businessFacts.ts`.
+
+Verification:
+
+```sh
+pnpm exec vitest run tests/unit/fact-freshness.test.ts tests/convex/approval-claims.test.ts tests/convex/siteWatch.test.ts tests/convex/fact-reconfirm.test.ts tests/convex/custom-agents.test.ts tests/convex/social-publish.test.ts tests/convex/publish-flow.test.ts tests/convex/autopilot.test.ts tests/convex/plan-grounding.test.ts tests/convex/tenancy.test.ts tests/convex/safety.test.ts tests/unit/claims-uplift.test.ts tests/unit/plan-evidence-links.test.ts
+pnpm typecheck
+pnpm exec eslint convex/lib/businessFacts.ts convex/lib/claimCheck.ts convex/jobWrites.ts convex/jobs.ts convex/publish.ts convex/siteWatch.ts convex/schema.ts shared/agents/factFreshness.ts shared/agents/conflicts.ts shared/ai/tasks.ts 'src/app/app/[organization]/settings/facts/page.tsx' tests/unit/fact-freshness.test.ts tests/convex/approval-claims.test.ts tests/convex/custom-agents.test.ts tests/convex/social-publish.test.ts e2e/business-fact-evidence.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/business-fact-evidence.spec.ts
+git diff --check
+```
+
+Results: 126 tests across 13 files passed. Both browser checks passed in 12.0 seconds. Typecheck, scoped lint, diff checks and isolated local schema sync passed. Regression coverage includes invalid/future dates, unchanged reconfirmation, contradictory capability evidence, current price conflicts, separately supported former prices, billing periods, more than six conflicts, 305 rejected records before new facts, capped active evidence, foreign-tenant supporting rows, planning-context exclusion and a fact changed after approval. The executor test recorded no provider requests and no send receipt for the changed-evidence case. Browser checks verified persistence, no approval/artifact/workflow/receipt changes, no page overflow and no serious/critical axe findings. The mobile capture was inspected; these checks do not prove full accessibility.
+
+Limits: deterministic patterns are narrow English checks, not complete semantic truth, general entity resolution, or independent fact verification. Unrecognized wording and complex historical/conditional clauses still need owner review. A matching price alone does not verify all offer terms; existing approved-offer controls remain separate. View/model samples are bounded, and active-fact overflow deliberately blocks the checked approval path. This increment does not audit every outbound, advertising, billing or live-provider execution path. No real provider operation, paid model call, hosted deployment or model switch occurred. The 410-requirement completion audit and real-world recommendation quality remain unproven.
+
 ## 16 November 2026 — traceable strategy feedback selection
 
 Audit confirmed that creative feedback was fetched by plan ID before report time, repeated updates to one option could all enter learning, and the inspection query marked more reports used than generation received. Original option/test conditions were not included in the learning brief. Rejection freshness used plan creation rather than the actual owner decision.

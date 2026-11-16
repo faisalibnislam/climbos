@@ -1,3 +1,4 @@
+import { unsupportedClaimIssue } from "./lib/claimCheck";
 import { trendFreshnessIssue } from "../shared/agents/trendFreshness";
 import { v } from "convex/values";
 import {
@@ -110,12 +111,13 @@ export const publishContext = internalQuery({
       idempotencyKey,
       existingReceipt: receipt,
       imageUrl,
+      claimIssue: ver ? await unsupportedClaimIssue(ctx, a.businessId, [a.title, ver.headline, ver.body, ver.callToAction, ...ver.hashtags, ver.altText]) : null,
     };
   },
 });
 
 export const beginReceipt = internalMutation({
-  args: { artifactId: v.id("artifacts"), idempotencyKey: v.string(), provider: v.string(), action: v.string() },
+  args: { artifactId: v.id("artifacts"), versionId: v.id("artifactVersions"), approvalId: v.id("approvals"), idempotencyKey: v.string(), provider: v.string(), action: v.string() },
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query("actionReceipts")
@@ -124,6 +126,11 @@ export const beginReceipt = internalMutation({
     if (existing) return { receiptId: existing._id, existingStatus: existing.status };
     const a = await ctx.db.get(args.artifactId);
     if (!a) throw new Error("missing artifact");
+    if (a.currentVersionId !== args.versionId || a.approvalId !== args.approvalId || !SENDABLE.includes(a.status)) return { blocked: "The post or its approval changed during the publishing check. Review it again." };
+    const version = await ctx.db.get(args.versionId);
+    if (!version || version.orgId !== a.orgId || version.artifactId !== a._id) return { blocked: "The approved post version is unavailable." };
+    const claimIssue = await unsupportedClaimIssue(ctx, a.businessId, [a.title, version.headline, version.body, version.callToAction, ...version.hashtags, version.altText]);
+    if (claimIssue) return { blocked: `The business evidence needs review. ${claimIssue}` };
     // Intent marker written BEFORE the provider call: if we crash, the outcome stays "uncertain".
     const receiptId = await ctx.db.insert("actionReceipts", {
       orgId: a.orgId,
@@ -263,6 +270,10 @@ export const publishArtifact = internalAction({
       await ctx.runMutation(internal.publish.settleFromReceipt, { artifactId, receiptId: c.existingReceipt._id });
       return;
     }
+    if (c.claimIssue) {
+      await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: `The business evidence needs review. ${c.claimIssue}`, backTo: "in_review" });
+      return;
+    }
     const trendIssue = trendFreshnessIssue(version.copyBrief, Date.now(), artifact.scheduledFor);
     if (trendIssue) {
       await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: trendIssue, backTo: "in_review" });
@@ -340,7 +351,11 @@ export const publishArtifact = internalAction({
     }
 
     const action = ACTION_FOR[c.provider];
-    const begin = await ctx.runMutation(internal.publish.beginReceipt, { artifactId, idempotencyKey: c.idempotencyKey, provider: c.provider, action });
+    const begin = await ctx.runMutation(internal.publish.beginReceipt, { artifactId, versionId: version._id, approvalId: approval._id, idempotencyKey: c.idempotencyKey, provider: c.provider, action });
+    if ("blocked" in begin) {
+      await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: begin.blocked!, backTo: "in_review" });
+      return;
+    }
     if (begin.existingStatus) {
       await ctx.runMutation(internal.publish.settleFromReceipt, { artifactId, receiptId: begin.receiptId });
       return;

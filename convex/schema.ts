@@ -1596,6 +1596,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_business", ["businessId"])
+    .index("by_business_state_updated", ["businessId", "reviewState", "updatedAt"])
     .index("by_org_state", ["orgId", "reviewState"]),
 
   factSources: defineTable({

@@ -190,9 +190,11 @@ describe("custom specialist profiles", () => {
       const olderSource = await ctx.db.insert("factSources", { ...sourceBase, title: "Owner report, original", excerpt: "Our product has 10 paid customers." });
       const newerSource = await ctx.db.insert("factSources", { ...sourceBase, title: "Owner report, corrected wording", excerpt: " OUR PRODUCT HAS 10 PAID CUSTOMERS! " });
       const base = { orgId: org._id, businessId: business._id, category: "product" as const, confidence: "high" as const, reviewState: "confirmed" as const, provenance: "owner_supplied" as const, createdAt: now - 10_000 };
+      for (let i = 0; i < 305; i++) await ctx.db.insert("businessFacts", { ...base, reviewState: "rejected", statement: `Retired history ${i}`, sourceIds: [], updatedAt: now - 20_000 });
       await ctx.db.insert("businessFacts", { ...base, sourceIds: [olderSource], statement: "Our product has 10 paid customers.", updatedAt: now - 5_000 });
       await ctx.db.insert("businessFacts", { ...base, sourceIds: [newerSource], statement: " OUR PRODUCT HAS 10 PAID CUSTOMERS! ", updatedAt: now });
       await ctx.db.insert("businessFacts", { ...base, category: "pricing", sourceIds: [], statement: "Our Pro plan is $20 per month.", updatedAt: Date.now() - 61 * 86_400_000 });
+      await ctx.db.insert("businessFacts", { ...base, sourceIds: [], statement: "Future support promise.", updatedAt: now, verifiedAt: now + 86_400_000 });
       return { businessId: business._id, orgId: org._id };
     });
     const { id } = await owner.client.mutation(api.customAgents.create, { slug, ...profile });
@@ -205,6 +207,8 @@ describe("custom specialist profiles", () => {
     expect(matching).toHaveLength(1);
     expect(matching[0]?.statement).toBe(" OUR PRODUCT HAS 10 PAID CUSTOMERS! ");
     expect(context?.facts.find((fact) => fact.category === "pricing" && /Pro plan/.test(fact.statement))).toBeUndefined();
+    expect(context?.facts.find(fact => fact.statement === "Future support promise.")).toBeUndefined();
+    expect(context?.staleFacts.find(fact => fact.statement === "Future support promise.")?.freshness).toEqual({ daysOld: null, reviewSuggested: true });
     expect(context?.staleFacts.find((fact) => fact.category === "pricing" && /Pro plan/.test(fact.statement))?.freshness).toMatchObject({ reviewSuggested: true, daysOld: 61 });
     const stored = await t.run(async (ctx) => (await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", businessId)).collect()).filter((fact) => /10 paid customers/i.test(fact.statement)));
     expect(stored).toHaveLength(2);

@@ -1,0 +1,46 @@
+import { expect, test } from "@playwright/test";
+import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
+import { localDemoFixtures } from "./local-demo-fixtures";
+
+const envFile = process.env.CLIMBOS_DESIGN_E2E_ENV_FILE;
+const { rows, append } = localDemoFixtures(envFile);
+const copyRow = (row: Record<string, unknown>) => Object.fromEntries(Object.entries(row).filter(([key]) => key !== "_id" && key !== "_creationTime"));
+
+test("business facts expose new evidence after retired history and require invalid dates to be reconfirmed @mobile", async ({ page, baseURL }, testInfo) => {
+  test.skip(!envFile, "Requires isolated loopback fixtures");
+  test.setTimeout(150_000);
+  expect(baseURL).toBe("http://127.0.0.1:3420");
+  const demoSlug = await openDemo(page);
+  const original = (await rows("organizations")).find(row => row.slug === demoSlug);
+  if (!original || original.kind !== "demo") throw new Error("Isolated demo required");
+  const member = (await rows("memberships")).find(row => row.orgId === original._id);
+  const business = (await rows("businesses")).find(row => row.orgId === original._id);
+  if (!member || !business) throw new Error("Demo records required");
+  const slug = `fact-evidence-${testInfo.project.name}-${Date.now()}`;
+  await append("organizations", [{ ...copyRow(original), slug, name: "Synthetic business evidence" }]);
+  const org = (await rows("organizations")).find(row => row.slug === slug)!;
+  await append("memberships", [{ ...copyRow(member), orgId: org._id }]);
+  await append("businesses", [{ ...copyRow(business), orgId: org._id }]);
+  const savedBusiness = (await rows("businesses")).find(row => row.orgId === org._id)!;
+  const now = Date.now();
+  const fact = { orgId: org._id, businessId: savedBusiness._id, category: "product", confidence: "high", provenance: "owner_supplied", sourceIds: [], createdAt: now, updatedAt: now };
+  await append("businessFacts", Array.from({ length: 305 }, (_, i) => ({ ...fact, reviewState: "rejected", statement: `Retired synthetic fact ${i}` })));
+  const statement = "The Pro plan includes a private review session.";
+  await append("businessFacts", [{ ...fact, reviewState: "confirmed", statement, verifiedAt: now + 86_400_000 }]);
+  const snapshot = async () => Promise.all(["approvals", "artifacts", "actionReceipts", "workflowRuns"].map(async table => (await rows(table)).filter(row => row.orgId === org._id)));
+  const before = await snapshot();
+  await page.goto(`/app/${slug}/settings/facts`);
+  await expect(page.getByText(statement, { exact: true })).toBeVisible();
+  await expect(page.getByText(/Confirmation date unavailable/)).toBeVisible();
+  await expect(page.getByText("Retired synthetic fact 0", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: `Still accurate: ${statement}`, exact: true }).click();
+  await expect(page.getByText(/Confirmation date unavailable/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: `Still accurate: ${statement}`, exact: true })).toHaveCount(0);
+  const saved = (await rows("businessFacts")).find(row => row.orgId === org._id && row.statement === statement)!;
+  expect(Number(saved.verifiedAt)).toBeLessThan(now + 86_400_000);
+  expect(saved.reviewState).toBe("confirmed");
+  await expectNoHorizontalScroll(page);
+  await expectAccessible(page, "Business facts evidence review");
+  await page.screenshot({ path: testInfo.outputPath("business-facts.png"), fullPage: true });
+  expect(await snapshot()).toEqual(before);
+});

@@ -29,7 +29,7 @@ const CAPABILITY_IS_FEATURE_OF = /^(.{2,100}?)\s+is\s+(not\s+)?(?:a\s+)?feature\
 
 const sym = (s: string) => s.trim().toUpperCase().replace("USD", "$").replace("EUR", "€").replace("GBP", "£");
 
-export function findConflicts(facts: { id: string; statement: string; category?: string }[]): FactConflict[] {
+export function findConflicts(facts: { id: string; statement: string; category?: string }[], limit = 6): FactConflict[] {
   const seen = new Map<string, { value: number; shown: string; factId: string }[]>();
   const capabilities = new Map<string, { value: boolean; shown: string; factId: string }[]>();
   const add = (key: string, value: number, shown: string, factId: string) => {
@@ -91,7 +91,7 @@ export function findConflicts(facts: { id: string; statement: string; category?:
       out.push({ subject: `Feature availability · ${subject} / ${feature}`, values: [...new Set(list.map((x) => x.shown))], factIds: [...new Set(list.map((x) => x.factId))] });
     }
   }
-  return out.slice(0, 6);
+  return out.slice(0, limit);
 }
 
 /** One owner-facing line per conflict: "Pro price per month: $19 vs $24". */

@@ -142,6 +142,26 @@ describe("LinkedIn and X publishing", () => {
     expect(a?.scheduledFor).toBeUndefined();
   });
 
+  it("rechecks current business facts after approval and before any provider request", async () => {
+    const t = setup(); const w = await workspace(t);
+    await connect(t, w, "linkedin", { accessToken: "li-token" }, Date.now() + 60 * 86_400_000);
+    await w.owner.client.mutation(api.orgs.addFact, { slug: w.slug, category: "product", statement: "Pro includes 24/7 support." });
+    const id = await draft(t, w.orgId, "linkedin", "Get 24/7 support.");
+    await w.owner.client.mutation(api.content.decide, { slug: w.slug, artifactId: id, decision: "approve" });
+    const approved = (await t.run(ctx => ctx.db.get(id)))!;
+    await w.owner.client.mutation(api.orgs.addFact, { slug: w.slug, category: "product", statement: "Pro does not include 24/7 support." });
+    const calls = stubFetch(() => json(500, {}));
+    // Recheck again at the intent claim, covering evidence changes during link/token reads.
+    const begun = await t.mutation(internal.publish.beginReceipt, { artifactId: id, versionId: approved.currentVersionId!, approvalId: approved.approvalId!, idempotencyKey: "synthetic-fact-recheck", provider: "linkedin", action: "publish_linkedin" });
+    expect(begun).toMatchObject({ blocked: expect.stringMatching(/evidence needs review/) });
+    await t.action(internal.publish.publishArtifact, { artifactId: id });
+    const artifact = await t.run(ctx => ctx.db.get(id));
+    expect(artifact?.status).toBe("in_review");
+    expect(artifact?.lastPublishError?.message).toMatch(/evidence needs review/);
+    expect(calls).toHaveLength(0);
+    expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toHaveLength(0);
+  });
+
   it("returns an approved draft to review when its trend expires before execution", async () => {
     const t = setup(); const w = await workspace(t);
     await connect(t, w, "linkedin", { accessToken: "li-token" }, Date.now() + 60 * 86_400_000);

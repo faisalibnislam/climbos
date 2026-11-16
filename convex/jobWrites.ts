@@ -1,3 +1,4 @@
+import { activeBusinessFacts } from "./lib/businessFacts";
 import { customerVoice } from "./lib/customerVoice";
 import { customerVoiceBrief } from "../shared/reviews/voiceThemes";
 import { boundedPageReads, checkedCustomerLanguage } from "../shared/agents/provenance";
@@ -81,12 +82,8 @@ export const jobContext = internalQuery({
       .query("businesses")
       .withIndex("by_org", (q) => q.eq("orgId", org._id))
       .first();
-    const facts = business
-      ? await ctx.db
-          .query("businessFacts")
-          .withIndex("by_business", (q) => q.eq("businessId", business._id))
-          .take(200)
-      : [];
+    const factSample = business ? await activeBusinessFacts(ctx, business) : { facts: [], limited: false };
+    const facts = factSample.facts;
     // Keep the canonical, newest version of an exactly repeated fact in model context.
     // The underlying rows and their source history remain untouched for audit/display.
     const usable = groupExactDuplicateFacts(
@@ -389,6 +386,7 @@ export const jobContext = internalQuery({
       creativeStrategyLearning: run.kind === "strategy" && !run.isFixture ? await creativeStrategyLearningBrief(ctx, org._id) : "",
       facts: currentFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, confidence: f.confidence, provenance: f.provenance, createdAt: f.createdAt, updatedAt: f.updatedAt, verifiedAt: f.verifiedAt ?? f.updatedAt, kind: EVIDENCE_KIND_LABEL[evidenceKind(f.statement, f.provenance)], evidenceKind: evidenceKind(f.statement, f.provenance), freshness: freshnessOf(f) })),
       staleFacts: staleFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, confidence: f.confidence, provenance: f.provenance, updatedAt: f.updatedAt, verifiedAt: f.verifiedAt ?? f.updatedAt, freshness: freshnessOf(f) })),
+      factsLimited: factSample.limited || currentFacts.length > 40 || staleFacts.length > 40,
       unconfirmedCount: facts.filter((f) => f.reviewState === "needs_review").length,
       goal,
       brand,

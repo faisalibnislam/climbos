@@ -1,3 +1,4 @@
+import { activeBusinessFacts } from "./lib/businessFacts";
 import { v } from "convex/values";
 import { CALL_ROUTES } from "../shared/agents/routes";
 import { internal } from "./_generated/api";
@@ -30,8 +31,8 @@ export const facts = query({
     const { org } = await requireOrgAccess(ctx, { slug }, "view");
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     if (!business) return null;
-    const rows = (await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", business._id)).take(300)).filter((f) => f.reviewState !== "rejected");
-    const conflictCandidates = rows.filter((f) => f.reviewState !== "rejected");
+    const { facts: rows, limited: factsLimited } = await activeBusinessFacts(ctx, business, 300);
+    const conflictCandidates = [...rows].sort((a, b) => a.createdAt - b.createdAt || a._creationTime - b._creationTime);
     const conflicts = findConflicts(conflictCandidates.map((f) => ({ id: String(f._id), statement: f.statement, category: f.category })));
     const conflictFactIds = [...new Set(conflicts.flatMap((conflict) => conflict.factIds))];
     const conflictFacts = new Map(conflictCandidates.filter((fact) => conflictFactIds.includes(String(fact._id))).map((fact) => [String(fact._id), fact]));
@@ -42,7 +43,7 @@ export const facts = query({
       if (source && source.orgId === org._id) conflictSources.set(id, { kind: source.kind, url: source.url, title: source.title, excerpt: source.excerpt, fetchedAt: source.fetchedAt });
     }
     const order = { needs_review: 0, edited: 1, confirmed: 1, rejected: 2 } as const;
-    rows.sort((a, b) => order[a.reviewState] - order[b.reviewState] || b.updatedAt - a.updatedAt);
+    rows.sort((a, b) => order[a.reviewState] - order[b.reviewState] || b.updatedAt - a.updatedAt || a._creationTime - b._creationTime);
     const groupedFacts = groupExactDuplicateFacts(rows.map((fact) => ({
       ...fact,
       id: String(fact._id),
@@ -64,6 +65,7 @@ export const facts = query({
       sourceMap.set(String(source._id), { kind: source.kind, url: source.url, title: source.title, excerpt: source.excerpt, fetchedAt: source.fetchedAt, status: source.status });
     }
     return {
+      factsLimited,
       website: business.website ?? null,
       siteCheckedAt: business.siteCheckedAt ?? null,
       siteWatchLastAttemptAt: business.siteWatchLastAttemptAt ?? null,

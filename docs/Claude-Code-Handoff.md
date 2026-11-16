@@ -250,6 +250,10 @@ Not verified: no live Anthropic or Gemini call has been made; the admin page was
 
 The creative feedback selection gap is repaired in `convex/creativeStrategy.ts`: one read-only selection feeds UI and generation, with recent report/decision indexes, latest-per-option selection, retirement without resurrection, original option snapshots and hash-checked legacy fallback. Whole records retain original test conditions within a shared 10,000-character ceiling. The focused Plan options tab exposes the learning list. No new model, agent, provider or action permission was added. See the newest Verification entry for 57 focused regression/permission tests and two browser checks. Candidate-window and whole-record limits remain explicit; this is not complete history, independently verified outcomes or a full requirement-completion audit.
 
+## Latest business-fact evidence follow-up
+
+Invalid/future confirmation dates now require review. A shared active-state index/reader prevents rejected history from hiding new facts in job context, facts review and artifact claim checks. The approval checker excludes recognized contradictory facts, checks explicit current copy terms, and refuses incomplete active-fact coverage. Social publishing rechecks this evidence after approval and inside send-intent creation; a changed fact can return the post to review before provider I/O. Existing approval, idempotency and reconciliation remain in place. See the newest Verification entry for 126 tests and two browser checks. Pattern coverage, other fact readers, complex historical wording and uninspected execution paths remain limitations.
+
 ## What remains and should guide the next work
 
 These are known open gaps, not a complete substitute for checking the requirement audit and ledger before choosing work:

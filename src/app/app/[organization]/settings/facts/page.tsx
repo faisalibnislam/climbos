@@ -58,7 +58,7 @@ export default function FactsPage() {
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="text-ink-2">{f.statement}</span>
         <span className="text-xs text-ink-3">
-          {f.provenance === "owner_supplied" ? "Owner-provided" : f.provenance === "researched" ? "Website research" : "Demo example"} · Last confirmed {relativeTime(f.verifiedAt)}{factFreshness(f.category, f.updatedAt, undefined, f.verifiedAt).reviewSuggested ? " · Worth reviewing" : ""}
+          {f.provenance === "owner_supplied" ? "Owner-provided" : f.provenance === "researched" ? "Website research" : "Demo example"} · {factFreshness(f.category, f.updatedAt, undefined, f.verifiedAt).daysOld === null ? "Confirmation date unavailable" : `Last confirmed ${relativeTime(f.verifiedAt)}`}{factFreshness(f.category, f.updatedAt, undefined, f.verifiedAt).reviewSuggested ? " · Worth reviewing" : ""}
         </span>
         {f.sources.length || f.duplicateRecords.length ? (
           <details className="mt-1 text-xs text-ink-3">
@@ -116,6 +116,7 @@ export default function FactsPage() {
         }
       />
       {data.siteWatchLastError ? <Callout tone="warning" title="Latest site check didn't finish">{data.siteWatchLastError}{data.siteWatchLastAttemptAt ? ` · Tried ${relativeTime(data.siteWatchLastAttemptAt)}.` : ""} Your facts are unchanged.</Callout> : data.siteCheckedAt ? <p className="-mt-4 text-xs text-ink-3">Site checked {relativeTime(data.siteCheckedAt)}.</p> : null}
+      {data.factsLimited ? <Callout tone="warning" title="Some facts are outside this view">Showing up to 300 recent facts in each review state. Remove outdated or repeated facts to reveal older ones. Draft approvals require a complete check of active confirmed facts.</Callout> : null}
       {data.conflicts.length ? (
         <Card className="border-amber-300 bg-amber-50">
           <CardContent className="flex flex-col gap-2">
