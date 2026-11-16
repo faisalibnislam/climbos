@@ -1,10 +1,11 @@
 import { v } from "convex/values";
 import { requirePaid } from "./lib/access";
-import { createPausedSearchCampaign, getCampaignState, reconcileCampaignByName as findGoogleCampaign, setCampaignStatus as setGoogleStatus } from "../shared/integrations/googleAds";
+import { createPausedSearchCampaign, getCampaignActivationSettings as readGoogleActivation, getCampaignState, reconcileCampaignByName as findGoogleCampaign, setCampaignStatus as setGoogleStatus } from "../shared/integrations/googleAds";
 import { formatMinorMoney } from "../shared/economics/currency";
 import {
   createPausedCampaign as createMetaPaused,
   getAccountSpendCapUsage,
+  getCampaignActivationSettings as readMetaActivation,
   getCampaign as getMetaCampaign,
   reconcileCampaignByName as findMetaCampaign,
   SET_META_CAMPAIGN_STATUS_ACTION,
@@ -13,6 +14,8 @@ import {
 import { approvalHash, can, canonicalJson, checkApprovalForExecution, sha256Hex } from "../shared/policy";
 import { AD_BUDGET_UNIT_VERSION, campaignBudgetProblem, knownAdBudget, parseAdBudget, maxRolling31DaySpend, validCampaignDateRange } from "../shared/policy/campaignBudget";
 import { CAMPAIGN_REPORT_VERSION, campaignReportWindow, validateCampaignReportTotals } from "../shared/acquisition/campaignReport";
+import { campaignActivationProblem } from "../shared/policy/campaignActivation";
+import { campaignActivationObservationV } from "./lib/campaignActivation";
 import { campaignApprovalScope } from "../shared/policy/campaignScope";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -117,6 +120,7 @@ export const list = query({
         : unresolvedWrites(approvals, c).length > 0 ? "started" as const
         : approvals.some(a => a.orgId === org._id && a.status === "approved" && a.expiresAt > Date.now()) ? "queued" as const : null;
       const recovery = unresolvedWrites(approvals, c);
+      const latest = approvals.filter(a => a.orgId === org._id).sort((a, b) => b.createdAt - a.createdAt || b._creationTime - a._creationTime)[0];
       return {
         id: c._id,
         artifactId: c.artifactId ?? null,
@@ -125,6 +129,7 @@ export const list = query({
         channel: c.channel,
         status: c.status,
         writeState,
+        lastWriteProblem: approvals.length <= 1000 && latest?.executionOutcome === "failed" ? latest.invalidatedReason ?? "The last request failed. Review the campaign before trying again." : null,
         recoveryApprovalId: approvals.length <= 1000 && recovery.length === 1 ? recovery[0]._id : null,
         recoveryMessage: recovery.length === 1 ? recovery[0].recoveryMessage ?? null : null,
         recoveryCheckedAt: recovery.length === 1 ? recovery[0].recoveryCheckedAt ?? null : null,
@@ -461,42 +466,69 @@ export const campaignContext = internalQuery({
   handler: (ctx, { campaignId, approvalId }) => readCampaignContext(ctx, campaignId, approvalId),
 });
 
+async function campaignWriteProblem(ctx: MutationCtx, cx: NonNullable<Awaited<ReturnType<typeof readCampaignContext>>>, dispatch = false): Promise<string | null> {
+  const { campaign: c, approval: a, connection } = cx;
+  if (!a || !cx.org || cx.org.deletedAt || a.orgId !== c.orgId || a.subjectType !== "campaign_activation" || a.subjectId !== c._id) return "The campaign approval is no longer available.";
+  const previous = await campaignApprovals(ctx, c._id);
+  if (unresolvedWrites(previous, c).some(other => !dispatch || other._id !== a._id)) return "Another campaign write has started. Check its result before trying again.";
+  const problem = campaignActionProblem(c, a.actionKind);
+  if (problem) return problem;
+  const budgetProblem = await currentBudgetProblem(ctx, c);
+  if (budgetProblem) return budgetProblem;
+  const member = a.decidedBy ? await ctx.db.query("memberships").withIndex("by_org_user", q => q.eq("orgId", c.orgId).eq("userId", a.decidedBy!)).unique() : null;
+  if (!member || member.status !== "active" || !can(member.role, "approve")) return "The approving member no longer has permission. Ask an authorized owner to review again.";
+  try {
+    await requirePaid(ctx, cx.org, "ads_publish");
+    await refuseInCopilot(ctx, c.orgId, "launch ads");
+  } catch {
+    return "Your plan or approval mode no longer allows this campaign write.";
+  }
+  const provider = c.channel === "google_search_ad" ? "google_ads" : "meta_ads";
+  const contentHash = await campaignContentHash(c, a.actionKind);
+  const check = await checkApprovalForExecution({
+    approval: a,
+    current: { orgId: c.orgId, subjectType: "campaign_activation", subjectId: c._id, actionKind: a.actionKind, contentHash, scope: campaignApprovalScope(c, connection?.externalAccountId), policyVersion: cx.policyVersion, expiresAt: a.expiresAt },
+    now: Date.now(), emergencyStop: Boolean(cx.org.emergencyStop?.active) || cx.fleetStop,
+    capabilityReady: Boolean(connection && connection.orgId === c.orgId && connection.provider === provider && connection.status === "connected" && (connection.isFixture || connection.externalAccountId)),
+  });
+  if (!check.ok) return check.message;
+  return null;
+}
+
 /** Validation and the at-most-once claim share a transaction with owner rejection. */
 export const claimCampaignWrite = internalMutation({
   args: { campaignId: v.id("campaigns"), approvalId: v.id("approvals") },
   handler: async (ctx, { campaignId, approvalId }) => {
     const cx = await readCampaignContext(ctx, campaignId, approvalId);
     if (!cx?.approval || !cx.org || cx.org.deletedAt) return null;
-    const { campaign: c, approval: a, connection } = cx;
+    const { campaign: c, approval: a } = cx;
     if (a.orgId !== c.orgId || a.subjectType !== "campaign_activation" || a.subjectId !== c._id) return null;
     if (a.executionStartedAt !== undefined) return null; // A crash or lost response never authorizes replay.
-    const denied = (error: string) => ({ context: cx, error });
-    const previous = await campaignApprovals(ctx, c._id);
-    if (unresolvedWrites(previous, c).length > 0) return denied("Another campaign write has started. Check its result before trying again.");
-    const problem = campaignActionProblem(c, a.actionKind);
-    if (problem) return denied(problem);
-    const budgetProblem = await currentBudgetProblem(ctx, c);
-    if (budgetProblem) return denied(budgetProblem);
-    const member = a.decidedBy ? await ctx.db.query("memberships").withIndex("by_org_user", q => q.eq("orgId", c.orgId).eq("userId", a.decidedBy!)).unique() : null;
-    if (!member || member.status !== "active" || !can(member.role, "approve")) return denied("The approving member no longer has permission. Ask an authorized owner to review again.");
-    try {
-      await requirePaid(ctx, cx.org, "ads_publish");
-      await refuseInCopilot(ctx, c.orgId, "launch ads");
-    } catch {
-      return denied("Your plan or approval mode no longer allows this campaign write.");
-    }
+    const problem = await campaignWriteProblem(ctx, cx);
+    if (problem) return { context: cx, error: problem };
     const provider = c.channel === "google_search_ad" ? "google_ads" : "meta_ads";
-    const contentHash = await campaignContentHash(c, a.actionKind);
-    const check = await checkApprovalForExecution({
-      approval: a,
-      current: { orgId: c.orgId, subjectType: "campaign_activation", subjectId: c._id, actionKind: a.actionKind, contentHash, scope: campaignApprovalScope(c, connection?.externalAccountId), policyVersion: cx.policyVersion, expiresAt: a.expiresAt },
-      now: Date.now(), emergencyStop: Boolean(cx.org.emergencyStop?.active) || cx.fleetStop,
-      capabilityReady: Boolean(connection && connection.orgId === c.orgId && connection.provider === provider && connection.status === "connected" && (connection.isFixture || connection.externalAccountId)),
-    });
-    if (!check.ok) return denied(check.message);
     const execution = { executionStartedAt: Date.now(), campaignWriteProvider: provider, ...(a.actionKind === "create_paused" ? { campaignProviderName: providerCampaignName(c.name, a._id) } : {}) } as const;
     await ctx.db.patch(a._id, execution);
     return { context: { ...cx, approval: { ...a, ...execution } }, error: null };
+  },
+});
+
+/** Recheck trusted state after provider reads, immediately before the single activation write. */
+export const authorizeCampaignActivation = internalMutation({
+  args: { campaignId: v.id("campaigns"), approvalId: v.id("approvals"), startedAt: v.number(), checkedAt: v.number(), observation: campaignActivationObservationV },
+  handler: async (ctx, args) => {
+    const cx = await readCampaignContext(ctx, args.campaignId, args.approvalId);
+    const a = cx?.approval;
+    if (!cx || !a || a.actionKind !== "activate" || a.executionStartedAt !== args.startedAt || a.executionFinishedAt !== undefined || a.executionReconciledAt !== undefined || a.campaignActivationDispatchedAt !== undefined) return { ok: false, message: "This activation attempt is no longer available. Refresh the campaign." };
+    const problem = await campaignWriteProblem(ctx, cx, true);
+    if (problem) return { ok: false, message: problem };
+    const now = Date.now();
+    if (!Number.isFinite(args.checkedAt) || args.checkedAt < args.startedAt || args.checkedAt > now || now - args.checkedAt > 60_000) return { ok: false, message: "The provider settings read is too old. Review and approve a fresh start request." };
+    await ctx.db.patch(a._id, { campaignActivationCheck: { checkedAt: args.checkedAt, observation: args.observation } });
+    const mismatch = campaignActivationProblem(cx.campaign, cx.connection?.externalAccountId ?? "", args.observation, now);
+    if (mismatch) return { ok: false, message: mismatch };
+    await ctx.db.patch(a._id, { campaignActivationDispatchedAt: now });
+    return { ok: true, message: "Current provider budget checked against this approval." };
   },
 });
 
@@ -508,6 +540,7 @@ export const recordCampaignResult = internalMutation({
     newStatus: v.optional(v.union(v.literal("created_paused"), v.literal("active"), v.literal("paused"), v.literal("uncertain"))),
     externalId: v.optional(v.string()),
     summary: v.string(),
+    activationNotDispatched: v.optional(v.boolean()),
     approvalId: v.optional(v.id("approvals")),
   },
   handler: async (ctx, args) => {
@@ -518,6 +551,9 @@ export const recordCampaignResult = internalMutation({
     if (approval?.executionReconciledAt !== undefined) return; // A late worker cannot overwrite a recovered observation.
     const receiptKey = `${c.orgId}:campaign:${c._id}:${args.action}:${args.approvalId ?? Date.now()}`;
     if (args.approvalId && await ctx.db.query("actionReceipts").withIndex("by_idempotency", q => q.eq("idempotencyKey", receiptKey)).first()) return;
+    const notDispatched = args.activationNotDispatched === true && args.action === "activate" && args.status === "failed"
+      && approval?.executionStartedAt !== undefined && approval.campaignActivationDispatchedAt === undefined && !args.externalId && !args.newStatus;
+    if (args.activationNotDispatched && !notDispatched) return;
     let scopeChanged = false;
     if (approval?.executionStartedAt !== undefined) {
       const connection = c.connectionId ? await ctx.db.get(c.connectionId) : null;
@@ -528,6 +564,7 @@ export const recordCampaignResult = internalMutation({
         || (args.action === "create_paused" && c.externalId !== undefined && c.externalId !== args.externalId)
         || canonicalJson(currentScope) !== canonicalJson(approval.scope) || await campaignContentHash(c, args.action) !== approval.contentHash;
     }
+    scopeChanged = scopeChanged && !notDispatched; // No provider write occurred; do not manufacture an unknown outcome.
     const status = scopeChanged ? "uncertain" as const : args.status;
     const summary = scopeChanged ? `The campaign or account changed while the request was in flight. Check the originally approved account. Its returned result was ${args.status}; it was not applied to the changed campaign.` : args.summary;
     const newStatus = scopeChanged ? "uncertain" as const : args.newStatus;
@@ -602,6 +639,13 @@ export const executeCampaignWrite = internalAction({
       await ctx.runMutation(internal.ads.recordCampaignResult, { campaignId, action, status: "failed", summary: "The selected advertiser account changed after approval. Review and approve this campaign again.", approvalId });
       return;
     }
+    const authorizeActivation = async (read: Awaited<ReturnType<typeof readGoogleActivation>>, checkedAt: number) => {
+      const gate = read.ok
+        ? await ctx.runMutation(internal.ads.authorizeCampaignActivation, { campaignId, approvalId, startedAt: approval.executionStartedAt!, checkedAt, observation: read.data })
+        : { ok: false, message: `Could not verify current provider settings. No start request was sent. ${read.providerMessage}` };
+      if (!gate.ok) await ctx.runMutation(internal.ads.recordCampaignResult, { campaignId, action, status: "failed", summary: gate.message, activationNotDispatched: true, approvalId });
+      return gate.ok;
+    };
     const approvedAt = approval.decidedAt ?? approval.createdAt;
     const approvedBy = String(approval.decidedBy ?? "owner");
     if (c.channel === "google_search_ad") {
@@ -627,20 +671,24 @@ export const executeCampaignWrite = internalAction({
         } as never);
         await ctx.runMutation(internal.ads.recordCampaignResult, { campaignId, action, status: res.status, newStatus: res.status === "verified" ? "created_paused" : res.status === "uncertain" ? "uncertain" : undefined, externalId: res.externalId, summary: res.status === "verified" ? "Created in Google Ads, paused, and confirmed." : (res.providerMessage ?? "Google Ads didn't accept the campaign."), approvalId });
       } else {
+        const checkedAt = Date.now();
+        if (!await authorizeActivation(await readGoogleActivation({ ...auth, campaignId: c.externalId ?? "" }), checkedAt)) return;
         const res = await setGoogleStatus({ ...auth, campaignId: c.externalId ?? "", status: "ENABLED", approval: { kind: GOOGLE_SET_STATUS, targetId: c.externalId ?? "", value: "ENABLED", approvedBy, approvedAt } });
         await ctx.runMutation(internal.ads.recordCampaignResult, { campaignId, action, status: res.status, newStatus: res.status === "verified" ? "active" : res.status === "uncertain" ? "uncertain" : undefined, summary: res.status === "verified" ? "Started in Google Ads and confirmed." : (res.providerMessage ?? "Google Ads didn't start the campaign."), approvalId });
       }
     } else {
       const call = { accessToken: creds.accessToken };
-      const account = await getAccountSpendCapUsage({ ...call, adAccountId: creds.accountId });
-      if (!account.ok || account.data.currency !== c.currency.toUpperCase()) {
-        await ctx.runMutation(internal.ads.recordCampaignResult, { campaignId, action, status: "failed", summary: "The Meta ad account currency could not be confirmed as matching the approved campaign. Check the selected account before approving again.", approvalId });
-        return;
-      }
       if (action === "create_paused") {
+        const account = await getAccountSpendCapUsage({ ...call, adAccountId: creds.accountId });
+        if (!account.ok || account.data.currency !== c.currency.toUpperCase()) {
+          await ctx.runMutation(internal.ads.recordCampaignResult, { campaignId, action, status: "failed", summary: "The Meta ad account currency could not be confirmed as matching the approved campaign. Check the selected account before approving again.", approvalId });
+          return;
+        }
         const res = await createMetaPaused({ ...call, adAccountId: creds.accountId, draft: { name: approval.campaignProviderName!, objective: "OUTCOME_TRAFFIC", specialAdCategories: [], spendCapMinor: c.budgetEnvelopeMinor, maxSpendCapMinor: c.budgetEnvelopeMinor } });
         await ctx.runMutation(internal.ads.recordCampaignResult, { campaignId, action, status: res.status, newStatus: res.status === "verified" ? "created_paused" : res.status === "uncertain" ? "uncertain" : undefined, externalId: res.externalId, summary: res.status === "verified" ? "Created in Meta, paused, with a lifetime spend cap." : (res.providerMessage ?? "Meta didn't accept the campaign."), approvalId });
       } else {
+        const checkedAt = Date.now();
+        if (!await authorizeActivation(await readMetaActivation({ ...call, adAccountId: creds.accountId, campaignId: c.externalId ?? "" }), checkedAt)) return;
         const res = await setMetaStatus({ ...call, campaignId: c.externalId ?? "", status: "ACTIVE", approval: { kind: SET_META_CAMPAIGN_STATUS_ACTION, targetId: c.externalId ?? "", value: "ACTIVE", approvedBy, approvedAt } });
         await ctx.runMutation(internal.ads.recordCampaignResult, { campaignId, action, status: res.status, newStatus: res.status === "verified" ? "active" : res.status === "uncertain" ? "uncertain" : undefined, summary: res.status === "verified" ? "Started in Meta and confirmed." : (res.providerMessage ?? "Meta didn't start the campaign."), approvalId });
       }

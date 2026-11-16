@@ -30,6 +30,7 @@ test("campaign approval, cancellation and interrupted-write states @mobile", asy
   const base = { orgId: org._id, channel: "meta_ad", status: "needs_approval", dailyBudgetMinor: 1000, budgetEnvelopeMinor: 10000, currency: "USD", startDate: "2026-11-17", endDate: "2026-11-26", targetCostPerConversionMinor: 2000, reviewAfterDays: 7, stopRules: [], connectionId: connection._id, createdAt: now, updatedAt: now };
   await append("campaigns", [
     { ...base, name: "Ready fixture" }, { ...base, name: "Queued fixture" },
+    { ...base, name: "Blocked start fixture", status: "created_paused", externalId: "demo_blocked" },
     { ...base, name: "Interrupted fixture" }, { ...base, name: "Queued start fixture", status: "created_paused", externalId: "demo_existing" },
   ]);
   const campaigns = (await rows("campaigns")).filter(r => r.orgId === org._id);
@@ -38,13 +39,16 @@ test("campaign approval, cancellation and interrupted-write states @mobile", asy
     const scope = campaignApprovalScope(c as unknown as Parameters<typeof campaignApprovalScope>[0], "demo_account");
     const contentHash = await sha256Hex(canonicalJson({ name: String(c.name), channel: "meta_ad", action, stopRules: [] }));
     const binding = { orgId: String(org._id), subjectType: "campaign_activation", subjectId: String(c._id), actionKind: action, contentHash, scope, policyVersion: 1, expiresAt: now + 86_400_000 };
-    await append("approvals", [{ ...binding, title: String(c.name), costEstimateMicros: 0, approvalHash: await approvalHash(binding), status: "approved", decidedBy: member.userId, decidedAt: now, createdAt: now, ...(c.name === "Interrupted fixture" ? { executionStartedAt: now - 6 * 60_000 } : {}) }]);
+    await append("approvals", [{ ...binding, title: String(c.name), costEstimateMicros: 0, approvalHash: await approvalHash(binding), status: "approved", decidedBy: member.userId, decidedAt: now, createdAt: now, ...(c.name === "Interrupted fixture" ? { executionStartedAt: now - 6 * 60_000 } : {}), ...(c.name === "Blocked start fixture" ? { status: "invalidated", executionStartedAt: now - 1000, executionFinishedAt: now, executionOutcome: "failed", invalidatedReason: "The Meta campaign spend cap differs from the approved total. ClimbOS has not changed it." } : {}) }]);
   }
   const errors: string[] = [];
   page.on("pageerror", e => errors.push(e.message));
   await page.goto(`/app/${slug}/content?tab=ads`);
   await page.getByRole("tab", { name: "Ads", exact: true }).click();
   const card = (name: string) => page.getByRole("article").filter({ has: page.getByRole("heading", { name, exact: true }) });
+  await expect(card("Blocked start fixture").getByText("Last request did not complete", { exact: true })).toBeVisible();
+  await expect(card("Blocked start fixture").getByText(/spend cap differs from the approved total/)).toBeVisible();
+  await expect(card("Blocked start fixture").getByRole("button", { name: "Start", exact: true })).toBeEnabled();
   await expect(card("Queued fixture").getByText("Approval queued", { exact: true })).toBeVisible();
   await expect(card("Queued fixture").getByText("Approved, queued", { exact: true })).toBeVisible();
   await expect(card("Queued fixture").getByRole("button", { name: "Create paused", exact: true })).toBeDisabled();
@@ -73,6 +77,8 @@ test("campaign approval, cancellation and interrupted-write states @mobile", asy
   await page.getByRole("alertdialog").getByRole("button", { name: "Create paused", exact: true }).click();
   await expect(card("Ready fixture").getByRole("button", { name: "Start", exact: true })).toBeEnabled();
   await card("Ready fixture").getByRole("button", { name: "Start", exact: true }).click();
+  await expect(page.getByRole("alertdialog").getByText(/checks the current provider account and budget/)).toBeVisible();
+  await expect(page.getByRole("alertdialog").getByText(/Check ad-set schedules/)).toBeVisible();
   await page.getByRole("alertdialog").getByRole("button", { name: "Start at $10.00/day", exact: true }).click();
   await expect(card("Ready fixture").getByText("Running", { exact: true })).toBeVisible();
   const receipts = (await rows("actionReceipts")).filter(r => r.orgId === org._id);

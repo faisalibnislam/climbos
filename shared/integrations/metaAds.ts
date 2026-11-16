@@ -5,6 +5,7 @@
  */
 
 import { asNumber, asString, isRecord, reportedNumber } from "./http";
+import type { CampaignActivationObservation } from "../policy/campaignActivation";
 import { graphCollect, graphGet, graphPost, metaReadFailure, metaWriteFailure, type GraphCall } from "./metaGraph";
 import { GRAPH_BASE } from "./registry";
 import { approvalError, type ApprovedAction, type PaginationResult, type ReadResult, type ReconcileResult, type WriteResult } from "./types";
@@ -112,6 +113,24 @@ export async function getCampaign(call: GraphCall & { campaignId: string }): Pro
   const out = await graphGet(call, url);
   if (out.kind !== "ok") return metaReadFailure(out);
   return { ok: true, data: parseCampaign(isRecord(out.data) ? out.data : {}) };
+}
+
+/** Separate from status-only recovery: exact account identity and unrounded campaign cap. */
+export async function getCampaignActivationSettings(call: GraphCall & { campaignId: string; adAccountId: string }): Promise<ReadResult<CampaignActivationObservation>> {
+  if (!/^\d+$/.test(call.campaignId)) return { ok: false, providerMessage: "Invalid campaign id", retryable: false };
+  const url = new URL(`${GRAPH_BASE}/${call.campaignId}`);
+  url.searchParams.set("fields", "id,account_id,status,objective,spend_cap");
+  const out = await graphGet(call, url);
+  if (out.kind !== "ok") return metaReadFailure(out);
+  const account = await getAccountSpendCapUsage(call);
+  if (!account.ok) return account;
+  const row = isRecord(out.data) ? out.data : {};
+  return { ok: true, data: {
+    provider: "meta_ads", accountId: asString(row.account_id) ?? "", campaignId: asString(row.id) ?? "",
+    currency: account.data.currency, timeZone: account.data.timeZone ?? "",
+    status: asString(row.status) ?? "", kind: asString(row.objective) ?? "",
+    budgetAmount: asString(row.spend_cap) ?? (Number.isSafeInteger(row.spend_cap) ? String(row.spend_cap) : ""),
+  } };
 }
 
 export async function reconcileCampaignByName(call: GraphCall & { adAccountId: string; name: string }): Promise<ReconcileResult<MetaCampaignState>> {

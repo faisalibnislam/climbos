@@ -1,3 +1,9 @@
+## Local update — 16 November 2026: verify provider settings before activation
+
+Confirmed the existing start path validated local approval but did not read current remote budget/settings. Added bounded Google and Meta preflight reads using existing adapters, deterministic exact-money/date/account comparisons, fresh persisted observation evidence and a final one-use dispatch check that revalidates current authorization after the read. The campaign card now displays the latest failed-request reason; the start dialog describes what is checked and what still needs manual review. Failed preflight creates no provider write and does not manufacture an uncertain remote outcome.
+
+Verification: 283 tests across 11 relevant files, desktop/mobile owner-flow checks, app/Convex typecheck and changed-file lint. The optional observation validator's API declaration was generated through the established local sync workflow. See [Verification](../Verification.md) for exact commands, current primary references and limits. No live ads or hosted deployments were changed. Child-ad/targeting/destination verification, Meta ad-set schedule enforcement, provider-side races, live eligibility and the broader 410-item audit remain open.
+
 # Growth engine implementation ledger
 
 ## Local update — 16 November 2026: read-only recovery of interrupted campaign writes

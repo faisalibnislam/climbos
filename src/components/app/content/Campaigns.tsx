@@ -173,6 +173,7 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
         {c.recoveryMessage ? <p className="text-sm text-ink-2">{c.recoveryMessage}{c.recoveryCheckedAt ? ` Checked ${new Date(c.recoveryCheckedAt).toLocaleString()} (your browser time).` : ""}</p> : null}
       </div> : null}
       <H className="heading-card break-words">{c.name}</H>
+      {c.lastWriteProblem ? <Callout tone="warning" title="Last request did not complete">{c.lastWriteProblem}</Callout> : null}
       {c.budgetReviewReason ? <Callout tone="warning" title="Review the saved budget">{c.budgetReviewReason} {c.externalId ? "For an existing ad, check its current amounts in the ad account; ClimbOS has not changed them." : "Use Don't create to cancel this preparation, then enter the intended amounts in a new campaign."}</Callout> : null}
       <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
         <div>
@@ -303,6 +304,11 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
                 onConfirm={() => run("activate", "Start request sent.")}
               >
                 {facts}
+                <p className="mt-3 text-sm text-ink-3">
+                  Before starting, ClimbOS checks the current provider account and budget against this approval.
+                  {c.channel === "google_search_ad" ? " Google campaign dates and budget sharing must also match." : " Check ad-set schedules, daily delivery budgets, audiences and creative in Meta before approving; this check only verifies the campaign account, objective and total cap."}
+                  {" Changed or unknown settings block the start. This check does not lock provider settings against later edits."}
+                </p>
                 <p className="mt-3 text-sm text-ink-3">
                   Spend is billed by {platform}, not ClimbOS.
                   {isDemo ? " Demo: simulated, no money spent." : ""}

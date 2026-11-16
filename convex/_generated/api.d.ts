@@ -84,6 +84,7 @@ import type * as lib_autopilot from "../lib/autopilot.js";
 import type * as lib_brandConsistency from "../lib/brandConsistency.js";
 import type * as lib_businessModelEvidence from "../lib/businessModelEvidence.js";
 import type * as lib_businessModelTests from "../lib/businessModelTests.js";
+import type * as lib_campaignActivation from "../lib/campaignActivation.js";
 import type * as lib_cards from "../lib/cards.js";
 import type * as lib_claimCheck from "../lib/claimCheck.js";
 import type * as lib_climbConfig from "../lib/climbConfig.js";
@@ -250,6 +251,7 @@ declare const fullApi: ApiFromModules<{
   "lib/brandConsistency": typeof lib_brandConsistency;
   "lib/businessModelEvidence": typeof lib_businessModelEvidence;
   "lib/businessModelTests": typeof lib_businessModelTests;
+  "lib/campaignActivation": typeof lib_campaignActivation;
   "lib/cards": typeof lib_cards;
   "lib/claimCheck": typeof lib_claimCheck;
   "lib/climbConfig": typeof lib_climbConfig;

@@ -7,6 +7,7 @@
  */
 
 import { currencyExponent, microsToMinor, minorToMicros } from "./currency";
+import type { CampaignActivationObservation } from "../policy/campaignActivation";
 import { asArray, asString, collectPages, isRecord, readFailure, reportedNumber, requestJson, writeFailure } from "./http";
 import { GOOGLE_ADS_BASE } from "./registry";
 import { approvalError, type AdapterOptions, type ApprovedAction, type PaginationResult, type ReadResult, type ReconcileResult, type WriteResult } from "./types";
@@ -204,6 +205,24 @@ export async function getCampaignState(auth: GoogleAdsAuth & { campaignId: strin
   if (res.data.truncated || res.data.items.length > 1) return { ok: false, retryable: false, providerMessage: "Campaign lookup was incomplete or ambiguous." };
   const first = res.data.items[0];
   return { ok: true, data: first ? parseCampaignState(first) : null };
+}
+
+/** Read the exact campaign's current budget and account-local schedule before enabling it. */
+export async function getCampaignActivationSettings(auth: GoogleAdsAuth & { campaignId: string }): Promise<ReadResult<CampaignActivationObservation>> {
+  if (!/^\d+$/.test(auth.campaignId)) return { ok: false, providerMessage: "Invalid campaign id", retryable: false };
+  const res = await searchGaql({ ...auth, maxPages: 1, query: `SELECT customer.id, customer.currency_code, customer.time_zone, campaign.id, campaign.status, campaign.advertising_channel_type, campaign.start_date_time, campaign.end_date_time, campaign_budget.amount_micros, campaign_budget.period, campaign_budget.explicitly_shared FROM campaign WHERE campaign.id = ${auth.campaignId}` });
+  if (!res.ok) return res;
+  if (res.data.truncated || res.data.items.length !== 1) return { ok: false, retryable: false, providerMessage: "Campaign settings were missing, incomplete or ambiguous." };
+  const row = res.data.items[0];
+  const c = sub(row, "campaign"), customer = sub(row, "customer"), budget = sub(row, "campaignBudget");
+  return { ok: true, data: {
+    provider: "google_ads", accountId: asString(customer.id) ?? "", campaignId: asString(c.id) ?? "",
+    currency: asString(customer.currencyCode) ?? "", timeZone: asString(customer.timeZone) ?? "",
+    status: asString(c.status) ?? "", kind: asString(c.advertisingChannelType) ?? "",
+    budgetAmount: asString(budget.amountMicros) ?? (Number.isSafeInteger(budget.amountMicros) ? String(budget.amountMicros) : ""),
+    budgetPeriod: asString(budget.period), budgetShared: typeof budget.explicitlyShared === "boolean" ? budget.explicitlyShared : undefined,
+    startDateTime: asString(c.startDateTime), endDateTime: asString(c.endDateTime),
+  } };
 }
 
 /** Require one exact match in a complete result. Callers must provide an operation-specific name. */

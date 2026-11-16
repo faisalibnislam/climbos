@@ -5,6 +5,7 @@ import { renderChecksV } from "./lib/renderChecks";
 import { pageSampleV } from "./lib/pageSamples";
 import { v } from "convex/values";
 import { postVisualValidator } from "./lib/postVisual";
+import { campaignActivationObservationV } from "./lib/campaignActivation";
 
 const experimentAnalysisV = v.object({
   n: v.number(),
@@ -4124,6 +4125,9 @@ export default defineSchema({
     /** Frozen request identity and result for read-only campaign recovery; never a retry permission. */
     campaignProviderName: v.optional(v.string()),
     campaignWriteProvider: v.optional(v.union(v.literal("google_ads"), v.literal("meta_ads"))),
+    /** Read-before-start evidence and one-use dispatch claim; absent on older attempts. */
+    campaignActivationCheck: v.optional(v.object({ checkedAt: v.number(), observation: campaignActivationObservationV })),
+    campaignActivationDispatchedAt: v.optional(v.number()),
     executionExternalId: v.optional(v.string()),
     executionOutcome: v.optional(v.union(v.literal("verified"), v.literal("failed"), v.literal("uncertain"), v.literal("fixture_verified"))),
     executionReconciledAt: v.optional(v.number()),
