@@ -162,12 +162,15 @@ const ResultsOutputSchema = z.object({
   attribution: z.object({
     lastTouch: AttributionViewSchema.nullable(),
     firstTouch: AttributionViewSchema.nullable(),
+    issues: z.array(z.string()).optional(),
     note: z.string(),
   }),
+  platformClaimsNote: z.string().optional(),
   platformClaims: z.object({
     platforms: z.array(z.object({
       platform: z.string(),
       label: z.literal("platform_reported"),
+      origin: z.enum(["owner_reported", "platform_reported", "unknown", "mixed"]).optional(),
       conversions: z.number(),
       conversionValueMinorByCurrency: z.record(z.string(), z.number()),
       firstDate: z.string().nullable(),

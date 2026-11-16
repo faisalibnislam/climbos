@@ -169,14 +169,14 @@ export function attribute(
     resolved.set(e, key !== null && channelByOrder.has(key) ? (channelByOrder.get(key) ?? null) : channelFor(e));
   }
 
-  const byCurrency: Record<string, CurrencyAttribution> = {};
-  const totals: Record<string, number> = {};
+  const byCurrency: Record<string, CurrencyAttribution> = Object.create(null);
+  const totals: Record<string, number> = Object.create(null);
   for (const e of unique) {
     const net = netMinor(e);
     totals[e.currency] = (totals[e.currency] ?? 0) + net;
     const bucket = (byCurrency[e.currency] ??= {
       currency: e.currency,
-      channels: {},
+      channels: Object.create(null),
       unattributed: { ...emptyTotals(), eventIds: [] },
       attributedNetMinor: 0,
       totalNetBillingMinor: 0,
@@ -220,7 +220,7 @@ export function attribute(
     const rateFor = (cur: string): number | undefined => (cur === fx.reportingCurrency ? 1 : fx.rates[cur]);
     const converted: string[] = [];
     const unconverted: string[] = [];
-    const channels: Record<string, number> = {};
+    const channels: Record<string, number> = Object.create(null);
     let unattributedMinor = 0;
     let totalNetMinor = 0;
     for (const cur of currencies) {

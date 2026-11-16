@@ -26,15 +26,10 @@ export function channelLabel(channel: string): string {
   return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : "Unknown";
 }
 
-/** Heuristic: channels credited from paid-ad tracked links ("google ads", "cpc", "paid social"…). */
-function isAdChannel(channel: string): boolean {
-  return /\bads?\b|cpc|ppc|paid/i.test(channel);
-}
-
 function ReconcileBadge({ reconciled }: { reconciled: boolean }) {
   return reconciled ? (
     <Badge tone="green" icon={<CircleCheck />}>
-      Matches billing
+      Rows reconcile
     </Badge>
   ) : (
     <Badge tone="red" icon={<CircleAlert />}>
@@ -62,7 +57,7 @@ function AttributionTable({ group, model }: { group: Attr["byCurrency"][number];
             <tr>
               <Th>Channel</Th>
               <Th numeric>Net revenue</Th>
-              <Th numeric>Customers</Th>
+              <Th numeric>Payment events</Th>
               <Th numeric>Share</Th>
             </tr>
           </THead>
@@ -92,7 +87,7 @@ function AttributionTable({ group, model }: { group: Attr["byCurrency"][number];
           <tfoot className="border-t border-line bg-surface-2 font-semibold">
             <tr>
               <th scope="row" className={rowHeader}>
-                Billing total
+                Imported billing total
               </th>
               <Td numeric>{fmt(total)}</Td>
               <Td numeric>{formatNumber(group.channels.reduce((s, c) => s + c.conversions, 0) + group.unattributed.conversions)}</Td>
@@ -115,7 +110,7 @@ export function AttributionSection({ slug, data }: { slug: string; data: Overvie
     <section aria-labelledby="attribution-heading" className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <h2 id="attribution-heading" className="heading-section flex flex-wrap items-center gap-2">
-          <Workflow aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> Revenue by channel <ValueKind kind="attributed" />
+          <Workflow aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> Revenue by channel {attr ? <ValueKind kind="attributed" /> : null}
         </h2>
         <Segmented
           label="Attribution model"
@@ -128,8 +123,8 @@ export function AttributionSection({ slug, data }: { slug: string; data: Overvie
         />
       </div>
       {!attr ? (
-        <Callout tone="info" title="No billing revenue yet">
-          <Link href={`/app/${slug}/connections`}>Connect billing data</Link>
+        <Callout tone="info" title={data.attribution.issues?.length ? "Channel credit unavailable" : "No billing events recorded in this period"}>
+          {data.attribution.issues?.length ? data.attribution.issues.map(issue => <p key={issue}>{issue}</p>) : <Link href={`/app/${slug}/connections`}>Check billing data</Link>}
         </Callout>
       ) : (
         <div className="flex flex-col gap-5">
@@ -138,8 +133,9 @@ export function AttributionSection({ slug, data }: { slug: string; data: Overvie
           ))}
         </div>
       )}
+      <p className="text-xs text-ink-3">Payment events include renewals and repeat orders; they are not unique customers. Rows reconcile only against the imported records, not independently verified billing totals.</p>
       <Definition summary="How credit works">
-        <p>{model === "last_touch" ? "Last touch: last tracked channel before purchase." : "First touch: first tracked channel that brought them in."}</p>
+        <p>{model === "last_touch" ? "Last touch: latest recorded channel in the 30-day lookback before payment." : "First touch: earliest recorded channel in the 30-day lookback before payment."}</p>
         <Scannable text={data.attribution.note} max={4} tone="muted" className="mt-2" />
       </Definition>
     </section>
@@ -151,19 +147,17 @@ const PLATFORM_LABELS: Record<string, string> = { google_ads: "Google Ads", meta
 export function PlatformClaimsSection({ slug, data }: { slug: string; data: Overview }) {
   const claims = data.platformClaims;
   const currency = data.currency;
-  const group = data.attribution.lastTouch?.byCurrency.find((g) => g.currency === currency);
-  const adRevenue = group ? group.channels.filter((c) => isAdChannel(c.channel)).reduce((s, c) => s + c.netRevenueMinor, 0) : 0;
-  const spend = claims?.adSpendMinor ?? 0;
-  const roas = spend > 0 && adRevenue > 0 ? adRevenue / spend : null;
+  const spend = claims?.adSpendMinor ?? null;
 
   return (
     <section aria-labelledby="claims-heading" className="flex flex-col gap-4 rounded-xl border border-dashed border-line-strong bg-surface-2/60 p-5">
       <h2 id="claims-heading" className="heading-section flex flex-wrap items-center gap-2">
-        <Crosshair aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> What ad platforms say <ValueKind kind="platform_reported" />
+        <Crosshair aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> What ad platforms say <Badge>Reported figures</Badge>
       </h2>
+      <p className="text-xs text-ink-3">{data.platformClaimsNote}</p>
       {!claims ? (
         <p className="text-sm text-ink-2">
-          No ad data. <Link className={buttonClasses({ variant: "link" })} href={`/app/${slug}/connections`}>Connect Google or Meta Ads</Link>
+          Reported ad totals are unavailable. <Link className={buttonClasses({ variant: "link" })} href={`/app/${slug}/connections`}>Connect Google or Meta Ads</Link>
         </p>
       ) : (
         <>
@@ -177,6 +171,7 @@ export function PlatformClaimsSection({ slug, data }: { slug: string; data: Over
                   <SocialIcon network={p.platform === "google_ads" ? "google" : p.platform === "meta_ads" ? "facebook" : p.platform} size="sm" />
                   {PLATFORM_LABELS[p.platform] ?? p.platform}
                 </h3>
+                <p className="text-xs text-ink-3">{p.origin === "owner_reported" ? "Owner-reported import" : p.origin === "platform_reported" ? "Platform-reported observation" : p.origin === "mixed" ? "Mixed record origins; check the sources" : "Record origin unknown"}</p>
                 <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-ui">
                   <dt className="text-ink-3">Conversions</dt>
                   <dd className="text-right font-medium tabular-nums text-ink">{formatNumber(p.conversions)}</dd>
@@ -195,27 +190,17 @@ export function PlatformClaimsSection({ slug, data }: { slug: string; data: Over
             ))}
           </ul>
           <div className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-4">
-            <h3 className="heading-card">Return on ad spend</h3>
+            <h3 className="heading-card">Recorded ad spend</h3>
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-ui">
               <dt className="text-ink-3">Ad spend ({currency})</dt>
-              <dd className="text-right font-medium tabular-nums text-ink">{minorToDisplay(spend, currency)}</dd>
-              <dt className="text-ink-3">Revenue credited to ads</dt>
-              <dd className="text-right font-medium tabular-nums text-ink">{minorToDisplay(adRevenue, currency)}</dd>
-              <dt className="text-ink-3">ROAS</dt>
-              <dd className="text-right font-semibold tabular-nums text-ink">{roas !== null ? `${roas.toFixed(2)}×` : "—"}</dd>
+              <dd className="text-right font-medium tabular-nums text-ink">{spend === null ? "Unknown" : minorToDisplay(spend, currency)}</dd>
+              <dt className="text-ink-3">Return on ad spend</dt>
+              <dd className="text-right font-semibold text-ink">Unknown</dd>
             </dl>
-            {roas === null ? (
-              <p className="text-xs text-ink-3">
-                {spend <= 0 ? "No ad spend this period." : "No revenue credited to ads yet. Add UTM tags."}
-              </p>
-            ) : null}
+            <p className="text-xs text-ink-3">Revenue and spend need matching channels, accounts, dates and definitions. Channel-name guesses cannot establish that match. Missing spend is not zero.</p>
             <Definition summary="ROAS vs ROI">
-              <p>
-                <strong className="font-semibold">ROAS</strong> = billing revenue credited to ads (last touch) ÷ ad spend.
-              </p>
-              <p className="mt-1">
-                <strong className="font-semibold">ROI</strong> also subtracts your other costs, which ClimbOS doesn&apos;t know, so it isn&apos;t shown. Neither proves cause.
-              </p>
+              <p><strong className="font-semibold">ROAS</strong> compares attributed revenue with matching ad spend. It does not subtract other costs or prove incremental sales.</p>
+              <p className="mt-1"><strong className="font-semibold">ROI</strong> also requires the relevant costs. Neither can be established from unmatched totals.</p>
             </Definition>
           </div>
         </>

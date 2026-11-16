@@ -8,6 +8,8 @@ Owners can now complete experiment setup in the plan: 2–4 versions, decision o
 
 Weekly and shared client reports now explain their recorded activity counts and preserve unavailable measures as unknown in the app, assistant and email templates. Publication confirmations, mailbox sends, reply messages, confirmed bookings and owner-recorded won deals are distinct from customers or revenue. Period reach is unavailable from snapshot-only evidence. Tracked-link counts cover only complete UTC days inside the period; partial boundaries, estimates and read limits restrict comparisons. Reports use workspace timezone and mark shared demo activity as synthetic. Historical reports can change with source corrections; they are not immutable or proof of causal growth. See [Verification](Verification.md).
 
+Attribution uses the displayed completed local dates and a bounded recorded-touch lookback. Invalid, conflicting, ambiguous legacy or truncated evidence produces an unavailable explanation. Its counts are payment events, not unique customers, and matching row totals does not independently verify billing. Ad observations retain their record origin and missing currency spend; Results does not calculate ROAS from guessed channel-name matches. Matching revenue/spend scope and complete import coverage remain unknown. See [Verification](Verification.md).
+
 ## Availability labels
 
 - **Built:** implemented in the application. Test evidence is reported separately in [Verification](Verification.md); this label alone does not mean every current check has passed.

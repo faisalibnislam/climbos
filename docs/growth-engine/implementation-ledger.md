@@ -2,6 +2,10 @@
 
 Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs as written there. Baseline: `404c466`. Branch: `growth-engine-v2`.
 
+## Local update — 16 November 2026: attribution evidence and payment definitions
+
+Results and `get_results` now retain attribution evidence failures, completed local reporting dates, bounded touch history and real-versus-fixture distinctions. Conflicting billing identities, unsafe values and capped reads withhold channel credit. The UI distinguishes payment events from customers and arithmetic reconciliation from verified billing. Platform-date records retain origin and missing-spend information; the unsupported channel-name-based ROAS card now explains that a matched revenue/spend scope is unavailable. Existing deterministic economics is unchanged. Verification: 81 focused regression/permission tests, typecheck/lint and two desktop/mobile browser checks. Separate first-payer history scaling, cross-window refund matching, full import coverage and qualified ROAS remain open; no external action or deployment. See [Verification](../Verification.md).
+
 ## Local update — 16 November 2026: weekly/shared report evidence
 
 Weekly reports, shared client views, assistant output and email/markdown templates now retain unknown totals and their evidence limits. Event-time indexes replace mutable status/edit timestamps and campaign-age windows; period reach is no longer inferred from post snapshots, and tracked-link UTC-day counts are not blended with platform clicks. Sentinel reads withhold truncated totals, duplicate/invalid clicks and invalid usage cannot become measured counts, and estimates cannot support period changes. Two-period reads are bounded together; large-history aggregation remains future work. Workspace timezone and demo labels survive sharing. Focused verification: 41 regression/permission tests, typecheck, changed-file ESLint and two desktop/mobile browser checks; screenshots inspected. No external action, provider call or hosted deployment. Counts remain source-scoped, historical CRM state is mutable, and business impact is unproven. See [Verification](../Verification.md).

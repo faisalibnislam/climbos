@@ -2,11 +2,12 @@ import { v } from "convex/values";
 import { featureAllowed } from "./lib/access";
 import { getLiveConfig } from "./lib/config";
 import { attribute, computeCohorts, OVERLAP_WARNING, summarizePlatformClaims } from "../shared/attribution";
+import { zonedTime } from "../shared/autopilot";
 import type { RevenueEvent, Touch } from "../shared/attribution/types";
 import { addDays, recentForecastHistory, metricHealth, runForecast, type DailyPoint, type MetricHealthAlert, scoreForecast, isValidDateString, daysBetween } from "../shared/forecasting";
 import { formatMoney, majorToMinor, minorToMajor } from "../shared/economics/currency";
 import { summarizeAiReferralRows } from "../shared/integrations/ga4";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { audit } from "./lib/audit";
 import { appError, requireOrgAccess } from "./lib/tenancy";
@@ -431,57 +432,64 @@ export const overview = query({
         : "No identified payments recorded in this period; the customer count is unknown.";
     }
 
-    // Attribution: billing revenue is the truth; ad-platform claims shown separately.
-    const startMs = Date.parse(`${from}T00:00:00Z`);
-    const revenueRows = await ctx.db
-      .query("revenueEvents")
-      .withIndex("by_org_occurred", (q) => q.eq("orgId", org._id).gte("occurredAt", startMs))
-      .take(5000);
-    const events: RevenueEvent[] = revenueRows.map((r) => ({
-      id: r._id,
-      sourceEventId: r.sourceEventId,
-      source: r.source,
-      occurredAt: r.occurredAt,
-      customerRef: r.customerRef,
-      orderRef: r.orderRef,
-      utmSource: r.utmSource,
-      utmMedium: r.utmMedium,
-      utmCampaign: r.utmCampaign,
-      currency: r.currency,
-      amountMinor: r.amountMinor,
-      refundedMinor: r.refundedMinor,
-      kind: r.kind,
-    }));
-    const customers = [...new Set(revenueRows.map((r) => r.customerRef).filter((c): c is string => Boolean(c)))].slice(0, 2000);
-    const touches: Touch[] = [];
-    for (const c of customers) {
-      const ts = await ctx.db
-        .query("touches")
-        .withIndex("by_org_customer", (q) => q.eq("orgId", org._id).eq("customerRef", c))
-        .take(20);
-      for (const t of ts) touches.push({ customerRef: t.customerRef, source: t.source, occurredAt: t.occurredAt, channel: t.channel, utmSource: t.utmSource, utmMedium: t.utmMedium, utmCampaign: t.utmCampaign });
+    // Use the same completed local dates as Results, with bounded evidence reads.
+    const midnight = (date: string) => {
+      const [year, month, day] = date.split("-").map(Number);
+      return zonedTime(year, month - 1, day, 0, 0, org.timezone);
+    };
+    const startMs = midnight(from);
+    const endMs = midnight(today);
+    const evidenceLimit = 2000;
+    const [rawRevenue, rawTouches] = await Promise.all([
+      ctx.db.query("revenueEvents").withIndex("by_org_occurred", q => q.eq("orgId", org._id).gte("occurredAt", startMs).lt("occurredAt", endMs)).take(evidenceLimit + 1),
+      ctx.db.query("touches").withIndex("by_org_occurred", q => q.eq("orgId", org._id).gte("occurredAt", startMs - 30 * DAY).lt("occurredAt", endMs)).take(evidenceLimit + 1),
+    ]);
+    const revenueRows = rawRevenue.filter(r => !r.isFixture || org.kind === "demo");
+    const customers = new Set(revenueRows.map(r => r.customerRef).filter(Boolean));
+    const touches: Touch[] = rawTouches.filter(r => (!r.isFixture || org.kind === "demo") && customers.has(r.customerRef));
+    const events: RevenueEvent[] = revenueRows.map(r => ({ id: r._id, sourceEventId: r.sourceEventId, source: r.source, occurredAt: r.occurredAt, customerRef: r.customerRef, orderRef: r.orderRef, utmSource: r.utmSource, utmMedium: r.utmMedium, utmCampaign: r.utmCampaign, currency: r.currency, amountMinor: r.amountMinor, refundedMinor: r.refundedMinor, kind: r.kind }));
+    const attributionIssues: string[] = [];
+    if (rawRevenue.length > evidenceLimit || rawTouches.length > evidenceLimit) attributionIssues.push("Channel credit is unavailable: the billing or touch-history read reached its 2,000-record limit. A truncated history cannot establish first or last touch.");
+    if (events.some(e => !Number.isSafeInteger(e.amountMinor) || !Number.isSafeInteger(e.refundedMinor) || e.refundedMinor < 0 || (e.kind !== "refund" && e.amountMinor < 0) || !/^[A-Z]{3}$/.test(e.currency) || !e.source || !e.sourceEventId)) attributionIssues.push("Channel credit is unavailable: billing amounts, currency or source identities need review.");
+    if (touches.some(t => !t.channel.trim())) attributionIssues.push("Channel credit is unavailable: a tracked touch has no channel.");
+    if (org.kind !== "demo" && touches.some(t => !t.source)) attributionIssues.push("Channel credit is unavailable: legacy touches lack the billing-source identity needed to match customers safely. Refresh the source mapping.");
+    const copies = new Map<string, string>();
+    for (const { id: _id, ...event } of events) {
+      const key = JSON.stringify([event.source, event.sourceEventId]);
+      const value = JSON.stringify(event);
+      if (copies.has(key) && copies.get(key) !== value) attributionIssues.push("Channel credit is unavailable: duplicate billing-event identities contain conflicting values.");
+      copies.set(key, value);
     }
-    const lastTouch = events.length ? attribute(events, touches, { model: "last_touch", lookbackDays: 30 }) : null;
-    const firstTouch = events.length ? attribute(events, touches, { model: "first_touch", lookbackDays: 30 }) : null;
+    let lastTouch = events.length && !attributionIssues.length ? attribute(events, touches, { model: "last_touch", lookbackDays: 30 }) : null;
+    let firstTouch = events.length && !attributionIssues.length ? attribute(events, touches, { model: "first_touch", lookbackDays: 30 }) : null;
+    if ((lastTouch && !lastTouch.reconciled) || (firstTouch && !firstTouch.reconciled)) {
+      attributionIssues.push("Channel credit is unavailable: the imported amounts cannot be reconciled safely.");
+      lastTouch = null; firstTouch = null;
+    }
 
-    const claimsRows = [];
+    const claimsRows: Doc<"platformClaims">[] = [];
+    const claimIssues: string[] = [];
     for (const platform of ["google_ads", "meta_ads"]) {
-      const rows = await ctx.db
-        .query("platformClaims")
-        .withIndex("by_org_platform_date", (q) => q.eq("orgId", org._id).eq("platform", platform).gte("date", from))
-        .take(400);
-      claimsRows.push(...rows);
+      const rows = await ctx.db.query("platformClaims").withIndex("by_org_platform_date", q => q.eq("orgId", org._id).eq("platform", platform).gte("date", from).lt("date", today)).take(401);
+      if (rows.length > 400) claimIssues.push(`${platform}: the 400-record read limit was reached.`);
+      claimsRows.push(...rows.filter(r => !r.isFixture || org.kind === "demo"));
     }
-    const claims = claimsRows.length
-      ? summarizePlatformClaims(claimsRows.map((c) => ({ platform: c.platform, date: c.date, conversions: c.conversions, conversionValueMinor: c.conversionValueMinor, currency: c.currency })))
-      : null;
+    const claimKeys = claimsRows.map(c => JSON.stringify([c.platform, c.date, c.currency]));
+    if (new Set(claimKeys).size !== claimKeys.length) claimIssues.push("Duplicate platform/day/currency records need reconciliation.");
+    if (claimsRows.some(c => !isValidDateString(c.date) || !/^[A-Z]{3}$/.test(c.currency) || !Number.isFinite(c.conversions) || c.conversions < 0 || !Number.isSafeInteger(c.conversionValueMinor) || !Number.isSafeInteger(c.spendMinor) || c.spendMinor < 0)) claimIssues.push("Invalid platform dates, counts, currencies or amounts need review.");
+    let claims = claimsRows.length && !claimIssues.length ? summarizePlatformClaims(claimsRows) : null;
     const adSpendByCurrency = claimsRows.reduce<Record<string, number>>((totals, claim) => {
-      if (claim.isFixture && org.kind !== "demo") return totals;
-      const currency = claim.currency.toUpperCase();
-      totals[currency] = (totals[currency] ?? 0) + claim.spendMinor;
+      if (/^[A-Z]{3}$/.test(claim.currency)) totals[claim.currency] = (totals[claim.currency] ?? 0) + claim.spendMinor;
       return totals;
     }, {});
-    const adSpendMinor = adSpendByCurrency[org.currency.toUpperCase()] ?? null;
+    if (Object.values(adSpendByCurrency).some(n => !Number.isSafeInteger(n)) || claims?.platforms.some(p => !Number.isFinite(p.conversions) || Object.values(p.conversionValueMinorByCurrency).some(n => !Number.isSafeInteger(n)))) {
+      claimIssues.push("Platform totals exceed the supported numeric range.");
+      claims = null;
+    }
+    const adSpendMinor = Object.hasOwn(adSpendByCurrency, org.currency.toUpperCase()) ? adSpendByCurrency[org.currency.toUpperCase()] : null;
+    const claimOrigins = [...new Set(claimsRows.map(c => c.spendOrigin ?? "unknown"))];
+    const platformClaimsNote = claimIssues.length ? `Reported ad totals unavailable. ${[...new Set(claimIssues)].join(" ")}`
+      : `Recorded platform-date observations only; missing days and complete account coverage are unknown. Reporting timezone and conversion definitions may differ from billing. Record provenance: ${claimOrigins.length ? claimOrigins.map(o => o.replaceAll("_", " ")).join(", ") : "unknown"}. Owner imports are not independently verified provider observations. No matched revenue/spend scope is established, so ROAS is unavailable here.`;
 
     const forecasts = await ctx.db
       .query("forecastRuns")
@@ -521,10 +529,15 @@ export const overview = query({
       attribution: {
         lastTouch: lastTouch ? summarizeAttribution(lastTouch) : null,
         firstTouch: firstTouch ? summarizeAttribution(firstTouch) : null,
-        note: "Billing revenue is the source of truth. Channel credit uses tracked links (UTM) within 30 days; revenue with no tracked source stays in “Unattributed”. Attribution shows association, not cause.",
+        issues: [...new Set(attributionIssues)],
+        note: "Channel credit describes imported billing events and recorded source-scoped touches in a 30-day lookback. Payment events include renewals and repeat orders, not unique customers. Matching totals is arithmetic reconciliation of these records, not independent verification or complete billing coverage. Refunds inherit a matching order only when that order is in this reporting window; otherwise credit follows the refund timestamp. Missing recorded touches remain unattributed; they do not prove no marketing influence. Attribution shows association, not cause.",
       },
+      platformClaimsNote,
       platformClaims: claims
-        ? { platforms: claims.platforms, warning: OVERLAP_WARNING, adSpendMinor, adSpendByCurrency }
+        ? { platforms: claims.platforms.map(p => {
+          const origins = [...new Set(claimsRows.filter(c => c.platform === p.platform).map(c => c.spendOrigin ?? "unknown"))];
+          return { ...p, origin: origins.length === 1 ? origins[0] : "mixed" };
+        }), warning: OVERLAP_WARNING, adSpendMinor, adSpendByCurrency }
         : null,
       forecasts: forecasts.map((f) => ({ id: f._id, metricKey: f.metricKey, status: f.status, horizonDays: f.horizonDays, createdAt: f.createdAt, isFixture: f.isFixture })),
       gaps,

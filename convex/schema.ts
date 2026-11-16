@@ -5465,7 +5465,8 @@ export default defineSchema({
     utmMedium: v.optional(v.string()),
     utmCampaign: v.optional(v.string()),
     isFixture: v.boolean(),
-  }).index("by_org_customer", ["orgId", "customerRef"]),
+  }).index("by_org_customer", ["orgId", "customerRef"])
+    .index("by_org_occurred", ["orgId", "occurredAt"]),
 
   platformClaims: defineTable({
     orgId: v.id("organizations"),
