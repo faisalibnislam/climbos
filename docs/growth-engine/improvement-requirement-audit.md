@@ -8,6 +8,8 @@
 
 ## Current revalidation — 16 November 2026
 
+Weekly correction follow-up: current/past-week entry, saved-value loading, stale report/version rejection, immutable correction history, legacy snapshot preservation and exact indexed correction lookup are now implemented. History is tenant-bound, paginated and included in export/deletion. A failing blind-overwrite regression preceded the repair. Summary read caps and trailing missing-week coverage remain open; history availability must not be presented as complete automatic learning. See the newest Verification entry for actual tests.
+
 Weekly-results follow-up traced owner entry → saved play results → deterministic actuals/cost checks → owner review and next-plan context. Explicit currency and precision, blank-input handling, changed-currency rejection and missing original forecasts are repaired and covered by 93 focused tests plus desktop/mobile checks. This is a scoped evidence-integrity repair, not completion of outcome learning: weekly correction history/revision protection, historical-week UI and bounded read coverage still need work. See the latest Verification entry.
 
 At the start of this pass, the inventory contained exactly 410 unique IDs, 1–410, with 126 distinct existing literal file/directory paths and 15 symbol/property references in its code-evidence column. The outdated `lintEmail` label has been corrected to the current `emailSpec` inline lint. This checks inventory integrity and code locations only; it does not verify the behavior of all 410 requirements. The original Downloads prompt remains absent, so this pass uses the retained requirement map and consolidated specification rather than claiming a fresh original-document comparison.

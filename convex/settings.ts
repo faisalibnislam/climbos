@@ -484,6 +484,8 @@ export const exportData = internalQuery({
     const platformPreparations = await ctx.db.query("platformPreparations").withIndex("by_org_kind", (q) => q.eq("orgId", orgId)).take(1000);
     const experiments = await ctx.db.query("experiments").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(1000);
     const businessModelTests = await ctx.db.query("businessModelTests").withIndex("by_org_created", q => q.eq("orgId", orgId)).order("desc").take(1001);
+    const weeklyReports = await ctx.db.query("playResults").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
+    const weeklyRevisions = await ctx.db.query("playResultRevisions").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
     const outcomeRevisions = await ctx.db.query("experimentOutcomeRevisions").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
     const brandPatterns = await ctx.db.query("brandPatternDecisions").withIndex("by_org_key_at", q => q.eq("orgId", orgId)).take(101);
     const strip = <T extends Record<string, unknown>>(rows: T[]) => rows.map(({ _creationTime: _c, ...r }) => r);
@@ -506,6 +508,10 @@ export const exportData = internalQuery({
         experiments: strip(experiments),
         businessModelTests: strip(businessModelTests.slice(0, 1000)),
         businessModelTestHistoryLimited: businessModelTests.length > 1000,
+        weeklyReports: strip(weeklyReports.slice(0, 1000)),
+        weeklyReportsLimited: weeklyReports.length > 1000,
+        weeklyReportRevisions: strip(weeklyRevisions.slice(0, 1000)),
+        weeklyReportHistoryLimited: weeklyRevisions.length > 1000,
         experimentOutcomeRevisions: strip(outcomeRevisions.slice(0, 1000)),
         experimentOutcomeHistoryLimited: outcomeRevisions.length > 1000,
         brandPatternDecisions: strip(brandPatterns.slice(0, 100)),
@@ -811,6 +817,7 @@ const PURGE_BY_ORG: { table: string; index: string }[] = [
   // Media, designs and drafts.
   { table: "designs", index: "by_org_updated" },
   { table: "playResults", index: "by_org" },
+  { table: "playResultRevisions", index: "by_org" },
   { table: "assets", index: "by_org_created" },
   { table: "reels", index: "by_org_created" },
   { table: "assetJobs", index: "by_org_created" },

@@ -7,6 +7,24 @@ import { v } from "convex/values";
 import { postVisualValidator } from "./lib/postVisual";
 import { campaignActivationObservationV } from "./lib/campaignActivation";
 
+const weeklyResultFields = {
+  reach: v.number(),
+  /** People passing each funnel step of the play's model, in order. */
+  steps: v.array(v.number()),
+  spendUsd: v.number(),
+  /** Whole-unit weekly spend uses this owner-confirmed currency; missing legacy currency is unknown. */
+  spendCurrency: v.optional(v.string()),
+  ownerHours: v.number(),
+  /** Optional weekly, owner-reported repeat-customer outcomes; money uses the business currency's minor unit. */
+  repeatCustomers: v.optional(v.number()),
+  retainedRevenueMinor: v.optional(v.number()),
+  retainedContributionMinor: v.optional(v.number()),
+  retentionCurrency: v.optional(v.string()),
+  enteredBy: v.id("users"),
+  updatedAt: v.number(),
+  stepNames: v.optional(v.array(v.string())),
+};
+
 const experimentAnalysisV = v.object({
   n: v.number(),
   executed: v.boolean(),
@@ -2264,23 +2282,26 @@ export default defineSchema({
     /** Stable play ID (REQ-LEARN-04); results follow it when the play is renamed. Older rows match by name. */
     playId: v.optional(v.string()),
     weekStart: v.number(),
-    reach: v.number(),
-    /** People passing each funnel step of the play's model, in order. */
-    steps: v.array(v.number()),
-    spendUsd: v.number(),
-    /** Whole-unit weekly spend uses this owner-confirmed currency; missing legacy currency is unknown. */
-    spendCurrency: v.optional(v.string()),
-    ownerHours: v.number(),
-    /** Optional weekly, owner-reported repeat-customer outcomes; money uses the business currency's minor unit. */
-    repeatCustomers: v.optional(v.number()),
-    retainedRevenueMinor: v.optional(v.number()),
-    retainedContributionMinor: v.optional(v.number()),
-    retentionCurrency: v.optional(v.string()),
-    enteredBy: v.id("users"),
-    updatedAt: v.number(),
+    ...weeklyResultFields,
+    revision: v.optional(v.number()),
   })
     .index("by_strategy", ["strategyId", "playName", "weekStart"])
+    .index("by_strategy_play_week", ["strategyId", "playId", "weekStart"])
     .index("by_org", ["orgId", "updatedAt"]),
+
+  /** Immutable versions of a weekly owner report. Corrections are not additional observations. */
+  playResultRevisions: defineTable({
+    orgId: v.id("organizations"),
+    resultId: v.id("playResults"),
+    strategyId: v.id("strategies"),
+    weekStart: v.number(),
+    playName: v.string(),
+    revision: v.number(),
+    kind: v.union(v.literal("recorded"), v.literal("correction"), v.literal("legacy_snapshot")),
+    snapshot: v.object(weeklyResultFields),
+    savedAt: v.number(),
+  }).index("by_org_result_revision", ["orgId", "resultId", "revision"])
+    .index("by_org", ["orgId"]),
 
   /**
    * Owner feedback on a plan's parts with a specific reason (cycle 2). Each

@@ -1,17 +1,14 @@
 "use client";
 
-import { useMutation } from "convex/react";
-import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { ChartLine, CircleAlert, CircleCheck, ClipboardPen, Clock, type LucideIcon } from "@/components/icons"
 import { useState } from "react";
-import { Badge, Button, Field, Input, toast, type Tone } from "@/components/ui";
-import { errorMessage } from "@/components/app/errors";
+import { Badge, Button, type Tone } from "@/components/ui";
 import type { PlayModel } from "../../../../shared/agents/economics";
 import { costCheck, type CostCheck, type PlayActuals, type RetentionActuals } from "../../../../shared/growth/actuals";
 import { formatMinorMoney, majorToMinor } from "../../../../shared/economics/currency";
-import { decimalToMinor } from "../../../../shared/integrations/currency";
 import { diagnoseShortfall, type Shortfall } from "../../../../shared/growth/diagnostics";
+import { WeeklyReportEditor } from "./WeeklyReportEditor";
 import { cn } from "@/lib/utils";
 
 const STATUS: Record<PlayActuals["status"], { label: string; tone: Tone; icon: LucideIcon }> = {
@@ -71,45 +68,8 @@ export function RetentionResultsSummary({ retention }: { retention?: RetentionAc
 
 /** Plan vs actual for one play, and a weekly log (spec §28). */
 export function PlayResults({ slug, strategyId, playName, model, actuals, retention, currency, canEdit, affordableCacUsd = null }: { slug: string; strategyId: Id<"strategies">; playName: string; model: PlayModel; actuals?: PlayActuals; retention?: RetentionActuals; currency?: string | null; canEdit: boolean; affordableCacUsd?: number | null }) {
-  const log = useMutation(api.playResults.log);
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [vals, setVals] = useState<Record<string, string>>({});
-  const [formCurrency, setFormCurrency] = useState<string | null>(currency ?? null);
-  const currencyChanged = formCurrency !== (currency ?? null);
-  const fields = [{ key: "reach", label: "Reached" }, ...model.steps.map((s, i) => ({ key: `s${i}`, label: s.name })), { key: "spend", label: `Spent${formCurrency ? ` (${formCurrency})` : ""}` }, { key: "hours", label: "Your hours" }];
   const st = actuals ? STATUS[actuals.status] : null;
-  const submit = async () => {
-    const n = (k: string) => {
-      if (!vals[k]?.trim()) throw new Error("Enter every reported count, spending amount and hours. Use 0 only when you recorded zero.");
-      const value = Number(vals[k]);
-      if (!Number.isFinite(value)) throw new Error("Enter valid numbers for the weekly report.");
-      return value;
-    };
-    const optionalCount = vals.repeatCustomers?.trim() ? Number(vals.repeatCustomers) : undefined;
-    const optionalMoney = (key: "retainedRevenue" | "retainedContribution") => {
-      const value = vals[key]?.trim();
-      if (!value) return undefined;
-      if (!formCurrency) throw new Error("Set the business currency before entering retention amounts.");
-      const parsed = decimalToMinor(value, formCurrency);
-      if (!parsed.ok) throw new Error(parsed.error);
-      return parsed.minor;
-    };
-    setBusy(true);
-    try {
-      if (currencyChanged) throw new Error("The business currency changed. Reopen the form and re-enter the original amounts.");
-      const retainedRevenueMinor = optionalMoney("retainedRevenue");
-      const retainedContributionMinor = optionalMoney("retainedContribution");
-      await log({ slug, strategyId, playName, reach: n("reach"), steps: model.steps.map((_, i) => n(`s${i}`)), spendUsd: n("spend"), ...(formCurrency ? { currency: formCurrency } : {}), ownerHours: n("hours"), ...(optionalCount !== undefined ? { repeatCustomers: optionalCount } : {}), ...(retainedRevenueMinor !== undefined ? { retainedRevenueMinor } : {}), ...(retainedContributionMinor !== undefined ? { retainedContributionMinor } : {}) });
-      setVals({});
-      setOpen(false);
-      toast({ tone: "success", title: "Results saved" });
-    } catch (e) {
-      toast({ tone: "danger", title: errorMessage(e) });
-    } finally {
-      setBusy(false);
-    }
-  };
   return (
     <div className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line p-3">
       <p className="text-overline flex items-center gap-1.5">
@@ -166,48 +126,11 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, retent
         <p className="text-xs text-ink-3">No results yet. Log weekly to compare.</p>
       )}
       <RetentionResultsSummary retention={retention} />
-      {canEdit && !open ? (
-        <Button size="sm" variant="ghost" className="self-start" onClick={() => { setVals({}); setFormCurrency(currency ?? null); setOpen(true); }}>
-          <ClipboardPen aria-hidden /> Log this week
+      {!open ? (
+        <Button size="sm" variant="ghost" className="self-start" onClick={() => setOpen(true)}>
+          <ClipboardPen aria-hidden /> {canEdit ? "Log this week" : "Review weekly reports"}
         </Button>
-      ) : null}
-      {open ? (
-        <div className="flex flex-col gap-2">
-          <p className="text-xs text-ink-3">Enter each reported value. Use 0 only when you recorded zero; leave an unknown week unreported. Weeks start Monday at 00:00 UTC.</p>
-          {currencyChanged ? <p role="alert" className="text-xs text-red-800">The business currency changed. Cancel and reopen this form, then re-enter the original amounts.</p> : null}
-          <div className="grid grid-cols-2 gap-2">
-            {fields.map((f) => (
-              <Field key={f.key} label={f.label}>
-                <Input inputMode="decimal" value={vals[f.key] ?? ""} onChange={(e) => setVals((v) => ({ ...v, [f.key]: e.target.value }))} disabled={busy} />
-              </Field>
-            ))}
-          </div>
-          <fieldset className="flex flex-col gap-2 rounded-[var(--radius-control)] border border-line p-2.5">
-            <legend className="px-1 text-xs font-semibold text-ink">Existing customers (optional)</legend>
-            <p className="text-xs text-ink-3">Leave blank if you didn&apos;t track it.</p>
-            <div className="grid grid-cols-2 gap-2">
-              <Field label="Repeat customers this week">
-                <Input inputMode="numeric" value={vals.repeatCustomers ?? ""} onChange={(e) => setVals((v) => ({ ...v, repeatCustomers: e.target.value }))} disabled={busy} />
-              </Field>
-              <Field label={`Net retained revenue${formCurrency ? ` (${formCurrency})` : ""}`} hint={formCurrency ? "From existing customers this week." : "Set your currency in settings first."}>
-                <Input inputMode="decimal" value={vals.retainedRevenue ?? ""} onChange={(e) => setVals((v) => ({ ...v, retainedRevenue: e.target.value }))} disabled={busy || !formCurrency} />
-              </Field>
-              <Field label={`Retained contribution${formCurrency ? ` (${formCurrency})` : ""}`} hint="After delivery costs. Can be negative.">
-                <Input inputMode="decimal" value={vals.retainedContribution ?? ""} onChange={(e) => setVals((v) => ({ ...v, retainedContribution: e.target.value }))} disabled={busy || !formCurrency} />
-              </Field>
-            </div>
-            <p className="text-xs text-ink-3">Re-saving this week clears any blank optional fields.</p>
-          </fieldset>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={submit} disabled={busy || currencyChanged || fields.some(f => !vals[f.key]?.trim())}>
-              {busy ? "Saving…" : "Save"}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-      ) : null}
+      ) : <WeeklyReportEditor slug={slug} strategyId={strategyId} playName={playName} model={model} canEdit={canEdit} onClose={() => setOpen(false)} />}
     </div>
   );
 }

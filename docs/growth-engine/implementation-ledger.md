@@ -1,3 +1,9 @@
+## Local update — 16 November 2026: weekly corrections and historical entry
+
+Reproduced a blind second save overwriting a weekly report. Extended the existing weekly report mutation with exact ID/revision checks and an indexed week lookup that preserves stable play identity beyond the old scan limit. New append-only snapshots keep original/current values distinct; legacy values are preserved at their first correction. The current plan form now loads any valid UTC week, prefills recorded values, blocks stale edits/currency changes and exposes paginated report history. Read-only viewers can review; only editors can save. Export/deletion include the new history. Engine version: `v3.89-weekly-report-history`.
+
+Verification and remaining bounds are recorded in [Verification](../Verification.md). Summaries and automatic learning still use bounded current rows, not revision history; this increment does not establish complete-history calculations, recover previously overwritten corrections or verify causal outcomes.
+
 ## Local update — 16 November 2026: explicit weekly money and unknown forecasts
 
 Traced weekly owner entry through `playResults.log`, persistence, `playActuals`, cost/shortfall assessment, `resultsBrief` and the existing plan review. Reproduced ambiguous legacy currency and loss of three-decimal precision. New reports retain currency; exact minor-unit validation/sums reject incompatible units or precision instead of guessing. Blank core inputs cannot save as zero, and stale currency forms cannot reinterpret amounts. Browser inspection also exposed a missing original range rendered as NaN and compared as zero; missing, invalid and unordered ranges now withhold forecast comparison/calibration while retaining the idea and observed counts. Engine version: `v3.88-weekly-report-money`.

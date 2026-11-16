@@ -1,7 +1,7 @@
 import { paginationOptsValidator } from "convex/server";
 import { diagnoseShortfall, shortfallLine } from "../shared/growth/diagnostics";
 import { v } from "convex/values";
-import { internalQuery, mutation, query, type QueryCtx } from "./_generated/server";
+import { internalQuery, mutation, query, type QueryCtx, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { audit } from "./lib/audit";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
@@ -33,6 +33,44 @@ type SavedPlay = { name: string; id?: string; model?: PlayModel; p10?: number; p
 function playsOf(s: Doc<"strategies">): SavedPlay[] {
   return (expertPlaysOf(s.expert) as SavedPlay[]).filter((p) => p.model?.steps?.length);
 }
+
+/** Exact week lookup, including pre-ID legacy rows. Never let a bounded plan scan create duplicates. */
+async function weeklyReport(ctx: QueryCtx | MutationCtx, s: Doc<"strategies">, play: SavedPlay, weekStart: number) {
+  const byId = play.id ? await ctx.db.query("playResults").withIndex("by_strategy_play_week", q => q.eq("strategyId", s._id).eq("playId", play.id).eq("weekStart", weekStart)).take(2) : [];
+  const byName = await ctx.db.query("playResults").withIndex("by_strategy", q => q.eq("strategyId", s._id).eq("playName", play.name).eq("weekStart", weekStart)).take(3);
+  const rows = [...new Map([...byId, ...byName.filter(e => !play.id || !e.playId || e.playId === play.id)].map(e => [e._id, e])).values()];
+  if (byName.length >= 3 || rows.length > 1) return { row: null, issue: "Conflicting reports exist for this week. Resolve the duplicate records before editing." };
+  return { row: rows[0] ? assertSameOrg(rows[0], s.orgId, "weekly report") : null, issue: null };
+}
+
+function reportSnapshot(e: Doc<"playResults">) {
+  return { reach: e.reach, steps: e.steps, spendUsd: e.spendUsd, spendCurrency: e.spendCurrency, ownerHours: e.ownerHours, repeatCustomers: e.repeatCustomers, retainedRevenueMinor: e.retainedRevenueMinor, retainedContributionMinor: e.retainedContributionMinor, retentionCurrency: e.retentionCurrency, enteredBy: e.enteredBy, updatedAt: e.updatedAt, stepNames: e.stepNames };
+}
+
+/** Load one week independently of summary read limits. Opening this query authorizes no write. */
+export const weekForPlay = query({
+  args: { slug: v.string(), strategyId: v.id("strategies"), playName: v.string(), weekStart: v.number() },
+  handler: async (ctx, a) => {
+    const { org } = await requireOrgAccess(ctx, { slug: a.slug }, "view");
+    const s = assertSameOrg(await ctx.db.get(a.strategyId), org._id, "plan");
+    const play = playsOf(s).find(p => p.name === a.playName);
+    if (!play || !Number.isFinite(weekOf(a.weekStart))) throw appError("INVALID", "Choose a valid play and reporting week.");
+    const { row, issue } = await weeklyReport(ctx, s, play, weekOf(a.weekStart));
+    const business = assertSameOrg(await ctx.db.get(s.businessId), org._id, "business");
+    return { issue, row: row ? { ...reportSnapshot(row), enteredBy: undefined, id: row._id, revision: row.revision ?? 0 } : null, minWeek: weekOf(s._creationTime), currency: business.currency || null };
+  },
+});
+
+export const weeklyHistoryPage = query({
+  args: { slug: v.string(), resultId: v.id("playResults"), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { slug, resultId, paginationOpts }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const row = assertSameOrg(await ctx.db.get(resultId), org._id, "weekly report");
+    assertSameOrg(await ctx.db.get(row.strategyId), org._id, "plan");
+    const page = await ctx.db.query("playResultRevisions").withIndex("by_org_result_revision", q => q.eq("orgId", org._id).eq("resultId", resultId)).order("desc").paginate({ ...paginationOpts, numItems: Math.max(1, Math.min(25, paginationOpts.numItems)) });
+    return { ...page, page: page.page.map(({ snapshot: { enteredBy: _by, ...snapshot }, ...r }) => ({ id: r._id, revision: r.revision, kind: r.kind, savedAt: r.savedAt, snapshot, current: r.revision === row.revision })) };
+  },
+});
 
 async function actualsFor(ctx: QueryCtx, s: Doc<"strategies">): Promise<{ name: string; killIf?: string; actuals: PlayActuals; retention: RetentionActuals; entries: Doc<"playResults">[]; forecast: { p10: number; p90: number }; horizonWeeks: number }[]> {
   const out = [];
@@ -69,7 +107,7 @@ export const forStrategy = query({
 
 /** Log (or correct) one week of a play's results. */
 export const log = mutation({
-  args: { slug: v.string(), strategyId: v.id("strategies"), playName: v.string(), weekStart: v.optional(v.number()), reach: v.number(), steps: v.array(v.number()), spendUsd: v.number(), currency: v.optional(v.string()), ownerHours: v.number(), repeatCustomers: v.optional(v.number()), retainedRevenueMinor: v.optional(v.number()), retainedContributionMinor: v.optional(v.number()) },
+  args: { slug: v.string(), strategyId: v.id("strategies"), playName: v.string(), weekStart: v.optional(v.number()), reach: v.number(), steps: v.array(v.number()), spendUsd: v.number(), currency: v.optional(v.string()), ownerHours: v.number(), expectedResultId: v.optional(v.id("playResults")), expectedRevision: v.optional(v.number()), expectedWorkspaceCurrency: v.optional(v.union(v.string(), v.null())), repeatCustomers: v.optional(v.number()), retainedRevenueMinor: v.optional(v.number()), retainedContributionMinor: v.optional(v.number()) },
   handler: async (ctx, a) => {
     const { org, user } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
     const s = assertSameOrg(await ctx.db.get(a.strategyId), org._id, "plan");
@@ -81,9 +119,6 @@ export const log = mutation({
     if (counts.some((n) => !Number.isSafeInteger(n) || n < 0 || n > 10_000_000)) throw appError("INVALID", "Reach and funnel counts must be whole numbers from zero to ten million.");
     const nums = [a.spendUsd, a.ownerHours];
     if (nums.some((n) => !Number.isFinite(n) || n < 0 || n > 10_000_000)) throw appError("INVALID", "Spend and owner hours must be finite numbers from zero to ten million.");
-    const hasMoney = a.spendUsd > 0 || a.retainedRevenueMinor !== undefined || a.retainedContributionMinor !== undefined;
-    if ((hasMoney && !a.currency) || (a.currency && (!isKnownCurrency(a.currency) || a.currency !== business.currency))) throw appError("INVALID", "Confirm the current business currency before saving amounts. If it changed, reopen the form and review the original amounts.");
-    if (a.currency && !decimalToMinor(String(a.spendUsd), a.currency).ok) throw appError("INVALID", "Spend has more decimal places than this currency supports.");
     if (a.repeatCustomers !== undefined && (!Number.isSafeInteger(a.repeatCustomers) || a.repeatCustomers < 0 || a.repeatCustomers > 10_000_000)) throw appError("INVALID", "Repeat-customer count must be a whole number from zero to ten million.");
     if (a.retainedRevenueMinor !== undefined && (!Number.isSafeInteger(a.retainedRevenueMinor) || Math.abs(a.retainedRevenueMinor) > 1_000_000_000_000)) throw appError("INVALID", "Retained revenue must be a valid amount in minor currency units.");
     if (a.retainedContributionMinor !== undefined && (!Number.isSafeInteger(a.retainedContributionMinor) || Math.abs(a.retainedContributionMinor) > 1_000_000_000_000)) throw appError("INVALID", "Retained contribution must be a valid amount in minor currency units.");
@@ -95,11 +130,28 @@ export const log = mutation({
     if (!Number.isFinite(weekStart)) throw appError("INVALID", "Choose a valid reporting week.");
     if (weekStart > Date.now()) throw appError("INVALID", "That week hasn't started yet.");
     if (weekStart < weekOf(s._creationTime)) throw appError("INVALID", "That week is before this plan was made, so it isn't this play's result.");
-    const existing = (await ctx.db.query("playResults").withIndex("by_strategy", (q) => q.eq("strategyId", s._id)).take(400)).find((e) => e.weekStart === weekStart && (play.id && e.playId ? e.playId === play.id : e.playName === a.playName));
-    const row = { reach: a.reach, steps: a.steps, spendUsd: a.spendUsd, spendCurrency: a.currency, ownerHours: a.ownerHours, repeatCustomers: a.repeatCustomers, retainedRevenueMinor: a.retainedRevenueMinor, retainedContributionMinor: a.retainedContributionMinor, retentionCurrency: a.retainedRevenueMinor !== undefined || a.retainedContributionMinor !== undefined ? a.currency : undefined, enteredBy: user._id, updatedAt: Date.now() };
-    if (existing) await ctx.db.patch(existing._id, row);
-    else await ctx.db.insert("playResults", { orgId: org._id, strategyId: s._id, playName: a.playName, ...(play.id ? { playId: play.id } : {}), weekStart, ...row });
-    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "play.results_logged", subjectType: "strategy", subjectId: s._id, summary: `Logged results for “${a.playName}”.` });
+    const { row: existing, issue } = await weeklyReport(ctx, s, play, weekStart);
+    if (issue) throw appError("INVALID", issue);
+    if (existing ? a.expectedResultId !== existing._id || a.expectedRevision !== (existing.revision ?? 0) : a.expectedResultId !== undefined || (a.expectedRevision !== undefined && a.expectedRevision !== 0)) throw appError("INVALID", "This weekly report changed. Reload the saved report before correcting it; your unsaved values have not been applied.");
+    if (a.expectedWorkspaceCurrency !== undefined && a.expectedWorkspaceCurrency !== (business.currency || null)) throw appError("INVALID", "The business currency changed. Reload the report before saving.");
+    // Existing explicit units can be corrected after a settings change, without an FX conversion.
+    const originalCurrencies = [...new Set([existing?.spendCurrency, existing?.retentionCurrency].filter((c): c is string => !!c))];
+    const originalCurrency = originalCurrencies.length === 1 ? originalCurrencies[0] : undefined;
+    const correctionCurrency = existing && a.expectedWorkspaceCurrency !== undefined && originalCurrency === a.currency;
+    const hasMoney = a.spendUsd > 0 || a.retainedRevenueMinor !== undefined || a.retainedContributionMinor !== undefined;
+    if ((hasMoney && !a.currency) || (a.currency && (!isKnownCurrency(a.currency) || (a.currency !== business.currency && !correctionCurrency)))) throw appError("INVALID", "Confirm the current business currency before saving amounts. If it changed, reopen the form and review the original amounts.");
+    if (a.currency && !decimalToMinor(String(a.spendUsd), a.currency).ok) throw appError("INVALID", "Spend has more decimal places than this currency supports.");
+
+    const row = { reach: a.reach, steps: a.steps, spendUsd: a.spendUsd, spendCurrency: a.currency, ownerHours: a.ownerHours, repeatCustomers: a.repeatCustomers, retainedRevenueMinor: a.retainedRevenueMinor, retainedContributionMinor: a.retainedContributionMinor, retentionCurrency: a.retainedRevenueMinor !== undefined || a.retainedContributionMinor !== undefined ? a.currency : undefined, enteredBy: user._id, updatedAt: Date.now(), stepNames: play.model!.steps.map(step => step.name) };
+    let revision = existing?.revision ?? 0;
+    if (existing && existing.revision === undefined) {
+      await ctx.db.insert("playResultRevisions", { orgId: org._id, resultId: existing._id, strategyId: s._id, weekStart, playName: existing.playName, revision: 0, kind: "legacy_snapshot", snapshot: reportSnapshot(existing), savedAt: existing.updatedAt });
+    }
+    revision++;
+    const resultId = existing?._id ?? await ctx.db.insert("playResults", { orgId: org._id, strategyId: s._id, playName: a.playName, ...(play.id ? { playId: play.id } : {}), weekStart, ...row, revision });
+    if (existing) await ctx.db.patch(resultId, { ...row, revision });
+    await ctx.db.insert("playResultRevisions", { orgId: org._id, resultId, strategyId: s._id, weekStart, playName: a.playName, revision, kind: existing ? "correction" : "recorded", snapshot: row, savedAt: row.updatedAt });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "play.results_logged", subjectType: "strategy", subjectId: s._id, summary: `Logged results for “${a.playName}”, week ${new Date(weekStart).toISOString().slice(0, 10)}, revision ${revision}.` });
   },
 });
 

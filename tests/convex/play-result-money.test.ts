@@ -30,7 +30,7 @@ describe("weekly result money provenance", () => {
     let brief = await f.t.query(internal.playResults.briefFor, { orgId: f.orgId });
     expect(brief).toContain("12.345"); expect(brief).toContain("KWD"); expect(brief).not.toContain("spent $12");
     await f.t.run(ctx => ctx.db.patch(f.businessId, { currency: "USD" }));
-    await expect(f.owner.client.mutation(api.playResults.log, { ...f.args, spendUsd: 10 })).rejects.toThrow(/currency/);
+    await expect(f.owner.client.mutation(api.playResults.log, { ...f.args, expectedResultId: row._id, expectedRevision: row.revision, spendUsd: 10 })).rejects.toThrow(/currency/);
     expect(await f.t.run(ctx => ctx.db.get(row._id))).toEqual(row);
     view = await f.owner.client.query(api.playResults.forStrategy, { slug: f.slug, strategyId: f.strategyId });
     expect(view.byPlay["Weekly play"]).toMatchObject({ spendUsd: null, spendIssue: expect.stringContaining("KWD") });

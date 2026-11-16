@@ -1,3 +1,29 @@
+## 16 November 2026 — historical weekly reporting and protected corrections
+
+Path inspected: existing plan card → weekly report form → `playResults.log` → current `playResults` row → actuals/learning, plus existing experiment revision/history and workspace export/deletion conventions. The existing mutation supported a past-week argument but the UI never sent it; corrections overwrote values without a saved revision or original snapshot. The correction lookup read only the first 400 strategy rows. A regression proved a second save with no version token silently overwrote the first.
+
+Implemented:
+
+- `weekForPlay` reads an exact normalized Monday UTC week via stable play ID and legacy name fallback. `by_strategy_play_week` avoids the old correction scan limit. Ambiguous duplicates block correction and produce a visible read issue rather than selecting a winner or adding another row. Permissions and original strategy/business/report tenants are checked.
+- New/current reports carry a monotonic revision. Updating an existing report requires its exact ID and revision; missing or stale tokens fail without applying changes. Creating a report is still compatible with older clients, but they cannot blindly overwrite an existing one. Original explicit currency may be retained when correcting after a settings change, with the currently reviewed workspace currency checked separately. Unknown legacy currency is not inferred or converted.
+- `playResultRevisions` stores immutable snapshots atomically with each current-row write and audit event. New snapshots retain step labels, counts, hours, currency and optional repeat-customer amounts. A legacy current row is preserved as revision zero on its first correction. Earlier revisions do not enter current actuals as additional results. `weeklyHistoryPage` is tenant-bound, read-only and paginated (maximum 25 per page). Workspace export includes up to 1,000 reports and 1,000 revisions with separate limited flags; workspace deletion includes the history table.
+- The existing plan report now offers a UTC week selector, loaded saved values, explicit unknown/zero wording and visible history. Viewers can review but cannot save. Stale reactive updates keep the draft intact and disable Save until the owner explicitly reloads. Date selection is disabled while a save is in flight. Opening another week starts that week's form. Unknown/conflicting old money is not silently prefilled in a different currency. Existing original units remain visible in history.
+
+Verification commands:
+
+```sh
+pnpm exec vitest run tests/convex/play-result-history.test.ts tests/convex/play-result-money.test.ts tests/convex/play-results.test.ts tests/convex/experiment-outcomes.test.ts tests/convex/tenancy.test.ts tests/convex/safety.test.ts tests/unit/play-actuals.test.ts tests/unit/shortfall.test.ts tests/unit/play-cost-per-customer.test.tsx tests/unit/play-results-retention.test.tsx tests/unit/retention-actuals.test.ts tests/unit/decision-books.test.ts
+pnpm typecheck
+pnpm exec eslint convex/playResults.ts convex/schema.ts convex/settings.ts shared/agents/specs.ts src/components/app/plan/PlayResults.tsx src/components/app/plan/WeeklyReportEditor.tsx tests/convex/play-result-history.test.ts tests/convex/play-result-money.test.ts tests/convex/play-results.test.ts e2e/play-result-money.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/play-result-money.spec.ts
+git diff --check
+```
+
+Results: 99 tests in 12 focused files passed, including stale/blind writes, current-only learning, a renamed legacy report after 405 unrelated rows, revision pagination, optional-field removal, historical currency correction, invalid weeks, duplicate rejection, viewer/tenant controls, export/deletion and unchanged action records. Typecheck, scoped lint and isolated local schema/index sync passed. Two desktop/mobile browser checks passed in 27.0 seconds, exercising currency changes, missing forecasts, historical-week entry, saved values, an intervening server edit, preserved unsaved input, explicit reload, correction history, a visible duplicate-report block, overflow and serious/critical accessibility checks. The rendered mobile history was inspected. Engine version: `v3.89-weekly-report-history`.
+
+Limits: summary calculations still read up to 400 rows per strategy and 60 per play; this increment fixes exact editing/history access, not complete aggregate retrieval or trailing missing-week detection. Previously overwritten versions cannot be recovered. A legacy row with no stable ID cannot be matched after an otherwise unrecorded name change. Ambiguous duplicates need data review; they are not automatically merged. All core fields are still required, and weeks use UTC rather than customer-local boundaries. No new causal evidence, measured recommendation quality or complete 410-requirement acceptance is established. No deployment, live provider action, sending, publishing or spending occurred.
+
 ## 16 November 2026 — weekly reports preserve money units and missing forecasts
 
 Path inspected: `PlayResults` owner form → `playResults.log` → `playResults` rows → `actualsFor` / `playActuals` → cash-cost and shortfall checks → plan review and `resultsBrief` → future strategy context. Existing code already checked numeric bounds, funnel consistency, edit permission, tenant identity and reporting weeks. It did not store spending currency, required only reach in the form, and substituted zero for absent forecast ranges.

@@ -94,7 +94,8 @@ describe("play results", () => {
     expect(brief).toContain("3 customer-week(s); net revenue $500.00 over 1 week(s); retained contribution $320.00 over 1 week(s)");
     expect(brief).toContain("separate from new-customer forecasts");
     // Correcting a weekly row without the optional values clears the previous retention report.
-    await owner.client.mutation(api.playResults.log, { slug, strategyId, playName: "Agency outreach", weekStart: Date.now(), reach: 250, steps: [6, 1], spendUsd: 0, ownerHours: 1 });
+    const originalWeek = await owner.client.query(api.playResults.weekForPlay, { slug, strategyId, playName: "Agency outreach", weekStart: Date.now() });
+    await owner.client.mutation(api.playResults.log, { slug, strategyId, playName: "Agency outreach", expectedResultId: originalWeek.row!.id, expectedRevision: originalWeek.row!.revision, weekStart: Date.now(), reach: 250, steps: [6, 1], spendUsd: 0, ownerHours: 1 });
     const corrected = await owner.client.query(api.playResults.forStrategy, { slug, strategyId });
     expect(corrected.byPlay["Agency outreach"].retention).toMatchObject({ weeksReported: 0, repeatCustomerWeeksReported: 0, repeatCustomerWeeks: 0 });
     const other = await asNewUser(t, "other-results@example.com");
