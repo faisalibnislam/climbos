@@ -76,6 +76,8 @@ it("runs the real focused path with a matching quote, reuses bound research and 
   await t.finishAllScheduledFunctions(() => undefined);
   expect(JSON.stringify(state.requests.at(-2)?.messages)).toContain("Owner preference: investigate scoping rituals without publicly declining work.");
   expect(JSON.stringify(state.requests.at(-2)?.messages)).toContain("a prior rejection never bans bold exploration");
+  expect(JSON.stringify(state.requests.at(-2)?.messages)).toContain("original proposal and test conditions");
+  expect(JSON.stringify(state.requests.at(-2)?.messages)).toContain("Unresolved scoping decisions identified");
 });
 it("keeps critical review failures blocked even when a short draft passes schema", async () => {
   const { t, owner, slug, orgId } = await workspace(); state.failTruth = true;

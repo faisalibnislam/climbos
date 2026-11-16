@@ -2346,6 +2346,7 @@ export default defineSchema({
     optionTitle: v.string(),
     /** Binds this feedback to the exact option the owner reviewed. */
     optionHash: v.string(),
+    optionSnapshot: v.optional(strategyExplorationOptionValidator),
     ownerEditHash: v.optional(v.string()),
     strategyStatusAtFeedback: v.union(v.literal("draft"), v.literal("needs_approval"), v.literal("approved"), v.literal("superseded")),
     decision: v.union(v.literal("considering"), v.literal("selected"), v.literal("rejected"), v.literal("edited")),
@@ -2360,6 +2361,7 @@ export default defineSchema({
     retiredBy: v.optional(v.id("users")),
   })
     .index("by_org_strategy", ["orgId", "strategyId", "createdAt"])
+    .index("by_org_created", ["orgId", "createdAt"])
     .index("by_strategy_mode", ["strategyId", "mode", "createdAt"]),
 
   /** Owner-recorded results of a business model check's deciding or alternative test (append-only; latest row wins). */
@@ -4170,6 +4172,7 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_org_status", ["orgId", "status"])
+    .index("by_org_subject_status_decided", ["orgId", "subjectType", "status", "decidedAt"])
     .index("by_subject", ["subjectType", "subjectId"]),
 
   autonomyPolicies: defineTable({

@@ -1,19 +1,17 @@
 import { v } from "convex/values";
 import { mutation, query, type QueryCtx } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { audit } from "./lib/audit";
+import { STRATEGY_LEARNING_CONTEXT_CHARS } from "../shared/agents/context";
 import { sha256Hex } from "../shared/policy";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
 const MODES = ["grounded", "adjacent", "bold"] as const;
 type Mode = (typeof MODES)[number];
-type Exploration = Record<Mode, { title?: unknown }>;
+type Exploration = NonNullable<NonNullable<Doc<"strategies">["expert"]>["strategyExploration"]>;
 
-function optionFor(strategy: { expert?: { strategyExploration?: unknown } }, mode: Mode): Record<string, unknown> | null {
-  const exploration = strategy.expert?.strategyExploration;
-  if (!exploration || typeof exploration !== "object") return null;
-  const option = (exploration as Exploration)[mode];
-  return option && typeof option === "object" ? option as Record<string, unknown> : null;
+function optionFor(strategy: Doc<"strategies">, mode: Mode): Exploration[Mode] | null {
+  return strategy.expert?.strategyExploration?.[mode] ?? null;
 }
 
 export const feedbackForStrategy = query({
@@ -74,6 +72,7 @@ export const recordFeedback = mutation({
       mode: args.mode,
       optionTitle: option.title,
       optionHash,
+      optionSnapshot: option,
       strategyStatusAtFeedback: strategy.status,
       decision: args.decision,
       ...(ownerEdit ? { ownerEdit, ownerEditHash } : {}),
@@ -98,29 +97,80 @@ export const recordFeedback = mutation({
 
 /** Feedback and send-back notes older than this stop guiding plans; owners can also retire them sooner. */
 export const LEARNING_MAX_AGE_DAYS = 365;
-const usable = (createdAt: number, retiredAt: number | undefined, now: number) => !retiredAt && now - createdAt <= LEARNING_MAX_AGE_DAYS * 86_400_000;
+type UseReason = "included" | "retired" | "expired" | "invalid_date" | "superseded" | "unverified" | "context_limit";
+function dateReason(createdAt: number | undefined, retiredAt: number | undefined, now: number): UseReason | null {
+  if (retiredAt !== undefined) return "retired";
+  if (createdAt === undefined || !Number.isFinite(createdAt) || createdAt > now || createdAt < 0) return "invalid_date";
+  return now - createdAt > LEARNING_MAX_AGE_DAYS * 86_400_000 ? "expired" : null;
+}
 
-/** Every strategy preference ClimbOS may reuse, with whether it is currently used, so the owner can retire it. */
+/** One selection feeds both owner inspection and generation. Whole records only. */
+async function learningSelection(ctx: QueryCtx, orgId: Id<"organizations">) {
+  const now = Date.now();
+  const [candidateFeedback, candidateApprovals] = await Promise.all([
+    ctx.db.query("strategyExplorationFeedback").withIndex("by_org_created", q => q.eq("orgId", orgId)).order("desc").take(81),
+    ctx.db.query("approvals").withIndex("by_org_subject_status_decided", q => q.eq("orgId", orgId).eq("subjectType", "strategy").eq("status", "rejected")).order("desc").take(41),
+  ]);
+  const limited = candidateFeedback.length > 80 || candidateApprovals.length > 40;
+  const prefix = `Tenant-scoped strategy learning (captured ${new Date(now).toISOString().slice(0, 10)}; owner decisions and rejection notes are preference signals, not proof of business performance):\n`;
+  const suffix = "\nBounded sample: latest 80 feedback reports and 40 strategy rejections; at most 8 option reports and 5 rejection notes, with complete records within the context budget. Superseded, retired, stale, untraceable and over-budget records are omitted. Outcome evidence labels are owner declarations, not independent verification. Original tests are proposals, not proof they ran unchanged. Recheck current facts, goal and constraints; match original test conditions before reusing a result. Changed conditions may justify reconsideration; a prior rejection never bans bold exploration. Never treat selection as approval to execute.";
+  let remaining = STRATEGY_LEARNING_CONTEXT_CHARS - prefix.length - suffix.length;
+  const lines: string[] = [];
+  function include(line: string, count: number, cap: number): boolean {
+    if (count >= cap || line.length + 1 > remaining) return false;
+    lines.push(line);
+    remaining -= line.length + 1;
+    return true;
+  }
+  const seen = new Set<string>();
+  const feedback = [];
+  let includedFeedback = 0;
+  for (const row of candidateFeedback.slice(0, 80)) {
+    const key = `${row.strategyId}:${row.mode}`;
+    let reason: UseReason | null = seen.has(key) ? "superseded" : dateReason(row.createdAt, row.retiredAt, now);
+    // Mark before eligibility checks: retiring the latest report never revives an older one.
+    seen.add(key);
+    if (!reason) {
+      const plan = await ctx.db.get(row.strategyId);
+      const option = row.optionSnapshot ?? (plan ? optionFor(plan, row.mode) : null);
+      if (!plan || plan.orgId !== orgId || !option || await sha256Hex(JSON.stringify(option)) !== row.optionHash) {
+        reason = "unverified";
+      } else {
+        const result = row.testState === "observed"
+          ? `reported observation (${row.outcomeEvidence.replaceAll("_", "-")}): ${row.outcomeNote ?? ""}`
+          : `test state: ${row.testState}; outcome evidence: unknown; no observed result`;
+        const original = { audience: option.audienceOrCondition, mechanism: option.businessMechanism, action: option.businessAction, assumptions: option.assumptions, risks: option.risks, test: option.reversibleTest };
+        const line = `- ${row.mode} option “${row.optionTitle}” (plan ${row.strategyId}, option ${row.optionHash}, report ${row._id}, recorded ${new Date(row.createdAt).toISOString()}): owner decision ${row.decision}; ${result}${row.ownerEdit ? `; owner edit (not verified execution): ${row.ownerEdit}` : ""}; original proposal and test conditions: ${JSON.stringify(original)}`;
+        reason = include(line, includedFeedback, 8) ? "included" : "context_limit";
+        if (reason === "included") includedFeedback++;
+      }
+    }
+    feedback.push({ id: row._id, mode: row.mode, optionTitle: row.optionTitle, decision: row.decision, testState: row.testState, outcomeNote: row.outcomeNote ?? null, createdAt: row.createdAt, retired: row.retiredAt !== undefined, used: reason === "included", reason });
+  }
+  const planNotes = [];
+  let includedNotes = 0;
+  for (const approval of candidateApprovals.slice(0, 40)) {
+    const strategyId = ctx.db.normalizeId("strategies", approval.subjectId);
+    const plan = strategyId ? await ctx.db.get(strategyId) : null;
+    const note = approval.decisionNote?.trim();
+    if (!plan || plan.orgId !== orgId || plan.approvalId !== approval._id || !note) continue;
+    let reason = dateReason(approval.decidedAt, plan.rejectionNoteRetiredAt, now);
+    if (!reason) {
+      const line = `- Growth plan v${plan.version} (${plan._id}) sent back at ${new Date(approval.decidedAt!).toISOString()}: owner-reported rationale: ${note} (preference only; reassess if current evidence or constraints differ)`;
+      reason = include(line, includedNotes, 5) ? "included" : "context_limit";
+      if (reason === "included") includedNotes++;
+    }
+    planNotes.push({ strategyId: plan._id, version: plan.version, note, createdAt: approval.decidedAt ?? null, retired: plan.rejectionNoteRetiredAt !== undefined, used: reason === "included", reason });
+  }
+  return { feedback, planNotes, limited, brief: lines.length ? prefix + lines.join("\n") + suffix : "" };
+}
+
 export const learningSources = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
     const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
-    const now = Date.now();
-    const feedback = await ctx.db.query("strategyExplorationFeedback").withIndex("by_org_strategy", (q) => q.eq("orgId", org._id)).order("desc").take(40);
-    const plans = await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", org._id)).order("desc").take(20);
-    const notes = [];
-    for (const plan of plans) {
-      if (!plan.approvalId) continue;
-      const approval = await ctx.db.get(plan.approvalId);
-      const note = approval && approval.orgId === org._id && approval.status === "rejected" && approval.subjectType === "strategy" && approval.subjectId === String(plan._id) ? approval.decisionNote?.trim() : undefined;
-      if (note) notes.push({ strategyId: plan._id, version: plan.version, note: note.slice(0, 500), createdAt: plan.createdAt, retired: Boolean(plan.rejectionNoteRetiredAt), used: usable(plan.createdAt, plan.rejectionNoteRetiredAt, now) });
-    }
-    return {
-      canEdit: role === "owner" || role === "admin" || role === "editor",
-      maxAgeDays: LEARNING_MAX_AGE_DAYS,
-      feedback: feedback.map((row) => ({ id: row._id, mode: row.mode, optionTitle: row.optionTitle, decision: row.decision, testState: row.testState, outcomeNote: row.outcomeNote ?? null, createdAt: row.createdAt, retired: Boolean(row.retiredAt), used: usable(row.createdAt, row.retiredAt, now) })),
-      planNotes: notes.slice(0, 10),
-    };
+    const { feedback, planNotes, limited } = await learningSelection(ctx, org._id);
+    return { canEdit: role === "owner" || role === "admin" || role === "editor", maxAgeDays: LEARNING_MAX_AGE_DAYS, feedback, planNotes, limited };
   },
 });
 
@@ -147,31 +197,5 @@ export const setPlanNoteRetired = mutation({
 
 /** Only this tenant's recent, unretired owner decisions are reusable; they are guidance, never outcome proof. */
 export async function creativeStrategyLearningBrief(ctx: QueryCtx, orgId: Id<"organizations">): Promise<string> {
-  const now = Date.now();
-  const rows = (await ctx.db.query("strategyExplorationFeedback")
-    .withIndex("by_org_strategy", (q) => q.eq("orgId", orgId))
-    .order("desc").take(40)).filter((row) => usable(row.createdAt, row.retiredAt, now));
-  const lines = rows.slice(0, 8).map((row) => {
-    const evidenceLabel = row.outcomeEvidence.replaceAll("_", "-");
-    const result = row.testState === "observed"
-      ? `reported observation (${evidenceLabel}): ${row.outcomeNote ?? ""}`
-      : `test state: ${row.testState}; outcome evidence: ${row.outcomeEvidence}${row.testState === "unknown" ? "; outcome remains unknown" : ""}`;
-    return `- ${row.mode} option “${row.optionTitle}”: owner decision ${row.decision}; ${result}${row.ownerEdit ? `; owner edit: ${row.ownerEdit}` : ""}`;
-  });
-  // Plan rejections already retain their note in the tenant-owned approval record.
-  // Reuse only those explicit notes, and verify the approval belongs to this exact
-  // strategy and tenant before making the preference available to future runs.
-  const plans = await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", orgId)).order("desc").take(20);
-  let planNotes = 0;
-  for (const plan of plans) {
-    if (planNotes >= 5 || !plan.approvalId || !usable(plan.createdAt, plan.rejectionNoteRetiredAt, now)) continue;
-    const approval = await ctx.db.get(plan.approvalId);
-    if (!approval || approval.orgId !== orgId || approval.status !== "rejected" || approval.subjectType !== "strategy" || approval.subjectId !== String(plan._id)) continue;
-    const note = approval.decisionNote?.trim();
-    if (!note) continue;
-    lines.push(`- Growth plan v${plan.version} sent back: owner-reported rationale: ${note.slice(0, 500)} (preference only; reassess if current evidence or constraints differ)`);
-    planNotes += 1;
-  }
-  if (!lines.length) return "";
-  return `Tenant-scoped strategy learning (captured ${new Date(Date.now()).toISOString().slice(0, 10)}; owner decisions and rejection notes are preference signals, not proof of business performance):\n${lines.join("\n")}\nUse only as this business owner's prior preference and reported learning. Recheck current facts, goal and constraints before applying a prior rejection; a changed situation may justify reconsideration. Keep unknown outcomes unknown, match test conditions before reusing a result, and never treat selection as approval to execute.`;
+  return (await learningSelection(ctx, orgId)).brief;
 }

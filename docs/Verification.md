@@ -1,3 +1,26 @@
+## 16 November 2026 — traceable strategy feedback selection
+
+Audit confirmed that creative feedback was fetched by plan ID before report time, repeated updates to one option could all enter learning, and the inspection query marked more reports used than generation received. Original option/test conditions were not included in the learning brief. Rejection freshness used plan creation rather than the actual owner decision.
+
+The existing feedback table now retains an optional exact option snapshot for new reports, using the existing option validator. A shared read-only selection powers both owner inspection and the strategy job context. It selects the latest report per plan/mode before eligibility filtering, so retiring the latest does not revive an older observation. A new report-time index retrieves recent feedback independently of plan age; a strategy-rejection decision-time index does the same for send-back notes. Missing/future/invalid dates remain unavailable. Same-tenant plan identity and option hashes are checked; older records without snapshots are usable only when their hash still matches the saved option.
+
+Included records retain original audience, mechanism/action, assumptions, risks and complete reversible-test criteria beside the dated owner report and edit. Whole records fit a shared 10,000-character context ceiling (raised from the prior 4,000-character caller truncation); focused and detailed generation consume that same ceiling. Selection considers 80 recent feedback reports and 40 strategy rejections, includes at most eight option reports and five rejection notes, and discloses omissions. The owner list distinguishes included, replaced, retired, expired, invalid-date, untraceable and outside-sample states. Focused Plan → Strategy options now exposes the existing learning controls. Restoring a report makes it eligible for consideration; it does not promise inclusion or modify a previous plan. Engine: `v3.97-strategy-learning-selection`.
+
+Verification commands:
+
+```sh
+pnpm exec vitest run tests/convex/strategy-learning-sources.test.ts tests/convex/creative-strategy.test.ts tests/convex/focused-plan.test.ts tests/unit/strategy-learning-list.test.tsx tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts tests/convex/safety.test.ts tests/convex/free-onboarding.test.ts tests/unit/focused-plan.test.ts
+pnpm typecheck
+pnpm exec eslint convex/creativeStrategy.ts convex/jobs.ts convex/schema.ts shared/agents/context.ts shared/agents/planTasks.ts shared/agents/specs.ts src/components/app/plan/GoalWorkspace.tsx src/components/app/plan/StrategyLearningSources.tsx tests/convex/strategy-learning-sources.test.ts tests/convex/focused-plan.test.ts tests/unit/strategy-learning-list.test.tsx e2e/focused-strategy-options.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/focused-strategy-options.spec.ts
+git diff --check
+```
+
+Results: 57 tests across nine files passed; desktop and mobile browser checks both passed (21.4 seconds). Typecheck, scoped lint and local schema sync passed. Regression cases cover 86 dated reports, repeated updates, retire/restore, expiry/future dates, complete-record budget, legacy hash mismatch, preserved original snapshot after a plan change, cross-tenant provenance, a recent rejection on a 500-day-old plan after 25 newer plans, missing rejection date and unchanged action/approval records. Actual focused model-boundary tests confirm original test conditions arrive; detailed-task tests confirm the complete bounded brief survives wrapping. Browser tests exercise selection, retirement, restoration and replacement, with unchanged approval/artifact/workflow/receipt rows, no page overflow and no serious/critical axe findings. Synthetic fixture selection and TypeScript errors found during testing were corrected before the passing run.
+
+Limits: this is a bounded current selection, not a historical record of what every previous plan used. Frequent amendments can still occupy the recent candidate window; longer and older records can be omitted, visibly. Snapshots missing from old records cannot be reconstructed if the original option changed. A reported result does not independently establish exposure, unchanged test execution, causality or semantic truth; owner evidence labels remain declarations. Real-model quality/cost under the larger bounded context and broad business effectiveness remain unevaluated. No provider/model change, paid inference, hosted deployment, publication or sending occurred. The original 410-requirement acceptance audit remains incomplete.
+
 ## 16 November 2026 — protected exploration in the default strategy path
 
 Audit: the detailed growth-plays path already required `StrategyExplorationSchema`, supplied the protected exploration instructions, retrieved precedents and persisted the result. Focused/starter plans used a separate schema without that field, asked for internal comparison only, never activated the existing task-triggered precedent retrieval, and did not consume the already-loaded creative owner feedback. A failing schema regression reproduced the missing required output.

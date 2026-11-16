@@ -17,6 +17,7 @@ import { PreparedWork } from "./PreparedWork";
 import { PlanTimeline } from "./PlanTimeline";
 import { StepWorkLibrary } from "./StepWork";
 import type { ExpertView } from "./ExpertPlan";
+import { StrategyLearningSources } from "./StrategyLearningSources";
 import { StrategicDirectionPanel } from "./StrategicDirection";
 
 const StrategyExplorationPanel = dynamic(() => import("./ExpertPlan").then(module => module.StrategyExplorationPanel), { loading: () => <Skeleton className="h-64" /> });
@@ -73,7 +74,7 @@ function GoalPlan({ slug, selectedId, details }: { slug: string; selectedId: Id<
         <TabsList aria-label="Plan views"><TabsTrigger value="steps">Next steps</TabsTrigger>{expert?.strategyExploration ? <TabsTrigger value="options">Strategy options</TabsTrigger> : null}<TabsTrigger value="work">Prepared work</TabsTrigger><TabsTrigger value="why">Why this plan</TabsTrigger><TabsTrigger value="research">Research</TabsTrigger></TabsList>
         <TabsContent value="steps">{running && needsRepair ? <p role="status" className="rounded-xl bg-surface p-6 text-sm">AI is correcting the plan. Your saved drafts stay available in Prepared work.</p> : <PlanTimeline key={strategy.id} slug={slug} strategyId={strategy.id} phases={expert?.phases ?? []} checklist={expert?.weekOneChecklist ?? []} hasPreparedWork={prepared} canEdit={plan.canEdit} onOpenWork={() => { setReview(true); setTab("work"); }} onAsk={ask} />}</TabsContent>
         <TabsContent value="work" className="space-y-5"><div id="plan-prepared-work" tabIndex={-1} className="scroll-mt-20 space-y-5"><StepWorkLibrary slug={slug} strategyId={strategy.id} canEdit={plan.canEdit} />{prepared ? <PreparedWork key={strategy.id} work={expert?.preparedWork} slug={slug} strategyId={strategy.id} /> : <Callout title="No prepared drafts in this saved plan">Ask AI to help with a step, or update the plan to prepare useful work.<div className="mt-3">{generate}</div></Callout>}</div></TabsContent>
-        {expert?.strategyExploration ? <TabsContent value="options"><StrategyExplorationPanel key={strategy.id} options={expert.strategyExploration} slug={slug} strategyId={strategy.id} canEdit={plan.canEdit} /></TabsContent> : null}
+        {expert?.strategyExploration ? <TabsContent value="options"><StrategyExplorationPanel key={strategy.id} options={expert.strategyExploration} slug={slug} strategyId={strategy.id} canEdit={plan.canEdit} /><StrategyLearningSources slug={slug} /></TabsContent> : null}
         <TabsContent value="why" className="space-y-4">
       <section aria-labelledby="next-step-heading" className="space-y-4 rounded-xl border border-line bg-surface p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3"><Badge>Why start here?</Badge>{timing.success ? <Button variant="link" size="sm" onClick={() => setTimingOpen(true)}>First review: {dayRange(timing.data.firstReview)}</Button> : <span className="text-xs text-ink-3">Timing will be judged with the next AI update</span>}</div>

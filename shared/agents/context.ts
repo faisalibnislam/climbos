@@ -1,3 +1,6 @@
+/** Shared ceiling for complete, provenance-bound strategy learning records. */
+export const STRATEGY_LEARNING_CONTEXT_CHARS = 10_000;
+
 /**
  * Prompt context that fits a budget without silent cuts: JSON stays valid
  * (trailing list items go first, then the longest strings are shortened) and

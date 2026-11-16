@@ -246,6 +246,10 @@ The owner asked for Anthropic and Gemini alongside OpenAI, governed by operator 
 
 Not verified: no live Anthropic or Gemini call has been made; the admin page wasn't opened in a browser because the dev test account isn't staff (the onboarding page was checked for a user without permission). Owner action: add `ANTHROPIC_API_KEY` and/or confirm `GEMINI_API_KEY` in the Convex dashboard, then pick defaults in `/ops/models`.
 
+## Latest strategy-learning follow-up
+
+The creative feedback selection gap is repaired in `convex/creativeStrategy.ts`: one read-only selection feeds UI and generation, with recent report/decision indexes, latest-per-option selection, retirement without resurrection, original option snapshots and hash-checked legacy fallback. Whole records retain original test conditions within a shared 10,000-character ceiling. The focused Plan options tab exposes the learning list. No new model, agent, provider or action permission was added. See the newest Verification entry for 57 focused regression/permission tests and two browser checks. Candidate-window and whole-record limits remain explicit; this is not complete history, independently verified outcomes or a full requirement-completion audit.
+
 ## What remains and should guide the next work
 
 These are known open gaps, not a complete substitute for checking the requirement audit and ledger before choosing work:
