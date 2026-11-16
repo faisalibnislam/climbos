@@ -1,23 +1,25 @@
 import { expect, test } from "@playwright/test";
 import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
 
-test("Home leads with a recommendation and keeps requests editable @mobile", async ({ page }) => {
+test.beforeEach(async ({ page }) => { page.setDefaultTimeout(15_000); });
+
+test("Home opens saved work and keeps requests editable @mobile", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   const slug = await openDemo(page);
-  await expect(page.getByRole("heading", { level: 1, name: "Your next move" })).toBeVisible();
-  const recommendation = page.getByRole("region", { name: "Your next step" });
+  await expect(page.getByRole("heading", { level: 1, name: "What’s next?" })).toBeVisible();
+  const recommendation = page.getByRole("region", { name: "First form in 7 days", exact: true });
   const composer = page.getByRole("region", { name: "Ask ClimbOS", exact: true });
   await expect(recommendation).toBeVisible();
   expect((await recommendation.boundingBox())!.y).toBeLessThan((await composer.boundingBox())!.y);
-  const input = page.getByLabel("Describe a problem or a goal", { exact: true });
+  const input = page.getByRole("textbox", { name: "Your request", exact: true });
   await input.fill("Keep my draft.");
-  await page.getByRole("button", { name: "Get more customers", exact: true }).click();
-  await expect(input).toHaveValue("Keep my draft.\nGet more customers");
-  await recommendation.getByRole("link").click();
+  await page.getByRole("button", { name: "Get more paying customers", exact: true }).click();
+  await expect(input).toHaveValue("Keep my draft.\nGet more paying customers");
+  await recommendation.getByRole("link", { name: "See your plan", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/app/${slug}/plan`));
   await page.goto(`/app/${slug}/today`);
-  await expect(input).toHaveValue("Keep my draft.\nGet more customers");
+  await expect(input).toHaveValue("Keep my draft.\nGet more paying customers");
   await expectAccessible(page, "recommendation-first Home");
   await expectNoHorizontalScroll(page);
   expect(errors).toEqual([]);
@@ -30,8 +32,12 @@ test("Plan presents the choice before optional research and controls @mobile", a
   await expect(page.getByRole("tab", { name: "Next steps", exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("heading", { name: "Where your business could go", exact: true })).toHaveCount(0);
   await page.getByRole("tab", { name: "Why this plan", exact: true }).click();
+  await page.getByText("Where this could lead", { exact: true }).click();
   await expect(page.getByRole("heading", { name: "Where your business could go", exact: true })).toBeVisible();
   await expect(page.getByText("A proposed direction to test.", { exact: false })).toBeVisible();
+  await page.getByRole("tablist", { name: "Plan views", exact: true }).getByRole("tab", { name: "Research", exact: true }).click();
+  await page.getByRole("button", { name: "Open research and plan details", exact: true }).click();
+  await page.getByText("Other ideas, numbers and questions", { exact: true }).click();
   const fullPlan = page.locator("details").filter({ has: page.locator("summary", { hasText: "Who to reach and how" }) }).first();
   await expect(fullPlan).not.toHaveAttribute("open");
   await fullPlan.locator(":scope > summary").click();
@@ -73,10 +79,13 @@ test("Search suggests an observed page review and only prepares an editable requ
   await expect(page.getByRole("region", { name: "Your requests", exact: true })).toHaveText(history, { useInnerText: true });
 });
 
-test("Owners can define a test before starting and preserve later changes @mobile", async ({ page }) => {
+test("Owners can define a test and preserve its setup after reporting it not run @mobile", async ({ page }) => {
   const slug = await openDemo(page);
   await page.goto(`/app/${slug}/plan`);
-  await page.getByRole("tab", { name: "Why this plan", exact: true }).click();
+  const views = page.getByRole("tablist", { name: "Plan views", exact: true });
+  await views.getByRole("tab", { name: "Research", exact: true }).click();
+  await page.getByRole("button", { name: "Open research and plan details", exact: true }).click();
+  await page.getByText("Other ideas, numbers and questions", { exact: true }).click();
   await page.getByText("Who to reach and how", { exact: true }).click();
   const setup = page.locator("details").filter({ has: page.locator(":scope > summary", { hasText: "Set up this test" }) }).first();
   await setup.locator(":scope > summary").click();
@@ -92,6 +101,15 @@ test("Owners can define a test before starting and preserve later changes @mobil
   await expect(setup.locator("xpath=..").getByText("Proposed", { exact: true })).toBeVisible();
   await expectAccessible(page, "test setup form");
   await expectNoHorizontalScroll(page);
+  await views.getByRole("tab", { name: "Next steps", exact: true }).click();
+  const learning = page.getByRole("region", { name: "Check your progress", exact: true });
+  await learning.getByRole("button", { name: "Record outcome", exact: true }).click();
+  await learning.getByRole("button", { name: "Didn't run", exact: true }).click();
+  await learning.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(learning.getByText("Not run", { exact: true })).toBeVisible();
+  await views.getByRole("tab", { name: "Research", exact: true }).click();
+  await page.getByText("Other ideas, numbers and questions", { exact: true }).click();
+  await page.getByText("Who to reach and how", { exact: true }).click();
   const running = page.locator("details").filter({ has: page.locator(":scope > summary", { hasText: "Original setup and changes" }) }).first();
   await running.locator(":scope > summary").click();
   await expect(running.getByRole("button", { name: "Save test setup" })).toHaveCount(0);

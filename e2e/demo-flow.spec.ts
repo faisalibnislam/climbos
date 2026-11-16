@@ -56,11 +56,12 @@ test.describe.serial("Formkit demo end-to-end", () => {
 
   test("plan: approved plan with channels, experiments and insights", async () => {
     await page.goto(`/app/${slug}/plan`);
-    await page.getByRole("tab", { name: "Why this plan", exact: true }).click();
+    await page.getByRole("tablist", { name: "Plan views", exact: true }).getByRole("tab", { name: "Research", exact: true }).click();
+    await page.getByRole("button", { name: "Open research and plan details", exact: true }).click();
     await page.getByText("Other ideas, numbers and questions", { exact: true }).click();
     await page.getByText("Who to reach and how", { exact: true }).click();
     await page.getByText("What we found", { exact: true }).click();
-    await expect(page.getByText(/Use-case pages|use-case/i).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Priority 1: Agency workflow research", exact: true })).toBeVisible();
     await expect(page.getByText(/experiment/i).first()).toBeVisible();
     await expect(page.getByText(/SWOT|strengths/i).first()).toBeVisible();
     await expectAccessible(page, "plan");

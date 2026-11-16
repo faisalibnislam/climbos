@@ -9,6 +9,28 @@ beforeEach(() => {
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
+it("opens a fresh demo with the current focused workflow without generating a plan", async () => {
+  const t = setup();
+  const owner = await asNewUser(t, "demo-first-visit@example.com", { anonymous: true });
+  const { slug } = await owner.client.mutation(api.demo.createDemoWorkspace, {});
+  await t.finishAllScheduledFunctions(() => undefined);
+  const view = await owner.client.query(api.workspace.plan, { slug });
+  expect(view.strategy?.expert?.focusedMove?.title).toBe("Check one agency intake handoff");
+  expect(view.strategy?.expert?.preparedWork).toHaveLength(1);
+  expect(view.strategy?.expert?.strategyExploration?.bold.title).toBe("Become known for the brief you decline");
+  expect(view.strategy?.expert?.phases).toHaveLength(2);
+  expect(view.experiments).toMatchObject([{ name: view.strategy?.expert?.focusedMove?.title, status: "proposed", baselineRate: null }]);
+  expect(view.strategy?.channels).toMatchObject([{ key: "partnerships", adSpendMinor: 0 }]);
+  expect((await t.run(ctx => ctx.db.get(view.strategy!.id)))?.generationCostMicros).toBe(0);
+  expect(await t.run(ctx => ctx.db.query("workflowRuns").collect())).toEqual([]);
+  const ownerText = "Owner-edited private demo brief. Preserve this text when opening the demo again.";
+  await owner.client.mutation(api.planDrafts.save, { slug, strategyId: view.strategy!.id, index: 0, expectedRevision: 0, body: ownerText });
+  expect(await owner.client.mutation(api.demo.createDemoWorkspace, {})).toEqual({ slug });
+  expect((await owner.client.query(api.workspace.plan, { slug })).strategy?.id).toBe(view.strategy?.id);
+  expect((await owner.client.query(api.planDrafts.forStrategy, { slug, strategyId: view.strategy!.id })).edits).toMatchObject([{ body: ownerText, revision: 1 }]);
+  expect(fetch).not.toHaveBeenCalled();
+});
+
 it.each(["starter", "focused"] as const)("prepares the current %s owner workflow in demo without a provider call", async planStyle => {
   const t = setup();
   const owner = await asNewUser(t, `demo-${planStyle}@example.com`, { anonymous: true });

@@ -1,7 +1,9 @@
 import { v } from "convex/values";
 import { createRng, generateSyntheticDailySeries, runForecast, addDays } from "../shared/forecasting";
 import { fixtureOutput } from "./ai/fixtures";
-import type { BusinessInsights, SocialPostsOutput, StrategyOutput } from "../shared/ai/tasks";
+import type { BusinessInsights, SocialPostsOutput } from "../shared/ai/tasks";
+import { demoFocusedStrategy } from "../shared/demo/focusedStrategy";
+import { LEGACY_EXPERT_PLAN_SCHEMA_VERSION } from "../shared/agents/planCompatibility";
 import { approvalHash, contentHash } from "../shared/policy";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -129,8 +131,9 @@ async function seedDemo(ctx: MutationCtx, userId: Id<"users">): Promise<string> 
     active: true,
   });
 
-  // Approved growth plan v1.
-  const s = fixtureOutput("growth_strategy", fx) as StrategyOutput;
+  // Synthetic approved example, using the same contract as a focused demo update.
+  // This seeded state is not an owner approval or permission for a live action.
+  const s = demoFocusedStrategy();
   const strategyId = await ctx.db.insert("strategies", {
     orgId,
     businessId,
@@ -139,39 +142,23 @@ async function seedDemo(ctx: MutationCtx, userId: Id<"users">): Promise<string> 
     status: "approved",
     summary: s.summary,
     expert: {
-      version: 7,
-      diagnosis: "Fictional sample plan for demonstrating ClimbOS.",
-      affordableCac: "Unknown in this demo.",
-      notDoing: [],
-      northStar: { metric: "Demo metric only", baseline: "Unknown", target: "Not set" },
-      leadingIndicators: [],
-      phases: [],
-      weekOneChecklist: [],
-      risks: [],
-      strategicDirection: {
-        ambition: "Make client intake easier for a small agency, from the first question to a ready-to-start project.",
-        customer: "In this fictional example, an agency owner scoping a new client project.",
-        unmetNeed: "A submitted form can still leave the owner chasing information before work can begin.",
-        winningApproach: "Test one reusable client-intake workflow, rather than promote every form-building feature to everyone.",
-        whyThisBusiness: "The demo illustrates forms with logic and response workflows; real capabilities still need checking for a real business.",
-        compoundingAdvantage: "Useful, owner-approved workflow examples could make future agency onboarding easier.",
-        horizon: "Illustrative longer-term direction",
-        currentBet: "Review one intake example and identify the missing information needed before a project can start.",
-        nextHorizon: "If a small pilot helps, test whether another similar agency needs the same workflow.",
-        notNow: ["A launch on every platform or a broad paid campaign."],
-        assumptions: ["This is synthetic demo reasoning, not measured customer demand or a live recommendation."],
-        changeCourseIf: "The workflow does not make the agency's scoping decision easier.",
-        evidenceRefs: [],
-      },
-      plays: [{
-        id: "demo_opportunity",
-        name: "Demo opportunity",
-        oneLiner: "This fictional example shows how an opportunity can be explored; it is not a recommendation for your business.",
-        firstActionToday: "Ask what evidence would be needed to assess an opportunity for your business.",
-        kind: "research",
-      }],
+      version: LEGACY_EXPERT_PLAN_SCHEMA_VERSION,
+      diagnosis: s.diagnosis,
+      affordableCac: s.affordableCac,
+      notDoing: s.notDoing,
+      northStar: s.northStar,
+      leadingIndicators: s.leadingIndicators,
+      phases: s.phases,
+      weekOneChecklist: s.weekOneChecklist,
+      risks: s.risks,
+      strategicDirection: s.strategicDirection,
+      focusedMove: s.focusedMove,
+      strategyExploration: s.strategyExploration,
+      preparedWork: s.preparedWork,
+      timing: s.timing,
+      plays: [],
     },
-    audiences: s.audiences,
+    audiences: s.audiences.map(({ name, hypothesis, evidence }) => ({ name, hypothesis, evidence })),
     positioning: s.positioning,
     channels: s.channels.map((c, i) => ({
       key: c.key,
@@ -179,7 +166,7 @@ async function seedDemo(ctx: MutationCtx, userId: Id<"users">): Promise<string> 
       why: c.why,
       priority: i + 1,
       status: "active" as const,
-      monthlyCostMicros: [1_200_000, 900_000, 300_000, 400_000][i] ?? 0,
+      monthlyCostMicros: 0,
       adSpendMinor: Math.round(c.suggestedMonthlyAdSpend * 100),
       deliverables: c.deliverables,
       dependencies: c.dependencies,
@@ -188,13 +175,13 @@ async function seedDemo(ctx: MutationCtx, userId: Id<"users">): Promise<string> 
     })),
     constraints: s.constraints,
     measurementPlan: s.measurementPlan,
-    reviewDate: new Date(now + 7 * DAY).toISOString().slice(0, 10),
-    sourceFactIds: factIds.slice(0, 5),
+    reviewDate: new Date(now + s.timing!.firstReview.maxDays * DAY).toISOString().slice(0, 10),
+    sourceFactIds: [],
     generationCostMicros: 0,
-    createdAt: now - 19 * DAY,
+    createdAt: now,
   });
-  for (const [i, e] of s.experiments.entries()) {
-    await ctx.db.insert("experiments", { orgId, strategyId, ...e, status: i === 0 ? "running" : "proposed", createdAt: now - 18 * DAY });
+  for (const e of s.experiments) {
+    await ctx.db.insert("experiments", { orgId, strategyId, ...e, status: "proposed", createdAt: now });
   }
 
   // Content in every state, including an honest "uncertain" outcome.

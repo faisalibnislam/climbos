@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expertPlaysOf, readExpertPlan } from "../shared/agents/planCompatibility";
+import { readExpertPlan } from "../shared/agents/planCompatibility";
 import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
 import { localDemoFixtures } from "./local-demo-fixtures";
 
@@ -30,8 +30,8 @@ test("weekly reports require explicit values and preserve currency across settin
   const savedGoal = (await rows("goals")).find(r => r.orgId === org._id)!;
   await append("autonomyPolicies", [{ ...copyRow(policy), orgId: org._id, currency: "KWD" }]);
   const sourceExpert = readExpertPlan(plan.expert as Record<string, unknown>);
-  const sourcePlay = expertPlaysOf(plan.expert)[0] as Record<string, unknown>;
-  if (!sourcePlay) throw new Error("Demo play required");
+  // This test exercises detailed-plan reporting independently of the focused demo seed.
+  const sourcePlay = { kind: "research", oneLiner: "Synthetic weekly reporting example", firstActionToday: "Record the synthetic observation." };
   const { growthPlanV9: _v9, growthPlanV8: _v8, snapshot: _snapshot, quality: _quality, ...expert } = sourceExpert;
   await append("strategies", [{ ...copyRow(plan), _creationTime: Date.now() - 21 * 86400000, orgId: org._id, businessId: savedBusiness._id, goalId: savedGoal._id, runId: undefined, approvalId: undefined, status: "approved", expert: { ...expert, version: 7, plays: [{ ...sourcePlay, id: "weekly-fixture", name: "Weekly reporting fixture", p10: undefined, p50: undefined, p90: undefined, model: { weeklyReach: 100, steps: [{ name: "Paying customers", rate: 0.1 }], monthlySpendUsd: 0, ownerHoursPerWeek: 1 } }] } }]);
   const savedPlan = (await rows("strategies")).find(r => r.orgId === org._id)!;

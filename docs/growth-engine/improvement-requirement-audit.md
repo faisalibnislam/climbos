@@ -1,5 +1,7 @@
 # ClimbOS improvement requirements: implementation audit
 
+**17 November first-visit demo follow-up:** new demo workspaces now seed the same focused contract as their update path, exposing prepared work, a timeline, protected creative options and a proposed primary experiment without a generation request. Existing demos and owner-edited drafts are preserved. Detailed-plan reporting fixtures are explicit test data rather than a dependency on a placeholder public-demo play. This closes the initial showcase gap noted below; synthetic workflow coverage does not establish real recommendation quality or full specification acceptance. See Verification.
+
 **17 November demo workflow follow-up:** starter/focused update requests now persist the current focused recommendation, prepared work, creative portfolio and matching primary experiment through the demo adapter. The prior approved plan is retained; only a pending review is created. Synthetic examples preserve unknown business inputs and make no research/model-quality claim. This closes a demo update-path gap, not the initial showcase refresh, generic fake-model schema coverage, live recommendation quality or full 410-row acceptance. See Verification.
 
 **Audit date:** 25 October 2026. **Source:** `~/Downloads/Prompt for improving.md` and the related user instructions in this task. This is a repository-state audit, not a claim that every user-facing outcome has been validated in production.
