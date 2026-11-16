@@ -2,6 +2,10 @@
 
 Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs as written there. Baseline: `404c466`. Branch: `growth-engine-v2`.
 
+## Local update — 16 November 2026: business-model evidence and latest decisions
+
+Fixed owner/context disagreement after long alternative-test histories by using one indexed latest record per test target. Added missing business-model test history to workspace export/deletion. Viability context now distinguishes calculated imported-record observations, capped billing/pipeline samples, missing loss reasons and heuristic direction flags; incomplete comparison windows stay unknown, and future deal closes cannot become observed sales outcomes. Owner reports no longer automatically override an earlier model judgment. The three strategy modes remain required. Engine `v3.84-business-model-evidence-limits`; 76 focused tests across 13 files, two desktop/mobile browser checks, typecheck, changed-file ESLint and diff checks passed. This verifies data selection and bounds, not expert-level viability judgments. See [Verification](../Verification.md).
+
 ## Local update — 16 November 2026: recoverable experiment reports
 
 Closed the previously confirmed correction-history gap. Typed append-only outcome revisions now preserve original reports, corrections, changed definitions and available legacy snapshots. Revision-bound saves reject stale editors; the existing current-analysis projection remains the only report input to future learning. Owner history exposes dated versions and changed fields through tenant-scoped pagination. Export/deletion includes history. Verification: 62 focused regression/permission tests, four desktop/mobile browser checks (including two simultaneous editor forms), typecheck, changed-file ESLint and diff checks passed. Earlier overwritten corrections cannot be recovered, and historical reports remain member-entered rather than independently verified outcomes. See [Verification](../Verification.md).

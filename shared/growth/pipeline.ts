@@ -49,7 +49,7 @@ export function pipelineOutcomes(deals: readonly PipelineDeal[], options: { nowM
   const windowDays = options.windowDays ?? 365;
   const from = options.nowMs - windowDays * DAY;
   const closedAt = (d: PipelineDeal) => (d.stage === "won" ? d.wonAt ?? d.updatedAt : d.lostAt ?? d.updatedAt);
-  const closed = deals.filter((d) => (d.stage === "won" || d.stage === "lost") && closedAt(d) >= from);
+  const closed = deals.filter((d) => (d.stage === "won" || d.stage === "lost") && closedAt(d) >= from && closedAt(d) <= options.nowMs);
   const won = closed.filter((d) => d.stage === "won");
   const lost = closed.filter((d) => d.stage === "lost");
   const counts = new Map<LossReason, number>();

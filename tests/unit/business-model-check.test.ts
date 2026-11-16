@@ -77,7 +77,7 @@ describe("first-party model signals", () => {
 
   it("computes a revenue trend only with 180 days of history, using stated thresholds", () => {
     const down = ownerModelSignals({ nowMs: now, currency: "USD", revenueEvents: [order(180, 10_000), order(100, 10_000), order(30, 12_000)], deals: [], competitorChanges90d: 0 });
-    expect(down.find((s) => s.key === "revenue_trend")).toMatchObject({ direction: "headwind", basis: "measured", detail: expect.stringContaining("-40%") });
+    expect(down.find((s) => s.key === "revenue_trend")).toMatchObject({ direction: "headwind", basis: "calculated", detail: expect.stringContaining("-40%") });
     const thin = ownerModelSignals({ nowMs: now, currency: "USD", revenueEvents: [order(30, 12_000)], deals: [], competitorChanges90d: 0 });
     expect(thin.find((s) => s.key === "revenue_trend")).toMatchObject({ direction: "unknown" });
   });
@@ -85,11 +85,53 @@ describe("first-party model signals", () => {
   it("uses owner pipeline reasons and stage, and says when nothing is available", () => {
     const deals = Array.from({ length: 6 }, (_, i) => ({ stage: "lost" as const, source: "manual", createdAt: now - 60 * DAY, updatedAt: now - DAY, lostAt: now - DAY, lostReason: i < 3 ? "chose_competitor" as const : "timing" as const }));
     const s = ownerModelSignals({ nowMs: now, currency: "USD", revenueEvents: [], deals, lifecycleStage: "decline", competitorChanges90d: 2 });
-    expect(s.find((x) => x.key === "loss_reasons")).toMatchObject({ direction: "headwind", basis: "owner_report", detail: "3 of 6 recorded loss reasons." });
+    expect(s.find((x) => x.key === "loss_reasons")).toMatchObject({ direction: "headwind", basis: "owner_report", detail: expect.stringContaining("3 of 6 recorded loss reasons;") });
     expect(s.find((x) => x.key === "lifecycle_stage")?.direction).toBe("headwind");
-    expect(s.find((x) => x.key === "competitor_changes")?.detail).toContain("2 recorded change summaries");
+    expect(s.find((x) => x.key === "competitor_changes")?.detail).toContain("2 change summaries in the loaded sample");
     expect(ownerModelSignalsBrief([])).toContain("none available");
     expect(ownerModelSignalsBrief(s)).toContain("thresholds are stated, not business facts");
+  });
+
+  it("withholds revenue direction for a truncated comparison but preserves a fully read comparison window", () => {
+    const input = { nowMs: now, currency: "USD", revenueEvents: [order(180, 10_000), order(100, 10_000), order(30, 12_000)], deals: [], competitorChanges90d: 0, revenuePartial: true };
+    const partial = ownerModelSignals(input).find(s => s.key === "revenue_trend")!;
+    expect(partial.direction).toBe("unknown");
+    expect(partial.detail).toContain("comparison is withheld");
+    expect(partial.detail).not.toContain("-40%");
+    const completeWindow = ownerModelSignals({ ...input, revenueReadCoversComparison: true }).find(s => s.key === "revenue_trend")!;
+    expect(completeWindow.detail).toContain("-40%");
+    expect(completeWindow.detail).toContain("both comparison periods fit within the bounded read");
+    expect(completeWindow.detail).toContain("do not verify coverage of every account or period");
+    expect(completeWindow.detail).toContain("15%");
+  });
+
+  it("qualifies capped pipeline and repeat samples, missing loss reasons and competitor counts", () => {
+    const revenueEvents = Array.from({ length: 20 }, (_, i) => order(200 + i, 100));
+    const deals = Array.from({ length: 12 }, (_, i) => ({ stage: "lost" as const, source: "manual", createdAt: now - 60 * DAY, updatedAt: now - DAY, lostAt: now - DAY, ...(i < 6 ? { lostReason: "price" as const } : {}) }));
+    const signals = ownerModelSignals({ nowMs: now, currency: "USD", revenueEvents, deals, competitorChanges90d: 8, revenuePartial: true, pipelinePartial: true, competitorChangesPartial: true });
+    const loss = signals.find(s => s.key === "loss_reasons")!;
+    expect(loss.direction).toBe("unknown");
+    expect(loss.detail).toContain("6 lost deals have no recorded reason");
+    expect(loss.detail).toContain("totals and proportions are partial");
+    expect(signals.find(s => s.key === "win_rate")?.detail).toContain("2,000 most recently updated deals");
+    expect(signals.find(s => s.key === "repeat_purchase")?.detail).toContain("History is truncated");
+    expect(signals.find(s => s.key === "competitor_changes")?.detail).toContain("not a complete market count");
+    expect(ownerModelSignalsBrief(signals)).toContain("calculated from loaded records");
+  });
+
+  it("does not treat future payments and future deal closes as observed results", () => {
+    const revenueEvents = Array.from({ length: 20 }, (_, i) => order(-1, 100, `future-${i}`));
+    const deals = Array.from({ length: 12 }, () => ({ stage: "lost" as const, source: "manual", createdAt: now - DAY, updatedAt: now, lostAt: now + DAY, lostReason: "price" as const }));
+    const signals = ownerModelSignals({ nowMs: now, currency: "USD", revenueEvents, deals, competitorChanges90d: 0 });
+    expect(signals.map(s => s.key)).toEqual(["revenue_trend"]);
+    expect(signals[0].direction).toBe("unknown");
+  });
+
+  it("keeps non-monetary evidence when the business currency is unknown", () => {
+    const signals = ownerModelSignals({ nowMs: now, currency: null, revenueEvents: [order(180, 10_000)], deals: [], lifecycleStage: "decline", competitorChanges90d: 2 });
+    expect(signals.find(s => s.key === "revenue_trend")?.detail).toContain("Business currency is unknown");
+    expect(signals.find(s => s.key === "lifecycle_stage")?.basis).toBe("owner_report");
+    expect(signals.find(s => s.key === "competitor_changes")?.detail).toContain("2 change summaries");
   });
 
   it("limits analogy citations to the small retrieved set", () => {

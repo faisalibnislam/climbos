@@ -79,6 +79,58 @@ describe("business model check", () => {
     expect(context?.businessModelTestsText).toContain("grounded: observed, evidence owner reported, decision keep testing");
     expect(context?.businessModelTestNotes).toEqual(["grounded: 3 of 20 past customers asked to join the plan."]);
   });
+  it("keeps the latest result for every alternative beyond 200 updates, and exports and deletes scoped history", async () => {
+    const t = setup();
+    const w = await workspace(t, "model-history@example.com");
+    const other = await workspace(t, "model-history-other@example.com");
+    const { runId } = await w.client.mutation(api.businessModel.start, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const baseAt = Date.now() - 10_000;
+    const targets = ["deciding", "grounded", "adjacent", "bold"] as const;
+    await t.run(async ctx => {
+      for (const target of targets) await ctx.db.insert("businessModelTests", { orgId: w.orgId, runId, target, testState: "observed", outcomeNote: `Retain ${target} evidence`, outcomeEvidence: "owner_reported", ownerDecision: "keep_testing", createdBy: w.userId, createdAt: baseAt });
+      for (let i = 0; i < 205; i++) await ctx.db.insert("businessModelTests", { orgId: w.orgId, runId, target: "adjacent", testState: "observed", outcomeNote: `Adjacent update ${i}`, outcomeEvidence: "owner_reported", ownerDecision: "drop_alternative", createdBy: w.userId, createdAt: baseAt + i + 1 });
+    });
+    const latest = await w.client.query(api.businessModel.latest, { slug: w.slug });
+    expect(Object.keys(latest.result!.tests).sort()).toEqual([...targets].sort());
+    expect(latest.result!.tests.adjacent.outcomeNote).toBe("Adjacent update 204");
+    expect(latest.result!.tests.bold.outcomeNote).toBe("Retain bold evidence");
+    const strategyRunId = await t.run(async ctx => ctx.db.insert("workflowRuns", { ...(await ctx.db.get(runId))!, _id: undefined, _creationTime: undefined, kind: "strategy", status: "executing", output: undefined } as never));
+    const context = await t.query(internal.jobWrites.jobContext, { runId: strategyRunId });
+    expect(context!.businessModelTestNotes).toEqual(expect.arrayContaining(["adjacent: Adjacent update 204", "bold: Retain bold evidence", "deciding: Retain deciding evidence", "grounded: Retain grounded evidence"]));
+    expect(context!.businessModelTestNotes).toHaveLength(4);
+    expect(context!.businessModelTestsText).toContain("not automatic proof");
+    expect(context!.businessModelTestsText).not.toContain("outranks");
+    expect((await other.client.query(api.businessModel.latest, { slug: other.slug })).result).toBeNull();
+    const exported = JSON.parse(await t.query(internal.settings.exportData, { orgId: w.orgId }));
+    expect(exported.businessModelTests).toHaveLength(209);
+    expect(exported.businessModelTestHistoryLimited).toBe(false);
+    expect(JSON.parse(await t.query(internal.settings.exportData, { orgId: other.orgId })).businessModelTests).toEqual([]);
+    await t.mutation(internal.settings.purgeWorkspaceBatch, { orgId: w.orgId });
+    await t.finishAllScheduledFunctions(() => undefined);
+    expect(await t.run(ctx => ctx.db.query("businessModelTests").withIndex("by_org_created", q => q.eq("orgId", w.orgId)).collect())).toEqual([]);
+    expect(await t.run(ctx => ctx.db.get(other.orgId))).not.toBeNull();
+  });
+
+  it("carries actual billing and pipeline read limits into the viability context without authorizing actions", async () => {
+    const t = setup();
+    const w = await workspace(t, "model-coverage@example.com");
+    const { runId } = await w.client.mutation(api.businessModel.start, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const now = Date.now();
+    await t.run(async ctx => {
+      for (let i = 0; i < 10_001; i++) await ctx.db.insert("revenueEvents", { orgId: w.orgId, source: "csv", sourceEventId: `coverage-${i}`, occurredAt: now - 40 * 86_400_000 - i, currency: "USD", amountMinor: 100, refundedMinor: 0, kind: "order", isFixture: false, ingestedAt: now });
+      for (let i = 0; i < 2_001; i++) await ctx.db.insert("deals", { orgId: w.orgId, name: `Reported loss ${i}`, stage: "lost", source: "manual", currency: "USD", notes: [], createdAt: now - 86_400_000, updatedAt: now - i, lostAt: now - 1, lostReason: "price" });
+    });
+    const context = await t.query(internal.jobWrites.jobContext, { runId });
+    expect(context!.businessModelSignalsText).toContain("comparison is withheld");
+    expect(context!.businessModelSignalsText).toContain("2,000 most recently updated deals");
+    expect(context!.businessModelSignalsText).toContain("totals and proportions are partial");
+    expect(context!.businessModelSignalsText).toContain("calculated from loaded records");
+    expect(context!.businessModelSignalsText).not.toContain("[headwind");
+    for (const table of ["approvals", "actionReceipts"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
+  });
+
 });
 
 describe("business model check without the agent engine", () => {

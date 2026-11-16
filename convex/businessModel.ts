@@ -1,3 +1,4 @@
+import { latestBusinessModelTests } from "./lib/businessModelTests";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
@@ -61,8 +62,8 @@ export const latest = query({
         check = null;
       }
     }
-    const tests = done ? await ctx.db.query("businessModelTests").withIndex("by_run_target", (q) => q.eq("runId", done._id)).take(200) : [];
-    const latestTest = (target: string) => tests.filter((t) => t.target === target).sort((a, b) => b.createdAt - a.createdAt || b._creationTime - a._creationTime)[0];
+    const tests = done ? await latestBusinessModelTests(ctx, org._id, done._id) : [];
+    const latestTest = (target: string) => tests.find((t) => t.target === target);
     return {
       canEdit: can(role, "edit"),
       running: running ? { runId: running._id, status: running.status, createdAt: running.createdAt } : null,

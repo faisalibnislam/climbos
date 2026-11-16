@@ -93,7 +93,7 @@ export const BusinessModelCheckSchema = z.object({
 });
 export type BusinessModelCheck = z.infer<typeof BusinessModelCheckSchema>;
 
-export const BUSINESS_MODEL_TASK = `BUSINESS MODEL CHECK: Describe how this business currently makes money (who pays, for what, pricing structure, sales motion, delivery) using only supplied facts and pages read in this run. Then judge whether that model is holding up against how its market is moving: list market signals (demand, pricing pressure, substitutes, customer behavior, distribution, cost structure, platform or regulatory change, technology), each with direction, basis, references, the date the evidence describes (observedAt, YYYY-MM-DD), and its limitation. A research signal with no stated date must say "undated" in its limitation. Rate up to three customer segments in segmentFit, each once on problem severity, willingness to pay, reachability and serviceability, with level (low, medium, high or unknown), basis and references; high willingness to pay needs payment or pricing evidence. Use the FIRST-PARTY MODEL SIGNALS block as computed facts; never contradict or recompute them. Give a verdict (holding, watch, at risk, or insufficient evidence) with your confidence, reasoning, and what would change it; it is shown to the owner as your judgment. A website, competitor activity, or a trend article alone does not prove a model is outdated, and an absence of data is not decline. Propose exactly three alternative business models: one grounded (established practice), one adjacent (an evidence-supported stretch), one bold (may lack any precedent; do not drop it for being novel, low-evidence, or not yet executable). For each: the model change, mechanism, existing assets it reuses, who pays and how, the convention it challenges, assumptions, risks, unit-economics inputs (state each as owner-reported, measured, research, assumption, or unknown; never invent a figure), what stays the same, and the smallest reversible test with success signal, stop condition, and maximum cost or time. Keep novelty, evidence strength, fit, feasibility, and risk separate. Finish with persist, adjust, test a pivot, or insufficient evidence, the single test that would decide it, and the recommended alternative when testing a pivot. Nothing here authorizes changing prices, offers, or operations.`;
+export const BUSINESS_MODEL_TASK = `BUSINESS MODEL CHECK: Describe how this business currently makes money (who pays, for what, pricing structure, sales motion, delivery) using only supplied facts and pages read in this run. Then judge whether that model is holding up against how its market is moving: list market signals (demand, pricing pressure, substitutes, customer behavior, distribution, cost structure, platform or regulatory change, technology), each with direction, basis, references, the date the evidence describes (observedAt, YYYY-MM-DD), and its limitation. A research signal with no stated date must say "undated" in its limitation. Rate up to three customer segments in segmentFit, each once on problem severity, willingness to pay, reachability and serviceability, with level (low, medium, high or unknown), basis and references; high willingness to pay needs payment or pricing evidence. Use the FIRST-PARTY MODEL SIGNALS block as calculated observations from the specified records; preserve every coverage limit, unknown and owner-report label. Do not turn incomplete imports, heuristic flags or competitor activity into proof of business decline. Never contradict or recompute the supplied arithmetic. Give a verdict (holding, watch, at risk, or insufficient evidence) with your confidence, reasoning, and what would change it; it is shown to the owner as your judgment. A website, competitor activity, or a trend article alone does not prove a model is outdated, and an absence of data is not decline. Propose exactly three alternative business models: one grounded (established practice), one adjacent (an evidence-supported stretch), one bold (may lack any precedent; do not drop it for being novel, low-evidence, or not yet executable). For each: the model change, mechanism, existing assets it reuses, who pays and how, the convention it challenges, assumptions, risks, unit-economics inputs (state each as owner-reported, measured, research, assumption, or unknown; never invent a figure), what stays the same, and the smallest reversible test with success signal, stop condition, and maximum cost or time. Keep novelty, evidence strength, fit, feasibility, and risk separate. Finish with persist, adjust, test a pivot, or insufficient evidence, the single test that would decide it, and the recommended alternative when testing a pivot. Nothing here authorizes changing prices, offers, or operations.`;
 
 const REF = /^fact:(\d+)$/i;
 const citeKey = (url: string) => url.trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, "").replace(/\/+$/, "");
@@ -144,7 +144,7 @@ export interface OwnerModelSignal {
   key: "revenue_trend" | "repeat_purchase" | "win_rate" | "loss_reasons" | "lifecycle_stage" | "competitor_changes";
   label: string;
   direction: "headwind" | "tailwind" | "neutral" | "unknown";
-  basis: "measured" | "owner_report";
+  basis: "calculated" | "owner_report";
   detail: string;
 }
 
@@ -156,45 +156,58 @@ const DAY = 86_400_000;
  */
 export function ownerModelSignals(input: {
   nowMs: number;
-  currency: string;
+  currency: string | null;
   revenueEvents: readonly CohortPayment[];
   deals: readonly PipelineDeal[];
   lifecycleStage?: string | null;
   competitorChanges90d: number;
+  /** True when bounded reads omitted records; not evidence of business decline. */
+  revenuePartial?: boolean;
+  /** The descending read reached earlier than both comparison periods; does not verify import completeness. */
+  revenueReadCoversComparison?: boolean;
+  pipelinePartial?: boolean;
+  competitorChangesPartial?: boolean;
 }): OwnerModelSignal[] {
   const out: OwnerModelSignal[] = [];
-  const net = (from: number, to: number) => input.revenueEvents
+  const billingCoverage = "Imported records do not verify coverage of every account or period; this is not a full-business diagnosis.";
+  const pipelineCoverage = input.pipelinePartial ? " Only the 2,000 most recently updated deals were loaded; totals and proportions are partial." : " Owner-recorded stages are not independently verified sales results.";
+  const revenueEvents = input.revenueEvents.filter(e => Number.isFinite(e.occurredAt) && e.occurredAt <= input.nowMs);
+  const net = (from: number, to: number) => revenueEvents
     .filter((e) => e.currency === input.currency && e.occurredAt >= from && e.occurredAt < to)
     .reduce((s, e) => s + (e.kind === "refund" ? -Math.abs(e.amountMinor) : e.amountMinor - e.refundedMinor), 0);
-  const earliest = input.revenueEvents.filter((e) => e.currency === input.currency).reduce((m, e) => Math.min(m, e.occurredAt), Infinity);
-  if (earliest <= input.nowMs - 180 * DAY) {
+  const earliest = revenueEvents.filter((e) => e.currency === input.currency).reduce((m, e) => Math.min(m, e.occurredAt), Infinity);
+  if (!input.currency) {
+    out.push({ key: "revenue_trend", label: "Revenue trend", direction: "unknown", basis: "calculated", detail: "Business currency is unknown. Confirm the reporting currency before comparing revenue; do not combine currencies or assume an exchange rate." });
+  } else if (input.revenuePartial && !input.revenueReadCoversComparison) {
+    out.push({ key: "revenue_trend", label: "Revenue trend", direction: "unknown", basis: "calculated", detail: `Loaded billing history is truncated to at most 10,000 records. A 90-day comparison is withheld because omitted records may change it. Check complete same-currency records for both 90-day periods. ${billingCoverage}` });
+  } else if (earliest <= input.nowMs - 180 * DAY) {
     const recent = net(input.nowMs - 90 * DAY, input.nowMs);
     const prior = net(input.nowMs - 180 * DAY, input.nowMs - 90 * DAY);
     if (prior > 0) {
       const change = (recent - prior) / prior;
-      out.push({ key: "revenue_trend", label: "Revenue, last 90 days vs the 90 before", direction: change <= -0.15 ? "headwind" : change >= 0.15 ? "tailwind" : "neutral", basis: "measured", detail: `${change >= 0 ? "+" : ""}${Math.round(change * 100)}% net ${input.currency.toUpperCase()} revenue (imported records; seasonality not removed).` });
-    } else out.push({ key: "revenue_trend", label: "Revenue trend", direction: "unknown", basis: "measured", detail: "No positive revenue in the earlier 90-day window to compare with." });
-  } else out.push({ key: "revenue_trend", label: "Revenue trend", direction: "unknown", basis: "measured", detail: "Less than 180 days of imported revenue history." });
+      out.push({ key: "revenue_trend", label: "Revenue, last 90 days vs the 90 before", direction: change <= -0.15 ? "headwind" : change >= 0.15 ? "tailwind" : "neutral", basis: "calculated", detail: `${change >= 0 ? "+" : ""}${Math.round(change * 100)}% net ${input.currency.toUpperCase()} revenue (imported records; seasonality not removed). Direction uses a ±15% change heuristic, not a validated decline or growth threshold.${input.revenuePartial ? " Older history was truncated, but both comparison periods fit within the bounded read." : ""} ${billingCoverage}` });
+    } else out.push({ key: "revenue_trend", label: "Revenue trend", direction: "unknown", basis: "calculated", detail: `No positive revenue in the earlier 90-day window to compare with. ${billingCoverage}` });
+  } else out.push({ key: "revenue_trend", label: "Revenue trend", direction: "unknown", basis: "calculated", detail: `Loaded same-currency records do not span 180 days. Check coverage before comparing two 90-day periods. ${billingCoverage}` });
 
-  const repeat = repeatPurchaseSummary(input.revenueEvents, { currency: input.currency, nowMs: input.nowMs, windowsDays: [90] }).windows[0];
-  if (repeat && repeat.eligible >= 20) out.push({ key: "repeat_purchase", label: "Customers who reordered within 90 days", direction: "unknown", basis: "measured", detail: `${repeat.repeated}/${repeat.eligible} (${Math.round((repeat.rate ?? 0) * 100)}%); no benchmark is assumed, so direction is left to the evidence.` });
+  const repeat = input.currency ? repeatPurchaseSummary(revenueEvents, { currency: input.currency, nowMs: input.nowMs, windowsDays: [90] }).windows[0] : undefined;
+  if (repeat && repeat.eligible >= 20) out.push({ key: "repeat_purchase", label: "Customers who reordered within 90 days", direction: "unknown", basis: "calculated", detail: `${repeat.repeated}/${repeat.eligible} (${Math.round((repeat.rate ?? 0) * 100)}%); no benchmark is assumed, so direction is left to the evidence. First order means first in loaded history, not necessarily first ever.${input.revenuePartial ? " History is truncated; the eligible customers and repeat rate may change with a complete import." : ""} ${billingCoverage}` });
 
   const p = pipelineOutcomes(input.deals, { nowMs: input.nowMs });
   const closed = p.won + p.lost;
-  if (closed >= 10) out.push({ key: "win_rate", label: "Owner-recorded win rate (365 days)", direction: "unknown", basis: "owner_report", detail: `${p.won} won of ${closed} closed (${Math.round((p.winRate ?? 0) * 100)}%).` });
+  if (closed >= 10) out.push({ key: "win_rate", label: "Owner-recorded win rate (365 days)", direction: "unknown", basis: "owner_report", detail: `${p.won} won of ${closed} closed (${Math.round((p.winRate ?? 0) * 100)}%).${pipelineCoverage}` });
   const recorded = p.lossReasons.reduce((s, r) => s + r.count, 0);
   if (recorded >= 5) {
     const modelLoss = p.lossReasons.filter((r) => r.reason === "chose_competitor" || r.reason === "no_need" || r.reason === "price").reduce((s, r) => s + r.count, 0);
-    out.push({ key: "loss_reasons", label: "Recorded loss reasons pointing at the model (another option, no need, price)", direction: modelLoss / recorded >= 0.4 ? "headwind" : "neutral", basis: "owner_report", detail: `${modelLoss} of ${recorded} recorded loss reasons.` });
+    out.push({ key: "loss_reasons", label: "Recorded loss reasons pointing at the model (another option, no need, price)", direction: input.pipelinePartial ? "unknown" : modelLoss / recorded >= 0.4 ? "headwind" : "neutral", basis: "owner_report", detail: `${modelLoss} of ${recorded} recorded loss reasons; ${p.lossReasonNotRecorded} lost deals have no recorded reason. The 40% flag is a review heuristic, not proof that the business model caused losses.${pipelineCoverage}` });
   }
   if (input.lifecycleStage === "decline") out.push({ key: "lifecycle_stage", label: "Owner-reported business stage", direction: "headwind", basis: "owner_report", detail: "The owner reports decline (a concern to check, not a diagnosis)." });
-  if (input.competitorChanges90d > 0) out.push({ key: "competitor_changes", label: "Monitored competitor changes (90 days)", direction: "unknown", basis: "measured", detail: `${input.competitorChanges90d} recorded change summaries; read them for direction.` });
+  if (input.competitorChanges90d > 0) out.push({ key: "competitor_changes", label: "Monitored competitor changes (90 days)", direction: "unknown", basis: "calculated", detail: `${input.competitorChanges90d} change summaries in the loaded sample (at most eight), not a complete market count${input.competitorChangesPartial ? "; older summaries may be omitted" : ""}; read them for direction. Competitor activity does not establish customer demand.` });
   return out;
 }
 
 export function ownerModelSignalsBrief(signals: readonly OwnerModelSignal[]): string {
   if (!signals.length) return "FIRST-PARTY MODEL SIGNALS: none available (no imported revenue, pipeline, stage or competitor history). Treat first-party trends as unknown.";
-  return `FIRST-PARTY MODEL SIGNALS (computed by ClimbOS from this workspace's records; thresholds are stated, not business facts): ${signals.map((s) => `${s.label}: ${s.detail} [${s.direction}, ${s.basis === "measured" ? "measured" : "owner-reported"}]`).join("; ")}.`;
+  return `FIRST-PARTY MODEL SIGNALS (computed by ClimbOS from this workspace's records; thresholds are stated, not business facts; imported-record calculations are not independently verified or complete business evidence): ${signals.map((s) => `${s.label}: ${s.detail} [${s.direction}, ${s.basis === "calculated" ? "calculated from loaded records" : "owner-reported"}]`).join("; ")}.`;
 }
 
 /** The latest saved check as context for later strategy runs; its verdict stays labelled as a model judgment. */
@@ -244,7 +257,7 @@ export function businessModelTestsBrief(records: readonly BusinessModelTestRecor
   if (!latest.size) return { summary: "", notes: [] };
   const rows = [...latest.values()];
   return {
-    summary: `OWNER-RECORDED BUSINESS MODEL TESTS (latest per test; owner-reported, not verified): ${rows.map((r) => `${r.target}: ${r.testState.replace(/_/g, " ")}, evidence ${r.outcomeEvidence.replace(/_/g, " ")}, decision ${r.ownerDecision.replace(/_/g, " ")}`).join("; ")}. Build on these results; an observed result outranks the earlier verdict, and an unrun test is not evidence either way.`,
+    summary: `OWNER-RECORDED BUSINESS MODEL TESTS (latest per test; owner-reported, not verified): ${rows.map((r) => `${r.target}: ${r.testState.replace(/_/g, " ")}, evidence ${r.outcomeEvidence.replace(/_/g, " ")}, decision ${r.ownerDecision.replace(/_/g, " ")}`).join("; ")}. Assess the latest report against its audience, metric, observation window and evidence quality before changing the earlier judgment. A reported result is not automatic proof, and an unrun test is not evidence either way.`,
     notes: rows.filter((r) => r.outcomeNote?.trim()).map((r) => `${r.target}: ${r.outcomeNote!.trim().slice(0, 300)}`),
   };
 }

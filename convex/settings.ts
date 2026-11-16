@@ -476,6 +476,7 @@ export const exportData = internalQuery({
     const goals = await ctx.db.query("goals").withIndex("by_org_status", (q) => q.eq("orgId", orgId)).take(1001);
     const platformPreparations = await ctx.db.query("platformPreparations").withIndex("by_org_kind", (q) => q.eq("orgId", orgId)).take(1000);
     const experiments = await ctx.db.query("experiments").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(1000);
+    const businessModelTests = await ctx.db.query("businessModelTests").withIndex("by_org_created", q => q.eq("orgId", orgId)).order("desc").take(1001);
     const outcomeRevisions = await ctx.db.query("experimentOutcomeRevisions").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
     const brandPatterns = await ctx.db.query("brandPatternDecisions").withIndex("by_org_key_at", q => q.eq("orgId", orgId)).take(101);
     const strip = <T extends Record<string, unknown>>(rows: T[]) => rows.map(({ _creationTime: _c, ...r }) => r);
@@ -496,6 +497,8 @@ export const exportData = internalQuery({
         planningCycleHistoryLimited: goals.length > 1000,
         platformPreparations: strip(platformPreparations),
         experiments: strip(experiments),
+        businessModelTests: strip(businessModelTests.slice(0, 1000)),
+        businessModelTestHistoryLimited: businessModelTests.length > 1000,
         experimentOutcomeRevisions: strip(outcomeRevisions.slice(0, 1000)),
         experimentOutcomeHistoryLimited: outcomeRevisions.length > 1000,
         brandPatternDecisions: strip(brandPatterns.slice(0, 100)),
@@ -767,6 +770,7 @@ const PURGE_BY_ORG: { table: string; index: string }[] = [
   { table: "connections", index: "by_org" },
   { table: "contacts", index: "by_org" },
   { table: "experimentOutcomeRevisions", index: "by_org" },
+  { table: "businessModelTests", index: "by_org_created" },
   { table: "experiments", index: "by_org" },
   { table: "campaigns", index: "by_org" },
   { table: "planDrafts", index: "by_org_updated" },

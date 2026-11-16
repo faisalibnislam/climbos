@@ -1,3 +1,4 @@
+import { latestBusinessModelTests } from "./lib/businessModelTests";
 import { GoalTimingSchema } from "../shared/agents/goalTiming";
 import { runGoal, goalPlans } from "./lib/goals";
 import { FocusedMoveSchema } from "../shared/agents/focusedPlan";
@@ -216,14 +217,14 @@ export const jobContext = internalQuery({
     // Website audits: owner decisions on earlier Design Critic findings, so dismissed findings aren't re-raised blindly.
     const priorDesign = run.kind === "conversion_audit" ? await priorDesignDecisions(ctx, org._id, run._id) : { summary: "", notes: [] as string[] };
     // Business model check: first-party signals computed here; strategy runs read the latest verified check.
-    const businessModelSignalsText = run.kind === "business_model_check" && concentrationCurrency
-      ? ownerModelSignalsBrief(ownerModelSignals({ nowMs: concentrationToMs, currency: concentrationCurrency, revenueEvents: concentrationEvents, deals: pipelineDeals.slice(0, 2_000), lifecycleStage: business?.lifecycleStage?.stage ?? null, competitorChanges90d: marketChanges.filter((change) => change.at >= concentrationToMs - 90 * DAY).length }))
+    const businessModelSignalsText = run.kind === "business_model_check"
+      ? ownerModelSignalsBrief(ownerModelSignals({ nowMs: concentrationToMs, currency: concentrationCurrency ?? null, revenueEvents: concentrationEvents.slice(0, 10_000), revenuePartial: concentrationIsPartial, revenueReadCoversComparison: (revenueRows.at(-1)?.occurredAt ?? Infinity) < concentrationToMs - 180 * DAY, deals: pipelineDeals.slice(0, 2_000), pipelinePartial: pipelineDeals.length > 2_000, competitorChangesPartial: marketChanges.length === 8, lifecycleStage: business?.lifecycleStage?.stage ?? null, competitorChanges90d: marketChanges.filter((change) => change.at >= concentrationToMs - 90 * DAY && change.at <= concentrationToMs).length }))
       : "";
     const latestModelCheck = run.kind === "strategy" || run.kind === "business_model_check"
       ? (await ctx.db.query("workflowRuns").withIndex("by_org_kind_created", (q) => q.eq("orgId", org._id).eq("kind", "business_model_check")).order("desc").take(10))
           .find((r) => r.status === "verified" && !r.isFixture && typeof r.output === "string")
       : undefined;
-    const modelTests = businessModelTestsBrief(latestModelCheck ? (await ctx.db.query("businessModelTests").withIndex("by_run_target", (q) => q.eq("runId", latestModelCheck._id)).collect()).sort((a, b) => b.createdAt - a.createdAt || b._creationTime - a._creationTime).slice(0, 200).filter((t) => t.orgId === org._id) : []);
+    const modelTests = businessModelTestsBrief(latestModelCheck ? await latestBusinessModelTests(ctx, org._id, latestModelCheck._id) : []);
     const businessModelTestsText = modelTests.summary;
     const businessModelTestNotes = modelTests.notes;
     const latestModel = (() => {

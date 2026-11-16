@@ -34,6 +34,16 @@ describe("owner pipeline outcomes", () => {
     expect(text).not.toContain("cheaper local option"); // notes go through the untrusted wrapper separately
   });
 
+  it("excludes future close dates from observed wins, losses, reasons and notes", () => {
+    const p = pipelineOutcomes([
+      deal({ stage: "won", wonAt: now + DAY }),
+      deal({ stage: "lost", lostAt: now + DAY, lostReason: "price", lostReasonNote: "Not yet observed" }),
+      deal({ stage: "lost", updatedAt: now + DAY }),
+      deal({ stage: "won", wonAt: now }),
+    ], { nowMs: now });
+    expect(p).toMatchObject({ won: 1, lost: 0, winRate: 1, lossReasons: [], recentLossNotes: [] });
+  });
+
   it("returns nothing without a pipeline", () => {
     expect(pipelineOutcomesBrief(pipelineOutcomes([], { nowMs: now }))).toBe("");
     expect(pipelineOutcomesBrief(pipelineOutcomes([deal({ stage: "lead" })], { nowMs: now }))).toContain("no closed deals yet");
