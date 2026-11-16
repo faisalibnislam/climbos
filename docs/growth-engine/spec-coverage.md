@@ -54,7 +54,7 @@ This replaces the older deferred-feature inventory. “Implemented” describes 
 | 2 | §9 | Persuasion and offer evidence checks remain enforced, including truthful terms and fair review rules. |
 | 3 | §8 | Exact saved draft captures now include bounded desktop/mobile DOM observations for overflow, language, headings, names, alt attributes and small text. This is not a complete accessibility audit. Original page evidence remains recoverable. |
 | 4 | §8 | Measurement plans and append-only finding decisions remain linked to the page version and capture date. |
-| 5 | §6 | Unscheduled review drafts and linked calendar slots remain visible. |
+| 5 | §6 | Daily/weekly/monthly views now paginate scheduled posts, Autopilot slots and unscheduled review drafts independently. The review range is indexed before pagination, linked items are deduplicated, and partial counts remain explicit until every source is exhausted. Older clients retain the capped compatibility query. |
 | 6 | §3.1 | Expanded diagnosis vocabulary and discriminating checks remain available. Sparse measurements do not establish a diagnosis. |
 | 7 | §6 | New channel reviews persist unknowns, setup, effort basis/unknown hours, first step, smallest check, alternative and change-course condition; library priors remain separate from business evidence. |
 | 8 | §12 | Experiment setup and append-only changes now have an owner form. Proposed tests start no execution. |

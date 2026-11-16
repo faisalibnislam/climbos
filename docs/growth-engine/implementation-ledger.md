@@ -2,6 +2,12 @@
 
 Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs as written there. Baseline: `404c466`. Branch: `growth-engine-v2`.
 
+## Local update — 16 November 2026: complete calendar pagination
+
+Confirmed and repaired: calendar sources stopped at 300 rows; review drafts were capped before applying the selected date range. `content.calendarPage` now pages one tenant-scoped source at a time using existing indexes, including the implicit creation-time suffix for review drafts. The shared merge keeps one entry per linked artifact and preserves Autopilot state independent of source arrival order. The current calendar loads 100 rows per source initially and offers more pages, including after empty filtered pages; changing workspace, timezone or range remounts the grid. The older snapshot query remains available, uses the corrected review range and retains its cap warning. No schema migration, provider call or approval/action change.
+
+Verification: 57 tests passed across eight focused calendar, tenant, Autopilot, safety and publishing files; details and limits are in [Verification](../Verification.md). UI evidence is server-rendered assertions with mocked query hooks, not a browser session or a production scale benchmark.
+
 ## Local update — 9 November 2026
 
 The [local audit](../Local-Audit-2026-11-09.md) maps current defects, repairs and limitations. Implemented: shared research before channel scoring; context-bound scorecard caching; preservation of owner channel preferences; earned creator coverage distinct from sponsorship; required direction for new plans; required 3–5-channel decision shortlist for new scoring (with a brief broad comparison); exact duplicate mechanism/action quality gate; explicit seven-platform social routing; recommendation-first Home/Plan/channels; creator intake; observed search-page review drafts; draft restoration repair; exact-loopback development auth and reproducible fixture backend startup. `ENGINE_VERSION` is `v3.75-direction-and-channel-shortlist`; existing hosted engine selection is unchanged. New schema contracts retain older stored-plan compatibility.

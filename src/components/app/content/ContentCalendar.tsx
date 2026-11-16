@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { ChevronLeft, ChevronRight } from "@/components/icons"
 import Link from "next/link";
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { Segmented } from "@/components/ui/segmented";
 import { ArtifactStatus, SectionBoundary, channelLabel, useNow } from "./shared";
 import { localDate, zonedTime } from "../../../../shared/autopilot";
+import { mergeCalendarItems } from "../../../../shared/contentCalendar";
 
 type View = "day" | "week" | "month";
 
@@ -154,7 +155,7 @@ function CalendarInner({ slug, now, timeZone }: { slug: string; now: number; tim
         />
       </div>
       <p className="text-xs text-ink-3">Times shown in {timeZone}</p>
-      <SectionBoundary label="the calendar" key={`${range.from}-${range.to}`}>
+      <SectionBoundary label="the calendar" key={`${slug}-${timeZone}-${range.from}-${range.to}`}>
         <CalendarGrid
           slug={slug}
           days={range.days}
@@ -192,8 +193,14 @@ function CalendarGrid({
   timeZone: string;
   onSelectDay: (day: Date) => void;
 }) {
-  const result = useQuery(api.content.calendar, { slug, from, to });
-  const items = result?.items;
+  const scheduled = usePaginatedQuery(api.content.calendarPage, { slug, from, to, source: "scheduled" }, { initialNumItems: 100 });
+  const autopilot = usePaginatedQuery(api.content.calendarPage, { slug, from, to, source: "autopilot" }, { initialNumItems: 100 });
+  const review = usePaginatedQuery(api.content.calendarPage, { slug, from, to, source: "review" }, { initialNumItems: 100 });
+  const pages = [scheduled, autopilot, review];
+  const firstLoading = pages.some((page) => page.status === "LoadingFirstPage");
+  const loadingMore = pages.some((page) => page.status === "LoadingMore");
+  const hasMore = pages.some((page) => page.status === "CanLoadMore" || page.status === "LoadingMore");
+  const items = firstLoading ? undefined : mergeCalendarItems(scheduled.results, autopilot.results, review.results);
   const byDay = new Map<string, NonNullable<typeof items>>();
   for (const it of items ?? []) {
     const k = dateKeyAt(it.scheduledFor, timeZone);
@@ -205,14 +212,16 @@ function CalendarGrid({
   const total = items?.length ?? 0;
 
   return (
-    <div aria-busy={items === undefined}>
+    <div aria-busy={firstLoading || loadingMore}>
       <p className="sr-only" role="status">
-        {items === undefined ? "Loading calendar…" : `${total} item${total === 1 ? "" : "s"} in this ${view}.`}
+        {items === undefined ? "Loading calendar…" : `${total} item${total === 1 ? "" : "s"} loaded for this ${view}.${hasMore ? " More items may be available." : " All items loaded."}`}
       </p>
-      {result?.limitsReached && (result.limitsReached.scheduledPosts || result.limitsReached.autopilotSlots || result.limitsReached.awaitingReview) ? (
-        <CalendarLimitNotice limitsReached={result.limitsReached} />
+      {items !== undefined ? (
+        <CalendarLoadMore total={total} hasMore={hasMore} loading={loadingMore} onMore={() => {
+          for (const page of pages) if (page.status === "CanLoadMore") page.loadMore(100);
+        }} />
       ) : null}
-      {items !== undefined && total === 0 ? (
+      {items !== undefined && total === 0 && !hasMore ? (
         <Callout tone="info" className="mb-4">Nothing scheduled this {view}.</Callout>
       ) : null}
       {view !== "day" ? (
@@ -252,7 +261,7 @@ function CalendarGrid({
               {items === undefined ? (
                 <Skeleton className="h-8 w-full" />
               ) : list.length === 0 ? (
-                <p className="text-xs text-ink-3 md:sr-only">Nothing scheduled.</p>
+                <p className="text-xs text-ink-3 md:sr-only">{hasMore ? "No items loaded for this day yet." : "Nothing scheduled."}</p>
               ) : (
                 <ul className="flex flex-col gap-1.5">
                   {list.map((it) => {
@@ -285,16 +294,12 @@ function CalendarGrid({
   );
 }
 
-export function CalendarLimitNotice({ limitsReached }: { limitsReached: { scheduledPosts: boolean; autopilotSlots: boolean; awaitingReview?: boolean } }) {
-  const sources = [
-    limitsReached.scheduledPosts ? "scheduled posts" : null,
-    limitsReached.autopilotSlots ? "Autopilot slots" : null,
-    limitsReached.awaitingReview ? "posts awaiting review" : null,
-  ].filter(Boolean);
-  if (sources.length === 0) return null;
+export function CalendarLoadMore({ total, hasMore, loading, onMore }: { total: number; hasMore: boolean; loading: boolean; onMore: () => void }) {
+  if (!hasMore) return null;
   return (
-    <Callout tone="warning" role="status">
-      Hit the 300-item limit for {sources.join(" and ")}, so this view may be incomplete. Pick a shorter range.
+    <Callout tone="info" className="mb-4">
+      <p role="status">Showing {total} loaded items. More items may be available in this range.</p>
+      <Button className="mt-2" onClick={onMore} disabled={loading}>{loading ? "Loading more…" : "Load more calendar items"}</Button>
     </Callout>
   );
 }

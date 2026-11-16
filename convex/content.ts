@@ -1,4 +1,5 @@
 import { paginationOptsValidator } from "convex/server";
+import { mergeCalendarItems, type CalendarItem } from "../shared/contentCalendar";
 import { featureAllowed, requirePaid } from "./lib/access";
 import { aiModeView, resolveAiMode } from "./lib/aiMode";
 import { EXPERT_KINDS } from "../shared/agents/routes";
@@ -29,7 +30,7 @@ import { findRiskyClaims } from "../shared/ai/tasks";
 import { localDate, thisWeekOf } from "../shared/autopilot";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { artifactStatusValidator, channelValidator } from "./schema";
 import { canRetryRun, createRunWithReservation } from "./engine";
 import { audit } from "./lib/audit";
@@ -152,81 +153,88 @@ export const list = query({
   },
 });
 
+function validateCalendarRange(from: number, to: number) {
+  if (!Number.isFinite(from) || !Number.isFinite(to) || !Number.isFinite(new Date(from).getTime()) || !Number.isFinite(new Date(to).getTime()) || to <= from) {
+    throw appError("INVALID", "Pick a valid date range.");
+  }
+  if (to - from > 62 * 86_400_000) throw appError("INVALID", "Pick a shorter date range.");
+}
+
+function artifactCalendarItem(a: Doc<"artifacts">): CalendarItem {
+  return {
+    id: String(a._id), artifactId: a._id, slotId: null,
+    title: a.title, channel: a.channel, status: a.status,
+    scheduledFor: a.scheduledFor ?? a._creationTime,
+    autopilot: false, autopilotStatus: null,
+    ...(a.scheduledFor === undefined ? { unscheduled: true } : {}),
+  };
+}
+
+async function slotCalendarItem(ctx: QueryCtx, slot: Doc<"calendarSlots">, from: number, to: number): Promise<CalendarItem | null> {
+  if (slot.status === "skipped") return null;
+  const linked = slot.artifactId ? await ctx.db.get(slot.artifactId) : null;
+  const artifact = linked?.orgId === slot.orgId ? linked : null;
+  // A post may have been rescheduled since this slot was planned. Its actual schedule wins.
+  if (artifact?.scheduledFor !== undefined && (artifact.scheduledFor < from || artifact.scheduledFor >= to)) return null;
+  return {
+    id: String(artifact?._id ?? slot._id), artifactId: artifact?._id ?? null, slotId: slot._id,
+    title: artifact?.title ?? slot.idea, channel: slot.channel, status: artifact?.status ?? slot.status,
+    scheduledFor: artifact?.scheduledFor ?? slot.slotAt, autopilot: true, autopilotStatus: slot.status,
+  };
+}
+
+function reviewCalendarQuery(ctx: QueryCtx, orgId: Id<"organizations">, from: number, to: number) {
+  // Convex appends _creationTime to this index. Bound the range before paging,
+  // so newer drafts outside the selected month cannot hide older review work.
+  return ctx.db.query("artifacts")
+    .withIndex("by_org_status", (q) => q.eq("orgId", orgId).eq("status", "in_review").gte("_creationTime", from).lt("_creationTime", to))
+    .order("desc");
+}
+
+/** Paginate each source independently; one Convex pagination cursor per query. */
+export const calendarPage = query({
+  args: {
+    slug: v.string(), from: v.number(), to: v.number(),
+    source: v.union(v.literal("scheduled"), v.literal("autopilot"), v.literal("review")),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, { slug, from, to, source, paginationOpts }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    validateCalendarRange(from, to);
+    if (source === "autopilot") {
+      const result = await ctx.db.query("calendarSlots")
+        .withIndex("by_org_slot", (q) => q.eq("orgId", org._id).gte("slotAt", from).lt("slotAt", to))
+        .paginate(paginationOpts);
+      const items = await Promise.all(result.page.map((slot) => slotCalendarItem(ctx, slot, from, to)));
+      // Preserve the cursor even for an entirely skipped/rescheduled page.
+      return { ...result, page: items.filter((item): item is CalendarItem => item !== null) };
+    }
+    const result = source === "scheduled"
+      ? await ctx.db.query("artifacts")
+        .withIndex("by_org_scheduled", (q) => q.eq("orgId", org._id).gte("scheduledFor", from).lt("scheduledFor", to))
+        .paginate(paginationOpts)
+      : await reviewCalendarQuery(ctx, org._id, from, to).paginate(paginationOpts);
+    return {
+      ...result,
+      page: result.page.filter((a) => source !== "review" || a.scheduledFor === undefined).map(artifactCalendarItem),
+    };
+  },
+});
+
+/** Compatibility snapshot for older clients; the current UI uses calendarPage. */
 export const calendar = query({
   args: { slug: v.string(), from: v.number(), to: v.number() },
   handler: async (ctx, { slug, from, to }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "view");
-    if (to - from > 62 * 86_400_000) throw appError("INVALID", "Pick a shorter date range.");
-    const rows = await ctx.db
-      .query("artifacts")
-      .withIndex("by_org_scheduled", (q) => q.eq("orgId", org._id).gte("scheduledFor", from).lt("scheduledFor", to))
-      .take(300);
-    type CalendarItem = {
-      id: string;
-      artifactId: Id<"artifacts"> | null;
-      slotId: Id<"calendarSlots"> | null;
-      title: string;
-      channel: string;
-      status: string;
-      scheduledFor: number;
-      autopilot: boolean;
-      autopilotStatus: string | null;
-      /** Waiting for owner review with no posting time yet; placed on the day it was drafted. */
-      unscheduled?: boolean;
-    };
-    const events = new Map<string, CalendarItem>(rows.map((a) => [String(a._id), {
-      id: String(a._id),
-      artifactId: a._id,
-      slotId: null as Id<"calendarSlots"> | null,
-      title: a.title,
-      channel: a.channel,
-      status: a.status,
-      scheduledFor: a.scheduledFor!,
-      autopilot: false,
-      autopilotStatus: null as string | null,
-    }]));
-    const slots = await ctx.db
-      .query("calendarSlots")
-      .withIndex("by_org_slot", (q) => q.eq("orgId", org._id).gte("slotAt", from).lt("slotAt", to))
-      .take(300);
-    for (const slot of slots) {
-      if (slot.status === "skipped") continue;
-      const linked = slot.artifactId ? await ctx.db.get(slot.artifactId) : null;
-      const artifact = linked?.orgId === org._id ? linked : null;
-
-      if (artifact && artifact.scheduledFor !== undefined && (artifact.scheduledFor < from || artifact.scheduledFor >= to)) {
-        // A post may have been rescheduled since this slot was planned. Its actual schedule wins.
-        continue;
-      }
-      const existing = artifact ? events.get(String(artifact._id)) : undefined;
-      if (existing) {
-        events.set(existing.id, { ...existing, slotId: slot._id, autopilot: true, autopilotStatus: slot.status });
-        continue;
-      }
-
-      events.set(String(slot._id), {
-        id: String(slot._id),
-        artifactId: artifact?._id ?? null,
-        slotId: slot._id,
-        title: artifact?.title ?? slot.idea,
-        channel: slot.channel,
-        status: artifact?.status ?? slot.status,
-        scheduledFor: artifact?.scheduledFor ?? slot.slotAt,
-        autopilot: true,
-        autopilotStatus: slot.status,
-      });
-    }
-    // Drafts waiting for review have no posting time; show them on the day they were drafted so nothing awaiting the owner is hidden.
-    const awaiting = await ctx.db.query("artifacts").withIndex("by_org_status", (q) => q.eq("orgId", org._id).eq("status", "in_review")).order("desc").take(300);
-    for (const a of awaiting) {
-      if (a.scheduledFor !== undefined || events.has(String(a._id))) continue;
-      const draftedAt = a._creationTime;
-      if (draftedAt < from || draftedAt >= to) continue;
-      events.set(String(a._id), { id: String(a._id), artifactId: a._id, slotId: null, title: a.title, channel: a.channel, status: a.status, scheduledFor: draftedAt, autopilot: false, autopilotStatus: null, unscheduled: true });
-    }
+    validateCalendarRange(from, to);
+    const [rows, slots, awaiting] = await Promise.all([
+      ctx.db.query("artifacts").withIndex("by_org_scheduled", (q) => q.eq("orgId", org._id).gte("scheduledFor", from).lt("scheduledFor", to)).take(300),
+      ctx.db.query("calendarSlots").withIndex("by_org_slot", (q) => q.eq("orgId", org._id).gte("slotAt", from).lt("slotAt", to)).take(300),
+      reviewCalendarQuery(ctx, org._id, from, to).take(300),
+    ]);
+    const slotItems = await Promise.all(slots.map((slot) => slotCalendarItem(ctx, slot, from, to)));
     return {
-      items: [...events.values()].sort((a, b) => a.scheduledFor - b.scheduledFor),
-      // Reaching a source cap means the range may contain more rows than we return.
+      items: mergeCalendarItems(rows.map(artifactCalendarItem), slotItems.filter((item): item is CalendarItem => item !== null), awaiting.filter((a) => a.scheduledFor === undefined).map(artifactCalendarItem)),
       limitsReached: {
         scheduledPosts: rows.length === 300,
         autopilotSlots: slots.length === 300,
