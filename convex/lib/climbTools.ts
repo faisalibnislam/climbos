@@ -4,6 +4,8 @@ import type { FunctionReference } from "convex/server";
 import { api } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { microsToCredits } from "../../shared/economics";
+import { minorToMajor } from "../../shared/economics/currency";
+import type { DealValueSummary } from "../../shared/growth/pipeline";
 import { planJob, maxJobMicros } from "./jobPlans";
 import { CalcToolInput, calculate } from "../../shared/analysis/decisions";
 
@@ -71,7 +73,8 @@ const HttpUrlSchema = z.string().url().refine((value) => {
 }, "Expected an HTTP(S) URL");
 const ImageListOutputSchema = z.object({ website: z.string().nullable(), returned: z.number().int().nonnegative(), truncated: z.boolean(), coverage: z.string(), images: z.array(z.object({ id: z.string(), kind: z.string(), view: z.string().nullable(), label: z.string(), product: z.object({ name: z.string(), price: z.string().optional(), url: HttpUrlSchema.optional() }).nullable() })) });
 const InboxOutputSchema = z.object({ openReturned: z.number().int().nonnegative(), truncated: z.boolean(), coverage: z.string(), items: z.array(z.object({ id: z.string(), kind: z.string(), from: z.string(), email: z.string().nullable(), text: z.string(), status: z.string(), hasDraftReply: z.boolean() })) });
-const PipelineOutputSchema = z.object({ totals: z.object({ open: z.number(), wonValue: z.number(), pipelineValue: z.number(), currency: z.string() }), truncated: z.boolean(), coverage: z.string(), deals: z.array(z.object({ name: z.string(), company: z.string().nullable(), stage: z.string(), value: z.number().nullable(), currency: z.string(), nextStep: z.string().nullable(), nextStepAt: z.string().nullable(), source: z.string() })) });
+const DealValueSummaryOutputSchema = z.object({ partial: z.boolean(), byCurrency: z.array(z.object({ currency: z.string(), recordedValue: z.number().nullable(), known: z.number(), missing: z.number(), needsReview: z.number() })) });
+const PipelineOutputSchema = z.object({ valueUnit: z.literal("major_currency_units"), evidenceKind: z.literal("owner_reported"), totals: z.object({ open: z.number(), wonValue: z.number().nullable(), pipelineValue: z.number().nullable(), currency: z.string(), won: DealValueSummaryOutputSchema, pipeline: DealValueSummaryOutputSchema }), truncated: z.boolean(), coverage: z.string(), deals: z.array(z.object({ name: z.string(), company: z.string().nullable(), stage: z.string(), value: z.number().nullable(), valueNeedsReview: z.boolean(), currency: z.string(), nextStep: z.string().nullable(), nextStepAt: z.string().nullable(), source: z.string() })) });
 const CompetitorsOutputSchema = z.object({
   watching: z.array(z.object({ name: z.string(), url: HttpUrlSchema, status: z.enum(["checked", "pending", "error"]), lastCheckedAt: z.number().nullable(), lastError: z.string().nullable() })),
   changes: z.array(z.object({ id: z.string(), name: z.string(), summary: z.string(), bullets: z.array(z.string()), soWhat: z.string().nullable(), sourceUrls: z.array(HttpUrlSchema), evidence: z.object({ removed: z.array(z.string()), added: z.array(z.string()) }).nullable(), at: z.number() })),
@@ -507,7 +510,7 @@ export const CLIMB_TOOLS: ClimbTool[] = [
   tool({
     name: "get_pipeline",
     title: "Pipeline",
-    description: "Everyone the business is talking to, by stage (lead, talking, booked, won, lost), with deal values, next steps and totals.",
+    description: "Recorded customer progress, deal values and next steps. Values are owner reports, not verified payments or forecasts. Keep currencies separate and missing/unconfirmed values unknown; respect the stated read limits.",
     risk: "read",
     doing: "Checking your pipeline",
     input: z.object({}),
@@ -515,7 +518,8 @@ export const CLIMB_TOOLS: ClimbTool[] = [
     run: async (c, slug) => {
       const p = await c.query(api.crm.list, { slug });
       const deals = p.deals.slice(0, 40);
-      return { totals: p.totals, truncated: p.deals.length > deals.length || p.deals.length >= 500, coverage: "Newest 40 deals from a source capped at 500; older deals may be omitted.", deals: deals.map((d) => ({ name: d.name, company: d.company, stage: d.stage, value: d.value ? d.value / 100 : null, currency: d.currency, nextStep: d.nextStep, nextStepAt: d.nextStepAt ? new Date(d.nextStepAt).toISOString() : null, source: d.source })) };
+      const summary = (s: DealValueSummary) => ({ partial: s.partial, byCurrency: s.byCurrency.map(({ recordedMinor, ...g }) => ({ ...g, recordedValue: recordedMinor === null ? null : minorToMajor(recordedMinor, g.currency) })) });
+      return { valueUnit: "major_currency_units" as const, evidenceKind: "owner_reported" as const, totals: { open: p.totals.open, currency: p.totals.currency, wonValue: p.totals.wonValue === null ? null : minorToMajor(p.totals.wonValue, p.totals.currency), pipelineValue: p.totals.pipelineValue === null ? null : minorToMajor(p.totals.pipelineValue, p.totals.currency), won: summary(p.totals.won), pipeline: summary(p.totals.pipeline) }, truncated: p.deals.length > deals.length || p.hasMore, coverage: `Newest ${deals.length} deal details; counts and recorded value subtotals cover ${p.deals.length} loaded records${p.hasMore ? "; older records are omitted" : ""}. Missing or unconfirmed values are not zero. Currencies are not converted; these owner reports are not verified cash receipts, profit or forecasts.`, deals: deals.map((d) => ({ name: d.name, company: d.company, stage: d.stage, value: d.value === null ? null : minorToMajor(d.value, d.currency), valueNeedsReview: d.valueNeedsReview, currency: d.currency, nextStep: d.nextStep, nextStepAt: d.nextStepAt ? new Date(d.nextStepAt).toISOString() : null, source: d.source })) };
     },
   }),
 

@@ -12,6 +12,8 @@ Attribution uses the displayed completed local dates and a bounded recorded-touc
 
 First-recorded payer counts use positive charges before refunds: a refunded first charge does not turn a renewal into a new customer. Source-scoped history is bounded, fixtures are excluded from real-workspace counts, and invalid/conflicting/incomplete reads stay unknown. First-payer forecasts preserve the definition version. Recorded repeat-payment cohorts now also preserve entry before refunds and before the visible history cutoff. Invalid/conflicting/capped history or missing customer IDs makes the table unavailable with a reason. Results shows payer counts beside percentages and the unknown import completeness; zero recorded charges is not verified churn. Strategy subscription context uses the same assessment, and invalid billing money cannot crash its related concentration/refund calculations. These UTC, currency-specific cohorts do not establish complete billing coverage, contractual retention or causal results.
 
+Customer progress preserves each deal’s currency precision and shows separate recorded subtotals, unknown values and amounts needing review. Its assistant tool uses the same evidence and explicit units. Values are owner reports, not confirmed payments or forecasts. The newest-500-record limit is disclosed. Older non-two-decimal amounts need owner confirmation; already-copied historical CRM revenue is not automatically migrated. See [Verification](Verification.md).
+
 ## Availability labels
 
 - **Built:** implemented in the application. Test evidence is reported separately in [Verification](Verification.md); this label alone does not mean every current check has passed.

@@ -13,11 +13,12 @@ import { StatBlocks } from "@/components/ds/content";
 import { Badge, Button, ConfirmDialog, DatePicker, EmptyState, Field, Input, Select, Sheet, Textarea, toast } from "@/components/ui";
 import { LossReasonFields } from "@/components/app/pipeline/LossReasonFields";
 import { DealAttentionBadges } from "@/components/app/pipeline/DealAttentionBadges";
-import { dealAttention } from "@shared/growth/pipeline";
+import { dealAttention, dealValueSummaryLabel, formatDealValue } from "@shared/growth/pipeline";
+import { minorToMajor } from "@shared/economics/currency";
 
 /** "1200" or "1200.50" → 1200.5; anything else ("1.2.3") → NaN. */
 function parseMoney(s: string): number {
-  return /^\d+(\.\d{0,2})?$/.test(s.trim()) ? Number(s.trim()) : NaN;
+  return /^\d+(\.\d*)?$/.test(s.trim()) ? Number(s.trim()) : NaN;
 }
 
 const STAGES = [
@@ -31,7 +32,7 @@ type Stage = (typeof STAGES)[number]["value"];
 const NEXT: Partial<Record<Stage, Stage>> = { lead: "talking", talking: "booked", booked: "won" };
 const SOURCE: Record<string, string> = { outbound: "Outreach", booking: "Booking page", inbox: "Inbox", manual: "Added by you" };
 
-const money = (minor: number, currency: string) => new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(minor / 100);
+const money = formatDealValue;
 
 /** Mini-CRM: everyone you're talking to, from first reply to won. */
 export default function PipelinePage() {
@@ -47,17 +48,18 @@ export default function PipelinePage() {
       <PageHeader
         section="pipeline"
         title="Customer progress"
-        actions={<AddDeal slug={slug} />}
+        actions={<AddDeal slug={slug} currency={data?.totals.currency ?? null} />}
       />
       {data && data.deals.length ? (
         <StatBlocks
           stats={[
             { label: "Still in progress", value: data.totals.open },
-            { label: "Possible sales value", value: money(data.totals.pipelineValue, data.totals.currency) },
-            { label: "Sale recorded", value: money(data.totals.wonValue, data.totals.currency), tone: data.totals.wonValue ? "good" : "default" },
+            { label: "Recorded possible value", value: dealValueSummaryLabel(data.totals.pipeline) },
+            { label: "Recorded sale value", value: dealValueSummaryLabel(data.totals.won), tone: data.totals.wonValue ? "good" : "default" },
           ]}
         />
       ) : null}
+      {data?.deals.length ? <p className="text-sm text-ink-2">Values are owner-reported, not confirmed payments or a sales forecast. Currencies stay separate; missing or unconfirmed amounts are excluded from recorded subtotals.{data.hasMore ? " Showing the newest 500 records only; older records and values are omitted." : ""}</p> : null}
       {data === undefined ? (
         <LoadingBlock label="Loading customer progress…" lines={4} />
       ) : data.deals.length === 0 ? (
@@ -66,14 +68,14 @@ export default function PipelinePage() {
         <div className="grid gap-3 md:grid-cols-5">
           {STAGES.map((s) => {
             const col = data.deals.filter((d) => d.stage === s.value);
-            const total = col.reduce((sum, d) => sum + (d.value ?? 0), 0);
+            const values = data.valuesByStage[s.value];
             return (
               <section key={s.value} aria-label={s.label} className="flex min-w-0 flex-col gap-2 rounded-xl bg-surface-2 p-2">
-                <header className="flex items-baseline justify-between px-1">
+                <header className="flex flex-col gap-1 px-1">
                   <h2 className="text-sm font-semibold text-ink">
                     {s.label} <span className="font-normal text-ink-3">{col.length}</span>
                   </h2>
-                  {total ? <span className="text-xs text-ink-3">{money(total, data.totals.currency)}</span> : null}
+                  {col.length ? <span className="break-words text-xs text-ink-3">{dealValueSummaryLabel(values)}</span> : null}
                 </header>
                 {col.map((d) => (
                   <div key={d.id} className="rounded-lg border border-line bg-surface p-2.5">
@@ -81,7 +83,7 @@ export default function PipelinePage() {
                       <span className="block truncate text-sm font-medium text-ink">{d.name}</span>
                       {d.company && d.company !== d.name ? <span className="block truncate text-xs text-ink-3">{d.company}</span> : null}
                       <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-ink-3">
-                        {d.value ? <span className="font-medium text-ink-2">{money(d.value, d.currency)}</span> : null}
+                        {d.value !== null ? <span className="font-medium text-ink-2">{money(d.value, d.currency)}</span> : <span>{d.valueNeedsReview ? "Value needs review" : "Value not recorded"}</span>}
                         {d.nextStepAt ? <span>{d.nextStep ?? "Next"}: {new Date(d.nextStepAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span> : <span>{relativeTime(d.updatedAt)}</span>}
                         <DealAttentionBadges attention={dealAttention(d, now)} />
                       </span>
@@ -99,7 +101,7 @@ export default function PipelinePage() {
         </div>
       )}
       <Sheet open={Boolean(open)} onOpenChange={(o) => !o && setOpenId(null)} title={open?.name ?? "Possible sale"}>
-        {open ? <DealPanel key={open.id} slug={slug} d={open} onDeleted={() => setOpenId(null)} /> : <span />}
+        {open ? <DealPanel key={`${open.id}:${open.currency}`} slug={slug} d={open} onDeleted={() => setOpenId(null)} /> : <span />}
       </Sheet>
     </div>
   );
@@ -110,7 +112,7 @@ type Deal = NonNullable<ReturnType<typeof useQuery<typeof api.crm.list>>>["deals
 function DealPanel({ slug, d, onDeleted }: { slug: string; d: Deal; onDeleted: () => void }) {
   const update = useMutation(api.crm.update);
   const remove = useMutation(api.crm.remove);
-  const [value, setValue] = useState(d.value ? String(d.value / 100) : "");
+  const [value, setValue] = useState(d.value === null ? "" : String(minorToMajor(d.value, d.currency)));
   const [nextStep, setNextStep] = useState(d.nextStep ?? "");
   const [nextAt, setNextAt] = useState(d.nextStepAt ? new Date(d.nextStepAt).toISOString().slice(0, 10) : "");
   const [note, setNote] = useState("");
@@ -137,10 +139,11 @@ function DealPanel({ slug, d, onDeleted }: { slug: string; d: Deal; onDeleted: (
         <Select options={STAGES.map((s) => ({ value: s.value, label: s.label }))} value={d.stage} onValueChange={(v) => save({ slug, id: d.id, stage: v as Stage })} />
       </Field>
       {d.stage === "lost" ? <LossReasonFields slug={slug} d={d} save={save} /> : null}
-      <Field label={`Possible sale value (${d.currency})`} hint="Counts as a sale when you pick Sale recorded.">
-        <Input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value.replace(/[^0-9.]/g, ""))} onBlur={() => {
+      <Field label={`Possible sale value (${d.currency})`} hint={d.valueNeedsReview ? "An earlier amount has unconfirmed currency units. Enter the correct value to confirm it; no historical amount is guessed." : "An owner-reported sale when you pick Sale recorded; not confirmation of payment."}>
+        <Input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} onBlur={() => {
+            if (value === (d.value === null ? "" : String(minorToMajor(d.value, d.currency)))) return;
             if (value && !Number.isFinite(parseMoney(value))) return void toast({ tone: "danger", title: "Use a number, like 1200.50" });
-            void save({ slug, id: d.id, value: value ? parseMoney(value) : null });
+            void save({ slug, id: d.id, value: value ? parseMoney(value) : null, expectedCurrency: d.currency });
           }} />
       </Field>
       <div className="grid grid-cols-2 gap-2">
@@ -187,20 +190,27 @@ function DealPanel({ slug, d, onDeleted }: { slug: string; d: Deal; onDeleted: (
           </Button>
         }
       />
-      {d.stage === "won" ? <Badge tone="green">Won {d.value ? money(d.value, d.currency) : ""}</Badge> : null}
+      {d.stage === "won" ? <Badge tone="green">Sale recorded {d.value !== null ? money(d.value, d.currency) : "— value unknown"}</Badge> : null}
     </div>
   );
 }
 
-function AddDeal({ slug }: { slug: string }) {
+function AddDeal({ slug, currency }: { slug: string; currency: string | null }) {
   const create = useMutation(api.crm.create);
   const [open, setOpen] = useState(false);
+  const [entryCurrency, setEntryCurrency] = useState<string | null>(null);
   const [f, setF] = useState({ name: "", company: "", email: "", value: "" });
   const [busy, setBusy] = useState(false);
   return (
     <Sheet
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={(next) => {
+        if (next) {
+          if (entryCurrency !== currency) setF(current => ({ ...current, value: "" }));
+          setEntryCurrency(currency);
+        }
+        setOpen(next);
+      }}
       title="Add someone"
       trigger={
         <Button size="sm">
@@ -215,7 +225,7 @@ function AddDeal({ slug }: { slug: string }) {
           if (f.value && !Number.isFinite(parseMoney(f.value))) return void toast({ tone: "danger", title: "Use a number, like 1200.50" });
           setBusy(true);
           try {
-            await create({ slug, name: f.name, company: f.company || undefined, email: f.email || undefined, value: f.value ? parseMoney(f.value) : undefined });
+            await create({ slug, name: f.name, company: f.company || undefined, email: f.email || undefined, value: f.value ? parseMoney(f.value) : undefined, expectedCurrency: entryCurrency ?? undefined });
             setF({ name: "", company: "", email: "", value: "" });
             setOpen(false);
           } catch (err) {
@@ -234,10 +244,11 @@ function AddDeal({ slug }: { slug: string }) {
         <Field label="Email" optional>
           <Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
         </Field>
-        <Field label="Possible sale value" optional>
-          <Input inputMode="decimal" value={f.value} onChange={(e) => setF({ ...f, value: e.target.value.replace(/[^0-9.]/g, "") })} />
+        <Field label={`Possible sale value${entryCurrency ? ` (${entryCurrency})` : ""}`} optional>
+          <Input inputMode="decimal" value={f.value} onChange={(e) => setF({ ...f, value: e.target.value })} />
         </Field>
-        <Button type="submit" loading={busy} disabled={!f.name.trim()}>
+        {entryCurrency !== currency ? <p className="text-sm text-ink-2">The business currency changed. Close and reopen this form to enter the value in the new currency.</p> : null}
+        <Button type="submit" loading={busy} disabled={!f.name.trim() || Boolean(f.value && (!entryCurrency || entryCurrency !== currency))}>
           Add
         </Button>
       </form>

@@ -2994,6 +2994,8 @@ export default defineSchema({
     ),
     prospectId: v.optional(v.id("prospects")),
     valueMinor: v.optional(v.number()),
+    /** Older writers used hundredths regardless of currency. */
+    valueVersion: v.optional(v.literal("currency-minor-v1")),
     currency: v.string(),
     notes: v.array(
       v.object({

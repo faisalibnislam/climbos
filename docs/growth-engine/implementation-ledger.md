@@ -2,6 +2,10 @@
 
 Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs as written there. Baseline: `404c466`. Branch: `growth-engine-v2`.
 
+## Local update — 16 November 2026: CRM money and evidence
+
+Corrected the existing Customer progress value path across currency-aware entry, stored amounts, per-currency subtotals, queued sale events and assistant output. Unknown, legacy-unconfirmed, mixed-currency and capped values no longer become a complete pipeline total. New/reconfirmed values are versioned and edits audited; legacy non-two-decimal amounts need owner confirmation. Verified with 49 focused tests, typecheck/lint and two local desktop/mobile checks. Earlier downstream CRM revenue is not bulk migrated, payment provenance is not independently verified, and the 500-record view is still bounded. The 410-row inventory/code-reference check is recorded in the audit; full behavioral revalidation remains open. See [Verification](../Verification.md).
+
 ## Local update — 16 November 2026: recorded-charge cohorts
 
 Repaired owner cohort and strategy subscription-history paths with the shared recorded-charge-before-refunds definition. Entry is established before the visible history cutoff; malformed/conflicting/capped evidence is unavailable, real workspaces exclude fixture records, and future or zero charges cannot create entry. Results exposes recorded counts and unknown import completeness. Strategy context now survives invalid billing money without invented concentration/refund/repeat-purchase signals. Verified with 76 focused regression/permission tests, app/Convex typecheck, changed-file lint and two local desktop/mobile checks. This does not establish contractual churn, complete imports, cross-provider identity matching, large-history aggregation or the full 410-item audit. See [Verification](../Verification.md).

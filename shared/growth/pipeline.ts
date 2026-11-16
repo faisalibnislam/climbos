@@ -1,3 +1,5 @@
+import { fractionDigits, majorToMinor, minorToMajor } from "../economics/currency";
+
 /**
  * The owner's own pipeline outcomes for planning: closed deals, win rate, and recorded loss reasons.
  * Owner-entered CRM stages are first-party reports, not verified sales records, and never causal evidence.
@@ -5,6 +7,66 @@
 
 export const LOSS_REASONS = ["price", "timing", "no_need", "chose_competitor", "no_response", "not_a_fit", "other"] as const;
 export type LossReason = (typeof LOSS_REASONS)[number];
+
+export const DEAL_VALUE_VERSION = "currency-minor-v1" as const;
+type DealMoney = { valueMinor?: number; currency: string; valueVersion?: string };
+
+/** Legacy writers assumed hundredths. Non-two-decimal amounts need owner review. */
+export function dealValueNeedsReview(d: DealMoney): boolean {
+  return d.valueMinor !== undefined && (!/^[A-Z]{3}$/.test(d.currency) || !Number.isSafeInteger(d.valueMinor) || d.valueMinor < 0 || (fractionDigits(d.currency) !== 2 && d.valueVersion !== DEAL_VALUE_VERSION));
+}
+
+export function dealValueMinor(value: number, currency: string): number {
+  if (!Number.isFinite(value) || value < 0 || !/^[A-Z]{3}$/.test(currency)) throw new RangeError("Enter the value as a number greater than or equal to zero in the displayed currency.");
+  const digits = fractionDigits(currency);
+  const minor = majorToMinor(value, currency);
+  if (!Number.isSafeInteger(minor)) throw new RangeError("This value is too large to record accurately.");
+  if (Number(value.toFixed(digits)) !== value) throw new RangeError(`Use at most ${digits} decimal places for ${currency}; the value was not rounded.`);
+  return minor;
+}
+
+export interface DealValueSummary {
+  totalMinor: number | null;
+  partial: boolean;
+  byCurrency: { currency: string; recordedMinor: number | null; known: number; missing: number; needsReview: number }[];
+}
+
+/** Recorded subtotals only. No FX conversion, probabilities, or inferred missing values. */
+export function summarizeDealValues(deals: readonly DealMoney[], currency: string, partial = false): DealValueSummary {
+  const groups = new Map<string, DealValueSummary["byCurrency"][number]>();
+  for (const d of deals) {
+    const group = groups.get(d.currency) ?? { currency: d.currency, recordedMinor: null, known: 0, missing: 0, needsReview: 0 };
+    if (d.valueMinor === undefined) group.missing++;
+    else if (dealValueNeedsReview(d)) group.needsReview++;
+    else {
+      group.recordedMinor = (group.recordedMinor ?? 0) + d.valueMinor;
+      group.known++;
+    }
+    groups.set(d.currency, group);
+  }
+  const byCurrency = [...groups.values()].sort((a, b) => a.currency.localeCompare(b.currency));
+  for (const group of byCurrency) if (group.recordedMinor !== null && !Number.isSafeInteger(group.recordedMinor)) {
+    group.recordedMinor = null;
+    group.needsReview += group.known;
+    group.known = 0;
+  }
+  const complete = !partial && byCurrency.every(g => !g.missing && !g.needsReview && g.currency === currency);
+  return { totalMinor: complete ? byCurrency[0]?.recordedMinor ?? 0 : null, partial, byCurrency };
+}
+
+export function formatDealValue(minor: number | null, currency: string): string {
+  if (minor === null || !Number.isSafeInteger(minor) || !/^[A-Z]{3}$/.test(currency)) return "Not available";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency, currencyDisplay: "code", minimumFractionDigits: 0, maximumFractionDigits: fractionDigits(currency) }).format(minorToMajor(minor, currency));
+}
+
+export function dealValueSummaryLabel(summary: DealValueSummary): string {
+  if (!summary.byCurrency.length) return "No recorded values";
+  return summary.byCurrency.map(group => {
+    const amount = group.recordedMinor === null ? `${group.currency}: no confirmed amount` : formatDealValue(group.recordedMinor, group.currency);
+    const gaps = [group.missing ? `${group.missing} not recorded` : "", group.needsReview ? `${group.needsReview} need review` : ""].filter(Boolean);
+    return `${amount}${gaps.length ? ` (${gaps.join(", ")})` : ""}`;
+  }).join("; ");
+}
 
 export const LOSS_REASON_LABEL: Record<LossReason, string> = {
   price: "Price or budget",

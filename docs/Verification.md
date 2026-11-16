@@ -1,3 +1,24 @@
+## 16 November 2026 — CRM values, currency precision and unknowns
+
+The 410-item inventory review led into `crm.create/update/list` → persisted `deals` → `syncRevenue` and queued `deal.won` payloads → Customer progress and the assistant `get_pipeline` tool. Six initial regressions demonstrated existing monetary defects: JPY multiplied by 100, KWD rounded to hundredths, missing values summed as zero, negative values clamped to zero, excess precision silently rounded, and unsafe amounts accepted. A separate new-version test initially failed because the old schema had no unit-version field; that initial schema failure is not behavioral proof.
+
+The path now reuses the existing currency helpers and validates whole minor units, non-negative input, safe integer bounds and supported precision. Entry does not silently round. The displayed currency is checked at save; existing deals retain their currency. New or reconfirmed values carry `currency-minor-v1`. Old non-two-decimal values and invalid stored amounts stay unknown in this view/tool and need owner review; no historical value is guessed or bulk rewritten. A newly entered won deal now has its close timestamp and recorded-revenue row, and synthetic demo sales are marked fixtures. Missing versus explicit zero values remain distinct in queued sale payloads, with an owner-reported evidence label. Existing configured webhook/event behavior is preserved; tests inspect queued payloads without delivering them externally.
+
+Customer progress uses separate recorded subtotals per currency, with missing/review counts. The existing 500-record read now has a 501st-record sentinel and visible coverage; a capped, mixed-currency, incomplete or unsafe value cannot become a whole-pipeline total. The assistant uses the same summaries, explicit major-currency units and owner-report limitations. Possible value is not a probability-weighted forecast, confirmed payment or profit. Actual value changes are audited. An unchanged blank field cannot clear an unconfirmed legacy amount merely by receiving and losing focus.
+
+Verification:
+
+```text
+pnpm exec vitest run tests/convex/crm.test.ts tests/convex/crm-loss-reasons.test.ts tests/unit/pipeline-money.test.ts tests/unit/pipeline-outcomes.test.tsx tests/unit/climb-tool-output.test.ts tests/convex/tenancy.test.ts tests/convex/webhooks.test.ts tests/convex/safety.test.ts
+49 passed across 8 files
+pnpm typecheck
+passed: application and Convex
+```
+
+Changed-file ESLint and diff checks passed. Browser command: `E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/pipeline-money.spec.ts` — final rerun: two passed in 16.9 seconds, desktop Chromium and Pixel 7 emulation. The add form retains its entry currency while open; a changed currency requires reopening and re-entering the value. The tests inspect separate currencies and missing/legacy labels, add KWD 9.876 as 9,876 minor units, edit it to 4.321 as 4,321 units, and verify an untouched legacy JPY amount remains stored but unconfirmed. Desktop and mobile screenshots inspected. No page errors, horizontal page overflow or serious/critical axe findings. Workflow, approval, action-receipt and webhook-delivery records in the isolated workspace are unchanged by these local form checks. No model calls, external sending or hosted deployment.
+
+Remaining limits: older CRM-derived revenue rows already copied into the revenue ledger are not automatically migrated by this change. Confirming a won deal's correct value updates its corresponding recorded row; until then, downstream analytics/provenance paths require a dedicated audit and must not be represented as verified cash receipts. Currency precision alone does not establish payment, profitability, customer identity or forecast quality. The pipeline remains a newest-500 view rather than a paginated full ledger. Real-account performance, conversation intelligence and the requirement-level 410-item behavioral audit remain open. The inventory/code-location check is not completion proof.
+
 ## 16 November 2026 — recorded-charge cohorts and strategy evidence
 
 Traced `revenueEvents` → `analytics.cohorts` / `computeCohorts` → Results, and the shared calculator → `jobWrites.jobContext` → `jobs` strategy writer. All six initial integration regressions failed before repair: refunded entry, earlier history outside the displayed window, fixture/future contamination, malformed amounts, missing customer IDs and capped history.
