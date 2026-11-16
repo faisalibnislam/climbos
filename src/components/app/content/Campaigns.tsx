@@ -91,8 +91,8 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
   const [syncingPerformance, setSyncingPerformance] = useState(false);
   const canApprove = member?.role ? ["owner", "admin", "reviewer"].includes(member.role) : false;
   const days = daysBetween(c.startDate, c.endDate);
-  const daily = minorToDisplay(c.dailyBudgetMinor, c.currency);
-  const total = minorToDisplay(c.budgetEnvelopeMinor, c.currency);
+  const daily = c.budgetReviewReason ? "Needs review" : minorToDisplay(c.dailyBudgetMinor, c.currency);
+  const total = c.budgetReviewReason ? "Needs review" : minorToDisplay(c.budgetEnvelopeMinor, c.currency);
   const platform = platformName(c.channel);
   const performance = c.performance?.status === "ready" ? c.performance : null;
   // Google reports conversions; Meta's count comes only from the action type the owner confirmed.
@@ -136,7 +136,7 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
       items={[
         { term: "Daily budget", detail: daily },
         { term: "Dates", detail: `${formatDay(c.startDate)} to ${formatDay(c.endDate)}${days ? ` (${days} day${days === 1 ? "" : "s"})` : ""}` },
-        { term: "Max total", detail: total },
+        { term: "Planned total", detail: total },
         { term: "First results review", detail: `${c.reviewAfterDays ?? 7} days after start` },
         { term: "Cost / conversion target", detail: c.targetCostPerConversionMinor !== null ? `${minorToDisplay(c.targetCostPerConversionMinor, c.currency)} (owner set)` : "not set" },
         { term: "Link", detail: c.destinationUrl ?? "none" },
@@ -160,13 +160,14 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
         </Callout>
       ) : null}
       <H className="heading-card break-words">{c.name}</H>
+      {c.budgetReviewReason ? <Callout tone="warning" title="Review the saved budget">{c.budgetReviewReason} {c.externalId ? "For an existing ad, check its current amounts in the ad account; ClimbOS has not changed them." : "Use Don't create to cancel this preparation, then enter the intended amounts in a new campaign."}</Callout> : null}
       <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
         <div>
           <dt className="text-xs text-ink-3">Daily</dt>
           <dd className="font-medium text-ink">{daily}</dd>
         </div>
         <div>
-          <dt className="text-xs text-ink-3">Max total</dt>
+          <dt className="text-xs text-ink-3">Planned total</dt>
           <dd className="font-medium text-ink">{total}</dd>
         </div>
         <div>
@@ -188,9 +189,10 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
           <dd className="break-words font-medium text-ink">{c.destinationUrl ?? "None"}</dd>
         </div>
       </dl>
-      {c.stopRules.length > 0 ? (
+      {c.stopRules.length > 0 && !c.budgetReviewReason ? (
         <div>
-          <p className="text-sm font-medium text-ink">Auto-pauses if:</p>
+          <p className="text-sm font-medium text-ink">Pause conditions to review:</p>
+          <p className="mt-1 text-xs text-ink-3">ClimbOS does not automatically monitor spend or tracking loss for these conditions. Check the ad platform and pause when needed. Pause all requests a pause; wait for confirmation.</p>
           <ul className="mt-1 list-disc pl-5 text-sm text-ink-2">
             {c.stopRules.map((r) => (
               <li key={r}>{r}</li>
@@ -256,7 +258,7 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
             {c.status === "needs_approval" ? (
               <>
                 <ConfirmDialog
-                  trigger={<Button disabled={!c.accountConnected || Boolean(c.writeState)}>Create paused</Button>}
+                  trigger={<Button disabled={!c.accountConnected || Boolean(c.writeState) || Boolean(c.budgetReviewReason)}>Create paused</Button>}
                   title="Create this campaign, paused?"
                   description={`Created in ${platform}, switched off. Nothing spent until you press Start.`}
                   confirmLabel="Create paused"
@@ -278,9 +280,9 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
               </>
             ) : (
               <ConfirmDialog
-                trigger={<Button disabled={!c.accountConnected || Boolean(c.writeState)}>Start</Button>}
+                trigger={<Button disabled={!c.accountConnected || Boolean(c.writeState) || Boolean(c.budgetReviewReason)}>Start</Button>}
                 title="Start this campaign?"
-                description={`Spends up to ${daily}/day, max ${total} total.`}
+                description={c.channel === "google_search_ad" ? `Uses an average daily budget of ${daily}. The ${total} planned total is not a Google lifetime cap; daily spend can vary.` : `Uses a total campaign cap of ${total}. The ${daily} daily amount is for planning; ad-set delivery needs configuration in Meta.`}
                 confirmLabel={`Start at ${daily}/day`}
                 onConfirm={() => run("activate", "Start request sent.")}
               >
@@ -334,7 +336,7 @@ export function AdsPanel({ slug }: { slug: string }) {
               stats={[
                 { label: "Google Ads", value: data.googleAdsConnected ? "Connected" : "Not connected", tone: data.googleAdsConnected ? "good" : "default" },
                 { label: "Meta ads", value: data.metaAdsConnected ? "Connected" : "Not connected", tone: data.metaAdsConnected ? "good" : "default" },
-                { label: "Monthly cap", value: data.monthlyEnvelopeMinor > 0 ? minorToDisplay(data.monthlyEnvelopeMinor, data.currency) : "Not set" },
+                { label: "Monthly planning limit", value: data.monthlyBudgetNeedsReview ? "Needs owner confirmation" : minorToDisplay(data.monthlyEnvelopeMinor, data.currency) },
               ]}
             />
             {!data.googleAdsConnected || !data.metaAdsConnected ? (

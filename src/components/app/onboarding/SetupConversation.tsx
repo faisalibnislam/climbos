@@ -34,6 +34,7 @@ export function SetupConversation({ slug, userId, state }: { slug: string; userI
   const [reply, setReply] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [editing, setEditing] = useState<Edit>(null);
+  const [budgetCurrency, setBudgetCurrency] = useState(state.goal?.currency ?? state.business?.currency ?? state.org.currency);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lock = useRef(false);
@@ -95,9 +96,9 @@ export function SetupConversation({ slug, userId, state }: { slug: string; userI
     if (!text) return;
     if (editing === "budget") {
       const clean = text.replace(/,/g, "");
-      const digits = fractionDigits(state.business?.currency);
-      if (!/^\d+(?:\.\d+)?$/.test(clean) || (clean.split(".")[1]?.length ?? 0) > digits || !Number.isFinite(Number(clean)) || Number(clean) > 1_000_000) { setError(`Enter an amount in ${state.business?.currency ?? "USD"}, using up to ${digits} decimal places. Use 0 for no ads.`); return; }
-      return act(async () => { await setBudget({ slug, monthlyAdBudget: Number(clean) }); record("What monthly ad budget would you like to allow?", `${clean} ${state.business?.currency ?? "USD"} a month.`); });
+      const digits = fractionDigits(budgetCurrency);
+      if (!/^\d+(?:\.\d+)?$/.test(clean) || (clean.split(".")[1]?.length ?? 0) > digits || !Number.isFinite(Number(clean)) || Number(clean) > 1_000_000) { setError(`Enter an amount in ${budgetCurrency}, using up to ${digits} decimal places. Use 0 for no ads.`); return; }
+      return act(async () => { await setBudget({ slug, monthlyAdBudget: Number(clean), expectedCurrency: budgetCurrency }); record("What monthly ad budget would you like to allow?", `${clean} ${budgetCurrency} a month.`); });
     }
     return act(async () => {
       await prepare({ slug, expectedGoalId: state.goal?.id ?? null, statement: text });
@@ -123,7 +124,7 @@ export function SetupConversation({ slug, userId, state }: { slug: string; userI
           <ConversationBubble role="assistant" text={ready ? "Your recommendation and next steps are ready to look at. You can discuss or change them before putting anything into action." : running ? "I’m using the research and your wish to prepare a recommendation. I’ll choose suitable milestones and prepare the first pieces of work. You can leave while I work." : stopped ? run?.userMessage ?? "I couldn’t finish the plan. Your answers are saved. We can retry from here." : needsRevision ? "The last draft needs another pass before it is ready. Your goal and answers are saved. I can prepare a new version for you to review." : contextText} />}
       </div>
       {needsGoal || editing === "goal" || editing === "budget" ? <div className="mt-4 space-y-3">
-        {editing === "budget" ? <ConversationBubble role="assistant" text={`What monthly ad budget would you like to allow, in ${state.business?.currency ?? "USD"}? Use 0 to keep ads off. This is separate from the AI cost.`} /> : editing === "goal" ? <ConversationBubble role="assistant" text="What would you like to change about your goal?" /> : null}
+        {editing === "budget" ? <ConversationBubble role="assistant" text={`What monthly ad budget would you like to allow, in ${budgetCurrency}? Use 0 to keep ads off. This is separate from the AI cost.`} /> : editing === "goal" ? <ConversationBubble role="assistant" text="What would you like to change about your goal?" /> : null}
         <RequestComposer label={editing === "budget" ? "Monthly ad budget" : "Your reply"} value={reply} onChange={setReply} onSubmit={() => void saveReply()} placeholder={editing === "budget" ? "0" : "Tell me what you want to achieve…"} submitLabel="Send reply" maxLength={300} busy={busy || !canEdit} suggestions={needsGoal ? ["Help me choose the best first step.", "I want more customers.", "I want more website visitors.", "I want more sales."] : []} />
         {editing ? <Button variant="ghost" disabled={busy} onClick={() => { setEditing(null); setReply(""); }}>Cancel</Button> : null}
       </div> : null}
@@ -148,7 +149,7 @@ export function SetupConversation({ slug, userId, state }: { slug: string; userI
         </> : <Callout tone="warning">{state.accessMessage ?? "An owner, admin or editor can start the plan."}{!state.canRunAi ? <Link href={`/app/${slug}/settings/billing`} className="ml-2 underline">See available credits</Link> : null}</Callout>}
         {canEdit && !run && !state.strategy ? <details className="text-sm text-ink-2"><summary className="cursor-pointer py-2">Change something</summary><div className="mt-2 flex flex-wrap gap-2">
           <Button size="sm" variant="ghost" disabled={busy} onClick={() => { setEditing("goal"); setReply(state.goal?.statement ?? ""); }}>My goal</Button>
-          {canManage ? <><Button size="sm" variant="ghost" disabled={busy} onClick={() => { setEditing("budget"); setReply(""); }}>Ad budget</Button><Button size="sm" variant="ghost" disabled={busy} onClick={() => setEditing("approval")}>Publishing preference</Button></> : null}
+          {canManage ? <><Button size="sm" variant="ghost" disabled={busy} onClick={() => { setBudgetCurrency(state.goal?.currency ?? state.business?.currency ?? state.org.currency); setEditing("budget"); setReply(""); }}>Ad budget</Button><Button size="sm" variant="ghost" disabled={busy} onClick={() => setEditing("approval")}>Publishing preference</Button></> : null}
         </div></details> : null}
       </div> : null}
       {ready && state.firstWinRunIds?.length ? <details className="mt-5 text-sm text-ink-2"><summary className="cursor-pointer py-2">Work being prepared</summary><div className="mt-2 space-y-3">{state.firstWinRunIds.map(id => <RunProgressCompact key={id} slug={slug} runId={id} />)}</div></details> : null}

@@ -9,6 +9,8 @@ async function campaignFixture() {
   const { slug } = await owner.client.mutation(api.demo.createDemoWorkspace, {});
   const campaignId = await t.run(async ctx => {
     const org = (await ctx.db.query("organizations").withIndex("by_slug", q => q.eq("slug", slug)).unique())!;
+    // Isolate authorization from the demo campaign that already reserves the monthly cap.
+    for (const c of await ctx.db.query("campaigns").withIndex("by_org", q => q.eq("orgId", org._id)).collect()) await ctx.db.delete(c._id);
     const connectionId = await ctx.db.insert("connections", {
       orgId: org._id, provider: "meta_ads", status: "connected", externalAccountId: "demo_meta_ads",
       scopes: [], isFixture: true, createdBy: owner.userId, createdAt: Date.now(), updatedAt: Date.now(),

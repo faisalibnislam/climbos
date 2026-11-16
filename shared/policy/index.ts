@@ -173,6 +173,7 @@ export interface ApprovalScope {
   audience?: string;
   spendLimitMinor?: number;
   totalSpendLimitMinor?: number;
+  budgetUnitVersion?: string;
   targetCostPerConversionMinor?: number;
   reviewAfterDays?: number;
   currency?: string;

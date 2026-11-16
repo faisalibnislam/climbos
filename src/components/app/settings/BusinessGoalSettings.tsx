@@ -37,7 +37,7 @@ export function BusinessGoalSettings({ slug }: { slug: string }) {
         }
       />
       {!canEdit ? <Callout tone="info">Changing these needs {PERMISSION_WHO.edit}.</Callout> : null}
-      <GoalForm key={`${state.goal?.statement ?? ""}-${state.goal?.monthlyAdBudget ?? ""}`} slug={slug} state={state} canEdit={canEdit} canRaise={can(role, "manage_policies")} />
+      <GoalForm key={`${state.goal?.statement ?? ""}-${state.goal?.monthlyAdBudget ?? ""}-${state.business?.currency ?? state.org.currency}`} slug={slug} state={state} canEdit={canEdit} canRaise={can(role, "manage_policies")} />
       <BusinessForm key={`${state.business?.id ?? ""}-${state.business?.website ?? ""}-${state.business?.industryBusinessTypeId ?? "unset"}-${state.business?.lifecycleStage?.stage ?? "unknown"}`} slug={slug} state={state} canEdit={canEdit} canSetStage={role === "owner" || role === "admin"} />
       <ResearchCard slug={slug} state={state} canEdit={canEdit} />
     </div>
@@ -52,7 +52,7 @@ function GoalForm({ slug, state, canEdit, canRaise }: { slug: string; state: Sta
   const kind = kinds[0] ?? "more_customers";
   const [statement, setStatement] = useState(state.goal?.statement ?? defaults.more_customers);
   const horizon = String(state.goal?.horizonDays ?? 90);
-  const [budget, setBudget] = useState(String(state.goal?.monthlyAdBudget ?? 0));
+  const [budget, setBudget] = useState(state.goal && state.goal.currency !== (state.business?.currency ?? state.org.currency) ? "" : String(state.goal?.monthlyAdBudget ?? 0));
   const [reviewDay, setReviewDay] = useState(state.goal?.reviewDay ?? "Friday");
   const t = state.goal?.target;
   const [metric, setMetric] = useState<"customers" | "revenue_month" | "other">(t?.metric ?? "customers");
@@ -62,7 +62,8 @@ function GoalForm({ slug, state, canEdit, canRaise }: { slug: string; state: Sta
   const numOrNull = (s: string) => (s.trim() === "" ? null : Number(s));
   const [busy, setBusy] = useState(false);
   const currency = state.business?.currency ?? state.org.currency;
-  const over = !canRaise && Number(budget || 0) > state.adCap;
+  const capNeedsReview = state.adCap === null || state.adCapCurrency !== currency;
+  const over = !canRaise && (capNeedsReview || Number(budget || 0) > (state.adCap ?? 0));
   return (
     <Card id="goal">
       <CardHeader>
@@ -104,8 +105,8 @@ function GoalForm({ slug, state, canEdit, canRaise }: { slug: string; state: Sta
         </Field>
         <Field
           label={`Monthly ad budget (${currency})`}
-          hint={canRaise ? "Paid to Google or Meta, not us. 0 = no ads." : `Up to ${majorToDisplay(state.adCap, currency)}. Raising needs ${PERMISSION_WHO.manage_team}.`}
-          error={over ? `Only ${PERMISSION_WHO.manage_team} can raise it above ${majorToDisplay(state.adCap, currency)}.` : undefined}
+          hint={capNeedsReview ? "An owner or admin must confirm the spending limit and currency." : canRaise ? "Paid to Google or Meta, not us. 0 = no ads." : `Up to ${majorToDisplay(state.adCap ?? 0, currency)}. Raising needs ${PERMISSION_WHO.manage_team}.`}
+          error={over ? capNeedsReview ? "Ask an owner or admin to confirm this budget first." : `Only ${PERMISSION_WHO.manage_team} can raise it above ${majorToDisplay(state.adCap ?? 0, currency)}.` : undefined}
         >
           <Input inputMode="decimal" disabled={!canEdit} value={budget} onChange={(e) => setBudget(e.target.value.replace(/[^\d.]/g, ""))} />
         </Field>
@@ -120,7 +121,8 @@ function GoalForm({ slug, state, canEdit, canRaise }: { slug: string; state: Sta
               onClick={async () => {
                 setBusy(true);
                 try {
-                  await setGoal({ slug, kind, kinds: kinds.length ? kinds : [kind], statement: statement.trim() || defaults[kind] || "Grow the business", target: { metric, mode, baseline: mode === "total" ? numOrNull(baseline) : null, desired: numOrNull(desired) }, horizonDays: Number(horizon), monthlyAdBudget: Number(budget || 0), reviewDay });
+                  if (!budget.trim()) throw new Error("Enter the monthly budget in the displayed currency; use 0 for no ads.");
+                  await setGoal({ slug, kind, kinds: kinds.length ? kinds : [kind], statement: statement.trim() || defaults[kind] || "Grow the business", target: { metric, mode, baseline: mode === "total" ? numOrNull(baseline) : null, desired: numOrNull(desired) }, horizonDays: Number(horizon), monthlyAdBudget: Number(budget || 0), expectedCurrency: currency, reviewDay });
                   toast({ tone: "success", title: "Goal saved.", description: state.strategy ? "Refresh your plan to use it." : undefined });
                 } catch (e) {
                   toast({ tone: "danger", title: errorMessage(e) });

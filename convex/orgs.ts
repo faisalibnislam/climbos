@@ -1,8 +1,9 @@
+import { AD_BUDGET_UNIT_VERSION, knownAdBudget, parseAdBudget } from "../shared/policy/campaignBudget";
 import { parseIntro } from "../shared/onboarding/intro";
 import { focusedGoal, goalPlans } from "./lib/goals";
 import { capturePlanPreparation } from "./lib/preparationContext";
 import { localWorkspaceTestingEnabled } from "../shared/policy/localDevelopment";
-import { majorToMinor, minorToMajor } from "../shared/economics/currency";
+import { minorToMajor } from "../shared/economics/currency";
 import { isUnlimited } from "../shared/economics/credits";
 import { ConvexError, v } from "convex/values";
 import { isIndustryBusinessTypeId } from "../shared/knowledge/industryCatalog";
@@ -388,7 +389,8 @@ export const onboardingState = query({
         : null,
       autonomy: policy?.mode ?? "review",
       /** The ad budget editors may set without an owner or admin (raising it needs one). */
-      adCap: (policy?.maxMonthlyAdSpendMinor ?? 0) / 100,
+      adCap: policy && knownAdBudget(policy.maxMonthlyAdSpendMinor, policy.currency, policy.budgetUnitVersion) ? minorToMajor(policy.maxMonthlyAdSpendMinor, policy.currency) : null,
+      adCapCurrency: policy?.currency ?? null,
       strategy: strategy ? { id: strategy._id, status: strategy.status, version: strategy.version, createdAt: strategy.createdAt } : null,
       canRunAi: access.allowed,
       accessMessage: access.allowed ? null : access.message,
@@ -608,7 +610,7 @@ function cleanTarget(t: GoalTarget): GoalTarget | undefined {
 }
 
 type GoalKind = "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom";
-type SetGoalInput = { slug: string; kind: GoalKind; kinds?: GoalKind[]; statement: string; target?: GoalTarget; horizonDays: number; monthlyAdBudget: number; reviewDay?: string };
+type SetGoalInput = { slug: string; kind: GoalKind; kinds?: GoalKind[]; statement: string; target?: GoalTarget; horizonDays: number; monthlyAdBudget: number; reviewDay?: string; expectedCurrency?: string };
 type SetAutonomyInput = { slug: string; mode: "copilot" | "review" | "bounded_autopilot" };
 
 const GOAL_KINDS = new Set(["more_sales", "more_customers", "more_reach", "more_followers", "custom"]);
@@ -658,21 +660,24 @@ export const saveOnboardingIntro = mutation({
 
 /** Change only the monthly ad budget on the active goal (raising it above the spending cap needs an owner or admin). */
 export const setAdBudget = mutation({
-  args: { slug: v.string(), monthlyAdBudget: v.number() },
-  handler: async (ctx, { slug, monthlyAdBudget }) => {
+  args: { slug: v.string(), monthlyAdBudget: v.number(), expectedCurrency: v.optional(v.string()) },
+  handler: async (ctx, { slug, monthlyAdBudget, expectedCurrency }) => {
     const { org, user, role } = await requireOrgAccess(ctx, { slug }, "edit");
     if (!Number.isFinite(monthlyAdBudget) || monthlyAdBudget < 0 || monthlyAdBudget > 1_000_000) throw appError("INVALID", "Enter a monthly ad budget between 0 and 1,000,000 (0 means no ads).");
     const goal = await focusedGoal(ctx, org);
     if (!goal) throw appError("NOT_FOUND", "Set a goal first.");
-    const budgetMinor = majorToMinor(monthlyAdBudget, goal.currency);
+    if (expectedCurrency !== undefined && expectedCurrency !== goal.currency) throw appError("INVALID", "The goal currency changed. Reload before saving the budget.");
+    const parsed = parseAdBudget(monthlyAdBudget, goal.currency);
+    if (!parsed.ok) throw appError("INVALID", parsed.error);
+    const budgetMinor = parsed.minor;
     const policy = await ctx.db.query("autonomyPolicies").withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true)).first();
-    if (policy && budgetMinor > policy.maxMonthlyAdSpendMinor && !can(role, "manage_policies")) throw appError("FORBIDDEN", "Only an owner or admin can raise the ad budget.");
+    if (policy && (!knownAdBudget(policy.maxMonthlyAdSpendMinor, policy.currency, policy.budgetUnitVersion) || policy.currency !== goal.currency || budgetMinor > policy.maxMonthlyAdSpendMinor) && !can(role, "manage_policies")) throw appError("FORBIDDEN", "Only an owner or admin can raise the ad budget or confirm a changed or unknown budget currency.");
     await ctx.db.patch(goal._id, { monthlyAdBudgetMinor: budgetMinor });
     // The ad envelope in the active policy follows the goal (same as setGoal).
-    if (policy && policy.maxMonthlyAdSpendMinor !== budgetMinor) {
+    if (policy && (policy.maxMonthlyAdSpendMinor !== budgetMinor || policy.currency !== goal.currency || !knownAdBudget(policy.maxMonthlyAdSpendMinor, policy.currency, policy.budgetUnitVersion))) {
       await ctx.db.patch(policy._id, { active: false });
       const { _id: _omit, _creationTime: _ct, ...rest } = policy;
-      await ctx.db.insert("autonomyPolicies", { ...rest, version: policy.version + 1, maxMonthlyAdSpendMinor: budgetMinor, createdBy: user._id, createdAt: Date.now(), active: true });
+      await ctx.db.insert("autonomyPolicies", { ...rest, version: policy.version + 1, maxMonthlyAdSpendMinor: budgetMinor, currency: goal.currency, budgetUnitVersion: AD_BUDGET_UNIT_VERSION, createdBy: user._id, createdAt: Date.now(), active: true });
     }
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "goal.budget_changed", subjectType: "goal", subjectId: String(goal._id), summary: `Monthly ad budget set to ${monthlyAdBudget} ${goal.currency}.` });
   },
@@ -691,15 +696,18 @@ export async function applySetGoal(ctx: MutationCtx, args: SetGoalInput) {
     const horizonDays = Math.max(14, Math.min(365, Math.round(args.horizonDays)));
     const statement = args.statement.trim().slice(0, 300);
     if (!statement) throw appError("INVALID", "Tell us your goal in a sentence.");
-    const budgetMinor = majorToMinor(args.monthlyAdBudget, business.currency);
+    if (args.expectedCurrency !== undefined && args.expectedCurrency !== business.currency) throw appError("INVALID", "The business currency changed. Reload before saving the budget.");
+    const parsed = parseAdBudget(args.monthlyAdBudget, business.currency);
+    if (!parsed.ok) throw appError("INVALID", parsed.error);
+    const budgetMinor = parsed.minor;
     const target = args.target ? cleanTarget(args.target) : undefined;
     // The ad budget is also the spending cap: anyone who edits may lower it, only an owner or admin may raise it.
     const policy = await ctx.db
       .query("autonomyPolicies")
       .withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true))
       .first();
-    if (policy && budgetMinor > policy.maxMonthlyAdSpendMinor && !can(role, "manage_policies")) {
-      throw appError("FORBIDDEN", "Only an owner or admin can raise the ad budget.");
+    if (policy && (!knownAdBudget(policy.maxMonthlyAdSpendMinor, policy.currency, policy.budgetUnitVersion) || policy.currency !== business.currency || budgetMinor > policy.maxMonthlyAdSpendMinor) && !can(role, "manage_policies")) {
+      throw appError("FORBIDDEN", "Only an owner or admin can raise the ad budget or confirm a changed or unknown budget currency.");
     }
     const active = await focusedGoal(ctx, org);
     if (active) await ctx.db.patch(active._id, { status: "archived" });
@@ -723,10 +731,10 @@ export async function applySetGoal(ctx: MutationCtx, args: SetGoalInput) {
     });
     await ctx.db.patch(org._id, { focusedGoalId: goalId });
     // The ad envelope in the active policy follows the goal.
-    if (policy && policy.maxMonthlyAdSpendMinor !== budgetMinor) {
+    if (policy && (policy.maxMonthlyAdSpendMinor !== budgetMinor || policy.currency !== business.currency || !knownAdBudget(policy.maxMonthlyAdSpendMinor, policy.currency, policy.budgetUnitVersion))) {
       await ctx.db.patch(policy._id, { active: false });
       const { _id: _omit, _creationTime: _ct, ...rest } = policy;
-      await ctx.db.insert("autonomyPolicies", { ...rest, version: policy.version + 1, maxMonthlyAdSpendMinor: budgetMinor, createdBy: user._id, createdAt: Date.now(), active: true });
+      await ctx.db.insert("autonomyPolicies", { ...rest, version: policy.version + 1, maxMonthlyAdSpendMinor: budgetMinor, currency: business.currency, budgetUnitVersion: AD_BUDGET_UNIT_VERSION, createdBy: user._id, createdAt: Date.now(), active: true });
     }
     if (org.onboardingStep !== "done") await ctx.db.patch(org._id, { onboardingStep: "preferences" });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "goal.set", summary: `Goal set: ${statement}` });
@@ -742,6 +750,7 @@ export const setGoal = mutation({
     target: v.optional(v.object({ metric: v.union(v.literal("customers"), v.literal("revenue_month"), v.literal("other")), baseline: v.union(v.number(), v.null()), desired: v.union(v.number(), v.null()), mode: v.union(v.literal("total"), v.literal("incremental")) })),
     horizonDays: v.number(),
     monthlyAdBudget: v.number(),
+    expectedCurrency: v.optional(v.string()),
     reviewDay: v.optional(v.string()),
   },
   handler: applySetGoal,

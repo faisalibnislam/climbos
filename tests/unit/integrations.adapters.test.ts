@@ -120,6 +120,11 @@ describe("googleAds", () => {
     expect(googleAds.validateSearchCampaignDraft({ ...draft, currency: "XX" }, ctx).join()).toMatch(/ISO 4217/);
   });
 
+  it.each([["JPY", 1200, "1200000000"], ["KWD", 12345, "12345000"], ["CLF", 12345, "1234500"]] as const)("sends exact %s account-currency micros in the campaign request", (currency, dailyBudgetMinor, micros) => {
+    const body = googleAds.buildCreatePausedSearchCampaignMutate("1234567890", { ...draft, currency, dailyBudgetMinor }) as { mutateOperations: Array<Record<string, { create: Record<string, unknown> }>> };
+    expect(body.mutateOperations[0]?.campaignBudgetOperation?.create.amountMicros).toBe(micros);
+  });
+
   it("builds an atomic PAUSED Search campaign mutate with micros and EU declaration", () => {
     const body = googleAds.buildCreatePausedSearchCampaignMutate("1234567890", draft) as { mutateOperations: Array<Record<string, { create: Record<string, unknown> }>> };
     const budget = body.mutateOperations[0]?.campaignBudgetOperation?.create;

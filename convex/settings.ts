@@ -1,4 +1,6 @@
 import { isUnlimited } from "../shared/economics/credits";
+import { AD_BUDGET_UNIT_VERSION, knownAdBudget, parseAdBudget } from "../shared/policy/campaignBudget";
+import { minorToMajor } from "../shared/economics/currency";
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { CURRENT_ENTITLEMENTS } from "../shared/economics";
@@ -195,7 +197,7 @@ export const policies = query({
             approvalRoles: p.approvalRoles,
             allowRecurringPostsUnderCalendar: p.allowRecurringPostsUnderCalendar,
             allowAdPauseRules: p.allowAdPauseRules,
-            maxMonthlyAdSpend: p.maxMonthlyAdSpendMinor / 100,
+            maxMonthlyAdSpend: knownAdBudget(p.maxMonthlyAdSpendMinor, p.currency, p.budgetUnitVersion) ? minorToMajor(p.maxMonthlyAdSpendMinor, p.currency) : null,
             currency: p.currency,
             approvalTtlHours: p.approvalTtlHours,
           }
@@ -242,6 +244,7 @@ export const updatePolicy = mutation({
     allowRecurringPostsUnderCalendar: v.optional(v.boolean()),
     allowAdPauseRules: v.boolean(),
     maxMonthlyAdSpend: v.number(),
+    expectedCurrency: v.optional(v.string()),
     approvalTtlHours: v.number(),
   },
   handler: async (ctx, args) => {
@@ -251,6 +254,7 @@ export const updatePolicy = mutation({
       .withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true))
       .first();
     if (!p) throw appError("NOT_FOUND", "Policy not found.");
+    if (args.expectedCurrency !== undefined && args.expectedCurrency !== p.currency) throw appError("INVALID", "The budget currency changed. Reload and review the amount before saving.");
     const sub = await latestSubscription(ctx, org);
     const plan = CURRENT_ENTITLEMENTS.plans[sub?.planKey ?? "basic"];
     if (org.kind !== "demo" && !plan.autonomyModes.includes(args.mode)) {
@@ -258,10 +262,12 @@ export const updatePolicy = mutation({
     }
     if (!(args.maxMonthlyAdSpend >= 0) || args.maxMonthlyAdSpend > 1_000_000) throw appError("INVALID", "Enter a monthly ad budget between 0 and 1,000,000.");
     const ttl = Math.max(1, Math.min(24 * 14, Math.round(args.approvalTtlHours)));
-    const spendMinor = Math.round(args.maxMonthlyAdSpend * 100);
+    const parsed = parseAdBudget(args.maxMonthlyAdSpend, p.currency);
+    if (!parsed.ok) throw appError("INVALID", parsed.error);
+    const spendMinor = parsed.minor;
     // Only rules that decide what an approval authorizes start a new version (which voids existing approvals).
     // The expiry window applies to approvals given from now on, so changing it alone keeps them.
-    const relevant = args.mode !== p.mode || args.allowAdPauseRules !== p.allowAdPauseRules || spendMinor !== p.maxMonthlyAdSpendMinor;
+    const relevant = args.mode !== p.mode || args.allowAdPauseRules !== p.allowAdPauseRules || spendMinor !== p.maxMonthlyAdSpendMinor || !knownAdBudget(p.maxMonthlyAdSpendMinor, p.currency, p.budgetUnitVersion);
     if (!relevant) {
       if (ttl !== p.approvalTtlHours) {
         await ctx.db.patch(p._id, { approvalTtlHours: ttl });
@@ -277,6 +283,7 @@ export const updatePolicy = mutation({
       mode: args.mode,
       allowAdPauseRules: args.allowAdPauseRules,
       maxMonthlyAdSpendMinor: spendMinor,
+      budgetUnitVersion: AD_BUDGET_UNIT_VERSION,
       approvalTtlHours: ttl,
       createdBy: user._id,
       createdAt: Date.now(),

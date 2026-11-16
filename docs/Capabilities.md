@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Ad-budget entry now preserves the currency's decimal precision across campaign preparation, policies and goal settings. Unsupported precision is rejected instead of rounded. Older positive non-two-decimal policy/campaign amounts remain unchanged and need owner confirmation or a newly prepared campaign. Changed currency is rejected on stale form submissions. Approval and execution recheck the current shared planning limit; Meta writes first verify account currency. These checks do not guarantee actual platform billing. Google uses average daily budgets, not the displayed planned total as a lifetime cap; Meta campaign creation still needs ad-set setup. Campaign cards and Policies now disclose that spend/tracking-loss auto-monitoring is not implemented. Pause all requests a pause and requires a provider result. See [Verification](Verification.md).
+
 Campaign approvals now persist the reviewed account, daily and total budget, dates, destination, audience and review terms, and bind activation to the external campaign. Changed terms and stop rules require renewed approval. Queued creation or activation can be cancelled before execution starts; cancellation does not claim to pause live ads. Started requests with no recorded result remain visible and cannot be resubmitted automatically. Current member permission and account/provider ownership are rechecked before an atomic execution claim. Unresolved provider results need reconciliation; this does not verify currency inputs or live provider spending behavior. See [Verification](Verification.md).
 
 
@@ -19,7 +21,7 @@ Customer progress preserves each deal’s currency precision and shows separate 
 
 Owner-recorded sales now stay separate from imported payments across Results, attribution, payer forecasts, repeat-payment cohorts and strategy calculations. This avoids counting a CRM sale again when its billing payment is imported. Older real billing aggregates require a source refresh before use; repeated imports can rebuild the affected day without duplicating the payment. Sales remain available in Customer progress and owner-reported strategy context. Imported records still do not independently verify cash, profit, complete coverage or cross-provider deduplication. See [Verification](Verification.md).
 
-Shared minor-unit displays now preserve currency precision in Results, attribution, forecasts, campaign cards and other existing consumers, including zero-decimal yen and three-decimal dinars. Larger totals retain their cents; missing currency stays unknown. This is a display correction, not a migration of old values. Separate ad-budget and policy input paths still need currency-unit reconciliation before affected non-two-decimal live budgets can be treated as verified. See [Verification](Verification.md).
+Shared minor-unit displays now preserve currency precision in Results, attribution, forecasts, campaign cards and other existing consumers, including zero-decimal yen and three-decimal dinars. Larger totals retain their cents; missing currency stays unknown. The subsequent budget-input repair above handles new amounts and blocks ambiguous older campaign values; it does not migrate historical money or verify live platform billing. See [Verification](Verification.md).
 
 ## Availability labels
 

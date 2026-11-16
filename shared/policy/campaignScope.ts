@@ -6,6 +6,7 @@ export function campaignApprovalScope(
     audience?: string;
     dailyBudgetMinor?: number;
     budgetEnvelopeMinor?: number;
+    budgetUnitVersion?: string;
     externalId?: string;
     currency: string;
     startDate?: string;
@@ -23,6 +24,7 @@ export function campaignApprovalScope(
     audience: campaign.audience,
     spendLimitMinor: campaign.dailyBudgetMinor,
     totalSpendLimitMinor: campaign.budgetEnvelopeMinor,
+    budgetUnitVersion: campaign.budgetUnitVersion,
     currency: campaign.currency,
     windowStart: campaign.startDate ? Date.parse(`${campaign.startDate}T00:00:00Z`) : undefined,
     windowEnd: campaign.endDate ? Date.parse(`${campaign.endDate}T23:59:59Z`) : undefined,

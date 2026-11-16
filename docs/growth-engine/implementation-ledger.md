@@ -1,5 +1,11 @@
 # Growth engine implementation ledger
 
+## Local update — 16 November 2026: currency-aware campaign budgets
+
+Closed the confirmed fixed-*100 preparation/policy writers and rounded goal-input gap. Exact parsing rejects excess currency precision and unsafe amounts. New campaigns and materially changed policies record a unit version; older positive non-two-decimal values are preserved and blocked from approval until the owner confirms a policy or prepares a replacement campaign. Goal changes carry the correct policy currency; editors cannot confirm unknown/cross-currency caps. Browser forms bind the displayed currency. Approval and atomic execution claims recheck current reservations/caps, and Meta verifies account currency before any write. The UI distinguishes planned totals from provider spending behavior and no longer claims the listed pause conditions are automatically monitored.
+
+Verified with the 150-test regression/permission batch, a 67-test goal/provider follow-up (overlapping adapter coverage), and desktop/mobile budget plus authorization checks. Subsequent disclosure checks rerun the two amount-presentation tests and budget browser pair. Typecheck and changed-file lint passed. See [Verification](../Verification.md) for commands, official provider references, and exact limits. No live writes, deployment, migration or new provider. Automatic spend/tracking-loss monitoring, uncertain-write reconciliation, full 410-item behavioral validation and real-business quality remain open.
+
 ## Local update — 16 November 2026: campaign approval and queue safety
 
 Repaired persisted campaign approval scope, binding total spend and external campaign identity as well as existing account/review terms. Rejection invalidates queued approvals without claiming a live pause. Execution rechecks current permissions and uses an atomic claim to prevent concurrent/replayed writes. Owner UI exposes queued and unresolved started states and supports cancelling a queued activation. Interrupted claims need manual reconciliation, not automatic resubmission. Budget currency inputs and provider monetary conventions remain the next monetary task. Verified with 60 focused regression/permission tests, desktop/mobile fixture checks, typecheck and lint. See [Verification](../Verification.md) for reproduced failures and exact checks.

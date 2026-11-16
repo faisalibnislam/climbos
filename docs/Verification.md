@@ -1,3 +1,43 @@
+## 16 November 2026 — exact ad-budget entry and current spending-policy checks
+
+Traced owner entry in Policies, Business & goal, Plan and onboarding → policy/goal storage → ad draft preparation → campaign review → exact approval → atomic execution claim → Google/Meta monetary payload. Initial focused tests reproduced JPY amounts multiplied by 100, KWD/CLF precision lost, excess precision rounded, ambiguous old policy values shown as confirmed and goal changes leaving the spending policy in a different currency.
+
+New input uses the existing exact decimal parser and recognized currency set. Excess precision, negative/non-finite/unsafe amounts and unsafe totals are rejected. Campaigns and materially changed policies carry `currency-minor-v1`; older positive non-two-decimal amounts are not reinterpreted or migrated. Owners confirm the intended policy amount; confirmation starts a new policy version even if its raw integer stays the same. Ambiguous campaigns require a newly prepared record and renewed approval. Their old values remain unchanged and their daily/total display is withheld. Two-decimal legacy budgets and zero retain compatible interpretation. Target cost already used currency-aware conversion and remains separately displayed.
+
+Goal setters reject excess precision, carry goal/business currency into the policy and restrict confirmation of unknown/cross-currency limits to policy managers. Current forms send the displayed currency to reject stale submissions. Preparation checks the shared rolling 31-day planned reservation; approval and execution recheck known units, consistent totals/dates, matching currency and current cap. Unit version joins the approval scope. Missing or excessive history remains a refusal, not an assumed zero. Preparing or confirming a policy does not write to an ad provider.
+
+Meta now reads the selected account currency before creation/activation. Mocked action tests verify missing/mismatched currency causes no POST and matching KWD sends the exact integer `spend_cap`. Google already checks account currency on creation; payload tests now cover JPY, KWD and CLF conversion to micros. These are arithmetic/adapter checks, not claims that each provider accepts all tested ISO currencies.
+
+The UI calls the amount a planned total. Google currently uses average daily `amountMicros`, not campaign-total budgeting; Meta creates a campaign with a total spend cap and still needs ad-set setup. Screenshot review also revealed the old “Auto-pauses if” promise. Repository tracing found only the Pause all caller of `pauseCampaignForStop`, not a spend/tracking-loss monitor. Campaign cards now describe pause conditions for review; Policies labels the flag a saved preference. This wording correction does not implement the missing monitor. Existing stored stop rules remain in approval hashes, unchanged. Pause all is a request, not immediate confirmed cessation of billing.
+
+Verification commands and actual results:
+
+```text
+pnpm exec vitest run tests/convex/ad-budget-currency.test.ts tests/convex/campaign-authorization.test.ts tests/convex/safety.test.ts tests/convex/tenancy.test.ts tests/convex/ad-performance.test.ts tests/convex/approval-claims.test.ts tests/unit/campaign-budget.test.ts tests/unit/campaign-scope.test.ts tests/unit/campaign-money-display.test.tsx tests/unit/integrations.adapters.test.ts tests/unit/integrations.csv.test.ts
+150 passed across 11 files
+
+pnpm exec vitest run tests/convex/onboarding-defaults.test.ts tests/convex/goal-kinds.test.ts tests/convex/acquisition-profile.test.ts tests/convex/business-details.test.ts tests/unit/integrations.adapters.test.ts
+67 passed across 5 files (includes 3 added Google payload cases; adapter coverage overlaps the first run)
+
+pnpm exec vitest run tests/unit/campaign-money-display.test.tsx
+2 passed after adding the monitoring-disclosure assertions
+
+pnpm typecheck
+application and Convex checks passed
+```
+
+Changed-file ESLint and `git diff --check` passed. The existing campaign authorization fixture now removes its unrelated seeded demo reservation before exercising its own campaign; it does not loosen the shared cap.
+
+Browser command: `E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/ad-budget-currency.spec.ts e2e/campaign-authorization.spec.ts` — four checks passed in 38.5 seconds on desktop Chromium and Pixel 7 emulation. The new isolated demo fixture verifies blocked preparation before confirmation, blank legacy policy amount, KWD 100.123 stored as 100123, retained old 60000 policy, KWD 1.234/day over 14 days stored as 17276, exact target cost, zero campaign execution approvals/receipts from preparation, and legacy campaign refusal with preserved raw values. Existing checks exercise queue cancellation, fixture create/start and interruption refusal. After the monitoring disclosure changed, the budget pair was rerun with explicit disclosure assertions. No page errors, horizontal overflow or serious/critical axe findings. Screenshots reviewed; this is not full accessibility conformance or live-account testing.
+
+Provider sources inspected 16 November 2026:
+
+- [Google campaign budgets overview](https://developers.google.com/google-ads/api/docs/campaigns/budgets/overview), updated 13 November 2026: average daily budgets and separate campaign-total budgeting. Existing ClimbOS requests use the daily path.
+- [Google campaign budget fields](https://developers.google.com/google-ads/api/fields/v26/campaign_budget): micros express the advertiser account currency.
+- [Meta campaign reference](https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/ad-campaign-group): integer account-currency subunits for `spend_cap`; campaign-level dates do not replace ad-set setup. No publication date recorded. The dedicated Meta currency page returned HTTP 429/cache failure; full currency eligibility/minimums were not verified.
+
+Remaining limits: no live provider acceptance, spend, billing or automatic-monitor verification; shared UTC 31-day planning is not a provider billing cap. Existing oversized/ambiguous history needs owner/operator review. No general automatic migration or interrupted-write reconciliation was added. Automatic monitoring must use real, complete, dated measurements and exact configured policy; do not infer tracking failure from zero conversions or absent imports. The complete 410-item behavioral audit and business-quality evaluation remain open. No hosted deployment, live send or live campaign action occurred.
+
 ## 16 November 2026 — campaign approval persistence, cancellation and replay
 
 Traced campaign preparation and owner review → `ads.decide` → persisted approval scope → scheduled `executeCampaignWrite` → provider/fixture adapter → action receipt and campaign state. The database rejected the existing account/review scope fields; after fixing that schema mismatch, regressions reproduced queued writes executing after rejection, local rejection falsely marking active ads paused, missing execution-time approver permission checks, and duplicate approval creation. The unit contract also omitted the total campaign budget and external campaign identity.

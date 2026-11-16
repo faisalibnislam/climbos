@@ -1,14 +1,15 @@
 import { v } from "convex/values";
 import { requirePaid } from "./lib/access";
 import { createPausedSearchCampaign, setCampaignStatus as setGoogleStatus } from "../shared/integrations/googleAds";
-import { decimalToMinor } from "../shared/integrations/currency";
+import { formatMinorMoney } from "../shared/economics/currency";
 import {
   createPausedCampaign as createMetaPaused,
+  getAccountSpendCapUsage,
   SET_META_CAMPAIGN_STATUS_ACTION,
   setCampaignStatus as setMetaStatus,
 } from "../shared/integrations/metaAds";
 import { approvalHash, can, canonicalJson, checkApprovalForExecution, sha256Hex } from "../shared/policy";
-import { maxRolling31DaySpend, validCampaignDateRange } from "../shared/policy/campaignBudget";
+import { AD_BUDGET_UNIT_VERSION, campaignBudgetProblem, knownAdBudget, parseAdBudget, maxRolling31DaySpend, validCampaignDateRange } from "../shared/policy/campaignBudget";
 import { campaignApprovalScope } from "../shared/policy/campaignScope";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -43,6 +44,22 @@ async function campaignApprovals(ctx: QueryCtx | MutationCtx, campaignId: Id<"ca
   const rows = await ctx.db.query("approvals").withIndex("by_subject", q => q.eq("subjectType", "campaign_activation").eq("subjectId", campaignId)).take(1001);
   if (rows.length > 1000) throw appError("LIMIT_REACHED", "This campaign's approval history needs review before another write.");
   return rows;
+}
+
+async function currentBudgetProblem(ctx: QueryCtx | MutationCtx, c: Doc<"campaigns">): Promise<string | null> {
+  const problem = campaignBudgetProblem(c);
+  if (problem) return problem;
+  const policy = await ctx.db.query("autonomyPolicies").withIndex("by_org_active", q => q.eq("orgId", c.orgId).eq("active", true)).first();
+  if (!policy || !knownAdBudget(policy.maxMonthlyAdSpendMinor, policy.currency, policy.budgetUnitVersion)) return "An owner must confirm the monthly budget in Settings → Policies before campaign approval.";
+  if (policy.currency !== c.currency) return "The campaign and current spending policy use different currencies. Review the budget before approving.";
+  const today = new Date().toISOString().slice(0, 10);
+  if (c.endDate! < today) return "This campaign's planned dates have ended. Prepare a new campaign with reviewed dates.";
+  const reservations = await ctx.db.query("campaigns").withIndex("by_org", q => q.eq("orgId", c.orgId)).take(1001);
+  if (reservations.length > 1000) return "Too many campaigns to verify the shared ad budget. Review older campaigns first.";
+  const planned = maxRolling31DaySpend(reservations, policy.currency, today);
+  if (!planned.ok) return "The shared campaign budget needs review: an existing amount, currency or schedule is unknown.";
+  if (planned.maxSpendMinor > policy.maxMonthlyAdSpendMinor) return "The planned campaigns exceed your current monthly ad budget. Lower or reschedule them, or ask an owner to change the policy.";
+  return null;
 }
 
 export const list = query({
@@ -81,6 +98,7 @@ export const list = query({
         channel: c.channel,
         status: c.status,
         writeState,
+        budgetReviewReason: campaignBudgetProblem(c),
         dailyBudgetMinor: c.dailyBudgetMinor ?? 0,
         budgetEnvelopeMinor: c.budgetEnvelopeMinor,
         currency: c.currency,
@@ -98,6 +116,7 @@ export const list = query({
     }));
     return {
       monthlyEnvelopeMinor: policy?.maxMonthlyAdSpendMinor ?? 0,
+      monthlyBudgetNeedsReview: !policy || !knownAdBudget(policy.maxMonthlyAdSpendMinor, policy.currency, policy.budgetUnitVersion),
       currency: policy?.currency ?? org.currency,
       googleAdsConnected: connected("google_ads"),
       metaAdsConnected: connected("meta_ads"),
@@ -211,6 +230,7 @@ export const prepareCampaign = mutation({
     slug: v.string(),
     artifactId: v.id("artifacts"),
     dailyBudget: v.number(),
+    expectedCurrency: v.optional(v.string()),
     startDate: v.string(),
     endDate: v.string(),
     targetCostPerConversion: v.optional(v.number()),
@@ -226,13 +246,18 @@ export const prepareCampaign = mutation({
       .query("autonomyPolicies")
       .withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true))
       .first();
-    const dailyMinor = Math.round(args.dailyBudget * 100);
+    if (!policy || !knownAdBudget(policy.maxMonthlyAdSpendMinor, policy.currency, policy.budgetUnitVersion)) throw appError("INVALID", "An owner must confirm the monthly budget in Settings → Policies first.");
+    if (args.expectedCurrency !== undefined && args.expectedCurrency !== policy.currency) throw appError("INVALID", "The budget currency changed. Reload and review the amounts before preparing.");
+    const parsed = parseAdBudget(args.dailyBudget, policy.currency);
+    if (!parsed.ok) throw appError("INVALID", parsed.error);
+    const dailyMinor = parsed.minor;
     if (!(dailyMinor > 0)) throw appError("INVALID", "Enter a daily budget greater than 0.");
     if (!Number.isInteger(args.reviewAfterDays) || args.reviewAfterDays < 1 || args.reviewAfterDays > 90) throw appError("INVALID", "Choose a first review window from 1 to 90 days.");
     if (!validCampaignDateRange(args.startDate, args.endDate)) {
       throw appError("INVALID", "Pick a start date and an end date after it.");
     }
     const days = Math.round((Date.parse(args.endDate) - Date.parse(args.startDate)) / 86_400_000) + 1;
+    if (!Number.isSafeInteger(dailyMinor * days)) throw appError("INVALID", "The planned campaign total is too large.");
     const envelope = policy?.maxMonthlyAdSpendMinor ?? 0;
     // Reserve every pending or live campaign across both ad providers in the
     // same transaction. This prevents parallel preparations from each using
@@ -242,14 +267,14 @@ export const prepareCampaign = mutation({
     const planned = maxRolling31DaySpend(
       [
         ...existing,
-        { status: "needs_approval", currency: policy?.currency ?? org.currency, dailyBudgetMinor: dailyMinor, startDate: args.startDate, endDate: args.endDate },
+        { status: "needs_approval", currency: policy.currency, dailyBudgetMinor: dailyMinor, budgetUnitVersion: AD_BUDGET_UNIT_VERSION, startDate: args.startDate, endDate: args.endDate },
       ],
       policy?.currency ?? org.currency,
       new Date().toISOString().slice(0, 10),
     );
     if (!planned.ok) throw appError("LIMIT_REACHED", "We can't safely calculate your shared ad budget from the existing campaign schedules. Resolve the currency or schedule details before preparing another campaign.");
     if (planned.maxSpendMinor > envelope) {
-      throw appError("LIMIT_REACHED", `That would plan ${(planned.maxSpendMinor / 100).toFixed(2)} ${policy?.currency ?? org.currency} across Google and Meta in the 31-day window starting ${planned.windowStart}, above your approved monthly ad budget of ${(envelope / 100).toFixed(0)}. Lower or reschedule a campaign, or raise your budget in Settings → Policies.`);
+      throw appError("LIMIT_REACHED", `That would plan ${formatMinorMoney(planned.maxSpendMinor, policy.currency)} across Google and Meta in the 31-day window starting ${planned.windowStart}, above your approved monthly ad budget of ${formatMinorMoney(envelope, policy.currency)}. Lower or reschedule a campaign, or raise your budget in Settings → Policies.`);
     }
     const provider = a.channel === "google_search_ad" ? "google_ads" : "meta_ads";
     const conn = await ctx.db
@@ -260,7 +285,7 @@ export const prepareCampaign = mutation({
     let targetCostPerConversionMinor: number | undefined;
     if (args.targetCostPerConversion !== undefined) {
       if (!Number.isFinite(args.targetCostPerConversion) || args.targetCostPerConversion <= 0) throw appError("INVALID", "The target cost per conversion must be greater than zero.");
-      const parsed = decimalToMinor(String(args.targetCostPerConversion), policy?.currency ?? org.currency);
+      const parsed = parseAdBudget(args.targetCostPerConversion, policy.currency);
       if (!parsed.ok || parsed.minor <= 0) throw appError("INVALID", "Enter a valid positive target cost for the workspace currency.");
       targetCostPerConversionMinor = parsed.minor;
     }
@@ -272,6 +297,7 @@ export const prepareCampaign = mutation({
       status: "needs_approval",
       budgetEnvelopeMinor: dailyMinor * days,
       dailyBudgetMinor: dailyMinor,
+      budgetUnitVersion: AD_BUDGET_UNIT_VERSION,
       currency: policy?.currency ?? org.currency,
       startDate: args.startDate,
       endDate: args.endDate,
@@ -280,7 +306,7 @@ export const prepareCampaign = mutation({
       destinationUrl: ver?.destinationUrl,
       audience: undefined,
       stopRules: [
-        `Pause if spend reaches ${(dailyMinor * days / 100).toFixed(2)} ${policy?.currency ?? org.currency} for this campaign`,
+        `Pause if spend reaches ${formatMinorMoney(dailyMinor * days, policy.currency)} for this campaign`,
         "Pause if conversion tracking stops reporting for 48 hours",
         "Pause immediately when you press Pause all",
       ],
@@ -288,7 +314,7 @@ export const prepareCampaign = mutation({
       createdAt: now,
       updatedAt: now,
     });
-    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "campaign.prepared", subjectType: "campaign", subjectId: campaignId, summary: `Prepared paused campaign for "${a.title}" at ${(dailyMinor / 100).toFixed(2)}/day.` });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "campaign.prepared", subjectType: "campaign", subjectId: campaignId, summary: `Prepared paused campaign for "${a.title}" at ${formatMinorMoney(dailyMinor, policy.currency)}/day.` });
     return campaignId;
   },
 });
@@ -319,6 +345,8 @@ export const decide = mutation({
     }
     const actionProblem = campaignActionProblem(c, action);
     if (actionProblem) throw appError("INVALID", actionProblem);
+    const budgetProblem = await currentBudgetProblem(ctx, c);
+    if (budgetProblem) throw appError("INVALID", budgetProblem);
     if (!c.connectionId) throw appError("UNAVAILABLE", "Connect and select the advertiser account for this campaign first. Until then, use the ad drafts manually.");
     const connection = await ctx.db.get(c.connectionId);
     const provider = c.channel === "google_search_ad" ? "google_ads" : "meta_ads";
@@ -358,7 +386,7 @@ export const decide = mutation({
       createdAt: now,
     });
     await ctx.scheduler.runAfter(0, internal.ads.executeCampaignWrite, { campaignId: c._id, approvalId });
-    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: `campaign.${action}_approved`, subjectType: "campaign", subjectId: c._id, summary: `Approved ${action === "activate" ? "starting" : "creating (paused)"} "${c.name}" at ${((c.dailyBudgetMinor ?? 0) / 100).toFixed(2)} ${c.currency}/day.` });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: `campaign.${action}_approved`, subjectType: "campaign", subjectId: c._id, summary: `Approved ${action === "activate" ? "starting" : "creating (paused)"} "${c.name}" at ${formatMinorMoney(c.dailyBudgetMinor ?? 0, c.currency)}/day.` });
   },
 });
 
@@ -398,6 +426,8 @@ export const claimCampaignWrite = internalMutation({
     if (previous.some(other => other.orgId === c.orgId && other.executionStartedAt !== undefined && other.executionFinishedAt === undefined)) return denied("Another campaign write has started. Check its result before trying again.");
     const problem = campaignActionProblem(c, a.actionKind);
     if (problem) return denied(problem);
+    const budgetProblem = await currentBudgetProblem(ctx, c);
+    if (budgetProblem) return denied(budgetProblem);
     const member = a.decidedBy ? await ctx.db.query("memberships").withIndex("by_org_user", q => q.eq("orgId", c.orgId).eq("userId", a.decidedBy!)).unique() : null;
     if (!member || member.status !== "active" || !can(member.role, "approve")) return denied("The approving member no longer has permission. Ask an authorized owner to review again.");
     try {
@@ -534,6 +564,11 @@ export const executeCampaignWrite = internalAction({
       }
     } else {
       const call = { accessToken: creds.accessToken };
+      const account = await getAccountSpendCapUsage({ ...call, adAccountId: creds.accountId });
+      if (!account.ok || account.data.currency !== c.currency.toUpperCase()) {
+        await ctx.runMutation(internal.ads.recordCampaignResult, { campaignId, action, status: "failed", summary: "The Meta ad account currency could not be confirmed as matching the approved campaign. Check the selected account before approving again.", approvalId });
+        return;
+      }
       if (action === "create_paused") {
         const res = await createMetaPaused({ ...call, adAccountId: creds.accountId, draft: { name: c.name, objective: "OUTCOME_TRAFFIC", specialAdCategories: [], spendCapMinor: c.budgetEnvelopeMinor, maxSpendCapMinor: c.budgetEnvelopeMinor } });
         await ctx.runMutation(internal.ads.recordCampaignResult, { campaignId, action, status: res.status, newStatus: res.status === "verified" ? "created_paused" : res.status === "uncertain" ? "uncertain" : undefined, externalId: res.externalId, summary: res.status === "verified" ? "Created in Meta, paused, with a lifetime spend cap." : (res.providerMessage ?? "Meta didn't accept the campaign."), approvalId });

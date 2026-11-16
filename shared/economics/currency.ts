@@ -76,6 +76,10 @@ export function majorToMinor(major: number, currency: string | null | undefined)
 // revenue-import currency exponent table. NumberFormat still knows their scale.
 const displayCurrencies = new Set([...Intl.supportedValuesOf("currency"), "CLF", "UYW", "UYI"]);
 
+export function isKnownCurrency(currency: string): boolean {
+  return displayCurrencies.has(currency.trim().toUpperCase());
+}
+
 /** Exact stored-money display. Never assume USD, round away minor units, or
  * reinterpret an invalid amount. This validates representation, not provenance.
  */

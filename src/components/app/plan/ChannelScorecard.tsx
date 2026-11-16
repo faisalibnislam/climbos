@@ -99,7 +99,7 @@ export function ChannelScorecard({ slug }: { slug: string }) {
       <details open={!data.recommendation}>
         <summary className="min-h-9 cursor-pointer font-medium">Explore other ways to reach customers</summary>
         <div className="mt-4 flex flex-col gap-6">
-      <Profile slug={slug} data={data} />
+      <Profile key={`${slug}:${data.budget.currency}`} slug={slug} data={data} />
       {!data.scored ? (
         <Callout tone="info" title="Rough ranking">
           Based on business type and budget. Refresh the plan for better scores.
@@ -191,7 +191,7 @@ function Profile({ slug, data }: { slug: string; data: View }) {
                 const n = Number(budgetText.replace(/,/g, ""));
                 if (!Number.isFinite(n) || n < 0) return toast({ tone: "danger", title: "Enter 0 or more (0 means no paid ads)." });
                 try {
-                  await setBudget({ slug, monthlyAdBudget: n });
+                  await setBudget({ slug, monthlyAdBudget: n, expectedCurrency: data.budget.currency });
                   setEditBudget(false);
                   toast({ tone: "success", title: "Budget updated. Refresh the plan to use it." });
                 } catch (err) {

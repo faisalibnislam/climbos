@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { maxRolling31DaySpend, validCampaignDateRange } from "../../shared/policy/campaignBudget";
+import { AD_BUDGET_UNIT_VERSION, campaignBudgetProblem, knownAdBudget, parseAdBudget, maxRolling31DaySpend, validCampaignDateRange } from "../../shared/policy/campaignBudget";
 
 const reservation = (overrides: Partial<Parameters<typeof maxRolling31DaySpend>[0][number]> = {}) => ({
   status: "active",
@@ -11,6 +11,29 @@ const reservation = (overrides: Partial<Parameters<typeof maxRolling31DaySpend>[
 });
 
 describe("cross-platform campaign budget reservations", () => {
+  it.each([["JPY", "1200", 1200], ["USD", "12.34", 1234], ["KWD", "12.345", 12345], ["CLF", "1.2345", 12345]])("parses exact %s units", (currency, text, minor) => {
+    expect(parseAdBudget(text, currency)).toEqual({ ok: true, minor });
+  });
+  it.each([["JPY", "1.1"], ["KWD", "1.2345"], ["USD", "-1"], ["USD", "Infinity"], ["USD", "9007199254740992"], ["ZZZ", "12"]])("rejects unsupported %s amount %s", (currency, text) => {
+    expect(parseAdBudget(text, currency).ok).toBe(false);
+  });
+  it("distinguishes confirmed, legacy and zero amounts without rewriting them", () => {
+    expect(knownAdBudget(12345, "KWD")).toBe(false);
+    expect(knownAdBudget(12345, "KWD", AD_BUDGET_UNIT_VERSION)).toBe(true);
+    expect(knownAdBudget(12345, "USD")).toBe(true);
+    expect(knownAdBudget(0, "JPY")).toBe(true);
+    expect(knownAdBudget(12345, "USD", "unknown-version")).toBe(false);
+    expect(knownAdBudget(12.3, "USD", AD_BUDGET_UNIT_VERSION)).toBe(false);
+    expect(knownAdBudget(0, "ZZZ")).toBe(false);
+  });
+  it("rejects ambiguous reservations and inconsistent planned totals", () => {
+    const old = reservation({ currency: "KWD" });
+    expect(maxRolling31DaySpend([old], "KWD", "2026-10-24")).toMatchObject({ ok: false, reason: "unknown_reservation" });
+    const confirmed = { ...old, budgetUnitVersion: AD_BUDGET_UNIT_VERSION, budgetEnvelopeMinor: 45000 };
+    expect(maxRolling31DaySpend([confirmed], "KWD", "2026-10-24")).toMatchObject({ ok: true, maxSpendMinor: 45000 });
+    expect(campaignBudgetProblem(confirmed)).toBeNull();
+    expect(campaignBudgetProblem({ ...confirmed, budgetEnvelopeMinor: 45001 })).toMatch(/do not agree/);
+  });
   it("sums overlapping Google and Meta caps in the highest rolling 31-day window", () => {
     const result = maxRolling31DaySpend(
       [reservation(), reservation({ status: "needs_approval", dailyBudgetMinor: 600 })],

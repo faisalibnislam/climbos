@@ -5,6 +5,8 @@ import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import { parseAdBudget } from "@shared/policy/campaignBudget";
+import { fractionDigits } from "@shared/economics/currency";
 import { ShieldCheck } from "@/components/icons";
 import { Button, Callout, ConfirmDialog, Field, Input, RadioCards, Switch, buttonClasses, toast } from "@/components/ui";
 import { errorInfo } from "../errors";
@@ -52,7 +54,7 @@ export function PoliciesSettings({ slug }: { slug: string }) {
             </Callout>
           ) : null}
           {data.policy ? (
-            <PolicyForm key={data.policy.version} slug={slug} policy={data.policy} allowedModes={[...data.allowedModes]} canManage={data.canManage} />
+            <PolicyForm key={`${data.policy.version}:${data.policy.currency}`} slug={slug} policy={data.policy} allowedModes={[...data.allowedModes]} canManage={data.canManage} />
           ) : (
             <Callout tone="info" title="No rules yet">
               Created when setup finishes. <Link href="/onboarding">Continue setup</Link>
@@ -81,7 +83,7 @@ function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; p
   const update = useMutation(api.settings.updatePolicy);
   const [mode, setMode] = useState<Mode>(policy.mode as Mode);
   const [adPause, setAdPause] = useState(policy.allowAdPauseRules);
-  const [budget, setBudget] = useState(String(policy.maxMonthlyAdSpend));
+  const [budget, setBudget] = useState(policy.maxMonthlyAdSpend === null ? "" : String(policy.maxMonthlyAdSpend));
   const [ttl, setTtl] = useState(String(policy.approvalTtlHours));
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,6 +102,8 @@ function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; p
     const b = Number(budget);
     const t = Number(ttl);
     if (budget.trim() === "" || !Number.isFinite(b) || b < 0 || b > 1_000_000) fe.budget = "Enter an amount between 0 and 1,000,000.";
+    const parsed = parseAdBudget(budget, policy.currency);
+    if (!fe.budget && !parsed.ok) fe.budget = parsed.error;
     if (ttl.trim() === "" || !Number.isFinite(t) || t < 1 || t > 336) fe.ttl = "Enter between 1 and 336 hours (14 days).";
     setFieldErrors(fe);
     return Object.keys(fe).length === 0;
@@ -121,6 +125,7 @@ function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; p
         mode,
         allowAdPauseRules: adPause,
         maxMonthlyAdSpend: Number(budget),
+        expectedCurrency: policy.currency,
         approvalTtlHours: Math.round(Number(ttl)),
       });
       toast({ tone: "success", title: "Rules saved", description: res?.invalidated ? "Earlier approvals cancelled." : undefined });
@@ -167,16 +172,17 @@ function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; p
           <h2 id="limits-heading" className="heading-section">
             Limits
           </h2>
+          {policy.maxMonthlyAdSpend === null ? <Callout tone="warning" title="Confirm your monthly budget">The older stored amount has unconfirmed currency units. Enter the amount you intend to allow. Saving requires new campaign approvals; it does not change live ads.</Callout> : null}
           <Switch
-            label="Auto-pause ads that break your rules"
-            description="Only ever reduces spend."
+            label="Automatic ad-pause preference"
+            description="Saved preference only. Automatic spend and tracking-loss monitoring is not available. Use Pause all or the ad platform."
             checked={adPause}
             onCheckedChange={setAdPause}
             disabled={!canManage}
           />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={`Maximum monthly ad spend (${policy.currency})`} hint="Hard cap." error={fieldErrors.budget}>
-              <Input type="number" inputMode="decimal" min="0" step="1" value={budget} onChange={(e) => setBudget(e.target.value)} />
+            <Field label={`Maximum monthly ad spend (${policy.currency})`} hint="Shared planning limit. Platform billing and pause delays can differ." error={fieldErrors.budget}>
+              <Input type="number" inputMode="decimal" min="0" step={10 ** -fractionDigits(policy.currency)} value={budget} onChange={(e) => setBudget(e.target.value)} />
             </Field>
             <Field label="Approvals expire after (hours)" error={fieldErrors.ttl}>
               <Input type="number" inputMode="numeric" min="1" max="336" step="1" value={ttl} onChange={(e) => setTtl(e.target.value)} />

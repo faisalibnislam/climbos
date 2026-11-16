@@ -1,13 +1,16 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
+import { parseAdBudget } from "@shared/policy/campaignBudget";
+import { fractionDigits } from "@shared/economics/currency";
 import { api } from "@convex/_generated/api";
 import Link from "next/link";
 import { useState } from "react";
 import { Button, Callout, ConfirmDialog, DatePicker, Field, Input, Skeleton, toast } from "@/components/ui";
 import { minorToDisplay } from "../../money";
 import { CampaignCard } from "../Campaigns";
-import { ErrorCallout, FactList, PERMISSION_WHO, majorToDisplay } from "../shared";
+import { ErrorCallout, FactList, PERMISSION_WHO } from "../shared";
 import type { ArtifactView } from "./model";
 
 function isoDay(ms: number): string {
@@ -26,8 +29,13 @@ function dayCount(start: string, end: string): number {
  */
 export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifact: ArtifactView; now: number }) {
   const ads = useQuery(api.ads.list, { slug });
+  if (ads === undefined) return <Skeleton className="h-40 w-full" />;
+  return <AdCampaignForm key={`${slug}:${artifact.id}:${ads.currency}`} slug={slug} artifact={artifact} now={now} ads={ads} />;
+}
+
+function AdCampaignForm({ slug, artifact, now, ads }: { slug: string; artifact: ArtifactView; now: number; ads: FunctionReturnType<typeof api.ads.list> }) {
   const prepare = useMutation(api.ads.prepareCampaign);
-  const [daily, setDaily] = useState("10");
+  const [daily, setDaily] = useState("");
   const [targetCostPerConversion, setTargetCostPerConversion] = useState("");
   const [reviewAfterDays, setReviewAfterDays] = useState("7");
   const [start, setStart] = useState(() => isoDay(now + 86_400_000));
@@ -35,8 +43,6 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<unknown>(null);
-
-  if (ads === undefined) return <Skeleton className="h-40 w-full" />;
 
   const ids = new Set<string>(artifact.campaignIds);
   const related = ads.campaigns.filter((c) => ids.has(c.id) || c.artifactId === artifact.id);
@@ -46,14 +52,21 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
   const targetCostNum = targetCostPerConversion.trim() ? Number(targetCostPerConversion) : undefined;
   const reviewDaysNum = Number(reviewAfterDays);
   const days = dayCount(start, end);
-  const total = Number.isFinite(dailyNum) && dailyNum > 0 ? dailyNum * days : 0;
+  const parsedDaily = parseAdBudget(daily, currency);
+  const parsedTarget = targetCostNum !== undefined ? parseAdBudget(targetCostPerConversion, currency) : null;
+  const total = parsedDaily.ok ? parsedDaily.minor * days : 0;
+  const totalValid = Number.isSafeInteger(total) && total > 0;
+  const dailyDisplay = parsedDaily.ok ? minorToDisplay(parsedDaily.minor, currency) : "Unknown";
+  const targetDisplay = parsedTarget?.ok ? minorToDisplay(parsedTarget.minor, currency) : "Unknown";
   const platform = artifact.channel === "google_search_ad" ? "Google Ads" : "Meta";
   const destination = artifact.current?.destinationUrl;
 
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!(dailyNum > 0)) e.daily = "Enter a daily budget greater than 0.";
+    if (!parsedDaily.ok) e.daily = parsedDaily.error;
+    else if (parsedDaily.minor <= 0 || !totalValid) e.daily = "Enter a positive budget with a representable planned total.";
     if (targetCostNum !== undefined && (!(targetCostNum > 0) || !Number.isFinite(targetCostNum))) e.targetCostPerConversion = "Enter a positive number, or leave blank.";
+    if (parsedTarget && !parsedTarget.ok) e.targetCostPerConversion = parsedTarget.error;
     if (!Number.isInteger(reviewDaysNum) || reviewDaysNum < 1 || reviewDaysNum > 90) e.reviewAfterDays = "Choose between 1 and 90 days.";
     if (!start) e.start = "Pick a start date.";
     if (!end || end < start) e.end = "End date must be on or after the start.";
@@ -88,14 +101,14 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
           >
             <h3 className="heading-card">{related.length ? "Another campaign" : "New campaign"}</h3>
             <p className="text-sm text-ink-2">
-              Monthly cap: {ads.monthlyEnvelopeMinor > 0 ? minorToDisplay(ads.monthlyEnvelopeMinor, currency) : "not set (Settings → Policies)"}
+              Monthly planning limit: {ads.monthlyBudgetNeedsReview ? "Needs owner confirmation in Settings → Policies" : minorToDisplay(ads.monthlyEnvelopeMinor, currency)}
             </p>
             <Field label={`Daily budget (${currency})`} error={fieldErrors.daily}>
-              <Input type="number" inputMode="decimal" min={1} step="0.01" value={daily} onChange={(e) => setDaily(e.target.value)} />
+              <Input type="number" inputMode="decimal" min={0} step={10 ** -fractionDigits(currency)} value={daily} onChange={(e) => setDaily(e.target.value)} />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label={`Target cost per conversion (${currency}, optional)`} error={fieldErrors.targetCostPerConversion}>
-                <Input type="number" inputMode="decimal" min={0} step="0.01" value={targetCostPerConversion} onChange={(e) => setTargetCostPerConversion(e.target.value)} placeholder="Set your target" />
+                <Input type="number" inputMode="decimal" min={0} step={10 ** -fractionDigits(currency)} value={targetCostPerConversion} onChange={(e) => setTargetCostPerConversion(e.target.value)} placeholder="Set your target" />
               </Field>
               <Field label="First review after (days)" error={fieldErrors.reviewAfterDays}>
                 <Input type="number" inputMode="numeric" min={1} max={90} step={1} value={reviewAfterDays} onChange={(e) => setReviewAfterDays(e.target.value)} />
@@ -111,12 +124,12 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
               </Field>
             </div>
             <p className="text-sm text-ink-2" aria-live="polite">
-              {days > 0 && total > 0 ? (
+              {days > 0 && totalValid ? (
                 <>
-                  {days} day{days === 1 ? "" : "s"} × {majorToDisplay(dailyNum, currency)} = <strong className="font-semibold text-ink">up to {majorToDisplay(total, currency)}</strong> in total.
+                  {days} day{days === 1 ? "" : "s"} × {dailyDisplay} = <strong className="font-semibold text-ink">{minorToDisplay(total, currency)}</strong> planned in total.
                 </>
               ) : (
-                "Enter budget and dates to see max spend."
+                "Enter budget and dates to see planned spend."
               )}
             </p>
             {!destination ? (
@@ -131,7 +144,8 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
                 Needed to launch. <Link href={`/app/${slug}/connections`}>Connect</Link>
               </Callout>
             ) : null}
-            <Button type="submit" className="self-start">
+            {ads.monthlyBudgetNeedsReview ? <Callout tone="warning" title="Confirm the spending limit"><Link href={`/app/${slug}/settings/policies`}>Open Policies</Link> to enter the intended monthly amount. Older amounts are kept unchanged.</Callout> : null}
+            <Button type="submit" className="self-start" disabled={ads.monthlyBudgetNeedsReview}>
               Prepare campaign
             </Button>
             {error ? <ErrorCallout error={error} /> : null}
@@ -144,7 +158,7 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
               onConfirm={async () => {
                 setError(null);
                 try {
-                  await prepare({ slug, artifactId: artifact.id, dailyBudget: dailyNum, startDate: start, endDate: end, targetCostPerConversion: targetCostNum, reviewAfterDays: reviewDaysNum });
+                  await prepare({ slug, artifactId: artifact.id, dailyBudget: dailyNum, expectedCurrency: currency, startDate: start, endDate: end, targetCostPerConversion: targetCostNum, reviewAfterDays: reviewDaysNum });
                   toast({ tone: "success", title: "Campaign prepared. Needs approval." });
                 } catch (e) {
                   setError(e);
@@ -153,11 +167,11 @@ export function AdCampaignPanel({ slug, artifact, now }: { slug: string; artifac
             >
               <FactList
                 items={[
-                  { term: "Daily", detail: `${majorToDisplay(dailyNum || 0, currency)}/day` },
+                  { term: "Daily", detail: `${dailyDisplay}/day` },
                   { term: "Dates", detail: `${start} to ${end}` },
-                  { term: "Max spend", detail: majorToDisplay(total, currency) },
+                  { term: "Planned spend", detail: totalValid ? minorToDisplay(total, currency) : "Unknown" },
                   { term: "First review", detail: `${reviewDaysNum} days after it starts` },
-                  { term: "Cost target", detail: targetCostNum ? `${majorToDisplay(targetCostNum, currency)} per reported conversion` : "Not set" },
+                  { term: "Cost target", detail: targetCostNum ? `${targetDisplay} per reported conversion` : "Not set" },
                 ]}
               />
             </ConfirmDialog>

@@ -1,4 +1,31 @@
 /** Cross-platform reservation for scheduled Google and Meta ad spend. */
+import { isKnownCurrency } from "../economics/currency";
+import { currencyExponent, decimalToMinor, type DecimalParse } from "../integrations/currency";
+
+export const AD_BUDGET_UNIT_VERSION = "currency-minor-v1";
+
+export function parseAdBudget(value: string | number, currency: string): DecimalParse {
+  if (!isKnownCurrency(currency)) return { ok: false, error: "Choose a recognized budget currency." };
+  const result = decimalToMinor(String(value), currency);
+  return result.ok && result.minor < 0 ? { ok: false, error: "Ad budgets cannot be negative." } : result;
+}
+
+/** Old *100 writers and currency-aware goal writers cannot be distinguished
+ * for non-two-decimal amounts. Preserve the raw value; require confirmation.
+ */
+export function knownAdBudget(minor: number | undefined, currency: string, version?: string): minor is number {
+  return typeof minor === "number" && Number.isSafeInteger(minor) && minor >= 0 && isKnownCurrency(currency)
+    && (version === AD_BUDGET_UNIT_VERSION || (version === undefined && (minor === 0 || currencyExponent(currency) === 2)));
+}
+
+export function campaignBudgetProblem(c: CampaignBudgetReservation & { budgetEnvelopeMinor: number }): string | null {
+  if (!knownAdBudget(c.dailyBudgetMinor, c.currency, c.budgetUnitVersion) || !knownAdBudget(c.budgetEnvelopeMinor, c.currency, c.budgetUnitVersion)) return "The stored budget units need owner review. Prepare a new campaign with confirmed amounts; do not reinterpret the original.";
+  if (!c.dailyBudgetMinor || !c.startDate || !c.endDate || !validCampaignDateRange(c.startDate, c.endDate)) return "The campaign needs a positive budget and valid dates.";
+  const days = (Date.parse(c.endDate) - Date.parse(c.startDate)) / DAY_MS + 1;
+  const total = c.dailyBudgetMinor * days;
+  if (!Number.isSafeInteger(total) || total !== c.budgetEnvelopeMinor) return "The daily amount, dates and planned total do not agree. Review the campaign budget.";
+  return null;
+}
 
 const DAY_MS = 86_400_000;
 const WINDOW_DAYS = 31;
@@ -8,6 +35,7 @@ export interface CampaignBudgetReservation {
   status: string;
   currency: string;
   dailyBudgetMinor?: number;
+  budgetUnitVersion?: string;
   startDate?: string;
   endDate?: string;
 }
@@ -45,7 +73,7 @@ export function maxRolling31DaySpend(
     const start = item.startDate ? dayMs(item.startDate) : null;
     const daily = item.dailyBudgetMinor;
     if (item.currency.trim().toUpperCase() !== currency) return { ok: false, reason: "currency_mismatch" };
-    if (start === null || end === null || end < start || typeof daily !== "number" || !Number.isSafeInteger(daily) || daily <= 0) {
+    if (start === null || end === null || end < start || !knownAdBudget(daily, item.currency, item.budgetUnitVersion) || daily <= 0) {
       return { ok: false, reason: "unknown_reservation" };
     }
     active.push({ start: Math.max(start, todayMs), end, daily });
