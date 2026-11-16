@@ -870,14 +870,14 @@ export const startFirstWin = internalMutation({
     const firstPostsBrief = "First posts from the new growth plan: introduce what makes the business different, one customer problem it solves, and one clear next step.";
     const jobs: { job: "content_social" | "content_email"; quantity?: number; channel?: SocialChannel | "email"; brief: string }[] = [
       ...[...perChannel].map(([channel, quantity]) => ({ job: "content_social" as const, quantity, channel, brief: firstPostsBrief })),
-      ...(strategy.channels.some(channel => channel.key === "email_lifecycle" && channel.status !== "parked") ? [{ job: "content_email" as const, channel: "email" as const, brief: "A short welcome email for new subscribers or customers based on the growth plan." }] : []),
+      ...(strategy.channels.some(channel => channel.key === "email_lifecycle" && channel.status !== "parked") ? [{ job: "content_email" as const, channel: "email" as const, brief: "Prepare the selected lifecycle email work from this saved plan. Preserve its intended audience, objective, dependencies and unknowns; these are private drafts for review." }] : []),
     ];
     for (const j of jobs) {
       try {
         // Instagram can't post without an image, so its first posts come with one.
         const images = j.channel === "instagram" ? 1 : 0;
         const plan = planJob(j.job, { quantity: j.quantity, images, channel: j.channel });
-        const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: j.job === "content_social" ? (perChannel.size > 1 ? `Your first ${j.channel === "x" ? "X" : (j.channel ?? "").replace(/^./, (c) => c.toUpperCase())} post${(j.quantity ?? 1) > 1 ? "s" : ""}` : "Your first 3 posts") : "Your welcome email", roles: plan.roles, input: { firstWin: true, strategyId: strategy._id, channel: j.channel, quantity: j.quantity }, steps: plan.steps, meters: plan.meters, createdBy: userId, isFixture: false });
+        const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: j.job === "content_social" ? (perChannel.size > 1 ? `Your first ${j.channel === "x" ? "X" : (j.channel ?? "").replace(/^./, (c) => c.toUpperCase())} post${(j.quantity ?? 1) > 1 ? "s" : ""}` : "Your first 3 posts") : "Your first email drafts", roles: plan.roles, input: { firstWin: true, strategyId: strategy._id, planApprovedAtLaunch: strategy.status === "approved", ...(j.job === "content_email" ? { planChannel: "email_lifecycle" } : {}), channel: j.channel, quantity: j.quantity }, steps: plan.steps, meters: plan.meters, createdBy: userId, isFixture: false });
         await ctx.scheduler.runAfter(0, internal.jobs.createContent, { runId, job: j.job, channel: j.channel, quantity: j.quantity, images, brief: j.brief });
         runIds.push(runId);
       } catch {

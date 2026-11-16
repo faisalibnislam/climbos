@@ -1160,7 +1160,7 @@ export function emailToArtifacts(out: Omit<EmailSequenceOutput, "emails"> & { an
       title: out.name,
       headline: `${out.emails.length} emails · for ${out.audience}`,
       body: out.emails
-        .map((e, i) => `Email ${i + 1} — day ${e.sendAfterDays}\nSubject: ${e.subject}\nPreview: ${e.previewText}\n\n${e.body}\n\n[${e.callToAction}]`)
+        .map((e, i) => `Email ${i + 1} — ${e.sendAfterDays === null ? "timing to confirm" : `day ${e.sendAfterDays} (proposed)`}\nSubject: ${e.subject}\nPreview: ${e.previewText}\n\n${e.body}\n\n[${e.callToAction}]`)
         .join("\n\n———\n\n"),
       contentAngle: [out.angle, ...out.emails.map((email, i) => (email.angle ? `Email ${i + 1}: ${email.angle}` : ""))].filter(Boolean).join("\n").slice(0, 500) || undefined,
       copyBrief: out.copyBrief,

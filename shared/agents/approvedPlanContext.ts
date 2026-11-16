@@ -10,6 +10,28 @@ export interface ApprovedPlanContextInput {
   expert?: unknown;
 }
 
+/** Saved channel detail is planning context, not permission or proof of customer behavior. */
+export function planChannelDraftContext(plan: {
+  version: number; status: string; summary: string;
+  audiences: { name: string; hypothesis: string; evidence: string; sources?: unknown[] }[];
+  channels: { key: string; name: string; why: string; status: string; deliverables: string[]; dependencies: string[]; measurement: string; sources?: unknown[] }[];
+  constraints: string[];
+}, key: string): string | null {
+  const matches = plan.channels.filter(channel => channel.key === key && channel.status !== "parked");
+  if (matches.length !== 1) return null;
+  const channel = matches[0];
+  const context = JSON.stringify({
+    planVersion: plan.version, planStatus: plan.status,
+    channel: { key: channel.key, name: channel.name, why: channel.why, status: channel.status, deliverables: channel.deliverables, dependencies: channel.dependencies, measurement: channel.measurement, sources: channel.sources ?? [] },
+    audiences: plan.audiences.slice(0, 5), omittedAudiences: Math.max(0, plan.audiences.length - 5),
+    audienceStatus: plan.audiences.length ? "Candidate audiences from the plan, not a verified recipient segment. Use only the audience supported by the selected channel; ask if the selection is ambiguous." : "No audience is recorded in this plan. The intended reader, lifecycle stage and eligibility remain unknown; ask for the choice that changes the draft.",
+    constraints: plan.constraints,
+    authority: "Planning context only. Hypotheses and cited evidence retain their labels; a plan source is not a new read or independent verification. Pending plans do not establish approved offers. No contacts, topic-specific consent, observed behavior, offer changes or sending permission are implied.",
+  });
+  // Do not silently cut an eligibility qualifier, source or material constraint mid-record.
+  return context.length <= 8_000 ? context : null;
+}
+
 type PlanDetail = {
   snapshot?: { snapshotId?: string; [key: string]: unknown };
   diagnosis?: string;

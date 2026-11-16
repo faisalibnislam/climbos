@@ -1,3 +1,14 @@
+## 17 November 2026 — lifecycle-specific email preparation and unknown timing
+
+First-win preparation now follows the selected email plan instead of forcing welcome copy. Exact bounded channel/audience/evidence/dependency context reaches generation; missing or ambiguous bindings stop. Email timing may remain null, and invalid structures/delays fail before saving. A separately reproduced approval-label bug now keeps superseded unapproved starter proposals from gaining approved status. See [the audit](growth-engine/lifecycle-draft-context-audit.md).
+
+- `pnpm exec vitest run tests/convex/lifecycle-draft-context.test.ts tests/convex/first-win-reuse.test.ts tests/unit/approved-plan-context.test.ts tests/unit/ai-tasks.test.ts tests/unit/offer-assessment.test.ts tests/convex/marketing-authorization.test.ts tests/convex/marketing.test.ts tests/convex/research-context.test.ts tests/convex/engine-v2.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — final recheck: 120 passed across eleven files, 7.06 seconds.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint convex/content.ts convex/jobs.ts convex/jobWrites.ts shared/agents/specs.ts shared/agents/contentTasks.ts shared/agents/approvedPlanContext.ts shared/ai/tasks.ts tests/convex/lifecycle-draft-context.test.ts` — passed without warnings.
+- `git diff --check` — passed.
+
+The focused file has 16 cases, included in the 120 total. Tests intercept the actual model boundary or return a controlled response; no live provider/model, browser, schedule, send or deployment occurred. Early test cleanup was corrected to avoid leaking scheduled jobs across cases. The numeric cadence's semantic evidence, generated-copy quality and full lifecycle automation remain unverified.
+
 ## 17 November 2026 — exact marketing audience and one-use send approval
 
 Eight initial regressions reproduced missing audience/content/permission rechecks and duplicate execution in marketing email. Approval now binds local recipient identity, artifact version, rendered payload/sender, destination, credentials, reservation and policy. Current state is rechecked before preparation and send dispatch; unknown outcomes remain reserved and cannot retry. See [the scoped audit](growth-engine/marketing-send-authorization-audit.md).

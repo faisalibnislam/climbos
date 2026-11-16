@@ -23,6 +23,8 @@ Latest ad-routing follow-up (17 November): selected Google/Meta destinations now
 
 Latest marketing-send follow-up (17 November): exact local audience/content/version/credential/reservation binding and one-use preparation/dispatch claims close eight reproduced permission/concurrency gaps. 153 broader tests, final 24 overlapping focused cases, typecheck and lint pass. [Audit](growth-engine/marketing-send-authorization-audit.md) records additive undeployed schema, legacy reapproval, reserved unknown outcomes and provider-state limits. The first-win welcome-email brief remains the next confirmed lifecycle-drafting gap.
 
+Latest lifecycle-drafting follow-up (17 November): the welcome-only first-win gap is repaired. Selected plan audience/evidence/dependency context now reaches email generation; unknown delays are supported, and malformed output is rejected before saving. Approval-at-launch evidence prevents superseded starter proposals being mislabeled approved. 120 tests/eleven files, typecheck and lint pass. [Audit](growth-engine/lifecycle-draft-context-audit.md) preserves remaining semantic, lifecycle-trigger and unknown-send recovery work.
+
 This handoff records what has been built, what was checked, what remains unverified, and how to continue safely. It is a starting point for repository work, not proof that every capability works with live providers or real customer outcomes.
 
 ## Current status — 17 November 2026

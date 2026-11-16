@@ -3,7 +3,7 @@
 import { isSocialChannel } from "../shared/growth/socialChannels";
 import { CUSTOMER_VOICE_POLICY } from "../shared/reviews/voiceThemes";
 import { focusedPlanTask, focusedExplorationTask, FOCUSED_EXPLORATION_VERSION } from "../shared/agents/focusedPlan";
-import { COPY_BRIEF_INSTRUCTION, socialPostsTask, seoPageTask } from "../shared/agents/contentTasks";
+import { COPY_BRIEF_INSTRUCTION, emailSequenceTask, socialPostsTask, seoPageTask } from "../shared/agents/contentTasks";
 import { RUN_FAILURE_COPY } from "../shared/progress";
 import { CHANNEL_DECISION_POLICY } from "../shared/acquisition/channelDecision";
 
@@ -30,6 +30,7 @@ import {
   type ChatIntentOutput,
   factsBlock,
   businessResearchContext,
+  EmailSequenceSchema,
   staleFactsBlock,
   stripFactMarkers,
   type SeoBriefOutput,
@@ -120,7 +121,7 @@ import { linkQuickTakeEvidence } from "../shared/agents/opportunities";
 import { canonicalJson, sha256Hex } from "../shared/policy";
 import { localToday } from "../shared/agents/campaignTiming";
 import { mediaBreakEvenRoas } from "../shared/attribution/roi";
-import { approvedPlanContext, approvedPlanOfferTerms } from "../shared/agents/approvedPlanContext";
+import { approvedPlanContext, approvedPlanOfferTerms, planChannelDraftContext } from "../shared/agents/approvedPlanContext";
 import { readExpertPlan } from "../shared/agents/planCompatibility";
 import { customerNeedPerMonth, revenueGoalNewCustomersPerMonth } from "../shared/agents/goal";
 import type { BindingConstraint } from "../shared/agents/decision";
@@ -570,10 +571,20 @@ async function runAgentTask<T>(
   }
 }
 
+/** Starter preparation can precede approval; identity alone cannot approve a superseded proposal. */
+function approvedPinnedPredecessor(job: JobCtx): boolean {
+  if (!job.strategyPinned || job.strategy?.status !== "superseded") return false;
+  try {
+    const input = JSON.parse(job.run.input) as { firstWin?: boolean; planApprovedAtLaunch?: boolean };
+    // Plan action-card preparation already requires an approved plan. Starter jobs do not.
+    return input?.firstWin !== true || input.planApprovedAtLaunch === true;
+  } catch { return false; }
+}
+
 /** Keep approved plan terms separate from unapproved research and language candidates. */
 function planContext(job: JobCtx): string {
   const insights = job.business?.insights as (Record<string, unknown> & { positioning?: string }) | undefined;
-  const pinnedSuperseded = job.strategyPinned && job.strategy?.status === "superseded";
+  const pinnedSuperseded = approvedPinnedPredecessor(job);
   const approved = job.strategy && (job.strategy.status === "approved" || pinnedSuperseded)
     ? approvedPlanContext(job.strategy as never, { pinnedAtLaunch: Boolean(pinnedSuperseded) })
     : "";
@@ -594,7 +605,7 @@ function marketChangeContext(job: JobCtx): string {
 }
 
 function agentInput(job: JobCtx, task: string, extra: Partial<AgentInput> = {}): AgentInput {
-  const pinnedSuperseded = job.strategyPinned && job.strategy?.status === "superseded";
+  const pinnedSuperseded = approvedPinnedPredecessor(job);
   const approvedOfferTerms = job.strategy ? approvedPlanOfferTerms(job.strategy as never, { pinnedAtLaunch: Boolean(pinnedSuperseded) }) : [];
   return { task, brief: businessBrief(job), facts: job.facts.map((f) => f.statement), ownerApprovedExamples: job.brand?.approvedExamples ?? [], constraints: constraintsOf(job), ...(approvedOfferTerms.length ? { approvedOfferTerms } : {}), ...(job.business?.website ? { businessWebsite: job.business.website } : {}), ...(job.business?.industryBusinessTypeId ? { industryBusinessTypeId: job.business.industryBusinessTypeId } : {}), ...extra };
 }
@@ -1800,15 +1811,28 @@ export const createContent = internalAction({
           if (lintAdPlatformSelection(out, args.channel).length) throw new JobStop("ad_destination_mismatch", "The generated ads do not match the requested platform. No drafts were saved or campaigns created.");
           items = adsToArtifacts(out, job.business?.website);
         } else if (args.job === "content_email") {
+          let input: { strategyId?: string; planChannel?: string; firstWin?: boolean } = {};
+          try { input = JSON.parse(job.run.input); } catch { /* Legacy direct requests need no plan selection. */ }
+          let selectedContext = "";
+          if (input?.strategyId && (input.planChannel || input.firstWin)) {
+            if (!job.strategyPinned || job.strategy?._id !== input.strategyId) throw new JobStop("email_plan_context", "The originating email plan is unavailable. Review the intended audience and purpose before drafting.");
+            const selected = planChannelDraftContext(job.strategy, input.planChannel ?? "email_lifecycle");
+            if (!selected) throw new JobStop("email_plan_context", "The selected email channel is missing, parked, ambiguous or too large to carry intact. Clarify this plan's email work before drafting.");
+            selectedContext = `\n\nSELECTED LIFECYCLE PLAN CONTEXT (saved proposal; not sending authority):\n${untrusted("selected email plan", selected, 8_000)}`;
+          }
+          // Older queued starter jobs may still carry the former welcome-only brief.
+          const request = input?.firstWin && selectedContext ? "Prepare the selected lifecycle email work from the saved plan, preserving its audience, objective, dependencies and unknowns." : args.brief;
+          const task = emailSequenceTask(request, `${selectedContext}${planContext(job)}`);
           const out = await runAgentTask<EmailSequenceV2>(
             ctx,
             job,
             0,
             emailSpec(),
-            agentInput(job, `Write a short email sequence (3 emails) for people who agreed to hear from the business. Return one campaign angle and a distinct specific angle for each email (12 words or fewer per angle), selected from positioning, customer language, use case, objection, trigger or proof. Use {{first_name}} with a safe fallback. One idea and one call to action per email. ${copyBriefInstruction}${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`, { ownerSuppliedUrls: ownerSuppliedUrls(args.brief) }),
+            agentInput(job, task, { ownerSuppliedUrls: ownerSuppliedUrls(args.brief) }),
             startedAt,
-            { task: "email_sequence", context: "", ctx: fx, text: `TASK: Write a short email sequence (3 emails) for people who agreed to hear from the business. Use {{first_name}} for personalization. Include a clear call to action per email.\n\n${businessBrief(job)}${brief}` },
+            { task: "email_sequence", context: "", ctx: fx, text: `TASK: ${task}\n\n${businessBrief(job)}` },
           );
+          if (!EmailSequenceSchema.safeParse(out).success) throw new JobStop("invalid_email_sequence", "The email draft has missing messages or invalid timing. No drafts were saved; review the sequence before trying again.");
           items = emailToArtifacts(out);
         } else {
           const siteInventory = job.business?.website && !process.env.CLIMBOS_FAKE_LLM
@@ -1911,7 +1935,7 @@ export const createContent = internalAction({
         }
 
         const offerTermsSnapshot = job.strategy
-          ? approvedPlanOfferTerms(job.strategy as never, { pinnedAtLaunch: Boolean(job.strategyPinned && job.strategy.status === "superseded") })
+          ? approvedPlanOfferTerms(job.strategy as never, { pinnedAtLaunch: approvedPinnedPredecessor(job) })
           : [];
         const artifactIds = await ctx.runMutation(internal.jobWrites.saveArtifacts, { runId: args.runId, items: withImages as never, factIds, offerTermsSnapshot });
         await finish(ctx, args.runId, "verified", {

@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: selected lifecycle email context
+
+Replaced the first-win welcome-only request/title with selected-plan lifecycle preparation. Exact bounded audience hypotheses/evidence, channel purpose, dependencies and constraints now reach generation. Unknown relative timing can remain null; final schema validation rejects malformed output before saving. Superseded starter proposals now require approval-at-launch evidence before being treated as approved. Final 120 tests/eleven files, typecheck and lint pass. [Audit](lifecycle-draft-context-audit.md) records context bounds, semantic-quality limits and remaining automation/recovery work. Engine v3.125-lifecycle-draft-context; no external action or new provider.
+
 ## Local update — 17 November 2026: exact marketing send authorization
 
 Marketing approval now freezes recipient identity and content/version/credential/reservation scope, uses current approval/permission checks, and claims preparation/send once. Duplicate executors cannot resend; unresolved outcomes retain quota and need provider review. Eight red regressions preceded the repair. 153 broader tests/nine files plus final 24 overlapping focused cases, typecheck and lint pass. [Audit](marketing-send-authorization-audit.md) documents additive schema, legacy reapproval, provider race limits and absent unknown-result recovery UI. The welcome-email brief remains a separate confirmed drafting gap.

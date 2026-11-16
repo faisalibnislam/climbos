@@ -202,8 +202,8 @@ export const EmailSequenceSchema = z.object({
   name: z.string(),
   audience: z.string(),
   emails: z.array(
-    z.object({ subject: z.string(), previewText: z.string(), body: z.string(), sendAfterDays: z.number(), callToAction: z.string() }),
-  ),
+    z.object({ subject: z.string(), previewText: z.string(), body: z.string(), sendAfterDays: z.number().int().min(0).nullable(), callToAction: z.string() }),
+  ).min(1).max(3),
   factIndexes: z.array(z.number()),
 });
 export type EmailSequenceOutput = z.infer<typeof EmailSequenceSchema>;

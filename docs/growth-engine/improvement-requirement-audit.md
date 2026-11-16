@@ -1,3 +1,7 @@
+## 17 November 2026 — lifecycle purpose retained in draft preparation
+
+Execution/content consistency follow-up: first-win email preparation no longer assumes a welcome sequence. Selected plan audience hypotheses/evidence, dependencies, deliverables and constraints reach the actual writer input. Unknown timing is representable; invalid draft structures fail before saving. Approval-at-launch evidence prevents superseded starter proposals from acquiring approved-plan status. Final 120 focused/permission tests pass. [Audit](lifecycle-draft-context-audit.md) preserves model-quality, event-trigger, recipient-fit and reconciliation gaps; this is not full lifecycle-engine completion.
+
 ## 17 November 2026 — marketing audience and execution binding
 
 Execution/approval follow-up: segment name and count did not freeze recipient identity, and marketing sending lacked current content/permission rechecks and an atomic one-use claim. Exact local request scope and current-state claims now close those confirmed gaps, with 153 focused/permission tests and 24 overlapping final cases passing. [Scoped audit](marketing-send-authorization-audit.md) retains live-provider, remote concurrency, recovery and lifecycle recommendation limits. This is not full execution-engine completion.
