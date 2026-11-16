@@ -14,8 +14,8 @@ export function StepWorkLibrary({ slug, strategyId, canEdit }: { slug: string; s
   return <section className="space-y-4" aria-label="Work from your steps"><h2 className="heading-section">Work from your steps</h2>{rows.map(row => <div key={row.stepKey} className="space-y-2"><h3 className="text-sm font-medium">{row.title}</h3><StepWork slug={slug} strategyId={strategyId} stepKey={row.stepKey} canEdit={canEdit} /></div>)}</section>;
 }
 
-export function StepWork({ slug, strategyId, stepKey, canEdit }: { slug: string; strategyId: Id<"strategies">; stepKey: string; canEdit: boolean }) {
-  const [selectedWorkId, setSelectedWorkId] = useState<Id<"planStepWork"> | undefined>();
+export function StepWork({ slug, strategyId, stepKey, canEdit, initialWorkId }: { slug: string; strategyId: Id<"strategies">; stepKey: string; canEdit: boolean; initialWorkId?: Id<"planStepWork"> }) {
+  const [selectedWorkId, setSelectedWorkId] = useState(initialWorkId);
   const data = useQuery(api.stepWork.view, { slug, strategyId, stepKey, ...(selectedWorkId ? { workId: selectedWorkId } : {}) });
   const quote = useQuery(api.stepWork.quote, canEdit ? { slug } : "skip");
   const start = useMutation(api.stepWork.start);
@@ -35,8 +35,9 @@ export function StepWork({ slug, strategyId, stepKey, canEdit }: { slug: string;
   }
   const working = data?.status === "working";
   const question = data?.result?.ownerQuestion;
+  if (selectedWorkId && data === null) return <Callout title="This saved work is unavailable">It may have been removed or belong to a different workspace. Open the plan to choose available work.</Callout>;
   return <div className="ai-step-work space-y-4" aria-label="AI work for this step">
-    {selectedWorkId ? <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2 text-xs"><span>Earlier saved work</span><Button size="sm" variant="link" onClick={() => setSelectedWorkId(undefined)}>Back to latest work</Button></div> : null}
+    {selectedWorkId && data?.historical ? <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2 text-xs"><span>Earlier saved work</span><Button size="sm" variant="link" onClick={() => setSelectedWorkId(undefined)}>Back to latest work</Button></div> : null}
     {data === undefined ? <p role="status" className="text-sm text-ink-3">Checking saved work…</p> : working ? <p role="status" className="text-sm">{data.phase ?? "AI is preparing this step…"}</p> : !data || data.status === "failed" ? <>
       {data?.error ? <p className="text-sm text-ink-2">{data.error}</p> : <p className="text-sm text-ink-2">AI will research and prepare what it can for this step.</p>}
       {canEdit && !data?.historical ? <div className="flex flex-wrap items-center gap-3"><Button className="step-primary-action" loading={busy} disabled={!quote} onClick={() => void prepare()}>{data ? "Try preparing again" : "Make it happen"}</Button><span className="text-xs text-ink-3">{quote ? `Up to ${cost.upTo(quote.maxCostMicros)}. Unused credits return.` : "Checking cost…"}</span></div> : !canEdit ? <p className="text-xs text-ink-3">An editor can start AI preparation.</p> : null}

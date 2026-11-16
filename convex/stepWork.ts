@@ -24,12 +24,20 @@ export const home = query({ args: { slug: v.string() }, handler: async (ctx, { s
   const plans = await goalPlans(ctx, org._id, goal?._id);
   const selected = plans.find(plan => plan.status === "approved") ?? plans[0];
   if (!selected) return null;
-  const rows = await ctx.db.query("planStepWork").withIndex("by_org", q => q.eq("orgId", org._id)).order("desc").take(30);
-  const work = rows.find(row => row.strategyId === selected._id && ["ready", "needs_input"].includes(row.status) && row.result);
-  if (!work?.result) return null;
-  const result = StepWorkOutput.parse(JSON.parse(work.result));
-  const featured = result.drafts.find(draft => !["research", "analysis"].includes(draft.kind) && !/hold|unverified|unknown/i.test(draft.title)) ?? result.drafts[0];
-  return { title: featured?.title ?? work.stepTitle, summary: result.summary, stepTitle: work.stepTitle, needsAnswer: work.status === "needs_input" };
+  // Read the latest attempt per saved step, not a global slice that can hide
+  // this plan or resurrect an earlier success behind a newer failure.
+  const rows = await Promise.all(planTimeline(selected.expert).map(step =>
+    ctx.db.query("planStepWork").withIndex("by_strategy_step", q => q.eq("strategyId", selected._id).eq("stepKey", step.key)).filter(q => q.eq(q.field("orgId"), org._id)).order("desc").first(),
+  ));
+  for (const work of rows.filter(row => row !== null).sort((a, b) => b._creationTime - a._creationTime)) {
+    if (work.goalId !== selected.goalId || !["ready", "needs_input"].includes(work.status) || !work.result) continue;
+    let result;
+    try { result = StepWorkOutput.safeParse(JSON.parse(work.result)); } catch { continue; }
+    if (!result.success) continue;
+    const featured = result.data.drafts.find(draft => !["research", "analysis"].includes(draft.kind) && !/hold|unverified|unknown/i.test(draft.title)) ?? result.data.drafts[0];
+    return { workId: work._id, strategyId: selected._id, stepKey: work.stepKey, title: featured?.title ?? work.stepTitle, summary: result.data.summary, stepTitle: work.stepTitle, needsAnswer: work.status === "needs_input" };
+  }
+  return null;
 } });
 async function snapshot(ctx: QueryCtx, orgId: Id<"organizations">, userId: Id<"users">, strategyId: Id<"strategies">, stepKey: string) {
   const strategy = assertSameOrg(await ctx.db.get(strategyId), orgId, "plan");
@@ -62,14 +70,15 @@ export const quote = query({ args: { slug: v.string() }, handler: async (ctx, { 
 export const view = query({ args: { slug: v.string(), strategyId: v.id("strategies"), stepKey: v.string(), workId: v.optional(v.id("planStepWork")) }, handler: async (ctx, args) => {
   const { org, user, role } = await requireOrgAccess(ctx, { slug: args.slug }, "view");
   assertSameOrg(await ctx.db.get(args.strategyId), org._id, "plan");
-  const work = args.workId ? await ctx.db.get(args.workId) : await ctx.db.query("planStepWork").withIndex("by_strategy_step", q => q.eq("strategyId", args.strategyId).eq("stepKey", args.stepKey)).order("desc").first();
+  const latest = await ctx.db.query("planStepWork").withIndex("by_strategy_step", q => q.eq("strategyId", args.strategyId).eq("stepKey", args.stepKey)).filter(q => q.eq(q.field("orgId"), org._id)).order("desc").first();
+  const work = args.workId ? await ctx.db.get(args.workId) : latest;
   if (!work || work.orgId !== org._id) return null;
   if (work.strategyId !== args.strategyId || work.stepKey !== args.stepKey) throw appError("FORBIDDEN", "This work belongs to another plan step.");
   const prior = await ctx.db.query("planStepWork").withIndex("by_strategy_step", q => q.eq("strategyId", args.strategyId).eq("stepKey", args.stepKey).lt("_creationTime", work._creationTime)).order("desc").first();
   const run = await ctx.db.get(work.runId);
   const status = work.status === "working" && (!run || !ACTIVE.includes(run.status)) ? "failed" : work.status;
   const current = await snapshot(ctx, org._id, user._id, args.strategyId, args.stepKey);
-  return { id: work._id, status, historical: Boolean(args.workId), previousId: prior?._id, stale: current.baseHash !== work.baseHash, phase: work.phase, result: work.result ? StepWorkOutput.parse(JSON.parse(work.result)) : null, sources: work.sources ? (JSON.parse(work.sources) as { url: string; title?: string; status: string }[]).map(({ url, title, status }) => ({ url, title, status })) : [], edits: work.edits, draftRevision: work.draftRevision, error: work.error ?? run?.userMessage, canEdit: can(role, "edit") };
+  return { id: work._id, status, historical: work._id !== latest?._id, previousId: prior?._id, stale: current.baseHash !== work.baseHash, phase: work.phase, result: work.result ? StepWorkOutput.parse(JSON.parse(work.result)) : null, sources: work.sources ? (JSON.parse(work.sources) as { url: string; title?: string; status: string }[]).map(({ url, title, status }) => ({ url, title, status })) : [], edits: work.edits, draftRevision: work.draftRevision, error: work.error ?? run?.userMessage, canEdit: can(role, "edit") };
 } });
 export const forStrategy = query({ args: { slug: v.string(), strategyId: v.id("strategies") }, handler: async (ctx, { slug, strategyId }) => {
   const { org } = await requireOrgAccess(ctx, { slug }, "view");

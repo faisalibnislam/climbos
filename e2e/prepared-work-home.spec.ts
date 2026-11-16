@@ -1,0 +1,55 @@
+import { expect, test } from "@playwright/test";
+import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
+import { localDemoFixtures } from "./local-demo-fixtures";
+
+const envFile = process.env.CLIMBOS_DESIGN_E2E_ENV_FILE;
+const { rows, append } = localDemoFixtures(envFile);
+
+test("Home opens exact saved work and keeps it stable when a newer attempt arrives @mobile", async ({ page, baseURL }, testInfo) => {
+  test.skip(!envFile, "Requires the isolated local fixture backend");
+  test.setTimeout(150_000);
+  page.setDefaultTimeout(15_000);
+  expect(baseURL).toBe("http://127.0.0.1:3420");
+  const slug = await openDemo(page);
+  const org = (await rows("organizations")).find(row => row.slug === slug)!;
+  expect(org.kind).toBe("demo");
+  const plan = (await rows("strategies")).find(row => row.orgId === org._id)!;
+  const member = (await rows("memberships")).find(row => row.orgId === org._id && row.role === "owner")!;
+  const now = Date.now();
+  await append("workflowRuns", [{ orgId: org._id, kind: "step_work", title: "Synthetic saved-work browser fixture", status: "verified", input: "{}", roles: [], estimateMicros: 0, actualMicros: 0, rateVersionId: "test", entitlementVersionId: "test", routingVersionId: "test", budget: { modelSteps: 0, researchTools: 0, repairs: 0 }, used: { modelSteps: 0, researchTools: 0, repairs: 0 }, isFixture: true, createdAt: now, updatedAt: now }]);
+  const run = (await rows("workflowRuns")).find(row => row.orgId === org._id)!;
+  const result = { summary: "Synthetic private work for this browser check.", drafts: [{ title: "First saved introduction", kind: "seo", body: "Synthetic original text for owner review. This is not researched customer evidence or a published page." }], evidence: [], ownerQuestion: null, ownerTasks: ["Review before using"] };
+  const work = { orgId: org._id, strategyId: plan._id, goalId: plan.goalId, createdBy: member.userId, stepKey: "step-0", stepTitle: "Prepare the review", stepFingerprint: "synthetic", baseHash: "synthetic", context: "{}", cachedSources: "[]", answers: [], requestKey: "browser-first-work", status: "ready", runId: run._id, claimed: true, result: JSON.stringify(result), sources: "[]", edits: [], draftRevision: 0, createdAt: now, updatedAt: now };
+  await append("planStepWork", [work]);
+  const authority = async () => Promise.all(["workflowRuns", "approvals", "artifacts", "actionReceipts", "planTaskProgress"].map(async table => (await rows(table)).filter(row => row.orgId === org._id)));
+  const before = await authority();
+  const review = page.getByRole("button", { name: "Review prepared work", exact: true });
+  await review.click();
+  const dialog = page.getByRole("dialog", { name: "Prepared work: Prepare the review", exact: true });
+  await dialog.getByText("First saved introduction · Private draft", { exact: true }).click();
+  const editor = dialog.getByRole("textbox", { name: "Edit First saved introduction", exact: true });
+  await expect(editor).toHaveValue(result.drafts[0].body);
+  await expect(dialog.getByText("Earlier saved work", { exact: true })).toHaveCount(0);
+  await editor.fill("My private edit stays in the version I opened.");
+
+  await append("planStepWork", [{ ...work, requestKey: "browser-newer-work", result: JSON.stringify({ ...result, drafts: [{ ...result.drafts[0], title: "Newer saved introduction", body: `Synthetic replacement text from a later preparation attempt. ${result.drafts[0].body}` }] }), createdAt: Date.now(), updatedAt: Date.now() }]);
+  await expect(dialog.getByText("Earlier saved work", { exact: true })).toBeVisible();
+  await expect(editor).toHaveValue("My private edit stays in the version I opened.");
+  await dialog.getByRole("button", { name: "Save draft", exact: true }).click();
+  await expect(page.getByText("Draft saved. Nothing shared.", { exact: true })).toBeVisible();
+  const saved = (await rows("planStepWork")).filter(row => row.orgId === org._id);
+  expect(saved.find(row => row.requestKey === "browser-first-work")?.edits).toEqual([{ index: 0, body: "My private edit stays in the version I opened." }]);
+  expect(saved.find(row => row.requestKey === "browser-newer-work")?.edits).toEqual([]);
+  expect(await authority()).toEqual(before);
+  await expectNoHorizontalScroll(page);
+  await expectAccessible(page, "Exact prepared-work review");
+  await page.screenshot({ path: testInfo.outputPath("prepared-work-home.png") });
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(review).toBeFocused();
+  await expect(page.getByRole("heading", { name: "Newer saved introduction", exact: true })).toBeVisible();
+  await review.click();
+  await expect(dialog.getByText("Newer saved introduction · Private draft", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("Earlier saved work", { exact: true })).toHaveCount(0);
+  expect(await authority()).toEqual(before);
+});

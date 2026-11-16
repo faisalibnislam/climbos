@@ -1,3 +1,24 @@
+## 17 November 2026 — exact saved step work from Home
+
+Audit: the active focused-plan review already opened saved work without another AI job. A separate Home card selected the first successful result from the newest 30 organization-wide records and linked to a general plan anchor. Red regressions reproduced selected-plan work disappearing behind 35 unrelated rows, earlier success reappearing behind newer failed/working attempts, and malformed latest JSON crashing Home.
+
+Home now uses the existing strategy/step index to read each actual saved step's latest attempt for the selected plan. It considers valid ready/needs-input results without falling back within a failed, working or malformed step; another valid step may still appear. All saved phases are considered, matching the existing plan-work library rather than imposing a new four-step cap. The result includes exact work, plan and step IDs. The existing editor is lazily opened in the shared dialog, pinned to the selected work ID. Explicitly opening the current result no longer labels it historical; a later attempt makes the pinned result historical without replacing its editor. Missing exact work has an unavailable state. Existing saveDraft revision/tenant/role controls remain in force, including edits to recoverable earlier work. No new agent, provider, schema, generated file or action path.
+
+Verification commands:
+
+```sh
+pnpm exec vitest run tests/convex/prepared-work-home.test.ts tests/convex/step-work.test.ts tests/convex/focused-plan.test.ts tests/convex/goal-workspace.test.ts tests/convex/plan-approval.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts tests/convex/publish-flow.test.ts
+pnpm typecheck
+pnpm exec eslint convex/stepWork.ts src/components/app/plan/StepWork.tsx src/components/app/today/HomeCards.tsx tests/convex/prepared-work-home.test.ts e2e/prepared-work-home.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/prepared-work-home.spec.ts
+git diff --check
+```
+
+Results: **135 tests across eight files passed (8.57s)**, including five new Home selection/permission cases and existing focused-plan/tenant/approval/publishing checks. App/Convex typecheck, scoped lint and isolated sync passed. **Two desktop/mobile browser checks passed (10.0s)**. They open the actual Home dialog, retain an unsaved original edit while a newer result arrives, save only the original version, close with Escape, restore trigger focus and reopen the newer version. Workflow runs, approvals, artifacts, action receipts and completion records remain unchanged. Automated serious/critical accessibility and document-overflow checks passed. The mobile screenshot was inspected; transient completion/save notices and the development badge are present, so this is not an app-wide visual/accessibility certification.
+
+The first browser run failed after closing because the synthetic newer draft was shorter than the real 100-character output minimum. Home correctly omitted that invalid result. Correcting the fixture to a valid draft made both cases pass; no runtime validation was weakened. The local browser fixture is explicitly synthetic and imports only into the dedicated loopback demo. It does not exercise paid model generation or real publishing. The malformed-data fallback is specific to Home, not a general repair of every legacy work-detail reader. No hosted deployment, paid evaluation, external send/publish/spend or model switch occurred. Pre-existing .gitignore changes remain untouched; full-project acceptance remains open.
+
 ## 17 November 2026 — current focused workflow on the first demo visit
 
 Audit: a fresh demo still seeded an empty expert outline, legacy multi-channel advice and a placeholder opportunity. The focused move, prepared brief, creative alternatives and primary learning control appeared only after the prior update-path repair. A failing actual-query regression confirmed the missing initial focused move.

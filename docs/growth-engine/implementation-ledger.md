@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: exact prepared-work review from Home
+
+Replaced the Home prepared-work query’s organization-wide history slice with latest-attempt reads per actual saved step. This prevents unrelated history hiding selected-plan work and avoids resurrecting earlier success behind a newer failed/running/invalid attempt. Returned exact work/plan/step identity opens the existing editor in a lazy shared dialog. Exact current work is distinguished from historical work; an open draft remains pinned when a new attempt arrives. Existing revision, tenant and role checks govern edits. Focused regressions, permission checks and desktop/mobile browser checks pass; details and limitations are in Verification.
+
 ## Local update — 17 November 2026: focused workflow on the first demo visit
 
 The initial seed still created an empty expert outline, a placeholder opportunity and the old multi-channel plan. A failing first-visit query reproduced the missing focused move. Reused demoFocusedStrategy for seed content, mapped its source-free synthetic audience fields to persistence, retained the approved showcase state as explicitly simulated, and seeded the primary experiment as proposed. Plan timing and review date agree; unsupported channel cost and source-reference placeholders are removed. Existing demos remain unchanged on reopening. Browser fixtures that require a detailed play now declare their own synthetic play instead of coupling to the public demo. See Verification for exact tests and limits.

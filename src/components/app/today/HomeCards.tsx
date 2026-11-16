@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
@@ -8,7 +9,7 @@ import { api } from "@convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
 import { ArrowRight } from "@/components/icons";
 import { errorMessage } from "../errors";
-import { Badge, Button, toast, buttonClasses } from "@/components/ui";
+import { Badge, Button, Dialog, DialogContent, DialogTrigger, toast, buttonClasses } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { OwnerGoalTarget } from "./OwnerGoalTarget";
 
@@ -16,15 +17,23 @@ type Today = FunctionReturnType<typeof api.workspace.today>;
 type Snapshot = FunctionReturnType<typeof api.analytics.homeSnapshot>;
 
 const card = "flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-surface p-5";
+const SavedStepWork = dynamic(() => import("../plan/StepWork").then(module => module.StepWork), { loading: () => <p role="status">Opening saved work…</p> });
 
 /** Returning owners see one actual item to pick up, rather than a dashboard of competing priorities. */
 export function HomeNextAction({ slug, data }: { slug: string; data: Today }) {
   const stepWork = useQuery(api.stepWork.home, { slug });
+  const [review, setReview] = useState<NonNullable<FunctionReturnType<typeof api.stepWork.home>> | null>(null);
   const strategy = data.strategy;
   const ready = Boolean(strategy?.preparedTitles?.length);
   const draft = data.approvals[0];
   const failed = data.recent.find(r => r.status === "failed" && !r.replaced);
-  if (stepWork) return <section aria-labelledby="pick-up-heading" className={cn(card, "home-next-action")}><p className="text-overline">{stepWork.needsAnswer ? "AI has work ready · one answer needed" : "AI has prepared this for you"}</p><h2 id="pick-up-heading" className="heading-section">{stepWork.title}</h2><p className="text-sm text-ink-2">{stepWork.summary}</p><div className="flex flex-wrap items-center gap-3"><Link href={`/app/${slug}/plan#prepared-work`} className={buttonClasses({ variant: "primary", className: "step-primary-action" })}>Review prepared work<ArrowRight aria-hidden /></Link><span className="text-xs text-ink-3">From: {stepWork.stepTitle}</span></div></section>;
+  const shownWork = review ?? stepWork;
+  if (shownWork) return <Dialog open={review !== null} onOpenChange={open => setReview(open ? shownWork : null)}>
+    <section aria-labelledby="pick-up-heading" className={cn(card, "home-next-action")}><p className="text-overline">{shownWork.needsAnswer ? "AI has work ready · one answer needed" : "AI has prepared this for you"}</p><h2 id="pick-up-heading" className="heading-section">{shownWork.title}</h2><p className="text-sm text-ink-2">{shownWork.summary}</p><div className="flex flex-wrap items-center gap-3"><DialogTrigger asChild><Button className="step-primary-action">Review prepared work<ArrowRight aria-hidden /></Button></DialogTrigger><span className="text-xs text-ink-3">From: {shownWork.stepTitle}</span></div></section>
+    <DialogContent title={`Prepared work: ${shownWork.stepTitle}`} description="Review the saved work you opened. Viewing it does not run AI or share anything." className="max-w-2xl">
+      {review ? <SavedStepWork key={review.workId} slug={slug} strategyId={review.strategyId} stepKey={review.stepKey} initialWorkId={review.workId} canEdit={["owner", "admin", "editor"].includes(data.role)} /> : null}
+    </DialogContent>
+  </Dialog>;
   if (!strategy && !draft && !failed) return null;
   const title = draft ? draft.title : ready ? strategy!.preparedTitles[0] : failed ? failed.title : strategy?.focusedMove?.title ?? strategy?.summary;
   const href = draft ? `/app/${slug}/content/${draft.id}` : ready ? `/app/${slug}/plan#prepared-work` : failed ? `/app/${slug}/work/${failed.id}` : `/app/${slug}/plan`;
