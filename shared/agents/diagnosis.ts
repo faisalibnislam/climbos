@@ -57,6 +57,8 @@ export interface DiagnosisContext {
   types?: string[];
   /** Typical days from lead to purchase; a shorter period can't show purchases yet. */
   salesCycleDays?: number;
+  /** When days come from a category mapping, keep that assumption and its source explicit. */
+  salesCycleEstimate?: { category: string; source: "owner" | "inferred" };
   /** Owner-stated goal converted to the new-customer pace required over its horizon. */
   customerTargetPerMonth?: number;
   /** Unit of the owner goal; revenue goals are converted only from supplied average revenue and churn. */
@@ -153,6 +155,8 @@ export interface Diagnosis {
   customerGoalPace?: CustomerGoalPace;
   /** Revenue goal is known but cannot be translated into customer additions with the supplied inputs. */
   goalNote?: string;
+  /** Category-derived duration is a planning assumption, not an observed buying cycle. */
+  salesCycleNote?: string;
 }
 
 const pct = (x: number) => `${Math.round(x * 1000) / 10}%`;
@@ -204,6 +208,9 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
   const rules: string[] = [`${T.id}@${T.version}`];
   const saas = (ctx.types ?? []).some((t) => SAAS.has(t));
   const immature = ctx.salesCycleDays !== undefined && ctx.salesCycleDays > days;
+  const salesCycleNote = ctx.salesCycleEstimate && ctx.salesCycleDays !== undefined
+    ? `Buying-cycle timing uses a ${ctx.salesCycleDays}-day planning assumption from the ${ctx.salesCycleEstimate.source === "owner" ? "owner-selected" : "inferred"} category “${ctx.salesCycleEstimate.category}”; the actual time to buy has not been verified. Confirm lead and purchase dates before treating purchase counts as complete.`
+    : undefined;
 
   // 0. Do the counts nest? Contradictions are resolved before anything is read from them.
   const gt = (a: number | undefined, b: number | undefined) => a !== undefined && b !== undefined && a > b;
@@ -219,7 +226,7 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
   for (const [k, n] of Object.entries({ visitors: f.visitors, leads: f.leads, qualifiedLeads: f.qualifiedLeads, activated: f.activated, newCustomers: f.newCustomers })) if (n !== undefined && !(Number.isSafeInteger(n) && n >= 0 && n <= 100_000_000)) conflicts.push(`${k} must be a whole count between 0 and 100,000,000.`);
   if (f.periodDays !== undefined && !(Number.isFinite(f.periodDays) && f.periodDays > 0)) conflicts.push("The measurement period must be a number of days greater than zero.");
   if (ctx.monthlyChurn !== undefined && ctx.monthlyChurn !== null && !(Number.isFinite(ctx.monthlyChurn) && ctx.monthlyChurn >= 0 && ctx.monthlyChurn <= 1)) conflicts.push("Monthly churn must be a share between 0 and 100%.");
-  if (ctx.salesCycleDays !== undefined && !(Number.isFinite(ctx.salesCycleDays) && ctx.salesCycleDays > 0)) conflicts.push("Sales cycle length must be a number of days greater than zero.");
+  if (ctx.salesCycleDays !== undefined && !(Number.isFinite(ctx.salesCycleDays) && ctx.salesCycleDays >= 0)) conflicts.push("Sales cycle length must be a number of zero or more days; zero means same-day buying.");
   if (ctx.newCustomersPerMonth !== undefined && ctx.newCustomersPerMonth !== null && !(Number.isFinite(ctx.newCustomersPerMonth) && ctx.newCustomersPerMonth >= 0)) conflicts.push("Capacity must be a number of zero or more new customers a month.");
   if (ctx.customerTargetPerMonth !== undefined && !(Number.isFinite(ctx.customerTargetPerMonth) && ctx.customerTargetPerMonth >= 0)) conflicts.push("The customer goal pace must be a number of zero or more new customers a month.");
 
@@ -287,7 +294,7 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
   if (f.activated === undefined) missing.push("how many reached first value");
   if (f.newCustomers === undefined) missing.push("new paying customers");
   if (saas && !saasRef && overall !== null) missing.push("whether a signup is a free plan, a trial without a card, or a trial with a card (picks the reference)");
-  if (immature) missing.push(`a period of at least ${ctx.salesCycleDays} days (one sales cycle), so recent leads have had time to buy`);
+  if (immature) missing.push(salesCycleNote ? "actual lead and purchase dates to check whether the category-based buying-cycle assumption applies" : `a period of at least ${ctx.salesCycleDays} days (one sales cycle), so recent leads have had time to buy`);
 
   const capR = readings.find((r) => r.stage === "capacity");
   const retR = readings.find((r) => r.stage === "retention");
@@ -331,6 +338,8 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
 
   const nextMeasurement: NextMeasurement | undefined = conflicts.length
     ? undefined
+    : immature && salesCycleNote
+      ? { action: "Confirm how long these leads actually take to buy, using lead and purchase dates for the same group.", reason: salesCycleNote, priority: "decision_critical" }
     : f.newCustomers === undefined
       ? { action: `Count new paying customers in the same ${days}-day period (include zero if there were none).`, reason: "This is the outcome the growth plan needs to explain; without it, the system cannot tell whether the business is gaining customers.", priority: "decision_critical" }
       : ctx.goalMetric === "revenue_month" && ctx.customerTargetPerMonth === undefined
@@ -384,6 +393,7 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
     ...(leverage.length ? { leverage } : {}),
     ...(customerGoalPace ? { customerGoalPace } : {}),
     ...(goalNote ? { goalNote } : {}),
+    ...(salesCycleNote ? { salesCycleNote } : {}),
     rules: [...new Set(rules)],
   });
 
@@ -398,7 +408,7 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
     const a = hyp("activation", `${act.observed} (${pct(act.rate!)})`, r2(pAct), [`P(activation is the weaker link) = ${r2(pAct)}.`], [COMPETING.activation]);
     const c = hyp("conversion", `${buyFromActive.observed} (${pct(buyFromActive.rate!)})`, r2(1 - pAct), [`P(purchase is the weaker link) = ${r2(1 - pAct)}.`], [COMPETING.conversion]);
     if (buyFromActive.immature) {
-      missing.push("purchases from recent leads (the period is shorter than the sales cycle)");
+      missing.push(salesCycleNote ? "whether recent leads have had enough time to buy; the category estimate does not establish this" : "purchases from recent leads (the period is shorter than the sales cycle)");
       return out("unknown", "insufficient_evidence", [a, c]);
     }
     // Material too: with huge counts a half-point gap is "certain" but not a reason to pick one link (Kochenderfer Ex 19.3).
@@ -477,7 +487,7 @@ export function diagnose(ctx: DiagnosisContext): Diagnosis {
 /** The diagnosis as the plays and plan agents read it. */
 export function diagnosisBrief(d: Diagnosis): string {
   const reading = (r: StageReading) =>
-    `- ${r.stage}: ${r.observed}${r.rate !== null && r.stage !== "capacity" && r.stage !== "retention" ? ` (${pct(r.rate)}${r.likely ? `, likely ${pct(r.likely.low)}–${pct(r.likely.high)}` : ""})` : ""}${r.reference ? `; reference ${r.reference}` : "; no reliable benchmark"}${r.definition ? `; owner-defined as ${JSON.stringify(r.definition)}` : ""}${r.immature ? "; period shorter than the sales cycle, purchases still arriving" : ""}${r.verdict === "weak" ? " → weak" : ""}`;
+    `- ${r.stage}: ${r.observed}${r.rate !== null && r.stage !== "capacity" && r.stage !== "retention" ? ` (${pct(r.rate)}${r.likely ? `, likely ${pct(r.likely.low)}–${pct(r.likely.high)}` : ""})` : ""}${r.reference ? `; reference ${r.reference}` : "; no reliable benchmark"}${r.definition ? `; owner-defined as ${JSON.stringify(r.definition)}` : ""}${r.immature ? "; period shorter than the sales-cycle input; purchases may still be arriving" : ""}${r.verdict === "weak" ? " → weak" : ""}`;
   const lever = d.leverage?.length ? [`Customers a month per +1 point at each link (arithmetic only; which change is attainable is unknown): ${d.leverage.map((l) => `${l.stage} +${l.perPoint}`).join(", ")}. The lowest rate isn't automatically the best fix: compare evidence, cost and delay.`] : [];
   const pace = d.customerGoalPace ? [
     `${d.customerGoalPace.goalMetric === "revenue_month" ? "REVENUE GOAL CUSTOMER-EQUIVALENT PACE (scenario from owner-supplied average monthly revenue per customer and churn; same averages assumed for new customers; not a forecast)" : "CUSTOMER GOAL PACE (owner goal + current counts; scenario, not a forecast)"}: about ${d.customerGoalPace.currentCustomersPerMonth}/month now against ${d.customerGoalPace.targetCustomersPerMonth}/month needed (${d.customerGoalPace.gapPerMonth > 0 ? `short by ${d.customerGoalPace.gapPerMonth}` : d.customerGoalPace.gapPerMonth < 0 ? `above by ${Math.abs(d.customerGoalPace.gapPerMonth)}` : "at the goal pace"}${d.customerGoalPace.gapPerMonth === 0 ? "" : "/month"}).${d.customerGoalPace.visitorToCustomerRate ? ` Visitor → paying-customer rate: ${pct(d.customerGoalPace.visitorToCustomerRate.observed)} observed, likely ${pct(d.customerGoalPace.visitorToCustomerRate.likely.low)}–${pct(d.customerGoalPace.visitorToCustomerRate.likely.high)} under a uniform-prior model; P(current visitor volume falls short of the goal) = ${d.customerGoalPace.probabilityCurrentReachBelowGoal === null ? "unknown" : pct(d.customerGoalPace.probabilityCurrentReachBelowGoal)}.` : " A comparable visitor → paying-customer count is unavailable, so no conversion scenario is calculated."}${d.customerGoalPace.visitorVolumeScenario ? ` If today's conversion rate held, about ${d.customerGoalPace.visitorVolumeScenario.atObservedConversionPerMonth === null ? "no point estimate is available at the observed zero-customer rate" : `${d.customerGoalPace.visitorVolumeScenario.atObservedConversionPerMonth} visitors per month`} would match the goal pace, compared with ${d.customerGoalPace.visitorVolumeScenario.currentPerMonth} now. Using the likely conversion-rate range gives a scenario of ${d.customerGoalPace.visitorVolumeScenario.atLikelyConversionRangePerMonth.low} to ${d.customerGoalPace.visitorVolumeScenario.atLikelyConversionRangePerMonth.high ?? "no finite upper estimate"} visitors per month; this is a conversion-held-constant calculation, not a forecast.` : " A visitors-needed scenario is unavailable without a comparable visitor and customer count."} This compares the owner goal with current data; it does not show why the gap exists or which channel will close it.`,
@@ -487,7 +497,7 @@ export function diagnosisBrief(d: Diagnosis): string {
   if (d.constraint === "unknown") {
     const hyps = d.hypotheses?.length ? [`Competing hypotheses (none established): ${d.hypotheses.map((h) => `${h.constraint}${h.probability !== null ? ` (P weaker ${h.probability})` : ""}`).join(" vs ")}. To tell them apart: ${d.hypotheses[0].discriminate}`] : [];
     const next = d.nextMeasurement ? [`NEXT MEASUREMENT (${d.nextMeasurement.priority === "decision_critical" ? "needed before a firm decision" : "most useful next"}): ${d.nextMeasurement.action} Why: ${d.nextMeasurement.reason}`] : [];
-    return [`DIAGNOSIS (computed from the owner's numbers): not enough evidence to name the binding constraint.`, ...pace, ...(d.goalNote ? [d.goalNote] : []), ...d.readings.map(reading), ...hyps, ...lever, ...next, "Use this as the first measurement step; keep plays cheap and reversible until the diagnosis is supported."].join("\n");
+    return [`DIAGNOSIS (computed from the owner's numbers): not enough evidence to name the binding constraint.`, ...pace, ...(d.goalNote ? [d.goalNote] : []), ...(d.salesCycleNote ? [d.salesCycleNote] : []), ...d.readings.map(reading), ...hyps, ...lever, ...next, "Use this as the first measurement step; keep plays cheap and reversible until the diagnosis is supported."].join("\n");
   }
   const goalGap = d.hypotheses?.find((h) => h.goalGap)?.goalGap;
   const alt = d.hypotheses?.slice(1).filter((h) => h.probability !== null);
@@ -497,6 +507,7 @@ export function diagnosisBrief(d: Diagnosis): string {
       : `DIAGNOSIS (computed from the owner's numbers, ${d.basis}): the numbers point to ${d.constraint} as the weakest link. This is an observation about where people drop, not a proven cause.`,
     ...pace,
     ...(d.goalNote ? [d.goalNote] : []),
+    ...(d.salesCycleNote ? [d.salesCycleNote] : []),
     ...d.readings.map(reading),
     ...(alt?.length ? [`Alternative still possible: ${alt.map((h) => `${h.constraint} (P weaker ${h.probability})`).join(", ")}.`] : []),
     ...lever,

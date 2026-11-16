@@ -82,6 +82,44 @@ it.each(["focused", "starter"] as const)("carries deterministic diagnosis into t
   expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
 });
 
+it.each(["focused", "starter"] as const)("keeps owner-confirmed same-day buying valid in %s diagnosis", async planStyle => {
+  const { t, owner, slug, orgId } = await workspace();
+  await owner.client.mutation(api.acquisition.setDimension, { slug, key: "salesCycle", value: "immediate" });
+  await owner.client.mutation(api.workspace.setFunnel, { slug, periodDays: 90, leads: 100, activated: 12, newCustomers: 3, activationKind: "value" });
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first());
+  expect(plan?.expert?.constraintDiagnosis).toMatchObject({ constraint: "activation", status: "supported" });
+  expect(JSON.stringify(state.requests)).not.toContain("Sales cycle length must");
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
+
+it.each(["owner", "inferred", "low_confidence"] as const)("preserves %s buying-cycle uncertainty through generation and storage", async source => {
+  const { t, owner, slug, orgId } = await workspace();
+  await owner.client.mutation(api.workspace.setFunnel, { slug, periodDays: 30, leads: 100, activated: 12, newCustomers: 3, activationKind: "value" });
+  await owner.client.mutation(api.acquisition.setDimension, { slug, key: "salesCycle", value: "long" });
+  if (source !== "owner") await t.run(async ctx => {
+    const business = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", orgId)).first())!;
+    await ctx.db.patch(business._id, { acquisition: { ...business.acquisition!, dims: { salesCycle: { value: "long", source: "inferred", confidence: source === "low_confidence" ? "low" : "high" } } } });
+  });
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first());
+  const diagnosis = plan?.expert?.constraintDiagnosis;
+  if (source === "low_confidence") {
+    expect(diagnosis).toMatchObject({ constraint: "activation", status: "supported" });
+    expect(diagnosis?.salesCycleNote).toBeUndefined();
+  } else {
+    expect(diagnosis).toMatchObject({ constraint: "unknown", status: "insufficient_evidence", nextMeasurement: { priority: "decision_critical" } });
+    expect(diagnosis?.salesCycleNote).toContain("120-day planning assumption");
+    expect(diagnosis?.salesCycleNote).toContain(source === "owner" ? "owner-selected" : "inferred");
+    expect(diagnosis?.nextMeasurement.action).toContain("lead and purchase dates");
+    for (const request of state.requests) expect(JSON.stringify(request.messages)).toContain(diagnosis.salesCycleNote);
+  }
+  expect(plan?.expert?.strategyExploration?.bold).toBeDefined();
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
+
 it.each(["unknown", "capacity", "conflicting"] as const)("preserves %s diagnosis evidence without suppressing bold exploration", async condition => {
   const { t, owner, slug, orgId } = await workspace();
   if (condition === "capacity") await owner.client.mutation(api.workspace.setUnitEconomics, { slug, newCustomersPerMonth: 0 });

@@ -33,7 +33,7 @@ test("focused plan exposes all three options and selecting bold grants no action
   const fixture = focusedPlanFixture();
   fixture.focusedMove.offerAssessment = offerAssessmentFixture();
   fixture.focusedMove.timingAssessment = futureCampaignTimingFixture();
-  await append("strategies", [{ ...copyRow(plan), orgId: org._id, businessId: savedBusiness._id, goalId: savedGoal._id, runId: undefined, approvalId: undefined, summary: fixture.summary, expert: { ...(plan.expert as Record<string, unknown>), constraintDiagnosis: diagnose({ funnel: { periodDays: 90, leads: 100, activated: 12, newCustomers: 3, activationKind: "value" } }), focusedMove: { ...fixture.focusedMove, timingAssessment: { ...fixture.focusedMove.timingAssessment, researchRetrievedAt: new Date().toISOString() } }, strategicDirection: fixture.strategicDirection, strategyExploration: fixture.strategyExploration, preparedWork: fixture.preparedWork, timing: fixture.timing, phases: fixture.phases, weekOneChecklist: fixture.weekOneChecklist, plays: [] } }]);
+  await append("strategies", [{ ...copyRow(plan), orgId: org._id, businessId: savedBusiness._id, goalId: savedGoal._id, runId: undefined, approvalId: undefined, summary: fixture.summary, expert: { ...(plan.expert as Record<string, unknown>), constraintDiagnosis: diagnose({ funnel: { periodDays: 90, leads: 100, activated: 12, newCustomers: 3, activationKind: "value" }, salesCycleDays: 45, salesCycleEstimate: { category: "A few weeks to two months", source: "owner" } }), focusedMove: { ...fixture.focusedMove, timingAssessment: { ...fixture.focusedMove.timingAssessment, researchRetrievedAt: new Date().toISOString() } }, strategicDirection: fixture.strategicDirection, strategyExploration: fixture.strategyExploration, preparedWork: fixture.preparedWork, timing: fixture.timing, phases: fixture.phases, weekOneChecklist: fixture.weekOneChecklist, plays: [] } }]);
   const snapshot = async () => Promise.all(["artifacts", "approvals", "actionReceipts", "workflowRuns"].map(async table => (await rows(table)).filter(row => row.orgId === org._id)));
   const before = await snapshot();
   await page.goto(`/app/${slug}/plan`);
@@ -105,6 +105,8 @@ test("focused plan exposes all three options and selecting bold grants no action
   await page.getByText("Where you stand and what the numbers mean", { exact: true }).click();
   await page.getByText("What your reported numbers show", { exact: true }).click();
   const diagnosis = page.locator("summary", { hasText: /^What your reported numbers show$/ }).locator("..");
+  await expect(diagnosis).toContainText("45-day planning assumption from the owner-selected category");
+  await expect(diagnosis).toContainText("actual time to buy has not been verified");
   await expect(diagnosis).toContainText("not independently verified measurements or proof of cause");
   await expect(diagnosis).toContainText("People sign up but don't get going");
   await expect(diagnosis).toContainText("12 of 100");

@@ -106,7 +106,7 @@ import {
 import { fixtureCalendar } from "../shared/autopilot/fixture";
 import { fixtureOutbound } from "../shared/outbound";
 import { BUSINESS_TYPES, budgetBand, isServiceBusiness, LIBRARY_VERSION, typesFromLegacy } from "../shared/acquisition/library";
-import { adjustmentsFrom, candidatesFor, CYCLE_DAYS, DIMENSIONS, entryPriceUsdMonth, FACTORS, mergeFit, priceFitText, profileFrom, scoreChannels, scorecardText, type AcquisitionProfile, type Adjustment, type SavedAcquisition, MULTI_DIMENSIONS } from "../shared/acquisition/scoring";
+import { adjustmentsFrom, candidatesFor, salesCycleEstimate, DIMENSIONS, entryPriceUsdMonth, FACTORS, mergeFit, priceFitText, profileFrom, scoreChannels, scorecardText, type AcquisitionProfile, type Adjustment, type SavedAcquisition, MULTI_DIMENSIONS } from "../shared/acquisition/scoring";
 import type { AgentInput, AgentSpec, PlanConstraints } from "../shared/agents/types";
 import { fakeTurn } from "../shared/agents/fake";
 import { agentRevisionSteps } from "./lib/jobPlans";
@@ -672,7 +672,7 @@ function planUnknowns(job: JobCtx, plays: { model?: { monthlySpendUsd?: number; 
 
 /** The same owner-data calculation is used by starter, focused and detailed plans. */
 function strategyDiagnosis(job: JobCtx, profile: AcquisitionProfile, types = profile.types): Diagnosis {
-  const cycle = CYCLE_DAYS[profile.dims.salesCycle?.value ?? ""];
+  const cycle = salesCycleEstimate(profile);
   const target = job.goal?.target;
   const monthlyChurn = job.business?.unitEconomics?.monthlyChurn ?? null;
   const revenuePerCustomerMonth = job.business?.unitEconomics?.revenuePerCustomerMonthUsd ?? null;
@@ -688,7 +688,7 @@ function strategyDiagnosis(job: JobCtx, profile: AcquisitionProfile, types = pro
     ...(customerTargetPerMonth !== null ? { customerTargetPerMonth } : {}),
     ...(target?.metric === "customers" || target?.metric === "revenue_month" ? { goalMetric: target.metric } : {}),
     types,
-    ...(cycle !== undefined ? { salesCycleDays: cycle } : {}),
+    ...(cycle ? { salesCycleDays: cycle.days, salesCycleEstimate: { category: cycle.category, source: cycle.source } } : {}),
   });
 }
 

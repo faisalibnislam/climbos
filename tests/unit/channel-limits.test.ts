@@ -57,7 +57,7 @@ describe("hard limits before ranking", () => {
     const rows = scoreChannels(now, [], undefined, {});
     const plan = picked(rows);
     expect(plan.length).toBeGreaterThan(0);
-    for (const r of plan.filter((x) => x.limits?.some((l) => l.verdict === "late"))) expect(r.limits!.find((l) => l.verdict === "late")!.reason).toMatch(/First revenue around day \d+/);
+    for (const r of plan.filter((x) => x.limits?.some((l) => l.verdict === "late"))) expect(r.limits!.find((l) => l.verdict === "late")!.reason).toMatch(/Planning scenario reaches day \d+/);
   });
 
   it("capability: outreach without a mailbox needs setup but isn't blocked; with one it's clear", () => {

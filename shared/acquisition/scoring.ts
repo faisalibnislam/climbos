@@ -351,8 +351,17 @@ export interface LimitCheck {
 
 /** Days until a channel can show whether it works. */
 const LEARN_DAYS: Record<Channel["learn"], number> = { days: 7, weeks: 28, months: 90 };
-/** Days from first conversation to a paying customer. */
+/** Heuristic days from first conversation to a paying customer; not observed durations. */
 export const CYCLE_DAYS: Record<string, number> = { immediate: 0, short: 14, medium: 45, long: 120 };
+
+/** Representative planning assumptions, never measured buying-cycle durations. */
+export function salesCycleEstimate(p: Pick<AcquisitionProfile, "dims">): { days: number; category: string; source: "owner" | "inferred" } | undefined {
+  const value = p.dims.salesCycle;
+  if (!value || (value.source === "inferred" && value.confidence === "low")) return undefined;
+  const days = CYCLE_DAYS[value.value];
+  return days === undefined ? undefined : { days, category: dimensionValueLabel("salesCycle", value.value), source: value.source };
+}
+
 /** Owner hours a week a channel needs at its smallest readable test. */
 const MIN_OWNER_HOURS: Record<Execution, number> = { auto: 0, partial: 1, human: 3 };
 /** What ClimbOS needs connected to run a family itself; without it the owner does that step by hand. */
@@ -397,10 +406,10 @@ export function limitChecks(c: Channel, p: AcquisitionProfile, l: ChannelLimits 
   if (p.dims.tracking?.source === "owner" && p.dims.tracking.value === "none" && ["paid_search", "paid_social", "retargeting"].includes(c.family)) {
     out.push({ kind: "measurement", verdict: "blocked", reason: "Set up conversion tracking before paying for traffic, so the test can measure qualified leads or customers rather than clicks alone." });
   }
-  const cycle = CYCLE_DAYS[dim(p, "salesCycle") ?? ""];
-  if (cycle !== undefined && !ownBase(c)) {
-    const first = LEARN_DAYS[c.learn] + cycle;
-    if (first > p.horizonDays) out.push({ kind: "sales_cycle", verdict: "late", reason: `First revenue around day ${first} (${c.learn} to learn + ${cycle}-day sales cycle); the goal date is day ${p.horizonDays}.` });
+  const cycle = salesCycleEstimate(p);
+  if (cycle && !ownBase(c)) {
+    const first = LEARN_DAYS[c.learn] + cycle.days;
+    if (first > p.horizonDays) out.push({ kind: "sales_cycle", verdict: "late", reason: `Planning scenario reaches day ${first}: a ${LEARN_DAYS[c.learn]}-day channel learning assumption plus a ${cycle.days}-day buying-cycle assumption from the ${cycle.source === "owner" ? "owner-selected" : "inferred"} category “${cycle.category}”. The goal date is day ${p.horizonDays}. Actual learning time, time to buy and first revenue are unknown; confirm them before relying on this timing.` });
   }
   const needs = NEEDS_BY_ID[c.id] ?? NEEDS[c.family];
   if (needs && l.connected && !needs.any.some((x) => l.connected!.includes(x))) out.push({ kind: "capability", verdict: "setup", reason: `Connect ${needs.label} first, or do that step by hand.` });

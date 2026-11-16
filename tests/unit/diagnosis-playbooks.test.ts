@@ -59,10 +59,10 @@ describe("diagnosis", () => {
       expect(diagnosis.conflicts).toContain("Monthly churn must be a share between 0 and 100%.");
       expect(diagnosis.readings.some((reading) => reading.stage === "retention")).toBe(false);
     }
-    for (const salesCycleDays of [0, -30, Number.NaN, Number.POSITIVE_INFINITY]) {
+    for (const salesCycleDays of [-30, Number.NaN, Number.POSITIVE_INFINITY]) {
       const diagnosis = diagnose({ funnel: { periodDays: 30, leads: 10, activated: 5, newCustomers: 1 }, salesCycleDays });
       expect(diagnosis).toMatchObject({ constraint: "unknown", status: "conflicting_inputs" });
-      expect(diagnosis.conflicts).toContain("Sales cycle length must be a number of days greater than zero.");
+      expect(diagnosis.conflicts).toContain("Sales cycle length must be a number of zero or more days; zero means same-day buying.");
     }
   });
   it("rejects an explicitly invalid measurement period instead of silently assuming 30 days", () => {

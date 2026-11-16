@@ -144,6 +144,8 @@ This table describes implemented paths, not current production status for any pa
 
 ## Boundaries
 
+- Business diagnosis supports same-day buying. When timing comes from a broad buying-cycle category, the plan identifies the assumed duration and whether the category was owner-selected or inferred. Low-confidence inferred categories are not used as timing inputs. Short observation periods prompt a check of actual lead and purchase dates; channel timing scenarios do not predict when revenue will arrive.
+
 - New offer and campaign-timing recommendations check evidence labels against recorded source types. Owner reports stay owner-reported even when they mention analytics; a web claim remains source-reported. Mismatched labels prevent approval. Reported risks are shown as reported by your team or a source. These checks do not independently verify the claim, and older saved plans are not reclassified.
 
 - Landing drafts linked to a website audit can be captured on desktop and mobile, showing the exact saved version. Captures are labelled as the ClimbOS-hosted draft and never published. Choosing a design direction keeps the original page's text and screenshots past the 30-day screenshot limit.
