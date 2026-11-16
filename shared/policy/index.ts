@@ -168,9 +168,13 @@ export function contentHash(content: MaterialContent): Promise<string> {
 export interface ApprovalScope {
   connectionId?: string;
   externalAccountId?: string;
+  externalCampaignId?: string;
   destination?: string;
   audience?: string;
   spendLimitMinor?: number;
+  totalSpendLimitMinor?: number;
+  targetCostPerConversionMinor?: number;
+  reviewAfterDays?: number;
   currency?: string;
   windowStart?: number;
   windowEnd?: number;

@@ -1,3 +1,24 @@
+## 16 November 2026 — campaign approval persistence, cancellation and replay
+
+Traced campaign preparation and owner review → `ads.decide` → persisted approval scope → scheduled `executeCampaignWrite` → provider/fixture adapter → action receipt and campaign state. The database rejected the existing account/review scope fields; after fixing that schema mismatch, regressions reproduced queued writes executing after rejection, local rejection falsely marking active ads paused, missing execution-time approver permission checks, and duplicate approval creation. The unit contract also omitted the total campaign budget and external campaign identity.
+
+Approval persistence now accepts the existing account and review terms and binds the total budget and external campaign identity. The content hash includes the displayed stop rules. Changes require new approval; legacy hashes are not rewritten. Owner rejection invalidates pending approvals and is audited, preserves a recorded paused state, and never claims to pause live ads. The worker checks campaign state/action, tenant and subject, account/provider, current approver permission, paid access, policy, expiry and emergency stop before an atomic execution claim. Repeated approval clicks reuse the current matching approval; concurrent queue deliveries and older duplicate approvals cannot claim two writes for the same campaign. Definitive failed attempts require renewed approval. Unknown provider results remain uncertain.
+
+An unfinished execution claim is retained even if policy changes invalidate approval. The UI distinguishes queued approval from started processing, supports cancellation of a queued start, and prevents resubmitting an unfinished request. A claimed attempt is not automatically retried after a crash or lost result. Provider-side reconciliation of such an interruption is still a manual operator task; a claim is not proof that the request reached the provider. Cancellation cannot recall an already-sent request. Changes after the atomic claim cannot be made atomic with a third-party network request.
+
+Verification:
+
+```text
+pnpm exec vitest run tests/unit/campaign-scope.test.ts tests/unit/campaign-budget.test.ts tests/unit/campaign-money-display.test.tsx tests/convex/campaign-authorization.test.ts tests/convex/tenancy.test.ts tests/convex/safety.test.ts tests/convex/ad-performance.test.ts tests/convex/approval-claims.test.ts
+60 passed across 8 files
+pnpm typecheck
+passed: application and Convex
+```
+
+Changed-file ESLint and diff checks passed. Browser command: `E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/campaign-authorization.spec.ts`. Desktop Chromium and Pixel 7 checks cover cancellation of queued creation/activation, rejection of those queue entries when replayed, the visible unresolved-claim state with disabled submission, and fixture-only creation/activation through the real UI and local schema. Stored approvals retain the account, total budget, review terms and execution timestamps; activation binds the exact synthetic external campaign. Exactly two successful receipts are fixture-verified, with no live provider writes. No page errors, horizontal page overflow or serious/critical axe findings; screenshots inspected. Initial browser attempts used an incorrect `dialog` role and internal status labels; corrected to the existing `alertdialog`, “Not created” and “Running” UI. Visual review also replaced the misleading underlying “Needs approval” badge during a queued/started write with “Approved, queued” or “Result pending”. The React review adds no effects or subscriptions. No real provider write, spending, hosted deployment, budget conversion or historical money migration is part of this increment.
+
+Remaining monetary work: fixed-*100 daily/monthly budget inputs, currency-consistent policy/goal updates, old non-two-decimal budget confirmation, current cap checks through execution, and provider-specific monetary conventions. The exact approval repair does not establish those amounts are correct or that a platform enforces ClimbOS's displayed daily/total limits. The full 410-item behavioral audit and broader real-business quality evaluation remain open.
+
 ## 16 November 2026 — exact currency display across shared money views
 
 Traced stored minor-unit amounts → `src/components/app/money.ts::minorToDisplay` → Results metrics/charts, attribution and ad-spend tables, forecast details, campaign approval cards, plan ad-allocation summaries, creator reports and billing/admin order amounts. The old helper divided every currency by 100 and rounded larger totals to whole units. Direct runtime checks showed 1,200 JPY minor units as ¥12 and 12,345 KWD minor units as KWD 123.45. Twenty of the initial 23 focused cases failed before the repair.

@@ -148,8 +148,17 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
     <article className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <ChannelTag channel={c.channel} />
-        <CampaignStatusPill status={c.status} />
+        {c.writeState ? <Badge tone="amber">{c.writeState === "queued" ? "Approved, queued" : c.writeState === "started" ? "Result pending" : "Needs review"}</Badge> : <CampaignStatusPill status={c.status} />}
       </div>
+      {c.writeState ? (
+        <Callout tone="info" title={c.writeState === "queued" ? "Approval queued" : "Check campaign write status"}>
+          {c.writeState === "queued"
+            ? "Your approved request is queued. You can cancel it before the provider write starts."
+            : c.writeState === "started"
+              ? "ClimbOS has started processing the approved request, but its result is not recorded yet. Do not submit another request. If it stays here, check the ad account and ask support to reconcile the result. Cancellation cannot recall a request already sent."
+              : "This campaign’s approval history needs review before another write."}
+        </Callout>
+      ) : null}
       <H className="heading-card break-words">{c.name}</H>
       <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
         <div>
@@ -247,7 +256,7 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
             {c.status === "needs_approval" ? (
               <>
                 <ConfirmDialog
-                  trigger={<Button disabled={!c.accountConnected}>Create paused</Button>}
+                  trigger={<Button disabled={!c.accountConnected || Boolean(c.writeState)}>Create paused</Button>}
                   title="Create this campaign, paused?"
                   description={`Created in ${platform}, switched off. Nothing spent until you press Start.`}
                   confirmLabel="Create paused"
@@ -260,7 +269,7 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
                   </p>
                 </ConfirmDialog>
                 <ConfirmDialog
-                  trigger={<Button variant="secondary">Don&apos;t create</Button>}
+                  trigger={<Button variant="secondary" disabled={c.writeState === "started" || c.writeState === "review_required"}>Don&apos;t create</Button>}
                   title="Don't create this campaign?"
                   description="Nothing is sent to the ad platform."
                   confirmLabel="Don't create"
@@ -269,7 +278,7 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
               </>
             ) : (
               <ConfirmDialog
-                trigger={<Button disabled={!c.accountConnected}>Start</Button>}
+                trigger={<Button disabled={!c.accountConnected || Boolean(c.writeState)}>Start</Button>}
                 title="Start this campaign?"
                 description={`Spends up to ${daily}/day, max ${total} total.`}
                 confirmLabel={`Start at ${daily}/day`}
@@ -282,6 +291,15 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
                 </p>
               </ConfirmDialog>
             )}
+            {c.writeState === "queued" && ["created_paused", "paused"].includes(c.status) ? (
+              <ConfirmDialog
+                trigger={<Button variant="secondary">Cancel start</Button>}
+                title="Cancel this start request?"
+                description="Cancels the queued approval if the provider request has not started. This does not pause an already-running campaign."
+                confirmLabel="Cancel start"
+                onConfirm={() => run("reject", "Queued start approval cancelled.")}
+              />
+            ) : null}
           </div>
         ) : member ? (
           <p className="text-sm text-ink-2">Waiting for {PERMISSION_WHO.approve}.</p>

@@ -4068,9 +4068,14 @@ export default defineSchema({
     contentHash: v.string(),
     scope: v.object({
       connectionId: v.optional(v.string()),
+      externalAccountId: v.optional(v.string()),
+      externalCampaignId: v.optional(v.string()),
       destination: v.optional(v.string()),
       audience: v.optional(v.string()),
       spendLimitMinor: v.optional(v.number()),
+      totalSpendLimitMinor: v.optional(v.number()),
+      targetCostPerConversionMinor: v.optional(v.number()),
+      reviewAfterDays: v.optional(v.number()),
       currency: v.optional(v.string()),
       windowStart: v.optional(v.number()),
       windowEnd: v.optional(v.number()),
@@ -4093,6 +4098,9 @@ export default defineSchema({
     decisionNote: v.optional(v.string()),
     expiresAt: v.number(),
     invalidatedReason: v.optional(v.string()),
+    /** Campaign writes claim approval atomically before calling a provider; never replay a claimed attempt. */
+    executionStartedAt: v.optional(v.number()),
+    executionFinishedAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_org_status", ["orgId", "status"])

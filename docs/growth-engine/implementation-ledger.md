@@ -1,5 +1,10 @@
 # Growth engine implementation ledger
 
+## Local update — 16 November 2026: campaign approval and queue safety
+
+Repaired persisted campaign approval scope, binding total spend and external campaign identity as well as existing account/review terms. Rejection invalidates queued approvals without claiming a live pause. Execution rechecks current permissions and uses an atomic claim to prevent concurrent/replayed writes. Owner UI exposes queued and unresolved started states and supports cancelling a queued activation. Interrupted claims need manual reconciliation, not automatic resubmission. Budget currency inputs and provider monetary conventions remain the next monetary task. Verified with 60 focused regression/permission tests, desktop/mobile fixture checks, typecheck and lint. See [Verification](../Verification.md) for reproduced failures and exact checks.
+
+
 ## Local update — 16 November 2026: exact currency display
 
 Replaced the shared UI /100 formatter with exact currency-specific minor-unit formatting. Results and creator reports keep unknown currency unknown; large totals retain fractional units. Actual attribution, forecast and campaign-card consumers are covered; rendering does not execute actions or mutate amounts. Verification: 67 focused regression/permission tests, typecheck/lint and two desktop/mobile checks with stored-record invariance. The caller audit found separate fixed-*100 ad/policy writers and /100 audit text; these remain the next end-to-end monetary task, not silently migrated by this display change. See [Verification](../Verification.md).

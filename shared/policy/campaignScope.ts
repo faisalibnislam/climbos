@@ -5,6 +5,8 @@ export function campaignApprovalScope(
     destinationUrl?: string;
     audience?: string;
     dailyBudgetMinor?: number;
+    budgetEnvelopeMinor?: number;
+    externalId?: string;
     currency: string;
     startDate?: string;
     endDate?: string;
@@ -16,9 +18,11 @@ export function campaignApprovalScope(
   return {
     connectionId: campaign.connectionId,
     externalAccountId: externalAccountId ?? undefined,
+    externalCampaignId: campaign.externalId,
     destination: campaign.destinationUrl,
     audience: campaign.audience,
     spendLimitMinor: campaign.dailyBudgetMinor,
+    totalSpendLimitMinor: campaign.budgetEnvelopeMinor,
     currency: campaign.currency,
     windowStart: campaign.startDate ? Date.parse(`${campaign.startDate}T00:00:00Z`) : undefined,
     windowEnd: campaign.endDate ? Date.parse(`${campaign.endDate}T23:59:59Z`) : undefined,

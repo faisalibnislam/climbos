@@ -7,6 +7,8 @@ describe("paid campaign approval scope", () => {
     connectionId: "connection-1",
     destinationUrl: "https://example.com/offer",
     dailyBudgetMinor: 2500,
+    budgetEnvelopeMinor: 20000,
+    externalId: "campaign-123",
     currency: "USD",
     startDate: "2026-10-25",
     endDate: "2026-11-01",
@@ -40,5 +42,12 @@ describe("paid campaign approval scope", () => {
 
   it("keeps fixture approvals scoped to their synthetic account", () => {
     expect(campaignApprovalScope(campaign, "demo_google_ads").externalAccountId).toBe("demo_google_ads");
+  });
+
+  it("binds the total spend cap and exact external campaign", () => {
+    const scope = campaignApprovalScope(campaign, "account-1");
+    expect(scope).toMatchObject({ totalSpendLimitMinor: 20000, externalCampaignId: "campaign-123" });
+    expect(campaignApprovalScope({ ...campaign, budgetEnvelopeMinor: 30000 }, "account-1")).not.toEqual(scope);
+    expect(campaignApprovalScope({ ...campaign, externalId: "campaign-456" }, "account-1")).not.toEqual(scope);
   });
 });

@@ -7,11 +7,12 @@ import {
   SET_META_CAMPAIGN_STATUS_ACTION,
   setCampaignStatus as setMetaStatus,
 } from "../shared/integrations/metaAds";
-import { approvalHash, canonicalJson, checkApprovalForExecution, sha256Hex } from "../shared/policy";
+import { approvalHash, can, canonicalJson, checkApprovalForExecution, sha256Hex } from "../shared/policy";
 import { maxRolling31DaySpend, validCampaignDateRange } from "../shared/policy/campaignBudget";
 import { campaignApprovalScope } from "../shared/policy/campaignScope";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { activePolicyVersion } from "./jobWrites";
 import { audit } from "./lib/audit";
@@ -26,6 +27,23 @@ import { refuseInCopilot } from "./lib/approvals";
  */
 
 const GOOGLE_SET_STATUS = "google_ads.set_campaign_status";
+
+function campaignActionProblem(c: Doc<"campaigns">, action: string): string | null {
+  if (c.channel !== "google_search_ad" && c.channel !== "meta_ad") return "This campaign type cannot use paid-ad publishing.";
+  if (action === "create_paused") return c.status === "needs_approval" && !c.externalId ? null : "This campaign isn't waiting to be created.";
+  if (action === "activate") return ["created_paused", "paused"].includes(c.status) && c.externalId ? null : "Create the campaign (paused) first.";
+  return "This campaign action is not supported.";
+}
+
+function campaignContentHash(c: Doc<"campaigns">, action: string) {
+  return sha256Hex(canonicalJson({ name: c.name, channel: c.channel, action, stopRules: c.stopRules }));
+}
+
+async function campaignApprovals(ctx: QueryCtx | MutationCtx, campaignId: Id<"campaigns">) {
+  const rows = await ctx.db.query("approvals").withIndex("by_subject", q => q.eq("subjectType", "campaign_activation").eq("subjectId", campaignId)).take(1001);
+  if (rows.length > 1000) throw appError("LIMIT_REACHED", "This campaign's approval history needs review before another write.");
+  return rows;
+}
 
 export const list = query({
   args: { slug: v.string() },
@@ -51,6 +69,10 @@ export const list = query({
         .query("campaignPerformance")
         .withIndex("by_org_campaign", (q) => q.eq("orgId", org._id).eq("campaignId", c._id))
         .first();
+      const approvals = await ctx.db.query("approvals").withIndex("by_subject", q => q.eq("subjectType", "campaign_activation").eq("subjectId", c._id)).take(1001);
+      const writeState = approvals.length > 1000 ? "review_required" as const
+        : approvals.some(a => a.orgId === org._id && a.executionStartedAt !== undefined && a.executionFinishedAt === undefined) ? "started" as const
+        : approvals.some(a => a.orgId === org._id && a.status === "approved" && a.expiresAt > Date.now()) ? "queued" as const : null;
       return {
         id: c._id,
         artifactId: c.artifactId ?? null,
@@ -58,6 +80,7 @@ export const list = query({
         name: c.name,
         channel: c.channel,
         status: c.status,
+        writeState,
         dailyBudgetMinor: c.dailyBudgetMinor ?? 0,
         budgetEnvelopeMinor: c.budgetEnvelopeMinor,
         currency: c.currency,
@@ -283,12 +306,19 @@ export const decide = mutation({
     if (action !== "reject") await requirePaid(ctx, org, "ads_publish");
     if (action !== "reject") await refuseInCopilot(ctx, org._id, "launch ads");
     if (org.emergencyStop?.active && action !== "reject") throw appError("PAUSED", "All activity is paused. Resume activity first.");
+    const previous = await campaignApprovals(ctx, c._id);
+    if (previous.some(a => a.orgId === org._id && a.executionStartedAt !== undefined && a.executionFinishedAt === undefined)) {
+      throw appError("UNAVAILABLE", "A campaign write has already started. Check its result before trying again; rejecting cannot cancel a request already sent to the provider.");
+    }
     if (action === "reject") {
-      await ctx.db.patch(c._id, { status: c.externalId ? "paused" : "draft", updatedAt: Date.now() });
+      if (["active", "uncertain"].includes(c.status)) throw appError("INVALID", "Rejecting does not pause live ads. Use Pause all and check the provider result.");
+      for (const a of previous) if (a.orgId === org._id && ["approved", "pending"].includes(a.status)) await ctx.db.patch(a._id, { status: "invalidated", invalidatedReason: "Campaign rejected by owner" });
+      await ctx.db.patch(c._id, { status: c.externalId ? c.status : "draft", updatedAt: Date.now() });
+      await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "campaign.rejected", subjectType: "campaign", subjectId: c._id, summary: "Cancelled pending campaign approval. No provider pause was requested or claimed." });
       return;
     }
-    if (action === "create_paused" && c.status !== "needs_approval") throw appError("INVALID", "This campaign isn't waiting for approval.");
-    if (action === "activate" && c.status !== "created_paused" && c.status !== "paused") throw appError("INVALID", "Create the campaign (paused) first.");
+    const actionProblem = campaignActionProblem(c, action);
+    if (actionProblem) throw appError("INVALID", actionProblem);
     if (!c.connectionId) throw appError("UNAVAILABLE", "Connect and select the advertiser account for this campaign first. Until then, use the ad drafts manually.");
     const connection = await ctx.db.get(c.connectionId);
     const provider = c.channel === "google_search_ad" ? "google_ads" : "meta_ads";
@@ -302,8 +332,14 @@ export const decide = mutation({
     const now = Date.now();
     const expiresAt = now + 24 * 3_600_000;
     const scope = campaignApprovalScope(c, connection.externalAccountId);
-    const contentHash = await sha256Hex(canonicalJson({ name: c.name, channel: c.channel, action }));
+    const contentHash = await campaignContentHash(c, action);
     const binding = { orgId: org._id, subjectType: "campaign_activation", subjectId: c._id, actionKind: action, contentHash, scope, policyVersion, expiresAt };
+    for (const a of previous) {
+      if (a.orgId !== org._id || !["approved", "pending"].includes(a.status)) continue;
+      const same = a.status === "approved" && a.decidedBy === user._id && a.actionKind === action && a.expiresAt > now && a.approvalHash === await approvalHash({ ...binding, expiresAt: a.expiresAt });
+      if (same) return; // The original queue entry owns this exact, still-valid approval.
+      await ctx.db.patch(a._id, { status: "invalidated", invalidatedReason: "Superseded by a newly reviewed campaign approval" });
+    }
     const approvalId = await ctx.db.insert("approvals", {
       orgId: org._id,
       subjectType: "campaign_activation",
@@ -326,23 +362,61 @@ export const decide = mutation({
   },
 });
 
+async function readCampaignContext(ctx: QueryCtx | MutationCtx, campaignId: Id<"campaigns">, approvalId?: Id<"approvals">) {
+  const c = await ctx.db.get(campaignId);
+  if (!c) return null;
+  const org = await ctx.db.get(c.orgId);
+  const conn = c.connectionId ? await ctx.db.get(c.connectionId) : null;
+  const approval = approvalId ? await ctx.db.get(approvalId) : null;
+  const policy = await ctx.db
+    .query("autonomyPolicies")
+    .withIndex("by_org_active", (q) => q.eq("orgId", c.orgId).eq("active", true))
+    .first();
+  const fleet = await ctx.db
+    .query("fleetControls")
+    .withIndex("by_key", (q) => q.eq("key", "global"))
+    .unique();
+  return { campaign: c, org, connection: conn, approval, policyVersion: policy?.version ?? 1, allowPauseRules: policy?.allowAdPauseRules ?? true, fleetStop: Boolean(fleet?.emergencyStop) };
+}
+
 export const campaignContext = internalQuery({
   args: { campaignId: v.id("campaigns"), approvalId: v.optional(v.id("approvals")) },
+  handler: (ctx, { campaignId, approvalId }) => readCampaignContext(ctx, campaignId, approvalId),
+});
+
+/** Validation and the at-most-once claim share a transaction with owner rejection. */
+export const claimCampaignWrite = internalMutation({
+  args: { campaignId: v.id("campaigns"), approvalId: v.id("approvals") },
   handler: async (ctx, { campaignId, approvalId }) => {
-    const c = await ctx.db.get(campaignId);
-    if (!c) return null;
-    const org = await ctx.db.get(c.orgId);
-    const conn = c.connectionId ? await ctx.db.get(c.connectionId) : null;
-    const approval = approvalId ? await ctx.db.get(approvalId) : null;
-    const policy = await ctx.db
-      .query("autonomyPolicies")
-      .withIndex("by_org_active", (q) => q.eq("orgId", c.orgId).eq("active", true))
-      .first();
-    const fleet = await ctx.db
-      .query("fleetControls")
-      .withIndex("by_key", (q) => q.eq("key", "global"))
-      .unique();
-    return { campaign: c, org, connection: conn, approval, policyVersion: policy?.version ?? 1, allowPauseRules: policy?.allowAdPauseRules ?? true, fleetStop: Boolean(fleet?.emergencyStop) };
+    const cx = await readCampaignContext(ctx, campaignId, approvalId);
+    if (!cx?.approval || !cx.org || cx.org.deletedAt) return null;
+    const { campaign: c, approval: a, connection } = cx;
+    if (a.orgId !== c.orgId || a.subjectType !== "campaign_activation" || a.subjectId !== c._id) return null;
+    if (a.executionStartedAt !== undefined) return null; // A crash or lost response never authorizes replay.
+    const denied = (error: string) => ({ context: cx, error });
+    const previous = await campaignApprovals(ctx, c._id);
+    if (previous.some(other => other.orgId === c.orgId && other.executionStartedAt !== undefined && other.executionFinishedAt === undefined)) return denied("Another campaign write has started. Check its result before trying again.");
+    const problem = campaignActionProblem(c, a.actionKind);
+    if (problem) return denied(problem);
+    const member = a.decidedBy ? await ctx.db.query("memberships").withIndex("by_org_user", q => q.eq("orgId", c.orgId).eq("userId", a.decidedBy!)).unique() : null;
+    if (!member || member.status !== "active" || !can(member.role, "approve")) return denied("The approving member no longer has permission. Ask an authorized owner to review again.");
+    try {
+      await requirePaid(ctx, cx.org, "ads_publish");
+      await refuseInCopilot(ctx, c.orgId, "launch ads");
+    } catch {
+      return denied("Your plan or approval mode no longer allows this campaign write.");
+    }
+    const provider = c.channel === "google_search_ad" ? "google_ads" : "meta_ads";
+    const contentHash = await campaignContentHash(c, a.actionKind);
+    const check = await checkApprovalForExecution({
+      approval: a,
+      current: { orgId: c.orgId, subjectType: "campaign_activation", subjectId: c._id, actionKind: a.actionKind, contentHash, scope: campaignApprovalScope(c, connection?.externalAccountId), policyVersion: cx.policyVersion, expiresAt: a.expiresAt },
+      now: Date.now(), emergencyStop: Boolean(cx.org.emergencyStop?.active) || cx.fleetStop,
+      capabilityReady: Boolean(connection && connection.orgId === c.orgId && connection.provider === provider && connection.status === "connected" && (connection.isFixture || connection.externalAccountId)),
+    });
+    if (!check.ok) return denied(check.message);
+    await ctx.db.patch(a._id, { executionStartedAt: Date.now() });
+    return { context: cx, error: null };
   },
 });
 
@@ -359,6 +433,8 @@ export const recordCampaignResult = internalMutation({
   handler: async (ctx, args) => {
     const c = await ctx.db.get(args.campaignId);
     if (!c) return;
+    const approval = args.approvalId ? await ctx.db.get(args.approvalId) : null;
+    if (args.approvalId && (!approval || approval.orgId !== c.orgId || approval.subjectType !== "campaign_activation" || approval.subjectId !== c._id || approval.actionKind !== args.action)) return;
     const now = Date.now();
     await ctx.db.insert("actionReceipts", {
       orgId: c.orgId,
@@ -378,7 +454,11 @@ export const recordCampaignResult = internalMutation({
       ...(args.newStatus === "active" && !c.activatedAt ? { activatedAt: now } : {}),
       updatedAt: now,
     });
-    if (args.approvalId && (args.status === "verified" || args.status === "fixture_verified")) await ctx.db.patch(args.approvalId, { status: "consumed" });
+    if (approval?.status === "approved") await ctx.db.patch(approval._id,
+      args.status === "verified" || args.status === "fixture_verified"
+        ? { status: "consumed" }
+        : { status: "invalidated", invalidatedReason: args.status === "uncertain" ? "Provider outcome unknown; reconcile before trying again" : args.summary.slice(0, 400) });
+    if (approval?.executionStartedAt !== undefined) await ctx.db.patch(approval._id, { executionFinishedAt: now });
     await audit(ctx, { orgId: c.orgId, actorType: "system", action: `campaign.${args.action}.${args.status}`, subjectType: "campaign", subjectId: c._id, summary: `${c.name}: ${args.summary}` });
   },
 });
@@ -393,20 +473,14 @@ async function adCredentials(ctx: { runQuery: (q: typeof internal.connections.ge
 export const executeCampaignWrite = internalAction({
   args: { campaignId: v.id("campaigns"), approvalId: v.id("approvals") },
   handler: async (ctx, { campaignId, approvalId }) => {
-    const cx = await ctx.runQuery(internal.ads.campaignContext, { campaignId, approvalId });
-    if (!cx?.approval || !cx.org) return;
+    const claim = await ctx.runMutation(internal.ads.claimCampaignWrite, { campaignId, approvalId });
+    if (!claim) return;
+    const cx = claim.context;
+    if (!cx.approval || !cx.org) return;
     const { campaign: c, approval } = cx;
     const action = approval.actionKind as "create_paused" | "activate";
-    const contentHash = await sha256Hex(canonicalJson({ name: c.name, channel: c.channel, action }));
-    const check = await checkApprovalForExecution({
-      approval: { status: approval.status, approvalHash: approval.approvalHash, expiresAt: approval.expiresAt, scope: approval.scope, contentHash: approval.contentHash, policyVersion: approval.policyVersion },
-      current: { orgId: c.orgId, subjectType: "campaign_activation", subjectId: c._id, actionKind: action, contentHash, scope: campaignApprovalScope(c, cx.connection?.externalAccountId), policyVersion: cx.policyVersion, expiresAt: approval.expiresAt },
-      now: Date.now(),
-      emergencyStop: Boolean(cx.org.emergencyStop?.active) || cx.fleetStop,
-      capabilityReady: cx.connection?.status === "connected" && (cx.connection.isFixture || Boolean(cx.connection.externalAccountId)),
-    });
-    if (!check.ok) {
-      await ctx.runMutation(internal.ads.recordCampaignResult, { campaignId, action, status: "failed", summary: check.message, approvalId });
+    if (claim.error) {
+      await ctx.runMutation(internal.ads.recordCampaignResult, { campaignId, action, status: "failed", summary: claim.error, approvalId });
       return;
     }
     if (cx.connection?.isFixture) {
