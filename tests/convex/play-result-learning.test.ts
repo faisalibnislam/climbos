@@ -115,12 +115,13 @@ describe("weekly result learning across plans", () => {
       const play = (expert.plays as Record<string, unknown>[])[0];
       await ctx.db.patch(s._id, { expert: { ...expert, economics: { revenuePerCustomerMonthUsd: 1, grossMargin: 0.1, monthlyChurn: 0.1 }, plays: [{ ...play, horizonDays: 14, p10: 180, p50: 200, p90: 220, model: { weeklyReach: 1000, steps: [{ name: "Paying customers", rate: 0.1 }], monthlySpendUsd: 100, ownerHoursPerWeek: 1 } }] } } as never);
     });
-    await f.owner.client.mutation(api.playResults.log, { ...f.args, steps: [1] });
+    await f.owner.client.mutation(api.playResults.log, { ...f.args, steps: [10] });
     const clock = vi.spyOn(Date, "now").mockReturnValue(first + 7 * 86400000);
-    await f.owner.client.mutation(api.playResults.log, { ...f.args, steps: [1] });
+    await f.owner.client.mutation(api.playResults.log, { ...f.args, steps: [10] });
     clock.mockReturnValue(first + 14 * 86400000);
     const before = await f.t.query(internal.playResults.briefFor, { orgId: f.orgId });
     expect(before).toContain("Historical diagnostic only");
+    expect(before).toContain("only reach is short");
     expect(before).toContain("Don't raise its spend");
     await f.t.run(ctx => ctx.db.patch(f.businessId, { unitEconomics: { revenuePerCustomerMonthUsd: 10000, grossMargin: 0.9, monthlyChurn: 0.01, updatedAt: Date.now() } }));
     expect(await f.t.query(internal.playResults.briefFor, { orgId: f.orgId })).toBe(before);

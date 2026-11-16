@@ -1,3 +1,30 @@
+## 16 November 2026 — weekly scenario position and next-decision review
+
+Traced saved weekly reports through `actualsFor` → `playActuals` → `diagnoseShortfall` → `PlayResults` / `ExpertPlan` and `resultsBrief` → strategy job context. The initial focused regressions reproduced a large volume shortfall labeled On track and zero reported reach treated as proof the work never ran. Inspection also confirmed that the spend branch accepted any informative funnel step while a later step could remain thin; the final regression explicitly exercises an uncertain downstream conversion step.
+
+Implemented:
+
+- Replaced the weekly status Poisson mixture over scenario endpoints with descriptive `below_scenario`, `within_scenario` and `above_scenario` states. Existing incomplete/open/unknown/too-early states remain. Full-horizon references do not establish statistical confidence, causal lift or success against the owner's test criteria. Earlier references explicitly assume even delivery and do not model ramp-up or conversion delays. No saved forecast or report values were changed.
+- Separated scenario position from the next decision. The shared review trigger catches low reach even when conversion holds, and weak conversion even when higher reach brings enough customers to meet the reference. Both owner UI and future-plan context use it. Missing/open windows cannot justify these diagnostics.
+- Zero or absent reach leaves execution unknown, and zero downstream counts prompt a tracking check without claiming tracking is proven broken. Uncertain later steps block an increased-spend suggestion. Cost/value comparison requires matching known currency; recorded cash is still displayed in its own currency. Otherwise supported reach expansion is a review proposal requiring current capacity, cash, stop-rule and approval checks.
+- Original stop rules now reach the owner card. Insufficient evidence and completed horizons no longer instruct an automatic extension. Small deviations can be visibly below a reference while the diagnostic remains inconclusive. The standalone statistical coverage helper is documented as requiring genuine prediction intervals; it is not used for these scenarios.
+- Updated badges, comparison explanation and neutral next-check presentation. Mobile inspection found crowded scenario labels, resolved with grid spacing. No new query, client effect, provider, dependency or external-action path was introduced. The installed Next.js use-client guide and React review guidance were consulted.
+
+Verification commands:
+
+```sh
+pnpm exec vitest run tests/unit/weekly-decision.test.ts tests/unit/weekly-decision-ui.test.tsx tests/unit/play-actuals.test.ts tests/unit/shortfall.test.ts tests/unit/decision-books.test.ts tests/unit/play-cost-per-customer.test.tsx tests/unit/play-results-retention.test.tsx tests/convex/play-result-learning.test.ts tests/convex/play-result-coverage.test.ts tests/convex/play-result-money.test.ts tests/convex/play-result-history.test.ts tests/convex/play-results.test.ts tests/convex/tenancy.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+pnpm exec eslint shared/growth/actuals.ts shared/growth/diagnostics.ts convex/playResults.ts shared/agents/specs.ts src/components/app/plan/PlayResults.tsx src/components/app/plan/ExpertPlan.tsx tests/unit/weekly-decision.test.ts tests/unit/weekly-decision-ui.test.tsx tests/unit/play-actuals.test.ts tests/unit/shortfall.test.ts tests/unit/decision-books.test.ts tests/convex/play-result-learning.test.ts e2e/play-result-money.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/play-result-money.spec.ts
+git diff --check
+```
+
+Results: **119 tests passed across 14 focused files**, including 11 new decision/UI cases. Typecheck, scoped lint, isolated local function sync and diff checks passed. Desktop/mobile browser checks exercised actual large-shortfall and unknown-execution cards, original stop-rule visibility, report editing/history, currency changes, duplicate-summary withholding and unchanged approval/action/workflow records. Both passed after label spacing in **34.3 seconds**; no horizontal overflow or serious/critical automated accessibility violations were found. The final mobile screenshot was inspected. The subsequent shared trigger extension for weak conversion despite adequate total volume passed the final unit/UI suite and local sync; it does not add a browser interaction.
+
+Limits: reports do not independently verify execution, exposure, unique customers, attribution or causal impact. Existing reach and Bayesian funnel thresholds are diagnostic review heuristics with model assumptions, not owner-approved business stop criteria. Missing historical inputs remain unknown. Partial-horizon reference interpolation still assumes even delivery; it is not a timing-aware forecast. No automatic scaling, stop action, price change, spending, publishing, provider call or hosted deployment occurred. Expert recommendation quality and the full 410-requirement acceptance audit remain open. Engine version: `v3.92-weekly-decision-evidence`.
+
 ## 16 November 2026 — original weekly learning across plan versions
 
 Traced owner `playResults.log` → current report and append-only revision → original strategy/report-time index → `resultsBrief` → `jobWrites.jobContext.resultsText` → `jobs` performance context. A new regression failed before implementation: after seven newer untested plans, the older reported play produced an empty learning brief. The inspected forecast contract also defines input scenarios, while the old brief treated P10/P90 as an 80% probability interval.

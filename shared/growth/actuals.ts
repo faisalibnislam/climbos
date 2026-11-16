@@ -5,7 +5,7 @@
  * early noise doesn't swing the plan).
  */
 import type { PlayModel } from "../agents/economics";
-import { betaPosterior, binomialCdf, poissonCdf, probBelow } from "../analysis/bayes";
+import { betaPosterior, binomialCdf, probBelow } from "../analysis/bayes";
 import { formatMinorMoney, isKnownCurrency, majorToMinor, minorToMajor } from "../economics/currency";
 import { decimalToMinor } from "../integrations/currency";
 
@@ -13,8 +13,8 @@ import { decimalToMinor } from "../integrations/currency";
  * Decision books (2026-10-20):
  * - Time zero (Hernán & Robins Ch 22): weeks before the play started aren't its results.
  * - Missing weeks are unknown, not zero (Ch 8 selection; Ch 19 loss to follow-up): no "ahead" while the log has gaps.
- * - Noise (Downey Ch 7, Kochenderfer §4.2): "behind" needs the count to be unlikely under the plan
- *   (Poisson, P ≤ 5% averaged over the plan's range) or a leading step that is clearly short; 2 customers against 4 expected is normal noise.
+ * - Scenario bounds are descriptive; a low count alone does not prove a failed intervention.
+ *   Review observation quality and individual funnel steps before recommending a response.
  */
 const WEEK = 7 * 86_400_000;
 
@@ -102,7 +102,10 @@ export interface PlayActuals {
   ownerHours: number;
   /** Customers the plan expected by now (P10/P50/P90 scaled to the weeks logged). */
   expectedByNow: { p10: number; p50: number; p90: number } | null;
-  status: "ahead" | "on_track" | "behind" | "too_early" | "incomplete_log" | "forecast_unknown" | "partial_week";
+  /** Scenario position is descriptive, not a statistical success/failure verdict. */
+  comparisonNote?: string;
+  horizonComplete?: boolean;
+  status: "above_scenario" | "within_scenario" | "below_scenario" | "too_early" | "incomplete_log" | "forecast_unknown" | "partial_week";
   steps: StepActual[];
   /** Weekly reach actually achieved vs planned. */
   reachVsPlan: number | null;
@@ -192,14 +195,13 @@ export function playActuals(model: PlayModel, all: ResultEntry[], forecast: Save
     : weeksSinceStart > horizonWeeks ? "The reported window extends beyond the original forecast horizon; do not compare these totals with that shorter forecast."
     : null;
   const expectedByNow = !comparisonIssue && knownPlayForecast(forecast) ? { p10: forecast.p10 * f, p50: forecast.p50 * f, p90: forecast.p90 * f } : null;
-  // Behind only when the count is unlikely under the plan (not just below P10), and the leading step agrees.
-  // The plan's own rate is uncertain too (Kochenderfer Ex 4.1): average the Poisson tail over its P10/P50/P90.
-  const lams = expectedByNow ? [expectedByNow.p10, expectedByNow.p50, expectedByNow.p90].filter((l) => l > 0) : [];
-  const avg = (fn: (l: number) => number) => (lams.length ? lams.reduce((s, l) => s + fn(l), 0) / lams.length : 1);
-  const surprisinglyLow = lams.length > 0 && avg((l) => poissonCdf(customers, l)) <= 0.05;
-  const surprisinglyHigh = lams.length ? avg((l) => 1 - poissonCdf(customers - 1, l)) <= 0.05 : customers > 0;
+  // Input scenarios are not probability intervals. Diagnosis of the shortfall is separate.
   const status: PlayActuals["status"] =
-    unloggedWeeks > 0 ? "incomplete_log" : opts.currentWeekIncluded && knownPlayForecast(forecast) ? "partial_week" : !expectedByNow ? "forecast_unknown" : weeks < 2 ? "too_early" : customers > expectedByNow.p90 && surprisinglyHigh ? "ahead" : customers < expectedByNow.p10 && (leading(steps) === "short" || (surprisinglyLow && leading(steps) === "thin")) ? "behind" : "on_track";
+    unloggedWeeks > 0 ? "incomplete_log" : opts.currentWeekIncluded && knownPlayForecast(forecast) ? "partial_week" : !expectedByNow ? "forecast_unknown" : weeks < 2 ? "too_early" : customers > expectedByNow.p90 ? "above_scenario" : customers < expectedByNow.p10 ? "below_scenario" : "within_scenario";
+  const comparisonNote = expectedByNow ? weeks < horizonWeeks
+    ? "This is a proportional reference for the reported weeks, assuming even delivery. It does not model ramp-up or conversion delays and is not a validated probability range."
+    : "This compares reported counts with the saved low, central and high scenarios. It does not establish statistical confidence, causal lift or success against an owner-approved test rule."
+    : undefined;
   return {
     weeks,
     reach,
@@ -207,6 +209,8 @@ export function playActuals(model: PlayModel, all: ResultEntry[], forecast: Save
     ...reportedSpend(entries, opts.currency),
     ownerHours: entries.reduce((s, e) => s + Math.max(0, e.ownerHours), 0),
     expectedByNow,
+    ...(comparisonNote ? { comparisonNote } : {}),
+    ...(Number.isFinite(horizonWeeks) && horizonWeeks > 0 ? { horizonComplete: weeksSinceStart >= horizonWeeks } : {}),
     status,
     steps,
     reachVsPlan: weeks > 0 && model.weeklyReach > 0 ? reach / weeks / model.weeklyReach : null,
@@ -231,18 +235,11 @@ export function stepTooThin(s: Pick<StepActual, "planned" | "successes" | "trial
   return !stepClearlyShort(s) && probBelow(betaPosterior(s.successes, s.trials), s.planned * 0.5) >= 0.1;
 }
 
-/** The first step that can be judged: clearly short, fine, or none judgeable yet ("thin": then the customer count decides). */
-function leading(steps: StepActual[]): "short" | "ok" | "thin" {
-  const s = steps.find((x) => !stepTooThin(x));
-  if (!s) return "thin";
-  return stepClearlyShort(s) ? "short" : "ok";
-}
-
 /**
- * Forecast calibration (Hubbard Ch 5; Kochenderfer Ch 14): of the plays that ran their full horizon with every
- * week logged, how many landed inside their P10–P90 range? That band is an 80% range, so about 80% should.
- * A low count means ranges were too narrow (overconfident); the next plan should say so. Predictions were saved
- * with the plan before results, so this compares honestly.
+ * Coverage diagnostic for genuine 80% prediction intervals, not input scenarios.
+ * Callers must establish compatible complete windows and the sampling assumptions;
+ * P10/P90 field names alone do not establish them. Weekly growth scenarios do not
+ * use this function. The binomial result does not establish causal business impact.
  */
 export function forecastCalibration(rows: { customers: number; p10: number; p90: number }[]): { matured: number; inside: number; expected: number; pTooFew: number; verdict: "too_few_plays" | "overconfident" | "consistent" } {
   const n = rows.length;
@@ -251,7 +248,7 @@ export function forecastCalibration(rows: { customers: number; p10: number; p90:
   return { matured: n, inside, expected: Math.round(n * 0.8 * 10) / 10, pTooFew: Math.round(pTooFew * 1000) / 1000, verdict: n < 3 ? "too_few_plays" : pTooFew <= 0.05 ? "overconfident" : "consistent" };
 }
 
-/** One line per play for the next plan's brief: observed counts are first-party facts (grade A). */
+/** One line per play for the next plan: counts remain owner reports, not independently verified facts. */
 export function resultsLine(name: string, a: PlayActuals): string {
   const rates = a.steps
     .filter((s) => s.trials > 0)
@@ -260,5 +257,5 @@ export function resultsLine(name: string, a: PlayActuals): string {
   const coverage = a.unloggedWeeks > 0 ? ` ${a.unloggedWeeks} elapsed week${a.unloggedWeeks === 1 ? " is" : "s are"} unlogged; missing weeks are unknown, not zero, so do not read this as a complete-period result.` : "";
   if (!a.weeks) return `${name}: no weekly results reported; customer counts, spending and hours are unknown.${coverage}`;
   const spend = a.spendUsd === null ? `spend unavailable (${a.spendIssue})` : a.spendUsd === 0 ? "explicitly reported no spend" : `spent ${formatMinorMoney(majorToMinor(a.spendUsd, a.spendCurrency), a.spendCurrency)} ${a.spendCurrency}`;
-  return `${name}: ${a.weeks} week${a.weeks === 1 ? "" : "s"}, reached ${a.reach}, ${a.customers} new customers, ${spend}, ${Math.round(a.ownerHours)} owner hours.${coverage}${a.comparisonIssue ? ` ${a.comparisonIssue}` : ""} ${rates}.`;
+  return `${name}: ${a.weeks} week${a.weeks === 1 ? "" : "s"}, reached ${a.reach}, ${a.customers} new customers, ${spend}, ${Math.round(a.ownerHours)} owner hours.${coverage}${a.comparisonIssue ? ` ${a.comparisonIssue}` : ""} ${rates}.${a.expectedByNow ? ` Reported customers compared with the low/central/high scenario reference: ${a.customers} versus ${a.expectedByNow.p10}/${a.expectedByNow.p50}/${a.expectedByNow.p90}. ${a.comparisonNote ?? "Descriptive comparison only; not a calibrated probability interval."}` : ""}`;
 }

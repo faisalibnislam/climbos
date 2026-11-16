@@ -18,7 +18,7 @@ describe("play results vs plan", () => {
     const provisional = playActuals(model, rows, forecast, 13, { startWeek: rows[0].weekStart, throughWeek: rows[1].weekStart, currentWeekIncluded: true });
     expect(provisional).toMatchObject({ status: "partial_week", expectedByNow: null, comparisonIssue: expect.stringContaining("still open") });
     const complete = playActuals(model, rows, forecast, 13, { startWeek: rows[0].weekStart, throughWeek: rows[1].weekStart, currentWeekIncluded: false });
-    expect(complete.status).toBe("ahead");
+    expect(complete.status).toBe("above_scenario");
   });
   it.each([{}, { p10: null, p50: 10, p90: 20 }, { p10: 5, p50: 4, p90: 20 }, { p10: 0, p50: NaN, p90: 20 }])("keeps missing or invalid original forecasts unknown: %j", forecast => {
     const actual = playActuals(model, [week(0, 100, [10, 5, 2]), week(1, 100, [10, 5, 2])], forecast);
@@ -63,12 +63,12 @@ describe("play results vs plan", () => {
     expect(a.reachVsPlan).toBe(1);
   });
 
-  it("says too early, ahead or behind", () => {
+  it("shows too early or a descriptive position against the scenario", () => {
     expect(playActuals(model, [week(0, 250, [5, 2, 1])], forecast).status).toBe("too_early");
-    expect(playActuals(model, [week(0, 250, [20, 10, 5]), week(1, 250, [20, 10, 5])], forecast).status).toBe("ahead");
+    expect(playActuals(model, [week(0, 250, [20, 10, 5]), week(1, 250, [20, 10, 5])], forecast).status).toBe("above_scenario");
     // 4 weeks, reply rate 0.2% vs 2% planned, no customers: behind.
     const weak = [0, 1, 2, 3].map((i) => week(i, 250, [0, 0, 0]));
-    expect(playActuals(model, weak, forecast).status).toBe("behind");
+    expect(playActuals(model, weak, forecast).status).toBe("below_scenario");
   });
 
   it("does not label a play on track or behind when elapsed weeks are missing from the log", () => {

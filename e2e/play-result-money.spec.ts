@@ -125,6 +125,31 @@ test("weekly reports require explicit values and preserve currency across settin
   await expectAccessible(page, "weekly summary unavailable");
   await page.screenshot({ path: testInfo.outputPath("weekly-summary-unavailable.png"), fullPage: false });
   await expect(card.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
+
+  // A separate saved plan demonstrates the decision path without changing the report-history fixture.
+  const now = Date.now(), d = new Date(now);
+  const currentWeek = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - ((d.getUTCDay() + 6) % 7) * 86400000;
+  const reviewPlays = ["Delivery review fixture", "Execution review fixture"].map((name, i) => ({ ...sourcePlay, id: `decision-${i}`, name, horizonDays: 21, p10: 270, p50: 300, p90: 330, killIf: "Review complaints before continuing", model: { weeklyReach: 1000, steps: [{ name: "Paying customers", rate: 0.1 }], monthlySpendUsd: 100, ownerHoursPerWeek: 1 } }));
+  await append("strategies", [{ ...copyRow(plan), _creationTime: now - 21 * 86400000, orgId: org._id, businessId: savedBusiness._id, goalId: savedGoal._id, version: Number(savedPlan.version) + 1, runId: undefined, approvalId: undefined, weeklyReportedAt: undefined, status: "approved", expert: { ...expert, version: 7, plays: reviewPlays } }]);
+  const reviewPlan = (await rows("strategies")).find(r => r.orgId === org._id && Number(r.version) === Number(savedPlan.version) + 1)!;
+  await append("playResults", reviewPlays.flatMap((p, i) => [0, 1, 2].map(w => ({ orgId: org._id, strategyId: reviewPlan._id, playId: p.id, playName: p.name, weekStart: currentWeek - (3 - w) * 7 * 86400000, reach: i ? 0 : 100, steps: [i ? 0 : 10], spendUsd: 10, spendCurrency: "USD", ownerHours: 1, enteredBy: member.userId, updatedAt: now, stepNames: ["Paying customers"] }))));
+  await page.reload();
+  await page.getByRole("tab", { name: "Research", exact: true }).click();
+  await page.getByRole("button", { name: "Open research and plan details", exact: true }).click();
+  await page.locator("summary").filter({ hasText: "Other ideas, numbers and questions" }).click();
+  const delivery = page.getByRole("article").filter({ has: page.getByRole("heading", { name: "Delivery review fixture", exact: true }) });
+  const execution = page.getByRole("article").filter({ has: page.getByRole("heading", { name: "Execution review fixture", exact: true }) });
+  await expect(delivery.getByText("Below scenario range", { exact: true })).toBeVisible();
+  await expect(delivery.getByText(/^Next check:/)).toContainText("reach");
+  await expect(delivery.getByText(/^Next check:/)).toContainText("Review complaints before continuing");
+  await expect(delivery).not.toContainText("On track");
+  await expect(delivery.getByText(/does not establish statistical confidence/)).toBeVisible();
+  await expect(execution.getByText(/^Next check:/)).toContainText("Confirm whether the activity ran");
+  await expect(execution).not.toContainText("hasn't run yet");
+  await delivery.scrollIntoViewIfNeeded();
+  await expectNoHorizontalScroll(page);
+  await expectAccessible(page, "weekly scenario and next decision");
+  await page.screenshot({ path: testInfo.outputPath("weekly-scenario-decision.png"), fullPage: false });
   expect(await actionSnapshot()).toEqual(before);
   expect(errors).toEqual([]);
 });

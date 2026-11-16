@@ -576,7 +576,7 @@ function Forecast({ f, economics, open = false, diagnosis }: { f: PlayView; econ
         <span aria-hidden className={cn("absolute top-1/2 h-3 w-0.5 -translate-x-1/2 -translate-y-1/2", k.rail)} style={{ left: `${pos(f.p90)}%` }} />
         <span aria-hidden className={cn("absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-surface", k.rail)} style={{ left: `${pos(f.p50)}%` }} />
       </div>
-      <dl className="grid grid-cols-3 text-xs">
+      <dl className="grid grid-cols-3 gap-3 text-xs">
         <div>
           <dt className="text-ink-3">Lower scenario</dt>
           <dd className="font-medium tabular-nums text-ink">{fmtN(f.p10)}</dd>
@@ -1140,7 +1140,7 @@ function PlayCard({ play, slug, economics, results, planId, targets, canEdit = f
         <Forecast f={play} economics={economics} open={open} diagnosis={diagnosis} />
         {play.model && economics ? <PlayEconomics play={play} economics={economics} /> : null}
         {targets && planId && play.id ? <PlayTargetsBlock t={targets} slug={slug} strategyId={planId} playId={play.id} canEdit={canEdit} /> : null}
-        {play.model?.steps?.length && results ? <PlayResults key={`${results.strategyId}:${play.id ?? play.name}`} slug={slug} strategyId={results.strategyId} playName={play.name} model={play.model} actuals={results.byPlay[play.name]} issue={results.issues?.[play.name]} retention={results.byPlay[play.name]?.retention} currency={results.currency} canEdit={results.canEdit}  affordableCacUsd={economics ? customerValue(economics) : null}/> : null}
+        {play.model?.steps?.length && results ? <PlayResults key={`${results.strategyId}:${play.id ?? play.name}`} slug={slug} strategyId={results.strategyId} playName={play.name} model={play.model} actuals={results.byPlay[play.name]} issue={results.issues?.[play.name]} retention={results.byPlay[play.name]?.retention} currency={results.currency} canEdit={results.canEdit} stopRule={play.killIf} affordableCacUsd={economics ? customerValue(economics) : null}/> : null}
 
         {open ? <PlayDetails play={play} economics={economics} id={panel} /> : null}
 

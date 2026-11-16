@@ -15,9 +15,9 @@ describe("shortfall diagnosis", () => {
       expect(diagnoseShortfall(incomplete, {}, { affordableCacUsd: 50 })).toMatchObject({ verdict: "too_few", moreSpendJustified: false });
     }
   });
-  it("not run: no reach says nothing about the channel", () => {
-    expect(diagnoseShortfall(a([])).verdict).toBe("not_run");
-    expect(diagnoseShortfall(a([week(1, 0, [0, 0]), week(2, 0, [0, 0])])).verdict).toBe("not_run");
+  it("zero or missing reach leaves execution unknown", () => {
+    expect(diagnoseShortfall(a([])).verdict).toBe("execution_unknown");
+    expect(diagnoseShortfall(a([week(1, 0, [0, 0]), week(2, 0, [0, 0])])).verdict).toBe("execution_unknown");
   });
   it("tracking: people reached but nothing recorded", () => {
     expect(diagnoseShortfall(a([week(1, 200, [0, 0]), week(2, 200, [0, 0])])).verdict).toBe("tracking");
@@ -46,7 +46,7 @@ describe("shortfall diagnosis", () => {
     // Unknown customer value: don't assume spend is justified.
     const unknown = diagnoseShortfall(actuals);
     expect(unknown.moreSpendJustified).toBe(false);
-    expect(unknown.next).toMatch(/confirm price, margin and churn/);
+    expect(unknown.next).toMatch(/confirm price, margin, churn and matching currency/);
     expect(shortfallLine("Referral test", unknown)).toMatch(/Don't raise its spend/);
   });
   it("reach only with no logged spend doesn't recommend starting paid spend", () => {

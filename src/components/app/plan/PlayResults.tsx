@@ -7,14 +7,14 @@ import { Badge, Button, type Tone } from "@/components/ui";
 import type { PlayModel } from "../../../../shared/agents/economics";
 import { costCheck, type CostCheck, type PlayActuals, type RetentionActuals } from "../../../../shared/growth/actuals";
 import { formatMinorMoney, majorToMinor } from "../../../../shared/economics/currency";
-import { diagnoseShortfall, type Shortfall } from "../../../../shared/growth/diagnostics";
+import { diagnoseShortfall, needsShortfallReview, type Shortfall } from "../../../../shared/growth/diagnostics";
 import { WeeklyReportEditor } from "./WeeklyReportEditor";
 import { cn } from "@/lib/utils";
 
 const STATUS: Record<PlayActuals["status"], { label: string; tone: Tone; icon: LucideIcon }> = {
-  ahead: { label: "Ahead of plan", tone: "green", icon: CircleCheck },
-  on_track: { label: "On track", tone: "blue", icon: CircleCheck },
-  behind: { label: "Behind: check stop rule", tone: "red", icon: CircleAlert },
+  above_scenario: { label: "Above scenario range", tone: "blue", icon: CircleCheck },
+  within_scenario: { label: "Within scenario range", tone: "blue", icon: CircleCheck },
+  below_scenario: { label: "Below scenario range", tone: "neutral", icon: CircleAlert },
   too_early: { label: "Too early to tell", tone: "neutral", icon: Clock },
   incomplete_log: { label: "Weekly log incomplete", tone: "neutral", icon: Clock },
   partial_week: { label: "Current week still open", tone: "neutral", icon: Clock },
@@ -25,12 +25,12 @@ const pct = (x: number) => `${Math.round(x * 1000) / 10}%`;
 
 /** Why a play is behind, checked in order (ran? measured? reach? which step?), with one next step. */
 function ShortfallNote({ s }: { s: Shortfall }) {
-  const failed = s.checks.find((c) => c.status === "fail");
+  const failed = s.checks.find((c) => c.status === "fail") ?? s.checks.find(c => c.status === "unknown");
   return (
-    <div className="flex flex-col gap-1 rounded-[var(--radius-control)] bg-red-100 px-2 py-1.5 text-xs text-red-800">
-      <p className="font-semibold">{s.next}</p>
+    <div className="flex flex-col gap-1 rounded-[var(--radius-control)] bg-surface-2 px-2 py-1.5 text-xs text-ink-2">
+      <p className="font-semibold">Next check: {s.next}</p>
       {failed ? <p>{failed.detail}</p> : null}
-      {!s.moreSpendJustified ? <p className="text-red-800/80">Don&apos;t raise spend until this is fixed.</p> : null}
+      {!s.moreSpendJustified ? <p>These observations do not justify increasing spend yet.</p> : null}
     </div>
   );
 }
@@ -68,7 +68,7 @@ export function RetentionResultsSummary({ retention }: { retention?: RetentionAc
 }
 
 /** Plan vs actual for one play, and a weekly log (spec §28). */
-export function PlayResults({ slug, strategyId, playName, model, actuals, retention, currency, issue, canEdit, affordableCacUsd = null }: { slug: string; strategyId: Id<"strategies">; playName: string; model: PlayModel; actuals?: PlayActuals; issue?: string; retention?: RetentionActuals; currency?: string | null; canEdit: boolean; affordableCacUsd?: number | null }) {
+export function PlayResults({ slug, strategyId, playName, model, actuals, retention, currency, issue, canEdit, stopRule, affordableCacUsd = null }: { slug: string; strategyId: Id<"strategies">; playName: string; model: PlayModel; actuals?: PlayActuals; issue?: string; retention?: RetentionActuals; currency?: string | null; canEdit: boolean; stopRule?: string; affordableCacUsd?: number | null }) {
   const [open, setOpen] = useState(false);
   const st = actuals ? STATUS[actuals.status] : null;
   return (
@@ -84,7 +84,7 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, retent
               <span className="text-ui text-ink-2">
                 customer{actuals.customers === 1 ? "" : "s"} · {actuals.unloggedWeeks > 0 ? `${actuals.weeks} of ${actuals.weeksSinceStart} weeks logged` : `week ${actuals.weeks}`}
               </span>
-              {actuals.expectedByNow ? <span className="text-xs tabular-nums text-ink-3">plan ≈{r1(actuals.expectedByNow.p50)}</span> : null}
+              {actuals.expectedByNow ? <span className="text-xs tabular-nums text-ink-3">reference ≈{r1(actuals.expectedByNow.p50)}</span> : null}
             </p>
             {st ? (
               <Badge tone={st.tone} icon={<st.icon />}>
@@ -93,9 +93,10 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, retent
             ) : null}
           </div>
           {(actuals.unloggedWeeks > 0 || actuals.currentWeekIncluded) ? <p className="text-xs text-ink-3">Counts and cash cost cover only recorded weeks, including any provisional current-week report; they are not complete-period results.</p> : null}
+          {actuals.comparisonNote ? <p className="text-xs text-ink-3">{actuals.comparisonNote}</p> : null}
           <CostPerCustomerLine check={costCheck(actuals, affordableCacUsd)} currency={currency ?? undefined} />
           {actuals.spendIssue ? <p className="text-xs text-ink-2">{actuals.spendIssue}</p> : null}
-          {actuals.status === "behind" ? <ShortfallNote s={diagnoseShortfall(actuals, {}, { affordableCacUsd, currency: currency ?? undefined })} /> : null}
+          {needsShortfallReview(actuals) ? <ShortfallNote s={diagnoseShortfall(actuals, { killIf: stopRule }, { affordableCacUsd, currency: currency ?? undefined })} /> : null}
           <ul className="flex flex-col gap-1.5 text-xs">
             {actuals.steps
               .filter((s) => s.trials > 0)
