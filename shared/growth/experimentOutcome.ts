@@ -1,10 +1,10 @@
 /**
  * Structured experiment outcomes (Book 14 §14, Book 13 §9). The owner records
  * who was eligible, who was exposed, what converted and how it was measured;
- * code decides what the result can claim:
+ * code classifies the reported design; source/assignment are not independently verified:
  * - "observed": counts with no comparison group (or before/after). Not proof of cause.
- * - "attributed": the platform's own report. Its attribution, not a comparison.
- * - "incremental": randomized design, or a holdout chosen at random, with both groups measured.
+ * - "attributed": the member reports platform attribution; not a verified platform read.
+ * - "incremental": legacy label for a reported random comparison with nonempty groups.
  *   A holdout picked by a rule or by the owner isn't exchangeable with the treated group
  *   (Hernán & Robins Ch 2–3; Kohavi Ch 11), so it stays "observed" with its comparison shown.
  * - "not_run": the test wasn't carried out, so it says nothing about the channel.
@@ -32,7 +32,7 @@ export interface OutcomeInput {
   eligible?: number;
   /** Everyone assigned to get the change, whether or not they used it (count by person, not visit). */
   exposed?: number;
-  /** Holdouts only: how the comparison group was chosen (missing on older records = unknown). */
+  /** How either comparison group was chosen (missing on older records = unknown). */
   assignment?: OutcomeAssignment;
   /** Conversions among the exposed (on the analysis metric). */
   conversions?: number;
@@ -54,29 +54,33 @@ export interface OutcomeInput {
   note?: string;
 }
 
-/** What the result can claim, from the design and source alone (never from the model). */
+/** Legacy storage classification of the reported design, not proof of causal impact. */
 export function inferenceOf(o: Pick<OutcomeInput, "executed" | "source" | "design" | "exposed" | "controlSize" | "assignment">): Inference {
   if (!o.executed) return "not_run";
   if (o.source === "platform_report") return "attributed";
-  const comparative = o.design === "randomized" || (o.design === "holdout" && o.assignment === "random");
+  const comparative = (o.design === "randomized" || o.design === "holdout") && o.assignment === "random";
   if (comparative && (o.exposed ?? 0) > 0 && (o.controlSize ?? 0) > 0) return "incremental";
   return "observed";
 }
 
 /**
- * What an incremental design's numbers can actually claim (blog research BRP-21:
- * Microsoft ExP, Kohavi): a split that doesn't match its plan can't be read,
- * and only a significant difference may be called extra conversions.
+ * Assess reported comparison counts using the existing deterministic calculator.
+ * Unknown or suspect allocation prevents a reliable comparison reading; even a
+ * significant rate difference does not independently verify a causal design.
  */
 export type Reading =
   | { kind: "no_counts" }
+  | { kind: "invalid_counts" }
+  | { kind: "split_unknown" }
   | { kind: "split_mismatch"; splitP: number }
   | { kind: "split_warning"; splitP: number; pValue: number }
   | { kind: "no_difference"; pValue: number; interval?: [number, number] }
   | { kind: "difference"; pValue: number; extra: number; interval?: [number, number] };
 
 export function readingOf(o: Pick<OutcomeInput, "exposed" | "conversions" | "controlSize" | "controlConversions" | "plannedSharePct">): Reading {
+  if ([o.exposed, o.controlSize, o.conversions, o.controlConversions].some(n => n !== undefined && (!Number.isSafeInteger(n) || n < 0 || n > 100_000_000)) || (o.exposed !== undefined && o.conversions !== undefined && o.conversions > o.exposed) || (o.controlSize !== undefined && o.controlConversions !== undefined && o.controlConversions > o.controlSize)) return { kind: "invalid_counts" };
   if (!o.exposed || !o.controlSize || o.conversions === undefined || o.controlConversions === undefined) return { kind: "no_counts" };
+  if (o.plannedSharePct === undefined || !Number.isFinite(o.plannedSharePct) || !(o.plannedSharePct > 0 && o.plannedSharePct < 100)) return { kind: "split_unknown" };
   let splitWarn: number | null = null;
   if (o.plannedSharePct !== undefined && o.plannedSharePct > 0 && o.plannedSharePct < 100) {
     const srm = sampleRatio({ planned: [o.plannedSharePct, 100 - o.plannedSharePct], observed: [o.exposed, o.controlSize] });
@@ -97,6 +101,10 @@ export function readingText(r: Reading): string {
   switch (r.kind) {
     case "no_counts":
       return "Counts missing for one arm: nothing can be read yet.";
+    case "invalid_counts":
+      return "The recorded counts conflict or are invalid. Correct them before interpreting the comparison.";
+    case "split_unknown":
+      return "The planned split is unknown. Record the original allocation before checking the comparison; do not infer it from the observed counts.";
     case "split_mismatch":
       return `The split doesn't match the plan (${fmtP(r.splitP)}): find the cause before reading the result.`;
     case "split_warning":
@@ -104,11 +112,14 @@ export function readingText(r: Reading): string {
     case "no_difference":
       return `No reliable difference (${fmtP(r.pValue)}${r.interval ? `; likely ${ptsRange(r.interval)}` : ""}): not proof it worked, or that it didn't.`;
     case "difference":
-      return `A difference the data can tell apart (${fmtP(r.pValue)}${r.interval ? `; likely ${ptsRange(r.interval)}` : ""}).`;
+      return `A calculated rate difference (${fmtP(r.pValue)}${r.interval ? `; likely ${ptsRange(r.interval)}` : ""}).`;
   }
 }
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
+export function validOutcomeDay(value: string | undefined): boolean {
+  return Boolean(value && ISO.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value);
+}
 
 /** Problems with an outcome, in plain words; empty when it can be saved. */
 export function outcomeProblems(o: OutcomeInput, today: string): string[] {
@@ -116,12 +127,13 @@ export function outcomeProblems(o: OutcomeInput, today: string): string[] {
   const counts = [o.eligible, o.exposed, o.conversions, o.controlSize, o.controlConversions];
   if (counts.some((n) => n !== undefined && (!Number.isInteger(n) || n < 0 || n > 100_000_000))) out.push("Counts must be whole numbers, zero or more.");
   if (o.eligible !== undefined && (o.exposed ?? 0) + (o.controlSize ?? 0) > o.eligible) out.push("Exposed plus comparison can't be more than eligible.");
-  if (o.plannedSharePct !== undefined && !(o.plannedSharePct > 0 && o.plannedSharePct < 100)) out.push("The planned share must be between 1 and 99%.");
+  if (o.plannedSharePct !== undefined && !(o.plannedSharePct > 0 && o.plannedSharePct < 100)) out.push("The planned share must be greater than 0 and less than 100%.");
   if (o.exposed !== undefined && o.conversions !== undefined && o.conversions > o.exposed) out.push("Conversions can't be more than exposed.");
   if (o.controlSize !== undefined && o.controlConversions !== undefined && o.controlConversions > o.controlSize) out.push("Comparison conversions can't be more than the group.");
   if ((o.design === "holdout" || o.design === "randomized") && o.executed && o.source !== "platform_report" && o.controlSize === undefined) out.push("Give the comparison group size.");
-  for (const d of [o.windowStart, o.windowEnd]) if (d !== undefined && (!ISO.test(d) || Number.isNaN(Date.parse(d)))) out.push("Dates must be YYYY-MM-DD.");
+  for (const d of [o.windowStart, o.windowEnd]) if (d !== undefined && !validOutcomeDay(d)) out.push("Dates must be YYYY-MM-DD.");
   if (o.windowStart && o.windowEnd && o.windowStart > o.windowEnd) out.push("The window ends before it starts.");
+  if (o.windowStart && o.windowStart > today) out.push("The window cannot start in the future.");
   if (o.windowEnd && o.windowEnd > today) out.push("The window can't end in the future.");
   if (!o.metric.trim() || !o.successRule.trim()) out.push("Name the metric and the success rule.");
   if (o.metric.length > 200 || o.successRule.length > 300 || (o.note?.length ?? 0) > 500) out.push("Keep text short.");
@@ -140,42 +152,45 @@ export function sameDefinition(a: Pick<OutcomeInput, "metric" | "successRule">, 
 
 const pct = (x: number) => `${Math.round(x * 1000) / 10}%`;
 
-/** Exposed vs comparison rates and the difference in conversions; only meaningful when incremental. */
+/** Descriptive rates and rate difference scaled to the treatment group; not causal verification. */
 export function lift(o: Pick<OutcomeInput, "exposed" | "conversions" | "controlSize" | "controlConversions">): { exposedRate: number; controlRate: number; extra: number } | null {
   if (!o.exposed || !o.controlSize || o.conversions === undefined || o.controlConversions === undefined) return null;
+  if ([o.exposed, o.controlSize, o.conversions, o.controlConversions].some(n => !Number.isSafeInteger(n) || n < 0 || n > 100_000_000) || o.conversions > o.exposed || o.controlConversions > o.controlSize) return null;
   const exposedRate = o.conversions / o.exposed;
   const controlRate = o.controlConversions / o.controlSize;
   return { exposedRate, controlRate, extra: Math.round((exposedRate - controlRate) * o.exposed) };
 }
 
 const RESULT_WORD: Record<OutcomeResult, string> = { met: "met its success rule", missed: "missed its success rule", unclear: "unclear against its success rule" };
-const SOURCE_WORD: Record<OutcomeSource, string> = { owner_report: "owner report", integration: "integration", platform_report: "platform report" };
+export const OUTCOME_SOURCE_LABEL: Record<OutcomeSource, string> = { owner_report: "Member-entered count", integration: "Member-entered; reported source: connected tool", platform_report: "Member-entered; reported source: platform report" };
+export const OUTCOME_REPORT_LIMIT = "Source, assignment, tracking and outcome maturity have not been independently verified. A reported success rule or calculated difference is not proof of causal impact.";
 
 /**
- * One line for the next plan's brief. Wording follows the inference: only an
- * incremental result may speak of extra conversions caused by the change.
+ * One line for the next plan: calculated comparisons of member-entered reports
+ * must not be promoted to independently verified causal effects.
  */
 export function outcomeLine(name: string, o: OutcomeInput & { inference: Inference; redefined: boolean }, original?: OutcomeResult): string {
-  if (o.inference === "not_run") return `${name}: NOT RUN. No evidence about the channel either way.`;
-  const window = o.windowStart && o.windowEnd ? `, ${o.windowStart} to ${o.windowEnd}` : "";
-  const head = `${name} (${SOURCE_WORD[o.source]}${window}): ${RESULT_WORD[o.result]} on "${o.metric}"${o.stopRuleHit ? "; stop rule hit" : ""}`;
+  const inference = inferenceOf(o); // Reassess legacy labels from the saved reported inputs.
+  if (inference === "not_run") return `${name}: NOT RUN. No evidence about the channel either way.`;
+  const window = validOutcomeDay(o.windowStart) && validOutcomeDay(o.windowEnd) && o.windowStart! <= o.windowEnd! ? `, ${o.windowStart} to ${o.windowEnd}` : ", observation window incomplete or invalid";
+  const head = `${name} (${OUTCOME_SOURCE_LABEL[o.source]}${window}): reported result: ${RESULT_WORD[o.result]} on "${o.metric}"${o.stopRuleHit ? "; stop rule hit" : ""}`;
   const redefined = o.redefined ? ` Judged on a definition changed after results: exploratory only.${original ? ` On the original definition it ${RESULT_WORD[original]}.` : ""}` : "";
   const of = o.eligible !== undefined ? ` of ${o.eligible} eligible` : "";
-  if (o.inference === "incremental") {
+  if (inference === "incremental") {
     const l = lift(o);
     const r = readingOf(o);
     const counts = l ? `${o.conversions}/${o.exposed} exposed (${pct(l.exposedRate)}) vs ${o.controlConversions}/${o.controlSize} in the comparison group (${pct(l.controlRate)})` : `comparison group of ${o.controlSize}`;
-    // Only a valid split with a significant difference may speak of extra conversions.
-    const range = r.kind === "difference" && r.interval && o.exposed ? `, likely ${Math.max(0, Math.round(r.interval[0] * o.exposed))}–${Math.round(r.interval[1] * o.exposed)}` : "";
-    const claim = r.kind === "difference" ? `about ${r.extra} incremental conversions${range} (${fmtP(r.pValue)})` : readingText(r);
-    return `${head}. ${r.kind === "difference" ? "INCREMENTAL" : "COMPARED"} (${o.design}): ${counts}: ${claim}${redefined}`;
+    // Preserve signed intervals: a harmful difference must not be clipped to zero.
+    const range = r.kind === "difference" && r.interval && o.exposed ? `, 95% interval ${Math.round(r.interval[0] * o.exposed)} to ${Math.round(r.interval[1] * o.exposed)}` : "";
+    const claim = r.kind === "difference" ? `calculated difference of ${r.extra} conversions at the reported treatment-group size${range} (${fmtP(r.pValue)})` : readingText(r);
+    return `${head}. REPORTED RANDOMIZED COMPARISON (${o.design}): ${counts}: ${claim.replace(/\.$/, "")}. ${OUTCOME_REPORT_LIMIT}${redefined}`;
   }
   const counts = o.exposed !== undefined ? `${o.conversions ?? "?"} conversions from ${o.exposed} exposed${of}` : o.conversions !== undefined ? `${o.conversions} conversions` : "no counts";
-  if (o.inference === "attributed") return `${head}. ATTRIBUTED by the platform: ${counts}. The platform's attribution, not a measured lift.${redefined}`;
-  if (o.design === "holdout" && o.controlSize) {
+  if (inference === "attributed") return `${head}. ATTRIBUTED by the platform: ${counts}. The platform's attribution, not a measured lift.${redefined}`;
+  if ((o.design === "holdout" || o.design === "randomized") && o.controlSize) {
     const l = lift(o);
     const how = o.assignment === "rule" ? "chosen by a rule" : o.assignment === "owner_choice" ? "chosen by hand" : "chosen in an unrecorded way";
-    return `${head}. COMPARED, NOT RANDOMIZED (holdout ${how}): ${l ? `${pct(l.exposedRate)} vs ${pct(l.controlRate)}` : counts}. The groups may differ in other ways, so this isn't proof of cause.${redefined}`;
+    return `${head}. COMPARED, RANDOMIZATION UNVERIFIED (${o.design} ${how}): ${l ? `${pct(l.exposedRate)} vs ${pct(l.controlRate)}` : counts}. The groups may differ in other ways, so this isn't proof of cause.${redefined}`;
   }
-  return `${head}. OBSERVED: ${counts}; no comparison group, so not proof of cause.${redefined}`;
+  return `${head}. OBSERVED: ${counts}; no validated comparison, so not proof of cause.${redefined}`;
 }

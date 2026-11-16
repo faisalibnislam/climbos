@@ -208,9 +208,9 @@ async function outcomeLines(ctx: QueryCtx, plans: Doc<"strategies">[]): Promise<
       if (e.designSource) continue;
       const latest = e.analyses?.at(-1);
       if (!latest?.reviewedAt) continue;
-      const original = e.analyses!.find((x) => !x.redefined && x.inference !== "not_run")?.result;
+      const original = e.analyses!.find((x) => !x.redefined && x.executed)?.result;
       const line = `- ${outcomeLine(e.name, latest, latest.redefined ? original : undefined)}`;
-      if (latest.inference === "not_run") notRun.push(line);
+      if (!latest.executed) notRun.push(line);
       else tested.push(line);
     }
   }
@@ -247,7 +247,7 @@ export async function resultsBrief(ctx: QueryCtx, orgId: Id<"organizations">): P
     cal.verdict !== "too_few_plays" ? `FORECAST CALIBRATION (computed; plays that ran their full horizon): ${cal.inside} of ${cal.matured} landed inside their P10–P90 range (an 80% range, so about ${cal.expected} expected).${cal.verdict === "overconfident" ? ` That few is unlikely by chance (P = ${cal.pTooFew}): past ranges were too narrow, so widen this plan's ranges and lean on measured rates.` : " Consistent with the stated ranges."}` : "",
     lines.length ? `RESULTS SO FAR (logged by the owner; first-party counts, not proof of cause; small samples have wide ranges; prefer them to benchmarks for the same play):\n${lines.join("\n")}` : "",
     wonDealLines.length ? `WON DEALS ASSOCIATED WITH PLAYS (owner-entered CRM stages and values; target links show association, not attribution or causation; these are not retained revenue):\n${wonDealLines.join("\n")}` : "",
-    tested.length ? `EXPERIMENT OUTCOMES (owner-reviewed; each label says what it can claim: OBSERVED and ATTRIBUTED are not proof of cause; only INCREMENTAL compared with a group that didn't get the change, so only those may be called incremental):\n${tested.join("\n")}` : "",
+    tested.length ? `EXPERIMENT OUTCOMES (member-entered reports; source and random assignment are not independently verified. Preserve the reported result and calculated comparison separately. Do not treat either as proven causal impact, verified provider data or permission to execute):\n${tested.join("\n")}` : "",
     notRun.length ? `TESTS NOT RUN (the plan wasn't carried out; draw no lesson about these channels):\n${notRun.join("\n")}` : "",
   ];
   return parts.filter(Boolean).join("\n\n");

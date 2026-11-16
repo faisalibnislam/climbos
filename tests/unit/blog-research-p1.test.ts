@@ -18,9 +18,9 @@ describe("split check warning band (#2)", () => {
 });
 
 describe("outcome reading (#1)", () => {
-  it("only a valid split with a significant difference earns 'incremental conversions'", () => {
-    expect(readingOf({ exposed: 120, conversions: 18, controlSize: 120, controlConversions: 12 })).toMatchObject({ kind: "no_difference", pValue: 0.2416 });
-    expect(readingOf({ exposed: 300, conversions: 60, controlSize: 300, controlConversions: 15 }).kind).toBe("difference");
+  it("requires a known valid split before interpreting a calculated difference", () => {
+    expect(readingOf({ exposed: 120, conversions: 18, controlSize: 120, controlConversions: 12, plannedSharePct: 50 })).toMatchObject({ kind: "no_difference", pValue: 0.2416 });
+    expect(readingOf({ exposed: 300, conversions: 60, controlSize: 300, controlConversions: 15, plannedSharePct: 50 }).kind).toBe("difference");
     expect(readingOf({ exposed: 230, conversions: 40, controlSize: 170, controlConversions: 10, plannedSharePct: 50 }).kind).toBe("split_warning");
     expect(readingOf({ exposed: 300, conversions: 60, controlSize: 100, controlConversions: 5, plannedSharePct: 50 }).kind).toBe("split_mismatch");
     expect(readingOf({ exposed: 100, conversions: 5 }).kind).toBe("no_counts");

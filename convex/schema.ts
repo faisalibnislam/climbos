@@ -3664,7 +3664,8 @@ export default defineSchema({
      * Structured outcomes (Book 14 §14). The hypothesis, metric and stopping
      * rule above stay as written; an analysis on a changed definition is
      * appended, never written over. Last = current. `inference` is computed
-     * (shared/growth/experimentOutcome.ts), never entered.
+     * (shared/growth/experimentOutcome.ts), never entered. The legacy "incremental"
+     * value classifies a reported random comparison, not independently verified causal impact.
      */
     analyses: v.optional(
       v.array(
@@ -3689,7 +3690,7 @@ export default defineSchema({
           controlConversions: v.optional(v.number()),
           /** Planned % in the changed version, so the split can be checked. */
           plannedSharePct: v.optional(v.number()),
-          /** Holdouts: how the comparison group was chosen (only random supports "incremental"). */
+          /** Reported assignment for either comparison design; missing on legacy rows means unknown. */
           assignment: v.optional(
             v.union(
               v.literal("random"),

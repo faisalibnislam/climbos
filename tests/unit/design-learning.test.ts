@@ -42,8 +42,9 @@ describe("design result evidence for later advice", () => {
   });
 
   it("uses existing comparison checks and refuses to reinterpret monetary or unplanned tests as conversion rates", () => {
-    const compared = { ...input, method: "ab_split", metricType: "binary_rate", preregisteredAt: Date.UTC(2026, 8, 30), outcome: { ...outcome, design: "randomized" as const, exposed: 1000, conversions: 200, controlSize: 1000, controlConversions: 100, plannedSharePct: 50 } };
+    const compared = { ...input, method: "ab_split", metricType: "binary_rate", preregisteredAt: Date.UTC(2026, 8, 30), outcome: { ...outcome, design: "randomized" as const, assignment: "random" as const, exposed: 1000, conversions: 200, controlSize: 1000, controlConversions: 100, plannedSharePct: 50 } };
     expect(assessDesignLearning(compared).state).toBe("compared");
+    expect(assessDesignLearning({ ...compared, outcome: { ...compared.outcome, assignment: undefined } }).state).toBe("inconclusive");
     expect(assessDesignLearning({ ...compared, outcome: { ...compared.outcome, exposed: 2000 } }).state).toBe("inconclusive");
     expect(assessDesignLearning({ ...compared, outcome: { ...compared.outcome, conversions: 101 } }).state).toBe("inconclusive");
     expect(assessDesignLearning({ ...compared, metricType: "monetary" }).state).toBe("inconclusive");

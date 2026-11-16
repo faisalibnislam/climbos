@@ -1,4 +1,4 @@
-import { outcomeProblems, readingOf, readingText, type OutcomeInput } from "./experimentOutcome";
+import { outcomeProblems, readingOf, readingText, validOutcomeDay, type OutcomeInput } from "./experimentOutcome";
 
 export const DESIGN_LEARNING_POLICY = "PAST PAGE-CHANGE REPORTS (same workspace, member-recorded; not independently verified): preserve each exact page version, objective, audience, source, window and calculated evidence assessment. Only observed or compared records can support an outcome-based inference; all records may help frame a reversible test. Needs-evidence, inconclusive and not-run records identify evidence gaps or test improvements, not winners or losers. Uncertainty must not suppress original or bold ideation. Neither a reported result nor a calculated comparison establishes a reusable winning design, causal proof, a universal brand rule or execution permission.";
 
@@ -25,7 +25,7 @@ export function assessDesignLearning(input: {
   const missing: string[] = [];
   if (!input.publicationConfirmed) missing.push("Publication approval for this exact page version is unverified.");
   if (!input.measurementBound) missing.push("The saved measurement definition for this exact version is unavailable or does not match the original test.");
-  const validDay = (value?: string) => Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value);
+  const validDay = validOutcomeDay;
   if (!validDay(o.windowStart) || !validDay(o.windowEnd)) missing.push("Record a valid observation start and end date.");
   missing.push(...outcomeProblems(o, new Date(input.now).toISOString().slice(0, 10)));
   if (validDay(o.windowEnd) && input.publicationApprovedAt !== undefined && Date.parse(o.windowEnd!) + 86_400_000 <= input.publicationApprovedAt) missing.push("The observation window ends before the recorded publication approval.");
@@ -40,7 +40,7 @@ export function assessDesignLearning(input: {
   if (o.exposed === undefined || o.exposed <= 0 || o.conversions === undefined) return { state: "inconclusive", summary: "Exposure or outcome counts are missing; no design winner is established.", limits };
   const comparative = o.design === "randomized" || o.design === "holdout";
   if (comparative) {
-    const methodMatches = (input.method === "ab_split" && o.design === "randomized") || (input.method === "holdout" && o.design === "holdout" && o.assignment === "random");
+    const methodMatches = (input.method === "ab_split" && o.design === "randomized" && o.assignment === "random") || (input.method === "holdout" && o.design === "holdout" && o.assignment === "random");
     if (!methodMatches || input.metricType !== "binary_rate" || input.preregisteredAt === undefined || input.preregisteredAt > Date.parse(o.windowStart!) || o.plannedSharePct === undefined) {
       return { state: "inconclusive", summary: "The comparison needs a matching, pre-registered rate test and planned split before it can guide a design choice.", limits };
     }

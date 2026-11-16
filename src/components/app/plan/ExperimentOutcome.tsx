@@ -7,27 +7,27 @@ import { CircleAlert, CircleCheck, CircleDashed, ClipboardPen, Scale, type Lucid
 import { useState } from "react";
 import { Badge, Button, Checkbox, DatePicker, Field, Input, Segmented, Select, toast, type Tone } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
-import { inferenceOf, isRedefined, readingOf, readingText, type Inference, type OutcomeAssignment, type OutcomeDesign, type OutcomeInput, type OutcomeResult, type OutcomeSource } from "../../../../shared/growth/experimentOutcome";
+import { inferenceOf, isRedefined, readingOf, readingText, OUTCOME_SOURCE_LABEL, OUTCOME_REPORT_LIMIT, type Inference, type OutcomeAssignment, type OutcomeDesign, type OutcomeInput, type OutcomeResult, type OutcomeSource } from "../../../../shared/growth/experimentOutcome";
 
 export type Analysis = OutcomeInput & { n: number; inference: Inference; redefined: boolean; reviewedAt: number };
 
 export const INFERENCE: Record<Inference, { label: string; tone: Tone; icon: LucideIcon }> = {
-  incremental: { label: "Incremental", tone: "green", icon: Scale },
+  incremental: { label: "Reported random comparison", tone: "blue", icon: Scale },
   observed: { label: "Observed only", tone: "blue", icon: CircleDashed },
   attributed: { label: "Platform-attributed", tone: "amber", icon: CircleDashed },
   not_run: { label: "Not run", tone: "neutral", icon: CircleAlert },
 };
 
 const RESULT: Record<OutcomeResult, { label: string; tone: Tone }> = {
-  met: { label: "Met", tone: "green" },
-  missed: { label: "Missed", tone: "red" },
+  met: { label: "Reported: met", tone: "green" },
+  missed: { label: "Reported: missed", tone: "red" },
   unclear: { label: "Unclear", tone: "neutral" },
 };
 
 const SOURCES: { value: OutcomeSource; label: string }[] = [
   { value: "owner_report", label: "My own count" },
-  { value: "integration", label: "Connected tool" },
-  { value: "platform_report", label: "Platform report" },
+  { value: "integration", label: "Connected tool (entered by me)" },
+  { value: "platform_report", label: "Platform report (entered by me)" },
 ];
 
 const DESIGNS: { value: OutcomeDesign; label: string }[] = [
@@ -37,7 +37,8 @@ const DESIGNS: { value: OutcomeDesign; label: string }[] = [
   { value: "randomized", label: "Random split" },
 ];
 
-const ASSIGNMENTS: { value: OutcomeAssignment; label: string }[] = [
+const ASSIGNMENTS: { value: OutcomeAssignment | "unknown"; label: string }[] = [
+  { value: "unknown", label: "Unknown / not recorded" },
   { value: "random", label: "At random" },
   { value: "rule", label: "By a rule (e.g. inactive customers)" },
   { value: "owner_choice", label: "By hand" },
@@ -64,8 +65,8 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
     conversions: str(latest?.conversions),
     controlSize: str(latest?.controlSize),
     controlConversions: str(latest?.controlConversions),
-    plannedSharePct: str(latest?.plannedSharePct ?? (latest ? undefined : 50)),
-    assignment: (latest as { assignment?: OutcomeAssignment } | undefined)?.assignment ?? ("random" as OutcomeAssignment),
+    plannedSharePct: str(latest?.plannedSharePct),
+    assignment: latest?.assignment ?? ("unknown" as OutcomeAssignment | "unknown"),
     windowStart: latest?.windowStart ?? "",
     windowEnd: latest?.windowEnd ?? "",
     result: latest?.result ?? ("unclear" as OutcomeResult),
@@ -84,7 +85,7 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
     controlSize: comparative ? num(f.controlSize) : undefined,
     controlConversions: comparative ? num(f.controlConversions) : undefined,
     plannedSharePct: comparative ? num(f.plannedSharePct) : undefined,
-    ...(f.design === "holdout" ? { assignment: f.assignment } : {}),
+    assignment: comparative && f.assignment !== "unknown" ? f.assignment : undefined,
   };
   const preview = inferenceOf({ ...f, ...counts });
   const redefines = Boolean(latest) && (f.metric.trim() !== latest!.metric || f.successRule.trim() !== latest!.successRule);
@@ -116,7 +117,7 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
     }
   };
 
-  const inf = latest ? INFERENCE[latest.inference] : null;
+  const inf = latest ? INFERENCE[inferenceOf(latest)] : null;
   return (
     <div className="flex flex-col gap-2 border-t border-line pt-2.5">
       {latest && inf ? (
@@ -163,13 +164,13 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
                 <Field label="Source">
                   <Select options={SOURCES} value={f.source} onValueChange={(v) => set("source", v as OutcomeSource)} disabled={busy} />
                 </Field>
-                <Field label="Design">
+                <Field label="Reported design">
                   <Select options={DESIGNS} value={f.design} onValueChange={(v) => set("design", v as OutcomeDesign)} disabled={busy} />
                 </Field>
               </div>
-              {f.design === "holdout" ? (
+              {comparative ? (
                 <Field label="Comparison group chosen">
-                  <Select options={ASSIGNMENTS} value={f.assignment} onValueChange={(v) => set("assignment", v as OutcomeAssignment)} disabled={busy} />
+                  <Select options={ASSIGNMENTS} value={f.assignment} onValueChange={(v) => set("assignment", v as OutcomeAssignment | "unknown")} disabled={busy} />
                 </Field>
               ) : null}
               <div className="grid grid-cols-3 gap-2">
@@ -180,7 +181,7 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
                   <>
                     <NumField label="Comparison group" value={f.controlSize} onChange={(v) => set("controlSize", v)} disabled={busy} />
                     <NumField label="Comparison converted" value={f.controlConversions} onChange={(v) => set("controlConversions", v)} disabled={busy} />
-                    <NumField label="Planned % in new version" value={f.plannedSharePct} onChange={(v) => set("plannedSharePct", v)} disabled={busy} />
+                    <NumField decimal label="Planned % in new version" hint="Leave blank if unknown; use the original plan, not the observed split." value={f.plannedSharePct} onChange={(v) => set("plannedSharePct", v)} disabled={busy} />
                   </>
                 ) : null}
               </div>
@@ -220,7 +221,7 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
               Cancel
             </Button>
             <span className="ml-auto flex items-center gap-1.5 text-xs text-ink-3">
-              Counts as
+              Reported design
               <Badge tone={INFERENCE[preview].tone}>{INFERENCE[preview].label}</Badge>
             </span>
           </div>
@@ -230,10 +231,10 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
   );
 }
 
-function NumField({ label, value, onChange, disabled }: { label: string; value: string; onChange: (v: string) => void; disabled: boolean }) {
+function NumField({ label, hint, decimal = false, value, onChange, disabled }: { label: string; hint?: string; decimal?: boolean; value: string; onChange: (v: string) => void; disabled: boolean }) {
   return (
-    <Field label={label}>
-      <Input inputMode="numeric" value={value} onChange={(ev) => onChange(ev.target.value.replace(/[^\d]/g, ""))} disabled={disabled} />
+    <Field label={label} hint={hint}>
+      <Input inputMode={decimal ? "decimal" : "numeric"} value={value} onChange={(ev) => { const next = ev.target.value; if (decimal ? /^\d*\.?\d*$/.test(next) : /^\d*$/.test(next)) onChange(next); }} disabled={disabled} />
     </Field>
   );
 }
@@ -244,11 +245,11 @@ const pct = (x: number) => `${Math.round(x * 1000) / 10}%`;
 function OutcomeNumbers({ a }: { a: Analysis }) {
   const parts: string[] = [];
   if (a.exposed !== undefined) parts.push(`${a.conversions ?? "?"}/${a.exposed} exposed${a.exposed && a.conversions !== undefined ? ` (${pct(a.conversions / a.exposed)})` : ""}`);
-  if (a.inference === "incremental" && a.controlSize) parts.push(`${a.controlConversions ?? "?"}/${a.controlSize} comparison${a.controlConversions !== undefined ? ` (${pct(a.controlConversions / a.controlSize)})` : ""}`);
+  if ((a.design === "holdout" || a.design === "randomized") && a.controlSize) parts.push(`${a.controlConversions ?? "?"}/${a.controlSize} comparison${a.controlConversions !== undefined ? ` (${pct(a.controlConversions / a.controlSize)})` : ""}`);
   if (a.eligible !== undefined) parts.push(`${a.eligible} eligible`);
   if (a.windowStart && a.windowEnd) parts.push(`${a.windowStart} → ${a.windowEnd}`);
-  if (!parts.length) return null;
-  const reading = a.inference === "incremental" ? readingText(readingOf(a)) : null;
+  if (!a.windowStart || !a.windowEnd) parts.push("Observation window incomplete");
+  const reading = inferenceOf(a) === "incremental" ? readingText(readingOf(a)) : null;
   return (
     <div className="flex flex-col gap-0.5">
       <p className="flex items-center gap-1.5 text-xs tabular-nums text-ink-2">
@@ -256,6 +257,7 @@ function OutcomeNumbers({ a }: { a: Analysis }) {
         {parts.join(" · ")}
       </p>
       {reading ? <p className="text-xs text-ink-2">{reading}</p> : null}
+      <p className="text-xs text-ink-3">{OUTCOME_SOURCE_LABEL[a.source]}. {OUTCOME_REPORT_LIMIT}</p>
     </div>
   );
 }

@@ -54,23 +54,56 @@ describe("experiment outcomes", () => {
     await expect(other.owner.client.mutation(api.playResults.recordExperimentOutcome, { slug: other.slug, experimentId: holdout, executed: false, source: "owner_report", design: "none", result: "unclear", stopRuleHit: false })).rejects.toThrow(/couldn't find/);
   });
 
-  it("feeds reviewed outcomes into the next plan's brief with observed vs incremental wording", async () => {
+  it("feeds reported outcomes into later plans without upgrading reports to verified causal effects", async () => {
     const t = setup();
     const { owner, slug, orgId, referral, holdout, cold } = await planWithTests(t, "brief@example.com");
     expect(await t.query(internal.playResults.briefFor, { orgId })).toBe("");
     await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId: referral, executed: true, source: "owner_report", design: "before_after", eligible: 300, exposed: 120, conversions: 6, result: "met", stopRuleHit: false });
-    await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId: holdout, executed: true, source: "integration", design: "holdout", assignment: "random", eligible: 300, exposed: 200, conversions: 20, controlSize: 100, controlConversions: 5, result: "met", stopRuleHit: false });
+    await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId: holdout, executed: true, source: "integration", design: "holdout", assignment: "random", eligible: 300, exposed: 200, conversions: 20, controlSize: 100, controlConversions: 5, plannedSharePct: 200 / 3, result: "met", stopRuleHit: false });
     await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId: cold, executed: false, source: "owner_report", design: "none", result: "unclear", stopRuleHit: false, note: "No time" });
     const brief = await t.query(internal.playResults.briefFor, { orgId });
     const line = (name: string) => brief.split("\n").find((l) => l.startsWith(`- ${name}`))!;
-    expect(line("Referral ask")).toContain("OBSERVED: 6 conversions from 120 exposed of 300 eligible; no comparison group, so not proof of cause.");
+    expect(line("Referral ask")).toContain("OBSERVED: 6 conversions from 120 exposed of 300 eligible; no validated comparison, so not proof of cause.");
     expect(line("Referral ask")).not.toMatch(/incremental/i);
     // Not significant (p ≈ 0.18), so the brief compares without claiming extra conversions.
-    expect(line("Win-back email")).toContain("COMPARED (holdout): 20/200 exposed (10%) vs 5/100 in the comparison group (5%): No reliable difference");
+    expect(line("Win-back email")).toContain("REPORTED RANDOMIZED COMPARISON (holdout): 20/200 exposed (10%) vs 5/100 in the comparison group (5%): No reliable difference");
     expect(line("Win-back email")).not.toMatch(/incremental conversions/);
     // An unexecuted test is kept out of the lessons.
     const [lessons, notRun] = brief.split("TESTS NOT RUN");
     expect(lessons).not.toContain("Cold email");
     expect(notRun).toContain("Cold email: NOT RUN");
+  });
+
+  it("preserves unknown assignment, rejects invalid dates, and cannot grant actions or let viewers record outcomes", async () => {
+    const t = setup();
+    const f = await planWithTests(t, "integrity@example.com");
+    const args = { slug: f.slug, experimentId: f.holdout, executed: true, source: "integration" as const, design: "randomized" as const, exposed: 300, conversions: 15, controlSize: 300, controlConversions: 60, result: "missed" as const, stopRuleHit: false };
+    const before = await t.run(ctx => ctx.db.get(f.holdout));
+    await expect(f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...args, windowStart: "2026-02-30" })).rejects.toThrow(/YYYY-MM-DD/);
+    expect(await t.run(ctx => ctx.db.get(f.holdout))).toEqual(before);
+    const viewer = await asNewUser(t, "viewer-outcome@example.com");
+    await t.run(ctx => ctx.db.insert("memberships", { orgId: f.orgId, userId: viewer.userId, role: "viewer", status: "active", createdAt: Date.now() }));
+    await expect(viewer.client.mutation(api.playResults.recordExperimentOutcome, args)).rejects.toThrow();
+    expect(await f.owner.client.mutation(api.playResults.recordExperimentOutcome, args)).toMatchObject({ inference: "observed" });
+    const unknown = (await t.run(ctx => ctx.db.get(f.holdout)))!.analyses!.at(-1)!;
+    expect(unknown.assignment).toBeUndefined();
+    expect(unknown.plannedSharePct).toBeUndefined();
+    let brief = await t.query(internal.playResults.briefFor, { orgId: f.orgId });
+    expect(brief).toContain("RANDOMIZATION UNVERIFIED");
+    expect(brief).toContain("Member-entered; reported source: connected tool");
+    expect(brief).not.toContain("INCREMENTAL");
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...args, assignment: "random", plannedSharePct: 50 });
+    brief = await t.query(internal.playResults.briefFor, { orgId: f.orgId });
+    expect(brief).toMatch(/difference of -45 conversions.*95% interval -\d+ to -\d+/);
+    expect(brief).toContain("not proof of causal impact");
+    // Historical labels must not move a not-run report into the lessons section.
+    await t.run(async ctx => {
+      const e = (await ctx.db.get(f.holdout))!;
+      await ctx.db.patch(e._id, { analyses: [{ ...e.analyses!.at(-1)!, executed: false, inference: "incremental" }] });
+    });
+    const [lessons, notRun] = (await t.query(internal.playResults.briefFor, { orgId: f.orgId })).split("TESTS NOT RUN");
+    expect(lessons).not.toContain("Win-back email");
+    expect(notRun).toContain("Win-back email: NOT RUN");
+    for (const table of ["approvals", "actionReceipts", "workflowRuns"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toHaveLength(0);
   });
 });

@@ -2,6 +2,10 @@
 
 Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs as written there. Baseline: `404c466`. Branch: `growth-engine-v2`.
 
+## Local update — 16 November 2026: reported experiment integrity
+
+Removed invented 50/50/random defaults from manual outcome entry, distinguished member-reported tool sources and random comparisons from verified causal effects in both the UI and later-plan context, preserved signed harm intervals, rejected rolled-over/future observation dates and invalid count comparisons, and reassessed legacy labels for not-run grouping. Existing deterministic comparison code, experiment storage and permissions are reused; no new agent/provider or execution path. Downstream design comparisons now require explicit reported random assignment as well as their existing evidence gates. Verification: 59 focused tests and four desktop/mobile browser tests passed, plus typecheck, changed-file ESLint and diff checks. The remaining outcome-history gap is that same-definition corrections replace the latest analysis; preserving all revisions needs a separate complete implementation. See [Verification](../Verification.md).
+
 ## Local update — 16 November 2026: brand consistency map and exceptions
 
 Settings → Brand kit now compares approved rules with saved page/design values, distinguishes possible variation from confirmed intentional exceptions, and supports owner/admin corrections, confirmations, dismissals and reopening. Decisions retain the exact reviewed source/rule snapshot and become stale when those inputs change. The latest scoped decisions feed both strategy and conversion-audit context without editing assets or granting execution permission. Tenant export/deletion handles the new append-only records. The map is a bounded saved-token inspection, not external-site or raster analysis. Verification: 24 focused tests and two desktop/mobile browser checks passed; source-link touch targets were corrected after the first accessibility scan. See [Verification](../Verification.md) for commands, coverage, source limits and release boundaries.
