@@ -2,6 +2,10 @@
 
 Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs as written there. Baseline: `404c466`. Branch: `growth-engine-v2`.
 
+## Local update — 16 November 2026: cross-page design opportunity queue
+
+Your work now has a Design opportunities tab that pages through saved website audits, groups related lenses/regions, collapses repeat automated observations without increasing confidence, and preserves the exact audit/finding link and earlier observations. Evidence, customer relevance, effort, assumptions, risks, viewport and dated capture limits stay visible. Existing review controls and permission/audit behavior are reused. Browser verification found that both original finding-review forms used non-submitting buttons; explicit submit types now make initial and updated reviews save correctly. Brand consistency maps and intentional-exception tracking remain separate work. See [Verification](../Verification.md) for focused tests and local desktop/mobile evidence.
+
 ## Local update — 16 November 2026: version-bound design learning
 
 Design finding → selected direction → saved page version → measurement plan → recorded outcome now feeds later conversion audits and growth plans through a tenant-validated, source-labeled context. Exact-version publication approvals are retained on saved revisions; missing historical dates remain unknown. Deterministic checks keep insufficient evidence, changed definitions, unrun tests and unsuitable comparisons from becoming winning-design claims. The existing result UI exposes the assessment and its limits. This is a bounded owner-report learning loop, not automatic performance attribution or a universal style rule. See [Verification](../Verification.md) for 58 focused regression/permission tests, four desktop/mobile browser checks (design outcomes and calendar), and remaining limitations.

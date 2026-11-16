@@ -12,6 +12,7 @@ import { WishFeed } from "./wish/WishFeed";
 import { RecentWork } from "./plan/PlanSections";
 import { NeedsYouCard } from "./today/HomeCards";
 import { PreparedDraftLibrary } from "./plan/PreparedDraftLibrary";
+import { DesignOpportunityQueue } from "./plan/DesignOpportunityQueue";
 import { WordHelp } from "@/components/ui/word-help";
 import { PageHeader } from "./results/QueryBoundary";
 import { PRIMARY_NAV, SECONDARY_NAV, appHref, findTools, type AppArea } from "./navigation";
@@ -34,8 +35,9 @@ export function WorkspaceHub({ area }: { area: "work" | "customers" | "tools" })
   return (
     <Tabs value={tab} onValueChange={setTab} asChild><div className="mx-auto max-w-5xl space-y-5">
       <PageHeader section={area} title={item.label} intro={item.description} />
-      <TabsList aria-label="Work sections" className="flex-wrap">{area === "work" ? <TabsTrigger value="drafts">Your drafts</TabsTrigger> : null}<TabsTrigger value="activity">{area === "work" ? "AI activity" : "Start here"}</TabsTrigger>{area === "work" ? <TabsTrigger value="review">Needs a decision</TabsTrigger> : null}<TabsTrigger value="tools">Tools</TabsTrigger></TabsList>
+      <TabsList aria-label="Work sections" className="flex-wrap">{area === "work" ? <TabsTrigger value="drafts">Your drafts</TabsTrigger> : null}<TabsTrigger value="activity">{area === "work" ? "AI activity" : "Start here"}</TabsTrigger>{area === "work" ? <><TabsTrigger value="review">Needs a decision</TabsTrigger><TabsTrigger value="design">Design opportunities</TabsTrigger></> : null}<TabsTrigger value="tools">Tools</TabsTrigger></TabsList>
       {area === "work" ? <TabsContent value="drafts"><PreparedDraftLibrary slug={slug} /></TabsContent> : null}
+      {area === "work" ? <TabsContent value="design">{tab === "design" ? <DesignOpportunityQueue key={slug} slug={slug} /> : null}</TabsContent> : null}
       <TabsContent value="activity" className="space-y-5">
         {area === "work" ? <><RecentWork slug={slug} /><details className="rounded-xl border border-line bg-surface p-4"><summary className="min-h-11 cursor-pointer font-medium">Ask AI for something else</summary><div className="mt-3"><WishComposer slug={slug} userId={me?.userId} identityReady={Boolean(me?.userId)} suggestions={wishSuggestions(data?.business?.type)} disabled={!data?.canRunAi || !me?.userId} disabledReason={data?.accessMessage} requestCostEstimateMicros={data?.requestCostEstimateMicros ?? 0} autoDraftBudgetMicros={data?.autoDraftBudgetMicros ?? 0} isDemo={data?.org.kind === "demo"} /></div></details>{data ? <WishFeed slug={slug} chat={data.chat} /> : <p role="status">Loading your work…</p>}</> : <><p className="text-sm text-ink-2">Tell Climb what you want to achieve. It will choose the right tools and prepare the work.</p><Link href={appHref(slug, "today")} className="text-link">Ask Climb for help</Link><p className="text-sm text-ink-3">Already know what you need? Open Tools.</p></>}
       </TabsContent>

@@ -119,7 +119,7 @@ export function ConversionAuditView({ value, slug, runId }: { value: unknown; sl
             <figcaption className="p-3 text-xs text-ink-2"><span className="font-semibold capitalize text-ink">{capture.view} capture</span> · {capture.width} × {capture.height} · {formatDateTime(capture.capturedAt)}<a href={capture.pageUrl} target="_blank" rel="noreferrer noopener" className="mt-1 block break-all text-link">Open reviewed page <ExternalLink aria-hidden className="ml-1 inline size-3" /></a></figcaption>
           </figure>;
         })}</div> : null}
-        {designFindings.length ? <ul className="mt-3 grid gap-2">{designFindings.map((finding, i) => <li key={`${finding.sourceUrl}-${finding.region}-${i}`} className="rounded-lg border border-line bg-surface-2/60 p-3">
+        {designFindings.length ? <ul className="mt-3 grid gap-2">{designFindings.map((finding, i) => <li id={`design-finding-${i}`} key={`${finding.sourceUrl}-${finding.region}-${i}`} className="scroll-mt-24 rounded-lg border border-line bg-surface-2/60 p-3">
           <div className="flex flex-wrap items-center gap-2"><Badge tone={finding.severity === "high" ? "amber" : "neutral"}>{label(finding.severity, "severity unknown")} priority</Badge><span className="text-sm font-semibold text-ink">{label(finding.region, "Page region")}</span><Badge>{label(finding.lens, "design lens").replaceAll("_", " ")}</Badge><Badge tone={finding.classification === "objective_defect" || finding.classification === "automated_check" ? "blue" : "violet"}>{label(finding.classification, "judgment unlabelled").replaceAll("_", " ")}</Badge><span className="text-xs text-ink-3">{label(finding.confidence, "confidence unknown")} confidence</span></div>
           {finding.observation ? <p className="mt-2 text-sm text-ink-2">{label(finding.observation)}</p> : null}
           {finding.businessOrUserGoal ? <p className="mt-1 text-sm text-ink"><span className="font-medium">Goal: </span>{label(finding.businessOrUserGoal)}</p> : null}
@@ -265,7 +265,7 @@ function FindingHistory({ events }: { events: FindingEvent[] }) {
   </details>;
 }
 
-function DesignFindingReview({ slug, runId, findingIndex, current, canEdit }: { slug: string; runId: Id<"workflowRuns">; findingIndex: number; current?: FindingReview; canEdit: boolean }) {
+export function DesignFindingReview({ slug, runId, findingIndex, current, canEdit }: { slug: string; runId: Id<"workflowRuns">; findingIndex: number; current?: FindingReview; canEdit: boolean }) {
   const save = useMutation(api.designCritic.setFeedback);
   const [status, setStatus] = useState<FindingStatus | "">(current?.status ?? "");
   const [note, setNote] = useState(current?.note ?? "");
@@ -277,14 +277,14 @@ function DesignFindingReview({ slug, runId, findingIndex, current, canEdit }: { 
     {canEdit ? <form className="mt-2 flex flex-col gap-2" onSubmit={async (event) => { event.preventDefault(); if (!status) return; setBusy(true); try { await save({ slug, runId, findingIndex, status, note }); toast({ tone: "success", title: "Finding review updated" }); } catch (error) { toast({ tone: "danger", title: errorMessage(error) }); } finally { setBusy(false); } }}>
       <Field label="Update review status"><Select value={status} onValueChange={(value) => setStatus(value as FindingStatus | "")} options={[{ value: "", label: "Keep current status" }, { value: "accepted", label: "Accepted" }, { value: "deferred", label: "Defer" }, { value: "corrected", label: "Corrected" }, { value: "resolved", label: "Resolved" }, { value: "dismissed", label: "Dismissed" }, { value: "reopened", label: "Reopen" }, { value: "needs_information", label: "Needs more information" }]} /></Field>
       <Field label="Note or correction"><Textarea value={note} onChange={(event) => setNote(event.target.value.slice(0, 500))} rows={2} autosize placeholder="What should the team know?" /></Field>
-      <Button size="sm" variant="secondary" className="self-start" loading={busy} disabled={!status || (status === "corrected" && !note.trim())}>Save review</Button>
+      <Button type="submit" size="sm" variant="secondary" className="self-start" loading={busy} disabled={!status || (status === "corrected" && !note.trim())}>Save review</Button>
     </form> : null}
   </div>;
   if (!canEdit) return null;
   return <form className="mt-3 flex flex-col gap-2 border-t border-line pt-3" onSubmit={async (event) => { event.preventDefault(); if (!status) return; setBusy(true); try { await save({ slug, runId, findingIndex, status, note }); toast({ tone: "success", title: "Finding review saved" }); } catch (error) { toast({ tone: "danger", title: errorMessage(error) }); } finally { setBusy(false); } }}>
     <Field label="Your review of this finding"><Select value={status} onValueChange={(value) => setStatus(value as FindingStatus | "")} options={[{ value: "", label: "Choose a status" }, { value: "accepted", label: "Accept" }, { value: "deferred", label: "Defer" }, { value: "corrected", label: "I corrected the finding" }, { value: "resolved", label: "Resolved" }, { value: "dismissed", label: "Not relevant" }, { value: "needs_information", label: "Needs more information" }]} /></Field>
     <Field label="Correction or context" hint={status === "corrected" ? "Required for corrections." : "Optional; helps improve the review."}><Textarea value={note} onChange={(event) => setNote(event.target.value.slice(0, 500))} rows={2} autosize placeholder="Add context for your team" /></Field>
-    <Button size="sm" variant="secondary" className="self-start" loading={busy} disabled={!status || (status === "corrected" && !note.trim())}>Save review</Button>
+    <Button type="submit" size="sm" variant="secondary" className="self-start" loading={busy} disabled={!status || (status === "corrected" && !note.trim())}>Save review</Button>
   </form>;
 }
 

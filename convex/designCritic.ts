@@ -4,6 +4,8 @@ import { priorDesignDecisions } from "./jobWrites";
 import { findingFingerprint } from "../shared/agents/designDecisions";
 import { sha256Hex } from "../shared/policy";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
+import { designOpportunityRows } from "../shared/agents/designOpportunities";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
 import { audit } from "./lib/audit";
@@ -18,6 +20,21 @@ function findingsFromRun(run: { kind?: string; output?: string }): unknown[] {
     return [];
   }
 }
+
+/** Paginate audits before grouping: older findings remain reachable without an arbitrary latest-N cap. */
+export const opportunitiesPage = query({
+  args: { slug: v.string(), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { slug, paginationOpts }) => {
+    const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
+    const page = await ctx.db.query("workflowRuns").withIndex("by_org_kind_created", q => q.eq("orgId", org._id).eq("kind", "conversion_audit")).order("desc").paginate({ ...paginationOpts, numItems: Math.min(10, Math.max(1, paginationOpts.numItems)) });
+    return { ...page, page: await Promise.all(page.page.map(async run => {
+      const available = run.status === "verified" && (!run.isFixture || org.kind === "demo");
+      const reviews = available ? await ctx.db.query("designFindingReviews").withIndex("by_org_run", q => q.eq("orgId", org._id).eq("runId", run._id)).take(20) : [];
+      const parsed = available ? designOpportunityRows({ runId: run._id, auditedAt: run.finishedAt ?? run.createdAt, output: run.output }, reviews.map(r => ({ findingIndex: r.findingIndex, status: r.status, note: r.note ?? "", updatedAt: r.updatedAt }))) : { findings: [], unavailable: true };
+      return { runId: run._id, ...parsed, isFixture: run.isFixture, canEdit: role !== "viewer" };
+    })) };
+  },
+});
 
 /** A finding's page versions and linked outcome records, without implying causal lift. */
 export const results = query({
