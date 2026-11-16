@@ -174,8 +174,8 @@ function PolicyForm({ slug, policy, allowedModes, canManage }: { slug: string; p
           </h2>
           {policy.maxMonthlyAdSpend === null ? <Callout tone="warning" title="Confirm your monthly budget">The older stored amount has unconfirmed currency units. Enter the amount you intend to allow. Saving requires new campaign approvals; it does not change live ads.</Callout> : null}
           <Switch
-            label="Automatic ad-pause preference"
-            description="Saved preference only. Automatic spend and tracking-loss monitoring is not available. Use Pause all or the ad platform."
+            label="Allow approved spend-limit pauses"
+            description="Each running campaign needs separate approval in Ads. This switch alone enables no monitors. Conversion-tracking loss is not monitored."
             checked={adPause}
             onCheckedChange={setAdPause}
             disabled={!canManage}

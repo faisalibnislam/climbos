@@ -11,6 +11,7 @@
 import type * as abtests from "../abtests.js";
 import type * as access from "../access.js";
 import type * as acquisition from "../acquisition.js";
+import type * as adMonitoring from "../adMonitoring.js";
 import type * as adPerformance from "../adPerformance.js";
 import type * as admin from "../admin.js";
 import type * as ads from "../ads.js";
@@ -176,6 +177,7 @@ declare const fullApi: ApiFromModules<{
   abtests: typeof abtests;
   access: typeof access;
   acquisition: typeof acquisition;
+  adMonitoring: typeof adMonitoring;
   adPerformance: typeof adPerformance;
   admin: typeof admin;
   ads: typeof ads;

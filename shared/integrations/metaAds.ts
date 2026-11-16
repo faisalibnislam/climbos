@@ -128,7 +128,7 @@ export async function reconcileCampaignByName(call: GraphCall & { adAccountId: s
 async function verifyStatus(call: GraphCall, campaignId: string, expected: "ACTIVE" | "PAUSED"): Promise<WriteResult<MetaCampaignState>> {
   const read = await getCampaign({ ...call, campaignId });
   if (!read.ok) return { status: "uncertain", externalId: campaignId, retryable: false, providerMessage: `Change sent but read-back failed: ${read.providerMessage}` };
-  if (read.data.status !== expected) {
+  if (read.data.id !== campaignId || read.data.status !== expected) {
     return { status: "uncertain", externalId: campaignId, retryable: false, providerMessage: `Read-back shows ${read.data.status}, expected ${expected}.`, data: read.data };
   }
   return { status: "verified", externalId: campaignId, retryable: false, data: read.data };

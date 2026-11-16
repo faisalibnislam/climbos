@@ -3872,9 +3872,20 @@ export default defineSchema({
     stopRules: v.array(v.string()),
     externalId: v.optional(v.string()),
     connectionId: v.optional(v.id("connections")),
+    /** Explicit, version-bound spend monitor; never inferred from the policy default. */
+    monitorApprovalId: v.optional(v.id("approvals")),
+    monitorNextAt: v.optional(v.number()),
+    monitorCheckStartedAt: v.optional(v.number()),
+    monitorStatus: v.optional(v.union(v.literal("waiting"), v.literal("checking"), v.literal("below_limit"), v.literal("needs_review"), v.literal("pause_pending"), v.literal("paused"), v.literal("uncertain"), v.literal("disabled"))),
+    monitorMessage: v.optional(v.string()),
+    monitorCheckedAt: v.optional(v.number()),
+    monitorSpendMinor: v.optional(v.number()),
+    monitorWindowStart: v.optional(v.string()),
+    monitorWindowEnd: v.optional(v.string()),
+    monitorTimeZone: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_org", ["orgId"]),
+  }).index("by_org", ["orgId"]).index("by_monitor_due", ["monitorNextAt"]),
 
   /** Latest read-only campaign performance snapshot; replaced on each manual sync. */
   campaignPerformance: defineTable({
@@ -4065,6 +4076,7 @@ export default defineSchema({
       v.literal("artifact"),
       v.literal("strategy"),
       v.literal("campaign_activation"),
+      v.literal("campaign_monitor"),
       v.literal("email_send"),
       v.literal("budget_change"),
       v.literal("action_card"),

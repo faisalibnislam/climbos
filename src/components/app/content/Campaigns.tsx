@@ -12,6 +12,7 @@ import { minorToDisplay } from "../money";
 import { KeyTakeaways, StatBlocks } from "@/components/ds/content";
 import { ChannelTag, ErrorCallout, FactList, PERMISSION_WHO, useWorkspaceMember } from "./shared";
 import { reviewCampaignPerformance, metaConversions } from "../../../../shared/acquisition/campaignPerformance";
+import { CampaignSpendMonitor } from "./CampaignSpendMonitor";
 
 export type AdsList = FunctionReturnType<typeof api.ads.list>;
 export type Campaign = AdsList["campaigns"][number];
@@ -192,7 +193,7 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
       {c.stopRules.length > 0 && !c.budgetReviewReason ? (
         <div>
           <p className="text-sm font-medium text-ink">Pause conditions to review:</p>
-          <p className="mt-1 text-xs text-ink-3">ClimbOS does not automatically monitor spend or tracking loss for these conditions. Check the ad platform and pause when needed. Pause all requests a pause; wait for confirmation.</p>
+          <p className="mt-1 text-xs text-ink-3">Automatic spend pauses need separate campaign approval below. Other conditions, including tracking loss, need manual review. Pause all requests a pause; wait for confirmation.</p>
           <ul className="mt-1 list-disc pl-5 text-sm text-ink-2">
             {c.stopRules.map((r) => (
               <li key={r}>{r}</li>
@@ -200,6 +201,7 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
           </ul>
         </div>
       ) : null}
+      {c.status === "active" || c.monitorConfigured ? <CampaignSpendMonitor slug={slug} campaignId={c.id} /> : null}
       {(c.channel === "google_search_ad" || c.channel === "meta_ad") && c.externalId && ["active", "paused", "ended"].includes(c.status) ? (
         <section aria-label="Campaign performance" className="flex flex-col gap-2 rounded-lg border border-line bg-surface-2 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">

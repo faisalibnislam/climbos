@@ -372,7 +372,7 @@ async function verifyCampaignStatus(auth: GoogleAdsAuth, campaignId: string, exp
   if (!read.data) {
     return { status: "uncertain", externalId: campaignId, retryable: false, providerMessage: "Change sent but the campaign was not found on read-back." };
   }
-  if (read.data.status !== expected) {
+  if (read.data.campaignId !== campaignId || read.data.status !== expected) {
     return { status: "uncertain", externalId: campaignId, retryable: false, providerMessage: `Read-back shows status ${read.data.status}, expected ${expected}.`, data: read.data };
   }
   return { status: "verified", externalId: campaignId, retryable: false, data: read.data };

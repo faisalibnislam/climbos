@@ -111,6 +111,7 @@ export const list = query({
         channel: c.channel,
         status: c.status,
         writeState,
+        monitorConfigured: Boolean(c.monitorApprovalId),
         budgetReviewReason: campaignBudgetProblem(c),
         dailyBudgetMinor: c.dailyBudgetMinor ?? 0,
         budgetEnvelopeMinor: c.budgetEnvelopeMinor,

@@ -3,6 +3,9 @@ import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
+// Only explicitly approved campaign monitors have a due time; legacy preferences do not enroll campaigns.
+crons.interval("approved campaign spend checks", { minutes: 5 }, internal.adMonitoring.tick, {});
+
 // Recover jobs whose action died: model steps fail, provider writes become "uncertain".
 crons.interval("recover stuck runs", { minutes: 5 }, internal.engine.recoverStuckRuns, {});
 // Reprocess Polar webhooks that failed (bounded attempts).

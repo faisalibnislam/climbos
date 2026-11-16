@@ -1,5 +1,11 @@
 # Growth engine implementation ledger
 
+## Local update — 16 November 2026: explicitly approved spend-limit pauses
+
+Closed the confirmed missing monitor path using existing campaigns, approvals, provider adapters and policy controls. Each running campaign needs new exact-scope consent. A bounded cron dispatches due account-local checks; deterministic spend comparisons claim one pause attempt and preserve unknown reads. Changed terms/permissions/expiry invalidate authority, cross-tenant references cannot expose account details or invalidate foreign approvals, and provider read-back must identify the exact campaign. An unresolved attempt blocks reapproval; owner-requested reconciliation only reads PAUSED status and rechecks permission at recording. Added owner review/stop/result controls and updated the old policy-preference wording.
+
+Verification and current official sources are recorded in [Verification](../Verification.md): 215 regression/permission/provider tests across nine files, plus isolated desktop/mobile approval checks. Existing adapters use stubbed fetch in tests; no real ads were touched. A threshold is a delayed-report pause trigger, not guaranteed billing enforcement. No tracking-loss diagnosis, full-volume SLA or live-provider readiness is claimed. Earlier entries describe prerequisites and are superseded only for this explicit monitor scope.
+
 ## Local update — 16 November 2026: campaign report evidence before monitoring
 
 Tracing the missing spend monitor exposed unsafe existing manual-report inputs. Twelve initial action regressions reproduced empty/malformed/duplicate/truncated reports being accepted, missing row currency accepted, negative Meta spend accepted, missing timezone guessed and missing source identity. Exact reported values, complete pagination, unique valid daily rows, safe totals and verified account-local windows now precede persisted performance advice. Missing optional conversions/action data stay unknown. Meta decimal spend text survives conversion. Saving rechecks tenant/member/current account/campaign/currency and rejects earlier-request overwrites. Older unvalidated snapshots are preserved but withheld from recommendations until refreshed; the owner sees why, the account timezone and returned row count.
