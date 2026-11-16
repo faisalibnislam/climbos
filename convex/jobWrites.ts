@@ -188,29 +188,35 @@ export const jobContext = internalQuery({
           amountMinor: event.amountMinor, refundedMinor: event.refundedMinor, kind: event.kind,
           utmSource: event.utmSource, utmMedium: event.utmMedium,
         }));
-    const subscriptionEvents = usableRevenueRows.filter((event) => event.kind === "subscription_payment");
+    let billingEvidenceIssue: string | null = null;
+    const invalidBillingAmounts = concentrationEvents.some(event => event.currency === concentrationCurrency && (
+      !Number.isSafeInteger(event.amountMinor) || !Number.isSafeInteger(event.refundedMinor) || event.refundedMinor < 0 ||
+      (event.kind === "refund" ? event.refundedMinor !== 0 : event.amountMinor < 0 || event.refundedMinor > event.amountMinor)
+    ));
+    const billingSignal = <T>(calculate: () => T): T | null => {
+      if (invalidBillingAmounts) {
+        billingEvidenceIssue = "Billing-derived signals are unavailable: imported amounts are invalid. Review the source records; do not infer customer concentration, repeat purchases, refunds or channel performance from them.";
+        return null;
+      }
+      try { return calculate(); } catch (error) {
+        if (!(error instanceof RangeError)) throw error;
+        billingEvidenceIssue = "A billing-derived calculation is unavailable because its amounts or window exceed valid calculation limits. Review the source records; do not substitute guessed figures.";
+        return null;
+      }
+    };
+    const subscriptionEvents = usableRevenueRows.filter((event) => event.kind === "subscription_payment" || event.kind === "refund");
     const subscriptionCohorts = concentrationCurrency
-      ? computeCohorts(subscriptionEvents.map((event) => ({
-          source: event.source,
-          customerRef: event.customerRef,
-          orderRef: event.orderRef,
-          occurredAt: event.occurredAt,
-          amountMinor: event.amountMinor,
-          refundedMinor: event.refundedMinor,
-          kind: event.kind,
-          currency: event.currency,
-        })), { currency: concentrationCurrency, nowMs: concentrationToMs, maxMonths: 6 })
-      : [];
+      ? computeCohorts(subscriptionEvents, { currency: concentrationCurrency, nowMs: concentrationToMs, maxMonths: 6, truncated: concentrationIsPartial })
+      : { rows: [], issue: null };
     const subscriptionCohortText = run.kind === "strategy" && concentrationCurrency
       ? subscriptionCohortBrief(subscriptionCohorts, {
           currency: concentrationCurrency,
           hasCustomerIds: subscriptionEvents.some((event) => Boolean(event.customerRef)),
-          truncated: concentrationIsPartial,
         })
       : "";
-    const repeatPurchaseText = run.kind === "strategy" && concentrationCurrency
-      ? repeatPurchaseBrief(repeatPurchaseSummary(concentrationEvents, { currency: concentrationCurrency, nowMs: concentrationToMs }), { truncated: concentrationIsPartial })
-      : "";
+    const repeatPurchases = run.kind === "strategy" && concentrationCurrency
+      ? billingSignal(() => repeatPurchaseSummary(concentrationEvents, { currency: concentrationCurrency, nowMs: concentrationToMs })) : null;
+    const repeatPurchaseText = repeatPurchases ? repeatPurchaseBrief(repeatPurchases, { truncated: concentrationIsPartial }) : "";
     // The owner's own pipeline: closed deals, win rate and recorded loss reasons (bounded; owner-entered).
     const pipelineDeals = run.kind === "strategy" || run.kind === "business_model_check" ? await ctx.db.query("deals").withIndex("by_org_updated", (q) => q.eq("orgId", org._id)).order("desc").take(2_001) : [];
     const pipeline = pipelineOutcomes(pipelineDeals.slice(0, 2_000), { nowMs: concentrationToMs });
@@ -245,9 +251,9 @@ export const jobContext = internalQuery({
     const businessModelContext = latestModel && latestModelCheck ? businessModelPlanContext(latestModel, latestModelCheck.createdAt, modelFreshness) : "";
     const businessModelVerdict = modelFreshness?.status === "unchanged" ? latestModel?.verdict.status ?? null : null;
     const concentration = concentrationCurrency
-      ? customerConcentration(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
+      ? billingSignal(() => customerConcentration(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial }))
       : null;
-    const spendRows = [];
+    const spendRows: Doc<"platformClaims">[] = [];
     let spendPartial = false;
     for (const platform of ["google_ads", "meta_ads"]) {
       const rows = await ctx.db
@@ -258,7 +264,7 @@ export const jobContext = internalQuery({
       spendRows.push(...rows);
     }
     const platformSourceConcentration = concentrationCurrency
-      ? platformConcentration(concentrationEvents, {
+      ? billingSignal(() => platformConcentration(concentrationEvents, {
           currency: concentrationCurrency,
           fromMs: concentrationFromMs,
           toMs: concentrationToMs,
@@ -266,7 +272,7 @@ export const jobContext = internalQuery({
           spendPartial,
           ...(typeof business?.unitEconomics?.grossMargin === "number" && business.unitEconomics.grossMargin >= 0 && business.unitEconomics.grossMargin <= 1 ? { grossMargin: business.unitEconomics.grossMargin } : {}),
           reportedSpend: spendRows.filter((row) => !row.isFixture).map((row) => ({ platform: row.platform, date: row.date, currency: row.currency, spendMinor: row.spendMinor, ...(row.spendOrigin ? { origin: row.spendOrigin } : {}) })),
-        })
+        }))
       : null;
     const aiReferralTo = new Date(Date.now()).toISOString().slice(0, 10);
     const aiReferralFrom = new Date(Date.now() - 90 * DAY).toISOString().slice(0, 10);
@@ -299,7 +305,7 @@ export const jobContext = internalQuery({
     }
     const creatorOutcomeText = formatCreatorOutcomeContext(creatorOutcomeReports, 12);
     const refundExposureSignal = concentrationCurrency
-      ? refundExposure(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
+      ? billingSignal(() => refundExposure(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial }))
       : null;
     let intakeBrief: string | null = null;
     let intakeSources: { url: string; title?: string; excerpt?: string }[] = [];
@@ -344,6 +350,7 @@ export const jobContext = internalQuery({
       creatorOutcomeText,
       refundExposure: refundExposureSignal,
       subscriptionCohortText,
+      billingEvidenceIssue,
       repeatPurchaseText,
       pipelineOutcomesText,
       pipelineLossNotes,

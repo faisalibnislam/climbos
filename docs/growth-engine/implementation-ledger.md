@@ -2,6 +2,10 @@
 
 Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs as written there. Baseline: `404c466`. Branch: `growth-engine-v2`.
 
+## Local update — 16 November 2026: recorded-charge cohorts
+
+Repaired owner cohort and strategy subscription-history paths with the shared recorded-charge-before-refunds definition. Entry is established before the visible history cutoff; malformed/conflicting/capped evidence is unavailable, real workspaces exclude fixture records, and future or zero charges cannot create entry. Results exposes recorded counts and unknown import completeness. Strategy context now survives invalid billing money without invented concentration/refund/repeat-purchase signals. Verified with 76 focused regression/permission tests, app/Convex typecheck, changed-file lint and two local desktop/mobile checks. This does not establish contractual churn, complete imports, cross-provider identity matching, large-history aggregation or the full 410-item audit. See [Verification](../Verification.md).
+
 ## Local update — 16 November 2026: first-payer evidence and bounded history
 
 Corrected first-recorded payer counts to use positive charges before refunds, isolate fixtures before read limits, reject malformed/conflicting history and retain unknowns when the shared history budget is exhausted. Earliest-charge lookup stops before loading later renewals; two fixture-aware indexes support the existing read path. Free orders/refund-only rows do not create observed payer days. Results and first-payer forecasts use the same corrected definition; v2 evidence prevents silent scoring against v1 forecasts. Five regressions failed before the fix; final verification is 80 focused tests, typecheck/lint and two desktop/mobile browser checks. The browser fixture confirms a separate unresolved cohort first-paid-month/invalid-amount issue, recorded as the next measurement task in Verification. No external action or deployment.

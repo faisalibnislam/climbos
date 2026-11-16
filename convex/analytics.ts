@@ -567,7 +567,8 @@ export const overview = query({
 
 /**
  * Monthly customer cohorts from billing data (observed, never modelled).
- * Bounded read: the last 12 months, at most 10,000 events.
+ * Establish entry from loaded history before restricting visible cohort months.
+ * More than 10,000 records cannot establish complete loaded history here.
  */
 export const cohorts = query({
   args: { slug: v.string() },
@@ -580,26 +581,23 @@ export const cohorts = query({
     // Free accounts: the last 30 days only.
     if (!(await featureAllowed(ctx, org, "full_history"))) start.setTime(now - (await getLiveConfig(ctx)).freeHistoryDays * 86_400_000);
     else start.setUTCMonth(start.getUTCMonth() - 11);
-    const rows = await ctx.db
-      .query("revenueEvents")
-      .withIndex("by_org_occurred", (q) => q.eq("orgId", org._id).gte("occurredAt", start.getTime()))
-      .take(10_000);
-    const result = computeCohorts(rows.map((row) => ({
-      source: row.source,
-      customerRef: row.customerRef,
-      orderRef: row.orderRef,
-      occurredAt: row.occurredAt,
-      amountMinor: row.amountMinor,
-      refundedMinor: row.refundedMinor,
-      kind: row.kind,
-      currency: row.currency,
-    })), { currency: org.currency, nowMs: now, maxMonths: 6 });
+    const rows = org.kind === "demo"
+      ? await ctx.db.query("revenueEvents").withIndex("by_org_occurred", q => q.eq("orgId", org._id).lte("occurredAt", now)).take(10_001)
+      : await ctx.db.query("revenueEvents").withIndex("by_org_fixture_occurred", q => q.eq("orgId", org._id).eq("isFixture", false).lte("occurredAt", now)).take(10_001);
+    const truncated = rows.length > 10_000;
+    const mixedFixture = rows.some(r => r.isFixture) && rows.some(r => !r.isFixture);
+    const result = mixedFixture
+      ? { rows: [], issue: "Synthetic and real billing records are mixed; review the source records." }
+      : computeCohorts(rows, { currency: org.currency, nowMs: now, maxMonths: 6, truncated });
     return {
       currency: org.currency,
-      truncated: rows.length >= 10_000,
+      truncated,
       isFixture: rows.some((r) => r.isFixture),
       hasCustomerIds: rows.some((r) => Boolean(r.customerRef)),
-      rows: result.slice(-6),
+      issue: result.issue,
+      // Earlier history identifies existing payers, but does not extend the
+      // account's visible history entitlement or reassign old cohort members.
+      rows: result.rows.filter(row => Date.parse(`${row.cohort}-01T00:00:00Z`) >= start.getTime()).slice(-6),
     };
   },
 });

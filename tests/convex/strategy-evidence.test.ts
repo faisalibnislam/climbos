@@ -15,6 +15,20 @@ describe("strategy evidence and owner control survive a re-plan", () => {
   beforeEach(() => { process.env.CLIMBOS_ENGINE = "v2"; process.env.CLIMBOS_FAKE_LLM = "ship"; requests.length = 0; });
   afterEach(() => { delete process.env.CLIMBOS_ENGINE; delete process.env.CLIMBOS_FAKE_LLM; });
 
+  it("carries invalid billing evidence into the actual strategy writer without an external action", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "strategy-invalid-billing@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Billing Evidence Co" });
+    await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "Understand repeat customer activity", horizonDays: 90, monthlyAdBudget: 0 });
+    await makePaid(t, orgId);
+    await t.run(ctx => ctx.db.insert("revenueEvents", { orgId, source: "stripe", sourceEventId: "invalid-amount", customerRef: "customer", currency: "USD", amountMinor: 1.5, refundedMinor: 0, kind: "subscription_payment", occurredAt: Date.now() - 90 * 86_400_000, isFixture: false, ingestedAt: Date.now() }));
+    await owner.client.mutation(api.orgs.generatePlan, { slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    expect(requests.some(request => request.includes("OBSERVED SUBSCRIPTION COHORTS: unavailable") && request.includes("imported amounts are invalid"))).toBe(true);
+    expect(await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).collect())).toHaveLength(1);
+    expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+  });
+
   it("gives channel scoring the shared research, saves the direction, and re-scores changed owner preferences", async () => {
     const t = setup();
     const owner = await asNewUser(t, "strategy-evidence@example.com");

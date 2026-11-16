@@ -31,14 +31,14 @@ function CohortTable({ data }: { data: Cohorts }) {
   return (
     <TableFrame>
       <Table>
-        <caption className="sr-only">Share of each month&apos;s new customers who paid again in later months</caption>
+        <caption className="sr-only">Recorded repeat charges by first recorded charge month in UTC</caption>
         <THead>
           <tr>
-            <Th>First paid</Th>
-            <Th numeric>Customers</Th>
+            <Th>First recorded</Th>
+            <Th numeric>Payer IDs</Th>
             {Array.from({ length: months }, (_, k) => (
               <Th key={k} numeric className="px-3">
-                {k === 0 ? "Month 1" : `+${k} mo`}
+                {k === 0 ? "Entry month" : `+${k} mo`}
               </Th>
             ))}
           </tr>
@@ -59,6 +59,7 @@ function CohortTable({ data }: { data: Cohorts }) {
                 ) : (
                   <Td key={k} numeric className={cn("px-3 text-ink", cellTone(r))}>
                     {formatPercent(r, 0)}
+                    <span className="block text-xs font-normal">{formatNumber(row.activeCustomers[k] ?? 0)} of {formatNumber(row.size)}</span>
                   </Td>
                 ),
               )}
@@ -78,29 +79,36 @@ export function CohortsSection({ slug }: { slug: string }) {
   return (
     <section aria-labelledby="cohorts-heading" className="flex flex-col gap-4">
       <h2 id="cohorts-heading" className="heading-section flex flex-wrap items-center gap-2">
-        <Repeat2 aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> Customers who keep paying <ValueKind kind="observed" />
+        <Repeat2 aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> Recorded repeat payments <ValueKind kind="observed" />
       </h2>
       {data === undefined ? (
         <LoadingBlock label="Loading returning-customer information…" lines={3} />
+      ) : data.issue ? (
+        <Callout tone="info" title="Repeat-payment figures unavailable">
+          {data.issue} <Link href={`/app/${slug}/connections`}>Review billing connection</Link>
+        </Callout>
       ) : data.rows.length === 0 ? (
-        <Callout tone="info" title={data.hasCustomerIds ? "No paying customers this year" : "No customer-level billing data"}>
-          Needs payments with customer IDs. <Link href={`/app/${slug}/connections`}>Connect billing</Link>
+        <Callout tone="info" title={data.hasCustomerIds ? "No recorded entry cohorts in your available history" : "No customer-level billing data"}>
+          Cohorts need positive charges with customer IDs. Existing payers stay in their original recorded month, even when it is outside your available history. <Link href={`/app/${slug}/connections`}>Review billing connection</Link>
         </Callout>
       ) : (
         <>
           {latestFull ? (
             <p className="text-sm text-ink">
               <strong className="font-semibold">{formatPercent(latestFull.retention[1] ?? 0, 0)}</strong> of {monthLabel(latestFull.cohort)}&apos;s{" "}
-              {formatNumber(latestFull.size)} customers paid again next month.
+              {formatNumber(latestFull.size)} payer IDs have a recorded charge the following month ({formatNumber(latestFull.activeCustomers[1] ?? 0)} of {formatNumber(latestFull.size)}).
             </p>
           ) : null}
+          <p className="text-sm text-ink-2">
+            Refunds do not reset entry or erase recorded charge activity. Import completeness is unknown: 0% means no recorded charge, not verified churn.
+          </p>
           <CohortTable data={data} />
           <Definition>
             <Scannable
               shape="bullets"
               max={4}
               tone="muted"
-              text={`Grouped by first payment month (${data.currency}). Each column: share who paid that month, after refunds. A dot means the month isn't over.${data.truncated ? " Latest 10,000 payments only." : ""}`}
+              text={`First recorded positive charge before refunds, in UTC (${data.currency}); IDs are separate per billing source. A dot means the follow-up month is unfinished; entry-month counts can still grow. Annual or irregular payments are not monthly churn. Only cohorts whose entry month starts within your plan's history window are shown.`}
             />
           </Definition>
         </>

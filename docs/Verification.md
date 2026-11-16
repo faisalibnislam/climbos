@@ -1,3 +1,28 @@
+## 16 November 2026 — recorded-charge cohorts and strategy evidence
+
+Traced `revenueEvents` → `analytics.cohorts` / `computeCohorts` → Results, and the shared calculator → `jobWrites.jobContext` → `jobs` strategy writer. All six initial integration regressions failed before repair: refunded entry, earlier history outside the displayed window, fixture/future contamination, malformed amounts, missing customer IDs and capped history.
+
+Cohort entry now uses the first recorded positive charge before refunds, per source/customer and selected currency, in UTC. Refunds change recorded net amounts, not entry or charge activity. Identical event identities are deduplicated; conflicting copies, ambiguous order/refund ownership, invalid dates/amounts/identities, missing positive-charge customer IDs and unsafe totals withhold figures with a reason. Future charges and zero charges cannot establish entry. Unfinished follow-up months remain null; entry-month counts are provisional. Recorded zero activity is not verified churn, particularly for annual or irregular billing.
+
+The owner query establishes entry from the loaded ledger before filtering visible cohort months. It uses an existing fixture-aware index for real workspaces, rejects mixed real/synthetic demo records, and reads at most 10,001 records as a sentinel for the existing 10,000-record bound. Overflow withholds the calculation rather than reassigning old customers. Only cohorts whose entry month starts within the account's history window are displayed; earlier records establish identity without extending visible history entitlement. This is bounded history, not a scalable unlimited aggregation service.
+
+Strategy subscription cohorts reuse this assessment and withhold percentages when the shared history read is capped. Their scope remains subscription charges; Results includes orders and subscription charges. Both use the same recorded-charge/refund definition, source scoping and uncertainty rules. The strategy integration test exposed an adjacent crash in concentration calculations on malformed money. That context boundary now withholds affected billing signals, retains a plain-language evidence issue, and lets the strategy writer continue without invented figures. A fake-model full-plan test confirms the issue reaches the actual writer; no live model quality claim is made.
+
+Results now says “Recorded repeat payments,” shows counts beside percentages and exposes the import-completeness limitation outside collapsed details. The first browser pass caught that limitation hidden inside the existing Definition disclosure; this was corrected and rechecked. Empty histories no longer claim that the business has no paying customers. Existing tenant checks and action authorization are unchanged; calculations and reads create no action receipts or approvals.
+
+Verification:
+
+```text
+pnpm exec vitest run tests/unit/cohorts.test.ts tests/convex/cohort-evidence.test.ts tests/convex/analytics-new-customers.test.ts tests/convex/first-payer-evidence.test.ts tests/unit/repeat-purchases.test.ts tests/unit/customer-concentration.test.ts tests/unit/refund-exposure.test.ts tests/convex/strategy-evidence.test.ts tests/convex/safety.test.ts tests/convex/tenancy.test.ts
+76 passed across 10 files
+pnpm typecheck
+passed: application and Convex
+```
+
+Changed-file ESLint and diff checks passed. Browser command: `E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/first-payer-evidence.spec.ts` — two passed in 9.0 seconds (desktop Chromium and Pixel 7 emulation). The fixture retains the original entry month after a full refund, then replaces the table with an explicit unavailable reason when an earlier malformed payment is appended. No page errors, horizontal page overflow or serious/critical axe findings; desktop and mobile screenshots inspected. Read-only Results leaves workflow, approval, receipt and forecast records unchanged. The final refund-identity guard is additionally covered by the focused unit suite; the browser fixture does not exercise that conflict.
+
+Remaining limits: complete provider import coverage, contractual retention/churn, merged identities across providers, refund reconciliation against settled billing, high-volume aggregation, real business outcomes and the full 410-row audit are not established. One-off repeat-purchase and source/concentration calculations retain their separate definitions and require their own remaining evidence audit; the malformed-money guard is not a claim that all such paths are repaired. No hosted deployment, paid/live model request or external campaign action occurred; only the isolated loopback backend was synced.
+
 ## 16 November 2026 — first recorded payers, refunds and shared history bounds
 
 Traced `revenueEvents` → `firstRecordedPayerDays` → Results/assistant metric and first-payer forecast creation/forward scoring. Five new integration regressions failed against the original path: fully refunded first payments could make later renewals new customers; fixture history influenced real-workspace counts; zero charges became observed payer days; a known old customer with 1,200 later payments became unavailable because every history loaded 1,000 rows; malformed older money could support a count instead of uncertainty.

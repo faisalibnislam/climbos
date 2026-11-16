@@ -770,6 +770,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     refundExposureLine(job.refundExposure),
     job.run.kind === "strategy" ? stripeReceivablesLine(job.stripeReceivables) : "",
     job.subscriptionCohortText,
+    job.billingEvidenceIssue ?? "",
     job.repeatPurchaseText,
     job.pipelineOutcomesText,
     job.businessModelContext ? untrusted("latest saved business model check (AI judgment)", job.businessModelContext, 1_500) : "",

@@ -1,7 +1,7 @@
 /**
  * Monthly customer cohorts from billing events. A customer's cohort is the
- * month of their first positive payment; retention for month offset k is the
- * share of that cohort with at least one positive payment in month k.
+ * UTC month of their first recorded positive charge before refunds; month k
+ * measures recorded charge activity, not contractual or revenue retention.
  * Later months are only reported once they are complete: months that haven't
  * finished yet are `null` (not zero), so a young cohort never looks like it
  * churned. Month 0 is always shown (it is 100% by definition).
@@ -10,6 +10,7 @@
 export interface CohortPayment {
   /** Provider namespace for customerRef; optional only for legacy callers. */
   source?: string;
+  sourceEventId?: string;
   customerRef?: string;
   orderRef?: string;
   occurredAt: number;
@@ -30,12 +31,19 @@ export interface CohortRow {
   revenueMinor: (number | null)[];
 }
 
+export interface CohortAssessment {
+  rows: CohortRow[];
+  issue: string | null;
+}
+
 /** Compact, evidence-labeled subscription cohort context for growth planning. */
 export function subscriptionCohortBrief(
-  rows: readonly CohortRow[],
-  options: { currency: string; hasCustomerIds: boolean; truncated: boolean },
+  assessment: CohortAssessment,
+  options: { currency: string; hasCustomerIds: boolean },
 ): string {
   const currency = options.currency.toUpperCase();
+  if (assessment.issue) return `OBSERVED SUBSCRIPTION COHORTS: unavailable for ${currency}; ${assessment.issue} Do not infer retention, churn or expansion from this history.`;
+  const { rows } = assessment;
   if (!options.hasCustomerIds) {
     return `OBSERVED SUBSCRIPTION COHORTS: unavailable for ${currency}; loaded billing events do not include customer IDs. Do not infer subscription retention, churn, or expansion from aggregate revenue.`;
   }
@@ -50,11 +58,11 @@ export function subscriptionCohortBrief(
       const rate = row.retention[offset];
       return `M${offset} ${count}/${row.size}${rate === null ? "" : ` (${(rate * 100).toFixed(1)}%)`}`;
     });
-    return `${row.cohort}: ${row.size} first-paid customers; ${months.join(", ") || "no completed follow-up month"}`;
+    return `${row.cohort}: ${row.size} first-recorded subscription payers; ${months.join(", ") || "no completed follow-up month"}`;
   });
   return [
-    `OBSERVED SUBSCRIPTION PAYMENT COHORTS (${currency}; latest six cohorts from the loaded billing-event history${options.truncated ? "; history is truncated to the latest 10,000 events" : ""}): ${observations.join("; ")}.`,
-    "Each cohort is grouped by month of first positive subscription payment and counts same-currency customers with a positive subscription payment in each completed month. This is observed payer retention, not contractual churn, gross/net revenue retention, a forecast, or causal evidence. Incomplete months are explicitly omitted; do not treat them as zero.",
+    `OBSERVED SUBSCRIPTION PAYMENT COHORTS (${currency}; latest six cohorts from the loaded billing-event history): ${observations.join("; ")}.`,
+    "Each cohort starts at the first recorded positive subscription charge before refunds, in UTC. A refund does not reset entry or erase recorded charge activity. Customer IDs are separate per billing source. This is observed payer retention, not contractual churn, gross/net revenue retention, a forecast, or causal evidence. Import completeness is unknown: zero means no recorded charge, not verified churn. Incomplete follow-up months are omitted, not zero; the first month may still be in progress. Annual or irregular payment schedules cannot be judged as monthly churn.",
   ].join(" ");
 }
 
@@ -69,14 +77,34 @@ function monthIndex(key: string): number {
 
 export function computeCohorts(
   payments: readonly CohortPayment[],
-  options: { currency: string; nowMs: number; maxMonths?: number },
-): CohortRow[] {
+  options: { currency: string; nowMs: number; maxMonths?: number; truncated?: boolean },
+): CohortAssessment {
+  const unavailable = (issue: string): CohortAssessment => ({ rows: [], issue });
+  if (options.truncated) return unavailable("Billing history exceeds the read limit; the first recorded charge and follow-up cannot be established from this slice.");
   const maxMonths = options.maxMonths ?? 12;
+  if (!Number.isSafeInteger(options.nowMs) || options.nowMs < 0 || options.nowMs > 8.64e15 || !Number.isInteger(maxMonths) || maxMonths < 1 || maxMonths > 120 || !/^[A-Z]{3}$/.test(options.currency)) return unavailable("The cohort date, currency or observation window is invalid.");
+  const recorded: CohortPayment[] = [];
+  const identities = new Map<string, string>();
+  for (const p of payments) {
+    if (!Number.isSafeInteger(p.occurredAt) || p.occurredAt < 0 || p.occurredAt > 8.64e15 || !/^[A-Z]{3}$/.test(p.currency)) return unavailable("Billing history contains invalid dates or currencies; review the source records.");
+    if (p.occurredAt > options.nowMs) continue;
+    const key = JSON.stringify([p.source, p.sourceEventId]);
+    const signature = JSON.stringify([p.currency, p.occurredAt, p.customerRef ?? null, p.orderRef ?? null, p.amountMinor, p.refundedMinor, p.kind]);
+    const previous = identities.get(key);
+    if (previous !== undefined && previous !== signature) return unavailable("Billing history contains conflicting copies of the same event; reconcile the source records.");
+    if (previous !== undefined) continue;
+    identities.set(key, signature);
+    if (p.currency !== options.currency) continue;
+    if (!Number.isSafeInteger(p.amountMinor) || !Number.isSafeInteger(p.refundedMinor) || p.refundedMinor < 0 || (p.kind === "refund" ? p.refundedMinor !== 0 : p.amountMinor < 0 || p.refundedMinor > p.amountMinor) || !p.source?.trim() || !p.sourceEventId?.trim()) return unavailable("Billing history contains invalid amounts or source identities; review the source records.");
+    if (p.kind !== "refund" && p.amountMinor > 0 && !p.customerRef?.trim()) return unavailable("Positive charges are missing customer IDs; their first month and repeat payments are unknown.");
+    recorded.push(p);
+  }
   const nowIndex = monthIndex(monthKey(options.nowMs));
   const firstMonth = new Map<string, number>();
-  const customerKey = (payment: CohortPayment) => `${payment.source ?? ""}\u0000${payment.customerRef}`;
-  const valid = payments
-    .filter((p) => p.customerRef && p.kind !== "refund" && p.currency === options.currency && p.amountMinor - p.refundedMinor > 0)
+  const customerKey = (payment: CohortPayment) => JSON.stringify([payment.source, payment.customerRef]);
+  const orderKey = (payment: CohortPayment) => JSON.stringify([payment.source, payment.currency, payment.orderRef]);
+  const valid = recorded
+    .filter((p) => p.customerRef && p.kind !== "refund" && p.amountMinor > 0)
     .sort((a, b) => a.occurredAt - b.occurredAt);
   for (const p of valid) {
     const idx = monthIndex(monthKey(p.occurredAt));
@@ -86,8 +114,10 @@ export function computeCohorts(
   const customerByOrder = new Map<string, string>();
   for (const p of valid) {
     if (!p.orderRef || !p.customerRef) continue;
-    const key = `${p.source ?? ""}\u0000${p.currency}\u0000${p.orderRef}`;
-    if (!customerByOrder.has(key)) customerByOrder.set(key, customerKey(p));
+    const key = orderKey(p);
+    const existing = customerByOrder.get(key);
+    if (existing && existing !== customerKey(p)) return unavailable("Billing history contains conflicting customer identities for an order; reconcile the source records.");
+    customerByOrder.set(key, customerKey(p));
   }
   const cohorts = new Map<number, { members: Set<string>; active: Map<number, Set<string>>; revenue: Map<number, number> }>();
   for (const [customer, idx] of firstMonth) {
@@ -101,13 +131,13 @@ export function computeCohorts(
     netMinor: payment.amountMinor - payment.refundedMinor,
     isRefund: false,
   }));
-  for (const refund of payments) {
+  for (const refund of recorded) {
     if (refund.kind !== "refund" || refund.currency !== options.currency) continue;
+    const orderCustomer = refund.orderRef ? customerByOrder.get(orderKey(refund)) : undefined;
+    if (refund.customerRef && orderCustomer && customerKey(refund) !== orderCustomer) return unavailable("A refund's customer and order identities conflict; reconcile the source records.");
     const customer = refund.customerRef
       ? customerKey(refund)
-      : refund.orderRef
-        ? customerByOrder.get(`${refund.source ?? ""}\u0000${refund.currency}\u0000${refund.orderRef}`)
-        : undefined;
+      : orderCustomer;
     if (customer && firstMonth.has(customer)) ledger.push({ payment: refund, customer, netMinor: -Math.abs(refund.amountMinor), isRefund: true });
   }
 
@@ -121,9 +151,11 @@ export function computeCohorts(
       set.add(customer);
       c.active.set(k, set);
     }
-    c.revenue.set(k, (c.revenue.get(k) ?? 0) + netMinor);
+    const revenue = (c.revenue.get(k) ?? 0) + netMinor;
+    if (!Number.isSafeInteger(netMinor) || !Number.isSafeInteger(revenue)) return unavailable("Cohort revenue exceeds safe calculation limits; review the source amounts.");
+    c.revenue.set(k, revenue);
   }
-  return [...cohorts.entries()]
+  const rows = [...cohorts.entries()]
     .sort((a, b) => a[0] - b[0])
     .map(([idx, c]) => {
       const activeCustomers: (number | null)[] = [];
@@ -145,6 +177,7 @@ export function computeCohorts(
       const m = (idx % 12) + 1;
       return { cohort: `${y}-${String(m).padStart(2, "0")}`, size: c.members.size, activeCustomers, retention, revenueMinor };
     });
+  return { rows, issue: null };
 }
 
 export interface RepeatPurchaseWindow {

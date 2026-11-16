@@ -39,7 +39,7 @@ describe("first recorded paying customers", () => {
       return ctx.db.insert("workflowRuns", { orgId: org, kind: "strategy", title: "Plan", status: "executing", input: "{}", roles: [], estimateMicros: 0, actualMicros: 0, rateVersionId: "verified-2026-10-17", entitlementVersionId: "ent-credits-2026-10-18", routingVersionId: "r1", budget: { modelSteps: 1, researchTools: 0, repairs: 0 }, used: { modelSteps: 0, researchTools: 0, repairs: 0 }, isFixture: false, createdAt: now, updatedAt: now });
     });
     const context = await t.query(internal.jobWrites.jobContext, { runId });
-    expect(context?.subscriptionCohortText).toContain("2026-03: 2 first-paid customers; M1 1/2 (50.0%)");
+    expect(context?.subscriptionCohortText).toContain("2026-03: 2 first-recorded subscription payers; M1 1/2 (50.0%)");
     expect(context?.subscriptionCohortText).not.toContain("one-off");
     expect(context?.subscriptionCohortText).not.toContain("other-user");
     expect(context?.subscriptionCohortText).toContain("observed payer retention, not contractual churn");
