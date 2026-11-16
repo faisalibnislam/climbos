@@ -34,6 +34,45 @@ const PLAN_CARD: Partial<Record<JobKind, { what: string; channel?: string; quant
 
 export type PlanWorkResult = { started: string[]; waiting: { title: string; reason: string }[]; covered: string[]; busy: boolean };
 
+/** Reuse only completed, readable starter drafts bound to this exact plan. */
+async function firstWinWork(ctx: MutationCtx, org: Doc<"organizations">, strategy: Doc<"strategies">): Promise<Map<string, "covered" | "working" | "uncertain" | "paused">> {
+  const grouped = new Map<string, ("covered" | "missing" | "working" | "uncertain" | "paused")[]>();
+  if (strategy.version !== 1 || (org.firstWinRunIds?.length ?? 0) > 8) return new Map();
+  for (const id of org.firstWinRunIds ?? []) {
+    const run = await ctx.db.get(id);
+    if (!run || run.orgId !== org._id || !["content_social", "content_email"].includes(run.kind)) continue;
+    let input: { firstWin?: boolean; strategyId?: string; channel?: string; quantity?: number };
+    try { input = JSON.parse(run.input); } catch { continue; }
+    if (!input || input.firstWin !== true || input.strategyId !== strategy._id) continue;
+    let state: "covered" | "missing" | "working" | "uncertain" | "paused" = "missing";
+    if (run.status === "uncertain") state = "uncertain";
+    else if (run.status === "paused") state = "paused";
+    else if (!["verified", "failed", "canceled"].includes(run.status)) state = "working";
+    else if (run.status === "verified") {
+      const artifacts = await ctx.db.query("artifacts").withIndex("by_run", q => q.eq("runId", run._id)).take(7);
+      let usable = 0;
+      for (const artifact of artifacts) {
+        if (artifact.orgId !== org._id || artifact.businessId !== strategy.businessId || !artifact.currentVersionId || !["draft", "in_review", "approved", "scheduled", "published", "exported"].includes(artifact.status)) continue;
+        if (input.channel && artifact.channel !== input.channel) continue;
+        if (run.kind === "content_social" ? artifact.kind !== "social_post" : !["email", "email_sequence"].includes(artifact.kind)) continue;
+        const version = await ctx.db.get(artifact.currentVersionId);
+        if (version?.orgId === org._id && version.artifactId === artifact._id && version.version === artifact.currentVersion && version.body.trim()) usable++;
+      }
+      const expected = run.kind === "content_email" ? 1 : input.quantity;
+      if (expected !== undefined && Number.isInteger(expected) && expected >= 1 && expected <= 6 && usable >= expected) state = "covered";
+    }
+    grouped.set(run.kind, [...(grouped.get(run.kind) ?? []), state]);
+  }
+  const result = new Map<string, "covered" | "working" | "uncertain" | "paused">();
+  for (const [kind, states] of grouped) {
+    if (states.includes("uncertain")) result.set(kind, "uncertain");
+    else if (states.includes("paused")) result.set(kind, "paused");
+    else if (states.includes("working")) result.set(kind, "working");
+    else if (states.every(state => state === "covered")) result.set(kind, "covered");
+  }
+  return result;
+}
+
 /**
  * Approving a plan starts its work: each active channel gets one card that
  * runs its first drafts (drafts only, reserved like any job). Channels that
@@ -57,15 +96,19 @@ export async function startPlanWork(
   }
   const now = Date.now();
   const channels = s.channels.map((c) => ({ ...c }));
-  // Plan v1 already drafted the first posts and a welcome email ("first win").
-  const firstWin = s.version === 1 && Boolean(p.org.firstWinRunIds?.length);
+  const firstWin = await firstWinWork(ctx, p.org, s);
   for (const c of [...channels].sort((a, b) => a.priority - b.priority)) {
     if (c.status !== "active" || (p.onlyKeys && !p.onlyKeys.includes(c.key))) continue;
     const job = CHANNEL_JOBS[c.key];
     const shape = job ? PLAN_CARD[job] : undefined;
     if (!job || !shape) continue;
-    if (firstWin && (job === "content_social" || job === "content_email")) {
-      out.covered.push(c.name);
+    const starterState = firstWin.get(job);
+    if (starterState) {
+      if (starterState === "covered") out.covered.push(c.name);
+      else {
+        out.waiting.push({ title: c.name, reason: starterState === "working" ? "Your starter drafts are still in progress; no duplicate job was started." : starterState === "paused" ? "Starter drafting is paused. Review its status in AI activity before restarting." : "The starter draft outcome is unknown. Review it in AI activity before starting another job." });
+        if (starterState === "working") out.busy = true;
+      }
       continue;
     }
     let card = c.cardId ? await ctx.db.get(c.cardId) : null;

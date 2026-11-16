@@ -1,3 +1,7 @@
+## 17 November 2026 — preparation completion states
+
+Rows 41–43 follow-up: the detailed-plan first-win shortcut falsely treated any recorded job as completed social and email drafts. Same-plan job/artifact evidence now establishes reuse; incomplete or uncertain work remains waiting or follows existing draft preparation. Focused drafts remain unchanged. See [scoped evidence and limits](plan-preparation-reuse-audit.md). This closes a status/reuse defect, not broad execution or recommendation completeness.
+
 ## 17 November 2026 — retained owner channel feedback
 
 Later owner requirement to retain dismissals now reaches focused/starter strategy input and shared plan validation, using the existing detailed scorer policy. Identifiable dismissed/irrelevant selections fail quality until the owner clears the preference; soft preferences are not evidence of performance. A related false-staleness bug is fixed by comparing the same recorded source/date values. 130 focused/permission/history tests pass. [Audit](owner-channel-feedback-audit.md) records the exact scope; arbitrary aliases, semantic compliance and the full strategy requirements remain unverified.

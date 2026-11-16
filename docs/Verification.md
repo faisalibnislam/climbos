@@ -1,3 +1,14 @@
+## 17 November 2026 — truthful reuse of starter preparation
+
+Detailed plan activation previously marked both social/email work covered whenever any first-win job ID existed. New run inputs bind the originating plan and social quantity; reuse now verifies matching job state and usable same-tenant/current-version artifacts. Pending, paused and unknown outcomes remain explicit waiting states. Failure or missing preparation follows existing draft-only action cards and usage limits. Focused embedded drafts are unchanged. See [the scoped audit](growth-engine/plan-preparation-reuse-audit.md).
+
+- `pnpm exec vitest run tests/convex/first-win-reuse.test.ts tests/unit/first-win-channels.test.ts tests/convex/plan-history.test.ts tests/convex/focused-plan.test.ts tests/convex/wish.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — 116 passed across seven files, 17.05 seconds.
+- `pnpm exec vitest run tests/convex/first-win-reuse.test.ts` — final 16 passed, including the subsequently added actual first-win reservation/binding case. This overlaps the preceding run and is not an additional 16 distinct tests.
+- `pnpm typecheck` — root and Convex TypeScript passed.
+- `pnpm exec eslint convex/lib/cards.ts convex/content.ts tests/convex/first-win-reuse.test.ts` — passed.
+
+Nine initial regressions failed before repair. Tests include no usable drafts, archived/broken versions, wrong destination, partial quantity, different/legacy plan, foreign run/version, pending/paused/uncertain states and separate social/email coverage. No provider jobs were executed by the new tests; no external-action receipts were produced. No browser, live-account or paid-model evaluation ran. Old unbound work and arbitrary copy quality remain unverified.
+
 ## 17 November 2026 — owner channel feedback in default plans
 
 Closed two confirmed gaps: default focused/starter generation lacked explicit saved-channel feedback and its deterministic dismissal check; freshness compared a source/date-bearing snapshot with current preferences stripped of those fields. Strategy context now labels and carries owner preferences, shared scoring/plan validation reuses exact-channel exclusion, and generation/freshness use the same recorded values. Hard findings block approval/start without suppressing bold exploration or treating preferences as outcomes. See [the scoped audit](growth-engine/owner-channel-feedback-audit.md).

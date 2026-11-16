@@ -15,6 +15,8 @@ Latest channel-evidence follow-up (17 November): plan citations now require reco
 
 Latest owner-channel follow-up (17 November): default strategy now consumes saved preferences and shares exact-channel dismissal checks with scoring. Shared source/date-preserving snapshots fix immediate false staleness. 130 focused/permission/history tests, typecheck and scoped lint pass. [Audit and remaining scope](growth-engine/owner-channel-feedback-audit.md) identify free-form channel references and semantic compliance as unfinished acceptance work.
 
+Latest preparation follow-up (17 November): first-win draft reuse now depends on same-plan job/artifact evidence rather than a nonempty job list. Pending/paused/unknown work is shown honestly. Broader verification: 116 tests/seven files; final focused run: 16 overlapping cases. [Audit](growth-engine/plan-preparation-reuse-audit.md) records limits and remaining platform/semantic consistency work.
+
 This handoff records what has been built, what was checked, what remains unverified, and how to continue safely. It is a starting point for repository work, not proof that every capability works with live providers or real customer outcomes.
 
 ## Current status — 17 November 2026

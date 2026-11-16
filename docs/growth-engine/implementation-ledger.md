@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: truthful starter-work reuse
+
+Detailed-plan activation no longer treats the presence of any first-win job as completed social and email preparation. New jobs bind their plan; reuse checks status, quantity, destination, tenant and current artifact versions. Running work waits; uncertain/paused work is not automatically replaced. Nine red regressions preceded the fix. Broader run: 116 tests/seven files; final focused run: 16 cases (overlapping), plus typecheck/lint. [Scoped audit](plan-preparation-reuse-audit.md) retains incomplete-copy/platform coverage limits. No provider, UI, schema or external action added.
+
 ## Local update — 17 November 2026: owner channel feedback
 
 Default plans now receive saved owner channel feedback in strategy context and validation. The existing dismissed/irrelevant policy is shared with the scorer for identifiable channel selections; soft preferences and bold hypotheses stay distinct. Actual tests also exposed immediate false staleness from differing snapshot/current source-date shapes; a shared snapshot function repairs that comparison. 130 tests/nine files, typecheck and scoped lint passed. [Scoped audit](owner-channel-feedback-audit.md) preserves free-form identity and semantic-quality limits. No new schema/provider/UI/agent or external action.

@@ -879,7 +879,7 @@ export const startFirstWin = internalMutation({
     if (!org || org.kind === "demo" || org.firstWinRunIds?.length) return;
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first();
     const strategy = await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", orgId)).order("desc").first();
-    if (strategy?.expert?.focusedMove) return; // Starter work is already in this plan.
+    if (!strategy || strategy.expert?.focusedMove) return; // Starter work is already in a focused plan.
     const perChannel = new Map<SocialChannel, number>();
     for (const c of firstWinChannels(strategy?.channels ?? [], business?.businessType)) perChannel.set(c, (perChannel.get(c) ?? 0) + 1);
     const runIds: Id<"workflowRuns">[] = [];
@@ -893,7 +893,7 @@ export const startFirstWin = internalMutation({
         // Instagram can't post without an image, so its first posts come with one.
         const images = j.channel === "instagram" ? 1 : 0;
         const plan = planJob(j.job, { quantity: j.quantity, images, channel: j.channel });
-        const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: j.job === "content_social" ? (perChannel.size > 1 ? `Your first ${j.channel === "x" ? "X" : (j.channel ?? "").replace(/^./, (c) => c.toUpperCase())} post${(j.quantity ?? 1) > 1 ? "s" : ""}` : "Your first 3 posts") : "Your welcome email", roles: plan.roles, input: { firstWin: true, channel: j.channel }, steps: plan.steps, meters: plan.meters, createdBy: userId, isFixture: false });
+        const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: j.job === "content_social" ? (perChannel.size > 1 ? `Your first ${j.channel === "x" ? "X" : (j.channel ?? "").replace(/^./, (c) => c.toUpperCase())} post${(j.quantity ?? 1) > 1 ? "s" : ""}` : "Your first 3 posts") : "Your welcome email", roles: plan.roles, input: { firstWin: true, strategyId: strategy._id, channel: j.channel, quantity: j.quantity }, steps: plan.steps, meters: plan.meters, createdBy: userId, isFixture: false });
         await ctx.scheduler.runAfter(0, internal.jobs.createContent, { runId, job: j.job, channel: j.channel, quantity: j.quantity, images, brief: j.brief });
         runIds.push(runId);
       } catch {
