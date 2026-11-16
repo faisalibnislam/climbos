@@ -47,7 +47,7 @@ import { inferSearchIntentStage } from "./searchIntent";
 import { lintFactIndexes } from "./factIndexes";
 import { lintDiagnosisFit, playWorksOnConstraint } from "./diagnosis";
 import { lintEligibilityIds } from "../playbooks/contracts";
-import { OfferAssessmentSchema, lintApprovedOfferCopy, lintOfferAssessment, type OfferAssessmentContext } from "./offerAssessment";
+import { offerCopyTerms, OfferAssessmentSchema, lintApprovedOfferCopy, lintOfferAssessment, type OfferAssessmentContext } from "./offerAssessment";
 import { lintPlatformEligibility } from "../acquisition/platformRules";
 import { validateResearchUrl } from "../integrations/website";
 import { hookBeforeFold, lintClaims, lintCopy, maxItems, maxLength, minItems, stringFields, untracedNumbers } from "./lint";
@@ -336,7 +336,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.106-prepared-offer-terms";
+export const ENGINE_VERSION = "v3.107-focused-offer-assessment";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -2688,6 +2688,33 @@ export function strategySpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof Stra
   );
 }
 
+/** Reuse the detailed offer contract for the selected move, leaving speculative alternatives unrestricted. */
+function lintFocusedOffer(out: z.infer<typeof FocusedStrategySchema>, input: AgentInput): LintIssue[] {
+  const focus = out.focusedMove;
+  const assessment = focus.offerAssessment;
+  const diagnosis = input.constraints?.diagnosis;
+  const issues = lintOfferAssessment(assessment, {
+    name: focus.title, oneLiner: `${out.summary} ${focus.why}`, mechanic: focus.aiCanDo, test: focus.firstAction,
+    actionContract: { diagnosis: out.diagnosis },
+  }, {
+    facts: input.facts, researchNotes: input.precomputedResearch?.notes ?? input.untrustedContext ?? "",
+    sourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map(source => source.url) ?? [],
+    evidenceText: evidenceOf(input),
+    ...(diagnosis?.status === "supported" ? { diagnosedConstraint: diagnosis.constraint, diagnosisMeasured: diagnosis.basis === "measured" } : {}),
+  }, "focusedMove.offerAssessment").map(issue => ({ ...issue, rule: issue.severity === "error" ? "focused_offer_assessment" : issue.rule }));
+  if (assessment) {
+    if (input.constraints?.currency && assessment.currency !== input.constraints.currency) issues.push({ severity: "error", rule: "focused_offer_assessment", path: "focusedMove.offerAssessment.currency", message: "Use the supplied business currency for the offer comparison; do not silently convert its inputs." });
+  }
+  return issues;
+}
+
+/** A new assessed proposal may differ from the old plan, but public drafts must bind the intended terms. */
+function focusedOfferDraftInput(out: z.infer<typeof FocusedStrategySchema>, input: AgentInput): AgentInput {
+  const focus = out.focusedMove;
+  if (!focus.offerAssessment) return input;
+  return { ...input, approvedOfferTerms: [offerCopyTerms(focus.title, focus.offerAssessment), ...(input.approvedOfferTerms ?? []).filter(offer => offer.playName !== focus.title)] };
+}
+
 /** Default owner experience: one decision and useful prepared work; no forced forecast portfolio. */
 export function focusedStrategySpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof FocusedStrategySchema>> {
   return base({
@@ -2695,9 +2722,10 @@ export function focusedStrategySpec(o: SpecOptions = {}): AgentSpec<z.infer<type
     schema: FocusedStrategySchema, rubric: focusedRubric(rubricOf("growth-strategy")), criticSkills: ["owner-brevity"],
     lint: (out, input) => [
       ...lintStrategyExploration(out.strategyExploration, input),
+      ...lintFocusedOffer(out, input),
       ...lintPlanning(out, input), ...lintCites(out, input.facts.length, evidenceOf(input)),
       ...lintPlanFit(out, input.constraints), ...lintOutcomeNumbers(out, input.constraints, `${input.brief}\n${input.facts.join("\n")}`),
-      ...lintRefusedOutreach(out.preparedWork, input), ...lintPreparedWork(out.preparedWork, input), ...lintPreparedDrafts(out.preparedWork, input),
+      ...lintRefusedOutreach(out.preparedWork, input), ...lintPreparedWork(out.preparedWork, input), ...lintPreparedDrafts(out.preparedWork, focusedOfferDraftInput(out, input)),
       ...out.preparedWork.flatMap((work, i) => lintEmbeddedUrls([{ path: `preparedWork[${i}].draft`, text: work.draft }], input, work.kind === "test_brief")),
       ...lintStrategicDirection(out.strategicDirection, input.facts, input.availableSourceUrls ?? []),
       ...lintStrategicDirection({ ...out.strategicDirection, evidenceRefs: out.focusedMove.evidenceRefs }, input.facts, input.availableSourceUrls ?? []),

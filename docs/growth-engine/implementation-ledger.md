@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: default offer assessment and economics
+
+Eight red focused-unit cases confirmed absent schema retention, assessment checks and downstream approved terms. Extended the existing FocusedMove with the existing OfferAssessment, reused deterministic checks and calculator, made primary-offer errors hard failures, and retained it through existing saveStrategy parsing and typed Convex storage. Reused the owner offer panel under Why this plan; approved focused terms and audience names now reach later drafting. A further red case showed empty cost arrays appearing as full contribution: missing payment/delivery/incentive categories now remain unknown in both unit and horizon views. Updated the horizon test to use complete typed cost evidence instead of a cast partial fixture. Prepared-copy binding persistence from v3.106 now has its missing database validator. Grounded/adjacent/bold exploration is not subject to this primary execution assessment. Engine v3.107-focused-offer-assessment. 186 focused tests and two desktop/mobile checks pass, with typecheck/lint; no new agent/provider or external action. See Verification for initial failures and remaining semantic, model-quality and historical-data limits.
+
 ## Local update — 17 November 2026: social reports survive calendar gaps
 
 ## Local update — 17 November 2026: prepared offer consistency and refund claims

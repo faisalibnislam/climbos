@@ -1,3 +1,4 @@
+import { offerCopyTerms } from "./offerAssessment";
 import { readExpertPlan } from "./planCompatibility";
 
 export interface ApprovedPlanContextInput {
@@ -5,7 +6,7 @@ export interface ApprovedPlanContextInput {
   version: number;
   summary?: string;
   positioning?: string;
-  audiences?: string[];
+  audiences?: (string | { name: string })[];
   expert?: unknown;
 }
 
@@ -13,6 +14,7 @@ type PlanDetail = {
   snapshot?: { snapshotId?: string; [key: string]: unknown };
   diagnosis?: string;
   northStar?: unknown;
+  focusedMove?: { title: string; why: string; aiCanDo: string; offerAssessment?: NonNullable<PlanDetail["plays"]>[number]["offerAssessment"] };
   plays?: {
     name?: string;
     oneLiner?: string;
@@ -55,30 +57,17 @@ export interface ApprovedOfferTermConstraint {
 
 const clean = (value: unknown, max = 500): string => typeof value === "string" ? value.trim().slice(0, max) : "";
 
-/** Typed price constraints for publishable drafts, derived only from an approved plan. */
+/** Adapt the focused primary move to the existing offer-context path without inventing execution plays. */
+function offerContextPlays(expert: PlanDetail): NonNullable<PlanDetail["plays"]> {
+  const focus = expert.focusedMove;
+  return [...(expert.plays ?? []), ...(focus?.offerAssessment ? [{ name: focus.title, oneLiner: focus.why, mechanic: focus.aiCanDo, offerAssessment: focus.offerAssessment }] : [])];
+}
+
+/** Typed price constraints derived only from an approved plan or its exact launch-pinned predecessor. */
 export function approvedPlanOfferTerms(plan: ApprovedPlanContextInput, opts: { pinnedAtLaunch?: boolean } = {}): ApprovedOfferTermConstraint[] {
   if (plan.status !== "approved" && !(plan.status === "superseded" && opts.pinnedAtLaunch)) return [];
   const expert = plan.expert && typeof plan.expert === "object" ? readExpertPlan(plan.expert as Record<string, unknown>) as PlanDetail : {};
-  return (expert.plays ?? []).flatMap((play) => {
-    const offer = play.offerAssessment;
-    if (!offer) return [];
-    const current = offer.current?.netPrice?.amount;
-    const proposed = offer.proposed?.netPrice?.amount;
-    const recommendation = clean(offer.recommendation, 60);
-    const allowedPrices = new Set<number>();
-    if (typeof current === "number" && Number.isFinite(current)) allowedPrices.add(current);
-    if (recommendation === "recommend_promotion" && typeof proposed === "number" && Number.isFinite(proposed)) allowedPrices.add(proposed);
-    // validate_first is an internal experiment proposal, not an offer currently
-    // available to customers. Only a recommended promotion is customer-copy eligible.
-    const eligibleAudience = recommendation === "recommend_promotion" ? clean(offer.test?.eligibleAudience, 240) || null : null;
-    const allowedMechanisms = recommendation === "recommend_promotion"
-      ? [clean(offer.mechanism, 60)].filter((mechanism) => mechanism && mechanism !== "none")
-      : [];
-    const allowedDiscountPercentages = recommendation === "recommend_promotion" && clean(offer.mechanism, 60) === "discount" && typeof current === "number" && Number.isFinite(current) && current > 0 && typeof proposed === "number" && Number.isFinite(proposed) && proposed >= 0 && proposed < current
-      ? [...new Set([Number((((current - proposed) / current) * 100).toFixed(2)), Number((((current - proposed) / current) * 100).toFixed(1))])]
-      : [];
-    return [{ playName: clean(play.name, 120), recommendation, currency: clean(offer.currency, 3).toUpperCase(), allowedPrices: [...allowedPrices], allowedDiscountPercentages, allowedMechanisms, urgencyClaim: clean(offer.urgencyClaim, 160) || null, eligibleAudience }];
-  });
+  return offerContextPlays(expert).flatMap(play => play.offerAssessment ? [offerCopyTerms(play.name ?? "", play.offerAssessment)] : []);
 }
 
 /** A bounded, provenance-labeled summary of the exact owner-approved plan. */
@@ -94,9 +83,9 @@ export function approvedPlanContext(plan: ApprovedPlanContextInput, opts: { pinn
     clean(plan.summary) ? `Summary: ${clean(plan.summary)}` : "",
     clean(expert.diagnosis) ? `Diagnosis: ${clean(expert.diagnosis)}` : "",
     clean(plan.positioning) ? `Positioning: ${clean(plan.positioning)}` : "",
-    plan.audiences?.length ? `Audiences: ${plan.audiences.slice(0, 5).map((x) => clean(x, 180)).filter(Boolean).join("; ")}` : "",
+    plan.audiences?.length ? `Audiences: ${plan.audiences.slice(0, 5).map((x) => clean(typeof x === "string" ? x : x.name, 180)).filter(Boolean).join("; ")}` : "",
     expert.northStar ? `North Star: ${JSON.stringify(expert.northStar).slice(0, 500)}` : "",
-    ...(expert.plays ?? []).slice(0, 5).map((play) => {
+    ...offerContextPlays(expert).slice(0, 5).map((play) => {
       const measure = play.actionContract?.measurement;
       const measurement = measure ? ` Measure: ${[measure.metric, measure.baseline, measure.target, measure.windowDays ? `${measure.windowDays} days` : "", measure.source].map((x) => clean(x, 100)).filter(Boolean).join("; ")}.` : "";
       const offer = play.offerAssessment;

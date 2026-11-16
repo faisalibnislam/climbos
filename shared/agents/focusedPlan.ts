@@ -2,6 +2,8 @@ import { z } from "zod";
 import { cycleMilestoneInstruction } from "./planningCycles";
 import {fitJson, reportDropped} from "./context";
 import { GOAL_TIMING_INSTRUCTION } from "./goalTiming";
+import { OfferAssessmentSchema } from "./offerAssessment";
+import { OFFER_DECISION_POLICY } from "./planTasks";
 
 /** A decision and already-prepared work, without fictitious forecast inputs. */
 export const FocusedMoveSchema = z.object({
@@ -11,6 +13,7 @@ export const FocusedMoveSchema = z.object({
   firstAction: z.string().min(12).max(300),
   aiCanDo: z.string().min(20).max(500),
   evidenceRefs: z.array(z.string()).max(8),
+  offerAssessment: OfferAssessmentSchema.optional(),
 });
 export type FocusedMove = z.infer<typeof FocusedMoveSchema>;
 export type PlanStyle = "starter" | "focused" | "detailed";
@@ -34,6 +37,8 @@ In notDoing include the strongest realistic alternative, why this test comes fir
 Do not assume that a catalog filter count identifies which named apps are free, or that two apps belong to the same collection. Verify the specific product page or leave those claims out. Never invent a first-person experience such as "I kept running into this" in social copy; use the business voice without a fictional customer story. A zero operational ad cap means no paid advertising is authorized, not that the owner reported a zero budget.
 Anything offered in a pitch must already exist at a confirmed supplied URL or be included as a complete prepared draft. Do not promise an extra checklist, demonstration or resource that AI still has to prepare. If an external route is unverified, keep it as secondary research rather than making all useful progress depend on that recipient.
 For prepared public copy that uses supplied approved offer terms, preserve the exact price, mechanism, audience and urgency, and name the exact approvedOfferPlayName. A validation-only promotion stays an internal test_brief, not an available customer offer. A refund guarantee needs affirmative current evidence; generic reassurance is not proof of a refund policy.
+${OFFER_DECISION_POLICY}
+FOCUSED OFFER APPLICATION: Apply the offer policy to the primary focusedMove using focusedMove.offerAssessment, with diagnosis exactly equal to the plan diagnosis. Omit it when no offer decision is needed. This contract does not apply to exploratory grounded/adjacent/bold alternatives until one becomes the primary recommendation. Include known promotionHistory or status unknown with reference null, claim empty and period null; name missing history in unknowns. Keep unknown amounts null and list missing costs explicitly. An empty cost list is not evidence of zero costs. Use only the supplied currency and a clearly proposed test horizon; never invent commercial inputs. Missing economics calls for a private validation brief alongside useful independent work. When this primary assessment supplies draft terms, bind prepared public copy with approvedOfferPlayName equal to focusedMove.title; this is a proposal binding, not approval. A validated recommendation may prepare public copy for review; validate_first may only prepare the proposed promotion privately. Nothing changes a live offer.
 Do useful work now: include 1–3 complete preparedWork drafts tied to this move, with actual copy or a practical script, exact target, source references and checks before use. A relevant earned creator pitch can be the primary move; a working product page does not need a rewrite to justify distribution. Name verified niche educators/partners when the evidence supports them; do not invent recipients, audiences, consent or availability. Keep product behavior and published promises distinct from tested results. Use a different buyer situation rather than inventing details about an unresearched product.
 Use the source reads to resolve public product details yourself; do not ask the owner to confirm links, features, system requirements or public prices already supplied. Owner review is for accuracy and actual product behavior, not repeating public research. If a product's free eligibility is unknown, omit that claim. How-to drafts need short ordered actions supported by the source, including prerequisites and preserving originals. Feature inventories alone are not instructions. Page copy may use up to 6000 characters; keep social/pitch/test drafts within 2400.
 Keep existing and proposed destinations distinct. If a new guide is not published, prepare that guide privately and let any complete social draft point directly to the relevant existing product page, accurately described as an app page. Do not call an app URL a guide, invent a proposed live URL, include replacement instructions in public copy, or make useful work depend on an unspecified connected account. Name a suitable platform as a proposed destination; connection and posting remain separate permissions.

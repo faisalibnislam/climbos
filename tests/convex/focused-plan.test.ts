@@ -2,15 +2,28 @@ import { afterEach, expect, it, vi } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import { asNewUser, makePaid, setup } from "./helpers";
 import { focusedPlanFixture } from "../fixtures/focusedPlan";
+import { offerAssessmentFixture, offerFact } from "../fixtures/offerAssessment";
+import { approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
 import type { TurnRequest } from "../../shared/ai/types";
 import type { RateVersion } from "../../shared/economics/rates";
-const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false, unsupportedGuarantee: false }));
+const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false, unsupportedGuarantee: false, offerMode: "" }));
 vi.mock("../../shared/ai/turn", async original => ({
   ...await original<typeof import("../../shared/ai/turn")>(),
   modelTurn: async (req: TurnRequest, rates: RateVersion) => {
     state.requests.push(req);
     const days = Number(JSON.stringify(req.messages).match(/EXECUTION CYCLE: (14|30|90) days/)?.[1] ?? 14);
     const plan = focusedPlanFixture(days);
+    if (state.offerMode) {
+      const offer = offerAssessmentFixture();
+      if (state.offerMode === "missing_cost") offer.proposed.unknownCosts = ["Incremental delivery cost"];
+      if (state.offerMode === "validate_first") {
+        offer.recommendation = "validate_first"; offer.proposed.unknownCosts = ["Incremental delivery cost"];
+        offer.risks[0].status = "unknown"; offer.test.ownerInputs = ["Confirm incremental delivery cost"];
+      }
+      plan.diagnosis = offer.diagnosis;
+      plan.focusedMove = { ...plan.focusedMove, title: "Test the proposed introductory discount", why: "The owner reports a price obstacle for qualified quote requests.", firstAction: "Review the prepared offer test.", aiCanDo: "Prepare a private discount test brief for owner review.", ...(state.offerMode === "missing_assessment" ? {} : { offerAssessment: offer }) };
+      plan.preparedWork[0].approvedOfferPlayName = plan.focusedMove.title;
+    }
     if (state.unsupportedGuarantee) plan.preparedWork[0] = { ...plan.preparedWork[0], kind: "social_post", draft: "Review our service for your next project. We guarantee your money back." };
     if (state.refusedTarget) plan.preparedWork[0] = { ...plan.preparedWork[0], kind: "creator_pitch", target: "Creator.example — suggest our product" };
     if (req.schema?.safeParse(plan).success) {
@@ -25,7 +38,7 @@ vi.mock("../../shared/ai/turn", async original => ({
     return result;
   },
 }));
-afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; });
+afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.offerMode = ""; });
 
 async function workspace() {
   const t = setup(); delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE;
@@ -161,4 +174,50 @@ it.each([30, 90])("preserves the %i-day financial scenario while AI chooses inde
   expect(plan.expert?.timing?.firstReview.maxDays).toBe(14);
   expect(JSON.stringify(state.requests[0].messages)).not.toContain("EXECUTION CYCLE:");
   expect(JSON.stringify(state.requests[0].messages)).toContain("CREATIVITY PREFERENCE: surprising");
+});
+
+
+it.each(["focused", "starter"] as const)("persists the %s offer assessment and derives downstream terms only after owner approval", async planStyle => {
+  const { t, owner, slug, orgId } = await workspace(); state.offerMode = "valid";
+  await t.run(async ctx => {
+    const business = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", orgId)).first())!;
+    await ctx.db.insert("businessFacts", { orgId, businessId: business._id, category: "pricing", statement: offerFact, confidence: "high", reviewState: "confirmed", provenance: "owner_supplied", sourceIds: [], createdAt: Date.now(), updatedAt: Date.now() });
+  });
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const saved = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(saved.expert?.focusedMove?.offerAssessment).toEqual(offerAssessmentFixture());
+  expect(saved.expert?.preparedWork?.[0].approvedOfferPlayName).toBe(saved.expert?.focusedMove?.title);
+  expect(saved.expert?.quality?.state).toBe("passed");
+  expect(approvedPlanOfferTerms(saved)).toEqual([]);
+  const stranger = await asNewUser(t, `offer-stranger-${planStyle}@example.com`);
+  await expect(stranger.client.mutation(api.workspace.decidePlan, { slug, strategyId: saved._id, decision: "approve" })).rejects.toThrow();
+  const changedExpert = structuredClone(saved.expert!);
+  changedExpert.focusedMove!.offerAssessment!.proposed.netPrice.amount = 90;
+  await t.run(ctx => ctx.db.patch(saved._id, { expert: changedExpert }));
+  await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: saved._id, decision: "approve" })).rejects.toThrow(/changed after it was sent for review/);
+  await t.run(ctx => ctx.db.patch(saved._id, { expert: saved.expert }));
+  await owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: saved._id, decision: "approve" });
+  const approved = (await t.run(ctx => ctx.db.get(saved._id)))!;
+  expect(approvedPlanOfferTerms(approved)).toMatchObject([{ allowedPrices: [100, 95], allowedDiscountPercentages: [5] }]);
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+  expect(await t.run(ctx => ctx.db.query("campaigns").collect())).toEqual([]);
+});
+
+it.each(["missing_assessment", "missing_cost", "validate_first"])("keeps %s promotion decisions honest through generation and approval", async mode => {
+  const { t, owner, slug, orgId } = await workspace(); state.offerMode = mode;
+  await t.run(async ctx => {
+    const business = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", orgId)).first())!;
+    await ctx.db.insert("businessFacts", { orgId, businessId: business._id, category: "pricing", statement: offerFact, confidence: "high", reviewState: "confirmed", provenance: "owner_supplied", sourceIds: [], createdAt: Date.now(), updatedAt: Date.now() });
+  });
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const saved = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(saved.expert?.quality?.state).toBe(mode === "validate_first" ? "passed" : "failed");
+  if (mode === "validate_first") {
+    expect(saved.expert?.focusedMove?.offerAssessment?.proposed.unknownCosts).toEqual(["Incremental delivery cost"]);
+    await owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: saved._id, decision: "approve" });
+    expect(approvedPlanOfferTerms((await t.run(ctx => ctx.db.get(saved._id)))!)).toMatchObject([{ recommendation: "validate_first", allowedPrices: [100], allowedMechanisms: [] }]);
+  } else await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: saved._id, decision: "approve" })).rejects.toThrow(/checks/);
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
 });

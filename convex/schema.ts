@@ -3202,8 +3202,8 @@ export default defineSchema({
         /** Grounded, adjacent, and bold exploration; validated before this persisted envelope is written. */
         strategyExploration: v.optional(strategyExplorationValidator),
         timing: v.optional(v.object({ preparation: v.object({ minDays: v.number(), maxDays: v.number() }), firstReview: v.object({ minDays: v.number(), maxDays: v.number() }), reason: v.string(), assumptions: v.array(v.string()), reviewTrigger: v.string(), outcomeLag: v.string() })),
-        focusedMove: v.optional(v.object({ version: v.literal(1), title: v.string(), why: v.string(), firstAction: v.string(), aiCanDo: v.string(), evidenceRefs: v.array(v.string()) })),
-        preparedWork: v.optional(v.array(v.object({ title: v.string(), kind: v.union(v.literal("page_copy"), v.literal("creator_pitch"), v.literal("social_post"), v.literal("test_brief")), target: v.string(), draft: v.string(), evidenceRefs: v.array(v.string()), checksBeforeUse: v.array(v.string()), status: v.literal("draft") }))),
+        focusedMove: v.optional(v.object({ version: v.literal(1), title: v.string(), why: v.string(), firstAction: v.string(), aiCanDo: v.string(), evidenceRefs: v.array(v.string()), offerAssessment: v.optional(offerAssessmentValidator) })),
+        preparedWork: v.optional(v.array(v.object({ title: v.string(), kind: v.union(v.literal("page_copy"), v.literal("creator_pitch"), v.literal("social_post"), v.literal("test_brief")), target: v.string(), draft: v.string(), evidenceRefs: v.array(v.string()), checksBeforeUse: v.array(v.string()), status: v.literal("draft"), approvedOfferPlayName: v.optional(v.string()) }))),
         strategicDirection: v.optional(v.object({
           ambition: v.string(), customer: v.string(), unmetNeed: v.string(),
           winningApproach: v.string(), whyThisBusiness: v.string(),

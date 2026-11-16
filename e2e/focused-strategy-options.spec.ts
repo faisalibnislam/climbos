@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
 import { localDemoFixtures } from "./local-demo-fixtures";
 import { focusedPlanFixture } from "../tests/fixtures/focusedPlan";
+import { offerAssessmentFixture } from "../tests/fixtures/offerAssessment";
 import { diagnose } from "../shared/agents/diagnosis";
 
 const envFile = process.env.CLIMBOS_DESIGN_E2E_ENV_FILE;
@@ -29,11 +30,25 @@ test("focused plan exposes all three options and selecting bold grants no action
   await append("goals", [{ ...copyRow(goal), orgId: org._id }]);
   const savedGoal = (await rows("goals")).find(row => row.orgId === org._id)!;
   const fixture = focusedPlanFixture();
+  fixture.focusedMove.offerAssessment = offerAssessmentFixture();
   await append("strategies", [{ ...copyRow(plan), orgId: org._id, businessId: savedBusiness._id, goalId: savedGoal._id, runId: undefined, approvalId: undefined, summary: fixture.summary, expert: { ...(plan.expert as Record<string, unknown>), constraintDiagnosis: diagnose({ funnel: { periodDays: 90, leads: 100, activated: 12, newCustomers: 3, activationKind: "value" } }), focusedMove: fixture.focusedMove, strategicDirection: fixture.strategicDirection, strategyExploration: fixture.strategyExploration, preparedWork: fixture.preparedWork, timing: fixture.timing, phases: fixture.phases, weekOneChecklist: fixture.weekOneChecklist, plays: [] } }]);
   const snapshot = async () => Promise.all(["artifacts", "approvals", "actionReceipts", "workflowRuns"].map(async table => (await rows(table)).filter(row => row.orgId === org._id)));
   const before = await snapshot();
   await page.goto(`/app/${slug}/plan`);
   await expect(page.getByRole("tab", { name: "Next steps", exact: true })).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("tab", { name: "Why this plan", exact: true }).click();
+  const offer = page.getByRole("region", { name: "Offer recommendation and test" });
+  await expect(offer).toContainText("Advice only · changes need your approval");
+  await expect(offer).toContainText("Reported by your team");
+  await expect(offer).toContainText("Current $50 from $100 · proposed $40 from $95");
+  await expect(offer).toContainText("About 1.25 sales at the new price equal one current sale.");
+  await offer.getByText("See test plan, options, and risks", { exact: true }).click();
+  await expect(offer).toContainText("Incremental completed first-time jobs");
+  await expect(offer).toContainText("21 days");
+  await expect(offer).toContainText("Sales may come earlier, not grow");
+  await expectNoHorizontalScroll(page);
+  await expectAccessible(page, "Focused offer economics");
+  await offer.screenshot({ path: testInfo.outputPath("offer-economics.png") });
   await page.getByRole("tab", { name: "Strategy options", exact: true }).click();
   const section = page.getByRole("region", { name: "Grounded, adjacent and bold strategy options" });
   for (const mode of ["grounded", "adjacent", "bold"] as const) await expect(section.getByRole("heading", { name: fixture.strategyExploration[mode].title })).toBeVisible();
@@ -66,6 +81,8 @@ test("focused plan exposes all three options and selecting bold grants no action
   await expect(learning).toContainText("1 included");
   await expect(learning.getByRole("button", { name: "Stop using", exact: true })).toHaveCount(1);
   await expectNoHorizontalScroll(page);
+  // Check the stable review view after the save notifications finish animating and dismiss.
+  await expect(page.getByRole("status").filter({ hasText: "Saved for this workspace" })).toHaveCount(0, { timeout: 10_000 });
   await expectAccessible(page, "Focused strategy options");
   await bold.screenshot({ path: testInfo.outputPath("bold-option.png") });
   await page.getByRole("tab", { name: "Research", exact: true }).click();

@@ -113,6 +113,34 @@ export interface ApprovedOfferCopyTerms {
   eligibleAudience: string | null;
 }
 
+type OfferCopyInput = {
+  recommendation?: string; mechanism?: string; currency?: string;
+  current?: { netPrice?: { amount?: number | null } };
+  proposed?: { netPrice?: { amount?: number | null } };
+  test?: { eligibleAudience?: string }; urgencyClaim?: string | null;
+};
+
+/** A proposed copy contract only; callers still enforce plan and action approval separately. */
+export function offerCopyTerms(playName: string, offer: OfferCopyInput): ApprovedOfferCopyTerms {
+  const clean = (value: unknown, max: number): string => typeof value === "string" ? value.trim().slice(0, max) : "";
+  const current = offer.current?.netPrice?.amount;
+  const proposed = offer.proposed?.netPrice?.amount;
+  const recommendation = clean(offer.recommendation, 60);
+  const allowedPrices = new Set<number>();
+  if (typeof current === "number" && Number.isFinite(current)) allowedPrices.add(current);
+  if (recommendation === "recommend_promotion" && typeof proposed === "number" && Number.isFinite(proposed)) allowedPrices.add(proposed);
+  // validate_first is an internal experiment proposal, not an offer currently
+  // available to customers. Only a recommended promotion is customer-copy eligible.
+  const eligibleAudience = recommendation === "recommend_promotion" ? clean(offer.test?.eligibleAudience, 240) || null : null;
+  const allowedMechanisms = recommendation === "recommend_promotion"
+    ? [clean(offer.mechanism, 60)].filter((mechanism) => mechanism && mechanism !== "none")
+    : [];
+  const allowedDiscountPercentages = recommendation === "recommend_promotion" && clean(offer.mechanism, 60) === "discount" && typeof current === "number" && Number.isFinite(current) && current > 0 && typeof proposed === "number" && Number.isFinite(proposed) && proposed >= 0 && proposed < current
+    ? [...new Set([Number((((current - proposed) / current) * 100).toFixed(2)), Number((((current - proposed) / current) * 100).toFixed(1))])]
+    : [];
+  return { playName: clean(playName, 120), recommendation, currency: clean(offer.currency, 3).toUpperCase(), allowedPrices: [...allowedPrices], allowedDiscountPercentages, allowedMechanisms, urgencyClaim: clean(offer.urgencyClaim, 160) || null, eligibleAudience };
+}
+
 /** Rejects monetary amounts in publishable copy that conflict with the approved plan's offer prices. */
 export function lintApprovedOfferPrices(text: string, offers: ApprovedOfferCopyTerms[] | undefined, path: string): LintIssue[] {
   if (!offers?.length || !text.trim()) return [];
@@ -181,9 +209,18 @@ export interface OfferUnitEconomics {
   unknowns: string[];
 }
 
+const PAYMENT_COST = /payment|processing fee|transaction fee/i;
+const DELIVERY_COST = /fulfill|service|labor|delivery|shipping|cogs|materials?|manufactur|production|unit cost/i;
+const INCENTIVE_COST = /bonus|promo|referral|reward|bundle/i;
+
 /** Per-unit arithmetic only; excludes fixed overhead and acquisition cost unless explicitly in the supplied boundary. */
 export function evaluateOfferUnitEconomics(assessment: OfferAssessment): OfferUnitEconomics {
   const unknowns = [
+    ...(["current", "proposed"] as const).flatMap(side => [
+      ...(!assessment[side].variableCosts.some(cost => PAYMENT_COST.test(cost.category)) ? [`${side === "current" ? "Current" : "Proposed"} payment or transaction fee`] : []),
+      ...(!assessment[side].variableCosts.some(cost => DELIVERY_COST.test(cost.category)) ? [`${side === "current" ? "Current" : "Proposed"} variable delivery or service cost`] : []),
+    ]),
+    ...(["bonus", "bundle", "referral_incentive"].includes(assessment.mechanism) && !assessment.proposed.variableCosts.some(cost => INCENTIVE_COST.test(cost.category)) ? ["Proposed bonus or incentive cost"] : []),
     ...assessment.current.unknownCosts.map((item) => `Current offer: ${item}`),
     ...assessment.proposed.unknownCosts.map((item) => `Proposed offer: ${item}`),
     ...(assessment.current.netPrice.amount === null ? ["Current net price"] : []),
