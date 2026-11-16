@@ -4,6 +4,7 @@ import { hasNoCustomersYet } from "../shared/agents/lifecycle";
 import { SPECIALIST_EVENT_LABEL, type SpecialistEvent } from "../shared/agents/specialistEvents";
 import { isServiceBusiness } from "../shared/acquisition/library";
 import { legacyPlanHash, planContentHash } from "./lib/planHash";
+import { segmentEconomicsInputIssues } from "../shared/agents/segmentEconomics";
 import { majorToMinor, minorToMajor } from "../shared/economics/currency";
 import { v } from "convex/values";
 import { needsPaymentRefresh, LEGACY_BILLING_NOTE, SALES_PAYMENT_NOTE } from "../shared/attribution/paymentEvidence";
@@ -920,7 +921,7 @@ export const setUnitEconomics = mutation({
     monthlyGrowthCashUsd: v.optional(v.number()),
     /** Numbers the owner isn't sure of; a value given for one of these takes it off the list. */
     unsure: v.optional(v.array(v.union(v.literal("revenue"), v.literal("margin"), v.literal("churn")))),
-    segmentEconomics: v.optional(v.array(v.object({ segment: v.string(), currency: v.string(), periodDays: v.number(), customers: v.number(), netRevenue: v.number(), variableCosts: v.number(), costBoundary: v.string(), unknownCosts: v.optional(v.array(v.string())), strategicValueNote: v.optional(v.string()) }))),
+    segmentEconomics: v.optional(v.array(v.object({ segment: v.string(), currency: v.string(), periodDays: v.number(), customers: v.number(), netRevenue: v.optional(v.number()), variableCosts: v.optional(v.number()), costCoverage: v.optional(v.union(v.literal("complete"), v.literal("incomplete"), v.literal("unknown"))), costBoundary: v.string(), unknownCosts: v.optional(v.array(v.string())), strategicValueNote: v.optional(v.string()) }))),
     ranges: v.optional(v.object({ revenue: v.optional(v.object({ low: v.number(), high: v.number() })), margin: v.optional(v.object({ low: v.number(), high: v.number() })), churn: v.optional(v.object({ low: v.number(), high: v.number() })) })),
   },
   handler: async (ctx, { slug, ranges, unsure: unsureArg, ...vals }) => {
@@ -944,14 +945,8 @@ export const setUnitEconomics = mutation({
         const key = item.segment.trim().toLocaleLowerCase("en-US");
         if (!key || item.segment.length > 80 || names.has(key)) throw appError("INVALID", "Each customer group needs a unique name of 1–80 characters.");
         names.add(key);
-        if (!/^[A-Z]{3}$/.test(item.currency)) throw appError("INVALID", "Use a three-letter currency code for each segment total.");
-        if (!Number.isSafeInteger(item.periodDays) || item.periodDays < 1 || item.periodDays > 3650) throw appError("INVALID", "Segment comparison period must be 1–3650 days.");
-        if (!Number.isSafeInteger(item.customers) || item.customers < 1 || item.customers > 10_000_000) throw appError("INVALID", "Segment customer count must be a whole number above zero.");
-        check(item.netRevenue, 0, 1_000_000_000, "Segment net revenue");
-        check(item.variableCosts, 0, 1_000_000_000, "Segment variable costs");
-        if (item.costBoundary.trim().length < 12 || item.costBoundary.length > 240) throw appError("INVALID", "Describe the variable costs included, or name the missing costs.");
-        if ((item.unknownCosts?.length ?? 0) > 8 || item.unknownCosts?.some((cost) => !cost.trim() || cost.length > 100)) throw appError("INVALID", "List up to eight specific unknown costs.");
-        if (item.strategicValueNote && item.strategicValueNote.length > 240) throw appError("INVALID", "Strategic value note must be 240 characters or less.");
+        const issues = segmentEconomicsInputIssues(item);
+        if (issues.length) throw appError("INVALID", issues[0]);
       }
     }
     // A range must be low < high and pass the same checks; its value is the midpoint (set by the client, re-checked here).

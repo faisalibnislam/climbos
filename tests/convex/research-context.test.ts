@@ -94,7 +94,13 @@ describe("persisted research in generation context", () => {
       return business._id;
     });
     await expect(t.mutation(internal.jobWrites.saveInsights, { runId, businessId: otherBusiness, insights: JSON.stringify(research) })).rejects.toThrow("Business mismatch");
-    if (kind === "strategy") await t.action(internal.jobs.buildStrategy, { runId });
+    if (kind === "strategy") {
+      await t.run(async ctx => {
+        const business = (await ctx.db.get(businessId))!;
+        await ctx.db.patch(businessId, { unitEconomics: { ...business.unitEconomics, updatedAt: Date.now(), segmentEconomics: [{ segment: "Segment with missing delivery costs", currency: "KWD", periodDays: 90, customers: 10, netRevenue: 10.123, costCoverage: "unknown", costBoundary: "Delivery costs not yet collected" }] } });
+      });
+      await t.action(internal.jobs.buildStrategy, { runId });
+    }
     else await t.action(internal.jobs.createContent, { runId, job: kind, quantity: 1 });
     expect(captured.inputs, JSON.stringify(await t.run(ctx => ctx.db.get(runId)))).toHaveLength(1);
     const input = captured.inputs[0];
@@ -111,6 +117,12 @@ describe("persisted research in generation context", () => {
     expect(text).not.toContain("Invented customer praise");
     expect(text).not.toContain("Search-only unsupported words");
     if (kind === "strategy") {
+      expect(text).toContain("Segment with missing delivery costs");
+      expect(text).toContain("net revenue 10.123 KWD");
+      expect(text).toContain("listed variable costs unknown");
+      expect(text).toContain("contribution after listed costs unknown");
+      expect(text).toContain("cost coverage unknown");
+      expect(text).toContain("No spending or execution is authorized");
       expect(text).toContain("Owner interpretation: investigate recurring errors first.");
       expect(text).toContain('"label":"Reliability"');
       expect(text).toContain("not unique customers");

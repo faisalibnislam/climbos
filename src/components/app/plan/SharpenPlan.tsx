@@ -7,8 +7,8 @@ import { useState } from "react";
 import { Button, Callout, Card, CardContent, ChoiceChips, Input, Tooltip, toast } from "@/components/ui";
 import { errorMessage } from "@/components/app/errors";
 import type { OwnerEconomics, OwnerQuestion } from "../../../../shared/agents/economics";
-import { calculateSegmentEconomics } from "../../../../shared/agents/segmentEconomics";
-import { formatMoney } from "../../../../shared/economics/currency";
+import { calculateSegmentEconomics, segmentEconomicsInputIssues } from "../../../../shared/agents/segmentEconomics";
+import { formatMinorMoney, majorToMinor } from "../../../../shared/economics/currency";
 
 /** Shares are typed as percentages; money as plain amounts. */
 const UNIT: Record<OwnerQuestion["unit"], { suffix: string; toInput: (v: number) => string; fromInput: (s: string) => number }> = {
@@ -131,32 +131,29 @@ export function SharpenPlan({ slug, questions, canEdit, answersNewer, currency =
 }
 
 type SegmentRow = NonNullable<OwnerEconomics["segmentEconomics"]>[number];
-type SegmentDraft = { segment: string; currency: string; periodDays: string; customers: string; netRevenue: string; variableCosts: string; costBoundary: string; unknownCosts: string; strategicValueNote: string };
-const emptySegment = (currency: string): SegmentDraft => ({ segment: "", currency, periodDays: "30", customers: "", netRevenue: "", variableCosts: "", costBoundary: "", unknownCosts: "", strategicValueNote: "" });
-const toDraft = (row: SegmentRow): SegmentDraft => ({ segment: row.segment, currency: row.currency, periodDays: String(row.periodDays), customers: String(row.customers), netRevenue: String(row.netRevenue), variableCosts: String(row.variableCosts), costBoundary: row.costBoundary, unknownCosts: row.unknownCosts?.join(", ") ?? "", strategicValueNote: row.strategicValueNote ?? "" });
+type SegmentDraft = { segment: string; currency: string; periodDays: string; customers: string; netRevenue: string; variableCosts: string; costCoverage: "complete" | "incomplete" | "unknown"; costBoundary: string; unknownCosts: string; strategicValueNote: string };
+const emptySegment = (currency: string): SegmentDraft => ({ segment: "", currency, periodDays: "", customers: "", netRevenue: "", variableCosts: "", costCoverage: "unknown", costBoundary: "", unknownCosts: "", strategicValueNote: "" });
+const toDraft = (row: SegmentRow): SegmentDraft => ({ segment: row.segment, currency: row.currency, periodDays: String(row.periodDays), customers: String(row.customers), netRevenue: row.netRevenue === undefined ? "" : String(row.netRevenue), variableCosts: row.variableCosts === undefined ? "" : String(row.variableCosts), costCoverage: row.costCoverage ?? (row.unknownCosts?.length ? "incomplete" : "unknown"), costBoundary: row.costBoundary, unknownCosts: row.unknownCosts?.join(", ") ?? "", strategicValueNote: row.strategicValueNote ?? "" });
+const parseSegment = (row: SegmentDraft): SegmentRow => ({
+  segment: row.segment.trim(), currency: row.currency.trim().toUpperCase(),
+  periodDays: row.periodDays.trim() ? Number(row.periodDays) : NaN,
+  customers: row.customers.trim() ? Number(row.customers) : NaN,
+  ...(row.netRevenue.trim() ? { netRevenue: Number(row.netRevenue) } : {}),
+  ...(row.variableCosts.trim() ? { variableCosts: Number(row.variableCosts) } : {}),
+  costCoverage: row.costCoverage, costBoundary: row.costBoundary.trim(),
+  unknownCosts: row.unknownCosts.split(",").map(value => value.trim()).filter(Boolean),
+  ...(row.strategicValueNote.trim() ? { strategicValueNote: row.strategicValueNote.trim() } : {}),
+});
 
 function SegmentEconomicsEditor({ slug, canEdit, currency, saved = [] }: { slug: string; canEdit: boolean; currency: string; saved?: OwnerEconomics["segmentEconomics"] }) {
   const save = useMutation(api.workspace.setUnitEconomics);
   const [rows, setRows] = useState<SegmentDraft[]>(() => saved.map(toDraft));
   const [busy, setBusy] = useState(false);
-  const update = (index: number, key: keyof SegmentDraft, value: string) => setRows((current) => current.map((row, i) => i === index ? { ...row, [key]: value } : row));
+  const update = (index: number, key: keyof SegmentDraft, value: string) => setRows(current => current.map((row, i) => i === index ? { ...row, [key]: value } : row));
   const saveRows = async () => {
-    const parsed: SegmentRow[] = [];
-    for (const row of rows) {
-      const item: SegmentRow = {
-        segment: row.segment.trim(),
-        currency: row.currency.trim().toUpperCase(),
-        periodDays: Number(row.periodDays),
-        customers: Number(row.customers),
-        netRevenue: Number(row.netRevenue),
-        variableCosts: Number(row.variableCosts),
-        costBoundary: row.costBoundary.trim(),
-        unknownCosts: row.unknownCosts.split(",").map((value) => value.trim()).filter(Boolean),
-        ...(row.strategicValueNote.trim() ? { strategicValueNote: row.strategicValueNote.trim() } : {}),
-      };
-      if (!item.segment || !Number.isFinite(item.periodDays) || !Number.isFinite(item.customers) || !Number.isFinite(item.netRevenue) || !Number.isFinite(item.variableCosts) || !item.costBoundary) return toast({ tone: "danger", title: "Fill in every field for each group." });
-      parsed.push(item);
-    }
+    const parsed = rows.map(parseSegment);
+    const issue = parsed.flatMap(segmentEconomicsInputIssues)[0];
+    if (issue) return toast({ tone: "danger", title: issue });
     setBusy(true);
     try {
       await save({ slug, segmentEconomics: parsed });
@@ -172,25 +169,25 @@ function SegmentEconomicsEditor({ slug, canEdit, currency, saved = [] }: { slug:
       <CardContent className="flex flex-col gap-3">
         <div>
           <h2 className="heading-card">Compare customer groups</h2>
-          <p className="mt-1 text-xs text-ink-3">Optional. Enter revenue after discounts and refunds, and costs for the same period.</p>
+          <p className="mt-1 text-xs text-ink-3">Optional. Enter revenue after discounts and refunds, and costs for the same period. Leave unknown money amounts blank; enter 0 only when the total is actually zero.</p>
         </div>
         {rows.map((row, index) => {
-          const customers = Number(row.customers);
-          const revenue = Number(row.netRevenue);
-          const costs = Number(row.variableCosts);
-          const p = row.segment.trim() && Number.isFinite(customers) && customers > 0 && Number.isFinite(revenue) && Number.isFinite(costs)
-            ? calculateSegmentEconomics([{ segment: row.segment, currency: row.currency || currency, periodDays: Math.max(1, Number(row.periodDays) || 1), customers, netRevenue: revenue, variableCosts: costs, costBoundary: row.costBoundary || "Draft boundary", unknownCosts: row.unknownCosts.split(",").map((value) => value.trim()).filter(Boolean) }], currency)[0]
-            : undefined;
+          const input = parseSegment(row);
+          const p = calculateSegmentEconomics([input])[0];
+          const money = (value: number | null) => value === null ? "unknown" : formatMinorMoney(majorToMinor(value, p.currency), p.currency);
           return (
             <div key={index} className="grid gap-2 rounded-[var(--radius-card)] border border-line p-3 sm:grid-cols-2 lg:grid-cols-4">
-              {([["segment", "Customer group"], ["currency", "Currency (ISO code)"], ["periodDays", "Period (days)"], ["customers", "Customers in group"], ["netRevenue", `Net revenue (${row.currency || currency})`], ["variableCosts", `Variable costs (${row.currency || currency})`], ["costBoundary", "Costs included"], ["unknownCosts", "Unknown costs (comma-separated)"], ["strategicValueNote", "Strategic value to consider"]] as const).map(([key, label]) => <label key={key} className="flex flex-col gap-1 text-xs text-ink-2">{label}<Input disabled={!canEdit || busy} value={row[key]} placeholder={key === "segment" ? "e.g. Solo customers" : key === "currency" ? currency : key === "costBoundary" ? "e.g. materials, payment fees, service time" : key === "unknownCosts" ? "Leave blank if none known" : undefined} inputMode={key === "costBoundary" || key === "unknownCosts" || key === "strategicValueNote" || key === "segment" || key === "currency" ? "text" : "decimal"} onChange={(event) => update(index, key, event.target.value)} /></label>)}
-              {p ? <p className="text-xs text-ink-2 sm:col-span-2 lg:col-span-4">{formatMoney(p.contributionAfterListedCosts, p.currency)} contribution after listed costs · {formatMoney(p.contributionPerCustomer, p.currency)} per customer{p.contributionMargin === null ? " · margin unavailable" : ` · ${Math.round(p.contributionMargin * 1000) / 10}% of net revenue`}{p.completeCostCoverage ? " · all costs listed" : ` · incomplete costs: ${p.unknownCosts.join(", ")}`}. This is not net profit.</p> : null}
-              {canEdit ? <div className="sm:col-span-2 lg:col-span-4"><Button size="sm" onClick={() => setRows((current) => current.filter((_, i) => i !== index))} disabled={busy}>Remove group</Button></div> : null}
+              {([["segment", "Customer group"], ["currency", "Currency (ISO code)"], ["periodDays", "Period (days)"], ["customers", "Customers in group"], ["netRevenue", `Net revenue (${row.currency || "unknown currency"})`], ["variableCosts", `Variable costs (${row.currency || "unknown currency"})`], ["costBoundary", "Costs included"], ["unknownCosts", "Unknown costs (comma-separated)"], ["strategicValueNote", "Strategic value to consider"]] as const).map(([key, label]) => <label key={key} className="flex flex-col gap-1 text-xs text-ink-2">{label}<Input disabled={!canEdit || busy} value={row[key]} placeholder={key === "segment" ? "e.g. Solo customers" : key === "currency" ? currency : key === "costBoundary" ? "e.g. materials, payment fees, service time" : key === "unknownCosts" ? "List missing cost categories, if known" : key === "netRevenue" || key === "variableCosts" ? "Unknown" : undefined} inputMode={key === "costBoundary" || key === "unknownCosts" || key === "strategicValueNote" || key === "segment" || key === "currency" ? "text" : "decimal"} onChange={event => update(index, key, event.target.value)} /></label>)}
+              <label className="flex flex-col gap-1 text-xs text-ink-2">Cost coverage<select className="min-h-10 rounded-lg border border-line bg-surface px-2" disabled={!canEdit || busy} value={row.costCoverage} onChange={event => update(index, "costCoverage", event.target.value)}>
+                <option value="unknown">Not sure</option><option value="incomplete">Some costs are missing</option><option value="complete">All costs in this boundary are included</option>
+              </select></label>
+              {p.issues.length ? <p className="text-xs text-ink-3 sm:col-span-2 lg:col-span-4">Calculation unavailable: {p.issues[0]}</p> : <p className="text-xs text-ink-2 sm:col-span-2 lg:col-span-4">{p.contributionAfterListedCosts === null ? "Contribution unknown: add the missing revenue or cost total." : `${money(p.contributionAfterListedCosts)} contribution after listed costs · ${money(p.contributionPerCustomer)} per customer${p.contributionMargin === null ? " · margin unavailable" : ` · ${Math.round(p.contributionMargin * 1000) / 10}% of net revenue`}.`} {p.completeCostCoverage ? "You report complete costs for this boundary." : p.costCoverage === "incomplete" ? `Costs incomplete: ${p.unknownCosts.join(", ") || "missing categories not listed"}.` : "Cost coverage unknown."} Owner-reported totals; not net profit. Per-customer averages are rounded to the currency&apos;s minor unit.</p>}
+              {canEdit ? <div className="sm:col-span-2 lg:col-span-4"><Button size="sm" onClick={() => setRows(current => current.filter((_, i) => i !== index))} disabled={busy}>Remove group</Button></div> : null}
             </div>
           );
         })}
-        <p className="text-xs text-ink-3">A lower-earning group is worth a look, not a reason to drop it. This ignores retention and long-term value.</p>
-        {canEdit ? <div className="flex gap-2"><Button size="sm" onClick={() => setRows((current) => current.length < 8 ? [...current, emptySegment(currency)] : current)} disabled={busy || rows.length >= 8}>Add group</Button><Button size="sm" onClick={saveRows} disabled={busy}>{busy ? "Saving…" : "Save groups"}</Button></div> : null}
+        <p className="text-xs text-ink-3">Compare groups only for matching currencies, dates and cost boundaries. A lower-earning group is worth a look, not a reason to drop it. This ignores retention and long-term value.</p>
+        {canEdit ? <div className="flex gap-2"><Button size="sm" onClick={() => setRows(current => current.length < 8 ? [...current, emptySegment(currency)] : current)} disabled={busy || rows.length >= 8}>Add group</Button><Button size="sm" onClick={saveRows} disabled={busy}>{busy ? "Saving…" : "Save groups"}</Button></div> : null}
       </CardContent>
     </Card>
   );

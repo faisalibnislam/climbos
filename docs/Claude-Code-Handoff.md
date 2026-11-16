@@ -262,6 +262,10 @@ The previously unfinished final-send tests now reproduce and close the authoriza
 
 Publishing receipts now retain original version/account/approval identity and the first provider result. Current artifact settlement requires the same binding; terminal and duplicate callbacks cannot replace a resolved result. Exact-ID recovery uses the original account/content and rechecks credential/account identity after the read; missing IDs, container-only outcomes, absent/mismatched results and legacy identity remain unknown. The existing uncertain-post panel exposes an owner-requested provider check where supported and an exact-attempt manual report. Owner reports retain the earlier summary and their own observation date; UI badges and history no longer imply provider confirmation for those reports. See the newest Verification entry for the focused regression, permission, browser and scope evidence. Remaining: live-provider eligibility/access, complete media/placement verification, investigation of independently conflicting later evidence, and the wider requirement/quality/release audit. No model switch or deployment.
 
+## Latest customer-group economics follow-up
+
+The optional segment comparison now preserves missing totals, requires explicit cost-coverage declarations, validates currency precision and legacy inputs, and computes contribution in the recorded currency. The focused-plan details expose the same editor even when no detailed plays exist. Actual starter/focused generation inputs retain unknown costs and no-execution limits; bounded briefing no longer cuts a record mid-caveat. Old missing coverage is unknown; historical zero totals are not guessed or migrated. See Verification for tests, browser coverage and limits. Segment membership, observation dates, cost completeness and business effectiveness still need evidence.
+
 ## What remains and should guide the next work
 
 These are known open gaps, not a complete substitute for checking the requirement audit and ledger before choosing work:

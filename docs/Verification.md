@@ -1,3 +1,28 @@
+## 16 November 2026 — customer-group cost evidence
+
+Nine failing regression cases reproduced inferred complete cost coverage, non-finite arithmetic with missing/invalid inputs, two-decimal rounding of KWD and silent missing/invalid currency use. The owner form additionally coerced blank revenue and costs to zero. This affected the existing path from Plan details → `workspace.setUnitEconomics` → saved business economics → `segmentEconomicsBrief` → strategy generation. Focused plans without detailed plays also hid this editor.
+
+The existing segment contract now permits unknown revenue and variable-cost totals, and has an optional explicit complete/incomplete/unknown cost-coverage declaration. Blank fields stay absent; explicit zero stays zero. Older rows without coverage remain unknown unless they list missing costs (incomplete). Complete coverage requires a cost total and no listed unknown costs. This is an owner declaration for the named boundary, not independent verification or net profit. Negative net revenue after refunds is retained; non-positive revenue has no contribution-margin percentage.
+
+The same input checks run on save and before deterministic calculation. Unknown currency is never replaced with the workspace currency; unsupported currency/precision, invalid counts/periods and conflicting coverage withhold calculations and explain the issue. Money differences use the existing currency minor-unit helpers, including zero- and three-decimal currencies. UI money uses exact minor-unit formatting; per-customer averages are rounded and labeled. The shared strategy brief selects whole records within its budget and retains missing-cost, currency, comparison and no-execution caveats. The focused/starter generation regression inspects the actual input without a paid model call. Engine version: `v3.99-segment-cost-evidence`.
+
+The existing optional editor is available in focused plan details even without detailed plays. It does not invent a period, cost boundary or zero total; owners choose cost coverage separately. No new agent, integration, model route or external action is introduced. Existing tenant/editor checks and economics audit logging remain in effect. Stored legacy totals are not rewritten, because old explicit and accidentally zero-filled amounts cannot be distinguished reliably.
+
+Commands:
+
+```sh
+pnpm exec vitest run tests/unit/segment-economics.test.ts tests/convex/segment-economics.test.ts tests/convex/research-context.test.ts tests/convex/unsure-economics.test.ts tests/convex/tenancy.test.ts
+pnpm typecheck
+pnpm exec eslint shared/agents/segmentEconomics.ts shared/agents/economics.ts shared/agents/specs.ts convex/workspace.ts convex/schema.ts src/components/app/plan/SharpenPlan.tsx 'src/app/app/[organization]/plan/PlanDetails.tsx' tests/unit/segment-economics.test.ts tests/convex/segment-economics.test.ts tests/convex/research-context.test.ts e2e/segment-economics.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/segment-economics.spec.ts
+git diff --check
+```
+
+Results: 41 tests passed in five focused files (1.99 seconds); app and Convex typechecks and scoped ESLint passed. Local Convex sync completed. Both desktop/mobile browser checks passed (24.9 seconds), including saving/reloading unknown totals, KWD precision, explicit coverage, rejection of contradictory coverage, serious/critical axe checks, horizontal-overflow checks and unchanged action records. Screenshots were visually reviewed. Initial browser setup failed on an extra fixture field, then an exact label selector timed out; the fixture was corrected to the existing persisted schema and the selector to the observed accessible combobox name. `git diff --check` passed.
+
+Limits: owner-entered aggregates, not connected customer-level segment accounting; dates/cohort identity and cost completeness are not independently verified. Equal duration does not establish comparable observation windows. No exchange-rate conversion, automatic group exclusion, full-profit conclusion or causal/long-term value claim. Context remains bounded. Existing plan text requires a new reviewed plan; historical amounts are not retrospectively corrected. The source prompt is still absent from its historical Downloads path; this work maps to the retained specification and audit rows, not a fresh reading of that attachment. Full requirement completion and real-model/business effectiveness remain unproven.
+
 ## 16 November 2026 — original-attempt publishing results and recovery
 
 Six failing regressions established that result writers could settle another tenant's artifact, overwrite a known result with a late callback, overwrite newer content, recover through a replacement account, treat an empty recent-feed sample as proof of failure, and accept mismatched content for a known post ID. The prior final-send claim checks remain intact.

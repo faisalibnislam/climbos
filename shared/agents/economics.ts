@@ -107,8 +107,9 @@ export interface OwnerEconomics {
     currency: string;
     periodDays: number;
     customers: number;
-    netRevenue: number;
-    variableCosts: number;
+    netRevenue?: number;
+    variableCosts?: number;
+    costCoverage?: "complete" | "incomplete" | "unknown";
     costBoundary: string;
     unknownCosts?: string[];
     strategicValueNote?: string;
