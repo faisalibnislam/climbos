@@ -260,6 +260,38 @@ async function setTimingEvidence(t: ReturnType<typeof setup>, orgId: import("../
   await t.mutation(internal.engine.putResearchCache, { orgId, businessWebsite: "https://business.example/", cacheKey: "b".repeat(64), agentId: "business_insights", modelKey: "claude-haiku-5.5", notes: futureCampaignTimingFixture().moment.evidence[0].claim, sources: [{ url: timingUrl }], retrievedAt, expiresAt: Date.now() + 86400000 });
 }
 
+it("supplies the original offer and timing conditions with a reported experiment to the next writer and reviewer", async () => {
+  const { t, owner, slug, orgId } = await workspace();
+  state.offerMode = "valid"; state.timingMode = "valid";
+  await setTimingEvidence(t, orgId, Date.now() - 60000);
+  await t.run(async ctx => {
+    const business = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", orgId)).first())!;
+    const fact = (await ctx.db.query("businessFacts").withIndex("by_business", q => q.eq("businessId", business._id)).first())!;
+    await ctx.db.patch(fact._id, { statement: `${fact.statement} ${offerFact}` });
+  });
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const original = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(original.expert?.quality?.state).toBe("passed");
+  const experimentId = await t.run(ctx => ctx.db.insert("experiments", { orgId, strategyId: original._id, name: "Synthetic original offer review", hypothesis: "The proposal may address a price objection", population: "Eligible quote requesters", method: "pre_post_observational", primaryMetric: "Completed jobs", guardrails: ["Contribution remains within the owner limit"], durationDays: 21, stoppingRule: "Stop if the owner contribution floor fails", status: "proposed", createdAt: Date.now() }));
+  await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId, expectedRevision: 0, executed: true, source: "owner_report", design: "none", result: "unclear", stopRuleHit: false, note: "Actual exposure was not tracked; no causal conclusion." });
+  state.requests = []; state.offerMode = ""; state.timingMode = "";
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  expect(state.requests.length).toBeGreaterThanOrEqual(2);
+  for (const request of state.requests) {
+    const prompt = JSON.stringify(request.messages);
+    expect(prompt).toContain("ORIGINAL FOCUSED DECISIONS FOR REPORTED EXPERIMENTS");
+    expect(prompt).toContain(original._id);
+    expect(prompt).toContain(offerAssessmentFixture().costBoundary);
+    expect(prompt).toContain(futureCampaignTimingFixture().moment.evidence[0].claim);
+    expect(prompt).toContain("not proof that this experiment tested the offer or used that window");
+    expect(prompt).toContain("Actual exposure was not tracked");
+  }
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+  expect(await t.run(ctx => ctx.db.query("campaigns").collect())).toEqual([]);
+});
+
 it.each(["too_close", "capacity", "stale", "unknown"])("keeps %s timing from silently authorizing a dated campaign", async condition => {
   const { t, owner, slug, orgId } = await workspace(); state.timingMode = condition;
   await setTimingEvidence(t, orgId, Date.now() - (condition === "stale" ? 48 * 3600000 : 60000));

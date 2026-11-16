@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { asNewUser, setup, type T } from "./helpers";
+import { focusedPlanFixture } from "../fixtures/focusedPlan";
+import { offerAssessmentFixture } from "../fixtures/offerAssessment";
+import { campaignTimingFixture } from "../fixtures/campaignTiming";
 
 /** Structured experiment outcomes (Book 14 §14): code labels the claim, re-analysis is appended, the next plan learns. */
 async function planWithTests(t: T, email: string) {
@@ -22,7 +25,61 @@ async function planWithTests(t: T, email: string) {
   return { owner, slug, orgId: orgId as Id<"organizations">, ...ids };
 }
 
+function originalDecisions(brief: string) {
+  return brief.split("\n").filter(line => line.startsWith('{"strategyId":') && line.includes('"originalFocusedMove":')).map(line => JSON.parse(line));
+}
+
+function focusedExpert(fixture = focusedPlanFixture()) {
+  const { diagnosis, affordableCac, notDoing, northStar, leadingIndicators, phases, weekOneChecklist, risks, focusedMove } = fixture;
+  return { diagnosis, affordableCac, notDoing, northStar, leadingIndicators, phases, weekOneChecklist, risks, focusedMove, plays: [] };
+}
+
 describe("experiment outcomes", () => {
+  it.each(["met", "missed", "unclear", "not_run"] as const)("carries original focused offer and timing conditions with a %s report, without treating the proposal as exposure", async outcome => {
+    const t = setup(), f = await planWithTests(t, `focused-${outcome}@example.com`);
+    const fixture = focusedPlanFixture(), offer = offerAssessmentFixture();
+    fixture.focusedMove.offerAssessment = offer;
+    fixture.focusedMove.timingAssessment = campaignTimingFixture;
+    await t.run(async ctx => {
+      await ctx.db.patch(f.strategyId, { expert: focusedExpert(fixture) });
+      // A newer plan's changed terms must not replace the original conditions.
+      const { _id: _id, _creationTime: _time, ...plan } = (await ctx.db.get(f.strategyId))!;
+      await ctx.db.insert("strategies", { ...plan, version: 2, expert: { ...plan.expert!, focusedMove: { ...fixture.focusedMove, title: "New unrelated direction", offerAssessment: undefined, timingAssessment: undefined } } });
+    });
+    const report = { expectedRevision: 0, slug: f.slug, experimentId: f.referral, executed: outcome !== "not_run", source: "owner_report" as const, design: "none" as const, result: outcome === "not_run" ? "unclear" as const : outcome, stopRuleHit: false };
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, report);
+    const brief = await t.query(internal.playResults.briefFor, { orgId: f.orgId });
+    expect(originalDecisions(brief)).toEqual([expect.objectContaining({ strategyId: f.strategyId, planVersion: 1, originalFocusedMove: fixture.focusedMove })]);
+    expect(brief).toContain("not proof that this experiment tested the offer or used that window");
+    expect(brief).not.toContain("New unrelated direction");
+    if (outcome === "not_run") expect(brief).toContain("Referral ask: NOT RUN");
+    else expect(brief).toContain(`reported result: ${outcome === "unclear" ? "unclear against" : outcome} its success rule`);
+    const foreign = await planWithTests(t, `foreign-${outcome}@example.com`);
+    expect(await t.query(internal.playResults.briefFor, { orgId: foreign.orgId })).toBe("");
+    for (const table of ["approvals", "actionReceipts", "workflowRuns"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
+  });
+
+  it("includes one original plan context for multiple reports and explicitly omits an oversized decision intact", async () => {
+    const t = setup(), f = await planWithTests(t, "focused-context-limits@example.com");
+    const fixture = focusedPlanFixture();
+    await t.run(ctx => ctx.db.patch(f.strategyId, { expert: focusedExpert(fixture) }));
+    const report = { expectedRevision: 0, slug: f.slug, executed: true, source: "owner_report" as const, design: "none" as const, result: "unclear" as const, stopRuleHit: false };
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, experimentId: f.referral });
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, experimentId: f.holdout });
+    let brief = await t.query(internal.playResults.briefFor, { orgId: f.orgId });
+    expect(originalDecisions(brief)).toHaveLength(1);
+    expect(originalDecisions(brief)[0].originalFocusedMove).toEqual(fixture.focusedMove);
+    const large = { ...fixture.focusedMove, why: "Do not truncate these historical conditions. ".repeat(300) };
+    await t.run(ctx => ctx.db.patch(f.strategyId, { expert: { ...focusedExpert(fixture), focusedMove: large } }));
+    brief = await t.query(internal.playResults.briefFor, { orgId: f.orgId });
+    expect(brief).toContain("Original focused decision omitted in full: context limit");
+    expect(brief).not.toContain("Do not truncate these historical conditions.");
+    expect(brief).toContain("Referral ask");
+    expect(brief).toContain("Win-back email");
+    await t.run(ctx => ctx.db.patch(f.strategyId, { expert: undefined }));
+    expect(await t.query(internal.playResults.briefFor, { orgId: f.orgId })).toContain('"originalFocusedMove":null');
+  });
+
   it("retains recently reported tests after newer untested plans and keeps their original context", async () => {
     const t = setup();
     const f = await planWithTests(t, "durable-outcomes@example.com");
@@ -42,6 +99,39 @@ describe("experiment outcomes", () => {
     expect(brief).toContain(f.referral);
     expect(brief).toContain(f.strategyId);
     expect(brief).toContain("bounded sample");
+  });
+
+  it("bounds complete decision context across plans and excludes broken original business and goal provenance", async () => {
+    const t = setup(), f = await planWithTests(t, "decision-budget@example.com");
+    const other = await planWithTests(t, "decision-provenance@example.com");
+    const fixture = focusedPlanFixture(); fixture.focusedMove.offerAssessment = offerAssessmentFixture(); fixture.focusedMove.timingAssessment = campaignTimingFixture;
+    const ids = await t.run(async ctx => {
+      const { _id: _id, _creationTime: _time, ...plan } = (await ctx.db.get(f.strategyId))!;
+      const { _id: _exp, _creationTime: _expTime, ...test } = (await ctx.db.get(f.referral))!;
+      const ids = [];
+      for (let i = 0; i < 4; i++) {
+        const strategyId = await ctx.db.insert("strategies", { ...plan, expert: focusedExpert(fixture), version: i + 2 });
+        const experimentId = await ctx.db.insert("experiments", { ...test, strategyId, name: `Independent report ${i}` });
+        ids.push({ strategyId, experimentId });
+      }
+      return ids;
+    });
+    for (const row of ids) await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { slug: f.slug, experimentId: row.experimentId, expectedRevision: 0, executed: true, source: "owner_report", design: "none", result: "unclear", stopRuleHit: false });
+    let brief = await t.query(internal.playResults.briefFor, { orgId: f.orgId });
+    const decisions = originalDecisions(brief), included = decisions.filter(d => d.originalFocusedMove !== null);
+    expect(decisions).toHaveLength(4); expect(included).toHaveLength(2);
+    expect(included.reduce((sum, record) => sum + JSON.stringify(record).length, 0)).toBeLessThanOrEqual(16000);
+    expect(decisions.filter(d => d.limitation)).toHaveLength(2);
+    expect(brief).toContain("Independent report 0");
+    await t.run(async ctx => {
+      const foreign = (await ctx.db.get(other.strategyId))!;
+      await ctx.db.patch(ids[0].strategyId, { businessId: foreign.businessId });
+      await ctx.db.patch(ids[1].strategyId, { goalId: foreign.goalId });
+    });
+    brief = await t.query(internal.playResults.briefFor, { orgId: f.orgId });
+    expect(brief).not.toContain("Independent report 0"); expect(brief).not.toContain("Independent report 1");
+    expect(brief).not.toContain(ids[0].strategyId); expect(brief).not.toContain(ids[1].strategyId);
+    expect(originalDecisions(brief)).toHaveLength(2);
   });
 
   it("retrieves reported tests beyond the old ten-test limit without letting corrections crowd out other tests", async () => {
