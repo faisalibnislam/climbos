@@ -7,6 +7,21 @@ import {lintAgentOutput} from "../../shared/agents/runtime";
 import { planJob, maxJobMicros } from "../../convex/lib/jobPlans";
 
 describe("a focused plan does useful work without invented forecasts", () => {
+  it("requires inspectable strategic alternatives rather than an internal comparison only", () => {
+    const plan = focusedPlanFixture();
+    expect(FocusedStrategySchema.safeParse({ ...plan, strategyExploration: undefined }).success).toBe(false);
+    expect(FocusedStrategySchema.safeParse({ ...plan, strategyExploration: { ...plan.strategyExploration, bold: undefined } }).success).toBe(false);
+  });
+  it("preserves an unproven bold option while rejecting duplicate mechanisms and unsupported citations", () => {
+    const plan = focusedPlanFixture();
+    const input = { task: focusedPlanTask(14), brief: "Synthetic business context", facts: [], constraints: { horizonDays: 14, monthlyAdBudgetUsd: 0 } };
+    expect(plan.strategyExploration.bold).toMatchObject({ precedentIds: [], evidenceStrength: "low", feasibility: "low", risk: "high" });
+    expect(focusedStrategySpec().lint?.(plan, input)?.filter(issue => issue.severity === "error")).toEqual([]);
+    plan.strategyExploration.bold = { ...plan.strategyExploration.grounded, title: "A bolder sounding title" };
+    expect(focusedStrategySpec().lint?.(plan, input)).toContainEqual(expect.objectContaining({ severity: "error", rule: "creative_diversity" }));
+    plan.strategyExploration.bold.evidenceRefs = ["https://unread.example/claim", "fact:99"];
+    expect(focusedStrategySpec().lint?.(plan, input)).toContainEqual(expect.objectContaining({ severity: "error", rule: "exploration_evidence" }));
+  });
   it.each([14, 30, 90])("requires concrete %i-day milestones and real starter drafts", days => {
     const plan = focusedPlanFixture(days);
     expect(lintCycleMilestones(plan.phases, days)).toEqual([]);
@@ -39,6 +54,8 @@ describe("a focused plan does useful work without invented forecasts", () => {
   });
   it("carries useful draft work into an update without turning old forecasts or approvals into context",()=>{
     const value=JSON.parse(focusedRefreshContext({...focusedPlanFixture(),approved:true,permission:"publish",facts:["Unverified old claim"],economics:{forecast:10000},plays:[{name:"An old proposal",oneLiner:"Useful idea to recheck",model:{conversion:0.2},approved:true}]}));
+    expect(value.strategyExploration.bold.businessMechanism).toBe(focusedPlanFixture().strategyExploration.bold.businessMechanism);
+    expect(value.strategyExploration.bold).not.toHaveProperty("evidenceRefs");
     expect(value.preparedWork[0].draft).toContain("proposed test");expect(value.plays[0].name).toBe("An old proposal");
     expect(value.strategicDirection.nextHorizon).toBe(focusedPlanFixture().strategicDirection.nextHorizon);
     expect(value.strategicDirection.compoundingAdvantage).toBe(focusedPlanFixture().strategicDirection.compoundingAdvantage);

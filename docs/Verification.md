@@ -1,3 +1,31 @@
+## 16 November 2026 — protected exploration in the default strategy path
+
+Audit: the detailed growth-plays path already required `StrategyExplorationSchema`, supplied the protected exploration instructions, retrieved precedents and persisted the result. Focused/starter plans used a separate schema without that field, asked for internal comparison only, never activated the existing task-triggered precedent retrieval, and did not consume the already-loaded creative owner feedback. A failing schema regression reproduced the missing required output.
+
+Implemented in the existing path:
+
+- Require the shared grounded/adjacent/bold schema in focused/starter model output and reuse its citation/precedent/exact-duplicate-mechanism checks. Speculative options remain valid with no precedent, low evidence/feasibility and high risk. Distinct wording alone does not satisfy the exact-duplicate check; that check is not a semantic originality detector.
+- Keep one primary recommendation/prepared-work package; separately retain alternatives with challenged convention, mechanism/action, audience/conditions, evidence labels, assumptions/risks/capacity and reversible continue/change/stop tests. The existing retrieval hook now supplies bounded precedents to writer/reviewer; case absence never blocks a novel option. No campaign-timing prompt or calculation changed.
+- Preserve creative range, retrieved IDs and application-generated prompt/input hashes. Model-produced provenance is overwritten. Retain prior alternative proposals during refresh and include the existing tenant-scoped exploration feedback as preferences/labelled reports, not facts or authorization.
+- Add explicit originality, business relevance, transfer and reversible-test criteria to the focused reviewer and skill rubric. Regenerate `shared/skills/generated.ts` through the established script.
+- Reuse the existing options panel in a direct Plan tab, loaded on demand. Preserve old plans without backfilling invented options. Selecting an option records feedback; it does not approve or start external work. Existing plan approval can remain pending after generation.
+
+Commands:
+
+```sh
+pnpm skills:build
+pnpm exec vitest run tests/unit/focused-plan.test.ts tests/convex/focused-plan.test.ts tests/convex/free-onboarding.test.ts tests/convex/creative-strategy.test.ts tests/convex/goal-workspace.test.ts tests/unit/decision-structured.test.ts tests/unit/creative-precedents.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+pnpm exec eslint shared/agents/focusedPlan.ts shared/agents/focusedRubric.ts shared/agents/specs.ts convex/jobs.ts src/components/app/plan/GoalWorkspace.tsx src/components/app/plan/ExpertPlan.tsx tests/unit/focused-plan.test.ts tests/convex/focused-plan.test.ts tests/convex/free-onboarding.test.ts tests/fixtures/focusedPlan.ts e2e/focused-strategy-options.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/focused-strategy-options.spec.ts
+git diff --check
+```
+
+Results: 153 tests passed across 10 files; app/Convex typechecks, scoped lint and isolated local sync passed. Generation tests exercise actual jobs/persistence with synthetic model responses, verify the precedent block reaches the writer, preserve free-starter quotation/allowance and unchanged model-call count, and show later focused runs receiving owner option feedback. Browser checks cover desktop/mobile option visibility, expandable evidence/tests, selecting the unproven bold option, persisted feedback and no new approval/action/artifact/run. Automated checks found no serious/critical accessibility violations or horizontal page overflow. The first browser fixture incorrectly put top-level plan fields inside `expert`; it was corrected to the actual saved schema, then both checks passed. Mobile capture was inspected; temporary toast/fixed navigation overlaps in the element capture are not a full-page layout assessment.
+
+Limits: no paid model benchmark or live-provider action ran. These tests establish preservation, retrieval, persistence, visibility and permission behavior, not consistently surprising ideas, semantic evidence support, improved business results, production latency or actual per-run cost. Existing model routes, token ceilings and budget checks remain unchanged; larger outputs still need measured quality/cost evaluation. Earlier saved focused plans remain valid and have no invented alternatives.
+
 ## 16 November 2026 — customer-message feedback into strategy
 
 Confirmed gap: `reviews.voiceThemes` displayed saved corrections and dismissals, but strategy generation never consumed that feedback. Added failing generation-boundary assertions for focused/starter plans, then connected the existing sample through `customerVoice` → `jobWrites.jobContext` → `jobs.businessBrief` → agent input. The existing Reviews query now reuses the same reader.

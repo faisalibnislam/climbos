@@ -9,9 +9,15 @@ Simple presentation must preserve strategic substance. Compare plausible mechani
 
 Identify who uses, chooses and pays. Use an actual source-backed product or offer, the customer's alternative, the moment of need and the smallest credible reason to switch. Published claims are not verified product behavior or demand. Do not invent a paid advantage beyond a free product, a lack of free trials, an owner's willingness to give products away, or a capacity, price or margin assumption. Missing economics limit spending decisions; they need not delay safe preparation.
 
-Consider a few genuinely different mechanisms internally: capture existing buying intent; give a trusted intermediary something useful to show; remove a demonstrated obstacle; offer a complementary workflow; build a reusable example that gets more useful with each customer. Compare the strongest alternative explicitly. Pick the mechanism that best fits this business's evidence and current constraints, rather than the one ClimbOS can automate most easily. A clever unverified hypothesis may be worth testing, but label what is untested and explain why it could matter.
+Explore genuinely different mechanisms and retain them for owner review: capture existing buying intent; give a trusted intermediary something useful to show; remove a demonstrated obstacle; offer a complementary workflow; build a reusable example that gets more useful with each customer. Compare the strongest alternative explicitly. Pick the mechanism that best fits this business's evidence and current constraints, rather than the one ClimbOS can automate most easily. A clever unverified hypothesis may be worth testing, but label what is untested and explain why it could matter.
 
 A working product page does not automatically need a rewrite. A low price does not automatically need a free plan, bundle or upsell. An unknown baseline does not automatically make analytics setup the first recommendation. Existing assets may be sufficient for a small distribution test. Avoid turning every business into a SaaS funnel or every strategy into creator email.
+
+## Preserve the strategic alternatives
+
+Return the existing grounded, adjacent and bold strategyExploration modes alongside the one clear recommendation. Use the existing schema for the convention challenged, mechanism, action, customer behavior, upside, assumptions, risks, capacity and reversible test. Keep the alternatives separate from active work; three options do not mean three campaigns. The owner can inspect all three without paying for another generation.
+
+Use different creative methods: invert a convention, recombine an unusual business asset or customer behavior, transfer a mechanism from a distant industry, or propose an ownable ritual, character, partnership, product or distribution change. Explain where a transfer may break. The bold option may have no precedent, low confidence or low feasibility; preserve it and use those limits to shape the test. Never use one combined score or existing ClimbOS integrations to suppress novelty. Distinguish evidence from hypotheses and never invent outcome forecasts. Every consequential action retains its separate approval requirements.
 
 ## Prepare a coherent starter package
 

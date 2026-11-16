@@ -1411,7 +1411,7 @@ const EMPTY_EXPLORATION_FEEDBACK: Record<ExplorationMode, ExplorationFeedbackDra
   bold: { decision: "considering", ownerEdit: "", testState: "not_started", outcomeNote: "", outcomeEvidence: "unknown" },
 };
 
-function StrategyExplorationPanel({ options, slug, strategyId, canEdit }: { options: StrategyExploration; slug: string; strategyId?: Id<"strategies">; canEdit: boolean }) {
+export function StrategyExplorationPanel({ options, slug, strategyId, canEdit }: { options: StrategyExploration; slug: string; strategyId?: Id<"strategies">; canEdit: boolean }) {
   const saved = useQuery(api.creativeStrategy.feedbackForStrategy, strategyId ? { slug, strategyId } : "skip");
   const recordFeedback = useMutation(api.creativeStrategy.recordFeedback);
   const [drafts, setDrafts] = useState<Record<ExplorationMode, ExplorationFeedbackDraft>>(() => structuredClone(EMPTY_EXPLORATION_FEEDBACK));
@@ -1441,15 +1441,15 @@ function StrategyExplorationPanel({ options, slug, strategyId, canEdit }: { opti
   };
   const previous = saved?.feedback as Partial<Record<ExplorationMode, { decision: string; ownerEdit: string; testState: string; outcomeNote: string; outcomeEvidence: string }>> | undefined;
   const entries = [
-    { key: "grounded" as const, mode: "Grounded", description: "Best evidence, most practical.", value: options.grounded },
+    { key: "grounded" as const, mode: "Grounded", description: "Starts from available business evidence.", value: options.grounded },
     { key: "adjacent" as const, mode: "Adjacent", description: "An idea borrowed from elsewhere.", value: options.adjacent },
-    { key: "bold" as const, mode: "Bold", description: "Original and less certain.", value: options.bold },
+    { key: "bold" as const, mode: "Bold", description: "Challenges a convention; uncertainty stays visible.", value: options.bold },
   ];
   return (
     <section aria-label="Grounded, adjacent and bold strategy options" className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-chart-3/30 bg-chart-3/5 p-3">
       <div>
         <div className="flex flex-wrap items-center gap-2"><FieldLabel icon={Sparkles}>Three strategy options</FieldLabel><Badge>Exploration · not an execution ranking</Badge></div>
-        <p className="mt-1 text-sm text-ink-2">Different ways forward, with their assumptions kept visible. Bold ideas can be worth testing even with little evidence. Range: {(options.requestedRange ?? "balanced").replaceAll("_", " ")}.</p>
+        <p className="mt-1 text-sm text-ink-2">Different ways forward, with their assumptions kept visible. Bold ideas can be worth testing even with little evidence. Range: {(options.requestedRange ?? "balanced").replaceAll("_", " ")}. Saving a choice records your preference; it does not start work.</p>
       </div>
       <div className="grid gap-3 lg:grid-cols-3">
         {entries.map(({ key, mode, description, value }) => (
@@ -1488,7 +1488,7 @@ function StrategyExplorationPanel({ options, slug, strategyId, canEdit }: { opti
               </ul>
               {value.assumptions.length || value.uncertainties.length || value.risks.length ? <p className="mt-2 text-xs text-ink-3">Assumptions: {value.assumptions.join(" · ") || "None listed"}. Unknowns: {value.uncertainties.join(" · ") || "None listed"}. Risks: {value.risks.join(" · ") || "None listed"}. Resources: {value.costAndCapacity}</p> : null}
             </div>
-            {previous?.[key] ? <p className="rounded bg-surface-2 p-2 text-xs text-ink-2">Last owner record: {previous[key]!.decision}; test {previous[key]!.testState}; outcome evidence {previous[key]!.outcomeEvidence}{previous[key]!.ownerEdit ? `. Owner edit: ${previous[key]!.ownerEdit}` : ""}{previous[key]!.outcomeNote ? `. Outcome: ${previous[key]!.outcomeNote}` : previous[key]!.testState === "unknown" ? ". Outcome unknown." : ""}</p> : null}
+            {previous?.[key] ? <p className="rounded bg-surface-2 p-2 text-xs text-ink-2">Last owner record: {previous[key]!.decision}; test {previous[key]!.testState.replaceAll("_", " ")}; outcome evidence {previous[key]!.outcomeEvidence.replaceAll("_", " ")}{previous[key]!.ownerEdit ? `. Owner edit: ${previous[key]!.ownerEdit}` : ""}{previous[key]!.outcomeNote ? `. Outcome: ${previous[key]!.outcomeNote}` : previous[key]!.testState === "unknown" ? ". Outcome unknown." : ""}</p> : null}
             {canEdit && strategyId ? <div className="flex flex-col gap-2 border-t border-line pt-2">
               <Field label="Your decision"><Select value={drafts[key].decision} onValueChange={(choice) => update(key, { decision: choice as ExplorationDecision })} options={[{ value: "considering", label: "Still considering" }, { value: "selected", label: "Select this option" }, { value: "rejected", label: "Reject this option" }, { value: "edited", label: "I changed it" }]} /></Field>
               <Field label="Your edit or reason" hint={drafts[key].decision === "edited" ? "Required when you change it." : "Optional."}><Textarea value={drafts[key].ownerEdit} onChange={(event) => update(key, { ownerEdit: event.target.value.slice(0, 2_000) })} maxLength={2_000} rows={2} /></Field>

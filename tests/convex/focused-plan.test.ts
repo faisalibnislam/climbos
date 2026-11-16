@@ -48,6 +48,15 @@ it("runs the real focused path with a matching quote, reuses bound research and 
   const saved = await t.run(async ctx => ({ run: (await ctx.db.get(runId))!, plan: (await ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first())! }));
   expect(saved.run.status).toBe("verified"); expect(saved.run.estimateMicros).toBe(quote.reserveMicros);
   expect(saved.plan.expert?.focusedMove?.title).toBe(focusedPlanFixture().focusedMove.title);
+  expect(saved.plan.expert?.strategyExploration).toMatchObject({
+    grounded: { title: "Review one past handoff" }, adjacent: { title: "Borrow a production call sheet" },
+    bold: { title: "Become known for the brief you decline", precedentIds: [], evidenceStrength: "low", feasibility: "low" },
+    requestedRange: "balanced", promptVersion: "focused-exploration-v1", promptHash: expect.stringMatching(/^[a-f0-9]{64}$/), inputHash: expect.stringMatching(/^[a-f0-9]{64}$/), retrievedPrecedentIds: expect.any(Array),
+  });
+  expect(JSON.stringify(state.requests[0].messages)).toContain("PROTECTED STRATEGY EXPLORATION");
+  expect(JSON.stringify(state.requests[0].messages)).toContain("BOUNDED CREATIVE PRECEDENT RETRIEVAL");
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+  expect(await t.run(ctx => ctx.db.query("approvals").collect())).toMatchObject([{ status: "pending", actionKind: "approve_plan" }]);
   expect(saved.plan.expert?.quality?.state).not.toBe("failed"); expect(saved.plan.expert?.plays).toHaveLength(0);
   expect(state.requests).toHaveLength(2); expect(state.requests.every(r => !r.webSearch)).toBe(true);
   await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: saved.plan._id, playId: "focused" })).rejects.toThrow(/approve/);
@@ -62,6 +71,11 @@ it("runs the real focused path with a matching quote, reuses bound research and 
   await expect(outsider.client.mutation(api.workspace.startPlay, { slug, strategyId: saved.plan._id, playId: "focused" })).rejects.toThrow();
   await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "A materially changed goal", horizonDays: 30, monthlyAdBudget: 0 });
   await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: saved.plan._id, playId: "focused" })).rejects.toThrow(/goal/);
+  await owner.client.mutation(api.creativeStrategy.recordFeedback, { slug, strategyId: saved.plan._id, mode: "bold", decision: "rejected", ownerEdit: "Owner preference: investigate scoping rituals without publicly declining work.", testState: "not_started", outcomeEvidence: "unknown" });
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  expect(JSON.stringify(state.requests.at(-2)?.messages)).toContain("Owner preference: investigate scoping rituals without publicly declining work.");
+  expect(JSON.stringify(state.requests.at(-2)?.messages)).toContain("a prior rejection never bans bold exploration");
 });
 it("keeps critical review failures blocked even when a short draft passes schema", async () => {
   const { t, owner, slug, orgId } = await workspace(); state.failTruth = true;

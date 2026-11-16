@@ -1,6 +1,21 @@
 import { FocusedStrategySchema } from "../../shared/agents/specs";
 import { milestoneWindows } from "../../shared/agents/planningCycles";
 export function focusedPlanFixture(days = 14) {
+  const option = (title: string, businessMechanism: string, businessAction: string) => ({
+    title, businessMechanism, businessAction,
+    challengedConvention: "A completed questionnaire means a client brief is ready for delivery.",
+    whyConventionPersists: "Collecting information is easier to standardize than resolving a disagreement.",
+    costOfBreaking: "A new workflow could add effort or confuse clients.",
+    whyItCouldMatter: "A clearer agreement could make handoffs more useful; the benefit is unmeasured.",
+    customerBehavior: "Review the unresolved decision before agreeing to scope.",
+    audienceOrCondition: "Agency owners who report repeated scoping disagreements.",
+    evidenceBasis: "speculative_hypothesis", evidenceNote: "Synthetic test proposal; no customer evidence or matching precedent supplied.",
+    evidenceRefs: [], precedentIds: [], transferLogic: "No verified precedent is claimed; test the proposed mechanism directly.", keyDifferences: "Customer acceptance and implementation capacity remain unknown.",
+    assumptions: ["Owners may value a clearer agreement."], uncertainties: ["Demand and capacity are unknown."], risks: ["Additional friction could outweigh the benefit."],
+    costAndCapacity: "Owner time and budget are unknown; agree a cap before testing.",
+    novelty: "high", evidenceStrength: "low", businessFit: "medium", feasibility: "low", risk: "high",
+    reversibleTest: { method: "Privately walk through the proposed workflow on a past brief and record objections.", metric: "Unresolved scoping decisions identified", duration: "One owner-approved review session", resourceLimit: "Owner sets a time cap before starting", continueIf: "The owner finds a useful distinction worth trying on an eligible future brief.", changeIf: "The distinction is useful but adds avoidable steps.", stopIf: "The test causes confusion or the owner cannot support the work." },
+  });
   const direction = { ambition: "Become a useful starting point for small agency client projects.", customer: "An agency owner preparing to scope a new client project.", unmetNeed: "A questionnaire alone does not show whether the request is ready for delivery.", winningApproach: "Test one intake-to-project example before building a wider campaign.", whyThisBusiness: "Published form tools suggest a possible fit; the handoff still needs testing.", compoundingAdvantage: "Each approved example could help the next agency start with less work.", horizon: "Proposed next year", currentBet: "Draft one agency intake example and review the handoff.", nextHorizon: "Use the pilot learning to decide whether to prepare another example.", notNow: ["Broad paid acquisition"], assumptions: ["Buyer demand and owner capacity are unknown."], changeCourseIf: "Owners find no useful difference from their current intake process.", evidenceRefs: [] };
   return FocusedStrategySchema.parse({
     summary: "Test an agency intake example before building a wider campaign.", positioning: "A proposed clearer handoff for small agencies.",
@@ -12,6 +27,11 @@ export function focusedPlanFixture(days = 14) {
     weekOneChecklist: ["Review the draft intake example."], risks: [{ risk: "The handoff might not solve a meaningful problem.", mitigation: "Test the actual workflow before claiming it works." }],
     focusedMove: { version: 1, title: "Test one clearer agency intake handoff", why: "A concrete example lets an agency owner judge whether the handoff helps their real workflow.", firstAction: "Review the prepared intake example.", aiCanDo: "The initial example is prepared below for checking against the actual product.", evidenceRefs: [] },
     strategicDirection: direction,
+    strategyExploration: {
+      grounded: option("Review one past handoff", "Compare a real past request with the proposed intake questions to expose missing decisions.", "Prepare an intake example for private owner review."),
+      adjacent: option("Borrow a production call sheet", "Transfer a film crew's shared call-sheet mechanism to clarify agency handoff responsibilities.", "Prototype a scoping sheet that names the decision, accountable role and handoff condition."),
+      bold: option("Become known for the brief you decline", "Invert collecting every lead: make mutually agreed reasons to decline a project the distinctive service.", "Privately prototype a reversible decline-or-redesign conversation before changing the public offer."),
+    },
     timing: { preparation: { minDays: 2, maxDays: 3 }, firstReview: { minDays: Math.max(4, days - 3), maxDays: days }, reason: "The example needs preparation and time for a reviewer to try the actual handoff.", assumptions: ["Reviewer availability and business capacity remain unknown."], reviewTrigger: "Review when useful feedback arrives, or at the end of the proposed test window.", outcomeLag: "This tests usefulness; it does not promise paying customers within this period." },
     preparedWork: [{ title: "Proposed intake example", kind: "test_brief", target: "To build: one agency intake workflow", draft: "Use a recent client request to check which details are needed before scoping. Mark missing details, then compare the proposed intake questions with the actual request. This is a proposed test, not a tested capability or a customer result.", evidenceRefs: [], checksBeforeUse: ["Check the actual workflow before sharing."], status: "draft" }],
   });

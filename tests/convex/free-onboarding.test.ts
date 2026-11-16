@@ -49,6 +49,7 @@ it("finishes the actual free onboarding path without topping up, deep research o
   const generated = await owner.client.mutation(api.orgs.generatePlan,{slug,planStyle:"starter"}); await t.finishAllScheduledFunctions(()=>undefined);
   const saved = await t.run(async ctx=>({plan:(await ctx.db.query("strategies").withIndex("by_org",q=>q.eq("orgId",orgId)).first())!,run:(await ctx.db.get(generated.runId))!}));
   expect(saved.run.status).toBe("verified"); expect(saved.plan.expert?.quality?.state).toBe("passed"); expect(saved.plan.expert?.preparedWork).toHaveLength(1);
+  expect(saved.plan.expert?.strategyExploration?.bold).toMatchObject({ title: "Become known for the brief you decline", precedentIds: [], evidenceStrength: "low", feasibility: "low" });
   expect(state.calls).toHaveLength(3); expect(state.calls.every(req=>!req.webSearch)).toBe(true);
   expect(state.calls[1].thinkingOff).toBe(true); expect(state.calls[1].maxTokens).toBe(11000); expect(state.calls[2].maxTokens).toBe(4000);
   expect(saved.run.estimateMicros).toBe(quote.reserveMicros);

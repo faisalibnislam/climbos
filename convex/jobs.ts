@@ -1,6 +1,6 @@
 "use node";
 import { CUSTOMER_VOICE_POLICY } from "../shared/reviews/voiceThemes";
-import { focusedPlanTask } from "../shared/agents/focusedPlan";
+import { focusedPlanTask, focusedExplorationTask, FOCUSED_EXPLORATION_VERSION } from "../shared/agents/focusedPlan";
 import { COPY_BRIEF_INSTRUCTION, socialPostsTask, seoPageTask } from "../shared/agents/contentTasks";
 import { RUN_FAILURE_COPY } from "../shared/progress";
 import { CHANNEL_DECISION_POLICY } from "../shared/acquisition/channelDecision";
@@ -1403,7 +1403,8 @@ export const buildStrategy = internalAction({
         const profile = profileFrom({ saved: (job.business as { acquisition?: SavedAcquisition } | null)?.acquisition ?? null, legacyType: job.business?.businessType, legacyTypes: typesFromLegacy, budgetMinor: job.goal?.monthlyAdBudgetMinor ?? 0, horizonDays: job.goal?.horizonDays ?? 14, currency: workspaceCurrency(job) });
         const geography = profile.dims.geography?.value;
         const timingContext = { today: localToday(job.org.timezone), timezone: job.org.timezone };
-        task += `\nCREATIVITY PREFERENCE: ${creativeRangeOf(job)}. Compare meaningfully different mechanisms internally; show one clear recommendation and its strongest alternative. A preference never establishes demand, facts, resources or permission.`;
+        task += `\n${focusedExplorationTask(creativeRangeOf(job))}`;
+        if (job.creativeStrategyLearning) task += `\nPRIOR OWNER STRATEGY DECISIONS: These are preferences and labelled outcome reports, not verified causal results or action authority. Recheck current evidence and conditions; a prior rejection never bans bold exploration.\n${untrusted("prior owner strategy decisions", job.creativeStrategyLearning, 4_000)}`;
         task += `\nFINAL DRAFT CHECK: Previous proposals and reviewer suggestions do not override the task's complete-copy or truth requirements. Remove all GUIDE-URL and other replacement slots from public copy. Use the exact existing app URL and describe it accurately while the new guide is unpublished. Name a proposed social platform rather than asking the owner to choose one. Do the supplied public-source checks yourself; leave owner tasks to actual product testing, review and access. Keep strategicDirection.nextHorizon under 1000 characters, using compoundingAdvantage and notNow for their separate purposes. Include concise conditional later milestones, the strongest alternative and a clear learning rule. Match every schema bound before returning JSON.`;
         task += `\nSOURCE CONFLICT CHECK: Prefer current first-party vendor instructions over an older secondary tutorial when they disagree. Explicit supplied source corrections supersede older proposed copy. Do not claim an alternative cannot batch, is slower, or is worse without direct support. Compare source-described workflows and choices; performance and buyer preference stay untested. Remove owner tasks that merely ask for another read of the exact public page already supplied.`;
         const input = agentInput(job, task, {
@@ -1412,12 +1413,17 @@ export const buildStrategy = internalAction({
           ...(supplied ? { precomputedResearch: supplied, availableSourceUrls: supplied.sources.map((source) => source.url) } : { ...(requestedStyle === "starter" ? { precomputedResearch: { notes: "No additional public research supplied. Use only supplied facts, label hypotheses and leave unverifiable targets unknown.", sources: [] } } : { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name, ...timingContext, horizonDays: job.goal?.horizonDays ?? 14, ...(geography ? { marketScope: geography } : {}) }) }) }),
         });
         const plan = await runAgentTask<z.infer<typeof FocusedStrategySchema>>(ctx, job, 0, requestedStyle === "starter" ? starterStrategySpec() : focusedStrategySpec(), input, startedAt, { task: "growth_strategy", text: task, context: "", ctx: fixtureCtx(job) }, meta);
+        const exploration = {
+          ...plan.strategyExploration, requestedRange: creativeRangeOf(job),
+          retrievedPrecedentIds: retrieveCreativePrecedents({ task: input.task, brief: input.brief, facts: input.facts, ...(input.industryBusinessTypeId ? { industryBusinessTypeId: input.industryBusinessTypeId } : {}), ...(input.constraints ? { constraints: input.constraints } : {}) }, 2).map(({ precedent }) => precedent.id),
+          promptVersion: FOCUSED_EXPLORATION_VERSION, promptHash: await sha256Hex(input.task), inputHash: await sha256Hex(JSON.stringify(input)),
+        };
         const sources = uniqueSources([...(supplied?.sources ?? []), ...(meta.sources ?? [])]);
         const quality = planQuality(meta.quality ? [meta.quality] : [], [], { unknowns: planUnknowns(job, []), conflicts: conflictLines(conflictsForJob(job)) });
         await ctx.runMutation(internal.jobWrites.saveStrategy, {
           runId, factIds: job.facts.map((fact) => fact.id),
           evidence: JSON.stringify(buildPlanEvidence({ skillIds: meta.skills ?? [], models: { growth_strategy: meta.models ?? {} }, currency: workspaceCurrency(job), goal: job.goal ? { statement: job.goal.statement, horizonDays: job.goal.horizonDays, monthlyAdBudget: minorToMajor(job.goal.monthlyAdBudgetMinor, job.goal.currency) } : null, facts: job.facts.map(fact => ({ id: String(fact.id), statement: fact.statement, evidenceKind: fact.evidenceKind, provenance: fact.provenance })), ownerEconomics: job.business?.unitEconomics, insights: businessResearchContext(job.business?.insights as Record<string, unknown> | undefined), research: [{ agentId: "growth_strategy", notes: meta.notes ?? supplied?.notes, sources, retrievedAt: meta.retrievedAt ?? supplied?.retrievedAt }] })),
-          strategy: JSON.stringify({ ...plan, quality, webSources: sources, snapshot: await planSnapshot(job, businessResearchContext(job.business?.insights as Record<string, unknown> | undefined), sources.map((source) => source.url), mergeKnowledgeReferences(meta.knowledgeReferences)) }),
+          strategy: JSON.stringify({ ...plan, strategyExploration: exploration, quality, webSources: sources, snapshot: await planSnapshot(job, businessResearchContext(job.business?.insights as Record<string, unknown> | undefined), sources.map((source) => source.url), mergeKnowledgeReferences(meta.knowledgeReferences)) }),
         });
         await finish(ctx, runId, "verified", { output: { preparedDrafts: plan.preparedWork.length, planStyle: requestedStyle, quality: quality.state } });
         return;

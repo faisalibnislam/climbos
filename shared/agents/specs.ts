@@ -330,24 +330,13 @@ export const StrategyV2Schema = StrategySchema.extend({
   weekOneChecklist: z.array(z.string()),
   risks: z.array(z.object({ risk: z.string(), mitigation: z.string() })),
 });
-export const FocusedStrategySchema = StrategyV2Schema.extend({
-  timing: GoalTimingSchema.optional(),
-  focusedMove: FocusedMoveSchema,
-  strategicDirection: StrategicDirectionSchema,
-  preparedWork: z.array(PreparedWorkSchema).min(1).max(3),
-  audiences: StrategyV2Schema.shape.audiences.max(2),
-  channels: StrategyV2Schema.shape.channels.min(1).max(2),
-  weekOneChecklist: z.array(z.string()).min(1).max(3),
-  leadingIndicators: StrategyV2Schema.shape.leadingIndicators.max(2),
-  risks: StrategyV2Schema.shape.risks.max(3),
-});
 /** Saved plans also carry the growth-plays portfolio (produced by its own agent). */
 export type StrategyV2 = z.infer<typeof StrategyV2Schema> & { constraintDiagnosis?: unknown; playbooks?: unknown; portfolio?: unknown; plays?: Play[]; economics?: PlaysOutput["economics"]; decision?: Decision | null; webSources?: { url: string; title?: string }[]; snapshot?: PlanSnapshot; quality?: PlanQuality | null; goalGap?: GoalGap | null; strategyExploration?: StrategyExploration; strategicDirection?: StrategicDirection; preparedWork?: z.infer<typeof PreparedWorkSchema>[]; focusedMove?: FocusedMove; timing?: GoalTiming };
 export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number; leads?: number; qualifiedLeads?: number; qualificationDefinition?: string; activated?: number; newCustomers?: number; activationKind?: "value" | "habit" | "setup" | "unknown"; signupKind?: "free_plan" | "trial_no_card" | "trial_card" | "unknown"; updatedAt: number }
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.95-customer-voice-learning";
+export const ENGINE_VERSION = "v3.96-focused-strategy-exploration";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -401,6 +390,19 @@ export const StrategyExplorationSchema = z.object({
   inputHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
 });
 export type StrategyExploration = z.infer<typeof StrategyExplorationSchema>;
+
+export const FocusedStrategySchema = StrategyV2Schema.extend({
+  strategyExploration: StrategyExplorationSchema,
+  timing: GoalTimingSchema.optional(),
+  focusedMove: FocusedMoveSchema,
+  strategicDirection: StrategicDirectionSchema,
+  preparedWork: z.array(PreparedWorkSchema).min(1).max(3),
+  audiences: StrategyV2Schema.shape.audiences.max(2),
+  channels: StrategyV2Schema.shape.channels.min(1).max(2),
+  weekOneChecklist: z.array(z.string()).min(1).max(3),
+  leadingIndicators: StrategyV2Schema.shape.leadingIndicators.max(2),
+  risks: StrategyV2Schema.shape.risks.max(3),
+});
 
 function lintStrategyExploration(exploration: StrategyExploration | undefined, input: AgentInput): LintIssue[] {
   // The output schema requires exploration for all new model output. Skip this supplemental
@@ -2691,6 +2693,7 @@ export function focusedStrategySpec(o: SpecOptions = {}): AgentSpec<z.infer<type
     id: "growth_strategy", role: "cmo", label: "Your next growth step", skills: ["owner-brevity", "focused-growth-strategy"],
     schema: FocusedStrategySchema, rubric: focusedRubric(rubricOf("growth-strategy")), criticSkills: ["owner-brevity"],
     lint: (out, input) => [
+      ...lintStrategyExploration(out.strategyExploration, input),
       ...lintPlanning(out, input), ...lintCites(out, input.facts.length, evidenceOf(input)),
       ...lintPlanFit(out, input.constraints), ...lintOutcomeNumbers(out, input.constraints, `${input.brief}\n${input.facts.join("\n")}`),
       ...lintRefusedOutreach(out.preparedWork, input), ...lintPreparedWork(out.preparedWork, input), ...lintPreparedDrafts(out.preparedWork, input),

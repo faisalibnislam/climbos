@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -17,6 +18,8 @@ import { PlanTimeline } from "./PlanTimeline";
 import { StepWorkLibrary } from "./StepWork";
 import type { ExpertView } from "./ExpertPlan";
 import { StrategicDirectionPanel } from "./StrategicDirection";
+
+const StrategyExplorationPanel = dynamic(() => import("./ExpertPlan").then(module => module.StrategyExplorationPanel), { loading: () => <Skeleton className="h-64" /> });
 
 export function GoalWorkspace({ slug, details }: { slug: string; details: ReactNode }) {
   const goals = useQuery(api.goals.list, { slug });
@@ -67,9 +70,10 @@ function GoalPlan({ slug, selectedId, details }: { slug: string; selectedId: Id<
       {strategy.expert?.quality?.state === "provisional" && !running ? <Callout tone="info" title="This draft can be better">AI can revise it using the latest research and prepared work. {generate}</Callout> : null}
       {plan.staleInputs.requiresRefresh ? <Callout tone="warning" title="Your information has changed">You can still read and edit the saved drafts. Update the recommendation before starting work based on the old information. {generate}</Callout> : null}
       <Tabs value={tab} onValueChange={value => { if (value !== "work") { setReview(false); if (window.location.hash === "#prepared-work") window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search); } setTab(value); }}>
-        <TabsList aria-label="Plan views"><TabsTrigger value="steps">Next steps</TabsTrigger><TabsTrigger value="work">Prepared work</TabsTrigger><TabsTrigger value="why">Why this plan</TabsTrigger><TabsTrigger value="research">Research</TabsTrigger></TabsList>
+        <TabsList aria-label="Plan views"><TabsTrigger value="steps">Next steps</TabsTrigger>{expert?.strategyExploration ? <TabsTrigger value="options">Strategy options</TabsTrigger> : null}<TabsTrigger value="work">Prepared work</TabsTrigger><TabsTrigger value="why">Why this plan</TabsTrigger><TabsTrigger value="research">Research</TabsTrigger></TabsList>
         <TabsContent value="steps">{running && needsRepair ? <p role="status" className="rounded-xl bg-surface p-6 text-sm">AI is correcting the plan. Your saved drafts stay available in Prepared work.</p> : <PlanTimeline key={strategy.id} slug={slug} strategyId={strategy.id} phases={expert?.phases ?? []} checklist={expert?.weekOneChecklist ?? []} hasPreparedWork={prepared} canEdit={plan.canEdit} onOpenWork={() => { setReview(true); setTab("work"); }} onAsk={ask} />}</TabsContent>
         <TabsContent value="work" className="space-y-5"><div id="plan-prepared-work" tabIndex={-1} className="scroll-mt-20 space-y-5"><StepWorkLibrary slug={slug} strategyId={strategy.id} canEdit={plan.canEdit} />{prepared ? <PreparedWork key={strategy.id} work={expert?.preparedWork} slug={slug} strategyId={strategy.id} /> : <Callout title="No prepared drafts in this saved plan">Ask AI to help with a step, or update the plan to prepare useful work.<div className="mt-3">{generate}</div></Callout>}</div></TabsContent>
+        {expert?.strategyExploration ? <TabsContent value="options"><StrategyExplorationPanel key={strategy.id} options={expert.strategyExploration} slug={slug} strategyId={strategy.id} canEdit={plan.canEdit} /></TabsContent> : null}
         <TabsContent value="why" className="space-y-4">
       <section aria-labelledby="next-step-heading" className="space-y-4 rounded-xl border border-line bg-surface p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3"><Badge>Why start here?</Badge>{timing.success ? <Button variant="link" size="sm" onClick={() => setTimingOpen(true)}>First review: {dayRange(timing.data.firstReview)}</Button> : <span className="text-xs text-ink-3">Timing will be judged with the next AI update</span>}</div>
