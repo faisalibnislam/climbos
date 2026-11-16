@@ -19,6 +19,28 @@ async function fixture() {
 }
 
 describe("goal workspace and private drafts", () => {
+  it("keeps the selected plan's tests visible after newer plans and excludes foreign rows", async () => {
+    const { t, owner, slug, orgId, strategyId, plan } = await fixture();
+    const other = await asNewUser(t, "learning-outsider@example.com");
+    const foreign = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other learning" });
+    const primaryId = await t.run(async ctx => {
+      const test = { ...plan.experiments[0], orgId, strategyId, status: "proposed" as const, createdAt: Date.now() };
+      const primary = await ctx.db.insert("experiments", test);
+      const { _id: _id, _creationTime: _time, ...old } = (await ctx.db.get(strategyId))!;
+      const newer = await ctx.db.insert("strategies", { ...old, version: 2 });
+      for (let i = 0; i < 25; i++) await ctx.db.insert("experiments", { ...test, strategyId: newer, name: `Other plan test ${i}` });
+      // Defensive tenant check even if a malformed legacy record points at this strategy.
+      await ctx.db.insert("experiments", { ...test, orgId: foreign.orgId });
+      return primary;
+    });
+    const view = await owner.client.query(api.workspace.plan, { slug, strategyId });
+    expect(view.experiments.map(e => e.id)).toEqual([primaryId]);
+    expect(view.experiments[0].name).toBe(plan.focusedMove.title);
+    await expect(other.client.query(api.workspace.plan, { slug, strategyId })).rejects.toThrow();
+    for (const table of ["approvals", "actionReceipts", "workflowRuns"] as const) {
+      expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
+    }
+  });
   it("persists team-reported task progress for the exact plan without approving or executing anything", async () => {
     const { t, owner, slug, orgId, strategyId, plan } = await fixture();
     const task = planTimeline(plan)[0].tasks[0];

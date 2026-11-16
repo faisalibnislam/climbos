@@ -694,10 +694,11 @@ export const plan = query({
       ? (
           await ctx.db
             .query("experiments")
-            .withIndex("by_org", (q) => q.eq("orgId", org._id))
+            .withIndex("by_strategy", (q) => q.eq("strategyId", strategy._id))
+            .filter((q) => q.eq(q.field("orgId"), org._id))
             .order("desc")
             .take(20)
-        ).filter((e) => e.strategyId === strategy._id)
+        )
       : [];
     const facts: {
       id: Id<"businessFacts">;

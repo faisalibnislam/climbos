@@ -1,3 +1,28 @@
+## 17 November 2026 — report primary learning from Next steps
+
+Audit: GoalWorkspace's default Next steps rendered only PlanTimeline. The existing primary experiment/outcome control required Research → Open research and plan details → Who to reach and how. The workspace query also read only the newest 20 experiments across the organization before selecting this strategy. A new failing regression inserted 25 newer tests for another plan and demonstrated that the selected plan's primary test disappeared.
+
+Next steps now includes Check your progress for the saved focused recommendation. It shows the metric and proposed observation duration, expandable hypothesis/audience/comparison/stop conditions, and the existing ExperimentOutcome form and history. The form is keyed to the test; the panel is keyed to the strategy. Only a unique exact-name match is used. Missing or ambiguous matches show an explanation and an editable discussion draft, not a guessed test or automatic generation. Viewers can inspect reported outcomes without write controls. The query uses the existing by_strategy index with an explicit tenant filter, retaining the bounded 20-row read for that strategy. No schema, engine prompt/version, model, provider, execution or approval contract changed.
+
+Verification commands:
+
+```sh
+pnpm exec vitest run tests/unit/focused-learning-ui.test.tsx tests/unit/experiment-outcome-ui.test.tsx tests/unit/focused-learning.test.ts tests/unit/experiment-outcome.test.ts tests/unit/experiment-measurement.test.ts tests/convex/goal-workspace.test.ts tests/convex/focused-plan.test.ts tests/convex/experiment-outcomes.test.ts tests/convex/plan-approval.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts tests/convex/publish-flow.test.ts
+pnpm typecheck
+pnpm exec eslint src/components/app/plan/FocusedLearning.tsx src/components/app/plan/GoalWorkspace.tsx convex/workspace.ts tests/unit/focused-learning-ui.test.tsx tests/convex/goal-workspace.test.ts e2e/focused-strategy-options.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/focused-strategy-options.spec.ts
+git diff --check
+```
+
+Results: **203 tests in 12 files passed (9.87s)**; app/Convex typecheck, scoped lint and local sync passed. **Two desktop/mobile browser tests passed (1.5m)**. The browser checks find reporting on the initial Next steps view, inspect its saved test conditions, save Not run, record and correct a count, change to a negative KWD monetary observation with unknown comparison, then confirm the same report in Research. Tenant-scoped artifacts, approvals, action receipts and workflow rows remain unchanged. Stable-view serious/critical automated accessibility and horizontal-overflow checks passed. The mobile panel capture was inspected; its tall element screenshot includes the existing fixed navigation/development overlay, so it is not a clean full-page visual acceptance artifact.
+
+Failures: the query regression initially returned no experiments instead of the selected plan's test. The first browser run stopped on two identically named Next steps tabs after opening advanced Research; the selector now uses the named Plan views tablist. The final run passed. These tests use synthetic local fixtures; they make no paid model/provider call or live external action.
+
+Changed files: convex/workspace.ts; src/components/app/plan/GoalWorkspace.tsx and FocusedLearning.tsx; tests/convex/goal-workspace.test.ts and tests/unit/focused-learning-ui.test.tsx; e2e/focused-strategy-options.spec.ts; capability, handoff, requirement-audit, ledger and this verification document. Existing unrelated .gitignore changes were preserved. No generated files changed.
+
+Limits: exact-name matching is structural, not semantic proof of a good test. Old plans are not backfilled. The per-strategy read remains bounded at 20, while new focused plans allow at most four experiments; oversized legacy records are not exhaustively rendered. Owner reports remain unverified observations, and task completion does not establish customer or revenue outcomes. This is a focused accessibility/workflow check, not representative-owner usability, whole-app accessibility, a development-console audit, real-model evaluation or full 410-requirement completion. Nothing was deployed or merged.
+
 ## 17 November 2026 — record the actual experiment metric
 
 Audit path: Strategy.experiments.primaryMetricType → saved experiment → workspace plan query → shared ExperimentOutcome form → playResults.recordExperimentOutcome → analyses/revision history → outcomeLine/resultsBriefs → next strategy writer and reviewer. The plan contract already supported count, continuous and monetary metrics. The report contract/form only supported eligible/exposed/converted people and a note. Three red API tests demonstrated that typed metric values could not be recorded. Existing outcome history, source labels, tenant controls, recorded-design classification and later-learning selection were retained.
