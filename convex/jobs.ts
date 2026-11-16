@@ -1378,32 +1378,45 @@ export const onboardingResearch = internalAction({
 
       // Step 2: CMO builds business intelligence (audience, competitors, VoC, SWOT, journey).
       const v1InsightsTask = `TASK: Using the business profile and website content, produce business intelligence: likely customer groups, competitors (only name competitors you can support with a source; if you used web search, put the URL in sourceUrl; otherwise say the owner should confirm), positioning, pricing observations, SWOT, a customer journey and the top opportunities.\n\nPROFILE:\n${reportDropped("insights profile", fitJson(profile, 6000, "profile"))}`;
+      const insightSpec = insightsSpec();
+      const insightInput = agentInput(
+        job,
+        `Produce business intelligence for ${business.name}: competitive alternatives, customer groups, a voice-of-customer phrase bank, objections, positioning, pricing observations, SWOT, journey, gaps and the top opportunities. Maintain up to five distinct audience profiles. For each, list needs, objections, purchasing motivations and channel preferences separately; label each item as owner_report, measured, research or inference, and cite only fact:N from supplied facts or an exact page URL read in this run. Use empty arrays when evidence is missing. A source or owner statement supports only what it actually says; do not treat one comment as a market-wide pattern or an inferred segment as validated.\n\nProvide commercialAssessment as a structured evidence map for the customer's problem, demand, alternatives, differentiation, and willingness to pay. For each supported finding label basis as owner_report, measured, research, site_claim, or inference; cite supplied fact:N or an exact page URL read in this run; and state the limitation. A business's own website claims cannot count as independent proof of demand, problem severity, or willingness to pay. Market research indicates category context, not this business's own paid demand. Do not infer representativeness from a small number of reviews, interviews, anecdotes or customers. Use status only to summarize whether business-specific evidence supports running a bounded test, is mixed, or is insufficient; this is never a viable/not-viable verdict. Name the most important unknowns and propose one smallest feasible test with a question, success signal and decision rule. When evidence is absent, use empty evidence and unknowns; do not invent customers, budgets, rates, sample sizes or outcomes.\n\nCritically assess the business's published website communication using siteAssessment (up to 8 findings): offer clarity, named buyer specificity, proof presentation, visible next-step path, trust information and messaging consistency. Each finding needs the exact sourceUrl of a website page read in this run, a short verbatim evidenceQuote from that same page, an observation limited to what the excerpt shows, and a separate cautious implication describing what the owner could investigate or improve. Assess only text and page content supplied here; do not infer visual design, mobile usability, loading speed, actual conversion performance, customer demand, product quality, willingness to pay, or business viability. Do not recommend a pivot or a full rebuild from website copy alone. If a finding lacks a direct quote from the same read page, omit it; use an empty siteAssessment array when no page evidence supports a finding.\n\nFor every SWOT statement, identify its dimension (strength/weakness are internal; opportunity/threat are external), match the statement exactly in swotEvidence, state its evidence basis (owner report, source claim, measured result, research, or inference), cite only fact:N from the supplied confirmed facts or a page URL read in this run, and explain the strategic implication. Use inference with no citation when direct evidence is missing; never turn website marketing claims into verified strengths or treat a hypothesis as a market fact. Add up to 8 TOWS moves only when useful: combine existing SWOT entries as strength+opportunity, weakness+opportunity, strength+threat, or weakness+threat; use their exact zero-based indexes, give one concrete move, its smallest first test, and a measurable signal. If no evidence-backed pairing helps choose what to do, return an empty swotMoves array.\n\nPROFILE (extracted from the website):\n${reportDropped("insights profile", fitJson(profile, 12_000, "profile"))}`,
+        {
+          untrustedContext: pagesText,
+          availableSourceUrls: pages.filter((p) => p.status === "ok").map((p) => p.url),
+          research: researchFor("business_insights", { website: business.website, businessName: business.name }),
+        },
+      );
       const insightsMeta: AgentMeta = {};
       const insights = await runAgentTask<BusinessInsights>(
         ctx,
         job,
         2,
-        insightsSpec(),
-        agentInput(
-          job,
-          `Produce business intelligence for ${business.name}: competitive alternatives, customer groups, a voice-of-customer phrase bank, objections, positioning, pricing observations, SWOT, journey, gaps and the top opportunities. Maintain up to five distinct audience profiles. For each, list needs, objections, purchasing motivations and channel preferences separately; label each item as owner_report, measured, research or inference, and cite only fact:N from supplied facts or an exact page URL read in this run. Use empty arrays when evidence is missing. A source or owner statement supports only what it actually says; do not treat one comment as a market-wide pattern or an inferred segment as validated.\n\nProvide commercialAssessment as a structured evidence map for the customer's problem, demand, alternatives, differentiation, and willingness to pay. For each supported finding label basis as owner_report, measured, research, site_claim, or inference; cite supplied fact:N or an exact page URL read in this run; and state the limitation. A business's own website claims cannot count as independent proof of demand, problem severity, or willingness to pay. Market research indicates category context, not this business's own paid demand. Do not infer representativeness from a small number of reviews, interviews, anecdotes or customers. Use status only to summarize whether business-specific evidence supports running a bounded test, is mixed, or is insufficient; this is never a viable/not-viable verdict. Name the most important unknowns and propose one smallest feasible test with a question, success signal and decision rule. When evidence is absent, use empty evidence and unknowns; do not invent customers, budgets, rates, sample sizes or outcomes.\n\nCritically assess the business's published website communication using siteAssessment (up to 8 findings): offer clarity, named buyer specificity, proof presentation, visible next-step path, trust information and messaging consistency. Each finding needs the exact sourceUrl of a website page read in this run, a short verbatim evidenceQuote from that same page, an observation limited to what the excerpt shows, and a separate cautious implication describing what the owner could investigate or improve. Assess only text and page content supplied here; do not infer visual design, mobile usability, loading speed, actual conversion performance, customer demand, product quality, willingness to pay, or business viability. Do not recommend a pivot or a full rebuild from website copy alone. If a finding lacks a direct quote from the same read page, omit it; use an empty siteAssessment array when no page evidence supports a finding.\n\nFor every SWOT statement, identify its dimension (strength/weakness are internal; opportunity/threat are external), match the statement exactly in swotEvidence, state its evidence basis (owner report, source claim, measured result, research, or inference), cite only fact:N from the supplied confirmed facts or a page URL read in this run, and explain the strategic implication. Use inference with no citation when direct evidence is missing; never turn website marketing claims into verified strengths or treat a hypothesis as a market fact. Add up to 8 TOWS moves only when useful: combine existing SWOT entries as strength+opportunity, weakness+opportunity, strength+threat, or weakness+threat; use their exact zero-based indexes, give one concrete move, its smallest first test, and a measurable signal. If no evidence-backed pairing helps choose what to do, return an empty swotMoves array.\n\nPROFILE (extracted from the website):\n${reportDropped("insights profile", fitJson(profile, 12_000, "profile"))}`,
-          {
-            untrustedContext: pagesText,
-            availableSourceUrls: pages.filter((p) => p.status === "ok").map((p) => p.url),
-            research: researchFor("business_insights", { website: business.website, businessName: business.name }),
-          },
-        ),
+        insightSpec,
+        insightInput,
         startedAt,
         { task: "business_insights", text: v1InsightsTask, context: pagesText, ctx: fixtureCtx(job) },
         insightsMeta,
       );
+      await firstTake;
+      // The writer can retain its best draft after revision exhaustion. Validate the
+      // final research before it can replace the business's saved evidence context.
+      let acceptedInsights = insights;
+      if (!job.run.isFixture && job.run.engine === "v2") {
+        const parsed = insightSpec.schema.safeParse(insights);
+        if (!parsed.success) throw new JobStop("invalid_research", "The research returned an incomplete result. Earlier insights are preserved. Try a new research check.");
+        const research = insightsMeta.notes !== undefined ? { notes: insightsMeta.notes, sources: insightsMeta.sources ?? [], retrievedAt: insightsMeta.retrievedAt } : undefined;
+        const issue = lintAgentOutput(insightSpec, insightInput, parsed.data, research).find(issue => issue.severity === "error");
+        if (issue) throw new JobStop("invalid_research", `The research needs correction: ${issue.message} Earlier insights are preserved.`);
+        acceptedInsights = parsed.data;
+      }
       // Claim support for audience evidence: excerpts are checked against confirmed facts and the site pages read here.
       const pageText = Object.fromEntries(pages.filter((p) => p.status === "ok").map((p) => [urlKey(p.url), p.text]));
-      const checkedInsights = insights && typeof insights === "object" && Array.isArray((insights as { audiences?: unknown }).audiences)
-        ? { ...(insights as Record<string, unknown>), audiences: verifyAudienceEvidence((insights as { audiences: Parameters<typeof verifyAudienceEvidence>[0] }).audiences, { facts: job.facts.map((f) => f.statement), pages: pageText }) }
-        : insights;
+      const checkedInsights = acceptedInsights && typeof acceptedInsights === "object" && Array.isArray((acceptedInsights as { audiences?: unknown }).audiences)
+        ? { ...(acceptedInsights as Record<string, unknown>), audiences: verifyAudienceEvidence((acceptedInsights as { audiences: Parameters<typeof verifyAudienceEvidence>[0] }).audiences, { facts: job.facts.map((f) => f.statement), pages: pageText }) }
+        : acceptedInsights;
       await ctx.runMutation(internal.jobWrites.saveInsights, { runId, businessId: business._id, insights: JSON.stringify(checkedInsights), pageReads: insightsMeta.pageReads ?? [] });
-      await firstTake;
       await finish(ctx, runId, "verified", { output: { facts: profile.facts.length }, meters: { scrapeCredits: pagesFetched, searchCalls: 0 } });
     }, undefined, resumeAs(ctx, "onboardingResearch", { runId, ownerText }));
   },

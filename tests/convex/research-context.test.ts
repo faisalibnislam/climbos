@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import { asNewUser, setup } from "./helpers";
 import { RATE_VERSIONS } from "../../shared/economics/rates";
+import { InsightsV2Schema } from "../../shared/agents/specs";
 import type { AgentInput } from "../../shared/agents/types";
 
 const captured = vi.hoisted(() => ({ inputs: [] as AgentInput[], reply: null as unknown }));
@@ -18,7 +19,8 @@ vi.mock("../../shared/agents/runtime", async (original) => ({
 const research = {
   audiences: [], competitors: [], positioning: "Research proposal, not an approved offer", pricingNotes: "Unknown",
   swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, journey: [], opportunities: [],
-  alternatives: [], gaps: [],
+  alternatives: [], gaps: [], swotEvidence: [], swotMoves: [],
+  commercialAssessment: { status: "insufficient_business_specific_evidence", evidence: [], unknowns: ["Paid demand is unknown."], nextTest: { question: "Will a buyer commit?", smallestTest: "Ask the owner to define a private buyer test.", successSignal: "A recorded buyer commitment.", decisionRule: "Set the decision rule before testing." } },
   vocPhrases: [{ phrase: "I keep chasing the missing brief", theme: "handoff", sourceUrl: "https://research.example/interview" }],
   objections: [{ objection: "Migrating our workflow is hard", force: "anxiety", counter: "Test a small migration", sourceUrl: "https://research.example/interview" }],
   positioningStatement: "A clearer handoff for small studios",
@@ -29,13 +31,13 @@ const research = {
 describe("persisted research in generation context", () => {
   afterEach(() => { captured.inputs.length = 0; captured.reply = null; vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
-  it("carries actual research-phase page evidence through onboarding into the saved phrase bank", async () => {
+  it.each(["valid", "unknown_source", "missing_research", "invented_quote", "site_claim_demand", "unknown_fact", "malformed", "inference"] as const)("validates %s research before replacing saved insights", async kind => {
     const t = setup();
     vi.stubEnv("CLIMBOS_FAKE_LLM", "");
     const network = vi.fn(() => { throw new Error("Unexpected network call"); });
     vi.stubGlobal("fetch", network);
     const owner = await asNewUser(t, "insights-page-evidence@example.com");
-    const { orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Research context", website: "https://business.example/" });
+    const { orgId, slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Research context", website: "https://business.example/" });
     const now = Date.now();
     const runId = await t.run(async ctx => {
       const runId = await ctx.db.insert("workflowRuns", { orgId, kind: "onboarding_research", title: "Source evidence", status: "executing", input: "{}", engine: "v2", roles: [], estimateMicros: 0, actualMicros: 0, rateVersionId: RATE_VERSIONS[0].id, entitlementVersionId: "test", routingVersionId: "test", budget: { modelSteps: 10, researchTools: 5, repairs: 0 }, used: { modelSteps: 0, researchTools: 0, repairs: 0 }, isFixture: false, createdAt: now, updatedAt: now });
@@ -46,11 +48,33 @@ describe("persisted research in generation context", () => {
       return runId;
     });
     const readAt = now - 5000;
-    captured.reply = { output: research, assessment: null, rounds: 1, history: [], research: { notes: "Synthetic research note", sources: [{ url: research.vocPhrases[0].sourceUrl }], retrievedAt: now, pageReads: [{ url: research.vocPhrases[0].sourceUrl, text: research.vocPhrases[0].phrase, retrievedAt: readAt }] } };
+    const output = InsightsV2Schema.parse(structuredClone(research));
+    if (kind === "unknown_source") output.vocPhrases[0].sourceUrl = "https://unread.example/review";
+    if (kind === "invented_quote") output.siteAssessment[0].evidenceQuote = "Our customers achieved a guaranteed return.";
+    if (kind === "site_claim_demand") output.commercialAssessment.evidence = [{ dimension: "demand", finding: "The site claims demand.", basis: "site_claim", evidenceRefs: ["https://business.example/"], limitation: "Website claim only." }];
+    if (kind === "unknown_fact") output.commercialAssessment.evidence = [{ dimension: "demand", finding: "An owner reports demand.", basis: "owner_report", evidenceRefs: ["fact:999"], limitation: "Owner report only." }];
+    if (kind === "inference") output.commercialAssessment.evidence = [{ dimension: "problem", finding: "Studios may need clearer briefs.", basis: "inference", evidenceRefs: [], limitation: "Untested hypothesis; customer behavior unknown." }];
+    const business = (await t.run(ctx => ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", orgId)).first()))!;
+    await t.mutation(internal.jobWrites.saveInsights, { runId, businessId: business._id, insights: JSON.stringify(research) });
+    const prior = (await t.run(ctx => ctx.db.get(business._id)))!.insights;
+    captured.reply = { output: kind === "malformed" ? { ...output, commercialAssessment: undefined } : output, assessment: { ship: true, gatesPassed: true, average: 5, minimum: 5, lint: [], critique: { gates: [], criteria: [], fixes: [], strengths: [] } }, rounds: 1, history: [], research: kind === "missing_research" ? null : { notes: "Synthetic research note", sources: [{ url: research.vocPhrases[0].sourceUrl }], retrievedAt: now, pageReads: [{ url: research.vocPhrases[0].sourceUrl, text: research.vocPhrases[0].phrase, retrievedAt: readAt }] } };
     await t.action(internal.jobs.onboardingResearch, { runId });
-    expect((await t.run(ctx => ctx.db.get(runId)))?.status).toBe("verified");
+    const good = kind === "valid" || kind === "inference";
+    const run = (await t.run(ctx => ctx.db.get(runId)))!;
+    expect(run.status).toBe(good ? "verified" : "failed");
     const saved = await t.run(ctx => ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", orgId)).first());
-    expect(saved?.insights?.expert?.vocPhrases).toEqual([{ ...research.vocPhrases[0], evidenceStatus: "text_matched", sourceReadAt: readAt }]);
+    if (good) {
+      expect(saved?.insights?.expert?.vocPhrases).toEqual([{ ...research.vocPhrases[0], evidenceStatus: "text_matched", sourceReadAt: readAt }]);
+      if (kind === "inference") expect(saved?.insights?.commercialAssessment?.evidence[0]).toMatchObject({ basis: "inference", evidenceRefs: [] });
+    } else {
+      expect(saved?.insights).toEqual(prior);
+      expect(run.userMessage).toContain("research");
+      expect(run.output).toBeUndefined();
+      const visible = await owner.client.query(api.workspace.runs, { slug });
+      expect(visible.find(row => row.id === runId)).toMatchObject({ status: "failed", userMessage: run.userMessage });
+      const outsider = await asNewUser(t, `outsider-${kind}@example.com`);
+      await expect(outsider.client.query(api.workspace.runs, { slug })).rejects.toThrow();
+    }
     expect(network).not.toHaveBeenCalled();
     for (const table of ["approvals", "actionReceipts", "artifacts"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
   });

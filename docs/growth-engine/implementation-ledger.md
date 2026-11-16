@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: final research acceptance
+
+Six red onboarding-job regressions showed retained invalid research becoming verified and replacing saved insights despite existing drafting lint. Real v2 onboarding now parses and reruns the existing insights spec against the original input and actual research metadata before persistence. Prior insights remain intact on rejection; labeled hypotheses stay possible, and the existing work-history message explains the failure. Added the rows 21–25 scoped audit without claiming full acceptance. 86 focused tests/11 files, a final 15-case visibility/tenant rerun, typecheck and lint passed. Engine v3.118-insights-acceptance; no provider, agent, schema, UI, external authority or model switch added.
+
 ## Local update — 17 November 2026: explain blocked plans without losing owner drafts
 
 Audited owner-experience requirements 11–20 against current Home, plan, task/progress and shared composer paths. Main failed-plan checks now expose saved reasons and fixes, with an editable explanation request. Browser tests exposed and verified the repair of queued assistant context replacing manually typed text. Current drafts are preserved and nothing auto-submits. The existing metered repair action and execution controls remain unchanged. Added a scoped completion audit retaining unproven usability/adaptive-depth requirements. Verification: 104 tests/11 files, typecheck, scoped lint, four desktop/mobile browser checks. No engine version, schema, provider, model or external action changed.

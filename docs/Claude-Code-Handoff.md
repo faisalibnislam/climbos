@@ -328,6 +328,10 @@ The current audit of rows 1–10 is in `docs/growth-engine/growth-plan-completio
 
 Main failed-plan checks now show the saved reason and expandable fixes; Explain these checks fills an editable request bound to the saved plan. Browser testing caught queued context replacing unsent owner text in ClimbPanel; appending to current text with stable effect dependencies and cleanup repairs it. No automatic submission or authority change. The [rows 11–20 audit](growth-engine/owner-experience-completion-audit.md) maps existing behavior and preserves unresolved owner-usability/adaptive-depth requirements. 104 regression/permission tests, typecheck, scoped lint and four desktop/mobile browser tests passed; see Verification for exact commands and limits. Continue with evidence/intelligence requirements; do not treat these scoped checks as product completion.
 
+## Research acceptance follow-up — 17 November 2026
+
+Real v2 onboarding now validates retained insights against its existing schema/spec and original input plus actual research metadata before saving. Six regressions reproduced unsupported outputs being accepted despite existing drafting checks. Failure preserves saved insights and remains visible in work history; valid page evidence and labeled speculation survive. Profile extraction is separately saved, and legacy/fixture results are unchanged. Engine v3.118-insights-acceptance. See [the rows 21–25 audit](growth-engine/research-evidence-completion-audit.md) and Verification for 86 tests, the final 15-case read-permission rerun, typecheck/lint and semantic/historical limitations. Continue with evidence-label fidelity and remaining missing-input/forecast acceptance; no full specification completion is claimed.
+
 ## What remains and should guide the next work
 
 These are known open gaps, not a complete substitute for checking the requirement audit and ledger before choosing work:

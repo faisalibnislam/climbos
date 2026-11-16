@@ -1,3 +1,7 @@
+## 17 November 2026 — research evidence acceptance
+
+Rows 21–25 have a [current scoped audit](research-evidence-completion-audit.md). Confirmed final-acceptance gaps allowed unsupported retained research to replace saved insights. Real v2 onboarding now enforces its existing schema/source/quote/fact-reference checks before saving, preserves earlier insights on rejection, and exposes the failed-run reason. Valid research and labeled hypotheses remain available. Source truth, general label fidelity, broad semantic contradiction detection and full requirement acceptance remain unproven; this does not close rows 26–30.
+
 ## 17 November 2026 — owner understanding and progress
 
 Rows 11–20 have a current [scoped reconciliation](owner-experience-completion-audit.md). Main-plan failure explanations are now visible without entering advanced research, and contextual assistant requests preserve the owner's unsent question. Focused regression/permission and desktop/mobile checks pass. These rows remain partial: novice-owner comprehension, adaptive explanations, task-effort measures and broad accessibility are not established by the fixture checks. Current tabs and progressive disclosure supersede the generic historical description below.

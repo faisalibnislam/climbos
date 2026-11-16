@@ -1,3 +1,16 @@
+## 17 November 2026 — final research acceptance before replacing insights
+
+Six new actual onboarding-job cases first failed: unread citation, unavailable research, invented website quote, website claim used as demand evidence, nonexistent fact index, and malformed commercial structure all became verified. The shared runner can retain its best draft; a positive mocked reviewer verdict did not establish evidence validity. Real v2 onboarding now reuses its original insights spec/input and actual research metadata for schema and deterministic lint checks before saving. Errors preserve earlier insights and produce a visible failed-run reason. Valid source-backed language and labeled inferences still pass. Existing profile extraction and legacy/fixture behavior remain separate. Engine v3.118-insights-acceptance; see [the scoped audit](growth-engine/research-evidence-completion-audit.md).
+
+Commands and results:
+
+- `pnpm exec vitest run tests/convex/research-context.test.ts tests/unit/research-quality.test.ts tests/unit/business-research-context.test.ts tests/unit/audience-evidence-support.test.tsx tests/convex/free-onboarding.test.ts tests/convex/research-cache.test.ts tests/convex/local-research.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts tests/convex/stopped-runs.test.ts tests/convex/business-model-validation.test.ts` — 86 passed, 11 files, 4.44 seconds.
+- `pnpm exec vitest run tests/convex/research-context.test.ts` — final 15 passed, including actual failed-run visibility to the owner and rejection of another tenant's read, 1.13 seconds.
+- `pnpm typecheck` — root and Convex TypeScript passed.
+- `pnpm exec eslint convex/jobs.ts shared/agents/specs.ts tests/convex/research-context.test.ts` — passed.
+
+New cases assert no network calls or approvals, action receipts or artifacts. Rejected output cannot replace saved insights; valid research retains page-read timestamps/excerpt status. No UI/browser change, paid evaluation, deployment or external send. Final schema/source checks do not prove semantic support, representative demand, all evidence-label correctness or historical result validity. Full 410-row acceptance remains open.
+
 ## 17 November 2026 — visible plan-check reasons and preserved discussion drafts
 
 The main failed-plan callout now exposes its saved first reason, expandable remaining reasons/fixes and an editable Explain these checks request. The browser test reproduced a shared ClimbPanel bug that overwrote an owner's unsent question; queued context now appends to current text and canceled effects cannot replay it. Existing approval and repair-generation paths are unchanged. See [the rows 11–20 audit](growth-engine/owner-experience-completion-audit.md).
