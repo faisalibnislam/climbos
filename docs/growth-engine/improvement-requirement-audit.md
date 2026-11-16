@@ -1,3 +1,7 @@
+## 17 November 2026 — marketing audience and execution binding
+
+Execution/approval follow-up: segment name and count did not freeze recipient identity, and marketing sending lacked current content/permission rechecks and an atomic one-use claim. Exact local request scope and current-state claims now close those confirmed gaps, with 153 focused/permission tests and 24 overlapping final cases passing. [Scoped audit](marketing-send-authorization-audit.md) retains live-provider, remote concurrency, recovery and lifecycle recommendation limits. This is not full execution-engine completion.
+
 ## 17 November 2026 — exact ad drafting destinations
 
 Rows 41–44 follow-up: detailed-plan Google/Meta selections reached jobs but were ignored by ad generation. They now constrain research/tasks/schemas and final persisted output; old unstarted card payloads cannot override the approved plan's platform key. Final 140 focused/permission tests pass. [Scoped audit](ad-destination-consistency-audit.md) preserves generic-request compatibility and outstanding semantic, email-audience and live-provider limits. This does not complete the full execution requirements.

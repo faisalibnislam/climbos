@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: exact marketing send authorization
+
+Marketing approval now freezes recipient identity and content/version/credential/reservation scope, uses current approval/permission checks, and claims preparation/send once. Duplicate executors cannot resend; unresolved outcomes retain quota and need provider review. Eight red regressions preceded the repair. 153 broader tests/nine files plus final 24 overlapping focused cases, typecheck and lint pass. [Audit](marketing-send-authorization-audit.md) documents additive schema, legacy reapproval, provider race limits and absent unknown-result recovery UI. The welcome-email brief remains a separate confirmed drafting gap.
+
 ## Local update — 17 November 2026: plan-to-ad destination consistency
 
 Selected Google/Meta draft destinations now survive through research, spec, task and final validation. Mixed/empty selected-platform output fails before persistence; old unstarted plan cards resolve from the approved plan key. Generic requests retain both draft types. Six red regressions preceded the repair; final 140 tests/ten files, typecheck and lint pass. [Audit](ad-destination-consistency-audit.md) records remaining semantic, email and provider work. Engine v3.124-ad-destinations. Draft-only; no execution or authorization expansion.

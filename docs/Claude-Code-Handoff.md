@@ -21,6 +21,8 @@ Latest social-routing follow-up (17 November): detailed-plan platform selections
 
 Latest ad-routing follow-up (17 November): selected Google/Meta destinations now reach research, drafting, schemas and final persistence checks. Older unstarted plan cards resolve from the approved plan key. Generic requests retain both draft types. [Audit](growth-engine/ad-destination-consistency-audit.md) records exact tests and remaining email/semantic/provider limitations. No campaign execution authority was added.
 
+Latest marketing-send follow-up (17 November): exact local audience/content/version/credential/reservation binding and one-use preparation/dispatch claims close eight reproduced permission/concurrency gaps. 153 broader tests, final 24 overlapping focused cases, typecheck and lint pass. [Audit](growth-engine/marketing-send-authorization-audit.md) records additive undeployed schema, legacy reapproval, reserved unknown outcomes and provider-state limits. The first-win welcome-email brief remains the next confirmed lifecycle-drafting gap.
+
 This handoff records what has been built, what was checked, what remains unverified, and how to continue safely. It is a starting point for repository work, not proof that every capability works with live providers or real customer outcomes.
 
 ## Current status — 17 November 2026

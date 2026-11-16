@@ -14,10 +14,10 @@ import {
   sendBroadcast,
   upsertMarketingContact,
 } from "../shared/integrations/resendMarketing";
-import { approvalHash, canonicalJson, sha256Hex } from "../shared/policy";
+import { approvalHash, can, canonicalJson, checkApprovalForExecution, sha256Hex } from "../shared/policy";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { action, internalAction, internalMutation, internalQuery, mutation, query, type QueryCtx } from "./_generated/server";
+import { action, internalAction, internalMutation, internalQuery, mutation, query, type QueryCtx, type MutationCtx } from "./_generated/server";
 import { decideReservation, releaseReservation } from "../shared/economics/ledger";
 import { activePolicyVersion } from "./jobWrites";
 import { audit } from "./lib/audit";
@@ -282,6 +282,32 @@ function toHtml(text: string, businessName: string): string {
   return `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:16px;color:#1a1d1b;max-width:560px">${paras}<p style="margin:24px 0 0;font-size:12px;color:#626761">You're receiving this because you opted in to emails from ${esc(businessName)}. <a href="${RESEND_UNSUBSCRIBE_PLACEHOLDER}">Unsubscribe</a></p></div>`;
 }
 
+/** A complete bounded audience, with identity rather than count used for approval. */
+async function eligibleRecipients(ctx: QueryCtx, orgId: Id<"organizations">, segment: string) {
+  const contacts = await ctx.db.query("contacts").withIndex("by_org", q => q.eq("orgId", orgId)).take(MAX_CONTACT_ROWS + 1);
+  if (contacts.length > MAX_CONTACT_ROWS) throw appError("LIMIT_REACHED", "This workspace's audience is too large to verify completely. No send was authorized.");
+  const recipients = [];
+  for (const contact of contacts) {
+    if (contact.deletedAt || !contact.segments.includes(segment)) continue;
+    const records = await ctx.db.query("consentRecords").withIndex("by_org_contact", q => q.eq("orgId", orgId).eq("contactId", contact._id)).take(101);
+    if (records.length > 100) throw appError("LIMIT_REACHED", "A contact's consent history needs review before sending.");
+    const consent = records.find(r => r.purpose === "marketing_email" && !r.withdrawnAt && r.source.trim() && Number.isFinite(r.capturedAt) && r.capturedAt <= Date.now());
+    const suppressed = await ctx.db.query("suppressions").withIndex("by_org_email", q => q.eq("orgId", orgId).eq("emailHash", contact.emailHash)).first();
+    if (!consent || suppressed) continue;
+    if (!contact.emailCiphertext || !contact.emailIv) throw appError("INVALID", "A selected contact's address is unavailable. Review the audience before sending.");
+    recipients.push({ contactId: contact._id, emailHash: contact.emailHash, ciphertext: contact.emailCiphertext, iv: contact.emailIv, firstName: contact.displayName?.split(" ")[0], consent: { id: consent._id, source: consent.source, grantedAt: consent.capturedAt }, suppressed: false });
+  }
+  return recipients.sort((a, b) => a.emailHash.localeCompare(b.emailHash) || a.contactId.localeCompare(b.contactId));
+}
+async function recipientSetHash(recipients: Awaited<ReturnType<typeof eligibleRecipients>>) {
+  return sha256Hex(canonicalJson(recipients));
+}
+async function marketingConnection(ctx: QueryCtx, orgId: Id<"organizations">) {
+  const connection = await ctx.db.query("connections").withIndex("by_org_provider", q => q.eq("orgId", orgId).eq("provider", "email_resend")).first();
+  const secret = connection?.status === "connected" ? await ctx.db.query("connectionSecrets").withIndex("by_connection", q => q.eq("connectionId", connection._id)).first() : null;
+  return { connection, credentialId: secret?.orgId === orgId ? secret._id : undefined };
+}
+
 /**
  * Approve sending ONE email from an approved sequence to a segment through the
  * customer's Resend account. The approval binds content, segment, sender and
@@ -302,15 +328,24 @@ export const approveSend = mutation({
     const a = assertSameOrg(await ctx.db.get(args.artifactId), org._id, "email");
     if (a.kind !== "email_sequence" && a.kind !== "email") throw appError("INVALID", "Only email drafts can be sent.");
     if (a.status !== "approved") throw appError("INVALID", "Approve the email content first.");
+    const pending = await ctx.db.query("approvals").withIndex("by_subject", q => q.eq("subjectType", "email_send").eq("subjectId", a._id))
+      .filter(q => q.and(q.eq(q.field("orgId"), org._id), q.or(
+        q.and(q.eq(q.field("status"), "approved"), q.gt(q.field("expiresAt"), Date.now())),
+        q.and(q.neq(q.field("executionStartedAt"), undefined), q.or(q.eq(q.field("executionFinishedAt"), undefined), q.eq(q.field("executionOutcome"), "uncertain"))),
+      ))).first();
+    if (pending) throw appError("INVALID", "This email already has an approved or unresolved send. Check its result before approving another.");
     if (!/^[^<>]*<?[^\s@<>]+@[^\s@<>]+\.[a-z]{2,}>?$/i.test(args.from.trim())) throw appError("INVALID", "Enter a sender like “Your Name <hello@yourdomain.com>” on a domain verified in your Resend account.");
     const access = await chargeableAccess(ctx, org);
     if (!access.allowed) throw appError(access.code === "PAUSED" ? "PAUSED" : "PAYMENT_REQUIRED", access.message);
     const ver = a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null;
-    const emails = ver ? splitSequence(ver.body) : [];
-    const email = emails[args.emailIndex] ?? (a.kind === "email" && ver ? { subject: ver.headline ?? a.title, text: ver.body } : undefined);
+    if (!ver || ver.orgId !== org._id || ver.artifactId !== a._id || ver.version !== a.currentVersion) throw appError("INVALID", "Review the current email version before sending.");
+    if (!Number.isInteger(args.emailIndex) || args.emailIndex < 0 || (a.kind === "email" && args.emailIndex !== 0)) throw appError("INVALID", "Choose one email from the approved draft.");
+    const emails = splitSequence(ver.body);
+    const email = emails[args.emailIndex] ?? (a.kind === "email" ? { subject: ver.headline ?? a.title, text: ver.body.trim() } : undefined);
     if (!email) throw appError("INVALID", "We couldn't find that email in the draft.");
-    const stats = (await segmentStats(ctx, org._id)).find((s) => s.segment === args.segment);
-    if (!stats || stats.sendable === 0) throw appError("INVALID", "Nobody in this segment has a recorded marketing opt-in. ClimbOS won't send without one.");
+    const recipients = await eligibleRecipients(ctx, org._id, args.segment);
+    const stats = { sendable: recipients.length };
+    if (stats.sendable === 0) throw appError("INVALID", "Nobody in this segment has a recorded marketing opt-in. ClimbOS won't send without one.");
     // The owner's contact frequency limit holds the whole send rather than silently dropping people from an approved segment.
     const frequency = await segmentFrequency(ctx, org._id, args.segment, org.contactFrequencyDays);
     const blocked = frequency ? frequencyBlockMessage(frequency, org.contactFrequencyDays!) : null;
@@ -323,8 +358,11 @@ export const approveSend = mutation({
     const policyVersion = await activePolicyVersion(ctx, org._id);
     const now = Date.now();
     const expiresAt = now + 24 * 3_600_000;
-    const contentHash = await sha256Hex(canonicalJson({ subject: email.subject, text: email.text, from: args.from.trim() }));
-    const scope = { destination: args.providerSegmentId, audience: args.segment, spendLimitMinor: stats.sendable };
+    const html = toHtml(email.text, org.name);
+    const contentHash = await sha256Hex(canonicalJson({ subject: email.subject, html, from: args.from.trim() }));
+    const { connection, credentialId } = await marketingConnection(ctx, org._id);
+    const reservationId = await ctx.db.insert("usageReservations", { orgId: org._id, periodId: period._id, purpose: "email_send", walletMicros: 0, topupMicros: 0, meters: { byoMarketingSends: stats.sendable }, status: "held", createdAt: now });
+    const scope = { destination: args.providerSegmentId, audience: args.segment, spendLimitMinor: stats.sendable, recipientSetHash: await recipientSetHash(recipients), artifactVersionId: ver._id, reservationId, connectionId: connection?.status === "connected" ? connection._id : undefined, credentialId };
     const binding = { orgId: org._id, subjectType: "email_send", subjectId: a._id, actionKind: `send:${args.emailIndex}`, contentHash, scope, policyVersion, expiresAt };
     const approvalId = await ctx.db.insert("approvals", {
       orgId: org._id,
@@ -343,47 +381,83 @@ export const approveSend = mutation({
       expiresAt,
       createdAt: now,
     });
-    const reservationId = await ctx.db.insert("usageReservations", { orgId: org._id, periodId: period._id, purpose: "email_send", walletMicros: 0, topupMicros: 0, meters: { byoMarketingSends: stats.sendable }, status: "held", createdAt: now });
-    await ctx.scheduler.runAfter(0, internal.marketing.executeSend, { approvalId, reservationId, subject: email.subject, html: toHtml(email.text, org.name), from: args.from.trim(), segment: args.segment, providerSegmentId: args.providerSegmentId });
+    await ctx.scheduler.runAfter(0, internal.marketing.executeSend, { approvalId, reservationId, subject: email.subject, html, from: args.from.trim(), segment: args.segment, providerSegmentId: args.providerSegmentId });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "email.send_approved", subjectType: "artifact", subjectId: a._id, summary: `Approved sending “${email.subject}” to ${stats.sendable} opted-in contact(s) in “${args.segment}”.` });
     return { recipients: stats.sendable };
   },
 });
 
+const sendArgs = {
+  approvalId: v.id("approvals"), reservationId: v.id("usageReservations"), subject: v.string(), html: v.string(), from: v.string(), segment: v.string(), providerSegmentId: v.string(),
+};
+type SendArgs = { approvalId: Id<"approvals">; reservationId: Id<"usageReservations">; subject: string; html: string; from: string; segment: string; providerSegmentId: string };
+async function readSendContext(ctx: QueryCtx, approvalId: Id<"approvals">, segment: string) {
+  const approval = await ctx.db.get(approvalId);
+  if (!approval || approval.subjectType !== "email_send") return null;
+  const org = await ctx.db.get(approval.orgId);
+  if (!org || org.deletedAt) return null;
+  const { connection, credentialId } = await marketingConnection(ctx, org._id);
+  let recipients: Awaited<ReturnType<typeof eligibleRecipients>> = [];
+  let audienceProblem: string | null = null;
+  try { recipients = await eligibleRecipients(ctx, org._id, segment); } catch { audienceProblem = "The complete audience or consent history could not be verified. Review it before sending."; }
+  const artifactId = ctx.db.normalizeId("artifacts", approval.subjectId);
+  const artifact = artifactId ? await ctx.db.get(artifactId) : null;
+  const version = artifact?.currentVersionId ? await ctx.db.get(artifact.currentVersionId) : null;
+  return { approval, org, connectionId: connection?.status === "connected" ? connection._id : null, credentialId, recipients, audienceProblem, artifact, version };
+}
 export const sendContext = internalQuery({
   args: { approvalId: v.id("approvals"), segment: v.string() },
-  handler: async (ctx, { approvalId, segment }) => {
-    const approval = await ctx.db.get(approvalId);
-    if (!approval) return null;
-    const org = await ctx.db.get(approval.orgId);
-    if (!org) return null;
-    const conn = await ctx.db
-      .query("connections")
-      .withIndex("by_org_provider", (q) => q.eq("orgId", org._id).eq("provider", "email_resend"))
-      .first();
-    const contacts = (
-      await ctx.db
-        .query("contacts")
-        .withIndex("by_org", (q) => q.eq("orgId", org._id))
-        .take(10_000)
-    ).filter((c) => !c.deletedAt && c.segments.includes(segment));
-    const recipients = [];
-    for (const c of contacts) {
-      const consent = (
-        await ctx.db
-          .query("consentRecords")
-          .withIndex("by_org_contact", (q) => q.eq("orgId", org._id).eq("contactId", c._id))
-          .take(5)
-      ).find((r) => r.purpose === "marketing_email" && !r.withdrawnAt);
-      const suppressed = Boolean(
-        await ctx.db
-          .query("suppressions")
-          .withIndex("by_org_email", (q) => q.eq("orgId", org._id).eq("emailHash", c.emailHash))
-          .first(),
-      );
-      recipients.push({ ciphertext: c.emailCiphertext ?? "", iv: c.emailIv ?? "", firstName: c.displayName?.split(" ")[0], consent: consent ? { source: consent.source, grantedAt: consent.capturedAt } : null, suppressed });
-    }
-    return { approval, org, connectionId: conn?.status === "connected" ? conn._id : null, recipients, paused: Boolean(org.emergencyStop?.active) };
+  handler: (ctx, args) => readSendContext(ctx, args.approvalId, args.segment),
+});
+async function sendProblem(ctx: MutationCtx, c: NonNullable<Awaited<ReturnType<typeof readSendContext>>>, args: SendArgs): Promise<string | null> {
+  const { approval: a, org, artifact, version } = c;
+  if (c.audienceProblem) return c.audienceProblem;
+  if (!a.scope.recipientSetHash || !a.scope.artifactVersionId || !a.scope.reservationId) return "This older email approval needs a fresh review of its exact audience and content.";
+  if (!c.connectionId || !c.credentialId) return "Connect your own Resend account before sending.";
+  const reservation = await ctx.db.get(args.reservationId);
+  if (!reservation || reservation.orgId !== org._id || reservation.purpose !== "email_send" || reservation.status !== "held" || reservation.meters.byoMarketingSends !== a.scope.spendLimitMinor) return "The reserved email allowance no longer matches this approval.";
+  if (!artifact || artifact.orgId !== org._id || artifact.status !== "approved" || !version || version.orgId !== org._id || version.artifactId !== artifact._id || version.version !== artifact.currentVersion) return "The current email content is no longer approved.";
+  const member = a.decidedBy ? await ctx.db.query("memberships").withIndex("by_org_user", q => q.eq("orgId", org._id).eq("userId", a.decidedBy!)).unique() : null;
+  if (!member || member.status !== "active" || !can(member.role, "approve")) return "The approving member no longer has permission. Review the send again.";
+  try { await requirePaid(ctx, org, "sending"); } catch { return "Your plan no longer allows email sending."; }
+  const access = await chargeableAccess(ctx, org);
+  if (!access.allowed) return access.message;
+  const index = Number(a.actionKind.replace(/^send:/, ""));
+  if (!/^send:\d+$/.test(a.actionKind) || !Number.isSafeInteger(index)) return "The approved email selection is invalid.";
+  const email = artifact.kind === "email" && index === 0 ? splitSequence(version.body)[0] ?? { subject: version.headline ?? artifact.title, text: version.body.trim() } : artifact.kind === "email_sequence" ? splitSequence(version.body)[index] : null;
+  if (!email || email.subject !== args.subject || toHtml(email.text, org.name) !== args.html) return "The email content changed after approval. Review the current version.";
+  const frequency = await segmentFrequency(ctx, org._id, args.segment, org.contactFrequencyDays);
+  const frequencyIssue = frequency ? frequencyBlockMessage(frequency, org.contactFrequencyDays!) : null;
+  if (frequencyIssue) return frequencyIssue;
+  const scope = { destination: args.providerSegmentId, audience: args.segment, spendLimitMinor: c.recipients.length, recipientSetHash: await recipientSetHash(c.recipients), artifactVersionId: version._id, reservationId: args.reservationId, connectionId: c.connectionId, credentialId: c.credentialId };
+  const check = await checkApprovalForExecution({ approval: a, current: { orgId: org._id, subjectType: "email_send", subjectId: artifact._id, actionKind: a.actionKind, contentHash: await sha256Hex(canonicalJson({ subject: args.subject, html: args.html, from: args.from })), scope, policyVersion: await activePolicyVersion(ctx, org._id), expiresAt: a.expiresAt }, now: Date.now(), emergencyStop: Boolean(org.emergencyStop?.active), capabilityReady: true });
+  return check.ok ? null : check.message;
+}
+
+/** Claim before any provider write; an interrupted attempt never silently retries. */
+export const claimSend = internalMutation({
+  args: sendArgs,
+  handler: async (ctx, args) => {
+    const c = await readSendContext(ctx, args.approvalId, args.segment);
+    if (!c || c.approval.executionStartedAt !== undefined || c.approval.executionFinishedAt !== undefined) return null;
+    const reservation = await ctx.db.get(args.reservationId);
+    if (!reservation || reservation.orgId !== c.org._id || reservation.purpose !== "email_send" || reservation.status !== "held" || (c.approval.scope.reservationId && c.approval.scope.reservationId !== reservation._id)) return null;
+    const error = await sendProblem(ctx, c, args);
+    await ctx.db.patch(c.approval._id, { executionStartedAt: Date.now() });
+    return { context: c, error };
+  },
+});
+
+/** Recheck after provider contact reads and immediately before the one send dispatch. */
+export const authorizeSendDispatch = internalMutation({
+  args: sendArgs,
+  handler: async (ctx, args) => {
+    const c = await readSendContext(ctx, args.approvalId, args.segment);
+    if (!c || c.approval.executionStartedAt === undefined || c.approval.executionFinishedAt !== undefined || c.approval.emailSendDispatchedAt !== undefined) return { ok: false, message: "This email attempt is no longer available." };
+    const error = await sendProblem(ctx, c, args);
+    if (error) return { ok: false, message: error };
+    await ctx.db.patch(c.approval._id, { emailSendDispatchedAt: Date.now() });
+    return { ok: true, message: "" };
   },
 });
 
@@ -401,7 +475,10 @@ export const finishSend = internalMutation({
   handler: async (ctx, args) => {
     const approval = await ctx.db.get(args.approvalId);
     const reservation = await ctx.db.get(args.reservationId);
-    if (!approval || !reservation) return;
+    if (!approval || !reservation || approval.subjectType !== "email_send" || reservation.orgId !== approval.orgId || reservation.purpose !== "email_send" || approval.executionFinishedAt !== undefined || (approval.scope.reservationId && approval.scope.reservationId !== reservation._id)) return;
+    if (args.status === "verified" && approval.emailSendDispatchedAt === undefined) return;
+    if (args.status === "uncertain" && approval.executionStartedAt === undefined) return;
+    await ctx.db.patch(approval._id, { executionFinishedAt: Date.now(), executionOutcome: args.status, ...(args.externalId ? { executionExternalId: args.externalId } : {}) });
     if (args.status === "verified" && args.recipientHashes?.length) {
       const now = Date.now();
       for (const emailHash of args.recipientHashes.slice(0, 10_000)) {
@@ -410,11 +487,14 @@ export const finishSend = internalMutation({
       }
     }
     const period = await ctx.db.get(reservation.periodId);
-    if (period && reservation.status === "held") {
+    if (period?.orgId !== approval.orgId) throw appError("INVALID", "The email allowance does not belong to this workspace.");
+    if (reservation.status === "held" && args.status === "uncertain") {
+      await ctx.db.patch(reservation._id, { status: "unresolved" }); // Keep quota held until the provider outcome is known.
+    } else if (reservation.status === "held") {
       const released = releaseReservation(ledgerOf(period), { walletMicros: 0, topupMicros: 0, meters: reservation.meters });
       released.meterUsed = { ...released.meterUsed, byoMarketingSends: released.meterUsed.byoMarketingSends + args.sent };
       await ctx.db.patch(period._id, ledgerPatch(released));
-      await ctx.db.patch(reservation._id, { status: args.status === "uncertain" ? "unresolved" : "reconciled", reconciledAt: Date.now() });
+      await ctx.db.patch(reservation._id, { status: "reconciled", reconciledAt: Date.now() });
     }
     await ctx.db.insert("actionReceipts", {
       orgId: approval.orgId,
@@ -428,75 +508,79 @@ export const finishSend = internalMutation({
       createdAt: Date.now(),
       verifiedAt: args.status === "verified" ? Date.now() : undefined,
     });
-    if (args.status === "verified") await ctx.db.patch(approval._id, { status: "consumed" });
+    await ctx.db.patch(approval._id, { status: args.status === "verified" ? "consumed" : "invalidated", ...(args.status !== "verified" ? { invalidatedReason: args.summary.slice(0, 400) } : {}) });
     await audit(ctx, { orgId: approval.orgId, actorType: "system", action: `email.send.${args.status}`, summary: args.summary.slice(0, 300) });
   },
 });
 
 export const executeSend = internalAction({
-  args: {
-    approvalId: v.id("approvals"),
-    reservationId: v.id("usageReservations"),
-    subject: v.string(),
-    html: v.string(),
-    from: v.string(),
-    segment: v.string(),
-    providerSegmentId: v.string(),
-  },
+  args: sendArgs,
   handler: async (ctx, args): Promise<void> => {
-    const c = await ctx.runQuery(internal.marketing.sendContext, { approvalId: args.approvalId, segment: args.segment });
-    if (!c) return;
+    const claim = await ctx.runMutation(internal.marketing.claimSend, args);
+    if (!claim) return;
+    const c = claim.context;
     const fail = async (summary: string): Promise<void> => {
-      await ctx.runMutation(internal.marketing.finishSend, { approvalId: args.approvalId, reservationId: args.reservationId, status: "failed", sent: 0, summary });
+      await ctx.runMutation(internal.marketing.finishSend, { approvalId: args.approvalId, reservationId: args.reservationId, status: "failed", sent: 0, externalId, summary });
     };
-    if (c.paused) return fail("Not sent: all activity is paused.");
-    if (c.approval.status !== "approved" || c.approval.expiresAt < Date.now()) return fail("Not sent: the approval is no longer valid.");
-    const scope = c.approval.scope;
-    if (scope.destination !== args.providerSegmentId || scope.audience !== args.segment || scope.spendLimitMinor === undefined) {
-      return fail("Not sent: the reviewed email audience no longer matches this approval. Review and approve the send again.");
+    let requestPhase: "preparation" | "draft" | "send" = "preparation";
+    let externalId: string | undefined;
+    try {
+      if (claim.error) return fail(`Not sent: ${claim.error}`);
+      if (c.approval.status !== "approved" || c.approval.expiresAt < Date.now()) return fail("Not sent: the approval is no longer valid.");
+      const scope = c.approval.scope;
+      if (scope.destination !== args.providerSegmentId || scope.audience !== args.segment || scope.spendLimitMinor === undefined) {
+        return fail("Not sent: the reviewed email audience no longer matches this approval. Review and approve the send again.");
+      }
+      if (!c.connectionId) return fail("Not sent: connect your own Resend account first.");
+      const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId: c.connectionId });
+      if (!secret || secret.orgId !== c.org._id || secret.provider !== "email_resend" || secret.secretId !== c.credentialId) return fail("Not sent: the email provider connection changed. Review the send again.");
+      const { apiKey } = JSON.parse(secret.value) as { apiKey: string };
+      const expectedRecipients = new Set<string>();
+      let syncUnverified = false;
+      for (const r of c.recipients) {
+        if (!r.consent || r.suppressed || !r.ciphertext) continue;
+        const [keyId, iv] = r.iv.split(":");
+        const email = await decryptSecret({ keyId, iv, ciphertext: r.ciphertext }, contactAad(c.org._id));
+        const contact = { email, firstName: r.firstName, consent: { purpose: "marketing_email", source: r.consent.source, grantedAt: r.consent.grantedAt }, suppressed: r.suppressed, segmentIds: [args.providerSegmentId] };
+        if (contactRefusalReason(contact)) continue;
+        const res = await upsertMarketingContact({ apiKey, contact });
+        if (res.status !== "verified" || !res.data || res.data.email.trim().toLowerCase() !== email.trim().toLowerCase()) syncUnverified = true;
+        else if (!res.data.unsubscribed) expectedRecipients.add(res.data.email.trim().toLowerCase());
+      }
+      if (syncUnverified) return fail("Not sent: the email provider could not verify every opted-in contact. Check the connection and try again.");
+      if (expectedRecipients.size === 0) return fail("Not sent: no opted-in, unsuppressed contacts could be synced.");
+      if (expectedRecipients.size !== scope.spendLimitMinor) {
+        return fail("Not sent: the eligible contact count changed after approval. Review the current audience and approve the send again.");
+      }
+      const providerRecipients = await listSegmentContacts({ apiKey, segmentId: args.providerSegmentId });
+      if (!providerRecipients.ok) return fail("Not sent: ClimbOS could not verify who is in the selected email segment. Check the connection and try again.");
+      if (providerRecipients.data.truncated) return fail("Not sent: the email segment is too large for ClimbOS to verify completely. Narrow it to a segment of 10,000 contacts or fewer, then try again.");
+      const match = compareSegmentRecipients(expectedRecipients, providerRecipients.data.items);
+      if (!match.matches) {
+        return fail(`Not sent: the selected email segment does not match the ${match.expectedCount} opted-in contacts you approved (${match.additional} extra active contact${match.additional === 1 ? "" : "s"}, ${match.missing} approved contact${match.missing === 1 ? " is" : "s are"} missing). Align the segment and approve again.`);
+      }
+      requestPhase = "draft";
+      const draft = await createDraftBroadcast({ apiKey, draft: { segmentId: args.providerSegmentId, from: args.from, subject: args.subject, html: args.html, name: `climbos-${args.approvalId}` } });
+      if (draft.status !== "verified" || !draft.externalId) {
+        await ctx.runMutation(internal.marketing.finishSend, { approvalId: args.approvalId, reservationId: args.reservationId, status: draft.status === "uncertain" ? "uncertain" : "failed", sent: 0, externalId: draft.externalId, summary: draft.providerMessage ?? "Your email provider didn't accept the draft." });
+        return;
+      }
+      externalId = draft.externalId;
+      const dispatch = await ctx.runMutation(internal.marketing.authorizeSendDispatch, args);
+      if (!dispatch.ok) return fail(`Not sent: ${dispatch.message}`);
+      requestPhase = "send";
+      const sent = await sendBroadcast({ apiKey, broadcastId: draft.externalId, approval: { kind: SEND_BROADCAST_ACTION, targetId: draft.externalId, value: "now", approvedBy: String(c.approval.decidedBy ?? "owner"), approvedAt: Date.now() } });
+      await ctx.runMutation(internal.marketing.finishSend, {
+        approvalId: args.approvalId,
+        reservationId: args.reservationId,
+        status: sent.status,
+        sent: sent.status === "verified" ? expectedRecipients.size : 0,
+        externalId: draft.externalId,
+        ...(sent.status === "verified" ? { recipientHashes: await Promise.all([...expectedRecipients].map((email) => sha256Hex(email))) } : {}),
+        summary: sent.status === "verified" ? `Accepted by your email provider for ${expectedRecipients.size} opted-in contact(s) after the provider segment matched the approved audience.` : (sent.providerMessage ?? "Your email provider didn't send it."),
+      });
+    } catch {
+      await ctx.runMutation(internal.marketing.finishSend, { approvalId: args.approvalId, reservationId: args.reservationId, status: requestPhase === "preparation" ? "failed" : "uncertain", sent: 0, externalId, summary: requestPhase === "preparation" ? "Email preparation stopped before a broadcast was requested. Review the connection and approve again." : "The email provider result is unknown. Check the provider before attempting another send; this approval will not retry." });
     }
-    if (!c.connectionId) return fail("Not sent: connect your own Resend account first.");
-    const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId: c.connectionId });
-    if (!secret) return fail("Not sent: the email provider connection was removed.");
-    const { apiKey } = JSON.parse(secret.value) as { apiKey: string };
-    const expectedRecipients = new Set<string>();
-    let syncUnverified = false;
-    for (const r of c.recipients) {
-      if (!r.consent || r.suppressed || !r.ciphertext) continue;
-      const [keyId, iv] = r.iv.split(":");
-      const email = await decryptSecret({ keyId, iv, ciphertext: r.ciphertext }, contactAad(c.org._id));
-      const contact = { email, firstName: r.firstName, consent: { purpose: "marketing_email", source: r.consent.source, grantedAt: r.consent.grantedAt }, suppressed: r.suppressed, segmentIds: [args.providerSegmentId] };
-      if (contactRefusalReason(contact)) continue;
-      const res = await upsertMarketingContact({ apiKey, contact });
-      if (res.status !== "verified" || !res.data || res.data.email.trim().toLowerCase() !== email.trim().toLowerCase()) syncUnverified = true;
-      else if (!res.data.unsubscribed) expectedRecipients.add(res.data.email.trim().toLowerCase());
-    }
-    if (syncUnverified) return fail("Not sent: the email provider could not verify every opted-in contact. Check the connection and try again.");
-    if (expectedRecipients.size === 0) return fail("Not sent: no opted-in, unsuppressed contacts could be synced.");
-    if (expectedRecipients.size !== scope.spendLimitMinor) {
-      return fail("Not sent: the eligible contact count changed after approval. Review the current audience and approve the send again.");
-    }
-    const providerRecipients = await listSegmentContacts({ apiKey, segmentId: args.providerSegmentId });
-    if (!providerRecipients.ok) return fail("Not sent: ClimbOS could not verify who is in the selected email segment. Check the connection and try again.");
-    if (providerRecipients.data.truncated) return fail("Not sent: the email segment is too large for ClimbOS to verify completely. Narrow it to a segment of 10,000 contacts or fewer, then try again.");
-    const match = compareSegmentRecipients(expectedRecipients, providerRecipients.data.items);
-    if (!match.matches) {
-      return fail(`Not sent: the selected email segment does not match the ${match.expectedCount} opted-in contacts you approved (${match.additional} extra active contact${match.additional === 1 ? "" : "s"}, ${match.missing} approved contact${match.missing === 1 ? " is" : "s are"} missing). Align the segment and approve again.`);
-    }
-    const draft = await createDraftBroadcast({ apiKey, draft: { segmentId: args.providerSegmentId, from: args.from, subject: args.subject, html: args.html, name: `climbos-${args.approvalId}` } });
-    if (draft.status !== "verified" || !draft.externalId) {
-      await ctx.runMutation(internal.marketing.finishSend, { approvalId: args.approvalId, reservationId: args.reservationId, status: draft.status === "uncertain" ? "uncertain" : "failed", sent: 0, summary: draft.providerMessage ?? "Your email provider didn't accept the draft." });
-      return;
-    }
-    const sent = await sendBroadcast({ apiKey, broadcastId: draft.externalId, approval: { kind: SEND_BROADCAST_ACTION, targetId: draft.externalId, value: "now", approvedBy: String(c.approval.decidedBy ?? "owner"), approvedAt: Date.now() } });
-    await ctx.runMutation(internal.marketing.finishSend, {
-      approvalId: args.approvalId,
-      reservationId: args.reservationId,
-      status: sent.status,
-      sent: sent.status === "verified" ? expectedRecipients.size : 0,
-      externalId: draft.externalId,
-      ...(sent.status === "verified" ? { recipientHashes: await Promise.all([...expectedRecipients].map((email) => sha256Hex(email))) } : {}),
-      summary: sent.status === "verified" ? `Accepted by your email provider for ${expectedRecipients.size} opted-in contact(s) after the provider segment matched the approved audience.` : (sent.providerMessage ?? "Your email provider didn't send it."),
-    });
   },
 });

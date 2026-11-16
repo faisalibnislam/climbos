@@ -40,6 +40,8 @@ describe("contact frequency limit", () => {
       approvalId: (await ctx.db.query("approvals").collect()).find((a) => a.subjectType === "email_send")!._id,
       reservationId: (await ctx.db.query("usageReservations").collect()).find((r) => r.purpose === "email_send")!._id,
     }));
+    // This unit of the workflow models an already authorized provider dispatch.
+    await t.run(ctx => ctx.db.patch(approvalId, { executionStartedAt: Date.now(), emailSendDispatchedAt: Date.now() }));
     await t.mutation(internal.marketing.finishSend, { approvalId, reservationId, status: "verified", sent: 1, summary: "ok", recipientHashes: [await sha256Hex("dee@example.com")] });
     const dee = await t.run(async (ctx) => (await ctx.db.query("contacts").withIndex("by_org", (q) => q.eq("orgId", orgId)).collect()).find((c) => c.displayName === "Dee")!);
     expect(dee.lastMarketingEmailAt).toBeGreaterThan(Date.now() - 60_000);

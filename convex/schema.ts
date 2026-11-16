@@ -4132,6 +4132,10 @@ export default defineSchema({
       externalCampaignId: v.optional(v.string()),
       destination: v.optional(v.string()),
       audience: v.optional(v.string()),
+      recipientSetHash: v.optional(v.string()),
+      artifactVersionId: v.optional(v.string()),
+      credentialId: v.optional(v.string()),
+      reservationId: v.optional(v.string()),
       spendLimitMinor: v.optional(v.number()),
       totalSpendLimitMinor: v.optional(v.number()),
       budgetUnitVersion: v.optional(v.string()),
@@ -4168,6 +4172,8 @@ export default defineSchema({
     /** Read-before-start evidence and one-use dispatch claim; absent on older attempts. */
     campaignActivationCheck: v.optional(v.object({ checkedAt: v.number(), observation: campaignActivationObservationV })),
     campaignActivationDispatchedAt: v.optional(v.number()),
+    /** One-use marketing send dispatch, after current audience and approval checks. */
+    emailSendDispatchedAt: v.optional(v.number()),
     executionExternalId: v.optional(v.string()),
     executionOutcome: v.optional(v.union(v.literal("verified"), v.literal("failed"), v.literal("uncertain"), v.literal("fixture_verified"))),
     executionReconciledAt: v.optional(v.number()),

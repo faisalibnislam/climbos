@@ -1,0 +1,152 @@
+import { afterEach, expect, it, vi } from "vitest";
+import type { FunctionArgs } from "convex/server";
+import { api, internal } from "../../convex/_generated/api";
+import { asNewUser, makePaid, setup } from "./helpers";
+
+const provider = vi.hoisted(() => ({ synced: [] as string[], drafts: 0, sends: 0, outcome: "verified" as "verified" | "uncertain" | "throw", onRead: null as null | (() => Promise<void>) }));
+vi.mock("../../shared/integrations/resendMarketing", async original => ({
+  ...await original<typeof import("../../shared/integrations/resendMarketing")>(),
+  upsertMarketingContact: vi.fn(async ({ contact }: { contact: { email: string } }) => { provider.synced.push(contact.email); return { status: "verified", data: { email: contact.email, unsubscribed: false } }; }),
+  listSegmentContacts: vi.fn(async () => { await provider.onRead?.(); return { ok: true, data: { truncated: false, items: provider.synced.map(email => ({ email, unsubscribed: false })) } }; }),
+  createDraftBroadcast: vi.fn(async () => { provider.drafts++; return { status: "verified", externalId: "broadcast-test" }; }),
+  sendBroadcast: vi.fn(async () => { provider.sends++; if (provider.outcome === "throw") throw new Error("Lost provider response"); return { status: provider.outcome, externalId: "broadcast-test" }; }),
+}));
+afterEach(() => { provider.synced = []; provider.drafts = 0; provider.sends = 0; provider.outcome = "verified"; provider.onRead = null; });
+
+async function fixture(body = "A useful update for subscribers.") {
+  const t = setup(), owner = await asNewUser(t, "email-boundary@example.com");
+  const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Email boundary" });
+  await makePaid(t, orgId);
+  await t.run(async ctx => {
+    const period = (await ctx.db.query("usagePeriods").withIndex("by_org_ends", q => q.eq("orgId", orgId)).collect()).find(p => p.source === "subscription")!;
+    await ctx.db.patch(period._id, { meterCaps: { ...period.meterCaps, byoMarketingSends: 100 } });
+  });
+  const importContact = (email: string) => owner.client.action(api.marketing.importContacts, { slug, csv: `email,consent,consent_source,consent_date,segment\n${email},yes,signup form,2026-10-01,newsletter` });
+  await importContact("ana@example.com");
+  await t.mutation(internal.connections.storeConnection, { orgId, userId: owner.userId, provider: "email_resend", secret: JSON.stringify({ apiKey: "test-key" }), secretKind: "api_key", scopes: [], accountLabel: "Test account" });
+  const artifactId = await t.run(async ctx => {
+    const business = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", orgId)).first())!;
+    const artifactId = await ctx.db.insert("artifacts", { orgId, businessId: business._id, kind: "email", channel: "email", title: "An update", status: "approved", currentVersion: 1, createdAt: Date.now(), updatedAt: Date.now() });
+    const versionId = await ctx.db.insert("artifactVersions", { orgId, artifactId, version: 1, headline: "An update", body, hashtags: [], claimFactIds: [], unsupportedClaims: [], contentHash: "fixture", createdAt: Date.now() });
+    await ctx.db.patch(artifactId, { currentVersionId: versionId });
+    return artifactId;
+  });
+  await owner.client.mutation(api.marketing.approveSend, { slug, artifactId, emailIndex: 0, segment: "newsletter", providerSegmentId: "seg-news", from: "Owner <hello@example.com>" });
+  const args = await t.run(async ctx => {
+    const scheduled = (await ctx.db.system.query("_scheduled_functions").collect()).find(f => f.name.includes("executeSend"))!;
+    await ctx.scheduler.cancel(scheduled._id);
+    return scheduled.args[0] as FunctionArgs<typeof internal.marketing.executeSend>;
+  });
+  return { t, owner, slug, orgId, artifactId, args, importContact };
+}
+
+it("rejects a same-size audience replacement before any provider write", async () => {
+  const f = await fixture();
+  await f.t.run(async ctx => { const contact = (await ctx.db.query("contacts").collect())[0]; await ctx.db.patch(contact._id, { segments: ["other"] }); });
+  await f.importContact("bea@example.com");
+  await f.t.action(internal.marketing.executeSend, f.args);
+  expect(provider.synced).toEqual([]);
+  expect(provider.sends).toBe(0);
+});
+
+it.each(["content", "payload", "role", "policy", "credentials", "suppression", "sender", "destination", "version", "expired", "paused", "frequency", "legacy"] as const)("rechecks %s before touching the provider", async change => {
+  const f = await fixture();
+  if (change === "content") await f.t.run(async ctx => { const a = (await ctx.db.get(f.artifactId))!; await ctx.db.patch(a.currentVersionId!, { body: "Changed since approval" }); });
+  if (change === "payload") f.args.html = "Unapproved message";
+  if (change === "sender") f.args.from = "Another <other@example.com>";
+  if (change === "destination") f.args.providerSegmentId = "other-segment";
+  if (change === "version") await f.t.run(async ctx => { const a = (await ctx.db.get(f.artifactId))!; const old = (await ctx.db.get(a.currentVersionId!))!; const { _id: _id, _creationTime: _creationTime, ...fields } = old; const id = await ctx.db.insert("artifactVersions", { ...fields, version: 2 }); await ctx.db.patch(a._id, { currentVersionId: id, currentVersion: 2 }); });
+  if (change === "expired") await f.t.run(ctx => ctx.db.patch(f.args.approvalId, { expiresAt: Date.now() - 1 }));
+  if (change === "paused") await f.t.run(ctx => ctx.db.patch(f.orgId, { emergencyStop: { active: true, at: Date.now(), by: f.owner.userId } }));
+  if (change === "frequency") await f.t.run(async ctx => { await ctx.db.patch(f.orgId, { contactFrequencyDays: 7 }); const contact = (await ctx.db.query("contacts").collect())[0]; await ctx.db.patch(contact._id, { lastMarketingEmailAt: Date.now() }); });
+  if (change === "legacy") await f.t.run(async ctx => { const a = (await ctx.db.get(f.args.approvalId))!; await ctx.db.patch(a._id, { scope: { ...a.scope, recipientSetHash: undefined } }); });
+  if (change === "role") await f.t.run(async ctx => { const member = (await ctx.db.query("memberships").withIndex("by_org_user", q => q.eq("orgId", f.orgId).eq("userId", f.owner.userId)).unique())!; await ctx.db.patch(member._id, { role: "viewer" }); });
+  if (change === "policy") await f.t.run(async ctx => { const policy = (await ctx.db.query("autonomyPolicies").withIndex("by_org_active", q => q.eq("orgId", f.orgId).eq("active", true)).first())!; await ctx.db.patch(policy._id, { version: policy.version + 1 }); });
+  if (change === "credentials") await f.t.mutation(internal.connections.storeConnection, { orgId: f.orgId, userId: f.owner.userId, provider: "email_resend", secret: JSON.stringify({ apiKey: "replacement-account" }), secretKind: "api_key", scopes: [] });
+  if (change === "suppression") await f.t.run(async ctx => { const contact = (await ctx.db.query("contacts").collect())[0]; await ctx.db.insert("suppressions", { orgId: f.orgId, emailHash: contact.emailHash, reason: "unsubscribe", source: "test", createdAt: Date.now() }); });
+  await f.t.action(internal.marketing.executeSend, f.args);
+  expect(provider.synced).toEqual([]);
+  expect(provider.drafts).toBe(0);
+  expect(provider.sends).toBe(0);
+});
+
+it.each(["suppression", "content", "policy"] as const)("rechecks late %s before dispatch", async change => {
+  const f = await fixture();
+  provider.onRead = async () => f.t.run(async ctx => {
+    if (change === "suppression") { const contact = (await ctx.db.query("contacts").collect())[0]; await ctx.db.insert("suppressions", { orgId: f.orgId, emailHash: contact.emailHash, reason: "unsubscribe", source: "test", createdAt: Date.now() }); }
+    if (change === "content") await ctx.db.patch(f.artifactId, { status: "draft" });
+    if (change === "policy") { const policy = (await ctx.db.query("autonomyPolicies").withIndex("by_org_active", q => q.eq("orgId", f.orgId).eq("active", true)).first())!; await ctx.db.patch(policy._id, { version: policy.version + 1 }); }
+  });
+  await f.t.action(internal.marketing.executeSend, f.args);
+  expect(provider.sends).toBe(0);
+});
+
+it("claims one attempt and records one result for overlapping executors", async () => {
+  const f = await fixture();
+  await Promise.all([f.t.action(internal.marketing.executeSend, f.args), f.t.action(internal.marketing.executeSend, f.args)]);
+  expect(provider.sends).toBe(1);
+  expect(provider.drafts).toBe(1);
+  const receipts = await f.t.run(ctx => ctx.db.query("actionReceipts").collect());
+  expect(receipts).toHaveLength(1);
+  expect(receipts[0].status).toBe("verified");
+  await f.t.action(internal.marketing.executeSend, f.args);
+  expect(provider.sends).toBe(1);
+});
+
+it.each(["uncertain", "throw"] as const)("holds %s send outcomes without replay or releasing their reserved allowance", async outcome => {
+  const f = await fixture();
+  provider.outcome = outcome;
+  await f.t.action(internal.marketing.executeSend, f.args);
+  await f.t.action(internal.marketing.executeSend, f.args);
+  expect(provider.sends).toBe(1);
+  const reservation = (await f.t.run(ctx => ctx.db.get(f.args.reservationId)))!;
+  expect(reservation.status).toBe("unresolved");
+  expect((await f.t.run(ctx => ctx.db.get(reservation.periodId)))!.meterReserved.byoMarketingSends).toBe(1);
+  const visible = await f.owner.client.query(api.content.get, { slug: f.slug, artifactId: f.artifactId });
+  expect(visible.receipts).toContainEqual(expect.objectContaining({ provider: "resend_marketing", status: "uncertain", externalId: "broadcast-test" }));
+  await expect(f.owner.client.mutation(api.marketing.approveSend, { slug: f.slug, artifactId: f.artifactId, emailIndex: 0, segment: "newsletter", providerSegmentId: "seg-news", from: "Owner <hello@example.com>" })).rejects.toThrow(/unresolved send/);
+});
+
+it("rejects duplicate approval while a send is waiting", async () => {
+  const f = await fixture();
+  await expect(f.owner.client.mutation(api.marketing.approveSend, { slug: f.slug, artifactId: f.artifactId, emailIndex: 0, segment: "newsletter", providerSegmentId: "seg-news", from: "Owner <hello@example.com>" })).rejects.toThrow(/approved or unresolved/);
+  expect(provider.sends).toBe(0);
+});
+
+it("cannot execute or reconcile using another tenant's reservation", async () => {
+  const f = await fixture();
+  const outsider = await asNewUser(f.t, "other-email-owner@example.com");
+  const other = await outsider.client.mutation(api.orgs.createWorkspace, { businessName: "Other email workspace" });
+  await makePaid(f.t, other.orgId);
+  const reservationId = await f.t.run(async ctx => {
+    const period = (await ctx.db.query("usagePeriods").withIndex("by_org_ends", q => q.eq("orgId", other.orgId)).collect()).find(p => p.source === "subscription")!;
+    return ctx.db.insert("usageReservations", { orgId: other.orgId, periodId: period._id, purpose: "email_send", walletMicros: 0, topupMicros: 0, meters: { byoMarketingSends: 1 }, status: "held", createdAt: Date.now() });
+  });
+  await f.t.action(internal.marketing.executeSend, { ...f.args, reservationId });
+  expect(provider.synced).toEqual([]);
+  expect(provider.sends).toBe(0);
+  await f.t.mutation(internal.marketing.finishSend, { approvalId: f.args.approvalId, reservationId, status: "failed", sent: 0, summary: "Wrong reservation" });
+  expect((await f.t.run(ctx => ctx.db.get(reservationId)))!.status).toBe("held");
+  expect(await f.t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
+
+it("preserves the owner's parsed single-email subject and text", async () => {
+  const f = await fixture("Subject: The reviewed subject\nPreview: A preview\n\nThe reviewed message.");
+  expect(f.args.subject).toBe("The reviewed subject");
+  expect(f.args.html).toContain("The reviewed message.");
+  expect(f.args.html).not.toContain("Subject:");
+  await f.t.action(internal.marketing.executeSend, f.args);
+  expect(provider.sends).toBe(1);
+});
+
+it("does not turn an incomplete local contact scan into an approved audience", async () => {
+  const f = await fixture();
+  await f.t.run(async ctx => {
+    for (let i = 0; i < 10_000; i++) await ctx.db.insert("contacts", { orgId: f.orgId, emailHash: `extra-${i}`, emailDomain: "example.com", source: "csv_import", segments: ["other"], createdAt: Date.now() });
+  });
+  await f.t.action(internal.marketing.executeSend, f.args);
+  expect(provider.synced).toEqual([]);
+  expect(provider.sends).toBe(0);
+  const receipt = (await f.t.run(ctx => ctx.db.query("actionReceipts").collect()))[0];
+  expect(receipt.summary).toContain("complete audience");
+});

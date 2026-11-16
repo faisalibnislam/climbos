@@ -171,6 +171,11 @@ export interface ApprovalScope {
   externalCampaignId?: string;
   destination?: string;
   audience?: string;
+  /** Exact marketing-send inputs; absent legacy approvals must be reviewed again. */
+  recipientSetHash?: string;
+  artifactVersionId?: string;
+  credentialId?: string;
+  reservationId?: string;
   spendLimitMinor?: number;
   totalSpendLimitMinor?: number;
   budgetUnitVersion?: string;

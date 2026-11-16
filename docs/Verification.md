@@ -1,3 +1,15 @@
+## 17 November 2026 — exact marketing audience and one-use send approval
+
+Eight initial regressions reproduced missing audience/content/permission rechecks and duplicate execution in marketing email. Approval now binds local recipient identity, artifact version, rendered payload/sender, destination, credentials, reservation and policy. Current state is rechecked before preparation and send dispatch; unknown outcomes remain reserved and cannot retry. See [the scoped audit](growth-engine/marketing-send-authorization-audit.md).
+
+- `pnpm exec vitest run tests/convex/marketing-authorization.test.ts tests/convex/marketing.test.ts tests/convex/contact-frequency.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts tests/convex/safety.test.ts tests/convex/send-idempotency.test.ts tests/convex/campaign-authorization.test.ts tests/convex/publish-flow.test.ts` — 153 passed across nine files, 4.82 seconds.
+- `pnpm exec vitest run tests/convex/marketing-authorization.test.ts` — final 24 passed, including owner-query visibility of uncertain outcomes; overlaps the broader set.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint convex/marketing.ts convex/schema.ts shared/policy/index.ts tests/convex/marketing-authorization.test.ts tests/convex/contact-frequency.test.ts` — passed without warnings.
+- `git diff --check` — passed.
+
+No live email/provider call, deployment, paid model evaluation or browser run. This adds optional backend approval fields using existing tables, with no generated file changes. The earlier intermediate schema placement and isolation-fixture errors were fixed and rerun. Local checks do not make external provider state atomic; unknown-send reconciliation and lifecycle drafting remain open.
+
 ## 17 November 2026 — selected ad platforms survive draft generation
 
 Six initial regressions confirmed that selected Google/Meta plan jobs generated both platforms and accepted empty or mismatched results. Platform selection now reaches quote/research/spec/task and final validation; older unstarted cards resolve against the approved plan key. See [the scoped audit](growth-engine/ad-destination-consistency-audit.md).
