@@ -1,3 +1,7 @@
+## 17 November 2026 — owner understanding and progress
+
+Rows 11–20 have a current [scoped reconciliation](owner-experience-completion-audit.md). Main-plan failure explanations are now visible without entering advanced research, and contextual assistant requests preserve the owner's unsent question. Focused regression/permission and desktop/mobile checks pass. These rows remain partial: novice-owner comprehension, adaptive explanations, task-effort measures and broad accessibility are not established by the fixture checks. Current tabs and progressive disclosure supersede the generic historical description below.
+
 ## 17 November 2026 — main-plan diagnosis and prioritization
 
 Rows 1–10 now have a current scoped [reconciliation](growth-plan-completion-audit.md). Existing diagnosis, audience/competitor research, offer economics, lifecycle and capacity paths were inspected. The confirmed missing default-plan demand gate and non-blocking quality classification were repaired. Broad acceptance remains partial: local checks do not establish general causal diagnosis, real-market fit, pricing optimality or business outcomes. The other 400 rows and later owner requirements remain in scope.

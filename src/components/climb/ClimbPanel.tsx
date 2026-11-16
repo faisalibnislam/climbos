@@ -49,17 +49,22 @@ export function ClimbPanel({ slug }: { slug: string }) {
   const pending = useRef(false);
   const followLatest = useRef(true);
   const handledUi = useRef(new Set<string>());
+  const queuedDraft = climb.draft;
+  const clearQueuedDraft = climb.setDraft;
 
   // Text queued from elsewhere ("Ask Climb AI about this").
   useEffect(() => {
-    if (climb.draft) {
-      queueMicrotask(() => {
-        setText(climb.draft);
-        climb.setDraft("");
-        area.current?.focus();
-      });
-    }
-  }, [climb]);
+    if (!queuedDraft) return;
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setText(current => current.trim() ? `${current.trimEnd()}\n${queuedDraft}` : queuedDraft);
+      clearQueuedDraft("");
+      area.current?.focus();
+    });
+    // Avoid replaying a queued request after cleanup or when selection/open state changes.
+    return () => { active = false; };
+  }, [queuedDraft, clearQueuedDraft]);
 
   // Keep the newest message in view.
   useEffect(() => {

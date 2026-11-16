@@ -1,3 +1,16 @@
+## 17 November 2026 — visible plan-check reasons and preserved discussion drafts
+
+The main failed-plan callout now exposes its saved first reason, expandable remaining reasons/fixes and an editable Explain these checks request. The browser test reproduced a shared ClimbPanel bug that overwrote an owner's unsent question; queued context now appends to current text and canceled effects cannot replay it. Existing approval and repair-generation paths are unchanged. See [the rows 11–20 audit](growth-engine/owner-experience-completion-audit.md).
+
+Commands and observed results:
+
+- `pnpm exec vitest run tests/unit/plan-check-summary.test.tsx tests/unit/request-composer.test.tsx tests/unit/plan-quality.test.ts tests/unit/focused-learning-ui.test.tsx tests/convex/owner-questions.test.ts tests/convex/focused-plan.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts tests/convex/climb.test.ts tests/unit/climb-tool-output.test.ts tests/unit/plan-timeline.test.ts` — 104 passed across 11 files, 7.04 seconds.
+- `pnpm typecheck` — passed root and Convex TypeScript checks.
+- `pnpm exec eslint src/components/app/plan/GoalWorkspace.tsx src/components/app/plan/PlanCheckSummary.tsx src/components/climb/ClimbPanel.tsx tests/unit/plan-check-summary.test.tsx e2e/plan-check-feedback.spec.ts` — passed.
+- `E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/plan-check-feedback.spec.ts e2e/focused-strategy-options.spec.ts` — four passed across desktop/mobile, 1.7 minutes, using the isolated local demo backend.
+
+New browser coverage checks first reason visibility, disclosure of other checks, editable exact request text, preservation of manually typed text after reopening, and unchanged authority-bearing rows. Existing strategy coverage retains all three creative options and their action boundary. Both screenshots were inspected; scoped axe serious/critical and horizontal-overflow checks passed. The development issue indicator remains visible; these checks do not establish app-wide accessibility, an issue-free application, owner comprehension or real-model explanation quality. Tests use synthetic local data, not provider accounts. No deployment, external action, paid evaluation or model change.
+
 ## 17 November 2026 — enforce demand validation in starter/focused plans
 
 Audit of the default growth-plan path confirmed that owner funnel diagnosis, capacity, lifecycle and demand concerns already reach generation. Two gaps remained: starter/focused specs did not run the detailed planner's demand gate, and `demand_gate` was absent from hard quality rules. Three new unit regressions failed before implementation: focused/starter produced no demand error, and final quality returned passed for a demand-gate error.

@@ -324,6 +324,10 @@ The existing viability/pivot workflow was traced through owner start, evidence s
 
 The current audit of rows 1–10 is in `docs/growth-engine/growth-plan-completion-audit.md`. Starter/focused channels now reuse the existing demand-validation gate by priority (ties all primary). `demand_gate` is a hard quality rule, closing the gap where a failing deterministic demand check could still produce an approvable plan. Supporting paid tests and bold exploration remain. Engine v3.117-focused-demand-validation; see Verification. This does not migrate historical quality states, prove semantic diagnosis alignment, or establish real-market recommendation quality.
 
+## Owner-experience follow-up — 17 November 2026
+
+Main failed-plan checks now show the saved reason and expandable fixes; Explain these checks fills an editable request bound to the saved plan. Browser testing caught queued context replacing unsent owner text in ClimbPanel; appending to current text with stable effect dependencies and cleanup repairs it. No automatic submission or authority change. The [rows 11–20 audit](growth-engine/owner-experience-completion-audit.md) maps existing behavior and preserves unresolved owner-usability/adaptive-depth requirements. 104 regression/permission tests, typecheck, scoped lint and four desktop/mobile browser tests passed; see Verification for exact commands and limits. Continue with evidence/intelligence requirements; do not treat these scoped checks as product completion.
+
 ## What remains and should guide the next work
 
 These are known open gaps, not a complete substitute for checking the requirement audit and ledger before choosing work:

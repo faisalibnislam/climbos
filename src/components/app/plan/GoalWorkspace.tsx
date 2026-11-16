@@ -21,6 +21,7 @@ import { StrategyLearningSources } from "./StrategyLearningSources";
 import { CampaignTimingSummary } from "./CampaignTimingSummary";
 import { OfferAssessmentPanel } from "./OfferAssessmentPanel";
 import { StrategicDirectionPanel } from "./StrategicDirection";
+import { PlanCheckSummary } from "./PlanCheckSummary";
 
 const StrategyExplorationPanel = dynamic(() => import("./ExpertPlan").then(module => module.StrategyExplorationPanel), { loading: () => <Skeleton className="h-64" /> });
 const FocusedLearning = dynamic(() => import("./FocusedLearning").then(module => module.FocusedLearning), { loading: () => <Skeleton className="h-48" /> });
@@ -70,7 +71,11 @@ function GoalPlan({ slug, selectedId, details }: { slug: string; selectedId: Id<
     {startedRun || running ? <StrategyRunWatcher slug={slug} startedRunId={startedRun} activeRunId={running ? plan.strategyRun!.id : null} onDismiss={() => setStartedRun(null)} /> : null}
     {plan.otherVersion?.status === "needs_approval" && strategy?.status === "approved" ? <Callout tone="info" title="Your updated recommendation is ready" action={<Button size="sm" variant="secondary" onClick={() => { setReview(false); setViewId(plan.otherVersion!.id); }}>See the update</Button>}>Your existing work stays saved while you look at the update.</Callout> : null}
     {!selectedId ? <p className="text-ink-2">Add what you want to achieve. No business terms or plan length needed.</p> : !strategy ? <section className="space-y-4 rounded-xl border border-line bg-surface p-6"><h2 className="heading-section">Let AI work out a useful starting point.</h2><p className="max-w-prose text-sm text-ink-2">We’ll use your business research, recommend an approach, choose realistic timing, and prepare useful drafts. Your other goals stay saved.</p>{generate}</section> : <>
-      {strategy.expert?.quality?.state === "failed" && !running ? <Callout tone="warning" title="AI found issues to fix">The drafts are available to inspect. This plan cannot start outside work until its checks pass. {generate}</Callout> : null}
+      {strategy.expert?.quality?.state === "failed" && !running ? <Callout tone="warning" title="AI found issues to fix">
+        <PlanCheckSummary quality={strategy.expert.quality} />
+        <p className="mt-2">The drafts are available to inspect. This plan cannot start outside work until its checks pass.</p>
+        <div className="mt-3 flex flex-wrap items-start gap-3">{generate}<Button variant="secondary" size="sm" onClick={() => ask("Explain the saved plan checks in simple words. What needs fixing, what remains unknown, and what can I safely review now? Do not start work, send, publish or spend.")}>Explain these checks</Button></div>
+      </Callout> : null}
       {strategy.expert?.quality?.state === "provisional" && !running ? <Callout tone="info" title="This draft can be better">AI can revise it using the latest research and prepared work. {generate}</Callout> : null}
       {plan.staleInputs.requiresRefresh ? <Callout tone="warning" title="Your information has changed">You can still read and edit the saved drafts. Update the recommendation before starting work based on the old information. {generate}</Callout> : null}
       <Tabs value={tab} onValueChange={value => { if (value !== "work") { setReview(false); if (window.location.hash === "#prepared-work") window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search); } setTab(value); }}>
