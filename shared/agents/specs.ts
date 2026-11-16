@@ -9,7 +9,7 @@ import { StrategicDirectionSchema, lintStrategicDirection, type StrategicDirecti
 import { ChannelDecisionSchema, channelDecisionFrom } from "../acquisition/channelDecision";
 import { BusinessModelCheckSchema, lintBusinessModelCheck, type BusinessModelCheck } from "./businessModel";
 import { z } from "zod";
-import { FocusedMoveSchema, type FocusedMove } from "./focusedPlan";
+import { FocusedMoveSchema, lintFocusedLearning, type FocusedMove } from "./focusedPlan";
 import { lintWordCaps, PLAN_CAPS, PLAYS_CAPS } from "./wordCaps";
 import { applyOwnerEconomics, customerValue, growthCashTiming, lintEconomics, playMaths, portfolioExpectedCustomers, portfolioP50, portfolioRange, selectPortfolio, withForecasts, type Economics, type ForecastUncertainty, type PlayLike, type PlaySensitivity } from "./economics";
 import type { FinancialEvidence } from "./provenance";
@@ -336,7 +336,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.111-buying-cycle-evidence";
+export const ENGINE_VERSION = "v3.112-focused-learning-test";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -395,6 +395,7 @@ export const FocusedStrategySchema = StrategyV2Schema.extend({
   strategyExploration: StrategyExplorationSchema,
   timing: GoalTimingSchema.optional(),
   focusedMove: FocusedMoveSchema.extend({ timingAssessment: CampaignTimingSchema }),
+  experiments: StrategyV2Schema.shape.experiments.min(1).max(4),
   strategicDirection: StrategicDirectionSchema,
   preparedWork: z.array(PreparedWorkSchema).min(1).max(3),
   audiences: StrategyV2Schema.shape.audiences.max(2),
@@ -2723,6 +2724,7 @@ export function focusedStrategySpec(o: SpecOptions = {}): AgentSpec<z.infer<type
     lint: (out, input) => [
       ...lintStrategyExploration(out.strategyExploration, input),
       ...lintFocusedOffer(out, input),
+      ...lintFocusedLearning(out, input),
       ...lintCampaignTiming(out.focusedMove.timingAssessment, { today: input.timingContext?.today ?? "", now: input.timingContext?.now, timezone: input.timingContext?.timezone, facts: input.facts, factEvidenceBases: input.constraints?.factEvidenceBases, researchNotes: input.precomputedResearch?.notes ?? input.untrustedContext ?? "", sourceUrls: input.availableSourceUrls ?? input.precomputedResearch?.sources.map(source => source.url) ?? [], researchRetrievedAt: input.precomputedResearch?.retrievedAt }, "focusedMove.timingAssessment"),
       ...lintPlanning(out, input), ...lintCites(out, input.facts.length, evidenceOf(input)),
       ...lintPlanFit(out, input.constraints), ...lintOutcomeNumbers(out, input.constraints, `${input.brief}\n${input.facts.join("\n")}`),
@@ -2734,7 +2736,7 @@ export function focusedStrategySpec(o: SpecOptions = {}): AgentSpec<z.infer<type
       ...(input.constraints?.adaptiveTiming ? lintGoalTiming(out.timing, out.phases) : lintCycleMilestones(out.phases, input.constraints?.horizonDays ?? 14)),
       ...lintWordCaps(out, { summary: 60, "focusedMove.firstAction": 30, "phases[].focus": 40, "weekOneChecklist[]": 25 }),
       ...lintNoAudience(out, input.constraints, input.facts.join("\n")),
-      ...lintExperimentFeasibility(out, input.constraints),
+      ...lintExperimentFeasibility(out, input.constraints).map(issue => ({ ...issue, rule: "focused_learning" })),
       ...lintClaims([{ path: "positioning", text: out.positioning }, { path: "focusedMove.why", text: out.focusedMove.why }], verifiedCapabilityEvidence(input)),
       ...lintPlatformEligibility(out.channels.map((ch, i) => ({ path: `channels[${i}]`, text: `${ch.name} ${ch.why} ${ch.deliverables.join(" ")}` })), input.constraints?.businessTypes ?? []),
       ...lintServiceArea(out.channels.map((ch, i) => ({ path: `channels[${i}]`, spend: ch.suggestedMonthlyAdSpend, text: `${ch.name} ${ch.why} ${ch.deliverables.join(" ")}` })), input.constraints),

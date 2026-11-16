@@ -7,7 +7,7 @@ import { offerAssessmentFixture, offerFact } from "../fixtures/offerAssessment";
 import { approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
 import type { TurnRequest } from "../../shared/ai/types";
 import type { RateVersion } from "../../shared/economics/rates";
-const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false, unsupportedGuarantee: false, offerMode: "", timingMode: "" }));
+const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "" }));
 vi.mock("../../shared/ai/turn", async original => ({
   ...await original<typeof import("../../shared/ai/turn")>(),
   modelTurn: async (req: TurnRequest, rates: RateVersion) => {
@@ -35,7 +35,9 @@ vi.mock("../../shared/ai/turn", async original => ({
       plan.diagnosis = offer.diagnosis;
       plan.focusedMove = { ...plan.focusedMove, title: "Test the proposed introductory discount", why: "The owner reports a price obstacle for qualified quote requests.", firstAction: "Review the prepared offer test.", aiCanDo: "Prepare a private discount test brief for owner review.", ...(state.offerMode === "missing_assessment" ? {} : { offerAssessment: offer }) };
       plan.preparedWork[0].approvedOfferPlayName = plan.focusedMove.title;
+      plan.experiments[0].name = plan.focusedMove.title;
     }
+    if (state.wrongLearningTest) plan.experiments[0].name = "Unrelated test that does not track the primary move";
     if (state.unsupportedGuarantee) plan.preparedWork[0] = { ...plan.preparedWork[0], kind: "social_post", draft: "Review our service for your next project. We guarantee your money back." };
     if (state.refusedTarget) plan.preparedWork[0] = { ...plan.preparedWork[0], kind: "creator_pitch", target: "Creator.example — suggest our product" };
     if (req.schema?.safeParse(plan).success) {
@@ -50,7 +52,7 @@ vi.mock("../../shared/ai/turn", async original => ({
     return result;
   },
 }));
-afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.offerMode = ""; state.timingMode = ""; });
+afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; });
 
 async function workspace() {
   const t = setup(); delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE;
@@ -117,6 +119,35 @@ it.each(["owner", "inferred", "low_confidence"] as const)("preserves %s buying-c
     for (const request of state.requests) expect(JSON.stringify(request.messages)).toContain(diagnosis.salesCycleNote);
   }
   expect(plan?.expert?.strategyExploration?.bold).toBeDefined();
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
+
+it.each(["met", "missed", "unclear", "not_run"] as const)("records %s for the generated primary test and carries it to future learning", async outcome => {
+  const { t, owner, slug, orgId } = await workspace();
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  const tests = await t.run(ctx => ctx.db.query("experiments").filter(q => q.eq(q.field("strategyId"), plan._id)).collect());
+  expect(tests).toHaveLength(1);
+  expect(tests[0]).toMatchObject({ name: plan.expert!.focusedMove!.title, method: "pre_post_observational", durationDays: 1, status: "proposed", baselineRate: null, baselineProvenance: "unknown", plannedSamplePerArm: null });
+  const report = await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId: tests[0]._id, expectedRevision: 0, executed: outcome !== "not_run", source: "owner_report", design: "none", result: outcome === "not_run" ? "unclear" : outcome, stopRuleHit: false, note: "Synthetic private workflow review; no causal claim or customer revenue observed." });
+  expect(report.inference).toBe(outcome === "not_run" ? "not_run" : "observed");
+  const brief = await t.query(internal.playResults.briefFor, { orgId });
+  expect(brief).toContain(tests[0].name);
+  expect(brief).toContain(outcome === "not_run" ? "NOT RUN" : `reported result: ${outcome}`);
+  const outsider = await asNewUser(t, `outsider-${outcome}@example.com`);
+  await expect(outsider.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId: tests[0]._id, expectedRevision: 1, executed: false, source: "owner_report", design: "none", result: "unclear", stopRuleHit: false })).rejects.toThrow();
+
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
+
+it("blocks plan approval when the saved test does not match the primary recommendation", async () => {
+  const { t, owner, slug, orgId } = await workspace(); state.wrongLearningTest = true;
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(plan.expert?.quality?.state).toBe("failed");
+  await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
   expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
 });
 

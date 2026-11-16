@@ -773,7 +773,7 @@ export const saveStrategy = internalMutation({
         plannedSamplePerArm: e.plannedSamplePerArm,
         plannedSampleBasis: e.plannedSampleBasis,
         guardrails: e.guardrails.slice(0, 4),
-        durationDays: Math.max(7, Math.min(120, Math.round(e.durationDays))),
+        durationDays: Math.max(e.method === "ab_split" || e.method === "holdout" ? 7 : 1, Math.min(120, Math.round(e.durationDays))),
         stoppingRule: e.stoppingRule,
         status: "proposed",
         createdAt: now,

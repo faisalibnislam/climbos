@@ -296,6 +296,9 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
         x.durationDays = 14;
         x.guardrails = ["Unsubscribes stay under 1% (estimate)"];
       }
+    // Keep the synthetic primary learning record bound to its synthetic focused move.
+    const focused = output as { focusedMove?: { title: string }; experiments?: { name: string }[] };
+    if (focused?.focusedMove && focused.experiments?.[0]) focused.experiments[0].name = focused.focusedMove.title;
     // Cites must resolve to a fact or a page the research read; the fake has neither, so it cites nothing.
     if (plan && typeof plan === "object" && "diagnosis" in plan) for (const x of [...(plan.channels ?? []), ...(plan.audiences ?? [])]) if (x && typeof x === "object") x.cites = [];
     if (plan && typeof plan === "object" && Array.isArray(plan.weekOneChecklist) && "diagnosis" in plan) plan.weekOneChecklist = ["Update the comparison page with the referral offer.", "Pitch the comparison page to 10 partner newsletters."];

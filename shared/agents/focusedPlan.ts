@@ -1,4 +1,7 @@
 import { z } from "zod";
+import type { StrategyOutput } from "../ai/tasks";
+import type { AgentInput, LintIssue } from "./types";
+import { referenceEvidenceBasis } from "./evidenceKind";
 import { cycleMilestoneInstruction } from "./planningCycles";
 import {fitJson, reportDropped} from "./context";
 import { GOAL_TIMING_INSTRUCTION } from "./goalTiming";
@@ -19,6 +22,38 @@ export const FocusedMoveSchema = z.object({
 });
 export type FocusedMove = z.infer<typeof FocusedMoveSchema>;
 export type PlanStyle = "starter" | "focused" | "detailed";
+
+/** Reuse the existing experiment workflow for the primary move, including observational learning. */
+export function lintFocusedLearning(out: { focusedMove: FocusedMove; experiments: StrategyOutput["experiments"] }, input: AgentInput): LintIssue[] {
+  const issues: LintIssue[] = [];
+  const fail = (path: string, message: string) => issues.push({ severity: "error", rule: "focused_learning", path, message });
+  const matches = out.experiments.map((test, index) => ({ test, index })).filter(({ test }) => test.name === out.focusedMove.title);
+  if (matches.length !== 1) {
+    fail("experiments", "Define exactly one primary learning test with name equal to focusedMove.title. Use an observational test with unknown inputs when a statistical split is not justified; drafting does not start the test.");
+    return issues;
+  }
+  const { test, index } = matches[0], path = `experiments[${index}]`;
+  for (const key of ["hypothesis", "population", "assignmentUnit", "primaryMetric", "denominator", "baselineBasis", "plannedSampleBasis", "stoppingRule"] as const) {
+    if (!test[key].trim()) fail(`${path}.${key}`, `The primary test needs ${key}; explain unknown inputs without inventing them.`);
+  }
+  if (!test.guardrails.some(value => value.trim())) fail(`${path}.guardrails`, "State a relevant harm or capacity limit for the proposed test; do not invent a numeric threshold.");
+  const horizon = input.constraints?.adaptiveTiming ? undefined : input.constraints?.horizonDays;
+  if (!Number.isInteger(test.durationDays) || test.durationDays < 1 || test.durationDays > 120 || (horizon !== undefined && test.durationDays > horizon)) fail(`${path}.durationDays`, "Use a whole observation window within 1–120 days and the requested cycle. It is a proposed window, not a promised outcome date.");
+  if (test.method === "export_instructions") fail(`${path}.method`, "A data export alone is not the primary learning test. Define a reversible observational check without claiming statistical power.");
+  if (test.baselineRate === null) {
+    if (test.baselineProvenance !== "unknown" || test.baselineEvidenceRefs.length) fail(`${path}.baselineProvenance`, "An unknown baseline stays null, with unknown provenance and no invented evidence reference.");
+  } else {
+    const expected = test.baselineProvenance === "owner_report" ? "owner_reported" : test.baselineProvenance;
+    const urls = input.availableSourceUrls ?? input.precomputedResearch?.sources.map(source => source.url) ?? [];
+    if (expected === "unknown" || !test.baselineEvidenceRefs.length || !test.baselineEvidenceRefs.every(ref => referenceEvidenceBasis(ref, input.constraints?.factEvidenceBases, urls) === expected)) fail(`${path}.baselineProvenance`, "Each known-baseline reference must resolve to the stated recorded source class.");
+    if (!Number.isFinite(test.baselineRate) || (test.primaryMetricType === "binary_rate" && (test.baselineRate < 0 || test.baselineRate > 1)) || (test.primaryMetricType === "count" && test.baselineRate < 0)) fail(`${path}.baselineRate`, "A baseline must be finite, a binary rate between zero and one, or a nonnegative count. Keep unsupported values unknown.");
+  }
+  if (test.plannedSamplePerArm !== null && (!Number.isSafeInteger(test.plannedSamplePerArm) || test.plannedSamplePerArm <= 0)) fail(`${path}.plannedSamplePerArm`, "A known sample size must be a positive whole number; keep an unknown sample null.");
+  if (!test.minimumMeaningfulEffect.basis.trim()) fail(`${path}.minimumMeaningfulEffect.basis`, "Explain the meaningful-change rule or why its numeric threshold is unknown.");
+  if (test.method === "pre_post_observational" && !["time_based", "matched", "owner_selected", "not_applicable"].includes(test.assignmentMethod)) fail(`${path}.assignmentMethod`, "An observational test cannot claim randomized assignment; use the matching method or keep assignment not applicable.");
+  return issues;
+}
+
 
 /** Old proposals help an update keep useful work; they confer no truth or approval. */
 export function focusedRefreshContext(value: unknown): string {
@@ -46,7 +81,7 @@ Use the source reads to resolve public product details yourself; do not ask the 
 Keep existing and proposed destinations distinct. If a new guide is not published, prepare that guide privately and let any complete social draft point directly to the relevant existing product page, accurately described as an app page. Do not call an app URL a guide, invent a proposed live URL, include replacement instructions in public copy, or make useful work depend on an unspecified connected account. Name a suitable platform as a proposed destination; connection and posting remain separate permissions.
 When competitor evidence is absent, do not turn this business's own comparison claims into verified competitor facts. Prepare an offer-specific example instead. Demonstrations must not invent dashboard counts, customer behavior or before/after improvements, even for a sample. Use proposed shot directions and clearly labelled planned durations; verify the real behavior before recording. A social draft needs one named platform and complete copy with an exact supplied link when needed, never a [page link] placeholder or a claim that a proposed recording is already available.
 focusedMove leads with the decision, why it fits and what AI has prepared. Its firstAction is one simple review or concrete preparation step, not a list of analytics exports or a questionnaire. Missing private analytics must not postpone safe drafting or research. Ask only a genuinely decision-changing question; keep independent work moving.
-Do not produce customer forecasts, invented conversion rates, sample-size floors or arbitrary success targets. Use affordableCac to explain that acquisition cost cannot be judged without the required inputs. Leave a missing northStar baseline/target explicitly unknown. There is no requirement for a numeric owner goal. Define a small observable learning signal and honest continue/change/stop rules; low traffic is inconclusive, not proof of no demand. Leave experiments empty unless the supplied measurements justify a statistical experiment. Measurement should help the test, not become the whole plan.
+Do not produce customer forecasts, invented conversion rates, sample-size floors or arbitrary success targets. Use affordableCac to explain that acquisition cost cannot be judged without the required inputs. Leave a missing northStar baseline/target explicitly unknown. There is no requirement for a numeric owner goal. Define a small observable learning signal and honest continue/change/stop rules; low traffic is inconclusive, not proof of no demand. Include one primary learning test in experiments with name exactly equal to focusedMove.title, so the owner can record met, missed, unclear or not run in the existing test workflow. A small pre_post_observational comparison can be proposed without a powered statistical test: define the eligible population, one primary metric, the before/after comparison in baselineBasis, a proposed observation window within this cycle, guardrails and honest continue/change/stop rules. Use baselineRate null, baselineProvenance unknown, baselineEvidenceRefs [], minimumMeaningfulEffect.value null and plannedSamplePerArm null when those inputs are unknown, and explain each unknown in its basis. Keep qualitative observations in the outcome note and never equate attention with paid demand. A private workflow review can compare its current version with a proposed one. Only use ab_split or holdout when the supplied measurements justify it. Creating the proposed test does not execute or approve it. Measurement should help the test, not become the whole plan.
 Make the learning rule usable without inventing a threshold: distinguish discovery (indexing or referral arrival), interest (reading or an app-page click), and paid uptake (unknown until measured). Compare matched observation windows after the first observed baseline, preserve denominators, and explain what to fix when a link is unindexed, readers arrive but do not click, or evidence is too sparse. State how the strongest alternative could beat this test, the decision-changing unknown, and what you deliberately postpone. Explain near-term and later progression conditionally, never as promised results or fixed plan lengths.
 In strategicDirection.nextHorizon, explain briefly what the next month could unlock, what the next quarter could unlock, and when to change approach. In compoundingAdvantage explain how the useful learning or asset could accumulate year over year; in notNow state the deliberate sacrifices. These are conditional directions, not fixed plan durations or forecasts. Preserve useful longer-term thinking from the previous plan while fixing its weak parts. Put the buyer-specific differentiator near the start of the prepared work, supported by supplied sources, instead of leading with a generic feature inventory.
 Keep the main summary under 60 words, at most 3 immediate items in weekOneChecklist, and at most 2 leading indicators. Explain what follows this test based on useful evidence and how learning could compound across years, without inventing future results or forcing fixed future dates. Keep technical tracking detail out of the main explanation. Use source citations only from numbered fact:N statements or the exact source index supplied to this run. Viewing, approval of a plan and preparation never authorize sending, publication, advertising or changes to external accounts.`;

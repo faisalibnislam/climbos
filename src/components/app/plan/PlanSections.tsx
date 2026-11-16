@@ -679,7 +679,7 @@ function ExperimentCard({ e, slug, canEdit }: { e: PlanView["experiments"][numbe
 
 export function Experiments({ experiments, slug, canEdit }: { experiments: PlanView["experiments"]; slug: string; canEdit: boolean }) {
   return (
-    <PlanSection id="experiments-heading" title="Experiments" icon={FlaskConical} intro="Each has a control and stop rule." bare>
+    <PlanSection id="experiments-heading" title="Experiments" icon={FlaskConical} intro="Each records who takes part, what to watch, and when to stop. An observation alone does not prove cause." bare>
       {experiments.length === 0 ? (
         <Card>
           <EmptyState icon={<FlaskConical />} title="No experiments yet" body="Tests appear here with one number to watch and a stop rule." />
