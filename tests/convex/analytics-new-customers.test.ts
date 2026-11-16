@@ -152,7 +152,7 @@ describe("first recorded paying customers", () => {
     const metric = view!.metrics.find((m) => m.key === "paid_conversions")!;
 
     expect(metric.hasData).toBe(false);
-    expect(metric.total).toBe(0);
+    expect(metric.total).toBeNull();
     expect(metric.sourceName).toBeNull();
   });
 
@@ -168,7 +168,7 @@ describe("first recorded paying customers", () => {
     const view = await owner.client.query(api.analytics.overview, { slug, days: 30 });
     const metric = view!.metrics.find((m) => m.key === "paid_conversions")!;
     expect(metric.hasData).toBe(false);
-    expect(metric.total).toBe(0);
+    expect(metric.total).toBeNull();
     expect(metric.sourceName).toBeNull();
   });
 

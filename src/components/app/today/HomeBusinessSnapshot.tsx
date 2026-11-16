@@ -12,8 +12,11 @@ type Snapshot = {
     label: string;
     definition: string;
     hasData: boolean;
-    total: number;
+    total: number | null;
     recordedDays: number;
+    expectedDays: number;
+    partial: boolean;
+    partialReason: string | null;
     sourceName: string | null;
     freshness: number | null;
     isFixture: boolean;
@@ -58,16 +61,17 @@ export function HomeBusinessSnapshot({ slug, snapshot }: { slug: string; snapsho
                 <h3 className="text-sm font-medium text-ink">{metric.label}</h3>
                 {metric.isFixture ? <Badge tone="neutral">Demo data</Badge> : <Badge tone="blue">Recorded</Badge>}
               </div>
-              {metric.hasData ? (
+              {metric.total !== null ? (
                 <>
                   <p className="metric mt-1">{formatNumber(metric.total)}</p>
+                  {metric.partialReason ? <p className="mt-1 text-xs text-ink-2">{metric.partialReason}</p> : null}
                   <p className="mt-1 text-xs text-ink-3">
                     {metric.sourceName ?? "Source not recorded"} · data in {metric.recordedDays} reported {metric.recordedDays === 1 ? "day" : "days"}
                     {updatedDate(metric.freshness) ? ` · last updated ${updatedDate(metric.freshness)}` : ""}
                   </p>
                 </>
               ) : (
-                <p className="mt-2 text-sm text-ink-3">No data recorded for this measure.</p>
+                <p className="mt-2 text-sm text-ink-3">{metric.hasData ? metric.partialReason ?? "Total unavailable. Check source data." : "No data recorded for this measure."}</p>
               )}
               <p className="mt-2 text-xs text-ink-3">{metric.definition}</p>
             </article>

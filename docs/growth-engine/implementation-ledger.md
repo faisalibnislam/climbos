@@ -2,6 +2,10 @@
 
 Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs as written there. Baseline: `404c466`. Branch: `growth-engine-v2`.
 
+## Local update — 16 November 2026: comparable totals and coverage through owner/assistant views
+
+Extended the existing analytics reader so Results, the active Home card and `get_results` preserve nullable incompatible totals, recorded-day coverage and comparison reasons. Incomplete windows retain labeled subtotals but cannot produce a period-growth percentage; full same-source windows retain comparisons. First-payer days are no longer zero-filled, and unknown billing coverage cannot become a prior-period change. Removed unsupported cross-population funnel ratios while retaining the separate counts. Focused evidence: 66 regression/permission tests, two desktop/mobile checks, typecheck, targeted lint and diff checks. No new provider/agent, live source mutation or deployment. Full provider coverage, linked-customer conversion instrumentation and causal attribution remain unproven. See [Verification](../Verification.md).
+
 ## Local update — 16 November 2026: calendar-aware measurement alerts
 
 Repaired Results alerts that mistook sparse rows for consecutive or recent days. Actual calendar windows and observed baseline counts now drive checks; recent internal gaps stay unknown. Before aggregation, the Results reader detects truncated, duplicate/overlapping, mixed-source, negative-count and incompatible/unknown workspace-setting inputs and withholds statistical claims. Existing warning UI is reused; no agent, provider, model call or execution path was added. Verified with 70 focused regression/permission tests, app/Convex typecheck and targeted lint. Totals/source reconciliation, period-comparison completeness and calibrated anomaly detection remain separate work. See [Verification](../Verification.md).

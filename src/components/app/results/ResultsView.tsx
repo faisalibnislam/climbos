@@ -13,7 +13,7 @@ import { AttributionSection, PlatformClaimsSection } from "./AttributionSection"
 import { WordHelp } from "@/components/ui/word-help";
 import { CohortsSection } from "./CohortsSection";
 import { ForecastsSection } from "./ForecastsSection";
-import { changeText, formatMetric, formatPercent, freshnessText, longDate, shortDate, sourceLabel } from "./format";
+import { changeText, formatMetric, freshnessText, longDate, shortDate, sourceLabel } from "./format";
 import { DemoBadge, Definition, ValueKind } from "./Provenance";
 import { LoadingBlock, PageHeader } from "./QueryBoundary";
 import { ScenarioCalculator } from "./ScenarioCalculator";
@@ -175,7 +175,7 @@ export function MetricMeta({ metric }: { metric: OverviewMetric }) {
   );
 }
 
-function MetricCard({ slug, metric, span }: { slug: string; metric: OverviewMetric; span: number }) {
+export function MetricCard({ slug, metric, span }: { slug: string; metric: OverviewMetric; span: number }) {
   return (
     <article className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-5">
       <div className="flex flex-wrap items-center gap-2">
@@ -183,19 +183,21 @@ function MetricCard({ slug, metric, span }: { slug: string; metric: OverviewMetr
         <ValueKind kind="observed" />
         <DemoBadge show={metric.isFixture} />
       </div>
-      {metric.hasData ? (
+      {metric.total !== null ? (
         <>
           <p className="metric">
             {formatMetric(metric.total, metric.unit, metric.currency)}
           </p>
-          <p className="text-ui font-medium text-ink-2">{changeText(metric.total, metric.previousTotal, span)}</p>
+          {metric.partialReason ? <p className="text-xs text-ink-2">{metric.partialReason}</p> : null}
+          <p className="text-ui font-medium text-ink-2">{metric.comparisonReason ?? changeText(metric.total, metric.previousTotal, span)}</p>
           <MetricMeta metric={metric} />
         </>
       ) : (
         <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-ink-2">No data yet</p>
+          <p className="text-sm font-medium text-ink-2">{metric.hasData ? "Total unavailable" : "No data yet"}</p>
+          {metric.partialReason ? <p className="text-xs text-ink-2">{metric.partialReason}</p> : null}
           <Link href={`/app/${slug}/connections`} className={buttonClasses({ variant: "link", className: "self-start whitespace-normal text-left" })}>
-            {METRIC_NEEDS[metric.key] ?? "Connect a data source"}
+            {metric.hasData ? "Check data connections" : METRIC_NEEDS[metric.key] ?? "Connect a data source"}
             <ArrowRight aria-hidden="true" className="size-4" />
           </Link>
         </div>
@@ -217,7 +219,7 @@ function OutcomeSection({ slug, data }: { slug: string; data: Overview }) {
         {revenue ? <MetricCard slug={slug} metric={revenue} span={data.span} /> : null}
         {paid ? <MetricCard slug={slug} metric={paid} span={data.span} /> : null}
       </div>
-      {revenue?.hasData && revenue.points.length > 1 ? (
+      {revenue && revenue.total !== null && !revenue.partial && revenue.points.length > 1 ? (
         <LineChart
           title="Revenue per day (net)"
           source={`${sourceLabel(revenue.sourceName, revenue.source)} · ${freshnessText(revenue.freshness)} · ${data.currency}`}
@@ -232,26 +234,18 @@ function OutcomeSection({ slug, data }: { slug: string; data: Overview }) {
   );
 }
 
-function FunnelSection({ slug, data }: { slug: string; data: Overview }) {
+export function FunnelSection({ slug, data }: { slug: string; data: Overview }) {
   const get = (k: string) => data.metrics.find((m) => m.key === k);
   const visits = get("visits");
   const signups = get("signups");
   const paid = get("paid_conversions");
   const steps = [visits, signups, paid].filter((m): m is OverviewMetric => Boolean(m));
   const anyData = steps.some((s) => s.hasData);
-  const maxVal = Math.max(1, ...steps.map((s) => (s.hasData ? s.total : 0)));
-
-  const rate = (num?: OverviewMetric, den?: OverviewMetric) => {
-    if (!num?.hasData || !den?.hasData) return null;
-    if (den.total <= 0) return "—";
-    return formatPercent(num.total / den.total);
-  };
-  const rates = [null, rate(signups, visits), rate(paid, signups)];
 
   return (
     <section aria-labelledby="funnel-heading" className="flex flex-col gap-4">
       <h2 id="funnel-heading" className="heading-section flex items-center gap-2">
-        <Filter aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> From visits to customers
+        <Filter aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> Visits, sign-ups and customers
       </h2>
       {!anyData ? (
         <Callout
@@ -268,33 +262,26 @@ function FunnelSection({ slug, data }: { slug: string; data: Overview }) {
       ) : (
         <div className="rounded-xl border border-line bg-surface p-5">
           <ol className="flex flex-col gap-5">
-            {steps.map((s, i) => {
-              const r = rates[i];
+            {steps.map((s) => {
               return (
                 <li key={s.key} className="flex flex-col gap-1.5">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                     <span className="flex items-center gap-2 text-sm font-medium text-ink">
-                      <span aria-hidden="true" className="grid size-6 place-items-center rounded-full bg-brand-100 text-xs font-semibold text-brand-900">
-                        {i + 1}
-                      </span>
                       {s.label}
                     </span>
                     <span className="metric">
-                      {s.hasData ? formatNumber(Math.round(s.total)) : "No data"}
+                      {s.total !== null ? formatNumber(Math.round(s.total)) : s.hasData ? "Unavailable" : "No data"}
                     </span>
                   </div>
-                  <div aria-hidden="true" className="h-2.5 w-full overflow-hidden rounded-full bg-surface-3">
-                    <div className="h-full rounded-full bg-brand-700" style={{ width: `${s.hasData ? Math.max(1, (s.total / maxVal) * 100) : 0}%` }} />
-                  </div>
+                  {s.partialReason ? <p className="text-xs text-ink-2">{s.partialReason}</p> : null}
                   <p className="text-xs text-ink-3">
-                    {i > 0 ? <>{r ?? "—"} from step {i} · </> : null}
                     {sourceLabel(s.sourceName, s.source)}
                   </p>
                 </li>
               );
             })}
           </ol>
-          <p className="mt-5 border-t border-line pt-3 text-xs text-ink-3">Rates are approximate: steps come from different systems.</p>
+          <p className="mt-5 border-t border-line pt-3 text-xs text-ink-3">These are separate activity counts, not a linked conversion funnel. Conversion rates need a matched audience and observation window.</p>
         </div>
       )}
     </section>

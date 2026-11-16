@@ -13,7 +13,9 @@ This handoff records what has been built, what was checked, what remains unverif
 
 ## Current status — 16 November 2026
 
-- Results metric-health alerts now use calendar windows rather than row counts. Missing dates cannot create a consecutive-zero run; old observations cannot become recent anomalies. Gaps and raw-source comparability/read-limit issues produce visible check-source warnings. Seventy focused regression/permission tests plus typecheck/lint passed; see `docs/Verification.md`. This does not reconcile existing totals, prove causal diagnosis or validate period comparisons.
+- Results, the active Home card and the assistant Results tool now share explicit recorded-day coverage and nullable incompatible totals. Partial periods cannot produce growth percentages; comparable complete periods still can. Missing billing days remain unknown, and unrelated analytics/billing counts are no longer shown as a linked conversion funnel. Verification: 66 focused regression/permission tests, two desktop/mobile checks, typecheck/lint. These are reporting integrity checks, not proof of complete imports or causation.
+
+- Results metric-health alerts now use calendar windows rather than row counts. Missing dates cannot create a consecutive-zero run; old observations cannot become recent anomalies. Gaps and raw-source comparability/read-limit issues produce visible check-source warnings. Seventy focused regression/permission tests plus typecheck/lint passed; see `docs/Verification.md`. This does not reconcile competing sources or prove causal diagnosis; the subsequent coverage repair handles totals and period comparisons.
 
 Read this section and the dated entries in `docs/Verification.md` before using the historical batches below as a to-do list. This is not a declaration that every numbered requirement is complete.
 

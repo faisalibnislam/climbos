@@ -128,11 +128,11 @@ export function PlanCard({ slug, data }: { slug: string; data: Today }) {
 export function ThisWeekCard({ slug, data, snapshot }: { slug: string; data: Today; snapshot: Snapshot | null | undefined }) {
   const metrics = snapshot?.metrics ?? [];
   const followers = useQuery(api.followers.summary, { slug });
-  const numbers = [
+  const numbers: { label: string; value: string; note?: string | null }[] = [
     ...(followers?.total !== null && followers?.total !== undefined
       ? [{ label: followers.weekChange ? `Followers (${followers.weekChange > 0 ? "+" : ""}${new Intl.NumberFormat("en-US").format(followers.weekChange)} this week)` : "Followers", value: new Intl.NumberFormat("en-US").format(followers.total) }]
       : []),
-    ...metrics.slice(0, 2).map((m) => ({ label: m.label, value: m.hasData ? new Intl.NumberFormat("en-US").format(m.total) : "—" })),
+    ...metrics.slice(0, 2).map((m) => ({ label: m.label, value: m.total !== null ? new Intl.NumberFormat("en-US").format(m.total) : "—", note: m.partialReason })),
     { label: "Done this week", value: String(data.counts.doneThisWeek) },
   ];
   return (
@@ -141,7 +141,7 @@ export function ThisWeekCard({ slug, data, snapshot }: { slug: string; data: Tod
       <dl className="flex flex-col divide-y divide-line">
         {numbers.map((n) => (
           <div key={n.label} className="flex items-baseline justify-between gap-3 py-2 first:pt-0 last:pb-0">
-            <dt className="min-w-0 text-ui text-ink-2">{n.label}</dt>
+            <dt className="min-w-0 text-ui text-ink-2">{n.label}{n.note ? <span className="mt-1 block text-xs text-ink-3">{n.note}</span> : null}</dt>
             <dd className="font-[family-name:var(--font-display-serif)] text-2xl tabular-nums text-ink">{n.value}</dd>
           </div>
         ))}

@@ -262,11 +262,13 @@ async function series(ctx: { db: QueryCtx["db"] }, org: { _id: Id<"organizations
   const byDate = new Map<string, number>();
   let freshness = 0;
   const sources = new Set<string>();
+  const fixtureKinds = new Set<boolean>();
   let isFixture = false;
   const issues = new Set<string>();
   if (rows.length > 2000) issues.add("the daily-data read reached its limit");
   for (const r of rows.slice(0, 2000)) {
     if (r.kind !== kind || r.channel) continue;
+    if (!isValidDateString(r.date) || !Number.isFinite(r.value)) issues.add("daily observations contain invalid dates or values");
     if (byDate.has(r.date)) issues.add("duplicate or overlapping daily observations need reconciliation");
     if (r.workspaceTimezone !== org.timezone || (metricKey === "revenue" && r.workspaceCurrency !== org.currency)) issues.add("recorded workspace currency/timezone settings differ or are unknown");
     if (metricKey !== "revenue" && r.value < 0) issues.add("daily counts cannot be negative");
@@ -274,10 +276,23 @@ async function series(ctx: { db: QueryCtx["db"] }, org: { _id: Id<"organizations
     freshness = Math.max(freshness, r.ingestedAt);
     sources.add(r.source);
     isFixture = isFixture || r.isFixture;
+    fixtureKinds.add(r.isFixture);
   }
   if (sources.size > 1) issues.add("multiple sources may not be comparable");
+  if (fixtureKinds.size > 1) issues.add("demo and real observations must not be combined");
   const points: DailyPoint[] = [...byDate.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([date, value]) => ({ date, value }));
-  return { points, freshness, source: sources.size === 1 ? [...sources][0] : sources.size > 1 ? "Multiple sources" : "", isFixture, healthIssue: issues.size ? [...issues].join("; ") : null };
+  const recordedDays = points.length;
+  const expectedDays = daysBetween(from, to) + 1;
+  const sum = points.reduce((total, point) => total + point.value, 0);
+  if (!Number.isFinite(sum)) issues.add("the recorded total is not a finite number");
+  const healthIssue = issues.size ? [...issues].join("; ") : null;
+  const partial = Boolean(healthIssue) || recordedDays !== expectedDays;
+  const partialReason = healthIssue ? `Total unavailable: ${healthIssue}. Refresh or reconcile the source data.`
+    : !recordedDays ? "No observations recorded for this period. Missing data is unknown, not zero."
+    : partial ? `Recorded subtotal from ${recordedDays} of ${expectedDays} days. Missing days remain unknown.` : null;
+  return { points: healthIssue ? [] : points, hasData: recordedDays > 0 || rows.length > 2000, total: healthIssue || !recordedDays ? null : sum,
+    recordedDays, expectedDays, partial, partialReason, freshness,
+    source: sources.size === 1 ? [...sources][0] : sources.size > 1 ? "Multiple sources" : "", isFixture, healthIssue };
 }
 
 /** Forecasts need comparable, non-duplicated daily observations; never add competing source totals. */
@@ -314,9 +329,12 @@ export const homeSnapshot = query({
         key,
         label: METRICS[key].label,
         definition: METRICS[key].definition,
-        hasData: current.points.length > 0,
-        total: current.points.reduce((sum, point) => sum + point.value, 0),
-        recordedDays: current.points.length,
+        hasData: current.hasData,
+        total: current.total,
+        recordedDays: current.recordedDays,
+        expectedDays: current.expectedDays,
+        partial: current.partial,
+        partialReason: current.partialReason,
         sourceName: current.source || null,
         freshness: current.freshness || null,
         isFixture: current.isFixture,
@@ -351,6 +369,7 @@ export const overview = query({
   args: { slug: v.string(), days: v.optional(v.number()) },
   handler: async (ctx, { slug, days }) => {
     const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    if (days !== undefined && !Number.isInteger(days)) throw appError("INVALID", "Choose a whole number of days for the reporting period.");
     // Free accounts see the last 30 days (full history comes with a package).
     const historyLimited = !(await featureAllowed(ctx, org, "full_history"));
     const freeDays = (await getLiveConfig(ctx)).freeHistoryDays;
@@ -364,45 +383,52 @@ export const overview = query({
       const cur = await series(ctx, org, key, from, addDays(today, -1));
       const prev = await series(ctx, org, key, prevFrom, addDays(from, -1));
       if (cur.healthIssue) healthIssues.set(key, cur.healthIssue);
-      const total = cur.points.reduce((s, p) => s + p.value, 0);
-      const prevTotal = prev.points.reduce((s, p) => s + p.value, 0);
+      const comparisonReason = historyLimited ? "Comparing prior periods needs full-history access."
+        : cur.healthIssue || prev.healthIssue ? "Period comparison unavailable: source observations are not comparable."
+        : cur.partial || prev.partial ? "Period comparison unavailable: one or both periods have incomplete observations."
+        : cur.source !== prev.source || cur.isFixture !== prev.isFixture ? "Period comparison unavailable: the periods use different sources or demo settings." : null;
       metrics.push({
         key,
         ...METRICS[key],
-        hasData: cur.points.length > 0,
-        total,
-        previousTotal: prev.points.length > 0 && !historyLimited ? prevTotal : null,
+        hasData: cur.hasData,
+        total: cur.total,
+        previousTotal: comparisonReason ? null : prev.total,
+        comparisonReason,
+        recordedDays: cur.recordedDays,
+        expectedDays: cur.expectedDays,
         points: cur.points,
         freshness: cur.freshness || null,
         sourceName: cur.source || null,
         isFixture: cur.isFixture,
         currency: key === "revenue" ? org.currency : null,
         timezone: org.timezone,
-        partial: false as boolean,
-        partialReason: null as string | null,
+        partial: cur.partial,
+        partialReason: cur.partialReason,
       });
     }
     const aiReferrals = await aiReferralSummary(ctx, org._id, from, addDays(today, -1));
 
     const yesterday = addDays(today, -1);
     const payerHistory = await firstRecordedPayerDays(ctx, org._id, prevFrom, yesterday, org.timezone);
-    const payerPoints = [];
-    for (let date = from; date <= yesterday; date = addDays(date, 1)) payerPoints.push({ date, value: payerHistory.counts.get(date) ?? 0 });
-    const previousEnd = addDays(from, -1);
-    const previousPayers = [...payerHistory.counts.entries()].reduce((sum, [date, count]) => date >= prevFrom && date <= previousEnd ? sum + count : sum, 0);
+    const payerPoints = payerHistory.observedDates.filter(date => date >= from && date <= yesterday)
+      .map(date => ({ date, value: payerHistory.counts.get(date) ?? 0 }));
     const payerMetric = metrics.find((metric) => metric.key === "paid_conversions");
     if (payerMetric) {
       payerMetric.label = METRICS.paid_conversions.label;
       payerMetric.definition = METRICS.paid_conversions.definition;
-      payerMetric.hasData = payerHistory.hasIdentifiedCustomers;
-      payerMetric.total = payerPoints.reduce((sum, point) => sum + point.value, 0);
-      payerMetric.previousTotal = historyLimited ? null : previousPayers;
-      payerMetric.points = payerPoints;
+      payerMetric.hasData = payerPoints.length > 0;
+      payerMetric.total = payerHistory.partial || !payerPoints.length ? null : payerPoints.reduce((sum, point) => sum + point.value, 0);
+      payerMetric.previousTotal = null;
+      payerMetric.comparisonReason = "Billing import completeness is unknown; period change cannot be established.";
+      payerMetric.points = payerHistory.partial ? [] : payerPoints;
+      payerMetric.recordedDays = payerPoints.length;
       payerMetric.freshness = payerHistory.freshness || null;
-      payerMetric.sourceName = payerHistory.hasIdentifiedCustomers ? "Billing" : null;
+      payerMetric.sourceName = payerPoints.length ? "Billing" : null;
       payerMetric.isFixture = payerHistory.isFixture;
-      payerMetric.partial = payerHistory.partial;
-      payerMetric.partialReason = payerHistory.partial ? "The billing history window exceeded the calculation limit; this customer count may be incomplete." : null;
+      payerMetric.partial = true;
+      payerMetric.partialReason = payerHistory.partial ? "Customer count unavailable: the billing history read reached its calculation limit."
+        : payerPoints.length ? "Count from identified imported payments only. Completeness of billing history is unknown; unrecorded days are not zero."
+        : "No identified payments recorded in this period; the customer count is unknown.";
     }
 
     // Attribution: billing revenue is the truth; ad-platform claims shown separately.
@@ -476,7 +502,7 @@ export const overview = query({
     const healthAlerts = metrics.filter((m) => (m.hasData || healthIssues.has(m.key)) && m.key !== "paid_conversions" && !m.isFixture).flatMap((m) => {
       const issue = healthIssues.get(m.key);
       const alerts: MetricHealthAlert[] = issue
-        ? [{ kind: "invalid", date: yesterday, message: `${m.label}: ${issue}. Check the source before relying on the displayed totals; unusual-day and zero-run checks are unavailable until the observations are comparable.` }]
+        ? [{ kind: "invalid", date: yesterday, message: `${m.label}: ${issue}. Totals and statistical checks are unavailable until the observations are comparable. Check the source.` }]
         : metricHealth(m.points, { yesterday, label: m.label, ...(m.key === "revenue" ? { format: (n: number) => formatMoney(minorToMajor(n, org.currency), org.currency) } : {}) });
       return alerts.map(alert => ({ metric: m.key, ...alert }));
     });

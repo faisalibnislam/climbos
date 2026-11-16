@@ -1,4 +1,25 @@
-## 16 November: comparable forecast evidence and honest accuracy checks
+## 16 November 2026 — honest totals, period comparisons and activity counts
+
+Traced ingestion → the existing daily series reader → Results overview and Home snapshot → active `ThisWeekCard` / Results components → the assistant's `get_results` output contract. Confirmed that incomplete current/prior windows could produce growth percentages, overlapping sources could be summed into a headline total, and the UI divided unrelated analytics/billing populations into conversion rates. Eight new integration regressions failed before implementation.
+
+Daily summaries now return nullable totals, recorded/expected day counts and coverage reasons. Missing days permit a clearly labeled recorded subtotal, but no period-change percentage. Duplicate/overlapping, mixed-source, invalid/non-finite, negative-count, mixed-fixture, truncated or incompatible/unknown workspace-setting observations withhold totals and chart points. Full matching calendar windows retain deterministic comparisons, including explicit zeros and negative net revenue. Source or fixture changes between otherwise complete periods withhold comparison. Fractional/non-finite reporting windows are rejected. These checks retain existing ingestion and permissions rather than silently fixing or rewriting source records.
+
+First-payer Results use only dates with identified imported payment observations; neither missing current days nor a previous-only payment become invented zero days. Customer totals remain source-scoped counts from imported history. Truncated history withholds the count; unknown import completeness withholds period comparisons. This does not establish the number of all customers or identity reconciliation between providers.
+
+The active Home Results card, the reusable snapshot component and Results show the same coverage/unknowns. Incomplete revenue series are not drawn as a continuous full-period chart. Visits, sign-ups and payers remain visible as separate activity counts, without conversion-rate or funnel graphics that imply matched people. The assistant tool preserves nullable totals, sample coverage, comparison reasons and health alerts and describes the same interpretation limits.
+
+Verification:
+
+```text
+pnpm exec vitest run tests/convex/analytics-coverage.test.ts tests/convex/metric-health.test.ts tests/convex/home-snapshot.test.ts tests/convex/analytics-new-customers.test.ts tests/unit/climb-tool-output.test.ts tests/unit/home-business-snapshot.test.tsx tests/unit/results-coverage.test.tsx tests/convex/safety.test.ts tests/convex/tenancy.test.ts
+66 passed across 9 files
+pnpm typecheck
+passed: application and Convex
+```
+
+Targeted ESLint on changed code/tests and `git diff --check` passed. Browser command: `E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/results-coverage.spec.ts` — two passed in 10.2 seconds, desktop Chromium and Pixel 7 emulation. Demo-only isolated workspaces exercise partial Results, a reactive overlapping-source total becoming unavailable, and the actual Home Results tab. No page errors, horizontal overflow or serious/critical axe findings; desktop/mobile screenshots were inspected. Workflow, approval, action-receipt and forecast records remain unchanged by reading the views. Only the loopback fixture backend was synced; no external provider action, paid model call or deployment.
+
+Limits: a full set of daily rows is recorded-day coverage, not proof of complete provider/business coverage or unchanged provider account identity. These changes do not create linked-customer funnel instrumentation, reconcile competing sources, establish causation, or validate the separate weekly-report, client-report, attribution and follower paths. Legacy rows lacking workspace settings stay unknown until refreshed; no historical settings are invented. The 410-item completion audit remains open.
 
 ## 16 November 2026 — calendar-aware metric-health alerts
 
@@ -21,6 +42,8 @@ passed
 
 The Convex tests exercise the actual overview with an America/Los_Angeles date boundary, missing days followed by explicit-zero recovery, viewer access, denied cross-tenant/anonymous reads, fixture exclusion, source overlap, unknown legacy metadata, currency changes and read truncation. Workflow, approval, action-receipt and forecast tables remain unchanged by reading Results. A server-rendered check verifies the owner-facing unknown-not-zero explanation in the existing alert component. No browser session, full suite, paid model evaluation, production sync, external action or deployment was run for this increment. Automated health thresholds remain heuristics, not calibrated business-specific detection, causal diagnosis or an authorization to act. Requirements 293 and 295 remain partial.
 
+
+## 16 November: comparable forecast evidence and honest accuracy checks
 
 Audit covered requirement clusters 26/28/29 (unsupported numbers and data limits), 295 (measurement failures), 311–315 (baseline, confidence and calibration), and 328/329 (insufficient data and plain-language forecasts). Actual path: integration/revenue ingestion → `metricDaily` or identified billing history → `analytics.createForecast` → deterministic `shared/forecasting` → saved forecast/backtest → `analytics.getForecast` → Results forecast detail. Confirmed defects: the creation mutation zero-filled missing observations; forward scoring only read the most recent 120 days; the detail chart re-read current history instead of preserving the training data; current workspace currency could relabel old amounts; first-payer forecasts used an obsolete counter instead of the billing-derived definition; negative net revenue was clamped to zero; the UI invented “about 80%” coverage when the held-out result was absent.
 

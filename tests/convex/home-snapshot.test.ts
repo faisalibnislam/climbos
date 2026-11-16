@@ -30,6 +30,8 @@ describe("Growth Home analytics snapshot", () => {
         ...(channel ? { channel } : {}),
         isFixture: false,
         ingestedAt: now,
+        workspaceTimezone: org.timezone,
+        workspaceCurrency: org.currency,
       });
       await put(org._id, "visits", previousDay, 120, "Google Analytics 4");
       await put(org._id, "visits", previousDay, 10, "GA4 import correction");
@@ -40,7 +42,7 @@ describe("Growth Home analytics snapshot", () => {
     });
 
     const snapshot = await owner.client.query(api.analytics.homeSnapshot, { slug });
-    expect(snapshot.metrics.find((metric) => metric.key === "visits")).toMatchObject({ hasData: true, total: 130, recordedDays: 1, sourceName: "Multiple sources" });
+    expect(snapshot.metrics.find((metric) => metric.key === "visits")).toMatchObject({ hasData: true, total: null, recordedDays: 1, sourceName: "Multiple sources", partialReason: expect.stringContaining("overlapping") });
     expect(snapshot.metrics.find((metric) => metric.key === "signups")).toMatchObject({ hasData: true, total: 7, recordedDays: 1 });
   });
 
@@ -52,7 +54,7 @@ describe("Growth Home analytics snapshot", () => {
     await otherOwner.client.mutation(api.orgs.createWorkspace, { businessName: "Other Empty Snapshot Co" });
 
     const snapshot = await owner.client.query(api.analytics.homeSnapshot, { slug });
-    expect(snapshot.metrics.every((metric) => !metric.hasData && metric.total === 0)).toBe(true);
+    expect(snapshot.metrics.every((metric) => !metric.hasData && metric.total === null)).toBe(true);
     await expect(otherOwner.client.query(api.analytics.homeSnapshot, { slug })).rejects.toThrow();
   });
 });
