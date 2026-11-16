@@ -66,7 +66,7 @@ export async function recordArtifactDecision(
   const { connection } = await publishTarget(ctx, org._id, a.channel);
   const now = Date.now();
   const expiresAt = now + (policy?.approvalTtlHours ?? 72) * 3_600_000;
-  const scope = { connectionId: connection ? connection._id : undefined, destination: a.channel, ...(a.scheduledFor !== undefined ? { scheduledFor: a.scheduledFor } : {}) };
+  const scope = { connectionId: connection?._id, externalAccountId: connection?.externalAccountId, destination: a.channel, ...(a.scheduledFor !== undefined ? { scheduledFor: a.scheduledFor } : {}) };
   const actionKind = connection ? "publish" : "export";
   const binding = { orgId: org._id, subjectType: "artifact", subjectId: a._id, actionKind, contentHash: ver.contentHash, scope, policyVersion, expiresAt };
   await invalidateApprovals(ctx, a._id, "Superseded by a newer decision");
@@ -150,6 +150,7 @@ export function approvalProblem(
   if (ap.actionKind !== wanted || (ap.scope.connectionId ?? null) !== (connection?._id ?? null)) {
     return connection ? "Approved before this account was connected. Approve it again to publish it." : "The connected account changed. Approve it again.";
   }
+  if (connection && ap.scope.externalAccountId !== connection.externalAccountId) return "The approved provider account is missing or changed. Review the account and approve again.";
   return null;
 }
 

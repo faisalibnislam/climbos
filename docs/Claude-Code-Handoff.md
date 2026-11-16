@@ -254,6 +254,10 @@ The creative feedback selection gap is repaired in `convex/creativeStrategy.ts`:
 
 Invalid/future confirmation dates now require review. A shared active-state index/reader prevents rejected history from hiding new facts in job context, facts review and artifact claim checks. The approval checker excludes recognized contradictory facts, checks explicit current copy terms, and refuses incomplete active-fact coverage. Social publishing rechecks this evidence after approval and inside send-intent creation; a changed fact can return the post to review before provider I/O. Existing approval, idempotency and reconciliation remain in place. See the newest Verification entry for 126 tests and two browser checks. Pattern coverage, other fact readers, complex historical wording and uninspected execution paths remain limitations.
 
+## Latest final-publishing authorization follow-up
+
+The previously unfinished final-send tests now reproduce and close the authorization gap in `convex/publish.ts`. Artifact approvals include the exact external account; legacy missing-account approvals require reapproval. The final claim transaction checks current policy, stop state, entitlement, tenant/resource identity, member permission, provider capability, prepared credential identity and current Autopilot authority, plus existing claim/trend evidence. Credentials are frozen before that claim. Sending state and receipt are claimed atomically, and late preparation failures cannot overwrite edits, rescheduling, reapproval or a claimed attempt. Existing UI review/error surfaces are reused. See the newest Verification entry for 139 focused checks and precise limits. Next inspect original-attempt receipt settlement/reconciliation and late provider callbacks; those paths were not expanded in this increment. Do not infer live-provider validation or full requirement completion.
+
 ## What remains and should guide the next work
 
 These are known open gaps, not a complete substitute for checking the requirement audit and ledger before choosing work:

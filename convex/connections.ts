@@ -654,6 +654,7 @@ export const getSecret = internalQuery({
       .first();
     if (!secret) return null;
     return {
+      secretId: secret._id,
       provider: conn.provider,
       orgId: conn.orgId,
       externalAccountId: conn.externalAccountId ?? null,

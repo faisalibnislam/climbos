@@ -148,11 +148,12 @@ describe("LinkedIn and X publishing", () => {
     await w.owner.client.mutation(api.orgs.addFact, { slug: w.slug, category: "product", statement: "Pro includes 24/7 support." });
     const id = await draft(t, w.orgId, "linkedin", "Get 24/7 support.");
     await w.owner.client.mutation(api.content.decide, { slug: w.slug, artifactId: id, decision: "approve" });
-    const approved = (await t.run(ctx => ctx.db.get(id)))!;
+    const approved = (await t.query(internal.publish.publishContext, { artifactId: id }))!;
+    const secret = (await t.query(internal.connections.getSecret, { connectionId: approved.connection!._id }))!;
     await w.owner.client.mutation(api.orgs.addFact, { slug: w.slug, category: "product", statement: "Pro does not include 24/7 support." });
     const calls = stubFetch(() => json(500, {}));
     // Recheck again at the intent claim, covering evidence changes during link/token reads.
-    const begun = await t.mutation(internal.publish.beginReceipt, { artifactId: id, versionId: approved.currentVersionId!, approvalId: approved.approvalId!, idempotencyKey: "synthetic-fact-recheck", provider: "linkedin", action: "publish_linkedin" });
+    const begun = await t.mutation(internal.publish.beginReceipt, { artifactId: id, versionId: approved.version!._id, approvalId: approved.approval!._id, approvalHash: approved.approval!.approvalHash, connectionId: approved.connection!._id, connectionUpdatedAt: approved.connection!.updatedAt, secretId: secret.secretId, idempotencyKey: approved.idempotencyKey, provider: "linkedin", action: "linkedin.publish_post" });
     expect(begun).toMatchObject({ blocked: expect.stringMatching(/evidence needs review/) });
     await t.action(internal.publish.publishArtifact, { artifactId: id });
     const artifact = await t.run(ctx => ctx.db.get(id));

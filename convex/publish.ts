@@ -16,16 +16,18 @@ import {
 import { linkedInApprovalValue, publishPost as publishLinkedInPost, PUBLISH_LINKEDIN_ACTION, reconcilePost as reconcileLinkedInPost } from "../shared/integrations/linkedin";
 import { normalizeHashtag } from "../shared/integrations/drafts";
 import { publishTweet, PUBLISH_X_ACTION, reconcileTweet, xApprovalValue } from "../shared/integrations/x";
-import { checkApprovalForExecution } from "../shared/policy";
+import { can, checkApprovalForExecution } from "../shared/policy";
+import { scopesFor, type ScopedCapability } from "../shared/integrations/oauth";
+import { routeDraft } from "../shared/autopilot";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { action, internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx } from "./_generated/server";
 import { appError } from "./lib/tenancy";
 import { emitEvent } from "./webhooks";
 import { audit } from "./lib/audit";
-import { onPublishBlocked, onPublishOutcome } from "./lib/autopilot";
+import { autopilotLive, onPublishBlocked, onPublishOutcome, settingsFor, trustFor } from "./lib/autopilot";
 import { notifyOwners } from "./lib/notify";
-import { fleetStopped } from "./lib/access";
+import { featureAllowed, fleetStopped } from "./lib/access";
 import { imageUrlFor } from "./lib/media";
 
 /**
@@ -117,18 +119,70 @@ export const publishContext = internalQuery({
 });
 
 export const beginReceipt = internalMutation({
-  args: { artifactId: v.id("artifacts"), versionId: v.id("artifactVersions"), approvalId: v.id("approvals"), idempotencyKey: v.string(), provider: v.string(), action: v.string() },
+  args: { artifactId: v.id("artifacts"), versionId: v.id("artifactVersions"), approvalId: v.id("approvals"), approvalHash: v.string(), connectionId: v.id("connections"), connectionUpdatedAt: v.number(), secretId: v.optional(v.id("connectionSecrets")), requestedBy: v.optional(v.id("users")), idempotencyKey: v.string(), provider: v.string(), action: v.string() },
   handler: async (ctx, args) => {
+    const a = await ctx.db.get(args.artifactId);
+    if (!a) return { blocked: "The post is unavailable." };
+    const provider = TARGET[a.channel as keyof typeof TARGET];
+    const key = `${a.orgId}:publish:${a._id}:v${a.currentVersion}:${args.approvalId}`;
+    if (!provider || args.provider !== provider || args.action !== ACTION_FOR[provider] || args.idempotencyKey !== key) return { blocked: "The publishing destination or attempt changed. Review it again." };
     const existing = await ctx.db
       .query("actionReceipts")
       .withIndex("by_idempotency", (q) => q.eq("idempotencyKey", args.idempotencyKey))
       .first();
-    if (existing) return { receiptId: existing._id, existingStatus: existing.status };
-    const a = await ctx.db.get(args.artifactId);
-    if (!a) throw new Error("missing artifact");
+    if (existing) return existing.orgId === a.orgId && existing.artifactId === a._id
+      ? { receiptId: existing._id, existingStatus: existing.status }
+      : { blocked: "The publishing attempt belongs to another post." };
     if (a.currentVersionId !== args.versionId || a.approvalId !== args.approvalId || !SENDABLE.includes(a.status)) return { blocked: "The post or its approval changed during the publishing check. Review it again." };
     const version = await ctx.db.get(args.versionId);
     if (!version || version.orgId !== a.orgId || version.artifactId !== a._id) return { blocked: "The approved post version is unavailable." };
+    const business = await ctx.db.get(a.businessId);
+    if (!business || business.orgId !== a.orgId) return { blocked: "The post's business evidence is unavailable." };
+    if (a.status === "scheduled" && (a.scheduledFor === undefined || a.scheduledFor > Date.now())) return { blocked: "This scheduled post is not due yet." };
+    const org = await ctx.db.get(a.orgId);
+    const approval = await ctx.db.get(args.approvalId);
+    const connection = await ctx.db.get(args.connectionId);
+    if (!org || !approval || approval.orgId !== a.orgId || approval.subjectType !== "artifact" || approval.subjectId !== a._id || approval.actionKind !== "publish" || approval.approvalHash !== args.approvalHash) return { blocked: "The publishing approval changed. Review it again." };
+    if (!connection || connection.orgId !== a.orgId || connection.provider !== provider || connection.status !== "connected" || connection.updatedAt !== args.connectionUpdatedAt) return { blocked: "The connected account changed during preparation. Check Connections and try again." };
+    const policy = await ctx.db.query("autonomyPolicies").withIndex("by_org_active", q => q.eq("orgId", a.orgId).eq("active", true)).first();
+    const capability: ScopedCapability = provider === "linkedin" && connection.externalAccountId?.startsWith("urn:li:organization:")
+      ? "linkedin.publish_org_post" : provider === "instagram" ? "instagram.publish_media" : ACTION_FOR[provider];
+    const capabilityReady = Boolean(connection.isFixture) || Boolean(connection.externalAccountId
+      && (!connection.expiresAt || connection.expiresAt > Date.now())
+      && scopesFor([capability]).every(scope => connection.scopes.includes(scope))
+      && (provider !== "instagram" || ["business", "media_creator", "creator"].includes((connection.accountType ?? "").toLowerCase())));
+    const check = await checkApprovalForExecution({
+      approval,
+      current: { orgId: a.orgId, subjectType: "artifact", subjectId: a._id, actionKind: "publish", contentHash: version.contentHash,
+        scope: { connectionId: connection._id, externalAccountId: connection.externalAccountId, destination: a.channel, ...(a.scheduledFor !== undefined ? { scheduledFor: a.scheduledFor } : {}) },
+        policyVersion: policy?.version ?? 1, expiresAt: approval.expiresAt },
+      now: Date.now(), emergencyStop: Boolean(org.emergencyStop?.active || org.suspendedAt || org.deletedAt) || await fleetStopped(ctx), capabilityReady,
+    });
+    if (!check.ok) return { blocked: check.message };
+    if (policy?.mode === "copilot") return { blocked: "Copilot mode is on. Use the export pack or review the publishing policy." };
+    if (!(await featureAllowed(ctx, org, "publishing"))) return { blocked: "Publishing needs an active package. Check Billing before trying again." };
+    if (args.requestedBy) {
+      const requester = await ctx.db.query("memberships").withIndex("by_org_user", q => q.eq("orgId", a.orgId).eq("userId", args.requestedBy)).unique();
+      if (requester?.status !== "active" || !can(requester.role, "approve")) return { blocked: "The person requesting publication no longer has permission." };
+    }
+    if (approval.decidedBy) {
+      const member = await ctx.db.query("memberships").withIndex("by_org_user", q => q.eq("orgId", a.orgId).eq("userId", approval.decidedBy)).unique();
+      if (member?.status !== "active" || !can(member.role, "approve")) return { blocked: "The approver no longer has permission. Ask a current approver to review this post." };
+    } else {
+      const settings = await settingsFor(ctx, a.orgId);
+      const slot = await ctx.db.query("calendarSlots").withIndex("by_artifact", q => q.eq("artifactId", a._id)).first();
+      if (policy?.mode !== "bounded_autopilot" || !settings || !(await autopilotLive(ctx, org, settings)) || !settings.channels.some(c => c.channel === a.channel && c.postsPerWeek > 0)
+        || !slot || slot.orgId !== a.orgId || slot.status !== "scheduled" || slot.routing?.decision !== "auto" || slot.slotAt !== a.scheduledFor) return { blocked: "Autopilot no longer authorizes this post. Review it before publishing." };
+      const route = routeDraft({ mode: settings.mode, channel: a.channel, text: [version.headline, version.body, version.callToAction, ...version.hashtags].filter(Boolean).join("\n"), trust: trustFor(settings, a.channel), unsupportedClaims: version.unsupportedClaims,
+        reviewShipped: null, plannerNeedsOwner: slot.needsOwner, plannerNote: slot.ownerNote, alwaysAskTopics: settings.alwaysAskTopics, firstOnChannel: false, canPublish: true });
+      if (route.decision !== "auto") return { blocked: route.reasons.join(" ") };
+    }
+    if (!connection.isFixture) {
+      const secret = args.secretId ? await ctx.db.get(args.secretId) : null;
+      if (!secret || secret.orgId !== a.orgId || secret.connectionId !== connection._id) return { blocked: "The account credentials changed during preparation. Reconnect or try again." };
+    }
+    const trendIssue = trendFreshnessIssue(version.copyBrief, Date.now(), a.scheduledFor);
+    if (trendIssue) return { blocked: trendIssue };
     const claimIssue = await unsupportedClaimIssue(ctx, a.businessId, [a.title, version.headline, version.body, version.callToAction, ...version.hashtags, version.altText]);
     if (claimIssue) return { blocked: `The business evidence needs review. ${claimIssue}` };
     // Intent marker written BEFORE the provider call: if we crash, the outcome stays "uncertain".
@@ -142,6 +196,8 @@ export const beginReceipt = internalMutation({
       summary: "Sending to the platform…",
       createdAt: Date.now(),
     });
+    // Lock edits and rescheduling with the same transaction that claims the write.
+    await ctx.db.patch(a._id, { status: "publishing", updatedAt: Date.now() });
     return { receiptId, existingStatus: null };
   },
 });
@@ -230,10 +286,18 @@ export const offerCheckTarget = internalQuery({
 });
 
 export const blockPublish = internalMutation({
-  args: { artifactId: v.id("artifacts"), reason: v.string(), backTo: v.union(v.literal("approved"), v.literal("in_review")) },
-  handler: async (ctx, { artifactId, reason, backTo }) => {
+  args: { artifactId: v.id("artifacts"), expected: v.object({ versionId: v.union(v.id("artifactVersions"), v.null()), approvalId: v.union(v.id("approvals"), v.null()), approvalHash: v.union(v.string(), v.null()), status: v.string(), scheduledFor: v.union(v.number(), v.null()) }), reason: v.string(), backTo: v.union(v.literal("approved"), v.literal("in_review")) },
+  handler: async (ctx, { artifactId, expected, reason, backTo }) => {
     const a = await ctx.db.get(artifactId);
-    if (!a) return;
+    if (!a || !SENDABLE.includes(a.status) || a.status !== expected.status || (a.currentVersionId ?? null) !== expected.versionId || (a.approvalId ?? null) !== expected.approvalId || (a.scheduledFor ?? null) !== expected.scheduledFor) return;
+    const approval = a.approvalId ? await ctx.db.get(a.approvalId) : null;
+    if ((approval?.approvalHash ?? null) !== expected.approvalHash) return;
+    // A second worker's late refusal must not undo an already claimed send.
+    const legacyKey = `${a.orgId}:publish:${a._id}:v${a.currentVersion}`;
+    const key = a.approvalId ? `${legacyKey}:${a.approvalId}` : legacyKey;
+    const claimed = await ctx.db.query("actionReceipts").withIndex("by_idempotency", q => q.eq("idempotencyKey", key)).first();
+    const legacy = key === legacyKey ? null : await ctx.db.query("actionReceipts").withIndex("by_idempotency", q => q.eq("idempotencyKey", legacyKey)).first();
+    if (claimed || (legacy && legacy.status !== "failed")) return;
     const now = Date.now();
     await ctx.db.patch(a._id, { status: backTo, scheduledFor: undefined, lastPublishError: { message: reason.slice(0, 400), at: now }, updatedAt: now });
     await onPublishBlocked(ctx, a._id, reason);
@@ -254,12 +318,14 @@ export const scheduledPublish = internalAction({
 
 export const publishArtifact = internalAction({
   args: { artifactId: v.id("artifacts"), requestedBy: v.optional(v.id("users")) },
-  handler: async (ctx, { artifactId }) => {
+  handler: async (ctx, { artifactId, requestedBy }) => {
     const c = await ctx.runQuery(internal.publish.publishContext, { artifactId });
     // Only an approved post on its way out is sent (published, archived or edited ones are left alone).
     if (!c || !SENDABLE.includes(c.artifact.status)) return;
+    if (c.artifact.status === "scheduled" && c.artifact.scheduledFor !== undefined && c.artifact.scheduledFor > Date.now()) return;
+    const expected = { versionId: c.artifact.currentVersionId ?? null, approvalId: c.artifact.approvalId ?? null, approvalHash: c.approval?.approvalHash ?? null, status: c.artifact.status, scheduledFor: c.artifact.scheduledFor ?? null };
     if (!c.version) {
-      await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: "There's nothing to post yet.", backTo: "in_review" });
+      await ctx.runMutation(internal.publish.blockPublish, { artifactId, expected, reason: "There's nothing to post yet.", backTo: "in_review" });
       return;
     }
     const { artifact, version, approval } = c;
@@ -271,25 +337,29 @@ export const publishArtifact = internalAction({
       return;
     }
     if (c.claimIssue) {
-      await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: `The business evidence needs review. ${c.claimIssue}`, backTo: "in_review" });
+      await ctx.runMutation(internal.publish.blockPublish, { artifactId, expected, reason: `The business evidence needs review. ${c.claimIssue}`, backTo: "in_review" });
       return;
     }
     const trendIssue = trendFreshnessIssue(version.copyBrief, Date.now(), artifact.scheduledFor);
     if (trendIssue) {
-      await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: trendIssue, backTo: "in_review" });
+      await ctx.runMutation(internal.publish.blockPublish, { artifactId, expected, reason: trendIssue, backTo: "in_review" });
       return;
     }
     if (!c.provider || !c.connection || c.connection.status !== "connected") {
       await ctx.runMutation(internal.publish.blockPublish, {
-        artifactId,
+        artifactId, expected,
         reason: c.provider ? "The account isn't connected. Connect it, or use the export pack." : "This channel has no verified integration. Use the export pack.",
         backTo: "approved",
       });
       return;
     }
-    const conn = await freshConnection(ctx, c.connection);
+    const conn = await freshConnection(ctx, c.connection).catch(() => null);
+    if (!conn) {
+      await ctx.runMutation(internal.publish.blockPublish, { artifactId, expected, reason: "The account access could not be refreshed. Check Connections and try again.", backTo: "approved" });
+      return;
+    }
     if (REFRESH_BEFORE_USE.has(c.provider) && !conn.isFixture && conn.expiresAt && conn.expiresAt <= Date.now()) {
-      await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: `${PLATFORM_NAME[c.provider]} sign-in expired. Reconnect it in Connections, then publish again.`, backTo: "approved" });
+      await ctx.runMutation(internal.publish.blockPublish, { artifactId, expected, reason: `${PLATFORM_NAME[c.provider]} sign-in expired. Reconnect it in Connections, then publish again.`, backTo: "approved" });
       return;
     }
     const capabilityReady =
@@ -298,7 +368,7 @@ export const publishArtifact = internalAction({
         ? ["business", "media_creator", "creator"].includes((conn.accountType ?? "").toLowerCase())
         : true) && (!conn.expiresAt || conn.expiresAt > Date.now());
     if (!approval) {
-      await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: "No approval on record.", backTo: "in_review" });
+      await ctx.runMutation(internal.publish.blockPublish, { artifactId, expected, reason: "No approval on record.", backTo: "in_review" });
       return;
     }
     const check = await checkApprovalForExecution({
@@ -309,7 +379,7 @@ export const publishArtifact = internalAction({
         subjectId: artifact._id,
         actionKind: approval.actionKind,
         contentHash: version.contentHash,
-        scope: { connectionId: c.connection._id, destination: artifact.channel, ...(artifact.scheduledFor !== undefined ? { scheduledFor: artifact.scheduledFor } : {}) },
+        scope: { connectionId: conn._id, externalAccountId: conn.externalAccountId, destination: artifact.channel, ...(artifact.scheduledFor !== undefined ? { scheduledFor: artifact.scheduledFor } : {}) },
         policyVersion: c.policyVersion,
         expiresAt: approval.expiresAt,
       },
@@ -318,12 +388,12 @@ export const publishArtifact = internalAction({
       capabilityReady,
     });
     if (!check.ok) {
-      await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: check.message, backTo: check.reason === "emergency_stop" ? "approved" : "in_review" });
+      await ctx.runMutation(internal.publish.blockPublish, { artifactId, expected, reason: check.message, backTo: check.reason === "emergency_stop" ? "approved" : "in_review" });
       return;
     }
     // Copilot mode: the owner posts it themselves (export pack), even if it was scheduled before switching.
     if (c.copilot) {
-      await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: "Copilot mode is on: post it yourself from the export pack, or switch to Review in Settings → Policies.", backTo: "approved" });
+      await ctx.runMutation(internal.publish.blockPublish, { artifactId, expected, reason: "Copilot mode is on: post it yourself from the export pack, or switch to Review in Settings → Policies.", backTo: "approved" });
       return;
     }
 
@@ -338,7 +408,7 @@ export const publishArtifact = internalAction({
         const detail = unavailable.length === 1
           ? `The link ${unavailable[0]?.url} could not be safely confirmed (HTTP ${unavailable[0]?.httpStatus ?? "status unavailable"}).`
           : `${unavailable.length} links could not be safely confirmed before posting.`;
-        await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: `${detail} Check or remove the link, then approve the post again.`, backTo: "approved" });
+        await ctx.runMutation(internal.publish.blockPublish, { artifactId, expected, reason: `${detail} Check or remove the link, then approve the post again.`, backTo: "approved" });
         return;
       }
     }
@@ -350,10 +420,28 @@ export const publishArtifact = internalAction({
       await ctx.runMutation(internal.publish.recordDestinationOfferCheck, { versionId: version._id, url: version.destinationUrl, ...offer });
     }
 
+    // Freeze the prepared credentials before the atomic authorization claim. A
+    // refresh/reconnection cannot substitute a token after the final check.
+    const secret = conn.isFixture ? null : await ctx.runQuery(internal.connections.getSecret, { connectionId: conn._id }).catch(() => null);
+    if (!conn.isFixture && (!secret || secret.orgId !== artifact.orgId || secret.provider !== c.provider || secret.externalAccountId !== conn.externalAccountId)) {
+      await ctx.runMutation(internal.publish.blockPublish, { artifactId, expected, reason: "The account credentials changed. Reconnect or try again.", backTo: "in_review" });
+      return;
+    }
+    let accessToken = "";
+    if (secret) {
+      try {
+        const parsed = JSON.parse(secret.value) as { accessToken?: unknown } | null;
+        accessToken = typeof parsed?.accessToken === "string" ? parsed.accessToken.trim() : "";
+      } catch { /* Invalid credentials remain blocked. */ }
+      if (!accessToken) {
+        await ctx.runMutation(internal.publish.blockPublish, { artifactId, expected, reason: "The connection has no usable access token. Reconnect the account.", backTo: "approved" });
+        return;
+      }
+    }
     const action = ACTION_FOR[c.provider];
-    const begin = await ctx.runMutation(internal.publish.beginReceipt, { artifactId, versionId: version._id, approvalId: approval._id, idempotencyKey: c.idempotencyKey, provider: c.provider, action });
+    const begin = await ctx.runMutation(internal.publish.beginReceipt, { artifactId, versionId: version._id, approvalId: approval._id, approvalHash: approval.approvalHash, connectionId: conn._id, connectionUpdatedAt: conn.updatedAt, secretId: secret?.secretId, requestedBy, idempotencyKey: c.idempotencyKey, provider: c.provider, action });
     if ("blocked" in begin) {
-      await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: begin.blocked!, backTo: "in_review" });
+      await ctx.runMutation(internal.publish.blockPublish, { artifactId, expected, reason: begin.blocked!, backTo: "in_review" });
       return;
     }
     if (begin.existingStatus) {
@@ -361,7 +449,7 @@ export const publishArtifact = internalAction({
       return;
     }
 
-    if (c.connection.isFixture) {
+    if (conn.isFixture) {
       await ctx.runMutation(internal.publish.finishReceipt, {
         receiptId: begin.receiptId,
         artifactId,
@@ -372,12 +460,6 @@ export const publishArtifact = internalAction({
       return;
     }
 
-    const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId: c.connection._id });
-    if (!secret) {
-      await ctx.runMutation(internal.publish.finishReceipt, { receiptId: begin.receiptId, artifactId, status: "failed", summary: "The connection's access was removed. Reconnect the account." });
-      return;
-    }
-    const { accessToken } = JSON.parse(secret.value) as { accessToken: string };
     const caption = [version.body, version.hashtags.join(" ")].filter(Boolean).join("\n\n");
     // The stored approval (status, expiry, content and scope hash) was re-verified just above, so the
     // adapters' freshness guard measures that check. Posts scheduled days ahead would otherwise be refused.
@@ -389,7 +471,7 @@ export const publishArtifact = internalAction({
           await ctx.runMutation(internal.publish.finishReceipt, { receiptId: begin.receiptId, artifactId, status: "failed", summary: "Instagram posts need an image. Add one and approve again." });
           return;
         }
-        const post = { igUserId: c.connection.externalAccountId ?? "", imageUrl: c.imageUrl, caption, altText: version.altText };
+        const post = { igUserId: conn.externalAccountId ?? "", imageUrl: c.imageUrl, caption, altText: version.altText };
         const res = await publishImage({
           accessToken,
           post,
@@ -406,7 +488,7 @@ export const publishArtifact = internalAction({
           summary: res.status === "verified" ? "Accepted by Instagram and confirmed on read-back." : (res.providerMessage ?? "Instagram didn't accept the post."),
         });
       } else if (c.provider === "linkedin") {
-        const post = { authorUrn: c.connection.externalAccountId ?? "", text: socialText(version), imageUrl: c.imageUrl ?? undefined, altText: c.imageUrl ? version.altText : undefined };
+        const post = { authorUrn: conn.externalAccountId ?? "", text: socialText(version), imageUrl: c.imageUrl ?? undefined, altText: c.imageUrl ? version.altText : undefined };
         const res = await publishLinkedInPost({
           accessToken,
           post,
@@ -420,7 +502,7 @@ export const publishArtifact = internalAction({
           summary: res.status === "verified" ? "Accepted by LinkedIn and confirmed on read-back." : (res.providerMessage ?? "LinkedIn didn't accept the post."),
         });
       } else if (c.provider === "x") {
-        const post = { userId: c.connection.externalAccountId ?? "", text: socialText(version) };
+        const post = { userId: conn.externalAccountId ?? "", text: socialText(version) };
         const res = await publishTweet({
           accessToken,
           post,
@@ -435,7 +517,7 @@ export const publishArtifact = internalAction({
           summary: (res.status === "verified" ? "Accepted by X and confirmed on read-back." : (res.providerMessage ?? "X didn't accept the post.")) + noImage,
         });
       } else {
-        const post = { pageId: c.connection.externalAccountId ?? "", message: caption, link: c.imageUrl ? undefined : version.destinationUrl, imageUrl: c.imageUrl ?? undefined };
+        const post = { pageId: conn.externalAccountId ?? "", message: caption, link: c.imageUrl ? undefined : version.destinationUrl, imageUrl: c.imageUrl ?? undefined };
         const res = await publishPagePost({
           accessToken,
           post,
