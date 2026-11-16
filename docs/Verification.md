@@ -1,3 +1,14 @@
+## 17 November 2026 — uncertain marketing-send recovery
+
+Added exact original-broadcast read-back, an owner-facing check, separately dated receipts, one-time allowance reconciliation and bounded original-contact history updates. [Audit and limits](growth-engine/marketing-send-recovery-audit.md).
+
+- `pnpm exec vitest run tests/convex/marketing-authorization.test.ts tests/convex/marketing.test.ts tests/convex/contact-frequency.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts tests/convex/lifecycle-draft-context.test.ts tests/unit/integrations.adapters.test.ts tests/unit/email-recovery-ui.test.tsx` — 144 passed, eight files, 3.23 seconds.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint convex/marketing.ts convex/schema.ts shared/integrations/resendMarketing.ts src/components/app/content/detail/EmailSendPanel.tsx tests/convex/marketing-authorization.test.ts tests/unit/integrations.adapters.test.ts tests/unit/email-recovery-ui.test.tsx` — passed.
+- `git diff --check` — passed.
+
+No live provider, browser interaction, sending, deployment or paid-model evaluation. The optional schema additions are local. Legacy/no-dispatch/no-match cases remain unresolved. UI verification covers rendering, not full interactions or accessibility.
+
 ## 17 November 2026 — lifecycle-specific email preparation and unknown timing
 
 First-win preparation now follows the selected email plan instead of forcing welcome copy. Exact bounded channel/audience/evidence/dependency context reaches generation; missing or ambiguous bindings stop. Email timing may remain null, and invalid structures/delays fail before saving. A separately reproduced approval-label bug now keeps superseded unapproved starter proposals from gaining approved status. See [the audit](growth-engine/lifecycle-draft-context-audit.md).

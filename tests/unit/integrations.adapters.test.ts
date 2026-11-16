@@ -811,3 +811,15 @@ describe("ga4 + searchConsole", () => {
     expect(searchConsoleSeoContext(snapshot, "https://example.com/", [])).toContain("none of its returned page rows match a page successfully fetched");
   });
 });
+
+describe("Resend historical broadcast evidence", () => {
+  it("retains exact content and identity from a read-only broadcast lookup", async () => {
+    const { fetchImpl, calls } = scripted([{ match: "/broadcasts/b_1", method: "GET", respond: json(200, { id: "b_1", name: "original-reference", segment_id: "seg_1", subject: "Original subject", from: "Owner <hello@example.com>", html: "<p>Original</p>", status: "sent", sent_at: "2026-11-17T01:00:00Z" }) }]);
+    expect(await resend.getBroadcast({ apiKey: "re_test", broadcastId: "b_1", fetchImpl })).toMatchObject({ ok: true, data: { id: "b_1", name: "original-reference", segmentId: "seg_1", subject: "Original subject", from: "Owner <hello@example.com>", html: "<p>Original</p>", status: "sent", sentAt: "2026-11-17T01:00:00Z" } });
+    expect(calls.map(c => c.method)).toEqual(["GET"]);
+  });
+  it("does not fabricate absent content fields in a provider read", async () => {
+    const { fetchImpl } = scripted([{ match: "/broadcasts/b_1", respond: json(200, { id: "b_1", status: "sent" }) }]);
+    expect(await resend.getBroadcast({ apiKey: "re_test", broadcastId: "b_1", fetchImpl })).toEqual({ ok: true, data: { id: "b_1", status: "sent" } });
+  });
+});

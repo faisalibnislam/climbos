@@ -25,6 +25,8 @@ Latest marketing-send follow-up (17 November): exact local audience/content/vers
 
 Latest lifecycle-drafting follow-up (17 November): the welcome-only first-win gap is repaired. Selected plan audience/evidence/dependency context now reaches email generation; unknown delays are supported, and malformed output is rejected before saving. Approval-at-launch evidence prevents superseded starter proposals being mislabeled approved. 120 tests/eleven files, typecheck and lint pass. [Audit](growth-engine/lifecycle-draft-context-audit.md) preserves remaining semantic, lifecycle-trigger and unknown-send recovery work.
 
+Latest marketing recovery follow-up (17 November): uncertain post-dispatch emails now expose an exact-broadcast read-only check. Matching original identity/content/credential evidence can resolve the reserved allowance and original recipient history in bounded batches. Original uncertain receipts remain intact. 144 tests/eight files, typecheck and lint pass. [Audit](growth-engine/marketing-send-recovery-audit.md) identifies optional undeployed schema fields, legacy/manual limits and unverified live/browser behavior.
+
 This handoff records what has been built, what was checked, what remains unverified, and how to continue safely. It is a starting point for repository work, not proof that every capability works with live providers or real customer outcomes.
 
 ## Current status — 17 November 2026

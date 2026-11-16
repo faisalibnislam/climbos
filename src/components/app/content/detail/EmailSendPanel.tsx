@@ -39,6 +39,33 @@ type ProviderSegment = { id: string; name: string };
 
 /** Send one approved email through the customer's own Resend account to opted-in contacts. */
 export function EmailSendPanel({ slug, artifact }: { slug: string; artifact: ArtifactView }) {
+  return <div className="flex flex-col gap-4"><EmailSendRecovery slug={slug} artifact={artifact} /><EmailSendForm slug={slug} artifact={artifact} /></div>;
+}
+
+export function EmailSendRecovery({ slug, artifact }: { slug: string; artifact: ArtifactView }) {
+  const unresolved = useQuery(api.marketing.unresolvedSends, { slug, artifactId: artifact.id });
+  const check = useAction(api.marketing.checkSendResult);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  if (!unresolved?.items.length) return null;
+  return <div className="flex flex-col gap-3">
+    {unresolved.items.map(attempt => <Callout key={attempt.id} tone="warning" title="Check an earlier email send">
+      <p className="break-words">{attempt.title}</p>
+      <p className="mt-2">{attempt.message}</p>
+      <p className="mt-2 text-sm">This checks the original approved version, even if this draft has changed. It never sends another email. Allow five minutes after the attempt starts.</p>
+      {attempt.canCheck ? <Button type="button" className="mt-3" disabled={busy} onClick={async () => {
+        setBusy(true); setError(null);
+        try { const result = await check({ slug, artifactId: artifact.id, approvalId: attempt.id }); toast({ tone: result.confirmed ? "success" : "info", title: result.confirmed ? "Provider send confirmed" : "Result still unknown", description: result.message }); }
+        catch (e) { setError(e); }
+        finally { setBusy(false); }
+      }}>{busy ? "Checking…" : "Check provider result"}</Button> : <p className="mt-2 text-sm">{attempt.resolving ? "Provider result confirmed. Updating the original contact history and allowance…" : "Automatic checking needs dispatch evidence and approval permission. If unavailable, inspect the original Resend account; do not resend while unresolved."}</p>}
+    </Callout>)}
+    {unresolved.omitted ? <p className="text-sm text-ink-2">Showing ten unresolved attempts. More are retained in Activity.</p> : null}
+    {error ? <ErrorCallout error={error} /> : null}
+  </div>;
+}
+
+function EmailSendForm({ slug, artifact }: { slug: string; artifact: ArtifactView }) {
   const audience = useQuery(api.marketing.audience, { slug });
   const loadProviderSegments = useAction(api.marketing.providerSegments);
   const approveSend = useMutation(api.marketing.approveSend);

@@ -7,6 +7,7 @@ import {
   contactRefusalReason,
   compareSegmentRecipients,
   createDraftBroadcast,
+  getBroadcast,
   listSegmentContacts,
   listSegments,
   RESEND_UNSUBSCRIBE_PLACEHOLDER,
@@ -16,7 +17,7 @@ import {
 } from "../shared/integrations/resendMarketing";
 import { approvalHash, can, canonicalJson, checkApprovalForExecution, sha256Hex } from "../shared/policy";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { action, internalAction, internalMutation, internalQuery, mutation, query, type QueryCtx, type MutationCtx } from "./_generated/server";
 import { decideReservation, releaseReservation } from "../shared/economics/ledger";
 import { activePolicyVersion } from "./jobWrites";
@@ -331,7 +332,7 @@ export const approveSend = mutation({
     const pending = await ctx.db.query("approvals").withIndex("by_subject", q => q.eq("subjectType", "email_send").eq("subjectId", a._id))
       .filter(q => q.and(q.eq(q.field("orgId"), org._id), q.or(
         q.and(q.eq(q.field("status"), "approved"), q.gt(q.field("expiresAt"), Date.now())),
-        q.and(q.neq(q.field("executionStartedAt"), undefined), q.or(q.eq(q.field("executionFinishedAt"), undefined), q.eq(q.field("executionOutcome"), "uncertain"))),
+        q.and(q.eq(q.field("executionReconciledAt"), undefined), q.neq(q.field("executionStartedAt"), undefined), q.or(q.eq(q.field("executionFinishedAt"), undefined), q.eq(q.field("executionOutcome"), "uncertain"))),
       ))).first();
     if (pending) throw appError("INVALID", "This email already has an approved or unresolved send. Check its result before approving another.");
     if (!/^[^<>]*<?[^\s@<>]+@[^\s@<>]+\.[a-z]{2,}>?$/i.test(args.from.trim())) throw appError("INVALID", "Enter a sender like “Your Name <hello@yourdomain.com>” on a domain verified in your Resend account.");
@@ -450,13 +451,14 @@ export const claimSend = internalMutation({
 
 /** Recheck after provider contact reads and immediately before the one send dispatch. */
 export const authorizeSendDispatch = internalMutation({
-  args: sendArgs,
+  args: { ...sendArgs, externalId: v.string() },
   handler: async (ctx, args) => {
     const c = await readSendContext(ctx, args.approvalId, args.segment);
     if (!c || c.approval.executionStartedAt === undefined || c.approval.executionFinishedAt !== undefined || c.approval.emailSendDispatchedAt !== undefined) return { ok: false, message: "This email attempt is no longer available." };
     const error = await sendProblem(ctx, c, args);
     if (error) return { ok: false, message: error };
-    await ctx.db.patch(c.approval._id, { emailSendDispatchedAt: Date.now() });
+    if (!args.externalId.trim()) return { ok: false, message: "The provider draft identity is missing." };
+    await ctx.db.patch(c.approval._id, { emailSendDispatchedAt: Date.now(), executionExternalId: args.externalId, emailRecipientHashBatches: Array.from({ length: Math.ceil(c.recipients.length / 200) }, (_, i) => c.recipients.slice(i * 200, (i + 1) * 200).map(r => r.emailHash)) });
     return { ok: true, message: "" };
   },
 });
@@ -475,7 +477,7 @@ export const finishSend = internalMutation({
   handler: async (ctx, args) => {
     const approval = await ctx.db.get(args.approvalId);
     const reservation = await ctx.db.get(args.reservationId);
-    if (!approval || !reservation || approval.subjectType !== "email_send" || reservation.orgId !== approval.orgId || reservation.purpose !== "email_send" || approval.executionFinishedAt !== undefined || (approval.scope.reservationId && approval.scope.reservationId !== reservation._id)) return;
+    if (!approval || !reservation || approval.subjectType !== "email_send" || reservation.orgId !== approval.orgId || reservation.purpose !== "email_send" || approval.executionFinishedAt !== undefined || approval.executionReconciledAt !== undefined || approval.emailRecovery !== undefined || (approval.scope.reservationId && approval.scope.reservationId !== reservation._id)) return;
     if (args.status === "verified" && approval.emailSendDispatchedAt === undefined) return;
     if (args.status === "uncertain" && approval.executionStartedAt === undefined) return;
     await ctx.db.patch(approval._id, { executionFinishedAt: Date.now(), executionOutcome: args.status, ...(args.externalId ? { executionExternalId: args.externalId } : {}) });
@@ -566,7 +568,7 @@ export const executeSend = internalAction({
         return;
       }
       externalId = draft.externalId;
-      const dispatch = await ctx.runMutation(internal.marketing.authorizeSendDispatch, args);
+      const dispatch = await ctx.runMutation(internal.marketing.authorizeSendDispatch, { ...args, externalId });
       if (!dispatch.ok) return fail(`Not sent: ${dispatch.message}`);
       requestPhase = "send";
       const sent = await sendBroadcast({ apiKey, broadcastId: draft.externalId, approval: { kind: SEND_BROADCAST_ACTION, targetId: draft.externalId, value: "now", approvedBy: String(c.approval.decidedBy ?? "owner"), approvedAt: Date.now() } });
@@ -582,5 +584,120 @@ export const executeSend = internalAction({
     } catch {
       await ctx.runMutation(internal.marketing.finishSend, { approvalId: args.approvalId, reservationId: args.reservationId, status: requestPhase === "preparation" ? "failed" : "uncertain", sent: 0, externalId, summary: requestPhase === "preparation" ? "Email preparation stopped before a broadcast was requested. Review the connection and approve again." : "The email provider result is unknown. Check the provider before attempting another send; this approval will not retry." });
     }
+  },
+});
+
+const EMAIL_RECOVERY_WAIT_MS = 5 * 60_000;
+function unresolvedEmail(a: Doc<"approvals">) {
+  return a.subjectType === "email_send" && a.executionStartedAt !== undefined && a.executionReconciledAt === undefined && (a.executionFinishedAt === undefined || a.executionOutcome === "uncertain");
+}
+const recoveryArgs = { slug: v.string(), artifactId: v.id("artifacts"), approvalId: v.id("approvals") };
+type EmailRecoveryArgs = { slug: string; artifactId: Id<"artifacts">; approvalId: Id<"approvals"> };
+async function readEmailRecovery(ctx: QueryCtx | MutationCtx, args: EmailRecoveryArgs) {
+  const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "approve");
+  const artifact = assertSameOrg(await ctx.db.get(args.artifactId), org._id, "email");
+  const a = assertSameOrg(await ctx.db.get(args.approvalId), org._id, "email request");
+  if (a.subjectId !== artifact._id || !unresolvedEmail(a) || a.emailRecovery) throw appError("INVALID", "This email request is no longer unresolved. Refresh its result.");
+  if (a.emailSendDispatchedAt === undefined || !a.executionExternalId || !a.emailRecipientHashBatches?.length) throw appError("INVALID", "This older or interrupted request lacks dispatch evidence. Check the original Resend account; no automatic retry is available.");
+  if (Date.now() - a.emailSendDispatchedAt < EMAIL_RECOVERY_WAIT_MS) throw appError("INVALID", "Wait five minutes after dispatch before checking its result.");
+  const { connection, credentialId } = await marketingConnection(ctx, org._id);
+  if (org.kind === "demo" || connection?.isFixture) throw appError("UNAVAILABLE", "Demo email has no live provider result to check.");
+  if (!connection || connection.status !== "connected" || connection._id !== a.scope.connectionId || credentialId !== a.scope.credentialId || !credentialId) throw appError("INVALID", "The original email connection or credentials changed. Check the original Resend account.");
+  const binding = { orgId: a.orgId, subjectType: a.subjectType, subjectId: a.subjectId, actionKind: a.actionKind, contentHash: a.contentHash, scope: a.scope, policyVersion: a.policyVersion, expiresAt: a.expiresAt };
+  if (await approvalHash(binding) !== a.approvalHash) throw appError("INVALID", "The saved email approval no longer matches its original terms.");
+  const id = a.scope.reservationId ? ctx.db.normalizeId("usageReservations", a.scope.reservationId) : null;
+  const reservation = id ? await ctx.db.get(id) : null;
+  const hashes = a.emailRecipientHashBatches.flat();
+  if (!reservation || reservation.orgId !== org._id || reservation.purpose !== "email_send" || !["held", "unresolved"].includes(reservation.status) || reservation.meters.byoMarketingSends !== a.scope.spendLimitMinor || new Set(hashes).size !== a.scope.spendLimitMinor || hashes.length !== a.scope.spendLimitMinor || hashes.length > MAX_CONTACT_ROWS) throw appError("INVALID", "The original email allowance or recipient evidence needs review.");
+  const period = await ctx.db.get(reservation.periodId);
+  if (!period || period.orgId !== org._id) throw appError("INVALID", "The original email allowance is unavailable.");
+  // A changed draft, expired approval, stopped workspace or lapsed plan cannot authorize a retry,
+  // but also must not prevent observing what happened to the original approved request.
+  return { org, user, approval: a, reservation, period, connection, credentialId,
+    fingerprint: await sha256Hex(canonicalJson({ approvalHash: a.approvalHash, externalId: a.executionExternalId, dispatch: a.emailSendDispatchedAt, hashes: a.emailRecipientHashBatches, outcome: a.executionOutcome, finished: a.executionFinishedAt, checked: a.recoveryCheckedAt })) };
+}
+type EmailRecoveryContext = Awaited<ReturnType<typeof readEmailRecovery>>;
+
+export const unresolvedSends = query({
+  args: { slug: v.string(), artifactId: v.id("artifacts") },
+  handler: async (ctx, args) => {
+    const { org, role } = await requireOrgAccess(ctx, { slug: args.slug });
+    assertSameOrg(await ctx.db.get(args.artifactId), org._id, "email");
+    const rows = await ctx.db.query("approvals").withIndex("by_subject", q => q.eq("subjectType", "email_send").eq("subjectId", args.artifactId))
+      .filter(q => q.and(q.eq(q.field("orgId"), org._id), q.eq(q.field("executionReconciledAt"), undefined), q.neq(q.field("executionStartedAt"), undefined), q.or(q.eq(q.field("executionFinishedAt"), undefined), q.eq(q.field("executionOutcome"), "uncertain")))).order("desc").take(11);
+    return { omitted: rows.length > 10, items: rows.slice(0, 10).map(a => ({ id: a._id, title: a.title, versionId: a.scope.artifactVersionId ?? null, startedAt: a.executionStartedAt!, availableAt: (a.emailSendDispatchedAt ?? a.executionStartedAt!) + EMAIL_RECOVERY_WAIT_MS, resolving: Boolean(a.emailRecovery), canCheck: !a.emailRecovery && can(role, "approve") && a.emailSendDispatchedAt !== undefined && Boolean(a.executionExternalId && a.emailRecipientHashBatches?.length), message: a.recoveryMessage ?? "The send result is unknown. Do not send another copy while this is unresolved." })) };
+  },
+});
+export const emailRecoveryContext = internalQuery({ args: recoveryArgs, handler: readEmailRecovery });
+
+export const recordEmailRecovery = internalMutation({
+  args: { ...recoveryArgs, fingerprint: v.string(), requestedAt: v.number(), providerStatus: v.optional(v.string()), matches: v.boolean(), sentAt: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const c = await readEmailRecovery(ctx, args);
+    if (c.fingerprint !== args.fingerprint) throw appError("INVALID", "The email request changed during this check. Refresh its result.");
+    const a = c.approval, now = Date.now();
+    const confirmed = args.matches && args.providerStatus === "sent" && args.sentAt !== undefined && Number.isFinite(args.sentAt) && args.sentAt >= a.emailSendDispatchedAt! - 60_000 && args.sentAt <= now;
+    const message = confirmed ? "Resend reports the original approved broadcast as sent. This does not confirm delivery, reads or customer outcomes. No new send was requested." : "The provider result could not confirm the original approved broadcast was sent. The allowance remains held; do not send another copy. Check the original Resend account.";
+    // Preserve the original execution outcome and receipt, adding a separately dated observation.
+    await ctx.db.patch(a._id, { recoveryCheckedAt: now, recoveryMessage: message });
+    if (confirmed) {
+      // Contact updates are applied in bounded batches before resolution releases the send hold.
+      await ctx.db.patch(a._id, { emailRecovery: { sentAt: args.sentAt!, checkedAt: now, nextOffset: 0 } });
+      await ctx.scheduler.runAfter(0, internal.marketing.finishEmailRecovery, { approvalId: a._id, offset: 0, checkedAt: now });
+    }
+    await ctx.db.insert("actionReceipts", { orgId: c.org._id, artifactId: args.artifactId, provider: "resend_marketing", action: "reconcile_email_send", idempotencyKey: `${a._id}:reconcile:${args.requestedAt}`, status: confirmed ? "verified" : "uncertain", externalId: a.executionExternalId, summary: message, createdAt: now, ...(confirmed ? { verifiedAt: now } : {}) });
+    await audit(ctx, { orgId: c.org._id, actorType: "user", actorId: c.user._id, action: confirmed ? "email.recovery.confirmed" : "email.recovery.unresolved", subjectType: "artifact", subjectId: args.artifactId, summary: message });
+    return { confirmed, message };
+  },
+});
+
+/** Complete accounting in bounded batches; no provider calls or sending authority. */
+export const finishEmailRecovery = internalMutation({
+  args: { approvalId: v.id("approvals"), offset: v.number(), checkedAt: v.number() },
+  handler: async (ctx, args) => {
+    const a = await ctx.db.get(args.approvalId);
+    if (!a || !unresolvedEmail(a) || !a.emailRecovery || a.emailRecovery.checkedAt !== args.checkedAt || a.emailRecovery.nextOffset !== args.offset || !a.emailRecipientHashBatches?.length) return;
+    const hashes = a.emailRecipientHashBatches.flat();
+    for (const hash of hashes.slice(args.offset, args.offset + 200)) {
+      const contact = await ctx.db.query("contacts").withIndex("by_org_email", q => q.eq("orgId", a.orgId).eq("emailHash", hash)).first();
+      if (contact && !contact.deletedAt) await ctx.db.patch(contact._id, { lastMarketingEmailAt: Math.max(contact.lastMarketingEmailAt ?? 0, a.emailRecovery.sentAt) });
+    }
+    if (args.offset + 200 < hashes.length) {
+      await ctx.db.patch(a._id, { emailRecovery: { ...a.emailRecovery, nextOffset: args.offset + 200 } });
+      await ctx.scheduler.runAfter(0, internal.marketing.finishEmailRecovery, { ...args, offset: args.offset + 200 });
+      return;
+    }
+    const id = a.scope.reservationId ? ctx.db.normalizeId("usageReservations", a.scope.reservationId) : null;
+    const reservation = id ? await ctx.db.get(id) : null;
+    const period = reservation ? await ctx.db.get(reservation.periodId) : null;
+    if (!reservation || !period || reservation.orgId !== a.orgId || period.orgId !== a.orgId || !["held", "unresolved"].includes(reservation.status) || reservation.purpose !== "email_send" || reservation.meters.byoMarketingSends === undefined || reservation.meters.byoMarketingSends !== a.scope.spendLimitMinor || new Set(hashes).size !== a.scope.spendLimitMinor) throw appError("INVALID", "The original allowance changed during recovery.");
+    const released = releaseReservation(ledgerOf(period), { walletMicros: 0, topupMicros: 0, meters: reservation.meters });
+    released.meterUsed = { ...released.meterUsed, byoMarketingSends: released.meterUsed.byoMarketingSends + reservation.meters.byoMarketingSends };
+    await ctx.db.patch(period._id, ledgerPatch(released));
+    await ctx.db.patch(reservation._id, { status: "reconciled", reconciledAt: Date.now() });
+    await ctx.db.patch(a._id, { status: "consumed", executionReconciledAt: Date.now(), emailRecovery: undefined, invalidatedReason: undefined });
+  },
+});
+
+export const checkSendResult = action({
+  args: recoveryArgs,
+  handler: async (ctx, args): Promise<{ confirmed: boolean; message: string }> => {
+    const c: EmailRecoveryContext = await ctx.runQuery(internal.marketing.emailRecoveryContext, args);
+    const requestedAt = Date.now();
+    const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId: c.connection._id });
+    if (!secret || secret.orgId !== c.org._id || secret.secretId !== c.credentialId || secret.provider !== "email_resend") throw appError("INVALID", "The original email credentials are unavailable.");
+    const { apiKey } = JSON.parse(secret.value) as { apiKey: string };
+    let matches = false, providerStatus: string | undefined, sentAt: number | undefined;
+    try {
+      const result = await getBroadcast({ apiKey, broadcastId: c.approval.executionExternalId! });
+      if (result.ok) {
+        const b = result.data;
+        providerStatus = b.status;
+        sentAt = b.sentAt && /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}(?::?\d{2})?)$/i.test(b.sentAt) ? Date.parse(b.sentAt) : undefined;
+        if (!Number.isFinite(sentAt)) sentAt = undefined;
+        matches = b.id === c.approval.executionExternalId && b.name === `climbos-${c.approval._id}` && b.segmentId === c.approval.scope.destination && typeof b.subject === "string" && typeof b.html === "string" && typeof b.from === "string" && await sha256Hex(canonicalJson({ subject: b.subject, html: b.html, from: b.from })) === c.approval.contentHash;
+      }
+    } catch { /* A read failure is unknown, never proof that a send did not happen. */ }
+    return ctx.runMutation(internal.marketing.recordEmailRecovery, { ...args, fingerprint: c.fingerprint, requestedAt, matches, providerStatus, sentAt });
   },
 });

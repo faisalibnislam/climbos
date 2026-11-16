@@ -1,3 +1,7 @@
+## 17 November 2026 — original marketing-send result recovery
+
+Uncertain and interrupted post-dispatch sends now have an owner-facing read-only provider check. Exact saved identity/content/account evidence can confirm the original broadcast, preserve its earlier receipt and reconcile original-recipient history and reserved allowance once. 144 focused/permission/UI/adapter tests, typecheck and lint pass. [Audit](marketing-send-recovery-audit.md) retains legacy, pre-dispatch, provider-normalization, live-validation and full-lifecycle limits. No new send authority or production deployment.
+
 ## Local update — 17 November 2026: selected lifecycle email context
 
 Replaced the first-win welcome-only request/title with selected-plan lifecycle preparation. Exact bounded audience hypotheses/evidence, channel purpose, dependencies and constraints now reach generation. Unknown relative timing can remain null; final schema validation rejects malformed output before saving. Superseded starter proposals now require approval-at-launch evidence before being treated as approved. Final 120 tests/eleven files, typecheck and lint pass. [Audit](lifecycle-draft-context-audit.md) records context bounds, semantic-quality limits and remaining automation/recovery work. Engine v3.125-lifecycle-draft-context; no external action or new provider.

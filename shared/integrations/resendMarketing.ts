@@ -241,6 +241,8 @@ export interface BroadcastState {
   scheduledAt?: string | null;
   sentAt?: string | null;
   html?: string;
+  subject?: string;
+  from?: string;
 }
 
 function parseBroadcast(d: Record<string, unknown>): BroadcastState {
@@ -253,6 +255,9 @@ function parseBroadcast(d: Record<string, unknown>): BroadcastState {
   if (d.sent_at !== undefined) b.sentAt = asString(d.sent_at) ?? null;
   const html = asString(d.html);
   if (html !== undefined) b.html = html;
+  const subject = asString(d.subject), from = asString(d.from);
+  if (subject !== undefined) b.subject = subject;
+  if (from !== undefined) b.from = from;
   return b;
 }
 
