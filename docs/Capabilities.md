@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Uncertain social posts can now be checked against their original provider account, saved post ID and exact content version. Supported matches are recorded separately from the initial result; missing or conflicting evidence stays uncertain. Owners can record a manual outcome for one exact attempt, with the earlier result retained and the answer labeled as an owner report. Late callbacks cannot replace resolved outcomes or overwrite newer content. Legacy attempts without saved account identity remain manual. Read-back does not prove every media detail or business outcome. See [Verification](Verification.md).
+
 Social publication now rechecks current authorization after link/token preparation, inside the transaction that claims the send. Changed approvals, policy, account access, publishing entitlement, approver permission or automatic-posting authority can stop the attempt before a provider write. Approvals bind the specific provider account; older approvals missing that identity require review again. A late failed check cannot replace a newer edit, approval or scheduled time. Once a send has started, pausing cannot promise to recall it. These checks are locally regression-tested, not live-account certification. See [Verification](Verification.md).
 
 

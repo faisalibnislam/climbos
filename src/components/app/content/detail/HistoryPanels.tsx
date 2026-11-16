@@ -207,12 +207,15 @@ export function ReceiptsTimeline({ receipts, now }: { receipts: ArtifactView["re
           <li key={r.id} className="flex gap-3">
             <meta.Icon aria-hidden="true" className={cn("mt-0.5 size-5 shrink-0", meta.cls)} />
             <div className="flex min-w-0 flex-col gap-0.5">
-              <span className={cn("text-sm font-semibold", meta.cls)}>{meta.label}</span>
+              <span className={cn("text-sm font-semibold", meta.cls)}>{r.resolutionSource === "owner" ? (r.status === "verified" ? "Owner reported: posted" : "Owner reported: not posted") : meta.label}</span>
               <span className="text-xs text-ink-3">
                 {PROVIDER_LABEL[r.provider] ?? channelLabel(r.provider)}
-                {now ? ` · ${formatDateTime(r.createdAt)}` : ""}
+                {now ? ` · Attempt: ${formatDateTime(r.createdAt)}` : ""}
+                {r.originalVersion !== null ? ` · Version ${r.originalVersion}` : ""}
               </span>
               <MessageText text={r.summary} className="break-words text-sm text-ink-2" />
+              {r.resolvedAt !== null && now ? <span className="text-xs text-ink-3">Outcome recorded {formatDateTime(r.resolvedAt)}</span> : null}
+              {r.resolutionSource && r.previousSummary ? <p className="break-words text-xs text-ink-3">Earlier result: {r.previousSummary}</p> : null}
               {r.externalId ? <span className="break-all text-xs text-ink-3">Ref: {r.externalId}</span> : null}
             </div>
           </li>

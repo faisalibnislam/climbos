@@ -182,8 +182,17 @@ export function PublishPanel({ slug, artifact, now }: { slug: string; artifact: 
         <Spinner /> Sending to {ch}…
       </span>
     );
-  else if (s === "published") statusLine = `Accepted by ${ch}.`;
-  else if (s === "failed") statusLine = `Not posted: ${ch} rejected it. Re-approve to retry.`;
+  else if (s === "published") {
+    const receipt = artifact.receipts.find(r => r.isCurrent);
+    statusLine = receipt?.resolutionSource === "owner" ? "Marked as posted after owner review."
+      : receipt?.status === "fixture_verified" ? "Demo: simulated platform acceptance."
+      : receipt?.status === "verified" ? `Accepted by ${ch}.` : "Recorded as posted. See Activity for confirmation details.";
+  }
+  else if (s === "failed") {
+    const receipt = artifact.receipts.find(r => r.isCurrent);
+    statusLine = receipt?.resolutionSource === "owner" ? "Marked as not posted after owner review. Nothing was re-sent."
+      : "Publishing attempt failed. See Activity for details before re-approving.";
+  }
   else if (s === "uncertain") statusLine = `Unconfirmed. Check ${ch}; no retry until you do.`;
   else if (s === "exported") statusLine = "Exported. Posting can't be confirmed.";
   else if (s === "archived") statusLine = "Archived.";

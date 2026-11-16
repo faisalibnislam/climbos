@@ -38,9 +38,9 @@ export const ARTIFACT_STATUS: Record<string, { label: string; tone: "neutral" | 
   approved: { label: "Approved", tone: "green", help: "Approved. Not scheduled yet." },
   scheduled: { label: "Scheduled in ClimbOS", tone: "blue", help: "ClimbOS will send it at the scheduled time. The platform hasn't accepted it yet." },
   publishing: { label: "Sending…", tone: "blue", help: "Sending to the platform now." },
-  published: { label: "Accepted by platform", tone: "green", help: "The platform confirmed it." },
+  published: { label: "Recorded as posted", tone: "green", help: "Review the publishing history to see how this result was confirmed." },
   exported: { label: "Exported for manual posting", tone: "violet", help: "You copied or downloaded it. ClimbOS can't confirm it was posted." },
-  failed: { label: "Didn't go out", tone: "red", help: "The platform didn't accept it. Nothing was posted." },
+  failed: { label: "Recorded as not posted", tone: "red", help: "Review the publishing history for the failure or owner report before trying again." },
   uncertain: { label: "Outcome uncertain", tone: "amber", help: "We couldn't confirm whether it was posted, so we won't repeat it until it's checked." },
   archived: { label: "Archived", tone: "neutral", help: "Hidden from active lists." },
 };

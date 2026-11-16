@@ -34,7 +34,7 @@ import { internalMutation, internalQuery, mutation, query, type MutationCtx, typ
 import { artifactStatusValidator, channelValidator } from "./schema";
 import { canRetryRun, createRunWithReservation } from "./engine";
 import { audit } from "./lib/audit";
-import { approvalProblem, DIRECT_PUBLISH, extendApprovalUntil, invalidateApprovals, publishTarget, recordArtifactDecision, refuseInCopilot, autonomyMode, SCHEDULE_GRACE_MS } from "./lib/approvals";
+import { approvalProblem, DIRECT_PUBLISH, extendApprovalUntil, invalidateApprovals, publicationMatchesArtifact, publishTarget, recordArtifactDecision, refuseInCopilot, autonomyMode, SCHEDULE_GRACE_MS } from "./lib/approvals";
 import { onOwnerDecision, onPublishOutcome } from "./lib/autopilot";
 import { estimateJobMicros, maxJobMicros, planJob } from "./lib/jobPlans";
 import { imageUrlFor } from "./lib/media";
@@ -305,6 +305,7 @@ export const get = query({
       : null;
     const currentApproval = a.approvalId ? await ctx.db.get(a.approvalId) : null;
     const curVer = a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null;
+    const uncertainReceipt = receipts.find(r => r.status === "uncertain" && publicationMatchesArtifact(r, a, currentApproval));
     const wordpressConnection = a.kind === "blog_post" && a.channel === "blog"
       ? await ctx.db.query("connections").withIndex("by_org_provider", (q) => q.eq("orgId", org._id).eq("provider", "wordpress")).first()
       : null;
@@ -326,6 +327,14 @@ export const get = query({
       status: a.status,
       scheduledFor: a.scheduledFor ?? null,
       lastPublishError: a.lastPublishError ?? null,
+      recovery: uncertainReceipt && a.currentVersionId ? {
+        receiptId: uncertainReceipt._id, versionId: a.currentVersionId, approvalId: a.approvalId ?? null,
+        approvalHash: currentApproval?.approvalHash ?? null,
+        externalAccountId: uncertainReceipt.publication?.externalAccountId ?? null,
+        legacy: !uncertainReceipt.publication,
+        canCheckProvider: Boolean(uncertainReceipt.publication && !uncertainReceipt.publication.isFixture && uncertainReceipt.externalId && !uncertainReceipt.externalId.startsWith("container:") && conn?.status === "connected" && !conn.isFixture && conn._id === uncertainReceipt.publication.connectionId && conn.externalAccountId === uncertainReceipt.publication.externalAccountId),
+        availableAt: uncertainReceipt.providerResult ? uncertainReceipt.providerResult.at : uncertainReceipt.createdAt + 5 * 60_000,
+      } : null,
       /** Why the current approval can't be used to publish (null when it can). */
       approvalProblem: a.status === "approved" || a.status === "scheduled" ? approvalProblem(currentApproval, curVer, conn?.status === "connected" ? conn : null, a.scheduledFor) : null,
       autopilotSlot: slot && slot.status !== "skipped" ? { slotAt: slot.slotAt, status: slot.status } : null,
@@ -356,7 +365,7 @@ export const get = query({
         destination: ap.scope.destination ?? null,
         isCurrent: ap.contentHash === versions[0]?.contentHash,
       })),
-      receipts: receipts.map((r) => ({ id: r._id, provider: r.provider, action: r.action, status: r.status, externalId: r.externalId ?? null, summary: r.summary, createdAt: r.createdAt })),
+      receipts: receipts.filter(r => r.orgId === org._id).map((r) => ({ id: r._id, provider: r.provider, action: r.action, status: r.status, externalId: r.externalId ?? null, summary: r.summary, createdAt: r.createdAt, resolutionSource: r.resolution?.source ?? (r.summary === "Confirmed by the owner after checking the platform." || r.summary === "Owner checked the platform: it wasn't posted." ? "owner" as const : null), isCurrent: publicationMatchesArtifact(r, a, currentApproval), originalVersion: r.publication?.version ?? null, resolvedAt: r.resolution?.at ?? null, previousSummary: r.resolution?.previousSummary ?? r.providerResult?.summary ?? null })),
       facts,
       wordpressConnection: wordpressConnection?.status === "connected"
         ? { accountLabel: wordpressConnection.accountLabel ?? null, siteUrl: wordpressConnection.externalAccountId ?? null }
@@ -799,31 +808,30 @@ export const byRun = query({
  * as an owner confirmation (not a provider receipt) and never re-sends.
  */
 export const resolveUncertain = mutation({
-  args: { slug: v.string(), artifactId: v.id("artifacts"), outcome: v.union(v.literal("posted"), v.literal("not_posted")) },
-  handler: async (ctx, { slug, artifactId, outcome }) => {
+  args: { slug: v.string(), artifactId: v.id("artifacts"), receiptId: v.id("actionReceipts"), versionId: v.id("artifactVersions"), approvalId: v.union(v.id("approvals"), v.null()), approvalHash: v.union(v.string(), v.null()), outcome: v.union(v.literal("posted"), v.literal("not_posted")) },
+  handler: async (ctx, { slug, artifactId, receiptId, versionId, approvalId, approvalHash, outcome }) => {
     const { org, user } = await requireOrgAccess(ctx, { slug }, "approve");
     const a = assertSameOrg(await ctx.db.get(artifactId), org._id, "draft");
     if (a.status !== "uncertain") throw appError("INVALID", "This item isn't marked uncertain.");
+    const approval = a.approvalId ? await ctx.db.get(a.approvalId) : null;
+    if (a.currentVersionId !== versionId || (a.approvalId ?? null) !== approvalId || (approval?.approvalHash ?? null) !== approvalHash) throw appError("INVALID", "This post or approval changed. Reload and check the original attempt again.");
+    const version = await ctx.db.get(versionId);
+    if (!version || version.orgId !== org._id || version.artifactId !== a._id || version.version !== a.currentVersion) throw appError("INVALID", "The original post version is unavailable. Reload before recording an outcome.");
+    const r = await ctx.db.get(receiptId);
+    if (!r || r.status !== "uncertain" || !publicationMatchesArtifact(r, a, approval)) throw appError("INVALID", "This publishing attempt changed or belongs to different content. Reload before recording an outcome.");
     const now = Date.now();
-    const receipts = (
-      await ctx.db
-        .query("actionReceipts")
-        .withIndex("by_artifact", (q) => q.eq("artifactId", a._id))
-        .order("desc")
-        .take(50)
-    ).filter((r) => r.status === "uncertain");
-    for (const r of receipts) {
-      await ctx.db.patch(r._id, {
+    if (!r.providerResult && now < r.createdAt + 5 * 60_000) throw appError("INVALID", "The original request may still be running. Wait five minutes after it started, then check the platform.");
+    await ctx.db.patch(r._id, {
         status: outcome === "posted" ? "verified" : "failed",
         summary: outcome === "posted" ? "Confirmed by the owner after checking the platform." : "Owner checked the platform: it wasn't posted.",
         verifiedAt: outcome === "posted" ? now : undefined,
-      });
-    }
+        resolution: { source: "owner", outcome, at: now, by: user._id, previousSummary: r.summary.slice(0, 400) },
+    });
     // "Not posted" marks it failed: approving it again is a deliberate new attempt (a new approval means a new receipt key).
     await ctx.db.patch(a._id, { status: outcome === "posted" ? "published" : "failed", updatedAt: now });
     if (outcome === "posted" && a.approvalId) await ctx.db.patch(a.approvalId, { status: "consumed" });
     await onPublishOutcome(ctx, a._id, outcome === "posted" ? "published" : "failed");
-    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "content.uncertain_resolved", subjectType: "artifact", subjectId: a._id, summary: `Owner marked "${a.title}" as ${outcome === "posted" ? "posted" : "not posted"}.` });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "content.uncertain_resolved", subjectType: "receipt", subjectId: r._id, summary: `Owner marked "${a.title}" v${a.currentVersion} as ${outcome === "posted" ? "posted" : "not posted"}; not provider-verified.` });
   },
 });
 

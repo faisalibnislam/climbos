@@ -5102,6 +5102,18 @@ export default defineSchema({
     provider: v.string(),
     action: v.string(),
     idempotencyKey: v.string(),
+    /** Frozen social-send identity; absent on legacy receipts, never reconstructed from a new account. */
+    publication: v.optional(v.object({
+      versionId: v.id("artifactVersions"), version: v.number(), contentHash: v.string(),
+      approvalId: v.id("approvals"), approvalHash: v.string(),
+      connectionId: v.id("connections"), externalAccountId: v.optional(v.string()),
+      channel: v.string(), isFixture: v.boolean(),
+    })),
+    providerResult: v.optional(v.object({
+      status: v.union(v.literal("verified"), v.literal("failed"), v.literal("uncertain"), v.literal("fixture_verified")),
+      summary: v.string(), externalId: v.optional(v.string()), at: v.number(),
+    })),
+    resolution: v.optional(v.object({ source: v.union(v.literal("provider_read"), v.literal("owner")), outcome: v.union(v.literal("posted"), v.literal("not_posted")), at: v.number(), by: v.optional(v.id("users")), previousSummary: v.optional(v.string()) })),
     status: v.union(
       v.literal("verified"),
       v.literal("failed"),

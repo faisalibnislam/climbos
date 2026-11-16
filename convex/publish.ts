@@ -5,23 +5,23 @@ import {
   instagramApprovalValue,
   publishImage,
   PUBLISH_INSTAGRAM_ACTION,
-  reconcilePublish,
+  getMedia,
 } from "../shared/integrations/instagram";
 import {
   pagePostApprovalValue,
   publishPagePost,
   PUBLISH_PAGE_POST_ACTION,
-  reconcilePagePost,
+  getPost as getPagePost,
 } from "../shared/integrations/facebookPages";
-import { linkedInApprovalValue, publishPost as publishLinkedInPost, PUBLISH_LINKEDIN_ACTION, reconcilePost as reconcileLinkedInPost } from "../shared/integrations/linkedin";
+import { linkedInApprovalValue, publishPost as publishLinkedInPost, PUBLISH_LINKEDIN_ACTION, getPost as getLinkedInPost } from "../shared/integrations/linkedin";
 import { normalizeHashtag } from "../shared/integrations/drafts";
-import { publishTweet, PUBLISH_X_ACTION, reconcileTweet, xApprovalValue } from "../shared/integrations/x";
+import { publishTweet, PUBLISH_X_ACTION, getTweet, xApprovalValue } from "../shared/integrations/x";
 import { can, checkApprovalForExecution } from "../shared/policy";
 import { scopesFor, type ScopedCapability } from "../shared/integrations/oauth";
 import { routeDraft } from "../shared/autopilot";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { action, internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx } from "./_generated/server";
+import { action, internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { appError } from "./lib/tenancy";
 import { emitEvent } from "./webhooks";
 import { audit } from "./lib/audit";
@@ -29,6 +29,7 @@ import { autopilotLive, onPublishBlocked, onPublishOutcome, settingsFor, trustFo
 import { notifyOwners } from "./lib/notify";
 import { featureAllowed, fleetStopped } from "./lib/access";
 import { imageUrlFor } from "./lib/media";
+import { publicationMatchesArtifact } from "./lib/approvals";
 
 /**
  * Publishing executor. Immediately before any external write it re-checks:
@@ -192,6 +193,7 @@ export const beginReceipt = internalMutation({
       provider: args.provider,
       action: args.action,
       idempotencyKey: args.idempotencyKey,
+      publication: { versionId: version._id, version: a.currentVersion, contentHash: version.contentHash, approvalId: approval._id, approvalHash: approval.approvalHash, connectionId: connection._id, externalAccountId: connection.externalAccountId, channel: a.channel, isFixture: Boolean(connection.isFixture) },
       status: "uncertain",
       summary: "Sending to the platform…",
       createdAt: Date.now(),
@@ -211,16 +213,20 @@ export const finishReceipt = internalMutation({
     summary: v.string(),
   },
   handler: async (ctx, args) => {
+    const receipt = await ctx.db.get(args.receiptId);
+    const a = await ctx.db.get(args.artifactId);
+    if (!receipt || !a || receipt.orgId !== a.orgId || receipt.artifactId !== a._id || receipt.status !== "uncertain" || receipt.providerResult || receipt.resolution) return;
     const now = Date.now();
     await ctx.db.patch(args.receiptId, {
       status: args.status,
       externalId: args.externalId,
       summary: args.summary.slice(0, 400),
       verifiedAt: args.status === "verified" || args.status === "fixture_verified" ? now : undefined,
+      providerResult: { status: args.status, externalId: args.externalId, summary: args.summary.slice(0, 400), at: now },
     });
-    const a = await ctx.db.get(args.artifactId);
-    if (!a) return;
-    await settleArtifact(ctx, a, args.status, args.summary, args.externalId);
+    const approval = a.approvalId ? await ctx.db.get(a.approvalId) : null;
+    if (publicationMatchesArtifact(receipt, a, approval) && ["publishing", "uncertain"].includes(a.status)) await settleArtifact(ctx, a, args.status, args.summary, args.externalId);
+    else await audit(ctx, { orgId: receipt.orgId, actorType: "system", action: "publish.previous_attempt_result", subjectType: "receipt", subjectId: receipt._id, summary: `Recorded ${args.status} for the original publishing attempt; current content was left unchanged.` });
   },
 });
 
@@ -228,6 +234,7 @@ export const finishReceipt = internalMutation({
 async function settleArtifact(ctx: MutationCtx, a: Doc<"artifacts">, outcome: Doc<"actionReceipts">["status"], summary: string, externalId?: string) {
   const now = Date.now();
   const status = outcome === "verified" || outcome === "fixture_verified" ? "published" : outcome === "uncertain" ? "uncertain" : "failed";
+  if (a.status === status) return;
   await ctx.db.patch(a._id, { status, updatedAt: now, lastPublishError: status === "failed" ? { message: summary.slice(0, 400), at: now } : undefined });
   if (status === "published" && a.approvalId) await ctx.db.patch(a.approvalId, { status: "consumed" });
   if (status === "published") await emitEvent(ctx, a.orgId, "post.published", { title: a.title, channel: a.channel, externalId: externalId ?? null });
@@ -246,6 +253,8 @@ export const settleFromReceipt = internalMutation({
     const a = await ctx.db.get(artifactId);
     const r = await ctx.db.get(receiptId);
     if (!a || !r || !SENDABLE.includes(a.status)) return;
+    const approval = a.approvalId ? await ctx.db.get(a.approvalId) : null;
+    if (!publicationMatchesArtifact(r, a, approval)) return;
     await settleArtifact(ctx, a, r.status, r.summary, r.externalId);
   },
 });
@@ -542,39 +551,100 @@ export const publishArtifact = internalAction({
   },
 });
 
-/** Look up the provider before any retry of an uncertain write. */
+/** Read only the identity frozen when this send was claimed, never the current destination. */
+async function recoveryContext(ctx: QueryCtx | MutationCtx, receiptId: Id<"actionReceipts">) {
+  const receipt = await ctx.db.get(receiptId);
+  const p = receipt?.publication;
+  if (!receipt || receipt.status !== "uncertain" || !receipt.artifactId || !p || p.isFixture || !p.externalAccountId) return null;
+  const artifact = await ctx.db.get(receipt.artifactId);
+  const version = await ctx.db.get(p.versionId);
+  const connection = await ctx.db.get(p.connectionId);
+  const provider = TARGET[p.channel as keyof typeof TARGET];
+  if (!artifact || artifact.orgId !== receipt.orgId || !version || version.orgId !== receipt.orgId || version.artifactId !== receipt.artifactId || version.version !== p.version || version.contentHash !== p.contentHash
+    || !provider || provider !== receipt.provider || ACTION_FOR[provider] !== receipt.action
+    || !connection || connection.orgId !== receipt.orgId || connection.provider !== provider || connection.status !== "connected" || connection.isFixture || connection.externalAccountId !== p.externalAccountId) return null;
+  return { receipt, version, connection, provider };
+}
+
+export const recoveryContextFor = internalQuery({ args: { receiptId: v.id("actionReceipts") }, handler: recoveryContextQuery });
+async function recoveryContextQuery(ctx: QueryCtx, args: { receiptId: Id<"actionReceipts"> }) { return recoveryContext(ctx, args.receiptId); }
+
+/** A provider read is an observation, not another publishing attempt. Recheck its account and credential identity after I/O. */
+export const recordRecovery = internalMutation({
+  args: { receiptId: v.id("actionReceipts"), externalId: v.string(), connectionUpdatedAt: v.number(), secretId: v.id("connectionSecrets"), requestedBy: v.optional(v.id("users")) },
+  handler: async (ctx, args) => {
+    const c = await recoveryContext(ctx, args.receiptId);
+    if (!c || c.receipt.externalId !== args.externalId || c.connection.updatedAt !== args.connectionUpdatedAt) return;
+    if (args.requestedBy) {
+      const member = await ctx.db.query("memberships").withIndex("by_org_user", q => q.eq("orgId", c.receipt.orgId).eq("userId", args.requestedBy)).unique();
+      if (member?.status !== "active" || !can(member.role, "approve")) return;
+    }
+    const secret = await ctx.db.get(args.secretId);
+    if (!secret || secret.orgId !== c.receipt.orgId || secret.connectionId !== c.connection._id) return;
+    const now = Date.now();
+    const summary = "Confirmed by reading the original provider post and matching its content.";
+    await ctx.db.patch(c.receipt._id, { status: "verified", summary, verifiedAt: now, resolution: { source: "provider_read", outcome: "posted", at: now, previousSummary: c.receipt.summary.slice(0, 400) } });
+    const a = await ctx.db.get(c.receipt.artifactId!);
+    const approval = a?.approvalId ? await ctx.db.get(a.approvalId) : null;
+    if (a && publicationMatchesArtifact(c.receipt, a, approval) && ["publishing", "uncertain"].includes(a.status)) await settleArtifact(ctx, a, "verified", summary, args.externalId);
+    await audit(ctx, { orgId: c.receipt.orgId, actorType: "system", action: "publish.reconciled", subjectType: "receipt", subjectId: c.receipt._id, summary });
+  },
+});
+
+/** Exact-ID read-back only. Missing IDs, inaccessible posts and incomplete feeds never prove non-publication. */
 export const reconcile = internalAction({
-  args: { receiptId: v.id("actionReceipts") },
-  handler: async (ctx, { receiptId }) => {
-    const r = await ctx.runQuery(internal.publish.receipt, { receiptId });
-    if (!r || r.status !== "uncertain" || !r.artifactId) return;
-    const c = await ctx.runQuery(internal.publish.publishContext, { artifactId: r.artifactId });
-    if (!c?.connection || !c.version) return;
-    if (c.connection.isFixture) return;
-    await freshConnection(ctx, c.connection);
-    const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId: c.connection._id });
-    if (!secret) return;
-    const { accessToken } = JSON.parse(secret.value) as { accessToken: string };
+  args: { receiptId: v.id("actionReceipts"), requestedBy: v.optional(v.id("users")) },
+  handler: async (ctx, { receiptId, requestedBy }) => {
+    let c = await ctx.runQuery(internal.publish.recoveryContextFor, { receiptId });
+    if (!c || !c.receipt.externalId || c.receipt.externalId.startsWith("container:")) return;
+    await freshConnection(ctx, c.connection).catch(() => null);
+    c = await ctx.runQuery(internal.publish.recoveryContextFor, { receiptId });
+    if (!c || !c.receipt.externalId || (c.connection.expiresAt !== undefined && c.connection.expiresAt <= Date.now())) return;
+    const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId: c.connection._id }).catch(() => null);
+    if (!secret || secret.orgId !== c.receipt.orgId || secret.provider !== c.provider || secret.externalAccountId !== c.connection.externalAccountId) return;
+    let accessToken: string;
+    try {
+      const parsed = JSON.parse(secret.value) as { accessToken?: unknown } | null;
+      if (typeof parsed?.accessToken !== "string" || !parsed.accessToken.trim()) return;
+      accessToken = parsed.accessToken;
+    } catch { return; }
+    const id = c.receipt.externalId;
+    const account = c.connection.externalAccountId;
     const caption = [c.version.body, c.version.hashtags.join(" ")].filter(Boolean).join("\n\n");
-    const since = Math.floor(r.createdAt / 1000) - 300;
-    let found: { outcome: "found"; externalId: string } | { outcome: "not_found" } | { outcome: "unknown"; providerMessage: string };
-    if (c.provider === "instagram") {
-      const containerId = r.externalId?.startsWith("container:") ? r.externalId.slice(10) : null;
-      if (!containerId) return; // No container id recorded: needs operator review.
-      found = await reconcilePublish({ accessToken, igUserId: c.connection.externalAccountId ?? "", containerId, caption });
-    } else if (c.provider === "linkedin") {
-      found = await reconcileLinkedInPost({ accessToken, authorUrn: c.connection.externalAccountId ?? "", text: socialText(c.version), postUrn: r.externalId });
-    } else if (c.provider === "x") {
-      found = await reconcileTweet({ accessToken, userId: c.connection.externalAccountId ?? "", text: socialText(c.version), tweetId: r.externalId, sinceMs: since * 1000 });
-    } else {
-      found = await reconcilePagePost({ accessToken, pageId: c.connection.externalAccountId ?? "", message: caption, sinceUnix: since });
-    }
-    if (found.outcome === "found") {
-      await ctx.runMutation(internal.publish.finishReceipt, { receiptId, artifactId: r.artifactId as Id<"artifacts">, status: "verified", externalId: found.externalId, summary: "Confirmed on the platform after checking." });
-    } else if (found.outcome === "not_found") {
-      await ctx.runMutation(internal.publish.finishReceipt, { receiptId, artifactId: r.artifactId as Id<"artifacts">, status: "failed", summary: "Checked the platform: it wasn't posted. You can try again." });
-    }
-    // "unknown": stay uncertain; operators see it in /ops.
+    const same = (a: string, b: string | undefined) => b !== undefined && a.normalize("NFC").trim() === b.normalize("NFC").trim();
+    let matches = false;
+    try {
+      if (c.provider === "linkedin") {
+        const read = await getLinkedInPost({ accessToken, postUrn: id });
+        matches = read.ok && read.data.id === id && read.data.author === account && read.data.lifecycleState === "PUBLISHED" && same(socialText(c.version), read.data.text);
+      } else if (c.provider === "x") {
+        const read = await getTweet({ accessToken, tweetId: id });
+        matches = read.ok && read.data.id === id && read.data.authorId === account && same(socialText(c.version), read.data.text);
+      } else if (c.provider === "facebook_pages") {
+        if (id.includes("_") && id.split("_")[0] !== account) return;
+        const read = await getPagePost({ accessToken, postId: id });
+        matches = read.ok && read.data.id === id && same(caption, read.data.message);
+      } else if (/^\d+$/.test(id)) {
+        const read = await getMedia({ accessToken, mediaId: id });
+        matches = read.ok && read.data.id === id && same(caption, read.data.caption);
+      }
+    } catch { return; }
+    if (matches) await ctx.runMutation(internal.publish.recordRecovery, { receiptId, externalId: id, connectionUpdatedAt: c.connection.updatedAt, secretId: secret.secretId, requestedBy });
+    // Unknown observations keep the original result. No resend and no "not posted" inference.
+  },
+});
+
+/** Owner-requested, read-only recovery of the exact attempt shown in the review panel. */
+export const checkResult = action({
+  args: { slug: v.string(), artifactId: v.id("artifacts"), receiptId: v.id("actionReceipts"), versionId: v.id("artifactVersions"), approvalId: v.union(v.id("approvals"), v.null()), approvalHash: v.union(v.string(), v.null()) },
+  handler: async (ctx, args): Promise<"verified" | "uncertain"> => {
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug: args.slug, permission: "approve" });
+    const view = await ctx.runQuery(api.content.get, { slug: args.slug, artifactId: args.artifactId });
+    const r = view.recovery;
+    if (view.status !== "uncertain" || !r || r.receiptId !== args.receiptId || r.versionId !== args.versionId || r.approvalId !== args.approvalId || r.approvalHash !== args.approvalHash) throw appError("INVALID", "This publishing attempt changed. Reload before checking its result.");
+    await ctx.runAction(internal.publish.reconcile, { receiptId: args.receiptId, requestedBy: access.userId });
+    const result = await ctx.runQuery(internal.publish.receipt, { receiptId: args.receiptId });
+    return result?.orgId === access.orgId && result.status === "verified" && result.resolution?.source === "provider_read" ? "verified" : "uncertain";
   },
 });
 

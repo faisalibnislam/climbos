@@ -26,6 +26,18 @@ export async function invalidateApprovals(ctx: MutationCtx, artifactId: Id<"arti
   }
 }
 
+/** Can this result describe the artifact currently shown? Legacy keys only establish version/attempt identity. */
+export function publicationMatchesArtifact(receipt: Doc<"actionReceipts">, artifact: Doc<"artifacts">, approval: Doc<"approvals"> | null): boolean {
+  if (receipt.orgId !== artifact.orgId || receipt.artifactId !== artifact._id) return false;
+  if (artifact.approvalId && (!approval || approval._id !== artifact.approvalId || approval.orgId !== artifact.orgId || approval.subjectType !== "artifact" || approval.subjectId !== artifact._id)) return false;
+  const p = receipt.publication;
+  if (p) return artifact.currentVersionId === p.versionId && artifact.currentVersion === p.version && artifact.channel === p.channel
+    && artifact.approvalId === p.approvalId && approval?._id === p.approvalId && approval.orgId === artifact.orgId
+    && approval.subjectType === "artifact" && approval.subjectId === artifact._id && approval.approvalHash === p.approvalHash && approval.contentHash === p.contentHash;
+  const key = `${artifact.orgId}:publish:${artifact._id}:v${artifact.currentVersion}`;
+  return receipt.idempotencyKey === key || Boolean(artifact.approvalId && receipt.idempotencyKey === `${key}:${artifact.approvalId}`);
+}
+
 /** The connected account an artifact would publish through, if any. */
 export async function publishTarget(ctx: MutationCtx, orgId: Id<"organizations">, channel: Doc<"artifacts">["channel"]) {
   const provider = DIRECT_PUBLISH[channel];
