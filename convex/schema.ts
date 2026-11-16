@@ -4763,8 +4763,26 @@ export default defineSchema({
     shares: v.optional(v.number()),
     saves: v.optional(v.number()),
     clicks: v.optional(v.number()),
+    artifactVersionId: v.optional(v.id("artifactVersions")),
+    artifactVersionNumber: v.optional(v.number()),
+    contentHash: v.optional(v.string()),
+    recordedBy: v.optional(v.id("users")),
+    fromDate: v.optional(v.string()),
+    toDate: v.optional(v.string()),
+    timeZone: v.optional(v.string()),
+    periodStart: v.optional(v.number()),
+    periodEnd: v.optional(v.number()),
+    measurementNote: v.optional(v.string()),
+    qualifiedVisits: v.optional(v.number()),
+    signups: v.optional(v.number()),
+    payingCustomers: v.optional(v.number()),
+    activatedCustomers: v.optional(v.number()),
+    retainedCustomers: v.optional(v.number()),
+    customerQuestionsAnswered: v.optional(v.number()),
+    operatingMinutes: v.optional(v.number()),
   })
     .index("by_org_captured", ["orgId", "capturedAt"])
+    .index("by_artifact_captured", ["artifactId", "capturedAt"])
     .index("by_artifact", ["artifactId"]),
 
   /* ---------------- Chat and action cards ---------------- */

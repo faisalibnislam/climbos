@@ -1,0 +1,47 @@
+import { expect, test } from "@playwright/test";
+import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
+import { localDemoFixtures } from "./local-demo-fixtures";
+const envFile = process.env.CLIMBOS_DESIGN_E2E_ENV_FILE;
+const { rows } = localDemoFixtures(envFile);
+test("post observations preserve zero, unknowns and corrections without actions @mobile", async ({ page, baseURL }, testInfo) => {
+  test.skip(!envFile, "Requires isolated local demo"); test.setTimeout(90000); page.setDefaultTimeout(15000);
+  expect(baseURL).toBe("http://127.0.0.1:3420");
+  const slug = await openDemo(page);
+  const org = (await rows("organizations")).find(row => row.slug === slug);
+  if (!org || org.kind !== "demo") throw new Error("Isolated demo required");
+  const post = (await rows("artifacts")).find(row => row.orgId === org._id && row.kind === "social_post" && row.status === "published");
+  if (!post) throw new Error("Published synthetic post required");
+  const effects = async () => Promise.all(["artifacts", "approvals", "actionReceipts", "workflowRuns"].map(async table => (await rows(table)).filter(row => row.orgId === org._id)));
+  const before = await effects();
+  await page.goto(`/app/${slug}/content/${post._id}`);
+  await page.getByRole("button", { name: "Record results", exact: true }).click();
+  const form = page.getByRole("region", { name: "Record post results" });
+  const day = new Date(Date.now()-2*86400000);
+  const dateLabel = day.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  for (const name of ["From date", "Through date"]) {
+    await form.getByRole("button", { name, exact: true }).click();
+    await page.getByRole("gridcell", { name: dateLabel, exact: true }).click();
+  }
+  await form.getByLabel("Qualified visits", { exact: true }).fill("12");
+  await form.getByLabel("Paying customers", { exact: true }).fill("0");
+  await form.getByLabel("How did you measure this?", { exact: true }).fill("Synthetic analytics sample; qualified means service-area visitors. Signups unmeasured.");
+  await form.getByRole("button", { name: "Save results", exact: true }).click();
+  await expect(page.getByText("Results recorded", { exact: true })).toBeVisible();
+  await expect(page.getByText("Synthetic demo report").first()).toBeVisible();
+  const summary = page.locator("div.rounded-lg").filter({ has: page.getByText(/^Synthetic demo report/) }).first();
+  await expect(summary).toContainText("SignupsUnknown");
+  await expect(summary).toContainText("Paying customers0");
+  await page.getByRole("button", { name: "Add or correct results" }).click();
+  await form.getByLabel("Qualified visits", { exact: true }).fill("9");
+  await form.getByRole("button", { name: "Save results", exact: true }).click();
+  await expect(form).toBeHidden();
+  await page.reload();
+  await page.getByText("Report history", { exact: true }).click();
+  await expect(page.getByText(/^Synthetic demo report/)).toHaveCount(3);
+  const saved = (await rows("postMetrics")).filter(row => row.artifactId === post._id);
+  expect(saved.map(row => row.qualifiedVisits).sort()).toEqual([12,9]);
+  expect(saved.every(row => row.source === "fixture" && row.payingCustomers === 0 && row.signups === undefined)).toBe(true);
+  await expectNoHorizontalScroll(page); await expectAccessible(page, "Post result reporting");
+  await page.screenshot({ path: testInfo.outputPath("post-results.png"), fullPage: true });
+  expect(await effects()).toEqual(before);
+});

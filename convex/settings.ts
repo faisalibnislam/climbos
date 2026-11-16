@@ -484,6 +484,7 @@ export const exportData = internalQuery({
     const platformPreparations = await ctx.db.query("platformPreparations").withIndex("by_org_kind", (q) => q.eq("orgId", orgId)).take(1000);
     const experiments = await ctx.db.query("experiments").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(1000);
     const businessModelTests = await ctx.db.query("businessModelTests").withIndex("by_org_created", q => q.eq("orgId", orgId)).order("desc").take(1001);
+    const postObservations = await ctx.db.query("postMetrics").withIndex("by_org_captured", q => q.eq("orgId", orgId)).order("desc").take(1001);
     const weeklyReports = await ctx.db.query("playResults").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
     const weeklyRevisions = await ctx.db.query("playResultRevisions").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
     const outcomeRevisions = await ctx.db.query("experimentOutcomeRevisions").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
@@ -508,6 +509,8 @@ export const exportData = internalQuery({
         experiments: strip(experiments),
         businessModelTests: strip(businessModelTests.slice(0, 1000)),
         businessModelTestHistoryLimited: businessModelTests.length > 1000,
+        postObservations: strip(postObservations.slice(0, 1000)),
+        postObservationHistoryLimited: postObservations.length > 1000,
         weeklyReports: strip(weeklyReports.slice(0, 1000)),
         weeklyReportsLimited: weeklyReports.length > 1000,
         weeklyReportRevisions: strip(weeklyRevisions.slice(0, 1000)),
@@ -774,6 +777,7 @@ const PURGE_BY_ORG: { table: string; index: string }[] = [
   { table: "actionCards", index: "by_org_status" },
   { table: "chatMessages", index: "by_org_created" },
   { table: "metricDaily", index: "by_org_date" },
+  { table: "postMetrics", index: "by_org_captured" },
   { table: "revenueEvents", index: "by_org_occurred" },
   { table: "touches", index: "by_org_customer" },
   { table: "platformClaims", index: "by_org_platform_date" },

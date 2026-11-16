@@ -32,6 +32,7 @@ import { TranslateDialog } from "@/components/app/content/TranslateDialog";
 import { FactsList, FlaggedClaims, ReceiptsTimeline, VersionHistory } from "@/components/app/content/detail/HistoryPanels";
 import { EmailSendPanel, isEmailKind } from "@/components/app/content/detail/EmailSendPanel";
 import { PublishPanel } from "@/components/app/content/detail/PublishPanel";
+import { PostResultsPanel } from "@/components/app/content/detail/PostResultsPanel";
 import { UncertainPanel } from "@/components/app/content/detail/UncertainPanel";
 import { isCampaignAd, isSocial, type ArtifactView } from "@/components/app/content/detail/model";
 import { SuggestedVisual } from "@/components/app/content/detail/SuggestedVisual";
@@ -152,6 +153,8 @@ function ArtifactDetail({ slug, artifactId }: { slug: string; artifactId: Id<"ar
             {cur ? <ChannelPreview channel={artifact.channel} version={cur} accountLabel={artifact.publishTarget?.accountLabel} /> : <p className="text-sm text-ink-3">No text yet.</p>}
             {locked ? <p className="text-sm text-ink-3">{artifact.status === "uncertain" ? "Check if it posted before editing." : "Published content can't be edited."}</p> : null}
           </Section>
+
+          {artifact.kind === "social_post" ? <PostResultsPanel slug={slug} artifactId={artifact.id} /> : null}
 
           {cur && isSocial(artifact.channel) && !artifact.reel ? (
             <Section id="visual-heading" title="Suggested visual">
