@@ -4622,6 +4622,7 @@ export default defineSchema({
     callToAction: v.string(),
     needsOwner: v.boolean(),
     ownerNote: v.optional(v.string()),
+    trendEvidence: v.optional(v.object({ sourceUrl: v.string(), observationDate: v.string(), observation: v.string(), retrievedAt: v.optional(v.number()) })),
     status: v.union(
       v.literal("planned"),
       v.literal("drafting"),

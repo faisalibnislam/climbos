@@ -13,7 +13,8 @@ import {
   TRUST_THRESHOLD,
   tzOffsetMinutes,
 } from "../shared/autopilot";
-import type { SocialCalendar } from "../shared/agents/specs";
+import { calendarTrendIssues, SocialCalendarSchema } from "../shared/agents/specs";
+import { trendFreshnessIssue } from "../shared/agents/trendFreshness";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
@@ -79,6 +80,7 @@ export const get = query({
                 status: s.status,
                 needsOwner: s.needsOwner,
                 ownerNote: s.ownerNote ?? null,
+                trendEvidence: s.trendEvidence ?? null,
                 routing: s.routing ?? null,
                 artifact: a ? { id: a._id, title: a.title, status: a.status, preview: ver?.body.slice(0, 220) ?? "", hasImage: Boolean(ver?.imageStorageId || ver?.imageR2Key) } : null,
               };
@@ -443,14 +445,18 @@ export const planningContext = internalQuery({
 
 /** Save the planner's week and kick off drafting, one run per channel. */
 export const saveWeekPlan = internalMutation({
-  args: { runId: v.id("workflowRuns"), weekOf: v.string(), fromDay: v.number(), plan: v.any() },
-  handler: async (ctx, { runId, weekOf, fromDay, plan: raw }) => {
+  args: { runId: v.id("workflowRuns"), weekOf: v.string(), fromDay: v.number(), plan: v.any(), research: v.optional(v.object({ notes: v.string(), sources: v.array(v.object({ url: v.string() })), retrievedAt: v.optional(v.number()) })) },
+  handler: async (ctx, { runId, weekOf, fromDay, plan: raw, research }) => {
     const run = await ctx.db.get(runId);
     if (!run) return;
     const org = await ctx.db.get(run.orgId);
     const settings = await settingsFor(ctx, run.orgId);
     if (!org || !settings) return;
-    const plan = raw as SocialCalendar;
+    const plan = SocialCalendarSchema.parse(raw);
+    for (const [index, slot] of plan.slots.entries()) {
+      const issues = calendarTrendIssues(slot, { task: "Save calendar", brief: "", facts: [], precomputedResearch: research, availableSourceUrls: research?.sources.map(source => source.url) ?? [] }, `slots[${index}]`);
+      if (issues.some(issue => issue.severity === "error")) throw appError("INVALID", issues.find(issue => issue.severity === "error")!.message);
+    }
     const now = Date.now();
     const preview = runInput(run).preview === true;
     // Room left per channel (before this plan's old not-yet-drafted slots are replaced below).
@@ -487,6 +493,9 @@ export const saveWeekPlan = internalMutation({
       const indexOnDay = perDay.get(key) ?? 0;
       perDay.set(key, indexOnDay + 1);
       const at = slotTime({ weekOf, day: s.day, channel: s.channel, timeZone: org.timezone, preferredHours: settings.postingHours, indexOnDay });
+      const trendEvidence = s.trendEvidence ? { ...s.trendEvidence, retrievedAt: research?.retrievedAt } : undefined;
+      const freshness = trendFreshnessIssue(trendEvidence ? { trendEvidence, supportingSourceUrls: [trendEvidence.sourceUrl] } : undefined, now, at);
+      if (freshness) throw appError("INVALID", freshness);
       await ctx.db.insert("calendarSlots", {
         orgId: org._id,
         weekOf,
@@ -504,6 +513,7 @@ export const saveWeekPlan = internalMutation({
         callToAction: s.callToAction.slice(0, 200),
         needsOwner: s.needsOwner,
         ownerNote: s.ownerNote?.slice(0, 300) || undefined,
+        trendEvidence,
         status: "planned",
         createdAt: now,
         updatedAt: now,
@@ -567,11 +577,28 @@ export const startDrafts = internalMutation({
   },
 });
 
+/** Read the exact tenant-bound slots again; an owner's free-text request cap must not cut off a later slot. */
+export const draftingContext = internalQuery({
+  args: { runId: v.id("workflowRuns"), channel: v.string() },
+  handler: async (ctx, { runId, channel }) => {
+    const run = await ctx.db.get(runId);
+    if (!run || run.kind !== "content_social") return null;
+    const slots = await ctx.db.query("calendarSlots").withIndex("by_draft_run", q => q.eq("draftRunId", runId)).take(MAX_PER_CHANNEL + 1);
+    if (!slots.length) return null;
+    if (slots.length > MAX_PER_CHANNEL || slots.some(slot => slot.orgId !== run.orgId || slot.channel !== channel)) throw appError("INVALID", "The draft's planned slots do not match its workspace or channel.");
+    const org = await ctx.db.get(run.orgId);
+    if (!org) return null;
+    const brief = draftBrief(slots.sort((a, b) => a.slotAt - b.slotAt), org.timezone);
+    if (brief.length > 30_000) throw appError("INVALID", "The planned post details are too long. Shorten them before drafting.");
+    return { brief, count: slots.length, trendSourceUrls: [...new Set(slots.flatMap(slot => slot.trendEvidence ? [slot.trendEvidence.sourceUrl] : []))] };
+  },
+});
+
 function draftBrief(slots: Doc<"calendarSlots">[], timeZone: string) {
-  const day = (t: number) => new Date(t).toLocaleString("en-US", { timeZone, weekday: "long", hour: "numeric", minute: "2-digit" });
+  const day = (t: number) => new Date(t).toLocaleString("en-US", { timeZone, year: "numeric", month: "short", day: "numeric", weekday: "long", hour: "numeric", minute: "2-digit" });
   return [
     `Write exactly ${slots.length} post${slots.length === 1 ? "" : "s"}, one per planned slot below, in this order. Follow each slot's idea, format and call to action; the hook draft is a starting point you may improve.`,
-    ...slots.map((s, i) => `${i + 1}. ${day(s.slotAt)} · ${s.format} · ${s.purpose} · pillar "${s.pillar}"\n   Idea: ${s.idea}\n   Angle: ${s.angle}${s.approvedOfferPlayName ? `\n   Exact approved offer play: ${s.approvedOfferPlayName}` : ""}\n   Hook draft: ${s.hookDraft}\n   Call to action: ${s.callToAction}${s.ownerNote ? `\n   Note: ${s.ownerNote}` : ""}`),
+    ...slots.map((s, i) => `${i + 1}. ${day(s.slotAt)} (${timeZone}) · ${s.format} · ${s.purpose} · pillar "${s.pillar}"\n   Idea: ${s.idea}\n   Angle: ${s.angle}${s.approvedOfferPlayName ? `\n   Exact approved offer play: ${s.approvedOfferPlayName}` : ""}\n   Hook draft: ${s.hookDraft}\n   Call to action: ${s.callToAction}${s.ownerNote ? `\n   Note: ${s.ownerNote}` : ""}${s.trendEvidence ? `\n   Prior trend inspiration (not fresh research or publication approval): ${JSON.stringify(s.trendEvidence)}\n   Recheck this exact source and its current business/platform fit. Use an evergreen treatment if fresh dated evidence is unavailable; never relabel this prior observation as newly observed.` : ""}`),
   ].join("\n");
 }
 

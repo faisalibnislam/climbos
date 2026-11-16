@@ -55,6 +55,46 @@ describe("persisted research in generation context", () => {
     for (const table of ["approvals", "actionReceipts", "artifacts"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
   });
 
+  it("keeps every saved Autopilot slot and its prior source in the actual drafting input", async () => {
+    const t = setup(); vi.stubEnv("CLIMBOS_FAKE_LLM", "");
+    const owner = await asNewUser(t, "calendar-draft-context@example.com");
+    const { orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Calendar context" });
+    const now = Date.now(); const sourceUrl = "https://research.example/observed-format";
+    const runId = await t.run(async ctx => {
+      const id = await ctx.db.insert("workflowRuns", { orgId, kind: "content_social", title: "Calendar draft input", status: "proposed", input: "{}", engine: "v2", roles: [], estimateMicros: 0, actualMicros: 0, rateVersionId: RATE_VERSIONS[0].id, entitlementVersionId: "test", routingVersionId: "test", budget: { modelSteps: 20, researchTools: 5, repairs: 0 }, used: { modelSteps: 0, researchTools: 0, repairs: 0 }, isFixture: false, createdAt: now, updatedAt: now });
+      for (let i = 0; i < 6; i++) await ctx.db.insert("calendarSlots", { orgId, weekOf: "2026-11-16", day: i + 1, slotAt: now + i * 86400000, channel: "linkedin", pillar: "Explain", purpose: "teach", format: "text", idea: `Saved idea ${i + 1}: ${"Synthetic context. ".repeat(20)}`, angle: "Explain a workflow", hookDraft: `Distinct hook ${i + 1}`, callToAction: `Complete final instruction ${i + 1}`, needsOwner: true, status: "drafting", draftRunId: id, trendEvidence: { sourceUrl, observationDate: "2026-11-15", observation: "A creator shows the process before its result.", retrievedAt: now - 1000 }, createdAt: now, updatedAt: now });
+      return id;
+    });
+    await t.action(internal.jobs.createContent, { runId, job: "content_social", channel: "linkedin", quantity: 6, brief: "This older truncated scheduler argument must not replace the saved slots https://untrusted.example/generated-link" });
+    expect(captured.inputs).toHaveLength(1);
+    const input = captured.inputs[0];
+    for (let i = 1; i <= 6; i++) expect(input.task).toContain(`Complete final instruction ${i}`);
+    expect(input.task).not.toContain("older truncated scheduler argument");
+    expect(input.ownerSuppliedUrls).toEqual([]);
+    expect(input.task).toContain("not fresh research or publication approval");
+    expect(input.research?.brief).toContain(sourceUrl);
+    expect(input.research?.brief).toContain("do not invent an updated observation date");
+    for (const table of ["artifacts", "approvals", "actionReceipts"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
+  });
+
+  it("records the research retrieval time from the actual calendar job, not the generated plan", async () => {
+    const t = setup(); vi.stubEnv("CLIMBOS_FAKE_LLM", "");
+    const owner = await asNewUser(t, "calendar-research-context@example.com");
+    const { orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Calendar research" });
+    const now = Date.now(), observed = new Date(now).toISOString().slice(0, 10), sourceUrl = "https://research.example/calendar-format";
+    const evidence = { sourceUrl, observationDate: observed, observation: "A creator shows a process before its result." };
+    const runId = await t.run(async ctx => {
+      await ctx.db.insert("autopilotSettings", { orgId, enabled: false, mode: "always_ask", channels: [{ channel: "linkedin", postsPerWeek: 1 }], postingHours: [12], alwaysAskTopics: [], imagesPerWeek: 0, trust: [], updatedBy: owner.userId, createdAt: now, updatedAt: now });
+      return ctx.db.insert("workflowRuns", { orgId, kind: "social_calendar", title: "Calendar research input", status: "executing", input: JSON.stringify({ preview: true }), engine: "v2", roles: [], estimateMicros: 0, actualMicros: 0, rateVersionId: RATE_VERSIONS[0].id, entitlementVersionId: "test", routingVersionId: "test", budget: { modelSteps: 20, researchTools: 5, repairs: 0 }, used: { modelSteps: 0, researchTools: 0, repairs: 0 }, isFixture: false, createdBy: owner.userId, createdAt: now, updatedAt: now });
+    });
+    const readAt = now - 1;
+    captured.reply = { output: { weekTheme: "Explain the process", pillars: [], learningsApplied: [], slots: [{ channel: "linkedin", day: 1, pillar: "Explain", purpose: "teach", format: "text", idea: "Adapt this meme format", angle: "Make work visible", hookDraft: "Before the result", proof: "Source observation", callToAction: "Compare your process", needsOwner: true, ownerNote: "Audience fit is a hypothesis", trendSourceUrl: sourceUrl, trendEvidence: { ...evidence, retrievedAt: now + 100000 } }] }, assessment: null, rounds: 1, history: [], research: { notes: `TREND SIGNAL 1\nSource URL: ${sourceUrl}\nObserved date: ${observed}\nObserved signal: ${evidence.observation}`, sources: [{ url: sourceUrl }], retrievedAt: readAt } };
+    await t.action(internal.jobs.planSocialWeek, { runId, weekOf: observed, fromDay: 1 });
+    expect((await t.run(ctx => ctx.db.get(runId)))?.status).toBe("verified");
+    expect((await t.run(ctx => ctx.db.query("calendarSlots").collect()))[0]?.trendEvidence).toEqual({ ...evidence, retrievedAt: readAt });
+    for (const table of ["artifacts", "approvals", "actionReceipts"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
+  });
+
   it.each([
     ["content_social", "focused"], ["content_ads", "focused"], ["content_email", "focused"],
     ["strategy", "focused"], ["strategy", "starter"],

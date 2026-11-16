@@ -1,6 +1,7 @@
 "use client";
 
 import { AiModePicker, useAiMode, type AiMode } from "@/components/app/AiModePicker";
+import { TrendEvidenceNote } from "@/components/app/content/TrendEvidenceNote";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -553,11 +554,11 @@ function SlotCard({ slug, slot, tz, canAct }: { slug: string; slot: Slot; tz: st
           </Badge>
         </span>
       </Tooltip>
-      {slot.ownerNote ? (
+      {slot.ownerNote || slot.trendEvidence ? (
         <details className="mt-1 rounded-md bg-surface-2 px-2 py-1.5">
           <summary className="cursor-pointer text-xs font-medium text-ink-2">Notes and sources</summary>
-          <p className="mt-1 whitespace-pre-wrap break-words text-xs text-ink-3">{noteWithLinks(slot.ownerNote)}</p>
-          <p className="mt-1 text-xs text-ink-3">Check the source and date before trusting a trend.</p>
+          {slot.ownerNote ? <p className="mt-1 whitespace-pre-wrap break-words text-xs text-ink-3">{noteWithLinks(slot.ownerNote)}</p> : null}
+          {slot.trendEvidence ? <TrendEvidenceNote evidence={slot.trendEvidence} /> : <p className="mt-1 text-xs text-ink-3">Check the source and date before trusting a trend.</p>}
         </details>
       ) : null}
     </article>

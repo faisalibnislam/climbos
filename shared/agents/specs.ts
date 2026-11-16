@@ -336,7 +336,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.100-nonpositive-owner-margin";
+export const ENGINE_VERSION = "v3.101-calendar-trend-evidence";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -1771,7 +1771,7 @@ function normalizedEvidenceText(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }
 
-function lintTrendEvidence(post: SocialPostsV2["posts"][number], input: AgentInput, path: string): LintIssue[] {
+function lintTrendEvidence(post: Pick<SocialPostsV2["posts"][number], "trendSourceUrl" | "trendEvidence">, input: AgentInput, path: string): LintIssue[] {
   const evidence = post.trendEvidence;
   if (!evidence) return [{ severity: "error", rule: "trend_evidence", message: "Add the dated observation copied from this run's research, or remove the current-trend reference and use an evergreen idea.", path }];
   const trendUrl = normalizeSourceUrl(post.trendSourceUrl ?? "");
@@ -2889,6 +2889,9 @@ export const SocialCalendarSchema = z.object({
       angle: z.string(),
       /** Exact approved-plan play whose terms this slot represents, when applicable. */
       approvedOfferPlayName: z.string().min(1).max(120).optional(),
+      /** Same run-bound dated evidence contract as an individual social draft. */
+      trendSourceUrl: z.string().url().max(2048).optional(),
+      trendEvidence: TrendEvidenceSchema.optional(),
       hookDraft: z.string(),
       proof: z.string(),
       callToAction: z.string(),
@@ -2899,6 +2902,17 @@ export const SocialCalendarSchema = z.object({
   learningsApplied: z.array(z.string()),
 });
 export type SocialCalendar = z.infer<typeof SocialCalendarSchema>;
+
+/** Calendar and persistence share the individual-post evidence checks. Notes alone are not evidence. */
+export function calendarTrendIssues(slot: SocialCalendar["slots"][number], input: AgentInput, path: string): LintIssue[] {
+  const namesTrend = /\b(?:trend|trending|meme|viral)\b/i.test(`${slot.idea} ${slot.angle} ${slot.hookDraft}`);
+  if (!namesTrend && !slot.trendEvidence && !slot.trendSourceUrl) return [];
+  const issues = lintTrendEvidence(slot, input, `${path}.trendEvidence`);
+  const references = (slot.ownerNote.match(/https?:\/\/[^\s)]+/g) ?? []).map(url => ({ url: url.replace(/[.,;!?]+$/, ""), path: `${path}.ownerNote` }));
+  if (slot.trendSourceUrl) references.push({ url: slot.trendSourceUrl, path: `${path}.trendSourceUrl` });
+  else issues.push({ severity: "error", rule: "trend_source", message: "A trend-inspired calendar idea needs its own exact research source and dated observation; otherwise use an evergreen idea.", path: `${path}.trendSourceUrl` });
+  return [...issues, ...lintAvailableSourceUrls(references, input)];
+}
 
 /** Plans next week's slots; `cadence` is posts per channel this week. */
 export function socialCalendarSpec(cadence: Record<string, number>, o: SpecOptions = {}): AgentSpec<SocialCalendar> {
@@ -2914,7 +2928,6 @@ export function socialCalendarSpec(cadence: Record<string, number>, o: SpecOptio
       criticSkills: ["copy-fundamentals", "social-intelligence"],
       lint: (out, input) => {
         const issues = [...lintCopy({ theme: out.weekTheme, slots: out.slots.map((s) => ({ idea: s.idea, hook: s.hookDraft })) }, { evidence: evidenceOf(input) }), ...out.slots.flatMap((slot, index) => lintApprovedOfferCopy(`${slot.idea}\n${slot.hookDraft}\n${slot.callToAction}`, input.approvedOfferTerms, `slots[${index}]`, slot.approvedOfferPlayName))];
-        const trendReferences: { url: string; path: string }[] = [];
         for (const [channel, n] of Object.entries(cadence)) {
           const got = out.slots.filter((s) => s.channel === channel).length;
           if (got !== n) issues.push({ severity: "error", rule: "count", message: `${channel} needs exactly ${n} slot${n === 1 ? "" : "s"}; the plan has ${got}.`, path: "slots" });
@@ -2922,14 +2935,8 @@ export function socialCalendarSpec(cadence: Record<string, number>, o: SpecOptio
         out.slots.forEach((s, i) => {
           if (!(s.channel in cadence)) issues.push({ severity: "error", rule: "channel", message: `"${s.channel}" isn't one of this week's channels.`, path: `slots[${i}].channel` });
           if (!Number.isInteger(s.day) || s.day < 1 || s.day > 7) issues.push({ severity: "error", rule: "day", message: "day must be 1 (Monday) to 7 (Sunday).", path: `slots[${i}].day` });
-          if (/\b(?:trend|trending|meme|viral)\b/i.test(`${s.idea} ${s.angle} ${s.hookDraft}`)) {
-            const urls = (s.ownerNote.match(/https?:\/\/[^\s)]+/g) ?? []).map((url) => url.replace(/[.,;!?]+$/, ""));
-            if (!urls.length) issues.push({ severity: "error", rule: "trend_source", message: "A current trend or meme-based calendar idea needs an exact source URL and freshness note in ownerNote; otherwise choose an evergreen angle.", path: `slots[${i}].ownerNote` });
-            for (const url of urls) trendReferences.push({ url, path: `slots[${i}].ownerNote` });
-            if (!/\b(?:date|dated|freshness|undated|unknown)\b/i.test(s.ownerNote)) issues.push({ severity: "warn", rule: "trend_freshness", message: "State the trend source's date or say freshness is unknown in ownerNote.", path: `slots[${i}].ownerNote` });
-          }
+          issues.push(...calendarTrendIssues(s, input, `slots[${i}]`));
         });
-        issues.push(...lintAvailableSourceUrls(trendReferences, input));
         const ideas = out.slots.map((s) => s.idea.trim().toLowerCase());
         if (new Set(ideas).size !== ideas.length) issues.push({ severity: "error", rule: "duplicate", message: "Two slots share the same idea; every slot needs its own.", path: "slots" });
         if (out.pillars.length > 4) issues.push({ severity: "warn", rule: "focus", message: "More than 4 pillars dilutes the week.", path: "pillars" });

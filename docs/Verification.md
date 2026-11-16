@@ -1,3 +1,27 @@
+## 16 November 2026 — calendar trend evidence and complete draft context
+
+Audit traced `planSocialWeek` → social calendar schema/lint → `autopilot.saveWeekPlan` → saved slots → `startDrafts` → `createContent` → individual-post validation → existing owner review/approval. Brand, humor and trend preferences already reach shared business context. Individual posts already require a dated matching observation; calendars previously accepted a source URL and an unknown-date note. Five failing cases reproduced missing, conflicting and stale evidence acceptance. The calendar's scheduler brief also passed through the 1,500-character owner-request cap, losing later slot instructions.
+
+Calendar slots now carry optional structured trend evidence, use the same matching-source/date/observation validator, and are validated again before persistence. Freshness is checked against the actual local slot timestamp under the existing 30-day policy. Failed saves roll back without replacing prior slots. The retrieval timestamp comes from the engine research result, not model output. The existing Regular posting source disclosure displays observation date, retrieval time, exact URL, observation and audience-fit limitation.
+
+The real drafting job now loads at most six ordered slots for its exact run, tenant and channel. A mismatch, excessive count or context above 30,000 characters is rejected rather than partially delivered. This context bypasses only the short owner-request truncation; it grants no action authority. Prior trend sources are labeled as inspiration and supplied to the same bounded research step for rechecking. A missing current signal calls for an evergreen treatment. Generated calendar URLs do not become owner-supplied URLs. Existing research call budgets, paid usage accounting, approval requirements and final publishing guards remain unchanged.
+
+Commands and results:
+
+```sh
+pnpm skills:build
+pnpm exec vitest run tests/unit/calendar-trend-evidence.test.ts tests/unit/social-intelligence.test.ts tests/unit/trend-freshness.test.ts tests/unit/trend-evidence-note.test.ts tests/convex/calendar-trend-evidence.test.ts tests/convex/research-context.test.ts tests/convex/autopilot.test.ts tests/convex/social-publish.test.ts tests/convex/calendar-awaiting-review.test.ts tests/convex/tenancy.test.ts
+pnpm typecheck
+pnpm exec eslint convex/autopilot.ts convex/jobs.ts convex/schema.ts shared/agents/specs.ts 'src/app/app/[organization]/autopilot/page.tsx' tests/unit/calendar-trend-evidence.test.ts tests/convex/calendar-trend-evidence.test.ts tests/convex/research-context.test.ts e2e/calendar-trend-evidence.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/calendar-trend-evidence.spec.ts
+git diff --check
+```
+
+**69 tests across 10 files passed** (3.21 seconds). After the final generated-link source-classification change, the two affected backend suites passed again (14 tests). **Two desktop/mobile browser checks passed** (8.4 seconds), exercising source/date disclosure with no new artifacts, approvals, receipts or workflow runs. No horizontal overflow or serious/critical automated accessibility violations occurred in those tested states; this does not prove full accessibility conformance. The mobile card capture was inspected. Typechecks, scoped lint and diff checks passed. Runtime skill compilation updated the established generated bundle.
+
+Limits: matching a research note is not independent semantic verification of its source. Audience fit, originality, humor appropriateness and commercial effect still require model/owner evaluation. A dated observation inside 30 days is not proof that a trend remains popular. Legacy slots without structured evidence remain unmodified; their notes do not acquire verified dates. This adds no continuous listening feed and performs no live-account publishing or paid model evaluation. Engine `v3.101-calendar-trend-evidence`; full product completion remains unproven.
+
 ## 16 November 2026 — zero and negative owner margins
 
 The existing paid-channel guard recognized non-positive owner margins, but the real owner path could not supply them: both forms and the mutation rejected them, the override ignored them, zero disappeared from generation context, and the calculator treated losses as invalid. Eight focused failures reproduced this mismatch before repair. The existing path now retains signed contribution margins (including below -100%) and zero churn, labels them as owner inputs, validates finite values and coherent ranges, and supplies them to focused/starter generation. No new agent, provider, dependency or campaign-timing prompt change.
