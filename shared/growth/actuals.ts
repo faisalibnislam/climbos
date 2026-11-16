@@ -102,7 +102,7 @@ export interface PlayActuals {
   ownerHours: number;
   /** Customers the plan expected by now (P10/P50/P90 scaled to the weeks logged). */
   expectedByNow: { p10: number; p50: number; p90: number } | null;
-  status: "ahead" | "on_track" | "behind" | "too_early" | "incomplete_log" | "forecast_unknown";
+  status: "ahead" | "on_track" | "behind" | "too_early" | "incomplete_log" | "forecast_unknown" | "partial_week";
   steps: StepActual[];
   /** Weekly reach actually achieved vs planned. */
   reachVsPlan: number | null;
@@ -112,6 +112,10 @@ export interface PlayActuals {
   unloggedWeeks: number;
   /** Logged weeks before the play's start (ignored). */
   ignoredBeforeStart: number;
+  /** Last UTC reporting week included in the observation window. */
+  throughWeek?: number;
+  currentWeekIncluded?: boolean;
+  comparisonIssue?: string | null;
 }
 
 export type CostCheckStatus = "within" | "above" | "no_spend" | "no_customers" | "value_unknown" | "spend_unknown";
@@ -164,12 +168,14 @@ export function knownPlayForecast(f: SavedForecast): f is { p10: number; p50: nu
     && f.p10! <= f.p50! && f.p50! <= f.p90!;
 }
 
-export function playActuals(model: PlayModel, all: ResultEntry[], forecast: SavedForecast, horizonWeeks = 13, opts: { startWeek?: number; currency?: string | null } = {}): PlayActuals {
+export function playActuals(model: PlayModel, all: ResultEntry[], forecast: SavedForecast, horizonWeeks = 13, opts: { startWeek?: number; currency?: string | null; throughWeek?: number; currentWeekIncluded?: boolean } = {}): PlayActuals {
   const entries = opts.startWeek !== undefined ? all.filter((e) => e.weekStart >= opts.startWeek!) : all;
   const starts = [...new Set(entries.map((e) => e.weekStart))].sort((a, b) => a - b);
   const weeks = starts.length;
   const first = opts.startWeek ?? starts[0];
-  const weeksSinceStart = weeks ? Math.round((starts[weeks - 1] - first) / WEEK) + 1 : 0;
+  const last = Math.max(opts.throughWeek ?? -Infinity, starts[weeks - 1] ?? -Infinity);
+  const weeksSinceStart = Number.isFinite(first) && Number.isFinite(last) ? Math.max(0, Math.round((last - first) / WEEK) + 1) : 0;
+  const unloggedWeeks = Math.max(0, weeksSinceStart - weeks);
   const reach = entries.reduce((s, e) => s + Math.max(0, e.reach), 0);
   const stepSums = model.steps.map((_, i) => entries.reduce((s, e) => s + Math.max(0, e.steps[i] ?? 0), 0));
   const steps: StepActual[] = model.steps.map((st, i) => {
@@ -180,16 +186,20 @@ export function playActuals(model: PlayModel, all: ResultEntry[], forecast: Save
   });
   const customers = stepSums[stepSums.length - 1] ?? 0;
   const f = Math.min(1, weeks / Math.max(1, horizonWeeks));
-  const expectedByNow = knownPlayForecast(forecast) && Number.isFinite(horizonWeeks) && horizonWeeks > 0 ? { p10: forecast.p10 * f, p50: forecast.p50 * f, p90: forecast.p90 * f } : null;
+  const comparisonIssue = !knownPlayForecast(forecast) || !Number.isFinite(horizonWeeks) || horizonWeeks <= 0 ? "Original forecast unavailable; do not classify performance against an invented zero forecast."
+    : unloggedWeeks > 0 ? "Forecast comparison unavailable while reporting weeks are missing."
+    : opts.currentWeekIncluded ? "The current UTC week is still open; its report is provisional and cannot support a full-week forecast comparison."
+    : weeksSinceStart > horizonWeeks ? "The reported window extends beyond the original forecast horizon; do not compare these totals with that shorter forecast."
+    : null;
+  const expectedByNow = !comparisonIssue && knownPlayForecast(forecast) ? { p10: forecast.p10 * f, p50: forecast.p50 * f, p90: forecast.p90 * f } : null;
   // Behind only when the count is unlikely under the plan (not just below P10), and the leading step agrees.
   // The plan's own rate is uncertain too (Kochenderfer Ex 4.1): average the Poisson tail over its P10/P50/P90.
   const lams = expectedByNow ? [expectedByNow.p10, expectedByNow.p50, expectedByNow.p90].filter((l) => l > 0) : [];
   const avg = (fn: (l: number) => number) => (lams.length ? lams.reduce((s, l) => s + fn(l), 0) / lams.length : 1);
   const surprisinglyLow = lams.length > 0 && avg((l) => poissonCdf(customers, l)) <= 0.05;
   const surprisinglyHigh = lams.length ? avg((l) => 1 - poissonCdf(customers - 1, l)) <= 0.05 : customers > 0;
-  const unloggedWeeks = Math.max(0, weeksSinceStart - weeks);
   const status: PlayActuals["status"] =
-    unloggedWeeks > 0 ? "incomplete_log" : !expectedByNow ? "forecast_unknown" : weeks < 2 ? "too_early" : customers > expectedByNow.p90 && surprisinglyHigh ? "ahead" : customers < expectedByNow.p10 && (leading(steps) === "short" || (surprisinglyLow && leading(steps) === "thin")) ? "behind" : "on_track";
+    unloggedWeeks > 0 ? "incomplete_log" : opts.currentWeekIncluded && knownPlayForecast(forecast) ? "partial_week" : !expectedByNow ? "forecast_unknown" : weeks < 2 ? "too_early" : customers > expectedByNow.p90 && surprisinglyHigh ? "ahead" : customers < expectedByNow.p10 && (leading(steps) === "short" || (surprisinglyLow && leading(steps) === "thin")) ? "behind" : "on_track";
   return {
     weeks,
     reach,
@@ -203,6 +213,9 @@ export function playActuals(model: PlayModel, all: ResultEntry[], forecast: Save
     weeksSinceStart,
     unloggedWeeks,
     ignoredBeforeStart: all.length - entries.length,
+    ...(Number.isFinite(last) && last >= first ? { throughWeek: last } : {}),
+    currentWeekIncluded: opts.currentWeekIncluded ?? false,
+    comparisonIssue,
   };
 }
 
@@ -245,6 +258,7 @@ export function resultsLine(name: string, a: PlayActuals): string {
     .map((s) => `${s.name} ${s.successes}/${s.trials} (${Math.round((s.successes / s.trials) * 1000) / 10}%, planned ${Math.round(s.planned * 1000) / 10}%)`)
     .join("; ");
   const coverage = a.unloggedWeeks > 0 ? ` ${a.unloggedWeeks} elapsed week${a.unloggedWeeks === 1 ? " is" : "s are"} unlogged; missing weeks are unknown, not zero, so do not read this as a complete-period result.` : "";
+  if (!a.weeks) return `${name}: no weekly results reported; customer counts, spending and hours are unknown.${coverage}`;
   const spend = a.spendUsd === null ? `spend unavailable (${a.spendIssue})` : a.spendUsd === 0 ? "explicitly reported no spend" : `spent ${formatMinorMoney(majorToMinor(a.spendUsd, a.spendCurrency), a.spendCurrency)} ${a.spendCurrency}`;
-  return `${name}: ${a.weeks} week${a.weeks === 1 ? "" : "s"}, reached ${a.reach}, ${a.customers} new customers, ${spend}, ${Math.round(a.ownerHours)} owner hours.${coverage}${a.expectedByNow ? "" : " Original forecast unavailable; do not classify performance against an invented zero forecast."} ${rates}.`;
+  return `${name}: ${a.weeks} week${a.weeks === 1 ? "" : "s"}, reached ${a.reach}, ${a.customers} new customers, ${spend}, ${Math.round(a.ownerHours)} owner hours.${coverage}${a.comparisonIssue ? ` ${a.comparisonIssue}` : ""} ${rates}.`;
 }

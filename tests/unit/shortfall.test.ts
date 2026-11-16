@@ -9,6 +9,12 @@ const week = (i: number, reach: number, steps: number[]): ResultEntry => ({ week
 const a = (entries: ResultEntry[]) => playActuals(model, entries, forecast, 13);
 
 describe("shortfall diagnosis", () => {
+  it("does not justify more spend from a missing or still-open reporting window", () => {
+    const actuals = a([week(1, 60, [7, 2]), week(2, 50, [6, 1]), week(3, 60, [6, 1]), week(4, 50, [5, 1])]);
+    for (const incomplete of [{ ...actuals, unloggedWeeks: 1 }, { ...actuals, currentWeekIncluded: true }]) {
+      expect(diagnoseShortfall(incomplete, {}, { affordableCacUsd: 50 })).toMatchObject({ verdict: "too_few", moreSpendJustified: false });
+    }
+  });
   it("not run: no reach says nothing about the channel", () => {
     expect(diagnoseShortfall(a([])).verdict).toBe("not_run");
     expect(diagnoseShortfall(a([week(1, 0, [0, 0]), week(2, 0, [0, 0])])).verdict).toBe("not_run");

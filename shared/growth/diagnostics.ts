@@ -32,6 +32,9 @@ const pct = (x: number) => `${Math.round(x * 100)}%`;
 export function diagnoseShortfall(a: PlayActuals, play: { killIf?: string } = {}, opts: { affordableCacUsd?: number | null; currency?: string } = {}): Shortfall {
   const checks: ShortfallCheck[] = [];
   const stop = play.killIf ? ` Your stop rule: ${play.killIf}` : "";
+  if (a.unloggedWeeks > 0 || a.currentWeekIncluded) {
+    return { verdict: "too_few", checks: [{ check: "measured", status: "unknown", detail: a.unloggedWeeks > 0 ? "Completed reporting weeks are missing; their results are unknown." : "The current weekly report is provisional." }], next: "Complete the reporting window before judging performance or increasing spend.", moreSpendJustified: false };
+  }
   // 1. Did it run?
   if (a.weeks === 0 || a.reach === 0) {
     checks.push({ check: "executed", status: "fail", detail: a.weeks === 0 ? "No weeks logged." : "Nobody was reached in the weeks logged." });

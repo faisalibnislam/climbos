@@ -44,6 +44,7 @@ test("weekly reports require explicit values and preserve currency across settin
   await page.getByRole("button", { name: "Open research and plan details", exact: true }).click();
   await page.locator("summary").filter({ hasText: "Other ideas, numbers and questions" }).click();
   const card = page.getByRole("article").filter({ has: page.getByRole("heading", { name: "Weekly reporting fixture", exact: true }) });
+  await expect(card.getByText(/3 reporting weeks are missing/)).toBeVisible();
   await card.getByRole("button", { name: "Log this week", exact: true }).click();
   await card.getByLabel("Reached", { exact: true }).fill("100");
   await expect(card.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
@@ -60,7 +61,7 @@ test("weekly reports require explicit values and preserve currency across settin
   expect(saved[0]).toMatchObject({ spendUsd: 12.345, spendCurrency: "KWD", retainedRevenueMinor: 9876, retentionCurrency: "KWD", steps: [10], ownerHours: 1 });
   await expect(card.getByText(/Net retained revenue:/)).toContainText("9.876");
   await expect(card.getByText("Weekly log incomplete", { exact: true })).toBeVisible();
-  await expect(card.getByText(/Original forecast unavailable/)).toBeVisible();
+  await expect(card.getByText(/^Original forecast unavailable\. Record the missing inputs/)).toBeVisible();
   await expect(card).not.toContainText("NaN");
   await expect(card).not.toContainText("plan ≈0");
   await card.getByRole("button", { name: "Log this week", exact: true }).click();
@@ -116,7 +117,13 @@ test("weekly reports require explicit values and preserve currency across settin
   await card.scrollIntoViewIfNeeded();
   await page.screenshot({ path: testInfo.outputPath("weekly-money-evidence.png"), fullPage: false });
   await append("playResults", [copyRow(historical)]);
-  await expect(card.getByRole("alert")).toContainText("Conflicting reports");
+  await expect(card.getByRole("alert").filter({ hasText: /^Conflicting reports/ })).toBeVisible();
+  await expect(card.getByText(/Weekly summary unavailable/)).toBeVisible();
+  await expect(card.getByText(/Cash cost per customer:/)).toHaveCount(0);
+  await card.getByText(/Weekly summary unavailable/).scrollIntoViewIfNeeded();
+  await expectNoHorizontalScroll(page);
+  await expectAccessible(page, "weekly summary unavailable");
+  await page.screenshot({ path: testInfo.outputPath("weekly-summary-unavailable.png"), fullPage: false });
   await expect(card.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
   expect(await actionSnapshot()).toEqual(before);
   expect(errors).toEqual([]);

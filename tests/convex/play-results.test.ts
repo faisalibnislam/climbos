@@ -76,7 +76,7 @@ describe("play results", () => {
     await owner.client.mutation(api.playResults.log, { slug, strategyId, playName: "Agency outreach", reach: 250, steps: [6, 1], spendUsd: 0, ownerHours: 1, currency: "USD", repeatCustomers: 3, retainedRevenueMinor: 50_000, retainedContributionMinor: 32_000 });
     const view = await owner.client.query(api.playResults.forStrategy, { slug, strategyId });
     expect(view.currency).toBe("USD");
-    expect(view.byPlay["Agency outreach"]).toMatchObject({ weeks: 1, reach: 250, customers: 1, status: "too_early" });
+    expect(view.byPlay["Agency outreach"]).toMatchObject({ weeks: 1, reach: 250, customers: 1, status: "partial_week" });
     expect(view.byPlay["Agency outreach"].retention).toMatchObject({ weeksReported: 1, repeatCustomerWeeksReported: 1, repeatCustomerWeeks: 3, revenueByCurrency: [{ currency: "USD", netRevenueMinor: 50_000, weeksReported: 1 }], contributionByCurrency: [{ currency: "USD", contributionMinor: 32_000, weeksReported: 1 }] });
     await t.run(async (ctx) => {
       const business = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId as Id<"organizations">)).first())!;

@@ -1,3 +1,30 @@
+## 16 November 2026 — weekly summary completeness and reporting windows
+
+Traced `playResults.forStrategy` and `resultsBrief` through the same `actualsFor` reader, `playActuals`, shortfall diagnostics and plan cards. Three new regressions failed before the repair: a valid play disappeared behind 405 unrelated rows, 62 recorded weeks produced a 60-week/600-customer subtotal instead of 62/620, and three completed missing weeks after the last report were reported as no missing weeks.
+
+Implemented:
+
+- Reused the existing play-ID/week and play-name/week indexes to read relevant rows from the plan-creation UTC week through the current week. ID and legacy-name rows are deduplicated by row ID. Each indexed read and combined set has a 520-record budget plus sentinel. Overflow never becomes a partial total. A legacy name change without a saved stable ID remains unresolvable.
+- Checks reject duplicate weeks, incompatible tenant provenance, ambiguous play identity, invalid UTC week alignment, missing/inconsistent funnel counts, invalid model rates, changed saved step labels, and invalid cash/hours/retention numbers before aggregation. Unusable histories return an explicit issue with no actuals, retained-money summary, cost advice or calibration. Individual-week editing remains separate. Source money with unknown currency retains the prior explicit unavailable-cost handling.
+- The observation window includes all completed weeks after plan creation, including trailing weeks with no report. A current-week report is included as provisional; an unreported open week is excluded. Empty windows produce unknown-results wording rather than measured zeros. Missing/open weeks withhold full-week forecast comparisons and increased-spend diagnoses. Recorded-week totals remain visible with a scope explanation. Windows beyond the original forecast horizon cannot be compared with that shorter forecast.
+- Forecast range coverage now uses only completed, exactly aligned whole-week horizons with every week present and a valid saved range. It excludes later results from the tested horizon. Fractional-week horizons cannot be established from weekly aggregates, so they are not included. This is range coverage of owner reports, not proof of calibrated predictions or causal impact.
+- UI and future-plan context share the assessment. Context prioritizes reported plays before empty ones and discloses its bounded four-newest-plan sample and six report/diagnosis-line limit. Engine version: `v3.90-weekly-summary-coverage`.
+
+Verification commands:
+
+```sh
+pnpm exec vitest run tests/convex/play-result-coverage.test.ts tests/convex/play-result-history.test.ts tests/convex/play-result-money.test.ts tests/convex/play-results.test.ts tests/convex/experiment-outcomes.test.ts tests/convex/tenancy.test.ts tests/convex/safety.test.ts tests/unit/play-actuals.test.ts tests/unit/shortfall.test.ts tests/unit/play-cost-per-customer.test.tsx tests/unit/play-results-retention.test.tsx tests/unit/retention-actuals.test.ts tests/unit/decision-books.test.ts
+pnpm typecheck
+pnpm exec eslint convex/playResults.ts shared/growth/actuals.ts shared/growth/diagnostics.ts shared/agents/specs.ts src/components/app/plan/PlayResults.tsx src/components/app/plan/ExpertPlan.tsx tests/convex/play-result-coverage.test.ts tests/convex/play-results.test.ts tests/unit/play-actuals.test.ts tests/unit/shortfall.test.ts e2e/play-result-money.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/play-result-money.spec.ts
+git diff --check
+```
+
+Results: 115 tests passed in 13 focused files; typecheck, scoped lint and local function sync passed. Two desktop/mobile tests passed in 24.0 seconds, including missing-week wording, unavailable duplicate summaries, preserved editing/history behavior, unchanged action records, no horizontal overflow and serious/critical accessibility scans. The final mobile unavailable-summary screenshot was inspected. Coverage includes the three reproduced defects, completely unreported periods, current-week versus completed-week comparisons, future/pre-plan exclusion, duplicate/foreign/invalid/overflow evidence, empty-play sampling, post-horizon exclusion, fractional horizons and unchanged action records. An initial browser run failed because a broad text locator matched both the forecast card and new reporting explanation; the selector now identifies the specific forecast-card message.
+
+Remaining: reads are bounded, not an unlimited materialized history. Over 520 relevant rows is explicitly unavailable; old unrecorded play renames and legacy step definitions cannot be reconstructed. The reporting week begins Monday UTC and the plan's creation week remains its reporting start; this is not independently verified execution start. Summary dates reflect query evaluation, not continuous clock polling. Current-week figures are owner reports, not verified complete periods. Automatic weekly learning can omit reports on plans older than the four-newest-plan sample. Source completeness, unique customer identity, causal attribution, calibrated prediction quality and full requirement-level acceptance remain unproven. No deployment or external action was performed.
+
 ## 16 November 2026 — historical weekly reporting and protected corrections
 
 Path inspected: existing plan card → weekly report form → `playResults.log` → current `playResults` row → actuals/learning, plus existing experiment revision/history and workspace export/deletion conventions. The existing mutation supported a past-week argument but the UI never sent it; corrections overwrote values without a saved revision or original snapshot. The correction lookup read only the first 400 strategy rows. A regression proved a second save with no version token silently overwrote the first.

@@ -979,6 +979,7 @@ interface ResultsCtx {
   strategyId: Id<"strategies">;
   canEdit: boolean;
   currency: string | null;
+  issues?: Record<string, string>;
   byPlay: Record<string, (PlayActuals & { retention: RetentionActuals }) | undefined>;
 }
 
@@ -1139,7 +1140,7 @@ function PlayCard({ play, slug, economics, results, planId, targets, canEdit = f
         <Forecast f={play} economics={economics} open={open} diagnosis={diagnosis} />
         {play.model && economics ? <PlayEconomics play={play} economics={economics} /> : null}
         {targets && planId && play.id ? <PlayTargetsBlock t={targets} slug={slug} strategyId={planId} playId={play.id} canEdit={canEdit} /> : null}
-        {play.model?.steps?.length && results ? <PlayResults key={`${results.strategyId}:${play.id ?? play.name}`} slug={slug} strategyId={results.strategyId} playName={play.name} model={play.model} actuals={results.byPlay[play.name]} retention={results.byPlay[play.name]?.retention} currency={results.currency} canEdit={results.canEdit}  affordableCacUsd={economics ? customerValue(economics) : null}/> : null}
+        {play.model?.steps?.length && results ? <PlayResults key={`${results.strategyId}:${play.id ?? play.name}`} slug={slug} strategyId={results.strategyId} playName={play.name} model={play.model} actuals={results.byPlay[play.name]} issue={results.issues?.[play.name]} retention={results.byPlay[play.name]?.retention} currency={results.currency} canEdit={results.canEdit}  affordableCacUsd={economics ? customerValue(economics) : null}/> : null}
 
         {open ? <PlayDetails play={play} economics={economics} id={panel} /> : null}
 
@@ -1508,7 +1509,7 @@ export function GrowthPlays({ plays, slug, economics, portfolioComparisons, stra
   // plan_targets workspaces only (null otherwise): named targets per play.
   const targets = useQuery(api.targets.forStrategy, planId ? { slug, strategyId: planId } : "skip");
   if (!plays.length && !strategyExploration) return null;
-  const results = strategyId ? { strategyId, canEdit, currency: byPlay?.currency ?? null, byPlay: (byPlay?.byPlay ?? {}) as Record<string, (PlayActuals & { retention: RetentionActuals }) | undefined> } : undefined;
+  const results = strategyId ? { strategyId, canEdit, currency: byPlay?.currency ?? null, issues: byPlay?.issues ?? {}, byPlay: (byPlay?.byPlay ?? {}) as Record<string, (PlayActuals & { retention: RetentionActuals }) | undefined> } : undefined;
   const order = { bankable: 0, creative: 1, moonshot: 2 } as const;
   const sorted = [...plays].sort((a, b) => order[a.kind] - order[b.kind]);
   const counts = (Object.keys(KIND) as PlayView["kind"][]).map((k) => ({ k, n: plays.filter((p) => p.kind === k).length })).filter((c) => c.n);

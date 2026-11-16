@@ -1,3 +1,9 @@
+## Local update — 16 November 2026: honest weekly summary coverage
+
+Three regressions reproduced a play hidden behind 405 unrelated rows, a 62-week history silently totaled as 60 weeks, and missing completed weeks after the latest report counted as zero missing weeks. The shared owner/context path now reads by play identity and reporting window, uses a sentinel at 520 records, validates comparable observations and withholds unusable summaries. Trailing missing weeks and provisional current reports cannot support a performance classification or increased-spend diagnosis. Forecast range coverage is restricted to completed, aligned, fully reported horizons; later outcomes cannot inflate it. No independent summary/agent subsystem was added. Engine version: `v3.90-weekly-summary-coverage`.
+
+See [Verification](../Verification.md) for the 115-test evidence, browser checks and remaining limits. The automatic weekly context still samples four newest plans; high-volume histories above the read budget need further processing. These repaired data boundaries do not establish causal outcomes or complete the original requirement audit.
+
 ## Local update — 16 November 2026: weekly corrections and historical entry
 
 Reproduced a blind second save overwriting a weekly report. Extended the existing weekly report mutation with exact ID/revision checks and an indexed week lookup that preserves stable play identity beyond the old scan limit. New append-only snapshots keep original/current values distinct; legacy values are preserved at their first correction. The current plan form now loads any valid UTC week, prefills recorded values, blocks stale edits/currency changes and exposes paginated report history. Read-only viewers can review; only editors can save. Export/deletion include the new history. Engine version: `v3.89-weekly-report-history`.

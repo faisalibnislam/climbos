@@ -5,7 +5,7 @@ import { internalQuery, mutation, query, type QueryCtx, type MutationCtx } from 
 import type { Doc, Id } from "./_generated/dataModel";
 import { audit } from "./lib/audit";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
-import { forecastCalibration, playActuals, resultsLine, retentionActuals, type PlayActuals, type RetentionActuals } from "../shared/growth/actuals";
+import { forecastCalibration, knownPlayForecast, playActuals, resultsLine, retentionActuals, type PlayActuals, type RetentionActuals } from "../shared/growth/actuals";
 import { inferenceOf, isRedefined, outcomeLine, outcomeProblems, sameDefinition } from "../shared/growth/experimentOutcome";
 import { applyOwnerEconomics, customerValue, type Economics, type PlayModel } from "../shared/agents/economics";
 import { formatMinorMoney, formatMoney, isKnownCurrency, minorToMajor } from "../shared/economics/currency";
@@ -28,7 +28,7 @@ export function weekOf(t: number): number {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - day * DAY;
 }
 
-type SavedPlay = { name: string; id?: string; model?: PlayModel; p10?: number; p50?: number; p90?: number; horizonDays?: number };
+type SavedPlay = { name: string; id?: string; model?: PlayModel; p10?: number; p50?: number; p90?: number; horizonDays?: number; killIf?: string };
 
 function playsOf(s: Doc<"strategies">): SavedPlay[] {
   return (expertPlaysOf(s.expert) as SavedPlay[]).filter((p) => p.model?.steps?.length);
@@ -72,19 +72,59 @@ export const weeklyHistoryPage = query({
   },
 });
 
-async function actualsFor(ctx: QueryCtx, s: Doc<"strategies">): Promise<{ name: string; killIf?: string; actuals: PlayActuals; retention: RetentionActuals; entries: Doc<"playResults">[]; forecast: { p10: number; p90: number }; horizonWeeks: number }[]> {
-  const out = [];
+const REPORT_READ_LIMIT = 520;
+const REPORT_WEEK_MS = 7 * DAY;
+type PlayAssessment = { name: string; killIf?: string; actuals: PlayActuals | null; retention: RetentionActuals | null; entries: Doc<"playResults">[]; issue: string | null; calibration: { customers: number; p10: number; p90: number } | null };
+
+/** Validate complete weekly observations before treating a loaded set as comparable counts. */
+function reportIssue(rows: Doc<"playResults">[], s: Doc<"strategies">, p: SavedPlay): string | null {
+  const seen = new Set<number>();
+  const model = p.model!;
+  if (!Number.isFinite(model.weeklyReach) || model.weeklyReach < 0 || model.steps.some(x => !Number.isFinite(x.rate) || x.rate < 0 || x.rate > 1)) return "The saved funnel model is invalid. Review its definition before comparing weekly results.";
+  for (const row of rows) {
+    if (row.orgId !== s.orgId) return "A report has incompatible workspace provenance. Summary unavailable pending data review.";
+    if (!Number.isFinite(row.weekStart) || weekOf(row.weekStart) !== row.weekStart) return "A report has an invalid UTC week. Correct it before combining results.";
+    if (seen.has(row.weekStart)) return "Conflicting reports exist for the same week. Summary unavailable until the duplicate records are resolved.";
+    seen.add(row.weekStart);
+    const counts = [row.reach, ...row.steps];
+    if (row.steps.length !== model.steps.length || counts.some((n, i) => !Number.isSafeInteger(n) || n < 0 || n > 10_000_000 || (i > 0 && n > counts[i - 1]))) return "A report has missing, invalid or inconsistent funnel counts. Correct it before combining results.";
+    if (row.stepNames && JSON.stringify(row.stepNames) !== JSON.stringify(model.steps.map(x => x.name))) return "The saved report's funnel labels differ from this plan. Confirm compatible definitions before combining results.";
+    if (!Number.isFinite(row.ownerHours) || row.ownerHours < 0 || row.ownerHours > 10_000_000 || !Number.isFinite(row.spendUsd) || row.spendUsd < 0 || row.spendUsd > 10_000_000) return "A report has invalid spending or hours. Correct it before combining results.";
+    if (row.repeatCustomers !== undefined && (!Number.isSafeInteger(row.repeatCustomers) || row.repeatCustomers < 0 || row.repeatCustomers > 10_000_000)) return "A report has an invalid repeat-customer count. Correct it before combining results.";
+    if ([row.retainedRevenueMinor, row.retainedContributionMinor].some(n => n !== undefined && (!Number.isSafeInteger(n) || Math.abs(n) > 1_000_000_000_000))) return "A report has invalid retained money. Correct it before combining results.";
+  }
+  return null;
+}
+
+async function actualsFor(ctx: QueryCtx, s: Doc<"strategies">): Promise<PlayAssessment[]> {
+  const out: PlayAssessment[] = [];
   const business = await ctx.db.get(s.businessId);
   const currency = business?.orgId === s.orgId ? business.currency ?? null : null;
-  const all = await ctx.db.query("playResults").withIndex("by_strategy", (q) => q.eq("strategyId", s._id)).take(400);
-  for (const p of playsOf(s)) {
-    // By stable ID when both have one; older rows by name.
-    const entries = all.filter((e) => (p.id && e.playId ? e.playId === p.id : e.playName === p.name)).slice(0, 60);
-    if (!entries.length) continue;
-    const weeks = (p.horizonDays || 90) / 7;
-    // Time zero is the week the plan was made: earlier weeks aren't this play's results (Hernán & Robins Ch 22).
-    const startWeek = weekOf(s._creationTime);
-    out.push({ name: p.name, killIf: (p as { killIf?: string }).killIf, entries, forecast: { p10: p.p10 ?? 0, p90: p.p90 ?? 0 }, horizonWeeks: weeks, actuals: playActuals(p.model!, entries, { p10: p.p10, p50: p.p50, p90: p.p90 }, weeks, { startWeek, currency }), retention: retentionActuals(entries.filter((entry) => entry.weekStart >= startWeek)) });
+  const plays = playsOf(s);
+  const startWeek = weekOf(s._creationTime), currentWeek = weekOf(Date.now());
+  for (const p of plays) {
+    // Narrow both indexes to this play and the actual reporting window. Legacy name matches are read separately.
+    const [identified, named] = await Promise.all([
+      p.id ? ctx.db.query("playResults").withIndex("by_strategy_play_week", q => q.eq("strategyId", s._id).eq("playId", p.id).gte("weekStart", startWeek).lte("weekStart", currentWeek)).take(REPORT_READ_LIMIT + 1) : Promise.resolve([]),
+      ctx.db.query("playResults").withIndex("by_strategy", q => q.eq("strategyId", s._id).eq("playName", p.name).gte("weekStart", startWeek).lte("weekStart", currentWeek)).take(REPORT_READ_LIMIT + 1),
+    ]);
+    const entries = [...new Map([...identified, ...named.filter(e => !p.id || !e.playId || e.playId === p.id)].map(e => [e._id, e])).values()].sort((a, b) => a.weekStart - b.weekStart);
+    const ambiguous = plays.filter(x => x.name === p.name || (!!p.id && x.id === p.id)).length > 1;
+    const issue = business?.orgId !== s.orgId ? "Original business provenance is unavailable. Review the plan before using its results."
+      : ambiguous ? "This plan contains ambiguous play names or identities. Summary unavailable until they are resolved."
+      : identified.length > REPORT_READ_LIMIT || named.length > REPORT_READ_LIMIT || entries.length > REPORT_READ_LIMIT ? `Weekly history exceeds the ${REPORT_READ_LIMIT}-report read limit. No partial total, cost comparison or forecast calibration is shown; individual weeks remain available in the report editor.`
+      : reportIssue(entries, s, p);
+    if (issue) { out.push({ name: p.name, entries: [], actuals: null, retention: null, issue, calibration: null }); continue; }
+    const horizonWeeks = typeof p.horizonDays === "number" && Number.isFinite(p.horizonDays) && p.horizonDays > 0 ? p.horizonDays / 7 : NaN;
+    const currentWeekIncluded = entries.some(e => e.weekStart === currentWeek);
+    const throughWeek = currentWeekIncluded ? currentWeek : currentWeek - REPORT_WEEK_MS;
+    const actuals = playActuals(p.model!, entries, p, horizonWeeks, { startWeek, throughWeek, currentWeekIncluded, currency });
+    // Weekly aggregates cannot prove a fractional-week forecast window. Only completed, exactly aligned horizons qualify.
+    const horizonRows = entries.filter(e => e.weekStart < startWeek + horizonWeeks * REPORT_WEEK_MS);
+    const aligned = Number.isInteger(horizonWeeks) && horizonWeeks > 0 && startWeek + horizonWeeks * REPORT_WEEK_MS <= currentWeek
+      && horizonRows.length === horizonWeeks && horizonRows.every((e, i) => e.weekStart === startWeek + i * REPORT_WEEK_MS);
+    const calibration = aligned && knownPlayForecast(p) && p.p90 > 0 ? { customers: horizonRows.reduce((n, e) => n + e.steps[e.steps.length - 1], 0), p10: p.p10, p90: p.p90 } : null;
+    out.push({ name: p.name, killIf: p.killIf, entries, issue: null, calibration, actuals, retention: retentionActuals(entries) });
   }
   return out;
 }
@@ -99,8 +139,9 @@ export const forStrategy = query({
     const business = await ctx.db.get(s.businessId);
     return {
       /** Current workspace currency for new owner-entered money values; historical rows retain their own currency. */
-      currency: business?.currency ?? null,
-      byPlay: Object.fromEntries(rows.map((r) => [r.name, { ...r.actuals, retention: r.retention, entries: r.entries.map((e) => ({ weekStart: e.weekStart, reach: e.reach, steps: e.steps, spendUsd: e.spendUsd, ...(e.spendCurrency ? { spendCurrency: e.spendCurrency } : {}), ownerHours: e.ownerHours, ...(e.repeatCustomers !== undefined ? { repeatCustomers: e.repeatCustomers } : {}), ...(e.retainedRevenueMinor !== undefined ? { retainedRevenueMinor: e.retainedRevenueMinor } : {}), ...(e.retainedContributionMinor !== undefined ? { retainedContributionMinor: e.retainedContributionMinor } : {}), ...(e.retentionCurrency ? { retentionCurrency: e.retentionCurrency } : {}) })) }]))
+      currency: business?.orgId === s.orgId ? business.currency ?? null : null,
+      issues: Object.fromEntries(rows.filter(r => r.issue).map(r => [r.name, r.issue!])),
+      byPlay: Object.fromEntries(rows.flatMap((r) => r.actuals ? [[r.name, { ...r.actuals, retention: r.retention!, entries: r.entries.map((e) => ({ weekStart: e.weekStart, reach: e.reach, steps: e.steps, spendUsd: e.spendUsd, ...(e.spendCurrency ? { spendCurrency: e.spendCurrency } : {}), ownerHours: e.ownerHours, ...(e.repeatCustomers !== undefined ? { repeatCustomers: e.repeatCustomers } : {}), ...(e.retainedRevenueMinor !== undefined ? { retainedRevenueMinor: e.retainedRevenueMinor } : {}), ...(e.retainedContributionMinor !== undefined ? { retainedContributionMinor: e.retainedContributionMinor } : {}), ...(e.retentionCurrency ? { retentionCurrency: e.retentionCurrency } : {}) })) }]] : []))
     };
   },
 });
@@ -356,12 +397,12 @@ export async function resultsBrief(ctx: QueryCtx, orgId: Id<"organizations">): P
   const lines: string[] = [];
   const matured: { customers: number; p10: number; p90: number }[] = [];
   for (const s of plans)
-    for (const r of await actualsFor(ctx, s)) {
-      // Calibration only on plays that ran their whole horizon with every week logged.
-      if (r.actuals.expectedByNow && r.actuals.weeks >= Math.floor(r.horizonWeeks) && r.actuals.weeksSinceStart === r.actuals.weeks && r.forecast.p90 > 0) matured.push({ customers: r.actuals.customers, ...r.forecast });
+    for (const r of (await actualsFor(ctx, s)).sort((a, b) => Number(!!b.actuals?.weeks) - Number(!!a.actuals?.weeks) || Number(!!b.issue) - Number(!!a.issue))) {
+      if (!r.actuals) { if (lines.length < 6) lines.push(`- ${r.name}: weekly summary unavailable. ${r.issue}`); continue; }
+      if (r.calibration) matured.push(r.calibration);
       if (lines.length < 6) {
         lines.push(`- ${resultsLine(r.name, r.actuals)}`);
-        if (r.retention.weeksReported) lines.push(`  OWNER-REPORTED REPEAT-CUSTOMER OUTCOMES (association with this play is not attribution or causation): ${r.retention.repeatCustomerWeeks} customer-week(s); net revenue ${r.retention.revenueByCurrency.map((x) => `${formatMinorMoney(x.netRevenueMinor, x.currency)} over ${x.weeksReported} week(s)`).join(", ") || "not reported"}; retained contribution ${r.retention.contributionByCurrency.map((x) => `${formatMinorMoney(x.contributionMinor, x.currency)} over ${x.weeksReported} week(s)`).join(", ") || "not reported"}. These values are separate from new-customer forecasts and may omit unreported weeks.`);
+        if (r.retention?.weeksReported) lines.push(`  OWNER-REPORTED REPEAT-CUSTOMER OUTCOMES (association with this play is not attribution or causation): ${r.retention.repeatCustomerWeeks} customer-week(s); net revenue ${r.retention.revenueByCurrency.map((x) => `${formatMinorMoney(x.netRevenueMinor, x.currency)} over ${x.weeksReported} week(s)`).join(", ") || "not reported"}; retained contribution ${r.retention.contributionByCurrency.map((x) => `${formatMinorMoney(x.contributionMinor, x.currency)} over ${x.weeksReported} week(s)`).join(", ") || "not reported"}. These values are separate from new-customer forecasts and may omit unreported weeks.`);
         // A play that's behind gets a diagnosis, not more budget (cycle 2).
         if (r.actuals.status === "behind") lines.push(`  ${shortfallLine(r.name, diagnoseShortfall(r.actuals, { killIf: r.killIf }, { affordableCacUsd: affordableCacOf(s, business?.unitEconomics), currency: business?.currency }))}`);
       }
@@ -371,8 +412,8 @@ export async function resultsBrief(ctx: QueryCtx, orgId: Id<"organizations">): P
   const { tested, notRun } = await outcomeLines(ctx, orgId, plans);
   const parts = [
     tested.length || notRun.length ? "EXPERIMENT LEARNING COVERAGE: bounded sample of up to six tested and four not-run experiments, drawn from the 40 most recently reported tests plus up to ten tests from each of the four newest plans for legacy coverage. Older unindexed reports may be omitted until updated. Each test contributes only its current report, not repeated corrections. Compare with the original hypothesis, population, variants, rules and observation window; historical context may differ from today's business. Missing or excerpted details stay unknown. Unclear and not-run outcomes do not establish effectiveness; a result never authorizes an action." : "",
-    cal.verdict !== "too_few_plays" ? `FORECAST CALIBRATION (computed; plays that ran their full horizon): ${cal.inside} of ${cal.matured} landed inside their P10–P90 range (an 80% range, so about ${cal.expected} expected).${cal.verdict === "overconfident" ? ` That few is unlikely by chance (P = ${cal.pTooFew}): past ranges were too narrow, so widen this plan's ranges and lean on measured rates.` : " Consistent with the stated ranges."}` : "",
-    lines.length ? `RESULTS SO FAR (logged by the owner; first-party counts, not proof of cause; small samples have wide ranges; prefer them to benchmarks for the same play):\n${lines.join("\n")}` : "",
+    cal.verdict !== "too_few_plays" ? `FORECAST RANGE COVERAGE (computed from owner reports for completed, aligned whole-week horizons; not independent verification of predictive quality): ${cal.inside} of ${cal.matured} landed inside their P10–P90 range (an 80% range, so about ${cal.expected} expected).${cal.verdict === "overconfident" ? ` That few is unlikely by chance (P = ${cal.pTooFew}): past ranges were too narrow, so widen this plan's ranges and lean on measured rates.` : " Consistent with the stated ranges."}` : "",
+    lines.length ? `RESULTS SO FAR (bounded sample from four newest plans, up to six report/diagnosis lines; weekly reads cover plan-creation week through the current UTC week, up to 520 rows per play with overflow withheld; owner reports, not independently verified counts or proof of cause; missing weeks remain unknown; current-week reports are provisional):\n${lines.join("\n")}` : "",
     wonDealLines.length ? `WON DEALS ASSOCIATED WITH PLAYS (owner-entered CRM stages and values; target links show association, not attribution or causation; these are not retained revenue):\n${wonDealLines.join("\n")}` : "",
     tested.length ? `EXPERIMENT OUTCOMES (member-entered reports; source and random assignment are not independently verified. Preserve the reported result and calculated comparison separately. Do not treat either as proven causal impact, verified provider data or permission to execute):\n${tested.join("\n")}` : "",
     notRun.length ? `TESTS NOT RUN (the plan wasn't carried out; draw no lesson about these channels):\n${notRun.join("\n")}` : "",
@@ -421,4 +462,4 @@ export const briefFor = internalQuery({
   handler: async (ctx, { orgId }): Promise<string> => resultsBrief(ctx, orgId),
 });
 
-export type PlayResultsView = { currency: string | null; byPlay: Record<string, PlayActuals & { retention: RetentionActuals; entries: { weekStart: number; reach: number; steps: number[]; spendUsd: number; spendCurrency?: string; ownerHours: number; repeatCustomers?: number; retainedRevenueMinor?: number; retainedContributionMinor?: number; retentionCurrency?: string }[] }> };
+export type PlayResultsView = { currency: string | null; issues: Record<string, string>; byPlay: Record<string, PlayActuals & { retention: RetentionActuals; entries: { weekStart: number; reach: number; steps: number[]; spendUsd: number; spendCurrency?: string; ownerHours: number; repeatCustomers?: number; retainedRevenueMinor?: number; retainedContributionMinor?: number; retentionCurrency?: string }[] }> };

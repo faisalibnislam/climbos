@@ -6,6 +6,20 @@ const forecast = { p10: 4, p50: 9.75, p90: 18 };
 const week = (i: number, reach: number, steps: number[]) => ({ weekStart: Date.UTC(2026, 9, 19) + i * 7 * 86_400_000, reach, steps, spendUsd: 0, ownerHours: 1 });
 
 describe("play results vs plan", () => {
+  it("does not invent a completed window before a new plan starts", () => {
+    const startWeek = week(0, 0, [0, 0, 0]).weekStart;
+    const actuals = playActuals(model, [], forecast, 13, { startWeek, throughWeek: startWeek - 7 * 86400000 });
+    expect(actuals).toMatchObject({ weeks: 0, weeksSinceStart: 0, unloggedWeeks: 0 });
+    expect(actuals.throughWeek).toBeUndefined();
+    expect(resultsLine("New plan", actuals)).toContain("customer counts, spending and hours are unknown");
+  });
+  it("keeps open-week reports provisional and only judges completed reporting windows", () => {
+    const rows = [week(0, 250, [20, 10, 5]), week(1, 250, [20, 10, 5])];
+    const provisional = playActuals(model, rows, forecast, 13, { startWeek: rows[0].weekStart, throughWeek: rows[1].weekStart, currentWeekIncluded: true });
+    expect(provisional).toMatchObject({ status: "partial_week", expectedByNow: null, comparisonIssue: expect.stringContaining("still open") });
+    const complete = playActuals(model, rows, forecast, 13, { startWeek: rows[0].weekStart, throughWeek: rows[1].weekStart, currentWeekIncluded: false });
+    expect(complete.status).toBe("ahead");
+  });
   it.each([{}, { p10: null, p50: 10, p90: 20 }, { p10: 5, p50: 4, p90: 20 }, { p10: 0, p50: NaN, p90: 20 }])("keeps missing or invalid original forecasts unknown: %j", forecast => {
     const actual = playActuals(model, [week(0, 100, [10, 5, 2]), week(1, 100, [10, 5, 2])], forecast);
     expect(actual).toMatchObject({ expectedByNow: null, status: "forecast_unknown" });

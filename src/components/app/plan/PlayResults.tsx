@@ -17,6 +17,7 @@ const STATUS: Record<PlayActuals["status"], { label: string; tone: Tone; icon: L
   behind: { label: "Behind: check stop rule", tone: "red", icon: CircleAlert },
   too_early: { label: "Too early to tell", tone: "neutral", icon: Clock },
   incomplete_log: { label: "Weekly log incomplete", tone: "neutral", icon: Clock },
+  partial_week: { label: "Current week still open", tone: "neutral", icon: Clock },
   forecast_unknown: { label: "Plan comparison unavailable", tone: "neutral", icon: Clock },
 };
 
@@ -67,7 +68,7 @@ export function RetentionResultsSummary({ retention }: { retention?: RetentionAc
 }
 
 /** Plan vs actual for one play, and a weekly log (spec §28). */
-export function PlayResults({ slug, strategyId, playName, model, actuals, retention, currency, canEdit, affordableCacUsd = null }: { slug: string; strategyId: Id<"strategies">; playName: string; model: PlayModel; actuals?: PlayActuals; retention?: RetentionActuals; currency?: string | null; canEdit: boolean; affordableCacUsd?: number | null }) {
+export function PlayResults({ slug, strategyId, playName, model, actuals, retention, currency, issue, canEdit, affordableCacUsd = null }: { slug: string; strategyId: Id<"strategies">; playName: string; model: PlayModel; actuals?: PlayActuals; issue?: string; retention?: RetentionActuals; currency?: string | null; canEdit: boolean; affordableCacUsd?: number | null }) {
   const [open, setOpen] = useState(false);
   const st = actuals ? STATUS[actuals.status] : null;
   return (
@@ -75,7 +76,7 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, retent
       <p className="text-overline flex items-center gap-1.5">
         <ChartLine aria-hidden className="size-3.5" /> Plan vs actual
       </p>
-      {actuals ? (
+      {issue ? <p role="alert" className="text-xs text-ink-2">Weekly summary unavailable. {issue}</p> : actuals && actuals.weeks > 0 ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="flex items-baseline gap-1.5">
@@ -91,7 +92,7 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, retent
               </Badge>
             ) : null}
           </div>
-          {actuals.unloggedWeeks > 0 ? <p className="text-xs text-ink-2">Missing weeks are unknown, not zero. Fill them in before judging.</p> : null}
+          {(actuals.unloggedWeeks > 0 || actuals.currentWeekIncluded) ? <p className="text-xs text-ink-3">Counts and cash cost cover only recorded weeks, including any provisional current-week report; they are not complete-period results.</p> : null}
           <CostPerCustomerLine check={costCheck(actuals, affordableCacUsd)} currency={currency ?? undefined} />
           {actuals.spendIssue ? <p className="text-xs text-ink-2">{actuals.spendIssue}</p> : null}
           {actuals.status === "behind" ? <ShortfallNote s={diagnoseShortfall(actuals, {}, { affordableCacUsd, currency: currency ?? undefined })} /> : null}
@@ -125,7 +126,10 @@ export function PlayResults({ slug, strategyId, playName, model, actuals, retent
       ) : (
         <p className="text-xs text-ink-3">No results yet. Log weekly to compare.</p>
       )}
-      <RetentionResultsSummary retention={retention} />
+      {actuals?.unloggedWeeks ? <p className="text-xs text-ink-2">{actuals.unloggedWeeks} reporting week{actuals.unloggedWeeks === 1 ? " is" : "s are"} missing. Missing weeks are unknown, not zero. Fill them in before judging.</p> : null}
+      {actuals?.throughWeek !== undefined ? <p className="text-xs text-ink-3">UTC reporting window through week beginning {new Date(actuals.throughWeek).toISOString().slice(0, 10)}. {actuals.currentWeekIncluded ? "The current week is provisional." : "The current open week is excluded until reported."}</p> : null}
+      {!!actuals?.weeks && actuals.comparisonIssue ? <p className="text-xs text-ink-2">{actuals.comparisonIssue}</p> : null}
+      {!issue ? <RetentionResultsSummary retention={retention} /> : null}
       {!open ? (
         <Button size="sm" variant="ghost" className="self-start" onClick={() => setOpen(true)}>
           <ClipboardPen aria-hidden /> {canEdit ? "Log this week" : "Review weekly reports"}
