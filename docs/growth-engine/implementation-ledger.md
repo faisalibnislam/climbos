@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: distinguish generic trend exclusions
+
+Red checks reproduced evergreen advice against viral trend chasing being blocked and plural-only positive references being missed. Social and calendar generation now share a field-local detector with narrow exclusions for generic material. Specific references, separate positive clauses and structured metadata remain subject to the same evidence validation. Actual job and calendar-persistence regressions cover successful evergreen drafts and rejection of separate unsupported references without external action. Engine v3.115; see Verification.
+
 ## Local update — 17 November 2026: complete social creative-surface trend checks
 
 Verified existing brand voice, humor/trend preference and owner-example input in individual-post and weekly-plan jobs. Red tests exposed missing carousel/video/visual/comment/hashtag trend checks and createContent saving invalid retained output despite a passing review. Reused the dated-source validator in an exported per-post helper called by lint and before image work/persistence. Calendar proof and CTA references now enter its existing transactional evidence gate. The tested original evergreen character remains available without a source requirement. Engine v3.114; see Verification for test commands, scope and limitations.

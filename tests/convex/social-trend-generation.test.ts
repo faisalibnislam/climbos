@@ -27,14 +27,20 @@ async function workspace() {
   return { t, owner, orgId, slug, runId, network };
 }
 
-it.each(["missing", "unmatched", "uncited", "stale", "valid", "evergreen"] as const)("validates %s trend evidence before saving generated posts despite a passing AI assessment", async kind => {
+it.each(["missing", "unmatched", "uncited", "stale", "valid", "evergreen", "negative_only", "negative_and_current", "negative_with_bad_evidence"] as const)("validates %s trend evidence before saving generated posts despite a passing AI assessment", async kind => {
   const f = await workspace();
   const output = socialTrendFixture();
   const { evidence, research } = currentTrendResearch();
   if (kind !== "evergreen") output.posts[0].firstComment = "Try this current viral format for the next project review.";
-  if (kind !== "missing" && kind !== "evergreen") {
+  if (["valid", "unmatched", "uncited", "stale"].includes(kind)) {
     output.posts[0].trendSourceUrl = evidence.sourceUrl;
     output.posts[0].trendEvidence = { ...evidence, ...(kind === "unmatched" ? { observation: "An invented customer reaction" } : {}) };
+  }
+  if (kind.startsWith("negative_")) {
+    output.posts[0].firstComment = "Don't chase viral trends. Explain the customer's actual problem.";
+    output.posts[0].visualBrief = "No viral gimmicks. Use an original diagram.";
+    if (kind === "negative_and_current") output.posts[0].videoScript = "Adapt this current meme to show the process.";
+    if (kind === "negative_with_bad_evidence") output.posts[0].trendEvidence = evidence;
   }
   if (kind === "uncited") research.sources = [];
   if (kind === "stale") {
@@ -46,7 +52,7 @@ it.each(["missing", "unmatched", "uncited", "stale", "valid", "evergreen"] as co
   await f.t.action(internal.jobs.createContent, { runId: f.runId, job: "content_social", channel: "linkedin", quantity: 1, images: 0 });
   const run = await f.t.run(ctx => ctx.db.get(f.runId));
   const artifacts = await f.t.run(ctx => ctx.db.query("artifacts").collect());
-  const good = kind === "valid" || kind === "evergreen";
+  const good = kind === "valid" || kind === "evergreen" || kind === "negative_only";
   expect(run?.status).toBe(good ? "verified" : "failed");
   expect(artifacts).toHaveLength(good ? 1 : 0);
   if (good) expect(artifacts[0]).toMatchObject({ orgId: f.orgId, status: "in_review" });

@@ -74,4 +74,18 @@ describe("calendar source persistence and draft context", () => {
     await t.run(async ctx => { const first = (await ctx.db.query("calendarSlots").collect())[0]; await ctx.db.patch(first._id, { orgId: foreign.orgId }); });
     await expect(t.query(internal.autopilot.draftingContext, { runId: draftId, channel: "linkedin" })).rejects.toThrow();
   });
+
+  it("saves an evergreen exclusion but rejects a separate unsupported current reference without replacing it", async () => {
+    const { t, runId } = await seed();
+    const plan = calendar();
+    Object.assign(plan.slots[0], { idea: "Don't chase viral trends. Explain the customer question.", trendSourceUrl: undefined, trendEvidence: undefined });
+    await t.mutation(internal.autopilot.saveWeekPlan, { runId, weekOf: "2026-11-16", fromDay: 1, plan });
+    const before = await t.run(ctx => ctx.db.query("calendarSlots").collect());
+    expect(before).toHaveLength(1);
+    expect(before[0]).toMatchObject({ idea: plan.slots[0].idea, status: "planned" });
+    plan.slots[0].callToAction = "Adapt this current viral format";
+    await expect(t.mutation(internal.autopilot.saveWeekPlan, { runId, weekOf: "2026-11-16", fromDay: 1, plan })).rejects.toThrow();
+    expect(await t.run(ctx => ctx.db.query("calendarSlots").collect())).toEqual(before);
+    for (const table of ["artifacts", "approvals", "actionReceipts"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
+  });
 });

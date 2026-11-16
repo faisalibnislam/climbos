@@ -1,3 +1,22 @@
+## 17 November 2026 — preserve evergreen advice about trend chasing
+
+Audit of the preceding social guard found a real false positive: “don’t chase viral trends” and “no viral gimmicks” required a dated current-trend source. The same detector missed plural-only positive instructions such as “follow current trends.” Six failing unit cases reproduced the post/calendar false positives and plural omission before implementation.
+
+Social and calendar checks now share namesTrendReference. It strips only bounded explicit exclusions of generic trend material before checking each field independently. Definite references such as “this viral meme,” separate positive clauses, and “don’t miss this viral trend” still require evidence. No title or field can negate a different field. Explicit source/evidence metadata is always validated regardless of wording. The existing source/date/observation matcher and final pre-image/pre-save gate are unchanged. Engine v3.115-trend-reference-context; no provider, model route, schema, UI, generated file or action authority changed.
+
+Verification commands:
+
+```sh
+pnpm exec vitest run tests/unit/social-trend-surfaces.test.ts tests/convex/social-trend-generation.test.ts tests/unit/social-intelligence.test.ts tests/unit/calendar-trend-evidence.test.ts tests/convex/calendar-trend-evidence.test.ts tests/convex/engine-v2.test.ts tests/convex/autopilot.test.ts tests/convex/social-publish.test.ts tests/convex/research-context.test.ts tests/convex/brand.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts tests/convex/publish-flow.test.ts tests/unit/trend-freshness.test.ts
+pnpm typecheck
+pnpm exec eslint shared/agents/specs.ts tests/unit/social-trend-surfaces.test.ts tests/unit/calendar-trend-evidence.test.ts tests/convex/social-trend-generation.test.ts tests/convex/calendar-trend-evidence.test.ts
+git diff --check
+```
+
+Results: **180 tests across 14 files passed (7.71s)**; app/Convex typecheck, scoped lint and whitespace checks passed. Actual createContent boundary tests save generic-exclusion advice as in-review work, reject a separate unsupported video reference, and reject incomplete declared evidence despite negative wording. The calendar mutation saves evergreen advice as a planned preview and refuses an unsupported later CTA without replacing it. No external network calls or action receipts occur in the new job cases; successful content requires the existing pending review. Existing brand inputs, Autopilot, tenant and publishing checks remain covered.
+
+Limits: these exclusions are a deliberately narrow English grammar, not a general semantic classifier. Unrecognized educational phrasing may still require revision, while implicit or multilingual references may escape lexical detection unless metadata declares them. The model, source truth, creative effectiveness and live providers were not evaluated. No browser/UI change or deployment; no paid evaluation, external send/publish/spend or model switch. Existing .gitignore work remains untouched; whole-project acceptance remains open.
+
 ## 17 November 2026 — social trend checks across generated creative fields
 
 Audit followed brand settings and job context into createContent and planSocialWeek, the shared social-intelligence/platform skills, research, model lint/revision, socialToArtifacts, calendar persistence and existing approval/publishing checks. Voice, humor/trend preferences and approved examples already reached both jobs. Weekly history already included qualified post reports with source/version/measurement limitations. No replacement agent or prompt was needed for those behaviors.

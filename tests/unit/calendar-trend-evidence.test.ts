@@ -33,4 +33,9 @@ describe("calendar trend evidence", () => {
   it.each(["proof", "callToAction"])("requires evidence for a trend reference in %s", field => {
     expect(lint({ idea: "Explain one process", ownerNote: "Owner should check the workflow", [field]: "Try the current viral format" }, { task: "Plan", brief: "Synthetic", facts: [] }).some(issue => issue.rule === "trend_evidence")).toBe(true);
   });
+  it("allows evergreen advice against generic trend chasing while retaining actual-reference checks", () => {
+    const evergreen = { idea: "Don't chase viral trends. Explain the customer question.", ownerNote: "Owner should check the workflow" };
+    expect(lint(evergreen, { task: "Plan", brief: "Synthetic", facts: [] })).toEqual([]);
+    expect(lint({ ...evergreen, callToAction: "Try this current meme" }, { task: "Plan", brief: "Synthetic", facts: [] }).some(issue => issue.rule === "trend_evidence")).toBe(true);
+  });
 });
