@@ -1,3 +1,7 @@
+## 17 November 2026 — evidence behind channel and audience choices
+
+Strategy-path audit found channel/audience citations being accepted from URL substrings in prompt text. Focused/starter/detailed validation now checks the recorded research source list, preserving host/path/query identity. Existing fact references and uncited hypotheses remain possible. Four red spec cases and six generation cases verify the repair; 127 focused/permission tests pass. See [source audit and open strategy work](plan-channel-evidence-audit.md). This strengthens requirement 24 and the evidence boundary for rows 31–40 without marking those broad requirements complete.
+
 ## 17 November 2026 — default-plan paid acquisition fit
 
 Requirement 33 follow-up: focused/starter validation now reuses the channel scorer's existing blocks for supplied non-positive margin and supported activation/conversion/retention/delivery/economics constraints. Recorded margin reaches the validation contract; a hard finding prevents approval/start. Unknown inputs do not become negative facts, and bold alternatives remain available. See [scoped evidence and remaining work](paid-acquisition-completion-audit.md). 122 focused/permission tests pass. Requirement 33 and the broader strategy scope remain partial.

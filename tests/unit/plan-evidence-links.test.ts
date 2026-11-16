@@ -1,15 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { lintCites } from "../../shared/agents/specs";
+import { focusedStrategySpec, starterStrategySpec, strategySpec, lintCites } from "../../shared/agents/specs";
+import { focusedPlanFixture } from "../fixtures/focusedPlan";
 import { resolveCites } from "../../shared/agents/evidence";
 import { conflictLines, findConflicts } from "../../shared/agents/conflicts";
 import { canDriveWork, planQuality, agentQuality } from "../../shared/agents/quality";
 
 /** Items 8 and 9 (Book 14 §5): claims link to evidence; conflicting facts are kept and shown. */
 describe("channel and audience cites", () => {
-  const evidence = "Research notes: pricing at https://formkit.app/pricing/ shows Pro at $19.\nhttps://www.g2.com/products/formkit/reviews";
+  const evidence = ["https://formkit.app/pricing/", "https://www.g2.com/products/formkit/reviews?x=1"];
   const plan = (cites: string[], aud: string[] = []) => ({ channels: [{ name: "SEO pages", priority: 1, cites }], audiences: [{ name: "Solo founders", cites: aud }] });
-  it("accepts confirmed facts and pages the research read (any www / slash / query form)", () => {
-    expect(lintCites(plan(["fact:0", "fact:2", "https://formkit.app/pricing", "https://g2.com/products/formkit/reviews?x=1"]), 3, evidence)).toEqual([]);
+  it("accepts confirmed facts and recorded pages with equivalent trailing slash or fragment", () => {
+    expect(lintCites(plan(["fact:0", "fact:2", "https://formkit.app/pricing", "https://www.g2.com/products/formkit/reviews?x=1#reviews"]), 3, evidence)).toEqual([]);
   });
   it("fails a fact index out of range or a page nobody read, as a citation error", () => {
     const issues = lintCites(plan(["fact:3"], ["https://made-up.example/report"]), 3, evidence);
@@ -18,15 +19,41 @@ describe("channel and audience cites", () => {
       ["citation", "audiences[0].cites"],
     ]);
   });
+  it("does not attach a read source's title to a different path, host or query", () => {
+    const urls = ["https://formkit.app/Pricing", "https://www.formkit.app/pricing", "https://formkit.app/pricing?market=other"];
+    expect(resolveCites(urls, [], [{ url: "https://formkit.app/pricing", title: "Read pricing page" }])).toEqual(urls.map(url => ({ kind: "web", url })));
+  });
   it("nudges (warn) when the top channel cites nothing", () => {
     expect(lintCites(plan([]), 2, evidence)).toMatchObject([{ severity: "warn", rule: "uncited" }]);
   });
   it("resolves cites to fact ids and titled pages, dropping duplicates and junk", () => {
-    const refs = resolveCites(["fact:1", "fact:1", "https://www.formkit.app/pricing/", "https://formkit.app/pricing", "fact:9", "nonsense"], ["f0", "f1"], [{ url: "https://formkit.app/pricing", title: "Pricing" }]);
+    const refs = resolveCites(["fact:1", "fact:1", "https://formkit.app/pricing/#plans", "https://formkit.app/pricing", "fact:9", "nonsense"], ["f0", "f1"], [{ url: "https://formkit.app/pricing", title: "Pricing" }]);
     expect(refs).toEqual([
       { kind: "fact", factId: "f1" },
-      { kind: "web", url: "https://www.formkit.app/pricing/", title: "Pricing" },
+      { kind: "web", url: "https://formkit.app/pricing/#plans", title: "Pricing" },
     ]);
+  });
+});
+
+describe("plan source membership", () => {
+  it.each([focusedStrategySpec(), starterStrategySpec(), strategySpec()])("checks recorded pages rather than prompt mentions in $label", spec => {
+    const out = focusedPlanFixture();
+    const readUrl = "https://business.example/Research?market=local";
+    const unsupported = ["https://business.example", "https://business.example/Research", "https://business.example/research?market=local", "https://business.example/Research?market=global", "https://mentioned.example/report"];
+    for (const ref of unsupported) {
+      out.channels[0].cites = [ref];
+      out.audiences[0].cites = [ref];
+      const issues = spec.lint!(out, { task: "Consider https://mentioned.example/report without having read it", brief: readUrl, facts: [], untrustedContext: `Read source: ${readUrl}`, availableSourceUrls: [readUrl] }).filter(issue => issue.rule === "citation");
+      expect(issues).toEqual(expect.arrayContaining([expect.objectContaining({ path: "channels[0].cites" }), expect.objectContaining({ path: "audiences[0].cites" })]));
+      expect(canDriveWork(planQuality([], issues))).toBe(false);
+    }
+  });
+  it("accepts an exact recorded source even when notes do not repeat its URL", () => {
+    const out = focusedPlanFixture();
+    out.channels[0].cites = ["https://business.example/Research?market=local#finding"];
+    out.audiences[0].cites = ["https://business.example/Research?market=local"];
+    const input = { task: "Recommend the next move", brief: "Synthetic source notes", facts: [], availableSourceUrls: ["https://business.example/Research?market=local"] };
+    expect(focusedStrategySpec().lint!(out, input).filter(issue => issue.rule === "citation" && /^(channels|audiences)/.test(issue.path ?? ""))).toEqual([]);
   });
 });
 

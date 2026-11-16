@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: channel/audience source identity
+
+Replaced prompt-substring citation acceptance with recorded research-source membership in default/detailed plan specs. Reused the existing strict URL normalizer for validation and persisted title lookup. Four red spec regressions and six actual job cases cover false acceptance, false rejection, saved links and approval boundaries. Final 127 tests/seven files, typecheck and scoped lint pass. No prompt/provider/schema/UI or external authority change. [Audit and remaining scope](plan-channel-evidence-audit.md) distinguish source identity from semantic/business validation.
+
 ## Local update — 17 November 2026: paid acquisition eligibility
 
 Focused/starter plans could bypass the existing channel scorer's economics/diagnosis blocks. Reused that policy in shared plan validation and carried recorded owner margin into constraints. Hard quality findings prevent approval/start; low-evidence bold exploration and unpaid preparation remain available. 122 tests/eight files, typecheck and scoped lint passed. See [scoped audit](paid-acquisition-completion-audit.md) and Verification. Explicit allocations are covered; historical plans and general recommendation judgment remain outside this repair.

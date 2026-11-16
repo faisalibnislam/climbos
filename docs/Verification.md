@@ -1,3 +1,13 @@
+## 17 November 2026 — recorded sources for channel and audience citations
+
+Four new spec-level regressions showed prompt-only URLs and URL prefixes accepted as research, and recorded sources absent from prose rejected. `lintCites` now checks the structured research source list in focused/starter/detailed specs using the existing URL normalizer. Path case, query, scheme and host stay distinct. Persisted evidence-title matching uses the same identity rules. Six actual default-plan generation cases verify rejected/accepted sources, saved links, approval/start rejection and no action receipts. Engine v3.121-plan-source-membership. See [the scoped audit](growth-engine/plan-channel-evidence-audit.md).
+
+- `pnpm exec vitest run tests/unit/plan-evidence-links.test.ts tests/convex/focused-plan.test.ts tests/unit/focused-plan.test.ts tests/unit/plan-quality.test.ts tests/convex/strategy-evidence.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — 127 passed in seven files, 7.91 seconds.
+- `pnpm typecheck` — root and Convex TypeScript passed.
+- `pnpm exec eslint shared/agents/specs.ts shared/agents/evidence.ts tests/unit/plan-evidence-links.test.ts tests/convex/focused-plan.test.ts` — passed.
+
+The first integration run exposed a test assertion using the wrong persistence field; the next exposed optional fixes being absent on a passing plan. Assertions now inspect actual channel/audience `sources` and explicitly require passed quality for accepted references. The final test run is green. No browser, live-provider or paid-model test ran. No prompt or execution authority changed. Matching a recorded source does not establish claim truth, audience demand, causal evidence or recommendation quality; historical plans are not retroactively revalidated.
+
 ## 17 November 2026 — paid acquisition fit in default plans
 
 Closed a confirmed bypass between scored channel recommendations and focused/starter plans. Both now reuse the same deterministic eligibility policy for explicit paid allocations, with recorded owner margin and only a supported diagnosis. The hard finding reaches saved quality and existing approval/start checks. Unknown margin, uncertain diagnosis, unpaid preparation and bold exploration remain distinct. See [the scoped audit](growth-engine/paid-acquisition-completion-audit.md).

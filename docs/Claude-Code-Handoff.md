@@ -11,6 +11,8 @@
 
 Latest paid-acquisition follow-up (17 November): focused/starter validation now shares the channel scorer's supplied-economics and supported-diagnosis blocks. 122 focused/permission tests, typecheck and scoped lint pass. See [the audit](growth-engine/paid-acquisition-completion-audit.md) for the exact path and remaining scope. This is a recommendation validation repair, not new spending authority or completion of strategy quality. Preserve the pre-existing `.gitignore` edits.
 
+Latest channel-evidence follow-up (17 November): plan citations now require recorded research-source membership, and persisted source titles preserve URL identity. 127 focused/permission tests, typecheck and scoped lint pass. [The scoped audit](growth-engine/plan-channel-evidence-audit.md) retains open customer-fit, channel-preference and semantic-consistency work; source matching is not proof of business quality.
+
 This handoff records what has been built, what was checked, what remains unverified, and how to continue safely. It is a starting point for repository work, not proof that every capability works with live providers or real customer outcomes.
 
 ## Current status — 17 November 2026

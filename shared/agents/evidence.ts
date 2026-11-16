@@ -8,7 +8,7 @@
  * well under Convex's document limit.
  */
 import { skillVersion } from "../skills";
-import { ENGINE_VERSION } from "./specs";
+import { ENGINE_VERSION, normalizeSourceUrl } from "./specs";
 import type { FactConflict } from "./conflicts";
 import type { Source } from "../ai/types";
 
@@ -90,7 +90,7 @@ export type EvidenceRef = { kind: "fact"; factId: string } | { kind: "web"; url:
 export function resolveCites(cites: string[] | undefined, factIds: string[], sources: { url: string; title?: string }[] = []): EvidenceRef[] {
   const out: EvidenceRef[] = [];
   const seen = new Set<string>();
-  const key = (u: string) => u.trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, "").replace(/[#?].*$/, "").replace(/\/+$/, "");
+  const key = normalizeSourceUrl;
   for (const c of cites ?? []) {
     const f = /^fact:(\d+)$/i.exec(c.trim());
     if (f) {
@@ -99,7 +99,7 @@ export function resolveCites(cites: string[] | undefined, factIds: string[], sou
       if (id) seen.add(id);
     } else if (/^https?:\/\//i.test(c.trim())) {
       const k = key(c);
-      if (seen.has(k)) continue;
+      if (k === null || seen.has(k)) continue;
       seen.add(k);
       const title = sources.find((s) => key(s.url) === k)?.title;
       out.push({ kind: "web", url: c.trim().slice(0, 500), ...(title ? { title: title.slice(0, 200) } : {}) });

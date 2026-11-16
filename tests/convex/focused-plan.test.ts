@@ -7,13 +7,14 @@ import { offerAssessmentFixture, offerFact } from "../fixtures/offerAssessment";
 import { approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
 import type { TurnRequest } from "../../shared/ai/types";
 import type { RateVersion } from "../../shared/economics/rates";
-const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "" }));
+const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "" }));
 vi.mock("../../shared/ai/turn", async original => ({
   ...await original<typeof import("../../shared/ai/turn")>(),
   modelTurn: async (req: TurnRequest, rates: RateVersion) => {
     state.requests.push(req);
     const days = Number(JSON.stringify(req.messages).match(/EXECUTION CYCLE: (14|30|90) days/)?.[1] ?? 14);
     const plan = focusedPlanFixture(days);
+    if (state.citationReference) { plan.channels[0].cites = [state.citationReference]; plan.audiences[0].cites = [state.citationReference]; }
     if (state.demandMode) {
       const channel = plan.channels[0];
       plan.channels = [{ ...channel, key: "search_ads", name: "Search ads test", priority: 1, suggestedMonthlyAdSpend: 150 }];
@@ -57,7 +58,7 @@ vi.mock("../../shared/ai/turn", async original => ({
     return result;
   },
 }));
-afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; });
+afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; });
 
 async function workspace() {
   const t = setup(); delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE;
@@ -73,6 +74,36 @@ async function workspace() {
   await t.mutation(internal.engine.putResearchCache, { orgId, businessWebsite: "https://business.example/", cacheKey: "a".repeat(64), agentId: "business_insights", modelKey: "claude-haiku-5.5", notes: "Synthetic public-source notes for a workflow integration test. No measured demand.", sources: [{ url: "https://business.example/" }], expiresAt: Date.now() + 86400000 });
   return { t, owner, slug, orgId };
 }
+
+it.each([
+  ["focused", "https://business.exam"], ["starter", "https://business.exam"],
+  ["focused", "https://mentioned.example/report"], ["starter", "https://mentioned.example/report"],
+] as const)("rejects a %s source citation absent from the recorded research: %s", async (planStyle, reference) => {
+  const { t, owner, slug, orgId } = await workspace();
+  state.citationReference = reference;
+  await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "Consider https://mentioned.example/report if useful, but we have not read it", horizonDays: 14, monthlyAdBudget: 0 });
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(plan.expert?.quality).toMatchObject({ state: "failed", fixes: expect.arrayContaining([expect.objectContaining({ rule: "citation", path: "channels[0].cites" }), expect.objectContaining({ rule: "citation", path: "audiences[0].cites" })]) });
+  await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
+  await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: plan._id, playId: "focused" })).rejects.toThrow();
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+  expect((await t.run(ctx => ctx.db.query("approvals").collect())).every(a => a.status === "pending")).toBe(true);
+});
+
+it.each(["focused", "starter"] as const)("retains an exact cached source citation through %s generation", async planStyle => {
+  const { t, owner, slug, orgId } = await workspace();
+  state.citationReference = "https://business.example/#source";
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(plan.channels[0].sources).toContainEqual(expect.objectContaining({ kind: "web", url: state.citationReference }));
+  expect(plan.audiences[0].sources).toContainEqual(expect.objectContaining({ kind: "web", url: state.citationReference }));
+  expect(plan.expert?.quality?.state).toBe("passed");
+  expect((plan.expert?.quality?.fixes ?? []).filter(fix => fix.rule === "citation")).toEqual([]);
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
 
 it.each([
   ["focused", 0], ["focused", -0.25], ["focused", "capacity"],
