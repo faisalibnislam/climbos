@@ -3728,11 +3728,14 @@ export default defineSchema({
      * value classifies a reported random comparison, not independently verified causal impact.
      */
     outcomeRevision: v.optional(v.number()),
+    /** Latest owner report, independent of plan age; corrections do not create extra learning candidates. */
+    outcomeReviewedAt: v.optional(v.number()),
     analyses: v.optional(v.array(experimentAnalysisV)),
     createdAt: v.number(),
   })
     .index("by_org", ["orgId"])
     .index("by_strategy", ["strategyId"])
+    .index("by_org_outcome_reviewed", ["orgId", "outcomeReviewedAt"])
     .index("by_design_source", ["orgId", "designSource.runId", "designSource.findingIndex"]),
 
   /** Append-only outcome reports; analyses on experiments remain the current learning projection. */

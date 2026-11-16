@@ -23,6 +23,168 @@ async function planWithTests(t: T, email: string) {
 }
 
 describe("experiment outcomes", () => {
+  it("retains recently reported tests after newer untested plans and keeps their original context", async () => {
+    const t = setup();
+    const f = await planWithTests(t, "durable-outcomes@example.com");
+    await t.run(async ctx => {
+      await ctx.db.patch(f.referral, { hypothesis: "A personal referral request helps repeat buyers introduce peers", population: "Repeat buyers in Dhaka", variants: [{ key: "control", description: "No request" }, { key: "change", description: "Personal referral request" }], guardrails: ["Stop on complaints"] });
+      const { _id: _id, _creationTime: _time, ...plan } = (await ctx.db.get(f.strategyId))!;
+      for (let i = 0; i < 6; i++) await ctx.db.insert("strategies", { ...plan, version: i + 2, createdAt: Date.now() + i });
+    });
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { expectedRevision: 0, slug: f.slug, experimentId: f.referral, executed: true, source: "owner_report", design: "before_after", exposed: 100, conversions: 2, result: "unclear", stopRuleHit: false, note: "Only repeat buyers were approached" });
+    const brief = await t.query(internal.playResults.briefFor, { orgId: f.orgId });
+    expect(brief).toContain("Referral ask");
+    expect(brief).toContain("Repeat buyers in Dhaka");
+    expect(brief).toContain("A personal referral request helps repeat buyers introduce peers");
+    expect(brief).toContain("No request");
+    expect(brief).toContain("Stop on complaints");
+    expect(brief).toContain("Only repeat buyers were approached");
+    expect(brief).toContain(f.referral);
+    expect(brief).toContain(f.strategyId);
+    expect(brief).toContain("bounded sample");
+  });
+
+  it("retrieves reported tests beyond the old ten-test limit without letting corrections crowd out other tests", async () => {
+    const t = setup();
+    const f = await planWithTests(t, "outcome-volume@example.com");
+    const last = await t.run(async ctx => {
+      const { _id: _id, _creationTime: _time, ...experiment } = (await ctx.db.get(f.referral))!;
+      let id = f.referral;
+      for (let i = 0; i < 20; i++) id = await ctx.db.insert("experiments", { ...experiment, name: `Later test ${i}` });
+      return id;
+    });
+    const report = { slug: f.slug, executed: true, source: "owner_report" as const, design: "before_after" as const, exposed: 100, conversions: 2, result: "missed" as const, stopRuleHit: false };
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: 0, experimentId: last });
+    for (let revision = 0; revision < 45; revision++) await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: revision, experimentId: f.referral });
+    const brief = await t.query(internal.playResults.briefFor, { orgId: f.orgId });
+    expect(brief).toContain("Later test 19");
+    expect(brief.match(/- Referral ask/g)).toHaveLength(1);
+  });
+
+  it("uses the latest original-definition report after returning to and then changing the metric again", async () => {
+    const t = setup();
+    const f = await planWithTests(t, "definition-return@example.com");
+    const report = { slug: f.slug, experimentId: f.referral, executed: true, source: "owner_report" as const, design: "before_after" as const, result: "unclear" as const, stopRuleHit: false };
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: 0, result: "met" });
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: 1, metric: "replies" });
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: 2, result: "missed" });
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: 3, metric: "replies" });
+    const brief = await t.query(internal.playResults.briefFor, { orgId: f.orgId });
+    expect(brief).toContain("On the original definition it missed its success rule.");
+    expect(brief).not.toContain("On the original definition it met its success rule.");
+  });
+
+  it("keeps bounded legacy coverage, deduplicates candidates and sends the original context only to strategy work", async () => {
+    const t = setup();
+    const f = await planWithTests(t, "legacy-context@example.com");
+    const report = { slug: f.slug, experimentId: f.referral, executed: true, source: "owner_report" as const, design: "before_after" as const, result: "missed" as const, stopRuleHit: false };
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: 0 });
+    const ids = await t.run(async ctx => {
+      await ctx.db.patch(f.referral, { outcomeReviewedAt: undefined, population: "Legacy audience", hypothesis: "Legacy mechanism" });
+      const run = { orgId: f.orgId, title: "Learning context", status: "executing" as const, input: "{}", roles: [], estimateMicros: 0, actualMicros: 0, rateVersionId: "test", entitlementVersionId: "test", routingVersionId: "test", budget: { modelSteps: 0, researchTools: 0, repairs: 0 }, used: { modelSteps: 0, researchTools: 0, repairs: 0 }, isFixture: false, createdAt: Date.now(), updatedAt: Date.now() };
+      return { strategy: await ctx.db.insert("workflowRuns", { ...run, kind: "strategy" }), content: await ctx.db.insert("workflowRuns", { ...run, kind: "content_social" }) };
+    });
+    let brief = await t.query(internal.playResults.briefFor, { orgId: f.orgId });
+    expect(brief).toContain("Legacy audience");
+    expect(brief).toContain("Older unindexed reports may be omitted");
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: 1 });
+    brief = await t.query(internal.playResults.briefFor, { orgId: f.orgId });
+    expect(brief.match(/- Referral ask/g)).toHaveLength(1);
+    expect((await t.query(internal.jobWrites.jobContext, { runId: ids.strategy }))?.resultsText).toContain("Legacy mechanism");
+    expect((await t.query(internal.jobWrites.jobContext, { runId: ids.content }))?.resultsText).toBe("");
+    for (const table of ["approvals", "actionReceipts"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
+  });
+
+  it("excludes foreign, orphaned, fixture and design-linked tests from generic learning and rejects broken source links on writes", async () => {
+    const t = setup();
+    const f = await planWithTests(t, "linked-outcomes@example.com");
+    const other = await planWithTests(t, "foreign-outcomes@example.com");
+    const report = { slug: f.slug, experimentId: f.referral, executed: true, source: "owner_report" as const, design: "before_after" as const, result: "met" as const, stopRuleHit: false };
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: 0 });
+    expect(await t.query(internal.playResults.briefFor, { orgId: other.orgId })).toBe("");
+    await t.run(ctx => ctx.db.patch(f.referral, { strategyId: other.strategyId }));
+    expect(await t.query(internal.playResults.briefFor, { orgId: f.orgId })).toBe("");
+    await expect(f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: 1 })).rejects.toThrow();
+    await t.run(ctx => ctx.db.patch(f.referral, { strategyId: f.strategyId, orgId: other.orgId }));
+    expect(await t.query(internal.playResults.briefFor, { orgId: f.orgId })).toBe("");
+    const runId = await t.run(async ctx => {
+      await ctx.db.patch(f.referral, { orgId: f.orgId });
+      const runId = await ctx.db.insert("workflowRuns", { orgId: f.orgId, kind: "strategy", title: "Demo plan", status: "verified", input: "{}", roles: [], estimateMicros: 0, actualMicros: 0, rateVersionId: "test", entitlementVersionId: "test", routingVersionId: "test", budget: { modelSteps: 0, researchTools: 0, repairs: 0 }, used: { modelSteps: 0, researchTools: 0, repairs: 0 }, isFixture: true, createdAt: Date.now(), updatedAt: Date.now() });
+      await ctx.db.patch(f.strategyId, { runId });
+      return runId;
+    });
+    expect(await t.query(internal.playResults.briefFor, { orgId: f.orgId })).toBe("");
+    await expect(f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: 1 })).rejects.toThrow(/Demo plan/);
+    await t.run(ctx => ctx.db.delete(runId));
+    expect(await t.query(internal.playResults.briefFor, { orgId: f.orgId })).toBe("");
+    await expect(f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: 1 })).rejects.toThrow();
+    await t.run(ctx => ctx.db.delete(f.strategyId));
+    expect(await t.query(internal.playResults.briefFor, { orgId: f.orgId })).toBe("");
+    await expect(f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: 1 })).rejects.toThrow();
+    expect((await t.run(ctx => ctx.db.get(f.referral)))?.outcomeRevision).toBe(1);
+    for (const table of ["approvals", "actionReceipts"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
+  });
+
+  it("selects recent reports with separate tested and not-run limits and does not revive superseded original results", async () => {
+    const t = setup();
+    const f = await planWithTests(t, "bounded-outcomes@example.com");
+    await t.run(async ctx => {
+      const { _id: _id, _creationTime: _time, ...template } = (await ctx.db.get(f.referral))!;
+      for (let i = 0; i < 15; i++) {
+        const at = Date.now() - 100_000 + i;
+        await ctx.db.insert("experiments", { ...template, name: `Recorded experiment ${i}`, outcomeReviewedAt: at, analyses: [{ n: 1, executed: i < 8, source: "owner_report", design: "none", metric: template.primaryMetric, successRule: template.stoppingRule, result: i % 2 ? "missed" : "unclear", stopRuleHit: false, inference: "observed", redefined: false, reviewedAt: at, reviewedBy: f.owner.userId }] });
+      }
+    });
+    let brief = await t.query(internal.playResults.briefFor, { orgId: f.orgId });
+    const [tested, notRun] = brief.split("TESTS NOT RUN");
+    expect(tested.match(/- Recorded experiment/g)).toHaveLength(6);
+    expect(notRun.match(/- Recorded experiment/g)).toHaveLength(4);
+    expect(tested).toContain("Recorded experiment 7");
+    expect(tested).not.toContain("Recorded experiment 0 (");
+    expect(notRun).toContain("Recorded experiment 14");
+    const report = { slug: f.slug, experimentId: f.referral, executed: true, source: "owner_report" as const, design: "none" as const, result: "met" as const, stopRuleHit: false };
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: 0 });
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: 1, metric: "replies" });
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: 2, executed: false, result: "unclear" });
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: 3, metric: "replies", result: "unclear" });
+    brief = await t.query(internal.playResults.briefFor, { orgId: f.orgId });
+    expect(brief).not.toContain("On the original definition it met");
+    expect(brief).toContain("exploratory only");
+  });
+
+  it("backfills old review timestamps in tenant-scoped pages without rewriting reports or inventing dates", async () => {
+    const t = setup();
+    const f = await planWithTests(t, "index-backfill@example.com");
+    const other = await planWithTests(t, "index-other@example.com");
+    const report = { expectedRevision: 0, slug: f.slug, experimentId: f.referral, executed: true, source: "owner_report" as const, design: "none" as const, result: "missed" as const, stopRuleHit: false };
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, report);
+    await other.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, slug: other.slug, experimentId: other.referral });
+    const before = await t.run(async ctx => {
+      await ctx.db.patch(f.referral, { outcomeReviewedAt: undefined });
+      await ctx.db.patch(other.referral, { outcomeReviewedAt: undefined });
+      const original = (await ctx.db.get(f.referral))!;
+      await ctx.db.patch(f.holdout, { analyses: [{ ...original.analyses![0], reviewedAt: Date.now() + 86_400_000 }] });
+      const { _id: _id, _creationTime: _time, ...plan } = (await ctx.db.get(f.strategyId))!;
+      for (let i = 0; i < 6; i++) await ctx.db.insert("strategies", { ...plan, version: i + 2 });
+      return original;
+    });
+    expect(await t.query(internal.playResults.briefFor, { orgId: f.orgId })).toBe("");
+    expect(await t.mutation(internal.migrations.experimentOutcomeReviewIndex, { orgId: f.orgId })).toMatchObject({ eligible: 1, updated: 0, skipped: 1, dryRun: true });
+    expect(await t.run(ctx => ctx.db.get(f.referral))).toEqual(before);
+    let cursor: string | undefined, updated = 0, pages = 0;
+    do {
+      const page = await t.mutation(internal.migrations.experimentOutcomeReviewIndex, { orgId: f.orgId, limit: 1, cursor, dryRun: false });
+      updated += page.updated; pages++; cursor = page.cursor ?? undefined;
+    } while (cursor);
+    expect(pages).toBe(3); expect(updated).toBe(1);
+    expect(await t.run(ctx => ctx.db.get(f.referral))).toEqual({ ...before, outcomeReviewedAt: before.analyses![0].reviewedAt });
+    expect((await t.run(ctx => ctx.db.get(other.referral)))?.outcomeReviewedAt).toBeUndefined();
+    expect((await t.run(ctx => ctx.db.get(f.holdout)))?.outcomeReviewedAt).toBeUndefined();
+    expect(await t.query(internal.playResults.briefFor, { orgId: f.orgId })).toContain("Referral ask");
+    expect(await t.mutation(internal.migrations.experimentOutcomeReviewIndex, { orgId: f.orgId, dryRun: false })).toMatchObject({ updated: 0, eligible: 0 });
+    for (const table of ["approvals", "actionReceipts", "workflowRuns"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
+  });
+
   it("saves an outcome with a computed label, and re-analysis never overwrites", async () => {
     const t = setup();
     const { owner, slug, referral } = await planWithTests(t, "outcome@example.com");

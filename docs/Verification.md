@@ -1,3 +1,32 @@
+## 16 November 2026 — experiment learning survives new plans and preserves original context
+
+Path inspected: owner outcome form → `playResults.recordExperimentOutcome` → current analyses plus append-only revisions → `resultsBrief` → `jobWrites.jobContext` → strategy business brief. Existing behavior already validates counts/dates, preserves unknown allocation, separates observed/reported comparisons from causal proof, binds editor access to the workspace, rejects stale form revisions and retains correction history. The separate design-learning path checks exact page versions.
+
+Three new regressions **failed before the fix**: a reported result vanished after newer plans pushed its plan outside the four-plan sample; a reported experiment beyond the first ten was omitted; and changing away from, back to, then away from the original definition could quote the first original “met” report instead of its later “missed” report.
+
+Changes:
+
+- Optional `experiments.outcomeReviewedAt` is updated atomically with each report and indexed by workspace. Candidate selection reads the 40 most recently reported distinct tests plus the existing bounded recent-plan legacy fallback, orders by the current report date, and includes up to six tested and four not-run tests. Multiple corrections cannot occupy multiple candidate slots. The latest matching original-definition analysis supplies the original result; a not-run correction cannot revive an older success. Stored redefinition labels are reassessed against actual original criteria.
+- Each included report retains experiment/plan identity, plan version, review time, original hypothesis, audience, variants, metric, stopping rule, analysis success rule, planned method/duration, guardrails, deviation count/latest note and owner note. These are bounded excerpts wrapped as untrusted historical data, with explicit incomplete-history and transfer limits. Missing variants remain unknown. Owner reporting remains unverified; no success, causal impact or new action permission is inferred. Engine version: `v3.87-experiment-learning-context`.
+- Generic learning excludes foreign-tenant, missing-source, known fixture and design-linked reports. Writes validate the original plan/run tenant and reject known demo plan tests in real workspaces. Demo workspaces retain fixture reporting for local verification. The design-specific context remains separate.
+- `migrations:experimentOutcomeReviewIndex` provides an internal, tenant-scoped paginated preview/apply path for older reports. Args: required `orgId`, optional `cursor`, `limit` (default 50, maximum 100), and `dryRun` (default true). Review all preview pages, then apply from the start with `dryRun:false`, passing each returned cursor until `done`. Only the last analysis's existing valid review time is copied; missing/future/invalid dates and broken/fixture source links are not invented or repaired. Repeated applications are idempotent. No automatic scheduler or provider action is created. Production application remains a separately authorized rollout step.
+
+Verification actually run:
+
+```sh
+pnpm exec vitest run tests/convex/experiment-outcomes.test.ts tests/convex/play-results.test.ts tests/convex/strategy-learning-sources.test.ts tests/convex/design-learning.test.ts tests/convex/tenancy.test.ts tests/convex/safety.test.ts tests/unit/experiment-outcome.test.ts tests/unit/experiment-outcome-ui.test.tsx tests/unit/strategy-prompt-cost.test.ts
+pnpm typecheck
+pnpm exec eslint convex/playResults.ts convex/migrations.ts convex/schema.ts shared/agents/specs.ts tests/convex/experiment-outcomes.test.ts
+pnpm exec eslint e2e/design-learning.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/design-learning.spec.ts
+git diff --check
+```
+
+Results: **60 tests passed across nine focused files**; app/Convex typecheck and scoped lint passed. The isolated local sync installed the optional index successfully. **Four desktop/mobile browser tests passed in 24.8 seconds**, exercising reporting, corrections, stale forms, history, unknown allocation, signed comparisons and unchanged approval/action records. The first browser run had two accessibility failures on a newly appearing toast during its 360 ms fade-in (trace showed blended text contrast 2.1:1). The test now waits for that toast's computed opacity to reach 1 while retaining it in the accessibility scan; no app styles or scan rules were changed. Final scans passed.
+
+Limits: selection remains bounded and recency-based, not complete-history semantic retrieval. Before the backfill is applied, older unindexed reports outside recent-plan fallback may be omitted. Design reports can occupy the indexed candidate read but remain excluded from this generic summary. Original plan provenance missing on legacy records cannot independently establish whether data was synthetic. Context preservation and deterministic selection are verified; improved real-model judgment, cross-industry quality and business outcomes are not. No production migration, deployment, live provider action, campaign send, publishing or spend occurred. The 410-requirement completion audit remains open.
+
 ## 16 November 2026 — business-model outcomes retain their original hypothesis
 
 Audit path: saved Business Model Check → owner test report → `businessModelTests` append-only rows → `jobWrites.jobContext` → untrusted business brief → later strategy/model check, plus the owner page and workspace export/deletion. Existing code already preserved the latest report per alternative beyond 200 updates, guarded tenant/edit permissions, kept measured evidence owner-labelled, and withheld stale model verdicts from plan constraints.

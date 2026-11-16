@@ -1,3 +1,9 @@
+## Local update — 16 November 2026: preserve experiment context across plans
+
+Verification: 60 focused tests, four desktop/mobile reporting checks, app/Convex typecheck, scoped lint and isolated local schema sync passed.
+
+Three failing regressions reproduced missing reports after four newer plans, omission of a reported test beyond the first ten experiments, and a stale original-definition success after a later failure. The existing outcome path now indexes latest review time, retrieves distinct recently reported tests, carries original hypothesis/audience/criteria and identity as untrusted data, and uses the latest matching original-definition report. A tenant-scoped preview/apply backfill indexes historical reports using saved dates. Existing outcome corrections/history, approval boundaries and the separate design-learning path remain intact. See [Verification](../Verification.md) for exact evidence and bounded/legacy limits; this does not establish real-model quality or finish the 410-requirement audit.
+
 ## Local update — 16 November 2026: durable business-model test learning
 
 Reproduced loss of earlier test evidence when a new model check had no reports. Extended existing report persistence/context to bind each result to its original check, proposal and test; added optional explicit outcomes, indexed recently reported checks, bounded historical retrieval and an owner history view. Current forms reset on a new check and reject stale saves without deleting their drafts or earlier reports. Kept original grounded/adjacent/bold options and separated owner decisions from evidence of effectiveness. No parallel agent or experiment subsystem was introduced.

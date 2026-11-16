@@ -142,6 +142,9 @@ test("reported comparisons keep allocation unknown until the owner supplies it @
   await expect(section.getByText(/Member-entered; reported source: connected tool/)).toBeVisible();
   await expect(section.getByText("Incremental", { exact: true })).toHaveCount(0);
   await expectNoHorizontalScroll(page);
+  // Check the visible notification, not its temporary fade-in opacity. Keep it
+  // in the scan so a real text/background contrast failure still fails the test.
+  await expect(page.getByRole("status").filter({ hasText: "Outcome saved" }).last()).toHaveCSS("opacity", "1");
   await expectAccessible(page, "reported experiment result");
   await section.scrollIntoViewIfNeeded();
   await page.screenshot({ path: testInfo.outputPath("reported-comparison.png"), fullPage: false });

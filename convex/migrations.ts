@@ -4,6 +4,36 @@ import { ensureAccountForOwner } from "./lib/accounts";
 import { EXPERT_PLAN_JSON_ENVELOPE_VERSION, EXPERT_PLAN_SCHEMA_VERSION } from "../shared/agents/planCompatibility";
 import { buildCurrentExpertGrowthPayload, parseCurrentExpertGrowthPayload } from "../shared/agents/growthPlanPersistence";
 
+/**
+ * Index existing reports by their saved review time without asking owners to
+ * re-enter outcomes. Operator-only, tenant-scoped and paginated. Preview is the
+ * default; apply every page with dryRun:false when rollout is authorized.
+ * Never changes a report, its history, approval or execution state.
+ */
+export const experimentOutcomeReviewIndex = internalMutation({
+  args: { orgId: v.id("organizations"), cursor: v.optional(v.string()), limit: v.optional(v.number()), dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, { orgId, cursor, limit, dryRun = true }) => {
+    const pageSize = Number.isSafeInteger(limit) ? Math.max(1, Math.min(100, limit!)) : 50;
+    const page = await ctx.db.query("experiments").withIndex("by_org", q => q.eq("orgId", orgId)).paginate({ numItems: pageSize, cursor: cursor ?? null });
+    let eligible = 0, updated = 0, skipped = 0;
+    for (const e of page.page) {
+      if (e.outcomeReviewedAt !== undefined) continue;
+      const reviewedAt = e.analyses?.at(-1)?.reviewedAt;
+      if (reviewedAt === undefined) continue;
+      if (!Number.isFinite(reviewedAt) || reviewedAt <= 0 || reviewedAt > Date.now()) { skipped++; continue; }
+      const plan = await ctx.db.get(e.strategyId);
+      if (!plan || plan.orgId !== orgId) { skipped++; continue; }
+      if (plan.runId) {
+        const run = await ctx.db.get(plan.runId);
+        if (!run || run.orgId !== orgId || run.isFixture) { skipped++; continue; }
+      }
+      eligible++;
+      if (!dryRun) { await ctx.db.patch(e._id, { outcomeReviewedAt: reviewedAt }); updated++; }
+    }
+    return { scanned: page.page.length, eligible, updated, skipped, dryRun, done: page.isDone, cursor: page.isDone ? null : page.continueCursor };
+  },
+});
+
 function expertVersion(expert: Record<string, unknown>): number {
   const value = expert.version;
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : 0;
