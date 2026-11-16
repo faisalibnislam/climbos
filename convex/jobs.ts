@@ -1505,9 +1505,12 @@ export const buildStrategy = internalAction({
       const research = await researchRun;
       // Re-plans: when the channel library, goal and research haven't changed since the last plan, its
       // evidence-based channel scoring still holds (budget and price fit are applied in code below).
+      // Use the same evidence-only weekly context for both the cache key and
+      // actual scorer. Empty generated proposals still reach strategy writing.
+      const channelBrief = businessBrief({ ...job, resultsText: job.channelResultsText });
       const channelInputHash = await sha256Hex(JSON.stringify({
         engine: ENGINE_VERSION,
-        brief: businessBrief(job),
+        brief: channelBrief,
         goalTarget: job.goal?.target ?? null,
         ownerTypes: job.business?.acquisition?.typesSource === "owner" ? job.business.acquisition.types : null,
         ownerDimensions: Object.entries((job.business?.acquisition?.dims ?? {}) as Record<string, { value: string; source: string }>).filter(([, value]) => value?.source === "owner"),
@@ -1550,7 +1553,7 @@ export const buildStrategy = internalAction({
               `CANDIDATES (id · name · priors):\n${candidates.map((c) => `${c.id} · ${c.name} · ${FACTORS.map((f) => c.factors[f]).join("/")}`).join("\n")}`,
               `BUSINESS INTELLIGENCE (researched earlier):\n${insightsBrief}`,
             ].join("\n\n"),
-            { ...(research ? { precomputedResearch: research } : {}), timingContext },
+            { brief: channelBrief, ...(research ? { precomputedResearch: research } : {}), timingContext },
           ),
           startedAt,
           { task: "growth_strategy", context: "", ctx: fixtureCtx(job), text: "" },

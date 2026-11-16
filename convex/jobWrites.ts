@@ -30,7 +30,7 @@ import { validateActionDependencies } from "../shared/agents/actionDependencies"
 import { sha256Hex } from "../shared/policy";
 import { v } from "convex/values";
 import { isPaymentRecord, SALES_PAYMENT_NOTE } from "../shared/attribution/paymentEvidence";
-import { resultsBrief } from "./playResults";
+import { resultsBriefs } from "./playResults";
 import { customerConcentration } from "../shared/attribution/concentration";
 import { pipelineOutcomes, pipelineOutcomesBrief } from "../shared/growth/pipeline";
 import { computeCohorts, repeatPurchaseBrief, repeatPurchaseSummary, subscriptionCohortBrief } from "../shared/attribution/cohorts";
@@ -340,6 +340,9 @@ export const jobContext = internalQuery({
         preparedStepWork = JSON.stringify(captured.drafts).slice(0, 10000);
       }
     } catch { /* Older runs have no captured preparation. */ }
+    const [resultBriefs, feedback] = run.kind === "strategy"
+      ? await Promise.all([resultsBriefs(ctx, org._id), feedbackBrief(ctx, org._id)])
+      : [null, ""] as const;
     return {
       intakeBrief,
       focusedResearch,
@@ -382,7 +385,8 @@ export const jobContext = internalQuery({
       /** Recent, source-backed competitor page changes are market signals, not customer evidence. */
       marketChanges: marketChanges.map(({ _id, at, name, summary, bullets, soWhat, suggestedAction, sourceUrls, evidence }) => ({ id: String(_id), at, name, summary, bullets, soWhat: soWhat ?? null, suggestedAction: suggestedAction ?? null, sourceUrls: sourceUrls ?? [], evidence: evidence ?? null })),
       /** Plans start from what earlier plays actually did. */
-      resultsText: run.kind === "strategy" ? [await resultsBrief(ctx, org._id), await feedbackBrief(ctx, org._id)].filter(Boolean).join("\n\n") : "",
+      resultsText: [resultBriefs?.full, feedback].filter(Boolean).join("\n\n"),
+      channelResultsText: [resultBriefs?.reported, feedback].filter(Boolean).join("\n\n"),
       creativeStrategyLearning: run.kind === "strategy" && !run.isFixture ? await creativeStrategyLearningBrief(ctx, org._id) : "",
       facts: currentFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, confidence: f.confidence, provenance: f.provenance, createdAt: f.createdAt, updatedAt: f.updatedAt, verifiedAt: f.verifiedAt ?? f.updatedAt, kind: EVIDENCE_KIND_LABEL[evidenceKind(f.statement, f.provenance)], evidenceKind: evidenceKind(f.statement, f.provenance), freshness: freshnessOf(f) })),
       staleFacts: staleFacts.slice(0, 40).map((f) => ({ id: f._id, statement: f.statement, category: f.category, confidence: f.confidence, provenance: f.provenance, updatedAt: f.updatedAt, verifiedAt: f.verifiedAt ?? f.updatedAt, freshness: freshnessOf(f) })),

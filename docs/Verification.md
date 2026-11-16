@@ -1,3 +1,23 @@
+## 16 November 2026 — reuse channel scoring without treating proposals as observations
+
+The preceding increment reproduced a pre-existing failure in the unchanged-input replan test on both current code and an archive of `da261294`. Traced `orgs.generatePlan` → `jobWrites.jobContext` → `playResults.resultsBrief` → `jobs.businessBrief` → channel input hash/scorer → saved acquisition profile. Diagnostic capture showed the second plan's new history consisted only of unreported proposals, including fresh plan/play identities and creation dates. Those changed the business brief despite no new outcome or owner input.
+
+The existing results reader now derives full and report-bearing briefs from one bounded database read. Full strategy context retains unreported proposals and unknown outcomes. The channel scorer and cache key both receive the report-bearing variant; merely normalizing the hash while supplying different model inputs was avoided. Records with actual entries or summary issues are retained, as are experiment outcomes, CRM associations and owner feedback. No new cache, provider, agent or execution permission was introduced. Current research still runs/reuses its own existing mechanism before channel-cache eligibility is evaluated. The six-hour TTL, matching goal, library and current input hash requirements remain intact.
+
+Verification:
+
+```sh
+pnpm exec vitest run tests/convex/channel-cache.test.ts tests/convex/plan-speed.test.ts tests/convex/strategy-evidence.test.ts tests/convex/play-results.test.ts tests/convex/play-result-history.test.ts tests/convex/experiment-outcomes.test.ts tests/convex/research-context.test.ts tests/convex/tenancy.test.ts
+pnpm exec vitest run tests/convex/play-result-learning.test.ts tests/convex/play-result-coverage.test.ts
+pnpm typecheck
+pnpm exec eslint convex/jobs.ts convex/jobWrites.ts convex/playResults.ts shared/agents/specs.ts tests/convex/channel-cache.test.ts
+git diff --check
+```
+
+The first group passed **53 tests across eight files** and the second passed **21 tests across two files**: **74 total**. Typecheck, targeted lint and whitespace checks passed. The original `plan-speed` test is unchanged and now passes. Seven new workflow tests cover unchanged reuse, preserving full unknown history, adding an owner report, reusing that unchanged report, owner economics/preferences/feedback, changed research and expiry. Existing tests retain goal-change, evidence, result-history, invalid-summary and tenant checks. Test model calls are synthetic; no live provider/model call or external action was made. No Next.js/UI code changed and no browser suite was run for this backend-only increment.
+
+Limits: reduced scoring calls are established in fixtures, not measured production latency, credits or total cost. Other meaningful context changes may correctly invalidate reuse; research and strategy writing still execute their existing workflows. The prior wider-suite run was interrupted, so this is not an all-tests-green claim. Full requirement acceptance and real strategy quality remain unproven. Engine `v3.103-channel-evidence-reuse`.
+
 ## 16 November 2026 — exact-post observation reports and weekly planning
 
 Audit traced the existing postMetrics table → autopilot.planningContext → jobs.planSocialWeek generation input and the published-content detail screen. The table had no production report writer. Its planner reader selected insertion-order metrics without a measurement window, content-version identity or source caveat, and the oldest 120 slots could hide recent work while future slots were not excluded. The research step already receives audience/business/brand context; no duplicate context pipeline was added.
