@@ -1,3 +1,4 @@
+import { isSocialChannel } from "../growth/socialChannels";
 import { MAX_CURRENT_TREND_AGE_MS } from "./trendFreshness";
 import { GoalTimingSchema, lintGoalTiming, type GoalTiming } from "./goalTiming";
 import { lintRefusedOutreach } from "./contactPolicy";
@@ -336,7 +337,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.122-owner-channel-feedback";
+export const ENGINE_VERSION = "v3.123-social-destinations";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -2804,6 +2805,9 @@ export function starterStrategySpec(): AgentSpec<z.infer<typeof FocusedStrategyS
 }
 
 export function socialSpec(channels: string[], o: SpecOptions = {}): AgentSpec<SocialPostsV2> {
+  const selected = channels.filter(isSocialChannel);
+  if (!selected.length || selected.length !== channels.length) throw new Error("Select supported social destinations before drafting.");
+  const destinationSchema = SocialPostsV2Schema.extend({ posts: z.array(SocialPostsV2Schema.shape.posts.element.extend({ channel: z.enum(selected as [typeof selected[number], ...typeof selected[number][]]) })) });
   const channelSkills = [...new Set(channels.map((c) => CHANNEL_SKILL[c] ?? "instagram-posts"))];
   const primary = channelSkills[0] ?? "instagram-posts";
   const needsVideo = channels.some((c) => c === "tiktok" || c === "youtube");
@@ -2813,7 +2817,7 @@ export function socialSpec(channels: string[], o: SpecOptions = {}): AgentSpec<S
       role: "social_media_manager",
       label: "Social posts",
       skills: ["copy-fundamentals", "social-intelligence", ...channelSkills, "social-visual-briefs", ...(needsVideo || channelSkills.includes("instagram-posts") ? ["short-video-scripts"] : [])].filter((v, i, a) => a.indexOf(v) === i),
-      schema: SocialPostsV2Schema,
+      schema: destinationSchema,
       rubric: rubricOf(primary),
       criticSkills: ["copy-fundamentals", "social-intelligence", ...channelSkills.slice(1)],
       lint: (out, input) => lintSocial(out, input, channels),

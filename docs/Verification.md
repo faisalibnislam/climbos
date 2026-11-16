@@ -1,3 +1,14 @@
+## 17 November 2026 — social destinations survive plan handoff
+
+Three new actual routing regressions showed detailed-plan platform selections missing from reserved draft jobs. Shared named-platform selection now reaches cards, quotes, requests, research, schemas and fixtures; ambiguous/unknown/community labels wait instead of becoming generic platform jobs. First-win preparation follows selected, non-parked plan channels and no longer guesses from business type or unconditionally adds email. Final social output rejects destination mismatches instead of rewriting post.channel. See [the scoped audit](growth-engine/social-destination-consistency-audit.md).
+
+- `pnpm exec vitest run tests/convex/plan-social-destinations.test.ts tests/convex/first-win-reuse.test.ts tests/unit/first-win-channels.test.ts tests/unit/social-intelligence.test.ts tests/unit/social-visuals.test.ts tests/convex/engine-v2.test.ts tests/convex/autopilot.test.ts tests/convex/publish-flow.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — 138 passed across ten files, 7.24 seconds.
+- `pnpm exec vitest run tests/convex/plan-social-destinations.test.ts` — final eight cases additionally check that ambiguous/unknown/community selections also start no onboarding job; overlapping verification, not eight additional distinct tests.
+- `pnpm typecheck` — root and Convex TypeScript passed.
+- `pnpm exec eslint shared/growth/socialChannels.ts convex/content.ts convex/lib/cards.ts convex/lib/jobPlans.ts convex/jobs.ts convex/ai/fixtures.ts shared/agents/specs.ts tests/convex/plan-social-destinations.test.ts tests/convex/first-win-reuse.test.ts tests/unit/first-win-channels.test.ts` — passed without warnings.
+
+The actual job tests use fixture/mocked providers; artifacts remain drafts/in review and no external-action receipts are created. An injected Facebook result for a LinkedIn request fails before saving. The initial multiple-platform test exposed an empty legacy channel in quote construction; quotes now receive the actual selected set. No generated files, live accounts, paid-model evaluations, browser checks or deployment. Bounded label recognition and generic direct-request defaults remain explicit limitations.
+
 ## 17 November 2026 — truthful reuse of starter preparation
 
 Detailed plan activation previously marked both social/email work covered whenever any first-win job ID existed. New run inputs bind the originating plan and social quantity; reuse now verifies matching job state and usable same-tenant/current-version artifacts. Pending, paused and unknown outcomes remain explicit waiting states. Failure or missing preparation follows existing draft-only action cards and usage limits. Focused embedded drafts are unchanged. See [the scoped audit](growth-engine/plan-preparation-reuse-audit.md).

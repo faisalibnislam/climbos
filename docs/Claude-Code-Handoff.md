@@ -17,6 +17,8 @@ Latest owner-channel follow-up (17 November): default strategy now consumes save
 
 Latest preparation follow-up (17 November): first-win draft reuse now depends on same-plan job/artifact evidence rather than a nonempty job list. Pending/paused/unknown work is shown honestly. Broader verification: 116 tests/seven files; final focused run: 16 overlapping cases. [Audit](growth-engine/plan-preparation-reuse-audit.md) records limits and remaining platform/semantic consistency work.
 
+Latest social-routing follow-up (17 November): detailed-plan platform selections now reach the real draft job; output mismatches fail rather than being relabeled. First-win preparation follows selected plan channels. 138 focused/permission tests and a final overlapping eight-case routing check pass. [Audit](growth-engine/social-destination-consistency-audit.md) records bounded name recognition, manual community handling and remaining ad/email mapping work.
+
 This handoff records what has been built, what was checked, what remains unverified, and how to continue safely. It is a starting point for repository work, not proof that every capability works with live providers or real customer outcomes.
 
 ## Current status — 17 November 2026

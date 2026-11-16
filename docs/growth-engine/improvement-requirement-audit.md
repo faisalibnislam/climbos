@@ -1,3 +1,7 @@
+## 17 November 2026 — exact social drafting destinations
+
+Rows 41–44 follow-up: detailed-plan social selections were dropped before drafting, and single-platform output could be relabeled after generation. Selected destinations now reach quotes, requests and schemas, with final mismatch rejection. Unknown/ambiguous/community selections wait; onboarding preparation follows only the selected social/email work. 138 regression/permission tests pass. [Scoped audit](social-destination-consistency-audit.md) keeps semantic adaptation, platform access and other execution mappings open.
+
 ## 17 November 2026 — preparation completion states
 
 Rows 41–43 follow-up: the detailed-plan first-win shortcut falsely treated any recorded job as completed social and email drafts. Same-plan job/artifact evidence now establishes reuse; incomplete or uncertain work remains waiting or follows existing draft preparation. Focused drafts remain unchanged. See [scoped evidence and limits](plan-preparation-reuse-audit.md). This closes a status/reuse defect, not broad execution or recommendation completeness.

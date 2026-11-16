@@ -91,7 +91,11 @@ it.each(["different_plan", "wrong_channel", "partial_quantity", "foreign_run", "
 it("binds newly reserved first-win work to the plan that requested it", async () => {
   const f = await fixture("verified");
   await makePaid(f.t, f.orgId, 50_000_000);
-  await f.t.run(ctx => ctx.db.patch(f.orgId, { firstWinRunIds: undefined }));
+  await f.t.run(async ctx => {
+    await ctx.db.patch(f.orgId, { firstWinRunIds: undefined });
+    const plan = (await ctx.db.get(f.strategyId))!;
+    await ctx.db.patch(f.strategyId, { channels: plan.channels.map(channel => channel.key === "social_organic" ? { ...channel, name: "LinkedIn posts" } : channel) });
+  });
   await f.t.mutation(internal.content.startFirstWin, { orgId: f.orgId, userId: f.owner.userId });
   const ids = (await f.t.run(ctx => ctx.db.get(f.orgId)))?.firstWinRunIds ?? [];
   expect(ids.length).toBeGreaterThan(0);

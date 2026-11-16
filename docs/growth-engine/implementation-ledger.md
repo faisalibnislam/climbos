@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: plan-to-social destination consistency
+
+Named social destinations now persist through detailed-plan draft preparation, metering, schema and final validation. Three red routing tests preceded the repair. Wrong-platform output is rejected rather than relabeled; ambiguous/community labels wait. First-win jobs follow selected social/email plan work rather than adding defaults. 138 tests/ten files, final eight-case routing check (overlapping), typecheck and scoped lint pass. [Audit](social-destination-consistency-audit.md) preserves name-recognition, platform-access and content-quality limits. Engine v3.123-social-destinations; no external action or provider added.
+
 ## Local update — 17 November 2026: truthful starter-work reuse
 
 Detailed-plan activation no longer treats the presence of any first-win job as completed social and email preparation. New jobs bind their plan; reuse checks status, quantity, destination, tenant and current artifact versions. Running work waits; uncertain/paused work is not automatically replaced. Nine red regressions preceded the fix. Broader run: 116 tests/seven files; final focused run: 16 cases (overlapping), plus typecheck/lint. [Scoped audit](plan-preparation-reuse-audit.md) retains incomplete-copy/platform coverage limits. No provider, UI, schema or external action added.

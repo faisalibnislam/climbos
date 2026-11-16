@@ -1,3 +1,4 @@
+import { SOCIAL_CHANNELS, isSocialChannel } from "../../shared/growth/socialChannels";
 import { demoBusinessModelCheck } from "../../shared/agents/businessModel";
 import { demoFocusedStrategy } from "../../shared/demo/focusedStrategy";
 import type { PlanStyle } from "../../shared/agents/focusedPlan";
@@ -25,6 +26,7 @@ export interface FixtureContext {
   facts: { statement: string; category: string }[];
   goal?: string;
   channel?: string;
+  channels?: string[];
   quantity?: number;
   request?: string;
   planStyle?: PlanStyle;
@@ -136,7 +138,7 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
     }
     case "social_posts": {
       const qty = Math.min(ctx.quantity ?? 3, 6);
-      const channels = ["instagram", "facebook", "linkedin", "x"] as const;
+      const channels = ctx.channels?.filter(isSocialChannel).length ? ctx.channels.filter(isSocialChannel) : ctx.channel && isSocialChannel(ctx.channel) ? [ctx.channel] : SOCIAL_CHANNELS.slice(0, 4);
       const hooks = [
         "Describe it. Get a form.",
         "Collect payments without code.",

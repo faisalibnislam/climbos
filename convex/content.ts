@@ -1,3 +1,4 @@
+import { namedSocialChannels, isSocialChannel, type SocialChannel } from "../shared/growth/socialChannels";
 import { paginationOptsValidator } from "convex/server";
 import { mergeCalendarItems, type CalendarItem } from "../shared/contentCalendar";
 import { featureAllowed, requirePaid } from "./lib/access";
@@ -844,49 +845,32 @@ export const unarchive = mutation({
   },
 });
 
-const SOCIAL_FIRST_WIN = ["instagram", "facebook", "linkedin", "x", "tiktok", "pinterest", "youtube"] as const;
-type SocialChannel = (typeof SOCIAL_FIRST_WIN)[number];
-const SOCIAL_NAME: Record<SocialChannel, RegExp> = {
-  instagram: /instagram|\binsta\b/i,
-  facebook: /facebook|\bfb\b|meta (?:page|organic)/i,
-  linkedin: /linked\s?in/i,
-  x: /\btwitter\b|\bx\.com\b|\bon x\b|^x$/i,
-  tiktok: /tik\s?tok/i,
-  pinterest: /pinterest/i,
-  youtube: /youtube/i,
-};
-
-/**
- * The first three posts follow the plan: one post on each of up to three social channels it chose, in priority
- * order (three on the only one, if it chose one). Without a social channel in the plan, the old fit guess is used.
- */
-export function firstWinChannels(planChannels: { key: string; name: string; priority: number }[], businessType: string | undefined): SocialChannel[] {
+/** Up to three named plan destinations, with three total starter posts. No business-type guess. */
+export function firstWinChannels(planChannels: { key: string; name: string; priority: number }[], _businessType?: string): SocialChannel[] {
   const picked: SocialChannel[] = [];
   for (const c of [...planChannels].sort((a, b) => a.priority - b.priority)) {
-    const hit = SOCIAL_FIRST_WIN.find((s) => c.key === s || SOCIAL_NAME[s].test(`${c.key} ${c.name}`));
-    if (hit && !picked.includes(hit)) picked.push(hit);
+    if (c.key !== "social_organic" && !isSocialChannel(c.key)) continue;
+    for (const channel of namedSocialChannels(c)) if (!picked.includes(channel) && picked.length < 3) picked.push(channel);
     if (picked.length === 3) break;
   }
-  if (!picked.length) picked.push(/saas|b2b|agency|services|consult|software/i.test(businessType ?? "") ? "linkedin" : "instagram");
-  return Array.from({ length: 3 }, (_, i) => picked[i % picked.length]);
+  return picked.length ? Array.from({ length: 3 }, (_, i) => picked[i % picked.length]) : [];
 }
 
-/** First win (after the first plan): 3 social posts on the plan's social channels + 1 welcome email, if credits allow. */
+/** Prepare the first plan's selected social/email work only, within existing credits. */
 export const startFirstWin = internalMutation({
   args: { orgId: v.id("organizations"), userId: v.id("users") },
   handler: async (ctx, { orgId, userId }) => {
     const org = await ctx.db.get(orgId);
     if (!org || org.kind === "demo" || org.firstWinRunIds?.length) return;
-    const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", orgId)).first();
     const strategy = await ctx.db.query("strategies").withIndex("by_org", (q) => q.eq("orgId", orgId)).order("desc").first();
     if (!strategy || strategy.expert?.focusedMove) return; // Starter work is already in a focused plan.
     const perChannel = new Map<SocialChannel, number>();
-    for (const c of firstWinChannels(strategy?.channels ?? [], business?.businessType)) perChannel.set(c, (perChannel.get(c) ?? 0) + 1);
+    for (const c of firstWinChannels(strategy.channels.filter(channel => channel.status !== "parked"))) perChannel.set(c, (perChannel.get(c) ?? 0) + 1);
     const runIds: Id<"workflowRuns">[] = [];
     const firstPostsBrief = "First posts from the new growth plan: introduce what makes the business different, one customer problem it solves, and one clear next step.";
     const jobs: { job: "content_social" | "content_email"; quantity?: number; channel?: SocialChannel | "email"; brief: string }[] = [
       ...[...perChannel].map(([channel, quantity]) => ({ job: "content_social" as const, quantity, channel, brief: firstPostsBrief })),
-      { job: "content_email", channel: "email", brief: "A short welcome email for new subscribers or customers based on the growth plan." },
+      ...(strategy.channels.some(channel => channel.key === "email_lifecycle" && channel.status !== "parked") ? [{ job: "content_email" as const, channel: "email" as const, brief: "A short welcome email for new subscribers or customers based on the growth plan." }] : []),
     ];
     for (const j of jobs) {
       try {

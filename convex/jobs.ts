@@ -1,4 +1,6 @@
 "use node";
+
+import { isSocialChannel } from "../shared/growth/socialChannels";
 import { CUSTOMER_VOICE_POLICY } from "../shared/reviews/voiceThemes";
 import { focusedPlanTask, focusedExplorationTask, FOCUSED_EXPLORATION_VERSION } from "../shared/agents/focusedPlan";
 import { COPY_BRIEF_INSTRUCTION, socialPostsTask, seoPageTask } from "../shared/agents/contentTasks";
@@ -1704,6 +1706,7 @@ export const createContent = internalAction({
   args: {
     runId: v.id("workflowRuns"),
     job: v.union(v.literal("content_social"), v.literal("content_ads"), v.literal("content_email"), v.literal("content_seo")),
+    channels: v.optional(v.array(v.string())),
     channel: v.optional(v.string()),
     quantity: v.optional(v.number()),
     images: v.optional(v.number()),
@@ -1728,13 +1731,14 @@ export const createContent = internalAction({
       ctx,
       args.runId,
       async () => {
-        const fx = fixtureCtx(job, { channel: args.channel, quantity: args.quantity, request: args.brief });
+        const fx = fixtureCtx(job, { channel: args.channel, channels: args.channels, quantity: args.quantity, request: args.brief });
         const review: AgentMeta = {};
         let items: ReturnType<typeof socialToArtifacts> = [];
         let posts = 0;
         if (args.job === "content_social") {
           const qty = Math.max(1, Math.min(args.quantity ?? 3, 6));
-          const channels = args.channel ? [args.channel] : ["instagram", "facebook", "linkedin"];
+          const channels = args.channels ?? (args.channel ? [args.channel] : ["instagram", "facebook", "linkedin"]);
+          if (!channels.length || channels.length > 7 || channels.some(channel => !isSocialChannel(channel)) || (args.channel && (channels.length !== 1 || channels[0] !== args.channel))) throw new JobStop("invalid_social_destination", "The requested social destinations are missing, unsupported or conflicting. No drafts were saved.");
           const calendar = args.channel ? await ctx.runQuery(internal.autopilot.draftingContext, { runId: args.runId, channel: args.channel }) : null;
           if (calendar && calendar.count !== qty) throw new Error("The requested draft count does not match its planned slots.");
           const research = researchFor("social_posts", { website: job.business?.website, businessName: job.business?.name ?? job.org.name, platforms: channels });
@@ -1757,7 +1761,7 @@ export const createContent = internalAction({
               task: "social_posts",
               context: "",
               ctx: fx,
-              text: `TASK: Write ${qty} social posts${args.channel ? ` for ${args.channel}` : " across Instagram, Facebook and LinkedIn"} that support the plan. Platform-native style, accessible alt text, an image idea that never implies a real customer or a fake screenshot.\n\n${businessBrief(job)}${brief}`,
+              text: `TASK: Write ${qty} social posts for ${channels.join(", ")} that support the plan. Platform-native style, accessible alt text, an image idea that never implies a real customer or a fake screenshot.\n\n${businessBrief(job)}${brief}`,
             },
             review,
           );
@@ -1769,8 +1773,8 @@ export const createContent = internalAction({
           };
           const trendIssue = out.posts.flatMap((post, index) => socialTrendIssues(post, trendInput, `posts[${index}]`)).find(issue => issue.severity === "error");
           if (trendIssue) throw new JobStop("unverified_trend", `The trend research could not be verified. ${trendIssue.message} No posts were saved or shared.`);
-          // A run for one channel only ever produces posts for that channel.
-          if (args.channel) out.posts = out.posts.map((p) => ({ ...p, channel: args.channel as typeof p.channel }));
+          // Destination mismatch requires regeneration, never relabeling another platform's copy.
+          if (out.posts.some(post => !channels.includes(post.channel))) throw new JobStop("social_destination_mismatch", "The generated posts do not match the requested social platforms. No posts were saved or shared.");
           posts = out.posts.length;
           items = socialToArtifacts(out, Date.now(), review.retrievedAt);
         } else if (args.job === "content_ads") {

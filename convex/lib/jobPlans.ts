@@ -63,7 +63,7 @@ export function agentRevisionSteps(spec: AgentSpec<unknown>, revisionModel?: Age
 const CONSISTENCY: PlannedStep = { kind: "model", role: "ceo", modelKey: CALL_ROUTES.chat_intent, inputBudget: 30_000, outputBudget: 16_000 };
 const QUICK_TAKE: PlannedStep = { kind: "model", role: "ceo", modelKey: CALL_ROUTES.chat_intent, inputBudget: 8_000, outputBudget: 3_000 };
 
-function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string; researchDepth?: "starter" | "full"; planStyle?: "starter" | "focused" | "detailed" }, mode: AiMode): JobPlan | null {
+function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string; channels?: string[]; researchDepth?: "starter" | "full"; planStyle?: "starter" | "focused" | "detailed" }, mode: AiMode): JobPlan | null {
   // Priced at Luna baseline; an eligible Expert revision reserves its selected model before running.
   const revisionSteps: PlannedStep[] = [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -101,7 +101,7 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
       const qty = Math.max(1, Math.min(params.quantity ?? 3, 6));
       const images = Math.max(0, Math.min(params.images ?? 0, qty, 2));
       const r = { maxSearches: searches("social_posts") };
-      const spec = any(socialSpec([params.channel ?? "instagram"], { outputItems: qty }));
+      const spec = any(socialSpec(params.channels ?? [params.channel || "instagram"], { outputItems: qty }));
       return plan(
         `Draft ${qty} social post${qty === 1 ? "" : "s"}`,
         images ? ["social_media_manager", "creative_director"] : ["social_media_manager"],
@@ -204,7 +204,7 @@ function modelStep(task: TaskType, webSearches = 0): PlannedStep {
   };
 }
 
-export function planJob(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string; clips?: number; researchDepth?: "starter" | "full"; planStyle?: "starter" | "focused" | "detailed" } = {}, opts: { fixture?: boolean; mode?: AiMode } = {}): JobPlan {
+export function planJob(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string; channels?: string[]; clips?: number; researchDepth?: "starter" | "full"; planStyle?: "starter" | "focused" | "detailed" } = {}, opts: { fixture?: boolean; mode?: AiMode } = {}): JobPlan {
   // The weekly planner exists only as an agent: real workspaces always get it.
   if ((engineV2() || kind === "social_calendar" || kind === "outbound" || (kind === "strategy" && ["starter", "focused"].includes(params.planStyle ?? "")) || (kind === "onboarding_research" && params.researchDepth === "starter")) && !opts.fixture) {
     const v2 = v2Plan(kind, params, opts.mode ?? "basic");
@@ -213,7 +213,7 @@ export function planJob(kind: JobKind, params: { quantity?: number; images?: num
   return { ...v1Plan(kind, params), aiMode: "basic" };
 }
 
-function v1Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string; clips?: number; researchDepth?: "starter" | "full"; planStyle?: "starter" | "focused" | "detailed" }): Omit<JobPlan, "aiMode"> {
+function v1Plan(kind: JobKind, params: { quantity?: number; images?: number; pages?: number; channel?: string; channels?: string[]; clips?: number; researchDepth?: "starter" | "full"; planStyle?: "starter" | "focused" | "detailed" }): Omit<JobPlan, "aiMode"> {
   switch (kind) {
     case "onboarding_research": {
       const pages = Math.min(params.pages ?? 3, 3);

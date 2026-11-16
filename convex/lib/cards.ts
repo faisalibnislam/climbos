@@ -1,3 +1,4 @@
+import { namedSocialChannels } from "../../shared/growth/socialChannels";
 import { internal } from "../_generated/api";
 import { resolveAiMode } from "./aiMode";
 import type { Doc, Id } from "../_generated/dataModel";
@@ -111,12 +112,17 @@ export async function startPlanWork(
       }
       continue;
     }
+    const destinations = job === "content_social" ? namedSocialChannels(c) : [];
+    if (job === "content_social" && !destinations.length) {
+      out.waiting.push({ title: c.name, reason: "This plan does not clearly select a social platform. Name the platform when requesting these drafts; no extra destinations were chosen." });
+      continue;
+    }
     let card = c.cardId ? await ctx.db.get(c.cardId) : null;
     if (card && ["running", "done", "failed"].includes(card.status)) continue;
     const title = `${c.name}: ${shape.what}`;
     if (!card) {
-      const channel = shape.channel ?? (c.key === "meta_ads" ? "meta_ad" : c.key === "search_ads" ? "google_search_ad" : "");
-      const plan = planJob(job, { quantity: shape.quantity, images: job === "content_social" ? 1 : 0, channel }, { fixture: p.org.kind === "demo" });
+      const channel = (destinations.length === 1 ? destinations[0] : shape.channel) ?? (c.key === "meta_ads" ? "meta_ad" : c.key === "search_ads" ? "google_search_ad" : undefined);
+      const plan = planJob(job, { quantity: shape.quantity, images: job === "content_social" ? 1 : 0, channel, ...(destinations.length ? { channels: destinations } : {}) }, { fixture: p.org.kind === "demo" });
       const brief = `From your approved growth plan (v${s.version}), channel "${c.name}": ${[c.why, ...c.deliverables.slice(0, 3)].join(" ")}`.slice(0, 1500);
       const cardId = await ctx.db.insert("actionCards", {
         orgId: p.org._id,
@@ -125,7 +131,7 @@ export async function startPlanWork(
         proposedEffect: job.startsWith("content_") ? "Creates drafts only. Nothing is published." : "Prepares a plan for you to review. Nothing is sent.",
         kind: "generate_content",
         roles: plan.roles,
-        payload: JSON.stringify({ job, channel, quantity: shape.quantity, brief, strategyId: s._id, planChannel: c.key }),
+        payload: JSON.stringify({ job, channel, ...(destinations.length ? { channels: destinations } : {}), quantity: shape.quantity, brief, strategyId: s._id, planChannel: c.key }),
         costEstimateMicros: maxJobMicros(plan, { fixture: p.org.kind === "demo" }),
         externalEffect: false,
         status: "proposed",
@@ -185,7 +191,7 @@ export const AUTO_RUN_KINDS = new Set(["generate_content", "refresh_plan", "rese
  */
 export const WISH_AUTO_BUDGET_MICROS = 5_000_000;
 
-export type CardPayload = { job?: string; channel?: string; quantity?: number; brief?: string; strategyId?: string; planChannel?: string; customAgentId?: string; customAgentParentRunId?: string; agentArchetypeId?: string };
+export type CardPayload = { job?: string; channel?: string; channels?: string[]; quantity?: number; brief?: string; strategyId?: string; planChannel?: string; customAgentId?: string; customAgentParentRunId?: string; agentArchetypeId?: string };
 
 /** Keep dependent work gated even when a card is started outside the chat UI. */
 export async function assertCardDependenciesComplete(ctx: MutationCtx, card: Doc<"actionCards">, orgId: Id<"organizations">) {
@@ -216,6 +222,12 @@ export async function startCardRun(
     const ch = s?.channels.find((c) => c.key === payload.planChannel);
     if (!s || s.orgId !== org._id || s.status !== "approved") throw appError("INVALID", "This came from a plan that's no longer approved.");
     if (!ch || ch.status === "parked") throw appError("INVALID", `${ch?.name ?? "This channel"} is parked in your plan. Turn it on first.`);
+    if (job === "content_social") {
+      const destinations = namedSocialChannels(ch);
+      if (!destinations.length) throw appError("INVALID", "Choose the social platform for this plan's drafts before starting them.");
+      payload.channels = destinations;
+      payload.channel = destinations.length === 1 ? destinations[0] : undefined;
+    }
   }
   if (job === "strategy") await assertNoActiveRun(ctx, org._id, "strategy", "Your plan is already being refreshed.");
   if (job === "outbound") {
@@ -228,12 +240,12 @@ export async function startCardRun(
   const images = job === "content_social" ? 1 : 0;
   const aiMode = await resolveAiMode(ctx, org, job);
   const runInput = job === "strategy" ? { ...payload, planStyle: "focused" as const } : payload;
-  const plan = planJob(job, { quantity: payload.quantity, images, channel: payload.channel, ...(job === "strategy" ? { planStyle: "focused" } : {}) }, { fixture: org.kind === "demo", mode: aiMode });
+  const plan = planJob(job, { quantity: payload.quantity, images, channel: payload.channel, channels: payload.channels, ...(job === "strategy" ? { planStyle: "focused" } : {}) }, { fixture: org.kind === "demo", mode: aiMode });
   const runId = await createRunWithReservation(ctx, { org, kind: plan.kind, title: card.title || plan.title, roles: plan.roles, input: runInput, steps: plan.steps, meters: plan.meters, createdBy: p.userId, isFixture: org.kind === "demo", aiMode, customAgentId: payload.customAgentId as Id<"customAgents"> | undefined, customAgentParentRunId: payload.customAgentParentRunId as Id<"workflowRuns"> | undefined, agentArchetypeId: payload.agentArchetypeId });
   await ctx.db.patch(card._id, { status: "running", runId, updatedAt: Date.now() });
   const brief = payload.brief?.slice(0, 1500) || undefined;
   if (job === "content_social" || job === "content_ads" || job === "content_email" || job === "content_seo") {
-    await ctx.scheduler.runAfter(0, internal.jobs.createContent, { runId, job, channel: payload.channel || undefined, quantity: payload.quantity, images, brief, cardId: card._id });
+    await ctx.scheduler.runAfter(0, internal.jobs.createContent, { runId, job, channel: payload.channel || undefined, channels: payload.channels, quantity: payload.quantity, images, brief, cardId: card._id });
   } else if (job === "strategy") {
     await ctx.scheduler.runAfter(0, internal.jobs.buildStrategy, { runId });
   } else if (job === "conversion_audit") {
