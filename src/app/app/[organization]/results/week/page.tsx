@@ -12,7 +12,7 @@ import { ClientReportCard } from "@/components/app/results/ClientReportCard";
 import { Prose } from "@/components/ds/content";
 import { Highlight, StatBlocks } from "@/components/ds/content";
 
-const fmt = (ms: number) => new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+const fmt = (ms: number, timeZone: string) => new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone });
 
 /** Weekly CEO report: outcomes first, then what needs you next week. */
 export default function WeekReportPage() {
@@ -24,7 +24,7 @@ export default function WeekReportPage() {
       <PageHeader
         section="results"
         title={weeksAgo === 0 ? "This week" : weeksAgo === 1 ? "Last week" : `${weeksAgo} weeks ago`}
-        intro={r ? `${fmt(r.weekStart)}–${fmt(r.weekEnd - 1)}` : undefined}
+        intro={r ? `${fmt(r.weekStart, r.timezone)}–${fmt(r.weekEnd - 1, r.timezone)} · ${r.timezone}` : undefined}
         actions={
           <div className="flex gap-1">
             <Button size="sm" variant="secondary" aria-label="Earlier week" disabled={weeksAgo >= 12} onClick={() => setWeeksAgo((w) => w + 1)}>
@@ -47,14 +47,14 @@ export default function WeekReportPage() {
                 const good = (l.change ?? 0) > 0 === (l.key !== "creditsUsed");
                 return {
                   label: l.label,
-                  value: l.value.toLocaleString("en-US"),
-                  hint: l.change ? (
+                  value: l.value === null ? "Unknown" : l.value.toLocaleString("en-US"),
+                  hint: <>{l.change ? (
                     <span className={cn("inline-flex items-center gap-0.5 font-medium tabular-nums", good ? "text-brand-800" : "text-red-800")}>
                       {l.change > 0 ? <ArrowUp className="size-3" aria-hidden /> : <ArrowDown className="size-3" aria-hidden />}
                       <span className="sr-only">{l.change > 0 ? "Up" : "Down"} </span>
                       {Math.abs(l.change).toLocaleString("en-US")}
                     </span>
-                  ) : undefined,
+                  ) : null}{l.note ? <span className="mt-1 block text-xs text-ink-3">{l.note}</span> : null}</>,
                 };
               })}
             />

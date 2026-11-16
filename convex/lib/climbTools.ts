@@ -194,7 +194,7 @@ const ProspectOutputSchema = z.object({
   upcomingCalls: z.array(z.object({ name: z.string(), company: z.string().nullable(), when: z.string() })),
   pipeline: z.record(z.string(), z.number().int().nonnegative()),
 });
-const WeeklyReportOutputSchema = z.object({ weekStart: z.number(), weekEnd: z.number(), headline: z.string(), lines: z.array(z.object({ key: z.string(), label: z.string(), value: z.number(), change: z.number().nullable() })), next: z.array(z.string()), competitors: z.array(z.object({ name: z.string(), summary: z.string(), sourceUrls: z.array(HttpUrlSchema).optional(), observedAt: z.number().optional() })).optional() });
+const WeeklyReportOutputSchema = z.object({ weekStart: z.number(), weekEnd: z.number(), headline: z.string(), timezone: z.string().optional(), isDemo: z.boolean().optional(), lines: z.array(z.object({ key: z.string(), label: z.string(), value: z.number().nullable(), change: z.number().nullable(), note: z.string().optional() })), next: z.array(z.string()), competitors: z.array(z.object({ name: z.string(), summary: z.string(), sourceUrls: z.array(HttpUrlSchema).optional(), observedAt: z.number().optional() })).optional() });
 const RunIdOutputSchema = z.object({ runId: z.string() });
 const CampaignStartOutputSchema = z.object({ campaignId: z.string(), pausedSending: z.boolean() });
 const SavedDraftOutputSchema = z.object({ saved: z.literal(true), note: z.string() });

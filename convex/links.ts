@@ -114,6 +114,17 @@ export const remove = mutation({
 
 /** Human clicks on this org's links in [from, to). */
 export async function linkClicksBetween(ctx: { db: MutationCtx["db"] } | { db: import("./_generated/server").QueryCtx["db"] }, orgId: Id<"organizations">, from: number, to: number) {
-  const rows = await ctx.db.query("linkClickDays").withIndex("by_org_day", (q) => q.eq("orgId", orgId).gte("day", dayKey(from)).lt("day", dayKey(to))).take(10000);
-  return rows.reduce((s, r) => s + r.clicks, 0);
+  const day = 86_400_000;
+  const start = Math.ceil(from / day) * day;
+  const end = Math.floor(to / day) * day;
+  // The report reads two periods plus other activity tables in one transaction.
+  const limit = 2000;
+  if (end <= start) return { value: null, comparable: false, note: "No complete UTC day fits inside this period; tracked-link counts are stored by UTC day." };
+  const rows = await ctx.db.query("linkClickDays").withIndex("by_org_day", (q) => q.eq("orgId", orgId).gte("day", dayKey(start)).lt("day", dayKey(end))).take(limit + 1);
+  const keys = new Set(rows.map(r => `${r.linkId}:${r.day}`));
+  if (rows.length > limit) return { value: null, comparable: false, note: "Tracked-link total unavailable: the 2,000-record read limit was reached. Narrow the reporting period." };
+  if (keys.size !== rows.length || rows.some(r => !Number.isSafeInteger(r.clicks) || r.clicks < 0)) return { value: null, comparable: false, note: "Tracked-link totals are unavailable: duplicate or invalid daily records need review." };
+  const value = rows.reduce((s, r) => s + r.clicks, 0);
+  if (!Number.isSafeInteger(value)) return { value: null, comparable: false, note: "Tracked-link total exceeds the supported numeric range." };
+  return { value, comparable: start === from && end === to, note: `Recorded tracked-link clicks for complete UTC days ${dayKey(start)} through ${dayKey(end - day)}. Partial boundary days are excluded. Counts are deduplicated per link and UTC day, not unique customers or sales; platform click snapshots are separate.` };
 }

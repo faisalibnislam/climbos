@@ -14,10 +14,30 @@ describe("weekly CEO report", () => {
   it("lists what needs the owner, at most five", () => {
     const r = buildWeeklyReport({ weekStart: 0, weekEnd: 1, now: { ...zero, replies: 2 }, before: zero, ctx: { ...ctx, pendingApprovals: 4, outboundOn: false, scheduledPosts: 0, creditsLeft: 10, upcomingCalls: [{ name: "Ana", startAt: Date.UTC(2026, 9, 20) }] } });
     expect(r.next[0]).toBe("Approve 4 drafts.");
-    expect(r.next).toContain("Answer 2 replies.");
+    expect(r.next).toContain("Review 2 recorded reply messages.");
     expect(r.next.length).toBeLessThanOrEqual(5);
   });
   it("weeks start on Monday UTC", () => {
     expect(new Date(weekStartUtc(Date.UTC(2026, 9, 18, 15))).toISOString()).toBe("2026-10-12T00:00:00.000Z");
+  });
+  it("uses the workspace timezone for upcoming call dates", () => {
+    const r = buildWeeklyReport({ weekStart: 0, weekEnd: 1, timezone: "Asia/Dhaka", now: zero, before: zero, ctx: { ...ctx, upcomingCalls: [{ name: "Ana", startAt: Date.UTC(2026, 9, 18, 20) }] } });
+    expect(r.next).toContain("Call with Ana, Mon, Oct 19.");
+  });
+  it("keeps unknown metrics visible without inventing a change or a quiet-business conclusion", () => {
+    const r = buildWeeklyReport({ weekStart: 0, weekEnd: 1, now: { ...zero, dealsWon: null, reach: null }, before: { ...zero, dealsWon: 10, reach: 1000 }, ctx, evidence: { dealsWon: { note: "Read truncated", comparable: false }, reach: { note: "No period reach measurement", comparable: false } } });
+    expect(r.lines.find(l => l.key === "dealsWon")).toMatchObject({ value: null, change: null, note: expect.stringContaining("Read truncated") });
+    expect(r.lines.find(l => l.key === "reach")).toMatchObject({ value: null, change: null });
+    expect(r.headline).toContain("unavailable");
+    expect(r.headline).not.toContain("quiet");
+  });
+  it("withholds changes when the previous evidence is incomplete even if both values exist", () => {
+    const r = buildWeeklyReport({ weekStart: 0, weekEnd: 1, now: { ...zero, clicks: 200 }, before: { ...zero, clicks: 100 }, ctx, beforeEvidence: { clicks: { note: "Partial UTC days", comparable: false } } });
+    expect(r.lines.find(l => l.key === "clicks")).toMatchObject({ value: 200, change: null, note: expect.stringContaining("unavailable") });
+  });
+  it("does not turn an unknown send count into zero in the headline", () => {
+    const r = buildWeeklyReport({ weekStart: 0, weekEnd: 1, now: { ...zero, postsPublished: 1, emailsSent: null }, before: zero, ctx });
+    expect(r.headline).toBe("1 publication confirmation recorded for this period.");
+    expect(r.headline).not.toContain("0 emails");
   });
 });

@@ -1,0 +1,45 @@
+import { expect, test } from "@playwright/test";
+import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
+import { localDemoFixtures } from "./local-demo-fixtures";
+
+const envFile = process.env.CLIMBOS_DESIGN_E2E_ENV_FILE;
+const { rows, append } = localDemoFixtures(envFile);
+
+test("weekly and shared reports keep unknown reach and evidence notes @mobile", async ({ page, baseURL }, testInfo) => {
+  test.skip(!envFile, "Requires the isolated local fixture backend");
+  test.setTimeout(180_000);
+  expect(baseURL).toBe("http://127.0.0.1:3420");
+  const slug = await openDemo(page);
+  const org = (await rows("organizations")).find(row => row.slug === slug);
+  if (!org || org.kind !== "demo") throw new Error("Report checks require a demo workspace");
+  const artifact = (await rows("artifacts")).find(row => row.orgId === org._id && row.kind === "social_post");
+  if (!artifact) throw new Error("Demo social post missing");
+  await append("actionReceipts", [{ orgId: org._id, artifactId: artifact._id, provider: "instagram", action: "instagram.publish_media", idempotencyKey: `${org._id}:report-evidence`, status: "fixture_verified", externalId: "report-fixture-post", summary: "Synthetic report test, nothing published", createdAt: Date.now() - 100 * 86_400_000, verifiedAt: Date.now() - 1000 }]);
+  await append("postMetrics", [{ orgId: org._id, artifactId: artifact._id, channel: "instagram", source: "fixture", capturedAt: Date.now() - 1000, impressions: 50000, reach: 20000, clicks: 1000 }]);
+  const effects = async () => Promise.all(["workflowRuns", "approvals", "actionReceipts"].map(async table => (await rows(table)).filter(row => row.orgId === org._id)));
+  const before = await effects();
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto(`/app/${slug}/results/week`);
+  await expect(page.getByText("Reach during this period", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Impressions are not reach/)).toBeVisible();
+  await expect(page.getByText(/publication confirmations recorded/)).toBeVisible();
+  await expect(page.getByText("20,000", { exact: true })).toHaveCount(0);
+  await expectAccessible(page, "weekly report evidence");
+  await expectNoHorizontalScroll(page);
+  await page.screenshot({ path: testInfo.outputPath("weekly-evidence.png"), fullPage: true });
+  await page.getByRole("button", { name: "Create link", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Turn off link", exact: true })).toBeVisible();
+  const share = (await rows("reportShares")).find(row => row.orgId === org._id && !row.revokedAt);
+  if (!share) throw new Error("Owner-created local report share missing");
+  await page.goto(`/report/${share.token}`);
+  await expect(page.getByText(/Demo report.*synthetic activity/)).toBeVisible();
+  await expect(page.getByText(/Impressions are not reach/)).toBeVisible();
+  await expect(page.getByText("Unknown", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Credits used", { exact: true })).toHaveCount(0);
+  await expectAccessible(page, "shared report evidence");
+  await expectNoHorizontalScroll(page);
+  await page.screenshot({ path: testInfo.outputPath("shared-evidence.png"), fullPage: true });
+  expect(await effects()).toEqual(before);
+  expect(errors).toEqual([]);
+});

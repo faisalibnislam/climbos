@@ -2,6 +2,10 @@
 
 Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs as written there. Baseline: `404c466`. Branch: `growth-engine-v2`.
 
+## Local update — 16 November 2026: weekly/shared report evidence
+
+Weekly reports, shared client views, assistant output and email/markdown templates now retain unknown totals and their evidence limits. Event-time indexes replace mutable status/edit timestamps and campaign-age windows; period reach is no longer inferred from post snapshots, and tracked-link UTC-day counts are not blended with platform clicks. Sentinel reads withhold truncated totals, duplicate/invalid clicks and invalid usage cannot become measured counts, and estimates cannot support period changes. Two-period reads are bounded together; large-history aggregation remains future work. Workspace timezone and demo labels survive sharing. Focused verification: 41 regression/permission tests, typecheck, changed-file ESLint and two desktop/mobile browser checks; screenshots inspected. No external action, provider call or hosted deployment. Counts remain source-scoped, historical CRM state is mutable, and business impact is unproven. See [Verification](../Verification.md).
+
 ## Local update — 16 November 2026: comparable totals and coverage through owner/assistant views
 
 Extended the existing analytics reader so Results, the active Home card and `get_results` preserve nullable incompatible totals, recorded-day coverage and comparison reasons. Incomplete windows retain labeled subtotals but cannot produce a period-growth percentage; full same-source windows retain comparisons. First-payer days are no longer zero-filled, and unknown billing coverage cannot become a prior-period change. Removed unsupported cross-population funnel ratios while retaining the separate counts. Focused evidence: 66 regression/permission tests, two desktop/mobile checks, typecheck, targeted lint and diff checks. No new provider/agent, live source mutation or deployment. Full provider coverage, linked-customer conversion instrumentation and causal attribution remain unproven. See [Verification](../Verification.md).

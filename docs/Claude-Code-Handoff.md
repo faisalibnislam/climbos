@@ -13,6 +13,8 @@ This handoff records what has been built, what was checked, what remains unverif
 
 ## Current status — 16 November 2026
 
+- Weekly and shared reports now preserve unknown reach, exact recorded-event definitions, bounded-read warnings, UTC-day click limits and estimated-usage labels through the UI, assistant and email templates. Publication counts use confirmations, replies use received messages, and dates use workspace timezone. Verification: 41 focused regression/permission tests, typecheck/lint and two desktop/mobile browser checks. Source completeness, immutable historical reports, high-volume aggregation and causal outcomes remain unproven; see the latest verification entry.
+
 - Results, the active Home card and the assistant Results tool now share explicit recorded-day coverage and nullable incompatible totals. Partial periods cannot produce growth percentages; comparable complete periods still can. Missing billing days remain unknown, and unrelated analytics/billing counts are no longer shown as a linked conversion funnel. Verification: 66 focused regression/permission tests, two desktop/mobile checks, typecheck/lint. These are reporting integrity checks, not proof of complete imports or causation.
 
 - Results metric-health alerts now use calendar windows rather than row counts. Missing dates cannot create a consecutive-zero run; old observations cannot become recent anomalies. Gaps and raw-source comparability/read-limit issues produce visible check-source warnings. Seventy focused regression/permission tests plus typecheck/lint passed; see `docs/Verification.md`. This does not reconcile competing sources or prove causal diagnosis; the subsequent coverage repair handles totals and period comparisons.

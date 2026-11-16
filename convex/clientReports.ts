@@ -93,6 +93,8 @@ export const shared = query({
       color: account?.brandColor ?? "#0b5d46",
       logoUrl: account?.brandLogoUrl ?? null,
       poweredBy: !whiteLabel,
+      timezone: org.timezone,
+      isDemo: org.kind === "demo",
       from: now - span,
       to: now,
       headline: r.headline.replace("this week", span === 7 * DAY ? "this week" : `in the last ${span / DAY} days`).replace("A quiet week", "A quiet stretch"),

@@ -2136,6 +2136,7 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   })
+    .index("by_org_created", ["orgId", "createdAt"])
     .index("by_campaign", ["campaignId"])
     .index("by_org_stage", ["orgId", "stage"])
     .index("by_org_domain", ["orgId", "domain"])
@@ -3013,6 +3014,7 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   })
+    .index("by_org_won", ["orgId", "wonAt"])
     .index("by_org_updated", ["orgId", "updatedAt"])
     .index("by_org_stage", ["orgId", "stage"])
     .index("by_prospect", ["prospectId"]),
@@ -3057,6 +3059,7 @@ export default defineSchema({
     followUpSentAt: v.optional(v.number()),
     createdAt: v.number(),
   })
+    .index("by_org_created", ["orgId", "createdAt"])
     .index("by_page_start", ["pageId", "startAt"])
     .index("by_org_start", ["orgId", "startAt"])
     .index("by_manage", ["manageTokenHash"])
@@ -4932,6 +4935,7 @@ export default defineSchema({
     /** When owners were told this run failed (one notice per run). */
     failNoticeAt: v.optional(v.number()),
   })
+    .index("by_org_finished", ["orgId", "finishedAt"])
     .index("by_created", ["createdAt"])
     .index("by_org_created", ["orgId", "createdAt"])
     .index("by_org_kind_created", ["orgId", "kind", "createdAt"])
@@ -5025,6 +5029,7 @@ export default defineSchema({
     createdAt: v.number(),
     verifiedAt: v.optional(v.number()),
   })
+    .index("by_org_verified", ["orgId", "verifiedAt"])
     .index("by_org_created", ["orgId", "createdAt"])
     .index("by_idempotency", ["idempotencyKey"])
     .index("by_artifact", ["artifactId", "createdAt"]),

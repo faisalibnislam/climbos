@@ -93,9 +93,9 @@ export function creditAlertEmail(params: { orgName: string; percent: number; lef
 /** Weekly CEO report email. */
 export function weeklyReportEmail(params: { orgName: string; report: WeeklyReport; url: string }) {
   const { orgName, report, url } = params;
-  const range = `${fmtDay(report.weekStart)}–${fmtDay(report.weekEnd - 1)}`;
+  const range = `${fmtDay(report.weekStart, report.timezone)}–${fmtDay(report.weekEnd - 1, report.timezone)}`;
   const delta = (c: number | null) => (c === null || c === 0 ? "" : c > 0 ? ` (+${c.toLocaleString("en-US")})` : ` (${c.toLocaleString("en-US")})`);
-  const rows = report.lines.map((l) => `${l.label}: ${l.value.toLocaleString("en-US")}${delta(l.change)}`);
+  const rows = report.lines.map((l) => `${l.label}: ${l.value === null ? "Unknown" : l.value.toLocaleString("en-US")}${delta(l.change)}${l.note ? ` — ${l.note}` : ""}`);
   return {
     subject: `${orgName} this week: ${report.headline.replace(/\.$/, "")}`,
     text: `${report.headline}\n\n${rows.join("\n")}${report.competitors?.length ? `\n\nCompetitors:\n${report.competitors.map((c) => `- ${c.name}: ${c.summary}${c.sourceUrls?.[0] ? ` (source: ${c.sourceUrls[0]})` : ""}`).join("\n")}` : ""}\n\nNext week:\n${report.next.map((n) => `- ${n}`).join("\n")}\n\n${url}`,
@@ -104,7 +104,7 @@ export function weeklyReportEmail(params: { orgName: string; report: WeeklyRepor
       `<h1 style="margin:0 0 6px;font-size:22px">${escapeHtml(report.headline)}</h1>
 <p style="margin:0 0 16px;color:#6b7068;font-size:13px">${escapeHtml(orgName)} · ${escapeHtml(range)}</p>
 <table style="width:100%;border-collapse:collapse;margin:0 0 20px">${report.lines
-        .map((l) => `<tr><td style="padding:6px 0;border-bottom:1px solid #ecebe6;color:#454a44">${escapeHtml(l.label)}</td><td style="padding:6px 0;border-bottom:1px solid #ecebe6;text-align:right;font-weight:600">${l.value.toLocaleString("en-US")}<span style="color:${(l.change ?? 0) >= 0 ? GREEN : "#b42318"};font-weight:500">${escapeHtml(delta(l.change))}</span></td></tr>`)
+        .map((l) => `<tr><td style="padding:6px 0;border-bottom:1px solid #ecebe6;color:#454a44">${escapeHtml(l.label)}${l.note ? `<br><span style="font-size:12px">${escapeHtml(l.note)}</span>` : ""}</td><td style="padding:6px 0;border-bottom:1px solid #ecebe6;text-align:right;font-weight:600">${l.value === null ? "Unknown" : l.value.toLocaleString("en-US")}<span style="color:${(l.change ?? 0) >= 0 ? GREEN : "#b42318"};font-weight:500">${escapeHtml(delta(l.change))}</span></td></tr>`)
         .join("")}</table>
 ${report.competitors?.length ? `<p style="margin:0 0 6px;font-weight:600">Competitors</p><ul style="margin:0 0 20px;padding-left:18px;color:#454a44">${report.competitors.map((c) => `<li style="margin-bottom:4px"><strong>${escapeHtml(c.name)}</strong>: ${escapeHtml(c.summary)}${c.sourceUrls?.[0] ? ` <a href="${escapeHtml(c.sourceUrls[0])}" style="color:${GREEN}">Source</a>` : ""}</li>`).join("")}</ul>` : ""}
 ${report.next.length ? `<p style="margin:0 0 6px;font-weight:600">Next week</p><ul style="margin:0 0 20px;padding-left:18px;color:#454a44">${report.next.map((n) => `<li style="margin-bottom:4px">${escapeHtml(n)}</li>`).join("")}</ul>` : ""}
@@ -113,8 +113,8 @@ ${report.next.length ? `<p style="margin:0 0 6px;font-weight:600">Next week</p><
   };
 }
 
-function fmtDay(ms: number): string {
-  return new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+function fmtDay(ms: number, timezone = "UTC"): string {
+  return new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: timezone });
 }
 
 export function digestEmail(params: { orgName: string; lines: string[]; url: string; cadence: string }) {

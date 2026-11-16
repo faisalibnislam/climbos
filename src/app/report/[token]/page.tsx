@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 const PERIODS = [7, 30, 90] as const;
-const fmt = (ms: number) => new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const fmt = (ms: number, timeZone: string) => new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone });
 
 /** A client-facing results report in the agency's brand. Printable to PDF. */
 export default function ClientReportPage() {
@@ -53,8 +53,9 @@ export default function ClientReportPage() {
           </div>
         </header>
         <div>
+          {r.isDemo ? <p className="mb-2 text-sm font-medium">Demo report · synthetic activity, not real business outcomes.</p> : null}
           <p className="text-sm text-ink-3">
-            Results for {r.client} · {fmt(r.from)} – {fmt(r.to)}
+            Results for {r.client} · {fmt(r.from, r.timezone)} – {fmt(r.to, r.timezone)} · {r.timezone}
           </p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">{r.headline}</h1>
         </div>
@@ -64,7 +65,7 @@ export default function ClientReportPage() {
               <li key={l.key} className="rounded-2xl border border-line p-4">
                 <p className="text-xs text-ink-3">{l.label}</p>
                 <p className="mt-1 flex items-baseline gap-2">
-                  <span className="text-2xl font-semibold tabular-nums">{l.value.toLocaleString("en-US")}</span>
+                  <span className="text-2xl font-semibold tabular-nums">{l.value === null ? "Unknown" : l.value.toLocaleString("en-US")}</span>
                   {l.change ? (
                     <span className={cn("inline-flex items-center text-xs font-medium", l.change > 0 ? "text-brand-800" : "text-red-800")}>
                       {l.change > 0 ? <ArrowUp className="size-3" aria-hidden /> : <ArrowDown className="size-3" aria-hidden />}
@@ -72,11 +73,12 @@ export default function ClientReportPage() {
                     </span>
                   ) : null}
                 </p>
+                {l.note ? <p className="mt-2 text-xs text-ink-3">{l.note}</p> : null}
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-ink-2">No activity in this period yet.</p>
+          <p className="text-ink-2">No activity recorded in this report period. Unrecorded outcomes remain unknown.</p>
         )}
         {r.competitors.length ? (
           <section>

@@ -1,3 +1,28 @@
+## 16 November 2026 — weekly and shared report evidence integrity
+
+Traced recorded activity → `reports.countsFor` → `reportBetween` → owner weekly view, `get_weekly_report`, client share, and weekly email/markdown formatting. Confirmed that mutable artifact/prospect timestamps could become publication/reply events, old queued sends and later job completions could be missed, post snapshots could become period reach, and the larger of two differently defined click totals was presented as one measure. Truncated reads and unknown values did not survive all output surfaces.
+
+Reports now count distinct publication confirmations by verification time, recorded mailbox sends by send time (including later bounces), outbound reply messages by received time, prospects/bookings by creation time, currently won deals by recorded won time, completed jobs by finish time, and usage by event time. Five event indexes support these reads. Publication/export/fixture distinctions are retained; real workspaces exclude fixture publication receipts, replies and jobs. Reply counts are messages, not people or unanswered conversations. Deal status is owner-recorded, not verified payment; confirmed bookings are not attendance. No recommendation authorizes execution.
+
+Period reach stays unknown because the current post-snapshot contract cannot establish it. Impressions never substitute for reach. Tracked-link counts use only complete UTC-day buckets contained in the selected window, with exact bucket dates and partial-boundary exclusions disclosed; partial windows cannot produce a period comparison. They remain distinct from platform clicks, customers and sales. Invalid or duplicate click buckets, missing publication identity, invalid usage values and read truncation withhold the affected count. Estimated usage retains its estimate label and cannot support a measured period change.
+
+Every metric read has a sentinel. Usage and tracked-link reads are each bounded at 2,000 records per period, so the two periods' maximum activity scan is 30,018 documents, leaving room for the existing bounded context reads. This follows the current [Convex transaction limits](https://docs.convex.dev/production/state/limits), checked 16 November 2026. This is not a production byte-size or load benchmark; unusually large source documents can still exhaust a transaction's byte budget. Scaling beyond these counts requires aggregation or a separately designed paginated report, not presenting a truncated sample as a complete total.
+
+Nullable values and explanatory notes pass through the app, assistant output schema, shared reports and email/markdown templates. Headline selection cannot turn an unknown send count into zero. Suggestions no longer promise that enabling outbound produces booked calls or treat every recorded reply as unanswered. Dates and upcoming-call labels use the workspace timezone. Public demo reports label synthetic activity and continue excluding internal credits/jobs; token revocation and tenant authorization remain enforced.
+
+Verification:
+
+```text
+pnpm exec vitest run tests/convex/report-evidence.test.ts tests/convex/clientReports.test.ts tests/unit/weekly-report.test.ts tests/unit/weekly-report-email.test.ts tests/unit/climb-tool-output.test.ts tests/convex/safety.test.ts tests/convex/tenancy.test.ts
+41 passed across 7 files
+pnpm typecheck
+passed: application and Convex
+```
+
+Targeted ESLint passed on all changed TypeScript files and the browser regression. Local browser command: `E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/report-evidence.spec.ts` — two passed in 10.3 seconds, desktop Chromium and Pixel 7 emulation. Tests exercise the owner weekly page and an owner-created loopback share link, unknown reach despite large snapshot counters, preserved evidence notes, hidden internal measures, unchanged workflow/approval/action receipts, no page errors or horizontal overflow, and no serious/critical axe findings. Desktop owner and mobile share screenshots were inspected. The subsequent scan-budget tightening passed the focused regression/type/lint checks; the browser fixtures do not exercise high-volume histories.
+
+Limits: these are counts of recorded events, not proof of complete provider/business coverage, unique customers, revenue attribution or causal growth. CRM status, source corrections and deletions can change historical reports; they are not immutable snapshots. UTC-day click storage cannot reconstruct local partial-day counts. Other attribution/follower paths and the full 410-item completion audit remain open. No full-suite run, paid model evaluation, live provider operation, hosted deployment or email sending occurred. Only the isolated loopback backend was synced.
+
 ## 16 November 2026 — honest totals, period comparisons and activity counts
 
 Traced ingestion → the existing daily series reader → Results overview and Home snapshot → active `ThisWeekCard` / Results components → the assistant's `get_results` output contract. Confirmed that incomplete current/prior windows could produce growth percentages, overlapping sources could be summed into a headline total, and the UI divided unrelated analytics/billing populations into conversion rates. Eight new integration regressions failed before implementation.
