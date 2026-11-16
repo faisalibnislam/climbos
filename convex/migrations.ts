@@ -1,8 +1,31 @@
 import { v } from "convex/values";
+import type { Doc } from "./_generated/dataModel";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { ensureAccountForOwner } from "./lib/accounts";
 import { EXPERT_PLAN_JSON_ENVELOPE_VERSION, EXPERT_PLAN_SCHEMA_VERSION } from "../shared/agents/planCompatibility";
 import { buildCurrentExpertGrowthPayload, parseCurrentExpertGrowthPayload } from "../shared/agents/growthPlanPersistence";
+import { weeklyLearningEligible } from "./playResults";
+
+/** Tenant-scoped, preview-first indexing of existing weekly reports; no report or action is rewritten. */
+export const weeklyOutcomeReviewIndex = internalMutation({
+  args: { orgId: v.id("organizations"), cursor: v.optional(v.string()), limit: v.optional(v.number()), dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, { orgId, cursor, limit, dryRun = true }) => {
+    const pageSize = Number.isSafeInteger(limit) ? Math.max(1, Math.min(100, limit!)) : 50;
+    const page = await ctx.db.query("playResults").withIndex("by_org", q => q.eq("orgId", orgId)).paginate({ numItems: pageSize, cursor: cursor ?? null });
+    const updates = new Map<string, { plan: Doc<"strategies">; at: number }>();
+    let skipped = 0;
+    for (const row of page.page) {
+      if (!Number.isFinite(row.updatedAt) || row.updatedAt <= 0 || row.updatedAt > Date.now()) { skipped++; continue; }
+      const plan = await ctx.db.get(row.strategyId);
+      if (!plan || !await weeklyLearningEligible(ctx, plan, orgId)) { skipped++; continue; }
+      const prior = updates.get(plan._id)?.at ?? plan.weeklyReportedAt;
+      if (prior !== undefined && Number.isFinite(prior) && prior > 0 && prior <= Date.now() && prior >= row.updatedAt) continue;
+      updates.set(plan._id, { plan, at: row.updatedAt });
+    }
+    if (!dryRun) for (const { plan, at } of updates.values()) await ctx.db.patch(plan._id, { weeklyReportedAt: at });
+    return { scanned: page.page.length, eligible: updates.size, updated: dryRun ? 0 : updates.size, skipped, dryRun, done: page.isDone, cursor: page.isDone ? null : page.continueCursor };
+  },
+});
 
 /**
  * Index existing reports by their saved review time without asking owners to

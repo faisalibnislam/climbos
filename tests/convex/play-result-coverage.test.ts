@@ -120,15 +120,20 @@ describe("weekly summary coverage", () => {
       for (let i = 0; i < 3; i++) for (let w = 0; w < 3; w++) await ctx.db.insert("playResults", { orgId: f.orgId, strategyId: s._id, playId: `cal-${i}`, playName: `Cal ${i}`, weekStart: first + w * weekMs, reach: 100, steps: [w === 2 ? 90 : 1], spendUsd: 0, ownerHours: 0, enteredBy: f.owner.userId, updatedAt: Date.now() });
     });
     const clock = vi.spyOn(Date, "now").mockReturnValue(first + weekMs + 1);
-    expect(await f.t.query(internal.playResults.briefFor, { orgId: f.orgId })).not.toContain("FORECAST RANGE COVERAGE");
+    expect(await f.t.query(internal.playResults.briefFor, { orgId: f.orgId })).not.toContain("FORECAST SCENARIO COMPARISON");
     clock.mockReturnValue(first + 3 * weekMs);
-    expect(await f.t.query(internal.playResults.briefFor, { orgId: f.orgId })).toContain("3 of 3 landed inside");
+    const brief = await f.t.query(internal.playResults.briefFor, { orgId: f.orgId });
+    expect(brief).toContain("3 of 3 landed inside");
+    expect(brief).toContain("not statistical interval coverage");
+    expect(brief).not.toContain("an 80% range");
+    expect(brief).not.toContain("unlikely by chance");
+    expect(brief).not.toContain("Consistent with the stated ranges");
     const view = await f.owner.client.query(api.playResults.forStrategy, { slug: f.slug, strategyId: f.strategyId });
     expect(view.byPlay["Cal 0"]).toMatchObject({ customers: 92, expectedByNow: null, comparisonIssue: expect.stringContaining("beyond the original forecast horizon") });
     await f.t.run(async ctx => {
       const s = (await ctx.db.get(f.strategyId))!, expert = s.expert as Record<string, unknown>;
       await ctx.db.patch(s._id, { expert: { ...expert, plays: (expert.plays as Record<string, unknown>[]).map(p => ({ ...p, horizonDays: 13 })) } } as never);
     });
-    expect(await f.t.query(internal.playResults.briefFor, { orgId: f.orgId })).not.toContain("FORECAST RANGE COVERAGE");
+    expect(await f.t.query(internal.playResults.briefFor, { orgId: f.orgId })).not.toContain("FORECAST SCENARIO COMPARISON");
   });
 });

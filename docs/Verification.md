@@ -1,3 +1,30 @@
+## 16 November 2026 — original weekly learning across plan versions
+
+Traced owner `playResults.log` → current report and append-only revision → original strategy/report-time index → `resultsBrief` → `jobWrites.jobContext.resultsText` → `jobs` performance context. A new regression failed before implementation: after seven newer untested plans, the older reported play produced an empty learning brief. The inspected forecast contract also defines input scenarios, while the old brief treated P10/P90 as an 80% probability interval.
+
+Implemented the existing path, without another agent/provider:
+
+- Optional `strategies.weeklyReportedAt` and tenant/report-time index, maintained atomically with reporting. Recent plan creation/restoration does not copy this metadata. The report metadata does not alter the plan content hash or approval scope.
+- Select up to eight eligible recently reported plans from 40 indexed candidates, plus four newest plans for legacy fallback; prioritize reported plays and retain up to six complete play records. Original audience, mechanism, kind, proposed test, stop/continue rules, plan/play identity, scenario, horizon, saved currency/goal when present, funnel labels and report dates remain attached as bounded untrusted historical data. Missing original fields remain null. Current corrections count once; revision snapshots are not independent observations.
+- Original business/goal/run links must stay within the tenant. Known fixture and orphaned run sources are excluded from learning. Real-workspace reporting rejects known fixture runs; demo workspaces can still demonstrate reporting. Invalid saved report times withhold summaries. No approval, action receipt or workflow is created by reporting, reading or indexing.
+- Descriptive low/high scenario comparisons replace binomial probability coverage, confidence and automatic range-widening claims. Only selected complete, completed, aligned whole-week horizons qualify; later reports do not inflate that horizon. Historical shortfall diagnostics no longer apply today's business prices/margins to an old baseline; a new decision must recheck confirmed economics and capacity.
+- `migrations:weeklyOutcomeReviewIndex` is operator-only, explicitly tenant-scoped, paginated and preview-first. It copies the maximum valid existing saved report time per plan, skips broken/fixture provenance and is idempotent. Preview all pages with the workspace `orgId` and default `dryRun: true`; after authorized rollout, restart with `dryRun: false` and follow returned cursors until `done`. No production backfill ran.
+
+Verification commands:
+
+```sh
+pnpm exec vitest run tests/convex/play-result-learning.test.ts tests/convex/play-result-coverage.test.ts tests/convex/play-result-history.test.ts tests/convex/play-result-money.test.ts tests/convex/play-results.test.ts tests/convex/experiment-outcomes.test.ts tests/convex/tenancy.test.ts tests/convex/safety.test.ts tests/unit/play-actuals.test.ts tests/unit/shortfall.test.ts tests/unit/decision-books.test.ts
+pnpm typecheck
+pnpm exec eslint convex/playResults.ts convex/migrations.ts convex/schema.ts shared/agents/specs.ts tests/convex/play-result-learning.test.ts tests/convex/play-result-coverage.test.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/play-result-money.spec.ts
+git diff --check
+```
+
+Results: **115 tests passed across 11 focused files**, including eight new learning tests. App/Convex typecheck, scoped lint, diff checks and the isolated local schema/function sync passed. Both existing desktop/mobile reporting checks passed in **30.7 seconds**. Coverage includes older reported plans, the actual strategy job-context reader, repeated corrections, unchanged plan hash and action records, fixture/orphan/tenant boundaries, invalid saved timestamps, historical context after current economics change, tenant-scoped preview/apply pagination and maximum-date/idempotent backfill, plus scenario comparison without probability claims. No Next.js component changed.
+
+Limits: this is bounded selection, not exhaustive history or semantic relevance retrieval. Each play retains the 520-report summary budget; larger histories are withheld. Old unindexed plans need authorized migration or a new report/correction. Original fields absent from legacy plans cannot be recovered or inferred from today's business. Owner counts, exposure, execution and causal impact remain independently unverified; this does not establish predictive calibration or real-model recommendation quality. No hosted deployment, live-provider operation, campaign send or spend occurred. The full 410-requirement completion audit remains open. Engine version: `v3.91-original-weekly-learning`.
+
 ## 16 November 2026 — weekly summary completeness and reporting windows
 
 Traced `playResults.forStrategy` and `resultsBrief` through the same `actualsFor` reader, `playActuals`, shortfall diagnostics and plan cards. Three new regressions failed before the repair: a valid play disappeared behind 405 unrelated rows, 62 recorded weeks produced a 60-week/600-customer subtotal instead of 62/620, and three completed missing weeks after the last report were reported as no missing weeks.

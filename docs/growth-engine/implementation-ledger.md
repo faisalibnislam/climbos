@@ -1,3 +1,9 @@
+## Local update — 16 November 2026: original weekly results survive newer plans
+
+Reproduced an empty learning brief after seven newer untested plans. Extended the existing plan schema with a tenant/report-time index, updated atomically with weekly reporting. The learning reader retains original plan/play context, deduplicates corrections and excludes known fixture, orphaned and cross-tenant sources. A preview-first paginated operator migration indexes existing report dates without rewriting outcomes. The existing `jobWrites.jobContext` → `jobs` performance brief consumes these records; no new agent or provider was introduced. Descriptive scenario comparisons replace unsupported probability calibration language, and historical shortfall checks no longer apply today's economics as old plan inputs. Engine version: `v3.91-original-weekly-learning`.
+
+Verification and bounded/legacy limitations are recorded in [Verification](../Verification.md). This increment does not prove model judgment quality, causal impact, complete-history retrieval or whole-product completion. Production backfill and deployment have not run.
+
 ## Local update — 16 November 2026: honest weekly summary coverage
 
 Three regressions reproduced a play hidden behind 405 unrelated rows, a 62-week history silently totaled as 60 weeks, and missing completed weeks after the latest report counted as zero missing weeks. The shared owner/context path now reads by play identity and reporting window, uses a sentinel at 520 records, validates comparable observations and withholds unusable summaries. Trailing missing weeks and provisional current reports cannot support a performance classification or increased-spend diagnosis. Forecast range coverage is restricted to completed, aligned, fully reported horizons; later outcomes cannot inflate it. No independent summary/agent subsystem was added. Engine version: `v3.90-weekly-summary-coverage`.

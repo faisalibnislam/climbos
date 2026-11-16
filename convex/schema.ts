@@ -3650,8 +3650,11 @@ export default defineSchema({
     ),
     /** The owner stopped this plan's send-back note from guiding future plans. */
     rejectionNoteRetiredAt: v.optional(v.number()),
+    /** Latest saved weekly report, independent of plan creation/version age. */
+    weeklyReportedAt: v.optional(v.number()),
     createdAt: v.number(),
-  }).index("by_org", ["orgId"]).index("by_org_goal", ["orgId", "goalId"]),
+  }).index("by_org", ["orgId"]).index("by_org_goal", ["orgId", "goalId"])
+    .index("by_org_weekly_reported", ["orgId", "weeklyReportedAt"]),
 
   /**
    * What a plan version knew when it was written (Book 14 §4–5): the facts,
