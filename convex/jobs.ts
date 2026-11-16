@@ -106,8 +106,8 @@ import {
 } from "../shared/agents/specs";
 import { fixtureCalendar } from "../shared/autopilot/fixture";
 import { fixtureOutbound } from "../shared/outbound";
-import { BUSINESS_TYPES, budgetBand, isServiceBusiness, LIBRARY_VERSION, typesFromLegacy } from "../shared/acquisition/library";
-import { adjustmentsFrom, candidatesFor, salesCycleEstimate, DIMENSIONS, entryPriceUsdMonth, FACTORS, mergeFit, priceFitText, profileFrom, scoreChannels, scorecardText, type AcquisitionProfile, type Adjustment, type SavedAcquisition, MULTI_DIMENSIONS } from "../shared/acquisition/scoring";
+import { BUSINESS_TYPES, CHANNEL_BY_ID, budgetBand, isServiceBusiness, LIBRARY_VERSION, typesFromLegacy } from "../shared/acquisition/library";
+import { channelPreferenceSnapshot, adjustmentsFrom, candidatesFor, salesCycleEstimate, DIMENSIONS, entryPriceUsdMonth, FACTORS, mergeFit, priceFitText, profileFrom, scoreChannels, scorecardText, type AcquisitionProfile, type Adjustment, type SavedAcquisition, MULTI_DIMENSIONS } from "../shared/acquisition/scoring";
 import type { AgentInput, AgentSpec, PlanConstraints } from "../shared/agents/types";
 import { fakeTurn } from "../shared/agents/fake";
 import { agentRevisionSteps } from "./lib/jobPlans";
@@ -632,6 +632,7 @@ function constraintsOf(job: JobCtx, extra: Partial<PlanConstraints> = {}): PlanC
   return {
     ...(job.goal ? { monthlyAdBudgetUsd: minorToMajor(job.goal.monthlyAdBudgetMinor, job.goal.currency) } : {}),
     currency: workspaceCurrency(job),
+    ownerChannelPreferences: job.business?.acquisition?.channelPreferences ?? [],
     ...(job.business?.unitEconomics?.grossMargin !== undefined ? { ownerGrossMargin: job.business.unitEconomics.grossMargin } : {}),
     ...(job.business?.unitEconomics?.ownerHoursPerWeek !== undefined ? { ownerHoursPerWeek: job.business.unitEconomics.ownerHoursPerWeek } : {}),
     ...(job.business?.unitEconomics?.monthlyGrowthCashUsd !== undefined ? { monthlyGrowthCashUsd: job.business.unitEconomics.monthlyGrowthCashUsd } : {}),
@@ -784,6 +785,9 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     job.run.kind === "strategy" && b?.unitEconomics?.segmentEconomics?.length
       ? `SEGMENT ECONOMICS INPUT:\n${untrusted("owner-reported segment economics", segmentEconomicsBrief(b.unitEconomics.segmentEconomics, b.currency ?? workspaceCurrency(job)), 3_000)}`
       : job.run.kind === "strategy" ? segmentEconomicsBrief(undefined, b?.currency ?? workspaceCurrency(job)) : "",
+    job.run.kind === "strategy" && b?.acquisition?.channelPreferences?.length
+      ? `OWNER CHANNEL FEEDBACK (owner-reported preferences, not measured performance, customer demand or action permission):\n${untrusted("saved channel preferences", JSON.stringify(b.acquisition.channelPreferences.map(({ channelId, preference, rationale, evidenceDate }) => ({ channelId, channel: CHANNEL_BY_ID[channelId]?.name ?? channelId, preference, rationale, evidenceDate }))), 16_000)}\nDo not select dismissed or irrelevant channels for the immediate execution portfolio unless the owner clears that preference. Avoid, prefer and already_using are soft context, not proof of fit or permission. Preserve grounded, adjacent and bold exploration; a speculative alternative may explain what would justify reconsideration without selecting or executing the dismissed channel.`
+      : "",
     audienceLine(job.audience),
     trustPostureContext(job.facts.map((f) => f.evidenceKind)),
     conflictsLine(job),
@@ -971,9 +975,7 @@ async function planSnapshot(job: JobCtx, insights: string, sourceUrls: string[],
         .map(([key, value]) => [key, value.value])
         .sort(([a], [b]) => a.localeCompare(b)),
     ),
-    ownerChannelPreferences: [...(job.business?.acquisition?.channelPreferences ?? [])]
-      .map(({ channelId, preference, rationale, sourceUrl, evidenceDate }) => ({ channelId, preference, rationale, ...(sourceUrl ? { sourceUrl } : {}), ...(evidenceDate ? { evidenceDate } : {}) }))
-      .sort((a, b) => a.channelId.localeCompare(b.channelId)),
+    ownerChannelPreferences: channelPreferenceSnapshot(job.business?.acquisition?.channelPreferences),
     businessResearchAt: job.business?.insights?.generatedAt ?? null,
     marketChangeVersions: job.marketChanges.map(({ id, at }) => ({ id, at })),
     businessFactVersions: [...facts, ...staleFacts].map(({ id, updatedAt, reviewSuggested }) => ({ id, updatedAt, reviewSuggested })).sort((a, b) => a.id.localeCompare(b.id)),

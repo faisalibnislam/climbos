@@ -1,3 +1,4 @@
+import type { OwnerChannelPreference } from "../acquisition/scoring";
 import type { Diagnosis } from "./diagnosis";
 import type { EvidenceKind, FactEvidenceBasis } from "./evidenceKind";
 import type { z } from "zod";
@@ -130,6 +131,8 @@ export interface AgentInput {
 }
 
 export interface PlanConstraints {
+  /** Saved owner preferences, not measured channel performance or action authority. */
+  ownerChannelPreferences?: OwnerChannelPreference[];
   /** Cash the owner will pay ad platforms each month, in `currency` (the name predates currencies). */
   monthlyAdBudgetUsd?: number;
   /** Owner-reported contribution margin before acquisition; absent when unknown. */

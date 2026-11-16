@@ -1,3 +1,4 @@
+import { channelPreferenceSnapshot, type OwnerChannelPreference } from "../shared/acquisition/scoring";
 import { localWorkspaceTestingEnabled } from "../shared/policy/localDevelopment";
 import { focusedGoal, goalPlans } from "./lib/goals";
 import { hasNoCustomersYet } from "../shared/agents/lifecycle";
@@ -1186,7 +1187,7 @@ function planStaleInputs(
   connectedCapabilities: string[] = [],
   marketChangeVersions: { id: string; at: number }[] = [],
 ): { ownerEconomics: boolean; lifecycleStage: boolean; funnel: boolean; goal: boolean; businessProfile: boolean; businessFacts: boolean; brandGuidance: boolean; capabilities: boolean; businessResearch: boolean; marketChanges: boolean; cashTiming: boolean } {
-  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; kinds?: string[]; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid"; rationale: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; capabilities?: string[]; growthCashTiming?: unknown } | undefined;
+  const snapshot = strategy.expert?.snapshot as { snapshotVersion?: number; businessLifecycleStage?: { stage?: string } | null; businessFunnel?: Doc<"businesses">["funnel"] | null; goalInput?: { id: string; kind: string; kinds?: string[]; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: unknown } | null; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: OwnerChannelPreference[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; capabilities?: string[]; growthCashTiming?: unknown } | undefined;
   const savedStage = snapshot?.businessLifecycleStage?.stage ?? null;
   const currentStage = business?.lifecycleStage?.stage ?? null;
   const savedFunnel = funnelDecisionValues(snapshot?.businessFunnel);
@@ -1209,9 +1210,7 @@ function planStaleInputs(
       .map(([key, value]) => [key, value.value])
       .sort(([a], [b]) => a.localeCompare(b)),
   );
-  const ownerChannelPreferences = [...(business?.acquisition?.channelPreferences ?? [])]
-    .map(({ channelId, preference, rationale }) => ({ channelId, preference, rationale }))
-    .sort((a, b) => a.channelId.localeCompare(b.channelId));
+  const ownerChannelPreferences = channelPreferenceSnapshot(business?.acquisition?.channelPreferences);
   return {
     ownerEconomics: hasNewerOwnerEconomics(strategy, business?.unitEconomics),
     // Re-saving the same stage is not a material decision-input change.

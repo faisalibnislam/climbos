@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: owner channel feedback
+
+Default plans now receive saved owner channel feedback in strategy context and validation. The existing dismissed/irrelevant policy is shared with the scorer for identifiable channel selections; soft preferences and bold hypotheses stay distinct. Actual tests also exposed immediate false staleness from differing snapshot/current source-date shapes; a shared snapshot function repairs that comparison. 130 tests/nine files, typecheck and scoped lint passed. [Scoped audit](owner-channel-feedback-audit.md) preserves free-form identity and semantic-quality limits. No new schema/provider/UI/agent or external action.
+
 ## Local update — 17 November 2026: channel/audience source identity
 
 Replaced prompt-substring citation acceptance with recorded research-source membership in default/detailed plan specs. Reused the existing strict URL normalizer for validation and persisted title lookup. Four red spec regressions and six actual job cases cover false acceptance, false rejection, saved links and approval boundaries. Final 127 tests/seven files, typecheck and scoped lint pass. No prompt/provider/schema/UI or external authority change. [Audit and remaining scope](plan-channel-evidence-audit.md) distinguish source identity from semantic/business validation.

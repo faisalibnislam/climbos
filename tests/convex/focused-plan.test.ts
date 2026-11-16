@@ -7,13 +7,14 @@ import { offerAssessmentFixture, offerFact } from "../fixtures/offerAssessment";
 import { approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
 import type { TurnRequest } from "../../shared/ai/types";
 import type { RateVersion } from "../../shared/economics/rates";
-const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "" }));
+const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", dismissedChannel: false }));
 vi.mock("../../shared/ai/turn", async original => ({
   ...await original<typeof import("../../shared/ai/turn")>(),
   modelTurn: async (req: TurnRequest, rates: RateVersion) => {
     state.requests.push(req);
     const days = Number(JSON.stringify(req.messages).match(/EXECUTION CYCLE: (14|30|90) days/)?.[1] ?? 14);
     const plan = focusedPlanFixture(days);
+    if (state.dismissedChannel) plan.channels[0] = { ...plan.channels[0], key: "seo_content", name: "Blog articles" };
     if (state.citationReference) { plan.channels[0].cites = [state.citationReference]; plan.audiences[0].cites = [state.citationReference]; }
     if (state.demandMode) {
       const channel = plan.channels[0];
@@ -58,7 +59,7 @@ vi.mock("../../shared/ai/turn", async original => ({
     return result;
   },
 }));
-afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; });
+afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.dismissedChannel = false; });
 
 async function workspace() {
   const t = setup(); delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE;
@@ -74,6 +75,50 @@ async function workspace() {
   await t.mutation(internal.engine.putResearchCache, { orgId, businessWebsite: "https://business.example/", cacheKey: "a".repeat(64), agentId: "business_insights", modelKey: "claude-haiku-5.5", notes: "Synthetic public-source notes for a workflow integration test. No measured demand.", sources: [{ url: "https://business.example/" }], expiresAt: Date.now() + 86400000 });
   return { t, owner, slug, orgId };
 }
+
+it("keeps unchanged channel feedback fresh and requires refresh when its source changes", async () => {
+  const { t, owner, slug, orgId } = await workspace();
+  const preference = { slug, channelId: "C01", preference: "prefer" as const, rationale: "Our team prefers writing useful customer answers." };
+  await owner.client.mutation(api.acquisition.setChannelPreference, { ...preference, sourceUrl: "https://owner.example/original" });
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect((await owner.client.query(api.workspace.plan, { slug, strategyId: plan._id })).staleInputs.businessProfile).toBe(false);
+  await owner.client.mutation(api.acquisition.setChannelPreference, { ...preference, sourceUrl: "https://owner.example/corrected" });
+  expect((await owner.client.query(api.workspace.plan, { slug, strategyId: plan._id })).staleInputs.businessProfile).toBe(true);
+  await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/business profile changed/);
+  await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: plan._id, playId: "focused" })).rejects.toThrow(/business profile changed/);
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
+
+it.each([
+  ["focused", "dismissed"], ["focused", "irrelevant"],
+  ["starter", "dismissed"], ["starter", "irrelevant"],
+] as const)("carries %s owner channel feedback into review and respects %s until cleared", async (planStyle, preference) => {
+  const { t, owner, slug, orgId } = await workspace();
+  state.dismissedChannel = true;
+  const rationale = "Our team cannot maintain articles this cycle.";
+  await owner.client.mutation(api.acquisition.setChannelPreference, { slug, channelId: "C01", preference, rationale });
+  const generate = async () => {
+    await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle });
+    await t.finishAllScheduledFunctions(() => undefined);
+    return (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  };
+  const blocked = await generate();
+  expect(JSON.stringify(state.requests)).toContain("OWNER CHANNEL FEEDBACK");
+  expect(JSON.stringify(state.requests)).toContain(rationale);
+  expect(blocked.expert?.quality).toMatchObject({ state: "failed", fixes: expect.arrayContaining([expect.objectContaining({ rule: "owner_channel_preference", path: "channels[0]" })]) });
+  expect(blocked.expert?.strategyExploration?.bold).toMatchObject({ precedentIds: [], evidenceStrength: "low" });
+  await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: blocked._id, decision: "approve" })).rejects.toThrow(/checks/);
+  await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: blocked._id, playId: "focused" })).rejects.toThrow();
+  await owner.client.mutation(api.acquisition.setChannelPreference, { slug, channelId: "C01", preference: "clear" });
+  const cleared = await generate();
+  expect(cleared._id).not.toBe(blocked._id);
+  expect(cleared.expert?.quality?.state).toBe("passed");
+  expect(cleared.expert?.snapshot?.ownerChannelPreferences).toEqual([]);
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+  expect((await t.run(ctx => ctx.db.query("approvals").collect())).every(a => a.status === "pending")).toBe(true);
+});
 
 it.each([
   ["focused", "https://business.exam"], ["starter", "https://business.exam"],

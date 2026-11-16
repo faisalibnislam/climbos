@@ -1,5 +1,5 @@
 import { formatMoney, fromUsd, minorToMajor, thresholdIn, toUsd } from "../economics/currency";
-import { budgetBand, CHANNELS, SERVICE_TYPES, TYPE_BY_KEY, type Channel, type Execution, type Requirement, type Stage } from "./library";
+import { budgetBand, CHANNELS, CHANNEL_BY_ID, SERVICE_TYPES, TYPE_BY_KEY, type Channel, type Execution, type Requirement, type Stage } from "./library";
 import type { BindingConstraint } from "../agents/decision";
 import { channelDecisionFrom, type ChannelDecision } from "./channelDecision";
 
@@ -107,6 +107,24 @@ export interface OwnerChannelPreference {
   rationale: string;
   sourceUrl?: string;
   evidenceDate?: string;
+}
+
+/** Same recorded values for planning snapshots and later freshness checks. */
+export function channelPreferenceSnapshot(preferences: readonly OwnerChannelPreference[] = []): OwnerChannelPreference[] {
+  return preferences.map(({ channelId, preference, rationale, sourceUrl, evidenceDate }) => ({ channelId, preference, rationale, ...(sourceUrl ? { sourceUrl } : {}), ...(evidenceDate ? { evidenceDate } : {}) })).sort((a, b) => a.channelId.localeCompare(b.channelId));
+}
+
+/** Exact known-channel identity only; never infer that a whole creative mechanism was rejected. */
+export function channelPreferenceBlock(channel: { key?: string; name: string }, preferences: readonly OwnerChannelPreference[] = []): string | undefined {
+  const normalize = (value: string) => value.trim().toLowerCase().replace(/[\s_-]+/g, "");
+  const identities = [channel.key ?? "", channel.name].map(normalize);
+  for (const preference of preferences) {
+    if (preference.preference !== "dismissed" && preference.preference !== "irrelevant") continue;
+    const known = CHANNEL_BY_ID[preference.channelId];
+    if (!known || ![known.id, known.name].some(value => identities.includes(normalize(value)))) continue;
+    return preference.preference === "irrelevant" ? "Your team marked this channel irrelevant; that feedback is saved for future rankings." : "Your team dismissed this channel; that feedback is saved for future rankings.";
+  }
+  return undefined;
 }
 
 export interface AcquisitionProfile {
@@ -589,9 +607,10 @@ export function scoreChannels(p: AcquisitionProfile, adjustments: Adjustment[] =
       }
     }
     if (preference?.preference === "already_using" && row.status !== "ineligible") row.why = "You already use this, so ClimbOS builds on it instead of starting from zero.";
-    if (preference?.preference === "dismissed" || preference?.preference === "irrelevant") {
+    const ownerBlock = channelPreferenceBlock({ key: row.id, name: row.name }, preference ? [preference] : []);
+    if (ownerBlock) {
       evidenceBlocked.add(row.id);
-      row.why = preference.preference === "irrelevant" ? "Your team marked this channel irrelevant; that feedback is saved for future rankings." : "Your team dismissed this channel; that feedback is saved for future rankings.";
+      row.why = ownerBlock;
     }
   }
   return select(rows, p, focus && DIAGNOSIS_STAGES[focus] ? focus : undefined, evidenceBlocked);

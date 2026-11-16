@@ -1,3 +1,7 @@
+## 17 November 2026 — retained owner channel feedback
+
+Later owner requirement to retain dismissals now reaches focused/starter strategy input and shared plan validation, using the existing detailed scorer policy. Identifiable dismissed/irrelevant selections fail quality until the owner clears the preference; soft preferences are not evidence of performance. A related false-staleness bug is fixed by comparing the same recorded source/date values. 130 focused/permission/history tests pass. [Audit](owner-channel-feedback-audit.md) records the exact scope; arbitrary aliases, semantic compliance and the full strategy requirements remain unverified.
+
 ## 17 November 2026 — evidence behind channel and audience choices
 
 Strategy-path audit found channel/audience citations being accepted from URL substrings in prompt text. Focused/starter/detailed validation now checks the recorded research source list, preserving host/path/query identity. Existing fact references and uncited hypotheses remain possible. Four red spec cases and six generation cases verify the repair; 127 focused/permission tests pass. See [source audit and open strategy work](plan-channel-evidence-audit.md). This strengthens requirement 24 and the evidence boundary for rows 31–40 without marking those broad requirements complete.

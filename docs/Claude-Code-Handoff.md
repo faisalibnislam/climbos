@@ -13,6 +13,8 @@ Latest paid-acquisition follow-up (17 November): focused/starter validation now 
 
 Latest channel-evidence follow-up (17 November): plan citations now require recorded research-source membership, and persisted source titles preserve URL identity. 127 focused/permission tests, typecheck and scoped lint pass. [The scoped audit](growth-engine/plan-channel-evidence-audit.md) retains open customer-fit, channel-preference and semantic-consistency work; source matching is not proof of business quality.
 
+Latest owner-channel follow-up (17 November): default strategy now consumes saved preferences and shares exact-channel dismissal checks with scoring. Shared source/date-preserving snapshots fix immediate false staleness. 130 focused/permission/history tests, typecheck and scoped lint pass. [Audit and remaining scope](growth-engine/owner-channel-feedback-audit.md) identify free-form channel references and semantic compliance as unfinished acceptance work.
+
 This handoff records what has been built, what was checked, what remains unverified, and how to continue safely. It is a starting point for repository work, not proof that every capability works with live providers or real customer outcomes.
 
 ## Current status — 17 November 2026
