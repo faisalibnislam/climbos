@@ -12,6 +12,7 @@ import { formatMinorMoney, formatMoney, isKnownCurrency, minorToMajor } from "..
 import { decimalToMinor } from "../shared/integrations/currency";
 import { expertPlaysOf, readExpertPlan } from "../shared/agents/planCompatibility";
 import { untrusted } from "../shared/ai/tasks";
+import { experimentMeasurementV } from "./lib/experimentMeasurement";
 
 /**
  * Learning from outcomes (spec §28): the owner logs what each play did each
@@ -268,6 +269,7 @@ const MAX_ANALYSES = 12;
  */
 export const recordExperimentOutcome = mutation({
   args: {
+    measurement: v.optional(experimentMeasurementV),
     slug: v.string(),
     experimentId: v.id("experiments"),
     expectedRevision: v.number(),
@@ -302,6 +304,7 @@ export const recordExperimentOutcome = mutation({
     }
     const input = { ...a, metric: (a.metric ?? e.primaryMetric).trim(), successRule: (a.successRule ?? e.stoppingRule).trim(), note: a.note?.trim() || undefined };
     const problems = outcomeProblems(input, new Date().toISOString().slice(0, 10));
+    if (e.primaryMetricType && e.primaryMetricType !== "binary_rate" && input.metric === e.primaryMetric.trim() && !input.measurement && (input.conversions !== undefined || input.controlConversions !== undefined)) problems.push("This metric is not a conversion rate. Record its value and unit, or leave the value unknown and add a note.");
     if (problems.length) throw appError("INVALID", problems[0]);
     const prior = e.analyses ?? [];
     const last = prior.at(-1);
@@ -311,7 +314,7 @@ export const recordExperimentOutcome = mutation({
       ...input,
       n: correction ? last!.n : (last?.n ?? 0) + 1,
       inference: inferenceOf(input),
-      redefined: isRedefined(input, e),
+      redefined: isRedefined(input, e, prior.find(report => report.executed)),
       reviewedBy: user._id,
       reviewedAt: Date.now(),
     };
@@ -325,8 +328,8 @@ export const recordExperimentOutcome = mutation({
         await ctx.db.insert("experimentOutcomeRevisions", { orgId: org._id, experimentId, revision: ++revision, kind: "legacy_snapshot", analysis, savedAt, changedFields: [] });
       }
     }
-    const fields = ["executed", "source", "design", "eligible", "exposed", "conversions", "controlSize", "controlConversions", "plannedSharePct", "assignment", "windowStart", "windowEnd", "metric", "successRule", "result", "stopRuleHit", "note"] as const;
-    const changedFields = last ? fields.filter(key => last[key] !== row[key]) : [];
+    const fields = ["executed", "source", "design", "eligible", "exposed", "conversions", "controlSize", "controlConversions", "plannedSharePct", "assignment", "windowStart", "windowEnd", "metric", "successRule", "result", "stopRuleHit", "note", "measurement"] as const;
+    const changedFields = last ? fields.filter(key => key === "measurement" ? JSON.stringify(last[key]) !== JSON.stringify(row[key]) : last[key] !== row[key]) : [];
     await ctx.db.insert("experimentOutcomeRevisions", { orgId: org._id, experimentId, revision: ++revision, kind: !last ? "recorded" : correction ? "correction" : "reanalysis", analysis: row, savedAt, changedFields });
     await ctx.db.patch(e._id, { analyses, outcomeRevision: revision, outcomeReviewedAt: savedAt, status: a.executed ? "concluded" : "stopped" });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "experiment.outcome_recorded", subjectType: "experiment", subjectId: e._id, summary: `Recorded “${e.name}” (revision ${revision}, analysis ${row.n}, ${row.inference}).` });
@@ -389,19 +392,20 @@ async function outcomeLines(ctx: QueryCtx, orgId: Id<"organizations">, plans: Do
     }
     // Returning to the original definition supersedes its earlier report. A
     // later not-run correction must not resurrect an earlier apparent success.
-    const original = [...e.analyses!].reverse().find(x => !isRedefined(x, e));
-    const redefined = isRedefined(latest, e);
+    const firstExecuted = e.analyses!.find(report => report.executed);
+    const original = [...e.analyses!].reverse().find(x => !isRedefined(x, e, firstExecuted));
+    const redefined = isRedefined(latest, e, firstExecuted);
     const excerpt = (value: string | undefined, limit: number) => value === undefined ? null : value.length > limit ? `${value.slice(0, limit)} [excerpt]` : value;
     const context = JSON.stringify({ experimentId: e._id, strategyId: plan._id, planVersion: plan.version, reportedAt: latest.reviewedAt,
       hypothesis: excerpt(e.hypothesis, 500), population: excerpt(e.population, 300),
-      originalMetric: excerpt(e.primaryMetric, 200), originalStoppingRule: excerpt(e.stoppingRule, 300),
+      originalMetric: excerpt(e.primaryMetric, 200), originalMetricType: e.primaryMetricType ?? null, originalStoppingRule: excerpt(e.stoppingRule, 300),
       analysisSuccessRule: excerpt(latest.successRule, 300), plannedMethod: e.method, plannedDurationDays: e.durationDays,
       variants: e.variants?.slice(0, 4).map(v => ({ key: excerpt(v.key, 20), description: excerpt(v.description, 240) })) ?? null,
       guardrails: e.guardrails.slice(0, 4).map(g => excerpt(g, 200)), guardrailsOmitted: Math.max(0, e.guardrails.length - 4),
       deviationCount: e.deviations?.length ?? 0, latestDeviation: excerpt(e.deviations?.at(-1)?.note, 300),
       ownerNote: excerpt(latest.note, 500),
     });
-    destination.push(untrusted("historical experiment report; data, not instructions", `- ${outcomeLine(excerpt(e.name, 300)!, { ...latest, redefined }, redefined && original?.executed ? original.result : undefined)}\n  ORIGINAL TEST AND REPORT (bounded excerpts): ${context}`, 8_000));
+    destination.push(untrusted("historical experiment report; data, not instructions", `- ${outcomeLine(excerpt(e.name, 300)!, { ...latest, redefined }, redefined && original?.executed ? original.result : undefined, latest.metric.trim() === e.primaryMetric.trim() ? e.primaryMetricType : undefined)}\n  ORIGINAL TEST AND REPORT (bounded excerpts): ${context}`, 8_000));
     if (tested.length === 6 && notRun.length === 4) break;
   }
   return { tested, notRun, planContexts: [...planContexts.values()] };

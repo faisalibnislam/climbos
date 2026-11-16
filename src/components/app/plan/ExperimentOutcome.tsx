@@ -8,7 +8,7 @@ import { useState } from "react";
 import { Badge, Button, Checkbox, DatePicker, Field, Input, Segmented, Select, toast, type Tone } from "@/components/ui";
 import { formatDateTime } from "@/components/app/money";
 import { errorMessage } from "@/components/app/errors";
-import { inferenceOf, isRedefined, readingOf, readingText, OUTCOME_SOURCE_LABEL, OUTCOME_REPORT_LIMIT, type Inference, type OutcomeAssignment, type OutcomeDesign, type OutcomeInput, type OutcomeResult, type OutcomeSource } from "../../../../shared/growth/experimentOutcome";
+import { inferenceOf, isRedefined, readingOf, readingText, measurementInputValue, measurementText, parseMeasurementValue, OUTCOME_SOURCE_LABEL, OUTCOME_REPORT_LIMIT, type Inference, type OutcomeAssignment, type OutcomeDesign, type OutcomeInput, type OutcomeResult, type OutcomeSource } from "../../../../shared/growth/experimentOutcome";
 
 export type Analysis = OutcomeInput & { n: number; inference: Inference; redefined: boolean; reviewedAt: number };
 
@@ -26,7 +26,7 @@ const RESULT: Record<OutcomeResult, { label: string; tone: Tone }> = {
 };
 
 const SOURCES: { value: OutcomeSource; label: string }[] = [
-  { value: "owner_report", label: "My own count" },
+  { value: "owner_report", label: "My own records" },
   { value: "integration", label: "Connected tool (entered by me)" },
   { value: "platform_report", label: "Platform report (entered by me)" },
 ];
@@ -46,7 +46,8 @@ const ASSIGNMENTS: { value: OutcomeAssignment | "unknown"; label: string }[] = [
 ];
 const DESIGN_OF_METHOD: Record<string, OutcomeDesign> = { holdout: "holdout", ab_split: "randomized", pre_post_observational: "before_after", export_instructions: "none" };
 
-type Exp = { id: Id<"experiments">; method: string; primaryMetric: string; stoppingRule: string; analyses: Analysis[]; outcomeRevision?: number };
+type Exp = { id: Id<"experiments">; method: string; primaryMetric: string; primaryMetricType?: string; currency?: string | null; stoppingRule: string; analyses: Analysis[]; outcomeRevision?: number };
+const MEASUREMENTS = [{ value: "binary_rate", label: "Conversion counts (people)" }, { value: "count", label: "Count of the named outcome" }, { value: "continuous", label: "Time or other measured value" }, { value: "monetary", label: "Money" }, { value: "notes", label: "Notes only / value unknown" }];
 
 const num = (s: string) => (s.trim() === "" ? undefined : Number(s));
 const str = (n?: number) => (n === undefined ? "" : String(n));
@@ -77,11 +78,18 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
     metric: latest?.metric ?? e.primaryMetric,
     successRule: latest?.successRule ?? e.stoppingRule,
     note: latest?.note ?? "",
+    measurementType: latest?.measurement?.type ?? e.primaryMetricType ?? "binary_rate",
+    measurementValue: measurementInputValue(latest?.measurement?.value, latest?.measurement?.type ?? "count", latest?.measurement?.currency),
+    comparisonValue: measurementInputValue(latest?.measurement?.comparisonValue, latest?.measurement?.type ?? "count", latest?.measurement?.currency),
+    measurementUnit: latest?.measurement?.unit ?? "",
+    measurementCurrency: latest?.measurement?.currency ?? e.currency ?? "",
+    measurementBasis: latest?.measurement?.basis ?? "",
+    comparisonBasis: latest?.measurement?.comparisonBasis ?? "",
   });
   const [f, setF] = useState(init);
   const set = <K extends keyof typeof f>(k: K, val: (typeof f)[K]) => setF((x) => ({ ...x, [k]: val }));
   const comparative = f.design === "holdout" || f.design === "randomized";
-  const counts = {
+  const counts = f.measurementType === "binary_rate" ? {
     eligible: num(f.eligible),
     exposed: num(f.exposed),
     conversions: num(f.conversions),
@@ -89,8 +97,9 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
     controlConversions: comparative ? num(f.controlConversions) : undefined,
     plannedSharePct: comparative ? num(f.plannedSharePct) : undefined,
     assignment: comparative && f.assignment !== "unknown" ? f.assignment : undefined,
-  };
-  const preview = inferenceOf({ ...f, ...counts });
+  } : {};
+  const measurementType = f.measurementType === "count" || f.measurementType === "continuous" || f.measurementType === "monetary" ? f.measurementType : null;
+  const preview = inferenceOf({ executed: f.executed, source: f.source, design: f.design, ...counts });
   const redefines = Boolean(latest) && (f.metric.trim() !== latest!.metric || f.successRule.trim() !== latest!.successRule);
 
   const submit = async () => {
@@ -104,6 +113,14 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
         source: f.source,
         design: f.design,
         ...(f.executed ? counts : {}),
+        ...(f.executed && measurementType ? { measurement: {
+          type: measurementType,
+          value: parseMeasurementValue(f.measurementValue, measurementType, f.measurementCurrency),
+          comparisonValue: parseMeasurementValue(f.comparisonValue, measurementType, f.measurementCurrency),
+          unit: f.measurementUnit.trim(),
+          ...(measurementType === "monetary" ? { currency: f.measurementCurrency.trim().toUpperCase() } : {}),
+          basis: f.measurementBasis.trim(), comparisonBasis: f.comparisonBasis.trim(),
+        } } : {}),
         windowStart: f.windowStart || undefined,
         windowEnd: f.windowEnd || undefined,
         metric: f.metric,
@@ -121,7 +138,8 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
     }
   };
 
-  const inf = latest ? INFERENCE[inferenceOf(latest)] : null;
+  const legacyMetricMismatch = Boolean(latest && !latest.measurement && e.primaryMetricType && e.primaryMetricType !== "binary_rate" && latest.metric.trim() === e.primaryMetric.trim() && (latest.conversions !== undefined || latest.controlConversions !== undefined));
+  const inf = latest ? INFERENCE[legacyMetricMismatch && latest.executed ? "observed" : inferenceOf(latest)] : null;
   return (
     <div className="flex flex-col gap-2 border-t border-line pt-2.5">
       {latest && inf ? (
@@ -135,7 +153,7 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
             {latest.redefined ? <Badge tone="amber">Changed definition</Badge> : null}
             {e.analyses.length > 1 ? <span className="text-xs text-ink-3">Analysis {latest.n}</span> : null}
           </div>
-          {latest.executed ? <OutcomeNumbers a={latest} /> : null}
+          {latest.executed ? legacyMetricMismatch ? <p className="text-xs text-ink-2">This older report used conversion counts for a different metric. Its metric value remains unknown; review the saved report before interpreting it.</p> : <OutcomeNumbers a={latest} /> : null}
         </div>
       ) : null}
       {latest ? <details onToggle={event => setHistoryOpen(event.currentTarget.open)}>
@@ -174,15 +192,33 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
                   <Select options={SOURCES} value={f.source} onValueChange={(v) => set("source", v as OutcomeSource)} disabled={busy} />
                 </Field>
                 <Field label="Reported design">
-                  <Select options={DESIGNS} value={f.design} onValueChange={(v) => set("design", v as OutcomeDesign)} disabled={busy} />
+                  <Select options={DESIGNS} value={f.design} onValueChange={v => setF(x => ({ ...x, design: v as OutcomeDesign, ...(v === "none" ? { comparisonValue: "", comparisonBasis: "" } : {}) }))} disabled={busy} />
                 </Field>
               </div>
-              {comparative ? (
+              <Field label="Measurement" hint="Use the planned metric. Changing type clears these measurement fields. Changed units or scope save a separate analysis, preserving the earlier result.">
+                <Select options={MEASUREMENTS} value={f.measurementType} onValueChange={v => setF(x => ({ ...x, measurementType: v, measurementValue: "", comparisonValue: "", measurementUnit: "", measurementBasis: "", comparisonBasis: "" }))} disabled={busy} />
+              </Field>
+              {measurementType ? <>
+                <Field label="Unit or amount meaning" hint={measurementType === "monetary" ? "For example, contribution after variable costs. Revenue is not profit." : "For example, qualified enquiries or minutes per request."}>
+                  <Input value={f.measurementUnit} onChange={ev => set("measurementUnit", ev.target.value)} maxLength={80} disabled={busy} />
+                </Field>
+                {measurementType === "monetary" ? <Field label="Recorded currency" hint="Use the currency in these records. No currency conversion is performed.">
+                  <Input value={f.measurementCurrency} onChange={ev => set("measurementCurrency", ev.target.value.toUpperCase())} maxLength={3} disabled={busy} placeholder="USD" />
+                </Field> : null}
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="Recorded value" optional hint="Blank means unknown; zero is a recorded zero."><Input inputMode="decimal" value={f.measurementValue} onChange={ev => set("measurementValue", ev.target.value)} disabled={busy} /></Field>
+                  {f.design !== "none" ? <Field label="Comparison value" optional hint="Use actual records, not the plan's estimate."><Input inputMode="decimal" value={f.comparisonValue} onChange={ev => set("comparisonValue", ev.target.value)} disabled={busy} /></Field> : null}
+                </div>
+                <Field label="What the value covers" hint="Name the population and whether this is a total or average. For money, include the cost boundary."><Input value={f.measurementBasis} onChange={ev => set("measurementBasis", ev.target.value)} maxLength={400} disabled={busy} /></Field>
+                {f.design !== "none" ? <Field label="What the comparison covers" optional hint="Include its period, population and calculation method; explain any differences or unknowns."><Input value={f.comparisonBasis} onChange={ev => set("comparisonBasis", ev.target.value)} maxLength={400} disabled={busy} /></Field> : null}
+                <p className="text-xs text-ink-3">Values are saved as reported observations. ClimbOS does not infer an effect, significance or success from these aggregate values.</p>
+              </> : null}
+              {comparative && f.measurementType === "binary_rate" ? (
                 <Field label="Comparison group chosen">
                   <Select options={ASSIGNMENTS} value={f.assignment} onValueChange={(v) => set("assignment", v as OutcomeAssignment | "unknown")} disabled={busy} />
                 </Field>
               ) : null}
-              <div className="grid grid-cols-3 gap-2">
+              {f.measurementType === "binary_rate" ? <div className="grid grid-cols-3 gap-2">
                 <NumField label="Eligible" value={f.eligible} onChange={(v) => set("eligible", v)} disabled={busy} />
                 <NumField label="Assigned to the change" value={f.exposed} onChange={(v) => set("exposed", v)} disabled={busy} />
                 <NumField label="Converted" value={f.conversions} onChange={(v) => set("conversions", v)} disabled={busy} />
@@ -193,7 +229,7 @@ export function ExperimentOutcome({ slug, e, canEdit }: { slug: string; e: Exp; 
                     <NumField decimal label="Planned % in new version" hint="Leave blank if unknown; use the original plan, not the observed split." value={f.plannedSharePct} onChange={(v) => set("plannedSharePct", v)} disabled={busy} />
                   </>
                 ) : null}
-              </div>
+              </div> : null}
               <div className="grid grid-cols-2 gap-2">
                 <Field label="From">
                   <DatePicker value={f.windowStart} onChange={(v) => set("windowStart", v)} max={f.windowEnd || undefined} disabled={busy} />
@@ -252,6 +288,11 @@ const pct = (x: number) => `${Math.round(x * 1000) / 10}%`;
 
 /** Counts in one line; the comparison only when the design has one. */
 function OutcomeNumbers({ a }: { a: Analysis }) {
+  if (a.measurement) return <div className="flex flex-col gap-1 text-xs text-ink-2">
+    <p>{measurementText(a.measurement)}</p>
+    <p>{a.windowStart && a.windowEnd ? `${a.windowStart} → ${a.windowEnd}` : "Observation window incomplete"}</p>
+    <p className="text-ink-3">{OUTCOME_SOURCE_LABEL[a.source]}. {OUTCOME_REPORT_LIMIT}</p>
+  </div>;
   const parts: string[] = [];
   if (a.exposed !== undefined) parts.push(`${a.conversions ?? "?"}/${a.exposed} exposed${a.exposed && a.conversions !== undefined ? ` (${pct(a.conversions / a.exposed)})` : ""}`);
   if ((a.design === "holdout" || a.design === "randomized") && a.controlSize) parts.push(`${a.controlConversions ?? "?"}/${a.controlSize} comparison${a.controlConversions !== undefined ? ` (${pct(a.controlConversions / a.controlSize)})` : ""}`);
@@ -276,7 +317,7 @@ const HISTORY_FIELDS: Record<keyof OutcomeInput, string> = {
   exposed: "Exposed people", conversions: "Conversions", controlSize: "Comparison group size",
   controlConversions: "Comparison conversions", plannedSharePct: "Planned allocation (%)", assignment: "Reported assignment",
   windowStart: "Window start", windowEnd: "Window end", metric: "Metric", successRule: "Success rule",
-  result: "Reported result", stopRuleHit: "Stop rule hit", note: "Note",
+  result: "Reported result", stopRuleHit: "Stop rule hit", note: "Note", measurement: "Metric measurement",
 };
 const HISTORY_KIND = { recorded: "First report", correction: "Correction", reanalysis: "Changed definition", legacy_snapshot: "Earlier saved analysis" };
 
@@ -298,6 +339,7 @@ function OutcomeHistory({ slug, e }: { slug: string; e: Exp }) {
 function historyValue(a: Analysis, key: keyof OutcomeInput): string {
   const value = a[key];
   if (value === undefined || value === "") return "Not recorded";
+  if (key === "measurement") return a.measurement ? measurementText(a.measurement) : "Not recorded";
   if (key === "source") return OUTCOME_SOURCE_LABEL[a.source];
   if (key === "design") return DESIGNS.find(item => item.value === a.design)?.label ?? "Unknown";
   if (key === "assignment") return ASSIGNMENTS.find(item => item.value === a.assignment)?.label ?? "Unknown";

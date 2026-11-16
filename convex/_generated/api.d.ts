@@ -99,6 +99,7 @@ import type * as lib_customerVoice from "../lib/customerVoice.js";
 import type * as lib_designLearning from "../lib/designLearning.js";
 import type * as lib_emailTemplates from "../lib/emailTemplates.js";
 import type * as lib_estimate from "../lib/estimate.js";
+import type * as lib_experimentMeasurement from "../lib/experimentMeasurement.js";
 import type * as lib_goals from "../lib/goals.js";
 import type * as lib_jobPlans from "../lib/jobPlans.js";
 import type * as lib_landingVersions from "../lib/landingVersions.js";
@@ -270,6 +271,7 @@ declare const fullApi: ApiFromModules<{
   "lib/designLearning": typeof lib_designLearning;
   "lib/emailTemplates": typeof lib_emailTemplates;
   "lib/estimate": typeof lib_estimate;
+  "lib/experimentMeasurement": typeof lib_experimentMeasurement;
   "lib/goals": typeof lib_goals;
   "lib/jobPlans": typeof lib_jobPlans;
   "lib/landingVersions": typeof lib_landingVersions;

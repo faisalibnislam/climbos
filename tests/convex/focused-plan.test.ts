@@ -363,7 +363,7 @@ it("supplies the original offer and timing conditions with a reported experiment
   const original = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
   expect(original.expert?.quality?.state).toBe("passed");
   const experimentId = await t.run(ctx => ctx.db.insert("experiments", { orgId, strategyId: original._id, name: "Synthetic original offer review", hypothesis: "The proposal may address a price objection", population: "Eligible quote requesters", method: "pre_post_observational", primaryMetric: "Completed jobs", guardrails: ["Contribution remains within the owner limit"], durationDays: 21, stoppingRule: "Stop if the owner contribution floor fails", status: "proposed", createdAt: Date.now() }));
-  await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId, expectedRevision: 0, executed: true, source: "owner_report", design: "none", result: "unclear", stopRuleHit: false, note: "Actual exposure was not tracked; no causal conclusion." });
+  await owner.client.mutation(api.playResults.recordExperimentOutcome, { slug, experimentId, expectedRevision: 0, executed: true, source: "owner_report", design: "none", result: "unclear", stopRuleHit: false, note: "Actual exposure was not tracked; no causal conclusion.", measurement: { type: "count", value: 2, comparisonValue: null, unit: "completed jobs", basis: "Owner-reported jobs completed in the observed period; offer exposure unknown", comparisonBasis: "No earlier comparable count supplied" } });
   state.requests = []; state.offerMode = ""; state.timingMode = "";
   await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
   await t.finishAllScheduledFunctions(() => undefined);
@@ -376,6 +376,9 @@ it("supplies the original offer and timing conditions with a reported experiment
     expect(prompt).toContain(futureCampaignTimingFixture().moment.evidence[0].claim);
     expect(prompt).toContain("not proof that this experiment tested the offer or used that window");
     expect(prompt).toContain("Actual exposure was not tracked");
+    expect(prompt).toContain("Recorded value: 2 completed jobs");
+    expect(prompt).toContain("Comparison value: Unknown");
+    expect(prompt).toContain("offer exposure unknown");
   }
   expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
   expect(await t.run(ctx => ctx.db.query("campaigns").collect())).toEqual([]);

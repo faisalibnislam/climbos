@@ -39,3 +39,23 @@ it("makes the saved report inspectable without presenting old or missing values 
   expect(html).toContain("Random split");
   expect(html).not.toContain(">randomized<");
 });
+
+it("shows measured values and their boundaries without representing time as customer conversions", () => {
+  const a: Experiment["analyses"][number] = { ...experiment.analyses[0], conversions: undefined, exposed: undefined, controlSize: undefined, controlConversions: undefined, design: "before_after", measurement: { type: "continuous", value: 0, comparisonValue: null, unit: "hours", basis: "Owner preparation time for one example", comparisonBasis: "Earlier time unknown" } };
+  const html = renderToStaticMarkup(createElement(ExperimentOutcome, { slug: "workspace", e: { ...experiment, primaryMetricType: "continuous", analyses: [a] }, canEdit: false }));
+  expect(html).toContain("Recorded value: 0 hours");
+  expect(html).toContain("Comparison value: Unknown");
+  expect(html).toContain("Owner preparation time for one example");
+  expect(html).toContain("Observed only");
+  expect(html).not.toContain("calculated rate difference");
+  const history = renderToStaticMarkup(createElement(OutcomeHistoryEntry, { a, title: "Revision 2", changedFields: ["measurement"] }));
+  expect(history).toContain("Changed: Metric measurement");
+  expect(history).toContain("0 hours");
+  expect(history).not.toContain("[object Object]");
+});
+
+it("withholds the rate interpretation of an older non-binary metric report", () => {
+  const html = renderToStaticMarkup(createElement(ExperimentOutcome, { slug: "workspace", e: { ...experiment, primaryMetricType: "monetary" }, canEdit: false }));
+  expect(html).toContain("metric value remains unknown");
+  expect(html).not.toContain("15/300");
+});

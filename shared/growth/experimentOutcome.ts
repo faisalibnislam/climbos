@@ -10,6 +10,62 @@
  * - "not_run": the test wasn't carried out, so it says nothing about the channel.
  */
 import { compareRates, sampleRatio } from "../analysis/decisions";
+import { formatMinorMoney, isKnownCurrency } from "../economics/currency";
+import { currencyExponent, decimalToMinor } from "../integrations/currency";
+
+/** Member-reported aggregate; monetary values use exact integer minor units. */
+export interface OutcomeMeasurement {
+  type: "count" | "continuous" | "monetary";
+  value: number | null;
+  comparisonValue: number | null;
+  unit: string;
+  currency?: string;
+  /** Population, aggregation and cost boundary where applicable. */
+  basis: string;
+  comparisonBasis: string;
+}
+
+export function measurementProblems(m: OutcomeMeasurement): string[] {
+  const out: string[] = [];
+  if (!m.unit.trim() || m.unit.length > 80 || !m.basis.trim() || m.basis.length > 400) out.push("Name the measurement unit and what the value covers (up to 400 characters).");
+  if (m.comparisonBasis.length > 400 || (m.comparisonValue !== null && !m.comparisonBasis.trim())) out.push("Explain what the comparison value covers; leave it unknown if it was not recorded.");
+  if (m.type === "monetary" ? !m.currency || !isKnownCurrency(m.currency) || m.currency !== m.currency.trim().toUpperCase() : m.currency !== undefined) out.push("Money needs a supported currency; other measurements must not carry a currency.");
+  for (const value of [m.value, m.comparisonValue]) {
+    if (value === null) continue;
+    if (!Number.isFinite(value) || Math.abs(value) > Number.MAX_SAFE_INTEGER || (m.type !== "continuous" && !Number.isSafeInteger(value)) || (m.type === "count" && value < 0)) out.push("Values must be finite; counts are nonnegative whole numbers and money uses whole minor units.");
+  }
+  return out;
+}
+
+/** No conversion to counts, no effect estimate, and no automatic verdict. */
+export function measurementText(m: OutcomeMeasurement): string {
+  if (measurementProblems(m).length) return "Recorded measurement is invalid; correct its values, units and scope before use.";
+  const value = (n: number | null) => n === null ? "Unknown" : m.type === "monetary" ? `${formatMinorMoney(n, m.currency)} ${m.currency}` : `${n} ${m.unit}`;
+  return `Recorded value: ${value(m.value)}${m.type === "monetary" ? ` (${m.unit})` : ""}. Scope: ${m.basis}. Comparison value: ${value(m.comparisonValue)}. Comparison basis: ${m.comparisonBasis || "Unknown"}. These are reported observations, not proof of cause; comparability and completeness are unverified.`;
+}
+
+/** Exact money input round trips; blanks remain unknown, including a blank comparison. */
+export function measurementInputValue(value: number | null | undefined, type: OutcomeMeasurement["type"], currency?: string): string {
+  if (value == null) return "";
+  if (type !== "monetary") return String(value);
+  if (!currency || !isKnownCurrency(currency) || !Number.isSafeInteger(value)) return "";
+  const digits = currencyExponent(currency), scale = 10n ** BigInt(digits), amount = BigInt(value), abs = amount < 0n ? -amount : amount;
+  return `${amount < 0n ? "-" : ""}${abs / scale}${digits ? `.${String(abs % scale).padStart(digits, "0")}` : ""}`;
+}
+
+export function parseMeasurementValue(raw: string, type: OutcomeMeasurement["type"], currency?: string): number | null {
+  if (!raw.trim()) return null;
+  if (type === "monetary") {
+    if (!currency || !isKnownCurrency(currency)) throw new Error("Choose the currency used in these records.");
+    const parsed = decimalToMinor(raw, currency);
+    if (!parsed.ok) throw new Error(parsed.error);
+    return parsed.minor;
+  }
+  if (!/^-?\d+(?:\.\d+)?$/.test(raw.trim())) throw new Error("Enter a plain number, or leave it blank if unknown.");
+  const value = Number(raw);
+  if (!Number.isFinite(value) || Math.abs(value) > Number.MAX_SAFE_INTEGER || (type === "count" && (!Number.isSafeInteger(value) || value < 0))) throw new Error("Enter a finite value; counts must be nonnegative whole numbers.");
+  return value;
+}
 
 export const OUTCOME_SOURCES = ["owner_report", "integration", "platform_report"] as const;
 export const OUTCOME_DESIGNS = ["none", "before_after", "holdout", "randomized"] as const;
@@ -52,12 +108,14 @@ export interface OutcomeInput {
   /** The original stopping rule was hit. */
   stopRuleHit: boolean;
   note?: string;
+  measurement?: OutcomeMeasurement;
 }
 
 /** Legacy storage classification of the reported design, not proof of causal impact. */
-export function inferenceOf(o: Pick<OutcomeInput, "executed" | "source" | "design" | "exposed" | "controlSize" | "assignment">): Inference {
+export function inferenceOf(o: Pick<OutcomeInput, "executed" | "source" | "design" | "exposed" | "controlSize" | "assignment" | "measurement">): Inference {
   if (!o.executed) return "not_run";
   if (o.source === "platform_report") return "attributed";
+  if (o.measurement) return "observed"; // Aggregate amounts cannot support the binary-rate calculator.
   const comparative = (o.design === "randomized" || o.design === "holdout") && o.assignment === "random";
   if (comparative && (o.exposed ?? 0) > 0 && (o.controlSize ?? 0) > 0) return "incremental";
   return "observed";
@@ -124,13 +182,19 @@ export function validOutcomeDay(value: string | undefined): boolean {
 /** Problems with an outcome, in plain words; empty when it can be saved. */
 export function outcomeProblems(o: OutcomeInput, today: string): string[] {
   const out: string[] = [];
+  if (o.measurement) {
+    out.push(...measurementProblems(o.measurement));
+    if (!o.executed) out.push("A test that did not run cannot include measured values.");
+    if (o.conversions !== undefined || o.controlConversions !== undefined) out.push("Record the metric value separately; it cannot also be a conversion count.");
+    if (o.design === "none" && o.measurement.comparisonValue !== null) out.push("Select a reported comparison design before recording a comparison value.");
+  }
   const counts = [o.eligible, o.exposed, o.conversions, o.controlSize, o.controlConversions];
   if (counts.some((n) => n !== undefined && (!Number.isInteger(n) || n < 0 || n > 100_000_000))) out.push("Counts must be whole numbers, zero or more.");
   if (o.eligible !== undefined && (o.exposed ?? 0) + (o.controlSize ?? 0) > o.eligible) out.push("Exposed plus comparison can't be more than eligible.");
   if (o.plannedSharePct !== undefined && !(o.plannedSharePct > 0 && o.plannedSharePct < 100)) out.push("The planned share must be greater than 0 and less than 100%.");
   if (o.exposed !== undefined && o.conversions !== undefined && o.conversions > o.exposed) out.push("Conversions can't be more than exposed.");
   if (o.controlSize !== undefined && o.controlConversions !== undefined && o.controlConversions > o.controlSize) out.push("Comparison conversions can't be more than the group.");
-  if ((o.design === "holdout" || o.design === "randomized") && o.executed && o.source !== "platform_report" && o.controlSize === undefined) out.push("Give the comparison group size.");
+  if ((o.design === "holdout" || o.design === "randomized") && o.executed && !o.measurement && o.source !== "platform_report" && o.controlSize === undefined) out.push("Give the comparison group size.");
   for (const d of [o.windowStart, o.windowEnd]) if (d !== undefined && !validOutcomeDay(d)) out.push("Dates must be YYYY-MM-DD.");
   if (o.windowStart && o.windowEnd && o.windowStart > o.windowEnd) out.push("The window ends before it starts.");
   if (o.windowStart && o.windowStart > today) out.push("The window cannot start in the future.");
@@ -141,13 +205,17 @@ export function outcomeProblems(o: OutcomeInput, today: string): string[] {
 }
 
 /** The analysis judges by a different metric or rule than the experiment set before results. */
-export function isRedefined(o: Pick<OutcomeInput, "metric" | "successRule">, original: { primaryMetric: string; stoppingRule: string }): boolean {
-  return o.metric.trim() !== original.primaryMetric.trim() || o.successRule.trim() !== original.stoppingRule.trim();
+type OutcomeDefinition = Pick<OutcomeInput, "metric" | "successRule" | "measurement">;
+const measurementDefinition = (m?: OutcomeMeasurement) => m ? JSON.stringify([m.type, m.unit.trim(), m.currency ?? null, m.basis.trim(), m.comparisonBasis.trim()]) : "";
+export function isRedefined(o: OutcomeDefinition, original: { primaryMetric: string; stoppingRule: string; primaryMetricType?: string }, firstReport?: OutcomeDefinition): boolean {
+  return o.metric.trim() !== original.primaryMetric.trim() || o.successRule.trim() !== original.stoppingRule.trim()
+    || Boolean(o.measurement && original.primaryMetricType && o.measurement.type !== original.primaryMetricType)
+    || Boolean(firstReport && measurementDefinition(o.measurement) !== measurementDefinition(firstReport.measurement));
 }
 
 /** Same definition as an earlier analysis: a correction to that one, not a new analysis. */
-export function sameDefinition(a: Pick<OutcomeInput, "metric" | "successRule">, b: Pick<OutcomeInput, "metric" | "successRule">): boolean {
-  return a.metric.trim() === b.metric.trim() && a.successRule.trim() === b.successRule.trim();
+export function sameDefinition(a: OutcomeDefinition, b: OutcomeDefinition): boolean {
+  return a.metric.trim() === b.metric.trim() && a.successRule.trim() === b.successRule.trim() && measurementDefinition(a.measurement) === measurementDefinition(b.measurement);
 }
 
 const pct = (x: number) => `${Math.round(x * 1000) / 10}%`;
@@ -162,19 +230,21 @@ export function lift(o: Pick<OutcomeInput, "exposed" | "conversions" | "controlS
 }
 
 const RESULT_WORD: Record<OutcomeResult, string> = { met: "met its success rule", missed: "missed its success rule", unclear: "unclear against its success rule" };
-export const OUTCOME_SOURCE_LABEL: Record<OutcomeSource, string> = { owner_report: "Member-entered count", integration: "Member-entered; reported source: connected tool", platform_report: "Member-entered; reported source: platform report" };
+export const OUTCOME_SOURCE_LABEL: Record<OutcomeSource, string> = { owner_report: "Member-entered report", integration: "Member-entered; reported source: connected tool", platform_report: "Member-entered; reported source: platform report" };
 export const OUTCOME_REPORT_LIMIT = "Source, assignment, tracking and outcome maturity have not been independently verified. A reported success rule or calculated difference is not proof of causal impact.";
 
 /**
  * One line for the next plan: calculated comparisons of member-entered reports
  * must not be promoted to independently verified causal effects.
  */
-export function outcomeLine(name: string, o: OutcomeInput & { inference: Inference; redefined: boolean }, original?: OutcomeResult): string {
+export function outcomeLine(name: string, o: OutcomeInput & { inference: Inference; redefined: boolean }, original?: OutcomeResult, originalMetricType?: string): string {
   const inference = inferenceOf(o); // Reassess legacy labels from the saved reported inputs.
   if (inference === "not_run") return `${name}: NOT RUN. No evidence about the channel either way.`;
   const window = validOutcomeDay(o.windowStart) && validOutcomeDay(o.windowEnd) && o.windowStart! <= o.windowEnd! ? `, ${o.windowStart} to ${o.windowEnd}` : ", observation window incomplete or invalid";
   const head = `${name} (${OUTCOME_SOURCE_LABEL[o.source]}${window}): reported result: ${RESULT_WORD[o.result]} on "${o.metric}"${o.stopRuleHit ? "; stop rule hit" : ""}`;
   const redefined = o.redefined ? ` Judged on a definition changed after results: exploratory only.${original ? ` On the original definition it ${RESULT_WORD[original]}.` : ""}` : "";
+  if (o.measurement) return `${head}. ${measurementText(o.measurement)} ${OUTCOME_REPORT_LIMIT}${redefined}`;
+  if (originalMetricType && originalMetricType !== "binary_rate" && (o.conversions !== undefined || o.controlConversions !== undefined)) return `${head}. Primary metric value unknown: this older report contains conversion-style counts for a non-conversion metric. Review the original report before interpreting it. ${OUTCOME_REPORT_LIMIT}${redefined}`;
   const of = o.eligible !== undefined ? ` of ${o.eligible} eligible` : "";
   if (inference === "incremental") {
     const l = lift(o);

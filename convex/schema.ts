@@ -6,6 +6,7 @@ import { pageSampleV } from "./lib/pageSamples";
 import { v } from "convex/values";
 import { postVisualValidator } from "./lib/postVisual";
 import { campaignActivationObservationV } from "./lib/campaignActivation";
+import { experimentMeasurementV } from "./lib/experimentMeasurement";
 
 const weeklyResultFields = {
   reach: v.number(),
@@ -26,6 +27,7 @@ const weeklyResultFields = {
 };
 
 const experimentAnalysisV = v.object({
+  measurement: v.optional(experimentMeasurementV),
   n: v.number(),
   executed: v.boolean(),
   source: v.union(

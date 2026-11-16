@@ -35,6 +35,63 @@ function focusedExpert(fixture = focusedPlanFixture()) {
 }
 
 describe("experiment outcomes", () => {
+  it("does not treat a prior not-run report as an already observed measurement definition", async () => {
+    const t = setup(), f = await planWithTests(t, "first-real-measurement@example.com");
+    await t.run(ctx => ctx.db.patch(f.referral, { primaryMetricType: "count" }));
+    const args = { slug: f.slug, experimentId: f.referral, executed: false, source: "owner_report" as const, design: "before_after" as const, result: "unclear" as const, stopRuleHit: false };
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...args, expectedRevision: 0 });
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...args, expectedRevision: 1, executed: true, measurement: { type: "count", value: 0, comparisonValue: null, unit: "qualified enquiries", basis: "Recorded enquiries this week", comparisonBasis: "Earlier counts unknown" } });
+    expect((await t.run(ctx => ctx.db.get(f.referral)))!.analyses!.at(-1)?.redefined).toBe(false);
+    expect(await t.query(internal.playResults.briefFor, { orgId: f.orgId })).not.toContain("exploratory only");
+  });
+  it("preserves measurement redefinitions, rejects invalid or foreign writes and never grants action authority", async () => {
+    const t = setup(), f = await planWithTests(t, "metric-boundaries@example.com"), other = await planWithTests(t, "metric-other@example.com");
+    await t.run(ctx => ctx.db.patch(f.referral, { primaryMetricType: "continuous" }));
+    const measurement = { type: "continuous" as const, value: 2.5, comparisonValue: null, unit: "hours", basis: "Total preparation time for the example", comparisonBasis: "Earlier time unknown" };
+    const args = { slug: f.slug, experimentId: f.referral, expectedRevision: 0, executed: true, source: "owner_report" as const, design: "before_after" as const, result: "unclear" as const, stopRuleHit: false, measurement };
+    await expect(other.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...args, slug: other.slug })).rejects.toThrow();
+    const viewer = await asNewUser(t, "measurement-viewer@example.com");
+    await t.run(ctx => ctx.db.insert("memberships", { orgId: f.orgId, userId: viewer.userId, role: "viewer", status: "active", createdAt: Date.now() }));
+    await expect(viewer.client.mutation(api.playResults.recordExperimentOutcome, args)).rejects.toThrow();
+    for (const patch of [{ executed: false }, { conversions: 2 }, { measurement: { ...measurement, basis: "" } }, { measurement: { ...measurement, value: Infinity } }]) await expect(f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...args, ...patch })).rejects.toThrow();
+    await expect(f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...args, measurement: undefined, conversions: 3 })).rejects.toThrow(/not a conversion rate/);
+    expect((await t.run(ctx => ctx.db.get(f.referral)))!.analyses).toBeUndefined();
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, args);
+    const changed = { ...measurement, unit: "minutes", value: 150 };
+    expect(await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...args, expectedRevision: 1, measurement: changed })).toMatchObject({ n: 2, newAnalysis: true, inference: "observed" });
+    expect((await t.run(ctx => ctx.db.get(f.referral)))!.analyses!.at(-1)).toMatchObject({ redefined: true, measurement: changed });
+    expect(await t.query(internal.playResults.briefFor, { orgId: f.orgId })).toContain("exploratory only");
+    await expect(f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...args, expectedRevision: 1 })).rejects.toThrow(/outdated/);
+    for (const table of ["approvals", "actionReceipts", "workflowRuns"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toHaveLength(0);
+  });
+  it.each([
+    { type: "count" as const, value: 12, comparisonValue: 8, unit: "scoping decisions", basis: "Unresolved decisions across one private brief", comparisonBasis: "The same brief before the proposed questions" },
+    { type: "continuous" as const, value: 2.5, comparisonValue: null, unit: "hours", basis: "Owner time spent preparing the private example", comparisonBasis: "Earlier preparation time was not recorded" },
+    { type: "monetary" as const, value: -1250, comparisonValue: 0, unit: "net contribution", currency: "USD", basis: "One completed job after materials and payment fees; excludes fixed overhead", comparisonBasis: "Owner's recorded prior job under the same cost boundary" },
+  ])("records $type observations without forcing them into conversion counts", async measurement => {
+    const t = setup(), f = await planWithTests(t, `measurement-${measurement.type}@example.com`);
+    await t.run(ctx => ctx.db.patch(f.referral, { primaryMetricType: measurement.type }));
+    const report = { slug: f.slug, experimentId: f.referral, expectedRevision: 0, executed: true, source: "owner_report" as const, design: "before_after" as const, result: "unclear" as const, stopRuleHit: false, measurement, windowStart: "2026-09-01", windowEnd: "2026-09-14" };
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, report);
+    const saved = (await t.run(ctx => ctx.db.get(f.referral)))!.analyses!.at(-1)!;
+    expect(saved).toMatchObject({ measurement, inference: "observed" });
+    expect(saved.conversions).toBeUndefined();
+    const brief = await t.query(internal.playResults.briefFor, { orgId: f.orgId });
+    expect(brief).toContain(measurement.unit);
+    expect(brief).toContain(measurement.basis);
+    expect(brief).toContain("not proof of cause");
+    expect(brief).not.toContain("conversions from");
+    const corrected = { ...measurement, value: measurement.type === "monetary" ? -1000 : 0 };
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: 1, measurement: corrected });
+    const history = await f.owner.client.query(api.playResults.outcomeHistoryPage, { slug: f.slug, experimentId: f.referral, paginationOpts: { cursor: null, numItems: 10 } });
+    expect(history.page.map(row => row.analysis.measurement?.value)).toEqual([corrected.value, measurement.value]);
+    expect(history.page[0]).toMatchObject({ kind: "correction", changedFields: ["measurement"] });
+    const { type, ...sameValues } = corrected;
+    await f.owner.client.mutation(api.playResults.recordExperimentOutcome, { ...report, expectedRevision: 2, measurement: { ...sameValues, type } });
+    const unchanged = await f.owner.client.query(api.playResults.outcomeHistoryPage, { slug: f.slug, experimentId: f.referral, paginationOpts: { cursor: null, numItems: 10 } });
+    expect(unchanged.page[0].changedFields).toEqual([]);
+    for (const table of ["approvals", "actionReceipts", "workflowRuns"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toHaveLength(0);
+  });
   it.each(["met", "missed", "unclear", "not_run"] as const)("carries original focused offer and timing conditions with a %s report, without treating the proposal as exposure", async outcome => {
     const t = setup(), f = await planWithTests(t, `focused-${outcome}@example.com`);
     const fixture = focusedPlanFixture(), offer = offerAssessmentFixture();
