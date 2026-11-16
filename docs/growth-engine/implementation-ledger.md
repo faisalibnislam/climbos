@@ -6,7 +6,7 @@ Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs a
 
 Confirmed and repaired: calendar sources stopped at 300 rows; review drafts were capped before applying the selected date range. `content.calendarPage` now pages one tenant-scoped source at a time using existing indexes, including the implicit creation-time suffix for review drafts. The shared merge keeps one entry per linked artifact and preserves Autopilot state independent of source arrival order. The current calendar loads 100 rows per source initially and offers more pages, including after empty filtered pages; changing workspace, timezone or range remounts the grid. The older snapshot query remains available, uses the corrected review range and retains its cap warning. No schema migration, provider call or approval/action change.
 
-Verification: 57 tests passed across eight focused calendar, tenant, Autopilot, safety and publishing files; details and limits are in [Verification](../Verification.md). UI evidence is server-rendered assertions with mocked query hooks, not a browser session or a production scale benchmark.
+Verification: 57 tests passed across eight focused calendar, tenant, Autopilot, safety and publishing files; details and limits are in [Verification](../Verification.md). Initial UI evidence used server-rendered assertions. The follow-up browser regression exercised actual Convex pagination with 351 linked posts on desktop and mobile, including view changes, review links, no action-state changes and an automated accessibility scan. It also repaired custom link names that did not match visible text. This is not a production scale benchmark or full accessibility conformance.
 
 ## Local update — 9 November 2026
 

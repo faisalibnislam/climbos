@@ -270,13 +270,12 @@ function CalendarGrid({
                       <li key={`${it.id}`}>
                         <Link
                           href={href}
-                          aria-label={`${it.title}, ${channelLabel(it.channel)}, ${it.unscheduled ? "awaiting review, not scheduled yet" : new Date(it.scheduledFor).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone })}, ${it.status}${it.autopilot ? ", Autopilot" : ""}`}
                           className="flex flex-col gap-1 rounded-lg border border-line bg-surface-2 p-2 text-ui transition-colors hover:border-brand-700"
                         >
-                          <span className="flex items-center gap-1.5 text-xs text-ink-3">
+                          <span className="flex flex-wrap items-center gap-1.5 text-xs text-ink-3">
                             <SocialIcon network={it.channel} size="xs" />
                             <span>{it.unscheduled ? "Not scheduled yet" : new Date(it.scheduledFor).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone })} · {channelLabel(it.channel)}</span>
-                            {it.autopilot ? <span className="ml-auto">Auto</span> : null}
+                            {it.autopilot ? <span className="ml-auto">Autopilot</span> : null}
                           </span>
                           <span className="line-clamp-2 font-medium text-ink">{it.title}</span>
                           {it.artifactId ? <ArtifactStatus status={it.status} /> : <AutopilotStatus status={it.status} />}

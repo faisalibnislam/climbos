@@ -1,0 +1,128 @@
+import { execFile } from "node:child_process";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { promisify } from "node:util";
+import { expect, test, type Locator } from "@playwright/test";
+import { localDate, zonedTime } from "../shared/autopilot";
+import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
+
+const execute = promisify(execFile);
+const envFile = process.env.CLIMBOS_CALENDAR_E2E_ENV_FILE;
+
+/** Test-only imports must target the credential-free local demo, never a hosted or real-business database. */
+async function fixtureCli(args: string[]) {
+  if (!envFile) throw new Error("Provide the isolated local demo backend.env file");
+  const lines = (await readFile(envFile, "utf8")).trim().split(/\r?\n/);
+  if (lines.length !== 2 || lines[0] !== "CONVEX_SELF_HOSTED_URL=http://127.0.0.1:3320" || !/^CONVEX_SELF_HOSTED_ADMIN_KEY=\S+$/.test(lines[1])) throw new Error("Calendar fixtures require the dedicated loopback demo backend");
+  const { stdout } = await execute(process.execPath, [resolve("node_modules/convex/bin/main.js"), ...args, "--env-file", envFile], {
+    env: {
+      NODE_ENV: "test",
+      PATH: process.env.PATH, HOME: process.env.HOME, TMPDIR: process.env.TMPDIR,
+      CONVEX_DEPLOYMENT: "", CONVEX_DEPLOY_KEY: "",
+      CONVEX_SELF_HOSTED_URL: "http://127.0.0.1:3320",
+      CONVEX_SELF_HOSTED_ADMIN_KEY: lines[1].slice("CONVEX_SELF_HOSTED_ADMIN_KEY=".length),
+    },
+    maxBuffer: 8 * 1024 * 1024,
+    encoding: "utf8",
+  });
+  return stdout;
+}
+
+async function rows(table: string): Promise<Record<string, unknown>[]> {
+  const output = await fixtureCli(["data", table, "--limit", "5000", "--format", "json"]);
+  // The CLI writes an empty-table notice to stderr and no JSON to stdout.
+  return output.trim() ? JSON.parse(output) : [];
+}
+
+async function seedCalendar(slug: string) {
+  const org = (await rows("organizations")).find(row => row.slug === slug);
+  if (!org || org.kind !== "demo" || typeof org.timezone !== "string") throw new Error("Only a newly opened demo workspace may receive calendar fixtures");
+  const business = (await rows("businesses")).find(row => row.orgId === org._id);
+  if (!business) throw new Error("Demo business missing");
+  const now = Date.now();
+  const local = localDate(now, org.timezone);
+  const scheduledFor = zonedTime(local.year, local.month0, local.day, 12, 0, org.timezone);
+  const temp = await mkdtemp(join(tmpdir(), "climbos-calendar-e2e-"));
+  try {
+    const path = join(temp, "rows.json");
+    const artifacts = Array.from({ length: 351 }, (_, i) => ({
+      orgId: org._id, businessId: business._id, kind: "social_post", channel: "facebook",
+      title: `Calendar regression post ${String(i).padStart(3, "0")}`, status: "in_review",
+      currentVersion: 1, scheduledFor, createdAt: now, updatedAt: now,
+    }));
+    await writeFile(path, JSON.stringify(artifacts));
+    await fixtureCli(["import", "--append", "--table", "artifacts", path]);
+    const saved = (await rows("artifacts")).filter(row => row.orgId === org._id && String(row.title).startsWith("Calendar regression post "));
+    if (saved.length !== 351) throw new Error("Expected exactly 351 isolated calendar fixtures");
+    await writeFile(path, JSON.stringify(saved.map(row => ({
+      orgId: org._id, weekOf: `${local.year}-${String(local.month0 + 1).padStart(2, "0")}-${String(local.day).padStart(2, "0")}`,
+      channel: "facebook", day: local.weekday, slotAt: scheduledFor,
+      pillar: "Fixture", purpose: "education", format: "text", idea: row.title,
+      angle: "Browser regression", hookDraft: "Fixture only", callToAction: "Review",
+      needsOwner: true, status: "needs_approval", artifactId: row._id,
+      createdAt: now, updatedAt: now,
+    }))));
+    await fixtureCli(["import", "--append", "--table", "calendarSlots", path]);
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
+  return { orgId: org._id, timeZone: org.timezone };
+}
+
+async function finishLoading(calendar: Locator) {
+  const more = calendar.getByRole("button", { name: "Load more calendar items", exact: true });
+  for (let i = 0; i < 10; i++) {
+    await expect(calendar.locator('[aria-busy="true"]')).toHaveCount(0);
+    if (!(await more.count())) return;
+    await more.click();
+  }
+  throw new Error("Calendar did not exhaust its pages");
+}
+
+test("calendar loads every item and resets daily, weekly and monthly ranges @mobile", async ({ page, baseURL }, testInfo) => {
+  test.skip(!envFile, "Requires an explicitly configured isolated local demo backend");
+  test.setTimeout(180_000);
+  expect(baseURL).toBe("http://127.0.0.1:3420");
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  const slug = await openDemo(page);
+  const { orgId, timeZone } = await seedCalendar(slug);
+  const actionSnapshot = async () => Promise.all(["approvals", "actionReceipts", "workflowRuns"].map(async table => (await rows(table)).filter(row => row.orgId === orgId).map(row => row._id).sort()));
+  const before = await actionSnapshot();
+  await page.goto(`/app/${slug}/content?tab=calendar`);
+  const calendar = page.locator('section[aria-labelledby="calendar-heading"]');
+  const posts = calendar.getByRole("link", { name: /Calendar regression post / });
+  await expect(calendar.getByText(`Times shown in ${timeZone}`)).toBeVisible();
+  await expect(calendar.getByRole("button", { name: "Load more calendar items" })).toBeVisible();
+  await finishLoading(calendar);
+  await expect(posts).toHaveCount(351);
+  await expect(posts.first()).toHaveAccessibleName(/Autopilot/);
+  await expectNoHorizontalScroll(page);
+
+  await calendar.getByRole("button", { name: "Next week", exact: true }).click();
+  await expect(posts).toHaveCount(0);
+  await expect(calendar.locator('[aria-busy="true"]')).toHaveCount(0);
+  await calendar.getByRole("button", { name: "Previous week", exact: true }).click();
+  await expect(calendar.getByRole("button", { name: "Load more calendar items" })).toBeVisible();
+  await finishLoading(calendar);
+  await expect(posts).toHaveCount(351);
+
+  await calendar.getByRole("button", { name: "Month", exact: true }).click();
+  await finishLoading(calendar);
+  await expect(posts).toHaveCount(351);
+  await expectNoHorizontalScroll(page);
+  await calendar.locator('li[aria-current="date"]').getByRole("button", { name: /^View / }).click();
+  await expect(calendar.getByRole("button", { name: "Day", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await finishLoading(calendar);
+  await expect(posts).toHaveCount(351);
+  await expectNoHorizontalScroll(page);
+  await expectAccessible(page, "paginated content calendar");
+  await page.screenshot({ path: testInfo.outputPath("calendar.png"), fullPage: false });
+
+  await posts.first().click();
+  await expect(page).toHaveURL(new RegExp(`/app/${slug}/content/[^/?]+$`));
+  await expect(page.getByRole("heading", { name: /^Calendar regression post / })).toBeVisible();
+  expect(await actionSnapshot()).toEqual(before);
+  expect(errors).toEqual([]);
+});
