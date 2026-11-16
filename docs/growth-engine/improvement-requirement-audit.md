@@ -1,3 +1,7 @@
+## 17 November 2026 — exact ad drafting destinations
+
+Rows 41–44 follow-up: detailed-plan Google/Meta selections reached jobs but were ignored by ad generation. They now constrain research/tasks/schemas and final persisted output; old unstarted card payloads cannot override the approved plan's platform key. Final 140 focused/permission tests pass. [Scoped audit](ad-destination-consistency-audit.md) preserves generic-request compatibility and outstanding semantic, email-audience and live-provider limits. This does not complete the full execution requirements.
+
 ## 17 November 2026 — exact social drafting destinations
 
 Rows 41–44 follow-up: detailed-plan social selections were dropped before drafting, and single-platform output could be relabeled after generation. Selected destinations now reach quotes, requests and schemas, with final mismatch rejection. Unknown/ambiguous/community selections wait; onboarding preparation follows only the selected social/email work. 138 regression/permission tests pass. [Scoped audit](social-destination-consistency-audit.md) keeps semantic adaptation, platform access and other execution mappings open.

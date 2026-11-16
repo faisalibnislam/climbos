@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: plan-to-ad destination consistency
+
+Selected Google/Meta draft destinations now survive through research, spec, task and final validation. Mixed/empty selected-platform output fails before persistence; old unstarted plan cards resolve from the approved plan key. Generic requests retain both draft types. Six red regressions preceded the repair; final 140 tests/ten files, typecheck and lint pass. [Audit](ad-destination-consistency-audit.md) records remaining semantic, email and provider work. Engine v3.124-ad-destinations. Draft-only; no execution or authorization expansion.
+
 ## Local update — 17 November 2026: plan-to-social destination consistency
 
 Named social destinations now persist through detailed-plan draft preparation, metering, schema and final validation. Three red routing tests preceded the repair. Wrong-platform output is rejected rather than relabeled; ambiguous/community labels wait. First-win jobs follow selected social/email plan work rather than adding defaults. 138 tests/ten files, final eight-case routing check (overlapping), typecheck and scoped lint pass. [Audit](social-destination-consistency-audit.md) preserves name-recognition, platform-access and content-quality limits. Engine v3.123-social-destinations; no external action or provider added.

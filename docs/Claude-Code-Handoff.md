@@ -19,6 +19,8 @@ Latest preparation follow-up (17 November): first-win draft reuse now depends on
 
 Latest social-routing follow-up (17 November): detailed-plan platform selections now reach the real draft job; output mismatches fail rather than being relabeled. First-win preparation follows selected plan channels. 138 focused/permission tests and a final overlapping eight-case routing check pass. [Audit](growth-engine/social-destination-consistency-audit.md) records bounded name recognition, manual community handling and remaining ad/email mapping work.
 
+Latest ad-routing follow-up (17 November): selected Google/Meta destinations now reach research, drafting, schemas and final persistence checks. Older unstarted plan cards resolve from the approved plan key. Generic requests retain both draft types. [Audit](growth-engine/ad-destination-consistency-audit.md) records exact tests and remaining email/semantic/provider limitations. No campaign execution authority was added.
+
 This handoff records what has been built, what was checked, what remains unverified, and how to continue safely. It is a starting point for repository work, not proof that every capability works with live providers or real customer outcomes.
 
 ## Current status — 17 November 2026

@@ -77,6 +77,7 @@ import { capabilityContext } from "../shared/agents/capacity";
 import { capsHint, PLAN_CAPS } from "../shared/agents/wordCaps";
 import {
   adsSpec,
+  lintAdPlatformSelection,
   conversionAuditSpec,
   emailSpec,
   insightsSpec,
@@ -1778,18 +1779,25 @@ export const createContent = internalAction({
           posts = out.posts.length;
           items = socialToArtifacts(out, Date.now(), review.retrievedAt);
         } else if (args.job === "content_ads") {
+          if (args.channel && !["google_search_ad", "meta_ad"].includes(args.channel)) throw new JobStop("invalid_ad_destination", "Choose Google search or Meta before drafting this ad. No drafts were saved.");
+          const destinationTask = args.channel === "google_search_ad"
+            ? "Draft Google responsive search ads only; leave metaAds empty."
+            : args.channel === "meta_ad"
+              ? "Draft Meta ads only; leave searchAds empty."
+              : "Draft one Google responsive search ad and Meta ads.";
           const out = await runAgentTask<AdDraftsV2>(
             ctx,
             job,
             0,
-            adsSpec(),
-            agentInput(job, `Draft one Google responsive search ad and Meta ads built on distinct creative concepts for the goal, within the owner's budget. Choose and return one specific positioning/customer-language angle for each ad in its angle field (12 words or fewer). Ads are created paused and only go live after the owner approves them. ${copyBriefInstruction}${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`, {
+            adsSpec({ channel: args.channel }),
+            agentInput(job, `${destinationTask} Build on distinct creative concepts for the goal, within the owner's budget. Choose and return one specific positioning/customer-language angle for each ad in its angle field (12 words or fewer). Return private copy drafts only. Drafting does not create a provider campaign or authorize publishing or spending. ${copyBriefInstruction}${args.brief ? `\n\nThe owner asked for: ${args.brief.slice(0, 1500)}` : ""}${planContext(job)}`, {
               ownerSuppliedUrls: ownerSuppliedUrls(args.brief),
-              research: researchFor("ad_drafts", { website: job.business?.website, businessName: job.business?.name ?? job.org.name }),
+              research: researchFor("ad_drafts", { website: job.business?.website, businessName: job.business?.name ?? job.org.name, platforms: args.channel ? [args.channel] : undefined }),
             }),
             startedAt,
-            { task: "ad_drafts", context: "", ctx: fx, text: `TASK: Draft one Google search ad (headlines ≤ 30 characters, descriptions ≤ 90) and one Meta ad. Keep within the owner's budget; suggest a test budget but never above it.\n\n${businessBrief(job)}${brief}` },
+            { task: "ad_drafts", context: "", ctx: fx, text: `TASK: ${destinationTask} For Google search ads use headlines ≤ 30 characters and descriptions ≤ 90. Keep within the owner's supplied budget; do not invent a test budget when it is unknown. These are private drafts, not provider campaigns.\n\n${businessBrief(job)}${brief}` },
           );
+          if (lintAdPlatformSelection(out, args.channel).length) throw new JobStop("ad_destination_mismatch", "The generated ads do not match the requested platform. No drafts were saved or campaigns created.");
           items = adsToArtifacts(out, job.business?.website);
         } else if (args.job === "content_email") {
           const out = await runAgentTask<EmailSequenceV2>(

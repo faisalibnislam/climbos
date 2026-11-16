@@ -112,7 +112,7 @@ function v2Plan(kind: JobKind, params: { quantity?: number; images?: number; pag
     }
     case "content_ads": {
       const r = { maxSearches: searches("ad_drafts") };
-      return plan("Draft ads (paused until approved)", ["ads_manager", "creative_director"], ["ad_drafts"], agentSteps(any(adsSpec()), r), { searchCalls: r.maxSearches });
+      return plan("Draft ads (paused until approved)", ["ads_manager", "creative_director"], ["ad_drafts"], agentSteps(any(adsSpec({ channel: params.channel })), r), { searchCalls: r.maxSearches });
     }
     case "content_email":
       return plan("Draft an email sequence", ["customer_success_manager"], ["email_sequence"], agentSteps(any(emailSpec())), {});

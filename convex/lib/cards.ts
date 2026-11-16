@@ -228,6 +228,10 @@ export async function startCardRun(
       payload.channels = destinations;
       payload.channel = destinations.length === 1 ? destinations[0] : undefined;
     }
+    if (job === "content_ads") {
+      if (!["search_ads", "meta_ads"].includes(ch.key)) throw appError("INVALID", "This plan channel does not select a supported ad platform.");
+      payload.channel = ch.key === "search_ads" ? "google_search_ad" : "meta_ad";
+    }
   }
   if (job === "strategy") await assertNoActiveRun(ctx, org._id, "strategy", "Your plan is already being refreshed.");
   if (job === "outbound") {

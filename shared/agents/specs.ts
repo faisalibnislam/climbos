@@ -337,7 +337,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.123-social-destinations";
+export const ENGINE_VERSION = "v3.124-ad-destinations";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -2827,9 +2827,25 @@ export function socialSpec(channels: string[], o: SpecOptions = {}): AgentSpec<S
   );
 }
 
-export function adsSpec(o: SpecOptions = {}): AgentSpec<AdDraftsV2> {
+/** A selected ad platform must have drafts, and no drafts for another platform. */
+export function lintAdPlatformSelection(out: { searchAds: unknown[]; metaAds: unknown[] }, channel?: string): LintIssue[] {
+  if (!channel) return [];
+  const search = channel === "google_search_ad", meta = channel === "meta_ad";
+  if ((!search && !meta) || (search && (!out.searchAds.length || out.metaAds.length)) || (meta && (!out.metaAds.length || out.searchAds.length))) {
+    return [{ severity: "error", rule: "ad_platform", message: "Return drafts only for the requested ad platform, with at least one draft for it. Leave the other platform's array empty." }];
+  }
+  return [];
+}
+
+export function adsSpec(o: SpecOptions & { channel?: string } = {}): AgentSpec<AdDraftsV2> {
+  if (o.channel && !["google_search_ad", "meta_ad"].includes(o.channel)) throw new Error("Select a supported ad destination before drafting.");
+  const search = !o.channel || o.channel === "google_search_ad", meta = !o.channel || o.channel === "meta_ad";
+  const schema = o.channel ? AdDraftsV2Schema.extend({
+    searchAds: search ? AdDraftsV2Schema.shape.searchAds.min(1) : AdDraftsV2Schema.shape.searchAds.max(0),
+    metaAds: meta ? AdDraftsV2Schema.shape.metaAds.min(1) : AdDraftsV2Schema.shape.metaAds.max(0),
+  }) : AdDraftsV2Schema;
   return base(
-    { id: "ad_drafts", role: "ads_manager", label: "Ad drafts", skills: ["copy-fundamentals", "google-ads", "meta-ads"], schema: AdDraftsV2Schema, rubric: rubricOf("google-ads"), criticSkills: ["meta-ads"], lint: lintAds },
+    { id: "ad_drafts", role: "ads_manager", label: "Ad drafts", skills: ["copy-fundamentals", ...(search ? ["google-ads"] : []), ...(meta ? ["meta-ads"] : [])], schema, rubric: rubricOf(search ? "google-ads" : "meta-ads"), criticSkills: meta ? ["meta-ads"] : ["google-ads"], lint: (out, input) => [...lintAds(out, input), ...lintAdPlatformSelection(out, o.channel)] },
     o,
     "lean",
   );
@@ -3460,7 +3476,7 @@ Prioritize the most decision-relevant routes instead of collecting one entry per
         maxSearches: 3,
         maxFetches: 3,
         cacheTtlMs: 60 * 60_000,
-        brief: `Look for competitors' current ads and offers (Google results for the main keywords, competitor landing pages) and the exact phrases buyers use. Note claims competitors make so ours can differ.`,
+        brief: `${ctx.platforms?.length ? `The requested ad destinations are ${ctx.platforms.join(", ")}. Focus creative research on those destinations; evidence from another channel does not establish audience fit or performance here. ` : ""}Look for competitors' current ads and offers (Google results for the main keywords, competitor landing pages) and the exact phrases buyers use. Note claims competitors make so ours can differ.`,
       };
     case "prospecting":
       // Searches are metered per plan; page reads (one per candidate's own site) are where verification happens.

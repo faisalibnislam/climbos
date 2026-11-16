@@ -34,7 +34,7 @@ function syntheticCampaignTiming() {
  * - "fail":   every call fails with a provider error.
  */
 
-type JsonSchema = { type?: string | string[]; const?:unknown; properties?: Record<string, JsonSchema>; items?: JsonSchema; enum?: unknown[]; anyOf?: JsonSchema[]; required?: string[] };
+type JsonSchema = { type?: string | string[]; const?:unknown; properties?: Record<string, JsonSchema>; items?: JsonSchema; maxItems?: number; enum?: unknown[]; anyOf?: JsonSchema[]; required?: string[] };
 
 function sample(s: JsonSchema, marker: string, key = ""): unknown {
   if(Object.prototype.hasOwnProperty.call(s,"const"))return s.const;
@@ -59,6 +59,7 @@ function sample(s: JsonSchema, marker: string, key = ""): unknown {
       return out;
     }
     case "array":
+      if (s.maxItems === 0) return [];
       if (key === "factIndexes" || key.endsWith("FactIndexes") || key.endsWith("SourceUrls") || key === "approvedExamples" || key === "evidenceRefs" || key === "evidenceExcerpts" || key === "dependencies" || key === "precedentIds") return [];
       return s.items ? [sample(s.items, marker, key)] : [];
     case "number":

@@ -185,6 +185,8 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
         budgetNote: "Start paused. Suggested test: $20/day within your $600 monthly envelope, reviewed weekly.",
         factIndexes: ctx.facts.length ? [0] : [],
       };
+      if (ctx.channel === "google_search_ad") out.metaAds = [];
+      if (ctx.channel === "meta_ad") out.searchAds = [];
       return out;
     }
     case "email_sequence": {

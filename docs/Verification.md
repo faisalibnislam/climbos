@@ -1,3 +1,15 @@
+## 17 November 2026 — selected ad platforms survive draft generation
+
+Six initial regressions confirmed that selected Google/Meta plan jobs generated both platforms and accepted empty or mismatched results. Platform selection now reaches quote/research/spec/task and final validation; older unstarted cards resolve against the approved plan key. See [the scoped audit](growth-engine/ad-destination-consistency-audit.md).
+
+- `pnpm exec vitest run tests/convex/plan-ad-destinations.test.ts tests/convex/plan-social-destinations.test.ts tests/unit/ad-destination-lint.test.ts tests/unit/agent-lint.test.ts tests/convex/engine-v2.test.ts tests/convex/campaign-authorization.test.ts tests/convex/campaign-activation-settings.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts tests/convex/plan-approval.test.ts` — final 140 passed across ten files, 8.90 seconds.
+- `pnpm exec vitest run tests/convex/plan-ad-destinations.test.ts` — nine passed in the focused rerun; these overlap the broader set.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint convex/ai/fixtures.ts convex/jobs.ts convex/lib/cards.ts convex/lib/jobPlans.ts shared/agents/specs.ts shared/agents/fake.ts tests/convex/plan-ad-destinations.test.ts` — passed without warnings.
+- `git diff --check` — passed.
+
+An intermediate expanded run passed 139 cases and failed one newly added test fixture missing action-card description/priority. The fixture was corrected and the complete focused set rerun green. No production workaround or removed test. Tests use deterministic providers; no live provider, paid-model evaluation, browser run, publishing, campaign creation or deployment was performed. No claim about live ad quality or results follows from these checks.
+
 ## 17 November 2026 — social destinations survive plan handoff
 
 Three new actual routing regressions showed detailed-plan platform selections missing from reserved draft jobs. Shared named-platform selection now reaches cards, quotes, requests, research, schemas and fixtures; ambiguous/unknown/community labels wait instead of becoming generic platform jobs. First-win preparation follows selected, non-parked plan channels and no longer guesses from business type or unconditionally adds email. Final social output rejects destination mismatches instead of rewriting post.channel. See [the scoped audit](growth-engine/social-destination-consistency-audit.md).
