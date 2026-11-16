@@ -1,3 +1,5 @@
+import { businessModelEvidenceHashes } from "./lib/businessModelEvidence";
+import { businessModelFreshness, readBusinessModelEvidence } from "../shared/agents/businessModelFreshness";
 import { latestBusinessModelTests } from "./lib/businessModelTests";
 import { GoalTimingSchema } from "../shared/agents/goalTiming";
 import { runGoal, goalPlans } from "./lib/goals";
@@ -220,6 +222,9 @@ export const jobContext = internalQuery({
     const businessModelSignalsText = run.kind === "business_model_check"
       ? ownerModelSignalsBrief(ownerModelSignals({ nowMs: concentrationToMs, currency: concentrationCurrency ?? null, revenueEvents: concentrationEvents.slice(0, 10_000), revenuePartial: concentrationIsPartial, revenueReadCoversComparison: (revenueRows.at(-1)?.occurredAt ?? Infinity) < concentrationToMs - 180 * DAY, deals: pipelineDeals.slice(0, 2_000), pipelinePartial: pipelineDeals.length > 2_000, competitorChangesPartial: marketChanges.length === 8, lifecycleStage: business?.lifecycleStage?.stage ?? null, competitorChanges90d: marketChanges.filter((change) => change.at >= concentrationToMs - 90 * DAY && change.at <= concentrationToMs).length }))
       : "";
+    const modelEvidenceHashes = run.kind === "strategy" || run.kind === "business_model_check"
+      ? await businessModelEvidenceHashes({ org, business, facts, brand, goal, revenueRows, pipelineDeals, marketChanges }, concentrationToMs)
+      : null;
     const latestModelCheck = run.kind === "strategy" || run.kind === "business_model_check"
       ? (await ctx.db.query("workflowRuns").withIndex("by_org_kind_created", (q) => q.eq("orgId", org._id).eq("kind", "business_model_check")).order("desc").take(10))
           .find((r) => r.status === "verified" && !r.isFixture && typeof r.output === "string")
@@ -236,8 +241,9 @@ export const jobContext = internalQuery({
         return null;
       }
     })();
-    const businessModelContext = latestModel && latestModelCheck ? businessModelPlanContext(latestModel, latestModelCheck.createdAt) : "";
-    const businessModelVerdict = latestModel?.verdict.status ?? null;
+    const modelFreshness = latestModelCheck && modelEvidenceHashes ? businessModelFreshness(readBusinessModelEvidence(latestModelCheck.input), modelEvidenceHashes, concentrationToMs) : null;
+    const businessModelContext = latestModel && latestModelCheck ? businessModelPlanContext(latestModel, latestModelCheck.createdAt, modelFreshness) : "";
+    const businessModelVerdict = modelFreshness?.status === "unchanged" ? latestModel?.verdict.status ?? null : null;
     const concentration = concentrationCurrency
       ? customerConcentration(concentrationEvents, { currency: concentrationCurrency, fromMs: concentrationFromMs, toMs: concentrationToMs, partial: concentrationIsPartial })
       : null;
@@ -342,6 +348,8 @@ export const jobContext = internalQuery({
       pipelineOutcomesText,
       pipelineLossNotes,
       businessModelSignalsText,
+      businessModelEvidenceHashes: modelEvidenceHashes,
+      businessModelFreshness: modelFreshness,
       businessModelContext,
       businessModelVerdict,
       businessModelTestsText,

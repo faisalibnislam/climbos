@@ -32,6 +32,18 @@ describe("business model check view", () => {
     expect(html).toContain("2 of 5 asked how to start");
   });
 
+  it("shows changed-input review guidance without hiding the bold alternative or starting work", () => {
+    const html = renderToStaticMarkup(createElement(BusinessModelCheckView, { check, createdAt: 0, tests: {}, canEdit: false, freshness: { status: "changed", changed: ["business", "billing"], capturedAt: 1, checkedAt: 2, reason: "Inputs changed since this check." } }));
+    expect(html).toContain("Review this saved judgment");
+    expect(html).toContain("Business model described in this report");
+    expect(html).toContain("Saved assessment");
+    expect(html).not.toContain("How the business makes money today");
+    expect(html).toContain("Business details and economics, Imported billing records");
+    expect(html).toContain("Bold · may have no precedent");
+    expect(html).toContain("owner-started");
+    expect(html).not.toContain("Save test result");
+  });
+
   it("is listed under Your plan in the tool directory", () => {
     expect(APP_TOOLS.find((tool) => tool.key === "business-model")).toMatchObject({ area: "plan", label: "Business model check" });
   });

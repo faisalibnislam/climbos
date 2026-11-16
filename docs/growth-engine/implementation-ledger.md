@@ -2,6 +2,10 @@
 
 Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs as written there. Baseline: `404c466`. Branch: `growth-engine-v2`.
 
+## Local update — 16 November 2026: historical viability advice and stable retries
+
+Business Model Check now binds its first effective model input and eight bounded workspace evidence groups before model work. Changed inputs cannot silently reuse earlier checkpoints; malformed or missing legacy identities stop for a new owner-started check. Later plans no longer use changed, over-30-day or untraceable verdicts as current constraints. Reports and all three alternatives remain accessible, with historical headings, changed-group explanations and explicit source limits. No automatic rerun or external action was added. Engine `v3.85-business-model-freshness`; 84 focused regression/permission tests and four desktop/mobile browser checks, plus typecheck, targeted ESLint and diff checks. The 30-day interval is a product heuristic; workspace matching is not semantic verification or live source monitoring. See [Verification](../Verification.md).
+
 ## Local update — 16 November 2026: business-model evidence and latest decisions
 
 Fixed owner/context disagreement after long alternative-test histories by using one indexed latest record per test target. Added missing business-model test history to workspace export/deletion. Viability context now distinguishes calculated imported-record observations, capped billing/pipeline samples, missing loss reasons and heuristic direction flags; incomplete comparison windows stay unknown, and future deal closes cannot become observed sales outcomes. Owner reports no longer automatically override an earlier model judgment. The three strategy modes remain required. Engine `v3.84-business-model-evidence-limits`; 76 focused tests across 13 files, two desktop/mobile browser checks, typecheck, changed-file ESLint and diff checks passed. This verifies data selection and bounds, not expert-level viability judgments. See [Verification](../Verification.md).

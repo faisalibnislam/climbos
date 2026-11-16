@@ -1,7 +1,9 @@
+import { currentBusinessModelEvidence } from "./lib/businessModelEvidence";
+import { BusinessModelEvidenceSchema, businessModelFreshness, readBusinessModelEvidence } from "../shared/agents/businessModelFreshness";
 import { latestBusinessModelTests } from "./lib/businessModelTests";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { ACTIVE_RUN_STATUSES, assertNoActiveRun, createRunWithReservation, latestRunsOfKind } from "./engine";
 import { audit } from "./lib/audit";
 import { planJob, maxJobMicros } from "./lib/jobPlans";
@@ -45,6 +47,23 @@ export const start = mutation({
   },
 });
 
+/** Freeze the evidence identity once, before the first model step; resumed runs cannot rebind it. */
+export const captureEvidence = internalMutation({
+  args: { runId: v.id("workflowRuns"), hashes: v.record(v.string(), v.string()), contextHash: v.string() },
+  handler: async (ctx, { runId, hashes, contextHash }) => {
+    const run = await ctx.db.get(runId);
+    if (!run || run.kind !== KIND || !ACTIVE_RUN_STATUSES.includes(run.status)) throw appError("INVALID", "This business model check is not running.");
+    const existing = readBusinessModelEvidence(run.input);
+    if (existing) return existing;
+    const input = JSON.parse(run.input || "{}");
+    const step = await ctx.db.query("workflowSteps").withIndex("by_run", q => q.eq("runId", runId)).first();
+    if (input.businessModelEvidence !== undefined || step) throw appError("INVALID", "This check has earlier work without a usable input snapshot. Start a new check; earlier progress is retained.");
+    const snapshot = BusinessModelEvidenceSchema.parse({ version: 1, capturedAt: Date.now(), hashes, contextHash });
+    await ctx.db.patch(runId, { input: JSON.stringify({ ...input, businessModelEvidence: snapshot }) });
+    return snapshot;
+  },
+});
+
 /** The latest finished check with its test records, plus any check still running. */
 export const latest = query({
   args: { slug: v.string() },
@@ -62,6 +81,8 @@ export const latest = query({
         check = null;
       }
     }
+    const now = Date.now();
+    const freshness = done && check ? businessModelFreshness(readBusinessModelEvidence(done.input), await currentBusinessModelEvidence(ctx, org, now), now) : null;
     const tests = done ? await latestBusinessModelTests(ctx, org._id, done._id) : [];
     const latestTest = (target: string) => tests.find((t) => t.target === target);
     return {
@@ -72,6 +93,7 @@ export const latest = query({
         createdAt: done.createdAt,
         isFixture: Boolean(done.isFixture),
         check,
+        freshness,
         precedents: CREATIVE_PRECEDENTS.filter((p) => check.alternatives.some((a) => a.precedentIds?.includes(p.id))).map((p) => ({ id: p.id, title: p.title, mechanism: p.mechanism, causalLimit: p.causalLimit, accessedAt: p.accessedAt, sources: p.sources.map((s) => ({ title: s.title, url: s.url })) })),
         tests: Object.fromEntries((["deciding", "grounded", "adjacent", "bold"] as const).flatMap((target) => {
           const t = latestTest(target);

@@ -1,3 +1,4 @@
+import type { BusinessModelFreshness } from "./businessModelFreshness";
 import { z } from "zod";
 import type { LintIssue } from "./types";
 import { repeatPurchaseSummary, type CohortPayment } from "../attribution/cohorts";
@@ -211,8 +212,11 @@ export function ownerModelSignalsBrief(signals: readonly OwnerModelSignal[]): st
 }
 
 /** The latest saved check as context for later strategy runs; its verdict stays labelled as a model judgment. */
-export function businessModelPlanContext(check: BusinessModelCheck | null | undefined, completedAt?: number): string {
+export function businessModelPlanContext(check: BusinessModelCheck | null | undefined, completedAt?: number, freshness?: BusinessModelFreshness | null): string {
   if (!check) return "";
+  if (freshness && freshness.status !== "unchanged") {
+    return `HISTORICAL BUSINESS MODEL CHECK (AI judgment; not current evidence): ${freshness.reason} Do not reuse its verdict as a current demand or viability constraint. Past hypotheses (not current recommendations): ${check.alternatives.map(a => `${a.mode}: ${a.name}`).join("; ")}. Keep all three available for reassessment; assess the current business independently. A new check needs the owner's normal metered start; this notice authorizes no work.`;
+  }
   const date = completedAt ? new Date(completedAt).toISOString().slice(0, 10) : "unknown date";
   const alt = (mode: "grounded" | "adjacent" | "bold") => check.alternatives.find((a) => a.mode === mode);
   return `LATEST BUSINESS MODEL CHECK (${date}; AI judgment for owner review, not a verified finding): verdict ${check.verdict.status.replace(/_/g, " ")} (${check.verdict.confidence} confidence); recommendation ${check.recommendation.decision.replace(/_/g, " ")}; deciding test: ${check.recommendation.decidingTest} Alternatives: grounded "${alt("grounded")?.name ?? "none"}", adjacent "${alt("adjacent")?.name ?? "none"}", bold "${alt("bold")?.name ?? "none"}". Consider these when choosing plays, keep the bold option visible, and don't treat the verdict as proof of decline or permission to change the offer.`;

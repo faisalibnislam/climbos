@@ -46,6 +46,7 @@ export default function BusinessModelPage() {
         <BusinessModelCheckView
           precedents={data.result.precedents}
           check={data.result.check}
+          freshness={data.result.freshness}
           createdAt={data.result.createdAt}
           isFixture={data.result.isFixture}
           tests={data.result.tests}

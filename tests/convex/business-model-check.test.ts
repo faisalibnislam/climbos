@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { checkInvariants } from "../../shared/economics/ledger";
@@ -19,8 +19,10 @@ describe("business model check", () => {
     process.env.CLIMBOS_FAKE_LLM = "ship";
   });
   afterEach(() => {
+    vi.restoreAllMocks();
     delete process.env.CLIMBOS_ENGINE;
     delete process.env.CLIMBOS_FAKE_LLM;
+    delete process.env.CLIMBOS_AGENT_SOFT_LIMIT_MS;
   });
 
   it("runs an owner-started, metered check and returns three alternatives with a labelled verdict", async () => {
@@ -131,12 +133,122 @@ describe("business model check", () => {
     for (const table of ["approvals", "actionReceipts"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
   });
 
+  it("keeps changed, old and legacy judgments visible but removes them from current plan constraints", async () => {
+    const t = setup();
+    const w = await workspace(t, "model-freshness@example.com");
+    const { runId } = await w.client.mutation(api.businessModel.start, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const initial = await w.client.query(api.businessModel.latest, { slug: w.slug });
+    expect(initial.result!.freshness!.status).toBe("unchanged");
+    const strategyRunId = await t.run(async ctx => ctx.db.insert("workflowRuns", { ...(await ctx.db.get(runId))!, _id: undefined, _creationTime: undefined, kind: "strategy", status: "executing", output: undefined } as never));
+    expect((await t.query(internal.jobWrites.jobContext, { runId: strategyRunId }))!.businessModelVerdict).toBe("insufficient_evidence");
+    await t.run(async ctx => {
+      const b = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", w.orgId)).first())!;
+      await ctx.db.patch(b._id, { summary: "Owner changed the business offer after the check" });
+    });
+    const changed = await w.client.query(api.businessModel.latest, { slug: w.slug });
+    expect(changed.result!.freshness).toMatchObject({ status: "changed", changed: ["business"] });
+    expect(changed.result!.check.alternatives.map(a => a.mode).sort()).toEqual(["adjacent", "bold", "grounded"]);
+    let context = await t.query(internal.jobWrites.jobContext, { runId: strategyRunId });
+    expect(context!.businessModelVerdict).toBeNull();
+    expect(context!.businessModelContext).toContain("HISTORICAL BUSINESS MODEL CHECK");
+    expect(context!.businessModelContext).not.toContain("verdict insufficient evidence");
+    const next = await w.client.mutation(api.businessModel.start, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    expect((await w.client.query(api.businessModel.latest, { slug: w.slug })).result!.freshness!.status).toBe("unchanged");
+    const captured = JSON.parse((await t.run(ctx => ctx.db.get(next.runId)))!.input).businessModelEvidence;
+    vi.spyOn(Date, "now").mockReturnValue(captured.capturedAt + 31 * 86_400_000);
+    expect((await w.client.query(api.businessModel.latest, { slug: w.slug })).result!.freshness!.status).toBe("review_due");
+    expect((await t.query(internal.jobWrites.jobContext, { runId: strategyRunId }))!.businessModelVerdict).toBeNull();
+    vi.restoreAllMocks();
+    await t.run(ctx => ctx.db.patch(next.runId, { input: "{}" }));
+    expect((await w.client.query(api.businessModel.latest, { slug: w.slug })).result!.freshness!.status).toBe("unknown");
+    context = await t.query(internal.jobWrites.jobContext, { runId: strategyRunId });
+    expect(context!.businessModelVerdict).toBeNull();
+    for (const table of ["approvals", "actionReceipts"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
+  });
+
+  it("resumes unchanged inputs through checkpoints without replacing the input identity", async () => {
+    process.env.CLIMBOS_AGENT_SOFT_LIMIT_MS = "1";
+    const t = setup();
+    const w = await workspace(t, "model-stable-resume@example.com");
+    const { runId } = await w.client.mutation(api.businessModel.start, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const run = (await t.run(ctx => ctx.db.get(runId)))!;
+    expect(run.status).toBe("verified");
+    expect(JSON.parse(run.input).businessModelEvidence.contextHash).toMatch(/^[a-f0-9]{64}$/);
+    const steps = await t.run(ctx => ctx.db.query("workflowSteps").withIndex("by_run", q => q.eq("runId", runId)).collect());
+    expect(steps.length).toBeGreaterThan(1);
+    expect(new Set(steps.map(s => s.index)).size).toBe(steps.length);
+  });
+
+  it("rejects a changed full prompt even when the displayed evidence groups still match", async () => {
+    const t = setup();
+    const w = await workspace(t, "model-context-resume@example.com");
+    const { runId } = await w.client.mutation(api.businessModel.start, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const before = (await t.run(ctx => ctx.db.get(runId)))!;
+    const original = JSON.parse(before.input).businessModelEvidence;
+    // Simulate a checkpoint retry after an audience change, outside the eight displayed evidence groups.
+    await t.run(async ctx => {
+      await ctx.db.patch(runId, { status: "executing", output: undefined });
+      await ctx.db.insert("contacts", { orgId: w.orgId, emailHash: "synthetic-audience", emailDomain: "example.com", source: "crm", segments: [], createdAt: Date.now() });
+    });
+    const context = await t.query(internal.jobWrites.jobContext, { runId });
+    expect(context!.businessModelEvidenceHashes).toEqual(original.hashes);
+    const usageBefore = await t.run(ctx => ctx.db.query("usageEvents").collect());
+    await t.action(internal.jobs.businessModelCheck, { runId });
+    const stopped = (await t.run(ctx => ctx.db.get(runId)))!;
+    expect(stopped.status).toBe("failed");
+    expect(stopped.output).toBeUndefined();
+    expect(JSON.parse(stopped.input).businessModelEvidence).toEqual(original);
+    expect(await t.run(ctx => ctx.db.query("usageEvents").collect())).toEqual(usageBefore);
+    expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+  });
+
+  it("does not rebind legacy checkpoints or malformed snapshots to current inputs", async () => {
+    const t = setup();
+    const w = await workspace(t, "model-legacy-resume@example.com");
+    const { runId } = await w.client.mutation(api.businessModel.start, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const run = (await t.run(ctx => ctx.db.get(runId)))!;
+    const snapshot = JSON.parse(run.input).businessModelEvidence;
+    for (const input of ["{}", JSON.stringify({ businessModelEvidence: { version: 1 } })]) {
+      await t.run(ctx => ctx.db.patch(runId, { status: "executing", input }));
+      await expect(t.mutation(internal.businessModel.captureEvidence, { runId, hashes: snapshot.hashes, contextHash: snapshot.contextHash })).rejects.toThrow(/earlier work/);
+      expect((await t.run(ctx => ctx.db.get(runId)))!.input).toBe(input);
+    }
+  });
+
+  it("freezes the first input identity and stops a resumed check before model work if inputs changed", async () => {
+    const t = setup();
+    const w = await workspace(t, "model-resume-evidence@example.com");
+    const { runId } = await w.client.mutation(api.businessModel.start, { slug: w.slug });
+    const initial = await t.query(internal.jobWrites.jobContext, { runId });
+    const captured = await t.mutation(internal.businessModel.captureEvidence, { runId, hashes: initial!.businessModelEvidenceHashes!, contextHash: "a".repeat(64) });
+    await t.run(async ctx => {
+      const b = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", w.orgId)).first())!;
+      await ctx.db.patch(b._id, { summary: "A materially different offer" });
+    });
+    const changed = await t.query(internal.jobWrites.jobContext, { runId });
+    expect(changed!.businessModelEvidenceHashes).not.toEqual(captured.hashes);
+    expect(await t.mutation(internal.businessModel.captureEvidence, { runId, hashes: changed!.businessModelEvidenceHashes!, contextHash: "b".repeat(64) })).toEqual(captured);
+    await t.finishAllScheduledFunctions(() => undefined);
+    const run = (await t.run(ctx => ctx.db.get(runId)))!;
+    expect(run.status).toBe("failed");
+    expect(run.output).toBeUndefined();
+    expect(JSON.parse(run.input).businessModelEvidence).toEqual(captured);
+    expect(await t.run(ctx => ctx.db.query("usageEvents").collect())).toEqual([]);
+    expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+  });
+
 });
 
 describe("business model check without the agent engine", () => {
   it("falls back to the labelled demo fixture and still saves a valid result", async () => {
     delete process.env.CLIMBOS_ENGINE;
     delete process.env.CLIMBOS_FAKE_LLM;
+    delete process.env.CLIMBOS_AGENT_SOFT_LIMIT_MS;
     const t = setup();
     const w = await workspace(t, "model-v1@example.com");
     // Demo workspaces use labelled fixtures instead of a provider.

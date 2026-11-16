@@ -4,6 +4,7 @@ import { COPY_BRIEF_INSTRUCTION, socialPostsTask, seoPageTask } from "../shared/
 import { RUN_FAILURE_COPY } from "../shared/progress";
 import { CHANNEL_DECISION_POLICY } from "../shared/acquisition/channelDecision";
 
+import { businessModelFreshness } from "../shared/agents/businessModelFreshness";
 import { BUSINESS_MODEL_TASK, type BusinessModelCheck } from "../shared/agents/businessModel";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { checkProspects } from "./ai/prospectCheck";
@@ -111,7 +112,7 @@ import { agentRevisionSteps } from "./lib/jobPlans";
 import { estimateRun, MAX_RUN_COST_MULTIPLE } from "./engine";
 import { fitJson, fitText, reportDropped } from "../shared/agents/context";
 import { linkQuickTakeEvidence } from "../shared/agents/opportunities";
-import { sha256Hex } from "../shared/policy";
+import { canonicalJson, sha256Hex } from "../shared/policy";
 import { localToday } from "../shared/agents/campaignTiming";
 import { mediaBreakEvenRoas } from "../shared/attribution/roi";
 import { approvedPlanContext, approvedPlanOfferTerms } from "../shared/agents/approvedPlanContext";
@@ -2498,13 +2499,21 @@ export const businessModelCheck = internalAction({
     const job = await loadContext(ctx, runId);
     if (!job) return;
     await guarded(ctx, runId, async () => {
+      if (!job.businessModelEvidenceHashes) throw new JobStop("business_model_context_missing", "The business context could not be checked. Start a new business model check.");
       const today = new Date().toISOString().slice(0, 10);
+      const input = agentInput(job, `${BUSINESS_MODEL_TASK}\n\nUse the bounded creative precedents only as analogies: return precedentIds on an alternative when the mechanism transfers, and explain the transfer and its limits in mechanism/assumptions. Empty precedentIds is valid; an original bold option never needs a matching case.\n\n${job.businessModelSignalsText}`, { research: researchFor("business_model_check", { website: job.business?.website, businessName: job.business?.name ?? job.org.name, today }) });
+      // Bind all effective prompt inputs as well as the owner-visible evidence groups.
+      // A resumed step must not combine cached research with a changed brief or engine.
+      const contextHash = await sha256Hex(canonicalJson(JSON.parse(JSON.stringify({ engine: ENGINE_VERSION, input }))));
+      const snapshot = await ctx.runMutation(internal.businessModel.captureEvidence, { runId, hashes: job.businessModelEvidenceHashes, contextHash });
+      const freshness = businessModelFreshness(snapshot, job.businessModelEvidenceHashes, Date.now());
+      if (freshness.status !== "unchanged" || snapshot.contextHash !== contextHash) throw new JobStop("business_model_inputs_changed", "Business inputs changed since this check began. Start a new check so its steps use the same evidence. Earlier progress is retained.");
       const out = await runAgentTask<BusinessModelCheck>(
         ctx,
         job,
         0,
         businessModelCheckSpec(),
-        agentInput(job, `${BUSINESS_MODEL_TASK}\n\nUse the bounded creative precedents only as analogies: return precedentIds on an alternative when the mechanism transfers, and explain the transfer and its limits in mechanism/assumptions. Empty precedentIds is valid; an original bold option never needs a matching case.\n\n${job.businessModelSignalsText}`, { research: researchFor("business_model_check", { website: job.business?.website, businessName: job.business?.name ?? job.org.name, today }) }),
+        input,
         startedAt,
         { task: "business_model_check", context: "", ctx: fixtureCtx(job), text: `${BUSINESS_MODEL_TASK}\n\n${businessBrief(job)}` },
       );

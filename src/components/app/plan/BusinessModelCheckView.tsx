@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Badge, Button, Callout, Field, Select, Textarea, type Tone } from "@/components/ui";
 import { EvidenceReferences } from "./EvidenceReferences";
+import { MODEL_EVIDENCE_LABELS, type BusinessModelFreshness } from "../../../../shared/agents/businessModelFreshness";
 import type { BusinessModelCheck } from "../../../../shared/agents/businessModel";
 
 type Target = "deciding" | "grounded" | "adjacent" | "bold";
@@ -59,13 +60,23 @@ function TestRecorder({ target, saved, canEdit, onRecord }: { target: Target; sa
 }
 
 /** The latest business model check: current model, market signals, labelled verdict, three alternatives, and the deciding test. */
-export function BusinessModelCheckView({ check, createdAt, isFixture, tests, canEdit, onRecord, precedents = [] }: { check: BusinessModelCheck; precedents?: { id: string; title: string; mechanism: string; causalLimit: string; accessedAt: string; sources: { title: string; url: string }[] }[]; createdAt: number; isFixture?: boolean; tests: Partial<Record<Target, BusinessModelTestView>>; canEdit: boolean; onRecord?: (draft: TestDraft) => Promise<unknown> }) {
+export function BusinessModelCheckView({ check, createdAt, isFixture, tests, canEdit, onRecord, precedents = [], freshness }: { freshness?: BusinessModelFreshness | null; check: BusinessModelCheck; precedents?: { id: string; title: string; mechanism: string; causalLimit: string; accessedAt: string; sources: { title: string; url: string }[] }[]; createdAt: number; isFixture?: boolean; tests: Partial<Record<Target, BusinessModelTestView>>; canEdit: boolean; onRecord?: (draft: TestDraft) => Promise<unknown> }) {
   const v = VERDICT[check.verdict.status];
+  const historical = freshness && freshness.status !== "unchanged";
   return (
     <div className="flex flex-col gap-4">
       {isFixture ? <Callout tone="info" title="Demo example">Demo data, not a real business.</Callout> : null}
+      {freshness ? <Callout tone={freshness.status === "unchanged" ? "info" : "warning"} title={freshness.status === "unchanged" ? "Saved inputs match" : "Review this saved judgment"}>
+        <p>{freshness.reason}</p>
+        {freshness.changed.length ? <p>Changed: {freshness.changed.map(group => MODEL_EVIDENCE_LABELS[group]).join(", ")}.</p> : null}
+        <details className="mt-2">
+          <summary className="cursor-pointer py-1">What was checked</summary>
+          <p>Only a limited set of saved workspace records was compared. Live websites were not rechecked. A new check is owner-started and shows its credit limit first.</p>
+          <p>Records compared on {new Date(freshness.checkedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}.</p>
+        </details>
+      </Callout> : null}
       <section aria-label="Current business model" className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4">
-        <h2 className="heading-card">How the business makes money today</h2>
+        <h2 className="heading-card">{historical ? "Business model described in this report" : "How the business makes money today"}</h2>
         <p className="text-ui text-ink">{check.currentModel.summary}</p>
         <dl className="grid gap-2 text-sm sm:grid-cols-2">
           <div><dt className="text-xs text-ink-3">Who pays</dt><dd className="text-ink">{check.currentModel.whoPays}</dd></div>
@@ -78,7 +89,7 @@ export function BusinessModelCheckView({ check, createdAt, isFixture, tests, can
 
       <section aria-label="Verdict" className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="heading-card">Is the model holding up?</h2>
+          <h2 className="heading-card">{historical ? "Saved assessment" : "Is the model holding up?"}</h2>
           <Badge tone={v.tone}>{v.label}</Badge>
           <span className="text-xs text-ink-3">AI judgment · {check.verdict.confidence} confidence · {new Date(createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
         </div>
@@ -89,7 +100,7 @@ export function BusinessModelCheckView({ check, createdAt, isFixture, tests, can
 
       {check.marketSignals.length ? (
         <section aria-label="Market signals" className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4">
-          <h2 className="heading-card">What the market is doing</h2>
+          <h2 className="heading-card">{historical ? "Market signals saved with this report" : "What the market is doing"}</h2>
           <ul className="flex flex-col gap-3">
             {check.marketSignals.map((s, i) => (
               <li key={i} className="flex flex-col gap-0.5 text-sm">
