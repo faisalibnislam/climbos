@@ -1,5 +1,27 @@
 ## 16 November: comparable forecast evidence and honest accuracy checks
 
+## 16 November 2026 — calendar-aware metric-health alerts
+
+Traced `metricDaily` ingestion → bounded `analytics.series` read → tenant-scoped `analytics.overview` → deterministic `metricHealth` → the existing Results `HealthAlertsSection`. Confirmed that row slices treated sparse observations as calendar days, allowing separated zeros to become a consecutive-zero warning and old observations to become recent anomalies. Ten new regressions failed against the original helper before the repair.
+
+The helper now uses actual calendar windows: consecutive recorded zero days; an observed baseline inside the preceding 14 days (minimum seven observations); and recent-week outliers against the preceding 28 calendar days (minimum 14 observations). Internal gaps within the bounded relevant history are disclosed as unknown, never synthesized as zero. Baseline sample counts appear in the explanation. Invalid/duplicate dates and non-finite values withhold statistical alerts. Current/future days are excluded; a one/two-day reporting lag is still tolerated by the existing freshness heuristic.
+
+The Results reader also checks raw rows before aggregation hides duplicates. A 2,001-row sentinel detects the existing 2,000-row read limit; duplicate/overlapping observations, mixed sources, negative counts, or different/unknown workspace currency/timezone settings produce a check-source warning instead of an unusual-day or zero-run claim. Negative net revenue remains permissible. Existing totals remain visible with the warning; this increment does not reconcile their source populations or redesign Home totals and period comparisons. Workspace settings are not independent proof of provider reporting settings.
+
+Verification:
+
+```text
+pnpm exec vitest run tests/unit/metric-health.test.tsx tests/convex/metric-health.test.ts tests/unit/forecasting.test.ts tests/convex/analytics-new-customers.test.ts tests/convex/safety.test.ts tests/convex/tenancy.test.ts
+70 tests passed across 6 files
+pnpm typecheck
+passed: application and Convex
+pnpm exec eslint convex/analytics.ts shared/forecasting/health.ts tests/unit/metric-health.test.tsx tests/convex/metric-health.test.ts
+passed
+```
+
+The Convex tests exercise the actual overview with an America/Los_Angeles date boundary, missing days followed by explicit-zero recovery, viewer access, denied cross-tenant/anonymous reads, fixture exclusion, source overlap, unknown legacy metadata, currency changes and read truncation. Workflow, approval, action-receipt and forecast tables remain unchanged by reading Results. A server-rendered check verifies the owner-facing unknown-not-zero explanation in the existing alert component. No browser session, full suite, paid model evaluation, production sync, external action or deployment was run for this increment. Automated health thresholds remain heuristics, not calibrated business-specific detection, causal diagnosis or an authorization to act. Requirements 293 and 295 remain partial.
+
+
 Audit covered requirement clusters 26/28/29 (unsupported numbers and data limits), 295 (measurement failures), 311–315 (baseline, confidence and calibration), and 328/329 (insufficient data and plain-language forecasts). Actual path: integration/revenue ingestion → `metricDaily` or identified billing history → `analytics.createForecast` → deterministic `shared/forecasting` → saved forecast/backtest → `analytics.getForecast` → Results forecast detail. Confirmed defects: the creation mutation zero-filled missing observations; forward scoring only read the most recent 120 days; the detail chart re-read current history instead of preserving the training data; current workspace currency could relabel old amounts; first-payer forecasts used an obsolete counter instead of the billing-derived definition; negative net revenue was clamped to zero; the UI invented “about 80%” coverage when the held-out result was absent.
 
 New owner-created forecasts use the latest uninterrupted observed segment ending yesterday, with at least seven days for the existing weekly baseline. Earlier gaps and excluded history are disclosed, never zero-filled. Missing recent observations require a source refresh; an unsupported horizon is rejected instead of silently changed to 30 days. Duplicate daily values, overlapping source totals, negative counts and truncated reads cannot become a forecast. Net revenue may remain negative. Daily ingestion now records the workspace currency/timezone basis; old or incompatible rows remain unknown, and only a comparable consecutive refreshed segment may be used. The basis records workspace settings, not independent verification of a provider's reporting timezone or complete business coverage.

@@ -2,6 +2,10 @@
 
 Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs as written there. Baseline: `404c466`. Branch: `growth-engine-v2`.
 
+## Local update — 16 November 2026: calendar-aware measurement alerts
+
+Repaired Results alerts that mistook sparse rows for consecutive or recent days. Actual calendar windows and observed baseline counts now drive checks; recent internal gaps stay unknown. Before aggregation, the Results reader detects truncated, duplicate/overlapping, mixed-source, negative-count and incompatible/unknown workspace-setting inputs and withholds statistical claims. Existing warning UI is reused; no agent, provider, model call or execution path was added. Verified with 70 focused regression/permission tests, app/Convex typecheck and targeted lint. Totals/source reconciliation, period-comparison completeness and calibrated anomaly detection remain separate work. See [Verification](../Verification.md).
+
 ## Local update — 16 November 2026: forecast evidence integrity
 
 Repaired the actual forecast creation/readback path: missing days no longer become zero, new forecasts retain their original inputs and reporting basis, and forward scoring reads the saved forecast window rather than the latest 120 days. First-payer forecasts use identified billing history, negative net revenue remains negative, overlapping/duplicate/incompatible observations are rejected, and held-out coverage is never invented. Owner views retain legacy projections with explicit unknowns. Existing deterministic forecasting, permissions and storage are reused; no model/provider or external execution. Verification: 64 focused regression/permission tests and two desktop/mobile browser tests, typecheck, targeted ESLint and diff checks. Predictive quality and import completeness remain unproven. See [Verification](../Verification.md).

@@ -3,7 +3,7 @@ import { featureAllowed } from "./lib/access";
 import { getLiveConfig } from "./lib/config";
 import { attribute, computeCohorts, OVERLAP_WARNING, summarizePlatformClaims } from "../shared/attribution";
 import type { RevenueEvent, Touch } from "../shared/attribution/types";
-import { addDays, recentForecastHistory, metricHealth, runForecast, type DailyPoint, scoreForecast, isValidDateString, daysBetween } from "../shared/forecasting";
+import { addDays, recentForecastHistory, metricHealth, runForecast, type DailyPoint, type MetricHealthAlert, scoreForecast, isValidDateString, daysBetween } from "../shared/forecasting";
 import { formatMoney, majorToMinor, minorToMajor } from "../shared/economics/currency";
 import { summarizeAiReferralRows } from "../shared/integrations/ga4";
 import type { Id } from "./_generated/dataModel";
@@ -254,24 +254,30 @@ export const importPlatformClaims = mutation({
   },
 });
 
-async function series(ctx: { db: QueryCtx["db"] }, orgId: Id<"organizations">, metricKey: string, from: string, to: string, kind: "observed" = "observed") {
+async function series(ctx: { db: QueryCtx["db"] }, org: { _id: Id<"organizations">; timezone: string; currency: string }, metricKey: string, from: string, to: string, kind: "observed" = "observed") {
   const rows = await ctx.db
     .query("metricDaily")
-    .withIndex("by_org_metric_date", (q) => q.eq("orgId", orgId).eq("metricKey", metricKey).gte("date", from).lte("date", to))
-    .take(2000);
+    .withIndex("by_org_metric_date", (q) => q.eq("orgId", org._id).eq("metricKey", metricKey).gte("date", from).lte("date", to))
+    .take(2001);
   const byDate = new Map<string, number>();
   let freshness = 0;
   const sources = new Set<string>();
   let isFixture = false;
-  for (const r of rows) {
+  const issues = new Set<string>();
+  if (rows.length > 2000) issues.add("the daily-data read reached its limit");
+  for (const r of rows.slice(0, 2000)) {
     if (r.kind !== kind || r.channel) continue;
+    if (byDate.has(r.date)) issues.add("duplicate or overlapping daily observations need reconciliation");
+    if (r.workspaceTimezone !== org.timezone || (metricKey === "revenue" && r.workspaceCurrency !== org.currency)) issues.add("recorded workspace currency/timezone settings differ or are unknown");
+    if (metricKey !== "revenue" && r.value < 0) issues.add("daily counts cannot be negative");
     byDate.set(r.date, (byDate.get(r.date) ?? 0) + r.value);
     freshness = Math.max(freshness, r.ingestedAt);
     sources.add(r.source);
     isFixture = isFixture || r.isFixture;
   }
+  if (sources.size > 1) issues.add("multiple sources may not be comparable");
   const points: DailyPoint[] = [...byDate.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([date, value]) => ({ date, value }));
-  return { points, freshness, source: sources.size === 1 ? [...sources][0] : sources.size > 1 ? "Multiple sources" : "", isFixture };
+  return { points, freshness, source: sources.size === 1 ? [...sources][0] : sources.size > 1 ? "Multiple sources" : "", isFixture, healthIssue: issues.size ? [...issues].join("; ") : null };
 }
 
 /** Forecasts need comparable, non-duplicated daily observations; never add competing source totals. */
@@ -303,7 +309,7 @@ export const homeSnapshot = query({
     const from = addDays(today, -30);
     const metrics = [];
     for (const key of ["visits", "signups"] as const) {
-      const current = await series(ctx, org._id, key, from, to);
+      const current = await series(ctx, org, key, from, to);
       metrics.push({
         key,
         label: METRICS[key].label,
@@ -353,9 +359,11 @@ export const overview = query({
     const from = addDays(today, -span);
     const prevFrom = addDays(today, -2 * span);
     const metrics = [];
+    const healthIssues = new Map<string, string>();
     for (const key of Object.keys(METRICS) as MetricKey[]) {
-      const cur = await series(ctx, org._id, key, from, addDays(today, -1));
-      const prev = await series(ctx, org._id, key, prevFrom, addDays(from, -1));
+      const cur = await series(ctx, org, key, from, addDays(today, -1));
+      const prev = await series(ctx, org, key, prevFrom, addDays(from, -1));
+      if (cur.healthIssue) healthIssues.set(key, cur.healthIssue);
       const total = cur.points.reduce((s, p) => s + p.value, 0);
       const prevTotal = prev.points.reduce((s, p) => s + p.value, 0);
       metrics.push({
@@ -465,7 +473,13 @@ export const overview = query({
     if (!connected("search_console")) gaps.push({ metric: "search", message: "Search performance needs Google Search Console.", fix: "Connect Search Console" });
 
     // Possible tracking breaks or unusual days in connected daily metrics (prompts to check, not causes).
-    const healthAlerts = metrics.filter((m) => m.hasData && m.key !== "paid_conversions" && !m.isFixture).flatMap((m) => metricHealth(m.points, { yesterday: addDays(today, -1), label: m.label, ...(m.key === "revenue" ? { format: (n: number) => formatMoney(minorToMajor(n, org.currency), org.currency) } : {}) }).map((alert) => ({ metric: m.key, ...alert })));
+    const healthAlerts = metrics.filter((m) => (m.hasData || healthIssues.has(m.key)) && m.key !== "paid_conversions" && !m.isFixture).flatMap((m) => {
+      const issue = healthIssues.get(m.key);
+      const alerts: MetricHealthAlert[] = issue
+        ? [{ kind: "invalid", date: yesterday, message: `${m.label}: ${issue}. Check the source before relying on the displayed totals; unusual-day and zero-run checks are unavailable until the observations are comparable.` }]
+        : metricHealth(m.points, { yesterday, label: m.label, ...(m.key === "revenue" ? { format: (n: number) => formatMoney(minorToMajor(n, org.currency), org.currency) } : {}) });
+      return alerts.map(alert => ({ metric: m.key, ...alert }));
+    });
     return {
       span,
       healthAlerts,

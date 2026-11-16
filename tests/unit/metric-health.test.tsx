@@ -36,4 +36,53 @@ describe("metric health", () => {
     expect(html).toContain("Worth checking before you read these numbers");
     expect(html).toContain("don&#x27;t say what caused a change");
   });
+
+  it("does not turn separated zero observations into consecutive zero days", () => {
+    const points = [...days(Array(14).fill(20), addDays(yesterday, -5)),
+      ...[4, 2, 0].map(offset => ({ date: addDays(yesterday, -offset), value: 0 }))];
+    const alerts = metricHealth(points, { yesterday, label: "Visits" });
+    expect(alerts.some(a => a.kind === "zero_run")).toBe(false);
+    expect(alerts).toContainEqual(expect.objectContaining({ kind: "incomplete", message: expect.stringContaining("2 missing days") }));
+    const html = renderToStaticMarkup(createElement(HealthAlertsSection, { alerts: alerts.map(a => ({ metric: "visits", ...a })) }));
+    expect(html).toContain("unknown, not zero");
+  });
+
+  it("does not borrow an old baseline for a current zero run", () => {
+    const points = [...days(Array(14).fill(20), addDays(yesterday, -30)), ...days([0, 0, 0])];
+    expect(metricHealth(points, { yesterday, label: "Visits" }).some(a => a.kind === "zero_run")).toBe(false);
+  });
+
+  it("does not describe an old spike as an unusual day in the last week", () => {
+    const points = [...days([...Array.from({ length: 28 }, (_, i) => 100 + i % 5), 400], addDays(yesterday, -10)), { date: yesterday, value: 102 }];
+    expect(metricHealth(points, { yesterday, label: "Visits" }).some(a => a.kind === "unusual_day")).toBe(false);
+  });
+
+  it("requires enough observations inside the actual preceding 28 calendar days", () => {
+    const points = [...days(Array.from({ length: 28 }, (_, i) => 100 + i % 5), addDays(yesterday, -60)), { date: yesterday, value: 400 }];
+    expect(metricHealth(points, { yesterday, label: "Visits" }).some(a => a.kind === "unusual_day")).toBe(false);
+  });
+
+  it("retains a real zero run and labels an incomplete baseline as observed days", () => {
+    const points = days([...Array(14).fill(20), 0, 0, 0]).filter(p => p.date !== addDays(yesterday, -5));
+    const alerts = metricHealth(points, { yesterday, label: "Visits" });
+    expect(alerts).toContainEqual(expect.objectContaining({ kind: "incomplete" }));
+    expect(alerts).toContainEqual(expect.objectContaining({ kind: "zero_run", message: expect.stringContaining("13 observed days") }));
+  });
+
+  it.each([
+    [{ date: yesterday, value: 0 }, { date: yesterday, value: 0 }],
+    [{ date: "2026-02-30", value: 10 }],
+    [{ date: yesterday, value: Number.NaN }],
+    [{ date: yesterday, value: Number.POSITIVE_INFINITY }],
+  ])("withholds statistical alerts for invalid or duplicate observations (%j)", (...points) => {
+    const alerts = metricHealth(points, { yesterday, label: "Visits" });
+    expect(alerts).toEqual([expect.objectContaining({ kind: "invalid" })]);
+  });
+
+  it("ignores incomplete current and future days without mutating the input", () => {
+    const points = [...days([10, 11, 12], addDays(yesterday, -5)), { date: addDays(yesterday, 1), value: 999 }].reverse();
+    const before = structuredClone(points);
+    expect(metricHealth(points, { yesterday, label: "Visits" })[0]?.kind).toBe("stale");
+    expect(points).toEqual(before);
+  });
 });

@@ -13,6 +13,8 @@ This handoff records what has been built, what was checked, what remains unverif
 
 ## Current status — 16 November 2026
 
+- Results metric-health alerts now use calendar windows rather than row counts. Missing dates cannot create a consecutive-zero run; old observations cannot become recent anomalies. Gaps and raw-source comparability/read-limit issues produce visible check-source warnings. Seventy focused regression/permission tests plus typecheck/lint passed; see `docs/Verification.md`. This does not reconcile existing totals, prove causal diagnosis or validate period comparisons.
+
 Read this section and the dated entries in `docs/Verification.md` before using the historical batches below as a to-do list. This is not a declaration that every numbered requirement is complete.
 
 - Forecast creation now uses comparable consecutive observed days without zero-filling gaps. New reports freeze original history, currency/timezone, definition and source identity; forward checks use the actual forecast window even after 120 days. First-payer counts use billing history, and negative net revenue remains negative. Legacy metadata stays unknown, and missing held-out coverage is not presented as 80%. The dated verification entry records 64 focused tests and two desktop/mobile checks; predictive performance remains unproven.
