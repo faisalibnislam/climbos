@@ -25,6 +25,7 @@ import { AGENT_ARCHETYPE_BY_ID, agentForAction } from "../shared/agents/registry
 import { validateActionDependencies } from "../shared/agents/actionDependencies";
 import { sha256Hex } from "../shared/policy";
 import { v } from "convex/values";
+import { isPaymentRecord, SALES_PAYMENT_NOTE } from "../shared/attribution/paymentEvidence";
 import { resultsBrief } from "./playResults";
 import { customerConcentration } from "../shared/attribution/concentration";
 import { pipelineOutcomes, pipelineOutcomesBrief } from "../shared/growth/pipeline";
@@ -179,7 +180,7 @@ export const jobContext = internalQuery({
       .withIndex("by_org_occurred", (q) => q.eq("orgId", org._id).lte("occurredAt", concentrationToMs))
       .order("desc")
       .take(10_001);
-    const usableRevenueRows = revenueRows.filter((event) => !event.isFixture);
+    const usableRevenueRows = revenueRows.filter((event) => !event.isFixture && isPaymentRecord(event));
     const concentrationIsPartial = revenueRows.length > 10_000;
     const concentrationCurrency = business?.currency ?? org.currency;
     const concentrationEvents = usableRevenueRows.map((event) => ({
@@ -188,7 +189,7 @@ export const jobContext = internalQuery({
           amountMinor: event.amountMinor, refundedMinor: event.refundedMinor, kind: event.kind,
           utmSource: event.utmSource, utmMedium: event.utmMedium,
         }));
-    let billingEvidenceIssue: string | null = null;
+    let billingEvidenceIssue: string | null = revenueRows.some(event => !event.isFixture && !isPaymentRecord(event)) ? SALES_PAYMENT_NOTE : null;
     const invalidBillingAmounts = concentrationEvents.some(event => event.currency === concentrationCurrency && (
       !Number.isSafeInteger(event.amountMinor) || !Number.isSafeInteger(event.refundedMinor) || event.refundedMinor < 0 ||
       (event.kind === "refund" ? event.refundedMinor !== 0 : event.amountMinor < 0 || event.refundedMinor > event.amountMinor)

@@ -65,7 +65,7 @@ describe("forecast evidence contract", () => {
 
   it("preserves negative net revenue, original currency and timezone; incompatible outcomes cannot be scored", async () => {
     const t = setup(); const w = await workspace(t);
-    await daily(t, w.orgId, history().map(p => ({ ...p, value: -100 })), "revenue", "billing");
+    await t.mutation(internal.analytics.ingestRevenue, { orgId: w.orgId, events: history().map(p => ({ source: "stripe", sourceEventId: p.date, occurredAt: Date.parse(`${p.date}T12:00:00Z`), currency: "USD", amountMinor: 100, refundedMinor: 0, kind: "refund" as const })) });
     const id = await w.client.mutation(api.analytics.createForecast, { slug: w.slug, metricKey: "revenue", horizonDays: 7 });
     let f = await w.client.query(api.analytics.getForecast, { slug: w.slug, forecastId: id });
     expect(f.points.every(p => p.value === -100)).toBe(true);

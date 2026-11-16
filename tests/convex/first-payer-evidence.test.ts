@@ -116,8 +116,8 @@ describe("first recorded payer evidence", () => {
     expect(original.metric.definition).toContain("before refunds");
     await t.run(async ctx => {
       const row = (await ctx.db.get(id))!; const saved = JSON.parse(row.result);
-      expect(saved.evidence.sources).toEqual(["billing-first-recorded-v2"]);
-      saved.evidence.sources = ["billing-first-recorded-v1"];
+      expect(saved.evidence.sources).toEqual(["billing-first-recorded-v3"]);
+      saved.evidence.sources = ["billing-first-recorded-v2"];
       await ctx.db.patch(id, { result: JSON.stringify(saved) });
       await ctx.db.insert("revenueEvents", event(w.orgId, "future-actual", 1, { customerRef: "actual-customer" }));
     });

@@ -3,6 +3,7 @@ import type { QueryCtx } from "../_generated/server";
 import { canonicalJson, sha256Hex } from "../../shared/policy";
 import { factFreshness } from "../../shared/agents/factFreshness";
 import type { BusinessModelEvidence } from "../../shared/agents/businessModelFreshness";
+import { isPaymentRecord, PAYMENT_BASIS } from "../../shared/attribution/paymentEvidence";
 import { focusedGoal } from "./goals";
 
 interface Inputs {
@@ -21,7 +22,7 @@ export async function businessModelEvidenceHashes(input: Inputs, now: number): P
     facts: sorted(input.facts.filter(f => f.reviewState === "confirmed" || f.reviewState === "edited")).map(f => ({ id: f._id, statement: f.statement, category: f.category, confidence: f.confidence, provenance: f.provenance, verifiedAt: f.verifiedAt ?? f.updatedAt, updatedAt: f.updatedAt, reviewSuggested: factFreshness(f.category, f.updatedAt, now, f.verifiedAt ?? f.updatedAt).reviewSuggested })),
     brand: brand ? { voice: brand.voice, toneWords: brand.toneWords, colors: brand.colors, doNots: brand.doNots, approvedExamples: brand.approvedExamples, learnedRules: brand.learnedRules, socialHumor: brand.socialHumor, socialTrendPolicy: brand.socialTrendPolicy } : null,
     goal: goal ? { id: goal._id, kind: goal.kind, kinds: goal.kinds, statement: goal.statement, horizonDays: goal.horizonDays, deadline: goal.deadline, monthlyAdBudgetMinor: goal.monthlyAdBudgetMinor, currency: goal.currency, target: goal.target, priorCycleReview: goal.priorCycleReview } : null,
-    billing: { partial: input.revenueRows.length > 10_000, rows: sorted(input.revenueRows.filter(r => !r.isFixture)).map(({ _creationTime: _c, ingestedAt: _at, ...row }) => row) },
+    billing: { basis: PAYMENT_BASIS, partial: input.revenueRows.length > 10_000, rows: sorted(input.revenueRows.filter(r => !r.isFixture && isPaymentRecord(r))).map(({ _creationTime: _c, ingestedAt: _at, ...row }) => row) },
     pipeline: { partial: input.pipelineDeals.length > 2_000, rows: sorted(input.pipelineDeals).map(({ _creationTime: _c, ...row }) => row) },
     competitors: sorted(input.marketChanges).map(({ _creationTime: _c, ...row }) => row),
   };

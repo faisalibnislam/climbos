@@ -1,6 +1,7 @@
 /**
- * Attribution domain types. Revenue truth comes from billing/order events
- * (RevenueEvent). Ad-platform claims (PlatformClaim) are kept separately and
+ * Attribution domain types. Payment calculations use imported billing/order
+ * observations (RevenueEvent), excluding CRM sale mirrors. Imports do not
+ * independently verify collected cash or profit. Ad-platform claims (PlatformClaim) are kept separately and
  * are never summed into unique revenue totals.
  */
 

@@ -133,7 +133,7 @@ export function AttributionSection({ slug, data }: { slug: string; data: Overvie
           ))}
         </div>
       )}
-      <p className="text-xs text-ink-3">Payment events include renewals and repeat orders; they are not unique customers. Rows reconcile only against the imported records, not independently verified billing totals.</p>
+      <p className="text-xs text-ink-3">Owner-recorded sales stay in the customer pipeline and are excluded here. Payment events include renewals and repeat orders; they are not unique customers. Rows reconcile only against the imported records, not independently verified billing totals.</p>
       <Definition summary="How credit works">
         <p>{model === "last_touch" ? "Last touch: latest recorded channel in the 30-day lookback before payment." : "First touch: earliest recorded channel in the 30-day lookback before payment."}</p>
         <Scannable text={data.attribution.note} max={4} tone="muted" className="mt-2" />

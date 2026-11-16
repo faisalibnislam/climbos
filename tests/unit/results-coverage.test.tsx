@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { Overview, OverviewMetric } from "../../src/components/app/results/ResultsView";
 import type { FunctionReturnType } from "convex/server";
+import { METRICS } from "../../convex/analytics";
 import { api } from "../../convex/_generated/api";
 
 vi.mock("convex/react", () => ({ useQuery: vi.fn(), useMutation: vi.fn(() => vi.fn()) }));
@@ -32,7 +33,7 @@ describe("Results coverage presentation", () => {
   });
 
   it("does not label incompatible money with the current currency or plot it as a total", () => {
-    const html = renderToStaticMarkup(createElement(MetricCard, { slug: "test", metric: { ...metric, key: "revenue", label: "Revenue (net of refunds)", definition: "Paid billing amounts minus refunds, by the day they happened in your business timezone.", source: "Billing", unit: "currency_minor", total: null, currency: "EUR", points: [], partialReason: "Recorded currency differs; total unavailable." }, span: 7 }));
+    const html = renderToStaticMarkup(createElement(MetricCard, { slug: "test", metric: { ...metric, key: "revenue", label: "Revenue (net of refunds)", definition: METRICS.revenue.definition, source: "Billing", unit: "currency_minor", total: null, currency: "EUR", points: [], partialReason: "Recorded currency differs; total unavailable." }, span: 7 }));
     expect(html).toContain("Total unavailable");
     expect(html).toContain("Recorded currency differs");
     expect(html).not.toContain("€");

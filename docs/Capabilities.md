@@ -14,6 +14,8 @@ First-recorded payer counts use positive charges before refunds: a refunded firs
 
 Customer progress preserves each deal’s currency precision and shows separate recorded subtotals, unknown values and amounts needing review. Its assistant tool uses the same evidence and explicit units. Values are owner reports, not confirmed payments or forecasts. The newest-500-record limit is disclosed. Older non-two-decimal amounts need owner confirmation; already-copied historical CRM revenue is not automatically migrated. See [Verification](Verification.md).
 
+Owner-recorded sales now stay separate from imported payments across Results, attribution, payer forecasts, repeat-payment cohorts and strategy calculations. This avoids counting a CRM sale again when its billing payment is imported. Older real billing aggregates require a source refresh before use; repeated imports can rebuild the affected day without duplicating the payment. Sales remain available in Customer progress and owner-reported strategy context. Imported records still do not independently verify cash, profit, complete coverage or cross-provider deduplication. See [Verification](Verification.md).
+
 ## Availability labels
 
 - **Built:** implemented in the application. Test evidence is reported separately in [Verification](Verification.md); this label alone does not mean every current check has passed.

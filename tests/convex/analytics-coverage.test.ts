@@ -98,8 +98,7 @@ describe("comparable Results periods", () => {
 
   it("compares negative net revenue without treating it as zero", async () => {
     const t = setup(); const w = await workspace(t);
-    await daily(t, w.orgId, week, -1000, "billing", "revenue");
-    await daily(t, w.orgId, previous, -2000, "billing", "revenue");
+    await t.mutation(internal.analytics.ingestRevenue, { orgId: w.orgId, events: [...week, ...previous].map(offset => ({ source: "stripe", sourceEventId: `refund-${offset}`, occurredAt: now - offset * 86_400_000, currency: "USD", amountMinor: offset <= 7 ? 1000 : 2000, refundedMinor: 0, kind: "refund" as const })) });
     const metric = (await w.client.query(api.analytics.overview, { slug: w.slug, days: 7 })).metrics.find(m => m.key === "revenue")!;
     expect(metric).toMatchObject({ total: -7000, previousTotal: -14000, partial: false, comparisonReason: null });
   });

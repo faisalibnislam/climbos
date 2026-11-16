@@ -4,6 +4,7 @@ import { getLiveConfig } from "./lib/config";
 import { attribute, computeCohorts, OVERLAP_WARNING, summarizePlatformClaims } from "../shared/attribution";
 import { zonedTime } from "../shared/autopilot";
 import type { RevenueEvent, Touch } from "../shared/attribution/types";
+import { isPaymentRecord, PAYMENT_BASIS, SALES_PAYMENT_NOTE, LEGACY_BILLING_NOTE, needsPaymentRefresh } from "../shared/attribution/paymentEvidence";
 import { addDays, recentForecastHistory, metricHealth, runForecast, type DailyPoint, type MetricHealthAlert, scoreForecast, isValidDateString, daysBetween } from "../shared/forecasting";
 import { formatMoney, majorToMinor, minorToMajor } from "../shared/economics/currency";
 import { summarizeAiReferralRows } from "../shared/integrations/ga4";
@@ -18,8 +19,8 @@ const DAY = 86_400_000;
 export const METRICS = {
   visits: { label: "Website visits", unit: "count", definition: "Sessions reported by your analytics.", source: "Google Analytics 4" },
   signups: { label: "Sign-ups", unit: "count", definition: "Key events you confirmed as a sign-up (e.g. account created).", source: "Google Analytics 4" },
-  paid_conversions: { label: "First recorded paying customers", unit: "count", definition: "Distinct source-scoped customer IDs whose first recorded positive charge before refunds falls in this period. A later refund does not make a renewal a new customer. Payments without a customer ID are excluded; the same person across billing systems may count more than once, and incomplete billing history can make this count low.", source: "Billing" },
-  revenue: { label: "Revenue (net of refunds)", unit: "currency_minor", definition: "Paid billing amounts minus refunds, by the day they happened in your business timezone.", source: "Billing" },
+  paid_conversions: { label: "First recorded paying customers", unit: "count", definition: "Distinct source-scoped customer IDs whose first recorded positive charge before refunds falls in this period. Owner-recorded CRM sales are excluded. A later refund does not make a renewal a new customer. Payments without a customer ID are excluded; the same person across billing systems may count more than once, and incomplete billing history can make this count low.", source: "Billing" },
+  revenue: { label: "Revenue (net of refunds)", unit: "currency_minor", definition: "Imported payment amounts minus refunds, by the day they happened in your business timezone. Owner-recorded CRM sales are excluded; imported records do not independently verify cash or profit.", source: "Billing" },
 } as const;
 export type MetricKey = keyof typeof METRICS;
 
@@ -38,11 +39,12 @@ export async function upsertDailyImpl(
   kind: "observed" | "attributed" | "platform_reported",
   rows: { metricKey: string; date: string; value: number; channel?: string }[],
   isFixture = false,
+  billingBasis?: typeof PAYMENT_BASIS,
 ) {
   const now = Date.now();
   const org = await ctx.db.get(orgId);
   if (!org) throw appError("NOT_FOUND", "Workspace not found.");
-  const basis = { workspaceTimezone: org.timezone, workspaceCurrency: org.currency };
+  const basis = { workspaceTimezone: org.timezone, workspaceCurrency: org.currency, billingBasis };
   for (const r of rows) {
     const existing = await ctx.db
       .query("metricDaily")
@@ -94,6 +96,8 @@ export const ingestRevenue = internalMutation({
         .withIndex("by_org_source_event", (q) => q.eq("orgId", orgId).eq("source", e.source).eq("sourceEventId", e.sourceEventId))
         .first();
       if (dup) {
+        // Re-imports also repair aggregates made under an older evidence definition.
+        days.add(dayKey(dup.occurredAt, org.timezone));
         // A refund update on a known event: keep the latest refunded amount.
         if (dup.refundedMinor !== e.refundedMinor) {
           await ctx.db.patch(dup._id, { refundedMinor: e.refundedMinor });
@@ -130,16 +134,19 @@ async function rematerializeRevenueDay(ctx: MutationCtx, orgId: Id<"organization
   const events = await ctx.db
     .query("revenueEvents")
     .withIndex("by_org_occurred", (q) => q.eq("orgId", orgId).gte("occurredAt", start).lt("occurredAt", end))
-    .take(10_000);
+    .take(10_001);
+  if (events.length > 10_000) throw appError("LIMIT_REACHED", "The billing-day rebuild exceeded its 10,000-record window. No partial payment total was saved.");
   let revenue = 0;
   for (const e of events) {
-    if (dayKey(e.occurredAt, timezone) !== day || e.currency !== currency) continue;
+    if (!isPaymentRecord(e) || e.isFixture || dayKey(e.occurredAt, timezone) !== day || e.currency !== currency) continue;
+    if (!Number.isSafeInteger(e.amountMinor) || !Number.isSafeInteger(e.refundedMinor) || e.refundedMinor < 0 || (e.kind === "refund" ? e.refundedMinor !== 0 : e.amountMinor < 0 || e.refundedMinor > e.amountMinor)) throw appError("INVALID", "Billing amounts need correction before this payment total can be rebuilt.");
     if (e.kind === "refund") revenue -= Math.abs(e.amountMinor);
     else revenue += e.amountMinor - e.refundedMinor;
+    if (!Number.isSafeInteger(revenue)) throw appError("INVALID", "The payment total exceeds the supported numeric range.");
   }
   await upsertDailyImpl(ctx, orgId, "billing", "observed", [
     { metricKey: "revenue", date: day, value: revenue },
-  ]);
+  ], false, PAYMENT_BASIS);
 }
 
 /** First recorded paying customer, counted once per customer ID across imported billing history. */
@@ -156,15 +163,16 @@ async function firstRecordedPayerDays(
   const fromMs = midnight(from), endMs = midnight(addDays(to, 1));
   const limit = 2000;
   // Index fixture state before the bound: synthetic history cannot hide real payers.
-  const rows = await (org.kind === "demo"
+  const loaded = await (org.kind === "demo"
     ? ctx.db.query("revenueEvents").withIndex("by_org_occurred", q => q.eq("orgId", org._id).gte("occurredAt", fromMs).lt("occurredAt", endMs))
     : ctx.db.query("revenueEvents").withIndex("by_org_fixture_occurred", q => q.eq("orgId", org._id).eq("isFixture", false).gte("occurredAt", fromMs).lt("occurredAt", endMs))
   ).take(limit + 1);
+  const rows = loaded.filter(isPaymentRecord);
   const valid = (e: Doc<"revenueEvents">) => Boolean(e.source.trim() && e.sourceEventId.trim()) && /^[A-Z]{3}$/.test(e.currency)
     && Number.isSafeInteger(e.occurredAt) && Number.isSafeInteger(e.amountMinor) && Number.isSafeInteger(e.refundedMinor)
     && e.refundedMinor >= 0 && (e.kind === "refund" || e.amountMinor >= 0);
   const positiveCharge = (e: Doc<"revenueEvents">) => e.kind !== "refund" && e.amountMinor > 0;
-  let issue: string | null = rows.length > limit ? "Customer count unavailable: the billing-period read reached its 2,000-record limit." : null;
+  let issue: string | null = loaded.length > limit ? "Customer count unavailable: the billing-period read reached its 2,000-record limit." : null;
   if (rows.some(e => e.customerRef?.trim() && !valid(e))) issue = "Customer count unavailable: identified billing records contain invalid amounts, dates, currencies or source identities.";
   if (rows.some(e => e.isFixture) && rows.some(e => !e.isFixture)) issue = "Customer count unavailable: synthetic and real billing observations are mixed.";
   const observed = rows.filter(e => e.customerRef?.trim() && valid(e) && positiveCharge(e));
@@ -289,6 +297,7 @@ async function series(ctx: { db: QueryCtx["db"] }, org: { _id: Id<"organizations
   if (rows.length > 2000) issues.add("the daily-data read reached its limit");
   for (const r of rows.slice(0, 2000)) {
     if (r.kind !== kind || r.channel) continue;
+    if (needsPaymentRefresh(r)) issues.add(LEGACY_BILLING_NOTE);
     if (!isValidDateString(r.date) || !Number.isFinite(r.value)) issues.add("daily observations contain invalid dates or values");
     if (byDate.has(r.date)) issues.add("duplicate or overlapping daily observations need reconciliation");
     if (r.workspaceTimezone !== org.timezone || (metricKey === "revenue" && r.workspaceCurrency !== org.currency)) issues.add("recorded workspace currency/timezone settings differ or are unknown");
@@ -320,18 +329,19 @@ async function series(ctx: { db: QueryCtx["db"] }, org: { _id: Id<"organizations
 async function forecastSeries(ctx: { db: QueryCtx["db"] }, org: Pick<Doc<"organizations">, "_id" | "kind" | "timezone" | "currency">, metricKey: string, from: string, to: string, purpose: "fit" | "score" = "fit") {
   if (metricKey === "paid_conversions") {
     const payers = await firstRecordedPayerDays(ctx, org, from, to);
-    return { points: payers.observedDates.map(date => ({ date, value: payers.counts.get(date) ?? 0 })), sources: ["billing-first-recorded-v2"], excludedContextRows: 0, isFixture: payers.isFixture, issue: payers.issue };
+    return { points: payers.observedDates.map(date => ({ date, value: payers.counts.get(date) ?? 0 })), sources: ["billing-first-recorded-v3"], excludedContextRows: 0, isFixture: payers.isFixture, issue: payers.issue };
   }
   const rows = await ctx.db.query("metricDaily").withIndex("by_org_metric_date", q => q.eq("orgId", org._id).eq("metricKey", metricKey).gte("date", from).lte("date", to)).take(2001);
   const eligible = rows.filter(r => r.kind === "observed" && !r.channel);
   const observed = eligible.filter(r => r.workspaceTimezone === org.timezone && (metricKey !== "revenue" || r.workspaceCurrency === org.currency));
   const excludedContextRows = eligible.length - observed.length;
-  const sources = [...new Set(observed.map(r => r.source))].sort();
+  const sources = [...new Set(observed.map(r => r.source === "billing" && r.billingBasis === PAYMENT_BASIS ? `${r.source}:${PAYMENT_BASIS}` : r.source))].sort();
   let issue: string | null = rows.length > 2000 ? "The daily-data read reached its limit. Narrow or repair the source history before forecasting or scoring." : null;
   if (metricKey !== "revenue" && observed.some(r => r.value < 0)) issue = "Daily counts cannot be negative. Correct the source observations before forecasting or scoring.";
   if (sources.length > 1) issue = "More than one source reports this metric. Their totals may overlap; reconcile the sources before forecasting or scoring.";
   if (new Set(observed.map(r => r.date)).size !== observed.length) issue = "Duplicate daily observations need reconciliation before forecasting or scoring.";
   if (excludedContextRows && (purpose === "score" || !observed.length)) issue = "The daily records have different or unknown workspace currency/timezone settings. Refresh comparable source data before forecasting or scoring.";
+  if (observed.some(needsPaymentRefresh)) issue = `Revenue unavailable: ${LEGACY_BILLING_NOTE}.`;
   return { points: observed.map(r => ({ date: r.date, value: r.value })).sort((a,b) => a.date.localeCompare(b.date)), sources, excludedContextRows, isFixture: observed.some(r => r.isFixture), issue };
 }
 
@@ -464,9 +474,9 @@ export const overview = query({
       ctx.db.query("revenueEvents").withIndex("by_org_occurred", q => q.eq("orgId", org._id).gte("occurredAt", startMs).lt("occurredAt", endMs)).take(evidenceLimit + 1),
       ctx.db.query("touches").withIndex("by_org_occurred", q => q.eq("orgId", org._id).gte("occurredAt", startMs - 30 * DAY).lt("occurredAt", endMs)).take(evidenceLimit + 1),
     ]);
-    const revenueRows = rawRevenue.filter(r => !r.isFixture || org.kind === "demo");
+    const revenueRows = rawRevenue.filter(r => isPaymentRecord(r) && (!r.isFixture || org.kind === "demo"));
     const customers = new Set(revenueRows.map(r => r.customerRef).filter(Boolean));
-    const touches: Touch[] = rawTouches.filter(r => (!r.isFixture || org.kind === "demo") && customers.has(r.customerRef));
+    const touches: Touch[] = rawTouches.filter(r => (!r.source || isPaymentRecord({ source: r.source })) && (!r.isFixture || org.kind === "demo") && customers.has(r.customerRef));
     const events: RevenueEvent[] = revenueRows.map(r => ({ id: r._id, sourceEventId: r.sourceEventId, source: r.source, occurredAt: r.occurredAt, customerRef: r.customerRef, orderRef: r.orderRef, utmSource: r.utmSource, utmMedium: r.utmMedium, utmCampaign: r.utmCampaign, currency: r.currency, amountMinor: r.amountMinor, refundedMinor: r.refundedMinor, kind: r.kind }));
     const attributionIssues: string[] = [];
     if (rawRevenue.length > evidenceLimit || rawTouches.length > evidenceLimit) attributionIssues.push("Channel credit is unavailable: the billing or touch-history read reached its 2,000-record limit. A truncated history cannot establish first or last touch.");
@@ -550,7 +560,7 @@ export const overview = query({
         lastTouch: lastTouch ? summarizeAttribution(lastTouch) : null,
         firstTouch: firstTouch ? summarizeAttribution(firstTouch) : null,
         issues: [...new Set(attributionIssues)],
-        note: "Channel credit describes imported billing events and recorded source-scoped touches in a 30-day lookback. Payment events include renewals and repeat orders, not unique customers. Matching totals is arithmetic reconciliation of these records, not independent verification or complete billing coverage. Refunds inherit a matching order only when that order is in this reporting window; otherwise credit follows the refund timestamp. Missing recorded touches remain unattributed; they do not prove no marketing influence. Attribution shows association, not cause.",
+        note: SALES_PAYMENT_NOTE + " Channel credit describes imported billing events and recorded source-scoped touches in a 30-day lookback. Payment events include renewals and repeat orders, not unique customers. Matching totals is arithmetic reconciliation of these records, not independent verification or complete billing coverage. Refunds inherit a matching order only when that order is in this reporting window; otherwise credit follows the refund timestamp. Missing recorded touches remain unattributed; they do not prove no marketing influence. Attribution shows association, not cause.",
       },
       platformClaimsNote,
       platformClaims: claims
@@ -581,10 +591,11 @@ export const cohorts = query({
     // Free accounts: the last 30 days only.
     if (!(await featureAllowed(ctx, org, "full_history"))) start.setTime(now - (await getLiveConfig(ctx)).freeHistoryDays * 86_400_000);
     else start.setUTCMonth(start.getUTCMonth() - 11);
-    const rows = org.kind === "demo"
+    const loaded = org.kind === "demo"
       ? await ctx.db.query("revenueEvents").withIndex("by_org_occurred", q => q.eq("orgId", org._id).lte("occurredAt", now)).take(10_001)
       : await ctx.db.query("revenueEvents").withIndex("by_org_fixture_occurred", q => q.eq("orgId", org._id).eq("isFixture", false).lte("occurredAt", now)).take(10_001);
-    const truncated = rows.length > 10_000;
+    const rows = loaded.filter(isPaymentRecord);
+    const truncated = loaded.length > 10_000;
     const mixedFixture = rows.some(r => r.isFixture) && rows.some(r => !r.isFixture);
     const result = mixedFixture
       ? { rows: [], issue: "Synthetic and real billing records are mixed; review the source records." }

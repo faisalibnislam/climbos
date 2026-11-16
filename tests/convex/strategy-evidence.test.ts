@@ -15,6 +15,20 @@ describe("strategy evidence and owner control survive a re-plan", () => {
   beforeEach(() => { process.env.CLIMBOS_ENGINE = "v2"; process.env.CLIMBOS_FAKE_LLM = "ship"; requests.length = 0; });
   afterEach(() => { delete process.env.CLIMBOS_ENGINE; delete process.env.CLIMBOS_FAKE_LLM; });
 
+  it("keeps owner-recorded sales in pipeline context without presenting them as collected payments", async () => {
+    const t = setup();
+    const owner = await asNewUser(t, "strategy-owner-sales@example.com");
+    const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Owner Sales Co" });
+    await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "Understand sales and repeat purchases", horizonDays: 90, monthlyAdBudget: 0 });
+    await makePaid(t, orgId);
+    await owner.client.mutation(api.crm.create, { slug, name: "Buyer", stage: "won", value: 10 });
+    await owner.client.mutation(api.orgs.generatePlan, { slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    expect(requests.some(request => request.includes("Owner-recorded sales stay in the customer pipeline") && request.includes("OWNER PIPELINE OUTCOMES"))).toBe(true);
+    expect(await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).collect())).toHaveLength(1);
+    expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+  });
+
   it("carries invalid billing evidence into the actual strategy writer without an external action", async () => {
     const t = setup();
     const owner = await asNewUser(t, "strategy-invalid-billing@example.com");

@@ -1,5 +1,10 @@
 # Growth engine implementation ledger
 
+## Local update — 16 November 2026: separate CRM sales from payments
+
+The downstream CRM audit reproduced six evidence defects and repaired payment readers across daily aggregates, Results/Home, attribution, first-payer forecasts, cohorts, strategy/model checks and Results explanations. Owner sales remain in pipeline context; CRM ledger mirrors are excluded from payment calculations. Legacy real billing aggregates require refreshed payment-only evidence; repeated imports rebuild affected days without duplicating events. Forecast v3 and business-model hash versioning preserve the definition change. Verification: 136 focused regression/permission tests, typecheck/lint and two desktop/mobile checks. The original sale values and forecast history remain unchanged. Cross-provider deduplication, complete source coverage, high-volume aggregation and the full 410-item audit remain open. The Results explanation's wider coverage contract and the shared display helper's fixed /100 currency divisor are next audit leads. See [Verification](../Verification.md).
+
+
 Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs as written there. Baseline: `404c466`. Branch: `growth-engine-v2`.
 
 ## Local update — 16 November 2026: CRM money and evidence

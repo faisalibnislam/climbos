@@ -81,6 +81,7 @@ export function CohortsSection({ slug }: { slug: string }) {
       <h2 id="cohorts-heading" className="heading-section flex flex-wrap items-center gap-2">
         <Repeat2 aria-hidden="true" className="size-4 shrink-0 text-brand-800" /> Recorded repeat payments <ValueKind kind="observed" />
       </h2>
+      <p className="text-xs text-ink-3">Owner-recorded sales stay in the customer pipeline; they do not establish collected payments and are excluded here.</p>
       {data === undefined ? (
         <LoadingBlock label="Loading returning-customer information…" lines={3} />
       ) : data.issue ? (

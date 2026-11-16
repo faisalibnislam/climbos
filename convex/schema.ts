@@ -5351,6 +5351,8 @@ export default defineSchema({
     /** Workspace aggregation settings at ingestion, not proof of the provider's reporting timezone. */
     workspaceTimezone: v.optional(v.string()),
     workspaceCurrency: v.optional(v.string()),
+    /** Confirms exclusion of CRM sale mirrors from this materialized billing day. */
+    billingBasis: v.optional(v.literal("payments-excluding-crm-v1")),
   })
     .index("by_org_metric_date", ["orgId", "metricKey", "date"])
     .index("by_org_date", ["orgId", "date"]),

@@ -6,6 +6,7 @@ import { isServiceBusiness } from "../shared/acquisition/library";
 import { legacyPlanHash, planContentHash } from "./lib/planHash";
 import { majorToMinor, minorToMajor } from "../shared/economics/currency";
 import { v } from "convex/values";
+import { needsPaymentRefresh, LEGACY_BILLING_NOTE, SALES_PAYMENT_NOTE } from "../shared/attribution/paymentEvidence";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
@@ -561,14 +562,17 @@ export const resultsSnapshot = internalQuery({
       .withIndex("by_org_date", (q) => q.eq("orgId", run.orgId).gte("date", new Date(Date.now() - 60 * 86_400_000).toISOString().slice(0, 10)))
       .take(2000);
     const totals: Record<string, { last30: number; prev30: number; source: string }> = {};
+    const unknowns: Record<string, string> = {};
     const cutoff = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
     for (const r of rows) {
       if (r.kind !== "observed" || r.channel) continue;
+      if (needsPaymentRefresh(r)) { unknowns[r.metricKey] = LEGACY_BILLING_NOTE; continue; }
       const t = (totals[r.metricKey] ??= { last30: 0, prev30: 0, source: r.source });
       if (r.date >= cutoff) t.last30 += r.value;
       else t.prev30 += r.value;
     }
-    return JSON.stringify({ totals, note: "Observed values from connected sources. Revenue in minor currency units." });
+    for (const key of Object.keys(unknowns)) delete totals[key];
+    return JSON.stringify({ totals, unknowns, note: `Imported observations, not independent verification. Revenue in minor currency units. ${SALES_PAYMENT_NOTE}` });
   },
 });
 

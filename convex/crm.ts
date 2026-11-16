@@ -182,7 +182,8 @@ export const remove = mutation({
   },
 });
 
-/** Won deals with a value are revenue in Results (one event per deal, kept in step with edits). */
+/** Retain a sale mirror for compatibility. Its CRM source is owner-reported,
+ * excluded by payment readers; the pipeline remains the owner-facing record. */
 async function syncRevenue(ctx: MutationCtx, d: Doc<"deals">) {
   const existing = await ctx.db.query("revenueEvents").withIndex("by_org_source_event", (q) => q.eq("orgId", d.orgId).eq("source", "crm").eq("sourceEventId", d._id)).first();
   const counts = d.stage === "won" && (d.valueMinor ?? 0) > 0;
