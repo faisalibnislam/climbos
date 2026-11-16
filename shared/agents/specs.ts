@@ -1784,7 +1784,7 @@ function lintTrendEvidence(post: SocialPostsV2["posts"][number], input: AgentInp
   if (!matchingRecord) return [{ severity: "error", rule: "trend_evidence", message: "The source, date, and observation must match one dated signal record in this run's research notes.", path }];
 
   const retrievedAt = input.precomputedResearch?.retrievedAt;
-  if (!Number.isFinite(retrievedAt)) return [{ severity: "error", rule: "trend_evidence", message: "This research has no recorded retrieval date, so ClimbOS cannot verify that the trend is current. Use an evergreen idea or refresh the research.", path }];
+  if (!Number.isFinite(retrievedAt) || !Number.isFinite(new Date(retrievedAt!).getTime())) return [{ severity: "error", rule: "trend_evidence", message: "This research has no recorded retrieval date, so ClimbOS cannot verify that the trend is current. Use an evergreen idea or refresh the research.", path }];
   const observedAt = Date.parse(`${evidence.observationDate}T00:00:00.000Z`);
   const retrievedDate = new Date(retrievedAt!).toISOString().slice(0, 10);
   const retrievedDay = Date.parse(`${retrievedDate}T00:00:00.000Z`);
@@ -1808,10 +1808,10 @@ function lintSocial(out: SocialPostsV2, input: AgentInput, requestedChannels: st
     }
     const trendPath = `posts[${index}].trendSourceUrl`;
     const namesTrend = /\b(?:trend(?:ing)?|meme|viral)\b/i.test(`${post.title} ${post.hook} ${post.body} ${post.angle}`);
-    if (namesTrend && !post.trendSourceUrl) {
+    if ((namesTrend || post.trendEvidence) && !post.trendSourceUrl) {
       issues.push({ severity: "error", rule: "trend_source", message: "Each trend or meme-inspired post needs its own exact source URL from this run; otherwise use an evergreen idea.", path: trendPath });
     }
-    if (namesTrend) issues.push(...lintTrendEvidence(post, input, `posts[${index}].trendEvidence`));
+    if (namesTrend || post.trendSourceUrl || post.trendEvidence) issues.push(...lintTrendEvidence(post, input, `posts[${index}].trendEvidence`));
     if (post.trendSourceUrl) trendReferences.push({ url: post.trendSourceUrl, path: trendPath });
   });
   issues.push(...lintAvailableSourceUrls(trendReferences, input));

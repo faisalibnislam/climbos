@@ -187,6 +187,25 @@ describe("social intelligence routing", () => {
     const good = spec.lint?.({ copyBrief, posts: [post] } as never, input) ?? [];
     expect(good.filter((issue) => issue.rule === "trend_evidence")).toEqual([]);
 
+    // An adaptation need not announce that it is a meme to readers.
+    const understated = { ...post, title: "Show your progress", hook: "A useful reveal" };
+    expect((spec.lint?.({ copyBrief, posts: [understated] } as never, input) ?? []).filter(i => i.rule === "trend_evidence")).toEqual([]);
+    for (const invalid of [
+      { ...understated, trendEvidence: undefined },
+      { ...understated, trendSourceUrl: undefined },
+      { ...understated, trendEvidence: { ...post.trendEvidence, observation: "An invented observation." } },
+    ]) {
+      expect((spec.lint?.({ copyBrief, posts: [invalid] } as never, input) ?? []).some(i => i.rule === "trend_evidence")).toBe(true);
+    }
+    const evergreen = { ...understated, trendSourceUrl: undefined, trendEvidence: undefined };
+    expect((spec.lint?.({ copyBrief, posts: [evergreen] } as never, input) ?? []).filter(i => i.rule === "trend_evidence")).toEqual([]);
+    const retrievalTime = input.precomputedResearch!.retrievedAt!;
+    const maliciousTime = { ...understated, trendEvidence: { ...post.trendEvidence, retrievedAt: retrievalTime + 999999 } };
+    const saved = socialToArtifacts({ copyBrief, posts: [maliciousTime] } as never, retrievalTime + 1000, retrievalTime);
+    expect(saved[0].copyBrief?.trendEvidence?.retrievedAt).toBe(retrievalTime);
+    const unknownRetrieval = socialToArtifacts({ copyBrief, posts: [maliciousTime] } as never, retrievalTime + 1000);
+    expect(unknownRetrieval[0].copyBrief?.trendEvidence?.retrievedAt).toBeUndefined();
+
     const missingDate = spec.lint?.({ copyBrief, posts: [{ ...post, trendEvidence: undefined }] } as never, input) ?? [];
     expect(missingDate.some((issue) => issue.rule === "trend_evidence")).toBe(true);
     const wrongObservation = spec.lint?.({ copyBrief, posts: [{ ...post, trendEvidence: { ...post.trendEvidence, observation: "Another source claim not present in the notes." } }] } as never, input) ?? [];

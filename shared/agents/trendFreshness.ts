@@ -2,7 +2,7 @@
 export const MAX_CURRENT_TREND_AGE_MS = 30 * 86_400_000;
 
 type TrendBrief = {
-  trendEvidence?: { sourceUrl: string; observationDate: string; observation: string };
+  trendEvidence?: { sourceUrl: string; observationDate: string; observation: string; retrievedAt?: number };
   supportingSourceUrls: string[];
 };
 
@@ -25,6 +25,13 @@ export function trendFreshnessIssue(brief: TrendBrief | undefined, now: number, 
   // Observations have day precision. Use UTC days consistently with generation lint.
   const today = Math.floor(now / 86_400_000) * 86_400_000;
   if (observedAt > today) return "The trend observation is dated in the future. Correct its source date before approving or posting.";
+  if (evidence.retrievedAt !== undefined) {
+    const retrievedAt = evidence.retrievedAt;
+    if (!Number.isFinite(retrievedAt) || !Number.isFinite(new Date(retrievedAt).getTime()) || retrievedAt > now
+      || Math.floor(retrievedAt / 86_400_000) * 86_400_000 < observedAt) {
+      return "The trend research retrieval time conflicts with its observation date or the current time. Refresh its research before approving or posting.";
+    }
+  }
   const postingDay = Math.floor(Math.max(now, scheduledFor ?? now) / 86_400_000) * 86_400_000;
   if (postingDay - observedAt > MAX_CURRENT_TREND_AGE_MS) {
     return "This trend evidence exceeds ClimbOS's 30-day window at the posting time. Refresh the research and review a new draft, or use an evergreen idea.";

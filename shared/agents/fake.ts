@@ -32,7 +32,7 @@ function sample(s: JsonSchema, marker: string, key = ""): unknown {
         if (k === "approvedOfferPlayName") continue;
         // The fixture has no dated trend source bundle. Keep optional trend
         // evidence absent instead of filling its dates and claims with markers.
-        if (k === "trendEvidence") continue;
+        if (k === "trendEvidence" || k === "trendSourceUrl") continue;
         if (k === "publishingDetails") continue; // No observed destination or author in this generic fixture.
         if (k === "focusedMove") { out[k] = { version: 1, title: "Synthetic focused test move", why: "Synthetic reasoning for the workflow test, not evidence about a real business.", firstAction: "Review the synthetic draft.", aiCanDo: "A synthetic draft has been prepared for the automated workflow check.", evidenceRefs: [] }; continue; }
         if (k === "preparedWork") { out[k] = [{ title: "Synthetic fixture draft", kind: "page_copy", target: "To build: fixture page", draft: "Synthetic fixture draft for automated workflow checks only. No real business claims or outcomes are supplied.", evidenceRefs: [], checksBeforeUse: ["Fixture only; do not publish."], status: "draft" }]; continue; }

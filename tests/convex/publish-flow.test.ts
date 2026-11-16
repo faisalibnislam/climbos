@@ -163,7 +163,7 @@ describe("publishing lifecycle", () => {
       objection: "Unknown", proofFactIds: [], prohibitedClaims: [], channel: "facebook", format: "single image", deliveryContext: "Organic post",
       brandVoice: "Clear and practical", approvedExamples: [], cta: "Ask for details", afterAction: "Reply to the inquiry", trackingMetric: "Qualified inquiries",
       trackingMethod: "Unknown", supportingFactIds: [supportingFactId], supportingSourceUrls: ["https://example.com/trends/dated-format"],
-      trendEvidence: { sourceUrl: "https://example.com/trends/dated-format", observationDate: "2026-10-20", observation: "The source reports a dated format example." }, unknowns: ["Availability"],
+      trendEvidence: { sourceUrl: "https://example.com/trends/dated-format", observationDate: "2026-10-20", observation: "The source reports a dated format example.", retrievedAt: Date.parse("2026-10-21T12:00:00Z") }, unknowns: ["Availability"],
     };
     await t.run(async (ctx) => {
       const artifact = await ctx.db.get(artifactId);

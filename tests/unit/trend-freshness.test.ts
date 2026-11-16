@@ -20,6 +20,15 @@ describe("saved trend freshness", () => {
     const empty = brief("2026-10-20"); empty.trendEvidence.observation = " ";
     expect(trendFreshnessIssue(empty, now)).toMatch(/source/);
   });
+  it("rejects impossible research chronology while retaining legacy observations", () => {
+    const evidence = brief("2026-10-20");
+    const withTime = (retrievedAt: number) => ({ ...evidence, trendEvidence: { ...evidence.trendEvidence, retrievedAt } });
+    expect(trendFreshnessIssue(withTime(Date.parse("2026-10-20T10:00:00Z")), now)).toBeNull();
+    for (const retrievedAt of [now + 1, now - 86_400_000, Number.NaN, 1e20]) {
+      expect(trendFreshnessIssue(withTime(retrievedAt), now)).toMatch(/retrieval time/);
+    }
+  });
+
   it("does not relabel legacy or evergreen drafts as trend-based", () => {
     expect(trendFreshnessIssue(undefined, now)).toBeNull();
     expect(trendFreshnessIssue({ supportingSourceUrls: [] }, now)).toBeNull();

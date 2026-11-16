@@ -1683,7 +1683,7 @@ export const createContent = internalAction({
       args.runId,
       async () => {
         const fx = fixtureCtx(job, { channel: args.channel, quantity: args.quantity, request: args.brief });
-        const review: { shipped?: boolean | null } = {};
+        const review: AgentMeta = {};
         let items: ReturnType<typeof socialToArtifacts> = [];
         let posts = 0;
         if (args.job === "content_social") {
@@ -1715,7 +1715,7 @@ export const createContent = internalAction({
           // A run for one channel only ever produces posts for that channel.
           if (args.channel) out.posts = out.posts.map((p) => ({ ...p, channel: args.channel as typeof p.channel }));
           posts = out.posts.length;
-          items = socialToArtifacts(out, Date.now());
+          items = socialToArtifacts(out, Date.now(), review.retrievedAt);
         } else if (args.job === "content_ads") {
           const out = await runAgentTask<AdDraftsV2>(
             ctx,

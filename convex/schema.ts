@@ -3966,7 +3966,7 @@ export default defineSchema({
         trackingMethod: v.string(),
         supportingFactIds: v.array(v.id("businessFacts")),
         supportingSourceUrls: v.array(v.string()),
-        trendEvidence: v.optional(v.object({ sourceUrl: v.string(), observationDate: v.string(), observation: v.string() })),
+        trendEvidence: v.optional(v.object({ sourceUrl: v.string(), observationDate: v.string(), observation: v.string(), retrievedAt: v.optional(v.number()) })),
         unknowns: v.array(v.string()),
       }),
     ),

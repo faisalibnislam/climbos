@@ -290,7 +290,7 @@ describe("Engine v2 wiring", () => {
     expect(artifacts[0].status).toBe("in_review");
 
     const sourceUrl = "https://example.com/current-format";
-    const trendEvidence = { sourceUrl, observationDate: "2026-10-20", observation: "A dated source reports this short video format." };
+    const trendEvidence = { sourceUrl, observationDate: "2026-10-20", observation: "A dated source reports this short video format.", retrievedAt: Date.parse("2026-10-21T12:00:00Z") };
     const [trendArtifactId] = await t.mutation(internal.jobWrites.saveArtifacts, {
       runId,
       factIds: [],

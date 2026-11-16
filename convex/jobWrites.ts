@@ -810,6 +810,10 @@ export async function activePolicyVersion(ctx: MutationCtx, orgId: Id<"organizat
   return policy?.version ?? 1;
 }
 
+type ArtifactCopyBrief = Omit<CopyBrief, "trendEvidence"> & {
+  trendEvidence?: NonNullable<CopyBrief["trendEvidence"]> & { retrievedAt?: number };
+};
+
 export type ArtifactInput = {
   kind: Doc<"artifacts">["kind"];
   channel: Doc<"artifacts">["channel"];
@@ -818,7 +822,7 @@ export type ArtifactInput = {
   body: string;
   /** Owner-facing strategy cue; not included in the publishable copy body. */
   contentAngle?: string;
-  copyBrief?: CopyBrief;
+  copyBrief?: ArtifactCopyBrief;
   callToAction?: string;
   destinationUrl?: string;
   hashtags: string[];
@@ -833,13 +837,13 @@ export type ArtifactInput = {
   role: NonNullable<Doc<"artifacts">["createdByRole"]>;
 };
 
-type PersistedCopyBrief = Omit<CopyBrief, "offerFactIndexes" | "proofFactIndexes" | "supportingFactIndexes"> & {
+type PersistedCopyBrief = Omit<ArtifactCopyBrief, "offerFactIndexes" | "proofFactIndexes" | "supportingFactIndexes"> & {
   offerFactIds: Id<"businessFacts">[];
   proofFactIds: Id<"businessFacts">[];
   supportingFactIds: Id<"businessFacts">[];
 };
 
-function persistedCopyBrief(brief: CopyBrief | undefined, factIds: Id<"businessFacts">[]): PersistedCopyBrief | undefined {
+function persistedCopyBrief(brief: ArtifactCopyBrief | undefined, factIds: Id<"businessFacts">[]): PersistedCopyBrief | undefined {
   if (!brief) return undefined;
   const toIds = (indexes: number[]) => indexes.flatMap((index) => factIds[index] ? [factIds[index]!] : []);
   const { offerFactIndexes, proofFactIndexes, supportingFactIndexes, ...rest } = brief;
@@ -974,7 +978,7 @@ const artifactInputValidator = v.object({
     proofFactIndexes: v.array(v.number()), prohibitedClaims: v.array(v.string()), channel: v.string(), format: v.string(), deliveryContext: v.string(),
     brandVoice: v.string(), approvedExamples: v.array(v.string()), cta: v.string(), afterAction: v.string(), trackingMetric: v.string(), trackingMethod: v.string(),
     supportingFactIndexes: v.array(v.number()), supportingSourceUrls: v.array(v.string()),
-    trendEvidence: v.optional(v.object({ sourceUrl: v.string(), observationDate: v.string(), observation: v.string() })),
+    trendEvidence: v.optional(v.object({ sourceUrl: v.string(), observationDate: v.string(), observation: v.string(), retrievedAt: v.optional(v.number()) })),
     unknowns: v.array(v.string()),
   })),
   callToAction: v.optional(v.string()),
@@ -1049,7 +1053,7 @@ export function postVisualOf(p: SocialPostVisualFields & { imageIdea?: string })
   };
 }
 
-export function socialToArtifacts(out: Omit<SocialPostsOutput, "posts"> & { copyBrief?: CopyBrief; posts: (SocialPostsOutput["posts"][number] & SocialPostVisualFields & { angle?: string; trendSourceUrl?: string; trendEvidence?: NonNullable<CopyBrief["trendEvidence"]>; approvedOfferPlayName?: string })[] }, now: number): Omit<ArtifactInput, "imageStorageId">[] {
+export function socialToArtifacts(out: Omit<SocialPostsOutput, "posts"> & { copyBrief?: CopyBrief; posts: (SocialPostsOutput["posts"][number] & SocialPostVisualFields & { angle?: string; trendSourceUrl?: string; trendEvidence?: NonNullable<CopyBrief["trendEvidence"]>; approvedOfferPlayName?: string })[] }, now: number, researchRetrievedAt?: number): Omit<ArtifactInput, "imageStorageId">[] {
   return out.posts.map((p, i) => ({
     kind: "social_post" as const,
     channel: p.channel,
@@ -1059,8 +1063,14 @@ export function socialToArtifacts(out: Omit<SocialPostsOutput, "posts"> & { copy
     copyBrief: out.copyBrief ? {
       ...out.copyBrief,
       approvedOfferPlayName: p.approvedOfferPlayName ?? out.copyBrief.approvedOfferPlayName,
-      supportingSourceUrls: [...new Set([...out.copyBrief.supportingSourceUrls, ...(p.trendSourceUrl ? [p.trendSourceUrl] : [])])],
-      trendEvidence: p.trendEvidence,
+      supportingSourceUrls: [...new Set([...out.copyBrief.supportingSourceUrls, ...(p.trendSourceUrl ? [p.trendSourceUrl] : []), ...(p.trendEvidence ? [p.trendEvidence.sourceUrl] : [])])],
+      // Only the engine's research result can supply retrieval time, never model output.
+      trendEvidence: p.trendEvidence ? {
+        sourceUrl: p.trendEvidence.sourceUrl,
+        observationDate: p.trendEvidence.observationDate,
+        observation: p.trendEvidence.observation,
+        ...(Number.isFinite(researchRetrievedAt) && Number.isFinite(new Date(researchRetrievedAt!).getTime()) ? { retrievedAt: researchRetrievedAt } : {}),
+      } : undefined,
     } : undefined,
     hashtags: p.hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)),
     altText: p.altText,
