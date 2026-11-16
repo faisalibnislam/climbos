@@ -1,5 +1,9 @@
 ## Local update — 17 November 2026: social reports survive calendar gaps
 
+## Local update — 17 November 2026: default strategy diagnosis integration
+
+Requirement 3/8/10 revalidation found starter/focused plans bypassing deterministic diagnosis despite receiving raw owner counts. Two red workflow tests confirmed missing saved diagnosis. Extracted the existing detailed calculation into a shared jobs helper, supplied its explanation and typed constraints to default writer/reviewer, persisted its result and exposed the owner evidence in existing review details. The reviewer criterion now assesses alignment with the supported diagnosis or a better-supported alternative; speculative exploration stays protected. Engine v3.105-focused-diagnosis. Verification: 97 focused tests, two desktop/mobile checks, app/Convex typecheck and scoped lint. No new agent, schema, provider or action authority; no live model-quality claim.
+
 ## Local update — 17 November 2026: preserve funnel meaning through owner edits
 
 Requirement 3/10 revalidation traced current owner inputs through setFunnel, job context, deterministic diagnosis and persisted plans. The active HelpClimbOS form silently replaced non-30-day windows and omitted qualification/activation/signup metadata. Reproduced in the browser before repair, then retained the full existing input contract, exposed editable definitions and skipped untouched funnel writes. No schema, provider, prompt or execution changes. Two desktop/mobile checks and 73 focused tests passed; seven generation tests were rerun with an explicit 90-day leverage assertion. Full diagnosis quality, concurrent-edit handling and all 410 requirements remain unproven. See Verification.

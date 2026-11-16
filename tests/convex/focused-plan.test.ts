@@ -40,6 +40,41 @@ async function workspace() {
   await t.mutation(internal.engine.putResearchCache, { orgId, businessWebsite: "https://business.example/", cacheKey: "a".repeat(64), agentId: "business_insights", modelKey: "claude-haiku-5.5", notes: "Synthetic public-source notes for a workflow integration test. No measured demand.", sources: [{ url: "https://business.example/" }], expiresAt: Date.now() + 86400000 });
   return { t, owner, slug, orgId };
 }
+
+it.each(["focused", "starter"] as const)("carries deterministic diagnosis into the %s writer, review and saved plan", async planStyle => {
+  const { t, owner, slug, orgId } = await workspace();
+  await owner.client.mutation(api.workspace.setFunnel, { slug, periodDays: 90, leads: 100, activated: 12, newCustomers: 3, activationKind: "value" });
+  const { runId } = await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const saved = await t.run(async ctx => ({ run: await ctx.db.get(runId), plan: await ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first() }));
+  expect(saved.run?.status).toBe("verified");
+  expect(saved.plan?.expert?.constraintDiagnosis).toMatchObject({ constraint: "activation", status: "supported", leverage: expect.arrayContaining([{ stage: "purchase", perPoint: 0.04 }]) });
+  expect(state.requests.length).toBeGreaterThanOrEqual(2);
+  for (const request of state.requests) expect(JSON.stringify(request.messages)).toContain("DIAGNOSIS (computed from the owner's numbers");
+  expect(JSON.stringify(state.requests[0].messages)).toContain("not a proven cause");
+  expect(saved.plan?.expert?.strategyExploration?.bold.title).toBe(focusedPlanFixture().strategyExploration.bold.title);
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
+
+it.each(["unknown", "capacity", "conflicting"] as const)("preserves %s diagnosis evidence without suppressing bold exploration", async condition => {
+  const { t, owner, slug, orgId } = await workspace();
+  if (condition === "capacity") await owner.client.mutation(api.workspace.setUnitEconomics, { slug, newCustomersPerMonth: 0 });
+  if (condition === "conflicting") await t.run(async ctx => {
+    const business = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", orgId)).first())!;
+    // Simulate contradictory legacy data; the current owner mutation rejects it.
+    await ctx.db.patch(business._id, { funnel: { periodDays: 30, leads: 10, activated: 20, updatedAt: Date.now() } });
+  });
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first());
+  expect(plan?.expert?.constraintDiagnosis).toMatchObject(condition === "capacity"
+    ? { constraint: "delivery", status: "supported" }
+    : { constraint: "unknown", status: condition === "unknown" ? "insufficient_evidence" : "conflicting_inputs" });
+  expect(plan?.expert?.strategyExploration?.bold).toMatchObject({ precedentIds: [], feasibility: "low", evidenceStrength: "low" });
+  const prompt = JSON.stringify(state.requests[0].messages);
+  expect(prompt).toContain(condition === "capacity" ? "no remaining capacity" : condition === "conflicting" ? "counts contradict each other" : "not enough evidence to name the binding constraint");
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
 it("runs the real focused path with a matching quote, reuses bound research and prepared drafts, and preserves tenant/approval gates", async () => {
   const { t, owner, slug, orgId } = await workspace();
   const quote = await owner.client.query(api.workspace.planQuote, { slug, planStyle: "focused" });

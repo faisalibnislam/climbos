@@ -669,6 +669,28 @@ function planUnknowns(job: JobCtx, plays: { model?: { monthlySpendUsd?: number; 
   ].filter(Boolean);
 }
 
+/** The same owner-data calculation is used by starter, focused and detailed plans. */
+function strategyDiagnosis(job: JobCtx, profile: AcquisitionProfile, types = profile.types): Diagnosis {
+  const cycle = CYCLE_DAYS[profile.dims.salesCycle?.value ?? ""];
+  const target = job.goal?.target;
+  const monthlyChurn = job.business?.unitEconomics?.monthlyChurn ?? null;
+  const revenuePerCustomerMonth = job.business?.unitEconomics?.revenuePerCustomerMonthUsd ?? null;
+  const customerTargetPerMonth = target?.metric === "revenue_month"
+    ? revenueGoalNewCustomersPerMonth(target, job.goal?.horizonDays ?? 90, revenuePerCustomerMonth, monthlyChurn)
+    : target?.metric === "customers"
+      ? customerNeedPerMonth(target, job.goal?.horizonDays ?? 90, monthlyChurn)
+      : null;
+  return diagnose({
+    funnel: job.business?.funnel,
+    monthlyChurn,
+    newCustomersPerMonth: job.business?.unitEconomics?.newCustomersPerMonth,
+    ...(customerTargetPerMonth !== null ? { customerTargetPerMonth } : {}),
+    ...(target?.metric === "customers" || target?.metric === "revenue_month" ? { goalMetric: target.metric } : {}),
+    types,
+    ...(cycle !== undefined ? { salesCycleDays: cycle } : {}),
+  });
+}
+
 /** What the playbook contracts need to know about this business (shared/playbooks/contracts.ts). */
 function playbookContext(job: JobCtx, profile: AcquisitionProfile, d: Diagnosis): PlaybookContext {
   const f = job.business?.funnel;
@@ -1402,6 +1424,8 @@ export const buildStrategy = internalAction({
         task += `${businessResearchContext(job.business?.insights as Record<string, unknown> | undefined)}\n\n${learned ? `Prior learning (preserve observed vs reported vs inferred): ${learned}` : "No prior measured outcomes supplied."}${marketChangeContext(job)}`;
         const supplied = job.focusedResearch;
         const profile = profileFrom({ saved: (job.business as { acquisition?: SavedAcquisition } | null)?.acquisition ?? null, legacyType: job.business?.businessType, legacyTypes: typesFromLegacy, budgetMinor: job.goal?.monthlyAdBudgetMinor ?? 0, horizonDays: job.goal?.horizonDays ?? 14, currency: workspaceCurrency(job) });
+        const diagnosis = strategyDiagnosis(job, profile);
+        task += `\nCURRENT BUSINESS DIAGNOSIS (deterministic reading of owner-reported inputs, not independent verification):\n${diagnosisBrief(diagnosis)}\nUse the supported weak link when choosing the immediate move, or explain with current evidence why another constraint takes priority. Unknown or conflicting inputs cannot establish a cause. Compare alternatives without inventing missing data; keep useful preparation moving. A zero remaining capacity requires resolving delivery before accepting more demand. This diagnosis informs the grounded move; it must not suppress adjacent or bold exploration or turn a speculative option into approved execution.`;
         const geography = profile.dims.geography?.value;
         const timingContext = { today: localToday(job.org.timezone), timezone: job.org.timezone };
         task += `\n${focusedExplorationTask(creativeRangeOf(job))}`;
@@ -1409,7 +1433,7 @@ export const buildStrategy = internalAction({
         task += `\nFINAL DRAFT CHECK: Previous proposals and reviewer suggestions do not override the task's complete-copy or truth requirements. Remove all GUIDE-URL and other replacement slots from public copy. Use the exact existing app URL and describe it accurately while the new guide is unpublished. Name a proposed social platform rather than asking the owner to choose one. Do the supplied public-source checks yourself; leave owner tasks to actual product testing, review and access. Keep strategicDirection.nextHorizon under 1000 characters, using compoundingAdvantage and notNow for their separate purposes. Include concise conditional later milestones, the strongest alternative and a clear learning rule. Match every schema bound before returning JSON.`;
         task += `\nSOURCE CONFLICT CHECK: Prefer current first-party vendor instructions over an older secondary tutorial when they disagree. Explicit supplied source corrections supersede older proposed copy. Do not claim an alternative cannot batch, is slower, or is worse without direct support. Compare source-described workflows and choices; performance and buyer preference stay untested. Remove owner tasks that merely ask for another read of the exact public page already supplied.`;
         const input = agentInput(job, task, {
-          constraints: constraintsOf(job, { horizonDays: undefined, adaptiveTiming: true, ...(job.goal?.deadline ? { goalDeadline: job.goal.deadline } : {}), businessTypes: profile.types, ...(geography ? { serviceArea: geography } : {}) }),
+          constraints: constraintsOf(job, { horizonDays: undefined, adaptiveTiming: true, ...(job.goal?.deadline ? { goalDeadline: job.goal.deadline } : {}), diagnosis, businessTypes: profile.types, ...(geography ? { serviceArea: geography } : {}) }),
           timingContext,
           ...(supplied ? { precomputedResearch: supplied, availableSourceUrls: supplied.sources.map((source) => source.url) } : { ...(requestedStyle === "starter" ? { precomputedResearch: { notes: "No additional public research supplied. Use only supplied facts, label hypotheses and leave unverifiable targets unknown.", sources: [] } } : { research: researchFor("growth_strategy", { website: job.business?.website, businessName: job.business?.name ?? job.org.name, ...timingContext, horizonDays: job.goal?.horizonDays ?? 14, ...(geography ? { marketScope: geography } : {}) }) }) }),
         });
@@ -1424,7 +1448,7 @@ export const buildStrategy = internalAction({
         await ctx.runMutation(internal.jobWrites.saveStrategy, {
           runId, factIds: job.facts.map((fact) => fact.id),
           evidence: JSON.stringify(buildPlanEvidence({ skillIds: meta.skills ?? [], models: { growth_strategy: meta.models ?? {} }, currency: workspaceCurrency(job), goal: job.goal ? { statement: job.goal.statement, horizonDays: job.goal.horizonDays, monthlyAdBudget: minorToMajor(job.goal.monthlyAdBudgetMinor, job.goal.currency) } : null, facts: job.facts.map(fact => ({ id: String(fact.id), statement: fact.statement, evidenceKind: fact.evidenceKind, provenance: fact.provenance })), ownerEconomics: job.business?.unitEconomics, insights: businessResearchContext(job.business?.insights as Record<string, unknown> | undefined), research: [{ agentId: "growth_strategy", notes: meta.notes ?? supplied?.notes, sources, retrievedAt: meta.retrievedAt ?? supplied?.retrievedAt }] })),
-          strategy: JSON.stringify({ ...plan, strategyExploration: exploration, quality, webSources: sources, snapshot: await planSnapshot(job, businessResearchContext(job.business?.insights as Record<string, unknown> | undefined), sources.map((source) => source.url), mergeKnowledgeReferences(meta.knowledgeReferences)) }),
+          strategy: JSON.stringify({ ...plan, constraintDiagnosis: diagnosis, strategyExploration: exploration, quality, webSources: sources, snapshot: await planSnapshot(job, businessResearchContext(job.business?.insights as Record<string, unknown> | undefined), sources.map((source) => source.url), mergeKnowledgeReferences(meta.knowledgeReferences)) }),
         });
         await finish(ctx, runId, "verified", { output: { preparedDrafts: plan.preparedWork.length, planStyle: requestedStyle, quality: quality.state } });
         return;
@@ -1445,26 +1469,7 @@ export const buildStrategy = internalAction({
         priceUsdMonth: job.business?.unitEconomics?.revenuePerCustomerMonthUsd ?? entryPriceUsdMonth(job.facts),
         currency: workspaceCurrency(job),
       });
-      const diagnoseFor = (types: string[]) => {
-        const cycle = CYCLE_DAYS[profile.dims.salesCycle?.value ?? ""];
-        const target = job.goal?.target;
-        const monthlyChurn = job.business?.unitEconomics?.monthlyChurn ?? null;
-        const revenuePerCustomerMonth = job.business?.unitEconomics?.revenuePerCustomerMonthUsd ?? null;
-        const customerTargetPerMonth = target?.metric === "revenue_month"
-          ? revenueGoalNewCustomersPerMonth(target, job.goal?.horizonDays ?? 90, revenuePerCustomerMonth, monthlyChurn)
-          : target?.metric === "customers"
-            ? customerNeedPerMonth(target, job.goal?.horizonDays ?? 90, monthlyChurn)
-            : null;
-        return diagnose({
-          funnel: job.business?.funnel,
-          monthlyChurn,
-          newCustomersPerMonth: job.business?.unitEconomics?.newCustomersPerMonth,
-          ...(customerTargetPerMonth !== null ? { customerTargetPerMonth } : {}),
-          ...(target?.metric === "customers" || target?.metric === "revenue_month" ? { goalMetric: target.metric } : {}),
-          types,
-          ...(cycle !== undefined ? { salesCycleDays: cycle } : {}),
-        });
-      };
+      const diagnoseFor = (types: string[]) => strategyDiagnosis(job, profile, types);
       let diagnosis = diagnoseFor(profile.types);
       // Give the quick first take the same deterministic diagnosis as the full strategy.
       // It remains asynchronous and non-blocking, but can no longer recommend from profile alone.

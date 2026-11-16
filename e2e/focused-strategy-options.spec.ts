@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
 import { localDemoFixtures } from "./local-demo-fixtures";
 import { focusedPlanFixture } from "../tests/fixtures/focusedPlan";
+import { diagnose } from "../shared/agents/diagnosis";
 
 const envFile = process.env.CLIMBOS_DESIGN_E2E_ENV_FILE;
 const { rows, append } = localDemoFixtures(envFile);
@@ -28,7 +29,7 @@ test("focused plan exposes all three options and selecting bold grants no action
   await append("goals", [{ ...copyRow(goal), orgId: org._id }]);
   const savedGoal = (await rows("goals")).find(row => row.orgId === org._id)!;
   const fixture = focusedPlanFixture();
-  await append("strategies", [{ ...copyRow(plan), orgId: org._id, businessId: savedBusiness._id, goalId: savedGoal._id, runId: undefined, approvalId: undefined, summary: fixture.summary, expert: { ...(plan.expert as Record<string, unknown>), focusedMove: fixture.focusedMove, strategicDirection: fixture.strategicDirection, strategyExploration: fixture.strategyExploration, preparedWork: fixture.preparedWork, timing: fixture.timing, phases: fixture.phases, weekOneChecklist: fixture.weekOneChecklist, plays: [] } }]);
+  await append("strategies", [{ ...copyRow(plan), orgId: org._id, businessId: savedBusiness._id, goalId: savedGoal._id, runId: undefined, approvalId: undefined, summary: fixture.summary, expert: { ...(plan.expert as Record<string, unknown>), constraintDiagnosis: diagnose({ funnel: { periodDays: 90, leads: 100, activated: 12, newCustomers: 3, activationKind: "value" } }), focusedMove: fixture.focusedMove, strategicDirection: fixture.strategicDirection, strategyExploration: fixture.strategyExploration, preparedWork: fixture.preparedWork, timing: fixture.timing, phases: fixture.phases, weekOneChecklist: fixture.weekOneChecklist, plays: [] } }]);
   const snapshot = async () => Promise.all(["artifacts", "approvals", "actionReceipts", "workflowRuns"].map(async table => (await rows(table)).filter(row => row.orgId === org._id)));
   const before = await snapshot();
   await page.goto(`/app/${slug}/plan`);
@@ -67,5 +68,17 @@ test("focused plan exposes all three options and selecting bold grants no action
   await expectNoHorizontalScroll(page);
   await expectAccessible(page, "Focused strategy options");
   await bold.screenshot({ path: testInfo.outputPath("bold-option.png") });
+  await page.getByRole("tab", { name: "Research", exact: true }).click();
+  await page.getByRole("button", { name: "Open research and plan details", exact: true }).click();
+  await page.getByText("Where you stand and what the numbers mean", { exact: true }).click();
+  await page.getByText("What your reported numbers show", { exact: true }).click();
+  const diagnosis = page.locator("summary", { hasText: /^What your reported numbers show$/ }).locator("..");
+  await expect(diagnosis).toContainText("not independently verified measurements or proof of cause");
+  await expect(diagnosis).toContainText("People sign up but don't get going");
+  await expect(diagnosis).toContainText("12 of 100");
+  await expect(diagnosis).toContainText("Alternative explanation");
+  await expectNoHorizontalScroll(page);
+  await expectAccessible(page, "Focused diagnosis evidence");
+  await diagnosis.screenshot({ path: testInfo.outputPath("diagnosis-evidence.png") });
   expect(await snapshot()).toEqual(before);
 });

@@ -13,6 +13,8 @@ This handoff records what has been built, what was checked, what remains unverif
 
 ## Current status — 17 November 2026
 
+- Default-path diagnosis repair: starter/focused generation now reuses the detailed path’s deterministic owner-data calculation, supplies it to writer/reviewer and persists constraintDiagnosis. Owner review has a compact expandable evidence reading. Five new workflow cases cover both styles, unknown evidence, zero capacity and conflicting counts while retaining bold options and no external actions. Verified with 97 focused tests and two desktop/mobile checks; real-model decision quality remains unverified. Engine v3.105-focused-diagnosis. See Verification.
+
 - Funnel input repair: the active Add a few numbers form no longer rewrites a saved period to 30 days or drops qualification/activation/signup definitions when saving economics. The owner can edit the existing funnel contract in place. A browser regression reproduced the loss before repair; two desktop/mobile checks and 73 focused tests passed, followed by seven generation tests with an explicit 90-day calculation assertion. This does not add measurement imports, stale-editor protection or historical recovery. See Verification.
 
 - Full regression reconciliation: **3,011 tests across 403 files pass**, plus four desktop/mobile weekly-report and customer-group checks, app/Convex typechecks and scoped lint. Six earlier failures were resolved by updating obsolete expectations/payment fixtures and replacing two native controls with the existing shared controls. No runtime evidence or authorization guard was weakened. See the newest Verification entry. This is an automated baseline, not full 410-requirement acceptance.

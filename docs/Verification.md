@@ -1,3 +1,27 @@
+## 17 November 2026 — deterministic diagnosis reaches the default strategy workflow
+
+Traced owner business facts/funnel → `jobContext`/`businessBrief` → `buildStrategy` style branch → agent input/review → `saveStrategy` → Plan review. Confirmed the detailed branch calculated and persisted a diagnosis, but starter/focused branches received only raw counts and did not save constraintDiagnosis. Two new actual-workflow tests failed with an undefined saved diagnosis before repair.
+
+Extracted the unchanged detailed calculation into `strategyDiagnosis` inside jobs.ts and reused it for both default styles. The current input uses owner funnel, churn, remaining capacity, owner goal and existing profile sales-cycle/type interpretation. Its explanation now reaches writer and reviewer and the typed constraints; the trusted calculated object is attached after model generation and retained by existing persistence. The focused review criterion assesses the supported constraint or an evidence-supported alternative. Instructions keep uncertain/conflicting data provisional and preserve original adjacent/bold options. No new model, agent, provider or execution path. Engine v3.105-focused-diagnosis.
+
+The existing Where you stand panel adds an expandable owner-data reading with observations, applicable reference text, immature sales-cycle warnings, qualification definition and competing explanation. It labels calculations as based on owner reports, distinct from independent measurement or proof of cause; existing missing-input/conflict guidance remains available. Existing saved plans without a calculated diagnosis are unchanged.
+
+Commands/results:
+
+```sh
+pnpm exec vitest run tests/convex/focused-plan.test.ts -t 'carries deterministic diagnosis'
+pnpm exec vitest run tests/convex/focused-plan.test.ts tests/convex/plan-grounding.test.ts tests/convex/channel-cache.test.ts tests/convex/tenancy.test.ts tests/unit/diagnosis-playbooks.test.ts tests/unit/focused-plan.test.ts tests/convex/plan-history.test.ts tests/unit/design-guard.test.ts
+pnpm typecheck
+pnpm exec eslint convex/jobs.ts shared/agents/focusedRubric.ts shared/agents/specs.ts src/components/app/plan/ExpertPlan.tsx tests/convex/focused-plan.test.ts e2e/focused-strategy-options.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/focused-strategy-options.spec.ts
+git diff --check
+```
+
+Initial targeted run: **2 failed** on missing saved diagnosis. After repair: **97 tests across 8 files passed**, including both default styles, original 90-day leverage, writer/reviewer context, unknown evidence, zero capacity, conflicting legacy data, retained unproven bold options and no action receipts; existing plan-history, approval and tenancy checks pass. Typecheck/lint pass. Browser run initially failed because the new nested-details locator matched both parent and child; corrected the test selector. Final **2 desktop/mobile tests passed** (23.2 seconds), covering option selection/feedback without action authority, opening the diagnosis explanation, source/causality limits, accessibility and overflow. Inspected the mobile evidence screenshot; local development chrome remains visible. No full-suite rerun was needed for the focused passing scope.
+
+Limitations: fixtures validate wiring and deterministic outputs, not live model adherence, causal diagnosis, representative business outcomes or source completeness. The calculator retains its existing reference assumptions and partial evidence model. No historic plans were backfilled. This does not add a semantic guarantee that generated strategy follows the diagnosis; that is assessed by the existing model reviewer. No paid model calls, hosted deployment, real publishing/sending or campaign actions occurred. The owner’s .gitignore changes remain untouched; the full 410-item acceptance audit remains active.
+
 ## 17 November 2026 — preserve the meaning of owner funnel counts
 
 Audited requirement 3/10 through `PlanDetails` → `HelpClimbOS` → `workspace.setFunnel` → business record/job context → `jobs.diagnoseFor` → deterministic diagnosis and persisted plan. Backend schema/validation already supported custom periods, qualified-lead definitions, activation meaning and signup types. The active form omitted these and always resaved periodDays=30. An isolated desktop regression failed before the fix: an economics-only save changed 90 to 30 and removed qualifiedLeads, qualificationDefinition, activationKind and signupKind.

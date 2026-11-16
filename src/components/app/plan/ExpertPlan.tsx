@@ -429,6 +429,13 @@ export function NorthStar({ expert, slug }: { expert: ExpertView; slug: string }
             <p className="text-overline">What needs attention</p>
             {expert.decision ? <DecisionSummary d={expert.decision} /> : null}
             <ProseBullets text={expert.diagnosis} max={3} />
+            {expert.constraintDiagnosis ? <details className="rounded-[var(--radius-control)] border border-line p-3 text-sm">
+              <summary className="min-h-9 cursor-pointer font-medium">What your reported numbers show</summary>
+              <p className="mt-2 text-ink-2">Calculated from owner-reported inputs, not independently verified measurements or proof of cause.</p>
+              <p className="mt-2 font-medium">{expert.constraintDiagnosis.status === "supported" && expert.constraintDiagnosis.constraint !== "unknown" ? CONSTRAINT_LABEL[expert.constraintDiagnosis.constraint] : "The numbers do not establish one constraint yet."}</p>
+              {expert.constraintDiagnosis.readings.length ? <ul className="mt-2 list-disc space-y-1 pl-5 text-ink-2">{expert.constraintDiagnosis.readings.map((reading, i) => <li key={`${reading.stage}-${i}`}>{reading.observed}{reading.definition ? `; qualified means: ${reading.definition}` : ""}{reading.immature ? "; purchases may still be arriving because the period is shorter than the sales cycle" : ""}{reading.reference ? `; comparison reference: ${reading.reference}` : ""}</li>)}</ul> : <p className="mt-2 text-ink-2">No usable readings are available.</p>}
+              <p className="mt-2 text-ink-2">Alternative explanation: {expert.constraintDiagnosis.competing}</p>
+            </details> : null}
             {conflicts.length ? <Callout tone="warning" title="Check these business numbers first" action={<Link href={`/app/${encodeURIComponent(slug)}/settings/business`}>Update business numbers <ArrowRight aria-hidden className="inline size-3.5" /></Link>}>
               <ul className="list-disc pl-5">{conflicts.slice(0, 4).map((conflict, i) => <li key={`${conflict}-${i}`}>{conflict}</li>)}</ul>
             </Callout> : nextMeasurement ? <Callout tone={nextMeasurement.priority === "decision_critical" ? "warning" : "info"} title={nextMeasurement.priority === "decision_critical" ? "Needed before a firm diagnosis" : "Most useful next step"} action={<Link href={`/app/${encodeURIComponent(slug)}/settings/business`}>Add or update business numbers <ArrowRight aria-hidden className="inline size-3.5" /></Link>}>

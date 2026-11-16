@@ -8,6 +8,8 @@
 
 ## Current revalidation — 17 November 2026
 
+Requirements 3, 8 and 10 default-path follow-up: starter/focused plans previously passed raw counts but omitted the deterministic diagnosis from generation and persistence. Two failing workflow tests demonstrated this. They now share the detailed calculation, pass the explanation to writer/reviewer and typed constraints, and retain it in the saved plan. Existing review details expose supported readings, uncertainty and competing explanations. Five new cases cover both styles, unknown evidence, zero capacity and conflicting legacy counts without removing bold exploration or causing actions. This is evidence-flow and calculation integration; semantic recommendation alignment remains model-reviewed, not exhaustively code-proven. See Verification for 97-test/two-browser scope. Requirements remain partial.
+
 Requirements 3 and 10 input-integrity follow-up: a browser regression reproduced the active Add a few numbers form changing a saved 90-day funnel to 30 days and dropping its qualified-lead count/rule, activation meaning and signup type when only economics were edited. The active form now leaves untouched funnel records alone and exposes the existing definitions with the editable counts. A generation-boundary test confirms the 90-day period reaches deterministic monthly leverage in the saved diagnosis. These remain owner-entered numbers; cohort comparability, independent validity, concurrent edits, historical recovery and causal/expert diagnosis are not established. See Verification for the red/green browser evidence, 73 focused tests and seven final generation tests. Rows remain partial.
 
 ## Current revalidation — 16 November 2026
