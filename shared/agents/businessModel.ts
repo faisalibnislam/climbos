@@ -250,8 +250,17 @@ export interface BusinessModelTestRecord {
   testState: "not_started" | "designed" | "run" | "observed";
   outcomeNote?: string;
   outcomeEvidence: "measured" | "owner_reported" | "unknown";
+  outcome?: "met" | "missed" | "unclear" | "not_run";
   ownerDecision: "undecided" | "keep_current_model" | "keep_testing" | "adopt_alternative" | "drop_alternative";
   createdAt: number;
+}
+
+/** The original proposal is immutable run output; mode alone is not a hypothesis identity. */
+export function businessModelTestSubject(check: BusinessModelCheck, target: BusinessModelTestRecord["target"]) {
+  if (target === "deciding") return { name: "Deciding test", test: check.recommendation.decidingTest, successSignal: null, stopCondition: null };
+  const matches = check.alternatives.filter(a => a.mode === target);
+  const alternative = matches.length === 1 ? matches[0] : null;
+  return alternative ? { name: alternative.name, test: alternative.smallestTest.test, successSignal: alternative.smallestTest.successSignal, stopCondition: alternative.smallestTest.stopCondition } : null;
 }
 
 /** Latest owner-recorded test per target (records newest first; ties keep input order), for later checks and plans; notes are returned for an untrusted wrapper. */
@@ -261,7 +270,7 @@ export function businessModelTestsBrief(records: readonly BusinessModelTestRecor
   if (!latest.size) return { summary: "", notes: [] };
   const rows = [...latest.values()];
   return {
-    summary: `OWNER-RECORDED BUSINESS MODEL TESTS (latest per test; owner-reported, not verified): ${rows.map((r) => `${r.target}: ${r.testState.replace(/_/g, " ")}, evidence ${r.outcomeEvidence.replace(/_/g, " ")}, decision ${r.ownerDecision.replace(/_/g, " ")}`).join("; ")}. Assess the latest report against its audience, metric, observation window and evidence quality before changing the earlier judgment. A reported result is not automatic proof, and an unrun test is not evidence either way.`,
+    summary: `OWNER-RECORDED BUSINESS MODEL TESTS (latest per test; owner-reported, not verified): ${rows.map((r) => `${r.target}: ${r.testState.replace(/_/g, " ")}, evidence ${r.outcomeEvidence.replace(/_/g, " ")}, decision ${r.ownerDecision.replace(/_/g, " ")}, outcome ${r.outcome?.replace(/_/g, " ") ?? "not recorded"}`).join("; ")}. Assess the latest report against its audience, metric, observation window and evidence quality before changing the earlier judgment. A reported result is not automatic proof, and an unrun test is not evidence either way.`,
     notes: rows.filter((r) => r.outcomeNote?.trim()).map((r) => `${r.target}: ${r.outcomeNote!.trim().slice(0, 300)}`),
   };
 }

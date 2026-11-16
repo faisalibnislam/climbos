@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import type { Id } from "@convex/_generated/dataModel";
+import { errorMessage } from "@/components/app/errors";
 import { Badge, Button, Callout, Field, Select, Textarea, type Tone } from "@/components/ui";
 import { EvidenceReferences } from "./EvidenceReferences";
 import { MODEL_EVIDENCE_LABELS, type BusinessModelFreshness } from "../../../../shared/agents/businessModelFreshness";
@@ -10,8 +12,9 @@ type Target = "deciding" | "grounded" | "adjacent" | "bold";
 type TestState = "not_started" | "designed" | "run" | "observed";
 type Evidence = "measured" | "owner_reported" | "unknown";
 type Decision = "undecided" | "keep_current_model" | "keep_testing" | "adopt_alternative" | "drop_alternative";
-export interface BusinessModelTestView { testState: TestState; outcomeNote: string | null; outcomeEvidence: Evidence; ownerDecision: Decision; createdAt: number }
-export interface TestDraft { target: Target; testState: TestState; outcomeNote?: string; outcomeEvidence: Evidence; ownerDecision: Decision }
+type Outcome = "met" | "missed" | "unclear" | "not_run";
+export interface BusinessModelTestView { id?: Id<"businessModelTests">; testState: TestState; outcome?: Outcome | null; outcomeNote: string | null; outcomeEvidence: Evidence; ownerDecision: Decision; createdAt: number }
+export interface TestDraft { target: Target; testState: TestState; outcome?: Outcome; outcomeNote?: string; outcomeEvidence: Evidence; ownerDecision: Decision; expectedPreviousId: Id<"businessModelTests"> | null }
 
 const VERDICT: Record<BusinessModelCheck["verdict"]["status"], { label: string; tone: Tone }> = {
   model_holding: { label: "Model holding up", tone: "green" },
@@ -29,30 +32,40 @@ const MODE: Record<Target, string> = { deciding: "Deciding test", grounded: "Gro
 const DIRECTION: Record<BusinessModelCheck["marketSignals"][number]["direction"], string> = { headwind: "Headwind", tailwind: "Tailwind", neutral: "Neutral", unknown: "Direction unknown" };
 const BASIS: Record<string, string> = { owner_report: "owner-reported", measured: "measured", research: "research", site_claim: "website claim", inference: "inference", assumption: "assumption", unknown: "unknown" };
 const STATE_LABEL: Record<TestState, string> = { not_started: "Not started", designed: "Designed", run: "Running or run", observed: "Result observed" };
+export const MODEL_TEST_OUTCOME_LABEL: Record<Outcome, string> = { met: "Met the test goal", missed: "Missed the test goal", unclear: "Result unclear", not_run: "Not run" };
 const DECISION_LABEL: Record<Decision, string> = { undecided: "Undecided", keep_current_model: "Keep the current model", keep_testing: "Keep testing", adopt_alternative: "Adopt this alternative", drop_alternative: "Drop this alternative" };
 const label = (s: string) => s.replace(/_/g, " ");
 
 /** Owner-recorded progress for one test; observed results need a note, evidence applies only to observed results. */
-function TestRecorder({ target, saved, canEdit, onRecord }: { target: Target; saved?: BusinessModelTestView; canEdit: boolean; onRecord?: (draft: TestDraft) => Promise<unknown> }) {
+function TestRecorder({ target, saved, canEdit, onRecord }: { target: Target; saved?: BusinessModelTestView; canEdit: boolean; onRecord?: (draft: TestDraft) => Promise<Id<"businessModelTests">> }) {
   const [state, setState] = useState<TestState>(saved?.testState ?? "not_started");
   const [note, setNote] = useState(saved?.outcomeNote ?? "");
   const [evidence, setEvidence] = useState<Evidence>(saved?.outcomeEvidence ?? "unknown");
   const [decision, setDecision] = useState<Decision>(saved?.ownerDecision ?? "undecided");
+  const [outcome, setOutcome] = useState<Outcome | "unknown">(saved?.outcome ?? "unknown");
+  const [previousId, setPreviousId] = useState(saved?.id ?? null);
+  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const decisions = (Object.keys(DECISION_LABEL) as Decision[]).filter((d) => target !== "deciding" || (d !== "adopt_alternative" && d !== "drop_alternative"));
-  if (!canEdit) return saved ? <p className="text-xs text-ink-3">Test: {STATE_LABEL[saved.testState]} · {DECISION_LABEL[saved.ownerDecision]}{saved.outcomeNote ? ` · “${saved.outcomeNote}”` : ""} (owner-reported)</p> : null;
+  const stale = (saved?.id ?? null) !== previousId;
+  const outcomes = state === "observed" ? ["met", "missed", "unclear"] as const : state === "run" ? [] : ["not_run"] as const;
+  if (!canEdit) return saved ? <p className="text-xs text-ink-3">Test: {STATE_LABEL[saved.testState]} · {saved.outcome ? MODEL_TEST_OUTCOME_LABEL[saved.outcome] : "Outcome not recorded"} · {DECISION_LABEL[saved.ownerDecision]}{saved.outcomeNote ? ` · “${saved.outcomeNote}”` : ""} (owner-reported)</p> : null;
   return (
     <div className="flex flex-col gap-2 rounded-[var(--radius-control)] bg-surface-2 p-2.5">
       <div className="grid gap-2 sm:grid-cols-3">
-        <Field label="Test status"><Select options={(Object.keys(STATE_LABEL) as TestState[]).map((value) => ({ value, label: STATE_LABEL[value] }))} value={state} onValueChange={(v) => { setState(v as TestState); if (v !== "observed") setEvidence("unknown"); }} /></Field>
-        <Field label="Evidence"><Select options={[{ value: "unknown", label: "Unknown" }, ...(state === "observed" ? [{ value: "owner_reported", label: "I observed it" }, { value: "measured", label: "Measured" }] : [])]} value={evidence} onValueChange={(v) => setEvidence(v as Evidence)} /></Field>
+        <Field label="Test status"><Select options={(Object.keys(STATE_LABEL) as TestState[]).map((value) => ({ value, label: STATE_LABEL[value] }))} value={state} onValueChange={(v) => { setState(v as TestState); setOutcome("unknown"); if (v !== "observed") setEvidence("unknown"); }} /></Field>
+        <Field label="Evidence"><Select options={[{ value: "unknown", label: "Unknown" }, ...(state === "observed" ? [{ value: "owner_reported", label: "I observed it" }, { value: "measured", label: "I measured it" }] : [])]} value={evidence} onValueChange={(v) => setEvidence(v as Evidence)} /></Field>
         <Field label="Your decision"><Select options={decisions.map((value) => ({ value, label: DECISION_LABEL[value] }))} value={decision} onValueChange={(v) => setDecision(v as Decision)} /></Field>
       </div>
+      <Field label="Test outcome"><Select value={outcome} onValueChange={v => setOutcome(v as Outcome | "unknown")} options={[{ value: "unknown", label: "Not recorded" }, ...outcomes.map(value => ({ value, label: MODEL_TEST_OUTCOME_LABEL[value] }))]} /></Field>
       {state === "observed" ? <Field label="What happened"><Textarea value={note} maxLength={600} rows={2} autosize onChange={(e) => setNote(e.target.value)} placeholder="3 of 20 past customers asked to join" /></Field> : null}
+      <p className="text-xs text-ink-3">Compare with this test&apos;s original goal. Your report is not independently verified; adopting an idea does not mean the test succeeded.</p>
+      {stale ? <Callout tone="warning" title="A newer result was saved"><p>Your draft has not replaced it. Reload the saved result before making another update.</p><Button variant="secondary" size="sm" onClick={() => { setPreviousId(saved?.id ?? null); setState(saved?.testState ?? "not_started"); setNote(saved?.outcomeNote ?? ""); setEvidence(saved?.outcomeEvidence ?? "unknown"); setDecision(saved?.ownerDecision ?? "undecided"); setOutcome(saved?.outcome ?? "unknown"); setError(null); }}>Reload saved result</Button></Callout> : null}
+      {error ? <Callout tone="danger" title="Result not saved">{error}</Callout> : null}
       <div>
-        <Button size="sm" variant="secondary" disabled={busy || !onRecord || (state === "observed" && !note.trim())} onClick={async () => {
-          setBusy(true);
-          try { await onRecord?.({ target, testState: state, ...(note.trim() && state === "observed" ? { outcomeNote: note.trim() } : {}), outcomeEvidence: evidence, ownerDecision: decision }); } finally { setBusy(false); }
+        <Button size="sm" variant="secondary" disabled={busy || stale || !onRecord || (state === "observed" && !note.trim())} onClick={async () => {
+          setBusy(true); setError(null);
+          try { const id = await onRecord?.({ target, testState: state, ...(outcome !== "unknown" ? { outcome } : {}), ...(note.trim() && state === "observed" ? { outcomeNote: note.trim() } : {}), outcomeEvidence: evidence, ownerDecision: decision, expectedPreviousId: previousId }); if (id) setPreviousId(id); } catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
         }}>Save test result</Button>
       </div>
     </div>
@@ -60,7 +73,7 @@ function TestRecorder({ target, saved, canEdit, onRecord }: { target: Target; sa
 }
 
 /** The latest business model check: current model, market signals, labelled verdict, three alternatives, and the deciding test. */
-export function BusinessModelCheckView({ check, createdAt, isFixture, tests, canEdit, onRecord, precedents = [], freshness }: { freshness?: BusinessModelFreshness | null; check: BusinessModelCheck; precedents?: { id: string; title: string; mechanism: string; causalLimit: string; accessedAt: string; sources: { title: string; url: string }[] }[]; createdAt: number; isFixture?: boolean; tests: Partial<Record<Target, BusinessModelTestView>>; canEdit: boolean; onRecord?: (draft: TestDraft) => Promise<unknown> }) {
+export function BusinessModelCheckView({ check, createdAt, isFixture, tests, canEdit, onRecord, precedents = [], freshness }: { freshness?: BusinessModelFreshness | null; check: BusinessModelCheck; precedents?: { id: string; title: string; mechanism: string; causalLimit: string; accessedAt: string; sources: { title: string; url: string }[] }[]; createdAt: number; isFixture?: boolean; tests: Partial<Record<Target, BusinessModelTestView>>; canEdit: boolean; onRecord?: (draft: TestDraft) => Promise<Id<"businessModelTests">> }) {
   const v = VERDICT[check.verdict.status];
   const historical = freshness && freshness.status !== "unchanged";
   return (

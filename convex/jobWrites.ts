@@ -1,6 +1,6 @@
 import { businessModelEvidenceHashes } from "./lib/businessModelEvidence";
 import { businessModelFreshness, readBusinessModelEvidence } from "../shared/agents/businessModelFreshness";
-import { latestBusinessModelTests } from "./lib/businessModelTests";
+import { businessModelLearning } from "./lib/businessModelTests";
 import { GoalTimingSchema } from "../shared/agents/goalTiming";
 import { runGoal, goalPlans } from "./lib/goals";
 import { FocusedMoveSchema } from "../shared/agents/focusedPlan";
@@ -8,7 +8,7 @@ import { PreparedWorkSchema } from "../shared/agents/preparedWork";
 import { planRepairGuidance } from "../shared/agents/quality";
 import {focusedRefreshContext} from "../shared/agents/focusedPlan";
 import { latestDecisions, priorDecisionsBrief, type PriorDecision } from "../shared/agents/designDecisions";
-import { BusinessModelCheckSchema, businessModelPlanContext, businessModelTestsBrief, ownerModelSignals, ownerModelSignalsBrief } from "../shared/agents/businessModel";
+import { BusinessModelCheckSchema, businessModelPlanContext, ownerModelSignals, ownerModelSignalsBrief } from "../shared/agents/businessModel";
 import { feedbackBrief } from "./feedback";
 import { designLearningBrief } from "./lib/designLearning";
 import { brandConsistencyBrief } from "./lib/brandConsistency";
@@ -232,11 +232,12 @@ export const jobContext = internalQuery({
     const modelEvidenceHashes = run.kind === "strategy" || run.kind === "business_model_check"
       ? await businessModelEvidenceHashes({ org, business, facts, brand, goal, revenueRows, pipelineDeals, marketChanges }, concentrationToMs)
       : null;
-    const latestModelCheck = run.kind === "strategy" || run.kind === "business_model_check"
-      ? (await ctx.db.query("workflowRuns").withIndex("by_org_kind_created", (q) => q.eq("orgId", org._id).eq("kind", "business_model_check")).order("desc").take(10))
-          .find((r) => r.status === "verified" && !r.isFixture && typeof r.output === "string")
-      : undefined;
-    const modelTests = businessModelTestsBrief(latestModelCheck ? await latestBusinessModelTests(ctx, org._id, latestModelCheck._id) : []);
+    const recentModelChecks = run.kind === "strategy" || run.kind === "business_model_check"
+      ? await ctx.db.query("workflowRuns").withIndex("by_org_kind_created", (q) => q.eq("orgId", org._id).eq("kind", "business_model_check")).order("desc").take(10)
+      : [];
+    const latestModelCheck = recentModelChecks.find((r) => r.status === "verified" && !r.isFixture && typeof r.output === "string");
+    const modelTests = run.kind === "strategy" || run.kind === "business_model_check"
+      ? await businessModelLearning(ctx, org._id, recentModelChecks) : { summary: "", notes: [] as string[] };
     const businessModelTestsText = modelTests.summary;
     const businessModelTestNotes = modelTests.notes;
     const latestModel = (() => {

@@ -1,3 +1,31 @@
+## 16 November 2026 — business-model outcomes retain their original hypothesis
+
+Audit path: saved Business Model Check → owner test report → `businessModelTests` append-only rows → `jobWrites.jobContext` → untrusted business brief → later strategy/model check, plus the owner page and workspace export/deletion. Existing code already preserved the latest report per alternative beyond 200 updates, guarded tenant/edit permissions, kept measured evidence owner-labelled, and withheld stale model verdicts from plan constraints.
+
+Confirmed gaps: a newer check without test reports replaced the only check read for learning, dropping prior reports from the planning context. A regression reproduced an empty context despite a saved prior result. Reports carried only generic mode labels, without the original alternative/test alongside the outcome. The React form had no run-version key, so a new reactive check could retain an older hypothesis's draft. Updates had no stale-form check; there was no paginated owner history or explicit met/missed/unclear/not-run classification.
+
+Implemented through the existing workflow:
+
+- New reports optionally record **met**, **missed**, **unclear** or **not run** separately from the owner's decision. Contradictory progress/result combinations are refused. Missing legacy outcomes remain unknown; adopting/dropping a proposal is not classified as a successful/failed test. Even owner-selected measured evidence remains unverified owner reporting.
+- An optional `workflowRuns.lastBusinessModelTestAt` timestamp and indexed query retain recently reported checks independently of repeated untested reruns. Planning uses latest reports per original target from up to three eligible checks, sampled from ten recently reported checks plus ten newest checks for legacy coverage. Each report carries the original check/report identity, dates, proposal, test, success/stop criteria, result, evidence label, decision and note. Repeated corrections are not independent experiments. Real learning excludes fixture, foreign-tenant, malformed and ambiguous source hypotheses. Unrelated content jobs receive none of this model-test context.
+- The brief labels the historical context and limits. Each report has its own untrusted 2,000-character excerpt so a long earlier report cannot consume all later reports' space. Missing/truncated details remain unknown; this is bounded context, not a complete-history or semantic-relevance guarantee. Engine version is `v3.86-business-model-learning`.
+- The owner page has a lazy, paginated Test history view with original test/criteria, report date and prior updates. Viewers can inspect it but cannot report results. Workspace export/deletion continues through the existing table handling.
+- Forms are keyed to the original check. The current UI sends its last-seen report ID (or null for a first report); a concurrent newer report causes rejection before insertion. Owners keep their unsaved text and explicitly reload the newer saved result. Successful saves advance the form version. Older callers may omit the version guard and still append; they do not overwrite past rows. Recording an outcome or viewing history does not launch tests, change prices, create approvals, send, publish or spend.
+
+Verification:
+
+```text
+pnpm exec vitest run tests/convex/business-model-learning.test.ts tests/convex/business-model-check.test.ts tests/convex/strategy-learning-sources.test.ts tests/convex/strategy-evidence.test.ts tests/convex/creative-strategy.test.ts tests/convex/experiment-outcomes.test.ts tests/convex/tenancy.test.ts tests/convex/safety.test.ts tests/unit/business-model-check.test.ts tests/unit/business-model-freshness.test.ts tests/unit/business-model-view.test.tsx tests/unit/strategy-prompt-cost.test.ts
+80 passed across 12 files
+
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/business-model-context.spec.ts
+4 passed in 28.6s: desktop Chromium and Pixel 7 emulation
+```
+
+Application/Convex typecheck, changed-file ESLint and `git diff --check` passed. The browser exercised a reactive new check replacing an open unsaved form, explicit unclear-result saving, stale-report rejection/reload, older-history visibility, preserved bold options, unchanged external-action records, automated accessibility and no horizontal overflow. A mobile capture was inspected. The workflow tests use synthetic evidence and fixture model responses; no real-model quality or business-impact claim follows. Local backend sync was loopback-only, and no generated files needed manual editing.
+
+Remaining: older unindexed checks outside the ten-newest fallback may be omitted from automatic context until another report indexes their check; paginated owner history remains available. History can contain incomplete/subjective evidence, and very long context fields are excerpted. There is no causal inference from these labels, verified performance, automatic implementation of a pivot or demonstrated expert-quality improvement. Complete requirements reconciliation and real-business evaluation remain open. No hosted deployment or live external action was performed.
+
 ## 16 November 2026 — provider settings checked before campaign activation
 
 Audit path: owner-prepared campaign → `ads.decide` exact-scope approval → scheduled `executeCampaignWrite` → atomic `claimCampaignWrite` → Google/Meta adapter → result receipt, campaign state and owner card. Existing permission, budget reservation, scope/hash, cancellation and no-replay guards were present. The activation branch previously sent ENABLED/ACTIVE without checking whether the provider campaign's current budget/settings still matched the approved local record. Failed requests also lacked a campaign-card explanation.

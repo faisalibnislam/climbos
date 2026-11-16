@@ -28,7 +28,7 @@ describe("business model check view", () => {
       check, createdAt: 0, tests: { bold: { testState: "observed", outcomeNote: "2 of 5 asked how to start", outcomeEvidence: "owner_reported", ownerDecision: "keep_testing", createdAt: 1 } }, canEdit: false,
     }));
     expect(html).not.toContain("Save test result");
-    expect(html).toContain("Result observed · Keep testing");
+    expect(html).toContain("Result observed · Outcome not recorded · Keep testing");
     expect(html).toContain("2 of 5 asked how to start");
   });
 

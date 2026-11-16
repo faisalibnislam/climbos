@@ -50,6 +50,29 @@ describe("business model check", () => {
     expect(audits.some((a) => a.action === "business_model.check_started")).toBe(true);
   });
 
+  it("retains a prior hypothesis and outcome after a newer check has no test reports", async () => {
+    const t = setup(); const w = await workspace(t, "model-continuity@example.com");
+    const { runId } = await w.client.mutation(api.businessModel.start, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    await w.client.mutation(api.businessModel.recordTest, { slug: w.slug, runId, target: "bold", testState: "observed", outcomeNote: "No qualified customers accepted the outcome-based offer.", outcomeEvidence: "owner_reported", ownerDecision: "keep_testing" });
+    const source = (await t.run(ctx => ctx.db.get(runId)))!;
+    const output = JSON.parse(source.output!);
+    output.alternatives.find((a: { mode: string }) => a.mode === "bold").name = "Different new bold proposal";
+    const strategyId = await t.run(async ctx => {
+      const { _id, _creationTime, ...base } = source;
+      await ctx.db.insert("workflowRuns", { ...base, output: JSON.stringify(output), createdAt: source.createdAt + 1 });
+      return ctx.db.insert("workflowRuns", { ...base, kind: "strategy", status: "executing", output: undefined });
+    });
+    const context = (await t.query(internal.jobWrites.jobContext, { runId: strategyId }))!;
+    expect(context.businessModelTestNotes.join("\n")).toContain("No qualified customers accepted");
+    expect(context.businessModelTestNotes.join("\n")).toContain(runId);
+    expect(context.businessModelTestNotes.join("\n")).not.toContain("Different new bold proposal");
+    await t.run(ctx => ctx.db.patch(strategyId, { kind: "content" }));
+    const unrelated = (await t.query(internal.jobWrites.jobContext, { runId: strategyId }))!;
+    expect(unrelated.businessModelTestsText).toBe("");
+    expect(unrelated.businessModelTestNotes).toEqual([]);
+  });
+
   it("records owner test results with validation, and keeps viewers and other workspaces out", async () => {
     const t = setup();
     const w = await workspace(t, "model-tests@example.com");
@@ -79,7 +102,7 @@ describe("business model check", () => {
     const context = await t.query(internal.jobWrites.jobContext, { runId: strategyRunId });
     expect(context?.businessModelContext).toContain("AI judgment for owner review");
     expect(context?.businessModelTestsText).toContain("grounded: observed, evidence owner reported, decision keep testing");
-    expect(context?.businessModelTestNotes).toEqual(["grounded: 3 of 20 past customers asked to join the plan."]);
+    expect(context?.businessModelTestNotes.map(note => JSON.parse(note))).toMatchObject([{ checkId: runId, target: "grounded", note: "3 of 20 past customers asked to join the plan.", outcome: "not_recorded" }]);
   });
   it("keeps the latest result for every alternative beyond 200 updates, and exports and deletes scoped history", async () => {
     const t = setup();
@@ -99,7 +122,7 @@ describe("business model check", () => {
     expect(latest.result!.tests.bold.outcomeNote).toBe("Retain bold evidence");
     const strategyRunId = await t.run(async ctx => ctx.db.insert("workflowRuns", { ...(await ctx.db.get(runId))!, _id: undefined, _creationTime: undefined, kind: "strategy", status: "executing", output: undefined } as never));
     const context = await t.query(internal.jobWrites.jobContext, { runId: strategyRunId });
-    expect(context!.businessModelTestNotes).toEqual(expect.arrayContaining(["adjacent: Adjacent update 204", "bold: Retain bold evidence", "deciding: Retain deciding evidence", "grounded: Retain grounded evidence"]));
+    expect(context!.businessModelTestNotes.map(note => { const r = JSON.parse(note); expect(r.checkId).toBe(runId); return `${r.target}: ${r.note}`; })).toEqual(expect.arrayContaining(["adjacent: Adjacent update 204", "bold: Retain bold evidence", "deciding: Retain deciding evidence", "grounded: Retain grounded evidence"]));
     expect(context!.businessModelTestNotes).toHaveLength(4);
     expect(context!.businessModelTestsText).toContain("not automatic proof");
     expect(context!.businessModelTestsText).not.toContain("outranks");

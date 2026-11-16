@@ -1,3 +1,9 @@
+## Local update — 16 November 2026: durable business-model test learning
+
+Reproduced loss of earlier test evidence when a new model check had no reports. Extended existing report persistence/context to bind each result to its original check, proposal and test; added optional explicit outcomes, indexed recently reported checks, bounded historical retrieval and an owner history view. Current forms reset on a new check and reject stale saves without deleting their drafts or earlier reports. Kept original grounded/adjacent/bold options and separated owner decisions from evidence of effectiveness. No parallel agent or experiment subsystem was introduced.
+
+Verification: 80 tests across 12 relevant files, four desktop/mobile owner-workflow checks, typecheck/lint and isolated local sync. See [Verification](../Verification.md) for the reproduced defect, commands, exact context limits and legacy behavior. These are tested data/permission/UI improvements, not measured improvement in real-model recommendations or customer business outcomes. The full original requirement audit remains incomplete.
+
 ## Local update — 16 November 2026: verify provider settings before activation
 
 Confirmed the existing start path validated local approval but did not read current remote budget/settings. Added bounded Google and Meta preflight reads using existing adapters, deterministic exact-money/date/account comparisons, fresh persisted observation evidence and a final one-use dispatch check that revalidates current authorization after the read. The campaign card now displays the latest failed-request reason; the start dialog describes what is checked and what still needs manual review. Failed preflight creates no provider write and does not manufacture an uncertain remote outcome.

@@ -779,7 +779,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
       return gate && job.run.kind === "strategy" ? `DEMAND NOT YET VALIDATED: ${gate.reasons.join(" ")} The primary play must test demand without ad spend; any paid traffic belongs in a supporting play as a small, capped test.` : "";
     })(),
     job.businessModelTestsText,
-    job.businessModelTestNotes.length ? `OWNER NOTES ON BUSINESS MODEL TESTS:\n${untrusted("owner business model test notes", job.businessModelTestNotes.join("\n"), 1_200)}` : "",
+    job.businessModelTestNotes.length ? `ORIGINAL BUSINESS MODEL TESTS AND OWNER REPORTS (historical, bounded excerpts, not independently verified; compare each result only with its own original test; missing or truncated details are unknown):\n${job.businessModelTestNotes.map((note, i) => untrusted(`owner business model test report ${i + 1}`, note, 2_000)).join("\n")}` : "",
     job.pipelineLossNotes.length ? `OWNER NOTES ON RECENTLY LOST DEALS (untrusted, owner-entered; may be partial or wrong):\n${untrusted("owner lost-deal notes", job.pipelineLossNotes.join("\n"), 1_500)}` : "",
     job.resultsText ?? "",
     job.designLearningText ? `${DESIGN_LEARNING_POLICY}\n${untrusted("owner-recorded design tests", job.designLearningText, 12_000)}` : "",

@@ -8,6 +8,7 @@ import { errorMessage } from "@/components/app/errors";
 import { useCostDisplay } from "@/components/app/useCostDisplay";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { BusinessModelCheckView } from "@/components/app/plan/BusinessModelCheckView";
+import { BusinessModelTestHistory } from "@/components/app/plan/BusinessModelTestHistory";
 import { Button, Callout, EmptyState, toast } from "@/components/ui";
 
 /** Business model check: is the way this business makes money holding up, and which alternatives are worth a small test? */
@@ -44,6 +45,7 @@ export default function BusinessModelPage() {
       {data && !data.result && !data.running ? <EmptyState title="No business model check yet" body="Run one to see how your model holds up, with three alternatives." /> : null}
       {data?.result ? (
         <BusinessModelCheckView
+          key={data.result.runId}
           precedents={data.result.precedents}
           check={data.result.check}
           freshness={data.result.freshness}
@@ -51,9 +53,10 @@ export default function BusinessModelPage() {
           isFixture={data.result.isFixture}
           tests={data.result.tests}
           canEdit={data.canEdit}
-          onRecord={(draft) => recordTest({ slug, runId: data.result!.runId, ...draft }).then(() => toast({ tone: "success", title: "Test result saved" }), (e) => toast({ tone: "danger", title: errorMessage(e) }))}
+          onRecord={async (draft) => { const id = await recordTest({ slug, runId: data.result!.runId, ...draft }); toast({ tone: "success", title: "Test result saved" }); return id; }}
         />
       ) : null}
+      {data ? <BusinessModelTestHistory key={slug} slug={slug} /> : null}
     </div>
   );
 }

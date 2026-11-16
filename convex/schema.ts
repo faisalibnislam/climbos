@@ -2345,6 +2345,8 @@ export default defineSchema({
     testState: v.union(v.literal("not_started"), v.literal("designed"), v.literal("run"), v.literal("observed")),
     outcomeNote: v.optional(v.string()),
     outcomeEvidence: v.union(v.literal("measured"), v.literal("owner_reported"), v.literal("unknown")),
+    /** Owner classification against the original test; missing on older reports means unknown. */
+    outcome: v.optional(v.union(v.literal("met"), v.literal("missed"), v.literal("unclear"), v.literal("not_run"))),
     ownerDecision: v.union(v.literal("undecided"), v.literal("keep_current_model"), v.literal("keep_testing"), v.literal("adopt_alternative"), v.literal("drop_alternative")),
     createdBy: v.id("users"),
     createdAt: v.number(),
@@ -4795,6 +4797,8 @@ export default defineSchema({
 
   /* ---------------- Workflow engine ---------------- */
   workflowRuns: defineTable({
+    /** Latest append-only business-model test report; indexes learning independently of untested new checks. */
+    lastBusinessModelTestAt: v.optional(v.number()),
     orgId: v.id("organizations"),
     /** Profile and originating request let budgets and outcome reporting follow child work. */
     customAgentId: v.optional(v.id("customAgents")),
@@ -4982,6 +4986,7 @@ export default defineSchema({
     .index("by_created", ["createdAt"])
     .index("by_org_created", ["orgId", "createdAt"])
     .index("by_org_kind_created", ["orgId", "kind", "createdAt"])
+    .index("by_org_kind_tested", ["orgId", "kind", "lastBusinessModelTestAt"])
     .index("by_org_custom_agent", ["orgId", "customAgentId", "createdAt"])
     .index("by_org_custom_agent_parent", [
       "orgId",
