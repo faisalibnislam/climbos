@@ -1,3 +1,7 @@
+## 17 November 2026 — approved payload at email provider boundary
+
+Fourteen red regressions exposed changed provider content/destination passing send and result checks. The existing adapter now compares complete declared payloads at draft read-back, before send and after send; response IDs must match. Runtime plain text preserves the selected approved email and unsubscribe footer. Recovery requires the complete dispatch payload hash. 170 focused/permission tests, typecheck and lint pass. [Audit](marketing-provider-payload-audit.md) retains remote concurrency, normalization, live verification and full lifecycle limits.
+
 ## 17 November 2026 — original marketing-send result recovery
 
 Uncertain and interrupted post-dispatch sends now have an owner-facing read-only provider check. Exact saved identity/content/account evidence can confirm the original broadcast, preserve its earlier receipt and reconcile original-recipient history and reserved allowance once. 144 focused/permission/UI/adapter tests, typecheck and lint pass. [Audit](marketing-send-recovery-audit.md) retains legacy, pre-dispatch, provider-normalization, live-validation and full-lifecycle limits. No new send authority or production deployment.

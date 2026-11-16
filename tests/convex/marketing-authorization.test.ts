@@ -3,16 +3,16 @@ import type { FunctionArgs } from "convex/server";
 import { api, internal } from "../../convex/_generated/api";
 import { asNewUser, makePaid, setup } from "./helpers";
 
-const provider = vi.hoisted(() => ({ synced: [] as string[], drafts: 0, sends: 0, outcome: "verified" as "verified" | "uncertain" | "throw", onRead: null as null | (() => Promise<void>), recovery: null as null | Record<string, unknown>, reads: 0, onRecovery: null as null | (() => Promise<void>) }));
+const provider = vi.hoisted(() => ({ synced: [] as string[], drafts: 0, sends: 0, outcome: "verified" as "verified" | "uncertain" | "throw", onRead: null as null | (() => Promise<void>), recovery: null as null | Record<string, unknown>, reads: 0, onRecovery: null as null | (() => Promise<void>), lastDraft: null as unknown, sentDraft: null as unknown }));
 vi.mock("../../shared/integrations/resendMarketing", async original => ({
   ...await original<typeof import("../../shared/integrations/resendMarketing")>(),
   upsertMarketingContact: vi.fn(async ({ contact }: { contact: { email: string } }) => { provider.synced.push(contact.email); return { status: "verified", data: { email: contact.email, unsubscribed: false } }; }),
   listSegmentContacts: vi.fn(async () => { await provider.onRead?.(); return { ok: true, data: { truncated: false, items: provider.synced.map(email => ({ email, unsubscribed: false })) } }; }),
-  createDraftBroadcast: vi.fn(async () => { provider.drafts++; return { status: "verified", externalId: "broadcast-test" }; }),
+  createDraftBroadcast: vi.fn(async ({ draft }: { draft: unknown }) => { provider.lastDraft = draft; provider.drafts++; return { status: "verified", externalId: "broadcast-test" }; }),
   getBroadcast: vi.fn(async () => { provider.reads++; await provider.onRecovery?.(); return provider.recovery ? { ok: true, data: provider.recovery } : { ok: false, providerMessage: "Read unavailable" }; }),
-  sendBroadcast: vi.fn(async () => { provider.sends++; if (provider.outcome === "throw") throw new Error("Lost provider response"); return { status: provider.outcome, externalId: "broadcast-test" }; }),
+  sendBroadcast: vi.fn(async ({ expectedDraft }: { expectedDraft: unknown }) => { provider.sentDraft = expectedDraft; provider.sends++; if (provider.outcome === "throw") throw new Error("Lost provider response"); return { status: provider.outcome, externalId: "broadcast-test" }; }),
 }));
-afterEach(() => { provider.synced = []; provider.drafts = 0; provider.sends = 0; provider.outcome = "verified"; provider.onRead = null; provider.recovery = null; provider.reads = 0; provider.onRecovery = null; });
+afterEach(() => { provider.synced = []; provider.drafts = 0; provider.sends = 0; provider.outcome = "verified"; provider.onRead = null; provider.recovery = null; provider.reads = 0; provider.onRecovery = null; provider.lastDraft = null; provider.sentDraft = null; });
 
 async function fixture(body = "A useful update for subscribers.", recipients = 1) {
   const t = setup(), owner = await asNewUser(t, "email-boundary@example.com");
@@ -139,6 +139,9 @@ it("preserves the owner's parsed single-email subject and text", async () => {
   expect(f.args.html).not.toContain("Subject:");
   await f.t.action(internal.marketing.executeSend, f.args);
   expect(provider.sends).toBe(1);
+  expect(provider.lastDraft).toMatchObject({ subject: "The reviewed subject", text: expect.stringContaining("The reviewed message."), html: f.args.html, from: f.args.from, segmentId: "seg-news" });
+  expect(provider.lastDraft).toMatchObject({ text: expect.stringContaining("Unsubscribe: {{{RESEND_UNSUBSCRIBE_URL}}}") });
+  expect(provider.sentDraft).toEqual(provider.lastDraft);
 });
 
 it("does not turn an incomplete local contact scan into an approved audience", async () => {
@@ -159,7 +162,7 @@ async function uncertainFixture(recipients = 1) {
   await f.t.action(internal.marketing.executeSend, f.args);
   const dispatchedAt = Date.now() - 6 * 60_000, sentAt = Date.now() - 60_000;
   await f.t.run(ctx => ctx.db.patch(f.args.approvalId, { executionStartedAt: dispatchedAt, emailSendDispatchedAt: dispatchedAt }));
-  provider.recovery = { id: "broadcast-test", name: `climbos-${f.args.approvalId}`, segmentId: "seg-news", subject: f.args.subject, html: f.args.html, from: f.args.from, status: "sent", sentAt: new Date(sentAt).toISOString() };
+  provider.recovery = { id: "broadcast-test", name: `climbos-${f.args.approvalId}`, segmentId: "seg-news", subject: f.args.subject, html: f.args.html, from: f.args.from, text: (provider.lastDraft as { text: string }).text, status: "sent", sentAt: new Date(sentAt).toISOString() };
   return { ...f, sentAt, recoveryArgs: { slug: f.slug, artifactId: f.artifactId, approvalId: f.args.approvalId } };
 }
 
@@ -194,7 +197,7 @@ it("recovers the exact original send with separate evidence, one quota charge an
   expect((await f.t.run(ctx => ctx.db.get(reservation.periodId)))!.meterUsed.byoMarketingSends).toBe(1);
 });
 
-it.each(["id", "name", "segmentId", "subject", "html", "from", "status", "sentAt", "missing", "future", "early"] as const)("keeps a conflicting or incomplete %s read unknown", async field => {
+it.each(["id", "name", "segmentId", "subject", "html", "text", "replyTo", "topicId", "from", "status", "sentAt", "missing", "future", "early"] as const)("keeps a conflicting or incomplete %s read unknown", async field => {
   const f = await uncertainFixture();
   if (field === "missing") provider.recovery = null;
   else if (field === "future") provider.recovery!.sentAt = new Date(Date.now() + 60_000).toISOString();
@@ -207,13 +210,14 @@ it.each(["id", "name", "segmentId", "subject", "html", "from", "status", "sentAt
   expect(provider.drafts).toBe(1);
 });
 
-it.each(["role", "credential", "scope", "legacy", "recent", "reservation"] as const)("rejects recovery with changed %s before reading the provider", async change => {
+it.each(["role", "credential", "scope", "legacy", "legacy_payload", "recent", "reservation"] as const)("rejects recovery with changed %s before reading the provider", async change => {
   const f = await uncertainFixture();
   await f.t.run(async ctx => {
     const a = (await ctx.db.get(f.args.approvalId))!;
     if (change === "role") { const m = (await ctx.db.query("memberships").withIndex("by_org_user", q => q.eq("orgId", f.orgId).eq("userId", f.owner.userId)).unique())!; await ctx.db.patch(m._id, { role: "viewer" }); }
     if (change === "scope") await ctx.db.patch(a._id, { scope: { ...a.scope, destination: "other" } });
     if (change === "legacy") await ctx.db.patch(a._id, { emailRecipientHashBatches: undefined });
+    if (change === "legacy_payload") await ctx.db.patch(a._id, { emailProviderPayloadHash: undefined });
     if (change === "recent") await ctx.db.patch(a._id, { emailSendDispatchedAt: Date.now() });
     if (change === "reservation") await ctx.db.patch(f.args.reservationId, { status: "released" });
   });
@@ -266,7 +270,7 @@ it("keeps the exact provider identity before a worker can lose its final result"
   expect(a.emailRecipientHashBatches).toHaveLength(1);
   expect(a.executionFinishedAt).toBeUndefined();
   await f.t.run(ctx => ctx.db.patch(a._id, { emailSendDispatchedAt: Date.now() - 6 * 60_000 }));
-  provider.recovery = { id: "before-crash", name: `climbos-${a._id}`, segmentId: "seg-news", subject: f.args.subject, html: f.args.html, from: f.args.from, status: "sent", sentAt: new Date(Date.now() - 60_000).toISOString() };
+  provider.recovery = { id: "before-crash", name: `climbos-${a._id}`, segmentId: "seg-news", subject: f.args.subject, html: f.args.html, from: f.args.from, text: "A useful update for subscribers.\n\nYou're receiving this because you opted in to emails from Email boundary.\nUnsubscribe: {{{RESEND_UNSUBSCRIBE_URL}}}", status: "sent", sentAt: new Date(Date.now() - 60_000).toISOString() };
   expect(await f.owner.client.action(api.marketing.checkSendResult, { slug: f.slug, artifactId: f.artifactId, approvalId: a._id })).toMatchObject({ confirmed: true });
   await f.t.finishAllScheduledFunctions(() => undefined);
   expect(provider.sends).toBe(0); // Recovery made only the read.

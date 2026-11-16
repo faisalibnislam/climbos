@@ -554,7 +554,7 @@ describe("resendMarketing", () => {
   it("creates a draft broadcast (send:false) and verifies it reads back as draft", async () => {
     const { fetchImpl, calls } = scripted([
       { match: "/broadcasts", method: "POST", respond: json(200, { object: "broadcast", id: "b_1" }) },
-      { match: "/broadcasts/b_1", method: "GET", respond: json(200, { id: "b_1", name: "oct-sale-1", status: "draft", segment_id: "seg_1", html }) },
+      { match: "/broadcasts/b_1", method: "GET", respond: json(200, { id: "b_1", name: "oct-sale-1", status: "draft", segment_id: "seg_1", from: "Shop <news@shop.example>", subject: "Sale", html }) },
     ]);
     const res = await resend.createDraftBroadcast({ apiKey: key, fetchImpl, draft: { segmentId: "seg_1", from: "Shop <news@shop.example>", subject: "Sale", html, name: "oct-sale-1" } });
     expect(res).toMatchObject({ status: "verified", externalId: "b_1" });
@@ -563,21 +563,23 @@ describe("resendMarketing", () => {
 
   it("send: approval required, 504 → uncertain, reconcile reads status; never double-sends", async () => {
     const a = approval(resend.SEND_BROADCAST_ACTION, "b_1", "now");
+    const expectedDraft = { segmentId: "seg_1", from: "Shop <news@shop.example>", subject: "Sale", html, name: "oct-sale-1" };
+    const payload = { id: "b_1", segment_id: "seg_1", from: expectedDraft.from, subject: expectedDraft.subject, html, name: expectedDraft.name };
     const noApproval = scripted([]);
-    expect((await resend.sendBroadcast({ apiKey: key, fetchImpl: noApproval.fetchImpl, broadcastId: "b_1", approval: undefined, now: NOW })).status).toBe("failed");
+    expect((await resend.sendBroadcast({ apiKey: key, fetchImpl: noApproval.fetchImpl, broadcastId: "b_1", expectedDraft, approval: undefined, now: NOW })).status).toBe("failed");
 
     const timeout = scripted([
-      { match: "/broadcasts/b_1", method: "GET", respond: json(200, { id: "b_1", status: "draft", html }) },
+      { match: "/broadcasts/b_1", method: "GET", respond: json(200, { ...payload, status: "draft" }) },
       { match: "/broadcasts/b_1/send", method: "POST", respond: json(504, {}) },
     ]);
-    expect(await resend.sendBroadcast({ apiKey: key, fetchImpl: timeout.fetchImpl, broadcastId: "b_1", approval: a, now: NOW })).toMatchObject({ status: "uncertain", retryable: false });
+    expect(await resend.sendBroadcast({ apiKey: key, fetchImpl: timeout.fetchImpl, broadcastId: "b_1", expectedDraft, approval: a, now: NOW })).toMatchObject({ status: "uncertain", retryable: false });
 
-    const rec = scripted([{ match: "/broadcasts/b_1", respond: json(200, { id: "b_1", status: "sending" }) }]);
-    expect((await resend.reconcileBroadcastSend({ apiKey: key, fetchImpl: rec.fetchImpl, broadcastId: "b_1" })).status).toBe("verified");
+    const rec = scripted([{ match: "/broadcasts/b_1", respond: json(200, { ...payload, status: "sending" }) }]);
+    expect((await resend.reconcileBroadcastSend({ apiKey: key, fetchImpl: rec.fetchImpl, broadcastId: "b_1", expectedDraft })).status).toBe("verified");
 
-    const already = scripted([{ match: "/broadcasts/b_1", respond: json(200, { id: "b_1", status: "sent", html }) }]);
-    const res = await resend.sendBroadcast({ apiKey: key, fetchImpl: already.fetchImpl, broadcastId: "b_1", approval: a, now: NOW });
-    expect(res.status).toBe("failed");
+    const already = scripted([{ match: "/broadcasts/b_1", respond: json(200, { ...payload, status: "sent" }) }]);
+    const res = await resend.sendBroadcast({ apiKey: key, fetchImpl: already.fetchImpl, broadcastId: "b_1", expectedDraft, approval: a, now: NOW });
+    expect(res.status).toBe("uncertain");
     expect(already.calls.some((c) => c.method === "POST")).toBe(false);
   });
 
@@ -821,5 +823,71 @@ describe("Resend historical broadcast evidence", () => {
   it("does not fabricate absent content fields in a provider read", async () => {
     const { fetchImpl } = scripted([{ match: "/broadcasts/b_1", respond: json(200, { id: "b_1", status: "sent" }) }]);
     expect(await resend.getBroadcast({ apiKey: "re_test", broadcastId: "b_1", fetchImpl })).toEqual({ ok: true, data: { id: "b_1", status: "sent" } });
+  });
+});
+
+describe("Resend send binds the approved provider payload", () => {
+  const expectedDraft = { segmentId: "seg_1", from: "Owner <hello@example.com>", subject: "Approved subject", html: '<p>Approved content</p><a href="{{{RESEND_UNSUBSCRIBE_URL}}}">Unsubscribe</a>', text: "Approved content", name: "approval-reference" };
+  const observed = () => ({ id: "b_1", segment_id: expectedDraft.segmentId, from: expectedDraft.from, subject: expectedDraft.subject, html: expectedDraft.html, text: expectedDraft.text, name: expectedDraft.name, reply_to: null, topic_id: null, scheduled_at: null, sent_at: null, status: "draft" });
+  it.each(["id", "segment_id", "from", "subject", "html", "text", "name", "reply_to", "topic_id", "scheduled_at", "missing_html", "missing_subject"])("never sends a draft with changed or absent %s", async field => {
+    const data: Record<string, unknown> = observed();
+    if (field.startsWith("missing_")) delete data[field.slice(8)];
+    else data[field] = field === "html" ? '<p>Unapproved content</p><a href="{{{RESEND_UNSUBSCRIBE_URL}}}">Unsubscribe</a>' : "unapproved";
+    const { fetchImpl, calls } = scripted([
+      { match: "/broadcasts/b_1", method: "GET", respond: json(200, data) },
+      { match: "/broadcasts/b_1/send", method: "POST", respond: json(200, { id: "b_1" }) },
+      { match: "/broadcasts/b_1", method: "GET", respond: json(200, { ...observed(), status: "sent" }) },
+    ]);
+    const request = { apiKey: "re_test", broadcastId: "b_1", expectedDraft, fetchImpl, approval: approval(resend.SEND_BROADCAST_ACTION, "b_1", "now"), now: NOW };
+    const result = await resend.sendBroadcast(request);
+    expect(calls.filter(c => c.method === "POST")).toEqual([]);
+    expect(result.status).toBe("failed");
+  });
+  it("sends a matching approved payload once and verifies the same payload afterwards", async () => {
+    const { fetchImpl, calls } = scripted([
+      { match: "/broadcasts/b_1", method: "GET", respond: json(200, observed()) },
+      { match: "/broadcasts/b_1/send", method: "POST", respond: json(200, { id: "b_1" }) },
+      { match: "/broadcasts/b_1", method: "GET", respond: json(200, { ...observed(), status: "sending" }) },
+    ]);
+    expect(await resend.sendBroadcast({ apiKey: "re_test", broadcastId: "b_1", expectedDraft, fetchImpl, approval: approval(resend.SEND_BROADCAST_ACTION, "b_1", "now"), now: NOW })).toMatchObject({ status: "verified", externalId: "b_1" });
+    expect(calls.map(c => c.method)).toEqual(["GET", "POST", "GET"]);
+  });
+  it.each(["reply_to", "scheduled_at", "segment_id", "alias_conflict"])("does not discard malformed or conflicting %s evidence", async field => {
+    const data: Record<string, unknown> = { ...observed(), audience_id: expectedDraft.segmentId };
+    if (field === "alias_conflict") data.audience_id = "other";
+    else data[field] = 42;
+    const { fetchImpl, calls } = scripted([{ match: "/broadcasts/b_1", method: "GET", respond: json(200, data) }]);
+    expect(await resend.sendBroadcast({ apiKey: "re_test", broadcastId: "b_1", expectedDraft, fetchImpl, approval: approval(resend.SEND_BROADCAST_ACTION, "b_1", "now"), now: NOW })).toMatchObject({ status: "failed" });
+    expect(calls.map(c => c.method)).toEqual(["GET"]);
+  });
+  it("refuses a legacy caller without the approved payload before any provider request", async () => {
+    const { fetchImpl, calls } = scripted([]);
+    // @ts-expect-error Deliberately exercise an old runtime caller without the new required binding.
+    expect(await resend.sendBroadcast({ apiKey: "re_test", broadcastId: "b_1", fetchImpl, approval: approval(resend.SEND_BROADCAST_ACTION, "b_1", "now"), now: NOW })).toMatchObject({ status: "failed" });
+    expect(calls).toEqual([]);
+  });
+  it("rejects a draft creation read-back that differs from the submitted payload", async () => {
+    const { fetchImpl } = scripted([
+      { match: "/broadcasts", method: "POST", respond: json(200, { id: "b_1" }) },
+      { match: "/broadcasts/b_1", method: "GET", respond: json(200, { ...observed(), subject: "Different" }) },
+    ]);
+    expect(await resend.createDraftBroadcast({ apiKey: "re_test", fetchImpl, draft: expectedDraft })).toMatchObject({ status: "uncertain", externalId: "b_1" });
+  });
+  it.each([{}, { id: "another-broadcast" }])("keeps an unbound send response unknown (%j)", async response => {
+    const { fetchImpl, calls } = scripted([
+      { match: "/broadcasts/b_1", method: "GET", respond: json(200, observed()) },
+      { match: "/broadcasts/b_1/send", method: "POST", respond: json(200, response) },
+    ]);
+    expect(await resend.sendBroadcast({ apiKey: "re_test", broadcastId: "b_1", expectedDraft, fetchImpl, approval: approval(resend.SEND_BROADCAST_ACTION, "b_1", "now"), now: NOW })).toMatchObject({ status: "uncertain", externalId: "b_1" });
+    expect(calls.filter(c => c.method === "POST")).toHaveLength(1);
+  });
+  it("does not mark changed post-send content as the approved verified result", async () => {
+    const { fetchImpl } = scripted([
+      { match: "/broadcasts/b_1", method: "GET", respond: json(200, observed()) },
+      { match: "/broadcasts/b_1/send", method: "POST", respond: json(200, { id: "b_1" }) },
+      { match: "/broadcasts/b_1", method: "GET", respond: json(200, { ...observed(), subject: "Changed after dispatch", status: "sent" }) },
+    ]);
+    const request = { apiKey: "re_test", broadcastId: "b_1", expectedDraft, fetchImpl, approval: approval(resend.SEND_BROADCAST_ACTION, "b_1", "now"), now: NOW };
+    expect(await resend.sendBroadcast(request)).toMatchObject({ status: "uncertain", externalId: "b_1" });
   });
 });

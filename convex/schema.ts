@@ -4174,6 +4174,7 @@ export default defineSchema({
     campaignActivationDispatchedAt: v.optional(v.number()),
     /** One-use marketing send dispatch, after current audience and approval checks. */
     emailSendDispatchedAt: v.optional(v.number()),
+    emailProviderPayloadHash: v.optional(v.string()),
     /** Original recipients for read-only recovery and contact-pressure accounting. */
     emailRecipientHashBatches: v.optional(v.array(v.array(v.string()))),
     emailRecovery: v.optional(v.object({ sentAt: v.number(), checkedAt: v.number(), nextOffset: v.number() })),

@@ -243,6 +243,19 @@ export interface BroadcastState {
   html?: string;
   subject?: string;
   from?: string;
+  text?: string;
+  replyTo?: string | string[];
+  topicId?: string;
+  malformedFields?: string[];
+}
+
+/** Exact material provider payload; absent optional fields have explicit defaults. */
+export function broadcastPayload(b: BroadcastDraft | BroadcastState) {
+  return { segmentId: b.segmentId ?? null, from: b.from ?? null, subject: b.subject ?? null, html: b.html ?? null, text: b.text ?? null, name: b.name ?? null, replyTo: typeof b.replyTo === "string" ? [b.replyTo] : b.replyTo ?? [], topicId: b.topicId ?? null };
+}
+
+function matchesBroadcast(b: BroadcastState, expected: BroadcastDraft, id: string): boolean {
+  return !b.malformedFields?.length && b.id === id && JSON.stringify(broadcastPayload(b)) === JSON.stringify(broadcastPayload(expected));
 }
 
 function parseBroadcast(d: Record<string, unknown>): BroadcastState {
@@ -258,6 +271,13 @@ function parseBroadcast(d: Record<string, unknown>): BroadcastState {
   const subject = asString(d.subject), from = asString(d.from);
   if (subject !== undefined) b.subject = subject;
   if (from !== undefined) b.from = from;
+  if (typeof d.text === "string") b.text = d.text;
+  if (typeof d.topic_id === "string") b.topicId = d.topic_id;
+  if (typeof d.reply_to === "string" || (Array.isArray(d.reply_to) && d.reply_to.every(value => typeof value === "string"))) b.replyTo = d.reply_to as string | string[];
+  const malformed = ["text", "topic_id", "scheduled_at", "sent_at", "segment_id", "audience_id"].filter(field => d[field] != null && typeof d[field] !== "string");
+  if (typeof d.segment_id === "string" && typeof d.audience_id === "string" && d.segment_id !== d.audience_id) malformed.push("segment_id");
+  if (d.reply_to != null && b.replyTo === undefined) malformed.push("reply_to");
+  if (malformed.length) b.malformedFields = malformed;
   return b;
 }
 
@@ -287,6 +307,7 @@ export async function createDraftBroadcast(call: ResendCall & { draft: Broadcast
   const read = await getBroadcast({ ...call, broadcastId: id });
   if (!read.ok) return { status: "uncertain", externalId: id, retryable: false, providerMessage: `Created but read-back failed: ${read.providerMessage}` };
   if (read.data.status !== "draft") return { status: "uncertain", externalId: id, retryable: false, providerMessage: `Expected draft, read-back shows ${read.data.status}.`, data: read.data };
+  if (!matchesBroadcast(read.data, d, id) || read.data.scheduledAt || read.data.sentAt) return { status: "uncertain", externalId: id, retryable: false, providerMessage: "Created broadcast does not match the approved draft. No send was requested.", data: read.data };
   return { status: "verified", externalId: id, retryable: false, data: read.data };
 }
 
@@ -319,20 +340,20 @@ const SENT_STATES = new Set(["scheduled", "queued", "sending", "sent"]);
  * Refuses if the broadcast is not a draft (prevents double sends).
  */
 export async function sendBroadcast(
-  call: ResendCall & { broadcastId: string; scheduledAt?: string; approval: ApprovedAction | undefined; now?: number },
+  call: ResendCall & { broadcastId: string; expectedDraft: BroadcastDraft; scheduledAt?: string; approval: ApprovedAction | undefined; now?: number },
 ): Promise<WriteResult<BroadcastState>> {
   const refusal = approvalError(call.approval, { kind: SEND_BROADCAST_ACTION, targetId: call.broadcastId, value: call.scheduledAt ?? "now" }, call.now);
   if (refusal) return { status: "failed", retryable: false, providerMessage: refusal };
 
+  if (!call.expectedDraft) return { status: "failed", retryable: false, providerMessage: "The approved provider payload is required before sending." };
   const before = await getBroadcast(call);
   if (!before.ok) return { status: "failed", retryable: before.retryable, providerMessage: `Could not read the broadcast: ${before.providerMessage}` };
   if (before.data.status !== "draft") {
-    return { status: "failed", retryable: false, externalId: call.broadcastId, providerMessage: `Broadcast is already ${before.data.status}; not sending again.`, data: before.data };
+    return { status: "uncertain", retryable: false, externalId: call.broadcastId, providerMessage: `Broadcast is already ${before.data.status}; not sending again.`, data: before.data };
   }
-  if (before.data.html !== undefined) {
-    const htmlErrors = validateMarketingHtml(before.data.html);
-    if (htmlErrors.length) return { status: "failed", retryable: false, providerMessage: htmlErrors.join(" ") };
-  }
+  if (!matchesBroadcast(before.data, call.expectedDraft, call.broadcastId) || before.data.scheduledAt || before.data.sentAt) return { status: "failed", externalId: call.broadcastId, retryable: false, providerMessage: "The provider draft no longer matches the approved content, sender or destination. No send was requested." };
+  const htmlErrors = validateMarketingHtml(before.data.html ?? "");
+  if (htmlErrors.length) return { status: "failed", externalId: call.broadcastId, retryable: false, providerMessage: htmlErrors.join(" ") };
 
   const body: Record<string, unknown> = {};
   if (call.scheduledAt) body.scheduled_at = call.scheduledAt;
@@ -348,13 +369,15 @@ export async function sendBroadcast(
     const failure = writeFailure<BroadcastState>(out);
     return { ...failure, externalId: call.broadcastId };
   }
+  if (!isRecord(out.data) || asString(out.data.id) !== call.broadcastId) return { status: "uncertain", externalId: call.broadcastId, retryable: false, providerMessage: "Send response did not identify the approved broadcast. Check the provider result before any new attempt." };
   return reconcileBroadcastSend(call);
 }
 
-/** Read the broadcast status: anything past "draft" means the send was accepted. */
-export async function reconcileBroadcastSend(call: ResendCall & { broadcastId: string }): Promise<WriteResult<BroadcastState>> {
+/** Confirm accepted status only for the exact expected payload; this is not delivery proof. */
+export async function reconcileBroadcastSend(call: ResendCall & { broadcastId: string; expectedDraft: BroadcastDraft }): Promise<WriteResult<BroadcastState>> {
   const read = await getBroadcast(call);
   if (!read.ok) return { status: "uncertain", externalId: call.broadcastId, retryable: false, providerMessage: `Read-back failed: ${read.providerMessage}` };
+  if (!call.expectedDraft || !matchesBroadcast(read.data, call.expectedDraft, call.broadcastId)) return { status: "uncertain", externalId: call.broadcastId, retryable: false, providerMessage: "Provider read-back does not match the approved payload.", data: read.data };
   if (SENT_STATES.has(read.data.status)) return { status: "verified", externalId: call.broadcastId, retryable: false, data: read.data };
   return { status: "uncertain", externalId: call.broadcastId, retryable: false, providerMessage: `Broadcast status is ${read.data.status}.`, data: read.data };
 }

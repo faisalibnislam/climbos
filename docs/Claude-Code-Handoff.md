@@ -27,6 +27,8 @@ Latest lifecycle-drafting follow-up (17 November): the welcome-only first-win ga
 
 Latest marketing recovery follow-up (17 November): uncertain post-dispatch emails now expose an exact-broadcast read-only check. Matching original identity/content/credential evidence can resolve the reserved allowance and original recipient history in bounded batches. Original uncertain receipts remain intact. 144 tests/eight files, typecheck and lint pass. [Audit](growth-engine/marketing-send-recovery-audit.md) identifies optional undeployed schema fields, legacy/manual limits and unverified live/browser behavior.
 
+Latest email payload follow-up (17 November): draft and send read-backs now require the complete declared provider payload, including plain text, sender and segment; the response ID must also match. Fourteen regressions failed before repair. Runtime text includes the unsubscribe footer, and recovery rejects missing or mismatched full payload hashes. 170 tests/eight files, typecheck and lint pass. [Audit](growth-engine/marketing-provider-payload-audit.md) retains optional undeployed schema, normalization, remote concurrency and delivery limitations.
+
 This handoff records what has been built, what was checked, what remains unverified, and how to continue safely. It is a starting point for repository work, not proof that every capability works with live providers or real customer outcomes.
 
 ## Current status — 17 November 2026

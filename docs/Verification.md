@@ -1,3 +1,14 @@
+## 17 November 2026 — approved provider email payload
+
+Fourteen regressions reproduced provider-content/identity gaps. Draft creation, the final pre-send read, send response and post-send read-back now check the expected payload/identity. Runtime plain text comes from the approved email and includes unsubscribe information; recovery uses the same complete payload hash. [Audit and limitations](growth-engine/marketing-provider-payload-audit.md).
+
+- `pnpm exec vitest run tests/convex/marketing-authorization.test.ts tests/convex/marketing.test.ts tests/convex/contact-frequency.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts tests/convex/lifecycle-draft-context.test.ts tests/unit/integrations.adapters.test.ts tests/unit/email-recovery-ui.test.tsx` — 170 passed across eight files, 3.13 seconds.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint convex/marketing.ts convex/schema.ts shared/integrations/resendMarketing.ts tests/convex/marketing-authorization.test.ts tests/unit/integrations.adapters.test.ts` — passed.
+- `git diff --check` — passed.
+
+No live provider/model, browser, sending or deployment. The optional payload-hash field is local. Older attempts lacking that hash remain manual. Remote read/write races, provider normalization and actual delivery remain unverified.
+
 ## 17 November 2026 — uncertain marketing-send recovery
 
 Added exact original-broadcast read-back, an owner-facing check, separately dated receipts, one-time allowance reconciliation and bounded original-contact history updates. [Audit and limits](growth-engine/marketing-send-recovery-audit.md).
