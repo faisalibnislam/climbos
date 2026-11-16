@@ -336,7 +336,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.113-typed-experiment-observations";
+export const ENGINE_VERSION = "v3.114-social-trend-surface-validation";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -1797,6 +1797,19 @@ function lintTrendEvidence(post: Pick<SocialPostsV2["posts"][number], "trendSour
   return [];
 }
 
+/** Shared by model revision and the final generation boundary before images or draft persistence. */
+export function socialTrendIssues(post: SocialPostsV2["posts"][number], input: AgentInput, path: string): LintIssue[] {
+  const creativeText = [post.title, post.hook, post.body, post.angle, post.altText, post.imageIdea, post.visualBrief,
+    post.videoScript, post.firstComment, ...(post.hashtags ?? []),
+    ...(post.slides ?? []).flatMap(slide => [slide.heading, slide.body]), ...(post.shotList ?? []).map(shot => shot.show)].join("\n");
+  const namesTrend = /\b(?:trend(?:ing)?|meme|viral)\b/i.test(creativeText);
+  if (!namesTrend && !post.trendEvidence && !post.trendSourceUrl) return [];
+  const issues = lintTrendEvidence(post, input, `${path}.trendEvidence`);
+  if (!post.trendSourceUrl) issues.push({ severity: "error", rule: "trend_source", message: "Each trend or meme-inspired post needs its own exact source URL from this run; otherwise use an evergreen idea.", path: `${path}.trendSourceUrl` });
+  else issues.push(...lintAvailableSourceUrls([{ url: post.trendSourceUrl, path: `${path}.trendSourceUrl` }], input));
+  return issues;
+}
+
 function lintSocial(out: SocialPostsV2, input: AgentInput, requestedChannels: string[]): LintIssue[] {
   const issues: LintIssue[] = [];
   issues.push(...lintCopyBrief(out.copyBrief, input));
@@ -1804,20 +1817,12 @@ function lintSocial(out: SocialPostsV2, input: AgentInput, requestedChannels: st
   issues.push(...lintRepeatedCopyPieces(out.posts.map((p, i) => ({ path: `posts[${i}].body`, text: `${p.title}\n${p.hook}\n${p.body}` }))));
   const requested = new Set(requestedChannels);
   const normalizedPosts = out.posts.map((post, index) => ({ post, index, tokens: copyTokens(`${post.title}\n${post.hook}\n${post.body}`) }));
-  const trendReferences: { url: string; path: string }[] = [];
   normalizedPosts.forEach(({ post, index }) => {
     if (requested.size && !requested.has(post.channel)) {
       issues.push({ severity: "error", rule: "unexpected_channel", message: `This draft targets ${post.channel}, which was not selected for this task. Draft only for the requested platforms.`, path: `posts[${index}].channel` });
     }
-    const trendPath = `posts[${index}].trendSourceUrl`;
-    const namesTrend = /\b(?:trend(?:ing)?|meme|viral)\b/i.test(`${post.title} ${post.hook} ${post.body} ${post.angle}`);
-    if ((namesTrend || post.trendEvidence) && !post.trendSourceUrl) {
-      issues.push({ severity: "error", rule: "trend_source", message: "Each trend or meme-inspired post needs its own exact source URL from this run; otherwise use an evergreen idea.", path: trendPath });
-    }
-    if (namesTrend || post.trendSourceUrl || post.trendEvidence) issues.push(...lintTrendEvidence(post, input, `posts[${index}].trendEvidence`));
-    if (post.trendSourceUrl) trendReferences.push({ url: post.trendSourceUrl, path: trendPath });
+    issues.push(...socialTrendIssues(post, input, `posts[${index}]`));
   });
-  issues.push(...lintAvailableSourceUrls(trendReferences, input));
   for (let i = 0; i < normalizedPosts.length; i += 1) {
     const left = normalizedPosts[i]!;
     if (left.tokens.length < 8) continue;
@@ -2937,7 +2942,7 @@ export type SocialCalendar = z.infer<typeof SocialCalendarSchema>;
 
 /** Calendar and persistence share the individual-post evidence checks. Notes alone are not evidence. */
 export function calendarTrendIssues(slot: SocialCalendar["slots"][number], input: AgentInput, path: string): LintIssue[] {
-  const namesTrend = /\b(?:trend|trending|meme|viral)\b/i.test(`${slot.idea} ${slot.angle} ${slot.hookDraft}`);
+  const namesTrend = /\b(?:trend|trending|meme|viral)\b/i.test(`${slot.idea} ${slot.angle} ${slot.hookDraft} ${slot.proof} ${slot.callToAction}`);
   if (!namesTrend && !slot.trendEvidence && !slot.trendSourceUrl) return [];
   const issues = lintTrendEvidence(slot, input, `${path}.trendEvidence`);
   const references = (slot.ownerNote.match(/https?:\/\/[^\s)]+/g) ?? []).map(url => ({ url: url.replace(/[.,;!?]+$/, ""), path: `${path}.ownerNote` }));

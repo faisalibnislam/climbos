@@ -91,6 +91,7 @@ import {
   playCatalogsFor,
   socialCalendarSpec,
   socialSpec,
+  socialTrendIssues,
   strategySpec, focusedStrategySpec, starterStrategySpec, FocusedStrategySchema,
   type ChannelFit,
   type SocialPostsV2,
@@ -1745,6 +1746,13 @@ export const createContent = internalAction({
             review,
           );
           out.posts = out.posts.slice(0, qty);
+          // A model review cannot waive source checks. Revalidate the kept
+          // result before image work, persistence or Autopilot routing.
+          const trendInput: AgentInput = { task: "Validate generated social trends", brief: "", facts: [],
+            ...(review.notes !== undefined ? { precomputedResearch: { notes: review.notes, sources: review.sources ?? [], retrievedAt: review.retrievedAt } } : {}),
+          };
+          const trendIssue = out.posts.flatMap((post, index) => socialTrendIssues(post, trendInput, `posts[${index}]`)).find(issue => issue.severity === "error");
+          if (trendIssue) throw new JobStop("unverified_trend", `The trend research could not be verified. ${trendIssue.message} No posts were saved or shared.`);
           // A run for one channel only ever produces posts for that channel.
           if (args.channel) out.posts = out.posts.map((p) => ({ ...p, channel: args.channel as typeof p.channel }));
           posts = out.posts.length;

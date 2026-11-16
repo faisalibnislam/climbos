@@ -38,11 +38,14 @@ describe("calendar source persistence and draft context", () => {
     await expect(other.client.query(api.autopilot.get, { slug })).rejects.toThrow();
   });
 
-  it.each(["missing", "wrong_observation", "future_retrieval", "stale_at_posting"] as const)("rejects %s evidence atomically without replacing prior slots", async kind => {
+  it.each(["missing", "wrong_observation", "future_retrieval", "stale_at_posting", "cta_only"] as const)("rejects %s evidence atomically without replacing prior slots", async kind => {
     const { t, runId } = await seed();
     await t.mutation(internal.autopilot.saveWeekPlan, { runId, weekOf: "2026-11-16", fromDay: 1, plan: calendar(), research });
     const before = await t.run(ctx => ctx.db.query("calendarSlots").collect());
     const plan = calendar();
+    if (kind === "cta_only") {
+      Object.assign(plan.slots[0], { idea: "Explain one process", callToAction: "Try this current viral format", trendEvidence: undefined, trendSourceUrl: undefined });
+    }
     if (kind === "wrong_observation") plan.slots[0].trendEvidence = { ...evidence, observation: "An unsupported claim about customers" };
     await expect(t.mutation(internal.autopilot.saveWeekPlan, { runId, weekOf: kind === "stale_at_posting" ? "2026-12-21" : "2026-11-16", fromDay: 1, plan, research: kind === "missing" ? undefined : { ...research, retrievedAt: kind === "future_retrieval" ? now + 1000 : research.retrievedAt } })).rejects.toThrow();
     expect(await t.run(ctx => ctx.db.query("calendarSlots").collect())).toEqual(before);

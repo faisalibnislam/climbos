@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: complete social creative-surface trend checks
+
+Verified existing brand voice, humor/trend preference and owner-example input in individual-post and weekly-plan jobs. Red tests exposed missing carousel/video/visual/comment/hashtag trend checks and createContent saving invalid retained output despite a passing review. Reused the dated-source validator in an exported per-post helper called by lint and before image work/persistence. Calendar proof and CTA references now enter its existing transactional evidence gate. The tested original evergreen character remains available without a source requirement. Engine v3.114; see Verification for test commands, scope and limitations.
+
 ## Local update — 17 November 2026: exact prepared-work review from Home
 
 Replaced the Home prepared-work query’s organization-wide history slice with latest-attempt reads per actual saved step. This prevents unrelated history hiding selected-plan work and avoids resurrecting earlier success behind a newer failed/running/invalid attempt. Returned exact work/plan/step identity opens the existing editor in a lazy shared dialog. Exact current work is distinguished from historical work; an open draft remains pinned when a new attempt arrives. Existing revision, tenant and role checks govern edits. Focused regressions, permission checks and desktop/mobile browser checks pass; details and limitations are in Verification.

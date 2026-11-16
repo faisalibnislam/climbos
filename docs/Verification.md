@@ -1,3 +1,24 @@
+## 17 November 2026 — social trend checks across generated creative fields
+
+Audit followed brand settings and job context into createContent and planSocialWeek, the shared social-intelligence/platform skills, research, model lint/revision, socialToArtifacts, calendar persistence and existing approval/publishing checks. Voice, humor/trend preferences and approved examples already reached both jobs. Weekly history already included qualified post reports with source/version/measurement limitations. No replacement agent or prompt was needed for those behaviors.
+
+Confirmed gaps: trend detection inspected title/hook/body/angle but omitted carousel headings/body, video script, first comment, alt text, visual brief, image idea, shot directions and hashtags. Calendar proof and CTA references were likewise omitted. The model loop intentionally retains its best draft after exhausted revisions; createContent could save an unresolved missing/unmatched trend record as a verified run. Red unit tests reproduced all nine omitted social surfaces and both calendar fields. After correcting a fixture's missing initial brand profile, actual-job tests reproduced missing/unmatched evidence completing as verified despite a claimed passing AI assessment.
+
+Extended the existing dated-record validator through socialTrendIssues, shared by model lint and a final createContent guard before images, saving or Autopilot routing. The guard uses research notes, URLs and retrieval time retained by the application, not a model-produced approval flag. Invalid retained trend output stops the batch with an owner-facing explanation; no automatic new generation is started. Valid run-bound evidence and original evergreen creative ideas still proceed to draft review. Calendar proof and CTA checks reuse the existing mutation validator, preserving its all-or-nothing behavior and earlier saved slots. Engine v3.114-social-trend-surface-validation. No provider, model route, schema, generated file, UI or action authorization was changed.
+
+Verification commands:
+
+```sh
+pnpm exec vitest run tests/unit/social-trend-surfaces.test.ts tests/convex/social-trend-generation.test.ts tests/unit/social-intelligence.test.ts tests/unit/calendar-trend-evidence.test.ts tests/convex/calendar-trend-evidence.test.ts tests/convex/engine-v2.test.ts tests/convex/autopilot.test.ts tests/convex/social-publish.test.ts tests/convex/research-context.test.ts tests/convex/brand.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts tests/convex/publish-flow.test.ts tests/unit/trend-freshness.test.ts
+pnpm typecheck
+pnpm exec eslint convex/jobs.ts shared/agents/specs.ts tests/fixtures/socialTrend.ts tests/unit/social-trend-surfaces.test.ts tests/unit/calendar-trend-evidence.test.ts tests/convex/social-trend-generation.test.ts tests/convex/calendar-trend-evidence.test.ts
+git diff --check
+```
+
+Results: **160 tests across 14 files passed (7.75s)**; app/Convex typecheck, scoped lint and whitespace checks passed. New job-boundary cases cover missing, mismatched, uncited and stale evidence, valid dated evidence and evergreen output with a nominal passing model assessment. Invalid cases save no artifacts or approvals; valid cases create review drafts only. Network calls are rejected by the test stub and no action receipts are created. A weekly preview case verifies matching humor/voice/example input and planned-only slots with no draft, approval, second run or external action. The calendar regression confirms CTA-only invalid evidence cannot replace earlier slots. Existing engine, Autopilot, publishing, brand and tenant tests cover the surrounding controls.
+
+Limits: the new generation tests replace the model loop at its boundary; they establish application enforcement and supplied context, not the real model's creative quality or compliance with tone preferences. The detection rule remains bounded to English trend/meme/viral markers or explicit structured metadata. It can flag discussion of those words even when not claiming current popularity and cannot detect every implicit or multilingual reference. Matching a dated research record does not prove that its source semantically supports the claim or that the idea fits an audience. No continuous listening, legacy-draft migration, manual-edit redesign, live provider check, browser rerun, paid evaluation or deployment was performed. Whole-project acceptance remains open and unrelated .gitignore work is preserved.
+
 ## 17 November 2026 — exact saved step work from Home
 
 Audit: the active focused-plan review already opened saved work without another AI job. A separate Home card selected the first successful result from the newest 30 organization-wide records and linked to a general plan anchor. Red regressions reproduced selected-plan work disappearing behind 35 unrelated rows, earlier success reappearing behind newer failed/working attempts, and malformed latest JSON crashing Home.

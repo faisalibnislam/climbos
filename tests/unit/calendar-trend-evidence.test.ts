@@ -30,4 +30,7 @@ describe("calendar trend evidence", () => {
   it("keeps genuinely evergreen ideas available without trend research", () => {
     expect(lint({ idea: "Explain one process", ownerNote: "Owner should check the workflow" }, { task: "Plan", brief: "Synthetic", facts: [] })).toEqual([]);
   });
+  it.each(["proof", "callToAction"])("requires evidence for a trend reference in %s", field => {
+    expect(lint({ idea: "Explain one process", ownerNote: "Owner should check the workflow", [field]: "Try the current viral format" }, { task: "Plan", brief: "Synthetic", facts: [] }).some(issue => issue.rule === "trend_evidence")).toBe(true);
+  });
 });
