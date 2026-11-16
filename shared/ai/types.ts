@@ -116,6 +116,13 @@ export interface TurnUsage {
   calls: number;
 }
 
+/** Bounded text actually returned by ClimbOS's page reader; never a model-written summary. */
+export interface PageReadEvidence {
+  url: string;
+  text: string;
+  retrievedAt: number;
+}
+
 export interface Source {
   /** Explicit first-party refusal observed in a page read; no field means unknown. */
   productPitchPolicy?: { status: "refused"; evidence: string };
@@ -138,6 +145,7 @@ export type TurnResult =
       /** Tokens + web searches, µUSD. */
       costMicros: number;
       sources: Source[];
+      pageReads?: PageReadEvidence[];
       actualModelId: string;
       stopReason: string;
       /** Present when the model stopped to call custom tools. */

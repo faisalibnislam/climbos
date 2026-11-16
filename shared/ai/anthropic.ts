@@ -232,7 +232,7 @@ export async function anthropicTurn(req: TurnRequest, rates: RateVersion): Promi
   if (calls.length && req.customTools?.length) {
     const ids = new Set(calls.map((c) => c.id));
     const toolUses = blocks.filter((b): b is ToolUseBlock => b.type === "tool_use" && ids.has(b.id)).map((b) => ({ id: b.id, name: b.name, input: b.input }));
-    return { ok: true, output: text, text, ...base2, sources: allSources, actualModelId: res.model ?? spec.apiModelId, stopReason: "tool_use", toolUses };
+    return { ok: true, output: text, text, ...base2, sources: allSources, ...(fetcher?.pageReads.length ? { pageReads: fetcher.pageReads } : {}), actualModelId: res.model ?? spec.apiModelId, stopReason: "tool_use", toolUses };
   }
   if (res.stop_reason === "max_tokens") return { ok: false, kind: "invalid_output", message: "The answer was cut off at the length limit.", ...base2, text };
   let parsed: unknown = text;
@@ -243,5 +243,5 @@ export async function anthropicTurn(req: TurnRequest, rates: RateVersion): Promi
       return { ok: false, kind: "invalid_output", message: (e as Error).message.slice(0, 400), ...base2, text };
     }
   }
-  return { ok: true, output: parsed, text, ...base2, sources: allSources, actualModelId: res.model ?? spec.apiModelId, stopReason: res.stop_reason ?? "end_turn" };
+  return { ok: true, output: parsed, text, ...base2, sources: allSources, ...(fetcher?.pageReads.length ? { pageReads: fetcher.pageReads } : {}), actualModelId: res.model ?? spec.apiModelId, stopReason: res.stop_reason ?? "end_turn" };
 }

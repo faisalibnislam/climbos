@@ -908,6 +908,41 @@ export function AudienceEvidence({ audience }: { audience: { needs?: EvidenceRow
   );
 }
 
+export function CustomerLanguage({ expert }: { expert: Insights["expert"] }) {
+  const phrases = expert?.vocPhrases ?? [];
+  const review = expert?.vocReview;
+  if (!phrases.length && !review?.candidateCount) return null;
+  return (
+    <details className="rounded-[var(--radius-card)] border border-line p-3">
+      <summary className="min-h-8 cursor-pointer text-ui font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-800">
+        Customer language <span className="font-normal text-ink-2">· {phrases.length} saved {phrases.length === 1 ? "phrase" : "phrases"}</span>
+      </summary>
+      <p className="mt-2 text-xs text-ink-2">A text match means these words appeared in a sampled page. It does not verify the writer is a customer, show how common the view is, or grant permission to publish a testimonial.</p>
+      {review && review.candidateCount > review.matchedCount ? (
+        <p className="mt-2 text-xs text-ink-2">Not included: {review.notMatchedCount} not found in the read excerpt, {review.uncheckedCount} without enough source evidence, and {review.businessSiteCount} from the business’s own website. These counts describe candidates, not customers.</p>
+      ) : null}
+      {!phrases.length ? <p className="mt-2 text-ui text-ink-2">No source-matched customer-language phrases are available from this research.</p> : (
+        <ul className="mt-3 flex flex-col gap-3">
+          {phrases.map((row, index) => {
+            const date = row.sourceReadAt && Number.isFinite(new Date(row.sourceReadAt).getTime()) ? new Date(row.sourceReadAt).toISOString().slice(0, 10) : null;
+            const matched = row.evidenceStatus === "text_matched" && date;
+            const safeSource = row.sourceUrl && /^https?:\/\//i.test(row.sourceUrl) ? row.sourceUrl : null;
+            return <li key={`${row.sourceUrl ?? "unknown"}:${index}`} className="min-w-0 rounded-[var(--radius-control)] bg-surface-2 p-3">
+              <p className="break-words text-ui text-ink">{row.phrase}</p>
+              <p className="mt-1 text-xs text-ink-2">Research theme: {row.theme}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Badge tone={matched ? "neutral" : "amber"}>{matched ? "Text matched" : "Not checked"}</Badge>
+                {matched ? <span className="text-xs text-ink-2">Source read {date} (UTC)</span> : <span className="text-xs text-ink-2">Source text or read date unavailable</span>}
+                {safeSource ? <LinkChip url={safeSource} label="Source" /> : null}
+              </div>
+            </li>;
+          })}
+        </ul>
+      )}
+    </details>
+  );
+}
+
 export function BusinessInsights({ insights }: { insights: Insights | null }) {
   const now = useNow();
   if (!insights) {
@@ -948,6 +983,7 @@ export function BusinessInsights({ insights }: { insights: Insights | null }) {
           </ul>
         </div>
 
+        <CustomerLanguage expert={insights.expert} />
         {insights.commercialAssessment ? (
           <div>
             <SubHead icon={ShieldAlert} meta={<Badge tone={insights.commercialAssessment.status === "evidence_supports_testing" ? "green" : insights.commercialAssessment.status === "mixed_evidence" ? "amber" : "neutral"}>{COMMERCIAL_STATUS_LABEL[insights.commercialAssessment.status]}</Badge>}>

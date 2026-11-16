@@ -1,3 +1,4 @@
+import { boundedPageReads } from "../shared/agents/provenance";
 import type { FunctionReference } from "convex/server";
 import { v } from "convex/values";
 import { CURRENT_ENTITLEMENTS, CURRENT_ROUTING, creditsToMicros, currentRateVersion, microsToCredits } from "../shared/economics";
@@ -363,7 +364,7 @@ export const getResearchCache = internalQuery({
     if (!/^[a-f0-9]{64}$/.test(cacheKey) || !(await ctx.db.get(orgId))) return null;
     const row = await ctx.db.query("researchCache").withIndex("by_org_key", (q) => q.eq("orgId", orgId).eq("cacheKey", cacheKey)).first();
     if (!row || row.expiresAt <= Date.now()) return null;
-    return { notes: row.notes, sources: row.sources, retrievedAt: row.retrievedAt ?? row.createdAt, expiresAt: row.expiresAt };
+    return { notes: row.notes, sources: row.sources, ...(row.pageReads ? { pageReads: row.pageReads } : {}), retrievedAt: row.retrievedAt ?? row.createdAt, expiresAt: row.expiresAt };
   },
 });
 
@@ -376,6 +377,7 @@ export const putResearchCache = internalMutation({
     agentId: v.string(),
     modelKey: v.string(),
     notes: v.string(),
+    pageReads: v.optional(v.array(v.object({ url: v.string(), text: v.string(), retrievedAt: v.number() }))),
     sources: v.array(v.object({ productPitchPolicy: v.optional(v.object({ status: v.literal("refused"), evidence: v.string() })), url: v.string(), title: v.optional(v.string()), pageReportedDates: v.optional(v.array(v.object({ kind: v.union(v.literal("published"), v.literal("updated")), date: v.string(), source: v.union(v.literal("json_ld"), v.literal("meta")) }))) })),
     retrievedAt: v.optional(v.number()),
     expiresAt: v.number(),
@@ -384,7 +386,7 @@ export const putResearchCache = internalMutation({
     if (!/^[a-f0-9]{64}$/.test(args.cacheKey) || args.notes.length > 40_000 || args.sources.length > 50 || args.expiresAt <= Date.now() || !(await ctx.db.get(args.orgId))) return null;
     const existing = await ctx.db.query("researchCache").withIndex("by_org_key", (q) => q.eq("orgId", args.orgId).eq("cacheKey", args.cacheKey)).first();
     const createdAt = Date.now();
-    const data = { businessWebsite: args.businessWebsite, agentId: args.agentId.slice(0, 80), modelKey: args.modelKey.slice(0, 80), notes: args.notes, sources: args.sources, createdAt, retrievedAt: args.retrievedAt ?? createdAt, expiresAt: args.expiresAt };
+    const data = { businessWebsite: args.businessWebsite, agentId: args.agentId.slice(0, 80), modelKey: args.modelKey.slice(0, 80), notes: args.notes, sources: args.sources, pageReads: args.pageReads ? boundedPageReads(args.pageReads, args.sources, createdAt) : undefined, createdAt, retrievedAt: args.retrievedAt ?? createdAt, expiresAt: args.expiresAt };
     if (existing) await ctx.db.patch(existing._id, data);
     else await ctx.db.insert("researchCache", { orgId: args.orgId, cacheKey: args.cacheKey, ...data });
     return true;

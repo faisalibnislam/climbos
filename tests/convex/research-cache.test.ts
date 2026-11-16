@@ -29,6 +29,7 @@ describe("tenant research cache", () => {
       notes: "Sourced market evidence",
       retrievedAt,
       sources: [{ url: "https://example.com/source", title: "Source" }],
+      pageReads: [{ url: "https://example.com/source", text: "Actually read page excerpt", retrievedAt }],
       expiresAt,
     });
 
@@ -37,7 +38,7 @@ describe("tenant research cache", () => {
         orgId: orgA,
         cacheKey,
       }),
-    ).toMatchObject({ notes: "Sourced market evidence", retrievedAt });
+    ).toMatchObject({ notes: "Sourced market evidence", retrievedAt, pageReads: [{ url: "https://example.com/source", text: "Actually read page excerpt", retrievedAt }] });
     expect(
       await t.query(internal.engine.getResearchCache, {
         orgId: orgB,

@@ -1442,8 +1442,11 @@ export default defineSchema({
                 phrase: v.string(),
                 theme: v.string(),
                 sourceUrl: v.optional(v.string()),
+                sourceReadAt: v.optional(v.number()),
+                evidenceStatus: v.optional(v.literal("text_matched")),
               }),
             ),
+            vocReview: v.optional(v.object({ candidateCount: v.number(), matchedCount: v.number(), notMatchedCount: v.number(), uncheckedCount: v.number(), businessSiteCount: v.number() })),
             objections: v.array(
               v.object({
                 objection: v.string(),
@@ -5077,6 +5080,7 @@ export default defineSchema({
     agentId: v.string(),
     modelKey: v.string(),
     notes: v.string(),
+    pageReads: v.optional(v.array(v.object({ url: v.string(), text: v.string(), retrievedAt: v.number() }))),
     sources: v.array(v.object({ productPitchPolicy: v.optional(v.object({ status: v.literal("refused"), evidence: v.string() })), url: v.string(), title: v.optional(v.string()), pageReportedDates: v.optional(v.array(v.object({ kind: v.union(v.literal("published"), v.literal("updated")), date: v.string(), source: v.union(v.literal("json_ld"), v.literal("meta")) }))) })),
     createdAt: v.number(),
     retrievedAt: v.optional(v.number()),

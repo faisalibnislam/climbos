@@ -396,7 +396,7 @@ export async function openaiTurn(req: TurnRequest, rates: RateVersion): Promise<
   if (calls.length && req.customTools?.length) {
     const ids = new Set(calls.map((c) => c.call_id));
     const toolUses = blocks.filter((b): b is ToolUseBlock => b.type === "tool_use" && ids.has(b.id)).map((b) => ({ id: b.id, name: b.name, input: b.input }));
-    return { ok: true, output: text, text, ...base2, sources: allSources, actualModelId: json.model ?? spec.apiModelId, stopReason: "tool_use", toolUses };
+    return { ok: true, output: text, text, ...base2, sources: allSources, ...(fetcher?.pageReads.length ? { pageReads: fetcher.pageReads } : {}), actualModelId: json.model ?? spec.apiModelId, stopReason: "tool_use", toolUses };
   }
   if (json.status === "incomplete") {
     return { ok: false, kind: "invalid_output", message: json.incomplete_details?.reason === "max_output_tokens" ? "The answer was cut off at the length limit." : `Incomplete answer (${json.incomplete_details?.reason ?? "unknown"}).`, ...base2, text };
@@ -409,5 +409,5 @@ export async function openaiTurn(req: TurnRequest, rates: RateVersion): Promise<
       return { ok: false, kind: "invalid_output", message: (e as Error).message.slice(0, 400), ...base2, text };
     }
   }
-  return { ok: true, output: parsed, text, ...base2, sources: allSources, actualModelId: json.model ?? spec.apiModelId, stopReason: "end_turn" };
+  return { ok: true, output: parsed, text, ...base2, sources: allSources, ...(fetcher?.pageReads.length ? { pageReads: fetcher.pageReads } : {}), actualModelId: json.model ?? spec.apiModelId, stopReason: "end_turn" };
 }

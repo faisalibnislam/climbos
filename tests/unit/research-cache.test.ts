@@ -85,6 +85,28 @@ function deps(overrides: Partial<AgentDeps> = {}) {
 }
 
 describe("tenant research cache behavior", () => {
+  it("carries actual insight page text through research and cache reuse without refreshing its date", async () => {
+    const pageRead = { url: "https://example.com/source", text: "I keep chasing the brief.", retrievedAt: Date.now() - 5000 };
+    let saved: CachedResearch | null = null;
+    let calls = 0;
+    const d = deps({
+      turn: async () => { calls++; return { ...result("Research summary"), pageReads: [pageRead] } as TurnResult; },
+      researchCache: { get: async () => saved, put: async (_key, value, expiresAt) => { saved = { ...value, expiresAt }; } },
+    });
+    const first = await runResearch({ ...spec, id: "business_insights" }, input, d.base);
+    expect(first?.pageReads).toEqual([pageRead]);
+    const second = await runResearch({ ...spec, id: "business_insights" }, input, d.base);
+    expect(second?.pageReads).toEqual([pageRead]);
+    expect(calls).toBe(1);
+  });
+
+  it("does not manufacture page text from research notes or copy it into other agents' caches", async () => {
+    const read = { url: "https://example.com/source", text: "Read words", retrievedAt: Date.now() - 1 };
+    const other = await runResearch(spec, input, deps({ turn: async () => ({ ...result("Notes"), pageReads: [read] } as TurnResult) }).base);
+    expect(other?.pageReads).toBeUndefined();
+    const insights = await runResearch({ ...spec, id: "business_insights" }, input, deps({ turn: async () => result("The source supposedly said: Read words") }).base);
+    expect(insights?.pageReads).toEqual([]);
+  });
   it("retains first-party contact restrictions in reusable research", async () => {
     const source: Source = { url: "https://creator.example/contact", productPitchPolicy: { status: "refused", evidence: "No marketing partnerships." } };
     const cache = deps({ turn: async () => result("A creator explicitly refuses this contact.", [source]) });

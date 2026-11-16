@@ -16,6 +16,61 @@
 import type { Economics, OwnerEconomics, PlayLike, PlayModel } from "./economics";
 import { ownerHourOf } from "./economics";
 import { formatMoney } from "../economics/currency";
+import type { PageReadEvidence } from "../ai/types";
+
+/** Preserve scheme, path case and query: different review pages cannot support one another. */
+export function exactPageKey(raw: string): string | null {
+  try {
+    const url = new URL(raw.trim());
+    if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) return null;
+    url.hash = "";
+    return url.href;
+  } catch { return null; }
+}
+
+/** Source-index membership does not turn a search snippet or model summary into a page read. */
+export function boundedPageReads(reads: readonly PageReadEvidence[] | undefined, sources: readonly { url: string }[], now: number): PageReadEvidence[] {
+  const allowed = new Set(sources.map(source => exactPageKey(source.url)).filter(Boolean));
+  const kept = new Map<string, PageReadEvidence>();
+  for (const read of reads ?? []) {
+    const key = exactPageKey(read.url);
+    if (!key || !allowed.has(key) || kept.has(key) || typeof read.text !== "string" || !read.text.trim() || !Number.isFinite(read.retrievedAt) || read.retrievedAt <= 0 || read.retrievedAt > now) continue;
+    kept.set(key, { url: read.url, text: read.text.slice(0, 8_000), retrievedAt: read.retrievedAt });
+    if (kept.size === 8) break;
+  }
+  return [...kept.values()];
+}
+
+export interface CustomerLanguageCandidate { phrase: string; theme: string; sourceUrl?: string }
+export interface CustomerLanguageCheck {
+  candidateCount: number;
+  matchedCount: number;
+  notMatchedCount: number;
+  uncheckedCount: number;
+  businessSiteCount: number;
+}
+
+/** Match words only. Neither a text match nor an external host proves customer identity or consent. */
+export function checkedCustomerLanguage(candidates: readonly CustomerLanguageCandidate[], reads: readonly PageReadEvidence[], businessWebsite?: string, now = Date.now()) {
+  const review: CustomerLanguageCheck = { candidateCount: 0, matchedCount: 0, notMatchedCount: 0, uncheckedCount: 0, businessSiteCount: 0 };
+  const phrases: (CustomerLanguageCandidate & { sourceUrl: string; sourceReadAt: number; evidenceStatus: "text_matched" })[] = [];
+  const ownKey = businessWebsite ? exactPageKey(businessWebsite) : null;
+  const ownHost = ownKey ? new URL(ownKey).hostname.replace(/^www\./, "") : null;
+  const textOf = (text: string) => text.replace(/\s+/g, " ").trim();
+  for (const row of candidates.slice(0, 40)) {
+    review.candidateCount++;
+    const key = row.sourceUrl ? exactPageKey(row.sourceUrl) : null;
+    const host = key ? new URL(key).hostname.replace(/^www\./, "") : null;
+    if (ownHost && host && (host === ownHost || host.endsWith(`.${ownHost}`))) { review.businessSiteCount++; continue; }
+    const page = key ? reads.find(read => exactPageKey(read.url) === key && Number.isFinite(read.retrievedAt) && read.retrievedAt > 0 && read.retrievedAt <= now) : undefined;
+    if (!page || !ownHost) { review.uncheckedCount++; continue; }
+    const phrase = textOf(row.phrase);
+    if (!phrase || !textOf(page.text).includes(phrase)) { review.notMatchedCount++; continue; }
+    review.matchedCount++;
+    phrases.push({ phrase: row.phrase, theme: row.theme, sourceUrl: row.sourceUrl!, sourceReadAt: page.retrievedAt, evidenceStatus: "text_matched" });
+  }
+  return { phrases, review };
+}
 
 export const PROVENANCE = ["owner", "research", "benchmark", "planned", "assumption"] as const;
 export type Provenance = (typeof PROVENANCE)[number];

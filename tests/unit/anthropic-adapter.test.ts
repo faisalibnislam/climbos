@@ -27,6 +27,13 @@ beforeEach(() => { state.requests.length = 0; state.responses.length = 0; state.
 afterEach(() => { delete process.env.ANTHROPIC_API_KEY; });
 
 describe("native Anthropic adapter, no network", () => {
+  it("returns actual fetched text separately from model notes and source URLs", async () => {
+    const url = "https://reviews.example/customer-note";
+    state.responses.push(response({ stop_reason: "tool_use", content: [{ type: "tool_use", id: "fetch_1", name: "fetch_page", input: { url } }] }), response());
+    const out = await anthropicTurn(request({ webFetch: { maxUses: 1, resolveHost: async () => ["93.184.216.34"], fetchImpl: async (target) => String(target).endsWith("/robots.txt") ? new Response("", { status: 404 }) : new Response("<html><body><p>I keep chasing the brief.</p></body></html>", { headers: { "content-type": "text/html" } }) } }), rates);
+    expect(out.ok && out.pageReads).toEqual([{ url, text: expect.stringContaining("I keep chasing the brief."), retrievedAt: expect.any(Number) }]);
+    expect(state.requests).toHaveLength(2);
+  });
   it("keeps ambiguous connection failures distinct from known unbilled rejections", async () => {
     state.responses.push(new Anthropic.APIConnectionTimeoutError());
     const out = await anthropicTurn(request(), rates);

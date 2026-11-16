@@ -75,6 +75,7 @@ describe("fetch_page (OpenAI adapter page reads)", () => {
     expect(out.output).toMatch(/<untrusted_content source="https:\/\/rival\.example\/pricing">[\s\S]*Pro is \$49 a month\.[\s\S]*<\/untrusted_content>/);
     expect(r.sources.map((s) => s.url)).toEqual(["https://rival.example/pricing", "https://other.example"]);
     expect(r.sources[0].title).toBe("Rival pricing");
+    expect(r.pageReads).toEqual([{ url: "https://rival.example/pricing", text: expect.stringContaining("Pro is $49 a month."), retrievedAt: expect.any(Number) }]);
     const expected = { inputTokens: 1_000 + 2_000, cacheReadTokens: 1_000, outputTokens: 500, webSearches: 1, webFetches: 1, calls: 2 };
     expect(r.usage).toMatchObject(expected);
     const summed = { ...usageOf(first), inputTokens: 3_000, cacheReadTokens: 1_000, outputTokens: 500, calls: 2, webFetches: 1 };
@@ -92,6 +93,8 @@ describe("fetch_page (OpenAI adapter page reads)", () => {
     fetcher.fetched[0].productPitchPolicy!.evidence = "x".repeat(400);
     const restored = new PageFetcher({ maxUses: 1, resolveHost: dns(), fetchImpl: web });
     restored.restore(fetcher.metadata());
+    expect(fetcher.pageReads).toHaveLength(1);
+    expect(restored.pageReads).toEqual([]); // URL-only background metadata cannot verify words.
     expect(restored.fetched[0]?.productPitchPolicy?.status).toBe("refused");
     expect(Object.values(fetcher.metadata()).every(value => value.length <= 512)).toBe(true);
   });

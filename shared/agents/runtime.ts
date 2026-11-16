@@ -1,3 +1,4 @@
+import { boundedPageReads } from "./provenance";
 import { OWNER_LANGUAGE_RULES } from "./ownerLanguage";
 import { fitJson, fitText, reportDropped } from "./context";
 import { z } from "zod";
@@ -273,7 +274,7 @@ export async function runResearch<T>(spec: AgentSpec<T>, input: AgentInput, deps
           actualModelId: "tenant-research-cache",
           stopReason: "cache_hit",
         };
-        return { value: { notes: cached.notes, sources: cached.sources, ...(cached.retrievedAt ? { retrievedAt: cached.retrievedAt } : {}) }, record: { phase: "research", round: 0, modelKey: spec.models.research, result, cacheHit: true } };
+        return { value: { notes: cached.notes, sources: cached.sources, ...(cached.pageReads ? { pageReads: boundedPageReads(cached.pageReads, cached.sources, Date.now()) } : {}), ...(cached.retrievedAt ? { retrievedAt: cached.retrievedAt } : {}) }, record: { phase: "research", round: 0, modelKey: spec.models.research, result, cacheHit: true } };
       }
     const req: TurnRequest = {
       modelKey: spec.models.research,
@@ -300,7 +301,7 @@ export async function runResearch<T>(spec: AgentSpec<T>, input: AgentInput, deps
     };
     const result = await deps.turn(req);
     if (!result.ok) failure(result);
-      const value = { notes: reportDropped(`${spec.id} research`, fitText(String(result.output), 40_000, "research notes")), sources: result.sources.slice(0, 50).map((s) => ({ url: s.url, title: s.title, ...(s.productPitchPolicy ? { productPitchPolicy: s.productPitchPolicy } : {}), ...(s.pageReportedDates?.length ? { pageReportedDates: s.pageReportedDates } : {}) })), retrievedAt: Date.now() };
+      const value = { notes: reportDropped(`${spec.id} research`, fitText(String(result.output), 40_000, "research notes")), sources: result.sources.slice(0, 50).map((s) => ({ url: s.url, title: s.title, ...(s.productPitchPolicy ? { productPitchPolicy: s.productPitchPolicy } : {}), ...(s.pageReportedDates?.length ? { pageReportedDates: s.pageReportedDates } : {}) })), retrievedAt: Date.now(), ...(spec.id === "business_insights" ? { pageReads: boundedPageReads(result.pageReads, result.sources, Date.now()) } : {}) };
       if (cacheKey && deps.researchCache && value.sources.length > 0) {
         const ttl = Math.max(1_000, Math.min(r.cacheTtlMs ?? 0, 24 * 60 * 60_000));
         try {

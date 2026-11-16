@@ -4,12 +4,13 @@ import { asNewUser, setup } from "./helpers";
 import { RATE_VERSIONS } from "../../shared/economics/rates";
 import type { AgentInput } from "../../shared/agents/types";
 
-const captured = vi.hoisted(() => ({ inputs: [] as AgentInput[] }));
+const captured = vi.hoisted(() => ({ inputs: [] as AgentInput[], reply: null as unknown }));
 vi.mock("../../shared/agents/runtime", async (original) => ({
   ...await original<typeof import("../../shared/agents/runtime")>(),
   // Inspect the actual job's generation input without a paid model or provider call.
   runAgent: vi.fn(async (_spec: unknown, input: AgentInput) => {
     captured.inputs.push(input);
+    if (captured.reply) return captured.reply;
     throw new Error("Test stopped at generation boundary");
   }),
 }));
@@ -26,7 +27,33 @@ const research = {
 };
 
 describe("persisted research in generation context", () => {
-  afterEach(() => { captured.inputs.length = 0; vi.unstubAllEnvs(); });
+  afterEach(() => { captured.inputs.length = 0; captured.reply = null; vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
+
+  it("carries actual research-phase page evidence through onboarding into the saved phrase bank", async () => {
+    const t = setup();
+    vi.stubEnv("CLIMBOS_FAKE_LLM", "");
+    const network = vi.fn(() => { throw new Error("Unexpected network call"); });
+    vi.stubGlobal("fetch", network);
+    const owner = await asNewUser(t, "insights-page-evidence@example.com");
+    const { orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Research context", website: "https://business.example/" });
+    const now = Date.now();
+    const runId = await t.run(async ctx => {
+      const runId = await ctx.db.insert("workflowRuns", { orgId, kind: "onboarding_research", title: "Source evidence", status: "executing", input: "{}", engine: "v2", roles: [], estimateMicros: 0, actualMicros: 0, rateVersionId: RATE_VERSIONS[0].id, entitlementVersionId: "test", routingVersionId: "test", budget: { modelSteps: 10, researchTools: 5, repairs: 0 }, used: { modelSteps: 0, researchTools: 0, repairs: 0 }, isFixture: false, createdAt: now, updatedAt: now });
+      const profile = { name: "Research context", oneLineSummary: "Client brief tool", businessType: "saas", audience: "Small studios", category: "Intake tools", facts: [], brandVoice: "Clear", suggestedSuccessEvents: [] };
+      for (const [index, output] of [[0, [{ url: "https://business.example/", status: "ok", text: "Collect a client brief" }]], [1, profile], [300, {}]] as const) {
+        await ctx.db.insert("workflowSteps", { orgId, runId, index, kind: index === 0 ? "research" : "model", label: "Synthetic completed checkpoint", status: "succeeded", idempotencyKey: `${orgId}:${runId}:s${index}`, attempt: 1, costMicros: 0, output: JSON.stringify(output) });
+      }
+      return runId;
+    });
+    const readAt = now - 5000;
+    captured.reply = { output: research, assessment: null, rounds: 1, history: [], research: { notes: "Synthetic research note", sources: [{ url: research.vocPhrases[0].sourceUrl }], retrievedAt: now, pageReads: [{ url: research.vocPhrases[0].sourceUrl, text: research.vocPhrases[0].phrase, retrievedAt: readAt }] } };
+    await t.action(internal.jobs.onboardingResearch, { runId });
+    expect((await t.run(ctx => ctx.db.get(runId)))?.status).toBe("verified");
+    const saved = await t.run(ctx => ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", orgId)).first());
+    expect(saved?.insights?.expert?.vocPhrases).toEqual([{ ...research.vocPhrases[0], evidenceStatus: "text_matched", sourceReadAt: readAt }]);
+    expect(network).not.toHaveBeenCalled();
+    for (const table of ["approvals", "actionReceipts", "artifacts"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
+  });
 
   it.each([
     ["content_social", "focused"], ["content_ads", "focused"], ["content_email", "focused"],
@@ -41,7 +68,17 @@ describe("persisted research in generation context", () => {
       const runId = await ctx.db.insert("workflowRuns", { orgId, kind, title: "Research context check", status: "proposed", input: JSON.stringify({ planStyle }), engine: "v2", roles: [], estimateMicros: 0, actualMicros: 0, rateVersionId: RATE_VERSIONS[0].id, entitlementVersionId: "test", routingVersionId: "test", budget: { modelSteps: 20, researchTools: 5, repairs: 0 }, used: { modelSteps: 0, researchTools: 0, repairs: 0 }, isFixture: false, createdAt: Date.now(), updatedAt: Date.now() });
       return { businessId: business._id, runId };
     });
-    await t.mutation(internal.jobWrites.saveInsights, { runId, businessId, insights: JSON.stringify(research) });
+    const candidates = [
+      ...research.vocPhrases,
+      { ...research.vocPhrases[0], phrase: "Invented customer praise", evidenceStatus: "text_matched", sourceReadAt: Date.now() },
+      { ...research.vocPhrases[0], phrase: "The business markets itself", sourceUrl: "https://business.example/" },
+      { ...research.vocPhrases[0], phrase: "Search-only unsupported words", sourceUrl: "https://unread.example/" },
+    ];
+    const readAt = Date.now() - 1000;
+    await t.mutation(internal.jobWrites.saveInsights, { runId, businessId, insights: JSON.stringify({ ...research, vocPhrases: candidates }), pageReads: [{ url: research.vocPhrases[0].sourceUrl, text: research.vocPhrases[0].phrase, retrievedAt: readAt }] });
+    const saved = (await t.run(ctx => ctx.db.get(businessId)))!.insights!.expert!;
+    expect(saved.vocReview).toEqual({ candidateCount: 4, matchedCount: 1, notMatchedCount: 1, uncheckedCount: 1, businessSiteCount: 1 });
+    expect(saved.vocPhrases).toEqual([{ ...research.vocPhrases[0], evidenceStatus: "text_matched", sourceReadAt: readAt }]);
     const other = await asNewUser(t, `other-${kind}@example.com`);
     const otherWorkspace = await other.client.mutation(api.orgs.createWorkspace, { businessName: "OTHER TENANT PRIVATE RESEARCH" });
     const otherBusiness = await t.run(async ctx => {
@@ -63,6 +100,8 @@ describe("persisted research in generation context", () => {
     expect(text).toContain("not verified testimonials");
     expect(text).toContain("not a source retrieval or verification date");
     expect(text).not.toContain("OTHER TENANT PRIVATE RESEARCH");
+    expect(text).not.toContain("Invented customer praise");
+    expect(text).not.toContain("Search-only unsupported words");
     expect((await t.run(ctx => ctx.db.get(otherBusiness)))?.insights).toBeUndefined();
     for (const table of ["approvals", "actionReceipts", "artifacts"] as const) {
       expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);

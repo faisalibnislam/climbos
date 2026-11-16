@@ -47,7 +47,7 @@ import { fetchCitedPages, researchWebsite, resolveHost } from "./ai/research";
 import { r2Configured, r2Key, r2Put } from "./lib/r2";
 import { adsToArtifacts, emailToArtifacts, seoToArtifacts, socialToArtifacts } from "./jobWrites";
 import { AgentFailure, AgentYield, runAgent, type AgentDeps, runResearch } from "../shared/agents/runtime";
-import { type Source, type MessageParam, type TurnResult } from "../shared/ai/types";
+import { type Source, type PageReadEvidence, type MessageParam, type TurnResult } from "../shared/ai/types";
 import { archetypeInstruction } from "../shared/agents/registry";
 import { modelTurn, providerOf } from "../shared/ai/turn";
 import { CALL_ROUTES, draftsFor, expertEscalationModel, routeModels, taskModelSlot, ROUTE_VERSION } from "../shared/agents/routes";
@@ -398,7 +398,7 @@ async function runAgentTask<T>(
     ...(process.env.CLIMBOS_FAKE_LLM ? {} : {
       researchCache: {
         get: async (cacheKey: string) => ctx.runQuery(internal.engine.getResearchCache, { orgId: job.org._id, cacheKey }),
-        put: async (cacheKey: string, value: { notes: string; sources: { url: string; title?: string; pageReportedDates?: { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }[] }[]; retrievedAt?: number }, expiresAt: number) => {
+        put: async (cacheKey: string, value: { notes: string; sources: { url: string; title?: string; pageReportedDates?: { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }[] }[]; retrievedAt?: number; pageReads?: PageReadEvidence[] }, expiresAt: number) => {
           await ctx.runMutation(internal.engine.putResearchCache, { orgId: job.org._id, cacheKey, agentId: spec.id, modelKey: spec.models.research, businessWebsite: job.business?.website ?? undefined, ...value, expiresAt });
         },
       },
@@ -540,6 +540,7 @@ async function runAgentTask<T>(
       meta.sources = result.research?.sources ?? [];
       meta.notes = result.research?.notes;
       meta.retrievedAt = result.research?.retrievedAt;
+      meta.pageReads = result.research?.pageReads;
       meta.skills = [...spec.skills, ...(spec.criticSkills ?? [])];
       meta.models = spec.models;
       meta.quality = agentQuality(spec.id, result.assessment, result.rounds, result.research ? result.research.sources.length : null);
@@ -689,7 +690,7 @@ function playbookContext(job: JobCtx, profile: AcquisitionProfile, d: Diagnosis)
 }
 
 /** What an agent run reports back for quality and the plan's evidence record. */
-type AgentMeta = { shipped?: boolean | null; sources?: { url: string; title?: string; pageReportedDates?: { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }[] }[]; notes?: string; retrievedAt?: number; skills?: string[]; models?: unknown; quality?: AgentQuality; knowledgeReferences?: KnowledgeReferenceSet };
+type AgentMeta = { shipped?: boolean | null; sources?: { url: string; title?: string; pageReportedDates?: { kind: "published" | "updated"; date: string; source: "json_ld" | "meta" }[] }[]; notes?: string; retrievedAt?: number; pageReads?: PageReadEvidence[]; skills?: string[]; models?: unknown; quality?: AgentQuality; knowledgeReferences?: KnowledgeReferenceSet };
 
 /** Constraints once the plays' numbers are locked: the plan's prose must use these customer counts (Book 14 §7). */
 function lockedConstraints(job: JobCtx, plays: PlaysOutput, serviceArea?: string, businessTypes?: string[], diagnosis?: Diagnosis): PlanConstraints {
@@ -1349,6 +1350,7 @@ export const onboardingResearch = internalAction({
 
       // Step 2: CMO builds business intelligence (audience, competitors, VoC, SWOT, journey).
       const v1InsightsTask = `TASK: Using the business profile and website content, produce business intelligence: likely customer groups, competitors (only name competitors you can support with a source; if you used web search, put the URL in sourceUrl; otherwise say the owner should confirm), positioning, pricing observations, SWOT, a customer journey and the top opportunities.\n\nPROFILE:\n${reportDropped("insights profile", fitJson(profile, 6000, "profile"))}`;
+      const insightsMeta: AgentMeta = {};
       const insights = await runAgentTask<BusinessInsights>(
         ctx,
         job,
@@ -1365,13 +1367,14 @@ export const onboardingResearch = internalAction({
         ),
         startedAt,
         { task: "business_insights", text: v1InsightsTask, context: pagesText, ctx: fixtureCtx(job) },
+        insightsMeta,
       );
       // Claim support for audience evidence: excerpts are checked against confirmed facts and the site pages read here.
       const pageText = Object.fromEntries(pages.filter((p) => p.status === "ok").map((p) => [urlKey(p.url), p.text]));
       const checkedInsights = insights && typeof insights === "object" && Array.isArray((insights as { audiences?: unknown }).audiences)
         ? { ...(insights as Record<string, unknown>), audiences: verifyAudienceEvidence((insights as { audiences: Parameters<typeof verifyAudienceEvidence>[0] }).audiences, { facts: job.facts.map((f) => f.statement), pages: pageText }) }
         : insights;
-      await ctx.runMutation(internal.jobWrites.saveInsights, { runId, businessId: business._id, insights: JSON.stringify(checkedInsights) });
+      await ctx.runMutation(internal.jobWrites.saveInsights, { runId, businessId: business._id, insights: JSON.stringify(checkedInsights), pageReads: insightsMeta.pageReads ?? [] });
       await firstTake;
       await finish(ctx, runId, "verified", { output: { facts: profile.facts.length }, meters: { scrapeCredits: pagesFetched, searchCalls: 0 } });
     }, undefined, resumeAs(ctx, "onboardingResearch", { runId, ownerText }));

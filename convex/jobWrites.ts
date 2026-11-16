@@ -1,3 +1,4 @@
+import { boundedPageReads, checkedCustomerLanguage } from "../shared/agents/provenance";
 import { businessModelEvidenceHashes } from "./lib/businessModelEvidence";
 import { businessModelFreshness, readBusinessModelEvidence } from "../shared/agents/businessModelFreshness";
 import { businessModelLearning } from "./lib/businessModelTests";
@@ -496,8 +497,8 @@ export const saveResearch = internalMutation({
 });
 
 export const saveInsights = internalMutation({
-  args: { runId: v.id("workflowRuns"), businessId: v.id("businesses"), insights: v.string() },
-  handler: async (ctx, { runId, businessId, insights }) => {
+  args: { runId: v.id("workflowRuns"), businessId: v.id("businesses"), insights: v.string(), pageReads: v.optional(v.array(v.object({ url: v.string(), text: v.string(), retrievedAt: v.number() }))) },
+  handler: async (ctx, { runId, businessId, insights, pageReads }) => {
     const run = await ensureRunOrg(ctx, runId);
     const business = await ctx.db.get(businessId);
     if (!business || business.orgId !== run.orgId) throw new Error("Business mismatch");
@@ -506,6 +507,7 @@ export const saveInsights = internalMutation({
     const v2Competitors = v2.competitors;
     const commercialAssessment = v2.commercialAssessment;
     const insightsAt = Date.now();
+    const language = checkedCustomerLanguage(v2.vocPhrases ?? [], boundedPageReads(pageReads, pageReads ?? [], insightsAt), business.website, insightsAt);
     const org = await ctx.db.get(run.orgId);
     const refreshDays = org?.competitorResearchRefreshDays ?? 90;
     await ctx.db.patch(businessId, {
@@ -579,7 +581,8 @@ export const saveInsights = internalMutation({
                 const url = (u: string) => u || undefined;
                 return {
                   alternatives: x.alternatives.slice(0, 10).map((a) => ({ ...a, sourceUrl: url(a.sourceUrl) })),
-                  vocPhrases: x.vocPhrases.slice(0, 40).map((a) => ({ ...a, sourceUrl: url(a.sourceUrl) })),
+                  vocPhrases: language.phrases,
+                  vocReview: language.review,
                   objections: x.objections.slice(0, 12).map((a) => ({ ...a, sourceUrl: url(a.sourceUrl) })),
                   gaps: x.gaps.slice(0, 10).map((a) => ({ ...a, sourceUrl: url(a.sourceUrl) })),
                   positioningStatement: x.positioningStatement,

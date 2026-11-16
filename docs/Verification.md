@@ -1,3 +1,32 @@
+## 16 November 2026 — customer-language source-text evidence
+
+The existing phrase-bank lint checked source URL membership but did not prove that quoted words appeared in text ClimbOS read. Traced `PageFetcher` → OpenAI/Anthropic turn result → business-insights research/checkpoint/cache → onboarding `AgentMeta` → `saveInsights` → saved expert research → downstream drafting/strategy and owner research UI.
+
+Implemented:
+
+- Carry at most eight 8,000-character actual page excerpts separately from the source URL index. Capture the actual read timestamp. Only business-insights research retains these excerpts in its existing cache; other agents do not acquire larger research caches. The existing tenant/expiry/deletion lifecycle applies. This adds no network read, paid research call or platform integration.
+- Keep original read times through cache reuse. Search snippets/model notes cannot stand in for fetched page text. Background-response metadata preserves URL/read counts but cannot restore page text; such missing evidence remains unchecked rather than triggering a new fetch.
+- In `saveInsights`, examine at most 40 phrase candidates, ignoring model-supplied verification flags. Retain only exact case-sensitive text matches with layout whitespace normalized, from a matching external page URL. Preserve scheme, query and path case; fragments identify the same fetched page. Unknown business website/source text/read time, nonmatching wording, and business-site copy are withheld and counted separately. Unknown timestamps are not replaced with save time.
+- Persist source-read timestamps and `text_matched` status with retained phrases. Store counts of matched/nonmatched/unchecked/business-site candidates without treating them as distinct customers or representative demand. Legacy records remain readable and explicitly unchecked.
+- Add an expandable customer-language panel inside the existing owner research section. It exposes wording, research theme, source, original read date and limitations. Text matching does not authenticate the writer, identify own versus competitor customers, establish publication permission, prove semantics or show prevalence. No approval or action control changed.
+
+Verification commands:
+
+```sh
+pnpm exec vitest run tests/unit/customer-language-evidence.test.ts tests/unit/customer-language-ui.test.tsx tests/unit/pageFetch.test.ts tests/unit/research-cache.test.ts tests/unit/anthropic-adapter.test.ts tests/unit/business-research-context.test.ts tests/unit/research-quality.test.ts tests/convex/research-context.test.ts tests/convex/research-cache.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+pnpm exec eslint shared/ai/types.ts shared/ai/pageFetch.ts shared/ai/openai.ts shared/ai/anthropic.ts shared/ai/tasks.ts shared/agents/types.ts shared/agents/runtime.ts shared/agents/provenance.ts shared/agents/specs.ts convex/schema.ts convex/engine.ts convex/jobs.ts convex/jobWrites.ts src/components/app/plan/PlanSections.tsx tests/unit/customer-language-evidence.test.ts tests/unit/customer-language-ui.test.tsx tests/unit/pageFetch.test.ts tests/unit/research-cache.test.ts tests/unit/anthropic-adapter.test.ts tests/convex/research-context.test.ts tests/convex/research-cache.test.ts e2e/customer-language-evidence.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/customer-language-evidence.spec.ts
+git diff --check
+```
+
+Results: **96 tests across 12 files passed**, application/Convex typecheck and scoped lint passed, and isolated loopback sync succeeded. Provider adapters used mocked services. The onboarding regression resumes synthetic profile/page checkpoints, receives mocked research-phase evidence through the actual job handler and verifies the persisted phrase/date with zero network calls. Five downstream job cases verify that unsupported/forged candidates are removed before generation while valid research survives; tenant and approval regressions remain green.
+
+Final browser run: **two desktop/mobile checks passed in 17.8 seconds** with synthetic data in the isolated backend. It verifies matched and legacy states, exact source/read date, omission explanation, usable source controls without opening external links, no horizontal overflow, no serious/critical automated accessibility findings, and unchanged artifact/approval/action/run records. The first attempt missed the enclosing collapsed “What we found” section; test navigation was corrected. Mobile render inspection led to using the existing surface color token; the final browser run includes that change. Next.js's installed use-client guide and React review guidance were consulted. These checks do not establish full accessibility conformance or real-provider operation.
+
+Remaining: matches cover only retained excerpts, not full-page absence or semantic support. External-site copy may still be a publisher's claim rather than a genuine customer statement; authenticity and customer-pool attribution remain unknown. Legacy/cache/background records without text cannot be retroactively verified. Other free-text research fields are outside this phrase-bank check. No live model-quality evaluation, production deployment or external publishing was performed. The broad product acceptance audit remains incomplete.
+
 ## 16 November 2026 — persisted research in drafting and focused strategy
 
 Traced `saveInsights` → stored `business.insights.expert` → `jobContext` → `businessResearchContext` / `planContext` → actual social, ad, email and focused/starter strategy generation inputs. Four initial regression cases failed because the saved positioning and associated research never reached generation. Starter uses the same affected branch and is included in the final five-case integration matrix. Detailed strategy already included the saved insight object; it was not replaced.
