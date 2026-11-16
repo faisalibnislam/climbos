@@ -88,6 +88,7 @@ export async function graphCollect<T>(
   firstUrl: URL,
   mapItem: (raw: Record<string, unknown>) => T | undefined,
   maxPages = 10,
+  strictRows = false,
 ): Promise<ReadResult<PaginationResult<T>>> {
   return collectPages<T>(
     async (cursor) => {
@@ -96,6 +97,7 @@ export async function graphCollect<T>(
       const out = await graphGet(call, url);
       if (out.kind !== "ok") return metaReadFailure(out);
       const data = isRecord(out.data) ? out.data : {};
+      if (strictRows && (!Array.isArray(data.data) || data.data.some(row => !isRecord(row)))) return { ok: false, providerMessage: "Meta returned malformed report rows.", retryable: false };
       const items: T[] = [];
       for (const raw of asArray(data.data)) {
         if (!isRecord(raw)) continue;
@@ -106,6 +108,7 @@ export async function graphCollect<T>(
       const cursors = isRecord(paging.cursors) ? paging.cursors : {};
       // Only continue when Graph signals a next page.
       const next = typeof paging.next === "string" ? asString(cursors.after) : undefined;
+      if (strictRows && typeof paging.next === "string" && !next) return { ok: false, providerMessage: "Meta indicated another report page without a usable cursor.", retryable: false };
       return { ok: true, data: { items, nextCursor: next } };
     },
     { maxPages },

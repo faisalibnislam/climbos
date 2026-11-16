@@ -196,7 +196,7 @@ export async function collectPages<T>(
     items.push(...page.data.items);
     cursor = page.data.nextCursor;
     if (!cursor) return { ok: true, data: { items, pages, truncated: false } };
-    if (seen.has(cursor)) return { ok: true, data: { items, pages, truncated: false } }; // provider loop guard
+    if (seen.has(cursor)) return { ok: true, data: { items, pages, truncated: true, nextCursor: cursor } }; // a loop is not a completed report
     seen.add(cursor);
   }
   return { ok: true, data: { items, pages, truncated: true, nextCursor: cursor } };
@@ -216,6 +216,14 @@ export function asNumber(v: unknown): number {
   if (typeof v === "number" && Number.isFinite(v)) return v;
   if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) return Number(v);
   return 0;
+}
+
+/** Missing is distinct from zero; malformed reported numbers stay invalid. */
+export function reportedNumber(v: unknown): number | undefined {
+  if (v === undefined || v === null) return undefined;
+  if (typeof v === "number") return Number.isFinite(v) ? v : NaN;
+  if (typeof v === "string" && /^-?\d+(?:\.\d+)?$/.test(v)) return Number(v);
+  return NaN;
 }
 
 export function asArray(v: unknown): unknown[] {

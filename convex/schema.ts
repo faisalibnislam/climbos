@@ -3894,6 +3894,12 @@ export default defineSchema({
     /** Meta action types are kept distinct; they are not interchangeable conversions. */
     reportedActions: v.optional(v.array(v.object({ actionType: v.string(), value: v.number() }))),
     syncedAt: v.number(),
+    requestedAt: v.optional(v.number()),
+    validationVersion: v.optional(v.number()),
+    externalAccountId: v.optional(v.string()),
+    externalCampaignId: v.optional(v.string()),
+    timeZone: v.optional(v.string()),
+    rowCount: v.optional(v.number()),
     error: v.optional(v.string()),
   }).index("by_org_campaign", ["orgId", "campaignId"]),
 

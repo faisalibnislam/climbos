@@ -10,6 +10,7 @@ import {
 } from "../shared/integrations/metaAds";
 import { approvalHash, can, canonicalJson, checkApprovalForExecution, sha256Hex } from "../shared/policy";
 import { AD_BUDGET_UNIT_VERSION, campaignBudgetProblem, knownAdBudget, parseAdBudget, maxRolling31DaySpend, validCampaignDateRange } from "../shared/policy/campaignBudget";
+import { CAMPAIGN_REPORT_VERSION, campaignReportWindow, validateCampaignReportTotals } from "../shared/acquisition/campaignReport";
 import { campaignApprovalScope } from "../shared/policy/campaignScope";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -86,6 +87,18 @@ export const list = query({
         .query("campaignPerformance")
         .withIndex("by_org_campaign", (q) => q.eq("orgId", org._id).eq("campaignId", c._id))
         .first();
+      let performanceReviewReason: string | null = null;
+      if (performance) {
+        if (performance.validationVersion !== CAMPAIGN_REPORT_VERSION || !performance.timeZone || performance.requestedAt === undefined) performanceReviewReason = "Refresh results to verify this older report's source and account timezone.";
+        else if (!campaignConnection || campaignConnection.orgId !== org._id || performance.connectionId !== c.connectionId || performance.externalAccountId !== campaignConnection.externalAccountId || performance.externalCampaignId !== c.externalId || performance.currency !== c.currency || performance.source !== campaignConnection.provider) performanceReviewReason = "The campaign or account changed. Refresh results before using the previous report.";
+        else {
+          try {
+            const window = campaignReportWindow(c, performance.timeZone, performance.requestedAt);
+            if (window.startDate !== performance.startDate || window.endDate !== performance.endDate) throw new Error("Report dates no longer match the campaign.");
+            validateCampaignReportTotals(performance);
+          } catch { performanceReviewReason = "This report needs a fresh read before its totals can be used."; }
+        }
+      }
       const approvals = await ctx.db.query("approvals").withIndex("by_subject", q => q.eq("subjectType", "campaign_activation").eq("subjectId", c._id)).take(1001);
       const writeState = approvals.length > 1000 ? "review_required" as const
         : approvals.some(a => a.orgId === org._id && a.executionStartedAt !== undefined && a.executionFinishedAt === undefined) ? "started" as const
@@ -111,7 +124,8 @@ export const list = query({
         destinationUrl: c.destinationUrl ?? null,
         stopRules: c.stopRules,
         externalId: c.externalId ?? null,
-        performance: performance ?? null,
+        performance: performanceReviewReason ? null : performance ?? null,
+        performanceReviewReason,
       };
     }));
     return {
@@ -171,6 +185,11 @@ export const recordPerformanceSnapshot = internalMutation({
     startDate: v.string(),
     endDate: v.string(),
     currency: v.string(),
+    requestedAt: v.number(),
+    timeZone: v.string(),
+    externalAccountId: v.string(),
+    externalCampaignId: v.string(),
+    rowCount: v.number(),
     spendMinor: v.optional(v.number()),
     impressions: v.optional(v.number()),
     clicks: v.optional(v.number()),
@@ -187,9 +206,15 @@ export const recordPerformanceSnapshot = internalMutation({
     if (campaign.connectionId !== args.connectionId || campaign.channel !== expectedChannel) throw appError("FORBIDDEN", "This account is no longer connected to the campaign.");
     const connection = await ctx.db.get(args.connectionId);
     if (!connection || connection.orgId !== org._id || connection.provider !== expectedProvider || connection.status !== "connected" || connection.isFixture) throw appError("FORBIDDEN", "The connected account changed before this result could be saved.");
+    if (connection.externalAccountId !== args.externalAccountId || campaign.externalId !== args.externalCampaignId || campaign.currency !== args.currency) throw appError("FORBIDDEN", "The campaign or account changed before this report finished. Refresh results again.");
+    if (!Number.isSafeInteger(args.requestedAt) || args.requestedAt > Date.now() || !Number.isSafeInteger(args.rowCount) || args.rowCount < 1 || args.rowCount > 90) throw appError("INVALID", "The report retrieval details are invalid.");
+    const window = campaignReportWindow(campaign, args.timeZone, args.requestedAt);
+    if (window.startDate !== args.startDate || window.endDate !== args.endDate) throw appError("INVALID", "The campaign report dates changed before saving.");
+    if (args.status === "ready") validateCampaignReportTotals(args);
     const old = await ctx.db.query("campaignPerformance")
       .withIndex("by_org_campaign", (q) => q.eq("orgId", org._id).eq("campaignId", campaign._id))
       .first();
+    if (old?.requestedAt !== undefined && old.requestedAt > args.requestedAt) throw appError("INVALID", "A newer report is already saved. Refresh to see it.");
     if (old) await ctx.db.delete(old._id);
     const syncedAt = Date.now();
     await ctx.db.insert("campaignPerformance", {
@@ -208,6 +233,12 @@ export const recordPerformanceSnapshot = internalMutation({
       conversionValueMinor: args.conversionValueMinor,
       reportedActions: args.reportedActions,
       syncedAt,
+      requestedAt: args.requestedAt,
+      timeZone: args.timeZone,
+      externalAccountId: args.externalAccountId,
+      externalCampaignId: args.externalCampaignId,
+      rowCount: args.rowCount,
+      validationVersion: CAMPAIGN_REPORT_VERSION,
       error: args.error?.slice(0, 300),
     });
     await audit(ctx, {

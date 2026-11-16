@@ -4,7 +4,7 @@
  * Scopes: ads_read (reads), ads_management (writes).
  */
 
-import { asArray, asNumber, asString, isRecord } from "./http";
+import { asNumber, asString, isRecord, reportedNumber } from "./http";
 import { graphCollect, graphGet, graphPost, metaReadFailure, metaWriteFailure, type GraphCall } from "./metaGraph";
 import { GRAPH_BASE } from "./registry";
 import { approvalError, type ApprovedAction, type PaginationResult, type ReadResult, type ReconcileResult, type WriteResult } from "./types";
@@ -40,10 +40,12 @@ export interface MetaInsightRow {
   campaignId: string;
   campaignName: string;
   spend: number;
+  /** Preserve provider decimal text before floating-point conversion. */
+  spendDecimal?: string;
   impressions: number;
   clicks: number;
   currency?: string;
-  actions: Array<{ actionType: string; value: number }>;
+  actions?: Array<{ actionType: string; value: number }>;
 }
 
 export function buildInsightsUrl(adAccountId: string, since: string, until: string, level: "account" | "campaign" = "campaign"): URL {
@@ -63,20 +65,21 @@ export function parseInsightRow(raw: Record<string, unknown>): MetaInsightRow {
     date: asString(raw.date_start) ?? "",
     campaignId: asString(raw.campaign_id) ?? "",
     campaignName: asString(raw.campaign_name) ?? "",
-    spend: asNumber(raw.spend),
-    impressions: asNumber(raw.impressions),
-    clicks: asNumber(raw.clicks),
+    spend: reportedNumber(raw.spend) ?? NaN,
+    spendDecimal: typeof raw.spend === "string" ? raw.spend : undefined,
+    impressions: reportedNumber(raw.impressions) ?? NaN,
+    clicks: reportedNumber(raw.clicks) ?? NaN,
     currency: asString(raw.account_currency),
-    actions: asArray(raw.actions)
-      .filter(isRecord)
-      .map((a) => ({ actionType: asString(a.action_type) ?? "", value: asNumber(a.value) })),
+    actions: raw.actions === undefined ? undefined : Array.isArray(raw.actions)
+      ? raw.actions.map((a) => isRecord(a) ? { actionType: asString(a.action_type) ?? "", value: reportedNumber(a.value) ?? NaN } : { actionType: "", value: NaN })
+      : [{ actionType: "", value: NaN }],
   };
 }
 
 export async function getInsights(
   call: GraphCall & { adAccountId: string; since: string; until: string; level?: "account" | "campaign"; maxPages?: number },
 ): Promise<ReadResult<PaginationResult<MetaInsightRow>>> {
-  return graphCollect(call, buildInsightsUrl(call.adAccountId, call.since, call.until, call.level), parseInsightRow, call.maxPages ?? 20);
+  return graphCollect(call, buildInsightsUrl(call.adAccountId, call.since, call.until, call.level), parseInsightRow, call.maxPages ?? 20, true);
 }
 
 // ---------------------------------------------------------------------------
@@ -217,6 +220,7 @@ export async function setCampaignStatus(
 
 export interface SpendCapUsage {
   currency: string;
+  timeZone?: string;
   /** 0 or absent means no cap is set. */
   spendCapMinor: number;
   amountSpentMinor: number;
@@ -226,13 +230,13 @@ export interface SpendCapUsage {
 
 export async function getAccountSpendCapUsage(call: GraphCall & { adAccountId: string }): Promise<ReadResult<SpendCapUsage>> {
   const url = new URL(`${GRAPH_BASE}/${normalizeAdAccountId(call.adAccountId)}`);
-  url.searchParams.set("fields", "spend_cap,amount_spent,currency");
+  url.searchParams.set("fields", "spend_cap,amount_spent,currency,timezone_name");
   const out = await graphGet(call, url);
   if (out.kind !== "ok") return metaReadFailure(out);
   const d = isRecord(out.data) ? out.data : {};
   const spendCapMinor = asNumber(d.spend_cap);
   const amountSpentMinor = asNumber(d.amount_spent);
-  const usage: SpendCapUsage = { currency: (asString(d.currency) ?? "").toUpperCase(), spendCapMinor, amountSpentMinor };
+  const usage: SpendCapUsage = { currency: (asString(d.currency) ?? "").toUpperCase(), timeZone: asString(d.timezone_name), spendCapMinor, amountSpentMinor };
   if (spendCapMinor > 0) usage.usedFraction = Math.min(1, amountSpentMinor / spendCapMinor);
   return { ok: true, data: usage };
 }

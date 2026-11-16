@@ -7,7 +7,7 @@
  */
 
 import { currencyExponent, microsToMinor, minorToMicros } from "./currency";
-import { asArray, asNumber, asString, collectPages, isRecord, readFailure, requestJson, writeFailure } from "./http";
+import { asArray, asString, collectPages, isRecord, readFailure, reportedNumber, requestJson, writeFailure } from "./http";
 import { GOOGLE_ADS_BASE } from "./registry";
 import { approvalError, type AdapterOptions, type ApprovedAction, type PaginationResult, type ReadResult, type ReconcileResult, type WriteResult } from "./types";
 
@@ -80,6 +80,7 @@ export async function searchGaql(
       const out = await requestJson({ url, method: "POST", headers: googleAdsHeaders(auth), body, fetchImpl: auth.fetchImpl, timeoutMs: auth.timeoutMs });
       if (out.kind !== "ok") return readFailure(out);
       const data = isRecord(out.data) ? out.data : {};
+      if (data.results !== undefined && (!Array.isArray(data.results) || data.results.some(row => !isRecord(row)))) return { ok: false, providerMessage: "Google returned malformed report rows.", retryable: false };
       const items = asArray(data.results).filter(isRecord);
       return { ok: true, data: { items, nextCursor: asString(data.nextPageToken) || undefined } };
     },
@@ -125,8 +126,8 @@ export interface CampaignDailyMetrics {
   costMicros: number;
   clicks: number;
   impressions: number;
-  conversions: number;
-  conversionsValue: number;
+  conversions?: number;
+  conversionsValue?: number;
 }
 
 function sub(row: Record<string, unknown>, key: string): Record<string, unknown> {
@@ -143,11 +144,11 @@ export function parseCampaignMetricsRow(row: Record<string, unknown>): CampaignD
     campaignName: asString(c.name) ?? "",
     date: asString(s.date) ?? "",
     // int64 fields arrive as JSON strings
-    costMicros: asNumber(m.costMicros),
-    clicks: asNumber(m.clicks),
-    impressions: asNumber(m.impressions),
-    conversions: asNumber(m.conversions),
-    conversionsValue: asNumber(m.conversionsValue),
+    costMicros: reportedNumber(m.costMicros) ?? NaN,
+    clicks: reportedNumber(m.clicks) ?? NaN,
+    impressions: reportedNumber(m.impressions) ?? NaN,
+    conversions: reportedNumber(m.conversions),
+    conversionsValue: reportedNumber(m.conversionsValue),
   };
 }
 

@@ -1,3 +1,44 @@
+## 16 November 2026 — campaign report integrity before monitoring
+
+Audit path: `adPerformance.syncPerformance` → `googleAds.getCampaignMetrics` / `metaAds.getInsights` → shared HTTP/Graph pagination and row parsing → daily aggregation → `ads.recordPerformanceSnapshot` → `ads.list` → `CampaignCard` efficiency advice. The missing automatic monitor could not safely reuse these inputs: twelve initial regressions reproduced accepted empty, missing-spend, duplicate and truncated Google reports; accepted missing-currency, duplicate, negative-spend and truncated Meta reports; missing snapshot source identity; Meta's wrong report cutoff; and guessed unknown timezones.
+
+Confirmed repairs:
+
+- Report parsing distinguishes missing from explicit zero. Required spend/click/impression data must be valid; optional Google conversions/value remain absent when any daily row lacks them. Meta action totals remain absent when a daily row lacks action data. Bad values are rejected, not silently normalized. Meta provider decimal text is retained for exact minor-unit conversion; Google micros are summed safely and rounded once. Converted monetary results are not revenue forecasts.
+- Daily rows require valid in-window dates and unique days. Google results must match the requested campaign. Meta still reads bounded account-level pages and selects the exact campaign; unrelated known campaigns are excluded, unidentifiable rows are refused, and every selected row must report the expected currency. Overflow, malformed action totals, negative spend and incomplete pages are rejected.
+- The shared cursor-loop guard now marks a repeated cursor incomplete. Google malformed row arrays and Meta malformed report pages/missing continuation cursors fail. Existing Graph consumers retain their non-strict behavior; the strict page contract is enabled for ad insights. No unfinished page set is saved as a complete campaign report.
+- Both providers require the account's recognized timezone. Meta reads `timezone_name` with existing account details. Windows exclude the current account-local day and remain capped at 90 days. No UTC/workspace fallback is invented. The UI states the actual account timezone and row count; calendar window duration is not called a count of observed rows.
+- Saved reports retain request start, account/campaign identity, timezone, row count and validation version. The final mutation rechecks current tenant membership, provider/account/campaign/currency and expected date window. An earlier-started request cannot replace a newer saved report. Readers withhold mismatched or legacy unvalidated snapshots and explain the required refresh. Old values are not migrated. A rejected refresh leaves the earlier stored report unchanged.
+
+Verification:
+
+```text
+pnpm exec vitest run tests/convex/ad-report-integrity.test.ts tests/unit/campaign-report.test.ts tests/convex/ad-performance.test.ts tests/convex/campaign-authorization.test.ts tests/convex/ad-budget-currency.test.ts tests/convex/tenancy.test.ts tests/convex/safety.test.ts tests/unit/campaign-performance.test.ts tests/unit/integrations.adapters.test.ts tests/unit/integrations.core.test.ts tests/unit/integrations.social.test.ts tests/unit/integrations.csv.test.ts tests/unit/campaign-money-display.test.tsx
+225 passed across 13 files
+
+pnpm exec vitest run tests/unit/campaign-report.test.ts tests/unit/campaign-performance.test.ts
+32 passed after decimal-text and calendar-window wording checks
+
+pnpm exec vitest run tests/convex/ad-report-integrity.test.ts
+22 passed after adding in-flight campaign/member changes
+
+pnpm typecheck
+application and Convex passed
+```
+
+Changed-file ESLint and `git diff --check` passed. Tests use synthetic credentials and stubbed fetch; Google calls only its read-only search endpoint and Meta only GET. Assertions verify no approvals, action receipts, pause or campaign-state changes from reporting. Tenant isolation, account/campaign changes, membership loss, old requests, source drift and legacy reports are exercised. The broad suite also covers existing approval and budget behavior. These counts overlap and should not be added as unique tests.
+
+Browser command: `E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/campaign-report-evidence.spec.ts` — desktop Chromium and Pixel 7 emulation passed, two checks in 9.6 seconds. Isolated demo fixtures show validated spend/cost-per-conversion and timezone/row context, while withholding a legacy total and preserving the stored value. No external write receipts, page errors, horizontal overflow or serious/critical axe findings. Screenshot inspected; the follow-up calendar-day wording is covered by the focused unit test. This does not establish full accessibility or live provider operation.
+
+Current primary documentation inspected 16 November 2026:
+
+- [Google reporting pagination](https://developers.google.com/google-ads/api/docs/reporting/paging), updated 13 November 2026: REST callers must follow page tokens to finish reading a report.
+- [Google zero metrics](https://developers.google.com/google-ads/api/docs/reporting/zero-metrics), updated 13 November 2026: segmented reports can omit all-zero rows. Therefore a missing day is not itself evidence of broken tracking; ClimbOS does not fabricate explicit daily observations or turn an entirely empty response into a verified zero result.
+- [Meta Ads Insights](https://developers.facebook.com/documentation/ads-commerce/marketing-api/insights), no publication date recorded: reporting requires `ads_read` and supports dated reports from ad objects.
+- [Meta Ad Account reference](https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/ad-account), no publication date recorded: `timezone_name` provides the account timezone. This increment adds no new OAuth scope or provider.
+
+Limits and next work: these are owner-triggered reads through yesterday, not a current-spend monitor. Google optional missing metrics and Meta missing action rows deliberately reduce available advice; the system cannot prove why a provider omitted them. Provider delays, modeled conversions, corrections, refunds, attribution and true tracking health remain distinct. Successful snapshots still replace the previous successful snapshot; no immutable reporting history or durable failed-refresh log was added. Meta retains its bounded account-level report read and can refuse large accounts. No auto-pause, new approval, deployment, paid model request or live API call occurred. Any automatic pause implementation must independently bind owner authorization to campaign/account/threshold/scope and use an appropriate fresh measurement, with explicit unknown/error and reconciliation states. Full requirement-level verification remains open.
+
 ## 16 November 2026 — exact ad-budget entry and current spending-policy checks
 
 Traced owner entry in Policies, Business & goal, Plan and onboarding → policy/goal storage → ad draft preparation → campaign review → exact approval → atomic execution claim → Google/Meta monetary payload. Initial focused tests reproduced JPY amounts multiplied by 100, KWD/CLF precision lost, excess precision rounded, ambiguous old policy values shown as confirmed and goal changes leaving the spending policy in a different currency.

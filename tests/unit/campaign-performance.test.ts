@@ -14,7 +14,10 @@ const base = {
 
 describe("reviewCampaignPerformance", () => {
   it("waits until the owner-defined review window", () => {
-    expect(reviewCampaignPerformance({ ...base, observedThrough: "2026-10-06" }).status).toBe("not_due");
+    const review = reviewCampaignPerformance({ ...base, observedThrough: "2026-10-06" });
+    expect(review.status).toBe("not_due");
+    expect(review.message).toContain("report window covers 6 calendar day(s)");
+    expect(review.message).not.toContain("are currently reported");
   });
 
   it("does not invent an efficiency target", () => {

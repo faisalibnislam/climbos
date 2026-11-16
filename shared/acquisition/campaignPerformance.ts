@@ -37,7 +37,7 @@ export function reviewCampaignPerformance(input: CampaignPerformanceReviewInput)
   if (last < first) throw new Error("Campaign performance review inputs are invalid.");
   const observedDays = Math.floor((last - first) / DAY_MS) + 1;
   if (observedDays < input.reviewAfterDays) {
-    return { status: "not_due", message: `The owner's review point is ${input.reviewAfterDays} days; ${Math.max(0, observedDays)} day(s) are currently reported.` };
+    return { status: "not_due", message: `The owner's review point is ${input.reviewAfterDays} days; the report window covers ${Math.max(0, observedDays)} calendar day(s).` };
   }
 
   const target = input.targetCostPerConversionMinor;

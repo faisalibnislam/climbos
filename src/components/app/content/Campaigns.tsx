@@ -209,6 +209,7 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
               {syncingPerformance ? "Refreshing…" : "Refresh results"}
             </Button>
           </div>
+          {c.performanceReviewReason ? <Callout tone="warning" title="Refresh campaign evidence">{c.performanceReviewReason}</Callout> : null}
           {performance ? (
             <>
               <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
@@ -225,8 +226,8 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
                     </dd>
                   </div>
                 ) : null}
-                {conversions && conversions > 0 ? (
-                  <div><dt className="text-xs text-ink-3">Reported cost / conversion</dt><dd className="font-medium text-ink">{minorToDisplay(Math.round((performance.spendMinor ?? 0) / conversions), performance.currency)}</dd></div>
+                {conversions && conversions > 0 && performance.spendMinor !== undefined ? (
+                  <div><dt className="text-xs text-ink-3">Reported cost / conversion</dt><dd className="font-medium text-ink">{minorToDisplay(Math.round(performance.spendMinor / conversions), performance.currency)}</dd></div>
                 ) : null}
               </dl>
               {review ? (
@@ -238,7 +239,7 @@ export function CampaignCard({ slug, campaign: c, headingLevel: H = "h3", isDemo
               <p className="text-xs text-ink-3">
                 Source: {performance.source === "google_ads" ? "Google Ads" : "Meta Ads"}, synced {new Date(performance.syncedAt).toLocaleString()}. Platform numbers can change and don’t prove new customers or profit. This advice never pauses or edits the campaign.
               </p>
-              {performance.source === "meta_ads" ? <p className="text-xs text-ink-3">Dates use your workspace timezone; Meta may use the ad account’s.</p> : null}
+              <p className="text-xs text-ink-3">Dates use the ad account timezone: {performance.timeZone ?? "Unknown"}. {performance.rowCount ?? "Unknown"} daily {performance.rowCount === 1 ? "row" : "rows"} returned. Missing dates do not establish whether tracking is working.</p>
             </>
           ) : (
             <p className="text-sm text-ink-2">Refresh to pull daily results. Advice uses only reported conversions and your cost target.</p>
