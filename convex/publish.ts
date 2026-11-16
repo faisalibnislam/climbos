@@ -1,3 +1,4 @@
+import { trendFreshnessIssue } from "../shared/agents/trendFreshness";
 import { v } from "convex/values";
 import {
   instagramApprovalValue,
@@ -260,6 +261,11 @@ export const publishArtifact = internalAction({
       // This approval was already attempted: never duplicate. Uncertain outcomes go to reconciliation.
       if (c.existingReceipt.status === "uncertain") await ctx.runAction(internal.publish.reconcile, { receiptId: c.existingReceipt._id });
       await ctx.runMutation(internal.publish.settleFromReceipt, { artifactId, receiptId: c.existingReceipt._id });
+      return;
+    }
+    const trendIssue = trendFreshnessIssue(version.copyBrief, Date.now(), artifact.scheduledFor);
+    if (trendIssue) {
+      await ctx.runMutation(internal.publish.blockPublish, { artifactId, reason: trendIssue, backTo: "in_review" });
       return;
     }
     if (!c.provider || !c.connection || c.connection.status !== "connected") {

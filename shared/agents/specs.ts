@@ -1,3 +1,4 @@
+import { MAX_CURRENT_TREND_AGE_MS } from "./trendFreshness";
 import { GoalTimingSchema, lintGoalTiming, type GoalTiming } from "./goalTiming";
 import { lintRefusedOutreach } from "./contactPolicy";
 import { hasUnfinishedDestination, PreparedWorkSchema, lintPreparedWork } from "./preparedWork";
@@ -1747,7 +1748,6 @@ export function lintRepeatedCopyPieces(items: { path: string; text: string }[]):
   return issues;
 }
 
-const MAX_CURRENT_TREND_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 type DatedTrendResearch = { sourceUrl: string; observationDate: string; observation: string };
 

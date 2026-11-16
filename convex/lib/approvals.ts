@@ -1,3 +1,4 @@
+import { trendFreshnessIssue } from "../../shared/agents/trendFreshness";
 import { approvalHash } from "../../shared/policy";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
@@ -53,6 +54,10 @@ export async function recordArtifactDecision(
   },
 ): Promise<Id<"approvals">> {
   const { org, artifact: a, version: ver } = p;
+  if (p.decision === "approve") {
+    const issue = trendFreshnessIssue(ver.copyBrief, Date.now(), a.scheduledFor);
+    if (issue) throw appError("INVALID", issue);
+  }
   const policy = await ctx.db
     .query("autonomyPolicies")
     .withIndex("by_org_active", (q) => q.eq("orgId", org._id).eq("active", true))
@@ -112,6 +117,9 @@ export const SCHEDULE_GRACE_MS = 6 * 3_600_000;
  * is part of the binding). Returns false when there is no live approval.
  */
 export async function extendApprovalUntil(ctx: MutationCtx, a: Doc<"artifacts">, until: number, scheduledFor?: number): Promise<boolean> {
+  const version = a.currentVersionId ? await ctx.db.get(a.currentVersionId) : null;
+  const issue = trendFreshnessIssue(version?.copyBrief, Date.now(), scheduledFor ?? a.scheduledFor);
+  if (issue) throw appError("INVALID", issue);
   const ap = a.approvalId ? await ctx.db.get(a.approvalId) : null;
   if (!ap || ap.status !== "approved" || ap.expiresAt <= Date.now()) return false;
   const expiresAt = Math.max(ap.expiresAt, until);

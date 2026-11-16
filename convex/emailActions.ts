@@ -1,3 +1,4 @@
+import { trendFreshnessIssue } from "../shared/agents/trendFreshness";
 import { v } from "convex/values";
 import { can, sha256Hex } from "../shared/policy";
 import { label } from "../shared/autopilot";
@@ -224,6 +225,8 @@ export const consume = mutation({
     if (await unsupportedClaimIssue(ctx, a.businessId, [a.title, ver.headline, ver.body, ver.callToAction, ...ver.hashtags, ver.altText])) {
       return { ok: false as const, message: "This post makes a claim ClimbOS can't verify yet. Open it in ClimbOS to fix it before approving." };
     }
+    const trendIssue = trendFreshnessIssue(ver.copyBrief, Date.now(), a.scheduledFor);
+    if (trendIssue) return { ok: false as const, message: trendIssue };
     await recordArtifactDecision(ctx, { org, artifact: a, version: ver, decision: "approve", decidedBy: t.userId, note: "Approved from email" });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: t.userId, action: "content.approved", subjectType: "artifact", subjectId: a._id, summary: `Approved "${a.title}" from email (v${ver.version}).` });
     await onOwnerDecision(ctx, { org, artifactId: a._id, decision: "approve", edited: ver.version > 1 && Boolean(ver.editedByUser), userId: t.userId });

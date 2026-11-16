@@ -87,3 +87,5 @@ Local specification-completion additions (9 November 2026): owner-entered offer-
 
 
 10 November follow-up: the unchanged 50-credit free allowance now fits the bounded profile and first-plan contract, with one correction only inside the original quote. Owner text retains its source class; invalid profile citations do not inherit a homepage. SEO retains the specific owner request and directly read page text. See [current verification and honest quality limits](Local-Gaps-Completion-2026-11-10.md) and the [complete customer solution inventory](Customer-Solutions.md).
+
+16 November follow-up: saved structured trend evidence is rechecked at approval, scheduling, Autopilot routing and execution against the later of today or the posting day. Evidence outside the existing 30-day window requires fresh research and a new reviewed draft. This does not continuously monitor trends or semantically verify sources; legacy drafts without trend metadata are unchanged. See [verification](Verification.md).

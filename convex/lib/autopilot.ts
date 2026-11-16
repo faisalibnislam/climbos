@@ -1,3 +1,4 @@
+import { trendFreshnessIssue } from "../../shared/agents/trendFreshness";
 import { DIRECT_PUBLISH_CHANNELS, label, nextTrust, routeDraft, type AutopilotMode, type TrustEvent, type TrustState } from "../../shared/autopilot";
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
@@ -136,6 +137,10 @@ export async function routeSlotDraft(
       route.decision = "ask";
       route.reasons = [`It makes a claim ClimbOS can't verify yet. ${claimIssue}`];
     }
+  }
+  if (route.decision === "auto") {
+    const issue = trendFreshnessIssue(version.copyBrief, Date.now(), slot.slotAt);
+    if (issue) { route.decision = "ask"; route.reasons = [issue]; }
   }
   if (org.emergencyStop?.active) {
     route.decision = "ask";

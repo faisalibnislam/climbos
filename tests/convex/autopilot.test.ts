@@ -1,3 +1,4 @@
+import { routeSlotDraft } from "../../convex/lib/autopilot";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -212,6 +213,28 @@ describe("social autopilot", () => {
     expect(after[0].status).toBe("skipped");
     const receipts = await t.run(async (ctx) => ctx.db.query("actionReceipts").collect());
     expect(receipts).toHaveLength(0);
+  });
+
+  it("routes stale trend evidence back to owner review instead of auto-approving", async () => {
+    const t = setup(); const w = await workspace(t, "ap-stale-trend@example.com");
+    await w.client.mutation(api.autopilot.save, { slug: w.slug, enabled: true, mode: "always_ask", channels: [{ channel: "facebook", postsPerWeek: 1 }], postingHours: [], alwaysAskTopics: [], imagesPerWeek: 0 });
+    await run(t);
+    const [slot] = await slots(t, w.orgId);
+    await t.run(async ctx => {
+      const artifact = (await ctx.db.get(slot.artifactId!))!;
+      const version = (await ctx.db.get(artifact.currentVersionId!))!;
+      expect(version.copyBrief).toBeDefined();
+      await ctx.db.patch(version._id, { copyBrief: { ...version.copyBrief!, supportingSourceUrls: ["https://example.com/trend"], trendEvidence: { sourceUrl: "https://example.com/trend", observationDate: "2026-09-01", observation: "Source reports an old format." } } });
+      await ctx.db.insert("artifacts", { orgId: w.orgId, businessId: artifact.businessId, kind: "social_post", channel: "facebook", title: "Earlier fixture", status: "published", currentVersion: 1, createdAt: Date.now(), updatedAt: Date.now() });
+      const settings = (await ctx.db.query("autopilotSettings").first())!;
+      await ctx.db.patch(settings._id, { mode: "auto" });
+      await routeSlotDraft(ctx, { org: (await ctx.db.get(w.orgId))!, settings: { ...settings, mode: "auto" }, slot: { ...slot, needsOwner: false }, artifact, reviewShipped: true });
+    });
+    const [after] = await slots(t, w.orgId);
+    expect(after.routing?.decision).toBe("ask");
+    expect(after.routing?.reasons.join(" ")).toMatch(/30-day/);
+    expect(after.status).toBe("needs_approval");
+    expect(await t.run(ctx => ctx.db.query("approvals").withIndex("by_subject", q => q.eq("subjectType", "artifact").eq("subjectId", slot.artifactId!)).collect())).toHaveLength(0);
   });
 
   it("the overview query shows the week, trust and connected channels", async () => {

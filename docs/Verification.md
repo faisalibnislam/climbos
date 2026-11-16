@@ -1,3 +1,13 @@
+## 16 November: trend freshness at approval and execution
+
+Confirmed gap: social generation compared dated observations with research retrieval time, but saved drafts could be approved and posted after the existing 30-day product window. The shared `trendFreshnessIssue` now checks exact valid UTC observation dates, source membership, future observations, and age at the later of now or the intended posting day. Central approval and schedule-extension code enforce it; email approval returns a useful refusal, Autopilot routes the item to owner review, and the executor sends expired drafts back to review before provider access. Existing receipt reconciliation remains ahead of this check to avoid duplicating previously attempted posts. Existing errors and audit/notification paths explain the refusal.
+
+Verification: `pnpm exec vitest run tests/unit/trend-freshness.test.ts tests/convex/social-publish.test.ts tests/convex/approval-claims.test.ts tests/unit/social-intelligence.test.ts tests/unit/creative-precedents.test.ts tests/convex/autopilot.test.ts tests/convex/safety.test.ts tests/convex/publish-flow.test.ts` — **138 passed in 8 files**. `pnpm typecheck` passed. Changed-file ESLint and diff checks passed. These are local tests with fixture/mocked providers; no live post, deployment, or paid model call was performed.
+
+Limitations: the 30-day policy is not proof of a trend's actual relevance or lifetime. The check uses saved structured trend evidence; legacy or evergreen drafts without that metadata are unchanged. Source membership is not semantic verification. Refreshing research still requires a new reviewed draft; the system never invents a more recent observation.
+
+Count correction: runtime `CREATIVE_PRECEDENTS` includes 75 base records plus 25 imported records from `creativePrecedentExpansion.ts`. The existing regression verifies 100 unique source-backed records. The prior 75-only status report missed that import; 25 additional records are not required to reach the numerical target. The expansion records remain low-confidence action precedents without demonstrated commercial outcomes.
+
 ## 11 November: Macloving plan passed after source-backed repairs
 
 The actual saved plan in `macloving-3a1n4` is **passed, 4.0/5**, with required gates passed, no hard failures or automatic errors, ten supplied research sources, and a completed independent second review. Strategy `js7v3wqp75pw24wb9g459n5jds8j147j` remains `needs_approval`; its quality status is not publication approval or proof of demand. Thresholds and rubric gates were not lowered. This supersedes the earlier 3.71/5 snapshot below.

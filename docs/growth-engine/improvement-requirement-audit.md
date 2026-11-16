@@ -4,6 +4,8 @@
 
 **Focused local update — 9 November 2026:** the [current audit](../Local-Audit-2026-11-09.md) records runtime repairs to researched channel scoring, owner feedback retention, direction and creative alternatives, practical channel decisions, creator research, social routing, search advice and owner UX. Its fixture and browser evidence does not validate expert reasoning across all 410 requirements. The row statuses below remain the dated inventory and must not be presented as full specification completion.
 
+**16 November focused update:** saved structured trend evidence is now rechecked at approval, schedule changes, Autopilot routing and publishing against the intended posting date. Expired evidence returns to review without a provider call. See `Verification.md` for the 138-test scope and the legacy-draft and semantic-evidence limits. This does not complete the broad social-intelligence requirements.
+
 ## How to read this audit
 
 - **Partially Implemented** means a real code path exists, but the full described capability or its live validation is not present.

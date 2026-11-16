@@ -42,7 +42,7 @@ Tests: `tests/convex/approval-claims.test.ts`, `tests/unit/manipulation-lint.tes
 | §9–10 | Constraint-first diagnosis, advisory-only offers, scarcity and deadline lint, campaign timing validation | `specs.ts` offer, timing and claim lints |
 | §11 | Neutral, identical invitation with frozen destination and recipients; private feedback optional and equally visible; reply drafts only; platform sync shown as manual | `convex/reviews.ts`, `src/app/review/[slug]`, `convex/inbox.ts` |
 | §12–13 | Observational vs causal labels, unknown is not zero, approval bound to tenant, content hash, destination, schedule, policy and expiry, fail-closed, audit, idempotency, emergency pause | `convex/lib/approvals.ts`, `convex/publish.ts`, `tests/convex/safety.test.ts` |
-| §19 | 75 reviewed precedents in runtime; bold option visible | `creativePrecedents.ts` (pinned by test), `ExpertPlan.tsx` |
+| §19 | 100 source-backed precedents in runtime (75 base plus 25 imported action records); bold option visible | `creativePrecedents.ts` (pinned by test), `ExpertPlan.tsx` |
 
 ## Buildable-gap reconciliation — 9 November 2026
 

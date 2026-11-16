@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
-import { contentHash } from "../../shared/policy";
+import { contentHash, sha256Hex } from "../../shared/policy";
 import { asNewUser, makePaid, setup, type T } from "./helpers";
 
 /** LinkedIn and X direct publishing through the real executor, with provider HTTP mocked. Nothing real is called. */
@@ -67,6 +67,22 @@ async function draft(t: T, orgId: Id<"organizations">, channel: "linkedin" | "x"
   });
 }
 
+async function setTrend(t: T, artifactId: Id<"artifacts">, observationDate: string) {
+  await t.run(async (ctx) => {
+    const a = (await ctx.db.get(artifactId))!;
+    const v = (await ctx.db.get(a.currentVersionId!))!;
+    const copyBrief = {
+      reader: "Local climbers", situation: "Choosing a route", awarenessStage: "unknown", relationshipStage: "unknown",
+      objective: "Useful discussion", offerFactIds: [], problemJob: "Choose a route", trigger: "A format example", centralIdea: "Route preparation",
+      objection: "Unknown", proofFactIds: [], prohibitedClaims: [], channel: a.channel, format: "text", deliveryContext: "Organic",
+      brandVoice: "Helpful", approvedExamples: [], cta: "Read", afterAction: "Unknown", trackingMetric: "Qualified visits", trackingMethod: "Unknown",
+      supportingFactIds: [], supportingSourceUrls: ["https://example.com/format"], unknowns: [],
+      trendEvidence: { sourceUrl: "https://example.com/format", observationDate, observation: "Source reports a format example." },
+    };
+    await ctx.db.patch(v._id, { copyBrief, contentHash: await contentHash({ body: v.body, hashtags: v.hashtags, channel: a.channel, copyBrief }) });
+  });
+}
+
 async function publish(t: T, w: Awaited<ReturnType<typeof workspace>>, artifactId: Id<"artifacts">) {
   await w.owner.client.mutation(api.content.decide, { slug: w.slug, artifactId, decision: "approve" });
   await w.owner.client.mutation(api.content.publishNow, { slug: w.slug, artifactId });
@@ -87,6 +103,59 @@ describe("LinkedIn and X publishing", () => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
     for (const k of ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET", "X_CLIENT_ID", "X_CLIENT_SECRET"]) delete process.env[k];
+  });
+
+  it("refuses stale trend approval without creating an approval or provider request", async () => {
+    const t = setup(); const w = await workspace(t);
+    const id = await draft(t, w.orgId, "linkedin", "An original route preparation idea.");
+    await setTrend(t, id, "2026-09-01");
+    const calls = stubFetch(() => json(500, {}));
+    await expect(w.owner.client.mutation(api.content.decide, { slug: w.slug, artifactId: id, decision: "approve" })).rejects.toThrow(/30-day/);
+    expect(await t.run((ctx) => ctx.db.query("approvals").withIndex("by_subject", q => q.eq("subjectType", "artifact").eq("subjectId", id)).collect())).toHaveLength(0);
+    expect(calls).toHaveLength(0);
+    await w.owner.client.mutation(api.content.decide, { slug: w.slug, artifactId: id, decision: "reject" });
+  });
+
+  it("returns an actionable refusal for stale trend approval from email", async () => {
+    const t = setup(); const w = await workspace(t);
+    const id = await draft(t, w.orgId, "linkedin", "An original route preparation idea.");
+    await setTrend(t, id, "2026-09-01");
+    const token = "c".repeat(48);
+    await t.run(async ctx => {
+      await ctx.db.insert("actionTokens", { tokenHash: await sha256Hex(token), orgId: w.orgId, userId: w.owner.userId, kind: "approve_post", subjectId: id, expiresAt: Date.now() + 3_600_000, createdAt: Date.now() });
+    });
+    const result = await t.mutation(api.emailActions.consume, { token });
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/30-day/);
+    expect((await t.run(ctx => ctx.db.get(id)))?.status).toBe("in_review");
+  });
+
+  it("refuses a schedule beyond the trend window while preserving the current approval", async () => {
+    const t = setup(); const w = await workspace(t);
+    await connect(t, w, "linkedin", { accessToken: "li-token" }, Date.now() + 60 * 86_400_000);
+    const id = await draft(t, w.orgId, "linkedin", "An original route preparation idea.");
+    await setTrend(t, id, "2026-09-21");
+    await w.owner.client.mutation(api.content.decide, { slug: w.slug, artifactId: id, decision: "approve" });
+    await expect(w.owner.client.mutation(api.content.schedule, { slug: w.slug, artifactId: id, when: Date.now() + 2 * 86_400_000 })).rejects.toThrow(/30-day/);
+    const a = await t.run(ctx => ctx.db.get(id));
+    expect(a?.status).toBe("approved");
+    expect(a?.scheduledFor).toBeUndefined();
+  });
+
+  it("returns an approved draft to review when its trend expires before execution", async () => {
+    const t = setup(); const w = await workspace(t);
+    await connect(t, w, "linkedin", { accessToken: "li-token" }, Date.now() + 60 * 86_400_000);
+    const id = await draft(t, w.orgId, "linkedin", "An original route preparation idea.");
+    await setTrend(t, id, "2026-09-21");
+    await w.owner.client.mutation(api.content.decide, { slug: w.slug, artifactId: id, decision: "approve" });
+    vi.setSystemTime(Date.now() + 2 * 86_400_000);
+    const calls = stubFetch(() => json(500, {}));
+    await t.action(internal.publish.publishArtifact, { artifactId: id });
+    const a = await t.run(ctx => ctx.db.get(id));
+    expect(a?.status).toBe("in_review");
+    expect(a?.lastPublishError?.message).toMatch(/30-day/);
+    expect(calls).toHaveLength(0);
+    expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toHaveLength(0);
   });
 
   it("publishes an approved LinkedIn post, verifies it on read-back and writes one receipt", async () => {
