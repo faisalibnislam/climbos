@@ -1,4 +1,6 @@
 import { demoBusinessModelCheck } from "../../shared/agents/businessModel";
+import { demoFocusedStrategy } from "../../shared/demo/focusedStrategy";
+import type { PlanStyle } from "../../shared/agents/focusedPlan";
 import type {
   AdDraftsOutput,
   BusinessProfile,
@@ -25,6 +27,7 @@ export interface FixtureContext {
   channel?: string;
   quantity?: number;
   request?: string;
+  planStyle?: PlanStyle;
 }
 
 function pick<T>(arr: readonly T[], seed: number): T {
@@ -103,6 +106,7 @@ export function fixtureOutput(task: TaskType, ctx: FixtureContext): unknown {
       return out;
     }
     case "growth_strategy": {
+      if (ctx.planStyle === "starter" || ctx.planStyle === "focused") return demoFocusedStrategy();
       const out: StrategyOutput = {
         summary: `Focus the next 90 days on three things: be found for specific form use cases, show the product working in short demos, and help new sign-ups publish their first form fast. Test search ads with a small budget before spending more.`,
         positioning: `The quickest way to go from "I need a form" to a working, branded form with logic and payments.`,

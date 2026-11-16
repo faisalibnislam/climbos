@@ -246,7 +246,8 @@ async function runModelTask<T>(
   const stepId = step.stepId!;
 
   if (run.isFixture) {
-    const output = task.schema.parse(fixtureOutput(taskType, fixture)) as T;
+    const schema = taskType === "growth_strategy" && (fixture.planStyle === "starter" || fixture.planStyle === "focused") ? FocusedStrategySchema : task.schema;
+    const output = schema.parse(fixtureOutput(taskType, fixture)) as T;
     await ctx.runMutation(internal.engine.recordUsage, {
       stepId,
       records: [{ type: "model_call", provider: "fixture", model: "demo-fixture", inputTokens: estimateTokens(taskText + untrustedContext), outputTokens: estimateTokens(JSON.stringify(output)), reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, quantity: 1, costMicros: 0, estimated: true }],
@@ -1632,7 +1633,7 @@ export const buildStrategy = internalAction({
         {
           task: "growth_strategy",
           context: "",
-          ctx: fixtureCtx(job),
+          ctx: fixtureCtx(job, { ...(requestedStyle === "starter" || requestedStyle === "focused" ? { planStyle: requestedStyle } : {}) }),
           text:
         `TASK: Create a focused growth plan for the goal. Choose 2-4 channels with priorities, dependencies and how each will be measured. Include 1-2 experiments with a hypothesis, population, method, primary metric, denominator, assignment unit and method, baseline rate/provenance/evidence references/basis (use null, unknown provenance, no refs and say why when no supported baseline exists), minimum meaningful effect and basis (null only when it cannot be set), planned sample per arm and basis (null when not estimable), guardrails, duration and stopping rule. Baseline evidence references must point to input fact IDs or exact source URLs; never invent evidence. Never claim a sample target is powered if the inputs do not support it. For non-randomized methods, label assignment as not applicable and explain the observation unit. Suggested ad spend must not exceed the stated monthly ad budget. Add 3 concrete first actions. Treat SWOT evidence and implications as hypotheses unless their cited sources support the claim; use evidence-backed TOWS moves when they help compare options, and carry their first test and measure into the plan. Don't treat SWOT or TOWS statements as proven advantages without supporting evidence.\n\n${businessBrief(job)}\n\nINSIGHTS:\n${insights ? reportDropped("plan fallback insights", fitJson({ audiences: insights.audiences, positioning: insights.positioning, swot: insights.swot, swotEvidence: insights.swotEvidence, swotMoves: insights.swotMoves, opportunities: insights.opportunities }, 6000, "insights")) : "(none yet)"}`,
         },

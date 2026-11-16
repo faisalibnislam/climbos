@@ -1,3 +1,26 @@
+## 17 November 2026 — current demo update-plan workflow
+
+Audit: actual starter/focused requests in a demo workspace completed as verified but saved only the legacy StrategySchema output. The focused production branch excludes fixtures, and runModelTask parsed all demo strategy output with the legacy schema. Two failing actual-generation tests reproduced the absent focusedMove. The separate generic fake-model sampler was not the path involved.
+
+Added a deterministic, explicitly synthetic focused demo plan in shared/demo/focusedStrategy.ts, selected by the existing fixture adapter only for starter/focused requests. runModelTask validates it with the full existing FocusedStrategySchema before recording zero-cost fixture usage and checkpointing. The existing detailed fallback passes the requested style through; saveStrategy persists the current move, prepared private brief, three distinct strategic alternatives and uniquely named primary experiment. No production prompt, agent/provider/model route, schema, generated API, UI component or action adapter changed. Initial seeded showcase and explicitly detailed demo requests retain the legacy fixture format.
+
+Verification commands:
+
+```sh
+pnpm exec vitest run tests/unit/demo-focused-strategy.test.ts tests/convex/demo-focused-plan.test.ts tests/convex/focused-plan.test.ts tests/convex/engine-v2.test.ts tests/convex/goal-workspace.test.ts tests/convex/plan-approval.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts tests/convex/publish-flow.test.ts tests/convex/landing-fixture.test.ts tests/unit/local-demo-isolation.test.ts
+pnpm typecheck
+pnpm exec eslint shared/demo/focusedStrategy.ts convex/ai/fixtures.ts convex/jobs.ts tests/unit/demo-focused-strategy.test.ts tests/convex/demo-focused-plan.test.ts e2e/demo-update-plan.spec.ts
+CLIMBOS_LOCAL_STATE_DIR=/private/tmp/climbos-calendar-check-20261116 pnpm local:demo sync
+E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/demo-update-plan.spec.ts
+git diff --check
+```
+
+Results: **143 tests across 11 files passed (12.56s)**; app/Convex typecheck, targeted ESLint and isolated local sync passed. **Two desktop/mobile browser checks passed (21.1s)** through the actual Update my plan confirmation, See the update, primary outcome control, all three strategy options and editable prepared draft. The tests inspect saved run/usage and unchanged artifact/action receipts; the prior plan remains approved and the new plan has a pending approval. Backend tests additionally throw on any fetch, reject outsiders, check nonempty zero-cost fixture usage, and validate primary learning, timing and prepared-work contracts. Unknown baseline/sample/capacity and absent precedent/research/model-verdict claims are checked. Explicit detailed requests retain four legacy channels.
+
+Test-development corrections: initial authority assertions were adjusted to compare existing seeded receipts and allow the expected pending plan-review request, without allowing granted authority or external-action changes. The first browser run used dialog rather than the actual alertdialog role; it timed out on desktop, and the redundant mobile attempt was stopped before rerunning. The corrected run passed. Stable-view automated serious/critical accessibility and document-overflow checks passed; the inspected mobile screenshot includes the local development issue badge and fixed navigation, so this is not a console-cleanliness or complete visual-quality claim.
+
+Limits: these are synthetic examples, not tailored real-business advice, retrieved research, paid-model evaluation, business outcomes or production-provider verification. The illustrative relative timing is explicitly assumed; it does not establish real readiness. Initial demo showcase modernization and full generic fake-model schema compatibility remain separate work. No external send, publish, spend, deployment, merge or model switch occurred. Unrelated .gitignore changes were preserved; the full project acceptance remains open.
+
 ## 17 November 2026 — preserve creative alternatives in assistant discussions
 
 Audit: StrategyExplorationPanel displays saved grounded, adjacent and bold options and their owner feedback, but get_plan did not expose strategyExploration. A red actual-tool regression confirmed the options view was absent. The existing strategy generator, retrieval library, option schema and owner feedback workflow were already implemented; this change connects their saved output to the assistant rather than generating another portfolio or agent.
