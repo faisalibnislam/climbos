@@ -70,6 +70,30 @@ describe("business model check output", () => {
     const issues = lintBusinessModelCheck(check({ verdict: { status: "at_risk", confidence: "low", reasoning: "Judgment call on thin evidence.", whatWouldChangeIt: "Any first-party trend." } }), { factCount: 1, readUrls: ["https://rival.example/plans"] });
     expect(issues.filter((i) => i.severity === "error")).toEqual([]);
   });
+
+  it.each(["2026-02-30", "2025-02-29", "2026-13-01", "2026-00-10", "2026-04-31", "", "tomorrow"])("rejects impossible or malformed evidence date %s", observedAt => {
+    const output = check(); output.marketSignals[0].observedAt = observedAt;
+    expect(lintBusinessModelCheck(output, { factCount: 1, readUrls: ["https://rival.example/plans"] })).toEqual(expect.arrayContaining([expect.objectContaining({ rule: "market_signal_date", severity: "error" })]));
+  });
+
+  it("accepts a real leap date without claiming that the date was supported by a source", () => {
+    const output = check(); output.marketSignals[0].observedAt = "2024-02-29";
+    expect(lintBusinessModelCheck(output, { factCount: 1, readUrls: ["https://rival.example/plans"] })).toEqual([]);
+  });
+
+  it.each([
+    ["https://RIVAL.example/Plans?offer=A", true],
+    ["https://rival.example/Plans?offer=A#pricing", true],
+    ["https://rival.example/plans?offer=A", false],
+    ["https://rival.example/Plans?offer=a", false],
+    ["http://rival.example/Plans?offer=A", false],
+    ["https://www.rival.example/Plans?offer=A", false],
+    ["https://rival.example/Plans/?offer=A", false],
+  ])("preserves source identity for %s", (url, valid) => {
+    const output = check(); output.marketSignals[0].evidenceRefs = [url];
+    const issues = lintBusinessModelCheck(output, { factCount: 1, readUrls: ["https://rival.example/Plans?offer=A"] });
+    expect(issues.some(issue => issue.rule === "citation")).toBe(!valid);
+  });
 });
 
 describe("first-party model signals", () => {

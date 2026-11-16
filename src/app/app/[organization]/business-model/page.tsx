@@ -42,7 +42,8 @@ export default function BusinessModelPage() {
       <PageHeader section="business-model" title="Business model check" intro="Plus three other models worth a small test." actions={action} />
       {data === undefined ? <LoadingBlock label="Loading business model check…" lines={4} /> : null}
       {data?.running ? <Callout tone="info" title="Check in progress">Reading your records and the market. This page updates when done.</Callout> : null}
-      {data && !data.result && !data.running ? <EmptyState title="No business model check yet" body="Run one to see how your model holds up, with three alternatives." /> : null}
+      {data?.failure ? <Callout tone="warning" title="The latest check could not finish">{data.failure.message}{data.result ? " Your earlier saved check is still shown below." : ""}</Callout> : null}
+      {data && !data.result && !data.running && !data.failure ? <EmptyState title="No business model check yet" body="Run one to see how your model holds up, with three alternatives." /> : null}
       {data?.result ? (
         <BusinessModelCheckView
           key={data.result.runId}

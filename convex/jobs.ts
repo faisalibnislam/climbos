@@ -47,7 +47,7 @@ import { callModel, generateImage, type ModelResult } from "./ai/providers";
 import { fetchCitedPages, researchWebsite, resolveHost } from "./ai/research";
 import { r2Configured, r2Key, r2Put } from "./lib/r2";
 import { adsToArtifacts, emailToArtifacts, seoToArtifacts, socialToArtifacts } from "./jobWrites";
-import { AgentFailure, AgentYield, runAgent, type AgentDeps, runResearch } from "../shared/agents/runtime";
+import { AgentFailure, AgentYield, runAgent, type AgentDeps, runResearch, lintAgentOutput } from "../shared/agents/runtime";
 import { type Source, type PageReadEvidence, type MessageParam, type TurnResult } from "../shared/ai/types";
 import { archetypeInstruction } from "../shared/agents/registry";
 import { modelTurn, providerOf } from "../shared/ai/turn";
@@ -2546,16 +2546,28 @@ export const businessModelCheck = internalAction({
       const snapshot = await ctx.runMutation(internal.businessModel.captureEvidence, { runId, hashes: job.businessModelEvidenceHashes, contextHash });
       const freshness = businessModelFreshness(snapshot, job.businessModelEvidenceHashes, Date.now());
       if (freshness.status !== "unchanged" || snapshot.contextHash !== contextHash) throw new JobStop("business_model_inputs_changed", "Business inputs changed since this check began. Start a new check so its steps use the same evidence. Earlier progress is retained.");
+      const spec = businessModelCheckSpec();
+      const meta: AgentMeta = {};
       const out = await runAgentTask<BusinessModelCheck>(
         ctx,
         job,
         0,
-        businessModelCheckSpec(),
+        spec,
         input,
         startedAt,
         { task: "business_model_check", context: "", ctx: fixtureCtx(job), text: `${BUSINESS_MODEL_TASK}\n\n${businessBrief(job)}` },
+        meta,
       );
-      await finish(ctx, runId, "verified", { output: out });
+      const parsed = spec.schema.safeParse(out);
+      if (!parsed.success) throw new JobStop("invalid_business_model", "The business model check returned an incomplete result. It was not saved as a recommendation. Try a new check.");
+      // The shared runner can retain its best draft after exhausting revisions. Recheck the
+      // actual output against this run's research; an AI review is not evidence validation.
+      if (!job.run.isFixture && job.run.engine === "v2") {
+        const research = meta.notes !== undefined ? { notes: meta.notes, sources: meta.sources ?? [], retrievedAt: meta.retrievedAt } : undefined;
+        const issue = lintAgentOutput(spec, input, parsed.data, research).find(issue => issue.severity === "error");
+        if (issue) throw new JobStop("invalid_business_model", `The business model check needs correction: ${issue.message} It was not saved as a recommendation.`);
+      }
+      await finish(ctx, runId, "verified", { output: parsed.data });
     }, undefined, resumeAs(ctx, "businessModelCheck", { runId }));
   },
 });

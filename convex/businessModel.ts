@@ -71,6 +71,7 @@ export const latest = query({
   handler: async (ctx, { slug }) => {
     const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
     const runs = await latestRunsOfKind(ctx, org._id, KIND, 10);
+    const latestAttempt = runs.find(r => org.kind === "demo" || !r.isFixture);
     const running = runs.find((r) => ACTIVE_RUN_STATUSES.includes(r.status)) ?? null;
     const done = runs.find((r) => r.status === "verified" && typeof r.output === "string" && (org.kind === "demo" || !r.isFixture));
     let check = null;
@@ -88,6 +89,7 @@ export const latest = query({
     const latestTest = (target: string) => tests.find((t) => t.target === target);
     return {
       canEdit: can(role, "edit"),
+      failure: latestAttempt?.status === "failed" ? { runId: latestAttempt._id, message: latestAttempt.userMessage ?? "The latest check could not finish. You can start a new check when ready." } : null,
       running: running ? { runId: running._id, status: running.status, createdAt: running.createdAt } : null,
       result: done && check ? {
         runId: done._id,

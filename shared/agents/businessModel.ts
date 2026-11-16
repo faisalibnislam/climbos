@@ -97,16 +97,31 @@ export type BusinessModelCheck = z.infer<typeof BusinessModelCheckSchema>;
 export const BUSINESS_MODEL_TASK = `BUSINESS MODEL CHECK: Describe how this business currently makes money (who pays, for what, pricing structure, sales motion, delivery) using only supplied facts and pages read in this run. Then judge whether that model is holding up against how its market is moving: list market signals (demand, pricing pressure, substitutes, customer behavior, distribution, cost structure, platform or regulatory change, technology), each with direction, basis, references, the date the evidence describes (observedAt, YYYY-MM-DD), and its limitation. A research signal with no stated date must say "undated" in its limitation. Rate up to three customer segments in segmentFit, each once on problem severity, willingness to pay, reachability and serviceability, with level (low, medium, high or unknown), basis and references; high willingness to pay needs payment or pricing evidence. Use the FIRST-PARTY MODEL SIGNALS block as calculated observations from the specified records; preserve every coverage limit, unknown and owner-report label. Do not turn incomplete imports, heuristic flags or competitor activity into proof of business decline. Never contradict or recompute the supplied arithmetic. Give a verdict (holding, watch, at risk, or insufficient evidence) with your confidence, reasoning, and what would change it; it is shown to the owner as your judgment. A website, competitor activity, or a trend article alone does not prove a model is outdated, and an absence of data is not decline. Propose exactly three alternative business models: one grounded (established practice), one adjacent (an evidence-supported stretch), one bold (may lack any precedent; do not drop it for being novel, low-evidence, or not yet executable). For each: the model change, mechanism, existing assets it reuses, who pays and how, the convention it challenges, assumptions, risks, unit-economics inputs (state each as owner-reported, measured, research, assumption, or unknown; never invent a figure), what stays the same, and the smallest reversible test with success signal, stop condition, and maximum cost or time. Keep novelty, evidence strength, fit, feasibility, and risk separate. Finish with persist, adjust, test a pivot, or insufficient evidence, the single test that would decide it, and the recommended alternative when testing a pivot. Nothing here authorizes changing prices, offers, or operations.`;
 
 const REF = /^fact:(\d+)$/i;
-const citeKey = (url: string) => url.trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, "").replace(/\/+$/, "");
+const citeKey = (value: string): string | null => {
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    // A fragment locates text on the same page; path/query case and scheme can identify different pages.
+    url.hash = "";
+    return url.href;
+  } catch { return null; }
+};
+
+function realEvidenceDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const time = Date.parse(`${value}T00:00:00.000Z`);
+  return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === value;
+}
 
 /** Structural and evidence integrity; the verdict itself is the model's labelled judgment and is not gated. */
 export function lintBusinessModelCheck(out: BusinessModelCheck, ctx: { factCount: number; readUrls: string[]; precedentIds?: string[] }): LintIssue[] {
   const issues: LintIssue[] = [];
-  const read = new Set(ctx.readUrls.map(citeKey));
+  const read = new Set(ctx.readUrls.map(citeKey).filter((key): key is string => key !== null));
   const checkRefs = (refs: string[], path: string) => {
     for (const ref of refs) {
       const fact = REF.exec(ref.trim());
-      const ok = fact ? Number(fact[1]) < ctx.factCount : /^https?:\/\//i.test(ref.trim()) && read.has(citeKey(ref));
+      const url = citeKey(ref);
+      const ok = fact ? Number(fact[1]) < ctx.factCount : url !== null && read.has(url);
       if (!ok) issues.push({ severity: "error", rule: "citation", message: `"${ref.slice(0, 80)}" isn't a supplied fact (fact:0–${Math.max(0, ctx.factCount - 1)}) or a page read in this run.`, path });
     }
   };
@@ -115,7 +130,7 @@ export function lintBusinessModelCheck(out: BusinessModelCheck, ctx: { factCount
     checkRefs(s.evidenceRefs, `marketSignals[${i}].evidenceRefs`);
     if ((s.basis === "research" || s.basis === "site_claim" || s.basis === "measured") && !s.evidenceRefs.length) issues.push({ severity: "error", rule: "citation", message: `A ${s.basis.replace("_", " ")} signal needs a fact or page reference, or label it inference.`, path: `marketSignals[${i}].evidenceRefs` });
     if (s.basis === "research" && !s.observedAt && !/\b(?:undated|no (?:stated |publication )?date|not dated|date (?:is )?unknown)\b/i.test(s.limitation)) issues.push({ severity: "error", rule: "market_signal_date", message: "A research signal needs the date its evidence describes, or a limitation that says it is undated.", path: `marketSignals[${i}].observedAt` });
-    if (s.observedAt && !/^\d{4}-\d{2}-\d{2}$/.test(s.observedAt)) issues.push({ severity: "error", rule: "business_model", message: "Use YYYY-MM-DD for the evidence date, or leave it out.", path: `marketSignals[${i}].observedAt` });
+    if (s.observedAt !== undefined && !realEvidenceDate(s.observedAt)) issues.push({ severity: "error", rule: "market_signal_date", message: "Use a real calendar date in YYYY-MM-DD form for the evidence date, or leave it out and explain that it is undated.", path: `marketSignals[${i}].observedAt` });
   });
   (out.segmentFit ?? []).forEach((seg, i) => {
     const dims = seg.dimensions.map((d) => d.dimension).sort().join(",");

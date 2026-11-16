@@ -316,6 +316,10 @@ Engine `v3.100-nonpositive-owner-margin` carries owner-reported zero/negative co
 
 Engine `v3.101-calendar-trend-evidence` closes the weaker weekly-calendar contract: current-trend slots need matching structured source/date/observation evidence from that run, checked again on save against the actual planned date. Engine research metadata supplies retrieval time; model-supplied timestamps cannot replace it. The existing calendar slot stores the evidence and the existing source panel displays it. A tenant/channel-bound query supplies up to six complete ordered slots to drafting, avoiding the old 1,500-character owner-request truncation. It rejects mismatched or oversized contexts; prior observations remain labeled as inspiration requiring fresh checks, and generated links are not owner authority. Existing publication approvals and provider checks are unchanged. The runtime calendar skill and generated bundle were updated through `pnpm skills:build`. See Verification for generation-boundary, persistence, permission and browser checks. Continuous listening, semantic source entailment and measured audience fit remain open.
 
+## Business-model acceptance follow-up — 17 November 2026
+
+The existing viability/pivot workflow was traced through owner start, evidence snapshot, model research/review, persistence, UI and future learning. New real v2 outputs now pass the existing schema and final spec lint before verified persistence, using retained research. Source identity and actual calendar-date validation were tightened. Latest failure feedback preserves earlier valid results. Engine v3.116-business-model-validation. See `docs/growth-engine/business-model-completion-audit.md` and the newest Verification entry. No historical migration, paid model evaluation or production action was performed; full requirement reconciliation remains open.
+
 ## What remains and should guide the next work
 
 These are known open gaps, not a complete substitute for checking the requirement audit and ledger before choosing work:

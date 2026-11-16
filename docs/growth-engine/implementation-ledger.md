@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: business-model result acceptance
+
+Traced business viability and pivot checks from owner start through evidence, model review, saved result and future learning. Seven red job-boundary cases exposed invalid output becoming verified. New real v2 checks now rerun existing schema/spec validation against the actual research record before saving; impossible dates and distinct source URLs no longer pass weak normalization. The dedicated page reports the latest failed attempt while preserving an earlier valid result. Grounded/adjacent/bold options, unknown/undated evidence, metering, tenant controls and owner authority remain intact. See [the scoped completion audit](business-model-completion-audit.md) and `docs/Verification.md`; this does not establish real-model decision quality or close the full 410-row audit. Engine v3.116-business-model-validation.
+
 ## Local update — 17 November 2026: distinguish generic trend exclusions
 
 Red checks reproduced evergreen advice against viral trend chasing being blocked and plural-only positive references being missed. Social and calendar generation now share a field-local detector with narrow exclusions for generic material. Specific references, separate positive clauses and structured metadata remain subject to the same evidence validation. Actual job and calendar-persistence regressions cover successful evergreen drafts and rejection of separate unsupported references without external action. Engine v3.115; see Verification.

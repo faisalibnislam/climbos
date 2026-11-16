@@ -1,3 +1,7 @@
+## 17 November 2026 — viability and pivot acceptance audit
+
+Requirements 2 and 9, plus the business-model portion of 10, were traced through the current runtime. The result-saving validation gap, weak source normalization and impossible-date acceptance were repaired; owner failure visibility was added. These rows remain partial because expert judgment, broader coverage and real-world effectiveness are not proven. See [the detailed audit](business-model-completion-audit.md) and Verification for exact tests and limits.
+
 # ClimbOS improvement requirements: implementation audit
 
 **17 November trend-context follow-up:** deterministic trend detection now preserves explicit generic exclusions (for example, “no viral gimmicks”) and catches plural references. Separate fields and actual current references retain source checks; supplied metadata is never exempted. Actual generation and transactional calendar tests pass, alongside surrounding permissions. This is a bounded English heuristic; it does not establish universal intent understanding or creative quality. See Verification.

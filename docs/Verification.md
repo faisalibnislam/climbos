@@ -1,3 +1,22 @@
+## 17 November 2026 — validate business-model results before acceptance
+
+Audit traced owner inputs and metered start through evidence hashes, deterministic first-party signals, market research, agent review, saved verdict, owner tests and future strategy context. The shared runner intentionally retains its best draft when revision is exhausted; the business-model job had no final acceptance check. Seven new failing boundary cases reproduced invalid output becoming verified despite a passing model assessment. Source normalization also conflated distinct URLs, and evidence-date validation accepted impossible dates.
+
+New real v2 checks parse the current schema and reuse `lintAgentOutput` with the actual retained research before verified persistence. Failed checks cannot enter latest-result/next-plan context. URL validation preserves scheme, host, path and query identity while allowing host casing and same-page fragments. Date validation checks real calendar days; explicitly undated evidence remains allowed. The dedicated page shows the newest failed attempt separately and retains an earlier valid report; a later successful check clears the failure. Engine v3.116-business-model-validation.
+
+Commands run:
+
+```sh
+pnpm exec vitest run tests/unit/business-model-check.test.ts tests/unit/business-model-freshness.test.ts tests/unit/business-model-view.test.tsx tests/convex/business-model-check.test.ts tests/convex/business-model-learning.test.ts tests/convex/business-model-validation.test.ts tests/convex/engine-v2.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts
+pnpm typecheck
+pnpm exec eslint shared/agents/businessModel.ts shared/agents/specs.ts convex/businessModel.ts convex/jobs.ts 'src/app/app/[organization]/business-model/page.tsx' tests/unit/business-model-check.test.ts tests/convex/business-model-validation.test.ts
+git diff --check
+```
+
+Results: **90 tests across 9 files passed (7.16s)**; app and Convex typechecks, scoped lint and whitespace checks passed. The new job tests mock the agent boundary, retain the actual job/query/context path and forbid network calls. Cases cover unknown fact/source, missing research, a different case-sensitive source path, impossible date, duplicate mode, number labeled unknown, malformed structure, valid evidence, undated evidence and a low-feasibility bold option without precedent. No artifacts, approvals, action receipts or test reports are created as recommendation side effects. Tenant isolation, previous-valid-result preservation and clearing the failure after success are checked. Existing suite coverage includes met/missed/unclear/not-run reporting, original-test learning, metering and permission boundaries.
+
+Limits: this is not a paid real-model quality evaluation, live-provider check or browser verification of the added callout. Historical reports were not migrated/revalidated. Legacy fixture paths receive schema checks only; final evidence lint is applied to real v2 runs. Source membership and valid dates do not establish semantic support, correct source dates, authentic customer demand or reliable business viability/pivot judgment. The scoped audit is `docs/growth-engine/business-model-completion-audit.md`; the remaining 410-requirement completion work is still open.
+
 ## 17 November 2026 — preserve evergreen advice about trend chasing
 
 Audit of the preceding social guard found a real false positive: “don’t chase viral trends” and “no viral gimmicks” required a dated current-trend source. The same detector missed plural-only positive instructions such as “follow current trends.” Six failing unit cases reproduced the post/calendar false positives and plural omission before implementation.
