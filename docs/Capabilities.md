@@ -10,6 +10,8 @@ Weekly and shared client reports now explain their recorded activity counts and 
 
 Attribution uses the displayed completed local dates and a bounded recorded-touch lookback. Invalid, conflicting, ambiguous legacy or truncated evidence produces an unavailable explanation. Its counts are payment events, not unique customers, and matching row totals does not independently verify billing. Ad observations retain their record origin and missing currency spend; Results does not calculate ROAS from guessed channel-name matches. Matching revenue/spend scope and complete import coverage remain unknown. See [Verification](Verification.md).
 
+First-recorded payer counts use positive charges before refunds: a refunded first charge does not turn a renewal into a new customer. Source-scoped history is bounded, fixtures are excluded from real-workspace counts, and invalid/conflicting/incomplete reads stay unknown. First-payer forecasts preserve the definition version. The separate cohort calculation still has a confirmed first-paid-month and invalid-history gap; do not treat this payer-count repair as complete retention validation.
+
 ## Availability labels
 
 - **Built:** implemented in the application. Test evidence is reported separately in [Verification](Verification.md); this label alone does not mean every current check has passed.

@@ -5453,6 +5453,8 @@ export default defineSchema({
       "customerRef",
       "occurredAt",
     ])
+    .index("by_org_fixture_occurred", ["orgId", "isFixture", "occurredAt"])
+    .index("by_org_source_customer_fixture_occurred", ["orgId", "source", "customerRef", "isFixture", "occurredAt"])
     .index("by_org_source_event", ["orgId", "source", "sourceEventId"]),
 
   touches: defineTable({

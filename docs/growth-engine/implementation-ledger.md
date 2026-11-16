@@ -2,6 +2,10 @@
 
 Source: `ClimbOS_Growth_Engine_Claude_Code_Prompt V2.md`, with requirement IDs as written there. Baseline: `404c466`. Branch: `growth-engine-v2`.
 
+## Local update — 16 November 2026: first-payer evidence and bounded history
+
+Corrected first-recorded payer counts to use positive charges before refunds, isolate fixtures before read limits, reject malformed/conflicting history and retain unknowns when the shared history budget is exhausted. Earliest-charge lookup stops before loading later renewals; two fixture-aware indexes support the existing read path. Free orders/refund-only rows do not create observed payer days. Results and first-payer forecasts use the same corrected definition; v2 evidence prevents silent scoring against v1 forecasts. Five regressions failed before the fix; final verification is 80 focused tests, typecheck/lint and two desktop/mobile browser checks. The browser fixture confirms a separate unresolved cohort first-paid-month/invalid-amount issue, recorded as the next measurement task in Verification. No external action or deployment.
+
 ## Local update — 16 November 2026: attribution evidence and payment definitions
 
 Results and `get_results` now retain attribution evidence failures, completed local reporting dates, bounded touch history and real-versus-fixture distinctions. Conflicting billing identities, unsafe values and capped reads withhold channel credit. The UI distinguishes payment events from customers and arithmetic reconciliation from verified billing. Platform-date records retain origin and missing-spend information; the unsupported channel-name-based ROAS card now explains that a matched revenue/spend scope is unavailable. Existing deterministic economics is unchanged. Verification: 81 focused regression/permission tests, typecheck/lint and two desktop/mobile browser checks. Separate first-payer history scaling, cross-window refund matching, full import coverage and qualified ROAS remain open; no external action or deployment. See [Verification](../Verification.md).

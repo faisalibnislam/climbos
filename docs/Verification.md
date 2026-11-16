@@ -1,3 +1,26 @@
+## 16 November 2026 — first recorded payers, refunds and shared history bounds
+
+Traced `revenueEvents` → `firstRecordedPayerDays` → Results/assistant metric and first-payer forecast creation/forward scoring. Five new integration regressions failed against the original path: fully refunded first payments could make later renewals new customers; fixture history influenced real-workspace counts; zero charges became observed payer days; a known old customer with 1,200 later payments became unavailable because every history loaded 1,000 rows; malformed older money could support a count instead of uncertainty.
+
+The definition now counts the earliest recorded positive non-refund charge **before** refund amounts, scoped by billing source and customer ID. Later refunds do not reset acquisition. Free orders and refund-only observations do not create observed payer days. Real-workspace period/history reads exclude fixtures through two new indexes before applying bounds; mixed real/synthetic demo observations are unavailable. Selected dates use the existing local-midnight helper and exclude today's incomplete data. Period change remains unavailable because complete import coverage is unknown.
+
+The period read has a 2,001-row sentinel. Customer history and duplicate-identity verification share one 2,000-document budget with an overflow sentinel, instead of reading up to 1,000 events for each of 2,000 customers. Each history stops at the first positive charge, so later renewals need not be loaded to establish an existing payer. Invalid earlier records, conflicting first-payment identities, truncated period reads and exhausted history budgets return explicit unknowns. Evidence problems remain visible even when every loaded payer record is malformed. This is a bounded calculation, not an unlimited historical aggregator or a production load/byte-size benchmark.
+
+Results and first-payer forecasts reuse this definition. New forecast evidence uses `billing-first-recorded-v2`; old v1 source snapshots are not silently compared with corrected outcomes. Original saved training history is retained. No historical event is rewritten, no customer identities are merged across billing providers, and no ingestion/provider/authorization behavior is added.
+
+Verification:
+
+```text
+pnpm exec vitest run tests/convex/first-payer-evidence.test.ts tests/convex/analytics-new-customers.test.ts tests/convex/forecast-evidence.test.ts tests/convex/analytics-coverage.test.ts tests/convex/attribution-evidence.test.ts tests/unit/climb-tool-output.test.ts tests/convex/safety.test.ts tests/convex/tenancy.test.ts
+80 passed across 8 files
+pnpm typecheck
+passed: application and Convex
+```
+
+Targeted ESLint and diff checks passed. Browser command: `E2E_BASE_URL=http://127.0.0.1:3420 CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env pnpm exec playwright test e2e/first-payer-evidence.spec.ts` — two passed in 9.9 seconds, desktop Chromium and Pixel 7 emulation. Synthetic workspaces show zero first-recorded payers for a renewal whose first charge was refunded, then reactively show an unavailable count and invalid-history reason after an earlier malformed payment is appended. No page errors, horizontal page overflow or serious/critical axe findings; screenshots inspected. Reading Results leaves workflow, approval, receipt and forecast records unchanged. The malformed-only-period visibility follow-up passed the final focused checks; browser fixtures exercise a malformed earlier record with a valid current charge.
+
+Confirmed remaining issue from the same browser fixture: the separate cohort table initially treats the renewal as a November first-paid customer and moves that month to July when a malformed older amount is appended. `analytics.cohorts` / `computeCohorts` still use their own bounded-window/net-positive definition and need a complete follow-up across owner view and strategy context. This increment does not claim that retention or all customer-history paths are repaired. Complete provider coverage, causal acquisition, cross-provider identity matching, large-history aggregation and the full 410-item audit remain open. Only the isolated local backend was synced; no hosted deploy, live provider/model operation or external sending occurred.
+
 ## 16 November 2026 — attribution definitions and bounded source evidence
 
 Traced billing ingestion and saved touches/platform observations → `analytics.overview` → existing first/last-touch calculator → Results “Where it came from” tab → `get_results` assistant contract. Confirmed that the attribution read started at UTC midnight and lacked an upper bound despite the displayed completed local-day range, took only the first 20 touches per customer without disclosure, included synthetic records in real-workspace attribution/claims, and silently accepted capped or conflicting observations. The table labeled order/payment-event counts as customers and called arithmetic self-reconciliation “Matches billing.” The ROAS card divided revenue from any ad-like channel name by Google/Meta spend without establishing a shared scope.

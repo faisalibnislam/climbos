@@ -18,7 +18,7 @@ const DAY = 86_400_000;
 export const METRICS = {
   visits: { label: "Website visits", unit: "count", definition: "Sessions reported by your analytics.", source: "Google Analytics 4" },
   signups: { label: "Sign-ups", unit: "count", definition: "Key events you confirmed as a sign-up (e.g. account created).", source: "Google Analytics 4" },
-  paid_conversions: { label: "First recorded paying customers", unit: "count", definition: "Distinct source-scoped customer IDs whose first positive, non-refund payment in imported billing data falls in this period. Payments without a customer ID are excluded; the same person across billing systems may count more than once, and incomplete billing history can make this count low.", source: "Billing" },
+  paid_conversions: { label: "First recorded paying customers", unit: "count", definition: "Distinct source-scoped customer IDs whose first recorded positive charge before refunds falls in this period. A later refund does not make a renewal a new customer. Payments without a customer ID are excluded; the same person across billing systems may count more than once, and incomplete billing history can make this count low.", source: "Billing" },
   revenue: { label: "Revenue (net of refunds)", unit: "currency_minor", definition: "Paid billing amounts minus refunds, by the day they happened in your business timezone.", source: "Billing" },
 } as const;
 export type MetricKey = keyof typeof METRICS;
@@ -145,50 +145,70 @@ async function rematerializeRevenueDay(ctx: MutationCtx, orgId: Id<"organization
 /** First recorded paying customer, counted once per customer ID across imported billing history. */
 async function firstRecordedPayerDays(
   ctx: { db: QueryCtx["db"] },
-  orgId: Id<"organizations">,
+  org: Pick<Doc<"organizations">, "_id" | "kind" | "timezone">,
   from: string,
   to: string,
-  timezone: string,
-): Promise<{ counts: Map<string, number>; observedDates: string[]; hasIdentifiedCustomers: boolean; isFixture: boolean; partial: boolean; freshness: number }> {
-  // Include a UTC day on either side; `from`/`to` are business-local dates.
-  const fromMs = Date.parse(`${from}T00:00:00Z`) - DAY;
-  const toMs = Date.parse(`${to}T23:59:59.999Z`) + DAY;
-  const rows = await ctx.db
-    .query("revenueEvents")
-    .withIndex("by_org_occurred", (q) => q.eq("orgId", orgId).gte("occurredAt", fromMs).lte("occurredAt", toMs))
-    .take(10_000);
-  const inRange = rows.filter((r) => {
-    const date = dayKey(r.occurredAt, timezone);
-    return date >= from && date <= to;
-  });
-  const customerKeys = [...new Set(inRange.flatMap((event) =>
-    event.customerRef && event.kind !== "refund" && event.amountMinor - event.refundedMinor > 0
-      ? [`${event.source}\u0000${event.customerRef}`]
-      : [],
-  ))];
+): Promise<{ counts: Map<string, number>; observedDates: string[]; hasIdentifiedCustomers: boolean; isFixture: boolean; partial: boolean; issue: string | null; freshness: number }> {
+  const midnight = (date: string) => {
+    const [year, month, day] = date.split("-").map(Number);
+    return zonedTime(year, month - 1, day, 0, 0, org.timezone);
+  };
+  const fromMs = midnight(from), endMs = midnight(addDays(to, 1));
+  const limit = 2000;
+  // Index fixture state before the bound: synthetic history cannot hide real payers.
+  const rows = await (org.kind === "demo"
+    ? ctx.db.query("revenueEvents").withIndex("by_org_occurred", q => q.eq("orgId", org._id).gte("occurredAt", fromMs).lt("occurredAt", endMs))
+    : ctx.db.query("revenueEvents").withIndex("by_org_fixture_occurred", q => q.eq("orgId", org._id).eq("isFixture", false).gte("occurredAt", fromMs).lt("occurredAt", endMs))
+  ).take(limit + 1);
+  const valid = (e: Doc<"revenueEvents">) => Boolean(e.source.trim() && e.sourceEventId.trim()) && /^[A-Z]{3}$/.test(e.currency)
+    && Number.isSafeInteger(e.occurredAt) && Number.isSafeInteger(e.amountMinor) && Number.isSafeInteger(e.refundedMinor)
+    && e.refundedMinor >= 0 && (e.kind === "refund" || e.amountMinor >= 0);
+  const positiveCharge = (e: Doc<"revenueEvents">) => e.kind !== "refund" && e.amountMinor > 0;
+  let issue: string | null = rows.length > limit ? "Customer count unavailable: the billing-period read reached its 2,000-record limit." : null;
+  if (rows.some(e => e.customerRef?.trim() && !valid(e))) issue = "Customer count unavailable: identified billing records contain invalid amounts, dates, currencies or source identities.";
+  if (rows.some(e => e.isFixture) && rows.some(e => !e.isFixture)) issue = "Customer count unavailable: synthetic and real billing observations are mixed.";
+  const observed = rows.filter(e => e.customerRef?.trim() && valid(e) && positiveCharge(e));
+  const customers = new Map(observed.map(e => [JSON.stringify([e.source, e.customerRef]), { source: e.source, customerRef: e.customerRef! }]));
   const counts = new Map<string, number>();
-  let historyPartial = false;
-  for (const key of customerKeys.slice(0, 2_000)) {
-    const [source, customerRef] = key.split("\u0000", 2);
-    const history = await ctx.db
-      .query("revenueEvents")
-      .withIndex("by_org_source_customer_occurred", (q) => q.eq("orgId", orgId).eq("source", source).eq("customerRef", customerRef))
-      .filter((q) => q.neq(q.field("kind"), "refund"))
-      .take(1_000);
-    if (history.length >= 1_000) historyPartial = true;
-    const first = history.find((event) => event.amountMinor - event.refundedMinor > 0);
-    if (!first) continue;
-    const firstDay = dayKey(first.occurredAt, timezone);
-    if (firstDay < from || firstDay > to) continue;
-    counts.set(firstDay, (counts.get(firstDay) ?? 0) + 1);
+  // One shared scan budget, not 1,000 rows for each of 2,000 customers.
+  // Stop at the earliest positive charge; later refunds do not reset acquisition.
+  let scanned = 0;
+  const scanAvailable = () => {
+    if (++scanned <= limit) return true;
+    issue = "Customer count unavailable: the shared 2,000-record customer-history scan limit was reached.";
+    return false;
+  };
+  const identity = (e: Doc<"revenueEvents">) => JSON.stringify([e.source, e.sourceEventId, e.customerRef, e.kind, e.occurredAt, e.amountMinor, e.currency, e.isFixture]);
+  for (const { source, customerRef } of customers.values()) {
+    if (issue) break;
+    const history = org.kind === "demo"
+      ? ctx.db.query("revenueEvents").withIndex("by_org_source_customer_occurred", q => q.eq("orgId", org._id).eq("source", source).eq("customerRef", customerRef).lt("occurredAt", endMs))
+      : ctx.db.query("revenueEvents").withIndex("by_org_source_customer_fixture_occurred", q => q.eq("orgId", org._id).eq("source", source).eq("customerRef", customerRef).eq("isFixture", false).lt("occurredAt", endMs));
+    let first: Doc<"revenueEvents"> | null = null;
+    for await (const e of history) {
+      if (!scanAvailable()) break;
+      if (!valid(e)) { issue = "Customer count unavailable: earlier customer history contains invalid billing evidence."; break; }
+      if (positiveCharge(e)) { first = e; break; }
+    }
+    if (issue || !first) continue;
+    // Do not silently pick a convenient first payment from conflicting source IDs.
+    for await (const copy of ctx.db.query("revenueEvents").withIndex("by_org_source_event", q => q.eq("orgId", org._id).eq("source", source).eq("sourceEventId", first.sourceEventId))) {
+      if (!scanAvailable()) break;
+      if (copy.isFixture && org.kind !== "demo") continue;
+      if (!valid(copy) || identity(copy) !== identity(first)) { issue = "Customer count unavailable: a first-payment identity has conflicting imported records."; break; }
+    }
+    if (issue) break;
+    const date = dayKey(first.occurredAt, org.timezone);
+    if (date >= from && date <= to) counts.set(date, (counts.get(date) ?? 0) + 1);
   }
   return {
-    counts,
-    observedDates: [...new Set(inRange.filter(r => r.customerRef && r.kind !== "refund").map(r => dayKey(r.occurredAt, timezone)))].sort(),
-    hasIdentifiedCustomers: customerKeys.length > 0,
-    isFixture: inRange.some((r) => r.isFixture),
-    partial: rows.length >= 10_000 || customerKeys.length > 2_000 || historyPartial,
-    freshness: Math.max(0, ...rows.map((r) => r.ingestedAt)),
+    counts: issue ? new Map() : counts,
+    observedDates: [...new Set(observed.map(e => dayKey(e.occurredAt, org.timezone)))].sort(),
+    hasIdentifiedCustomers: customers.size > 0,
+    isFixture: rows.some(e => e.isFixture),
+    partial: Boolean(issue),
+    issue,
+    freshness: Math.max(0, ...rows.map(r => r.ingestedAt)),
   };
 }
 
@@ -297,10 +317,10 @@ async function series(ctx: { db: QueryCtx["db"] }, org: { _id: Id<"organizations
 }
 
 /** Forecasts need comparable, non-duplicated daily observations; never add competing source totals. */
-async function forecastSeries(ctx: { db: QueryCtx["db"] }, org: { _id: Id<"organizations">; timezone: string; currency: string }, metricKey: string, from: string, to: string, purpose: "fit" | "score" = "fit") {
+async function forecastSeries(ctx: { db: QueryCtx["db"] }, org: Pick<Doc<"organizations">, "_id" | "kind" | "timezone" | "currency">, metricKey: string, from: string, to: string, purpose: "fit" | "score" = "fit") {
   if (metricKey === "paid_conversions") {
-    const payers = await firstRecordedPayerDays(ctx, org._id, from, to, org.timezone);
-    return { points: payers.observedDates.map(date => ({ date, value: payers.counts.get(date) ?? 0 })), sources: ["billing-first-recorded-v1"], excludedContextRows: 0, isFixture: payers.isFixture, issue: payers.partial ? "The billing read reached its limit. A complete comparable customer history is needed before forecasting or scoring." : null };
+    const payers = await firstRecordedPayerDays(ctx, org, from, to);
+    return { points: payers.observedDates.map(date => ({ date, value: payers.counts.get(date) ?? 0 })), sources: ["billing-first-recorded-v2"], excludedContextRows: 0, isFixture: payers.isFixture, issue: payers.issue };
   }
   const rows = await ctx.db.query("metricDaily").withIndex("by_org_metric_date", q => q.eq("orgId", org._id).eq("metricKey", metricKey).gte("date", from).lte("date", to)).take(2001);
   const eligible = rows.filter(r => r.kind === "observed" && !r.channel);
@@ -410,24 +430,24 @@ export const overview = query({
     const aiReferrals = await aiReferralSummary(ctx, org._id, from, addDays(today, -1));
 
     const yesterday = addDays(today, -1);
-    const payerHistory = await firstRecordedPayerDays(ctx, org._id, prevFrom, yesterday, org.timezone);
+    const payerHistory = await firstRecordedPayerDays(ctx, org, from, yesterday);
     const payerPoints = payerHistory.observedDates.filter(date => date >= from && date <= yesterday)
       .map(date => ({ date, value: payerHistory.counts.get(date) ?? 0 }));
     const payerMetric = metrics.find((metric) => metric.key === "paid_conversions");
     if (payerMetric) {
       payerMetric.label = METRICS.paid_conversions.label;
       payerMetric.definition = METRICS.paid_conversions.definition;
-      payerMetric.hasData = payerPoints.length > 0;
+      payerMetric.hasData = payerPoints.length > 0 || Boolean(payerHistory.issue);
       payerMetric.total = payerHistory.partial || !payerPoints.length ? null : payerPoints.reduce((sum, point) => sum + point.value, 0);
       payerMetric.previousTotal = null;
       payerMetric.comparisonReason = "Billing import completeness is unknown; period change cannot be established.";
       payerMetric.points = payerHistory.partial ? [] : payerPoints;
       payerMetric.recordedDays = payerPoints.length;
       payerMetric.freshness = payerHistory.freshness || null;
-      payerMetric.sourceName = payerPoints.length ? "Billing" : null;
+      payerMetric.sourceName = payerPoints.length || payerHistory.issue ? "Billing" : null;
       payerMetric.isFixture = payerHistory.isFixture;
       payerMetric.partial = true;
-      payerMetric.partialReason = payerHistory.partial ? "Customer count unavailable: the billing history read reached its calculation limit."
+      payerMetric.partialReason = payerHistory.partial ? payerHistory.issue
         : payerPoints.length ? "Count from identified imported payments only. Completeness of billing history is unknown; unrecorded days are not zero."
         : "No identified payments recorded in this period; the customer count is unknown.";
     }
