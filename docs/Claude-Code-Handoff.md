@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+The default starter/focused planner now actually receives the existing creative precedent library; an outdated heading check had omitted it. Writers and critics receive the same complete selected records and source/transfer limits. Uncited bold hypotheses remain available. [Audit, costs and limits](growth-engine/strategy-precedent-context-audit.md).
+
 Offline review packs now include the evaluation clock so past campaign windows cannot pass using the legacy 1970 fallback. UTC remains a test clock, not customer geography. [Audit](growth-engine/offline-evaluation-clock-audit.md).
 
 Connection setup and disconnect popups now show the service icon before the title, matching their cards. Stripe, Resend and WordPress use local brand artwork; file imports use colored file/contact symbols. [Scope and browser verification](growth-engine/connection-dialog-icons-audit.md).

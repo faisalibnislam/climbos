@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { focusedPlanTask } from "../../shared/agents/focusedPlan";
 import { CREATIVE_PRECEDENTS, creativePrecedentsForAgent, formatCreativePrecedents, retrieveCreativePrecedents } from "../../shared/knowledge/creativePrecedents";
 
 describe("creative strategy precedent retrieval", () => {
@@ -702,6 +703,13 @@ describe("creative strategy precedent retrieval", () => {
     const injected = creativePrecedentsForAgent("growth_plays", "Find an original demonstration strategy", query);
     expect(injected).toContain("CP-064");
     expect(injected).toContain("Do not invent a numerical success threshold");
+  });
+
+  it("keeps retrieval in the default focused planner even when the task heading changes", () => {
+    const task = focusedPlanTask(14);
+    const query = "small business distinctive mascot identity customer recall visual constraints";
+    expect(creativePrecedentsForAgent("growth_strategy", task, query)).toContain("Nintendo");
+    expect(creativePrecedentsForAgent("growth_strategy", "Prepare the next decision", "")).toContain("Generate an original hypothesis");
   });
 
   it("injects bounded precedents into every production growth-plays run", () => {

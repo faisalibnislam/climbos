@@ -1801,8 +1801,8 @@ export function formatCreativePrecedents(query: string | CreativePrecedentContex
   ].join("\n")).join("\n\n");
 }
 
-/** Runtime entry point: every growth-plays generation receives a bounded context, even if its task label changes. */
+/** Strategy agents always retrieve at most two records, independent of prompt headings. */
 export function creativePrecedentsForAgent(agentId: string, task: string, businessContext: string | CreativePrecedentContext): string {
-  if (agentId !== "growth_plays" && agentId !== "business_model_check" && !/STRATEGY EXPLORATION|CREATIVE STRATEGY EXPLORATION/i.test(task)) return "";
+  if (agentId !== "growth_plays" && agentId !== "growth_strategy" && agentId !== "business_model_check" && !/STRATEGY EXPLORATION|CREATIVE STRATEGY EXPLORATION/i.test(task)) return "";
   return formatCreativePrecedents(businessContext, 2);
 }

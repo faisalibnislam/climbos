@@ -1,3 +1,7 @@
+## 17 November 2026 — protected creative strategy runtime repair
+
+The default starter/focused workflow generated three options but did not receive precedent records because its task heading no longer matched the retrieval trigger. The existing library now reaches those writers and critics; complete source and transfer limits survive critic context. [Audit](strategy-precedent-context-audit.md). This closes a real integration gap in the protected later requirement, not all strategic-quality acceptance. Uncited original bold ideas remain eligible.
+
 ## 17 November 2026 — competitive and external-context analysis
 
 Rows 161/162 now have an actual structured Five Forces/PESTLE path in the business-model check, with business-specific mechanisms, implications, tradeoffs, source-linked checks and later-plan use. [Audit](strategic-landscape-audit.md). Related rows 156–170 retain broader incomplete scope; no real-world analysis-quality claim is made.

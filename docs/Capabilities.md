@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+The default starter/focused planner now actually receives the existing creative precedent library; an outdated heading check had omitted it. Writers and critics receive the same complete selected records and source/transfer limits. Uncited bold hypotheses remain available. [Audit, costs and limits](growth-engine/strategy-precedent-context-audit.md).
+
 Connection setup and disconnect popups now show the service icon before the title, matching their cards. Stripe, Resend and WordPress use local brand artwork; file imports use colored file/contact symbols. [Scope and browser verification](growth-engine/connection-dialog-icons-audit.md).
 
 The review loop now keeps a draft that passes every required check ahead of a higher-average draft that fails one criterion. Both revision and best-of-two paths are covered; strategy-option diversity, budgets and approval rules are unchanged. [Audit](growth-engine/reviewed-draft-selection-audit.md).

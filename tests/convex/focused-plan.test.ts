@@ -86,6 +86,23 @@ async function workspace() {
   return { t, owner, slug, orgId };
 }
 
+it.each(["focused", "starter"] as const)("connects the precedent library to the real %s writer, critic and saved plan", async planStyle => {
+  const { t, owner, slug, orgId } = await workspace();
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  const prompts = state.requests.map(req => req.messages.map(message => typeof message.content === "string" ? message.content : JSON.stringify(message.content)).join("\n"));
+  const writer = prompts.find(prompt => prompt.includes("BOUNDED CREATIVE PRECEDENT RETRIEVAL"));
+  const critic = prompts.find(prompt => prompt.includes("CREATIVE PRECEDENTS (reference only; validate transfer conditions"));
+  expect(writer).toBeDefined(); expect(critic).toBeDefined();
+  const ids = plan.expert?.strategyExploration?.retrievedPrecedentIds ?? [];
+  expect(ids.length).toBeGreaterThan(0); expect(ids.length).toBeLessThanOrEqual(2);
+  for (const id of ids) { expect(writer).toContain(id); expect(critic).toContain(id); }
+  expect(plan.expert?.strategyExploration?.bold.precedentIds).toEqual([]);
+  expect(plan.expert?.quality?.state).toBe("passed");
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
+
 it.each(["fractional", "duplicate"])("persists honest %s review results without authorizing actions", async mode => {
   const { t, owner, slug, orgId } = await workspace();
   state.reviewScores = mode;

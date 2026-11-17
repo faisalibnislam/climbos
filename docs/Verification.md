@@ -1,3 +1,7 @@
+## 17 November 2026 — default strategy precedent context
+
+[Audit](growth-engine/strategy-precedent-context-audit.md). Engine `v3.148-strategy-precedent-context`. Three initial regressions reproduced absent focused retrieval and truncated critic records. **307 tests in nine files passed, 14.43 seconds**, including actual starter/focused job persistence and authorization. App/Convex typechecks, changed-file ESLint and diff checks passed. The ongoing v4 paid process is pre-fix `v3.147`, not evidence for this repair. Additional `tests/convex/safety.test.ts` and `tests/unit/strategy-prompt-cost.test.ts`: **14 tests passed, 2.98 seconds**, covering stored cost caps and prompt/cost boundaries.
+
 ## 17 November 2026 — offline evaluation clock
 
 [Audit](growth-engine/offline-evaluation-clock-audit.md). Two red regressions reproduced the missing clock and past-window acceptance. **110 tests in seven files passed, 13.23 seconds**. Actual retail/education offline exports contain the clock and preserve unknown business location and research freshness. Application/Convex typecheck, changed-file ESLint and diff checks passed. No provider call or runtime engine change.

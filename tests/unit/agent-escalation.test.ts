@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { focusedPlanTask } from "../../shared/agents/focusedPlan";
+import { formatCreativePrecedents, retrieveCreativePrecedents } from "../../shared/knowledge/creativePrecedents";
 import { ZERO_USAGE, type TurnResult } from "../../shared/ai/types";
 import { CritiqueSchema, runAgent, type AgentDeps, type PhaseKey, type PhaseRecord } from "../../shared/agents/runtime";
 import type { AgentInput, AgentSpec, Rubric } from "../../shared/agents/types";
@@ -201,4 +203,35 @@ it.each([1, 2])("keeps a fully passing draft ahead of a higher-average draft wit
   expect(result.output.answer).toBe("Every criterion passed");
   expect(written).toBe(2);
   expect(reviewed).toBe(2);
+});
+
+
+it.each(["growth_strategy", "growth_plays"])("delivers complete matching precedent records to the %s writer and reviewer", async id => {
+  const task = focusedPlanTask(14);
+  const context = { task, brief: "A homeware shop can hold small product demonstrations; location, stock and staffing remain unknown.", facts: [], constraints: { businessTypes: ["physical_retail"] } };
+  const records = retrieveCreativePrecedents(context, 2);
+  const formatted = formatCreativePrecedents(context, 2);
+  expect(records).toHaveLength(2);
+  expect(formatted.length).toBeGreaterThan(3200);
+  const prompts: string[] = [];
+  await runAgent({ ...spec, id, maxRevisions: 0 }, context, {
+    turn: async req => {
+      prompts.push(req.messages.map(message => typeof message.content === "string" ? message.content : JSON.stringify(message.content)).join("\n"));
+      const output = req.schema === CritiqueSchema
+        ? { gates: [{ id: "truth", pass: true, note: "Checked" }], scores: [{ id: "clarity", score: 4, note: "", fix: "none" }, { id: "XV", score: 4, note: "", fix: "none" }], strengths: [], fixes: [], escalation: { reason: "none", evidence: "" } }
+        : { answer: "An original hypothesis can stand without a matching precedent." };
+      return { ok: true, output, text: JSON.stringify(output), appended: [], usage: { ...ZERO_USAGE, calls: 1 }, costMicros: 1, sources: [], actualModelId: req.modelKey, stopReason: "end_turn" };
+    },
+    phase: async (_key, _label, fn) => (await fn()).value,
+  });
+  expect(prompts).toHaveLength(2);
+  for (const prompt of prompts) {
+    for (const { precedent } of records) {
+      expect(prompt).toContain(precedent.id);
+      expect(prompt).toContain(precedent.transferRisk);
+      expect(prompt).toContain(precedent.causalLimit);
+      expect(prompt).toContain(precedent.reversibleTest);
+      for (const source of precedent.sources) expect(prompt).toContain(source.url);
+    }
+  }
 });

@@ -1,3 +1,7 @@
+## 17 November — default strategy precedent integration
+
+`v3.148-strategy-precedent-context`: default starter/focused agents now receive the existing library independent of task headings; reviewers receive complete selected source/transfer records. 307 focused tests passed after three red cases. [Audit](strategy-precedent-context-audit.md). Original uncited hypotheses remain eligible; lexical retrieval and real-model quality remain acceptance limits.
+
 ## 17 November — offline timing checks
 
 Offline prepare/check commands now supply the actual evaluation clock instead of falling back to 1970 in play validation. Two red cases, 110 passing focused tests, and inspected real offline exports. [Audit](offline-evaluation-clock-audit.md). The runtime timing prompt and paid harness are unchanged.
