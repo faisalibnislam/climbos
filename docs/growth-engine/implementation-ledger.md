@@ -1,3 +1,7 @@
+## 17 November 2026 — refund-aware repeat purchases
+
+The existing repeat-purchase calculator now reconciles separate refunds and partial captures, requires actual order identity and preserves material uncertainty in strategy/model input. 95 focused tests, typecheck and scoped lint passed; [audit](repeat-purchase-evidence-audit.md). No external action or UI change; full scope remains incomplete.
+
 ## 17 November 2026 — business-model billing evidence
 
 Closed a separate unvalidated billing comparison in the existing model-check signal path. Exact event deduplication, conflicts, invalid inputs and safe arithmetic now preserve unknowns without removing independent owner evidence. 90 focused tests, typecheck, scoped lint and diff checks passed; [audit](model-billing-evidence-audit.md). Full scope remains incomplete.

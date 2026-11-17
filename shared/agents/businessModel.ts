@@ -269,7 +269,9 @@ export function ownerModelSignals(input: {
     } else out.push({ key: "revenue_trend", label: "Revenue trend", direction: "unknown", basis: "calculated", detail: `No positive revenue in the earlier 90-day window to compare with. ${billingCoverage}` });
   } else out.push({ key: "revenue_trend", label: "Revenue trend", direction: "unknown", basis: "calculated", detail: `Loaded same-currency records do not span 180 days. Check coverage before comparing two 90-day periods. ${billingCoverage}` });
 
-  const repeat = input.currency && !billingIssue ? repeatPurchaseSummary(revenueEvents, { currency: input.currency, nowMs: input.nowMs, windowsDays: [90] }).windows[0] : undefined;
+  const repeatAssessment = input.currency && !billingIssue ? repeatPurchaseSummary(revenueEvents, { currency: input.currency, nowMs: input.nowMs, windowsDays: [90] }) : undefined;
+  const repeat = repeatAssessment?.windows[0];
+  if (repeatAssessment?.issue) out.push({ key: "repeat_purchase", label: "Repeat purchases", direction: "unknown", basis: "calculated", detail: `${repeatAssessment.issue} Reconcile the source records before interpreting repeat purchases. ${billingCoverage}` });
   if (repeat && repeat.eligible >= 20) out.push({ key: "repeat_purchase", label: "Customers who reordered within 90 days", direction: "unknown", basis: "calculated", detail: `${repeat.repeated}/${repeat.eligible} (${Math.round((repeat.rate ?? 0) * 100)}%); no benchmark is assumed, so direction is left to the evidence. First order means first in loaded history, not necessarily first ever.${input.revenuePartial ? " History is truncated; the eligible customers and repeat rate may change with a complete import." : ""} ${billingCoverage}` });
 
   const p = pipelineOutcomes(input.deals, { nowMs: input.nowMs, partial: input.pipelinePartial });

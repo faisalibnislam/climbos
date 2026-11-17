@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+Repeat-purchase advice now reconciles separately recorded refunds and partial captures by actual order identity. Fully refunded repeat orders do not count; ambiguous or unmatched records keep the conclusion unknown. [Definition and limits](growth-engine/repeat-purchase-evidence-audit.md).
+
 Business-model checks now withhold billing direction for invalid amounts, missing or conflicting event identities, and unsafe totals. Exact repeated payment events count once; unrelated owner-reported evidence remains available. [Evidence checks and limits](growth-engine/model-billing-evidence-audit.md).
 
 Billing-based customer-dependency advice now distinguishes identity coverage from net revenue and withholds concentration shares when order identities conflict or refunds cannot be assigned. Source records remain incomplete evidence, not a full-business diagnosis. [Audit and limits](growth-engine/customer-concentration-basis-audit.md).

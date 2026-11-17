@@ -191,6 +191,8 @@ export interface RepeatPurchaseWindow {
 
 export interface RepeatPurchaseSummary {
   currency: string;
+  /** No repeat-purchase inference when material order/refund evidence cannot be reconciled. */
+  issue: string | null;
   /** Distinct customers with at least one positive same-currency order and a customer ID. */
   customers: number;
   /** Positive same-currency orders without a customer ID (can't be linked to a person). */
@@ -212,18 +214,64 @@ const DAY_MS = 86_400_000;
  */
 export function repeatPurchaseSummary(payments: readonly CohortPayment[], options: { currency: string; nowMs: number; windowsDays?: number[] }): RepeatPurchaseSummary {
   const windowsDays = options.windowsDays ?? [30, 60, 90];
-  const orders = payments.filter((p) => p.kind === "order" && p.currency === options.currency && p.amountMinor - p.refundedMinor > 0);
-  const byCustomer = new Map<string, { at: number; order: string }[]>();
+  const unavailable = (issue: string): RepeatPurchaseSummary => ({ currency: options.currency, issue, customers: 0, ordersWithoutCustomer: 0, windows: [], medianDaysToSecond: null, reorderedCustomers: 0, historyFrom: null });
+  if (!Number.isSafeInteger(options.nowMs) || options.nowMs < 0 || options.nowMs > 8.64e15 || !/^[A-Z]{3}$/.test(options.currency) || !windowsDays.length || windowsDays.some(days => !Number.isInteger(days) || days < 1 || days > 3650)) return unavailable("The date, currency or observation window is invalid.");
+  const recorded: CohortPayment[] = [];
+  const identities = new Map<string, string>();
+  for (const payment of payments) {
+    if (payment.currency !== options.currency) continue;
+    if (!Number.isSafeInteger(payment.occurredAt) || payment.occurredAt < 0 || payment.occurredAt > 8.64e15) return unavailable("Billing history contains invalid dates.");
+    if (payment.occurredAt > options.nowMs) continue;
+    if (!payment.source?.trim() || !payment.sourceEventId?.trim()) return unavailable("Billing source/event identities are missing; reconcile duplicate records first.");
+    if (!Number.isSafeInteger(payment.amountMinor) || !Number.isSafeInteger(payment.refundedMinor) || payment.refundedMinor < 0 || (payment.kind === "refund" ? payment.refundedMinor !== 0 : payment.amountMinor < 0 || payment.refundedMinor > payment.amountMinor)) return unavailable("Billing history contains invalid amounts.");
+    const key = JSON.stringify([payment.source, payment.sourceEventId]);
+    const signature = JSON.stringify([payment.occurredAt, payment.customerRef ?? null, payment.orderRef ?? null, payment.amountMinor, payment.refundedMinor, payment.kind]);
+    const previous = identities.get(key);
+    if (previous !== undefined && previous !== signature) return unavailable("Billing history contains conflicting copies of the same event.");
+    if (previous !== undefined) continue;
+    identities.set(key, signature); recorded.push(payment);
+  }
+  const orderKey = (payment: CohortPayment) => payment.orderRef?.trim() ? JSON.stringify([payment.source, payment.currency, payment.orderRef]) : null;
+  const groups = new Map<string, { net: number; customer?: string; at: number }>();
+  const subscriptions = new Set(recorded.filter(p => p.kind === "subscription_payment").flatMap(p => orderKey(p) ? [orderKey(p)!] : []));
   let ordersWithoutCustomer = 0;
-  for (const p of orders) {
-    if (!p.customerRef) {
-      ordersWithoutCustomer++;
+  for (const payment of recorded) {
+    if (payment.kind !== "order") continue;
+    const net = payment.amountMinor - payment.refundedMinor;
+    const key = orderKey(payment);
+    const customer = payment.customerRef?.trim() ? JSON.stringify([payment.source, payment.customerRef]) : undefined;
+    if (!key) {
+      if (net > 0 && customer) return unavailable("Order identity is missing; distinct repeat purchases cannot be established from payment timestamps.");
+      if (net > 0) ordersWithoutCustomer++;
       continue;
     }
-    const key = `${p.source ?? ""}\u0000${p.customerRef}`;
-    const list = byCustomer.get(key) ?? [];
-    list.push({ at: p.occurredAt, order: p.orderRef ?? `@${p.occurredAt}` });
-    byCustomer.set(key, list);
+    if (subscriptions.has(key)) return unavailable("An order identity is shared by one-off and subscription charges; reconcile its type.");
+    const existing = groups.get(key);
+    if (existing?.customer && customer && existing.customer !== customer) return unavailable("An order has conflicting customer identities.");
+    const amount = (existing?.net ?? 0) + net;
+    if (!Number.isSafeInteger(amount)) return unavailable("Order totals exceed safe minor-unit arithmetic.");
+    groups.set(key, { net: amount, customer: customer ?? existing?.customer, at: Math.min(existing?.at ?? payment.occurredAt, payment.occurredAt) });
+  }
+  for (const refund of recorded) {
+    if (refund.kind !== "refund" || refund.amountMinor === 0) continue;
+    const key = orderKey(refund);
+    if (key && subscriptions.has(key)) continue;
+    const order = key ? groups.get(key) : undefined;
+    if (!order) return unavailable("A nonzero refund cannot be matched to a loaded order or subscription; repeat-purchase status is unknown.");
+    const customer = refund.customerRef?.trim() ? JSON.stringify([refund.source, refund.customerRef]) : undefined;
+    if (customer && order.customer && customer !== order.customer) return unavailable("A refund conflicts with its order's customer identity.");
+    if (refund.occurredAt < order.at) return unavailable("A refund predates its loaded order; reconcile the event dates.");
+    order.net -= Math.abs(refund.amountMinor);
+    if (!Number.isSafeInteger(order.net) || order.net < 0) return unavailable("Refunds exceed the loaded order amount or safe arithmetic range.");
+    order.customer ??= customer;
+  }
+  const byCustomer = new Map<string, { at: number; order: string }[]>();
+  const orders = [...groups.entries()].filter(([, order]) => order.net > 0);
+  for (const [key, order] of orders) {
+    if (!order.customer) { ordersWithoutCustomer++; continue; }
+    const list = byCustomer.get(order.customer) ?? [];
+    list.push({ at: order.at, order: key });
+    byCustomer.set(order.customer, list);
   }
   const firstTwo = [...byCustomer.values()].map((list) => {
     const sorted = list.sort((a, b) => a.at - b.at);
@@ -240,19 +288,20 @@ export function repeatPurchaseSummary(payments: readonly CohortPayment[], option
   const gaps = firstTwo.flatMap((c) => (c.second === null ? [] : [(c.second - c.first) / DAY_MS])).sort((a, b) => a - b);
   const mid = Math.floor(gaps.length / 2);
   return {
-    currency: options.currency,
+    currency: options.currency, issue: null,
     customers: byCustomer.size,
     ordersWithoutCustomer,
     windows,
     medianDaysToSecond: gaps.length ? (gaps.length % 2 ? gaps[mid] : (gaps[mid - 1] + gaps[mid]) / 2) : null,
     reorderedCustomers: gaps.length,
-    historyFrom: orders.length ? Math.min(...orders.map((p) => p.occurredAt)) : null,
+    historyFrom: orders.length ? Math.min(...orders.map(([, order]) => order.at)) : null,
   };
 }
 
 /** Evidence-labeled repeat-purchase context for planning; unknown when orders carry no customer IDs. */
 export function repeatPurchaseBrief(s: RepeatPurchaseSummary, options: { truncated: boolean }): string {
   const currency = s.currency.toUpperCase();
+  if (s.issue) return `OBSERVED REPEAT PURCHASES: unavailable for ${currency}; ${s.issue} Review the source records; do not infer repeat rates or reorder timing from this history.`;
   if (!s.customers && !s.ordersWithoutCustomer) return "";
   if (!s.customers) return `OBSERVED REPEAT PURCHASES: unavailable for ${currency}; loaded one-off orders do not include customer IDs. Do not infer repeat-purchase rates or time to reorder from order totals.`;
   const from = s.historyFrom ? new Date(s.historyFrom).toISOString().slice(0, 10) : "unknown";
@@ -260,6 +309,6 @@ export function repeatPurchaseBrief(s: RepeatPurchaseSummary, options: { truncat
   const median = s.medianDaysToSecond === null ? "no customer has reordered in the loaded history" : `median ${Math.round(s.medianDaysToSecond)} days to a second order among the ${s.reorderedCustomers} customers who reordered (customers who haven't reordered yet are excluded, so this understates the typical wait)`;
   return [
     `OBSERVED REPEAT PURCHASES (one-off orders, ${currency}; ${s.customers} identified customers; order history loaded from ${from}${options.truncated ? ", truncated to the latest 10,000 events" : ""}${s.ordersWithoutCustomer ? `; ${s.ordersWithoutCustomer} orders without a customer ID excluded` : ""}): customers who ordered again after their first loaded order: ${windows}; ${median}.`,
-    "Only customers whose whole window has passed are counted. First order means first in the loaded history, not necessarily the customer's first ever. Fully refunded orders are excluded. This is observed repeat behavior, not a retention forecast or evidence of what caused it.",
+    "Only customers whose whole window has passed are counted. First order means first in the loaded history, not necessarily the customer's first ever. Fully refunded orders are excluded using recorded refunds as of this observation; later refunds can change this descriptive cohort. Positive payment captures are grouped by source and order identity, not guessed from timestamps. This is observed repeat behavior, not a retention forecast or evidence of what caused it.",
   ].join(" ");
 }

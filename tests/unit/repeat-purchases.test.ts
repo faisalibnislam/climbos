@@ -3,7 +3,7 @@ import { repeatPurchaseBrief, repeatPurchaseSummary, type CohortPayment } from "
 
 const DAY = 86_400_000;
 const now = Date.UTC(2026, 9, 25);
-const order = (customerRef: string | undefined, daysAgo: number, o: Partial<CohortPayment> = {}): CohortPayment => ({ source: "stripe", customerRef, orderRef: `${customerRef}-${daysAgo}`, occurredAt: now - daysAgo * DAY, amountMinor: 5_000, refundedMinor: 0, kind: "order", currency: "USD", ...o });
+const order = (customerRef: string | undefined, daysAgo: number, o: Partial<CohortPayment> = {}): CohortPayment => ({ source: "stripe", sourceEventId: `${customerRef}-${daysAgo}`, customerRef, orderRef: `${customerRef}-${daysAgo}`, occurredAt: now - daysAgo * DAY, amountMinor: 5_000, refundedMinor: 0, kind: "order", currency: "USD", ...o });
 
 describe("repeat purchases for one-off orders", () => {
   it("counts only customers whose whole window has passed, and distinct second orders", () => {
@@ -26,7 +26,7 @@ describe("repeat purchases for one-off orders", () => {
 
   it("excludes other currencies, subscriptions, refunds, and fully refunded orders; keeps provider namespaces apart", () => {
     const s = repeatPurchaseSummary([
-      order("a", 200), order("a", 190, { currency: "EUR" }), order("a", 185, { kind: "subscription_payment" }), order("a", 180, { refundedMinor: 5_000 }), order("a", 170, { kind: "refund" }),
+      order("a", 200), order("a", 190, { currency: "EUR" }), order("a", 185, { kind: "subscription_payment" }), order("a", 180, { refundedMinor: 5_000 }), order("a", 170, { kind: "refund", orderRef: "a-185" }),
       order("a", 150, { source: "csv" }),
     ], { currency: "USD", nowMs: now });
     expect(s.customers).toBe(2);
@@ -45,4 +45,46 @@ describe("repeat purchases for one-off orders", () => {
     expect(text).toContain("not necessarily the customer's first ever");
     expect(text).not.toContain("cus_secret_123");
   });
+});
+
+it("excludes a second order fully refunded through a separate event", () => {
+  const rows = [order("a", 200), order("a", 180), order("a", 170, { kind: "refund", orderRef: "a-180" })];
+  const result = repeatPurchaseSummary(rows, { currency: "USD", nowMs: now });
+  expect(result).toMatchObject({ customers: 1, reorderedCustomers: 0, medianDaysToSecond: null });
+  expect(result.windows[0]).toMatchObject({ eligible: 1, repeated: 0, rate: 0 });
+});
+it("combines partial captures and refunds once per identified order", () => {
+  const rows = [order("a", 200), order("a", 180, { amountMinor: 3000 }), order("a", 179, { orderRef: "a-180", amountMinor: 2000 }), order("a", 170, { kind: "refund", orderRef: "a-180", amountMinor: 4000 })];
+  const result = repeatPurchaseSummary([...rows, rows[2]], { currency: "USD", nowMs: now });
+  expect(result).toMatchObject({ reorderedCustomers: 1, medianDaysToSecond: 20, issue: null });
+});
+it.each([
+  ["unmatched refund", [order("a", 200), order("a", 180), order("a", 170, { kind: "refund", orderRef: undefined })]],
+  ["conflicting customer", [order("a", 200), order("b", 180, { orderRef: "a-200" })]],
+  ["missing order identity", [order("a", 200), order("a", 180, { orderRef: undefined })]],
+  ["missing event identity", [order("a", 200, { sourceEventId: undefined })]],
+])("keeps repeat purchase unknown for %s", (_label, rows) => {
+  const result = repeatPurchaseSummary(rows, { currency: "USD", nowMs: now });
+  expect(result.issue).toBeTruthy();
+  expect(result.windows).toEqual([]);
+  expect(repeatPurchaseBrief(result, { truncated: false })).toContain("unavailable");
+});
+it("does not count future orders as observed repurchases", () => {
+  expect(repeatPurchaseSummary([order("a", 10), order("a", -1)], { currency: "USD", nowMs: now })).toMatchObject({ customers: 1, reorderedCustomers: 0, medianDaysToSecond: null });
+});
+
+it.each([
+  ["conflicting event copies", [order("a", 200), order("a", 200, { amountMinor: 4000 })]],
+  ["refund customer conflict", [order("a", 200), order("b", 190, { kind: "refund", orderRef: "a-200" })]],
+  ["refund before charge", [order("a", 200), order("a", 210, { kind: "refund", orderRef: "a-200" })]],
+  ["excessive refund", [order("a", 200), order("a", 190, { kind: "refund", orderRef: "a-200", amountMinor: 5001 })]],
+  ["unsafe partial captures", [order("a", 200, { amountMinor: Number.MAX_SAFE_INTEGER }), order("a", 199, { orderRef: "a-200", amountMinor: 1 })]],
+])("withholds rates for %s", (_label, rows) => {
+  const result = repeatPurchaseSummary(rows, { currency: "USD", nowMs: now });
+  expect(result.issue).toBeTruthy();
+  expect(result.windows).toEqual([]);
+});
+it("excludes a fully refunded first order without inventing a prior positive purchase", () => {
+  const result = repeatPurchaseSummary([order("a", 200), order("a", 180), order("a", 170, { kind: "refund", orderRef: "a-200" })], { currency: "USD", nowMs: now });
+  expect(result).toMatchObject({ customers: 1, reorderedCustomers: 0, historyFrom: now - 180 * DAY });
 });

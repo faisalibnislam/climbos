@@ -1,3 +1,12 @@
+## 17 November 2026 — refund-aware repeat purchases
+
+[Audit](growth-engine/repeat-purchase-evidence-audit.md). Engine `v3.140-repeat-order-evidence`.
+
+- `pnpm exec vitest run tests/unit/repeat-purchases.test.ts tests/unit/business-model-check.test.ts tests/convex/repeat-purchase-evidence.test.ts tests/convex/cohort-evidence.test.ts tests/convex/business-model-billing-evidence.test.ts tests/convex/crm-payment-evidence.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — **95 passed / eight files, 3.30 seconds**. Seven initial red cases reproduced the gaps. Refund/partial-capture reconciliation, missing/conflicting identities, dates, unsafe amounts, actual strategy/model context, tenancy and authorization are covered.
+- Application/Convex `pnpm typecheck` and scoped ESLint passed. No UI changed; no browser or live-provider test ran.
+
+The measure remains descriptive and limited to loaded records. Saved reports and imports were not rewritten; full project scope remains incomplete.
+
 ## 17 November 2026 — business-model billing evidence
 
 [Audit](growth-engine/model-billing-evidence-audit.md). Engine `v3.139-model-billing-evidence`.
