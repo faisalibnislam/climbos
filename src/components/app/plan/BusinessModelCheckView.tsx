@@ -5,7 +5,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import { errorMessage } from "@/components/app/errors";
 import { Badge, Button, Callout, Field, Select, Textarea, type Tone } from "@/components/ui";
 import { EvidenceReferences } from "./EvidenceReferences";
-import { MODEL_EVIDENCE_LABELS, type BusinessModelFreshness } from "../../../../shared/agents/businessModelFreshness";
+import { MODEL_EVIDENCE_LABELS, type BusinessModelFreshness, type BusinessModelEvidence } from "../../../../shared/agents/businessModelFreshness";
 import type { BusinessModelCheck } from "../../../../shared/agents/businessModel";
 
 type Target = "deciding" | "grounded" | "adjacent" | "bold";
@@ -73,7 +73,7 @@ function TestRecorder({ target, saved, canEdit, onRecord }: { target: Target; sa
 }
 
 /** The latest business model check: current model, market signals, labelled verdict, three alternatives, and the deciding test. */
-export function BusinessModelCheckView({ check, createdAt, isFixture, tests, canEdit, onRecord, precedents = [], freshness }: { freshness?: BusinessModelFreshness | null; check: BusinessModelCheck; precedents?: { id: string; title: string; mechanism: string; causalLimit: string; accessedAt: string; sources: { title: string; url: string }[] }[]; createdAt: number; isFixture?: boolean; tests: Partial<Record<Target, BusinessModelTestView>>; canEdit: boolean; onRecord?: (draft: TestDraft) => Promise<Id<"businessModelTests">> }) {
+export function BusinessModelCheckView({ check, createdAt, isFixture, tests, canEdit, onRecord, precedents = [], freshness, facts = null }: { facts?: BusinessModelEvidence["facts"] | null; freshness?: BusinessModelFreshness | null; check: BusinessModelCheck; precedents?: { id: string; title: string; mechanism: string; causalLimit: string; accessedAt: string; sources: { title: string; url: string }[] }[]; createdAt: number; isFixture?: boolean; tests: Partial<Record<Target, BusinessModelTestView>>; canEdit: boolean; onRecord?: (draft: TestDraft) => Promise<Id<"businessModelTests">> }) {
   const v = VERDICT[check.verdict.status];
   const historical = freshness && freshness.status !== "unchanged";
   return (
@@ -97,7 +97,7 @@ export function BusinessModelCheckView({ check, createdAt, isFixture, tests, can
           <div><dt className="text-xs text-ink-3">Pricing</dt><dd className="text-ink">{label(check.currentModel.pricingStructure)}</dd></div>
           <div><dt className="text-xs text-ink-3">How it sells · delivery</dt><dd className="text-ink">{label(check.currentModel.salesMotion)} · {check.currentModel.delivery}</dd></div>
         </dl>
-        <EvidenceReferences references={check.currentModel.evidenceRefs} />
+        <EvidenceReferences factSnapshot={facts} references={check.currentModel.evidenceRefs} />
       </section>
 
       <section aria-label="Verdict" className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4">
@@ -120,7 +120,7 @@ export function BusinessModelCheckView({ check, createdAt, isFixture, tests, can
                 <span className="font-medium text-ink">{DIRECTION[s.direction]} · {label(s.dimension)}</span>
                 <span className="text-ink-2">{s.finding}</span>
                 <span className="text-xs text-ink-3">{BASIS[s.basis]}{s.observedAt ? ` · evidence from ${s.observedAt}` : ""} · limit: {s.limitation}</span>
-                <EvidenceReferences references={s.evidenceRefs} />
+                <EvidenceReferences factSnapshot={facts} references={s.evidenceRefs} />
               </li>
             ))}
           </ul>
@@ -139,7 +139,7 @@ export function BusinessModelCheckView({ check, createdAt, isFixture, tests, can
                     <div key={d.dimension} className="flex flex-col">
                       <dt className="text-xs text-ink-3">{label(d.dimension)}: <span className="font-medium text-ink-2">{d.level}</span> · {BASIS[d.basis]}</dt>
                       <dd className="text-xs text-ink-2">{d.note}</dd>
-                      <EvidenceReferences references={d.evidenceRefs} />
+                      <EvidenceReferences factSnapshot={facts} references={d.evidenceRefs} />
                     </div>
                   ))}
                 </dl>
@@ -163,12 +163,12 @@ export function BusinessModelCheckView({ check, createdAt, isFixture, tests, can
                 <div><dt className="text-ink-3">Who pays · pricing</dt><dd className="text-ink">{a.whoPays} · {label(a.pricingStructure)}</dd></div>
                 <div><dt className="text-ink-3">Convention it challenges</dt><dd className="text-ink">{a.conventionChallenged}</dd></div>
                 <div><dt className="text-ink-3">What stays the same</dt><dd className="text-ink">{a.whatPersists}</dd></div>
-                {a.unitEconomicsInputs.length ? <div><dt className="text-ink-3">Numbers it depends on</dt><dd className="text-ink"><ul className="list-disc pl-4">{a.unitEconomicsInputs.map((u, i) => <li key={i}>{u.input}: {u.value} <span className="text-ink-3">({BASIS[u.basis]})</span></li>)}</ul></dd></div> : null}
+                {a.unitEconomicsInputs.length ? <div><dt className="text-ink-3">Numbers it depends on</dt><dd className="text-ink"><ul className="list-disc pl-4">{a.unitEconomicsInputs.map((u, i) => <li key={i}>{u.input}: {u.value} <span className="text-ink-3">({BASIS[u.basis]})</span>{u.evidenceRefs?.length ? <EvidenceReferences factSnapshot={facts} references={u.evidenceRefs} /> : ["owner_report", "measured", "research"].includes(u.basis) ? <span className="block text-ink-3">Supporting reference not retained in this report.</span> : null}</li>)}</ul></dd></div> : null}
                 {a.assumptions.length ? <div><dt className="text-ink-3">Assumptions</dt><dd className="text-ink"><ul className="list-disc pl-4">{a.assumptions.map((x, i) => <li key={i}>{x}</li>)}</ul></dd></div> : null}
                 {a.risks.length ? <div><dt className="text-ink-3">Risks</dt><dd className="text-ink"><ul className="list-disc pl-4">{a.risks.map((x, i) => <li key={i}>{x}</li>)}</ul></dd></div> : null}
               </dl>
               <p className="text-xs text-ink-3">Novelty {a.novelty} · evidence {a.evidenceStrength} · fit {a.businessFit} · feasibility {a.feasibility} · risk {a.risk} · {label(a.evidenceBasis)}</p>
-              <EvidenceReferences references={a.evidenceRefs} />
+              <EvidenceReferences factSnapshot={facts} references={a.evidenceRefs} />
               {precedents.filter((p) => a.precedentIds?.includes(p.id)).map((p) => <details key={p.id} className="text-xs text-ink-2"><summary className="min-h-9 cursor-pointer">Analogy: {p.title}</summary><p>{p.mechanism}</p><p className="mt-1">Limit: {p.causalLimit}</p><p>Source reviewed {p.accessedAt}</p>{p.sources.map((s) => <a key={s.url} href={s.url} target="_blank" rel="noreferrer noopener" className="mt-1 block text-link underline">{s.title}</a>)}</details>)}
               <div className="rounded-[var(--radius-control)] border border-line p-2.5 text-xs">
                 <p className="font-medium text-ink">Smallest test: {a.smallestTest.test}</p>

@@ -1,3 +1,5 @@
+import { parsedModelCheck } from "./lib/businessModelTests";
+import { readBusinessModelEvidence } from "../shared/agents/businessModelFreshness";
 import { isUnlimited } from "../shared/economics/credits";
 import { AD_BUDGET_UNIT_VERSION, knownAdBudget, parseAdBudget } from "../shared/policy/campaignBudget";
 import { minorToMajor } from "../shared/economics/currency";
@@ -483,6 +485,7 @@ export const exportData = internalQuery({
     const goals = await ctx.db.query("goals").withIndex("by_org_status", (q) => q.eq("orgId", orgId)).take(1001);
     const platformPreparations = await ctx.db.query("platformPreparations").withIndex("by_org_kind", (q) => q.eq("orgId", orgId)).take(1000);
     const experiments = await ctx.db.query("experiments").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(1000);
+    const businessModelChecks = await ctx.db.query("workflowRuns").withIndex("by_org_kind_created", q => q.eq("orgId", orgId).eq("kind", "business_model_check")).order("desc").take(101);
     const businessModelTests = await ctx.db.query("businessModelTests").withIndex("by_org_created", q => q.eq("orgId", orgId)).order("desc").take(1001);
     const postObservations = await ctx.db.query("postMetrics").withIndex("by_org_captured", q => q.eq("orgId", orgId)).order("desc").take(1001);
     const weeklyReports = await ctx.db.query("playResults").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
@@ -510,6 +513,8 @@ export const exportData = internalQuery({
         planningCycleHistoryLimited: goals.length > 1000,
         platformPreparations: strip(platformPreparations),
         experiments: strip(experiments),
+        businessModelChecks: businessModelChecks.slice(0, 100).map(run => ({ id: run._id, status: run.status, createdAt: run.createdAt, isFixture: Boolean(run.isFixture), check: parsedModelCheck(run), evidence: readBusinessModelEvidence(run.input) })),
+        businessModelCheckHistoryLimited: businessModelChecks.length > 100,
         businessModelTests: strip(businessModelTests.slice(0, 1000)),
         businessModelTestHistoryLimited: businessModelTests.length > 1000,
         postObservations: strip(postObservations.slice(0, 1000)),

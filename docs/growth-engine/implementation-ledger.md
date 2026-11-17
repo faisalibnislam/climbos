@@ -1,3 +1,7 @@
+## 17 November 2026 — business-model evidence and source review
+
+Closed confirmed source-class and per-economic-input reference gaps in the existing business-model/pivot workflow. Original ordered facts now survive edits for inline owner review; bounded exports include checks and snapshots. [Audit](business-model-source-basis-audit.md). 107 focused regression/permission tests and four desktop/mobile checks passed, plus typecheck and scoped lint. No changes to bold-option availability or action authority; full scope remains incomplete.
+
 ## 17 November 2026 — progress-aware email audiences
 
 Added an optional owner-reviewed lifecycle filter to the existing broadcast path, with exact preview/approval binding, current-state dispatch checks and clear exclusions. 203 focused tests and four desktop/mobile checks passed; the actual writer also receives the capability with its limits. [Audit](lifecycle-email-eligibility-audit.md). Full lifecycle automation and original/later project scope remain incomplete.

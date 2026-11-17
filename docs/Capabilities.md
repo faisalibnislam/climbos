@@ -1,5 +1,8 @@
 # ClimbOS capabilities and boundaries
 
+Business-model and pivot checks now validate source labels for market signals, segment fit and economic inputs; new reports preserve original fact text for inline inspection and bounded workspace export. Grounded, adjacent and bold alternatives remain available, and judgments do not execute changes. See [the audit and limits](growth-engine/business-model-source-basis-audit.md).
+
+
 Email send review can now filter an opted-in segment by an owner-selected product/journey, reported stage, exact definition and observation-age limit. It previews exclusions and rechecks the supporting reports before dispatch; a completed milestone can stop an outdated reminder. This uses dated owner reports, not live event tracking or automatic enrollment. See [the workflow and boundaries](growth-engine/lifecycle-email-eligibility-audit.md).
 
 Broadcasts, outreach (including follow-ups), and review invitations now apply the same owner-set contact interval. Queued/uncertain sends hold overlapping recipients, and undated review observations remain explicitly distinct from send times. Settings and existing review/send screens explain holds; a held outreach step remains queued or pauses for review. See [shared policy behavior and limits](growth-engine/shared-contact-policy-audit.md).

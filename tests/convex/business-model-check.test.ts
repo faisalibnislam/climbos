@@ -50,6 +50,33 @@ describe("business model check", () => {
     expect(audits.some((a) => a.action === "business_model.check_started")).toBe(true);
   });
 
+  it("retains the ordered source facts when current business facts change or disappear", async () => {
+    const t = setup(), w = await workspace(t, "model-original-facts@example.com");
+    await w.client.mutation(api.orgs.addFact, { slug: w.slug, statement: "Original owner price was $49.", category: "pricing" });
+    const { runId } = await w.client.mutation(api.businessModel.start, { slug: w.slug });
+    await t.finishAllScheduledFunctions(() => undefined);
+    const original = (await w.client.query(api.businessModel.latest, { slug: w.slug })).result!;
+    expect(original.facts).toEqual([{ statement: "Original owner price was $49.", basis: "owner_reported" }]);
+    await t.run(async ctx => {
+      const rows = await ctx.db.query("businessFacts").withIndex("by_org_state", q => q.eq("orgId", w.orgId).eq("reviewState", "confirmed")).collect();
+      for (const row of rows) await ctx.db.delete(row._id);
+    });
+    await w.client.mutation(api.orgs.addFact, { slug: w.slug, statement: "Current owner price is $99.", category: "pricing" });
+    const changed = (await w.client.query(api.businessModel.latest, { slug: w.slug })).result!;
+    expect(changed.runId).toBe(runId); expect(changed.facts).toEqual(original.facts);
+    expect(changed.freshness?.status).toBe("changed");
+    const outsider = await asNewUser(t, "model-facts-outsider@example.com");
+    await expect(outsider.client.query(api.businessModel.latest, { slug: w.slug })).rejects.toThrow();
+    const exported = JSON.parse(await t.query(internal.settings.exportData, { orgId: w.orgId }));
+    expect(exported.businessModelChecks).toEqual([expect.objectContaining({ id: runId, status: "verified", evidence: expect.objectContaining({ facts: original.facts }) })]);
+    expect(exported.businessModelCheckHistoryLimited).toBe(false);
+    const other = await workspace(t, "model-export-outsider@example.com");
+    expect(JSON.parse(await t.query(internal.settings.exportData, { orgId: other.orgId })).businessModelChecks).toEqual([]);
+    await t.mutation(internal.settings.purgeWorkspaceBatch, { orgId: w.orgId });
+    await t.finishAllScheduledFunctions(() => undefined);
+    expect(await t.run(ctx => ctx.db.get(runId))).toBeNull();
+  });
+
   it("retains a prior hypothesis and outcome after a newer check has no test reports", async () => {
     const t = setup(); const w = await workspace(t, "model-continuity@example.com");
     const { runId } = await w.client.mutation(api.businessModel.start, { slug: w.slug });

@@ -50,8 +50,8 @@ export const start = mutation({
 
 /** Freeze the evidence identity once, before the first model step; resumed runs cannot rebind it. */
 export const captureEvidence = internalMutation({
-  args: { runId: v.id("workflowRuns"), hashes: v.record(v.string(), v.string()), contextHash: v.string() },
-  handler: async (ctx, { runId, hashes, contextHash }) => {
+  args: { runId: v.id("workflowRuns"), hashes: v.record(v.string(), v.string()), contextHash: v.string(), facts: v.optional(v.array(v.object({ statement: v.string(), basis: v.union(v.literal("owner_reported"), v.literal("source_reported"), v.literal("measured"), v.literal("unknown")) }))) },
+  handler: async (ctx, { runId, hashes, contextHash, facts }) => {
     const run = await ctx.db.get(runId);
     if (!run || run.kind !== KIND || !ACTIVE_RUN_STATUSES.includes(run.status)) throw appError("INVALID", "This business model check is not running.");
     const existing = readBusinessModelEvidence(run.input);
@@ -59,7 +59,7 @@ export const captureEvidence = internalMutation({
     const input = JSON.parse(run.input || "{}");
     const step = await ctx.db.query("workflowSteps").withIndex("by_run", q => q.eq("runId", runId)).first();
     if (input.businessModelEvidence !== undefined || step) throw appError("INVALID", "This check has earlier work without a usable input snapshot. Start a new check; earlier progress is retained.");
-    const snapshot = BusinessModelEvidenceSchema.parse({ version: 1, capturedAt: Date.now(), hashes, contextHash });
+    const snapshot = BusinessModelEvidenceSchema.parse({ version: 1, capturedAt: Date.now(), hashes, contextHash, ...(facts ? { facts } : {}) });
     await ctx.db.patch(runId, { input: JSON.stringify({ ...input, businessModelEvidence: snapshot }) });
     return snapshot;
   },
@@ -97,6 +97,7 @@ export const latest = query({
         isFixture: Boolean(done.isFixture),
         check,
         freshness,
+        facts: readBusinessModelEvidence(done.input)?.facts ?? null,
         precedents: CREATIVE_PRECEDENTS.filter((p) => check.alternatives.some((a) => a.precedentIds?.includes(p.id))).map((p) => ({ id: p.id, title: p.title, mechanism: p.mechanism, causalLimit: p.causalLimit, accessedAt: p.accessedAt, sources: p.sources.map((s) => ({ title: s.title, url: s.url })) })),
         tests: Object.fromEntries((["deciding", "grounded", "adjacent", "bold"] as const).flatMap((target) => {
           const t = latestTest(target);

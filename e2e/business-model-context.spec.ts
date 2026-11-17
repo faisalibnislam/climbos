@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { MODEL_EVIDENCE_GROUPS } from "../shared/agents/businessModelFreshness";
 import { demoBusinessModelCheck } from "../shared/agents/businessModel";
 import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
 import { localDemoFixtures } from "./local-demo-fixtures";
@@ -19,6 +20,7 @@ test("business model view keeps the latest decision for every alternative after 
   if (!member) throw new Error("Demo owner required");
   const now = Date.now();
   const check = demoBusinessModelCheck("Synthetic model history");
+  check.currentModel.evidenceRefs = ["fact:0"];
   await append("workflowRuns", [{ orgId: org._id, kind: "business_model_check", title: "Synthetic model history check", status: "verified", input: "{}", output: JSON.stringify(check), roles: [], estimateMicros: 0, actualMicros: 0, rateVersionId: "test", entitlementVersionId: "test", routingVersionId: "test", budget: { modelSteps: 0, researchTools: 0, repairs: 0 }, used: { modelSteps: 0, researchTools: 0, repairs: 0 }, isFixture: true, createdAt: now, updatedAt: now }]);
   const run = (await rows("workflowRuns")).find(row => row.orgId === org._id && row.title === "Synthetic model history check");
   if (!run) throw new Error("Synthetic run missing");
@@ -32,6 +34,9 @@ test("business model view keeps the latest decision for every alternative after 
   await page.goto(`/app/${slug}/business-model`);
   await expect(page.getByText("Review this saved judgment", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Business model described in this report", exact: true })).toBeVisible();
+  await page.getByText("Business fact 1 · original text unavailable", { exact: true }).click();
+  await expect(page.getByText("This older report did not retain the original fact text. Current business facts may differ.", { exact: true })).toBeVisible();
+  await expect(page.locator('a[href="#sources-heading"]')).toHaveCount(0);
   for (const option of check.alternatives) {
     const card = page.getByRole("article").filter({ has: page.getByRole("heading", { name: option.name, exact: true }) });
     await expect(card.getByRole("textbox", { name: "What happened" })).toHaveValue(option.mode === "adjacent" ? "Adjacent update 204" : `Retain ${option.mode} evidence`);
@@ -47,12 +52,20 @@ test("business model view keeps the latest decision for every alternative after 
   const oldBold = page.getByRole("article").filter({ has: page.getByRole("heading", { name: check.alternatives.find(a => a.mode === "bold")!.name, exact: true }) });
   await oldBold.getByRole("textbox", { name: "What happened" }).fill("Unsaved note for the earlier idea");
   const nextCheck = demoBusinessModelCheck("New synthetic model");
+  nextCheck.currentModel.evidenceRefs = ["fact:0"];
+  nextCheck.alternatives[0].unitEconomicsInputs = [{ input: "Recorded current plan price", value: "$49", basis: "owner_report", evidenceRefs: ["fact:0"] }];
+  const sourceSnapshot = { businessModelEvidence: { version: 1, capturedAt: now, contextHash: "a".repeat(64), hashes: Object.fromEntries(MODEL_EVIDENCE_GROUPS.map(key => [key, "a".repeat(64)])), facts: [{ statement: "Original owner price was $49; this report does not establish current pricing.", basis: "owner_reported" }] } };
   nextCheck.alternatives.find(a => a.mode === "bold")!.name = "New partner-led model";
   const { _id: _oldId, _creationTime: _oldCreation, ...copy } = run;
-  await append("workflowRuns", [{ ...copy, title: "New synthetic model check", output: JSON.stringify(nextCheck), createdAt: Date.now() + 1, updatedAt: Date.now() + 1 }]);
+  await append("workflowRuns", [{ ...copy, title: "New synthetic model check", input: JSON.stringify(sourceSnapshot), output: JSON.stringify(nextCheck), createdAt: Date.now() + 1, updatedAt: Date.now() + 1 }]);
   const next = (await rows("workflowRuns")).find(row => row.orgId === org._id && row.title === "New synthetic model check")!;
   const newBold = page.getByRole("article").filter({ has: page.getByRole("heading", { name: "New partner-led model", exact: true }) });
   await expect(newBold.getByRole("combobox", { name: "Test status", exact: true })).toHaveText("Not started");
+  await page.getByText("Business fact 1 · owner-reported", { exact: true }).first().click();
+  await expect(page.getByText("Original owner price was $49; this report does not establish current pricing.", { exact: true }).first()).toBeVisible();
+  await expect(page.locator('a[href="#sources-heading"]')).toHaveCount(0);
+  await page.getByText("Business fact 1 · owner-reported", { exact: true }).first().scrollIntoViewIfNeeded();
+  await page.screenshot({ path: testInfo.outputPath("business-model-original-source.png"), fullPage: false });
   await expect(newBold.getByRole("textbox", { name: "What happened" })).toHaveCount(0);
   await newBold.getByRole("combobox", { name: "Test status", exact: true }).click();
   await page.getByRole("option", { name: "Result observed", exact: true }).click();

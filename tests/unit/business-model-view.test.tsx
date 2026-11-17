@@ -44,6 +44,20 @@ describe("business model check view", () => {
     expect(html).not.toContain("Save test result");
   });
 
+  it("shows original report facts without linking to a different plan's sources", () => {
+    const cited = demoBusinessModelCheck("Source check");
+    cited.currentModel.evidenceRefs = ["fact:0", "fact:1"];
+    cited.alternatives[0].unitEconomicsInputs = [{ input: "Reported price", value: "$49", basis: "owner_report", evidenceRefs: ["fact:0"] }];
+    const html = renderToStaticMarkup(createElement(BusinessModelCheckView, { check: cited, createdAt: 0, tests: {}, canEdit: false, facts: [{ statement: "Original owner price was $49.", basis: "owner_reported" }] }));
+    expect(html).toContain("Original owner price was $49.");
+    expect(html).toContain("Business fact 1 · owner-reported");
+    expect(html).toContain("Business fact 2 · original text unavailable");
+    expect(html).not.toContain('href="#sources-heading"');
+    const legacy = renderToStaticMarkup(createElement(BusinessModelCheckView, { check: cited, createdAt: 0, tests: {}, canEdit: false }));
+    expect(legacy).toContain("Current business facts may differ");
+    expect(legacy).not.toContain('href="#sources-heading"');
+  });
+
   it("is listed under Your plan in the tool directory", () => {
     expect(APP_TOOLS.find((tool) => tool.key === "business-model")).toMatchObject({ area: "plan", label: "Business model check" });
   });

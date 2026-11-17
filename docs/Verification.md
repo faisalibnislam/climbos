@@ -1,3 +1,13 @@
+## 17 November 2026 — business-model sources and evidence labels
+
+[Audit](growth-engine/business-model-source-basis-audit.md) records the actual input → research → proposal → final validation → original-source review → learning/export path. Engine `v3.135-business-model-source-basis`.
+
+- `pnpm exec vitest run tests/unit/business-model-check.test.ts tests/unit/business-model-view.test.tsx tests/unit/business-model-freshness.test.ts tests/unit/evidence-references.test.ts tests/unit/action-evidence-support.test.ts tests/convex/business-model-validation.test.ts tests/convex/business-model-check.test.ts tests/convex/business-model-learning.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — **107 passed / ten files, 15.32 seconds**. Seven new red regressions first reproduced mislabeled or unreferenced evidence. An export regression exposed missing report snapshots and passed after repair. An intervening run had one existing workflow timeout under concurrent local load; the final focused rerun passed without loosening the timeout.
+- `CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env E2E_BASE_URL=http://127.0.0.1:3420 pnpm exec playwright test e2e/business-model-context.spec.ts --workers=1` — **four desktop/mobile checks passed, 2.1 minutes**. Original fact disclosure, explicit missing historical sources, no unrelated plan-source links, latest alternative decisions, stale-input guidance and unchanged action records. Targeted axe/overflow checks passed; mobile source capture inspected. No full accessibility claim.
+- `pnpm typecheck` — application and Convex passed after fixing a nullable assertion in the new test. Scoped ESLint passed for all changed runtime/UI/tests; `git diff --check` passed. Isolated loopback backend sync passed in **53.34 seconds**. No generated files changed.
+
+Checks use mocked model responses and synthetic local records. Citation/source-class validation does not establish semantic truth, current market demand, calibrated pivot advice or real business outcomes. Historical reports remain intact; export includes up to 100 model checks with an explicit limit flag. No paid model evaluation, live message, price change or hosted deployment. Full project scope remains incomplete.
+
 ## 17 November 2026 — customer-progress email eligibility
 
 [Audit](growth-engine/lifecycle-email-eligibility-audit.md) traces the existing observation → planning → draft → exact send approval → provider-boundary path and the new optional progress rule.

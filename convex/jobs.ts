@@ -2624,7 +2624,7 @@ export const businessModelCheck = internalAction({
       // Bind all effective prompt inputs as well as the owner-visible evidence groups.
       // A resumed step must not combine cached research with a changed brief or engine.
       const contextHash = await sha256Hex(canonicalJson(JSON.parse(JSON.stringify({ engine: ENGINE_VERSION, input }))));
-      const snapshot = await ctx.runMutation(internal.businessModel.captureEvidence, { runId, hashes: job.businessModelEvidenceHashes, contextHash });
+      const snapshot = await ctx.runMutation(internal.businessModel.captureEvidence, { runId, hashes: job.businessModelEvidenceHashes, contextHash, facts: job.facts.map(fact => ({ statement: fact.statement, basis: factEvidenceBasis(fact.provenance) })) });
       const freshness = businessModelFreshness(snapshot, job.businessModelEvidenceHashes, Date.now());
       if (freshness.status !== "unchanged" || snapshot.contextHash !== contextHash) throw new JobStop("business_model_inputs_changed", "Business inputs changed since this check began. Start a new check so its steps use the same evidence. Earlier progress is retained.");
       const spec = businessModelCheckSpec();

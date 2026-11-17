@@ -50,6 +50,7 @@ export default function BusinessModelPage() {
           precedents={data.result.precedents}
           check={data.result.check}
           freshness={data.result.freshness}
+          facts={data.result.facts}
           createdAt={data.result.createdAt}
           isFixture={data.result.isFixture}
           tests={data.result.tests}

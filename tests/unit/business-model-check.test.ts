@@ -58,6 +58,35 @@ describe("business model check output", () => {
     expect(lint(undefined)).toEqual([]);
   });
 
+  it.each(["owner_as_measured", "source_as_measured", "missing_provenance", "mixed_sources", "uncited_owner", "segment_as_measured", "economics_without_source"])("rejects unsupported business-model evidence: %s", kind => {
+    const output = check();
+    const source = "https://rival.example/plans";
+    output.marketSignals = [{ ...output.marketSignals[0], basis: "measured", evidenceRefs: ["fact:0"] }];
+    if (kind === "source_as_measured") output.marketSignals[0].evidenceRefs = [source];
+    if (kind === "mixed_sources") output.marketSignals[0].evidenceRefs = ["fact:1", "fact:0"];
+    if (kind === "uncited_owner") output.marketSignals[0] = { ...output.marketSignals[0], basis: "owner_report", evidenceRefs: [] };
+    if (kind === "segment_as_measured") { output.marketSignals = []; output.segmentFit = [{ segment: "Homeowners", dimensions: ["problem_severity", "willingness_to_pay", "reachability", "serviceability"].map(dimension => ({ dimension: dimension as NonNullable<BusinessModelCheck["segmentFit"]>[number]["dimensions"][number]["dimension"], level: "medium", basis: "measured", evidenceRefs: ["fact:0"], note: "Owner reports analytics usage." })) }]; }
+    if (kind === "economics_without_source") { output.marketSignals = []; output.alternatives[0].unitEconomicsInputs = [{ input: "Plan price", value: "$49", basis: "owner_report" }]; }
+    const issues = lintBusinessModelCheck(output, { factCount: 2, readUrls: [source], factEvidenceBases: kind === "missing_provenance" ? undefined : ["owner_reported", "measured"] });
+    expect(issues.some(issue => issue.severity === "error" && ["evidence_basis", "citation"].includes(issue.rule))).toBe(true);
+  });
+
+  it("keeps correctly sourced reports and uncertain creative economics distinct", () => {
+    const output = check();
+    output.marketSignals = [
+      { ...output.marketSignals[0], basis: "owner_report", evidenceRefs: ["FACT:0"] },
+      { ...output.marketSignals[0], basis: "measured", evidenceRefs: ["fact:1"] },
+      { ...output.marketSignals[0], basis: "site_claim", evidenceRefs: ["fact:2"] },
+      { ...output.marketSignals[0], basis: "inference", evidenceRefs: ["fact:0", "https://rival.example/plans"] },
+    ];
+    output.alternatives[0].unitEconomicsInputs = [{ input: "Current price", value: "$49", basis: "owner_report", evidenceRefs: ["fact:0"] }];
+    output.alternatives[1].unitEconomicsInputs = [{ input: "Quoted competitor price", value: "$89", basis: "research", evidenceRefs: ["https://rival.example/plans"] }];
+    output.alternatives[2].unitEconomicsInputs = [{ input: "Proposed model price", value: "Owner must choose a test price", basis: "unknown" }];
+    expect(lintBusinessModelCheck(output, { factCount: 3, factEvidenceBases: ["owner_reported", "measured", "source_reported"], readUrls: ["https://rival.example/plans"] })).toEqual([]);
+    output.alternatives[0].unitEconomicsInputs[0].basis = "measured";
+    expect(lintBusinessModelCheck(output, { factCount: 3, factEvidenceBases: ["owner_reported", "measured", "source_reported"], readUrls: ["https://rival.example/plans"] })).toEqual(expect.arrayContaining([expect.objectContaining({ path: "alternatives[0].unitEconomicsInputs[0].basis", rule: "evidence_basis" })]));
+  });
+
   it("requires a date on research signals unless the limitation says the source is undated", () => {
     const base = check().marketSignals[0];
     const lint = (signal: BusinessModelCheck["marketSignals"][number]) => lintBusinessModelCheck(check({ marketSignals: [signal] }), { factCount: 1, readUrls: ["https://rival.example/plans"] }).filter((i) => i.rule === "market_signal_date");

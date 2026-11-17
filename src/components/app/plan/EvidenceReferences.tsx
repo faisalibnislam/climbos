@@ -1,3 +1,4 @@
+import type { FactEvidenceBasis } from "../../../../shared/agents/evidenceKind";
 import { ExternalLink } from "@/components/icons";
 import type { ActionEvidenceStatus, ActionEvidenceSupport } from "../../../../shared/agents/provenance";
 
@@ -11,7 +12,7 @@ const SUPPORT_LABEL: Record<ActionEvidenceStatus, string> = {
 };
 
 /** Show the references already attached to a recommendation in a usable form, with any code-checked excerpt support. */
-export function EvidenceReferences({ references, excerpts = [], support }: { references: string[]; excerpts?: { ref: string; excerpt: string }[]; support?: ActionEvidenceSupport[] }) {
+export function EvidenceReferences({ references, excerpts = [], support, factSnapshot }: { factSnapshot?: readonly { statement: string; basis: FactEvidenceBasis }[] | null; references: string[]; excerpts?: { ref: string; excerpt: string }[]; support?: ActionEvidenceSupport[] }) {
   if (!references.length) return null;
   const excerptOf = (ref: string) => excerpts.find((item) => item.ref.trim() === ref.trim())?.excerpt;
   const statusOf = (ref: string) => support?.find((item) => item.ref.trim() === ref.trim())?.status;
@@ -34,6 +35,11 @@ export function EvidenceReferences({ references, excerpts = [], support }: { ref
           const normalized = reference.trim();
           const fact = /^fact:(\d+)$/i.exec(normalized);
           if (fact) {
+            if (factSnapshot !== undefined) {
+              const saved = factSnapshot?.[Number(fact[1])];
+              const basis = saved?.basis === "owner_reported" ? "owner-reported" : saved?.basis === "source_reported" ? "published claim" : saved?.basis === "measured" ? "measured" : "source unknown";
+              return <li key={`${reference}-${index}`}><details><summary className="cursor-pointer py-1">Business fact {Number(fact[1]) + 1} · {saved ? basis : "original text unavailable"}</summary>{saved ? <p className="max-w-prose whitespace-pre-wrap break-words text-ink-2">{saved.statement}</p> : <p className="text-ink-3">This older report did not retain the original fact text. Current business facts may differ.</p>}{detail(reference)}</details></li>;
+            }
             return (
               <li key={`${reference}-${index}`}>
                 <a className="text-link underline" href="#sources-heading">

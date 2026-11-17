@@ -6,6 +6,8 @@ export const MODEL_EVIDENCE_LABELS: Record<ModelEvidenceGroup, string> = { works
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
 export const BusinessModelEvidenceSchema = z.object({
   version: z.literal(1), contextHash: hash, capturedAt: z.number().finite().nonnegative(),
+  /** Exact ordered facts used by this report; absent on historical snapshots. */
+  facts: z.array(z.object({ statement: z.string(), basis: z.enum(["owner_reported", "source_reported", "measured", "unknown"]) })).optional(),
   hashes: z.object({ workspace: hash, business: hash, facts: hash, brand: hash, goal: hash, billing: hash, pipeline: hash, competitors: hash }),
 });
 export type BusinessModelEvidence = z.infer<typeof BusinessModelEvidenceSchema>;
