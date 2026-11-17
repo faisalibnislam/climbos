@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Business-model checks now withhold billing direction for invalid amounts, missing or conflicting event identities, and unsafe totals. Exact repeated payment events count once; unrelated owner-reported evidence remains available. [Evidence checks and limits](growth-engine/model-billing-evidence-audit.md).
+
 Billing-based customer-dependency advice now distinguishes identity coverage from net revenue and withholds concentration shares when order identities conflict or refunds cannot be assigned. Source records remain incomplete evidence, not a full-business diagnosis. [Audit and limits](growth-engine/customer-concentration-basis-audit.md).
 
 Customer progress now accepts multiple optional loss reasons and preserves unknowns. Strategy and business-model checks receive all reported reasons while counting each lost deal once; edits are explicit, checked against the reviewed record and audited. [Behavior and limits](growth-engine/multiple-loss-reasons-audit.md).

@@ -126,13 +126,30 @@ describe("business model check output", () => {
 });
 
 describe("first-party model signals", () => {
-  const order = (daysAgo: number, amountMinor: number, customerRef = `c${daysAgo}`): CohortPayment => ({ source: "stripe", customerRef, orderRef: `o${daysAgo}`, occurredAt: now - daysAgo * DAY, amountMinor, refundedMinor: 0, kind: "order", currency: "USD" });
+  const order = (daysAgo: number, amountMinor: number, customerRef = `c${daysAgo}`): CohortPayment => ({ source: "stripe", sourceEventId: `event-${daysAgo}-${customerRef}`, customerRef, orderRef: `o${daysAgo}`, occurredAt: now - daysAgo * DAY, amountMinor, refundedMinor: 0, kind: "order", currency: "USD" });
 
   it("computes a revenue trend only with 180 days of history, using stated thresholds", () => {
     const down = ownerModelSignals({ nowMs: now, currency: "USD", revenueEvents: [order(180, 10_000), order(100, 10_000), order(30, 12_000)], deals: [], competitorChanges90d: 0 });
     expect(down.find((s) => s.key === "revenue_trend")).toMatchObject({ direction: "headwind", basis: "calculated", detail: expect.stringContaining("-40%") });
     const thin = ownerModelSignals({ nowMs: now, currency: "USD", revenueEvents: [order(30, 12_000)], deals: [], competitorChanges90d: 0 });
     expect(thin.find((s) => s.key === "revenue_trend")).toMatchObject({ direction: "unknown" });
+  });
+
+  it.each([
+    ["invalid amounts", [order(180, 100), order(100, 100), order(30, 1.5)]],
+    ["unsafe totals", [order(180, Number.MAX_SAFE_INTEGER), order(100, 1), order(30, 10)]],
+    ["conflicting copies", [order(180, 100), order(30, 100), { ...order(30, 100), amountMinor: 50 }]],
+    ["missing source identity", [{ ...order(180, 100), sourceEventId: undefined }, order(30, 100)]],
+  ])("withholds billing direction for %s without discarding owner context", (_reason, revenueEvents) => {
+    const signals = ownerModelSignals({ nowMs: now, currency: "USD", revenueEvents, deals: [], lifecycleStage: "decline", competitorChanges90d: 2 });
+    expect(signals.find(s => s.key === "revenue_trend")).toMatchObject({ direction: "unknown", detail: expect.stringMatching(/invalid|unsafe|conflicting|identit/i) });
+    expect(signals.find(s => s.key === "lifecycle_stage")).toMatchObject({ basis: "owner_report", direction: "headwind" });
+    expect(signals.find(s => s.key === "competitor_changes")).toBeDefined();
+  });
+  it("counts exact source-event redeliveries once in revenue comparisons", () => {
+    const prior = order(180, 100), recent = order(30, 100);
+    const input = { nowMs: now, currency: "USD", deals: [], competitorChanges90d: 0 };
+    expect(ownerModelSignals({ ...input, revenueEvents: [prior, recent, recent] })).toEqual(ownerModelSignals({ ...input, revenueEvents: [prior, recent] }));
   });
 
   it("uses owner pipeline reasons and stage, and says when nothing is available", () => {

@@ -1,3 +1,7 @@
+## 17 November 2026 — business-model billing evidence
+
+Closed a separate unvalidated billing comparison in the existing model-check signal path. Exact event deduplication, conflicts, invalid inputs and safe arithmetic now preserve unknowns without removing independent owner evidence. 90 focused tests, typecheck, scoped lint and diff checks passed; [audit](model-billing-evidence-audit.md). Full scope remains incomplete.
+
 ## 17 November 2026 — customer concentration evidence
 
 Fixed inconsistent identity-coverage arithmetic, ambiguous refund assignment, blank identities and unsafe totals in the existing billing → recommendation path. 33 focused tests passed, including the actual writer context and authorization regressions; typecheck and scoped lint passed. [Audit](customer-concentration-basis-audit.md). No UI or external action changes; full scope remains incomplete.

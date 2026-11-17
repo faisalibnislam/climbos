@@ -1,3 +1,12 @@
+## 17 November 2026 — business-model billing evidence
+
+[Audit](growth-engine/model-billing-evidence-audit.md). Engine `v3.139-model-billing-evidence`.
+
+- `pnpm exec vitest run tests/convex/business-model-billing-evidence.test.ts tests/unit/business-model-check.test.ts tests/convex/business-model-check.test.ts tests/convex/business-model-learning.test.ts tests/convex/pipeline-planning-evidence.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — **90 passed / seven files, 4.73 seconds**. Five initial red cases reproduced invalid amounts, unsafe totals, conflicting/missing source identities and duplicate inflation. Actual job context, independent owner evidence, tenancy and authorization are covered.
+- `pnpm typecheck`, scoped ESLint and diff checks passed. No UI changed; no browser or live-provider evaluation ran.
+
+Imported revenue remains incomplete, unverified business evidence. Saved reports and raw records were not rewritten; full project scope remains incomplete.
+
 ## 17 November 2026 — customer concentration evidence
 
 [Audit](growth-engine/customer-concentration-basis-audit.md) records the confirmed arithmetic/identity defects and limits. Engine `v3.138-customer-concentration-basis`.

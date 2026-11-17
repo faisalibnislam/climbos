@@ -215,25 +215,61 @@ export function ownerModelSignals(input: {
   const out: OwnerModelSignal[] = [];
   const billingCoverage = "Imported records do not verify coverage of every account or period; this is not a full-business diagnosis.";
   const pipelineCoverage = input.pipelinePartial ? " Only the 2,000 most recently updated deals were loaded; totals and proportions are partial." : " Owner-recorded stages are not independently verified sales results.";
-  const revenueEvents = input.revenueEvents.filter(e => Number.isFinite(e.occurredAt) && e.occurredAt <= input.nowMs);
+  const revenueEvents: CohortPayment[] = [];
+  let billingIssue: string | null = null;
+  const identities = new Map<string, { signature: string; currency: string }>();
+  for (const event of input.revenueEvents) {
+    if (!Number.isSafeInteger(event.occurredAt) || event.occurredAt < 0 || event.occurredAt > 8.64e15) {
+      if (event.currency === input.currency) billingIssue = "Imported billing dates are invalid.";
+      continue;
+    }
+    if (event.occurredAt > input.nowMs) continue;
+    const key = JSON.stringify([event.source, event.sourceEventId]);
+    const signature = JSON.stringify([event.currency, event.occurredAt, event.customerRef ?? null, event.orderRef ?? null, event.amountMinor, event.refundedMinor, event.kind]);
+    const previous = identities.get(key);
+    if (event.source?.trim() && event.sourceEventId?.trim()) {
+      if (previous && previous.signature !== signature && (event.currency === input.currency || previous.currency === input.currency)) billingIssue = "Imported billing history contains conflicting copies of the same event.";
+      if (previous) continue;
+      identities.set(key, { signature, currency: event.currency });
+    }
+    if (event.currency !== input.currency) continue;
+    if (!event.source?.trim() || !event.sourceEventId?.trim()) billingIssue = "Imported billing source identities are missing; duplicate events cannot be resolved.";
+    if (!Number.isSafeInteger(event.amountMinor) || !Number.isSafeInteger(event.refundedMinor) || event.refundedMinor < 0 || (event.kind === "refund" ? event.refundedMinor !== 0 : event.amountMinor < 0 || event.refundedMinor > event.amountMinor)) billingIssue = "Imported billing amounts are invalid.";
+    revenueEvents.push(event);
+  }
   const net = (from: number, to: number) => revenueEvents
-    .filter((e) => e.currency === input.currency && e.occurredAt >= from && e.occurredAt < to)
-    .reduce((s, e) => s + (e.kind === "refund" ? -Math.abs(e.amountMinor) : e.amountMinor - e.refundedMinor), 0);
+    .filter(e => e.occurredAt >= from && e.occurredAt < to)
+    .reduce((sum, event) => {
+      const next = sum + (event.kind === "refund" ? -Math.abs(event.amountMinor) : event.amountMinor - event.refundedMinor);
+      if (!Number.isSafeInteger(next)) throw new RangeError("Unsafe billing total");
+      return next;
+    }, 0);
+  let recent = 0, prior = 0;
+  if (!billingIssue) {
+    try {
+      recent = net(input.nowMs - 90 * DAY, input.nowMs);
+      prior = net(input.nowMs - 180 * DAY, input.nowMs - 90 * DAY);
+      if (!Number.isSafeInteger(recent - prior)) throw new RangeError("Unsafe billing comparison");
+    } catch (error) {
+      if (!(error instanceof RangeError)) throw error;
+      billingIssue = "Imported billing totals exceed safe minor-unit arithmetic; the comparison is unsafe.";
+    }
+  }
   const earliest = revenueEvents.filter((e) => e.currency === input.currency).reduce((m, e) => Math.min(m, e.occurredAt), Infinity);
   if (!input.currency) {
     out.push({ key: "revenue_trend", label: "Revenue trend", direction: "unknown", basis: "calculated", detail: "Business currency is unknown. Confirm the reporting currency before comparing revenue; do not combine currencies or assume an exchange rate." });
+  } else if (billingIssue) {
+    out.push({ key: "revenue_trend", label: "Revenue trend", direction: "unknown", basis: "calculated", detail: `${billingIssue} Reconcile the source records before using revenue or repeat-purchase signals. ${billingCoverage}` });
   } else if (input.revenuePartial && !input.revenueReadCoversComparison) {
     out.push({ key: "revenue_trend", label: "Revenue trend", direction: "unknown", basis: "calculated", detail: `Loaded billing history is truncated to at most 10,000 records. A 90-day comparison is withheld because omitted records may change it. Check complete same-currency records for both 90-day periods. ${billingCoverage}` });
   } else if (earliest <= input.nowMs - 180 * DAY) {
-    const recent = net(input.nowMs - 90 * DAY, input.nowMs);
-    const prior = net(input.nowMs - 180 * DAY, input.nowMs - 90 * DAY);
     if (prior > 0) {
       const change = (recent - prior) / prior;
       out.push({ key: "revenue_trend", label: "Revenue, last 90 days vs the 90 before", direction: change <= -0.15 ? "headwind" : change >= 0.15 ? "tailwind" : "neutral", basis: "calculated", detail: `${change >= 0 ? "+" : ""}${Math.round(change * 100)}% net ${input.currency.toUpperCase()} revenue (imported records; seasonality not removed). Direction uses a ±15% change heuristic, not a validated decline or growth threshold.${input.revenuePartial ? " Older history was truncated, but both comparison periods fit within the bounded read." : ""} ${billingCoverage}` });
     } else out.push({ key: "revenue_trend", label: "Revenue trend", direction: "unknown", basis: "calculated", detail: `No positive revenue in the earlier 90-day window to compare with. ${billingCoverage}` });
   } else out.push({ key: "revenue_trend", label: "Revenue trend", direction: "unknown", basis: "calculated", detail: `Loaded same-currency records do not span 180 days. Check coverage before comparing two 90-day periods. ${billingCoverage}` });
 
-  const repeat = input.currency ? repeatPurchaseSummary(revenueEvents, { currency: input.currency, nowMs: input.nowMs, windowsDays: [90] }).windows[0] : undefined;
+  const repeat = input.currency && !billingIssue ? repeatPurchaseSummary(revenueEvents, { currency: input.currency, nowMs: input.nowMs, windowsDays: [90] }).windows[0] : undefined;
   if (repeat && repeat.eligible >= 20) out.push({ key: "repeat_purchase", label: "Customers who reordered within 90 days", direction: "unknown", basis: "calculated", detail: `${repeat.repeated}/${repeat.eligible} (${Math.round((repeat.rate ?? 0) * 100)}%); no benchmark is assumed, so direction is left to the evidence. First order means first in loaded history, not necessarily first ever.${input.revenuePartial ? " History is truncated; the eligible customers and repeat rate may change with a complete import." : ""} ${billingCoverage}` });
 
   const p = pipelineOutcomes(input.deals, { nowMs: input.nowMs, partial: input.pipelinePartial });
