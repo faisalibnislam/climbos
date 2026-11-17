@@ -1,3 +1,7 @@
+## 17 November 2026 — sender setup evidence
+
+Added an explicit read-only exact-domain check to the existing email send form, credential-bound observation storage and audit, and dated historical provider evidence in actual recommendation inputs. No new execution authority or lifecycle enrollment. [Audit and official sources](email-sender-readiness-audit.md).
+
 ## 17 November 2026 — external audience evidence and plan approval
 
 External-list evidence now preserves recorded source class and ownership instead of accepting any subscriber/contact keyword. An unresolved immediate-list-use finding fails final plan quality and existing approval; private drafts and separate bold exploration remain available. Multiline facts retain provenance alignment. [Audit](external-email-audience-audit.md) documents semantic and readiness limits.

@@ -8,6 +8,7 @@
  */
 
 import { asArray, asString, collectPages, isRecord, readFailure, requestJson, writeFailure } from "./http";
+import { emailSenderDomain, type EmailSenderReadiness } from "../growth/emailReadiness";
 import { RESEND_BASE } from "./registry";
 import { approvalError, type AdapterOptions, type ApprovedAction, type PaginationResult, type ReadResult, type ReconcileResult, type WriteResult } from "./types";
 
@@ -21,6 +22,50 @@ export interface ResendCall extends AdapterOptions {
 function headers(call: ResendCall): Record<string, string> {
   if (!/^re_[A-Za-z0-9_]+$/.test(call.apiKey)) throw new Error("Resend API keys start with re_");
   return { Authorization: `Bearer ${call.apiKey}` };
+}
+
+/** Read-only domain inspection; no DNS verification request, contact write or test email. */
+export async function checkSenderDomain(call: ResendCall & { from: string }): Promise<EmailSenderReadiness> {
+  const domain = emailSenderDomain(call.from);
+  let sourceUrl: string | null = domain ? `${RESEND_BASE}/domains` : null;
+  const report = (state: EmailSenderReadiness["state"], message: string): EmailSenderReadiness => ({ domain: domain ?? "", state, message, checkedAt: Date.now(), sourceUrl });
+  if (!domain) return report("unknown", "Enter one sender address, such as Name <hello@example.com>.");
+  try {
+    const auth = { ...headers(call), "User-Agent": "ClimbOS/1.0" };
+    const list = await collectPages<{ id: string; name: string }>(async cursor => {
+      const url = new URL(`${RESEND_BASE}/domains`);
+      url.searchParams.set("limit", "100");
+      if (cursor) url.searchParams.set("after", cursor);
+      const out = await requestJson({ url: url.toString(), headers: auth, fetchImpl: call.fetchImpl, timeoutMs: call.timeoutMs });
+      if (out.kind !== "ok") return readFailure(out);
+      if (!isRecord(out.data) || !Array.isArray(out.data.data) || typeof out.data.has_more !== "boolean") return { ok: false, retryable: true, providerMessage: "Incomplete domain list." };
+      const items: { id: string; name: string }[] = [];
+      for (const row of out.data.data) {
+        if (!isRecord(row) || typeof row.id !== "string" || !row.id || typeof row.name !== "string" || !row.name) return { ok: false, retryable: true, providerMessage: "Unreadable domain list." };
+        items.push({ id: row.id, name: row.name.toLowerCase() });
+      }
+      if (out.data.has_more && !items.length) return { ok: false, retryable: true, providerMessage: "Missing domain cursor." };
+      return { ok: true, data: { items, nextCursor: out.data.has_more ? items.at(-1)!.id : undefined } };
+    }, { maxPages: 5 });
+    if (!list.ok || list.data.truncated) return report("unknown", "ClimbOS could not read the complete domain list. Check the domain in your Resend account; domain reads require suitable API access.");
+    const matches = list.data.items.filter(row => row.name === domain);
+    if (!matches.length) return report("setup_required", "This exact sender domain was not found in the connected Resend account. Add and verify it there; a parent or different subdomain is not a match.");
+    if (matches.length !== 1) return report("unknown", "The provider returned conflicting domain records. Check the exact sender in Resend.");
+    sourceUrl = `${RESEND_BASE}/domains/${encodeURIComponent(matches[0].id)}`;
+    const out = await requestJson({ url: sourceUrl, headers: auth, fetchImpl: call.fetchImpl, timeoutMs: call.timeoutMs });
+    if (out.kind !== "ok" || !isRecord(out.data) || out.data.id !== matches[0].id || out.data.name !== domain) return report("unknown", "The provider could not confirm this exact domain. Check it in Resend before sending.");
+    const d = out.data;
+    const sending = isRecord(d.capabilities) ? d.capabilities.sending : undefined;
+    if (sending === "disabled") return report("setup_required", "Sending is disabled for this domain in Resend. Review its sending settings.");
+    if (["not_started", "pending", "failed", "temporary_failure"].includes(String(d.status))) return report("setup_required", `Resend reports domain status ${d.status}. Review the domain's DNS setup in Resend before sending.`);
+    if (d.status !== "verified" || sending !== "enabled") return report("unknown", "Sending readiness is not established by this domain status. Partial verification can have several causes; inspect the sending records in Resend.");
+    const records = Array.isArray(d.records) ? d.records : [];
+    const authRecords = records.filter(row => isRecord(row) && (row.record === "SPF" || row.record === "DKIM"));
+    if (!["SPF", "DKIM"].every(kind => authRecords.some(row => row.record === kind)) || authRecords.some(row => row.status !== "verified")) return report("unknown", "The provider's domain status and sending-record evidence are incomplete or inconsistent. Check SPF and DKIM in Resend.");
+    return report("verified", "Resend reports this exact domain verified, sending enabled, and its reported SPF and DKIM records verified.");
+  } catch {
+    return report("unknown", "The sender check could not finish. Check the connection and inspect the domain in Resend.");
+  }
 }
 
 // ---------------------------------------------------------------------------

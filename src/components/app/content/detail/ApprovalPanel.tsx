@@ -28,6 +28,7 @@ export function approveConsequence(artifact: ArtifactView, now: number | null): 
   const ch = channelLabel(artifact.channel);
   const v = artifact.current?.version ?? 1;
   const demo = artifact.isDemo ? " Demo: simulated." : "";
+  if (artifact.kind === "email" || artifact.kind === "email_sequence") return `Approves email content v${v} only. Sending one message still needs a separate approval for its sender and audience. Nothing is sent now. Edits cancel approval.${demo}`;
   const slot = artifact.autopilotSlot;
   if (slot && artifact.publishTarget?.connected) {
     const when = formatDateTime(slot.slotAt);

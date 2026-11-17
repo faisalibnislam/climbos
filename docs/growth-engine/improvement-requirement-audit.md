@@ -1,3 +1,7 @@
+## 17 November 2026 — sender setup evidence
+
+Row 119 now includes a read-only sender-domain setup check with exact-domain/credential binding, unknown/partial handling, an owner-facing result and actual writer-context propagation. Domain status is not inbox placement, consent, reputation or account capacity. [Audit](email-sender-readiness-audit.md). This row remains partial and does not establish customer-event lifecycle automation.
+
 ## 17 November 2026 — external audience evidence and plan approval
 
 Row 111 follow-up: unrelated/negative/third-party audience facts no longer bypass the plan validator, and unresolved immediate list use blocks approval even after a passing model review. Drafting, verification, voluntary audience building and speculative strategy remain available. [Audit](external-email-audience-audit.md). Rows 111/112/118/119 remain partial; no audience permission or customer-state automation is inferred.

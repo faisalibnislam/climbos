@@ -1,3 +1,4 @@
+import { emailReadinessValidator } from "./lib/emailReadiness";
 import { ownerQuestionV } from "./lib/ownerQuestion";
 import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
@@ -1746,6 +1747,8 @@ export default defineSchema({
     expiresAt: v.optional(v.number()),
     lastSyncAt: v.optional(v.number()),
     lastSyncError: v.optional(v.string()),
+    /** Last read-only sender observation; invalid when the bound credential changes. */
+    emailSenderReadiness: v.optional(v.object({ credentialId: v.id("connectionSecrets"), report: emailReadinessValidator })),
     /** Aggregated Stripe open-invoice signal; no invoice IDs or customer data are retained. */
     stripeOpenInvoiceSnapshot: v.optional(v.object({
       asOf: v.number(),

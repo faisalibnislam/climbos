@@ -1,3 +1,4 @@
+import { recordedEmailReadiness } from "./lib/emailReadiness";
 import { activeBusinessFacts } from "./lib/businessFacts";
 import { planningEmailAudience } from "./lib/marketingAudience";
 import { customerVoice } from "./lib/customerVoice";
@@ -368,6 +369,7 @@ export const jobContext = internalQuery({
       brandConsistencyText: run.kind === "strategy" || run.kind === "conversion_audit" ? await brandConsistencyBrief(ctx, org._id) : "",
       stripeReceivables,
       audience,
+      emailSenderReadiness: await recordedEmailReadiness(ctx, connections.find(c => c.provider === "email_resend")),
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },
       run,
       specialist: run.customAgentSnapshot ?? null,

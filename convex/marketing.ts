@@ -1,3 +1,5 @@
+import { emailReadinessValidator, recordedEmailReadiness } from "./lib/emailReadiness";
+import { emailSenderDomain, type EmailSenderReadiness } from "../shared/growth/emailReadiness";
 import { checkContactFrequency, frequencyBlockMessage, type ContactHistory } from "../shared/growth/contactFrequency";
 import { outreachHistoryByHash } from "./lib/contactPressure";
 import { marketingContactRows, recordedMarketingConsent, MAX_MARKETING_CONTACTS } from "./lib/marketingAudience";
@@ -5,6 +7,7 @@ import { v } from "convex/values";
 import { requirePaid } from "./lib/access";
 import { parseCsv } from "../shared/integrations/csvRevenue";
 import {
+  checkSenderDomain,
   contactRefusalReason,
   compareSegmentRecipients,
   createDraftBroadcast,
@@ -269,8 +272,40 @@ export const audience = query({
     return {
       segments: await segmentStats(ctx, org._id),
       providerConnected: resend?.status === "connected",
+      senderReadiness: await recordedEmailReadiness(ctx, resend),
       note: "Only people with a recorded marketing opt-in can be emailed. Unsubscribes, bounces and complaints are always excluded.",
     };
+  },
+});
+
+/** Read-only provider inspection, with only a minimal local observation retained. */
+export const checkSender = action({
+  args: { slug: v.string(), from: v.string() },
+  handler: async (ctx, { slug, from }): Promise<EmailSenderReadiness> => {
+    const access = await ctx.runQuery(internal.access.orgAccessForAction, { slug, permission: "approve" });
+    if (!emailSenderDomain(from)) throw appError("INVALID", "Enter one sender address, such as Name <hello@example.com>.");
+    const conn = await ctx.runQuery(internal.connections.connectionFor, { orgId: access.orgId, provider: "email_resend" });
+    if (!conn || conn.status !== "connected" || conn.isFixture) throw appError("INVALID", "Connect your own Resend account to check the sender.");
+    const secret = await ctx.runQuery(internal.connections.getSecret, { connectionId: conn._id });
+    if (!secret || secret.orgId !== access.orgId || secret.provider !== "email_resend") throw appError("INVALID", "The email credentials are unavailable.");
+    const { apiKey } = JSON.parse(secret.value) as { apiKey: string };
+    const report = await checkSenderDomain({ apiKey, from });
+    await ctx.runMutation(internal.marketing.saveSenderReadiness, { slug, connectionId: conn._id, credentialId: secret.secretId, report });
+    return report;
+  },
+});
+
+export const saveSenderReadiness = internalMutation({
+  args: { slug: v.string(), connectionId: v.id("connections"), credentialId: v.id("connectionSecrets"), report: emailReadinessValidator },
+  handler: async (ctx, args) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "approve");
+    const conn = await ctx.db.get(args.connectionId);
+    const key = conn ? await ctx.db.query("connectionSecrets").withIndex("by_connection", q => q.eq("connectionId", conn._id)).first() : null;
+    if (!conn || conn.orgId !== org._id || conn.provider !== "email_resend" || conn.status !== "connected" || conn.isFixture || !key || key.orgId !== org._id || key._id !== args.credentialId) throw appError("INVALID", "The email connection changed. Check the current sender again.");
+    if (!Number.isFinite(args.report.checkedAt) || args.report.checkedAt > Date.now()) throw appError("INVALID", "Invalid check time.");
+    if ((conn.emailSenderReadiness?.report.checkedAt ?? 0) > args.report.checkedAt) return;
+    await ctx.db.patch(conn._id, { emailSenderReadiness: { credentialId: key._id, report: args.report } });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "email.sender_checked", subjectType: "connection", subjectId: conn._id, summary: `Read sender setup for ${args.report.domain}: ${args.report.state}. No email sent or DNS changed.` });
   },
 });
 

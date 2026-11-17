@@ -1,3 +1,15 @@
+## 17 November 2026 — read-only email sender setup
+
+Added an explicit exact-domain Resend check, credential-bound minimal observation/audit, dated evidence in recommendation inputs, and a concise send-form result. Email content approval now clearly distinguishes the later send approval. [Audit, sources and limits](growth-engine/email-sender-readiness-audit.md).
+
+- `pnpm exec vitest run tests/unit/email-sender-readiness.test.ts tests/unit/email-sender-readiness-ui.test.tsx tests/convex/email-sender-readiness.test.ts tests/convex/planning-email-audience.test.ts tests/unit/email-recovery-ui.test.tsx tests/unit/integrations.adapters.test.ts tests/convex/marketing.test.ts tests/convex/marketing-authorization.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts` — 226 passed across ten files, 3.31 seconds.
+- `CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env E2E_BASE_URL=http://127.0.0.1:3420 pnpm exec playwright test e2e/email-sender-check.spec.ts --workers=1` — desktop and mobile passed, 10.5 seconds. Explicit click, disabled invalid sender, fixture refusal before external access, unchanged approvals/receipts/runs, no horizontal overflow and no serious/critical automated accessibility findings. This does not establish full accessibility conformance or live provider success.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint convex/marketing.ts convex/schema.ts convex/jobs.ts convex/jobWrites.ts convex/lib/emailReadiness.ts shared/growth/emailReadiness.ts shared/integrations/resendMarketing.ts shared/agents/specs.ts src/components/app/content/detail/EmailSendPanel.tsx src/components/app/content/detail/EmailSenderCheck.tsx src/components/app/content/detail/ApprovalPanel.tsx tests/unit/email-sender-readiness.test.ts tests/unit/email-sender-readiness-ui.test.tsx tests/convex/email-sender-readiness.test.ts tests/convex/planning-email-audience.test.ts e2e/email-sender-check.spec.ts` — passed.
+- `git diff --check` — passed.
+
+The first browser attempt timed out because the test used `dialog` instead of the existing `alertdialog`; the corrected selector passed both viewports. Initial lint caught an import placed above the Node runtime directive; the directive was restored before local backend sync and final checks. Only the isolated loopback fixture backend was synced using the established script; its generated API declarations are included. Final provider-endpoint metadata was verified by the focused adapter/context tests. No real Resend credentials, email, paid model, hosted deployment or execution authorization was used. Requirement 119 remains partial: sender setup is not DMARC/reputation/delivery or customer-state lifecycle automation.
+
 ## 17 November 2026 — external audience evidence and plan approval
 
 Immediate email-list recommendations now require attributable audience evidence; unresolved findings fail final quality and existing approval. Private drafting, list building, verification and protected strategy exploration remain available. See [the audit](growth-engine/external-email-audience-audit.md).

@@ -108,3 +108,20 @@ it.each([false, true])("carries real audience evidence and uncertainty into gene
   expect(capture.inputs[0].brief).toContain("sending-domain readiness remain unknown");
   for (const table of ["approvals", "actionReceipts", "artifacts"] as const) expect(await f.t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
 });
+
+it.each(["verified", "setup_required", "unknown"] as const)("passes dated %s sender evidence into the real writer input without granting authority", async state => {
+  const f = await fixture();
+  vi.stubEnv("CLIMBOS_FAKE_LLM", "");
+  await f.t.run(async ctx => {
+    const connectionId = await ctx.db.insert("connections", { orgId: f.orgId, provider: "email_resend", status: "connected", scopes: [], isFixture: false, createdBy: f.owner.userId, createdAt: NOW, updatedAt: NOW });
+    const credentialId = await ctx.db.insert("connectionSecrets", { orgId: f.orgId, connectionId, kind: "api_key", keyId: "fixture", iv: "fixture", ciphertext: "fixture", createdAt: NOW });
+    await ctx.db.patch(connectionId, { emailSenderReadiness: { credentialId, report: { domain: "news.example.com", state, checkedAt: NOW - 86400000, sourceUrl: "https://api.resend.com/domains/fixture", message: "Provider observation for this domain." } } });
+  });
+  await f.t.action(internal.jobs.simplePlanJob, { runId: f.runId, task: "retention_plan" });
+  expect(capture.inputs).toHaveLength(1);
+  expect(capture.inputs[0].brief).toContain("historical provider report captured 2026-11-16T12:00:00.000Z for news.example.com");
+  expect(capture.inputs[0].brief).toContain(state);
+  expect(capture.inputs[0].brief).toContain("does not verify DMARC");
+  expect(capture.inputs[0].brief).toContain("recheck the intended sender");
+  for (const table of ["approvals", "actionReceipts", "artifacts"] as const) expect(await f.t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
+});

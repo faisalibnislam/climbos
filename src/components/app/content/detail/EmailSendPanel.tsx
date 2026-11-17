@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button, Callout, ConfirmDialog, Field, Input, Select, Skeleton, Spinner, toast } from "@/components/ui";
 import { ErrorCallout, FactList, MessageText, NoteList, PERMISSION_WHO } from "../shared";
+import { EmailSenderCheck } from "./EmailSenderCheck";
 import type { ArtifactView } from "./model";
 
 export interface ParsedEmail {
@@ -227,9 +228,11 @@ function EmailSendForm({ slug, artifact }: { slug: string; artifact: ArtifactVie
       </Field>
       {segError ? <ErrorCallout error={segError} onRetry={() => setReloadKey((k) => k + 1)} /> : null}
 
-      <Field label="Sender" hint="Domain verified in Resend." error={fieldErrors.from}>
+      <Field label="Sender" hint="Use a domain you have verified in Resend." error={fieldErrors.from}>
         <Input value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Your Name <hello@yourdomain.com>" autoComplete="off" />
       </Field>
+
+      <EmailSenderCheck key={`${slug}:${from}`} slug={slug} from={from} report={audience.senderReadiness} />
 
       <Button type="submit" className="self-start">
         Send
