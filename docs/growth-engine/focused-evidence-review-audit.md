@@ -1,5 +1,23 @@
 # Focused strategy evidence review — 17 November 2026
 
+## Exact review locators and focused corrections — v3.162
+
+V9 (`launch-quality-v9-20261117`, engine v3.161) completed four calls for **$0.688229**. The first draft scored 3.56 with one unsupported comparative claim; the revision scored 3.69 but had three hard findings, so the existing stop retained the first failed draft. The bold direction moved beyond client billing to a proposed gap-only client brief, but meaningful originality and owner workload remained below acceptance. Combined charged/held: **$65.439666 / $100**.
+
+Engine `v3.162-review-locator-repair` repairs only an omitted parent or array index when the review's verbatim quotation identifies exactly one compatible string field in the current draft. The raw provider review remains unchanged in its phase record; assessed reviews retain the reported path, resolved path and quotation. Ambiguous matches, unrelated paths and paraphrased or fabricated quotations still fail. A corrected locator never converts an unsupported claim into an acceptable one. Read-only reassessment of the unchanged v9 revision repaired one locator and preserved its two remaining hard findings and failed status; historical results were not overwritten.
+
+Focused revision feedback now prioritizes failed criteria and hard findings; optional suggestions attached to passing criteria no longer fill the criterion feedback block. Scores, quality thresholds, runtime models and permission boundaries are unchanged.
+
+Four red regressions preceded the fix. **197 tests in 12 files passed (12.03 seconds)**, plus app/Convex typechecks, changed-file ESLint and diff checks:
+
+```sh
+pnpm exec vitest run tests/unit/focused-evidence-review.test.ts tests/unit/agent-escalation.test.ts tests/unit/focused-plan.test.ts tests/unit/plan-quality.test.ts tests/unit/evaluation-identity.test.ts tests/unit/livoform-launch-input.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts tests/unit/anthropic-budget.test.ts tests/unit/evaluation-budget.test.ts tests/unit/ai-qa-budget.test.ts
+pnpm typecheck
+```
+
+V10 (`launch-quality-v10-20261117`) completed four calls for **$0.647073**. Both reviews were free of blocking evidence/format findings. The first scored **3.63**, the revision **3.43**, so the engine retained the first; **ship false**. The remaining failures concern originality, paid-value reasoning, generic outreach and excessive owner workload. The second repair was correctly not attempted after deterioration. Combined charged/held before its separate comparison: **$66.086739 / $100**. This establishes narrower review reliability on this run, not overall strategy-quality success. The runtime remains `claude-sonnet-5-5`; no customer action or deployment occurred.
+
+
 ## v8 retest and exploration/execution scope correction — v3.161
 
 Variant `launch-quality-v8-20261117`, engine v3.160, source hash `898eb76d609c16449da24dc00fda415faf654bd2d59e5e4383950a056487e4a2`: four calls cost **$0.765813**. First review: 3.5 with two hard findings. Revision: 3.44 with three hard findings. The existing non-improvement stop correctly retained the better first draft and did not spend on the newly available second repair. Final **ship false**; no overall quality improvement is claimed. Combined charged/held after v8: **$64.751437 / $100**.

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { assess, runAgent, type AgentDeps } from "../../shared/agents/runtime";
 import type { AgentSpec, CritiqueResult, Rubric } from "../../shared/agents/types";
 import { ZERO_USAGE } from "../../shared/ai/types";
+import { focusedRevisionCriteria } from "../../shared/agents/focusedReview";
 
 const rubric: Rubric = { id: "focused-growth-strategy", title: "Focused test", gates: [{ id: "G1", text: "Truth" }], criteria: [{ id: "F1", name: "Useful", anchors: { 1: "weak", 3: "partial", 5: "ready" } }], shipRule: { minEach: 4, minAverage: 4 } };
 const output = { summary: "Audience availability is unknown. A private example may help test the job." };
@@ -14,6 +15,34 @@ const audit = () => [
 const review = (evidenceAudit: unknown = audit()): CritiqueResult => ({ gates: [{ id: "G1", pass: true, note: "ok" }], scores: ["F1", "XV"].map(id => ({ id, score: 5, note: "Ready", fix: "none" })), strengths: [], fixes: [], evidenceAudit } as CritiqueResult);
 
 describe("focused review evidence integrity", () => {
+  it.each([
+    ["strategicDirection.assumptions", "strategicDirection.assumptions[0]", { strategicDirection: { assumptions: ["Contacts remain unknown."] } }],
+    ["baselineBasis", "experiments[0].baselineBasis", { experiments: [{ baselineBasis: "Contacts remain unknown." }] }],
+  ])("resolves a unique exact quotation at shortened path %s and records the original locator", (reportedPath, resolvedPath, draft) => {
+    const rows = audit(); rows[0].claims[0] = { ...rows[0].claims[0], path: reportedPath, quote: "Contacts remain unknown." };
+    const c = review(rows), result = assess(c, [], rubric, draft);
+    expect(result.ship).toBe(true);
+    expect(result.critique.evidenceAudit?.[0].claims[0].path).toBe(resolvedPath);
+    expect(result.critique).toHaveProperty("evidencePathCorrections", [{ reportedPath, resolvedPath, quote: "Contacts remain unknown." }]);
+    expect(c.evidenceAudit?.[0].claims[0].path).toBe(reportedPath);
+  });
+  it("refuses ambiguous or unrelated path corrections and still blocks an unsupported resolved quote", () => {
+    const rows = audit(); rows[0].claims[0] = { ...rows[0].claims[0], path: "baselineBasis", quote: "Contacts remain unknown." };
+    const draft = { experiments: [{ baselineBasis: "Contacts remain unknown." }] };
+    expect(assess(review(rows), [], rubric, { experiments: [...draft.experiments, ...draft.experiments] }).ship).toBe(false);
+    rows[0].claims[0].path = "unrelatedField";
+    expect(assess(review(rows), [], rubric, draft).ship).toBe(false);
+    rows[0].claims[0] = { ...rows[0].claims[0], path: "baselineBasis", verdict: "unsupported", correction: "Correct this claim using the supplied evidence." };
+    const result = assess(review(rows), [], rubric, draft);
+    expect(result.ship).toBe(false);
+    expect(result.lint).toContainEqual(expect.objectContaining({ rule: "invented_fact", path: "experiments[0].baselineBasis" }));
+  });
+  it("keeps repair feedback focused on failing criteria rather than optional edits to passing work", () => {
+    const c = review(); c.scores[0] = { id: "F1", score: 4, note: "Good", fix: "An optional stylistic change" };
+    expect(focusedRevisionCriteria(c, rubric)).toBe("");
+    c.scores[0].score = 3;
+    expect(focusedRevisionCriteria(c, rubric)).toContain("An optional stylistic change");
+  });
   it("refuses a missing semantic audit even when the reviewer gives every score five", () => {
     const c = review(); delete (c as unknown as { evidenceAudit?: unknown }).evidenceAudit;
     expect(assess(c, [], rubric).ship).toBe(false);

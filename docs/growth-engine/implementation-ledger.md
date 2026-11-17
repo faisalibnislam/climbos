@@ -1,3 +1,7 @@
+## 17 November — recover exact locators without weakening factual review
+
+`v3.162-review-locator-repair`: deterministically resolve unique verbatim quotes only for omitted parent/index paths; keep raw review and correction metadata. Unsupported or ambiguous claims remain blocked. Prioritize below-threshold criterion feedback. 197 focused, permission and budget tests, typechecks and lint passed. V9 and v10 remain honest failed acceptances; v10's evidence audit is clean, with strategic quality still open. [Audit](focused-evidence-review-audit.md).
+
 ## 17 November — preserve hypothetical product and business-model exploration
 
 `v3.161-exploration-scope`: fix the source playbook ambiguity between execution-ready product claims and creative hypotheses; require a meaningful distinction from commonplace billing handoffs or channels. Review documented first-party draft copy in its actual review stage without accepting unlisted features or tested-result claims. Generated skill rebuilt; 231 focused/permission tests and typechecks/lint passed. V8 remains failed; v9 is pending. [Audit](focused-evidence-review-audit.md).

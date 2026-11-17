@@ -11,7 +11,7 @@ export function focusedRevisionCriteria(critique: CritiqueResult, rubric: Rubric
     const matches = critique.scores.filter(score => score.id === criterion.id);
     if (matches.length !== 1) return [];
     const score = matches[0];
-    if (!Number.isFinite(score.score) || score.score < 1 || score.score > 5 || !score.fix.trim() || score.fix.trim().toLowerCase() === "none") return [];
+    if (!Number.isFinite(score.score) || score.score < 1 || score.score >= rubric.shipRule.minEach || !score.fix.trim() || score.fix.trim().toLowerCase() === "none") return [];
     return [{ score: score.score, text: `- ${criterion.id} (${criterion.name}, ${score.score}/5): ${score.note.slice(0, 800)} Fix: ${score.fix.slice(0, 1200)}` }];
   }).sort((a, b) => a.score - b.score).map(row => row.text).join("\n");
 }
@@ -28,6 +28,24 @@ export const FocusedEvidenceAuditSchema = z.array(z.object({
   })).max(4),
 })).length(3);
 export type FocusedEvidenceAudit = z.infer<typeof FocusedEvidenceAuditSchema>;
+
+/** Repair only an omitted parent/index when one verbatim quote identifies exactly one compatible field. */
+export function resolveFocusedEvidencePaths(critique: CritiqueResult, output: unknown): CritiqueResult {
+  const parsed = FocusedEvidenceAuditSchema.safeParse(critique.evidenceAudit);
+  if (!parsed.success || output === undefined) return critique;
+  const fields = stringFields(output);
+  const corrections: NonNullable<CritiqueResult["evidencePathCorrections"]> = [];
+  const evidenceAudit = parsed.data.map(row => ({ ...row, claims: row.claims.map(claim => {
+    if (!claim.quote.trim() || fields.some(field => field.path === claim.path && field.text.includes(claim.quote))) return claim;
+    const matches = fields.filter(field => field.text.includes(claim.quote));
+    if (matches.length !== 1) return claim;
+    const resolvedPath = matches[0].path;
+    if (!resolvedPath.startsWith(`${claim.path}[`) && !resolvedPath.endsWith(`.${claim.path}`)) return claim;
+    corrections.push({ reportedPath: claim.path, resolvedPath, quote: claim.quote });
+    return { ...claim, path: resolvedPath };
+  }) }));
+  return corrections.length ? { ...critique, evidenceAudit, evidencePathCorrections: corrections } : critique;
+}
 
 /** Enforces the review contract, not semantic entailment: the reviewer can still miss a claim. */
 export function lintFocusedEvidenceAudit(value: unknown, output?: unknown): LintIssue[] {

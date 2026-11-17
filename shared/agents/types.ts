@@ -192,6 +192,8 @@ export interface PlanConstraints {
 export interface CritiqueResult {
   /** Required for new focused reviews; older and other specialist reviews may omit it. */
   evidenceAudit?: import("./focusedReview").FocusedEvidenceAudit;
+  /** Deterministic locator corrections; the original provider review is retained in its phase record. */
+  evidencePathCorrections?: { reportedPath: string; resolvedPath: string; quote: string }[];
   gates: { id: string; pass: boolean; note: string }[];
   scores: { id: string; score: number; note: string; fix: string }[];
   strengths: string[];

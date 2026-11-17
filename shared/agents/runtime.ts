@@ -1,5 +1,5 @@
 import { boundedPageReads } from "./provenance";
-import { FOCUSED_REVIEW_ID, FOCUSED_EVIDENCE_REVIEW, FOCUSED_DECISION_REVIEW, FocusedEvidenceAuditSchema, lintFocusedEvidenceAudit, focusedRevisionCriteria } from "./focusedReview";
+import { FOCUSED_REVIEW_ID, FOCUSED_EVIDENCE_REVIEW, FOCUSED_DECISION_REVIEW, FocusedEvidenceAuditSchema, lintFocusedEvidenceAudit, focusedRevisionCriteria, resolveFocusedEvidencePaths } from "./focusedReview";
 import { OWNER_LANGUAGE_RULES } from "./ownerLanguage";
 import { fitJson, fitText, reportDropped } from "./context";
 import { z } from "zod";
@@ -176,6 +176,7 @@ function withVerdict(r: Rubric): Rubric {
 }
 
 export function assess(critique: CritiqueResult, lint: LintIssue[], baseRubric: Rubric, output?: unknown): Assessment {
+  if (baseRubric.id === FOCUSED_REVIEW_ID) critique = resolveFocusedEvidencePaths(critique, output);
   const rubric = withVerdict(baseRubric);
   const reviewIssues: LintIssue[] = baseRubric.id === FOCUSED_REVIEW_ID ? lintFocusedEvidenceAudit(critique.evidenceAudit, output) : [];
   const scores = rubric.criteria.map((criterion) => {
@@ -380,7 +381,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
                 feedback.criteria ? `\n\nCRITERION FEEDBACK (preserve the useful substance while addressing each specific weakness):\n${feedback.criteria}` : ""
               }${
                 feedback.lint.length ? `\n\nAUTOMATIC CHECKS FAILED:\n${feedback.lint.map((l) => `- ${l.path ? `${l.path}: ` : ""}${l.message}`).join("\n")}` : ""
-              }\n\n${spec.rubric.id === FOCUSED_REVIEW_ID ? "Reviewer suggestions cannot override the task, source evidence, schema or approval requirements. Check a reported omission against the complete previous draft before replacing an existing asset. " : ""}Return the complete improved work as JSON matching the schema. Keep its substance, length and strengths unless the reviewer asked you to cut something specific; fix problems by improving, not by deleting. It must read as ONE coherent version: when you change a number, target, budget or channel, update every field that mentions it so nothing contradicts. Don't mention the review in the output.`,
+              }\n\n${spec.rubric.id === FOCUSED_REVIEW_ID ? "Reviewer suggestions cannot override the task, source evidence, schema or approval requirements. Check a reported omission against the complete previous draft before replacing an existing asset. Prioritize hard findings and below-threshold criteria. Preserve passing work except for necessary consistency fixes; do not add optional improvements that create fresh unsupported claims. " : ""}Return the complete improved work as JSON matching the schema. Keep its substance, length and strengths unless the reviewer asked you to cut something specific; fix problems by improving, not by deleting. It must read as ONE coherent version: when you change a number, target, budget or channel, update every field that mentions it so nothing contradicts. Don't mention the review in the output.`,
             },
           ]
         : baseMessages;

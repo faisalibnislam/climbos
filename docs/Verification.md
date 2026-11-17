@@ -1,3 +1,7 @@
+## 17 November 2026 — exact review locator repairs
+
+Engine v3.162 resolves only unique verbatim quotations with an omitted parent/index, preserving raw reviews and unsupported-claim failures. Focused revisions prioritize failed criteria. Four red regressions, then **197 tests in 12 files passed (12.03 seconds)**; typechecks/lint passed. V10 has no blocking review/evidence findings but remains below quality at 3.63; cumulative charged/held before comparison **$66.086739 / $100**. [Audit and commands](growth-engine/focused-evidence-review-audit.md).
+
 ## 17 November 2026 — distinguish creative exploration from execution
 
 Engine v3.161 clarifies the higher-priority focused playbook: novel proposed capabilities are allowed in exploration, while execution-ready claims still require evidence. Public-draft review distinguishes first-party feature claims from tested outcomes. The skill was rebuilt using `pnpm skills:build`; **231 tests in ten files passed (10.92 seconds)**, plus typechecks/lint. V8 worsened on revision and stopped honestly; cumulative charged/held $64.751437 / $100. [Audit](growth-engine/focused-evidence-review-audit.md).
