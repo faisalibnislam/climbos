@@ -1,5 +1,10 @@
 ## 17 November 2026 — creative methods and product-test validity
 
+## 18 November 2026 — Livoform v14 passes, comparison prefers revised plan
+
+The unchanged Sonnet runtime produced a reviewed **4/5 on every criterion** with no hard findings. Five generation/review calls cost $0.851088; a separate six-question comparison ($0.066036) preferred the revision on five questions and tied on one. Combined charged/held $70.921823 / $100. One successful case does not establish reliability, real paid value or business outcomes; a fresh stability check is pending. [Full evidence and limitations](growth-engine/focused-evidence-review-audit.md).
+
+
 ## 18 November 2026 — one canonical next step
 
 Engine v3.166 derives the focused plan's Today card and first-phase entry from its chosen next step before review and persistence, preserving raw responses, later work and action boundaries. One red case, then **169 tests in ten files passed (17.54 seconds)**. V13 remained below acceptance at 3.88; its separate comparison preferred it over the original on five of six questions (one tie). Combined charged/held $70.004699 / $100. [Audit and exact commands](growth-engine/focused-evidence-review-audit.md).

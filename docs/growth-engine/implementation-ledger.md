@@ -1,3 +1,7 @@
+## 18 November — Livoform passes the existing rubric
+
+V14 passes 4/5 on every criterion; a separate comparison prefers it over the original on five of six questions (one tie). Runtime model and thresholds unchanged. Combined charged/held $70.921823 / $100, with a fresh stability run pending. Preserve observation-window, participant-access and real-outcome limitations; this is not a commercial validation. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — use the same next step throughout focused plans
 
 `v3.166-canonical-first-step`: derive the single Today note and first-phase action from focusedMove before review/save; keep provider output unchanged for audit. Do not let repairs bundle a question and review or invent automated support. 169 focused/permission tests passed after a reproduced failure. V13 is improved in a separate comparison but still fails simplicity; v14 remains to be evaluated. [Audit](focused-evidence-review-audit.md).

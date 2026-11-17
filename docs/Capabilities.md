@@ -1,5 +1,8 @@
 # ClimbOS capabilities and boundaries
 
+Focused strategy now prepares distinct creative mechanisms before writing the full plan, then independently reviews the final evidence and decision on the unchanged runtime model. Grounded, adjacent and bold options remain inspectable, including unbuilt hypotheses without a matching precedent. The selected next step supplies one consistent Today card and first-phase action; later work and approvals remain separate. The latest completed Livoform run passed the unchanged rubric at 4/5 on every criterion and improved over the original in a separate AI comparison; repeatability is being checked. This is not proof of reliable expert quality or business growth. [Current audit, tests, costs and limitations](growth-engine/focused-evidence-review-audit.md).
+
+
 Latest synthetic strategy checks: science and creator cleared the unchanged review rubric; healthcare and retail did not. Separate AI comparisons preferred the new passing drafts, but real-business usefulness and growth outcomes remain unverified. [Results and boundaries](Strategy-Quality-2026-11-17.md).
 
 Offer and approved-copy checks now recognize plural mechanisms such as “discounts”, “bonuses” and “free trials”. A generated primary promotion cannot bypass its assessment merely by using plural wording. [Audit and approval regression](growth-engine/plural-offer-mechanisms-audit.md).
