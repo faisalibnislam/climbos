@@ -1,3 +1,7 @@
+## 17 November — explore mechanisms before writing the full plan
+
+`v3.163-creative-preparation`: full focused runs prepare distinct proposals in a quoted, metered, reusable checkpoint on the unchanged writer. Final evidence/permission review remains independent; starter is unchanged. The comparison schema now requires all six held-out answers without model-retyped identities. Focused tests, permission tests, budgets, types and lint pass; actual creative quality remains pending v11. [Audit](focused-evidence-review-audit.md).
+
 ## 17 November — recover exact locators without weakening factual review
 
 `v3.162-review-locator-repair`: deterministically resolve unique verbatim quotes only for omitted parent/index paths; keep raw review and correction metadata. Unsupported or ambiguous claims remain blocked. Prioritize below-threshold criterion feedback. 197 focused, permission and budget tests, typechecks and lint passed. V9 and v10 remain honest failed acceptances; v10's evidence audit is clean, with strategic quality still open. [Audit](focused-evidence-review-audit.md).

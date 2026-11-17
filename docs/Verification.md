@@ -1,3 +1,7 @@
+## 17 November 2026 — separate creative preparation from execution detail
+
+Engine v3.163 adds one bounded, quoted, checkpointed preparation call inside the existing full focused strategy run, using the same model. The final critic sees only original evidence and final work; starter and approvals remain unchanged. 200 focused/permission/budget tests passed, followed by 22 affected tests after strengthening the six-question comparison contract; typechecks/lint passed. V10 comparison was rejected for an omitted question. Cumulative charged/held **$66.150079 / $100**; v11 paid quality is pending. [Audit, cost tradeoff and commands](growth-engine/focused-evidence-review-audit.md).
+
 ## 17 November 2026 — exact review locator repairs
 
 Engine v3.162 resolves only unique verbatim quotations with an omitted parent/index, preserving raw reviews and unsupported-claim failures. Focused revisions prioritize failed criteria. Four red regressions, then **197 tests in 12 files passed (12.03 seconds)**; typechecks/lint passed. V10 has no blocking review/evidence findings but remains below quality at 3.63; cumulative charged/held before comparison **$66.086739 / $100**. [Audit and commands](growth-engine/focused-evidence-review-audit.md).

@@ -31,6 +31,22 @@ export const LIVOFORM_LAUNCH_QUESTIONS = [
   "Does it preserve draft/approval boundaries and leave community rules, uninspected pages, real product behavior and unknown operating capacity unverified?",
 ];
 
+// Required keys prevent a reviewer from silently omitting a held-out question or paraphrasing its identity.
+const LaunchQuestionAnswer = z.object({ A: z.number().min(1).max(5), B: z.number().min(1).max(5), evidence: z.string().min(1) });
+export const LaunchComparisonResponseSchema = z.object({
+  verdict: z.enum(["A", "B", "tie", "neither"]),
+  questions: z.object(Object.fromEntries(LIVOFORM_LAUNCH_QUESTIONS.map((question, index) => [`q${index + 1}`, LaunchQuestionAnswer.describe(question)]))).strict(),
+  criticalErrors: z.array(z.object({ version: z.enum(["A", "B"]), claim: z.string(), reason: z.string() })),
+  usefulNextStep: z.object({ A: z.boolean(), B: z.boolean(), reason: z.string() }),
+  improvements: z.array(z.string()), summary: z.string(),
+});
+
+/** Preserve every supplied score and verbatim question without asking the model to retype identifiers. */
+export function normalizeLaunchComparison(value: unknown) {
+  const parsed = LaunchComparisonResponseSchema.parse(value);
+  return { ...parsed, questions: LIVOFORM_LAUNCH_QUESTIONS.map((question, index) => ({ question, ...parsed.questions[`q${index + 1}`] })) };
+}
+
 export function livoformLaunchInput(ownerInput: unknown, now = Date.now()): AgentInput {
   const owner = LaunchOwnerContextSchema.parse(ownerInput);
   const facts = owner.statements.map(statement => `Owner reports (${owner.reportedAt}): ${statement}`);

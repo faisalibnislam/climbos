@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { livoformLaunchInput, livoformLaunchComparison, LIVOFORM_LAUNCH_QUESTIONS } from "../../bench/strategy-quality/livoformLaunch";
+import { livoformLaunchInput, livoformLaunchComparison, LIVOFORM_LAUNCH_QUESTIONS, normalizeLaunchComparison } from "../../bench/strategy-quality/livoformLaunch";
 import { referenceEvidenceBasis } from "../../shared/agents/evidenceKind";
 
 // Synthetic reports exercise provenance; these are not claims about the real business.
@@ -46,6 +46,16 @@ describe("owner-selected Livoform launch acceptance", () => {
 
 
 describe("held-out launch comparison", () => {
+  it("requires every question exactly once while preserving supplied scores and the original question wording", () => {
+    const response = { verdict: "neither", questions: Object.fromEntries(LIVOFORM_LAUNCH_QUESTIONS.map((_, index) => [`q${index + 1}`, { A: index % 5 + 1, B: 2, evidence: "Synthetic comparison evidence." }])), criticalErrors: [], usefulNextStep: { A: false, B: false, reason: "Fixture only." }, improvements: [], summary: "Synthetic test, no model quality claim." };
+    const normalized = normalizeLaunchComparison(response);
+    expect(normalized.questions.map(row => row.question)).toEqual(LIVOFORM_LAUNCH_QUESTIONS);
+    normalized.questions.forEach((row, index) => expect(row).toMatchObject(response.questions[`q${index + 1}`]));
+    const missing = structuredClone(response); delete missing.questions.q6;
+    expect(() => normalizeLaunchComparison(missing)).toThrow();
+    expect(() => normalizeLaunchComparison({ ...response, questions: { ...response.questions, q7: response.questions.q1 } })).toThrow();
+    expect(() => normalizeLaunchComparison({ ...response, questions: normalized.questions })).toThrow();
+  });
   const record = () => ({ caseId: "livoform", schemaPassed: true, input: livoformLaunchInput(owner, now), result: { output: { summary: "Synthetic draft" }, assessment: { ship: false }, history: [{ score: 1 }] } });
   it("passes only candidate output and common evidence to a judge, without grades or drafting instructions", () => {
     const a = record(), b = record(); b.input.task = "A newer writer instruction"; b.input.timingContext!.now!++;

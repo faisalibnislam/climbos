@@ -1,4 +1,5 @@
 import { milestoneWindows } from "./planningCycles";
+import { CreativePreparationSchema } from "./creativePreparation";
 import { demoBusinessModelCheck } from "./businessModel";
 import { z } from "zod";
 import { turnCostMicros, ZERO_USAGE, type TurnRequest, type TurnResult } from "../ai/types";
@@ -111,6 +112,10 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
   } else {
     const marker = lastUser.includes("A senior reviewer assessed your draft") ? "fake-v2" : "fake-v1";
     output = sample(z.toJSONSchema(req.schema) as JsonSchema, marker);
+    if (req.schema === CreativePreparationSchema) {
+      const generated = output as { directions: Record<string, unknown>[] };
+      generated.directions = Array.from({ length: 3 }, (_, index) => ({ ...generated.directions[0], title: `Synthetic direction ${index + 1}` }));
+    }
     const social = output as { posts?: { channel?: string; body?: string; format?: string; videoScript?: string; shotList?: { timing: string; show: string }[] }[] };
     const requestedChannel = lastUser.match(/Write\s+(?:\d+|one|two|three)\s+social\s+posts?\s+for\s+(instagram|facebook|linkedin|x|tiktok|pinterest|youtube)\b/i)?.[1]?.toLowerCase();
     if (requestedChannel && Array.isArray(social?.posts)) for (const post of social.posts) {

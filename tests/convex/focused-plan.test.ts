@@ -411,8 +411,14 @@ it("runs the real focused path with a matching quote, reuses bound research and 
   expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
   expect(await t.run(ctx => ctx.db.query("approvals").collect())).toMatchObject([{ status: "pending", actionKind: "approve_plan" }]);
   expect(saved.plan.expert?.quality?.state).not.toBe("failed"); expect(saved.plan.expert?.plays).toHaveLength(0);
-  expect(state.requests).toHaveLength(2); expect(state.requests.every(r => !r.webSearch)).toBe(true);
-  expect(state.requests[0].maxTokens).toBe(32000);
+  expect(state.requests).toHaveLength(3); expect(state.requests.every(r => !r.webSearch)).toBe(true);
+  expect(state.requests[0].maxTokens).toBe(12000);
+  expect(state.requests[0].modelKey).toBe(state.requests[1].modelKey);
+  expect(state.requests[1].maxTokens).toBe(32000);
+  expect(JSON.stringify(state.requests[1].messages)).toContain("creative preparation proposals");
+  expect(JSON.stringify(state.requests[2].messages)).not.toContain("Synthetic direction 1");
+  const preparationSteps = await t.run(ctx => ctx.db.query("workflowSteps").withIndex("by_run", q => q.eq("runId", runId)).collect());
+  expect(preparationSteps.some(step => step.label.includes("explore strategic directions") && step.status === "succeeded")).toBe(true);
   await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: saved.plan._id, playId: "focused" })).rejects.toThrow(/approve/);
   const before = await t.run(ctx => ctx.db.query("workflowRuns").collect());
   const work = await owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: saved.plan._id, decision: "approve" });

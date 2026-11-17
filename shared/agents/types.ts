@@ -80,6 +80,8 @@ export interface AgentSpec<T> {
   inputBudgetFloor?: number;
   /** Write this many first drafts (different angles) and keep the one the reviewer rates higher. Default 1. */
   drafts?: number;
+  /** Full focused plans explore mechanisms before execution detail; same writer and run budget. */
+  creativePreparation?: boolean;
   /**
    * Speed (engine flag "fast_review"): keep the last revision without a second review when it has no
    * more lint errors than the version it replaces and drops none of its numbers.

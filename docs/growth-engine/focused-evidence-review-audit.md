@@ -1,5 +1,26 @@
 # Focused strategy evidence review — 17 November 2026
 
+## Bounded creative preparation in the existing run — v3.163
+
+Repeated complete Livoform drafts remained anchored on the same agency-intake mechanism, even after moving exploration first in the output schema. Full focused plans now prepare three or four short, distinct strategic possibilities in a separate checkpoint of the **same agent run and same writer model**, before drafting the final strategy. The preparation schema asks for the business tension, value exchange, changed behavior, participant benefit, closest familiar alternative, meaningful difference, unknowns and reversible test. It does not request an execution plan, forecast, campaign or new business facts.
+
+The final writer receives these as untrusted generated proposals alongside the original evidence, may improve or reject them, and still must return the complete grounded/adjacent/bold portfolio and one manageable primary test. The critic independently sees only the final work and original evidence. Existing deterministic validation, factual review and approval/start restrictions remain in force. No new agent, provider, calendar dependency, action or runtime model was introduced. Draft slots are explicitly a maximum, not a requirement to create another social workstream.
+
+The extra call is quoted and reserved in the initial full-plan allowance at 12,000 output tokens with the existing writer's input estimate, and uses stable checkpoint 49. Resume reuses that checkpoint. Invalid preparation stops before a final draft. The free starter retains its prior two initial calls, model route and 11,000/4,000 draft/review bounds. Full-plan latency and potential cost increase by one writer call; this is a hypothesis about creative quality, not an established win. Production and paid acceptance use the same path. Historical outputs are preserved.
+
+The v10 separate comparison cost **$0.063340** but omitted one of six required questions, so the harness correctly rejected it; its raw receipt is retained and no accepted comparison was saved. The launch comparison now requires six named answer fields and deterministically attaches the exact existing question text, preserving every model score. Missing or extra questions still fail. No favourable verdict was manufactured from the incomplete result. Combined charged/held before the next test: **$66.150079 / $100**.
+
+Verification: **200 tests in 13 files passed (21.56 seconds)**, then **22 tests in three affected files passed (2.62 seconds)** after the comparison-contract change; counts overlap. App/Convex typechecks, targeted ESLint and diff checks passed. The first workflow run exposed the generic test double's one-item array; its new preparation-only synthetic fixture and expected call count were updated. The real mocked job now verifies the extra metered checkpoint, matching quote, preserved pending approval, zero action receipts and tenant boundaries. Unit tests cover same-model calls, preparation/final-review separation, resume reuse and rejection of malformed preparation.
+
+```sh
+pnpm exec vitest run tests/unit/creative-preparation.test.ts tests/unit/focused-plan.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/agent-escalation.test.ts tests/unit/plan-quality.test.ts tests/unit/evaluation-identity.test.ts tests/unit/livoform-launch-input.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts tests/unit/anthropic-budget.test.ts tests/unit/evaluation-budget.test.ts tests/unit/ai-qa-budget.test.ts
+pnpm exec vitest run tests/unit/livoform-launch-input.test.ts tests/unit/evaluation-identity.test.ts tests/unit/creative-preparation.test.ts
+pnpm typecheck
+```
+
+Paid variant `launch-quality-v11-20261117` will assess this combined configuration with unchanged business evidence and `claude-sonnet-5-5`. Local wiring tests are not evidence of strategy quality or business growth.
+
+
 ## Exact review locators and focused corrections — v3.162
 
 V9 (`launch-quality-v9-20261117`, engine v3.161) completed four calls for **$0.688229**. The first draft scored 3.56 with one unsupported comparative claim; the revision scored 3.69 but had three hard findings, so the existing stop retained the first failed draft. The bold direction moved beyond client billing to a proposed gap-only client brief, but meaningful originality and owner workload remained below acceptance. Combined charged/held: **$65.439666 / $100**.

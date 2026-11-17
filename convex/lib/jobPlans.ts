@@ -6,6 +6,7 @@ import { TASKS, type TaskType } from "../../shared/ai/tasks";
 import { estimateRun, type PlannedStep } from "./estimate";
 import { BUILT_IN_ROUTE, isModelKey, routeModelKey, type ModelRoute } from "../../shared/ai/modelChoice";
 import type { AgentSpec } from "../../shared/agents/types";
+import { CREATIVE_PREPARATION_TOKENS } from "../../shared/agents/creativePreparation";
 import { CALL_ROUTES, draftsFor, expertEscalationModel, routeModels, taskModelSlot, type AiMode } from "../../shared/agents/routes";
 import {
   adsSpec,
@@ -42,6 +43,9 @@ export function agentSteps(spec: AgentSpec<unknown>, research?: { maxSearches: n
     steps.push({ kind: "model", role: spec.role, modelKey: spec.models.research, inputBudget: 80_000, outputBudget: spec.maxTokens.research, webSearches: research.maxSearches });
   }
   // Best-of-two agents write (and review) a second first draft.
+  if (spec.creativePreparation && spec.rubric.id === "focused-growth-strategy") {
+    steps.push({ kind: "model", role: spec.role, modelKey: spec.models.draft, inputBudget: 40_000, outputBudget: CREATIVE_PREPARATION_TOKENS });
+  }
   for (let r = 0; r < rounds + ((spec.drafts ?? 1) > 1 && spec.maxRevisions >= 0 ? 1 : 0); r++) {
     steps.push({ kind: "model", role: spec.role, modelKey: spec.models.draft, inputBudget: 40_000, outputBudget: spec.maxTokens.draft });
     // maxRevisions < 0 means a single draft with no review.
