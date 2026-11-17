@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Retention and expansion advice now keeps recorded evidence classes distinct and checks outcomes, comparisons and decision rules before real v2 work is marked verified. Observation periods can remain unknown with an owner input to resolve them. These are recommendation checks, not customer-event tracking or automatic sequence enrollment. See [the audit](growth-engine/retention-recommendation-audit.md).
+
 Translation now uses the draft version selected at launch and retains its offer constraints and original trend evidence. A later source edit does not silently change the translation input, and existing approval remains separate. Price checks cover recognized forms; native-language accuracy and every localized offer phrase still require review. See [the audit](growth-engine/translation-source-context-audit.md).
 
 Repurposing an existing draft retains its selected source version, offer terms and original trend evidence for later review. Known price/urgency conflicts and incomplete requested-format batches fail before drafts are saved. Rewriting does not refresh trend dates or transfer approval. Source correctness and semantic adaptation quality still need review. See [the audit](growth-engine/repurpose-source-context-audit.md).

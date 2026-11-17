@@ -329,7 +329,7 @@ export const RetentionPlanSchema = z.object({
       timingEvidenceClaim: z.string(),
       primaryOutcome: z.string(),
       comparison: z.string(),
-      observationWindowDays: z.number().int().min(1).max(365),
+      observationWindowDays: z.number().int().min(1).max(365).nullable(),
       continueRule: z.string(),
       stopRule: z.string(),
       ownerInputs: z.array(z.string()),

@@ -9,7 +9,7 @@ const facts = [
   "Measured usage trigger: after an account adds a second editor, show the Team plan option.",
 ];
 
-const input: AgentInput = { task: "Retention and expansion", brief: "Owner facts supplied.", facts };
+const input: AgentInput = { task: "Retention and expansion", brief: "Owner facts supplied.", facts, constraints: { factEvidenceBases: ["owner_reported", "measured", "measured"] } };
 
 function output(overrides: Record<string, unknown> = {}) {
   return RetentionPlanSchema.parse({
@@ -83,4 +83,51 @@ describe("retention expansion recommendations", () => {
     }] });
     expect(retentionSpec().lint?.(ungrounded, input)?.some((issue) => /missing owner input or unknown/u.test(issue.message))).toBe(true);
   });
+});
+
+it("does not promote an owner report about analytics into measured expansion evidence", () => {
+  const ownerInput: AgentInput = { ...input, constraints: { factEvidenceBases: ["owner_reported", "owner_reported", "owner_reported"] } };
+  expect(retentionSpec().lint?.(output(), ownerInput)?.some(issue => issue.rule === "evidence_basis")).toBe(true);
+});
+it("keeps absent provenance unknown even when the fact says measured", () => {
+  expect(retentionSpec().lint?.(output(), { ...input, constraints: undefined })?.some(issue => issue.rule === "evidence_basis")).toBe(true);
+});
+it("accepts an unknown observation window with a targeted owner input", () => {
+  const candidate = output();
+  const raw = { ...candidate, plays: [{ ...candidate.plays[0], expansionAssessment: { ...candidate.plays[0].expansionAssessment, observationWindowDays: null, ownerInputs: ["Confirm the observation window for this customer buying cycle."] } }] };
+  const parsed = RetentionPlanSchema.safeParse(raw);
+  expect(parsed.success).toBe(true);
+  if (parsed.success) expect(retentionSpec().lint?.(parsed.data, input)).toEqual([]);
+});
+it("requires useful outcomes and decision rules for retention as well as expansion", () => {
+  const candidate = output();
+  candidate.plays[0].type = "retention";
+  candidate.plays[0].expansionAssessment.decision = "no_expansion";
+  candidate.plays[0].expansionAssessment.primaryOutcome = "";
+  candidate.plays[0].expansionAssessment.stopRule = "";
+  expect(retentionSpec().lint?.(candidate, input)?.some(issue => issue.rule === "retention_expansion")).toBe(true);
+});
+it("keeps published claims source-reported rather than measured", () => {
+  const url = "https://example.com/team";
+  const sourceInput: AgentInput = { ...input, availableSourceUrls: [url], precomputedResearch: { notes: facts.join("\n"), sources: [{ url }] } };
+  const candidate = output(), assessment = candidate.plays[0].expansionAssessment;
+  assessment.valueEvidenceRef = url;
+  expect(retentionSpec().lint?.(candidate, sourceInput)?.some(issue => issue.rule === "evidence_basis")).toBe(true);
+  assessment.valueEvidenceBasis = "source_reported";
+  expect(retentionSpec().lint?.(candidate, sourceInput)).toEqual([]);
+});
+it("validates reported evidence on retention plays as well as upsells", () => {
+  const candidate = output(); candidate.plays[0].type = "retention";
+  const assessment = candidate.plays[0].expansionAssessment;
+  assessment.decision = "no_expansion"; assessment.timingEvidenceClaim = "This customer has already finished setup.";
+  expect(retentionSpec().lint?.(candidate, input)?.some(issue => issue.rule === "retention_expansion" && issue.path?.endsWith("timingEvidenceClaim"))).toBe(true);
+});
+it("allows explicit hypotheses that ask for validation without pretending they are measurements", () => {
+  const candidate = output(); const assessment = candidate.plays[0].expansionAssessment;
+  assessment.decision = "validate_first"; assessment.offering = null;
+  assessment.offerEvidenceBasis = "unknown"; assessment.offerEvidenceRef = null; assessment.offerEvidenceClaim = "";
+  assessment.valueEvidenceBasis = "inferred"; assessment.valueEvidenceRef = null; assessment.valueEvidenceClaim = "";
+  assessment.timingEvidenceBasis = "assumed"; assessment.timingEvidenceRef = null; assessment.timingEvidenceClaim = "";
+  assessment.observationWindowDays = null; assessment.ownerInputs = ["Confirm the available offering, customer need, and observation window."];
+  expect(retentionSpec().lint?.(candidate, { ...input, constraints: undefined })).toEqual([]);
 });

@@ -337,7 +337,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.128-translation-source-context";
+export const ENGINE_VERSION = "v3.129-retention-evidence-validation";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -2937,10 +2937,26 @@ function retentionEvidence(ref: string | null, input: AgentInput): string | unde
 /** Keeps expansion plays tied to verified offers, customer-value signals, and timing evidence. */
 function lintRetentionPlan(output: z.infer<typeof RetentionPlanSchema>, input: AgentInput): LintIssue[] {
   const issues: LintIssue[] = [];
+  const sourceUrls = [...(input.availableSourceUrls ?? []), ...(input.precomputedResearch?.sources.map(source => source.url) ?? [])].map(normalizeSourceUrl).filter((url): url is string => url !== null);
   output.plays.forEach((play, index) => {
     const path = `plays[${index}].expansionAssessment`;
     const assessment = play.expansionAssessment;
     const error = (message: string, field = "") => issues.push({ severity: "error", rule: "retention_expansion", message, path: field ? `${path}.${field}` : path });
+    for (const [field, basis, ref, claim] of [
+      ["offerEvidence", assessment.offerEvidenceBasis, assessment.offerEvidenceRef, assessment.offerEvidenceClaim],
+      ["valueEvidence", assessment.valueEvidenceBasis, assessment.valueEvidenceRef, assessment.valueEvidenceClaim],
+      ["timingEvidence", assessment.timingEvidenceBasis, assessment.timingEvidenceRef, assessment.timingEvidenceClaim],
+    ] as const) {
+      if (!["owner_reported", "measured", "source_reported"].includes(basis)) continue;
+      const reference = ref && /^fact:\d+$/.test(ref) ? ref : ref ? normalizeSourceUrl(ref) : null;
+      if (referenceEvidenceBasis(reference, input.constraints?.factEvidenceBases, sourceUrls) !== basis) issues.push({ severity: "error", rule: "evidence_basis", message: "Match the lifecycle claim to its recorded source class. Owner reports, including reports about analytics, are not independently measured evidence; missing provenance stays unknown.", path: `${path}.${field}Basis` });
+      const source = retentionEvidence(ref, input);
+      if (!source || !claim.trim() || !source.includes(claim)) error("A reported lifecycle claim must quote evidence available to this run; otherwise label it as an inference or unknown and validate it first.", `${field}Claim`);
+    }
+    if (!assessment.primaryOutcome.trim() || !assessment.comparison.trim() || !assessment.continueRule.trim() || !assessment.stopRule.trim()) error("Each lifecycle opportunity needs an outcome, comparison, and owner-set continue/stop rules.");
+    if (assessment.observationWindowDays === null && !assessment.ownerInputs.length && !assessment.unknowns.length) error("Name the owner input or uncertainty needed to choose an observation window.", "observationWindowDays");
+    const numericRules = `${assessment.continueRule} ${assessment.stopRule}`;
+    if (/\d/.test(numericRules) && !assessment.ownerInputs.some((item) => /threshold|target|minimum|maximum|set|confirm/i.test(item))) error("Numeric continue or stop thresholds need evidence or an explicit owner input to set them.", "ownerInputs");
     if (play.type === "retention") {
       if (assessment.decision === "recommend") error("Use retention for a non-expansion play; do not label it as an upsell or cross-sell.", "decision");
       return;
@@ -2961,9 +2977,6 @@ function lintRetentionPlan(output: z.infer<typeof RetentionPlanSchema>, input: A
       if (!assessment.ownerInputs.length && !assessment.unknowns.length) error("Name the missing owner input or unknown that prevents a grounded expansion recommendation.");
       if (assessment.offering && ["inferred", "assumed", "unknown"].includes(assessment.offerEvidenceBasis) && !assessment.unknowns.some((item) => /offer|product|upgrade|catalog/i.test(item))) error("An unverified offering must be identified as an unknown.", "unknowns");
     }
-    if (!assessment.primaryOutcome.trim() || !assessment.comparison.trim() || !assessment.continueRule.trim() || !assessment.stopRule.trim()) error("Each expansion opportunity needs an outcome, comparison, and owner-set continue/stop rules.");
-    const numericRules = `${assessment.continueRule} ${assessment.stopRule}`;
-    if (/\d/.test(numericRules) && !assessment.ownerInputs.some((item) => /threshold|target|minimum|maximum|set|confirm/i.test(item))) error("Numeric continue or stop thresholds need evidence or an explicit owner input to set them.", "ownerInputs");
   });
   return [...issues, ...lintGeneric(output, input)];
 }

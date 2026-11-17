@@ -33,6 +33,8 @@ This handoff records what has been built, what was checked, what remains unverif
 
 ## Current status — 17 November 2026
 
+Retention follow-up: source classes and quoted evidence are checked for lifecycle plays, ordinary retention requires outcome/decision rules, and observation windows may remain unknown. The real v2 job validates the final output before saving it as verified. Event-driven customer enrollment remains unfinished; do not confuse existing mailbox prospect sequences with lifecycle event tracking. See [the audit](growth-engine/retention-recommendation-audit.md) and Verification.
+
 Translation follow-up: exact source version/title and language are now pinned. A shared artifact-source helper preserves offer/trend context for translation and repurposing; save verifies tenant/request identity and stored terms independently of caller metadata. New drafts do not inherit approval/schedule. Legacy unpinned jobs require a fresh request; multilingual semantic verification remains limited. See [the audit](growth-engine/translation-source-context-audit.md) and Verification.
 
 Repurposing follow-up: existing source versions and offer/trend constraints now survive drafting and persistence, with independent normalized-copy checks and complete requested-format validation. New drafts remain in review. Historical evidence dates are unchanged; old unbound jobs cannot recover missing provenance. See [the audit](growth-engine/repurpose-source-context-audit.md) and Verification.

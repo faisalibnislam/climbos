@@ -1,3 +1,7 @@
+## 17 November 2026 — retention recommendation evidence
+
+Retention recommendations now compare claimed evidence classes with recorded provenance, require outcome/comparison/decision rules for retention as well as expansion, and preserve unknown observation windows. Real v2 output is schema/lint checked again before being recorded as verified. No enrollment or execution was added. See [the audit](retention-recommendation-audit.md).
+
 ## 17 November 2026 — source constraints survive translation
 
 Translation now pins the selected source version/title and language, preserves offer and historical trend context, and rechecks source ownership and stored constraints at persistence. The source-brief helper is shared with repurposing. Replayed saves do not duplicate drafts; approvals and schedules are not inherited. See [the audit](translation-source-context-audit.md) for multilingual and legacy limits.

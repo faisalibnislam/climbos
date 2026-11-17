@@ -1,3 +1,14 @@
+## 17 November 2026 — retention evidence and final output validation
+
+Retention advice now preserves recorded source classes, requires useful outcomes and decision rules for non-expansion plays, and can retain an unknown observation window. Real v2 jobs validate returned output again before saving it as verified. See [the audit](growth-engine/retention-recommendation-audit.md).
+
+- `pnpm exec vitest run tests/unit/retention-expansion.test.ts tests/convex/retention-plan-validation.test.ts tests/convex/lifecycle-draft-context.test.ts tests/convex/engine-v2.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts tests/unit/ai-tasks.test.ts tests/unit/agent-lint.test.ts tests/unit/agent-runtime.test.ts` — 66 passed across nine files, 6.96 seconds.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint convex/jobs.ts shared/agents/specs.ts shared/ai/tasks.ts tests/unit/retention-expansion.test.ts tests/convex/retention-plan-validation.test.ts` — passed.
+- `git diff --check` — passed.
+
+Four new unit regressions and three job-boundary regressions failed before the repair. Job tests deliberately supply a passing model assessment while returning invalid output; the final check now rejects it. Correct owner reports and explicit unknown periods remain valid. Tests create no artifacts, approvals or action receipts. The first wider command named a nonexistent agent-contracts file; its 57 passing tests covered seven actual files, not that file. The final command above uses existing agent-lint/runtime files. No live model, paid evaluation, browser, provider, deployment or sending was involved. Automatic customer lifecycle enrollment remains unfinished.
+
 ## 17 November 2026 — translation source identity and inherited evidence
 
 Translation now resolves a pinned tenant-bound source version, retains its offer/trend context and checks stored terms independently at save. The source-brief helper is shared with repurposing. See [the audit](growth-engine/translation-source-context-audit.md).

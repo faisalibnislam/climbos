@@ -2561,18 +2561,33 @@ export const simplePlanJob = internalAction({
     await guarded(ctx, runId, async () => {
       const text =
         task === "retention_plan"
-          ? "TASK: Design concise lifecycle plays for existing customers and people who agreed to hear from the business. Include retention, upsell, or cross-sell only when the supplied business facts identify the specific product/service, a relevant customer need or value signal, and a credible behavior-based trigger. For each play, fill expansionAssessment. Never infer a customer's value from age, spend, or plan alone; distinguish measured, owner-reported, source-reported, inferred, assumed, and unknown. For an expansion recommendation, quote separate supplied evidence for the offering, customer value signal, and timing trigger, cite each by fact:N or an exact source URL actually supplied to this run, and state a qualified outcome and baseline/comparison. If product catalog, customer need/value, consent, or trigger evidence is missing, choose validate_first, leave invented offers out, list the smallest useful owner input or validation step, and keep unknowns explicit. Use a behavior or lifecycle event for timing; do not invent a calendar deadline or customer activity. Define stop/continue rules without guessed numeric thresholds. This output is advice and draft direction only; do not contact customers, change billing or publish."
+          ? "TASK: Design concise lifecycle plays for existing customers and people who agreed to hear from the business. Include retention, upsell, or cross-sell only when the supplied business facts identify the specific product/service, a relevant customer need or value signal, and a credible behavior-based trigger. For each play, fill expansionAssessment. Never infer a customer's value from age, spend, or plan alone; distinguish measured, owner-reported, source-reported, inferred, assumed, and unknown. For an expansion recommendation, quote separate supplied evidence for the offering, customer value signal, and timing trigger, cite each by fact:N or an exact source URL actually supplied to this run, and state a qualified outcome and baseline/comparison. If product catalog, customer need/value, consent, or trigger evidence is missing, choose validate_first, leave invented offers out, list the smallest useful owner input or validation step, and keep unknowns explicit. Use a behavior or lifecycle event for timing; do not invent a calendar deadline or customer activity. Match evidence labels to the recorded source class, not words such as analytics in a statement. Define an outcome, comparison and stop/continue rules for retention as well as expansion, without guessed numeric thresholds. Keep observationWindowDays null when a meaningful period is unknown and name the needed owner input; any proposed numeric period still needs owner confirmation and is not a schedule. This output is advice and draft direction only; do not contact customers, change billing or publish."
           : "TASK: Define the ideal customer, qualification questions and a follow-up sequence for leads the business ALREADY has (inbound or CRM). Never imply access to a contact database.";
+      const input = agentInput(job, `${text.replace(/^TASK: /, "")}${planContext(job)}`);
+      const meta: AgentMeta = {};
       const out = await runAgentTask<unknown>(
         ctx,
         job,
         0,
         task === "retention_plan" ? retentionSpec() : salesSpec(),
-        agentInput(job, `${text.replace(/^TASK: /, "")}${planContext(job)}`),
+        input,
         startedAt,
         { task, context: "", ctx: fixtureCtx(job), text: `${text}\n\n${businessBrief(job)}` },
+        meta,
       );
-      await finish(ctx, runId, "verified", { output: out });
+      let checkedOutput = out;
+      if (task === "retention_plan") {
+        const spec = retentionSpec();
+        const parsed = spec.schema.safeParse(out);
+        if (!parsed.success) throw new JobStop("invalid_retention_plan", "The lifecycle recommendation returned an incomplete result. It was not saved as verified advice.");
+        if (!job.run.isFixture && job.run.engine === "v2") {
+          const research = meta.notes !== undefined ? { notes: meta.notes, sources: meta.sources ?? [], retrievedAt: meta.retrievedAt } : undefined;
+          const issue = lintAgentOutput(spec, input, parsed.data, research).find(issue => issue.severity === "error");
+          if (issue) throw new JobStop("invalid_retention_plan", `The lifecycle recommendation needs correction: ${issue.message}`);
+        }
+        checkedOutput = parsed.data;
+      }
+      await finish(ctx, runId, "verified", { output: checkedOutput });
       if (cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId, status: "done" });
     }, undefined, resumeAs(ctx, "simplePlanJob", { runId, task, cardId }));
   },
