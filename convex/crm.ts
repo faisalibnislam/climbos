@@ -1,9 +1,12 @@
+import { QUALIFICATION_TOPICS, QUALIFICATION_LIMITATIONS, QualificationObservationSchema } from "../shared/growth/dealQualification";
+import { validProgressDate } from "../shared/growth/customerProgress";
+import { qualificationTopicV, qualificationStateV } from "./lib/dealQualification";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { DEAL_VALUE_VERSION, dealAttention, dealDueDate, dealTimezone, isDealDate, isDealTimestamp, dealValueMinor, dealValueNeedsReview, summarizeDealValues } from "../shared/growth/pipeline";
 import { minorToMajor } from "../shared/economics/currency";
-import { sha256Hex } from "../shared/policy";
+import { can, sha256Hex } from "../shared/policy";
 import { audit } from "./lib/audit";
 import { emitEvent } from "./webhooks";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
@@ -158,6 +161,42 @@ export const detail = query({
       noteCoverage: { stored: d.notes.length, returned: end - start, nextBefore: start > 0 ? start : null, latestPage: end === d.notes.length },
       limitations: "Notes are saved CRM context, not a verified transcript or verbatim buyer statements. Entries without an author may be automated or imported. Dates record entry time, not necessarily conversation time. Earlier history may have been dropped by the 200-note retention limit. Read relevant earlier pages before concluding that evidence is absent. Entry source is not acquisition attribution. Stages, values and notes do not prove qualification, willingness to buy or payment, and are not permission to contact. Missing or invalid dates remain unknown. Review advice does not send, schedule, change this deal or approve anything.",
     };
+  },
+});
+
+/** Separate bounded review so complete qualification reports never crowd out paginated conversation notes. */
+export const qualification = query({
+  args: { slug: v.string(), id: v.id("deals"), expectedVersion: v.optional(v.string()) },
+  handler: async (ctx, { slug, id, expectedVersion }) => {
+    const { org, membership } = await requireOrgAccess(ctx, { slug }, "view");
+    const d = assertSameOrg(await ctx.db.get(id), org._id, "deal");
+    const version = await sha256Hex(JSON.stringify(d));
+    if (expectedVersion !== undefined && expectedVersion !== version) throw appError("INVALID", "This deal changed. Read it again before reviewing its buying context.");
+    const record = d.qualification ?? { current: [], history: [], revision: 0 };
+    return {
+      view: "qualification" as const, dealId: d._id, version, evidenceKind: "owner_reported" as const,
+      ...record, unknownTopics: QUALIFICATION_TOPICS.filter(topic => !record.current.some(r => r.topic === topic && r.state !== "unknown")),
+      canEdit: can(membership.role, "edit"), limitations: QUALIFICATION_LIMITATIONS,
+    };
+  },
+});
+
+export const recordQualification = mutation({
+  args: { slug: v.string(), id: v.id("deals"), expectedRevision: v.number(), topic: qualificationTopicV, state: qualificationStateV, statement: v.string(), sourceLabel: v.string(), observedOn: v.string() },
+  handler: async (ctx, a) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug: a.slug }, "edit");
+    const d = assertSameOrg(await ctx.db.get(a.id), org._id, "deal");
+    const previous = d.qualification ?? { current: [], history: [], revision: 0 };
+    if (!Number.isSafeInteger(a.expectedRevision) || a.expectedRevision !== previous.revision) throw appError("INVALID", "Buying context changed. Review the latest reports before saving again.");
+    const now = Date.now();
+    if (!validProgressDate(a.observedOn, now)) throw appError("INVALID", "Use a real observation date, no later than today (UTC).");
+    const parsed = QualificationObservationSchema.safeParse({ ...a, recordedAt: now, revision: previous.revision + 1 });
+    if (!parsed.success) throw appError("INVALID", "Add a short observation (3–240 characters) and where it came from (3–160 characters).");
+    const report = { ...parsed.data, recordedBy: user._id };
+    const current = [...previous.current.filter(r => r.topic !== a.topic), report].sort((a, b) => QUALIFICATION_TOPICS.indexOf(a.topic) - QUALIFICATION_TOPICS.indexOf(b.topic));
+    await ctx.db.patch(d._id, { qualification: { current, history: [...previous.history, report].slice(-20), revision: report.revision }, updatedAt: now });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "crm.qualification", subjectType: "deal", subjectId: d._id, summary: `Recorded owner-reported buying context: ${a.topic}, ${a.state}, revision ${report.revision}.` });
+    return report.revision;
   },
 });
 

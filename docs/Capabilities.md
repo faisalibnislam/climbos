@@ -1,5 +1,8 @@
 # ClimbOS capabilities and boundaries
 
+Customer progress now records dated buying-context reports across needs, success, fit, decision process, timing and alternatives. Conflicting, outdated and unknown observations remain explicit; corrections retain recent history. The existing assistant review can read the selected record without changing its stage or contacting anyone. [Workflow and limits](growth-engine/deal-qualification-audit.md).
+
+
 Business-model checks now connect relevant competitive pressures and external changes to a response, tradeoff and small validation check. Owners can inspect the supporting observations and unassessed areas; later planning receives the selected reasoning. These are labeled judgments, with grounded, adjacent and bold options preserved. See [the strategic-analysis audit](growth-engine/strategic-landscape-audit.md).
 
 

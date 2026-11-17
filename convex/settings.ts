@@ -491,6 +491,7 @@ export const exportData = internalQuery({
     const weeklyReports = await ctx.db.query("playResults").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
     const weeklyRevisions = await ctx.db.query("playResultRevisions").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
     const outcomeRevisions = await ctx.db.query("experimentOutcomeRevisions").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
+    const deals = await ctx.db.query("deals").withIndex("by_org_updated", q => q.eq("orgId", orgId)).order("desc").paginate({ cursor: null, numItems: 500, maximumBytesRead: 1_000_000 });
     const contactProgress = await ctx.db.query("contactProgress").withIndex("by_org", q => q.eq("orgId", orgId)).take(101);
     const reviewRequests = await ctx.db.query("reviewRequests").withIndex("by_org_created", q => q.eq("orgId", orgId)).order("desc").take(101);
     const reviewBatches = await ctx.db.query("reviewInvitationBatches").withIndex("by_org_created", q => q.eq("orgId", orgId)).order("desc").take(101);
@@ -529,6 +530,9 @@ export const exportData = internalQuery({
         reviewInvitationHistoryLimited: reviewRequests.length > 100,
         reviewInvitationApprovals: strip(reviewBatches.slice(0, 100)),
         reviewInvitationApprovalHistoryLimited: reviewBatches.length > 100,
+        deals: strip(deals.page),
+        dealHistoryLimited: !deals.isDone,
+        dealCoverage: "Newest deals, bounded to 500 records or approximately 1 MB read; buying-context history retains the most recent 20 observations per deal.",
         customerProgress: strip(contactProgress.slice(0, 100)),
         customerProgressLimited: contactProgress.length > 100,
         brandPatternDecisions: strip(brandPatterns.slice(0, 100)),

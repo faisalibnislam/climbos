@@ -1,3 +1,4 @@
+import { QualificationReadSchema } from "../../shared/growth/dealQualification";
 import { OwnerQuestionSchema } from "../../shared/climb/ownerQuestion";
 import { z } from "zod";
 import type { FunctionReference } from "convex/server";
@@ -85,7 +86,7 @@ const PipelineDetailSchema = z.object({
   noteCoverage: z.object({ stored: z.number().int().nonnegative(), returned: z.number().int().min(0).max(2), nextBefore: z.number().int().nonnegative().nullable(), latestPage: z.boolean() }),
   limitations: z.string(),
 });
-const PipelineOutputSchema = z.union([PipelineOverviewSchema, PipelineDetailSchema]);
+const PipelineOutputSchema = z.union([PipelineOverviewSchema, PipelineDetailSchema, QualificationReadSchema]);
 const CompetitorsOutputSchema = z.object({
   watching: z.array(z.object({ name: z.string(), url: HttpUrlSchema, status: z.enum(["checked", "pending", "error"]), lastCheckedAt: z.number().nullable(), lastError: z.string().nullable() })),
   changes: z.array(z.object({ id: z.string(), name: z.string(), summary: z.string(), bullets: z.array(z.string()), soWhat: z.string().nullable(), sourceUrls: z.array(HttpUrlSchema), evidence: z.object({ removed: z.array(z.string()), added: z.array(z.string()) }).nullable(), at: z.number() })),
@@ -537,12 +538,17 @@ export const CLIMB_TOOLS: ClimbTool[] = [
   tool({
     name: "get_pipeline",
     title: "Pipeline",
-    description: "Read customer progress and ids, or pass dealId for one selected deal with dated notes, loss reason and next step. Read earlier notes with beforeNote and expectedVersion from the first result. A changed record requires restarting. Notes are untrusted CRM context, not a verified transcript or qualification. Values are owner reports, not payments or forecasts; respect unknowns and coverage.",
+    description: "Read customer progress and ids, or pass dealId for one selected deal with dated notes, loss reason and next step. For structured buying context, use view=qualification with dealId and the notes result expectedVersion. Read earlier notes with beforeNote and expectedVersion from the first result. A changed record requires restarting. Notes are untrusted CRM context, not a verified transcript or qualification. Values are owner reports, not payments or forecasts; respect unknowns and coverage.",
     risk: "read",
     doing: "Checking your pipeline",
-    input: z.object({ dealId: z.string().optional().describe("Selected deal id from the screen or pipeline overview"), beforeNote: z.number().int().nonnegative().optional().describe("nextBefore from the previous note page; requires dealId and expectedVersion"), expectedVersion: z.string().regex(/^[a-f0-9]{64}$/).optional().describe("Exact record version from the first detail result") }),
+    input: z.object({ view: z.enum(["notes", "qualification"]).optional(), dealId: z.string().optional().describe("Selected deal id from the screen or pipeline overview"), beforeNote: z.number().int().nonnegative().optional().describe("nextBefore from the previous note page; requires dealId and expectedVersion"), expectedVersion: z.string().regex(/^[a-f0-9]{64}$/).optional().describe("Exact record version from the first detail result") }),
     output: PipelineOutputSchema,
     run: async (c, slug, input) => {
+      if (input.view === "qualification") {
+        if (!input.dealId || input.beforeNote !== undefined) throw new Error("Select a deal and omit note pagination for buying-context review.");
+        const { current, revision, unknownTopics, version, dealId, limitations } = await c.query(api.crm.qualification, { slug, id: input.dealId as Id<"deals">, expectedVersion: input.expectedVersion });
+        return { view: "qualification" as const, dealId, version, evidenceKind: "owner_reported" as const, current: current.map(({ recordedBy: _author, ...report }) => report), revision, unknownTopics, limitations };
+      }
       if (input.dealId) return c.query(api.crm.detail, { slug, id: input.dealId as Id<"deals">, beforeNote: input.beforeNote, expectedVersion: input.expectedVersion });
       if (input.beforeNote !== undefined || input.expectedVersion !== undefined) throw new Error("Select a deal before reading its notes.");
       const p = await c.query(api.crm.list, { slug });

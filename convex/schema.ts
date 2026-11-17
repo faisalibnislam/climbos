@@ -1,3 +1,4 @@
+import { dealQualificationV } from "./lib/dealQualification";
 import { customerProgressRecordV, customerProgressRuleV } from "./lib/customerProgress";
 import { emailReadinessValidator } from "./lib/emailReadiness";
 import { ownerQuestionV } from "./lib/ownerQuestion";
@@ -3050,6 +3051,7 @@ export default defineSchema({
 
   /** Mini-CRM: one row per person or company the owner is working with. */
   deals: defineTable({
+    qualification: v.optional(dealQualificationV),
     orgId: v.id("organizations"),
     name: v.string(),
     company: v.optional(v.string()),

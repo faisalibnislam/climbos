@@ -1,3 +1,13 @@
+## 17 November 2026 — buying-context entry and assistant review
+
+[Audit](growth-engine/deal-qualification-audit.md) traces optional owner input → revision-bound CRM persistence → exact/version-bound tool retrieval → editable review → export/deletion. Existing model routes and plan-engine version are unchanged.
+
+- `pnpm exec vitest run tests/convex/deal-qualification.test.ts tests/convex/pipeline-deal-review.test.ts tests/convex/crm.test.ts tests/convex/pipeline-assistant-context.test.ts tests/convex/crm-loss-reasons.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts tests/unit/deal-review-button.test.tsx` — **60 passed / eight files, 6.80 seconds**. Report states, unknown legacy data, bounds/dates, corrections, concurrent writes, exact records/versions, tenant and edit permissions, untrusted evidence, complete maximum-length tool output, the real assistant loop with a mocked model, bounded export, deal removal and workspace purge. No new consequential records or stage changes from entry or review.
+- `CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env E2E_BASE_URL=http://127.0.0.1:3420 pnpm exec playwright test e2e/deal-qualification.spec.ts --workers=1` — **two desktop/mobile checks passed, 32.9 seconds**. Entry, correction/history, unchanged stage/action records and an editable assistant question; serious/critical axe checks on entry/review, overflow and page-error checks passed. Mobile screenshot inspected. One intermediate run timed out because a screenshot-cleanup click outside the modal dismissed it; the test now waits for notifications to expire, without changing product behavior or weakening assertions. These checks do not establish full accessibility conformance.
+- `pnpm typecheck` — application and Convex passed. Scoped ESLint and `git diff --check` passed. Isolated local backend sync passed in **6.63 seconds**; the normal generator added the new validator module to `convex/_generated/api.d.ts`.
+
+No live model, real buyer, email provider or production deployment was exercised. Manual source descriptions remain owner reports, and conversation/qualification judgment is not independently validated. Full project scope remains incomplete.
+
 ## 17 November 2026 — competitive structure and external-context reasoning
 
 [Audit](growth-engine/strategic-landscape-audit.md) traces the new Five Forces/PESTLE decision contract through bounded research, generation, deterministic validation, persistence, owner review and later planning. Engine `v3.136-strategic-landscape`.

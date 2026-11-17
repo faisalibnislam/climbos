@@ -1,3 +1,7 @@
+## 17 November 2026 — structured buying context
+
+Customer progress now supports dated owner reports across six buying-decision topics, correction history, exact read-only assistant retrieval and bounded export. Missing, conflicting and outdated evidence stays explicit; no score, automatic contact or stage change is introduced. [Audit](deal-qualification-audit.md). 60 focused API/assistant/permission tests and two desktop/mobile checks passed, plus typecheck and scoped lint. Full project scope and real advice quality remain incomplete.
+
 ## 17 November 2026 — competitive pressures and external-context reasoning
 
 Added structured Five Forces/PESTLE decision support to the existing business-model workflow: bounded research, required new-generation contract, source-linked implications/tradeoffs/tests, explicit unassessed coverage, final validation, owner review and later-plan context. [Audit](strategic-landscape-audit.md). 126 focused regression/permission tests and two desktop/mobile checks passed, plus typecheck and scoped lint. No new agent/provider or action authority. Full scope and real-model quality remain incomplete.
