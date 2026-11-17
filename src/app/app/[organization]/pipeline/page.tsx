@@ -103,7 +103,7 @@ export default function PipelinePage() {
         </div>
       )}
       <Sheet open={Boolean(open)} onOpenChange={(o) => !o && setOpenId(null)} title={open?.name ?? "Possible sale"}>
-        {open ? <DealPanel key={`${open.id}:${open.currency}`} slug={slug} d={open} timezone={data?.timezone ?? null} onClose={() => setOpenId(null)} /> : <span />}
+        {open ? <DealPanel key={`${open.id}:${open.currency}`} slug={slug} d={open} canEdit={data?.canEdit === true} timezone={data?.timezone ?? null} onClose={() => setOpenId(null)} /> : <span />}
       </Sheet>
     </div>
   );
@@ -111,7 +111,7 @@ export default function PipelinePage() {
 
 type Deal = NonNullable<ReturnType<typeof useQuery<typeof api.crm.list>>>["deals"][number];
 
-function DealPanel({ slug, d, timezone, onClose }: { slug: string; d: Deal; timezone: string | null; onClose: () => void }) {
+function DealPanel({ slug, d, timezone, canEdit, onClose }: { slug: string; d: Deal; canEdit: boolean; timezone: string | null; onClose: () => void }) {
   const update = useMutation(api.crm.update);
   const remove = useMutation(api.crm.remove);
   const [value, setValue] = useState(d.value === null ? "" : String(minorToMajor(d.value, d.currency)));
@@ -150,7 +150,7 @@ function DealPanel({ slug, d, timezone, onClose }: { slug: string; d: Deal; time
       <DealReviewButton id={d.id} name={d.name} onPrepared={onClose} />
       <DealQualification slug={slug} id={d.id} />
       <DealHistory slug={slug} id={d.id} />
-      {d.stage === "lost" ? <LossReasonFields slug={slug} d={d} save={save} /> : null}
+      {d.stage === "lost" ? <LossReasonFields slug={slug} d={d} canEdit={canEdit} /> : null}
       <Field label={`Possible sale value (${d.currency})`} hint={d.valueNeedsReview ? "An earlier amount has unconfirmed currency units. Enter the correct value to confirm it; no historical amount is guessed." : "An owner-reported sale when you pick Sale recorded; not confirmation of payment."}>
         <Input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} onBlur={() => {
             if (value === (d.value === null ? "" : String(minorToMajor(d.value, d.currency)))) return;

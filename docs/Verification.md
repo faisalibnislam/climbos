@@ -1,3 +1,13 @@
+## 17 November 2026 — multiple reported loss reasons
+
+[Audit](growth-engine/multiple-loss-reasons-audit.md) records the confirmed gap, connected engine path and limits. Engine `v3.137-multiple-loss-reasons`.
+
+- `pnpm exec vitest run tests/convex/multiple-loss-reasons.test.ts tests/convex/crm-loss-reasons.test.ts tests/unit/pipeline-outcomes.test.tsx tests/unit/business-model-check.test.ts tests/convex/pipeline-planning-evidence.test.ts tests/convex/pipeline-deal-review.test.ts tests/convex/pipeline-assistant-context.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — **83 passed / nine files, 5.13 seconds**. Legacy/new input, unknowns, duplicates, stale/reopened decisions, unique-deal denominators, actual planning context, tenant/edit permissions and approval boundaries.
+- `CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env E2E_BASE_URL=http://127.0.0.1:3420 pnpm exec playwright test e2e/multiple-loss-reasons.spec.ts --workers=1` — **two desktop/mobile checks passed, 17.7 seconds**. Explicit multi-selection save and clear, unchanged action records, targeted axe/overflow and page errors. Mobile capture inspected; not full accessibility conformance.
+- `pnpm typecheck` passed for application and Convex. Scoped ESLint passed. Isolated local backend sync passed in **4.86 seconds**.
+
+No live provider, hosted deployment, paid evaluation or external customer action. Reports remain owner-reported; real-model interpretation and causal validity remain unverified. Full project scope remains incomplete.
+
 ## 17 November 2026 — recorded sales stage history
 
 [Audit](growth-engine/deal-stage-history-audit.md) records the traced writers, owner/assistant review path and limitations.

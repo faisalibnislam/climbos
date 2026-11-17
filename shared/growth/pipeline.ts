@@ -8,6 +8,12 @@ import { fractionDigits, majorToMinor, minorToMajor } from "../economics/currenc
 export const LOSS_REASONS = ["price", "timing", "no_need", "chose_competitor", "no_response", "not_a_fit", "other"] as const;
 export type LossReason = (typeof LOSS_REASONS)[number];
 
+/** New explicit lists supersede legacy single-reason records; overlap is not additional customers. */
+export function dealLossReasons(d: { lostReasons?: readonly LossReason[]; lostReason?: LossReason | null }): LossReason[] {
+  const values = d.lostReasons ?? (d.lostReason ? [d.lostReason] : []);
+  return LOSS_REASONS.filter(reason => values.includes(reason));
+}
+
 export const DEAL_VALUE_VERSION = "currency-minor-v1" as const;
 type DealMoney = { valueMinor?: number; currency: string; valueVersion?: string };
 
@@ -91,6 +97,7 @@ export interface PipelineDeal {
   wonAt?: number;
   lostAt?: number;
   lostReason?: LossReason;
+  lostReasons?: LossReason[];
   lostReasonNote?: string;
 }
 
@@ -102,6 +109,8 @@ export interface PipelineOutcomes {
   winRate: number | null;
   lossReasons: { reason: LossReason; count: number }[];
   lossReasonNotRecorded: number;
+  lossReasonDealCount: number;
+  modelRiskLossDeals: number;
   /** Records omitted by a bounded query; totals below describe the loaded sample only. */
   partial: boolean;
   closedWithoutCloseTime: number;
@@ -130,7 +139,7 @@ export function pipelineOutcomes(deals: readonly PipelineDeal[], options: { nowM
   const won = closed.filter((d) => d.stage === "won");
   const lost = closed.filter((d) => d.stage === "lost");
   const counts = new Map<LossReason, number>();
-  for (const d of lost) if (d.lostReason) counts.set(d.lostReason, (counts.get(d.lostReason) ?? 0) + 1);
+  for (const d of lost) for (const reason of dealLossReasons(d)) counts.set(reason, (counts.get(reason) ?? 0) + 1);
   const sources = new Map<string, { won: number; lost: number }>();
   for (const d of closed) {
     const row = sources.get(d.source) ?? { won: 0, lost: 0 };
@@ -146,7 +155,9 @@ export function pipelineOutcomes(deals: readonly PipelineDeal[], options: { nowM
     lost: lost.length,
     winRate: closed.length && !partial && !closedWithoutCloseTime && !invalidCloseTime ? won.length / closed.length : null,
     lossReasons: [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([reason, count]) => ({ reason, count })),
-    lossReasonNotRecorded: lost.filter((d) => !d.lostReason).length,
+    lossReasonNotRecorded: lost.filter(d => dealLossReasons(d).length === 0).length,
+    lossReasonDealCount: lost.filter(d => dealLossReasons(d).length > 0).length,
+    modelRiskLossDeals: lost.filter(d => dealLossReasons(d).some(r => r === "price" || r === "no_need" || r === "chose_competitor")).length,
     partial, closedWithoutCloseTime, invalidCloseTime,
     open,
     bySource: [...sources.entries()].map(([source, row]) => ({ source, ...row })),
@@ -165,7 +176,7 @@ export function pipelineOutcomesBrief(p: PipelineOutcomes): string {
   const sources = p.bySource.length ? `by source: ${p.bySource.map((s) => `${s.source} ${s.won} won / ${s.lost} lost`).join("; ")}` : "";
   return [
     `OWNER PIPELINE OUTCOMES (owner-entered CRM stages, last ${p.windowDays} days by recorded close date; counts describe loaded records): ${[rate, reasons, sources, `loaded open records: ${p.open.lead} lead, ${p.open.talking} talking, ${p.open.booked} booked`].filter(Boolean).join("; ")}.`,
-    "Use recorded loss reasons as owner-reported evidence about offer, price, fit or follow-up problems; an unrecorded reason is unknown, not any particular reason. Record sources describe how deals entered the CRM, not verified acquisition attribution. Missing/invalid close dates cannot be replaced by edit dates. These records are not verified payments or a complete customer cohort and do not show what caused a win or loss.",
+    "Reasons can overlap; each reason counts distinct lost deals, not extra customers, and the category totals must not be summed as deal counts. Use recorded loss reasons as owner-reported evidence about offer, price, fit or follow-up problems; an unrecorded reason is unknown, not any particular reason. Record sources describe how deals entered the CRM, not verified acquisition attribution. Missing/invalid close dates cannot be replaced by edit dates. These records are not verified payments or a complete customer cohort and do not show what caused a win or loss.",
   ].join(" ");
 }
 

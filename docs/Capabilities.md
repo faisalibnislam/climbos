@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Customer progress now accepts multiple optional loss reasons and preserves unknowns. Strategy and business-model checks receive all reported reasons while counting each lost deal once; edits are explicit, checked against the reviewed record and audited. [Behavior and limits](growth-engine/multiple-loss-reasons-audit.md).
+
 Customer progress now preserves dated stage changes from owner edits, bookings, prospect progress and inbound capture. Owners and the existing assistant can inspect retained history; old missing history remains unknown. [Coverage and limits](growth-engine/deal-stage-history-audit.md).
 
 

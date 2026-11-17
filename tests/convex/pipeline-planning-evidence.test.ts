@@ -71,4 +71,17 @@ describe("dated sales learning in actual recommendation context", () => {
     expect(context?.pipelineLossNotes).toEqual(["Buyer reported postponing this purchase"]);
     for (const table of ["approvals", "actionReceipts", "webhookDeliveries"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
   });
+  it("carries overlapping owner reasons into strategy and model checks without inflating customers", async () => {
+    const t = setup(), w = await workspace(t);
+    for (let i = 0; i < 5; i++) {
+      const id = await w.client.mutation(api.crm.create, { slug: w.slug, name: `Lost ${i}`, stage: "lost" });
+      await w.client.mutation(api.crm.update, { slug: w.slug, id, lostReasons: i === 0 ? ["price", "no_need", "chose_competitor"] : ["timing"], expectedLossState: { reasons: [], note: null, closedAt: now, stageSequence: 1 } });
+    }
+    const context = await t.query(internal.jobWrites.jobContext, { runId: await run(t, w) });
+    expect(context?.pipelineOutcomesText).toContain("0 won of 5 closed");
+    expect(context?.pipelineOutcomesText).toContain("Reasons can overlap");
+    const model = await t.query(internal.jobWrites.jobContext, { runId: await run(t, w, "business_model_check") });
+    expect(model?.businessModelSignalsText).toContain("1 of 5 lost deals with recorded reasons");
+  });
+
 });

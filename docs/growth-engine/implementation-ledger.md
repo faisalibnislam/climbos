@@ -1,3 +1,7 @@
+## 17 November 2026 — multiple reported loss reasons
+
+Closed the single-reason entry and overlapping-category denominator gaps in the existing CRM → strategy/model path. Explicit owner editing, stale-write checks, read-only viewer presentation and audit records preserve existing boundaries. 83 focused tests and two desktop/mobile checks passed, plus typecheck and scoped lint. [Audit](multiple-loss-reasons-audit.md). Full scope remains incomplete.
+
 ## 17 November 2026 — recorded sales stage history
 
 Added bounded, source-distinguished stage history across existing manual and automatic writers, owner inspection and version-bound assistant pagination. 85 focused tests and two browser checks pass; [audit](deal-stage-history-audit.md) preserves historical and real-model limits. No new action authority. Full project scope remains incomplete.

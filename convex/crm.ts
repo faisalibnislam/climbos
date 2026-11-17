@@ -6,7 +6,7 @@ import { qualificationTopicV, qualificationStateV } from "./lib/dealQualificatio
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
-import { DEAL_VALUE_VERSION, dealAttention, dealDueDate, dealTimezone, isDealDate, isDealTimestamp, dealValueMinor, dealValueNeedsReview, summarizeDealValues } from "../shared/growth/pipeline";
+import { DEAL_VALUE_VERSION, dealLossReasons, dealAttention, dealDueDate, dealTimezone, isDealDate, isDealTimestamp, dealValueMinor, dealValueNeedsReview, summarizeDealValues } from "../shared/growth/pipeline";
 import { minorToMajor } from "../shared/economics/currency";
 import { can, sha256Hex } from "../shared/policy";
 import { audit } from "./lib/audit";
@@ -113,13 +113,13 @@ export async function bookingCancelled(ctx: MutationCtx, b: Doc<"bookings">, not
 }
 
 function view(d: Doc<"deals">, now: number, timezone: string | null) {
-  return { attention: dealAttention(d, now, timezone), dueDate: dealDueDate(d, timezone), nextStepDate: isDealDate(d.nextStepDate) ? d.nextStepDate : null, id: d._id, name: d.name, company: d.company ?? null, email: d.email ?? null, stage: d.stage, source: d.source, value: dealValueNeedsReview(d) ? null : d.valueMinor ?? null, valueNeedsReview: dealValueNeedsReview(d), currency: d.currency, notes: d.notes.slice(-20), nextStep: d.nextStep ?? null, nextStepAt: isDealTimestamp(d.nextStepAt) ? d.nextStepAt : null, lostReason: d.lostReason ?? null, lostReasonNote: d.lostReasonNote ?? null, lostAt: d.lostAt ?? null, stageChangedAt: d.stageChangedAt ?? null, updatedAt: d.updatedAt, createdAt: d.createdAt };
+  return { attention: dealAttention(d, now, timezone), dueDate: dealDueDate(d, timezone), nextStepDate: isDealDate(d.nextStepDate) ? d.nextStepDate : null, id: d._id, stageSequence: d.stageHistory?.total ?? 0, name: d.name, company: d.company ?? null, email: d.email ?? null, stage: d.stage, source: d.source, value: dealValueNeedsReview(d) ? null : d.valueMinor ?? null, valueNeedsReview: dealValueNeedsReview(d), currency: d.currency, notes: d.notes.slice(-20), nextStep: d.nextStep ?? null, nextStepAt: isDealTimestamp(d.nextStepAt) ? d.nextStepAt : null, lostReason: d.lostReason ?? null, lostReasons: dealLossReasons(d), lostReasonNote: d.lostReasonNote ?? null, lostAt: d.lostAt ?? null, stageChangedAt: d.stageChangedAt ?? null, updatedAt: d.updatedAt, createdAt: d.createdAt };
 }
 
 export const list = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const { org, membership } = await requireOrgAccess(ctx, { slug }, "view");
     const loaded = await ctx.db.query("deals").withIndex("by_org_updated", (q) => q.eq("orgId", org._id)).order("desc").take(501);
     const rows = loaded.slice(0, 500);
     const hasMore = loaded.length > 500;
@@ -130,7 +130,7 @@ export const list = query({
     const timezone = dealTimezone(org.timezone);
     const observedAt = Date.now();
     return {
-      timezone, observedAt,
+      timezone, observedAt, canEdit: can(membership.role, "edit"),
       deals: rows.map(d => view(d, observedAt, timezone)),
       hasMore,
       valuesByStage: Object.fromEntries(STAGES.map(stage => [stage, summarizeDealValues(rows.filter(d => d.stage === stage), currency, hasMore)])),
@@ -158,7 +158,7 @@ export const detail = query({
     return {
       view: "deal" as const, version, valueUnit: "major_currency_units" as const,
       evidenceKind: "recorded_crm_context" as const, valueEvidenceKind: "owner_reported" as const,
-      deal: { id: d._id, name: d.name, company: d.company ?? null, stage: d.stage, source: d.source, currency: d.currency, value: needsReview || d.valueMinor === undefined ? null : minorToMajor(d.valueMinor, d.currency), valueNeedsReview: needsReview, nextStep: d.nextStep ?? null, nextStepAt: date(d.nextStepAt, true), nextStepDate: isDealDate(d.nextStepDate) ? d.nextStepDate : null, timezone: dealTimezone(org.timezone), attention: dealAttention(d, now, org.timezone), stageChangedAt: date(d.stageChangedAt), wonAt: date(d.wonAt), lostAt: date(d.lostAt), lostReason: d.lostReason ?? null, lostReasonNote: d.lostReasonNote ?? null, updatedAt: date(d.updatedAt) },
+      deal: { id: d._id, name: d.name, company: d.company ?? null, stage: d.stage, source: d.source, currency: d.currency, value: needsReview || d.valueMinor === undefined ? null : minorToMajor(d.valueMinor, d.currency), valueNeedsReview: needsReview, nextStep: d.nextStep ?? null, nextStepAt: date(d.nextStepAt, true), nextStepDate: isDealDate(d.nextStepDate) ? d.nextStepDate : null, timezone: dealTimezone(org.timezone), attention: dealAttention(d, now, org.timezone), stageChangedAt: date(d.stageChangedAt), wonAt: date(d.wonAt), lostAt: date(d.lostAt), lostReason: d.lostReason ?? null, lostReasons: dealLossReasons(d), lostReasonNote: d.lostReasonNote ?? null, updatedAt: date(d.updatedAt) },
       notes: d.notes.slice(start, end).map((n, offset) => ({ index: start + offset, text: n.text, recordedAt: date(n.at), basis: n.userId ? "owner_reported" as const : "recorded_context" as const })).reverse(),
       noteCoverage: { stored: d.notes.length, returned: end - start, nextBefore: start > 0 ? start : null, latestPage: end === d.notes.length },
       limitations: "Notes are saved CRM context, not a verified transcript or verbatim buyer statements. Entries without an author may be automated or imported. Dates record entry time, not necessarily conversation time. Earlier history may have been dropped by the 200-note retention limit. Read relevant earlier pages before concluding that evidence is absent. Entry source is not acquisition attribution. Stages, values and notes do not prove qualification, willingness to buy or payment, and are not permission to contact. Missing or invalid dates remain unknown. Review advice does not send, schedule, change this deal or approve anything.",
@@ -260,6 +260,8 @@ export const update = mutation({
     email: v.optional(v.string()),
     /** Why a lost deal was lost; only for deals that are (or are moving to) lost. `null` clears it. */
     lostReason: v.optional(v.union(lossReasonV, v.null())),
+    lostReasons: v.optional(v.array(lossReasonV)),
+    expectedLossState: v.optional(v.object({ reasons: v.array(lossReasonV), note: v.union(v.string(), v.null()), closedAt: v.union(v.number(), v.null()), stageSequence: v.number() })),
     lostReasonNote: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, a) => {
@@ -299,8 +301,17 @@ export const update = mutation({
     if (a.note?.trim()) patch.notes = [...d!.notes, { text: a.note.trim().slice(0, 2000), at: now, userId: user._id }].slice(-200);
     const finalStage = a.stage ?? d!.stage;
     if (a.stage === "won" && dealValueNeedsReview({ ...d!, ...patch })) throw appError("INVALID", "Confirm the sale value in its currency before recording this sale.");
-    if ((a.lostReason || a.lostReasonNote?.trim()) && finalStage !== "lost") throw appError("INVALID", "A loss reason can only be recorded for a lost deal.");
-    if (a.lostReason !== undefined) patch.lostReason = a.lostReason ?? undefined;
+    if ((a.lostReason || a.lostReasons?.length || a.lostReasonNote?.trim()) && finalStage !== "lost") throw appError("INVALID", "A loss reason can only be recorded for a lost deal.");
+    if (a.lostReasons !== undefined && a.lostReason !== undefined) throw appError("INVALID", "Choose the multiple-reason or older single-reason input, not both.");
+    if (a.lostReasons !== undefined || (d!.lostReasons !== undefined && (a.lostReason !== undefined || a.lostReasonNote !== undefined))) {
+      if (!a.expectedLossState || a.expectedLossState.closedAt !== (d!.lostAt ?? null) || a.expectedLossState.stageSequence !== (d!.stageHistory?.total ?? 0) || a.expectedLossState.note !== (d!.lostReasonNote ?? null) || JSON.stringify(dealLossReasons({ lostReasons: a.expectedLossState.reasons })) !== JSON.stringify(dealLossReasons(d!))) throw appError("INVALID", "The loss record changed or was not reviewed. Review the latest reasons before saving.");
+    }
+    if (a.lostReasons !== undefined) {
+      if (a.lostReasons.length > 7 || new Set(a.lostReasons).size !== a.lostReasons.length) throw appError("INVALID", "Choose each reason at most once.");
+      patch.lostReasons = dealLossReasons({ lostReasons: a.lostReasons });
+      patch.lostReason = undefined;
+    }
+    if (a.lostReason !== undefined) { patch.lostReason = a.lostReason ?? undefined; patch.lostReasons = undefined; }
     if (a.lostReasonNote !== undefined) patch.lostReasonNote = a.lostReasonNote?.trim().slice(0, 240) || undefined;
     if (a.stage && a.stage !== d!.stage) {
       patch.stage = a.stage;
@@ -308,7 +319,7 @@ export const update = mutation({
       patch.stageChangedAt = now;
       if (a.stage === "lost") patch.lostAt = now;
       // Reopening a lost deal clears its loss record rather than keeping a stale reason.
-      if (d!.stage === "lost") Object.assign(patch, { lostAt: undefined, lostReason: undefined, lostReasonNote: undefined });
+      if (d!.stage === "lost") Object.assign(patch, { lostAt: undefined, lostReason: undefined, lostReasons: undefined, lostReasonNote: undefined });
       if (a.stage === "won") {
         patch.wonAt = now;
         const value = a.value !== undefined ? patch.valueMinor : d!.valueMinor;
@@ -319,6 +330,7 @@ export const update = mutation({
     await ctx.db.patch(a.id, patch);
     const after = (await ctx.db.get(a.id))!;
     await syncRevenue(ctx, after);
+    if (JSON.stringify(dealLossReasons(d!)) !== JSON.stringify(dealLossReasons(after)) || d!.lostReasonNote !== after.lostReasonNote) await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "crm.loss_reasons", subjectType: "deal", subjectId: a.id, summary: "Updated owner-reported loss reasons or context; no causal conclusion inferred." });
     if (a.value !== undefined && (d!.valueMinor !== after.valueMinor || d!.valueVersion !== after.valueVersion)) await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "crm.value", subjectType: "deal", subjectId: a.id, summary: `Updated owner-reported deal value in ${after.currency}.` });
     if (a.stage && a.stage !== d!.stage) await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "crm.stage", subjectType: "deal", subjectId: a.id, summary: `${after.name}: ${d!.stage} → ${a.stage}.` });
   },

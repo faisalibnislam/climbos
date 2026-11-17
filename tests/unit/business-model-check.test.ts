@@ -138,7 +138,7 @@ describe("first-party model signals", () => {
   it("uses owner pipeline reasons and stage, and says when nothing is available", () => {
     const deals = Array.from({ length: 6 }, (_, i) => ({ stage: "lost" as const, source: "manual", createdAt: now - 60 * DAY, updatedAt: now - DAY, lostAt: now - DAY, lostReason: i < 3 ? "chose_competitor" as const : "timing" as const }));
     const s = ownerModelSignals({ nowMs: now, currency: "USD", revenueEvents: [], deals, lifecycleStage: "decline", competitorChanges90d: 2 });
-    expect(s.find((x) => x.key === "loss_reasons")).toMatchObject({ direction: "headwind", basis: "owner_report", detail: expect.stringContaining("3 of 6 recorded loss reasons;") });
+    expect(s.find((x) => x.key === "loss_reasons")).toMatchObject({ direction: "headwind", basis: "owner_report", detail: expect.stringContaining("3 of 6 lost deals with recorded reasons mention at least one of these factors;") });
     expect(s.find((x) => x.key === "lifecycle_stage")?.direction).toBe("headwind");
     expect(s.find((x) => x.key === "competitor_changes")?.detail).toContain("2 change summaries in the loaded sample");
     expect(ownerModelSignalsBrief([])).toContain("none available");
@@ -210,5 +210,16 @@ describe("first-party model signals", () => {
     expect(text).toContain("verdict watch (medium confidence)");
     expect(text).toContain('bold "bold model"');
     expect(businessModelPlanContext(null)).toBe("");
+  });
+});
+
+describe("overlapping reported losses", () => {
+  it("uses distinct deals rather than reason mentions for the review heuristic", () => {
+    const deals = Array.from({ length: 5 }, (_, i) => ({ stage: "lost" as const, source: "manual", createdAt: now - DAY, updatedAt: now, lostAt: now, lostReasons: i === 0 ? ["price" as const, "no_need" as const, "chose_competitor" as const] : ["timing" as const] }));
+    const input = { nowMs: now, currency: "USD", revenueEvents: [], deals, competitorChanges90d: 0 };
+    const signal = ownerModelSignals(input).find(s => s.key === "loss_reasons");
+    expect(signal).toMatchObject({ direction: "neutral", detail: expect.stringContaining("1 of 5 lost deals") });
+    expect(signal?.detail).toContain("multiple reasons on one deal count once");
+    expect(ownerModelSignals({ ...input, deals: deals.slice(0, 1) }).find(s => s.key === "loss_reasons")).toBeUndefined();
   });
 });

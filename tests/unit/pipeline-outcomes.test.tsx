@@ -96,8 +96,8 @@ describe("owner pipeline outcomes", () => {
   });
 
   it("offers optional loss reasons with an explicit not-recorded choice", () => {
-    const html = renderToStaticMarkup(createElement(LossReasonFields, { slug: "acme", d: { id: "d1" as never, lostReason: null, lostReasonNote: null }, save: () => undefined }));
-    expect(html).toContain("Why didn&#x27;t it go ahead?");
-    expect(html).toContain("Leave it blank if you don&#x27;t know");
+    const html = renderToStaticMarkup(createElement(LossReasonFields, { slug: "acme", d: { id: "d1" as never, lostReason: null, lostReasonNote: null } }));
+    expect(html).toContain("Why didn’t it go ahead?");
+    expect(html).toContain("Leave it blank if you don’t know");
   });
 });
