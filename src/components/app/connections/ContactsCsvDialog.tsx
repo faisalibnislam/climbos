@@ -1,5 +1,7 @@
 "use client";
 
+import { ProviderTitle } from "./ProviderMark";
+
 import { CustomerProgressDialog } from "./CustomerProgressDialog";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -79,7 +81,7 @@ export function ContactsCsvDialog({ slug, trigger }: { slug: string; trigger: Re
     >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent
-        title="Upload contacts"
+        title={<ProviderTitle provider="crm_csv">Upload contacts</ProviderTitle>}
         description="People you already know. Re-uploads update, never duplicate."
         className="max-w-2xl"
       >

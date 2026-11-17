@@ -1,3 +1,9 @@
+## 17 November 2026 — connection dialog service icons
+
+[Audit](growth-engine/connection-dialog-icons-audit.md). Six actual setup dialogs checked across desktop/mobile, with keyboard dismissal/focus return, unchanged authority records, no serious/critical automated accessibility findings after animation and no horizontal overflow. Screenshots inspected. App/Convex typecheck, changed-file ESLint and diff checks passed. No provider calls or real accounts.
+
+Review-loop expansion after `v3.147`: **423 tests in 29 review-related files passed, 16.23 seconds**. This overlaps prior focused suites; it is not an additional independent test count or a full repository pass.
+
 ## 17 November 2026 — reviewed draft selection
 
 [Audit](growth-engine/reviewed-draft-selection-audit.md). Engine `v3.147-reviewed-draft-selection`.

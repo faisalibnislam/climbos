@@ -1,3 +1,7 @@
+## 17 November — service icons in connection dialogs
+
+Shared local provider marks now precede setup, import and disconnect titles and match connection cards. Six desktop/mobile setup checks passed with unchanged authority records; no real account actions. [Audit](connection-dialog-icons-audit.md).
+
 ## 17 November — passing draft selection
 
 `v3.147-reviewed-draft-selection`: corrected both revision and best-of-two selection so a complete pass outranks a draft with a failed required criterion. Two red runtime cases became green; 238 focused tests passed. [Audit](reviewed-draft-selection-audit.md).

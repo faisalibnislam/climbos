@@ -1,5 +1,7 @@
 "use client";
 
+import { ProviderTitle } from "./ProviderMark";
+
 import { useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useState, type FormEvent, type ReactNode } from "react";
@@ -72,7 +74,7 @@ export function ApiKeyDialog({ slug, provider, trigger }: { slug: string; provid
       }}
     >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent title={copy.title}>
+      <DialogContent title={<ProviderTitle provider={provider}>{copy.title}</ProviderTitle>}>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <Scannable text={copy.steps.map((s, i) => `${i + 1}. ${s}`).join("\n")} shape="steps" max={copy.steps.length} tone="muted" />
           <Field label={copy.label} hint={copy.hint} error={error ?? undefined}>

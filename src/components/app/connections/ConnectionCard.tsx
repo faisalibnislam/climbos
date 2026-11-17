@@ -3,41 +3,12 @@
 import { useAction, useMutation } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
-import { ArrowRight, Contact, CreditCard, FileSpreadsheet, Globe, RefreshCw, UserSearch, type LucideIcon } from "@/components/icons"
+import { ArrowRight, RefreshCw } from "@/components/icons"
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { Badge, Button, Callout, ConfirmDialog, IconTile, SocialIcon, StatusPill, toast, type Tone } from "@/components/ui";
+import { Badge, Button, Callout, ConfirmDialog, StatusPill, toast } from "@/components/ui";
 
-/** Real network marks for social/ad/analytics providers; neutral icon tiles for the rest. */
-const PROVIDER_NETWORK: Record<string, string> = {
-  website: "website",
-  ga4: "google",
-  search_console: "google",
-  google_ads: "google",
-  google_business_profile: "google",
-  meta_ads: "facebook",
-  facebook_pages: "facebook",
-  instagram: "instagram",
-  email_resend: "email",
-  linkedin: "linkedin",
-  x: "x",
-  tiktok: "tiktok",
-  pinterest: "pinterest",
-  youtube: "youtube",
-};
-const PROVIDER_VISUAL: Record<string, { icon: LucideIcon; tone: Tone }> = {
-  stripe_revenue: { icon: CreditCard, tone: "violet" },
-  csv_revenue: { icon: FileSpreadsheet, tone: "green" },
-  crm_csv: { icon: Contact, tone: "teal" },
-  enrichment: { icon: UserSearch, tone: "brand" },
-};
-
-function ProviderMark({ provider }: { provider: string }) {
-  const network = PROVIDER_NETWORK[provider];
-  if (network) return <SocialIcon network={network} variant="tile" size="xl" />;
-  const v = PROVIDER_VISUAL[provider] ?? { icon: Globe, tone: "neutral" as Tone };
-  return <IconTile icon={v.icon} tone={v.tone} size="md" className="size-9" />;
-}
+import { ProviderMark, ProviderTitle } from "./ProviderMark";
 import { errorInfo } from "../errors";
 import { formatDateTime, relativeTime } from "../money";
 import { AccountChooser, ACCOUNT_KIND } from "./AccountChooser";
@@ -347,7 +318,7 @@ function Actions({
       <ConfirmDialog
         key="disconnect"
         tone="danger"
-        title={`Disconnect ${item.name}?`}
+        title={<ProviderTitle provider={item.provider}>Disconnect {item.name}?</ProviderTitle>}
         description="Revokes access and deletes the key. Scheduled work using it stops. Imported numbers stay."
         confirmLabel="Disconnect"
         onConfirm={onDisconnect}

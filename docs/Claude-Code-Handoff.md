@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+Connection setup and disconnect popups now show the service icon before the title, matching their cards. Stripe, Resend and WordPress use local brand artwork; file imports use colored file/contact symbols. [Scope and browser verification](growth-engine/connection-dialog-icons-audit.md).
+
 The review loop now keeps a draft that passes every required check ahead of a higher-average draft that fails one criterion. Both revision and best-of-two paths are covered; strategy-option diversity, budgets and approval rules are unchanged. [Audit](growth-engine/reviewed-draft-selection-audit.md).
 
 Review scoring now preserves fractional values and rejects missing, duplicate or invalid required scores. A live education draft previously marked passed was rechecked as below the bar; original results remain intact. [Repair and verification](growth-engine/review-score-integrity-audit.md), [live quality report and costs](Strategy-Quality-2026-11-17.md).

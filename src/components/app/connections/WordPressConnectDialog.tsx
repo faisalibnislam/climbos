@@ -1,5 +1,7 @@
 "use client";
 
+import { ProviderTitle } from "./ProviderMark";
+
 import { useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useState, type FormEvent, type ReactNode } from "react";
@@ -39,7 +41,7 @@ export function WordPressConnectDialog({ slug, trigger }: { slug: string; trigge
       if (!next) { setSiteUrl(""); setUsername(""); setApplicationPassword(""); setError(null); }
     }}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent title="Connect WordPress">
+      <DialogContent title={<ProviderTitle provider="wordpress">Connect WordPress</ProviderTitle>}>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <Scannable text={[
             "In WordPress, open Users → Profile → Application Passwords.",

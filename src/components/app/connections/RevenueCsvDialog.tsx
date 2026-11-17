@@ -1,5 +1,7 @@
 "use client";
 
+import { ProviderTitle } from "./ProviderMark";
+
 import { useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Download } from "@/components/icons"
@@ -83,7 +85,7 @@ export function RevenueCsvDialog({ slug, trigger }: { slug: string; trigger: Rea
       }}
     >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent title="Upload revenue CSV" description="Rows already imported are skipped." className="max-w-2xl">
+      <DialogContent title={<ProviderTitle provider="csv_revenue">Upload revenue CSV</ProviderTitle>} description="Rows already imported are skipped." className="max-w-2xl">
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <div>
             <h3 className="heading-card">Columns</h3>
