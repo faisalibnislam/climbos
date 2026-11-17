@@ -78,6 +78,11 @@ export const LOSS_REASON_LABEL: Record<LossReason, string> = {
   other: "Other",
 };
 
+/** Dates used by recorded deal context; unknown or non-representable values cannot become owner deadlines. */
+export function isDealTimestamp(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && Math.abs(value) <= 8.64e15;
+}
+
 export interface PipelineDeal {
   stage: "lead" | "talking" | "booked" | "won" | "lost";
   source: string;

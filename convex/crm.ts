@@ -1,8 +1,9 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
-import { DEAL_VALUE_VERSION, dealValueMinor, dealValueNeedsReview, summarizeDealValues } from "../shared/growth/pipeline";
+import { DEAL_VALUE_VERSION, isDealTimestamp, dealValueMinor, dealValueNeedsReview, summarizeDealValues } from "../shared/growth/pipeline";
 import { minorToMajor } from "../shared/economics/currency";
+import { sha256Hex } from "../shared/policy";
 import { audit } from "./lib/audit";
 import { emitEvent } from "./webhooks";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
@@ -62,7 +63,7 @@ export async function bookingCancelled(ctx: MutationCtx, b: Doc<"bookings">, not
 }
 
 function view(d: Doc<"deals">) {
-  return { id: d._id, name: d.name, company: d.company ?? null, email: d.email ?? null, stage: d.stage, source: d.source, value: dealValueNeedsReview(d) ? null : d.valueMinor ?? null, valueNeedsReview: dealValueNeedsReview(d), currency: d.currency, notes: d.notes.slice(-20), nextStep: d.nextStep ?? null, nextStepAt: d.nextStepAt ?? null, lostReason: d.lostReason ?? null, lostReasonNote: d.lostReasonNote ?? null, lostAt: d.lostAt ?? null, stageChangedAt: d.stageChangedAt ?? null, updatedAt: d.updatedAt, createdAt: d.createdAt };
+  return { id: d._id, name: d.name, company: d.company ?? null, email: d.email ?? null, stage: d.stage, source: d.source, value: dealValueNeedsReview(d) ? null : d.valueMinor ?? null, valueNeedsReview: dealValueNeedsReview(d), currency: d.currency, notes: d.notes.slice(-20), nextStep: d.nextStep ?? null, nextStepAt: isDealTimestamp(d.nextStepAt) ? d.nextStepAt : null, lostReason: d.lostReason ?? null, lostReasonNote: d.lostReasonNote ?? null, lostAt: d.lostAt ?? null, stageChangedAt: d.stageChangedAt ?? null, updatedAt: d.updatedAt, createdAt: d.createdAt };
 }
 
 export const list = query({
@@ -81,6 +82,33 @@ export const list = query({
       hasMore,
       valuesByStage: Object.fromEntries(STAGES.map(stage => [stage, summarizeDealValues(rows.filter(d => d.stage === stage), currency, hasMore)])),
       totals: { open: open.length, wonValue: won.totalMinor, pipelineValue: pipeline.totalMinor, currency, won, pipeline },
+    };
+  },
+});
+
+/** Exact selected-record review, independent of the bounded board list. No action or permission is inferred. */
+export const detail = query({
+  args: { slug: v.string(), id: v.id("deals"), beforeNote: v.optional(v.number()), expectedVersion: v.optional(v.string()) },
+  handler: async (ctx, { slug, id, beforeNote, expectedVersion }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const d = assertSameOrg(await ctx.db.get(id), org._id, "deal");
+    // Bind pagination to the entire record, including rolling note retention. Millisecond edit times alone are insufficient.
+    const version = await sha256Hex(JSON.stringify(d));
+    if (beforeNote !== undefined && !expectedVersion) throw appError("INVALID", "Use the version from the first review page when reading earlier notes.");
+    if (expectedVersion !== undefined && expectedVersion !== version) throw appError("INVALID", "This deal changed. Read it again before reviewing earlier notes.");
+    const end = beforeNote ?? d.notes.length;
+    if (!Number.isSafeInteger(end) || end < 0 || end > d.notes.length) throw appError("INVALID", "That note position is not available. Read the deal again.");
+    const start = Math.max(0, end - 2);
+    const now = Date.now();
+    const date = (value: number | undefined, allowFuture = false) => isDealTimestamp(value) && (allowFuture || value <= now) ? new Date(value).toISOString() : null;
+    const needsReview = dealValueNeedsReview(d);
+    return {
+      view: "deal" as const, version, valueUnit: "major_currency_units" as const,
+      evidenceKind: "recorded_crm_context" as const, valueEvidenceKind: "owner_reported" as const,
+      deal: { id: d._id, name: d.name, company: d.company ?? null, stage: d.stage, source: d.source, currency: d.currency, value: needsReview || d.valueMinor === undefined ? null : minorToMajor(d.valueMinor, d.currency), valueNeedsReview: needsReview, nextStep: d.nextStep ?? null, nextStepAt: date(d.nextStepAt, true), stageChangedAt: date(d.stageChangedAt), wonAt: date(d.wonAt), lostAt: date(d.lostAt), lostReason: d.lostReason ?? null, lostReasonNote: d.lostReasonNote ?? null, updatedAt: date(d.updatedAt) },
+      notes: d.notes.slice(start, end).map((n, offset) => ({ index: start + offset, text: n.text, recordedAt: date(n.at), basis: n.userId ? "owner_reported" as const : "recorded_context" as const })).reverse(),
+      noteCoverage: { stored: d.notes.length, returned: end - start, nextBefore: start > 0 ? start : null, latestPage: end === d.notes.length },
+      limitations: "Notes are saved CRM context, not a verified transcript or verbatim buyer statements. Entries without an author may be automated or imported. Dates record entry time, not necessarily conversation time. Earlier history may have been dropped by the 200-note retention limit. Read relevant earlier pages before concluding that evidence is absent. Entry source is not acquisition attribution. Stages, values and notes do not prove qualification, willingness to buy or payment, and are not permission to contact. Missing or invalid dates remain unknown. Review advice does not send, schedule, change this deal or approve anything.",
     };
   },
 });
@@ -143,7 +171,10 @@ export const update = mutation({
       patch.valueVersion = DEAL_VALUE_VERSION;
     }
     if (a.nextStep !== undefined) patch.nextStep = a.nextStep?.trim().slice(0, 200) || undefined;
-    if (a.nextStepAt !== undefined) patch.nextStepAt = a.nextStepAt ?? undefined;
+    if (a.nextStepAt !== undefined) {
+      if (a.nextStepAt !== null && !isDealTimestamp(a.nextStepAt)) throw appError("INVALID", "Choose a valid next-step date, or leave it unknown.");
+      patch.nextStepAt = a.nextStepAt ?? undefined;
+    }
     if (a.note?.trim()) patch.notes = [...d!.notes, { text: a.note.trim().slice(0, 2000), at: now, userId: user._id }].slice(-200);
     const finalStage = a.stage ?? d!.stage;
     if (a.stage === "won" && dealValueNeedsReview({ ...d!, ...patch })) throw appError("INVALID", "Confirm the sale value in its currency before recording this sale.");

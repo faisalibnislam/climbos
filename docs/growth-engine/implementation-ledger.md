@@ -1,3 +1,7 @@
+## 17 November 2026 — selected customer review
+
+Connected existing CRM notes and loss reasons to the existing assistant tool through exact, tenant-scoped record reads and version-bound note pagination. Added an editable-review shortcut and next-step date validation. No automatic contact, approval or CRM mutation. [Audit](selected-deal-review-audit.md) records actual tests and limits.
+
 ## 17 November 2026 — dated sales-learning coverage
 
 Strategy and business-model inputs now exclude undated/invalid close dates from recent decisions and withhold aggregate rates for incomplete coverage. Refreshed audience timestamps no longer falsely invalidate unchanged model-check retries; real input changes remain blocked. [Audit](pipeline-outcome-coverage-audit.md) records limits and the actual path.

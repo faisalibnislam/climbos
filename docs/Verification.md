@@ -1,3 +1,15 @@
+## 17 November 2026 — selected-deal review in the assistant
+
+The existing pipeline tool now reads exact selected records, including dated notes and loss reasons with version-bound pagination. A customer-progress shortcut prepares an editable review question. New next-step dates are validated; invalid legacy dates remain unknown. [Audit](growth-engine/selected-deal-review-audit.md).
+
+- `pnpm exec vitest run tests/convex/pipeline-deal-review.test.ts tests/convex/pipeline-assistant-context.test.ts tests/convex/crm.test.ts tests/convex/crm-loss-reasons.test.ts tests/convex/climb.test.ts tests/unit/climb-tool-output.test.ts tests/unit/deal-review-button.test.tsx tests/unit/pipeline-outcomes.test.tsx tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts` — 63 passed across ten files, 4.64 seconds.
+- `CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env E2E_BASE_URL=http://127.0.0.1:3420 pnpm exec playwright test e2e/pipeline-review.spec.ts --workers=1` — desktop and mobile passed, 15.1 seconds. Editable question, preserved unsent text, unchanged deals/chat/workflow/approval/action/webhook records, no horizontal overflow, no serious/critical automated accessibility findings. Mobile screenshots were visually inspected.
+- `pnpm typecheck` — root and Convex passed, including the final evidence-label contract.
+- `pnpm exec eslint convex/crm.ts convex/lib/climbTools.ts convex/lib/climbConfig.ts shared/agents/specs.ts shared/growth/pipeline.ts 'src/app/app/[organization]/pipeline/page.tsx' src/components/app/pipeline/DealReviewButton.tsx tests/convex/pipeline-deal-review.test.ts tests/convex/pipeline-assistant-context.test.ts tests/unit/deal-review-button.test.tsx e2e/pipeline-review.spec.ts` — passed. Final changed-file check of CRM, tool output, detail tests and browser test also passed.
+- `git diff --check` — passed.
+
+All four initial new query/tool regressions failed before implementation. An initial test-adapter TypeScript mismatch was corrected. The first browser scan caught the sheet mid-animation; both viewports passed after waiting for actual animation completion, with the accessibility scan retained and no color changes. The real chat loop uses a mocked model to prove exact-record routing, untrusted evidence transport and absence of consequential actions; it does not establish generated advice quality. Only the isolated loopback fixture backend was synced. Final date-validation/evidence-label changes were covered by the final unit/Convex run; the browser checks cover the unchanged UI interaction. No paid/live model, real provider action, hosted deployment, schema migration or new provider was used. Full qualification, conversation evaluation and the broader project remain partial.
+
 ## 17 November 2026 — sales outcome dates, coverage and stable model-check retries
 
 Sales-learning context now requires recorded close dates and preserves incomplete-read uncertainty. Broader regression exposed and repaired audience timestamp drift during business-model retries without removing full-input change detection. [Audit and limits](growth-engine/pipeline-outcome-coverage-audit.md).

@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Customer progress now offers **Review next step**: prepare an editable assistant question about the selected customer. The assistant can read that record’s saved notes, dates, loss reason and next step, with version-bound access to earlier notes. The shortcut submits nothing; advice does not contact the customer or change the deal. Notes are recorded context, not verified transcripts or proof of qualification. See [the audit](growth-engine/selected-deal-review-audit.md).
+
 Sales-learning inputs now use recorded decision dates rather than later edits. Missing dates and truncated history keep aggregate win rates unknown, while valid dated counts and owner-reported loss reasons remain available. CRM entry sources are not treated as acquisition attribution, and these summaries never authorize follow-up. Business-model retries retain stable context when only the audience read time changes. See [the audit](growth-engine/pipeline-outcome-coverage-audit.md).
 
 Retention and expansion advice now keeps recorded evidence classes distinct and checks outcomes, comparisons and decision rules before real v2 work is marked verified. Observation periods can remain unknown with an owner input to resolve them. These are recommendation checks, not customer-event tracking or automatic sequence enrollment. See [the audit](growth-engine/retention-recommendation-audit.md).

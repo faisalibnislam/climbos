@@ -12,6 +12,7 @@ import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary
 import { StatBlocks } from "@/components/ds/content";
 import { Badge, Button, ConfirmDialog, DatePicker, EmptyState, Field, Input, Select, Sheet, Textarea, toast } from "@/components/ui";
 import { LossReasonFields } from "@/components/app/pipeline/LossReasonFields";
+import { DealReviewButton } from "@/components/app/pipeline/DealReviewButton";
 import { DealAttentionBadges } from "@/components/app/pipeline/DealAttentionBadges";
 import { dealAttention, dealValueSummaryLabel, formatDealValue } from "@shared/growth/pipeline";
 import { minorToMajor } from "@shared/economics/currency";
@@ -101,7 +102,7 @@ export default function PipelinePage() {
         </div>
       )}
       <Sheet open={Boolean(open)} onOpenChange={(o) => !o && setOpenId(null)} title={open?.name ?? "Possible sale"}>
-        {open ? <DealPanel key={`${open.id}:${open.currency}`} slug={slug} d={open} onDeleted={() => setOpenId(null)} /> : <span />}
+        {open ? <DealPanel key={`${open.id}:${open.currency}`} slug={slug} d={open} onClose={() => setOpenId(null)} /> : <span />}
       </Sheet>
     </div>
   );
@@ -109,7 +110,7 @@ export default function PipelinePage() {
 
 type Deal = NonNullable<ReturnType<typeof useQuery<typeof api.crm.list>>>["deals"][number];
 
-function DealPanel({ slug, d, onDeleted }: { slug: string; d: Deal; onDeleted: () => void }) {
+function DealPanel({ slug, d, onClose }: { slug: string; d: Deal; onClose: () => void }) {
   const update = useMutation(api.crm.update);
   const remove = useMutation(api.crm.remove);
   const [value, setValue] = useState(d.value === null ? "" : String(minorToMajor(d.value, d.currency)));
@@ -138,6 +139,7 @@ function DealPanel({ slug, d, onDeleted }: { slug: string; d: Deal; onDeleted: (
       <Field label="Where are you with this person?">
         <Select options={STAGES.map((s) => ({ value: s.value, label: s.label }))} value={d.stage} onValueChange={(v) => save({ slug, id: d.id, stage: v as Stage })} />
       </Field>
+      <DealReviewButton id={d.id} name={d.name} onPrepared={onClose} />
       {d.stage === "lost" ? <LossReasonFields slug={slug} d={d} save={save} /> : null}
       <Field label={`Possible sale value (${d.currency})`} hint={d.valueNeedsReview ? "An earlier amount has unconfirmed currency units. Enter the correct value to confirm it; no historical amount is guessed." : "An owner-reported sale when you pick Sale recorded; not confirmation of payment."}>
         <Input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} onBlur={() => {
@@ -179,7 +181,7 @@ function DealPanel({ slug, d, onDeleted }: { slug: string; d: Deal; onDeleted: (
         onConfirm={async () => {
           try {
             await remove({ slug, id: d.id });
-            onDeleted();
+            onClose();
           } catch (e) {
             toast({ tone: "danger", title: errorMessage(e) });
           }
