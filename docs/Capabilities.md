@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Creative precedent retrieval no longer treats common instruction words as a mechanism or general prose as geographic/business-model evidence. Missing structured location/type stays missing in its explanation. [Audit and limits](growth-engine/precedent-fit-signals-audit.md).
+
 The default starter/focused planner now actually receives the existing creative precedent library; an outdated heading check had omitted it. Writers and critics receive the same complete selected records and source/transfer limits. Uncited bold hypotheses remain available. [Audit, costs and limits](growth-engine/strategy-precedent-context-audit.md).
 
 Connection setup and disconnect popups now show the service icon before the title, matching their cards. Stripe, Resend and WordPress use local brand artwork; file imports use colored file/contact symbols. [Scope and browser verification](growth-engine/connection-dialog-icons-audit.md).

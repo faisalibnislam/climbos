@@ -1680,7 +1680,11 @@ export const CREATIVE_PRECEDENTS: readonly CreativePrecedent[] = [
   ...CREATIVE_PRECEDENT_EXPANSION,
 ];
 
-const STOP = new Set(["and", "the", "for", "with", "from", "into", "that", "this", "business", "company", "customer", "strategy", "strategic", "growth", "marketing"]);
+const STOP = new Set([
+  "and", "the", "for", "with", "from", "into", "that", "this", "business", "company", "customer", "strategy", "strategic", "growth", "marketing",
+  // Grammar and missing-input labels are not creative mechanisms or fit evidence.
+  "one", "not", "can", "but", "when", "who", "are", "has", "have", "had", "only", "more", "over", "under", "than", "such", "should", "will", "would", "may", "might", "must", "does", "did", "its", "their", "they", "them", "you", "your", "our", "own", "each", "any", "all", "other", "where", "which", "how", "what", "why", "without", "unknown", "supplied", "provided", "confirmed",
+]);
 // Category and geography words may help explain transfer fit, but cannot by
 // themselves establish that a case has the same creative/business mechanism.
 const MECHANISM_STOP = new Set([...STOP, "care", "product", "service", "provider", "providers", "retail", "health", "businesses", "company", "companies", "industry", "sector", "market", "markets", "audience", "local", "global", "south", "north", "east", "west", "india", "kenya", "united", "states", "compare"]);
@@ -1707,7 +1711,8 @@ function contextFor(value: string | CreativePrecedentContext): { core: Set<strin
     constraint?.serviceArea ?? "",
     ...(constraint?.businessTypes ?? []),
   ].join(" ");
-  const geography = words([constraint?.serviceArea ?? "", evidenceText].join(" "));
+  // General prose can inform transfer, but cannot establish named geography.
+  const geography = words(constraint?.serviceArea ?? "");
   const scale = words([value.industryBusinessTypeId ?? "", ...(constraint?.businessTypes ?? []), evidenceText].join(" "));
   for (const term of [...scale]) for (const alias of SCALE_ALIASES[term] ?? []) scale.add(alias);
   return {
@@ -1717,7 +1722,7 @@ function contextFor(value: string | CreativePrecedentContext): { core: Set<strin
     constraints: words(`${constraintText} ${evidenceText}`),
     geography,
     scale,
-    model: words([value.industryBusinessTypeId ?? "", ...(constraint?.businessTypes ?? []), evidenceText].join(" ")),
+    model: words([value.industryBusinessTypeId ?? "", ...(constraint?.businessTypes ?? [])].join(" ")),
   };
 }
 

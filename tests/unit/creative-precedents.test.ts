@@ -646,6 +646,21 @@ describe("creative strategy precedent retrieval", () => {
     })).toContain("Why retrieved:");
   });
 
+  it("does not label general business prose as geography or business-model evidence", () => {
+    const matches = retrieveCreativePrecedents({
+      task: "Design a distinctive mascot that helps customers remember a brand character",
+      brief: "A small retailer offers a public service. Capacity, current results and served location are unknown.",
+      facts: [],
+    });
+    expect(matches.length).toBeGreaterThan(0);
+    expect(matches.flatMap(match => match.matchReasons).some(reason => reason.startsWith("geography:") || reason.startsWith("business model:"))).toBe(false);
+  });
+
+  it("does not mistake common instruction words or unknown-input labels for a creative mechanism", () => {
+    expect(retrieveCreativePrecedents("one not can but when who are has only more over under than should will would may might must their they them your our each any all other where which how what why unknown supplied provided confirmed").map(match => match.precedent.id))
+      .toEqual([]);
+  });
+
   it("does not force a weak analogy when customer and constraint evidence are absent", () => {
     expect(retrieveCreativePrecedents("")).toEqual([]);
     expect(formatCreativePrecedents("")).toContain("No sufficiently relevant sourced creative precedent");

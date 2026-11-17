@@ -1,3 +1,7 @@
+## 17 November — honest precedent fit reasons
+
+`v3.149-precedent-fit-signals`: common grammatical/unknown-input words no longer establish mechanism fit; geography and business-model reasons require their supplied structured fields. 214 tests passed after two red cases. [Audit](precedent-fit-signals-audit.md). Retrieval remains lexical, not semantic verification.
+
 ## 17 November — default strategy precedent integration
 
 `v3.148-strategy-precedent-context`: default starter/focused agents now receive the existing library independent of task headings; reviewers receive complete selected source/transfer records. 307 focused tests passed after three red cases. [Audit](strategy-precedent-context-audit.md). Original uncited hypotheses remain eligible; lexical retrieval and real-model quality remain acceptance limits.

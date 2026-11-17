@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+Creative precedent retrieval no longer treats common instruction words as a mechanism or general prose as geographic/business-model evidence. Missing structured location/type stays missing in its explanation. [Audit and limits](growth-engine/precedent-fit-signals-audit.md).
+
 The default starter/focused planner now actually receives the existing creative precedent library; an outdated heading check had omitted it. Writers and critics receive the same complete selected records and source/transfer limits. Uncited bold hypotheses remain available. [Audit, costs and limits](growth-engine/strategy-precedent-context-audit.md).
 
 Offline review packs now include the evaluation clock so past campaign windows cannot pass using the legacy 1970 fallback. UTC remains a test clock, not customer geography. [Audit](growth-engine/offline-evaluation-clock-audit.md).
