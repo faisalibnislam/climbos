@@ -18,7 +18,7 @@ import {fitJson} from "./context";
 export type QualityState = "passed" | "provisional" | "needs_input" | "failed";
 
 /** Lint rules whose failure means the plan must not drive work (REQ-EVAL hard failures). */
-export const HARD_RULES = new Set(["no_audience", "owner_channel_preference", "paid_acquisition_fit", "demand_gate", "focused_learning", "evidence_basis", "campaign_timing", "focused_offer_assessment", "contact_policy", "economics", "budget", "capacity", "citation", "provenance", "consistency", "no_plays", "invented_fact", "generic_action", "creative_diversity", "unsupported_scarcity", "unsupported_deadline", "unsupported_refund_promise", "approved_offer_price", "approved_offer_discount", "approved_offer_eligibility", "approved_offer_mechanism", "approved_offer_play", "approved_offer_urgency", "offer_validation_only", "offer_not_recommended", "growth_cash", "growth_cash_reserve"]);
+export const HARD_RULES = new Set(["no_audience", "owner_channel_preference", "paid_acquisition_fit", "demand_gate", "focused_learning", "evidence_basis", "campaign_timing", "focused_offer_assessment", "contact_policy", "economics", "budget", "capacity", "citation", "exploration_evidence", "creative_precedent", "provenance", "consistency", "no_plays", "invented_fact", "generic_action", "creative_diversity", "unsupported_scarcity", "unsupported_deadline", "unsupported_refund_promise", "approved_offer_price", "approved_offer_discount", "approved_offer_eligibility", "approved_offer_mechanism", "approved_offer_play", "approved_offer_urgency", "offer_validation_only", "offer_not_recommended", "growth_cash", "growth_cash_reserve"]);
 
 /** One hard finding the owner can act on: what failed and where. */
 export interface QualityFix {
@@ -112,6 +112,8 @@ const LABEL: Record<string, string> = {
   budget: "the plan spends more than your ad budget",
   capacity: "the plan needs more of your time than you have",
   citation: "a play cites a source the research didn't read",
+  exploration_evidence: "a strategy option claims a fact or source reference that this run cannot support; correct the reference or keep the idea as an uncited hypothesis",
+  creative_precedent: "a strategy option cites a precedent that was not retrieved for this business; correct or remove the citation without discarding the original idea",
   contact_policy: "A proposed outreach target explicitly refuses this kind of contact",
   review_gate: "AI has not cleared a required truth, budget or permission check",
   provenance: "a number is credited to a source without naming or quoting it",
@@ -182,9 +184,12 @@ export function planQuality(agents: AgentQuality[], finalLint: LintIssue[] = [],
 }
 
 /** Owner approval is still required; hard failures and material fact conflicts cannot drive work. */
-export function canDriveWork(q: Pick<PlanQuality, "state"> & Partial<Pick<PlanQuality, "conflicts">> | null | undefined): boolean {
+export function canDriveWork(q: Pick<PlanQuality, "state"> & Partial<Pick<PlanQuality, "conflicts" | "agents">> | null | undefined): boolean {
   // Older plans have no quality record: keep their behaviour.
-  return !q || (q.state !== "failed" && !q.conflicts?.length);
+  // An older quality summary may call a now-recognized source error "minor".
+  // Honor the recorded findings without rewriting the historical result.
+  const retainedHardError = q?.agents?.some(agent => Object.entries(agent.errors).some(([rule, count]) => count > 0 && HARD_RULES.has(rule)));
+  return !q || (q.state !== "failed" && !q.conflicts?.length && !retainedHardError);
 }
 
 export const QUALITY_LABEL: Record<QualityState, string> = {

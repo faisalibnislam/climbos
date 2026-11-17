@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { agentQuality, canDriveWork, fixWhere, planQuality, planRepairGuidance, withoutHard } from "../../shared/agents/quality";
 import type { Assessment, LintIssue } from "../../shared/agents/types";
+import { focusedStrategySpec } from "../../shared/agents/specs";
+import { focusedPlanFixture } from "../fixtures/focusedPlan";
 
 /** Frozen S1 regression cases: a completed workflow is not the same as a plan that passed. */
 const assessment = (o: Partial<Assessment> & { lint?: LintIssue[] } = {}): Assessment => ({
@@ -15,6 +17,36 @@ const assessment = (o: Partial<Assessment> & { lint?: LintIssue[] } = {}): Asses
 const err = (rule: string): LintIssue => ({ severity: "error", rule, message: rule });
 
 describe("plan quality", () => {
+  it.each(["fact:999", "https://unread.example/case", "Brief: invented source"])("blocks an invalid exploration citation without deleting the bold idea: %s", reference => {
+    const plan = focusedPlanFixture();
+    plan.strategyExploration.bold.evidenceRefs = [reference];
+    const lint = focusedStrategySpec().lint?.(plan, { task: "Explore strategy", brief: "Synthetic business", facts: [] }) ?? [];
+    const quality = planQuality([agentQuality("growth_strategy", assessment({ lint }), 1, null)]);
+    expect(quality.state).toBe("failed");
+    expect(canDriveWork(quality)).toBe(false);
+    expect(quality.fixes).toContainEqual(expect.objectContaining({ rule: "exploration_evidence" }));
+    expect(plan.strategyExploration.bold.title).toBe("Become known for the brief you decline");
+  });
+
+  it("blocks an unretrieved precedent but leaves an unsupported original hypothesis eligible for review", () => {
+    const plan = focusedPlanFixture();
+    const input = { task: "Explore strategy", brief: "Synthetic business", facts: [] };
+    const review = () => planQuality([agentQuality("growth_strategy", assessment({ lint: focusedStrategySpec().lint?.(plan, input) }), 1, null)]);
+    expect(review().state).toBe("passed");
+    plan.strategyExploration.bold.precedentIds = ["CP-999"];
+    expect(review().state).toBe("failed");
+    plan.strategyExploration.bold.precedentIds = [];
+    expect(review().state).toBe("passed");
+    expect(plan.strategyExploration.bold).toMatchObject({ evidenceStrength: "low", feasibility: "low", evidenceRefs: [] });
+  });
+
+  it("does not trust a stale provisional label over retained invalid-reference errors", () => {
+    const agent = agentQuality("growth_strategy", assessment({ lint: [err("exploration_evidence")] }), 1, null);
+    expect(canDriveWork({ state: "provisional", agents: [agent] })).toBe(false);
+    expect(canDriveWork({ state: "provisional", agents: [withoutHard(agent)] })).toBe(true);
+    expect(canDriveWork({ state: "provisional" })).toBe(true);
+  });
+
   it.each(["no_audience", "demand_gate", "focused_learning", "evidence_basis", "campaign_timing", "unsupported_refund_promise", "approved_offer_price", "approved_offer_discount", "approved_offer_eligibility", "approved_offer_mechanism", "approved_offer_play", "approved_offer_urgency", "offer_validation_only", "offer_not_recommended"])("blocks %s even with a passing AI review", rule => {
     const quality = planQuality([agentQuality("growth_strategy", assessment({ lint: [err(rule)] }), 1, null)]);
     expect(quality.state).toBe("failed");

@@ -7,6 +7,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { GoalTimingSchema, dayRange } from "@shared/agents/goalTiming";
 import { PreparedWorkSchema } from "@shared/agents/preparedWork";
+import { canDriveWork } from "@shared/agents/quality";
 import { Badge, Button, Callout, Dialog, DialogContent, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
 import { useClimb } from "@/components/climb/context";
 import { PageHeader } from "../results/QueryBoundary";
@@ -65,18 +66,20 @@ function GoalPlan({ slug, selectedId, details }: { slug: string; selectedId: Id<
     if (strategy) climb.addSelection({ type: "strategy", id: strategy.id, label: focus?.title ?? strategy.summary });
     climb.setOpen(true);
   };
-  const needsRepair = strategy?.expert?.quality?.state === "failed" || strategy?.expert?.quality?.state === "provisional";
+  const qualityBlocked = !canDriveWork(strategy?.expert?.quality);
+  const needsRepair = qualityBlocked || strategy?.expert?.quality?.state === "provisional";
   const generate = <GeneratePlanButton slug={slug} mode={strategy ? "refresh" : "build"} estimateMicros={plan.planEstimateMicros} repair={needsRepair} building={Boolean(running)} onStarted={setStartedRun} />;
   return <div className="space-y-5">
     {startedRun || running ? <StrategyRunWatcher slug={slug} startedRunId={startedRun} activeRunId={running ? plan.strategyRun!.id : null} onDismiss={() => setStartedRun(null)} /> : null}
     {plan.otherVersion?.status === "needs_approval" && strategy?.status === "approved" ? <Callout tone="info" title="Your updated recommendation is ready" action={<Button size="sm" variant="secondary" onClick={() => { setReview(false); setViewId(plan.otherVersion!.id); }}>See the update</Button>}>Your existing work stays saved while you look at the update.</Callout> : null}
     {!selectedId ? <p className="text-ink-2">Add what you want to achieve. No business terms or plan length needed.</p> : !strategy ? <section className="space-y-4 rounded-xl border border-line bg-surface p-6"><h2 className="heading-section">Let AI work out a useful starting point.</h2><p className="max-w-prose text-sm text-ink-2">We’ll use your business research, recommend an approach, choose realistic timing, and prepare useful drafts. Your other goals stay saved.</p>{generate}</section> : <>
-      {strategy.expert?.quality?.state === "failed" && !running ? <Callout tone="warning" title="AI found issues to fix">
+      {qualityBlocked && strategy.expert?.quality && !running ? <Callout tone="warning" title="AI found issues to fix">
+        {strategy.expert.quality.state !== "failed" ? <p>A recorded check still blocks this draft. Refresh it to show the current findings.</p> : null}
         <PlanCheckSummary quality={strategy.expert.quality} />
         <p className="mt-2">The drafts are available to inspect. This plan cannot start outside work until its checks pass.</p>
         <div className="mt-3 flex flex-wrap items-start gap-3">{generate}<Button variant="secondary" size="sm" onClick={() => ask("Explain the saved plan checks in simple words. What needs fixing, what remains unknown, and what can I safely review now? Do not start work, send, publish or spend.")}>Explain these checks</Button></div>
       </Callout> : null}
-      {strategy.expert?.quality?.state === "provisional" && !running ? <Callout tone="info" title="This draft can be better">AI can revise it using the latest research and prepared work. {generate}</Callout> : null}
+      {strategy.expert?.quality?.state === "provisional" && !qualityBlocked && !running ? <Callout tone="info" title="This draft can be better">AI can revise it using the latest research and prepared work. {generate}</Callout> : null}
       {plan.staleInputs.requiresRefresh ? <Callout tone="warning" title="Your information has changed">You can still read and edit the saved drafts. Update the recommendation before starting work based on the old information. {generate}</Callout> : null}
       <Tabs value={tab} onValueChange={value => { if (value !== "work") { setReview(false); if (window.location.hash === "#prepared-work") window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search); } setTab(value); }}>
         <TabsList aria-label="Plan views"><TabsTrigger value="steps">Next steps</TabsTrigger>{expert?.strategyExploration ? <TabsTrigger value="options">Strategy options</TabsTrigger> : null}<TabsTrigger value="work">Prepared work</TabsTrigger><TabsTrigger value="why">Why this plan</TabsTrigger><TabsTrigger value="research">Research</TabsTrigger></TabsList>

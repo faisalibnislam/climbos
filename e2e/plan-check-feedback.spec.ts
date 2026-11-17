@@ -5,6 +5,32 @@ import { localDemoFixtures } from "./local-demo-fixtures";
 const envFile = process.env.CLIMBOS_DESIGN_E2E_ENV_FILE;
 const { rows, append } = localDemoFixtures(envFile);
 
+test("old provisional source errors explain the current approval block @mobile", async ({ page, baseURL }, testInfo) => {
+  test.skip(!envFile, "Requires the isolated local demo backend");
+  test.setTimeout(120_000);
+  expect(baseURL).toBe("http://127.0.0.1:3420");
+  const slug = await openDemo(page);
+  const org = (await rows("organizations")).find(row => row.slug === slug)!;
+  expect(org.kind).toBe("demo");
+  const plan = (await rows("strategies")).find(row => row.orgId === org._id)!;
+  const { _id, _creationTime, ...copy } = plan;
+  await append("strategies", [{ ...copy, status: "needs_approval", approvalId: undefined, version: Number(plan.version) + 1, createdAt: Date.now() + 1,
+    expert: { ...(plan.expert as object), quality: { version: 1, state: "provisional", reasons: ["An older review left a minor finding."], hard: [], agents: [{ agentId: "growth_strategy", shipped: false, gatesPassed: true, average: 4, rounds: 1, errors: { exploration_evidence: 1 }, researchSources: null }] } },
+  }]);
+  const authority = async () => Promise.all(["workflowRuns", "approvals", "actionReceipts", "artifacts"].map(async table => (await rows(table)).filter(row => row.orgId === org._id)));
+  const before = await authority();
+  await page.goto(`/app/${slug}/plan`);
+  await page.getByRole("button", { name: "See the update", exact: true }).click();
+  await expect(page.getByText("AI found issues to fix", { exact: true })).toBeVisible();
+  await expect(page.getByText("A recorded check still blocks this draft. Refresh it to show the current findings.", { exact: true })).toBeVisible();
+  await expect(page.getByText("This draft can be better", { exact: true })).not.toBeVisible();
+  await expect(page.getByRole("button", { name: "Explain these checks", exact: true })).toBeEnabled();
+  await expectAccessible(page, "Retained strategy citation findings");
+  await expectNoHorizontalScroll(page);
+  await page.screenshot({ path: testInfo.outputPath("retained-source-check.png"), fullPage: false });
+  expect(await authority()).toEqual(before);
+});
+
 test("plan checks explain the block and discussion stays an editable request @mobile", async ({ page, baseURL }, testInfo) => {
   test.skip(!envFile, "Requires the isolated local demo backend");
   test.setTimeout(120_000);

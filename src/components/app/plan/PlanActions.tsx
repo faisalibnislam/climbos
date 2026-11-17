@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { fixWhere, QUALITY_LABEL, type QualityFix, type QualityState } from "../../../../shared/agents/quality";
+import { canDriveWork, fixWhere, QUALITY_LABEL, type AgentQuality, type QualityFix, type QualityState } from "../../../../shared/agents/quality";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -152,8 +152,9 @@ export function approvedToast(work: PlanWork): { tone: "success" | "info"; title
 }
 
 /** Prominent review card for a plan waiting for approval. */
-export function PlanReviewCard({ slug, strategyId, canApprove, onDecided, staleReason, quality, help, prepared = false }: { prepared?: boolean; slug: string; strategyId: Id<"strategies">; version: number; canApprove: boolean; onDecided?: () => void; staleReason?: string; quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[]; conflicts?: string[] } | null; /** Inline "Help ClimbOS" panel shown when missing numbers block or weaken the plan. */ help?: ReactNode }) {
-  const blocked = quality?.state === "failed" || Boolean(staleReason);
+export function PlanReviewCard({ slug, strategyId, canApprove, onDecided, staleReason, quality, help, prepared = false }: { prepared?: boolean; slug: string; strategyId: Id<"strategies">; version: number; canApprove: boolean; onDecided?: () => void; staleReason?: string; quality?: { state: QualityState; reasons: string[]; fixes?: QualityFix[]; unknowns?: string[]; conflicts?: string[]; agents?: AgentQuality[] } | null; /** Inline "Help ClimbOS" panel shown when missing numbers block or weaken the plan. */ help?: ReactNode }) {
+  const qualityBlocked = !canDriveWork(quality);
+  const blocked = qualityBlocked || Boolean(staleReason);
   const decide = useMutation(api.workspace.decidePlan);
   const [note, setNote] = useState("");
   const [error, setError] = useState<unknown>(null);
@@ -174,7 +175,7 @@ export function PlanReviewCard({ slug, strategyId, canApprove, onDecided, staleR
         <IconTile icon={ClipboardList} tone="amber" size="sm" className="bg-surface" />
         <div className="min-w-0 flex-1">
           <h2 id="review-heading" className="heading-section">
-            {quality?.state === "failed" ? "AI needs to fix this draft" : prepared ? "Ready to use this plan?" : "Ready to prepare the work?"}
+            {qualityBlocked ? "AI needs to fix this draft" : prepared ? "Ready to use this plan?" : "Ready to prepare the work?"}
           </h2>
           <ul className="mt-1.5 flex flex-wrap gap-1.5 text-xs text-amber-800">
             <li className="rounded-[var(--radius-badge)] bg-surface px-2 py-0.5">{prepared ? "Starter drafts are already prepared" : "AI prepares the agreed drafts"}</li>
@@ -183,9 +184,10 @@ export function PlanReviewCard({ slug, strategyId, canApprove, onDecided, staleR
           </ul>
         </div>
       </div>
-      {(quality && quality.state !== "passed") || staleReason ? (
-        <Callout tone={blocked ? "danger" : "warning"} live="none" title={staleReason ? "Refresh this plan before approval" : QUALITY_LABEL[quality!.state]} className={cn(!blocked && "bg-surface")}>
+      {(quality && (quality.state !== "passed" || qualityBlocked)) || staleReason ? (
+        <Callout tone={blocked ? "danger" : "warning"} live="none" title={staleReason ? "Refresh this plan before approval" : QUALITY_LABEL[qualityBlocked ? "failed" : quality!.state]} className={cn(!blocked && "bg-surface")}>
           {staleReason ? <p>Changed since this version: {staleReason}.</p> : null}
+          {qualityBlocked && quality?.state !== "failed" ? <p>A recorded check still blocks this draft. Refresh it to show the current findings.</p> : null}
           {quality?.reasons.length ? (
             <ul className="flex flex-col gap-1">
               {quality.reasons.map((r) => (

@@ -1,3 +1,13 @@
+## 17 November 2026 — strategy reference approval
+
+[Audit](growth-engine/strategy-reference-approval-audit.md). Engine `v3.145-strategy-reference-approval`.
+
+- Eight focused quality/creative/plan/permission files: **319 passed, 14.21 seconds**. Five unit and two actual-job failures preceded the repair.
+- Two component files: **four assertions passed, 0.49 seconds**. Full application/Convex typechecks, changed-file ESLint and diff checks passed.
+- Isolated local sync passed. Four desktop/mobile browser checks passed in **18.2 seconds**, including the existing no-auto-submit explanation flow. Default-workspace omission discovered in the first browser attempt was fixed; inspected screenshots show the current block. No serious/critical automated accessibility findings or horizontal overflow in the checked views. Authority records unchanged.
+
+No hosted deployment or live business action. This batch does not establish strategy quality or full product completion; a separate live-evaluation scoring discrepancy is under investigation and must not be reported as an accepted strategy.
+
 ## 17 November 2026 — full strategy output room
 
 [Audit and live failures](growth-engine/strategy-output-budget-audit.md). Engine `v3.144-strategy-output-budget`.

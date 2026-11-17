@@ -7,7 +7,7 @@ import { offerAssessmentFixture, offerFact } from "../fixtures/offerAssessment";
 import { approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
 import type { TurnRequest } from "../../shared/ai/types";
 import type { RateVersion } from "../../shared/economics/rates";
-const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", dismissedChannel: false, emailMode: "" }));
+const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", explorationReference: "", dismissedChannel: false, emailMode: "" }));
 vi.mock("../../shared/ai/turn", async original => ({
   ...await original<typeof import("../../shared/ai/turn")>(),
   modelTurn: async (req: TurnRequest, rates: RateVersion) => {
@@ -16,6 +16,10 @@ vi.mock("../../shared/ai/turn", async original => ({
     const plan = focusedPlanFixture(days);
     if (state.emailMode) plan.focusedMove.firstAction = state.emailMode === "draft" ? "Draft an email for your newsletter subscribers for owner review." : "Email your list about the proposed intake handoff.";
     if (state.dismissedChannel) plan.channels[0] = { ...plan.channels[0], key: "seo_content", name: "Blog articles" };
+    if (state.explorationReference) {
+      if (state.explorationReference.startsWith("CP-")) plan.strategyExploration.bold.precedentIds = [state.explorationReference];
+      else plan.strategyExploration.bold.evidenceRefs = [state.explorationReference];
+    }
     if (state.citationReference) { plan.channels[0].cites = [state.citationReference]; plan.audiences[0].cites = [state.citationReference]; }
     if (state.demandMode) {
       const channel = plan.channels[0];
@@ -60,7 +64,7 @@ vi.mock("../../shared/ai/turn", async original => ({
     return result;
   },
 }));
-afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.dismissedChannel = false; state.emailMode = ""; });
+afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.explorationReference = ""; state.dismissedChannel = false; state.emailMode = ""; });
 
 async function workspace() {
   const t = setup(); delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE;
@@ -76,6 +80,26 @@ async function workspace() {
   await t.mutation(internal.engine.putResearchCache, { orgId, businessWebsite: "https://business.example/", cacheKey: "a".repeat(64), agentId: "business_insights", modelKey: "claude-haiku-5.5", notes: "Synthetic public-source notes for a workflow integration test. No measured demand.", sources: [{ url: "https://business.example/" }], expiresAt: Date.now() + 86400000 });
   return { t, owner, slug, orgId };
 }
+
+it.each([
+  ["focused", "https://unread.example/case", "exploration_evidence"],
+  ["starter", "CP-999", "creative_precedent"],
+] as const)("keeps %s original options inspectable but blocks invalid claimed sources", async (planStyle, reference, rule) => {
+  const { t, owner, slug, orgId } = await workspace();
+  state.explorationReference = reference;
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(plan.expert?.quality).toMatchObject({ state: "failed", fixes: expect.arrayContaining([expect.objectContaining({ rule })]) });
+  expect(plan.expert?.strategyExploration?.bold).toMatchObject({ title: "Become known for the brief you decline", evidenceStrength: "low", feasibility: "low" });
+  await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
+  // Earlier versions stored these errors under a provisional label. Read the
+  // retained findings at the approval boundary without rewriting history.
+  await t.run(ctx => ctx.db.patch(plan._id, { expert: { ...plan.expert!, quality: { ...plan.expert!.quality!, state: "provisional" } } }));
+  await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
+  await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: plan._id, playId: "focused" })).rejects.toThrow();
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
 
 it("keeps unchanged channel feedback fresh and requires refresh when its source changes", async () => {
   const { t, owner, slug, orgId } = await workspace();

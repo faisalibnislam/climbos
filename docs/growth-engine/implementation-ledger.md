@@ -1,6 +1,12 @@
 ## 17 November 2026 — review reward validation
 
 
+## 17 November — strategy reference approval
+
+`v3.145-strategy-reference-approval`: invalid claimed facts/pages and unretrieved precedent IDs now remain hard findings through quality, approval and start boundaries, including older provisional summaries with retained errors. Uncited original hypotheses remain available. Both owner review views explain the current block. 319 focused tests, four component assertions, four desktop/mobile checks, typechecks and lint passed. [Audit](strategy-reference-approval-audit.md). No full quality or business-outcome claim.
+
+
+
 ## 17 November — complete strategy output budget
 
 `v3.144-strategy-output-budget`: two metered education responses exhausted the old 16k ceiling including reasoning. Full strategy draft/revision output now allows 24k, using existing quote/reservation/cap enforcement. Starter remains 11k; no model or acceptance-bar change. A further no-offer colon false positive is repaired. 231 focused tests, typecheck and lint passed. [Audit and failed-run limits](strategy-output-budget-audit.md).
