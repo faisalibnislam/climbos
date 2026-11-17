@@ -1,5 +1,10 @@
 ## 17 November 2026 — creative methods and product-test validity
 
+## 18 November 2026 — bounded section repairs
+
+V3.167 preserves omitted focused-plan sections, validates the full merged result and independently re-reviews it. Invalid patches retain the reviewed prior draft. Six red cases, then **181 tests in 14 files passed (12.98 seconds)**; app/Convex types, targeted lint and diff checks passed. Models, call limits, reservations and approval boundaries are unchanged. Starter/detailed remain full-output repairs. Paid quality effect remains to be evaluated. [Audit and commands](growth-engine/focused-evidence-review-audit.md).
+
+
 ## 18 November 2026 — Livoform v14 passes, comparison prefers revised plan
 
 The unchanged Sonnet runtime produced a reviewed **4/5 on every criterion** with no hard findings. Five generation/review calls cost $0.851088; a separate six-question comparison ($0.066036) preferred the revision on five questions and tied on one. Combined charged/held $70.921823 / $100. One successful case does not establish reliability, real paid value or business outcomes; a fresh stability check is pending. [Full evidence and limitations](growth-engine/focused-evidence-review-audit.md).

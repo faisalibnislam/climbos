@@ -1,5 +1,21 @@
 # Focused strategy evidence review — 17 November 2026
 
+## Preserve unchanged sections through repair — v3.167
+
+Earlier paid runs lost useful assets or introduced fresh errors while rewriting the complete plan for a localized correction. Full focused revisions now return only changed top-level sections. Omitted sections stay verbatim; a returned nested object or array replaces that complete section. Empty patches, unknown keys and invalid sections fail. The engine then validates the entire merged draft, applies the existing single-step projection, reruns deterministic checks and obtains a fresh independent review of the full result. A failed optional patch preserves the best previously reviewed draft; it does not manufacture a pass.
+
+This uses the existing revision call, phase/checkpoint, model, conservative output reservation and two-revision ceiling. It adds no provider, agent or external action. The free starter and detailed modes retain full-output revisions. Raw patches remain in local evaluation phase records; production checkpoints contain the complete merged result. No historical plans are edited. Actual token/latency savings and quality improvement are hypotheses pending a paid run.
+
+Six red regressions demonstrated the missing behavior. After implementation, **181 tests in 14 files passed (12.98 seconds)**, including preserved sections and raw responses, valid resume without a second provider call, rejected empty/unknown/invalid patches, full cross-section validation, fresh failed-review retention, unchanged starter behavior, budgets and production permission tests. App/Convex typechecks, targeted ESLint and diff checks passed.
+
+```sh
+pnpm exec vitest run tests/unit/focused-section-revisions.test.ts tests/unit/creative-preparation.test.ts tests/unit/focused-plan.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/agent-escalation.test.ts tests/unit/strategy-exploration.test.ts tests/unit/evaluation-identity.test.ts tests/unit/livoform-launch-input.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts tests/unit/anthropic-budget.test.ts tests/unit/evaluation-budget.test.ts tests/unit/ai-qa-budget.test.ts
+pnpm typecheck
+```
+
+The unchanged-v3.166 stability run is still finishing. The next run will evaluate section repair separately; all earlier results remain intact.
+
+
 ## Livoform acceptance and same-evidence comparison — v14
 
 Variant `launch-quality-v14-20261118` used v3.166 and source hash `30cba061224691565d81d955ff7c69d7503e48c51dde0364e7568dc9812d3b8c`. Five metered calls cost **$0.851088**. The initial draft failed quality; the reviewed revision passed **4 average, minimum 4, all gates passed and no blocking evidence findings**. The output gives the owner one review step and a synthetic intake example, observed-session script and invitation. It preserves unknown audience, capacity, costs and paid uptake. Its bold hypothesis explores respondent-initiated form improvement rather than simply changing who pays for an agency account; the comparison is explicitly descriptive and consent/approval bound.

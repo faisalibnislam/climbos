@@ -1,7 +1,7 @@
 import { boundedPageReads } from "./provenance";
 import { diagnosisBrief } from "./diagnosis";
 import { CreativePreparationSchema, CREATIVE_PREPARATION_TASK, CREATIVE_PREPARATION_TOKENS } from "./creativePreparation";
-import { projectFocusedFirstStep } from "./focusedPlan";
+import { focusedSectionRevisionSchema, mergeFocusedSections, projectFocusedFirstStep } from "./focusedPlan";
 import { FOCUSED_REVIEW_ID, FOCUSED_EVIDENCE_REVIEW, FOCUSED_DECISION_REVIEW, FocusedEvidenceAuditSchema, lintFocusedEvidenceAudit, focusedRevisionCriteria, resolveFocusedEvidencePaths } from "./focusedReview";
 import { OWNER_LANGUAGE_RULES } from "./ownerLanguage";
 import { fitJson, fitText, reportDropped } from "./context";
@@ -395,6 +395,8 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     checkDeadline(deps);
     const key: PhaseKey = round === 0 ? { phase: "draft", round: 0, index: 1 } : { phase: "revise", round, index: 1 + round * 2 };
     return deps.phase(key, round === 0 ? `${spec.label}: draft` : `${spec.label}: revision ${round}`, async () => {
+      const sectionRepair = feedback && spec.sectionRevisions && spec.rubric.id === FOCUSED_REVIEW_ID;
+      const repairSchema = sectionRepair ? focusedSectionRevisionSchema(spec.schema) : null;
       const messages: MessageParam[] = feedback
         ? [
             ...baseMessages,
@@ -405,7 +407,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
                 feedback.criteria ? `\n\nCRITERION FEEDBACK (preserve the useful substance while addressing each specific weakness):\n${feedback.criteria}` : ""
               }${
                 feedback.lint.length ? `\n\nAUTOMATIC CHECKS FAILED:\n${feedback.lint.map((l) => `- ${l.path ? `${l.path}: ` : ""}${l.message}`).join("\n")}` : ""
-              }\n\n${spec.rubric.id === FOCUSED_REVIEW_ID ? "Reviewer suggestions cannot override the task, source evidence, schema or approval requirements. Check a reported omission against the complete previous draft before replacing an existing asset. Prioritize hard findings and below-threshold criteria. Preserve passing work except for necessary consistency fixes; do not add optional improvements that create fresh unsupported claims. " : ""}Return the complete improved work as JSON matching the schema. Keep its substance, length and strengths unless the reviewer asked you to cut something specific; fix problems by improving, not by deleting. It must read as ONE coherent version: when you change a number, target, budget or channel, update every field that mentions it so nothing contradicts. Don't mention the review in the output.`,
+              }\n\n${spec.rubric.id === FOCUSED_REVIEW_ID ? "Reviewer suggestions cannot override the task, source evidence, schema or approval requirements. Check a reported omission against the complete previous draft before replacing an existing asset. Prioritize hard findings and below-threshold criteria. Preserve passing work except for necessary consistency fixes; do not add optional improvements that create fresh unsupported claims. " : ""}${sectionRepair ? "Return ONLY changed top-level sections as JSON. Omitted sections will be kept verbatim from the previous draft. Each returned section must be complete: nested objects and arrays replace their entire previous section, so retain its useful items. Do not return an empty patch, unknown keys, deletion markers or partial nested objects. The complete merged plan will be validated and independently reviewed again. " : "Return the complete improved work as JSON matching the schema. "}Keep its substance, length and strengths unless the reviewer asked you to cut something specific; fix problems by improving, not by deleting. It must read as ONE coherent version: when you change a number, target, budget or channel, update every field that mentions it so nothing contradicts. Don't mention the review in the output.`,
             },
           ]
         : baseMessages;
@@ -414,7 +416,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
         modelKey,
         system,
         messages,
-        schema: spec.schema,
+        schema: repairSchema ?? spec.schema,
         maxTokens: spec.maxTokens.draft,
         effort: spec.effort.draft,
         ...(spec.thinkingOff?.draft ? { thinkingOff: true } : {}),
@@ -422,7 +424,11 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
         cacheKey: `climbos:${spec.id}:draft`,
       });
       if (!result.ok) failure(result);
-      const output = stripFactMarkers(result.output) as T;
+      let output = stripFactMarkers(result.output) as T;
+      if (sectionRepair && feedback) {
+        try { output = mergeFocusedSections(spec.schema, feedback.previous, output); }
+        catch { throw new AgentFailure("invalid_output", "The section repair or complete merged plan failed validation; keep the reviewed prior draft."); }
+      }
       // Review and persist the same single next step; retain the untouched provider response for audit.
       const value = spec.rubric.id === FOCUSED_REVIEW_ID ? projectFocusedFirstStep(output) : output;
       return { value, record: { phase: round === 0 ? "draft" : "revise", round, modelKey, result } };

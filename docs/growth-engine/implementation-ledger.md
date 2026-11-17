@@ -1,3 +1,7 @@
+## 18 November — preserve useful work during focused repair
+
+`v3.167-focused-section-repairs`: allow only validated changed sections in full focused revisions; preserve omitted work, validate the complete merge and obtain a fresh review. Same checkpoint, model, call cap and reservation; malformed repairs retain the reviewed best draft. 181 focused/budget/permission tests, types and lint pass. Semantic effect pending paid acceptance. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — Livoform passes the existing rubric
 
 V14 passes 4/5 on every criterion; a separate comparison prefers it over the original on five of six questions (one tie). Runtime model and thresholds unchanged. Combined charged/held $70.921823 / $100, with a fresh stability run pending. Preserve observation-window, participant-access and real-outcome limitations; this is not a commercial validation. [Audit](focused-evidence-review-audit.md).

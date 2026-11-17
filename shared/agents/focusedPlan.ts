@@ -23,6 +23,17 @@ export const FocusedMoveSchema = z.object({
 export type FocusedMove = z.infer<typeof FocusedMoveSchema>;
 export type PlanStyle = "starter" | "focused" | "detailed";
 
+/** A repair may omit unchanged sections, never accept unknown keys or skip full-draft validation. */
+export function focusedSectionRevisionSchema<T>(schema: z.ZodType<T>) {
+  if (!(schema instanceof z.ZodObject)) throw new Error("Focused section revisions require an object schema.");
+  return z.object(schema.shape).partial().strict().refine(value => Object.keys(value).length > 0, "Return at least one changed section.");
+}
+
+export function mergeFocusedSections<T>(schema: z.ZodType<T>, previous: T, patch: unknown): T {
+  const checked = focusedSectionRevisionSchema(schema).parse(patch);
+  return schema.parse({ ...previous, ...checked });
+}
+
 /** These legacy presentation fields are aliases of the focused decision, not additional work. */
 export function projectFocusedFirstStep<T>(output: T): T {
   if (!output || typeof output !== "object") return output;

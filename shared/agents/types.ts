@@ -82,6 +82,8 @@ export interface AgentSpec<T> {
   drafts?: number;
   /** Full focused plans explore mechanisms before execution detail; same writer and run budget. */
   creativePreparation?: boolean;
+  /** Repair only explicitly returned top-level sections, then validate and review the complete merged draft. */
+  sectionRevisions?: boolean;
   /**
    * Speed (engine flag "fast_review"): keep the last revision without a second review when it has no
    * more lint errors than the version it replaces and drops none of its numbers.
