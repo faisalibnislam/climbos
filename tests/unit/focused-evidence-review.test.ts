@@ -26,6 +26,8 @@ describe("focused review evidence integrity", () => {
     ["business_state", "It has no audience.", "No traffic does not establish no contacts or followers."],
     ["comparative_claims", "This is the cheapest and fastest route.", "No comparative cost or time evidence was supplied."],
     ["capabilities_and_results", "The integration works without setup.", "The page was not inspected and product behavior was not tested."],
+    ["capabilities_and_results", "A checkout is payment.", "A started checkout does not establish a successful payment."],
+    ["capabilities_and_results", "Customer payment volume is our software revenue.", "No evidence establishes that the vendor earns the merchant receipts."],
   ])("turns an unsupported %s claim into a blocking finding despite a passing truth gate", (category, quote, basis) => {
     const rows = audit();
     rows.find(row => row.category === category)!.claims = [{ path: "summary", quote, verdict: "unsupported", basis, correction: "Keep this unknown or label it as a proposed hypothesis." }];

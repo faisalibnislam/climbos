@@ -1,3 +1,7 @@
+## 17 November — paid outcome and cost-boundary precision
+
+`v3.156-paid-outcome-precision`: the passing v3 retest still blurred checkout intent and payment, merchant transactions and vendor revenue, and workload caps and evidence sufficiency. Clarify these in writer/reviewer instructions and add review-enforcement examples; 151 focused/permission tests passed. The numeric acceptance bar and provider are unchanged. [Results and limitations](focused-evidence-review-audit.md).
+
 ## 17 November — shared exploration contract and consistent review verdicts
 
 `v3.155-protected-focused-task`: resolve the missing full exploration contract in direct focused evaluations using the same builder as production, without duplicating it or changing timing. Reject review verdicts that call a claim acceptable while requiring a factual correction. 205 focused/permission tests passed after two red cases. The prior paid retest and comparison remain documented failures, not a quality win. [Audit and costs](focused-evidence-review-audit.md).

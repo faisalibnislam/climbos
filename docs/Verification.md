@@ -1,3 +1,9 @@
+## 17 November 2026 — paid outcome precision
+
+Engine v3.156 clarifies confirmed payment versus checkout intent, merchant versus software-vendor revenue, and workload caps versus evidence thresholds. **151 tests in eight files passed (13.08 seconds)**. [Audit](growth-engine/focused-evidence-review-audit.md).
+
+The preceding v3.155 retest passed the engine rubric at 4/4, but inspection found remaining measurement imprecision and its separate comparison still preferred the original. The pass is not treated as proof of all quality gaps being solved. Five calls cost $0.785926; cumulative charged/held $61.270962 / $100.
+
 ## 17 November 2026 — shared exploration and review consistency
 
 Engine v3.155: two red cases followed by **205 passing tests in 12 files (16.25 seconds)**. Focused application and benchmark tasks now include the same complete protected exploration contract once. An acceptable review verdict cannot simultaneously require a factual correction. [Audit](growth-engine/focused-evidence-review-audit.md).

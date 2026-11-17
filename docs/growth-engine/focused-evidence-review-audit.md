@@ -28,6 +28,20 @@ pnpm exec vitest run tests/unit/focused-evidence-review.test.ts tests/unit/focus
 
 ## Limits and paid follow-up
 
+### v3 retest and remaining measurement precision
+
+Variant `launch-quality-v3-20261117`, engine v3.155, source hash `6a59ac5e158efb9b1c0fc8834177e2e20aedccaeca359e998db51a4d699e08ba`: four calls cost **$0.720914**. First draft: 3.5, failed gates and three unsupported claims. Revised draft: **4 average, minimum 4, all gates passed, no lint findings, ship true**. This is an automated acceptance pass for one case, not a proof of commercial quality.
+
+The separate-context comparison ($0.065012) again preferred the original for paid-value explanation and alternative mechanisms. It missed the known original unsupported assertion, so no blanket improvement or independent truth-verification claim is made. Inspection of the passing v3 draft found that it still described checkout as payment and risked conflating customer payment-processing activity with the software vendor's economics. A proposed invitation cap was also being used as an evidence-sufficiency threshold. Passing the AI rubric did not resolve those issues.
+
+Engine `v3.156-paid-outcome-precision` clarifies these distinctions in the existing writer/reviewer contracts: paid uptake needs explicitly confirmed successful payment with source provenance; merchant transactions are not vendor revenue; relevant fees need the correct actor and cost boundary; workload caps are not proof thresholds. Paid value must describe a buyer situation and consequence, not only list plan features. Two additional review-enforcement examples cover checkout and merchant-revenue confusion. **151 tests in eight files passed (13.08 seconds)**:
+
+```sh
+pnpm exec vitest run tests/unit/focused-evidence-review.test.ts tests/unit/focused-plan.test.ts tests/unit/focused-learning.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts tests/unit/evaluation-identity.test.ts tests/unit/livoform-launch-input.test.ts
+```
+
+Combined charged/held before the next retest: **$61.270962 / $100**. Earlier drafts and assessments are unchanged.
+
 ### v2 paid retest — preserved failure
 
 Variant `launch-quality-v2-20261117`, engine v3.154, selected-source hash `6495f512f0d5ed8b24e03976c925c470014e8404dd0d2c71c4d199b00dc42411`: four calls cost **$0.603600**. The first review explicitly identified an unsupported comparative claim despite passing its general truth gate; code blocked it and forwarded the correction. The revision removed that reported error but remained below quality: **3.56 average, minimum 3.5, ship false**. This is a verified enforcement improvement, not a quality-pass claim.
