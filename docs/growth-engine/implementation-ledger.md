@@ -1,3 +1,7 @@
+## 17 November — approved public launch acceptance result
+
+Completed the owner-approved four-call test through the existing focused engine. Schema passed, but the unchanged quality bar did not (3.75 average, minimum 3). Output inspection found additional unsupported qualitative claims and decision/workload/originality limitations; these remain open rather than being hidden by a clean lint result. [Audit and costs](public-launch-acceptance-audit.md). 46 focused and permission tests passed. No production code, provider route, customer account or external business action changed. Private inputs and raw outputs stay local and ignored.
+
 ## 17 November — owner-selected public launch acceptance input
 
 Added a dated Livoform public-source pack and bounded local owner-report input to the existing focused evaluation path. Private reports are excluded from Git, source claims retain provenance, and unavailable pages stay uninspected. 22 focused tests passed; local packet prepared without provider calls. [Audit](public-launch-acceptance-audit.md). No production capability or quality-pass claim.

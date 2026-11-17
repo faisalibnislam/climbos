@@ -1,3 +1,9 @@
+## 17 November 2026 — approved public launch acceptance result
+
+[Detailed audit](growth-engine/public-launch-acceptance-audit.md): four approved Anthropic calls completed on engine v3.153. Revised output is schema-valid and lint-clean, but **failed quality acceptance** (average 3.75, minimum 3). Inspection also found unsupported qualitative claims missed by the automated reviewer. No production quality improvement is claimed. Private reports and raw outputs remain Git-ignored.
+
+Post-run input, budget, cache, plan approval and safety checks: **46 tests passed across eight files (5.81 seconds)**. Cost: $0.626074; cumulative charged/held across both ledgers: $59.818528 / $100. No live business actions or deployment. Original results retained; remaining decision, evidence, originality and owner-effort gaps are documented.
+
 ## 17 November 2026 — owner-selected public launch input
 
 [Audit](growth-engine/public-launch-acceptance-audit.md): 22 focused input/provenance/cache/budget tests passed (0.475 seconds). A local three-report/two-source review packet was exported with zero model calls. Actual reports and outputs remain Git-ignored. This verifies input preparation, not recommendation quality or an external run.
