@@ -1,3 +1,7 @@
+## 17 November — test creative-method diversity and the actual customer job
+
+`v3.165-creative-method-coverage`: validate distinct ideation methods including inversion/transfer; retain speculative ideas without invented factual support. Separate source-supported copy from private prototypes and self-service product tests from owner-delivered concierge work. Prefer a prepared sample before requesting confidential material. 167 tests, types and lint passed; v13 semantic acceptance pending. V12 failed honestly at 3.81. [Audit](focused-evidence-review-audit.md).
+
 ## 17 November — isolate creative work and constrain owner workload
 
 `v3.164-exploration-context`: keep execution checklists out of the private ideation checkpoint while preserving original evidence, limits and diagnosis. Give full focused review high effort and matching quoted headroom on the unchanged model. Limit new phase checklists without invalidating historical plans, and surface exploration progress. 208 tests, types and lint passed. V11 remains failed; v12 evaluates the combined changes. [Audit](focused-evidence-review-audit.md).

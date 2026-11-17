@@ -114,7 +114,7 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
     output = sample(z.toJSONSchema(req.schema) as JsonSchema, marker);
     if (req.schema === CreativePreparationSchema) {
       const generated = output as { directions: Record<string, unknown>[] };
-      generated.directions = Array.from({ length: 3 }, (_, index) => ({ ...generated.directions[0], title: `Synthetic direction ${index + 1}` }));
+      generated.directions = Array.from({ length: 3 }, (_, index) => ({ ...generated.directions[0], title: `Synthetic direction ${index + 1}`, creativeMethod: ["convention_inversion", "distant_transfer", "asset_recombination"][index], methodApplication: "Synthetic creative method fixture, not a verified strategy." }));
     }
     const social = output as { posts?: { channel?: string; body?: string; format?: string; videoScript?: string; shotList?: { timing: string; show: string }[] }[] };
     const requestedChannel = lastUser.match(/Write\s+(?:\d+|one|two|three)\s+social\s+posts?\s+for\s+(instagram|facebook|linkedin|x|tiktok|pinterest|youtube)\b/i)?.[1]?.toLowerCase();

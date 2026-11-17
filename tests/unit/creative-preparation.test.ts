@@ -7,6 +7,7 @@ import { agentSteps } from "../../convex/lib/jobPlans";
 import { ZERO_USAGE, type TurnRequest } from "../../shared/ai/types";
 
 const seeds = { directions: Array.from({ length: 3 }, (_, index) => ({
+  creativeMethod: ["convention_inversion", "distant_transfer", "asset_recombination"][index], methodApplication: "A synthetic method application; no real business evidence.",
   title: `Synthetic possibility ${index}`, businessTension: "An explicitly hypothetical customer tension.",
   mechanism: "A proposed exchange to test privately before building.", changedBehavior: "An unverified new participant behavior.",
   whyParticipantsCare: "This is a hypothesis, not evidence of demand.", closestFamiliarAlternative: "A familiar current workflow.",
@@ -25,6 +26,14 @@ const spec = () => ({ ...focusedStrategySpec({ maxRevisions: 0 }), schema: z.obj
 });
 
 describe("creative preparation within the existing focused run", () => {
+  it("requires different methods including inversion and distant transfer without demanding a matching precedent", () => {
+    expect(CreativePreparationSchema.safeParse(seeds).success).toBe(true);
+    const repeated = structuredClone(seeds); repeated.directions[1].creativeMethod = repeated.directions[0].creativeMethod;
+    expect(CreativePreparationSchema.safeParse(repeated).success).toBe(false);
+    const missingTransfer = structuredClone(seeds); missingTransfer.directions[1].creativeMethod = "ownable_behavior";
+    expect(CreativePreparationSchema.safeParse(missingTransfer).success).toBe(false);
+    expect(seeds.directions.every(direction => direction.evidenceRefs.length === 0)).toBe(true);
+  });
   it("quotes one preparation call on the same writer and preserves the starter route and cap", () => {
     const full = focusedStrategySpec(), starter = starterStrategySpec();
     expect(full.creativePreparation).toBe(true);

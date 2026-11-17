@@ -1,5 +1,25 @@
 # Focused strategy evidence review — 17 November 2026
 
+## Creative-method coverage and self-service test validity — v3.165
+
+V12 (`launch-quality-v12-20261117`, v3.164, source hash `a8f492d544c9dba63cacc7a63a981ef71ec9efdde4f8060993a367c95d834c5d`) completed seven calls for **$1.292239**. Reviews progressed 3.31 with failed gates/two hard findings → 3.63 with two hard findings → **3.81/minimum 3.5, no lint, ship false**. High-effort review used actual reasoning and caught unsupported diagnosis/category claims missed earlier. Owner burden and paid-value testing remained weak; manual inspection also found the supposed bold assistant integration too close to advertised functionality. The automated final F7 score of 4 is not treated as proof of originality. Combined charged/held: **$68.599805 / $100**.
+
+The preparation contract now requires distinct named creative methods, including a convention inversion and a distant-industry transfer, with an explanation of the actual operation. Additional directions may recombine assets or develop an ownable behavior. Duplicate method labels or a missing required method fail structural validation; no source-backed precedent is required for a clearly hypothetical analogy. This verifies method coverage only. The final review still has to judge whether the ideas are meaningfully original and useful; labels are not a creativity score. No candidate Livoform strategy was hand-written into the case.
+
+The paid output also exposed a source-entailment problem: broad document creation was being treated as proof of a specific gap-removal behavior. Writer and reviewer guidance now explicitly separates an exact source-supported feature, a private prototype and an unsupported public promise. A check-before-use reminder cannot create missing feature evidence. Speculative product capabilities remain allowed in exploration.
+
+Focused test guidance now distinguishes self-service product value from an owner-operated concierge service. The latter may teach the customer job, but cannot establish software usability or willingness to pay. Tests should compare with the participant's actual current/free workaround, preserve unknown outcomes and avoid making the owner repeatedly deliver a manual service just to generate an activation signal. Cold invitations should offer the prepared sample first; confidential customer documents require separate consent and purpose later.
+
+Verification: **167 tests in ten files passed**, including distinct-method schema cases, exact checkpoint reuse, real mocked generation, retained unproven bold options, unchanged budget/model routing and existing permission boundaries. App/Convex typechecks, changed-file ESLint and diff checks passed. These are wiring/boundary checks, not a claim that this prompt contract has passed semantic evaluation.
+
+```sh
+pnpm exec vitest run tests/unit/creative-preparation.test.ts tests/unit/focused-plan.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/agent-escalation.test.ts tests/unit/strategy-exploration.test.ts tests/unit/evaluation-identity.test.ts tests/unit/livoform-launch-input.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+Paid variant `launch-quality-v13-20261117` evaluates the combined changes, using the same frozen business evidence, same runtime model and existing cap. No business action or deployment is authorized by these plans.
+
+
 ## Separate ideation context, deliberate review and bounded owner checklists — v3.164
 
 V11 (`launch-quality-v11-20261117`, v3.163, source hash `ccf30e4c123a01d0917565fd32510660a348a49925ca166ccf30a6b444c083bb`) completed seven calls, including creative preparation and both reserved repairs, for **$1.157487**. Reviews progressed 3.5 → 3.81 → 3.88. The last draft had one invalid audit locator and still scored 3 on owner simplicity; the engine retained the clean **3.81/minimum 3.5, ship false** revision. Its preparation remained a conventional feature/segment portfolio; the extra call alone did not establish originality. Combined charged/held: **$67.307566 / $100**.

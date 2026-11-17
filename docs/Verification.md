@@ -1,3 +1,7 @@
+## 17 November 2026 — creative methods and product-test validity
+
+V3.165 requires distinct ideation methods while preserving precedent-free hypotheses, clarifies that verification reminders cannot support invented features, and distinguishes self-service learning from concierge work. 167 focused/permission tests and typechecks/lint passed. V12 remains failed at 3.81; high-effort review caught factual gaps, but originality, paid-value testing and owner burden remain acceptance work. Cumulative **$68.599805 / $100**. [Audit](growth-engine/focused-evidence-review-audit.md).
+
 ## 17 November 2026 — focused ideation context and review reasoning
 
 V3.164 separates ideation from execution instructions, requests high-effort review on the same model with a quoted 12,000-token ceiling, bounds new phase checklists while preserving historical plans, and shows exploration progress. **208 tests in 14 files passed (16.88 seconds)**; typechecks/lint passed. V11 still failed at 3.81; seven calls cost $1.157487, cumulative **$67.307566 / $100**. [Audit, limits and commands](growth-engine/focused-evidence-review-audit.md).
