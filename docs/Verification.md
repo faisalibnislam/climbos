@@ -1,3 +1,14 @@
+## 17 November 2026 — customer-progress email eligibility
+
+[Audit](growth-engine/lifecycle-email-eligibility-audit.md) traces the existing observation → planning → draft → exact send approval → provider-boundary path and the new optional progress rule.
+
+- `pnpm exec vitest run tests/unit/customer-progress-eligibility.test.ts tests/convex/marketing-authorization.test.ts tests/convex/customer-progress.test.ts tests/convex/retention-plan-validation.test.ts tests/convex/lifecycle-draft-context.test.ts tests/convex/contact-frequency-history.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — **203 passed / eight files, 25.54 seconds**.
+- `pnpm exec vitest run tests/convex/customer-progress.test.ts` — **22 passed, 18.80 seconds**, rerun with additional actual-writer capability/limitation assertions; included in the 203-case suite above.
+- `CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env E2E_BASE_URL=http://127.0.0.1:3420 pnpm exec playwright test e2e/lifecycle-email-audience.spec.ts e2e/contact-frequency-policy.spec.ts --workers=1` — **four desktop/mobile checks passed, 1.5 minutes**. The initial run found a field-order readiness bug and one local demo-seed timeout; both flows passed after the comparison fix and rerun. Mobile capture inspected. Targeted axe/overflow checks passed; no full accessibility claim.
+- `pnpm typecheck` passed after a canonical-JSON type correction. Final `pnpm exec tsc --noEmit -p tsconfig.json` passed. Scoped lint passed for changed runtime/UI/tests; `git diff --check` passed. Final isolated loopback backend sync passed in **12.6 seconds**. No generated file edits were needed.
+
+Providers are mocked or credential-free local fixtures. The rule is explicit owner-selected eligibility over historical reports, not live tracking, automatic enrollment, permission or a forecast. Production scale, real model quality and real customer outcomes remain unverified; overall project scope remains incomplete.
+
 ## 17 November 2026 — shared contact-frequency policy
 
 The owner-selected interval now coordinates broadcast, outreach and review invitation history and pending attempts, including current-state dispatch checks. [Audit](growth-engine/shared-contact-policy-audit.md) records the exact behavior and remaining coverage limits.

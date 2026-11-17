@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
+import type { CustomerProgressRule, CustomerProgressState } from "../../shared/growth/customerProgress";
 import type { FunctionArgs } from "convex/server";
 import { api, internal } from "../../convex/_generated/api";
 import { sha256Hex } from "../../shared/policy";
@@ -50,7 +51,7 @@ async function fixture(body = "A useful update for subscribers.", recipients = 1
   return { t, owner, slug, orgId, artifactId, args, importContact };
 }
 
-async function anotherApprovedEmail(f: Awaited<ReturnType<typeof fixture>>, segment = "newsletter") {
+async function anotherApprovedEmail(f: Awaited<ReturnType<typeof fixture>>, segment = "newsletter", lifecycleRule?: CustomerProgressRule, previewHash?: string | null) {
   const artifactId = await f.t.run(async ctx => {
     const source = (await ctx.db.get(f.artifactId))!;
     const artifactId = await ctx.db.insert("artifacts", { orgId: f.orgId, businessId: source.businessId, kind: "email", channel: "email", title: "Another update", status: "approved", currentVersion: 1, createdAt: Date.now(), updatedAt: Date.now() });
@@ -58,7 +59,8 @@ async function anotherApprovedEmail(f: Awaited<ReturnType<typeof fixture>>, segm
     await ctx.db.patch(artifactId, { currentVersionId: versionId });
     return artifactId;
   });
-  await f.owner.client.mutation(api.marketing.approveSend, { slug: f.slug, artifactId, emailIndex: 0, segment, providerSegmentId: `seg-${segment}`, from: f.args.from });
+  const audiencePreviewHash = lifecycleRule && previewHash === undefined ? (await f.owner.client.query(api.marketing.emailAudiencePreview, { slug: f.slug, segment, lifecycleRule })).previewHash : previewHash ?? undefined;
+  await f.owner.client.mutation(api.marketing.approveSend, { slug: f.slug, artifactId, emailIndex: 0, segment, providerSegmentId: `seg-${segment}`, from: f.args.from, ...(lifecycleRule ? { lifecycleRule, audiencePreviewHash } : {}) });
   return f.t.run(async ctx => {
     const approval = (await ctx.db.query("approvals").withIndex("by_subject", q => q.eq("subjectType", "email_send").eq("subjectId", artifactId)).first())!;
     const scheduled = (await ctx.db.system.query("_scheduled_functions").collect()).find(s => s.name.includes("executeSend") && (s.args[0] as { approvalId?: string }).approvalId === approval._id)!;
@@ -72,6 +74,114 @@ async function prepareReview(f: Awaited<ReturnType<typeof fixture>>) {
   await f.t.mutation(internal.connections.storeConnection, { orgId: f.orgId, userId: f.owner.userId, provider: "email_mailbox", secret: JSON.stringify({ email: "owner@example.com" }), secretKind: "api_key", scopes: [], accountLabel: "owner@example.com" });
   return f.owner.client.mutation(api.reviews.prepareBatch, { slug: f.slug, people: [{ name: "Ana", email: "ana@example.com" }] });
 }
+
+const progressRule: CustomerProgressRule = { scope: "Export onboarding", state: "started", criterion: "Created account; real export not yet observed", maxAgeDays: 7 };
+async function recordProgress(f: Awaited<ReturnType<typeof fixture>>, email = "ana@example.com", state: CustomerProgressState = "started", scope = progressRule.scope, observedOn = new Date().toISOString().slice(0, 10)) {
+  const contact = (await f.owner.client.query(api.marketing.contactProgress, { slug: f.slug, email }))!;
+  return f.owner.client.mutation(api.marketing.recordContactProgress, { slug: f.slug, contactId: contact.contactId, expectedRevision: contact.progress.revision, scope, state, criterion: progressRule.criterion, evidence: "Owner checked the customer record", observedOn });
+}
+
+it("previews and sends only the opted-in audience matching the owner-selected progress rule", async () => {
+  const f = await fixture(undefined, 3);
+  await recordProgress(f);
+  await recordProgress(f, "extra-0@example.com", "activated");
+  const preview = await f.owner.client.query(api.marketing.emailAudiencePreview, { slug: f.slug, segment: "newsletter", lifecycleRule: progressRule, includeProgressOptions: true });
+  expect(preview).toMatchObject({ eligible: 1, total: 3, excluded: { different_progress: 1, unknown: 1, outdated: 0 }, rule: progressRule });
+  expect(preview.progressOptions.map(group => group.state).sort()).toEqual(["activated", "started"]);
+  expect(provider.synced).toEqual([]);
+  const args = await anotherApprovedEmail(f, "newsletter", progressRule, preview.previewHash);
+  expect((await f.t.run(ctx => ctx.db.get(args.approvalId)))?.scope).toMatchObject({ lifecycleRule: progressRule, spendLimitMinor: 1 });
+  await f.t.action(internal.marketing.executeSend, args);
+  expect(provider.synced).toEqual(["ana@example.com"]);
+  expect(provider.sends).toBe(1);
+});
+
+it.each(["missing preview", "stale preview"])("requires an exact reviewed progress audience: %s", async kind => {
+  const f = await fixture(); await recordProgress(f);
+  const preview = await f.owner.client.query(api.marketing.emailAudiencePreview, { slug: f.slug, segment: "newsletter", lifecycleRule: progressRule });
+  if (kind === "stale preview") await recordProgress(f, "ana@example.com", "activated");
+  await expect(anotherApprovedEmail(f, "newsletter", progressRule, kind === "missing preview" ? null : preview.previewHash)).rejects.toThrow(/changed or was not previewed/);
+  expect(provider.sends).toBe(0);
+});
+
+it.each(["completed milestone", "unknown", "new qualifying person", "same-state correction", "removed rule", "changed rule"])("invalidates the approved audience before provider writes after %s", async kind => {
+  const f = await fixture(undefined, 2); await recordProgress(f);
+  const args = await anotherApprovedEmail(f, "newsletter", progressRule);
+  if (kind === "completed milestone") await recordProgress(f, "ana@example.com", "activated");
+  if (kind === "unknown") await recordProgress(f, "ana@example.com", "unknown");
+  if (kind === "new qualifying person") await recordProgress(f, "extra-0@example.com");
+  if (kind === "same-state correction") await recordProgress(f);
+  if (kind === "removed rule" || kind === "changed rule") await f.t.run(async ctx => { const approval = (await ctx.db.get(args.approvalId))!; await ctx.db.patch(approval._id, { scope: { ...approval.scope, lifecycleRule: kind === "removed rule" ? undefined : { ...progressRule, maxAgeDays: 30 } } }); });
+  await f.t.action(internal.marketing.executeSend, args);
+  expect(provider.synced).toEqual([]);
+  expect(provider.sends).toBe(0);
+  expect(await f.t.run(ctx => ctx.db.get(args.reservationId))).toMatchObject({ status: "reconciled" });
+});
+
+it("stops a late completed milestone immediately before dispatch after provider preparation", async () => {
+  const f = await fixture(); await recordProgress(f);
+  const args = await anotherApprovedEmail(f, "newsletter", progressRule);
+  provider.onRead = () => recordProgress(f, "ana@example.com", "activated").then(() => undefined);
+  await f.t.action(internal.marketing.executeSend, args);
+  expect(provider.sends).toBe(0);
+  expect(await f.t.run(ctx => ctx.db.get(args.reservationId))).toMatchObject({ status: "reconciled" });
+});
+
+it("preserves an approved rule when a different product's progress changes", async () => {
+  const f = await fixture(); await recordProgress(f);
+  const args = await anotherApprovedEmail(f, "newsletter", progressRule);
+  await recordProgress(f, "ana@example.com", "exited", "A different product");
+  await f.t.action(internal.marketing.executeSend, args);
+  expect(provider.sends).toBe(1);
+});
+
+it("refuses a provider list containing people excluded by the approved progress filter", async () => {
+  const f = await fixture(undefined, 2); await recordProgress(f);
+  const args = await anotherApprovedEmail(f, "newsletter", progressRule);
+  provider.synced.push("extra-0@example.com");
+  await f.t.action(internal.marketing.executeSend, args);
+  expect(provider.drafts).toBe(0); expect(provider.sends).toBe(0);
+  expect(await f.t.run(ctx => ctx.db.get(args.reservationId))).toMatchObject({ status: "reconciled" });
+});
+
+it("does not use another tenant's progress record or expose its audience preview", async () => {
+  const f = await fixture();
+  const other = await asNewUser(f.t, "other-progress@example.com");
+  const { orgId } = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other progress" });
+  const contact = (await f.owner.client.query(api.marketing.contactProgress, { slug: f.slug, email: "ana@example.com" }))!;
+  await f.t.run(ctx => ctx.db.insert("contactProgress", { orgId, contactId: contact.contactId, progress: { revision: 1, history: [], current: [{ scope: progressRule.scope, state: "started", criterion: progressRule.criterion, evidence: "Foreign tenant record", observedOn: new Date().toISOString().slice(0, 10), recordedAt: Date.now(), recordedBy: other.userId, revision: 1 }] } }));
+  expect(await f.owner.client.query(api.marketing.emailAudiencePreview, { slug: f.slug, segment: "newsletter", lifecycleRule: progressRule, includeProgressOptions: true })).toMatchObject({ eligible: 0, excluded: { unknown: 1 }, progressOptions: [] });
+  await expect(other.client.query(api.marketing.emailAudiencePreview, { slug: f.slug, segment: "newsletter", lifecycleRule: progressRule })).rejects.toThrow();
+  await expect(anotherApprovedEmail(f, "newsletter", progressRule)).rejects.toThrow(/No opted-in contacts match/);
+  expect(provider.sends).toBe(0);
+});
+
+it.each(["unknown stage", "no definition", "no freshness limit"])("rejects an incomplete owner rule: %s", async kind => {
+  const f = await fixture(); await recordProgress(f);
+  const lifecycleRule = { ...progressRule, ...(kind === "unknown stage" ? { state: "unknown" as const } : kind === "no definition" ? { criterion: " " } : { maxAgeDays: 0 }) };
+  await expect(f.owner.client.query(api.marketing.emailAudiencePreview, { slug: f.slug, segment: "newsletter", lifecycleRule })).rejects.toThrow(/Choose a known customer-progress group/);
+  expect(provider.synced).toEqual([]);
+});
+
+it("checks contact frequency only for the filtered audience and keeps consent independent", async () => {
+  const f = await fixture(undefined, 2); await recordProgress(f);
+  await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: 7 });
+  await f.t.run(async ctx => {
+    const hash = await sha256Hex("extra-0@example.com");
+    const contact = (await ctx.db.query("contacts").collect()).find(c => c.emailHash === hash)!;
+    await ctx.db.patch(contact._id, { lastMarketingEmailAt: Date.now() });
+  });
+  expect(await f.owner.client.query(api.marketing.frequencyPreview, { slug: f.slug, segment: "newsletter" })).toMatchObject({ recentlyEmailed: 1 });
+  expect((await f.owner.client.query(api.marketing.emailAudiencePreview, { slug: f.slug, segment: "newsletter", lifecycleRule: progressRule })).frequency?.message).toBeNull();
+  const args = await anotherApprovedEmail(f, "newsletter", progressRule);
+  await f.t.run(async ctx => {
+    const hash = await sha256Hex("ana@example.com"), contact = (await ctx.db.query("contacts").collect()).find(c => c.emailHash === hash)!;
+    const consent = (await ctx.db.query("consentRecords").collect()).find(c => c.contactId === contact._id)!;
+    await ctx.db.patch(consent._id, { withdrawnAt: Date.now() });
+  });
+  await f.t.action(internal.marketing.executeSend, args);
+  expect(provider.synced).toEqual([]); expect(provider.sends).toBe(0);
+});
 
 it("a running broadcast blocks review approval and a fresh preview for its exact tenant and recipient", async () => {
   const f = await fixture(), batch = await prepareReview(f);

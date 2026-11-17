@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+Email send review can now filter an opted-in segment by an owner-selected product/journey, reported stage, exact definition and observation-age limit. It previews exclusions and rechecks the supporting reports before dispatch; a completed milestone can stop an outdated reminder. This uses dated owner reports, not live event tracking or automatic enrollment. See [the workflow and boundaries](growth-engine/lifecycle-email-eligibility-audit.md).
+
 Broadcasts, outreach (including follow-ups), and review invitations now apply the same owner-set contact interval. Queued/uncertain sends hold overlapping recipients, and undated review observations remain explicitly distinct from send times. Settings and existing review/send screens explain holds; a held outreach step remains queued or pauses for review. See [shared policy behavior and limits](growth-engine/shared-contact-policy-audit.md).
 
 Uncertain review invitations now offer an owner-requested original-mailbox check and an attributed manual observation. Exact saved message/account checks preserve missing or conflicting results as unknown; neither path resends. Original uncertainty, source and audit records remain inspectable. See [receipt recovery and limits](growth-engine/review-receipt-recovery-audit.md).

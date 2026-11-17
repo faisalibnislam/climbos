@@ -4,7 +4,8 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Button, Callout, ConfirmDialog, Field, Input, Select, Skeleton, Spinner, toast } from "@/components/ui";
+import { Button, Callout, Checkbox, ConfirmDialog, Field, Input, Select, Skeleton, Spinner, toast } from "@/components/ui";
+import { CUSTOMER_PROGRESS_LABELS, type CustomerProgressRule } from "@shared/growth/customerProgress";
 import { ErrorCallout, FactList, MessageText, NoteList, PERMISSION_WHO } from "../shared";
 import { EmailSenderCheck } from "./EmailSenderCheck";
 import type { ArtifactView } from "./model";
@@ -75,7 +76,18 @@ function EmailSendForm({ slug, artifact }: { slug: string; artifact: ArtifactVie
   const [reloadKey, setReloadKey] = useState(0);
   const [emailIndex, setEmailIndex] = useState("0");
   const [segment, setSegment] = useState("");
-  const frequency = useQuery(api.marketing.frequencyPreview, segment ? { slug, segment } : "skip");
+  const [limitByProgress, setLimitByProgress] = useState(false);
+  const [progressGroup, setProgressGroup] = useState<(Omit<CustomerProgressRule, "maxAgeDays"> & { key: string }) | null>(null);
+  const [observationAge, setObservationAge] = useState("");
+  const maxAgeDays = Number(observationAge);
+  const lifecycleRule: CustomerProgressRule | undefined = limitByProgress && progressGroup && Number.isInteger(maxAgeDays) && maxAgeDays >= 1 && maxAgeDays <= 365
+    ? { scope: progressGroup.scope, state: progressGroup.state, criterion: progressGroup.criterion, maxAgeDays } : undefined;
+  const audiencePreview = useQuery(api.marketing.emailAudiencePreview, segment ? { slug, segment, ...(lifecycleRule ? { lifecycleRule } : {}), includeProgressOptions: limitByProgress } : "skip");
+  const frequency = audiencePreview?.frequency;
+  const progressReady = !limitByProgress || Boolean(lifecycleRule && audiencePreview?.rule && lifecycleRule.scope === audiencePreview.rule.scope && lifecycleRule.state === audiencePreview.rule.state && lifecycleRule.criterion === audiencePreview.rule.criterion && lifecycleRule.maxAgeDays === audiencePreview.rule.maxAgeDays);
+  const reportedGroups = audiencePreview?.progressOptions ?? [];
+  const selectableGroups = progressGroup && !reportedGroups.some(group => group.key === progressGroup.key) ? [...reportedGroups, { ...progressGroup, contacts: 0 }] : reportedGroups;
+  const [approvedAudience, setApprovedAudience] = useState<{ rule?: CustomerProgressRule; hash: string; count: number } | null>(null);
   const [providerSegmentId, setProviderSegmentId] = useState("");
   const [from, setFrom] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -172,7 +184,10 @@ function EmailSendForm({ slug, artifact }: { slug: string; artifact: ArtifactVie
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
-        if (!frequency?.message && validate()) setConfirming(true);
+        if (audiencePreview && progressReady && audiencePreview.eligible > 0 && !frequency?.message && validate()) {
+          setApprovedAudience({ rule: lifecycleRule, hash: audiencePreview.previewHash, count: audiencePreview.eligible });
+          setConfirming(true);
+        }
       }}
     >
       {intro}
@@ -196,7 +211,7 @@ function EmailSendForm({ slug, artifact }: { slug: string; artifact: ArtifactVie
       <Field label="Who gets it" error={fieldErrors.segment}>
         <Select
           value={segment}
-          onValueChange={setSegment}
+          onValueChange={value => { setSegment(value); setProgressGroup(null); }}
           placeholder="Choose a group…"
           options={sendable.map((s) => ({
             value: s.segment,
@@ -204,6 +219,24 @@ function EmailSendForm({ slug, artifact }: { slug: string; artifact: ArtifactVie
           }))}
         />
       </Field>
+      {segment ? <div className="flex flex-col gap-3 rounded-lg border border-line p-3">
+        <Checkbox label="Limit this email by customer progress" checked={limitByProgress} onCheckedChange={checked => setLimitByProgress(checked === true)} />
+        {limitByProgress ? <>
+          <p className="text-sm text-ink-2">Use dated owner reports to match this email to a particular stage. This does not establish live activity or replace email permission.</p>
+          <Field label="Reported customer group"><Select value={progressGroup?.key ?? ""} placeholder="Choose a reported group…" onValueChange={key => {
+            const group = audiencePreview?.progressOptions.find(option => option.key === key);
+            if (group) setProgressGroup({ key, scope: group.scope, state: group.state, criterion: group.criterion });
+          }} options={selectableGroups.map(group => ({ value: group.key, label: `${group.scope} · ${CUSTOMER_PROGRESS_LABELS[group.state]} · ${group.criterion.length > 90 ? `${group.criterion.slice(0, 90)}…` : group.criterion}` }))} /></Field>
+          {audiencePreview && !audiencePreview.progressOptions.length ? <p className="text-sm text-ink-2">No usable groups in this opted-in audience. Record customer progress in Connections first; unknown progress does not qualify.</p> : null}
+          {audiencePreview?.omittedGroups ? <p className="text-xs text-ink-3">Showing 30 groups; {audiencePreview.omittedGroups} more are not shown. Choose a narrower contact segment to review them.</p> : null}
+          {progressGroup ? <p className="text-sm text-ink-2">Selected definition: {progressGroup.criterion}</p> : null}
+          <Field label="Oldest acceptable observation (days)" hint="Choose 1–365. Age uses UTC calendar dates; a report exactly this many days old qualifies. No age is assumed."><Input type="number" min={1} max={365} step={1} value={observationAge} onChange={event => setObservationAge(event.target.value)} /></Field>
+          {audiencePreview?.rule && progressReady ? <Callout tone="info" title={`${audiencePreview.eligible} of ${audiencePreview.total} opted-in contacts qualify`}>
+            Excluded: {audiencePreview.excluded.different_progress} with different progress or a different definition; {audiencePreview.excluded.outdated} with outdated reports; {audiencePreview.excluded.unknown} with missing, unknown or conflicting evidence. Checked on {audiencePreview.observedOnUtc} (UTC).
+          </Callout> : <p className="text-sm text-ink-2">Choose the group and observation age to preview recipients.</p>}
+          <p className="text-xs text-ink-3">Rechecked before approval and sending. Changed evidence stops this send for a fresh review. Use a provider list that matches the filtered audience exactly; ClimbOS does not remove extra provider contacts automatically.</p>
+        </> : null}
+      </div> : null}
       {frequency?.message ? <Callout tone="warning" title="Your contact limit will hold this send">{frequency.message}</Callout> : null}
       {chosen && chosen.total > chosen.sendable ? (
         <p className="-mt-2 text-sm text-ink-3">
@@ -234,7 +267,7 @@ function EmailSendForm({ slug, artifact }: { slug: string; artifact: ArtifactVie
 
       <EmailSenderCheck key={`${slug}:${from}`} slug={slug} from={from} report={audience.senderReadiness} />
 
-      <Button type="submit" className="self-start" disabled={Boolean(frequency?.message)}>
+      <Button type="submit" className="self-start" disabled={!audiencePreview || !progressReady || audiencePreview.eligible === 0 || Boolean(frequency?.message)}>
         Send
       </Button>
       {error ? <ErrorCallout error={error} /> : null}
@@ -247,13 +280,14 @@ function EmailSendForm({ slug, artifact }: { slug: string; artifact: ArtifactVie
       <ConfirmDialog
         open={confirming}
         onOpenChange={setConfirming}
-        title={`Send to ${chosen?.sendable.toLocaleString("en-US") ?? 0} people?`}
+        title={`Send to ${approvedAudience?.count.toLocaleString("en-US") ?? 0} people?`}
         description="Can't be unsent."
-        confirmLabel={`Send to ${chosen?.sendable.toLocaleString("en-US") ?? 0} people`}
+        confirmLabel={`Send to ${approvedAudience?.count.toLocaleString("en-US") ?? 0} people`}
+        confirmDisabled={!approvedAudience || approvedAudience.hash !== audiencePreview?.previewHash || Boolean(frequency?.message)}
         onConfirm={async () => {
           setError(null);
           try {
-            const res = await approveSend({ slug, artifactId: artifact.id, emailIndex: Number(emailIndex), segment, providerSegmentId, from: from.trim() });
+            const res = await approveSend({ slug, artifactId: artifact.id, emailIndex: Number(emailIndex), segment, providerSegmentId, from: from.trim(), ...(approvedAudience?.rule ? { lifecycleRule: approvedAudience.rule, audiencePreviewHash: approvedAudience.hash } : {}) });
             setSent({ recipients: res.recipients, subject: email?.subject ?? "" });
             toast({ tone: "info", title: "Send approved." });
           } catch (e) {
@@ -265,10 +299,12 @@ function EmailSendForm({ slug, artifact }: { slug: string; artifact: ArtifactVie
           items={[
             { term: "Email", detail: `“${email?.subject ?? ""}”` },
             { term: "To", detail: `Opted-in people in “${segment}”` },
+            ...(approvedAudience?.rule ? [{ term: "Progress rule", detail: `${approvedAudience.rule.scope} · ${CUSTOMER_PROGRESS_LABELS[approvedAudience.rule.state]} · ${approvedAudience.rule.criterion}. Owner observations no older than ${approvedAudience.rule.maxAgeDays} UTC calendar days.` }] : []),
             ...(providerName ? [{ term: "Via", detail: `“${providerName}”` }] : []),
             { term: "From", detail: from.trim() },
           ]}
         />
+        {approvedAudience && approvedAudience.hash !== audiencePreview?.previewHash ? <Callout tone="warning">The recipient evidence changed. Close this confirmation and review the updated audience.</Callout> : null}
         <NoteList
           className="mt-3"
           items={["Includes an unsubscribe link", "Your provider bills you", "Counts toward your send allowance", ...(artifact.isDemo ? ["Demo: simulated"] : [])]}

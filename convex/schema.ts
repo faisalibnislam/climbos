@@ -1,4 +1,4 @@
-import { customerProgressRecordV } from "./lib/customerProgress";
+import { customerProgressRecordV, customerProgressRuleV } from "./lib/customerProgress";
 import { emailReadinessValidator } from "./lib/emailReadiness";
 import { ownerQuestionV } from "./lib/ownerQuestion";
 import { authTables } from "@convex-dev/auth/server";
@@ -4181,6 +4181,7 @@ export default defineSchema({
       destination: v.optional(v.string()),
       audience: v.optional(v.string()),
       recipientSetHash: v.optional(v.string()),
+      lifecycleRule: v.optional(customerProgressRuleV),
       artifactVersionId: v.optional(v.string()),
       credentialId: v.optional(v.string()),
       reservationId: v.optional(v.string()),

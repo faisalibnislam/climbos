@@ -1,3 +1,7 @@
+## 17 November 2026 — progress-aware email audiences
+
+Added an optional owner-reviewed lifecycle filter to the existing broadcast path, with exact preview/approval binding, current-state dispatch checks and clear exclusions. 203 focused tests and four desktop/mobile checks passed; the actual writer also receives the capability with its limits. [Audit](lifecycle-email-eligibility-audit.md). Full lifecycle automation and original/later project scope remain incomplete.
+
 ## 17 November 2026 — shared contact-frequency policy
 
 Extended the existing owner interval across broadcasts, outreach and review invitations, with transactional dispatch checks and observation-aware review history. Four red regressions preceded 204 passing focused/permission tests and two desktop/mobile checks. Owner UI explains holds and preserves approved outreach steps. [Audit](shared-contact-policy-audit.md) records bounded reads, legacy correction gaps and incomplete lifecycle scope. No new provider or agent.

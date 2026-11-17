@@ -1,3 +1,5 @@
+import type { CustomerProgressRule } from "../growth/customerProgress";
+
 /**
  * Pure policy logic shared by Convex functions and tests: roles and
  * permissions, the job state machine, canonical hashing for approvals, and
@@ -173,6 +175,7 @@ export interface ApprovalScope {
   audience?: string;
   /** Exact marketing-send inputs; absent legacy approvals must be reviewed again. */
   recipientSetHash?: string;
+  lifecycleRule?: CustomerProgressRule;
   artifactVersionId?: string;
   credentialId?: string;
   reservationId?: string;
