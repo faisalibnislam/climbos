@@ -10,7 +10,7 @@ describe("booked calls: reminders, guest cancel, no-shows", () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  it("lets the guest cancel with their private link, and a no-show gets a rebooking email", async () => {
+  it("lets the guest cancel with their private link, and records a no-show separately from follow-up", async () => {
     const t = setup();
     const owner = await asNewUser(t, "calls@example.com");
     const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Calls Co" });

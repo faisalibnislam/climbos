@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+Latest booking follow-up (17 November): recording a no-show no longer queues an email or claims delivery. Attendance corrections are audited; linked CRM notes retain owner attribution without downgrading the deal. The inbox offers an editable manual draft and labels old send markers unverified. Legacy queued no-show actions now return without sending. [Audit and remaining gaps](growth-engine/booking-outcome-boundary-audit.md). No hosted deployment; other booking notifications retain their prior behavior.
+
 Latest selected-deal review (17 November): the customer-progress sheet now prepares an editable, selected-record question. The existing pipeline tool reads exact tenant-scoped notes, loss reasons and dates with version-bound pagination. Malformed new next-step dates are rejected; invalid legacy dates stay unknown. [Audit](growth-engine/selected-deal-review-audit.md) distinguishes verified routing/UI from unverified advice quality and remaining qualification/conversation scope. No hosted deployment or model change.
 
 Latest sales-learning repair (17 November): recent outcomes require recorded close dates; capped or undated history cannot produce a numeric aggregate win rate. Business-model retries preserve input identity when only the audience read timestamp changes, while current record changes still invalidate it. See [the audit](growth-engine/pipeline-outcome-coverage-audit.md) and [verification](Verification.md). Requirements 116/120 and the overall project remain partial.

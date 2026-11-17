@@ -1,3 +1,7 @@
+## 17 November 2026 — booking outcome and outreach separation
+
+Separated attendance records from sending, added corrections/audits and editable manual follow-up drafts, and neutralized legacy no-show jobs. Linked customer stages and next steps are preserved. 41 focused/permission tests and two desktop/mobile checks passed; full follow-up intelligence remains partial. [Audit](booking-outcome-boundary-audit.md).
+
 ## 17 November 2026 — selected customer review
 
 Connected existing CRM notes and loss reasons to the existing assistant tool through exact, tenant-scoped record reads and version-bound note pagination. Added an editable-review shortcut and next-step date validation. No automatic contact, approval or CRM mutation. [Audit](selected-deal-review-audit.md) records actual tests and limits.

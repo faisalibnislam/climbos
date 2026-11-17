@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Booking attendance can now be recorded and corrected without sending an email. A missed call offers an editable draft for manual review and copying; historical follow-up markers are explicitly unverified. Recording attendance preserves the deal’s stage and next step. This is not automatic follow-up or an in-app sending integration. See [the audit](growth-engine/booking-outcome-boundary-audit.md).
+
 Customer progress now offers **Review next step**: prepare an editable assistant question about the selected customer. The assistant can read that record’s saved notes, dates, loss reason and next step, with version-bound access to earlier notes. The shortcut submits nothing; advice does not contact the customer or change the deal. Notes are recorded context, not verified transcripts or proof of qualification. See [the audit](growth-engine/selected-deal-review-audit.md).
 
 Sales-learning inputs now use recorded decision dates rather than later edits. Missing dates and truncated history keep aggregate win rates unknown, while valid dated counts and owner-reported loss reasons remain available. CRM entry sources are not treated as acquisition attribution, and these summaries never authorize follow-up. Business-model retries retain stable context when only the audience read time changes. See [the audit](growth-engine/pipeline-outcome-coverage-audit.md).

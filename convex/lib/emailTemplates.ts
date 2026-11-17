@@ -208,18 +208,11 @@ export function bookingReminderEmail(p: { title: string; when: string; minutes: 
   };
 }
 
-/** Sent when the owner marks a no-show: friendly, one link to rebook. */
-export function noShowEmail(p: { withName: string; rebookUrl: string }) {
+/** Private text for owner review; recording an outcome never sends this draft. */
+export function noShowFollowUpDraft(p: { withName: string; rebookUrl?: string }) {
   return {
-    subject: `Sorry we missed you`,
-    text: `Hi, sorry we missed each other today. If you'd still like to talk, pick any time that suits you: ${p.rebookUrl}\n\n${p.withName}`,
-    html: layout(
-      "Missed call",
-      `<h1 style="margin:0 0 8px;font-size:22px">Sorry we missed you</h1>
-<p style="margin:0 0 16px;color:#454a44">If you'd still like to talk, pick any time that suits you.</p>
-<p style="margin:0">${button(p.rebookUrl, "Pick a new time")}</p>
-<p style="margin:16px 0 0;color:#6b7068;font-size:13px">${escapeHtml(p.withName)}</p>`,
-    ),
+    subject: "Sorry we missed each other",
+    text: `Hi, sorry we missed each other for our call. If you'd still like to talk, ${p.rebookUrl ? `you can check available times here: ${p.rebookUrl}` : "reply with a time that would work for you."}\n\n${p.withName}`,
   };
 }
 

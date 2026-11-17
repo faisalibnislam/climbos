@@ -4,13 +4,15 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { bookingCancelled } from "./crm";
+import { audit } from "./lib/audit";
+import { isDealTimestamp } from "../shared/growth/pipeline";
 import { decryptSecret, serverSecret } from "./lib/crypto";
-import { bookingCancelledEmail, bookingReminderEmail, noShowEmail } from "./lib/emailTemplates";
+import { bookingCancelledEmail, bookingReminderEmail, noShowFollowUpDraft } from "./lib/emailTemplates";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
 /**
  * Booked calls after booking: a reminder the day before (with a private link
- * to cancel or rebook), and a no-show follow-up when the owner marks one.
+ * to cancel or rebook). Owner-recorded outcomes are separate from follow-up drafts.
  */
 
 const SITE = () => process.env.SITE_URL ?? "https://climbos.app";
@@ -70,22 +72,32 @@ export const forInbox = query({
     const id = m.externalId.startsWith("booking:") ? ctx.db.normalizeId("bookings", m.externalId.slice(8)) : null;
     const b = id ? await ctx.db.get(id) : null;
     if (!b || b.orgId !== org._id) return null;
-    return { id: b._id, startAt: b.startAt, endAt: b.endAt, past: b.startAt <= Date.now(), status: b.status, outcome: b.outcome ?? null, followUpSent: Boolean(b.followUpSentAt) };
+    const page = await ctx.db.get(b.pageId);
+    const past = isDealTimestamp(b.startAt) && b.startAt <= Date.now();
+    // Legacy code set this marker BEFORE calling the provider; it cannot establish that an email was sent.
+    const followUpStatus = b.followUpSentAt !== undefined ? "historical_unverified" as const : "not_sent" as const;
+    const followUpDraft = b.status === "confirmed" && past && b.outcome === "no_show" && followUpStatus === "not_sent"
+      ? noShowFollowUpDraft({ withName: org.name, ...(page?.orgId === org._id && page.active ? { rebookUrl: `${SITE()}/book/${encodeURIComponent(page.slug)}` } : {}) }) : null;
+    return { id: b._id, startAt: b.startAt, endAt: b.endAt, past, status: b.status, outcome: b.outcome ?? null, followUpStatus, followUpDraft };
   },
 });
 
 export const setOutcome = mutation({
   args: { slug: v.string(), bookingId: v.id("bookings"), outcome: v.union(v.literal("attended"), v.literal("no_show")) },
   handler: async (ctx, { slug, bookingId, outcome }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "edit");
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "edit");
     const b = assertSameOrg(await ctx.db.get(bookingId), org._id, "booking");
+    if (b.status !== "confirmed") throw appError("INVALID", "A cancelled call cannot be marked attended or missed.");
+    if (!isDealTimestamp(b.startAt)) throw appError("INVALID", "The call date needs review before recording its outcome.");
     if (b.startAt > Date.now()) throw appError("INVALID", "The call hasn't happened yet.");
+    if (b.outcome === outcome) return;
     await ctx.db.patch(b._id, { outcome });
-    if (outcome === "no_show" && !b.followUpSentAt && org.kind !== "demo") await ctx.scheduler.runAfter(0, internal.bookings.sendNoShow, { bookingId });
-    if (b.prospectId && outcome === "no_show") {
+    // A missed appointment is not a lost opportunity. Record the owner's observation, without downgrading another booked call.
+    if (b.prospectId) {
       const deal = await ctx.db.query("deals").withIndex("by_prospect", (q) => q.eq("prospectId", b.prospectId)).first();
-      if (deal && deal.stage === "booked") await ctx.db.patch(deal._id, { stage: "talking", notes: [...deal.notes, { text: "Missed the call; follow-up sent.", at: Date.now() }], updatedAt: Date.now() });
+      if (deal?.orgId === org._id) await ctx.db.patch(deal._id, { notes: [...deal.notes, { text: `Owner ${b.outcome ? "corrected" : "recorded"} the call on ${new Date(b.startAt).toISOString()} as ${outcome === "attended" ? "attended" : "a no-show"}. This update sent no follow-up.`, at: Date.now(), userId: user._id }].slice(-200), updatedAt: Date.now() });
     }
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "booking.outcome_recorded", subjectType: "booking", subjectId: b._id, summary: `${b.outcome ? "Corrected" : "Recorded"} call outcome: ${outcome}. No follow-up sent.` });
   },
 });
 
@@ -151,14 +163,8 @@ export const sendCancelled = internalAction({
   },
 });
 
+/** Retained so pre-upgrade queued jobs cannot bypass the owner's review. */
 export const sendNoShow = internalAction({
   args: { bookingId: v.id("bookings") },
-  handler: async (ctx, { bookingId }) => {
-    const c = await ctx.runQuery(internal.bookings.emailContext, { bookingId });
-    if (!c || c.b.followUpSentAt) return;
-    const email = await decryptSecret({ keyId: c.b.emailKeyId, iv: c.b.emailIv, ciphertext: c.b.emailCiphertext }, `climbos:${c.org._id}:booking`);
-    const mail = noShowEmail({ withName: c.org.name, rebookUrl: `${SITE()}/book/${c.page.slug}` });
-    await ctx.runMutation(internal.bookings.markSent, { bookingId, field: "followUpSentAt" });
-    await ctx.runAction(internal.notifications.sendPlatformEmail, { orgId: c.org._id, to: email, template: "booking_no_show", ...mail });
-  },
+  handler: async () => ({ status: "requires_owner_review" as const }),
 });

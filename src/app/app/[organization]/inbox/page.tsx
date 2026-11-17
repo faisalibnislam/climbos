@@ -12,6 +12,7 @@ import { relativeTime } from "@/components/app/money";
 import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary";
 import { Badge, Button, Callout, Card, CardContent, EmptyState, Segmented, Textarea, toast } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { BookingOutcome } from "@/components/app/inbox/BookingOutcome";
 
 const BOXES = [
   { value: "open" as const, label: "Open" },
@@ -254,24 +255,5 @@ function ChatDetail({ slug, m }: { slug: string; m: Item }) {
         )}
       </CardContent>
     </Card>
-  );
-}
-
-/** After a booked call: "Did they show up?" A no-show gets a friendly rebooking email. */
-function BookingOutcome({ slug, inboxId }: { slug: string; inboxId: Id<"communityMessages"> }) {
-  const b = useQuery(api.bookings.forInbox, { slug, inboxId });
-  const setOutcome = useMutation(api.bookings.setOutcome);
-  if (!b || b.status === "cancelled" || !b.past) return null;
-  if (b.outcome) return <Badge tone={b.outcome === "attended" ? "green" : "orange"}>{b.outcome === "attended" ? "Showed up" : b.followUpSent ? "No-show · follow-up sent" : "No-show"}</Badge>;
-  const run = (outcome: "attended" | "no_show") => setOutcome({ slug, bookingId: b.id, outcome }).then(() => toast({ tone: "success", title: outcome === "no_show" ? "Rebook link sent" : "Marked attended" }), (e) => toast({ tone: "danger", title: errorMessage(e) }));
-  return (
-    <>
-      <Button size="sm" variant="secondary" onClick={() => run("attended")}>
-        Showed up
-      </Button>
-      <Button size="sm" variant="ghost" onClick={() => run("no_show")}>
-        No-show
-      </Button>
-    </>
   );
 }

@@ -1,3 +1,14 @@
+## 17 November 2026 — booking outcome and follow-up boundary
+
+Outcome recording no longer queues or claims a no-show email. Owner corrections, attributed CRM notes, private manual drafts and historical-send uncertainty are covered by the [audit](growth-engine/booking-outcome-boundary-audit.md).
+
+- `pnpm exec vitest run tests/convex/booking-outcome-boundary.test.ts tests/convex/bookings.test.ts tests/convex/crm.test.ts tests/convex/outbound.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — 41 passed across six files, 4.27 seconds.
+- `CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env E2E_BASE_URL=http://127.0.0.1:3420 pnpm exec playwright test e2e/booking-outcome.spec.ts --workers=1` — desktop and mobile passed, 19.7 seconds. Editable draft, attendance correction, persisted outcome/audit, historical uncertainty, and unchanged chat/workflow/approval/receipt/webhook/email-log records. No horizontal overflow or serious/critical automated accessibility findings. Mobile capture visually inspected; full accessibility and clipboard transfer are not established.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint convex/bookings.ts convex/lib/emailTemplates.ts 'src/app/app/[organization]/inbox/page.tsx' src/components/app/inbox/BookingOutcome.tsx tests/convex/booking-outcome-boundary.test.ts tests/convex/bookings.test.ts e2e/booking-outcome.spec.ts` — passed.
+
+The initial five regressions failed before the repair; the expanded eight-test booking-only run passed before the final broader run. Only the isolated loopback backend was synced. No live provider, hosted deployment, model change, paid evaluation or real send occurred. Manual draft preparation does not implement approved in-app follow-up sending or verify other booking notification paths. Full scope remains incomplete.
+
 ## 17 November 2026 — selected-deal review in the assistant
 
 The existing pipeline tool now reads exact selected records, including dated notes and loss reasons with version-bound pagination. A customer-progress shortcut prepares an editable review question. New next-step dates are validated; invalid legacy dates remain unknown. [Audit](growth-engine/selected-deal-review-audit.md).

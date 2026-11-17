@@ -1,0 +1,57 @@
+import { expect, test } from "@playwright/test";
+import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
+import { localDemoFixtures } from "./local-demo-fixtures";
+const envFile = process.env.CLIMBOS_DESIGN_E2E_ENV_FILE;
+const { rows, append } = localDemoFixtures(envFile);
+const copyRow = ({ _id: _i, _creationTime: _c, ...data }: Record<string, unknown>) => data;
+
+test("Booking outcomes stay separate from editable follow-up drafts @mobile", async ({ page, baseURL }, testInfo) => {
+  test.skip(!envFile, "Requires isolated loopback fixtures");
+  test.setTimeout(180_000);
+  expect(baseURL).toBe("http://127.0.0.1:3420");
+  const demoSlug = await openDemo(page);
+  const original = (await rows("organizations")).find(row => row.slug === demoSlug);
+  if (!original || original.kind !== "demo") throw new Error("Demo workspace required");
+  const member = (await rows("memberships")).find(row => row.orgId === original._id);
+  if (!member) throw new Error("Demo owner missing");
+  const slug = `booking-outcome-${testInfo.project.name}-${Date.now()}`;
+  await append("organizations", [{ ...copyRow(original), slug, name: "Booking outcome fixture", kind: "demo" }]);
+  const org = (await rows("organizations")).find(row => row.slug === slug);
+  if (!org || org.kind !== "demo") throw new Error("Isolated workspace missing");
+  await append("memberships", [{ ...copyRow(member), orgId: org._id }]);
+  const now = Date.now();
+  await append("bookingPages", [{ orgId: org._id, slug, title: "Intro", durationMin: 30, timezone: "UTC", days: [1, 2, 3, 4, 5], startHour: 9, endHour: 17, bufferMin: 0, noticeHours: 1, active: true, createdAt: now, updatedAt: now }]);
+  const bookingPage = (await rows("bookingPages")).find(row => row.orgId === org._id)!;
+  await append("bookings", [
+    { orgId: org._id, pageId: bookingPage._id, name: "Outcome guest", emailHash: "fixture", emailCiphertext: "sealed-fixture", emailIv: "fixture", emailKeyId: "k1", startAt: now - 86400000, endAt: now - 84600000, status: "confirmed", createdAt: now - 2 * 86400000 },
+    { orgId: org._id, pageId: bookingPage._id, name: "Historical guest", emailHash: "fixture", emailCiphertext: "sealed-fixture", emailIv: "fixture", emailKeyId: "k1", startAt: now - 86400000, endAt: now - 84600000, status: "confirmed", outcome: "no_show", followUpSentAt: now - 1000, createdAt: now - 2 * 86400000 },
+  ]);
+  const bookings = (await rows("bookings")).filter(row => row.orgId === org._id);
+  const booking = bookings.find(row => row.name === "Outcome guest")!;
+  await append("communityMessages", bookings.map(row => ({ orgId: org._id, channel: "booking", kind: "booking", externalId: `booking:${row._id}`, authorName: row.name, text: "Booked an introductory call", receivedAt: now, status: "new", createdAt: now, updatedAt: now })));
+  const effects = async () => Promise.all(["climbMessages", "workflowRuns", "approvals", "actionReceipts", "webhookDeliveries", "emailLog"].map(async table => (await rows(table)).filter(row => row.orgId === org._id)));
+  const before = await effects(); const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto(`/app/${slug}/inbox`);
+  await page.getByRole("button", { name: /Outcome guest/ }).click();
+  await page.getByRole("button", { name: "No-show", exact: true }).click();
+  await expect(page.getByText("No-show recorded. Nothing sent.", { exact: true })).toBeVisible();
+  await page.getByText("Review a follow-up draft", { exact: true }).click();
+  const draft = page.getByRole("textbox", { name: "Booking follow-up draft" });
+  await expect(draft).toHaveValue(/check available times here/);
+  await draft.fill("Subject: Another time?\n\nHappy to find another time if it is useful.");
+  await expect(draft).toHaveValue(/Happy to find another time/);
+  await expectAccessible(page, "booking outcome draft");
+  await expectNoHorizontalScroll(page);
+  await page.screenshot({ path: testInfo.outputPath("booking-draft.png"), fullPage: true });
+  await page.getByRole("button", { name: "Correct to attended", exact: true }).click();
+  await expect(draft).not.toBeVisible();
+  await expect(page.getByText("Showed up", { exact: true })).toBeVisible();
+  expect((await rows("bookings")).find(row => row._id === booking._id)).toMatchObject({ outcome: "attended" });
+  expect((await rows("auditEvents")).filter(row => row.orgId === org._id && row.action === "booking.outcome_recorded")).toHaveLength(2);
+  await page.getByRole("button", { name: /Historical guest/ }).click();
+  await expect(page.getByText(/An older follow-up record exists, but sending was not verified/)).toBeVisible();
+  await expect(page.getByText("Review a follow-up draft", { exact: true })).not.toBeVisible();
+  expect(await effects()).toEqual(before);
+  expect(errors).toEqual([]);
+});
