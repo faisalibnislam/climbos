@@ -2902,6 +2902,18 @@ export default defineSchema({
       v.literal("sent"),
       v.literal("failed"),
     ),
+    dispatch: v.optional(v.object({
+      connectionId: v.id("connections"), credentialId: v.id("connectionSecrets"),
+      sender: v.string(), to: v.string(), subject: v.string(), text: v.string(),
+      unsubscribeUrl: v.string(), messageId: v.string(), payloadHash: v.string(),
+    })),
+    recoveryRevision: v.optional(v.number()),
+    recovery: v.optional(v.object({
+      source: v.union(v.literal("sent_folder"), v.literal("owner_reported")),
+      outcome: v.union(v.literal("sent"), v.literal("not_sent"), v.literal("unknown")),
+      at: v.number(), by: v.id("users"), note: v.string(),
+      originalStatus: v.string(), originalError: v.optional(v.string()),
+    })),
     notSentConfirmed: v.optional(v.boolean()),
     error: v.optional(v.string()),
     claimToken: v.optional(v.string()),

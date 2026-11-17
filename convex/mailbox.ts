@@ -1,9 +1,10 @@
 "use node";
 
+import { matchesReviewEnvelope, matchesReviewText, type SavedReviewMessage } from "../shared/reviews/receipt";
 import { v } from "convex/values";
 import { ImapFlow } from "imapflow";
 import nodemailer from "nodemailer";
-import { fakeFindSent, fakeSend, FakeWorkerCrash } from "../shared/outbound/fakeMailbox";
+import { fakeFindSent, fakeMailbox, fakeSend, FakeWorkerCrash } from "../shared/outbound/fakeMailbox";
 import { isAutoReply, isOptOutReply, MAILBOX_PRESETS, replyText, SENT_COPY_HOSTS, sendMessageId, smtpOutcome, type MailboxPreset } from "../shared/outbound/sending";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -30,8 +31,8 @@ function transport(s: MailboxSecret) {
   return nodemailer.createTransport({ host: s.smtpHost, port: s.smtpPort, secure: s.smtpPort === 465, auth: { user: s.email, pass: s.password }, connectionTimeout: 15_000, socketTimeout: 30_000 });
 }
 
-function imap(s: MailboxSecret) {
-  return new ImapFlow({ host: s.imapHost, port: s.imapPort, secure: true, auth: { user: s.email, pass: s.password }, logger: false, socketTimeout: 30_000 });
+function imap(s: MailboxSecret, boundedRecovery = false) {
+  return new ImapFlow({ host: s.imapHost, port: s.imapPort, secure: true, auth: { user: s.email, pass: s.password }, logger: false, socketTimeout: 30_000, ...(boundedRecovery ? { connectionTimeout: 10_000, maxLineLength: 65536, maxLiteralSize: 32768, maxResponseSize: 65536 } : {}) });
 }
 
 /** Connect the owner's mailbox: checks SMTP and IMAP sign-in, then stores the credentials encrypted. */
@@ -272,9 +273,10 @@ export const sendReviewRequests = internalAction({
         continue;
       }
       const secret = JSON.parse(raw.value) as MailboxSecret;
+      if (secret.email.trim().toLowerCase() !== job.sender) continue;
       const claim = await ctx.runMutation(internal.reviews.claimRequest, { id, payloadHash: job.payloadHash, credentialId: raw.secretId });
       if (!claim) { await ctx.runMutation(internal.reviews.failUnstartedRequest, { id }); continue; }
-      const messageId = sendMessageId(`review-${id}`, secret.email);
+      const messageId = job.messageId;
       try {
         const info = process.env.CLIMBOS_FAKE_MAILBOX
           ? await fakeSend({ messageId, to: job.to, subject: job.subject, text: job.text })
@@ -287,5 +289,55 @@ export const sendReviewRequests = internalAction({
       if (process.env.CLIMBOS_FAKE_MAILBOX) continue;
       await new Promise((r) => setTimeout(r, 4_000));
     }
+  },
+});
+
+/** Only an exact, bounded plain-text Sent copy can confirm this invitation. No mailbox writes. */
+async function matchingReviewSent(s: MailboxSecret, expected: SavedReviewMessage): Promise<boolean> {
+  const client = imap(s, true);
+  const deadline = setTimeout(() => client.close(), 20_000);
+  try {
+    await client.connect();
+    const folders = (await client.list()).filter(folder => folder.specialUse === "\\Sent");
+    if (folders.length !== 1) return false;
+    const lock = await client.getMailboxLock(folders[0].path, { readOnly: true });
+    try {
+      const hits = await client.search({ header: { "message-id": expected.messageId } }, { uid: true });
+      if (!Array.isArray(hits) || hits.length !== 1) return false;
+      const message = await client.fetchOne(hits[0], { envelope: true, bodyStructure: true }, { uid: true });
+      if (!message || !message.envelope || !matchesReviewEnvelope(expected, message.envelope) || message.bodyStructure?.type !== "text/plain" || message.bodyStructure.childNodes?.length) return false;
+      const body = await client.download(hits[0], message.bodyStructure.part || "1", { uid: true, maxBytes: 32768 });
+      if (!body.content || body.meta.contentType !== "text/plain" || body.meta.flowed) { body.content?.destroy(); return false; }
+      const chunks: Buffer[] = []; let bytes = 0;
+      for await (const chunk of body.content) { const b = Buffer.from(chunk); bytes += b.length; if (bytes >= 32768) { body.content.destroy(); return false; } chunks.push(b); }
+      return matchesReviewText(expected, Buffer.concat(chunks).toString("utf8"));
+    } finally { lock.release(); }
+  } finally { clearTimeout(deadline); client.close(); }
+}
+
+/** Owner-requested read of the original mailbox. Missing is unknown, never permission to retry. */
+export const checkReviewReceipt = action({
+  args: { slug: v.string(), id: v.id("reviewRequests"), revision: v.number() },
+  handler: async (ctx, args): Promise<{ matched: boolean; message: string }> => {
+    const c = await ctx.runQuery(internal.reviews.receiptContext, args);
+    const d = c.request.dispatch;
+    let matches = false;
+    let note = "The original message could not be matched completely. Delivery remains unknown; nothing was resent.";
+    if (d && c.dispatchValid && c.request.claimToken) {
+      const raw = await ctx.runQuery(internal.connections.getSecret, { connectionId: d.connectionId });
+      if (raw && raw.orgId === c.org._id && raw.provider === "email_mailbox" && raw.secretId === d.credentialId) {
+        try {
+          const secret = JSON.parse(raw.value) as MailboxSecret;
+          if (secret.email.trim().toLowerCase() === d.sender) {
+            if (process.env.CLIMBOS_FAKE_MAILBOX) {
+              const fake = fakeMailbox();
+              const copies = fake.sent.filter(m => m.messageId === d.messageId);
+              matches = fake.lookup && copies.length === 1 && copies[0].to === d.to && copies[0].subject === d.subject && matchesReviewText(d, copies[0].text);
+            } else matches = await matchingReviewSent(secret, d);
+          }
+        } catch { /* Missing, changed, unsupported or unavailable mailbox evidence remains unknown. */ }
+      } else note = "The original mailbox sign-in is unavailable or changed. Delivery remains unknown; nothing was resent.";
+    } else note = "This older attempt lacks the saved message and mailbox identity needed for an automatic check. Record what you find manually.";
+    return ctx.runMutation(internal.reviews.recordReceiptCheck, { ...args, fingerprint: c.fingerprint, matches, note });
   },
 });

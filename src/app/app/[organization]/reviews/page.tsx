@@ -1,5 +1,6 @@
 "use client";
 
+import { ReviewReceiptControls } from "@/components/app/reviews/ReviewReceiptControls";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -174,13 +175,17 @@ export default function ReviewsPage() {
           {data.recent.length ? (
             <ul className="mt-2 flex flex-col divide-y divide-line text-sm">
               {data.recent.map((r) => (
-                <li key={r.id} className="flex items-center justify-between gap-2 py-2">
+                <li key={r.id} className="flex flex-col gap-2 py-2">
+                  <div className="flex items-center justify-between gap-2">
                   <span className="min-w-0 text-ink-2"><span className="block truncate">{r.name}</span>{r.error ? <span className="mt-1 block text-xs text-ink-3">{r.error}</span> : null}</span>
                   <span className="flex shrink-0 flex-wrap justify-end gap-1.5">
                     {r.feedback ? <Badge tone="violet">Note</Badge> : null}
                     {r.clicked ? <Badge tone="green">Opened</Badge> : null}
-                    <Badge tone={r.status === "failed" ? "red" : r.status === "uncertain" || r.status === "sending" ? "violet" : r.status === "sent" ? "neutral" : "blue"}>{r.status === "sent" ? "Mailbox accepted" : r.status === "failed" ? "Didn't send" : r.status === "uncertain" ? "Delivery unclear" : r.status === "sending" ? "Receipt pending" : "Queued"}</Badge>
+                    <Badge tone={r.status === "failed" ? "red" : r.status === "uncertain" || r.status === "sending" ? "violet" : r.status === "sent" ? "neutral" : "blue"}>{r.recovery?.source === "owner_reported" && r.recovery.outcome !== "unknown" ? (r.recovery.outcome === "sent" ? "Owner: sent" : "Owner: not sent") : r.recovery?.source === "sent_folder" && r.recovery.outcome === "sent" ? "Sent copy found" : r.status === "sent" ? "Mailbox accepted" : r.status === "failed" ? "Didn't send" : r.status === "uncertain" ? "Delivery unclear" : r.status === "sending" ? "Receipt pending" : "Queued"}</Badge>
                   </span>
+                  </div>
+                  {r.recovery ? <p className="text-xs text-ink-2">{r.recovery.source === "owner_reported" ? "Owner report" : "Mailbox check"} · {new Date(r.recovery.at).toLocaleString()}. {r.recovery.note}</p> : null}
+                  {data.canResolve && r.canRecover ? <ReviewReceiptControls slug={slug} receipt={r} /> : null}
                 </li>
               ))}
             </ul>

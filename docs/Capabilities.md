@@ -1,6 +1,8 @@
 # ClimbOS capabilities and boundaries
 
-Review invitations now claim the exact approved message and mailbox once before SMTP handoff, recheck current workspace/permission state, preserve completed results and expose uncertain receipt without automatic replay. Known unsent attempts can be reviewed afresh; negative feedback never changes the public invitation. Automatic mailbox reconciliation and review-history frequency coordination remain unfinished. See [the audit](growth-engine/review-send-boundary-audit.md).
+Uncertain review invitations now offer an owner-requested original-mailbox check and an attributed manual observation. Exact saved message/account checks preserve missing or conflicting results as unknown; neither path resends. Original uncertainty, source and audit records remain inspectable. See [receipt recovery and limits](growth-engine/review-receipt-recovery-audit.md).
+
+Review invitations now claim the exact approved message and mailbox once before SMTP handoff, recheck current workspace/permission state, preserve completed results and expose uncertain receipt without automatic replay. Known unsent attempts can be reviewed afresh; negative feedback never changes the public invitation. Owner-requested receipt checks and manual observations are now available; review-history frequency coordination remains unfinished. See [the audit](growth-engine/review-send-boundary-audit.md).
 
 Outgoing webhook deliveries now recheck pause, tenant, subscription and destination state before dispatch, reject stale retry results and include a signed stable delivery ID. Settings explain uncertain receipt. Receivers still need deduplication; legacy attempted deliveries without identity are held for review. See [the audit](growth-engine/webhook-delivery-boundary-audit.md).
 

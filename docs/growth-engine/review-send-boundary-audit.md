@@ -33,3 +33,7 @@ Two new tests failed before implementation: pausing after approval still returne
 SMTP cannot be recalled after handoff, and the final local claim cannot eliminate a remote-side race or prove inbox delivery. Worker loss can leave a request receipt-pending indefinitely; this batch exposes it and prevents replay but does not add an IMAP reconciliation or owner-resolution workflow. Historical sent/failed records are not independently reverified or migrated. Older in-flight application code must be drained before a future production rollout; no production rollout occurred here.
 
 The owner-selected broadcast contact interval still does not include review history; full cross-workflow arbitration, customer-event ingestion, lifecycle enrollment and business-quality validation remain incomplete. The next contact-pressure extension must preserve the newly distinguished pending/unknown/known-unsent states and the neutral invitation policy. All original 410 requirements and later owner specifications remain in scope; this is a verified dispatch repair, not completion of that broader scope.
+
+## Follow-up: 17 November 2026
+
+[Receipt recovery](review-receipt-recovery-audit.md) now supplies owner-requested exact-message Sent-folder checks and source-labeled manual observations. It supersedes the missing-reconciliation-UI limitation above, while preserving uncertainty and requiring fresh approval for a new invitation. Continuous recovery, final-observation correction and full contact-frequency coordination remain incomplete.

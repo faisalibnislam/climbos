@@ -1,3 +1,7 @@
+## 17 November 2026 — review receipt recovery
+
+The existing Reviews flow now reads original dispatch evidence, checks a bounded exact Sent copy or records an attributed owner observation, and never resends as a recovery side effect. 81 focused/permission tests and two browser checks passed. [Audit](review-receipt-recovery-audit.md) preserves mailbox-evidence limits and outstanding correction/frequency work; the full original and later scope remains active.
+
 ## 17 November 2026 — neutral review invitation send boundary
 
 Added exact-message/credential claims, live permission/pause checks, preserved results and explicit unknown receipt to the existing mailbox flow. Two red regressions preceded 55 passing focused/permission tests and two desktop/mobile checks. [Audit](review-send-boundary-audit.md) records legacy and recovery limits. Full project scope remains incomplete.

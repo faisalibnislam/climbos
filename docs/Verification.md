@@ -1,3 +1,15 @@
+## 17 November 2026 — original review-invitation receipt recovery
+
+[Audit](growth-engine/review-receipt-recovery-audit.md) documents frozen dispatch context, exact bounded Sent-copy matching, owner-reported observations, stale-result rejection and privacy lifecycle.
+
+- `pnpm exec vitest run tests/convex/review-receipt-recovery.test.ts tests/convex/review-send-boundary.test.ts tests/convex/reviews.test.ts tests/convex/sending.test.ts tests/convex/sending-safety.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — **81 passed, seven files, 7.73 seconds**.
+- `CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env E2E_BASE_URL=http://127.0.0.1:3420 pnpm exec playwright test e2e/review-send-boundaries.spec.ts --workers=1` — **two passed, 18.8 seconds**. Desktop/mobile manual unknown/not-sent workflow, reload, source labels, audit records and unchanged consequential records. No page errors, overflow or serious/critical targeted axe findings; mobile capture inspected.
+- Scoped ESLint passed for `convex/reviews.ts`, `convex/mailbox.ts`, `convex/schema.ts`, `convex/settings.ts`, `shared/reviews/receipt.ts`, the Reviews page, `ReviewReceiptControls.tsx`, the recovery suite and updated E2E suite.
+- `pnpm typecheck` — application and Convex passed after correcting an initial unsupported toast tone.
+- Final isolated backend sync passed in 5.18 seconds. Browser checks use synthetic legacy records; IMAP/SMTP behavior is mocked. No live mailbox, message, paid model or hosted deployment.
+
+Matching a Sent copy does not prove inbox delivery or a submitted review. Legacy/unsupported copies stay unknown; final owner-decision correction and complete contact-frequency coordination remain unfinished. The broad project is not complete.
+
 ## 17 November 2026 — review invitation dispatch and receipt
 
 Two failing regressions reproduced pause bypass and duplicate-worker overwrite of a successful invitation. Current claims bind exact payload and credential identity; uncertain SMTP receipt cannot become an automatic resend. [Audit](growth-engine/review-send-boundary-audit.md) records behavior and limits.

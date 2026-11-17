@@ -68,3 +68,7 @@ Security headers on every route: `X-Content-Type-Options`, `Referrer-Policy`, `X
 ## Outgoing event delivery
 
 Webhook dispatch uses current tenant, subscription, destination and workspace/fleet checks with a token per attempt. DNS resolution is checked before Node transport; redirects are refused. A signed body `deliveryId` survives retries, but receiver-side deduplication is required for at-least-once delivery. Legacy uncertain attempts are held for destination review. DNS checks are not socket-level pinning, and pausing cannot recall an in-flight request. [Verification and limits](growth-engine/webhook-delivery-boundary-audit.md).
+
+## Review invitation receipt evidence
+
+New invitation attempts retain their approved message/account snapshot for exact, owner-requested recovery. The Sent folder is read-only and a missing result never authorizes replay. Manual observations keep their owner-reported source, original uncertainty and audit trail. Recovery is tenant/permission/revision bound. The latest 100 invitation records and approval scopes are exportable with limit flags, and both tables participate in workspace purge. Original message text includes its original review/unsubscribe links; credential secrets are not included. See [verification and limits](growth-engine/review-receipt-recovery-audit.md).

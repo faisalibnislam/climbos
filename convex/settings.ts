@@ -489,6 +489,8 @@ export const exportData = internalQuery({
     const weeklyRevisions = await ctx.db.query("playResultRevisions").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
     const outcomeRevisions = await ctx.db.query("experimentOutcomeRevisions").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
     const contactProgress = await ctx.db.query("contactProgress").withIndex("by_org", q => q.eq("orgId", orgId)).take(101);
+    const reviewRequests = await ctx.db.query("reviewRequests").withIndex("by_org_created", q => q.eq("orgId", orgId)).order("desc").take(101);
+    const reviewBatches = await ctx.db.query("reviewInvitationBatches").withIndex("by_org_created", q => q.eq("orgId", orgId)).order("desc").take(101);
     const brandPatterns = await ctx.db.query("brandPatternDecisions").withIndex("by_org_key_at", q => q.eq("orgId", orgId)).take(101);
     const strip = <T extends Record<string, unknown>>(rows: T[]) => rows.map(({ _creationTime: _c, ...r }) => r);
     return JSON.stringify(
@@ -518,6 +520,10 @@ export const exportData = internalQuery({
         weeklyReportHistoryLimited: weeklyRevisions.length > 1000,
         experimentOutcomeRevisions: strip(outcomeRevisions.slice(0, 1000)),
         experimentOutcomeHistoryLimited: outcomeRevisions.length > 1000,
+        reviewInvitations: strip(reviewRequests.slice(0, 100).map(({ token: _token, claimToken: _claim, ...row }) => row)),
+        reviewInvitationHistoryLimited: reviewRequests.length > 100,
+        reviewInvitationApprovals: strip(reviewBatches.slice(0, 100)),
+        reviewInvitationApprovalHistoryLimited: reviewBatches.length > 100,
         customerProgress: strip(contactProgress.slice(0, 100)),
         customerProgressLimited: contactProgress.length > 100,
         brandPatternDecisions: strip(brandPatterns.slice(0, 100)),
@@ -822,6 +828,7 @@ const PURGE_BY_ORG: { table: string; index: string }[] = [
   { table: "chatThreads", index: "by_org_last" },
   { table: "communityMessages", index: "by_org_status" },
   { table: "reviewRequests", index: "by_org_created" },
+  { table: "reviewInvitationBatches", index: "by_org_created" },
   { table: "competitorWatches", index: "by_org" },
   { table: "competitorChanges", index: "by_org_at" },
   // Media, designs and drafts.

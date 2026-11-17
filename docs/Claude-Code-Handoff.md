@@ -1,6 +1,8 @@
 # ClimbOS development handoff for Claude Code
 
-Review invitations now claim the exact approved message and mailbox once before SMTP handoff, recheck current workspace/permission state, preserve completed results and expose uncertain receipt without automatic replay. Known unsent attempts can be reviewed afresh; negative feedback never changes the public invitation. Automatic mailbox reconciliation and review-history frequency coordination remain unfinished. See [the audit](growth-engine/review-send-boundary-audit.md).
+Uncertain review invitations now offer an owner-requested original-mailbox check and an attributed manual observation. Exact saved message/account checks preserve missing or conflicting results as unknown; neither path resends. Original uncertainty, source and audit records remain inspectable. See [receipt recovery and limits](growth-engine/review-receipt-recovery-audit.md).
+
+Review invitations now claim the exact approved message and mailbox once before SMTP handoff, recheck current workspace/permission state, preserve completed results and expose uncertain receipt without automatic replay. Known unsent attempts can be reviewed afresh; negative feedback never changes the public invitation. Owner-requested receipt checks and manual observations are now available; review-history frequency coordination remains unfinished. See [the audit](growth-engine/review-send-boundary-audit.md).
 
 Latest event-delivery update (17 November): webhook claims and results now bind a per-attempt token, destination and payload; workspace/fleet pause and tenant checks occur before dispatch. A Node action checks DNS and preserves the existing cron entry point. Signed `deliveryId` supports receiver deduplication. Legacy attempted rows without identity are held for review. 62 focused tests and two browser checks passed; see [migration and limits](growth-engine/webhook-delivery-boundary-audit.md). No hosted deployment or real receiver call.
 

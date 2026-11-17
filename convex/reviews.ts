@@ -1,14 +1,14 @@
 import { customerVoice } from "./lib/customerVoice";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, mutation, query, type QueryCtx } from "./_generated/server";
 import { featureAllowed, fleetStopped, requirePaid } from "./lib/access";
 import { audit } from "./lib/audit";
 import { notifyOwners } from "./lib/notify";
-import { appError, requireOrgAccess } from "./lib/tenancy";
-import { can, sha256Hex } from "../shared/policy";
-import { unsubscribeToken } from "../shared/outbound/sending";
+import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
+import { can, canonicalJson, sha256Hex } from "../shared/policy";
+import { sendMessageId, unsubscribeToken } from "../shared/outbound/sending";
 import { hasActiveOutboundSequence, hasQueuedReviewInvitation } from "./lib/contactPressure";
 import { serverSecret } from "./lib/crypto";
 import { reviewSafetySignals } from "../shared/reviews/safety";
@@ -46,16 +46,17 @@ function token(): string {
 export const overview = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", org._id)).first();
     const requests = await ctx.db.query("reviewRequests").withIndex("by_org_created", (q) => q.eq("orgId", org._id)).order("desc").take(500);
-    const asked = new Set(requests.filter(r => !r.notSentConfirmed).map((r) => r.email));
+    const asked = new Set(requests.filter(r => !r.notSentConfirmed && !(r.recovery?.source === "owner_reported" && r.recovery.outcome === "not_sent")).map((r) => r.email));
     const won = await ctx.db.query("deals").withIndex("by_org_stage", (q) => q.eq("orgId", org._id).eq("stage", "won")).take(500);
     return {
+      canResolve: can(role, "approve"),
       reviewUrl: business?.reviewUrl ?? null,
       pageUrl: `${SITE()}/review/${org.slug}`,
       stats: { sent: requests.filter((r) => r.status === "sent").length, clicked: requests.filter((r) => r.clickedAt).length, feedback: requests.filter((r) => r.feedbackAt).length },
-      recent: requests.slice(0, 30).map((r) => ({ id: r._id, name: r.name, email: r.email, status: r.status, sentAt: r.sentAt ?? null, clicked: Boolean(r.clickedAt), feedback: Boolean(r.feedbackAt), error: r.error ?? null })),
+      recent: requests.slice(0, 30).map((r) => ({ id: r._id, name: r.name, email: r.email, status: r.status, sentAt: r.sentAt ?? null, clicked: Boolean(r.clickedAt), feedback: Boolean(r.feedbackAt), error: r.error ?? null, recovery: r.recovery ?? null, recoveryRevision: r.recoveryRevision ?? 0, canRecover: recoverable(r), canCheckMailbox: Boolean(r.dispatch && r.claimToken), attemptedAt: r.dispatchStartedAt ?? null, receiptPreview: r.dispatch ? { sender: r.dispatch.sender, subject: r.dispatch.subject, text: r.dispatch.text, messageId: r.dispatch.messageId } : null })),
       candidates: won.filter((d) => d.email && !asked.has(d.email)).map((d) => ({ dealId: d._id, name: d.name, email: d.email! })),
     };
   },
@@ -170,7 +171,7 @@ export const prepareBatch = mutation({
         continue;
       }
       // Ask each customer at most once every 90 days.
-      if (await ctx.db.query("reviewRequests").withIndex("by_org_email", (q) => q.eq("orgId", org._id).eq("email", email).gte("createdAt", now - ASK_AGAIN_AFTER)).filter(q => q.neq(q.field("notSentConfirmed"), true)).first()) {
+      if (await ctx.db.query("reviewRequests").withIndex("by_org_email", (q) => q.eq("orgId", org._id).eq("email", email).gte("createdAt", now - ASK_AGAIN_AFTER)).filter(q => q.and(q.neq(q.field("notSentConfirmed"), true), q.not(q.and(q.eq(q.field("recovery.source"), "owner_reported"), q.eq(q.field("recovery.outcome"), "not_sent"))))).first()) {
         recentlyAsked++;
         continue;
       }
@@ -214,7 +215,7 @@ export const approveBatch = mutation({
     for (const person of batch.recipients) {
       const emailHash = await sha256Hex(person.email);
       if (await ctx.db.query("suppressions").withIndex("by_org_email", (q) => q.eq("orgId", org._id).eq("emailHash", emailHash)).first()) continue;
-      if (await ctx.db.query("reviewRequests").withIndex("by_org_email", (q) => q.eq("orgId", org._id).eq("email", person.email).gte("createdAt", Date.now() - ASK_AGAIN_AFTER)).filter(q => q.neq(q.field("notSentConfirmed"), true)).first()) continue;
+      if (await ctx.db.query("reviewRequests").withIndex("by_org_email", (q) => q.eq("orgId", org._id).eq("email", person.email).gte("createdAt", Date.now() - ASK_AGAIN_AFTER)).filter(q => q.and(q.neq(q.field("notSentConfirmed"), true), q.not(q.and(q.eq(q.field("recovery.source"), "owner_reported"), q.eq(q.field("recovery.outcome"), "not_sent"))))).first()) continue;
       if (await hasActiveOutboundSequence(ctx, org._id, person.email)) {
         activeOutreach++;
         continue;
@@ -258,7 +259,9 @@ async function preparedRequest(ctx: QueryCtx, id: Id<"reviewRequests">) {
   const link = `${SITE()}/review/${org.slug}?t=${r.token}`;
   const first = r.name.split(/\s+/)[0];
   const unsub = await unsubscribeToken(r._id, serverSecret());
+  if (!mailbox.accountLabel || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mailbox.accountLabel)) return null;
   const job = {
+    sender: mailbox.accountLabel.trim().toLowerCase(),
     credentialId: credential._id,
     connectionId: mailbox._id,
     to: r.email,
@@ -266,7 +269,7 @@ async function preparedRequest(ctx: QueryCtx, id: Id<"reviewRequests">) {
     text: INVITE_BODY(business.name, first, link, `${SITE()}/u/${unsub}`),
     unsubscribeUrl: process.env.CONVEX_SITE_URL ? `${process.env.CONVEX_SITE_URL}/unsubscribe?token=${encodeURIComponent(unsub)}` : `${SITE()}/u/${unsub}`,
   };
-  return { ...job, payloadHash: await sha256Hex(JSON.stringify(job)) };
+  return { ...job, messageId: sendMessageId(await sha256Hex(`review:${id}`), job.sender), payloadHash: await sha256Hex(canonicalJson(job)) };
 }
 export const prepareRequest = internalQuery({
   args: { id: v.id("reviewRequests") },
@@ -281,7 +284,7 @@ export const claimRequest = internalMutation({
     if (!job || job.payloadHash !== args.payloadHash || job.credentialId !== args.credentialId) return null;
     const r = (await ctx.db.get(args.id))!;
     const claimToken = token();
-    await ctx.db.patch(r._id, { status: "sending", claimToken, payloadHash: job.payloadHash, dispatchStartedAt: Date.now(), error: "Delivery has not been confirmed. Check the mailbox before sending another invitation." });
+    await ctx.db.patch(r._id, { status: "sending", claimToken, dispatch: job, payloadHash: job.payloadHash, dispatchStartedAt: Date.now(), error: "Delivery has not been confirmed. Check the mailbox before sending another invitation." });
     await audit(ctx, { orgId: r.orgId, actorType: "system", action: "reviews.dispatch_started", subjectType: "review_request", subjectId: r._id, summary: `Claimed one approved invitation. Payload hash ${job.payloadHash}. Receipt is not yet confirmed.` });
     return { claimToken };
   },
@@ -304,9 +307,60 @@ export const recordRequest = internalMutation({
   args: { id: v.id("reviewRequests"), claimToken: v.string(), outcome: v.union(v.literal("sent"), v.literal("failed"), v.literal("uncertain")), messageId: v.optional(v.string()) },
   handler: async (ctx, { id, claimToken, outcome, messageId }) => {
     const r = await ctx.db.get(id);
-    if (!r || r.status !== "sending" || r.claimToken !== claimToken) return;
+    if (!r || (r.status !== "sending" && !(r.status === "uncertain" && r.recovery?.outcome === "unknown")) || r.claimToken !== claimToken) return;
     await ctx.db.patch(id, { status: outcome, notSentConfirmed: outcome === "failed" ? true : undefined, ...(outcome === "sent" ? { sentAt: Date.now(), messageId, error: undefined } : { error: outcome === "uncertain" ? "The mailbox result is unclear. Check the Sent folder before sending another invitation. ClimbOS will not retry automatically." : "The mailbox rejected this invitation. No automatic retry." }) });
     await audit(ctx, { orgId: r.orgId, actorType: "system", action: "reviews.delivery_result", subjectType: "review_request", subjectId: id, summary: outcome === "sent" ? "Mailbox accepted the approved invitation; inbox delivery and review submission are not verified." : outcome === "uncertain" ? "Mailbox receipt is unknown; no automatic replay." : "Mailbox rejected the invitation." });
+  },
+});
+
+/** A live SMTP call gets time to finish; elapsed time is never proof of non-delivery. */
+function recoverable(r: Doc<"reviewRequests">): boolean {
+  return (r.status === "uncertain" || (r.status === "sending" && r.dispatchStartedAt !== undefined && r.dispatchStartedAt <= Date.now() - 120_000)) && (!r.recovery || r.recovery.outcome === "unknown");
+}
+const recoveryArgs = { slug: v.string(), id: v.id("reviewRequests"), revision: v.number() };
+async function recoveryContext(ctx: QueryCtx, args: { slug: string; id: Id<"reviewRequests">; revision: number }) {
+  const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "approve");
+  if (org.deletedAt !== undefined) throw appError("NOT_FOUND", "Workspace unavailable.");
+  const request = assertSameOrg(await ctx.db.get(args.id), org._id, "review invitation");
+  if (!recoverable(request) || (request.recoveryRevision ?? 0) !== args.revision) throw appError("INVALID", "This invitation result changed or is still in progress. Reload before reviewing it.");
+  let dispatchValid = false;
+  if (request.dispatch) {
+    const { messageId, payloadHash, ...body } = request.dispatch;
+    dispatchValid = payloadHash === request.payloadHash && payloadHash === await sha256Hex(canonicalJson(body)) && messageId === sendMessageId(await sha256Hex(`review:${request._id}`), body.sender);
+  }
+  return { org, user, request, dispatchValid, fingerprint: await sha256Hex(JSON.stringify([request.status, request.claimToken, request.payloadHash, request.dispatch, request.recoveryRevision ?? 0])) };
+}
+export const receiptContext = internalQuery({
+  args: recoveryArgs,
+  handler: recoveryContext,
+});
+
+export const recordReceiptCheck = internalMutation({
+  args: { ...recoveryArgs, fingerprint: v.string(), matches: v.boolean(), note: v.string() },
+  handler: async (ctx, args) => {
+    const c = await recoveryContext(ctx, args);
+    if (c.fingerprint !== args.fingerprint) throw appError("INVALID", "This invitation changed during the check. Reload its result.");
+    const d = c.request.dispatch;
+    const connection = d ? await ctx.db.get(d.connectionId) : null;
+    const credential = d ? await ctx.db.get(d.credentialId) : null;
+    const matches = Boolean(args.matches && c.dispatchValid && d && connection?.orgId === c.org._id && connection.status === "connected" && connection.provider === "email_mailbox" && connection.accountLabel?.trim().toLowerCase() === d.sender && credential?.orgId === c.org._id && credential.connectionId === d.connectionId && c.request.claimToken && c.request.payloadHash === d.payloadHash);
+    const note = matches ? "A matching copy was found in the original mailbox's Sent folder. Inbox delivery and a submitted review are not verified." : args.note.slice(0, 300);
+    await ctx.db.patch(c.request._id, { ...(matches ? { status: "sent" as const, messageId: d!.messageId, error: undefined } : {}), recoveryRevision: args.revision + 1, recovery: { source: "sent_folder", outcome: matches ? "sent" : "unknown", at: Date.now(), by: c.user._id, note, originalStatus: c.request.recovery?.originalStatus ?? c.request.status, originalError: c.request.recovery?.originalError ?? c.request.error } });
+    await audit(ctx, { orgId: c.org._id, actorType: "user", actorId: c.user._id, action: "reviews.receipt_checked", subjectType: "review_request", subjectId: c.request._id, summary: note });
+    return { matched: matches, message: note };
+  },
+});
+
+/** An attributed owner observation is not provider verification or permission to resend. */
+export const recordReceiptObservation = mutation({
+  args: { ...recoveryArgs, outcome: v.union(v.literal("sent"), v.literal("not_sent"), v.literal("unknown")), note: v.string() },
+  handler: async (ctx, args) => {
+    const c = await recoveryContext(ctx, args);
+    const note = args.note.trim();
+    if (note.length < 5 || note.length > 500) throw appError("INVALID", "Describe what you checked in 5–500 characters.");
+    await ctx.db.patch(c.request._id, { status: args.outcome === "sent" ? "sent" : args.outcome === "not_sent" ? "failed" : "uncertain", recoveryRevision: args.revision + 1, recovery: { source: "owner_reported", outcome: args.outcome, at: Date.now(), by: c.user._id, note, originalStatus: c.request.recovery?.originalStatus ?? c.request.status, originalError: c.request.recovery?.originalError ?? c.request.error }, error: args.outcome === "sent" ? undefined : args.outcome === "not_sent" ? "Owner reported no send. Any new invitation requires a fresh preview and approval." : "The owner could not determine delivery. No automatic retry." });
+    await audit(ctx, { orgId: c.org._id, actorType: "user", actorId: c.user._id, action: "reviews.receipt_observed", subjectType: "review_request", subjectId: c.request._id, summary: `Owner-reported ${args.outcome}: ${note}. No send authorized.` });
+    return { saved: true };
   },
 });
 
