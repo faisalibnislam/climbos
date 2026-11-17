@@ -51,9 +51,59 @@ describe("no email audience is assumed (Book 14 §4)", () => {
   });
   it("allows building a list, a stated list, or consented contacts", () => {
     expect(lintNoAudience([{ a: "Start a newsletter and grow your list with a template pack." }], { emailAudience: 0 }, "")).toEqual([]);
-    expect(lintNoAudience(plays, { emailAudience: 0 }, "Formkit has 2,400 newsletter subscribers")).toEqual([]);
+    expect(lintNoAudience(plays, { emailAudience: 0, businessName: "Formkit", factEvidenceBases: ["owner_reported"] }, ["Formkit has 2,400 newsletter subscribers"])).toEqual([]);
     expect(lintNoAudience(plays, { emailAudience: 120 }, "")).toEqual([]);
     expect(lintNoAudience(plays, {}, "")).toEqual([]);
+  });
+
+  it.each([
+    "Contact support for product help.",
+    "We have no newsletter subscribers.",
+    "We do not have an email list.",
+    "We have 0 newsletter subscribers.",
+    "We want to grow to 2,400 newsletter subscribers.",
+    "Our competitor has 2,400 newsletter subscribers.",
+    "Our partner has 2,400 newsletter subscribers.",
+    "We have 2,400 paying software subscribers.",
+    "We previously had 2,400 newsletter subscribers.",
+    "We have 2,400 newsletter subscribers, but their consent is unknown.",
+    "We have 2,400 newsletter subscribers whose permission was withdrawn.",
+    "We have 2,400 email contacts from a purchased list.",
+    "We have 2,400 email contacts from a scraped list.",
+  ])("does not turn an unrelated, negative or uncertain fact into an email audience: %s", fact => {
+    expect(lintNoAudience(plays, { emailAudience: 0, businessName: "Formkit", factEvidenceBases: ["owner_reported"] }, [fact])).toMatchObject([{ rule: "no_audience" }]);
+  });
+
+  it("requires recorded provenance and preserves conflicting or ambiguous audience reports", () => {
+    for (const basis of [undefined, "unknown"] as const) {
+      expect(lintNoAudience(plays, { emailAudience: 0, businessName: "Formkit", factEvidenceBases: basis ? [basis] : undefined }, ["Formkit has 2,400 newsletter subscribers"])).toMatchObject([{ rule: "no_audience" }]);
+    }
+    expect(lintNoAudience(plays, { emailAudience: 0, businessName: "Formkit", factEvidenceBases: ["source_reported"] }, ["Another company has 2,400 newsletter subscribers"])).toMatchObject([{ rule: "no_audience" }]);
+    expect(lintNoAudience(plays, { emailAudience: null, businessName: "Formkit", factEvidenceBases: ["owner_reported", "owner_reported"] }, ["Formkit has 2,400 newsletter subscribers", "We no longer have an email list"])).toMatchObject([{ rule: "no_audience" }]);
+  });
+
+  it.each(["owner_reported", "source_reported", "measured"] as const)("accepts a specifically attributed %s report without creating permission", basis => {
+    expect(lintNoAudience(plays, { emailAudience: 0, businessName: "Formkit", factEvidenceBases: [basis] }, ["Formkit has 2,400 newsletter subscribers"])).toEqual([]);
+    expect(lintNoAudience(plays, { emailAudience: null, businessName: "Formkit", factEvidenceBases: [basis] }, ["Other Formkit Tools has 2,400 newsletter subscribers"])).toMatchObject([{ rule: "no_audience" }]);
+  });
+
+  it("accepts an explicit owner report and treats researched first-person text as ambiguous", () => {
+    expect(lintNoAudience(plays, { emailAudience: null, factEvidenceBases: ["owner_reported"] }, ["We maintain an email list of 2,400 subscribers"])).toEqual([]);
+    expect(lintNoAudience(plays, { emailAudience: 0, factEvidenceBases: ["source_reported"] }, ["We have 2,400 newsletter subscribers"])).toMatchObject([{ rule: "no_audience" }]);
+    expect(lintNoAudience(plays, { emailAudience: null, businessName: "A+B (Tools)", factEvidenceBases: ["owner_reported"] }, ["A+B (Tools) has 1,200 email subscribers"])).toEqual([]);
+  });
+
+  it.each(["Our newsletter has 2,400 subscribers", "Formkit's newsletter has 2,400 subscribers"])("recognizes a directly owned newsletter report: %s", fact => {
+    expect(lintNoAudience(plays, { emailAudience: 0, businessName: "Formkit", factEvidenceBases: ["owner_reported"] }, [fact])).toEqual([]);
+  });
+
+  it("keeps draft preparation and bold exploration available without granting immediate list use", () => {
+    const out = {
+      strategyExploration: { bold: { mechanism: "What if your newsletter subscribers could collectively choose the next product? Explore building that audience with a partner first." } },
+      plays: [{ firstActionToday: "Draft an email for your newsletter subscribers for owner review." }],
+    };
+    expect(lintNoAudience(out, { emailAudience: null }, [])).toEqual([]);
+    expect(lintNoAudience({ plays: [{ firstActionToday: "Build a newsletter and then email your existing list today." }] }, { emailAudience: 0 }, [])).toMatchObject([{ rule: "no_audience" }]);
   });
 });
 

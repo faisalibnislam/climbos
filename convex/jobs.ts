@@ -645,6 +645,7 @@ function workspaceCurrency(job: JobCtx): string {
 
 function constraintsOf(job: JobCtx, extra: Partial<PlanConstraints> = {}): PlanConstraints {
   return {
+    businessName: job.business?.name ?? job.org.name,
     ...(job.goal ? { monthlyAdBudgetUsd: minorToMajor(job.goal.monthlyAdBudgetMinor, job.goal.currency) } : {}),
     currency: workspaceCurrency(job),
     ownerChannelPreferences: job.business?.acquisition?.channelPreferences ?? [],

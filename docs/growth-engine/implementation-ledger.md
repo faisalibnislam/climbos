@@ -1,3 +1,7 @@
+## 17 November 2026 — external audience evidence and plan approval
+
+External-list evidence now preserves recorded source class and ownership instead of accepting any subscriber/contact keyword. An unresolved immediate-list-use finding fails final plan quality and existing approval; private drafts and separate bold exploration remain available. Multiline facts retain provenance alignment. [Audit](external-email-audience-audit.md) documents semantic and readiness limits.
+
 ## Local update — 17 November 2026: recorded planning audience
 
 The engine now joins live contacts with current recorded permission and suppression, labels bounded coverage as unknown, and carries the dated evidence into real writer inputs and plan constraints. Owner counts and sending reuse the same consent predicate. Creative retrieval retains unknown audience state. [Audit](planning-email-audience-audit.md) records limits and the remaining external-list/readiness work.

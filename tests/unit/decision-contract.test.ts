@@ -35,6 +35,16 @@ const econ = { revenuePerCustomerMonthUsd: 40, grossMargin: 0.6, monthlyChurn: 0
 const portfolio = (issues: { rule: string; severity: string }[]) => issues.filter((i) => i.rule === "portfolio" && i.severity === "error");
 
 describe("decision contract flag", () => {
+  it.each([false, true])("keeps multiline facts aligned with audience provenance (reported=%s)", reported => {
+    const facts = reported
+      ? ["Support notes\nContact the team for help", "We have 2,400 newsletter subscribers"]
+      : ["Support notes\nWe have 2,400 newsletter subscribers", "Contact the team for help"];
+    const issues = growthPlaysSpec().lint!({ portfolioNote: "", economics: { ...econ, sources: { revenue: tag, margin: tag, churn: tag } }, plays: [play({ firstActionToday: "Email your list about the new menu." })] } as never, {
+      task: "", brief: "", facts, constraints: { emailAudience: 0, factEvidenceBases: ["unknown", "owner_reported"] },
+    });
+    expect(issues.some(issue => issue.rule === "no_audience")).toBe(!reported);
+  });
+
   it("treats open invoice balances as owner-review evidence, not collection permission", () => {
     expect(DECISION_CONTRACT).toContain("An open balance is not expected or recoverable revenue");
     expect(DECISION_CONTRACT).toContain("Do not retry payments, send reminders, or contact customers as a side effect");

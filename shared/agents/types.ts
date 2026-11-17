@@ -167,6 +167,8 @@ export interface PlanConstraints {
   goalNumbers?: number[];
   /** Complete local recorded audience; null = incomplete coverage, 0 = no eligible contacts in these records. Not send authorization. */
   emailAudience?: number | null;
+  /** Workspace business identity for attributing an external audience report; never model-invented. */
+  businessName?: string;
   /** Additional new customers the owner can accept each month with current operations. */
   newCustomersPerMonth?: number;
   /** Where customers can be served (acquisition geography): local or regional limits paid reach. */

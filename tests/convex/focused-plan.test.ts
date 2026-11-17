@@ -7,13 +7,14 @@ import { offerAssessmentFixture, offerFact } from "../fixtures/offerAssessment";
 import { approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
 import type { TurnRequest } from "../../shared/ai/types";
 import type { RateVersion } from "../../shared/economics/rates";
-const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", dismissedChannel: false }));
+const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", dismissedChannel: false, emailMode: "" }));
 vi.mock("../../shared/ai/turn", async original => ({
   ...await original<typeof import("../../shared/ai/turn")>(),
   modelTurn: async (req: TurnRequest, rates: RateVersion) => {
     state.requests.push(req);
     const days = Number(JSON.stringify(req.messages).match(/EXECUTION CYCLE: (14|30|90) days/)?.[1] ?? 14);
     const plan = focusedPlanFixture(days);
+    if (state.emailMode) plan.focusedMove.firstAction = state.emailMode === "draft" ? "Draft an email for your newsletter subscribers for owner review." : "Email your list about the proposed intake handoff.";
     if (state.dismissedChannel) plan.channels[0] = { ...plan.channels[0], key: "seo_content", name: "Blog articles" };
     if (state.citationReference) { plan.channels[0].cites = [state.citationReference]; plan.audiences[0].cites = [state.citationReference]; }
     if (state.demandMode) {
@@ -59,7 +60,7 @@ vi.mock("../../shared/ai/turn", async original => ({
     return result;
   },
 }));
-afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.dismissedChannel = false; });
+afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.dismissedChannel = false; state.emailMode = ""; });
 
 async function workspace() {
   const t = setup(); delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE;
@@ -363,6 +364,27 @@ it("withholds unsupported refund copy even when the AI review approves it", asyn
   expect(plan.expert?.quality?.state).toBe("failed");
   await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
   expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
+
+it.each(["unrelated", "negative", "reported", "draft"])("keeps %s audience evidence honest through final plan review and approval", async mode => {
+  const { t, owner, slug, orgId } = await workspace(); state.emailMode = mode;
+  await owner.client.mutation(api.orgs.addFact, { slug, category: "audience", statement: mode === "reported" ? "Focused Test has 2,400 newsletter subscribers." : mode === "negative" ? "We have no newsletter subscribers." : "Contact support for product help." });
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  const blocked = mode === "unrelated" || mode === "negative";
+  const fixes = plan.expert?.quality?.fixes?.filter(f => f.rule === "no_audience") ?? [];
+  if (blocked) {
+    expect(plan.expert?.quality?.state).toBe("failed");
+    expect(fixes).toContainEqual(expect.objectContaining({ rule: "no_audience", path: "focusedMove.firstAction" }));
+    await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
+  } else {
+    expect(fixes).toEqual([]);
+    expect(plan.expert?.quality?.state).not.toBe("failed");
+  }
+  expect(plan.expert?.strategyExploration?.bold).toBeDefined();
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+  expect(await t.run(ctx => ctx.db.query("approvals").filter(q => q.eq(q.field("subjectType"), "email_send")).collect())).toEqual([]);
 });
 it("does not reuse another website's or another tenant's cached evidence", async () => {
   const { t, owner, slug } = await workspace();

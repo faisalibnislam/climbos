@@ -1,3 +1,7 @@
+## 17 November 2026 — external audience evidence and plan approval
+
+Row 111 follow-up: unrelated/negative/third-party audience facts no longer bypass the plan validator, and unresolved immediate list use blocks approval even after a passing model review. Drafting, verification, voluntary audience building and speculative strategy remain available. [Audit](external-email-audience-audit.md). Rows 111/112/118/119 remain partial; no audience permission or customer-state automation is inferred.
+
 ## 17 November 2026 — audience evidence before recommendations
 
 Row 111 follow-up: planning no longer counts suppressed, deleted, orphaned or unusable contact records as an available email audience. Capped coverage remains unknown and reaches model input, plan validation and existing owner views. Permission records are not represented as independent verification or deliverability. [Audit](planning-email-audience-audit.md). Rows 111/112/118/119 remain partial; no new sending or lifecycle automation was added.

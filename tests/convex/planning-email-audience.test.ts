@@ -101,6 +101,7 @@ it.each([false, true])("carries real audience evidence and uncertainty into gene
   await f.t.action(internal.jobs.simplePlanJob, { runId: f.runId, task: "retention_plan" });
   expect(capture.inputs).toHaveLength(1);
   expect(capture.inputs[0].constraints?.emailAudience).toBe(partial ? null : 1);
+  expect(capture.inputs[0].constraints?.businessName).toBe("Audience evidence");
   expect(capture.inputs[0].brief).toContain(new Date(NOW).toISOString());
   expect(capture.inputs[0].brief).toContain(partial ? "Eligible audience unknown because coverage is incomplete" : "1 contact has recorded current marketing consent");
   expect(capture.inputs[0].brief).toContain("not independently verified permission");

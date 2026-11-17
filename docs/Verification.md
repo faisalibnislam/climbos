@@ -1,3 +1,15 @@
+## 17 November 2026 — external audience evidence and plan approval
+
+Immediate email-list recommendations now require attributable audience evidence; unresolved findings fail final quality and existing approval. Private drafting, list building, verification and protected strategy exploration remain available. See [the audit](growth-engine/external-email-audience-audit.md).
+
+- `pnpm exec vitest run tests/unit/plan-grounding.test.ts tests/unit/plan-quality.test.ts tests/unit/strategy-exploration.test.ts tests/unit/decision-contract.test.ts tests/convex/focused-plan.test.ts tests/convex/planning-email-audience.test.ts tests/convex/plan-approval.test.ts tests/convex/marketing-authorization.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts` — 261 passed across ten files, 11.22 seconds.
+- `pnpm typecheck` — root and Convex passed, including the final multiline regression.
+- `pnpm exec eslint convex/jobs.ts shared/growth/emailAudience.ts shared/agents/specs.ts shared/agents/types.ts shared/agents/quality.ts tests/unit/plan-grounding.test.ts tests/unit/plan-quality.test.ts tests/convex/focused-plan.test.ts tests/convex/planning-email-audience.test.ts` — passed.
+- `pnpm exec eslint tests/unit/decision-contract.test.ts` — passed.
+- `git diff --check` — passed.
+
+Actual generation-to-persistence and owner-approval regressions use mocked model output and a passing critic. They prove the audience finding cannot be overridden by that review and produces no email approval/action receipt. Additional coverage includes source-class alignment across multiline facts, existing tenant/send controls and protected strategy exploration. No live model, provider, email, browser or deployment. The audit records the remaining bounded-text and external-list verification limits; this is not a full-project completion claim.
+
 ## 17 November 2026 — recorded email audience in planning
 
 Planning now uses a dated, tenant-scoped join of active contact, current recorded consent and suppression data; incomplete coverage remains unknown. Owner segment counts and sending share the same consent predicate. [Audit](growth-engine/planning-email-audience-audit.md).

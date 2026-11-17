@@ -18,7 +18,7 @@ import {fitJson} from "./context";
 export type QualityState = "passed" | "provisional" | "needs_input" | "failed";
 
 /** Lint rules whose failure means the plan must not drive work (REQ-EVAL hard failures). */
-export const HARD_RULES = new Set(["owner_channel_preference", "paid_acquisition_fit", "demand_gate", "focused_learning", "evidence_basis", "campaign_timing", "focused_offer_assessment", "contact_policy", "economics", "budget", "capacity", "citation", "provenance", "consistency", "no_plays", "invented_fact", "generic_action", "creative_diversity", "unsupported_scarcity", "unsupported_deadline", "unsupported_refund_promise", "approved_offer_price", "approved_offer_discount", "approved_offer_eligibility", "approved_offer_mechanism", "approved_offer_play", "approved_offer_urgency", "offer_validation_only", "offer_not_recommended", "growth_cash", "growth_cash_reserve"]);
+export const HARD_RULES = new Set(["no_audience", "owner_channel_preference", "paid_acquisition_fit", "demand_gate", "focused_learning", "evidence_basis", "campaign_timing", "focused_offer_assessment", "contact_policy", "economics", "budget", "capacity", "citation", "provenance", "consistency", "no_plays", "invented_fact", "generic_action", "creative_diversity", "unsupported_scarcity", "unsupported_deadline", "unsupported_refund_promise", "approved_offer_price", "approved_offer_discount", "approved_offer_eligibility", "approved_offer_mechanism", "approved_offer_play", "approved_offer_urgency", "offer_validation_only", "offer_not_recommended", "growth_cash", "growth_cash_reserve"]);
 
 /** One hard finding the owner can act on: what failed and where. */
 export interface QualityFix {
@@ -104,6 +104,7 @@ const LABEL: Record<string, string> = {
   focused_learning: "the primary learning test needs a consistent definition and honest unknowns",
   evidence_basis: "the evidence labels must match the recorded sources",
   owner_channel_preference: "the selected channel was dismissed or marked irrelevant by your team",
+  no_audience: "a proposed email action relies on an audience that has not been established; verify the list or prepare a draft first",
   paid_acquisition_fit: "paid acquisition conflicts with the supplied economics or supported diagnosis",
   campaign_timing: "the campaign window needs supported dates, enough preparation time and capacity",
   focused_offer_assessment: "the proposed offer needs supported evidence, consistent terms and viable economics",
