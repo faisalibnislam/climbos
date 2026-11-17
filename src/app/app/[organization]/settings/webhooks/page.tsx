@@ -40,6 +40,7 @@ function Webhooks() {
       <Callout tone="info" title="Approval events don't publish">
         An approved draft event sends the exact approved version. It doesn&apos;t publish or authorize publishing. Long drafts are marked incomplete; use the export pack for full text.
       </Callout>
+      <p className="text-sm text-ink-2">Retries can repeat an event. Verify the signature, then deduplicate by the signed body’s deliveryId. A successful HTTP response confirms receipt, not what your automation did.</p>
       {secret ? (
         <Callout tone="info" title="Copy signing secret now">
           <span className="flex flex-wrap items-center gap-2">
@@ -131,9 +132,10 @@ function Webhooks() {
             {e.recent.length ? (
               <ul className="flex flex-col gap-1 text-xs text-ink-3">
                 {e.recent.map((d) => (
-                  <li key={d.id} className="flex items-center gap-2">
+                  <li key={d.id} className="flex flex-wrap items-center gap-2">
                     <Badge tone={d.status === "delivered" ? "green" : d.status === "failed" ? "red" : "blue"}>{d.status === "delivered" ? `Delivered${d.code ? ` · ${d.code}` : ""}` : d.status === "failed" ? `Failed${d.code ? ` · ${d.code}` : ""}` : "Retrying"}</Badge>
                     {d.event} · {relativeTime(d.at)}
+                    {d.error ? <span className="w-full text-ink-2">{d.error}</span> : null}
                   </li>
                 ))}
               </ul>

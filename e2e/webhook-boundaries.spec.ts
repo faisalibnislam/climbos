@@ -1,0 +1,22 @@
+import { expect, test } from "@playwright/test";
+import { expectAccessible, expectNoHorizontalScroll, openDemo } from "./helpers";
+import { localDemoFixtures } from "./local-demo-fixtures";
+const envFile = process.env.CLIMBOS_DESIGN_E2E_ENV_FILE;
+const { rows, append } = localDemoFixtures(envFile);
+test("Webhook review explains uncertainty and deduplication without dispatch @mobile", async ({ page, baseURL }, testInfo) => {
+  test.skip(!envFile, "Requires isolated loopback fixtures"); test.setTimeout(120000);
+  expect(baseURL).toBe("http://127.0.0.1:3420");
+  const slug = await openDemo(page), org = (await rows("organizations")).find(row => row.slug === slug)!;
+  expect(org.kind).toBe("demo");
+  await append("webhookEndpoints", [{ orgId: org._id, url: "https://example.com/fixture-only", events: ["lead.created"], secretCiphertext: "unusable-fixture", secretIv: "unusable-fixture", secretKeyId: "fixture", active: false, failures: 0, createdAt: Date.now() }]);
+  const endpoint = (await rows("webhookEndpoints")).find(row => row.orgId === org._id)!;
+  await append("webhookDeliveries", [{ orgId: org._id, endpointId: endpoint._id, event: "lead.created", payload: "{}", status: "failed", attempts: 6, nextAt: Date.now(), createdAt: Date.now(), lastError: "Delivery attempt limit reached; remote receipt may be unknown." }]);
+  const effects = async () => Promise.all(["webhookDeliveries", "auditEvents", "approvals", "actionReceipts", "workflowRuns"].map(async table => (await rows(table)).filter(row => row.orgId === org._id)));
+  const before = await effects();
+  await page.goto(`/app/${slug}/settings/webhooks`);
+  await expect(page.getByText("Retries can repeat an event.", { exact: false })).toBeVisible();
+  await expect(page.getByText("Delivery attempt limit reached; remote receipt may be unknown.", { exact: true })).toBeVisible();
+  await expectAccessible(page, "Webhook review"); await expectNoHorizontalScroll(page);
+  await page.screenshot({ path: testInfo.outputPath("webhook-boundaries.png"), fullPage: true });
+  expect(await effects()).toEqual(before);
+});

@@ -2621,7 +2621,12 @@ export default defineSchema({
     endpointId: v.id("webhookEndpoints"),
     event: v.string(),
     payload: v.string(),
-    /** "sending": claimed by one deliverer until nextAt (a lease), so rows are never POSTed twice. */
+    /** Fenced local attempt; remote delivery remains at-least-once and needs receiver deduplication. */
+    claimToken: v.optional(v.string()),
+    claimUrl: v.optional(v.string()),
+    claimPayloadHash: v.optional(v.string()),
+    dispatchStartedAt: v.optional(v.number()),
+    lastError: v.optional(v.string()),
     status: v.union(
       v.literal("pending"),
       v.literal("sending"),

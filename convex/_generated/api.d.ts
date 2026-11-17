@@ -172,6 +172,7 @@ import type * as stepWorkActions from "../stepWorkActions.js";
 import type * as targets from "../targets.js";
 import type * as team from "../team.js";
 import type * as translate from "../translate.js";
+import type * as webhookActions from "../webhookActions.js";
 import type * as webhooks from "../webhooks.js";
 import type * as wordpressDraftActions from "../wordpressDraftActions.js";
 import type * as wordpressDrafts from "../wordpressDrafts.js";
@@ -348,6 +349,7 @@ declare const fullApi: ApiFromModules<{
   targets: typeof targets;
   team: typeof team;
   translate: typeof translate;
+  webhookActions: typeof webhookActions;
   webhooks: typeof webhooks;
   wordpressDraftActions: typeof wordpressDraftActions;
   wordpressDrafts: typeof wordpressDrafts;

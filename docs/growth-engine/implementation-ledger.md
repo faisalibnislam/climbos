@@ -1,3 +1,7 @@
+## 17 November 2026 — outgoing event delivery
+
+Fixed reproduced pause/tenant/event-validation gaps, fenced retry results, added signed durable delivery identity and post-DNS dispatch checks, and bounded crashed-worker retries. The existing settings view exposes receipt uncertainty; legacy attempts without identity are not automatically replayed. 62 tests and two browser checks passed. [Audit and receiver requirements](webhook-delivery-boundary-audit.md). Full automation/lifecycle acceptance remains open.
+
 ## 17 November 2026 — customer progress evidence
 
 Added a real owner workflow for dated product/journey progress observations, scoped to existing contacts. Planning uses bounded, explicitly owner-reported evidence; retention retries and output retain the original source snapshot. Revisions, privacy/export/purge and no-action boundaries are tested. 69 tests and desktop/mobile checks passed. [Audit](customer-progress-evidence-audit.md). Event ingestion, enrollment, dispatch-time state checks and full lifecycle learning remain incomplete.

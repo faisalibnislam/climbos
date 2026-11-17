@@ -9,7 +9,7 @@ export const WEBHOOK_EVENTS = {
   "content.approved": "An approved blog draft is ready for export (not published)",
 } as const;
 export type WebhookEvent = keyof typeof WEBHOOK_EVENTS;
-export const isWebhookEvent = (s: string): s is WebhookEvent => s in WEBHOOK_EVENTS;
+export const isWebhookEvent = (s: string): s is WebhookEvent => Object.hasOwn(WEBHOOK_EVENTS, s);
 
 /** Retry schedule after a failed delivery: 1m, 5m, 30m, 2h, 12h, then give up. */
 export const RETRY_MS = [60_000, 5 * 60_000, 30 * 60_000, 2 * 3_600_000, 12 * 3_600_000];

@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Outgoing webhook deliveries now recheck pause, tenant, subscription and destination state before dispatch, reject stale retry results and include a signed stable delivery ID. Settings explain uncertain receipt. Receivers still need deduplication; legacy attempted deliveries without identity are held for review. See [the audit](growth-engine/webhook-delivery-boundary-audit.md).
+
 Customer progress can now be recorded and corrected for uploaded contacts, separately by product or journey. Dated owner observations and their definitions inform planning; retention runs preserve their original evidence across retries. This is manual evidence, not automatic product tracking or lifecycle enrollment. See [the audit](growth-engine/customer-progress-evidence-audit.md).
 
 Climb AI now remembers each person’s preferred explanation depth: Concise, Guided or Detailed, saved in Profile and captured for each new request. Public content style and approval controls retain their own settings. This is an explicit preference, not a claim to infer expertise. See [the audit](growth-engine/explanation-preference-audit.md) for verified behavior and limits.

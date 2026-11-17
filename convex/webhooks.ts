@@ -1,11 +1,14 @@
+import { fleetStopped } from "./lib/access";
+import { audit } from "./lib/audit";
+import { sha256Hex } from "../shared/policy";
 import { eventMayTrigger, isSpecialistEvent } from "../shared/agents/specialistEvents";
 import { v } from "convex/values";
-import { isWebhookEvent, RETRY_MS, signWebhook, WEBHOOK_EVENTS, type WebhookEvent } from "../shared/webhooks";
+import { isWebhookEvent, RETRY_MS, WEBHOOK_EVENTS, type WebhookEvent } from "../shared/webhooks";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
 import { safePublicUrl } from "../shared/net/safeUrl";
-import { decryptSecret, encryptSecret } from "./lib/crypto";
+import { encryptSecret } from "./lib/crypto";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
 /**
@@ -53,7 +56,7 @@ export const list = query({
     const out = [];
     for (const e of eps) {
       const recent = await ctx.db.query("webhookDeliveries").withIndex("by_endpoint", (q) => q.eq("endpointId", e._id)).order("desc").take(5);
-      out.push({ id: e._id, url: e.url, events: e.events, active: e.active, failures: e.failures, lastStatus: e.lastStatus ?? null, lastAt: e.lastAt ?? null, recent: recent.map((d) => ({ id: d._id, event: d.event, status: d.status, code: d.responseCode ?? null, at: d.createdAt })) });
+      out.push({ id: e._id, url: e.url, events: e.events, active: e.active, failures: e.failures, lastStatus: e.lastStatus ?? null, lastAt: e.lastAt ?? null, recent: recent.filter(d => d.orgId === org._id).map((d) => ({ id: d._id, event: d.event, status: d.status, code: d.responseCode ?? null, error: d.lastError ?? null, at: d.createdAt })) });
     }
     return { endpoints: out, events: Object.entries(WEBHOOK_EVENTS).map(([key, label]) => ({ key, label })) };
   },
@@ -62,16 +65,17 @@ export const list = query({
 export const create = mutation({
   args: { slug: v.string(), url: v.string(), events: v.array(v.string()) },
   handler: async (ctx, a) => {
-    const { org } = await requireOrgAccess(ctx, { slug: a.slug }, "manage_connections");
+    const { org, user } = await requireOrgAccess(ctx, { slug: a.slug }, "manage_connections");
     const url = a.url.trim();
-    if (!publicHttpsUrl(url)) throw appError("INVALID", "Use a public https:// address.");
+    if (url.length > 1000 || !publicHttpsUrl(url)) throw appError("INVALID", "Use a public https:// address.");
     const events = [...new Set(a.events.filter(isWebhookEvent))];
     if (!events.length) throw appError("INVALID", "Pick at least one event.");
     const count = (await ctx.db.query("webhookEndpoints").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(11)).length;
     if (count >= 10) throw appError("LIMIT_REACHED", "Up to 10 webhooks per workspace.");
     const secret = `whsec_${Array.from(crypto.getRandomValues(new Uint8Array(24)), (b) => b.toString(16).padStart(2, "0")).join("")}`;
     const sealed = await encryptSecret(secret, AAD(org._id));
-    const id = await ctx.db.insert("webhookEndpoints", { orgId: org._id, url: url.slice(0, 1000), events, secretCiphertext: sealed.ciphertext, secretIv: sealed.iv, secretKeyId: sealed.keyId, active: true, failures: 0, createdAt: Date.now() });
+    const id = await ctx.db.insert("webhookEndpoints", { orgId: org._id, url, events, secretCiphertext: sealed.ciphertext, secretIv: sealed.iv, secretKeyId: sealed.keyId, active: true, failures: 0, createdAt: Date.now() });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "webhook.created", subjectType: "webhook", subjectId: id, summary: `Configured ${events.length} event subscriptions for an exact destination. Signing secret omitted.` });
     // The secret is shown once, here.
     return { id, secret };
   },
@@ -80,20 +84,22 @@ export const create = mutation({
 export const setActive = mutation({
   args: { slug: v.string(), id: v.id("webhookEndpoints"), active: v.boolean() },
   handler: async (ctx, { slug, id, active }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "manage_connections");
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "manage_connections");
     assertSameOrg(await ctx.db.get(id), org._id, "webhook");
     await ctx.db.patch(id, { active, ...(active ? { failures: 0 } : {}) });
     if (!active) await dropPending(ctx, id);
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "webhook.status_changed", subjectType: "webhook", subjectId: id, summary: active ? "Owner enabled this webhook." : "Owner disabled this webhook." });
   },
 });
 
 export const remove = mutation({
   args: { slug: v.string(), id: v.id("webhookEndpoints") },
   handler: async (ctx, { slug, id }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "manage_connections");
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "manage_connections");
     assertSameOrg(await ctx.db.get(id), org._id, "webhook");
     for (const d of await ctx.db.query("webhookDeliveries").withIndex("by_endpoint", (q) => q.eq("endpointId", id)).take(500)) await ctx.db.delete(d._id);
     await ctx.db.delete(id);
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "webhook.removed", subjectType: "webhook", subjectId: id, summary: "Owner removed this destination." });
   },
 });
 
@@ -101,8 +107,10 @@ export const remove = mutation({
 export const test = mutation({
   args: { slug: v.string(), id: v.id("webhookEndpoints") },
   handler: async (ctx, { slug, id }) => {
-    const { org } = await requireOrgAccess(ctx, { slug }, "manage_connections");
+    const { org, user } = await requireOrgAccess(ctx, { slug }, "manage_connections");
     const e = assertSameOrg(await ctx.db.get(id), org._id, "webhook");
+    if (!e.active || org.emergencyStop?.active || org.suspendedAt !== undefined || await fleetStopped(ctx)) throw appError("INVALID", "Enable the destination and resume this workspace before sending a test.");
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "webhook.test_requested", subjectType: "webhook", subjectId: id, summary: "Owner requested a synthetic test event for this destination." });
     const now = Date.now();
     await ctx.db.insert("webhookDeliveries", { orgId: org._id, endpointId: e._id, event: "test", payload: JSON.stringify({ event: "test", createdAt: new Date(now).toISOString(), data: { workspace: org.name, message: "Hello from ClimbOS" } }), status: "pending", attempts: 0, nextAt: now, createdAt: now });
     await ctx.scheduler.runAfter(0, internal.webhooks.deliverDue, {});
@@ -118,82 +126,104 @@ export function publicHttpsUrl(raw: string): boolean {
 /** Pending rows of a switched-off endpoint are closed so they never clog the queue. */
 async function dropPending(ctx: MutationCtx, endpointId: Id<"webhookEndpoints">) {
   const rows = await ctx.db.query("webhookDeliveries").withIndex("by_endpoint", (q) => q.eq("endpointId", endpointId)).order("desc").take(500);
-  for (const d of rows) if (d.status === "pending" || d.status === "sending") await ctx.db.patch(d._id, { status: "failed" });
+  for (const d of rows) if (d.status === "pending" || d.status === "sending") await ctx.db.patch(d._id, { status: "failed", ...clearClaim, lastError: "Destination disabled. Future attempts canceled; earlier receipt may be unknown." });
 }
 
 /** Lease on a claimed delivery: if the deliverer dies, the row is due again after this. */
 const CLAIM_MS = 2 * 60_000;
 
-/**
- * Claim what's due in one mutation (pending, or a sending lease that ran out) so the cron and
- * per-event runs never POST the same row twice. Rows of missing or inactive endpoints are closed.
- */
+/** Invalid subscriptions and orphan/cross-tenant references never authorize a delivery. */
+function endpointMatches(d: Doc<"webhookDeliveries">, e: Doc<"webhookEndpoints"> | null): e is Doc<"webhookEndpoints"> {
+  return Boolean(e && e.orgId === d.orgId && e.active && publicHttpsUrl(e.url) && (d.event === "test" || (isWebhookEvent(d.event) && e.events.includes(d.event))));
+}
+const clearClaim = { claimToken: undefined, claimUrl: undefined, claimPayloadHash: undefined, dispatchStartedAt: undefined };
+
+/** Bounded claims; every retry gets a different token and consumes an attempt even if its worker disappears. */
 export const claimDue = internalMutation({
   args: {},
   handler: async (ctx) => {
+    if (await fleetStopped(ctx)) return [];
     const now = Date.now();
     const rows = [
-      ...(await ctx.db.query("webhookDeliveries").withIndex("by_status_next", (q) => q.eq("status", "pending").lte("nextAt", now)).take(25)),
-      ...(await ctx.db.query("webhookDeliveries").withIndex("by_status_next", (q) => q.eq("status", "sending").lte("nextAt", now)).take(10)),
+      ...(await ctx.db.query("webhookDeliveries").withIndex("by_status_next", q => q.eq("status", "pending").lte("nextAt", now)).take(25)),
+      ...(await ctx.db.query("webhookDeliveries").withIndex("by_status_next", q => q.eq("status", "sending").lte("nextAt", now)).take(10)),
     ];
     const out = [];
     for (const d of rows) {
-      const e = await ctx.db.get(d.endpointId);
-      if (!e || !e.active) {
-        await ctx.db.patch(d._id, { status: "failed" });
-        continue;
+      const e = await ctx.db.get(d.endpointId), org = await ctx.db.get(d.orgId);
+      if (!endpointMatches(d, e) || !org || org.deletedAt !== undefined) {
+        await ctx.db.patch(d._id, { status: "failed", ...clearClaim, lastError: "The workspace or subscribed destination is unavailable." }); continue;
       }
-      await ctx.db.patch(d._id, { status: "sending", nextAt: now + CLAIM_MS });
-      out.push({ id: d._id, orgId: d.orgId, url: e.url, payload: d.payload, secret: { keyId: e.secretKeyId, iv: e.secretIv, ciphertext: e.secretCiphertext } });
+      if (org.emergencyStop?.active || org.suspendedAt !== undefined) {
+        await ctx.db.patch(d._id, { nextAt: now + 60_000, lastError: "Waiting while this workspace is paused or suspended." }); continue;
+      }
+      if (!Number.isSafeInteger(d.attempts) || d.attempts < 0 || d.attempts >= RETRY_MS.length + 1) {
+        await ctx.db.patch(d._id, { status: "failed", ...clearClaim, lastError: "Delivery attempt limit reached; remote receipt may be unknown." }); continue;
+      }
+      if (d.status === "sending" && !d.claimToken) {
+        await ctx.db.patch(d._id, { status: "failed", ...clearClaim, lastError: "Legacy attempt has no stable delivery identity. Check the destination; receipt is unknown. No automatic replay." }); continue;
+      }
+      let payload: string;
+      try {
+        const body = JSON.parse(d.payload);
+        if (!body || typeof body !== "object" || Array.isArray(body) || body.event !== d.event || (body.deliveryId !== undefined && body.deliveryId !== String(d._id))) throw new Error("Invalid payload");
+        if (d.attempts > 0 && body.deliveryId === undefined) {
+          await ctx.db.patch(d._id, { status: "failed", ...clearClaim, lastError: "Earlier attempts lack a stable delivery identity. Check the destination; receipt is unknown. No automatic replay." }); continue;
+        }
+        payload = JSON.stringify({ ...body, deliveryId: String(d._id) });
+        if (payload.length > MAX_WEBHOOK_PAYLOAD_CHARS + 200) throw new Error("Oversized payload");
+      } catch { await ctx.db.patch(d._id, { status: "failed", ...clearClaim, lastError: "The saved event payload is invalid." }); continue; }
+      const claimToken = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, "0")).join("");
+      await ctx.db.patch(d._id, { status: "sending", nextAt: now + CLAIM_MS, attempts: d.attempts + 1, payload, claimToken, claimUrl: e.url, claimPayloadHash: await sha256Hex(payload), dispatchStartedAt: undefined, lastError: undefined });
+      out.push({ id: d._id, claimToken, url: e.url });
     }
     return out;
   },
 });
 
-export const record = internalMutation({
-  args: { id: v.id("webhookDeliveries"), code: v.optional(v.number()), ok: v.boolean() },
-  handler: async (ctx, { id, code, ok }) => {
-    const d = await ctx.db.get(id);
-    if (!d || d.status !== "sending") return;
-    const e = await ctx.db.get(d.endpointId);
-    const attempts = d.attempts + 1;
-    if (ok) await ctx.db.patch(id, { status: "delivered", attempts, responseCode: code });
-    else if (attempts > RETRY_MS.length) await ctx.db.patch(id, { status: "failed", attempts, responseCode: code });
-    else await ctx.db.patch(id, { status: "pending", attempts, responseCode: code, nextAt: Date.now() + RETRY_MS[attempts - 1] });
-    if (e) {
-      const failures = ok ? 0 : e.failures + 1;
-      // 20 failures in a row: switch it off and keep the owner informed in the Activity log.
-      await ctx.db.patch(e._id, { failures, lastStatus: code, lastAt: Date.now(), ...(failures >= 20 ? { active: false } : {}) });
-      if (failures >= 20 && e.active) await dropPending(ctx, e._id);
+/** One dispatch per current lease, after DNS inspection and immediately before the external call. */
+export const authorizeDispatch = internalMutation({
+  args: { id: v.id("webhookDeliveries"), claimToken: v.string(), url: v.string() },
+  handler: async (ctx, args) => {
+    const d = await ctx.db.get(args.id);
+    if (!d || d.status !== "sending" || d.claimToken !== args.claimToken || d.dispatchStartedAt !== undefined || d.nextAt <= Date.now()) return null;
+    const e = await ctx.db.get(d.endpointId), org = await ctx.db.get(d.orgId);
+    if (!endpointMatches(d, e) || !org || org.deletedAt !== undefined || d.claimUrl !== e.url || args.url !== e.url || d.claimPayloadHash !== await sha256Hex(d.payload)) {
+      await ctx.db.patch(d._id, { status: "failed", ...clearClaim, lastError: "The event or destination changed before dispatch." }); return null;
     }
+    if (org.emergencyStop?.active || org.suspendedAt !== undefined || await fleetStopped(ctx)) {
+      await ctx.db.patch(d._id, { status: "pending", ...clearClaim, attempts: Math.max(0, d.attempts - 1), nextAt: Date.now() + 60_000, lastError: "Paused before dispatch; no request started." }); return null;
+    }
+    await ctx.db.patch(d._id, { dispatchStartedAt: Date.now() });
+    await audit(ctx, { orgId: d.orgId, actorType: "system", action: "webhook.dispatch_started", subjectType: "webhook_delivery", subjectId: d._id, summary: `Authorized attempt ${d.attempts} for subscribed endpoint ${e._id}. Payload hash ${d.claimPayloadHash}. Remote receipt is not yet known.` });
+    return { orgId: d.orgId, payload: d.payload, url: e.url, secret: { keyId: e.secretKeyId, iv: e.secretIv, ciphertext: e.secretCiphertext } };
   },
 });
 
-/** Deliver what's due (also runs every minute from a cron). */
+/** A late response cannot complete a newer attempt or increment endpoint failure counters. */
+export const record = internalMutation({
+  args: { id: v.id("webhookDeliveries"), claimToken: v.string(), code: v.optional(v.number()), ok: v.boolean(), error: v.optional(v.string()) },
+  handler: async (ctx, { id, claimToken, code, ok, error }) => {
+    const d = await ctx.db.get(id);
+    if (!d || d.status !== "sending" || d.claimToken !== claimToken || (ok && d.dispatchStartedAt === undefined) || d.claimPayloadHash !== await sha256Hex(d.payload)) return;
+    if (ok && (code === undefined || !Number.isInteger(code) || code < 200 || code >= 300)) return;
+    const e = await ctx.db.get(d.endpointId);
+    const attempts = d.attempts;
+    const lastError = ok ? undefined : error?.slice(0, 200) || "The destination did not confirm receipt. It may have received the event.";
+    if (ok) await ctx.db.patch(id, { status: "delivered", ...clearClaim, responseCode: code, lastError });
+    else if (attempts > RETRY_MS.length) await ctx.db.patch(id, { status: "failed", ...clearClaim, responseCode: code, lastError });
+    else await ctx.db.patch(id, { status: "pending", ...clearClaim, responseCode: code, lastError, nextAt: Date.now() + RETRY_MS[Math.max(0, attempts - 1)] });
+    if (e?.orgId === d.orgId) {
+      const failures = ok ? 0 : e.failures + 1;
+      await ctx.db.patch(e._id, { failures, lastStatus: code, lastAt: Date.now(), ...(failures >= 20 ? { active: false } : {}) });
+      if (failures >= 20 && e.active) await dropPending(ctx, e._id);
+    }
+    await audit(ctx, { orgId: d.orgId, actorType: "system", action: "webhook.delivery_result", subjectType: "webhook_delivery", subjectId: id, summary: `Attempt ${attempts}: ${ok ? "destination accepted" : "receipt not confirmed"}${code !== undefined ? ` (HTTP ${code})` : ""}. Receiver-side effects are not verified.` });
+  },
+});
+
+/** Compatibility entry point for existing cron and queued jobs; network work runs in Node. */
 export const deliverDue = internalAction({
   args: {},
-  handler: async (ctx) => {
-    let n = 0;
-    for (const d of await ctx.runMutation(internal.webhooks.claimDue, {})) {
-      let code: number | undefined;
-      let ok = false;
-      try {
-        if (process.env.CLIMBOS_FAKE_WEBHOOKS) {
-          code = 200;
-          ok = true;
-        } else {
-          const secret = await decryptSecret(d.secret, AAD(d.orgId));
-          const ts = Math.floor(Date.now() / 1000);
-          const res = await fetch(d.url, { method: "POST", headers: { "Content-Type": "application/json", "User-Agent": "ClimbOS-Webhooks/1.0", "X-ClimbOS-Timestamp": String(ts), "X-ClimbOS-Signature": `v1=${await signWebhook(secret, ts, d.payload)}` }, body: d.payload, signal: AbortSignal.timeout(10_000), redirect: "manual" });
-          code = res.status;
-          ok = res.status >= 200 && res.status < 300;
-        }
-      } catch {
-        ok = false;
-      }
-      await ctx.runMutation(internal.webhooks.record, { id: d.id, code, ok });
-      n++;
-    }
-    return n;
-  },
+  handler: async (ctx): Promise<number> => ctx.runAction(internal.webhookActions.deliverDue, {}),
 });

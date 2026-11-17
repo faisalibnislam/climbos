@@ -64,3 +64,7 @@ Security headers on every route: `X-Content-Type-Options`, `Referrer-Policy`, `X
 - **Content Security Policy.** Not yet enforced (Next.js inline scripts need nonces).
 - **Attachment scanning.** Only CSV import exists today; no file uploads beyond CSV.
 - **Formal review.** No external penetration test or legal review yet. The privacy, terms and security pages are marked as drafts.
+
+## Outgoing event delivery
+
+Webhook dispatch uses current tenant, subscription, destination and workspace/fleet checks with a token per attempt. DNS resolution is checked before Node transport; redirects are refused. A signed body `deliveryId` survives retries, but receiver-side deduplication is required for at-least-once delivery. Legacy uncertain attempts are held for destination review. DNS checks are not socket-level pinning, and pausing cannot recall an in-flight request. [Verification and limits](growth-engine/webhook-delivery-boundary-audit.md).

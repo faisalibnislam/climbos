@@ -39,16 +39,17 @@ describe("outgoing webhooks", () => {
     await o.client.mutation(api.webhooks.setActive, { slug: o.slug, id: dead, active: false });
     const now = Date.now();
     await t.run(async (ctx) => {
-      for (let i = 0; i < 30; i++) await ctx.db.insert("webhookDeliveries", { orgId: o.orgId, endpointId: dead, event: "lead.created", payload: "{}", status: "pending", attempts: 0, nextAt: now - 10_000 + i, createdAt: now });
-      await ctx.db.insert("webhookDeliveries", { orgId: o.orgId, endpointId: live, event: "lead.created", payload: "{}", status: "pending", attempts: 0, nextAt: now - 1, createdAt: now });
+      for (let i = 0; i < 30; i++) await ctx.db.insert("webhookDeliveries", { orgId: o.orgId, endpointId: dead, event: "lead.created", payload: JSON.stringify({ event: "lead.created", data: {} }), status: "pending", attempts: 0, nextAt: now - 10_000 + i, createdAt: now });
+      await ctx.db.insert("webhookDeliveries", { orgId: o.orgId, endpointId: live, event: "lead.created", payload: JSON.stringify({ event: "lead.created", data: {} }), status: "pending", attempts: 0, nextAt: now - 1, createdAt: now });
     });
     expect(await t.mutation(internal.webhooks.claimDue, {})).toHaveLength(0);
     const claimed = await t.mutation(internal.webhooks.claimDue, {});
     expect(claimed.map((c) => c.url)).toEqual(["https://live.example.com/hook"]);
     // A second deliverer (cron or another event) gets nothing while the lease holds.
     expect(await t.mutation(internal.webhooks.claimDue, {})).toHaveLength(0);
-    await t.mutation(internal.webhooks.record, { id: claimed[0].id, code: 200, ok: true });
-    await t.mutation(internal.webhooks.record, { id: claimed[0].id, code: 200, ok: true });
+    await t.mutation(internal.webhooks.authorizeDispatch, claimed[0]);
+    await t.mutation(internal.webhooks.record, { id: claimed[0].id, claimToken: claimed[0].claimToken, code: 200, ok: true });
+    await t.mutation(internal.webhooks.record, { id: claimed[0].id, claimToken: claimed[0].claimToken, code: 200, ok: true });
     const rows = await t.run(async (ctx) => ctx.db.query("webhookDeliveries").collect());
     expect(rows.filter((r) => r.status === "pending" || r.status === "sending")).toHaveLength(0);
     expect(rows.find((r) => r.endpointId === live)).toMatchObject({ status: "delivered", attempts: 1 });
@@ -59,7 +60,7 @@ describe("outgoing webhooks", () => {
     const o = await owned(t);
     const { id } = await o.client.mutation(api.webhooks.create, { slug: o.slug, url: "https://hooks.example.com/x", events: ["lead.created"] });
     await t.run(async (ctx) => {
-      await ctx.db.insert("webhookDeliveries", { orgId: o.orgId, endpointId: id, event: "lead.created", payload: "{}", status: "pending", attempts: 0, nextAt: Date.now() + DAY, createdAt: Date.now() });
+      await ctx.db.insert("webhookDeliveries", { orgId: o.orgId, endpointId: id, event: "lead.created", payload: JSON.stringify({ event: "lead.created", data: {} }), status: "pending", attempts: 0, nextAt: Date.now() + DAY, createdAt: Date.now() });
     });
     await o.client.mutation(api.webhooks.setActive, { slug: o.slug, id, active: false });
     const rows = await t.run(async (ctx) => ctx.db.query("webhookDeliveries").collect());

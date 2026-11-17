@@ -1,3 +1,14 @@
+## 17 November 2026 — outgoing event delivery boundaries
+
+Three red regressions reproduced paused delivery, cross-tenant destination acceptance and inherited event names. [Audit](growth-engine/webhook-delivery-boundary-audit.md) describes fenced attempts, stable signed IDs, post-DNS authorization, bounded retries and legacy uncertainty.
+
+- `pnpm exec vitest run tests/convex/webhook-delivery-boundary.test.ts tests/convex/webhooks.test.ts tests/convex/platform-ops.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — **62 passed across five files, 3.31 seconds** in the final run. Covers actual action transport with mocked DNS/HTTP, stale results, current permission, cross-tenant history, malformed/inherited events, crashed-worker limits, legacy unknown receipt and existing blog-export scope.
+- `CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env E2E_BASE_URL=http://127.0.0.1:3420 pnpm exec playwright test e2e/webhook-boundaries.spec.ts --workers=1` — **two passed, 20.8 seconds**. Desktop/mobile visibility, overflow/targeted axe and unchanged consequential records, using inactive synthetic destinations. Mobile capture inspected. No webhook Test action used.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint convex/webhooks.ts convex/webhookActions.ts convex/schema.ts shared/webhooks.ts tests/convex/webhook-delivery-boundary.test.ts tests/convex/platform-ops.test.ts 'src/app/app/[organization]/settings/webhooks/page.tsx' e2e/webhook-boundaries.spec.ts` — passed.
+
+Final loopback sync passed in 17.86 seconds and generated the action API types. No live receiver, provider credential or hosted deployment was used. Exactly-once receiver effects, full accessibility, socket-level DNS pinning and wider lifecycle completion are not established. Strict receiver schemas must allow additive `deliveryId`; legacy attempted rows without identity require manual destination review.
+
 ## 17 November 2026 — customer progress observations
 
 [Audit](growth-engine/customer-progress-evidence-audit.md) traces owner input → dated scoped records → bounded planning evidence → actual retention writer → stable retry snapshot → saved review output. Saving observations has no sending or enrollment side effect.
