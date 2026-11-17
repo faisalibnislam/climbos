@@ -2,6 +2,14 @@
 
 These are isolated synthetic acceptance cases using ClimbOS's shared strategy generator and validators. They are not real businesses, measured growth, human expert sign-off or a complete Convex/browser acceptance test. Existing owner-authorized Haiku/Sonnet routes were used; no Codex model switch occurred.
 
+## Retail and creator follow-up after context repair
+
+The same approved synthetic briefs were rechecked as `acceptance-v5-20261117`, with engine **v3.150-declined-offer-clauses**, fingerprint `620bdb7431517dfd2b03b62125924ce5a1d4d10da050a39c85ab6265ee17955f`. Eight completed calls cost **$1.103572**. Both returned complete schema-valid output, and neither passed: retail **3.69 / 3.5**, creator **3.5 / 3** (average / minimum). Neither failed record was rewritten.
+
+The default writer now used precedents (retail CP-062; creator CP-046), but the examples did not establish better strategy quality. Retail's retained two lint findings were false positives: comparing a demo with a discount and recording staffing uncertainty. [The alternative/unknown-wording repair](growth-engine/offer-alternative-classification-audit.md) removes both when re-linting the unchanged draft. Its original below-bar review remains unchanged: the central customer obstacle, distinctiveness, baseline and practical sequence still need improvement. Creator was lint-clean but needed a better buyer diagnosis, less week-one work, honest handling of a remembered baseline, and a more distinctive portfolio.
+
+The process loaded before the [business-specific retrieval query](growth-engine/business-precedent-query-audit.md) repair. It is not post-repair quality evidence. The eight calls bring completed calls in this continuation to **39**, costing **$4.909687**. Main-ledger used/held **$55.334216** plus historical **$1.896709** totals **$57.230925** against the cumulative $100 cap. Holds remain intact. No customer or business action occurred.
+
 ## Four approved industry checks after scoring repair
 
 The owner explicitly approved healthcare, science, retail and creator synthetic briefs for Anthropic quality tests within the cumulative $100 cap. The `acceptance-v4-20261117` process loaded engine **v3.147-reviewed-draft-selection**, fingerprint `23b7bd0d23b704031103fdde8cc6a7fb35b2e7d9f1dcb9c9225d645cbb1286be`. It completed **16 calls costing $1.929616**. All four returned complete schema-valid output, and **none cleared the rubric** after its allowed revision.

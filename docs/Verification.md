@@ -1,3 +1,7 @@
+## 17 November 2026 — declined alternatives and capacity wording
+
+[Audit and commands](growth-engine/offer-alternative-classification-audit.md). Engine `v3.152-offer-alternative-classification`: **296 tests in ten files passed (13.99 seconds)**; typecheck, changed-file ESLint and diff checks passed. Unchanged v5 retail output is now lint-clean but its failed quality assessment remains unchanged. No execution authority was added.
+
 ## 17 November 2026 — business-specific precedent query
 
 [Audit](growth-engine/business-precedent-query-audit.md). Engine `v3.151-business-precedent-query`. **228 tests in ten files passed (13.55 seconds)**, including full writer/reviewer context, real starter/focused persistence and reference validation, no-match bold exploration, plan approval and tenancy. App/Convex typecheck, changed-file ESLint and diff checks passed. No provider switch, live business action or deployment.

@@ -19,6 +19,13 @@ const issues = (value: ReturnType<typeof plan>, context = input) => focusedStrat
 const offerErrors = (value: ReturnType<typeof plan>, context = input) => issues(value, context).filter(issue => issue.rule === "focused_offer_assessment");
 
 describe("focused promotion assessment", () => {
+  it("does not turn the primary move's declined price alternative into a promotion", () => {
+    const value = focusedPlanFixture(30);
+    value.focusedMove.why = "A demo costs staff time, not margin, and margins are unknown, so it is a safer first test than a discount.";
+    expect(focusedStrategySpec().lint?.(value, input)?.filter(issue => issue.rule === "focused_offer_assessment")).toEqual([]);
+    value.focusedMove.firstAction = "Offer a coupon to everyone who attends.";
+    expect(focusedStrategySpec().lint?.(value, input)).toContainEqual(expect.objectContaining({ rule: "focused_offer_assessment" }));
+  });
   it("accepts a non-price comprehension test that explicitly declines a discount", () => {
     const value = focusedPlanFixture(30);
     value.focusedMove.title = "School approval pack comprehension check";

@@ -1,3 +1,7 @@
+## 17 November — offer alternatives and plain-language capacity
+
+`v3.152-offer-alternative-classification`: rejected comparison offers no longer masquerade as selected promotions; staffing/stock/floor-space unknowns count as capacity uncertainty. 296 tests passed. [Audit](offer-alternative-classification-audit.md); [paid follow-up failures and costs](../Strategy-Quality-2026-11-17.md). No strategy-quality pass claim.
+
 ## 17 November — business-specific precedent queries
 
 `v3.151-business-precedent-query`: separate owner goal, summary and facts from generated task boilerplate; preserve the same query through writer, critic, validators and persisted IDs. A no-match case still retains original bold exploration. 228 focused tests, typechecks and lint passed. [Audit](business-precedent-query-audit.md). Live semantic fit and commercial outcomes remain unverified.

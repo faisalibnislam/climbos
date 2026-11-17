@@ -83,6 +83,9 @@ describe("offer and promotion recommendations", () => {
     "A workshop with no bonus helps people try the process.",
     "Do not offer a discount. Improve the page.",
     "No discount or free trial is proposed.",
+    "A demo is a safer first test than a discount.",
+    "Improve the buying path rather than a coupon.",
+    "Prepare a demo instead of a bonus.",
     "No offer change: price and margin are unknown, so improve the buying path.",
   ])("does not require promotion economics for a directly declined offer: %s", hook => {
     expect(lintOfferAssessment(undefined, { hook }, context, "offerAssessment")).toEqual([]);
@@ -90,6 +93,9 @@ describe("offer and promotion recommendations", () => {
 
   it.each([
     "No discount restrictions apply.",
+    "Offer free shipping instead of a discount.",
+    "A demo is a safer first test than a discount, but add a bonus.",
+    "A demo is safer than a discount without restrictions.",
     "A demo with no discount gives shoppers a reason to visit, but offer free shipping.",
     "A demo with no discount limits gives everyone a coupon.",
     "No need to wait: offer a discount.",
@@ -109,8 +115,19 @@ describe("offer and promotion recommendations", () => {
     const proposal = { name: "Clarify the current buying path", oneLiner: "No discount or bonus is proposed.", mechanic: "Prepare a private comprehension check.", actionContract: { diagnosis: offer.diagnosis } };
     expect(lintOfferAssessment(offer, proposal, context, "offerAssessment")).toEqual([]);
     expect(lintOfferAssessment(offer, { ...proposal, oneLiner: "A demo with no discount gives shoppers a reason to visit." }, context, "offerAssessment")).toEqual([]);
+    expect(lintOfferAssessment(offer, { ...proposal, oneLiner: "A demo is a safer first test than a discount." }, context, "offerAssessment")).toEqual([]);
     expect(lintOfferAssessment(offer, { ...proposal, mechanic: "Give a bonus to buyers." }, context, "offerAssessment"))
       .toContainEqual(expect.objectContaining({ path: "offerAssessment.mechanism", severity: "error" }));
+  });
+
+  it("recognizes plain-language staffing and stock capacity unknowns without accepting unrelated unknowns", () => {
+    for (const unknown of ["Staff time and cover available", "Stock available for the demo", "Floor space available"] ) {
+      const offer = assessment({ capacity: { status: "unknown", evidenceRef: null, claim: "" }, unknowns: ["Promotion history", unknown] });
+      expect(lintOfferAssessment(offer, play(), context, "offerAssessment").filter(issue => issue.path === "offerAssessment.unknowns")).toEqual([]);
+    }
+    const offer = assessment({ capacity: { status: "unknown", evidenceRef: null, claim: "" }, unknowns: ["Promotion history", "Price and margin"] });
+    expect(lintOfferAssessment(offer, play(), context, "offerAssessment"))
+      .toContainEqual(expect.objectContaining({ path: "offerAssessment.unknowns", severity: "error" }));
   });
 
   it("computes positive unit contribution and the deterministic volume needed to match current contribution", () => {

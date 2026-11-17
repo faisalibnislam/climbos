@@ -462,7 +462,7 @@ export function lintOfferAssessment(
     if (!supporting || !assessment.capacity.claim || !supporting.includes(assessment.capacity.claim)) error("Capacity must be supported by an exact supplied owner fact or retrieved source claim.", "capacity.evidenceRef");
   }
   if (assessment.capacity.status === "not_applicable" && assessment.capacity.claim.trim().length < 15) error("Explain why delivery capacity does not apply to this offer.", "capacity.claim");
-  if (assessment.capacity.status === "unknown" && !assessment.unknowns.some((item) => /capacity|service|fulfillment|fulfilment|inventory|delivery/i.test(item))) error("Unknown capacity must be named as an unresolved input.", "unknowns");
+  if (assessment.capacity.status === "unknown" && !assessment.unknowns.some((item) => /\b(?:capacity|service|fulfillment|fulfilment|inventory|delivery|staff(?:ing)?|stock|floor space)\b/i.test(item))) error("Unknown capacity must be named as an unresolved input.", "unknowns");
 
   const economics = evaluateOfferUnitEconomics(assessment);
   assessment.risks.forEach((risk, index) => {
