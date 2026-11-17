@@ -25,6 +25,8 @@ describe("focused promotion assessment", () => {
     value.focusedMove.why = "Teachers may need school approval to pay. A clear forwardable page needs no ads, audience or discount.";
     value.focusedMove.aiCanDo = "Draft the pack and private comprehension questions for owner review.";
     expect(focusedStrategySpec().lint?.(value, input)?.filter(issue => issue.rule === "focused_offer_assessment")).toEqual([]);
+    value.focusedMove.why = "A demo with no discount gives shoppers a reason to visit and tests interest without assuming margins.";
+    expect(focusedStrategySpec().lint?.(value, input)?.filter(issue => issue.rule === "focused_offer_assessment")).toEqual([]);
     value.focusedMove.aiCanDo = "Draft a free trial to help teachers test the workshop.";
     expect(focusedStrategySpec().lint?.(value, input))
       .toContainEqual(expect.objectContaining({ rule: "focused_offer_assessment", severity: "error" }));

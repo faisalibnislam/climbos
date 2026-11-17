@@ -2,6 +2,21 @@
 
 These are isolated synthetic acceptance cases using ClimbOS's shared strategy generator and validators. They are not real businesses, measured growth, human expert sign-off or a complete Convex/browser acceptance test. Existing owner-authorized Haiku/Sonnet routes were used; no Codex model switch occurred.
 
+## Four approved industry checks after scoring repair
+
+The owner explicitly approved healthcare, science, retail and creator synthetic briefs for Anthropic quality tests within the cumulative $100 cap. The `acceptance-v4-20261117` process loaded engine **v3.147-reviewed-draft-selection**, fingerprint `23b7bd0d23b704031103fdde8cc6a7fb35b2e7d9f1dcb9c9225d645cbb1286be`. It completed **16 calls costing $1.929616**. All four returned complete schema-valid output, and **none cleared the rubric** after its allowed revision.
+
+| Case | Retained review average / minimum | Material finding |
+|---|---:|---|
+| Healthcare | 3.63 / 3 | No deterministic lint issues; comparison with an existing booking-page improvement/no change and capacity-led sequencing remained weak. |
+| Science/technical B2B | 3.88 / 3 | No deterministic lint issues; lacked a sufficiently useful diagnosis step and precise quote-ready definition; owner workload needed improvement. |
+| Retail | 3.5 / 3 | Six original deterministic findings, including a false discount classification; unsupported evidence basis, missing history/capacity inputs and weak concrete test definition remain. |
+| Creator | 3.75 / 3 | No deterministic lint issues; lesson needed closer connection to the actual portfolio and useful interpretation with little/unknown audience data. |
+
+Audit of the real default path then found that its changed task heading omitted creative precedent context, while other paths truncated critic records. [That integration is repaired](growth-engine/strategy-precedent-context-audit.md), and [misleading lexical fit reasons](growth-engine/precedent-fit-signals-audit.md) were corrected. These changes happened after this process loaded; **do not relabel v4 as post-fix quality evidence**. [The retail clause fix](growth-engine/declined-offer-clause-audit.md) removes one false lint finding when rechecking the unchanged output; five other issues remain. No failed output or provider receipt was overwritten.
+
+After v4, the main ledger held/charged **$54.230644** plus historical **$1.896709**, totaling **$56.127353** against the cumulative $100 cap. This includes retained historical holds and is not a claim that all held money was spent. Across the earlier runs and v4, 31 completed calls in this continuation cost **$3.806115**. No customer was contacted and nothing was published.
+
 ## What the live checks established
 
 | Case/run | Saved result | Interpretation |

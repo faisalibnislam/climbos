@@ -1,3 +1,7 @@
+## 17 November — declined-offer clauses
+
+`v3.150-declined-offer-clauses`: repaired the live retail false positive for a demo “with no discount gives…” while preserving affirmative/ambiguous offers and the remaining five retail findings. Three red cases followed by 287 passing tests. [Audit](declined-offer-clause-audit.md).
+
 ## 17 November — honest precedent fit reasons
 
 `v3.149-precedent-fit-signals`: common grammatical/unknown-input words no longer establish mechanism fit; geography and business-model reasons require their supplied structured fields. 214 tests passed after two red cases. [Audit](precedent-fit-signals-audit.md). Retrieval remains lexical, not semantic verification.

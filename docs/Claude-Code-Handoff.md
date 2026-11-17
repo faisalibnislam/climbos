@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+The promotion validator now recognizes a declined offer inside a sentence, such as “a demo with no discount gives shoppers a reason to visit,” without exempting a real offer elsewhere. The failed retail evaluation still retains its other evidence and test-quality issues. [Audit](growth-engine/declined-offer-clause-audit.md).
+
 Creative precedent retrieval no longer treats common instruction words as a mechanism or general prose as geographic/business-model evidence. Missing structured location/type stays missing in its explanation. [Audit and limits](growth-engine/precedent-fit-signals-audit.md).
 
 The default starter/focused planner now actually receives the existing creative precedent library; an outdated heading check had omitted it. Writers and critics receive the same complete selected records and source/transfer limits. Uncited bold hypotheses remain available. [Audit, costs and limits](growth-engine/strategy-precedent-context-audit.md).

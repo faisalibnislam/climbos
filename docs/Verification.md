@@ -1,3 +1,7 @@
+## 17 November 2026 — declined-offer clause classification
+
+[Audit](growth-engine/declined-offer-clause-audit.md). Engine `v3.150-declined-offer-clauses`. Three red cases, then **287 tests in ten files passed, 12.30 seconds**. App/Convex typecheck, changed-file ESLint and diff checks passed. Re-linting unchanged retail output removes only the false mechanism finding and retains five other issues. No historical pass claim, external business action or deployment.
+
 ## 17 November 2026 — precedent fit signals
 
 [Audit](growth-engine/precedent-fit-signals-audit.md). Engine `v3.149-precedent-fit-signals`. Two red regressions followed by **214 tests in seven files passed, 13.54 seconds**. Application/Convex typecheck, changed-file ESLint and diff checks passed. No real-model quality claim.

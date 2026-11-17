@@ -79,6 +79,8 @@ describe("offer and promotion recommendations", () => {
   it.each([
     "A clear forwardable page needs no ads, audience or discount.",
     "Prepare the page without a discount.",
+    "A demo with no discount gives shoppers a reason to visit.",
+    "A workshop with no bonus helps people try the process.",
     "Do not offer a discount. Improve the page.",
     "No discount or free trial is proposed.",
     "No offer change: price and margin are unknown, so improve the buying path.",
@@ -88,6 +90,8 @@ describe("offer and promotion recommendations", () => {
 
   it.each([
     "No discount restrictions apply.",
+    "A demo with no discount gives shoppers a reason to visit, but offer free shipping.",
+    "A demo with no discount limits gives everyone a coupon.",
     "No need to wait: offer a discount.",
     "No discount. Add a bonus.",
     "No ads, audience or discount, but offer free shipping.",
@@ -104,6 +108,7 @@ describe("offer and promotion recommendations", () => {
     const offer = assessment({ recommendation: "no_change", mechanism: "none" });
     const proposal = { name: "Clarify the current buying path", oneLiner: "No discount or bonus is proposed.", mechanic: "Prepare a private comprehension check.", actionContract: { diagnosis: offer.diagnosis } };
     expect(lintOfferAssessment(offer, proposal, context, "offerAssessment")).toEqual([]);
+    expect(lintOfferAssessment(offer, { ...proposal, oneLiner: "A demo with no discount gives shoppers a reason to visit." }, context, "offerAssessment")).toEqual([]);
     expect(lintOfferAssessment(offer, { ...proposal, mechanic: "Give a bonus to buyers." }, context, "offerAssessment"))
       .toContainEqual(expect.objectContaining({ path: "offerAssessment.mechanism", severity: "error" }));
   });
