@@ -7,7 +7,7 @@ From `docs/research/plays/saas-b2b.md` (Oct 2026; teams of 1–20). Ranked by pr
 
 ## How to use this catalog
 
-- **Fit-gate first:** no Show HN without a no-signup demo, no review push under 10 happy customers, no Product Hunt for vertical B2B, no programmatic SEO without unique data.
+- **Fit-gate first:** no Show HN without a no-signup demo, review eligibility requires relevant customers and current platform rules, never satisfaction or an arbitrary customer quota, no Product Hunt for vertical B2B, no programmatic SEO without unique data.
 - **Services firms:** promote 33 Clutch, 19 CPE/CLE, 15 expert PR, 14 podcasts, 17 referral partnerships, 7 calculators/audits, 25 research. Demote Product Hunt, Show HN, AppSumo, Chrome, open source.
 - **Dev tools:** favour 18, 30, 21, 35, 3, 27. **Prosumer/creator:** 9, 12, 13, 22, 23; review sites (2) matter less. **Vertical B2B:** skip launches; favour 1, 2, 4, 5, 19.
 - **Bundles:** switching = 1 + 6 + 20. AI visibility (8) is fed by 1, 2, 15, 27. A free tool (7) gives 9 and 18 something to launch. 11–12 creators seed 13. Partners (16) speak at 32. Research (25) feeds 15 and 27.
@@ -28,15 +28,14 @@ From `docs/research/plays/saas-b2b.md` (Oct 2026; teams of 1–20). Ranked by pr
 - **Rules & risks:** truthful, substantiated claims (FTC Act §5); no logos implying endorsement.
 - **ClimbOS does:** keyword research, pricing scrape, page drafts, recheck alerts. Owner: differentiators, quotes, approve.
 
-### 2. Review-velocity campaign on G2/Capterra (`review-velocity-campaign`) · evidence moderate · predictability 4 · leverage 4
-- **Fits:** B2B SaaS with ≥10 happy active customers (agencies: 33); low value for prosumer.
-- **Why:** buyers and AI read review sites; grids reward count and recency, so small vendors can lead niches.
-- **Do:** 1) narrowest winnable category; 2) invite ALL active customers in a segment, G2-approved gift cards; 3) 3-touch founder/CSM ask + in-app prompt after wins; 4) reply within 48 h; 5) push before G2 quarterly cutoffs.
-- **Expect:** 7→107 reviews in a quarter [reachdesk.com]. 5–20% review rate with incentive, 1–5% without; 0–10 direct leads/mo [practitioner estimate]. Capterra PPC from $2/click [team4.agency].
-- **Cost / time:** $0–2.5k (cards $10–50); 10–20 h over 4–8 wks; reviews 1–2 wks, badges next quarter.
-- **Track:** submission/approval rate; category rank.
-- **Rules & risks:** FTC rule (16 CFR 465): no fake/bought or positive-only incentives, ~$51–53k/violation [natlawreview.com]; no review-gating; no staff/friends [g2.com].
-- **ClimbOS does:** segment, invite sequences, cutoff reminders, reply drafts. Owner: approve full list, fund, CSM asks.
+### 2. Neutral software-review presence (`review-velocity-campaign`) · evidence requires current verification
+- **Fits:** software with a relevant category and evidence that its buyers consult the selected comparison platform; do not select every review site by default.
+- **Why:** a relevant comparison page may answer buyers' questions and provide independent feedback; this is a hypothesis to test, not promised discovery or sales.
+- **Do:** verify current eligibility and invitation rules; prepare accurate profile information and a neutral invitation for consistently eligible customers; keep optional private feedback equally visible; obtain exact scoped approval before any send or profile change; prepare responses to positive and negative reviews for owner review.
+- **Cost / time:** unknown until current platform access, owner capacity and any fees are checked. No review-reward budget.
+- **Track:** qualified visits, signups, activation, retention, useful feedback and operating time where available. Review counts, ratings and category rank are descriptive, not customers or revenue.
+- **Rules & risks:** apply ClimbOS's unconditional no-rewards policy, neutral invitations and existing suppression/frequency controls. Current API and plan access must be verified; otherwise use a manual link or owner entry. Do not scrape review data or promise a rank, badge or cutoff benefit.
+- **ClimbOS does:** source-backed fit research, profile/invitation/reply drafts and measurement planning. These do not authorize external actions.
 
 ### 3. Zapier/Make integration + template pages (`zapier-integration-templates`) · evidence moderate (vendor-curated) · predictability 4 · leverage 4
 - **Fits:** B2B/prosumer SaaS with an API or webhooks; a developer for 1–3 weeks.

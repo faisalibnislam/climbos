@@ -1,3 +1,5 @@
+> Review-policy correction, 17 November 2026: this file retains historical research, not executable ClimbOS instructions. Any review-reward, incentive-program enrollment, sentiment-screening or happy-user selection suggestions are superseded by the neutral no-rewards guidance in `skills/plays-ecommerce-consumer/SKILL.md` and `skills/growth-plays/SKILL.md`. Sponsored editorial work is distinct from public customer reviews and needs its own disclosure, scope and approval. Historical estimates and platform claims require current verification.
+
 # Growth play library: ecommerce, DTC, consumer apps, creators and makers
 
 Status: research, 17 Oct 2026. Scope: non-obvious, evidence-backed growth plays for small teams in four segments: DTC and ecommerce brands (food, apparel, home goods, beauty), B2C subscription apps (habit, health, utility), creators and course or coaching businesses, and makers on Etsy or Shopify. Budgets are assumed to be under $5k/month and teams under 10 people.

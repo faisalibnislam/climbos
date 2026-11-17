@@ -1,3 +1,7 @@
+## 17 November 2026 — consistent neutral review guidance
+
+Corrected four runtime source playbooks and regenerated the bundle, removing reward and sentiment-selection conflicts with the owner’s review policy. 120 focused prompt-composition, review and permission checks passed; [audit](neutral-review-playbooks-audit.md). Historical research is marked superseded where applicable. No action capability added; full scope remains incomplete.
+
 ## 17 November 2026 — refund-aware repeat purchases
 
 The existing repeat-purchase calculator now reconciles separate refunds and partial captures, requires actual order identity and preserves material uncertainty in strategy/model input. 95 focused tests, typecheck and scoped lint passed; [audit](repeat-purchase-evidence-audit.md). No external action or UI change; full scope remains incomplete.

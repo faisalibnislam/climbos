@@ -3,6 +3,15 @@ name: growth-plays
 description: Method for turning a small business's facts into a growth plan with separately explored grounded, adjacent, and bold strategies plus a costed execution portfolio, going well beyond social posts and email. Use it whenever a job plans growth, picks channels or tactics, or answers "how do we get more customers". It covers generating 40+ candidate plays with proven frameworks (Bullseye, where customers gather, switch triggers, borrowed audiences, unfair assets, timing, loops, engineering as marketing, things that don't scale), transplanting mechanics with known base rates, forecasting with cited base rates and ranges, designing small tests with kill and scale rules, scoring and gating plays, and assembling a focused portfolio. The segment catalogs (plays-saas-b2b, plays-local, plays-ecommerce-consumer) supply the play library.
 ---
 
+## ClimbOS review collection policy
+
+Never offer rewards for reviews, changes, removals or ratings. This is the owner's product policy even if a platform permits an incentive program. Use the same neutral public invitation and destination for every eligible recipient, regardless of satisfaction, feedback, sentiment or predicted rating. Define eligibility through the actual customer relationship and current platform rules, never a satisfaction filter. Private feedback stays optional and equally visible; do not divert negative feedback away from the public destination. Never write, buy or post customer reviews.
+
+Verify current category/geography eligibility, invitation rules, account access and fees before recommending a platform. An old catalog example is not current policy, customer-demand evidence, a forecast or permission. Do not promise review volume, stars, badges, AI citations, leads or revenue. Explain the buyer's use case and track qualified visits, signups, activation, retention, useful feedback and operating time where available; unknown outcomes stay unknown.
+
+Prepare drafts for owner review. Sending invitations, public replies and profile edits require approval bound to tenant, exact content version, destination, audience and action scope, followed by an audit record; preserve suppression, unsubscribe and frequency checks. A saved strategy is not execution approval.
+
+
 ## The rule
 
 A bold strategy can be original without a direct precedent or base rate. Keep exploration separate from costed execution: the idea can be shown with low evidence or feasibility, while its risks and reversible test remain explicit. A proven mechanic is useful when available, but it is not a prerequisite for novelty.
@@ -190,7 +199,7 @@ Before writing any play, decide in this order:
 
 ## Compliance everywhere
 
-- **Reviews:** under the FTC 2024 rule, no fake, bought or insider reviews, and no suppressing negative ones. Google bans any review incentive, review gating, on-premises pressure and staff quotas. G2 incentives must never depend on the rating.
+- **Reviews:** follow the ClimbOS review collection policy above; no incentive exceptions for a named platform.
 - **Endorsements:** creators and affiliates must disclose (FTC).
 - **Messaging:** SMS needs prior express written consent (TCPA). Email follows CAN-SPAM, plus GDPR where it applies.
 - **Promotions:** sweepstakes follow state law. Health, money and earnings claims need substantiation.

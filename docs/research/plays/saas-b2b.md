@@ -1,3 +1,5 @@
+> Review-policy correction, 17 November 2026: the review-velocity entry below is historical research, not executable guidance. Its incentive, happy-customer selection, positive-QBR timing, forecast and automation suggestions are superseded by ClimbOS’s neutral, unconditional no-rewards policy in `skills/plays-saas-b2b/SKILL.md` and `skills/growth-plays/SKILL.md`. Current platform rules still require verification. Retained source claims are not authorization or ClimbOS capability claims.
+
 # Growth play library: B2B SaaS, creator/prosumer SaaS, developer tools, B2B services
 
 Status: research, 17 Oct 2026. Segment: teams of 1–20 people with small budgets. That covers B2B SaaS, creator/prosumer SaaS, developer tools, and B2B services (agencies, consultancies, accounting and legal firms).

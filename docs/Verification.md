@@ -1,3 +1,14 @@
+## 17 November 2026 — consistent neutral review guidance
+
+[Audit](growth-engine/neutral-review-playbooks-audit.md). Engine `v3.141-neutral-review-playbooks`.
+
+- `pnpm skills:build` rebuilt 34 skills through the established generator; four playbooks/hashes changed.
+- `pnpm exec vitest run tests/unit/review-playbook-policy.test.ts tests/unit/diagnosis-playbooks.test.ts tests/unit/manipulation-lint.test.ts tests/unit/strategy-prompt-cost.test.ts tests/convex/reviews.test.ts tests/convex/review-send-boundary.test.ts tests/convex/review-receipt-recovery.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — **120 passed / nine files, 5.42 seconds**. Five initial failures reproduced the runtime-policy conflict. Actual draft-system composition, fair review invitations, send/recovery and tenant/approval boundaries are covered.
+
+Application/Convex `pnpm typecheck`, scoped ESLint and diff checks passed.
+
+No UI change, browser test, platform integration or external action. Prompt correction is not proof of live-model compliance; full scope remains incomplete.
+
 ## 17 November 2026 — refund-aware repeat purchases
 
 [Audit](growth-engine/repeat-purchase-evidence-audit.md). Engine `v3.140-repeat-order-evidence`.

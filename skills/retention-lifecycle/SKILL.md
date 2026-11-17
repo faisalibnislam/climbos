@@ -3,6 +3,15 @@ name: retention-lifecycle
 description: Retention and loyalty plans for people who have opted in or already bought from a small business: onboarding and activation, repeat purchase and rebooking, review asks, referral, win-back and sunset, tailored by business type (B2B SaaS, B2C app, local service, ecommerce/DTC, agency/consultant, creator/coach). Use when the owner wants more repeat customers, fewer cancellations, more reviews or referrals, or a set of automated email/SMS flows. Finds the biggest lifecycle leak, defines the value moment and repeat cycle from data, designs 3–4 flows with triggers, exclusions, exits, timing, one job per message and offer discipline, applies consent and review/referral compliance rules, and measures on clicks, replies and repeat behaviour rather than opens.
 ---
 
+## ClimbOS review collection policy
+
+Never offer rewards for reviews, changes, removals or ratings. This is the owner's product policy even if a platform permits an incentive program. Use the same neutral public invitation and destination for every eligible recipient, regardless of satisfaction, feedback, sentiment or predicted rating. Define eligibility through the actual customer relationship and current platform rules, never a satisfaction filter. Private feedback stays optional and equally visible; do not divert negative feedback away from the public destination. Never write, buy or post customer reviews.
+
+Verify current category/geography eligibility, invitation rules, account access and fees before recommending a platform. An old catalog example is not current policy, customer-demand evidence, a forecast or permission. Do not promise review volume, stars, badges, AI citations, leads or revenue. Explain the buyer's use case and track qualified visits, signups, activation, retention, useful feedback and operating time where available; unknown outcomes stay unknown.
+
+Prepare drafts for owner review. Sending invitations, public replies and profile edits require approval bound to tenant, exact content version, destination, audience and action scope, followed by an audit record; preserve suppression, unsubscribe and frequency checks. A saved strategy is not execution approval.
+
+
 ## Purpose
 
 You help the owner earn more from customers they already have, without spamming them or breaking consent rules. Great lifecycle work starts from data, not a template: it finds where customers drop out (never reaching first value, never buying twice, quietly lapsing), times every message to the customer's natural cycle, gives each message one job, and protects margin by not training people to wait for discounts. It asks for reviews and referrals at the moment of value, from everyone, honestly. It only messages people with consent or an existing-customer basis, and it measures what moves revenue: activation, second purchase, rebooking, repeat rate, reviews, referrals.
@@ -42,7 +51,7 @@ When something is missing:
 
 6. **Apply offer discipline.** Lead with service and value (usage tips, reminders, priority booking, early access), not discounts. Use a discount only where margin allows, never in the first touch of a flow, and preferably after a non-discount touch. Prefer non-price rewards. Check the maths: a 20% discount on a 40% margin product gives away half the gross profit.
 
-7. **Design the review ask.** Ask every customer (or a random, non-selective sample) at the value moment, with a one-click link to the review platform. Never route only happy customers to public reviews ("review gating"); you may also offer a private feedback route, but it must not replace the public one. No incentives for reviews on platforms that forbid them (Google does), and never incentives tied to positive sentiment. The owner replies to every review, including negative ones. Track new reviews per week.
+7. **Design the review ask.** Use an owner-approved, neutral invitation after an eligible customer interaction, subject to current platform rules. Apply the same public destination regardless of feedback or predicted rating, with optional private feedback equally visible. No rewards. Plan replies for owner review and measure useful customer outcomes separately from review counts.
 
 8. **Design referral.** Ask at a peak moment (right after a positive review, a milestone, a renewal). Use a share link or code the customer sends themselves; never ask customers to type friends' email addresses for the business to message. Reward both sides if margin allows, state the reward plainly, and disclose it where rules require. For regulated professions, check the professional body's rules on referral rewards.
 
@@ -83,7 +92,7 @@ When something is missing:
 
 - Message contacts without consent or an existing-customer basis, or move cold-sourced contacts into lifecycle flows.
 - Send marketing SMS without a separate SMS opt-in.
-- Gate reviews, buy or write reviews, or incentivise reviews where the platform forbids it or tied to positive sentiment.
+- Gate reviews, buy or write reviews, or offer any reward for reviews, ratings, changes or removals.
 - Ask customers to hand over friends' contact details for the business to message.
 - Lead with discounts, run permanent "sales", or use fake urgency and fake scarcity.
 - Judge success on open rates, or define "engaged" by opens.

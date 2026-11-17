@@ -8,8 +8,8 @@ Source: `docs/research/plays/ecommerce-consumer.md` (17 Oct 2026); budgets < $5k
 ## How to use this catalog
 
 - **Scores.** Ordered by predictability × leverage. 5 high (leverage "very high" for featuring and retail open call), 4 medium-high, 3 medium, 2 low-medium, 1 low. Mixed source grades (weak-moderate; moderate process, weak outcomes) rounded down to `weak`.
-- **Run order.** Reviews first (Vine on Amazon): traffic to 0-review pages is wasted. Affiliate before seeding, gift guides, YouTube. DTC loop: seeding/TikTok Shop → license winners → creator-handle ads. Faire builds proof for retail open calls; the impact angle multiplies both.
-- **DTC/makers:** reviews, affiliate, seeding (TikTok Shop if AOV < $60), referral, Merchant Center; gift guides and Faire seasonally; subscribe-and-save if consumable; Vine and Brand Referral Bonus on Amazon.
+- **Run order.** Assess product-page clarity, customer evidence and neutral review eligibility before choosing more traffic; missing reviews alone do not prove waste. Affiliate before seeding, gift guides, YouTube. DTC loop: seeding/TikTok Shop → license winners → creator-handle ads. Faire builds proof for retail open calls; the impact angle multiplies both.
+- **DTC/makers:** reviews, affiliate, seeding (TikTok Shop if AOV < $60), referral, Merchant Center; gift guides and Faire seasonally; subscribe-and-save if consumable; verify current Amazon discovery and referral eligibility; do not recommend review rewards.
 - **Apps:** page tests and review-prompt timing lift every install source; recap cards and referral add inflow; nominate for featuring every release.
 - **Creators, courses, coaching:** paid newsletter recommendations and JV partners fill a challenge or webinar; BookBub feeds the same funnel for authors.
 - **Evidence.** Most benchmarks come from vendors selling the channel (ReferralCandy, Octane AI, AmpliSell, Firework, Shopify): treat as ceilings, plan on the low half, never guarantee. "[practitioner estimate]" is the researcher's synthesis.
@@ -26,7 +26,7 @@ Source: `docs/research/plays/ecommerce-consumer.md` (17 Oct 2026); budgets < $5k
 - **Expect:** response 3–35% [elev8or.io]; vendor: ~30% respond, 80% ship, 30–50% of shipped post [getsaral.com]; 300 pitches → 45–90 opt-ins → 15–40 posts, 1–3 of 30 creators drive most sales [practitioner estimate]; no-opt-in post rate 19–30% [hireinfluence.com].
 - **Cost / time:** $10–35/creator; 6–10 h/mo; posts in 10–21 days.
 - **Track:** opt-in ≥15%; ship-to-post ≤21 days; code use within 72h.
-- **Rules & risks:** #gifted/#ad even without obligation; brand liable for creator claims (LEGAL REVIEW for health claims); never condition on positive review.
+- **Rules & risks:** #gifted/#ad even without obligation; brand liable for creator claims (LEGAL REVIEW for health claims); no public customer review obligation or reward; apply the ClimbOS review policy.
 - **ClimbOS does:** list, scoring, pitches, opt-in form, claims card, tracking. Owner: approve, ship, DM.
 
 ### TikTok Shop sample-to-content machine (`tiktok-shop-sample-machine`) · evidence moderate · predictability 5 · leverage 5
@@ -39,15 +39,14 @@ Source: `docs/research/plays/ecommerce-consumer.md` (17 Oct 2026); budgets < $5k
 - **Rules & risks:** fees 35–45% before COGS [fivex.com]; SLA penalties; commercial toggle plus FTC disclosure; LEGAL REVIEW for health claims.
 - **ClimbOS does:** shortlist, invites, briefs, hooks, non-poster flags, weekly economics. Owner: shop, approvals, shipping, boosts.
 
-### Post-delivery review and photo-review engine (`review-photo-engine`) · evidence moderate · predictability 5 · leverage 3
-- **Fits:** DTC or makers with ≥30 orders/mo; biggest win on SKUs with < 5 reviews and pricier items.
-- **Why:** Most of the effect is 0 → ~5 reviews, and asking at delivery, not shipment, collects them mechanically.
-- **Do:** 1) bucket SKUs 0 / 1–4 / 5+; 2) trigger at delivered + time to first use (food 3d, skincare 10d, apparel 14d after returns); 3) one-tap stars, optional photo; 4) same incentive for any honest review; 5) one reminder at +5 days; 6) same-day reply to 1–3 stars, syndicate photos.
-- **Expect:** 5–15% of orders review, so 5 reviews needs ~50–100 orders [practitioner estimate]; 5+ reviews up to 270% more likely bought (380% high-priced) [spiegel.medill.northwestern.edu], a ceiling; causal estimates ~5–9% revenue per star [cleancommit.io].
-- **Cost / time:** app $0–60/mo; 3–4 h setup; 2–4 wks.
-- **Track:** submit rate; photo attach rate; revenue share from 5+ review SKUs.
-- **Rules & risks:** FTC 2024 bans sentiment-tied incentives and suppression; never hide negatives; Amazon bans incentives (use Vine).
-- **ClimbOS does:** bucketing, request flows, replies, review mining for FAQ and hooks. Owner: app, fixes.
+### Neutral post-delivery feedback and reviews (`review-photo-engine`) · evidence requires current verification
+- **Fits:** businesses with actual eligible customers and a relevant review destination whose current rules allow the proposed request.
+- **Why:** consistent neutral invitations can gather useful feedback and buyer information; volume and conversion impact remain unknown.
+- **Do:** confirm delivery/use eligibility without a satisfaction filter; use the same public invitation and destination for all eligible recipients; keep private feedback and any photo optional; give no reward; prepare replies and request exact approval before sending. Reuse photos or quotes only with appropriate permission.
+- **Cost / time:** confirm platform fees and owner capacity; do not infer a universal delay or cadence. Existing contact limits and unsubscribe/suppression rules apply.
+- **Track:** useful feedback, qualified visits and subsequent outcomes where measured; never treat review submissions or star ratings as revenue.
+- **Rules & risks:** ClimbOS's no-rewards and no-gating policy applies regardless of platform exceptions. Verify current platform invitation rules and preserve negative feedback.
+- **ClimbOS does:** research, neutral request/reply drafts and feedback analysis for owner review; no automatic invitation or publication from this playbook.
 
 ### Post-purchase referral with cash or commission reward (`post-purchase-referral`) · evidence moderate · predictability 5 · leverage 3
 - **Fits:** repeat or giftable DTC with ≥100 orders/mo, subscription boxes; margin for a $10–20 reward or 10–15% commission.
@@ -139,15 +138,14 @@ Source: `docs/research/plays/ecommerce-consumer.md` (17 Oct 2026); budgets < $5k
 - **Rules & risks:** screenshots must reflect the app (2.3); no medical claims.
 - **ClimbOS does:** variants in our editor, captions, localisation, test queue, analysis. Owner: upload.
 
-### Engagement-timed in-app review prompt (`in-app-review-prompt-timing`) · evidence weak · predictability 5 · leverage 3
-- **Fits:** apps with < ~500 ratings or < 4.5 average, habit or health apps with clear wins.
-- **Why:** Apple allows 3 prompts per 365 days, so asking right after a success moment selects happy users.
-- **Do:** 1) define 2–3 success moments; 2) call native API only there; 3) optional "Enjoying X?" pre-filter, check current guidance; 4) reply to negatives within 48h; 5) A/B test the moment.
-- **Expect:** anecdotes only: one app ~1.5→~4.7 stars [appbot.co]; +50% five-stars claim without method [clevertap.com]; plan 2–5× more ratings and +0.2–0.5 stars [practitioner estimate].
-- **Cost / time:** 1–2 dev days; 1–2 wks.
-- **Track:** ratings per week; average new rating; private-feedback share.
-- **Rules & risks:** Apple controls display; never incentivise ratings.
-- **ClimbOS does:** moments, copy, review replies, trends. Developer: implement.
+### Neutral in-app review eligibility (`in-app-review-prompt-timing`) · evidence requires current verification
+- **Fits:** eligible apps with meaningful actual use and current platform permission for the native prompt.
+- **Why:** a non-disruptive, consistently applied request may gather feedback; no rating lift or display is promised.
+- **Do:** verify current native API rules and limits; use an objective interaction milestone equally across customers; do not ask a sentiment-screening question or select likely high ratings; keep optional private feedback equally available; prepare the implementation for owner review.
+- **Cost / time:** unknown until current API access and implementation effort are checked.
+- **Track:** useful feedback, interruption burden and qualified customer outcomes; keep rating counts separate.
+- **Rules & risks:** platform controls may suppress display; no rewards, satisfaction filters or rating manipulation.
+- **ClimbOS does:** eligibility research and neutral draft guidance. An app/API change still needs its own scoped approval.
 
 ### JV affiliate launch (`jv-affiliate-launch`) · evidence moderate · predictability 3 · leverage 5
 - **Fits:** courses or coaching with a proven $200–2,000 offer and 5–20 non-competing partners.
@@ -192,11 +190,11 @@ Source: `docs/research/plays/ecommerce-consumer.md` (17 Oct 2026); budgets < $5k
 ### Micro-YouTuber review outreach (`micro-youtuber-review-outreach`) · evidence moderate · predictability 3 · leverage 5
 - **Fits:** considered purchases searched as "X review"; product must survive honest review.
 - **Why:** Reviews rank for years, and sub-70k channels are rarely sponsored (6.6% at ~71k subs), so they are under-pitched.
-- **Do:** 1) mine "[category] review", "[competitor] vs" for 2k–70k channels with views ≥20% of subs; 2) rank by fit; 3) free product for honest review, or pay by average views; 4) never script the verdict; 5) affiliate link; 6) track views at 30/90/365 days.
+- **Do:** 1) mine "[category] review", "[competitor] vs" for 2k–70k channels with views ≥20% of subs; 2) rank by fit; 3) prepare a disclosed editorial collaboration proposal without a public customer review requirement; 4) never script the verdict; 5) affiliate link; 6) track views at 30/90/365 days.
 - **Expect:** 5–15% agree to free reviews; 0.2–1% of views click [practitioner estimate]; sales accrue 12–36 months.
 - **Cost / time:** product, or $50–300/video for 1k–10k channels [bluehost.com]; CPM $15–40 [collabpals.com]; 3–8 wks.
 - **Track:** agreement rate; day-30 views; affiliate clicks per 1k views.
-- **Rules & risks:** paid-promotion box plus spoken disclosure, even for free product; reviews may be negative.
+- **Rules & risks:** paid-promotion box plus spoken disclosure, even for free product; editorial judgment stays independent. Sponsored editorial coverage is separate from public customer review collection; no reward for ratings, customer reviews, changes or removals.
 - **ClimbOS does:** channel mining, pitches, rate estimates, briefs, tracking. Owner: approve, ship.
 
 ### Pay-per-new-customer networks (`pay-per-new-customer-networks`) · evidence weak · predictability 3 · leverage 3
@@ -229,15 +227,14 @@ Source: `docs/research/plays/ecommerce-consumer.md` (17 Oct 2026); budgets < $5k
 - **Rules & risks:** brand pays retailer free returns; keep price parity.
 - **ClimbOS does:** boutique finding, invites, sample letters, shelf-talkers, reorder nudges. Owner: approve, ship.
 
-### Amazon pre-launch Vine (`amazon-vine-launch`) · evidence moderate · predictability 3 · leverage 3
-- **Fits:** brand-registered Amazon sellers launching a tested, differentiated product.
-- **Why:** Vine is Amazon's sanctioned honest-review route and since June 2025 can run pre-launch, so ads don't hit a 0-review page.
-- **Do:** 1) finish images, A+ and title; 2) enrol 10–30 units pre-launch; 3) fix issues reviewers flag; 4) Sponsored Products only at 5+ reviews; 5) add tagged external traffic.
-- **Expect:** 60–90% of units reviewed in 6 weeks [practitioner estimate]; conversion follows the 0→5 review curve.
-- **Cost / time:** $0/$75/$200 per parent ASIN for 2/10/30 units [bqool.com]; true cost 2–4× fee [novadata.io]; 2–6 wks.
-- **Track:** units claimed; reviews and stars; listing conversion.
-- **Rules & risks:** negative Vine reviews stay; never contact reviewers or solicit off-Amazon.
-- **ClimbOS does:** listing and A+ copy, review themes, fix list. Owner: enrolment, stock.
+### Amazon listing and neutral-feedback readiness (`amazon-vine-launch`; retained historical catalog identifier) · evidence requires current verification
+- **Fits:** eligible sellers with verified product information and customers who use the marketplace.
+- **Why:** clear product information and useful customer feedback may address buying questions; review totals are not a forecast of sales.
+- **Do:** prepare accurate listing information and address known product issues. Check current platform rules before preparing a neutral request. Do not recommend free products or rewards in exchange for customer reviews, including platform-operated incentive programs.
+- **Cost / time:** unknown until current eligibility, account access and owner effort are checked. No review-reward allocation.
+- **Track:** qualified visits, actual orders, returns, useful feedback and operating time where measured; unknown outcomes stay unknown.
+- **Rules & risks:** the historical identifier is not permission to enroll in a review-incentive program. Respect independent reviews and current platform communication rules.
+- **ClimbOS does:** listing drafts, evidence review and a small measurement plan for owner review; no enrollment, send or publication.
 
 ### Amazon Brand Referral Bonus arbitrage (`amazon-brand-referral-bonus`) · evidence moderate · predictability 3 · leverage 3
 - **Fits:** brand-registered sellers also running creators, newsletters, Pinterest or Google ads.
