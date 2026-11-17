@@ -21,3 +21,9 @@ pnpm exec eslint bench/strategy-quality/evaluationIdentity.ts bench/strategy-qua
 ```
 
 Typechecks and lint passed. No test made a provider request. This is strict request/configuration identity, not semantic validation or a full transitive dependency fingerprint. A fresh evaluation clock requires a new variant; result reuse is not new quality evidence. No cap, receipt or uncertainty hold was changed.
+
+## Independent-comparison follow-up
+
+Comparison-result reuse now also binds the exact blind A/B mapping, candidate outputs, brief/evidence, held-out questions and selected harness source fingerprint. Changing `--compare-with` cannot silently reuse a prior verdict. Legacy comparison files remain untouched and inspectable, but cannot be relabelled as newly validated results. Use a fresh run variant for fresh comparisons after a mismatch.
+
+The expanded focused checks passed **21 tests in six files (0.645 seconds)** with the same command above, including changed reference, candidate, question and code rejection. The two stored v6 comparisons completed before this guard was added and were not rewritten. This does not change their verdicts or make them independent human review.

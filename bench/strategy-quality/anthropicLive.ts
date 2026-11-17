@@ -9,7 +9,7 @@ import { runAgent, assess, CRITIC_RULES, CritiqueSchema, lintAgentOutput } from 
 import { ENGINE_VERSION, growthPlaysSpec, playCatalogsFor, PlaysOutputSchema, strategySpec, focusedStrategySpec, starterStrategySpec, socialSpec, seoSpec, SeoBriefV2Schema } from "../../shared/agents/specs";
 import { selectStrategyQualityCases } from "./cases";
 import { industryInput } from "./industryInput";
-import { evaluationIdentity, assertReusableEvaluation } from "./evaluationIdentity";
+import { evaluationIdentity, assertReusableEvaluation, comparisonIdentity } from "./evaluationIdentity";
 import { focusedPlanTask, focusedRefreshContext } from "../../shared/agents/focusedPlan";
 import { BusinessProfileSchema } from "../../shared/ai/tasks";
 import {agentQuality,planQuality,planRepairGuidance} from "../../shared/agents/quality";
@@ -145,16 +145,20 @@ try {
    const schema = z.object({verdict:z.enum(["A","B","tie","neither"]), questions:z.array(z.object({question:z.string(),A:z.number().int().min(1).max(5),B:z.number().int().min(1).max(5),evidence:z.string()})), criticalErrors:z.array(z.object({version:z.enum(["A","B"]),claim:z.string(),reason:z.string()})), usefulNextStep:z.object({A:z.boolean(),B:z.boolean(),reason:z.string()}), improvements:z.array(z.string()), summary:z.string()});
    for (const item of selectStrategyQualityCases(values.cases)) {
      if (!item.brief.startsWith("SYNTHETIC")) throw new Error("Isolated industry cases only.");
-     const path=resolve(out,`${item.id}-${variant}-industry-comparison.json`); if(existsSync(path)){console.log(`REUSE ${path}`);continue;}
+     const path=resolve(out,`${item.id}-${variant}-industry-comparison.json`);
      const versions=[values["compare-with"]!,variant];
      if(createHash("sha256").update(item.id).digest()[0]%2===0)versions.reverse();
      const records=versions.map(version=>JSON.parse(readFileSync(resolve(out,`${item.id}-${version}-focused-14.json`),"utf8")));
      if(records.some(record=>!record.result?.output))throw new Error("Both industry candidates must have complete outputs.");
+     const mapping = { A: versions[0], B: versions[1] };
+     const comparisonInput = { brief: item.brief, evidence: item.research, questions: item.reviewQuestions, A: records[0].result.output, B: records[1].result.output };
+     const identity = comparisonIdentity(loadedSourceHash, item.id, mapping, comparisonInput);
+     if (existsSync(path)) { assertReusableEvaluation(JSON.parse(readFileSync(path, "utf8")), identity); console.log(`REUSE exact saved comparison ${path}`); continue; }
      label=`${item.id}/${variant}/industry-independent-comparison`;
-     const result=await turn({modelKey:"claude-sonnet-5.5",maxTokens:4000,thinkingOff:true,effort:"high",schema,system:[{text:"Judge two anonymized growth plans against the same explicitly synthetic brief and the held-out questions. You did not see their reviews or generation conversations. Score each question 1–5 for both, citing concrete passages. Do not favor length, perfect safety-only homework or invented specificity. A clearly labelled proposed example is allowed; a made-up existing product, qualification, customer list, geography, consent or outcome is a critical error. Missing facts should limit execution without blocking safe original preparation. Ask whether an inexperienced owner gets one useful next action with actual usable AI-prepared work. Do not require every social network or SEO for every business. These are end-to-end engine configurations; do not infer isolated model effects. Return every held-out question verbatim exactly once. This is AI judgment, not evidence of commercial success.",cache:true}],messages:[{role:"user",content:JSON.stringify({brief:item.brief,evidence:item.research,questions:item.reviewQuestions,A:records[0].result.output,B:records[1].result.output})}]});
+     const result=await turn({modelKey:"claude-sonnet-5.5",maxTokens:4000,thinkingOff:true,effort:"high",schema,system:[{text:"Judge two anonymized growth plans against the same explicitly synthetic brief and the held-out questions. You did not see their reviews or generation conversations. Score each question 1–5 for both, citing concrete passages. Do not favor length, perfect safety-only homework or invented specificity. A clearly labelled proposed example is allowed; a made-up existing product, qualification, customer list, geography, consent or outcome is a critical error. Missing facts should limit execution without blocking safe original preparation. Ask whether an inexperienced owner gets one useful next action with actual usable AI-prepared work. Do not require every social network or SEO for every business. These are end-to-end engine configurations; do not infer isolated model effects. Return every held-out question verbatim exactly once. This is AI judgment, not evidence of commercial success.",cache:true}],messages:[{role:"user",content:JSON.stringify(comparisonInput)}]});
      if(!result.ok)throw new Error(result.message); const judged=schema.parse(result.output);
      if(judged.questions.length!==item.reviewQuestions.length||item.reviewQuestions.some(question=>judged.questions.filter(row=>row.question===question).length!==1))throw new Error("Missing or duplicated held-out question; no accepted verdict.");
-     writeFileSync(path,JSON.stringify({caseId:item.id,mapping:{A:versions[0],B:versions[1]},result,limits:"Isolated synthetic briefs, not live industry businesses. No external actions. AI review is not human or market validation."},null,2));
+     writeFileSync(path,JSON.stringify({caseId:item.id,mapping,evaluationIdentity:identity,sourceHash:loadedSourceHash,result,limits:"Isolated synthetic briefs, not live industry businesses. No external actions. AI review is not human or market validation."},null,2));
      console.log(`JUDGED ${item.id}: ${judged.verdict}`);
    }
    return;

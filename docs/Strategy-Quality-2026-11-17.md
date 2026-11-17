@@ -2,6 +2,38 @@
 
 These are isolated synthetic acceptance cases using ClimbOS's shared strategy generator and validators. They are not real businesses, measured growth, human expert sign-off or a complete Convex/browser acceptance test. Existing owner-authorized Haiku/Sonnet routes were used; no Codex model switch occurred.
 
+## Four-case recheck with business-specific retrieval
+
+`acceptance-v6-20261117` loaded engine **v3.152-offer-alternative-classification**, fingerprint `3c375f4bbddf1a423cec029ba52a9ea1acff94e52c50fde9dee049d0acb261aa`. Fourteen completed generation/review calls cost **$1.857688**. All four outputs were schema-valid. Two cleared the unchanged generation rubric; two did not:
+
+| Case | Average / minimum | Saved ship result | Remaining issues |
+|---|---:|---|---|
+| Healthcare | 3.63 / 3.5 | False | Page specificity, clinician-confirmed process, enquiry handling and delayed-publication comparison remain weak. No deterministic lint findings. |
+| Science / technical B2B | 4 / 4 | True | All eight scores are exactly 4. Distribution route/pitch, technical proof and late-publication measurement still need work. No deterministic lint findings. |
+| Retail | 3.38 / 3 | False | Arbitrary demonstration topic, comparison denominators, staff scripts, repeat-purchase mechanism and staff/margin inputs remain weak. Style warnings remain. |
+| Creator | 4 / 4 | True | All eight scores are exactly 4. Willingness to pay, collaboration specificity, consented critique format and workload remain open; style warnings remain. |
+
+These are four synthetic samples, not an estimated overall pass rate or a claim that the changes caused higher quality. Retail scored lower than its prior v5 run. No gate, rubric threshold or score rounding was loosened. The plural-offer repair and cache-identity harness changes happened after this process loaded; do not relabel its generation evidence as v3.153 or retrofit new cache metadata.
+
+### Separate anonymized comparison
+
+```sh
+pnpm strategy:anthropic --confirm-paid --stage industry-judge --cases science,creator --variant acceptance-v6-20261117 --compare-with acceptance-v4-20261117
+```
+
+Two separate calls, without the generation/review conversations, cost **$0.103841** and preferred v6 in both comparisons. Mapping was preserved in the records: science B=v6; creator A=v6. The judge reported no critical errors and a useful next step in both old and new drafts.
+
+- **Science:** technical/procurement framing remained 4/5 and unsupported-claim avoidance 5/5 in both. Partner/education mechanism rose from 2 to 4 in this judge's assessment. It preferred the proposed engineer/purchaser page and partner-route research over reliance on existing enquiries, but still wanted concrete distribution and credible technical proof.
+- **Creator:** paid-offer linkage rose from 2 to 3; collaboration/reusable learning remained 3; social situation fit remained 4. The preference was narrow. A passing generation rubric does not mean willingness to pay or a commercially viable offer was established. The judge's suggestion to invent a hypothetical price is not an owner instruction and was not implemented; supplied pricing and economic inputs still govern consequential recommendations.
+
+These remain AI judgments, not independent human expertise, customer acceptance or measured impact. Current conditions differ across whole engine configurations; the comparison does not isolate retrieval, a model or a single prompt.
+
+### Budget after these checks
+
+All v6 generation and comparison calls: **16 completed calls, $1.961529**. Across the November 17 continuation: **55 completed calls, $6.871216**. The main ledger records **$57.295745** charged or held, plus historical **$1.896709**, totaling **$59.192454** against the cumulative $100 cap. Unresolved historical holds are retained, so this is not a statement that every held dollar was spent. The evaluation lock was released normally. No customer data, customer contact, publishing, live offer or campaign action was involved.
+
+Healthcare/retail acceptance, repeated cross-industry quality, human judgment, real-business facts, operating capacity and measured outcomes remain open. The next real-business case requires an owner-selected website/goal and whatever business inputs are actually available; missing values must remain unknown. Neither the passing samples nor the old completed code-gap roadmap establishes completion of all 410 requirements.
+
 ## Retail and creator follow-up after context repair
 
 The same approved synthetic briefs were rechecked as `acceptance-v5-20261117`, with engine **v3.150-declined-offer-clauses**, fingerprint `620bdb7431517dfd2b03b62125924ce5a1d4d10da050a39c85ab6265ee17955f`. Eight completed calls cost **$1.103572**. Both returned complete schema-valid output, and neither passed: retail **3.69 / 3.5**, creator **3.5 / 3** (average / minimum). Neither failed record was rewritten.

@@ -1,3 +1,11 @@
+## 17 November 2026 — approved four-case quality recheck
+
+Comparison-cache follow-up: **21 tests in six files passed (0.645 seconds)**; the exact A/B reference, candidates and questions are now bound to cached verdicts. [Scope](growth-engine/evaluation-cache-identity-audit.md). All four unchanged v6 outputs were re-linted read-only with v3.153: no errors; retail/creator retain four style warnings each. Historical model assessments remain intact.
+
+[Detailed results and costs](Strategy-Quality-2026-11-17.md). Engine v3.152: science and creator passed the unchanged rubric at 4/4; healthcare and retail remained below it. Fourteen generation/review calls and two separate comparison calls completed; both comparisons preferred the new drafts but retained material limitations. Total charged/held across both ledgers: $59.192454 of the approved $100 cap. No business action or deployment occurred.
+
+Plural-offer publication follow-up: **79 tests in four files passed (1.47 seconds)** including edit → exact offer snapshot → approval rejection of plural bonuses, and successful approval after restoring valid terms. [Commands](growth-engine/plural-offer-mechanisms-audit.md). The 79-test scope overlaps other coverage and should not be summed as unique project coverage.
+
 ## 17 November 2026 — plural offer checks
 
 [Audit and commands](growth-engine/plural-offer-mechanisms-audit.md). Engine `v3.153-plural-offer-mechanisms`: fourteen red cases, then **310 tests in ten files passed (13.57 seconds)**. A generated plural promotion without an assessment now fails quality and approval with no action receipts. App/Convex typecheck, changed-file ESLint and diff checks passed.

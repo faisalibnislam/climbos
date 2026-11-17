@@ -1,6 +1,15 @@
 # ClimbOS buildable-gap completion roadmap
 
-**Created:** 25 October 2026. **Owner decision:** complete every code gap that can be built and tested in the repository, then open a PR from `growth-engine-v2`, merge to `main`, and deploy to production for live testing with connected provider accounts. The production deploy and merge are confirmed with the owner immediately before they run.
+**Created:** 25 October 2026. **Reconciled:** 17 November 2026. This is the historical 22-gap code inventory, not a declaration that all 410 requirements or later owner requests are complete. Its original release sequence and branch are superseded by the current work instructions: continue on `codex/trend-evidence-freshness`, push verified batches, preserve user changes, and ask before switching Codex models. Do not infer PR, merge, deployment, customer action or paid-call authority from this document. The owner separately approved the four synthetic healthcare/science/retail/creator evaluation cases under the cumulative $100 cap.
+
+## Current acceptance work
+
+- **Recommendation quality:** the November 17 paid checks still contain below-bar results. Retrieval integration, fractional scoring, draft selection and offer false positives have been repaired, but code tests are not proof of original, useful strategy quality. Preserve failed outputs and [the current quality report](../Strategy-Quality-2026-11-17.md).
+- **Requirement-level acceptance:** use [the 410-row audit](improvement-requirement-audit.md), actual runtime paths and dated regression evidence. A shared repair can cover many requirements without establishing every scenario or real-world outcome.
+- **Evidence and execution:** continue checking concrete gaps in source semantics, timing, offer consistency, outcome coverage and exact approval boundaries. Follow the [implementation ledger](implementation-ledger.md); do not rebuild capabilities solely because an older paragraph says they are missing.
+- **Owner and live-system validation:** full owner usability, current provider eligibility/access, external-site editing/re-rendering, real exposure and measured business outcomes remain distinct acceptance work. Report unsupported paths and missing credentials rather than guessing or silently executing them.
+
+The table below records the original buildable gaps. “Done” is scoped to those increments and their recorded tests.
 
 This roadmap lists code gaps only. It excludes work that needs live outcomes, real customers, provider approvals, credentials, or calendar time (see the handoff's "What remains" list). Candidates came from two read-only audits of audit rows 1–205 and 206–410 plus the handoff, checked against code on 25 October 2026. Re-verify each one against the code before building it; an audit finding is a lead, not proof.
 
@@ -34,13 +43,10 @@ Status: **Done**, **Next**, or **Planned**. Size: S (one module + tests), M (bac
 | 21 | Event-triggered specialist runs (draft-only, budgeted, debounced) | 337, 349, 381–410 | L | Done (see ledger) |
 | 22 | Specialist usage summary beyond the 500-run / 100-report caps | 149 | S | Done (see ledger) |
 
-## Release steps (after the gaps)
+## Release boundary
 
-1. Run the full test suite, typecheck and lint; fix or report failures.
-2. Check the production Convex and Vercel environment variables and provider credentials; report what is missing for Google, Meta, Resend and Stripe.
-3. Confirm with the owner, then open the PR to `main`, merge it, deploy the Convex functions and schema, and confirm the Vercel production deployment.
-4. Smoke-test the production site and report what was and wasn't verified.
+Current authorization covers verified commits and pushes to the feature branch. Production changes require a separate concrete release decision under the then-current owner instructions. Do not follow the historical plan to open/merge a PR or deploy merely because the table is marked done. Use focused tests for the changed behavior; broaden them when failures or a release decision justify it.
 
-## Estimate
+## Historical estimate
 
-At about four tested increments per working session, the 22 planned gaps are roughly five to seven sessions, plus one for release. Individual gaps may grow once traced; update this table as each lands.
+The original five-to-seven-session estimate applied only to the 22 listed code gaps. It is not an estimate for the entire product, current strategy-quality acceptance, all 410 requirements, provider approval or observed business outcomes. No completion date for those is established by this roadmap.

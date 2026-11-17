@@ -23,3 +23,5 @@ The real Convex fixture now saves the unsupported plural offer with failed quali
 ## Limits
 
 This closes a concrete lexical bypass, not universal natural-language coverage or semantic evidence verification. Non-English and unrecognized paraphrases still require review. Current v6 paid evaluations loaded v3.152 before this repair and are not post-repair model-quality evidence. No model route, price, budget, contact, campaign or live offer changed.
+
+Follow-up publication-boundary coverage: **79 tests in four files passed (1.47 seconds)** using `pnpm exec vitest run tests/convex/publish-flow.test.ts tests/convex/social-publish.test.ts tests/unit/offer-timing-evidence-basis.test.ts tests/unit/offer-horizon.test.ts`. An edited social artifact cannot add unapproved plural bonuses to an approved discount; exact valid terms can still be approved. Changed-test ESLint passed.

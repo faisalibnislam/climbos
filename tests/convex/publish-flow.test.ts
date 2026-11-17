@@ -404,7 +404,10 @@ describe("publishing lifecycle", () => {
     expect(versions[0]?.contentHash).not.toBe(versions[1]?.contentHash);
   });
 
-  it("keeps offer terms attached through edits and blocks approval of mismatched customer copy", async () => {
+  it.each([
+    ["price", "First-time quote requesters: save 40% today and pay $60 USD."],
+    ["plural mechanism", "First-time quote requesters: save 20%, pay $80 USD and get bonuses."],
+  ])("keeps offer terms attached and blocks approval of mismatched %s copy", async (_kind, body) => {
     const t = setup();
     const w = await workspace(t, "offer-copy-approval@flow.example");
     const artifactId = await draft(t, w.orgId, "facebook");
@@ -438,7 +441,7 @@ describe("publishing lifecycle", () => {
     await w.owner.client.mutation(api.content.edit, {
       slug: w.slug,
       artifactId,
-      body: "First-time quote requesters: save 40% today and pay $60 USD.",
+      body,
       hashtags: [],
     });
     const editedVersion = await t.run(async (ctx) => {

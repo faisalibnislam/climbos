@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Latest synthetic strategy checks: science and creator cleared the unchanged review rubric; healthcare and retail did not. Separate AI comparisons preferred the new passing drafts, but real-business usefulness and growth outcomes remain unverified. [Results and boundaries](Strategy-Quality-2026-11-17.md).
+
 Offer and approved-copy checks now recognize plural mechanisms such as “discounts”, “bonuses” and “free trials”. A generated primary promotion cannot bypass its assessment merely by using plural wording. [Audit and approval regression](growth-engine/plural-offer-mechanisms-audit.md).
 
 Offer checks distinguish narrowly worded rejected alternatives (“safer than a discount”) from proposed promotions and recognize staffing, stock and floor-space unknowns. Affirmative offers and approval controls still apply. [Audit](growth-engine/offer-alternative-classification-audit.md).

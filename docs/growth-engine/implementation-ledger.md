@@ -1,3 +1,7 @@
+## 17 November — four-case quality recheck and publication regression
+
+Approved v6 synthetic checks: science/creator passed, healthcare/retail did not. Two separate comparisons preferred v6 with explicit weaknesses. [Results/costs](../Strategy-Quality-2026-11-17.md). Added actual social-edit approval coverage for plural bonuses; 79 related tests passed. Reconciled the historical roadmap without declaring the whole project complete.
+
 ## 17 November — plural promotion mechanisms
 
 `v3.153-plural-offer-mechanisms`: close a plural-wording bypass in structured offer and approved-copy checks. Fourteen red cases followed by 310 passing focused/permission tests, including the real generation-to-approval boundary. [Audit](plural-offer-mechanisms-audit.md). Semantic and broader acceptance limits remain explicit.

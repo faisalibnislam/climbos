@@ -15,3 +15,8 @@ export function assertReusableEvaluation(saved: { evaluationIdentity?: string; r
   if (!saved.result) throw new Error("Saved evaluation failed or is incomplete; choose a new variant to retry. Original evidence is preserved.");
   if (!saved.evaluationIdentity || saved.evaluationIdentity !== expected) throw new Error("Saved evaluation does not match this code, configuration and input. Choose a new variant; do not relabel historical evidence as a current run.");
 }
+
+/** Bind an independent comparison to its exact candidates, blind mapping and questions. */
+export function comparisonIdentity(sourceHash: string, caseId: string, mapping: { A: string; B: string }, input: unknown): string {
+  return createHash("sha256").update(JSON.stringify({ version: 1, sourceHash, caseId, mapping, input })).digest("hex");
+}

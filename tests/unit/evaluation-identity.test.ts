@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertReusableEvaluation, evaluationIdentity } from "../../bench/strategy-quality/evaluationIdentity";
+import { assertReusableEvaluation, comparisonIdentity, evaluationIdentity } from "../../bench/strategy-quality/evaluationIdentity";
 import { focusedStrategySpec } from "../../shared/agents/specs";
 import type { AgentInput } from "../../shared/agents/types";
 
@@ -33,5 +33,19 @@ describe("paid evaluation cache identity", () => {
       expect(() => assertReusableEvaluation(saved, identity())).toThrow();
       expect(JSON.stringify(saved)).toBe(before);
     }
+  });
+
+  it("binds a comparison to the exact reference, candidates, questions and code", () => {
+    const mapping = { A: "old", B: "new" };
+    const input = { brief: "Synthetic case", questions: ["Is the test useful?"], A: { title: "Old plan" }, B: { title: "New plan" } };
+    const expected = comparisonIdentity("code", "retail", mapping, input);
+    const saved = { evaluationIdentity: expected, result: { verdict: "B" } };
+    expect(() => assertReusableEvaluation(saved, comparisonIdentity("code", "retail", mapping, input))).not.toThrow();
+    for (const changed of [
+      comparisonIdentity("code", "retail", { ...mapping, A: "different-reference" }, input),
+      comparisonIdentity("code", "retail", mapping, { ...input, B: { title: "Changed output" } }),
+      comparisonIdentity("code", "retail", mapping, { ...input, questions: ["A different question"] }),
+      comparisonIdentity("changed-code", "retail", mapping, input),
+    ]) expect(() => assertReusableEvaluation(saved, changed)).toThrow();
   });
 });
