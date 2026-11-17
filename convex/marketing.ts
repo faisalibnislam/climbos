@@ -179,14 +179,15 @@ export const markCrmConnected = internalMutation({
 });
 
 /** Owner-set frequency limit over the consented, unsuppressed contacts in one segment (null when no limit is set). */
-async function segmentFrequency(ctx: QueryCtx, orgId: Id<"organizations">, segment: string, limitDays: number | undefined) {
+async function segmentFrequency(ctx: QueryCtx, orgId: Id<"organizations">, segment: string, limitDays: number | undefined, recipients?: Awaited<ReturnType<typeof eligibleRecipients>>) {
   if (!limitDays) return null;
-  const contacts = (await ctx.db.query("contacts").withIndex("by_org", (q) => q.eq("orgId", orgId)).take(10_000)).filter((c) => !c.deletedAt && c.segments.includes(segment));
+  // Use the exact send audience, including provenance, suppression and history
+  // completeness checks. A different consent slice can silently omit a person
+  // who will actually receive the approved broadcast.
+  const audience = recipients ?? await eligibleRecipients(ctx, orgId, segment);
   const people: ContactHistory[] = [];
-  for (const c of contacts) {
-    const consented = (await ctx.db.query("consentRecords").withIndex("by_org_contact", (q) => q.eq("orgId", orgId).eq("contactId", c._id)).take(5)).some((r) => r.purpose === "marketing_email" && !r.withdrawnAt);
-    const suppressed = Boolean(await ctx.db.query("suppressions").withIndex("by_org_email", (q) => q.eq("orgId", orgId).eq("emailHash", c.emailHash)).first());
-    if (!consented || suppressed) continue;
+  for (const recipient of audience) {
+    const c = assertSameOrg(await ctx.db.get(recipient.contactId), orgId, "contact");
     people.push({ ...(c.lastMarketingEmailAt ? { lastMarketingEmailAt: c.lastMarketingEmailAt } : {}), ...(await outreachHistoryByHash(ctx, orgId, c.emailHash)) });
   }
   return checkContactFrequency(people, limitDays, Date.now());
@@ -350,7 +351,7 @@ export const approveSend = mutation({
     const stats = { sendable: recipients.length };
     if (stats.sendable === 0) throw appError("INVALID", "Nobody in this segment has a recorded marketing opt-in. ClimbOS won't send without one.");
     // The owner's contact frequency limit holds the whole send rather than silently dropping people from an approved segment.
-    const frequency = await segmentFrequency(ctx, org._id, args.segment, org.contactFrequencyDays);
+    const frequency = await segmentFrequency(ctx, org._id, args.segment, org.contactFrequencyDays, recipients);
     const blocked = frequency ? frequencyBlockMessage(frequency, org.contactFrequencyDays!) : null;
     if (blocked) throw appError("INVALID", blocked);
     // Reserve the send volume against the plan's marketing-send quota (customer's provider bill is separate).
@@ -429,7 +430,7 @@ async function sendProblem(ctx: MutationCtx, c: NonNullable<Awaited<ReturnType<t
   if (!/^send:\d+$/.test(a.actionKind) || !Number.isSafeInteger(index)) return "The approved email selection is invalid.";
   const email = selectedEmail(artifact, version, index);
   if (!email || email.subject !== args.subject || toHtml(email.text, org.name) !== args.html) return "The email content changed after approval. Review the current version.";
-  const frequency = await segmentFrequency(ctx, org._id, args.segment, org.contactFrequencyDays);
+  const frequency = await segmentFrequency(ctx, org._id, args.segment, org.contactFrequencyDays, c.recipients);
   const frequencyIssue = frequency ? frequencyBlockMessage(frequency, org.contactFrequencyDays!) : null;
   if (frequencyIssue) return frequencyIssue;
   const scope = { destination: args.providerSegmentId, audience: args.segment, spendLimitMinor: c.recipients.length, recipientSetHash: await recipientSetHash(c.recipients), artifactVersionId: version._id, reservationId: args.reservationId, connectionId: c.connectionId, credentialId: c.credentialId };

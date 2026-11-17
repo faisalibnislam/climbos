@@ -1,3 +1,7 @@
+## 17 November 2026 — contact-frequency history
+
+Rows 111/118/148 follow-up: owner-set broadcast frequency now uses the exact eligible audience, with consistent provenance/suppression/completeness checks, and the latest recorded outreach send time. [Audit](contact-frequency-history-audit.md) records reproduced gaps and remaining lifecycle/coordination limits. These rows remain partial.
+
 ## 17 November 2026 — retention recommendation evidence
 
 Retention recommendations now compare claimed evidence classes with recorded provenance, require outcome/comparison/decision rules for retention as well as expansion, and preserve unknown observation windows. Real v2 output is schema/lint checked again before being recorded as verified. No enrollment or execution was added. See [the audit](retention-recommendation-audit.md).

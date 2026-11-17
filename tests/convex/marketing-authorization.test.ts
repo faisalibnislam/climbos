@@ -14,7 +14,7 @@ vi.mock("../../shared/integrations/resendMarketing", async original => ({
 }));
 afterEach(() => { provider.synced = []; provider.drafts = 0; provider.sends = 0; provider.outcome = "verified"; provider.onRead = null; provider.recovery = null; provider.reads = 0; provider.onRecovery = null; provider.lastDraft = null; provider.sentDraft = null; });
 
-async function fixture(body = "A useful update for subscribers.", recipients = 1) {
+async function fixture(body = "A useful update for subscribers.", recipients = 1, withdrawnConsents = 0) {
   const t = setup(), owner = await asNewUser(t, "email-boundary@example.com");
   const { slug, orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Email boundary" });
   await makePaid(t, orgId);
@@ -24,6 +24,13 @@ async function fixture(body = "A useful update for subscribers.", recipients = 1
   });
   const importContact = (email: string) => owner.client.action(api.marketing.importContacts, { slug, csv: `email,consent,consent_source,consent_date,segment\n${email},yes,signup form,2026-10-01,newsletter` });
   await importContact("ana@example.com");
+  if (withdrawnConsents) await t.run(async ctx => {
+    const consent = (await ctx.db.query("consentRecords").collect())[0];
+    await ctx.db.patch(consent._id, { withdrawnAt: Date.now() });
+    const { _id: _id, _creationTime: _time, ...fields } = consent;
+    for (let i = 1; i < withdrawnConsents; i++) await ctx.db.insert("consentRecords", { ...fields, withdrawnAt: Date.now() });
+    await ctx.db.insert("consentRecords", { ...fields, capturedAt: Date.now() });
+  });
   if (recipients > 1) await owner.client.action(api.marketing.importContacts, { slug, csv: "email,consent,consent_source,consent_date,segment\n" + Array.from({ length: recipients - 1 }, (_, i) => `extra-${i}@example.com,yes,signup form,2026-10-01,newsletter`).join("\n") });
   await t.mutation(internal.connections.storeConnection, { orgId, userId: owner.userId, provider: "email_resend", secret: JSON.stringify({ apiKey: "test-key" }), secretKind: "api_key", scopes: [], accountLabel: "Test account" });
   const artifactId = await t.run(async ctx => {
@@ -72,15 +79,25 @@ it.each(["content", "payload", "role", "policy", "credentials", "suppression", "
   expect(provider.sends).toBe(0);
 });
 
-it.each(["suppression", "content", "policy"] as const)("rechecks late %s before dispatch", async change => {
-  const f = await fixture();
+it.each(["suppression", "content", "policy", "frequency"] as const)("rechecks late %s before dispatch", async change => {
+  const f = await fixture(undefined, 1, change === "frequency" ? 5 : 0);
   provider.onRead = async () => f.t.run(async ctx => {
     if (change === "suppression") { const contact = (await ctx.db.query("contacts").collect())[0]; await ctx.db.insert("suppressions", { orgId: f.orgId, emailHash: contact.emailHash, reason: "unsubscribe", source: "test", createdAt: Date.now() }); }
     if (change === "content") await ctx.db.patch(f.artifactId, { status: "draft" });
     if (change === "policy") { const policy = (await ctx.db.query("autonomyPolicies").withIndex("by_org_active", q => q.eq("orgId", f.orgId).eq("active", true)).first())!; await ctx.db.patch(policy._id, { version: policy.version + 1 }); }
+    if (change === "frequency") {
+      await ctx.db.patch(f.orgId, { contactFrequencyDays: 7 });
+      const contact = (await ctx.db.query("contacts").collect())[0];
+      await ctx.db.patch(contact._id, { lastMarketingEmailAt: Date.now() });
+    }
   });
   await f.t.action(internal.marketing.executeSend, f.args);
   expect(provider.sends).toBe(0);
+  if (change === "frequency") {
+    expect(provider.synced).toEqual(["ana@example.com"]);
+    const receipts = await f.t.run(ctx => ctx.db.query("actionReceipts").collect());
+    expect(receipts).toContainEqual(expect.objectContaining({ status: "failed", summary: expect.stringContaining("within your 7-day limit") }));
+  }
 });
 
 it("claims one attempt and records one result for overlapping executors", async () => {

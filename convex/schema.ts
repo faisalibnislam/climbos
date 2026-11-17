@@ -2008,6 +2008,7 @@ export default defineSchema({
     .index("by_campaign", ["campaignId", "createdAt"])
     .index("by_prospect", ["prospectId", "step"])
     .index("by_org_recipient_status", ["orgId", "recipientHash", "status"])
+    .index("by_org_recipient_status_sent", ["orgId", "recipientHash", "status", "sentAt"])
     .index("by_org_sent", ["orgId", "sentAt"]),
 
   /** Append-only mailbox execution history; contains no recipient address or email body. */

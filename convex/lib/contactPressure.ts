@@ -41,7 +41,10 @@ export async function outreachHistoryByHash(ctx: QueryCtx | MutationCtx, orgId: 
   const active = await Promise.all(ACTIVE_OUTBOUND_STATUSES.map((status) =>
     ctx.db.query("outboundSends").withIndex("by_org_recipient_status", (q) => q.eq("orgId", orgId).eq("recipientHash", recipientHash).eq("status", status)).first(),
   ));
-  const sent = await ctx.db.query("outboundSends").withIndex("by_org_recipient_status", (q) => q.eq("orgId", orgId).eq("recipientHash", recipientHash).eq("status", "sent")).take(20);
-  const last = sent.reduce((m, row) => Math.max(m, row.sentAt ?? 0), 0);
+  // Creation order is not send order: queued steps and delayed reconciliation
+  // can have older rows with newer send times. Read the actual maximum, without
+  // treating a bounded sample of the recipient's history as complete.
+  const sent = await ctx.db.query("outboundSends").withIndex("by_org_recipient_status_sent", (q) => q.eq("orgId", orgId).eq("recipientHash", recipientHash).eq("status", "sent")).order("desc").first();
+  const last = sent?.sentAt;
   return { activeOutreach: active.some(Boolean), ...(last ? { lastOutreachSentAt: last } : {}) };
 }

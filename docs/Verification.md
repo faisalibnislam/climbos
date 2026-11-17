@@ -1,3 +1,14 @@
+## 17 November 2026 — complete contact-frequency checks
+
+Owner-set broadcast frequency now uses exact send eligibility and an indexed latest outreach timestamp. See [the audit](growth-engine/contact-frequency-history-audit.md).
+
+- `pnpm exec vitest run tests/convex/contact-frequency-history.test.ts tests/convex/contact-frequency.test.ts tests/unit/contact-frequency.test.ts tests/convex/marketing-authorization.test.ts tests/convex/marketing.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts` — 86 passed across seven files, 2.43 seconds.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint convex/marketing.ts convex/lib/contactPressure.ts convex/schema.ts tests/convex/contact-frequency-history.test.ts tests/convex/marketing-authorization.test.ts` — passed.
+- `git diff --check` — passed.
+
+Five red regressions preceded the implementation. The late-frequency case preserves the approved consent identity and changes only the policy/history before dispatch. No real provider/model, browser, deployment or sending. Cross-broadcast contact locking, legacy unkeyed history and customer lifecycle state remain outside this repair.
+
 ## 17 November 2026 — retention evidence and final output validation
 
 Retention advice now preserves recorded source classes, requires useful outcomes and decision rules for non-expansion plays, and can retain an unknown observation window. Real v2 jobs validate returned output again before saving it as verified. See [the audit](growth-engine/retention-recommendation-audit.md).

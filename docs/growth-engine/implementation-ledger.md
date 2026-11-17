@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: exact contact-frequency history
+
+Broadcast preview, approval and execution now share send eligibility; the outreach history lookup uses the actual latest send time instead of the first 20 records. Five reproduced regressions cover truncated history and mismatched consent rules. [Audit](contact-frequency-history-audit.md) retains customer-state, legacy-history and cross-broadcast coordination limits. No new execution authority.
+
 ## 17 November 2026 — retention recommendation evidence
 
 Retention recommendations now compare claimed evidence classes with recorded provenance, require outcome/comparison/decision rules for retention as well as expansion, and preserve unknown observation windows. Real v2 output is schema/lint checked again before being recorded as verified. No enrollment or execution was added. See [the audit](retention-recommendation-audit.md).
