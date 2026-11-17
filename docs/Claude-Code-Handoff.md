@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+Latest booking identity follow-up (17 November): new bookings retain tenant-scoped deal ids and booking-owned next-step pointers. Cancellation preserves other calls, manual steps and closed decisions; direct-booking attendance notes reach the exact deal. Mismatched/ambiguous prospect associations become separate booking records rather than mutating unrelated customers. Legacy ambiguity remains explicit. [Audit](growth-engine/booking-deal-identity-audit.md) documents limits and the existing notification paths left unchanged.
+
 Latest sales follow-up dates (17 November): added a date-only CRM field, deterministic workspace-day checks, explicit unknown timing and consistent board/Today/assistant context. New automatic deals and cancellation stage transitions retain stage time; date/note edits do not reset it. Legacy instants are not migrated. 69 focused tests and four browser checks passed. [Audit and limits](growth-engine/pipeline-follow-up-date-audit.md). No hosted deployment or new execution authority.
 
 Latest booking follow-up (17 November): recording a no-show no longer queues an email or claims delivery. Attendance corrections are audited; linked CRM notes retain owner attribution without downgrading the deal. The inbox offers an editable manual draft and labels old send markers unverified. Legacy queued no-show actions now return without sending. [Audit and remaining gaps](growth-engine/booking-outcome-boundary-audit.md). No hosted deployment; other booking notifications retain their prior behavior.

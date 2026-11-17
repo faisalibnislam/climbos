@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { bookingCancelled, dealFromBooking, syncDealFromProspect } from "./crm";
+import { bookingCancelled, dealFromBooking, linkDealBooking, syncDealFromProspect } from "./crm";
 import { notifyOwners } from "./lib/notify";
 import { emitEvent } from "./webhooks";
 import { manageToken } from "./bookings";
@@ -545,7 +545,12 @@ export const book = mutation({
     // Link the booking to its prospect: the ?ref in their email's booking link, else their email address.
     const refId = a.ref ? ctx.db.normalizeId("prospects", a.ref) : null;
     const byRef = refId ? await ctx.db.get(refId) : null;
-    const prospect = byRef?.orgId === page.orgId ? byRef : await ctx.db.query("prospects").withIndex("by_org_email", (q) => q.eq("orgId", page.orgId).eq("publicEmail", email)).first();
+    // A forwarded or guessed ref is not proof that the guest is that prospect.
+    const emailMatches = await ctx.db.query("prospects").withIndex("by_org_email", (q) => q.eq("orgId", page.orgId).eq("publicEmail", email)).take(2);
+    const candidate = byRef?.orgId === page.orgId && byRef.publicEmail?.trim().toLowerCase() === email ? byRef : emailMatches.length === 1 ? emailMatches[0] : null;
+    const candidateDeals = candidate ? await ctx.db.query("deals").withIndex("by_prospect", q => q.eq("prospectId", candidate._id)).take(2) : [];
+    // Accept the appointment as its own record when existing CRM identity is ambiguous.
+    const prospect = candidate && candidateDeals.length <= 1 && candidateDeals.every(d => d.orgId === page.orgId) ? candidate : null;
     const id = await ctx.db.insert("bookings", {
       orgId: page.orgId,
       pageId: page._id,
@@ -564,11 +569,15 @@ export const book = mutation({
     });
     await ctx.db.patch(id, { manageTokenHash: await sha256Hex(await manageToken(id)) });
     if (prospect) {
-      if (prospect.stage !== "won" && prospect.stage !== "booked") await ctx.db.patch(prospect._id, { stage: "booked", stageUpdatedAt: now, updatedAt: now });
+      if (prospect.stage !== "won" && prospect.stage !== "lost" && prospect.stage !== "booked") await ctx.db.patch(prospect._id, { stage: "booked", stageUpdatedAt: now, updatedAt: now });
       // They booked: no more follow-ups.
       await cancelQueued(ctx, prospect._id);
-      await syncDealFromProspect(ctx, prospect, "booked", "outbound", "Booked a call.");
-    } else await dealFromBooking(ctx, page.orgId, name, a.company?.trim().slice(0, 120) || undefined, a.startAt);
+      const dealId = await syncDealFromProspect(ctx, prospect, "booked", "outbound", "Booked a call.");
+      await linkDealBooking(ctx, id, dealId);
+    } else {
+      const dealId = await dealFromBooking(ctx, page.orgId, name, a.company?.trim().slice(0, 120) || undefined, a.startAt, id);
+      await linkDealBooking(ctx, id, dealId);
+    }
     const when = new Date(a.startAt).toLocaleString("en-US", { timeZone: page.timezone, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
     await ctx.db.insert("communityMessages", { orgId: page.orgId, channel: "booking", kind: "booking", externalId: `booking:${id}`, prospectId: prospect?._id, authorName: a.company ? `${name} (${a.company.trim().slice(0, 60)})` : name, text: `Booked a ${page.durationMin}-minute call for ${when}.${a.note ? `\n\n“${a.note.trim().slice(0, 500)}”` : ""}`, receivedAt: now, status: "new", createdAt: now, updatedAt: now });
     await audit(ctx, { orgId: page.orgId, actorType: "system", action: "booking.created", subjectType: "booking", subjectId: id, summary: `${name}${a.company ? ` (${a.company.trim().slice(0, 60)})` : ""} booked a call` });

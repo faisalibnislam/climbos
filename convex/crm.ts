@@ -36,7 +36,9 @@ function recordedValue(value: number, currency: string) {
 /** Create or advance the deal for an outreach prospect (never moves a deal backwards or off won/lost). */
 export async function syncDealFromProspect(ctx: MutationCtx, p: Doc<"prospects">, stage: Stage, source: Doc<"deals">["source"], note?: string) {
   const now = Date.now();
-  const existing = await ctx.db.query("deals").withIndex("by_prospect", (q) => q.eq("prospectId", p._id)).first();
+  const matches = await ctx.db.query("deals").withIndex("by_prospect", (q) => q.eq("prospectId", p._id)).take(2);
+  if (matches.length > 1) throw appError("INVALID", "Multiple customer records match this prospect. Review them before changing its stage.");
+  const existing = matches[0];
   if (existing) {
     assertSameOrg(existing, p.orgId, "deal");
     if (existing.stage === "won" || existing.stage === "lost" || ORDER[stage] <= ORDER[existing.stage]) return existing._id;
@@ -47,20 +49,62 @@ export async function syncDealFromProspect(ctx: MutationCtx, p: Doc<"prospects">
 }
 
 /** A booking from someone who wasn't a prospect: a new "booked" deal. */
-export async function dealFromBooking(ctx: MutationCtx, orgId: Id<"organizations">, name: string, company: string | undefined, startAt: number) {
+export async function dealFromBooking(ctx: MutationCtx, orgId: Id<"organizations">, name: string, company: string | undefined, startAt: number, bookingId?: Id<"bookings">) {
   const now = Date.now();
-  await ctx.db.insert("deals", { orgId, name, company, stage: "booked", stageChangedAt: now, source: "booking", currency: await currencyOf(ctx, orgId), notes: [{ text: "Booked a call from your booking page.", at: now }], nextStep: "Call", nextStepAt: startAt, createdAt: now, updatedAt: now });
+  return ctx.db.insert("deals", { orgId, name, company, stage: "booked", stageChangedAt: now, source: "booking", currency: await currencyOf(ctx, orgId), notes: [{ text: "Booked a call from your booking page.", at: now }], nextStep: "Call", nextStepAt: startAt, nextStepBookingId: bookingId, createdAt: now, updatedAt: now });
 }
 
-/** A cancelled call: its deal goes back to "talking" and its prospect back to "replied". */
+/** Exact new link, or an unambiguous legacy prospect link; names are not identity evidence. */
+export async function bookingDeal(ctx: QueryCtx | MutationCtx, b: Doc<"bookings">): Promise<Doc<"deals"> | null> {
+  if (b.dealId) {
+    const deal = await ctx.db.get(b.dealId);
+    return deal?.orgId === b.orgId && (!b.prospectId || deal.prospectId === b.prospectId) ? deal : null;
+  }
+  if (!b.prospectId) return null;
+  const prospect = await ctx.db.get(b.prospectId);
+  if (prospect?.orgId !== b.orgId) return null;
+  const matches = await ctx.db.query("deals").withIndex("by_prospect", q => q.eq("prospectId", b.prospectId)).take(2);
+  return matches.length === 1 && matches[0].orgId === b.orgId ? matches[0] : null;
+}
+
+/** Link once within booking creation. Only empty or booking-managed next steps follow the appointment queue. */
+export async function linkDealBooking(ctx: MutationCtx, bookingId: Id<"bookings">, dealId: Id<"deals">) {
+  const b = await ctx.db.get(bookingId);
+  if (!b) throw appError("NOT_FOUND", "Booking not found.");
+  const deal = assertSameOrg(await ctx.db.get(dealId), b.orgId, "deal");
+  if (b.prospectId && deal.prospectId !== b.prospectId) throw appError("INVALID", "This booking does not match the customer record.");
+  await ctx.db.patch(b._id, { dealId });
+  const emptyStep = !deal.nextStep && deal.nextStepAt === undefined && deal.nextStepDate === undefined;
+  const previous = deal.nextStepBookingId ? await ctx.db.get(deal.nextStepBookingId) : null;
+  const managedStep = previous?.orgId === b.orgId && previous.dealId === deal._id && deal.nextStep === "Call" && deal.nextStepAt === previous.startAt && deal.nextStepDate === undefined;
+  if (deal.stage !== "booked" || (!emptyStep && !managedStep)) return;
+  const next = await ctx.db.query("bookings").withIndex("by_org_deal_status_start", q => q.eq("orgId", b.orgId).eq("dealId", dealId).eq("status", "confirmed").gte("startAt", Date.now())).first();
+  if (next) await ctx.db.patch(dealId, { nextStep: "Call", nextStepAt: next.startAt, nextStepDate: undefined, nextStepBookingId: next._id, updatedAt: Date.now() });
+}
+
+/** A cancellation is an appointment fact. It cannot erase an owner-edited step or another confirmed call. */
 export async function bookingCancelled(ctx: MutationCtx, b: Doc<"bookings">, note: string) {
   const now = Date.now();
-  const deal = b.prospectId
-    ? await ctx.db.query("deals").withIndex("by_prospect", (q) => q.eq("prospectId", b.prospectId)).first()
-    : (await ctx.db.query("deals").withIndex("by_org_stage", (q) => q.eq("orgId", b.orgId).eq("stage", "booked")).take(200)).find((d) => d.source === "booking" && d.name === b.name && d.nextStepAt === b.startAt);
-  if (deal?.orgId === b.orgId && deal.stage === "booked") await ctx.db.patch(deal._id, { stage: "talking", stageChangedAt: now, nextStep: undefined, nextStepAt: undefined, nextStepDate: undefined, notes: [...deal.notes, { text: note, at: now }], updatedAt: now });
-  const p = b.prospectId ? await ctx.db.get(b.prospectId) : null;
-  if (p?.orgId === b.orgId && p.stage === "booked") await ctx.db.patch(p._id, { stage: "replied", stageUpdatedAt: now, updatedAt: now });
+  const deal = await bookingDeal(ctx, b);
+  if (!deal) return;
+  const patch: Partial<Doc<"deals">> = { notes: [...deal.notes, { text: `${note} Appointment: ${isDealTimestamp(b.startAt) ? new Date(b.startAt).toISOString() : "date unavailable"}.`, at: now }].slice(-200), updatedAt: now };
+  // Older inferred links have no appointment ownership and cannot safely clear a next step.
+  let clearedBookedStage = false;
+  const otherProspectCall = b.prospectId ? await ctx.db.query("bookings").withIndex("by_org_prospect_status_start", q => q.eq("orgId", b.orgId).eq("prospectId", b.prospectId).eq("status", "confirmed").gte("startAt", now)).first() : null;
+  if (b.dealId === deal._id && deal.stage === "booked" && deal.nextStepBookingId === b._id && deal.nextStep === "Call" && deal.nextStepAt === b.startAt && deal.nextStepDate === undefined) {
+    const next = await ctx.db.query("bookings").withIndex("by_org_deal_status_start", q => q.eq("orgId", b.orgId).eq("dealId", deal._id).eq("status", "confirmed").gte("startAt", now)).first();
+    if (next) Object.assign(patch, { nextStep: "Call", nextStepAt: next.startAt, nextStepDate: undefined, nextStepBookingId: next._id });
+    else {
+      Object.assign(patch, { nextStep: undefined, nextStepAt: undefined, nextStepDate: undefined, nextStepBookingId: undefined });
+      // An older confirmed call may lack a deal id. Do not infer that no appointment remains.
+      if (!otherProspectCall) { Object.assign(patch, { stage: "talking", stageChangedAt: now }); clearedBookedStage = true; }
+    }
+  }
+  await ctx.db.patch(deal._id, patch);
+  if (clearedBookedStage && b.prospectId) {
+    const p = await ctx.db.get(b.prospectId);
+    if (p?.orgId === b.orgId && p.stage === "booked" && !otherProspectCall) await ctx.db.patch(p._id, { stage: "replied", stageUpdatedAt: now, updatedAt: now });
+  }
 }
 
 function view(d: Doc<"deals">, now: number, timezone: string | null) {
@@ -176,6 +220,10 @@ export const update = mutation({
       patch.valueVersion = DEAL_VALUE_VERSION;
     }
     if (a.nextStep !== undefined) patch.nextStep = a.nextStep?.trim().slice(0, 200) || undefined;
+    const changedStep = a.nextStep !== undefined && patch.nextStep !== d!.nextStep;
+    const changedInstant = a.nextStepAt !== undefined && ((a.nextStepAt ?? undefined) !== d!.nextStepAt || d!.nextStepDate !== undefined);
+    const changedDate = a.nextStepDate !== undefined && ((a.nextStepDate ?? undefined) !== d!.nextStepDate || d!.nextStepAt !== undefined);
+    if (changedStep || changedInstant || changedDate || (a.stage !== undefined && a.stage !== d!.stage)) patch.nextStepBookingId = undefined;
     if (a.nextStepDate !== undefined && a.nextStepAt !== undefined) throw appError("INVALID", "Choose either a calendar date or an appointment time, not both.");
     if (a.nextStepDate !== undefined) {
       if (a.nextStepDate !== null && !isDealDate(a.nextStepDate)) throw appError("INVALID", "Choose a valid calendar date, or leave it unknown.");

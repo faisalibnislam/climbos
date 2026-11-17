@@ -22,8 +22,10 @@ test("Booking outcomes stay separate from editable follow-up drafts @mobile", as
   const now = Date.now();
   await append("bookingPages", [{ orgId: org._id, slug, title: "Intro", durationMin: 30, timezone: "UTC", days: [1, 2, 3, 4, 5], startHour: 9, endHour: 17, bufferMin: 0, noticeHours: 1, active: true, createdAt: now, updatedAt: now }]);
   const bookingPage = (await rows("bookingPages")).find(row => row.orgId === org._id)!;
+  await append("deals", [{ orgId: org._id, name: "Outcome customer", stage: "booked", source: "booking", currency: "USD", notes: [], createdAt: now, updatedAt: now }]);
+  const deal = (await rows("deals")).find(row => row.orgId === org._id)!;
   await append("bookings", [
-    { orgId: org._id, pageId: bookingPage._id, name: "Outcome guest", emailHash: "fixture", emailCiphertext: "sealed-fixture", emailIv: "fixture", emailKeyId: "k1", startAt: now - 86400000, endAt: now - 84600000, status: "confirmed", createdAt: now - 2 * 86400000 },
+    { orgId: org._id, pageId: bookingPage._id, dealId: deal._id, name: "Outcome guest", emailHash: "fixture", emailCiphertext: "sealed-fixture", emailIv: "fixture", emailKeyId: "k1", startAt: now - 86400000, endAt: now - 84600000, status: "confirmed", createdAt: now - 2 * 86400000 },
     { orgId: org._id, pageId: bookingPage._id, name: "Historical guest", emailHash: "fixture", emailCiphertext: "sealed-fixture", emailIv: "fixture", emailKeyId: "k1", startAt: now - 86400000, endAt: now - 84600000, status: "confirmed", outcome: "no_show", followUpSentAt: now - 1000, createdAt: now - 2 * 86400000 },
   ]);
   const bookings = (await rows("bookings")).filter(row => row.orgId === org._id);
@@ -47,9 +49,14 @@ test("Booking outcomes stay separate from editable follow-up drafts @mobile", as
   await page.getByRole("button", { name: "Correct to attended", exact: true }).click();
   await expect(draft).not.toBeVisible();
   await expect(page.getByText("Showed up", { exact: true })).toBeVisible();
+  await expect(page.getByText(/This booking has no confirmed customer-record link/)).not.toBeVisible();
   expect((await rows("bookings")).find(row => row._id === booking._id)).toMatchObject({ outcome: "attended" });
+  const savedDeal = (await rows("deals")).find(row => row._id === deal._id)!;
+  expect(savedDeal.stage).toBe("booked");
+  expect(savedDeal.notes).toEqual([expect.objectContaining({ text: expect.stringMatching(/as a no-show/), userId: member.userId }), expect.objectContaining({ text: expect.stringMatching(/as attended/), userId: member.userId })]);
   expect((await rows("auditEvents")).filter(row => row.orgId === org._id && row.action === "booking.outcome_recorded")).toHaveLength(2);
   await page.getByRole("button", { name: /Historical guest/ }).click();
+  await expect(page.getByText(/This booking has no confirmed customer-record link/)).toBeVisible();
   await expect(page.getByText(/An older follow-up record exists, but sending was not verified/)).toBeVisible();
   await expect(page.getByText("Review a follow-up draft", { exact: true })).not.toBeVisible();
   expect(await effects()).toEqual(before);

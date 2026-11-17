@@ -57,6 +57,8 @@ describe("outbound", () => {
 
     const page = await t.query(api.outbound.publicPage, { slug: view.page!.slug });
     expect(page?.slots.length).toBeGreaterThan(10);
+    // A booking ref only associates the prospect when its recorded address matches the guest.
+    await t.run(ctx => ctx.db.patch(view.prospects[0].id, { publicEmail: "ada@alpha.example.com" }));
     const res = await t.mutation(api.outbound.book, { slug: view.page!.slug, startAt: page!.slots[0], name: "Ada", email: "ada@alpha.example.com", ref: view.prospects[0].id });
     expect(res.endAt - res.startAt).toBe(30 * 60_000);
     // The slot is gone, and the same slot can't be booked twice.

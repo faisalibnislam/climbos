@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+New bookings now retain their exact customer-record link. Cancelling one call preserves another confirmed call and owner-edited next steps; attendance notes also reach directly booked customer records after renaming. Ambiguous historical links stay unknown, and the inbox explains when an outcome is saved only on its booking. Address matching is not identity verification. See [the audit](growth-engine/booking-deal-identity-audit.md).
+
 Sales follow-up dates now stay as calendar dates when selected by the owner. Overdue checks use the configured workspace timezone; malformed, conflicting or unknown timing stays unknown. Customer progress, Today and assistant context share these checks, while stage-age prompts remain review heuristics. Editing a next-step date does not reschedule a booking or send anything. See [the audit](growth-engine/pipeline-follow-up-date-audit.md).
 
 Booking attendance can now be recorded and corrected without sending an email. A missed call offers an editable draft for manual review and copying; historical follow-up markers are explicitly unverified. Recording attendance preserves the deal’s stage and next step. This is not automatic follow-up or an in-app sending integration. See [the audit](growth-engine/booking-outcome-boundary-audit.md).

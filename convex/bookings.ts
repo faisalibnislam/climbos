@@ -3,7 +3,7 @@ import { sha256Hex } from "../shared/policy";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
-import { bookingCancelled } from "./crm";
+import { bookingCancelled, bookingDeal } from "./crm";
 import { audit } from "./lib/audit";
 import { isDealTimestamp } from "../shared/growth/pipeline";
 import { decryptSecret, serverSecret } from "./lib/crypto";
@@ -78,7 +78,7 @@ export const forInbox = query({
     const followUpStatus = b.followUpSentAt !== undefined ? "historical_unverified" as const : "not_sent" as const;
     const followUpDraft = b.status === "confirmed" && past && b.outcome === "no_show" && followUpStatus === "not_sent"
       ? noShowFollowUpDraft({ withName: org.name, ...(page?.orgId === org._id && page.active ? { rebookUrl: `${SITE()}/book/${encodeURIComponent(page.slug)}` } : {}) }) : null;
-    return { id: b._id, startAt: b.startAt, endAt: b.endAt, past, status: b.status, outcome: b.outcome ?? null, followUpStatus, followUpDraft };
+    return { crmLinked: Boolean(await bookingDeal(ctx, b)), id: b._id, startAt: b.startAt, endAt: b.endAt, past, status: b.status, outcome: b.outcome ?? null, followUpStatus, followUpDraft };
   },
 });
 
@@ -93,10 +93,8 @@ export const setOutcome = mutation({
     if (b.outcome === outcome) return;
     await ctx.db.patch(b._id, { outcome });
     // A missed appointment is not a lost opportunity. Record the owner's observation, without downgrading another booked call.
-    if (b.prospectId) {
-      const deal = await ctx.db.query("deals").withIndex("by_prospect", (q) => q.eq("prospectId", b.prospectId)).first();
-      if (deal?.orgId === org._id) await ctx.db.patch(deal._id, { notes: [...deal.notes, { text: `Owner ${b.outcome ? "corrected" : "recorded"} the call on ${new Date(b.startAt).toISOString()} as ${outcome === "attended" ? "attended" : "a no-show"}. This update sent no follow-up.`, at: Date.now(), userId: user._id }].slice(-200), updatedAt: Date.now() });
-    }
+    const deal = await bookingDeal(ctx, b);
+    if (deal) await ctx.db.patch(deal._id, { notes: [...deal.notes, { text: `Owner ${b.outcome ? "corrected" : "recorded"} the call on ${new Date(b.startAt).toISOString()} as ${outcome === "attended" ? "attended" : "a no-show"}. This update sent no follow-up.`, at: Date.now(), userId: user._id }].slice(-200), updatedAt: Date.now() });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "booking.outcome_recorded", subjectType: "booking", subjectId: b._id, summary: `${b.outcome ? "Corrected" : "Recorded"} call outcome: ${outcome}. No follow-up sent.` });
   },
 });

@@ -1,3 +1,7 @@
+## 17 November 2026 — exact booking/customer association
+
+Added exact tenant-scoped booking links and conditional ownership of booking-generated next steps. Cancellation retains remaining appointments/manual steps; attendance reaches renamed direct-booking deals. Public refs require matching address evidence; ambiguous associations remain separate rather than guessed. [Audit](booking-deal-identity-audit.md).
+
 ## 17 November 2026 — workspace-day follow-up checks
 
 Repaired browser/UTC date drift through a separate calendar-date field and shared deterministic attention checks. Board, Today and assistant context retain unknown timing and newest-sample coverage. Automatic deal creation/stage transitions record stage time without inventing legacy history. [Audit](pipeline-follow-up-date-audit.md) retains open monitoring, appointment identity and sales-learning scope.

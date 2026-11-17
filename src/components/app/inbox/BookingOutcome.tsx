@@ -28,6 +28,7 @@ export function BookingOutcome({ slug, inboxId }: { slug: string; inboxId: Id<"c
       {b.outcome !== "no_show" ? <Button size="sm" variant="ghost" disabled={busy} onClick={() => record("no_show")}>{b.outcome ? "Correct to no-show" : "No-show"}</Button> : null}
     </div>
     <p className="text-xs text-ink-2">Records your observation only. No email is sent.</p>
+    {!b.crmLinked ? <p className="text-xs text-ink-2">This booking has no confirmed customer-record link. Its outcome is saved here.</p> : null}
     {b.followUpStatus === "historical_unverified" ? <p className="text-sm text-ink-2">An older follow-up record exists, but sending was not verified. Check your email history before contacting this guest again.</p> : null}
     {b.followUpDraft ? <BookingFollowUpDraft key={b.id} draft={b.followUpDraft} /> : null}
   </div>;

@@ -3047,6 +3047,8 @@ export default defineSchema({
     nextStepAt: v.optional(v.number()),
     /** Owner-selected calendar date; mutually exclusive with nextStepAt. Compared in workspace timezone. */
     nextStepDate: v.optional(v.string()),
+    /** Only booking-managed next steps carry this pointer; owner edits clear it. */
+    nextStepBookingId: v.optional(v.id("bookings")),
     wonAt: v.optional(v.number()),
     /** When the deal moved to lost, and the owner-recorded reason (shared/growth/pipeline.ts); unknown when absent. */
     lostAt: v.optional(v.number()),
@@ -3085,6 +3087,8 @@ export default defineSchema({
     orgId: v.id("organizations"),
     pageId: v.id("bookingPages"),
     prospectId: v.optional(v.id("prospects")),
+    /** Exact tenant-scoped CRM association for new bookings; absent on older records. */
+    dealId: v.optional(v.id("deals")),
     name: v.string(),
     emailHash: v.string(),
     emailCiphertext: v.string(),
@@ -3106,6 +3110,8 @@ export default defineSchema({
     .index("by_page_start", ["pageId", "startAt"])
     .index("by_org_start", ["orgId", "startAt"])
     .index("by_manage", ["manageTokenHash"])
+    .index("by_org_deal_status_start", ["orgId", "dealId", "status", "startAt"])
+    .index("by_org_prospect_status_start", ["orgId", "prospectId", "status", "startAt"])
     .index("by_status_start", ["status", "startAt"]),
 
   /* ---------------- Strategy ---------------- */

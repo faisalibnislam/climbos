@@ -1,3 +1,14 @@
+## 17 November 2026 — exact booking/customer association
+
+New exact links separate booking-managed next steps from owner edits, preserve other appointments on cancellation, and route attendance notes to directly booked deals. [Audit](growth-engine/booking-deal-identity-audit.md).
+
+- `pnpm exec vitest run tests/convex/booking-deal-identity.test.ts tests/convex/bookings.test.ts tests/convex/booking-outcome-boundary.test.ts tests/convex/outbound.test.ts tests/convex/pipeline-follow-up-dates.test.ts tests/convex/crm.test.ts tests/convex/crm-loss-reasons.test.ts tests/convex/pipeline-deal-review.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — 62 passed across ten files, 7.30 seconds.
+- `CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env E2E_BASE_URL=http://127.0.0.1:3420 pnpm exec playwright test e2e/booking-outcome.spec.ts --workers=1` — desktop/mobile passed, 30.5 seconds. Exact linked CRM notes retain owner attribution and deal stage; unlinked historical bookings display the limitation. Editable drafts and corrections remain usable, with unchanged chat/workflow/approval/receipt/webhook/email-log records. No horizontal overflow or serious/critical automated accessibility findings; this is not full accessibility conformance.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint convex/crm.ts convex/outbound.ts convex/bookings.ts convex/schema.ts src/components/app/inbox/BookingOutcome.tsx tests/convex/booking-deal-identity.test.ts tests/convex/outbound.test.ts e2e/booking-outcome.spec.ts` — passed.
+
+The first focused run passed 24/25 tests and exposed an old public-booking fixture that expected an arbitrary reference without a matching recorded address to advance a prospect. The supported matching-address case is now explicit; new regressions cover rejected mismatches and ambiguity. Only the isolated loopback backend was synced, including two new indexes. No live email/model/provider action or hosted deployment was used. Other booking notifications, full identity verification, historical relinking and full sales-learning scope remain outside this verification.
+
 ## 17 November 2026 — workspace-day follow-up checks
 
 Calendar-date CRM input, timezone-aware overdue checks, valid stage-age evidence and consistent board/Today/assistant context are described in the [audit](growth-engine/pipeline-follow-up-date-audit.md).
