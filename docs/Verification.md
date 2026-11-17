@@ -1,5 +1,10 @@
 ## 17 November 2026 — creative methods and product-test validity
 
+## 18 November 2026 — held-out comparison effort
+
+Removed the launch comparator's contradictory reasoning-disable flag; the native adapter now receives the intended high effort with a metered 12,000-token envelope. Same model and existing cap. **34 tests in six files passed**, including native request bodies, complete held-out questions and budget/identity guards; targeted lint and diff checks passed. Historical verdicts remain unchanged. [Audit](growth-engine/focused-evidence-review-audit.md).
+
+
 V3.165 requires distinct ideation methods while preserving precedent-free hypotheses, clarifies that verification reminders cannot support invented features, and distinguishes self-service learning from concierge work. 167 focused/permission tests and typechecks/lint passed. V12 remains failed at 3.81; high-effort review caught factual gaps, but originality, paid-value testing and owner burden remain acceptance work. Cumulative **$68.599805 / $100**. [Audit](growth-engine/focused-evidence-review-audit.md).
 
 ## 17 November 2026 — focused ideation context and review reasoning

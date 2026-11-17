@@ -1,3 +1,7 @@
+## 18 November — correct held-out comparison reasoning
+
+Launch comparisons now actually use their requested high effort: the contradictory thinking-off flag is removed, with a reserved 12,000-token bound. Runtime models and thresholds are unchanged; old comparisons are preserved. 34 adapter/comparison/budget tests and targeted lint passed. [Audit](focused-evidence-review-audit.md).
+
 ## 17 November — test creative-method diversity and the actual customer job
 
 `v3.165-creative-method-coverage`: validate distinct ideation methods including inversion/transfer; retain speculative ideas without invented factual support. Separate source-supported copy from private prototypes and self-service product tests from owner-delivered concierge work. Prefer a prepared sample before requesting confidential material. 167 tests, types and lint passed; v13 semantic acceptance pending. V12 failed honestly at 3.81. [Audit](focused-evidence-review-audit.md).

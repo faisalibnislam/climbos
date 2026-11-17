@@ -1,5 +1,18 @@
 # Focused strategy evidence review — 17 November 2026
 
+## Deliberate held-out comparison — 18 November 2026
+
+The separate launch comparator requested high effort while also setting `thinkingOff: true`. Inspection of the native adapter confirmed that the latter wins and sends low effort. The launch comparison now uses adaptive high-effort reasoning with a 12,000-token output envelope, on the same Sonnet model. Existing per-call reservation and the cumulative $100 guard cover the larger envelope. This is evaluation configuration only; production runtime routes and acceptance thresholds are unchanged. Older comparison records are preserved and are not retrospectively regraded.
+
+**34 tests in six files passed (0.519 seconds)**, including a mocked native-adapter check of the actual high-versus-disabled request body, exact six-question coverage, comparison identity and budget guards. Changed-file ESLint and diff checks passed.
+
+```sh
+pnpm exec vitest run tests/unit/anthropic-adapter.test.ts tests/unit/livoform-launch-input.test.ts tests/unit/evaluation-identity.test.ts tests/unit/anthropic-budget.test.ts tests/unit/evaluation-budget.test.ts tests/unit/ai-qa-budget.test.ts
+```
+
+The comparator remains a same-model, separate-context judgment, not independent human review or proof of commercial results.
+
+
 ## Creative-method coverage and self-service test validity — v3.165
 
 V12 (`launch-quality-v12-20261117`, v3.164, source hash `a8f492d544c9dba63cacc7a63a981ef71ec9efdde4f8060993a367c95d834c5d`) completed seven calls for **$1.292239**. Reviews progressed 3.31 with failed gates/two hard findings → 3.63 with two hard findings → **3.81/minimum 3.5, no lint, ship false**. High-effort review used actual reasoning and caught unsupported diagnosis/category claims missed earlier. Owner burden and paid-value testing remained weak; manual inspection also found the supposed bold assistant integration too close to advertised functionality. The automated final F7 score of 4 is not treated as proof of originality. Combined charged/held: **$68.599805 / $100**.

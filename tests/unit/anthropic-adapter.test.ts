@@ -69,6 +69,13 @@ describe("native Anthropic adapter, no network", () => {
     expect(state.requests.map((body) => body.thinking)).toEqual([{ type: "disabled" }, { type: "between_tools" }]);
     expect(state.requests.every((body) => !body.temperature && !body.top_p && !body.top_k && !body.fallbacks)).toBe(true);
   });
+  it("preserves deliberate Sonnet review effort unless thinking is explicitly disabled", async () => {
+    state.responses.push(response({ model: "claude-sonnet-5-5" }), response({ model: "claude-sonnet-5-5" }));
+    await anthropicTurn(request({ modelKey: "claude-sonnet-5.5", effort: "high", maxTokens: 12000 }), rates);
+    await anthropicTurn(request({ modelKey: "claude-sonnet-5.5", effort: "high", thinkingOff: true }), rates);
+    expect(state.requests[0]).toMatchObject({ thinking: { type: "adaptive" }, max_tokens: 12000, output_config: { effort: "high" } });
+    expect(state.requests[1]).toMatchObject({ thinking: { type: "between_tools" }, output_config: { effort: "low" } });
+  });
   it("preserves nullable tool arguments and signed thinking in the same provider conversation", async () => {
     const thinking = { type: "thinking", thinking: "", signature: "synthetic-signature" };
     state.responses.push(response({ content: [thinking, { type: "tool_use", id: "tool_test", name: "record_unknown", input: { baseline: null } }], stop_reason: "tool_use" }));
