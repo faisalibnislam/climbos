@@ -1,3 +1,4 @@
+import { writingBrandContext } from "../shared/agents/contentTasks";
 import { v } from "convex/values";
 import { CALL_ROUTES } from "../shared/agents/routes";
 import { internal } from "./_generated/api";
@@ -56,7 +57,12 @@ export const context = internalQuery({
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", run.orgId)).first();
     const brand = business ? await ctx.db.query("brandProfiles").withIndex("by_business", (q) => q.eq("businessId", business._id)).first() : null;
     const org = await ctx.db.get(run.orgId);
-    return { language: org?.contentLanguage ?? "English", run, business: business ? { id: business._id, name: business.name, website: business.website ?? "" } : null, voice: brand ? `${brand.voice}${brand.learnedRules?.length ? `; owner's rules: ${brand.learnedRules.map((r) => r.text).join("; ")}` : ""}` : "" };
+    let includeSocial = true;
+    try {
+      const input = JSON.parse(run.input);
+      if (Array.isArray(input?.formats) && input.formats.length) includeSocial = input.formats.some((format: unknown) => format !== "email");
+    } catch { /* Older requests retain bounded guidance for both content types. */ }
+    return { language: org?.contentLanguage ?? "English", run, business: business ? { id: business._id, name: business.name, website: business.website ?? "" } : null, brandContext: writingBrandContext(brand?.orgId === run.orgId ? brand : null, includeSocial) };
   },
 });
 

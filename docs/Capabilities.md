@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Brand guidance now travels consistently to primary writing, repurposed content and landing-page drafts: saved tone, restrictions and approved examples are retained. Learned edit preferences are labeled as inferred and used only with voice learning enabled. This improves the supplied context; it does not guarantee that generated copy follows every stylistic instruction. See [the audit](growth-engine/brand-writing-context-audit.md).
+
 Forecast range checks now evaluate only forecasts that began after the calibration outcomes were available. Too few eligible observations leave coverage unknown. Older saved forecasts without the verified method record keep their original values and ranges, with historical coverage percentages withheld and explained. The check reports pooled, overlapping forecast errors; it does not guarantee future accuracy or establish business impact. See [Verification](Verification.md).
 
 New research findings now check their evidence labels against each cited source's recorded class. An owner report mentioning analytics stays owner-reported, published claims stay source-reported, and missing provenance cannot become measured evidence. Commercial findings, SWOT and audience/channel evidence use the same check. Explicitly labeled hypotheses remain available. This verifies source-class agreement, not the truth of a claim; no new measurement integration or historical migration is included. See [Verification](Verification.md).

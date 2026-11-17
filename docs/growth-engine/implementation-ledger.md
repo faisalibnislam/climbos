@@ -1,3 +1,7 @@
+## 17 November 2026 — shared brand-writing context
+
+Shared brand-writing context now reaches primary jobs, repurposing and landing-page generation. It preserves tone, restrictions and full approved examples, labels owner confirmation separately from inferred edit preferences, and omits learned rules unless learning is enabled. Social guidance stays scoped to social formats. This closes confirmed context-delivery gaps, not semantic brand-compliance acceptance. See [the audit](brand-writing-context-audit.md).
+
 ## 17 November 2026 — approved payload at email provider boundary
 
 Fourteen red regressions exposed changed provider content/destination passing send and result checks. The existing adapter now compares complete declared payloads at draft read-back, before send and after send; response IDs must match. Runtime plain text preserves the selected approved email and unsubscribe footer. Recovery requires the complete dispatch payload hash. 170 focused/permission tests, typecheck and lint pass. [Audit](marketing-provider-payload-audit.md) retains remote concurrency, normalization, live verification and full lifecycle limits.

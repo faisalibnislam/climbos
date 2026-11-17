@@ -1,3 +1,14 @@
+## 17 November 2026 — shared brand-writing context
+
+Repurposing and landing writers previously omitted tone, restrictions and approved examples and clipped voice/rules to 600 characters. The shared writer context now retains these fields, separates confirmed settings from inferred edits, and requires enabled consent before including inferred rules. See [the audit](growth-engine/brand-writing-context-audit.md).
+
+- `pnpm exec vitest run tests/convex/brand-writing-context.test.ts tests/unit/brand-writing-context.test.ts tests/convex/social-trend-generation.test.ts tests/convex/repurpose.test.ts tests/convex/landing.test.ts tests/convex/landing-fixture.test.ts tests/convex/brand.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts tests/convex/lifecycle-draft-context.test.ts` — 62 passed across ten files, 3.96 seconds.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint convex/jobs.ts convex/landing.ts convex/repurpose.ts convex/repurposeActions.ts shared/agents/contentTasks.ts shared/agents/specs.ts tests/convex/brand-writing-context.test.ts tests/unit/brand-writing-context.test.ts tests/convex/social-trend-generation.test.ts` — passed.
+- `git diff --check` — passed.
+
+The initial specialist cases failed against the previous writer context. During follow-up verification, a case-sensitive assertion and an invalid index in new test setup failed and were corrected; neither required a production behavior workaround. Tests capture actual writer requests and use mocked generation; they do not establish semantic copy quality. No paid model, live provider, UI change, browser interaction or deployment. Plan snapshots and historical content are unchanged. The original 410 requirements and later owner specifications remain incomplete.
+
 ## 17 November 2026 — approved provider email payload
 
 Fourteen regressions reproduced provider-content/identity gaps. Draft creation, the final pre-send read, send response and post-send read-back now check the expected payload/identity. Runtime plain text comes from the approved email and includes unsubscribe information; recovery uses the same complete payload hash. [Audit and limitations](growth-engine/marketing-provider-payload-audit.md).

@@ -1,3 +1,4 @@
+import { writingBrandContext } from "../shared/agents/contentTasks";
 import { v } from "convex/values";
 import { fakeTurn } from "../shared/agents/fake";
 import { CALL_ROUTES, ADVANCED_SLOT, ROUTE_VERSION } from "../shared/agents/routes";
@@ -139,7 +140,7 @@ export const writeContext = internalQuery({
     const facts = business ? (await ctx.db.query("businessFacts").withIndex("by_business", (q) => q.eq("businessId", business._id)).take(120)).filter((f) => f.reviewState !== "rejected") : [];
     const brand = business ? await ctx.db.query("brandProfiles").withIndex("by_business", (q) => q.eq("businessId", business._id)).first() : null;
     const org = await ctx.db.get(p.orgId);
-    return { language: org?.contentLanguage ?? "English", page: p, run, business: { name: business?.name ?? "", summary: business?.summary ?? "" }, facts: facts.map((f) => `- [${f.category}] ${f.statement}`).join("\n").slice(0, 7000), voice: brand ? `${brand.voice}${brand.learnedRules?.length ? `; owner's rules: ${brand.learnedRules.map((r) => r.text).join("; ")}` : ""}` : "" };
+    return { language: org?.contentLanguage ?? "English", page: p, run, business: { name: business?.name ?? "", summary: business?.summary ?? "" }, facts: facts.map((f) => `- [${f.category}] ${f.statement}`).join("\n").slice(0, 7000), brandContext: writingBrandContext(brand?.orgId === p.orgId ? brand : null, false) };
   },
 });
 
@@ -179,7 +180,7 @@ export const write = internalAction({
       return;
     }
     try {
-      const content = [`BUSINESS: ${c.business.name}`, c.language !== "English" ? `LANGUAGE: write the whole page in ${c.language}.` : "", c.business.summary ? `ABOUT: ${c.business.summary.slice(0, 800)}` : "", c.voice ? `VOICE: ${c.voice.slice(0, 600)}` : "", `<untrusted_content source="facts">\n${c.facts || "none"}\n</untrusted_content>`, `<untrusted_content source="brief">\n${c.page.brief}\n</untrusted_content>`].filter(Boolean).join("\n");
+      const content = [`BUSINESS: ${c.business.name}`, c.language !== "English" ? `LANGUAGE: write the whole page in ${c.language}.` : "", c.business.summary ? `ABOUT: ${c.business.summary.slice(0, 800)}` : "", c.brandContext, `<untrusted_content source="facts">\n${c.facts || "none"}\n</untrusted_content>`, `<untrusted_content source="brief">\n${c.page.brief}\n</untrusted_content>`].filter(Boolean).join("\n");
       const r = await call({ modelKey: model, cacheKey: "climbos:landing_page", system: [{ text: RULES, cache: true }], messages: [{ role: "user", content }], schema: LandingContent, maxTokens: 2_500, effort: "low", thinkingOff: true }, rates);
       if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(model, r, rates) });
       if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });

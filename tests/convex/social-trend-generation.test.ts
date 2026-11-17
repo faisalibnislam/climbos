@@ -68,6 +68,24 @@ it.each(["missing", "unmatched", "uncited", "stale", "valid", "evergreen", "nega
   if (!good) expect(approvals).toEqual([]);
 });
 
+it.each([true, false])("the primary writer respects voice-learning consent (%s)", async enabled => {
+  const f = await workspace();
+  await f.t.run(async ctx => {
+    const business = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", f.orgId)).first())!;
+    const brand = (await ctx.db.query("brandProfiles").withIndex("by_business", q => q.eq("businessId", business._id)).first())!;
+    await ctx.db.patch(brand._id, { voiceLearningEnabled: enabled, learnedRules: [{ text: "LEARNED_STYLE_MARKER", at: Date.now() }] });
+  });
+  state.reply = { output: socialTrendFixture(), assessment: { ship: true, gatesPassed: true, average: 5, minimum: 5, lint: [], critique: { gates: [], criteria: [], fixes: [], strengths: [] } }, rounds: 1, history: [], research: null };
+  await f.t.action(internal.jobs.createContent, { runId: f.runId, job: "content_social", channel: "linkedin", quantity: 1, images: 0 });
+  expect(state.inputs).toHaveLength(1);
+  expect(state.inputs[0].brief.includes("LEARNED_STYLE_MARKER")).toBe(enabled);
+  expect(state.inputs[0].brief).toContain("No fabricated customers");
+  expect(state.inputs[0].brief).toContain("OWNER-APPROVED COPY EXAMPLES");
+  if (enabled) expect(state.inputs[0].brief).toContain("not owner-authored rules or verified facts");
+  expect(f.network).not.toHaveBeenCalled();
+  expect(await f.t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
+
 it("carries the same owner voice and examples into weekly planning without granting publishing authority", async () => {
   const f = await workspace();
   const now = Date.now();

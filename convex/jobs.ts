@@ -3,7 +3,7 @@
 import { isSocialChannel } from "../shared/growth/socialChannels";
 import { CUSTOMER_VOICE_POLICY } from "../shared/reviews/voiceThemes";
 import { focusedPlanTask, focusedExplorationTask, FOCUSED_EXPLORATION_VERSION } from "../shared/agents/focusedPlan";
-import { COPY_BRIEF_INSTRUCTION, emailSequenceTask, socialPostsTask, seoPageTask } from "../shared/agents/contentTasks";
+import { COPY_BRIEF_INSTRUCTION, writingBrandContext, emailSequenceTask, socialPostsTask, seoPageTask } from "../shared/agents/contentTasks";
 import { RUN_FAILURE_COPY } from "../shared/progress";
 import { CHANNEL_DECISION_POLICY } from "../shared/acquisition/channelDecision";
 
@@ -787,10 +787,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     job.goal?.priorCycleReview ? `PREVIOUS CYCLE REVIEW (owner-recorded, not independently verified):\n${untrusted("previous cycle review", JSON.stringify(job.goal.priorCycleReview), 5000)}\nCarry learning forward, distinguish preference from measured outcomes, re-check facts, and do not repeat a failed approach unchanged or infer action permission.` : "",
     job.goal?.kinds && job.goal.kinds.length > 1 ? `GOAL TYPES (all equal priority; weigh plays against each, without ranking one above the others): ${job.goal.kinds.map((k) => GOAL_KIND_LABEL[k] ?? k).join("; ")}.` : "",
     job.goal && (job.goal.kind === "more_followers" || job.goal.kinds?.includes("more_followers")) ? FOLLOWER_GOAL_GUIDANCE : "",
-    job.brand ? `BRAND VOICE: ${job.brand.voice}${job.brand.toneWords.length ? ` (${job.brand.toneWords.join(", ")})` : ""}. Avoid: ${job.brand.doNots.join("; ")}` : "",
-    job.brand ? `SOCIAL STYLE PREFERENCES (retain platform, audience, category-safety, and current-policy checks): humor=${job.brand.socialHumor ?? "restrained (safe default; not owner-confirmed)"}; trend use=${job.brand.socialTrendPolicy ?? "selective (safe default; not owner-confirmed)"}. Treat these as guidance for social posts/calendars, not permission to make unsupported claims or reuse assets.` : "",
-    job.brand?.approvedExamples?.length ? `OWNER-APPROVED COPY EXAMPLES (style reference only; not proof about customer outcomes):\n${untrusted("owner-approved copy examples", JSON.stringify(job.brand.approvedExamples), 3_500)}` : "",
-    job.brand?.learnedRules?.length ? `HOW THE OWNER EDITS DRAFTS (follow these): ${job.brand.learnedRules.map((r) => r.text).join("; ")}` : "",
+    writingBrandContext(job.brand),
     job.org.contentLanguage && job.org.contentLanguage !== "English" ? `LANGUAGE: write every customer-facing word (posts, emails, ads, pages) in ${job.org.contentLanguage}. Notes to the owner stay in English.` : "",
     job.run.kind === "strategy" && b?.unitEconomics?.ownerHoursPerWeek === undefined ? "OWNER TIME: unknown (the owner hasn't said). Keep owner work small, prefer work ClimbOS can do, and state the hours each play needs so the owner can check." : "",
     ownerEconomicsLine(b?.unitEconomics, workspaceCurrency(job)),
