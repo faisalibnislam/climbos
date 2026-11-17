@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Id } from "@convex/_generated/dataModel";
 import { errorMessage } from "@/components/app/errors";
 import { Badge, Button, Callout, Field, Select, Textarea, type Tone } from "@/components/ui";
+import { StrategicLandscapeView } from "./StrategicLandscapeView";
 import { EvidenceReferences } from "./EvidenceReferences";
 import { MODEL_EVIDENCE_LABELS, type BusinessModelFreshness, type BusinessModelEvidence } from "../../../../shared/agents/businessModelFreshness";
 import type { BusinessModelCheck } from "../../../../shared/agents/businessModel";
@@ -126,6 +127,8 @@ export function BusinessModelCheckView({ check, createdAt, isFixture, tests, can
           </ul>
         </section>
       ) : null}
+
+      {check.strategicLandscape ? <StrategicLandscapeView landscape={check.strategicLandscape} signals={check.marketSignals} facts={facts} /> : null}
 
       {check.segmentFit?.length ? (
         <section aria-label="Segment fit" className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4">

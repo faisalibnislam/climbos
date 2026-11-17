@@ -12,7 +12,7 @@ vi.mock("../../shared/agents/runtime", async original => ({
 }));
 afterEach(() => { state.reply = null; state.inputs = []; vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
-it.each(["unknown_fact", "unknown_source", "missing_research", "different_source_path", "invalid_date", "duplicate_mode", "invented_unknown_price", "malformed", "valid", "undated", "bold_without_precedent", "owner_as_measured", "source_as_measured", "segment_as_measured", "economics_as_measured", "economics_uncited", "owner_sourced_economics"] as const)("checks %s before making a business model result available to owners and later plans", async kind => {
+it.each(["unknown_fact", "unknown_source", "missing_research", "different_source_path", "invalid_date", "duplicate_mode", "invented_unknown_price", "malformed", "valid", "undated", "bold_without_precedent", "owner_as_measured", "source_as_measured", "segment_as_measured", "economics_as_measured", "economics_uncited", "owner_sourced_economics", "landscape_valid", "landscape_missing", "landscape_bad_signal", "landscape_duplicate_force", "landscape_wrong_source", "landscape_speculation"] as const)("checks %s before making a business model result available to owners and later plans", async kind => {
   const t = setup();
   vi.stubEnv("CLIMBOS_FAKE_LLM", "");
   const network = vi.fn(() => { throw new Error("Unexpected network call"); });
@@ -31,6 +31,16 @@ it.each(["unknown_fact", "unknown_source", "missing_research", "different_source
   if (kind === "source_as_measured") output.marketSignals[0].basis = "measured";
   if (kind === "segment_as_measured") output.segmentFit = [{ segment: "Small studios", dimensions: ["problem_severity", "willingness_to_pay", "reachability", "serviceability"].map(dimension => ({ dimension: dimension as NonNullable<typeof output.segmentFit>[number]["dimensions"][number]["dimension"], level: "medium", basis: "measured", evidenceRefs: [ownerRef], note: "Owner report mentions analytics." })) }];
   if (["economics_as_measured", "economics_uncited", "owner_sourced_economics"].includes(kind)) output.alternatives[0].unitEconomicsInputs = [{ input: "Current plan price", value: "$49", basis: kind === "economics_as_measured" ? "measured" : "owner_report", evidenceRefs: kind === "economics_uncited" ? [] : [ownerRef] }];
+  if (kind.startsWith("landscape_")) {
+    const landscape = output.strategicLandscape!;
+    landscape.forces = [{ force: "substitutes", pressure: "unknown", basis: kind === "landscape_speculation" ? "speculative_hypothesis" : "evidence_supported_inference", signalIndexes: kind === "landscape_speculation" ? [] : [0], mechanism: "A different payment model could solve the same buyer need.", businessImplication: "The owner may need to test what buyers value before changing the model.", possibleResponse: "Compare how buyers explain the two approaches in a private interview.", tradeoff: "Research takes time and stated preferences may not predict purchases.", nextCheck: "Ask about the last buying episode and what alternative the buyer used." }];
+    landscape.unassessedForces = landscape.unassessedForces.filter(key => key !== "substitutes");
+    landscape.priorityRefs = ["force:substitutes"];
+    if (kind === "landscape_missing") delete output.strategicLandscape;
+    if (kind === "landscape_bad_signal") landscape.forces[0].signalIndexes = [7];
+    if (kind === "landscape_duplicate_force") landscape.forces.push(landscape.forces[0]);
+    if (kind === "landscape_wrong_source") { landscape.scopeBasis = "measured"; landscape.scopeEvidenceRefs = [ownerRef]; }
+  }
   if (kind === "unknown_fact") output.currentModel.evidenceRefs = ["fact:9999"];
   if (kind === "unknown_source") output.marketSignals[0].evidenceRefs = ["https://unread.example/plans"];
   if (kind === "different_source_path") output.marketSignals[0].evidenceRefs = [sourceUrl.toLowerCase()];
@@ -50,7 +60,7 @@ it.each(["unknown_fact", "unknown_source", "missing_research", "different_source
   state.reply = { output, assessment: { ship: true, gatesPassed: true, average: 5, minimum: 5, lint: [], critique: { gates: [], criteria: [], fixes: [], strengths: [] } }, rounds: 1, history: [], research: kind === "missing_research" ? null : { notes: "Synthetic source describes a payment model; demand unknown.", sources: [{ url: sourceUrl }], retrievedAt: now } };
   await t.action(internal.jobs.businessModelCheck, { runId });
   const run = (await t.run(ctx => ctx.db.get(runId)))!;
-  const good = ["valid", "undated", "bold_without_precedent", "owner_sourced_economics"].includes(kind);
+  const good = ["valid", "undated", "bold_without_precedent", "owner_sourced_economics", "landscape_valid", "landscape_speculation"].includes(kind);
   expect(run.status).toBe(good ? "verified" : "failed");
   expect(state.inputs[0].constraints?.factEvidenceBases?.[Number(ownerRef.slice(5))]).toBe("owner_reported");
   expect(state.inputs[0].task).toContain("every cited reference");
@@ -69,6 +79,12 @@ it.each(["unknown_fact", "unknown_source", "missing_research", "different_source
   const strategyId = await t.run(ctx => ctx.db.insert("workflowRuns", { ...run, _id: undefined, _creationTime: undefined, kind: "strategy", status: "executing", output: undefined } as never));
   const context = (await t.query(internal.jobWrites.jobContext, { runId: strategyId }))!;
   if (!good) expect(context.businessModelContext).toBe("");
+  if (kind === "landscape_valid" || kind === "landscape_speculation") {
+    expect(latest.result?.check.strategicLandscape?.forces[0].nextCheck).toContain("last buying episode");
+    expect(context.businessModelContext).toContain("last buying episode");
+    expect(context.businessModelContext).toContain("AI interpretations");
+    expect(state.inputs[0].task).toContain("Do not fill boxes with generic trends");
+  }
   for (const table of ["artifacts", "approvals", "actionReceipts", "businessModelTests"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
   expect(network).not.toHaveBeenCalled();
   if (kind === "unknown_fact") {

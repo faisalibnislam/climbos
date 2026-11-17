@@ -1,3 +1,4 @@
+import { StrategicLandscapeSchema, STRATEGIC_LANDSCAPE_TASK, emptyStrategicLandscape, lintStrategicLandscape, strategicLandscapeContext } from "./strategicLandscape";
 import { referenceEvidenceBasis, type FactEvidenceBasis } from "./evidenceKind";
 import type { BusinessModelFreshness } from "./businessModelFreshness";
 import { z } from "zod";
@@ -93,11 +94,14 @@ export const BusinessModelCheckSchema = z.object({
       note: z.string().min(4).max(240),
     })).length(4),
   })).max(3).optional(),
+  strategicLandscape: StrategicLandscapeSchema.optional(),
   unknowns: z.array(z.string().min(1).max(240)).max(8),
 });
+/** New generation requires coverage; historical saved reports remain readable. */
+export const BusinessModelGenerationSchema = BusinessModelCheckSchema.extend({ strategicLandscape: StrategicLandscapeSchema });
 export type BusinessModelCheck = z.infer<typeof BusinessModelCheckSchema>;
 
-export const BUSINESS_MODEL_TASK = `BUSINESS MODEL CHECK: Describe how this business currently makes money (who pays, for what, pricing structure, sales motion, delivery) using only supplied facts and pages read in this run. Then judge whether that model is holding up against how its market is moving: list market signals (demand, pricing pressure, substitutes, customer behavior, distribution, cost structure, platform or regulatory change, technology), each with direction, basis, references, the date the evidence describes (observedAt, YYYY-MM-DD), and its limitation. A research signal with no stated date must say "undated" in its limitation. Rate up to three customer segments in segmentFit, each once on problem severity, willingness to pay, reachability and serviceability, with level (low, medium, high or unknown), basis and references; high willingness to pay needs payment or pricing evidence. Use the FIRST-PARTY MODEL SIGNALS block as calculated observations from the specified records; preserve every coverage limit, unknown and owner-report label. Do not turn incomplete imports, heuristic flags or competitor activity into proof of business decline. Never contradict or recompute the supplied arithmetic. Give a verdict (holding, watch, at risk, or insufficient evidence) with your confidence, reasoning, and what would change it; it is shown to the owner as your judgment. Match every market-signal, segment-fit and economic-input evidence label to the recorded source class of every cited reference. An owner report about analytics is still owner_report; a published source is research or site_claim, never measured. Split differently sourced observations or label their interpretation inference. Missing provenance stays unknown. A website, competitor activity, or a trend article alone does not prove a model is outdated, and an absence of data is not decline. Propose exactly three alternative business models: one grounded (established practice), one adjacent (an evidence-supported stretch), one bold (may lack any precedent; do not drop it for being novel, low-evidence, or not yet executable). For each: the model change, mechanism, existing assets it reuses, who pays and how, the convention it challenges, assumptions, risks, unit-economics inputs (state each as owner-reported, measured, research, assumption, or unknown; never invent a figure; owner_report, measured and research inputs must cite evidenceRefs for their specific input, not just the overall alternative), what stays the same, and the smallest reversible test with success signal, stop condition, and maximum cost or time. Keep novelty, evidence strength, fit, feasibility, and risk separate. Finish with persist, adjust, test a pivot, or insufficient evidence, the single test that would decide it, and the recommended alternative when testing a pivot. Nothing here authorizes changing prices, offers, or operations.`;
+export const BUSINESS_MODEL_TASK = `BUSINESS MODEL CHECK: Describe how this business currently makes money (who pays, for what, pricing structure, sales motion, delivery) using only supplied facts and pages read in this run. Then judge whether that model is holding up against how its market is moving: list market signals (demand, pricing pressure, substitutes, customer behavior, distribution, cost structure, platform or regulatory change, technology), each with direction, basis, references, the date the evidence describes (observedAt, YYYY-MM-DD), and its limitation. A research signal with no stated date must say "undated" in its limitation. Rate up to three customer segments in segmentFit, each once on problem severity, willingness to pay, reachability and serviceability, with level (low, medium, high or unknown), basis and references; high willingness to pay needs payment or pricing evidence. Use the FIRST-PARTY MODEL SIGNALS block as calculated observations from the specified records; preserve every coverage limit, unknown and owner-report label. Do not turn incomplete imports, heuristic flags or competitor activity into proof of business decline. Never contradict or recompute the supplied arithmetic. Give a verdict (holding, watch, at risk, or insufficient evidence) with your confidence, reasoning, and what would change it; it is shown to the owner as your judgment. Match every market-signal, segment-fit and economic-input evidence label to the recorded source class of every cited reference. An owner report about analytics is still owner_report; a published source is research or site_claim, never measured. Split differently sourced observations or label their interpretation inference. Missing provenance stays unknown. A website, competitor activity, or a trend article alone does not prove a model is outdated, and an absence of data is not decline. Propose exactly three alternative business models: one grounded (established practice), one adjacent (an evidence-supported stretch), one bold (may lack any precedent; do not drop it for being novel, low-evidence, or not yet executable). For each: the model change, mechanism, existing assets it reuses, who pays and how, the convention it challenges, assumptions, risks, unit-economics inputs (state each as owner-reported, measured, research, assumption, or unknown; never invent a figure; owner_report, measured and research inputs must cite evidenceRefs for their specific input, not just the overall alternative), what stays the same, and the smallest reversible test with success signal, stop condition, and maximum cost or time. Keep novelty, evidence strength, fit, feasibility, and risk separate. Finish with persist, adjust, test a pivot, or insufficient evidence, the single test that would decide it, and the recommended alternative when testing a pivot. Nothing here authorizes changing prices, offers, or operations.\n\n${STRATEGIC_LANDSCAPE_TASK}`;
 
 const REF = /^fact:(\d+)$/i;
 const citeKey = (value: string): string | null => {
@@ -128,10 +132,10 @@ export function lintBusinessModelCheck(out: BusinessModelCheck, ctx: { factCount
       if (!ok) issues.push({ severity: "error", rule: "citation", message: `"${ref.slice(0, 80)}" isn't a supplied fact (fact:0–${Math.max(0, ctx.factCount - 1)}) or a page read in this run.`, path });
     }
   };
-  const checkBasis = (basis: string, refs: string[], path: string) => {
+  const checkBasis = (basis: string, refs: string[], path: string, basisField = "basis", refsField = "evidenceRefs") => {
     if (["inference", "assumption", "unknown"].includes(basis)) return;
     if (!refs.length) {
-      issues.push({ severity: "error", rule: "citation", message: `A ${basis.replace("_", " ")} finding needs its own supplied evidence reference. Otherwise keep the input unknown or label the interpretation as inference.`, path: `${path}.evidenceRefs` });
+      issues.push({ severity: "error", rule: "citation", message: `A ${basis.replace("_", " ")} finding needs its own supplied evidence reference. Otherwise keep the input unknown or label the interpretation as inference.`, path: `${path}.${refsField}` });
       return;
     }
     const expected: FactEvidenceBasis = basis === "owner_report" ? "owner_reported" : basis === "measured" ? "measured" : "source_reported";
@@ -139,8 +143,13 @@ export function lintBusinessModelCheck(out: BusinessModelCheck, ctx: { factCount
       const fact = REF.exec(ref.trim());
       const reference = fact ? `fact:${fact[1]}` : citeKey(ref);
       return referenceEvidenceBasis(reference, ctx.factEvidenceBases, [...read]) !== expected;
-    })) issues.push({ severity: "error", rule: "evidence_basis", message: "Match the evidence label to every cited source's recorded provenance. An owner report or published claim is not independently measured evidence; missing provenance stays unknown. Split differently sourced findings or label an interpretation as inference.", path: `${path}.basis` });
+    })) issues.push({ severity: "error", rule: "evidence_basis", message: "Match the evidence label to every cited source's recorded provenance. An owner report or published claim is not independently measured evidence; missing provenance stays unknown. Split differently sourced findings or label an interpretation as inference.", path: `${path}.${basisField}` });
   };
+  if (out.strategicLandscape) {
+    checkRefs(out.strategicLandscape.scopeEvidenceRefs, "strategicLandscape.scopeEvidenceRefs");
+    checkBasis(out.strategicLandscape.scopeBasis, out.strategicLandscape.scopeEvidenceRefs, "strategicLandscape", "scopeBasis", "scopeEvidenceRefs");
+    issues.push(...lintStrategicLandscape(out.strategicLandscape, out.marketSignals));
+  }
   checkRefs(out.currentModel.evidenceRefs, "currentModel.evidenceRefs");
   out.marketSignals.forEach((s, i) => {
     checkRefs(s.evidenceRefs, `marketSignals[${i}].evidenceRefs`);
@@ -255,7 +264,7 @@ export function businessModelPlanContext(check: BusinessModelCheck | null | unde
   }
   const date = completedAt ? new Date(completedAt).toISOString().slice(0, 10) : "unknown date";
   const alt = (mode: "grounded" | "adjacent" | "bold") => check.alternatives.find((a) => a.mode === mode);
-  return `LATEST BUSINESS MODEL CHECK (${date}; AI judgment for owner review, not a verified finding): verdict ${check.verdict.status.replace(/_/g, " ")} (${check.verdict.confidence} confidence); recommendation ${check.recommendation.decision.replace(/_/g, " ")}; deciding test: ${check.recommendation.decidingTest} Alternatives: grounded "${alt("grounded")?.name ?? "none"}", adjacent "${alt("adjacent")?.name ?? "none"}", bold "${alt("bold")?.name ?? "none"}". Consider these when choosing plays, keep the bold option visible, and don't treat the verdict as proof of decline or permission to change the offer.`;
+  return `LATEST BUSINESS MODEL CHECK (${date}; AI judgment for owner review, not a verified finding): verdict ${check.verdict.status.replace(/_/g, " ")} (${check.verdict.confidence} confidence); recommendation ${check.recommendation.decision.replace(/_/g, " ")}; deciding test: ${check.recommendation.decidingTest} Alternatives: grounded "${alt("grounded")?.name ?? "none"}", adjacent "${alt("adjacent")?.name ?? "none"}", bold "${alt("bold")?.name ?? "none"}". Consider these when choosing plays, keep the bold option visible, and don't treat the verdict as proof of decline or permission to change the offer.${strategicLandscapeContext(check.strategicLandscape)}`;
 }
 
 /** Labelled demo output for fixtures and the test double: no real-business claims, honest unknowns. */
@@ -277,6 +286,7 @@ export function demoBusinessModelCheck(businessName: string): BusinessModelCheck
       alt("bold", "Demo: pay for results", "Charge only when an agreed outcome is reached.", "Customers pay for effort rather than results."),
     ],
     recommendation: { decision: "insufficient_evidence", rationale: "Demo data: run the check on a real workspace with evidence.", decidingTest: "Demo data: ask five customers how they would prefer to pay." },
+    strategicLandscape: emptyStrategicLandscape(),
     unknowns: ["Demo data: real revenue trend", "Demo data: willingness to pay under another model"],
   };
 }

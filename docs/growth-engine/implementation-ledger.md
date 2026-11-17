@@ -1,3 +1,7 @@
+## 17 November 2026 — competitive pressures and external-context reasoning
+
+Added structured Five Forces/PESTLE decision support to the existing business-model workflow: bounded research, required new-generation contract, source-linked implications/tradeoffs/tests, explicit unassessed coverage, final validation, owner review and later-plan context. [Audit](strategic-landscape-audit.md). 126 focused regression/permission tests and two desktop/mobile checks passed, plus typecheck and scoped lint. No new agent/provider or action authority. Full scope and real-model quality remain incomplete.
+
 ## 17 November 2026 — business-model evidence and source review
 
 Closed confirmed source-class and per-economic-input reference gaps in the existing business-model/pivot workflow. Original ordered facts now survive edits for inline owner review; bounded exports include checks and snapshots. [Audit](business-model-source-basis-audit.md). 107 focused regression/permission tests and four desktop/mobile checks passed, plus typecheck and scoped lint. No changes to bold-option availability or action authority; full scope remains incomplete.

@@ -1,3 +1,13 @@
+## 17 November 2026 — competitive structure and external-context reasoning
+
+[Audit](growth-engine/strategic-landscape-audit.md) traces the new Five Forces/PESTLE decision contract through bounded research, generation, deterministic validation, persistence, owner review and later planning. Engine `v3.136-strategic-landscape`.
+
+- `pnpm exec vitest run tests/unit/strategic-landscape.test.tsx tests/unit/business-model-check.test.ts tests/unit/business-model-view.test.tsx tests/unit/business-model-freshness.test.ts tests/unit/evidence-references.test.ts tests/convex/business-model-validation.test.ts tests/convex/business-model-check.test.ts tests/convex/business-model-learning.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — **126 passed / ten files, 11.52 seconds** in the final run. Includes missing/duplicate coverage, invalid evidence links, priorities, source labels, unknowns, explicit speculation, actual final acceptance despite a passing mocked critique, later-plan context and no external-action records.
+- `CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env E2E_BASE_URL=http://127.0.0.1:3420 pnpm exec playwright test e2e/strategic-landscape.spec.ts --workers=1` — **two desktop/mobile checks passed, 26.9 seconds**. Concise summary, expanded response/tradeoff/test, linked original evidence, unknown geography, unassessed coverage, preserved bold option and unchanged consequential records. Targeted axe/overflow checks and page-error checks passed. Mobile screenshot inspected; full accessibility conformance remains unverified.
+- Final `pnpm typecheck` passed for application and Convex after resolving schema/result generic inference. Scoped ESLint and `git diff --check` passed. Final isolated loopback backend sync passed in **12.91 seconds**. No generated files changed.
+
+Real model quality, representative market coverage, causal validity, legal applicability and business results remain unverified. Fixtures and mocked model output establish the connected workflow and enforcement, not the quality of live strategic advice. No paid model evaluation, real business action or hosted deployment. The complete project scope remains active and incomplete.
+
 ## 17 November 2026 — business-model sources and evidence labels
 
 [Audit](growth-engine/business-model-source-basis-audit.md) records the actual input → research → proposal → final validation → original-source review → learning/export path. Engine `v3.135-business-model-source-basis`.

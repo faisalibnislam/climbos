@@ -1,5 +1,8 @@
 # ClimbOS capabilities and boundaries
 
+Business-model checks now connect relevant competitive pressures and external changes to a response, tradeoff and small validation check. Owners can inspect the supporting observations and unassessed areas; later planning receives the selected reasoning. These are labeled judgments, with grounded, adjacent and bold options preserved. See [the strategic-analysis audit](growth-engine/strategic-landscape-audit.md).
+
+
 Business-model and pivot checks now validate source labels for market signals, segment fit and economic inputs; new reports preserve original fact text for inline inspection and bounded workspace export. Grounded, adjacent and bold alternatives remain available, and judgments do not execute changes. See [the audit and limits](growth-engine/business-model-source-basis-audit.md).
 
 
