@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { livoformLaunchInput, LIVOFORM_LAUNCH_QUESTIONS } from "../../bench/strategy-quality/livoformLaunch";
+import { livoformLaunchInput, livoformLaunchComparison, LIVOFORM_LAUNCH_QUESTIONS } from "../../bench/strategy-quality/livoformLaunch";
 import { referenceEvidenceBasis } from "../../shared/agents/evidenceKind";
 
 // Synthetic reports exercise provenance; these are not claims about the real business.
@@ -36,5 +36,32 @@ describe("owner-selected Livoform launch acceptance", () => {
     expect(() => livoformLaunchInput({ ...owner, website: "https://elsewhere.example/" }, now)).toThrow();
     expect(() => livoformLaunchInput({ ...owner, statements: [] }, now)).toThrow();
     expect(() => livoformLaunchInput({ ...owner, reportedAt: "2026-02-31" }, now)).toThrow();
+  });
+});
+
+
+describe("held-out launch comparison", () => {
+  const record = () => ({ caseId: "livoform", schemaPassed: true, input: livoformLaunchInput(owner, now), result: { output: { summary: "Synthetic draft" }, assessment: { ship: false }, history: [{ score: 1 }] } });
+  it("passes only candidate output and common evidence to a judge, without grades or drafting instructions", () => {
+    const a = record(), b = record(); b.input.task = "A newer writer instruction"; b.input.timingContext!.now!++;
+    const comparison = livoformLaunchComparison(a, b);
+    expect(comparison.questions).toEqual(LIVOFORM_LAUNCH_QUESTIONS);
+    expect(comparison.A).toEqual(a.result.output);
+    expect(comparison).not.toHaveProperty("task");
+    expect(JSON.stringify(comparison)).not.toContain('"assessment"');
+    expect(JSON.stringify(comparison)).not.toContain('"history"');
+  });
+  it.each(["facts", "research", "constraints"])("refuses a comparison with changed %s", kind => {
+    const a = record(), b = record();
+    if (kind === "facts") b.input.facts.push("Different synthetic owner report");
+    if (kind === "research") b.input.precomputedResearch!.notes += " New evidence";
+    if (kind === "constraints") b.input.constraints!.monthlyAdBudgetUsd = 50;
+    expect(() => livoformLaunchComparison(a, b)).toThrow("identical business evidence");
+  });
+  it("refuses incomplete or unrelated artifacts", () => {
+    const a = record();
+    expect(() => livoformLaunchComparison(a, { ...a, schemaPassed: false })).toThrow();
+    expect(() => livoformLaunchComparison(a, { ...a, caseId: "different" })).toThrow();
+    expect(() => livoformLaunchComparison(a, { ...a, result: undefined })).toThrow();
   });
 });

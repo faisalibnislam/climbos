@@ -49,3 +49,14 @@ export function livoformLaunchInput(ownerInput: unknown, now = Date.now()): Agen
     constraints: { currency: "USD", horizonDays: 14, monthlyAdBudgetUsd: 0, businessTypes: ["b2b_saas"], factEvidenceBases: facts.map(() => "owner_reported" as const), factKinds: facts.map(() => "owner" as const) },
   };
 }
+
+
+/** Compare output quality on identical business evidence, without exposing either review to the judge. */
+export function livoformLaunchComparison(a: { caseId: string; schemaPassed?: boolean; input: AgentInput; result?: { output?: unknown } }, b: { caseId: string; schemaPassed?: boolean; input: AgentInput; result?: { output?: unknown } }) {
+  for (const record of [a, b]) {
+    if (record.caseId !== "livoform" || !record.schemaPassed || !record.result?.output || record.input.businessWebsite !== "https://livoform.com/" || !record.input.brief.startsWith("OWNER-SELECTED PUBLIC-SOURCE ACCEPTANCE CASE:")) throw new Error("Launch comparison requires two complete owner-selected launch records.");
+  }
+  const evidence = (input: AgentInput) => ({ brief: input.brief, facts: input.facts, research: input.precomputedResearch, constraints: input.constraints, businessWebsite: input.businessWebsite, ownerSuppliedUrls: input.ownerSuppliedUrls });
+  if (JSON.stringify(evidence(a.input)) !== JSON.stringify(evidence(b.input))) throw new Error("Launch comparison requires identical business evidence; do not mix different owner reports or source packs.");
+  return { ...evidence(a.input), questions: LIVOFORM_LAUNCH_QUESTIONS, A: a.result!.output, B: b.result!.output };
+}

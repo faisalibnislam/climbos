@@ -10,7 +10,7 @@ import { ENGINE_VERSION, growthPlaysSpec, playCatalogsFor, PlaysOutputSchema, st
 import { selectStrategyQualityCases } from "./cases";
 import { industryInput } from "./industryInput";
 import { FOCUSED_EVIDENCE_REVIEW } from "../../shared/agents/focusedReview";
-import { livoformLaunchInput } from "./livoformLaunch";
+import { livoformLaunchInput, livoformLaunchComparison } from "./livoformLaunch";
 import { evaluationIdentity, assertReusableEvaluation, comparisonIdentity } from "./evaluationIdentity";
 import { focusedPlanTask, focusedRefreshContext } from "../../shared/agents/focusedPlan";
 import { BusinessProfileSchema } from "../../shared/ai/tasks";
@@ -164,6 +164,27 @@ try {
      writeFileSync(path,JSON.stringify({caseId:item.id,mapping,evaluationIdentity:identity,sourceHash:loadedSourceHash,result,limits:"Isolated synthetic briefs, not live industry businesses. No external actions. AI review is not human or market validation."},null,2));
      console.log(`JUDGED ${item.id}: ${judged.verdict}`);
    }
+   return;
+ }
+ if (values.stage === "launch-judge") {
+   if (values.cases !== "livoform" || values["plan-style"] !== "focused" || cheapDraft || evidenceFrom || values["curated-sources"] || values["extra-sources"] || !/^[a-z0-9-]{1,40}$/.test(values["compare-with"]!)) throw new Error("Launch comparison requires two named owner-selected focused variants.");
+   const versions = [values["compare-with"]!, variant];
+   if (versions[0] === versions[1]) throw new Error("Choose distinct comparison variants.");
+   if (createHash("sha256").update(versions.join(":")).digest()[0] % 2 === 0) versions.reverse();
+   const records = versions.map(version => JSON.parse(readFileSync(resolve(out, `livoform-${version}-focused-14.json`), "utf8")));
+   const comparisonInput = livoformLaunchComparison(records[0], records[1]);
+   const mapping = { A: versions[0], B: versions[1] };
+   const identity = comparisonIdentity(loadedSourceHash, "livoform", mapping, comparisonInput);
+   const path = resolve(out, `livoform-${variant}-launch-comparison.json`);
+   if (existsSync(path)) { assertReusableEvaluation(JSON.parse(readFileSync(path, "utf8")), identity); console.log("REUSE exact launch comparison"); return; }
+   const schema = z.object({ verdict: z.enum(["A", "B", "tie", "neither"]), questions: z.array(z.object({ question: z.string(), A: z.number().min(1).max(5), B: z.number().min(1).max(5), evidence: z.string() })), criticalErrors: z.array(z.object({ version: z.enum(["A", "B"]), claim: z.string(), reason: z.string() })), usefulNextStep: z.object({ A: z.boolean(), B: z.boolean(), reason: z.string() }), improvements: z.array(z.string()), summary: z.string() });
+   label = `livoform/${variant}/launch-independent-comparison`;
+   const result = await turn({ modelKey: "claude-sonnet-5.5", maxTokens: 5000, thinkingOff: true, effort: "high", schema, system: [{ text: "Judge two anonymized recommendations for the same owner-selected real business and identical evidence. You did not see their reviews or drafting conversations. Answer every supplied held-out question verbatim exactly once, scoring each candidate 1–5 and citing concrete passages. Test unknown versus absent audiences and capacity, paid value beyond Free, one manageable first action, exposure versus outcomes, a credible distribution fallback, and meaningful originality. Do not favor length, safety-only homework or invented specificity. A proposed test is not an existing program; published functionality is not tested behavior. A bold idea does not need precedent, high confidence or immediate feasibility, but must change a meaningful mechanism rather than simply relabel a familiar channel. Reject unsupported claims; distinguish semantic errors from weak strategy. Select neither when both fail. Do not invent numeric prices, resources or performance thresholds in suggested fixes. This is AI judgment on proposals, not human validation or commercial evidence.", cache: true }], messages: [{ role: "user", content: JSON.stringify(comparisonInput) }] });
+   if (!result.ok) throw new Error(result.message);
+   const judged = schema.parse(result.output);
+   if (judged.questions.length !== comparisonInput.questions.length || comparisonInput.questions.some(question => judged.questions.filter(row => row.question === question).length !== 1)) throw new Error("Missing or duplicated held-out question; no accepted comparison.");
+   writeFileSync(path, JSON.stringify({ caseId: "livoform", mapping, evaluationIdentity: identity, sourceHash: loadedSourceHash, result, limits: "Same-model separate-context judgment, not human review or commercial validation. No external business action." }, null, 2), { mode: 0o600 });
+   console.log(`JUDGED launch: ${judged.verdict}`);
    return;
  }
  if (values.stage === "launch-acceptance") {
