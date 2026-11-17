@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { LintIssue } from "./types";
-import { withoutNegatedTrials } from "./offerLanguage";
+import { withoutDeclinedPromotionRecommendations, withoutNegatedTrials } from "./offerLanguage";
 import { referenceEvidenceBasis, type FactEvidenceBasis } from "./evidenceKind";
 
 export const OfferEvidenceValueSchema = z.object({
@@ -399,8 +399,9 @@ export function lintOfferAssessment(
   const checkBasis = (basis: string, ref: string | null, suffix: string) => {
     if (["owner_reported", "source_reported", "measured"].includes(basis) && referenceEvidenceBasis(ref, context.factEvidenceBases, context.sourceUrls) !== basis) basisError("The evidence basis must match the recorded source class. Owner reports and web claims are not independently measured facts; missing source metadata stays unknown.", suffix);
   };
-  const text = [play.name, play.oneLiner, play.hook, play.mechanic, play.test, play.killIf, play.scaleIf].filter(Boolean).join(" ");
-  const containsPromotion = PROMOTION_WORDS.test(withoutNegatedTrials(text));
+  const recommendationText = (parts: (string | undefined)[]) => parts.map(value => withoutDeclinedPromotionRecommendations(value ?? "")).join(" ");
+  const text = recommendationText([play.name, play.oneLiner, play.hook, play.mechanic, play.test, play.killIf, play.scaleIf]);
+  const containsPromotion = PROMOTION_WORDS.test(text);
   if (!assessment) {
     if (containsPromotion) error("A play that proposes an offer change needs a structured evidence, alternatives, economics, risk, and test assessment.");
     return issues;
@@ -415,7 +416,7 @@ export function lintOfferAssessment(
   if (assessment.recommendation !== "recommend_promotion" && assessment.mechanism !== "none" && assessment.recommendation !== "validate_first") error("Do not describe an offer mechanism as recommended when the chosen action is to improve another constraint or make no change.", "mechanism");
   if (assessment.recommendation === "recommend_promotion" && !containsPromotion) error("The play must describe the recommended offer mechanism clearly.");
   if (assessment.recommendation === "recommend_promotion" && context.diagnosedConstraint && !["offer", "conversion"].includes(context.diagnosedConstraint)) error(`The ${context.diagnosisMeasured ? "measured" : "selected"} constraint is ${context.diagnosedConstraint}; this promotion does not address that constraint.`, "recommendation");
-  if (["improve_other_constraint", "no_change"].includes(assessment.recommendation) && PROMOTION_WORDS.test(withoutNegatedTrials([play.oneLiner, play.hook, play.mechanic].filter(Boolean).join(" ")))) error("The selected recommendation is not to change the offer; remove promotion copy from the play or choose validate_first.", "mechanism");
+  if (["improve_other_constraint", "no_change"].includes(assessment.recommendation) && PROMOTION_WORDS.test(recommendationText([play.oneLiner, play.hook, play.mechanic]))) error("The selected recommendation is not to change the offer; remove promotion copy from the play or choose validate_first.", "mechanism");
   if (assessment.evidenceBasis === "assumed" || assessment.evidenceBasis === "inferred" || assessment.evidenceBasis === "source_reported") {
     if (assessment.recommendation === "recommend_promotion") error("Assumed, inferred, or general source-reported demand supports a validation test, not a business-specific promotion recommendation.", "recommendation");
   }

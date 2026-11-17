@@ -76,6 +76,36 @@ describe("offer and promotion recommendations", () => {
     expect(lintOfferAssessment(undefined, { hook: "Start a free trial today." }, context, "offerAssessment")).toContainEqual(expect.objectContaining({ rule: "offer_assessment" }));
   });
 
+  it.each([
+    "A clear forwardable page needs no ads, audience or discount.",
+    "Prepare the page without a discount.",
+    "Do not offer a discount. Improve the page.",
+    "No discount or free trial is proposed.",
+  ])("does not require promotion economics for a directly declined offer: %s", hook => {
+    expect(lintOfferAssessment(undefined, { hook }, context, "offerAssessment")).toEqual([]);
+  });
+
+  it.each([
+    "No discount restrictions apply.",
+    "No need to wait: offer a discount.",
+    "No discount. Add a bonus.",
+    "No ads, audience or discount, but offer free shipping.",
+    "Do not just offer a discount; add a bonus.",
+    "Without a discount we will offer a free trial.",
+    "No discount\nStart a free trial.",
+  ])("still requires an assessment for affirmative or ambiguous offer wording: %s", hook => {
+    expect(lintOfferAssessment(undefined, { hook }, context, "offerAssessment"))
+      .toContainEqual(expect.objectContaining({ rule: "offer_assessment", severity: "error" }));
+  });
+
+  it("keeps no-change decisions consistent while rejecting contradictory promotion copy", () => {
+    const offer = assessment({ recommendation: "no_change", mechanism: "none" });
+    const proposal = { name: "Clarify the current buying path", oneLiner: "No discount or bonus is proposed.", mechanic: "Prepare a private comprehension check.", actionContract: { diagnosis: offer.diagnosis } };
+    expect(lintOfferAssessment(offer, proposal, context, "offerAssessment")).toEqual([]);
+    expect(lintOfferAssessment(offer, { ...proposal, mechanic: "Give a bonus to buyers." }, context, "offerAssessment"))
+      .toContainEqual(expect.objectContaining({ path: "offerAssessment.mechanism", severity: "error" }));
+  });
+
   it("computes positive unit contribution and the deterministic volume needed to match current contribution", () => {
     const offer = assessment();
     expect(evaluateOfferUnitEconomics(offer)).toMatchObject({ currentContribution: 50, proposedContribution: 40, priceChangeFromCurrent: -5, currentMarginRate: 0.5, proposedMarginRate: 40 / 95, proposedUnitsPerCurrentUnitToMatchContribution: 50 / 40, contributionBreakEvenUnits: 2, known: true });

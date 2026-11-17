@@ -1,3 +1,13 @@
+## 17 November 2026 — declined promotion classification
+
+[Audit](growth-engine/declined-offer-classification-audit.md). Engine `v3.143-declined-offer-classification`.
+
+- Nine focused offer/plan/authorization files: **241 passed, 15.61 seconds**. Five initial failures reproduced the false-positive promotion assessment.
+- After adding one no-change consistency case, `pnpm exec vitest run tests/unit/offer-assessment.test.ts` — **26 passed, 2.70 seconds**.
+- Application/Convex typechecks, changed helper/validator/test ESLint and diff checks passed.
+
+No browser or post-fix paid-model result is claimed in this batch. The earlier synthetic failures are preserved; no production deployment or external business action occurred. Full scope remains incomplete.
+
 ## 17 November 2026 — industry evaluation clock
 
 [Audit and preserved live failures](growth-engine/industry-evaluation-clock-audit.md). Production engine remains `v3.142-review-reward-validation`; no timing prompt or runtime was changed.

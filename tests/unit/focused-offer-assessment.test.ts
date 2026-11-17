@@ -19,6 +19,17 @@ const issues = (value: ReturnType<typeof plan>, context = input) => focusedStrat
 const offerErrors = (value: ReturnType<typeof plan>, context = input) => issues(value, context).filter(issue => issue.rule === "focused_offer_assessment");
 
 describe("focused promotion assessment", () => {
+  it("accepts a non-price comprehension test that explicitly declines a discount", () => {
+    const value = focusedPlanFixture(30);
+    value.focusedMove.title = "School approval pack comprehension check";
+    value.focusedMove.why = "Teachers may need school approval to pay. A clear forwardable page needs no ads, audience or discount.";
+    value.focusedMove.aiCanDo = "Draft the pack and private comprehension questions for owner review.";
+    expect(focusedStrategySpec().lint?.(value, input)?.filter(issue => issue.rule === "focused_offer_assessment")).toEqual([]);
+    value.focusedMove.aiCanDo = "Draft a free trial to help teachers test the workshop.";
+    expect(focusedStrategySpec().lint?.(value, input))
+      .toContainEqual(expect.objectContaining({ rule: "focused_offer_assessment", severity: "error" }));
+  });
+
   it("retains the existing full assessment and calculates contribution from supplied inputs", () => {
     const value = plan();
     expect(FocusedStrategySchema.parse(value).focusedMove).toHaveProperty("offerAssessment", value.focusedMove.offerAssessment);

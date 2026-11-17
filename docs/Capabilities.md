@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Offer recommendations now distinguish an explicitly declined discount from a proposed promotion. The shared validator accepts a comprehension test that needs “no ads, audience or discount” while retaining the full assessment for affirmative offers elsewhere. Public-copy and approval controls are unchanged. [Coverage and limits](growth-engine/declined-offer-classification-audit.md).
+
 Review validation now catches additional incentive, review-change/removal reward and satisfaction-targeting language in copy and proposed actions. Lifecycle final validation rejects those known forms even if the model critic passes them. [Coverage and limits](growth-engine/review-reward-validation-audit.md).
 
 Strategy and lifecycle playbooks now consistently follow the owner’s neutral, no-rewards review policy, including software, ecommerce and in-app guidance. Older gift-card and satisfaction-filter recommendations were removed from the runtime instructions; editorial collaborations remain distinct from customer reviews. [Audit and limits](growth-engine/neutral-review-playbooks-audit.md).

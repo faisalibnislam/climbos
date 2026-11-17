@@ -1,5 +1,11 @@
 ## 17 November 2026 — review reward validation
 
+
+## 17 November — declined promotion classification
+
+`v3.143-declined-offer-classification`: the real synthetic education evaluation exposed a keyword false positive for “needs no ads, audience or discount.” Shared detailed/focused recommendation validation now recognizes narrow direct negative phrases and closed lists, preserving affirmative or ambiguous mechanisms for full assessment. Public-copy and execution checks are unchanged. Five red cases preceded the fix; 241 tests in nine files passed, then the expanded offer file passed all 26 tests. Typecheck/lint passed. [Audit](declined-offer-classification-audit.md). This is not evidence of live commercial outcomes or full scope completion.
+
+
 Closed known review-incentive/gating detection gaps and applied the shared checks to planned actions and final lifecycle acceptance. 203 focused tests passed; [audit](review-reward-validation-audit.md). Pattern coverage is explicit, not a universal semantic guarantee. No action authority or UI changes; full scope remains incomplete.
 
 ## 17 November 2026 — consistent neutral review guidance
