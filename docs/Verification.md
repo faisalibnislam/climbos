@@ -1,5 +1,10 @@
 ## 17 November 2026 — creative methods and product-test validity
 
+## 18 November 2026 — one canonical next step
+
+Engine v3.166 derives the focused plan's Today card and first-phase entry from its chosen next step before review and persistence, preserving raw responses, later work and action boundaries. One red case, then **169 tests in ten files passed (17.54 seconds)**. V13 remained below acceptance at 3.88; its separate comparison preferred it over the original on five of six questions (one tie). Combined charged/held $70.004699 / $100. [Audit and exact commands](growth-engine/focused-evidence-review-audit.md).
+
+
 ## 18 November 2026 — held-out comparison effort
 
 Removed the launch comparator's contradictory reasoning-disable flag; the native adapter now receives the intended high effort with a metered 12,000-token envelope. Same model and existing cap. **34 tests in six files passed**, including native request bodies, complete held-out questions and budget/identity guards; targeted lint and diff checks passed. Historical verdicts remain unchanged. [Audit](growth-engine/focused-evidence-review-audit.md).

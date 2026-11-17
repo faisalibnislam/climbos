@@ -1,6 +1,7 @@
 import { boundedPageReads } from "./provenance";
 import { diagnosisBrief } from "./diagnosis";
 import { CreativePreparationSchema, CREATIVE_PREPARATION_TASK, CREATIVE_PREPARATION_TOKENS } from "./creativePreparation";
+import { projectFocusedFirstStep } from "./focusedPlan";
 import { FOCUSED_REVIEW_ID, FOCUSED_EVIDENCE_REVIEW, FOCUSED_DECISION_REVIEW, FocusedEvidenceAuditSchema, lintFocusedEvidenceAudit, focusedRevisionCriteria, resolveFocusedEvidencePaths } from "./focusedReview";
 import { OWNER_LANGUAGE_RULES } from "./ownerLanguage";
 import { fitJson, fitText, reportDropped } from "./context";
@@ -421,7 +422,10 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
         cacheKey: `climbos:${spec.id}:draft`,
       });
       if (!result.ok) failure(result);
-      return { value: stripFactMarkers(result.output) as T, record: { phase: round === 0 ? "draft" : "revise", round, modelKey, result } };
+      const output = stripFactMarkers(result.output) as T;
+      // Review and persist the same single next step; retain the untouched provider response for audit.
+      const value = spec.rubric.id === FOCUSED_REVIEW_ID ? projectFocusedFirstStep(output) : output;
+      return { value, record: { phase: round === 0 ? "draft" : "revise", round, modelKey, result } };
     });
   };
 

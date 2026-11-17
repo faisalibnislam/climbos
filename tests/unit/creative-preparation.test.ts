@@ -5,6 +5,7 @@ import { runAgent, type AgentDeps, type PhaseKey } from "../../shared/agents/run
 import { focusedStrategySpec, starterStrategySpec } from "../../shared/agents/specs";
 import { agentSteps } from "../../convex/lib/jobPlans";
 import { ZERO_USAGE, type TurnRequest } from "../../shared/ai/types";
+import { focusedPlanFixture } from "../fixtures/focusedPlan";
 
 const seeds = { directions: Array.from({ length: 3 }, (_, index) => ({
   creativeMethod: ["convention_inversion", "distant_transfer", "asset_recombination"][index], methodApplication: "A synthetic method application; no real business evidence.",
@@ -26,6 +27,29 @@ const spec = () => ({ ...focusedStrategySpec({ maxRevisions: 0 }), schema: z.obj
 });
 
 describe("creative preparation within the existing focused run", () => {
+  it("reviews and checkpoints one canonical next step without changing the raw response or later work", async () => {
+    const original = focusedPlanFixture();
+    original.firstActions = ["Start another channel", "Name contacts", "Collect analytics"].map(title => ({ title, why: "Synthetic competing first step", role: "ceo" }));
+    const before = structuredClone(original), requests: TurnRequest[] = [];
+    let rawOutput: unknown;
+    const result = await runAgent({ ...spec(), schema: focusedStrategySpec().schema, creativePreparation: false }, { brief: "Synthetic", task: "Prepare one next step", facts: [] }, {
+      turn: async req => {
+        requests.push(req);
+        const output = requests.length === 1 ? original : review;
+        return { ok: true, output, text: JSON.stringify(output), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" };
+      },
+      phase: async (key, _label, fn) => { const phase = await fn(); if (key.phase === "draft" && phase.record.result.ok) rawOutput = phase.record.result.output; return phase.value; },
+    });
+    expect(original).toEqual(before);
+    expect(rawOutput).toEqual(before);
+    expect(result.output.firstActions).toEqual([{ title: original.focusedMove.firstAction, why: original.focusedMove.why, role: "ceo" }]);
+    expect(result.output.phases[0].firstAction).toBe(original.focusedMove.firstAction);
+    expect(result.output.phases.slice(1)).toEqual(original.phases.slice(1));
+    expect(result.output.preparedWork).toEqual(original.preparedWork);
+    expect(result.output.strategyExploration).toEqual(original.strategyExploration);
+    expect(JSON.stringify(requests[1].messages)).not.toContain("Start another channel");
+    expect(result.assessment?.ship).toBe(true);
+  });
   it("requires different methods including inversion and distant transfer without demanding a matching precedent", () => {
     expect(CreativePreparationSchema.safeParse(seeds).success).toBe(true);
     const repeated = structuredClone(seeds); repeated.directions[1].creativeMethod = repeated.directions[0].creativeMethod;

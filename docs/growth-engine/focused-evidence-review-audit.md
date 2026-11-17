@@ -1,5 +1,25 @@
 # Focused strategy evidence review — 17 November 2026
 
+## One canonical owner next step — v3.166
+
+V13 (`launch-quality-v13-20261117`, v3.165, source hash `55e06a29ca6ab88035f734ca909d9470dcd2d86a3a4c3cb81b280832736a3a02`) completed seven calls for **$1.337246**. Reviews progressed 3.56 with five hard findings → 3.63 with none → **3.88/minimum 3, no hard findings, ship false**. The final draft included a concrete sample, follow-up invitation, session script, separate paid-interest/payment measures and a respondent-approved-summary hypothesis. Owner simplicity remained below acceptance. Manual inspection also found the bold test's causal wording too strong for its small repeated-exposure design; passing originality is not proof of a valid experiment.
+
+The fresh six-question separate-context comparison cost **$0.067648** and preferred v13 over the original, scoring v13 higher on five questions and tied on paid-value explanation. This is the first accepted comparison here to prefer the new plan. It still contains fallible judgments: its objection to the original inference label and criticism of gated feature-check work are not automatically treated as factual errors. Both raw records remain unchanged. Combined charged/held after comparison: **$70.004699 / $100**. This supports improvement for this case, not stable acceptance or commercial usefulness.
+
+Code inspection found a concrete simplicity gap: `jobWrites.saveStrategy` creates up to three Today cards from the independently generated `firstActions`, even when `focusedMove.firstAction` presents one next step. Full focused and starter runs now project that selected next step into the legacy first-action card and first phase entry before lint, independent review and persistence. The raw provider response is retained, the original object is not mutated, later phase work and all strategic alternatives remain intact, and the card is still a proposed note with zero cost and no external effect. Detailed strategies are unaffected. No existing stored plans are rewritten.
+
+Writer/reviewer guidance also fixes a contradictory repair seen in v13: adding a contacts question alongside a review produced the very bundle the next review penalized. Choose one immediate review or decision-changing question; keep later access, verification and approval dependencies explicit. Do not invent automated building to hide actual owner work. This does not lower the quality threshold or remove required checks.
+
+One red regression reproduced the competing next steps, then **169 tests in ten files passed (17.54 seconds)**. App/Convex typechecks, changed-file ESLint and diff checks passed; a test-only union narrowing was corrected after the initial typecheck, with all five affected unit tests re-passed. The actual mocked Convex flow verifies one canonical Today card, consistent saved first phase, pending approvals and no action receipts. Unit coverage verifies the critic sees the projected result while the raw response, prepared work and bold options remain unchanged.
+
+```sh
+pnpm exec vitest run tests/unit/creative-preparation.test.ts tests/unit/focused-plan.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/agent-escalation.test.ts tests/unit/strategy-exploration.test.ts tests/unit/evaluation-identity.test.ts tests/unit/livoform-launch-input.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+V14 will test the combined configuration on the unchanged Sonnet runtime and frozen public evidence, within the existing cap. A new passing score alone will not erase previous failures.
+
+
 ## Deliberate held-out comparison — 18 November 2026
 
 The separate launch comparator requested high effort while also setting `thinkingOff: true`. Inspection of the native adapter confirmed that the latter wins and sends low effort. The launch comparison now uses adaptive high-effort reasoning with a 12,000-token output envelope, on the same Sonnet model. Existing per-call reservation and the cumulative $100 guard cover the larger envelope. This is evaluation configuration only; production runtime routes and acceptance thresholds are unchanged. Older comparison records are preserved and are not retrospectively regraded.

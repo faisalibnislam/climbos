@@ -1,3 +1,7 @@
+## 18 November — use the same next step throughout focused plans
+
+`v3.166-canonical-first-step`: derive the single Today note and first-phase action from focusedMove before review/save; keep provider output unchanged for audit. Do not let repairs bundle a question and review or invent automated support. 169 focused/permission tests passed after a reproduced failure. V13 is improved in a separate comparison but still fails simplicity; v14 remains to be evaluated. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — correct held-out comparison reasoning
 
 Launch comparisons now actually use their requested high effort: the contradictory thinking-off flag is removed, with a reserved 12,000-token bound. Runtime models and thresholds are unchanged; old comparisons are preserved. 34 adapter/comparison/budget tests and targeted lint passed. [Audit](focused-evidence-review-audit.md).
