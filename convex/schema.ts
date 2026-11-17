@@ -1001,6 +1001,8 @@ export default defineSchema({
     userId: v.id("users"),
     digest: v.union(v.literal("daily"), v.literal("weekly"), v.literal("off")),
     usageAlerts: v.boolean(),
+    /** Personal Climb AI explanation preference; does not change customer-facing brand copy. */
+    explanationDepth: v.optional(v.union(v.literal("concise"), v.literal("guided"), v.literal("detailed"))),
     lastDigestAt: v.optional(v.number()),
   }).index("by_user", ["userId"]),
 
@@ -4230,6 +4232,8 @@ export default defineSchema({
       v.literal("action"),
     ),
     text: v.string(),
+    /** Snapshot on the user request so later preference edits cannot change an in-flight answer. */
+    explanationDepth: v.optional(v.union(v.literal("concise"), v.literal("guided"), v.literal("detailed"))),
     question: v.optional(ownerQuestionV),
     /** Screen and pointed-at elements the owner sent with a message. */
     screen: v.optional(v.object({ path: v.string(), title: v.string() })),

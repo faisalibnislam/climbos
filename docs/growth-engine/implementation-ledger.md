@@ -1,5 +1,7 @@
 ## 17 November 2026 — exact booking/customer association
 
+Added personal explanation depth to the existing Profile/preferences/Climb AI path, with per-request snapshots and legacy defaults. A regression also exposed and fixed acceptance of another message’s processing run. 32 focused tests, desktop/mobile browser checks, typecheck and scoped lint passed. [Audit](explanation-preference-audit.md). Row 18 remains partial pending broader adaptive-explanation and comprehension evaluation.
+
 Added exact tenant-scoped booking links and conditional ownership of booking-generated next steps. Cancellation retains remaining appointments/manual steps; attendance reaches renamed direct-booking deals. Public refs require matching address evidence; ambiguous associations remain separate rather than guessed. [Audit](booking-deal-identity-audit.md).
 
 ## 17 November 2026 — workspace-day follow-up checks

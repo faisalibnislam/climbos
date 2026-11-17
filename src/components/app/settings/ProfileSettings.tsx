@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
+import type { ExplanationDepth } from "@shared/climb/explanation";
 import { useState, type FormEvent } from "react";
 import { Button, Callout, Field, Input, RadioCards, Switch, toast } from "@/components/ui";
 import { errorInfo } from "../errors";
@@ -18,7 +19,7 @@ export function ProfileSettings({ slug: _slug }: { slug: string }) {
   return (
     <div className="flex flex-col gap-6">
       <SettingsHeader title="Profile" intro="Applies to all your workspaces" />
-      {prefs === undefined ? <LoadingBlock label="Loading your profile…" /> : <ProfileForm key={`${prefs.name}-${prefs.digest}-${prefs.usageAlerts}`} prefs={prefs} />}
+      {prefs === undefined ? <LoadingBlock label="Loading your profile…" /> : <ProfileForm key={`${prefs.name}-${prefs.digest}-${prefs.usageAlerts}-${prefs.explanationDepth}`} prefs={prefs} />}
     </div>
   );
 }
@@ -28,16 +29,17 @@ function ProfileForm({ prefs }: { prefs: Prefs }) {
   const [name, setName] = useState(prefs.name ?? "");
   const [digest, setDigest] = useState<Digest>(prefs.digest as Digest);
   const [alerts, setAlerts] = useState(prefs.usageAlerts);
+  const [depth, setDepth] = useState<ExplanationDepth>(prefs.explanationDepth);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const dirty = name !== (prefs.name ?? "") || digest !== prefs.digest || alerts !== prefs.usageAlerts;
+  const dirty = name !== (prefs.name ?? "") || digest !== prefs.digest || alerts !== prefs.usageAlerts || depth !== prefs.explanationDepth;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      await update({ digest, usageAlerts: alerts, name });
+      await update({ digest, usageAlerts: alerts, name, explanationDepth: depth });
       toast({ tone: "success", title: "Profile saved" });
     } catch (err) {
       setError(errorInfo(err).message);
@@ -61,6 +63,15 @@ function ProfileForm({ prefs }: { prefs: Prefs }) {
         </div>
       </section>
 
+      <section aria-labelledby="explanation-heading" className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5">
+        <h2 id="explanation-heading" className="heading-section">How Climb AI explains things</h2>
+        <RadioCards aria-labelledby="explanation-heading" columns={3} value={depth} onValueChange={v => setDepth(v as ExplanationDepth)} options={[
+          { value: "concise", title: "Concise", description: "The answer and next step" },
+          { value: "guided", title: "Guided", description: "A plain explanation and helpful example" },
+          { value: "detailed", title: "Detailed", description: "Evidence, alternatives and tradeoffs" },
+        ]} />
+        <p className="text-sm text-ink-2">Applies to your next Climb AI messages across workspaces. You can ask for a different level of detail in any message. Your brand’s public content and approval settings stay the same.</p>
+      </section>
       <PushSettings />
       <section aria-labelledby="email-heading" className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5">
         <h2 id="email-heading" className="heading-section">

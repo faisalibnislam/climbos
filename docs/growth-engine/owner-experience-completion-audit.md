@@ -13,7 +13,7 @@
 | 15 | Keep simple tasks simple | Saved drafts open without regeneration. The assistant now appends contextual discussion requests to existing unsent text instead of overwriting it. | Broader task completion and editing-effort benchmarks remain. |
 | 16 | Explain recommendations | Why this plan retains rationale, offer economics, timing and direction. Failed-check reasons and fixes are now available on the main plan. | Saved explanation visibility does not prove its truth or causal validity. |
 | 17 | Distinguish urgent from optional | Failed, provisional and stale-input states are distinct; blocking checks precede optional strategy/research detail. | No universal business-urgency classifier or validated urgency ranking is claimed. |
-| 18 | Adapt explanation depth | Optional discussion and expandable details offer simpler explanations on request. | Persistent adaptation to the owner's knowledge level is not established. |
+| 18 | Adapt explanation depth | Optional discussion and expandable details now complement a personal Concise/Guided/Detailed setting, saved through Profile and snapshotted per Climb AI request. See [audit](explanation-preference-audit.md). | Explicit choice does not infer expertise; live-model adherence and real-owner comprehension remain unverified. |
 | 19 | Reduce dashboard overload | Primary navigation is Home, Your goals and Your work; specialist tools remain available through secondary navigation. | App-wide usability and accessibility remain unverified. |
 | 20 | Communicate progress | `RunProgress` uses recorded workflow steps; `PlanTimeline` uses saved task completion, and experiments expose reported results separately. | Completed tasks do not prove customer/revenue progress; provider failures and all journey states were not exhaustively exercised here. |
 
@@ -34,3 +34,7 @@ The browser regression first failed because the saved reason was absent, then re
 104 focused unit/Convex tests across 11 files, root and Convex type checks, scoped ESLint, and four browser tests passed. Exact commands are in `docs/Verification.md`. No live-model evaluation, paid work, external send, publication or deployment occurred. The older `e2e/focused-experience.spec.ts` contains expectations for an earlier demo layout and was not run or reconciled in this batch; no full-suite green claim is made.
 
 Next: continue the requirement audit into intelligence/evidence and decision quality. Carry forward the unresolved owner-usability and adaptive-explanation requirements rather than marking them complete from fixture tests.
+
+## 17 November 2026 — saved explanation preference
+
+Personal depth now reaches the actual assistant request while preserving legacy defaults and current-message overrides. A reproduced same-tenant wrong-run context defect is fixed. [Audit](explanation-preference-audit.md) records 32 focused tests, desktop/mobile persistence checks and remaining comprehension limits. This later batch adds optional schema fields and guidance; the earlier no-schema/no-prompt statement describes only its original plan-check batch. Row 18 remains partial.

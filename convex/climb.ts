@@ -1,3 +1,4 @@
+import { explanationDepth, explanationGuidance } from "../shared/climb/explanation";
 import { OwnerQuestionSchema, ownerAnswer, ownerAnswerLabel } from "../shared/climb/ownerQuestion";
 import { ownerQuestionV } from "./lib/ownerQuestion";
 import { v } from "convex/values";
@@ -99,8 +100,10 @@ export const send = mutation({
       .withIndex("by_org_user_created", (q) => q.eq("orgId", org._id).eq("userId", user._id).gt("createdAt", Date.now() - 60_000))
       .take(30);
     if (recent.filter((m) => m.role === "user").length >= 8) throw appError("RATE_LIMITED", "That's a lot of messages in a minute. Give Climb AI a moment.");
+    const preferences = await ctx.db.query("userPreferences").withIndex("by_user", q => q.eq("userId", user._id)).unique();
+    const depth = explanationDepth(preferences?.explanationDepth);
     // Reserve one turn now; each further turn tops up as it happens (most answers take one or two).
-    const runId = await createRunWithReservation(ctx, { org, kind: "climb_chat", title: "Climb AI", roles: ["coo"], input: { text: clean.slice(0, 500) }, steps: [TURN], meters: {}, createdBy: user._id, isFixture: org.kind === "demo" });
+    const runId = await createRunWithReservation(ctx, { org, kind: "climb_chat", title: "Climb AI", roles: ["coo"], input: { text: clean.slice(0, 500), explanationDepth: depth }, steps: [TURN], meters: {}, createdBy: user._id, isFixture: org.kind === "demo" });
     const run = (await ctx.db.get(runId))!;
     await ctx.db.patch(runId, { budget: { ...run.budget, modelSteps: Math.max(run.budget.modelSteps, MAX_TURNS + 1) } });
     const messageId = await ctx.db.insert("climbMessages", {
@@ -108,6 +111,7 @@ export const send = mutation({
       userId: user._id,
       role: "user",
       text: clean,
+      explanationDepth: depth,
       screen: { path: screen.path.slice(0, 200), title: screen.title.slice(0, 120) },
       selection: selection?.slice(0, 8).map((s) => ({ type: s.type.slice(0, 40), id: s.id.slice(0, 80), label: s.label.slice(0, 160) })),
       status: "done",
@@ -148,7 +152,7 @@ export const context = internalQuery({
   handler: async (ctx, { messageId, runId }) => {
     const m = await ctx.db.get(messageId);
     const run = await ctx.db.get(runId);
-    if (!m || !run || run.orgId !== m.orgId) return null;
+    if (!m || !run || run.orgId !== m.orgId || m.runId !== runId || run.createdBy !== m.userId || run.kind !== "climb_chat") return null;
     const org = await ctx.db.get(m.orgId);
     const history = await ctx.db
       .query("climbMessages")
@@ -278,7 +282,7 @@ export const respond = action({
         failed = step.reason === "paused" ? "Activity is paused, so Climb AI stopped." : "Climb AI reached its limit for this message.";
         break;
       }
-      const r = await turn({ modelKey: active, cacheKey: "climbos:climb", system: [{ text: RULES, cache: true }], messages, customTools: tools as ToolDef[], ...CLIMB_CONFIG.turn }, rates);
+      const r = await turn({ modelKey: active, cacheKey: "climbos:climb", system: [{ text: RULES, cache: true }, { text: explanationGuidance(m.explanationDepth) }], messages, customTools: tools as ToolDef[], ...CLIMB_CONFIG.turn }, rates);
       if (step.stepId && (r.usage.calls > 0 || r.costMicros > 0)) await ctx.runMutation(internal.engine.recordUsage, { stepId: step.stepId, records: claudeUsageRecords(active, r, rates) });
       if (step.stepId) await ctx.runMutation(internal.engine.completeStep, { stepId: step.stepId });
       if (!r.ok) {

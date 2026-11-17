@@ -433,20 +433,20 @@ export const preferences = query({
       .query("userPreferences")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .unique();
-    return { digest: p?.digest ?? "weekly", usageAlerts: p?.usageAlerts ?? true, email: user.email ?? null, name: user.name ?? null };
+    return { explanationDepth: p?.explanationDepth ?? "concise" as const, digest: p?.digest ?? "weekly", usageAlerts: p?.usageAlerts ?? true, email: user.email ?? null, name: user.name ?? null };
   },
 });
 
 export const updatePreferences = mutation({
-  args: { digest: v.union(v.literal("daily"), v.literal("weekly"), v.literal("off")), usageAlerts: v.boolean(), name: v.optional(v.string()) },
+  args: { digest: v.union(v.literal("daily"), v.literal("weekly"), v.literal("off")), usageAlerts: v.boolean(), name: v.optional(v.string()), explanationDepth: v.optional(v.union(v.literal("concise"), v.literal("guided"), v.literal("detailed"))) },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     const p = await ctx.db
       .query("userPreferences")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .unique();
-    if (p) await ctx.db.patch(p._id, { digest: args.digest, usageAlerts: args.usageAlerts });
-    else await ctx.db.insert("userPreferences", { userId: user._id, digest: args.digest, usageAlerts: args.usageAlerts });
+    if (p) await ctx.db.patch(p._id, { digest: args.digest, usageAlerts: args.usageAlerts, ...(args.explanationDepth !== undefined ? { explanationDepth: args.explanationDepth } : {}) });
+    else await ctx.db.insert("userPreferences", { userId: user._id, digest: args.digest, usageAlerts: args.usageAlerts, explanationDepth: args.explanationDepth ?? "concise" });
     if (args.name !== undefined) await ctx.db.patch(user._id, { name: args.name.trim().slice(0, 80) || undefined });
   },
 });

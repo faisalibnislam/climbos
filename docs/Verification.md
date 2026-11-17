@@ -1,5 +1,16 @@
 ## 17 November 2026 — exact booking/customer association
 
+## 17 November 2026 — personal explanation depth
+
+Profile saves Concise/Guided/Detailed per person; actual assistant requests receive the saved snapshot. Exact request/run matching rejects a reproduced wrong-run case. [Audit](growth-engine/explanation-preference-audit.md).
+
+- `pnpm exec vitest run tests/convex/explanation-preferences.test.ts tests/convex/climb.test.ts tests/convex/pipeline-assistant-context.test.ts tests/unit/climb-tool-output.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts` — 32 passed across six files, final rerun 3.53 seconds.
+- `CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env E2E_BASE_URL=http://127.0.0.1:3420 pnpm exec playwright test e2e/explanation-preferences.spec.ts --workers=1` — desktop/mobile passed. Recovered terminal `test-results/.last-run.json` reports passed with no failed tests; both project captures exist. Exact duration was not retained. Save/reload, privacy, no consequential records, no page errors, overflow and targeted axe checks covered. Mobile capture inspected; full accessibility not established.
+- `pnpm typecheck` — root and Convex passed in the recovered rerun.
+- `pnpm exec eslint shared/climb/explanation.ts convex/climb.ts convex/settings.ts convex/schema.ts src/components/app/settings/ProfileSettings.tsx tests/convex/explanation-preferences.test.ts e2e/explanation-preferences.spec.ts` — passed.
+
+Initial focused tests reproduced wrong request/run acceptance (5/6 passed); the exact-binding fix and legacy case preceded the final 32-test result. Only the isolated loopback backend was synced. Model output was mocked; delivered guidance is verified, real comprehension and model adherence are not. No live send, publish, spend or hosted deployment.
+
 New exact links separate booking-managed next steps from owner edits, preserve other appointments on cancellation, and route attendance notes to directly booked deals. [Audit](growth-engine/booking-deal-identity-audit.md).
 
 - `pnpm exec vitest run tests/convex/booking-deal-identity.test.ts tests/convex/bookings.test.ts tests/convex/booking-outcome-boundary.test.ts tests/convex/outbound.test.ts tests/convex/pipeline-follow-up-dates.test.ts tests/convex/crm.test.ts tests/convex/crm-loss-reasons.test.ts tests/convex/pipeline-deal-review.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — 62 passed across ten files, 7.30 seconds.
