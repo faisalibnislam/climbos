@@ -1,3 +1,4 @@
+import type { CustomerProgressEvidence } from "./customerProgress";
 import type { FactEvidenceBasis } from "../agents/evidenceKind";
 
 /** Recorded permission is evidence to review, not sending authorization. */
@@ -6,6 +7,7 @@ export function currentMarketingConsent(record: { purpose: string; withdrawnAt?:
 }
 
 export interface EmailAudienceSnapshot {
+  customerProgress?: CustomerProgressEvidence;
   contacts: number | null;
   consented: number | null;
   observedContacts: number;

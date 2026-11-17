@@ -1,3 +1,4 @@
+import { customerProgressEvidence } from "../../shared/growth/customerProgress";
 import { currentMarketingConsent, type EmailAudienceSnapshot } from "../../shared/growth/emailAudience";
 import type { Id } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
@@ -22,10 +23,11 @@ export async function recordedMarketingConsent(ctx: Pick<QueryCtx, "db">, orgId:
 /** Planning evidence only. A capped join cannot become an exact sendable audience. */
 export async function planningEmailAudience(ctx: QueryCtx, orgId: Id<"organizations">): Promise<EmailAudienceSnapshot> {
   const observedAt = Date.now();
-  const [contacts, consents, suppressions] = await Promise.all([
+  const [contacts, consents, suppressions, progress] = await Promise.all([
     ctx.db.query("contacts").withIndex("by_org", q => q.eq("orgId", orgId)).take(PLANNING_SAMPLE + 1),
     ctx.db.query("consentRecords").withIndex("by_org_contact", q => q.eq("orgId", orgId)).take(PLANNING_SAMPLE + 1),
     ctx.db.query("suppressions").withIndex("by_org_email", q => q.eq("orgId", orgId)).take(PLANNING_SAMPLE + 1),
+    ctx.db.query("contactProgress").withIndex("by_org", q => q.eq("orgId", orgId)).take(101),
   ]);
   const limitations: string[] = [];
   for (const [name, rows] of [["Contact", contacts], ["Consent", consents], ["Suppression", suppressions]] as const) {
@@ -42,5 +44,5 @@ export async function planningEmailAudience(ctx: QueryCtx, orgId: Id<"organizati
   const suppressed = new Set(suppressions.map(r => r.emailHash));
   const count = active.filter(c => consented.has(c._id) && !suppressed.has(c.emailHash) && c.emailCiphertext && c.emailIv).length;
   const knownEmpty = contacts.length <= PLANNING_SAMPLE && active.length === 0;
-  return { contacts: contacts.length > PLANNING_SAMPLE ? null : active.length, consented: knownEmpty ? 0 : limitations.length ? null : count, observedContacts: active.length, coverage: limitations.length ? "partial" : "complete", limitations, observedAt };
+  return { customerProgress: customerProgressEvidence(active.map(contact => ({ customerProgress: progress.slice(0, 100).find(report => report.contactId === contact._id)?.progress })), contacts.length <= PLANNING_SAMPLE && progress.length <= 100, observedAt), contacts: contacts.length > PLANNING_SAMPLE ? null : active.length, consented: knownEmpty ? 0 : limitations.length ? null : count, observedContacts: active.length, coverage: limitations.length ? "partial" : "complete", limitations, observedAt };
 }

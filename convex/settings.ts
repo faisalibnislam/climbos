@@ -488,6 +488,7 @@ export const exportData = internalQuery({
     const weeklyReports = await ctx.db.query("playResults").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
     const weeklyRevisions = await ctx.db.query("playResultRevisions").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
     const outcomeRevisions = await ctx.db.query("experimentOutcomeRevisions").withIndex("by_org", q => q.eq("orgId", orgId)).take(1001);
+    const contactProgress = await ctx.db.query("contactProgress").withIndex("by_org", q => q.eq("orgId", orgId)).take(101);
     const brandPatterns = await ctx.db.query("brandPatternDecisions").withIndex("by_org_key_at", q => q.eq("orgId", orgId)).take(101);
     const strip = <T extends Record<string, unknown>>(rows: T[]) => rows.map(({ _creationTime: _c, ...r }) => r);
     return JSON.stringify(
@@ -517,6 +518,8 @@ export const exportData = internalQuery({
         weeklyReportHistoryLimited: weeklyRevisions.length > 1000,
         experimentOutcomeRevisions: strip(outcomeRevisions.slice(0, 1000)),
         experimentOutcomeHistoryLimited: outcomeRevisions.length > 1000,
+        customerProgress: strip(contactProgress.slice(0, 100)),
+        customerProgressLimited: contactProgress.length > 100,
         brandPatternDecisions: strip(brandPatterns.slice(0, 100)),
         brandPatternHistoryLimited: brandPatterns.length > 100,
         artifacts: strip(artifacts),
@@ -605,6 +608,8 @@ export const deleteContact = mutation({
         .withIndex("by_org_contact", (q) => q.eq("orgId", org._id).eq("contactId", c._id))
         .take(50);
       for (const r of consents) await ctx.db.delete(r._id);
+      const progress = await ctx.db.query("contactProgress").withIndex("by_org_contact", q => q.eq("orgId", org._id).eq("contactId", c._id)).unique();
+      if (progress) await ctx.db.delete(progress._id);
       await ctx.db.delete(c._id);
     }
     const existing = await ctx.db
@@ -785,6 +790,7 @@ const PURGE_BY_ORG: { table: string; index: string }[] = [
   { table: "connectionCapabilities", index: "by_org" },
   { table: "followerSnapshots", index: "by_org_provider_day" },
   { table: "connections", index: "by_org" },
+  { table: "contactProgress", index: "by_org" },
   { table: "contacts", index: "by_org" },
   { table: "experimentOutcomeRevisions", index: "by_org" },
   { table: "businessModelTests", index: "by_org_created" },

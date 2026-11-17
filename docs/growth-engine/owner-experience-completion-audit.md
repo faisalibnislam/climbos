@@ -38,3 +38,7 @@ Next: continue the requirement audit into intelligence/evidence and decision qua
 ## 17 November 2026 — saved explanation preference
 
 Personal depth now reaches the actual assistant request while preserving legacy defaults and current-message overrides. A reproduced same-tenant wrong-run context defect is fixed. [Audit](explanation-preference-audit.md) records 32 focused tests, desktop/mobile persistence checks and remaining comprehension limits. This later batch adds optional schema fields and guidance; the earlier no-schema/no-prompt statement describes only its original plan-check batch. Row 18 remains partial.
+
+## 17 November 2026 — customer progress observations
+
+Owners can record and correct dated progress for a known uploaded contact, with distinct product/journey scopes, recent history and explicit Unknown. These reports inform planning but do not imply live activity or action permission. [Audit](customer-progress-evidence-audit.md) records evidence snapshots, 69 tests, desktop/mobile checks and remaining automatic lifecycle work.

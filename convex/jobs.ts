@@ -1,5 +1,7 @@
 "use node";
 
+import { customerProgressBrief, customerProgressFacts } from "../shared/growth/customerProgress";
+
 import { emailReadinessBrief } from "../shared/growth/emailReadiness";
 
 import { isSocialChannel } from "../shared/growth/socialChannels";
@@ -804,6 +806,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     job.run.kind === "strategy" && b?.acquisition?.channelPreferences?.length
       ? `OWNER CHANNEL FEEDBACK (owner-reported preferences, not measured performance, customer demand or action permission):\n${untrusted("saved channel preferences", JSON.stringify(b.acquisition.channelPreferences.map(({ channelId, preference, rationale, evidenceDate }) => ({ channelId, channel: CHANNEL_BY_ID[channelId]?.name ?? channelId, preference, rationale, evidenceDate }))), 16_000)}\nDo not select dismissed or irrelevant channels for the immediate execution portfolio unless the owner clears that preference. Avoid, prefer and already_using are soft context, not proof of fit or permission. Preserve grounded, adjacent and bold exploration; a speculative alternative may explain what would justify reconsideration without selecting or executing the dismissed channel.`
       : "",
+    customerProgressBrief(job.audience?.customerProgress),
     emailAudienceBrief(job.audience, job.run.kind === "business_model_check" ? { startedAt: job.run.createdAt } : undefined),
     emailReadinessBrief(job.emailSenderReadiness),
     trustPostureContext(job.facts.map((f) => f.evidenceKind)),
@@ -2561,7 +2564,23 @@ export const simplePlanJob = internalAction({
         task === "retention_plan"
           ? "TASK: Design concise lifecycle plays for existing customers and people who agreed to hear from the business. Include retention, upsell, or cross-sell only when the supplied business facts identify the specific product/service, a relevant customer need or value signal, and a credible behavior-based trigger. For each play, fill expansionAssessment. Never infer a customer's value from age, spend, or plan alone; distinguish measured, owner-reported, source-reported, inferred, assumed, and unknown. For an expansion recommendation, quote separate supplied evidence for the offering, customer value signal, and timing trigger, cite each by fact:N or an exact source URL actually supplied to this run, and state a qualified outcome and baseline/comparison. If product catalog, customer need/value, consent, or trigger evidence is missing, choose validate_first, leave invented offers out, list the smallest useful owner input or validation step, and keep unknowns explicit. Use a behavior or lifecycle event for timing; do not invent a calendar deadline or customer activity. Match evidence labels to the recorded source class, not words such as analytics in a statement. Define an outcome, comparison and stop/continue rules for retention as well as expansion, without guessed numeric thresholds. Keep observationWindowDays null when a meaningful period is unknown and name the needed owner input; any proposed numeric period still needs owner confirmation and is not a schedule. This output is advice and draft direction only; do not contact customers, change billing or publish."
           : "TASK: Define the ideal customer, qualification questions and a follow-up sequence for leads the business ALREADY has (inbound or CRM). Never imply access to a contact database.";
-      const input = agentInput(job, `${text.replace(/^TASK: /, "")}${planContext(job)}`);
+      let input = agentInput(job, `${text.replace(/^TASK: /, "")}${planContext(job)}`);
+      let progressSnapshot: { capturedAt: number; coverage: typeof job.audience.customerProgress; facts: { reference: string; basis: "owner_reported"; statement: string }[] } | undefined;
+      if (task === "retention_plan") {
+        const progressFacts = customerProgressFacts(job.audience?.customerProgress);
+        input.facts.push(...progressFacts);
+        input.constraints = { ...input.constraints, factKinds: [...(input.constraints?.factKinds ?? []), ...progressFacts.map(() => "owner" as const)], factEvidenceBases: [...(input.constraints?.factEvidenceBases ?? []), ...progressFacts.map(() => "owner_reported" as const)] };
+        progressSnapshot = { capturedAt: job.audience.observedAt, coverage: job.audience.customerProgress, facts: progressFacts.map((statement, index) => ({ reference: `fact:${job.facts.length + index}`, basis: "owner_reported", statement })) };
+        // Before the existing model phase indices: resume with the original input and evidence.
+        const snapshot = await begin(ctx, runId, -1, "compute", "Save the lifecycle evidence", "customer_success_manager");
+        if (snapshot.checkpoint !== undefined) {
+          const saved = snapshot.checkpoint as { input: AgentInput; progressSnapshot: NonNullable<typeof progressSnapshot> };
+          input = saved.input; progressSnapshot = saved.progressSnapshot;
+        } else {
+          if (!job.run.isFixture && (job.run.used.modelSteps > 0 || job.run.used.researchTools > 0)) throw new JobStop("legacy_retention_context", "This older lifecycle run has no saved evidence snapshot. Start a new retention plan rather than mixing earlier work with current observations.");
+          await ctx.runMutation(internal.engine.completeStep, { stepId: snapshot.stepId!, output: JSON.stringify({ input, progressSnapshot }) });
+        }
+      }
       const meta: AgentMeta = {};
       const out = await runAgentTask<unknown>(
         ctx,
@@ -2570,7 +2589,7 @@ export const simplePlanJob = internalAction({
         task === "retention_plan" ? retentionSpec() : salesSpec(),
         input,
         startedAt,
-        { task, context: "", ctx: fixtureCtx(job), text: `${text}\n\n${businessBrief(job)}` },
+        { task, context: "", ctx: fixtureCtx(job), text: `${input.task}\n\n${input.brief}` },
         meta,
       );
       let checkedOutput = out;
@@ -2583,7 +2602,7 @@ export const simplePlanJob = internalAction({
           const issue = lintAgentOutput(spec, input, parsed.data, research).find(issue => issue.severity === "error");
           if (issue) throw new JobStop("invalid_retention_plan", `The lifecycle recommendation needs correction: ${issue.message}`);
         }
-        checkedOutput = parsed.data;
+        checkedOutput = { ...parsed.data, ...(progressSnapshot ? { customerProgressEvidence: progressSnapshot } : {}) };
       }
       await finish(ctx, runId, "verified", { output: checkedOutput });
       if (cardId) await ctx.runMutation(internal.jobWrites.updateActionCard, { cardId, status: "done" });

@@ -1,3 +1,5 @@
+import { customerProgressStateV } from "./lib/customerProgress";
+import { progressScopeKey, validProgressDate } from "../shared/growth/customerProgress";
 import { emailReadinessValidator, recordedEmailReadiness } from "./lib/emailReadiness";
 import { emailSenderDomain, type EmailSenderReadiness } from "../shared/growth/emailReadiness";
 import { checkContactFrequency, frequencyBlockMessage, type ContactHistory } from "../shared/growth/contactFrequency";
@@ -107,6 +109,48 @@ export const insertContacts = internalMutation({
       }
     }
     return { inserted, updated };
+  },
+});
+
+/** Look up one known contact; never expose the tenant's raw contact list. */
+export const contactProgress = query({
+  args: { slug: v.string(), email: v.string() },
+  handler: async (ctx, { slug, email }) => {
+    const { org, role } = await requireOrgAccess(ctx, { slug }, "view");
+    const clean = email.trim().toLowerCase();
+    if (!EMAIL_RE.test(clean)) throw appError("INVALID", "Enter the contact's email address.");
+    const hash = await sha256Hex(clean);
+    const matches = await ctx.db.query("contacts").withIndex("by_org_email", q => q.eq("orgId", org._id).eq("emailHash", hash)).take(2);
+    if (matches.length !== 1 || matches[0].deletedAt !== undefined) return null;
+    const contact = matches[0];
+    const record = await ctx.db.query("contactProgress").withIndex("by_org_contact", q => q.eq("orgId", org._id).eq("contactId", contact._id)).unique();
+    return { contactId: contact._id, name: contact.displayName ?? "Uploaded contact", canEdit: can(role, "manage_connections"), progress: record?.progress ?? { current: [], history: [], revision: 0 } };
+  },
+});
+
+/** Explicit owner observation/correction only. This cannot enroll, schedule or contact anybody. */
+export const recordContactProgress = mutation({
+  args: { slug: v.string(), contactId: v.id("contacts"), expectedRevision: v.number(), scope: v.string(), state: customerProgressStateV, criterion: v.string(), evidence: v.string(), observedOn: v.string() },
+  handler: async (ctx, args) => {
+    const { org, user } = await requireOrgAccess(ctx, { slug: args.slug }, "manage_connections");
+    const contact = assertSameOrg(await ctx.db.get(args.contactId), org._id, "contact");
+    if (contact.deletedAt !== undefined) throw appError("NOT_FOUND", "This contact was deleted.");
+    const record = await ctx.db.query("contactProgress").withIndex("by_org_contact", q => q.eq("orgId", org._id).eq("contactId", contact._id)).unique();
+    const previous = record?.progress ?? { current: [], history: [], revision: 0 };
+    if (!Number.isSafeInteger(args.expectedRevision) || args.expectedRevision !== previous.revision) throw appError("INVALID", "This contact's progress changed. Look up the contact again before saving.");
+    const scope = args.scope.normalize("NFC").trim().replace(/\s+/g, " ");
+    const criterion = args.criterion.trim(), evidence = args.evidence.trim();
+    if (!scope || scope.length > 80 || !criterion || criterion.length > 300 || !evidence || evidence.length > 500 || !validProgressDate(args.observedOn, Date.now())) throw appError("INVALID", "Add a product or journey (up to 80 characters), a definition (300), evidence (500), and a valid observation date no later than today in UTC.");
+    const key = progressScopeKey(scope);
+    const existing = previous.current.find(r => progressScopeKey(r.scope) === key);
+    if (!existing && previous.current.length >= 20) throw appError("LIMIT_REACHED", "This contact already has 20 product or journey scopes. Review an existing scope.");
+    const revision = previous.revision + 1;
+    const report = { scope: existing?.scope ?? scope, state: args.state, criterion, evidence, observedOn: args.observedOn, recordedAt: Date.now(), recordedBy: user._id, revision };
+    const progress = { current: [...previous.current.filter(r => progressScopeKey(r.scope) !== key), report], history: [...previous.history, report].slice(-20), revision };
+    if (record) await ctx.db.patch(record._id, { progress });
+    else await ctx.db.insert("contactProgress", { orgId: org._id, contactId: contact._id, progress });
+    await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "contact.progress_recorded", subjectType: "contact", subjectId: contact._id, summary: `Owner recorded customer progress, revision ${revision}. No message, enrollment or consent change.` });
+    return progress;
   },
 });
 

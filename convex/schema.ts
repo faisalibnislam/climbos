@@ -1,3 +1,4 @@
+import { customerProgressRecordV } from "./lib/customerProgress";
 import { emailReadinessValidator } from "./lib/emailReadiness";
 import { ownerQuestionV } from "./lib/ownerQuestion";
 import { authTables } from "@convex-dev/auth/server";
@@ -1846,6 +1847,13 @@ export default defineSchema({
   })
     .index("by_org", ["orgId"])
     .index("by_org_email", ["orgId", "emailHash"]),
+
+  /** Kept separate so contact eligibility scans never load narrative observation history. */
+  contactProgress: defineTable({
+    orgId: v.id("organizations"),
+    contactId: v.id("contacts"),
+    progress: customerProgressRecordV,
+  }).index("by_org", ["orgId"]).index("by_org_contact", ["orgId", "contactId"]),
 
   consentRecords: defineTable({
     orgId: v.id("organizations"),

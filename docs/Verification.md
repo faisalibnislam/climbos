@@ -1,4 +1,13 @@
-## 17 November 2026 — exact booking/customer association
+## 17 November 2026 — customer progress observations
+
+[Audit](growth-engine/customer-progress-evidence-audit.md) traces owner input → dated scoped records → bounded planning evidence → actual retention writer → stable retry snapshot → saved review output. Saving observations has no sending or enrollment side effect.
+
+- `pnpm exec vitest run tests/convex/customer-progress.test.ts tests/convex/planning-email-audience.test.ts tests/convex/retention-plan-validation.test.ts tests/unit/retention-expansion.test.ts tests/convex/marketing.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — **69 passed across seven files, 6.07 seconds**. Includes original input preserved on retry, new plans using corrections, legacy mixed-context rejection, export/deletion/purge, missing/invalid/conflicting observations, scope separation and permission boundaries.
+- `CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env E2E_BASE_URL=http://127.0.0.1:3420 pnpm exec playwright test e2e/customer-progress.spec.ts --workers=1` — **two passed, 25.0 seconds** in the final run. Desktop/mobile save, correction to Unknown, history and reload, with unchanged consent/chat/workflow/approval/receipt/webhook/email-log records. No page errors, horizontal overflow or serious/critical targeted axe findings. Mobile capture inspected; full accessibility remains unverified.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint shared/growth/customerProgress.ts shared/growth/emailAudience.ts shared/agents/specs.ts convex/lib/customerProgress.ts convex/lib/marketingAudience.ts convex/schema.ts convex/marketing.ts convex/jobs.ts convex/settings.ts src/components/app/connections/CustomerProgressDialog.tsx src/components/app/connections/ContactsCsvDialog.tsx tests/convex/customer-progress.test.ts e2e/customer-progress.spec.ts` — passed.
+
+The first isolated sync failed after an import was placed before `use node`; fixing the directive order restored bundling. Final isolated sync passed in 7.27 seconds and generated the established API type update. Earlier browser runs passed; final rerun followed the snapshot and editor-state changes. Model calls were mocked. No live provider, paid model, customer message, hosted deployment or new execution authority. Manual reports do not prove current product behavior, causal retention or real recommendation quality. Engine `v3.134-customer-progress-evidence`.
 
 ## 17 November 2026 — personal explanation depth
 
@@ -10,6 +19,8 @@ Profile saves Concise/Guided/Detailed per person; actual assistant requests rece
 - `pnpm exec eslint shared/climb/explanation.ts convex/climb.ts convex/settings.ts convex/schema.ts src/components/app/settings/ProfileSettings.tsx tests/convex/explanation-preferences.test.ts e2e/explanation-preferences.spec.ts` — passed.
 
 Initial focused tests reproduced wrong request/run acceptance (5/6 passed); the exact-binding fix and legacy case preceded the final 32-test result. Only the isolated loopback backend was synced. Model output was mocked; delivered guidance is verified, real comprehension and model adherence are not. No live send, publish, spend or hosted deployment.
+
+## 17 November 2026 — exact booking/customer association
 
 New exact links separate booking-managed next steps from owner edits, preserve other appointments on cancellation, and route attendance notes to directly booked deals. [Audit](growth-engine/booking-deal-identity-audit.md).
 

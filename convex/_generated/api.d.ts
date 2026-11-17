@@ -96,6 +96,7 @@ import type * as lib_contactPressure from "../lib/contactPressure.js";
 import type * as lib_costDisplay from "../lib/costDisplay.js";
 import type * as lib_credits from "../lib/credits.js";
 import type * as lib_crypto from "../lib/crypto.js";
+import type * as lib_customerProgress from "../lib/customerProgress.js";
 import type * as lib_customerVoice from "../lib/customerVoice.js";
 import type * as lib_designLearning from "../lib/designLearning.js";
 import type * as lib_emailReadiness from "../lib/emailReadiness.js";
@@ -271,6 +272,7 @@ declare const fullApi: ApiFromModules<{
   "lib/costDisplay": typeof lib_costDisplay;
   "lib/credits": typeof lib_credits;
   "lib/crypto": typeof lib_crypto;
+  "lib/customerProgress": typeof lib_customerProgress;
   "lib/customerVoice": typeof lib_customerVoice;
   "lib/designLearning": typeof lib_designLearning;
   "lib/emailReadiness": typeof lib_emailReadiness;

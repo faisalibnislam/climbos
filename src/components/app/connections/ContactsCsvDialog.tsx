@@ -1,5 +1,6 @@
 "use client";
 
+import { CustomerProgressDialog } from "./CustomerProgressDialog";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Download } from "@/components/icons"
@@ -201,6 +202,7 @@ export function AudienceSummary({ slug }: { slug: string }) {
   return (
     <div className="flex flex-col gap-2">
       <h4 className="text-ui font-semibold text-ink-2">Who can be emailed</h4>
+      <CustomerProgressDialog slug={slug} />
       <DataTable
         caption="Contacts by segment and how many can receive marketing email"
         hideCaption

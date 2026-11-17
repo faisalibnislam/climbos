@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Customer progress can now be recorded and corrected for uploaded contacts, separately by product or journey. Dated owner observations and their definitions inform planning; retention runs preserve their original evidence across retries. This is manual evidence, not automatic product tracking or lifecycle enrollment. See [the audit](growth-engine/customer-progress-evidence-audit.md).
+
 Climb AI now remembers each person’s preferred explanation depth: Concise, Guided or Detailed, saved in Profile and captured for each new request. Public content style and approval controls retain their own settings. This is an explicit preference, not a claim to infer expertise. See [the audit](growth-engine/explanation-preference-audit.md) for verified behavior and limits.
 
 New bookings now retain their exact customer-record link. Cancelling one call preserves another confirmed call and owner-edited next steps; attendance notes also reach directly booked customer records after renaming. Ambiguous historical links stay unknown, and the inbox explains when an outcome is saved only on its booking. Address matching is not identity verification. See [the audit](growth-engine/booking-deal-identity-audit.md).

@@ -24,3 +24,7 @@ Tests cover correct owner/measured/source labels, absent provenance, invalid rep
 Quote matching and source-class agreement do not prove semantic truth, causal impact, actual per-customer progress or native-language quality. Numeric periods are not independently verified against every business buying cycle. Current source-note matching is bounded and not a universal source-attribution check. No paid model, browser, provider operation, deployment, enrollment or email send was exercised.
 
 Customer lifecycle event ingestion, explicit entry/exit state, enrollment, per-recipient progress checks and event-triggered marketing sequences remain unfinished scope. Current contacts/segments do not establish completion of a customer's product milestone, and outbound prospect sequences must not be relabeled as that capability. The original 410 requirements and later owner specifications remain incomplete.
+
+## Later 17 November update — structured owner observations
+
+The later [customer-progress batch](customer-progress-evidence-audit.md) adds scoped, dated manual observations to the existing contacts UI and actual retention writer, with original-input checkpoints and saved evidence references. The prior statement about no structured customer progress describes this audit’s starting point. Automatic event ingestion, entry/exit evaluation, enrollment and per-recipient dispatch checks remain unfinished.
