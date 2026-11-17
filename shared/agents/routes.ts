@@ -46,8 +46,10 @@ export function taskModelSlot(task: string, policy: string = ROUTE_VERSION): Mod
 
 /** Output budgets include reasoning. No universal 24k/12k floor for small tasks. */
 export function phaseTokenLimits(id: string, requested: { research: number; draft: number; critic: number }) {
-  const draft = id === "growth_plays" ? 32_000 : ["business_model_check", "business_insights", "seo_brief"].includes(id) ? 24_000
-    : ["growth_strategy", "conversion_audit"].includes(id) ? 16_000
+  // Full strategies carry three creative modes and prepared work. Live runs
+  // exhausted 16k including reasoning; starter plans retain their own 11k cap.
+  const draft = id === "growth_plays" ? 32_000 : ["growth_strategy", "business_model_check", "business_insights", "seo_brief"].includes(id) ? 24_000
+    : id === "conversion_audit" ? 16_000
     : SONNET_AGENTS.has(id) ? 12_000 : 6_000;
   return { research: Math.min(requested.research, 8_000), draft: Math.min(requested.draft, draft), critic: Math.min(requested.critic, 6_000) };
 }

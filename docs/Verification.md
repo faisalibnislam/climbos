@@ -1,3 +1,14 @@
+## 17 November 2026 — full strategy output room
+
+[Audit and live failures](growth-engine/strategy-output-budget-audit.md). Engine `v3.144-strategy-output-budget`.
+
+- Ten focused routing/offer/plan/budget/permission files: **231 passed, 13.83 seconds**; two initial red regressions.
+- Application/Convex typechecks, changed routing/helper/test ESLint and diff checks passed.
+- Corrected-input live run: **five completed calls, $0.667183**. Ecommerce remained below the AI quality bar; education truncated at its previous 16k ceiling. The ceiling is now 24k with matching reservations, but no post-change live success is claimed here.
+- Read-only current lint on the unchanged saved ecommerce output returns no findings after the colon correction. Original ship false / 3.5 assessment and receipts remain intact.
+
+No deployment or external business action. Full product acceptance remains incomplete.
+
 ## 17 November 2026 — declined promotion classification
 
 [Audit](growth-engine/declined-offer-classification-audit.md). Engine `v3.143-declined-offer-classification`.

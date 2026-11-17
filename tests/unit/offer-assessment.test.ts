@@ -81,6 +81,7 @@ describe("offer and promotion recommendations", () => {
     "Prepare the page without a discount.",
     "Do not offer a discount. Improve the page.",
     "No discount or free trial is proposed.",
+    "No offer change: price and margin are unknown, so improve the buying path.",
   ])("does not require promotion economics for a directly declined offer: %s", hook => {
     expect(lintOfferAssessment(undefined, { hook }, context, "offerAssessment")).toEqual([]);
   });
@@ -93,6 +94,7 @@ describe("offer and promotion recommendations", () => {
     "Do not just offer a discount; add a bonus.",
     "Without a discount we will offer a free trial.",
     "No discount\nStart a free trial.",
+    "No offer change: give every buyer a bonus.",
   ])("still requires an assessment for affirmative or ambiguous offer wording: %s", hook => {
     expect(lintOfferAssessment(undefined, { hook }, context, "offerAssessment"))
       .toContainEqual(expect.objectContaining({ rule: "offer_assessment", severity: "error" }));

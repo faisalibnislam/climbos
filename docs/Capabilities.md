@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Full strategy plans now reserve more output room for reasoning, the three creative options and prepared work after two live responses were cut off. Quotes use the same limit as execution; starter-plan limits and existing spending caps remain unchanged. This does not establish better strategy quality. [Evidence and boundaries](growth-engine/strategy-output-budget-audit.md).
+
 Offer recommendations now distinguish an explicitly declined discount from a proposed promotion. The shared validator accepts a comprehension test that needs “no ads, audience or discount” while retaining the full assessment for affirmative offers elsewhere. Public-copy and approval controls are unchanged. [Coverage and limits](growth-engine/declined-offer-classification-audit.md).
 
 Review validation now catches additional incentive, review-change/removal reward and satisfaction-targeting language in copy and proposed actions. Lifecycle final validation rejects those known forms even if the model critic passes them. [Coverage and limits](growth-engine/review-reward-validation-audit.md).

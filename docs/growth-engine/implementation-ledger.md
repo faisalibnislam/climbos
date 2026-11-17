@@ -1,6 +1,12 @@
 ## 17 November 2026 — review reward validation
 
 
+## 17 November — complete strategy output budget
+
+`v3.144-strategy-output-budget`: two metered education responses exhausted the old 16k ceiling including reasoning. Full strategy draft/revision output now allows 24k, using existing quote/reservation/cap enforcement. Starter remains 11k; no model or acceptance-bar change. A further no-offer colon false positive is repaired. 231 focused tests, typecheck and lint passed. [Audit and failed-run limits](strategy-output-budget-audit.md).
+
+
+
 ## 17 November — declined promotion classification
 
 `v3.143-declined-offer-classification`: the real synthetic education evaluation exposed a keyword false positive for “needs no ads, audience or discount.” Shared detailed/focused recommendation validation now recognizes narrow direct negative phrases and closed lists, preserving affirmative or ambiguous mechanisms for full assessment. Public-copy and execution checks are unchanged. Five red cases preceded the fix; 241 tests in nine files passed, then the expanded offer file passed all 26 tests. Typecheck/lint passed. [Audit](declined-offer-classification-audit.md). This is not evidence of live commercial outcomes or full scope completion.

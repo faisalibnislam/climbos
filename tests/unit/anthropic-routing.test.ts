@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { BUILT_IN_ROUTE, routeModelKey, runModel } from "../../shared/ai/modelChoice";
 import { ADVANCED_SLOT, STANDARD_SLOT, ROUTE_VERSION, routeModels, draftsFor, expertEscalationModel, phaseTokenLimits } from "../../shared/agents/routes";
 import { currentRateVersion, getRateVersion, modelCallCostUsd } from "../../shared/economics/rates";
-import { socialSpec } from "../../shared/agents/specs";
-import { planJob } from "../../convex/lib/jobPlans";
+import { focusedStrategySpec, socialSpec, starterStrategySpec } from "../../shared/agents/specs";
+import { agentRevisionSteps, planJob } from "../../convex/lib/jobPlans";
 
 describe("Haiku/Sonnet default policy", () => {
   it("uses Sonnet from the first strategy/copy draft and through review; routine work uses Haiku", () => {
@@ -40,6 +40,20 @@ describe("Haiku/Sonnet default policy", () => {
     expect(batch.maxTokens.draft).toBeLessThanOrEqual(32000);
     expect(quote.steps.some((step) => step.kind === "model" && step.outputBudget === batch.maxTokens.draft)).toBe(true);
     expect(batch.maxRevisions).toBe(single.maxRevisions);
+  });
+  it("reserves room for the protected strategy portfolio and its reasoning in drafts and revisions", () => {
+    const full = focusedStrategySpec();
+    expect(full.maxTokens.draft).toBe(24000);
+    const quote = planJob("strategy", { planStyle: "focused" });
+    expect(quote.steps).toContainEqual(expect.objectContaining({ kind: "model", outputBudget: 24000 }));
+    expect(agentRevisionSteps({ ...full, lint: undefined })[0]).toMatchObject({ kind: "model", outputBudget: 24000 });
+    expect(full.maxTokens.critic).toBe(6000);
+    expect(full.maxRevisions).toBe(1);
+    const starter = starterStrategySpec();
+    expect(starter.maxTokens.draft).toBe(11000);
+    expect(starter.thinkingOff?.draft).toBe(true);
+    expect(starter.revisionWithinInitialCap).toBe(true);
+    expect(phaseTokenLimits("growth_strategy", { research: 0, draft: 4000, critic: 2000 }).draft).toBe(4000);
   });
   it("meters Haiku's long-context tier including cache input, without rewriting old rates", () => {
     const now = currentRateVersion(new Date("2026-11-09T12:00:00Z"));

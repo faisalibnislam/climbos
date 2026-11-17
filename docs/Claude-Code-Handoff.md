@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+Full strategy plans now reserve more output room for reasoning, the three creative options and prepared work after two live responses were cut off. Quotes use the same limit as execution; starter-plan limits and existing spending caps remain unchanged. This does not establish better strategy quality. [Evidence and boundaries](growth-engine/strategy-output-budget-audit.md).
+
 Offer recommendations now distinguish an explicitly declined discount from a proposed promotion. The shared validator accepts a comprehension test that needs “no ads, audience or discount” while retaining the full assessment for affirmative offers elsewhere. Public-copy and approval controls are unchanged. [Coverage and limits](growth-engine/declined-offer-classification-audit.md).
 
 Two fresh synthetic industry evaluations remained below acceptance. The harness omitted the app-provided timing clock; that evaluation-input defect is fixed without changing the timing prompt. Preserve the failed receipts and distinguish harness correction from product quality. [Details, cost and remaining gaps](growth-engine/industry-evaluation-clock-audit.md).
