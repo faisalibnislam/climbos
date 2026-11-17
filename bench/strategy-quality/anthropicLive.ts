@@ -5,10 +5,11 @@ import { resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { parseArgs } from "node:util";
 import { z } from "zod";
-import { runAgent, assess, CRITIC_RULES, CritiqueSchema, lintAgentOutput } from "../../shared/agents/runtime";
+import { runAgent, assess, CRITIC_RULES, CritiqueSchema, FocusedCritiqueSchema, lintAgentOutput } from "../../shared/agents/runtime";
 import { ENGINE_VERSION, growthPlaysSpec, playCatalogsFor, PlaysOutputSchema, strategySpec, focusedStrategySpec, starterStrategySpec, socialSpec, seoSpec, SeoBriefV2Schema } from "../../shared/agents/specs";
 import { selectStrategyQualityCases } from "./cases";
 import { industryInput } from "./industryInput";
+import { FOCUSED_EVIDENCE_REVIEW } from "../../shared/agents/focusedReview";
 import { livoformLaunchInput } from "./livoformLaunch";
 import { evaluationIdentity, assertReusableEvaluation, comparisonIdentity } from "./evaluationIdentity";
 import { focusedPlanTask, focusedRefreshContext } from "../../shared/agents/focusedPlan";
@@ -41,7 +42,7 @@ if (!horizons.length || horizons.some((days) => ![14, 30, 90].includes(days)) ||
 if (!/^[a-z0-9-]{1,40}$/.test(variant)) throw new Error("Invalid variant name.");
 if (!values["confirm-paid"] || process.env.CLIMBOS_FAKE_LLM) throw new Error("Real QA needs --confirm-paid, with no fake LLM.");
 const out = resolve("bench/cache/anthropic-real-2026-11-09"); mkdirSync(out, { recursive: true });
-const loadedSourceHash = createHash("sha256").update(["bench/strategy-quality/anthropicLive.ts", "bench/strategy-quality/evaluationIdentity.ts", "bench/strategy-quality/livoformLaunch.ts", "shared/agents/runtime.ts", "shared/agents/specs.ts", "shared/agents/planTasks.ts", "shared/agents/contentTasks.ts", "shared/agents/focusedPlan.ts", "shared/agents/focusedRubric.ts", "shared/agents/channelJudgment.ts", "shared/agents/capacity.ts", "shared/agents/campaignTiming.ts", "shared/agents/routes.ts", "shared/agents/offerLanguage.ts", "shared/agents/offerAssessment.ts", "bench/strategy-quality/industryInput.ts", "shared/skills/generated.ts", "shared/knowledge/creativePrecedents.ts", "shared/knowledge/creativePrecedentExpansion.ts", "shared/ai/anthropic.ts"].map((f) => readFileSync(resolve(f), "utf8")).join("\n")).digest("hex");
+const loadedSourceHash = createHash("sha256").update(["bench/strategy-quality/anthropicLive.ts", "bench/strategy-quality/evaluationIdentity.ts", "bench/strategy-quality/livoformLaunch.ts", "shared/agents/runtime.ts", "shared/agents/specs.ts", "shared/agents/planTasks.ts", "shared/agents/contentTasks.ts", "shared/agents/focusedPlan.ts", "shared/agents/focusedRubric.ts", "shared/agents/focusedReview.ts", "shared/agents/channelJudgment.ts", "shared/agents/capacity.ts", "shared/agents/campaignTiming.ts", "shared/agents/routes.ts", "shared/agents/offerLanguage.ts", "shared/agents/offerAssessment.ts", "bench/strategy-quality/industryInput.ts", "shared/skills/generated.ts", "shared/knowledge/creativePrecedents.ts", "shared/knowledge/creativePrecedentExpansion.ts", "shared/ai/anthropic.ts"].map((f) => readFileSync(resolve(f), "utf8")).join("\n")).digest("hex");
 const secret = readFileSync(resolve(".env.anthropic.local"), "utf8").match(/^\s*ANTHROPIC_API_KEY\s*=\s*(.+)\s*$/m)?.[1]?.trim().replace(/^(['"])(.*)\1$/, "$2");
 if (!secret) throw new Error("Saved Anthropic key is missing.");
 process.env.ANTHROPIC_API_KEY = secret;
@@ -224,8 +225,8 @@ try {
     const output=focusedStrategySpec().schema.parse(JSON.parse(readFileSync(resolve(values["review-file"]),"utf8")));
     const spec=focusedStrategySpec(),days=horizons[0],reviewInput={...input,task:focusedPlanTask(days),constraints:{...input.constraints,horizonDays:days}};
     const lint=lintAgentOutput(spec,reviewInput,output);label=`${id}/${variant}/focused-${days}/recovered-draft review`;
-    const result=await turn({modelKey:"claude-sonnet-5.5",thinkingOff:true,maxTokens:5000,effort:"high",schema:CritiqueSchema,system:[{text:CRITIC_RULES},{text:`Return exactly one score for each rubric criterion, including XV (overall specialist judgment), and each required gate. Review the actual supplied day windows.\n${JSON.stringify(spec.rubric)}`,cache:true}],messages:[{role:"user",content:JSON.stringify({business:c,evidence:input.precomputedResearch,task:reviewInput.task,limits:reviewInput.constraints,draft:output,automaticChecks:lint})}]});
-    if(!result.ok)throw new Error(result.message);const assessment=assess(CritiqueSchema.parse(result.output),lint,spec.rubric);
+    const result=await turn({modelKey:"claude-sonnet-5.5",thinkingOff:true,maxTokens:6000,effort:"high",schema:FocusedCritiqueSchema,system:[{text:CRITIC_RULES},{text:FOCUSED_EVIDENCE_REVIEW},{text:`Return exactly one score for each rubric criterion, including XV (overall specialist judgment), and each required gate. Review the actual supplied day windows.\n${JSON.stringify(spec.rubric)}`,cache:true}],messages:[{role:"user",content:JSON.stringify({business:c,evidence:input.precomputedResearch,task:reviewInput.task,limits:reviewInput.constraints,draft:output,automaticChecks:lint})}]});
+    if(!result.ok)throw new Error(result.message);const assessment=assess(FocusedCritiqueSchema.parse(result.output),lint,spec.rubric,output);
     writeFileSync(resolve(out,`${id}-${variant}-focused-${days}-recovered.json`),JSON.stringify({caseId:id,variant,name:`focused-${days}`,origin:"Unchanged completed paid provider draft recovered after a presentation-only target length limit was expanded from 300 to 600. Original validation failure and receipts retained; independent real-model review.",sourceHash:loadedSourceHash,input:reviewInput,result:{output,assessment,rounds:1,research:input.precomputedResearch},review:result,schemaPassed:true},null,2));
     console.log(`RECOVERED ${id}/${variant}: ship ${assessment.ship}; average ${assessment.average}`);continue;
   }

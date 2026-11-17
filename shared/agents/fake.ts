@@ -106,6 +106,7 @@ export async function fakeTurn(req: TurnRequest, rates: RateVersion): Promise<Tu
       strengths: ["clear"],
       fixes: pass ? [] : ["Make it specific"],
       escalation: { reason: "none", evidence: "" },
+      ...(system.includes("FOCUSED EVIDENCE AUDIT:") ? { evidenceAudit: ["business_state", "comparative_claims", "capabilities_and_results"].map(category => ({ category, basis: "Synthetic review fixture only; no real semantic verification.", claims: [] })) } : {}),
     };
   } else {
     const marker = lastUser.includes("A senior reviewer assessed your draft") ? "fake-v2" : "fake-v1";

@@ -1,3 +1,7 @@
+## 17 November 2026 — focused semantic evidence review
+
+Engine v3.154: seven red regression cases followed by **197 passing tests in 12 files (11.47 seconds)**. Focused reviews now audit qualitative claims and validate exact draft quotations; reported unsupported claims reach revision and remain blocked at approval/start. First-action, paid-value, exposure and creative reasoning instructions are tightened without lowering the quality bar. [Scope, commands and limits](growth-engine/focused-evidence-review-audit.md). Fresh paid acceptance is recorded separately.
+
 ## 17 November 2026 — approved public launch acceptance result
 
 [Detailed audit](growth-engine/public-launch-acceptance-audit.md): four approved Anthropic calls completed on engine v3.153. Revised output is schema-valid and lint-clean, but **failed quality acceptance** (average 3.75, minimum 3). Inspection also found unsupported qualitative claims missed by the automated reviewer. No production quality improvement is claimed. Private reports and raw outputs remain Git-ignored.

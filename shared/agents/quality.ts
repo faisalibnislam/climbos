@@ -100,7 +100,7 @@ export function withoutHard(a: AgentQuality): AgentQuality {
 }
 
 const LABEL: Record<string, string> = {
-  review_scores: "the AI review contains missing, duplicate or invalid scores; run a complete review before approving this draft",
+  review_scores: "the AI review contains missing, duplicate or invalid scores or evidence checks; run a complete review before approving this draft",
   demand_gate: "the main recommendation buys traffic before the supplied demand concerns are resolved",
   focused_learning: "the primary learning test needs a consistent definition and honest unknowns",
   evidence_basis: "the evidence labels must match the recorded sources",

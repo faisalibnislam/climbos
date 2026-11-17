@@ -7,13 +7,14 @@ import { offerAssessmentFixture, offerFact } from "../fixtures/offerAssessment";
 import { approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
 import type { TurnRequest } from "../../shared/ai/types";
 import type { RateVersion } from "../../shared/economics/rates";
-const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], reviewScores: "", failTruth: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", explorationReference: "", dismissedChannel: false, emailMode: "" }));
+const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], reviewScores: "", failTruth: false, unsupportedStateClaim: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", explorationReference: "", dismissedChannel: false, emailMode: "" }));
 vi.mock("../../shared/ai/turn", async original => ({
   ...await original<typeof import("../../shared/ai/turn")>(),
   modelTurn: async (req: TurnRequest, rates: RateVersion) => {
     state.requests.push(req);
     const days = Number(JSON.stringify(req.messages).match(/EXECUTION CYCLE: (14|30|90) days/)?.[1] ?? 14);
     const plan = focusedPlanFixture(days);
+    if (state.unsupportedStateClaim) plan.strategicDirection.whyThisBusiness = "The business has no audience.";
     if (state.emailMode) plan.focusedMove.firstAction = state.emailMode === "draft" ? "Draft an email for your newsletter subscribers for owner review." : "Email your list about the proposed intake handoff.";
     if (state.dismissedChannel) plan.channels[0] = { ...plan.channels[0], key: "seo_content", name: "Blog articles" };
     if (state.explorationReference) {
@@ -62,6 +63,10 @@ vi.mock("../../shared/ai/turn", async original => ({
     if (result.ok && state.failTruth && typeof result.output === "object" && result.output && "gates" in result.output) {
       (result.output as { gates: { id: string; pass: boolean; note: string }[] }).gates.find(g => g.id === "G1")!.pass = false;
     }
+    if (result.ok && state.unsupportedStateClaim && typeof result.output === "object" && result.output && "evidenceAudit" in result.output) {
+      const audit = (result.output as import("../../shared/agents/types").CritiqueResult).evidenceAudit!;
+      audit.find(row => row.category === "business_state")!.claims = [{ path: "strategicDirection.whyThisBusiness", quote: "The business has no audience.", verdict: "unsupported", basis: "A traffic report does not establish absence of contacts or followers.", correction: "Keep audience availability unknown." }];
+    }
     if (result.ok && state.reviewScores && typeof result.output === "object" && result.output && "scores" in result.output) {
       const review = result.output as { scores: { id: string; score: number; note: string; fix: string }[] };
       review.scores.forEach(score => { score.score = 3.5; });
@@ -70,7 +75,7 @@ vi.mock("../../shared/ai/turn", async original => ({
     return result;
   },
 }));
-afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.reviewScores = ""; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.explorationReference = ""; state.dismissedChannel = false; state.emailMode = ""; });
+afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.reviewScores = ""; state.failTruth = false; state.unsupportedStateClaim = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.explorationReference = ""; state.dismissedChannel = false; state.emailMode = ""; });
 
 async function workspace() {
   const t = setup(); delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE;
@@ -632,5 +637,21 @@ it.each(["too_close", "capacity", "stale", "unknown"])("keeps %s timing from sil
   expect(saved.expert?.quality?.state).toBe(condition === "unknown" ? "passed" : "failed");
   if (condition !== "unknown") await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: saved._id, decision: "approve" })).rejects.toThrow(/checks/);
   else expect(saved.expert?.focusedMove?.timingAssessment).toMatchObject({ decision: "not_enough_evidence", proposedWindow: null });
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
+
+
+it("persists semantic evidence failures and blocks approval and action even when scores and gates pass", async () => {
+  const { t, owner, slug, orgId } = await workspace(); state.unsupportedStateClaim = true;
+  await owner.client.mutation(api.orgs.addFact, { slug, category: "audience", statement: "Synthetic test: no website traffic was reported; contacts and followers are unknown." });
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(plan.expert?.quality?.state).toBe("failed");
+  expect(plan.expert?.quality?.fixes).toContainEqual(expect.objectContaining({ rule: "invented_fact", path: "strategicDirection.whyThisBusiness" }));
+  const revision = state.requests.find(req => JSON.stringify(req.messages).includes("A senior reviewer assessed your draft"));
+  expect(JSON.stringify(revision?.messages)).toContain("Keep audience availability unknown.");
+  await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
+  await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: plan._id, playId: "focused" })).rejects.toThrow();
   expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
 });

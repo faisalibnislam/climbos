@@ -1,3 +1,7 @@
+## 17 November — focused evidence review and decision quality
+
+`v3.154-focused-evidence-review`: enforce qualitative claim audits in the existing critic, validate exact current-draft quotations, pass review findings into revision, and prevent stale focused reviews. Refine the existing writer/rubric for specific alternatives, paid value, one first action, honest exposure and substantive originality. Seven red cases, then 197 passing focused/permission tests. [Audit](focused-evidence-review-audit.md). Model judgment remains fallible; paid acceptance follows separately.
+
 ## 17 November — approved public launch acceptance result
 
 Completed the owner-approved four-call test through the existing focused engine. Schema passed, but the unchanged quality bar did not (3.75 average, minimum 3). Output inspection found additional unsupported qualitative claims and decision/workload/originality limitations; these remain open rather than being hidden by a clean lint result. [Audit and costs](public-launch-acceptance-audit.md). 46 focused and permission tests passed. No production code, provider route, customer account or external business action changed. Private inputs and raw outputs stay local and ignored.

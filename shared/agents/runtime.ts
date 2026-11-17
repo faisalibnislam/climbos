@@ -1,4 +1,5 @@
 import { boundedPageReads } from "./provenance";
+import { FOCUSED_REVIEW_ID, FOCUSED_EVIDENCE_REVIEW, FocusedEvidenceAuditSchema, lintFocusedEvidenceAudit } from "./focusedReview";
 import { OWNER_LANGUAGE_RULES } from "./ownerLanguage";
 import { fitJson, fitText, reportDropped } from "./context";
 import { z } from "zod";
@@ -122,6 +123,8 @@ export const CritiqueSchema = z.object({
   }),
 });
 
+export const FocusedCritiqueSchema = CritiqueSchema.extend({ evidenceAudit: FocusedEvidenceAuditSchema });
+
 export const CRITIC_RULES = `You are a demanding senior reviewer (the kind agencies hire to say no). You judge marketing work for a small business against a rubric. You did not write it and you don't soften scores.
 
 Gate fidelity: fail a hard gate for a concrete violation of that gate, quoting the offending claim and explaining the evidence mismatch. Weak originality, limited depth or an ordinary headline belong in their scored criteria, not automatically in the truth gate. A supplied exact read-page URL can support source-reported claims without a numbered fact index when the contract permits either; linkage alone still does not prove semantic support or tested behavior. Distinguish what a publisher lists from independently verified performance. Do not invent a requirement that H1 wording equal the title exactly, or a minimum word count. Proposed byline, path, schema and draft-status metadata can live outside public copy; never require a fabricated owner-review date or credentials. Keep the rubric's quality threshold unchanged and judge whether the work serves its stated scope.
@@ -172,9 +175,9 @@ function withVerdict(r: Rubric): Rubric {
   return r.criteria.some((c) => c.id === EXPERT_VERDICT.id) ? r : { ...r, criteria: [...r.criteria, EXPERT_VERDICT] };
 }
 
-export function assess(critique: CritiqueResult, lint: LintIssue[], baseRubric: Rubric): Assessment {
+export function assess(critique: CritiqueResult, lint: LintIssue[], baseRubric: Rubric, output?: unknown): Assessment {
   const rubric = withVerdict(baseRubric);
-  const reviewIssues: LintIssue[] = [];
+  const reviewIssues: LintIssue[] = baseRubric.id === FOCUSED_REVIEW_ID ? lintFocusedEvidenceAudit(critique.evidenceAudit, output) : [];
   const scores = rubric.criteria.map((criterion) => {
     const entries = critique.scores.filter((entry) => entry.id === criterion.id);
     if (entries.length !== 1 || !Number.isFinite(entries[0].score) || entries[0].score < 1 || entries[0].score > 5) {
@@ -403,7 +406,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
       const rubricExtra = (spec.criticSkills ?? spec.skills).map((id) => skillRubricText(id)).filter(Boolean).join("\n\n");
       const result = await deps.turn({
         modelKey: spec.models.critic,
-        system: [{ text: CRITIC_RULES }, { text: `${rubricText(withVerdict(spec.rubric))}${rubricExtra ? `\n\nSPECIALIST CHECKLISTS:\n${rubricExtra}` : ""}`, cache: true }],
+        system: [{ text: CRITIC_RULES }, { text: `${rubricText(withVerdict(spec.rubric))}${spec.rubric.id === FOCUSED_REVIEW_ID ? `\n\n${FOCUSED_EVIDENCE_REVIEW}` : ""}${rubricExtra ? `\n\nSPECIALIST CHECKLISTS:\n${rubricExtra}` : ""}`, cache: true }],
         messages: [
           {
             role: "user",
@@ -414,7 +417,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
             }Review it against the rubric. Return exactly one score for EVERY criterion ID, including XV, and exactly one entry for EVERY gate ID. Missing scores are treated as failures by code. Review the task's supplied milestone windows as given; do not require different windows or invented numeric thresholds. An alternative may be conditional, but do not assume the owner has past customers, a contact list, qualifications or resources absent from the evidence.`,
           },
         ],
-        schema: CritiqueSchema,
+        schema: spec.rubric.id === FOCUSED_REVIEW_ID ? FocusedCritiqueSchema : CritiqueSchema,
         maxTokens: spec.maxTokens.critic,
         effort: spec.effort.critic,
         ...(spec.thinkingOff?.critic ? { thinkingOff: true } : {}),
@@ -459,8 +462,8 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     const lintA = lintOf(current);
     const lintB = lintOf(alt);
     const [cA, cB] = await both(critique(0, current, lintA), critique(0, alt, lintB, true));
-    const aA = assess(cA, lintA, spec.rubric);
-    const aB = assess(cB, lintB, spec.rubric);
+    const aA = assess(cA, lintA, spec.rubric, current);
+    const aB = assess(cB, lintB, spec.rubric, alt);
     if (rank(aB) > rank(aA)) {
       current = alt;
       firstReview = { c: cB, lint: lintB };
@@ -474,7 +477,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
   for (let round = 0; round < reviews; round++) {
     const lint = round === 0 && firstReview ? firstReview.lint : lintOf(current);
     const c = round === 0 && firstReview ? firstReview.c : await critique(round, current, lint);
-    const a = assess(c, lint, spec.rubric);
+    const a = assess(c, lint, spec.rubric, current);
     history.push({ round, average: a.average, gatesPassed: a.gatesPassed, lintErrors: a.lint.filter((l) => l.severity === "error").length });
     if (!best.assessment || rank(a) > rank(best.assessment)) best = { output: current, assessment: a, round };
     const shipped = spec.shipOn === "gates" ? a.gatesPassed && a.lint.every((l) => l.severity !== "error") : a.ship;
@@ -487,7 +490,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     if (deps.beforeRevision && !(await deps.beforeRevision(round + 1, revisionModel))) break;
     const previous = current;
     try {
-      current = await draftOnce(round + 1, { previous: current, fixes: c.fixes, strengths: c.strengths, lint }, escalation);
+      current = await draftOnce(round + 1, { previous: current, fixes: c.fixes, strengths: c.strengths, lint: a.lint }, escalation);
     } catch (error) {
       // A truncated/malformed optional revision must not erase an already reviewed draft.
       // Its failed attempt is still metered by the host. Transport, budget and permission failures propagate.
@@ -496,7 +499,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
       break;
     }
     // fast_review: the last revision is kept without another review if it's no worse on lint and keeps every number.
-    if (spec.skipFinalReview && round + 1 === reviews - 1) {
+    if (spec.skipFinalReview && spec.rubric.id !== FOCUSED_REVIEW_ID && round + 1 === reviews - 1) {
       const errs = (l: LintIssue[]) => l.filter((x) => x.severity === "error").length;
       const nextLint = lintOf(current);
       const kept = numbersIn(current);
