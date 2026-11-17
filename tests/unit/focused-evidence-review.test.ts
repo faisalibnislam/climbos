@@ -15,6 +15,19 @@ const audit = () => [
 const review = (evidenceAudit: unknown = audit()): CritiqueResult => ({ gates: [{ id: "G1", pass: true, note: "ok" }], scores: ["F1", "XV"].map(id => ({ id, score: 5, note: "Ready", fix: "none" })), strengths: [], fixes: [], evidenceAudit } as CritiqueResult);
 
 describe("focused review evidence integrity", () => {
+  it("uses an explicitly named array to disambiguate an omitted index without waiving the claim", () => {
+    const rows = audit(); rows[0].claims[0] = { ...rows[0].claims[0], path: "choice.evidenceRefs", quote: "fact:2", verdict: "unsupported", correction: "This source does not support the offered price." };
+    const draft = { choice: { evidenceRefs: ["fact:1", "fact:2"] }, otherChoice: { evidenceRefs: ["fact:2"] } };
+    const c = review(rows), result = assess(c, [], rubric, draft);
+    expect(result.critique.evidencePathCorrections).toEqual([{ reportedPath: "choice.evidenceRefs", resolvedPath: "choice.evidenceRefs[1]", quote: "fact:2" }]);
+    expect(result.lint.some(issue => issue.rule === "review_scores")).toBe(false);
+    expect(result.lint).toContainEqual(expect.objectContaining({ rule: "invented_fact", path: "choice.evidenceRefs[1]" }));
+    expect(result.ship).toBe(false);
+    expect(c.evidenceAudit?.[0].claims[0].path).toBe("choice.evidenceRefs");
+    const duplicate = assess(c, [], rubric, { ...draft, choice: { evidenceRefs: ["fact:2", "fact:2"] } });
+    expect(duplicate.critique.evidencePathCorrections).toBeUndefined();
+    expect(duplicate.lint.some(issue => issue.rule === "review_scores")).toBe(true);
+  });
   it.each([
     ["strategicDirection.assumptions", "strategicDirection.assumptions[0]", { strategicDirection: { assumptions: ["Contacts remain unknown."] } }],
     ["baselineBasis", "experiments[0].baselineBasis", { experiments: [{ baselineBasis: "Contacts remain unknown." }] }],

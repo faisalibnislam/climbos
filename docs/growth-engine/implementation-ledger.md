@@ -1,3 +1,7 @@
+## 18 November — preserve honest quality failures and repair scoped locators
+
+`v3.168-scoped-review-locators`: an explicitly named array can disambiguate an exact citation quote when its missing index is unique inside that array. Repeated entries still fail; underlying evidence findings remain blocked. 152 focused/permission tests, types and lint passed. V15 finished below quality at 3.88, with owner workload unresolved. Combined used/held $73.423925 / $100. No paid run active; actual tester access and founder time are pending. [Current audit](focused-evidence-review-audit.md).
+
 ## 18 November — preserve useful work during focused repair
 
 `v3.167-focused-section-repairs`: allow only validated changed sections in full focused revisions; preserve omitted work, validate the complete merge and obtain a fresh review. Same checkpoint, model, call cap and reservation; malformed repairs retain the reviewed best draft. 181 focused/budget/permission tests, types and lint pass. Semantic effect pending paid acceptance. [Audit](focused-evidence-review-audit.md).

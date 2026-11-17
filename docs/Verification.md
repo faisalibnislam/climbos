@@ -1,5 +1,10 @@
 ## 17 November 2026 — creative methods and product-test validity
 
+## 18 November 2026 — v15 acceptance and exact array-locator repair
+
+V15 failed honestly at 3.88/minimum 3 despite clean evidence checks; the prior unchanged-engine repeat failed at 3.75 after v14's pass. V3.168 resolves an omitted index only when the quote is unique within the explicitly named array, retaining unsupported-claim failures. One red case, then **152 tests in eight files passed (11.98 seconds)**; types/lint passed. Read-only replay of the actual v15 review confirms the repair without changing history. Combined charged/held **$73.423925 / $100**, no paid run active. Test access and founder time are pending owner inputs. [Current audit and boundaries](growth-engine/focused-evidence-review-audit.md).
+
+
 ## 18 November 2026 — bounded section repairs
 
 V3.167 preserves omitted focused-plan sections, validates the full merged result and independently re-reviews it. Invalid patches retain the reviewed prior draft. Six red cases, then **181 tests in 14 files passed (12.98 seconds)**; app/Convex types, targeted lint and diff checks passed. Models, call limits, reservations and approval boundaries are unchanged. Starter/detailed remain full-output repairs. Paid quality effect remains to be evaluated. [Audit and commands](growth-engine/focused-evidence-review-audit.md).

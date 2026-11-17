@@ -1,5 +1,32 @@
 # Focused strategy evidence review — 17 November 2026
 
+## Current status: v15 result, scoped locator fix and required launch context
+
+**Verified implementation is improved; dependable strategy quality remains unresolved.** V14 passed at 4/5 on every criterion, and both v13/v14 separate comparisons preferred the revised advice over the original. The unchanged-engine repeat failed at 3.75. The next section-repair run, v15, failed at **3.88/minimum 3**, with owner workload the remaining below-threshold criterion. All histories, raw responses and failures are preserved. No score was changed to force acceptance.
+
+`launch-quality-v15-20261118` used v3.167 and source hash `f8adf6e4820e2988b7db976a43428af0679f7a5c2e68dd9286d1696b82d68503`. Seven calls cost **$1.179095**. Reviews progressed 3.5 with one hard finding → 3.75 with two → 3.88 with none. Section repair worked mechanically: the first patch omitted four original sections, which the engine retained before full validation/review. It still rewrote most sections and has not established token/latency savings or consistent semantic improvement. The final review gave originality 4, but the proposed editable-response/owner-flag mechanism remains close to familiar form behavior; real differentiation requires comparison and user testing.
+
+A concrete audit defect appeared in review two: the reviewer named `strategyExploration.adjacent.evidenceRefs` and quoted `fact:2`, omitting the array index. That citation also appeared elsewhere, so the previous global-uniqueness rule rejected a locator that was unambiguous inside its explicitly named array. V3.168 now resolves a unique verbatim match inside that named array first. Duplicates inside the array, unrelated paths and invented quotations remain errors. The underlying unsupported-claim verdict is never waived. Read-only reassessment of the saved v15 review repaired the index and retained its evidence failure; no historical result was overwritten and no paid rerun was needed for this deterministic fix.
+
+One new red regression, then **152 tests in eight files passed (11.98 seconds)**. App/Convex typechecks, targeted ESLint and diff checks passed. The earlier v3.167 batch passed 181 tests in 14 files; these counts overlap and must not be added.
+
+```sh
+pnpm exec vitest run tests/unit/focused-evidence-review.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-plan.test.ts tests/unit/creative-preparation.test.ts tests/unit/agent-escalation.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+Combined charged/held across both ledgers is **$73.423925 / $100**, leaving **$26.576075** subject to reservation rules and historical uncertainty holds. No paid process is active. Runtime model remains `claude-sonnet-5-5`; no deployment, customer outreach, publishing, pricing or billing action was performed. The owner's pre-existing `.gitignore` remains untouched.
+
+Two owner inputs are pending: whether any potential testers are reachable, and the founder time available each week. These private operational facts cannot be established from the public website. They materially affect a feasible next launch plan and its workload; they are not prerequisites for generating or displaying bold ideas. Do not substitute zero traffic for no contacts, invent an hours allowance, or call the current test commercially validated. Next acceptance should use the actual answers, keep them source-labelled, and treat the changed evidence as a new case rather than an identical-evidence A/B comparison. Remaining limitations also include fallible AI grading, observation-clock wording, unverified product behavior, participant access and absent real willingness-to-pay/retention results.
+
+
+## Preserved failed repeat — unchanged v3.166
+
+`launch-stability-v1-20261118` used the exact v14 engine/source hash `30cba061224691565d81d955ff7c69d7503e48c51dde0364e7568dc9812d3b8c` and the same business-source pack. Seven calls cost **$1.323007**. Reviews progressed 3.31 with four hard findings → 3.44 with one → **3.75/minimum 3, no hard findings, ship false**. The repeat did not reproduce the prior pass. Paid-value depth and owner workload remained below the bar. The reviewer accepted the deposit-form bold mechanism at 4, but this remains a familiar practice with limited originality; that score is not treated as proof of surprising strategy.
+
+This is evidence of inconsistent quality, not a failure to be removed from the record. The actual safeguards caught unsupported audience/comparative claims and retained a failed final verdict. Combined charged/held after the repeat: **$72.244830 / $100**. V3.167's section-repair test is running as `launch-quality-v15-20261118`; it must be assessed on its own results.
+
+
 ## Preserve unchanged sections through repair — v3.167
 
 Earlier paid runs lost useful assets or introduced fresh errors while rewriting the complete plan for a localized correction. Full focused revisions now return only changed top-level sections. Omitted sections stay verbatim; a returned nested object or array replaces that complete section. Empty patches, unknown keys and invalid sections fail. The engine then validates the entire merged draft, applies the existing single-step projection, reruns deterministic checks and obtains a fresh independent review of the full result. A failed optional patch preserves the best previously reviewed draft; it does not manufacture a pass.
