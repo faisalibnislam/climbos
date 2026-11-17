@@ -28,6 +28,30 @@ pnpm exec vitest run tests/unit/focused-evidence-review.test.ts tests/unit/focus
 
 ## Limits and paid follow-up
 
+### Latest status and next engineering pass
+
+**Safeguards verified; overall strategy-quality improvement not established.** All implementation batches remain on `codex/trend-evidence-freshness`: `6813520e` (semantic evidence review), `8afa0b99` (same-evidence comparison), `e1e37d91` (shared protected task and consistent verdicts), and `32973545` (paid-outcome precision). No deployment or external business action occurred. The owner's pre-existing `.gitignore` change is untouched.
+
+The owner requested a Codex-model switch only when needed. A switch to Astra for the remaining engineering/design work was requested after repeated conventional outputs and inconsistent reviewer judgments; no runtime model was changed. All paid processes have finished. The original provider route, scoring thresholds and cumulative cap remain intact.
+
+Variant `launch-quality-v4-20261117`, engine v3.156, source hash `1179f9080e5c2471ea648e4503d1275ad71c145e9ad264a269130591e778433d`, completed three metered calls for **$0.570983**. The first draft preserved the corrected intent/payment distinction and economic actor boundary, but failed quality at **3.5 average, minimum 3**. Its optional revision returned an 83-character exploration duration against the existing 80-character schema limit. The engine correctly retained the reviewed first draft and recorded `invalid_output`; no final review of the invalid revision occurred. The bound was not silently widened and the result was not manually converted into a pass.
+
+Inspection also found a likely reviewer false positive: it rejected an invitation offering an outline even though the outline was included as a complete separate prepared draft, which the writer contract permits. Whether the proposed product workflow itself works still requires verification; that is distinct from whether the textual outline has been prepared. This unresolved distinction can cause useful work to be discarded during revision.
+
+Across this continuation: **13 paid calls, $2.023417**, with combined charged/held **$61.841945 / $100**. Unused authorization is **$38.158055**, subject to the existing per-call reservation and retained historical holds. This is ledger usage at configured rates, not an independently reconciled invoice. Every run and comparison is preserved locally in ignored cache files.
+
+Remaining acceptance work:
+
+1. Improve the buyer-value mechanism and concrete competing customer-job reasoning; merely naming paid features is insufficient.
+2. Produce a meaningfully unconventional, business-relevant bold direction with a useful affected-user/payer test. Familiar concierge onboarding or a reseller arrangement should not earn high novelty solely from its label. Unknown feasibility and absent precedent must still not suppress exploration.
+3. Preserve useful prepared examples through revision, and distinguish an already-authored draft from an unbuilt product feature or published asset. Do not replace the evidence audit with an unchecked model verdict.
+4. Keep the first owner action manageable while preserving later product verification, exact recipient/content approval and lawful access requirements. A proposed channel is not verified reach.
+5. Keep confirmed payment, workload limits, evidence sufficiency and each party's economic boundary distinct. The v4 first draft improved these, but did not pass overall quality.
+6. Investigate bounded schema-failure recovery without corrupting historical results, removing constraints wholesale or silently spending more. The current fallback behaved honestly.
+7. Test any next design change against counterfactual sparse-data cases and fresh Livoform output using the unchanged approved data/cap. Inspect actual claims and artifacts as well as scores; both isolated comparisons missed a known original error. No quality claim should rely on one self-review or a favorable A/B preference alone.
+
+Useful paths for resuming: `shared/agents/focusedPlan.ts`, `focusedRubric.ts`, `focusedReview.ts`, `runtime.ts`, `specs.ts`; production assembly in `convex/jobs.ts`; `bench/strategy-quality/{livoformLaunch,anthropicLive,evaluationIdentity}.ts`; regression tests named below. Local private owner report and raw variants are under `bench/cache/anthropic-real-2026-11-09/`; the readable local report is `Livoform-Retest-2026-11-17.md`. Do not commit those private inputs or raw outputs.
+
 ### v3 retest and remaining measurement precision
 
 Variant `launch-quality-v3-20261117`, engine v3.155, source hash `6a59ac5e158efb9b1c0fc8834177e2e20aedccaeca359e998db51a4d699e08ba`: four calls cost **$0.720914**. First draft: 3.5, failed gates and three unsupported claims. Revised draft: **4 average, minimum 4, all gates passed, no lint findings, ship true**. This is an automated acceptance pass for one case, not a proof of commercial quality.

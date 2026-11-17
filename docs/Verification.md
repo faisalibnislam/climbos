@@ -1,3 +1,9 @@
+## 17 November 2026 — latest Livoform acceptance status
+
+The v3.156 fourth run remained below acceptance (3.5, minimum 3); its optional revision exceeded an existing duration-label bound by three characters and the engine retained the failed reviewed draft. Three calls cost $0.570983. Across this continuation: 13 calls, $2.023417; cumulative charged/held **$61.841945 / $100**. All paid processes completed; no business action or deployment. [Detailed results and remaining work](growth-engine/focused-evidence-review-audit.md).
+
+Guardrails and their permission tests are verified, but overall strategy quality remains unresolved. A Codex switch to Astra was requested for the next engineering/design pass; ClimbOS's runtime route is unchanged. Original results and comparison disagreements are preserved. Typechecks, changed-file lint and diff checks passed for the implementation batches.
+
 ## 17 November 2026 — paid outcome precision
 
 Engine v3.156 clarifies confirmed payment versus checkout intent, merchant versus software-vendor revenue, and workload caps versus evidence thresholds. **151 tests in eight files passed (13.08 seconds)**. [Audit](growth-engine/focused-evidence-review-audit.md).

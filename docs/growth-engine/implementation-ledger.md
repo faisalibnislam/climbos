@@ -1,3 +1,7 @@
+## 17 November — acceptance remains open after fourth run
+
+Four verified batches are pushed. v3 passed the automated rubric but not an independent overall-quality claim; v4 retained its failed first draft after an overlength optional revision. Complete results, costs and concrete remaining acceptance tasks are in the [focused evidence review audit](focused-evidence-review-audit.md). Cumulative charged/held: $61.841945 / $100. Astra was requested for deeper Codex engineering/design work; no runtime provider/model change, deployment or business action occurred.
+
 ## 17 November — paid outcome and cost-boundary precision
 
 `v3.156-paid-outcome-precision`: the passing v3 retest still blurred checkout intent and payment, merchant transactions and vendor revenue, and workload caps and evidence sufficiency. Clarify these in writer/reviewer instructions and add review-enforcement examples; 151 focused/permission tests passed. The numeric acceptance bar and provider are unchanged. [Results and limitations](focused-evidence-review-audit.md).
