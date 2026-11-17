@@ -1,3 +1,7 @@
+## 17 November — isolate creative work and constrain owner workload
+
+`v3.164-exploration-context`: keep execution checklists out of the private ideation checkpoint while preserving original evidence, limits and diagnosis. Give full focused review high effort and matching quoted headroom on the unchanged model. Limit new phase checklists without invalidating historical plans, and surface exploration progress. 208 tests, types and lint passed. V11 remains failed; v12 evaluates the combined changes. [Audit](focused-evidence-review-audit.md).
+
 ## 17 November — explore mechanisms before writing the full plan
 
 `v3.163-creative-preparation`: full focused runs prepare distinct proposals in a quoted, metered, reusable checkpoint on the unchanged writer. Final evidence/permission review remains independent; starter is unchanged. The comparison schema now requires all six held-out answers without model-retyped identities. Focused tests, permission tests, budgets, types and lint pass; actual creative quality remains pending v11. [Audit](focused-evidence-review-audit.md).

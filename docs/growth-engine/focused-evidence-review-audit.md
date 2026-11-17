@@ -1,5 +1,25 @@
 # Focused strategy evidence review — 17 November 2026
 
+## Separate ideation context, deliberate review and bounded owner checklists — v3.164
+
+V11 (`launch-quality-v11-20261117`, v3.163, source hash `ccf30e4c123a01d0917565fd32510660a348a49925ca166ccf30a6b444c083bb`) completed seven calls, including creative preparation and both reserved repairs, for **$1.157487**. Reviews progressed 3.5 → 3.81 → 3.88. The last draft had one invalid audit locator and still scored 3 on owner simplicity; the engine retained the clean **3.81/minimum 3.5, ship false** revision. Its preparation remained a conventional feature/segment portfolio; the extra call alone did not establish originality. Combined charged/held: **$67.307566 / $100**.
+
+Inspection confirmed that preparation still inherited the complete execution checklist and focused-writing playbook. V3.164 gives that checkpoint only the general operating rules, its ideation contract, original business context/evidence/limits, deterministic diagnosis with provenance, and retrieved creative precedents. The full writer and independent critic still receive all original task instructions, prior work and owner preferences. Possibilities remain explicitly unselected proposals, never new facts or permission. This isolates creative exploration from the pressure to fill an execution plan without removing evidence or action boundaries.
+
+The v11 medium-effort reviews used zero thinking tokens and one accepted an unsupported comparison as qualified. Full focused review now requests high effort and up to **12,000 output tokens**, including reasoning, with the same Sonnet model. Initial and revision quotes derive that same bound. Explicit effort overrides remain possible; starter retains its existing thinking-off mode and 4,000-token review ceiling. This raises the potential full-plan review cost and latency; it does not guarantee correctness or change the numeric acceptance bar.
+
+New focused/starter drafts have at most four coherent task groups per phase, with instructions to defer optional work rather than pack unrelated chores into one item. This is a presentation limit, not evidence of owner capacity. Required verification and approval remain. The historical `FocusedStrategySchema` still accepts older longer plans; storage/read behavior is unchanged. The progress display now recognizes the exploration checkpoint and identifies its results as proposals. Its time estimate provisionally reuses the existing writer estimate, not a measured service commitment.
+
+**208 tests in 14 files passed (16.88 seconds)**, including real mocked generation, quotes, approval rejection, tenant isolation, historical-schema compatibility and checkpoint context separation. App/Convex typechecks, targeted ESLint and diff checks passed. Command:
+
+```sh
+pnpm exec vitest run tests/unit/creative-preparation.test.ts tests/unit/progress.test.ts tests/unit/focused-plan.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/agent-escalation.test.ts tests/unit/plan-quality.test.ts tests/unit/evaluation-identity.test.ts tests/unit/livoform-launch-input.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts tests/unit/anthropic-budget.test.ts tests/unit/evaluation-budget.test.ts tests/unit/ai-qa-budget.test.ts
+pnpm typecheck
+```
+
+The next paid variant is `launch-quality-v12-20261117`, using the same business evidence and model. Results must be assessed as a combined configuration, not proof that any individual change caused improvement.
+
+
 ## Bounded creative preparation in the existing run — v3.163
 
 Repeated complete Livoform drafts remained anchored on the same agency-intake mechanism, even after moving exploration first in the output schema. Full focused plans now prepare three or four short, distinct strategic possibilities in a separate checkpoint of the **same agent run and same writer model**, before drafting the final strategy. The preparation schema asks for the business tension, value exchange, changed behavior, participant benefit, closest familiar alternative, meaningful difference, unknowns and reversible test. It does not request an execution plan, forecast, campaign or new business facts.

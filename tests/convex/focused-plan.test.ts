@@ -302,7 +302,7 @@ it.each(["focused", "starter"] as const)("carries deterministic diagnosis into t
   expect(saved.plan?.expert?.constraintDiagnosis).toMatchObject({ constraint: "activation", status: "supported", leverage: expect.arrayContaining([{ stage: "purchase", perPoint: 0.04 }]) });
   expect(state.requests.length).toBeGreaterThanOrEqual(2);
   for (const request of state.requests) expect(JSON.stringify(request.messages)).toContain("DIAGNOSIS (computed from the owner's numbers");
-  expect(JSON.stringify(state.requests[0].messages)).toContain("not a proven cause");
+  expect(JSON.stringify(state.requests.find(request => request.cacheKey === "climbos:growth_strategy:draft")!.messages)).toContain("not a proven cause");
   expect(saved.plan?.expert?.strategyExploration?.bold.title).toBe(focusedPlanFixture().strategyExploration.bold.title);
   expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
 });
@@ -389,7 +389,7 @@ it.each(["unknown", "capacity", "conflicting"] as const)("preserves %s diagnosis
     ? { constraint: "delivery", status: "supported" }
     : { constraint: "unknown", status: condition === "unknown" ? "insufficient_evidence" : "conflicting_inputs" });
   expect(plan?.expert?.strategyExploration?.bold).toMatchObject({ precedentIds: [], feasibility: "low", evidenceStrength: "low" });
-  const prompt = JSON.stringify(state.requests[0].messages);
+  const prompt = JSON.stringify(state.requests.find(request => request.cacheKey === "climbos:growth_strategy:draft")!.messages);
   expect(prompt).toContain(condition === "capacity" ? "no remaining capacity" : condition === "conflicting" ? "counts contradict each other" : "not enough evidence to name the binding constraint");
   expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
 });
@@ -406,8 +406,8 @@ it("runs the real focused path with a matching quote, reuses bound research and 
     bold: { title: "Become known for the brief you decline", precedentIds: [], evidenceStrength: "low", feasibility: "low" },
     requestedRange: "balanced", promptVersion: "focused-exploration-v2", promptHash: expect.stringMatching(/^[a-f0-9]{64}$/), inputHash: expect.stringMatching(/^[a-f0-9]{64}$/), retrievedPrecedentIds: expect.any(Array),
   });
-  expect(JSON.stringify(state.requests[0].messages)).toContain("PROTECTED STRATEGY EXPLORATION");
-  expect(JSON.stringify(state.requests[0].messages)).toContain("BOUNDED CREATIVE PRECEDENT RETRIEVAL");
+  expect(JSON.stringify(state.requests.find(request => request.cacheKey === "climbos:growth_strategy:draft")!.messages)).toContain("PROTECTED STRATEGY EXPLORATION");
+  expect(JSON.stringify(state.requests.find(request => request.cacheKey === "climbos:growth_strategy:draft")!.messages)).toContain("BOUNDED CREATIVE PRECEDENT RETRIEVAL");
   expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
   expect(await t.run(ctx => ctx.db.query("approvals").collect())).toMatchObject([{ status: "pending", actionKind: "approve_plan" }]);
   expect(saved.plan.expert?.quality?.state).not.toBe("failed"); expect(saved.plan.expert?.plays).toHaveLength(0);
@@ -415,6 +415,7 @@ it("runs the real focused path with a matching quote, reuses bound research and 
   expect(state.requests[0].maxTokens).toBe(12000);
   expect(state.requests[0].modelKey).toBe(state.requests[1].modelKey);
   expect(state.requests[1].maxTokens).toBe(32000);
+  expect(state.requests[2]).toMatchObject({ maxTokens: 12000, effort: "high" });
   expect(JSON.stringify(state.requests[1].messages)).toContain("creative preparation proposals");
   expect(JSON.stringify(state.requests[2].messages)).not.toContain("Synthetic direction 1");
   const preparationSteps = await t.run(ctx => ctx.db.query("workflowSteps").withIndex("by_run", q => q.eq("runId", runId)).collect());
@@ -504,8 +505,8 @@ it.each([30, 90])("preserves the %i-day financial scenario while AI chooses inde
   expect(plan.expert?.phases.map(phase => phase.days)).toEqual(focusedPlanFixture(14).phases.map(phase => phase.days));
   expect(plan.expert?.snapshot?.horizonDays).toBe(days);
   expect(plan.expert?.timing?.firstReview.maxDays).toBe(14);
-  expect(JSON.stringify(state.requests[0].messages)).not.toContain("EXECUTION CYCLE:");
-  expect(JSON.stringify(state.requests[0].messages)).toContain("CREATIVITY PREFERENCE: surprising");
+  expect(JSON.stringify(state.requests.find(request => request.cacheKey === "climbos:growth_strategy:draft")!.messages)).not.toContain("EXECUTION CYCLE:");
+  expect(JSON.stringify(state.requests.find(request => request.cacheKey === "climbos:growth_strategy:draft")!.messages)).toContain("CREATIVITY PREFERENCE: surprising");
 });
 
 
@@ -582,7 +583,7 @@ it.each(["focused", "starter"] as const)("carries a sourced campaign window thro
   const saved = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
   expect(saved.expert?.quality?.state).toBe("passed");
   expect(saved.expert?.focusedMove?.timingAssessment).toMatchObject({ decision: "proceed", proposedWindow: futureCampaignTimingFixture().proposedWindow, researchRetrievedAt: new Date(retrievedAt).toISOString() });
-  expect(JSON.stringify(state.requests[0].messages)).toContain("FOCUSED TIMING CONTRACT");
+  expect(JSON.stringify(state.requests.find(request => request.cacheKey === "climbos:growth_strategy:draft")!.messages)).toContain("FOCUSED TIMING CONTRACT");
   const changed = structuredClone(saved.expert!); changed.focusedMove!.timingAssessment!.proposedWindow!.startDate = "2099-01-01";
   await t.run(ctx => ctx.db.patch(saved._id, { expert: changed }));
   await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: saved._id, decision: "approve" })).rejects.toThrow(/changed after it was sent for review/);

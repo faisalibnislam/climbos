@@ -10,10 +10,18 @@ import { claudeSchema } from "../../shared/ai/anthropicSchema";
 
 describe("a focused plan does useful work without invented forecasts", () => {
   it("places creative exploration before the execution plan in the actual provider schema without changing saved fields", () => {
-    const schema = claudeSchema(jsonSchemaFor(FocusedStrategySchema)) as { properties: Record<string, { properties: Record<string, unknown> }> };
+    const schema = claudeSchema(jsonSchemaFor(focusedStrategySpec().schema)) as { properties: Record<string, { properties: Record<string, unknown> }> };
     expect(Object.keys(schema.properties)[0]).toBe("strategyExploration");
     expect(Object.keys(schema.properties.strategyExploration.properties).slice(0, 3)).toEqual(["bold", "grounded", "adjacent"]);
     expect(FocusedStrategySchema.parse(focusedPlanFixture())).toEqual(focusedPlanFixture());
+  });
+  it("bounds new focused phase checklists while retaining historical plan compatibility", () => {
+    const plan = focusedPlanFixture();
+    plan.phases[0].tasks = ["Review the prepared example.", "Verify actual product behavior.", "Approve the exact audience and draft.", "Observe the approved test."];
+    expect(focusedStrategySpec().schema.safeParse(plan).success).toBe(true);
+    plan.phases[0].tasks.push("Start a separate optional workstream.");
+    expect(focusedStrategySpec().schema.safeParse(plan).success).toBe(false);
+    expect(FocusedStrategySchema.safeParse(plan).success).toBe(true);
   });
   it("quotes full-plan output headroom for both draft and revision while preserving the starter allowance", () => {
     const spec = focusedStrategySpec(), plan = planJob("strategy", { planStyle: "focused" });

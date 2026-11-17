@@ -1,4 +1,5 @@
 import { boundedPageReads } from "./provenance";
+import { diagnosisBrief } from "./diagnosis";
 import { CreativePreparationSchema, CREATIVE_PREPARATION_TASK, CREATIVE_PREPARATION_TOKENS } from "./creativePreparation";
 import { FOCUSED_REVIEW_ID, FOCUSED_EVIDENCE_REVIEW, FOCUSED_DECISION_REVIEW, FocusedEvidenceAuditSchema, lintFocusedEvidenceAudit, focusedRevisionCriteria, resolveFocusedEvidencePaths } from "./focusedReview";
 import { OWNER_LANGUAGE_RULES } from "./ownerLanguage";
@@ -363,8 +364,11 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     checkDeadline(deps);
     // Distinct from research (0), normal draft/review (1–6), alternatives (50–51), and reservations (61–62).
     const directions = await deps.phase({ phase: "explore", round: 0, index: 49 }, `${spec.label}: explore strategic directions`, async () => {
-      const result = await deps.turn({ modelKey: spec.models.draft, system,
-        messages: [{ role: "user", content: `${context}\n\nFINAL PLAN CONTEXT (its constraints still apply; do not produce the final plan in this step):\n${input.task}\n\nCURRENT PREPARATION TASK:\n${CREATIVE_PREPARATION_TASK}` }],
+      // Keep execution checklists and their output schema out of divergent exploration.
+      // The full draft still receives every task instruction, owner preference and prior decision below.
+      const result = await deps.turn({ modelKey: spec.models.draft,
+        system: [{ text: OPERATING_RULES }, { text: CREATIVE_PREPARATION_TASK, cache: true }],
+        messages: [{ role: "user", content: `${inputBlock(input, research?.notes ?? null, "", research?.sources ?? [])}${input.constraints?.diagnosis ? `\n\n${diagnosisBrief(input.constraints.diagnosis)}\nThis is a deterministic reading of owner-reported inputs, not independent verification. It informs the immediate move; it does not suppress bold exploration.` : ""}${creativePrecedents ? `\n\nCREATIVE PRECEDENTS (reference mechanisms only, not evidence about this business):\n${creativePrecedents}` : ""}\n\nDevelop distinct candidate directions for the business goal in this context. The final plan will recheck the complete task and owner preferences; these are possibilities, not selected recommendations or permission.` }],
         schema: CreativePreparationSchema, maxTokens: CREATIVE_PREPARATION_TOKENS, effort: spec.effort.draft,
         cacheKey: `climbos:${spec.id}:explore`,
       });

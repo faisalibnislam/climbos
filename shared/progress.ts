@@ -11,7 +11,7 @@ export interface RunStep {
   finishedAt?: number | null;
 }
 
-export type Phase = "read" | "profile" | "research" | "draft" | "review" | "revise" | "other";
+export type Phase = "read" | "profile" | "research" | "explore" | "draft" | "review" | "revise" | "other";
 
 /** Why a job stopped, in plain words with what to do next. Written on the run as its userMessage. */
 export const RUN_FAILURE_COPY = {
@@ -70,12 +70,14 @@ export function runStatusPresentation(status: string): { label: string; tone: "n
 }
 
 /** Typical seconds per phase (median-ish, live routes). */
-export const EXPECTED_SECONDS: Record<Phase, number> = { read: 20, profile: 25, research: 150, draft: 200, review: 80, revise: 200, other: 30 };
+// Exploration provisionally uses the existing writer estimate; it is not a measured SLA.
+export const EXPECTED_SECONDS: Record<Phase, number> = { read: 20, profile: 25, research: 150, explore: 200, draft: 200, review: 80, revise: 200, other: 30 };
 
 export const PHASE_LABEL: Record<Phase, string> = {
   read: "Reading your website",
   profile: "Pulling out the facts",
   research: "Researching the web",
+  explore: "Exploring strategic directions",
   draft: "Writing the analysis",
   review: "Expert review",
   revise: "Improving it",
@@ -87,6 +89,7 @@ export function phaseOf(label: string): Phase {
   if (/read your website/.test(l)) return "read";
   if (/understand the business/.test(l)) return "profile";
   if (/: research$/.test(l)) return "research";
+  if (/: explore strategic directions$/.test(l)) return "explore";
   if (/: revision \d+$/.test(l)) return "revise";
   if (/: review (\d+|b)$/.test(l)) return "review";
   if (/: draft( b)?$/.test(l)) return "draft";
@@ -172,7 +175,7 @@ export function plannedSteps(kind: string, engine: string | null | undefined, op
       return [...(opts.website !== false ? ["Read your website"] : []), "Understand the business", ...agent("Business insights", true)];
     case "strategy":
       if (opts.planStyle === "starter") return agent("Your first growth step", false);
-      if (opts.planStyle === "focused") return agent("Your next growth step", true);
+      if (opts.planStyle === "focused") return ["Your next growth step: research", "Your next growth step: explore strategic directions", ...agent("Your next growth step", false)];
       return [...agent("Channel scoring", false, false), ...agent("Growth plays", true), ...agent("Growth plan", false)];
     case "outbound":
       return [...agent("Find customers", true), ...agent("Write the emails", false)];
@@ -211,6 +214,10 @@ export function findingsFor(label: string, output: unknown): string[] {
   if (!output || typeof output !== "object") return [];
   const o = output as Obj;
   const ph = phaseOf(label);
+  if (ph === "explore") {
+    const directions = arr(o.directions);
+    return [`Prepared ${directions.length} strategic ${directions.length === 1 ? "possibility" : "possibilities"} for review; these are proposals, not verified customer demand.`];
+  }
   if (ph === "research") {
     const sources = arr(o.sources);
     const domains = [...new Set(sources.map((s) => host(str(s.url))).filter(Boolean))];

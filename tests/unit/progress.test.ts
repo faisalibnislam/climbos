@@ -26,6 +26,7 @@ describe("job progress", () => {
   it("maps engine step labels to phases", () => {
     expect(phaseOf("Read your website")).toBe("read");
     expect(phaseOf("Business insights: research")).toBe("research");
+    expect(phaseOf("Your next growth step: explore strategic directions")).toBe("explore");
     expect(phaseOf("Business insights: draft")).toBe("draft");
     expect(phaseOf("Business insights: review 1")).toBe("review");
     expect(phaseOf("Business insights: revision 1")).toBe("revise");
@@ -56,11 +57,12 @@ describe("findings", () => {
   it("plans the actual short AI workflow instead of showing the detailed strategy phases", async () => {
     const { plannedSteps } = await import("../../shared/progress");
     expect(plannedSteps("strategy", "v2", { planStyle: "starter" })).toEqual(["Your first growth step: draft", "Your first growth step: review 1"]);
-    expect(plannedSteps("strategy", "v2", { planStyle: "focused" })).toEqual(["Your next growth step: research", "Your next growth step: draft", "Your next growth step: review 1"]);
+    expect(plannedSteps("strategy", "v2", { planStyle: "focused" })).toEqual(["Your next growth step: research", "Your next growth step: explore strategic directions", "Your next growth step: draft", "Your next growth step: review 1"]);
     expect(plannedSteps("strategy", "v2")).toContain("Growth plays: research");
   });
   it("summarises research, reviews and plans in plain text", async () => {
     const { findingsFor } = await import("../../shared/progress");
+    expect(findingsFor("Your next growth step: explore strategic directions", { directions: [{ title: "Proposed mechanism" }] })).toEqual(["Prepared 1 strategic possibility for review; these are proposals, not verified customer demand."]);
     expect(findingsFor("Growth plays: research", { notes: "## Notes\n- **Plausible** already has a [free trial](https://x.com) for 30 days, no card", sources: [{ url: "https://www.g2.com/a" }, { url: "https://reddit.com/b" }] })).toEqual([
       "Read 2 sources: g2.com, reddit.com",
       "Plausible already has a free trial for 30 days, no card",

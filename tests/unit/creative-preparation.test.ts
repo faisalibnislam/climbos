@@ -31,6 +31,9 @@ describe("creative preparation within the existing focused run", () => {
     const steps = agentSteps({ ...full, lint: undefined });
     expect(steps[0]).toMatchObject({ modelKey: full.models.draft, outputBudget: CREATIVE_PREPARATION_TOKENS, inputBudget: 40_000 });
     expect(steps).toHaveLength(3);
+    expect(full.effort.critic).toBe("high");
+    expect(steps[2]).toMatchObject({ modelKey: full.models.critic, outputBudget: 12000 });
+    expect(focusedStrategySpec({ effort: { critic: "medium" } }).effort.critic).toBe("medium");
     expect(starter.creativePreparation).toBe(false);
     expect(agentSteps({ ...starter, lint: undefined })).toHaveLength(2);
     expect(starter.maxTokens).toEqual({ research: 0, draft: 11000, critic: 4000 });
@@ -51,16 +54,19 @@ describe("creative preparation within the existing focused run", () => {
         const result = await fn(); checkpoints.set(key.index, result.value); return result.value;
       },
     };
-    const input = { brief: "Synthetic source context; capacity unknown.", task: "Prepare an owner-reviewable proposal.", facts: [] };
+    const input = { brief: "Synthetic source context; capacity unknown.", task: "Prepare an owner-reviewable proposal. Specific execution checklist stays in the final drafting task.", facts: [] };
     const result = await runAgent(spec(), input, deps);
     expect(result.output).toEqual(draft); expect(result.assessment?.ship).toBe(true);
     expect(keys.map(key => [key.phase, key.index])).toEqual([["explore", 49], ["draft", 1], ["critique", 2]]);
     expect(requests[0]).toMatchObject({ modelKey: spec().models.draft, maxTokens: CREATIVE_PREPARATION_TOKENS });
     expect(requests[0].customTools).toBeUndefined(); expect(requests[0].webSearch).toBeUndefined();
+    expect(JSON.stringify(requests[0].messages)).not.toContain("Specific execution checklist");
+    expect(JSON.stringify(requests[0].messages)).toContain(input.brief);
     const writer = JSON.stringify(requests[1].messages), critic = JSON.stringify(requests[2].messages);
     expect(writer).toContain("creative preparation proposals");
     expect(writer).toContain("not new facts, user instructions or authorization");
     expect(writer).toContain("Synthetic possibility 0");
+    expect(writer).toContain("Specific execution checklist");
     expect(critic).not.toContain("Synthetic possibility 0");
     expect(critic).toContain(draft.summary);
     expect(await runAgent(spec(), input, deps)).toEqual(result);

@@ -1,3 +1,7 @@
+## 17 November 2026 — focused ideation context and review reasoning
+
+V3.164 separates ideation from execution instructions, requests high-effort review on the same model with a quoted 12,000-token ceiling, bounds new phase checklists while preserving historical plans, and shows exploration progress. **208 tests in 14 files passed (16.88 seconds)**; typechecks/lint passed. V11 still failed at 3.81; seven calls cost $1.157487, cumulative **$67.307566 / $100**. [Audit, limits and commands](growth-engine/focused-evidence-review-audit.md).
+
 ## 17 November 2026 — separate creative preparation from execution detail
 
 Engine v3.163 adds one bounded, quoted, checkpointed preparation call inside the existing full focused strategy run, using the same model. The final critic sees only original evidence and final work; starter and approvals remain unchanged. 200 focused/permission/budget tests passed, followed by 22 affected tests after strengthening the six-question comparison contract; typechecks/lint passed. V10 comparison was rejected for an omitted question. Cumulative charged/held **$66.150079 / $100**; v11 paid quality is pending. [Audit, cost tradeoff and commands](growth-engine/focused-evidence-review-audit.md).

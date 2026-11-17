@@ -338,7 +338,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.163-creative-preparation";
+export const ENGINE_VERSION = "v3.164-exploration-context";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -408,6 +408,13 @@ export const FocusedStrategySchema = z.object({
   weekOneChecklist: z.array(z.string()).min(1).max(3),
   leadingIndicators: StrategyV2Schema.shape.leadingIndicators.max(2),
   risks: StrategyV2Schema.shape.risks.max(3),
+});
+
+/** Bound new focused checklists without invalidating previously saved, longer plans. */
+const FocusedStrategyDraftSchema = FocusedStrategySchema.extend({
+  phases: z.array(StrategyV2Schema.shape.phases.element.extend({
+    tasks: StrategyV2Schema.shape.phases.element.shape.tasks.unwrap().max(4).describe("One to four coherent steps, only as needed. Do not bundle unrelated chores to evade the bound. Keep necessary approvals and verification; defer optional work conditionally.").optional(),
+  })),
 });
 
 function lintStrategyExploration(exploration: StrategyExploration | undefined, input: AgentInput): LintIssue[] {
@@ -2773,7 +2780,7 @@ function focusedOfferDraftInput(out: z.infer<typeof FocusedStrategySchema>, inpu
 export function focusedStrategySpec(o: SpecOptions = {}): AgentSpec<z.infer<typeof FocusedStrategySchema>> {
   const spec = base({
     id: "growth_strategy", role: "cmo", label: "Your next growth step", skills: ["owner-brevity", "focused-growth-strategy"],
-    schema: FocusedStrategySchema, rubric: focusedRubric(rubricOf("growth-strategy")), criticSkills: ["owner-brevity"],
+    schema: FocusedStrategyDraftSchema, rubric: focusedRubric(rubricOf("growth-strategy")), criticSkills: ["owner-brevity"],
     lint: (out, input) => [
       ...lintStrategyExploration(out.strategyExploration, input),
       ...lintFocusedDemandGate(out.channels, input.constraints),
@@ -2798,7 +2805,7 @@ export function focusedStrategySpec(o: SpecOptions = {}): AgentSpec<z.infer<type
     ],
   }, { maxRevisions: 2, ...o }, "expert");
   // Reasoning and JSON share the output ceiling. Reserve this same bound in jobPlans.
-  return { ...spec, creativePreparation: true, maxTokens: { ...spec.maxTokens, draft: 32_000 } };
+  return { ...spec, creativePreparation: true, effort: { ...spec.effort, critic: o.effort?.critic ?? "high" }, maxTokens: { ...spec.maxTokens, draft: 32_000, critic: 12_000 } };
 }
 
 /** Same output and hard checks; a reviewed first step that fits the free allowance. */
