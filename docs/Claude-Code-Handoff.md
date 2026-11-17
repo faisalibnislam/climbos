@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+Offer and approved-copy checks now recognize plural mechanisms such as “discounts”, “bonuses” and “free trials”. A generated primary promotion cannot bypass its assessment merely by using plural wording. [Audit and approval regression](growth-engine/plural-offer-mechanisms-audit.md).
+
 Paid QA now rejects reuse of a variant whose code, input or agent settings no longer match. Choose a new variant after changes; historical outputs and failed reviews are never silently upgraded. [Audit](growth-engine/evaluation-cache-identity-audit.md).
 
 Offer checks distinguish narrowly worded rejected alternatives (“safer than a discount”) from proposed promotions and recognize staffing, stock and floor-space unknowns. Affirmative offers and approval controls still apply. [Audit](growth-engine/offer-alternative-classification-audit.md).

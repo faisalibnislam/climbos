@@ -261,7 +261,7 @@ export interface OfferAssessmentContext {
 }
 
 const REQUIRED_ALTERNATIVES = ["positioning", "conversion_path", "retention", "capacity", "no_change"] as const;
-const PROMOTION_WORDS = /\b(?:discount|%\s*off|save\s+\$|sale price|coupon|promo code|limited[- ]time|bonus|bundle|free trial|payment terms|pay later|installments?|split payments?|guarantee|referral reward|incentive|special offer|offer change|change the offer|non[- ]price offer|free (?:setup|shipping|delivery|consultation|onboarding))\b/i;
+const PROMOTION_WORDS = /\b(?:discounts?|%\s*off|save\s+\$|sale prices?|coupons?|promo codes?|limited[- ]time|bonus(?:es)?|bundles?|free trials?|payment terms|pay later|installments?|split payments?|guarantees?|referral rewards?|incentives?|special offers?|offer changes?|change the offer|non[- ]price offers?|free (?:setup|shipping|delivery|consultation|onboarding))\b/i;
 const URGENCY_WORDS = /\b(?:limited[- ]time|ends? (?:today|tomorrow|this week|on|in)|last chance|only \d+|limited (?:spots?|seats?|stock|inventory)|while supplies last|deadline|scarcity|expires? (?:today|tomorrow|on|in))\b/i;
 const RESTRICTED_AUDIENCE = /\b(?:first[- ]time|new (?:customers?|clients?|buyers?|users?)|existing (?:customers?|clients?|buyers?|users?|subscribers?|members?)|qualified|invited|waitlist|members? only|(?:for )?(?:returning|current) (?:customers?|clients?|buyers?|users?|subscribers?|members?))\b/i;
 const UNIVERSAL_AUDIENCE = /\b(?:available to everyone|open to everyone|for everyone|all customers|all users|any customer|any user|anyone can|no restrictions)\b/i;
@@ -276,13 +276,13 @@ const AUDIENCE_QUALIFIERS = [
   /\b(?:returning|current) (?:customers?|clients?|buyers?|users?|subscribers?|members?)\b/i,
 ];
 const OFFER_MECHANISM_PATTERNS: Record<string, RegExp> = {
-  discount: /\b(?:discount|\d+(?:\.\d+)?%\s*off|save\s+(?:[$£€]\s*)?\d|promo(?:tion)? code|coupon|sale price|introductory price)\b/i,
+  discount: /\b(?:discounts?|\d+(?:\.\d+)?%\s*off|save\s+(?:[$£€]\s*)?\d|promo(?:tion)? codes?|coupons?|sale prices?|introductory prices?)\b/i,
   bundle: /\bbundles?\b/i,
-  bonus: /\b(?:bonus|free gift|free add[- ]on|complimentary (?:item|service|month))\b/i,
-  trial: /\b(?:free trial|trial period|try(?: it)? free)\b/i,
+  bonus: /\b(?:bonus(?:es)?|free gifts?|free add[- ]ons?|complimentary (?:items?|services?|months?))\b/i,
+  trial: /\b(?:free trials?|trial periods?|try(?: it)? free)\b/i,
   payment_terms: /\b(?:pay later|installments?|payment terms|split payments?)\b/i,
-  guarantee: /\b(?:guarantee|money[- ]back|refund promise)\b/i,
-  referral_incentive: /\b(?:referral reward|referral incentive|refer (?:a friend|someone) and get)\b/i,
+  guarantee: /\b(?:guarantees?|money[- ]back|refund promises?)\b/i,
+  referral_incentive: /\b(?:referral rewards?|referral incentives?|refer (?:a friend|someone) and get)\b/i,
 };
 
 /** Bind every recognized offer mechanism, deadline, or price to its exact approved play. */

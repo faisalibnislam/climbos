@@ -1,3 +1,7 @@
+## 17 November — plural promotion mechanisms
+
+`v3.153-plural-offer-mechanisms`: close a plural-wording bypass in structured offer and approved-copy checks. Fourteen red cases followed by 310 passing focused/permission tests, including the real generation-to-approval boundary. [Audit](plural-offer-mechanisms-audit.md). Semantic and broader acceptance limits remain explicit.
+
 ## 17 November — paid evaluation cache identity
 
 Harness reuse now requires exact code/input/configuration identity, preserving legacy records and refusing silent stale reuse. Twenty tests, typecheck and lint passed. [Audit](evaluation-cache-identity-audit.md). No runtime behavior or paid-call authority changed.

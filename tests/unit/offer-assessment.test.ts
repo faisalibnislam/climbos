@@ -22,6 +22,22 @@ const play = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe("offer and promotion recommendations", () => {
+  it.each(["discounts", "coupons", "bonuses", "bundles", "free trials", "guarantees", "referral rewards", "incentives", "special offers"])("requires an assessment for plural promotion wording: %s", mechanism => {
+    expect(lintOfferAssessment(undefined, { hook: `Offer ${mechanism} to first-time customers.` }, context, "offerAssessment"))
+      .toContainEqual(expect.objectContaining({ rule: "offer_assessment", severity: "error" }));
+    expect(lintOfferAssessment(undefined, { hook: `No ${mechanism} proposed.` }, context, "offerAssessment")).toEqual([]);
+    const terms = [{ playName: "Fix clarity", recommendation: "no_change", currency: "USD", allowedPrices: [], allowedMechanisms: [], urgencyClaim: null, eligibleAudience: null }];
+    expect(lintApprovedOfferCopy(`Get ${mechanism} when you join.`, terms, "email.body"))
+      .toContainEqual(expect.objectContaining({ rule: "offer_not_recommended", severity: "error" }));
+  });
+
+  it.each(["bonuses", "free trials", "guarantees", "referral rewards"])("keeps plural mechanisms bound to the approved offer: %s", mechanism => {
+    const terms = [{ playName: "Introductory price", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [95], allowedMechanisms: ["discount"], urgencyClaim: null, eligibleAudience: null }];
+    expect(lintApprovedOfferCopy(`Get ${mechanism} when you join.`, terms, "email.body"))
+      .toContainEqual(expect.objectContaining({ rule: "approved_offer_mechanism", severity: "error" }));
+    expect(lintApprovedOfferCopy("No free trials.", terms, "email.body").filter(issue => issue.rule === "offer_not_recommended")).toEqual([]);
+  });
+
   it("shows the decision-critical offer details first and places the full comparison behind a disclosure", () => {
     const markup = renderToStaticMarkup(createElement(OfferAssessmentPanel, { offer: assessment() }));
     expect(markup).toContain("Advice only · changes need your approval");

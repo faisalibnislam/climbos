@@ -1,3 +1,7 @@
+## 17 November 2026 — plural offer checks
+
+[Audit and commands](growth-engine/plural-offer-mechanisms-audit.md). Engine `v3.153-plural-offer-mechanisms`: fourteen red cases, then **310 tests in ten files passed (13.57 seconds)**. A generated plural promotion without an assessment now fails quality and approval with no action receipts. App/Convex typecheck, changed-file ESLint and diff checks passed.
+
 ## 17 November 2026 — exact paid evaluation reuse
 
 Harness-only change: **20 tests in six files passed (0.664 seconds)**, plus typecheck and ESLint. Changed/legacy cached evaluation identity now fails before another provider request or overwrite. Historical failures and all budget holds remain intact. [Audit and commands](growth-engine/evaluation-cache-identity-audit.md).

@@ -46,6 +46,7 @@ vi.mock("../../shared/ai/turn", async original => ({
       }
       plan.diagnosis = offer.diagnosis;
       plan.focusedMove = { ...plan.focusedMove, title: "Test the proposed introductory discount", why: "The owner reports a price obstacle for qualified quote requests.", firstAction: "Review the prepared offer test.", aiCanDo: "Prepare a private discount test brief for owner review.", ...(state.offerMode === "missing_assessment" ? {} : { offerAssessment: offer }) };
+      if (state.offerMode === "plural_missing_assessment") plan.focusedMove = { ...focusedPlanFixture(days).focusedMove, title: "Offer discounts to first-time buyers", why: "A proposed price test for quote requesters.", firstAction: "Review the proposed terms.", aiCanDo: "Prepare the test brief." };
       plan.preparedWork[0].approvedOfferPlayName = plan.focusedMove.title;
       plan.experiments[0].name = plan.focusedMove.title;
     }
@@ -523,7 +524,7 @@ it.each(["focused", "starter"] as const)("persists the %s offer assessment and d
   expect(await t.run(ctx => ctx.db.query("campaigns").collect())).toEqual([]);
 });
 
-it.each(["missing_assessment", "missing_cost", "validate_first"])("keeps %s promotion decisions honest through generation and approval", async mode => {
+it.each(["missing_assessment", "plural_missing_assessment", "missing_cost", "validate_first"])("keeps %s promotion decisions honest through generation and approval", async mode => {
   const { t, owner, slug, orgId } = await workspace(); state.offerMode = mode;
   await t.run(async ctx => {
     const business = (await ctx.db.query("businesses").withIndex("by_org", q => q.eq("orgId", orgId)).first())!;
