@@ -659,6 +659,7 @@ describe("creative strategy precedent retrieval", () => {
   it("does not mistake common instruction words or unknown-input labels for a creative mechanism", () => {
     expect(retrieveCreativePrecedents("one not can but when who are has only more over under than should will would may might must their they them your our each any all other where which how what why unknown supplied provided confirmed").map(match => match.precedent.id))
       .toEqual([]);
+    expect(retrieveCreativePrecedents("Owner-selected public-source acceptance case. Use current reported facts, first-party evidence and supplied information. Evaluation only.")).toEqual([]);
   });
 
   it("does not force a weak analogy when customer and constraint evidence are absent", () => {

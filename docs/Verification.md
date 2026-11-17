@@ -1,3 +1,7 @@
+## 17 November 2026 — relevant precedents and bounded repairs
+
+Engine v3.160 excludes request/provenance boilerplate from precedent matching and gives full focused plans up to two separately reserved, freshly reviewed repairs. Starter/model/permission controls stay unchanged. **233 tests in 12 files passed (15.87 seconds)**, plus typechecks and lint. V7 remained failed at 3.88 with an unsupported social instruction; cumulative charged/held $63.985624 / $100. [Audit and cost/latency tradeoff](growth-engine/focused-evidence-review-audit.md).
+
 ## 17 November 2026 — explore before committing to a plan
 
 Engine v3.159 changes focused generation order so the creative portfolio, starting with bold, precedes the practical plan. The raw v6 output confirmed the previous reverse order. One red regression, then **141 tests in eight files passed (15.13 seconds)**; typechecks and lint passed. Existing fields, UI order, approvals and models remain unchanged. V6 completed without truncation but failed quality at 3.69/minimum 3.5; cumulative charged/held $63.311534 / $100. [Audit](growth-engine/focused-evidence-review-audit.md).

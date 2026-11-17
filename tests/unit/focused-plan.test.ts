@@ -21,6 +21,9 @@ describe("a focused plan does useful work without invented forecasts", () => {
     expect(spec.maxTokens.draft).toBeGreaterThan(24000);
     expect(plan.steps).toContainEqual(expect.objectContaining({ kind: "model", modelKey: spec.models.draft, outputBudget: spec.maxTokens.draft }));
     expect(plan.revisionSteps).toContainEqual(expect.objectContaining({ kind: "model", outputBudget: spec.maxTokens.draft }));
+    expect(spec.maxRevisions).toBe(2);
+    expect(plan.revisionSteps).toHaveLength(4);
+    expect(focusedStrategySpec({ maxRevisions: 0 }).maxRevisions).toBe(0);
     const starter = starterStrategySpec(), starterPlan = planJob("strategy", { planStyle: "starter" });
     expect(starter.models).toEqual(spec.models);
     expect(starter.maxTokens.draft).toBe(11000);

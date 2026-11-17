@@ -1686,10 +1686,12 @@ const STOP = new Set([
   "and", "the", "for", "with", "from", "into", "that", "this", "business", "company", "customer", "strategy", "strategic", "growth", "marketing",
   // Grammar and missing-input labels are not creative mechanisms or fit evidence.
   "one", "not", "can", "but", "when", "who", "are", "has", "have", "had", "only", "more", "over", "under", "than", "such", "should", "will", "would", "may", "might", "must", "does", "did", "its", "their", "they", "them", "you", "your", "our", "own", "each", "any", "all", "other", "where", "which", "how", "what", "why", "without", "unknown", "supplied", "provided", "confirmed",
+  // Request/provenance boilerplate must not outrank the actual business mechanism.
+  "owner", "selected", "use", "used", "using", "first", "source", "sourced", "reported", "report", "evidence", "fact", "facts", "information", "current", "known", "acceptance", "evaluation", "case", "based", "include", "including", "available", "read",
 ]);
 // Category and geography words may help explain transfer fit, but cannot by
 // themselves establish that a case has the same creative/business mechanism.
-const MECHANISM_STOP = new Set([...STOP, "care", "product", "service", "provider", "providers", "retail", "health", "businesses", "company", "companies", "industry", "sector", "market", "markets", "audience", "local", "global", "south", "north", "east", "west", "india", "kenya", "united", "states", "compare"]);
+const MECHANISM_STOP = new Set([...STOP, "care", "product", "service", "provider", "providers", "retail", "health", "businesses", "company", "companies", "industry", "sector", "market", "markets", "audience", "local", "global", "south", "north", "east", "west", "india", "kenya", "united", "states", "compare", "public", "party", "test"]);
 const words = (s: string) => new Set((s.toLocaleLowerCase("en-US").normalize("NFKC").match(/[a-z0-9]{3,}/g) ?? []).map((term) => STOP.has(term) || term.length <= 4 || term.endsWith("ss") ? term : term.endsWith("s") ? term.slice(0, -1) : term));
 const SCALE_ALIASES: Record<string, string[]> = { small: ["startup", "early", "resource", "limited"], startup: ["early", "small"], micro: ["small", "limited"] };
 

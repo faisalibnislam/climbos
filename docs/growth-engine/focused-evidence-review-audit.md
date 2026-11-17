@@ -1,5 +1,24 @@
 # Focused strategy evidence review — 17 November 2026
 
+## v7 retest, retrieval relevance and bounded second repair — v3.160
+
+Variant `launch-quality-v7-20261117`, engine v3.159, source hash `35d999287af17b9f09f77e195b2574a0f32adc99a5dc79fce225127c7e680259`: four calls cost **$0.674090**. The raw response now did explore first. First review: 3.63 with two lint errors. Revision: **3.88 average, minimum 3, ship false**, with an unsupported instruction about editing a generated form in its social draft. Other rubric criteria reached 4, but a familiar agency/client-payer mechanism remained labelled highly novel; generation order alone did not establish originality. The failed result is preserved. Combined charged/held after v7: **$63.985624 / $100**.
+
+Inspection found precedent ranking reasons such as `owner, selected, use, first`: the retrieval gate was matching provenance/request boilerplate as a creative mechanism. A new red regression reproduced this without any business content. `v3.160-retrieval-and-bounded-repair` excludes these labels and common request words from matching; the existing 77-case retrieval regression file still passes. This remains lexical retrieval, not verified semantic transfer.
+
+The Livoform harness's explicit retrieval query previously repeated its evaluation instructions. It now uses only a source-labelled summary of product capabilities already in the frozen research pack, mirroring production's use of the business summary. The actual owner reports, brief, sources, research and constraints are unchanged. This is a changed retrieval configuration, not new business evidence or a manually supplied strategy. Historical benchmark identities remain distinct.
+
+Full focused plans may now make **at most two optional revisions**, each freshly reviewed, rather than stopping after one repair while a newly identified defect remains. Existing early-stop and best-reviewed-draft behavior stays in force. Each revision is subject to the existing reservation; a refused second reservation retains the failed reviewed draft and makes no second-repair call. Quotes include both potential revision pairs. Starter remains at one optional repair within its initial cap, and explicit caller overrides still work. The benchmark now takes this same production default. This can increase latency and cost for difficult full plans; it does not weaken acceptance, change the model or add execution authority.
+
+Three red regressions, then **233 tests in 12 files passed (15.87 seconds)**, including a six-call/two-repair test and a four-call stop when the second reservation is refused. App/Convex typechecks, changed-file ESLint and diff checks passed:
+
+```sh
+pnpm exec vitest run tests/unit/creative-precedents.test.ts tests/unit/livoform-launch-input.test.ts tests/unit/agent-escalation.test.ts tests/unit/focused-plan.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/evaluation-identity.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts tests/unit/anthropic-budget.test.ts tests/unit/evaluation-budget.test.ts tests/unit/ai-qa-budget.test.ts
+pnpm typecheck
+```
+
+Paid v8 is a new full-workflow evaluation under the same $100 ledger cap and runtime model; interpret it as the combined configuration, not an isolated causal test of any single change.
+
 ## v6 retest and exploration-before-plan hypothesis — v3.159
 
 Variant `launch-quality-v6-20261117`, engine v3.158, source hash `50cd6955fa39b7748dbf5534e049f6380bbc29ec9220653e2b76d28215cb8650`: four calls cost **$0.746657**. First draft: 3.38, failed gates. Revision: **3.69 average, minimum 3.5, all gates passed and no lint findings, ship false**. The complete revision fit its allowance. It omitted the unnecessary offer assessment and retained useful prepared work, but conventional agency/client-payer ideas, thin commercial differentiation and owner workload remained below acceptance. The critic still made debatable demands (for example a different artifact kind not in the existing schema). This is not a claim that semantic review is now reliable. Combined charged/held: **$63.311534 / $100**.

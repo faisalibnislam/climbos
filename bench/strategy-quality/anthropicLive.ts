@@ -32,7 +32,7 @@ const { values } = parseArgs({ options: { variant: { type: "string", default: "b
 const variant = values.variant!;
 if (values["owner-context"] && values.stage !== "launch-acceptance") throw new Error("Owner context is only accepted by the launch-acceptance stage; refusing to silently ignore it.");
 if (!["starter", "focused"].includes(values["plan-style"]!)) throw new Error("Unknown plan style.");
-const selectedPlanSpec = () => values["plan-style"] === "starter" ? starterStrategySpec() : focusedStrategySpec({maxRevisions: 1});
+const selectedPlanSpec = () => values["plan-style"] === "starter" ? starterStrategySpec() : focusedStrategySpec();
 const cheapDraft = values["draft-tier"] === "standard" || variant === "economy";
 if (!["standard", "advanced"].includes(values["draft-tier"]!)) throw new Error("Invalid draft tier.");
 const evidenceFrom = values["evidence-from"] ?? (variant === "economy" ? "improved" : undefined);

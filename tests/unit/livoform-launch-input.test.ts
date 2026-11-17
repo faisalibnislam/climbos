@@ -31,6 +31,9 @@ describe("owner-selected Livoform launch acceptance", () => {
     expect(input.brief).toContain("evaluation choices");
     expect(input.constraints?.monthlyAdBudgetUsd).toBe(0);
     expect(input.creativeRetrievalQuery).not.toContain("YOUR TASK");
+    expect(input.creativeRetrievalQuery).toContain("conditional logic");
+    expect(input.creativeRetrievalQuery).toContain("source-reported");
+    expect(input.creativeRetrievalQuery).not.toContain("ACCEPTANCE CASE");
     expect(input.task).not.toContain(LIVOFORM_LAUNCH_QUESTIONS[0]);
     expect(input.task.match(/PROTECTED STRATEGY EXPLORATION:/g)).toHaveLength(1);
     expect(input.task).toContain("CREATIVITY PREFERENCE: balanced");

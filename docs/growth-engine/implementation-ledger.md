@@ -1,3 +1,7 @@
+## 17 November — repair retrieval and allow one further reviewed correction
+
+`v3.160-retrieval-and-bounded-repair`: stop ranking precedents by words such as owner/selected/source; give the launch harness the source-labelled product summary already in its evidence. Full focused plans permit two reserved revisions, with starter unchanged and every revision re-reviewed. Three red regressions, then 233 tests passed; typechecks/lint passed. V7 failed and is preserved; v8 evaluates the combined configuration. [Audit](focused-evidence-review-audit.md).
+
 ## 17 November — explore before execution planning
 
 `v3.159-explore-before-planning`: reorder the focused generation schema, preserving its full contract, so bold exploration is not written after an entire conventional execution plan. This is a testable anchoring hypothesis, not a quality guarantee. Provider-schema and permission coverage: 141 tests passed, typechecks/lint passed. V6 still failed acceptance; v7 is pending. [Preserved results and audit](focused-evidence-review-audit.md).

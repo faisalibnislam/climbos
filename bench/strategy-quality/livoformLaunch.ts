@@ -40,7 +40,9 @@ export function livoformLaunchInput(ownerInput: unknown, now = Date.now()): Agen
     task: `${focusedPlanTask(14)}\n${campaignTimingTask(timingContext)}\nUTC is this evaluation clock only, not evidence of customer location or business timezone. Use not_relevant for an evergreen first-user test. Owner reports are not measured analytics or billing evidence; do not invent a reporting interval.`,
     brief,
     facts: facts,
-    creativeRetrievalQuery: [brief, ...facts].join("\n"),
+    // Match production's business-summary query rather than the evaluator's instructions.
+    // These are only capabilities already present in RESEARCH, not new evidence or a proposed strategy.
+    creativeRetrievalQuery: "AI form builder with conditional logic and response workflows; assistant/API access; company-wide Core/Pro subscriptions; custom domains and product branding removal (source-reported, not tested).",
     businessWebsite: "https://livoform.com/",
     ownerSuppliedUrls: ["https://livoform.com/"],
     timingContext,
