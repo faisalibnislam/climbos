@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+Two fresh synthetic industry evaluations remained below acceptance. The harness omitted the app-provided timing clock; that evaluation-input defect is fixed without changing the timing prompt. Preserve the failed receipts and distinguish harness correction from product quality. [Details, cost and remaining gaps](growth-engine/industry-evaluation-clock-audit.md).
+
 Review validation now catches additional incentive, review-change/removal reward and satisfaction-targeting language in copy and proposed actions. Lifecycle final validation rejects those known forms even if the model critic passes them. [Coverage and limits](growth-engine/review-reward-validation-audit.md).
 
 Strategy and lifecycle playbooks now consistently follow the owner’s neutral, no-rewards review policy, including software, ecommerce and in-app guidance. Older gift-card and satisfaction-filter recommendations were removed from the runtime instructions; editorial collaborations remain distinct from customer reviews. [Audit and limits](growth-engine/neutral-review-playbooks-audit.md).

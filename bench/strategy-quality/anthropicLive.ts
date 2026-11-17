@@ -8,6 +8,7 @@ import { z } from "zod";
 import { runAgent, assess, CRITIC_RULES, CritiqueSchema, lintAgentOutput } from "../../shared/agents/runtime";
 import { ENGINE_VERSION, growthPlaysSpec, playCatalogsFor, PlaysOutputSchema, strategySpec, focusedStrategySpec, starterStrategySpec, socialSpec, seoSpec, SeoBriefV2Schema } from "../../shared/agents/specs";
 import { selectStrategyQualityCases } from "./cases";
+import { industryInput } from "./industryInput";
 import { focusedPlanTask, focusedRefreshContext } from "../../shared/agents/focusedPlan";
 import { BusinessProfileSchema } from "../../shared/ai/tasks";
 import {agentQuality,planQuality,planRepairGuidance} from "../../shared/agents/quality";
@@ -37,7 +38,7 @@ if (!horizons.length || horizons.some((days) => ![14, 30, 90].includes(days)) ||
 if (!/^[a-z0-9-]{1,40}$/.test(variant)) throw new Error("Invalid variant name.");
 if (!values["confirm-paid"] || process.env.CLIMBOS_FAKE_LLM) throw new Error("Real QA needs --confirm-paid, with no fake LLM.");
 const out = resolve("bench/cache/anthropic-real-2026-11-09"); mkdirSync(out, { recursive: true });
-const loadedSourceHash = createHash("sha256").update(["shared/agents/runtime.ts", "shared/agents/specs.ts", "shared/agents/planTasks.ts", "shared/agents/contentTasks.ts", "shared/agents/focusedPlan.ts", "shared/agents/focusedRubric.ts", "shared/agents/channelJudgment.ts", "shared/agents/capacity.ts", "shared/skills/generated.ts", "shared/ai/anthropic.ts"].map((f) => readFileSync(resolve(f), "utf8")).join("\n")).digest("hex");
+const loadedSourceHash = createHash("sha256").update(["shared/agents/runtime.ts", "shared/agents/specs.ts", "shared/agents/planTasks.ts", "shared/agents/contentTasks.ts", "shared/agents/focusedPlan.ts", "shared/agents/focusedRubric.ts", "shared/agents/channelJudgment.ts", "shared/agents/capacity.ts", "shared/agents/campaignTiming.ts", "bench/strategy-quality/industryInput.ts", "shared/skills/generated.ts", "shared/ai/anthropic.ts"].map((f) => readFileSync(resolve(f), "utf8")).join("\n")).digest("hex");
 const secret = readFileSync(resolve(".env.anthropic.local"), "utf8").match(/^\s*ANTHROPIC_API_KEY\s*=\s*(.+)\s*$/m)?.[1]?.trim().replace(/^(['"])(.*)\1$/, "$2");
 if (!secret) throw new Error("Saved Anthropic key is missing.");
 process.env.ANTHROPIC_API_KEY = secret;
@@ -160,7 +161,7 @@ try {
    const selected = selectStrategyQualityCases(values.cases);
    if (selected.some(item => !item.brief.startsWith("SYNTHETIC"))) throw new Error("Industry runs require explicitly synthetic isolated briefs.");
    for (const item of selected) {
-     const input: AgentInput = { task: focusedPlanTask(14), brief: item.brief.replace(/over 90 days/g, "over 14 days"), facts: item.facts, precomputedResearch: item.research, availableSourceUrls: item.research.sources.map(source => source.url), constraints: { currency: "USD", horizonDays: 14, monthlyAdBudgetUsd: 0, businessTypes: [item.businessType] } };
+     const input = industryInput(item);
      await execute(item.id, "focused-14", selectedPlanSpec(), input);
    }
    console.log(`COMPLETE isolated industry run: ${selected.length} cases; $${(spent()/1e6).toFixed(6)} used/held.`);

@@ -1,3 +1,13 @@
+## 17 November 2026 — industry evaluation clock
+
+[Audit and preserved live failures](growth-engine/industry-evaluation-clock-audit.md). Production engine remains `v3.142-review-reward-validation`; no timing prompt or runtime was changed.
+
+- Six focused test files: **126 passed, 4.21 seconds**, including real timing validators, budget guard and marketing/tenant permissions.
+- Application and Convex typechecks passed. New helper/test ESLint and diff checks passed.
+- Seven completed live Sonnet calls across ecommerce/education cost **$0.933375** under the existing evaluation allowance. Both plans remained below acceptance; the missing benchmark clock is fixed, but no corrected-input live result is claimed in this batch. Education's attempted revision was truncated and did not replace the failed draft.
+
+The synthetic harness is not the entire production job. No external business actions, UI changes or deployment occurred. Full scope remains incomplete.
+
 ## 17 November 2026 — review reward validation
 
 [Audit](growth-engine/review-reward-validation-audit.md). Engine `v3.142-review-reward-validation`.
