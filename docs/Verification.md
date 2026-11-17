@@ -1,3 +1,7 @@
+## 17 November 2026 — offline evaluation clock
+
+[Audit](growth-engine/offline-evaluation-clock-audit.md). Two red regressions reproduced the missing clock and past-window acceptance. **110 tests in seven files passed, 13.23 seconds**. Actual retail/education offline exports contain the clock and preserve unknown business location and research freshness. Application/Convex typecheck, changed-file ESLint and diff checks passed. No provider call or runtime engine change.
+
 ## 17 November 2026 — connection dialog service icons
 
 [Audit](growth-engine/connection-dialog-icons-audit.md). Six actual setup dialogs checked across desktop/mobile, with keyboard dismissal/focus return, unchanged authority records, no serious/critical automated accessibility findings after animation and no horizontal overflow. Screenshots inspected. App/Convex typecheck, changed-file ESLint and diff checks passed. No provider calls or real accounts.

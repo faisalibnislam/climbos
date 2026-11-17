@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+Offline review packs now include the evaluation clock so past campaign windows cannot pass using the legacy 1970 fallback. UTC remains a test clock, not customer geography. [Audit](growth-engine/offline-evaluation-clock-audit.md).
+
 Connection setup and disconnect popups now show the service icon before the title, matching their cards. Stripe, Resend and WordPress use local brand artwork; file imports use colored file/contact symbols. [Scope and browser verification](growth-engine/connection-dialog-icons-audit.md).
 
 The review loop now keeps a draft that passes every required check ahead of a higher-average draft that fails one criterion. Both revision and best-of-two paths are covered; strategy-option diversity, budgets and approval rules are unchanged. [Audit](growth-engine/reviewed-draft-selection-audit.md).
@@ -453,11 +455,11 @@ These are known open gaps, not a complete substitute for checking the requiremen
 - Keep recommendation generation separate from action. No sending, publishing, scheduling, price changes, ad spend, profile changes, or other external effects as a generation side effect.
 - Preserve tenant isolation, permissions, policy checks, and approvals tied to exact tenant, artifact/content version, destination, audience, budget, and action scope. Fail closed for unsupported or unknown action kinds.
 - Verify volatile platform rules and API access from current official sources before recommending an integration. Record the supported claim, access date, and limits.
-- Use the existing OpenAI-first metered routing, cost reservation/accounting, and Gemini image path. Do not change providers or the coding model casually. If a different Codex model tier is genuinely needed, ask the owner before switching; for Claude Code use its currently selected model unless there is a concrete reason to request a change.
+- Use the currently stored provider route and its metered cost reservation/accounting. New application runs currently use Haiku/Sonnet (`shared/agents/routes.ts`); legacy OpenAI runs retain their original routing. Preserve the separate image path. Do not change providers or the coding model casually. If a different Codex model tier is genuinely needed, ask the owner before switching; for Claude Code use its currently selected model unless there is a concrete reason to request a change.
 - Do not put unrelated brand names into customer-facing ClimbOS copy.
 - Keep creative strategy original. Case retrieval must improve reasoning, never act as a precedent gate for bold options.
 
-## Verification performed for the latest pushed batch
+## Historical verification for commit 7ee9e8b
 
 The following commands passed before commit `7ee9e8b`:
 
@@ -475,7 +477,7 @@ git diff --check
   passed
 ```
 
-This was a focused check of the latest batch, not a full repository test suite or a live-model/provider test. The preceding batch `c154357` also passed its documented focused tests (52 across five files), app/Convex typecheck, changed-file ESLint, and diff check. See the ledger for earlier batches and their own exact scopes.
+This was a focused check of that historical batch, not the current head, a full repository test suite or a live-model/provider test. The preceding batch `c154357` also passed its documented focused tests (52 across five files), app/Convex typecheck, changed-file ESLint, and diff check. See the ledger for earlier batches and their own exact scopes.
 
 The follow-up prompt correction also passed:
 

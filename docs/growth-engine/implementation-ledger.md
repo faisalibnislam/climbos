@@ -1,3 +1,7 @@
+## 17 November — offline timing checks
+
+Offline prepare/check commands now supply the actual evaluation clock instead of falling back to 1970 in play validation. Two red cases, 110 passing focused tests, and inspected real offline exports. [Audit](offline-evaluation-clock-audit.md). The runtime timing prompt and paid harness are unchanged.
+
 ## 17 November — service icons in connection dialogs
 
 Shared local provider marks now precede setup, import and disconnect titles and match connection cards. Six desktop/mobile setup checks passed with unchanged authority records; no real account actions. [Audit](connection-dialog-icons-audit.md).
