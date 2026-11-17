@@ -1,5 +1,22 @@
 # Focused strategy evidence review — 17 November 2026
 
+## v5 retest and confirmed validator/length gaps — v3.158
+
+Variant `launch-quality-v5-20261117`, engine v3.157, source hash `7dbe077184978f4e096d91bdbb1306fd6afe938effc3692648a00b4889551157`: three calls cost **$0.722932**. The first reviewed draft failed at **3.25, minimum 3**. Its ordinary embedded-referral idea was still labelled high novelty. The review recognized the prepared outline, but still confused grounded originality with bold quality and supplied one invalid audit path. Its revision hit the 24,000-token ceiling (13,740 thinking tokens), so the engine correctly retained the failed reviewed draft; there was no final review or comparison. Historical output remains unchanged. Cumulative charged/held after v5: **$62.564877 / $100**.
+
+Two actual false positives were reproduced as failing tests: the intake question “Deadline and what drives it” was classified as promotional urgency, and a complete “No … actions are authorized” denial was classified as granting authority. Engine `v3.158-offer-review-precision` exempts only bounded neutral timing questions and complete authorization denials. Actual unsupported offer deadlines, contradictory positive clauses and exceptions still fail. These text checks grant no authority and do not replace server approval enforcement.
+
+The focused writer now explicitly omits a redundant offer assessment when researching paid value for an unchanged published plan. A real offer change still requires the existing assessment. The originality anchor distinguishes a legitimately conventional grounded option from a weak, relabelled bold mechanism. Full focused drafting/revision gets **32,000 output tokens**, with the same model and reasoning setting; quote and revision reservations derive the identical ceiling. Starter remains at 11,000 and retains its existing initial-cap restriction. This increases the possible quoted cost of full focused plans; it does not silently extend an approved allowance or guarantee that every future output will fit.
+
+Three new regressions failed before these fixes. After updating the old full-plan token expectation, **248 tests in 14 files passed (13.42 seconds)**:
+
+```sh
+pnpm exec vitest run tests/unit/offer-assessment.test.ts tests/unit/focused-plan.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/plan-quality.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts tests/unit/strategy-prompt-cost.test.ts tests/unit/evaluation-identity.test.ts tests/unit/livoform-launch-input.test.ts tests/unit/agent-escalation.test.ts tests/unit/anthropic-budget.test.ts tests/unit/evaluation-budget.test.ts tests/unit/ai-qa-budget.test.ts
+pnpm typecheck
+```
+
+App/Convex typechecks and changed-file ESLint/diff checks passed. Tests include both positive/negative validator cases, actual job request/quote alignment, retained failed-draft handling, budget reservations and plan permission boundaries. The next paid variant is `launch-quality-v6-20261117`; its outcome is recorded separately. No runtime model, campaign-timing prompt, schema limit, provider, action or tenant control was changed.
+
 ## Review continuity and mechanism-first exploration — v3.157
 
 The next audit confirmed that `draftOnce` forwarded only the critic's short top-level fixes list, dropping specific per-criterion reasoning and corrections. A failing runtime regression reproduced that loss. Focused revisions now receive bounded, recognized, non-duplicate criterion feedback, ordered by score, alongside existing strengths and assessed lint. Other rubrics keep their previous feedback path. Suggestions cannot override evidence, the schema or approval requirements.

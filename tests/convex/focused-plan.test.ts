@@ -412,7 +412,7 @@ it("runs the real focused path with a matching quote, reuses bound research and 
   expect(await t.run(ctx => ctx.db.query("approvals").collect())).toMatchObject([{ status: "pending", actionKind: "approve_plan" }]);
   expect(saved.plan.expert?.quality?.state).not.toBe("failed"); expect(saved.plan.expert?.plays).toHaveLength(0);
   expect(state.requests).toHaveLength(2); expect(state.requests.every(r => !r.webSearch)).toBe(true);
-  expect(state.requests[0].maxTokens).toBe(24000);
+  expect(state.requests[0].maxTokens).toBe(32000);
   await expect(owner.client.mutation(api.workspace.startPlay, { slug, strategyId: saved.plan._id, playId: "focused" })).rejects.toThrow(/approve/);
   const before = await t.run(ctx => ctx.db.query("workflowRuns").collect());
   const work = await owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: saved.plan._id, decision: "approve" });

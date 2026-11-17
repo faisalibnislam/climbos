@@ -1,3 +1,7 @@
+## 17 November 2026 — offer review precision and output headroom
+
+Engine v3.158: **248 focused, budget and permission tests in 14 files passed (13.42 seconds)**, plus app/Convex typechecks and lint. Fixed two reproduced offer-validator false positives. Full focused-plan output headroom is quoted/reserved at 32,000 tokens; starter and runtime models remain unchanged. The v5 paid revision was truncated and its failed first draft retained; three calls cost $0.722932, cumulative $62.564877 / $100. [Audit, commands and limitations](growth-engine/focused-evidence-review-audit.md).
+
 ## 17 November 2026 — focused revision continuity
 
 Engine v3.157 fixes dropped criterion feedback, clarifies prepared draft versus live-asset review, and moves protected mechanism exploration ahead of tactic selection. A red runtime regression now passes; all 94 affected tests passed after updating the prompt-version expectation, with the other seven focused/permission files already passing. App/Convex typechecks, changed-file ESLint and diff checks passed. Runtime model and action boundaries are unchanged. Paid Livoform v5 acceptance is pending; [audit and exact commands](growth-engine/focused-evidence-review-audit.md).

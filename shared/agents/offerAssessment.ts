@@ -263,6 +263,24 @@ export interface OfferAssessmentContext {
 const REQUIRED_ALTERNATIVES = ["positioning", "conversion_path", "retention", "capacity", "no_change"] as const;
 const PROMOTION_WORDS = /\b(?:discounts?|%\s*off|save\s+\$|sale prices?|coupons?|promo codes?|limited[- ]time|bonus(?:es)?|bundles?|free trials?|payment terms|pay later|installments?|split payments?|guarantees?|referral rewards?|incentives?|special offers?|offer changes?|change the offer|non[- ]price offers?|free (?:setup|shipping|delivery|consultation|onboarding))\b/i;
 const URGENCY_WORDS = /\b(?:limited[- ]time|ends? (?:today|tomorrow|this week|on|in)|last chance|only \d+|limited (?:spots?|seats?|stock|inventory)|while supplies last|deadline|scarcity|expires? (?:today|tomorrow|on|in))\b/i;
+/** A question about the customer's project is not a claim that our offer expires. */
+function hasOfferUrgency(text: string): boolean {
+  const withoutIntakeQuestions = text.replace(/^[ \t]*(?:\d+[.)][ \t]*)?(?:(?:what(?:'s| is)|when(?:'s| is))[ \t]+(?:your|the)[ \t]+(?:project[ \t]+)?deadline\?|(?:project[ \t]+)?deadline[ \t]+and[ \t]+(?:what drives it|why)\??)[ \t]*$/gim, "");
+  return URGENCY_WORDS.test(withoutIntakeQuestions);
+}
+
+/** Exempt only complete denials; exceptions and a second affirmative clause still fail. */
+function claimsAuthorization(note: string): boolean {
+  const remainder = note.split(/[.!?;\n]+/).filter(sentence => {
+    const text = sentence.trim().toLowerCase();
+    if (/^(?:this (?:recommendation|plan|draft)|it) is not (?:authorized|approved|ready to publish)$/.test(text)) return false;
+    const denial = /^no (.+) (?:is|are) (?:authorized|approved)$/.exec(text);
+    if (!denial) return true;
+    const words = denial[1].split(/[\s,/-]+/);
+    return !words.every(word => /^(?:price|pricing|billing|offers?|discounts?|changes?|messages?|sends?|sending|publishing|publication|spend|spending|actions?|or|and)$/.test(word));
+  }).join(". ");
+  return /approved|authorized|ready to publish|will send|will apply/i.test(remainder);
+}
 const RESTRICTED_AUDIENCE = /\b(?:first[- ]time|new (?:customers?|clients?|buyers?|users?)|existing (?:customers?|clients?|buyers?|users?|subscribers?|members?)|qualified|invited|waitlist|members? only|(?:for )?(?:returning|current) (?:customers?|clients?|buyers?|users?|subscribers?|members?))\b/i;
 const UNIVERSAL_AUDIENCE = /\b(?:available to everyone|open to everyone|for everyone|all customers|all users|any customer|any user|anyone can|no restrictions)\b/i;
 const AUDIENCE_QUALIFIERS = [
@@ -341,7 +359,7 @@ export function lintApprovedOfferCopy(text: string, offers: ApprovedOfferCopyTer
       }
     }
   }
-  if (URGENCY_WORDS.test(text)) {
+  if (hasOfferUrgency(text)) {
     const supportedClaims = applicableOffers.map((offer) => offer.urgencyClaim?.trim()).filter((claim): claim is string => Boolean(claim));
     const normalizedText = text.normalize("NFKC").replace(/\s+/gu, " ").toLocaleLowerCase("en-US");
     const exactSupportedClaim = supportedClaims.some((claim) => normalizedText.includes(claim.normalize("NFKC").replace(/\s+/gu, " ").toLocaleLowerCase("en-US")));
@@ -489,7 +507,7 @@ export function lintOfferAssessment(
   if (assessment.recommendation === "recommend_promotion" && economics.known && assessment.minimumContribution?.amount !== null && assessment.minimumContribution?.amount !== undefined && economics.proposedContribution! < assessment.minimumContribution.amount) error("The proposed offer fails the supplied minimum contribution guardrail.", "minimumContribution");
   if (assessment.recommendation === "recommend_promotion" && economics.known && assessment.minimumMarginRate?.amount !== null && assessment.minimumMarginRate?.amount !== undefined && economics.proposedMarginRate! < assessment.minimumMarginRate.amount) error("The proposed offer fails the supplied minimum contribution-margin guardrail.", "minimumMarginRate");
 
-  const urgency = URGENCY_WORDS.test(text);
+  const urgency = hasOfferUrgency(text);
   if (urgency && (!assessment.urgencyClaim || !assessment.urgencyEvidenceRef)) error("Deadline, scarcity, or limited-availability copy needs direct owner or current source evidence; otherwise remove it.", "urgencyClaim");
   if (assessment.urgencyClaim) {
     if (!text.includes(assessment.urgencyClaim)) error("The urgency evidence must support the exact deadline or scarcity language used in the play.", "urgencyClaim");
@@ -497,7 +515,7 @@ export function lintOfferAssessment(
     if (!supporting || !supporting.includes(assessment.urgencyClaim)) error("Deadline or scarcity claims must be present in the cited supplied fact or retrieved source.", "urgencyEvidenceRef");
   }
   issues.push(...lintPersuasion(assessment, path));
-  if (assessment.authorizationNote && /approved|authorized|ready to publish|will send|will apply/i.test(assessment.authorizationNote)) error("An offer recommendation is advisory and cannot itself authorize a price, billing, message, or publishing change.", "authorizationNote");
+  if (claimsAuthorization(assessment.authorizationNote)) error("An offer recommendation is advisory and cannot itself authorize a price, billing, message, or publishing change.", "authorizationNote");
   if (!context.evidenceText.trim() && assessment.recommendation === "recommend_promotion") error("There is no business-specific evidence to support a promotion recommendation.", "recommendation");
   return issues;
 }

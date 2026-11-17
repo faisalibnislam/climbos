@@ -22,6 +22,25 @@ const play = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe("offer and promotion recommendations", () => {
+  it("distinguishes an intake timing question from an unsupported offer deadline", () => {
+    const terms = [{ playName: "No offer change", recommendation: "no_change", currency: "USD", allowedPrices: [], urgencyClaim: null, eligibleAudience: null }];
+    for (const text of ["5. Deadline and what drives it\n6. Budget range", "What is your project deadline?"]) {
+      expect(lintApprovedOfferCopy(text, terms, "preparedWork[1].draft").filter(issue => issue.rule === "approved_offer_urgency")).toEqual([]);
+    }
+    for (const text of ["Deadline: Friday.", "What is your project deadline? Buy before tomorrow's deadline.", "5. Deadline and what drives it\nOffer ends tomorrow."]) {
+      expect(lintApprovedOfferCopy(text, terms, "preparedWork[1].draft").some(issue => issue.rule === "approved_offer_urgency")).toBe(true);
+    }
+  });
+
+  it("accepts an explicit denial of authorization without allowing exceptions or positive claims", () => {
+    for (const authorizationNote of ["Recommendation only. No price, billing or offer changes, sends, publishing or spending are authorized.", "No actions are approved.", "This recommendation is not authorized."]) {
+      expect(lintOfferAssessment(assessment({ authorizationNote }), play(), context, "offerAssessment").filter(issue => issue.path?.endsWith("authorizationNote"))).toEqual([]);
+    }
+    for (const authorizationNote of ["Price changes are authorized.", "No actions except sending are authorized.", "No actions are authorized except publishing.", "No actions are approved. We will send now."]) {
+      expect(lintOfferAssessment(assessment({ authorizationNote }), play(), context, "offerAssessment").some(issue => issue.path?.endsWith("authorizationNote"))).toBe(true);
+    }
+  });
+
   it.each(["discounts", "coupons", "bonuses", "bundles", "free trials", "guarantees", "referral rewards", "incentives", "special offers"])("requires an assessment for plural promotion wording: %s", mechanism => {
     expect(lintOfferAssessment(undefined, { hook: `Offer ${mechanism} to first-time customers.` }, context, "offerAssessment"))
       .toContainEqual(expect.objectContaining({ rule: "offer_assessment", severity: "error" }));

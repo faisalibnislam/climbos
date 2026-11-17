@@ -7,6 +7,18 @@ import {lintAgentOutput} from "../../shared/agents/runtime";
 import { planJob, maxJobMicros } from "../../convex/lib/jobPlans";
 
 describe("a focused plan does useful work without invented forecasts", () => {
+  it("quotes full-plan output headroom for both draft and revision while preserving the starter allowance", () => {
+    const spec = focusedStrategySpec(), plan = planJob("strategy", { planStyle: "focused" });
+    // A real revision used 13,740 thinking tokens plus its structured portfolio and hit 24,000.
+    expect(spec.maxTokens.draft).toBeGreaterThan(24000);
+    expect(plan.steps).toContainEqual(expect.objectContaining({ kind: "model", modelKey: spec.models.draft, outputBudget: spec.maxTokens.draft }));
+    expect(plan.revisionSteps).toContainEqual(expect.objectContaining({ kind: "model", outputBudget: spec.maxTokens.draft }));
+    const starter = starterStrategySpec(), starterPlan = planJob("strategy", { planStyle: "starter" });
+    expect(starter.models).toEqual(spec.models);
+    expect(starter.maxTokens.draft).toBe(11000);
+    expect(starterPlan.steps).toContainEqual(expect.objectContaining({ kind: "model", outputBudget: 11000 }));
+    expect(starterPlan.revisionSteps).toEqual([]);
+  });
   it("requires inspectable strategic alternatives rather than an internal comparison only", () => {
     const plan = focusedPlanFixture();
     expect(FocusedStrategySchema.safeParse({ ...plan, strategyExploration: undefined }).success).toBe(false);

@@ -1,3 +1,7 @@
+## 17 November — distinguish neutral questions and authorization denials
+
+`v3.158-offer-review-precision`: two verified false positives fixed without accepting real unsupported deadlines or positive authorization claims. Avoid unnecessary promotion scaffolding for unchanged-price research; clarify bold originality. Full focused output headroom and its quote/reservation rise together to 32,000; free starter stays at 11,000, with models unchanged. Three red regressions, then 248 focused/budget/permission tests passed. V5 acceptance remains failed and preserved; v6 retest pending. [Audit](focused-evidence-review-audit.md).
+
 ## 17 November — preserve strategy critique through revision
 
 `v3.157-strategy-review-continuity`: forward recognized per-criterion fixes that the short summary omitted; distinguish a complete prepared text asset from a live/tested service; explore distinct value exchanges before selecting the primary move. Protected grounded/adjacent/bold options remain visible and unranked by a combined score. Relevant local and permission tests, typechecks and lint passed; paid Livoform acceptance remains pending. [Audit](focused-evidence-review-audit.md). No runtime model change or external business action.
