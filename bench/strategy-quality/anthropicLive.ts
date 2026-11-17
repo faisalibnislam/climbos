@@ -9,7 +9,7 @@ import { runAgent, assess, CRITIC_RULES, CritiqueSchema, FocusedCritiqueSchema, 
 import { ENGINE_VERSION, growthPlaysSpec, playCatalogsFor, PlaysOutputSchema, strategySpec, focusedStrategySpec, starterStrategySpec, socialSpec, seoSpec, SeoBriefV2Schema } from "../../shared/agents/specs";
 import { selectStrategyQualityCases } from "./cases";
 import { industryInput } from "./industryInput";
-import { FOCUSED_EVIDENCE_REVIEW } from "../../shared/agents/focusedReview";
+import { FOCUSED_EVIDENCE_REVIEW, FOCUSED_DECISION_REVIEW } from "../../shared/agents/focusedReview";
 import { livoformLaunchInput, livoformLaunchComparison } from "./livoformLaunch";
 import { evaluationIdentity, assertReusableEvaluation, comparisonIdentity } from "./evaluationIdentity";
 import { focusedPlanTask, focusedRefreshContext } from "../../shared/agents/focusedPlan";
@@ -246,7 +246,7 @@ try {
     const output=focusedStrategySpec().schema.parse(JSON.parse(readFileSync(resolve(values["review-file"]),"utf8")));
     const spec=focusedStrategySpec(),days=horizons[0],reviewInput={...input,task:focusedPlanTask(days),constraints:{...input.constraints,horizonDays:days}};
     const lint=lintAgentOutput(spec,reviewInput,output);label=`${id}/${variant}/focused-${days}/recovered-draft review`;
-    const result=await turn({modelKey:"claude-sonnet-5.5",thinkingOff:true,maxTokens:6000,effort:"high",schema:FocusedCritiqueSchema,system:[{text:CRITIC_RULES},{text:FOCUSED_EVIDENCE_REVIEW},{text:`Return exactly one score for each rubric criterion, including XV (overall specialist judgment), and each required gate. Review the actual supplied day windows.\n${JSON.stringify(spec.rubric)}`,cache:true}],messages:[{role:"user",content:JSON.stringify({business:c,evidence:input.precomputedResearch,task:reviewInput.task,limits:reviewInput.constraints,draft:output,automaticChecks:lint})}]});
+    const result=await turn({modelKey:"claude-sonnet-5.5",thinkingOff:true,maxTokens:6000,effort:"high",schema:FocusedCritiqueSchema,system:[{text:CRITIC_RULES},{text:`${FOCUSED_EVIDENCE_REVIEW}\n\n${FOCUSED_DECISION_REVIEW}`},{text:`Return exactly one score for each rubric criterion, including XV (overall specialist judgment), and each required gate. Review the actual supplied day windows.\n${JSON.stringify(spec.rubric)}`,cache:true}],messages:[{role:"user",content:JSON.stringify({business:c,evidence:input.precomputedResearch,task:reviewInput.task,limits:reviewInput.constraints,draft:output,automaticChecks:lint})}]});
     if(!result.ok)throw new Error(result.message);const assessment=assess(FocusedCritiqueSchema.parse(result.output),lint,spec.rubric,output);
     writeFileSync(resolve(out,`${id}-${variant}-focused-${days}-recovered.json`),JSON.stringify({caseId:id,variant,name:`focused-${days}`,origin:"Unchanged completed paid provider draft recovered after a presentation-only target length limit was expanded from 300 to 600. Original validation failure and receipts retained; independent real-model review.",sourceHash:loadedSourceHash,input:reviewInput,result:{output,assessment,rounds:1,research:input.precomputedResearch},review:result,schemaPassed:true},null,2));
     console.log(`RECOVERED ${id}/${variant}: ship ${assessment.ship}; average ${assessment.average}`);continue;

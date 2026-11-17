@@ -103,6 +103,7 @@ it.each(["focused", "starter"] as const)("connects the precedent library to the 
   const writer = prompts.find(prompt => prompt.includes("BOUNDED CREATIVE PRECEDENT RETRIEVAL"));
   const critic = prompts.find(prompt => prompt.includes("CREATIVE PRECEDENTS (reference only; validate transfer conditions"));
   expect(writer).toBeDefined(); expect(critic).toBeDefined();
+  expect(writer!.match(/PROTECTED STRATEGY EXPLORATION:/g)).toHaveLength(1);
   const ids = plan.expert?.strategyExploration?.retrievedPrecedentIds ?? [];
   expect(ids).toContain("CP-011"); expect(ids.length).toBeLessThanOrEqual(2);
   for (const id of ids) { expect(writer).toContain(id); expect(critic).toContain(id); }

@@ -1,5 +1,5 @@
 import { boundedPageReads } from "./provenance";
-import { FOCUSED_REVIEW_ID, FOCUSED_EVIDENCE_REVIEW, FocusedEvidenceAuditSchema, lintFocusedEvidenceAudit } from "./focusedReview";
+import { FOCUSED_REVIEW_ID, FOCUSED_EVIDENCE_REVIEW, FOCUSED_DECISION_REVIEW, FocusedEvidenceAuditSchema, lintFocusedEvidenceAudit } from "./focusedReview";
 import { OWNER_LANGUAGE_RULES } from "./ownerLanguage";
 import { fitJson, fitText, reportDropped } from "./context";
 import { z } from "zod";
@@ -406,7 +406,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
       const rubricExtra = (spec.criticSkills ?? spec.skills).map((id) => skillRubricText(id)).filter(Boolean).join("\n\n");
       const result = await deps.turn({
         modelKey: spec.models.critic,
-        system: [{ text: CRITIC_RULES }, { text: `${rubricText(withVerdict(spec.rubric))}${spec.rubric.id === FOCUSED_REVIEW_ID ? `\n\n${FOCUSED_EVIDENCE_REVIEW}` : ""}${rubricExtra ? `\n\nSPECIALIST CHECKLISTS:\n${rubricExtra}` : ""}`, cache: true }],
+        system: [{ text: CRITIC_RULES }, { text: `${rubricText(withVerdict(spec.rubric))}${spec.rubric.id === FOCUSED_REVIEW_ID ? `\n\n${FOCUSED_EVIDENCE_REVIEW}\n\n${FOCUSED_DECISION_REVIEW}` : ""}${rubricExtra ? `\n\nSPECIALIST CHECKLISTS:\n${rubricExtra}` : ""}`, cache: true }],
         messages: [
           {
             role: "user",

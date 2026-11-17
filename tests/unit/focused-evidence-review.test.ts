@@ -37,6 +37,11 @@ describe("focused review evidence integrity", () => {
     const rows = audit(); rows[0].claims[0].verdict = "qualified";
     expect(assess(review(rows), [], rubric).ship).toBe(true);
   });
+  it("rejects a supported or qualified verdict that still requires a factual correction", () => {
+    const rows = audit(); rows[0].claims[0].verdict = "qualified";
+    rows[0].claims[0].correction = "Remove the unsupported restriction on who pays.";
+    expect(assess(review(rows), [], rubric).ship).toBe(false);
+  });
   it("does not impose this focused contract on other existing rubrics", () => {
     const c = review(); delete (c as unknown as { evidenceAudit?: unknown }).evidenceAudit;
     expect(assess(c, [], { ...rubric, id: "other-task" }).ship).toBe(true);

@@ -1,3 +1,7 @@
+## 17 November — shared exploration contract and consistent review verdicts
+
+`v3.155-protected-focused-task`: resolve the missing full exploration contract in direct focused evaluations using the same builder as production, without duplicating it or changing timing. Reject review verdicts that call a claim acceptable while requiring a factual correction. 205 focused/permission tests passed after two red cases. The prior paid retest and comparison remain documented failures, not a quality win. [Audit and costs](focused-evidence-review-audit.md).
+
 ## 17 November — focused evidence review and decision quality
 
 `v3.154-focused-evidence-review`: enforce qualitative claim audits in the existing critic, validate exact current-draft quotations, pass review findings into revision, and prevent stale focused reviews. Refine the existing writer/rubric for specific alternatives, paid value, one first action, honest exposure and substantive originality. Seven red cases, then 197 passing focused/permission tests. [Audit](focused-evidence-review-audit.md). Model judgment remains fallible; paid acceptance follows separately.

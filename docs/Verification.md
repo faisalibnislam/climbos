@@ -1,3 +1,9 @@
+## 17 November 2026 — shared exploration and review consistency
+
+Engine v3.155: two red cases followed by **205 passing tests in 12 files (16.25 seconds)**. Focused application and benchmark tasks now include the same complete protected exploration contract once. An acceptable review verdict cannot simultaneously require a factual correction. [Audit](growth-engine/focused-evidence-review-audit.md).
+
+The preceding v3.154 Livoform retest remained below quality (3.56, minimum 3.5). A separate-context comparison preferred the original and missed one known original error; this is not claimed as a strategy-quality win. Five calls cost $0.666508; cumulative charged/held $60.485036 / $100. Original results remain intact.
+
 ## 17 November 2026 — focused semantic evidence review
 
 Engine v3.154: seven red regression cases followed by **197 passing tests in 12 files (11.47 seconds)**. Focused reviews now audit qualitative claims and validate exact draft quotations; reported unsupported claims reach revision and remain blocked at approval/start. First-action, paid-value, exposure and creative reasoning instructions are tightened without lowering the quality bar. [Scope, commands and limits](growth-engine/focused-evidence-review-audit.md). Fresh paid acceptance is recorded separately.
