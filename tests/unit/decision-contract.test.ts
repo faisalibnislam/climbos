@@ -35,6 +35,12 @@ const econ = { revenuePerCustomerMonthUsd: 40, grossMargin: 0.6, monthlyChurn: 0
 const portfolio = (issues: { rule: string; severity: string }[]) => issues.filter((i) => i.rule === "portfolio" && i.severity === "error");
 
 describe("decision contract flag", () => {
+  it.each(["mechanic", "trigger", "route", "firstActionToday"])("rejects rewarded reviews in the actual play %s even when public copy is neutral", field => {
+    const output = { portfolioNote: "", economics: { ...econ, sources: { revenue: tag, margin: tag, churn: tag } }, plays: [play({ [field]: "Offer the same incentive for any honest review." })] };
+    const issues = growthPlaysSpec().lint!(output as never, { task: "", brief: "", facts: [] });
+    expect(issues).toContainEqual(expect.objectContaining({ rule: "review_incentive", severity: "error", path: `plays[0].${field}` }));
+  });
+
   it.each([false, true])("keeps multiline facts aligned with audience provenance (reported=%s)", reported => {
     const facts = reported
       ? ["Support notes\nContact the team for help", "We have 2,400 newsletter subscribers"]

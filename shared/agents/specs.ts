@@ -52,7 +52,7 @@ import { lintEligibilityIds } from "../playbooks/contracts";
 import { offerCopyTerms, OfferAssessmentSchema, lintApprovedOfferCopy, lintOfferAssessment, type OfferAssessmentContext } from "./offerAssessment";
 import { lintPlatformEligibility } from "../acquisition/platformRules";
 import { validateResearchUrl } from "../integrations/website";
-import { hookBeforeFold, lintClaims, lintCopy, maxItems, maxLength, minItems, stringFields, untracedNumbers } from "./lint";
+import { hookBeforeFold, lintClaims, lintCopy, lintReviewPolicy, maxItems, maxLength, minItems, stringFields, untracedNumbers } from "./lint";
 import type { AgentInput, AgentSpec, LintIssue, PhaseModels, ResearchSpec, Rubric } from "./types";
 import { CampaignTimingSchema, lintCampaignTiming } from "./campaignTiming";
 
@@ -338,7 +338,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.141-neutral-review-playbooks";
+export const ENGINE_VERSION = "v3.142-review-reward-validation";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -1698,7 +1698,7 @@ export function lintOutcomeNumbers(out: unknown, c: PlanConstraints | undefined,
 
 /** Plans and plays: numbers trace to any input or the output's own model; labelled assumptions and targets pass. */
 function lintPlanning(out: unknown, input: AgentInput): LintIssue[] {
-  return lintCopy(out, { evidence: `${evidenceOf(input)}\n${ownNumbers(out).join(" ")}`, labelled: true, skip: (p) => /url|sourceUrl|keywords|key$|killIf|scaleIf|falsifier|days$|weeklyTarget|target$/i.test(p) || /(?:^|\.)timingAssessment\.(?:proposedWindow\.(?:startDate|endDate)|moment\.evidence\[\d+\]\.(?:eventDate|publishedDate)|researchRetrievedAt)$/.test(p) });
+  return [...lintReviewPolicy(stringFields(out).filter(field => /(?:^|\.)(?:mechanic|trigger|audience|route|unit|firstActionToday)$/.test(field.path))), ...lintCopy(out, { evidence: `${evidenceOf(input)}\n${ownNumbers(out).join(" ")}`, labelled: true, skip: (p) => /url|sourceUrl|keywords|key$|killIf|scaleIf|falsifier|days$|weeklyTarget|target$/i.test(p) || /(?:^|\.)timingAssessment\.(?:proposedWindow\.(?:startDate|endDate)|moment\.evidence\[\d+\]\.(?:eventDate|publishedDate)|researchRetrievedAt)$/.test(p) })];
 }
 
 const ANGLE_STOP_WORDS = new Set(["a", "an", "and", "at", "for", "from", "in", "of", "on", "or", "the", "to", "with", "your", "their", "when", "how", "why"]);
@@ -2948,7 +2948,7 @@ function retentionEvidence(ref: string | null, input: AgentInput): string | unde
 
 /** Keeps expansion plays tied to verified offers, customer-value signals, and timing evidence. */
 function lintRetentionPlan(output: z.infer<typeof RetentionPlanSchema>, input: AgentInput): LintIssue[] {
-  const issues: LintIssue[] = [];
+  const issues: LintIssue[] = lintReviewPolicy(output.plays.flatMap((play, index) => [{ path: `plays[${index}].message`, text: play.message }, { path: `plays[${index}].trigger`, text: play.trigger }]));
   const sourceUrls = [...(input.availableSourceUrls ?? []), ...(input.precomputedResearch?.sources.map(source => source.url) ?? [])].map(normalizeSourceUrl).filter((url): url is string => url !== null);
   output.plays.forEach((play, index) => {
     const path = `plays[${index}].expansionAssessment`;

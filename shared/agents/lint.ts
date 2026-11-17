@@ -101,8 +101,8 @@ function supportsUrgencyClaim(claim: string, evidence: string, kind: "scarcity" 
  */
 const MANIPULATION: { rule: string; re: RegExp; message: string }[] = [
   { rule: "vote_request", re: /\b(?:up-?vote|vote for us|vote us up|give us (?:an? )?(?:upvote|vote)|support us (?:on|with a vote on) product hunt|help us (?:reach|hit|get to) #?1 on product hunt)\b/i, message: "Asks people for votes. Launch and community platforms treat vote requests as manipulation; ask for honest feedback instead." },
-  { rule: "review_incentive", re: /\b(?:(?:leave|write|post)\s+(?:us\s+)?an?\s+(?:\d-star\s+|five-star\s+|5-star\s+|positive\s+|good\s+|great\s+)?review\b[^.!?\n]{0,60}\b(?:get|receive|earn|win|for)\s+(?:an?\s+|\d+%?\s+)?(?:free|discount|gift|voucher|coupon|credit|entry|off|reward|\$)|(?:free|discount|gift|voucher|coupon|reward)\w*(?:\s+\w+){0,3}\s+(?:for|in exchange for)\s+(?:an?\s+|your\s+)?(?:\d-star\s+|five-star\s+|5-star\s+|positive\s+)?reviews?)/i, message: "Offers something in return for a review. Incentivised reviews break most review platforms' rules; ask every customer the same neutral way." },
-  { rule: "review_gating", re: /\b(?:if you (?:loved|enjoyed|liked|had a (?:great|good|positive|wonderful) (?:experience|time))[^.!?\n]{0,40}\breview|(?:happy|satisfied) customers?[^.!?\n]{0,30}\b(?:leave|write|post) (?:us )?an? review|only (?:happy|satisfied) customers|(?:5|five)-star reviews? (?:only|please)|leave (?:us )?an? (?:5|five)-star review)/i, message: "Invites only satisfied customers or a set rating. Review platforms ban this gating; invite every customer with the same neutral wording." },
+  { rule: "review_incentive", re: /\b(?:(?:leave|write|post)\s+(?:us\s+)?an?\s+(?:\d-star\s+|five-star\s+|5-star\s+|positive\s+|good\s+|great\s+)?review\b[^.!?\n]{0,60}\b(?:get|receive|earn|win|for)\s+(?:an?\s+|\d+%?\s+)?(?:free|discount|gift|voucher|coupon|credit|entry|off|reward|\$)|(?:free|discount|gift|voucher|coupon|reward|incentive)\w*(?:\s+\w+){0,3}\s+(?:for|in exchange for|after)\s+(?:(?:they|you)\s+)?(?:(?:writing|posting|leaving|changing|editing|removing|deleting|write|post|leave|change|edit|remove|delete)\s+)?(?:an?\s+|any\s+|their\s+|your\s+)?(?:\d-star\s+|five-star\s+|5-star\s+|positive\s+|honest\s+|public\s+)?reviews?)/i, message: "Offers a reward for a review, rating change or removal. ClimbOS requires unrewarded, neutral review invitations regardless of platform exceptions." },
+  { rule: "review_gating", re: /\b(?:if you (?:loved|enjoyed|liked|had a (?:great|good|positive|wonderful) (?:experience|time))[^.!?\n]{0,40}\breview|(?:happy|satisfied) customers?[^.!?\n]{0,30}\b(?:leave|write|post) (?:us )?an? review|only (?:happy|satisfied) customers|(?:5|five)-star reviews? (?:only|please)|leave (?:us )?an? (?:5|five)-star review|(?:invite|ask|target|select)\s+(?:(?:only|our|the)\s+)*(?:happy|satisfied)\s+(?:active\s+)?(?:customers|users)\b[^.!?\n]{0,45}\b(?:review|ratings?)\b)/i, message: "Selects customers by satisfaction or asks for a set rating. ClimbOS requires the same neutral public invitation regardless of sentiment or predicted rating." },
   { rule: "fake_followers", re: /\b(?:buy(?:ing)?|purchas(?:e|ing)|paid for)\s+(?:\d[\d,]*k?\s+)?(?:real\s+)?(?:followers|likes|subscribers|views)\b|\b(?:follow[- ]?(?:for|4)[- ]?follow|f4f|follow[- ]and[- ]unfollow|follow\/unfollow|engagement pods?|bot followers|follower bots?)\b/i, message: "Buys followers or games engagement. Platforms remove fake followers and can suspend the account; grow with content, collaborations and capped follower ads instead." },
   { rule: "virality_promise", re: /\b(?:guaranteed? (?:to )?(?:go )?viral|will go viral|go viral guaranteed|guaranteed (?:views|followers|likes))\b/i, message: "Promises virality or guaranteed reach. No one controls platform distribution; describe the content, not the outcome." },
 ];
@@ -110,9 +110,24 @@ const MANIPULATION: { rule: string; re: RegExp; message: string }[] = [
 export function lintManipulation(fields: { path: string; text: string }[]): LintIssue[] {
   const issues: LintIssue[] = [];
   for (const { path, text } of fields) {
-    for (const m of MANIPULATION) if (m.re.test(text)) issues.push({ severity: "error", rule: m.rule, message: m.message, path });
+    for (const m of MANIPULATION) {
+      const matches = [...text.matchAll(new RegExp(m.re.source, "gi"))];
+      const affirmative = matches.some(match => {
+        if (m.rule !== "review_incentive" && m.rule !== "review_gating") return true;
+        // Only a direct prohibition of this matched action is excluded. A later
+        // affirmative clause or "do not hesitate to ..." remains actionable.
+        const prefix = text.slice(Math.max(0, match.index - 80), match.index);
+        return !/\b(?:no|never|do not|don't|must not|cannot)(?:\s+(?:offer|give|send|provide|use|reward|pay|ask|invite|target|select))?(?:\s+(?:an?|any|the|same))?\s*$/i.test(prefix);
+      });
+      if (affirmative) issues.push({ severity: "error", rule: m.rule, message: m.message, path });
+    }
   }
   return issues;
+}
+
+/** Review-specific checks also apply to proposed actions, not only publishable copy. */
+export function lintReviewPolicy(fields: { path: string; text: string }[]): LintIssue[] {
+  return lintManipulation(fields).filter(issue => issue.rule === "review_incentive" || issue.rule === "review_gating");
 }
 
 /** Unsupported capability, scale or leadership claims in customer-facing text. */

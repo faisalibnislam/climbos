@@ -12,6 +12,13 @@ describe("manipulation lint", () => {
     ["Free coffee in exchange for a review.", "review_incentive"],
     ["If you loved your visit, leave us a review!", "review_gating"],
     ["Happy customers, please leave a review.", "review_gating"],
+    ["Offer the same incentive for any honest review.", "review_incentive"],
+    ["Give a gift card for an honest review.", "review_incentive"],
+    ["Reward customers for removing their review.", "review_incentive"],
+    ["Send a coupon after they change their review.", "review_incentive"],
+    ["Invite our happy active customers to review us.", "review_gating"],
+    ["Do not offer incentives for reviews, but give coupons for reviews.", "review_incentive"],
+    ["Do not hesitate to offer incentives for reviews.", "review_incentive"],
     ["This reel is guaranteed to go viral.", "virality_promise"],
   ])("flags %s", (text, rule) => {
     expect(rules(text)).toContain(rule);
@@ -21,6 +28,10 @@ describe("manipulation lint", () => {
     "If you have a moment, you can share an honest review here.",
     "We'd love your feedback on the launch, good or bad.",
     "Our launch is live on Product Hunt. Tell us what's missing.",
+    "Never offer incentives for reviews.",
+    "Do not give a gift card for an honest review.",
+    "Do not reward customers for removing their review.",
+    "No incentives for reviews; invite every eligible customer neutrally.",
     "Book a review call with our team.",
   ])("leaves neutral copy alone: %s", (text) => {
     expect(rules(text)).toEqual([]);

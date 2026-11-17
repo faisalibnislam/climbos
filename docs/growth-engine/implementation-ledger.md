@@ -1,3 +1,7 @@
+## 17 November 2026 — review reward validation
+
+Closed known review-incentive/gating detection gaps and applied the shared checks to planned actions and final lifecycle acceptance. 203 focused tests passed; [audit](review-reward-validation-audit.md). Pattern coverage is explicit, not a universal semantic guarantee. No action authority or UI changes; full scope remains incomplete.
+
 ## 17 November 2026 — consistent neutral review guidance
 
 Corrected four runtime source playbooks and regenerated the bundle, removing reward and sentiment-selection conflicts with the owner’s review policy. 120 focused prompt-composition, review and permission checks passed; [audit](neutral-review-playbooks-audit.md). Historical research is marked superseded where applicable. No action capability added; full scope remains incomplete.

@@ -1,3 +1,12 @@
+## 17 November 2026 — review reward validation
+
+[Audit](growth-engine/review-reward-validation-audit.md). Engine `v3.142-review-reward-validation`.
+
+- `pnpm exec vitest run tests/unit/manipulation-lint.test.ts tests/unit/agent-lint.test.ts tests/unit/decision-contract.test.ts tests/unit/review-playbook-policy.test.ts tests/convex/retention-plan-validation.test.ts tests/convex/reviews.test.ts tests/convex/review-send-boundary.test.ts tests/convex/marketing-authorization.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — **203 passed / ten files, 7.44 seconds**. Five initial red cases reproduced missed incentive/gating language; the actual play validator and final lifecycle acceptance are covered alongside existing review/marketing permission checks.
+- Application/Convex typecheck, scoped ESLint and diff checks passed. No UI, browser, paid model or live provider test ran.
+
+Coverage is limited to known English-language patterns. Existing saved drafts remain intact; full scope remains incomplete.
+
 ## 17 November 2026 — consistent neutral review guidance
 
 [Audit](growth-engine/neutral-review-playbooks-audit.md). Engine `v3.141-neutral-review-playbooks`.

@@ -8,7 +8,7 @@ vi.mock("../../shared/agents/runtime", async original => ({ ...await original<ty
   state.inputs.push(input);
   const ref = (text: string) => `fact:${input.facts.findIndex(fact => fact.includes(text))}`;
   const claim = (text: string) => input.facts.find(fact => fact.includes(text))!;
-  const output = { segments: [], plays: [{ type: "upsell", name: "Explain the Team plan", trigger: "second editor", message: "Prepare an explanation of the Team plan for owner review.", channel: "email", expansionAssessment: {
+  const output = { segments: [], plays: [{ type: "upsell", name: "Explain the Team plan", trigger: "second editor", message: state.mode === "review_reward" ? "Offer the same incentive for any honest review." : "Prepare an explanation of the Team plan for owner review.", channel: "email", expansionAssessment: {
     decision: "recommend", offering: "Team plan", customerNeed: "Working with another editor", customerValueSignal: "request team access",
     offerEvidenceBasis: "owner_reported", offerEvidenceRef: ref("Team plan"), offerEvidenceClaim: claim("Team plan"),
     valueEvidenceBasis: state.mode === "wrong_basis" ? "measured" : "owner_reported", valueEvidenceRef: ref("request team access"), valueEvidenceClaim: claim("request team access"),
@@ -28,7 +28,7 @@ async function fixture() {
   const runId = await t.run(ctx => ctx.db.insert("workflowRuns", { orgId, kind: "retention_plan", title: "Retention advice", status: "executing", input: "{}", engine: "v2", roles: [], estimateMicros: 0, actualMicros: 0, rateVersionId: RATE_VERSIONS[0].id, entitlementVersionId: "test", routingVersionId: "test", budget: { modelSteps: 20, researchTools: 5, repairs: 0 }, used: { modelSteps: 0, researchTools: 0, repairs: 0 }, isFixture: false, createdBy: owner.userId, createdAt: now, updatedAt: now }));
   return { t, runId };
 }
-it.each(["valid", "wrong_basis", "malformed", "no_outcome", "unknown_window"])("checks %s retention output before recording it as verified despite a passing model assessment", async mode => {
+it.each(["valid", "wrong_basis", "malformed", "no_outcome", "unknown_window", "review_reward"])("checks %s retention output before recording it as verified despite a passing model assessment", async mode => {
   const f = await fixture(); state.mode = mode;
   await f.t.action(internal.jobs.simplePlanJob, { runId: f.runId, task: "retention_plan" });
   const run = await f.t.run(ctx => ctx.db.get(f.runId));

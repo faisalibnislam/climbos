@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Review validation now catches additional incentive, review-change/removal reward and satisfaction-targeting language in copy and proposed actions. Lifecycle final validation rejects those known forms even if the model critic passes them. [Coverage and limits](growth-engine/review-reward-validation-audit.md).
+
 Strategy and lifecycle playbooks now consistently follow the owner’s neutral, no-rewards review policy, including software, ecommerce and in-app guidance. Older gift-card and satisfaction-filter recommendations were removed from the runtime instructions; editorial collaborations remain distinct from customer reviews. [Audit and limits](growth-engine/neutral-review-playbooks-audit.md).
 
 Repeat-purchase advice now reconciles separately recorded refunds and partial captures by actual order identity. Fully refunded repeat orders do not count; ambiguous or unmatched records keep the conclusion unknown. [Definition and limits](growth-engine/repeat-purchase-evidence-audit.md).
