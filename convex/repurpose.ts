@@ -1,6 +1,6 @@
 import { writingBrandContext } from "../shared/agents/contentTasks";
 import { lintApprovedOfferCopy } from "../shared/agents/offerAssessment";
-import { CopyBriefSchema } from "../shared/agents/specs";
+import { exactArtifactSource, inheritedArtifactBrief } from "./lib/artifactSource";
 import { v } from "convex/values";
 import { CALL_ROUTES } from "../shared/agents/routes";
 import { internal } from "./_generated/api";
@@ -27,10 +27,7 @@ async function sourceVersion(ctx: QueryCtx, run: Doc<"workflowRuns">) {
   const artifactId = typeof input.sourceArtifactId === "string" ? ctx.db.normalizeId("artifacts", input.sourceArtifactId) : null;
   const versionId = typeof input.sourceVersionId === "string" ? ctx.db.normalizeId("artifactVersions", input.sourceVersionId) : null;
   if (!artifactId || !versionId) throw appError("INVALID", "The saved source reference is incomplete. Choose the source draft again.");
-  const artifact = assertSameOrg(await ctx.db.get(artifactId), run.orgId, "source draft");
-  const version = assertSameOrg(await ctx.db.get(versionId), run.orgId, "source version");
-  if (version.artifactId !== artifact._id) throw appError("INVALID", "The source version does not belong to this draft.");
-  return version;
+  return (await exactArtifactSource(ctx, run.orgId, artifactId, versionId)).version;
 }
 
 export const start = mutation({
@@ -112,14 +109,7 @@ export const save = internalMutation({
     }
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", run.orgId)).first();
     if (!business) return [];
-    const brief = source?.copyBrief;
-    const sourceFactIds = [...new Set([...(source?.claimFactIds ?? []), ...(brief?.offerFactIds ?? []), ...(brief?.proofFactIds ?? []), ...(brief?.supportingFactIds ?? [])])];
-    const factIds: Id<"businessFacts">[] = [];
-    for (const id of sourceFactIds) {
-      const fact = await ctx.db.get(id);
-      if (fact && fact.orgId === run.orgId && fact.businessId === business._id) factIds.push(id);
-    }
-    const indexes = (ids: Id<"businessFacts">[]) => ids.map(id => factIds.indexOf(id)).filter(index => index >= 0);
+    const { factIds, copyBrief } = await inheritedArtifactBrief(ctx, source, run.orgId, business._id);
     const ids: Id<"artifacts">[] = [];
     for (const it of normalized) {
       const map = CHANNEL[it.format];
@@ -133,13 +123,7 @@ export const save = internalMutation({
           offerTermsSnapshot: source?.approvedOfferTermsSnapshot,
           offerPlayNameSnapshot: playName,
           item: { kind: map.kind, channel: map.channel, title: it.title, body: it.body, destinationUrl: sourceUrl, hashtags: it.hashtags, factIndexes: [], role: map.role,
-            copyBrief: brief ? (() => {
-              const { offerFactIds, proofFactIds, supportingFactIds, ...rest } = brief;
-              return { ...rest,
-                awarenessStage: CopyBriefSchema.shape.awarenessStage.safeParse(rest.awarenessStage).data ?? "unknown",
-                relationshipStage: CopyBriefSchema.shape.relationshipStage.safeParse(rest.relationshipStage).data ?? "unknown",
-                channel: map.channel, format: it.format, offerFactIndexes: indexes(offerFactIds), proofFactIndexes: indexes(proofFactIds), supportingFactIndexes: indexes(supportingFactIds), unknowns: [...new Set([...rest.unknowns, "Inherited source brief; adaptation and evidence fit require owner review."])] };
-            })() : undefined,
+            copyBrief: copyBrief ? { ...copyBrief, channel: map.channel, format: it.format } : undefined,
           },
         }),
       );

@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Translation now uses the draft version selected at launch and retains its offer constraints and original trend evidence. A later source edit does not silently change the translation input, and existing approval remains separate. Price checks cover recognized forms; native-language accuracy and every localized offer phrase still require review. See [the audit](growth-engine/translation-source-context-audit.md).
+
 Repurposing an existing draft retains its selected source version, offer terms and original trend evidence for later review. Known price/urgency conflicts and incomplete requested-format batches fail before drafts are saved. Rewriting does not refresh trend dates or transfer approval. Source correctness and semantic adaptation quality still need review. See [the audit](growth-engine/repurpose-source-context-audit.md).
 
 Brand guidance now travels consistently to primary writing, repurposed content and landing-page drafts: saved tone, restrictions and approved examples are retained. Learned edit preferences are labeled as inferred and used only with voice learning enabled. This improves the supplied context; it does not guarantee that generated copy follows every stylistic instruction. See [the audit](growth-engine/brand-writing-context-audit.md).

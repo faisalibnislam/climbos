@@ -1,3 +1,7 @@
+## 17 November 2026 — source constraints survive translation
+
+Translation now pins the selected source version/title and language, preserves offer and historical trend context, and rechecks source ownership and stored constraints at persistence. The source-brief helper is shared with repurposing. Replayed saves do not duplicate drafts; approvals and schedules are not inherited. See [the audit](translation-source-context-audit.md) for multilingual and legacy limits.
+
 ## 17 November 2026 — source constraints survive repurposing
 
 Repurposing now pins an existing source draft version, preserves its offer constraints and historical trend evidence, and independently checks the normalized batch before saving. Missing/duplicate/unrequested formats cannot be reported as complete. New drafts retain separate approval; rewriting does not refresh evidence or authorize publishing. See [the audit](repurpose-source-context-audit.md).

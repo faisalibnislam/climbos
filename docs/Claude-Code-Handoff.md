@@ -33,6 +33,8 @@ This handoff records what has been built, what was checked, what remains unverif
 
 ## Current status — 17 November 2026
 
+Translation follow-up: exact source version/title and language are now pinned. A shared artifact-source helper preserves offer/trend context for translation and repurposing; save verifies tenant/request identity and stored terms independently of caller metadata. New drafts do not inherit approval/schedule. Legacy unpinned jobs require a fresh request; multilingual semantic verification remains limited. See [the audit](growth-engine/translation-source-context-audit.md) and Verification.
+
 Repurposing follow-up: existing source versions and offer/trend constraints now survive drafting and persistence, with independent normalized-copy checks and complete requested-format validation. New drafts remain in review. Historical evidence dates are unchanged; old unbound jobs cannot recover missing provenance. See [the audit](growth-engine/repurpose-source-context-audit.md) and Verification.
 
 Brand-writing follow-up: primary, repurposing and landing writers now share complete relevant brand guidance and explicit inference/consent labels. Specialist voice clipping is removed; email-only repurposing and landing pages omit social preferences. No schema or provider change. See [the audit](growth-engine/brand-writing-context-audit.md) and Verification for tested boundaries and remaining model-quality work.

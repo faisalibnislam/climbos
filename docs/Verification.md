@@ -1,3 +1,14 @@
+## 17 November 2026 — translation source identity and inherited evidence
+
+Translation now resolves a pinned tenant-bound source version, retains its offer/trend context and checks stored terms independently at save. The source-brief helper is shared with repurposing. See [the audit](growth-engine/translation-source-context-audit.md).
+
+- `pnpm exec vitest run tests/convex/translation-source-context.test.ts tests/convex/translate.test.ts tests/convex/repurpose-source-context.test.ts tests/convex/repurpose.test.ts tests/convex/brand-writing-context.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts tests/unit/offer-assessment.test.ts tests/convex/social-publish.test.ts tests/convex/publish-flow.test.ts` — final run: 118 passed across ten files, 4.24 seconds.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint convex/lib/artifactSource.ts convex/repurpose.ts convex/translate.ts shared/agents/specs.ts tests/convex/translation-source-context.test.ts tests/convex/repurpose-source-context.test.ts` — passed.
+- `git diff --check` — passed.
+
+Four controlled regressions failed before the fix. Scheduler timers now ensure the edit-race tests actually edit before the worker reads. New tests cover historical evidence/fact retention, source/version/tenant/language binding, ignored caller authority, wrong-price rejection, deleted/legacy-source failure, replay and separate approval/schedule state. No real model, native-language quality evaluation, provider call, browser, deployment or external action. Localized semantic checks remain bounded and old completed translations are not migrated.
+
 ## 17 November 2026 — source constraints and complete repurposing batches
 
 Existing source identity, offer snapshots and trend evidence now survive repurposing; final persistence checks the normalized batch independently. Incomplete requested formats fail rather than being silently omitted. See [the audit](growth-engine/repurpose-source-context-audit.md).

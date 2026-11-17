@@ -8,9 +8,10 @@ vi.mock("../../shared/ai/turn", async original => ({ ...await original<typeof im
   state.messages.push(args.messages);
   return { ok: true, output: { items: state.formats.map(format => ({ format, title: "Workshop guide", body: state.body, hashtags: [] })) }, usage: { calls: 0 }, costMicros: 0 };
 }) }));
-afterEach(() => { vi.unstubAllEnvs(); state.messages = []; state.formats = ["linkedin"]; state.body = "Review the workshop guide for $40. Read the full process before choosing."; });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); state.messages = []; state.formats = ["linkedin"]; state.body = "Review the workshop guide for $40. Read the full process before choosing."; });
 const terms = [{ playName: "Workshop guide", recommendation: "recommend_promotion", currency: "USD", allowedPrices: [40], allowedDiscountPercentages: [], allowedMechanisms: ["non_price_change"], urgencyClaim: null, eligibleAudience: null }];
 async function fixture() {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
   const t = setup(), owner = await asNewUser(t, "source-context@example.com");
   const { orgId, slug } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Workshop" });
   await makePaid(t, orgId, 50_000_000); vi.stubEnv("CLIMBOS_FAKE_LLM", "");
@@ -25,7 +26,7 @@ async function fixture() {
 it("pins source version, carries original offer and trend evidence, and grants no approval", async () => {
   const f = await fixture(); const original = await f.t.run(ctx => ctx.db.get(f.id));
   const runId = await f.owner.client.mutation(api.repurpose.start, { slug: f.slug, artifactId: f.id, formats: ["linkedin"] });
-  await f.t.finishAllScheduledFunctions(() => undefined);
+  await f.t.finishAllScheduledFunctions(vi.runAllTimers);
   const run = await f.t.run(ctx => ctx.db.get(runId));
   expect(JSON.parse(run!.input)).toMatchObject({ sourceArtifactId: f.id, sourceVersionId: original!.currentVersionId });
   const [draft] = await f.t.run(ctx => ctx.db.query("artifacts").withIndex("by_run", q => q.eq("runId", runId)).collect());
@@ -43,7 +44,7 @@ it("pins source version, carries original offer and trend evidence, and grants n
 it.each(["Get the guide for $90.", "Get the guide for $40. Only 3 spots left!"])("rejects generated offer changes before saving (%s)", async body => {
   const f = await fixture(); state.body = body;
   const runId = await f.owner.client.mutation(api.repurpose.start, { slug: f.slug, artifactId: f.id, formats: ["linkedin"] });
-  await f.t.finishAllScheduledFunctions(() => undefined);
+  await f.t.finishAllScheduledFunctions(vi.runAllTimers);
   expect((await f.t.run(ctx => ctx.db.get(runId)))?.status).toBe("failed");
   expect(await f.t.run(ctx => ctx.db.query("artifacts").withIndex("by_run", q => q.eq("runId", runId)).collect())).toEqual([]);
 });
@@ -57,7 +58,7 @@ it("uses the original version when the owner edits the source before the worker 
   const before = await f.t.run(ctx => ctx.db.get(f.id));
   const runId = await f.owner.client.mutation(api.repurpose.start, { slug: f.slug, artifactId: f.id, formats: ["linkedin"] });
   await f.owner.client.mutation(api.content.edit, { slug: f.slug, artifactId: f.id, hashtags: [], body: "CHANGED_SOURCE_MARKER: The guide now costs $90. This new text must not silently replace the version selected for repurposing." });
-  await f.t.finishAllScheduledFunctions(() => undefined);
+  await f.t.finishAllScheduledFunctions(vi.runAllTimers);
   expect((await f.t.run(ctx => ctx.db.get(f.id)))?.currentVersionId).not.toBe(before?.currentVersionId);
   expect(JSON.stringify(state.messages)).not.toContain("CHANGED_SOURCE_MARKER");
   expect(JSON.stringify(state.messages)).toContain("The workshop guide costs $40");
@@ -81,7 +82,7 @@ it("fails a queued job cleanly if its pinned version is unavailable", async () =
   const f = await fixture();
   const runId = await f.owner.client.mutation(api.repurpose.start, { slug: f.slug, artifactId: f.id, formats: ["linkedin"] });
   await f.t.run(async ctx => { const source = (await ctx.db.get(f.id))!; await ctx.db.delete(source.currentVersionId!); });
-  await f.t.finishAllScheduledFunctions(() => undefined);
+  await f.t.finishAllScheduledFunctions(vi.runAllTimers);
   expect((await f.t.run(ctx => ctx.db.get(runId)))?.status).toBe("failed");
   expect(state.messages).toEqual([]);
   expect(await f.t.run(ctx => ctx.db.query("artifacts").withIndex("by_run", q => q.eq("runId", runId)).collect())).toEqual([]);
@@ -92,7 +93,7 @@ it("rechecks the whole saved batch at persistence rather than trusting the worke
   await expect(f.t.mutation(internal.repurpose.save, { runId, items: [{ format: "linkedin", title: "Good", body: "Get the guide for $40.", hashtags: [] }, { format: "email", title: "Bad", body: "Get the guide for $90.", hashtags: [] }] })).rejects.toThrow();
   expect(await f.t.run(ctx => ctx.db.query("artifacts").withIndex("by_run", q => q.eq("runId", runId)).collect())).toEqual([]);
   state.formats = ["linkedin", "email"];
-  await f.t.finishAllScheduledFunctions(() => undefined);
+  await f.t.finishAllScheduledFunctions(vi.runAllTimers);
 });
 it.each(["missing", "duplicate", "unexpected"])("does not label a %s-format result complete", async kind => {
   const f = await fixture();
@@ -100,7 +101,7 @@ it.each(["missing", "duplicate", "unexpected"])("does not label a %s-format resu
   if (kind === "duplicate") state.formats = ["linkedin", "linkedin"];
   if (kind === "unexpected") state.formats = ["linkedin", "email"];
   const runId = await f.owner.client.mutation(api.repurpose.start, { slug: f.slug, artifactId: f.id, formats: [...formats] });
-  await f.t.finishAllScheduledFunctions(() => undefined);
+  await f.t.finishAllScheduledFunctions(vi.runAllTimers);
   expect((await f.t.run(ctx => ctx.db.get(runId)))?.status).toBe("failed");
   expect(await f.t.run(ctx => ctx.db.query("artifacts").withIndex("by_run", q => q.eq("runId", runId)).collect())).toEqual([]);
 });
