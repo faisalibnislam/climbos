@@ -9,6 +9,7 @@ import { runAgent, assess, CRITIC_RULES, CritiqueSchema, lintAgentOutput } from 
 import { ENGINE_VERSION, growthPlaysSpec, playCatalogsFor, PlaysOutputSchema, strategySpec, focusedStrategySpec, starterStrategySpec, socialSpec, seoSpec, SeoBriefV2Schema } from "../../shared/agents/specs";
 import { selectStrategyQualityCases } from "./cases";
 import { industryInput } from "./industryInput";
+import { livoformLaunchInput } from "./livoformLaunch";
 import { evaluationIdentity, assertReusableEvaluation, comparisonIdentity } from "./evaluationIdentity";
 import { focusedPlanTask, focusedRefreshContext } from "../../shared/agents/focusedPlan";
 import { BusinessProfileSchema } from "../../shared/ai/tasks";
@@ -26,8 +27,9 @@ import type { TurnRequest } from "../../shared/ai/types";
 import { ANTHROPIC_QA_CAP_MICROS, reserveClaudeQaCall, claudeQaActualMicros, type ClaudeQaModel } from "./anthropicBudget";
 
 async function main() {
-const { values } = parseArgs({ options: { variant: { type: "string", default: "baseline" }, stage: { type: "string", default: "plans" }, request: {type:"string"}, "review-file":{type:"string"}, "reference-plan": {type:"string"}, "compare-with": { type: "string", default: "baseline-fixed" }, cases: { type: "string", default: "macloving,livoform,folevi" }, "draft-tier": { type: "string", default: "advanced" }, "plan-style": { type: "string", default: "focused" }, "evidence-from": { type: "string" }, "extra-sources": { type: "string" }, "curated-sources": { type: "string" }, horizons: { type: "string", default: "14,30,90" }, "confirm-paid": { type: "boolean" } } });
+const { values } = parseArgs({ options: { variant: { type: "string", default: "baseline" }, stage: { type: "string", default: "plans" }, request: {type:"string"}, "review-file":{type:"string"}, "owner-context": {type:"string"}, "reference-plan": {type:"string"}, "compare-with": { type: "string", default: "baseline-fixed" }, cases: { type: "string", default: "macloving,livoform,folevi" }, "draft-tier": { type: "string", default: "advanced" }, "plan-style": { type: "string", default: "focused" }, "evidence-from": { type: "string" }, "extra-sources": { type: "string" }, "curated-sources": { type: "string" }, horizons: { type: "string", default: "14,30,90" }, "confirm-paid": { type: "boolean" } } });
 const variant = values.variant!;
+if (values["owner-context"] && values.stage !== "launch-acceptance") throw new Error("Owner context is only accepted by the launch-acceptance stage; refusing to silently ignore it.");
 if (!["starter", "focused"].includes(values["plan-style"]!)) throw new Error("Unknown plan style.");
 const selectedPlanSpec = () => values["plan-style"] === "starter" ? starterStrategySpec() : focusedStrategySpec({maxRevisions: 1});
 const cheapDraft = values["draft-tier"] === "standard" || variant === "economy";
@@ -39,7 +41,7 @@ if (!horizons.length || horizons.some((days) => ![14, 30, 90].includes(days)) ||
 if (!/^[a-z0-9-]{1,40}$/.test(variant)) throw new Error("Invalid variant name.");
 if (!values["confirm-paid"] || process.env.CLIMBOS_FAKE_LLM) throw new Error("Real QA needs --confirm-paid, with no fake LLM.");
 const out = resolve("bench/cache/anthropic-real-2026-11-09"); mkdirSync(out, { recursive: true });
-const loadedSourceHash = createHash("sha256").update(["bench/strategy-quality/anthropicLive.ts", "bench/strategy-quality/evaluationIdentity.ts", "shared/agents/runtime.ts", "shared/agents/specs.ts", "shared/agents/planTasks.ts", "shared/agents/contentTasks.ts", "shared/agents/focusedPlan.ts", "shared/agents/focusedRubric.ts", "shared/agents/channelJudgment.ts", "shared/agents/capacity.ts", "shared/agents/campaignTiming.ts", "shared/agents/routes.ts", "shared/agents/offerLanguage.ts", "shared/agents/offerAssessment.ts", "bench/strategy-quality/industryInput.ts", "shared/skills/generated.ts", "shared/knowledge/creativePrecedents.ts", "shared/knowledge/creativePrecedentExpansion.ts", "shared/ai/anthropic.ts"].map((f) => readFileSync(resolve(f), "utf8")).join("\n")).digest("hex");
+const loadedSourceHash = createHash("sha256").update(["bench/strategy-quality/anthropicLive.ts", "bench/strategy-quality/evaluationIdentity.ts", "bench/strategy-quality/livoformLaunch.ts", "shared/agents/runtime.ts", "shared/agents/specs.ts", "shared/agents/planTasks.ts", "shared/agents/contentTasks.ts", "shared/agents/focusedPlan.ts", "shared/agents/focusedRubric.ts", "shared/agents/channelJudgment.ts", "shared/agents/capacity.ts", "shared/agents/campaignTiming.ts", "shared/agents/routes.ts", "shared/agents/offerLanguage.ts", "shared/agents/offerAssessment.ts", "bench/strategy-quality/industryInput.ts", "shared/skills/generated.ts", "shared/knowledge/creativePrecedents.ts", "shared/knowledge/creativePrecedentExpansion.ts", "shared/ai/anthropic.ts"].map((f) => readFileSync(resolve(f), "utf8")).join("\n")).digest("hex");
 const secret = readFileSync(resolve(".env.anthropic.local"), "utf8").match(/^\s*ANTHROPIC_API_KEY\s*=\s*(.+)\s*$/m)?.[1]?.trim().replace(/^(['"])(.*)\1$/, "$2");
 if (!secret) throw new Error("Saved Anthropic key is missing.");
 process.env.ANTHROPIC_API_KEY = secret;
@@ -161,6 +163,13 @@ try {
      writeFileSync(path,JSON.stringify({caseId:item.id,mapping,evaluationIdentity:identity,sourceHash:loadedSourceHash,result,limits:"Isolated synthetic briefs, not live industry businesses. No external actions. AI review is not human or market validation."},null,2));
      console.log(`JUDGED ${item.id}: ${judged.verdict}`);
    }
+   return;
+ }
+ if (values.stage === "launch-acceptance") {
+   if (values.cases !== "livoform" || values["plan-style"] !== "focused" || cheapDraft || evidenceFrom || values["curated-sources"] || values["extra-sources"]) throw new Error("Launch acceptance uses the exact owner-selected Livoform evidence pack and current focused route.");
+   if (!values["owner-context"]) throw new Error("Launch acceptance needs the explicitly approved local owner report file.");
+   const ownerContext = JSON.parse(readFileSync(resolve(values["owner-context"]), "utf8"));
+   await execute("livoform", "focused-14", selectedPlanSpec(), livoformLaunchInput(ownerContext));
    return;
  }
  if (values.stage === "industries") {

@@ -22,3 +22,9 @@ The Anthropic harness now stores an evaluation identity covering the selected co
 This is deliberately strict: a newly constructed current clock changes the identity even on the same date. Reuse is not a fresh validation, and a below-bar result stays below bar. The selected-file fingerprint is not a full dependency manifest or a semantic correctness check. No ledger, cost hold, retry policy or provider authorization is changed.
 
 Independent industry-comparison result reuse also requires an exact identity for the reference mapping, both candidate outputs, held-out questions, case evidence and harness fingerprint. A cached verdict with a different baseline or missing identity is rejected rather than presented as a current comparison. Earlier comparison files remain historical records.
+
+### Owner-selected launch case
+
+The `launch-acceptance` stage uses the dated Livoform public-source pack plus a local owner-report JSON file. Keep actual reports and outputs in ignored `bench/cache/`; never paste private business reports into tracked fixtures. The file shape is `{ "website": "https://livoform.com/", "reportedAt": "YYYY-MM-DD", "statements": ["Owner-provided statement"] }`. A valid report date and at most ten bounded statements are required.
+
+After the owner approves the exact provider/data scope, use `--stage launch-acceptance --cases livoform --plan-style focused --owner-context /absolute/path/to/approved-local-report.json --variant <fresh-variant> --confirm-paid`. Existing budget holds and the cumulative cap remain intact. This stage uses a 14-day initial test; it cannot change a live offer or authorize outreach. See the dated public-launch acceptance audit for inspected-source and cached-page limitations.

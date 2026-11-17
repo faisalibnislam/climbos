@@ -1,3 +1,7 @@
+## 17 November 2026 — owner-selected public launch input
+
+[Audit](growth-engine/public-launch-acceptance-audit.md): 22 focused input/provenance/cache/budget tests passed (0.475 seconds). A local three-report/two-source review packet was exported with zero model calls. Actual reports and outputs remain Git-ignored. This verifies input preparation, not recommendation quality or an external run.
+
 ## 17 November 2026 — approved four-case quality recheck
 
 Comparison-cache follow-up: **21 tests in six files passed (0.645 seconds)**; the exact A/B reference, candidates and questions are now bound to cached verdicts. [Scope](growth-engine/evaluation-cache-identity-audit.md). All four unchanged v6 outputs were re-linted read-only with v3.153: no errors; retail/creator retain four style warnings each. Historical model assessments remain intact.

@@ -1,3 +1,7 @@
+## 17 November — owner-selected public launch acceptance input
+
+Added a dated Livoform public-source pack and bounded local owner-report input to the existing focused evaluation path. Private reports are excluded from Git, source claims retain provenance, and unavailable pages stay uninspected. 22 focused tests passed; local packet prepared without provider calls. [Audit](public-launch-acceptance-audit.md). No production capability or quality-pass claim.
+
 ## 17 November — four-case quality recheck and publication regression
 
 Approved v6 synthetic checks: science/creator passed, healthcare/retail did not. Two separate comparisons preferred v6 with explicit weaknesses. [Results/costs](../Strategy-Quality-2026-11-17.md). Added actual social-edit approval coverage for plural bonuses; 79 related tests passed. Reconciled the historical roadmap without declaring the whole project complete.
