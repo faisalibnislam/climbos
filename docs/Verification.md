@@ -1,3 +1,7 @@
+## 17 November 2026 — explore before committing to a plan
+
+Engine v3.159 changes focused generation order so the creative portfolio, starting with bold, precedes the practical plan. The raw v6 output confirmed the previous reverse order. One red regression, then **141 tests in eight files passed (15.13 seconds)**; typechecks and lint passed. Existing fields, UI order, approvals and models remain unchanged. V6 completed without truncation but failed quality at 3.69/minimum 3.5; cumulative charged/held $63.311534 / $100. [Audit](growth-engine/focused-evidence-review-audit.md).
+
 ## 17 November 2026 — offer review precision and output headroom
 
 Engine v3.158: **248 focused, budget and permission tests in 14 files passed (13.42 seconds)**, plus app/Convex typechecks and lint. Fixed two reproduced offer-validator false positives. Full focused-plan output headroom is quoted/reserved at 32,000 tokens; starter and runtime models remain unchanged. The v5 paid revision was truncated and its failed first draft retained; three calls cost $0.722932, cumulative $62.564877 / $100. [Audit, commands and limitations](growth-engine/focused-evidence-review-audit.md).

@@ -338,7 +338,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.158-offer-review-precision";
+export const ENGINE_VERSION = "v3.159-explore-before-planning";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -393,8 +393,11 @@ export const StrategyExplorationSchema = z.object({
 });
 export type StrategyExploration = z.infer<typeof StrategyExplorationSchema>;
 
-export const FocusedStrategySchema = StrategyV2Schema.extend({
-  strategyExploration: StrategyExplorationSchema,
+// Generation order matters: explore beyond the first practical tactic before writing its plan.
+// Fields, validation and owner-facing presentation remain unchanged.
+export const FocusedStrategySchema = z.object({
+  strategyExploration: StrategyExplorationSchema.pick({ bold: true }).extend(StrategyExplorationSchema.omit({ bold: true }).shape),
+  ...StrategyV2Schema.shape,
   timing: GoalTimingSchema.optional(),
   focusedMove: FocusedMoveSchema.extend({ timingAssessment: CampaignTimingSchema }),
   experiments: StrategyV2Schema.shape.experiments.min(1).max(4),

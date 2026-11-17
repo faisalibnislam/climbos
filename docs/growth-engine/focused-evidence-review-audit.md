@@ -1,5 +1,20 @@
 # Focused strategy evidence review — 17 November 2026
 
+## v6 retest and exploration-before-plan hypothesis — v3.159
+
+Variant `launch-quality-v6-20261117`, engine v3.158, source hash `50cd6955fa39b7748dbf5534e049f6380bbc29ec9220653e2b76d28215cb8650`: four calls cost **$0.746657**. First draft: 3.38, failed gates. Revision: **3.69 average, minimum 3.5, all gates passed and no lint findings, ship false**. The complete revision fit its allowance. It omitted the unnecessary offer assessment and retained useful prepared work, but conventional agency/client-payer ideas, thin commercial differentiation and owner workload remained below acceptance. The critic still made debatable demands (for example a different artifact kind not in the existing schema). This is not a claim that semantic review is now reliable. Combined charged/held: **$63.311534 / $100**.
+
+Inspection of the actual provider schema and raw JSON, not only the parsed output, confirmed that the writer produced summary, audience, channels, experiments and the full action timeline before writing the creative portfolio. Engine `v3.159-explore-before-planning` moves `strategyExploration` first in the focused generation schema and its bold option ahead of grounded/adjacent. Fields, validation, persistence shape, model and owner-facing presentation are unchanged. This tests an anchoring hypothesis; order alone does not guarantee original thought or a quality pass. No extra model call or agent was added.
+
+One red regression checks the actual Anthropic-adapted schema order and unchanged fixture parsing. **141 tests in eight files passed (15.13 seconds)**, plus app/Convex typechecks, changed-file ESLint and diff checks:
+
+```sh
+pnpm exec vitest run tests/unit/focused-plan.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/strategy-prompt-cost.test.ts tests/unit/evaluation-identity.test.ts tests/unit/livoform-launch-input.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+Paid variant `launch-quality-v7-20261117` tests the unchanged Livoform evidence with this ordering; its result is recorded separately. Earlier outputs are preserved.
+
 ## v5 retest and confirmed validator/length gaps — v3.158
 
 Variant `launch-quality-v5-20261117`, engine v3.157, source hash `7dbe077184978f4e096d91bdbb1306fd6afe938effc3692648a00b4889551157`: three calls cost **$0.722932**. The first reviewed draft failed at **3.25, minimum 3**. Its ordinary embedded-referral idea was still labelled high novelty. The review recognized the prepared outline, but still confused grounded originality with bold quality and supplied one invalid audit path. Its revision hit the 24,000-token ceiling (13,740 thinking tokens), so the engine correctly retained the failed reviewed draft; there was no final review or comparison. Historical output remains unchanged. Cumulative charged/held after v5: **$62.564877 / $100**.

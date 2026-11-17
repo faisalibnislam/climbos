@@ -1,3 +1,7 @@
+## 17 November — explore before execution planning
+
+`v3.159-explore-before-planning`: reorder the focused generation schema, preserving its full contract, so bold exploration is not written after an entire conventional execution plan. This is a testable anchoring hypothesis, not a quality guarantee. Provider-schema and permission coverage: 141 tests passed, typechecks/lint passed. V6 still failed acceptance; v7 is pending. [Preserved results and audit](focused-evidence-review-audit.md).
+
 ## 17 November — distinguish neutral questions and authorization denials
 
 `v3.158-offer-review-precision`: two verified false positives fixed without accepting real unsupported deadlines or positive authorization claims. Avoid unnecessary promotion scaffolding for unchanged-price research; clarify bold originality. Full focused output headroom and its quote/reservation rise together to 32,000; free starter stays at 11,000, with models unchanged. Three red regressions, then 248 focused/budget/permission tests passed. V5 acceptance remains failed and preserved; v6 retest pending. [Audit](focused-evidence-review-audit.md).

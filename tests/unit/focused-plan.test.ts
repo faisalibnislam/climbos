@@ -5,8 +5,16 @@ import { focusedPlanTask, focusedRefreshContext } from "../../shared/agents/focu
 import { lintCycleMilestones } from "../../shared/agents/planningCycles";
 import {lintAgentOutput} from "../../shared/agents/runtime";
 import { planJob, maxJobMicros } from "../../convex/lib/jobPlans";
+import { jsonSchemaFor } from "../../shared/ai/types";
+import { claudeSchema } from "../../shared/ai/anthropicSchema";
 
 describe("a focused plan does useful work without invented forecasts", () => {
+  it("places creative exploration before the execution plan in the actual provider schema without changing saved fields", () => {
+    const schema = claudeSchema(jsonSchemaFor(FocusedStrategySchema)) as { properties: Record<string, { properties: Record<string, unknown> }> };
+    expect(Object.keys(schema.properties)[0]).toBe("strategyExploration");
+    expect(Object.keys(schema.properties.strategyExploration.properties).slice(0, 3)).toEqual(["bold", "grounded", "adjacent"]);
+    expect(FocusedStrategySchema.parse(focusedPlanFixture())).toEqual(focusedPlanFixture());
+  });
   it("quotes full-plan output headroom for both draft and revision while preserving the starter allowance", () => {
     const spec = focusedStrategySpec(), plan = planJob("strategy", { planStyle: "focused" });
     // A real revision used 13,740 thinking tokens plus its structured portfolio and hit 24,000.
