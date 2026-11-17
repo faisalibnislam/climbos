@@ -1,3 +1,14 @@
+## 17 November 2026 — overlapping marketing-send frequency
+
+Frozen recipient snapshots now begin at the execution claim; owner-selected contact intervals check running and uncertain broadcasts transactionally and at final dispatch. Existing preview/recovery paths show the hold. [Audit](growth-engine/marketing-contact-overlap-audit.md).
+
+- `pnpm exec vitest run tests/convex/marketing-authorization.test.ts tests/convex/contact-frequency-history.test.ts tests/convex/contact-frequency.test.ts tests/unit/contact-frequency.test.ts tests/convex/marketing.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts tests/unit/email-recovery-ui.test.tsx` — 107 passed across eight files, 3.08 seconds.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint convex/marketing.ts convex/schema.ts shared/growth/contactFrequency.ts tests/convex/marketing-authorization.test.ts tests/unit/contact-frequency.test.ts` — passed.
+- `git diff --check` — passed.
+
+Five regressions failed before the change. Additional coverage verifies the whole local executor permits one competing send, refusal releases its allowance, disjoint audiences and no-limit behavior remain available, legacy/incomplete/over-limit histories stay held, and partial 205-recipient recovery retains the overlap hold until accounting completes. Test provider calls are mocked; no real send, model evaluation, browser interaction, production concurrency benchmark or deployment occurred. Other communication workflows and outside-provider activity are not universally coordinated. The full project remains incomplete.
+
 ## 17 November 2026 — complete contact-frequency checks
 
 Owner-set broadcast frequency now uses exact send eligibility and an indexed latest outreach timestamp. See [the audit](growth-engine/contact-frequency-history-audit.md).

@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: overlapping marketing broadcasts
+
+Original-recipient snapshots now begin at the one-use claim. Owner-selected contact limits check other running/uncertain broadcasts transactionally and again at dispatch, keeping unknown results held through full recovery accounting. Disjoint audiences and no-limit behavior are preserved. [Audit](marketing-contact-overlap-audit.md) documents the bounded lookup, legacy/manual and cross-workflow limits.
+
 ## Local update — 17 November 2026: exact contact-frequency history
 
 Broadcast preview, approval and execution now share send eligibility; the outreach history lookup uses the actual latest send time instead of the first 20 records. Five reproduced regressions cover truncated history and mismatched consent rules. [Audit](contact-frequency-history-audit.md) retains customer-state, legacy-history and cross-broadcast coordination limits. No new execution authority.

@@ -9,6 +9,13 @@ describe("owner-set contact frequency", () => {
     expect(checkContactFrequency([{ lastMarketingEmailAt: now - DAY, activeOutreach: true }], undefined, now)).toBeNull();
   });
 
+  it("explains unresolved marketing attempts without promising a clearance date", () => {
+    const check = { recentlyEmailed: 0, activeOutreach: 0, activeMarketing: 1, clearAt: null };
+    expect(frequencyBlockMessage(check, 7)).toContain("1 person is waiting for a marketing send result");
+    expect(frequencyBlockMessage(check, 7)).not.toContain("clears on");
+    expect(frequencyBlockMessage({ ...check, unknownMarketingAudience: true }, 7)).toContain("cannot verify the recipients");
+  });
+
   it("counts people emailed by a broadcast or outreach within the limit, and anyone in active outreach", () => {
     const check = checkContactFrequency([
       { lastMarketingEmailAt: now - 2 * DAY, activeOutreach: false },

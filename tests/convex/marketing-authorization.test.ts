@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import type { FunctionArgs } from "convex/server";
 import { api, internal } from "../../convex/_generated/api";
+import { sha256Hex } from "../../shared/policy";
 import { asNewUser, makePaid, setup } from "./helpers";
 
 const provider = vi.hoisted(() => ({ synced: [] as string[], drafts: 0, sends: 0, outcome: "verified" as "verified" | "uncertain" | "throw", onRead: null as null | (() => Promise<void>), recovery: null as null | Record<string, unknown>, reads: 0, onRecovery: null as null | (() => Promise<void>), lastDraft: null as unknown, sentDraft: null as unknown }));
@@ -48,6 +49,143 @@ async function fixture(body = "A useful update for subscribers.", recipients = 1
   });
   return { t, owner, slug, orgId, artifactId, args, importContact };
 }
+
+async function anotherApprovedEmail(f: Awaited<ReturnType<typeof fixture>>, segment = "newsletter") {
+  const artifactId = await f.t.run(async ctx => {
+    const source = (await ctx.db.get(f.artifactId))!;
+    const artifactId = await ctx.db.insert("artifacts", { orgId: f.orgId, businessId: source.businessId, kind: "email", channel: "email", title: "Another update", status: "approved", currentVersion: 1, createdAt: Date.now(), updatedAt: Date.now() });
+    const versionId = await ctx.db.insert("artifactVersions", { orgId: f.orgId, artifactId, version: 1, headline: "Another update", body: "Another useful message.", hashtags: [], claimFactIds: [], unsupportedClaims: [], contentHash: "fixture", createdAt: Date.now() });
+    await ctx.db.patch(artifactId, { currentVersionId: versionId });
+    return artifactId;
+  });
+  await f.owner.client.mutation(api.marketing.approveSend, { slug: f.slug, artifactId, emailIndex: 0, segment, providerSegmentId: `seg-${segment}`, from: f.args.from });
+  return f.t.run(async ctx => {
+    const approval = (await ctx.db.query("approvals").withIndex("by_subject", q => q.eq("subjectType", "email_send").eq("subjectId", artifactId)).first())!;
+    const scheduled = (await ctx.db.system.query("_scheduled_functions").collect()).find(s => s.name.includes("executeSend") && (s.args[0] as { approvalId?: string }).approvalId === approval._id)!;
+    await ctx.scheduler.cancel(scheduled._id);
+    return scheduled.args[0] as FunctionArgs<typeof internal.marketing.executeSend>;
+  });
+}
+
+it("serializes different approved broadcasts for the same recipient under an owner frequency limit", async () => {
+  const f = await fixture();
+  const second = await anotherApprovedEmail(f);
+  await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: 7 });
+  const claims = await Promise.all([f.t.mutation(internal.marketing.claimSend, f.args), f.t.mutation(internal.marketing.claimSend, second)]);
+  expect(claims.filter(c => c && !c.error)).toHaveLength(1);
+  expect(claims.find(c => c?.error)?.error).toMatch(/marketing send result/);
+  expect(provider.sends).toBe(0);
+});
+
+it.each(["running", "uncertain", "expired", "legacy"] as const)("holds another broadcast for a %s send and explains it in the existing preview", async state => {
+  const f = await fixture();
+  const second = await anotherApprovedEmail(f);
+  await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: 7 });
+  expect((await f.t.mutation(internal.marketing.claimSend, f.args))?.error).toBeNull();
+  if (state === "uncertain") await f.t.mutation(internal.marketing.finishSend, { approvalId: f.args.approvalId, reservationId: f.args.reservationId, status: "uncertain", sent: 0, summary: "Provider response unknown" });
+  if (state === "expired") await f.t.run(ctx => ctx.db.patch(f.args.approvalId, { expiresAt: Date.now() - 1 }));
+  if (state === "legacy") await f.t.run(ctx => ctx.db.patch(f.args.approvalId, { emailRecipientHashBatches: undefined }));
+  const preview = await f.owner.client.query(api.marketing.frequencyPreview, { slug: f.slug, segment: "newsletter" });
+  expect(preview?.message).toMatch(state === "legacy" ? /cannot verify.*earlier email/i : /marketing send result/);
+  await f.t.action(internal.marketing.executeSend, second);
+  expect(provider.synced).toEqual([]);
+  expect(provider.drafts).toBe(0);
+  expect(provider.sends).toBe(0);
+  await expect(anotherApprovedEmail(f)).rejects.toThrow(state === "legacy" ? /cannot verify.*earlier email/i : /marketing send result/);
+});
+
+it("rechecks a frequency limit enabled between claim and dispatch", async () => {
+  const f = await fixture();
+  const second = await anotherApprovedEmail(f);
+  expect((await f.t.mutation(internal.marketing.claimSend, f.args))?.error).toBeNull();
+  expect((await f.t.mutation(internal.marketing.claimSend, second))?.error).toBeNull();
+  await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: 7 });
+  expect(await f.t.mutation(internal.marketing.authorizeSendDispatch, { ...second, externalId: "second-draft" })).toMatchObject({ ok: false, message: expect.stringContaining("marketing send result") });
+});
+
+it("executes only one of two overlapping broadcasts and releases the refused attempt's allowance", async () => {
+  const f = await fixture();
+  const second = await anotherApprovedEmail(f);
+  await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: 7 });
+  await Promise.all([f.t.action(internal.marketing.executeSend, f.args), f.t.action(internal.marketing.executeSend, second)]);
+  expect(provider.sends).toBe(1);
+  expect(provider.drafts).toBe(1);
+  const receipts = await f.t.run(ctx => ctx.db.query("actionReceipts").collect());
+  expect(receipts.map(r => r.status).sort()).toEqual(["failed", "verified"]);
+  const reservations = await f.t.run(ctx => ctx.db.query("usageReservations").collect());
+  expect(reservations.filter(r => r.purpose === "email_send").map(r => r.status)).toEqual(["reconciled", "reconciled"]);
+});
+
+it("keeps no-limit behavior while retaining recipient evidence for a later policy change", async () => {
+  const f = await fixture();
+  const second = await anotherApprovedEmail(f);
+  for (const args of [f.args, second]) {
+    expect((await f.t.mutation(internal.marketing.claimSend, args))?.error).toBeNull();
+    expect(await f.t.mutation(internal.marketing.authorizeSendDispatch, { ...args, externalId: String(args.approvalId) })).toMatchObject({ ok: true });
+    expect((await f.t.run(ctx => ctx.db.get(args.approvalId)))?.emailRecipientHashBatches?.flat()).toHaveLength(1);
+  }
+  expect(await f.owner.client.query(api.marketing.frequencyPreview, { slug: f.slug, segment: "newsletter" })).toBeNull();
+});
+
+it("allows disjoint audiences under the same policy and ignores its own claim at dispatch", async () => {
+  const f = await fixture();
+  await f.importContact("bea@example.com");
+  await f.t.run(async ctx => {
+    const hash = await sha256Hex("bea@example.com");
+    const newContact = (await ctx.db.query("contacts").withIndex("by_org_email", q => q.eq("orgId", f.orgId).eq("emailHash", hash)).first())!;
+    await ctx.db.patch(newContact._id, { segments: ["other"] });
+  });
+  const second = await anotherApprovedEmail(f, "other");
+  await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: 7 });
+  for (const args of [f.args, second]) {
+    expect((await f.t.mutation(internal.marketing.claimSend, args))?.error).toBeNull();
+    expect(await f.t.mutation(internal.marketing.authorizeSendDispatch, { ...args, externalId: String(args.approvalId) })).toMatchObject({ ok: true });
+  }
+});
+
+it("a definitively failed attempt releases the frequency hold", async () => {
+  const f = await fixture();
+  const second = await anotherApprovedEmail(f);
+  await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: 7 });
+  expect((await f.t.mutation(internal.marketing.claimSend, f.args))?.error).toBeNull();
+  await f.t.mutation(internal.marketing.finishSend, { approvalId: f.args.approvalId, reservationId: f.args.reservationId, status: "failed", sent: 0, summary: "Stopped before provider dispatch" });
+  expect((await f.t.mutation(internal.marketing.claimSend, second))?.error).toBeNull();
+});
+
+it.each(["missing", "duplicate", "count", "invalid hash", "too many"] as const)("holds incomplete pending-recipient evidence: %s", async fault => {
+  const f = await fixture();
+  const second = await anotherApprovedEmail(f);
+  await f.t.mutation(internal.marketing.claimSend, f.args);
+  await f.t.run(async ctx => {
+    const a = (await ctx.db.get(f.args.approvalId))!;
+    const hash = (await ctx.db.query("contacts").collect())[0].emailHash;
+    if (fault === "missing") await ctx.db.patch(a._id, { emailRecipientHashBatches: undefined });
+    if (fault === "duplicate") await ctx.db.patch(a._id, { emailRecipientHashBatches: [[hash, hash]], scope: { ...a.scope, spendLimitMinor: 2 } });
+    if (fault === "count") await ctx.db.patch(a._id, { emailRecipientHashBatches: [[hash]], scope: { ...a.scope, spendLimitMinor: 2 } });
+    if (fault === "invalid hash") await ctx.db.patch(a._id, { emailRecipientHashBatches: [["unknown"]] });
+    if (fault === "too many") {
+      const { _id: _id, _creationTime: _time, ...fields } = a;
+      for (let i = 0; i < 8; i++) await ctx.db.insert("approvals", fields);
+    }
+  });
+  await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: 7 });
+  expect((await f.t.mutation(internal.marketing.claimSend, second))?.error).toMatch(/cannot verify.*earlier email/i);
+  expect(provider.sends).toBe(0);
+});
+
+it("does not use another tenant's unresolved recipient snapshot", async () => {
+  const f = await fixture();
+  const other = await asNewUser(f.t, "other-pending-send@example.com");
+  const otherOrg = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other pending send" });
+  await f.t.run(async ctx => {
+    const approval = (await ctx.db.get(f.args.approvalId))!;
+    const { _id: _id, _creationTime: _time, ...fields } = approval;
+    const hash = (await ctx.db.query("contacts").collect())[0].emailHash;
+    await ctx.db.insert("approvals", { ...fields, orgId: otherOrg.orgId, executionStartedAt: Date.now(), emailRecipientHashBatches: [[hash]] });
+  });
+  await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: 7 });
+  expect((await f.t.mutation(internal.marketing.claimSend, f.args))?.error).toBeNull();
+});
 
 it("rejects a same-size audience replacement before any provider write", async () => {
   const f = await fixture();
@@ -296,6 +434,8 @@ it("keeps the exact provider identity before a worker can lose its final result"
 
 it("applies recovered history in bounded batches and resists replay and late callbacks", async () => {
   const f = await uncertainFixture(205);
+  await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: 7 });
+  expect(await f.owner.client.query(api.marketing.frequencyPreview, { slug: f.slug, segment: "newsletter" })).toMatchObject({ activeMarketing: 205, recentlyEmailed: 0 });
   expect(await f.owner.client.action(api.marketing.checkSendResult, f.recoveryArgs)).toMatchObject({ confirmed: true });
   const a = (await f.t.run(ctx => ctx.db.get(f.args.approvalId)))!;
   expect(a.emailRecipientHashBatches?.map(batch => batch.length)).toEqual([200, 5]);
@@ -305,10 +445,14 @@ it("applies recovered history in bounded batches and resists replay and late cal
   await f.t.mutation(internal.marketing.finishSend, { approvalId: a._id, reservationId: f.args.reservationId, status: "failed", sent: 0, summary: "Late failure" });
   expect((await f.t.run(ctx => ctx.db.get(a._id)))!.emailRecovery?.nextOffset).toBe(200);
   expect((await f.t.run(ctx => ctx.db.get(f.args.reservationId)))!.status).toBe("unresolved");
+  expect(await f.owner.client.query(api.marketing.frequencyPreview, { slug: f.slug, segment: "newsletter" })).toMatchObject({ activeMarketing: 205, recentlyEmailed: 200 });
   await f.t.finishAllScheduledFunctions(() => undefined);
   const contacts = await f.t.run(ctx => ctx.db.query("contacts").collect());
   expect(contacts).toHaveLength(205);
   expect(contacts.every(c => c.lastMarketingEmailAt === f.sentAt)).toBe(true);
+  const frequency = await f.owner.client.query(api.marketing.frequencyPreview, { slug: f.slug, segment: "newsletter" });
+  expect(frequency).toMatchObject({ recentlyEmailed: 205, clearAt: f.sentAt + 7 * 86_400_000 });
+  expect(frequency?.activeMarketing).toBeUndefined();
   const r = (await f.t.run(ctx => ctx.db.get(f.args.reservationId)))!;
   expect((await f.t.run(ctx => ctx.db.get(r.periodId)))!.meterUsed.byoMarketingSends).toBe(205);
   expect(provider.sends).toBe(1);

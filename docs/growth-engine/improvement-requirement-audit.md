@@ -1,3 +1,7 @@
+## 17 November 2026 — marketing contact overlap
+
+Rows 118/148: different approved broadcasts now coordinate their frozen recipients under the owner-selected contact interval; running/uncertain attempts cannot be treated as no recent contact. Partial recovery retains the hold, and complete recovery transitions to recorded history. [Audit](marketing-contact-overlap-audit.md). Broader customer lifecycle and cross-workflow pressure requirements remain partial.
+
 ## 17 November 2026 — contact-frequency history
 
 Rows 111/118/148 follow-up: owner-set broadcast frequency now uses the exact eligible audience, with consistent provenance/suppression/completeness checks, and the latest recorded outreach send time. [Audit](contact-frequency-history-audit.md) records reproduced gaps and remaining lifecycle/coordination limits. These rows remain partial.

@@ -179,7 +179,7 @@ export const markCrmConnected = internalMutation({
 });
 
 /** Owner-set frequency limit over the consented, unsuppressed contacts in one segment (null when no limit is set). */
-async function segmentFrequency(ctx: QueryCtx, orgId: Id<"organizations">, segment: string, limitDays: number | undefined, recipients?: Awaited<ReturnType<typeof eligibleRecipients>>) {
+async function segmentFrequency(ctx: QueryCtx, orgId: Id<"organizations">, segment: string, limitDays: number | undefined, recipients?: Awaited<ReturnType<typeof eligibleRecipients>>, excludingApprovalId?: Id<"approvals">) {
   if (!limitDays) return null;
   // Use the exact send audience, including provenance, suppression and history
   // completeness checks. A different consent slice can silently omit a person
@@ -190,7 +190,35 @@ async function segmentFrequency(ctx: QueryCtx, orgId: Id<"organizations">, segme
     const c = assertSameOrg(await ctx.db.get(recipient.contactId), orgId, "contact");
     people.push({ ...(c.lastMarketingEmailAt ? { lastMarketingEmailAt: c.lastMarketingEmailAt } : {}), ...(await outreachHistoryByHash(ctx, orgId, c.emailHash)) });
   }
-  return checkContactFrequency(people, limitDays, Date.now());
+  const check = checkContactFrequency(people, limitDays, Date.now());
+  if (!check || !audience.length) return check;
+  const pending = await pendingMarketingRecipients(ctx, orgId, excludingApprovalId);
+  if (pending === null) return { ...check, unknownMarketingAudience: true };
+  const activeMarketing = audience.filter(r => pending.has(r.emailHash)).length;
+  return { ...check, ...(activeMarketing ? { activeMarketing } : {}) };
+}
+
+/** Complete bounded lookup of running/uncertain attempts, including legacy approvals.
+ * Read and claim in the same mutation so overlapping claims conflict transactionally.
+ * Never infer "not sent" from an expired approval or an invalidated uncertain result.
+ */
+async function pendingMarketingRecipients(ctx: QueryCtx, orgId: Id<"organizations">, excludingApprovalId?: Id<"approvals">): Promise<Set<string> | null> {
+  const maxAttempts = 8; // Each record can contain up to 10,000 recipient hashes.
+  const running = await ctx.db.query("approvals").withIndex("by_org_email_execution", q => q.eq("orgId", orgId).eq("subjectType", "email_send").eq("executionOutcome", undefined).eq("executionReconciledAt", undefined).eq("executionFinishedAt", undefined).gte("executionStartedAt", 0))
+    .filter(q => q.neq(q.field("_id"), excludingApprovalId)).take(maxAttempts + 1);
+  if (running.length > maxAttempts) return null;
+  const uncertain = await ctx.db.query("approvals").withIndex("by_org_email_execution", q => q.eq("orgId", orgId).eq("subjectType", "email_send").eq("executionOutcome", "uncertain").eq("executionReconciledAt", undefined))
+    .filter(q => q.neq(q.field("_id"), excludingApprovalId)).take(maxAttempts - running.length + 1);
+  if (running.length + uncertain.length > maxAttempts) return null;
+  const hashes = new Set<string>();
+  for (const attempt of [...running, ...uncertain]) {
+    const batches = attempt.emailRecipientHashBatches;
+    if (!batches?.length || batches.length > 50 || batches.some(b => !b.length || b.length > 200)) return null;
+    const recipients = batches.flat();
+    if (recipients.length !== attempt.scope.spendLimitMinor || new Set(recipients).size !== recipients.length || recipients.some(h => !/^[a-f0-9]{64}$/.test(h))) return null;
+    for (const hash of recipients) hashes.add(hash);
+  }
+  return hashes;
 }
 
 /** Before approving a broadcast: who in the segment the owner's contact limit would hold back. */
@@ -430,7 +458,7 @@ async function sendProblem(ctx: MutationCtx, c: NonNullable<Awaited<ReturnType<t
   if (!/^send:\d+$/.test(a.actionKind) || !Number.isSafeInteger(index)) return "The approved email selection is invalid.";
   const email = selectedEmail(artifact, version, index);
   if (!email || email.subject !== args.subject || toHtml(email.text, org.name) !== args.html) return "The email content changed after approval. Review the current version.";
-  const frequency = await segmentFrequency(ctx, org._id, args.segment, org.contactFrequencyDays, c.recipients);
+  const frequency = await segmentFrequency(ctx, org._id, args.segment, org.contactFrequencyDays, c.recipients, a._id);
   const frequencyIssue = frequency ? frequencyBlockMessage(frequency, org.contactFrequencyDays!) : null;
   if (frequencyIssue) return frequencyIssue;
   const scope = { destination: args.providerSegmentId, audience: args.segment, spendLimitMinor: c.recipients.length, recipientSetHash: await recipientSetHash(c.recipients), artifactVersionId: version._id, reservationId: args.reservationId, connectionId: c.connectionId, credentialId: c.credentialId };
@@ -456,7 +484,14 @@ export const claimSend = internalMutation({
     const reservation = await ctx.db.get(args.reservationId);
     if (!reservation || reservation.orgId !== c.org._id || reservation.purpose !== "email_send" || reservation.status !== "held" || (c.approval.scope.reservationId && c.approval.scope.reservationId !== reservation._id)) return null;
     const error = await sendProblem(ctx, c, args);
-    await ctx.db.patch(c.approval._id, { executionStartedAt: Date.now() });
+    await ctx.db.patch(c.approval._id, {
+      executionStartedAt: Date.now(),
+      // Keep the one-attempt claim even when validation refuses it. A known
+      // pre-provider refusal must not hold another valid broadcast as unknown.
+      ...(error ? { executionOutcome: "failed" as const } : {
+        emailRecipientHashBatches: Array.from({ length: Math.ceil(c.recipients.length / 200) }, (_, i) => c.recipients.slice(i * 200, (i + 1) * 200).map(r => r.emailHash)),
+      }),
+    });
     return { context: c, error };
   },
 });

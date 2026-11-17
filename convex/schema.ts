@@ -4176,7 +4176,7 @@ export default defineSchema({
     /** One-use marketing send dispatch, after current audience and approval checks. */
     emailSendDispatchedAt: v.optional(v.number()),
     emailProviderPayloadHash: v.optional(v.string()),
-    /** Original recipients for read-only recovery and contact-pressure accounting. */
+    /** Exact recipients frozen at claim, then rechecked at dispatch; used for recovery and contact pressure. */
     emailRecipientHashBatches: v.optional(v.array(v.array(v.string()))),
     emailRecovery: v.optional(v.object({ sentAt: v.number(), checkedAt: v.number(), nextOffset: v.number() })),
     executionExternalId: v.optional(v.string()),
@@ -4188,6 +4188,7 @@ export default defineSchema({
   })
     .index("by_org_status", ["orgId", "status"])
     .index("by_org_subject_status_decided", ["orgId", "subjectType", "status", "decidedAt"])
+    .index("by_org_email_execution", ["orgId", "subjectType", "executionOutcome", "executionReconciledAt", "executionFinishedAt", "executionStartedAt"])
     .index("by_subject", ["subjectType", "subjectId"]),
 
   autonomyPolicies: defineTable({
