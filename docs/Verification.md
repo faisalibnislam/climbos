@@ -1,3 +1,14 @@
+## 17 November 2026 — source constraints and complete repurposing batches
+
+Existing source identity, offer snapshots and trend evidence now survive repurposing; final persistence checks the normalized batch independently. Incomplete requested formats fail rather than being silently omitted. See [the audit](growth-engine/repurpose-source-context-audit.md).
+
+- `pnpm exec vitest run tests/convex/repurpose-source-context.test.ts tests/convex/repurpose.test.ts tests/convex/brand-writing-context.test.ts tests/convex/translate.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts tests/unit/offer-assessment.test.ts tests/convex/social-publish.test.ts tests/convex/publish-flow.test.ts` — 109 passed across nine files, 3.81 seconds.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint convex/repurpose.ts convex/repurposeActions.ts shared/agents/specs.ts tests/convex/repurpose-source-context.test.ts` — passed.
+- `git diff --check` — passed.
+
+Four new regressions failed before the fix. Follow-up validation caught broad persisted enum types (now parsed with existing enum schemas, unknown preserved) and missing required hashtags in new edit-test arguments (corrected). No provider calls, browser checks, paid model, deployment or external action. Model responses are mocked; semantic copy quality is not established. No generated files or unrelated `.gitignore` edits are included.
+
 ## 17 November 2026 — shared brand-writing context
 
 Repurposing and landing writers previously omitted tone, restrictions and approved examples and clipped voice/rules to 600 characters. The shared writer context now retains these fields, separates confirmed settings from inferred edits, and requires enabled consent before including inferred rules. See [the audit](growth-engine/brand-writing-context-audit.md).

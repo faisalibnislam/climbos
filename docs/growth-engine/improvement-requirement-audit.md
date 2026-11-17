@@ -1,3 +1,7 @@
+## 17 November 2026 — source constraints survive repurposing
+
+Repurposing now pins an existing source draft version, preserves its offer constraints and historical trend evidence, and independently checks the normalized batch before saving. Missing/duplicate/unrequested formats cannot be reported as complete. New drafts retain separate approval; rewriting does not refresh evidence or authorize publishing. See [the audit](repurpose-source-context-audit.md).
+
 ## 17 November 2026 — shared brand-writing context
 
 Shared brand-writing context now reaches primary jobs, repurposing and landing-page generation. It preserves tone, restrictions and full approved examples, labels owner confirmation separately from inferred edit preferences, and omits learned rules unless learning is enabled. Social guidance stays scoped to social formats. This closes confirmed context-delivery gaps, not semantic brand-compliance acceptance. See [the audit](brand-writing-context-audit.md).

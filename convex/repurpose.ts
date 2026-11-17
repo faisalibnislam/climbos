@@ -1,22 +1,37 @@
 import { writingBrandContext } from "../shared/agents/contentTasks";
+import { lintApprovedOfferCopy } from "../shared/agents/offerAssessment";
+import { CopyBriefSchema } from "../shared/agents/specs";
 import { v } from "convex/values";
 import { CALL_ROUTES } from "../shared/agents/routes";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
-import { internalMutation, internalQuery, mutation } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
+import { internalMutation, internalQuery, mutation, type QueryCtx } from "./_generated/server";
 import { createRunWithReservation } from "./engine";
 import { insertArtifact, type ArtifactInput } from "./jobWrites";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 
 /**
  * Repurposing: one piece (a URL, pasted text or an existing draft) becomes
- * drafts for several channels in one Luna call. Drafts go to review like any
+ * drafts for several channels in one routed model call. Drafts go to review like any
  * other; links get tracked automatically.
  */
 
 const MODEL = CALL_ROUTES.chat_intent;
 export const FORMATS = ["linkedin", "x", "instagram", "facebook", "email", "video"] as const;
 const formatV = v.union(...FORMATS.map((f) => v.literal(f)));
+
+/** Resolve the immutable source chosen at launch, never a newer edited version. */
+async function sourceVersion(ctx: QueryCtx, run: Doc<"workflowRuns">) {
+  const input = JSON.parse(run.input);
+  if (input.sourceArtifactId === undefined && input.sourceVersionId === undefined) return null;
+  const artifactId = typeof input.sourceArtifactId === "string" ? ctx.db.normalizeId("artifacts", input.sourceArtifactId) : null;
+  const versionId = typeof input.sourceVersionId === "string" ? ctx.db.normalizeId("artifactVersions", input.sourceVersionId) : null;
+  if (!artifactId || !versionId) throw appError("INVALID", "The saved source reference is incomplete. Choose the source draft again.");
+  const artifact = assertSameOrg(await ctx.db.get(artifactId), run.orgId, "source draft");
+  const version = assertSameOrg(await ctx.db.get(versionId), run.orgId, "source version");
+  if (version.artifactId !== artifact._id) throw appError("INVALID", "The source version does not belong to this draft.");
+  return version;
+}
 
 export const start = mutation({
   args: { slug: v.string(), url: v.optional(v.string()), text: v.optional(v.string()), artifactId: v.optional(v.id("artifacts")), formats: v.array(formatV) },
@@ -25,10 +40,14 @@ export const start = mutation({
     const formats = [...new Set(a.formats)].slice(0, FORMATS.length);
     if (!formats.length) throw appError("INVALID", "Pick at least one format.");
     let text = a.text?.trim().slice(0, 20_000) ?? "";
+    let sourceVersionId: Id<"artifactVersions"> | undefined;
     if (a.artifactId) {
+      if (a.url?.trim() || text) throw appError("INVALID", "Choose one source: either an existing draft or pasted text/a webpage.");
       const art = assertSameOrg(await ctx.db.get(a.artifactId), org._id, "draft");
-      const ver = art.currentVersionId ? await ctx.db.get(art.currentVersionId) : null;
-      text = [ver?.headline, ver?.body].filter(Boolean).join("\n\n");
+      const ver = assertSameOrg(art.currentVersionId ? await ctx.db.get(art.currentVersionId) : null, org._id, "source version");
+      if (ver.artifactId !== art._id) throw appError("INVALID", "The source version does not belong to this draft.");
+      sourceVersionId = ver._id;
+      text = [ver.headline, ver.body, ver.callToAction, ...ver.hashtags].filter(Boolean).join("\n\n");
     }
     const url = a.url?.trim();
     if (url && !/^https:\/\/\S+$/i.test(url)) throw appError("INVALID", "Links must start with https://");
@@ -38,7 +57,7 @@ export const start = mutation({
       kind: "repurpose",
       title: `Repurpose into ${formats.length} format${formats.length === 1 ? "" : "s"}`,
       roles: ["social_media_manager"],
-      input: { url, formats },
+      input: { url, formats, ...(a.artifactId ? { sourceArtifactId: a.artifactId, sourceVersionId } : {}) },
       steps: [{ kind: "model", role: "social_media_manager", modelKey: MODEL, inputBudget: 12_000, outputBudget: 1_200 + formats.length * 700 }],
       meters: {},
       createdBy: user._id,
@@ -53,7 +72,8 @@ export const context = internalQuery({
   args: { runId: v.id("workflowRuns") },
   handler: async (ctx, { runId }) => {
     const run = await ctx.db.get(runId);
-    if (!run) return null;
+    if (!run || run.kind !== "repurpose") return null;
+    const source = await sourceVersion(ctx, run);
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", run.orgId)).first();
     const brand = business ? await ctx.db.query("brandProfiles").withIndex("by_business", (q) => q.eq("businessId", business._id)).first() : null;
     const org = await ctx.db.get(run.orgId);
@@ -62,7 +82,7 @@ export const context = internalQuery({
       const input = JSON.parse(run.input);
       if (Array.isArray(input?.formats) && input.formats.length) includeSocial = input.formats.some((format: unknown) => format !== "email");
     } catch { /* Older requests retain bounded guidance for both content types. */ }
-    return { language: org?.contentLanguage ?? "English", run, business: business ? { id: business._id, name: business.name, website: business.website ?? "" } : null, brandContext: writingBrandContext(brand?.orgId === run.orgId ? brand : null, includeSocial) };
+    return { language: org?.contentLanguage ?? "English", run, source, business: business ? { id: business._id, name: business.name, website: business.website ?? "" } : null, brandContext: writingBrandContext(brand?.orgId === run.orgId ? brand : null, includeSocial) };
   },
 });
 
@@ -79,20 +99,48 @@ export const save = internalMutation({
   args: { runId: v.id("workflowRuns"), sourceUrl: v.optional(v.string()), items: v.array(v.object({ format: formatV, title: v.string(), body: v.string(), hashtags: v.array(v.string()) })) },
   handler: async (ctx, { runId, sourceUrl, items }) => {
     const run = await ctx.db.get(runId);
-    if (!run) return [];
+    if (!run || run.kind !== "repurpose") throw appError("INVALID", "This is not a repurposing request.");
+    const requested = JSON.parse(run.input).formats as unknown;
+    if (!Array.isArray(requested) || !requested.length || items.length !== requested.length || new Set(items.map(item => item.format)).size !== requested.length || items.some(item => !requested.includes(item.format) || !item.body.trim())) throw appError("INVALID", "One usable draft is required for each selected format.");
+    const source = await sourceVersion(ctx, run);
+    const playName = source?.copyBrief?.approvedOfferPlayName ?? source?.offerPlayNameSnapshot;
+    const normalized = items.map(item => ({ ...item, title: item.title.slice(0, 120) || `Repurposed for ${item.format}`, body: item.body.slice(0, 8000), hashtags: item.hashtags.map(tag => tag.replace(/^#/, "")).slice(0, 10) }));
+    // Validate exactly what will be saved, after length limits, before any insert.
+    for (const item of normalized) {
+      const issue = lintApprovedOfferCopy([item.title, item.body, ...item.hashtags].join("\n"), source?.approvedOfferTermsSnapshot, "repurpose", playName).find(issue => issue.severity === "error");
+      if (issue) throw appError("INVALID", issue.message);
+    }
     const business = await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", run.orgId)).first();
     if (!business) return [];
+    const brief = source?.copyBrief;
+    const sourceFactIds = [...new Set([...(source?.claimFactIds ?? []), ...(brief?.offerFactIds ?? []), ...(brief?.proofFactIds ?? []), ...(brief?.supportingFactIds ?? [])])];
+    const factIds: Id<"businessFacts">[] = [];
+    for (const id of sourceFactIds) {
+      const fact = await ctx.db.get(id);
+      if (fact && fact.orgId === run.orgId && fact.businessId === business._id) factIds.push(id);
+    }
+    const indexes = (ids: Id<"businessFacts">[]) => ids.map(id => factIds.indexOf(id)).filter(index => index >= 0);
     const ids: Id<"artifacts">[] = [];
-    for (const it of items) {
+    for (const it of normalized) {
       const map = CHANNEL[it.format];
       ids.push(
         await insertArtifact(ctx, {
           orgId: run.orgId,
           businessId: business._id,
           runId,
-          factIds: [],
+          factIds,
           createdBy: run.createdBy,
-          item: { kind: map.kind, channel: map.channel, title: it.title.slice(0, 120) || `Repurposed for ${it.format}`, body: it.body.slice(0, 8000), destinationUrl: sourceUrl, hashtags: it.hashtags.map((h) => h.replace(/^#/, "")).slice(0, 10), factIndexes: [], role: map.role },
+          offerTermsSnapshot: source?.approvedOfferTermsSnapshot,
+          offerPlayNameSnapshot: playName,
+          item: { kind: map.kind, channel: map.channel, title: it.title, body: it.body, destinationUrl: sourceUrl, hashtags: it.hashtags, factIndexes: [], role: map.role,
+            copyBrief: brief ? (() => {
+              const { offerFactIds, proofFactIds, supportingFactIds, ...rest } = brief;
+              return { ...rest,
+                awarenessStage: CopyBriefSchema.shape.awarenessStage.safeParse(rest.awarenessStage).data ?? "unknown",
+                relationshipStage: CopyBriefSchema.shape.relationshipStage.safeParse(rest.relationshipStage).data ?? "unknown",
+                channel: map.channel, format: it.format, offerFactIndexes: indexes(offerFactIds), proofFactIndexes: indexes(proofFactIds), supportingFactIndexes: indexes(supportingFactIds), unknowns: [...new Set([...rest.unknowns, "Inherited source brief; adaptation and evidence fit require owner review."])] };
+            })() : undefined,
+          },
         }),
       );
     }
