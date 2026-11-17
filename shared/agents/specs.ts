@@ -337,7 +337,7 @@ export interface BusinessFunnelSnapshot { periodDays: number; visitors?: number;
 export interface GoalInputSnapshot { timingMode?: "ai" | "owner"; deadline?: string; id: string; kind: "more_sales" | "more_customers" | "more_reach" | "more_followers" | "custom"; statement: string; horizonDays: number; monthlyAdBudgetMinor: number; currency: string; target: GoalTarget | null }
 export interface PlanSnapshot { snapshotVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22; snapshotId: string; capturedAt: number; engine: string; aiMode: string; goal: string; horizonDays: number; monthlyAdBudget: number; currency?: string; facts: number; factVersions: { id: string; updatedAt: number }[]; businessProfile?: unknown; businessFactVersions?: { id: string; updatedAt: number; reviewSuggested?: boolean }[]; brandProfile?: unknown; ownerAcquisitionTypes?: string[] | null; ownerAcquisitionDimensions?: Record<string, string>; ownerChannelPreferences?: { channelId: string; preference: "prefer" | "avoid" | "dismissed" | "irrelevant" | "already_using"; rationale: string; sourceUrl?: string; evidenceDate?: string }[]; businessResearchAt?: number | null; marketChangeVersions?: { id: string; at: number }[]; staleFactIds: string[]; contradictions: { subject: string; values: string[]; factIds: string[] }[]; insightsChars: number; insightsHash: string; sourceUrls: string[]; capabilities: string[]; businessLifecycleStage?: { stage: string; provenance: "owner_reported"; updatedAt: number } | null; businessFunnel?: BusinessFunnelSnapshot | null; goalInput?: GoalInputSnapshot | null; knowledgeReferences?: KnowledgeReferenceSet; ownerEconomics?: unknown; growthCashTiming?: { reserveMinor: number | null; currency: string; paymentLagDays: number | null } | null; refundExposure?: RefundExposure; channelOutcomes?: PlatformConcentration; goalTarget?: GoalTarget; flags?: string[] }
 /** Bump when the plan pipeline changes in a way that could change results. */
-export const ENGINE_VERSION = "v3.129-retention-evidence-validation";
+export const ENGINE_VERSION = "v3.130-recorded-email-audience";
 
 /** The growth-plays agent returns separately explored strategic options and costed plays. */
 /** Strategy exploration is separate from the ranked, costed plays that may enter an execution plan. */
@@ -1652,17 +1652,19 @@ export function lintBorrowedUplift(plays: { name?: string; model?: { steps?: { n
 const USES_LIST = /\b(?:your|existing|current)\s+(?:email\s+|mailing\s+|newsletter\s+)?(?:list|subscribers?|newsletter)\b|\bnewsletter\s+subscribers?\b|\b(?:email|broadcast|send)\w*\s+(?:to\s+)?(?:your|the|existing)\s+(?:\d[\d,]*\s+)?(?:subscribers?|list)\b/i;
 const BUILDS_LIST = /\b(?:start|launch|build|create|grow|set up|collect)\w*\b[^.]{0,40}\b(?:list|newsletter|subscribers?)\b/i;
 const LIST_IN_EVIDENCE = /\b(subscribers?|newsletter|mailing list|email list|contacts?)\b/i;
+const CHECKS_LIST = /^(?:confirm|verify|check|audit)\b[^.!?]*\b(?:list|subscribers?|newsletter)\b[^.!?]*[.!?]?$/i;
+const SENDS_LIST = /\b(?:send|broadcast|email)\w*\s+(?:to\s+)?(?:your|the|existing|current)\b/i;
 
 /**
  * Book 14 §4: no audience is assumed. With no consented contacts in ClimbOS and
  * no fact about a list, a play or channel can't rely on emailing one.
  */
 export function lintNoAudience(out: unknown, c: PlanConstraints | undefined, evidence: string): LintIssue[] {
-  if (c?.emailAudience === undefined || c.emailAudience > 0 || LIST_IN_EVIDENCE.test(evidence)) return [];
+  if (c?.emailAudience === undefined || (c.emailAudience !== null && c.emailAudience > 0) || LIST_IN_EVIDENCE.test(evidence)) return [];
   return stringFields(out)
-    .filter(({ path, text }) => !/url|sourceUrl|notDoing|risks/i.test(path) && USES_LIST.test(text) && !BUILDS_LIST.test(text))
+    .filter(({ path, text }) => !/url|sourceUrl|notDoing|risks|ownerInputs|ownerQuestion|unknowns/i.test(path) && USES_LIST.test(text) && !BUILDS_LIST.test(text) && !(CHECKS_LIST.test(text.trim()) && !SENDS_LIST.test(text)))
     .slice(0, 3)
-    .map(({ path }) => ({ severity: "error" as const, rule: "no_audience", message: "This relies on an email list, but the business has no consented contacts in ClimbOS and no fact says it has a list. Build the list first (a signup or lead magnet), or reach people another way.", path }));
+    .map(({ path }) => ({ severity: "error" as const, rule: "no_audience", message: c.emailAudience === null ? "This relies on an existing email list, but the local audience evidence is incomplete and no fact establishes a list. Ask the owner to verify the audience before proposing a send; do not treat unknown coverage as either zero contacts or permission to send." : "This relies on an email list, but the business has no locally eligible marketing contacts in ClimbOS and no fact says it has a list. Build the list first (a signup or lead magnet), or reach people another way.", path }));
 }
 
 /** "40 new customers", "120–200 paying users": a count of outcomes over the plan's horizon. Interviews, calls and per-week rates are not. */

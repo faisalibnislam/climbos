@@ -632,7 +632,7 @@ describe("creative strategy precedent retrieval", () => {
       brief: "A small local service business in the United States has limited owner time and wants useful community participation.",
       facts: ["The owner says the service area is regional and the team has limited capacity."],
       industryBusinessTypeId: "local_services",
-      constraints: { ownerHoursPerWeek: 4, monthlyAdBudgetUsd: 0, serviceArea: "United States regional", businessTypes: ["local_service"] },
+      constraints: { ownerHoursPerWeek: 4, monthlyAdBudgetUsd: 0, emailAudience: null, serviceArea: "United States regional", businessTypes: ["local_service"] },
     });
     expect(matches[0]?.precedent.id).toBe("CP-007");
     expect(matches[0]?.matchReasons.some((reason) => reason.startsWith("geography: united"))).toBe(true);

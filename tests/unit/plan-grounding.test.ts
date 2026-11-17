@@ -43,6 +43,12 @@ describe("no email audience is assumed (Book 14 §4)", () => {
   it("flags sending to a list when there are no consented contacts and no fact about one", () => {
     expect(lintNoAudience(plays, { emailAudience: 0 }, "")).toMatchObject([{ rule: "no_audience", path: "[0].firstActionToday" }]);
   });
+  it("keeps incomplete audience evidence unknown without inventing an empty or ready list", () => {
+    expect(lintNoAudience(plays, { emailAudience: null }, "")).toMatchObject([{ rule: "no_audience", message: expect.stringContaining("incomplete") }]);
+    expect(lintNoAudience([{ a: "Build a voluntary newsletter list with a useful guide." }], { emailAudience: null }, "")).toEqual([]);
+    expect(lintNoAudience([{ firstActionToday: "Verify the current opt-in records for your email list.", ownerQuestion: "How many people are on your email list?" }], { emailAudience: null }, "")).toEqual([]);
+    expect(lintNoAudience([{ firstActionToday: "Verify your email list and then email your subscribers." }], { emailAudience: null }, "")).toMatchObject([{ rule: "no_audience" }]);
+  });
   it("allows building a list, a stated list, or consented contacts", () => {
     expect(lintNoAudience([{ a: "Start a newsletter and grow your list with a template pack." }], { emailAudience: 0 }, "")).toEqual([]);
     expect(lintNoAudience(plays, { emailAudience: 0 }, "Formkit has 2,400 newsletter subscribers")).toEqual([]);

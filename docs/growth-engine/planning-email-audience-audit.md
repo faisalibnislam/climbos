@@ -1,0 +1,26 @@
+# Recorded email audience in recommendations — 17 November 2026
+
+## Requirement and confirmed gap
+
+Original requirement 111 asks the engine to recognize insufficient email permission or audience data; rows 112/118/119 distinguish sales outreach, cadence and readiness. Followed the master-index Book 08 route and inspected actual job context, strategy constraints, playbook eligibility, creative-precedent context, retention drafting, marketing audience UI queries and send eligibility. The installed Next.js testing guide was already read in this audit sequence. No frontend component, provider or new agent was introduced.
+
+`jobWrites.jobContext` previously counted up to 1,000 contact rows and separately counted active consent references. It did not join permission to live contacts or suppressions, require a consent source/current timestamp, or check address availability. Deleted, orphaned and suppressed contacts could therefore appear as an audience, sometimes with a positive consent count but zero contacts. Filtering after truncation also allowed incomplete coverage to look like a complete small/empty audience. The owner-facing segment query separately inspected only five consent records, unlike execution's 100-record bound.
+
+## Changes and evidence path
+
+- Added a bounded tenant-scoped planning join over contacts, consent records and suppressions. Count distinct active contacts with a stored address, recorded current marketing consent and no recorded suppression. Orphan/foreign contact references do not create an audience.
+- Each of the three planning samples reads 1,001 rows to detect a 1,000-row boundary. Incomplete totals are `null`, with the observed contact sample, capture time and specific coverage limitations. A contact whose consent history exceeds the actual send-review bound also makes readiness incomplete. A complete zero-contact inventory still proves zero locally eligible contacts even if unrelated orphan consent history is incomplete.
+- Reused the same current-consent predicate and bounded contact/consent readers in owner segment counts and send eligibility. A timestamp of zero is still a recorded withdrawal/deletion. Future consent, blank provenance, suppression and missing stored addresses cannot inflate the displayed sendable count. The send path still checks the complete exact audience and rejects unusable selected addresses rather than silently changing recipients.
+- The actual writer brief labels these numbers as calculated from local records, with capture date. It distinguishes recorded permission from independent permission verification, customer interest, segment fit, domain readiness and deliverability. Those are not inferred from an imported list or connected provider.
+- Plan constraints carry `null` for incomplete local audience evidence; playbook eligibility receives unknown rather than a fabricated zero. Owner-facing plan unknowns request audience verification. The existing no-audience lint distinguishes unknown from empty, allows a verification-only next step or list building, and still flags unsupported immediate list use when no list evidence is supplied.
+- Creative-precedent context accepts and labels the unknown audience without converting it into a number or suppressing an otherwise relevant unconventional mechanism. Engine revision: `v3.130-recorded-email-audience`.
+
+## Verification
+
+Before the change, ten cases reproduced incorrect audience/coverage behavior; a positive-count case additionally specified the new capture/coverage metadata. Actual generation-boundary tests verify that complete and incomplete evidence reaches `AgentInput.brief` and `constraints`. They stop at mocked generation and create no artifacts, approvals or action receipts. Tests also cover exact sample boundaries, per-contact history bounds, duplicate opt-ins, tenant/orphan references, epoch-zero withdrawal/deletion, owner counts, existing email authorization and protected creative retrieval. Commands/results are in `docs/Verification.md`.
+
+Verification initially exposed an older creative-context type that did not accept unknown counts; it now retains and labels null. Two new generation fixtures initially stopped before the model because their rate-version ID was invalid; using the repository's current rate fixture made the intended boundary observable. Neither failure was hidden by weakening production checks.
+
+## Limits
+
+This is local recorded-audience evidence, not verified permission, interest, delivery or customer state. A stored address is not proof of a working mailbox. Provider/domain readiness, audience relevance, external lists, lifecycle milestones and real outcomes need separate evidence. The existing free-form external-list evidence fallback remains a bounded text heuristic, not comprehensive verification of ownership or consent; the sender's hard authorization checks remain separate. Historical plans are not rewritten, and this does not establish a complete historical snapshot of all planning inputs. Owner counts were verified through their backend query, not a new browser/visual audit. No live model evaluation, external request, real send or deployment occurred. The broader requirements remain incomplete.

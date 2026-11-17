@@ -71,6 +71,7 @@ import { businessLifecycleContext } from "../shared/agents/lifecycle";
 import { choosePlaybooks, playbookBrief, type PlaybookContext } from "../shared/playbooks/contracts";
 import { applyOwnerEconomics, churnOf, forecastCustomers, growthCashInputsIn, growthCashReserveConstraint, growthCashTiming, growthCashTimingContext, growthCashTimingInput, growthCashTimingLine, lockedNumbers, playsGoalGap, portfolioP50, selectPortfolio, withForecasts, type OwnerEconomics } from "../shared/agents/economics";
 import { segmentEconomicsBrief } from "../shared/agents/segmentEconomics";
+import { emailAudienceBrief } from "../shared/growth/emailAudience";
 import { campaignTimingTask, CREATIVE_STRATEGY_PROMPT_VERSION, planTask, playsTask, type CreativeRange } from "../shared/agents/planTasks";
 import { citedUrls, urlKey, verifyActionEvidence, verifyAudienceEvidence, verifyTags, withDerivedAssumed } from "../shared/agents/provenance";
 import { agentQuality, HARD_RULES, planQuality, withoutHard, type AgentQuality } from "../shared/agents/quality";
@@ -683,7 +684,8 @@ function planUnknowns(job: JobCtx, plays: { model?: { monthlySpendUsd?: number; 
   return [
     job.business?.unitEconomics?.ownerHoursPerWeek === undefined ? "Hours you can give growth work each week" : "",
     job.business?.unitEconomics?.monthlyGrowthCashUsd === undefined && plays.some((play) => (play.model?.monthlySpendUsd ?? 0) > 0 || (play.model?.otherMonthlyUsd ?? 0) > 0) ? "Monthly cash available for growth work" : "",
-    job.audience && job.audience.consented === 0 ? "Who you can email (no consented contacts in ClimbOS)" : "",
+    job.audience && job.audience.consented === 0 ? "Who you can email (no eligible marketing contacts recorded in ClimbOS)" : "",
+    job.audience?.consented === null ? "Who you can email (local audience and consent coverage is incomplete)" : "",
     isServiceBusiness((job.business as { acquisition?: { types?: string[] } } | null)?.acquisition?.types, job.business?.businessType) && job.business?.unitEconomics?.newCustomersPerMonth === undefined ? "How many additional new customers you can serve each month after your current workload" : "",
   ].filter(Boolean);
 }
@@ -717,7 +719,7 @@ function playbookContext(job: JobCtx, profile: AcquisitionProfile, d: Diagnosis)
     types: profile.types,
     budgetUsd: profile.budgetUsd,
     ...(f?.visitors !== undefined ? { weeklyVisitors: (f.visitors / (f.periodDays || 30)) * 7 } : {}),
-    ...(job.audience ? { emailAudience: job.audience.consented } : {}),
+    ...(job.audience?.consented != null ? { emailAudience: job.audience.consented } : {}),
     connected: job.capabilities.connected,
     ...(profile.priceUsdMonth !== undefined ? { priceUsdMonth: profile.priceUsdMonth } : {}),
     constraint: d.constraint,
@@ -799,7 +801,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     job.run.kind === "strategy" && b?.acquisition?.channelPreferences?.length
       ? `OWNER CHANNEL FEEDBACK (owner-reported preferences, not measured performance, customer demand or action permission):\n${untrusted("saved channel preferences", JSON.stringify(b.acquisition.channelPreferences.map(({ channelId, preference, rationale, evidenceDate }) => ({ channelId, channel: CHANNEL_BY_ID[channelId]?.name ?? channelId, preference, rationale, evidenceDate }))), 16_000)}\nDo not select dismissed or irrelevant channels for the immediate execution portfolio unless the owner clears that preference. Avoid, prefer and already_using are soft context, not proof of fit or permission. Preserve grounded, adjacent and bold exploration; a speculative alternative may explain what would justify reconsideration without selecting or executing the dismissed channel.`
       : "",
-    audienceLine(job.audience),
+    emailAudienceBrief(job.audience),
     trustPostureContext(job.facts.map((f) => f.evidenceKind)),
     conflictsLine(job),
     factsBlock(job.facts),
@@ -1067,14 +1069,6 @@ function conflictsForJob(job: JobCtx) {
 function conflictsLine(job: JobCtx): string {
   const lines = conflictLines(conflictsForJob(job));
   return lines.length ? `MATERIAL BUSINESS CONFLICTS (preserve both source records; neither value is settled. Ask the owner to confirm the current value before recommending dependent pricing, offer, or feature work): ${lines.join("; ")}.` : "";
-}
-
-/** Who the business can email, from ClimbOS's contacts and consent records (never assumed). */
-function audienceLine(a: { contacts: number; consented: number } | undefined): string {
-  if (!a) return "";
-  const n = (x: number) => (x >= 1000 ? "1,000+" : x.toLocaleString("en-US"));
-  if (!a.contacts) return "EMAIL AUDIENCE: none in ClimbOS (no imported contacts or consented subscribers). Don't plan sends to a list the owner hasn't shown; building one is fine.";
-  return `EMAIL AUDIENCE: ${n(a.contacts)} contacts in ClimbOS, ${n(a.consented)} with marketing-email consent.${a.consented ? "" : " Only consented contacts may get marketing email."}`;
 }
 
 /** No customers yet (or no numbers yet): figures are labelled assumptions; a planned price is the owner's intent, not revenue. */

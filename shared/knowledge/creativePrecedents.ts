@@ -42,7 +42,7 @@ export interface CreativePrecedentContext {
     monthlyAdBudgetUsd?: number;
     ownerHoursPerWeek?: number;
     newCustomersPerMonth?: number;
-    emailAudience?: number;
+    emailAudience?: number | null;
     serviceArea?: string;
     businessTypes?: string[];
   };
@@ -1703,7 +1703,7 @@ function contextFor(value: string | CreativePrecedentContext): { core: Set<strin
     ...(constraint?.monthlyAdBudgetUsd === undefined ? [] : [`monthly ad budget ${constraint.monthlyAdBudgetUsd}`]),
     ...(constraint?.ownerHoursPerWeek === undefined ? [] : [`owner hours per week ${constraint.ownerHoursPerWeek}`]),
     ...(constraint?.newCustomersPerMonth === undefined ? [] : [`capacity new customers per month ${constraint.newCustomersPerMonth}`]),
-    ...(constraint?.emailAudience === undefined ? [] : [`consented email audience ${constraint.emailAudience}`]),
+    ...(constraint?.emailAudience === undefined ? [] : [constraint.emailAudience === null ? "recorded email audience unknown (incomplete coverage)" : `recorded eligible email audience ${constraint.emailAudience}`]),
     constraint?.serviceArea ?? "",
     ...(constraint?.businessTypes ?? []),
   ].join(" ");

@@ -1,3 +1,7 @@
+## 17 November 2026 — audience evidence before recommendations
+
+Row 111 follow-up: planning no longer counts suppressed, deleted, orphaned or unusable contact records as an available email audience. Capped coverage remains unknown and reaches model input, plan validation and existing owner views. Permission records are not represented as independent verification or deliverability. [Audit](planning-email-audience-audit.md). Rows 111/112/118/119 remain partial; no new sending or lifecycle automation was added.
+
 ## 17 November 2026 — marketing contact overlap
 
 Rows 118/148: different approved broadcasts now coordinate their frozen recipients under the owner-selected contact interval; running/uncertain attempts cannot be treated as no recent contact. Partial recovery retains the hold, and complete recovery transitions to recorded history. [Audit](marketing-contact-overlap-audit.md). Broader customer lifecycle and cross-workflow pressure requirements remain partial.

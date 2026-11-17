@@ -1,4 +1,5 @@
 import { activeBusinessFacts } from "./lib/businessFacts";
+import { planningEmailAudience } from "./lib/marketingAudience";
 import { customerVoice } from "./lib/customerVoice";
 import { customerVoiceBrief } from "../shared/reviews/voiceThemes";
 import { boundedPageReads, checkedCustomerLanguage } from "../shared/agents/provenance";
@@ -164,13 +165,7 @@ export const jobContext = internalQuery({
           "Treat each entry as a descriptive workspace report. Match metric, cohort, offer, channel and period before applying it; do not pool unlike businesses or claim the specialist caused a change. Member reports are separate from usefulness ratings and do not authorize any action.",
         ].join("\n")
       : "";
-    // Who the business can email (Book 14 §4: no audience is assumed). Bounded counts; 1,000 means "1,000 or more".
-    const contacts = (await ctx.db.query("contacts").withIndex("by_org", (q) => q.eq("orgId", org._id)).take(1000)).filter((c) => !c.deletedAt).length;
-    const consented = new Set(
-      (await ctx.db.query("consentRecords").withIndex("by_org_contact", (q) => q.eq("orgId", org._id)).take(1000))
-        .filter((r) => r.purpose === "marketing_email" && !r.withdrawnAt)
-        .map((r) => r.contactId),
-    ).size;
+    const audience = await planningEmailAudience(ctx, org._id);
     const concentrationToMs = Date.now();
     const concentrationFromMs = concentrationToMs - 365 * DAY;
     const concentrationFromDay = new Date(concentrationFromMs).toISOString().slice(0, 10);
@@ -372,7 +367,7 @@ export const jobContext = internalQuery({
       designLearningText: run.kind === "strategy" || run.kind === "conversion_audit" ? await designLearningBrief(ctx, org._id) : "",
       brandConsistencyText: run.kind === "strategy" || run.kind === "conversion_audit" ? await brandConsistencyBrief(ctx, org._id) : "",
       stripeReceivables,
-      audience: { contacts, consented },
+      audience,
       capabilities: { connected: connections.filter((c) => c.status === "connected").map((c) => c.provider), autonomy: policy?.mode ?? "review" },
       run,
       specialist: run.customAgentSnapshot ?? null,

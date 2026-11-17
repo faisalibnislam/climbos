@@ -1,3 +1,7 @@
+## Local update — 17 November 2026: recorded planning audience
+
+The engine now joins live contacts with current recorded permission and suppression, labels bounded coverage as unknown, and carries the dated evidence into real writer inputs and plan constraints. Owner counts and sending reuse the same consent predicate. Creative retrieval retains unknown audience state. [Audit](planning-email-audience-audit.md) records limits and the remaining external-list/readiness work.
+
 ## Local update — 17 November 2026: overlapping marketing broadcasts
 
 Original-recipient snapshots now begin at the one-use claim. Owner-selected contact limits check other running/uncertain broadcasts transactionally and again at dispatch, keeping unknown results held through full recovery accounting. Disjoint audiences and no-limit behavior are preserved. [Audit](marketing-contact-overlap-audit.md) documents the bounded lookup, legacy/manual and cross-workflow limits.

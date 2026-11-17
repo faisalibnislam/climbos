@@ -1,5 +1,6 @@
 import { checkContactFrequency, frequencyBlockMessage, type ContactHistory } from "../shared/growth/contactFrequency";
 import { outreachHistoryByHash } from "./lib/contactPressure";
+import { marketingContactRows, recordedMarketingConsent, MAX_MARKETING_CONTACTS } from "./lib/marketingAudience";
 import { v } from "convex/values";
 import { requirePaid } from "./lib/access";
 import { parseCsv } from "../shared/integrations/csvRevenue";
@@ -37,7 +38,7 @@ import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
  * exact email, segment and recipient count, and the unsubscribe link is mandatory.
  */
 
-const MAX_CONTACT_ROWS = 10_000;
+const MAX_CONTACT_ROWS = MAX_MARKETING_CONTACTS;
 const EMAIL_RE = /^[^\s@<>()[\],;:"]+@[^\s@<>()[\],;:"]+\.[^\s@<>()[\],;:"]{2,}$/;
 
 function contactAad(orgId: string) {
@@ -232,18 +233,11 @@ export const frequencyPreview = query({
 });
 
 async function segmentStats(ctx: { db: import("./_generated/server").QueryCtx["db"] }, orgId: Id<"organizations">) {
-  const contacts = await ctx.db
-    .query("contacts")
-    .withIndex("by_org", (q) => q.eq("orgId", orgId))
-    .take(10_000);
-  const bySegment = new Map<string, { total: number; consented: number; suppressed: number }>();
+  const contacts = await marketingContactRows(ctx, orgId);
+  const bySegment = new Map<string, { total: number; consented: number; suppressed: number; sendable: number }>();
   for (const c of contacts) {
-    if (c.deletedAt) continue;
-    const consents = await ctx.db
-      .query("consentRecords")
-      .withIndex("by_org_contact", (q) => q.eq("orgId", orgId).eq("contactId", c._id))
-      .take(5);
-    const consented = consents.some((r) => r.purpose === "marketing_email" && !r.withdrawnAt);
+    if (c.deletedAt !== undefined) continue;
+    const consented = Boolean(await recordedMarketingConsent(ctx, orgId, c._id));
     const suppressed = Boolean(
       await ctx.db
         .query("suppressions")
@@ -251,14 +245,17 @@ async function segmentStats(ctx: { db: import("./_generated/server").QueryCtx["d
         .first(),
     );
     for (const s of c.segments) {
-      const st = bySegment.get(s) ?? { total: 0, consented: 0, suppressed: 0 };
+      const st = bySegment.get(s) ?? { total: 0, consented: 0, suppressed: 0, sendable: 0 };
       st.total++;
       if (suppressed) st.suppressed++;
-      else if (consented) st.consented++;
+      else if (consented) {
+        st.consented++;
+        if (c.emailCiphertext && c.emailIv) st.sendable++;
+      }
       bySegment.set(s, st);
     }
   }
-  return [...bySegment.entries()].map(([segment, s]) => ({ segment, ...s, sendable: s.consented }));
+  return [...bySegment.entries()].map(([segment, s]) => ({ segment, ...s }));
 }
 
 export const audience = query({
@@ -316,14 +313,11 @@ function toHtml(text: string, businessName: string): string {
 
 /** A complete bounded audience, with identity rather than count used for approval. */
 async function eligibleRecipients(ctx: QueryCtx, orgId: Id<"organizations">, segment: string) {
-  const contacts = await ctx.db.query("contacts").withIndex("by_org", q => q.eq("orgId", orgId)).take(MAX_CONTACT_ROWS + 1);
-  if (contacts.length > MAX_CONTACT_ROWS) throw appError("LIMIT_REACHED", "This workspace's audience is too large to verify completely. No send was authorized.");
+  const contacts = await marketingContactRows(ctx, orgId);
   const recipients = [];
   for (const contact of contacts) {
-    if (contact.deletedAt || !contact.segments.includes(segment)) continue;
-    const records = await ctx.db.query("consentRecords").withIndex("by_org_contact", q => q.eq("orgId", orgId).eq("contactId", contact._id)).take(101);
-    if (records.length > 100) throw appError("LIMIT_REACHED", "A contact's consent history needs review before sending.");
-    const consent = records.find(r => r.purpose === "marketing_email" && !r.withdrawnAt && r.source.trim() && Number.isFinite(r.capturedAt) && r.capturedAt <= Date.now());
+    if (contact.deletedAt !== undefined || !contact.segments.includes(segment)) continue;
+    const consent = await recordedMarketingConsent(ctx, orgId, contact._id);
     const suppressed = await ctx.db.query("suppressions").withIndex("by_org_email", q => q.eq("orgId", orgId).eq("emailHash", contact.emailHash)).first();
     if (!consent || suppressed) continue;
     if (!contact.emailCiphertext || !contact.emailIv) throw appError("INVALID", "A selected contact's address is unavailable. Review the audience before sending.");

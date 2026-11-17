@@ -1,3 +1,14 @@
+## 17 November 2026 — recorded email audience in planning
+
+Planning now uses a dated, tenant-scoped join of active contact, current recorded consent and suppression data; incomplete coverage remains unknown. Owner segment counts and sending share the same consent predicate. [Audit](growth-engine/planning-email-audience-audit.md).
+
+- `pnpm exec vitest run tests/convex/planning-email-audience.test.ts tests/convex/contact-frequency-history.test.ts tests/convex/contact-frequency.test.ts tests/convex/marketing.test.ts tests/convex/marketing-authorization.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts tests/convex/lifecycle-draft-context.test.ts tests/unit/plan-grounding.test.ts tests/unit/decision-books.test.ts tests/unit/diagnosis-playbooks.test.ts tests/unit/creative-precedents.test.ts` — 278 passed across twelve files, 4.09 seconds.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint convex/jobs.ts convex/jobWrites.ts convex/marketing.ts convex/lib/marketingAudience.ts shared/growth/emailAudience.ts shared/agents/specs.ts shared/agents/types.ts shared/knowledge/creativePrecedents.ts tests/convex/planning-email-audience.test.ts tests/convex/contact-frequency-history.test.ts tests/unit/plan-grounding.test.ts tests/unit/creative-precedents.test.ts` — passed.
+- `git diff --check` — passed.
+
+Ten pre-fix cases reproduced inaccurate audience/coverage behavior; a positive case specified added metadata. Generation tests capture actual writer inputs and stop before mocked model output, proving context propagation without external execution. Owner-count queries, unknown-audience lint, existing permissions and creative retrieval are covered. Initial type/fixture failures and remaining semantic/readiness limits are documented in the audit. No paid model, live provider, browser, real email or deployment.
+
 ## 17 November 2026 — overlapping marketing-send frequency
 
 Frozen recipient snapshots now begin at the execution claim; owner-selected contact intervals check running and uncertain broadcasts transactionally and at final dispatch. Existing preview/recovery paths show the hold. [Audit](growth-engine/marketing-contact-overlap-audit.md).

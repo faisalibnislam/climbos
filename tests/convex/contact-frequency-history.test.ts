@@ -54,19 +54,24 @@ describe("complete contact frequency history", () => {
       await ctx.db.patch(f.contact._id, { lastMarketingEmailAt: NOW - DAY });
     });
     expect(await f.preview()).toMatchObject({ recentlyEmailed: 1 });
+    expect((await f.owner.client.query(api.marketing.audience, { slug: f.slug })).segments).toContainEqual(expect.objectContaining({ segment: "newsletter", sendable: 1 }));
     await expect(f.approve()).rejects.toThrow(/within your 7-day limit/);
   });
 
-  it.each(["future consent", "missing source", "suppressed", "deleted"])("does not include %s in the eligible frequency audience", async state => {
+  it.each(["future consent", "missing source", "suppressed", "deleted", "withdrawn at zero", "deleted at zero"])("does not include %s in the eligible frequency audience", async state => {
     const f = await fixture();
     await f.t.run(async ctx => {
       await ctx.db.patch(f.contact._id, { lastMarketingEmailAt: NOW - DAY, ...(state === "deleted" ? { deletedAt: NOW } : {}) });
       const consent = (await ctx.db.query("consentRecords").collect()).find(r => r.contactId === f.contact._id)!;
       if (state === "future consent") await ctx.db.patch(consent._id, { capturedAt: NOW + DAY });
       if (state === "missing source") await ctx.db.patch(consent._id, { source: " " });
+      if (state === "withdrawn at zero") await ctx.db.patch(consent._id, { withdrawnAt: 0 });
+      if (state === "deleted at zero") await ctx.db.patch(f.contact._id, { deletedAt: 0 });
       if (state === "suppressed") await ctx.db.insert("suppressions", { orgId: f.orgId, emailHash: f.contact.emailHash, reason: "unsubscribe", source: "owner", createdAt: NOW });
     });
     expect(await f.preview()).toMatchObject({ recentlyEmailed: 0, activeOutreach: 0, message: null });
+    const segments = (await f.owner.client.query(api.marketing.audience, { slug: f.slug })).segments;
+    expect(segments.find(s => s.segment === "newsletter")?.sendable ?? 0).toBe(0);
     await expect(f.approve()).rejects.toThrow(/Nobody in this segment/);
   });
 
@@ -76,6 +81,7 @@ describe("complete contact frequency history", () => {
       for (let i = 0; i < 100; i++) await ctx.db.insert("consentRecords", { orgId: f.orgId, contactId: f.contact._id, purpose: "marketing_email", basis: "opt_in", source: "Owner", evidence: "Owner record", capturedAt: NOW - DAY, withdrawnAt: NOW });
     });
     await expect(f.preview()).rejects.toThrow(/consent history needs review/);
+    await expect(f.owner.client.query(api.marketing.audience, { slug: f.slug })).rejects.toThrow(/consent history needs review/);
     await expect(f.approve()).rejects.toThrow(/consent history needs review/);
   });
 

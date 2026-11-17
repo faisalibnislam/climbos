@@ -165,8 +165,8 @@ export interface PlanConstraints {
   forecastCustomers?: number[];
   /** The owner's goal numbers (baseline and desired), which prose may restate. */
   goalNumbers?: number[];
-  /** Contacts with marketing-email consent in ClimbOS (capped at 1,000); 0 = no list to send to. */
-  emailAudience?: number;
+  /** Complete local recorded audience; null = incomplete coverage, 0 = no eligible contacts in these records. Not send authorization. */
+  emailAudience?: number | null;
   /** Additional new customers the owner can accept each month with current operations. */
   newCustomersPerMonth?: number;
   /** Where customers can be served (acquisition geography): local or regional limits paid reach. */
