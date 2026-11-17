@@ -184,3 +184,21 @@ it("cannot erase invalid review scores by keeping a final revision without anoth
   expect(result.quality?.finalLint.review_scores).toBe(1);
   expect(result.history[0].lintErrors).toBe(1);
 });
+
+it.each([1, 2])("keeps a fully passing draft ahead of a higher-average draft with a failing criterion (%s initial drafts)", async drafts => {
+  let written = 0;
+  let reviewed = 0;
+  const result = await runAgent({ ...spec, drafts }, input, {
+    turn: async (req): Promise<TurnResult> => {
+      const output = req.schema === CritiqueSchema
+        ? { gates: [{ id: "truth", pass: true, note: "Checked" }], scores: [{ id: "clarity", score: reviewed++ === 0 ? 3.9 : 4, note: "", fix: "Clarify" }, { id: "XV", score: reviewed === 1 ? 5 : 4, note: "", fix: "none" }], strengths: [], fixes: ["Clarify"], escalation: { reason: "none", evidence: "" } }
+        : { answer: ++written === 1 ? "One criterion below the bar" : "Every criterion passed" };
+      return { ok: true, output, text: JSON.stringify(output), appended: [], usage: { ...ZERO_USAGE, calls: 1 }, costMicros: 1, sources: [], actualModelId: req.modelKey, stopReason: "end_turn" };
+    },
+    phase: async (_key, _label, fn) => (await fn()).value,
+  });
+  expect(result.assessment?.ship).toBe(true);
+  expect(result.output.answer).toBe("Every criterion passed");
+  expect(written).toBe(2);
+  expect(reviewed).toBe(2);
+});

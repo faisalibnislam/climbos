@@ -195,9 +195,9 @@ export function assess(critique: CritiqueResult, lint: LintIssue[], baseRubric: 
   return { critique, lint: checkedLint, average: Math.round(average * 100) / 100, minimum, gatesPassed, ship };
 }
 
-/** Higher is better: gates and lint first, then average score. */
+/** A complete pass wins; otherwise prefer gates and lint, then editorial scores. */
 function rank(a: Assessment): number {
-  return (a.gatesPassed ? 1000 : 0) - a.lint.filter((l) => l.severity === "error").length * 50 + a.average * 10 + a.minimum;
+  return (a.ship ? 10_000 : 0) + (a.gatesPassed ? 1000 : 0) - a.lint.filter((l) => l.severity === "error").length * 50 + a.average * 10 + a.minimum;
 }
 
 export function draftSystem<T>(spec: AgentSpec<T>): SystemBlock[] {

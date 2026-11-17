@@ -1,3 +1,7 @@
+## 17 November — passing draft selection
+
+`v3.147-reviewed-draft-selection`: corrected both revision and best-of-two selection so a complete pass outranks a draft with a failed required criterion. Two red runtime cases became green; 238 focused tests passed. [Audit](reviewed-draft-selection-audit.md).
+
 ## 17 November — honest review scores
 
 `v3.146-review-score-integrity`: fractional scores no longer round into acceptance. Malformed required scores block approval and survive review shortcuts. 236 focused tests passed; unchanged live education output re-assessed below the bar. [Audit](review-score-integrity-audit.md). No historical rewriting or model change.

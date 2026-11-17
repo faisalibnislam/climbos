@@ -1,3 +1,13 @@
+## 17 November 2026 — reviewed draft selection
+
+[Audit](growth-engine/reviewed-draft-selection-audit.md). Engine `v3.147-reviewed-draft-selection`.
+
+- **238 tests in eight files passed, 12.48 seconds**, after two runtime regressions reproduced wrong-version retention.
+- Five paid-harness budget tests in three files passed (0.142 seconds).
+- Application/Convex typechecks, changed-file ESLint and diff checks passed.
+
+No deployment, external business action or model switch.
+
 ## 17 November 2026 — review score integrity
 
 [Audit](growth-engine/review-score-integrity-audit.md), [live evaluation report](Strategy-Quality-2026-11-17.md). Engine `v3.146-review-score-integrity`.
