@@ -9,7 +9,7 @@ import { notifyOwners } from "./lib/notify";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { can, canonicalJson, sha256Hex } from "../shared/policy";
 import { sendMessageId, unsubscribeToken } from "../shared/outbound/sending";
-import { hasActiveOutboundSequence, hasQueuedReviewInvitation } from "./lib/contactPressure";
+import { hasActiveOutboundSequence, hasQueuedReviewInvitation, recipientContactPressure, pendingMarketingRecipients } from "./lib/contactPressure";
 import { serverSecret } from "./lib/crypto";
 import { reviewSafetySignals } from "../shared/reviews/safety";
 import { reviewDestinationProblem } from "../shared/acquisition/platformRules";
@@ -155,6 +155,8 @@ export const prepareBatch = mutation({
     let recentlyAsked = 0;
     let activeOutreach = 0;
     let unresolvedInvitations = 0;
+    let contactLimitHeld = 0;
+    const pendingMarketing = org.contactFrequencyDays ? await pendingMarketingRecipients(ctx, org._id) : undefined;
     const now = Date.now();
     for (const p of people.slice(0, room)) {
       const email = p.email.trim().toLowerCase();
@@ -176,15 +178,16 @@ export const prepareBatch = mutation({
         continue;
       }
       if (await hasQueuedReviewInvitation(ctx, org._id, email)) { unresolvedInvitations++; continue; }
+      if ((await recipientContactPressure(ctx, org, email, undefined, pendingMarketing))?.message) { contactLimitHeld++; continue; }
       recipients.push({ name: p.name.trim().slice(0, 80) || email, email, ...(p.dealId ? { dealId: p.dealId } : {}) });
     }
-    if (!recipients.length) throw appError("INVALID", unresolvedInvitations ? "An earlier review invitation has no confirmed result. Check the mailbox before preparing another." : activeOutreach ? "These addresses already have an active ClimbOS email sequence. Wait until it finishes before preparing a review invitation." : recentlyAsked ? "Everyone here was asked in the last 90 days." : "No eligible email addresses to review.");
+    if (!recipients.length) throw appError("INVALID", contactLimitHeld ? "Your contact limit holds these invitations because of recent or unresolved ClimbOS email activity. Review the email history or wait before preparing again." : unresolvedInvitations ? "An earlier review invitation has no confirmed result. Check the mailbox before preparing another." : activeOutreach ? "These addresses already have an active ClimbOS email sequence. Wait until it finishes before preparing a review invitation." : recentlyAsked ? "Everyone here was asked in the last 90 days." : "No eligible email addresses to review.");
     const destination = publicReviewUrl(business.reviewUrl)!;
     const scopeHash = await inviteScopeHash(recipients);
     const reviewPageUrl = `${SITE()}/review/${org.slug}`;
     const contentHash = await inviteContentHash(business.name, destination, reviewPageUrl);
     const batchId = await ctx.db.insert("reviewInvitationBatches", { orgId: org._id, createdBy: user._id, connectionId: mailbox._id, credentialId: credential._id, destination, templateVersion: INVITE_TEMPLATE_VERSION, contentHash, scopeHash, recipients, status: "pending", createdAt: now, expiresAt: now + 30 * 60_000 });
-    return { batchId, count: recipients.length, skipped: people.length - recipients.length, recentlyAsked, activeOutreach, unresolvedInvitations, destination, templateVersion: INVITE_TEMPLATE_VERSION, contentHash, scopeHash, businessName: business.name, recipients, preview: INVITE_BODY(business.name, recipients[0].name.split(/\s+/)[0], `${reviewPageUrl}?t={recipient_token}`, "your personal unsubscribe link") };
+    return { batchId, count: recipients.length, skipped: people.length - recipients.length, recentlyAsked, activeOutreach, unresolvedInvitations, contactLimitHeld, destination, templateVersion: INVITE_TEMPLATE_VERSION, contentHash, scopeHash, businessName: business.name, recipients, preview: INVITE_BODY(business.name, recipients[0].name.split(/\s+/)[0], `${reviewPageUrl}?t={recipient_token}`, "your personal unsubscribe link") };
   },
 });
 
@@ -212,6 +215,8 @@ export const approveBatch = mutation({
     const ids: Id<"reviewRequests">[] = [];
     let activeOutreach = 0;
     let unresolvedInvitations = 0;
+    let contactLimitHeld = 0;
+    const pendingMarketing = org.contactFrequencyDays ? await pendingMarketingRecipients(ctx, org._id) : undefined;
     for (const person of batch.recipients) {
       const emailHash = await sha256Hex(person.email);
       if (await ctx.db.query("suppressions").withIndex("by_org_email", (q) => q.eq("orgId", org._id).eq("emailHash", emailHash)).first()) continue;
@@ -221,13 +226,14 @@ export const approveBatch = mutation({
         continue;
       }
       if (await hasQueuedReviewInvitation(ctx, org._id, person.email)) { unresolvedInvitations++; continue; }
+      if ((await recipientContactPressure(ctx, org, person.email, undefined, pendingMarketing))?.message) { contactLimitHeld++; continue; }
       ids.push(await ctx.db.insert("reviewRequests", { orgId: org._id, dealId: person.dealId, name: person.name, email: person.email, token: token(), status: "queued", approvalBatchId: batch._id, createdAt: Date.now() }));
     }
-    if (!ids.length) throw appError("INVALID", unresolvedInvitations ? "An earlier review invitation has no confirmed result. Check the mailbox before approving another." : activeOutreach ? "No invitations were queued because every remaining address has an active ClimbOS email sequence." : "No recipients remain eligible. Prepare a fresh preview.");
+    if (!ids.length) throw appError("INVALID", contactLimitHeld ? "Your contact limit holds these invitations because of recent or unresolved ClimbOS email activity. Review the email history or wait before approving again." : unresolvedInvitations ? "An earlier review invitation has no confirmed result. Check the mailbox before approving another." : activeOutreach ? "No invitations were queued because every remaining address has an active ClimbOS email sequence." : "No recipients remain eligible. Prepare a fresh preview.");
     await ctx.db.patch(batch._id, { status: "queued", approvedBy: user._id, approvedAt: Date.now() });
     await ctx.scheduler.runAfter(0, internal.mailbox.sendReviewRequests, { ids });
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "reviews.requested", subjectType: "review_invitation_batch", subjectId: batch._id, summary: `Approved and queued ${ids.length} neutral review invitation${ids.length === 1 ? "" : "s"}; destination and recipient scope were frozen.` });
-    return { queued: ids.length, skipped: batch.recipients.length - ids.length, activeOutreach, unresolvedInvitations };
+    return { queued: ids.length, skipped: batch.recipients.length - ids.length, activeOutreach, unresolvedInvitations, contactLimitHeld };
   },
 });
 
@@ -255,6 +261,7 @@ async function preparedRequest(ctx: QueryCtx, id: Id<"reviewRequests">) {
   // Unsubscribed since it was queued: don't send.
   if (await ctx.db.query("suppressions").withIndex("by_org_email", (q) => q.eq("orgId", r.orgId).eq("emailHash", hashOf)).first()) return null;
   if (await hasActiveOutboundSequence(ctx, r.orgId, r.email)) return null;
+  if ((await recipientContactPressure(ctx, org, r.email, r._id))?.message) return null;
   if (publicReviewUrl(business.reviewUrl) !== batch.destination) return null;
   const link = `${SITE()}/review/${org.slug}?t=${r.token}`;
   const first = r.name.split(/\s+/)[0];
@@ -298,7 +305,7 @@ export const failUnstartedRequest = internalMutation({
     if (!r || r.status !== "queued" || await preparedRequest(ctx, id)) return;
     const batch = r.approvalBatchId ? await ctx.db.get(r.approvalBatchId) : null;
     const legacy = !batch?.credentialId;
-    await ctx.db.patch(id, { status: legacy ? "uncertain" : "failed", notSentConfirmed: legacy ? undefined : true, error: legacy ? "This older invitation lacks a verified mailbox identity. Earlier delivery is unknown; check the Sent folder. No automatic retry." : "Not sent: current workspace, mailbox, permission, unsubscribe or approval checks failed. Prepare a fresh review before sending." });
+    await ctx.db.patch(id, { status: legacy ? "uncertain" : "failed", notSentConfirmed: legacy ? undefined : true, error: legacy ? "This older invitation lacks a verified mailbox identity. Earlier delivery is unknown; check the Sent folder. No automatic retry." : "Not sent: current workspace, mailbox, permission, contact limit, unsubscribe or approval checks failed. Prepare a fresh review before sending." });
     await audit(ctx, { orgId: r.orgId, actorType: "system", action: "reviews.dispatch_blocked", subjectType: "review_request", subjectId: id, summary: legacy ? "Legacy delivery is unknown; no new mailbox request authorized." : "No new mailbox request authorized; current invitation checks failed." });
   },
 });

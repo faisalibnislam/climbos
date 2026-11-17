@@ -1957,7 +1957,7 @@ export default defineSchema({
         /** Fingerprint of the emails and sender details the owner approved (spec §23); any change pauses sending. */
         contentHash: v.optional(v.string()),
         pausedReason: v.optional(
-          v.union(v.literal("content_changed"), v.literal("archived")),
+          v.union(v.literal("content_changed"), v.literal("archived"), v.literal("contact_limit")),
         ),
         /** Last email sent (the 21-day reply watch runs from here). */
         lastSentAt: v.optional(v.number()),
@@ -2929,7 +2929,8 @@ export default defineSchema({
     .index("by_token", ["token"])
     .index("by_org_created", ["orgId", "createdAt"])
     .index("by_org_email", ["orgId", "email", "createdAt"])
-    .index("by_org_email_status", ["orgId", "email", "status"]),
+    .index("by_org_email_status", ["orgId", "email", "status"])
+    .index("by_org_email_status_sent", ["orgId", "email", "status", "sentAt"]),
 
   /** Immutable owner-approved scope for one neutral review invitation send. */
   reviewInvitationBatches: defineTable({

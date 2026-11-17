@@ -1,3 +1,7 @@
+## 17 November 2026 — shared contact-frequency policy
+
+Extended the existing owner interval across broadcasts, outreach and review invitations, with transactional dispatch checks and observation-aware review history. Four red regressions preceded 204 passing focused/permission tests and two desktop/mobile checks. Owner UI explains holds and preserves approved outreach steps. [Audit](shared-contact-policy-audit.md) records bounded reads, legacy correction gaps and incomplete lifecycle scope. No new provider or agent.
+
 ## 17 November 2026 — review receipt recovery
 
 The existing Reviews flow now reads original dispatch evidence, checks a bounded exact Sent copy or records an attributed owner observation, and never resends as a recovery side effect. 81 focused/permission tests and two browser checks passed. [Audit](review-receipt-recovery-audit.md) preserves mailbox-evidence limits and outstanding correction/frequency work; the full original and later scope remains active.

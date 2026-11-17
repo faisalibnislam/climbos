@@ -1,3 +1,14 @@
+## 17 November 2026 — shared contact-frequency policy
+
+The owner-selected interval now coordinates broadcast, outreach and review invitation history and pending attempts, including current-state dispatch checks. [Audit](growth-engine/shared-contact-policy-audit.md) records the exact behavior and remaining coverage limits.
+
+- Four new regressions first failed because review history did not hold broadcasts.
+- `pnpm exec vitest run tests/unit/contact-frequency.test.ts tests/convex/contact-frequency.test.ts tests/convex/contact-frequency-history.test.ts tests/convex/marketing-authorization.test.ts tests/convex/review-send-boundary.test.ts tests/convex/review-receipt-recovery.test.ts tests/convex/reviews.test.ts tests/convex/sending.test.ts tests/convex/sending-safety.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — **204 passed / 11 files, 27.89 seconds**.
+- `CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env E2E_BASE_URL=http://127.0.0.1:3420 pnpm exec playwright test e2e/contact-frequency-policy.spec.ts --workers=1` — **two desktop/mobile checks passed, 45.9 seconds**. Saved policy, source-aware hold explanation, disabled Send control, no new external-action records, no page errors, no horizontal overflow or serious/critical targeted axe findings. Mobile result inspected. Synthetic demo only; no real provider credentials.
+- `pnpm typecheck` passed for the application and Convex. Scoped ESLint passed for changed runtime, UI, regression and E2E files; `git diff --check` passed. Final isolated loopback backend sync passed in **17.01 seconds**, including the new review history index. No generated files changed.
+
+Unknown legacy receipts and bounded-history overflow remain holds. Complete historical repair, automatic lifecycle enrollment/state checks, production scale, real mailbox behavior and full accessibility remain unverified or incomplete. The overall project is not complete.
+
 ## 17 November 2026 — original review-invitation receipt recovery
 
 [Audit](growth-engine/review-receipt-recovery-audit.md) documents frozen dispatch context, exact bounded Sent-copy matching, owner-reported observations, stale-result rejection and privacy lifecycle.

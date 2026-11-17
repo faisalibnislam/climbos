@@ -172,7 +172,7 @@ function EmailSendForm({ slug, artifact }: { slug: string; artifact: ArtifactVie
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
-        if (validate()) setConfirming(true);
+        if (!frequency?.message && validate()) setConfirming(true);
       }}
     >
       {intro}
@@ -234,7 +234,7 @@ function EmailSendForm({ slug, artifact }: { slug: string; artifact: ArtifactVie
 
       <EmailSenderCheck key={`${slug}:${from}`} slug={slug} from={from} report={audience.senderReadiness} />
 
-      <Button type="submit" className="self-start">
+      <Button type="submit" className="self-start" disabled={Boolean(frequency?.message)}>
         Send
       </Button>
       {error ? <ErrorCallout error={error} /> : null}

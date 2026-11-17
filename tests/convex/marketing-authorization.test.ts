@@ -67,6 +67,68 @@ async function anotherApprovedEmail(f: Awaited<ReturnType<typeof fixture>>, segm
   });
 }
 
+async function prepareReview(f: Awaited<ReturnType<typeof fixture>>) {
+  await f.owner.client.mutation(api.reviews.setReviewUrl, { slug: f.slug, url: "https://g.page/r/synthetic/review" });
+  await f.t.mutation(internal.connections.storeConnection, { orgId: f.orgId, userId: f.owner.userId, provider: "email_mailbox", secret: JSON.stringify({ email: "owner@example.com" }), secretKind: "api_key", scopes: [], accountLabel: "owner@example.com" });
+  return f.owner.client.mutation(api.reviews.prepareBatch, { slug: f.slug, people: [{ name: "Ana", email: "ana@example.com" }] });
+}
+
+it("a running broadcast blocks review approval and a fresh preview for its exact tenant and recipient", async () => {
+  const f = await fixture(), batch = await prepareReview(f);
+  await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: 7 });
+  expect((await f.t.mutation(internal.marketing.claimSend, f.args))?.error).toBeNull();
+  await expect(f.owner.client.mutation(api.reviews.approveBatch, { slug: f.slug, batchId: batch.batchId, contentHash: batch.contentHash, scopeHash: batch.scopeHash, confirmEligibleRecipients: true })).rejects.toThrow(/contact limit/);
+  await expect(f.owner.client.mutation(api.reviews.prepareBatch, { slug: f.slug, people: batch.recipients })).rejects.toThrow(/contact limit/);
+  expect(await f.t.run(ctx => ctx.db.query("reviewRequests").collect())).toEqual([]);
+  expect(provider.sends).toBe(0);
+});
+
+it("queued review approval blocks a previously approved broadcast at claim, without touching the provider", async () => {
+  const f = await fixture(), batch = await prepareReview(f);
+  await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: 7 });
+  await f.owner.client.mutation(api.reviews.approveBatch, { slug: f.slug, batchId: batch.batchId, contentHash: batch.contentHash, scopeHash: batch.scopeHash, confirmEligibleRecipients: true });
+  await f.t.action(internal.marketing.executeSend, f.args);
+  expect(provider.synced).toEqual([]);
+  expect(provider.sends).toBe(0);
+  expect((await f.owner.client.query(api.marketing.frequencyPreview, { slug: f.slug, segment: "newsletter" }))?.activeReview).toBe(1);
+});
+
+it("cannot claim a broadcast and approve an overlapping review batch concurrently under the same policy", async () => {
+  const f = await fixture(), batch = await prepareReview(f);
+  await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: 7 });
+  const outcomes = await Promise.allSettled([
+    f.t.mutation(internal.marketing.claimSend, f.args).then(result => Boolean(result && !result.error)),
+    f.owner.client.mutation(api.reviews.approveBatch, { slug: f.slug, batchId: batch.batchId, contentHash: batch.contentHash, scopeHash: batch.scopeHash, confirmEligibleRecipients: true }).then(result => result.queued > 0),
+  ]);
+  expect(outcomes.filter(result => result.status === "fulfilled" && result.value)).toHaveLength(1);
+  expect(provider.sends).toBe(0);
+});
+
+it("holds review invitations when an unresolved broadcast has incomplete historical recipient evidence", async () => {
+  const f = await fixture(), batch = await prepareReview(f);
+  await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: 7 });
+  expect((await f.t.mutation(internal.marketing.claimSend, f.args))?.error).toBeNull();
+  await f.t.run(ctx => ctx.db.patch(f.args.approvalId, { emailRecipientHashBatches: undefined }));
+  await expect(f.owner.client.mutation(api.reviews.prepareBatch, { slug: f.slug, people: [{ name: "Another", email: "other@example.com" }] })).rejects.toThrow(/contact limit/);
+  await expect(f.owner.client.mutation(api.reviews.approveBatch, { slug: f.slug, batchId: batch.batchId, contentHash: batch.contentHash, scopeHash: batch.scopeHash, confirmEligibleRecipients: true })).rejects.toThrow(/contact limit/);
+  expect(provider.sends).toBe(0);
+});
+
+it("rechecks a newly enabled policy before review dispatch even when both workflows were approved without a limit", async () => {
+  const f = await fixture(), batch = await prepareReview(f);
+  await f.owner.client.mutation(api.reviews.approveBatch, { slug: f.slug, batchId: batch.batchId, contentHash: batch.contentHash, scopeHash: batch.scopeHash, confirmEligibleRecipients: true });
+  const request = (await f.t.run(ctx => ctx.db.query("reviewRequests").first()))!;
+  const job = (await f.t.query(internal.reviews.prepareRequest, { id: request._id }))!;
+  expect((await f.t.mutation(internal.marketing.claimSend, f.args))?.error).toBeNull();
+  await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: 7 });
+  expect(await f.t.mutation(internal.reviews.claimRequest, { id: request._id, credentialId: job.credentialId, payloadHash: job.payloadHash })).toBeNull();
+  await f.t.mutation(internal.reviews.failUnstartedRequest, { id: request._id });
+  expect(await f.t.run(ctx => ctx.db.get(request._id))).toMatchObject({ status: "failed", notSentConfirmed: true, error: expect.stringContaining("contact limit") });
+  // The rejected, unstarted review releases its hold; the original broadcast can now proceed under its own scope.
+  expect(await f.t.mutation(internal.marketing.authorizeSendDispatch, { ...f.args, externalId: "synthetic-draft" })).toMatchObject({ ok: true });
+  expect(provider.sends).toBe(0);
+});
+
 it("serializes different approved broadcasts for the same recipient under an owner frequency limit", async () => {
   const f = await fixture();
   const second = await anotherApprovedEmail(f);

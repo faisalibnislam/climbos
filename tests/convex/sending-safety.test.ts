@@ -39,6 +39,47 @@ describe("outbound sending safety", () => {
     delete process.env.CLIMBOS_FAKE_MAILBOX;
   });
 
+  it("does not enroll outreach to someone within the owner-set broadcast contact interval", async () => {
+    const t = setup(), w = await ready(t);
+    await w.owner.client.action(api.marketing.importContacts, { slug: w.slug, csv: "email,consent,consent_source,consent_date,segment\njane@agency.example,yes,signup,2026-10-01,newsletter" });
+    await t.run(async ctx => { const c = (await ctx.db.query("contacts").first())!; await ctx.db.patch(c._id, { lastMarketingEmailAt: Date.now() }); });
+    await w.owner.client.mutation(api.settings.setContactFrequency, { slug: w.slug, days: 7 });
+    await expect(w.owner.client.mutation(api.outboundSending.start, { slug: w.slug, campaignId: w.campaignId, ...SENDER })).rejects.toThrow(/contact limit/);
+    expect(await sends(t, w.campaignId)).toEqual([]);
+  });
+
+  it.each([0, 1])("holds step %s at dispatch for a late recent review send without consuming a provider attempt", async step => {
+    const t = setup(), w = await ready(t), now = Date.now();
+    await w.owner.client.mutation(api.outboundSending.start, { slug: w.slug, campaignId: w.campaignId, ...SENDER });
+    const [send] = await sends(t, w.campaignId);
+    await t.run(async ctx => {
+      await ctx.db.patch(send._id, { step, status: "sending", attempts: 1, lease: "synthetic-claim", leaseExpiresAt: now + 60000 });
+      await ctx.db.insert("reviewRequests", { orgId: w.orgId, name: "Jane", email: "jane@agency.example", token: "synthetic", status: "sent", sentAt: now, createdAt: now });
+    });
+    await w.owner.client.mutation(api.settings.setContactFrequency, { slug: w.slug, days: 7 });
+    expect(await t.mutation(internal.outboundSending.claimSend, { sendId: send._id, lease: "synthetic-claim", payloadHash: "synthetic-payload" })).toBe(false);
+    expect(await t.run(ctx => ctx.db.get(send._id))).toMatchObject({ status: "queued", attempts: 0, scheduledFor: now + 7 * 86400000, error: expect.stringContaining("7-day limit") });
+    expect((await t.run(ctx => ctx.db.get(send._id)))?.claimedAt).toBeUndefined();
+    vi.setSystemTime(now + 7 * 86400000);
+    await t.run(ctx => ctx.db.patch(send._id, { status: "sending", attempts: 1, lease: "fresh-claim", leaseExpiresAt: Date.now() + 60000 }));
+    expect(await t.mutation(internal.outboundSending.claimSend, { sendId: send._id, lease: "fresh-claim", payloadHash: "synthetic-payload" })).toBe(true);
+  });
+
+  it("pauses a follow-up for unknown review delivery while keeping the approved step recoverable", async () => {
+    const t = setup(), w = await ready(t);
+    await w.owner.client.mutation(api.outboundSending.start, { slug: w.slug, campaignId: w.campaignId, ...SENDER });
+    const [send] = await sends(t, w.campaignId);
+    await t.run(async ctx => {
+      await ctx.db.patch(send._id, { step: 1, status: "sending", attempts: 1, lease: "synthetic-claim", leaseExpiresAt: Date.now() + 60000 });
+      await ctx.db.insert("reviewRequests", { orgId: w.orgId, name: "Jane", email: "jane@agency.example", token: "synthetic", status: "uncertain", createdAt: Date.now() - 100 * 86400000 });
+    });
+    await w.owner.client.mutation(api.settings.setContactFrequency, { slug: w.slug, days: 7 });
+    expect(await t.mutation(internal.outboundSending.claimSend, { sendId: send._id, lease: "synthetic-claim", payloadHash: "synthetic-payload" })).toBe(false);
+    expect(await t.run(ctx => ctx.db.get(send._id))).toMatchObject({ status: "queued", attempts: 0, error: expect.stringContaining("unresolved review") });
+    expect(await t.run(ctx => ctx.db.get(w.campaignId))).toMatchObject({ sending: { status: "paused", pausedReason: "contact_limit" } });
+    expect((await t.run(ctx => ctx.db.get(send._id)))?.claimedAt).toBeUndefined();
+  });
+
   it("opt-out and auto-reply detection: only clear opt-outs stop as unsubscribes", () => {
     for (const no of ["No", "No.", "nope", "STOP", "Unsubscribe", "No thanks", "No, thank you!", "Not interested, thanks.", "Please remove me from your list", "Hi, take me off this list please"]) expect(isOptOutReply(no), no).toBe(true);
     for (const yes of ["No problem, Tuesday works", "No worries! Call me Thursday", "Nope, not yet, but send the deck", "Sounds interesting, call me Tuesday", "Stop by our office any time", "No rush"]) expect(isOptOutReply(yes), yes).toBe(false);

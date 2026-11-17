@@ -3,7 +3,7 @@ import { progressScopeKey, validProgressDate } from "../shared/growth/customerPr
 import { emailReadinessValidator, recordedEmailReadiness } from "./lib/emailReadiness";
 import { emailSenderDomain, type EmailSenderReadiness } from "../shared/growth/emailReadiness";
 import { checkContactFrequency, frequencyBlockMessage, type ContactHistory } from "../shared/growth/contactFrequency";
-import { outreachHistoryByHash } from "./lib/contactPressure";
+import { outreachHistoryByHash, pendingMarketingRecipients, reviewContactHistory } from "./lib/contactPressure";
 import { marketingContactRows, recordedMarketingConsent, MAX_MARKETING_CONTACTS } from "./lib/marketingAudience";
 import { v } from "convex/values";
 import { requirePaid } from "./lib/access";
@@ -234,9 +234,18 @@ async function segmentFrequency(ctx: QueryCtx, orgId: Id<"organizations">, segme
   // who will actually receive the approved broadcast.
   const audience = recipients ?? await eligibleRecipients(ctx, orgId, segment);
   const people: ContactHistory[] = [];
+  const hasReviews = Boolean(await ctx.db.query("reviewRequests").withIndex("by_org_created", q => q.eq("orgId", orgId)).first());
   for (const recipient of audience) {
     const c = assertSameOrg(await ctx.db.get(recipient.contactId), orgId, "contact");
-    people.push({ ...(c.lastMarketingEmailAt ? { lastMarketingEmailAt: c.lastMarketingEmailAt } : {}), ...(await outreachHistoryByHash(ctx, orgId, c.emailHash)) });
+    let reviewHistory: Partial<ContactHistory> = {};
+    if (hasReviews) {
+      try {
+        const [keyId, iv] = recipient.iv.split(":");
+        const address = (await decryptSecret({ keyId, iv, ciphertext: recipient.ciphertext }, contactAad(orgId))).trim().toLowerCase();
+        reviewHistory = await sha256Hex(address) === c.emailHash ? await reviewContactHistory(ctx, orgId, address) : { unknownReviewHistory: true };
+      } catch { reviewHistory = { unknownReviewHistory: true }; }
+    }
+    people.push({ ...reviewHistory, ...(c.lastMarketingEmailAt ? { lastMarketingEmailAt: c.lastMarketingEmailAt } : {}), ...(await outreachHistoryByHash(ctx, orgId, c.emailHash)) });
   }
   const check = checkContactFrequency(people, limitDays, Date.now());
   if (!check || !audience.length) return check;
@@ -244,29 +253,6 @@ async function segmentFrequency(ctx: QueryCtx, orgId: Id<"organizations">, segme
   if (pending === null) return { ...check, unknownMarketingAudience: true };
   const activeMarketing = audience.filter(r => pending.has(r.emailHash)).length;
   return { ...check, ...(activeMarketing ? { activeMarketing } : {}) };
-}
-
-/** Complete bounded lookup of running/uncertain attempts, including legacy approvals.
- * Read and claim in the same mutation so overlapping claims conflict transactionally.
- * Never infer "not sent" from an expired approval or an invalidated uncertain result.
- */
-async function pendingMarketingRecipients(ctx: QueryCtx, orgId: Id<"organizations">, excludingApprovalId?: Id<"approvals">): Promise<Set<string> | null> {
-  const maxAttempts = 8; // Each record can contain up to 10,000 recipient hashes.
-  const running = await ctx.db.query("approvals").withIndex("by_org_email_execution", q => q.eq("orgId", orgId).eq("subjectType", "email_send").eq("executionOutcome", undefined).eq("executionReconciledAt", undefined).eq("executionFinishedAt", undefined).gte("executionStartedAt", 0))
-    .filter(q => q.neq(q.field("_id"), excludingApprovalId)).take(maxAttempts + 1);
-  if (running.length > maxAttempts) return null;
-  const uncertain = await ctx.db.query("approvals").withIndex("by_org_email_execution", q => q.eq("orgId", orgId).eq("subjectType", "email_send").eq("executionOutcome", "uncertain").eq("executionReconciledAt", undefined))
-    .filter(q => q.neq(q.field("_id"), excludingApprovalId)).take(maxAttempts - running.length + 1);
-  if (running.length + uncertain.length > maxAttempts) return null;
-  const hashes = new Set<string>();
-  for (const attempt of [...running, ...uncertain]) {
-    const batches = attempt.emailRecipientHashBatches;
-    if (!batches?.length || batches.length > 50 || batches.some(b => !b.length || b.length > 200)) return null;
-    const recipients = batches.flat();
-    if (recipients.length !== attempt.scope.spendLimitMinor || new Set(recipients).size !== recipients.length || recipients.some(h => !/^[a-f0-9]{64}$/.test(h))) return null;
-    for (const hash of recipients) hashes.add(hash);
-  }
-  return hashes;
 }
 
 /** Before approving a broadcast: who in the segment the owner's contact limit would hold back. */

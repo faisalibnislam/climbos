@@ -14,7 +14,7 @@ import { serverSecret } from "./lib/crypto";
 import { notifyOwners } from "./lib/notify";
 import { appError, assertSameOrg, requireOrgAccess } from "./lib/tenancy";
 import { refuseInCopilot } from "./lib/approvals";
-import { hasActiveOutboundSequence, hasQueuedReviewInvitation } from "./lib/contactPressure";
+import { hasActiveOutboundSequence, hasQueuedReviewInvitation, recipientContactPressure, pendingMarketingRecipients } from "./lib/contactPressure";
 
 /**
  * Sending outbound emails from the owner's own mailbox (owner decision: the
@@ -90,12 +90,14 @@ async function unqueuedApproved(ctx: QueryCtx | MutationCtx, c: Doc<"outboundCam
   const out: Doc<"prospects">[] = [];
   const recipientHashes = new Set<string>();
   let skippedActiveAddresses = 0;
+  const org = await ctx.db.get(c.orgId);
+  const pendingMarketing = org?.contactFrequencyDays ? await pendingMarketingRecipients(ctx, org._id) : undefined;
   for (const p of await ctx.db.query("prospects").withIndex("by_campaign", (q) => q.eq("campaignId", c._id)).take(300)) {
     if (p.stage !== "approved" || !p.publicEmail) continue;
     if (await ctx.db.query("outboundSends").withIndex("by_prospect", (q) => q.eq("prospectId", p._id)).first()) continue;
     if (await isSuppressed(ctx, c.orgId, p.publicEmail)) continue;
     const recipientHash = await sha256Hex(p.publicEmail.trim().toLowerCase());
-    if (recipientHashes.has(recipientHash) || await hasActiveOutboundSequence(ctx, c.orgId, p.publicEmail) || await hasQueuedReviewInvitation(ctx, c.orgId, p.publicEmail)) {
+    if (recipientHashes.has(recipientHash) || await hasActiveOutboundSequence(ctx, c.orgId, p.publicEmail) || await hasQueuedReviewInvitation(ctx, c.orgId, p.publicEmail) || (org && (await recipientContactPressure(ctx, org, p.publicEmail, undefined, pendingMarketing))?.message)) {
       skippedActiveAddresses++;
       continue;
     }
@@ -176,7 +178,7 @@ export const start = mutation({
     if (a.address.trim().length < 8) throw appError("INVALID", "Add your business's postal address. The law requires it in cold emails.");
     if (!a.senderName.trim() || !a.company.trim()) throw appError("INVALID", "Add your name and company.");
     const { queued, skippedActiveAddresses } = await queueApproved(ctx, org, c);
-    if (!queued) throw appError("INVALID", skippedActiveAddresses ? "No messages were queued because another ClimbOS email is already queued, in progress, or unresolved for those addresses, or the check could not be completed safely." : "No approved possible customers with a published email to send to.");
+    if (!queued) throw appError("INVALID", skippedActiveAddresses ? "No messages were queued because another ClimbOS email is already queued, in progress, unresolved, or within your contact limit for those addresses, or the check could not be completed safely." : "No approved possible customers with a published email to send to.");
     const sender = { senderName: a.senderName.trim().slice(0, 80), company: a.company.trim().slice(0, 80), address: a.address.trim().slice(0, 200), bookingUrl: a.bookingUrl?.trim().slice(0, 300) || undefined };
     await ctx.db.patch(c._id, {
       sending: { status: "on", startedAt: c.sending?.startedAt ?? Date.now(), startedBy: user._id, firstSentAt: c.sending?.firstSentAt, lastSentAt: c.sending?.lastSentAt, ...sender, contentHash: await sendingHash(c, sender) },
@@ -408,6 +410,23 @@ export const claimSend = internalMutation({
         await recordSendEvent(ctx, s, "duplicate_blocked", "This email was stopped because another ClimbOS email to this address is queued, in progress, or unresolved.");
         return false;
       }
+    }
+    const org = await ctx.db.get(s.orgId);
+    const pressure = org ? await recipientContactPressure(ctx, org, s.to) : null;
+    if (org && pressure?.message) {
+      // A known waiting period postpones the same approved step. Unresolved history requires owner review.
+      const datedOnly = pressure.check.clearAt && !pressure.check.activeReview && !pressure.check.activeMarketing && !pressure.check.unknownMarketingAudience && !pressure.check.unknownReviewHistory;
+      if (datedOnly) await ctx.db.patch(s._id, { status: "queued", scheduledFor: nextSendWindow(pressure.check.clearAt!, org.timezone), attempts: Math.max(0, s.attempts - 1), error: pressure.message, ...RELEASE });
+      else {
+        await ctx.db.patch(s._id, { status: "queued", attempts: Math.max(0, s.attempts - 1), error: pressure.message, ...RELEASE });
+        const campaign = await ctx.db.get(s.campaignId);
+        if (campaign?.orgId === s.orgId && campaign.sending) {
+          await ctx.db.patch(campaign._id, { sending: { ...campaign.sending, status: "paused", pausedReason: "contact_limit" }, updatedAt: now });
+          await audit(ctx, { orgId: s.orgId, actorType: "system", action: "outbound.sending_paused", subjectType: "campaign", subjectId: campaign._id, summary: pressure.message });
+        }
+      }
+      await recordSendEvent(ctx, s, "not_sent", pressure.message);
+      return false;
     }
     if (s.opKey && (await keyTaken(ctx, s.opKey, s._id))) {
       await ctx.db.patch(s._id, { status: "canceled", error: "Duplicate of an email already sent or on its way.", ...RELEASE });

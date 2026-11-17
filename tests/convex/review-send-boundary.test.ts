@@ -35,6 +35,35 @@ async function claimInput(f: Awaited<ReturnType<typeof fixture>>) {
   const job = (await f.t.query(internal.reviews.prepareRequest, { id: f.request._id }))!;
   return { id: f.request._id, payloadHash: job.payloadHash, credentialId: job.credentialId };
 }
+it("does not let an invitation's own queued row block its approved claim", async () => {
+  const f = await fixture();
+  await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: 7 });
+  const input = await claimInput(f);
+  expect(await f.t.mutation(internal.reviews.claimRequest, input)).toMatchObject({ claimToken: expect.any(String) });
+  expect(fakeMailbox().sent).toEqual([]);
+});
+it("filters recent broadcast recipients neutrally and explains the partial review preview", async () => {
+  const f = await fixture();
+  await f.owner.client.action(api.marketing.importContacts, { slug: f.slug, csv: "email,consent,consent_source,consent_date,segment\nbea@example.com,yes,signup,2026-10-01,newsletter" });
+  await f.t.run(async ctx => { const c = (await ctx.db.query("contacts").first())!; await ctx.db.patch(c._id, { lastMarketingEmailAt: NOW - 86400000 }); });
+  await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: 7 });
+  const batch = await f.owner.client.mutation(api.reviews.prepareBatch, { slug: f.slug, people: [{ name: "Bea", email: "bea@example.com" }, { name: "Dee", email: "dee@example.com" }] });
+  expect(batch).toMatchObject({ count: 1, contactLimitHeld: 1, recipients: [{ name: "Dee", email: "dee@example.com" }] });
+  expect(fakeMailbox().sent).toEqual([]);
+});
+it("rechecks recent broadcast contact before review dispatch and permits a fresh preview after the exact interval", async () => {
+  const f = await fixture(), input = await claimInput(f);
+  await f.owner.client.action(api.marketing.importContacts, { slug: f.slug, csv: "email,consent,consent_source,consent_date,segment\nana@example.com,yes,signup,2026-10-01,newsletter" });
+  await f.t.run(async ctx => { const c = (await ctx.db.query("contacts").first())!; await ctx.db.patch(c._id, { lastMarketingEmailAt: NOW }); });
+  await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: 7 });
+  expect(await f.t.mutation(internal.reviews.claimRequest, input)).toBeNull();
+  await f.t.action(internal.mailbox.sendReviewRequests, { ids: [f.request._id] });
+  expect(fakeMailbox().sent).toEqual([]);
+  expect(await f.t.run(ctx => ctx.db.get(f.request._id))).toMatchObject({ status: "failed", notSentConfirmed: true });
+  vi.setSystemTime(NOW + 7 * 86400000);
+  expect((await f.owner.client.mutation(api.reviews.prepareBatch, { slug: f.slug, people: f.batch.recipients })).count).toBe(1);
+  expect(fakeMailbox().sent).toEqual([]);
+});
 it("allows only one current claim and rejects another worker's result", async () => {
   const f = await fixture(), input = await claimInput(f);
   const claims = await Promise.all([f.t.mutation(internal.reviews.claimRequest, input), f.t.mutation(internal.reviews.claimRequest, input)]);

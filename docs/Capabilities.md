@@ -1,8 +1,10 @@
 # ClimbOS capabilities and boundaries
 
+Broadcasts, outreach (including follow-ups), and review invitations now apply the same owner-set contact interval. Queued/uncertain sends hold overlapping recipients, and undated review observations remain explicitly distinct from send times. Settings and existing review/send screens explain holds; a held outreach step remains queued or pauses for review. See [shared policy behavior and limits](growth-engine/shared-contact-policy-audit.md).
+
 Uncertain review invitations now offer an owner-requested original-mailbox check and an attributed manual observation. Exact saved message/account checks preserve missing or conflicting results as unknown; neither path resends. Original uncertainty, source and audit records remain inspectable. See [receipt recovery and limits](growth-engine/review-receipt-recovery-audit.md).
 
-Review invitations now claim the exact approved message and mailbox once before SMTP handoff, recheck current workspace/permission state, preserve completed results and expose uncertain receipt without automatic replay. Known unsent attempts can be reviewed afresh; negative feedback never changes the public invitation. Owner-requested receipt checks and manual observations are now available; review-history frequency coordination remains unfinished. See [the audit](growth-engine/review-send-boundary-audit.md).
+Review invitations now claim the exact approved message and mailbox once before SMTP handoff, recheck current workspace/permission state, preserve completed results and expose uncertain receipt without automatic replay. Known unsent attempts can be reviewed afresh; negative feedback never changes the public invitation. Owner-requested receipt checks and manual observations are now available; the shared interval now covers these three email paths; broader lifecycle coordination remains unfinished. See [the audit](growth-engine/review-send-boundary-audit.md).
 
 Outgoing webhook deliveries now recheck pause, tenant, subscription and destination state before dispatch, reject stale retry results and include a signed stable delivery ID. Settings explain uncertain receipt. Receivers still need deduplication; legacy attempted deliveries without identity are held for review. See [the audit](growth-engine/webhook-delivery-boundary-audit.md).
 

@@ -153,6 +153,7 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
             <Badge tone={sending.status === "on" ? "green" : sending.status === "paused" ? "amber" : "neutral"}>{sending.status === "on" ? "Sending" : sending.status === "paused" ? "Paused" : "Done"}</Badge>
             <span className="text-ink-2">from {s.mailbox.label}</span>
           </p>
+          {sending.status === "paused" && sending.pausedReason === "contact_limit" ? <Callout tone="warning">Your contact limit is holding this campaign. Check earlier email and review invitation results, then resume. Approved steps remain queued.</Callout> : null}
           {sending.status === "paused" && sending.pausedReason === "content_changed" ? <Callout tone="warning">Emails changed. Check, then resume.</Callout> : null}
           <StatBlocks
             className="grid-cols-2 sm:grid-cols-2 md:grid-cols-2"
@@ -165,7 +166,7 @@ function SendingPanel({ slug, campaignId, approvedWithEmail, defaultCompany, boo
           />
           {s.activeEmailFlowsWaiting > 0 ? (
             <Callout tone="warning">
-              {s.activeEmailFlowsWaiting} possible {s.activeEmailFlowsWaiting === 1 ? "customer was" : "customers were"} left out because another ClimbOS email is already queued, in progress, or unresolved for that address, or the address could not be checked safely.
+              {s.activeEmailFlowsWaiting} possible {s.activeEmailFlowsWaiting === 1 ? "customer was" : "customers were"} left out because another ClimbOS email is already queued, in progress, unresolved, or within your contact limit for that address, or the address could not be checked safely.
             </Callout>
           ) : null}
           {s.review.length ? (

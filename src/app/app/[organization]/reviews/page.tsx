@@ -210,13 +210,14 @@ export default function ReviewsPage() {
           toast({
             tone: "success",
             title: `Queued ${result.queued} ${result.queued === 1 ? "review invitation" : "review invitations"}`,
-            description: result.activeOutreach ? `${result.activeOutreach} address${result.activeOutreach === 1 ? " already has" : "es already have"} an active email sequence and was skipped.` : undefined,
+            description: result.contactLimitHeld ? `${result.contactLimitHeld} address(es) were held by your contact limit because of recent or unresolved email activity.` : result.activeOutreach ? `${result.activeOutreach} address${result.activeOutreach === 1 ? " already has" : "es already have"} an active email sequence and was skipped.` : undefined,
           });
         }}
       >
         {preview ? (
           <div className="flex max-h-72 flex-col gap-3 overflow-y-auto rounded-lg bg-surface-2 p-3 text-sm">
             <p><span className="font-medium">Review link:</span> <span className="break-all">{preview.destination}</span></p>
+            {preview.contactLimitHeld > 0 ? <Callout tone="warning">Your contact limit held {preview.contactLimitHeld} address(es) because of recent or unresolved ClimbOS email activity. They are not in this invitation.</Callout> : null}
             {preview.activeOutreach > 0 ? (
               <Callout tone="warning">{preview.activeOutreach} address{preview.activeOutreach === 1 ? " already has" : "es already have"} an active ClimbOS email sequence and {preview.activeOutreach === 1 ? "was" : "were"} left out of this invitation.</Callout>
             ) : null}

@@ -34,6 +34,70 @@ describe("complete contact frequency history", () => {
   beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(NOW); });
   afterEach(() => vi.useRealTimers());
 
+  it.each(["sent", "queued", "sending", "uncertain"] as const)("includes %s review invitations in the broadcast policy", async status => {
+    const f = await fixture();
+    await f.t.run(ctx => ctx.db.insert("reviewRequests", { orgId: f.orgId, name: "Ana", email: "ana@example.com", token: "synthetic", status, ...(status === "sent" ? { sentAt: NOW - DAY } : {}), createdAt: NOW - DAY }));
+    const preview = await f.preview();
+    expect(preview?.message).not.toBeNull();
+    expect(preview).toMatchObject(status === "sent" ? { recentlyEmailed: 1, clearAt: NOW + 6 * DAY } : { activeReview: 1 });
+    await expect(f.approve()).rejects.toThrow(/review|7-day/);
+  });
+
+  it("uses the actual latest review send time across more than 100 records and clears exactly at the limit", async () => {
+    const f = await fixture();
+    await f.t.run(async ctx => {
+      for (let i = 0; i < 105; i++) await ctx.db.insert("reviewRequests", { orgId: f.orgId, name: "Ana", email: "ana@example.com", token: `synthetic-${i}`, status: "sent", sentAt: NOW - (i === 0 ? 1 : 20) * DAY, createdAt: NOW });
+    });
+    expect(await f.preview()).toMatchObject({ recentlyEmailed: 1, clearAt: NOW + 6 * DAY });
+    vi.setSystemTime(NOW + 6 * DAY);
+    expect((await f.preview())?.message).toBeNull();
+  });
+
+  it.each(["sent_folder", "owner_reported"] as const)("uses %s observation only as a conservative upper bound without inventing send time", async source => {
+    const f = await fixture();
+    const id = await f.t.run(ctx => ctx.db.insert("reviewRequests", { orgId: f.orgId, name: "Ana", email: "ana@example.com", token: "synthetic", status: "sent", recovery: { source, outcome: "sent", at: NOW - DAY, by: f.owner.userId, note: "Checked the original send", originalStatus: "uncertain" }, createdAt: NOW - 50 * DAY }));
+    expect(await f.preview()).toMatchObject({ recentlyEmailed: 0, recentReviewObservations: 1, clearAt: NOW + 6 * DAY, message: expect.stringContaining("exact send time is unknown") });
+    expect((await f.t.run(ctx => ctx.db.get(id)))?.sentAt).toBeUndefined();
+    vi.setSystemTime(NOW + 6 * DAY);
+    expect((await f.preview())?.message).toBeNull();
+  });
+
+  it.each(["undated sent", "unconfirmed failed", "too many undated"])("holds %s history rather than using creation time as send time", async scenario => {
+    const f = await fixture();
+    await f.t.run(async ctx => {
+      for (let i = 0; i < (scenario === "too many undated" ? 101 : 1); i++) await ctx.db.insert("reviewRequests", { orgId: f.orgId, name: "Ana", email: "ana@example.com", token: `synthetic-${i}`, status: scenario === "unconfirmed failed" ? "failed" : "sent", ...(scenario === "too many undated" ? { recovery: { source: "owner_reported" as const, outcome: "sent" as const, at: NOW - 20 * DAY, by: f.owner.userId, note: "Owner observation", originalStatus: "uncertain" } } : {}), createdAt: NOW - 200 * DAY });
+    });
+    expect(await f.preview()).toMatchObject({ unknownReviewHistory: true, clearAt: null });
+    await expect(f.approve()).rejects.toThrow(/cannot verify the timing/);
+  });
+
+  it.each(["known rejection", "owner not sent", "different address", "different tenant", "no limit"])("does not hold a broadcast for %s", async scenario => {
+    const f = await fixture();
+    const other = await asNewUser(f.t, "other-review-history@example.com");
+    const w = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Other" });
+    if (scenario === "no limit") await f.owner.client.mutation(api.settings.setContactFrequency, { slug: f.slug, days: null });
+    await f.t.run(ctx => ctx.db.insert("reviewRequests", { orgId: scenario === "different tenant" ? w.orgId : f.orgId, name: "Ana", email: scenario === "different address" ? "unrelated@example.com" : "ana@example.com", token: "synthetic", status: scenario === "known rejection" || scenario === "owner not sent" ? "failed" : "uncertain", ...(scenario === "known rejection" ? { notSentConfirmed: true } : {}), ...(scenario === "owner not sent" ? { recovery: { source: "owner_reported" as const, outcome: "not_sent" as const, at: NOW, by: f.owner.userId, note: "Confirmed rejection", originalStatus: "uncertain" } } : {}), createdAt: NOW }));
+    expect((await f.preview())?.message ?? null).toBeNull();
+    expect((await f.approve()).recipients).toBe(1);
+  });
+
+  it.each(["ciphertext", "address hash"])("holds an unverifiable %s join without exposing the address or decrypt error", async problem => {
+    const f = await fixture();
+    await f.t.run(async ctx => {
+      await ctx.db.insert("reviewRequests", { orgId: f.orgId, name: "Ana", email: "ana@example.com", token: "synthetic", status: "sent", sentAt: NOW, createdAt: NOW });
+      await ctx.db.patch(f.contact._id, problem === "ciphertext" ? { emailCiphertext: "invalid" } : { emailHash: await sha256Hex("changed@example.com") });
+    });
+    const preview = await f.preview();
+    expect(preview).toMatchObject({ unknownReviewHistory: true });
+    expect(preview?.message).not.toMatch(/ana@|decrypt|secret/);
+  });
+
+  it.each(["future send", "invalid send", "future observation"])("keeps %s evidence unknown instead of calculating a clearance date", async problem => {
+    const f = await fixture();
+    await f.t.run(ctx => ctx.db.insert("reviewRequests", { orgId: f.orgId, name: "Ana", email: "ana@example.com", token: "synthetic", status: "sent", ...(problem === "future observation" ? { recovery: { source: "owner_reported" as const, outcome: "sent" as const, at: NOW + DAY, by: f.owner.userId, note: "Invalid future observation", originalStatus: "uncertain" } } : { sentAt: problem === "invalid send" ? -1 : NOW + DAY }), createdAt: NOW }));
+    expect(await f.preview()).toMatchObject({ unknownReviewHistory: true, clearAt: null, recentlyEmailed: 0 });
+  });
+
   it.each(["last", "first"])("uses actual latest send time when a recent send was inserted %s among more than 20", async position => {
     const f = await fixture();
     const old = Array.from({ length: 25 }, (_, i) => NOW - (10 + i) * DAY);

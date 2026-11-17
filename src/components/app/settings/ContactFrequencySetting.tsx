@@ -14,7 +14,7 @@ export function ContactFrequencySetting({ slug, days, canManage }: { slug: strin
   return (
     <section aria-labelledby="frequency-heading" className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-5">
       <h2 id="frequency-heading" className="heading-section">Email limit per person</h2>
-      <p className="text-sm text-ink-2">{days === null ? "No limit set." : `At most one email every ${days} days per person.`} Marketing sends wait if anyone was emailed or is in an outreach sequence within that time.</p>
+      <p className="text-sm text-ink-2">{days === null ? "No limit set." : `At most one email every ${days} days per person.`} Broadcasts, outreach (including follow-ups), and review invitations check the same limit before sending.</p>
       {canManage ? (
         <div className="flex flex-wrap items-end gap-2">
           <label className="flex flex-col gap-1 text-sm font-medium text-ink">Days between emails<Input value={value} inputMode="numeric" onChange={(e) => setValue(e.target.value.replace(/[^0-9]/g, ""))} className="w-32" /></label>
@@ -22,7 +22,7 @@ export function ContactFrequencySetting({ slug, days, canManage }: { slug: strin
           {days !== null ? <Button size="sm" variant="ghost" onClick={() => void submit(null)}>Remove limit</Button> : null}
         </div>
       ) : null}
-      <p className="text-xs text-ink-3">Review invitations don&apos;t count toward this yet.</p>
+      <p className="text-xs text-ink-3">Queued or unresolved sends can hold another email. Confirmed review receipts with no send time use their observation date conservatively. Review invitations also keep their separate 90-day limit. Essential service messages are outside this policy.</p>
     </section>
   );
 }
