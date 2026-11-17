@@ -1,3 +1,4 @@
+import { initialDealHistory } from "./lib/dealHistory";
 import { v } from "convex/values";
 import { z } from "zod";
 import { fakeTurn } from "../shared/agents/fake";
@@ -151,7 +152,7 @@ export const send = mutation({
     if (email && !t.email) {
       await ctx.db.patch(t._id, { email });
       const currency = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", w.orgId)).first())?.currency ?? "USD";
-      const dealId = await ctx.db.insert("deals", { orgId: w.orgId, name: email, email, stage: "lead", source: "inbox", currency, notes: [{ text: `From website chat: “${text.slice(0, 200)}”`, at: now }], createdAt: now, updatedAt: now });
+      const dealId = await ctx.db.insert("deals", { orgId: w.orgId, stageChangedAt: now, stageHistory: initialDealHistory("lead", now, "inbound"), name: email, email, stage: "lead", source: "inbox", currency, notes: [{ text: `From website chat: “${text.slice(0, 200)}”`, at: now }], createdAt: now, updatedAt: now });
       await ctx.db.patch(t._id, { dealId });
       await emitEvent(ctx, w.orgId, "lead.created", { name: email, email, source: "website_chat" });
       t = (await ctx.db.get(t._id))!;

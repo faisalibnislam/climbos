@@ -1,5 +1,8 @@
 # ClimbOS development handoff for Claude Code
 
+Customer progress now preserves dated stage changes from owner edits, bookings, prospect progress and inbound capture. Owners and the existing assistant can inspect retained history; old missing history remains unknown. [Coverage and limits](growth-engine/deal-stage-history-audit.md).
+
+
 Customer progress now records dated buying-context reports across needs, success, fit, decision process, timing and alternatives. Conflicting, outdated and unknown observations remain explicit; corrections retain recent history. The existing assistant review can read the selected record without changing its stage or contacting anyone. [Workflow and limits](growth-engine/deal-qualification-audit.md).
 
 

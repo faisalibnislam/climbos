@@ -1,3 +1,5 @@
+import { initialDealHistory, advanceDealHistory } from "./lib/dealHistory";
+import { DEAL_HISTORY_LIMITATIONS } from "../shared/growth/dealHistory";
 import { QUALIFICATION_TOPICS, QUALIFICATION_LIMITATIONS, QualificationObservationSchema } from "../shared/growth/dealQualification";
 import { validProgressDate } from "../shared/growth/customerProgress";
 import { qualificationTopicV, qualificationStateV } from "./lib/dealQualification";
@@ -45,16 +47,16 @@ export async function syncDealFromProspect(ctx: MutationCtx, p: Doc<"prospects">
   if (existing) {
     assertSameOrg(existing, p.orgId, "deal");
     if (existing.stage === "won" || existing.stage === "lost" || ORDER[stage] <= ORDER[existing.stage]) return existing._id;
-    await ctx.db.patch(existing._id, { stage, stageChangedAt: now, updatedAt: now, notes: note ? [...existing.notes, { text: note, at: now }] : existing.notes });
+    await ctx.db.patch(existing._id, { stage, stageHistory: advanceDealHistory(existing, stage, now, "prospect"), stageChangedAt: now, updatedAt: now, notes: note ? [...existing.notes, { text: note, at: now }] : existing.notes });
     return existing._id;
   }
-  return ctx.db.insert("deals", { orgId: p.orgId, name: p.company, company: p.company, email: p.publicEmail, stage, stageChangedAt: now, source, prospectId: p._id, currency: await currencyOf(ctx, p.orgId), notes: note ? [{ text: note, at: now }] : [], createdAt: now, updatedAt: now });
+  return ctx.db.insert("deals", { orgId: p.orgId, stageHistory: initialDealHistory(stage, now, "prospect"), name: p.company, company: p.company, email: p.publicEmail, stage, stageChangedAt: now, source, prospectId: p._id, currency: await currencyOf(ctx, p.orgId), notes: note ? [{ text: note, at: now }] : [], createdAt: now, updatedAt: now });
 }
 
 /** A booking from someone who wasn't a prospect: a new "booked" deal. */
 export async function dealFromBooking(ctx: MutationCtx, orgId: Id<"organizations">, name: string, company: string | undefined, startAt: number, bookingId?: Id<"bookings">) {
   const now = Date.now();
-  return ctx.db.insert("deals", { orgId, name, company, stage: "booked", stageChangedAt: now, source: "booking", currency: await currencyOf(ctx, orgId), notes: [{ text: "Booked a call from your booking page.", at: now }], nextStep: "Call", nextStepAt: startAt, nextStepBookingId: bookingId, createdAt: now, updatedAt: now });
+  return ctx.db.insert("deals", { orgId, stageHistory: initialDealHistory("booked", now, "booking"), name, company, stage: "booked", stageChangedAt: now, source: "booking", currency: await currencyOf(ctx, orgId), notes: [{ text: "Booked a call from your booking page.", at: now }], nextStep: "Call", nextStepAt: startAt, nextStepBookingId: bookingId, createdAt: now, updatedAt: now });
 }
 
 /** Exact new link, or an unambiguous legacy prospect link; names are not identity evidence. */
@@ -100,7 +102,7 @@ export async function bookingCancelled(ctx: MutationCtx, b: Doc<"bookings">, not
     else {
       Object.assign(patch, { nextStep: undefined, nextStepAt: undefined, nextStepDate: undefined, nextStepBookingId: undefined });
       // An older confirmed call may lack a deal id. Do not infer that no appointment remains.
-      if (!otherProspectCall) { Object.assign(patch, { stage: "talking", stageChangedAt: now }); clearedBookedStage = true; }
+      if (!otherProspectCall) { Object.assign(patch, { stage: "talking", stageChangedAt: now, stageHistory: advanceDealHistory(deal, "talking", now, "booking_cancelled") }); clearedBookedStage = true; }
     }
   }
   await ctx.db.patch(deal._id, patch);
@@ -164,6 +166,26 @@ export const detail = query({
   },
 });
 
+/** Content-bound pagination of recorded transitions; legacy absence is not a reconstructed journey. */
+export const stageHistory = query({
+  args: { slug: v.string(), id: v.id("deals"), beforeEvent: v.optional(v.number()), expectedVersion: v.optional(v.string()) },
+  handler: async (ctx, { slug, id, beforeEvent, expectedVersion }) => {
+    const { org } = await requireOrgAccess(ctx, { slug }, "view");
+    const d = assertSameOrg(await ctx.db.get(id), org._id, "deal");
+    const version = await sha256Hex(JSON.stringify(d));
+    if (beforeEvent !== undefined && !expectedVersion) throw appError("INVALID", "Use the original review version before reading earlier history.");
+    if (expectedVersion !== undefined && expectedVersion !== version) throw appError("INVALID", "This deal changed. Read its latest history again.");
+    const history = d.stageHistory ?? { total: 0, events: [], fromCreation: false };
+    const oldest = history.events[0]?.sequence ?? 1;
+    const end = beforeEvent ?? history.total + 1;
+    if (!Number.isSafeInteger(end) || end < oldest || end > history.total + 1) throw appError("INVALID", "That history position is not retained. Read the latest history again.");
+    const selected = history.events.filter(event => event.sequence < end).slice(-20).reverse();
+    const first = selected.at(-1)?.sequence ?? oldest;
+    return { view: "history" as const, dealId: id, version, total: history.total, retained: history.events.length, fromCreation: history.fromCreation,
+      events: selected.map(({ actorId: _actor, ...event }) => event), nextBefore: first > oldest ? first : null, limitations: DEAL_HISTORY_LIMITATIONS };
+  },
+});
+
 /** Separate bounded review so complete qualification reports never crowd out paginated conversation notes. */
 export const qualification = query({
   args: { slug: v.string(), id: v.id("deals"), expectedVersion: v.optional(v.string()) },
@@ -214,7 +236,7 @@ export const create = mutation({
     const count = (await ctx.db.query("deals").withIndex("by_org_updated", (q) => q.eq("orgId", org._id)).take(5001)).length;
     if (count >= 5000) throw appError("LIMIT_REACHED", "The pipeline holds up to 5,000 people. Archive some lost ones first.");
     const now = Date.now();
-    const id = await ctx.db.insert("deals", { orgId: org._id, stageChangedAt: now, name, company: a.company?.trim().slice(0, 120) || undefined, email, stage: a.stage ?? "lead", source: "manual", valueMinor, valueVersion: DEAL_VALUE_VERSION, currency, notes: [], ...(a.stage === "won" ? { wonAt: now } : a.stage === "lost" ? { lostAt: now } : {}), createdAt: now, updatedAt: now });
+    const id = await ctx.db.insert("deals", { orgId: org._id, stageHistory: initialDealHistory(a.stage ?? "lead", now, "owner", user._id), stageChangedAt: now, name, company: a.company?.trim().slice(0, 120) || undefined, email, stage: a.stage ?? "lead", source: "manual", valueMinor, valueVersion: DEAL_VALUE_VERSION, currency, notes: [], ...(a.stage === "won" ? { wonAt: now } : a.stage === "lost" ? { lostAt: now } : {}), createdAt: now, updatedAt: now });
     if (a.stage === "won") await syncRevenue(ctx, (await ctx.db.get(id))!);
     await audit(ctx, { orgId: org._id, actorType: "user", actorId: user._id, action: "crm.created", subjectType: "deal", subjectId: id, summary: `Added ${name} to the pipeline.` });
     await emitEvent(ctx, org._id, "lead.created", { name, company: a.company ?? null, email: email ?? null, source: "manual" });
@@ -282,6 +304,7 @@ export const update = mutation({
     if (a.lostReasonNote !== undefined) patch.lostReasonNote = a.lostReasonNote?.trim().slice(0, 240) || undefined;
     if (a.stage && a.stage !== d!.stage) {
       patch.stage = a.stage;
+      patch.stageHistory = advanceDealHistory(d!, a.stage, now, "owner", user._id);
       patch.stageChangedAt = now;
       if (a.stage === "lost") patch.lostAt = now;
       // Reopening a lost deal clears its loss record rather than keeping a stale reason.

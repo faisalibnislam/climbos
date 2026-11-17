@@ -38,6 +38,8 @@ it("binds two appointments to one exact deal and preserves the remaining call on
     await f.owner.client.mutation(api.outbound.cancelBooking, { slug: f.slug, bookingId: remaining.bookingId });
     const after = (await f.t.run(ctx => ctx.db.get(b1.dealId!)))!;
     expect(after).toMatchObject({ stage: "talking", stageChangedAt: NOW + 1000 });
+    expect(after.stageHistory?.events.at(-1)).toMatchObject({ from: "booked", to: "talking", source: "booking_cancelled", at: NOW + 1000 });
+    expect(after.stageHistory?.total).toBe((original.stageHistory?.total ?? 0) + 1);
     expect(after.nextStepAt).toBeUndefined(); expect(after.nextStepBookingId).toBeUndefined();
     expect((await f.t.run(ctx => ctx.db.get(f.prospectId)))?.stage).toBe("replied");
   }

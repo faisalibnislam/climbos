@@ -46,6 +46,8 @@ describe("landing pages", () => {
     page = (await owner.client.query(api.landing.list, { slug })).pages[0];
     expect(page).toMatchObject({ views: 1, leads: 1 });
     expect((await owner.client.query(api.crm.list, { slug })).deals[0]).toMatchObject({ email: "ana@x.example", stage: "lead" });
+    const capturedDeal = (await owner.client.query(api.crm.list, { slug })).deals[0];
+    expect((await owner.client.query(api.crm.stageHistory, { slug, id: capturedDeal.id })).events[0]).toMatchObject({ from: null, to: "lead", source: "inbound" });
     expect((await owner.client.query(api.inbox.list, { slug, box: "open" }))[0]).toMatchObject({ kind: "form", canReply: true });
 
     const second = await owner.client.mutation(api.landing.create, { slug, brief: "Second offer" });

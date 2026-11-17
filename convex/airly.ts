@@ -1,3 +1,4 @@
+import { initialDealHistory } from "./lib/dealHistory";
 import { v } from "convex/values";
 import { AIRLY_APPS, isAirlyApp } from "../shared/airly";
 
@@ -120,7 +121,7 @@ export const importLeads = internalMutation({
       const now = Date.now();
       await ctx.db.insert("communityMessages", { orgId, channel: link.app, kind: it.kind, externalId, authorName: it.name.slice(0, 80) || it.email || "Someone", fromEmail: it.email, subject: it.subject.slice(0, 200), text: it.text.slice(0, 2000), receivedAt: it.at, status: "new", createdAt: now, updatedAt: now });
       if (it.email || it.name) {
-        await ctx.db.insert("deals", { orgId, name: it.name.slice(0, 120) || it.email!, company: it.company, email: it.email, stage: it.kind === "booking" ? "booked" : "lead", source: "inbox", currency, notes: [{ text: `From ${link.app === "formkit" ? "Formkit" : "Meetrao"}: ${it.subject}`, at: now }], ...(it.startAt ? { nextStep: "Call", nextStepAt: it.startAt } : {}), createdAt: now, updatedAt: now });
+        await ctx.db.insert("deals", { orgId, stageChangedAt: now, stageHistory: initialDealHistory(it.kind === "booking" ? "booked" : "lead", now, "inbound"), name: it.name.slice(0, 120) || it.email!, company: it.company, email: it.email, stage: it.kind === "booking" ? "booked" : "lead", source: "inbox", currency, notes: [{ text: `From ${link.app === "formkit" ? "Formkit" : "Meetrao"}: ${it.subject}`, at: now }], ...(it.startAt ? { nextStep: "Call", nextStepAt: it.startAt } : {}), createdAt: now, updatedAt: now });
         await emitEvent(ctx, orgId, it.kind === "booking" ? "booking.created" : "lead.created", { name: it.name, email: it.email ?? null, source: link.app, subject: it.subject });
       }
       added++;

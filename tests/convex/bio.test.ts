@@ -17,6 +17,8 @@ describe("link in bio", () => {
     expect((await t.query(api.bio.publicPage, { slug: pageSlug }))?.links[0].href).toBe(pub?.links[0].href);
     await t.mutation(api.bio.signup, { slug: pageSlug, email: "fan@x.example" });
     expect((await owner.client.query(api.crm.list, { slug })).deals[0]).toMatchObject({ email: "fan@x.example", stage: "lead" });
+    const capturedDeal = (await owner.client.query(api.crm.list, { slug })).deals[0];
+    expect((await owner.client.query(api.crm.stageHistory, { slug, id: capturedDeal.id })).events[0]).toMatchObject({ from: null, to: "lead", source: "inbound" });
     await owner.client.mutation(api.bio.save, { slug, title: "Bio Bakery", bio: "", color: "#123456", links: [], collectEmails: false, live: false });
     expect(await t.query(api.bio.publicPage, { slug: pageSlug })).toBeNull();
   });

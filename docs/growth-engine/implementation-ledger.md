@@ -1,3 +1,7 @@
+## 17 November 2026 — recorded sales stage history
+
+Added bounded, source-distinguished stage history across existing manual and automatic writers, owner inspection and version-bound assistant pagination. 85 focused tests and two browser checks pass; [audit](deal-stage-history-audit.md) preserves historical and real-model limits. No new action authority. Full project scope remains incomplete.
+
 ## 17 November 2026 — structured buying context
 
 Customer progress now supports dated owner reports across six buying-decision topics, correction history, exact read-only assistant retrieval and bounded export. Missing, conflicting and outdated evidence stays explicit; no score, automatic contact or stage change is introduced. [Audit](deal-qualification-audit.md). 60 focused API/assistant/permission tests and two desktop/mobile checks passed, plus typecheck and scoped lint. Full project scope and real advice quality remain incomplete.

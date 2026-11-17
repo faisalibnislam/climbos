@@ -12,6 +12,7 @@ import { LoadingBlock, PageHeader } from "@/components/app/results/QueryBoundary
 import { StatBlocks } from "@/components/ds/content";
 import { Badge, Button, ConfirmDialog, DatePicker, EmptyState, Field, Input, Select, Sheet, Textarea, toast } from "@/components/ui";
 import { LossReasonFields } from "@/components/app/pipeline/LossReasonFields";
+import { DealHistory } from "@/components/app/pipeline/DealHistory";
 import { DealQualification } from "@/components/app/pipeline/DealQualification";
 import { DealReviewButton } from "@/components/app/pipeline/DealReviewButton";
 import { DealAttentionBadges } from "@/components/app/pipeline/DealAttentionBadges";
@@ -148,6 +149,7 @@ function DealPanel({ slug, d, timezone, onClose }: { slug: string; d: Deal; time
       </Field>
       <DealReviewButton id={d.id} name={d.name} onPrepared={onClose} />
       <DealQualification slug={slug} id={d.id} />
+      <DealHistory slug={slug} id={d.id} />
       {d.stage === "lost" ? <LossReasonFields slug={slug} d={d} save={save} /> : null}
       <Field label={`Possible sale value (${d.currency})`} hint={d.valueNeedsReview ? "An earlier amount has unconfirmed currency units. Enter the correct value to confirm it; no historical amount is guessed." : "An owner-reported sale when you pick Sale recorded; not confirmation of payment."}>
         <Input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} onBlur={() => {

@@ -1,3 +1,13 @@
+## 17 November 2026 — recorded sales stage history
+
+[Audit](growth-engine/deal-stage-history-audit.md) records the traced writers, owner/assistant review path and limitations.
+
+- `pnpm exec vitest run tests/convex/deal-stage-history.test.ts tests/convex/booking-deal-identity.test.ts tests/convex/pipeline-follow-up-dates.test.ts tests/convex/crm.test.ts tests/convex/bio.test.ts tests/convex/landing.test.ts tests/convex/chat.test.ts tests/convex/pipeline-assistant-context.test.ts tests/convex/pipeline-deal-review.test.ts tests/convex/deal-qualification.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — **85 passed / twelve files, 10.00 seconds**. Captured transitions, no same-stage duplicates, unknown legacy histories, retention/pagination, changed records, tenant/role boundaries, import replay, export/deletion and actual assistant-loop evidence transport.
+- `CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env E2E_BASE_URL=http://127.0.0.1:3420 pnpm exec playwright test e2e/deal-stage-history.spec.ts --workers=1` — **two desktop/mobile checks passed, 16.7 seconds**. Earlier/latest pages, changed-snapshot notice, no action/message side effects, targeted accessibility/overflow and page errors. Mobile screenshot inspected; not full accessibility conformance.
+- `pnpm typecheck` passed for application and Convex. Local backend sync passed in **15.47 seconds** and generated the new helper's API declaration. Scoped ESLint and diff checks passed.
+
+No live provider, customer message, paid model evaluation or hosted deployment. History is captured application state, not verified customer intent or causal evidence. Full scope remains incomplete.
+
 ## 17 November 2026 — buying-context entry and assistant review
 
 [Audit](growth-engine/deal-qualification-audit.md) traces optional owner input → revision-bound CRM persistence → exact/version-bound tool retrieval → editable review → export/deletion. Existing model routes and plan-engine version are unchanged.

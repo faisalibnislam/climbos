@@ -1,3 +1,4 @@
+import { initialDealHistory } from "./lib/dealHistory";
 import { writingBrandContext } from "../shared/agents/contentTasks";
 import { v } from "convex/values";
 import { fakeTurn } from "../shared/agents/fake";
@@ -394,7 +395,7 @@ export const submit = mutation({
     if (recent.filter((m) => m.kind === "form").length >= 60) throw appError("RATE_LIMITED", "Thanks! Lots of requests right now. Please try again shortly.");
     const message = a.message?.trim().slice(0, 1500) ?? "";
     const currency = (await ctx.db.query("businesses").withIndex("by_org", (q) => q.eq("orgId", p.orgId)).first())?.currency ?? "USD";
-    await ctx.db.insert("deals", { orgId: p.orgId, name, email, stage: "lead", source: "inbox", currency, notes: [{ text: `From landing page “${p.title}”${message ? `: “${message.slice(0, 200)}”` : ""}`, at: now }], createdAt: now, updatedAt: now });
+    await ctx.db.insert("deals", { orgId: p.orgId, stageChangedAt: now, stageHistory: initialDealHistory("lead", now, "inbound"), name, email, stage: "lead", source: "inbox", currency, notes: [{ text: `From landing page “${p.title}”${message ? `: “${message.slice(0, 200)}”` : ""}`, at: now }], createdAt: now, updatedAt: now });
     await ctx.db.insert("communityMessages", { orgId: p.orgId, channel: "landing_page", kind: "form", externalId: `form:${p._id}:${now}`, authorName: name, fromEmail: email, subject: p.title, text: message || `Asked to be contacted via “${p.title}”.`, receivedAt: now, status: "new", createdAt: now, updatedAt: now });
     await ctx.db.patch(p._id, { leads: p.leads + 1 });
     await notifyOwners(ctx, p.orgId, `New lead from “${p.title}”: ${name}`, "inbox");

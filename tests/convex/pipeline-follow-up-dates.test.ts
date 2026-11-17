@@ -60,6 +60,7 @@ it("dates automatic deal creation and only genuine stage transitions, without ba
   expect((await f.t.run(ctx => ctx.db.get(id)))?.stageChangedAt).toBe(NOW);
   await f.t.run(async ctx => syncDealFromProspect(ctx, (await ctx.db.get(prospectId))!, "booked", "outbound"));
   expect((await f.t.run(ctx => ctx.db.get(id)))?.stageChangedAt).toBe(NOW + 1000);
+  expect((await f.t.run(ctx => ctx.db.get(id)))?.stageHistory).toMatchObject({ total: 2, fromCreation: true, events: [{ from: null, to: "talking", source: "prospect" }, { from: "talking", to: "booked", source: "prospect" }] });
   await f.t.run(ctx => dealFromBooking(ctx, f.orgId, "Direct guest", undefined, NOW + 86400000));
   expect((await f.owner.client.query(api.crm.list, { slug: f.slug })).deals.find(d => d.name === "Direct guest")?.stageChangedAt).toBe(NOW + 1000);
   await f.t.run(ctx => ctx.db.patch(f.id, { stageChangedAt: undefined }));

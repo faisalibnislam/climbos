@@ -30,6 +30,8 @@ describe("website chat", () => {
     expect(inbox).toHaveLength(1);
     expect(inbox[0]).toMatchObject({ kind: "chat", from: "ana@shop.example", canReply: true });
     expect((await owner.client.query(api.crm.list, { slug })).deals[0]).toMatchObject({ email: "ana@shop.example", stage: "lead" });
+    const capturedDeal = (await owner.client.query(api.crm.list, { slug })).deals[0];
+    expect((await owner.client.query(api.crm.stageHistory, { slug, id: capturedDeal.id })).events[0]).toMatchObject({ from: null, to: "lead", source: "inbound" });
     w = await t.query(api.chat.widget, { key, visitorId: VID });
     expect(w?.hasEmail).toBe(true);
   });

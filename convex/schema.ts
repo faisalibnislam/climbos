@@ -1,3 +1,4 @@
+import { dealStageHistoryV } from "./lib/dealHistory";
 import { dealQualificationV } from "./lib/dealQualification";
 import { customerProgressRecordV, customerProgressRuleV } from "./lib/customerProgress";
 import { emailReadinessValidator } from "./lib/emailReadiness";
@@ -3051,6 +3052,7 @@ export default defineSchema({
 
   /** Mini-CRM: one row per person or company the owner is working with. */
   deals: defineTable({
+    stageHistory: v.optional(dealStageHistoryV),
     qualification: v.optional(dealQualificationV),
     orgId: v.id("organizations"),
     name: v.string(),
