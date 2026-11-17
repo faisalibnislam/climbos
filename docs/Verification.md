@@ -1,3 +1,7 @@
+## 17 November 2026 — focused revision continuity
+
+Engine v3.157 fixes dropped criterion feedback, clarifies prepared draft versus live-asset review, and moves protected mechanism exploration ahead of tactic selection. A red runtime regression now passes; all 94 affected tests passed after updating the prompt-version expectation, with the other seven focused/permission files already passing. App/Convex typechecks, changed-file ESLint and diff checks passed. Runtime model and action boundaries are unchanged. Paid Livoform v5 acceptance is pending; [audit and exact commands](growth-engine/focused-evidence-review-audit.md).
+
 ## 17 November 2026 — latest Livoform acceptance status
 
 The v3.156 fourth run remained below acceptance (3.5, minimum 3); its optional revision exceeded an existing duration-label bound by three characters and the engine retained the failed reviewed draft. Three calls cost $0.570983. Across this continuation: 13 calls, $2.023417; cumulative charged/held **$61.841945 / $100**. All paid processes completed; no business action or deployment. [Detailed results and remaining work](growth-engine/focused-evidence-review-audit.md).

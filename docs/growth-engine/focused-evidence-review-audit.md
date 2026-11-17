@@ -1,5 +1,23 @@
 # Focused strategy evidence review — 17 November 2026
 
+## Review continuity and mechanism-first exploration — v3.157
+
+The next audit confirmed that `draftOnce` forwarded only the critic's short top-level fixes list, dropping specific per-criterion reasoning and corrections. A failing runtime regression reproduced that loss. Focused revisions now receive bounded, recognized, non-duplicate criterion feedback, ordered by score, alongside existing strengths and assessed lint. Other rubrics keep their previous feedback path. Suggestions cannot override evidence, the schema or approval requirements.
+
+The focused review instructions now cross-check an offered text asset against its complete `preparedWork` entry before declaring it missing. An authored outline can be ready for review without being a functioning form, tested integration or published URL. This is reviewer guidance, not a deterministic proof of semantic correctness. The acceptance bar and unsupported-claim enforcement are unchanged.
+
+The protected exploration block appears once, earlier in the same focused task, with version `focused-exploration-v2`. It asks for distinct value exchanges and participant behavior before the primary tactic is selected, distinguishes structural changes from renamed concierge/reseller programs, and preserves grounded, adjacent and bold options with separate uncertainty dimensions. The duplicate bold paragraph was consolidated into that block. No Livoform-specific answer, new agent, provider, dependency, timing change or runtime model switch was added.
+
+Verification: the new feedback case failed before the fix and passed afterward. The ten-file focused/permission command below initially returned 166 passes plus one stale prompt-version expectation; after updating that expectation, all 94 tests in the three affected files passed (15.41 seconds). The other seven files had passed unchanged. App and Convex `pnpm typecheck`, changed-file ESLint and `git diff --check` passed. These are local/mocked checks, not commercial outcomes.
+
+```sh
+pnpm exec vitest run tests/unit/focused-evidence-review.test.ts tests/unit/focused-plan.test.ts tests/unit/focused-learning.test.ts tests/unit/agent-escalation.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts tests/unit/evaluation-identity.test.ts tests/unit/livoform-launch-input.test.ts tests/unit/strategy-prompt-cost.test.ts
+pnpm exec vitest run tests/unit/focused-evidence-review.test.ts tests/unit/agent-escalation.test.ts tests/convex/focused-plan.test.ts
+pnpm typecheck
+```
+
+Paid retest `launch-quality-v5-20261117` uses the same frozen public-source/owner-report evidence and unchanged runtime model. Its result must be inspected separately before claiming a quality improvement. The pre-run cumulative charged/held total was $61.841945 of $100.
+
 ## Confirmed gaps
 
 The approved public launch acceptance failed quality at 3.75/5. Inspecting its actual output found unsupported qualitative business-state and comparative claims despite a passing automated truth gate and no lint findings. Its next-step workload, paid-value reasoning, alternative comparison, exposure handling and originality also needed improvement. The original run remains unchanged; see [acceptance audit](public-launch-acceptance-audit.md).

@@ -404,7 +404,7 @@ it("runs the real focused path with a matching quote, reuses bound research and 
   expect(saved.plan.expert?.strategyExploration).toMatchObject({
     grounded: { title: "Review one past handoff" }, adjacent: { title: "Borrow a production call sheet" },
     bold: { title: "Become known for the brief you decline", precedentIds: [], evidenceStrength: "low", feasibility: "low" },
-    requestedRange: "balanced", promptVersion: "focused-exploration-v1", promptHash: expect.stringMatching(/^[a-f0-9]{64}$/), inputHash: expect.stringMatching(/^[a-f0-9]{64}$/), retrievedPrecedentIds: expect.any(Array),
+    requestedRange: "balanced", promptVersion: "focused-exploration-v2", promptHash: expect.stringMatching(/^[a-f0-9]{64}$/), inputHash: expect.stringMatching(/^[a-f0-9]{64}$/), retrievedPrecedentIds: expect.any(Array),
   });
   expect(JSON.stringify(state.requests[0].messages)).toContain("PROTECTED STRATEGY EXPLORATION");
   expect(JSON.stringify(state.requests[0].messages)).toContain("BOUNDED CREATIVE PRECEDENT RETRIEVAL");

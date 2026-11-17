@@ -1,3 +1,7 @@
+## 17 November — preserve strategy critique through revision
+
+`v3.157-strategy-review-continuity`: forward recognized per-criterion fixes that the short summary omitted; distinguish a complete prepared text asset from a live/tested service; explore distinct value exchanges before selecting the primary move. Protected grounded/adjacent/bold options remain visible and unranked by a combined score. Relevant local and permission tests, typechecks and lint passed; paid Livoform acceptance remains pending. [Audit](focused-evidence-review-audit.md). No runtime model change or external business action.
+
 ## 17 November — acceptance remains open after fourth run
 
 Four verified batches are pushed. v3 passed the automated rubric but not an independent overall-quality claim; v4 retained its failed first draft after an overlength optional revision. Complete results, costs and concrete remaining acceptance tasks are in the [focused evidence review audit](focused-evidence-review-audit.md). Cumulative charged/held: $61.841945 / $100. Astra was requested for deeper Codex engineering/design work; no runtime provider/model change, deployment or business action occurred.

@@ -50,17 +50,19 @@ describe("focused review evidence integrity", () => {
   });
 });
 
-async function runReview(options: { invalidQuote?: boolean; skipFinalReview?: boolean } = {}) {
+async function runReview(options: { invalidQuote?: boolean; skipFinalReview?: boolean; criterionOnlyFeedback?: boolean } = {}) {
   let calls = 0, reviews = 0;
+  const revisionMessages: string[] = [];
   const spec: AgentSpec<typeof output> = {
     id: "growth_strategy", label: "Synthetic focused strategy", role: "cmo", skills: [], schema: z.object({ summary: z.string() }), rubric,
     models: { research: "gpt-6-luna", draft: "gpt-6-luna", critic: "gpt-6-luna" }, effort: { research: "low", draft: "low", critic: "low" },
-    maxTokens: { research: 100, draft: 100, critic: 100 }, maxRevisions: options.skipFinalReview ? 1 : 0, skipFinalReview: options.skipFinalReview,
+    maxTokens: { research: 100, draft: 100, critic: 100 }, maxRevisions: options.skipFinalReview || options.criterionOnlyFeedback ? 1 : 0, skipFinalReview: options.skipFinalReview,
   };
   const deps: AgentDeps = {
     turn: async req => {
       calls++;
       const isReview = req.system.some(block => block.text.includes("HARD GATES"));
+      if (!isReview && calls > 1) revisionMessages.push(JSON.stringify(req.messages));
       let value: unknown = output;
       if (isReview) {
         reviews++;
@@ -68,13 +70,19 @@ async function runReview(options: { invalidQuote?: boolean; skipFinalReview?: bo
         if (options.invalidQuote) rows[0].claims[0].quote = "A sentence not present in this version.";
         value = review(rows);
         if (options.skipFinalReview && reviews === 1) (value as CritiqueResult).scores.forEach(score => { score.score = 3; });
+        if (options.criterionOnlyFeedback && reviews === 1) {
+          const critique = value as CritiqueResult;
+          critique.scores[0] = { id: "F1", score: 3, note: "The two options use the same exchange.", fix: "Change who receives value and explain the reason they would invite the buyer." };
+          critique.fixes = ["Make the next step clear."];
+          critique.strengths = ["Keep the worked example and its approval dependency."];
+        }
       }
       return { ok: true, output: value, text: JSON.stringify(value), appended: [], usage: { ...ZERO_USAGE, calls: 1 }, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" };
     },
     phase: async (_key, _label, work) => (await work()).value,
   };
   const result = await runAgent(spec, { task: "Propose a private test", brief: "Audience availability is unknown.", facts: [] }, deps);
-  return { result, calls, reviews };
+  return { result, calls, reviews, revisionMessages };
 }
 
 it("checks the review quote against the exact draft instead of trusting an invented citation", async () => {
@@ -86,5 +94,14 @@ it("checks the review quote against the exact draft instead of trusting an inven
 it("re-reviews a changed focused draft even when the generic fast-review shortcut is enabled", async () => {
   const { result, reviews, calls } = await runReview({ skipFinalReview: true });
   expect(reviews).toBe(2); expect(calls).toBe(4);
+  expect(result.assessment?.ship).toBe(true);
+});
+
+it("delivers a failed criterion's concrete reasoning and fix even when the top-level fixes omit it", async () => {
+  const { revisionMessages, result } = await runReview({ criterionOnlyFeedback: true });
+  expect(revisionMessages).toHaveLength(1);
+  expect(revisionMessages[0]).toContain("The two options use the same exchange.");
+  expect(revisionMessages[0]).toContain("Change who receives value and explain the reason they would invite the buyer.");
+  expect(revisionMessages[0]).toContain("Keep the worked example and its approval dependency.");
   expect(result.assessment?.ship).toBe(true);
 });

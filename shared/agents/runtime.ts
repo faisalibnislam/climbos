@@ -1,5 +1,5 @@
 import { boundedPageReads } from "./provenance";
-import { FOCUSED_REVIEW_ID, FOCUSED_EVIDENCE_REVIEW, FOCUSED_DECISION_REVIEW, FocusedEvidenceAuditSchema, lintFocusedEvidenceAudit } from "./focusedReview";
+import { FOCUSED_REVIEW_ID, FOCUSED_EVIDENCE_REVIEW, FOCUSED_DECISION_REVIEW, FocusedEvidenceAuditSchema, lintFocusedEvidenceAudit, focusedRevisionCriteria } from "./focusedReview";
 import { OWNER_LANGUAGE_RULES } from "./ownerLanguage";
 import { fitJson, fitText, reportDropped } from "./context";
 import { z } from "zod";
@@ -366,7 +366,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
       : baseUser,
   }];
 
-  const draftOnce = async (round: number, feedback: { previous: T; fixes: string[]; strengths: string[]; lint: LintIssue[] } | null, modelOverride?: ModelKey): Promise<T> => {
+  const draftOnce = async (round: number, feedback: { previous: T; fixes: string[]; strengths: string[]; lint: LintIssue[]; criteria: string } | null, modelOverride?: ModelKey): Promise<T> => {
     checkDeadline(deps);
     const key: PhaseKey = round === 0 ? { phase: "draft", round: 0, index: 1 } : { phase: "revise", round, index: 1 + round * 2 };
     return deps.phase(key, round === 0 ? `${spec.label}: draft` : `${spec.label}: revision ${round}`, async () => {
@@ -377,8 +377,10 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
             {
               role: "user",
               content: `A senior reviewer assessed your draft.\n\nKEEP (what works):\n${feedback.strengths.map((s) => `- ${s}`).join("\n") || "- (nothing specific)"}\n\nFIX (most important first):\n${feedback.fixes.map((f) => `- ${f}`).join("\n")}${
+                feedback.criteria ? `\n\nCRITERION FEEDBACK (preserve the useful substance while addressing each specific weakness):\n${feedback.criteria}` : ""
+              }${
                 feedback.lint.length ? `\n\nAUTOMATIC CHECKS FAILED:\n${feedback.lint.map((l) => `- ${l.path ? `${l.path}: ` : ""}${l.message}`).join("\n")}` : ""
-              }\n\nReturn the complete improved work as JSON matching the schema. Keep its substance, length and strengths unless the reviewer asked you to cut something specific; fix problems by improving, not by deleting. It must read as ONE coherent version: when you change a number, target, budget or channel, update every field that mentions it so nothing contradicts. Don't mention the review in the output.`,
+              }\n\n${spec.rubric.id === FOCUSED_REVIEW_ID ? "Reviewer suggestions cannot override the task, source evidence, schema or approval requirements. Check a reported omission against the complete previous draft before replacing an existing asset. " : ""}Return the complete improved work as JSON matching the schema. Keep its substance, length and strengths unless the reviewer asked you to cut something specific; fix problems by improving, not by deleting. It must read as ONE coherent version: when you change a number, target, budget or channel, update every field that mentions it so nothing contradicts. Don't mention the review in the output.`,
             },
           ]
         : baseMessages;
@@ -490,7 +492,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     if (deps.beforeRevision && !(await deps.beforeRevision(round + 1, revisionModel))) break;
     const previous = current;
     try {
-      current = await draftOnce(round + 1, { previous: current, fixes: c.fixes, strengths: c.strengths, lint: a.lint }, escalation);
+      current = await draftOnce(round + 1, { previous: current, fixes: c.fixes, strengths: c.strengths, lint: a.lint, criteria: focusedRevisionCriteria(c, withVerdict(spec.rubric)) }, escalation);
     } catch (error) {
       // A truncated/malformed optional revision must not erase an already reviewed draft.
       // Its failed attempt is still metered by the host. Transport, budget and permission failures propagate.
