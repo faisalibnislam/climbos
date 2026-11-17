@@ -1,3 +1,7 @@
+## 17 November 2026 — exact paid evaluation reuse
+
+Harness-only change: **20 tests in six files passed (0.664 seconds)**, plus typecheck and ESLint. Changed/legacy cached evaluation identity now fails before another provider request or overwrite. Historical failures and all budget holds remain intact. [Audit and commands](growth-engine/evaluation-cache-identity-audit.md).
+
 ## 17 November 2026 — declined alternatives and capacity wording
 
 [Audit and commands](growth-engine/offer-alternative-classification-audit.md). Engine `v3.152-offer-alternative-classification`: **296 tests in ten files passed (13.99 seconds)**; typecheck, changed-file ESLint and diff checks passed. Unchanged v5 retail output is now lint-clean but its failed quality assessment remains unchanged. No execution authority was added.

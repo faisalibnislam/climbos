@@ -14,3 +14,9 @@ Current primary references: [Luna model](https://developers.openai.com/api/docs/
 
 
 `pnpm strategy:quality --confirm-paid --social` runs two editable posts for each of LinkedIn, Instagram, Facebook, X, TikTok, Pinterest and YouTube using frozen synthetic repair-kit facts and the shared production social task. It uses the same cumulative ledger and cap. No content is published. See [the dated results](RESULTS-2026-11-09.md); passing the schema is not a quality pass.
+
+### Paid result reuse
+
+The Anthropic harness now stores an evaluation identity covering the selected code fingerprint, engine, case/run name, complete input (including evaluation clock and creative retrieval query), and serializable agent settings. An existing variant is reused only when that identity matches. Changed or legacy records fail before a new provider call and remain untouched; choose a new variant for a fresh evaluation. Explicit historical comparison stages still read the named historical record as historical evidence.
+
+This is deliberately strict: a newly constructed current clock changes the identity even on the same date. Reuse is not a fresh validation, and a below-bar result stays below bar. The selected-file fingerprint is not a full dependency manifest or a semantic correctness check. No ledger, cost hold, retry policy or provider authorization is changed.

@@ -1,3 +1,7 @@
+## 17 November — paid evaluation cache identity
+
+Harness reuse now requires exact code/input/configuration identity, preserving legacy records and refusing silent stale reuse. Twenty tests, typecheck and lint passed. [Audit](evaluation-cache-identity-audit.md). No runtime behavior or paid-call authority changed.
+
 ## 17 November — offer alternatives and plain-language capacity
 
 `v3.152-offer-alternative-classification`: rejected comparison offers no longer masquerade as selected promotions; staffing/stock/floor-space unknowns count as capacity uncertainty. 296 tests passed. [Audit](offer-alternative-classification-audit.md); [paid follow-up failures and costs](../Strategy-Quality-2026-11-17.md). No strategy-quality pass claim.

@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+Paid QA now rejects reuse of a variant whose code, input or agent settings no longer match. Choose a new variant after changes; historical outputs and failed reviews are never silently upgraded. [Audit](growth-engine/evaluation-cache-identity-audit.md).
+
 Offer checks distinguish narrowly worded rejected alternatives (“safer than a discount”) from proposed promotions and recognize staffing, stock and floor-space unknowns. Affirmative offers and approval controls still apply. [Audit](growth-engine/offer-alternative-classification-audit.md).
 
 Creative precedent mechanisms now come from the saved business goal, summary and facts, separately from generated task instructions. Writers, reviewers, reference checks and saved IDs share that query. No match still allows original grounded, adjacent and bold exploration. [Audit and limits](growth-engine/business-precedent-query-audit.md).
