@@ -1,3 +1,14 @@
+## 17 November 2026 — workspace-day follow-up checks
+
+Calendar-date CRM input, timezone-aware overdue checks, valid stage-age evidence and consistent board/Today/assistant context are described in the [audit](growth-engine/pipeline-follow-up-date-audit.md).
+
+- `pnpm exec vitest run tests/unit/deal-attention.test.tsx tests/convex/pipeline-follow-up-dates.test.ts tests/convex/pipeline-assistant-context.test.ts tests/convex/pipeline-deal-review.test.ts tests/convex/crm-loss-reasons.test.ts tests/convex/crm.test.ts tests/convex/bookings.test.ts tests/convex/booking-outcome-boundary.test.ts tests/convex/outbound.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts tests/unit/climb-tool-output.test.ts` — 69 passed across twelve files, 6.32 seconds.
+- `CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env E2E_BASE_URL=http://127.0.0.1:3420 pnpm exec playwright test e2e/pipeline-dates.spec.ts e2e/pipeline-review.spec.ts --workers=1` — four desktop/mobile checks passed, 42.9 seconds. Honolulu browser versus Dhaka workspace; date save/reopen/clear, unchanged stage age, no consequential records, existing editable review flow preserved. No horizontal overflow or serious/critical automated accessibility findings; mobile date-editor capture visually inspected.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint shared/growth/pipeline.ts convex/crm.ts convex/inbox.ts convex/schema.ts convex/lib/climbTools.ts 'src/app/app/[organization]/pipeline/page.tsx' src/components/app/pipeline/DealAttentionBadges.tsx src/components/app/today/HomeCards.tsx tests/unit/deal-attention.test.tsx tests/convex/pipeline-follow-up-dates.test.ts tests/convex/bookings.test.ts e2e/pipeline-dates.spec.ts` — passed after the final UI wording/label correction.
+
+Initial browser scans failed on the added picker accessible-name override; removing it restored the existing labeling and all four checks passed. The final extra bounded-read regression passed in the twelve-file run. Query-time attention is not continuous monitoring; live model advice, full accessibility, multiple-booking association and full sales learning remain unverified/incomplete. Only the isolated loopback backend was synced. No hosted deployment, live send, scheduling, spend or model switch.
+
 ## 17 November 2026 — booking outcome and follow-up boundary
 
 Outcome recording no longer queues or claims a no-show email. Owner corrections, attributed CRM notes, private manual drafts and historical-send uncertainty are covered by the [audit](growth-engine/booking-outcome-boundary-audit.md).

@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
-import { DEAL_VALUE_VERSION, isDealTimestamp, dealValueMinor, dealValueNeedsReview, summarizeDealValues } from "../shared/growth/pipeline";
+import { DEAL_VALUE_VERSION, dealAttention, dealDueDate, dealTimezone, isDealDate, isDealTimestamp, dealValueMinor, dealValueNeedsReview, summarizeDealValues } from "../shared/growth/pipeline";
 import { minorToMajor } from "../shared/economics/currency";
 import { sha256Hex } from "../shared/policy";
 import { audit } from "./lib/audit";
@@ -38,17 +38,18 @@ export async function syncDealFromProspect(ctx: MutationCtx, p: Doc<"prospects">
   const now = Date.now();
   const existing = await ctx.db.query("deals").withIndex("by_prospect", (q) => q.eq("prospectId", p._id)).first();
   if (existing) {
+    assertSameOrg(existing, p.orgId, "deal");
     if (existing.stage === "won" || existing.stage === "lost" || ORDER[stage] <= ORDER[existing.stage]) return existing._id;
     await ctx.db.patch(existing._id, { stage, stageChangedAt: now, updatedAt: now, notes: note ? [...existing.notes, { text: note, at: now }] : existing.notes });
     return existing._id;
   }
-  return ctx.db.insert("deals", { orgId: p.orgId, name: p.company, company: p.company, email: p.publicEmail, stage, source, prospectId: p._id, currency: await currencyOf(ctx, p.orgId), notes: note ? [{ text: note, at: now }] : [], createdAt: now, updatedAt: now });
+  return ctx.db.insert("deals", { orgId: p.orgId, name: p.company, company: p.company, email: p.publicEmail, stage, stageChangedAt: now, source, prospectId: p._id, currency: await currencyOf(ctx, p.orgId), notes: note ? [{ text: note, at: now }] : [], createdAt: now, updatedAt: now });
 }
 
 /** A booking from someone who wasn't a prospect: a new "booked" deal. */
 export async function dealFromBooking(ctx: MutationCtx, orgId: Id<"organizations">, name: string, company: string | undefined, startAt: number) {
   const now = Date.now();
-  await ctx.db.insert("deals", { orgId, name, company, stage: "booked", source: "booking", currency: await currencyOf(ctx, orgId), notes: [{ text: "Booked a call from your booking page.", at: now }], nextStep: "Call", nextStepAt: startAt, createdAt: now, updatedAt: now });
+  await ctx.db.insert("deals", { orgId, name, company, stage: "booked", stageChangedAt: now, source: "booking", currency: await currencyOf(ctx, orgId), notes: [{ text: "Booked a call from your booking page.", at: now }], nextStep: "Call", nextStepAt: startAt, createdAt: now, updatedAt: now });
 }
 
 /** A cancelled call: its deal goes back to "talking" and its prospect back to "replied". */
@@ -57,13 +58,13 @@ export async function bookingCancelled(ctx: MutationCtx, b: Doc<"bookings">, not
   const deal = b.prospectId
     ? await ctx.db.query("deals").withIndex("by_prospect", (q) => q.eq("prospectId", b.prospectId)).first()
     : (await ctx.db.query("deals").withIndex("by_org_stage", (q) => q.eq("orgId", b.orgId).eq("stage", "booked")).take(200)).find((d) => d.source === "booking" && d.name === b.name && d.nextStepAt === b.startAt);
-  if (deal?.stage === "booked") await ctx.db.patch(deal._id, { stage: "talking", nextStep: undefined, nextStepAt: undefined, notes: [...deal.notes, { text: note, at: now }], updatedAt: now });
+  if (deal?.orgId === b.orgId && deal.stage === "booked") await ctx.db.patch(deal._id, { stage: "talking", stageChangedAt: now, nextStep: undefined, nextStepAt: undefined, nextStepDate: undefined, notes: [...deal.notes, { text: note, at: now }], updatedAt: now });
   const p = b.prospectId ? await ctx.db.get(b.prospectId) : null;
-  if (p?.stage === "booked") await ctx.db.patch(p._id, { stage: "replied", stageUpdatedAt: now, updatedAt: now });
+  if (p?.orgId === b.orgId && p.stage === "booked") await ctx.db.patch(p._id, { stage: "replied", stageUpdatedAt: now, updatedAt: now });
 }
 
-function view(d: Doc<"deals">) {
-  return { id: d._id, name: d.name, company: d.company ?? null, email: d.email ?? null, stage: d.stage, source: d.source, value: dealValueNeedsReview(d) ? null : d.valueMinor ?? null, valueNeedsReview: dealValueNeedsReview(d), currency: d.currency, notes: d.notes.slice(-20), nextStep: d.nextStep ?? null, nextStepAt: isDealTimestamp(d.nextStepAt) ? d.nextStepAt : null, lostReason: d.lostReason ?? null, lostReasonNote: d.lostReasonNote ?? null, lostAt: d.lostAt ?? null, stageChangedAt: d.stageChangedAt ?? null, updatedAt: d.updatedAt, createdAt: d.createdAt };
+function view(d: Doc<"deals">, now: number, timezone: string | null) {
+  return { attention: dealAttention(d, now, timezone), dueDate: dealDueDate(d, timezone), nextStepDate: isDealDate(d.nextStepDate) ? d.nextStepDate : null, id: d._id, name: d.name, company: d.company ?? null, email: d.email ?? null, stage: d.stage, source: d.source, value: dealValueNeedsReview(d) ? null : d.valueMinor ?? null, valueNeedsReview: dealValueNeedsReview(d), currency: d.currency, notes: d.notes.slice(-20), nextStep: d.nextStep ?? null, nextStepAt: isDealTimestamp(d.nextStepAt) ? d.nextStepAt : null, lostReason: d.lostReason ?? null, lostReasonNote: d.lostReasonNote ?? null, lostAt: d.lostAt ?? null, stageChangedAt: d.stageChangedAt ?? null, updatedAt: d.updatedAt, createdAt: d.createdAt };
 }
 
 export const list = query({
@@ -77,8 +78,11 @@ export const list = query({
     const won = summarizeDealValues(rows.filter(d => d.stage === "won"), currency, hasMore);
     const open = rows.filter(d => d.stage !== "won" && d.stage !== "lost");
     const pipeline = summarizeDealValues(open, currency, hasMore);
+    const timezone = dealTimezone(org.timezone);
+    const observedAt = Date.now();
     return {
-      deals: rows.map(view),
+      timezone, observedAt,
+      deals: rows.map(d => view(d, observedAt, timezone)),
       hasMore,
       valuesByStage: Object.fromEntries(STAGES.map(stage => [stage, summarizeDealValues(rows.filter(d => d.stage === stage), currency, hasMore)])),
       totals: { open: open.length, wonValue: won.totalMinor, pipelineValue: pipeline.totalMinor, currency, won, pipeline },
@@ -105,7 +109,7 @@ export const detail = query({
     return {
       view: "deal" as const, version, valueUnit: "major_currency_units" as const,
       evidenceKind: "recorded_crm_context" as const, valueEvidenceKind: "owner_reported" as const,
-      deal: { id: d._id, name: d.name, company: d.company ?? null, stage: d.stage, source: d.source, currency: d.currency, value: needsReview || d.valueMinor === undefined ? null : minorToMajor(d.valueMinor, d.currency), valueNeedsReview: needsReview, nextStep: d.nextStep ?? null, nextStepAt: date(d.nextStepAt, true), stageChangedAt: date(d.stageChangedAt), wonAt: date(d.wonAt), lostAt: date(d.lostAt), lostReason: d.lostReason ?? null, lostReasonNote: d.lostReasonNote ?? null, updatedAt: date(d.updatedAt) },
+      deal: { id: d._id, name: d.name, company: d.company ?? null, stage: d.stage, source: d.source, currency: d.currency, value: needsReview || d.valueMinor === undefined ? null : minorToMajor(d.valueMinor, d.currency), valueNeedsReview: needsReview, nextStep: d.nextStep ?? null, nextStepAt: date(d.nextStepAt, true), nextStepDate: isDealDate(d.nextStepDate) ? d.nextStepDate : null, timezone: dealTimezone(org.timezone), attention: dealAttention(d, now, org.timezone), stageChangedAt: date(d.stageChangedAt), wonAt: date(d.wonAt), lostAt: date(d.lostAt), lostReason: d.lostReason ?? null, lostReasonNote: d.lostReasonNote ?? null, updatedAt: date(d.updatedAt) },
       notes: d.notes.slice(start, end).map((n, offset) => ({ index: start + offset, text: n.text, recordedAt: date(n.at), basis: n.userId ? "owner_reported" as const : "recorded_context" as const })).reverse(),
       noteCoverage: { stored: d.notes.length, returned: end - start, nextBefore: start > 0 ? start : null, latestPage: end === d.notes.length },
       limitations: "Notes are saved CRM context, not a verified transcript or verbatim buyer statements. Entries without an author may be automated or imported. Dates record entry time, not necessarily conversation time. Earlier history may have been dropped by the 200-note retention limit. Read relevant earlier pages before concluding that evidence is absent. Entry source is not acquisition attribution. Stages, values and notes do not prove qualification, willingness to buy or payment, and are not permission to contact. Missing or invalid dates remain unknown. Review advice does not send, schedule, change this deal or approve anything.",
@@ -144,6 +148,7 @@ export const update = mutation({
     expectedCurrency: v.optional(v.string()),
     nextStep: v.optional(v.union(v.string(), v.null())),
     nextStepAt: v.optional(v.union(v.number(), v.null())),
+    nextStepDate: v.optional(v.union(v.string(), v.null())),
     note: v.optional(v.string()),
     name: v.optional(v.string()),
     company: v.optional(v.string()),
@@ -171,9 +176,16 @@ export const update = mutation({
       patch.valueVersion = DEAL_VALUE_VERSION;
     }
     if (a.nextStep !== undefined) patch.nextStep = a.nextStep?.trim().slice(0, 200) || undefined;
+    if (a.nextStepDate !== undefined && a.nextStepAt !== undefined) throw appError("INVALID", "Choose either a calendar date or an appointment time, not both.");
+    if (a.nextStepDate !== undefined) {
+      if (a.nextStepDate !== null && !isDealDate(a.nextStepDate)) throw appError("INVALID", "Choose a valid calendar date, or leave it unknown.");
+      patch.nextStepDate = a.nextStepDate ?? undefined;
+      patch.nextStepAt = undefined;
+    }
     if (a.nextStepAt !== undefined) {
       if (a.nextStepAt !== null && !isDealTimestamp(a.nextStepAt)) throw appError("INVALID", "Choose a valid next-step date, or leave it unknown.");
       patch.nextStepAt = a.nextStepAt ?? undefined;
+      patch.nextStepDate = undefined;
     }
     if (a.note?.trim()) patch.notes = [...d!.notes, { text: a.note.trim().slice(0, 2000), at: now, userId: user._id }].slice(-200);
     const finalStage = a.stage ?? d!.stage;

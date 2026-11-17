@@ -76,6 +76,7 @@ export function NeedsYouCard({ slug, data }: { slug: string; data: Today }) {
   const items: { key: string; title: string; href: string; action: string }[] = [];
   if (data.strategy?.status === "needs_approval") items.push({ key: "plan", title: "Review your new plan", href: `/app/${slug}/plan`, action: "Review" });
   if (attention?.inboxOpen) items.push({ key: "inbox", title: `${attention.inboxOpen} message${attention.inboxOpen === 1 ? "" : "s"} to answer`, href: `/app/${slug}/inbox`, action: "Reply" });
+  if (attention && (attention.overdueDeals || attention.stalledDeals)) items.push({ key: "customer-progress", title: [attention.overdueDeals ? `${attention.dealAttentionPartial ? "At least " : ""}${attention.overdueDeals} next step${attention.overdueDeals === 1 ? "" : "s"} overdue` : "", attention.stalledDeals ? `${attention.dealAttentionPartial ? "At least " : ""}${attention.stalledDeals} customer record${attention.stalledDeals === 1 ? "" : "s"} to review for stage age` : ""].filter(Boolean).join("; "), href: `/app/${slug}/pipeline`, action: "Review" });
   for (const r of data.recent) if (r.status === "failed" && !r.replaced) items.push({ key: `run-${r.id}`, title: `Didn't finish: ${r.title}`, href: `/app/${slug}/work/${r.id}`, action: "Fix" });
   for (const n of data.next) if (n.kind !== "plan" || data.strategy?.status !== "needs_approval") items.push({ key: `next-${n.href}-${n.title}`, title: n.title, href: n.href, action: n.kind === "approvals" ? "Review" : "Open" });
   const shown = items.slice(0, 4);

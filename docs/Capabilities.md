@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Sales follow-up dates now stay as calendar dates when selected by the owner. Overdue checks use the configured workspace timezone; malformed, conflicting or unknown timing stays unknown. Customer progress, Today and assistant context share these checks, while stage-age prompts remain review heuristics. Editing a next-step date does not reschedule a booking or send anything. See [the audit](growth-engine/pipeline-follow-up-date-audit.md).
+
 Booking attendance can now be recorded and corrected without sending an email. A missed call offers an editable draft for manual review and copying; historical follow-up markers are explicitly unverified. Recording attendance preserves the deal’s stage and next step. This is not automatic follow-up or an in-app sending integration. See [the audit](growth-engine/booking-outcome-boundary-audit.md).
 
 Customer progress now offers **Review next step**: prepare an editable assistant question about the selected customer. The assistant can read that record’s saved notes, dates, loss reason and next step, with version-bound access to earlier notes. The shortcut submits nothing; advice does not contact the customer or change the deal. Notes are recorded context, not verified transcripts or proof of qualification. See [the audit](growth-engine/selected-deal-review-audit.md).

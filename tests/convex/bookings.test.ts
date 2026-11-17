@@ -32,6 +32,7 @@ describe("booked calls: reminders, guest cancel, no-shows", () => {
     await t.mutation(api.bookings.cancelByGuest, { token });
     expect((await t.query(api.bookings.manageView, { token }))?.status).toBe("cancelled");
     expect(await t.query(internal.bookings.dueReminders, {})).toEqual([]);
+    expect((await owner.client.query(api.crm.list, { slug })).deals.find(d => d.name === "Ana")).toMatchObject({ stage: "talking", stageChangedAt: Date.now(), nextStepAt: null, nextStepDate: null });
 
     // A second booking that's missed.
     vi.setSystemTime(new Date("2026-10-19T08:00:00Z"));

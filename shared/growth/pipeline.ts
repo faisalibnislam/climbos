@@ -172,25 +172,54 @@ export function pipelineOutcomesBrief(p: PipelineOutcomes): string {
 /** Review prompts, not judgments: open deals with no stage change for this many days are surfaced to the owner. */
 export const STALLED_AFTER_DAYS = { lead: 21, talking: 14, booked: 14 } as const;
 
+/** Calendar dates are separate from appointment instants; never infer a browser timezone. */
+export function isDealDate(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const ms = Date.parse(`${value}T00:00:00Z`);
+  return Number.isFinite(ms) && new Date(ms).toISOString().slice(0, 10) === value;
+}
+
+export function dealTimezone(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try { new Intl.DateTimeFormat("en-US", { timeZone: value }).format(0); return value; } catch { return null; }
+}
+
+export function dealLocalDate(ms: unknown, timezone: string | null | undefined): string | null {
+  if (!isDealTimestamp(ms) || !dealTimezone(timezone)) return null;
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: timezone!, year: "numeric", month: "2-digit", day: "2-digit", era: "short" }).formatToParts(ms);
+  const part = (type: string) => parts.find(p => p.type === type)?.value;
+  const date = `${part("year")?.padStart(4, "0")}-${part("month")}-${part("day")}`;
+  return part("era") === "AD" && isDealDate(date) ? date : null;
+}
+
+type AttentionDeal = { stage: PipelineDeal["stage"]; nextStepAt?: number | null; nextStepDate?: string | null; stageChangedAt?: number | null };
+export function dealDueDate(d: Pick<AttentionDeal, "nextStepAt" | "nextStepDate">, timezone: string | null | undefined): string | null {
+  if (d.nextStepDate != null) return isDealDate(d.nextStepDate) && d.nextStepAt == null ? d.nextStepDate : null;
+  return dealLocalDate(d.nextStepAt, timezone);
+}
+
 export interface DealAttention {
-  /** The next step's date has fully passed. */
+  /** The next step's calendar date has passed in the configured workspace timezone. */
   overdue: boolean;
-  /** Days since the last stage change when it passed the review threshold; null when not stalled or unknown. */
+  /** Elapsed 24-hour days since the recorded stage change; a review policy, not buyer intent. */
   stalledDays: number | null;
-  /** Older deals have no stage-change time, so their stage age is unknown (never assumed stalled). */
   stageAgeKnown: boolean;
+  /** A date is recorded but cannot be assessed (invalid/conflicting dates, clock or timezone). */
+  nextStepTimingUnknown: boolean;
 }
 
-export function dealAttention(d: { stage: PipelineDeal["stage"]; nextStepAt?: number | null; stageChangedAt?: number | null }, nowMs: number): DealAttention {
-  if (d.stage === "won" || d.stage === "lost") return { overdue: false, stalledDays: null, stageAgeKnown: true };
-  const overdue = typeof d.nextStepAt === "number" && d.nextStepAt + DAY < nowMs;
-  if (typeof d.stageChangedAt !== "number") return { overdue, stalledDays: null, stageAgeKnown: false };
-  const days = Math.floor((nowMs - d.stageChangedAt) / DAY);
-  return { overdue, stalledDays: days >= STALLED_AFTER_DAYS[d.stage] ? days : null, stageAgeKnown: true };
+export function dealAttention(d: AttentionDeal, nowMs: number, timezone?: string | null): DealAttention {
+  if (d.stage === "won" || d.stage === "lost") return { overdue: false, stalledDays: null, stageAgeKnown: true, nextStepTimingUnknown: false };
+  const today = dealLocalDate(nowMs, timezone);
+  const due = dealDueDate(d, timezone);
+  const nextStepTimingUnknown = (d.nextStepAt != null || d.nextStepDate != null) && (!today || !due);
+  const overdue = Boolean(today && due && due < today);
+  const stageAgeKnown = isDealTimestamp(nowMs) && isDealTimestamp(d.stageChangedAt) && d.stageChangedAt <= nowMs;
+  const days = stageAgeKnown ? Math.floor((nowMs - d.stageChangedAt!) / DAY) : null;
+  return { overdue, stalledDays: days !== null && days >= STALLED_AFTER_DAYS[d.stage] ? days : null, stageAgeKnown, nextStepTimingUnknown };
 }
 
-export function pipelineAttention(deals: readonly { stage: PipelineDeal["stage"]; nextStepAt?: number | null; stageChangedAt?: number | null }[], nowMs: number): { overdue: number; stalled: number; stageAgeUnknown: number } {
-  const rows = deals.map((d) => dealAttention(d, nowMs));
-  const open = deals.map((d, i) => ({ d, a: rows[i] })).filter(({ d }) => d.stage !== "won" && d.stage !== "lost");
-  return { overdue: open.filter(({ a }) => a.overdue).length, stalled: open.filter(({ a }) => a.stalledDays !== null).length, stageAgeUnknown: open.filter(({ a }) => !a.stageAgeKnown).length };
+export function pipelineAttention(deals: readonly AttentionDeal[], nowMs: number, timezone?: string | null): { overdue: number; stalled: number; stageAgeUnknown: number; nextStepTimingUnknown: number } {
+  const open = deals.filter(d => d.stage !== "won" && d.stage !== "lost").map(d => dealAttention(d, nowMs, timezone));
+  return { overdue: open.filter(a => a.overdue).length, stalled: open.filter(a => a.stalledDays !== null).length, stageAgeUnknown: open.filter(a => !a.stageAgeKnown).length, nextStepTimingUnknown: open.filter(a => a.nextStepTimingUnknown).length };
 }

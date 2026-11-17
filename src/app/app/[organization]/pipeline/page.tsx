@@ -14,7 +14,7 @@ import { Badge, Button, ConfirmDialog, DatePicker, EmptyState, Field, Input, Sel
 import { LossReasonFields } from "@/components/app/pipeline/LossReasonFields";
 import { DealReviewButton } from "@/components/app/pipeline/DealReviewButton";
 import { DealAttentionBadges } from "@/components/app/pipeline/DealAttentionBadges";
-import { dealAttention, dealValueSummaryLabel, formatDealValue } from "@shared/growth/pipeline";
+import { dealValueSummaryLabel, formatDealValue } from "@shared/growth/pipeline";
 import { minorToMajor } from "@shared/economics/currency";
 
 /** "1200" or "1200.50" → 1200.5; anything else ("1.2.3") → NaN. */
@@ -41,8 +41,6 @@ export default function PipelinePage() {
   const data = useQuery(api.crm.list, { slug });
   const update = useMutation(api.crm.update);
   const [openId, setOpenId] = useState<Id<"deals"> | null>(null);
-  // One clock per page view keeps overdue and stalled labels stable while the board re-renders.
-  const [now] = useState(() => Date.now());
   const open = data?.deals.find((d) => d.id === openId) ?? null;
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
@@ -61,6 +59,7 @@ export default function PipelinePage() {
         />
       ) : null}
       {data?.deals.length ? <p className="text-sm text-ink-2">Values are owner-reported, not confirmed payments or a sales forecast. Currencies stay separate; missing or unconfirmed amounts are excluded from recorded subtotals.{data.hasMore ? " Showing the newest 500 records only; older records and values are omitted." : ""}</p> : null}
+      {data?.deals.length ? <p className="text-xs text-ink-2">{data.timezone ? `Next-step dates use ${data.timezone}; overdue means the calendar day has passed.` : "Set a valid workspace timezone to assess overdue next steps."} Stage-age labels are review prompts based on elapsed days, not proof that a buyer has lost interest. Timing reflects the latest data check in this view.</p> : null}
       {data === undefined ? (
         <LoadingBlock label="Loading customer progress…" lines={4} />
       ) : data.deals.length === 0 ? (
@@ -85,8 +84,8 @@ export default function PipelinePage() {
                       {d.company && d.company !== d.name ? <span className="block truncate text-xs text-ink-3">{d.company}</span> : null}
                       <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-ink-3">
                         {d.value !== null ? <span className="font-medium text-ink-2">{money(d.value, d.currency)}</span> : <span>{d.valueNeedsReview ? "Value needs review" : "Value not recorded"}</span>}
-                        {d.nextStepAt ? <span>{d.nextStep ?? "Next"}: {new Date(d.nextStepAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span> : <span>{relativeTime(d.updatedAt)}</span>}
-                        <DealAttentionBadges attention={dealAttention(d, now)} />
+                        {d.dueDate ? <span>{d.nextStep ?? "Next"}: {d.dueDate}</span> : <span>{relativeTime(d.updatedAt)}</span>}
+                        <DealAttentionBadges attention={d.attention} />
                       </span>
                     </button>
                     {NEXT[d.stage] ? (
@@ -102,7 +101,7 @@ export default function PipelinePage() {
         </div>
       )}
       <Sheet open={Boolean(open)} onOpenChange={(o) => !o && setOpenId(null)} title={open?.name ?? "Possible sale"}>
-        {open ? <DealPanel key={`${open.id}:${open.currency}`} slug={slug} d={open} onClose={() => setOpenId(null)} /> : <span />}
+        {open ? <DealPanel key={`${open.id}:${open.currency}`} slug={slug} d={open} timezone={data?.timezone ?? null} onClose={() => setOpenId(null)} /> : <span />}
       </Sheet>
     </div>
   );
@@ -110,14 +109,21 @@ export default function PipelinePage() {
 
 type Deal = NonNullable<ReturnType<typeof useQuery<typeof api.crm.list>>>["deals"][number];
 
-function DealPanel({ slug, d, onClose }: { slug: string; d: Deal; onClose: () => void }) {
+function DealPanel({ slug, d, timezone, onClose }: { slug: string; d: Deal; timezone: string | null; onClose: () => void }) {
   const update = useMutation(api.crm.update);
   const remove = useMutation(api.crm.remove);
   const [value, setValue] = useState(d.value === null ? "" : String(minorToMajor(d.value, d.currency)));
   const [nextStep, setNextStep] = useState(d.nextStep ?? "");
-  const [nextAt, setNextAt] = useState(d.nextStepAt ? new Date(d.nextStepAt).toISOString().slice(0, 10) : "");
+  const [nextAt, setNextAt] = useState(d.dueDate ?? "");
+  const [savingDate, setSavingDate] = useState(false);
   const [note, setNote] = useState("");
   const save = (patch: Parameters<typeof update>[0]) => update(patch).catch((e) => toast({ tone: "danger", title: errorMessage(e) }));
+  const saveDate = async (date: string) => {
+    setSavingDate(true);
+    try { await update({ slug, id: d.id, nextStepDate: date || null }); setNextAt(date); }
+    catch (error) { toast({ tone: "danger", title: errorMessage(error) }); }
+    finally { setSavingDate(false); }
+  };
   return (
     <div className="flex flex-col gap-4">
       <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
@@ -153,9 +159,11 @@ function DealPanel({ slug, d, onClose }: { slug: string; d: Deal; onClose: () =>
           <Input value={nextStep} placeholder="Send proposal" onChange={(e) => setNextStep(e.target.value)} onBlur={() => save({ slug, id: d.id, nextStep: nextStep || null })} />
         </Field>
         <Field label="When">
-          <DatePicker value={nextAt} onChange={(v) => { setNextAt(v ?? ""); save({ slug, id: d.id, nextStepAt: v ? Date.parse(`${v}T09:00:00`) : null }); }} />
+          <DatePicker id="pipeline-next-step-date" value={nextAt} disabled={savingDate} onChange={saveDate} />
+          {nextAt || d.attention.nextStepTimingUnknown ? <Button size="sm" variant="ghost" disabled={savingDate} onClick={() => saveDate("")}>Clear next-step date</Button> : null}
         </Field>
       </div>
+      <p className="text-xs text-ink-2">{timezone ? `Calendar date in ${timezone}. Changing this date does not reschedule a booking or send anything.` : "Calendar date only. Overdue status stays unknown until the workspace timezone is confirmed."}{d.nextStepAt !== null ? " The existing appointment time is displayed as a date in the workspace timezone; saving replaces this CRM next step with a calendar date." : ""}</p>
       <div className="flex flex-col gap-2">
         <p className="text-sm font-medium text-ink">Notes</p>
         {d.notes.length ? (

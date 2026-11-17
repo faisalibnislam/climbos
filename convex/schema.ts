@@ -3045,6 +3045,8 @@ export default defineSchema({
     ),
     nextStep: v.optional(v.string()),
     nextStepAt: v.optional(v.number()),
+    /** Owner-selected calendar date; mutually exclusive with nextStepAt. Compared in workspace timezone. */
+    nextStepDate: v.optional(v.string()),
     wonAt: v.optional(v.number()),
     /** When the deal moved to lost, and the owner-recorded reason (shared/growth/pipeline.ts); unknown when absent. */
     lostAt: v.optional(v.number()),

@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+Latest sales follow-up dates (17 November): added a date-only CRM field, deterministic workspace-day checks, explicit unknown timing and consistent board/Today/assistant context. New automatic deals and cancellation stage transitions retain stage time; date/note edits do not reset it. Legacy instants are not migrated. 69 focused tests and four browser checks passed. [Audit and limits](growth-engine/pipeline-follow-up-date-audit.md). No hosted deployment or new execution authority.
+
 Latest booking follow-up (17 November): recording a no-show no longer queues an email or claims delivery. Attendance corrections are audited; linked CRM notes retain owner attribution without downgrading the deal. The inbox offers an editable manual draft and labels old send markers unverified. Legacy queued no-show actions now return without sending. [Audit and remaining gaps](growth-engine/booking-outcome-boundary-audit.md). No hosted deployment; other booking notifications retain their prior behavior.
 
 Latest selected-deal review (17 November): the customer-progress sheet now prepares an editable, selected-record question. The existing pipeline tool reads exact tenant-scoped notes, loss reasons and dates with version-bound pagination. Malformed new next-step dates are rejected; invalid legacy dates stay unknown. [Audit](growth-engine/selected-deal-review-audit.md) distinguishes verified routing/UI from unverified advice quality and remaining qualification/conversation scope. No hosted deployment or model change.

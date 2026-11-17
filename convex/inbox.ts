@@ -278,14 +278,16 @@ export const attention = query({
     const open = (await ctx.db.query("communityMessages").withIndex("by_org_received", (q) => q.eq("orgId", org._id)).order("desc").take(200)).filter((m) => (OPEN as readonly string[]).includes(m.status));
     const now = Date.now();
     const next = (await ctx.db.query("bookings").withIndex("by_org_start", (q) => q.eq("orgId", org._id).gte("startAt", now)).take(10)).find((b) => b.status === "confirmed");
-    const deals = await ctx.db.query("deals").withIndex("by_org_updated", (q) => q.eq("orgId", org._id)).take(500);
+    const loadedDeals = await ctx.db.query("deals").withIndex("by_org_updated", (q) => q.eq("orgId", org._id)).order("desc").take(501);
+    const deals = loadedDeals.slice(0, 500);
     const openDeals = deals.filter((d) => d.stage !== "won" && d.stage !== "lost");
     return {
       inboxOpen: open.length,
       inboxUnread: open.filter((m) => !m.readAt).length,
       nextCall: next ? { name: next.company ? `${next.name} (${next.company})` : next.name, startAt: next.startAt } : null,
       openDeals: openDeals.length,
-      ...(() => { const a = pipelineAttention(openDeals, now); return { overdueDeals: a.overdue, stalledDeals: a.stalled }; })(),
+      dealAttentionPartial: loadedDeals.length > 500,
+      ...(() => { const a = pipelineAttention(openDeals, now, org.timezone); return { overdueDeals: a.overdue, stalledDeals: a.stalled, dealTimingUnknown: a.nextStepTimingUnknown }; })(),
       pipelineValue: openDeals.reduce((s, d) => s + (d.valueMinor ?? 0), 0),
       currency: deals[0]?.currency ?? "USD",
     };

@@ -1,3 +1,7 @@
+## 17 November 2026 — workspace-day follow-up checks
+
+Repaired browser/UTC date drift through a separate calendar-date field and shared deterministic attention checks. Board, Today and assistant context retain unknown timing and newest-sample coverage. Automatic deal creation/stage transitions record stage time without inventing legacy history. [Audit](pipeline-follow-up-date-audit.md) retains open monitoring, appointment identity and sales-learning scope.
+
 ## 17 November 2026 — booking outcome and outreach separation
 
 Separated attendance records from sending, added corrections/audits and editable manual follow-up drafts, and neutralized legacy no-show jobs. Linked customer stages and next steps are preserved. 41 focused/permission tests and two desktop/mobile checks passed; full follow-up intelligence remains partial. [Audit](booking-outcome-boundary-audit.md).
