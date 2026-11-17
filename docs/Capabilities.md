@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Sales-learning inputs now use recorded decision dates rather than later edits. Missing dates and truncated history keep aggregate win rates unknown, while valid dated counts and owner-reported loss reasons remain available. CRM entry sources are not treated as acquisition attribution, and these summaries never authorize follow-up. Business-model retries retain stable context when only the audience read time changes. See [the audit](growth-engine/pipeline-outcome-coverage-audit.md).
+
 Retention and expansion advice now keeps recorded evidence classes distinct and checks outcomes, comparisons and decision rules before real v2 work is marked verified. Observation periods can remain unknown with an owner input to resolve them. These are recommendation checks, not customer-event tracking or automatic sequence enrollment. See [the audit](growth-engine/retention-recommendation-audit.md).
 
 Translation now uses the draft version selected at launch and retains its offer constraints and original trend evidence. A later source edit does not silently change the translation input, and existing approval remains separate. Price checks cover recognized forms; native-language accuracy and every localized offer phrase still require review. See [the audit](growth-engine/translation-source-context-audit.md).

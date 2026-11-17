@@ -1,3 +1,14 @@
+## 17 November 2026 — sales outcome dates, coverage and stable model-check retries
+
+Sales-learning context now requires recorded close dates and preserves incomplete-read uncertainty. Broader regression exposed and repaired audience timestamp drift during business-model retries without removing full-input change detection. [Audit and limits](growth-engine/pipeline-outcome-coverage-audit.md).
+
+- `pnpm exec vitest run tests/unit/pipeline-outcomes.test.tsx tests/unit/business-model-check.test.ts tests/convex/pipeline-planning-evidence.test.ts tests/convex/crm-payment-evidence.test.ts tests/convex/crm-loss-reasons.test.ts tests/convex/crm.test.ts tests/convex/business-model-check.test.ts tests/convex/business-model-learning.test.ts tests/convex/plan-approval.test.ts tests/convex/approval-claims.test.ts tests/convex/tenancy.test.ts tests/convex/planning-email-audience.test.ts` — 140 passed across twelve files, 9.46 seconds.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint convex/jobWrites.ts convex/jobs.ts shared/growth/pipeline.ts shared/growth/emailAudience.ts shared/agents/businessModel.ts shared/agents/specs.ts tests/unit/pipeline-outcomes.test.tsx tests/unit/business-model-check.test.ts tests/convex/pipeline-planning-evidence.test.ts tests/convex/business-model-check.test.ts` — passed.
+- `git diff --check` — passed.
+
+The first broader run passed 121/122 tests and reproduced the unchanged-input checkpoint failure. A focused retry reproduced the saved input-change error, then passed after fixing its volatile read-time context; the changed-audience rejection regression still passes. The final twelve-file run includes both. New context tests exercise the actual 2,001-row bound and owner CRM writes with no approvals/action receipts/webhooks. No live model/provider, browser, hosted deployment, schema migration or external action was used. The checks establish deterministic context behavior and existing authorization boundaries, not expert strategy quality, full CRM coverage or full project completion.
+
 ## 17 November 2026 — read-only email sender setup
 
 Added an explicit exact-domain Resend check, credential-bound minimal observation/audit, dated evidence in recommendation inputs, and a concise send-form result. Email content approval now clearly distinguishes the later send approval. [Audit, sources and limits](growth-engine/email-sender-readiness-audit.md).

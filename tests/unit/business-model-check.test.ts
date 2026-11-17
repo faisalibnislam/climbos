@@ -147,8 +147,19 @@ describe("first-party model signals", () => {
     const revenueEvents = Array.from({ length: 20 }, (_, i) => order(-1, 100, `future-${i}`));
     const deals = Array.from({ length: 12 }, () => ({ stage: "lost" as const, source: "manual", createdAt: now - DAY, updatedAt: now, lostAt: now + DAY, lostReason: "price" as const }));
     const signals = ownerModelSignals({ nowMs: now, currency: "USD", revenueEvents, deals, competitorChanges90d: 0 });
-    expect(signals.map(s => s.key)).toEqual(["revenue_trend"]);
+    expect(signals.map(s => s.key)).toEqual(["revenue_trend", "win_rate"]);
+    expect(signals.find(s => s.key === "win_rate")).toMatchObject({ direction: "unknown", detail: expect.stringContaining("invalid/future for 12 loaded decisions") });
     expect(signals[0].direction).toBe("unknown");
+  });
+
+  it("does not turn undated or truncated sales records into a numeric win rate or model-loss diagnosis", () => {
+    const deals = Array.from({ length: 12 }, () => ({ stage: "lost" as const, source: "manual", createdAt: now - 60 * DAY, updatedAt: now, lostAt: now - DAY, lostReason: "price" as const }));
+    for (const input of [{ deals, pipelinePartial: true }, { deals: [...deals, { ...deals[0], lostAt: undefined }], pipelinePartial: false }]) {
+      const signals = ownerModelSignals({ nowMs: now, currency: "USD", revenueEvents: [], competitorChanges90d: 0, ...input });
+      expect(signals.find(s => s.key === "win_rate")?.detail).toContain("unknown");
+      expect(signals.find(s => s.key === "win_rate")?.detail).not.toContain("(0%)");
+      expect(signals.find(s => s.key === "loss_reasons")?.direction).toBe("unknown");
+    }
   });
 
   it("keeps non-monetary evidence when the business currency is unknown", () => {

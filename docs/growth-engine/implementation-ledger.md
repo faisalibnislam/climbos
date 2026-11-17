@@ -1,3 +1,7 @@
+## 17 November 2026 — dated sales-learning coverage
+
+Strategy and business-model inputs now exclude undated/invalid close dates from recent decisions and withhold aggregate rates for incomplete coverage. Refreshed audience timestamps no longer falsely invalidate unchanged model-check retries; real input changes remain blocked. [Audit](pipeline-outcome-coverage-audit.md) records limits and the actual path.
+
 ## 17 November 2026 — sender setup evidence
 
 Added an explicit read-only exact-domain check to the existing email send form, credential-bound observation storage and audit, and dated historical provider evidence in actual recommendation inputs. No new execution authority or lifecycle enrollment. [Audit and official sources](email-sender-readiness-audit.md).

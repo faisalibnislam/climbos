@@ -804,7 +804,7 @@ function businessBrief(job: JobCtx, includeSpecialist = true): string {
     job.run.kind === "strategy" && b?.acquisition?.channelPreferences?.length
       ? `OWNER CHANNEL FEEDBACK (owner-reported preferences, not measured performance, customer demand or action permission):\n${untrusted("saved channel preferences", JSON.stringify(b.acquisition.channelPreferences.map(({ channelId, preference, rationale, evidenceDate }) => ({ channelId, channel: CHANNEL_BY_ID[channelId]?.name ?? channelId, preference, rationale, evidenceDate }))), 16_000)}\nDo not select dismissed or irrelevant channels for the immediate execution portfolio unless the owner clears that preference. Avoid, prefer and already_using are soft context, not proof of fit or permission. Preserve grounded, adjacent and bold exploration; a speculative alternative may explain what would justify reconsideration without selecting or executing the dismissed channel.`
       : "",
-    emailAudienceBrief(job.audience),
+    emailAudienceBrief(job.audience, job.run.kind === "business_model_check" ? { startedAt: job.run.createdAt } : undefined),
     emailReadinessBrief(job.emailSenderReadiness),
     trustPostureContext(job.facts.map((f) => f.evidenceKind)),
     conflictsLine(job),

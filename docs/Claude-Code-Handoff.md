@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+Latest sales-learning repair (17 November): recent outcomes require recorded close dates; capped or undated history cannot produce a numeric aggregate win rate. Business-model retries preserve input identity when only the audience read timestamp changes, while current record changes still invalidate it. See [the audit](growth-engine/pipeline-outcome-coverage-audit.md) and [verification](Verification.md). Requirements 116/120 and the overall project remain partial.
+
 | Field | State |
 |---|---|
 | Prepared | 25 October 2026; current-status reconciliation 17 November 2026 |

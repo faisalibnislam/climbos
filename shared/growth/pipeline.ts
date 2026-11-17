@@ -93,12 +93,14 @@ export interface PipelineOutcomes {
   windowDays: number;
   won: number;
   lost: number;
-  /** won / (won + lost); null with no closed deals. */
+  /** Dated won / dated closed; withheld when the read or close dates are incomplete. */
   winRate: number | null;
   lossReasons: { reason: LossReason; count: number }[];
   lossReasonNotRecorded: number;
-  /** Lost deals with no recorded close time (older records); counted by last update. */
-  lostWithoutCloseTime: number;
+  /** Records omitted by a bounded query; totals below describe the loaded sample only. */
+  partial: boolean;
+  closedWithoutCloseTime: number;
+  invalidCloseTime: number;
   open: { lead: number; talking: number; booked: number };
   bySource: { source: string; won: number; lost: number }[];
   /** Up to five recent owner notes on lost deals (untrusted text). */
@@ -107,11 +109,19 @@ export interface PipelineOutcomes {
 
 const DAY = 86_400_000;
 
-export function pipelineOutcomes(deals: readonly PipelineDeal[], options: { nowMs: number; windowDays?: number }): PipelineOutcomes {
+export function pipelineOutcomes(deals: readonly PipelineDeal[], options: { nowMs: number; windowDays?: number; partial?: boolean }): PipelineOutcomes {
   const windowDays = options.windowDays ?? 365;
+  if (!Number.isSafeInteger(options.nowMs) || Math.abs(options.nowMs) > 8.64e15 || !Number.isSafeInteger(windowDays) || windowDays <= 0) throw new RangeError("Pipeline outcomes need a valid capture time and observation window.");
   const from = options.nowMs - windowDays * DAY;
-  const closedAt = (d: PipelineDeal) => (d.stage === "won" ? d.wonAt ?? d.updatedAt : d.lostAt ?? d.updatedAt);
-  const closed = deals.filter((d) => (d.stage === "won" || d.stage === "lost") && closedAt(d) >= from && closedAt(d) <= options.nowMs);
+  if (!Number.isSafeInteger(windowDays * DAY) || !Number.isSafeInteger(from) || Math.abs(from) > 8.64e15) throw new RangeError("Pipeline observation window exceeds the supported date range.");
+  // Record creation/update time is not the buyer's decision date, especially after imports or edits.
+  const closedAt = (d: PipelineDeal) => d.stage === "won" ? d.wonAt : d.lostAt;
+  const decisions = deals.filter(d => d.stage === "won" || d.stage === "lost");
+  const closedWithoutCloseTime = decisions.filter(d => closedAt(d) === undefined).length;
+  const validClose = (d: PipelineDeal) => Number.isSafeInteger(closedAt(d)) && Math.abs(closedAt(d)!) <= 8.64e15 && closedAt(d)! <= options.nowMs;
+  const invalidCloseTime = decisions.filter(d => closedAt(d) !== undefined && !validClose(d)).length;
+  const closed = decisions.filter(d => validClose(d) && closedAt(d)! >= from);
+  const partial = options.partial === true;
   const won = closed.filter((d) => d.stage === "won");
   const lost = closed.filter((d) => d.stage === "lost");
   const counts = new Map<LossReason, number>();
@@ -129,26 +139,28 @@ export function pipelineOutcomes(deals: readonly PipelineDeal[], options: { nowM
     windowDays,
     won: won.length,
     lost: lost.length,
-    winRate: closed.length ? won.length / closed.length : null,
+    winRate: closed.length && !partial && !closedWithoutCloseTime && !invalidCloseTime ? won.length / closed.length : null,
     lossReasons: [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([reason, count]) => ({ reason, count })),
     lossReasonNotRecorded: lost.filter((d) => !d.lostReason).length,
-    lostWithoutCloseTime: lost.filter((d) => d.lostAt === undefined).length,
+    partial, closedWithoutCloseTime, invalidCloseTime,
     open,
     bySource: [...sources.entries()].map(([source, row]) => ({ source, ...row })),
-    recentLossNotes: lost.filter((d) => d.lostReasonNote?.trim()).sort((a, b) => closedAt(b) - closedAt(a)).slice(0, 5).map((d) => d.lostReasonNote!.trim().slice(0, 240)),
+    recentLossNotes: lost.filter((d) => d.lostReasonNote?.trim()).sort((a, b) => closedAt(b)! - closedAt(a)!).slice(0, 5).map((d) => d.lostReasonNote!.trim().slice(0, 240)),
   };
 }
 
 /** Planning context; empty when the owner has no pipeline. Loss notes are returned separately so callers can mark them untrusted. */
 export function pipelineOutcomesBrief(p: PipelineOutcomes): string {
-  if (!p.won && !p.lost && !p.open.lead && !p.open.talking && !p.open.booked) return "";
+  if (!p.won && !p.lost && !p.open.lead && !p.open.talking && !p.open.booked && !p.partial && !p.closedWithoutCloseTime && !p.invalidCloseTime) return "";
   const closed = p.won + p.lost;
-  const rate = p.winRate === null ? "no closed deals yet" : `win rate ${(p.winRate * 100).toFixed(0)}% (${p.won} won of ${closed} closed${closed < 20 ? "; small sample" : ""})`;
+  const incomplete = p.partial || p.closedWithoutCloseTime > 0 || p.invalidCloseTime > 0;
+  const gaps = [p.partial ? "bounded read: totals and proportions are partial" : "", p.closedWithoutCloseTime ? `close date not recorded for ${p.closedWithoutCloseTime}` : "", p.invalidCloseTime ? `invalid or future close date for ${p.invalidCloseTime}` : ""].filter(Boolean).join("; ");
+  const rate = p.winRate === null ? (incomplete ? `win rate unknown (${p.won} won / ${p.lost} lost with valid close dates in the loaded window; ${gaps})` : "no dated closed deals in this window") : `win rate ${(p.winRate * 100).toFixed(0)}% (${p.won} won of ${closed} closed${closed < 20 ? "; small sample" : ""})`;
   const reasons = p.lost ? `loss reasons: ${[...p.lossReasons.map((r) => `${LOSS_REASON_LABEL[r.reason].toLowerCase()} ${r.count}`), p.lossReasonNotRecorded ? `not recorded ${p.lossReasonNotRecorded}` : ""].filter(Boolean).join(", ")}` : "";
   const sources = p.bySource.length ? `by source: ${p.bySource.map((s) => `${s.source} ${s.won} won / ${s.lost} lost`).join("; ")}` : "";
   return [
-    `OWNER PIPELINE OUTCOMES (owner-entered CRM stages, last ${p.windowDays} days by close date${p.lostWithoutCloseTime ? `; ${p.lostWithoutCloseTime} older lost deals dated by last update` : ""}): ${[rate, reasons, sources, `open now: ${p.open.lead} lead, ${p.open.talking} talking, ${p.open.booked} booked`].filter(Boolean).join("; ")}.`,
-    "Use recorded loss reasons as owner-reported evidence about offer, price, fit or follow-up problems; an unrecorded reason is unknown, not any particular reason. These records are not verified sales data and do not show what caused a win or loss.",
+    `OWNER PIPELINE OUTCOMES (owner-entered CRM stages, last ${p.windowDays} days by recorded close date; counts describe loaded records): ${[rate, reasons, sources, `loaded open records: ${p.open.lead} lead, ${p.open.talking} talking, ${p.open.booked} booked`].filter(Boolean).join("; ")}.`,
+    "Use recorded loss reasons as owner-reported evidence about offer, price, fit or follow-up problems; an unrecorded reason is unknown, not any particular reason. Record sources describe how deals entered the CRM, not verified acquisition attribution. Missing/invalid close dates cannot be replaced by edit dates. These records are not verified payments or a complete customer cohort and do not show what caused a win or loss.",
   ].join(" ");
 }
 

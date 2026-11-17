@@ -14,9 +14,12 @@ export interface EmailAudienceSnapshot {
   observedAt: number;
 }
 
-export function emailAudienceBrief(a: EmailAudienceSnapshot | undefined): string {
+export function emailAudienceBrief(a: EmailAudienceSnapshot | undefined, workflow?: { startedAt: number }): string {
   if (!a) return "";
-  const scope = `EMAIL AUDIENCE (calculated from ClimbOS records at ${new Date(a.observedAt).toISOString()}):`;
+  // Resumable checks reread current records; a fresh query timestamp alone must not change their prompt identity.
+  // The workflow timestamp is a reference for the check, never a claim that these were the records at its start.
+  const timing = workflow ? `records refreshed for the workflow started ${new Date(workflow.startedAt).toISOString()}` : `records at ${new Date(a.observedAt).toISOString()}`;
+  const scope = `EMAIL AUDIENCE (calculated from ClimbOS ${timing}):`;
   const contacts = a.contacts === null ? `${a.observedContacts} active contacts observed in a bounded sample; total unknown` : `${a.contacts} active contact${a.contacts === 1 ? "" : "s"} recorded`;
   const eligible = a.consented === null ? "Eligible audience unknown because coverage is incomplete" : `${a.consented} contact${a.consented === 1 ? " has" : "s have"} recorded current marketing consent, a stored address and no recorded suppression`;
   return `${scope} ${contacts}. ${eligible}.${a.limitations.length ? ` Limits: ${a.limitations.join("; ")}.` : ""} These are local records, not independently verified permission, customer interest, segment fit or deliverability. External lists, provider eligibility and sending-domain readiness remain unknown unless separately evidenced. Confirm the intended audience before proposing a send; building a voluntary list or drafting for later review is allowed. Every actual send still requires current eligibility and exact owner approval.`;

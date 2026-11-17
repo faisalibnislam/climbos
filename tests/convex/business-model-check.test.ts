@@ -198,7 +198,7 @@ describe("business model check", () => {
     const { runId } = await w.client.mutation(api.businessModel.start, { slug: w.slug });
     await t.finishAllScheduledFunctions(() => undefined);
     const run = (await t.run(ctx => ctx.db.get(runId)))!;
-    expect(run.status).toBe("verified");
+    expect(run.status, run.userMessage ?? run.error).toBe("verified");
     expect(JSON.parse(run.input).businessModelEvidence.contextHash).toMatch(/^[a-f0-9]{64}$/);
     const steps = await t.run(ctx => ctx.db.query("workflowSteps").withIndex("by_run", q => q.eq("runId", runId)).collect());
     expect(steps.length).toBeGreaterThan(1);
