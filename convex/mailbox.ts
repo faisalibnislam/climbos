@@ -263,25 +263,28 @@ export const sendReviewRequests = internalAction({
     for (const id of ids) {
       const job = await ctx.runQuery(internal.reviews.prepareRequest, { id });
       if (!job) {
-        await ctx.runMutation(internal.reviews.recordRequest, { id, ok: false, error: "Not sent: a current mailbox, unsubscribe, approval, or active-email check failed." });
-        continue;
-      }
-      if (process.env.CLIMBOS_FAKE_MAILBOX) {
-        await ctx.runMutation(internal.reviews.recordRequest, { id, ok: true });
+        await ctx.runMutation(internal.reviews.failUnstartedRequest, { id });
         continue;
       }
       const raw = await ctx.runQuery(internal.connections.getSecret, { connectionId: job.connectionId });
-      if (!raw) {
-        await ctx.runMutation(internal.reviews.recordRequest, { id, ok: false, error: "Mailbox disconnected" });
+      if (!raw || raw.secretId !== job.credentialId) {
+        await ctx.runMutation(internal.reviews.failUnstartedRequest, { id });
         continue;
       }
       const secret = JSON.parse(raw.value) as MailboxSecret;
+      const claim = await ctx.runMutation(internal.reviews.claimRequest, { id, payloadHash: job.payloadHash, credentialId: raw.secretId });
+      if (!claim) { await ctx.runMutation(internal.reviews.failUnstartedRequest, { id }); continue; }
+      const messageId = sendMessageId(`review-${id}`, secret.email);
       try {
-        await transport(secret).sendMail({ from: secret.email, to: job.to, subject: job.subject, text: job.text, headers: { "List-Unsubscribe": `<${job.unsubscribeUrl}>, <mailto:${secret.email}?subject=unsubscribe>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } });
-        await ctx.runMutation(internal.reviews.recordRequest, { id, ok: true });
+        const info = process.env.CLIMBOS_FAKE_MAILBOX
+          ? await fakeSend({ messageId, to: job.to, subject: job.subject, text: job.text })
+          : await transport(secret).sendMail({ messageId, from: secret.email, to: job.to, subject: job.subject, text: job.text, headers: { "List-Unsubscribe": `<${job.unsubscribeUrl}>, <mailto:${secret.email}?subject=unsubscribe>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } });
+        await ctx.runMutation(internal.reviews.recordRequest, { id, claimToken: claim.claimToken, outcome: "sent", messageId: info.messageId ?? messageId });
       } catch (e) {
-        await ctx.runMutation(internal.reviews.recordRequest, { id, ok: false, error: (e as Error).message });
+        if (e instanceof FakeWorkerCrash) continue;
+        await ctx.runMutation(internal.reviews.recordRequest, { id, claimToken: claim.claimToken, outcome: smtpOutcome(e as { code?: string; responseCode?: number }) === "unclear" ? "uncertain" : "failed" });
       }
+      if (process.env.CLIMBOS_FAKE_MAILBOX) continue;
       await new Promise((r) => setTimeout(r, 4_000));
     }
   },

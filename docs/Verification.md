@@ -1,3 +1,15 @@
+## 17 November 2026 — review invitation dispatch and receipt
+
+Two failing regressions reproduced pause bypass and duplicate-worker overwrite of a successful invitation. Current claims bind exact payload and credential identity; uncertain SMTP receipt cannot become an automatic resend. [Audit](growth-engine/review-send-boundary-audit.md) records behavior and limits.
+
+- `pnpm exec vitest run tests/convex/review-send-boundary.test.ts tests/convex/reviews.test.ts tests/convex/sending.test.ts tests/convex/sending-safety.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — **55 passed, six files, 7.61 seconds**.
+- `CLIMBOS_DESIGN_E2E_ENV_FILE=/private/tmp/climbos-calendar-check-20261116/backend.env E2E_BASE_URL=http://127.0.0.1:3420 pnpm exec playwright test e2e/review-send-boundaries.spec.ts --workers=1` — **two passed, 17.2 seconds**. Desktop/mobile receipt labels and explanations, unchanged consequential records, no page errors, overflow or serious/critical targeted axe findings. Mobile capture inspected.
+- `pnpm typecheck` — root and Convex passed.
+- `pnpm exec eslint convex/reviews.ts convex/mailbox.ts convex/schema.ts convex/lib/contactPressure.ts 'src/app/app/[organization]/reviews/page.tsx' tests/convex/review-send-boundary.test.ts` and separate lint of `e2e/review-send-boundaries.spec.ts` — passed.
+- Loopback sync passed in 26.11 seconds; diff checks passed. Actual worker tests use the fake mailbox; browser checks only read synthetic demo status. No live send, paid model or hosted deployment.
+
+SMTP acceptance is not delivery or review submission. In-flight actions cannot be recalled, legacy outcomes remain unverified, and pending/uncertain results still need manual mailbox investigation without an in-app reconciliation path. Full contact-frequency coordination, lifecycle execution and accessibility conformance remain unverified/incomplete.
+
 ## 17 November 2026 — outgoing event delivery boundaries
 
 Three red regressions reproduced paused delivery, cross-tenant destination acceptance and inherited event names. [Audit](growth-engine/webhook-delivery-boundary-audit.md) describes fenced attempts, stable signed IDs, post-DNS authorization, bounded retries and legacy uncertainty.

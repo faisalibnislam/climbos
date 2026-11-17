@@ -29,11 +29,12 @@ export async function hasActiveOutboundSequence(
   return false;
 }
 
-/** A queued public-review invitation is an active customer email flow for that address. */
+/** Queued, in-flight and unresolved public-review invitations occupy this address until resolved. */
 export async function hasQueuedReviewInvitation(ctx: QueryCtx | MutationCtx, orgId: Id<"organizations">, email: string): Promise<boolean> {
-  return Boolean(await ctx.db.query("reviewRequests").withIndex("by_org_email_status", (q) =>
-    q.eq("orgId", orgId).eq("email", email.trim().toLowerCase()).eq("status", "queued"),
-  ).first());
+  const rows = await Promise.all((["queued", "sending", "uncertain"] as const).map(status => ctx.db.query("reviewRequests").withIndex("by_org_email_status", q =>
+    q.eq("orgId", orgId).eq("email", email.trim().toLowerCase()).eq("status", status),
+  ).first()));
+  return rows.some(Boolean);
 }
 
 /** History for one contact hash: last ClimbOS outreach send and whether an outreach sequence is still active. */

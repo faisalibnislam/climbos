@@ -1,3 +1,7 @@
+## 17 November 2026 — neutral review invitation send boundary
+
+Added exact-message/credential claims, live permission/pause checks, preserved results and explicit unknown receipt to the existing mailbox flow. Two red regressions preceded 55 passing focused/permission tests and two desktop/mobile checks. [Audit](review-send-boundary-audit.md) records legacy and recovery limits. Full project scope remains incomplete.
+
 ## 17 November 2026 — outgoing event delivery
 
 Fixed reproduced pause/tenant/event-validation gaps, fenced retry results, added signed durable delivery identity and post-DNS dispatch checks, and bounded crashed-worker retries. The existing settings view exposes receipt uncertainty; legacy attempts without identity are not automatically replayed. 62 tests and two browser checks passed. [Audit and receiver requirements](webhook-delivery-boundary-audit.md). Full automation/lifecycle acceptance remains open.

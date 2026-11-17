@@ -175,11 +175,11 @@ export default function ReviewsPage() {
             <ul className="mt-2 flex flex-col divide-y divide-line text-sm">
               {data.recent.map((r) => (
                 <li key={r.id} className="flex items-center justify-between gap-2 py-2">
-                  <span className="truncate text-ink-2">{r.name}</span>
-                  <span className="flex gap-1.5">
+                  <span className="min-w-0 text-ink-2"><span className="block truncate">{r.name}</span>{r.error ? <span className="mt-1 block text-xs text-ink-3">{r.error}</span> : null}</span>
+                  <span className="flex shrink-0 flex-wrap justify-end gap-1.5">
                     {r.feedback ? <Badge tone="violet">Note</Badge> : null}
                     {r.clicked ? <Badge tone="green">Opened</Badge> : null}
-                    <Badge tone={r.status === "failed" ? "red" : r.status === "sent" ? "neutral" : "blue"}>{r.status === "sent" ? "Asked" : r.status === "failed" ? "Didn't send" : "Sending"}</Badge>
+                    <Badge tone={r.status === "failed" ? "red" : r.status === "uncertain" || r.status === "sending" ? "violet" : r.status === "sent" ? "neutral" : "blue"}>{r.status === "sent" ? "Mailbox accepted" : r.status === "failed" ? "Didn't send" : r.status === "uncertain" ? "Delivery unclear" : r.status === "sending" ? "Receipt pending" : "Queued"}</Badge>
                   </span>
                 </li>
               ))}
