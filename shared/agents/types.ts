@@ -96,6 +96,8 @@ export interface AgentSpec<T> {
 export interface AgentInput {
   /** The job, e.g. "Write 3 LinkedIn posts for the founder that support the plan." */
   task: string;
+  /** Business goal/context for creative retrieval, excluding generated task instructions. Empty means no query. */
+  creativeRetrievalQuery?: string;
   /** Application-assembled business context. Evidence labels inside it determine what each statement supports. */
   brief: string;
   /** Owner text, website text, research from earlier jobs. Wrapped as untrusted. */

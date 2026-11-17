@@ -350,13 +350,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
   const system = draftSystem(spec);
   const knowledgeRecords = retrieveGrowthKnowledge(`${input.task}\n${input.brief}`, { limit: 3, maxChars: 3_500, ...(input.industryBusinessTypeId ? { businessTypeId: input.industryBusinessTypeId } : {}) });
   const knowledge = formatGrowthKnowledge(knowledgeRecords);
-  const creativePrecedents = creativePrecedentsForAgent(spec.id, input.task, {
-    task: input.task,
-    brief: input.brief,
-    facts: input.facts,
-    ...(input.industryBusinessTypeId ? { industryBusinessTypeId: input.industryBusinessTypeId } : {}),
-    ...(input.constraints ? { constraints: input.constraints } : {}),
-  });
+  const creativePrecedents = creativePrecedentsForAgent(spec.id, input.task, input);
   const reviewerKnowledge = formatGrowthKnowledge(retrieveGrowthKnowledge(`${input.task}\n${input.brief}`, { limit: 2, maxChars: 1_800, ...(input.industryBusinessTypeId ? { businessTypeId: input.industryBusinessTypeId } : {}) }));
   const baseUser = `${inputBlock(input, research?.notes ?? null, knowledge, research?.sources ?? [])}${creativePrecedents ? `\n\nBOUNDED CREATIVE PRECEDENT RETRIEVAL (use only when the mechanism genuinely transfers; these are not evidence about this business):\n${creativePrecedents}` : ""}\n\nYOUR TASK:\n${input.task}\n\nBefore answering, check your work against the playbook's checklist. Respond only with JSON matching the schema.`;
   const baseMessages: MessageParam[] = [{

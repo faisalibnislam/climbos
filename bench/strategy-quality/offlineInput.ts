@@ -7,6 +7,7 @@ import type { StrategyQualityCase } from "./cases";
 export function offlineInput(item: StrategyQualityCase, now = Date.now()): AgentInput {
   const timingContext = { today: localToday("UTC", now), timezone: "UTC", now };
   return {
+    creativeRetrievalQuery: [item.brief, ...item.facts].join("\n"),
     timingContext,
     task: `${playsTask({ scorecard: "No scored channel evidence supplied. Investigate fit; do not treat library priors as customer evidence.", insights: item.research.notes, horizonDays: 90, timingContext })}\nUTC is only this offline evaluation clock, not evidence of business or customer geography or an owner-confirmed setting. Keep served geography and business-local timezone unknown unless separately supplied.`,
     brief: item.brief,

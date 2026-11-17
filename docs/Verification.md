@@ -1,3 +1,14 @@
+## 17 November 2026 — business-specific precedent query
+
+[Audit](growth-engine/business-precedent-query-audit.md). Engine `v3.151-business-precedent-query`. **228 tests in ten files passed (13.55 seconds)**, including full writer/reviewer context, real starter/focused persistence and reference validation, no-match bold exploration, plan approval and tenancy. App/Convex typecheck, changed-file ESLint and diff checks passed. No provider switch, live business action or deployment.
+
+```sh
+pnpm exec vitest run tests/unit/creative-precedents.test.ts tests/unit/agent-escalation.test.ts tests/unit/strategy-exploration.test.ts tests/unit/industry-evaluation-input.test.ts tests/unit/offline-evaluation-input.test.ts tests/unit/plan-quality.test.ts tests/convex/focused-plan.test.ts tests/convex/creative-strategy.test.ts tests/convex/plan-approval.test.ts tests/convex/tenancy.test.ts
+pnpm typecheck
+```
+
+Related business-model checks: **78 tests in three files passed (3.34 seconds)** with `pnpm exec vitest run tests/unit/business-model-check.test.ts tests/convex/business-model-check.test.ts tests/convex/business-model-validation.test.ts`.
+
 ## 17 November 2026 — declined-offer clause classification
 
 [Audit](growth-engine/declined-offer-clause-audit.md). Engine `v3.150-declined-offer-clauses`. Three red cases, then **287 tests in ten files passed, 12.30 seconds**. App/Convex typecheck, changed-file ESLint and diff checks passed. Re-linting unchanged retail output removes only the false mechanism finding and retains five other issues. No historical pass claim, external business action or deployment.

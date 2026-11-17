@@ -8,6 +8,7 @@ import type { StrategyQualityCase } from "./cases";
 export function industryInput(item: StrategyQualityCase, now = Date.now()): AgentInput {
   const timingContext = { today: localToday("UTC", now), timezone: "UTC", now };
   return {
+    creativeRetrievalQuery: [item.brief, ...item.facts].join("\n"),
     task: `${focusedPlanTask(14)}\n${campaignTimingTask(timingContext)}\nUTC is only this synthetic evaluation's workspace clock, not an owner-confirmed setting or evidence of customer geography. Keep business-local timezone and served geography unknown unless separately supplied. Put the primary move's assessment in focusedMove.timingAssessment; use not_relevant for an evergreen move.`,
     timingContext,
     brief: item.brief.replace(/over 90 days/g, "over 14 days"),

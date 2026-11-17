@@ -208,7 +208,7 @@ it.each([1, 2])("keeps a fully passing draft ahead of a higher-average draft wit
 
 it.each(["growth_strategy", "growth_plays"])("delivers complete matching precedent records to the %s writer and reviewer", async id => {
   const task = focusedPlanTask(14);
-  const context = { task, brief: "A homeware shop can hold small product demonstrations; location, stock and staffing remain unknown.", facts: [], constraints: { businessTypes: ["physical_retail"] } };
+  const context = { task, creativeRetrievalQuery: "Create a personalized shareable annual recap using each customer's own product history", brief: "A homeware shop can hold small product demonstrations; location, stock and staffing remain unknown.", facts: [], constraints: { businessTypes: ["physical_retail"] } };
   const records = retrieveCreativePrecedents(context, 2);
   const formatted = formatCreativePrecedents(context, 2);
   expect(records).toHaveLength(2);

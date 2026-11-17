@@ -14,6 +14,7 @@ describe("offline strategy evaluation clock", () => {
     expect(input.timingContext).toEqual({ today: "2026-12-01", timezone: "UTC", now: Date.now() });
     expect(input.task).toContain("current local date 2026-12-01");
     expect(input.task).toContain("not evidence of business or customer geography");
+    expect(input.creativeRetrievalQuery).toBe([item.brief, ...item.facts].join("\n"));
     expect(input.facts).toEqual(item.facts);
     expect(input.businessWebsite).toBe(item.businessWebsite);
     expect(input.constraints?.horizonDays).toBe(90);

@@ -14,6 +14,7 @@ describe("isolated industry evaluation inputs", () => {
     expect(input.timingContext).toEqual({ today: "2026-11-17", timezone: "UTC", now });
     expect(input.task).toContain("CAMPAIGN TIMING CONTEXT: current local date 2026-11-17");
     expect(input.task).toContain("UTC is only this synthetic evaluation's workspace clock");
+    expect(input.creativeRetrievalQuery).toBe([item.brief, ...item.facts].join("\n"));
     expect(input.facts).toEqual([]);
     expect(input.constraints).not.toHaveProperty("serviceArea");
     expect(input.precomputedResearch).toEqual(item.research);

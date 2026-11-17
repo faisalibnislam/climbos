@@ -88,6 +88,8 @@ async function workspace() {
 
 it.each(["focused", "starter"] as const)("connects the precedent library to the real %s writer, critic and saved plan", async planStyle => {
   const { t, owner, slug, orgId } = await workspace();
+  await owner.client.mutation(api.orgs.setGoal, { slug, kind: "more_customers", statement: "Create a personalized shareable annual recap using each customer's own product history", horizonDays: 14, monthlyAdBudget: 0 });
+  state.explorationReference = "CP-011";
   await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle });
   await t.finishAllScheduledFunctions(() => undefined);
   const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
@@ -96,10 +98,23 @@ it.each(["focused", "starter"] as const)("connects the precedent library to the 
   const critic = prompts.find(prompt => prompt.includes("CREATIVE PRECEDENTS (reference only; validate transfer conditions"));
   expect(writer).toBeDefined(); expect(critic).toBeDefined();
   const ids = plan.expert?.strategyExploration?.retrievedPrecedentIds ?? [];
-  expect(ids.length).toBeGreaterThan(0); expect(ids.length).toBeLessThanOrEqual(2);
+  expect(ids).toContain("CP-011"); expect(ids.length).toBeLessThanOrEqual(2);
   for (const id of ids) { expect(writer).toContain(id); expect(critic).toContain(id); }
+  expect(plan.expert?.strategyExploration?.bold.precedentIds).toEqual(["CP-011"]);
+  expect(plan.expert?.quality?.state).toBe("passed");
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+});
+
+it("keeps original exploration when a vague goal has no matching business mechanism", async () => {
+  const { t, owner, slug, orgId } = await workspace();
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(plan.expert?.strategyExploration?.retrievedPrecedentIds).toEqual([]);
   expect(plan.expert?.strategyExploration?.bold.precedentIds).toEqual([]);
   expect(plan.expert?.quality?.state).toBe("passed");
+  const prompts = state.requests.map(req => JSON.stringify(req.messages));
+  expect(prompts.some(prompt => prompt.includes("No sufficiently relevant sourced creative precedent"))).toBe(true);
   expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
 });
 

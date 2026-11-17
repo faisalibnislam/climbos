@@ -1,3 +1,7 @@
+## 17 November — business-specific precedent queries
+
+`v3.151-business-precedent-query`: separate owner goal, summary and facts from generated task boilerplate; preserve the same query through writer, critic, validators and persisted IDs. A no-match case still retains original bold exploration. 228 focused tests, typechecks and lint passed. [Audit](business-precedent-query-audit.md). Live semantic fit and commercial outcomes remain unverified.
+
 ## 17 November — declined-offer clauses
 
 `v3.150-declined-offer-clauses`: repaired the live retail false positive for a demo “with no discount gives…” while preserving affirmative/ambiguous offers and the remaining five retail findings. Three red cases followed by 287 passing tests. [Audit](declined-offer-clause-audit.md).

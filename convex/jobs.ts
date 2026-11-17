@@ -612,7 +612,7 @@ function marketChangeContext(job: JobCtx): string {
 function agentInput(job: JobCtx, task: string, extra: Partial<AgentInput> = {}): AgentInput {
   const pinnedSuperseded = approvedPinnedPredecessor(job);
   const approvedOfferTerms = job.strategy ? approvedPlanOfferTerms(job.strategy as never, { pinnedAtLaunch: Boolean(pinnedSuperseded) }) : [];
-  return { task, brief: businessBrief(job), facts: job.facts.map((f) => f.statement), ownerApprovedExamples: job.brand?.approvedExamples ?? [], constraints: constraintsOf(job), ...(approvedOfferTerms.length ? { approvedOfferTerms } : {}), ...(job.business?.website ? { businessWebsite: job.business.website } : {}), ...(job.business?.industryBusinessTypeId ? { industryBusinessTypeId: job.business.industryBusinessTypeId } : {}), ...extra };
+  return { task, creativeRetrievalQuery: [job.goal?.statement, job.business?.summary, ...job.facts.map(f => f.statement)].filter(Boolean).join("\n"), brief: businessBrief(job), facts: job.facts.map((f) => f.statement), ownerApprovedExamples: job.brand?.approvedExamples ?? [], constraints: constraintsOf(job), ...(approvedOfferTerms.length ? { approvedOfferTerms } : {}), ...(job.business?.website ? { businessWebsite: job.business.website } : {}), ...(job.business?.industryBusinessTypeId ? { industryBusinessTypeId: job.business.industryBusinessTypeId } : {}), ...extra };
 }
 
 /** Cap visual input and reserve its estimated image-token cost before provider calls. */
@@ -1473,7 +1473,7 @@ export const buildStrategy = internalAction({
         const plan = await runAgentTask<z.infer<typeof FocusedStrategySchema>>(ctx, job, 0, requestedStyle === "starter" ? starterStrategySpec() : focusedStrategySpec(), input, startedAt, { task: "growth_strategy", text: task, context: "", ctx: fixtureCtx(job) }, meta);
         const exploration = {
           ...plan.strategyExploration, requestedRange: creativeRangeOf(job),
-          retrievedPrecedentIds: retrieveCreativePrecedents({ task: input.task, brief: input.brief, facts: input.facts, ...(input.industryBusinessTypeId ? { industryBusinessTypeId: input.industryBusinessTypeId } : {}), ...(input.constraints ? { constraints: input.constraints } : {}) }, 2).map(({ precedent }) => precedent.id),
+          retrievedPrecedentIds: retrieveCreativePrecedents(input, 2).map(({ precedent }) => precedent.id),
           promptVersion: FOCUSED_EXPLORATION_VERSION, promptHash: await sha256Hex(input.task), inputHash: await sha256Hex(JSON.stringify(input)),
         };
         const sources = uniqueSources([...(supplied?.sources ?? []), ...(meta.sources ?? [])]);
@@ -1622,13 +1622,7 @@ export const buildStrategy = internalAction({
       const planMeta: AgentMeta = {};
       const playsAgentInput = v2 ? { ...playsInput(scorecard + decisionBrief), ...(research ? { precomputedResearch: research } : {}) } : null;
       const retrievedPrecedentIds = playsAgentInput
-        ? retrieveCreativePrecedents({
-          task: playsAgentInput.task,
-          brief: playsAgentInput.brief,
-          facts: playsAgentInput.facts,
-          ...(playsAgentInput.industryBusinessTypeId ? { industryBusinessTypeId: playsAgentInput.industryBusinessTypeId } : {}),
-          ...(playsAgentInput.constraints ? { constraints: playsAgentInput.constraints } : {}),
-        }, 2).map(({ precedent }) => precedent.id)
+        ? retrieveCreativePrecedents(playsAgentInput, 2).map(({ precedent }) => precedent.id)
         : [];
       const creativePromptHash = playsAgentInput ? await sha256Hex(playsAgentInput.task) : undefined;
       const creativeInputHash = playsAgentInput ? await sha256Hex(JSON.stringify(playsAgentInput)) : undefined;

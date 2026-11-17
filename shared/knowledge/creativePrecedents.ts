@@ -35,6 +35,8 @@ export interface CreativePrecedent {
 
 export interface CreativePrecedentContext {
   task: string;
+  /** Explicit business query; omitted preserves older direct-call behavior. */
+  creativeRetrievalQuery?: string;
   brief: string;
   facts: string[];
   industryBusinessTypeId?: string;
@@ -1697,7 +1699,7 @@ function contextFor(value: string | CreativePrecedentContext): { core: Set<strin
     return { core, audience: new Set(), goals: new Set(), constraints: new Set(), geography: new Set(), scale: new Set(), model: new Set() };
   }
   const evidenceText = [value.brief, ...value.facts].join("\n");
-  const task = words(value.task);
+  const task = words(value.creativeRetrievalQuery ?? value.task);
   const evidence = words(evidenceText);
   // Business profile facts help rank transferability, but must not masquerade
   // as a mechanism request (e.g. "local retail" matching an unrelated case).

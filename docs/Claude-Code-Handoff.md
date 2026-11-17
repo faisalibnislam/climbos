@@ -1,5 +1,7 @@
 # ClimbOS development handoff for Claude Code
 
+Creative precedent mechanisms now come from the saved business goal, summary and facts, separately from generated task instructions. Writers, reviewers, reference checks and saved IDs share that query. No match still allows original grounded, adjacent and bold exploration. [Audit and limits](growth-engine/business-precedent-query-audit.md).
+
 The promotion validator now recognizes a declined offer inside a sentence, such as “a demo with no discount gives shoppers a reason to visit,” without exempting a real offer elsewhere. The failed retail evaluation still retains its other evidence and test-quality issues. [Audit](growth-engine/declined-offer-clause-audit.md).
 
 Creative precedent retrieval no longer treats common instruction words as a mechanism or general prose as geographic/business-model evidence. Missing structured location/type stays missing in its explanation. [Audit and limits](growth-engine/precedent-fit-signals-audit.md).

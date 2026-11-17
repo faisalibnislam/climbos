@@ -666,6 +666,15 @@ describe("creative strategy precedent retrieval", () => {
     expect(formatCreativePrecedents("")).toContain("No sufficiently relevant sourced creative precedent");
   });
 
+  it("uses the explicit business query instead of task boilerplate for mechanisms and goals", () => {
+    const creativeRetrievalQuery = "Create a personalized shareable annual recap using each customer's own product history";
+    const context = { task: "Create a useful travel guide that helps customers use our product category", brief: "", facts: [], creativeRetrievalQuery };
+    expect(retrieveCreativePrecedents(context)[0]?.precedent.id).toBe("CP-011");
+    expect(retrieveCreativePrecedents({ ...context, task: "An unrelated task with price discounts, birthday queues and booking capacity" }))
+      .toEqual(retrieveCreativePrecedents(context));
+    expect(retrieveCreativePrecedents({ ...context, creativeRetrievalQuery: "" })).toEqual([]);
+  });
+
   it("does not retrieve a case from geography or sector overlap without a mechanism match", () => {
     expect(retrieveCreativePrecedents({ task: "Compare retail businesses in the United States", brief: "Outdoor retail, local retail stores.", facts: [], constraints: { serviceArea: "United States" } })).toEqual([]);
   });
