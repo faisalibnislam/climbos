@@ -1,3 +1,13 @@
+## 17 November 2026 — review score integrity
+
+[Audit](growth-engine/review-score-integrity-audit.md), [live evaluation report](Strategy-Quality-2026-11-17.md). Engine `v3.146-review-score-integrity`.
+
+- Eight initial unit failures reproduced the bug; **236 tests in eight files passed, 13.42 seconds** after repair. Runtime shortcut, actual Convex job, tenant and approval coverage included.
+- Application and Convex typechecks, changed-file ESLint and diff checks passed.
+- Read-only re-assessment: unchanged education review is **3.56 average / 3.5 minimum / ship false**, not the historical rounded false pass. Original records preserved. No additional paid calls for this correction.
+
+No deployment or business action; full product acceptance remains incomplete.
+
 ## 17 November 2026 — strategy reference approval
 
 [Audit](growth-engine/strategy-reference-approval-audit.md). Engine `v3.145-strategy-reference-approval`.

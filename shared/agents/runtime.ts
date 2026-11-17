@@ -174,17 +174,25 @@ function withVerdict(r: Rubric): Rubric {
 
 export function assess(critique: CritiqueResult, lint: LintIssue[], baseRubric: Rubric): Assessment {
   const rubric = withVerdict(baseRubric);
-  const byId = new Map(critique.scores.map((s) => [s.id, Math.max(1, Math.min(5, Math.round(s.score)))]));
-  const scores = rubric.criteria.map((c) => byId.get(c.id) ?? 1);
+  const reviewIssues: LintIssue[] = [];
+  const scores = rubric.criteria.map((criterion) => {
+    const entries = critique.scores.filter((entry) => entry.id === criterion.id);
+    if (entries.length !== 1 || !Number.isFinite(entries[0].score) || entries[0].score < 1 || entries[0].score > 5) {
+      reviewIssues.push({ rule: "review_scores", severity: "error", path: `review.scores.${criterion.id}`, message: `The reviewer must score ${criterion.id} exactly once with a finite value from 1 to 5. Run a complete review before accepting this draft.` });
+      return 1;
+    }
+    return entries[0].score;
+  });
+  const checkedLint = [...lint, ...reviewIssues];
   const average = scores.reduce((a, b) => a + b, 0) / Math.max(scores.length, 1);
   const minimum = Math.min(...scores);
   const gatesPassed = rubric.gates.length > 0 && rubric.gates.every((gate) => {
     const entries = critique.gates.filter((entry) => entry.id === gate.id);
     return entries.length === 1 && entries[0].pass;
   });
-  const lintErrors = lint.filter((l) => l.severity === "error").length;
+  const lintErrors = checkedLint.filter((l) => l.severity === "error").length;
   const ship = gatesPassed && lintErrors === 0 && minimum >= rubric.shipRule.minEach && average >= rubric.shipRule.minAverage;
-  return { critique, lint, average: Math.round(average * 100) / 100, minimum, gatesPassed, ship };
+  return { critique, lint: checkedLint, average: Math.round(average * 100) / 100, minimum, gatesPassed, ship };
 }
 
 /** Higher is better: gates and lint first, then average score. */
@@ -473,7 +481,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     const lint = round === 0 && firstReview ? firstReview.lint : lintOf(current);
     const c = round === 0 && firstReview ? firstReview.c : await critique(round, current, lint);
     const a = assess(c, lint, spec.rubric);
-    history.push({ round, average: a.average, gatesPassed: a.gatesPassed, lintErrors: lint.filter((l) => l.severity === "error").length });
+    history.push({ round, average: a.average, gatesPassed: a.gatesPassed, lintErrors: a.lint.filter((l) => l.severity === "error").length });
     if (!best.assessment || rank(a) > rank(best.assessment)) best = { output: current, assessment: a, round };
     const shipped = spec.shipOn === "gates" ? a.gatesPassed && a.lint.every((l) => l.severity !== "error") : a.ship;
     if (shipped || round === reviews - 1) break;
@@ -498,7 +506,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
       const errs = (l: LintIssue[]) => l.filter((x) => x.severity === "error").length;
       const nextLint = lintOf(current);
       const kept = numbersIn(current);
-      if (errs(nextLint) <= errs(lint) && [...numbersIn(previous)].every((n) => kept.has(n))) {
+      if (!a.lint.some((issue) => issue.rule === "review_scores" && issue.severity === "error") && errs(nextLint) <= errs(lint) && [...numbersIn(previous)].every((n) => kept.has(n))) {
         history.push({ round: round + 1, average: a.average, gatesPassed: a.gatesPassed, lintErrors: errs(nextLint) });
         best = { output: current, assessment: { ...a, lint: nextLint }, round: round + 1 };
       }

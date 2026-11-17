@@ -7,7 +7,7 @@ import { offerAssessmentFixture, offerFact } from "../fixtures/offerAssessment";
 import { approvedPlanOfferTerms } from "../../shared/agents/approvedPlanContext";
 import type { TurnRequest } from "../../shared/ai/types";
 import type { RateVersion } from "../../shared/economics/rates";
-const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], failTruth: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", explorationReference: "", dismissedChannel: false, emailMode: "" }));
+const state = vi.hoisted(() => ({ requests: [] as TurnRequest[], reviewScores: "", failTruth: false, refusedTarget: false, unsupportedGuarantee: false, wrongLearningTest: false, offerMode: "", timingMode: "", demandMode: "", citationReference: "", explorationReference: "", dismissedChannel: false, emailMode: "" }));
 vi.mock("../../shared/ai/turn", async original => ({
   ...await original<typeof import("../../shared/ai/turn")>(),
   modelTurn: async (req: TurnRequest, rates: RateVersion) => {
@@ -61,10 +61,15 @@ vi.mock("../../shared/ai/turn", async original => ({
     if (result.ok && state.failTruth && typeof result.output === "object" && result.output && "gates" in result.output) {
       (result.output as { gates: { id: string; pass: boolean; note: string }[] }).gates.find(g => g.id === "G1")!.pass = false;
     }
+    if (result.ok && state.reviewScores && typeof result.output === "object" && result.output && "scores" in result.output) {
+      const review = result.output as { scores: { id: string; score: number; note: string; fix: string }[] };
+      review.scores.forEach(score => { score.score = 3.5; });
+      if (state.reviewScores === "duplicate") review.scores.push({ ...review.scores[0], score: 5 });
+    }
     return result;
   },
 }));
-afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.explorationReference = ""; state.dismissedChannel = false; state.emailMode = ""; });
+afterEach(() => { delete process.env.ANTHROPIC_API_KEY; delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE; state.requests = []; state.reviewScores = ""; state.failTruth = false; state.refusedTarget = false; state.unsupportedGuarantee = false; state.wrongLearningTest = false; state.offerMode = ""; state.timingMode = ""; state.demandMode = ""; state.citationReference = ""; state.explorationReference = ""; state.dismissedChannel = false; state.emailMode = ""; });
 
 async function workspace() {
   const t = setup(); delete process.env.CLIMBOS_FAKE_LLM; delete process.env.CLIMBOS_ENGINE;
@@ -80,6 +85,22 @@ async function workspace() {
   await t.mutation(internal.engine.putResearchCache, { orgId, businessWebsite: "https://business.example/", cacheKey: "a".repeat(64), agentId: "business_insights", modelKey: "claude-haiku-5.5", notes: "Synthetic public-source notes for a workflow integration test. No measured demand.", sources: [{ url: "https://business.example/" }], expiresAt: Date.now() + 86400000 });
   return { t, owner, slug, orgId };
 }
+
+it.each(["fractional", "duplicate"])("persists honest %s review results without authorizing actions", async mode => {
+  const { t, owner, slug, orgId } = await workspace();
+  state.reviewScores = mode;
+  await owner.client.mutation(api.orgs.generatePlan, { slug, planStyle: "focused" });
+  await t.finishAllScheduledFunctions(() => undefined);
+  const plan = (await t.run(ctx => ctx.db.query("strategies").withIndex("by_org", q => q.eq("orgId", orgId)).order("desc").first()))!;
+  expect(plan.expert?.quality?.state).toBe(mode === "duplicate" ? "failed" : "provisional");
+  expect(plan.expert?.quality?.agents[0].shipped).toBe(false);
+  if (mode === "duplicate") {
+    expect(plan.expert?.quality?.fixes).toContainEqual(expect.objectContaining({ rule: "review_scores" }));
+    await expect(owner.client.mutation(api.workspace.decidePlan, { slug, strategyId: plan._id, decision: "approve" })).rejects.toThrow(/checks/);
+  } else expect(plan.expert?.quality?.agents[0].average).toBe(3.5);
+  expect(await t.run(ctx => ctx.db.query("actionReceipts").collect())).toEqual([]);
+  expect((await t.run(ctx => ctx.db.query("approvals").collect())).every(a => a.status === "pending")).toBe(true);
+});
 
 it.each([
   ["focused", "https://unread.example/case", "exploration_evidence"],

@@ -1,5 +1,7 @@
 # ClimbOS capabilities and boundaries
 
+Review scoring now preserves fractional values and rejects missing, duplicate or invalid required scores. A live education draft previously marked passed was rechecked as below the bar; original results remain intact. [Repair and verification](growth-engine/review-score-integrity-audit.md), [live quality report and costs](Strategy-Quality-2026-11-17.md).
+
 Invalid claimed references in strategy options now block approval, including retained errors under an older provisional label. Original bold ideas without a precedent remain available; the goal workspace explains the block and keeps drafts inspectable. [Verification and limits](growth-engine/strategy-reference-approval-audit.md).
 
 Full strategy plans now reserve more output room for reasoning, the three creative options and prepared work after two live responses were cut off. Quotes use the same limit as execution; starter-plan limits and existing spending caps remain unchanged. This does not establish better strategy quality. [Evidence and boundaries](growth-engine/strategy-output-budget-audit.md).

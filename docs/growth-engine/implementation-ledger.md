@@ -1,3 +1,7 @@
+## 17 November — honest review scores
+
+`v3.146-review-score-integrity`: fractional scores no longer round into acceptance. Malformed required scores block approval and survive review shortcuts. 236 focused tests passed; unchanged live education output re-assessed below the bar. [Audit](review-score-integrity-audit.md). No historical rewriting or model change.
+
 ## 17 November 2026 — review reward validation
 
 

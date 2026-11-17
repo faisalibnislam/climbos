@@ -40,6 +40,30 @@ describe("assessment", () => {
     criteria: [{ id: "C1", name: "a", anchors: { 1: "x", 3: "y", 5: "z" } }, { id: "C2", name: "b", anchors: { 1: "x", 3: "y", 5: "z" } }],
     shipRule: { minEach: 3, minAverage: 4 },
   };
+  const review = (values: number[]) => ({ gates: [{ id: "G1", pass: true, note: "" }], scores: values.map((score, i) => ({ id: ["C1", "C2", "XV"][i], score, note: "", fix: "" })), strengths: [], fixes: [] });
+  it("preserves fractional scores and compares the unrounded average to the bar", () => {
+    expect(assess(review([3.5, 3.5, 4]), [], rubric)).toMatchObject({ ship: false, average: 3.67, minimum: 3.5 });
+    expect(assess(review([3.999, 4, 4]), [], rubric)).toMatchObject({ ship: false, average: 4, minimum: 3.999 });
+    expect(assess(review([3.5, 4, 4.5]), [], rubric)).toMatchObject({ ship: true, average: 4, minimum: 3.5 });
+    expect(assess(review([2.9, 5, 5]), [], rubric).ship).toBe(false);
+  });
+  it.each([0, 6, 99, NaN, Infinity, -Infinity])("rejects invalid required scores instead of clamping them: %s", score => {
+    const result = assess(review([score, 5, 5]), [], rubric);
+    expect(result.ship).toBe(false);
+    expect(result.lint).toContainEqual(expect.objectContaining({ rule: "review_scores", severity: "error" }));
+    expect(Number.isFinite(result.average)).toBe(true);
+  });
+  it("rejects missing or duplicated criteria without mutating input or accepting last-wins scores", () => {
+    const original = review([5, 5, 5]);
+    const lint: Parameters<typeof assess>[1] = [];
+    for (const scores of [original.scores.slice(1), [...original.scores, original.scores[0]], [{ ...original.scores[0], score: 1 }, ...original.scores]]) {
+      const result = assess({ ...original, scores }, lint, rubric);
+      expect(result.ship).toBe(false);
+      expect(result.lint).toContainEqual(expect.objectContaining({ rule: "review_scores" }));
+    }
+    expect(lint).toEqual([]);
+    expect(assess(original, lint, rubric).ship).toBe(true);
+  });
   it("ships only when gates pass, lint is clean and scores clear the bar", () => {
     const good = { gates: [{ id: "G1", pass: true, note: "" }], scores: [{ id: "C1", score: 4, note: "", fix: "" }, { id: "C2", score: 5, note: "", fix: "" }, { id: "XV", score: 4, note: "", fix: "" }], strengths: [], fixes: [] };
     expect(assess(good, [], rubric).ship).toBe(true);

@@ -18,7 +18,7 @@ import {fitJson} from "./context";
 export type QualityState = "passed" | "provisional" | "needs_input" | "failed";
 
 /** Lint rules whose failure means the plan must not drive work (REQ-EVAL hard failures). */
-export const HARD_RULES = new Set(["no_audience", "owner_channel_preference", "paid_acquisition_fit", "demand_gate", "focused_learning", "evidence_basis", "campaign_timing", "focused_offer_assessment", "contact_policy", "economics", "budget", "capacity", "citation", "exploration_evidence", "creative_precedent", "provenance", "consistency", "no_plays", "invented_fact", "generic_action", "creative_diversity", "unsupported_scarcity", "unsupported_deadline", "unsupported_refund_promise", "approved_offer_price", "approved_offer_discount", "approved_offer_eligibility", "approved_offer_mechanism", "approved_offer_play", "approved_offer_urgency", "offer_validation_only", "offer_not_recommended", "growth_cash", "growth_cash_reserve"]);
+export const HARD_RULES = new Set(["review_scores", "no_audience", "owner_channel_preference", "paid_acquisition_fit", "demand_gate", "focused_learning", "evidence_basis", "campaign_timing", "focused_offer_assessment", "contact_policy", "economics", "budget", "capacity", "citation", "exploration_evidence", "creative_precedent", "provenance", "consistency", "no_plays", "invented_fact", "generic_action", "creative_diversity", "unsupported_scarcity", "unsupported_deadline", "unsupported_refund_promise", "approved_offer_price", "approved_offer_discount", "approved_offer_eligibility", "approved_offer_mechanism", "approved_offer_play", "approved_offer_urgency", "offer_validation_only", "offer_not_recommended", "growth_cash", "growth_cash_reserve"]);
 
 /** One hard finding the owner can act on: what failed and where. */
 export interface QualityFix {
@@ -100,6 +100,7 @@ export function withoutHard(a: AgentQuality): AgentQuality {
 }
 
 const LABEL: Record<string, string> = {
+  review_scores: "the AI review contains missing, duplicate or invalid scores; run a complete review before approving this draft",
   demand_gate: "the main recommendation buys traffic before the supplied demand concerns are resolved",
   focused_learning: "the primary learning test needs a consistent definition and honest unknowns",
   evidence_basis: "the evidence labels must match the recorded sources",

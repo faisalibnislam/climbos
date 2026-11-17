@@ -141,8 +141,8 @@ it("gives the writer and critic the stored source index and structured planning 
     expect(prompt).toContain("RESEARCH SOURCE INDEX");
     expect(prompt).toContain("monthlyAdBudgetUsd");
     expect(prompt).toContain("NUMBERED BUSINESS FACT STATEMENTS");
-    expect(prompt).toContain("0. [source kind unspecified — use business-context labels] Source A says price");
-    expect(prompt).toContain("1. [source kind unspecified — use business-context labels] Source B says setup time");
+    expect(prompt).toContain("0. [source: unknown; wording signal: unclassified] Source A says price");
+    expect(prompt).toContain("1. [source: unknown; wording signal: unclassified] Source B says setup time");
     expect(prompt).toContain("uninspected");
   }
 });
@@ -163,4 +163,24 @@ describe("optional revision failure preserves reviewed work", () => {
     expect(result.assessment?.ship).toBe(false);
     expect(result.quality?.revisionFailure?.kind).toBe("invalid_output");
   });
+});
+
+it("cannot erase invalid review scores by keeping a final revision without another review", async () => {
+  let calls = 0;
+  const result = await runAgent({ ...spec, skipFinalReview: true }, input, {
+    turn: async (req): Promise<TurnResult> => {
+      calls++;
+      const output = req.schema === CritiqueSchema
+        ? { gates: [{ id: "truth", pass: true, note: "Checked" }], scores: [{ id: "clarity", score: 5, note: "Clear", fix: "none" }], strengths: [], fixes: ["Clarify the next step"], escalation: { reason: "none", evidence: "" } }
+        : { answer: calls === 1 ? "Original draft" : "Unreviewed revision" };
+      return { ok: true, output, text: JSON.stringify(output), appended: [], usage: { ...ZERO_USAGE, calls: 1 }, costMicros: 1, sources: [], actualModelId: req.modelKey, stopReason: "end_turn" };
+    },
+    phase: async (_key, _label, fn) => (await fn()).value,
+  });
+  expect(calls).toBe(3);
+  expect(result.output.answer).toBe("Original draft");
+  expect(result.assessment?.ship).toBe(false);
+  expect(result.assessment?.lint).toContainEqual(expect.objectContaining({ rule: "review_scores" }));
+  expect(result.quality?.finalLint.review_scores).toBe(1);
+  expect(result.history[0].lintErrors).toBe(1);
 });
