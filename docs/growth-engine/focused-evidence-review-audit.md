@@ -1,5 +1,23 @@
 # Focused strategy evidence review — 17 November 2026
 
+## v8 retest and exploration/execution scope correction — v3.161
+
+Variant `launch-quality-v8-20261117`, engine v3.160, source hash `898eb76d609c16449da24dc00fda415faf654bd2d59e5e4383950a056487e4a2`: four calls cost **$0.765813**. First review: 3.5 with two hard findings. Revision: 3.44 with three hard findings. The existing non-improvement stop correctly retained the better first draft and did not spend on the newly available second repair. Final **ship false**; no overall quality improvement is claimed. Combined charged/held after v8: **$64.751437 / $100**.
+
+The next inspection found a scope ambiguity in the higher-priority focused skill: its instruction to use an actual source-backed product or offer did not distinguish execution-ready claims from hypothetical creative exploration. Engine `v3.161-exploration-scope` makes that distinction explicit. Bold exploration may propose a new capability, offer, ownership arrangement or ritual, with unknown terms and a reversible simulation; it may not present that idea as available functionality. It must compare with ordinary practice and show a meaningful benefit for each participant beyond shifting a bill. No candidate strategy or Livoform-specific answer was supplied.
+
+Review guidance also distinguishes documented first-party features in an owner-reviewable public draft from independently tested behavior. It cross-reads the draft's sources and checks-before-use rather than requiring self-citation in every marketing sentence. Unlisted features, inferred free-tier eligibility, speed/results and claims of completed testing remain unsupported. Existing artifact kinds are retained. No score threshold or hard failure rule was relaxed.
+
+The source skill was rebuilt through the repository's established `pnpm skills:build` workflow; only that playbook and its generated hash changed. **231 tests in ten files passed (10.92 seconds)**, plus app/Convex typechecks, changed-file ESLint and diff checks:
+
+```sh
+pnpm skills:build
+pnpm exec vitest run tests/unit/creative-precedents.test.ts tests/unit/strategy-prompt-cost.test.ts tests/unit/focused-plan.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/agent-escalation.test.ts tests/unit/evaluation-identity.test.ts tests/unit/livoform-launch-input.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+These checks establish wiring and boundaries, not semantic success. Paid variant `launch-quality-v9-20261117` evaluates the new contract using the same supplied business evidence and runtime model.
+
 ## v7 retest, retrieval relevance and bounded second repair — v3.160
 
 Variant `launch-quality-v7-20261117`, engine v3.159, source hash `35d999287af17b9f09f77e195b2574a0f32adc99a5dc79fce225127c7e680259`: four calls cost **$0.674090**. The raw response now did explore first. First review: 3.63 with two lint errors. Revision: **3.88 average, minimum 3, ship false**, with an unsupported instruction about editing a generated form in its social draft. Other rubric criteria reached 4, but a familiar agency/client-payer mechanism remained labelled highly novel; generation order alone did not establish originality. The failed result is preserved. Combined charged/held after v7: **$63.985624 / $100**.

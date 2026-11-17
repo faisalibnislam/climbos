@@ -1,3 +1,7 @@
+## 17 November — preserve hypothetical product and business-model exploration
+
+`v3.161-exploration-scope`: fix the source playbook ambiguity between execution-ready product claims and creative hypotheses; require a meaningful distinction from commonplace billing handoffs or channels. Review documented first-party draft copy in its actual review stage without accepting unlisted features or tested-result claims. Generated skill rebuilt; 231 focused/permission tests and typechecks/lint passed. V8 remains failed; v9 is pending. [Audit](focused-evidence-review-audit.md).
+
 ## 17 November — repair retrieval and allow one further reviewed correction
 
 `v3.160-retrieval-and-bounded-repair`: stop ranking precedents by words such as owner/selected/source; give the launch harness the source-labelled product summary already in its evidence. Full focused plans permit two reserved revisions, with starter unchanged and every revision re-reviewed. Three red regressions, then 233 tests passed; typechecks/lint passed. V7 failed and is preserved; v8 evaluates the combined configuration. [Audit](focused-evidence-review-audit.md).
