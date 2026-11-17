@@ -1,0 +1,40 @@
+import { afterEach, expect, it, vi } from "vitest";
+import { api, internal } from "../../convex/_generated/api";
+import { asNewUser, setup } from "./helpers";
+import type { AgentInput } from "../../shared/agents/types";
+import { RATE_VERSIONS } from "../../shared/economics/rates";
+const state = vi.hoisted(() => ({ inputs: [] as AgentInput[] }));
+vi.mock("../../shared/agents/runtime", async original => ({ ...await original<typeof import("../../shared/agents/runtime")>(), runAgent: vi.fn(async (_spec: unknown, input: AgentInput) => {
+  state.inputs.push(input);
+  throw new Error("Test stops at the model boundary after capturing actual evidence");
+}) }));
+afterEach(() => { state.inputs = []; vi.unstubAllEnvs(); });
+it("carries correct identity coverage and conflicting-refund limits through the actual recommendation writer", async () => {
+  const t = setup(), owner = await asNewUser(t, "concentration-evidence@example.com"), other = await asNewUser(t, "foreign-concentration@example.com");
+  const { orgId } = await owner.client.mutation(api.orgs.createWorkspace, { businessName: "Evidence" });
+  const foreign = await other.client.mutation(api.orgs.createWorkspace, { businessName: "Foreign" });
+  const now = Date.now();
+  const base = { orgId, source: "stripe", currency: "USD", refundedMinor: 0, occurredAt: now - 1000, isFixture: false, ingestedAt: now };
+  await t.run(async ctx => {
+    await ctx.db.insert("revenueEvents", { ...base, sourceEventId: "sale", kind: "order", amountMinor: 1000, customerRef: "private-a", orderRef: "order" });
+    await ctx.db.insert("revenueEvents", { ...base, sourceEventId: "refund", kind: "refund", amountMinor: 200, orderRef: "order" });
+    await ctx.db.insert("revenueEvents", { ...base, orgId: foreign.orgId, sourceEventId: "foreign", kind: "order", amountMinor: 99999, customerRef: "foreign-customer", orderRef: "order" });
+  });
+  vi.stubEnv("CLIMBOS_FAKE_LLM", "");
+  const run = () => t.run(ctx => ctx.db.insert("workflowRuns", { orgId, kind: "sales_sequence", title: "Review recorded sales", status: "executing", input: "{}", engine: "v2", roles: [], estimateMicros: 0, actualMicros: 0, rateVersionId: RATE_VERSIONS[0].id, entitlementVersionId: "test", routingVersionId: "test", budget: { modelSteps: 20, researchTools: 5, repairs: 0 }, used: { modelSteps: 0, researchTools: 0, repairs: 0 }, isFixture: false, createdBy: owner.userId, createdAt: now, updatedAt: now }));
+  const first = await run();
+  const context = await t.query(internal.jobWrites.jobContext, { runId: first });
+  expect(context?.customerConcentration).toMatchObject({ eventCount: 2, identifiedCoverage: 1, identifiedPositiveMinor: 800, topCustomerShare: 1 });
+  await t.action(internal.jobs.simplePlanJob, { runId: first, task: "sales_sequence" });
+  expect(state.inputs[0].brief).toContain("Customer identity coverage 100%");
+  expect(state.inputs[0].brief).toContain("not net revenue or import completeness");
+  expect(state.inputs[0].brief).not.toContain("private-a");
+  expect(state.inputs[0].brief).not.toContain("foreign-customer");
+  await t.run(ctx => ctx.db.insert("revenueEvents", { ...base, sourceEventId: "conflict", kind: "order", amountMinor: 500, customerRef: "private-b", orderRef: "order" }));
+  const second = await run();
+  expect((await t.query(internal.jobWrites.jobContext, { runId: second }))?.customerConcentration).toMatchObject({ topCustomerShare: null, conflictingOrderCount: 1, unresolvedRefundCount: 1 });
+  await t.action(internal.jobs.simplePlanJob, { runId: second, task: "sales_sequence" });
+  expect(state.inputs[1].brief).toContain("top customer share unavailable");
+  expect(state.inputs[1].brief).toContain("1 order reference(s) have conflicting customer identities; 1 nonzero refund(s) cannot be assigned");
+  for (const table of ["approvals", "actionReceipts", "emailLog", "webhookDeliveries", "artifacts"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
+});

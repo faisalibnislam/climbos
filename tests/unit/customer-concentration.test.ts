@@ -30,7 +30,8 @@ describe("customer concentration", () => {
     expect(result.customerCount).toBe(2);
     expect(result.identifiedPositiveMinor).toBe(16_000);
     expect(result.totalPositiveMinor).toBe(23_000);
-    expect(result.identifiedCoverage).toBeCloseTo(16 / 23);
+    expect(result.identifiedCoverage).toBeCloseTo(18 / 23);
+    expect(result.identifiedBillingPositiveMinor).toBe(18_000);
     expect(result.topCustomerShare).toBeCloseTo(8 / 16);
     expect(result.topThreeCustomerShare).toBe(1);
     expect(JSON.stringify(result)).not.toContain("private-");
@@ -65,4 +66,51 @@ describe("customer concentration", () => {
     expect(result.identifiedPositiveMinor).toBe(18_000);
     expect(result.topCustomerShare).toBeCloseTo(10 / 18);
   });
+});
+
+it("keeps identity coverage on the same positive-event basis despite refunds", () => {
+  const result = customerConcentration([
+    event({ sourceEventId: "sale", amountMinor: 1000, kind: "order", customerRef: "a", orderRef: "o" }),
+    event({ sourceEventId: "refund", amountMinor: 200, kind: "refund", orderRef: "o" }),
+  ], window)!;
+  expect(result).toMatchObject({ identifiedCoverage: 1, identifiedBillingPositiveMinor: 1000, identifiedPositiveMinor: 800, totalPositiveMinor: 1000 });
+});
+it("does not assign an ambiguous order refund to whichever customer was read first", () => {
+  const rows = [
+    event({ sourceEventId: "a", amountMinor: 1000, kind: "order", customerRef: "a", orderRef: "same" }),
+    event({ sourceEventId: "b", amountMinor: 500, kind: "order", customerRef: "b", orderRef: "same" }),
+    event({ sourceEventId: "r", amountMinor: 200, kind: "refund", orderRef: "same" }),
+  ];
+  const result = customerConcentration(rows, window)!;
+  expect(result).toMatchObject({ conflictingOrderCount: 1, unresolvedRefundCount: 1, topCustomerShare: null, topThreeCustomerShare: null });
+  expect(customerConcentration([...rows].reverse(), window)).toEqual(result);
+});
+it("withholds concentration when a nonzero refund cannot be assigned or contradicts its order", () => {
+  const sale = event({ sourceEventId: "a", amountMinor: 1000, kind: "order", customerRef: "a", orderRef: "o" });
+  expect(customerConcentration([sale, event({ sourceEventId: "r", amountMinor: 200, kind: "refund" })], window)).toMatchObject({ unresolvedRefundCount: 1, topCustomerShare: null });
+  expect(customerConcentration([sale, event({ sourceEventId: "r", amountMinor: 200, kind: "refund", orderRef: "o", customerRef: "b" })], window)).toMatchObject({ conflictingOrderCount: 1, topCustomerShare: null });
+});
+it("treats blank customer identifiers as unknown and rejects unsafe aggregate arithmetic", () => {
+  expect(customerConcentration([event({ sourceEventId: "a", amountMinor: 1000, kind: "order", customerRef: "   " })], window)).toMatchObject({ identifiedCoverage: 0, customerCount: 0 });
+  expect(() => customerConcentration([
+    event({ sourceEventId: "a", amountMinor: Number.MAX_SAFE_INTEGER, kind: "order", customerRef: "a" }),
+    event({ sourceEventId: "b", amountMinor: 1, kind: "order", customerRef: "b" }),
+  ], window)).toThrow(RangeError);
+});
+
+it("does not mistake zero refunds, foreign currency or out-of-window events for material identity uncertainty", () => {
+  const result = customerConcentration([
+    event({ sourceEventId: "a", amountMinor: 1000, kind: "order", customerRef: "a", orderRef: "o" }),
+    event({ sourceEventId: "zero", amountMinor: 0, kind: "refund" }),
+    event({ sourceEventId: "foreign", amountMinor: 200, kind: "refund", currency: "EUR" }),
+    event({ sourceEventId: "future", amountMinor: 200, kind: "refund", occurredAt: 1001 }),
+  ], window)!;
+  expect(result).toMatchObject({ eventCount: 2, unresolvedRefundCount: 0, identifiedCoverage: 1, topCustomerShare: 1 });
+});
+it.each([
+  { amountMinor: 0.5, refundedMinor: 0 },
+  { amountMinor: 100, refundedMinor: 101 },
+  { amountMinor: 100, refundedMinor: -1 },
+])("rejects invalid imported amounts %j", extra => {
+  expect(() => customerConcentration([event({ sourceEventId: "a", kind: "order", ...extra })], window)).toThrow(RangeError);
 });

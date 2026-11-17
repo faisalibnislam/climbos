@@ -1,3 +1,12 @@
+## 17 November 2026 — customer concentration evidence
+
+[Audit](growth-engine/customer-concentration-basis-audit.md) records the confirmed arithmetic/identity defects and limits. Engine `v3.138-customer-concentration-basis`.
+
+- `pnpm exec vitest run tests/convex/customer-concentration-evidence.test.ts tests/unit/customer-concentration.test.ts tests/convex/cohort-evidence.test.ts tests/convex/tenancy.test.ts tests/convex/approval-claims.test.ts` — **33 passed / five files, 2.64 seconds**. Five earlier failures reproduced the defect. Actual recommendation prompt transport, tenant separation, no identifier disclosure, ambiguous/unmatched refunds, positive-event coverage, window/currency filters, safe arithmetic and action boundaries.
+- `pnpm typecheck` passed for application and Convex. Scoped ESLint passed. No UI changed; no browser or paid live-model check ran.
+
+No source records were rewritten and no live provider or external customer action ran. Imports remain partial evidence; live advice quality and full project scope remain unverified.
+
 ## 17 November 2026 — multiple reported loss reasons
 
 [Audit](growth-engine/multiple-loss-reasons-audit.md) records the confirmed gap, connected engine path and limits. Engine `v3.137-multiple-loss-reasons`.

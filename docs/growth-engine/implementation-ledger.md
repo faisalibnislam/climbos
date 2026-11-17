@@ -1,3 +1,7 @@
+## 17 November 2026 — customer concentration evidence
+
+Fixed inconsistent identity-coverage arithmetic, ambiguous refund assignment, blank identities and unsafe totals in the existing billing → recommendation path. 33 focused tests passed, including the actual writer context and authorization regressions; typecheck and scoped lint passed. [Audit](customer-concentration-basis-audit.md). No UI or external action changes; full scope remains incomplete.
+
 ## 17 November 2026 — multiple reported loss reasons
 
 Closed the single-reason entry and overlapping-category denominator gaps in the existing CRM → strategy/model path. Explicit owner editing, stale-write checks, read-only viewer presentation and audit records preserve existing boundaries. 83 focused tests and two desktop/mobile checks passed, plus typecheck and scoped lint. [Audit](multiple-loss-reasons-audit.md). Full scope remains incomplete.
