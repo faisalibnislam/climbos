@@ -1,3 +1,7 @@
+## 18 November — preserve the actor of a proposed product test
+
+V3.183 clarifies that third-party connector documentation and owner approval do not create ClimbOS account access or a working integration. The writer/reviewer distinguish preparing a checklist from running its product test. 172 tests in nine files, types/lint passed. Docs V5 changed the bold mechanism but still failed factual and test-quality checks at 3.63; seven calls cost $1.431628, combined $83.216985 / $100. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — explore participant roles and value exchange
 
 V3.182 refines the existing ideation methods to change consequential roles/exchanges, distinguish causal transfers from metaphors and consider affected non-buyers. Same model, call count and token budget; hypotheses can be simulated without existing integrations. 168 tests in ten files, types/lint passed. Paid semantic effect awaits a fresh run. [Audit](focused-evidence-review-audit.md).

@@ -1,6 +1,21 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status — generate structural alternatives before polishing a feature
+## Current status — keep the actor and actual capability explicit
+
+`launch-docs-v5-20261118` used v3.180, source hash `ec972c1cb31b9f9f83e1e9af18e7787b18467323359e0ab69c2a9d322a87d991`, and unchanged documentation evidence. Seven calls cost **$1.431628**; combined charged/held reached **$83.216985 / $100**. History: **3.50 / one hard error → 3.38 / two → 3.63 / two; ship false**. The new originality comparison rejected the ordinary connector and AI reply gate. The final respondent-owned portable-brief proposal was classified as a material difference, but its stated-preference test remained weak. No real-world originality, demand or commercial result is claimed.
+
+Two remaining factual findings were preserved: an unqualified “learn faster” channel comparison and a promise that ClimbOS could run the private payment check after access approval. A product's published connector does not prove that ClimbOS implements it, and approval does not create technical capability. V3.183 makes this actor distinction explicit in the existing writer task and evidence review: preparing instructions is different from performing a third-party product/payment test; current abilities must be supported by supplied application context, and proposed future integrations remain proposals. Existing semantic evidence findings still block approval; no new integration, capability or external action is added.
+
+**172 tests in nine files passed (21.61 seconds)**, including actual writer/reviewer request delivery, semantic-evidence rejection, generation and authorization boundaries. App/Convex types, changed-file lint and diff checks passed.
+
+```sh
+pnpm exec vitest run tests/unit/creative-preparation.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/focused-originality-review.test.ts tests/unit/focused-plan.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/agent-escalation.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+The active docs V6 run loaded v3.182 and measures the preceding generation refinements. A later fresh test is needed to establish V3.183's semantic effect. Tester access and founder time remain unknown, runtime model unchanged, all calls within the same combined cap.
+
+## V3.182 — generate structural alternatives before polishing a feature
 
 V3.182 strengthens the existing bounded ideation task in response to repeated conventional candidates in docs V3–V5. The inversion method must identify a consequential change in who sets terms, chooses, owns outputs, does work, carries risk or receives value. A distant transfer must bring an operating rule or incentive, not merely rename an ordinary service as a tailor/library/concierge. At least one candidate treats the product as a resource for a different exchange and considers an affected non-buyer as well as the buyer. Interests may conflict; demand remains a hypothesis. Private simulations remain possible without current integration support. No example specific to Livoform, new agent, provider, call, token allowance or model was added.
 
@@ -11,7 +26,7 @@ pnpm exec vitest run tests/unit/creative-preparation.test.ts tests/unit/strategy
 pnpm typecheck
 ```
 
-The new structured reviewer in docs V5 correctly rejected both the assistant-connector idea and its first replacement, an ordinary AI reply approval workflow. The average-deficit repair now reaches the writer. The second replacement changes respondent ownership and portability of a proposed brief, with a manual comparison against a plain answer copy; its final review is pending. This is evidence that the actual mechanism can change during repair, not acceptance, business validation or proof that every new idea is original. V5 loaded v3.180; a fresh run will be needed to test V3.181/V3.182's generation changes.
+The new structured reviewer in docs V5 correctly rejected both the assistant-connector idea and its first replacement, an ordinary AI reply approval workflow. The average-deficit repair now reaches the writer. The second replacement changes respondent ownership and portability of a proposed brief, with a manual comparison against a plain answer copy; its final review subsequently recognized the difference but failed overall (details above). This is evidence that the actual mechanism can change during repair, not acceptance, business validation or proof that every new idea is original. V5 loaded v3.180; a fresh run will be needed to test V3.181/V3.182's generation changes.
 
 ## V3.181 — distinguish proposed futures from invented present facts
 

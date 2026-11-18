@@ -58,12 +58,16 @@ describe("creative preparation within the existing focused run", () => {
     expect(writer).toContain("No eligible exposure still means not-run, not failed demand");
     expect(writer).toContain("A required paid plan may put payment before activation");
     expect(writer).toContain("actual product activation remains untested");
+    expect(writer).toContain("Owner approval cannot create a missing capability");
+    expect(writer).toContain("distinguish preparing instructions from performing the instructed task");
     expect(writer).not.toContain("at most 3 immediate items in weekOneChecklist");
     expect(critic).toContain("not a distribution fallback");
     expect(critic).toContain("not an already verified channel");
     expect(critic).toContain("Payment can legitimately precede activation");
     expect(critic).toContain("A sample walkthrough supports comprehension or job-fit learning only");
     expect(critic).toContain("Preserve prepared assets and useful alternative mechanisms");
+    expect(critic).toContain("another product's connector documentation does not establish ClimbOS account access");
+    expect(critic).toContain("Preparing a checklist is different from running its product/payment test");
     expect(critic).toContain("FOCUSED ORIGINALITY AUDIT:");
     expect(critic).toContain("A distinctive adjacent option does not compensate for a conventional bold one");
     expect(critic).toContain("not whether it is proven");
