@@ -3,7 +3,7 @@ export const ANTHROPIC_QA_CAP_MICROS = 100_000_000;
 const MAX_QA_INPUT_TOKENS = 1_000_000;
 // Text-only strategy calls use a tighter envelope than opaque server-side search.
 // The byte-based bound includes schema/cache overhead and is enforced before billing.
-export const MAX_QA_TEXT_INPUT_BOUND = 400_000;
+export const MAX_QA_TEXT_INPUT_BOUND = 300_000;
 const MAX_QA_OUTPUT_TOKENS = 32_000;
 // Two text-only calls at the highest permitted cache-write/output rates and limits.
 // This is a conservative preflight, not a new charge or an increased spending cap.

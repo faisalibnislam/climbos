@@ -53,6 +53,20 @@ function stringLengthCorrection(message: string): string | null {
 const RevisionLengthFailure = z.object({ _focusedRevisionLengthFailure: z.string() }).strict();
 type RevisionLengthFailure = z.infer<typeof RevisionLengthFailure>;
 
+/** Prior judgments are fallible revision context, never business facts or a ban on an idea. */
+function priorFocusedFindings(output: unknown, critique: CritiqueResult) {
+  const bold = (output as { strategyExploration?: { bold?: { title?: unknown; businessMechanism?: unknown } } } | null)?.strategyExploration?.bold;
+  const short = (value: unknown, limit: number) => typeof value === "string" ? value.slice(0, limit) : "";
+  const audit = FocusedOriginalityAuditSchema.safeParse(critique.originalityAudit);
+  const evidence = FocusedEvidenceAuditSchema.safeParse(critique.evidenceAudit);
+  return {
+    earlierBoldProposal: { title: short(bold?.title, 120), mechanism: short(bold?.businessMechanism, 500) },
+    originalityFinding: audit.success ? { verdict: audit.data.mechanismVerdict, closestAlternative: short(audit.data.closestFamiliarAlternative, 400), difference: short(audit.data.consequentialDifference, 500), test: short(audit.data.testOfDifference, 400) } : null,
+    unsupportedClaims: (evidence.success ? evidence.data : []).flatMap(row => row.claims).filter(claim => claim.verdict === "unsupported").slice(0, 3)
+      .map(claim => ({ path: short(claim.path, 200), quote: short(claim.quote, 400), correction: short(claim.correction, 400) })),
+  };
+}
+
 export interface PhaseRecord {
   phase: "research" | "explore" | "draft" | "critique" | "revise";
   round: number;
@@ -456,7 +470,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
       : baseUser,
   }];
 
-  const draftOnce = async (round: number, feedback: { previous: T; fixes: string[]; strengths: string[]; lint: LintIssue[]; criteria: string; failedGates: string[] } | null, modelOverride?: ModelKey): Promise<T> => {
+  const draftOnce = async (round: number, feedback: { previous: T; fixes: string[]; strengths: string[]; lint: LintIssue[]; criteria: string; failedGates: string[]; priorFindings: string } | null, modelOverride?: ModelKey): Promise<T> => {
     checkDeadline(deps);
     const key: PhaseKey = round === 0 ? { phase: "draft", round: 0, index: 1 } : { phase: "revise", round, index: 1 + round * 2 };
     const phaseValue = await deps.phase<T | RevisionLengthFailure>(key, round === 0 ? `${spec.label}: draft` : `${spec.label}: revision ${round}`, async () => {
@@ -466,7 +480,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
       const shortFixes = feedback?.fixes.map(f => `- ${f}`).join("\n") ?? "";
       const checks = feedback?.lint.map(l => `- ${focused ? `[${l.severity}] ` : ""}${l.path ? `${l.path}: ` : ""}${l.message}`).join("\n") ?? "";
       const repairFeedback = feedback && focused
-        ? `FAILED GATES (address these concrete violations first):\n${feedback.failedGates.join("\n") || "None reported."}\n\nAUTOMATIC CHECK FINDINGS (errors block acceptance; warnings are advisory):\n${checks || "None reported."}\n\nCRITERION FEEDBACK (deficits under the actual acceptance thresholds):\n${feedback.criteria || "No scored deficit reported."}\n\nADDITIONAL REVIEWER SUGGESTIONS (context, not separate assignments; use only when needed for the required repairs or cross-section consistency):\n${shortFixes}`
+        ? `FAILED GATES (address these concrete violations first):\n${feedback.failedGates.join("\n") || "None reported."}\n\nAUTOMATIC CHECK FINDINGS (errors block acceptance; warnings are advisory):\n${checks || "None reported."}\n\nCRITERION FEEDBACK (deficits under the actual acceptance thresholds):\n${feedback.criteria || "No scored deficit reported."}${feedback.priorFindings ? `\n\nEARLIER REVIEW CONTEXT: These findings concern earlier drafts, not the current draft or established business facts. Do not cycle back to the same mechanism or unsupported claim merely because it disappeared from the latest review. You may revisit or disagree with an earlier judgment: explain the consequential change or evidence that addresses its weakness. No idea is banned and unknown evidence does not disqualify novelty. The final reviewer will independently assess only the new complete draft and original sources.\n${untrusted("earlier review findings", feedback.priorFindings)}` : ""}\n\nADDITIONAL REVIEWER SUGGESTIONS (context, not separate assignments; use only when needed for the required repairs or cross-section consistency):\n${shortFixes}`
         : `FIX (most important first):\n${shortFixes}${feedback?.criteria ? `\n\nCRITERION FEEDBACK:\n${feedback.criteria}` : ""}${checks ? `\n\nAUTOMATIC CHECKS FAILED:\n${checks}` : ""}`;
       const messages: MessageParam[] = feedback
         ? [
@@ -589,6 +603,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
   let best: { output: T; assessment: Assessment | null; round: number } = { output: current, assessment: null, round: 0 };
   const history: AgentRunResult<T>["history"] = [];
   let revisionFailure: { kind: string; message: string } | undefined;
+  const earlierFindings: ReturnType<typeof priorFocusedFindings>[] = [];
   const reviews = spec.maxRevisions >= 0 ? spec.maxRevisions + 1 : 0;
   for (let round = 0; round < reviews; round++) {
     const lint = round === 0 && firstReview ? firstReview.lint : lintOf(current);
@@ -616,7 +631,9 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     const revisionModel = escalation ?? spec.models.revise ?? spec.models.draft;
     if (deps.beforeRevision && !(await deps.beforeRevision(round + 1, revisionModel))) break;
     const previous = current;
-    const repair = { previous, fixes: c.fixes, strengths: c.strengths, lint: a.lint, criteria: focusedRevisionCriteria(c, withVerdict(spec.rubric)), failedGates: c.gates.filter(gate => !gate.pass).map(gate => `- ${gate.id}: ${gate.note}`) };
+    const priorFindings = spec.rubric.id === FOCUSED_REVIEW_ID && earlierFindings.length ? reportDropped("earlier review findings", fitJson(earlierFindings.slice(-2).reverse(), 6_000)) : "";
+    if (spec.rubric.id === FOCUSED_REVIEW_ID) earlierFindings.push(priorFocusedFindings(current, c));
+    const repair = { previous, fixes: c.fixes, strengths: c.strengths, lint: a.lint, criteria: focusedRevisionCriteria(c, withVerdict(spec.rubric)), failedGates: c.gates.filter(gate => !gate.pass).map(gate => `- ${gate.id}: ${gate.note}`), priorFindings };
     try {
       current = await draftOnce(round + 1, repair, escalation);
     } catch (error) {

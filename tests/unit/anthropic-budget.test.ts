@@ -18,7 +18,7 @@ describe("owner-authorized Anthropic QA envelope", () => {
     expect(claudeQaActualMicros("claude-sonnet-5-5", {})).toBeNull();
   });
   it("preflights a whole revision and review against both ledgers, including uncertain holds", () => {
-    expect(CLAUDE_QA_REVISION_HEADROOM_MICROS).toBe(2_640_000);
+    expect(CLAUDE_QA_REVISION_HEADROOM_MICROS).toBe(2_140_000);
     const historical = 1_896_709, main = ANTHROPIC_QA_CAP_MICROS - CLAUDE_QA_REVISION_HEADROOM_MICROS - historical;
     expect(canStartClaudeQaRevision(main + historical)).toBe(true);
     expect(canStartClaudeQaRevision(main + historical + 1)).toBe(false);

@@ -37,6 +37,30 @@ async function run(patch: unknown, lastReview = review(5)) {
 }
 
 describe("bounded focused section repairs", () => {
+  it("carries earlier mechanism and factual findings into a later repair without feeding them to the independent critic", async () => {
+    const creativeSchema = schema.extend({ strategyExploration: z.object({ bold: z.object({ title: z.string(), businessMechanism: z.string() }) }) });
+    const first = { ...original, summary: "Payers carry all the outcome risk.", strategyExploration: { bold: { title: "Original refund proposal", businessMechanism: "A familiar paid inbox and refund guarantee." } } };
+    const middle = { summary: "Payment and customer risk remain unknown.", strategyExploration: { bold: { title: "Replacement wallet proposal", businessMechanism: "A familiar portable answer profile." } } };
+    const final = { strategyExploration: { bold: { title: "A changed exchange to review", businessMechanism: "A different synthetic value exchange with honest unknowns." } } };
+    const earlierReview = { ...review(3), originalityAudit: { ...focusedOriginalityFixture, mechanismVerdict: "familiar_mechanism", closestFamiliarAlternative: "Earlier paid-inbox comparison", consequentialDifference: "Refunds alone do not change the exchange." } };
+    earlierReview.evidenceAudit[0].claims = [{ path: "summary", quote: first.summary, verdict: "unsupported", basis: "No supplied source establishes which party bears all risk.", correction: "Keep the actual risk allocation unknown." }] as never;
+    const laterReview = { ...review(3), originalityAudit: { ...focusedOriginalityFixture, mechanismVerdict: "familiar_mechanism", closestFamiliarAlternative: "Current profile-wallet comparison" } };
+    const responses = [first, earlierReview, middle, laterReview, final, review(5)], requests: TurnRequest[] = [];
+    const result = await runAgent({ ...spec, schema: creativeSchema, maxRevisions: 2 }, { task: "Synthetic creative repair", brief: "No risk allocation measured", facts: [] }, {
+      beforeRevision: async () => true,
+      phase: async (_key, _label, fn) => (await fn()).value,
+      turn: async req => { requests.push(req); const value = responses.shift(); return { ok: true, output: value, text: JSON.stringify(value), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" }; },
+    });
+    expect(requests).toHaveLength(6);
+    const secondRepair = JSON.stringify(requests[4].messages);
+    expect(secondRepair).toContain("Original refund proposal");
+    expect(secondRepair).toContain("Earlier paid-inbox comparison");
+    expect(secondRepair).toContain("Keep the actual risk allocation unknown.");
+    expect(secondRepair).toContain("may revisit or disagree");
+    expect(JSON.stringify(requests[5].messages)).not.toContain("Earlier paid-inbox comparison");
+    expect(JSON.stringify(requests[5].messages)).not.toContain("Original refund proposal");
+    expect(result.assessment?.ship).toBe(true);
+  });
   it.each(["recover", "deny", "yield", "repeat_failure", "review_failure"] as const)("uses only the remaining reserved attempt for a string-length failure: %s", async mode => {
     const bounded = schema.extend({ summary: z.string().min(4).max(40) });
     const tooLong = bounded.shape.summary.safeParse("x".repeat(41));

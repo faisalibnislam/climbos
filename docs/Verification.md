@@ -1,3 +1,7 @@
+## 18 November — keep earlier findings available to revisions
+
+V4 retained a clean but failing **3.63/5** plan. Its final schema-invalid repair returned to a previously rejected idea and claim. V3.197 gives the writer bounded earlier findings without turning them into facts or banning ideas; final review stays independent. **188 tests in 11 files passed**. The QA input envelope is further restricted to 300,000, funding a complete worst-case repair pair with $2.14 headroom while preserving the $100 cap. Combined charged/held **$96.635521 / $100**. [Audit](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November — repair the actual defects within the existing allowance
 
 Comparison-pack V3 failed at **3.25/5**; a schema-invalid first revision left the reviewed draft intact. Combined charged/held **$95.307098 / $100**. V3.196 passes omitted gate details to repairs, separates optional polish, and allows a pure string-length failure to consume only the remaining reserved attempt. Failed attempts are checkpointed across resume; the full corrected draft is revalidated and independently reviewed. **187 tests in 11 files passed**, including refusal, repeat-failure and permission cases. Runtime model, acceptance bar and total cap unchanged. [Audit](growth-engine/focused-evidence-review-audit.md).

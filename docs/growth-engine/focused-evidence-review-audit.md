@@ -1,5 +1,19 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.197 — prevent revisions from forgetting earlier findings
+
+Comparison-pack V4 (`15efad68235f75cfb2740deb5cf68699bf83afb001b465751a4d656acc1fa9de`) made seven paid calls for **$1.328423**. Its first review scored 3.25 with two unsupported claims; the next reviewed version was clean but still failed at **3.63/5**, with F7=2. The final attempted patch exceeded the 500-character bold-test-method bound and was not reviewed or accepted. The failed attempt is now checkpointed and inspectable; no further attempt was allowed after the two-revision ceiling. Combined charged/held: **$96.635521 / $100**.
+
+Inspection found a concrete cycle: the first critic rejected pay-to-ask/refund and its unsupported claim about who bears outcome risk. The writer replaced it with a respondent-held profile, then returned to the original refund idea and risk claim after the next critique. The revision packet carried only the latest review, while its original candidate context still favoured the earlier proposal.
+
+Focused revisions now carry a bounded record of earlier bold mechanisms, originality findings and unsupported claims/corrections. The record contains at most two earlier reviews, fitted to 6,000 characters, and is explicitly fallible, untrusted context rather than evidence or an idea blacklist. The writer may revisit an idea or disagree if it addresses the earlier weakness. Final critics still see only the current complete work and original sources; prior judgments cannot bias their verdict. Checkpoint replay rebuilds this context from the existing reviewed phases. No new model call, agent, provider, quality threshold or execution permission.
+
+The new request-level regression failed before the change. After correction, **188 tests in 11 files passed (19.01 seconds)** using the V3.196 focused/runtime/permission command. An intermediate test run caught passing the context fitter's object rather than its text; the established `reportDropped` adapter now supplies the bounded text and records any omission.
+
+The QA runner also now rejects text requests above a **300,000** conservative input bound (UTF-8 serialized bytes plus 65,536 overhead), instead of 400,000. The largest V4 request bound was 247,282, before the new history allowance. This is a smaller enforceable envelope, not truncation or a larger spending permission. Both worst-case text calls together require **$2.14** preflight headroom; each actual request still reserves in full and refuses a cumulative total over $100. Boundary, over-limit, multibyte, both-ledger and uncertain-hold tests pass. Search calls keep their separate original envelope. The next run will fail before billing if it exceeds the smaller input bound.
+
+Final defensive parsing and history ordering passed **45 repair/evidence/budget tests (1.79 seconds)**. App/Convex types, changed-file lint and diff checks passed. No generated files or model routes changed.
+
 ## V3.196 — prioritize actual repair failures and use the remaining reserved attempt
 
 Comparison-pack V3 completed the two creative stages and drafted a plan, but its independent review still failed at **3.25/5** (F7=2). The first revision exceeded `strategyExploration.adjacent.businessMechanism`'s 500-character bound. It was correctly rejected, leaving the reviewed failed draft intact. Five paid calls cost **$0.917202**; combined charged/held **$95.307098 / $100**. Source hash `60bbb158c14e399f78340e142e282a2a81153640e5be4b013f81cb9b4f233033`. No separate comparison or accepted plan is claimed.
