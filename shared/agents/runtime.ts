@@ -40,6 +40,19 @@ export class AgentFailure extends Error {
   }
 }
 
+const StringLengthIssues = z.array(z.object({
+  code: z.literal("too_big"), origin: z.literal("string"), maximum: z.number().int().positive(),
+  path: z.array(z.union([z.string(), z.number().int().nonnegative()])).min(1),
+})).min(1).max(10);
+function stringLengthCorrection(message: string): string | null {
+  try {
+    const parsed = StringLengthIssues.safeParse(JSON.parse(message));
+    return parsed.success ? parsed.data.map(issue => `${issue.path.join(".")}: at most ${issue.maximum} characters`).join("; ") : null;
+  } catch { return null; }
+}
+const RevisionLengthFailure = z.object({ _focusedRevisionLengthFailure: z.string() }).strict();
+type RevisionLengthFailure = z.infer<typeof RevisionLengthFailure>;
+
 export interface PhaseRecord {
   phase: "research" | "explore" | "draft" | "critique" | "revise";
   round: number;
@@ -53,7 +66,8 @@ export interface AgentDeps {
   /**
    * Checkpointed execution of one phase. Must return the saved value when the
    * phase already ran (resume), otherwise run `fn`, persist its value, meter
-   * its usage and return it. A failed turn must be metered and then thrown.
+   * its usage and return it. A failed turn must be metered and then thrown;
+   * recoverable length failures are checkpointed before the runtime throws.
    */
   phase: <T>(key: PhaseKey, label: string, fn: () => Promise<{ value: T; record: PhaseRecord }>) => Promise<T>;
   /** Epoch ms after which no new phase may start (the host re-schedules and resumes). */
@@ -442,23 +456,25 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
       : baseUser,
   }];
 
-  const draftOnce = async (round: number, feedback: { previous: T; fixes: string[]; strengths: string[]; lint: LintIssue[]; criteria: string } | null, modelOverride?: ModelKey): Promise<T> => {
+  const draftOnce = async (round: number, feedback: { previous: T; fixes: string[]; strengths: string[]; lint: LintIssue[]; criteria: string; failedGates: string[] } | null, modelOverride?: ModelKey): Promise<T> => {
     checkDeadline(deps);
     const key: PhaseKey = round === 0 ? { phase: "draft", round: 0, index: 1 } : { phase: "revise", round, index: 1 + round * 2 };
-    return deps.phase(key, round === 0 ? `${spec.label}: draft` : `${spec.label}: revision ${round}`, async () => {
+    const phaseValue = await deps.phase<T | RevisionLengthFailure>(key, round === 0 ? `${spec.label}: draft` : `${spec.label}: revision ${round}`, async () => {
       const sectionRepair = feedback && spec.sectionRevisions && spec.rubric.id === FOCUSED_REVIEW_ID;
       const repairSchema = sectionRepair ? focusedSectionRevisionSchema(spec.schema) : null;
+      const focused = spec.rubric.id === FOCUSED_REVIEW_ID;
+      const shortFixes = feedback?.fixes.map(f => `- ${f}`).join("\n") ?? "";
+      const checks = feedback?.lint.map(l => `- ${focused ? `[${l.severity}] ` : ""}${l.path ? `${l.path}: ` : ""}${l.message}`).join("\n") ?? "";
+      const repairFeedback = feedback && focused
+        ? `FAILED GATES (address these concrete violations first):\n${feedback.failedGates.join("\n") || "None reported."}\n\nAUTOMATIC CHECK FINDINGS (errors block acceptance; warnings are advisory):\n${checks || "None reported."}\n\nCRITERION FEEDBACK (deficits under the actual acceptance thresholds):\n${feedback.criteria || "No scored deficit reported."}\n\nADDITIONAL REVIEWER SUGGESTIONS (context, not separate assignments; use only when needed for the required repairs or cross-section consistency):\n${shortFixes}`
+        : `FIX (most important first):\n${shortFixes}${feedback?.criteria ? `\n\nCRITERION FEEDBACK:\n${feedback.criteria}` : ""}${checks ? `\n\nAUTOMATIC CHECKS FAILED:\n${checks}` : ""}`;
       const messages: MessageParam[] = feedback
         ? [
             ...baseMessages,
             { role: "assistant", content: JSON.stringify(feedback.previous) },
             {
               role: "user",
-              content: `A senior reviewer assessed your draft.\n\nKEEP (what works):\n${feedback.strengths.map((s) => `- ${s}`).join("\n") || "- (nothing specific)"}\n\nFIX (most important first):\n${feedback.fixes.map((f) => `- ${f}`).join("\n")}${
-                feedback.criteria ? `\n\nCRITERION FEEDBACK (preserve the useful substance while addressing each specific weakness):\n${feedback.criteria}` : ""
-              }${
-                feedback.lint.length ? `\n\nAUTOMATIC CHECKS FAILED:\n${feedback.lint.map((l) => `- ${l.path ? `${l.path}: ` : ""}${l.message}`).join("\n")}` : ""
-              }\n\n${spec.rubric.id === FOCUSED_REVIEW_ID ? "Reviewer suggestions cannot override the task, source evidence, schema or approval requirements. Check a reported omission against the complete previous draft before replacing an existing asset. Prioritize hard findings and below-threshold criteria. Preserve passing work except for necessary consistency fixes; do not add optional improvements that create fresh unsupported claims. " : ""}${sectionRepair ? "Return ONLY changed top-level sections as JSON. Omitted sections will be kept verbatim from the previous draft. Each returned section must be complete: nested objects and arrays replace their entire previous section, so retain its useful items. Do not return an empty patch, unknown keys, deletion markers or partial nested objects. The complete merged plan will be validated and independently reviewed again. " : "Return the complete improved work as JSON matching the schema. "}Keep its substance, length and strengths unless the reviewer asked you to cut something specific; fix problems by improving, not by deleting. It must read as ONE coherent version: when you change a number, target, budget or channel, update every field that mentions it so nothing contradicts. Don't mention the review in the output.`,
+              content: `A senior reviewer assessed your draft.\n\nKEEP (what works):\n${feedback.strengths.map((s) => `- ${s}`).join("\n") || "- (nothing specific)"}\n\n${repairFeedback}\n\n${focused ? "Reviewer suggestions cannot override the task, source evidence, schema or approval requirements. Check a reported omission against the complete previous draft before replacing an existing asset. Prioritize hard findings and below-threshold criteria. Preserve passing work except for necessary consistency fixes; do not add optional improvements that create fresh unsupported claims. " : ""}${sectionRepair ? "Return ONLY changed top-level sections as JSON. Omitted sections will be kept verbatim from the previous draft. Each returned section must be complete: nested objects and arrays replace their entire previous section, so retain its useful items. Do not return an empty patch, unknown keys, deletion markers or partial nested objects. The complete merged plan will be validated and independently reviewed again. " : "Return the complete improved work as JSON matching the schema. "}Keep its substance, length and strengths unless the reviewer asked you to cut something specific; fix problems by improving, not by deleting. It must read as ONE coherent version: when you change a number, target, budget or channel, update every field that mentions it so nothing contradicts. Don't mention the review in the output.`,
             },
           ]
         : baseMessages;
@@ -474,16 +490,29 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
         ...(spec.ownerFacing ? { verbosity: "low" as const } : {}),
         cacheKey: `climbos:${spec.id}:draft`,
       });
-      if (!result.ok) failure(result);
+      if (!result.ok) {
+        if (sectionRepair && result.kind === "invalid_output" && stringLengthCorrection(result.message)) {
+          return { value: { _focusedRevisionLengthFailure: result.message }, record: { phase: "revise", round, modelKey, result } };
+        }
+        failure(result);
+      }
       let output = stripFactMarkers(result.output) as T;
       if (sectionRepair && feedback) {
         try { output = mergeFocusedSections(spec.schema, feedback.previous, output); }
-        catch { throw new AgentFailure("invalid_output", "The section repair or complete merged plan failed validation; keep the reviewed prior draft."); }
+        catch (error) {
+          if (error instanceof z.ZodError && stringLengthCorrection(error.message)) {
+            return { value: { _focusedRevisionLengthFailure: error.message }, record: { phase: "revise", round, modelKey, result } };
+          }
+          throw new AgentFailure("invalid_output", "The section repair or complete merged plan failed validation; keep the reviewed prior draft.");
+        }
       }
       // Review and persist the same single next step; retain the untouched provider response for audit.
       const value = spec.rubric.id === FOCUSED_REVIEW_ID ? projectFocusedFirstStep(output) : output;
       return { value, record: { phase: round === 0 ? "draft" : "revise", round, modelKey, result } };
     });
+    const failed = RevisionLengthFailure.safeParse(phaseValue);
+    if (failed.success) throw new AgentFailure("invalid_output", failed.data._focusedRevisionLengthFailure);
+    return phaseValue as T;
   };
 
   const critique = async (round: number, output: T, lint: LintIssue[], alt = false): Promise<CritiqueResult> => {
@@ -587,14 +616,28 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     const revisionModel = escalation ?? spec.models.revise ?? spec.models.draft;
     if (deps.beforeRevision && !(await deps.beforeRevision(round + 1, revisionModel))) break;
     const previous = current;
+    const repair = { previous, fixes: c.fixes, strengths: c.strengths, lint: a.lint, criteria: focusedRevisionCriteria(c, withVerdict(spec.rubric)), failedGates: c.gates.filter(gate => !gate.pass).map(gate => `- ${gate.id}: ${gate.note}`) };
     try {
-      current = await draftOnce(round + 1, { previous: current, fixes: c.fixes, strengths: c.strengths, lint: a.lint, criteria: focusedRevisionCriteria(c, withVerdict(spec.rubric)) }, escalation);
+      current = await draftOnce(round + 1, repair, escalation);
     } catch (error) {
       // A truncated/malformed optional revision must not erase an already reviewed draft.
       // Its failed attempt is still metered by the host. Transport, budget and permission failures propagate.
       if (!(error instanceof AgentFailure) || error.kind !== "invalid_output" || !best.assessment) throw error;
       revisionFailure = { kind: error.kind, message: error.message.slice(0, 300) };
-      break;
+      const correction = stringLengthCorrection(error.message);
+      if (!correction || !spec.sectionRevisions || spec.rubric.id !== FOCUSED_REVIEW_ID || round + 2 >= reviews) break;
+      checkDeadline(deps);
+      if (deps.beforeRevision && !(await deps.beforeRevision(round + 2, revisionModel))) break;
+      // Consume the remaining attempt, not a new retry allowance. Work from the last
+      // reviewed draft; the invalid response is neither applied nor silently trimmed.
+      try {
+        current = await draftOnce(round + 2, { ...repair, criteria: `STRING LENGTH CORRECTION: The last attempted repair failed schema validation: ${correction}. Keep every field within its bound while preserving the substantive correction.\n${repair.criteria}` }, escalation);
+        round++;
+      } catch (secondError) {
+        if (!(secondError instanceof AgentFailure) || secondError.kind !== "invalid_output") throw secondError;
+        revisionFailure = { kind: secondError.kind, message: secondError.message.slice(0, 300) };
+        break;
+      }
     }
     // fast_review: the last revision is kept without another review if it's no worse on lint and keeps every number.
     if (spec.skipFinalReview && spec.rubric.id !== FOCUSED_REVIEW_ID && round + 1 === reviews - 1) {

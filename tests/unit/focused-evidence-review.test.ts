@@ -139,13 +139,13 @@ describe("focused review evidence integrity", () => {
   });
 });
 
-async function runReview(options: { invalidQuote?: boolean; skipFinalReview?: boolean; criterionOnlyFeedback?: boolean; twoRepairs?: boolean; denySecondRepair?: boolean } = {}) {
+async function runReview(options: { invalidQuote?: boolean; skipFinalReview?: boolean; criterionOnlyFeedback?: boolean; gateOnlyFeedback?: boolean; twoRepairs?: boolean; denySecondRepair?: boolean } = {}) {
   let calls = 0, reviews = 0;
   const revisionMessages: string[] = [];
   const spec: AgentSpec<typeof output> = {
     id: "growth_strategy", label: "Synthetic focused strategy", role: "cmo", skills: [], schema: z.object({ summary: z.string() }), rubric,
     models: { research: "gpt-6-luna", draft: "gpt-6-luna", critic: "gpt-6-luna" }, effort: { research: "low", draft: "low", critic: "low" },
-    maxTokens: { research: 100, draft: 100, critic: 100 }, maxRevisions: options.twoRepairs ? 2 : options.skipFinalReview || options.criterionOnlyFeedback ? 1 : 0, skipFinalReview: options.skipFinalReview,
+    maxTokens: { research: 100, draft: 100, critic: 100 }, maxRevisions: options.twoRepairs ? 2 : options.skipFinalReview || options.criterionOnlyFeedback || options.gateOnlyFeedback ? 1 : 0, skipFinalReview: options.skipFinalReview,
   };
   const deps: AgentDeps = {
     turn: async req => {
@@ -158,6 +158,11 @@ async function runReview(options: { invalidQuote?: boolean; skipFinalReview?: bo
         const rows = audit();
         if (options.invalidQuote) rows[0].claims[0].quote = "A sentence not present in this version.";
         value = review(rows);
+        if (options.gateOnlyFeedback && reviews === 1) {
+          const critique = value as CritiqueResult;
+          critique.gates[0] = { id: "G1", pass: false, note: "Synthetic failed gate detail omitted from the short fixes." };
+          critique.fixes = ["Optional headline polish unrelated to the failure."];
+        }
         if (options.skipFinalReview && reviews === 1) (value as CritiqueResult).scores.forEach(score => { score.score = 3; });
         if (options.twoRepairs) (value as CritiqueResult).scores.forEach(score => { score.score = reviews === 1 ? 3 : reviews === 2 ? 3.5 : 5; });
         if (options.criterionOnlyFeedback && reviews === 1) {
@@ -194,6 +199,17 @@ it("delivers a failed criterion's concrete reasoning and fix even when the top-l
   expect(revisionMessages[0]).toContain("The two options use the same exchange.");
   expect(revisionMessages[0]).toContain("Change who receives value and explain the reason they would invite the buyer.");
   expect(revisionMessages[0]).toContain("Keep the worked example and its approval dependency.");
+  expect(result.assessment?.ship).toBe(true);
+});
+
+it("delivers failed gate details and separates optional reviewer suggestions from required repairs", async () => {
+  const { revisionMessages, result } = await runReview({ gateOnlyFeedback: true });
+  expect(revisionMessages).toHaveLength(1);
+  const message = revisionMessages[0];
+  expect(message).toContain("Synthetic failed gate detail omitted from the short fixes.");
+  expect(message).toContain("ADDITIONAL REVIEWER SUGGESTIONS");
+  expect(message.indexOf("FAILED GATES")).toBeLessThan(message.indexOf("ADDITIONAL REVIEWER SUGGESTIONS"));
+  expect(message).not.toContain("FIX (most important first)");
   expect(result.assessment?.ship).toBe(true);
 });
 

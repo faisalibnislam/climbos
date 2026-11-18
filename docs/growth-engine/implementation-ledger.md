@@ -1,3 +1,7 @@
+## 18 November — repair the actual defects within the existing allowance
+
+Comparison-pack V3 failed at **3.25/5**; a schema-invalid first revision left the reviewed draft intact. Combined charged/held **$95.307098 / $100**. V3.196 passes omitted gate details to repairs, separates optional polish, and allows a pure string-length failure to consume only the remaining reserved attempt. Failed attempts are checkpointed across resume; the full corrected draft is revalidated and independently reviewed. **187 tests in 11 files passed**, including refusal, repeat-failure and permission cases. Runtime model, acceptance bar and total cap unchanged. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — finish the advisory comparison response
 
 Exploration completed, but comparison-pack V2 stopped at the candidate review's 8,000-token limit, with no plan score. Cumulative charged/held **$94.389896 / $100**. V3.195 quotes and allows 16,000 tokens for that review, retaining the same model, effort, call count and rejection of incomplete output. **124 tests in six files**, types/lint/diff checks passed. [Audit](focused-evidence-review-audit.md).

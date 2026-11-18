@@ -1,5 +1,20 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.196 — prioritize actual repair failures and use the remaining reserved attempt
+
+Comparison-pack V3 completed the two creative stages and drafted a plan, but its independent review still failed at **3.25/5** (F7=2). The first revision exceeded `strategyExploration.adjacent.businessMechanism`'s 500-character bound. It was correctly rejected, leaving the reviewed failed draft intact. Five paid calls cost **$0.917202**; combined charged/held **$95.307098 / $100**. Source hash `60bbb158c14e399f78340e142e282a2a81153640e5be4b013f81cb9b4f233033`. No separate comparison or accepted plan is claimed.
+
+Two repair-loop gaps were reproduced before fixing them. First, the writer received the critic's short fixes but could miss a failed gate's actual explanation, while optional changes to passing work were presented as mandatory fixes. Focused repairs now receive failed gate notes, severity-labelled deterministic findings and actual scored deficits before the short suggestions. Suggestions remain available as context, with passing work preserved unless consistency requires a change.
+
+Second, one schema length error ended the run despite an unused, budgetable second repair. For focused section revisions only, a pure string-length validation failure can consume that remaining attempt. It starts from the last reviewed draft, includes exact paths and bounds, validates the whole merged plan and independently reviews it. No automatic text truncation, acceptance shortcut, additional attempt allowance or model switch. Truncated output, array-limit violations, mixed/unknown schema errors, transport and permission failures do not qualify. The failed response is checkpointed before recovery so a yield/resume cannot silently repeat and bill it again; usage remains metered and the failure remains in the quality record. The host's existing budget reservation must allow the next round, otherwise the reviewed fallback remains.
+
+Four new checks failed against the prior implementation. After repair, **187 tests in 11 files passed (14.02 seconds)**, including successful recovery, denied reservation, repeated failure, independent rejection after repair, checkpoint reuse across a yield, strict failure eligibility, focused generation and tenant/approval controls. A final severity-label adjustment passed the 39 focused repair/evidence tests again (1.34 seconds). App/Convex types, changed-file lint and diff checks passed. No real customer outcome or reliable strategy-quality improvement is established by these deterministic tests.
+
+```sh
+pnpm exec vitest run tests/unit/focused-section-revisions.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/focused-length-repair.test.ts tests/unit/agent-runtime.test.ts tests/unit/agent-escalation.test.ts tests/unit/creative-preparation.test.ts tests/unit/anthropic-budget.test.ts tests/unit/evaluation-identity.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
 ## V3.195 — complete the advisory comparison response
 
 Comparison-pack V2 completed exploration, then its candidate review reached the 8,000-token output ceiling, including 5,405 thinking tokens. The incomplete review was rejected before drafting; it has no strategy score. The two calls cost **$0.231162**, bringing combined charged/held to **$94.389896 / $100**. Both failed comparison-pack runs and their receipts remain intact.

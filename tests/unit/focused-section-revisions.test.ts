@@ -1,7 +1,7 @@
 import { focusedOriginalityFixture } from "../fixtures/focusedOriginality";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { runAgent, type AgentDeps, type PhaseRecord } from "../../shared/agents/runtime";
+import { AgentYield, runAgent, type AgentDeps, type PhaseRecord } from "../../shared/agents/runtime";
 import { focusedSectionRevisionSchema, mergeFocusedSections } from "../../shared/agents/focusedPlan";
 import { focusedStrategySpec, starterStrategySpec } from "../../shared/agents/specs";
 import { ZERO_USAGE, type TurnRequest } from "../../shared/ai/types";
@@ -37,6 +37,71 @@ async function run(patch: unknown, lastReview = review(5)) {
 }
 
 describe("bounded focused section repairs", () => {
+  it.each(["recover", "deny", "yield", "repeat_failure", "review_failure"] as const)("uses only the remaining reserved attempt for a string-length failure: %s", async mode => {
+    const bounded = schema.extend({ summary: z.string().min(4).max(40) });
+    const tooLong = bounded.shape.summary.safeParse("x".repeat(41));
+    if (tooLong.success) throw new Error("Fixture must exceed the bound");
+    // The provider validates the partial JSON and reports this exact kind of error.
+    const issues = tooLong.error.issues.map(issue => ({ ...issue, path: ["summary"] }));
+    const failure = { ok: false as const, kind: "invalid_output" as const, message: JSON.stringify(issues), text: "", appended: [], usage: ZERO_USAGE, costMicros: 0 };
+    const requests: TurnRequest[] = [], keys: number[] = [], checkpoints = new Map<number, unknown>();
+    const reservations: number[] = [];
+    let yielded = false;
+    const responses = [original, review(3), failure, mode === "repeat_failure" ? failure : { summary: "Audience availability stays unknown." }, review(mode === "review_failure" ? 3 : 5)];
+    const deps: AgentDeps = {
+      beforeRevision: async round => {
+        reservations.push(round);
+        if (round === 2 && mode === "deny") return false;
+        if (round === 2 && mode === "yield" && !yielded) { yielded = true; throw new AgentYield(); }
+        return true;
+      },
+      turn: async req => {
+        requests.push(req); const value = responses.shift();
+        if (value === failure) return failure;
+        return { ok: true, output: value, text: JSON.stringify(value), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" };
+      },
+      phase: async (key, _label, fn) => {
+        if (checkpoints.has(key.index)) return checkpoints.get(key.index) as never;
+        keys.push(key.index); const phase = await fn(); checkpoints.set(key.index, phase.value); return phase.value;
+      },
+    };
+    const execute = () => runAgent({ ...spec, schema: bounded, maxRevisions: 2 }, { task: "Synthetic repair", brief: "Access unknown", facts: [] }, deps);
+    if (mode === "yield") await expect(execute()).rejects.toBeInstanceOf(AgentYield);
+    const result = await execute();
+    expect(reservations).toEqual(mode === "yield" ? [1, 2, 1, 2] : [1, 2]);
+    expect(requests.every(req => !req.customTools && !req.webSearch)).toBe(true);
+    expect(result.quality?.revisionFailure?.kind).toBe("invalid_output");
+    if (mode === "deny" || mode === "repeat_failure") {
+      expect(requests).toHaveLength(mode === "deny" ? 3 : 4);
+      expect(result.output).toEqual(original); expect(result.assessment?.ship).toBe(false);
+    } else {
+      expect(requests).toHaveLength(5); // The failed attempt is checkpointed even across a yield.
+      expect(keys).toEqual([1, 2, 3, 5, 6]);
+      expect(JSON.stringify(requests[3].messages)).toContain("STRING LENGTH CORRECTION");
+      expect(JSON.stringify(requests[4].messages)).toContain("Audience availability stays unknown.");
+      expect(result.output.preparedWork).toEqual(original.preparedWork);
+      expect(result.assessment?.ship).toBe(mode !== "review_failure");
+    }
+  });
+  it.each([
+    "The answer was cut off at the length limit.",
+    '[{"origin":"array","code":"too_big","maximum":3,"path":["preparedWork"]}]',
+    '[{"origin":"string","code":"too_big","maximum":40,"path":["summary"]},{"code":"unrecognized_keys","keys":["publish"],"path":[]}]',
+  ])("does not turn other invalid output into a length retry: %s", async message => {
+    let calls = 0, reservations = 0;
+    const result = await runAgent({ ...spec, maxRevisions: 2 }, { task: "Synthetic", brief: "Unknown audience", facts: [] }, {
+      beforeRevision: async () => { reservations++; return true; },
+      phase: async (_key, _label, fn) => (await fn()).value,
+      turn: async () => {
+        calls++;
+        if (calls === 3) return { ok: false, kind: "invalid_output", message, text: "", appended: [], usage: ZERO_USAGE, costMicros: 0 };
+        const value = calls === 1 ? original : review(3);
+        return { ok: true, output: value, text: JSON.stringify(value), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" };
+      },
+    });
+    expect(calls).toBe(3); expect(reservations).toBe(1);
+    expect(result.output).toEqual(original); expect(result.assessment?.ship).toBe(false);
+  });
   it("delivers mechanism-replacement guidance in the existing reserved repair, then reviews the complete result", async () => {
     const creativeSchema = schema.extend({ strategyExploration: z.object({ bold: z.string() }) });
     const first = { ...original, strategyExploration: { bold: "A familiar synthetic trial mechanism" } };
