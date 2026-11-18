@@ -1,5 +1,19 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.187 — retain factual progress despite contradictory gate labels
+
+Docs V8 (`d2b0d8d391f3688f6916c1ff7a37a89c43509e00ee48e4a7b806319fb3d2ee65`) ran eight calls for **$1.458588**. The new candidate comparison identified three familiar mechanisms, but the full writer still selected a familiar connector idea. Its later revision developed a task-triggered cue. Reviews were 3.63, 3.50 and 3.81, all failed; the saved fallback was the middle 3.50 draft. A separate comparison cost $0.076389 and preferred docs V6 (mapped to A), chiefly its observed product-use test over V8's guided stated preference. There is **no demonstrated quality gain from the extra candidate call yet**. Combined charged/held: **$87.674778 / $100**.
+
+The trace exposed a deterministic fallback defect. The middle reviewer said G1 passed while its own evidence audit identified two unsupported claims. The last review correctly failed G1 with one remaining unsupported claim, improved average and no lower minimum, and intact budget/channel/safety gates. The general gate-first ranking preferred the more defective middle draft. V3.187 reuses the bounded factual-progress check symmetrically for full focused fallback selection: among otherwise safe reviewed failures containing only factual errors, fewer errors with non-decreasing quality win despite the contradictory truth checkbox. Both directions of comparison are checked, so candidate ordering cannot undo the improvement. Missing/duplicate truth gates, other errors, weaker quality or non-truth gate failures do not qualify. Passing results still win. Starter behavior, final acceptance, models and revision limits are unchanged.
+
+A **zero-cost replay of all eight unchanged V8 responses** selects the 3.81 last revision with one unsupported workaround claim. It remains failed; no text, score, gate or historical artifact was repaired or relabelled as passing. The saved replay is local evaluation evidence, not a new independent review. Three targeted regressions failed before the fix. **178 focused/permission tests in ten files passed (15.23 seconds)**, followed by **14 factual-repair tests** including both candidate orders. App/Convex types and changed-file lint passed.
+
+```sh
+pnpm exec vitest run tests/unit/focused-evidence-repair.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/focused-originality-review.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-length-repair.test.ts tests/unit/agent-escalation.test.ts tests/unit/creative-preparation.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm exec vitest run tests/unit/focused-evidence-repair.test.ts
+pnpm typecheck
+```
+
 ## V3.186 — compare creative mechanisms before expanding the plan
 
 Docs V7 used V3.184 and the unchanged documentation pack (`d9d2e1aad38756289a06b3a76c79950ab23362ae862e2f18a13d245d5747c500`). Seven calls cost **$1.416242**. All three drafts failed (3.25, 3.31, 3.44); final hard errors reached zero but originality remained 2. The initial buyer questionnaire, vendor reply promise and final AI question-cut suggestion all remained familiar mechanisms. The brief-to-form practical choice also lacked an observable reason to choose Pro over Free. The separate-context comparison preferred docs V6, particularly its paid-only customer job and different mechanisms; it cost $0.073717. Combined charged/held is **$86.139801 / $100**. These same-model judgments are not human acceptance or market evidence. Its suggestion to use real customer work is conditional on access and consent, not permission to collect sensitive data or a reason to pretend a fictional exercise measures real activation.

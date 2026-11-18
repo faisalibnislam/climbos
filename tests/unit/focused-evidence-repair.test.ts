@@ -57,7 +57,7 @@ describe("bounded factual repair without relaxing acceptance", () => {
     expect(requests.every(request => !request.customTools?.length && !request.webSearch && !request.webFetch)).toBe(true);
     expect(requests.map(request => request.modelKey)).toEqual([base.models.draft, base.models.critic, base.models.revise ?? base.models.draft, base.models.critic, base.models.revise ?? base.models.draft, base.models.critic]);
   });
-  it.each([{ reserve: false }, { errors: 2 }, { score: 2 }, { failedGate: "G2" }, { failedGate: "G3" }, { failedGate: "G4" }, { malformed: true }, { sectionRevisions: false }, { maxRevisions: 1 }, { cleanOriginal: true }])("does not relax limits or expand repair for unrelated failures: %j", async options => {
+  it.each([{ errors: 2 }, { score: 2 }, { failedGate: "G2" }, { failedGate: "G3" }, { failedGate: "G4" }, { malformed: true }, { sectionRevisions: false }, { cleanOriginal: true }])("does not relax limits or expand repair for unrelated failures: %j", async options => {
     const { result, requests } = await run(options);
     expect(requests).toHaveLength(4);
     expect(result.output).toEqual(original);
@@ -67,6 +67,31 @@ describe("bounded factual repair without relaxing acceptance", () => {
     const { result, requests } = await run({ finalPass: false });
     expect(requests).toHaveLength(6);
     expect(result.assessment?.ship).toBe(false);
-    expect(result.output).toEqual(original);
+    expect(result.output).toEqual(revision);
+  });
+  it.each([{ reserve: false }, { maxRevisions: 1 }])("retains the improved reviewed failure without another budgeted round: %j", async options => {
+    const { result, requests } = await run(options);
+    expect(requests).toHaveLength(4);
+    expect(result.output).toEqual(revision);
+    expect(result.assessment?.ship).toBe(false);
+    expect(result.assessment?.gatesPassed).toBe(false);
+    expect(result.assessment?.lint.filter(issue => issue.severity === "error")).toHaveLength(1);
+  });
+  it.each([false, true])("selects the less-defective reviewed candidate regardless of initial ordering (%s)", async reverse => {
+    const drafts = reverse ? [revision, original] : [original, revision];
+    const result = await runAgent({ ...base, schema, lint: () => [], creativePreparation: false, sectionRevisions: true, drafts: 2, maxRevisions: 0 },
+      { task: "Compare reviewed candidates", brief: "Synthetic regression", facts: [] }, {
+        phase: async (_key, _label, fn) => (await fn()).value,
+        turn: async request => {
+          const revised = JSON.stringify(request.messages).includes(revision.summary);
+          const output = request.system.some(block => block.text.includes("HARD GATES"))
+            ? revised ? review(revision.summary, 1, 4, "G1") : review(original.summary, 2, 3)
+            : drafts.shift();
+          return { ok: true, output, text: JSON.stringify(output), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: request.modelKey, stopReason: "end_turn" };
+        },
+      });
+    expect(result.output).toEqual(revision);
+    expect(result.assessment?.ship).toBe(false);
+    expect(result.assessment?.gatesPassed).toBe(false);
   });
 });

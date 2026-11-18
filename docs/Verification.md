@@ -1,3 +1,7 @@
+## 18 November — retain the better reviewed factual repair
+
+V3.187 fixes a reproduced fallback-selection defect without changing acceptance, models or calls. V8's saved 3.50 draft had two unsupported claims; its last 3.81 revision had one but a failed truth checkbox. Zero-cost replay now retains that improved **still-failed** revision. 178 tests in ten files, then 14 targeted ordering/repair tests, types/lint passed. The separate comparison preferred V6; the extra candidate phase has not demonstrated a quality gain. Combined charged/held **$87.674778 / $100**. [Audit](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November — review candidate mechanisms before full drafting
 
 V3.186 adds one bounded advisory comparison using the same model, existing originality structure and reserved accounting. All candidates remain available; no confidence/precedent filter or action tools. The independent final critic sees no preliminary judgments. **180 tests in 11 files**, types and lint passed after repairing a diagnosis-context omission caught by the first run. Docs V7 still failed at 3.44, and a separate comparison preferred V6. Combined charged/held **$86.139801 / $100**; paid effect of the new phase pending. [Audit](growth-engine/focused-evidence-review-audit.md).

@@ -207,6 +207,16 @@ function rank(a: Assessment): number {
   return (a.ship ? 10_000 : 0) + (a.gatesPassed ? 1000 : 0) - a.lint.filter((l) => l.severity === "error").length * 50 + a.average * 10 + a.minimum;
 }
 
+/** An affirmative truth checkbox cannot outweigh its own unsupported-claim findings.
+ * Compare only otherwise safe, fully reviewed focused failures with monotonic progress. */
+function betterAssessment(current: Assessment, best: Assessment, focusedSections: boolean): boolean {
+  if (focusedSections && !current.ship && !best.ship) {
+    if (repairableFocusedEvidenceProgress(current, best)) return true;
+    if (repairableFocusedEvidenceProgress(best, current)) return false;
+  }
+  return rank(current) > rank(best);
+}
+
 /** A better strategic revision can exceed a draft length bound. Keep the clean fallback,
  * but allow its already-budgeted remaining repair; never waive the bound or the review. */
 function repairableFocusedLengthRegression(current: Assessment, best: Assessment): boolean {
@@ -227,6 +237,7 @@ function repairableFocusedEvidenceProgress(current: Assessment, best: Assessment
     const entries = assessment.critique.gates.filter(gate => gate.id === id);
     return entries.length === 1 && entries[0].pass;
   });
+  if ([current, best].some(assessment => assessment.critique.gates.filter(gate => gate.id === "G1").length !== 1)) return false;
   return currentErrors.length > 0 && currentErrors.length < bestErrors.length
     && [...currentErrors, ...bestErrors].every(issue => issue.rule === "invented_fact")
     && current.average >= best.average && current.minimum >= best.minimum
@@ -539,7 +550,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     const [cA, cB] = await both(critique(0, current, lintA), critique(0, alt, lintB, true));
     const aA = assess(cA, lintA, spec.rubric, current);
     const aB = assess(cB, lintB, spec.rubric, alt);
-    if (rank(aB) > rank(aA)) {
+    if (betterAssessment(aB, aA, Boolean(spec.sectionRevisions && spec.rubric.id === FOCUSED_REVIEW_ID))) {
       current = alt;
       firstReview = { c: cB, lint: lintB };
     } else firstReview = { c: cA, lint: lintA };
@@ -563,7 +574,7 @@ export async function runAgent<T>(spec: AgentSpec<T>, input: AgentInput, deps: A
     }
     const a = assess(c, lint, spec.rubric, current);
     history.push({ round, average: a.average, gatesPassed: a.gatesPassed, lintErrors: a.lint.filter((l) => l.severity === "error").length });
-    if (!best.assessment || rank(a) > rank(best.assessment)) best = { output: current, assessment: a, round };
+    if (!best.assessment || betterAssessment(a, best.assessment, Boolean(spec.sectionRevisions && spec.rubric.id === FOCUSED_REVIEW_ID))) best = { output: current, assessment: a, round };
     const shipped = spec.shipOn === "gates" ? a.gatesPassed && a.lint.every((l) => l.severity !== "error") : a.ship;
     if (shipped || round === reviews - 1) break;
     // Choosing the safest reviewed fallback is separate from deciding whether the next
