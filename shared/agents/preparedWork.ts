@@ -4,7 +4,7 @@ import type { AgentInput, LintIssue } from "./types";
 /** Small, useful drafts produced with the recommendation. These confer no execution permission. */
 export const PreparedWorkSchema = z.object({
   title: z.string().min(1).max(120),
-  kind: z.enum(["page_copy", "creator_pitch", "social_post", "test_brief"]),
+  kind: z.enum(["page_copy", "creator_pitch", "social_post", "test_brief"]).describe("Use test_brief for a private worked example or mock-up with fictional test values. page_copy, creator_pitch and social_post are public-copy kinds and require sourced business claims even when status is draft."),
   target: z.string().min(1).max(600),
   draft: z.string().min(40).max(6000),
   evidenceRefs: z.array(z.string()).max(8),

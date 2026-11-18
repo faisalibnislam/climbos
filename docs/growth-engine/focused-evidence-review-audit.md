@@ -1,5 +1,30 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.199 — clarify the private-example contract after the last bounded test
+
+The `public-agencies-20261118` run (`launch-agencies-v1-20261118`, engine V3.198, source hash `f8169ff6db66caec7cc29b573b4a7eb49671fbc6c7a353a68fb80edb737506f2`) completed exploration, candidate feedback, drafting and review for **$0.690687**. The single reviewed draft failed at **3.5/5**, with F7=2 and XV=3. It used the new agency source and correctly distinguished adding a customer logo on any plan from paid features. Its first review was not followed by a repair because the existing cumulative reservation guard refused the required headroom. No request failed, no response was truncated and no hidden retry occurred. This is a first-draft result with different evidence, not a controlled comparison with the repaired V5 result.
+
+Inspection found three material limitations:
+
+1. The proposed bold mechanism was a capped quote conditional on a completed brief. The final reviewer identified its similarity to an ordinary not-to-exceed proposal, despite the candidate review having developed it as a new direction. The test compared it to a calculator rather than the closest ordinary proposal. Meaningful originality and reviewer consistency remain unresolved.
+2. A phase grouped Core and Pro access for AI drafting from a brief even though the supplied plan evidence restricts that feature. The evidence audit flagged the exact statement as unsupported; runtime kept that hard failure even though the critic's general truth gate passed. A private product-check instruction still needs correct feature eligibility. No model or acceptance threshold was changed to accept it.
+3. The fictional numeric sample was classified as `page_copy`, with bare `(fictional)` labels. The existing contract permits properly labelled private examples in `test_brief`; public-copy checks do not inherit that exemption from a target saying private. The critic incorrectly said these numeric errors did not apply. Runtime retained them. This is a writer/reviewer contract mismatch, not a reason to relax public-copy validation.
+
+V3.199 makes that last boundary explicit in the existing prepared-work schema description, focused writer and focused reviewer: use `test_brief` for private fictional examples even when they depict a page/form, and use the accepted local line/value labels. Preserve the useful worked example; do not reclassify actual product claims as fictional. Validation, schema limits, runtime model, provider, approval controls and budget remain unchanged. The paid harness now also fingerprints `preparedWork.ts`, so its schema description cannot change without invalidating a saved evaluation identity. Existing regression coverage exercises private examples, unsupported public copy, mixed real/fictional numbers, misleading labels and headings that cannot qualify later claims. This instruction change has not received a fresh paid semantic evaluation and is not claimed to solve creativity or plan eligibility.
+
+**162 tests in eight files passed (16.52 seconds)**, followed by successful app/Convex typechecks and changed-file lint/diff checks:
+
+```sh
+pnpm exec vitest run tests/unit/focused-plan.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/strategy-prompt-cost.test.ts tests/unit/evaluation-identity.test.ts tests/unit/anthropic-budget.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+pnpm exec eslint shared/agents/preparedWork.ts shared/agents/focusedPlan.ts shared/agents/focusedReview.ts shared/agents/specs.ts bench/strategy-quality/anthropicLive.ts
+git diff --check
+```
+
+Combined charged/held across both ledgers is now **$99.063401 / $100**, with **$0.936599** remaining. Historical uncertain holds are still counted. No further complete repair/review pair can be reserved. Tester access, founder time, real demand, margins and delivery capacity remain unknown; no customer was contacted and no product/account/payment action occurred. Further paid quality work requires either a workflow that fits the unchanged safe reservations or explicit owner authorization for a higher cumulative cap. No increase is assumed.
+
+After adding the prepared-work source fingerprint, `pnpm exec vitest run tests/unit/evaluation-identity.test.ts tests/unit/anthropic-budget.test.ts` passed **16 tests in two files (0.341 seconds)**; harness ESLint and the final diff check also passed. All paid processes have finished.
+
 ## V3.198 — recognize dated tasks; preserve the latest failed result and new source evidence
 
 Comparison-pack V5 (`launch-comparison-v5-20261118`, engine `v3.197-preserve-review-findings`, source hash `2b07dccd154a0005e03a0b86734032a49b83bc1ddc3d6c9193642dd9757108f4`) completed eight calls for **$1.650352**. Reviews scored 3.25, 3.31 and **3.81/5**. All responses completed without a schema-invalid repair. The last bold idea, confirm-or-correct intake, earned F7=4; diagnosis/segment selection, owner workload and overall judgment remained at 3.5. This run did not return to its two earlier rejected mechanisms, but one run does not establish reliable originality or reliable reviewer judgment. The saved result remains failed.
