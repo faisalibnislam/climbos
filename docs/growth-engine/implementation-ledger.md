@@ -1,3 +1,7 @@
+## 18 November — product prerequisites and deferred access research
+
+`v3.174-access-research`: resolve material product instructions within the existing research call; retain a concrete conditional research path when tester access is unknown, without repeating deferred questions or inventing reach. First-checklist wording matches its existing validator. 183 tests, types/lint passed. Documentation baseline loaded the previous engine; semantic effect is pending. [Audit](focused-evidence-review-audit.md).
+
 ## 18 November — dated product-documentation acceptance pack
 
 An opt-in Livoform documentation pack adds six directly read public sources without rewriting historical evidence or owner unknowns. Mixed-pack comparisons and silently ignored options fail. No runtime model/integration change. 51 tests, types/lint pass. Original-case V18 passes internally but loses the separate comparison to V14 on two criteria; no consistency claim. Combined charged/held $76.677288 / $100. [Audit](focused-evidence-review-audit.md).

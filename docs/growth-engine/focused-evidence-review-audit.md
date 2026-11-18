@@ -1,6 +1,21 @@
 # Focused strategy evidence review — 17 November 2026
 
-## Current status — original-case pass and separately dated product evidence
+## Current status — product-prerequisite research and unknown-access fallback
+
+V3.174 closes two confirmed instruction gaps in the existing path. `researchFor("growth_strategy")` previously emphasized channel discovery without explicitly prioritizing the help/setup evidence needed to validate a customer task. The same research call now checks decision-changing product prerequisites before route research, avoids rereading supplied facts, and preserves per-claim dates, failures and unknowns. Its existing seven-search/four-fetch ceiling, six-hour cache, provider and model are unchanged. Cached/precomputed research is still reused; this does not add automatic supplemental retrieval to those paths. Campaign-timing instructions remain intact.
+
+V18's separate comparison exposed a weak no-contacts branch: not-run is an honest outcome, but does not explain how to investigate access. The focused writer and independent reviewer now require a concrete **conditional research path** in the existing private brief—target job, query/source and current fit/rule checks—when access is unknown. It remains deferred research, never a verified audience or another active campaign. Explicitly deferred tester/time questions are not repeated, and preparation that needs neither continues. No exposure still cannot mean failed demand. A contradictory old “at most three” checklist instruction was also aligned with the existing exactly-one-step validator.
+
+**183 tests in 11 files passed (15.29 seconds)**. Captured production research/writer/reviewer requests verify the new instructions reach the actual calls within unchanged tool/model limits; they do not prove semantic quality. Existing cache isolation, fallback, budget identity and tenant/approval tests also passed. App/Convex typechecks, changed-file ESLint and diff checks passed. No new schema, provider, agent, action tool, publishing path or UI was introduced.
+
+The documentation-enriched baseline `launch-docs-v1-20261118` loaded v3.173 before this change; it will remain a separate baseline. V3.174's paid effect is pending, and no code-only causal improvement is claimed from adding source evidence. Tester access and founder time stay unknown by owner choice.
+
+```sh
+pnpm exec vitest run tests/unit/research-cache.test.ts tests/unit/creative-preparation.test.ts tests/unit/focused-plan.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/agent-escalation.test.ts tests/convex/research-cache.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts tests/unit/evaluation-identity.test.ts tests/unit/livoform-launch-input.test.ts
+pnpm typecheck
+```
+
+## V18 — original-case pass and separately dated product evidence
 
 V18 (`launch-quality-v18-20261118`, engine v3.173, source hash `f13ed39d518b80f4928eb6b154405db756446ca8be4c51746f7306f13d750ec9`) completed five paid calls for **$0.865650**. Its revised result passes the unchanged rubric at **4/5 throughout**, with all gates passing and no hard findings. The original frozen two-page evidence pack was unchanged. The plan separates merchant receipts from Livoform subscription revenue, keeps access/time unknown, and proposes a subtract-with-reasons form concept with a manual-deletion comparison. Product tests and real growth outcomes remain unperformed.
 

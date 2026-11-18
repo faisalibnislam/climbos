@@ -6,6 +6,7 @@ import { focusedStrategySpec, starterStrategySpec } from "../../shared/agents/sp
 import { agentSteps } from "../../convex/lib/jobPlans";
 import { ZERO_USAGE, type TurnRequest } from "../../shared/ai/types";
 import { focusedPlanFixture } from "../fixtures/focusedPlan";
+import { focusedPlanTask } from "../../shared/agents/focusedPlan";
 
 const seeds = { directions: Array.from({ length: 3 }, (_, index) => ({
   creativeMethod: ["convention_inversion", "distant_transfer", "asset_recombination"][index], methodApplication: "A synthetic method application; no real business evidence.",
@@ -27,6 +28,27 @@ const spec = () => ({ ...focusedStrategySpec({ maxRevisions: 0 }), schema: z.obj
 });
 
 describe("creative preparation within the existing focused run", () => {
+  it("passes the unknown-access fallback contract to writer and independent reviewer without execution tools", async () => {
+    const requests: TurnRequest[] = [];
+    await runAgent(spec(), { brief: "Synthetic case. Keep tester access and founder time unknown.", task: focusedPlanTask(14), facts: [] }, {
+      phase: async (_key, _label, fn) => (await fn()).value,
+      turn: async req => {
+        requests.push(req);
+        const output = req.schema === CreativePreparationSchema ? seeds : req.system.some(s => s.text.includes("HARD GATES")) ? review : draft;
+        return { ok: true, output, text: JSON.stringify(output), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" };
+      },
+    });
+    expect(requests).toHaveLength(3);
+    expect(requests.every(req => req.customTools === undefined && req.webSearch === undefined && req.webFetch === undefined)).toBe(true);
+    const writer = JSON.stringify(requests[1].messages), critic = JSON.stringify(requests[2].system);
+    expect(writer).toContain("concrete public research query or source to inspect");
+    expect(writer).toContain("do not repeat the question");
+    expect(writer).toContain("No eligible exposure still means not-run, not failed demand");
+    expect(writer).not.toContain("at most 3 immediate items in weekOneChecklist");
+    expect(critic).toContain("not a distribution fallback");
+    expect(critic).toContain("not an already verified channel");
+    expect(critic).toContain("Preserve prepared assets and useful alternative mechanisms");
+  });
   it("reviews and checkpoints one canonical next step without changing the raw response or later work", async () => {
     const original = focusedPlanFixture();
     original.firstActions = ["Start another channel", "Name contacts", "Collect analytics"].map(title => ({ title, why: "Synthetic competing first step", role: "ceo" }));

@@ -12,6 +12,7 @@ import type {
   CachedResearch,
 } from "../../shared/agents/types";
 import type { ModelKey } from "../../shared/economics/rates";
+import { focusedStrategySpec, researchFor } from "../../shared/agents/specs";
 
 const spec: AgentSpec<unknown> = {
   id: "cache-test",
@@ -85,6 +86,23 @@ function deps(overrides: Partial<AgentDeps> = {}) {
 }
 
 describe("tenant research cache behavior", () => {
+  it("checks decision-changing product prerequisites within the existing strategy research call and bounds", async () => {
+    const actualSpec = focusedStrategySpec();
+    const research = researchFor("growth_strategy", { businessName: "Synthetic software", website: "https://business.example/" })!;
+    let request: import("../../shared/ai/types").TurnRequest | undefined;
+    const notes = "Published eligibility only; private setup, owner time and audience access remain unverified.";
+    const d = deps({ turn: async req => { request = req; return result(notes); } });
+    const value = await runResearch(actualSpec, { ...input, research }, d.base);
+    expect(request).toMatchObject({ modelKey: actualSpec.models.research, maxTokens: actualSpec.maxTokens.research, webSearch: { maxUses: 7 }, webFetch: { maxUses: 4 } });
+    expect(request?.customTools).toBeUndefined();
+    const body = JSON.stringify(request?.messages);
+    expect(body).toContain("first-party help or setup page");
+    expect(body).toContain("Do not reread details already supplied");
+    expect(body).toContain("retrieval date and stated update date per claim");
+    expect(body).toContain("not tested behavior");
+    expect(value?.notes).toBe(notes);
+    expect(d.phases).toHaveLength(1);
+  });
   it("carries actual insight page text through research and cache reuse without refreshing its date", async () => {
     const pageRead = { url: "https://example.com/source", text: "I keep chasing the brief.", retrievedAt: Date.now() - 5000 };
     let saved: CachedResearch | null = null;

@@ -1,3 +1,7 @@
+## 18 November 2026 — research prerequisites and keep unknown-access work useful
+
+V3.174 adds product/setup priorities to the existing bounded research call and a concrete deferred access-research branch to focused writing/review. Owner tester access and time stay unknown; no new action, provider or research allowance. **183 tests in 11 files passed**, app/Convex types and changed-file lint passed. Paid effect pending. [Audit and limits](growth-engine/focused-evidence-review-audit.md).
+
 ## 18 November 2026 — preserve comparable evidence and add verified public documentation
 
 Original-case V18 passes 4/5, but the separate comparison prefers V14 on two questions and ties on four. Combined charged/held **$76.677288 / $100**. The new explicitly selected documentation pack preserves dated first-party claims and keeps original evidence immutable; no product behavior is implied verified. **51 tests in seven files**, app/Convex types, changed-file lint and diff checks pass. [Audit, commands and limitations](growth-engine/focused-evidence-review-audit.md).
