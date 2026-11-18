@@ -1,5 +1,22 @@
 # Focused strategy evidence review — 17 November 2026
 
+## V3.209 — worked reasoning contrasts in the actual strategy workflow
+
+The saved agency review exposed two reasoning weaknesses beyond mechanical validation: the capped-quote comparison used a weaker control, and correct paid-plan eligibility was confused with a reason for a customer to pay. The existing workflow had abstract instructions but no worked contrasts showing how to preserve useful conventional work while developing a distinct hypothesis. A small shared instructional passage now supplies three contrasts: same-benefit comparison, an explicitly unbuilt reciprocal exchange, and required feature bundle versus customer value.
+
+The reciprocal-exchange example is synthetic, not a verified precedent or a proven original strategy. It asks whether returning useful decisions before requesting more answers changes the exchange relative to an equally private, reusable brief; an equally strong ordinary reciprocal service could still defeat its originality claim. Its simulated test can reveal confusion or effort, not demand or trust. The passage explicitly forbids treating examples as business facts, evidence references, library cases, endorsed recommendations or templates to copy. Unknown access/time, speculative options and separate novelty/evidence/feasibility/risk/upside remain intact.
+
+The same bounded passage reaches existing exploration, advisory feedback, drafting and independent review; resumed exploration still delivers it to subsequent drafting/review. It adds prompt text, not a provider, call, output allowance, filter, ranking or execution capability. The source-backed precedent library and its verified count are unchanged. **Two request-delivery regressions failed before integration.**
+
+**260 focused, budget and permission tests passed in 14 files (13.10 seconds)**; app/Convex typechecks, changed-file ESLint and diff checks passed. The request tests exercise fresh and checkpointed runtime paths using local doubles, verify each active stage receives all three contrasts, and keep business facts and research unchanged.
+
+```sh
+pnpm exec vitest run tests/unit/focused-measurement-review.test.ts tests/unit/focused-plan-eligibility.test.ts tests/unit/focused-evidence-review.test.ts tests/unit/focused-evidence-repair.test.ts tests/unit/focused-originality-review.test.ts tests/unit/creative-preparation.test.ts tests/unit/focused-section-revisions.test.ts tests/unit/focused-length-repair.test.ts tests/unit/evaluation-identity.test.ts tests/unit/anthropic-budget.test.ts tests/unit/strategy-prompt-cost.test.ts tests/convex/focused-plan.test.ts tests/convex/plan-approval.test.ts tests/convex/safety.test.ts
+pnpm typecheck
+```
+
+**Limit:** delivery tests establish that the instruction reaches the model, not that the unchanged model follows it or improves its strategy. They do not award a new quality score. Paid API calls remain paused, the $100 cap and runtime model remain unchanged, and the saved failed Livoform results remain failed.
+
 ## V3.208 — keep proposed learning within the observed activity's scope
 
 The saved `livoform-launch-docs-v2-20261118-focused-14.json` passed its AI review while calling a buyer's test-mode submission on the owner's sample form product activation. It did not show that the buyer could use the product for their own job. Earlier guidance addressed that mistake, but the review contract could still endorse its own mismatched observation/outcome labels. **Twelve local regressions failed before this fix.**

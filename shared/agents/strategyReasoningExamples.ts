@@ -1,0 +1,14 @@
+/**
+ * Instructional contrasts, not precedent records or business facts.
+ * The control and paid-value mistakes come from the saved 2026-11-18
+ * Livoform agency evaluation. The reciprocal exchange is a synthetic
+ * counterexample, not a verified invention, recommendation or customer result.
+ */
+export const STRATEGY_REASONING_CONTRASTS = `REASONING CONTRASTS — instructional hypotheses, not business evidence
+Apply the reasoning to this business; do not copy these ideas or add them to facts, evidence references or the precedent library. They supply no proof of originality, eligibility, demand or performance.
+
+Same benefit, stronger control: a capped quote conditional on a complete brief does not become novel by calling it an answer-for-ceiling exchange. Compare with a manual capped proposal using the same scope assumptions, not a calculator without a cap. If nothing consequential remains after holding the cap constant, acknowledge the ordinary mechanism. If an added rule changes a client's decision or an agency's obligation, explain that change and test it with both relevant roles. Seller enthusiasm alone does not establish client response. A familiar offer may still be the grounded recommendation; do not force it to carry the bold mode.
+
+Unbuilt reciprocal exchange: suppose clients control a reusable brief, and a vendor must return a useful scope decision before asking for more answers. The proposed difference from a reusable questionnaire is a reciprocal obligation and the client's power to withhold further work, not the words passport or AI. Compare with a client-owned shared brief using the same privacy, answer reuse and advice. Change only whether returning value unlocks further questions. A private role-play can expose deadlock, misunderstood obligations or unacceptable effort; it cannot establish demand or trust. This is an uncertain candidate difference, not automatically novel: look for an equally strong ordinary reciprocal service and explain what still differs. Missing integrations or precedent are not reasons to hide it. Keep incentives, support burden, risk and potential upside separate from novelty.
+
+Required bundle is not paid value: if one workflow needs calculations and AI-assisted preparation, a plan supporting only calculations does not support the whole bundle. Separate manual preparation from the optional AI branch and price only an evidenced eligible combination. Even a correct plan map is not a reason to pay when a free alternative advertises the same job. Compare the specific buyer consequence and current workaround, keeping parity and unknowns explicit. A private example can test comprehension; actual customer use and willingness to pay remain separate observations. Do not invent competitor weaknesses, trial access or a winning segment to resolve uncertainty.`;

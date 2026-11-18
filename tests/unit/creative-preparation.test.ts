@@ -30,6 +30,34 @@ const spec = () => ({ ...focusedStrategySpec({ maxRevisions: 0 }), schema: z.obj
 });
 
 describe("creative preparation within the existing focused run", () => {
+  it.each([false, true])("delivers reasoning contrasts to every active creative stage without turning them into evidence (checkpoint=%s)", async cached => {
+    const requests: TurnRequest[] = [];
+    const input = { brief: "Synthetic new product; no measured demand. Tester access and founder time unknown.", task: focusedPlanTask(14), facts: [] };
+    const result = await runAgent(spec(), input, {
+      phase: async (key, _label, fn) => {
+        if (cached && key.index === 49) return seeds as never;
+        if (cached && key.index === 48) return feedback as never;
+        return (await fn()).value;
+      },
+      turn: async req => {
+        requests.push(req);
+        const output = req.schema === CreativePreparationSchema ? seeds : req.schema === CreativeFeedbackSchema ? feedback : req.system.some(s => s.text.includes("HARD GATES")) ? review : draft;
+        return { ok: true, output, text: JSON.stringify(output), appended: [], usage: ZERO_USAGE, costMicros: 0, sources: [], actualModelId: "fixture", stopReason: "end_turn" };
+      },
+    });
+    expect(requests).toHaveLength(cached ? 2 : 4);
+    for (const req of requests) {
+      const text = JSON.stringify({ system: req.system, messages: req.messages });
+      expect(text.includes("REASONING CONTRASTS — instructional hypotheses, not business evidence")).toBe(true);
+      expect(text.includes("Same benefit, stronger control")).toBe(true);
+      expect(text.includes("Unbuilt reciprocal exchange")).toBe(true);
+      expect(text.includes("Required bundle is not paid value")).toBe(true);
+      expect(req.customTools).toBeUndefined(); expect(req.webSearch).toBeFalsy(); expect(req.webFetch).toBeFalsy();
+    }
+    expect(input.facts).toEqual([]);
+    expect(result.research).toBeNull();
+  });
+
   it.each(["supplied", "fresh", "checkpoint"])("retains saved research restrictions through every creative phase (%s)", async mode => {
     const restriction = "Source-reported restriction: the Core plan excludes AI brief drafting; Pro eligibility is untested.";
     const notes = "Source-reported background; no measured demand.\n".repeat(720) + restriction;

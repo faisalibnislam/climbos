@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { stringFields } from "./lint";
 import { FocusedMeasurementCheckSchema, FOCUSED_MEASUREMENT_REVIEW, lintFocusedMeasurementCheck } from "./focusedMeasurement";
+import { STRATEGY_REASONING_CONTRASTS } from "./strategyReasoningExamples";
 import type { AgentInput, CritiqueResult, LintIssue, Rubric } from "./types";
 
 export const FOCUSED_REVIEW_ID = "focused-growth-strategy";
@@ -23,7 +24,8 @@ export function focusedOriginalityMatches(audit: FocusedOriginalityAudit, output
     && audit.testQuote === fields.get("strategyExploration.bold.reversibleTest.method");
 }
 
-export const MECHANISM_COMPARISON_GUIDANCE = `Compare with the strongest ordinary way to obtain the same promised result, including manual services, contractual arrangements and workarounds outside the software category. A bare tool is a weak control when an ordinary service already offers the proposed benefit. State the changed rule or exchange after holding ordinary benefits constant, and the response that would distinguish it. Keep audience, promise, information and support comparable except for the mechanism being tested. Include the participant whose behavior must change; a seller's willingness to offer something cannot establish a buyer's response. A private simulation may test comprehension or choices inside that simulation, with demand and real use left untested. If the control is inadequate, repair the comparison rather than inventing a difference or discarding a distinctive uncertain idea. This is analytical comparison, not proof that every business uses that practice or a requirement for a matching precedent.`;
+export const MECHANISM_COMPARISON_GUIDANCE = `Compare with the strongest ordinary way to obtain the same promised result, including manual services, contractual arrangements and workarounds outside the software category. A bare tool is a weak control when an ordinary service already offers the proposed benefit. State the changed rule or exchange after holding ordinary benefits constant, and the response that would distinguish it. Keep audience, promise, information and support comparable except for the mechanism being tested. Include the participant whose behavior must change; a seller's willingness to offer something cannot establish a buyer's response. A private simulation may test comprehension or choices inside that simulation, with demand and real use left untested. If the control is inadequate, repair the comparison rather than inventing a difference or discarding a distinctive uncertain idea. This is analytical comparison, not proof that every business uses that practice or a requirement for a matching precedent.
+${STRATEGY_REASONING_CONTRASTS}`;
 
 export function lintFocusedOriginalityAudit(critique: CritiqueResult, rubric: Rubric, output?: unknown): LintIssue[] {
   if (!rubric.criteria.some(criterion => criterion.id === "F7")) return [];

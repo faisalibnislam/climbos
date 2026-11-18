@@ -1,3 +1,7 @@
+## 18 November — deliver worked strategy reasoning contrasts
+
+V3.209 carries three explicitly instructional contrasts through exploration, feedback, drafting and review, including resumed paths. They address weak comparisons, unbuilt exchange hypotheses and paid-plan/value confusion without becoming business facts or verified precedents. **260 tests**, types and lint passed. Delivery is verified; better live model reasoning is not. Paid API calls remain paused and the runtime model is unchanged. [Audit and commands](focused-evidence-review-audit.md).
+
 ## 18 November — keep demonstrations, product use and payment distinct
 
 V3.208 binds measurement-review annotations to the actual proposed activity and outcome. Contradictory learning labels fail, while weaker useful tests remain eligible. **258 tests**, an affected **98-test rerun**, types and lint passed, including repair feedback and approval/start denial. These checks enforce review consistency, not autonomous understanding or a fresh Livoform quality pass. Paid tests remain paused; runtime models are unchanged. [Audit and commands](focused-evidence-review-audit.md).
